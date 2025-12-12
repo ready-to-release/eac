@@ -7,7 +7,7 @@
 # CI Verification: Requires a successful ci-ext-eac.yaml run on the EXACT commit
 # being released (strict mode). This ensures the container was built and tested.
 
-name: "release-ext-eac (stage 7+)"
+name: "release-ext-eac (stage 8+)"
 
 on:
   push:

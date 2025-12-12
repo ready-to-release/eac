@@ -411,3 +411,49 @@ type DrawioCacheStatus struct {
 	Cached    bool
 	CachePath string
 }
+
+// UpdateDrawioCache ensures all drawio.png images in docs/ are cached.
+// This is fast if images are already cached (just hash comparison).
+// Returns the number of images optimized (0 if all cached).
+func UpdateDrawioCache(workspaceRoot string, logWriter io.Writer) (int, error) {
+	docsDir := filepath.Join(workspaceRoot, "docs")
+	cache := NewAssetCache(workspaceRoot)
+
+	// Find all drawio images
+	images, err := FindDrawioImages(docsDir)
+	if err != nil {
+		return 0, fmt.Errorf("scanning for drawio images: %w", err)
+	}
+
+	if len(images) == 0 {
+		return 0, nil
+	}
+
+	// Check cache and optimize any missing
+	optimized := 0
+	for _, img := range images {
+		cacheKey := DrawioCacheKey{
+			SourceHash: img.Hash,
+			MaxWidth:   MaxImageWidthPDF,
+		}
+
+		cachePath, hit := cache.GetDrawio(cacheKey)
+		if hit {
+			continue // Already cached
+		}
+
+		// Optimize and cache
+		if err := OptimizeSingleImage(img.SourceFile, cachePath, MaxImageWidthPDF); err != nil {
+			fmt.Fprintf(logWriter, "    Warning: failed to optimize %s: %v\n", img.RelPath, err)
+			continue
+		}
+
+		if err := cache.PutDrawio(cachePath, cacheKey); err != nil {
+			fmt.Fprintf(logWriter, "    Warning: failed to cache %s: %v\n", img.RelPath, err)
+		}
+
+		optimized++
+	}
+
+	return optimized, nil
+}

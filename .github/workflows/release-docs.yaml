@@ -6,7 +6,7 @@
 # CI Verification: Requires a successful ci-docs.yaml run on the exact commit being released.
 # If ci_run_id is not provided, it will find the latest successful CI run for the current commit.
 
-name: "release-docs (stage 7+)"
+name: "release-docs (stage 8+)"
 
 on:
   push:

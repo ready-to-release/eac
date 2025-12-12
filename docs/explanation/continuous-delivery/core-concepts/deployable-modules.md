@@ -564,8 +564,8 @@ Deployable modules are the fundamental building blocks of Continuous Delivery:
 - [Unit of Flow](unit-of-flow.md) - See how deployable modules fit into the bigger picture
 - [Trunk-Based Development](../workflow/trunk-based-development.md) - How code flows into deployable modules
 - [Branching Strategies](../workflow/branching-strategies.md) - Branching flows for RA and CDE patterns
-- [Stages 1-6](../cd-model/cd-model-stages-1-6.md) - Development stages for deployable modules
-- [Stages 7-12](../cd-model/cd-model-stages-7-12.md) - Release stages for deployable modules
+- [Stages 1-7](../cd-model/cd-model-stages-1-7.md) - Development stages for deployable modules
+- [Stages 8-12](../cd-model/cd-model-stages-8-12.md) - Release stages for deployable modules
 
 ## References
 

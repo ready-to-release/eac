@@ -103,62 +103,78 @@ Environment agents represent different types of execution environments:
 
 ![PLTE Environments](../../../assets/cd-model/legend-env-plte.drawio.png){width=60}
 
-PLTEs are ephemeral, isolated environments that emulate production characteristics. They enable:
+PLTEs are, optimally ephemeral, isolated, environments that emulate production characteristics.
+
+PLTEs enable:
 
 - Realistic testing without production risk
 - Parallel testing for multiple feature branches
-- Infrastructure as Code validation
+- Production IaC validation
 - Performance and security testing in production-like conditions
 
 ## The 12 Stages Overview
 
-Here's a high-level overview of each stage. For detailed explanations, see the stage-specific articles.
+Here's a high-level overview of each stage.
+
+> For detailed explanations, see the stage-specific articles.
 
 ```mermaid
 flowchart LR
-    subgraph Development["Development (1-6)"]
+    subgraph Development["Development (1-7)"]
         S1[1. Authoring] --> S2[2. Pre-commit]
         S2 --> S3[3. Merge Request]
         S3 --> S4[4. Commit]
         S4 --> S5[5. Acceptance Test]
         S5 --> S6[6. Extended Test]
+        S6[6. Extended Test] --> S7[7. Exploration]
     end
 
-    subgraph Release["Release (7-12)"]
-        S7[7. Exploration] --> S8[8. Start Release]
-        S8 --> S9[9. Release Approval]
+    subgraph Release["Release (8-12)"]
+        S8[8. Start Release] --> S9[9. Release Approval]
         S9 --> S10[10. Prod Deploy]
         S10 --> S11[11. Live]
         S11 --> S12[12. Toggling]
     end
 
-    S6 --> S7
+    S7 --> S8
     S12 -.->|Feedback| S1
+    S11 -.->|Feedback| S1
+    S10 -.->|Feedback| S1
+    S9 -.->|Feedback| S1
+    S8 -.->|Feedback| S1
+    S7 -.->|Feedback| S1
+    S6 -.->|Feedback| S1
+    S5 -.->|Feedback| S1
+    S4 -.->|Feedback| S1
+    S3 -.->|Feedback| S1
+    S2 -.->|Feedback| S1
 
 ```
 
-**Stages 1-6: Development Through Testing**:
+**Stages 1-7: Development Through Testing**:
 
+<!-- markdownlint-disable MD029 -->
 1. **Authoring Changes**: Create code, config, requirements on local topic branches
 2. **Pre-commit**: Validate changes locally before committing (5-10 min time-box)
 3. **Merge Request**: Peer review and automated validation
 4. **Commit**: Integrate validated changes into the main branch
 5. **Acceptance Testing**: Validate functional requirements in PLTE
 6. **Extended Testing**: Performance, security, and compliance validation
-
-**Stages 7-12: Release Through Production**:
-
 7. **Exploration**: Stakeholder validation and exploratory testing
+
+**Stages 8-12: Release Through Production**:
+
 8. **Start Release**: Create release candidate and documentation
 9. **Release Approval**: Obtain formal approval for production deployment
 10. **Production Deployment**: Deploy to production environment
 11. **Live**: Monitor and validate production behavior
 12. **Release Toggling**: Control feature exposure with feature flags (optional)
+ <!-- markdownlint-enable MD029 -->
 
 For detailed explanations of each stage:
 
-- [Stages 1-6: Development to Testing](cd-model-stages-1-6.md)
-- [Stages 7-12: Release to Production](cd-model-stages-7-12.md)
+- [Stages 1-7: Development to Testing](cd-model-stages-1-7.md)
+- [Stages 8-12: Release to Production](cd-model-stages-8-12.md)
 
 ---
 
@@ -188,12 +204,13 @@ This prevents defects from progressing through the pipeline and accumulating.
 
 While documentation remains important, the CD Model prioritizes:
 
-- **Automated tests** over test plans
-- **Infrastructure as Code** over environment documentation
-- **Pipeline configuration** over deployment procedures
-- **Automated compliance checks** over manual reviews
+- **Automated tests** over **Manual test plans**
+- **Isolated testing infrastructure** over **Horizontal End to End release train environments**
+- **Infrastructure as Code** over **environment documentation**
+- **Pipeline configuration** over **deployment procedures**
+- **Automated compliance checks** over **manual reviews**
 
-This ensures consistency and reduces manual error.
+This ensures consistency, control of variability and reduces manual errors.
 
 ### Continuous Integration
 
@@ -278,8 +295,8 @@ See [Implementation Patterns](implementation-patterns.md) for detailed guidance 
 **If you're new to the CD Model:**
 
 1. Read this overview to understand the concept
-2. Review [Stages 1-6](cd-model-stages-1-6.md) to understand the development flow
-3. Review [Stages 7-12](cd-model-stages-7-12.md) to understand the release flow
+2. Review [Stages 1-7](cd-model-stages-1-7.md) to understand the development flow
+3. Review [Stages 8-12](cd-model-stages-8-12.md) to understand the release flow
 4. Explore [Implementation Patterns](implementation-patterns.md) to choose an approach
 
 **If you're implementing the CD Model:**
@@ -302,8 +319,8 @@ See [Implementation Patterns](implementation-patterns.md) for detailed guidance 
 
 **Related Documentation:**
 
-- [Stages 1-6: Development to Testing](cd-model-stages-1-6.md)
-- [Stages 7-12: Release to Production](cd-model-stages-7-12.md)
+- [Stages 1-7: Development to Testing](cd-model-stages-1-7.md)
+- [Stages 8-12: Release to Production](cd-model-stages-8-12.md)
 - [Implementation Patterns](implementation-patterns.md)
 - [Environments Architecture](../architecture/environments.md)
 - [Testing Strategy Overview](../testing/testing-strategy-overview.md)

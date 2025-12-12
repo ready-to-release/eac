@@ -7,7 +7,7 @@
 # CI Verification: Requires a successful ci-r2r-cli.yaml run on the EXACT commit
 # being released (strict mode). This ensures the specific code was tested.
 
-name: "release-r2r-cli (stage 7+)"
+name: "release-r2r-cli (stage 8+)"
 
 on:
   push:

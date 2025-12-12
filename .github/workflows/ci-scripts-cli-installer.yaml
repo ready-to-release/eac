@@ -1,4 +1,4 @@
-name: "ci-scripts-cli-installer (stage 1-6)"
+name: "ci-scripts-cli-installer (stage 1-7)"
 
 on:
   workflow_call:

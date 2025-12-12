@@ -486,7 +486,7 @@ time make precommit
 ## Next Steps
 
 - [Merge Request Quality Gates](./merge-request-gates.md) - Stage 3 validation
-- [CD Model Stages 1-6](../cd-model/cd-model-stages-1-6.md) - See Stage 2 in full context
+- [CD Model Stages 1-7](../cd-model/cd-model-stages-1-7.md) - See Stage 2 in full context
 - [Testing Strategy](../testing/testing-strategy-overview.md) - How unit tests fit in overall strategy
 
 {{ diataxis_footer() }}

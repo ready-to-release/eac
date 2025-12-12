@@ -43,10 +43,10 @@ Run acceptance and extended tests:
 
 ```bash
 # Acceptance tests (IV, OV, PV)
-eac test acceptance
+r2r eac test acceptance
 
 # Extended tests (performance, security)
-eac test extended
+r2r eac test extended
 ```
 
 ### Step 5: Destroy

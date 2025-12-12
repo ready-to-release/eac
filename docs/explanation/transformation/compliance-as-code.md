@@ -58,7 +58,7 @@ Compliance checked on every commit, not periodically. Compliance tests run in CI
 
 **Why It Matters**: Continuous validation provides immediate feedback when violations occur, prevents compliance drift, scales without manual review overhead, and provides continuous audit readiness.
 
-**See**: [CD Model Stages 1-6](../continuous-delivery/cd-model/cd-model-stages-1-6.md) for how continuous validation integrates into development stages.
+**See**: [CD Model Stages 1-7](../continuous-delivery/cd-model/cd-model-stages-1-7.md) for how continuous validation integrates into development stages.
 
 ---
 

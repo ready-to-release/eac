@@ -297,7 +297,7 @@ Later stages assume earlier stages passed - don't repeat validations unnecessari
 ## Next Steps
 
 - [Pre-commit Quality Gates](./precommit-gates.md) - Fast local validation
-- [CD Model Stages 1-6](../cd-model/cd-model-stages-1-6.md) - See gates in development context
+- [CD Model Stages 1-7](../cd-model/cd-model-stages-1-7.md) - See gates in development context
 - [Implementation Patterns](../cd-model/implementation-patterns.md) - RA vs CDe gate differences
 - [Testing Strategy](../testing/testing-strategy-overview.md) - How testing integrates with gates
 

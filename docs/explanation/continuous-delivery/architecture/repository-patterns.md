@@ -10,6 +10,10 @@ The way you structure your repositories influences build times, dependency manag
 
 This article explains the two primary repository patterns - monorepo and polyrepo - and provides guidance on choosing the right approach for your organization and system architecture.
 
+It also introduces the concept of `adjacent repositories`, which are repositories used for specialized purposes, beyond being a trunk for one or more modules.
+An example of an `adjacent repository`, is a kubernetes GitOps repository, which is a special form of IaC that constrains the IaC into being declarations only etc.
+A gitops repository cannot easily be integrated into a trunk, nor should it: We want the GitOps repository's history to be the history of the cluster it controls, one to one.
+
 ### Impact on CD Model
 
 Repository structure directly impacts several CD Model stages:
@@ -28,7 +32,13 @@ Choosing the right pattern aligns repository organization with your system archi
 
 ![Monorepo Structure](../../../assets/repository/single.drawio.png){width=600}
 
-**This diagram illustrates the single-repository (mono-repository) pattern:** The diagram shows a single repository containing more than one deployable module. In this pattern, multiple deployable modules share a single version history and repository boundary. Path filters (glob patterns) define the boundaries of each deployable module within the repository, allowing independent versioning and deployment of each unit despite sharing the same repository. This is also called a **single-repository** to distinguish it from large-scale organizational mono-repositories. The pattern enables atomic cross-cutting changes while maintaining independent deployment pipelines per deployable module.
+> **This diagram illustrates the single-repository (mono-repository) pattern:**
+
+The diagram shows a single repository containing more than one deployable module. In this pattern, multiple deployable modules share a single version history and repository boundary. Path filters (glob patterns) define the boundaries of each deployable module within the repository, allowing independent versioning and deployment of each unit despite sharing the same repository.
+
+This is also called a **single-repository** to distinguish it from large-scale organizational mono-repositories.
+
+The pattern enables atomic cross-cutting changes while maintaining independent deployment pipelines per deployable module.
 
 ### Characteristics
 
@@ -41,24 +51,27 @@ Choosing the right pattern aligns repository organization with your system archi
 
 **Code Organization:**
 
-- Organized by module or service directories
-- Shared libraries and utilities
+- Always organized by technology first, then modules directories
+  (Many stacks dont blend in shared folders, so we just keep them apart as a design decision)
+- Shared tooling and configuration
 - Common configuration files
-- Unified dependency management
+- Unified dependency management, controlling pinning and implicit bindings
 
 **Example Structure:**
 
-```
+Single stack mono:
+
+```text
 monorepo/
-├── services/
-│   ├── api/
-│   ├── web/
-│   └── worker/
-├── shared/
-│   ├── models/
-│   └── utils/
-├── infrastructure/
-└── docs/
+├── services/       # module group, one technology stack folder, ex. dotnet
+│   ├── api/        # deployable module
+│   ├── web/        # deployable module
+│   └── worker/     # deployable module
+├── shared/         # module group, one technology stack folder, ex. dotnet
+│   ├── models/     # module, implicit consume
+│   └── utils/      # module, implicit consume
+├── infrastructure/ # one technology stack folder, ex. azure Bicep
+└── docs/           # one technology stack folder, ex. markdown via mkdocs
 ```
 
 ### Benefits
@@ -133,7 +146,7 @@ monorepo/
 
 - **Team coupled services**: Services that a team maintains together
 - **Shared libraries**: Heavy code reuse across projects
-- **Small to medium teams**: < 50-100 developers working in same domain, however it can scale to google sized orgs.
+- **1 to many teams**: < 50-100 developers working in same domain, however it can scale to google sized orgs.
 - **Rapid iteration**: Fast-moving products requiring frequent cross-cutting changes
 - **Unified ownership**: Single team or organization owns all code
 
@@ -175,7 +188,12 @@ monorepo/
 
 ![Polyrepo Structure](../../../assets/repository/poly.drawio.png){width=300}
 
-**This diagram illustrates the poly-repository pattern:** The diagram shows the pattern where a repository boundary perfectly aligns with a single deployable module boundary. In this pattern, one repository contains exactly one deployable module - whether that's a versioned component (library, container, package) or a runtime system (service, application). The version of any commit is directly equal to the version of the deployable module, making versioning simple and straightforward. This pattern is commonly used in GitHub open-source projects and enforces decoupling through versioned modules, where dependencies between units are managed through published versioned artifacts consumed via package managers rather than direct code references.
+**This diagram illustrates the poly-repository pattern:**
+The diagram shows the pattern where a repository boundary perfectly aligns with a single deployable module boundary.
+
+In this pattern, one repository contains exactly one deployable module - whether that's a versioned component (library, container, package) or a runtime system (service, application). The version of any commit is directly equal to the version of the deployable module, making versioning simple and straightforward.
+
+This pattern is commonly used in GitHub open-source projects and enforces decoupling through versioned modules, where dependencies between units are managed through published versioned artifacts consumed via package managers rather (pinning and stitching) than direct code references (implicit).
 
 ### Characteristics
 
@@ -196,13 +214,54 @@ monorepo/
 **Example Structure:**
 
 ```text
-organization/
-├── api-service/
-├── web-service/
+repo-1/
+├── .github/          # deployable module, pipeline
+├── api-service/      # deployable module, software
+├── docs/             # deployable module, docs
+├── infrastructure/   # deployable module, infrastructure
+└── specs/            # deployable module, specs
+```
+
+```text
+repo-2/
+├── .github/          # deployable module, pipeline
+├── web-service/      # deployable module, software
+├── docs/             # deployable module, docs
+├── infrastructure/   # deployable module, infrastructure
+└── specs/            # deployable module, specs
+```
+
+```text
+repo-3/
+├── .github/          # deployable module, pipeline
 ├── worker-service/
-├── shared-models/
-├── shared-utils/
-└── infrastructure/
+├── docs/             # deployable module, docs
+├── infrastructure/   # deployable module, infrastructure
+└── specs/            # deployable module, specs
+```
+
+```text
+repo-4/
+├── .github/          # deployable module, pipeline
+├── docs/             # deployable module, docs
+├── shared-models/    # deployable module, software, explicit consume
+└── specs/            # deployable module, specs
+```
+
+```text
+shared-utils-repo/
+├── .github/          # deployable module, pipeline
+├── docs/             # deployable module, docs
+└── shared-utils/     # deployable module, software, explicit consume
+└── specs/            # deployable module, specs
+```
+
+```text
+shared-infrastructure-repo/
+├── .github/          # deployable module, pipeline
+├── docs/             # deployable module, docs
+├── infrastructure/   # deployable module, infrastructure
+└── specs/            # deployable module, specs
 ```
 
 ### Benefits
@@ -302,9 +361,9 @@ organization/
 
 **Stage 5 (Acceptance Testing):**
 
-- PLTE must coordinate multiple repositories
-- Version pinning for service dependencies
-- Contract testing between services
+- PLTE isolated pr. repository, any HE2E coordinates across multiple repositories
+- Version pinning for module dependencies
+- Contract testing required between deployable modules to avoid HE2E (especially service calls, configurations)
 - More complex environment setup
 
 **Stage 8 (Start Release):**
@@ -326,7 +385,10 @@ organization/
 
 ![Repository Types](../../../assets/repository/types.drawio.png){width=500}
 
-**This diagram shows the repository type taxonomy:** The diagram categorizes repositories by the number of deployable modules they contain. **Poly-repository** (left) contains exactly one deployable module - the repository boundary perfectly aligns with the deployable module boundary, making versioning simple (any commit = new version of the unit). **Mono-repository** (right) contains more than one deployable module, with three subtypes: **Team mono-repository** (single-repository) where one team owns multiple deployable modules, **Product mono-repository** (single-repository) where multiple teams collaborate on one product's deployable modules, and **Organizational mono-repository** used by large organizations like Google/Facebook (not recommended for most teams). The diagram establishes the fundamental distinction: poly = one deployable module, mono = multiple deployable modules.
+**This diagram shows the repository type taxonomy:** The diagram categorizes repositories by the number of deployable modules they contain.
+**Poly-repository** (left) contains exactly one deployable module - the repository boundary perfectly aligns with the deployable module boundary, making versioning simple (any commit = new version of the unit).
+**Mono-repository** (right) contains more than one deployable module, with three subtypes: **Team mono-repository** (single-repository) where one team owns multiple deployable modules, **Product mono-repository** (single-repository) where multiple teams collaborate on one product's deployable modules, and **Organizational mono-repository** used by large organizations like Google/Facebook (not recommended for most teams).
+The diagram establishes the fundamental distinction: poly = one deployable module, mono = multiple deployable modules.
 
 ### Side-by-Side Analysis
 
@@ -352,17 +414,18 @@ flowchart LR
 
 ```
 
-| Factor                     | Monorepo                      | Polyrepo                    |
-| -------------------------- | ----------------------------- | --------------------------- |
-| **Atomic Changes**         | ✅ Excellent - single commit  | ❌ Difficult - multiple PRs |
-| **Team Autonomy**          | ⚠️ Limited - shared decisions | ✅ Excellent - independent  |
-| **Build Times**            | ⚠️ Potentially long           | ✅ Fast per repository      |
-| **Dependency Management**  | ✅ Simple - unified           | ⚠️ Complex - versioned      |
-| **Code Reuse**             | ✅ Easy - shared directly     | ⚠️ Requires versioning      |
-| **Access Control**         | ⚠️ Coarse-grained             | ✅ Fine-grained             |
-| **Discoverability**        | ✅ All code in one place      | ⚠️ Spread across repos      |
-| **Independent Deployment** | ⚠️ Coordinated releases       | ✅ Independent cycles       |
-| **Tooling**                | ✅ Unified                    | ⚠️ Duplicated               |
+| Factor                           | Monorepo                                  | Polyrepo                                                                   |
+| -------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------- |
+| **Atomic Cross-Cutting Changes** | ✅ Excellent - single commit              | ❌ Difficult - multiple PRs                                                |
+| **Traceability**                 | ✅ Excellent - single timeline            | ❌ Difficult - multiple timelines, potentially different branch topologies |
+| **Team Autonomy**                | ⚠️ Limited - shared delivery architecture | ⚠️ Depends on tooling. Max freedom = No supporting platform                |
+| **Pipeline Complexity**          | ⚠️ Requires specialized tooling           | ✅ Simple tooling                                                          |
+| **Independent Deployment**       | ✅ Coordinated releases simple            | ⚠️ Coordinated releases hard                                               |
+| **Dependency Management**        | ✅ Complicated - implict+explicit         | ⚠️ Complex - explicit                                                      |
+| **Code Reuse**                   | ✅ Easy - shared directly                 | ⚠️ Requires versioning, access control mgmt. etc.                          |
+| **Access Control**               | ⚠️ Coarse-grained                         | ✅ Fine-grained                                                            |
+| **Discoverability**              | ✅ All code in one place                  | ⚠️ Spread across repos                                                     |
+| **Tooling**                      | ⚠️ Requires specialized tooling           | ⚠️ Duplicated, scattered, hard-coded                                       |
 
 ### Decision Factors
 
@@ -396,13 +459,14 @@ flowchart LR
 
 - Organize repositories around deployable module boundaries, not technical boundaries
 - Use poly-repository pattern (one deployable module per repository) OR single-repository pattern (multiple deployable modules per repository owned by same team)
-- Keep all code for a deployable module together (frontend, backend, scripts, docs, infrastructure) in the same repository
+- Keep all code for a deployable module together (frontend, backend, scripts, specs, docs, infrastructure) in the same repository
 - Version Everything-as-Code (EaC) artifacts together, grouped by deployable module boundaries
 
 **❌ DO NOT**:
 
-- Create separate repositories for frontend, backend, scripts, documentation, or infrastructure unless each is a distinct deployable module
+- Create separate repositories for frontend, backend, scripts, documentation, or infrastructure unless each is a distinct deployable module with proper contracts.
 - Create loose gatherings of repositories with cross-repository dependencies
+- Have ANY head-to-head dependencies between repos (dependencies MUST be managed through proper pinning and stitching cross-reposotory)
 - Split a single deployable module across multiple repositories
 
 ---
@@ -413,18 +477,23 @@ flowchart LR
 
 **Versioning**:
 
-- Monorepo: Unified or independent module versioning
-- Polyrepo: Semantic versioning per repository, dependency manifests specify compatible versions
+- Monorepo: Independent SemVer/CalVer module versioning
+- Polyrepo: SemVer/CalVer versioning per repository (one module), dependency manifests specify compatible versions
 
 **Dependency Management**:
 
-- Monorepo: Root-level with lock file for consistency
-- Polyrepo: Per repository with published versioned libraries and contract testing
+Poly and Mono both:
+
+- Root-level with lock file pr. stack (go.sum, packages.json etc.) for consistency
+- Dependency manager must support in-repository implicit bindings
+- External-to-the-repo-bindings are all pinned in source and stitched in build.
 
 **Automation Tools**:
 
-- Monorepo: Change detection, selective builds, distributed caching (Nx, Bazel, Turborepo)
-- Polyrepo: Repository templates, shared pipeline definitions, automated updates (Dependabot)
+- Monorepo: Change detection, selective builds, distributed caching (Eac, Nx, Bazel, Turborepo)
+- Mono+Poly: Repository templates, shared pipeline definitions, automated updates (Dependabot)
+
+> `+` many many more.
 
 ---
 
@@ -445,7 +514,7 @@ flowchart LR
 ## Next Steps
 
 - [CD Model Overview](../cd-model/cd-model-overview.md) - Understand how repos integrate with stages
-- [Stages 1-6](../cd-model/cd-model-stages-1-6.md) - See repository impact on development
+- [Stages 1-7](../cd-model/cd-model-stages-1-7.md) - See repository impact on development
 - [Environments](environments.md) - Understand PLTE provisioning strategies
 - [Implementation Patterns](../cd-model/implementation-patterns.md) - Choose RA or CDe pattern
 - [Testing Strategy Integration](../testing/testing-strategy-integration.md) - Test coordination approaches
