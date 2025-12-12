@@ -131,7 +131,7 @@ See [CD Model Overview](../cd-model/cd-model-overview.md) for the complete 12-st
    Changes on topic branches are squash-merged back, resulting in one topic branch creating exactly one commit on the destination branch.
    **Topic branches** also comes in a variant where they branch off of a release branch, in which case we call them **Release Topic branches**.
    Topic branches can also become spikes (experimental work) that never progress past the Merge Request stage.
-1. **Release branches** (above trunk in illustration) branch from trunk at [Stage 8 for the Release Approval pattern](../cd-model/cd-model-stages-7-12.md#stage-8-start-release).
+1. **Release branches** (above trunk in illustration) branch from trunk at [Stage 8 for the Release Approval pattern](../cd-model/cd-model-stages-8-12.md#stage-8-start-release).
    All paths to trunk and release branches go through merge requests, never direct commits.
 
 ### Trunk Branch (Main)
@@ -400,7 +400,7 @@ if featureFlags.IsEnabled("new-checkout-flow", user) {
 
 **This is Stage 12 (Release Toggling) of the CD Model.**
 
-See [Stages 7-12](../cd-model/cd-model-stages-7-12.md#stage-12-release-toggling) for feature flag implementation patterns.
+See [Stages 7-12](../cd-model/cd-model-stages-8-12.md#stage-12-release-toggling) for feature flag implementation patterns.
 
 ### When to Use Each Strategy
 
@@ -553,7 +553,7 @@ When conflicts occur: pull latest, resolve locally. Remember to rebase main on t
 - [Unit of Flow](../core-concepts/unit-of-flow.md) - See how trunk fits into the bigger picture
 - [Deployable Modules](../core-concepts/deployable-modules.md) - What gets built from trunk
 - [Implementation Patterns](../cd-model/implementation-patterns.md) - RA vs CDe decision guidance
-- [Stages 7-12](../cd-model/cd-model-stages-7-12.md) - Release stages including feature flags
+- [Stages 7-12](../cd-model/cd-model-stages-8-12.md) - Release stages including feature flags
 
 ## References
 

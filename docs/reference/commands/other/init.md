@@ -200,7 +200,7 @@ echo $GOOGLE_API_KEY
 - name: Initialize AI provider
   env:
     ANTHROPIC_API_KEY: ⟪ secrets.ANTHROPIC_API_KEY ⟫
-  run: eac init --ai claude-api
+  run: r2r eac init --ai claude-api
 ```
 
 ## Configuration File Location
@@ -240,7 +240,7 @@ echo $ANTHROPIC_API_KEY
 export ANTHROPIC_API_KEY="sk-ant-api03-..."
 
 # Try again
-eac init --ai claude-api
+r2r eac init --ai claude-api
 ```
 
 ### Problem: Invalid API Key
@@ -272,11 +272,11 @@ Warning: Configuration file already exists at .r2r/eac/ai-provider.yml
 # The command will overwrite the existing file
 # Your choice:
 # 1. Proceed (overwrites old config)
-eac init --ai claude-api
+r2r eac init --ai claude-api
 
 # 2. Back up old config first
 cp .r2r/eac/ai-provider.yml .r2r/eac/ai-provider.yml.backup
-eac init --ai claude-api
+r2r eac init --ai claude-api
 ```
 
 ### Problem: Permission Denied
@@ -298,25 +298,7 @@ chmod 755 .r2r/eac
 chmod 644 .r2r/eac/ai-provider.yml
 
 # Try again
-eac init --ai claude-api
-```
-
-### Problem: Directory Not Found
-
-**Error:**
-
-```text
-Error: Directory not found: .r2r/eac/
-```
-
-**Solution:**
-
-```bash
-# Create directory
-mkdir -p .r2r/eac
-
-# Try again
-eac init --ai claude-api
+r2r eac init --ai claude-api
 ```
 
 ### Problem: Provider Not Recognized
@@ -332,16 +314,16 @@ Error: Unknown provider: claude
 ```bash
 # Use exact provider name
 # Valid options: claude-api, claude-cli, openai, gemini
-eac init --ai claude-api  # ✓ Correct
-eac init --ai claude      # ✗ Invalid
+r2r eac init --ai claude-api  # ✓ Correct
+r2r eac init --ai claude      # ✗ Invalid
 ```
 
 ### Problem: AI Features Not Working After Init
 
 **Symptoms:**
 
-- `eac work commit` doesn't generate messages
-- `eac create spec` fails
+- `r2r eac work commit` doesn't generate messages
+- `r2r eac create spec` fails
 - No AI responses
 
 **Solution:**
@@ -354,10 +336,10 @@ cat .r2r/eac/ai-provider.yml
 echo $ANTHROPIC_API_KEY  # or appropriate variable
 
 # 3. Test with debug mode
-eac work commit --all --debug
+r2r eac work commit --all --debug
 
 # 4. Re-initialize if needed
-eac init --ai claude-api --debug
+r2r eac init --ai claude-api --debug
 ```
 
 ## Technical Notes

@@ -17,7 +17,7 @@ All module CI workflows follow a consistent structure:
 ### Standard Structure
 
 ```yaml
-name: "ci-{moniker} (stage 1-6)"
+name: "ci-{moniker} (stage 1-7)"
 
 on:
   workflow_call:
@@ -83,8 +83,8 @@ jobs:
 
 Workflows are named with stage numbers indicating their position in the overall pipeline:
 
-- `(stage 1-6)` - Standard module CI workflow (build and test)
-- `(stage 7+)` - Release workflows (post-CI)
+- `(stage 1-7)` - Standard module CI workflow (build and test)
+- `(stage 8+)` - Release workflows (post-CI)
 
 ### Common Inputs
 

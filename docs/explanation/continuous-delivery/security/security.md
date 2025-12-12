@@ -748,8 +748,8 @@ By integrating these free, open-source tools throughout the CD Model, teams achi
 ## Next Steps
 
 - [CD Model Overview](../cd-model/cd-model-overview.md) - See security in context
-- [Stages 1-6](../cd-model/cd-model-stages-1-6.md) - Security in development
-- [Stages 7-12](../cd-model/cd-model-stages-7-12.md) - Security in release
+- [Stages 1-7](../cd-model/cd-model-stages-1-7.md) - Security in development
+- [Stages 8-12](../cd-model/cd-model-stages-8-12.md) - Security in release
 - [Testing Strategy Integration](../testing/testing-strategy-integration.md) - Integrate security testing
 
 ## References

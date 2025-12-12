@@ -731,14 +731,14 @@ See **[Testing Taxonomy](../../specifications/taxonomy/)** for complete document
 ## Next Steps
 
 - [Testing Strategy Integration](testing-strategy-integration.md) - Map test levels to CD Model stages
-- [Stages 1-6](../cd-model/cd-model-stages-1-6.md) - See testing in development stages
-- [Stages 7-12](../cd-model/cd-model-stages-7-12.md) - See testing in release stages
+- [Stages 1-7](../cd-model/cd-model-stages-1-7.md) - See testing in development stages
+- [Stages 8-12](../cd-model/cd-model-stages-8-12.md) - See testing in release stages
 - [Environments](../architecture/environments.md) - Understand PLTE for L3 tests
 
 ## References
 
 - [CD Model Overview](../cd-model/cd-model-overview.md)
-- [Stages 1-6](../cd-model/cd-model-stages-1-6.md)
+- [Stages 1-7](../cd-model/cd-model-stages-1-7.md)
 - [Three-Layer Testing](../../specifications/concepts/three-layer-approach.md)
 
 {{ diataxis_footer() }}

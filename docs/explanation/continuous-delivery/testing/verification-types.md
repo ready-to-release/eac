@@ -655,8 +655,8 @@ Validation ensures:
 ## Next Steps
 
 - [Testing Strategy Overview](./testing-strategy-overview.md) - How verification types fit in overall strategy
-- [CD Model Stages 1-6](../cd-model/cd-model-stages-1-6.md#stage-5-acceptance-testing) - Stage 5 in detail
-- [Acceptance Testing](../cd-model/cd-model-stages-1-6.md#stage-5-acceptance-testing) - Full acceptance testing explanation
+- [CD Model Stages 1-7](../cd-model/cd-model-stages-1-7.md#stage-5-acceptance-testing) - Stage 5 in detail
+- [Acceptance Testing](../cd-model/cd-model-stages-1-7.md#stage-5-acceptance-testing) - Full acceptance testing explanation
 - [Environments](../architecture/environments.md#production-like-test-environments-plte) - PLTE environment details
 
 ## Quick Reference

@@ -1,4 +1,4 @@
-name: "ci-eac-commands (stage 1-6)"
+name: "ci-eac-commands (stage 1-7)"
 
 on:
   workflow_call:

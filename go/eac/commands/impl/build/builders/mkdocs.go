@@ -418,7 +418,17 @@ func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book
 		for _, book := range moduleBooks {
 			Logln(logWriter, "   - %s (%s)", book.Name, book.GetOutput())
 		}
-		Logln(logWriter, "\n🚀 Building %d books in PARALLEL...", len(moduleBooks))
+		Logln(logWriter, "\n🚀 Building %d books in parallel...", len(moduleBooks))
+	}
+
+	// Pre-build: ensure drawio cache is up to date
+	// This is fast if already cached (just hash comparison)
+	optimized, err := books.UpdateDrawioCache(workspaceRoot, logWriter)
+	if err != nil {
+		Logln(logWriter, "⚠️  Warning: drawio cache update failed: %v", err)
+		// Non-fatal - continue with build
+	} else if optimized > 0 {
+		Logln(logWriter, "📊 Updated drawio cache: %d image(s) optimized", optimized)
 	}
 
 	// Build books (parallel if multiple, sequential if single)
@@ -860,9 +870,9 @@ func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName str
 		"run", "--rm",
 		"-v", dockerVolume + ":/docs",
 		"-w", "/docs",
-		"--cpus", cpuLimit,         // Allocate available CPU cores for faster rendering
-		"--memory", "8g",           // 8GB RAM for Chromium and mkdocs
-		"--shm-size", "2gb",        // Shared memory for Chromium (prevents crashes)
+		"--cpus", cpuLimit, // Allocate available CPU cores for faster rendering
+		"--memory", "8g", // 8GB RAM for Chromium and mkdocs
+		"--shm-size", "2gb", // Shared memory for Chromium (prevents crashes)
 		"-e", "ENABLE_PDF_EXPORT=true",
 	}
 
@@ -879,6 +889,7 @@ func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName str
 	buildArgs = append(buildArgs,
 		imageName,
 		"mkdocs", "build",
+		"--verbose", // Show detailed output for debugging PDF rendering errors
 		"-f", dockerConfigPath,
 		"--site-dir", dockerSiteDir,
 	)

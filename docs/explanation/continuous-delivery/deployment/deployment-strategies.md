@@ -852,7 +852,7 @@ All strategies require:
 ## Next Steps
 
 - [Deployment Rings](./deployment-rings.md) - Progressive user group rollout pattern
-- [CD Model Stages 7-12](../cd-model/cd-model-stages-7-12.md) - See deployment in CD Model context
+- [CD Model Stages 7-12](../cd-model/cd-model-stages-8-12.md) - See deployment in CD Model context
 - [Implementation Patterns](../cd-model/implementation-patterns.md) - RA vs CDe pattern selection
 - [Environments Architecture](../architecture/environments.md) - Deploy Agents and production environments
 
