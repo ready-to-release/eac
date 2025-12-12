@@ -37,7 +37,7 @@ import (
 
 const (
 	defaultDocsRepoURL    = "https://github.com/ready-to-release/eac"
-	defaultDocsSourcePath = "templates/docs"
+	defaultDocsSourcePath = "templates/docs/reference"
 	defaultDocsDest       = ".docs/reference"
 )
 

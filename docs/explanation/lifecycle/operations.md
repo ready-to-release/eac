@@ -14,13 +14,13 @@ Defines how systems are operated, maintained, and kept compliant and secure thro
 
 **Regulatory note:** Some regulated processes require digital signature.
 
-Templates: [Operation & Maintenance Plan](https://github.com/ready-to-release/eac/blob/main/templates/docs/operations/operation-maintenance.md)
+Templates: [Operation & Maintenance Plan](https://github.com/ready-to-release/eac/blob/main/templates/docs/reference/operations/operation-maintenance.md)
 
 ### Problem Management
 
 Use blameless post-mortems for all significant incidents. Document findings for future learning and prevention.
 
-Templates: [Blameless Post Mortem](https://github.com/ready-to-release/eac/blob/main/templates/docs/operations/blameless-post-mortem.md)
+Templates: [Blameless Post Mortem](https://github.com/ready-to-release/eac/blob/main/templates/docs/reference/operations/blameless-post-mortem.md)
 
 ---
 
@@ -72,7 +72,7 @@ Document all defects detected after [Production Deployment](../continuous-delive
 - Document root cause analysis for critical defects
 - Track defect trends for quality improvements
 
-Templates: [Defect](https://github.com/ready-to-release/eac/blob/main/templates/docs/operations/defect.md)
+Templates: [Defect](https://github.com/ready-to-release/eac/blob/main/templates/docs/reference/operations/defect.md)
 
 ---
 
@@ -84,8 +84,8 @@ Record all production incidents in the IT service management system. Complete th
 
 - Create incident reports using template
 - Link incident resolution to code changes
-- Conduct [Blameless Post Mortem](https://github.com/ready-to-release/eac/blob/main/templates/docs/operations/blameless-post-mortem.md) for significant incidents
+- Conduct [Blameless Post Mortem](https://github.com/ready-to-release/eac/blob/main/templates/docs/reference/operations/blameless-post-mortem.md) for significant incidents
 
-Templates: [Incident](https://github.com/ready-to-release/eac/blob/main/templates/docs/operations/incident.md)
+Templates: [Incident](https://github.com/ready-to-release/eac/blob/main/templates/docs/reference/operations/incident.md)
 
 {{ diataxis_footer() }}
