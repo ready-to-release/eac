@@ -163,7 +163,7 @@ func (c *RepositoryConfig) BuildOutputPathAbs(workspaceRoot, moniker string) str
 }
 
 // TemplatePath returns the relative path to a template file within the templates directory.
-// Example: TemplatePath("reports", "release-notes-template.md") returns "templates/reports/release-notes-template.md"
+// Example: TemplatePath("reports", "release", "release-notes-template.md") returns "templates/reports/release/release-notes-template.md"
 func (c *RepositoryConfig) TemplatePath(pathComponents ...string) string {
 	parts := append([]string{c.Paths.Templates}, pathComponents...)
 	return filepath.Join(parts...)

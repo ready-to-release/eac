@@ -979,7 +979,7 @@ func TestSuite() int {
 	)
 
 	// Get repository root to find template
-	templatePath := filepath.Join(workspaceRootNative, repoCfg.Paths.Templates, "reports", "suite-summary.md")
+	templatePath := filepath.Join(workspaceRootNative, repoCfg.Paths.Templates, "reports", "testsuite-summary.md")
 	mdPath := filepath.Join(testRunDir, "test-suite-summary.md")
 
 	renderer := reporter.NewRenderer(templatePath, mdPath, reportData)

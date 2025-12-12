@@ -173,7 +173,7 @@ func GenerateTemplate(workspaceRoot string, cfg *config.RepositoryConfig, path, 
 	}
 
 	// Get template path from config
-	templatePath := cfg.TemplatePathAbs(workspaceRoot, "reports", "release-notes-template.md")
+	templatePath := cfg.TemplatePathAbs(workspaceRoot, "reports", "release", "release-notes-template.md")
 	templateContent, err := os.ReadFile(templatePath)
 	if err != nil {
 		return fmt.Errorf("failed to read template file %s: %w", templatePath, err)
