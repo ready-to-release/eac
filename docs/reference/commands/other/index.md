@@ -6,11 +6,11 @@ Utility commands that don't fit into verb-based categories.
 
 ## Commands in this Category
 
-| Command | Purpose |
-|---------|---------|
-| [build](./build.md) | Build one or more modules |
-| [help](./help.md) | Display help information |
-| [init](./init.md) | Initialize AI provider configuration |
+| Command                               | Purpose                               |
+| ------------------------------------- | ------------------------------------- |
+| [build](./build.md)                   | Build one or more modules             |
+| [help](./help.md)                     | Display help information              |
+| [init](./init.md)                     | Initialize AI provider configuration  |
 | [extension-meta](./extension-meta.md) | Output extension metadata for r2r CLI |
 
 ## Quick Examples

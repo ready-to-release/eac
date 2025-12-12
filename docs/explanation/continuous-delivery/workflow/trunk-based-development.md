@@ -400,7 +400,7 @@ if featureFlags.IsEnabled("new-checkout-flow", user) {
 
 **This is Stage 12 (Release Toggling) of the CD Model.**
 
-See [Stages 7-12](../cd-model/cd-model-stages-8-12.md#stage-12-release-toggling) for feature flag implementation patterns.
+See [Stages 8-12](../cd-model/cd-model-stages-8-12.md#stage-12-release-toggling) for feature flag implementation patterns.
 
 ### When to Use Each Strategy
 
@@ -553,7 +553,7 @@ When conflicts occur: pull latest, resolve locally. Remember to rebase main on t
 - [Unit of Flow](../core-concepts/unit-of-flow.md) - See how trunk fits into the bigger picture
 - [Deployable Modules](../core-concepts/deployable-modules.md) - What gets built from trunk
 - [Implementation Patterns](../cd-model/implementation-patterns.md) - RA vs CDe decision guidance
-- [Stages 7-12](../cd-model/cd-model-stages-8-12.md) - Release stages including feature flags
+- [Stages 8-12](../cd-model/cd-model-stages-8-12.md) - Release stages including feature flags
 
 ## References
 

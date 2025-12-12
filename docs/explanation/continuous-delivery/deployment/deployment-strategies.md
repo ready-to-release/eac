@@ -211,12 +211,20 @@ echo "Rolling deployment complete"
 
 ### What It Is
 
-Blue-green deployment maintains two identical production environments. One serves traffic (Blue), while the other is idle (Green). Deploy to Green, test, then switch traffic from Blue to Green instantly.
+Blue-green deployment maintains two identical production environments.
+
+It is the preferred way to stage any deployment, even when we are doing rolling, we will blue/green individual rings.
+
+One color serves traffic (active), while the other is idle (inactive).
+
+Deploy to inactive color, test, then switch traffic to new active.
 
 **Environments**:
 
-- **Blue**: Current production version, serving live traffic
-- **Green**: New version deployed, idle (or receiving test traffic)
+**Blue** and **Green**, or **001**, **002**, **003** etc.
+
+- **active**: Current production version, serving live traffic
+- **inactive**: New version deployed, idle (or receiving test traffic)
 
 **Process**:
 
@@ -231,7 +239,7 @@ Blue-green deployment maintains two identical production environments. One serve
 
 - Zero downtime
 - Instant traffic switch (seconds)
-- Instant rollback (switch back to Blue)
+- Instant rollback (switch back to inactive)
 - High infrastructure cost (2x resources)
 - Requires infrastructure automation
 
@@ -247,9 +255,9 @@ Blue-green deployment maintains two identical production environments. One serve
 
 **Not suitable for**:
 
-- Cost-constrained environments (requires 2x infrastructure)
-- Stateful applications without shared state store
-- Very large infrastructure (cost prohibitive)
+- License-constrained environments (requires 2x prod infrastructure).
+- Most cloud supports pay-for-play, so does not increase costs if designed correctly
+- Have to do special steps to support Stateful applications (dbs etc.)
 
 ### Example Implementation
 
@@ -316,10 +324,10 @@ Rollback completes in seconds - just switch traffic back.
 
 **Disadvantages**:
 
-- ❌ High cost (2x infrastructure running during deployment)
-- ❌ Database migrations complex (shared database between Blue/Green)
+- ❌ Higher complixity cost (2x infrastructure running during deployment + load balancing)
+- ❌ Database migrations complex (state transfers between Blue/Green)
 - ❌ Requires infrastructure automation
-- ❌ Idle environment waste (Blue sits idle after switch)
+- ❌ Some licenses make it double cost (hot swappable prod)
 
 ---
 
@@ -494,7 +502,9 @@ def canary_rollout():
 
 ### What It Is
 
-Feature flags decouple **deployment** (code reaches production) from **release** (features enabled for users). Deploy code with features disabled, enable via runtime flags.
+Feature flags decouple **deployment** (code reaches production) from **release** (features enabled for users).
+
+Deploy code with features disabled, enable via runtime flags.
 
 **Process**:
 
@@ -663,13 +673,13 @@ Each step is independent of deployment - just toggle configuration.
 
 ### Strategy Comparison
 
-| Strategy       | Downtime | Rollback Speed | Complexity | Cost    | Use Case                       |
-| -------------- | -------- | -------------- | ---------- | ------- | ------------------------------ |
-| Hot Deploy     | Brief    | Fast (1-2 min) | Low        | Low     | Internal tools, batch jobs     |
-| Rolling        | None     | Medium (5 min) | Medium     | Low     | Standard web services          |
-| Blue-Green     | None     | Instant        | Medium     | High    | High-risk, large deployments   |
-| Canary         | None     | Instant        | High       | Medium  | Production validation needed   |
-| Feature Flags  | None     | Instant        | High       | Medium  | Gradual rollouts, A/B testing  |
+| Strategy      | Downtime | Rollback Speed | Complexity | Cost   | Use Case                      |
+| ------------- | -------- | -------------- | ---------- | ------ | ----------------------------- |
+| Hot Deploy    | Brief    | Fast (1-2 min) | Low        | Low    | Internal tools, batch jobs    |
+| Rolling       | None     | Medium (5 min) | Medium     | Low    | Standard web services         |
+| Blue-Green    | None     | Instant        | Medium     | High   | High-risk, large deployments  |
+| Canary        | None     | Instant        | High       | Medium | Production validation needed  |
+| Feature Flags | None     | Instant        | High       | Medium | Gradual rollouts, A/B testing |
 
 ---
 
@@ -852,7 +862,7 @@ All strategies require:
 ## Next Steps
 
 - [Deployment Rings](./deployment-rings.md) - Progressive user group rollout pattern
-- [CD Model Stages 7-12](../cd-model/cd-model-stages-8-12.md) - See deployment in CD Model context
+- [CD Model Stages 8-12](../cd-model/cd-model-stages-8-12.md) - See deployment in CD Model context
 - [Implementation Patterns](../cd-model/implementation-patterns.md) - RA vs CDe pattern selection
 - [Environments Architecture](../architecture/environments.md) - Deploy Agents and production environments
 

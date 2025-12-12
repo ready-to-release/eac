@@ -256,10 +256,12 @@ gh run view <run-id> --json jobs \
 ### Investigation Steps
 
 1. **Identify failed module(s):**
+
    - Check which module CI workflow failed in the full rebuild
    - Review test failures or build errors
 
 2. **Compare with incremental CI:**
+
    - Check if the same module passed in recent incremental CI
    - Look for differences in test execution or environment
 

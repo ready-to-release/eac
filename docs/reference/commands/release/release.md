@@ -10,17 +10,17 @@
 
 ## Subcommands
 
-| Command | Purpose |
-|---------|---------|
-| [release this](./this.md) | Finalize and release module |
-| [release changelog](./changelog.md) | Generate/update changelog |
-| [release check-ci](./check-ci.md) | Check CI status |
-| [release get-version](./get-version.md) | Extract version |
-| [release pending](./pending.md) | Check pending changes |
-| [release tag-pending](./tag-pending.md) | Check missing tags |
-| [release r2r-cli](./r2r-cli.md) | Release r2r-cli |
-| [validate release](./../validate/release.md) | Validate changelog |
-| [validate release-version](../validate/release-version.md) | Validate version |
+| Command                                                    | Purpose                     |
+| ---------------------------------------------------------- | --------------------------- |
+| [release this](./this.md)                                  | Finalize and release module |
+| [release changelog](./changelog.md)                        | Generate/update changelog   |
+| [release check-ci](./check-ci.md)                          | Check CI status             |
+| [release get-version](./get-version.md)                    | Extract version             |
+| [release pending](./pending.md)                            | Check pending changes       |
+| [release tag-pending](./tag-pending.md)                    | Check missing tags          |
+| [release r2r-cli](./r2r-cli.md)                            | Release r2r-cli             |
+| [validate release](./../validate/release.md)               | Validate changelog          |
+| [validate release-version](../validate/release-version.md) | Validate version            |
 
 ## Examples
 

@@ -22,50 +22,50 @@ Get commands provide structured JSON output designed for automation, CI/CD pipel
 
 ### Module & Repository Information
 
-| Command | Purpose | Output Schema |
-|---------|---------|---------------|
-| [get modules](../get/modules.md) | Module contracts | `{modules: [...]}` |
-| [get dependencies](../get/dependencies.md) | Dependency graph | `{dependencies: {...}}` |
-| [get files](../get/files.md) | File-to-module mappings | `{files: [...], total: N}` |
-| [get config](../get/config.md) | EAC configuration | `{repository: {...}, ai: {...}}` |
-| [get environments](../get/environments.md) | Environment contracts | `{environments: [...]}` |
+| Command                                    | Purpose                 | Output Schema                    |
+| ------------------------------------------ | ----------------------- | -------------------------------- |
+| [get modules](../get/modules.md)           | Module contracts        | `{modules: [...]}`               |
+| [get dependencies](../get/dependencies.md) | Dependency graph        | `{dependencies: {...}}`          |
+| [get files](../get/files.md)               | File-to-module mappings | `{files: [...], total: N}`       |
+| [get config](../get/config.md)             | EAC configuration       | `{repository: {...}, ai: {...}}` |
+| [get environments](../get/environments.md) | Environment contracts   | `{environments: [...]}`          |
 
 ### Build & Test Information
 
-| Command | Purpose | Output Schema |
-|---------|---------|---------------|
-| [get artifacts](../get/artifacts.md) | Resolved artifacts for module | `{artifacts: [...]}` |
-| [get build-deps](../get/build-deps.md) | Build dependencies | `{dependencies: [...]}` |
-| [get build-times](../get/build-times.md) | Build performance data | `{builds: [...]}` |
-| [get execution order](../get/execution-order.md) | Dependency-based build order | `{execution_order: [...]}` |
-| [get suite](../get/suite.md) | Test suite information | `{name: ..., tests: N}` |
-| [get tests](../get/tests.md) | All tests in repository | `{tests: [...], total: N}` |
-| [get test-timings](../get/test-timings.md) | Test performance data | `{tests: [...]}` |
+| Command                                          | Purpose                       | Output Schema              |
+| ------------------------------------------------ | ----------------------------- | -------------------------- |
+| [get artifacts](../get/artifacts.md)             | Resolved artifacts for module | `{artifacts: [...]}`       |
+| [get build-deps](../get/build-deps.md)           | Build dependencies            | `{dependencies: [...]}`    |
+| [get build-times](../get/build-times.md)         | Build performance data        | `{builds: [...]}`          |
+| [get execution order](../get/execution-order.md) | Dependency-based build order  | `{execution_order: [...]}` |
+| [get suite](../get/suite.md)                     | Test suite information        | `{name: ..., tests: N}`    |
+| [get tests](../get/tests.md)                     | All tests in repository       | `{tests: [...], total: N}` |
+| [get test-timings](../get/test-timings.md)       | Test performance data         | `{tests: [...]}`           |
 
 ### Change Detection
 
-| Command | Purpose | Output Schema |
-|---------|---------|---------------|
-| [get changed-modules](../get/changed-modules.md) | Modules affected by local changes | `{changed_modules: [...]}` |
-| [get changed-modules-ci](../get/changed-modules-ci.md) | Modules requiring rebuild | `{changed_modules: [...], base_commit: ...}` |
+| Command                                                | Purpose                           | Output Schema                                |
+| ------------------------------------------------------ | --------------------------------- | -------------------------------------------- |
+| [get changed-modules](../get/changed-modules.md)       | Modules affected by local changes | `{changed_modules: [...]}`                   |
+| [get changed-modules-ci](../get/changed-modules-ci.md) | Modules requiring rebuild         | `{changed_modules: [...], base_commit: ...}` |
 
 ### Command Metadata
 
-| Command | Purpose | Output Schema |
-|---------|---------|---------------|
-| [get commands](../get/commands.md) | Command metadata for shell integration | `{commands: [...], tree: {...}}` |
-| [get valid-commands](../get/valid-commands.md) | All valid commands | `{commands: [...]}` |
+| Command                                        | Purpose                                | Output Schema                    |
+| ---------------------------------------------- | -------------------------------------- | -------------------------------- |
+| [get commands](../get/commands.md)             | Command metadata for shell integration | `{commands: [...], tree: {...}}` |
+| [get valid-commands](../get/valid-commands.md) | All valid commands                     | `{commands: [...]}`              |
 
 ### Specifications
 
-| Command | Purpose | Output Schema |
-|---------|---------|---------------|
+| Command                                                | Purpose                       | Output Schema           |
+| ------------------------------------------------------ | ----------------------------- | ----------------------- |
 | [get specs unused-steps](../get/specs-unused-steps.md) | Unused godog step definitions | `{unused_steps: [...]}` |
 
 ### Base Command
 
-| Command | Purpose | Output Schema |
-|---------|---------|---------------|
+| Command              | Purpose                  | Output Schema        |
+| -------------------- | ------------------------ | -------------------- |
 | [get](../get/get.md) | Retrieve repository data | Varies by subcommand |
 
 ## Common Patterns
@@ -116,19 +116,19 @@ jq '.files[] | select(.module == "src-auth")' files.json
 
 Most get commands have corresponding `show` commands that provide the same information in human-readable format:
 
-| get command | show command | Output Format |
-|-------------|--------------|---------------|
-| `get modules` | `show modules` | JSON / Table |
-| `get dependencies` | `show dependencies` | JSON / Table |
-| `get files` | `show files` | JSON / Table |
-| `get config` | `show config` | JSON / Formatted |
-| `get tests` | `show tests` | JSON / Table |
-| `get environments` | `show environments` | JSON / Table |
-| `get build-times` | `show build-times` | JSON / Table |
-| `get test-timings` | `show test-timings` | JSON / Table |
-| `get suite <name>` | `show suite <name>` | JSON / Formatted |
-| `get artifacts <m>` | `show artifacts <m>` | JSON / Table |
-| `get valid-commands` | `show valid-commands` | JSON / Table |
+| get command          | show command          | Output Format    |
+| -------------------- | --------------------- | ---------------- |
+| `get modules`        | `show modules`        | JSON / Table     |
+| `get dependencies`   | `show dependencies`   | JSON / Table     |
+| `get files`          | `show files`          | JSON / Table     |
+| `get config`         | `show config`         | JSON / Formatted |
+| `get tests`          | `show tests`          | JSON / Table     |
+| `get environments`   | `show environments`   | JSON / Table     |
+| `get build-times`    | `show build-times`    | JSON / Table     |
+| `get test-timings`   | `show test-timings`   | JSON / Table     |
+| `get suite <name>`   | `show suite <name>`   | JSON / Formatted |
+| `get artifacts <m>`  | `show artifacts <m>`  | JSON / Table     |
+| `get valid-commands` | `show valid-commands` | JSON / Table     |
 
 **Rule**: Use `get` for automation and scripts, `show` for interactive terminal use.
 

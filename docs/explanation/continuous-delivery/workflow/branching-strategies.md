@@ -829,7 +829,7 @@ Choose the pattern that matches your regulatory requirements, risk profile, and 
 
 - [Implementation Patterns](../cd-model/implementation-patterns.md) - Detailed guidance on choosing between RA and CDe
 - [Trunk-Based Development](trunk-based-development.md) - Daily development practices
-- [Stages 7-12](../cd-model/cd-model-stages-8-12.md) - Understand release stages in detail
+- [Stages 8-12](../cd-model/cd-model-stages-8-12.md) - Understand release stages in detail
 - [Deployable Modules](../core-concepts/deployable-modules.md) - What gets versioned and deployed
 
 ## References

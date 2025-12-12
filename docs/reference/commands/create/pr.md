@@ -16,10 +16,10 @@ r2r eac create pr [--title <title>] [--body <body>]
 
 ## Options
 
-| Flag | Description |
-|------|-------------|
+| Flag      | Description       |
+| --------- | ----------------- |
 | `--title` | Override PR title |
-| `--body` | Override PR body |
+| `--body`  | Override PR body  |
 
 ## Examples
 

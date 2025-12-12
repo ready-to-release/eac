@@ -17,7 +17,7 @@ r2r eac release this [module]
 ## Examples
 
 ```bash
-# Release current module
+# Release all modules
 r2r eac release this
 
 # Release specific module

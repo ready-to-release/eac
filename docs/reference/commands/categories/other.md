@@ -18,13 +18,13 @@ Other commands provide essential functionality that doesn't fit neatly into othe
 
 ## All Other Commands
 
-| Command | Purpose | Use Case |
-|---------|---------|----------|
-| [init](../other/init.md) | Initialize AI provider configuration | Set up API keys and AI provider settings |
-| [build](../other/build.md) | Build modules | Compile and package modules |
-| [help](../other/help.md) | Display help information | Get command documentation |
-| [show help](../show/help.md) | Show help in formatted output | Interactive help browsing |
-| [extension-meta](../other/extension-meta.md) | Output extension metadata | r2r CLI integration |
+| Command                                      | Purpose                              | Use Case                                 |
+| -------------------------------------------- | ------------------------------------ | ---------------------------------------- |
+| [init](../other/init.md)                     | Initialize AI provider configuration | Set up API keys and AI provider settings |
+| [build](../other/build.md)                   | Build modules                        | Compile and package modules              |
+| [help](../other/help.md)                     | Display help information             | Get command documentation                |
+| [show help](../show/help.md)                 | Show help in formatted output        | Interactive help browsing                |
+| [extension-meta](../other/extension-meta.md) | Output extension metadata            | r2r CLI integration                      |
 
 ## Build Commands
 
