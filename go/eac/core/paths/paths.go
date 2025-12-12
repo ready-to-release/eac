@@ -568,3 +568,69 @@ func BuildStatePath(repoRoot, stateFileName string) string {
 func TestStatePath(repoRoot, stateFileName string) string {
 	return filepath.Join(repoRoot, OutDir, TestDir, stateFileName)
 }
+
+// ============================================================================
+// Additional Path Helpers for Common Patterns
+// ============================================================================
+
+// BuildOutputDir returns the root build output directory (out/build)
+func BuildOutputDir(repoRoot string) string {
+	return filepath.Join(repoRoot, OutDir, BuildDir)
+}
+
+// BuildLogPath returns the path to a module's build.log file
+func BuildLogPath(repoRoot, moniker string) string {
+	return filepath.Join(repoRoot, OutDir, BuildDir, moniker, "build.log")
+}
+
+// BuildTimingPath returns the path to a module's build-timing.txt file
+func BuildTimingPath(repoRoot, moniker string) string {
+	return filepath.Join(repoRoot, OutDir, BuildDir, moniker, "build-timing.txt")
+}
+
+// TestSuiteOutputPath returns the path to a test suite's output directory
+func TestSuiteOutputPath(repoRoot, suiteName string) string {
+	return filepath.Join(repoRoot, OutDir, TestDir, suiteName)
+}
+
+// TestModuleOutputPath returns the path to a module's test output within a suite
+func TestModuleOutputPath(repoRoot, suiteName, moniker string) string {
+	return filepath.Join(repoRoot, OutDir, TestDir, suiteName, moniker)
+}
+
+// TestTimingPath returns the path to a test suite's test-timing.txt file
+func TestTimingPath(repoRoot, suiteName string) string {
+	return filepath.Join(repoRoot, OutDir, TestDir, suiteName, "test-timing.txt")
+}
+
+// RiskControlsPath returns the path to the risk controls directory
+func RiskControlsPath(repoRoot string) string {
+	return filepath.Join(repoRoot, SpecsDir, RiskControlsDir)
+}
+
+// RiskCatalogPath returns the path to the risk catalog file
+func RiskCatalogPath(repoRoot string) string {
+	return filepath.Join(repoRoot, TemplatesDir, "specs", "risk-catalog", "controls.catalog.json")
+}
+
+// TemplateSpecsPath returns the path to specs templates subdirectory
+func TemplateSpecsPath(repoRoot string, subpaths ...string) string {
+	parts := append([]string{repoRoot, TemplatesDir, "specs"}, subpaths...)
+	return filepath.Join(parts...)
+}
+
+// TemplateReportsPath returns the path to reports templates subdirectory
+func TemplateReportsPath(repoRoot string, subpaths ...string) string {
+	parts := append([]string{repoRoot, TemplatesDir, "reports"}, subpaths...)
+	return filepath.Join(parts...)
+}
+
+// SpecsFeaturePath returns the path to a feature specification file
+// For module-scoped features: SpecsFeaturePath(root, moduleName, featureName)
+// For top-level features: SpecsFeaturePath(root, "", featureName) or just pass featureName as first param
+func SpecsFeaturePath(repoRoot, moduleName, featureName string) string {
+	if moduleName == "" {
+		return filepath.Join(repoRoot, SpecsDir, featureName, "specification.feature")
+	}
+	return filepath.Join(repoRoot, SpecsDir, moduleName, featureName, "specification.feature")
+}

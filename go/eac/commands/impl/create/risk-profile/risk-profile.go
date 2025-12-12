@@ -25,6 +25,7 @@ import (
 	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/oscal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	eacConfig "github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
@@ -104,7 +105,13 @@ func CreateRiskProfile() int {
 	// Determine output path
 	outputPath := config.OutputPath
 	if outputPath == "" {
-		outputPath = filepath.Join(config.WorkspaceRoot, "specs", ".risk-controls", "risk-profile.json")
+		// Use helper function for clean fallback to defaults in test environments
+		cfg := eacConfig.LoadOrNil(config.WorkspaceRoot)
+		if cfg == nil {
+			outputPath = filepath.Join(config.WorkspaceRoot, "specs", ".risk-controls", "risk-profile.json")
+		} else {
+			outputPath = filepath.Join(config.WorkspaceRoot, cfg.Repository.Paths.SpecsRoot, ".risk-controls", "risk-profile.json")
+		}
 	}
 
 	// Check if file exists

@@ -53,7 +53,7 @@ func TestTags() int {
 	}
 
 	// Discover all feature files
-	specsDir := filepath.Join(repoRoot, "specs")
+	specsDir := filepath.Join(repoRoot, cfg.Repository.Paths.SpecsRoot)
 	var featureFiles []string
 
 	err = filepath.Walk(specsDir, func(path string, info os.FileInfo, err error) error {

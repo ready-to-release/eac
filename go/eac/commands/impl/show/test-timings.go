@@ -12,6 +12,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/impl/internal/testdata"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/core/config"
 )
 
 func init() {
@@ -41,7 +42,14 @@ func ShowTestTimingsForModules(modules []string, topN int, testOutputDir string,
 			return 1
 		}
 
-		testOutputDir = filepath.Join(repoRoot, "out", "test")
+		// Load config to get test output directory
+		cfg, err := config.Load(config.LoadOptions{RepoRoot: repoRoot})
+		if err != nil {
+			log.Errorf("failed to load config: %v", err)
+			return 1
+		}
+
+		testOutputDir = filepath.Join(repoRoot, cfg.Repository.Paths.Out.Test)
 	}
 	if _, err := os.Stat(testOutputDir); os.IsNotExist(err) {
 		log.Errorf("test output directory not found: %s (run tests first)", testOutputDir)

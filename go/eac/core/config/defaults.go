@@ -412,6 +412,33 @@ func MergeRepository(defaults, user *RepositoryConfig) *RepositoryConfig {
 	if user.Conventions.Changelog != "" {
 		result.Conventions.Changelog = user.Conventions.Changelog
 	}
+	if user.Conventions.BuildLog != "" {
+		result.Conventions.BuildLog = user.Conventions.BuildLog
+	}
+	if user.Conventions.BuildTiming != "" {
+		result.Conventions.BuildTiming = user.Conventions.BuildTiming
+	}
+	if user.Conventions.TestTiming != "" {
+		result.Conventions.TestTiming = user.Conventions.TestTiming
+	}
+	if user.Conventions.Specification != "" {
+		result.Conventions.Specification = user.Conventions.Specification
+	}
+	if user.Conventions.RiskCatalog != "" {
+		result.Conventions.RiskCatalog = user.Conventions.RiskCatalog
+	}
+	if user.Conventions.RiskControlsDir != "" {
+		result.Conventions.RiskControlsDir = user.Conventions.RiskControlsDir
+	}
+	if user.Conventions.TemplateSpecsDir != "" {
+		result.Conventions.TemplateSpecsDir = user.Conventions.TemplateSpecsDir
+	}
+	if user.Conventions.TemplateReportsDir != "" {
+		result.Conventions.TemplateReportsDir = user.Conventions.TemplateReportsDir
+	}
+	if user.Conventions.TemplateRiskCatalogDir != "" {
+		result.Conventions.TemplateRiskCatalogDir = user.Conventions.TemplateRiskCatalogDir
+	}
 
 	// Modules: user modules completely override defaults (no merge)
 	if len(user.Modules) > 0 {

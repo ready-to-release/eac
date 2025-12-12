@@ -209,6 +209,51 @@
           "type": "string",
           "description": "Changelog file name",
           "default": "CHANGELOG.md"
+        },
+        "build_log": {
+          "type": "string",
+          "description": "Build log filename",
+          "default": "build.log"
+        },
+        "build_timing": {
+          "type": "string",
+          "description": "Build timing report filename",
+          "default": "build-timing.txt"
+        },
+        "test_timing": {
+          "type": "string",
+          "description": "Test timing report filename",
+          "default": "test-timing.txt"
+        },
+        "specification": {
+          "type": "string",
+          "description": "Gherkin specification filename",
+          "default": "specification.feature"
+        },
+        "risk_catalog": {
+          "type": "string",
+          "description": "OSCAL catalog filename",
+          "default": "controls.catalog.json"
+        },
+        "risk_controls_dir": {
+          "type": "string",
+          "description": "Risk controls directory name",
+          "default": ".risk-controls"
+        },
+        "template_specs_dir": {
+          "type": "string",
+          "description": "Specs templates subdirectory",
+          "default": "specs"
+        },
+        "template_reports_dir": {
+          "type": "string",
+          "description": "Reports templates subdirectory",
+          "default": "reports"
+        },
+        "template_risk_catalog_dir": {
+          "type": "string",
+          "description": "Risk catalog templates subdirectory",
+          "default": "risk-catalog"
         }
       }
     },

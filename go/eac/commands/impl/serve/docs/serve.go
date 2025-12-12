@@ -19,8 +19,8 @@ import (
 
 	docsInternal "github.com/ready-to-release/eac/go/eac/commands/impl/docs/helper"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
-	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 	"go.uber.org/zap"
 )
@@ -69,7 +69,13 @@ func writeDebugFile(workspaceRoot string, logger *logging.Logger, filename strin
 		return
 	}
 
-	debugDir := paths.CommandLogsPath(workspaceRoot, "docs")
+	cfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot})
+	if err != nil {
+		logger.Warn("Failed to load config", zap.Error(err))
+		return
+	}
+
+	debugDir := cfg.Repository.LogsPathAbs(workspaceRoot, "docs")
 	if err := os.MkdirAll(debugDir, 0755); err != nil {
 		logger.Warn("Failed to create debug directory", zap.Error(err))
 		return
@@ -163,8 +169,15 @@ func ServeDocs() int {
 	if skipValidation {
 		logger.Debug("Skipping Docker validation (test mode)")
 
+		// Load config for path resolution
+		cfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot})
+		if err != nil {
+			log.Errorf("Failed to load config: %v", err)
+			return 1
+		}
+
 		// Use state file to track mock "running" state
-		stateFile := filepath.Join(workspaceRoot, "out", "test", ".mkdocs-mock-state")
+		stateFile := filepath.Join(cfg.Repository.TestOutputDirAbs(workspaceRoot), ".mkdocs-mock-state")
 
 		if stop {
 			// Remove state file if it exists

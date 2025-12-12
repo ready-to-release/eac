@@ -343,6 +343,8 @@ func checkModulePending(module string, moduleRegistry *modules.Registry, repo gi
 }
 
 func findModulesWithChangelogs(workspaceRoot string) []string {
+	// TODO(path-migration): Add cfg.Repository.ReleasePathAbs() method to config
+	// For now using hardcoded "release" until release paths are added to repository.schema.json
 	releaseDir := filepath.Join(workspaceRoot, "release")
 	entries, err := os.ReadDir(releaseDir)
 	if err != nil {

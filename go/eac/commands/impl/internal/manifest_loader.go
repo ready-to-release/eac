@@ -86,7 +86,8 @@ func loadAndValidateModule(workspaceRoot, moniker string, cfg *config.EACConfig,
 	if cfg != nil {
 		moduleBuildDirRel = cfg.Repository.BuildOutputPath(moniker)
 	} else {
-		// Fallback to default path structure
+		// Fallback: use default hardcoded path when config not provided
+		// This maintains backward compatibility for tests and legacy callers
 		moduleBuildDirRel = filepath.Join("out", "build", moniker)
 	}
 

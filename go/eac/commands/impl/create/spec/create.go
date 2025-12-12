@@ -31,6 +31,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/oscal"
 	aimock "github.com/ready-to-release/eac/go/eac/core/ai"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/git"
@@ -90,72 +91,80 @@ func ResetGitRepo() {
 // CreateSpec orchestrates the specification generation workflow
 func CreateSpec() int {
 	// Parse configuration
-	config, err := parseConfig()
+	specsConfig, err := parseConfig()
 	if err != nil {
 		log.Errorf("Error: %v", err)
 		return 1
 	}
 
+	// Load EAC configuration for path access
+	eacCfg, err := config.Load(config.LoadOptions{RepoRoot: specsConfig.TemplateRoot})
+	if err != nil {
+		log.Errorf("Error: failed to load EAC config: %v", err)
+		return 1
+	}
+	specsConfig.EACConfig = eacCfg
+
 	// Initialize logger (logs to out/logs/specs/)
 	var logger *logging.Logger
-	if config.Debug {
-		logger, err = logging.NewWithDebug("specs", config.TemplateRoot)
+	if specsConfig.Debug {
+		logger, err = logging.NewWithDebug("specs", specsConfig.TemplateRoot)
 	} else {
-		logger, err = logging.NewDefault("specs", config.TemplateRoot)
+		logger, err = logging.NewDefault("specs", specsConfig.TemplateRoot)
 	}
 	if err != nil {
 		log.Errorf("Warning: Failed to initialize logger: %v", err)
 		// Continue without logger - not fatal
 	} else {
-		config.Logger = logger
+		specsConfig.Logger = logger
 		defer logger.Sync()
 	}
 
 	// Log command start
-	if config.Logger != nil {
-		config.Logger.Info("Starting specs create",
-			zap.String("description", truncateForLog(config.Description, 100)),
-			zap.String("module", config.Module),
-			zap.Bool("debug", config.Debug))
+	if specsConfig.Logger != nil {
+		specsConfig.Logger.Info("Starting specs create",
+			zap.String("description", truncateForLog(specsConfig.Description, 100)),
+			zap.String("module", specsConfig.Module),
+			zap.Bool("debug", specsConfig.Debug))
 	}
 
 	// Load contract and build prompt
-	fullPrompt, err := loadAndBuildPrompt(config)
+	fullPrompt, err := loadAndBuildPrompt(specsConfig)
 	if err != nil {
-		if config.Logger != nil {
-			config.Logger.Error("Failed to build prompt", zap.Error(err))
+		if specsConfig.Logger != nil {
+			specsConfig.Logger.Error("Failed to build prompt", zap.Error(err))
 		}
 		log.Errorf("Error: %v", err)
 		return 1
 	}
 
 	// Generate and clean output
-	cleanedOutput, err := generateAndClean(config, fullPrompt)
+	cleanedOutput, err := generateAndClean(specsConfig, fullPrompt)
 	if err != nil {
-		if config.Logger != nil {
-			config.Logger.Error("AI generation failed", zap.Error(err))
+		if specsConfig.Logger != nil {
+			specsConfig.Logger.Error("AI generation failed", zap.Error(err))
 		}
 		log.Errorf("\n❌ Error: %v", err)
 		return 1
 	}
 
 	// Determine and validate output path
-	finalOutputPath, err := determineAndValidateOutputPath(config, cleanedOutput)
+	finalOutputPath, err := determineAndValidateOutputPath(specsConfig, cleanedOutput)
 	if err != nil {
-		if config.Logger != nil {
-			config.Logger.Error("Output path validation failed", zap.Error(err))
+		if specsConfig.Logger != nil {
+			specsConfig.Logger.Error("Output path validation failed", zap.Error(err))
 		}
 		log.Errorf("\n❌ Error: %v", err)
 		return 1
 	}
 
 	// Check if file exists and --force not specified
-	if !config.Force {
+	if !specsConfig.Force {
 		if _, err := os.Stat(finalOutputPath); err == nil {
-			if config.Logger != nil {
-				config.Logger.Warn("File already exists",
+			if specsConfig.Logger != nil {
+				specsConfig.Logger.Warn("File already exists",
 					zap.String("path", finalOutputPath),
-					zap.Bool("force", config.Force))
+					zap.Bool("force", specsConfig.Force))
 			}
 			log.Errorf("Error: File already exists: %s", finalOutputPath)
 			log.Error("Use --force to overwrite")
@@ -164,17 +173,17 @@ func CreateSpec() int {
 	}
 
 	// Write output and report success
-	if err := writeOutputAndReportSuccess(finalOutputPath, cleanedOutput, config); err != nil {
-		if config.Logger != nil {
-			config.Logger.Error("Failed to write output", zap.Error(err))
+	if err := writeOutputAndReportSuccess(finalOutputPath, cleanedOutput, specsConfig); err != nil {
+		if specsConfig.Logger != nil {
+			specsConfig.Logger.Error("Failed to write output", zap.Error(err))
 		}
 		log.Errorf("\n❌ Error: %v", err)
 		return 1
 	}
 
 	// Log successful completion
-	if config.Logger != nil {
-		config.Logger.Info("Specification created successfully",
+	if specsConfig.Logger != nil {
+		specsConfig.Logger.Info("Specification created successfully",
 			zap.String("path", finalOutputPath),
 			zap.Int("size", len(cleanedOutput)))
 	}
@@ -200,6 +209,7 @@ type SpecsConfig struct {
 	PromptPath   string // --prompt: Custom system prompt file
 	TemplateRoot string
 	Logger       *logging.Logger
+	EACConfig    *config.EACConfig // Loaded repository configuration
 }
 
 // loadAndBuildPrompt loads the contract and builds the AI prompt
@@ -228,7 +238,7 @@ func loadAndBuildPrompt(config *SpecsConfig) (string, error) {
 
 	if config.Debug {
 		// Write debug output to out/logs/specs/ for consistency
-		debugDir := filepath.Join(config.TemplateRoot, "out", "logs", "specs")
+		debugDir := config.EACConfig.Repository.LogsPathAbs(config.TemplateRoot, "specs")
 		if err := os.MkdirAll(debugDir, 0755); err != nil {
 			if config.Logger != nil {
 				config.Logger.Warn("Failed to create debug directory", zap.Error(err))
@@ -295,7 +305,7 @@ func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 	// Setup debug directory if needed - use out/logs/specs/ for consistency
 	debugOutputDir := ""
 	if config.Debug {
-		debugOutputDir = filepath.Join(config.TemplateRoot, "out", "logs", "specs")
+		debugOutputDir = config.EACConfig.Repository.LogsPathAbs(config.TemplateRoot, "specs")
 		// Ensure debug directory exists
 		if err := os.MkdirAll(debugOutputDir, 0755); err != nil {
 			if config.Logger != nil {
@@ -412,7 +422,7 @@ func determineAndValidateOutputPath(config *SpecsConfig, content string) (string
 		}
 
 		// Default to specs directory
-		finalOutputPath = specs.DetermineOutputPath(config.TemplateRoot, moduleName, featureName)
+		finalOutputPath = specs.DetermineOutputPath(config.TemplateRoot, moduleName, featureName, config.EACConfig)
 	}
 
 	// Security: Validate that output path is within repository
@@ -750,7 +760,7 @@ func loadPromptTemplates(config *SpecsConfig) (string, error) {
 	}
 
 	// Load available OSCAL controls for module (if profile exists)
-	availableControls := loadModuleControlsContext(config.TemplateRoot, config.Module)
+	availableControls := loadModuleControlsContext(config.TemplateRoot, config.Module, config.EACConfig)
 
 	// Build prompt with contract using Go templates
 	customData := map[string]string{
@@ -820,14 +830,14 @@ func stripAgentNoiseWithContract(output string, templateRoot string) string {
 }
 
 // loadModuleControlsContext loads OSCAL profile and formats controls for AI prompt
-func loadModuleControlsContext(workspaceRoot string, moduleName string) string {
+func loadModuleControlsContext(workspaceRoot string, moduleName string, cfg *config.EACConfig) string {
 	// Only load if module is specified
 	if moduleName == "" {
 		return "(No module specified - control tags optional)"
 	}
 
 	// Get profile path for module
-	profilePath := filepath.Join(workspaceRoot, "specs", ".risk-controls", moduleName+".profile.json")
+	profilePath := filepath.Join(cfg.Repository.RiskControlsPathAbs(workspaceRoot), moduleName+".profile.json")
 
 	// Check if profile exists
 	if _, err := os.Stat(profilePath); os.IsNotExist(err) {
@@ -842,7 +852,7 @@ func loadModuleControlsContext(workspaceRoot string, moduleName string) string {
 	}
 
 	// Load catalog to get control descriptions
-	catalogPath := filepath.Join(workspaceRoot, "templates/specs/risk-catalog/controls.catalog.json")
+	catalogPath := cfg.Repository.RiskCatalogPathAbs(workspaceRoot)
 	catalog, err := oscal.LoadCatalog(catalogPath)
 	if err != nil {
 		log.Errorf("Warning: Failed to load catalog: %v", err)

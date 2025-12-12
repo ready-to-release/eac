@@ -36,6 +36,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/scoring"
 	sharedTemplate "github.com/ready-to-release/eac/go/eac/commands/internal/template"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	eacConfig "github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
@@ -507,9 +508,15 @@ func generateMarkdownReport(config *AssessConfig, results []*ModuleAssessmentRes
 	// Build template data
 	reportData := buildReportData(config, results, profile, isSubset, totalModules)
 
+	// Load EAC config for template path
+	cfg, err := eacConfig.Load(eacConfig.LoadOptions{RepoRoot: config.WorkspaceRoot})
+	if err != nil {
+		return "", fmt.Errorf("failed to load config: %w", err)
+	}
+
 	// Use selected template variant
 	templateName := config.ReportTemplate + ".md"
-	templatePath := filepath.Join(config.WorkspaceRoot, "templates", "reports", templateName)
+	templatePath := filepath.Join(config.WorkspaceRoot, cfg.Repository.Paths.Templates, "reports", templateName)
 	renderer := sharedTemplate.NewRenderer(templatePath)
 
 	return renderer.RenderToString(reportData)

@@ -1130,7 +1130,13 @@ func displayGodogFeatureSummaries(testPkgPath string, w io.Writer) {
 		return
 	}
 
-	specsPath := filepath.Join(repoRoot, "specs", specsDir)
+	cfg, err := config.Load(config.LoadOptions{RepoRoot: repoRoot})
+	if err != nil {
+		fmt.Fprintf(w, "⚠️  Could not load config: %v\n", err)
+		return
+	}
+
+	specsPath := filepath.Join(repoRoot, cfg.Repository.Paths.SpecsRoot, specsDir)
 
 	// Find all .feature files in the specs directory
 	featureFiles, err := testing.FindFeatureFiles(specsPath)

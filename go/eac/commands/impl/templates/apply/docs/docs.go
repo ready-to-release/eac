@@ -30,6 +30,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/templates/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
@@ -214,24 +215,26 @@ func applyTemplates(config *Config, templateDir string, values internal.Template
 }
 
 // writeDebugFile writes debug content to file
-func writeDebugFile(config *Config, filename string, content string) {
-	if !config.Debug {
+func writeDebugFile(c *Config, filename string, content string) {
+	if !c.Debug {
 		return
 	}
 
-	debugDir := filepath.Join(config.WorkspaceRoot, "out", "logs", "templates", "apply")
+	// Use helper function for clean fallback to defaults in test environments
+	debugDir := filepath.Join(config.GetLogsPath(c.WorkspaceRoot, "templates"), "apply")
+
 	if err := os.MkdirAll(debugDir, 0755); err != nil {
-		config.Logger.Warn("Failed to create debug directory", zap.Error(err))
+		c.Logger.Warn("Failed to create debug directory", zap.Error(err))
 		return
 	}
 
 	debugFile := filepath.Join(debugDir, filename)
 	if err := os.WriteFile(debugFile, []byte(content), 0644); err != nil {
-		config.Logger.Warn("Failed to write debug file",
+		c.Logger.Warn("Failed to write debug file",
 			zap.String("file", debugFile),
 			zap.Error(err))
 	} else {
-		config.Logger.Debug("Saved debug file", zap.String("file", debugFile))
+		c.Logger.Debug("Saved debug file", zap.String("file", debugFile))
 	}
 }
 

@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"gopkg.in/yaml.v3"
 )
 
@@ -84,7 +85,7 @@ func LoadTemplateTagsConfig(repoRoot string) (*TemplateTagsConfig, error) {
 	cfg := &TemplateTagsConfig{}
 
 	// 1. Load testing-tags.yml (read-only - defines valid test taxonomy tags)
-	testingPath := filepath.Join(repoRoot, ".r2r", "eac", "testing-tags.yml")
+	testingPath := filepath.Join(paths.R2RPath(repoRoot), "eac", "testing-tags.yml")
 	if data, err := os.ReadFile(testingPath); err == nil {
 		var testingCfg struct {
 			Tags        []TemplateTagDefinition `yaml:"tags"`
@@ -100,7 +101,7 @@ func LoadTemplateTagsConfig(repoRoot string) (*TemplateTagsConfig, error) {
 	}
 
 	// 2. Load template-tags.yml (template-specific metadata tags)
-	templatePath := filepath.Join(repoRoot, ".r2r", "eac", "template-tags.yml")
+	templatePath := filepath.Join(paths.R2RPath(repoRoot), "eac", "template-tags.yml")
 	if data, err := os.ReadFile(templatePath); err == nil {
 		var templateCfg TemplateTagsConfig
 		if err := yaml.Unmarshal(data, &templateCfg); err != nil {

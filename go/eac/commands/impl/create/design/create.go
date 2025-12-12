@@ -28,10 +28,10 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
+	eacConfig "github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
-	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
@@ -83,10 +83,18 @@ func CreateDesign() int {
 		out.Progress("⚠️  Skipping Docker validation")
 	}
 
+	// Load EAC config for path resolution (uses helper with clean fallback for tests)
+	cfg := eacConfig.LoadOrNil(config.TemplateRoot)
+
 	// Determine output path
 	outputPath := config.OutputPath
 	if outputPath == "" {
-		outputPath = paths.WorkspaceDSLPath(config.TemplateRoot, config.Module)
+		if cfg == nil {
+			// Fallback to default path if config loading fails (e.g., in tests)
+			outputPath = filepath.Join(config.TemplateRoot, "specs", config.Module, ".design", "workspace.dsl")
+		} else {
+			outputPath = filepath.Join(cfg.Repository.SpecsPathAbs(config.TemplateRoot, config.Module), ".design", "workspace.dsl")
+		}
 	}
 
 	// Check if output exists (unless --force)
@@ -444,7 +452,8 @@ func generateAndValidate(config *DesignConfig, prompt string, out *design.Output
 	}
 
 	if config.Debug {
-		retryConfig.DebugOutputDir = filepath.Join(config.TemplateRoot, "out", "logs", "design")
+		// Use helper function for clean fallback to defaults in test environments
+		retryConfig.DebugOutputDir = eacConfig.GetLogsPath(config.TemplateRoot, "design")
 	}
 
 	result, err := contracts.GenerateWithRetry(

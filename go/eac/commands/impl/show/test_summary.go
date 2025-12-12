@@ -15,7 +15,6 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
-	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 func init() {
@@ -98,9 +97,9 @@ func testSummaryContent(f *SummaryFormatter, module *config.Module, suite, statu
 
 	// Test results (if available)
 	if status == "success" {
-		summary += testMetricsSection(f, module, suite)
+		summary += testMetricsSection(f, module, suite, cfg)
 	} else {
-		summary += testDiagnosticsSection(f, module, suite)
+		summary += testDiagnosticsSection(f, module, suite, cfg)
 	}
 
 	// Test configuration (collapsible)
@@ -109,8 +108,8 @@ func testSummaryContent(f *SummaryFormatter, module *config.Module, suite, statu
 	return summary
 }
 
-func testMetricsSection(f *SummaryFormatter, module *config.Module, suite string) string {
-	outputDir := filepath.Join("out", "test", suite)
+func testMetricsSection(f *SummaryFormatter, module *config.Module, suite string, cfg *config.EACConfig) string {
+	outputDir := cfg.Repository.TestSuiteOutputPath(suite)
 
 	// Try to read test summary JSON if available
 	summaryFile := filepath.Join(outputDir, fmt.Sprintf("%s-summary.json", module.Moniker))
@@ -199,13 +198,13 @@ func packageBreakdown(f *SummaryFormatter, details []PackageTestResults) string 
 	return f.Section(Emoji("chart")+" Package Breakdown", f.Table(headers, rows))
 }
 
-func testDiagnosticsSection(f *SummaryFormatter, module *config.Module, suite string) string {
+func testDiagnosticsSection(f *SummaryFormatter, module *config.Module, suite string, cfg *config.EACConfig) string {
 	var diagnostics string
 
 	// Read actual test log from the correct output directory
 	// Test logs are output to out/test/{suite}/{module}/test.log
 	// For modules with subpackages, logs may be in subdirectories
-	moduleDir := filepath.Join("out", "test", suite, module.Moniker)
+	moduleDir := cfg.Repository.TestModuleOutputPath(suite, module.Moniker)
 	rootLogPath := filepath.Join(moduleDir, "test.log")
 	logContent := readLogTail(rootLogPath, 100) // Last 100 lines for test failures
 
@@ -221,7 +220,7 @@ func testDiagnosticsSection(f *SummaryFormatter, module *config.Module, suite st
 	}
 
 	// Show test timing if available
-	timingPath := filepath.Join("out", "test", suite, "test-timing.txt")
+	timingPath := cfg.Repository.TestTimingPath(suite)
 	if timing, err := os.ReadFile(timingPath); err == nil {
 		diagnostics += f.Section(Emoji("time")+" Timing", string(timing))
 	}
@@ -275,7 +274,7 @@ func testConfigSection(f *SummaryFormatter, module *config.Module, suite string,
 	}
 
 	// Output directory
-	configDetails += fmt.Sprintf("- %s: %s\n", Bold("Output"), Code(fmt.Sprintf("%s/%s", paths.OutTestRelPath, suite)))
+	configDetails += fmt.Sprintf("- %s: %s\n", Bold("Output"), Code(cfg.Repository.TestSuiteOutputPath(suite)))
 
 	return f.CollapsibleSection(Emoji("config")+" Test Configuration", configDetails)
 }

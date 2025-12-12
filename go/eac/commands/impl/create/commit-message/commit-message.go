@@ -23,6 +23,7 @@ import (
 	commitmessageinternal "github.com/ready-to-release/eac/go/eac/commands/impl/create/commit-message/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
+	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/git"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -38,7 +39,12 @@ func writeDebugFile(workspaceRoot string, logger *logging.Logger, filename strin
 		return
 	}
 
-	debugDir := filepath.Join(workspaceRoot, "out", "logs", "commit")
+	cfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot})
+	if err != nil {
+		logger.Warn(fmt.Sprintf("Failed to load config: %v", err))
+		return
+	}
+	debugDir := cfg.Repository.LogsPathAbs(workspaceRoot, "commit")
 	if err := os.MkdirAll(debugDir, 0755); err != nil {
 		logger.Warn(fmt.Sprintf("Failed to create debug directory: %v", err))
 		return

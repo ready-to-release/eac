@@ -30,6 +30,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"github.com/ready-to-release/eac/go/eac/core/git"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
@@ -48,7 +49,12 @@ func writeDebugFile(workspaceRoot string, logger *logging.Logger, filename strin
 		return
 	}
 
-	debugDir := filepath.Join(workspaceRoot, "out", "logs", "commit")
+	cfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot})
+	if err != nil {
+		logger.Warn(fmt.Sprintf("Failed to load config: %v", err))
+		return
+	}
+	debugDir := cfg.Repository.LogsPathAbs(workspaceRoot, "commit")
 	if err := os.MkdirAll(debugDir, 0755); err != nil {
 		logger.Warn(fmt.Sprintf("Failed to create debug directory: %v", err))
 		return
@@ -211,17 +217,17 @@ func CreateSquashMessage() int {
 	return 0
 }
 
-// config holds the parsed command configuration
-type config struct {
+// squashConfig holds the parsed command configuration
+type squashConfig struct {
 	baseBranch string
 	debug      bool
 }
 
 // parseConfig parses command line arguments
-func parseConfig() (*config, error) {
+func parseConfig() (*squashConfig, error) {
 	args := os.Args[3:] // Skip "r2r", "create", "squash-message"
 
-	cfg := &config{
+	cfg := &squashConfig{
 		baseBranch: "main",
 		debug:      false,
 	}

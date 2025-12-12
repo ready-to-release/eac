@@ -18,6 +18,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/internal/testdata"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 )
 
@@ -77,7 +78,13 @@ func GetBuildTimesFiltered(moduleFilter []string, buildOutputDir string) int {
 				return nil, fmt.Errorf("failed to find repository root: %w", err)
 			}
 
-			buildOutputDir = filepath.Join(repoRoot, "out", "build")
+			// Load config for path resolution
+			cfg, err := config.Load(config.LoadOptions{RepoRoot: repoRoot})
+			if err != nil {
+				return nil, fmt.Errorf("failed to load config: %w", err)
+			}
+
+			buildOutputDir = filepath.Join(repoRoot, cfg.Repository.Paths.Out.Root, cfg.Repository.Paths.Out.Build)
 		} else {
 			// If buildOutputDir is provided, derive repo root from it
 			var err error

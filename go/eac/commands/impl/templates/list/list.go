@@ -19,6 +19,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/templates/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	eacConfig "github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
@@ -96,7 +97,13 @@ func resolveTemplateDirectory(config *Config) (string, func(), error) {
 				zap.String("workspaceRoot", root))
 		}
 
-		templateDir = filepath.Join(root, "templates")
+		// Load EAC config for template path
+		cfg, err := eacConfig.Load(eacConfig.LoadOptions{RepoRoot: root})
+		if err != nil {
+			return "", nil, fmt.Errorf("failed to load config: %w", err)
+		}
+
+		templateDir = filepath.Join(root, cfg.Repository.Paths.Templates)
 
 		// Verify directory exists
 		if _, err := os.Stat(templateDir); os.IsNotExist(err) {
@@ -167,16 +174,18 @@ func displayPlaceholders(templateDir string, placeholderInfos []internal.Placeho
 }
 
 // saveDebugOutput saves scan results to debug files
-func saveDebugOutput(config *Config, placeholderInfos []internal.PlaceholderInfo) {
-	debugDir := filepath.Join(config.WorkspaceRoot, "out", "logs", "templates", "list")
+func saveDebugOutput(c *Config, placeholderInfos []internal.PlaceholderInfo) {
+	// Use helper function for clean fallback to defaults in test environments
+	debugDir := filepath.Join(eacConfig.GetLogsPath(c.WorkspaceRoot, "templates"), "list")
+
 	if err := os.MkdirAll(debugDir, 0755); err != nil {
-		config.Logger.Warn("Failed to create debug directory", zap.Error(err))
+		c.Logger.Warn("Failed to create debug directory", zap.Error(err))
 		return
 	}
 
 	// Build debug output content
 	var content string
-	content += fmt.Sprintf("Template Source: %s\n", config.TemplateSource)
+	content += fmt.Sprintf("Template Source: %s\n", c.TemplateSource)
 	content += fmt.Sprintf("Total Placeholders: %d\n\n", len(placeholderInfos))
 
 	for _, info := range placeholderInfos {
@@ -190,9 +199,9 @@ func saveDebugOutput(config *Config, placeholderInfos []internal.PlaceholderInfo
 
 	debugFile := filepath.Join(debugDir, "scan-results.txt")
 	if err := os.WriteFile(debugFile, []byte(content), 0644); err != nil {
-		config.Logger.Warn("Failed to write debug file", zap.Error(err))
+		c.Logger.Warn("Failed to write debug file", zap.Error(err))
 	} else {
-		config.Logger.Debug("Saved scan results", zap.String("file", debugFile))
+		c.Logger.Debug("Saved scan results", zap.String("file", debugFile))
 	}
 }
 
