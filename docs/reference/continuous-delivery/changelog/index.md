@@ -10,11 +10,11 @@ The repository uses [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) for
 
 ## In This Section
 
-| Reference | Description |
-|-----------|-------------|
-| [Format Specification](./format-specification.md) | Keep a Changelog format details |
-| [Repository Changelog](./repository-changelog.md) | Repository-level changelog conventions |
-| [Module Changelogs](./module-changelogs.md) | Module-level changelog conventions |
-| [Versioning](./versioning.md) | Semantic versioning rules and conventions |
+| Reference                                         | Description                               |
+| ------------------------------------------------- | ----------------------------------------- |
+| [Format Specification](./format-specification.md) | Keep a Changelog format details           |
+| [Repository Changelog](./repository-changelog.md) | Repository-level changelog conventions    |
+| [Module Changelogs](./module-changelogs.md)       | Module-level changelog conventions        |
+| [Versioning](./versioning.md)                     | Semantic versioning rules and conventions |
 
 {{ diataxis_footer() }}

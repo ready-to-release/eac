@@ -91,7 +91,7 @@ The right strategy depends on:
 ## Next Steps
 
 - [Deployment Strategies](./deployment-strategies.md) - Deep dive into each pattern
-- [CD Model Stages 7-12](../cd-model/cd-model-stages-8-12.md) - See deployment in CD Model context
+- [CD Model Stages 8-12](../cd-model/cd-model-stages-8-12.md) - See deployment in CD Model context
 - [Environments Architecture](../architecture/environments.md) - Environment types and network zones
 
 ## Quick Reference

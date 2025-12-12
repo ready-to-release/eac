@@ -256,19 +256,19 @@ Changes are derived from commit messages using conventional commit format:
 
 ### Type Mapping
 
-| Commit Type | Changelog Category |
-|-------------|-------------------|
-| `feat` | Added |
-| `fix` | Fixed |
-| `refactor` | Changed |
-| `perf` | Changed |
-| `docs` | Changed (or omitted if doc-only) |
-| `test` | Changed (or omitted) |
-| `chore` | Changed |
-| `ci` | Changed (or omitted) |
-| `build` | Changed |
-| `revert` | Changed or Removed |
-| `security` | Security |
+| Commit Type | Changelog Category               |
+| ----------- | -------------------------------- |
+| `feat`      | Added                            |
+| `fix`       | Fixed                            |
+| `refactor`  | Changed                          |
+| `perf`      | Changed                          |
+| `docs`      | Changed (or omitted if doc-only) |
+| `test`      | Changed (or omitted)             |
+| `chore`     | Changed                          |
+| `ci`        | Changed (or omitted)             |
+| `build`     | Changed                          |
+| `revert`    | Changed or Removed               |
+| `security`  | Security                         |
 
 ### Commit Examples
 

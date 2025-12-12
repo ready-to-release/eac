@@ -8,9 +8,9 @@ The **serve** category contains 2 commands for starting development servers for 
 
 ## Commands
 
-| Command | Purpose |
-|---------|---------|
-| [serve docs](../serve/docs.md) | Start or stop MkDocs server |
+| Command                            | Purpose                                                      |
+| ---------------------------------- | ------------------------------------------------------------ |
+| [serve docs](../serve/docs.md)     | Start or stop MkDocs server                                  |
 | [serve design](../serve/design.md) | View architecture diagrams in browser using Structurizr Lite |
 
 ## Common Use Cases

@@ -8,8 +8,8 @@ The **update** category contains 2 commands for updating existing documentation 
 
 ## Commands
 
-| Command | Purpose |
-|---------|---------|
+| Command                              | Purpose                                             |
+| ------------------------------------ | --------------------------------------------------- |
 | [update design](../update/design.md) | Update existing workspace.dsl for a module using AI |
 
 ## Common Use Cases

@@ -58,12 +58,12 @@ permissions:
 
 ## Release Workflows Inventory
 
-| Workflow | Module | Artifact Type | Destination | Versioning |
-|----------|--------|---------------|-------------|------------|
-| `release-r2r-cli.yaml` | r2r-cli | Cross-platform binaries | GitHub Releases | SemVer |
-| `release-ext-eac.yaml` | ext-eac | Docker extension | Docker Hub | SemVer |
-| `release-docs.yaml` | docs | Static site | GitHub Pages | CalVer |
-| `release-books.yaml` | books | PDF documents | GitHub Releases | CalVer |
+| Workflow               | Module  | Artifact Type           | Destination     | Versioning |
+| ---------------------- | ------- | ----------------------- | --------------- | ---------- |
+| `release-r2r-cli.yaml` | r2r-cli | Cross-platform binaries | GitHub Releases | SemVer     |
+| `release-ext-eac.yaml` | ext-eac | Docker extension        | Docker Hub      | SemVer     |
+| `release-docs.yaml`    | docs    | Static site             | GitHub Pages    | CalVer     |
+| `release-books.yaml`   | books   | PDF documents           | GitHub Releases | CalVer     |
 
 ## Example: release-r2r-cli.yaml
 

@@ -8,16 +8,16 @@ The **scan** category contains 8 commands for security scanning and evidence col
 
 ## Commands
 
-| Command | Purpose |
-|---------|---------|
-| [scan](../scan/scan.md) | Run all security scans |
-| [scan vuln](../scan/vuln.md) | Scan for vulnerabilities using Trivy |
-| [scan sast](../scan/sast.md) | Static Application Security Testing using Semgrep |
-| [scan secrets](../scan/secrets.md) | Detect secrets and credentials using Trivy |
-| [scan iac](../scan/iac.md) | Scan Infrastructure as Code for misconfigurations |
-| [scan sbom](../scan/sbom.md) | Generate Software Bill of Materials |
-| [scan compliance](../scan/compliance.md) | Check compliance with security standards |
-| [scan zap](../scan/zap.md) | Dynamic Application Security Testing using OWASP ZAP |
+| Command                                  | Purpose                                              |
+| ---------------------------------------- | ---------------------------------------------------- |
+| [scan](../scan/scan.md)                  | Run all security scans                               |
+| [scan vuln](../scan/vuln.md)             | Scan for vulnerabilities using Trivy                 |
+| [scan sast](../scan/sast.md)             | Static Application Security Testing using Semgrep    |
+| [scan secrets](../scan/secrets.md)       | Detect secrets and credentials using Trivy           |
+| [scan iac](../scan/iac.md)               | Scan Infrastructure as Code for misconfigurations    |
+| [scan sbom](../scan/sbom.md)             | Generate Software Bill of Materials                  |
+| [scan compliance](../scan/compliance.md) | Check compliance with security standards             |
+| [scan zap](../scan/zap.md)               | Dynamic Application Security Testing using OWASP ZAP |
 
 ## Common Use Cases
 

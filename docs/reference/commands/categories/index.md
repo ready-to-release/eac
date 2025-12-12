@@ -148,22 +148,22 @@ Commands that don't fit into verb-based categories: help, init, and extension me
 
 ## Category Quick Reference
 
-| Category | Commands | Primary Use | Output Format |
-|----------|----------|-------------|---------------|
-| **create** | 7 | AI content generation | Varies |
-| **get** | 18 | Automation & scripting | JSON |
-| **show** | 17 | Interactive exploration | Formatted text |
-| **validate** | 20 | Quality gates | Pass/fail |
-| **work** | 6 | Workspace management | Varies |
-| **test** | 4 | Testing | Test results |
-| **build** | 1 | Building | Artifacts |
-| **pipeline** | 6 | CI/CD | Varies |
-| **release** | 8 | Release management | Varies |
-| **scan** | 8 | Security | Reports |
-| **serve** | 2 | Local servers | Process |
-| **templates** | 7 | Templates | Varies |
-| **update** | 1 | Updates | Varies |
-| **other** | 3 | Utilities | Varies |
+| Category      | Commands | Primary Use             | Output Format  |
+| ------------- | -------- | ----------------------- | -------------- |
+| **create**    | 7        | AI content generation   | Varies         |
+| **get**       | 18       | Automation & scripting  | JSON           |
+| **show**      | 17       | Interactive exploration | Formatted text |
+| **validate**  | 20       | Quality gates           | Pass/fail      |
+| **work**      | 6        | Workspace management    | Varies         |
+| **test**      | 4        | Testing                 | Test results   |
+| **build**     | 1        | Building                | Artifacts      |
+| **pipeline**  | 6        | CI/CD                   | Varies         |
+| **release**   | 8        | Release management      | Varies         |
+| **scan**      | 8        | Security                | Reports        |
+| **serve**     | 2        | Local servers           | Process        |
+| **templates** | 7        | Templates               | Varies         |
+| **update**    | 1        | Updates                 | Varies         |
+| **other**     | 3        | Utilities               | Varies         |
 
 ## Finding Commands by Task
 
@@ -230,13 +230,13 @@ Commands that don't fit into verb-based categories: help, init, and extension me
 
 Most information commands come in pairs:
 
-| get (JSON) | show (Formatted) | Information |
-|------------|------------------|-------------|
-| `get modules` | `show modules` | Module contracts |
+| get (JSON)         | show (Formatted)    | Information      |
+| ------------------ | ------------------- | ---------------- |
+| `get modules`      | `show modules`      | Module contracts |
 | `get dependencies` | `show dependencies` | Dependency graph |
-| `get files` | `show files` | File ownership |
-| `get config` | `show config` | Configuration |
-| `get tests` | `show tests` | Test information |
+| `get files`        | `show files`        | File ownership   |
+| `get config`       | `show config`       | Configuration    |
+| `get tests`        | `show tests`        | Test information |
 
 **Rule**: Use `get` for automation, `show` for interactive use.
 

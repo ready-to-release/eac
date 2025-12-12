@@ -1,11 +1,11 @@
 
-# CD Model: Stages 7-12 (Release to Production)
+# CD Model: Stages 8-12 (Release to Production)
 
 {{ page_breadcrumb() }}
 
 ## Introduction
 
-Stages 7-12 of the Continuous Delivery Model cover the release, deployment, and operational phases. These stages transition validated software from testing environments into production, where it serves end users. The focus shifts from development and testing to stakeholder validation, controlled deployment, and operational excellence.
+Stages 8-12 of the Continuous Delivery Model cover the release, deployment, and operational phases. These stages transition validated software from testing environments into production, where it serves end users. The focus shifts from development and testing to stakeholder validation, controlled deployment, and operational excellence.
 
 This article provides detailed explanations of each stage, including deployment strategies, approval processes, monitoring practices, and feature management.
 
@@ -222,7 +222,7 @@ Release approval validation occurs in **PLTE (automated)** and **Demo (explorati
 flowchart LR
     Approved[Approved release] --> Strategy{Strategy?}
 
-    Strategy -->|Blue-Green| BG[Deploy to green]
+    Strategy -->|Blue-Green| BG[Deploy to inactive color]
     Strategy -->|Rolling| Roll[Deploy incrementally]
     Strategy -->|Canary| Can[Deploy to canary]
 
@@ -521,9 +521,8 @@ Feature flags operate in the **Production Environment**, providing runtime contr
 
 ## Summary
 
-Stages 7-12 bring software to production and manage it operationally:
+Stages 8-12 bring software to production and manage it operationally:
 
-- **Stage 7**: Stakeholder validation and exploratory testing
 - **Stage 8**: Release candidate creation and documentation
 - **Stage 9**: Formal approval (manual or automated)
 - **Stage 10**: Production deployment with chosen strategy

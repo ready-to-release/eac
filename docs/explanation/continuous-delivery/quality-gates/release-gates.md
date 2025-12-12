@@ -709,7 +709,7 @@ def evaluate_release_gate():
 
 - [Pre-commit Quality Gates](./precommit-gates.md) - Stage 2 validation
 - [Merge Request Quality Gates](./merge-request-gates.md) - Stage 3 validation
-- [CD Model Stages 7-12](../cd-model/cd-model-stages-8-12.md) - See Stage 9 in full context
+- [CD Model Stages 8-12](../cd-model/cd-model-stages-8-12.md) - See Stage 9 in full context
 - [Implementation Patterns](../cd-model/implementation-patterns.md) - RA vs CDe approval differences
 
 {{ diataxis_footer() }}

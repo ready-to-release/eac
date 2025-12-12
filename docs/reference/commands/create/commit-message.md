@@ -14,10 +14,10 @@ r2r eac create commit-message [options]
 
 ## Options and Flags
 
-| Flag | Short | Description | Default |
-|------|-------|-------------|---------|
-| `--commit` | `-c` | Automatically create the commit without opening editor | `false` |
-| `--debug` | `-d` | Save intermediate outputs to `out/` directory for inspection | `false` |
+| Flag       | Short | Description                                                  | Default |
+| ---------- | ----- | ------------------------------------------------------------ | ------- |
+| `--commit` | `-c`  | Automatically create the commit without opening editor       | `false` |
+| `--debug`  | `-d`  | Save intermediate outputs to `out/` directory for inspection | `false` |
 
 ### Examples
 
@@ -39,16 +39,16 @@ r2r eac create commit-message --commit --debug
 
 The AI uses standard semantic commit types:
 
-| Type | Description | Use Case | Example |
-|------|-------------|----------|---------|
-| `feat` | New feature or capability | Adding new functionality | `feat(src-auth): implement JWT authentication` |
-| `fix` | Bug fix | Fixing broken behavior | `fix(src-api): resolve rate limiting race condition` |
-| `refactor` | Code restructuring (no behavior change) | Improving code structure | `refactor(eac-core): extract validation logic` |
-| `docs` | Documentation only | Documentation changes | `docs(specs): add authentication examples` |
-| `chore` | Maintenance tasks | Dependency updates, tooling | `chore(deps): update dependencies` |
-| `test` | Test changes only | Adding or modifying tests | `test(src-auth): add integration tests` |
-| `perf` | Performance improvements | Optimizing performance | `perf(src-cache): optimize lookup algorithm` |
-| `style` | Code formatting (no logic change) | Formatting, whitespace | `style(eac-core): apply gofmt` |
+| Type       | Description                             | Use Case                    | Example                                              |
+| ---------- | --------------------------------------- | --------------------------- | ---------------------------------------------------- |
+| `feat`     | New feature or capability               | Adding new functionality    | `feat(src-auth): implement JWT authentication`       |
+| `fix`      | Bug fix                                 | Fixing broken behavior      | `fix(src-api): resolve rate limiting race condition` |
+| `refactor` | Code restructuring (no behavior change) | Improving code structure    | `refactor(eac-core): extract validation logic`       |
+| `docs`     | Documentation only                      | Documentation changes       | `docs(specs): add authentication examples`           |
+| `chore`    | Maintenance tasks                       | Dependency updates, tooling | `chore(deps): update dependencies`                   |
+| `test`     | Test changes only                       | Adding or modifying tests   | `test(src-auth): add integration tests`              |
+| `perf`     | Performance improvements                | Optimizing performance      | `perf(src-cache): optimize lookup algorithm`         |
+| `style`    | Code formatting (no logic change)       | Formatting, whitespace      | `style(eac-core): apply gofmt`                       |
 
 ### Multi-Module Commits
 
@@ -284,10 +284,10 @@ Try running with --debug for detailed diagnostics.
 
 ### Command Comparison
 
-| Command | Use Case | Working Directory | Auto-staging |
-|---------|----------|-------------------|--------------|
-| `r2r eac create commit-message` | Direct commit message generation | Any git repo | No (manual `git add`) |
-| `r2r eac work commit` | Workspace-aware commits | Inside work workspace | Yes (with `--all`) |
+| Command                         | Use Case                         | Working Directory     | Auto-staging          |
+| ------------------------------- | -------------------------------- | --------------------- | --------------------- |
+| `r2r eac create commit-message` | Direct commit message generation | Any git repo          | No (manual `git add`) |
+| `r2r eac work commit`           | Workspace-aware commits          | Inside work workspace | Yes (with `--all`)    |
 
 ### Work Command Example
 

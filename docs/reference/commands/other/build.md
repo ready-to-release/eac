@@ -28,12 +28,12 @@ r2r eac build [module...] [--all] [options]
 
 ## Options
 
-| Flag | Description |
-|------|-------------|
-| `--all` | Build all modules |
-| `--clean` | Clean before building |
-| `--parallel` | Build in parallel |
-| `--verbose` | Verbose output |
+| Flag         | Description           |
+| ------------ | --------------------- |
+| `--all`      | Build all modules     |
+| `--clean`    | Clean before building |
+| `--parallel` | Build in parallel     |
+| `--verbose`  | Verbose output        |
 
 ## Examples
 
