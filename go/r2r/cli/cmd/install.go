@@ -36,12 +36,12 @@ Examples:
   r2r install
   
   # Add and install a specific extension
-  r2r install pwsh
+  r2r install eac
   r2r install python
   r2r install go
   
   # Install with local development images
-  r2r install pwsh --load-local`,
+  r2r install eac --load-local`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// If extension name provided, add it to config (creates config if needed)
 		if len(args) > 0 {
@@ -81,7 +81,7 @@ Examples:
 				logging.Info("  • Run 'r2r init' to create a configuration file")
 				logging.Info("  • Or install a specific extension: 'r2r install <extension-name>'")
 				logging.Info("\nExamples:")
-				logging.Info("  r2r install pwsh")
+				logging.Info("  r2r install eac")
 				logging.Info("  r2r install python")
 				os.Exit(1)
 			}
@@ -140,7 +140,7 @@ Examples:
 				logging.Error("❌ No extensions configured. Add an extension with:")
 				logging.Info("  r2r install <extension-name>")
 				logging.Info("\nExamples:")
-				logging.Info("  r2r install pwsh")
+				logging.Info("  r2r install eac")
 				logging.Info("  r2r install python")
 				os.Exit(1)
 			}
@@ -267,8 +267,8 @@ func addExtensionToConfig(extensionName string) error {
 			return fmt.Errorf("failed to create registry client: %w", err)
 		}
 
-		// Try to list tags for this specific extension
-		imagePath := fmt.Sprintf("ready-to-release/r2r-cli/extensions/%s", extensionName)
+		// Try to list tags for this specific extension (ext-<name> format)
+		imagePath := fmt.Sprintf("ready-to-release/ext-%s", extensionName)
 		tags, err := client.ListTags(imagePath)
 		if err != nil || len(tags) == 0 {
 			return fmt.Errorf("extension not found in registry: %s", extensionName)

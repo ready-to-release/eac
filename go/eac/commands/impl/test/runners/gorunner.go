@@ -349,8 +349,9 @@ func sanitizePathForLog(pkgPath string) string {
 }
 
 // extractGoBuildTags extracts Go build tags from a suite tag filter.
-// Input: "@L0,@L1 && ~@skip:wip" or "@L0,@L1,@L2"
-// Output: "L0,L1" or "L0,L1,L2" (comma-separated Go build tags)
+// Input: "@L0,@L1 && ~@skip:wip" or "@L0,@L1,@L2" or "@deps:gh-token"
+// Output: "L0,L1" or "L0,L1,L2" or "L0,L1,deps_gh_token" (comma-separated Go build tags)
+// Note: @deps:<name> tags are translated to deps_<name> (colon->underscore, hyphen->underscore)
 func extractGoBuildTags(suiteTagFilter string) string {
 	if suiteTagFilter == "" {
 		return ""
@@ -363,6 +364,34 @@ func extractGoBuildTags(suiteTagFilter string) string {
 		if strings.Contains(suiteTagFilter, "@"+level) {
 			tags = append(tags, level)
 		}
+	}
+
+	// Look for @deps:<name> tags and translate to deps_<name>
+	// Go build tags can't contain : or -, so we replace them with _
+	depsPrefix := "@deps:"
+	idx := 0
+	for {
+		pos := strings.Index(suiteTagFilter[idx:], depsPrefix)
+		if pos == -1 {
+			break
+		}
+		start := idx + pos + len(depsPrefix)
+		// Find the end of the dependency name (stop at space, comma, &, or end)
+		end := start
+		for end < len(suiteTagFilter) {
+			c := suiteTagFilter[end]
+			if c == ' ' || c == ',' || c == '&' || c == ')' {
+				break
+			}
+			end++
+		}
+		if end > start {
+			depName := suiteTagFilter[start:end]
+			// Translate to valid Go build tag: replace - with _
+			goBuildTag := "deps_" + strings.ReplaceAll(depName, "-", "_")
+			tags = append(tags, goBuildTag)
+		}
+		idx = end
 	}
 
 	if len(tags) == 0 {

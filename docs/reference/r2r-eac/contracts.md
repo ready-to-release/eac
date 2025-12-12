@@ -18,20 +18,20 @@ The EAC contract system defines all configuration via **YAML contracts validated
 
 ## All Contracts
 
-| Contract | File | Purpose |
-|----------|------|---------|
-| **Modules** | `repository.yml` | Module definitions, dependencies, file ownership |
-| **Module Types** | `module-types.yml` | Type templates with build/test behavior |
-| **Environments** | `environments.yml` | Test execution environments (L0-L4) |
-| **Test Suites** | `test-suites.yml` | Test suites with tag selectors |
-| **Testing Tags** | `testing-tags.yml` | Valid test tag definitions |
-| **Books** | `books.yml` | Documentation book configuration |
-| **Repository** | `repository.yml` | Repository metadata |
-| **System Deps** | `system-dependencies.yml` | Required system tools (go, docker, etc.) |
-| **Security Tools** | `security-tools.yml` | Security scanning tool configuration |
-| **AI Config** | `ai-config.yml` | AI provider configuration |
-| **EAC Config** | `eac-config.yml` | EAC system configuration |
-| **Logging** | `logging.yml` | Logging configuration |
+| Contract           | File                      | Purpose                                          |
+| ------------------ | ------------------------- | ------------------------------------------------ |
+| **Modules**        | `repository.yml`          | Module definitions, dependencies, file ownership |
+| **Module Types**   | `module-types.yml`        | Type templates with build/test behavior          |
+| **Environments**   | `environments.yml`        | Test execution environments (L0-L4)              |
+| **Test Suites**    | `test-suites.yml`         | Test suites with tag selectors                   |
+| **Testing Tags**   | `testing-tags.yml`        | Valid test tag definitions                       |
+| **Books**          | `books.yml`               | Documentation book configuration                 |
+| **Repository**     | `repository.yml`          | Repository metadata, incl. module declarations   |
+| **System Deps**    | `system-dependencies.yml` | Required system tools (go, docker, etc.)         |
+| **Security Tools** | `security-tools.yml`      | Security scanning tool configuration             |
+| **AI Config**      | `ai-config.yml`           | AI provider configuration                        |
+| **EAC Config**     | `eac-config.yml`          | EAC system configuration                         |
+| **Logging**        | `logging.yml`             | Logging configuration                            |
 
 **Location**: All contracts in `.r2r/eac/`, validated against schemas in `contracts/`
 
@@ -77,16 +77,16 @@ modules:
 
 ### Key Fields
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `moniker` | string | ✅ | Unique module identifier (kebab-case) |
-| `type` | string | ✅ | Module type reference (from module-types.yml) |
-| `name` | string | ❌ | Human-readable name |
-| `description` | string | ❌ | Module purpose |
-| `depends_on` | array | ❌ | Module dependencies (monikers) |
-| `files` | object | ❌ | File ownership patterns (glob) |
-| `versioning` | object | ❌ | Versioning configuration (semver/calver) |
-| `metadata` | object | ❌ | Custom key-value pairs |
+| Field         | Type   | Required | Description                                   |
+| ------------- | ------ | -------- | --------------------------------------------- |
+| `moniker`     | string | ✅       | Unique module identifier (kebab-case)         |
+| `type`        | string | ✅       | Module type reference (from module-types.yml) |
+| `name`        | string | ❌       | Human-readable name                           |
+| `description` | string | ❌       | Module purpose                                |
+| `depends_on`  | array  | ❌       | Module dependencies (monikers)                |
+| `files`       | object | ❌       | File ownership patterns (glob)                |
+| `versioning`  | object | ❌       | Versioning configuration (semver/calver)      |
+| `metadata`    | object | ❌       | Custom key-value pairs                        |
 
 ### File Ownership
 
@@ -168,25 +168,25 @@ types:
 
 ### Key Fields
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `name` | string | ✅ | Unique type identifier (kebab-case) |
-| `description` | string | ✅ | Human-readable description |
-| `build_deps` | array | ❌ | System dependencies (go, docker, npm) |
-| `capabilities` | array | ❌ | Type capabilities (executable, go_module, etc.) |
-| `build` | object | ❌ | Build artifacts configuration |
-| `defaults` | object | ❌ | Default values inherited by modules |
-| `docker_build` | object | ❌ | Docker build config (r2r-extension only) |
+| Field          | Type   | Required | Description                                     |
+| -------------- | ------ | -------- | ----------------------------------------------- |
+| `name`         | string | ✅       | Unique type identifier (kebab-case)             |
+| `description`  | string | ✅       | Human-readable description                      |
+| `build_deps`   | array  | ❌       | System dependencies (go, docker, npm)           |
+| `capabilities` | array  | ❌       | Type capabilities (executable, go_module, etc.) |
+| `build`        | object | ❌       | Build artifacts configuration                   |
+| `defaults`     | object | ❌       | Default values inherited by modules             |
+| `docker_build` | object | ❌       | Docker build config (r2r-extension only)        |
 
 ### Capabilities
 
-| Capability | Description |
-|------------|-------------|
-| `go_module` | Go module (workspace member) |
-| `executable` | Produces executable binary |
+| Capability      | Description                         |
+| --------------- | ----------------------------------- |
+| `go_module`     | Go module (workspace member)        |
+| `executable`    | Produces executable binary          |
 | `cross_compile` | Supports cross-platform compilation |
-| `container` | Docker container image |
-| `documentation` | Documentation generation |
+| `container`     | Docker container image              |
+| `documentation` | Documentation generation            |
 
 ### Build Artifacts
 
@@ -286,36 +286,36 @@ environments:
 
 ### Key Fields
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `moniker` | string | ✅ | Unique environment identifier (kebab-case) |
-| `name` | string | ✅ | Human-readable environment name |
-| `level` | string | ✅ | Test level: L0, L1, L2, L3, L4 |
-| `type` | string | ✅ | Environment type (unit, docker, plte, production) |
-| `description` | string | ❌ | Detailed environment description |
-| `system_deps` | array | ❌ | Required system dependencies |
+| Field         | Type   | Required | Description                                       |
+| ------------- | ------ | -------- | ------------------------------------------------- |
+| `moniker`     | string | ✅       | Unique environment identifier (kebab-case)        |
+| `name`        | string | ✅       | Human-readable environment name                   |
+| `level`       | string | ✅       | Test level: L0, L1, L2, L3, L4                    |
+| `type`        | string | ✅       | Environment type (unit, docker, plte, production) |
+| `description` | string | ❌       | Detailed environment description                  |
+| `system_deps` | array  | ❌       | Required system dependencies                      |
 
 ### Testing Pyramid Levels
 
-| Level | Speed | Execution Time | Type | System Deps | Use Cases |
-|-------|-------|----------------|------|-------------|-----------|
-| **L0** | Very Fast | < 100ms | unit | None | Pure logic, no I/O |
-| **L1** | Fast | 100ms - 1s | unit | go | Component tests, mocked deps |
-| **L2** | Moderate | 1s - 30s | docker | docker | Service integration, API contracts |
-| **L3** | Slow | 30s - 5min | plte | kubectl, helm | End-to-end tests, PLTE |
-| **L4** | Variable | Variable | production | kubectl, helm | Smoke tests, production |
+| Level  | Speed     | Execution Time | Type       | System Deps   | Use Cases                          |
+| ------ | --------- | -------------- | ---------- | ------------- | ---------------------------------- |
+| **L0** | Very Fast | < 100ms        | unit       | None          | Pure logic, no I/O                 |
+| **L1** | Fast      | 100ms - 1s     | unit       | go            | Component tests, mocked deps       |
+| **L2** | Moderate  | 1s - 30s       | docker     | docker        | Service integration, API contracts |
+| **L3** | Slow      | 30s - 5min     | plte       | kubectl, helm | End-to-end tests, PLTE             |
+| **L4** | Variable  | Variable       | production | kubectl, helm | Smoke tests, production            |
 
 **Recommended Distribution**: 54% L0, 30% L1, 10% L2, 5% L3, 1% L4
 
 ### Environment Types
 
-| Type | Description | Typical Levels |
-|------|-------------|----------------|
-| `unit` | In-process or fast unit tests | L0, L1 |
-| `docker` | Single Docker container | L2 |
-| `docker-compose` | Multi-container orchestration | L2 |
-| `plte` | Production-Like Test Environment (Kubernetes) | L3 |
-| `production` | Live production | L4 |
+| Type             | Description                                   | Typical Levels |
+| ---------------- | --------------------------------------------- | -------------- |
+| `unit`           | In-process or fast unit tests                 | L0, L1         |
+| `docker`         | Single Docker container                       | L2             |
+| `docker-compose` | Multi-container orchestration                 | L2             |
+| `plte`           | Production-Like Test Environment (Kubernetes) | L3             |
+| `production`     | Live production                               | L4             |
 
 ### Examples
 
@@ -378,10 +378,10 @@ suites:
 
 ### Selector Types
 
-| Selector | Description | Example |
-|----------|-------------|---------|
+| Selector       | Description        | Example             |
+| -------------- | ------------------ | ------------------- |
 | `require_tags` | Must have ALL tags | `["@L0", "@smoke"]` |
-| `any_of_tags` | Must have ANY tag | `["@L0", "@L1"]` |
+| `any_of_tags`  | Must have ANY tag  | `["@L0", "@L1"]`    |
 | `exclude_tags` | Must NOT have tags | `["@wip", "@skip"]` |
 
 ---
@@ -408,14 +408,14 @@ graph TB
 
 ### Validation Levels
 
-| Level | Validates | Command |
-|-------|-----------|---------|
-| **Schema** | YAML structure against JSON schema | `validate-contracts` |
-| **Cross-reference** | Dependencies and references exist | `validate-dependencies` |
-| **File ownership** | Files claimed by exactly one module | `validate-module-files` |
-| **Hierarchy** | Dependency graph is acyclic | `validate-module-hierarchy` |
-| **Specs** | Gherkin syntax, tag validity | `validate-specs` |
-| **Design** | Structurizr DSL syntax | `validate-design` |
+| Level               | Validates                           | Command                     |
+| ------------------- | ----------------------------------- | --------------------------- |
+| **Schema**          | YAML structure against JSON schema  | `validate-contracts`        |
+| **Cross-reference** | Dependencies and references exist   | `validate-dependencies`     |
+| **File ownership**  | Files claimed by exactly one module | `validate-module-files`     |
+| **Hierarchy**       | Dependency graph is acyclic         | `validate-module-hierarchy` |
+| **Specs**           | Gherkin syntax, tag validity        | `validate-specs`            |
+| **Design**          | Structurizr DSL syntax              | `validate-design`           |
 
 ### Commands
 
@@ -614,14 +614,14 @@ r2r eac get-config              # Config JSON
 
 ## Benefits
 
-| Benefit | Description |
-|---------|-------------|
-| **Version Control** | Track changes, code review, rollback capabilities |
-| **Self-Documenting** | Human-readable YAML with schema validation |
-| **Early Validation** | Catch errors pre-commit, not at runtime |
-| **Consistency** | Single source of truth, type templates ensure uniformity |
-| **Tool Integration** | IDE support, AI-friendly structured data |
-| **Explicit Configuration** | No implicit conventions, everything defined |
+| Benefit                    | Description                                              |
+| -------------------------- | -------------------------------------------------------- |
+| **Version Control**        | Track changes, code review, rollback capabilities        |
+| **Self-Documenting**       | Human-readable YAML with schema validation               |
+| **Early Validation**       | Catch errors pre-commit, not at runtime                  |
+| **Consistency**            | Single source of truth, type templates ensure uniformity |
+| **Tool Integration**       | IDE support, AI-friendly structured data                 |
+| **Explicit Configuration** | No implicit conventions, everything defined              |
 
 ---
 

@@ -257,7 +257,7 @@ r2r eac test <module>
 **Test suite** (multiple modules):
 
 ```bash
-r2r eac test-suite commit
+r2r eac test-suite component
 ```
 
 **Test Flow**:

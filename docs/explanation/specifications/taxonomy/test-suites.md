@@ -2,7 +2,7 @@
 
 {{ page_breadcrumb() }}
 
-> **Pre-commit, acceptance, and production verification suites**
+> **Component, integration, acceptance, and production verification suites**
 
 Test suites select tests by tags for execution at specific CD Model stages.
 
@@ -10,48 +10,74 @@ Test suites select tests by tags for execution at specific CD Model stages.
 
 ---
 
-## pre-commit
+## component
 
-**Selects**: `@L0`, `@L1`, `@L2`
-**Excludes**: `@ignore`
-**Time**: 5-10 minutes
-**Purpose**: Fast pre-commit validation
+**Selects**: `@L0`, `@L1`
+**Excludes**: `@L2`, `@L3`, `@L4`, `@ignore`
+**Time**: 2-5 minutes
+**Purpose**: Fast component-level validation
 **Environment**: DevBox or Build Agent
-**Run**: `r2r eac test pre-commit`
+**Run**: `r2r eac test component`
 
 ### What It Tests
 
-- Fast unit tests (L0)
-- Unit tests with minimal I/O (L1)
-- Emulated system tests (L2)
+- Very fast unit tests with no I/O (L0)
+- Fast unit tests with minimal I/O (L1)
 
 ### Example
 
 ```bash
-# Run pre-commit suite
-r2r eac test pre-commit
+# Run component suite
+r2r eac test component
 
 # Runs all scenarios with:
-# - @L0, @L1, or @L2
-# - Excludes @ignore
+# - @L0 or @L1
+# - Excludes @L2, @L3, @L4, @ignore
+```
+
+---
+
+## integration
+
+**Selects**: `@L2`
+**Excludes**: `@L0`, `@L1`, `@L3`, `@L4`, `@ignore`
+**Time**: 5-15 minutes
+**Purpose**: Emulated system tests with Docker
+**Environment**: Build Agent with Docker
+**Run**: `r2r eac test integration`
+
+### What It Tests
+
+- Emulated system tests (L2)
+- Docker-based integration tests
+- Tests requiring containers or network simulation
+
+### Example
+
+```bash
+# Run integration suite
+r2r eac test integration
+
+# Runs all scenarios with:
+# - @L2
+# - Excludes @L0, @L1, @L3, @L4, @ignore
 ```
 
 ---
 
 ## acceptance
 
-**Selects**: `@iv`, `@ov`, `@pv`
-**Excludes**: `@ignore`
-**Infers**: `@L3` from `@iv` and `@pv`
+**Selects**: `@L3`
+**Excludes**: `@L0`, `@L1`, `@L2`, `@L4`, `@ignore`
 **Time**: 1-2 hours
-**Purpose**: PLTE deployment validation
+**Purpose**: Production-like system tests in PLTE
 **Environment**: PLTE (Production-Like Test Environment)
 **Run**: `r2r eac test acceptance`
 
 ### What It Tests
 
 - Installation verification (@iv) - deployment succeeded
-- Operational verification (@ov) - features work
+- Operational verification (@ov) - features work in production-like environment
 - Performance verification (@pv) - meets SLA
 
 ### Example
@@ -61,9 +87,8 @@ r2r eac test pre-commit
 r2r eac test acceptance
 
 # Runs all scenarios with:
-# - @iv, @ov, or @pv
-# - Infers @L3 for @iv and @pv
-# - Excludes @ignore
+# - @L3
+# - Excludes @L0, @L1, @L2, @L4, @ignore
 ```
 
 ---
@@ -91,7 +116,7 @@ r2r eac test acceptance
 r2r eac test production-verification
 
 # Runs all scenarios with:
-# - @L4 AND (@piv OR @ppv)
+# - @L4 AND @piv
 # - Excludes @ignore
 ```
 
@@ -99,52 +124,64 @@ r2r eac test production-verification
 
 ## Test Suite Selection Logic
 
-### pre-commit Suite
+### component Suite
 
 ```gherkin
 @L0 @ov
-Scenario: Fast unit test
-  # ✅ SELECTED (L0)
+Scenario: Very fast unit test
+  # SELECTED (L0)
 
 @L1 @ov
-Scenario: Unit test
-  # ✅ SELECTED (L1)
+Scenario: Fast unit test
+  # SELECTED (L1)
 
 @L2 @ov
-Scenario: Emulated test
-  # ✅ SELECTED (L2)
-
-@L3 @iv
-Scenario: PLTE deployment
-  # ❌ NOT SELECTED (L3)
+Scenario: Docker-based test
+  # NOT SELECTED (L2 excluded)
 
 @ignore @L1 @ov
 Scenario: Ignored test
-  # ❌ NOT SELECTED (@ignore)
+  # NOT SELECTED (@ignore)
+```
+
+### integration Suite
+
+```gherkin
+@L2 @ov
+Scenario: Docker integration test
+  # SELECTED (L2)
+
+@L1 @ov
+Scenario: Unit test
+  # NOT SELECTED (L1 excluded)
+
+@L3 @iv
+Scenario: PLTE deployment
+  # NOT SELECTED (L3 excluded)
+
+@ignore @L2 @ov
+Scenario: Ignored test
+  # NOT SELECTED (@ignore)
 ```
 
 ### acceptance Suite
 
 ```gherkin
-@ov
-Scenario: Functional test
-  # ✅ SELECTED (@ov)
+@L3 @ov
+Scenario: Production-like functional test
+  # SELECTED (@L3)
 
-@iv
+@L3 @iv
 Scenario: Deployment check
-  # ✅ SELECTED (@iv, infers @L3)
-
-@pv
-Scenario: Performance test
-  # ✅ SELECTED (@pv, infers @L3)
+  # SELECTED (@L3)
 
 @L2 @ov
 Scenario: Emulated test
-  # ❌ NOT SELECTED (explicit @L2, not @L3)
+  # NOT SELECTED (L2 excluded)
 
-@ignore @ov
+@ignore @L3 @ov
 Scenario: Ignored test
-  # ❌ NOT SELECTED (@ignore)
+  # NOT SELECTED (@ignore)
 ```
 
 ### production-verification Suite
@@ -152,24 +189,50 @@ Scenario: Ignored test
 ```gherkin
 @L4 @piv
 Scenario: Production smoke test
-  # ✅ SELECTED (@L4 + @piv)
+  # SELECTED (@L4 + @piv)
 
 @L4 @ppv
 Scenario: Production monitoring
-  # ✅ SELECTED (@L4 + @ppv)
-
-@piv
-Scenario: Missing L4
-  # ✅ SELECTED (@piv infers @L4)
+  # SELECTED (@L4 + @ppv)
 
 @L3 @iv
 Scenario: PLTE test
-  # ❌ NOT SELECTED (L3, not production)
+  # NOT SELECTED (L3, not production)
 
 @ignore @L4 @piv
 Scenario: Ignored test
-  # ❌ NOT SELECTED (@ignore)
+  # NOT SELECTED (@ignore)
 ```
+
+---
+
+## Running All Suites
+
+Use `--all` to run component, integration, and acceptance suites in a single pass:
+
+```bash
+# Run all suites (single init, single summary)
+r2r eac test --all
+
+# Run all suites for a specific module
+r2r eac test my-module --all
+```
+
+This runs tests from all three suites while routing output to the correct folders:
+
+- `out/test/component/` - L0, L1 tests
+- `out/test/integration/` - L2 tests
+- `out/test/acceptance/` - L3 tests
+
+Benefits:
+
+- Single initialization phase
+- Single summary showing all results
+- Faster than running three separate commands
+- Useful for local development comprehensive testing
+
+!!! note "CI Pipelines"
+    CI pipelines typically run suites separately (`--suite component`, `--suite integration`, etc.) for better failure isolation and parallel job distribution.
 
 ---
 
@@ -177,8 +240,9 @@ Scenario: Ignored test
 
 | CD Stage | Test Suite | Tags Selected | Environment |
 |----------|-----------|---------------|-------------|
-| **Build** | pre-commit | `@L0`, `@L1`, `@L2` | DevBox/Agent |
-| **Acceptance** | acceptance | `@iv`, `@ov`, `@pv` | PLTE |
+| **Pre-commit/MR/Commit** | component | `@L0`, `@L1` | DevBox/Agent |
+| **Integration** | integration | `@L2` | Agent + Docker |
+| **Acceptance** | acceptance | `@L3` | PLTE |
 | **Production** | production-verification | `@L4` + `@piv` | Production |
 
 ---
@@ -187,31 +251,33 @@ Scenario: Ignored test
 
 ### Test Suite Organization
 
-✅ **DO**:
+**DO**:
 
-- Run pre-commit before every commit
-- Run acceptance in PLTE after deployment
+- Run component tests before every commit (fast feedback)
+- Run integration tests before merging (Docker validation)
+- Run acceptance tests in PLTE after deployment
 - Run production-verification continuously in production
-- Ensure fast feedback (keep pre-commit < 10 minutes)
-- Balance test coverage across suites
+- Keep component suite < 5 minutes
+- Keep integration suite < 15 minutes
 
-❌ **DON'T**:
+**DON'T**:
 
-- Skip pre-commit tests (catch issues early)
+- Skip component tests (catch issues early)
+- Skip integration tests (Docker issues caught here)
 - Run production tests in PLTE (environment mismatch)
 - Run PLTE tests in production (excessive load)
-- Include slow tests in pre-commit (breaks feedback loop)
+- Include slow tests in commit suite (breaks feedback loop)
 
 ### Tag Selection
 
-✅ **DO**:
+**DO**:
 
-- Use appropriate verification tags (@ov, @iv, @pv, @piv, @ppv)
-- Set correct test levels (@L0-L4)
+- Use appropriate test levels (@L0-L4)
+- Use verification tags (@ov, @iv, @pv, @piv, @ppv)
 - Let test suites select automatically by tags
 - Review test distribution across suites
 
-❌ **DON'T**:
+**DON'T**:
 
 - Manually filter test suites (use tags)
 - Mix test levels inappropriately
@@ -239,19 +305,30 @@ godog run --tags="@ov && !@Manual"
 
 ## Test Suite Execution Time Guidelines
 
-### pre-commit (Target: < 10 minutes)
+### commit (Target: < 5 minutes)
 
-- **L0**: < 1 minute (microseconds per test)
-- **L1**: 2-3 minutes (milliseconds per test)
-- **L2**: 5-7 minutes (seconds per test)
-- **Total**: 8-10 minutes maximum
+- **L0**: < 30 seconds (microseconds per test)
+- **L1**: 2-4 minutes (milliseconds per test)
+- **Total**: 5 minutes maximum
 
-**If exceeding 10 minutes**:
+**If exceeding 5 minutes**:
 
-- Move slow L2 tests to acceptance suite (change to @L3)
+- Move slow L1 tests to integration suite (change to @L2)
 - Optimize test doubles and mocks
 - Run tests in parallel
 - Review test necessity
+
+### integration (Target: < 15 minutes)
+
+- **L2**: 5-15 minutes (seconds per test)
+- **Total**: 15 minutes maximum
+
+**If exceeding 15 minutes**:
+
+- Parallelize Docker container tests
+- Optimize container startup
+- Review test coverage (remove redundant tests)
+- Consider pre-built test containers
 
 ### acceptance (Target: 1-2 hours)
 
@@ -287,10 +364,14 @@ godog run --tags="@ov && !@Manual"
 
 ```bash
 # Dry run - show which tests would run
-r2r eac test pre-commit --dry-run
+r2r eac test commit --dry-run
+r2r eac test integration --dry-run
+r2r eac test acceptance --dry-run
+r2r eac test production-verification --dry-run
 
 # Show test count by suite
-r2r eac test pre-commit --count
+r2r eac test commit --count
+r2r eac test integration --count
 r2r eac test acceptance --count
 r2r eac test production-verification --count
 ```

@@ -347,7 +347,7 @@ schedule:
 
 ## References
 
-- [CI Orchestration](./ci-orchestration.md) - How trigger-ci.yaml works
+- [Trigger Orchestration](./trigger-orchestration.md) - How trigger-ci.yaml works
 - Workflow file: `.github/workflows/cron-full-trigger.yaml`
 - Trigger workflow: `.github/workflows/trigger-ci.yaml`
 

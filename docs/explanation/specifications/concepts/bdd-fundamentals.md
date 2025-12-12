@@ -157,13 +157,13 @@ Requirements for features are discovered through **Example Mapping**, a collabor
 
 ### Card to Gherkin Mapping
 
-| Card Color | Represents | Maps To | Location |
-|------------|------------|---------|----------|
-| **Yellow** | User Story | Feature description | `specs/` |
-| **Blue** | Acceptance Criteria | `Rule:` blocks | `specs/` |
-| **Green** | Concrete Examples | `Scenario:` blocks | `specs/` |
-| **Pink** | Questions/Unknowns | issues.md | `specs/` |
-| N/A | Step Implementation | Go functions | `src/` |
+| Card Color | Represents          | Maps To             | Location |
+| ---------- | ------------------- | ------------------- | -------- |
+| **Yellow** | User Story          | Feature description | `specs/` |
+| **Blue**   | Acceptance Criteria | `Rule:` blocks      | `specs/` |
+| **Green**  | Concrete Examples   | `Scenario:` blocks  | `specs/` |
+| **Pink**   | Questions/Unknowns  | issues.md           | `specs/` |
+| N/A        | Step Implementation | Go functions        | `src/`   |
 
 ### Workshop Format
 

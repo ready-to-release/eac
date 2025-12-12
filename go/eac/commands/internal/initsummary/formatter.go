@@ -30,7 +30,11 @@ func FormatCompact(s *Summary) string {
 
 	// Test suite info
 	if s.HasTestInfo() {
-		b.WriteString(fmt.Sprintf("Suite: %s\n", s.Test.SuiteName))
+		if len(s.Test.SuitesIncluded) > 0 {
+			b.WriteString(fmt.Sprintf("Suite: %s (%s)\n", s.Test.SuiteName, strings.Join(s.Test.SuitesIncluded, ", ")))
+		} else {
+			b.WriteString(fmt.Sprintf("Suite: %s\n", s.Test.SuiteName))
+		}
 		b.WriteString(fmt.Sprintf("Tests: %d selected (of %d discovered)\n",
 			s.Test.Selected, s.Test.TotalDiscovered))
 		// Module summary for tests
@@ -134,6 +138,9 @@ func FormatDetailed(s *Summary) string {
 		b.WriteString(fmt.Sprintf("  Name: %s\n", s.Test.SuiteName))
 		if s.Test.SuiteDescription != "" {
 			b.WriteString(fmt.Sprintf("  Description: %s\n", s.Test.SuiteDescription))
+		}
+		if len(s.Test.SuitesIncluded) > 0 {
+			b.WriteString(fmt.Sprintf("  Includes: %s\n", strings.Join(s.Test.SuitesIncluded, ", ")))
 		}
 		b.WriteString("\n")
 

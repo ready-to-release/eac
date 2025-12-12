@@ -14,7 +14,7 @@ This tutorial teaches you how to set up automated CI/CD pipelines with quality g
 
 - Set up GitHub Actions workflows for r2r projects
 - Implement quality gates at commit, merge, and release stages
-- Use `r2r pipeline` commands for orchestration
+- Use `pipeline` commands for orchestration
 - Run changed modules only in CI
 - Configure test suites for different pipeline stages
 - Monitor pipeline status and wait for completion
@@ -23,23 +23,27 @@ This tutorial teaches you how to set up automated CI/CD pipelines with quality g
 ### Tutorial Structure
 
 1. **Understanding the CD model**
+
    - 12-stage continuous delivery framework
    - Quality gates: pre-commit, merge request, release
-   - Test levels at each stage (L0-L2 → L3 → L4)
+   - Test levels at each stage (L0-L1 commit → L2 integration → L3 acceptance → L4 production)
    - Artifact progression through stages
 
 2. **GitHub Actions setup**
+
    - Workflow file structure (`.github/workflows/`)
    - Trigger events: push, pull_request, workflow_dispatch
    - Job dependencies and parallelization
    - Secrets and environment variables
 
 3. **Pre-commit quality gate**
+
    - Local: pre-commit hooks
    - What to validate: format, lint, L0-L2 tests, specs
    - Fast feedback (< 5 minutes)
 
 4. **Commit/Push quality gate**
+
    ```yaml
    name: Commit Pipeline
    on: push
@@ -52,32 +56,36 @@ This tutorial teaches you how to set up automated CI/CD pipelines with quality g
            run: r2r get changed-modules-ci
          - name: Build changed modules
            run: r2r build $(r2r get changed-modules-ci)
-         - name: Test changed modules (commit suite)
+         - name: Test changed modules (component suite)
            run: r2r test $(r2r get changed-modules-ci)
          - name: Validate all
            run: r2r validate
    ```
 
 5. **Pull request quality gate**
-   - Run acceptance suite (L0-L3, IV/OV/PV)
+
+   - Run integration suite (L2 Docker-based tests)
    - Security scanning (SAST, vulnerabilities)
    - Dependency validation
    - Specification validation
-   - More thorough (10-20 minutes)
+   - Thorough validation (10-20 minutes)
 
 6. **Release quality gate**
+
    - Production verification suite (L4, PIV)
    - Generate SBOM
    - Compliance scanning
    - Release approval checks
 
 7. **Using pipeline commands**
+
    - Run pipeline: `r2r pipeline run`
    - Check status: `r2r pipeline status`
    - Dispatch and wait: `r2r pipeline ci dispatch-and-wait`
    - Wait for completion: `r2r pipeline wait`
 
 8. **Optimizing CI performance**
+
    - Build only changed modules
    - Cache dependencies (Go modules, npm packages)
    - Parallel test execution
@@ -95,24 +103,28 @@ This tutorial teaches you how to set up automated CI/CD pipelines with quality g
 The tutorial will set up a complete CI/CD pipeline:
 
 **Pre-commit (local):**
+
 ```bash
 # .git/hooks/pre-commit
 r2r validate
 ```
 
 **Commit pipeline (on push):**
+
 - Build changed modules
-- Test changed modules (commit suite)
+- Test changed modules (component suite)
 - Validate contracts and specs
 
 **Pull request pipeline (on PR):**
+
 - Build all affected modules
-- Test with acceptance suite
+- Test with integration suite (L2)
 - Security scans (SAST, vulnerabilities, IaC)
 - Validate dependencies
 - Generate test report
 
 **Release pipeline (on tag):**
+
 - Build release artifacts
 - Run production-verification suite
 - Generate SBOM
@@ -172,7 +184,7 @@ jobs:
         if: steps.changed.outputs.modules != ''
         run: r2r build ⟪ steps.changed.outputs.modules ⟫
 
-      - name: Test (commit suite)
+      - name: Test (component suite)
         if: steps.changed.outputs.modules != ''
         run: r2r test ⟪ steps.changed.outputs.modules ⟫
 

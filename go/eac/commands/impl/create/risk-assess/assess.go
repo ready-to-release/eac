@@ -14,7 +14,7 @@
 // Flag.max-evidence-age: type=string, default=24h, usage=Maximum age for security evidence before auto-refresh (e.g., 24h, 7d)
 // Flag.force-scan: type=bool, default=false, usage=Force re-run security scans regardless of age
 // Flag.skip-auto-run: type=bool, default=false, usage=Use existing evidence only, fail if missing
-// Flag.suite: type=string, default=acceptance, usage=Test suite to run (e.g., acceptance, commit)
+// Flag.suite: type=string, default=acceptance, usage=Test suite to run (e.g., acceptance, component)
 // Flag.report-template: type=string, default=risk-assessment-detailed, usage=Report template variant (risk-assessment, risk-assessment-summary, risk-assessment-detailed)
 // Flag.sequential: type=bool, default=false, usage=Run assessments sequentially instead of parallel
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Save intermediate outputs to out/logs/risk/
@@ -448,7 +448,7 @@ Examples:
   create risk-assess billing api auth --profile specs/.risk-controls/risk-profile.json
 
   # Use different test suite
-  create risk-assess --profile specs/.risk-controls/risk-profile.json --suite commit
+  create risk-assess --profile specs/.risk-controls/risk-profile.json --suite component
 
   # Assess single module with production tests
   create risk-assess billing --profile specs/.risk-controls/risk-profile.json --suite production-verification

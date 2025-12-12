@@ -58,6 +58,7 @@ Collaborative workshop technique that discovers domain vocabulary by visually ma
 Applies established Ubiquitous Language to specific features through time-boxed workshops.
 
 **Uses domain terms in**:
+
 - **Yellow cards**: WHO (actor), WHAT (capability), WHY (value)
 - **Blue cards**: Business rules using domain vocabulary
 - **Green cards**: Concrete situations using domain concepts
@@ -71,7 +72,7 @@ Applies established Ubiquitous Language to specific features through time-boxed 
 
 ### The Flow
 
-```
+```text
 Event Storming: Discover vocabulary
     → Domain Events, Actors, Policies
 Example Mapping: Apply to features
@@ -87,6 +88,7 @@ Code: Implement using same terms
 **Event Storming** discovered: "Order Approved" event, "Manager" actor, "Approval" policy
 
 **Example Mapping** applied:
+
 - Blue card: "Orders over $10,000 must be approved by a manager"
 - Green card: "Given $15,000 order, when manager approves..."
 
@@ -114,6 +116,7 @@ Feature: Order Approval Process
 Not every term means the same thing everywhere. Ubiquitous Language exists within **bounded contexts**.
 
 **Example**: "Customer" has different meanings:
+
 - **Sales Context**: Potential buyer, includes leads
 - **Support Context**: Paying subscriber with support contract
 - **Accounting Context**: Entity with payment history
@@ -197,6 +200,7 @@ Specifications use exact business vocabulary - no separate "business document" t
 ### All Stakeholders Can Validate
 
 Written in Ubiquitous Language means:
+
 - Product owners recognize terms and validate requirements
 - Domain experts see their concepts reflected
 - Developers understand what to implement
@@ -206,6 +210,7 @@ Written in Ubiquitous Language means:
 ### Tests as Living Documentation
 
 Automated tests using Ubiquitous Language:
+
 - Document domain in terms everyone understands
 - Business rules visible and verifiable
 - New team members learn domain from reading tests
@@ -214,6 +219,7 @@ Automated tests using Ubiquitous Language:
 ### Code Implements Business Concepts
 
 Code using Ubiquitous Language:
+
 - Classes, methods, variables reflect domain concepts
 - Code reviews can involve domain experts
 - Refactoring preserves business concepts

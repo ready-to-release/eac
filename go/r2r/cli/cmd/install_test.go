@@ -1,5 +1,5 @@
-//go:build L2
-// +build L2
+//go:build L2 && deps_gh_token
+// +build L2,deps_gh_token
 
 package cmd
 
@@ -33,7 +33,7 @@ func TestInstallCommand_CreateConfigFile(t *testing.T) {
 	}
 
 	// Test adding extension to non-existent config
-	err := addExtensionToConfig("pwsh")
+	err := addExtensionToConfig("eac")
 	if err != nil {
 		t.Fatalf("addExtensionToConfig should create config file, got error: %v", err)
 	}
@@ -73,8 +73,8 @@ func TestInstallCommand_CreateConfigFile(t *testing.T) {
 		t.Fatal("Extension should be a map")
 	}
 
-	if ext["name"] != "pwsh" {
-		t.Errorf("Expected extension name 'pwsh', got %v", ext["name"])
+	if ext["name"] != "eac" {
+		t.Errorf("Expected extension name 'eac', got %v", ext["name"])
 	}
 
 	image, ok := ext["image"].(string)
@@ -106,14 +106,14 @@ func TestInstallCommand_AddToExistingConfig(t *testing.T) {
 	existingConfig := `version: "1.0"
 extensions:
   - name: "python"
-    image: "ghcr.io/ready-to-release/r2r-cli/extensions/python:latest"
+    image: "ghcr.io/ready-to-release/ext-python:latest"
 `
 	if err := os.WriteFile(configPath, []byte(existingConfig), 0644); err != nil {
 		t.Fatalf("Failed to create existing config: %v", err)
 	}
 
 	// Add new extension
-	err := addExtensionToConfig("pwsh")
+	err := addExtensionToConfig("eac")
 	if err != nil {
 		t.Fatalf("addExtensionToConfig failed: %v", err)
 	}
@@ -148,7 +148,7 @@ extensions:
 		names[i] = extMap["name"].(string)
 	}
 
-	expectedNames := []string{"python", "pwsh"}
+	expectedNames := []string{"python", "eac"}
 	for _, expected := range expectedNames {
 		found := false
 		for _, name := range names {
@@ -177,7 +177,7 @@ func TestInstallCommand_PreventDuplicates(t *testing.T) {
 		t.Fatalf("Failed to create .git directory: %v", err)
 	}
 
-	// Create existing config with pwsh in .r2r directory
+	// Create existing config with eac in .r2r directory
 	r2rDir := filepath.Join(tempDir, ".r2r")
 	if err := os.MkdirAll(r2rDir, 0755); err != nil {
 		t.Fatalf("Failed to create .r2r directory: %v", err)
@@ -185,16 +185,16 @@ func TestInstallCommand_PreventDuplicates(t *testing.T) {
 	configPath := filepath.Join(r2rDir, "r2r-cli.yml")
 	existingConfig := `version: "1.0"
 extensions:
-  - name: "pwsh"
-    image: "ghcr.io/ready-to-release/r2r-cli/extensions/pwsh:v1.0.0"
+  - name: "eac"
+    image: "ghcr.io/ready-to-release/ext-eac:v1.0.0"
 `
 	if err := os.WriteFile(configPath, []byte(existingConfig), 0644); err != nil {
 		t.Fatalf("Failed to create existing config: %v", err)
 	}
 
-	// Try to add pwsh again - this may fail if registry is not accessible
+	// Try to add eac again - this may fail if registry is not accessible
 	// but we can still test the file handling logic
-	err := addExtensionToConfig("pwsh")
+	err := addExtensionToConfig("eac")
 
 	// If registry access fails, just verify the error is reasonable and return
 	if err != nil {
@@ -231,8 +231,8 @@ extensions:
 		t.Fatal("Extension should be a map")
 	}
 
-	if ext["name"] != "pwsh" {
-		t.Errorf("Expected extension name 'pwsh', got %v", ext["name"])
+	if ext["name"] != "eac" {
+		t.Errorf("Expected extension name 'eac', got %v", ext["name"])
 	}
 }
 
@@ -253,7 +253,7 @@ func TestInstallCommand_NoRepositoryRoot(t *testing.T) {
 	os.Chdir(isolatedDir)
 
 	// Try to add extension
-	err := addExtensionToConfig("pwsh")
+	err := addExtensionToConfig("eac")
 	if err == nil {
 		t.Fatal("addExtensionToConfig should fail in isolated directory")
 	}
@@ -333,7 +333,7 @@ func TestInstallCommand_ConfigFilePermissions(t *testing.T) {
 	}
 
 	// Add extension (creates config file)
-	err := addExtensionToConfig("pwsh")
+	err := addExtensionToConfig("eac")
 	if err != nil {
 		t.Fatalf("addExtensionToConfig failed: %v", err)
 	}
@@ -377,7 +377,7 @@ func TestInstallCommand_ConfigInitialization(t *testing.T) {
 	}
 
 	// Add extension (should create config in .r2r directory)
-	err := addExtensionToConfig("pwsh")
+	err := addExtensionToConfig("eac")
 	if err != nil {
 		if strings.Contains(err.Error(), "registry") || strings.Contains(err.Error(), "SHA") {
 			t.Logf("Registry access failed (acceptable in test): %v", err)
@@ -421,8 +421,8 @@ func TestInstallCommand_ConfigInitialization(t *testing.T) {
 		t.Fatal("Extension should be a map")
 	}
 
-	if ext["name"] != "pwsh" {
-		t.Errorf("Expected extension name 'pwsh', got %v", ext["name"])
+	if ext["name"] != "eac" {
+		t.Errorf("Expected extension name 'eac', got %v", ext["name"])
 	}
 
 	// Verify image field exists and is non-empty

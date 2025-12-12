@@ -207,7 +207,7 @@ func ValidatePostInference(test TestReference, validSkipReasons map[string]confi
 		errors = append(errors, fmt.Sprintf("test '%s' has @gmp-critical-aspect but no @gxp tag", test.TestName))
 	}
 
-	// Validate: Production tags (@piv/@ppv) should not be in commit suite (these are @L4)
+	// Validate: Production tags (@piv/@ppv) should not be in component suite (these are @L4)
 	// This is covered by the L4 check above
 
 	// Validate: @skip tests should still have proper tags (for documentation)

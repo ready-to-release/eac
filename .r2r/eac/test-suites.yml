@@ -1,10 +1,10 @@
 # yaml-language-server: $schema=../../contracts/eac-core/0.1.0/test-suites.schema.json
 suites:
   # ============================================================================
-  # Commit Suite - Fast unit and integration tests for pre-commit stages
+  # Component Suite - Fast unit tests for component-level validation
   # ============================================================================
-  - moniker: commit
-    name: Commit Tests
+  - moniker: component
+    name: Component Tests
     description: "Fast tests for Stage 2-4 (Pre-commit, MR, Commit) - L0-L1"
     selectors:
       - any_of_tags:
@@ -16,19 +16,34 @@ suites:
           - "@L4"
 
   # ============================================================================
-  # Acceptance Suite - PLTE-level verification tests
+  # Integration Suite - Emulated system tests (Docker-based)
   # ============================================================================
-  - moniker: acceptance
-    name: PLTE Acceptance Tests
-    description: "Stage 5-6 - L2+ Installation, Operational, and Performance Verification"
+  - moniker: integration
+    name: Integration Tests
+    description: "Stage 5 - L2 emulated system tests with Docker"
     selectors:
       - any_of_tags:
-          - "@iv"
-          - "@ov"
-          - "@pv"
+          - "@L2"
         exclude_tags:
           - "@L0"
           - "@L1"
+          - "@L3"
+          - "@L4"
+
+  # ============================================================================
+  # Acceptance Suite - Production-like system tests
+  # ============================================================================
+  - moniker: acceptance
+    name: Acceptance Tests
+    description: "Stage 6 - L3 production-like system tests"
+    selectors:
+      - any_of_tags:
+          - "@L3"
+        exclude_tags:
+          - "@L0"
+          - "@L1"
+          - "@L2"
+          - "@L4"
 
   # ============================================================================
   # Production Verification Suite - Production smoke tests

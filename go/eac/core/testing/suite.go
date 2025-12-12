@@ -13,10 +13,16 @@ var log = logging.C()
 
 // GetSuite retrieves a suite by its moniker from configuration.
 // Returns error if config is unavailable (fail-closed - no hardcoded fallbacks).
+// Special case: "all" returns a combined suite (component + integration + acceptance).
 func GetSuite(moniker string) (*TestSuite, error) {
 	cfg := config.Global()
 	if cfg == nil || cfg.TestSuites == nil {
 		return nil, fmt.Errorf("cannot get suite '%s': config unavailable (ensure config is loaded)", moniker)
+	}
+
+	// Handle special "all" suite that combines component, integration, and acceptance
+	if moniker == "all" {
+		return buildAllSuite()
 	}
 
 	suiteDef := cfg.TestSuites.Get(moniker)
@@ -24,6 +30,27 @@ func GetSuite(moniker string) (*TestSuite, error) {
 		return convertSuiteDef(suiteDef), nil
 	}
 	return nil, fmt.Errorf("suite not found: %s", moniker)
+}
+
+// buildAllSuite creates a combined suite from component, integration, and acceptance.
+// This matches tests with @L0, @L1, @L2, or @L3 tags (excludes @L4/production-verification).
+// The combined suite uses a single selector matching any of L0-L3 to avoid cross-exclusion issues.
+func buildAllSuite() (*TestSuite, error) {
+	// Instead of combining individual selectors (which have cross-exclusions),
+	// create a single clean selector that matches L0, L1, L2, or L3.
+	// Only exclude L4 (production-verification).
+	return &TestSuite{
+		Moniker:     "all",
+		Name:        "All Tests (component + integration + acceptance)",
+		Description: "Combined suite: L0-L3 tests (excludes L4/production-verification)",
+		Selectors: []TagSelector{
+			{
+				AnyOfTags:   []string{"@L0", "@L1", "@L2", "@L3"},
+				ExcludeTags: []string{"@L4"},
+			},
+		},
+		Inferences: GetGlobalInferences(),
+	}, nil
 }
 
 // ListSuites returns all available suite monikers.

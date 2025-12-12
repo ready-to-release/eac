@@ -28,7 +28,7 @@ The testing taxonomy defines:
 | [Dependency Tags](./dependency-tags.md) | System, module, and environment dependencies |
 | [Control Tags](./control-tags.md) | Risk and compliance controls |
 | [Tag Inheritance](./tag-inheritance.md) | How tags accumulate and override |
-| [Test Suites](./test-suites.md) | Pre-commit, acceptance, production verification |
+| [Test Suites](./test-suites.md) | Commit, integration, acceptance, production-verification |
 
 ---
 

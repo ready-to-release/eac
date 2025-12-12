@@ -317,9 +317,9 @@
       },
       "extensions": [
         {
-          "name": "pwsh",
-          "description": "PowerShell extension",
-          "image": "ghcr.io/ready-to-release/r2r/extensions/pwsh:sha-abc123",
+          "name": "eac",
+          "description": "PowerShell extension",          
+          "image": "ghcr.io/ready-to-release/ext-eac:sha-abc123",
           "env": [
             {
               "name": "PS_VERSION",

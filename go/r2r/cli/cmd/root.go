@@ -113,7 +113,7 @@ func init() {
 		logging.Fatalf("Version validation failed: %v", err)
 	}
 
-	// Initialize extension aliases for direct execution (e.g., "r2r pwsh" instead of "r2r run pwsh")
+	// Initialize extension aliases for direct execution (e.g., "r2r eac" instead of "r2r run eac")
 	InitializeExtensionAliases()
 }
 

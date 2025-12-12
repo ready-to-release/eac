@@ -16,15 +16,15 @@ import (
 func TestMergeExtensionPartialOverride(t *testing.T) {
 	// Create base extension
 	base := &Extension{
-		Name:            "pwsh",
-		Image:           "ghcr.io/ready-to-release/r2r-cli/extensions/pwsh:v1.0.0",
+		Name:            "eac",
+		Image:           "ghcr.io/ready-to-release/ext-eac:v1.0.0",
 		ImagePullPolicy: "IfNotPresent",
 		LoadLocal:       false,
 	}
 
 	// Create override with only LoadLocal field
 	override := &Extension{
-		Name:      "pwsh",
+		Name:      "eac",
 		LoadLocal: true,
 		// Image and ImagePullPolicy are empty - should not override
 	}
@@ -33,8 +33,8 @@ func TestMergeExtensionPartialOverride(t *testing.T) {
 	mergeExtension(base, override)
 
 	// Verify fields
-	assert.Equal(t, "pwsh", base.Name, "Name should remain unchanged")
-	assert.Equal(t, "ghcr.io/ready-to-release/r2r-cli/extensions/pwsh:v1.0.0", base.Image, "Image should remain unchanged")
+	assert.Equal(t, "eac", base.Name, "Name should remain unchanged")
+	assert.Equal(t, "ghcr.io/ready-to-release/ext-eac:v1.0.0", base.Image, "Image should remain unchanged")
 	assert.Equal(t, "IfNotPresent", base.ImagePullPolicy, "ImagePullPolicy should remain unchanged")
 	assert.True(t, base.LoadLocal, "LoadLocal should be updated from override")
 }
@@ -149,8 +149,8 @@ func TestMergeConfigsExtensions(t *testing.T) {
 	base := &Config{
 		Extensions: []Extension{
 			{
-				Name:            "pwsh",
-				Image:           "ghcr.io/ready-to-release/r2r-cli/extensions/pwsh:v1.0.0",
+				Name:            "eac",
+				Image:           "ghcr.io/ready-to-release/ext-eac:v1.0.0",
 				ImagePullPolicy: "IfNotPresent",
 			},
 			{
@@ -164,7 +164,7 @@ func TestMergeConfigsExtensions(t *testing.T) {
 	override := &Config{
 		Extensions: []Extension{
 			{
-				Name:      "pwsh",
+				Name:      "eac",
 				LoadLocal: true, // Partial override
 			},
 			{
@@ -186,11 +186,11 @@ func TestMergeConfigsExtensions(t *testing.T) {
 		extMap[base.Extensions[i].Name] = &base.Extensions[i]
 	}
 
-	// Verify pwsh was merged
-	pwsh := extMap["pwsh"]
-	assert.NotNil(t, pwsh)
-	assert.Equal(t, "ghcr.io/ready-to-release/r2r-cli/extensions/pwsh:v1.0.0", pwsh.Image, "Image should remain from base")
-	assert.True(t, pwsh.LoadLocal, "LoadLocal should be updated from override")
+	// Verify eac was merged
+	eac := extMap["eac"]
+	assert.NotNil(t, eac)
+	assert.Equal(t, "ghcr.io/ready-to-release/ext-eac:v1.0.0", eac.Image, "Image should remain from base")
+	assert.True(t, eac.LoadLocal, "LoadLocal should be updated from override")
 
 	// Verify python remained unchanged
 	python := extMap["python"]
@@ -213,8 +213,8 @@ func TestMergeConfigFile(t *testing.T) {
 	// Create base configuration file
 	baseConfig := `version: "1.0"
 extensions:
-  - name: "pwsh"
-    image: "ghcr.io/ready-to-release/r2r-cli/extensions/pwsh:v1.0.0"
+  - name: "eac"
+    image: "ghcr.io/ready-to-release/ext-eac:v1.0.0"
     image_pull_policy: "IfNotPresent"
   - name: "python"
     image: "python:3.9"
@@ -231,14 +231,14 @@ extensions:
 
 	// Verify base config loaded correctly
 	assert.Len(t, Global.Extensions, 2)
-	assert.Equal(t, "pwsh", Global.Extensions[0].Name)
-	assert.Equal(t, "ghcr.io/ready-to-release/r2r-cli/extensions/pwsh:v1.0.0", Global.Extensions[0].Image)
+	assert.Equal(t, "eac", Global.Extensions[0].Name)
+	assert.Equal(t, "ghcr.io/ready-to-release/ext-eac:v1.0.0", Global.Extensions[0].Image)
 	assert.False(t, Global.Extensions[0].LoadLocal)
 
 	// Create override configuration file
 	overrideConfig := `version: "1.0"
 extensions:
-  - name: "pwsh"
+  - name: "eac"
     load_local: true
   - name: "node"
     image: "node:16"
@@ -260,11 +260,11 @@ extensions:
 		extMap[Global.Extensions[i].Name] = &Global.Extensions[i]
 	}
 
-	// Verify pwsh was merged correctly
-	pwsh := extMap["pwsh"]
-	assert.NotNil(t, pwsh)
-	assert.Equal(t, "ghcr.io/ready-to-release/r2r-cli/extensions/pwsh:v1.0.0", pwsh.Image, "Image should remain from base")
-	assert.True(t, pwsh.LoadLocal, "LoadLocal should be updated from override")
+	// Verify eac was merged correctly
+	eac := extMap["eac"]
+	assert.NotNil(t, eac)
+	assert.Equal(t, "ghcr.io/ready-to-release/ext-eac:v1.0.0", eac.Image, "Image should remain from base")
+	assert.True(t, eac.LoadLocal, "LoadLocal should be updated from override")
 
 	// Verify python remained unchanged
 	python := extMap["python"]
@@ -360,8 +360,8 @@ func TestPartialOverrideValidation(t *testing.T) {
 	// Create base configuration file
 	baseConfig := `version: "1.0"
 extensions:
-  - name: "pwsh"
-    image: "ghcr.io/ready-to-release/r2r-cli/extensions/pwsh:v1.0.0"
+  - name: "eac"
+    image: "ghcr.io/ready-to-release/ext-eac:v1.0.0"
 `
 	baseConfigPath := filepath.Join(r2rDir, "r2r-cli.yml")
 	err := os.WriteFile(baseConfigPath, []byte(baseConfig), 0644)
@@ -376,7 +376,7 @@ extensions:
 	// This should be valid as a partial override
 	overrideConfig := `version: "1.0"
 extensions:
-  - name: "pwsh"
+  - name: "eac"
     load_local: true
 `
 	overrideConfigPath := filepath.Join(tempDir, "r2r-cli.partial.yml")
@@ -389,8 +389,8 @@ extensions:
 
 	// Verify the merge worked
 	assert.Len(t, Global.Extensions, 1)
-	assert.Equal(t, "pwsh", Global.Extensions[0].Name)
-	assert.Equal(t, "ghcr.io/ready-to-release/r2r-cli/extensions/pwsh:v1.0.0", Global.Extensions[0].Image)
+	assert.Equal(t, "eac", Global.Extensions[0].Name)
+	assert.Equal(t, "ghcr.io/ready-to-release/ext-eac:v1.0.0", Global.Extensions[0].Image)
 	assert.True(t, Global.Extensions[0].LoadLocal)
 }
 

@@ -3,7 +3,7 @@
 This repository implements a sophisticated CI/CD pipeline with:
 
 - **Incremental CI** - Dependency-aware change detection for fast feedback
-- **Parallel PR testing** - Fast commit suite for PRs
+- **Parallel PR testing** - Fast component suite for PRs
 - **Sequential trunk builds** - Full acceptance testing on main branch
 - **Automated releases** - Version-based deployment to multiple platforms
 - **Security scanning** - CodeQL and supply chain attestations
@@ -116,7 +116,7 @@ ci-<module> (test job)
   │
   ├─ Download: commands-binary
   ├─ Download: build-artifacts-{module}
-  ├─ Run tests (commit for PRs, commit+acceptance for main)
+  ├─ Run tests (component for PRs, component+acceptance for main)
   └─ Upload: test-results-{module}
 ```
 
@@ -171,14 +171,14 @@ jobs:
           module: my-module
           trigger-run-id: ${{ inputs.trigger_run_id }}
           setup-deps: auto
-          suites: ${{ startsWith(inputs.ref, 'refs/pull/') && 'commit' || 'commit,acceptance' }}
+          suites: ${{ startsWith(inputs.ref, 'refs/pull/') && 'component' || 'component,integration,acceptance' }}
 ```
 
 **Key points:**
 
 - `trigger-run-id` enables artifact caching from orchestrator
-- PRs run `commit` suite only (fast)
-- Main branch runs `commit,acceptance` (full validation)
+- PRs run `component` suite only (fast)
+- Main branch runs `component,integration,acceptance` (full validation)
 - `build-module` and `test-module` handle all artifact operations + summaries
 
 ---
@@ -335,15 +335,15 @@ Developer-initiated release via CHANGELOG:
 
 **Two-tier strategy for fast PRs, thorough trunk:**
 
-| Branch       | Suites              | Duration   | Purpose         |
-| ------------ | ------------------- | ---------- | --------------- |
-| Pull Request | `commit` only       | ~5-10 min  | Fast feedback   |
-| Main (trunk) | `commit,acceptance` | ~15-30 min | Full validation |
+| Branch       | Suites                             | Duration   | Purpose         |
+| ------------ | ---------------------------------- | ---------- | --------------- |
+| Pull Request | `component` only                   | ~5-10 min  | Fast feedback   |
+| Main (trunk) | `component,integration,acceptance` | ~15-30 min | Full validation |
 
 **Implementation:**
 
 ```yaml
-suites: ${{ startsWith(inputs.ref, 'refs/pull/') && 'commit' || 'commit,acceptance' }}
+suites: ${{ startsWith(inputs.ref, 'refs/pull/') && 'component' || 'component,integration,acceptance' }}
 ```
 
 ---
@@ -427,7 +427,7 @@ All workflows need the `commands` binary. Three modes:
    ./commands build my-module
 
    # Test
-   ./commands test my-module --suite commit
+   ./commands test my-module --suite component
    ```
 
 ### Update Commands Binary

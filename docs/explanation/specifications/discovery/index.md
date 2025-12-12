@@ -22,13 +22,13 @@ Discovery happens BEFORE implementation. These workshops build shared understand
 
 ## In This Section
 
-| Topic | Description |
-|-------|-------------|
-| [Event Storming Overview](./event-storming-overview.md) | What is Event Storming and when to use it |
-| [Event Storming Formats](./event-storming-formats.md) | Big Picture, Process Modeling, Software Design |
-| [Event Storming Facilitation](./event-storming-facilitation.md) | Running an Event Storming session |
-| [Example Mapping](./example-mapping.md) | Workshop for discovering acceptance criteria (15-25 min) |
-| [Card Reference](./card-reference.md) | Example Mapping card colors and meanings |
+| Topic                                                           | Description                                              |
+| --------------------------------------------------------------- | -------------------------------------------------------- |
+| [Event Storming Overview](./event-storming-overview.md)         | What is Event Storming and when to use it                |
+| [Event Storming Formats](./event-storming-formats.md)           | Big Picture, Process Modeling, Software Design           |
+| [Event Storming Facilitation](./event-storming-facilitation.md) | Running an Event Storming session                        |
+| [Example Mapping](./example-mapping.md)                         | Workshop for discovering acceptance criteria (15-25 min) |
+| [Card Reference](./card-reference.md)                           | Example Mapping card colors and meanings                 |
 
 ---
 
@@ -81,8 +81,10 @@ Both techniques require multiple perspectives:
 - Split large domains across multiple sessions
 
 **Example Mapping**: 15-25 minutes per feature
+
 >
-- >25 min means feature is too large (split it)
+
+- > 25 min means feature is too large (split it)
 - <15 min might mean missing edge cases
 
 ### 3. Capture questions, don't solve them
@@ -161,12 +163,12 @@ See: [Example Mapping](./example-mapping.md)
 
 Quick reference:
 
-| Color | Represents | Maps To | Quantity Limit |
-|-------|------------|---------|----------------|
-| 🟡 Yellow | User Story | Feature description | 1 per feature |
-| 🔵 Blue | Acceptance Criteria | `Rule:` blocks | ≤ 4 per story |
-| 🟢 Green | Concrete Examples | `Scenario:` blocks | ≤ 4 per criterion |
-| 🟣 Pink | Questions/Unknowns | issues.md | Resolve before implementation |
+| Color     | Represents          | Maps To             | Quantity Limit                |
+| --------- | ------------------- | ------------------- | ----------------------------- |
+| 🟡 Yellow | User Story          | Feature description | 1 per feature                 |
+| 🔵 Blue   | Acceptance Criteria | `Rule:` blocks      | ≤ 4 per story                 |
+| 🟢 Green  | Concrete Examples   | `Scenario:` blocks  | ≤ 4 per criterion             |
+| 🟣 Pink   | Questions/Unknowns  | issues.md           | Resolve before implementation |
 
 See: [Card Reference](./card-reference.md) for detailed usage.
 

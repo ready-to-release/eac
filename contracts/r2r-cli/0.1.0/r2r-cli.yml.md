@@ -218,14 +218,14 @@ All environment variable names must:
 
 ### Extensions Configuration
 
-Extensions are the core of the configuration. Each extension defines a containerized tool.
+Extensions are the core of the configuration.
+
+Each extension defines a containerized tool.
 
 ```yaml
 extensions:
-  - name: "pwsh"
-    description: "PowerShell Core environment"
-    version: "7.4.0"
-    image: "ghcr.io/ready-to-release/r2r/extensions/pwsh:sha-abc123"
+  - name: "eac"
+    image: "ghcr.io/ready-to-release/ext-eac:sha-abc123"
     image_pull_policy: "IfNotPresent"
 
     env:
@@ -241,17 +241,13 @@ extensions:
       - host: 8080
         container: 80
 
-    working_dir: "/workspace"
-    entrypoint: ["/usr/bin/pwsh"]
-    command: ["-NoLogo"]
-
     privileged: false
     network_mode: "bridge"
     memory_limit: "1GB"
     cpu_limit: "2.0"
 
-    repo_url: "https://github.com/ready-to-release/r2r-extensions-pwsh"
-    docs_url: "https://github.com/ready-to-release/r2r-extensions-pwsh#readme"
+    repo_url: "https://github.com/ready-to-release/eac"
+    docs_url: "https://github.com/ready-to-release/eac#readme"
 ```
 
 #### Required Fields
@@ -373,14 +369,16 @@ The CLI detects CI environments via standard CI environment variables (`CI`, `GI
 
 ### Image Pinning Requirement
 
-**In CI environments, all extension images must be pinned to a specific version.** Unpinned tags like `:latest`, `:main`, or implicit latest (no tag) will cause the CLI to fail with an error.
+**In CI environments, all extension images must be pinned to a specific version.**
+
+Unpinned tags like `:latest`, `:main`, or implicit latest (no tag) will cause the CLI to fail with an error.
 
 **Allowed in CI:**
 
 ```yaml
 extensions:
-  - name: "pwsh"
-    image: "ghcr.io/org/pwsh:sha-abc123"  # Pinned to commit SHA
+  - name: "eac"
+    image: "ghcr.io/org/eac:sha-abc123"   # Pinned to commit SHA
   - name: "node"
     image: "ghcr.io/org/node:1.2.3"       # Pinned to version
 ```
@@ -389,8 +387,8 @@ extensions:
 
 ```yaml
 extensions:
-  - name: "pwsh"
-    image: "ghcr.io/org/pwsh:latest"      # ERROR: unpinned
+  - name: "eac"
+    image: "ghcr.io/org/eac:latest"       # ERROR: unpinned
   - name: "node"
     image: "ghcr.io/org/node"             # ERROR: implicit latest
 ```
@@ -424,16 +422,16 @@ Base config (`.r2r/r2r-cli.yml`):
 
 ```yaml
 extensions:
-  - name: "pwsh"
-    image: "ghcr.io/org/pwsh:sha-abc123"
+  - name: "eac"
+    image: "ghcr.io/org/eac:sha-abc123"
 ```
 
 Local override (`.r2r/r2r-cli.local.yml`):
 
 ```yaml
 extensions:
-  - name: "pwsh"
-    image: "pwsh-local:dev"  # Use local development image
+  - name: "eac"
+    image: "eac-local:dev"  # Use local development image
 ```
 
 Add to `.gitignore`:

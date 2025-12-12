@@ -39,26 +39,31 @@ When domain experts explain processes, they use their natural vocabulary. When d
 Event Storming workshops surface critical information for specifications:
 
 **Domain Events**:
+
 - Things that happen in the business
 - Examples: "Order Placed", "Payment Received", "Approval Granted"
 - Become the foundation for Given/When/Then scenarios
 
 **Actors/Personas**:
+
 - Who initiates or responds to events
 - Examples: "Customer", "Manager", "System Administrator"
 - Appear in user stories ("As a customer...")
 
 **Commands**:
+
 - Actions that cause events
 - Examples: "Place Order", "Approve Request", "Cancel Subscription"
 - Become the "When" in scenarios
 
 **Policies**:
+
 - Business rules that govern behavior
 - Examples: "Orders over $10,000 require manager approval"
 - Become acceptance criteria (Rule blocks)
 
 **Bounded Contexts**:
+
 - Where different terminologies apply
 - Examples: "Customer" in Sales context vs Support context
 - Prevents terminology confusion in specifications

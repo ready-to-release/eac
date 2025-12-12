@@ -116,7 +116,7 @@ The [DevOps Research and Assessment (DORA)](https://dora.dev/research/) program 
 The State of DevOps Report 2025 includes respondents from regulated industries:
 
 | Industry                     | % of Survey Respondents |
-|------------------------------|-------------------------|
+| ---------------------------- | ----------------------- |
 | Technology                   | 38.0%                   |
 | Financial Services           | 13.6%                   |
 | Other                        | 9.7%                    |

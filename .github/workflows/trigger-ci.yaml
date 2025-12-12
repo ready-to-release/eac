@@ -9,7 +9,7 @@
 # 2. PARALLEL FLOWS:
 #    Flow A (Repository Validation):
 #      - build-repository: Build repository module
-#      - validate-repository: Run repository commit suite (contract validation)
+#      - validate-repository: Run repository component suite (contract validation)
 #    Flow B (Module CI Orchestration):
 #      - detect-changes: Determine which modules need CI workflows triggered
 #      - calculate-order: Compute dependency-based execution order
@@ -120,7 +120,7 @@ jobs:
           module: repository
           trigger-run-id: ${{ github.run_id }}
           setup-deps: auto
-          suites: commit
+          suites: component
 
   # =========================================
   # Flow B: Module CI Orchestration (runs in parallel with Flow A)
@@ -370,7 +370,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
           if [ "$IS_PR" = "true" ]; then
-            echo "**Mode**: PR (parallel execution, commit tests only)" >> $GITHUB_STEP_SUMMARY
+            echo "**Mode**: PR (parallel execution, component tests only)" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             ALL_MODULES=$(echo "$PLAN" | jq -r '[.layers[][]] | join(", ")')
             echo "All modules will run in parallel: \`$ALL_MODULES\`" >> $GITHUB_STEP_SUMMARY
@@ -595,7 +595,7 @@ jobs:
           if [ "$VALIDATE_REPOSITORY" = "failure" ]; then
             echo "### Repository Validation Failed" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Repository commit suite failed. Fix test failures before continuing." >> $GITHUB_STEP_SUMMARY
+            echo "Repository component suite failed. Fix test failures before continuing." >> $GITHUB_STEP_SUMMARY
             exit 0
           fi
 
@@ -665,7 +665,7 @@ jobs:
 
           # Validation stage
           if [ "$VALIDATE_REPOSITORY" = "success" ]; then
-            echo "| Test Repository | Pass | Repository commit suite passed |" >> $GITHUB_STEP_SUMMARY
+            echo "| Test Repository | Pass | Repository component suite passed |" >> $GITHUB_STEP_SUMMARY
           elif [ "$VALIDATE_REPOSITORY" = "failure" ]; then
             echo "| Test Repository | Fail | Repository test failures found |" >> $GITHUB_STEP_SUMMARY
           elif [ "$VALIDATE_REPOSITORY" = "skipped" ]; then

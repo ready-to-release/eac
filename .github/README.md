@@ -1,4 +1,5 @@
 <!-- markdownlint-disable MD033 MD045 -->
+
 #
 
 <p align="center">
@@ -211,11 +212,13 @@ Up and running in under 5 minutes.
 <summary><b>View install commands</b></summary>
 
 **Linux / macOS**
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/sh/cli/install.sh | bash
 ```
 
 **Windows (PowerShell)**
+
 ```powershell
 irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/cli/install.ps1 | iex
 ```

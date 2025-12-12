@@ -430,13 +430,13 @@ flowchart LR
 
 ## Impact on CD Model Stages
 
-| Stage        | Monorepo                                | Polyrepo                                   |
-| ------------ | --------------------------------------- | ------------------------------------------ |
-| **Stage 3**  | Larger PRs, single review               | Smaller focused PRs, may need coordination |
-| **Stage 4**  | Change detection for selective builds   | Independent builds in parallel             |
-| **Stage 5**  | Single PLTE with all services           | Version pinning, contract testing          |
-| **Stage 8**  | Single orchestrated release event possible for RA                      | Multiple independent release tags          |
-| **Stage 10** | Coordinated deployment or feature flags | Independent deployment schedules           |
+| Stage        | Monorepo                                          | Polyrepo                                   |
+| ------------ | ------------------------------------------------- | ------------------------------------------ |
+| **Stage 3**  | Larger PRs, single review                         | Smaller focused PRs, may need coordination |
+| **Stage 4**  | Change detection for selective builds             | Independent builds in parallel             |
+| **Stage 5**  | Single PLTE with all services                     | Version pinning, contract testing          |
+| **Stage 8**  | Single orchestrated release event possible for RA | Multiple independent release tags          |
+| **Stage 10** | Coordinated deployment or feature flags           | Independent deployment schedules           |
 
 **Polyrepo Coordination Requirements**: Contract testing for API compatibility, version pinning in PLTE, deployment sequencing for backward compatibility, API versioning for gradual rollout.
 
