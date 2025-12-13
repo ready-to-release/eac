@@ -19,7 +19,7 @@ The implementation plan provides a framework for successful delivery, covering s
 
 **Regulatory note:** Some regulated processes require digital signature.
 
-Templates: [Implementation Plan](https://github.com/ready-to-release/eac/blob/main/templates/docs/implementation-plan.md)
+Templates: [Implementation Plan](https://github.com/ready-to-release/eac/blob/main/templates/docs/reference/implementation-plan.md)
 
 ---
 
@@ -71,7 +71,7 @@ The solution can be released when the Release Approval stage is approved.
 
 **Regulatory note:** Some regulated processes require digital signature.
 
-Templates: [Implementation Report](https://github.com/ready-to-release/eac/blob/main/templates/reports/implementation-report.md)
+Templates: [Implementation Report](https://github.com/ready-to-release/eac/blob/main/templates/reports/release/implementation-report.md)
 
 ---
 

@@ -550,6 +550,8 @@ func getGoModulePath(moduleRoot string) string {
 // Checks both module root and release/{moniker}/ directories
 func getVersionFromChangelog(moduleRoot, workspaceRoot, moniker string) string {
 	// Try multiple locations for changelog
+	// TODO(path-migration): Add cfg.Repository.ReleasePathAbs() method to config
+	// For now using hardcoded "release" until release paths are added to repository.schema.json
 	paths := []string{
 		filepath.Join(moduleRoot, "CHANGELOG.md"),
 		filepath.Join(workspaceRoot, "release", moniker, "CHANGELOG.md"),

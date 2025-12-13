@@ -44,25 +44,25 @@ Feature: eac-core_logging
       When I log an Error message "Git repository not found"
       Then the message appears on console stderr
 
-  Rule: Debug flag enables file logging for all levels
+  Rule: Debug flag enables file logging to unified commands.log
 
-    When the --debug flag is enabled, all log levels are written to file
-    for troubleshooting and audit purposes.
+    When the --debug flag is enabled, all log levels are written to
+    the unified out/commands.log file for troubleshooting and audit.
 
-    Scenario: All levels write to file when debug enabled
+    Scenario: All levels write to unified log when debug enabled
       Given debug mode is enabled
       When I log messages at all levels
-      Then all messages appear in file "out/logs/commit/debug.log"
+      Then all messages appear in file "out/commands.log"
 
-    Scenario: Debug logs write to file when debug enabled
+    Scenario: Debug logs write to unified log when debug enabled
       Given debug mode is enabled
       When I log a Debug message "Processing staged files"
-      Then the message appears in file "out/logs/commit/debug.log"
+      Then the message appears in file "out/commands.log"
 
-    Scenario: Info logs write to file when debug enabled
+    Scenario: Info logs write to unified log when debug enabled
       Given debug mode is enabled
       When I log an Info message "Commit message generated"
-      Then the message appears in file "out/logs/commit/debug.log"
+      Then the message appears in file "out/commands.log"
 
   Rule: Debug flag enables Debug output on console
 
@@ -73,7 +73,7 @@ Feature: eac-core_logging
       Given debug mode is enabled
       When I log a Debug message "Processing staged files"
       Then the message appears on console stdout
-      And the message appears in file "out/logs/commit/debug.log"
+      And the message appears in file "out/commands.log"
 
     Scenario: All levels shown on console when debug enabled
       Given debug mode is enabled
@@ -92,21 +92,21 @@ Feature: eac-core_logging
       Then only one Zap logger instance exists
       And both console and file receive the message
 
-  Rule: Log files are created in module-specific directories
+  Rule: All commands use unified log file
 
-    Log files are organized by module name under out/logs/<module>/
-    to keep logs from different commands separated.
+    All commands write to a single unified out/commands.log file.
+    This simplifies log management and debugging.
 
-    Scenario: Log file created in module directory when debug enabled
+    Scenario: Log file created at unified path when debug enabled
       Given debug mode is enabled
       And a logger configured for module "commit"
       When I log an Info message "Test"
-      Then the log file exists at "out/logs/commit/debug.log"
+      Then the log file exists at "out/commands.log"
 
-    Scenario: Different modules have separate log files
+    Scenario: Multiple loggers write to same unified log
       Given debug mode is enabled
       And a logger configured for module "commit"
       And a logger configured for module "build"
       When I log Info messages to both loggers
-      Then "out/logs/commit/debug.log" contains only commit logs
-      And "out/logs/build/debug.log" contains only build logs
+      Then "out/commands.log" contains commit logs
+      And "out/commands.log" contains build logs

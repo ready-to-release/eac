@@ -14,12 +14,10 @@ package show
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
-	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 func init() {
@@ -102,7 +100,7 @@ func buildSummaryContent(f *SummaryFormatter, module *config.Module, status stri
 	if status == "success" {
 		summary += buildMetricsSection(f, module, cfg)
 	} else {
-		summary += buildDiagnosticsSection(f, module)
+		summary += buildDiagnosticsSection(f, module, cfg)
 	}
 
 	// Artifacts section
@@ -125,7 +123,7 @@ func getModuleTypeDescription(moduleType string, cfg *config.EACConfig) string {
 }
 
 func buildMetricsSection(f *SummaryFormatter, module *config.Module, cfg *config.EACConfig) string {
-	outputDir := filepath.Join("out", "build", module.Moniker)
+	outputDir := cfg.Repository.BuildOutputPath(module.Moniker)
 
 	// Get artifact definitions from module type contract
 	if cfg.ModuleTypes == nil {
@@ -217,12 +215,11 @@ func formatArtifactDetails(r config.ArtifactVerificationResult) string {
 	}
 }
 
-func buildDiagnosticsSection(f *SummaryFormatter, module *config.Module) string {
+func buildDiagnosticsSection(f *SummaryFormatter, module *config.Module, cfg *config.EACConfig) string {
 	var diagnostics string
 
 	// Read actual build log from the correct output directory
-	// Build logs are output to out/build/{module}/build.log
-	logPath := filepath.Join("out", "build", module.Moniker, "build.log")
+	logPath := cfg.Repository.BuildLogPath(module.Moniker)
 	logContent := readLogTail(logPath, 50) // Last 50 lines
 
 	if logContent != "" {
@@ -232,7 +229,7 @@ func buildDiagnosticsSection(f *SummaryFormatter, module *config.Module) string 
 	}
 
 	// Show timing data if available
-	timingPath := filepath.Join("out", "build", module.Moniker, "build-timing.txt")
+	timingPath := cfg.Repository.BuildTimingPath(module.Moniker)
 	if timing, err := os.ReadFile(timingPath); err == nil {
 		diagnostics += f.Section(Emoji("time")+" Timing", string(timing))
 	}
@@ -260,7 +257,7 @@ func buildConfigSection(f *SummaryFormatter, module *config.Module, cfg *config.
 	}
 
 	// Output directory
-	configDetails += fmt.Sprintf("- %s: %s\n", Bold("Output"), Code(fmt.Sprintf("%s/%s", paths.OutBuildRelPath, module.Moniker)))
+	configDetails += fmt.Sprintf("- %s: %s\n", Bold("Output"), Code(fmt.Sprintf("%s/%s/%s", cfg.Repository.Paths.Out.Root, cfg.Repository.Paths.Out.Build, module.Moniker)))
 
 	return f.CollapsibleSection(Emoji("config")+" Build Configuration", configDetails)
 }

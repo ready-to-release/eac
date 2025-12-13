@@ -268,6 +268,19 @@ func (m *ModuleContract) GetChangelogPath() string {
 	return "CHANGELOG.md"
 }
 
+// GetReleaseNotesPath returns the path to RELEASE-NOTES.md for this module
+// Defaults to release/{moniker}/RELEASE-NOTES.md if not explicitly set
+func (m *ModuleContract) GetReleaseNotesPath() string {
+	if m.Files.ReleaseNotes != "" {
+		if m.Files.Root != "" && m.Files.Root != "/" {
+			return filepath.Join(m.Files.Root, m.Files.ReleaseNotes)
+		}
+		return m.Files.ReleaseNotes
+	}
+	// Default: release/{moniker}/RELEASE-NOTES.md
+	return filepath.Join("release", m.Moniker, "RELEASE-NOTES.md")
+}
+
 // GetTestImplementationPath returns the test implementation directory path.
 // This is where godog step definitions and test implementations live.
 // Returns empty string if not defined in the module contract.

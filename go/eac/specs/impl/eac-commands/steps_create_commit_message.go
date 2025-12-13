@@ -168,31 +168,37 @@ func registerCreateCommitMessageSteps(sc *godog.ScenarioContext, ctx *internal.T
 		return nil
 	})
 
-	// Debug file verification
-	sc.Step(`^debug files are saved to "([^"]*)"$`, func(path string) error {
-		debugPath := filepath.Join(ctx.IsolatedDir, path)
-		info, err := os.Stat(debugPath)
+	// Log file verification
+	sc.Step(`^logs are written to "([^"]*)"$`, func(logPath string) error {
+		logFile := filepath.Join(ctx.IsolatedDir, logPath)
+		if _, err := os.Stat(logFile); os.IsNotExist(err) {
+			return fmt.Errorf("log file %s not found", logFile)
+		}
+		return nil
+	})
+
+	sc.Step(`^the log contains debug artifacts for AI prompts$`, func() error {
+		logFile := filepath.Join(ctx.IsolatedDir, "out/commands.log")
+		content, err := os.ReadFile(logFile)
 		if err != nil {
-			return fmt.Errorf("debug directory not found: %w", err)
+			return fmt.Errorf("failed to read log file: %w", err)
 		}
-		if !info.IsDir() {
-			return fmt.Errorf("%s is not a directory", path)
-		}
-		return nil
-	})
-
-	sc.Step(`^debug files include the AI prompt$`, func() error {
-		promptFile := filepath.Join(ctx.IsolatedDir, "out/logs/commit/debug-top-level-context.md")
-		if _, err := os.Stat(promptFile); os.IsNotExist(err) {
-			return fmt.Errorf("AI prompt debug file not found")
+		// Check for TOP-LEVEL-CONTEXT which contains the AI prompt
+		if !strings.Contains(string(content), "=== TOP-LEVEL-CONTEXT START ===") {
+			return fmt.Errorf("log doesn't contain AI prompt artifacts")
 		}
 		return nil
 	})
 
-	sc.Step(`^debug files include the AI response$`, func() error {
-		responseFile := filepath.Join(ctx.IsolatedDir, "out/logs/commit/debug-top-level-output.md")
-		if _, err := os.Stat(responseFile); os.IsNotExist(err) {
-			return fmt.Errorf("AI response debug file not found")
+	sc.Step(`^the log contains debug artifacts for AI responses$`, func() error {
+		logFile := filepath.Join(ctx.IsolatedDir, "out/commands.log")
+		content, err := os.ReadFile(logFile)
+		if err != nil {
+			return fmt.Errorf("failed to read log file: %w", err)
+		}
+		// Check for TOP-LEVEL-OUTPUT which contains the AI response
+		if !strings.Contains(string(content), "=== TOP-LEVEL-OUTPUT START ===") {
+			return fmt.Errorf("log doesn't contain AI response artifacts")
 		}
 		return nil
 	})

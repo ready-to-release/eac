@@ -10,12 +10,15 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/ready-to-release/eac/go/eac/core/config"
 )
 
 // FindLatestTestRun finds the most recent test run directory in out/test/.
 // Test run directories are named with timestamps: "2025-11-29T14-30-00"
 func FindLatestTestRun(workspaceRoot string) (string, error) {
-	testDir := filepath.Join(workspaceRoot, "out", "test")
+	// Use helper function for clean fallback to defaults in test environments
+	testDir := config.GetTestOutputPath(workspaceRoot)
 
 	entries, err := os.ReadDir(testDir)
 	if err != nil {
@@ -48,8 +51,10 @@ func FindLatestTestRun(workspaceRoot string) (string, error) {
 // FindTestResultsForModuleInSuite discovers test result files for a given module in a specific test suite.
 // Test results are stored in: out/test/<suite>/<module>/
 func FindTestResultsForModuleInSuite(workspaceRoot, moduleName, suiteName string) (*TestResults, error) {
+	// Use helper function for clean fallback to defaults in test environments
+	testRunDir := config.GetTestSuiteOutputPath(workspaceRoot, suiteName)
+
 	// Look for module test results in the suite directory
-	testRunDir := filepath.Join(workspaceRoot, "out", "test", suiteName)
 	moduleDir := filepath.Join(testRunDir, moduleName)
 
 	if _, err := os.Stat(moduleDir); os.IsNotExist(err) {
@@ -161,7 +166,11 @@ func FindAcceptanceTestResults(workspaceRoot, moduleName string) ([]string, erro
 	}
 
 	// Also check acceptance directory: out/test/acceptance/<module>/
-	acceptanceDir := filepath.Join(workspaceRoot, "out", "test", "acceptance", moduleName)
+	cfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot})
+	if err != nil {
+		return acceptanceFiles, nil // Return what we have so far
+	}
+	acceptanceDir := cfg.Repository.TestModuleOutputPathAbs(workspaceRoot, "acceptance", moduleName)
 	if entries, err := os.ReadDir(acceptanceDir); err == nil {
 		for _, entry := range entries {
 			if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".cucumber.json") {

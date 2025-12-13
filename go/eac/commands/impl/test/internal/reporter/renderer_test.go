@@ -118,7 +118,7 @@ func TestRenderer_Render(t *testing.T) {
 			workingDir, _ := os.Getwd()
 			// Navigate up from go/eac/commands/impl/test/internal/reporter to root
 			repoRoot := filepath.Join(workingDir, "..", "..", "..", "..", "..", "..", "..")
-			templatePath := filepath.Join(repoRoot, "templates", "reports", "suite-summary.md")
+			templatePath := filepath.Join(repoRoot, "templates", "reports", "testsuite-summary.md")
 
 			outputPath := filepath.Join(tempDir, "test-suite-summary.md")
 

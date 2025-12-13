@@ -85,11 +85,15 @@ func (s *AIScorer) AnalyzeRisk(ctx context.Context, input *AIAnalysisInput) (*AI
 
 // buildPrompt constructs the AI prompt for risk analysis.
 func (s *AIScorer) buildPrompt(input *AIAnalysisInput) (string, error) {
-	// Load prompt from .r2r/eac/ai/prompts/risk/access.md
+	// Load prompt with three-tier priority:
+	// 1. Command flag (not applicable - internal function)
+	// 2. Team override (.r2r/eac/templates/ai/risk-access/risk-access.md)
+	// 3. System default (templates/ai/risk-access/risk-access.md)
+	// Convention: Empty string uses type name (risk-access.md)
 	systemPrompt := defaultRiskAnalysisPrompt
 	if s.workspaceRoot != "" {
 		loader := contracts.NewContractLoader(s.workspaceRoot, "ai/risk-access", "")
-		if loadedPrompt, _, err := loader.LoadPrompt("risk/access.md", defaultRiskAnalysisPrompt); err == nil {
+		if loadedPrompt, _, err := loader.LoadPrompt("", defaultRiskAnalysisPrompt); err == nil {
 			systemPrompt = loadedPrompt
 		}
 	}

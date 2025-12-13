@@ -267,7 +267,7 @@ func buildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 	Logln(logWriter, "   Config: %s (from template)", configPath)
 
 	// Copy mkdocs macros script for footer generation
-	macrosSource := filepath.Join(workspaceRoot, "scripts", "mkdocs_macros.py")
+	macrosSource := filepath.Join(workspaceRoot, "containers", "mkdocs-site", "mkdocs_macros.py")
 	macrosTarget := filepath.Join(outputDir, "main.py")
 	if macrosData, err := os.ReadFile(macrosSource); err == nil {
 		if err := os.WriteFile(macrosTarget, macrosData, 0644); err != nil {
@@ -676,7 +676,7 @@ func buildHTMLWithStaging(module *modules.ModuleContract, workspaceRoot string, 
 	Logln(logWriter, "   Config: %s (from template)", configPath)
 
 	// Copy mkdocs macros script for footer generation
-	macrosSource := filepath.Join(workspaceRoot, "scripts", "mkdocs_macros.py")
+	macrosSource := filepath.Join(workspaceRoot, "containers", "mkdocs-site", "mkdocs_macros.py")
 	macrosTarget := filepath.Join(outputDir, "main.py")
 	if macrosData, err := os.ReadFile(macrosSource); err == nil {
 		if err := os.WriteFile(macrosTarget, macrosData, 0644); err != nil {

@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/ready-to-release/eac/go/eac/core/config"
 )
 
 // WriteEvidence writes a security evidence file with SHA256 integrity hash.
@@ -30,8 +32,14 @@ import (
 //   - SHA256 hash of findings for integrity verification
 //   - Scanner-specific findings in JSON format
 func WriteEvidence(workspaceRoot, module string, scanner ScannerType, findings interface{}) (string, error) {
+	// Load config for path resolution
+	cfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot})
+	if err != nil {
+		return "", fmt.Errorf("failed to load config: %w", err)
+	}
+
 	// Create output directory (per-module organization)
-	outputDir := filepath.Join(workspaceRoot, "out", "security", module, string(scanner))
+	outputDir := filepath.Join(workspaceRoot, cfg.Repository.Paths.Out.Root, cfg.Repository.Paths.Out.Security, module, string(scanner))
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create output directory: %w", err)
 	}

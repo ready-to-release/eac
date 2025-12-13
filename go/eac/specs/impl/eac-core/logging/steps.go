@@ -44,7 +44,7 @@ func resetLoggingContext() {
 	}
 	// Clean up only log files created by tests (not the entire out directory)
 	if logCtx.workspaceRoot != "" {
-		os.RemoveAll(filepath.Join(logCtx.workspaceRoot, "out", "logs"))
+		os.RemoveAll(filepath.Join(logCtx.workspaceRoot, "out"))
 	}
 	logCtx = loggingContext{
 		loggers: make(map[string]*logging.Logger),
@@ -81,11 +81,14 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	sc.Step(`^the log file exists at "([^"]*)"$`, theLogFileExistsAt)
 	sc.Step(`^all messages appear on console$`, allMessagesAppearOnConsole)
 	sc.Step(`^all messages appear in the log file$`, allMessagesAppearInLogFile)
-	sc.Step(`^"([^"]*)" contains only commit logs$`, fileContainsOnlyCommitLogs)
-	sc.Step(`^"([^"]*)" contains only build logs$`, fileContainsOnlyBuildLogs)
+	sc.Step(`^"([^"]*)" contains commit logs$`, fileContainsCommitLogs)
+	sc.Step(`^"([^"]*)" contains build logs$`, fileContainsBuildLogs)
 }
 
 func aLoggingModuleConfiguredFor(module string) error {
+	// Clear test logging env var so library tests can verify unified log behavior
+	os.Unsetenv("R2R_TEST_LOGGING_ACTIVE")
+
 	// Create a unique temp directory for this scenario
 	count := atomic.AddInt64(&testCounter, 1)
 	logCtx.workspaceRoot = filepath.Join(os.TempDir(), fmt.Sprintf("logging-test-%d", count))
@@ -253,7 +256,8 @@ func allMessagesAppearInSpecificFile(filePath string) error {
 }
 
 func noLogFileIsCreated() error {
-	logPath := filepath.Join(logCtx.workspaceRoot, "out", "logs", logCtx.module, "debug.log")
+	// Check unified log path
+	logPath := filepath.Join(logCtx.workspaceRoot, "out", "commands.log")
 	if _, err := os.Stat(logPath); !os.IsNotExist(err) {
 		return fmt.Errorf("log file should not exist at %s", logPath)
 	}
@@ -267,8 +271,8 @@ func onlyOneZapLoggerInstanceExists() error {
 }
 
 func bothConsoleAndFileReceiveTheMessage() error {
-	// Verify file contains the message
-	return theMessageAppearsInFile(filepath.Join("out", "logs", logCtx.module, "debug.log"))
+	// Verify unified log file contains the message
+	return theMessageAppearsInFile("out/commands.log")
 }
 
 func theLogFileExistsAt(filePath string) error {
@@ -288,7 +292,8 @@ func allMessagesAppearOnConsole() error {
 }
 
 func allMessagesAppearInLogFile() error {
-	logPath := filepath.Join(logCtx.workspaceRoot, "out", "logs", logCtx.module, "debug.log")
+	// Use unified log path
+	logPath := filepath.Join(logCtx.workspaceRoot, "out", "commands.log")
 	content, err := os.ReadFile(logPath)
 	if err != nil {
 		return fmt.Errorf("failed to read log file: %v", err)
@@ -303,7 +308,7 @@ func allMessagesAppearInLogFile() error {
 	return nil
 }
 
-func fileContainsOnlyCommitLogs(filePath string) error {
+func fileContainsCommitLogs(filePath string) error {
 	fullPath := filepath.Join(logCtx.workspaceRoot, filePath)
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
@@ -312,15 +317,12 @@ func fileContainsOnlyCommitLogs(filePath string) error {
 
 	contentStr := string(content)
 	if !strings.Contains(contentStr, "commit") {
-		return fmt.Errorf("commit log file should contain commit logs")
-	}
-	if strings.Contains(contentStr, "build info message") {
-		return fmt.Errorf("commit log file should not contain build logs")
+		return fmt.Errorf("log file should contain commit logs")
 	}
 	return nil
 }
 
-func fileContainsOnlyBuildLogs(filePath string) error {
+func fileContainsBuildLogs(filePath string) error {
 	fullPath := filepath.Join(logCtx.workspaceRoot, filePath)
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
@@ -329,10 +331,7 @@ func fileContainsOnlyBuildLogs(filePath string) error {
 
 	contentStr := string(content)
 	if !strings.Contains(contentStr, "build") {
-		return fmt.Errorf("build log file should contain build logs")
-	}
-	if strings.Contains(contentStr, "commit info message") {
-		return fmt.Errorf("build log file should not contain commit logs")
+		return fmt.Errorf("log file should contain build logs")
 	}
 	return nil
 }

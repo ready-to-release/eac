@@ -613,25 +613,38 @@ func (o *Orchestrator) Init() error {
 		return nil // Already initialized
 	}
 
-	// Create orchestrator log file
-	orchestratorLogPath := filepath.Join(o.config.WorkspaceRoot, o.config.OutputBaseDir, o.config.OrchestratorLogName)
-	if err := os.MkdirAll(filepath.Dir(orchestratorLogPath), 0755); err != nil {
-		return fmt.Errorf("failed to create orchestrator log directory: %w", err)
-	}
+	// Create orchestrator log file (if enabled)
+	var orchestratorLog io.Writer = os.Stdout // Default to stdout if no log file
+	if o.config.OrchestratorLogName != "" {
+		orchestratorLogPath := filepath.Join(o.config.WorkspaceRoot, o.config.OutputBaseDir, o.config.OrchestratorLogName)
+		if err := os.MkdirAll(filepath.Dir(orchestratorLogPath), 0755); err != nil {
+			return fmt.Errorf("failed to create orchestrator log directory: %w", err)
+		}
 
-	orchestratorLog, err := os.Create(orchestratorLogPath)
-	if err != nil {
-		return fmt.Errorf("failed to create orchestrator log: %w", err)
+		logFile, err := os.Create(orchestratorLogPath)
+		if err != nil {
+			return fmt.Errorf("failed to create orchestrator log: %w", err)
+		}
+		o.logFile = logFile
+		orchestratorLog = logFile
 	}
-	o.logFile = orchestratorLog
 
 	// Create a goroutine-safe logger
 	// When TUI is enabled, only write to log file (TUI handles console display)
+	// When no log file is configured, write to stdout
 	var multiWriter io.Writer
 	if o.config.TUI {
-		multiWriter = orchestratorLog
+		if o.logFile != nil {
+			multiWriter = orchestratorLog
+		} else {
+			multiWriter = io.Discard // TUI mode with no log file - discard output
+		}
 	} else {
-		multiWriter = io.MultiWriter(os.Stdout, orchestratorLog)
+		if o.logFile != nil {
+			multiWriter = io.MultiWriter(os.Stdout, orchestratorLog)
+		} else {
+			multiWriter = os.Stdout
+		}
 	}
 	o.logger = log.New(multiWriter, "", 0)
 	o.orchestratorOut = multiWriter

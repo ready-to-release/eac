@@ -32,6 +32,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/oscal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
@@ -63,10 +64,17 @@ func ControlTags() int {
 		return 1
 	}
 
+	// Load configuration
+	cfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot})
+	if err != nil {
+		ctlog.Errorf("Error: failed to load config: %v", err)
+		return 1
+	}
+
 	ctlog.Info("Validating OSCAL control tags...")
 
 	// Load OSCAL catalog
-	catalogPath := filepath.Join(workspaceRoot, "templates/specs/risk-catalog/controls.catalog.json")
+	catalogPath := cfg.Repository.RiskCatalogPathAbs(workspaceRoot)
 	if _, err := os.Stat(catalogPath); os.IsNotExist(err) {
 		ctlog.Errorf("Error: OSCAL catalog not found at %s", catalogPath)
 		ctlog.Error("Please ensure the catalog exists before validating control tags")
@@ -93,7 +101,7 @@ func ControlTags() int {
 	}
 
 	// Discover all feature files
-	specsDir := filepath.Join(workspaceRoot, "specs")
+	specsDir := filepath.Join(workspaceRoot, cfg.Repository.Paths.SpecsRoot)
 	var featureFiles []string
 
 	err = filepath.Walk(specsDir, func(path string, info os.FileInfo, err error) error {

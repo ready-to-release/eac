@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
@@ -18,7 +19,12 @@ func WriteDebugFile(workspaceRoot string, logger *logging.Logger, filename strin
 		return
 	}
 
-	debugDir := filepath.Join(workspaceRoot, "out", "logs", "design")
+	cfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot})
+	if err != nil {
+		logger.Warn(fmt.Sprintf("Failed to load config: %v", err))
+		return
+	}
+	debugDir := cfg.Repository.LogsPathAbs(workspaceRoot, "design")
 	if err := os.MkdirAll(debugDir, 0755); err != nil {
 		logger.Warn(fmt.Sprintf("Failed to create debug directory: %v", err))
 		return

@@ -1,0 +1,57 @@
+# Logging Configuration Defaults
+# User overrides in .r2r/eac/logging.yml will be merged on top of these defaults
+
+# Console output (stdout)
+console:
+  # Levels to show on console: debug, info, warn, error
+  levels:
+    - info
+    - warn
+    - error
+  # Formatter for console output:
+  #   raw        - message only (clean CLI output)
+  #   timestamped - "HH:MM:SS.mmm  LEVEL  module:message"
+  #   json       - structured JSON
+  formatter: raw
+
+# Main log file: out/commands.log
+# All commands write to this unified log file
+file:
+  # Levels to write to file: debug, info, warn, error
+  levels:
+    - debug
+    - info
+    - warn
+    - error
+  # Formatter for file output (raw, timestamped, json)
+  formatter: timestamped
+  # Enable file logging (set to false to disable)
+  enabled: true
+  # Rolling log configuration
+  max_size_mb: 5      # Rotate when file exceeds 5MB
+  max_backups: 3      # Keep 3 old log files
+  max_age_days: 7     # Delete files older than 7 days
+  compress: false     # Don't compress rotated files
+
+# Extra log targets for specific commands
+# Each target creates an additional log file beyond out/commands.log
+# The {unit} placeholder is replaced with the module/suite name
+targets:
+  # Build command: creates out/build/{unit}/build.log
+  build:
+    path: "out/build/{unit}/build.log"
+    levels:
+      - debug
+      - info
+      - warn
+      - error
+    formatter: timestamped
+  # Test command: creates out/test/{unit}/test.log
+  test:
+    path: "out/test/{unit}/test.log"
+    levels:
+      - debug
+      - info
+      - warn
+      - error
+    formatter: timestamped

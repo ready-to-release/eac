@@ -68,8 +68,9 @@ func RunTestCommandWithEnv(dir string, logWriter io.Writer, env map[string]strin
 	cmd.Dir = dir
 
 	// Set custom environment variables
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, "R2R_TEST_LOGGING_ACTIVE=true")
 	if env != nil {
-		cmd.Env = os.Environ()
 		for key, value := range env {
 			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
 		}

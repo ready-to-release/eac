@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/ready-to-release/eac/go/eac/core/config"
 )
 
 // ExtractFeatureName extracts module and feature name from Gherkin content
@@ -147,9 +149,6 @@ func ValidateOutputPath(outputPath string, templateRoot string) error {
 }
 
 // DetermineOutputPath constructs the output file path in specs directory
-func DetermineOutputPath(templateRoot string, moduleName string, featureName string) string {
-	if moduleName != "" {
-		return filepath.Join(templateRoot, "specs", moduleName, featureName, "specification.feature")
-	}
-	return filepath.Join(templateRoot, "specs", featureName, "specification.feature")
+func DetermineOutputPath(templateRoot string, moduleName string, featureName string, cfg *config.EACConfig) string {
+	return cfg.Repository.SpecsFeaturePathAbs(templateRoot, moduleName, featureName)
 }

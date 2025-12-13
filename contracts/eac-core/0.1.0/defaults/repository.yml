@@ -46,6 +46,14 @@ paths:
   # Templates directory
   templates: templates
 
+  # AI prompt templates
+  ai_prompts:
+    # System defaults (version controlled, shipped with repo)
+    system: templates/ai
+
+    # Team overrides (version controlled, team customizations)
+    team: .r2r/eac/templates/ai
+
   # Output directory structure
   out:
     root: out
@@ -60,6 +68,15 @@ conventions:
   godog_test: godog_test.go
   package_json: package.json
   changelog: CHANGELOG.md
+  build_log: build.log
+  build_timing: build-timing.txt
+  test_timing: test-timing.txt
+  specification: specification.feature
+  risk_catalog: controls.catalog.json
+  risk_controls_dir: .risk-controls
+  template_specs_dir: specs
+  template_reports_dir: reports
+  template_risk_catalog_dir: risk-catalog
 
 # Default module (used when no modules defined in repository.yml)
 modules:

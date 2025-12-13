@@ -35,11 +35,15 @@ func loadPromptWithFallback(promptName string, workspaceRoot string) (string, er
 	// Create contract loader for AI config
 	loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "")
 
-	// No embedded prompt - load from .r2r/eac/ai/
+	// No embedded prompt - load with three-tier priority:
+	// 1. Command flag (not applicable - internal function)
+	// 2. Team override (.r2r/eac/templates/ai/commit-message/<promptName>.md)
+	// 3. System default (templates/ai/commit-message/<promptName>.md)
+	// Note: Variants like "module" and "top-level" (convention adds .md automatically)
 	var embeddedPrompt string
 
-	// Load prompt from AI config (prompts organized in folders)
-	agentContent, _, err := loader.LoadPrompt("commit/"+promptName+".md", embeddedPrompt)
+	// Load prompt using three-tier priority system (convention adds .md)
+	agentContent, _, err := loader.LoadPrompt(promptName, embeddedPrompt)
 	if err != nil {
 		return "", fmt.Errorf("failed to load prompt: %w", err)
 	}
