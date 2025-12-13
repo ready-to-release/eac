@@ -283,9 +283,14 @@ func (c *RepositoryConfig) TestTimingPathAbs(workspaceRoot, suiteName string) st
 	return filepath.Join(workspaceRoot, c.Paths.Out.Test, suiteName, c.Conventions.TestTiming)
 }
 
-// LogsPathAbs returns the absolute path to logs for a command
-func (c *RepositoryConfig) LogsPathAbs(workspaceRoot, command string) string {
-	return filepath.Join(workspaceRoot, c.Paths.Out.Logs, command)
+// LogsPathAbs returns the absolute path to logs for a command with optional path segments
+// Delegates to paths.CommandLogsPath for consistency
+// Examples:
+//   LogsPathAbs(root, "design") → out/design/
+//   LogsPathAbs(root, "build", "eac-core") → out/build/eac-core/
+//   LogsPathAbs(root, "templates", "apply") → out/templates/apply/
+func (c *RepositoryConfig) LogsPathAbs(workspaceRoot, command string, pathSegments ...string) string {
+	return paths.CommandLogsPath(workspaceRoot, command, pathSegments...)
 }
 
 // SpecsPathAbs returns the absolute path to a module's specs directory

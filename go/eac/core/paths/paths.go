@@ -285,9 +285,10 @@ func ContractsVersionPath(repoRoot, module, version string) string {
 	return filepath.Join(repoRoot, ContractsDir, module, version)
 }
 
-// LogsPath returns the path to the logs output directory
+// LogsPath returns the path to the out directory
+// Deprecated: Use CommandLogsPath with command and path segments instead
 func LogsPath(repoRoot string) string {
-	return filepath.Join(repoRoot, OutDir, LogsDir)
+	return filepath.Join(repoRoot, OutDir)
 }
 
 // SecurityOutputPath returns the path to security scan output
@@ -322,8 +323,14 @@ func TemplatePath(repoRoot string, subpaths ...string) string {
 }
 
 // CommandLogsPath returns the path to a command's log directory
-func CommandLogsPath(repoRoot, command string) string {
-	return filepath.Join(repoRoot, OutDir, LogsDir, command)
+// Supports flexible path construction with optional path segments:
+//   CommandLogsPath(root, "design") → out/design/
+//   CommandLogsPath(root, "build", "eac-core") → out/build/eac-core/
+//   CommandLogsPath(root, "templates", "apply") → out/templates/apply/
+func CommandLogsPath(repoRoot, command string, pathSegments ...string) string {
+	parts := []string{repoRoot, OutDir, command}
+	parts = append(parts, pathSegments...)
+	return filepath.Join(parts...)
 }
 
 // StripSpecsPrefix removes the specs/ prefix from a path

@@ -44,6 +44,7 @@ func init() {
 var log = logging.C()
 
 // writeDebugFile writes content to a debug file when debug mode is enabled.
+// Files are written to out/create/squash-message/<filename> in the workspace root.
 func writeDebugFile(workspaceRoot string, logger *logging.Logger, filename string, content string) {
 	if !logger.IsDebugMode() {
 		return
@@ -54,7 +55,7 @@ func writeDebugFile(workspaceRoot string, logger *logging.Logger, filename strin
 		logger.Warn(fmt.Sprintf("Failed to load config: %v", err))
 		return
 	}
-	debugDir := cfg.Repository.LogsPathAbs(workspaceRoot, "commit")
+	debugDir := cfg.Repository.LogsPathAbs(workspaceRoot, "create", "squash-message")
 	if err := os.MkdirAll(debugDir, 0755); err != nil {
 		logger.Warn(fmt.Sprintf("Failed to create debug directory: %v", err))
 		return
@@ -100,9 +101,9 @@ func CreateSquashMessage() int {
 	// Phase 2: Initialize logger
 	var logger *logging.Logger
 	if config.debug {
-		logger, err = logging.NewWithDebug("squash-message", "")
+		logger, err = logging.NewWithDebug("create", "")
 	} else {
-		logger, err = logging.NewDefault("squash-message", "")
+		logger, err = logging.NewDefault("create", "")
 	}
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: Failed to initialize logger: %v\n", err)

@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/ready-to-release/eac/go/eac/core/paths"
@@ -25,13 +26,14 @@ var (
 // ConfigureLogging sets up the logging system for a command.
 //
 // This is the ONE function to call for logging setup. It configures:
-//   - File logging: Debug logs ALWAYS go to file (out/logs/module/debug.log)
+//   - File logging: Debug logs ALWAYS go to file (out/<command>/<pathSegments>/<command>-<pathSegments>.log)
 //   - Console logging: Info/Warn/Error always, Debug only if debugToConsole=true
 //   - TUI logging: If tuiWriter provided, logs also go to TUI pane
 //
 // Parameters:
 //   - workspaceRoot: repository root for log file location
-//   - module: name for log file directory (e.g., "build", "test")
+//   - command: command name (e.g., "build", "test", "design")
+//   - pathSegments: optional path segments (e.g., module name, suite name, subcommand)
 //   - debugToConsole: if true, debug logs also appear on console (use with --debug flag)
 //   - tuiWriter: if non-nil, logs also go to TUI pane (pass nil for non-TUI mode)
 //
@@ -41,11 +43,20 @@ var (
 //	if useTUI {
 //	    tuiWriter = orch.GetTUIWriter(tui.PhaseInit)
 //	}
-//	if err := logging.ConfigureLogging(workspaceRoot, "build", debugMode, tuiWriter); err != nil {
+//	// Simple command: out/design/design.log
+//	if err := logging.ConfigureLogging(workspaceRoot, "design", nil, debugMode, tuiWriter); err != nil {
+//	    log.Warnf("Failed to configure logging: %v", err)
+//	}
+//	// Module-aware command: out/build/eac-core/build-eac-core.log
+//	if err := logging.ConfigureLogging(workspaceRoot, "build", []string{"eac-core"}, debugMode, tuiWriter); err != nil {
+//	    log.Warnf("Failed to configure logging: %v", err)
+//	}
+//	// Test with suite: out/test/commit/test-commit.log
+//	if err := logging.ConfigureLogging(workspaceRoot, "test", []string{"commit"}, debugMode, tuiWriter); err != nil {
 //	    log.Warnf("Failed to configure logging: %v", err)
 //	}
 //	defer logging.CloseLogging()
-func ConfigureLogging(workspaceRoot, module string, debugToConsole bool, tuiWriter io.Writer) error {
+func ConfigureLogging(workspaceRoot, command string, pathSegments []string, debugToConsole bool, tuiWriter io.Writer) error {
 	loggingMu.Lock()
 	defer loggingMu.Unlock()
 
@@ -102,16 +113,26 @@ func ConfigureLogging(workspaceRoot, module string, debugToConsole bool, tuiWrit
 
 	// 2. File core (always present when workspaceRoot provided)
 	// Debug logs ALWAYS go to file regardless of debugToConsole setting
-	if workspaceRoot != "" && module != "" {
-		logDir := filepath.Join(paths.LogsPath(workspaceRoot), module)
+	if workspaceRoot != "" && command != "" {
+		logDir := paths.CommandLogsPath(workspaceRoot, command, pathSegments...)
 		if err := os.MkdirAll(logDir, 0755); err != nil {
 			return fmt.Errorf("failed to create log directory: %w", err)
 		}
 
-		logPath := filepath.Join(logDir, "debug.log")
+		// Build log filename from command and path segments
+		// Examples:
+		//   command="design", pathSegments=nil → design.log
+		//   command="build", pathSegments=["eac-core"] → build-eac-core.log
+		//   command="test", pathSegments=["commit"] → test-commit.log
+		logName := command
+		if len(pathSegments) > 0 {
+			logName += "-" + strings.Join(pathSegments, "-")
+		}
+		logPath := filepath.Join(logDir, logName+".log")
+
 		file, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
-			return fmt.Errorf("failed to create debug log file: %w", err)
+			return fmt.Errorf("failed to create log file: %w", err)
 		}
 		closers = append(closers, file)
 
@@ -154,6 +175,11 @@ func ConfigureLogging(workspaceRoot, module string, debugToConsole bool, tuiWrit
 		closers: closers,
 	}
 
+	// Mark the component logger as initialized to prevent initComponentGlobalLogger from overwriting it
+	componentOnce.Do(func() {
+		// Empty - just marks the once as done so initComponentGlobalLogger won't run
+	})
+
 	// Store closers for CloseLogging
 	loggingClosers = closers
 
@@ -188,7 +214,7 @@ func closeLoggingLocked() {
 }
 
 // ConfigureLoggingSimple is a convenience wrapper for non-TUI commands.
-// Equivalent to ConfigureLogging(workspaceRoot, module, debugToConsole, nil)
-func ConfigureLoggingSimple(workspaceRoot, module string, debugToConsole bool) error {
-	return ConfigureLogging(workspaceRoot, module, debugToConsole, nil)
+// Equivalent to ConfigureLogging(workspaceRoot, command, pathSegments, debugToConsole, nil)
+func ConfigureLoggingSimple(workspaceRoot, command string, pathSegments []string, debugToConsole bool) error {
+	return ConfigureLogging(workspaceRoot, command, pathSegments, debugToConsole, nil)
 }

@@ -40,13 +40,15 @@ func New(cfg Config) (*Logger, error) {
 }
 
 // NewDefault creates a logger with default configuration (debug mode and file logging disabled).
-func NewDefault(module, workspaceRoot string) (*Logger, error) {
-	return New(DefaultConfig(module, workspaceRoot))
+// pathSegments are optional - omit for non-module-aware commands
+func NewDefault(command, workspaceRoot string, pathSegments ...string) (*Logger, error) {
+	return New(DefaultConfig(command, workspaceRoot, pathSegments...))
 }
 
 // NewWithDebug creates a logger with debug mode and file logging enabled.
-func NewWithDebug(module, workspaceRoot string) (*Logger, error) {
-	cfg := DefaultConfig(module, workspaceRoot).
+// pathSegments are optional - omit for non-module-aware commands
+func NewWithDebug(command, workspaceRoot string, pathSegments ...string) (*Logger, error) {
+	cfg := DefaultConfig(command, workspaceRoot, pathSegments...).
 		WithDebugMode(true).
 		WithFileLogging(true)
 	return New(cfg)
@@ -54,8 +56,9 @@ func NewWithDebug(module, workspaceRoot string) (*Logger, error) {
 
 // NewWithFileLogging creates a logger with file logging enabled but console debug disabled.
 // This is useful for build and test commands that want debug logs in files only.
-func NewWithFileLogging(module, workspaceRoot string) (*Logger, error) {
-	cfg := DefaultConfig(module, workspaceRoot).WithFileLogging(true)
+// pathSegments are optional - omit for non-module-aware commands
+func NewWithFileLogging(command, workspaceRoot string, pathSegments ...string) (*Logger, error) {
+	cfg := DefaultConfig(command, workspaceRoot, pathSegments...).WithFileLogging(true)
 	return New(cfg)
 }
 

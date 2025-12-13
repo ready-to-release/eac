@@ -63,7 +63,7 @@ func printHelp() {
 }
 
 // writeDebugFile writes content to a debug file when debug mode is enabled.
-// Files are written to out/logs/docs/<filename> in the workspace root.
+// Files are written to out/serve/docs/<filename> in the workspace root.
 func writeDebugFile(workspaceRoot string, logger *logging.Logger, filename string, content string) {
 	if !logger.IsDebugMode() {
 		return
@@ -75,7 +75,7 @@ func writeDebugFile(workspaceRoot string, logger *logging.Logger, filename strin
 		return
 	}
 
-	debugDir := cfg.Repository.LogsPathAbs(workspaceRoot, "docs")
+	debugDir := cfg.Repository.LogsPathAbs(workspaceRoot, "serve", "docs")
 	if err := os.MkdirAll(debugDir, 0755); err != nil {
 		logger.Warn("Failed to create debug directory", zap.Error(err))
 		return
@@ -147,9 +147,9 @@ func ServeDocs() int {
 	// Initialize logger based on debug mode
 	var logger *logging.Logger
 	if debug {
-		logger, err = logging.NewWithDebug("docs", workspaceRoot)
+		logger, err = logging.NewWithDebug("serve", workspaceRoot)
 	} else {
-		logger, err = logging.NewDefault("docs", workspaceRoot)
+		logger, err = logging.NewDefault("serve", workspaceRoot)
 	}
 	if err != nil {
 		log.Errorf("Error initializing logger: %v", err)

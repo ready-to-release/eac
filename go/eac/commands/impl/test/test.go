@@ -262,7 +262,12 @@ func executeTests(cfg *TestConfig) int {
 
 	// Configure logging for test command
 	// Debug always goes to file, also to console if --debug flag set
-	if err := logging.ConfigureLoggingSimple(workspaceRoot, "test", cfg.DebugMode); err != nil {
+	// Logs will go to: out/test/<suite>/test-<suite>.log
+	pathSegments := []string{}
+	if cfg.SuiteName != "" {
+		pathSegments = append(pathSegments, cfg.SuiteName)
+	}
+	if err := logging.ConfigureLoggingSimple(workspaceRoot, "test", pathSegments, cfg.DebugMode); err != nil {
 		log.Warnf("Failed to configure logging: %v", err)
 	}
 	defer logging.CloseLogging()
@@ -303,18 +308,6 @@ func executeTests(cfg *TestConfig) int {
 		return 1
 	}
 
-	// Create log file for test output
-	logFilePath := filepath.Join(testRunDir, "test-suite.log")
-	logFile, err := os.Create(logFilePath)
-	if err != nil {
-		log.Errorf("failed to create log file: %v", err)
-		return 1
-	}
-	defer logFile.Close()
-
-	// Multi-writer for console and log file
-	multiWriter := io.MultiWriter(os.Stdout, logFile)
-
 	// Configure orchestrator early for phase management
 	maxConcurrency := 4
 	if !cfg.Parallel {
@@ -324,7 +317,7 @@ func executeTests(cfg *TestConfig) int {
 		WorkspaceRoot:        workspaceRoot,
 		OutputBaseDir:        repoCfg.TestOutputPath(cfg.SuiteName),
 		LogFileName:          "test.log",
-		OrchestratorLogName:  "orchestrator.log",
+		OrchestratorLogName:  "", // Disable separate orchestrator log - use logging system instead
 		ActionVerb:           "Testing",
 		MaxConcurrency:       maxConcurrency,
 		StatusUpdateInterval: 2,
@@ -369,7 +362,7 @@ func executeTests(cfg *TestConfig) int {
 		if cfg.UseTUI {
 			orch.SendInitLine(msg)
 		} else {
-			writeln(multiWriter, "%s", msg)
+			writeln(os.Stdout, "%s", msg)
 		}
 	}
 
@@ -463,7 +456,7 @@ func executeTests(cfg *TestConfig) int {
 	stats.Selected = len(selectedTests)
 
 	// Filter by OS compatibility
-	osCompatibleTests := filterByOSCompatibility(selectedTests, multiWriter)
+	osCompatibleTests := filterByOSCompatibility(selectedTests, os.Stdout)
 	osFilteredCount := len(selectedTests) - len(osCompatibleTests)
 	selectedTests = osCompatibleTests
 	stats.OSFiltered = osFilteredCount
@@ -741,18 +734,18 @@ func executeTests(cfg *TestConfig) int {
 				writeInit("   Use --retest to force a full test run")
 
 				// Print summary even when skipping
-				fmt.Fprintln(multiWriter)
-				fmt.Fprintf(multiWriter, "✓ Initialization: %d modules up-to-date\n", len(changeResult.UpToDateModules))
-				fmt.Fprintf(multiWriter, "✓ Testing: skipped (no changes detected)\n")
-				fmt.Fprintln(multiWriter)
-				fmt.Fprintln(multiWriter, strings.Repeat("-", 58))
-				fmt.Fprintln(multiWriter, "Module               Pkgs  Asserts  Fail  Skip  Pass")
-				fmt.Fprintln(multiWriter, strings.Repeat("-", 58))
-				fmt.Fprintf(multiWriter, "%-20s %4d  %7d  %4d  %4d  %4d\n", "(no tests run)", 0, 0, 0, 0, 0)
-				fmt.Fprintln(multiWriter, strings.Repeat("-", 58))
-				fmt.Fprintf(multiWriter, "%-20s %4d  %7d  %4d  %4d  %4d\n", "TOTAL", 0, 0, 0, 0, 0)
-				fmt.Fprintln(multiWriter)
-				fmt.Fprintf(multiWriter, "Results: %s\n", testRunDir)
+				fmt.Fprintln(os.Stdout)
+				fmt.Fprintf(os.Stdout, "✓ Initialization: %d modules up-to-date\n", len(changeResult.UpToDateModules))
+				fmt.Fprintf(os.Stdout, "✓ Testing: skipped (no changes detected)\n")
+				fmt.Fprintln(os.Stdout)
+				fmt.Fprintln(os.Stdout, strings.Repeat("-", 58))
+				fmt.Fprintln(os.Stdout, "Module               Pkgs  Asserts  Fail  Skip  Pass")
+				fmt.Fprintln(os.Stdout, strings.Repeat("-", 58))
+				fmt.Fprintf(os.Stdout, "%-20s %4d  %7d  %4d  %4d  %4d\n", "(no tests run)", 0, 0, 0, 0, 0)
+				fmt.Fprintln(os.Stdout, strings.Repeat("-", 58))
+				fmt.Fprintf(os.Stdout, "%-20s %4d  %7d  %4d  %4d  %4d\n", "TOTAL", 0, 0, 0, 0, 0)
+				fmt.Fprintln(os.Stdout)
+				fmt.Fprintf(os.Stdout, "Results: %s\n", testRunDir)
 
 				return 0
 			}
@@ -943,7 +936,7 @@ func executeTests(cfg *TestConfig) int {
 
 	// Show full summary (when not using TUI or after TUI exits)
 	if !cfg.UseTUI {
-		printTestSummary(multiWriter, results, suite.Name, suite.Moniker,
+		printTestSummary(os.Stdout, results, suite.Name, suite.Moniker,
 			len(selectedTests), osFilteredCount,
 			len(testsByPackage), packagesPassed, packagesFailed,
 			testsTotal, testsPassed, testsFailed,
@@ -953,10 +946,10 @@ func executeTests(cfg *TestConfig) int {
 	// Show top 5 failed tests with log excerpts (always, even when using TUI)
 	// These "roll off" after the TUI exits, remaining visible for review
 	if packagesFailed > 0 || testsFailed > 0 {
-		writeln(multiWriter, "")
-		writeln(multiWriter, "══════════════════════════════════")
-		writeln(multiWriter, "  Failed Tests")
-		writeln(multiWriter, "══════════════════════════════════")
+		writeln(os.Stdout, "")
+		writeln(os.Stdout, "══════════════════════════════════")
+		writeln(os.Stdout, "  Failed Tests")
+		writeln(os.Stdout, "══════════════════════════════════")
 
 		// Collect failed results
 		failedResults := []PackageResult{}
@@ -974,31 +967,31 @@ func executeTests(cfg *TestConfig) int {
 
 		for i := 0; i < maxToShow; i++ {
 			result := failedResults[i]
-			writeln(multiWriter, "")
-			writeln(multiWriter, "❌ %s", result.PackageName)
+			writeln(os.Stdout, "")
+			writeln(os.Stdout, "❌ %s", result.PackageName)
 
 			// Read last 15 lines from log file
 			if result.LogFilePath != "" && fileExists(result.LogFilePath) {
 				lines := readLastLines(result.LogFilePath, 15)
 				for _, line := range lines {
-					writeln(multiWriter, "  %s", line)
+					writeln(os.Stdout, "  %s", line)
 				}
 			} else {
-				writeln(multiWriter, "  (log file not available)")
+				writeln(os.Stdout, "  (log file not available)")
 			}
 		}
 
 		if len(failedResults) > maxToShow {
-			writeln(multiWriter, "")
-			writeln(multiWriter, "... and %d more failed tests", len(failedResults)-maxToShow)
+			writeln(os.Stdout, "")
+			writeln(os.Stdout, "... and %d more failed tests", len(failedResults)-maxToShow)
 		}
 	}
 
-	writeln(multiWriter, "")
+	writeln(os.Stdout, "")
 
 	// Show timing analysis if requested
 	if cfg.ShowTimings {
-		writeln(multiWriter, "")
+		writeln(os.Stdout, "")
 		// Extract unique module monikers from tested packages
 		testedModules := make(map[string]bool)
 		for pkgPath := range testsByPackage {

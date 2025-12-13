@@ -33,7 +33,7 @@ import (
 var log = logging.C()
 
 // writeDebugFile writes content to a debug file when debug mode is enabled.
-// Files are written to out/logs/commit/<filename> in the workspace root.
+// Files are written to out/create/commit-message/<filename> in the workspace root.
 func writeDebugFile(workspaceRoot string, logger *logging.Logger, filename string, content string) {
 	if !logger.IsDebugMode() {
 		return
@@ -44,7 +44,7 @@ func writeDebugFile(workspaceRoot string, logger *logging.Logger, filename strin
 		logger.Warn(fmt.Sprintf("Failed to load config: %v", err))
 		return
 	}
-	debugDir := cfg.Repository.LogsPathAbs(workspaceRoot, "commit")
+	debugDir := cfg.Repository.LogsPathAbs(workspaceRoot, "create", "commit-message")
 	if err := os.MkdirAll(debugDir, 0755); err != nil {
 		logger.Warn(fmt.Sprintf("Failed to create debug directory: %v", err))
 		return
@@ -133,9 +133,9 @@ func CreateCommitMessage() int {
 	// Initialize logger early so all code paths can use it
 	var logger *logging.Logger
 	if debug {
-		logger, err = logging.NewWithDebug("commit", workspaceRoot)
+		logger, err = logging.NewWithDebug("create", workspaceRoot)
 	} else {
-		logger, err = logging.NewDefault("commit", workspaceRoot)
+		logger, err = logging.NewDefault("create", workspaceRoot)
 	}
 	if err != nil {
 		log.Errorf("initializing logger: %v", err)

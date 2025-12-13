@@ -4,6 +4,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"go.uber.org/zap/zapcore"
@@ -46,7 +47,7 @@ func newConfigLevelEnabler(levels []string) zapcore.LevelEnabler {
 
 // buildConsoleCore creates a console output core based on logging config.
 func buildConsoleCore(cfg Config, logCfg LoggingConfig) zapcore.Core {
-	encoder := CreateEncoder(logCfg.Console.Formatter, cfg.Module)
+	encoder := CreateEncoder(logCfg.Console.Formatter, cfg.Command)
 	enabler := newConfigLevelEnabler(logCfg.Console.Levels)
 
 	// If debug mode is enabled, also show debug on console
@@ -61,19 +62,33 @@ func buildConsoleCore(cfg Config, logCfg LoggingConfig) zapcore.Core {
 // buildFileCore creates a file output core based on logging config.
 // Returns the core and the file that needs to be closed.
 func buildFileCore(cfg Config, logCfg LoggingConfig) (zapcore.Core, *os.File, error) {
-	// Create log directory: out/logs/<module>/
-	logDir := filepath.Join(logsPath(cfg.WorkspaceRoot), cfg.Module)
+	// Create log directory using command and optional path segments
+	// Examples:
+	//   Command="design", PathSegments=[] → out/design/
+	//   Command="build", PathSegments=["eac-core"] → out/build/eac-core/
+	//   Command="templates", PathSegments=["apply"] → out/templates/apply/
+	logDir := paths.CommandLogsPath(cfg.WorkspaceRoot, cfg.Command, cfg.PathSegments...)
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		return nil, nil, err
 	}
 
-	logPath := filepath.Join(logDir, "debug.log")
+	// Build log filename from command and path segments
+	// Examples:
+	//   Command="design", PathSegments=[] → design.log
+	//   Command="build", PathSegments=["eac-core"] → build-eac-core.log
+	//   Command="templates", PathSegments=["apply"] → templates-apply.log
+	//   Command="test", PathSegments=["component"] → test-component.log
+	logName := cfg.Command
+	if len(cfg.PathSegments) > 0 {
+		logName += "-" + strings.Join(cfg.PathSegments, "-")
+	}
+	logPath := filepath.Join(logDir, logName+".log")
 	file, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	encoder := CreateEncoder(logCfg.File.Formatter, cfg.Module)
+	encoder := CreateEncoder(logCfg.File.Formatter, cfg.Command)
 	enabler := newConfigLevelEnabler(logCfg.File.Levels)
 
 	return zapcore.NewCore(encoder, zapcore.AddSync(file), enabler), file, nil

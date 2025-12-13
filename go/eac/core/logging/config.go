@@ -23,8 +23,16 @@ const (
 
 // Config holds logger configuration.
 type Config struct {
-	// Module name used for log file path: out/logs/<module>/
-	Module string
+	// Command name (required) - first part of log path
+	// Examples: "design", "build", "templates", "test"
+	Command string
+
+	// PathSegments (optional) - additional path components
+	// Examples:
+	//   [] → out/<command>/debug.log
+	//   ["eac-core"] → out/<command>/eac-core/debug.log
+	//   ["apply"] → out/<command>/apply/debug.log
+	PathSegments []string
 
 	// WorkspaceRoot is the repository root path
 	WorkspaceRoot string
@@ -35,7 +43,7 @@ type Config struct {
 	DebugMode bool
 
 	// EnableFileLogging enables writing logs to file.
-	// When true, logs are written to out/logs/<module>/debug.log.
+	// When true, logs are written to out/<command>/<pathSegments>/debug.log.
 	// When false, no file logging occurs.
 	EnableFileLogging bool
 
@@ -45,9 +53,11 @@ type Config struct {
 
 // DefaultConfig returns configuration with default settings.
 // Debug mode and file logging are disabled by default.
-func DefaultConfig(module, workspaceRoot string) Config {
+// pathSegments is optional - omit for non-module-aware commands
+func DefaultConfig(command, workspaceRoot string, pathSegments ...string) Config {
 	return Config{
-		Module:            module,
+		Command:           command,
+		PathSegments:      pathSegments,
 		WorkspaceRoot:     workspaceRoot,
 		DebugMode:         false,
 		EnableFileLogging: false,

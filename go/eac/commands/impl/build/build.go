@@ -363,7 +363,7 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 		WorkspaceRoot:        workspaceRoot,
 		OutputBaseDir:        paths.OutBuildRelPath,
 		LogFileName:          "build.log",
-		OrchestratorLogName:  "orchestrator.log",
+		OrchestratorLogName:  "", // Disable separate orchestrator log - use logging system instead
 		ActionVerb:           "Building",
 		MaxConcurrency:       0, // Use default (number of CPUs)
 		StatusUpdateInterval: 2, // Update every 2 seconds
@@ -395,14 +395,14 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 	}
 
 	// Configure unified logging system
-	// - Debug logs ALWAYS go to file (out/logs/build/debug.log)
+	// - Debug logs ALWAYS go to file (out/build/build.log)
 	// - Debug logs go to console only if debugMode=true
 	// - TUI output if TUI is enabled
 	var tuiWriter io.Writer
 	if useTUI {
 		tuiWriter = orch.GetTUIWriter(tui.PhaseInit)
 	}
-	if err := logging.ConfigureLogging(workspaceRoot, "build", debugMode, tuiWriter); err != nil {
+	if err := logging.ConfigureLogging(workspaceRoot, "build", nil, debugMode, tuiWriter); err != nil {
 		log.Warnf("Failed to configure logging: %v", err)
 	}
 	defer logging.CloseLogging()

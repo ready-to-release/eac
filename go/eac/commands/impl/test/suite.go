@@ -43,6 +43,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	contractsreports "github.com/ready-to-release/eac/go/eac/core/contracts/reports"
+	"github.com/ready-to-release/eac/go/eac/core/logging"
 	moduledeps "github.com/ready-to-release/eac/go/eac/core/module-deps"
 	"github.com/ready-to-release/eac/go/eac/core/platform"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -292,6 +293,17 @@ func TestSuite() int {
 	}
 	defer releaseSuiteLock(lockFile)
 
+	// Configure logging for test suite command
+	// Logs will go to: out/test/<suite>/test-<suite>.log
+	pathSegments := []string{suiteName}
+	debugMode := false // suite.go doesn't have a debug flag yet
+	if err := logging.ConfigureLoggingSimple(workspaceRootNative, "test", pathSegments, debugMode); err != nil {
+		log.Warnf("Failed to configure logging: %v", err)
+	}
+
+	// Close logging before purging test directory to release file handles
+	logging.CloseLogging()
+
 	// Purge and recreate test output directory (now protected by lock)
 	testRunDir := filepath.Join(workspaceRootNative, repoCfg.TestOutputPath(suiteName))
 	if err := os.RemoveAll(testRunDir); err != nil {
@@ -302,23 +314,17 @@ func TestSuite() int {
 		return 1
 	}
 
-	// Create log file
-	logPath := filepath.Join(testRunDir, "test-suite.log")
-	logFile, err := os.Create(logPath)
-	if err != nil {
-		log.Errorf("failed to create log file: %v", err)
-		return 1
+	// Re-configure logging after directory is recreated
+	if err := logging.ConfigureLoggingSimple(workspaceRootNative, "test", pathSegments, debugMode); err != nil {
+		log.Warnf("Failed to configure logging: %v", err)
 	}
-	defer logFile.Close()
+	defer logging.CloseLogging()
 
 	// Track start time for duration calculation
 	startTime := time.Now()
 
-	// Create multi-writer to log to both console and file
-	multiWriter := io.MultiWriter(os.Stdout, logFile)
-
 	// Phase 1: Discover all tests (Go + Godog)
-	writeln(multiWriter, "%s", output.PhaseHeader(1, "Test Discovery"))
+	writeln(os.Stdout, "%s", output.PhaseHeader(1, "Test Discovery"))
 
 	// Load module registry for inference
 	moduleReport, err := contractsreports.GetModuleContracts(workspaceRoot)
@@ -339,21 +345,21 @@ func TestSuite() int {
 		return 1
 	}
 
-	writeln(multiWriter, "Discovered %d tests", len(allTests))
-	writeln(multiWriter, "Applied %d inference rules", len(suite.Inferences))
+	writeln(os.Stdout, "Discovered %d tests", len(allTests))
+	writeln(os.Stdout, "Applied %d inference rules", len(suite.Inferences))
 	if moduleRegistry != nil {
-		writeln(multiWriter, "Inferred system deps from module types")
+		writeln(os.Stdout, "Inferred system deps from module types")
 	}
-	writeln(multiWriter, "")
+	writeln(os.Stdout, "")
 
 	// Phase 3: Select tests for suite
-	writeln(multiWriter, "%s", output.PhaseHeader(3, "Suite Selection"))
+	writeln(os.Stdout, "%s", output.PhaseHeader(3, "Suite Selection"))
 	selectedTests, selectionStats := suite.SelectTestsWithStats(allTests)
-	writeln(multiWriter, "Selected %d tests for suite '%s'", len(selectedTests), suite.Moniker)
+	writeln(os.Stdout, "Selected %d tests for suite '%s'", len(selectedTests), suite.Moniker)
 
 	// Phase 3.5: Apply module filter if specified
 	if len(moduleFilters) > 0 {
-		writeln(multiWriter, "%s", output.ListFormatWithPrefix("Filtering by modules", moduleFilters, 80, 5))
+		writeln(os.Stdout, "%s", output.ListFormatWithPrefix("Filtering by modules", moduleFilters, 80, 5))
 		filteredTests := []testing.TestReference{}
 
 		// Track unique modules found for debugging
@@ -407,29 +413,29 @@ func TestSuite() int {
 
 		// Log found modules for debugging
 		if len(filteredTests) == 0 {
-			writeln(multiWriter, "No tests matched. Modules found in selected tests:")
+			writeln(os.Stdout, "No tests matched. Modules found in selected tests:")
 			for mod, count := range foundModules {
 				if mod != "" {
-					writeln(multiWriter, "  - %s (%d tests)", mod, count)
+					writeln(os.Stdout, "  - %s (%d tests)", mod, count)
 				} else {
-					writeln(multiWriter, "  - [empty module name] (%d tests)", count)
+					writeln(os.Stdout, "  - [empty module name] (%d tests)", count)
 				}
 			}
 			// Show a few sample paths
 			if len(selectedTests) > 0 {
-				writeln(multiWriter, "Sample file paths (first 5):")
+				writeln(os.Stdout, "Sample file paths (first 5):")
 				sampleCount := 5
 				if len(selectedTests) < sampleCount {
 					sampleCount = len(selectedTests)
 				}
 				for i := 0; i < sampleCount; i++ {
-					writeln(multiWriter, "  - %s", selectedTests[i].FilePath)
+					writeln(os.Stdout, "  - %s", selectedTests[i].FilePath)
 				}
 			}
 		}
 
 		selectedTests = filteredTests
-		writeln(multiWriter, "Selected %d tests after module filtering", len(selectedTests))
+		writeln(os.Stdout, "Selected %d tests after module filtering", len(selectedTests))
 	}
 
 	// Phase 3.6: Filter out framework tests (tests about the testing framework itself)
@@ -444,36 +450,36 @@ func TestSuite() int {
 	}
 
 	if frameworkTestCount > 0 {
-		writeln(multiWriter, "INFO: %d framework tests excluded from execution", frameworkTestCount)
+		writeln(os.Stdout, "INFO: %d framework tests excluded from execution", frameworkTestCount)
 	}
 
 	// Phase 3.7: Filter by OS compatibility
 	// Tests with deps:linux, deps:macos, deps:windows are OS-specific
 	// Tests without any of these are OS-agnostic and run everywhere
-	osCompatibleTests := filterByOSCompatibility(productionTests, multiWriter)
+	osCompatibleTests := filterByOSCompatibility(productionTests, os.Stdout)
 	osFilteredCount := len(productionTests) - len(osCompatibleTests)
 	if osFilteredCount > 0 {
-		writeln(multiWriter, "INFO: %d tests excluded (incompatible with %s)", osFilteredCount, runtime.GOOS)
+		writeln(os.Stdout, "INFO: %d tests excluded (incompatible with %s)", osFilteredCount, runtime.GOOS)
 	}
 	productionTests = osCompatibleTests
 
-	writeln(multiWriter, "Running %d production tests", len(productionTests))
-	writeln(multiWriter, "")
+	writeln(os.Stdout, "Running %d production tests", len(productionTests))
+	writeln(os.Stdout, "")
 
 	// If list-only, just show tests and exit
 	if listOnly {
-		writeln(multiWriter, "=== Production Tests ===")
+		writeln(os.Stdout, "=== Production Tests ===")
 		for i, test := range productionTests {
-			writeln(multiWriter, "%d. %s (%s)", i+1, test.TestName, test.Type)
-			writeln(multiWriter, "   File: %s", test.FilePath)
-			writeln(multiWriter, "   Tags: %s", strings.Join(test.Tags, ", "))
-			writeln(multiWriter, "")
+			writeln(os.Stdout, "%d. %s (%s)", i+1, test.TestName, test.Type)
+			writeln(os.Stdout, "   File: %s", test.FilePath)
+			writeln(os.Stdout, "   Tags: %s", strings.Join(test.Tags, ", "))
+			writeln(os.Stdout, "")
 		}
 		return 0
 	}
 
 	// Phase 4: Extract and verify dependencies (system + module)
-	writeln(multiWriter, "%s", output.PhaseHeader(4, "Dependency Verification"))
+	writeln(os.Stdout, "%s", output.PhaseHeader(4, "Dependency Verification"))
 	systemDeps := testing.GetSystemDependencies(productionTests)
 	moduleDeps := testing.GetModuleDependencies(productionTests)
 
@@ -483,11 +489,11 @@ func TestSuite() int {
 	var unavailableModuleDeps []string
 
 	if len(allDeps) == 0 {
-		writeln(multiWriter, "No dependencies required")
-		writeln(multiWriter, "")
+		writeln(os.Stdout, "No dependencies required")
+		writeln(os.Stdout, "")
 	} else {
-		writeln(multiWriter, "System dependencies: %s", strings.Join(systemDeps, ", "))
-		writeln(multiWriter, "Module dependencies: %s", strings.Join(moduleDeps, ", "))
+		writeln(os.Stdout, "System dependencies: %s", strings.Join(systemDeps, ", "))
+		writeln(os.Stdout, "Module dependencies: %s", strings.Join(moduleDeps, ", "))
 
 		if !skipDeps {
 			hasSystemFailures := false
@@ -495,7 +501,7 @@ func TestSuite() int {
 			// Verify system dependencies - these cause hard failures
 			sysResults := systemdeps.VerifyAll(systemDeps)
 			for _, result := range sysResults {
-				writeln(multiWriter, "%s", output.DependencyLine(result.Available, result.Dependency, result.Version))
+				writeln(os.Stdout, "%s", output.DependencyLine(result.Available, result.Dependency, result.Version))
 				if !result.Available {
 					hasSystemFailures = true
 				}
@@ -504,30 +510,30 @@ func TestSuite() int {
 			// Verify module dependencies - unavailable ones cause tests to be skipped
 			modResults := moduledeps.VerifyAll(moduleDeps)
 			for _, result := range modResults {
-				writeln(multiWriter, "%s", output.DependencyLine(result.Available, result.Dependency, result.Version))
+				writeln(os.Stdout, "%s", output.DependencyLine(result.Available, result.Dependency, result.Version))
 				if !result.Available {
 					unavailableModuleDeps = append(unavailableModuleDeps, result.Dependency)
 				}
 			}
 
-			writeln(multiWriter, "")
+			writeln(os.Stdout, "")
 
 			// Only fail for system dependencies - module deps cause skip instead
 			if hasSystemFailures {
-				writeln(multiWriter, "%s Error: Required system dependencies are missing", output.IconFail)
-				writeln(multiWriter, "Use --skip-deps to run tests anyway")
+				writeln(os.Stdout, "%s Error: Required system dependencies are missing", output.IconFail)
+				writeln(os.Stdout, "Use --skip-deps to run tests anyway")
 				return 1
 			}
 
 			// Report skipped module dependencies
 			if len(unavailableModuleDeps) > 0 {
-				writeln(multiWriter, "%s Module dependencies not available, tests will be skipped: %s",
+				writeln(os.Stdout, "%s Module dependencies not available, tests will be skipped: %s",
 					output.IconSkip, strings.Join(unavailableModuleDeps, ", "))
-				writeln(multiWriter, "")
+				writeln(os.Stdout, "")
 			}
 		} else {
-			writeln(multiWriter, "Dependency check skipped (--skip-deps)")
-			writeln(multiWriter, "")
+			writeln(os.Stdout, "Dependency check skipped (--skip-deps)")
+			writeln(os.Stdout, "")
 		}
 	}
 
@@ -554,8 +560,8 @@ func TestSuite() int {
 	}
 
 	// Phase 5: Run tests
-	writeln(multiWriter, "%s", output.PhaseHeader(5, "Test Execution"))
-	writeln(multiWriter, "%s", output.OutputDir(testRunDir))
+	writeln(os.Stdout, "%s", output.PhaseHeader(5, "Test Execution"))
+	writeln(os.Stdout, "%s", output.OutputDir(testRunDir))
 
 	// Group tests by package
 	// For Godog tests: need to find their test runner package
@@ -573,7 +579,7 @@ func TestSuite() int {
 			relFeaturePath, err := filepath.Rel(workspaceRoot, test.FilePath)
 			if err != nil {
 				// Skip test if we can't compute relative path
-				writeln(multiWriter, "⚠️  Skipping test %s: unable to compute relative path from %s to %s",
+				writeln(os.Stdout, "⚠️  Skipping test %s: unable to compute relative path from %s to %s",
 					test.TestName, workspaceRoot, test.FilePath)
 				continue
 			}
@@ -597,7 +603,7 @@ func TestSuite() int {
 			relDir, err := filepath.Rel(workspaceRoot, absDir)
 			if err != nil {
 				// Skip test if we can't compute relative path
-				writeln(multiWriter, "⚠️  Skipping test %s: unable to compute relative path from %s to %s",
+				writeln(os.Stdout, "⚠️  Skipping test %s: unable to compute relative path from %s to %s",
 					test.TestName, workspaceRoot, absDir)
 				continue
 			}
@@ -617,7 +623,7 @@ func TestSuite() int {
 	// Load config to get skip reasons
 	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
-		fmt.Fprintf(multiWriter, "❌ Failed to load config: %v\n", err)
+		fmt.Fprintf(os.Stdout, "❌ Failed to load config: %v\n", err)
 		return 1
 	}
 
@@ -664,7 +670,7 @@ func TestSuite() int {
 		WorkspaceRoot:        workspaceRootNative,
 		OutputBaseDir:        relTestRunDir,
 		LogFileName:          "test.log",
-		OrchestratorLogName:  "orchestrator.log",
+		OrchestratorLogName:  "", // Disable separate orchestrator log - use logging system instead
 		ActionVerb:           "Testing",
 		MaxConcurrency:       maxConcurrency,
 		StatusUpdateInterval: 2, // seconds
@@ -682,7 +688,7 @@ func TestSuite() int {
 	orch := orchestrator.New(orchConfig, testCtx.CreateWorker())
 	_, orchErr := orch.Run(monikers)
 	if orchErr != nil {
-		writeln(multiWriter, "❌ Orchestrator error: %v", orchErr)
+		writeln(os.Stdout, "❌ Orchestrator error: %v", orchErr)
 		return 1
 	}
 	orch.StopTUI()
@@ -716,32 +722,32 @@ func TestSuite() int {
 	// Phase 6: Generate summary
 	endTime := time.Now()
 
-	writeln(multiWriter, "%s", output.SectionHeader("Test Summary"))
-	writeln(multiWriter, "Suite: %s", suite.Name)
-	writeln(multiWriter, "")
-	writeln(multiWriter, "Test Selection Breakdown:")
-	writeln(multiWriter, "  Tests discovered:        %d", selectionStats.TotalDiscovered)
-	writeln(multiWriter, "  - Skipped (@skip:*):     %d", selectionStats.Skipped)
-	writeln(multiWriter, "  - Not matching suite:    %d", selectionStats.NotMatchingSuite)
-	writeln(multiWriter, "  = Selected for suite:    %d", selectionStats.Selected)
+	writeln(os.Stdout, "%s", output.SectionHeader("Test Summary"))
+	writeln(os.Stdout, "Suite: %s", suite.Name)
+	writeln(os.Stdout, "")
+	writeln(os.Stdout, "Test Selection Breakdown:")
+	writeln(os.Stdout, "  Tests discovered:        %d", selectionStats.TotalDiscovered)
+	writeln(os.Stdout, "  - Skipped (@skip:*):     %d", selectionStats.Skipped)
+	writeln(os.Stdout, "  - Not matching suite:    %d", selectionStats.NotMatchingSuite)
+	writeln(os.Stdout, "  = Selected for suite:    %d", selectionStats.Selected)
 	if frameworkTestCount > 0 {
-		writeln(multiWriter, "  - Framework tests:       %d", frameworkTestCount)
+		writeln(os.Stdout, "  - Framework tests:       %d", frameworkTestCount)
 	}
-	writeln(multiWriter, "  - OS incompatible:       %d", osFilteredCount)
-	writeln(multiWriter, "  = Production tests:      %d", len(productionTests))
-	writeln(multiWriter, "")
-	writeln(multiWriter, "Test Execution:")
-	writeln(multiWriter, "  Total packages: %d", len(testsByPackage))
-	writeln(multiWriter, "  Packages passed: %d", packagesPassed)
-	writeln(multiWriter, "  Packages failed: %d", packagesFailed)
-	writeln(multiWriter, "  Tests total: %d", testsTotal)
-	writeln(multiWriter, "  Tests passed: %d", testsPassed)
-	writeln(multiWriter, "  Tests failed: %d", testsFailed)
+	writeln(os.Stdout, "  - OS incompatible:       %d", osFilteredCount)
+	writeln(os.Stdout, "  = Production tests:      %d", len(productionTests))
+	writeln(os.Stdout, "")
+	writeln(os.Stdout, "Test Execution:")
+	writeln(os.Stdout, "  Total packages: %d", len(testsByPackage))
+	writeln(os.Stdout, "  Packages passed: %d", packagesPassed)
+	writeln(os.Stdout, "  Packages failed: %d", packagesFailed)
+	writeln(os.Stdout, "  Tests total: %d", testsTotal)
+	writeln(os.Stdout, "  Tests passed: %d", testsPassed)
+	writeln(os.Stdout, "  Tests failed: %d", testsFailed)
 	if testsSkipped > 0 {
-		writeln(multiWriter, "  Tests skipped: %d", testsSkipped)
+		writeln(os.Stdout, "  Tests skipped: %d", testsSkipped)
 	}
-	writeln(multiWriter, "")
-	writeln(multiWriter, "Results directory: %s", testRunDir)
+	writeln(os.Stdout, "")
+	writeln(os.Stdout, "Results directory: %s", testRunDir)
 
 	// Calculate timing data (always needed for JSON export)
 	var totalDuration time.Duration
@@ -877,12 +883,12 @@ func TestSuite() int {
 
 	// Show timing summary table (only with --timings flag)
 	if showTimings {
-		writeln(multiWriter, "")
-		writeln(multiWriter, "%s", output.SectionHeader("Timing Summary"))
+		writeln(os.Stdout, "")
+		writeln(os.Stdout, "%s", output.SectionHeader("Timing Summary"))
 		for _, entry := range timingEntries {
-			writeln(multiWriter, "%s", output.TimingLine(time.Duration(entry.DurationSecs*float64(time.Second)), entry.DisplayName))
+			writeln(os.Stdout, "%s", output.TimingLine(time.Duration(entry.DurationSecs*float64(time.Second)), entry.DisplayName))
 		}
-		writeln(multiWriter, "%s", output.TimingTotal(totalDuration))
+		writeln(os.Stdout, "%s", output.TimingTotal(totalDuration))
 	}
 
 	// Write timing data to JSON file
@@ -896,14 +902,14 @@ func TestSuite() int {
 	timingsJSON, err := json.MarshalIndent(timingsData, "", "  ")
 	if err == nil {
 		if writeErr := os.WriteFile(timingsJSONPath, timingsJSON, 0644); writeErr != nil {
-			writeln(multiWriter, "⚠️  Warning: Failed to write timings.json: %v", writeErr)
+			writeln(os.Stdout, "⚠️  Warning: Failed to write timings.json: %v", writeErr)
 		}
 	}
 
 	// Show failed test outputs (top 5)
 	if packagesFailed > 0 {
-		writeln(multiWriter, "")
-		writeln(multiWriter, "%s", output.SectionHeader("Failed Test Outputs"))
+		writeln(os.Stdout, "")
+		writeln(os.Stdout, "%s", output.SectionHeader("Failed Test Outputs"))
 
 		failedResults := []PackageTestResult{}
 		for _, result := range results {
@@ -920,45 +926,45 @@ func TestSuite() int {
 
 		for i := 0; i < maxToShow; i++ {
 			result := failedResults[i]
-			writeln(multiWriter, "")
-			writeln(multiWriter, "❌ %s", result.PackageName)
+			writeln(os.Stdout, "")
+			writeln(os.Stdout, "❌ %s", result.PackageName)
 
 			// Read last 15 lines from log file
 			if result.LogFilePath != "" && fileExists(result.LogFilePath) {
 				lines := readLastLines(result.LogFilePath, 15)
 				for _, line := range lines {
-					writeln(multiWriter, "  %s", line)
+					writeln(os.Stdout, "  %s", line)
 				}
 			} else {
-				writeln(multiWriter, "  (log file not available)")
+				writeln(os.Stdout, "  (log file not available)")
 			}
 		}
 
 		if len(failedResults) > maxToShow {
-			writeln(multiWriter, "")
-			writeln(multiWriter, "... and %d more failed tests", len(failedResults)-maxToShow)
+			writeln(os.Stdout, "")
+			writeln(os.Stdout, "... and %d more failed tests", len(failedResults)-maxToShow)
 		}
 	}
 
 	// Check for undefined steps in test logs
 	undefinedSteps := extractUndefinedSteps(testRunDir)
 	if len(undefinedSteps) > 0 {
-		writeln(multiWriter, "")
-		writeln(multiWriter, "⚠️  WARNING: %d undefined steps found", len(undefinedSteps))
-		writeln(multiWriter, "Scenarios with undefined steps need step implementations.")
-		writeln(multiWriter, "Run with verbose logging to see full details.")
+		writeln(os.Stdout, "")
+		writeln(os.Stdout, "⚠️  WARNING: %d undefined steps found", len(undefinedSteps))
+		writeln(os.Stdout, "Scenarios with undefined steps need step implementations.")
+		writeln(os.Stdout, "Run with verbose logging to see full details.")
 	}
 
 	// Validate expected output files
-	writeln(multiWriter, "")
-	writeln(multiWriter, "%s", output.SectionHeader("Output File Validation"))
-	fileValidationErrors := validateOutputFiles(results, multiWriter)
+	writeln(os.Stdout, "")
+	writeln(os.Stdout, "%s", output.SectionHeader("Output File Validation"))
+	fileValidationErrors := validateOutputFiles(results, os.Stdout)
 	if len(fileValidationErrors) > 0 {
-		writeln(multiWriter, "")
-		writeln(multiWriter, "❌ %d output file validation errors found", len(fileValidationErrors))
+		writeln(os.Stdout, "")
+		writeln(os.Stdout, "❌ %d output file validation errors found", len(fileValidationErrors))
 		// Don't fail the build for missing files, just warn
 	} else {
-		writeln(multiWriter, "✅ All expected output files exist and are non-empty")
+		writeln(os.Stdout, "✅ All expected output files exist and are non-empty")
 	}
 
 	// Generate markdown report using template
@@ -1210,7 +1216,7 @@ func max(a, b int) int {
 }
 
 // runPackageTests runs tests for a single package and returns detailed test results
-func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter io.Writer, testParallelism int, testRunDir string, reportFormat string, coverage bool, suiteTagFilter string) (result PackageTestResult) {
+func runPackageTests(pkgPath string, tests []testing.TestReference, writer io.Writer, testParallelism int, testRunDir string, reportFormat string, coverage bool, suiteTagFilter string) (result PackageTestResult) {
 	// Track timing for this package - use defer to calculate at end
 	start := time.Now()
 	defer func() {
@@ -1273,7 +1279,7 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 
 	// Dispatch to appropriate handler based on test type
 	if handler, ok := getTestTypeHandler(testType); ok {
-		return handler(pkgPath, tests, multiWriter, testRunDir, reportFormat, suiteTagFilter)
+		return handler(pkgPath, tests, os.Stdout, testRunDir, reportFormat, suiteTagFilter)
 	}
 
 	// Default: Go test execution (handles "go", "godog", and unknown types)
@@ -1323,8 +1329,8 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 		pkgOutputDir := filepath.Join(testRunDir, parentDir)
 		// Create the output directory for feature files
 		if err := os.MkdirAll(pkgOutputDir, 0755); err != nil {
-			writeln(multiWriter, "❌ Failed to create output directory: %v", err)
-			writeln(multiWriter, "")
+			writeln(os.Stdout, "❌ Failed to create output directory: %v", err)
+			writeln(os.Stdout, "")
 			return PackageTestResult{PackageName: pkgPath, LogFilePath: "", TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true, ExpectedFiles: []string{}}
 		}
 
@@ -1359,8 +1365,8 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 		// Create module directory
 		moduleDir := filepath.Join(testRunDir, moduleName)
 		if err := os.MkdirAll(moduleDir, 0755); err != nil {
-			writeln(multiWriter, "❌ Failed to create output directory: %v", err)
-			writeln(multiWriter, "")
+			writeln(os.Stdout, "❌ Failed to create output directory: %v", err)
+			writeln(os.Stdout, "")
 			return PackageTestResult{PackageName: pkgPath, LogFilePath: "", TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true, ExpectedFiles: []string{}}
 		}
 
@@ -1369,8 +1375,8 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 	}
 	logFile, err := os.Create(logFilePath)
 	if err != nil {
-		writeln(multiWriter, "❌ Failed to create log file: %v", err)
-		writeln(multiWriter, "")
+		writeln(os.Stdout, "❌ Failed to create log file: %v", err)
+		writeln(os.Stdout, "")
 		return PackageTestResult{PackageName: pkgPath, LogFilePath: logFilePath, TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true, ExpectedFiles: []string{}}
 	}
 	defer logFile.Close()
@@ -1528,7 +1534,7 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 			resultStr = "-"
 		}
 
-		writeln(multiWriter, "%s", output.ResultLineNoTime(output.IconFail, pkgName, testType, resultStr))
+		writeln(os.Stdout, "%s", output.ResultLineNoTime(output.IconFail, pkgName, testType, resultStr))
 		return PackageTestResult{PackageName: pkgPath, LogFilePath: logFilePath, TestsPassed: 0, TestsFailed: len(tests), TestsSkipped: 0, TestsTotal: len(tests), PackageFailed: true, ExpectedFiles: expectedFiles}
 	}
 
@@ -1575,7 +1581,7 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, multiWriter 
 		icon = output.IconFail
 	}
 
-	writeln(multiWriter, "%s", output.ResultLineNoTime(icon, pkgName, displayTestType, resultStr))
+	writeln(os.Stdout, "%s", output.ResultLineNoTime(icon, pkgName, displayTestType, resultStr))
 	return PackageTestResult{PackageName: pkgPath, LogFilePath: logFilePath, TestsPassed: testsPassed, TestsFailed: testsFailed, TestsSkipped: 0, TestsTotal: testsTotal, PackageFailed: testsFailed > 0, ExpectedFiles: expectedFiles}
 }
 
@@ -2036,7 +2042,7 @@ func convertCoverageToJSON(coverageFile, jsonFile string) error {
 }
 
 // TestTypeHandler is a function that runs tests for a specific test type (mocha, jest, etc.)
-type TestTypeHandler func(pkgPath string, tests []testing.TestReference, multiWriter io.Writer, testRunDir string, reportFormat string, suiteTagFilter string) PackageTestResult
+type TestTypeHandler func(pkgPath string, tests []testing.TestReference, writer io.Writer, testRunDir string, reportFormat string, suiteTagFilter string) PackageTestResult
 
 // testTypeHandlers maps test types to their suite-level handlers.
 // Unit tests: mocha (npm)
@@ -2079,7 +2085,7 @@ func getTestTypeHandler(testType string) (TestTypeHandler, bool) {
 
 // runMochaTests runs mocha tests for a TypeScript/npm package.
 // It dispatches to npm test with Mocha grep pattern for tag filtering.
-func runMochaTests(pkgPath string, tests []testing.TestReference, multiWriter io.Writer, testRunDir string, reportFormat string, suiteTagFilter string) PackageTestResult {
+func runMochaTests(pkgPath string, tests []testing.TestReference, writer io.Writer, testRunDir string, reportFormat string, suiteTagFilter string) PackageTestResult {
 	start := time.Now()
 
 	// Get workspace root
@@ -2104,7 +2110,7 @@ func runMochaTests(pkgPath string, tests []testing.TestReference, multiWriter io
 		parent := filepath.Dir(moduleRoot)
 		if parent == moduleRoot {
 			// Reached root without finding package.json
-			writeln(multiWriter, "%s", output.ResultLineNoTime(output.IconFail, pkgName, "npm", "no package.json"))
+			writeln(os.Stdout, "%s", output.ResultLineNoTime(output.IconFail, pkgName, "npm", "no package.json"))
 			return PackageTestResult{
 				PackageName:   pkgPath,
 				LogFilePath:   "",
@@ -2126,7 +2132,7 @@ func runMochaTests(pkgPath string, tests []testing.TestReference, multiWriter io
 
 	logFile, err := os.Create(logFilePath)
 	if err != nil {
-		writeln(multiWriter, "%s", output.ResultLineNoTime(output.IconFail, pkgName, "npm", "log create failed"))
+		writeln(os.Stdout, "%s", output.ResultLineNoTime(output.IconFail, pkgName, "npm", "log create failed"))
 		return PackageTestResult{
 			PackageName:   pkgPath,
 			LogFilePath:   "",
@@ -2164,7 +2170,7 @@ func runMochaTests(pkgPath string, tests []testing.TestReference, multiWriter io
 	duration := time.Since(start)
 
 	if err != nil {
-		writeln(multiWriter, "%s", output.ResultLineNoTime(output.IconFail, pkgName, "npm", fmt.Sprintf("0/%d", len(tests))))
+		writeln(os.Stdout, "%s", output.ResultLineNoTime(output.IconFail, pkgName, "npm", fmt.Sprintf("0/%d", len(tests))))
 		return PackageTestResult{
 			PackageName:   pkgPath,
 			LogFilePath:   logFilePath,
@@ -2177,7 +2183,7 @@ func runMochaTests(pkgPath string, tests []testing.TestReference, multiWriter io
 		}
 	}
 
-	writeln(multiWriter, "%s", output.ResultLineNoTime(output.IconPass, pkgName, "npm", fmt.Sprintf("%d/%d", len(tests), len(tests))))
+	writeln(os.Stdout, "%s", output.ResultLineNoTime(output.IconPass, pkgName, "npm", fmt.Sprintf("%d/%d", len(tests), len(tests))))
 	return PackageTestResult{
 		PackageName:   pkgPath,
 		LogFilePath:   logFilePath,
@@ -2191,7 +2197,7 @@ func runMochaTests(pkgPath string, tests []testing.TestReference, multiWriter io
 }
 
 // runTsCucumberTests runs cucumber-js BDD tests for a TypeScript/npm package.
-func runTsCucumberTests(pkgPath string, tests []testing.TestReference, multiWriter io.Writer, testRunDir string, reportFormat string, suiteTagFilter string) PackageTestResult {
+func runTsCucumberTests(pkgPath string, tests []testing.TestReference, writer io.Writer, testRunDir string, reportFormat string, suiteTagFilter string) PackageTestResult {
 	start := time.Now()
 
 	workspaceRootNative, err := repository.GetRepositoryRoot("")
@@ -2222,7 +2228,7 @@ func runTsCucumberTests(pkgPath string, tests []testing.TestReference, multiWrit
 
 	// Verify module root was found
 	if moduleRoot == "" {
-		writeln(multiWriter, "%s", output.ResultLineNoTime(output.IconFail, pkgName, "tscucumber", "no module"))
+		writeln(os.Stdout, "%s", output.ResultLineNoTime(output.IconFail, pkgName, "tscucumber", "no module"))
 		return PackageTestResult{
 			PackageName:   pkgPath,
 			TestsFailed:   len(tests),
@@ -2234,7 +2240,7 @@ func runTsCucumberTests(pkgPath string, tests []testing.TestReference, multiWrit
 
 	packageJSON := filepath.Join(moduleRoot, "package.json")
 	if !fileExists(packageJSON) {
-		writeln(multiWriter, "%s", output.ResultLineNoTime(output.IconFail, pkgName, "tscucumber", "no package.json"))
+		writeln(os.Stdout, "%s", output.ResultLineNoTime(output.IconFail, pkgName, "tscucumber", "no package.json"))
 		return PackageTestResult{
 			PackageName:   pkgPath,
 			TestsFailed:   len(tests),
@@ -2251,7 +2257,7 @@ func runTsCucumberTests(pkgPath string, tests []testing.TestReference, multiWrit
 
 	logFile, err := os.Create(logFilePath)
 	if err != nil {
-		writeln(multiWriter, "%s", output.ResultLineNoTime(output.IconFail, pkgName, "tscucumber", "log create failed"))
+		writeln(os.Stdout, "%s", output.ResultLineNoTime(output.IconFail, pkgName, "tscucumber", "log create failed"))
 		return PackageTestResult{
 			PackageName:   pkgPath,
 			TestsFailed:   len(tests),
@@ -2292,7 +2298,7 @@ func runTsCucumberTests(pkgPath string, tests []testing.TestReference, multiWrit
 	duration := time.Since(start)
 
 	if err != nil {
-		writeln(multiWriter, "%s", output.ResultLineNoTime(output.IconFail, pkgName, "tscucumber", fmt.Sprintf("0/%d", len(tests))))
+		writeln(os.Stdout, "%s", output.ResultLineNoTime(output.IconFail, pkgName, "tscucumber", fmt.Sprintf("0/%d", len(tests))))
 		return PackageTestResult{
 			PackageName:   pkgPath,
 			LogFilePath:   logFilePath,
@@ -2305,7 +2311,7 @@ func runTsCucumberTests(pkgPath string, tests []testing.TestReference, multiWrit
 		}
 	}
 
-	writeln(multiWriter, "%s", output.ResultLineNoTime(output.IconPass, pkgName, "tscucumber", fmt.Sprintf("%d/%d", len(tests), len(tests))))
+	writeln(os.Stdout, "%s", output.ResultLineNoTime(output.IconPass, pkgName, "tscucumber", fmt.Sprintf("%d/%d", len(tests), len(tests))))
 	return PackageTestResult{
 		PackageName:   pkgPath,
 		LogFilePath:   logFilePath,
