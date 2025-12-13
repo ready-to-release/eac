@@ -191,9 +191,12 @@ monorepo/
 **This diagram illustrates the poly-repository pattern:**
 The diagram shows the pattern where a repository boundary perfectly aligns with a single deployable module boundary.
 
-In this pattern, one repository contains exactly one deployable module - whether that's a versioned component (library, container, package) or a runtime system (service, application). The version of any commit is directly equal to the version of the deployable module, making versioning simple and straightforward.
+In this pattern, one repository contains exactly one deployable module - whether that's a versioned component (library, container, package) or a runtime system (service, application).
 
-This pattern is commonly used in GitHub open-source projects and enforces decoupling through versioned modules, where dependencies between units are managed through published versioned artifacts consumed via package managers rather (pinning and stitching) than direct code references (implicit).
+The version of any commit is directly equal to the version of the deployable module, making versioning simple and straightforward.
+
+This pattern is commonly used in GitHub open-source projects and enforces decoupling through versioned modules,
+where dependencies between units are managed through published versioned artifacts consumed via package managers rather (pinning and stitching) than direct code references (implicit).
 
 ### Characteristics
 

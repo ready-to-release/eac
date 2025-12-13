@@ -44,7 +44,7 @@ See [Module Types Reference](./module-types-reference.md) for detailed language 
 
 **The EAC extension** (`ext-eac:latest`) provides:
 
-- **110+ commands** spanning build, test, validation, security, AI, documentation, and release workflows
+- **Hundreds of commands** spanning build, test, validation, security, AI, documentation, and release workflows
 - **Three execution models**: Docker CLI (`r2r eac <command>`), MCP server for LLM tools, and fallback mode for debugging
 - **Contract-driven architecture**: YAML contracts validated against JSON schemas to enforce consistency
 - **Modular design**: Independent packages for core libraries, commands, AI integrations, and MCP servers
@@ -91,7 +91,7 @@ cli/
 │
 ├── go/                         # Go source code
 │   ├── eac/                    # EAC modules
-│   │   ├── commands/           # eac-commands (110+ commands with AI integrations)
+│   │   ├── commands/           # eac-commands (hundreds of commands with AI integrations)
 │   │   ├── core/               # eac-core (domain libraries)
 │   │   ├── mcp/                # eac-mcp-commands (MCP server)
 │   │   └── specs/              # eac-specs (BDD infrastructure)
@@ -129,13 +129,15 @@ cli/
 ### Module Categories
 
 **Deployable Modules** - Independently built, versioned, and deployed:
+
 - **r2r-cli** - Go CLI application with cross-platform executables
 - **ext-eac** - Docker extension for R2R CLI
 - **docs-site** - MkDocs documentation site (GitHub Pages)
 
 **Supporting Modules** - Shared code and infrastructure:
+
 - **eac-core** - Core domain libraries (contracts, repository, git)
-- **eac-commands** - Command implementations (110+ commands) with integrated AI providers (Anthropic, OpenAI)
+- **eac-commands** - Command implementations (hundreds of commands) with integrated AI providers (Anthropic, OpenAI)
 - **eac-specs** - BDD test infrastructure (Godog)
 - **eac-mcp-commands** - MCP server for LLM tools
 
@@ -145,15 +147,15 @@ All modules defined in `.r2r/eac/repository.yml` with explicit dependencies and 
 
 ## In This Section
 
-| Document | Description |
-|----------|-------------|
-| [Architecture](./architecture.md) | System architecture, components, and execution models |
-| [Viewing Architecture](./viewing-architecture.md) | How to view and work with C4 architecture diagrams |
-| [Modules](./modules.md) | Module system, dependencies, and build management |
-| [Module Types Reference](./module-types-reference.md) | Language support and module type specifications |
-| [Contracts](./contracts.md) | YAML contracts, schemas, and validation system |
-| [Repository Layout](./repository-layout.md) | Directory structure and file organization |
-| [Creating Commands](./creating-commands.md) | Developer guide for extending EAC with new commands |
+| Document                                              | Description                                           |
+| ----------------------------------------------------- | ----------------------------------------------------- |
+| [Architecture](./architecture.md)                     | System architecture, components, and execution models |
+| [Viewing Architecture](./viewing-architecture.md)     | How to view and work with C4 architecture diagrams    |
+| [Modules](./modules.md)                               | Module system, dependencies, and build management     |
+| [Module Types Reference](./module-types-reference.md) | Language support and module type specifications       |
+| [Contracts](./contracts.md)                           | YAML contracts, schemas, and validation system        |
+| [Repository Layout](./repository-layout.md)           | Directory structure and file organization             |
+| [Creating Commands](./creating-commands.md)           | Developer guide for extending EAC with new commands   |
 
 ## Detailed Documentation
 
@@ -179,7 +181,7 @@ All modules defined in `.r2r/eac/repository.yml` with explicit dependencies and 
 
 ## Related Documentation
 
-- **[Command Reference](../commands/)** - Complete reference for all 110+ EAC commands
+- **[Command Reference](../commands/)** - Complete reference for all EAC commands
 - **[How-To Guides](../../how-to-guides/eac/)** - Task-oriented guides for using EAC
 - **[Decision Records](../decision-records/)** - Architectural decisions and rationale
 

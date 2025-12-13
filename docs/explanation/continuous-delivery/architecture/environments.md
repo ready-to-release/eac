@@ -37,7 +37,7 @@ The DevBox is the developer's local development environment where all changes be
 - Local build tools and compilers
 - Unit testing frameworks
 - Local security scanners (Trivy)
-- Version control (Git)
+- Version control (Git + Artifact repository)
 - Container runtime (Docker)
 
 **Purpose in CD Model:**
