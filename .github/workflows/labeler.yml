@@ -1,0 +1,113 @@
+# Pull Request Labeler
+#
+# Dynamically labels PRs based on which modules are affected by file changes.
+# Uses the commands CLI to determine module ownership (same logic as CI detection).
+#
+# Labels correspond to module monikers from .r2r/eac/repository.yml.
+
+name: "PR Labeler"
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  label:
+    name: Label PR by Module
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: go/eac/commands/go.sum
+
+      - name: Build Commands
+        run: go build -o commands ./go/eac/commands
+
+      - name: Detect Changed Modules
+        id: detect
+        run: |
+          # Get modules affected by PR changes
+          RESULT=$(./commands get changed-modules-ci --pr-base "${{ github.event.pull_request.base.sha }}" --as-json)
+
+          # Extract directly changed modules (not transitive dependents)
+          MODULES=$(echo "$RESULT" | jq -r '.directly_changed | join(",")')
+
+          echo "modules=$MODULES" >> $GITHUB_OUTPUT
+          echo "Detected modules: $MODULES"
+
+      - name: Apply Module Labels
+        if: steps.detect.outputs.modules != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const modules = '${{ steps.detect.outputs.modules }}'.split(',').filter(m => m);
+
+            if (modules.length === 0) {
+              console.log('No modules to label');
+              return;
+            }
+
+            console.log(`Adding labels for modules: ${modules.join(', ')}`);
+
+            // Get current labels
+            const { data: currentLabels } = await github.rest.issues.listLabelsOnIssue({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+
+            const currentLabelNames = currentLabels.map(l => l.name);
+
+            // Add module labels that don't exist yet
+            const labelsToAdd = modules.filter(m => !currentLabelNames.includes(m));
+
+            if (labelsToAdd.length > 0) {
+              // Ensure labels exist (create if needed)
+              for (const label of labelsToAdd) {
+                try {
+                  await github.rest.issues.getLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    name: label
+                  });
+                } catch (e) {
+                  if (e.status === 404) {
+                    // Create label with a color based on hash
+                    const hash = label.split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0);
+                    const color = Math.abs(hash).toString(16).substring(0, 6).padEnd(6, '0');
+
+                    await github.rest.issues.createLabel({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      name: label,
+                      color: color,
+                      description: `Module: ${label}`
+                    });
+                    console.log(`Created label: ${label}`);
+                  }
+                }
+              }
+
+              // Add labels to PR
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                labels: labelsToAdd
+              });
+
+              console.log(`Added labels: ${labelsToAdd.join(', ')}`);
+            } else {
+              console.log('All module labels already present');
+            }
