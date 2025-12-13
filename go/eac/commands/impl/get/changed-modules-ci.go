@@ -8,6 +8,14 @@
 //   --workflow <name>: Workflow name to find last success (default: "CI Trigger")
 //   --branch <name>: Branch to check for last success (default: main)
 //   --filter-workflows: Only include modules that have a ci-{module}.yaml workflow file
+// Long:
+// Long: Expected Output:
+// Long: YAML list of modules needing rebuild based on CI state, including:
+// Long:   - All modules requiring rebuild (directly changed + transitive dependents)
+// Long:   - Directly changed modules (files modified since base SHA)
+// Long:   - Invalidated modules (transitive dependents requiring rebuild)
+// Long:   - Base and head SHAs, bootstrap flag, changed files list
+// Long:   - Files-by-module mapping for detailed change reasoning
 package get
 
 import (

@@ -16,6 +16,13 @@
 // Long:   get files --as-json
 // Long:   get files --module eac-core
 // Long:   get files --changed-only --as-yaml
+// Long:
+// Long: Expected Output:
+// Long: List of files with owning module information. Format depends on --as-* flag:
+// Long:   - YAML (default): Structured list with file name and modules array
+// Long:   - JSON: Same structure as YAML in JSON format
+// Long:   - TOML: Same structure as YAML in TOML format
+// Long: Each entry contains the file name and list of owning module monikers.
 // Flag.as-yaml: type=bool, usage=Output as YAML (default format)
 // Flag.as-json: type=bool, usage=Output as JSON
 // Flag.as-toml: type=bool, usage=Output as TOML

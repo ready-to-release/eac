@@ -6,6 +6,10 @@
 // Long:
 // Long: The generated profile is saved to specs/.risk-controls/risk-profile.json for version control.
 // Long: Use --debug to inspect intermediate outputs and AI reasoning.
+// Long:
+// Long: Expected Output:
+// Long: - OSCAL profile JSON file selecting controls from catalog
+// Long: - AI reasoning for control selection in debug output
 // Flag.catalog: type=string, usage=Catalog URL for control selection and validation (default: NIST 800-53 Rev5)
 // Flag.output: type=string, shorthand=o, usage=Custom output path for the profile file
 // Flag.force: type=bool, shorthand=f, default=false, usage=Overwrite existing profile file

@@ -6,7 +6,8 @@
 // Long: quality issues using Semgrep's extensive rule library. Results are saved as
 // Long: timestamped evidence files with SHA256 integrity verification for audit compliance.
 // Long:
-// Long: Output: out/security/<module>/sast/<timestamp>.json
+// Long: Expected Output:
+// Long:   Timestamped JSON evidence files are written to out/security/<module>/sast/<timestamp>.json
 // Long:
 // Long: Example:
 // Long:   security sast                          # All modules, auto-detect rules

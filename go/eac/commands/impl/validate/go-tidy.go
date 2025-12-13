@@ -1,5 +1,11 @@
 // Command: validate go-tidy
 // Description: Validate Go module dependencies are tidy
+// Short: Validate Go module dependencies are tidy
+// Long: Validates that all Go modules have tidy dependencies by running 'go mod tidy -diff'.
+// Long:
+// Long: Expected Output:
+// Long:   Shows pass/fail status for 'go mod tidy' check on all Go modules.
+// Long:   Displays diff output for untidy modules. Exit code 0 if all tidy, 1 if any untidy.
 package validate
 
 import (

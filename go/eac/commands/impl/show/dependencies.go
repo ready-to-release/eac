@@ -8,6 +8,11 @@
 // Long:
 // Long: The table format makes it easy to see the full dependency graph at a glance.
 // Long:
+// Long: Expected Output:
+// Long: - Markdown table showing module dependencies with columns: Module, Depends On, Used By
+// Long: - Statistics table with metrics like total modules, total dependencies, root/leaf modules
+// Long: - Execution order table showing layers of modules that can run in parallel
+// Long:
 // Long: Example:
 // Long:   show dependencies
 package show

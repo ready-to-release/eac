@@ -1,5 +1,14 @@
 // Command: show tests
 // Description: Show all tests in the repository in a human-readable table
+// Short: Display all test assertions with metadata
+// Long: The show tests command displays all test assertions in the repository with their metadata.
+// Long: Shows test names, modules, packages, tags (type, level, verification, dependencies), with indicators for inferred values.
+// Long:
+// Long: Expected Output:
+// Long: - Table with test assertions showing: Module, Package, Assertion, Type, Level, Verify, Deps
+// Long: - Module overview table with per-module statistics (assertions, packages, level breakdown, types)
+// Long: - Summary sections showing counts by type and by level
+// Long: - Legend indicating inferred tags with * and ~ symbols
 package show
 
 import (

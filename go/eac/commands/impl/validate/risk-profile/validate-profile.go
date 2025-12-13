@@ -7,6 +7,11 @@
 // Long: - Required field presence (UUID, metadata, imports)
 // Long: - Control ID format validation
 // Long: - Import href validation
+// Long:
+// Long: Expected Output:
+// Long:   Displays OSCAL profile validation results including required field checks,
+// Long:   control ID format validation, and import href validation. Shows errors and warnings.
+// Long:   Exit code 0 if valid OSCAL 1.1.2 profile, 1 if validation errors.
 // Args: file
 package riskprofile
 

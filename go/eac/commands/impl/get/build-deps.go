@@ -4,6 +4,11 @@
 // Flags:
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
+// Long:
+// Long: Expected Output:
+// Long: YAML list of module build dependencies, aggregated from the module and all its transitive
+// Long: dependencies. Includes system dependencies resolved from module type capabilities (e.g., go,
+// Long: node, docker) and artifact-specific requirements (e.g., upx for compression).
 package get
 
 import (

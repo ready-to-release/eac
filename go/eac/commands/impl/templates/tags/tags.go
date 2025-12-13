@@ -5,6 +5,11 @@
 // Long: Tags are extracted from both Gherkin lines (@tag) and comment metadata (# @tag).
 // Long: Use --validate to check tags against the template-tags.yml configuration.
 // Long: Use --format to control output format (table, json, summary).
+// Long:
+// Long: Expected Output:
+// Long:   - Gherkin tags extracted from template files
+// Long:   - Validation results if --validate is enabled
+// Long:   - Exit code 0 if all tags valid, 1 if validation fails
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug mode
 // Flag.template: type=string, usage=Git repository URL or local directory to scan (default: templates)
 // Flag.validate: type=bool, default=true, usage=Validate tags against template-tags.yml

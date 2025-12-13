@@ -5,6 +5,13 @@
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML
+// Long:
+// Long: Expected Output:
+// Long: YAML test suite definition and configuration, including:
+// Long:   - Suite metadata (moniker, name, description)
+// Long:   - Test selection criteria (tags, modules, patterns)
+// Long:   - Suite-level configuration and settings
+// Long:   - List of included tests with their metadata
 package get
 
 import (

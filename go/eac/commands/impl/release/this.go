@@ -20,6 +20,11 @@
 // Long: the release-auto workflow will detect the new version and create the git tag,
 // Long: which triggers the module's release workflow.
 // Long:
+// Long: Expected Output:
+// Long:   - Updated changelog with new version section added
+// Long:   - [Unreleased] section cleared
+// Long:   - Changelog file ready to be committed and submitted in a pull request
+// Long:
 // Long: Examples:
 // Long:   release this r2r-cli              # Update changelog
 // Long:   release this r2r-cli --dry-run    # Preview without writing

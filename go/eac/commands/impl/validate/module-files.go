@@ -1,5 +1,11 @@
 // Command: validate module-files
 // Description: Validate module file ownership
+// Short: Validate module file ownership
+// Long: Validates that all files have proper module ownership and no files are unordered.
+// Long:
+// Long: Expected Output:
+// Long:   Displays files without proper module ownership (unordered or multi-module files).
+// Long:   Shows file paths and claiming modules. Exit code 0 if all files properly owned, 1 if issues found.
 package validate
 
 import (

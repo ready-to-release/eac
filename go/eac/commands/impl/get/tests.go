@@ -4,6 +4,14 @@
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML
+// Long:
+// Long: Expected Output:
+// Long: YAML list of all discovered tests with metadata, including:
+// Long:   - Test name and location (module, package, file)
+// Long:   - Test type (unit, integration, e2e, etc.)
+// Long:   - Tags and markers
+// Long:   - Total test count
+// Long:   - Aggregations by module and type
 package get
 
 import (

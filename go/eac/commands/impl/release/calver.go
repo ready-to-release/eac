@@ -7,6 +7,10 @@
 // Long:
 // Long: By default, only outputs the tag name. Use --create to create the git tag.
 // Long:
+// Long: Expected Output:
+// Long:   - Tag name in format prefix/YYYY.MM.DD[.N] (default behavior)
+// Long:   - Git tag created if --create flag is specified
+// Long:
 // Long: Examples:
 // Long:   release generate-module-calver docs                    # Output: docs/2025.01.15
 // Long:   release generate-module-calver docs --create           # Create the tag locally

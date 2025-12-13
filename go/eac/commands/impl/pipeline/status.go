@@ -6,6 +6,11 @@
 // Long: workflows for the latest commit on the main branch. It shows a compact
 // Long: summary of each workflow's status.
 // Long:
+// Long: Expected Output:
+// Long:   - Compact summary of all workflow statuses
+// Long:   - Status icons (✓, ✗, ◐, ○) and workflow names
+// Long:   - Exit code 0 if all succeed, 1 if any fail
+// Long:
 // Long: Example:
 // Long:   pipeline status              # Show status for main branch HEAD
 // Long:   pipeline status --ref dev    # Show status for dev branch HEAD

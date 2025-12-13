@@ -11,6 +11,11 @@
 // Long: Use --ref to specify a git reference (branch, tag, commit) to compare against
 // Long: when determining which modules have changed.
 // Long:
+// Long: Expected Output:
+// Long:   - Per-module pipeline execution results (build, test, validate stages)
+// Long:   - Exit code 0 if all pipelines pass
+// Long:   - Exit code 1 if any pipeline fails
+// Long:
 // Long: Example:
 // Long:   pipeline run                    # Run all modules
 // Long:   pipeline run --changed-only     # Run only changed modules

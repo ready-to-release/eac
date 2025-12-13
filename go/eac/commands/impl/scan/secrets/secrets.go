@@ -6,7 +6,8 @@
 // Long: that may have been accidentally committed to the repository. Results are
 // Long: saved as timestamped evidence files with SHA256 integrity verification.
 // Long:
-// Long: Output: out/security/<module>/secrets/<timestamp>.json
+// Long: Expected Output:
+// Long:   Timestamped JSON evidence files are written to out/security/<module>/secrets/<timestamp>.json
 // Long:
 // Long: Example:
 // Long:   security secrets                       # All modules

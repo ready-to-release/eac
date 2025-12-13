@@ -13,6 +13,11 @@
 // Long: Schema validation ensures configuration files are well-formed and contain
 // Long: valid values according to the contract specifications.
 // Long:
+// Long: Expected Output:
+// Long:   Displays schema validation results for each contract file (repository.yml,
+// Long:   environments.yml, testing-tags.yml, test-suites.yml). Shows count of validated
+// Long:   items per file. Exit code 0 if all contracts valid, 1 if any validation errors.
+// Long:
 // Long: Example:
 // Long:   validate contracts
 package validate

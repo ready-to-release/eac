@@ -3,6 +3,11 @@
 // Long: Scans out/build folders for generated PDF books and extracts
 // Long: each page as a PNG image. Images are stored in out/cache/pdf-screenshots/
 // Long: organized by book name with hash marker for cache invalidation.
+// Long:
+// Long: Expected Output:
+// Long:   - PNG images in out/cache/pdf-screenshots/ directory
+// Long:   - Organized by book name (one subdirectory per PDF)
+// Long:   - Hash marker files for cache validation
 // Flag.dry-run: type=bool, default=false, usage=Show what would be done without making changes
 // Flag.force: type=bool, shorthand=f, default=false, usage=Regenerate all images ignoring cache
 // Flag.verbose: type=bool, shorthand=v, default=false, usage=Show detailed progress

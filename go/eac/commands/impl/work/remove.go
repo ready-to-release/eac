@@ -12,6 +12,11 @@
 // Long:
 // Long: Use --debug to enable detailed logging to out/logs/work/.
 // Long:
+// Long: Expected Output:
+// Long:   - Workspace removed from git tracking
+// Long:   - Local branch deleted (unless --keep-branch)
+// Long:   - Information about manual folder deletion if needed
+// Long:
 // Long: Example:
 // Long:   work remove                              # Remove current workspace
 // Long:   work remove feature/old-feature          # Remove specific workspace

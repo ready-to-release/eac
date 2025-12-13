@@ -9,6 +9,10 @@
 // Long: Use this in release workflow cleanup jobs to prevent orphaned tags
 // Long: from blocking future release attempts.
 // Long:
+// Long: Expected Output:
+// Long:   - Deletion of partial GitHub releases (if any exist for the tag)
+// Long:   - Deletion of git tags from the remote repository
+// Long:
 // Long: Example:
 // Long:   release cleanup --tag r2r-cli/1.0.0
 // Long:   release cleanup --tag ext-eac/2.0.0

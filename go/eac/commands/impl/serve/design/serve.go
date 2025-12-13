@@ -5,6 +5,12 @@
 // Long: The viewer provides interactive C4 model diagrams (system context, containers, components) defined
 // Long: in workspace.dsl. When you run this command, it generates workspace.json and .structurizr/ files
 // Long: The viewer runs on a dynamically allocated port (9000-9999) and updates automatically when you edit the DSL file.
+// Long:
+// Long: Expected Output:
+// Long:   - Docker container running Structurizr Lite on port 9000-9999
+// Long:   - Browser opens automatically to http://localhost:<port>
+// Long:   - Live updates when workspace.dsl file changes
+// Long:   - Generated workspace.json and .structurizr/ directory (git-ignored)
 // Usage: serve design <module>
 package design
 

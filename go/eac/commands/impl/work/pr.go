@@ -11,6 +11,11 @@
 // Long:
 // Long: Requires GitHub CLI (gh) to be installed and authenticated.
 // Long:
+// Long: Expected Output:
+// Long: - PR created on GitHub
+// Long: - PR URL printed to stdout
+// Long: - AI-generated title and description based on commits
+// Long:
 // Long: Example:
 // Long:   create pr
 // Long:   create pr --target=develop

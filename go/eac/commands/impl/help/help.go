@@ -3,6 +3,10 @@
 // Long: The help command provides comprehensive documentation for all available commands.
 // Long: When called without arguments, it lists all commands with their short descriptions.
 // Long: When called with a command name, it displays detailed help including description, flags, and usage.
+// Long:
+// Long: Expected Output:
+// Long:   - NAME, SYNOPSIS, DESCRIPTION, COMMANDS, FLAGS sections
+// Long:   - Command usage examples
 // Flag.verbose: type=bool, shorthand=v, default=false, usage=Show detailed information including all subcommands and advanced options
 package help
 

@@ -8,6 +8,11 @@
 // Long: IMPORTANT: This command requires --tag-direct flag to prevent accidental releases.
 // Long: The preferred flow is: release this → commit → push → workflow creates tag.
 // Long: Use --tag-direct only when you need to tag directly from devbox.
+// Long:
+// Long: Expected Output:
+// Long:   - Git tag created in format r2r-cli/x.y.z
+// Long:   - Tag triggers the release workflow to build and publish binaries
+// Long:
 // Long: Example: release r2r-cli --tag-direct 1.0.0
 package release
 

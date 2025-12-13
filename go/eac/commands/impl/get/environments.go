@@ -4,6 +4,10 @@
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML
+// Long:
+// Long: Expected Output:
+// Long: YAML list of environment definitions with configuration for each environment,
+// Long: including environment variables, deployment targets, and environment-specific settings.
 package get
 
 import (

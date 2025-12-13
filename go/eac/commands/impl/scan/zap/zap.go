@@ -11,7 +11,8 @@
 // Long: rather than module files. The module argument is used for evidence file
 // Long: organization only.
 // Long:
-// Long: Output: out/security/<module>/zap/<timestamp>.json
+// Long: Expected Output:
+// Long:   Timestamped JSON evidence files are written to out/security/<module>/zap/<timestamp>.json
 // Long:
 // Long: Example:
 // Long:   security zap src-api --target http://localhost:8080              # Baseline scan

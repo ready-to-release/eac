@@ -1,5 +1,13 @@
 // Command: show environments
 // Description: Show all environment contracts in a human-readable table
+// Short: Display all environment configurations
+// Long: The show environments command displays all environment contracts defined in environments.yml.
+// Long: Shows environment details including moniker, name, level, type, and system dependencies.
+// Long:
+// Long: Expected Output:
+// Long: - Table with environment definitions showing: Moniker, Name, Level, Type, System Dependencies
+// Long: - Summary by level (L0-L4) showing count of environments at each level
+// Long: - Summary by type showing count of environments for each type
 package show
 
 import (

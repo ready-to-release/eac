@@ -8,6 +8,11 @@
 // Long:
 // Long: Validation uses the official OSCAL JSON schema:
 // Long: https://github.com/usnistgov/OSCAL/releases/download/v1.1.3/oscal_catalog_schema.json
+// Long:
+// Long: Expected Output:
+// Long:   Displays OSCAL schema validation results for catalog document.
+// Long:   Shows missing required fields, schema violations, and structural errors.
+// Long:   Exit code 0 if valid OSCAL 1.1.3 catalog, 1 if validation errors.
 // Args: file
 package riskcatalog
 

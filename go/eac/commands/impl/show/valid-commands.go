@@ -1,5 +1,12 @@
 // Command: show valid-commands
 // Short: Show all valid commands in a table
+// Long: The show valid-commands command displays all registered commands in the EAC CLI.
+// Long: Shows command names with their descriptions, sorted alphabetically.
+// Long:
+// Long: Expected Output:
+// Long: - Table with columns: Command, Description
+// Long: - Footer row showing total number of commands
+// Long: - Commands sorted alphabetically
 package show
 
 import (

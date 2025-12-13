@@ -4,6 +4,14 @@
 // Long: The get artifacts command returns all build artifacts for a module with metadata overrides applied.
 // Long: Output includes resolved names, paths, existence status, and which overrides were used.
 // Long: By default, shows artifacts for the current platform. Use --all-platforms to see all platforms.
+// Long:
+// Long: Expected Output:
+// Long: YAML list of build artifacts with metadata, including:
+// Long:   - Resolved artifact names and paths
+// Long:   - Artifact existence status (exists/missing)
+// Long:   - Metadata override information showing which overrides were applied
+// Long:   - Build modes (default and all)
+// Long:   - Summary statistics (total, exists, missing, overrides)
 package get
 
 import (
