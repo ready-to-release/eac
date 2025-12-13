@@ -1,0 +1,212 @@
+# Pull Request Labeler
+#
+# Dynamically labels PRs based on which modules are affected by file changes.
+# Uses the commands CLI to determine module ownership (same logic as CI detection).
+#
+# Labels:
+# - Module labels: correspond to module monikers from .r2r/eac/repository.yml
+# - Custom labels:
+#   - release:<module>: Applied when release/<module>/CHANGELOG.md is modified
+#
+# Security: Checks out BASE branch (trusted), not PR head (untrusted).
+# Changed files are obtained via GitHub API, not git diff.
+
+name: "PR Labeler"
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  actions: read
+
+jobs:
+  label:
+    name: Label PR by Module
+    runs-on: ubuntu-latest
+    steps:
+      # SECURITY: Checkout BASE branch (trusted code), NOT the PR head
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
+
+      - name: Detect Changed Modules
+        id: detect
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          COMMANDS="${{ steps.commands.outputs.commands-path }}"
+
+          # Get changed files from GitHub API and pipe to command via stdin
+          # This avoids ARG_MAX limits for PRs with many files
+          RESULT=$(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files \
+            --jq '.[].filename' \
+            | $COMMANDS get changed-modules --from-stdin --as-json 2>/dev/null || echo '{"modules":[]}')
+
+          echo "Raw result: $RESULT"
+
+          # Extract module list
+          MODULES=$(echo "$RESULT" | jq -r '.modules | join(",")')
+
+          echo "modules=$MODULES" >> $GITHUB_OUTPUT
+          echo "Detected modules: $MODULES"
+
+      # Custom Labels: Detect changelog changes for release labeling
+      - name: Detect Release Changelogs
+        id: changelogs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Get changed files and filter for changelog pattern
+          RELEASE_MODULES=$(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files \
+            --jq '.[].filename' \
+            | grep -E '^release/[^/]+/CHANGELOG\.md$' \
+            | sed 's|^release/||; s|/CHANGELOG\.md$||' \
+            | sort -u \
+            | tr '\n' ',' \
+            | sed 's/,$//')
+
+          echo "release_modules=$RELEASE_MODULES" >> $GITHUB_OUTPUT
+          echo "Detected release changelogs: $RELEASE_MODULES"
+
+      - name: Apply Module Labels
+        if: steps.detect.outputs.modules != ''
+        uses: actions/github-script@v7
+        env:
+          MODULES: ${{ steps.detect.outputs.modules }}
+        with:
+          script: |
+            const modules = (process.env.MODULES || '').split(',').filter(m => m);
+
+            if (modules.length === 0) {
+              console.log('No modules to label');
+              return;
+            }
+
+            console.log(`Adding labels for modules: ${modules.join(', ')}`);
+
+            // Get current labels
+            const { data: currentLabels } = await github.rest.issues.listLabelsOnIssue({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+
+            const currentLabelNames = currentLabels.map(l => l.name);
+
+            // Add module labels that don't exist yet
+            const labelsToAdd = modules.filter(m => !currentLabelNames.includes(m));
+
+            if (labelsToAdd.length > 0) {
+              // Ensure labels exist (create if needed)
+              for (const label of labelsToAdd) {
+                try {
+                  await github.rest.issues.getLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    name: label
+                  });
+                } catch (e) {
+                  if (e.status === 404) {
+                    // Create label with a color based on hash
+                    const hash = label.split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0);
+                    const color = Math.abs(hash).toString(16).substring(0, 6).padEnd(6, '0');
+
+                    await github.rest.issues.createLabel({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      name: label,
+                      color: color,
+                      description: `Module: ${label}`
+                    });
+                    console.log(`Created label: ${label}`);
+                  }
+                }
+              }
+
+              // Add labels to PR
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                labels: labelsToAdd
+              });
+
+              console.log(`Added labels: ${labelsToAdd.join(', ')}`);
+            } else {
+              console.log('All module labels already present');
+            }
+
+      # Custom Labels: Apply release labels for changelog changes
+      - name: Apply Release Labels
+        if: steps.changelogs.outputs.release_modules != ''
+        uses: actions/github-script@v7
+        env:
+          RELEASE_MODULES: ${{ steps.changelogs.outputs.release_modules }}
+        with:
+          script: |
+            const releaseModules = (process.env.RELEASE_MODULES || '').split(',').filter(m => m);
+
+            if (releaseModules.length === 0) {
+              console.log('No release labels to apply');
+              return;
+            }
+
+            // Convert to release:module format
+            const releaseLabels = releaseModules.map(m => `release:${m}`);
+            console.log(`Adding release labels: ${releaseLabels.join(', ')}`);
+
+            // Get current labels
+            const { data: currentLabels } = await github.rest.issues.listLabelsOnIssue({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+
+            const currentLabelNames = currentLabels.map(l => l.name);
+
+            // Add release labels that don't exist yet
+            const labelsToAdd = releaseLabels.filter(l => !currentLabelNames.includes(l));
+
+            if (labelsToAdd.length > 0) {
+              // Ensure labels exist (create if needed)
+              for (const label of labelsToAdd) {
+                try {
+                  await github.rest.issues.getLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    name: label
+                  });
+                } catch (e) {
+                  if (e.status === 404) {
+                    // Release labels use a consistent orange color
+                    await github.rest.issues.createLabel({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      name: label,
+                      color: 'ff9500',
+                      description: `Release pending: ${label.replace('release:', '')}`
+                    });
+                    console.log(`Created label: ${label}`);
+                  }
+                }
+              }
+
+              // Add labels to PR
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                labels: labelsToAdd
+              });
+
+              console.log(`Added release labels: ${labelsToAdd.join(', ')}`);
+            } else {
+              console.log('All release labels already present');
+            }
