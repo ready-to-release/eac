@@ -4,6 +4,12 @@
 // Long: The show config command displays all EAC repository configurations
 // Long: loaded with their defaults applied. This includes modules, module types,
 // Long: environments, testing tags, and test suites.
+// Long:
+// Long: Expected Output:
+// Long: - Human-readable display of all configurations with summary table showing status and counts
+// Long: - Detailed tables for modules (moniker, type, root), module types, environments
+// Long: - Testing tags grouped by type, test suites with descriptions
+// Long: - Each section clearly formatted with markdown headers and tables
 package show
 
 import (

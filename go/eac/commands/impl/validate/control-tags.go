@@ -15,6 +15,10 @@
 // Long:   - Checks that each control ID exists in the catalog
 // Long:   - Reports invalid or missing control IDs with file locations
 // Long:
+// Long: Expected Output:
+// Long:   Displays invalid or missing control IDs with file locations (path:line).
+// Long:   Groups errors by control ID. Exit code 0 if all tags valid, 1 if invalid tags found.
+// Long:
 // Long: Example:
 // Long:   validate control-tags
 package validate

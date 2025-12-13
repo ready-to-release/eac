@@ -5,7 +5,8 @@
 // Long: This command scans for known CVEs and generates timestamped evidence files
 // Long: with SHA256 integrity verification for audit compliance.
 // Long:
-// Long: Output: out/security/<module>/vuln/<timestamp>.json
+// Long: Expected Output:
+// Long:   Timestamped JSON evidence files are written to out/security/<module>/vuln/<timestamp>.json
 // Long:
 // Long: Example:
 // Long:   security vuln                              # All modules

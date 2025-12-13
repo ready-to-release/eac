@@ -8,9 +8,10 @@
 // Long:   - Major, minor, and patch must be non-negative integers
 // Long:   - No leading zeros allowed (except for 0 itself)
 // Long:
-// Long: Exit codes:
-// Long:   0 - Version is valid
-// Long:   1 - Version is invalid (with error message)
+// Long: Expected Output:
+// Long:   Exit code 0 if valid semver format, exit code 1 if invalid.
+// Long:   Error message displayed for invalid versions (v prefix, wrong format, leading zeros).
+// Long:   No output on success (silent success).
 // Long:
 // Long: Examples:
 // Long:   validate release-version 1.2.3        # Valid

@@ -10,6 +10,11 @@
 // Long: Evidence is collected from:
 // Long: - Test results: out/test/<suite>/<module>/*.json
 // Long: - Security scans: out/security/<module>/**/*.json
+// Long:
+// Long: Expected Output:
+// Long: - OSCAL assessment-results JSON file
+// Long: - Control status (satisfied/not-satisfied) based on test results
+// Long: - Evidence from out/test/ and out/security/
 // Flag.profile: type=string, shorthand=p, required=true, usage=Path to OSCAL profile JSON file
 // Flag.max-evidence-age: type=string, default=24h, usage=Maximum age for security evidence before auto-refresh (e.g., 24h, 7d)
 // Flag.force-scan: type=bool, default=false, usage=Force re-run security scans regardless of age

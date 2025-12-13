@@ -5,6 +5,10 @@
 // Long: This command is designed for use in CI/CD pipelines where the changelog
 // Long: is the source of truth for versioning.
 // Long:
+// Long: Expected Output:
+// Long:   - Version string (e.g., 0.0.14) by default
+// Long:   - Tag format (e.g., r2r-cli/0.0.14) if --tag flag is specified
+// Long:
 // Long: Examples:
 // Long:   release get-version r2r-cli              # Output: 0.0.14
 // Long:   release get-version docs                 # Output: 2025.12.01

@@ -3,6 +3,10 @@
 // Long: Outputs YAML-formatted metadata describing the extension's capabilities,
 // Long: commands, requirements, and configuration for integration with the r2r CLI.
 // Long: This command is used by r2r CLI to discover and configure extensions.
+// Long:
+// Long: Expected Output:
+// Long:   - YAML-formatted metadata describing extension capabilities
+// Long:   - Commands, requirements, and configuration for r2r CLI integration
 package extension
 
 import (

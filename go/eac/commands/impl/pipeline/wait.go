@@ -6,6 +6,11 @@
 // Long: their status in a compact, updating format. It exits with code 0 if all
 // Long: workflows succeed, or code 1 if any fail.
 // Long:
+// Long: Expected Output:
+// Long:   - Live progress display with status icons (✓, ✗, ◐, ○)
+// Long:   - Exit code 0 if all workflows succeed
+// Long:   - Exit code 1 if any workflow fails
+// Long:
 // Long: Example:
 // Long:   pipeline wait 12345 12346 12347    # Wait for specific run IDs
 // Long:   pipeline wait --timeout 600        # Wait up to 10 minutes (default: 30 min)

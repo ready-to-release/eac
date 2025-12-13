@@ -6,7 +6,10 @@
 // Long: Validation covers structure (Feature/Rule/Scenario hierarchy), tags, step formatting, and content quality.
 // Long: The command can validate a single file or recursively validate all .feature files in a directory.
 // Long: By default, output is in human-readable text format. Use --format json for machine-readable output.
-// Long: Exit code is 0 if all validations pass, 1 if any critical errors are found.
+// Long:
+// Long: Expected Output:
+// Long:   Displays validation results for Gherkin specification structure, tags, and step formatting.
+// Long:   Shows errors and warnings with line numbers. Exit code 0 if all pass, 1 if critical errors found.
 // Flag.quiet: type=bool, shorthand=q, default=false, usage=Suppress success messages and show only validation errors and warnings
 // Flag.verbose: type=bool, shorthand=v, default=false, usage=Show detailed validation output including metadata and additional context
 // Flag.format: type=string, shorthand=f, default=text, completion=text,json, usage=Output format for validation results (text for human-readable, json for machine-readable)

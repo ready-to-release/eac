@@ -2,6 +2,11 @@
 // Short: Start or stop MkDocs server
 // Long: The serve docs command manages the MkDocs documentation server using Docker.
 // Long: It can start a server on a specified port, stop a running server, and open the documentation in your browser.
+// Long:
+// Long: Expected Output:
+// Long:   - Docker container running MkDocs on port 9000-9999
+// Long:   - Browser opens automatically unless --no-browser is specified
+// Long:   - Live reload when documentation files change
 // Flag.no-browser: type=bool, default=false, usage=Don't open browser after starting server
 // Flag.port: type=int, shorthand=p, default=9000, usage=Port number for MkDocs server (auto-allocated from 9000-9999 if not specified)
 // Flag.stop: type=bool, default=false, usage=Stop the running MkDocs server

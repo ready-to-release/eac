@@ -4,6 +4,11 @@
 // Long: The show build-summary command generates a formatted build summary with module-specific metrics and diagnostics.
 // Long: This command is designed to be used in GitHub Actions workflows to create consistent, attractive build summaries.
 // Long: The output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.
+// Long:
+// Long: Expected Output:
+// Long: - Markdown-formatted build summary with emojis and styling, suitable for GitHub Actions $GITHUB_STEP_SUMMARY
+// Long: - Success: includes status section, build output metrics table, artifacts section, and collapsible configuration
+// Long: - Failure: includes status section, diagnostics with last 50 lines of build log, timing data, and configuration
 package show
 
 import (

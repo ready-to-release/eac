@@ -7,6 +7,13 @@
 //   --as-plantuml: Output as PlantUML diagram
 //   --as-mermaid: Output as Mermaid diagram
 //   --as-execution-order: Output execution order only
+// Long:
+// Long: Expected Output:
+// Long: YAML dependency graph showing module relationships, including:
+// Long:   - List of all module monikers
+// Long:   - Dependency edges (module -> list of dependencies)
+// Long:   - Execution order (topologically sorted modules)
+// Long: Alternative formats available: PlantUML diagram, Mermaid diagram, or execution order only.
 package get
 
 import (

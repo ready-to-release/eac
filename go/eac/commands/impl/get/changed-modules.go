@@ -5,6 +5,10 @@
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML
 //   --base <ref>: Base ref to compare against (default: HEAD)
+// Long:
+// Long: Expected Output:
+// Long: YAML list of module monikers that have changes based on git diff against the specified base ref.
+// Long: Only includes modules directly containing changed files.
 package get
 
 import (

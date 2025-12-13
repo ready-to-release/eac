@@ -13,6 +13,10 @@
 // Long:   2. Copies files as-is to destination directory
 // Long:   3. Preserves all {{ .Variable }} placeholders unchanged
 // Long:
+// Long: Expected Output:
+// Long:   - Template files copied as-is to destination directory
+// Long:   - All {{ .Variable }} placeholders preserved (not replaced)
+// Long:
 // Long: Use Case:
 // Long:   Install templates once to your project, then customize them as needed.
 // Long:   Unlike "apply", this command does NOT replace placeholders.

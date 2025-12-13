@@ -11,6 +11,10 @@
 // Long:   - openai: OpenAI via API (requires OPENAI_API_KEY)
 // Long:   - gemini: Google Gemini via API (requires GOOGLE_API_KEY)
 // Long:
+// Long: Expected Output:
+// Long:   - .r2r/eac/ai-provider.yml (team config) or
+// Long:   - .r2r/eac/ai-provider.personal.yml (personal config)
+// Long:
 // Long: Examples:
 // Long:   init --ai claude-api                              # Create team config with env var placeholders
 // Long:   init --ai claude-api --ai-token sk-ant-xxx        # Create personal config with actual token

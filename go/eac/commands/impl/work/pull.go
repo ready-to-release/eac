@@ -11,6 +11,10 @@
 // Long: Use --autostash to automatically stash uncommitted changes before rebasing.
 // Long: Use --debug to enable detailed logging to out/logs/work/.
 // Long:
+// Long: Expected Output:
+// Long:   - Branch rebased onto latest target
+// Long:   - Conflict instructions if conflicts occur
+// Long:
 // Long: Example:
 // Long:   work pull
 // Long:   work pull --target=develop

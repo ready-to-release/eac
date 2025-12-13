@@ -6,6 +6,11 @@
 // Long:   - Copy glob patterns are valid syntax
 // Long:   - Commands are valid EAC commands
 // Long:   - Navigation references are valid
+// Long:
+// Long: Expected Output:
+// Long:   Displays validation results for book names, module types, glob patterns, and commands.
+// Long:   Shows which modules reference each book and counts of copy/command/inline sources.
+// Long:   Exit code 0 if all books valid, 1 if validation errors found.
 package validate
 
 import (

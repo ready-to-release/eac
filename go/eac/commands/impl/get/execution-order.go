@@ -6,6 +6,10 @@
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML
 //   --no-deps: Don't expand to include transitive dependencies (only order the specified modules)
+// Long:
+// Long: Expected Output:
+// Long: YAML ordered list of modules for execution, topologically sorted based on dependencies.
+// Long: By default includes transitive dependencies. Use --no-deps to only order specified modules.
 package get
 
 import (

@@ -1,5 +1,9 @@
 // Command: get valid-commands
 // Short: Get all valid commands in structured format
+// Long:
+// Long: Expected Output:
+// Long: YAML list of all valid commands with descriptions, sorted alphabetically.
+// Long: Each entry contains the command name and its description.
 package get
 
 import (

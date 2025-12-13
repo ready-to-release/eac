@@ -7,6 +7,11 @@
 // Long: All specifications are validated against the specification contract to ensure they meet quality standards.
 // Long: The command automatically saves the specification to the specs/ directory, organized by module.
 // Long: Use --debug to inspect intermediate outputs and understand how the AI generates specifications.
+// Long:
+// Long: Expected Output:
+// Long: - Gherkin .feature file in specs/ directory
+// Long: - Feature, Rule, and Scenario blocks with tags
+// Long: - Validated against specification contract
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Save intermediate outputs (prompts, raw AI responses, validation results) to the 'out' directory for debugging and analysis
 // Flag.module: type=string, shorthand=m, usage=Target module for the specification (e.g., eac-commands, eac-core). If not provided, the module will be inferred from the description
 // Flag.output: type=string, shorthand=o, usage=Custom output path for the specification file. If not provided, the path is determined from the feature name and module

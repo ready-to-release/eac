@@ -8,6 +8,10 @@
 // Long: This allows you to work on multiple features simultaneously with separate Claude Code sessions.
 // Long: Use --debug to enable detailed logging to out/logs/work/.
 // Long:
+// Long: Expected Output:
+// Long:   - New git worktree in sibling directory
+// Long:   - Ready for parallel Claude Code session
+// Long:
 // Long: Example:
 // Long:   work create feature/authentication
 // Long:   work create bugfix/issue-123 --from=develop

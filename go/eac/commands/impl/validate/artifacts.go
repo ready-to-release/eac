@@ -14,6 +14,11 @@
 // Long:
 // Long: Validation failures indicate missing artifacts that must be built before testing.
 // Long:
+// Long: Expected Output:
+// Long:   Displays validation results for target module and all dependency artifacts.
+// Long:   Exit code 0 if all artifacts present, non-zero if any missing.
+// Long:   Shows detailed table with artifact counts and missing artifact paths.
+// Long:
 // Long: Example:
 // Long:   validate artifacts eac-commands
 // Long:   validate artifacts r2r-cli --all-platforms

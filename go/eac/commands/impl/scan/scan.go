@@ -15,6 +15,9 @@
 // Long:
 // Long: All evidence files are written to out/security/<module>/<scanner>/<timestamp>.json
 // Long:
+// Long: Expected Output:
+// Long:   Debug logging is written to out/logs/security when the --debug flag is enabled.
+// Long:
 // Long: External tools used (see NOTICE file for full attribution):
 // Long:   - Trivy (Apache 2.0) - https://github.com/aquasecurity/trivy
 // Long:   - Semgrep (LGPL 2.1) - https://github.com/semgrep/semgrep

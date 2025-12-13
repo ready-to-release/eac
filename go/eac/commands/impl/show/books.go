@@ -5,6 +5,10 @@
 // Long: including each book's name, description, and source counts.
 // Long: Books aggregate static content with dynamically-generated content
 // Long: from EAC commands for MkDocs documentation sites.
+// Long:
+// Long: Expected Output:
+// Long: - Table with columns: Name, Output, Modules, Description, Copy (count), Cmd (count), Inline (count)
+// Long: - Each row shows a book with its source counts and which modules reference it
 package show
 
 import (

@@ -10,6 +10,10 @@
 // Long:   4. Uses commit to generate a comprehensive commit message
 // Long:   5. Removes the workspace after successful merge
 // Long:
+// Long: Expected Output:
+// Long:   - Squash merge commit on target branch
+// Long:   - Workspace removed (unless --keep-worktree)
+// Long:
 // Long: Example:
 // Long:   work merge
 // Long:   work merge --target=develop

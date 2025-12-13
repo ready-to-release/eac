@@ -6,6 +6,10 @@
 // Long: This command displays all configured suites, making it easy to discover
 // Long: what test suites are available for execution.
 // Long:
+// Long: Expected Output:
+// Long:   - List of configured test suite names (component, integration, acceptance, etc.)
+// Long:   - Suite name, display name, and description for each suite
+// Long:
 // Long: Example:
 // Long:   test list-suites
 package test

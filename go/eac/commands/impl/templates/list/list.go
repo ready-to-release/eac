@@ -4,6 +4,11 @@
 // Long: The templates list command scans template files and displays all placeholder variables.
 // Long: Placeholders use {{ .VariableName }} syntax and can be replaced during template application.
 // Long: Use --debug to save scan results and intermediate outputs for troubleshooting.
+// Long:
+// Long: Expected Output:
+// Long:   - List of {{ .VariableName }} placeholders found in template files
+// Long:   - File locations for each placeholder
+// Long:   - Example JSON structure for providing values
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug mode to save scan results to 'out/logs/templates/list' directory
 // Flag.template: type=string, usage=Git repository URL or local directory to scan (default: https://github.com/ready-to-release/eac)
 // Usage: templates list [--template <git-repo-url|local-path>] [--debug]

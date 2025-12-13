@@ -1,5 +1,14 @@
 // Command: show suite
 // Description: Display detailed information about a test suite
+// Short: Display test suite details with all tests
+// Long: The show suite command displays detailed information about a specific test suite.
+// Long: Shows selection criteria, production tests with their metadata, and summary statistics.
+// Long:
+// Long: Expected Output:
+// Long: - Suite header with name, moniker, description, and test counts
+// Long: - Selection criteria section showing AnyOf/RequireAll/Exclude tag rules
+// Long: - Formatted table of production tests with columns: #, Moniker, Test Name, Type, Module, Level, Verification, System Deps
+// Long: - Statistics section with counts by type, by module, and aggregated dependencies
 package show
 
 import (

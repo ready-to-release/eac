@@ -7,6 +7,11 @@
 // Long: while incorporating new components, relationships, or changes. All updated workspaces are
 // Long: automatically validated against Structurizr CLI to ensure correct syntax before saving.
 // Long: Use --debug to save intermediate outputs to out/logs/design/ for debugging.
+// Long:
+// Long: Expected Output:
+// Long:   - Updated Structurizr DSL workspace file at specs/<module>/.design/workspace.dsl
+// Long:   - Preserves overall structure while incorporating code changes
+// Long:   - Validated syntax (passed Structurizr CLI validation)
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Save intermediate outputs (prompts, raw AI responses, validation results) to out/logs/design/ for debugging
 // Flag.force: type=bool, shorthand=f, default=false, usage=Overwrite workspace.dsl even if validation fails
 // Flag.output: type=string, shorthand=o, default=, usage=Custom output path for workspace.dsl (default: specs/<module>/.design/workspace.dsl)

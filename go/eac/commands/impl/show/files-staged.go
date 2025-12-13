@@ -1,5 +1,12 @@
 // Command: show files-staged
 // Short: Show staged files with their module ownership
+// Long: The show files-staged command displays staged files (git diff --cached) with their module ownership.
+// Long: Useful for identifying which modules are affected by staged changes before committing.
+// Long:
+// Long: Expected Output:
+// Long: - Table with staged file paths and owning modules (comma-separated if multiple)
+// Long: - Files with no module ownership shown as "NONE"
+// Long: - Empty output if no files are staged
 package show
 
 import (

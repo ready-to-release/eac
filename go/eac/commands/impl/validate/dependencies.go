@@ -9,6 +9,10 @@
 // Long: Validation failures indicate mismatches that should be resolved by either updating
 // Long: the contract or fixing the go.mod file.
 // Long:
+// Long: Expected Output:
+// Long:   Displays mismatches between module contracts and actual go.mod dependencies.
+// Long:   Shows modules with extra or missing dependencies. Exit code 0 if all match, 1 if discrepancies found.
+// Long:
 // Long: Example:
 // Long:   validate dependencies
 package validate
