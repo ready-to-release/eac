@@ -28,21 +28,21 @@ scan secrets         # verb: scan, noun: secrets
 
 Commands use semantically meaningful verbs that clearly indicate their purpose:
 
-| Verb | Meaning | Output | Examples |
-|------|---------|--------|----------|
-| `get` | Retrieve structured data | JSON | `get modules`, `get dependencies` |
-| `show` | Display formatted information | Human-readable | `show modules`, `show dependencies` |
-| `create` | Generate new content | Varies | `create spec`, `create pr` |
-| `validate` | Check correctness | Pass/fail | `validate contracts`, `validate specs` |
-| `scan` | Analyze for issues | Report | `scan secrets`, `scan vuln` |
-| `test` | Execute tests | Test results | `test`, `test suite` |
-| `build` | Compile/build | Artifacts | `build` |
-| `release` | Manage releases | Varies | `release changelog`, `release this` |
-| `work` | Manage workspaces | Varies | `work create`, `work commit` |
-| `pipeline` | CI/CD orchestration | Varies | `pipeline run`, `pipeline status` |
-| `serve` | Start servers | Server process | `serve docs`, `serve design` |
-| `templates` | Manage templates | Varies | `templates apply`, `templates list` |
-| `update` | Modify existing | Varies | `update design` |
+| Verb        | Meaning                       | Output         | Examples                               |
+| ----------- | ----------------------------- | -------------- | -------------------------------------- |
+| `get`       | Retrieve structured data      | JSON           | `get modules`, `get dependencies`      |
+| `show`      | Display formatted information | Human-readable | `show modules`, `show dependencies`    |
+| `create`    | Generate new content          | Varies         | `create spec`, `create pr`             |
+| `validate`  | Check correctness             | Pass/fail      | `validate contracts`, `validate specs` |
+| `scan`      | Analyze for issues            | Report         | `scan secrets`, `scan vuln`            |
+| `test`      | Execute tests                 | Test results   | `test`, `test suite`                   |
+| `build`     | Compile/build                 | Artifacts      | `build`                                |
+| `release`   | Manage releases               | Varies         | `release changelog`, `release this`    |
+| `work`      | Manage workspaces             | Varies         | `work create`, `work commit`           |
+| `pipeline`  | CI/CD orchestration           | Varies         | `pipeline run`, `pipeline status`      |
+| `serve`     | Start servers                 | Server process | `serve docs`, `serve design`           |
+| `templates` | Manage templates              | Varies         | `templates apply`, `templates list`    |
+| `update`    | Modify existing               | Varies         | `update design`                        |
 
 ### 3. Consistent Naming Within Categories
 
@@ -206,19 +206,19 @@ show <noun>   # Human-readable output for interactive use
 
 ### Examples
 
-| get command | show command | Purpose |
-|-------------|--------------|---------|
-| `get modules` | `show modules` | Module information |
-| `get dependencies` | `show dependencies` | Dependency graph |
-| `get files` | `show files` | File ownership |
-| `get config` | `show config` | Configuration |
-| `get environments` | `show environments` | Environment contracts |
-| `get tests` | `show tests` | Test information |
-| `get suite <name>` | `show suite <name>` | Test suite details |
-| `get artifacts <module>` | `show artifacts <module>` | Build artifacts |
-| `get build-times` | `show build-times` | Build performance |
-| `get test-timings` | `show test-timings` | Test performance |
-| `get valid-commands` | `show valid-commands` | Command list |
+| get command              | show command              | Purpose               |
+| ------------------------ | ------------------------- | --------------------- |
+| `get modules`            | `show modules`            | Module information    |
+| `get dependencies`       | `show dependencies`       | Dependency graph      |
+| `get files`              | `show files`              | File ownership        |
+| `get config`             | `show config`             | Configuration         |
+| `get environments`       | `show environments`       | Environment contracts |
+| `get tests`              | `show tests`              | Test information      |
+| `get suite <name>`       | `show suite <name>`       | Test suite details    |
+| `get artifacts <module>` | `show artifacts <module>` | Build artifacts       |
+| `get build-times`        | `show build-times`        | Build performance     |
+| `get test-timings`       | `show test-timings`       | Test performance      |
+| `get valid-commands`     | `show valid-commands`     | Command list          |
 
 ### When to Use Which
 
@@ -285,14 +285,14 @@ init                 # Initialization (action)
 
 Use terms consistent with the project's domain:
 
-| Concept | Term Used | Not Used |
-|---------|-----------|----------|
-| Module identifier | moniker | name, id |
-| Specification file | spec | feature, scenario |
-| Architecture diagram | design | architecture, diagram |
-| Git worktree workspace | workspace | worktree, branch |
-| PLTE environment | environment | env, target |
-| Executable unit | command | cmd, tool |
+| Concept                | Term Used   | Not Used              |
+| ---------------------- | ----------- | --------------------- |
+| Module identifier      | moniker     | name, id              |
+| Specification file     | spec        | feature, scenario     |
+| Architecture diagram   | design      | architecture, diagram |
+| Git worktree workspace | workspace   | worktree, branch      |
+| PLTE environment       | environment | env, target           |
+| Executable unit        | command     | cmd, tool             |
 
 ---
 

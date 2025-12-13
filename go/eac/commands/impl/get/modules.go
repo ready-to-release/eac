@@ -5,6 +5,14 @@
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML
 //   --as-<name>: Output using custom renderer (e.g., --as-summary, --as-count)
+// Long:
+// Long: Expected Output:
+// Long: YAML list of all module contracts, each containing:
+// Long:   - moniker: Unique module identifier
+// Long:   - type: Module type (e.g., go, container, typescript, static)
+// Long:   - root: Root path relative to repository
+// Long:   - depends_on: List of dependency module monikers
+// Long:   - Additional metadata (books, files, etc.)
 package get
 
 import (

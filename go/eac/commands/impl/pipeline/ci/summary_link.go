@@ -6,6 +6,11 @@
 // Long: The generated commands use the actual run ID and repository so they can be
 // Long: copy-pasted directly.
 // Long:
+// Long: Expected Output:
+// Long:   - Markdown code block with gh CLI diagnostic commands
+// Long:   - Commands use actual run ID and repository
+// Long:   - Suitable for piping to $GITHUB_STEP_SUMMARY
+// Long:
 // Long: Example:
 // Long:   pipeline ci summary-link 12345678                    # Basic diagnostic link
 // Long:   pipeline ci summary-link 12345678 --type test       # Include artifact download

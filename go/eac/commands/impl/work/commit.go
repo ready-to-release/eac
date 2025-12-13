@@ -6,6 +6,9 @@
 // Long: Uses the commit command internally to generate high-quality commit messages that follow
 // Long: project conventions and include module-specific details.
 // Long:
+// Long: Expected Output:
+// Long:   - Git commit created with AI-generated or custom message
+// Long:
 // Long: Example:
 // Long:   work commit
 // Long:   work commit --all

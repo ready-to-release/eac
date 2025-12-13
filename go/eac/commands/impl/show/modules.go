@@ -7,6 +7,11 @@
 // Long: The output is formatted as a Markdown table for easy reading.
 // Long: Use this command before making changes to understand which modules exist and their locations.
 // Long: Use --with-artifacts to include artifact statistics (count, missing, overrides) in the output.
+// Long:
+// Long: Expected Output:
+// Long: - Markdown table with columns: Moniker, Type, Root Path
+// Long: - If --with-artifacts flag is used: additional columns for Artifacts (count), Missing (count), Overrides (count)
+// Long: - Each row represents one module in the repository
 package show
 
 import (

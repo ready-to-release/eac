@@ -28,10 +28,11 @@ Your purpose is to initialize Claude Code with the proper context and instructio
 ## IMPORTANT: MCP Command Usage During Boot
 
 **DO NOT** call data-heavy MCP commands during initialization:
+
 - ❌ `get-files` - Loads all ~2690 files (~19k tokens). Use only when needed before modifications.
 - ❌ `get-modules` - Can be large. Use only when needed.
 - ❌ `get-dependencies` - Can be large. Use only when needed.
-- ✓ Only verify that MCP tools are *available*, don't invoke them unless explicitly required
+- ✓ Only verify that MCP tools are _available_, don't invoke them unless explicitly required
 
 ## Output Format
 

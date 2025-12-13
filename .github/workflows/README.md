@@ -129,7 +129,7 @@ ci-<module> (test job)
 **Pattern for Go modules:**
 
 ```yaml
-name: "ci-my-module (stage 1-6)"
+name: "ci-my-module (stage 1-7)"
 
 on:
   workflow_call:

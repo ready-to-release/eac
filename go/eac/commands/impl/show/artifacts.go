@@ -4,6 +4,12 @@
 // Long: The show artifacts command displays all build artifacts for a module in a formatted table.
 // Long: Shows resolved names with metadata overrides applied, existence status, and file paths.
 // Long: By default shows artifacts for the current platform. Use --all-platforms to see all platforms.
+// Long:
+// Long: Expected Output:
+// Long: - Formatted table with artifact names, existence status (checkmark or X), and resolved file paths
+// Long: - Summary header showing module name, type, build directory, and platform
+// Long: - Breakdown of build modes (default vs --all)
+// Long: - Metadata overrides section if any metadata is defined
 package show
 
 import (

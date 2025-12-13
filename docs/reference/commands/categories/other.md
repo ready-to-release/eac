@@ -18,13 +18,13 @@ Other commands provide essential functionality that doesn't fit neatly into othe
 
 ## All Other Commands
 
-| Command | Purpose | Use Case |
-|---------|---------|----------|
-| [init](../other/init.md) | Initialize AI provider configuration | Set up API keys and AI provider settings |
-| [build](../other/build.md) | Build modules | Compile and package modules |
-| [help](../other/help.md) | Display help information | Get command documentation |
-| [show help](../show/help.md) | Show help in formatted output | Interactive help browsing |
-| [extension-meta](../other/extension-meta.md) | Output extension metadata | r2r CLI integration |
+| Command                                      | Purpose                              | Use Case                                 |
+| -------------------------------------------- | ------------------------------------ | ---------------------------------------- |
+| [init](../other/init.md)                     | Initialize AI provider configuration | Set up API keys and AI provider settings |
+| [build](../other/build.md)                   | Build modules                        | Compile and package modules              |
+| [help](../other/help.md)                     | Display help information             | Get command documentation                |
+| [show help](../show/help.md)                 | Show help in formatted output        | Interactive help browsing                |
+| [extension-meta](../other/extension-meta.md) | Output extension metadata            | r2r CLI integration                      |
 
 ## Build Commands
 
@@ -87,11 +87,8 @@ r2r eac build $CHANGED
 Force rebuild from scratch:
 
 ```bash
-# Clean before build
-r2r eac build src-auth --clean
-
-# Or manually clean
-rm -rf bin/ && r2r eac build --all
+r2r eac build src-auth --rebuild #named module
+r2r eac build --rebuild #all
 ```
 
 ### Build Output
@@ -139,38 +136,12 @@ r2r eac validate artifacts r2r-cli
 r2r eac build src-auth && r2r eac test src-auth
 
 # Build and run
-r2r eac build r2r-cli && ./bin/r2r --version
-
-# Build before deployment
-r2r eac build --all && r2r eac scan vuln
+r2r eac build r2r-cli && ./out/build/r2r-cli/r2r-linux-amd64 --version
 ```
 
 ### Common Build Issues
 
-**Build fails with dependency errors**:
-
 ```bash
-# Check dependency order
-r2r eac get execution order src-auth
-
-# Build dependencies first
-r2r eac build eac-core eac-commands src-auth
-```
-
-**Stale artifacts**:
-
-```bash
-# Clean and rebuild
-rm -rf bin/ pkg/
-r2r eac build --all
-```
-
-**Missing dependencies**:
-
-```bash
-# Validate dependencies
-r2r eac validate dependencies
-
 # Check module contracts
 r2r eac show modules
 ```
@@ -194,17 +165,9 @@ r2r eac init
 
 **Configuration file locations**:
 
-- `.eac/ai-config.yml` - Project-specific
-- `~/.eac/ai-config.yml` - User-specific
-- `EAC_AI_PROVIDER` environment variable - Session-specific
-
-**Example configuration**:
-
-```yaml
-provider: anthropic
-api_key: sk-ant-...
-model: claude-3-5-sonnet-20241022
-```
+- `.r2r/*.yml` - Repository-specific r2r configurations
+- `.r2r/eac/*.yml` - Repository-specific eac configurations
+- `.r2r/eac/*.personal.yml` - User-specific overries
 
 ### When to Run init
 
@@ -215,6 +178,9 @@ model: claude-3-5-sonnet-20241022
 git clone https://github.com/your-org/project
 cd project
 
+# Initialize R2R
+r2r init
+
 # Initialize EAC
 r2r eac init
 ```
@@ -223,22 +189,11 @@ r2r eac init
 
 ```bash
 # Reconfigure for different provider
-r2r eac init
+r2r eac init --ai-provider
 
 # Override with environment variable
 export EAC_AI_PROVIDER=openai
 export EAC_AI_API_KEY=sk-...
-```
-
-**CI/CD setup**:
-
-```yaml
-# GitHub Actions example
-- name: Configure EAC
-  env:
-    EAC_AI_PROVIDER: anthropic
-    EAC_AI_API_KEY: ⟪ secrets.ANTHROPIC_API_KEY ⟫
-  run: r2r eac init --non-interactive
 ```
 
 ## Help Commands

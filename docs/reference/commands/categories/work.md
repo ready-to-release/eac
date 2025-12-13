@@ -18,14 +18,14 @@ Work commands manage parallel development workspaces using **git worktrees**. Th
 
 ## All Work Commands
 
-| Command | Purpose | Use Case |
-|---------|---------|----------|
-| [work create](../work/create.md) | Create new workspace | Start new feature in isolated environment |
-| [work commit](../work/commit.md) | Commit with AI messages | Commit changes with generated messages |
-| [work pull](../work/pull.md) | Sync with main | Update workspace with latest changes |
-| [work merge](../work/merge.md) | Merge to main | Complete feature and integrate |
-| [work remove](../work/remove.md) | Remove workspace | Clean up after merge |
-| [show workspaces](../show/workspaces.md) | List all workspaces | See all active workspaces |
+| Command                                  | Purpose                 | Use Case                                  |
+| ---------------------------------------- | ----------------------- | ----------------------------------------- |
+| [work create](../work/create.md)         | Create new workspace    | Start new feature in isolated environment |
+| [work commit](../work/commit.md)         | Commit with AI messages | Commit changes with generated messages    |
+| [work pull](../work/pull.md)             | Sync with main          | Update workspace with latest changes      |
+| [work merge](../work/merge.md)           | Merge to main           | Complete feature and integrate            |
+| [work remove](../work/remove.md)         | Remove workspace        | Clean up after merge                      |
+| [show workspaces](../show/workspaces.md) | List all workspaces     | See all active workspaces                 |
 
 ## Git Worktrees Explained
 

@@ -8,6 +8,12 @@
 // Long:
 // Long: Results are presented in a clear table format showing test failures.
 // Long:
+// Long: Expected Output:
+// Long:   - Table of failed tests with test name, package, and error details
+// Long:   - File locations (for Cucumber tests) with line numbers
+// Long:   - Parses out/test/**/*.json files (both Go test JSON and Cucumber JSON)
+// Long:   - If no failures found, displays success message
+// Long:
 // Long: Example:
 // Long:   test debug
 package test

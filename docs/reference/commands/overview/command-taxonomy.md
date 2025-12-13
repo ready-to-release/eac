@@ -302,7 +302,6 @@ Scan commands perform various security scans and generate compliance evidence.
 
 **When to use**: In pre-commit hooks (fast scans), CI pipelines (comprehensive scans), and for compliance evidence generation.
 
-
 ---
 
 ### 11. serve (2 commands)

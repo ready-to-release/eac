@@ -237,17 +237,17 @@ Version comparison rules:
 
 ## Module Versioning Schemes
 
-| Module | Versioning | Rationale |
-|--------|-----------|-----------|
-| repository | SemVer | Repository infrastructure and contracts |
-| r2r-cli | SemVer | CLI application with API |
-| ext-eac | SemVer | Docker extension with interface |
-| vscode-ext-commit | SemVer | VSCode extension with API |
-| docs | CalVer | Documentation site (time-based) |
-| books | CalVer | PDF documentation (time-based) |
-| eac-core | (not versioned) | Supporting library |
-| eac-commands | (not versioned) | Supporting library |
-| eac-ai | (not versioned) | Supporting library |
+| Module            | Versioning      | Rationale                               |
+| ----------------- | --------------- | --------------------------------------- |
+| repository        | SemVer          | Repository infrastructure and contracts |
+| r2r-cli           | SemVer          | CLI application with API                |
+| ext-eac           | SemVer          | Docker extension with interface         |
+| vscode-ext-commit | SemVer          | VSCode extension with API               |
+| docs              | CalVer          | Documentation site (time-based)         |
+| books             | CalVer          | PDF documentation (time-based)          |
+| eac-core          | (not versioned) | Supporting library                      |
+| eac-commands      | (not versioned) | Supporting library                      |
+| eac-ai            | (not versioned) | Supporting library                      |
 
 ## Version Validation
 

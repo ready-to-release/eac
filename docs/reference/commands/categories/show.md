@@ -22,42 +22,42 @@ Show commands display repository information in human-readable formats optimized
 
 ### Module & Repository Information
 
-| Command | Purpose | Output |
-|---------|---------|--------|
-| [show modules](../show/modules.md) | Display module contracts | Table |
-| [show moduletypes](../show/moduletypes.md) | Module types grouped by count | Grouped list |
-| [show dependencies](../show/dependencies.md) | Module dependency graph | Table |
-| [show files](../show/files.md) | Repository files with ownership | Table |
-| [show files-changed](../show/files-changed.md) | Modified files with ownership | Table |
-| [show files-staged](../show/files-staged.md) | Staged files with ownership | Table |
-| [show config](../show/config.md) | Configuration with defaults | Formatted text |
+| Command                                        | Purpose                         | Output         |
+| ---------------------------------------------- | ------------------------------- | -------------- |
+| [show modules](../show/modules.md)             | Display module contracts        | Table          |
+| [show moduletypes](../show/moduletypes.md)     | Module types grouped by count   | Grouped list   |
+| [show dependencies](../show/dependencies.md)   | Module dependency graph         | Table          |
+| [show files](../show/files.md)                 | Repository files with ownership | Table          |
+| [show files-changed](../show/files-changed.md) | Modified files with ownership   | Table          |
+| [show files-staged](../show/files-staged.md)   | Staged files with ownership     | Table          |
+| [show config](../show/config.md)               | Configuration with defaults     | Formatted text |
 
 ### Build & Test Results
 
-| Command | Purpose | Output |
-|---------|---------|--------|
+| Command                                        | Purpose                          | Output          |
+| ---------------------------------------------- | -------------------------------- | --------------- |
 | [show build-summary](../show/build-summary.md) | Build summary for GitHub Actions | Markdown report |
-| [show build-times](../show/build-times.md) | Build timing analysis | Table |
-| [show test-summary](../show/test-summary.md) | Test summary for GitHub Actions | Markdown report |
-| [show test-timings](../show/test-timings.md) | Test timing analysis | Table |
-| [show tests](../show/tests.md) | All tests in repository | Table |
-| [show suite](../show/suite.md) | Test suite details | Formatted text |
+| [show build-times](../show/build-times.md)     | Build timing analysis            | Table           |
+| [show test-summary](../show/test-summary.md)   | Test summary for GitHub Actions  | Markdown report |
+| [show test-timings](../show/test-timings.md)   | Test timing analysis             | Table           |
+| [show tests](../show/tests.md)                 | All tests in repository          | Table           |
+| [show suite](../show/suite.md)                 | Test suite details               | Formatted text  |
 
 ### Environment & Workspace
 
-| Command | Purpose | Output |
-|---------|---------|--------|
-| [show environments](../show/environments.md) | Environment contracts | Table |
-| [show workspaces](../show/workspaces.md) | Git worktrees and status | Table |
-| [show artifacts](../show/artifacts.md) | Build artifacts with status | Table |
-| [show books](../show/books.md) | Documentation books | Table |
+| Command                                      | Purpose                     | Output |
+| -------------------------------------------- | --------------------------- | ------ |
+| [show environments](../show/environments.md) | Environment contracts       | Table  |
+| [show workspaces](../show/workspaces.md)     | Git worktrees and status    | Table  |
+| [show artifacts](../show/artifacts.md)       | Build artifacts with status | Table  |
+| [show books](../show/books.md)               | Documentation books         | Table  |
 
 ### Help System
 
-| Command | Purpose | Output |
-|---------|---------|--------|
-| [show help](../show/help.md) | Command help information | Formatted text |
-| [show valid-commands](../show/valid-commands.md) | All valid commands | Table |
+| Command                                          | Purpose                  | Output         |
+| ------------------------------------------------ | ------------------------ | -------------- |
+| [show help](../show/help.md)                     | Command help information | Formatted text |
+| [show valid-commands](../show/valid-commands.md) | All valid commands       | Table          |
 
 ## Common Patterns
 
@@ -116,19 +116,19 @@ Total: 47 (95.7% pass rate)
 
 Many show commands have corresponding `get` commands that provide the same information in JSON format:
 
-| show command | get command | Use Case |
-|--------------|-------------|----------|
-| `show modules` | `get modules` | Module information |
-| `show dependencies` | `get dependencies` | Dependency graph |
-| `show files` | `get files` | File ownership |
-| `show config` | `get config` | Configuration |
-| `show tests` | `get tests` | Test information |
-| `show environments` | `get environments` | Environment contracts |
-| `show build-times` | `get build-times` | Build performance |
-| `show test-timings` | `get test-timings` | Test performance |
-| `show suite <name>` | `get suite <name>` | Test suite details |
-| `show artifacts <m>` | `get artifacts <m>` | Build artifacts |
-| `show valid-commands` | `get valid-commands` | Command list |
+| show command          | get command          | Use Case              |
+| --------------------- | -------------------- | --------------------- |
+| `show modules`        | `get modules`        | Module information    |
+| `show dependencies`   | `get dependencies`   | Dependency graph      |
+| `show files`          | `get files`          | File ownership        |
+| `show config`         | `get config`         | Configuration         |
+| `show tests`          | `get tests`          | Test information      |
+| `show environments`   | `get environments`   | Environment contracts |
+| `show build-times`    | `get build-times`    | Build performance     |
+| `show test-timings`   | `get test-timings`   | Test performance      |
+| `show suite <name>`   | `get suite <name>`   | Test suite details    |
+| `show artifacts <m>`  | `get artifacts <m>`  | Build artifacts       |
+| `show valid-commands` | `get valid-commands` | Command list          |
 
 **Rule**: Use `show` for interactive terminal use, `get` for scripts and automation.
 

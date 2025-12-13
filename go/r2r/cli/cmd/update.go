@@ -263,8 +263,13 @@ var updateCmd = &cobra.Command{
 			var foundExe string
 			for _, file := range reader.File {
 				if strings.HasSuffix(file.Name, ".exe") || (!strings.Contains(file.Name, ".") && !strings.Contains(file.Name, "/")) {
-					// Extract this file
-					extractPath := filepath.Join(extractDir, filepath.Base(file.Name))
+					// Prevent Zip Slip: extract only the base filename to avoid directory traversal
+					safeName := filepath.Base(file.Name)
+					if safeName == "." || safeName == ".." || safeName == "" {
+						logging.Warnf("Skipping unsafe archive entry: %s", file.Name)
+						continue
+					}
+					extractPath := filepath.Join(extractDir, safeName)
 
 					rc, err := file.Open()
 					if err != nil {
@@ -345,10 +350,15 @@ var updateCmd = &cobra.Command{
 
 				// Look for executable files (r2r-cli* without extension)
 				if header.Typeflag == tar.TypeReg {
-					name := filepath.Base(header.Name)
+					// Prevent Zip Slip: extract only the base filename to avoid directory traversal
+					safeName := filepath.Base(header.Name)
+					if safeName == "." || safeName == ".." || safeName == "" {
+						logging.Warnf("Skipping unsafe archive entry: %s", header.Name)
+						continue
+					}
 					// Check if this looks like the r2r-cli binary
-					if strings.Contains(name, "r2r-cli") || strings.Contains(name, "r2r") {
-						extractPath := filepath.Join(extractDir, name)
+					if strings.Contains(safeName, "r2r-cli") || strings.Contains(safeName, "r2r") {
+						extractPath := filepath.Join(extractDir, safeName)
 
 						outFile, err := os.OpenFile(extractPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.FileMode(header.Mode))
 						if err != nil {

@@ -4,9 +4,15 @@
 
 ## Introduction
 
-Environments are the foundation of the Continuous Delivery Model. Each environment serves a specific purpose in the software delivery pipeline, from local development through production deployment. Understanding environment types, their characteristics, and their relationships is essential for implementing an effective CD Model.
+Environments are the foundation of the Continuous Delivery Model.
+Each environment serves a specific purpose in the software delivery pipeline, from local development through production deployment.
 
-Traditional approaches often rely on long-lived, shared environments that create inter-team bottlenecks and inconsistencies. The CD Model reimagines environments as purpose-built, often ephemeral resources that enable parallel execution, rapid feedback, and consistent infrastructure. By "controlling the variables" of our verification processes, we make verifications more deterministic and trustworthy.
+Understanding environment types, their characteristics, and their relationships is essential for implementing an effective CD Model.
+
+Traditional approaches often rely on long-lived, shared environments that create inter-team bottlenecks and inconsistencies.
+
+The CD Model reimagines environments as purpose-built, often ephemeral resources that enable parallel execution, rapid feedback, and consistent infrastructure.
+By "controlling the variables" of our verification processes, we make verifications more deterministic and trustworthy.
 
 For a comprehensive comparison of traditional vs CD Model approaches, see [CD Model Overview](../cd-model/cd-model-overview.md).
 
@@ -31,7 +37,7 @@ The DevBox is the developer's local development environment where all changes be
 - Local build tools and compilers
 - Unit testing frameworks
 - Local security scanners (Trivy)
-- Version control (Git)
+- Version control (Git + Artifact repository)
 - Container runtime (Docker)
 
 **Purpose in CD Model:**
@@ -77,6 +83,52 @@ Build Agents are dedicated CI/CD pipeline runners that provide consistent, repro
 - Containerized runners (Docker, Kubernetes or vendor PasS)
 - Ephemeral execution environments
 - Infrastructure as Code for consistency
+
+### Deploy Agents
+
+Deploy Agents are specialized CI/CD runners with segregated access to production networks and deployment credentials.
+
+![Environment Agent Legend](../../../assets/cd-model/legend-env-agent.drawio.png){width=60}
+
+**Legend for agent types:** Shows the symbols for Build Agents (no production access, run Stages 2-4) and Deploy Agents (segregated production access, run Stage 10). The diagram illustrates network boundaries and credential segregation between agent types.
+
+**Characteristics:**
+
+- Network access to production environments
+- Production deployment credentials (stored securely in vaults)
+- Strict access controls and audit logging
+- Principle of least privilege
+- Separate from Build Agents
+
+**Purpose in CD Model:**
+
+- Stage 10 (Production Deployment): Execute production deployments
+- Stage 11 (Live): Health check validation
+- Rollback execution if needed
+
+**Security Measures:**
+
+- Network segmentation from Build Agents
+- Multi-factor authentication for credentials
+- Comprehensive audit logging
+- Time-limited sessions
+- Change approval integration
+
+**Approval Integration:**
+
+- Manual approval gate (RA pattern)
+- Automated approval gate (CDe pattern)
+- Emergency break-glass procedures
+- Rollback triggers
+
+**Why Separate from Build Agents:**
+
+- Principle of least privilege
+- Reduce attack surface
+- Prevent unauthorized production access
+- Clear audit trail
+
+---
 
 ### Production-Like Test Environments (PLTE)
 
@@ -159,52 +211,6 @@ The Demo (or "Trunk Demo") environment provides a stable, production-like enviro
 - Typically updated from main branch after successful Stage 6
 - May be updated daily or weekly
 - Represents validated, release-ready features
-
-### Deploy Agents
-
-Deploy Agents are specialized CI/CD runners with segregated access to production networks and deployment credentials.
-
-![Environment Agent Legend](../../../assets/cd-model/legend-env-agent.drawio.png){width=60}
-
-**Legend for agent types:** Shows the symbols for Build Agents (no production access, run Stages 2-4) and Deploy Agents (segregated production access, run Stage 10). The diagram illustrates network boundaries and credential segregation between agent types.
-
-**Characteristics:**
-
-- Network access to production environments
-- Production deployment credentials (stored securely in vaults)
-- Strict access controls and audit logging
-- Principle of least privilege
-- Separate from Build Agents
-
-**Purpose in CD Model:**
-
-- Stage 10 (Production Deployment): Execute production deployments
-- Stage 11 (Live): Health check validation
-- Rollback execution if needed
-
-**Security Measures:**
-
-- Network segmentation from Build Agents
-- Multi-factor authentication for credentials
-- Comprehensive audit logging
-- Time-limited sessions
-- Change approval integration
-
-**Approval Integration:**
-
-- Manual approval gate (RA pattern)
-- Automated approval gate (CDe pattern)
-- Emergency break-glass procedures
-- Rollback triggers
-
-**Why Separate from Build Agents:**
-
-- Principle of least privilege
-- Reduce attack surface
-- Prevent unauthorized production access
-- Clear audit trail
-
----
 
 ## Network Segregation Architecture
 
@@ -342,19 +348,33 @@ For comprehensive coverage of deployment strategies, implementation patterns, an
 
 ![Architectural Layers](../../../assets/environment/layers.drawio.png)
 
-**This diagram shows the architectural organization layers for environment infrastructure:** The diagram illustrates how environments are structured using **categories** (Production vs Dev/Test), **category instances** (individual subscriptions or account structures), **templates** (Infrastructure as Code definitions), and **environment instances** (deployed environments from templates). The layered architecture shows how **shared infrastructure** supports multiple **environment slot groups** (named horizontal environments like DEVELOPMENT, DEMO, PRODUCTION), which in turn contain **environment slots** (individual environment instances). This hierarchical organization enables consistent infrastructure definitions across all environments while allowing for appropriate isolation and access controls at each layer.
+> **This diagram shows the architectural organization layers for environment infrastructure:**
+
+The diagram illustrates how environments are structured using **categories** (Production vs Dev/Test), **category instances** (individual subscriptions or account structures), **templates** (Infrastructure as Code sets), and **environment instances** (deployed environments from templates).
+The layered architecture shows how **shared infrastructure** supports multiple **environment slot groups** (named horizontal environments like d/DEVELOPMENT, t/DEMO, p/PRODUCTION), which in turn contain **environment slots** (individual environment instances).
+This hierarchical organization enables consistent infrastructure definitions across all environments while allowing for appropriate isolation and access controls at each layer.
 
 ### Environment Slot Groups and Slots
 
 ![Environment Slots](../../../assets/environment/slots.drawio.png)
 
-**This diagram shows environment slot groups and slots organization:** The diagram illustrates how environments are organized into **slot groups** and **slots**. An **environment slot group** is a named horizontal environment grouping (e.g., DEVELOPMENT, DEMO, ACCEPTANCE, PRODUCTION) used to organize related environments. Within each slot group, **environment slots** are logical constructs that map to infrastructure templates. Horizontal PLTEs are instantiated within a single slot group and can consist of one to many slots. Vertical isolated PLTEs are also instantiated within slot groups. Slots can be empty or filled with environment instances, and slot groups can be partially or completely filled. This organization enables teams to manage multiple environment instances with clear boundaries for horizontal end-to-end testing and vertical isolated testing.
+> **This diagram shows environment slot groups and slots organization:**
+
+The diagram illustrates how environments are organized into **slot groups** and **slots**.
+An **environment slot group** is a named horizontal environment grouping (e.g., d/DEVELOPMENT, t/DEMO, t/ACCEPTANCE, p/PRODUCTION) used to organize related environments.
+
+Within each slot group, **environment slots** are logical constructs that map to infrastructure templates.
+Horizontal PLTEs are instantiated within a single slot group and can consist of one to many slots.
+Vertical isolated PLTEs are also instantiated within slot groups.
+Slots can be empty or filled with environment instances, and slot groups can be partially or completely filled. This organization enables teams to manage multiple environment instances with clear boundaries for horizontal end-to-end testing and vertical isolated testing.
 
 ### Environment Slot and Slot Group Naming
 
 ![Environment Naming](../../../assets/environment/units.drawio.png)
 
-**This diagram shows how environment slots and slot groups are identified through naming conventions:** The diagram illustrates how infrastructure components are named to indicate their **slot group** and **slot** membership. In cloud providers like Azure, a **slot** and **slot group** are identified by specific parts of the infrastructure component naming. For example, infrastructure components that exist in slot groups include App Services, Function Apps, Databases, Key Vaults, and Storage Accounts. **Shared infrastructure** (App Plans, Networks, DNS, Gateways, SQL Servers, Container Registries) has different naming patterns as it supports multiple slot groups. The naming convention enables clear identification of which environment instance a resource belongs to, facilitating automated provisioning and lifecycle management through Infrastructure as Code.
+> **This diagram shows how environment slots and slot groups are identified through naming conventions:**
+
+The diagram illustrates how infrastructure components are named to indicate their **slot group** and **slot** membership. In cloud providers like Azure, a **slot** and **slot group** are identified by specific parts of the infrastructure component naming. For example, infrastructure components that exist in slot groups include App Services, Function Apps, Databases, Key Vaults, and Storage Accounts. **Shared infrastructure** (App Plans, Networks, DNS, Gateways, SQL Servers, Container Registries) has different naming patterns as it supports multiple slot groups. The naming convention enables clear identification of which environment instance a resource belongs to, facilitating automated provisioning and lifecycle management through Infrastructure as Code.
 
 ---
 
@@ -369,16 +389,16 @@ For detailed PLTE provisioning procedures, lifecycle management, and Infrastruct
 ## Next Steps
 
 - [CD Model Overview](../cd-model/cd-model-overview.md) - Understand the 12 stages
-- [Stages 1-6](../cd-model/cd-model-stages-1-6.md) - See how environments support development stages
-- [Stages 7-12](../cd-model/cd-model-stages-7-12.md) - See how environments support release stages
+- [Stages 1-7](../cd-model/cd-model-stages-1-7.md) - See how environments support development stages
+- [Stages 8-12](../cd-model/cd-model-stages-8-12.md) - See how environments support release stages
 - [Repository Patterns](repository-patterns.md) - Understand repository organization
 - [Implementation Patterns](../cd-model/implementation-patterns.md) - Choose RA or CDE pattern
 
 ## References
 
 - [CD Model Overview](../cd-model/cd-model-overview.md)
-- [Stages 1-6](../cd-model/cd-model-stages-1-6.md)
-- [Stages 7-12](../cd-model/cd-model-stages-7-12.md)
+- [Stages 1-7](../cd-model/cd-model-stages-1-7.md)
+- [Stages 8-12](../cd-model/cd-model-stages-8-12.md)
 - [Testing Strategy Overview](../testing/testing-strategy-overview.md)
 
 {{ diataxis_footer() }}

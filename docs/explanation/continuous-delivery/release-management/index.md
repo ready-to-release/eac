@@ -80,7 +80,7 @@ Release management is the process of planning, scheduling, and controlling softw
 
 - [Release Documentation](./release-documentation.md) - Learn what documentation is required
 - [Release Approval Patterns](./release-approval.md) - Understand approval workflows
-- [CD Model Stages 7-12](../cd-model/cd-model-stages-7-12.md) - See release management in context
+- [CD Model Stages 8-12](../cd-model/cd-model-stages-8-12.md) - See release management in context
 - [Release Quality Gates](../quality-gates/release-gates.md) - Quality thresholds explained
 
 ## Quick Reference

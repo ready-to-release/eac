@@ -5,9 +5,13 @@
 // Long: This command builds modules respecting their dependency order.
 // Long: If no monikers are specified, all modules in the repository are built.
 // Long:
-// Long: Build results are collected in 'out/build/' with per-module logs and
-// Long: a summary orchestrator log. Failed builds are clearly marked but do not
-// Long: stop the execution of remaining modules.
+// Long: Expected Output:
+// Long:   - Build logs written to 'out/build/<module>/build.log' (one per module)
+// Long:   - Summary orchestrator log at 'out/build/orchestrator.log'
+// Long:   - Failed builds are clearly marked with error details
+// Long:   - Failed builds do not stop execution of remaining modules
+// Long:   - Exit code 0 indicates all builds succeeded
+// Long:   - Non-zero exit code indicates one or more builds failed
 // Long:
 // Long: Example:
 // Long:   build                           # Build all modules

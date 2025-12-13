@@ -112,16 +112,19 @@ Deployable modules must be versioned to enable traceability, rollback, and depen
 
 ### Version Number Format
 
-We use a four-part version number:
+!!! note
+    Even though we define quite complex numbers here, for almost all usages we only use the 3 first parts Major.Minor.Revision
 
-**Major.Minor.Revision.Build[-informational]**
+We use a extensible four-part version number:
+
+**Major.Minor.Revision.Patch[-informational]**
 
 **Example:** `1.2.3.4-rc1`
 
 - **Major**: 1
 - **Minor**: 2
-- **Revision**: 3 (commit count from branch point)
-- **Build**: 4 (pipeline build number)
+- **Revision**: 3
+- **Patch**: 4 (commit count from branch point - for release branching - 0 for main)
 - **Informational**: rc1 (release candidate 1)
 
 Non-used positions default to zero (e.g., `1.2` = `1.2.0.0`).
@@ -140,69 +143,72 @@ The versioning scheme depends on the deployable module type and distribution mod
 **CalVer (Calendar Versioning):**
 
 - **Use for**: SaaS runtime systems
-- **Format**: `YYYY.MMDD.Revision.Build`
-- **Example**: `2024.1115.0.1234` (Nov 15, 2024)
+- **Format**: `YYYY.MMDD.HHMM.Patch`
+- **Example**: `2024.1115.2030.0` (Nov 15, 2024, 20:30, main branch commit)
 - **Cost**: Low maintenance (automated)
 - **Benefit**: Easy to identify when deployed
 
-**Release Number Versioning:**
+**Manual Semantic Versioning:**
 
-- **Use for**: SaaS runtime systems with explicit releases
-- **Format**: `Fixed.Release.Revision.Build`
-- **Example**: `1.5.0.1234` (Major=1, Release=5)
-- **Cost**: Low to medium maintenance
-- **Benefit**: Clear release progression
+- **Use for**: SaaS systems with human calculated major and minor.
+- **Benefit**: Communicates breaking changes vs enhancements
+- **Format**: `Fixed.Fixed.Revision.Patch`
+- **Example**: `1.5.1234.0` (Major=1, Minor=5, Revision=1234, main branch commit)
+- **Cost**: Low to medium maintenance (still need to control major and minor, but they are fixed in configration)
+- **Benefit**: Easy to implement
+- **Drawback**: Hard to calculate manually -> High chance of semver not be used correctly
 
-**Semantic Versioning (SemVer):**
+**Automated Semantic Versioning (SemVer):**
 
 - **Use for**: Versioned components, libraries, multi-release systems
-- **Format**: `Major.Minor.Revision.Build`
-- **Example**: `2.3.0.1234`
-- **Cost**: Higher maintenance (requires human decisions)
 - **Benefit**: Communicates breaking changes vs enhancements
+- **Format**: `Major.Minor.Revision.Patch`
+- **Example**: `2.3.12.0`
+- **Cost**: Higher complexity (requires semantic change logs etc.)
 - **MAJOR**: Breaking changes (incompatible API changes)
 - **MINOR**: New features (backward-compatible)
 - **Revision**: Patches on release branches
-- **Build**: Pipeline build number
+- **Benefit**: Higher chance of reliable change logs and correct semver bumping.
+- **Drawback**: Complex to implement, requires conventional commits and module maps
 
 **API Versioning:**
 
 - **Use for**: Runtime APIs (REST, GraphQL, gRPC)
 - **Deployable Module Version**: Uses CalVer or Release Number (tracks with the service)
 - **API Interface Version**: Separate version (v1, v2, v3)
-- **Example**: API service version `2024.1115.0.1234` contains API interfaces v1, v2, v3
+- **Example**: API service version `2024.1115.2035.0` is contracted to be compatible with API interfaces v1, v2, v3
 - **Purpose**: Maintain multiple API versions in single service for backward compatibility
 
-### Revision Number
+### Patch Number
 
-![Versioning Revision](../../../assets/branching/versioning-revision.drawio.png)
+![Versioning Patch](../../../assets/branching/versioning-revision.drawio.png)
 
-The revision number tracks commits on release branches:
+The Patch number tracks commits on release branches:
 
-- **Main branch commits**: Revision = 0
-- **Release branch commits**: Revision = count of commits since branch point
-- **First release branch commit**: Revision = 1
+- **Main branch commits**: patch = 0
+- **Release branch commits**: patch = count of commits since branch point
+- **First release branch commit**: patch = 1
 
 **Git command:**
 
 ```bash
-# Get revision number on release branch
+# Get patch number on release branch
 git rev-list main.. --count
 ```
 
 ### Choosing a Versioning Strategy
 
-| Deployable Module Type | Distribution Model | Versioning Strategy |
-|---------------------|-------------------|-------------------|
-| Microservice | SaaS (single version) | CalVer or Release Number |
-| Web Application | SaaS (single version) | CalVer or Release Number |
-| CLI Tool | Multi-release (distributed) | SemVer |
-| npm Package | Multi-release (distributed) | SemVer |
-| Container Image | Multi-release (consumed) | SemVer |
-| Docker Base Image | Multi-release (consumed) | SemVer |
-| Internal Monorepo Module | Not distributed | Implicit (no version) |
-| REST API (service) | SaaS | CalVer + API versioning |
-| REST API (interface) | Multi-version support | v1, v2, v3 |
+| Deployable Module Type   | Distribution Model          | Versioning Strategy |
+| ------------------------ | --------------------------- | ------------------- |
+| Microservice             | SaaS (single version)       | CalVer or SemVer    |
+| Web Application          | SaaS (single version)       | CalVer or SemVer    |
+| CLI Tool                 | Multi-release (distributed) | SemVer              |
+| npm Package              | Multi-release (distributed) | SemVer              |
+| Container Image          | Multi-release (consumed)    | SemVer              |
+| Docker Base Image        | Multi-release (consumed)    | SemVer              |
+| Internal Monorepo Module | Not distributed             | Implicit            |
+| REST API (service)       | SaaS                        | CalVer              |
+| REST API (interface)     | Multi-version support       | API (v1, v2, v3)    |
 
 ---
 
@@ -252,7 +258,7 @@ Deployable modules are built into immutable artifacts that progress through the 
 
 **Container Images:**
 
-```
+```text
 registry.example.com/api-service:1.2.3.4
 ```
 
@@ -262,7 +268,7 @@ registry.example.com/api-service:1.2.3.4
 
 **Application Packages:**
 
-```
+```text
 api-service-1.2.3.4.zip
 api-service-1.2.3.4.tar.gz
 ```
@@ -273,7 +279,7 @@ api-service-1.2.3.4.tar.gz
 
 **Library Packages:**
 
-```
+```text
 @company/shared-utils@1.2.3
 company.shared-utils.1.2.3.nupkg
 ```
@@ -304,13 +310,13 @@ This separation enables the same artifact to be deployed to multiple environment
 
 ## Dependency Management
 
-Deployable modules often depend on other deployable modules (libraries, services, APIs).
+Deployable modules often depend on other modules (libraries), but can only depend on other deployable modules (services, APIs) via pinning and stitching.
 
 ### Internal Dependencies (Monorepo)
 
 **Implicit Versioning:**
 
-```
+```text
 monorepo/
 ├── services/
 │   └── api/              # Deployable Module 1
@@ -410,7 +416,7 @@ Defining the right boundaries for deployable modules is a critical architectural
 
 **Example:**
 
-```
+```text
 entire-platform/   # Single deployable module
 ├── api/
 ├── web/
@@ -434,7 +440,7 @@ All changes deploy together, even unrelated ones.
 
 **Example:**
 
-```
+```text
 user-service/          # Deployable module
 user-service-models/   # Deployable module
 user-service-client/   # Deployable module
@@ -457,7 +463,7 @@ Simple user service split into 4 units requiring coordination.
 
 **Example:**
 
-```
+```text
 api-service/      # Deployable module (user-facing API)
 worker-service/   # Deployable module (async processing)
 admin-app/        # Deployable module (admin UI)
@@ -564,8 +570,8 @@ Deployable modules are the fundamental building blocks of Continuous Delivery:
 - [Unit of Flow](unit-of-flow.md) - See how deployable modules fit into the bigger picture
 - [Trunk-Based Development](../workflow/trunk-based-development.md) - How code flows into deployable modules
 - [Branching Strategies](../workflow/branching-strategies.md) - Branching flows for RA and CDE patterns
-- [Stages 1-6](../cd-model/cd-model-stages-1-6.md) - Development stages for deployable modules
-- [Stages 7-12](../cd-model/cd-model-stages-7-12.md) - Release stages for deployable modules
+- [Stages 1-7](../cd-model/cd-model-stages-1-7.md) - Development stages for deployable modules
+- [Stages 8-12](../cd-model/cd-model-stages-8-12.md) - Release stages for deployable modules
 
 ## References
 

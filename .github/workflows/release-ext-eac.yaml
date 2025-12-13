@@ -7,7 +7,7 @@
 # CI Verification: Requires a successful ci-ext-eac.yaml run on the EXACT commit
 # being released (strict mode). This ensures the container was built and tested.
 
-name: "release-ext-eac (stage 7+)"
+name: "release-ext-eac (stage 8+)"
 
 on:
   push:
@@ -29,6 +29,8 @@ jobs:
   approve:
     name: Approve Release
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       version: ${{ steps.gate.outputs.version }}
       tag_name: ${{ steps.gate.outputs.tag_name }}
@@ -91,6 +93,9 @@ jobs:
     needs: [approve, release, cleanup]
     if: always()
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6

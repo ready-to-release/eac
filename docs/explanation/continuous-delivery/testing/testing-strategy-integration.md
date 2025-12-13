@@ -355,7 +355,7 @@ Maximize testing at L0-L3 (left) and L4 (right) to avoid horizontal pre-producti
 ## Next Steps
 
 - [Testing Strategy Overview](testing-strategy-overview.md) - Learn about test levels
-- [Stages 1-6](../cd-model/cd-model-stages-1-6.md) - See testing in development stages
+- [Stages 1-7](../cd-model/cd-model-stages-1-7.md) - See testing in development stages
 - [Environments](../architecture/environments.md) - Understand PLTE architecture
 - [Security](../security/security.md) - Integrate security testing
 

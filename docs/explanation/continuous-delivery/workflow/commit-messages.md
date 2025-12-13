@@ -114,7 +114,7 @@ fi
 
 ## Related
 
-- [Traceability Requirements](../cd-model/cd-model-stages-1-6.md#traceability-requirements)
+- [Traceability Requirements](../cd-model/cd-model-stages-1-7.md#traceability-requirements)
 - [Pre-commit Setup](../quality-gates/precommit-setup.md)
 - [Trunk-Based Development](./trunk-based-development.md)
 - [Branching Strategies](./branching-strategies.md)

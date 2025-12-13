@@ -181,7 +181,7 @@ Alert when deadline approaches or passes.
 
 ## Next Steps
 
-- [Release Toggling](../cd-model/cd-model-stages-7-12.md#stage-12-release-toggling) - Control feature exposure at runtime
+- [Release Toggling](../cd-model/cd-model-stages-8-12.md#stage-12-release-toggling) - Control feature exposure at runtime
 - [Deployment Rings](./deployment-rings.md) - Progressive rollout to user groups
 - [Rollback Procedures](./rollback-procedures.md) - Emergency response procedures
 - [Deployment Strategies](./deployment-strategies.md) - Decoupling deployment from release

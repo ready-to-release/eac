@@ -400,13 +400,13 @@ on:
 
 ### Deployable Modules with Changelogs
 
-| Module | Changelog Location | Versioning | Current Version |
-|--------|-------------------|------------|-----------------|
-| r2r-cli | `release/r2r-cli/CHANGELOG.md` | SemVer | (varies) |
-| ext-eac | `release/ext-eac/CHANGELOG.md` | SemVer | (varies) |
-| docs | `release/docs/CHANGELOG.md` | CalVer | (varies) |
-| books | `release/books/CHANGELOG.md` | CalVer | (varies) |
-| vscode-ext-commit | `typescript/vscode-ext-commit/CHANGELOG.md` | SemVer | (varies) |
+| Module            | Changelog Location                          | Versioning | Current Version |
+| ----------------- | ------------------------------------------- | ---------- | --------------- |
+| r2r-cli           | `release/r2r-cli/CHANGELOG.md`              | SemVer     | (varies)        |
+| ext-eac           | `release/ext-eac/CHANGELOG.md`              | SemVer     | (varies)        |
+| docs              | `release/docs/CHANGELOG.md`                 | CalVer     | (varies)        |
+| books             | `release/books/CHANGELOG.md`                | CalVer     | (varies)        |
+| vscode-ext-commit | `typescript/vscode-ext-commit/CHANGELOG.md` | SemVer     | (varies)        |
 
 ### Supporting Modules (No Independent Changelog)
 

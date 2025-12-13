@@ -147,7 +147,7 @@
         <mxCell id="kqFG6-upLMPOSbBK1oCb-24" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="ebzCFG4WxTYj-cSAARMx-136" target="ebzCFG4WxTYj-cSAARMx-82">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <UserObject label="Merge Request" link="..\continuous-delivery\cd-model\cd-model-stages-1-6\#stage-3-merge-request" linkTarget="_blank" id="ebzCFG4WxTYj-cSAARMx-136">
+        <UserObject label="Merge Request" link="..\continuous-delivery\cd-model\cd-model-stages-1-7\#stage-3-merge-request" linkTarget="_blank" id="ebzCFG4WxTYj-cSAARMx-136">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;" parent="1" vertex="1">
             <mxGeometry x="1190" y="867" width="270" height="30" as="geometry" />
           </mxCell>
@@ -184,7 +184,7 @@
             <mxGeometry x="959" y="1000" width="190" height="30" as="geometry" />
           </mxCell>
         </UserObject>
-        <UserObject label="Release Approval" link="..\continuous-delivery\cd-model\cd-model-stages-7-12\#stage-9-release-approval" linkTarget="_blank" id="kqFG6-upLMPOSbBK1oCb-13">
+        <UserObject label="Release Approval" link="..\continuous-delivery\cd-model\cd-model-stages-8-12\#stage-9-release-approval" linkTarget="_blank" id="kqFG6-upLMPOSbBK1oCb-13">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;" vertex="1" parent="1">
             <mxGeometry x="1420" y="1100" width="150" height="30" as="geometry" />
           </mxCell>
@@ -203,7 +203,7 @@
             <mxPoint x="1229.6899999999998" y="867" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <UserObject label="Exploration" link="..\continuous-delivery\cd-model\cd-model-stages-7-12\#stage-7-exploration" linkTarget="_blank" id="kqFG6-upLMPOSbBK1oCb-30">
+        <UserObject label="Exploration" link="..\continuous-delivery\cd-model\cd-model-stages-8-12\#stage-7-exploration" linkTarget="_blank" id="kqFG6-upLMPOSbBK1oCb-30">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;" vertex="1" parent="1">
             <mxGeometry x="1160" y="1000" width="140" height="30" as="geometry" />
           </mxCell>

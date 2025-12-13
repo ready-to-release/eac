@@ -63,7 +63,7 @@ Validates that system access remains appropriate and secure.
 
 ### Defects
 
-Document all defects detected after [Production Deployment](../continuous-delivery/cd-model/cd-model-stages-7-12.md#stage-10-production-deployment) by adding items to the backlog.
+Document all defects detected after [Production Deployment](../continuous-delivery/cd-model/cd-model-stages-8-12.md#stage-10-production-deployment) by adding items to the backlog.
 
 **Requirements:**
 

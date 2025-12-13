@@ -6,12 +6,12 @@ Conceptual documentation explaining the design, organization, and usage patterns
 
 ## In This Section
 
-| Guide | Description | Lines |
-|-------|-------------|-------|
-| [Command Taxonomy](./command-taxonomy.md) | How commands are organized into categories and the principles behind command design | 475 |
-| [Naming Conventions](./naming-conventions.md) | Command naming patterns, consistency rules, and how to interpret command names | 458 |
-| [Common Flags](./common-flags.md) | Global options available across all commands and flag usage patterns | 603 |
-| [Output Formats](./output-formats.md) | Understanding JSON vs human-readable output, when to use each format | 678 |
+| Guide                                         | Description                                                                         | Lines |
+| --------------------------------------------- | ----------------------------------------------------------------------------------- | ----- |
+| [Command Taxonomy](./command-taxonomy.md)     | How commands are organized into categories and the principles behind command design | 475   |
+| [Naming Conventions](./naming-conventions.md) | Command naming patterns, consistency rules, and how to interpret command names      | 458   |
+| [Common Flags](./common-flags.md)             | Global options available across all commands and flag usage patterns                | 603   |
+| [Output Formats](./output-formats.md)         | Understanding JSON vs human-readable output, when to use each format                | 678   |
 
 ## Key Concepts
 

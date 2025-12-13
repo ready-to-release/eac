@@ -25,8 +25,9 @@ r2r eac serve-design
 ```
 
 **Design files in repository:**
+
 - All modules: `specs/[module]/.design/workspace.dsl`
-- View in GitHub: [specs/*/​.design/](https://github.com/ready-to-release/eac/tree/main/specs)
+- View in GitHub: [specs/\*/​.design/](https://github.com/ready-to-release/eac/tree/main/specs)
 
 See [Viewing Architecture](./viewing-architecture.md) for detailed instructions.
 
@@ -72,13 +73,13 @@ Module types define:
 
 ### Go Family
 
-| Type | Purpose | Artifacts |
-|------|---------|-----------|
-| **go-cli** | CLI application with cross-platform builds | Platform executables (linux, windows, darwin) |
-| **go-library** | Library package (no executable) | Marker file |
-| **go-commands** | Library with CLI invoke wrapper | Single executable |
-| **go-mcp** | MCP server module | MCP server executable |
-| **go-tests** | Test-only module (BDD infrastructure) | None (tests only) |
+| Type            | Purpose                                    | Artifacts                                     |
+| --------------- | ------------------------------------------ | --------------------------------------------- |
+| **go-cli**      | CLI application with cross-platform builds | Platform executables (linux, windows, darwin) |
+| **go-library**  | Library package (no executable)            | Marker file                                   |
+| **go-commands** | Library with CLI invoke wrapper            | Single executable                             |
+| **go-mcp**      | MCP server module                          | MCP server executable                         |
+| **go-tests**    | Test-only module (BDD infrastructure)      | None (tests only)                             |
 
 ### Example (go-cli)
 
@@ -515,12 +516,12 @@ r2r eac update-design <module>
 
 ### C4 Model Levels
 
-| Level | Focus | Audience | Diagram Type |
-|-------|-------|----------|--------------|
-| **1. System Context** | System boundaries, external dependencies | Everyone | systemContext |
-| **2. Container** | Major subsystems, applications | Technical | container |
-| **3. Component** | Internal modules, packages | Developers | component |
-| **4. Code** | Classes, functions | Developers | (code only) |
+| Level                 | Focus                                    | Audience   | Diagram Type  |
+| --------------------- | ---------------------------------------- | ---------- | ------------- |
+| **1. System Context** | System boundaries, external dependencies | Everyone   | systemContext |
+| **2. Container**      | Major subsystems, applications           | Technical  | container     |
+| **3. Component**      | Internal modules, packages               | Developers | component     |
+| **4. Code**           | Classes, functions                       | Developers | (code only)   |
 
 ---
 
@@ -528,32 +529,32 @@ r2r eac update-design <module>
 
 ### Core System Modules
 
-| Module | Type | Purpose |
-|--------|------|---------|
-| **eac-core** | go-library | Core libraries (contracts, repository, git) |
-| **eac-commands** | go-commands | Command implementations (110+) with integrated AI providers (Anthropic, OpenAI) |
-| **eac-specs** | go-library | BDD test infrastructure (Godog) |
-| **eac-mcp-commands** | go-mcp | MCP server (LLM tool integration) |
+| Module               | Type        | Purpose                                                                  |
+| -------------------- | ----------- | ------------------------------------------------------------------------ |
+| **eac-core**         | go-library  | Core libraries (contracts, repository, git)                              |
+| **eac-commands**     | go-commands | Command implementations with integrated AI providers (Anthropic, OpenAI) |
+| **eac-specs**        | go-library  | BDD test infrastructure (Godog)                                          |
+| **eac-mcp-commands** | go-mcp      | MCP server (LLM tool integration)                                        |
 
 ### CLI and Extensions
 
-| Module | Type | Purpose |
-|--------|------|---------|
-| **r2r-cli** | go-cli | CLI framework (Docker orchestration) |
-| **ext-eac** | r2r-extension | EAC Docker extension image |
+| Module      | Type          | Purpose                              |
+| ----------- | ------------- | ------------------------------------ |
+| **r2r-cli** | go-cli        | CLI framework (Docker orchestration) |
+| **ext-eac** | r2r-extension | EAC Docker extension image           |
 
 ### Libraries
 
-| Module | Type | Purpose |
-|--------|------|---------|
-| **logging-go** | go-library | Structured logging (Go) |
-| **config-go** | go-library | Configuration management (Go) |
-| **validation-go** | go-library | Validation utilities (Go) |
+| Module            | Type       | Purpose                       |
+| ----------------- | ---------- | ----------------------------- |
+| **logging-go**    | go-library | Structured logging (Go)       |
+| **config-go**     | go-library | Configuration management (Go) |
+| **validation-go** | go-library | Validation utilities (Go)     |
 
 ### Documentation
 
-| Module | Type | Purpose |
-|--------|------|---------|
+| Module        | Type        | Purpose                   |
+| ------------- | ----------- | ------------------------- |
 | **docs-site** | mkdocs-site | MkDocs documentation site |
 
 ---

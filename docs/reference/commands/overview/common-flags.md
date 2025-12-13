@@ -432,12 +432,12 @@ r2r eac create commit-message
 
 All commands follow standard exit code conventions:
 
-| Exit Code | Meaning | When Used |
-|-----------|---------|-----------|
-| 0 | Success | Command completed successfully |
-| 1 | General error | Command failed |
-| 2 | Usage error | Invalid arguments or flags |
-| 3 | Validation failed | Quality gates not met |
+| Exit Code | Meaning           | When Used                      |
+| --------- | ----------------- | ------------------------------ |
+| 0         | Success           | Command completed successfully |
+| 1         | General error     | Command failed                 |
+| 2         | Usage error       | Invalid arguments or flags     |
+| 3         | Validation failed | Quality gates not met          |
 
 **Usage in scripts**:
 

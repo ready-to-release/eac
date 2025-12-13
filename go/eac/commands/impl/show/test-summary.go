@@ -4,6 +4,11 @@
 // Long: The show test-summary command generates a formatted test summary with test results, metrics, and diagnostics.
 // Long: This command is designed to be used in GitHub Actions workflows to create consistent, attractive test summaries.
 // Long: The output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.
+// Long:
+// Long: Expected Output:
+// Long: - Markdown-formatted test summary with emojis and styling, suitable for GitHub Actions $GITHUB_STEP_SUMMARY
+// Long: - Success: includes status section, test metrics table (packages, tests, passed/failed/skipped, duration), package breakdown
+// Long: - Failure: includes status section, diagnostics with last 100 lines of test log, timing data, and configuration
 package show
 
 import (

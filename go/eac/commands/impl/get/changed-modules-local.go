@@ -4,6 +4,14 @@
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML
+// Long:
+// Long: Expected Output:
+// Long: YAML list of modules needing rebuild based on local state, including:
+// Long:   - Modules requiring rebuild (source files changed since last build)
+// Long:   - Up-to-date modules (no changes detected)
+// Long:   - Change reasons for each module
+// Long:   - Fresh build flag (true if no build state exists)
+// Long:   - Detection timestamp
 package get
 
 import (

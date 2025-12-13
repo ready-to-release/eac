@@ -4,6 +4,12 @@
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML
+// Long:
+// Long: Expected Output:
+// Long: YAML with test timing metrics parsed from out/test/ logs, including:
+// Long:   - Per-scenario timing data with duration in seconds and status (PASS/FAIL)
+// Long:   - Aggregated statistics by module
+// Long:   - Overall summary with total/passed/failed tests and average duration
 package get
 
 import (

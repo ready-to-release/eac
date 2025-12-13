@@ -780,8 +780,8 @@ This article focuses on branching flows. For related topics, see:
 **CD Model Stages**:
 
 - [CD Model Overview](../cd-model/cd-model-overview.md) - Complete 12-stage framework
-- [Stages 1-6](../cd-model/cd-model-stages-1-6.md) - Development and testing stages
-- [Stages 7-12](../cd-model/cd-model-stages-7-12.md) - Release and production stages
+- [Stages 1-7](../cd-model/cd-model-stages-1-7.md) - Development and testing stages
+- [Stages 8-12](../cd-model/cd-model-stages-8-12.md) - Release and production stages
 
 **Implementation**:
 
@@ -829,7 +829,7 @@ Choose the pattern that matches your regulatory requirements, risk profile, and 
 
 - [Implementation Patterns](../cd-model/implementation-patterns.md) - Detailed guidance on choosing between RA and CDe
 - [Trunk-Based Development](trunk-based-development.md) - Daily development practices
-- [Stages 7-12](../cd-model/cd-model-stages-7-12.md) - Understand release stages in detail
+- [Stages 8-12](../cd-model/cd-model-stages-8-12.md) - Understand release stages in detail
 - [Deployable Modules](../core-concepts/deployable-modules.md) - What gets versioned and deployed
 
 ## References

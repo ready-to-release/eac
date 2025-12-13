@@ -143,11 +143,11 @@ echo "$RESULT" | jq -r '.change_reasons | to_entries[] | "\(.key): \(.value)"'
 
 ## Comparison with Related Commands
 
-| Command | Purpose | Use When |
-|---------|---------|----------|
-| `get changed-modules-local` | Modules needing rebuild based on build state | Local development, incremental builds |
-| `get changed-modules` | Modules affected by git changes | Working with uncommitted changes |
-| `get changed-modules-ci` | Modules needing rebuild in CI | CI/CD pipelines, comparing against base commit |
+| Command                     | Purpose                                      | Use When                                       |
+| --------------------------- | -------------------------------------------- | ---------------------------------------------- |
+| `get changed-modules-local` | Modules needing rebuild based on build state | Local development, incremental builds          |
+| `get changed-modules`       | Modules affected by git changes              | Working with uncommitted changes               |
+| `get changed-modules-ci`    | Modules needing rebuild in CI                | CI/CD pipelines, comparing against base commit |
 
 ## See Also
 

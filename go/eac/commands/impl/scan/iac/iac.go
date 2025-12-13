@@ -8,7 +8,8 @@
 // Long:
 // Long: Supported IaC types: Terraform, CloudFormation, Kubernetes, Docker, Helm
 // Long:
-// Long: Output: out/security/<module>/iac/<timestamp>.json
+// Long: Expected Output:
+// Long:   Timestamped JSON evidence files are written to out/security/<module>/iac/<timestamp>.json
 // Long:
 // Long: Example:
 // Long:   security iac                           # All modules

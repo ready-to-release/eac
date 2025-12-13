@@ -4,6 +4,11 @@
 // Long: renders any missing mermaid diagrams to SVG and optimizes drawio images,
 // Long: updating the cache at docs/assets/cache/. Cached assets are tracked in git
 // Long: for faster CI builds and consistent rendering.
+// Long:
+// Long: Expected Output:
+// Long:   - SVG files in docs/assets/cache/ for mermaid diagrams
+// Long:   - Optimized drawio images in docs/assets/cache/
+// Long:   - Cache status summary showing hits/misses
 // Flag.dry-run: type=bool, default=false, usage=Show what would be updated without actually updating
 // Flag.force: type=bool, default=false, usage=Force re-render/re-optimize all assets even if cached
 // Flag.verbose: type=bool, shorthand=v, default=false, usage=Show detailed progress for each file

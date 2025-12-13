@@ -8,6 +8,10 @@
 // Long: By default, shows a preview of the changelog entries without writing.
 // Long: Use --write to update the changelog file.
 // Long:
+// Long: Expected Output:
+// Long:   - Preview of changelog entries (default)
+// Long:   - Updated release/<module>/CHANGELOG.md file if --write flag is specified
+// Long:
 // Long: Examples:
 // Long:   release changelog r2r-cli              # Preview changelog entries
 // Long:   release changelog r2r-cli --write      # Update release/r2r-cli/CHANGELOG.md

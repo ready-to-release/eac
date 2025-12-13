@@ -8,13 +8,13 @@ The **templates** category contains 5 commands for managing project templates fo
 
 ## Commands
 
-| Command | Purpose |
-|---------|---------|
-| [templates](../templates/templates.md) | Manage project templates |
-| [templates apply](../templates/apply.md) | Apply templates with value replacements |
+| Command                                      | Purpose                                      |
+| -------------------------------------------- | -------------------------------------------- |
+| [templates](../templates/templates.md)       | Manage project templates                     |
+| [templates apply](../templates/apply.md)     | Apply templates with value replacements      |
 | [templates install](../templates/install.md) | Install templates without value replacements |
-| [templates list](../templates/list.md) | List template placeholder variables |
-| [templates tags](../templates/tags.md) | Extract template tags |
+| [templates list](../templates/list.md)       | List template placeholder variables          |
+| [templates tags](../templates/tags.md)       | Extract template tags                        |
 
 ## Common Use Cases
 

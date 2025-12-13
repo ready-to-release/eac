@@ -10,6 +10,10 @@
 // Long:   Provide a JSON file with key-value pairs: {"ProjectName": "MyApp", "Author": "John"}
 // Long:   If omitted: placeholders remain unchanged ({{ .ProjectName }} stays as-is)
 // Long:
+// Long: Expected Output:
+// Long:   - Rendered template files with {{ .Variable }} placeholders replaced by values
+// Long:   - Output files written to destination directory (default: .docs/reference)
+// Long:
 // Long: Examples:
 // Long:   templates apply docs
 // Long:   templates apply docs --source ./my-templates

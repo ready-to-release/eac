@@ -8,6 +8,11 @@
 // Long: IMPORTANT: This command requires --tag-direct flag to prevent accidental releases.
 // Long: The preferred flow is: release this → commit → push → workflow creates tag.
 // Long: Use --tag-direct only when you need to tag directly from devbox.
+// Long:
+// Long: Expected Output:
+// Long:   - Git tag created in format ext-eac/x.y.z
+// Long:   - Tag triggers the release workflow to retag and publish container image
+// Long:
 // Long: Example: release ext-eac --tag-direct 0.0.7
 package release
 

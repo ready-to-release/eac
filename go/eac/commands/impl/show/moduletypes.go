@@ -1,5 +1,13 @@
 // Command: show moduletypes
 // Description: Show all module types grouped by count
+// Short: Display module types and their usage counts
+// Long: The show moduletypes command displays all module types in the repository with their usage counts.
+// Long: Shows how many modules of each type exist, sorted alphabetically by type name.
+// Long:
+// Long: Expected Output:
+// Long: - Table with columns: Module Type, Count
+// Long: - Footer row showing total number of unique module types
+// Long: - Types sorted alphabetically
 package show
 
 import (

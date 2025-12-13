@@ -12,8 +12,8 @@
 // Long:   - No duplicate version numbers
 // Long:
 // Long: Examples:
-// Long:   release validate r2r-cli           # Validate single module
-// Long:   release validate --all             # Validate all modules with changelogs
+// Long:   validate release r2r-cli           # Validate single module
+// Long:   validate release --all             # Validate all modules with changelogs
 // Flag.all: type=bool, usage=Validate all modules with changelogs
 // Flag.json: type=bool, usage=Output result in JSON format
 // Args: modules

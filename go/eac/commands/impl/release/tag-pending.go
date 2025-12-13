@@ -5,6 +5,9 @@
 // Long:
 // Long: This is used by CI to detect merged releases that need tags created.
 // Long:
+// Long: Expected Output:
+// Long:   - JSON list of versions needing tags, including module, version, tag, and needs_tag fields
+// Long:
 // Long: Examples:
 // Long:   release tag-pending r2r-cli        # Check single module
 // Long:   release tag-pending --all          # Check all modules with changelogs

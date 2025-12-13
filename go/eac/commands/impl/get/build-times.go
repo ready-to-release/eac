@@ -4,6 +4,12 @@
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML
+// Long:
+// Long: Expected Output:
+// Long: YAML with build timing metrics parsed from out/build/ logs, including:
+// Long:   - Per-module timing data with duration in seconds and status (PASS/FAIL)
+// Long:   - Aggregated statistics by module type
+// Long:   - Overall summary with total/passed/failed builds and average duration
 package get
 
 import (

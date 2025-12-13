@@ -7,6 +7,12 @@
 // Long: All output is validated against the commit message contract to ensure consistency and quality.
 // Long: By default, the command outputs the commit message to stdout. Use --debug to save intermediate outputs.
 // Long: Use --commit to automatically create a git commit with the generated message.
+// Long:
+// Long: Expected Output:
+// Long: - Structured conventional commit message to stdout
+// Long: - Top-level summary and per-module sections
+// Long: - Validated against commit message contract
+// Long: - Debug outputs in out/ if --debug enabled
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug mode to save intermediate outputs (context, prompts, AI responses) to the 'out' directory for troubleshooting and analysis
 // Flag.commit: type=bool, shorthand=c, default=false, usage=Automatically create git commit with generated message
 // Flags: --debug (save intermediate outputs and show debug info), --commit (auto-commit)

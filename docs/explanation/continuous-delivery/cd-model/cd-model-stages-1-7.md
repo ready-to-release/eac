@@ -1,10 +1,10 @@
-# CD Model: Stages 1-6 (Development to Testing)
+# CD Model: Stages 1-7 (Development to Testing)
 
 {{ page_breadcrumb() }}
 
 ## Introduction
 
-Stages 1-6 of the Continuous Delivery Model cover the development and testing phases, from initial code authoring through comprehensive validation in production-like environments. These stages emphasize shift-left practices, rapid feedback, and automated quality gates to ensure high-quality software before release.
+Stages 1-7 of the Continuous Delivery Model cover the development and testing phases, from initial code authoring through comprehensive validation in production-like environments. These stages emphasize shift-left practices, rapid feedback, and automated quality gates to ensure high-quality software before release.
 
 This article provides detailed explanations of each stage, including their purpose, key activities, quality gates, and best practices.
 
@@ -30,7 +30,9 @@ Topic branches are created from HEAD of main (called "topic branches") or HEAD o
 
 ### Environment: DevBox
 
-The DevBox is the local development environment where engineers have full control. It typically includes:
+The DevBox is the local development environment where engineers have full control.
+
+It typically includes:
 
 - IDE or code editor
 - Local build tools and compilers
@@ -49,7 +51,9 @@ Stage 1 embraces collaborative requirement definition through the "Three Amigos"
 - **Development Team**: Contributes technical feasibility and implementation details
 - **Product Owners**: Provide clarity on business goals and expected outcomes
 
-This collaboration produces clear, concise, and actionable specifications that serve as the single source of truth. Requirements are expressed as [executable specifications (Gherkin scenarios, acceptance criteria)](../../specifications/index.md) rather than static documents.
+This collaboration produces clear, concise, and actionable specifications that serve as the single source of truth.
+
+Requirements are expressed as [executable specifications (Gherkin scenarios, acceptance criteria)](../../specifications/index.md) rather than static documents.
 
 ### Best Practices
 
@@ -489,9 +493,93 @@ Extended testing runs in **PLTE** environments, often with longer-lived instance
 
 ---
 
+
+## Stage 7: Exploration
+
+**Purpose**: Enable stakeholder validation and exploratory testing in a production-like environment.
+
+```mermaid
+flowchart LR
+    Demo[Deploy to Demo] --> Stake[Stakeholder review]
+    Demo --> Explore[Exploratory testing]
+
+    Stake --> Feedback[Gather feedback]
+    Explore --> Feedback
+
+    Feedback --> Decision{Ready?}
+    Decision -->|YES| Proceed[Proceed to release]
+    Decision -->|NO| Iterate[Update features]
+
+```
+
+### Demo Environment Purpose
+
+The exploration stage uses a dedicated demo or "trunk demo" environment that serves as a bridge between automated testing and production deployment. This environment allows:
+
+- **Stakeholders** to see and interact with new features
+- **Product owners** to validate business requirements
+- **QA teams** to perform exploratory testing
+- **Documentation teams** to verify user guides
+- **Training teams** to prepare materials
+
+Unlike PLTE environments used in Stage 5-6, the demo environment is typically longer-lived and may represent the current state of the main branch.
+
+### Stakeholder Validation
+
+Exploration provides opportunities for stakeholders to validate software before production:
+
+- **Feature demos**: Product teams showcase new capabilities
+- **Business validation**: Confirm features align with business goals
+- **Usability feedback**: Identify user experience issues
+- **Documentation review**: Ensure help text and guides are accurate
+
+This human validation complements automated testing by catching issues that automated tests miss:
+
+- Confusing user workflows
+- Missing features or edge cases
+- Visual/aesthetic concerns
+- Business rule misinterpretations
+
+### Exploratory Testing Approach
+
+Exploratory testing is structured, yet flexible, investigation of software behavior:
+
+**Session-Based Testing**:
+
+- Time-boxed sessions (60-90 minutes)
+- Defined charter or mission
+- Notes on findings and observations
+- Debrief and knowledge sharing
+
+**Test Tours**:
+
+- Feature tour: Exercise all features
+- Complexity tour: Focus on complex scenarios
+- Data tour: Vary input data types and sizes
+- User tour: Follow realistic user workflows
+
+Exploratory testing finds unexpected behaviors and edge cases that scripted tests may overlook.
+
+### UAT Coordination
+
+User Acceptance Testing (UAT) in Stage 7 involves:
+
+- **Test case execution**: Users validate specific scenarios
+- **Feedback collection**: Document issues, suggestions, improvements
+- **Sign-off process**: Formal acceptance before release approval
+- **Defect tracking**: Log bugs found during UAT
+
+UAT ensures the software meets user needs and expectations before production deployment.
+
+### Environment
+
+Exploration uses a **(Trunk-HEAD) Demo Environment** or **(Release-HEAD) Demo Environment** - a stable, production-like environment updated from the main or release branches.
+
+---
+
 ## Summary
 
-Stages 1-6 establish a foundation of quality through:
+Stages 1-7 establish a foundation of quality through:
 
 - **Stage 1**: Collaborative authoring with Requirements as Code
 - **Stage 2**: Fast local validation (5-10 min)
@@ -504,7 +592,7 @@ Each stage builds confidence incrementally, with quality gates preventing defect
 
 ## Next Steps
 
-- [Stages 7-12: Release to Production](cd-model-stages-7-12.md) - Continue to the release and deployment stages
+- [Stages 8-12: Release to Production](cd-model-stages-8-12.md) - Continue to the release and deployment stages
 - [Implementation Patterns](implementation-patterns.md) - Choose between RA and CDE patterns
 - [Testing Strategy](../testing/testing-strategy-overview.md) - Understand test levels and integration
 

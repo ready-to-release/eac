@@ -12,6 +12,10 @@
 // Long: The generated message is designed to be copied into GitHub's PR squash
 // Long: merge UI for use when squashing and merging pull requests.
 // Long:
+// Long: Expected Output:
+// Long: - Comprehensive commit message for squash merge
+// Long: - Suitable for GitHub PR squash merge UI
+// Long:
 // Long: Example:
 // Long:   create squash-message
 // Long:   create squash-message --base=develop

@@ -491,7 +491,7 @@ Stage 9 becomes a **verification** (did we meet criteria?) not a **decision** (s
 - [Release Documentation](./release-documentation.md) - What documentation is required
 - [Release Quality Gates](../quality-gates/release-gates.md) - Stage 9 thresholds explained
 - [Implementation Patterns](../cd-model/implementation-patterns.md) - RA vs CDe patterns in full CD Model context
-- [CD Model Stages 7-12](../cd-model/cd-model-stages-7-12.md) - Release stages detailed
+- [CD Model Stages 8-12](../cd-model/cd-model-stages-8-12.md) - Release stages detailed
 
 ## Quick Reference
 

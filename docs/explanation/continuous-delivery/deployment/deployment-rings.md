@@ -569,8 +569,8 @@ Example:
 ## Next Steps
 
 - [Deployment Strategies](./deployment-strategies.md) - Technical deployment patterns
-- [CD Model Stage 11](../cd-model/cd-model-stages-7-12.md#stage-11-live) - Live monitoring during rings
-- [CD Model Stage 12](../cd-model/cd-model-stages-7-12.md#stage-12-release-toggling) - Feature flag integration
+- [CD Model Stage 11](../cd-model/cd-model-stages-8-12.md#stage-11-live) - Live monitoring during rings
+- [CD Model Stage 12](../cd-model/cd-model-stages-8-12.md#stage-12-release-toggling) - Feature flag integration
 - [Implementation Patterns](../cd-model/implementation-patterns.md) - RA vs CDe pattern usage
 
 ## Quick Reference

@@ -18,12 +18,12 @@ Test commands execute and manage tests across the repository. They provide paral
 
 ## All Test Commands
 
-| Command | Purpose | Use Case |
-|---------|---------|----------|
-| [test](../test/test.md) | Run tests for modules | Execute tests for one or more modules |
-| [test suite](../test/suite.md) | Run specific test suite | Execute tests organized by suite |
-| [test list-suites](../test/list-suites.md) | List available suites | Discover available test suites |
-| [test debug](../test/debug.md) | Parse and analyze failures | Debug failed tests |
+| Command                                    | Purpose                    | Use Case                              |
+| ------------------------------------------ | -------------------------- | ------------------------------------- |
+| [test](../test/test.md)                    | Run tests for modules      | Execute tests for one or more modules |
+| [test suite](../test/suite.md)             | Run specific test suite    | Execute tests organized by suite      |
+| [test list-suites](../test/list-suites.md) | List available suites      | Discover available test suites        |
+| [test debug](../test/debug.md)             | Parse and analyze failures | Debug failed tests                    |
 
 ## Test Organization
 
@@ -57,7 +57,7 @@ suites:
 ### Running Tests During Development
 
 ```bash
-# Test current module
+# Test all modules
 r2r eac test
 
 # Test specific module
@@ -65,9 +65,6 @@ r2r eac test src-auth
 
 # Test multiple modules
 r2r eac test src-auth src-api
-
-# Run all tests
-r2r eac test --all
 ```
 
 ### Running Test Suites

@@ -4,6 +4,14 @@
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML
+// Long:
+// Long: Expected Output:
+// Long: YAML with all loaded configuration including:
+// Long:   - modules: Module contracts with moniker, type, root path, dependencies
+// Long:   - module_types: Module type definitions with build/test/deploy capabilities
+// Long:   - environments: Environment definitions
+// Long:   - testing_tags: Testing tag definitions
+// Long:   - test_suites: Test suite configurations
 package get
 
 import (

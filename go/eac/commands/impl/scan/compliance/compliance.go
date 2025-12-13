@@ -6,7 +6,9 @@
 // Long: standards like CIS Benchmarks, NIST, and PCI DSS. Results are saved as
 // Long: timestamped evidence files with SHA256 integrity verification.
 // Long:
-// Long: Output: out/security/<module>/compliance/<timestamp>.json
+// Long: Expected Output:
+// Long:   Timestamped JSON evidence files are written to out/security/<module>/compliance/<timestamp>.json
+// Long:   Each evidence file is SHA256-signed for integrity verification and audit compliance.
 // Long:
 // Long: Example:
 // Long:   security compliance --compliance k8s-cis              # Kubernetes CIS

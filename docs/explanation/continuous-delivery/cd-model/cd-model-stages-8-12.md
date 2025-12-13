@@ -1,96 +1,13 @@
 
-# CD Model: Stages 7-12 (Release to Production)
+# CD Model: Stages 8-12 (Release to Production)
 
 {{ page_breadcrumb() }}
 
 ## Introduction
 
-Stages 7-12 of the Continuous Delivery Model cover the release, deployment, and operational phases. These stages transition validated software from testing environments into production, where it serves end users. The focus shifts from development and testing to stakeholder validation, controlled deployment, and operational excellence.
+Stages 8-12 of the Continuous Delivery Model cover the release, deployment, and operational phases. These stages transition validated software from testing environments into production, where it serves end users. The focus shifts from development and testing to stakeholder validation, controlled deployment, and operational excellence.
 
 This article provides detailed explanations of each stage, including deployment strategies, approval processes, monitoring practices, and feature management.
-
-## Stage 7: Exploration
-
-**Purpose**: Enable stakeholder validation and exploratory testing in a production-like environment.
-
-```mermaid
-flowchart LR
-    Demo[Deploy to Demo] --> Stake[Stakeholder review]
-    Demo --> Explore[Exploratory testing]
-
-    Stake --> Feedback[Gather feedback]
-    Explore --> Feedback
-
-    Feedback --> Decision{Ready?}
-    Decision -->|YES| Proceed[Proceed to release]
-    Decision -->|NO| Iterate[Update features]
-
-```
-
-### Demo Environment Purpose
-
-The exploration stage uses a dedicated demo or "trunk demo" environment that serves as a bridge between automated testing and production deployment. This environment allows:
-
-- **Stakeholders** to see and interact with new features
-- **Product owners** to validate business requirements
-- **QA teams** to perform exploratory testing
-- **Documentation teams** to verify user guides
-- **Training teams** to prepare materials
-
-Unlike PLTE environments used in Stage 5-6, the demo environment is typically longer-lived and may represent the current state of the main branch.
-
-### Stakeholder Validation
-
-Exploration provides opportunities for stakeholders to validate software before production:
-
-- **Feature demos**: Product teams showcase new capabilities
-- **Business validation**: Confirm features align with business goals
-- **Usability feedback**: Identify user experience issues
-- **Documentation review**: Ensure help text and guides are accurate
-
-This human validation complements automated testing by catching issues that automated tests miss:
-
-- Confusing user workflows
-- Missing features or edge cases
-- Visual/aesthetic concerns
-- Business rule misinterpretations
-
-### Exploratory Testing Approach
-
-Exploratory testing is structured, yet flexible, investigation of software behavior:
-
-**Session-Based Testing**:
-
-- Time-boxed sessions (60-90 minutes)
-- Defined charter or mission
-- Notes on findings and observations
-- Debrief and knowledge sharing
-
-**Test Tours**:
-
-- Feature tour: Exercise all features
-- Complexity tour: Focus on complex scenarios
-- Data tour: Vary input data types and sizes
-- User tour: Follow realistic user workflows
-
-Exploratory testing finds unexpected behaviors and edge cases that scripted tests may overlook.
-
-### UAT Coordination
-
-User Acceptance Testing (UAT) in Stage 7 involves:
-
-- **Test case execution**: Users validate specific scenarios
-- **Feedback collection**: Document issues, suggestions, improvements
-- **Sign-off process**: Formal acceptance before release approval
-- **Defect tracking**: Log bugs found during UAT
-
-UAT ensures the software meets user needs and expectations before production deployment.
-
-### Environment
-
-Exploration uses a **Demo Environment** or **Trunk Demo Environment** - a stable, production-like environment updated from the main branch.
-
----
 
 ## Stage 8: Start Release
 
@@ -305,7 +222,7 @@ Release approval validation occurs in **PLTE (automated)** and **Demo (explorati
 flowchart LR
     Approved[Approved release] --> Strategy{Strategy?}
 
-    Strategy -->|Blue-Green| BG[Deploy to green]
+    Strategy -->|Blue-Green| BG[Deploy to inactive color]
     Strategy -->|Rolling| Roll[Deploy incrementally]
     Strategy -->|Canary| Can[Deploy to canary]
 
@@ -604,9 +521,8 @@ Feature flags operate in the **Production Environment**, providing runtime contr
 
 ## Summary
 
-Stages 7-12 bring software to production and manage it operationally:
+Stages 8-12 bring software to production and manage it operationally:
 
-- **Stage 7**: Stakeholder validation and exploratory testing
 - **Stage 8**: Release candidate creation and documentation
 - **Stage 9**: Formal approval (manual or automated)
 - **Stage 10**: Production deployment with chosen strategy
@@ -618,14 +534,14 @@ These stages emphasize controlled release, comprehensive monitoring, and risk mi
 ## Next Steps
 
 - [CD Model Overview](cd-model-overview.md) - Return to the overview
-- [Stages 1-6: Development to Testing](cd-model-stages-1-6.md) - Review earlier stages
+- [Stages 1-7: Development to Testing](cd-model-stages-1-7.md) - Review earlier stages
 - [Implementation Patterns](implementation-patterns.md) - Choose RA or CDE pattern
 - [Environments](../architecture/environments.md) - Understand environment architecture
 
 ## References
 
 - [CD Model Overview](cd-model-overview.md)
-- [Stages 1-6](cd-model-stages-1-6.md)
+- [Stages 1-7](cd-model-stages-1-7.md)
 - [Trunk-Based Development](../workflow/trunk-based-development.md)
 
 {{ diataxis_footer() }}

@@ -1,5 +1,11 @@
 // Command: validate module-hierarchy
 // Description: Validate module dependency graph structure
+// Short: Validate module dependency graph structure
+// Long: Validates the module dependency graph for structural integrity.
+// Long:
+// Long: Expected Output:
+// Long:   Displays structural issues in dependency graph including cycles, non-existent module
+// Long:   references, and bidirectional inconsistencies. Exit code 0 if valid, 1 if issues found.
 package validate
 
 import (

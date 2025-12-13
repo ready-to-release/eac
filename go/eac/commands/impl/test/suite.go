@@ -9,6 +9,11 @@
 // Long: Use --list-only to see which tests would run without executing them.
 // Long: Use --sequential to run tests one at a time instead of in parallel.
 // Long:
+// Long: Expected Output:
+// Long:   - Test execution results with pass/fail status for the specified suite
+// Long:   - Detailed test summary with modules, packages, and assertions
+// Long:   - If --list-only is used: list of test cases that would be executed
+// Long:
 // Long: Example:
 // Long:   test suite integration
 // Long:   test suite unit --sequential

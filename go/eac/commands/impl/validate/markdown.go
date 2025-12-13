@@ -1,5 +1,12 @@
 // Command: validate markdown
 // Description: Validate markdown file syntax
+// Short: Validate markdown file syntax
+// Long: Validates markdown files for proper syntax, heading hierarchy, and code block formatting.
+// Long:
+// Long: Expected Output:
+// Long:   Displays markdown syntax validation results for all markdown files in repository.
+// Long:   Shows errors for invalid syntax, heading issues, and malformed code blocks.
+// Long:   Exit code 0 if all valid, 1 if validation errors found.
 package validate
 
 import (

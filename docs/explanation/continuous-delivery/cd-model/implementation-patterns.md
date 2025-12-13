@@ -408,8 +408,8 @@ Choose based on regulatory requirements, risk profile, and organizational maturi
 ## Next Steps
 
 - [CD Model Overview](cd-model-overview.md) - Return to the model overview
-- [Stages 1-6](cd-model-stages-1-6.md) - Understand development stages
-- [Stages 7-12](cd-model-stages-7-12.md) - Understand release stages
+- [Stages 1-7](cd-model-stages-1-7.md) - Understand development stages
+- [Stages 8-12](cd-model-stages-8-12.md) - Understand release stages
 - [Environments](../architecture/environments.md) - Learn about environment architecture
 - [Security](../security/security.md) - Integrate security throughout the pipeline
 

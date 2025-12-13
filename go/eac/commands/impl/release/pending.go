@@ -13,6 +13,13 @@
 // Long:
 // Long: This is designed for CI/CD pipelines to determine if a release is needed.
 // Long:
+// Long: Expected Output:
+// Long:   - JSON object containing:
+// Long:     - has_changes: boolean indicating if there are releasable changes
+// Long:     - current_version: the current released version
+// Long:     - next_version: the calculated next version
+// Long:     - change_counts: breakdown by change type (added, fixed, changed, etc.)
+// Long:
 // Long: Examples:
 // Long:   release pending r2r-cli           # Check r2r-cli for pending changes
 // Long:   release pending r2r-cli --quiet   # Exit code only (0=changes, 1=no changes)

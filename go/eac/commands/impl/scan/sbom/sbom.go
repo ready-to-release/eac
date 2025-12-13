@@ -5,7 +5,9 @@
 // Long: This command generates SBOM evidence files in CycloneDX format for audit compliance.
 // Long: Evidence files are timestamped and SHA256-signed for integrity verification.
 // Long:
-// Long: Output: out/security/<module>/sbom/<timestamp>.json
+// Long: Expected Output:
+// Long:   Timestamped JSON evidence files are written to out/security/<module>/sbom/<timestamp>.json
+// Long:   Files are generated in CycloneDX format by default (customizable via --format flag).
 // Long:
 // Long: Example:
 // Long:   security sbom                              # All modules

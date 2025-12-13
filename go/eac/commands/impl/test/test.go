@@ -9,6 +9,12 @@
 // Long: Use --suite to select which tests to run. The default suite is "component" which
 // Long: includes L0 and L1 tests (fast unit tests for component-level validation).
 // Long:
+// Long: Expected Output:
+// Long:   - Test execution results with pass/fail status
+// Long:   - Detailed test summary table showing modules, packages, and assertions
+// Long:   - Test logs written to out/test/<suite-name>/ directory
+// Long:   - Exit code 0 if all tests pass, non-zero on failure
+// Long:
 // Long: Example:
 // Long:   test eac-commands                    # Test single module
 // Long:   test eac-core r2r-cli                # Test multiple modules

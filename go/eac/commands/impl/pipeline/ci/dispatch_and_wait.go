@@ -5,6 +5,11 @@
 // Long: This command is useful for CI orchestration when you need to trigger
 // Long: a workflow and wait for its completion before proceeding.
 // Long:
+// Long: Expected Output:
+// Long:   - Workflow dispatch confirmation message
+// Long:   - Live progress display with status updates
+// Long:   - Exit code 0 on success, 1 on failure
+// Long:
 // Long: Example:
 // Long:   pipeline ci dispatch-and-wait --workflow ci-r2r-cli.yaml --ref main
 // Long:   pipeline ci dispatch-and-wait --run-id 12345678

@@ -4,9 +4,12 @@
 // Long: Validates DSL files for syntax errors and structural issues using the official
 // Long: Structurizr CLI running in Docker. Checks DSL syntax, element relationships, view definitions,
 // Long: and ensures the workspace can be properly rendered. Supports multiple DSL files per module -
-// Long: files starting with "_" are treated as fragments (for !include) and skipped. Validation results
-// Long: are displayed in the console and saved to out/logs/design/validation-results.json.
+// Long: files starting with "_" are treated as fragments (for !include) and skipped.
 // Long: Use --all to validate all modules, or --file to validate a specific DSL file.
+// Long:
+// Long: Expected Output:
+// Long:   Displays validation results in console. Results saved to out/logs/design/validation-results.json.
+// Long:   Shows syntax errors, structural issues, and render status. Exit code 0 if valid, 1 if errors, 2 if system errors.
 // Usage: validate design <module> [--file=<name>]
 // Flag.all: type=bool, shorthand=a, default=false, usage=Validate all workspace files in specs/*/.design/ directories
 // Flag.file: type=string, shorthand=f, default="", usage=Validate only a specific DSL file (e.g., --file=landscape)

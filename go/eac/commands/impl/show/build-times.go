@@ -1,5 +1,13 @@
 // Command: show build-times
 // Description: Show build timing analysis in a human-readable format
+// Short: Display build timing metrics in tables
+// Long: The show build-times command displays build timing analysis parsed from build logs.
+// Long: Shows overall statistics, breakdown by module type, and the slowest individual builds.
+// Long:
+// Long: Expected Output:
+// Long: - Table with overall metrics: total builds, passed/failed counts, total/average duration
+// Long: - Summary by type table: module types with build counts, pass/fail, total and average times
+// Long: - Top N slowest builds table showing duration, status, module name, and type
 package show
 
 import (

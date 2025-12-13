@@ -6,6 +6,10 @@
 // Long: completed successfully for the given commit SHA. It's used by release
 // Long: workflows to ensure code is tested before releasing.
 // Long:
+// Long: Expected Output:
+// Long:   - Exit code 0 if CI workflow succeeded
+// Long:   - Exit code 1 if CI workflow failed or timeout occurred
+// Long:
 // Long: Exit codes:
 // Long:   0 - CI workflow succeeded
 // Long:   1 - CI workflow failed or timeout
