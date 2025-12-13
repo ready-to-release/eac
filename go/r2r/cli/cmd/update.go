@@ -263,12 +263,13 @@ var updateCmd = &cobra.Command{
 			var foundExe string
 			for _, file := range reader.File {
 				if strings.HasSuffix(file.Name, ".exe") || (!strings.Contains(file.Name, ".") && !strings.Contains(file.Name, "/")) {
-					// Extract this file using secure path joining to prevent Zip Slip
-					extractPath, err := secureJoin(extractDir, file.Name)
-					if err != nil {
-						logging.Warnf("Skipping unsafe archive entry: %v", err)
+					// Prevent Zip Slip: extract only the base filename to avoid directory traversal
+					safeName := filepath.Base(file.Name)
+					if safeName == "." || safeName == ".." || safeName == "" {
+						logging.Warnf("Skipping unsafe archive entry: %s", file.Name)
 						continue
 					}
+					extractPath := filepath.Join(extractDir, safeName)
 
 					rc, err := file.Open()
 					if err != nil {
@@ -349,15 +350,15 @@ var updateCmd = &cobra.Command{
 
 				// Look for executable files (r2r-cli* without extension)
 				if header.Typeflag == tar.TypeReg {
-					name := filepath.Base(header.Name)
+					// Prevent Zip Slip: extract only the base filename to avoid directory traversal
+					safeName := filepath.Base(header.Name)
+					if safeName == "." || safeName == ".." || safeName == "" {
+						logging.Warnf("Skipping unsafe archive entry: %s", header.Name)
+						continue
+					}
 					// Check if this looks like the r2r-cli binary
-					if strings.Contains(name, "r2r-cli") || strings.Contains(name, "r2r") {
-						// Use secure path joining to prevent Zip Slip
-						extractPath, err := secureJoin(extractDir, header.Name)
-						if err != nil {
-							logging.Warnf("Skipping unsafe archive entry: %v", err)
-							continue
-						}
+					if strings.Contains(safeName, "r2r-cli") || strings.Contains(safeName, "r2r") {
+						extractPath := filepath.Join(extractDir, safeName)
 
 						outFile, err := os.OpenFile(extractPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.FileMode(header.Mode))
 						if err != nil {
@@ -479,43 +480,6 @@ func getLatestRelease() (*Release, error) {
 	}
 
 	return &release, nil
-}
-
-// secureJoin safely joins a base directory with an archive entry name,
-// preventing Zip Slip (path traversal) attacks.
-// Returns error if the resulting path would escape the base directory.
-func secureJoin(baseDir, entryName string) (string, error) {
-	// Clean the entry name to handle any path separators
-	cleanName := filepath.Clean(entryName)
-
-	// Use only the base name to prevent directory traversal
-	safeName := filepath.Base(cleanName)
-
-	// Reject if the name is empty, ".", or ".."
-	if safeName == "" || safeName == "." || safeName == ".." {
-		return "", fmt.Errorf("invalid archive entry name: %q", entryName)
-	}
-
-	// Construct the full path
-	fullPath := filepath.Join(baseDir, safeName)
-
-	// Verify the path is within baseDir (defense in depth)
-	absBase, err := filepath.Abs(baseDir)
-	if err != nil {
-		return "", fmt.Errorf("failed to resolve base directory: %w", err)
-	}
-
-	absPath, err := filepath.Abs(fullPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to resolve target path: %w", err)
-	}
-
-	// Ensure the resolved path starts with the base directory
-	if !strings.HasPrefix(absPath, absBase+string(filepath.Separator)) && absPath != absBase {
-		return "", fmt.Errorf("path traversal detected: %q resolves outside target directory", entryName)
-	}
-
-	return fullPath, nil
 }
 
 // copyFile copies a file from src to dst (helper function)
