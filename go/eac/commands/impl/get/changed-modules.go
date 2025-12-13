@@ -5,13 +5,21 @@
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML
 //   --base <ref>: Base ref to compare against (default: HEAD)
+//   --from-stdin: Read file paths from stdin (one per line) instead of git diff
 // Long:
 // Long: Expected Output:
-// Long: YAML list of module monikers that have changes based on git diff against the specified base ref.
+// Long: YAML list of module monikers that have changes based on git diff against the specified base ref,
+// Long: or based on file paths read from stdin when --from-stdin is used.
 // Long: Only includes modules directly containing changed files.
+// Long:
+// Long: Examples:
+// Long:   get changed-modules                           # Use git diff HEAD
+// Long:   get changed-modules --base main               # Use git diff main
+// Long:   echo "path/to/file.go" | get changed-modules --from-stdin  # Read from stdin
 package get
 
 import (
+	"bufio"
 	"os"
 	"os/exec"
 	"strings"
@@ -33,27 +41,47 @@ func GetChangedModules() int {
 		return 1
 	}
 
-	// Get base ref from flags
+	// Parse flags
 	baseRef := "HEAD"
+	fromStdin := false
 	for i, arg := range os.Args {
 		if arg == "--base" && i+1 < len(os.Args) {
 			baseRef = os.Args[i+1]
-			break
+		}
+		if arg == "--from-stdin" {
+			fromStdin = true
 		}
 	}
 
-	// Get list of changed files from git
-	cmd := exec.Command("git", "diff", "--name-only", baseRef)
-	cmd.Dir = workspaceRoot
-	output, err := cmd.Output()
-	if err != nil {
-		log.Errorf("getting changed files: %v", err)
-		return 1
-	}
+	var changedFiles []string
 
-	changedFiles := strings.Split(strings.TrimSpace(string(output)), "\n")
-	if len(changedFiles) == 1 && changedFiles[0] == "" {
-		changedFiles = []string{}
+	if fromStdin {
+		// Read file paths from stdin (one per line)
+		scanner := bufio.NewScanner(os.Stdin)
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if line != "" {
+				changedFiles = append(changedFiles, line)
+			}
+		}
+		if err := scanner.Err(); err != nil {
+			log.Errorf("reading from stdin: %v", err)
+			return 1
+		}
+	} else {
+		// Get list of changed files from git
+		cmd := exec.Command("git", "diff", "--name-only", baseRef)
+		cmd.Dir = workspaceRoot
+		output, err := cmd.Output()
+		if err != nil {
+			log.Errorf("getting changed files: %v", err)
+			return 1
+		}
+
+		changedFiles = strings.Split(strings.TrimSpace(string(output)), "\n")
+		if len(changedFiles) == 1 && changedFiles[0] == "" {
+			changedFiles = []string{}
+		}
 	}
 
 	// Use the shared get command helper
