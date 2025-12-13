@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	design "github.com/ready-to-release/eac/go/eac/commands/impl/design/helper"
+	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
 )
 
@@ -41,8 +42,19 @@ func NewStructurizrDSLValidator(module, templateRoot string) (*StructurizrDSLVal
 func (v *StructurizrDSLValidator) Validate(output string, context map[string]interface{}) []contracts.ValidationError {
 	var errors []contracts.ValidationError
 
+	// Load config for specs path
+	cfg, err := config.Load(config.LoadOptions{RepoRoot: v.templateRoot})
+	if err != nil {
+		errors = append(errors, contracts.ValidationError{
+			Code:     "config_error",
+			Message:  fmt.Sprintf("Failed to load config: %v", err),
+			Severity: "error",
+		})
+		return errors
+	}
+
 	// Create module design directory in temp
-	moduleDesignDir := filepath.Join(v.tempDir, "specs", v.module, ".design")
+	moduleDesignDir := filepath.Join(v.tempDir, cfg.Repository.Paths.SpecsRoot, v.module, ".design")
 	if err := os.MkdirAll(moduleDesignDir, 0755); err != nil {
 		errors = append(errors, contracts.ValidationError{
 			Code:     "setup_error",

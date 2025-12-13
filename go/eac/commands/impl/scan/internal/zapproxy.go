@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/docker/docker/api/types/container"
+	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"go.uber.org/zap"
 )
@@ -78,8 +79,14 @@ func RunZAPScan(targetURL, scanType, workspaceRoot string, zapImage string, logg
 		zap.String("targetURL", targetURL),
 		zap.String("scanType", scanType))
 
+	// Load config for path resolution
+	cfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot})
+	if err != nil {
+		return nil, fmt.Errorf("failed to load config: %w", err)
+	}
+
 	// Create temporary output directory for ZAP report
-	outputDir := filepath.Join(workspaceRoot, "out", "security", "zap-temp")
+	outputDir := filepath.Join(workspaceRoot, cfg.Repository.Paths.Out.Root, cfg.Repository.Paths.Out.Security, "zap-temp")
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create ZAP output directory: %w", err)
 	}

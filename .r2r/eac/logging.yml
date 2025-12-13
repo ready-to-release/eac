@@ -1,28 +1,19 @@
 # Logging Configuration
-# Controls how log messages are routed to console and file sinks
+# Overrides for defaults in contracts/eac-core/0.1.0/defaults/logging.yml
+#
+# Defaults provide:
+# - Console: info, warn, error with raw formatter
+# - File: all levels to out/commands.log with json formatter
+# - Targets: build and test get unit-specific logs
+#
+# Uncomment and modify sections below to override defaults
 
-# Console output (stdout)
-console:
-  # Levels to show on console: debug, info, warn, error
-  levels:
-    - info
-    - warn
-    - error
-  # Formatter for console output:
-  #   raw        - message only (clean CLI output)
-  #   timestamped - "HH:MM:SS.mmm  LEVEL  module:message"
-  #   json       - structured JSON
-  formatter: raw
+# console:
+#   levels:
+#     - debug  # Add debug to console
+#     - info
+#     - warn
+#     - error
 
-# File output (out/logs/<module>/debug.log)
-file:
-  # Levels to write to file: debug, info, warn, error
-  levels:
-    - debug
-    - info
-    - warn
-    - error
-  # Formatter for file output
-  formatter: json
-  # Enable file logging (set to false to disable)
-  enabled: true
+# file:
+#   enabled: false  # Disable file logging

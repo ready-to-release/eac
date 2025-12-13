@@ -35,10 +35,10 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
+	eacConfig "github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
-	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
@@ -90,10 +90,18 @@ func CreateDesign() int {
 		out.Progress("⚠️  Skipping Docker validation")
 	}
 
+	// Load EAC config for path resolution (uses helper with clean fallback for tests)
+	cfg := eacConfig.LoadOrNil(config.TemplateRoot)
+
 	// Determine output path
 	outputPath := config.OutputPath
 	if outputPath == "" {
-		outputPath = paths.WorkspaceDSLPath(config.TemplateRoot, config.Module)
+		if cfg == nil {
+			// Fallback to default path if config loading fails (e.g., in tests)
+			outputPath = filepath.Join(config.TemplateRoot, "specs", config.Module, ".design", "workspace.dsl")
+		} else {
+			outputPath = filepath.Join(cfg.Repository.SpecsPathAbs(config.TemplateRoot, config.Module), ".design", "workspace.dsl")
+		}
 	}
 
 	// Check if output exists (unless --force)
@@ -392,25 +400,25 @@ func buildContractBasedPrompt(config *DesignConfig) (string, error) {
 	return prompt.String(), nil
 }
 
-// loadPrompt loads the AI prompt for design generation
+// loadPrompt loads the AI prompt for design generation with three-tier priority:
+// 1. Command flag (--prompt)
+// 2. Team override (.r2r/eac/templates/ai/design/design.md)
+// 3. System default (templates/ai/design/design.md)
+// Convention: Empty string uses type name (design.md)
 func loadPrompt(config *DesignConfig) (string, error) {
-	// If custom prompt specified, load that
-	if config.PromptPath != "" {
-		content, err := os.ReadFile(config.PromptPath)
-		if err != nil {
-			return "", fmt.Errorf("failed to read custom prompt from %s: %w", config.PromptPath, err)
-		}
-		return string(content), nil
-	}
-
-	// Load default prompt from repo path
-	repoPath := filepath.Join(config.TemplateRoot, "contracts", "ai", "design", "0.1.0", "design.md")
-	content, err := os.ReadFile(repoPath)
+	// Load prompt with three-tier priority system
+	loader := contracts.NewContractLoader(config.TemplateRoot, "ai/design", "")
+	prompt, source, err := loader.LoadPromptWithPriority("", config.PromptPath)
 	if err != nil {
-		return "", fmt.Errorf("failed to read prompt from %s: %w", repoPath, err)
+		return "", fmt.Errorf("failed to load prompt: %w", err)
 	}
 
-	return string(content), nil
+	// Log source if not default
+	if source != "embedded fallback" && config.Debug {
+		log.Errorf("ℹ️  Using %s prompt", source)
+	}
+
+	return prompt, nil
 }
 
 // generateAndValidate generates AI output with retry and validates with Structurizr CLI
@@ -451,7 +459,8 @@ func generateAndValidate(config *DesignConfig, prompt string, out *design.Output
 	}
 
 	if config.Debug {
-		retryConfig.DebugOutputDir = filepath.Join(config.TemplateRoot, "out", "logs", "design")
+		// Use helper function for clean fallback to defaults in test environments
+		retryConfig.DebugOutputDir = eacConfig.GetLogsPath(config.TemplateRoot, "design")
 	}
 
 	result, err := contracts.GenerateWithRetry(

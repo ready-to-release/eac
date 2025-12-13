@@ -23,8 +23,13 @@ const (
 
 // Config holds logger configuration.
 type Config struct {
-	// Module name used for log file path: out/logs/<module>/
-	Module string
+	// Command name (e.g., "build", "test", "create")
+	Command string
+
+	// Unit is the target unit for build/test commands (optional)
+	// Used with logging.yml targets to create unit-specific logs
+	// Examples: "eac-core" for build, "component" for test
+	Unit string
 
 	// WorkspaceRoot is the repository root path
 	WorkspaceRoot string
@@ -35,7 +40,7 @@ type Config struct {
 	DebugMode bool
 
 	// EnableFileLogging enables writing logs to file.
-	// When true, logs are written to out/logs/<module>/debug.log.
+	// When true, logs are written to out/commands.log.
 	// When false, no file logging occurs.
 	EnableFileLogging bool
 
@@ -45,9 +50,9 @@ type Config struct {
 
 // DefaultConfig returns configuration with default settings.
 // Debug mode and file logging are disabled by default.
-func DefaultConfig(module, workspaceRoot string) Config {
+func DefaultConfig(command, workspaceRoot string) Config {
 	return Config{
-		Module:            module,
+		Command:           command,
 		WorkspaceRoot:     workspaceRoot,
 		DebugMode:         false,
 		EnableFileLogging: false,
@@ -66,5 +71,12 @@ func (c Config) WithDebugMode(enabled bool) Config {
 // This enables writing all logs to file.
 func (c Config) WithFileLogging(enabled bool) Config {
 	c.EnableFileLogging = enabled
+	return c
+}
+
+// WithUnit returns a new config with unit set.
+// Used for build/test to enable target-specific logging.
+func (c Config) WithUnit(unit string) Config {
+	c.Unit = unit
 	return c
 }

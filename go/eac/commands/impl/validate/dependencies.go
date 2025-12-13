@@ -46,7 +46,7 @@ func ValidateDependencies() int {
 	}
 
 	// Build dependency graph from go.mod files
-	excludeDirs := []string{"out", "vendor", ".git", "node_modules"}
+	excludeDirs := []string{"out", "vendor", ".git", "node_modules", "tools"}
 	graph, err := gomod.BuildFromDirectory(workspaceRoot, moduleRegistry, baseModulePath, excludeDirs)
 	if err != nil {
 		log.Errorf("Error building dependency graph: %v", err)

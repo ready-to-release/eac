@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
@@ -181,10 +182,14 @@ func findModuleFeatureFiles(workspaceRoot, moduleName string) ([]string, error) 
 	// Use module contract to determine module's spec files
 	// For now, assume specs/<module>/**/*.feature pattern
 
-	specsDir := filepath.Join(workspaceRoot, "specs", moduleName)
+	cfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot})
+	if err != nil {
+		return nil, err
+	}
+	specsDir := filepath.Join(workspaceRoot, cfg.Repository.Paths.SpecsRoot, moduleName)
 	var files []string
 
-	err := filepath.Walk(specsDir, func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(specsDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}

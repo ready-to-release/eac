@@ -2,6 +2,8 @@ package logging
 
 import (
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"gopkg.in/yaml.v3"
@@ -27,12 +29,40 @@ type SinkConfig struct {
 	Formatter FormatterType `yaml:"formatter"`
 	// Enabled controls whether this sink is active (file only)
 	Enabled *bool `yaml:"enabled,omitempty"`
+	// Rolling log configuration (file only)
+	MaxSizeMB   int `yaml:"max_size_mb,omitempty"`   // Max size in MB before rotation (default: 5)
+	MaxBackups  int `yaml:"max_backups,omitempty"`   // Max number of old log files to keep (default: 3)
+	MaxAgeDays  int `yaml:"max_age_days,omitempty"`  // Max days to retain old log files (default: 7)
+	Compress    *bool `yaml:"compress,omitempty"`    // Compress rotated files (default: false)
+}
+
+// TargetConfig holds configuration for an extra log target (build/test specific logs)
+type TargetConfig struct {
+	// Path pattern with {unit} placeholder, e.g., "out/build/{unit}/build.log"
+	Path string `yaml:"path"`
+	// Levels to output: debug, info, warn, error
+	Levels []string `yaml:"levels"`
+	// Formatter type: raw, timestamped, json
+	Formatter FormatterType `yaml:"formatter"`
+}
+
+// ResolveTargetPath replaces {unit} placeholder with actual unit name
+func (t TargetConfig) ResolveTargetPath(repoRoot, unit string) string {
+	path := strings.Replace(t.Path, "{unit}", unit, -1)
+	return filepath.Join(repoRoot, path)
 }
 
 // LoggingConfig holds the complete logging configuration
 type LoggingConfig struct {
-	Console SinkConfig `yaml:"console"`
-	File    SinkConfig `yaml:"file"`
+	Console SinkConfig              `yaml:"console"`
+	File    SinkConfig              `yaml:"file"`
+	Targets map[string]TargetConfig `yaml:"targets"` // command -> target config
+}
+
+// GetTarget returns target config for a command, if configured
+func (c LoggingConfig) GetTarget(command string) (TargetConfig, bool) {
+	target, ok := c.Targets[command]
+	return target, ok
 }
 
 // DefaultLoggingConfig returns the default logging configuration
@@ -44,34 +74,94 @@ func DefaultLoggingConfig() LoggingConfig {
 			Formatter: FormatterRaw,
 		},
 		File: SinkConfig{
-			Levels:    []string{"debug", "info", "warn", "error"},
-			Formatter: FormatterJSON,
-			Enabled:   &enabled,
+			Levels:     []string{"debug", "info", "warn", "error"},
+			Formatter:  FormatterTimestamped,
+			Enabled:    &enabled,
+			MaxSizeMB:  5,  // 5MB before rotation
+			MaxBackups: 3,  // keep 3 old files
+			MaxAgeDays: 7,  // delete files older than 7 days
 		},
 	}
 }
 
-// LoadLoggingConfig loads logging configuration from .r2r/eac/logging.yml
-// Falls back to defaults if file doesn't exist or can't be parsed
+// LoadLoggingConfig loads logging configuration with defaults from contracts.
+// Merge order: contract defaults -> user config (.r2r/eac/logging.yml)
+// Falls back to built-in defaults if contract defaults don't exist.
 func LoadLoggingConfig(workspaceRoot string) LoggingConfig {
-	configPath := paths.EACLoggingConfigPath(workspaceRoot)
+	// Load contract defaults first
+	defaults := loadLoggingDefaults(workspaceRoot)
 
+	// Load user config
+	configPath := paths.EACLoggingConfigPath(workspaceRoot)
 	data, err := os.ReadFile(configPath)
 	if err != nil {
-		// File doesn't exist or can't be read, use defaults
+		// No user config, return defaults
+		return defaults
+	}
+
+	var userCfg LoggingConfig
+	if err := yaml.Unmarshal(data, &userCfg); err != nil {
+		// Invalid user YAML, return defaults
+		return defaults
+	}
+
+	// Merge user config on top of defaults
+	return mergeLoggingConfig(defaults, userCfg)
+}
+
+// loadLoggingDefaults loads logging defaults from contracts/eac-core/0.1.0/defaults/logging.yml
+func loadLoggingDefaults(workspaceRoot string) LoggingConfig {
+	defaultsPath := paths.LoggingDefaultsPath(workspaceRoot)
+	data, err := os.ReadFile(defaultsPath)
+	if err != nil {
+		// Contract defaults don't exist, use built-in defaults
 		return DefaultLoggingConfig()
 	}
 
 	var cfg LoggingConfig
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		// Invalid YAML, use defaults
+		// Invalid defaults YAML, use built-in defaults
 		return DefaultLoggingConfig()
 	}
 
-	// Apply defaults for missing fields
-	cfg = applyDefaults(cfg)
+	// Apply built-in defaults for any missing fields
+	return applyDefaults(cfg)
+}
 
-	return cfg
+// mergeLoggingConfig merges user config on top of defaults
+func mergeLoggingConfig(defaults, user LoggingConfig) LoggingConfig {
+	result := defaults
+
+	// Console: user overrides if specified
+	if len(user.Console.Levels) > 0 {
+		result.Console.Levels = user.Console.Levels
+	}
+	if user.Console.Formatter != "" {
+		result.Console.Formatter = user.Console.Formatter
+	}
+
+	// File: user overrides if specified
+	if len(user.File.Levels) > 0 {
+		result.File.Levels = user.File.Levels
+	}
+	if user.File.Formatter != "" {
+		result.File.Formatter = user.File.Formatter
+	}
+	if user.File.Enabled != nil {
+		result.File.Enabled = user.File.Enabled
+	}
+
+	// Targets: user targets override defaults by command name
+	if user.Targets != nil {
+		if result.Targets == nil {
+			result.Targets = make(map[string]TargetConfig)
+		}
+		for cmd, target := range user.Targets {
+			result.Targets[cmd] = target
+		}
+	}
+
+	return result
 }
 
 // applyDefaults fills in missing configuration with defaults
@@ -95,6 +185,16 @@ func applyDefaults(cfg LoggingConfig) LoggingConfig {
 	}
 	if cfg.File.Enabled == nil {
 		cfg.File.Enabled = defaults.File.Enabled
+	}
+	// Rolling log defaults
+	if cfg.File.MaxSizeMB == 0 {
+		cfg.File.MaxSizeMB = defaults.File.MaxSizeMB
+	}
+	if cfg.File.MaxBackups == 0 {
+		cfg.File.MaxBackups = defaults.File.MaxBackups
+	}
+	if cfg.File.MaxAgeDays == 0 {
+		cfg.File.MaxAgeDays = defaults.File.MaxAgeDays
 	}
 
 	return cfg

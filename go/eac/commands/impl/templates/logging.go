@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"go.uber.org/zap"
 )
@@ -23,7 +24,12 @@ func writeDebugFile(subcommand, workspaceRoot string, logger *logging.Logger, fi
 		return
 	}
 
-	debugDir := filepath.Join(workspaceRoot, "out", "logs", "templates", subcommand)
+	cfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot})
+	if err != nil {
+		logger.Warn("Failed to load config", zap.Error(err))
+		return
+	}
+	debugDir := filepath.Join(cfg.Repository.LogsPathAbs(workspaceRoot, "templates"), subcommand)
 	if err := os.MkdirAll(debugDir, 0755); err != nil {
 		logger.Warn("Failed to create debug directory", zap.String("dir", debugDir), zap.Error(err))
 		return

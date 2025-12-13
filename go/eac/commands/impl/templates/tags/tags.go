@@ -29,6 +29,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/templates/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	eacConfig "github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
@@ -247,7 +248,13 @@ func resolveTemplateDirectory(config *Config) (string, func(), error) {
 				zap.String("workspaceRoot", root))
 		}
 
-		templateDir = filepath.Join(root, "templates")
+		// Load EAC config for template path
+		cfg, err := eacConfig.Load(eacConfig.LoadOptions{RepoRoot: root})
+		if err != nil {
+			return "", nil, fmt.Errorf("failed to load config: %w", err)
+		}
+
+		templateDir = filepath.Join(root, cfg.Repository.Paths.Templates)
 		cleanup = func() {}
 
 		config.Logger.Debug("Local templates validated",

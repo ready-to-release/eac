@@ -87,6 +87,15 @@ const (
 
 	// WorkflowsDir is the workflows subdirectory under GitHubDir
 	WorkflowsDir = "workflows"
+
+	// EACCoreModule is the contract module name for EAC core
+	EACCoreModule = "eac-core"
+
+	// DefaultsVersion is the current defaults version
+	DefaultsVersion = "0.1.0"
+
+	// DefaultsDir is the defaults subdirectory under a contract version
+	DefaultsDir = "defaults"
 )
 
 // Relative path constants
@@ -285,9 +294,25 @@ func ContractsVersionPath(repoRoot, module, version string) string {
 	return filepath.Join(repoRoot, ContractsDir, module, version)
 }
 
-// LogsPath returns the path to the logs output directory
+// LoggingDefaultsPath returns the path to the logging defaults file
+// Container-aware: uses R2R_CONTAINER_ROOT when running in container
+func LoggingDefaultsPath(repoRoot string) string {
+	root := defaultsRoot(repoRoot)
+	return filepath.Join(root, ContractsDir, EACCoreModule, DefaultsVersion, DefaultsDir, "logging.yml")
+}
+
+// defaultsRoot returns the root for loading defaults (container-aware)
+func defaultsRoot(repoRoot string) string {
+	if containerRoot := os.Getenv("R2R_CONTAINER_ROOT"); containerRoot != "" {
+		return containerRoot
+	}
+	return repoRoot
+}
+
+// LogsPath returns the path to the out directory
+// Deprecated: Use CommandLogsPath with command and path segments instead
 func LogsPath(repoRoot string) string {
-	return filepath.Join(repoRoot, OutDir, LogsDir)
+	return filepath.Join(repoRoot, OutDir)
 }
 
 // SecurityOutputPath returns the path to security scan output
@@ -322,8 +347,20 @@ func TemplatePath(repoRoot string, subpaths ...string) string {
 }
 
 // CommandLogsPath returns the path to a command's log directory
-func CommandLogsPath(repoRoot, command string) string {
-	return filepath.Join(repoRoot, OutDir, LogsDir, command)
+// Supports flexible path construction with optional path segments:
+//   CommandLogsPath(root, "design") → out/design/
+//   CommandLogsPath(root, "build", "eac-core") → out/build/eac-core/
+//   CommandLogsPath(root, "templates", "apply") → out/templates/apply/
+func CommandLogsPath(repoRoot, command string, pathSegments ...string) string {
+	parts := []string{repoRoot, OutDir, command}
+	parts = append(parts, pathSegments...)
+	return filepath.Join(parts...)
+}
+
+// CommandsLogPath returns path to the unified commands log file
+// Example: CommandsLogPath(root) -> <root>/out/commands.log
+func CommandsLogPath(repoRoot string) string {
+	return filepath.Join(repoRoot, OutDir, "commands.log")
 }
 
 // StripSpecsPrefix removes the specs/ prefix from a path
@@ -356,6 +393,15 @@ func AIConfigFile(repoRoot, command, filename string) string {
 // AITestMockPath returns the path to the AI test mock response file
 func AITestMockPath(repoRoot string) string {
 	return filepath.Join(repoRoot, R2RDir, "test", "ai-mock.txt")
+}
+
+// AIPromptsPath returns path to AI prompts (team override or system default)
+// promptType: "team" for .r2r/eac/templates/ai, "system" for templates/ai
+func AIPromptsPath(repoRoot string, promptType, command, filename string) string {
+	if promptType == "team" {
+		return filepath.Join(repoRoot, R2RDir, EACDir, "templates", "ai", command, filename)
+	}
+	return filepath.Join(repoRoot, TemplatesDir, "ai", command, filename)
 }
 
 // EACConfigFilePath returns the path to the main EAC configuration file
@@ -558,4 +604,70 @@ func BuildStatePath(repoRoot, stateFileName string) string {
 // TestStatePath returns the path to the test state file
 func TestStatePath(repoRoot, stateFileName string) string {
 	return filepath.Join(repoRoot, OutDir, TestDir, stateFileName)
+}
+
+// ============================================================================
+// Additional Path Helpers for Common Patterns
+// ============================================================================
+
+// BuildOutputDir returns the root build output directory (out/build)
+func BuildOutputDir(repoRoot string) string {
+	return filepath.Join(repoRoot, OutDir, BuildDir)
+}
+
+// BuildLogPath returns the path to a module's build.log file
+func BuildLogPath(repoRoot, moniker string) string {
+	return filepath.Join(repoRoot, OutDir, BuildDir, moniker, "build.log")
+}
+
+// BuildTimingPath returns the path to a module's build-timing.txt file
+func BuildTimingPath(repoRoot, moniker string) string {
+	return filepath.Join(repoRoot, OutDir, BuildDir, moniker, "build-timing.txt")
+}
+
+// TestSuiteOutputPath returns the path to a test suite's output directory
+func TestSuiteOutputPath(repoRoot, suiteName string) string {
+	return filepath.Join(repoRoot, OutDir, TestDir, suiteName)
+}
+
+// TestModuleOutputPath returns the path to a module's test output within a suite
+func TestModuleOutputPath(repoRoot, suiteName, moniker string) string {
+	return filepath.Join(repoRoot, OutDir, TestDir, suiteName, moniker)
+}
+
+// TestTimingPath returns the path to a test suite's test-timing.txt file
+func TestTimingPath(repoRoot, suiteName string) string {
+	return filepath.Join(repoRoot, OutDir, TestDir, suiteName, "test-timing.txt")
+}
+
+// RiskControlsPath returns the path to the risk controls directory
+func RiskControlsPath(repoRoot string) string {
+	return filepath.Join(repoRoot, SpecsDir, RiskControlsDir)
+}
+
+// RiskCatalogPath returns the path to the risk catalog file
+func RiskCatalogPath(repoRoot string) string {
+	return filepath.Join(repoRoot, TemplatesDir, "specs", "risk-catalog", "controls.catalog.json")
+}
+
+// TemplateSpecsPath returns the path to specs templates subdirectory
+func TemplateSpecsPath(repoRoot string, subpaths ...string) string {
+	parts := append([]string{repoRoot, TemplatesDir, "specs"}, subpaths...)
+	return filepath.Join(parts...)
+}
+
+// TemplateReportsPath returns the path to reports templates subdirectory
+func TemplateReportsPath(repoRoot string, subpaths ...string) string {
+	parts := append([]string{repoRoot, TemplatesDir, "reports"}, subpaths...)
+	return filepath.Join(parts...)
+}
+
+// SpecsFeaturePath returns the path to a feature specification file
+// For module-scoped features: SpecsFeaturePath(root, moduleName, featureName)
+// For top-level features: SpecsFeaturePath(root, "", featureName) or just pass featureName as first param
+func SpecsFeaturePath(repoRoot, moduleName, featureName string) string {
+	if moduleName == "" {
+		return filepath.Join(repoRoot, SpecsDir, featureName, "specification.feature")
+	}
+	return filepath.Join(repoRoot, SpecsDir, moduleName, featureName, "specification.feature")
 }

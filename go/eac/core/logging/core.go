@@ -7,6 +7,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"go.uber.org/zap/zapcore"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 // logsPath returns the path to the logs output directory
@@ -46,7 +47,7 @@ func newConfigLevelEnabler(levels []string) zapcore.LevelEnabler {
 
 // buildConsoleCore creates a console output core based on logging config.
 func buildConsoleCore(cfg Config, logCfg LoggingConfig) zapcore.Core {
-	encoder := CreateEncoder(logCfg.Console.Formatter, cfg.Module)
+	encoder := CreateEncoder(logCfg.Console.Formatter, cfg.Command)
 	enabler := newConfigLevelEnabler(logCfg.Console.Levels)
 
 	// If debug mode is enabled, also show debug on console
@@ -58,23 +59,53 @@ func buildConsoleCore(cfg Config, logCfg LoggingConfig) zapcore.Core {
 	return zapcore.NewCore(encoder, zapcore.AddSync(os.Stdout), enabler)
 }
 
-// buildFileCore creates a file output core based on logging config.
-// Returns the core and the file that needs to be closed.
-func buildFileCore(cfg Config, logCfg LoggingConfig) (zapcore.Core, *os.File, error) {
-	// Create log directory: out/logs/<module>/
-	logDir := filepath.Join(logsPath(cfg.WorkspaceRoot), cfg.Module)
-	if err := os.MkdirAll(logDir, 0755); err != nil {
+// buildFileCore creates a file output core for unified commands.log with rolling support.
+// Returns the core and the writer that needs to be closed.
+func buildFileCore(cfg Config, logCfg LoggingConfig) (zapcore.Core, io.Closer, error) {
+	// Ensure out/ directory exists
+	if err := os.MkdirAll(filepath.Join(cfg.WorkspaceRoot, paths.OutDir), 0755); err != nil {
 		return nil, nil, err
 	}
 
-	logPath := filepath.Join(logDir, "debug.log")
-	file, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	// Unified log: out/commands.log with rolling
+	logPath := paths.CommandsLogPath(cfg.WorkspaceRoot)
+	writer := &lumberjack.Logger{
+		Filename:   logPath,
+		MaxSize:    logCfg.File.MaxSizeMB,  // MB
+		MaxBackups: logCfg.File.MaxBackups,
+		MaxAge:     logCfg.File.MaxAgeDays, // days
+		Compress:   logCfg.File.Compress != nil && *logCfg.File.Compress,
+	}
+
+	encoder := CreateEncoder(logCfg.File.Formatter, cfg.Command)
+	enabler := newConfigLevelEnabler(logCfg.File.Levels)
+
+	return zapcore.NewCore(encoder, zapcore.AddSync(writer), enabler), writer, nil
+}
+
+// buildTargetFileCore creates extra log core from logging.yml targets config.
+// Returns nil if no target is configured for this command or no unit is specified.
+// Target logs use simple file output (no rolling) since they're per-unit.
+func buildTargetFileCore(cfg Config, logCfg LoggingConfig) (zapcore.Core, io.Closer, error) {
+	// Check if command has a target configured
+	target, ok := logCfg.GetTarget(cfg.Command)
+	if !ok || cfg.Unit == "" {
+		return nil, nil, nil
+	}
+
+	// Resolve path pattern with unit
+	targetPath := target.ResolveTargetPath(cfg.WorkspaceRoot, cfg.Unit)
+	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+		return nil, nil, err
+	}
+
+	file, err := os.OpenFile(targetPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	encoder := CreateEncoder(logCfg.File.Formatter, cfg.Module)
-	enabler := newConfigLevelEnabler(logCfg.File.Levels)
+	encoder := CreateEncoder(target.Formatter, cfg.Command)
+	enabler := newConfigLevelEnabler(target.Levels)
 
 	return zapcore.NewCore(encoder, zapcore.AddSync(file), enabler), file, nil
 }
@@ -91,16 +122,32 @@ func buildCore(cfg Config) (zapcore.Core, []io.Closer, error) {
 
 	consoleCore := buildConsoleCore(cfg, logCfg)
 
-	// Only add file core when enabled in config AND EnableFileLogging is true
-	if !logCfg.File.IsEnabled() || !cfg.EnableFileLogging {
-		return consoleCore, nil, nil
+	// R2R_TEST_LOGGING_ACTIVE=true disables unified log but allows target logs
+	testLoggingActive := os.Getenv("R2R_TEST_LOGGING_ACTIVE") == "true"
+
+	var closers []io.Closer
+	cores := []zapcore.Core{consoleCore}
+
+	// Add unified file core (disabled when test logging active)
+	if logCfg.File.IsEnabled() && cfg.EnableFileLogging && !testLoggingActive {
+		fileCore, file, err := buildFileCore(cfg, logCfg)
+		if err == nil {
+			cores = append(cores, fileCore)
+			closers = append(closers, file)
+		}
 	}
 
-	fileCore, file, err := buildFileCore(cfg, logCfg)
-	if err != nil {
-		// Continue with console only on error
-		return consoleCore, nil, nil
+	// Add target core if configured (for build/test with unit) - always enabled
+	if logCfg.File.IsEnabled() && cfg.EnableFileLogging {
+		targetCore, targetFile, err := buildTargetFileCore(cfg, logCfg)
+		if err == nil && targetCore != nil {
+			cores = append(cores, targetCore)
+			closers = append(closers, targetFile)
+		}
 	}
 
-	return zapcore.NewTee(consoleCore, fileCore), []io.Closer{file}, nil
+	if len(cores) == 1 {
+		return consoleCore, nil, nil
+	}
+	return zapcore.NewTee(cores...), closers, nil
 }

@@ -46,24 +46,12 @@ func init() {
 
 var log = logging.C()
 
-// writeDebugFile writes content to a debug file when debug mode is enabled.
-func writeDebugFile(workspaceRoot string, logger *logging.Logger, filename string, content string) {
-	if !logger.IsDebugMode() {
-		return
-	}
-
-	debugDir := filepath.Join(workspaceRoot, "out", "logs", "commit")
-	if err := os.MkdirAll(debugDir, 0755); err != nil {
-		logger.Warn(fmt.Sprintf("Failed to create debug directory: %v", err))
-		return
-	}
-
-	debugFile := filepath.Join(debugDir, filename)
-	if err := os.WriteFile(debugFile, []byte(content), 0644); err != nil {
-		logger.Warn(fmt.Sprintf("Failed to write debug file %s: %v", debugFile, err))
-	} else {
-		logger.Debug(fmt.Sprintf("Saved debug file: %s", debugFile))
-	}
+// logDebugArtifact logs debug content with labeled sections to the log file.
+// This replaces writeDebugFile - content goes to out/commands.log instead of separate files.
+func logDebugArtifact(logger *logging.Logger, label string, content string) {
+	logger.Debug(fmt.Sprintf("=== %s START ===", label))
+	logger.Debug(content)
+	logger.Debug(fmt.Sprintf("=== %s END ===", label))
 }
 
 // gitRepo holds the git repository instance for testing
@@ -95,12 +83,19 @@ func CreateSquashMessage() int {
 		return 1
 	}
 
-	// Phase 2: Initialize logger
+	// Phase 2: Get workspace root (needed for logger)
+	workspaceRoot, err := repository.GetRepositoryRoot("")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: Failed to get workspace root: %v\n", err)
+		return 1
+	}
+
+	// Phase 3: Initialize logger with workspace root
 	var logger *logging.Logger
 	if config.debug {
-		logger, err = logging.NewWithDebug("squash-message", "")
+		logger, err = logging.NewWithDebug("create", workspaceRoot)
 	} else {
-		logger, err = logging.NewDefault("squash-message", "")
+		logger, err = logging.NewDefault("create", workspaceRoot)
 	}
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: Failed to initialize logger: %v\n", err)
@@ -109,13 +104,6 @@ func CreateSquashMessage() int {
 	defer logger.Sync()
 
 	log.Debug("Starting create squash-message command")
-
-	// Phase 3: Get workspace root
-	workspaceRoot, err := repository.GetRepositoryRoot("")
-	if err != nil {
-		logger.Error(fmt.Sprintf("Failed to get workspace root: %v", err))
-		return 1
-	}
 
 	// Phase 4: Open git repository
 	repo, err := getGitRepo(workspaceRoot)
@@ -186,7 +174,7 @@ func CreateSquashMessage() int {
 
 	// Phase 9: Build prompt context
 	context := buildSquashContext(currentBranch, config.baseBranch, commits, filesWithModules, diff, diffStats, affectedModules)
-	writeDebugFile(workspaceRoot, logger, "squash-context.md", context)
+	logDebugArtifact(logger, "SQUASH-CONTEXT", context)
 
 	// Phase 10: Generate top-level message using AI
 	logger.Info("Generating squash commit message using AI...")
@@ -205,7 +193,7 @@ func CreateSquashMessage() int {
 
 	// Phase 12: Assemble final message
 	finalMessage := assembleMessage(topLevelMessage, moduleSections)
-	writeDebugFile(workspaceRoot, logger, "squash-final.md", finalMessage)
+	logDebugArtifact(logger, "SQUASH-FINAL", finalMessage)
 
 	// Phase 13: Output message (validation skipped for now)
 	fmt.Println(">>>>>>OUTPUT START<<<<<<")
@@ -215,17 +203,17 @@ func CreateSquashMessage() int {
 	return 0
 }
 
-// config holds the parsed command configuration
-type config struct {
+// squashConfig holds the parsed command configuration
+type squashConfig struct {
 	baseBranch string
 	debug      bool
 }
 
 // parseConfig parses command line arguments
-func parseConfig() (*config, error) {
+func parseConfig() (*squashConfig, error) {
 	args := os.Args[3:] // Skip "r2r", "create", "squash-message"
 
-	cfg := &config{
+	cfg := &squashConfig{
 		baseBranch: "main",
 		debug:      false,
 	}
@@ -356,9 +344,13 @@ func buildFilesTable(files []repository.RepositoryFileWithModule) string {
 
 // generateTopLevelMessage generates the top-level commit message using AI
 func generateTopLevelMessage(workspaceRoot string, logger *logging.Logger, promptContext string) (string, error) {
-	// Load squash prompt template using unified loader
+	// Load squash prompt template with three-tier priority:
+	// 1. Command flag (not applicable - internal function)
+	// 2. Team override (.r2r/eac/templates/ai/commit-message/squash.md)
+	// 3. System default (templates/ai/commit-message/squash.md)
+	// Note: "squash" is a variant prompt (convention adds .md automatically)
 	loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "")
-	promptTemplate, _, err := loader.LoadPrompt("commit/squash.md", "")
+	promptTemplate, _, err := loader.LoadPrompt("squash", "")
 	if err != nil {
 		return "", fmt.Errorf("failed to load squash.md template: %w", err)
 	}
@@ -366,7 +358,7 @@ func generateTopLevelMessage(workspaceRoot string, logger *logging.Logger, promp
 	// Build full prompt
 	prompt := string(promptTemplate) + "\n\n" + promptContext
 
-	writeDebugFile(workspaceRoot, logger, "squash-prompt.md", prompt)
+	logDebugArtifact(logger, "SQUASH-PROMPT", prompt)
 
 	// Execute AI (includes test provider support for mocking)
 	executor := ai.NewExecutor(workspaceRoot)
@@ -377,7 +369,7 @@ func generateTopLevelMessage(workspaceRoot string, logger *logging.Logger, promp
 		return "", fmt.Errorf("AI execution failed: %w", err)
 	}
 
-	writeDebugFile(workspaceRoot, logger, "squash-ai-response.md", result)
+	logDebugArtifact(logger, "SQUASH-AI-RESPONSE", result)
 
 	return strings.TrimSpace(result), nil
 }

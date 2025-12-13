@@ -46,7 +46,7 @@ func TestWriteDebugFile(t *testing.T) {
 
 		WriteDebugFile(logger, tmpDir, "test.txt", "test content")
 
-		expectedPath := filepath.Join(tmpDir, "out", "logs", "work", "test.txt")
+		expectedPath := filepath.Join(tmpDir, "out", "work", "test.txt")
 		content, err := os.ReadFile(expectedPath)
 		if err != nil {
 			t.Fatalf("Failed to read debug file: %v", err)
@@ -63,7 +63,7 @@ func TestWriteDebugFile(t *testing.T) {
 
 		WriteDebugFile(logger, tmpDir, "should-not-exist.txt", "content")
 
-		expectedPath := filepath.Join(tmpDir, "out", "logs", "work", "should-not-exist.txt")
+		expectedPath := filepath.Join(tmpDir, "out", "work", "should-not-exist.txt")
 		if _, err := os.Stat(expectedPath); !os.IsNotExist(err) {
 			t.Error("File should not exist in non-debug mode")
 		}
@@ -82,7 +82,7 @@ func TestWriteDebugFilef(t *testing.T) {
 
 	WriteDebugFilef(logger, tmpDir, "test-%d.txt", "test content", 123)
 
-	expectedPath := filepath.Join(tmpDir, "out", "logs", "work", "test-123.txt")
+	expectedPath := filepath.Join(tmpDir, "out", "work", "test-123.txt")
 	content, err := os.ReadFile(expectedPath)
 	if err != nil {
 		t.Fatalf("Failed to read debug file: %v", err)

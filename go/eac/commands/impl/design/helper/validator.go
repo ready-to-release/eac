@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
@@ -105,7 +106,12 @@ func listAvailableModules() ([]moduleInfo, error) {
 		return nil, fmt.Errorf("failed to find repository root: %w", err)
 	}
 
-	specsDir := paths.SpecsPath(repoRoot, "")
+	cfg, err := config.Load(config.LoadOptions{RepoRoot: repoRoot})
+	if err != nil {
+		return nil, fmt.Errorf("failed to load config: %w", err)
+	}
+
+	specsDir := filepath.Join(repoRoot, cfg.Repository.Paths.SpecsRoot)
 
 	// Check if specs directory exists
 	if _, err := os.Stat(specsDir); os.IsNotExist(err) {
@@ -405,7 +411,12 @@ func (v *StructurizrValidatorImpl) executeDockerValidation(workspacePath string)
 		return "", fmt.Errorf("failed to get repository root: %w", err)
 	}
 
-	specsDir := filepath.Join(repoRoot, "specs")
+	cfg, err := config.Load(config.LoadOptions{RepoRoot: repoRoot})
+	if err != nil {
+		return "", fmt.Errorf("failed to load config: %w", err)
+	}
+
+	specsDir := filepath.Join(repoRoot, cfg.Repository.Paths.SpecsRoot)
 
 	// Calculate relative path from specs dir to workspace file
 	relWorkspacePath, err := filepath.Rel(specsDir, absWorkspacePath)

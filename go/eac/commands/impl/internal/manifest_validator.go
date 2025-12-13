@@ -173,7 +173,7 @@ func GetManifestValidatorWithRoot(workspaceRoot string) (*ManifestValidator, err
 func findWorkspaceRoot(startDir string) string {
 	dir := startDir
 	for {
-		if _, err := os.Stat(filepath.Join(dir, ".r2r")); err == nil {
+		if _, err := os.Stat(paths.R2RPath(dir)); err == nil {
 			return dir
 		}
 		parent := filepath.Dir(dir)

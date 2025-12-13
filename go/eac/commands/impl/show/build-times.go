@@ -20,6 +20,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/impl/internal/testdata"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 )
 
@@ -50,7 +51,14 @@ func ShowBuildTimesForModules(modules []string, topN int, buildOutputDir string)
 			return 1
 		}
 
-		buildOutputDir = filepath.Join(repoRoot, "out", "build")
+		// Load config to get build output directory
+		cfg, err := config.Load(config.LoadOptions{RepoRoot: repoRoot})
+		if err != nil {
+			log.Errorf("failed to load config: %v", err)
+			return 1
+		}
+
+		buildOutputDir = filepath.Join(repoRoot, cfg.Repository.Paths.Out.Build)
 	} else {
 		// Derive repo root from buildOutputDir
 		var err error

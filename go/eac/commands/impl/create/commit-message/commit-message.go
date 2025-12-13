@@ -23,12 +23,11 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 
 	commitmessageinternal "github.com/ready-to-release/eac/go/eac/commands/impl/create/commit-message/internal"
-	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
+	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/git"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -37,34 +36,18 @@ import (
 
 var log = logging.C()
 
-// writeDebugFile writes content to a debug file when debug mode is enabled.
-// Files are written to out/logs/commit/<filename> in the workspace root.
-func writeDebugFile(workspaceRoot string, logger *logging.Logger, filename string, content string) {
-	if !logger.IsDebugMode() {
-		return
-	}
-
-	debugDir := filepath.Join(workspaceRoot, "out", "logs", "commit")
-	if err := os.MkdirAll(debugDir, 0755); err != nil {
-		logger.Warn(fmt.Sprintf("Failed to create debug directory: %v", err))
-		return
-	}
-
-	debugFile := filepath.Join(debugDir, filename)
-	if err := os.WriteFile(debugFile, []byte(content), 0644); err != nil {
-		logger.Warn(fmt.Sprintf("Failed to write debug file %s: %v", debugFile, err))
-	} else {
-		log.Debugf("Saved debug file: %s", debugFile)
-	}
+// logDebugArtifact logs debug content with labeled sections to the log file.
+// This replaces writeDebugFile - content goes to out/commands.log instead of separate files.
+func logDebugArtifact(logger *logging.Logger, label string, content string) {
+	logger.Debug(fmt.Sprintf("=== %s START ===", label))
+	logger.Debug(content)
+	logger.Debug(fmt.Sprintf("=== %s END ===", label))
 }
 
-// writeDebugFilef writes content to a debug file with formatted filename.
-func writeDebugFilef(workspaceRoot string, logger *logging.Logger, format string, content string, args ...interface{}) {
-	if !logger.IsDebugMode() {
-		return
-	}
-	filename := fmt.Sprintf(format, args...)
-	writeDebugFile(workspaceRoot, logger, filename, content)
+// logDebugArtifactf logs debug content with a formatted label.
+func logDebugArtifactf(logger *logging.Logger, format string, content string, args ...interface{}) {
+	label := fmt.Sprintf(format, args...)
+	logDebugArtifact(logger, label, content)
 }
 
 // gitRepo holds the git repository instance for git operations.
@@ -133,9 +116,9 @@ func CreateCommitMessage() int {
 	// Initialize logger early so all code paths can use it
 	var logger *logging.Logger
 	if debug {
-		logger, err = logging.NewWithDebug("commit", workspaceRoot)
+		logger, err = logging.NewWithDebug("create", workspaceRoot)
 	} else {
-		logger, err = logging.NewDefault("commit", workspaceRoot)
+		logger, err = logging.NewDefault("create", workspaceRoot)
 	}
 	if err != nil {
 		log.Errorf("initializing logger: %v", err)
@@ -401,7 +384,7 @@ func getGitDiffAndStats(workspaceRoot string, logger *logging.Logger) (string, s
 func generateTopLevelSummary(cfg *executionConfig, stagedFilesTable string, diffStats string, logger *logging.Logger) (string, error) {
 	topLevelContext := buildTopLevelContext(stagedFilesTable, cfg.gitDiff, diffStats, cfg.affectedModules)
 
-	writeDebugFile(cfg.workspaceRoot, logger, "debug-top-level-context.md", topLevelContext)
+	logDebugArtifact(logger, "TOP-LEVEL-CONTEXT", topLevelContext)
 
 	var topLevelOutput string
 	var providerName string
@@ -427,7 +410,7 @@ func generateTopLevelSummary(cfg *executionConfig, stagedFilesTable string, diff
 	// Module sections will be generated separately and appended later
 	topLevelOutput = stripModuleSectionsFromTopLevel(topLevelOutput)
 
-	writeDebugFile(cfg.workspaceRoot, logger, "debug-top-level-output.md", topLevelOutput)
+	logDebugArtifact(logger, "TOP-LEVEL-OUTPUT", topLevelOutput)
 
 	return topLevelOutput, nil
 }
@@ -444,15 +427,15 @@ func generateModuleSections(cfg *executionConfig, logger *logging.Logger) ([]str
 func assembleFinalMessage(cfg *executionConfig, topLevel string, moduleSections []string, logger *logging.Logger) string {
 	// Combine sections
 	combinedMessage := combineCommitSections(topLevel, moduleSections)
-	writeDebugFile(cfg.workspaceRoot, logger, "debug-combined-message.md", combinedMessage)
+	logDebugArtifact(logger, "COMBINED-MESSAGE", combinedMessage)
 
 	// Auto-cleanup
 	cleanedOutput := commitmessageinternal.AutoCleanup(combinedMessage)
-	writeDebugFile(cfg.workspaceRoot, logger, "debug-after-cleanup.md", cleanedOutput)
+	logDebugArtifact(logger, "AFTER-CLEANUP", cleanedOutput)
 
 	// Add missing modules
 	cleanedOutput = addMissingModules(cleanedOutput, cfg.affectedModules, cfg.stagedFiles, cfg.gitDiff)
-	writeDebugFile(cfg.workspaceRoot, logger, "debug-after-missing-modules.md", cleanedOutput)
+	logDebugArtifact(logger, "AFTER-MISSING-MODULES", cleanedOutput)
 
 	return cleanedOutput
 }

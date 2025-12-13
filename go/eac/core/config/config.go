@@ -268,11 +268,14 @@ func (c *EACConfig) LoadAll(validateSchemas bool) error {
 	}
 
 	// Apply type-specific defaults after both modules and types are loaded
-	c.Repository.ApplyTypeDefaults(c.ModuleTypes)
+	// Skip if Repository is nil (can happen in test environments without contract files)
+	if c.Repository != nil {
+		c.Repository.ApplyTypeDefaults(c.ModuleTypes)
 
-	// Validate defined workflow paths and auto-discover missing ones
-	if err := c.Repository.ValidateAndDiscoverWorkflows(c.RepoRoot); err != nil {
-		return fmt.Errorf("workflow validation failed: %w", err)
+		// Validate defined workflow paths and auto-discover missing ones
+		if err := c.Repository.ValidateAndDiscoverWorkflows(c.RepoRoot); err != nil {
+			return fmt.Errorf("workflow validation failed: %w", err)
+		}
 	}
 
 	// === OPTIONAL CONFIGS: Continue on error, collect for reporting ===
@@ -345,7 +348,23 @@ func (c *EACConfig) LoadRepository(validateSchema bool) error {
 	// Step 5: Check if user config exists
 	repoPath := filepath.Join(c.ConfigRoot, RepositoryFileName)
 	if _, err := os.Stat(repoPath); os.IsNotExist(err) {
-		// Use merged defaults only
+		// Use merged defaults only (may be nil in test environments without contract files)
+		if mergedDefaults == nil {
+			// Create empty config with hardcoded defaults to guarantee non-nil
+			mergedDefaults = &RepositoryConfig{
+				Paths: PathsConfig{
+					SpecsRoot: "specs",
+					Out: OutConfig{
+						Root:     "out",
+						Build:    "out/build",
+						Test:     "out/test",
+						Logs:     "out/logs",
+						Security: "out/security",
+						Tools:    "out/tools",
+					},
+				},
+			}
+		}
 		c.Repository = mergedDefaults
 		return nil
 	}
@@ -384,7 +403,11 @@ func (c *EACConfig) LoadModuleTypes(validateSchema bool) error {
 	// Check if user config exists
 	typesPath := filepath.Join(c.ConfigRoot, ModuleTypesFileName)
 	if _, err := os.Stat(typesPath); os.IsNotExist(err) {
-		// Use defaults only
+		// Use defaults only (may be nil in test environments without contract files)
+		if defaults == nil {
+			// Create empty config to guarantee non-nil
+			defaults = &ModuleTypesConfig{}
+		}
 		c.ModuleTypes = defaults
 		return nil
 	}
@@ -517,7 +540,11 @@ func (c *EACConfig) LoadSystemDependencies(validateSchema bool) error {
 	// Check if user config exists
 	depsPath := filepath.Join(c.ConfigRoot, SystemDependenciesFileName)
 	if _, err := os.Stat(depsPath); os.IsNotExist(err) {
-		// Use defaults only
+		// Use defaults only (may be nil in test environments without contract files)
+		if defaults == nil {
+			// Create empty config to guarantee non-nil
+			defaults = &SystemDependenciesConfig{}
+		}
 		defaults.buildDepMap()
 		c.SystemDependencies = defaults
 		return nil
@@ -989,4 +1016,65 @@ func findRepositoryRoot(startPath string) (string, error) {
 		}
 		currentPath = parentPath
 	}
+}
+
+// LoadOrNil safely loads config, returning nil on failure instead of propagating errors.
+// Useful for commands that need to degrade gracefully when config is unavailable (e.g., tests).
+// Disables schema validation for performance since this is often called as a fallback.
+// Returns nil if config loading fails OR if the loaded config is unusable (e.g., nil Repository).
+func LoadOrNil(repoRoot string) *EACConfig {
+	cfg, err := Load(LoadOptions{
+		RepoRoot:        repoRoot,
+		ValidateSchemas: false,
+	})
+	if err != nil {
+		return nil
+	}
+	// Verify the config is actually usable (Repository must be non-nil)
+	// In test environments without contract files, Repository can be nil
+	if cfg == nil || cfg.Repository == nil {
+		return nil
+	}
+	return cfg
+}
+
+// GetLogsPath returns the logs path with graceful fallback to defaults.
+// If config loading fails, returns "out/logs/<subsystem>" relative to repoRoot.
+// This allows commands to write debug logs even when running in incomplete test environments.
+func GetLogsPath(repoRoot string, subsystem string) string {
+	cfg := LoadOrNil(repoRoot)
+	if cfg == nil {
+		return filepath.Join(repoRoot, "out", "logs", subsystem)
+	}
+	return cfg.Repository.LogsPathAbs(repoRoot, subsystem)
+}
+
+// GetSpecsPath returns the specs path with graceful fallback to defaults.
+// If config loading fails, returns "specs/<moduleName>" relative to repoRoot.
+func GetSpecsPath(repoRoot string, moduleName string) string {
+	cfg := LoadOrNil(repoRoot)
+	if cfg == nil {
+		return filepath.Join(repoRoot, "specs", moduleName)
+	}
+	return filepath.Join(repoRoot, cfg.Repository.Paths.SpecsRoot, moduleName)
+}
+
+// GetTestOutputPath returns the test output path with graceful fallback to defaults.
+// If config loading fails, returns "out/test" relative to repoRoot.
+func GetTestOutputPath(repoRoot string) string {
+	cfg := LoadOrNil(repoRoot)
+	if cfg == nil {
+		return filepath.Join(repoRoot, "out", "test")
+	}
+	return cfg.Repository.TestOutputDirAbs(repoRoot)
+}
+
+// GetTestSuiteOutputPath returns the test suite output path with graceful fallback to defaults.
+// If config loading fails, returns "out/test/<suiteName>" relative to repoRoot.
+func GetTestSuiteOutputPath(repoRoot string, suiteName string) string {
+	cfg := LoadOrNil(repoRoot)
+	if cfg == nil {
+		return filepath.Join(repoRoot, "out", "test", suiteName)
+	}
+	return cfg.Repository.TestSuiteOutputPathAbs(repoRoot, suiteName)
 }

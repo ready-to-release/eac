@@ -14,10 +14,11 @@ r2r eac create commit-message [options]
 
 ## Options and Flags
 
-| Flag       | Short | Description                                                  | Default |
-| ---------- | ----- | ------------------------------------------------------------ | ------- |
-| `--commit` | `-c`  | Automatically create the commit without opening editor       | `false` |
-| `--debug`  | `-d`  | Save intermediate outputs to `out/` directory for inspection | `false` |
+| Flag       | Short | Description                                                  | Default             |
+| ---------- | ----- | ------------------------------------------------------------ | ------------------- |
+| `--commit` | `-c`  | Automatically create the commit without opening editor       | `false`             |
+| `--debug`  | `-d`  | Save intermediate outputs to `out/` directory for inspection | `false`             |
+| `--prompt` |       | Custom prompt file path (overrides team and system defaults) | System/team default |
 
 ### Examples
 
@@ -30,6 +31,9 @@ r2r eac create commit-message --commit
 
 # Debug AI generation process
 r2r eac create commit-message --debug
+
+# Use custom prompt
+r2r eac create commit-message --prompt /path/to/custom-prompt.md
 
 # Auto-commit with debug output
 r2r eac create commit-message --commit --debug
@@ -413,33 +417,102 @@ r2r eac init
 
 ### Custom Prompts
 
-Customize AI behavior by editing prompts in `.r2r/eac/ai/commit/`:
+Customize AI behavior using the **three-tier prompt system**. Prompts are loaded with the following priority:
 
-```text
-.r2r/eac/ai/commit/
-├── context-prompt.md       # How to analyze git context
-├── summary-prompt.md       # How to generate summary
-├── module-prompt.md        # How to analyze each module
-└── assembly-prompt.md      # How to combine sections
+#### Priority Order
+
+1. **Command Flag** (highest priority)
+
+   ```bash
+   r2r eac create commit-message --prompt /path/to/custom.md
+   ```
+
+   Use for one-off experiments or testing new prompts
+
+2. **Team Override** (version controlled)
+   - Location: `.r2r/eac/templates/ai/commit/`
+   - For team-wide customizations
+   - Committed to git, affects entire team
+
+3. **System Default** (fallback)
+   - Location: `templates/ai/commit/`
+   - Shipped with r2r
+   - View to understand baseline behavior
+
+#### Available Prompts
+
+| Prompt File | Purpose | Override Location |
+|-------------|---------|-------------------|
+| `module.md` | Multi-module commit sections | `.r2r/eac/templates/ai/commit/module.md` |
+| `top-level.md` | Top-level commit header | `.r2r/eac/templates/ai/commit/top-level.md` |
+
+#### Creating Team Overrides
+
+**Step 1**: Copy system default
+
+```bash
+cp templates/ai/commit/module.md .r2r/eac/templates/ai/commit/module.md
 ```
 
-After editing, generate commits normally - custom prompts are used automatically.
+**Step 2**: Edit for your team's style
 
-**Example customization:**
+```bash
+# Edit to match team conventions
+nano .r2r/eac/templates/ai/commit/module.md
+```
 
-Edit `.r2r/eac/ai/commit/summary-prompt.md` to change how the AI generates summaries:
+**Step 3**: Commit to git
+
+```bash
+git add .r2r/eac/templates/ai/commit/module.md
+git commit -m "chore(eac): customize commit message prompt for team"
+```
+
+**Step 4**: Test
+
+```bash
+git add some-file.go
+r2r eac create commit-message --debug
+# Output shows: "Using team override prompt"
+```
+
+#### Testing Prompts
+
+Use `--debug` to see which prompt is being used:
+
+```bash
+r2r eac create commit-message --debug
+# Shows: "ℹ️  Using team override prompt"
+# or:    "ℹ️  Using system default prompt"
+# or:    "ℹ️  Using command flag prompt"
+```
+
+#### Example Customization
+
+Edit `.r2r/eac/templates/ai/commit/module.md` to customize commit generation:
 
 ```markdown
-# Custom Summary Prompt
+# Team Commit Message Prompt
 
-Analyze the following git changes and generate a commit summary.
+Generate commit messages focusing on:
+- Business value and user impact
+- Technical implementation approach
+- Testing strategy
 
-Focus on:
-- Business value of the change
-- User-facing impact
-- Technical approach
+Use our team conventions:
+- Keep descriptions under 50 characters
+- Use present tense ("add" not "added")
+- Reference JIRA tickets when applicable
 
-Format: <type>(<module>): <description>
+Format: <type>(<module>): <description> [JIRA-123]
+```
+
+#### Detailed Guide
+
+For comprehensive customization guide including examples, troubleshooting, and best practices, see:
+
+```bash
+cat .r2r/eac/templates/ai/README.md
 ```
 
 ## Performance

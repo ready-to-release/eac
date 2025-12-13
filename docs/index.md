@@ -37,64 +37,48 @@ Traditional compliance creates friction: manual documentation, periodic audits, 
 
 Documentation is organized using the [Diataxis framework](https://diataxis.fr/) - a systematic approach to technical documentation authoring:
 
-<table>
-<tr>
-<td width="50%" valign="top" markdown="1">
-
-### [Tutorials](tutorials/)
-
-> **Learning-oriented guides**
-
-Step-by-step lessons that take you through a series of steps to complete a project. Start here if you're new to the CLI and want hands-on guidance through core concepts.
-
-- [Quick Start Guide](tutorials/getting-started/quick-start.md)
-- [Your First Feature Specification](tutorials/getting-started/first-specification.md)
-
-</td>
-<td width="50%" valign="top" markdown="1">
-
-### [How-to Guides](how-to-guides/)
-
-> **Task-oriented recipes**
-
-Guides that show you how to solve specific problems. Use these when you need to accomplish a particular task.
-
-- [EAC Commands](how-to-guides/eac/commands/)
-- [EAC Configuration](how-to-guides/eac/configuration/)
-- [EAC Modules](how-to-guides/eac/modules/)
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top" markdown="1">
-
-### [Reference](reference/)
-
-> **Information-oriented descriptions**
-
-Technical reference material for looking up details. Check here for system architecture, module contracts, command syntax, configuration options, and specifications.
-
-- [R2R and EAC Architecture](reference/r2r-eac/) - System overview and design
-- [Repository Layout](reference/r2r-eac/repository-layout.md) - File structure
-- [Command Reference](reference/commands/) - CLI commands
-- [Decision Records](reference/decision-records/) - Architectural decisions
-
-</td>
-<td width="50%" valign="top" markdown="1">
-
-### [Explanation](explanation/)
-
-> **Understanding-oriented discussion**
-
-Conceptual explanations that clarify and illuminate. Read these to understand the "why" behind the system.
-
-- [Everything as Code](explanation/everything-as-code/)
-- [Continuous Delivery Model](explanation/continuous-delivery/)
-- [Compliance Transformation](explanation/transformation/)
-
-</td>
-</tr>
-</table>
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2em; margin: 2em 0;">
+<div>
+<h3><a href="tutorials/">Tutorials</a></h3>
+<p><strong>Learning-oriented guides</strong></p>
+<p>Step-by-step lessons that take you through a series of steps to complete a project. Start here if you're new to the CLI and want hands-on guidance through core concepts.</p>
+<ul>
+<li><a href="tutorials/getting-started/quick-start/">Quick Start Guide</a></li>
+<li><a href="tutorials/getting-started/first-specification/">Your First Feature Specification</a></li>
+</ul>
+</div>
+<div>
+<h3><a href="how-to-guides/">How-to Guides</a></h3>
+<p><strong>Task-oriented recipes</strong></p>
+<p>Guides that show you how to solve specific problems. Use these when you need to accomplish a particular task.</p>
+<ul>
+<li><a href="how-to-guides/eac/commands/">EAC Commands</a></li>
+<li><a href="how-to-guides/eac/configuration/">EAC Configuration</a></li>
+<li><a href="how-to-guides/eac/modules/">EAC Modules</a></li>
+</ul>
+</div>
+<div>
+<h3><a href="reference/">Reference</a></h3>
+<p><strong>Information-oriented descriptions</strong></p>
+<p>Technical reference material for looking up details. Check here for system architecture, module contracts, command syntax, configuration options, and specifications.</p>
+<ul>
+<li><a href="reference/r2r-eac/">R2R and EAC Architecture</a> - System overview and design</li>
+<li><a href="reference/r2r-eac/repository-layout/">Repository Layout</a> - File structure</li>
+<li><a href="reference/commands/">Command Reference</a> - CLI commands</li>
+<li><a href="reference/decision-records/">Decision Records</a> - Architectural decisions</li>
+</ul>
+</div>
+<div>
+<h3><a href="explanation/">Explanation</a></h3>
+<p><strong>Understanding-oriented discussion</strong></p>
+<p>Conceptual explanations that clarify and illuminate. Read these to understand the "why" behind the system.</p>
+<ul>
+<li><a href="explanation/everything-as-code/">Everything as Code</a></li>
+<li><a href="explanation/continuous-delivery/">Continuous Delivery Model</a></li>
+<li><a href="explanation/transformation/">Compliance Transformation</a></li>
+</ul>
+</div>
+</div>
 
 **Choose your path:**
 
@@ -118,3 +102,4 @@ docs/
 ├── reference/                  # Technical specifications
 └── explanation/                # Conceptual discussions
 ```
+<\!-- test -->
