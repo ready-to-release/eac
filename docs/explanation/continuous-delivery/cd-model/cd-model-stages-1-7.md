@@ -30,7 +30,9 @@ Topic branches are created from HEAD of main (called "topic branches") or HEAD o
 
 ### Environment: DevBox
 
-The DevBox is the local development environment where engineers have full control. It typically includes:
+The DevBox is the local development environment where engineers have full control.
+
+It typically includes:
 
 - IDE or code editor
 - Local build tools and compilers
@@ -49,7 +51,9 @@ Stage 1 embraces collaborative requirement definition through the "Three Amigos"
 - **Development Team**: Contributes technical feasibility and implementation details
 - **Product Owners**: Provide clarity on business goals and expected outcomes
 
-This collaboration produces clear, concise, and actionable specifications that serve as the single source of truth. Requirements are expressed as [executable specifications (Gherkin scenarios, acceptance criteria)](../../specifications/index.md) rather than static documents.
+This collaboration produces clear, concise, and actionable specifications that serve as the single source of truth.
+
+Requirements are expressed as [executable specifications (Gherkin scenarios, acceptance criteria)](../../specifications/index.md) rather than static documents.
 
 ### Best Practices
 

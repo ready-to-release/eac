@@ -58,13 +58,13 @@ graph TB
 
 ## Component Layers
 
-| Layer | Components | Purpose | Technology |
-|-------|------------|---------|------------|
-| **CLI** | R2R CLI binary | Command-line interface, Docker orchestration | Go (Cobra, Docker SDK) |
-| **Extension** | ext-eac container | Isolated execution environment | Docker container |
-| **Core** | eac-commands, eac-core, eac-specs | Business logic and domain libraries | Go modules |
-| **MCP** | eac-mcp-commands | LLM tool integration via MCP protocol | Go (JSON-RPC) |
-| **Repository** | Contracts, modules, specs | Configuration and source code | YAML, Go, Gherkin |
+| Layer          | Components                        | Purpose                                      | Technology             |
+| -------------- | --------------------------------- | -------------------------------------------- | ---------------------- |
+| **CLI**        | R2R CLI binary                    | Command-line interface, Docker orchestration | Go (Cobra, Docker SDK) |
+| **Extension**  | ext-eac container                 | Isolated execution environment               | Docker container       |
+| **Core**       | eac-commands, eac-core, eac-specs | Business logic and domain libraries          | Go modules             |
+| **MCP**        | eac-mcp-commands                  | LLM tool integration via MCP protocol        | Go (JSON-RPC)          |
+| **Repository** | Contracts, modules, specs         | Configuration and source code                | YAML, Go, Gherkin      |
 
 ---
 
@@ -76,12 +76,12 @@ graph TB
 
 ### Responsibilities
 
-| Component | Responsibility |
-|-----------|----------------|
-| **CLI Core** | Command parsing, argument validation using Cobra |
-| **Config Loader** | Load `.r2r/r2r-cli.yml` configuration via Viper |
+| Component               | Responsibility                                       |
+| ----------------------- | ---------------------------------------------------- |
+| **CLI Core**            | Command parsing, argument validation using Cobra     |
+| **Config Loader**       | Load `.r2r/r2r-cli.yml` configuration via Viper      |
 | **Docker Orchestrator** | Container lifecycle management (create, start, stop) |
-| **Git Discovery** | Find repository root, mount as `/workspace` |
+| **Git Discovery**       | Find repository root, mount as `/workspace`          |
 
 ### Configuration
 
@@ -111,12 +111,12 @@ extensions:
 
 ### Modules
 
-| Module | Purpose | Type |
-|--------|---------|------|
-| **eac-commands** | 110+ command implementations with integrated AI providers (Anthropic, OpenAI) | go-commands |
-| **eac-core** | Domain libraries, contract loading | go-library |
-| **eac-specs** | BDD test infrastructure (Godog) | go-library |
-| **eac-mcp-commands** | MCP server for LLM tool integration | go-mcp |
+| Module               | Purpose                                                                              | Type        |
+| -------------------- | ------------------------------------------------------------------------------------ | ----------- |
+| **eac-commands**     | hundreds of command implementations with integrated AI providers (Anthropic, OpenAI) | go-commands |
+| **eac-core**         | Domain libraries, contract loading                                                   | go-library  |
+| **eac-specs**        | BDD test infrastructure (Godog)                                                      | go-library  |
+| **eac-mcp-commands** | MCP server for LLM tool integration                                                  | go-mcp      |
 
 ### Container Structure
 
@@ -135,16 +135,16 @@ ext-eac:latest
 
 **Commands organized by category**:
 
-| Category | Example Commands |
-|----------|------------------|
-| **Discovery** | `show-modules`, `show-dependencies`, `get-files` |
-| **Build** | `build`, `get-artifacts`, `validate-artifacts` |
-| **Test** | `test`, `test-suite`, `test-debug`, `show-test-summary` |
-| **Validation** | `validate-contracts`, `validate-dependencies`, `validate-specs` |
-| **Release** | `release-changelog`, `release-this`, `release-pending` |
-| **Security** | `scan-vuln`, `scan-sast`, `scan-zap`, `scan-secrets` |
-| **AI** | `create-commit-message`, `create-spec`, `create-design`, `create-pr` |
-| **CI/CD** | `pipeline-run`, `pipeline-wait`, `get-changed-modules-ci` |
+| Category       | Example Commands                                                     |
+| -------------- | -------------------------------------------------------------------- |
+| **Discovery**  | `show-modules`, `show-dependencies`, `get-files`                     |
+| **Build**      | `build`, `get-artifacts`, `validate-artifacts`                       |
+| **Test**       | `test`, `test-suite`, `test-debug`, `show-test-summary`              |
+| **Validation** | `validate-contracts`, `validate-dependencies`, `validate-specs`      |
+| **Release**    | `release-changelog`, `release-this`, `release-pending`               |
+| **Security**   | `scan-vuln`, `scan-sast`, `scan-zap`, `scan-secrets`                 |
+| **AI**         | `create-commit-message`, `create-spec`, `create-design`, `create-pr` |
+| **CI/CD**      | `pipeline-run`, `pipeline-wait`, `get-changed-modules-ci`            |
 
 ### Command Pattern
 
@@ -171,13 +171,13 @@ func (h *BuildHandler) Execute(args []string) error {
 
 ### Core Packages
 
-| Package | Purpose |
-|---------|---------|
-| **contracts** | YAML contract loading and JSON schema validation |
-| **repository** | Module registry and dependency graph |
-| **builder** | Build orchestration and artifact management |
-| **tester** | Test execution and result collection |
-| **validator** | Contract and file validation |
+| Package        | Purpose                                          |
+| -------------- | ------------------------------------------------ |
+| **contracts**  | YAML contract loading and JSON schema validation |
+| **repository** | Module registry and dependency graph             |
+| **builder**    | Build orchestration and artifact management      |
+| **tester**     | Test execution and result collection             |
+| **validator**  | Contract and file validation                     |
 
 ### Repository Registry
 
@@ -210,10 +210,10 @@ type Repository struct {
 
 ### Supported Providers
 
-| Provider | Models | Use Cases |
-|----------|--------|-----------|
+| Provider      | Models                     | Use Cases                            |
+| ------------- | -------------------------- | ------------------------------------ |
 | **Anthropic** | Claude Opus, Sonnet, Haiku | Commit messages, specs, designs, PRs |
-| **OpenAI** | GPT-4, GPT-3.5 | Commit messages, specs, designs, PRs |
+| **OpenAI**    | GPT-4, GPT-3.5             | Commit messages, specs, designs, PRs |
 
 ### Configuration
 
@@ -246,12 +246,12 @@ api_key_env: ANTHROPIC_API_KEY
 
 ### Components
 
-| Component | Purpose |
-|-----------|---------|
-| **Godog Integration** | Execute Gherkin feature files |
-| **Step Definitions** | Reusable test steps in Go |
-| **Test Helpers** | Isolated test environments and utilities |
-| **Evidence Collection** | Generate OSCAL compliance evidence |
+| Component               | Purpose                                  |
+| ----------------------- | ---------------------------------------- |
+| **Godog Integration**   | Execute Gherkin feature files            |
+| **Step Definitions**    | Reusable test steps in Go                |
+| **Test Helpers**        | Isolated test environments and utilities |
+| **Evidence Collection** | Generate OSCAL compliance evidence       |
 
 ### Test Layers
 
@@ -271,7 +271,7 @@ api_key_env: ANTHROPIC_API_KEY
 
 ### MCP Tools
 
-**110+ tools** exposed as `mcp__commands__*`:
+**command tools** exposed as `mcp__commands__*`:
 
 ```json
 {
@@ -350,26 +350,26 @@ api_key_env: ANTHROPIC_API_KEY
 
 ### Go Ecosystem
 
-| Component | Technology |
-|-----------|------------|
-| **CLI Framework** | Cobra |
-| **Configuration** | Viper |
-| **Docker SDK** | github.com/docker/docker |
-| **BDD Testing** | Godog (Cucumber for Go) |
-| **JSON Schema** | gojsonschema |
+| Component         | Technology               |
+| ----------------- | ------------------------ |
+| **CLI Framework** | Cobra                    |
+| **Configuration** | Viper                    |
+| **Docker SDK**    | github.com/docker/docker |
+| **BDD Testing**   | Godog (Cucumber for Go)  |
+| **JSON Schema**   | gojsonschema             |
 
 ### External Tools
 
-| Tool | Purpose |
-|------|---------|
-| **Docker** | Container runtime |
-| **Git** | Version control and change detection |
-| **GitHub CLI (gh)** | GitHub API access |
-| **MkDocs** | Documentation generation |
-| **Structurizr** | C4 model architecture diagrams |
-| **Trivy** | Vulnerability scanning, SBOM |
-| **Semgrep** | Static analysis (SAST) |
-| **OWASP ZAP** | Dynamic analysis (DAST) |
+| Tool                | Purpose                              |
+| ------------------- | ------------------------------------ |
+| **Docker**          | Container runtime                    |
+| **Git**             | Version control and change detection |
+| **GitHub CLI (gh)** | GitHub API access                    |
+| **MkDocs**          | Documentation generation             |
+| **Structurizr**     | C4 model architecture diagrams       |
+| **Trivy**           | Vulnerability scanning, SBOM         |
+| **Semgrep**         | Static analysis (SAST)               |
+| **OWASP ZAP**       | Dynamic analysis (DAST)              |
 
 ---
 

@@ -113,7 +113,7 @@ Modules are organized into two categories:
 **Supporting Modules** - Shared code and infrastructure:
 
 - **eac-core** - Core domain libraries
-- **eac-commands** - Command implementations (110+ commands) with integrated AI providers (Anthropic, OpenAI)
+- **eac-commands** - Command implementations (hundreds of commands) with integrated AI providers (Anthropic, OpenAI)
 - **eac-specs** - BDD test infrastructure
 - **eac-mcp-commands** - MCP server for LLM tools
 
@@ -164,7 +164,7 @@ For comprehensive information about the R2R and EAC system:
 ### Related Topics
 
 - [Trunk-Based Development](../../explanation/continuous-delivery/workflow/trunk-based-development.md)
-- [Command Reference](../commands/index.md) - All 110+ EAC commands
+- [Command Reference](../commands/index.md) - All the hundreds of EAC commands
 
 ### Configuration Files
 
