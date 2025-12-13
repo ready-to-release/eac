@@ -78,9 +78,11 @@ jobs:
       - name: Apply Module Labels
         if: steps.detect.outputs.modules != ''
         uses: actions/github-script@v7
+        env:
+          MODULES: ${{ steps.detect.outputs.modules }}
         with:
           script: |
-            const modules = '${{ steps.detect.outputs.modules }}'.split(',').filter(m => m);
+            const modules = (process.env.MODULES || '').split(',').filter(m => m);
 
             if (modules.length === 0) {
               console.log('No modules to label');
@@ -145,9 +147,11 @@ jobs:
       - name: Apply Release Labels
         if: steps.changelogs.outputs.release_modules != ''
         uses: actions/github-script@v7
+        env:
+          RELEASE_MODULES: ${{ steps.changelogs.outputs.release_modules }}
         with:
           script: |
-            const releaseModules = '${{ steps.changelogs.outputs.release_modules }}'.split(',').filter(m => m);
+            const releaseModules = (process.env.RELEASE_MODULES || '').split(',').filter(m => m);
 
             if (releaseModules.length === 0) {
               console.log('No release labels to apply');
