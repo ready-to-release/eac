@@ -136,6 +136,7 @@ func (r *MochaRunner) Execute(pkgPath string, tests []testing.TestReference, tui
 	cmd := exec.Command(wrappedName, wrappedArgs...)
 	cmd.Dir = moduleRoot
 	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, "R2R_TEST_LOGGING_ACTIVE=true")
 
 	// Capture output
 	output, runErr := cmd.CombinedOutput()

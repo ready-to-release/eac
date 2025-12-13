@@ -1163,6 +1163,9 @@ func (ctx *TestExecutionContext) runPackageTests(modulePath string, tests []test
 	testRunID := filepath.Base(ctx.testRunDir)
 	cmd.Env = append(cmd.Env, fmt.Sprintf("R2R_TEST_RUN_ID=%s", testRunID))
 
+	// Disable file logging in test subprocesses to prevent polluting out/commands.log
+	cmd.Env = append(cmd.Env, "R2R_TEST_LOGGING_ACTIVE=true")
+
 	// Set godog environment variables if this is a godog test
 	isGodogTest := fileExists(filepath.Join(actualPkgDir, "godog_test.go"))
 	if isGodogTest {
@@ -1262,6 +1265,7 @@ func (ctx *TestExecutionContext) runTscucumberPackageTests(pkgPath string, tests
 	cmd := exec.Command(wrappedName, wrappedArgs...)
 	cmd.Dir = moduleRoot
 	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, "R2R_TEST_LOGGING_ACTIVE=true")
 
 	// Capture output
 	output, runErr := cmd.CombinedOutput()
@@ -1332,6 +1336,7 @@ func (ctx *TestExecutionContext) runMochaPackageTests(pkgPath string, tests []te
 	cmd := exec.Command(wrappedName, wrappedArgs...)
 	cmd.Dir = moduleRoot
 	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, "R2R_TEST_LOGGING_ACTIVE=true")
 
 	// Capture output
 	output, runErr := cmd.CombinedOutput()

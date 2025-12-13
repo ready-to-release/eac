@@ -270,6 +270,9 @@ func (r *GoRunner) Execute(pkgPath string, tests []testing.TestReference, tuiWri
 	testRunID := filepath.Base(cfg.TestRunDir)
 	cmd.Env = append(cmd.Env, fmt.Sprintf("R2R_TEST_RUN_ID=%s", testRunID))
 
+	// Disable file logging in test subprocesses to prevent polluting out/commands.log
+	cmd.Env = append(cmd.Env, "R2R_TEST_LOGGING_ACTIVE=true")
+
 	// Set godog environment variables if this is a godog test
 	isGodogTest := fileExists(filepath.Join(actualPkgDir, "godog_test.go"))
 	if isGodogTest {
@@ -319,6 +322,7 @@ func runGoGenerate(pkgDir string, logWriter io.Writer) error {
 	cmd := exec.Command("go", "generate", "./...")
 	cmd.Dir = moduleRoot
 	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, "R2R_TEST_LOGGING_ACTIVE=true")
 
 	output, err := cmd.CombinedOutput()
 	if len(output) > 0 {

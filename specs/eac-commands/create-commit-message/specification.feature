@@ -72,23 +72,23 @@ Feature: eac-commands_create-commit-message
       Then the exit code is 0
       And a git commit is created
 
-  Rule: Debug mode saves intermediate files
+  Rule: Debug mode logs intermediate outputs to commands.log
 
-    Scenario: Debug flag saves outputs
+    Scenario: Debug flag logs outputs to unified log
       Given files are staged with changes
       And the mock AI is configured to return a valid commit message
       When I run "create commit-message --debug"
       Then the exit code is 0
-      And debug files are saved to "out/logs/commit/"
-      And debug files include the AI prompt
-      And debug files include the AI response
+      And logs are written to "out/commands.log"
+      And the log contains debug artifacts for AI prompts
+      And the log contains debug artifacts for AI responses
 
     Scenario: Shorthand -d for debug
       Given files are staged with changes
       And the mock AI is configured to return a valid commit message
       When I run "create commit-message -d"
       Then the exit code is 0
-      And debug files are saved to "out/logs/commit/"
+      And logs are written to "out/commands.log"
 
   Rule: Handles module mappings
 

@@ -27,8 +27,8 @@ func TestDefaultLoggingConfig(t *testing.T) {
 	}
 
 	// File defaults
-	if cfg.File.Formatter != FormatterJSON {
-		t.Errorf("expected file formatter %q, got %q", FormatterJSON, cfg.File.Formatter)
+	if cfg.File.Formatter != FormatterTimestamped {
+		t.Errorf("expected file formatter %q, got %q", FormatterTimestamped, cfg.File.Formatter)
 	}
 	if !cfg.File.HasLevel("debug") {
 		t.Error("expected file to have debug level")
@@ -48,7 +48,7 @@ func TestLoadLoggingConfig_FileNotExists(t *testing.T) {
 	if cfg.Console.Formatter != FormatterRaw {
 		t.Errorf("expected default console formatter, got %q", cfg.Console.Formatter)
 	}
-	if cfg.File.Formatter != FormatterJSON {
+	if cfg.File.Formatter != FormatterTimestamped {
 		t.Errorf("expected default file formatter, got %q", cfg.File.Formatter)
 	}
 }
@@ -161,8 +161,8 @@ console:
 		t.Error("expected console to have default info level")
 	}
 	// File should use all defaults
-	if cfg.File.Formatter != FormatterJSON {
-		t.Errorf("expected file formatter %q, got %q", FormatterJSON, cfg.File.Formatter)
+	if cfg.File.Formatter != FormatterTimestamped {
+		t.Errorf("expected file formatter %q, got %q", FormatterTimestamped, cfg.File.Formatter)
 	}
 	if !cfg.File.IsEnabled() {
 		t.Error("expected file to be enabled by default")

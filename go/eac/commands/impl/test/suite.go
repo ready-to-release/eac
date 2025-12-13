@@ -1429,6 +1429,9 @@ func runPackageTests(pkgPath string, tests []testing.TestReference, writer io.Wr
 	testRunID := filepath.Base(testRunDir)
 	cmd.Env = append(cmd.Env, fmt.Sprintf("R2R_TEST_RUN_ID=%s", testRunID))
 
+	// Disable file logging in test subprocesses to prevent polluting out/commands.log
+	cmd.Env = append(cmd.Env, "R2R_TEST_LOGGING_ACTIVE=true")
+
 	// For Godog test packages, set GODOG environment variables
 	if isGodogTestPackage {
 

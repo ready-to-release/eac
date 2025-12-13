@@ -143,7 +143,14 @@ func (c *TestContext) RunCommand(cmdLine string) error {
 	cmd := c.createCommand(parts)
 
 	// Build environment
-	env := os.Environ()
+	// For isolated tests, filter out R2R_TEST_LOGGING_ACTIVE so unified log works
+	env := make([]string, 0, len(os.Environ()))
+	for _, e := range os.Environ() {
+		if c.IsolatedDir != "" && strings.HasPrefix(e, "R2R_TEST_LOGGING_ACTIVE=") {
+			continue // Don't inherit - isolated tests need unified log to work
+		}
+		env = append(env, e)
+	}
 	if c.IsolatedDir != "" {
 		// R2R_PWD: current working directory (may be worktree)
 		// R2R_REPO_ROOT: main repository root (never changes)

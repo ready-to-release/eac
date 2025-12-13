@@ -39,26 +39,37 @@ func New(cfg Config) (*Logger, error) {
 	}, nil
 }
 
-// NewDefault creates a logger with default configuration (debug mode and file logging disabled).
-// pathSegments are optional - omit for non-module-aware commands
-func NewDefault(command, workspaceRoot string, pathSegments ...string) (*Logger, error) {
-	return New(DefaultConfig(command, workspaceRoot, pathSegments...))
+// NewDefault creates a logger with file logging enabled.
+// Logs go to: out/commands.log
+func NewDefault(command, workspaceRoot string) (*Logger, error) {
+	cfg := DefaultConfig(command, workspaceRoot).WithFileLogging(true)
+	return New(cfg)
+}
+
+// NewForUnit creates a logger for build/test with unit-based logging.
+// Logs go to: out/commands.log + target from logging.yml (if configured)
+// Example for build: out/commands.log + out/build/eac-core/build.log
+// Example for test: out/commands.log + out/test/component/test.log
+func NewForUnit(command, workspaceRoot, unit string) (*Logger, error) {
+	cfg := DefaultConfig(command, workspaceRoot).
+		WithUnit(unit).
+		WithFileLogging(true)
+	return New(cfg)
 }
 
 // NewWithDebug creates a logger with debug mode and file logging enabled.
-// pathSegments are optional - omit for non-module-aware commands
-func NewWithDebug(command, workspaceRoot string, pathSegments ...string) (*Logger, error) {
-	cfg := DefaultConfig(command, workspaceRoot, pathSegments...).
+// Debug logs appear on console in addition to file.
+func NewWithDebug(command, workspaceRoot string) (*Logger, error) {
+	cfg := DefaultConfig(command, workspaceRoot).
 		WithDebugMode(true).
 		WithFileLogging(true)
 	return New(cfg)
 }
 
 // NewWithFileLogging creates a logger with file logging enabled but console debug disabled.
-// This is useful for build and test commands that want debug logs in files only.
-// pathSegments are optional - omit for non-module-aware commands
-func NewWithFileLogging(command, workspaceRoot string, pathSegments ...string) (*Logger, error) {
-	cfg := DefaultConfig(command, workspaceRoot, pathSegments...).WithFileLogging(true)
+// This is useful for commands that want debug logs in files only.
+func NewWithFileLogging(command, workspaceRoot string) (*Logger, error) {
+	cfg := DefaultConfig(command, workspaceRoot).WithFileLogging(true)
 	return New(cfg)
 }
 

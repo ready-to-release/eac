@@ -130,7 +130,7 @@ func generateModuleSectionsParallel(cfg *executionConfig, logger *logging.Logger
 			moduleContext := buildModuleContext(moduleName, moduleFiles, cfg.gitDiff)
 
 			// Debug output (thread-safe via logging module)
-			writeDebugFilef(cfg.workspaceRoot, logger, "debug-module-%d-%s-context.md", moduleContext, idx+1, moduleName)
+			logDebugArtifactf(logger, "MODULE-%d-%s-CONTEXT", moduleContext, idx+1, moduleName)
 
 			var output string
 			var providerName string
@@ -148,7 +148,7 @@ func generateModuleSectionsParallel(cfg *executionConfig, logger *logging.Logger
 				return genErr
 			})
 
-			writeDebugFilef(cfg.workspaceRoot, logger, "debug-module-%d-%s-output.md", output, idx+1, moduleName)
+			logDebugArtifactf(logger, "MODULE-%d-%s-OUTPUT", output, idx+1, moduleName)
 
 			// Send result with original index to preserve order
 			// Buffered channel ensures this never blocks
