@@ -84,27 +84,14 @@ jobs:
     if: |
       (github.ref == 'refs/heads/main' || inputs.ref == 'refs/heads/main') && !startsWith(inputs.ref || github.ref, 'refs/pull/')
     steps:
-      - name: Trigger release workflow
-        run: |
-          gh workflow run release-docs.yaml \
-            --repo ${{ github.repository }} \
-            -f ci_run_id=${{ github.run_id }}
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - uses: actions/checkout@v6
 
-      - name: Release Trigger Summary
-        run: |
-          echo "## Release Triggered: docs" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Triggered release workflow:" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Workflow | Description |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|-------------|" >> $GITHUB_STEP_SUMMARY
-          echo "| \`release-docs.yaml\` | Deploy site to GitHub Pages |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Trigger Run ID | \`${{ inputs.trigger_run_id || 'none (standalone)' }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| CI Docs Run ID | \`${{ github.run_id }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Branch | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+      - name: Trigger Release
+        uses: ./.github/actions/trigger-release
+        with:
+          module: docs
+          workflow: release-docs.yaml
+          workflow-description: Deploy site to GitHub Pages
+          ci-run-id: ${{ github.run_id }}
+          trigger-run-id: ${{ inputs.trigger_run_id }}
+          github-token: ${{ github.token }}
