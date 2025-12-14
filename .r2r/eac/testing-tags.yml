@@ -94,6 +94,12 @@ tags:
     type: execution_control
     level: feature-or-scenario
 
+  - tag: "@sequential"
+    description: "Test must run sequentially (not in parallel with other tests) due to resource constraints"
+    type: execution_control
+    level: feature-or-scenario
+    note: "Use for tests that spawn heavy subprocesses (builds, go test, etc.) that cause CI resource contention when parallelized"
+
   - tag: "@Manual"
     description: "Manual test requiring human execution and evidence collection (cannot have L0-L4 taxonomy tags)"
     type: execution_control

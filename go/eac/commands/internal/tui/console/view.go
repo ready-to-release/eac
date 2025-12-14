@@ -84,6 +84,14 @@ func (m Model) viewPanes() string {
 	if m.panes[PhaseRun].Status != PhasePending {
 		b.WriteString(m.renderPaneHeader(PhaseRun))
 		b.WriteString("\n")
+
+		// Always render tab bar (All tab is always visible)
+		tabs := m.GetVisibleTabs()
+		b.WriteString(m.renderTabBar(tabs))
+		b.WriteString("\n")
+		// Reduce run pane content height by 1 for the tab bar
+		runH--
+
 		b.WriteString(m.renderPaneContent(PhaseRun, runH))
 		b.WriteString("\n")
 		b.WriteString(m.renderPaneFooter(PhaseRun, runH))
@@ -102,6 +110,79 @@ func (m Model) viewPanes() string {
 
 	// No results section in pane view - results appear after TUI exits
 	// This ensures the view height stays constant (prevents cursor misalignment in inline mode)
+
+	return b.String()
+}
+
+// renderTabBar renders the horizontal tab bar for module switching
+func (m Model) renderTabBar(tabs []*ModuleState) string {
+	var b strings.Builder
+
+	// Left border
+	b.WriteString(Styles.Border.Render("│"))
+
+	// Render "All" tab first (aggregate view)
+	allLabel := "All"
+	if m.activeTab == "" {
+		b.WriteString(Styles.TabActive.Render(allLabel))
+	} else {
+		b.WriteString(Styles.TabComplete.Render(allLabel))
+	}
+
+	// Calculate available width for module tabs
+	// Account for borders, "All" tab, and separators
+	usedWidth := 2 + lipgloss.Width(allLabel) + 2 // borders + all tab
+
+	// Render module tabs
+	for _, state := range tabs {
+		// Tab separator
+		b.WriteString(Styles.TabSeparator.Render(" "))
+		usedWidth++
+
+		// Truncate long module names
+		label := state.Moniker
+		maxLabelLen := 12
+		if len(label) > maxLabelLen {
+			label = label[:maxLabelLen-1] + "…"
+		}
+
+		// Add status icon
+		icon := state.Status.Icon()
+		tabText := icon + " " + label
+
+		// Check if we have room for this tab
+		tabWidth := lipgloss.Width(tabText) + 2 // +2 for padding
+		if usedWidth+tabWidth > m.width-4 {
+			// Show overflow indicator
+			b.WriteString(Styles.Dim.Render("…"))
+			break
+		}
+
+		// Style based on selection and status
+		var style lipgloss.Style
+		if state.Moniker == m.activeTab {
+			style = Styles.TabActive
+		} else {
+			switch state.Status {
+			case ModuleRunning:
+				style = Styles.TabRunning
+			case ModuleComplete:
+				style = Styles.TabComplete
+			case ModuleFailed:
+				style = Styles.TabFailed
+			}
+		}
+
+		b.WriteString(style.Render(tabText))
+		usedWidth += tabWidth
+	}
+
+	// Fill remaining space and right border
+	remaining := m.width - usedWidth - 1
+	if remaining > 0 {
+		b.WriteString(strings.Repeat(" ", remaining))
+	}
+	b.WriteString(Styles.Border.Render("│"))
 
 	return b.String()
 }
@@ -195,18 +276,31 @@ func (m Model) renderPaneContent(phase Phase, height int) string {
 		return m.renderSummaryContent(height)
 	}
 
-	// Update max scroll in case buffer size changed
-	pane.UpdateMaxScroll(height)
+	// For Run phase, check if we're showing a specific module's buffer
+	var buffer *RingBuffer
+	if phase == PhaseRun && m.activeTab != "" {
+		// Show selected module's buffer
+		if moduleBuffer := m.GetActiveModuleBuffer(); moduleBuffer != nil {
+			buffer = moduleBuffer
+		} else {
+			buffer = pane.Buffer // Fallback to pane buffer
+		}
+	} else {
+		buffer = pane.Buffer
+	}
+
+	// Update max scroll based on the ACTIVE buffer (not always pane buffer)
+	pane.UpdateMaxScrollForBuffer(buffer, height)
 
 	// Get lines based on scroll offset
 	var lines []Line
 	if pane.scrollOffset == 0 || pane.autoScroll {
 		// At bottom or auto-scrolling: show most recent lines
-		lines = pane.Buffer.Last(height)
+		lines = buffer.Last(height)
 		pane.scrollOffset = 0 // Ensure it stays at 0
 	} else {
 		// Scrolled up: show lines at offset
-		lines = pane.Buffer.GetRange(pane.scrollOffset, height)
+		lines = buffer.GetRange(pane.scrollOffset, height)
 	}
 
 	for i := 0; i < height; i++ {

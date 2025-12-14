@@ -840,10 +840,26 @@ func executeTests(cfg *TestConfig) int {
 	}
 
 	// Build moniker list and type map using module-based paths
-	monikers := make([]string, 0, len(testsByModulePath))
+	// Also identify packages that need sequential execution (@sequential tag)
+	parallelMonikers := make([]string, 0, len(testsByModulePath))
+	sequentialMonikers := make([]string, 0)
 	moduleTypes := make(map[string]string)
 	for modulePath, tests := range testsByModulePath {
-		monikers = append(monikers, modulePath)
+		// Check if any test in this package has @sequential tag
+		hasSequential := false
+		for _, test := range tests {
+			if test.IsSequential {
+				hasSequential = true
+				break
+			}
+		}
+
+		if hasSequential {
+			sequentialMonikers = append(sequentialMonikers, modulePath)
+		} else {
+			parallelMonikers = append(parallelMonikers, modulePath)
+		}
+
 		// Use the type of the first test in the package
 		if len(tests) > 0 {
 			moduleTypes[modulePath] = tests[0].Type
@@ -857,11 +873,27 @@ func executeTests(cfg *TestConfig) int {
 	// Track test execution time
 	testStartTime := time.Now()
 
-	// Run tests (TUI transitions to Run phase automatically)
-	_, orchErr := orch.Run(monikers)
-	if orchErr != nil {
-		writeInit("❌ Orchestrator error: %v", orchErr)
-		return 1
+	// Run parallel tests first (normal concurrency)
+	if len(parallelMonikers) > 0 {
+		_, orchErr := orch.Run(parallelMonikers)
+		if orchErr != nil {
+			writeInit("❌ Orchestrator error: %v", orchErr)
+			return 1
+		}
+	}
+
+	// Run sequential tests one at a time (MaxConcurrency=1)
+	if len(sequentialMonikers) > 0 {
+		if len(parallelMonikers) > 0 {
+			writeInit("")
+			writeInit("Running %d sequential test package(s)...", len(sequentialMonikers))
+		}
+		orch.SetMaxConcurrency(1)
+		_, orchErr := orch.Run(sequentialMonikers)
+		if orchErr != nil {
+			writeInit("❌ Orchestrator error (sequential): %v", orchErr)
+			return 1
+		}
 	}
 
 	// Collect results (before stopping TUI)

@@ -71,6 +71,7 @@ func ConvertToEntries(
 			IsIgnored:        test.IsIgnored,
 			SkipReason:       test.SkipReason,
 			IsManual:         test.IsManual,
+			IsSequential:     test.IsSequential,
 			RiskControls:     test.RiskControls,
 			IsGxP:            test.IsGxP,
 			IsCriticalAspect: test.IsCriticalAspect,

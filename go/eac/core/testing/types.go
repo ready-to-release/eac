@@ -15,9 +15,10 @@ type TestReference struct {
 	InferredDepm []string // Module deps inferred from file path (@depm:X from specs/X/...)
 
 	// Execution control
-	IsIgnored  bool   // Has @skip:<reason> tag
-	SkipReason string // Reason code from @skip:<reason> (e.g., "wip", "broken")
-	IsManual   bool   // Has @Manual tag
+	IsIgnored    bool   // Has @skip:<reason> tag
+	SkipReason   string // Reason code from @skip:<reason> (e.g., "wip", "broken")
+	IsManual     bool   // Has @Manual tag
+	IsSequential bool   // Has @sequential tag - must run sequentially, not in parallel
 
 	// Dependency tracking
 	SystemDependencies []string // System deps extracted from @deps:<name> (e.g., "docker", "git")

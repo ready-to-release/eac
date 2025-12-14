@@ -651,6 +651,12 @@ func (o *Orchestrator) SetModuleTypes(moduleTypes map[string]string) {
 	o.config.ModuleTypes = moduleTypes
 }
 
+// SetMaxConcurrency updates the maximum concurrency for subsequent Run calls.
+// Useful for running sequential tests after parallel tests.
+func (o *Orchestrator) SetMaxConcurrency(maxConcurrency int) {
+	o.config.MaxConcurrency = maxConcurrency
+}
+
 // GetExitCode returns the appropriate exit code based on results
 // Returns 1 if any module failed, 0 otherwise
 func GetExitCode(results []WorkResult) int {

@@ -54,3 +54,22 @@ type ResultLineMsg struct {
 type SummaryDataMsg struct {
 	Data *SummaryData
 }
+
+// ModuleStartMsg is sent when a module starts execution (for tab tracking)
+type ModuleStartMsg struct {
+	Moniker string
+}
+
+// ModuleCompleteMsg is sent when a module completes execution
+type ModuleCompleteMsg struct {
+	Moniker  string
+	ExitCode int
+}
+
+// TabSelectMsg is sent when user clicks on a tab
+type TabSelectMsg struct {
+	Moniker string // Empty string = aggregate view
+}
+
+// TabDecayMsg is sent periodically to clean up decayed tabs
+type TabDecayMsg struct{}

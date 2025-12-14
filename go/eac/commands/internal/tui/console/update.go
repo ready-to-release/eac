@@ -51,6 +51,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Also write to legacy buffer for backward compatibility
 		m.buffer.Push(line)
 
+		// Route to per-module buffer if this is a module output line
+		// (Source is the module moniker, not "system" or phase name)
+		if line.Source != "" && line.Source != "system" && m.activePhase == PhaseRun {
+			// Check if this is a known module (has a state)
+			if state, exists := m.moduleStates[line.Source]; exists {
+				state.Buffer.Push(line)
+			} else {
+				// Create module state on first output (module started)
+				state := m.GetOrCreateModuleState(line.Source)
+				state.Buffer.Push(line)
+			}
+		}
+
 		// Track errors for sticky display
 		if line.Level == LevelError {
 			m.lastError = &line
@@ -130,6 +143,51 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case statusMsg:
 		status := Status(msg)
 		m.phase = status.Phase
+
+		// Detect modules that were running but are now gone (completed)
+		// Compare old running list with new one
+		newRunningSet := make(map[string]bool)
+		for _, moniker := range status.Running {
+			newRunningSet[moniker] = true
+		}
+
+		// Find modules that were in old running list but not in new
+		for _, moniker := range m.running {
+			if !newRunningSet[moniker] {
+				// This module completed
+				// If it's the active tab, keep it visible (will be removed on tab switch)
+				if m.activeTab == moniker {
+					// Mark as complete but don't remove - user is viewing it
+					if state, exists := m.moduleStates[moniker]; exists {
+						state.Status = ModuleComplete
+						state.EndTime = time.Now()
+					}
+				} else {
+					// Not selected - remove from tabs immediately
+					m.removeModuleFromTabs(moniker)
+				}
+			}
+		}
+
+		// Also check moduleStates for modules created via lineMsg that were never in running list
+		// (fast modules that complete before status update, or modules not tracked by orchestrator)
+		// Collect modules to remove first to avoid modifying map while iterating
+		var modulesToRemove []string
+		for moniker, state := range m.moduleStates {
+			if state.Status == ModuleRunning && !newRunningSet[moniker] {
+				// Module has state but isn't running - it completed
+				if m.activeTab == moniker {
+					state.Status = ModuleComplete
+					state.EndTime = time.Now()
+				} else {
+					modulesToRemove = append(modulesToRemove, moniker)
+				}
+			}
+		}
+		for _, moniker := range modulesToRemove {
+			m.removeModuleFromTabs(moniker)
+		}
+
 		m.running = status.Running
 		m.completed = status.Completed
 		m.total = status.Total
@@ -140,6 +198,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tickMsg:
+		// Clean up decayed tabs on each tick
+		m.CleanupDecayedTabs()
 		return m, m.tickCmd()
 
 	case linesDoneMsg:
@@ -161,6 +221,35 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		m.running = newRunning
+
+		// Mark module as complete in tab tracking
+		exitCode := msg.ExitCode
+		m.MarkModuleComplete(msg.Moniker, exitCode)
+		return m, nil
+
+	case ModuleStartMsg:
+		// Create module state when module starts
+		m.GetOrCreateModuleState(msg.Moniker)
+		return m, nil
+
+	case ModuleCompleteMsg:
+		// Mark module as complete (alternative to completedMsg)
+		m.MarkModuleComplete(msg.Moniker, msg.ExitCode)
+		return m, nil
+
+	case TabSelectMsg:
+		// Switch to selected tab
+		m.SetActiveTab(msg.Moniker)
+		// Reset scroll to bottom when switching tabs
+		if m.panes[PhaseRun] != nil {
+			m.panes[PhaseRun].scrollOffset = 0
+			m.panes[PhaseRun].autoScroll = true
+		}
+		return m, nil
+
+	case TabDecayMsg:
+		// Clean up decayed tabs
+		m.CleanupDecayedTabs()
 		return m, nil
 	}
 
@@ -181,19 +270,86 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "c":
 		// Clear last error
 		m.lastError = nil
+
+	// Tab navigation shortcuts
+	case "tab":
+		// Cycle to next tab
+		m.cycleTab(1)
+	case "shift+tab":
+		// Cycle to previous tab
+		m.cycleTab(-1)
+	case "a":
+		// Switch to "All" (aggregate view)
+		m.SetActiveTab("")
+		if m.panes[PhaseRun] != nil {
+			m.panes[PhaseRun].scrollOffset = 0
+			m.panes[PhaseRun].autoScroll = true
+		}
+	case "1", "2", "3", "4", "5", "6", "7", "8", "9":
+		// Direct tab selection (1-9)
+		idx := int(msg.String()[0] - '1') // Convert "1" to 0, "2" to 1, etc.
+		tabs := m.GetVisibleTabs()
+		if idx < len(tabs) {
+			m.SetActiveTab(tabs[idx].Moniker)
+			if m.panes[PhaseRun] != nil {
+				m.panes[PhaseRun].scrollOffset = 0
+				m.panes[PhaseRun].autoScroll = true
+			}
+		}
+	case "0":
+		// "0" = switch to aggregate view
+		m.SetActiveTab("")
+		if m.panes[PhaseRun] != nil {
+			m.panes[PhaseRun].scrollOffset = 0
+			m.panes[PhaseRun].autoScroll = true
+		}
 	}
 	return m, nil
 }
 
-// handleMouse handles mouse events for pane scrolling.
+// cycleTab cycles through tabs in the given direction (+1 = next, -1 = prev)
+func (m *Model) cycleTab(direction int) {
+	tabs := m.GetVisibleTabs()
+	if len(tabs) == 0 {
+		return
+	}
+
+	// Build list: [aggregate view] + [module tabs]
+	allTabs := make([]string, 0, len(tabs)+1)
+	allTabs = append(allTabs, "") // Aggregate view
+	for _, t := range tabs {
+		allTabs = append(allTabs, t.Moniker)
+	}
+
+	// Find current index
+	currentIdx := 0
+	for i, moniker := range allTabs {
+		if moniker == m.activeTab {
+			currentIdx = i
+			break
+		}
+	}
+
+	// Calculate new index with wrap-around
+	newIdx := (currentIdx + direction + len(allTabs)) % len(allTabs)
+	m.SetActiveTab(allTabs[newIdx])
+
+	// Reset scroll
+	if m.panes[PhaseRun] != nil {
+		m.panes[PhaseRun].scrollOffset = 0
+		m.panes[PhaseRun].autoScroll = true
+	}
+}
+
+// handleMouse handles mouse events for pane scrolling and tab clicks.
 func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
-	// Mouse scrolling:
-	// - Scroll wheel → scroll panes
+	// Mouse interactions:
+	// - Scroll wheel → scroll panes (handled first to prevent any accidental tab switching)
+	// - Click on tab bar → switch tabs
 	// - Shift+Click → select text (standard terminal behavior, bypasses mouse mode)
 
-	// Wheel events: handle scrolling
-	if msg.Type == tea.MouseWheelUp || msg.Type == tea.MouseWheelDown {
-
+	// Handle wheel events FIRST - scrolling should never change tabs
+	if msg.Button == tea.MouseButtonWheelUp || msg.Button == tea.MouseButtonWheelDown {
 		// Only handle scrolling in pane mode
 		if !m.usePanes {
 			return m, nil
@@ -219,21 +375,114 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			paneHeight = summaryH
 		}
 
-		// Update max scroll based on current buffer size
-		pane.UpdateMaxScroll(paneHeight)
+		// Determine which buffer is being displayed (for Run pane with active tab)
+		buffer := pane.Buffer
+		if paneIdx == 1 && m.activeTab != "" { // Run pane with module tab selected
+			if moduleBuffer := m.GetActiveModuleBuffer(); moduleBuffer != nil {
+				buffer = moduleBuffer
+			}
+		}
 
-		// Scroll the pane
+		// Update max scroll based on the ACTIVE buffer
+		pane.UpdateMaxScrollForBuffer(buffer, paneHeight)
+
+		// Scroll the pane - use Button to determine direction
 		scrollAmount := 3 // Lines to scroll per wheel tick
-		if msg.Type == tea.MouseWheelUp {
+		if msg.Button == tea.MouseButtonWheelUp {
 			pane.ScrollUp(scrollAmount)
-		} else {
+		} else if msg.Button == tea.MouseButtonWheelDown {
 			pane.ScrollDown(scrollAmount)
 		}
 
 		return m, nil
 	}
 
+	// Handle left mouse button click for tab selection (use Press for responsiveness)
+	if msg.Button == tea.MouseButtonLeft && msg.Action == tea.MouseActionPress {
+		// Check if click is on the tab bar (always shown when Run phase is active)
+		if m.usePanes && m.panes[PhaseRun].Status != PhasePending {
+			tabBarY := m.getTabBarY()
+			if msg.Y == tabBarY {
+				// Click is on the tab bar - determine which tab was clicked
+				selectedTab := m.getTabAtPosition(msg.X)
+				m.SetActiveTab(selectedTab)
+				// Reset scroll
+				if m.panes[PhaseRun] != nil {
+					m.panes[PhaseRun].scrollOffset = 0
+					m.panes[PhaseRun].autoScroll = true
+				}
+				return m, nil
+			}
+		}
+	}
+
 	return m, nil
+}
+
+// getTabBarY returns the Y coordinate of the tab bar (line after Run pane header)
+func (m Model) getTabBarY() int {
+	// Layout (0-indexed Y coordinates):
+	// 0: Init header
+	// 1 to initH: Init content
+	// initH+1: Init footer
+	// initH+2: Run header
+	// initH+3: Tab bar (if tabs exist)
+	initH, _, _ := m.calculatePaneHeights()
+	return initH + 3
+}
+
+// getTabAtPosition determines which tab was clicked based on X coordinate
+func (m Model) getTabAtPosition(x int) string {
+	tabs := m.GetVisibleTabs()
+
+	// Tab bar layout (matching renderTabBar exactly):
+	// │ All  ▶ mod1  ▶ mod2                    │
+	// ^ ^    ^  ^
+	// 0 1    6  8
+	//
+	// Position 0: left border "│"
+	// Position 1-5: "All" tab with padding " All " (5 chars rendered)
+	// Position 6: separator " "
+	// Position 7+: module tabs
+
+	currentX := 1 // After left border
+
+	// "All" tab: " All " = 5 chars visual width (1 padding + 3 text + 1 padding)
+	allTabWidth := 5
+	if x >= currentX && x < currentX+allTabWidth {
+		return "" // Aggregate view
+	}
+	currentX += allTabWidth
+
+	// Check module tabs
+	for _, state := range tabs {
+		// Separator " " = 1 char
+		currentX++
+
+		// Tab content: " ▶ modname " (icon + space + name, with padding)
+		label := state.Moniker
+		maxLabelLen := 12
+		if len(label) > maxLabelLen {
+			label = label[:maxLabelLen-1] + "…"
+		}
+		// Icon is 1 char wide visually (▶, ✓, ✗)
+		// Tab text: icon + " " + label = 2 + len(label)
+		// With padding: 1 + 2 + len(label) + 1 = 4 + len(label)
+		tabWidth := 4 + len(label)
+
+		if x >= currentX && x < currentX+tabWidth {
+			return state.Moniker
+		}
+		currentX += tabWidth
+
+		// Stop if past terminal width
+		if currentX > m.width-4 {
+			break
+		}
+	}
+
+	// Click not on any recognized tab - keep current selection
+	return m.activeTab
 }
 
 // getPaneAtPosition determines which pane (0, 1, or 2) is at the given Y coordinate.

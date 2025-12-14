@@ -145,7 +145,12 @@ func (p *Pane) ScrollDown(lines int) {
 
 // UpdateMaxScroll recalculates maximum scroll based on buffer size and pane height
 func (p *Pane) UpdateMaxScroll(paneHeight int) {
-	totalLines := p.Buffer.Count()
+	p.UpdateMaxScrollForBuffer(p.Buffer, paneHeight)
+}
+
+// UpdateMaxScrollForBuffer recalculates maximum scroll for a specific buffer
+func (p *Pane) UpdateMaxScrollForBuffer(buffer *RingBuffer, paneHeight int) {
+	totalLines := buffer.Count()
 	p.maxScroll = totalLines - paneHeight
 	if p.maxScroll < 0 {
 		p.maxScroll = 0
