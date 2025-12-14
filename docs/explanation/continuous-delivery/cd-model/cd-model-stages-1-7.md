@@ -337,7 +337,7 @@ Acceptance testing runs in a **Production-Like Test Environment (PLTE)** - an ep
 - **Infrastructure**: Same OS, database versions, network topology as production
 - **Configuration**: Production-like settings (without prod credentials)
 - **Data**: Realistic test data (anonymized if necessary)
-- **Isolation**: Each feature branch gets its own PLTE instance
+- **Isolation**: Each topic branch gets its own PLTE instance
 - **Ephemeral**: Created on-demand, destroyed after testing
 
 PLTEs enable realistic testing without production risk or resource contention.

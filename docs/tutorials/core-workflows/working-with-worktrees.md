@@ -48,7 +48,7 @@ This tutorial teaches you how to use git worktrees for parallel development, ena
 5. **Syncing with main**
    - Pull latest changes: `r2r work pull` (rebase on main)
    - Resolve conflicts if any
-   - Keep your feature branch up to date
+   - Keep your topic branch up to date
 
 6. **Merging back to main**
    - Create PR: `r2r create pr` (AI-generated description)
@@ -113,7 +113,7 @@ r2r work remove my-feature --delete-branch
 - Git worktrees and their advantages
 - Parallel feature development
 - AI-generated commit messages
-- Keeping feature branches synchronized
+- Keeping topic branches synchronized
 - Pull request workflow
 - Workspace lifecycle management
 

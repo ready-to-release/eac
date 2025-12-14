@@ -143,7 +143,7 @@ PLTEs are ephemeral, isolated environments that emulate production characteristi
 - Production-like infrastructure (OS, database versions, network topology)
 - Production-like configuration (without production credentials)
 - Realistic test data (anonymized if necessary)
-- Isolated per feature branch or release candidate
+- Isolated per topic branch or release candidate
 - Ephemeral - created on-demand, destroyed after testing
 - Can come as a series of environments with different toggle settings
 

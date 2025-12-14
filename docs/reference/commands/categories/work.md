@@ -4,7 +4,7 @@
 
 ## Overview
 
-Work commands manage parallel development workspaces using **git worktrees**. They enable multiple feature branches to be worked on simultaneously without switching contexts, providing isolated development environments for each feature.
+Work commands manage parallel development workspaces using **git worktrees**. They enable multiple topic branches to be worked on simultaneously without switching contexts, providing isolated development environments for each feature.
 
 **Key Characteristics**:
 
@@ -158,12 +158,12 @@ created        generated      main           main            worktree
 
 - Make code changes
 - Generate AI commit messages
-- Commit to feature branch
+- Commit to topic branch
 
 **3. Sync** (`work pull`)
 
 - Fetch latest main
-- Rebase feature branch
+- Rebase topic branch
 - Resolve conflicts if needed
 
 **4. Merge** (`work merge`)
@@ -217,7 +217,7 @@ r2r eac work commit --all --message "fix: resolve auth bug"
 **What it does**:
 
 - Generates semantic commit message using AI
-- Commits changes to feature branch
+- Commits changes to topic branch
 - Follows conventional commit format
 
 ### work pull
@@ -231,7 +231,7 @@ r2r eac work pull
 **What it does**:
 
 - Fetches latest main branch
-- Rebases feature branch on main
+- Rebases topic branch on main
 - Handles conflicts interactively
 
 ### work merge
@@ -268,7 +268,7 @@ r2r eac work remove feature/auth --delete-branch
 **What it does**:
 
 - Removes git worktree
-- Optionally deletes feature branch
+- Optionally deletes topic branch
 - Cleans up workspace directory
 
 ## Best Practices
@@ -317,7 +317,7 @@ r2r eac work commit --all
 r2r eac work pull
 
 # Prevents large merge conflicts
-# Keeps feature branch up-to-date
+# Keeps topic branch up-to-date
 ```
 
 ### Clean Up

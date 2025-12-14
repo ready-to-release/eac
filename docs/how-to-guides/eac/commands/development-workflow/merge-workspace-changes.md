@@ -4,11 +4,11 @@
 
 ## What You'll Accomplish
 
-Merge your feature branch back to main using squash merge, then clean up the workspace.
+Merge your topic branch back to main using squash merge, then clean up the workspace.
 
 ## Prerequisites
 
-- Feature branch with completed work
+- topic branch with completed work
 - PR approved (if using PR workflow)
 - Tests passing
 
@@ -34,7 +34,7 @@ r2r eac work merge
 - Squashes all commits into one
 - Generates squash commit message with AI
 - Merges to main
-- Deletes feature branch
+- Deletes topic branch
 
 ### 3. Verify Merge
 

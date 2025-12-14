@@ -108,7 +108,7 @@ PLTEs are, optimally ephemeral, isolated, environments that emulate production c
 PLTEs enable:
 
 - Realistic testing without production risk
-- Parallel testing for multiple feature branches
+- Parallel testing for multiple topic branches
 - Production IaC validation
 - Performance and security testing in production-like conditions
 

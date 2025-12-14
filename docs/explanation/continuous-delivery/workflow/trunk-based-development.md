@@ -6,7 +6,7 @@
 
 **Trunk-Based Development (TBD) is the branching strategy that enables Continuous Integration and Continuous Delivery.**
 
-Instead of long-lived feature branches that defers integration, TBD emphasizes frequent integration to a single main branch (trunk), enabling rapid feedback and reducing merge conflicts.
+Instead of long-lived topic branches that defers integration, TBD emphasizes frequent integration to a single main branch (trunk), enabling rapid feedback and reducing merge conflicts.
 
 This approach is fundamental to achieving:
 
