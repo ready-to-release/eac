@@ -121,7 +121,7 @@ jobs:
         uses: actions/download-artifact@v6
         with:
           name: build-artifacts-books
-          path: out/build/books
+          path: out/build
           run-id: ${{ steps.ci.outputs.run_id }}
           github-token: ${{ github.token }}
 
