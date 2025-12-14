@@ -224,6 +224,11 @@ func (m Model) renderPaneHeader(phase Phase) string {
 	if phase == PhaseRun && pane.Status == PhaseActive {
 		elapsed := time.Since(m.startTime).Round(time.Millisecond * 100)
 
+		// Add layer info if using layered execution
+		if m.totalLayers > 0 && m.layer > 0 {
+			left += " " + Styles.Dim.Render(fmt.Sprintf("(layer %d/%d)", m.layer, m.totalLayers))
+		}
+
 		// Build status indicators
 		var status string
 		if len(m.running) > 0 {
@@ -234,7 +239,7 @@ func (m Model) renderPaneHeader(phase Phase) string {
 			}
 		}
 
-		left = fmt.Sprintf("%s %s │ %d/%d",
+		left = fmt.Sprintf("%s %s %d/%d",
 			left,
 			Styles.Time.Render(formatElapsed(elapsed)),
 			m.completed,

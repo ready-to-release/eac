@@ -27,12 +27,14 @@ type Model struct {
 	resultsBuffer *RingBuffer // Output that appears after Run phase completes
 
 	// Run phase state (orchestrator status)
-	running   []string  // Currently running module monikers
-	completed int       // Completed count
-	total     int       // Total modules
-	phase     string    // Current phase name (legacy)
-	startTime time.Time // Execution start
-	lastError *Line     // Most recent error (sticky display)
+	running     []string  // Currently running module monikers
+	completed   int       // Completed count
+	total       int       // Total modules
+	phase       string    // Current phase name (legacy)
+	layer       int       // Current layer being executed (1-indexed, 0 = not using layers)
+	totalLayers int       // Total number of layers (0 = not using layers)
+	startTime   time.Time // Execution start
+	lastError   *Line     // Most recent error (sticky display)
 
 	// Per-module tab tracking for Run phase
 	moduleStates map[string]*ModuleState // Per-module state (running, completed, failed)

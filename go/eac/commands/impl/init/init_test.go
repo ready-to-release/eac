@@ -68,22 +68,6 @@ func TestWriteAgentConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "write claude-cli config",
-			config: &agentConfig{
-				providerName: "claude-cli",
-				envVarName:   "",
-				model:        "claude-3-haiku-20240307",
-				endpoint:     "",
-			},
-			wantErr: false,
-			wantContains: []string{
-				"ai:",
-				"provider: claude-cli",
-				"model: claude-3-haiku-20240307",
-				"git:",
-			},
-		},
-		{
 			name: "write openai config",
 			config: &agentConfig{
 				providerName: "openai",
@@ -100,6 +84,23 @@ func TestWriteAgentConfig(t *testing.T) {
 				"git:",
 			},
 		},
+		{
+			name: "write gemini config",
+			config: &agentConfig{
+				providerName: "gemini",
+				envVarName:   "GOOGLE_API_KEY",
+				model:        "gemini-1.5-pro",
+				endpoint:     "https://generativelanguage.googleapis.com",
+			},
+			wantErr: false,
+			wantContains: []string{
+				"ai:",
+				"provider: gemini",
+				"model: gemini-1.5-pro",
+				"api_key: ${GOOGLE_API_KEY}",
+				"git:",
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -111,11 +112,9 @@ func TestWriteAgentConfig(t *testing.T) {
 				t.Fatalf("failed to create .r2r/eac directory: %v", err)
 			}
 
-			configPath := filepath.Join(eacDir, "ai-provider.yml")
-
 			// Create empty token config since we're just testing team config generation
 			tokens := &tokenConfig{}
-			err := writeConfig(tmpDir, tt.config, tokens, nil)
+			configPath, err := writeConfig(tmpDir, tt.config, tokens, nil)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("writeAgentConfig() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -159,14 +158,6 @@ func TestConfigureProvider(t *testing.T) {
 			wantErr:          false,
 		},
 		{
-			name:             "configure claude-cli",
-			provider:         "claude-cli",
-			wantProviderName: "claude-cli",
-			wantModel:        "claude-3-haiku-20240307",
-			wantEnvVar:       "",
-			wantErr:          false,
-		},
-		{
 			name:             "configure openai",
 			provider:         "openai",
 			wantProviderName: "openai",
@@ -185,6 +176,11 @@ func TestConfigureProvider(t *testing.T) {
 		{
 			name:     "invalid provider returns error",
 			provider: "invalid-provider",
+			wantErr:  true,
+		},
+		{
+			name:     "claude-cli not supported in init (use importer.ps1)",
+			provider: "claude-cli",
 			wantErr:  true,
 		},
 	}

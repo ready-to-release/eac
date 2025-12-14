@@ -82,19 +82,19 @@ git:
 			errContains: "run: eac init",
 		},
 		{
-			name: "missing provider name returns error with init instructions",
+			name: "missing provider name returns ErrAIProviderNotConfigured",
 			configYAML: `ai:
   model: some-model
 git:
   token: ""`,
 			wantErr:     true,
-			errContains: "ai.provider is required",
+			errContains: "ai provider not configured",
 		},
 		{
-			name:        "empty config file returns error with init instructions",
+			name:        "empty config file returns ErrAIProviderNotConfigured",
 			configYAML:  "",
 			wantErr:     true,
-			errContains: "run: eac init",
+			errContains: "ai provider not configured",
 		},
 	}
 
@@ -153,12 +153,17 @@ func TestLoadConfig_FileNotFound(t *testing.T) {
 		t.Error("LoadConfig() expected error for non-existent file, got nil")
 	}
 
-	// Verify error message contains init instructions
-	if !strings.Contains(err.Error(), ".r2r/eac/ai-provider.yml not found") {
-		t.Errorf("LoadConfig() error = %v, want error containing '.r2r/eac/ai-provider.yml not found'", err)
+	// Verify error is ErrAIProviderNotConfigured
+	if err != ErrAIProviderNotConfigured {
+		t.Errorf("LoadConfig() error = %v, want ErrAIProviderNotConfigured", err)
 	}
-	if !strings.Contains(err.Error(), "run: eac init") {
-		t.Errorf("LoadConfig() error = %v, want error containing 'run: eac init'", err)
+
+	// Verify error message contains proper instructions
+	if !strings.Contains(err.Error(), "ai provider not configured") {
+		t.Errorf("LoadConfig() error = %v, want error containing 'ai provider not configured'", err)
+	}
+	if !strings.Contains(err.Error(), "eac init --ai-provider") {
+		t.Errorf("LoadConfig() error = %v, want error containing 'eac init --ai-provider'", err)
 	}
 }
 

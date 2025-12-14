@@ -56,7 +56,7 @@ func LoadConfig(path string) (*Config, error) {
 
 	// Validate required fields
 	if config.AI.Provider == "" {
-		return nil, fmt.Errorf("ai.provider is required in .r2r/eac/ai-provider.yml\n\nPlease run: eac init --ai <provider>\nSupported providers: claude-api, openai, gemini")
+		return nil, ErrAIProviderNotConfigured
 	}
 
 	return config, nil
@@ -102,7 +102,7 @@ func LoadConfigWithOverrides(workspaceRoot, teamConfigPath, personalConfigPath s
 
 	// Validate required fields
 	if config.AI.Provider == "" {
-		return nil, fmt.Errorf("ai.provider is required\n\nPlease run: eac init --ai <provider>\nSupported providers: claude-api, openai, gemini")
+		return nil, ErrAIProviderNotConfigured
 	}
 
 	return config, nil
@@ -125,13 +125,13 @@ func loadConfigFileWithValidation(path string, workspaceRoot string) (*Config, e
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf(".r2r/eac/ai-provider.yml not found at %s\n\nPlease run: eac init --ai <provider>\nSupported providers: claude-api, openai, gemini", path)
+			return nil, ErrAIProviderNotConfigured
 		}
-		return nil, fmt.Errorf("failed to read config file %s: %w\n\nPlease run: eac init --ai <provider>", path, err)
+		return nil, fmt.Errorf("failed to read config file %s: %w", path, err)
 	}
 
 	if len(data) == 0 {
-		return nil, fmt.Errorf(".r2r/eac/ai-provider.yml is empty\n\nPlease run: eac init --ai <provider>\nSupported providers: claude-api, openai, gemini")
+		return nil, ErrAIProviderNotConfigured
 	}
 
 	// Validate against schema if workspaceRoot is provided
@@ -143,7 +143,7 @@ func loadConfigFileWithValidation(path string, workspaceRoot string) (*Config, e
 
 	var config Config
 	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("failed to parse .r2r/eac/ai-provider.yml: %w\n\nPlease run: eac init --ai <provider>\nSupported providers: claude-api, openai, gemini", err)
+		return nil, fmt.Errorf("failed to parse .r2r/eac/ai-provider.yml: %w\n\nPlease run: eac init --ai-provider <provider>\nSupported providers: claude-api, openai, gemini", err)
 	}
 
 	return &config, nil

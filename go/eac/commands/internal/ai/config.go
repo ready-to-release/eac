@@ -1,6 +1,12 @@
 // File: go/eac/commands/internal/ai/config.go
 package ai
 
+import "errors"
+
+// ErrAIProviderNotConfigured is returned when AI provider configuration is missing.
+// Commands that depend on AI should check for this error and display the message.
+var ErrAIProviderNotConfigured = errors.New("ai provider not configured, please run eac init --ai-provider to initialize it")
+
 // Config represents AI and Git configuration loaded from .r2r/eac/ai-provider.yml
 //
 // Intent: Hold provider configuration with environment variable references.
