@@ -58,6 +58,7 @@ jobs:
         with:
           module: ext-eac
           trigger-run-id: ${{ inputs.trigger_run_id }}
+          commit-sha: ${{ inputs.sha || github.sha }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

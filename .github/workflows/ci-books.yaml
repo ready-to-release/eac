@@ -51,6 +51,7 @@ jobs:
         with:
           module: books
           trigger-run-id: ${{ inputs.trigger_run_id }}
+          commit-sha: ${{ inputs.sha || github.sha }}
           extra-args: '--all'
 
   # =============================================================================

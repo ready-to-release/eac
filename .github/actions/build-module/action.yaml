@@ -9,6 +9,10 @@ inputs:
     description: 'Run ID of trigger workflow (for artifact download). If empty, builds from source.'
     required: false
     default: ''
+  commit-sha:
+    description: 'Commit SHA for artifact lookup. Use when github.sha might differ (workflow_dispatch). Falls back to github.sha if empty.'
+    required: false
+    default: ''
   go-version:
     description: 'Go version for building commands from source'
     required: false
@@ -91,6 +95,9 @@ runs:
         COMMANDS: ${{ steps.commands.outputs.commands-path }}
         MODULE: ${{ inputs.module }}
         GH_TOKEN: ${{ github.token }}
+        # Use explicit commit-sha if provided (for workflow_dispatch where github.sha can drift)
+        # Falls back to github.sha for direct triggers (push, pull_request)
+        ARTIFACT_SHA: ${{ inputs.commit-sha || github.sha }}
       run: |
         # Get module dependencies from contract
         DEPS=$($COMMANDS get modules --as-json | jq -r ".[] | select(.moniker == \"$MODULE\") | .depends_on[]" 2>/dev/null || echo "")
@@ -100,9 +107,7 @@ runs:
           exit 0
         fi
 
-        # Get current commit SHA for same-trigger detection
-        CURRENT_SHA=$(git rev-parse HEAD)
-        echo "Current commit: $CURRENT_SHA"
+        echo "Artifact lookup SHA: $ARTIFACT_SHA"
         echo "Downloading dependency artifacts..."
         mkdir -p out/build
 
@@ -113,10 +118,10 @@ runs:
             continue
           fi
 
-          # First: Check for successful run from CURRENT commit (same CI trigger)
-          # This ensures layer N gets fresh artifacts from layer N-1
+          # Find successful run from current trigger chain (same SHA)
+          # trigger-ci dispatches in layers and waits, so deps should be complete
           CURRENT_RUN=$(gh run list -w "ci-$dep" -s success -L 5 --json databaseId,headSha \
-            | jq -r ".[] | select(.headSha == \"$CURRENT_SHA\") | .databaseId" | head -1 2>/dev/null || echo "")
+            | jq -r ".[] | select(.headSha == \"$ARTIFACT_SHA\") | .databaseId" | head -1 2>/dev/null || echo "")
 
           if [ -n "$CURRENT_RUN" ]; then
             echo "  ↓ $dep: downloading from current trigger (run $CURRENT_RUN)"
@@ -126,6 +131,7 @@ runs:
           fi
 
           # Fallback: Use last successful run from any commit (incremental CI)
+          # Valid when dependency module hasn't changed (no CI triggered for it)
           LAST_SUCCESS=$(gh run list -w "ci-$dep" -s success -L 1 --json databaseId -q '.[0].databaseId' 2>/dev/null || echo "")
 
           if [ -n "$LAST_SUCCESS" ]; then
