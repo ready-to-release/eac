@@ -1,0 +1,98 @@
+name: Trigger Release
+description: Trigger a release workflow and generate step summary
+
+inputs:
+  module:
+    description: 'Module name (e.g., docs, books, r2r-cli)'
+    required: true
+  workflow:
+    description: 'Release workflow filename (e.g., release-docs.yaml)'
+    required: true
+  workflow-description:
+    description: 'Description of what the release workflow does'
+    required: false
+    default: 'Release module'
+  ci-run-id:
+    description: 'CI workflow run ID to pass to release workflow'
+    required: false
+    default: ''
+  trigger-run-id:
+    description: 'Original trigger workflow run ID (for tracing)'
+    required: false
+    default: ''
+  version:
+    description: 'Version to release (optional, for semver modules)'
+    required: false
+    default: ''
+  github-token:
+    description: 'GitHub token for workflow dispatch'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Trigger release workflow
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        MODULE: ${{ inputs.module }}
+        WORKFLOW: ${{ inputs.workflow }}
+        CI_RUN_ID: ${{ inputs.ci-run-id }}
+        VERSION: ${{ inputs.version }}
+      run: |
+        echo "Triggering release workflow: $WORKFLOW"
+
+        # Build workflow dispatch arguments
+        ARGS=""
+
+        # Add ci_run_id if provided
+        if [ -n "$CI_RUN_ID" ]; then
+          ARGS="$ARGS -f ci_run_id=$CI_RUN_ID"
+        fi
+
+        # Add version if provided
+        if [ -n "$VERSION" ]; then
+          ARGS="$ARGS -f version=$VERSION"
+        fi
+
+        # Trigger the workflow
+        gh workflow run "$WORKFLOW" \
+          --repo ${{ github.repository }} \
+          $ARGS
+
+        echo "✅ Dispatched $WORKFLOW"
+
+    - name: Release Trigger Summary
+      shell: bash
+      env:
+        MODULE: ${{ inputs.module }}
+        WORKFLOW: ${{ inputs.workflow }}
+        WORKFLOW_DESC: ${{ inputs.workflow-description }}
+        CI_RUN_ID: ${{ inputs.ci-run-id }}
+        TRIGGER_RUN_ID: ${{ inputs.trigger-run-id }}
+        VERSION: ${{ inputs.version }}
+      run: |
+        echo "## Release Triggered: $MODULE" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Triggered release workflow:" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Workflow | Description |" >> $GITHUB_STEP_SUMMARY
+        echo "|----------|-------------|" >> $GITHUB_STEP_SUMMARY
+        echo "| \`$WORKFLOW\` | $WORKFLOW_DESC |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+        echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+
+        if [ -n "$VERSION" ]; then
+          echo "| Version | \`$VERSION\` |" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        if [ -n "$TRIGGER_RUN_ID" ]; then
+          echo "| Trigger Run ID | \`$TRIGGER_RUN_ID\` |" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "| Trigger Run ID | \`none (standalone)\` |" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        echo "| CI Run ID | \`${{ github.run_id }}\` |" >> $GITHUB_STEP_SUMMARY
+        echo "| Branch | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+        echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY

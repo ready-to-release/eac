@@ -257,7 +257,7 @@ func buildConfigSection(f *SummaryFormatter, module *config.Module, cfg *config.
 	}
 
 	// Output directory
-	configDetails += fmt.Sprintf("- %s: %s\n", Bold("Output"), Code(fmt.Sprintf("%s/%s/%s", cfg.Repository.Paths.Out.Root, cfg.Repository.Paths.Out.Build, module.Moniker)))
+	configDetails += fmt.Sprintf("- %s: %s\n", Bold("Output"), Code(cfg.Repository.BuildOutputPath(module.Moniker)))
 
 	return f.CollapsibleSection(Emoji("config")+" Build Configuration", configDetails)
 }

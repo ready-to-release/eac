@@ -1,0 +1,83 @@
+# Cleanup Pre-Releases Action
+#
+# Cleans up old pre-releases and their tags, keeping only the newest N releases.
+# Call this after a successful release to maintain a clean release history.
+#
+# Usage:
+#   cleanup:
+#     name: Cleanup Old Releases
+#     needs: [approve, release]
+#     if: needs.release.result == 'success'
+#     runs-on: ubuntu-latest
+#     permissions:
+#       contents: write
+#     steps:
+#       - uses: ./.github/actions/cleanup-pre-releases
+#         with:
+#           module: docs
+#           keep-count: 3
+
+name: Cleanup Pre-Releases
+description: Remove old pre-releases and their tags, keeping only the newest N
+
+inputs:
+  module:
+    description: 'Module prefix for releases (e.g., docs, books)'
+    required: true
+  keep-count:
+    description: 'Number of releases to keep (default: 3 = latest + 2 old)'
+    required: false
+    default: '3'
+
+runs:
+  using: composite
+  steps:
+    - name: Cleanup old releases and tags
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        MODULE="${{ inputs.module }}"
+        KEEP_COUNT="${{ inputs.keep-count }}"
+
+        echo "🧹 Cleaning up old $MODULE releases (keeping $KEEP_COUNT newest)..."
+
+        # Get all releases for this module, sorted by creation date (newest first)
+        RELEASES=$(gh release list --repo "${{ github.repository }}" --limit 100 \
+          | grep "^${MODULE}/" \
+          | head -n 100)
+
+        if [ -z "$RELEASES" ]; then
+          echo "No $MODULE releases found"
+          exit 0
+        fi
+
+        # Count releases
+        TOTAL=$(echo "$RELEASES" | wc -l)
+        echo "Found $TOTAL $MODULE releases"
+
+        if [ "$TOTAL" -le "$KEEP_COUNT" ]; then
+          echo "✅ Only $TOTAL releases exist, nothing to clean up"
+          exit 0
+        fi
+
+        # Get releases to delete (skip first KEEP_COUNT)
+        TO_DELETE=$(echo "$RELEASES" | tail -n +$((KEEP_COUNT + 1)))
+        DELETE_COUNT=$(echo "$TO_DELETE" | wc -l)
+
+        echo "Will delete $DELETE_COUNT old releases..."
+
+        # Delete each old release and its tag
+        echo "$TO_DELETE" | while read -r line; do
+          TAG=$(echo "$line" | awk '{print $1}')
+          if [ -n "$TAG" ]; then
+            echo "Deleting release and tag: $TAG"
+            # Delete the release
+            gh release delete "$TAG" --repo "${{ github.repository }}" --yes 2>/dev/null || true
+            # Delete the tag (URL-encode the /)
+            ENCODED_TAG=$(echo "$TAG" | sed 's|/|%2F|g')
+            gh api -X DELETE "repos/${{ github.repository }}/git/refs/tags/${ENCODED_TAG}" 2>/dev/null || true
+          fi
+        done
+
+        echo "✅ Cleanup complete: deleted $DELETE_COUNT old releases"

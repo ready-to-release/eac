@@ -199,11 +199,31 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
   # ==========================================================================
+  # Cleanup Old Releases
+  # ==========================================================================
+  cleanup:
+    name: Cleanup Old Releases
+    needs: [approve, release]
+    if: needs.release.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Cleanup old releases
+        uses: ./.github/actions/cleanup-pre-releases
+        with:
+          module: docs
+          keep-count: '3'
+
+  # ==========================================================================
   # Summary
   # ==========================================================================
   summary:
     name: Summary
-    needs: [approve, release]
+    needs: [approve, release, cleanup]
     if: always()
     runs-on: ubuntu-latest
     permissions:
