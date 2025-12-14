@@ -1,25 +1,22 @@
 // Command: get build-times
-// Description: Get build timing information from build logs
+// Description: Get build timing information from build manifests
 // Flags:
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML
 // Long:
 // Long: Expected Output:
-// Long: YAML with build timing metrics parsed from out/build/ logs, including:
-// Long:   - Per-module timing data with duration in seconds and status (PASS/FAIL)
+// Long: YAML with build timing metrics parsed from per-module build.manifest.json files:
+// Long:   - Per-module timing data with duration in seconds
 // Long:   - Aggregated statistics by module type
-// Long:   - Overall summary with total/passed/failed builds and average duration
+// Long:   - Overall summary with total builds and average duration
 package get
 
 import (
-	"bufio"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
-	"strconv"
-	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/internal/testdata"
@@ -90,7 +87,7 @@ func GetBuildTimesFiltered(moduleFilter []string, buildOutputDir string) int {
 				return nil, fmt.Errorf("failed to load config: %w", err)
 			}
 
-			buildOutputDir = filepath.Join(repoRoot, cfg.Repository.Paths.Out.Root, cfg.Repository.Paths.Out.Build)
+			buildOutputDir = filepath.Join(repoRoot, cfg.Repository.Paths.Out.Build)
 		} else {
 			// If buildOutputDir is provided, derive repo root from it
 			var err error
@@ -133,90 +130,58 @@ func GetBuildTimesFiltered(moduleFilter []string, buildOutputDir string) int {
 	})
 }
 
-// ParseBuildLog parses the orchestrator.log file to extract build timings
+// ParseBuildLog reads build timing data from per-module manifest files.
+// It scans all subdirectories in the build output dir for build.manifest.json files.
 func ParseBuildLog(buildDir string) ([]BuildTiming, error) {
-	logPath := filepath.Join(buildDir, "orchestrator.log")
-
-	file, err := os.Open(logPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open orchestrator.log: %w", err)
-	}
-	defer file.Close()
-
 	var timings []BuildTiming
-	scanner := bufio.NewScanner(file)
 
-	// Parse failed modules section first
-	failedModules := make(map[string]bool)
-	inFailedSection := false
-
-	// Regex to match timing summary lines
-	// Format: "  10.6s  docs"
-	// Format: "   2.7s  r2r-cli"
-	timingRe := regexp.MustCompile(`^\s+([0-9.]+)s\s+(\S+)`)
-
-	// Regex to match failed module lines (after "❌ Failed:" header)
-	// Format: "  module-name"
-	failedRe := regexp.MustCompile(`^\s+(\S+)`)
-
-	for scanner.Scan() {
-		line := scanner.Text()
-
-		// Check for failed section header
-		if strings.Contains(line, "❌ Failed:") {
-			inFailedSection = true
-			continue
-		}
-
-		// Check for section end (empty line or new section)
-		if inFailedSection && (line == "" || strings.HasPrefix(line, "===")) {
-			inFailedSection = false
-			continue
-		}
-
-		// Parse failed module names
-		if inFailedSection {
-			if matches := failedRe.FindStringSubmatch(line); matches != nil {
-				module := matches[1]
-				// Remove any trailing notes like "(retries exceeded)"
-				module = strings.Split(module, " ")[0]
-				failedModules[module] = true
-			}
-			continue
-		}
-
-		// Parse timing lines (in the "=== Timing Summary ===" section)
-		if matches := timingRe.FindStringSubmatch(line); matches != nil {
-			durationStr := matches[1]
-			module := matches[2]
-
-			// Skip the TOTAL line
-			if module == "TOTAL" {
-				continue
-			}
-
-			duration, err := strconv.ParseFloat(durationStr, 64)
-			if err != nil {
-				continue
-			}
-
-			// Determine status based on failed modules list
-			status := "PASS"
-			if failedModules[module] {
-				status = "FAIL"
-			}
-
-			timings = append(timings, BuildTiming{
-				Module:   module,
-				Duration: duration,
-				Status:   status,
-				Type:     "", // Type will be populated later
-			})
-		}
+	// Scan build directory for module subdirectories
+	entries, err := os.ReadDir(buildDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read build directory: %w", err)
 	}
 
-	if err := scanner.Err(); err != nil {
-		return nil, err
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		moduleName := entry.Name()
+		manifestPath := filepath.Join(buildDir, moduleName, "build.manifest.json")
+
+		// Check if manifest exists
+		if _, err := os.Stat(manifestPath); os.IsNotExist(err) {
+			continue
+		}
+
+		// Read manifest file
+		data, err := os.ReadFile(manifestPath)
+		if err != nil {
+			continue
+		}
+
+		// Parse manifest JSON - we only need duration_seconds and moniker
+		var manifest struct {
+			Moniker         string  `json:"moniker"`
+			Type            string  `json:"type"`
+			DurationSeconds float64 `json:"duration_seconds"`
+		}
+		if err := json.Unmarshal(data, &manifest); err != nil {
+			continue
+		}
+
+		// Use directory name as moniker if not in manifest (backward compat)
+		moniker := manifest.Moniker
+		if moniker == "" {
+			moniker = moduleName
+		}
+
+		timings = append(timings, BuildTiming{
+			Module:   moniker,
+			Duration: manifest.DurationSeconds,
+			Status:   "PASS", // If manifest exists, build succeeded
+			Type:     manifest.Type,
+		})
 	}
 
 	return timings, nil

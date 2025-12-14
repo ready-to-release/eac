@@ -66,9 +66,37 @@
         "versioning": {
           "$ref": "#/definitions/versioning_config",
           "description": "Repository-wide versioning constraints and behavior"
+        },
+        "parallelism": {
+          "$ref": "#/definitions/parallelism_config",
+          "description": "Parallelism limits for build and test commands"
         }
       },
       "additionalProperties": false
+    },
+    "parallelism_config": {
+      "type": "object",
+      "description": "Parallelism limits for build and test operations. CI uses lower limits to avoid resource contention on shared runners.",
+      "properties": {
+        "ci": {
+          "type": "integer",
+          "description": "Maximum parallel workers in CI environment (GitHub Actions)",
+          "minimum": 1,
+          "maximum": 16,
+          "default": 2
+        },
+        "devbox": {
+          "type": "integer",
+          "description": "Maximum parallel workers in local development environment",
+          "minimum": 1,
+          "maximum": 32,
+          "default": 4
+        }
+      },
+      "default": {
+        "ci": 2,
+        "devbox": 4
+      }
     },
     "pr_config": {
       "type": "object",

@@ -46,8 +46,6 @@ type Config struct {
 	OutputBaseDir string
 	// LogFileName is the name of the log file for each module (e.g., "build.log" or "test.log")
 	LogFileName string
-	// OrchestratorLogName is the name of the orchestrator summary log
-	OrchestratorLogName string
 	// ActionVerb is the present continuous verb for status messages (e.g., "building", "testing")
 	ActionVerb string
 	// MaxConcurrency is the maximum number of concurrent workers (0 = number of CPUs)

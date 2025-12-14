@@ -24,7 +24,6 @@ type Orchestrator struct {
 	display         *displayManager
 	orchestratorOut io.Writer
 	logger          *log.Logger // goroutine-safe logger
-	logFile         *os.File
 
 	// TUI console for real-time output display
 	tuiConsole *tui.Console
@@ -439,10 +438,8 @@ func (o *Orchestrator) WaitTUI() {
 		o.tuiConsole.Wait()
 	}
 	// Restore stdout after TUI exits
-	if o.logFile != nil {
-		o.orchestratorOut = io.MultiWriter(os.Stdout, o.logFile)
-		o.logger = log.New(o.orchestratorOut, "", 0)
-	}
+	o.orchestratorOut = os.Stdout
+	o.logger = log.New(o.orchestratorOut, "", 0)
 }
 
 // StopTUI stops the TUI console and restores stdout output.
@@ -457,21 +454,14 @@ func (o *Orchestrator) StopTUI() {
 		o.tuiCancel = nil
 	}
 	// Restore stdout for subsequent output (like PrintSummary)
-	if o.logFile != nil {
-		o.orchestratorOut = io.MultiWriter(os.Stdout, o.logFile)
-		o.logger = log.New(o.orchestratorOut, "", 0)
-	}
+	o.orchestratorOut = os.Stdout
+	o.logger = log.New(o.orchestratorOut, "", 0)
 }
 
 // Close releases resources held by the orchestrator
 func (o *Orchestrator) Close() {
 	// Stop TUI if not already stopped
 	o.StopTUI()
-
-	if o.logFile != nil {
-		o.logFile.Close()
-		o.logFile = nil
-	}
 }
 
 // tuiMarkRunning adds a module to the running list and updates TUI status
@@ -605,49 +595,26 @@ func (o *Orchestrator) SendSummary(data *tui.SummaryData) {
 	o.tuiConsole.SendSummary(data)
 }
 
-// Init initializes the orchestrator's output infrastructure (log file, writers).
+// Init initializes the orchestrator's output infrastructure.
 // This must be called before StartTUI or using phase methods.
 // It's automatically called by Run/RunLayered if not called explicitly.
 func (o *Orchestrator) Init() error {
-	if o.logFile != nil {
+	if o.orchestratorOut != nil {
 		return nil // Already initialized
 	}
 
-	// Create orchestrator log file (if enabled)
-	var orchestratorLog io.Writer = os.Stdout // Default to stdout if no log file
-	if o.config.OrchestratorLogName != "" {
-		orchestratorLogPath := filepath.Join(o.config.WorkspaceRoot, o.config.OutputBaseDir, o.config.OrchestratorLogName)
-		if err := os.MkdirAll(filepath.Dir(orchestratorLogPath), 0755); err != nil {
-			return fmt.Errorf("failed to create orchestrator log directory: %w", err)
-		}
-
-		logFile, err := os.Create(orchestratorLogPath)
-		if err != nil {
-			return fmt.Errorf("failed to create orchestrator log: %w", err)
-		}
-		o.logFile = logFile
-		orchestratorLog = logFile
-	}
-
-	// Create a goroutine-safe logger
-	// When TUI is enabled, only write to log file (TUI handles console display)
-	// When no log file is configured, write to stdout
-	var multiWriter io.Writer
+	// Configure output writer based on TUI mode
+	// When TUI is enabled, discard orchestrator-level output (TUI handles display)
+	// When TUI is disabled, write to stdout
+	var writer io.Writer
 	if o.config.TUI {
-		if o.logFile != nil {
-			multiWriter = orchestratorLog
-		} else {
-			multiWriter = io.Discard // TUI mode with no log file - discard output
-		}
+		writer = io.Discard // TUI mode - TUI handles console display
 	} else {
-		if o.logFile != nil {
-			multiWriter = io.MultiWriter(os.Stdout, orchestratorLog)
-		} else {
-			multiWriter = os.Stdout
-		}
+		writer = os.Stdout
 	}
-	o.logger = log.New(multiWriter, "", 0)
-	o.orchestratorOut = multiWriter
+
+	o.logger = log.New(writer, "", 0)
+	o.orchestratorOut = writer
 
 	return nil
 }
