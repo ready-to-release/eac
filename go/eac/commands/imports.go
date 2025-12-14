@@ -28,7 +28,7 @@ import (
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/scan/vuln"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/scan/zap"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/serve/design"
-	_ "github.com/ready-to-release/eac/go/eac/commands/impl/serve/docs"
+	_ "github.com/ready-to-release/eac/go/eac/commands/impl/serve"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/show"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/specs"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/specs/unused"
