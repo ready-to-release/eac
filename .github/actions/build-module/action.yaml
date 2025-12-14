@@ -120,7 +120,7 @@ runs:
 
           # Find successful run from current trigger chain (same SHA)
           # trigger-ci dispatches in layers and waits, so deps should be complete
-          CURRENT_RUN=$(gh run list -w "ci-$dep" -s success -L 5 --json databaseId,headSha \
+          CURRENT_RUN=$(gh run list -w "ci-${dep}.yaml" -s success -L 5 --json databaseId,headSha \
             | jq -r ".[] | select(.headSha == \"$ARTIFACT_SHA\") | .databaseId" | head -1 2>/dev/null || echo "")
 
           if [ -n "$CURRENT_RUN" ]; then
@@ -132,7 +132,7 @@ runs:
 
           # Fallback: Use last successful run from any commit (incremental CI)
           # Valid when dependency module hasn't changed (no CI triggered for it)
-          LAST_SUCCESS=$(gh run list -w "ci-$dep" -s success -L 1 --json databaseId -q '.[0].databaseId' 2>/dev/null || echo "")
+          LAST_SUCCESS=$(gh run list -w "ci-${dep}.yaml" -s success -L 1 --json databaseId -q '.[0].databaseId' 2>/dev/null || echo "")
 
           if [ -n "$LAST_SUCCESS" ]; then
             echo "  ↓ $dep: downloading from previous CI (run $LAST_SUCCESS)"

@@ -4,13 +4,9 @@
 # It downloads pre-built artifacts from CI and deploys them.
 #
 # CI Verification:
-# - When triggered by CI (ci_run_id provided): Uses that run directly, no waiting
-# - When triggered manually/by tag: Uses `release check-ci` which handles:
-#   - Waiting for CI to complete (with proper chain detection)
-#   - CI inheritance when only changelog changed
-#   - Exports CI_RUN_ID for artifact download
-#
-# Note: PDF books are released separately via the books module (release-books.yaml).
+# - Uses approve-release action which handles CI verification (strict mode)
+# - CI inheritance when only changelog changed
+# - Exports CI_RUN_ID for artifact download
 
 name: "release-docs (stage 8+)"
 
@@ -21,10 +17,15 @@ on:
   workflow_dispatch:
     inputs:
       ci_run_id:
-        description: 'CI workflow run ID (for verification)'
+        description: 'CI workflow run ID (passed from CI for artifact download)'
         required: false
         type: string
         default: ''
+      skip-ci-check:
+        description: 'Skip CI verification (dangerous - for hotfixes only)'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -33,8 +34,39 @@ permissions:
   actions: read
 
 jobs:
-  release:
+  approve:
+    name: Approve Release
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.gate.outputs.version }}
+      tag_name: ${{ steps.gate.outputs.tag_name }}
+      ci_sha: ${{ steps.gate.outputs.ci_sha }}
+      ci_run_id: ${{ inputs.ci_run_id }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Approve release
+        id: gate
+        uses: ./.github/actions/approve-release
+        with:
+          module: docs
+          version-type: calver
+          # Skip CI check when triggered from CI (ci_run_id provided) or manually skipped
+          skip-ci-check: ${{ inputs.ci_run_id != '' || inputs.skip-ci-check || 'false' }}
+          timeout: '300'
+
+  release:
+    name: Deploy Site
+    needs: approve
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+      actions: read
 
     environment:
       name: github-pages
@@ -50,82 +82,27 @@ jobs:
         id: commands
         uses: ./.github/actions/setup-commands
 
-      - name: Check CI status
-        if: inputs.ci_run_id == ''
-        run: |
-          COMMANDS="${{ steps.commands.outputs.commands-path }}"
-
-          # Only check CI when not invoked directly from CI workflow
-          # When ci_run_id is provided, CI just completed - no need to wait
-          $COMMANDS release check-ci \
-            --workflow ci-docs.yaml \
-            --commit ${{ github.sha }} \
-            --timeout 300
-
-          # CI_RUN_ID and CI_SHA are now available in GITHUB_ENV
-        env:
-          GH_TOKEN: ${{ github.token }}
-
-      - name: Generate calver tag
-        id: tag
-        run: |
-          COMMANDS="${{ steps.commands.outputs.commands-path }}"
-
-          # Configure git for tag operations
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git fetch --tags --force
-
-          # For tag triggers, extract version from tag
-          if [ "${{ github.event_name }}" = "push" ]; then
-            TAG="${{ github.ref_name }}"
-            VERSION="${TAG#docs/}"
-            echo "Tag trigger: using existing tag $TAG"
-          else
-            # Generate calver tag (docs/YYYY.MM.DD or docs/YYYY.MM.DD.N)
-            TAG=$($COMMANDS release generate-module-calver docs)
-            VERSION="${TAG#docs/}"
-            echo "Manual trigger: generated tag $TAG"
-          fi
-
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Check for existing release
-        run: |
-          TAG_NAME="${{ steps.tag.outputs.tag }}"
-
-          # Check if a GitHub release already exists for this tag
-          if gh release view "$TAG_NAME" 2>/dev/null; then
-            echo ""
-            echo "❌ Error: Release already exists for tag $TAG_NAME"
-            echo ""
-            echo "A GitHub release has already been created for this version."
-            echo "If you want to create a new release:"
-            echo "1. Delete the existing release: gh release delete $TAG_NAME"
-            echo "2. Delete the tag: git push --delete origin $TAG_NAME"
-            echo "3. Re-run this workflow"
-            exit 1
-          fi
-
-          echo "✅ No existing release found for $TAG_NAME"
-        env:
-          GH_TOKEN: ${{ github.token }}
-
       - name: Get CI run ID
         id: ci
         run: |
-          # Priority: 1) Input parameter, 2) CI_RUN_ID from check-ci
-          if [ -n "${{ inputs.ci_run_id }}" ]; then
-            echo "run_id=${{ inputs.ci_run_id }}" >> $GITHUB_OUTPUT
-            echo "Using provided CI run ID: ${{ inputs.ci_run_id }}"
-          elif [ -n "$CI_RUN_ID" ]; then
-            echo "run_id=$CI_RUN_ID" >> $GITHUB_OUTPUT
-            echo "Using CI run from check-ci: $CI_RUN_ID (SHA: ${CI_SHA:-unknown})"
+          # Priority: 1) ci_run_id from CI trigger, 2) lookup from ci_sha
+          if [ -n "${{ needs.approve.outputs.ci_run_id }}" ]; then
+            echo "run_id=${{ needs.approve.outputs.ci_run_id }}" >> $GITHUB_OUTPUT
+            echo "Using CI run ID from trigger: ${{ needs.approve.outputs.ci_run_id }}"
           else
-            echo "❌ No CI run ID available"
-            echo "   check-ci should have set CI_RUN_ID"
-            exit 1
+            COMMANDS="${{ steps.commands.outputs.commands-path }}"
+            CI_SHA="${{ needs.approve.outputs.ci_sha }}"
+            WORKFLOW="ci-docs.yaml"
+
+            RUN_ID=$($COMMANDS pipeline ci get-run-id --workflow "$WORKFLOW" --sha "$CI_SHA" 2>/dev/null || echo "")
+
+            if [ -z "$RUN_ID" ]; then
+              echo "❌ Could not find CI run for SHA: $CI_SHA"
+              exit 1
+            fi
+
+            echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
+            echo "Using CI run ID from lookup: $RUN_ID (SHA: $CI_SHA)"
           fi
         env:
           GH_TOKEN: ${{ github.token }}
@@ -184,7 +161,7 @@ jobs:
 
           ### Release Information
 
-          - **Version**: ${{ steps.tag.outputs.version }}
+          - **Version**: ${{ needs.approve.outputs.version }}
           - **Commit**: ${{ github.sha }}
           - **Site URL**: ${{ steps.deployment.outputs.page_url }}
 
@@ -196,8 +173,8 @@ jobs:
 
       - name: Create GitHub Release
         run: |
-          TAG_NAME="${{ steps.tag.outputs.tag }}"
-          VERSION="${{ steps.tag.outputs.version }}"
+          TAG_NAME="${{ needs.approve.outputs.tag_name }}"
+          VERSION="${{ needs.approve.outputs.version }}"
 
           echo "Creating release for tag: $TAG_NAME"
 
@@ -206,80 +183,70 @@ jobs:
             gh release create "$TAG_NAME" \
               --title "Documentation Site $VERSION" \
               --notes-file release_notes.md \
-              --target "${{ github.sha }}"
+              --target "${{ github.sha }}" \
+              --latest=false
           else
             echo "Tag trigger: using existing tag"
             gh release create "$TAG_NAME" \
               --title "Documentation Site $VERSION" \
               --notes-file release_notes.md \
-              --verify-tag
+              --verify-tag \
+              --latest=false
           fi
 
           echo "✅ Release created successfully"
         env:
           GH_TOKEN: ${{ github.token }}
 
-      # ==========================================================================
-      # Summary
-      # ==========================================================================
-      - name: Summary (failure)
-        if: failure()
+  # ==========================================================================
+  # Summary
+  # ==========================================================================
+  summary:
+    name: Summary
+    needs: [approve, release]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
+
+      - name: Generate summary
         run: |
-          echo "## ❌ Documentation Release Failed" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Common Failure Causes" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Step | Possible Cause | Fix |" >> $GITHUB_STEP_SUMMARY
-          echo "|------|----------------|-----|" >> $GITHUB_STEP_SUMMARY
-          echo "| Check CI status | No successful CI run for this commit | Run CI first or wait for it to complete |" >> $GITHUB_STEP_SUMMARY
-          echo "| Check existing release | Release already exists | Delete existing release or wait for new commit |" >> $GITHUB_STEP_SUMMARY
-          echo "| Build docs | MkDocs configuration error | Check mkdocs.yml syntax |" >> $GITHUB_STEP_SUMMARY
-          echo "| Build docs | Docker not available | Ensure Docker is running |" >> $GITHUB_STEP_SUMMARY
-          echo "| Deploy to Pages | GitHub Pages not enabled | Enable Pages in repository settings |" >> $GITHUB_STEP_SUMMARY
-          echo "| Create release | Tag conflict | Check if tag already exists |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Debug Information" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Trigger | \`${{ github.event_name }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Planned Tag | \`${{ steps.tag.outputs.tag }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
           COMMANDS="${{ steps.commands.outputs.commands-path }}"
-          $COMMANDS pipeline ci summary-link ${{ github.run_id }} --type release --workflow ci-docs.yaml --commit ${{ github.sha }} >> $GITHUB_STEP_SUMMARY
+          VERSION="${{ needs.approve.outputs.version }}"
+          TAG_NAME="${{ needs.approve.outputs.tag_name }}"
+          APPROVE_RESULT="${{ needs.approve.result }}"
+          RELEASE_RESULT="${{ needs.release.result }}"
+
+          if [ "$APPROVE_RESULT" = "success" ] && [ "$RELEASE_RESULT" = "success" ]; then
+            echo "## ✅ Documentation Site Released" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Successfully released documentation site **${VERSION}**." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "- **Version**: \`${VERSION}\` (calver)" >> $GITHUB_STEP_SUMMARY
+            echo "- **Tag**: \`${TAG_NAME}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- **Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "🌐 [**View Documentation Site**](https://ready-to-release.github.io/eac/)" >> $GITHUB_STEP_SUMMARY
+          elif [ "$APPROVE_RESULT" = "failure" ]; then
+            echo "## ❌ Release Approval Failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Release was not approved. Check the approve job for details." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            $COMMANDS pipeline ci summary-link ${{ github.run_id }} --type release --workflow ci-docs.yaml --commit ${{ github.sha }} >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ❌ Documentation Release Failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Release failed after approval. Check the release job for details." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            $COMMANDS pipeline ci summary-link ${{ github.run_id }} --type release --workflow ci-docs.yaml --commit ${{ github.sha }} >> $GITHUB_STEP_SUMMARY
+          fi
         env:
           GH_TOKEN: ${{ github.token }}
-
-      - name: Summary (success)
-        if: success()
-        run: |
-          VERSION="${{ steps.tag.outputs.version }}"
-          TAG_NAME="${{ steps.tag.outputs.tag }}"
-
-          echo "## ✅ Documentation Site Released" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Successfully released documentation site **${VERSION}**." >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "### Release Details" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Version | \`${VERSION}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Tag | \`${TAG_NAME}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Trigger | \`${{ github.event_name }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "### Site Statistics" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Total Files | ${{ steps.verify.outputs.file_count }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| HTML Pages | ${{ steps.verify.outputs.html_count }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Total Size | ${{ steps.verify.outputs.total_size }} |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "🌐 [**View Documentation Site**](${{ steps.deployment.outputs.page_url }})" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "📚 [**PDF Books**](https://github.com/${{ github.repository }}/releases?q=books) (released separately)" >> $GITHUB_STEP_SUMMARY

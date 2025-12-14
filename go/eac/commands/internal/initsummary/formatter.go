@@ -212,15 +212,24 @@ func FormatDetailed(s *Summary) string {
 		b.WriteString("  ⏭️  Skipped (--skip-depm)\n")
 	} else if !s.DepmStatus.Verified {
 		b.WriteString("  Not verified\n")
-	} else if s.DepmStatus.Total == 0 {
+	} else if s.DepmStatus.Total == 0 && len(s.DepmStatus.Existing) == 0 {
 		b.WriteString("  ✅ No module dependencies\n")
 	} else if len(s.DepmStatus.Missing) > 0 {
 		b.WriteString(fmt.Sprintf("  ❌ %d/%d resolved\n", len(s.DepmStatus.Resolved), s.DepmStatus.Total))
 		b.WriteString(fmt.Sprintf("  Missing: %s\n", strings.Join(s.DepmStatus.Missing, ", ")))
 	} else {
-		b.WriteString(fmt.Sprintf("  ✅ %d/%d resolved\n", len(s.DepmStatus.Resolved), s.DepmStatus.Total))
+		// Show existing deps (reused from previous builds via --use-existing-depm)
+		if len(s.DepmStatus.Existing) > 0 {
+			b.WriteString(fmt.Sprintf("  ✅ %d reused (existing artifacts)\n", len(s.DepmStatus.Existing)))
+			b.WriteString(fmt.Sprintf("  Reused: %s\n", strings.Join(s.DepmStatus.Existing, ", ")))
+		}
+		// Show resolved deps (will be built)
 		if len(s.DepmStatus.Resolved) > 0 {
+			b.WriteString(fmt.Sprintf("  ✅ %d/%d resolved\n", len(s.DepmStatus.Resolved), s.DepmStatus.Total))
 			b.WriteString(fmt.Sprintf("  Modules: %s\n", strings.Join(s.DepmStatus.Resolved, ", ")))
+		} else if len(s.DepmStatus.Existing) == 0 {
+			// No resolved and no existing - truly no deps
+			b.WriteString("  ✅ No module dependencies\n")
 		}
 	}
 	b.WriteString("\n")

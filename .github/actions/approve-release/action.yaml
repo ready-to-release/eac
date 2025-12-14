@@ -2,8 +2,9 @@
 #
 # Gates release workflows by validating:
 # 1. CI has passed for the exact commit being released (strict mode)
-# 2. Version is valid semver format
+# 2. Version is valid format (semver or calver)
 # 3. No existing GitHub release for this version
+# 4. Changelog has version entry (semver only)
 #
 # Usage:
 #   jobs:
@@ -20,6 +21,7 @@
 #           id: gate
 #           with:
 #             module: r2r-cli
+#             version-type: semver  # or calver for docs/books
 #
 #     release:
 #       needs: approve
@@ -30,8 +32,12 @@ description: Validate CI passed and release preconditions are met
 
 inputs:
   module:
-    description: 'Module name (e.g., r2r-cli, ext-eac)'
+    description: 'Module name (e.g., r2r-cli, ext-eac, docs, books)'
     required: true
+  version-type:
+    description: 'Version format: semver (x.y.z) or calver (YYYY.MMDD.HHMM)'
+    required: false
+    default: 'semver'
   skip-ci-check:
     description: 'Skip CI verification (dangerous - for hotfixes only)'
     required: false
@@ -64,19 +70,27 @@ runs:
       uses: ./.github/actions/extract-release-version
       with:
         module-prefix: ${{ inputs.module }}
+        version-type: ${{ inputs.version-type }}
         commands-path: ${{ steps.commands.outputs.commands-path }}
 
     - name: Validate version format
       shell: bash
+      env:
+        VERSION_TYPE: ${{ inputs.version-type }}
       run: |
         if [ "${{ steps.version.outputs.is_valid }}" != "true" ]; then
           echo "::error::Invalid version format: ${{ steps.version.outputs.version }}"
-          echo "Expected semver format: x.y.z (e.g., 1.0.0)"
+          if [ "$VERSION_TYPE" = "calver" ]; then
+            echo "Expected calver format: YYYY.MMDD.HHMM (e.g., 2025.1214.1630)"
+          else
+            echo "Expected semver format: x.y.z (e.g., 1.0.0)"
+          fi
           exit 1
         fi
-        echo "Version ${{ steps.version.outputs.version }} is valid"
+        echo "Version ${{ steps.version.outputs.version }} is valid $VERSION_TYPE"
 
     - name: Validate changelog has version entry
+      if: inputs.version-type == 'semver'
       shell: bash
       env:
         MODULE: ${{ inputs.module }}
@@ -187,19 +201,24 @@ runs:
         TAG_NAME="${{ steps.version.outputs.tag_name }}"
         COMMIT="${{ github.sha }}"
         SKIP_CI="${{ inputs.skip-ci-check }}"
+        VERSION_TYPE="${{ inputs.version-type }}"
         WORKFLOW="ci-${MODULE}.yaml"
 
         echo "## Release Approval: $MODULE" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
         echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
-        echo "| Version | \`$VERSION\` |" >> $GITHUB_STEP_SUMMARY
+        echo "| Version | \`$VERSION\` ($VERSION_TYPE) |" >> $GITHUB_STEP_SUMMARY
         echo "| Tag | \`$TAG_NAME\` |" >> $GITHUB_STEP_SUMMARY
         echo "| Commit | \`${COMMIT:0:7}\` |" >> $GITHUB_STEP_SUMMARY
 
         # Show success status only if job succeeded
         if [ "${{ job.status }}" != "failure" ]; then
-          echo "| Changelog | :white_check_mark: Updated |" >> $GITHUB_STEP_SUMMARY
+          if [ "$VERSION_TYPE" = "semver" ]; then
+            echo "| Changelog | :white_check_mark: Updated |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Changelog | :white_check_mark: N/A (calver) |" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "| Existing Release | :white_check_mark: None |" >> $GITHUB_STEP_SUMMARY
 
           if [ "$SKIP_CI" = "true" ]; then

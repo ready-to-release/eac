@@ -3,8 +3,12 @@ description: Extract version from tag trigger or workflow dispatch input
 
 inputs:
   module-prefix:
-    description: 'Module prefix in tag (e.g., r2r-cli, ext-eac, docs)'
+    description: 'Module prefix in tag (e.g., r2r-cli, ext-eac, docs, books)'
     required: true
+  version-type:
+    description: 'Version format: semver (x.y.z) or calver (YYYY.MMDD.HHMM)'
+    required: false
+    default: 'semver'
   commands-path:
     description: 'Path to commands binary for validation (optional, skips validation if not provided)'
     required: false
@@ -12,13 +16,13 @@ inputs:
 
 outputs:
   version:
-    description: 'Extracted version without prefix (e.g., 1.2.3)'
+    description: 'Extracted version without prefix (e.g., 1.2.3 or 2025.1214.1630)'
     value: ${{ steps.extract.outputs.version }}
   tag_name:
-    description: 'Full tag name (e.g., r2r-cli/1.2.3)'
+    description: 'Full tag name (e.g., r2r-cli/1.2.3 or docs/2025.1214.1630)'
     value: ${{ steps.extract.outputs.tag_name }}
   is_valid:
-    description: 'Whether version is valid semver (true/false)'
+    description: 'Whether version is valid for its type (true/false)'
     value: ${{ steps.extract.outputs.is_valid }}
 
 runs:
@@ -29,6 +33,7 @@ runs:
       shell: bash
       env:
         MODULE_PREFIX: ${{ inputs.module-prefix }}
+        VERSION_TYPE: ${{ inputs.version-type }}
         EVENT_NAME: ${{ github.event_name }}
         DISPATCH_VERSION: ${{ github.event.inputs.version }}
         GITHUB_REF: ${{ github.ref }}
@@ -36,9 +41,23 @@ runs:
       run: |
         # Determine version based on trigger type
         if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-          VERSION="$DISPATCH_VERSION"
-          TAG_NAME="${MODULE_PREFIX}/${VERSION}"
-          echo "Extracting from workflow_dispatch: version=$VERSION"
+          if [ "$VERSION_TYPE" = "calver" ] && [ -z "$DISPATCH_VERSION" ]; then
+            # Auto-generate calver for workflow_dispatch without version input
+            if [ -n "$COMMANDS_PATH" ] && [ -f "$COMMANDS_PATH" ]; then
+              TAG_NAME=$("$COMMANDS_PATH" release generate-module-calver "$MODULE_PREFIX")
+              VERSION="${TAG_NAME#${MODULE_PREFIX}/}"
+              echo "Auto-generated calver: version=$VERSION"
+            else
+              # Fallback: generate calver inline
+              VERSION=$(date -u +"%Y.%m%d.%H%M")
+              TAG_NAME="${MODULE_PREFIX}/${VERSION}"
+              echo "Generated calver (fallback): version=$VERSION"
+            fi
+          else
+            VERSION="$DISPATCH_VERSION"
+            TAG_NAME="${MODULE_PREFIX}/${VERSION}"
+            echo "Extracting from workflow_dispatch: version=$VERSION"
+          fi
         else
           # Extract from tag ref
           TAG_NAME="${GITHUB_REF#refs/tags/}"
@@ -50,25 +69,34 @@ runs:
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
 
-        # Validate if commands binary is available
-        if [ -n "$COMMANDS_PATH" ] && [ -f "$COMMANDS_PATH" ]; then
-          if "$COMMANDS_PATH" validate release-version "$VERSION" 2>/dev/null; then
+        # Validate based on version type
+        if [ "$VERSION_TYPE" = "calver" ]; then
+          # Calver: YYYY.MMDD.HHMM (e.g., 2025.1214.1630)
+          if echo "$VERSION" | grep -qE '^[0-9]{4}\.[0-9]{4}\.[0-9]{4}$'; then
             echo "is_valid=true" >> $GITHUB_OUTPUT
-            echo "Version $VERSION is valid"
+            echo "Version $VERSION is valid calver"
           else
             echo "is_valid=false" >> $GITHUB_OUTPUT
-            echo "::warning::Version $VERSION failed validation"
+            echo "::warning::Version $VERSION is not valid calver (expected YYYY.MMDD.HHMM)"
+          fi
+        elif [ -n "$COMMANDS_PATH" ] && [ -f "$COMMANDS_PATH" ]; then
+          # Semver with commands binary validation
+          if "$COMMANDS_PATH" validate release-version "$VERSION" 2>/dev/null; then
+            echo "is_valid=true" >> $GITHUB_OUTPUT
+            echo "Version $VERSION is valid semver"
+          else
+            echo "is_valid=false" >> $GITHUB_OUTPUT
+            echo "::warning::Version $VERSION failed semver validation"
           fi
         else
-          # Fallback validation with regex
+          # Semver fallback validation with regex
           if echo "$VERSION" | grep -qE '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'; then
-            # Also check no 'v' prefix
             if echo "$VERSION" | grep -qE '^[vV]'; then
               echo "is_valid=false" >> $GITHUB_OUTPUT
               echo "::warning::Version $VERSION has 'v' prefix"
             else
               echo "is_valid=true" >> $GITHUB_OUTPUT
-              echo "Version $VERSION is valid (regex check)"
+              echo "Version $VERSION is valid semver (regex check)"
             fi
           else
             echo "is_valid=false" >> $GITHUB_OUTPUT

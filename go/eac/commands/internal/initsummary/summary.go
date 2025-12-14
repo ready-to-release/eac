@@ -75,7 +75,8 @@ type DepmStatus struct {
 	Verified bool     // Were module deps checked? (false if --skip-depm)
 	Skipped  bool     // Was --skip-depm used?
 	Total    int      // Total dependency modules found
-	Resolved []string // Successfully resolved module deps
+	Resolved []string // Successfully resolved module deps (will be built)
+	Existing []string // Deps with existing artifacts (will be reused, --use-existing-depm)
 	Missing  []string // Failed to resolve (would cause build failure)
 }
 

@@ -149,7 +149,7 @@ books:
   # ==============================================================================
   - name: howto
     title: "How-to Guides"
-    description: "Howtos"
+    description: "Practical how-to guides for common tasks"
     output: pdf-dark
     site_url: "https://ready-to-release.github.io/eac/"
 
@@ -171,7 +171,7 @@ books:
   # ==============================================================================
   - name: tutorials
     title: "Tutorials"
-    description: "tutorials"
+    description: "Step-by-step learning tutorials"
     output: pdf-dark
     site_url: "https://ready-to-release.github.io/eac/"
 

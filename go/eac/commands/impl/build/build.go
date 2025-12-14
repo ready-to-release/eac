@@ -451,11 +451,11 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 
 	// Calculate added depm (modules added as dependencies)
 	var addedDepm []string
+	requestedSet := make(map[string]bool)
+	for _, m := range monikers {
+		requestedSet[m] = true
+	}
 	if includeDepm {
-		requestedSet := make(map[string]bool)
-		for _, m := range monikers {
-			requestedSet[m] = true
-		}
 		for _, m := range executionPlan.ExecutionOrder {
 			if !requestedSet[m] {
 				addedDepm = append(addedDepm, m)
@@ -463,12 +463,60 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 		}
 	}
 
+	// With --use-existing-depm: filter out dependency modules that already have artifacts
+	// This enables CI to only build the requested module, using pre-downloaded deps
+	var existingDepm []string
+	if useExistingDepm && !dryRun {
+		var filteredOrder []string
+		var filteredLayers [][]string
+		var filteredAddedDepm []string
+
+		for _, layer := range executionPlan.Layers {
+			var filteredLayer []string
+			for _, m := range layer {
+				// Always include requested modules
+				if requestedSet[m] {
+					filteredLayer = append(filteredLayer, m)
+					filteredOrder = append(filteredOrder, m)
+					continue
+				}
+				// For deps, check if artifacts exist
+				moduleType := ""
+				if module, exists := moduleReport.Registry.Get(m); exists {
+					moduleType = module.Type
+				}
+				if hasExistingArtifacts(m, moduleType, workspaceRoot, buildAll) {
+					existingDepm = append(existingDepm, m)
+					log.Debugf("Skipping dep %s (artifacts exist)", m)
+				} else {
+					filteredLayer = append(filteredLayer, m)
+					filteredOrder = append(filteredOrder, m)
+					filteredAddedDepm = append(filteredAddedDepm, m)
+				}
+			}
+			if len(filteredLayer) > 0 {
+				filteredLayers = append(filteredLayers, filteredLayer)
+			}
+		}
+
+		executionPlan.ExecutionOrder = filteredOrder
+		executionPlan.Layers = filteredLayers
+		addedDepm = filteredAddedDepm
+		totalModules = len(filteredOrder)
+
+		if len(existingDepm) > 0 {
+			log.Debugf("Using existing artifacts for %d deps: %v", len(existingDepm), existingDepm)
+		}
+	}
+
 	// Incremental Build Detection (devbox only)
 	// For local builds, detect which modules actually need rebuilding
 	// CI always does full builds (controlled by --use-existing-depm for layer skipping)
+	// Note: --use-existing-depm disables incremental detection since it's for CI where
+	// downloaded artifacts should be used directly without source change analysis
 	isCI := os.Getenv("CI") != "" || os.Getenv("GITHUB_ACTIONS") != "" || os.Getenv("GITLAB_CI") != ""
-	useIncremental := !isCI && !forceRebuild && !dryRun
-	log.Debugf("Incremental build detection: isCI=%v, forceRebuild=%v, dryRun=%v, useIncremental=%v", isCI, forceRebuild, dryRun, useIncremental)
+	useIncremental := !isCI && !forceRebuild && !dryRun && !useExistingDepm
+	log.Debugf("Incremental build detection: isCI=%v, forceRebuild=%v, dryRun=%v, useExistingDepm=%v, useIncremental=%v", isCI, forceRebuild, dryRun, useExistingDepm, useIncremental)
 
 	var skippedModules []string
 	var incrementalInfo *initsummary.IncrementalInfo
@@ -673,8 +721,9 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 		SetDepmStatus(initsummary.DepmStatus{
 			Verified: includeDepm,
 			Skipped:  skipDepm,
-			Total:    len(addedDepm),
+			Total:    len(addedDepm) + len(existingDepm),
 			Resolved: addedDepm,
+			Existing: existingDepm,
 		}).
 		SetDepsStatus(depsStatus).
 		SetOutputDir(paths.OutBuildRelPath + "/")
@@ -695,11 +744,7 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 	}
 	orch.SetModuleTypes(moduleTypes)
 
-	// Build set of originally requested modules for skip logic
-	requestedSet := make(map[string]bool)
-	for _, m := range monikers {
-		requestedSet[m] = true
-	}
+	// Note: requestedSet was already built at line 454 - reuse it for worker skip logic
 
 	// Create worker function that builds a single module and returns type info
 	worker := func(moniker string, logWriter io.Writer) int {
