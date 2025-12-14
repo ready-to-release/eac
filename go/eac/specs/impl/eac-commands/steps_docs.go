@@ -39,17 +39,17 @@ func registerDocsSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 		return docsCheckDocker(dCtx)
 	})
 
-	// Given/Then steps - MkDocs container state
-	sc.Step(`^MkDocs container is running$`, func() error {
+	// Given/Then steps - serve container state
+	sc.Step(`^serve container is running$`, func() error {
 		return docsContainerState(dCtx, true)
 	})
-	sc.Step(`^MkDocs container is not running$`, func() error {
+	sc.Step(`^serve container is not running$`, func() error {
 		return docsContainerState(dCtx, false)
 	})
-	sc.Step(`^MkDocs container should start successfully$`, func() error {
+	sc.Step(`^serve container should start successfully$`, func() error {
 		return docsContainerState(dCtx, true)
 	})
-	sc.Step(`^MkDocs container should be stopped$`, func() error {
+	sc.Step(`^serve container should be stopped$`, func() error {
 		return docsContainerState(dCtx, false)
 	})
 	sc.Step(`^documentation should be accessible$`, func() error {
@@ -78,7 +78,7 @@ func docsCheckDocker(dCtx *docsContext) error {
 	return nil
 }
 
-// docsContainerState ensures MkDocs container is in expected state.
+// docsContainerState ensures serve container is in expected state.
 // When used as a Given step, it will create/start/stop the container as needed.
 // When used as a Then step, it verifies the container is in the expected state.
 func docsContainerState(dCtx *docsContext, shouldBeRunning bool) error {
@@ -97,7 +97,7 @@ func docsContainerState(dCtx *docsContext, shouldBeRunning bool) error {
 	running := false
 	for _, c := range containers {
 		for _, name := range c.Names {
-			if strings.Contains(name, "mkdocs") || strings.Contains(name, "cli-mkdocs") {
+			if strings.Contains(name, "cli-serve-docs") {
 				containerID = c.ID
 				found = true
 				running = c.State == "running"
@@ -112,8 +112,8 @@ func docsContainerState(dCtx *docsContext, shouldBeRunning bool) error {
 	if shouldBeRunning {
 		if !found {
 			// Container doesn't exist - create and start it via serve docs command
-			if err := dCtx.testCtx.RunCommand("serve docs --no-browser --skip-validation"); err != nil {
-				return fmt.Errorf("failed to start MkDocs container: %w", err)
+			if err := dCtx.testCtx.RunCommand("serve docs --no-browser"); err != nil {
+				return fmt.Errorf("failed to start serve container: %w", err)
 			}
 			// Verify the command succeeded
 			if dCtx.testCtx.ExitCode != 0 {
@@ -123,7 +123,7 @@ func docsContainerState(dCtx *docsContext, shouldBeRunning bool) error {
 		} else if !running {
 			// Container exists but stopped - start it
 			if err := dCtx.dockerClient.ContainerStart(ctx, containerID, container.StartOptions{}); err != nil {
-				return fmt.Errorf("failed to start stopped MkDocs container: %w", err)
+				return fmt.Errorf("failed to start stopped serve container: %w", err)
 			}
 			// Poll for container health instead of fixed sleep
 			if err := waitForContainerReady(ctx, dCtx.dockerClient, containerID, 5*time.Second); err != nil {
@@ -135,7 +135,7 @@ func docsContainerState(dCtx *docsContext, shouldBeRunning bool) error {
 			// Container is running but should be stopped - stop it
 			timeout := 10
 			if err := dCtx.dockerClient.ContainerStop(ctx, containerID, container.StopOptions{Timeout: &timeout}); err != nil {
-				return fmt.Errorf("failed to stop MkDocs container: %w", err)
+				return fmt.Errorf("failed to stop serve container: %w", err)
 			}
 		}
 	}
