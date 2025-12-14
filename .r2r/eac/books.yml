@@ -130,11 +130,13 @@ books:
     site_url: "https://ready-to-release.github.io/eac/"
 
     sources:
-      # content
+      # content (exclude specifications which has its own book, and exclude .nav.yml
+      # which references specifications - let MkDocs auto-generate nav instead)
       - type: copy
         from: "docs/explanation/**"
         exclude:
           - "docs/explanation/specifications/**"
+          - "docs/explanation/.nav.yml"
         to: "./"
 
       # assets

@@ -191,6 +191,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.running = status.Running
 		m.completed = status.Completed
 		m.total = status.Total
+		m.layer = status.Layer
+		m.totalLayers = status.TotalLayers
 
 		if !m.statusDone {
 			return m, m.listenForStatus()

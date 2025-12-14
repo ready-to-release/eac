@@ -1,26 +1,25 @@
 // Command: init
-// Short: Initialize AI provider configuration for the project
-// Long: Initialize AI provider configuration for the project.
+// Short: Initialize EAC project configuration
+// Long: Initialize EAC project configuration.
 // Long:
-// Long: Creates .r2r/eac/ai-provider.yml (team config) or .r2r/eac/ai-provider.personal.yml (personal config).
-// Long: Team config contains environment variable placeholders (safe to commit).
-// Long: Personal config contains actual tokens when provided via flags (gitignored).
+// Long: Creates the .r2r/eac directory structure for repository configuration.
+// Long: AI provider configuration is optional - you can configure it later.
 // Long:
-// Long: Available providers:
+// Long: When --ai-provider is specified, creates:
+// Long:   - .r2r/eac/ai-provider.yml (team config) or
+// Long:   - .r2r/eac/ai-provider.personal.yml (personal config with tokens)
+// Long:
+// Long: Available AI providers:
 // Long:   - claude-api: Claude via Anthropic API (requires ANTHROPIC_API_KEY)
 // Long:   - openai: OpenAI via API (requires OPENAI_API_KEY)
 // Long:   - gemini: Google Gemini via API (requires GOOGLE_API_KEY)
 // Long:
-// Long: Expected Output:
-// Long:   - .r2r/eac/ai-provider.yml (team config) or
-// Long:   - .r2r/eac/ai-provider.personal.yml (personal config)
-// Long:
 // Long: Examples:
-// Long:   init --ai claude-api                              # Create team config with env var placeholders
-// Long:   init --ai claude-api --ai-token sk-ant-xxx        # Create personal config with actual token
-// Long:   init --ai claude-api --ai-token sk-ant-xxx --git-token ghp_xxx  # Include Git token
-// Long:   init --ai openai --force                          # Overwrite existing config
-// Flag.ai: type=string, shorthand=a, usage=AI provider to configure, required=true, completion=claude-api,openai,gemini
+// Long:   init                                                      # Initialize project (no AI config)
+// Long:   init --ai-provider claude-api                             # Configure AI provider
+// Long:   init --ai-provider claude-api --ai-token sk-ant-xxx       # Configure with actual token
+// Long:   init --ai-provider claude-api --force                     # Overwrite existing config
+// Flag.ai-provider: type=string, shorthand=a, usage=AI provider to configure (optional), completion=claude-api,openai,gemini
 // Flag.ai-token: type=string, usage=AI provider API token (creates personal config if provided)
 // Flag.git-token: type=string, usage=Git provider API token for repository operations (supports GitHub, GitLab, etc.) (optional)
 // Flag.force: type=bool, shorthand=f, default=false, usage=Overwrite existing config file if it exists
@@ -95,7 +94,7 @@ func ResetGitRepo() {
 //   - Config file is YAML - human readable and safe to commit
 //   - Logger integration for consistent output and debugging
 
-// Init initializes AI provider configuration
+// Init initializes EAC project configuration
 func Init() int {
 	// Parse flags early to get all options
 	aiProvider := ""
@@ -106,7 +105,7 @@ func Init() int {
 
 	for i := 2; i < len(os.Args); i++ {
 		switch os.Args[i] {
-		case "--ai", "-a":
+		case "--ai-provider", "-a":
 			if i+1 < len(os.Args) {
 				aiProvider = os.Args[i+1]
 				i++ // Skip the value
@@ -126,20 +125,6 @@ func Init() int {
 		case "--debug", "-d":
 			debug = true
 		}
-	}
-
-	// Validate required flag
-	if aiProvider == "" {
-		log.Errorf("--ai flag is required")
-		log.Info("Usage: init --ai <provider>")
-		log.Info("")
-		log.Info("Available providers: claude-api, openai, gemini")
-		log.Info("")
-		log.Info("Example:")
-		log.Info("  init --ai claude-api")
-		log.Info("  init --ai openai")
-		log.Info("  init --ai claude-api --debug   # With debug logging")
-		return 1
 	}
 
 	// Get workspace root via repository API
@@ -162,29 +147,44 @@ func Init() int {
 	}
 	defer logger.Sync()
 
-	// Define paths
-	teamConfigPath := paths.EACConfigFilePath(workspaceRoot)
-	personalConfigPath := paths.EACConfigPersonalFilePath(workspaceRoot)
-
-	// Check if config already exists
-	if err := checkExistingConfig(teamConfigPath, personalConfigPath, force, logger); err != nil {
-		logger.Error(fmt.Sprintf("%v", err))
-		return 1
-	}
-
-	logger.Info("🤖 Initialize Agent Configuration")
-	logger.Info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	logger.Info("")
-
-	// Create .r2r/eac directory structure
-	logger.Info("📁 Creating directory structure...")
+	// Create .r2r/eac directory structure (always)
+	logger.Info("📁 Initializing EAC project...")
 	if err := createDirectoryStructure(workspaceRoot); err != nil {
 		logger.Error(fmt.Sprintf("Error creating directory structure: %v", err))
 		return 1
 	}
 	logger.Info("✅ Directory structure created")
 
-	// Configure agent using --ai flag
+	// If no AI provider specified, just initialize directory structure
+	if aiProvider == "" {
+		logger.Info("")
+		logger.Info("✅ EAC project initialized")
+		logger.Info("")
+		logger.Info("ℹ️  Next steps:")
+		logger.Info("   To configure AI provider (optional):")
+		logger.Info("     eac init --ai-provider claude-api")
+		logger.Info("     eac init --ai-provider openai")
+		logger.Info("     eac init --ai-provider gemini")
+		logger.Info("")
+		return 0
+	}
+
+	// AI provider specified - configure it
+	logger.Info("")
+	logger.Info("🤖 Configuring AI Provider")
+	logger.Info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+	// Define paths
+	teamConfigPath := paths.EACConfigFilePath(workspaceRoot)
+	personalConfigPath := paths.EACConfigPersonalFilePath(workspaceRoot)
+
+	// Check if config already exists (only when configuring AI)
+	if err := checkExistingConfig(teamConfigPath, personalConfigPath, force, logger); err != nil {
+		logger.Error(fmt.Sprintf("%v", err))
+		return 1
+	}
+
+	// Configure agent using --ai-provider flag
 	config, err := configureAgent(aiProvider, logger)
 	if err != nil {
 		logger.Error(fmt.Sprintf("Error during configuration: %v", err))
@@ -206,7 +206,7 @@ func Init() int {
 
 	// Success message
 	logger.Info("")
-	logger.Info("✅ Configuration saved")
+	logger.Info("✅ AI provider configured")
 	logger.Info(fmt.Sprintf("   File: %s", configPath))
 	logger.Info("")
 
@@ -378,12 +378,16 @@ func writeConfig(workspaceRoot string, config *agentConfig, tokens *tokenConfig,
 		// User provided AI token - write personal config with direct values
 		configPath = paths.EACConfigPersonalFilePath(workspaceRoot)
 		useEnvVars = false
-		logger.Info("📝 Creating personal configuration with actual tokens...")
+		if logger != nil {
+			logger.Info("📝 Creating personal configuration with actual tokens...")
+		}
 	} else {
 		// No tokens provided - write team config with env var placeholders
 		configPath = paths.EACConfigFilePath(workspaceRoot)
 		useEnvVars = true
-		logger.Info("📝 Creating team configuration with environment variable placeholders...")
+		if logger != nil {
+			logger.Info("📝 Creating team configuration with environment variable placeholders...")
+		}
 	}
 
 	// Build config content

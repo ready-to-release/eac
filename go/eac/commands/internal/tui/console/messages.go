@@ -26,10 +26,12 @@ type completedMsg struct {
 
 // Status represents a status update from the orchestrator.
 type Status struct {
-	Phase     string
-	Running   []string
-	Completed int
-	Total     int
+	Phase       string
+	Running     []string
+	Completed   int
+	Total       int
+	Layer       int // Current layer being executed (1-indexed, 0 = not using layers)
+	TotalLayers int // Total number of layers (0 = not using layers)
 }
 
 // PhaseUpdateMsg is sent when a phase changes state (exported for tui package)

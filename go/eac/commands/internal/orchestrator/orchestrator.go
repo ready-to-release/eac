@@ -31,10 +31,12 @@ type Orchestrator struct {
 	tuiCancel  context.CancelFunc
 
 	// TUI status tracking (protected by tuiMu)
-	tuiMu        sync.Mutex
-	tuiRunning   []string
-	tuiCompleted int
-	tuiTotal     int
+	tuiMu          sync.Mutex
+	tuiRunning     []string
+	tuiCompleted   int
+	tuiTotal       int
+	tuiLayer       int // Current layer (1-indexed, 0 = not using layers)
+	tuiTotalLayers int // Total layers (0 = not using layers)
 }
 
 // New creates a new Orchestrator with the given configuration and worker function
@@ -87,15 +89,19 @@ func (o *Orchestrator) RunLayered(layers [][]string) ([]WorkResult, error) {
 		o.tuiTotal = len(allMonikers)
 		o.tuiCompleted = 0
 		o.tuiRunning = nil
+		o.tuiLayer = 0
+		o.tuiTotalLayers = len(layers)
 
 		// StartAsync is idempotent - will not restart if already running
 		o.tuiConsole.StartAsync(o.tuiCtx)
 		// Send initial status
 		o.tuiConsole.UpdateStatus(tui.Status{
-			Phase:     capitalize(o.config.ActionVerb),
-			Running:   nil,
-			Completed: 0,
-			Total:     len(allMonikers),
+			Phase:       capitalize(o.config.ActionVerb),
+			Running:     nil,
+			Completed:   0,
+			Total:       len(allMonikers),
+			Layer:       0,
+			TotalLayers: len(layers),
 		})
 	}
 
@@ -119,6 +125,13 @@ func (o *Orchestrator) RunLayered(layers [][]string) ([]WorkResult, error) {
 	for layerIdx, layerMonikers := range layers {
 		if len(layerMonikers) == 0 {
 			continue
+		}
+
+		// Update TUI layer tracking
+		if o.tuiConsole != nil {
+			o.tuiMu.Lock()
+			o.tuiLayer = layerIdx + 1 // 1-indexed
+			o.tuiMu.Unlock()
 		}
 
 		fmt.Fprintf(o.orchestratorOut, "Layer %d: %s%s", layerIdx+1, formatMonikerList(layerMonikers), LineEnding)
@@ -186,15 +199,19 @@ func (o *Orchestrator) Run(monikers []string) ([]WorkResult, error) {
 		o.tuiTotal = len(monikers)
 		o.tuiCompleted = 0
 		o.tuiRunning = nil
+		o.tuiLayer = 0       // Not using layers
+		o.tuiTotalLayers = 0 // Not using layers
 
 		// StartAsync is idempotent - will not restart if already running
 		o.tuiConsole.StartAsync(o.tuiCtx)
 		// Send initial status
 		o.tuiConsole.UpdateStatus(tui.Status{
-			Phase:     capitalize(o.config.ActionVerb),
-			Running:   nil,
-			Completed: 0,
-			Total:     len(monikers),
+			Phase:       capitalize(o.config.ActionVerb),
+			Running:     nil,
+			Completed:   0,
+			Total:       len(monikers),
+			Layer:       0,
+			TotalLayers: 0,
 		})
 	}
 
@@ -475,13 +492,17 @@ func (o *Orchestrator) tuiMarkRunning(moniker string) {
 	copy(running, o.tuiRunning)
 	completed := o.tuiCompleted
 	total := o.tuiTotal
+	layer := o.tuiLayer
+	totalLayers := o.tuiTotalLayers
 	o.tuiMu.Unlock()
 
 	o.tuiConsole.UpdateStatus(tui.Status{
-		Phase:     capitalize(o.config.ActionVerb),
-		Running:   running,
-		Completed: completed,
-		Total:     total,
+		Phase:       capitalize(o.config.ActionVerb),
+		Running:     running,
+		Completed:   completed,
+		Total:       total,
+		Layer:       layer,
+		TotalLayers: totalLayers,
 	})
 }
 
@@ -503,13 +524,17 @@ func (o *Orchestrator) tuiMarkCompleted(moniker string) {
 	copy(running, o.tuiRunning)
 	completed := o.tuiCompleted
 	total := o.tuiTotal
+	layer := o.tuiLayer
+	totalLayers := o.tuiTotalLayers
 	o.tuiMu.Unlock()
 
 	o.tuiConsole.UpdateStatus(tui.Status{
-		Phase:     capitalize(o.config.ActionVerb),
-		Running:   running,
-		Completed: completed,
-		Total:     total,
+		Phase:       capitalize(o.config.ActionVerb),
+		Running:     running,
+		Completed:   completed,
+		Total:       total,
+		Layer:       layer,
+		TotalLayers: totalLayers,
 	})
 }
 

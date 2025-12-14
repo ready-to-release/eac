@@ -41,11 +41,11 @@ git:
 			wantErr:      false,
 		},
 		{
-			name:         "execute with no config returns error",
+			name:         "execute with no config returns ErrAIProviderNotConfigured",
 			createConfig: false,
 			input:        "test prompt",
 			wantErr:      true,
-			errContains:  ".r2r/eac/ai-provider.yml not found",
+			errContains:  "ai provider not configured",
 		},
 		{
 			name:         "execute with malformed config returns error",
@@ -63,7 +63,7 @@ git:
   - broken`,
 			input:       "test prompt",
 			wantErr:     true,
-			errContains: "run: eac init",
+			errContains: "eac init --ai-provider",
 		},
 		{
 			name:         "execute with invalid provider returns error",
@@ -87,7 +87,7 @@ git:
   token: ""`,
 			input:       "test prompt",
 			wantErr:     true,
-			errContains: "run: eac init",
+			errContains: "eac init --ai-provider",
 		},
 	}
 

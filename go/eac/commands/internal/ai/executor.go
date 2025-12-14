@@ -118,19 +118,19 @@ func (e *Executor) loadConfig() (*Config, error) {
 func (e *Executor) LoadProvider(config *Config) (Provider, error) {
 	// Config is required
 	if config == nil {
-		return nil, fmt.Errorf("configuration is required\n\nPlease run: eac init --ai <provider>\nSupported providers: claude-api, openai, gemini\nOr run: .\\importer.ps1 (for claude-cli)")
+		return nil, ErrAIProviderNotConfigured
 	}
 
 	// Check if provider factory exists
 	factory, exists := e.providerFactories[config.AI.Provider]
 	if !exists {
-		return nil, fmt.Errorf("unknown provider: %s\n\nPlease run: eac init --ai <provider>\nSupported providers: claude-api, openai, gemini\nOr run: .\\importer.ps1 (for claude-cli)", config.AI.Provider)
+		return nil, fmt.Errorf("unknown provider: %s\n\nPlease run: eac init --ai-provider <provider>\nSupported providers: claude-api, openai, gemini", config.AI.Provider)
 	}
 
 	// Try to create provider
 	provider, err := factory(config)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create %s provider: %w\n\nPlease run: eac init --ai <provider>\nSupported providers: claude-api, openai, gemini\nOr run: .\\importer.ps1 (for claude-cli)", config.AI.Provider, err)
+		return nil, fmt.Errorf("failed to create %s provider: %w\n\nPlease run: eac init --ai-provider <provider>\nSupported providers: claude-api, openai, gemini", config.AI.Provider, err)
 	}
 
 	return provider, nil
