@@ -188,8 +188,6 @@ jobs:
           - **Commit**: ${{ github.sha }}
           - **Site URL**: ${{ steps.deployment.outputs.page_url }}
 
-          > **Note**: PDF books are released separately. See the [books releases](https://github.com/${{ github.repository }}/releases?q=books) for downloadable PDFs.
-
           ---
           🤖 Generated with [GitHub Actions](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
           EOF

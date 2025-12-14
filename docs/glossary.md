@@ -230,30 +230,30 @@ An EAC term for a git worktree used for feature development. Enables parallel de
 
 ### Command Categories
 
-| Category | Description |
-|----------|-------------|
-| **create** | AI-powered generation of commits, specs, designs, PRs |
-| **get** | JSON output for automation and scripting |
-| **show** | Human-readable output for interactive use |
-| **validate** | Contract and dependency validation |
-| **work** | Workspace management (git worktrees) |
-| **test** | Testing and test suite management |
-| **build** | Module building |
-| **pipeline** | CI/CD orchestration |
-| **release** | Release management and versioning |
-| **scan** | Security scanning (SAST, secrets, vulnerabilities) |
-| **serve** | Local development servers |
-| **templates** | Template management |
-| **update** | Update operations |
+| Category      | Description                                           |
+| ------------- | ----------------------------------------------------- |
+| **create**    | AI-powered generation of commits, specs, designs, PRs |
+| **get**       | JSON output for automation and scripting              |
+| **show**      | Human-readable output for interactive use             |
+| **validate**  | Contract and dependency validation                    |
+| **work**      | Workspace management (git worktrees)                  |
+| **test**      | Testing and test suite management                     |
+| **build**     | Module building                                       |
+| **pipeline**  | CI/CD orchestration                                   |
+| **release**   | Release management and versioning                     |
+| **scan**      | Security scanning (SAST, secrets, vulnerabilities)    |
+| **serve**     | Local development servers                             |
+| **templates** | Template management                                   |
+| **update**    | Update operations                                     |
 
 ### Command Patterns
 
-| Pattern | Example | Description |
-|---------|---------|-------------|
-| **get vs show** | `get modules` / `show modules` | JSON vs human-readable output |
-| **Noun-based** | `modules`, `dependencies`, `files` | Information retrieval |
-| **Action-based** | `create`, `update`, `validate` | Operations and transformations |
-| **Compound** | `changed-modules-ci` | Specialized variants |
+| Pattern          | Example                            | Description                    |
+| ---------------- | ---------------------------------- | ------------------------------ |
+| **get vs show**  | `get modules` / `show modules`     | JSON vs human-readable output  |
+| **Noun-based**   | `modules`, `dependencies`, `files` | Information retrieval          |
+| **Action-based** | `create`, `update`, `validate`     | Operations and transformations |
+| **Compound**     | `changed-modules-ci`               | Specialized variants           |
 
 ---
 
@@ -261,48 +261,48 @@ An EAC term for a git worktree used for feature development. Enables parallel de
 
 ### Repository Structure
 
-| Term | Description |
-|------|-------------|
-| **`/go`** | Source code for all Go modules |
-| **`/out`** | Build artifacts and intermediate files |
-| **`/specs`** | Gherkin feature files (specifications) |
-| **`/docs`** | Documentation (MkDocs site) |
-| **`/.r2r`** | R2R CLI configuration and contracts |
-| **`/.github`** | GitHub workflows and CI configuration |
-| **`/contracts`** | Module contract definitions (YAML) |
+| Term             | Description                            |
+| ---------------- | -------------------------------------- |
+| **`/go`**        | Source code for all Go modules         |
+| **`/out`**       | Build artifacts and intermediate files |
+| **`/specs`**     | Gherkin feature files (specifications) |
+| **`/docs`**      | Documentation (MkDocs site)            |
+| **`/.r2r`**      | R2R CLI configuration and contracts    |
+| **`/.github`**   | GitHub workflows and CI configuration  |
+| **`/contracts`** | Module contract definitions (YAML)     |
 
 ### File Types
 
-| Extension | Description |
-|-----------|-------------|
-| **`.feature`** | Gherkin specification file |
-| **`_test.go`** | Go unit test file |
-| **`contract.yml`** | Module contract definition |
-| **`.nav.yml`** | MkDocs navigation structure |
-| **`CHANGELOG.md`** | Module or repository changelog |
+| Extension           | Description                      |
+| ------------------- | -------------------------------- |
+| **`.feature`**      | Gherkin specification file       |
+| **`_test.go`**      | Go unit test file                |
+| **`contract.yml`**  | Module contract definition       |
+| **`.nav.yml`**      | MkDocs navigation structure      |
+| **`CHANGELOG.md`**  | Module or repository changelog   |
 | **`workspace.dsl`** | Structurizr architecture diagram |
 
 ---
 
 ## Acronyms Quick Reference
 
-| Acronym | Full Form | Category |
-|---------|-----------|----------|
-| ADR | Architectural Decision Record | Documentation |
-| BDD | Behavior-Driven Development | Testing |
-| CalVer | Calendar Versioning | Release |
-| CI/CD | Continuous Integration/Continuous Deployment | DevOps |
-| DAST | Dynamic Application Security Testing | Security |
-| DORA | DevOps Research and Assessment | Metrics |
-| EAC | Everything as Code | Philosophy |
-| MCP | Model Context Protocol | Integration |
-| OSCAL | Open Security Controls Assessment Language | Compliance |
-| R2R | Ready to Release | Framework |
-| SAST | Static Application Security Testing | Security |
-| SBOM | Software Bill of Materials | Security |
-| SemVer | Semantic Versioning | Release |
-| TDD | Test-Driven Development | Testing |
-| VSM | Value Stream Mapping | Process |
+| Acronym | Full Form                                    | Category      |
+| ------- | -------------------------------------------- | ------------- |
+| ADR     | Architectural Decision Record                | Documentation |
+| BDD     | Behavior-Driven Development                  | Testing       |
+| CalVer  | Calendar Versioning                          | Release       |
+| CI/CD   | Continuous Integration/Continuous Deployment | DevOps        |
+| DAST    | Dynamic Application Security Testing         | Security      |
+| DORA    | DevOps Research and Assessment               | Metrics       |
+| EAC     | Everything as Code                           | Philosophy    |
+| MCP     | Model Context Protocol                       | Integration   |
+| OSCAL   | Open Security Controls Assessment Language   | Compliance    |
+| R2R     | Ready to Release                             | Framework     |
+| SAST    | Static Application Security Testing          | Security      |
+| SBOM    | Software Bill of Materials                   | Security      |
+| SemVer  | Semantic Versioning                          | Release       |
+| TDD     | Test-Driven Development                      | Testing       |
+| VSM     | Value Stream Mapping                         | Process       |
 
 ---
 
