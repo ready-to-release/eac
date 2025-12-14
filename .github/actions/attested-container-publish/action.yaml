@@ -217,12 +217,10 @@ runs:
 
         ## Available Tags
 
-        | Tag | Image |
-        |-----|-------|
-        | Version | \`$IMAGE_BASE:$VERSION\` |
-        | Minor | \`$IMAGE_BASE:$MAJOR.$MINOR\` |
-        | Major | \`$IMAGE_BASE:$MAJOR\` |
-        | Latest | \`$IMAGE_BASE:latest\` |
+        - **Version** - \`$IMAGE_BASE:$VERSION\`
+        - **Minor**   - \`$IMAGE_BASE:$MAJOR.$MINOR\`
+        - **Major**   - \`$IMAGE_BASE:$MAJOR\`
+        - **Latest**  - \`$IMAGE_BASE:latest\`
 
         ## Platforms
 
@@ -240,8 +238,8 @@ runs:
         ## Release Information
 
         - **Version**: $VERSION
-        - **Commit**: ${{ github.sha }}
-        - **Digest**: \`$DIGEST\`
+        - **Commit**:  ${{ github.sha }}
+        - **Digest**:  \`$DIGEST\`
 
         ---
         Generated with [GitHub Actions](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
@@ -254,13 +252,15 @@ runs:
           gh release create "$TAG_NAME" \
             --title "$MODULE v$VERSION" \
             --notes-file release_notes.md \
-            --target "${{ github.sha }}"
+            --target "${{ github.sha }}" \
+            --latest=false
         else
           echo "Tag trigger: using existing tag"
           gh release create "$TAG_NAME" \
             --title "$MODULE v$VERSION" \
             --notes-file release_notes.md \
-            --verify-tag
+            --verify-tag \
+            --latest=false
         fi
 
         RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"

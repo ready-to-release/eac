@@ -49,7 +49,9 @@ var updateCmd = &cobra.Command{
 		}
 
 		currentVersion := strings.TrimPrefix(version.Version, "v")
-		latestVersion := strings.TrimPrefix(release.TagName, "v")
+		// Tag format is r2r-cli/x.y.z - extract just the version
+		latestVersion := strings.TrimPrefix(release.TagName, "r2r-cli/")
+		latestVersion = strings.TrimPrefix(latestVersion, "v")
 
 		// Check if update is needed
 		if !force && currentVersion == latestVersion {
@@ -261,11 +263,12 @@ func getLatestRelease() (*Release, error) {
 		return nil, fmt.Errorf("GitHub authentication required. Please set GITHUB_USERNAME and GITHUB_TOKEN environment variables")
 	}
 
-	// Set up authenticated GitHub API request (matching installer pattern)
+	// Query all releases and filter by r2r-cli/ tag prefix
+	// This is necessary because we use --latest=false in a monorepo
 	req, err := http.NewRequestWithContext(
 		context.Background(),
 		"GET",
-		"https://api.github.com/repos/ready-to-release/r2r-cli/releases/latest",
+		"https://api.github.com/repos/ready-to-release/r2r-cli/releases?per_page=50",
 		nil,
 	)
 	if err != nil {
@@ -290,13 +293,55 @@ func getLatestRelease() (*Release, error) {
 		return nil, fmt.Errorf("GitHub API returned status %d", resp.StatusCode)
 	}
 
-	// Parse response
-	var release Release
-	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+	// Parse response as array of releases
+	var releases []Release
+	if err := json.NewDecoder(resp.Body).Decode(&releases); err != nil {
 		return nil, err
 	}
 
-	return &release, nil
+	// Filter releases by r2r-cli/ tag prefix and find highest semver
+	var latestRelease *Release
+	var latestVersion [3]int
+
+	for i := range releases {
+		release := &releases[i]
+		tag := release.TagName
+
+		// Only consider r2r-cli/ prefixed tags
+		if !strings.HasPrefix(tag, "r2r-cli/") {
+			continue
+		}
+
+		// Extract version from tag (e.g., "r2r-cli/1.0.0" -> "1.0.0")
+		versionStr := strings.TrimPrefix(tag, "r2r-cli/")
+		versionStr = strings.TrimPrefix(versionStr, "v")
+
+		// Parse semver
+		parts := strings.Split(versionStr, ".")
+		if len(parts) < 3 {
+			continue
+		}
+
+		var ver [3]int
+		for j := 0; j < 3 && j < len(parts); j++ {
+			fmt.Sscanf(parts[j], "%d", &ver[j])
+		}
+
+		// Compare versions (major.minor.patch)
+		if latestRelease == nil ||
+			ver[0] > latestVersion[0] ||
+			(ver[0] == latestVersion[0] && ver[1] > latestVersion[1]) ||
+			(ver[0] == latestVersion[0] && ver[1] == latestVersion[1] && ver[2] > latestVersion[2]) {
+			latestRelease = release
+			latestVersion = ver
+		}
+	}
+
+	if latestRelease == nil {
+		return nil, fmt.Errorf("no r2r-cli releases found")
+	}
+
+	return latestRelease, nil
 }
 
 // copyFile copies a file from src to dst (helper function)
