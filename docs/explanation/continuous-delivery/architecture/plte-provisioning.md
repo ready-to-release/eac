@@ -12,7 +12,7 @@ PLTE provisioning is triggered by:
 
 - Merge to main branch
 - Release candidate creation
-- Manual request for feature branch testing
+- Manual request for topic branch testing
 
 ### Step 2: Provision (5-10 minutes)
 

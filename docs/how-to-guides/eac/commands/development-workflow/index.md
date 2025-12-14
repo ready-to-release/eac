@@ -11,7 +11,7 @@ Learn how to manage your daily development workflow with workspaces, commits, an
 | [Create Feature Workspace](./create-feature-workspace.md) | Set up isolated workspace for new feature |
 | [Make Commits with AI](./make-commits-with-ai.md) | Generate semantic commit messages automatically |
 | [Create Pull Request](./create-pull-request.md) | Generate PR with AI-written description |
-| [Merge Workspace Changes](./merge-workspace-changes.md) | Merge feature branch back to main |
+| [Merge Workspace Changes](./merge-workspace-changes.md) | Merge topic branch back to main |
 
 ## Common Workflows
 

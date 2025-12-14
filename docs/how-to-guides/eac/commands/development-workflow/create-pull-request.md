@@ -8,7 +8,7 @@ Generate a pull request with AI-written description that summarizes all branch c
 
 ## Prerequisites
 
-- Feature branch with commits
+- topic branch with commits
 - Branch pushed to remote
 - GitHub CLI (`gh`) installed (or use GitHub web UI)
 - AI provider configured

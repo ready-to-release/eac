@@ -189,7 +189,7 @@ Validate commands ensure repository consistency, enforce contracts, and verify q
 
 **Purpose**: Workspace management using git worktrees
 
-Work commands manage parallel development workspaces, enabling multiple feature branches to be worked on simultaneously without switching contexts.
+Work commands manage parallel development workspaces, enabling multiple topic branches to be worked on simultaneously without switching contexts.
 
 **Commands**:
 
