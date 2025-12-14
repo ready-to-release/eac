@@ -1,9 +1,6 @@
 package cmd
 
 import (
-	"archive/tar"
-	"archive/zip"
-	"compress/gzip"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -17,7 +14,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/logging"
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/version"
-	
+
 	"github.com/spf13/cobra"
 )
 
@@ -60,7 +57,7 @@ var updateCmd = &cobra.Command{
 			return
 		}
 
-		// Find correct asset for current platform (matching installer patterns)
+		// Find correct asset for current platform (raw executable)
 		var selectedAsset *struct {
 			Name        string `json:"name"`
 			DownloadURL string `json:"browser_download_url"`
@@ -68,47 +65,35 @@ var updateCmd = &cobra.Command{
 			Size        int    `json:"size"`
 		}
 
+		// Build expected asset name for current platform
+		// Binary names are: r2r-{os}-{arch}[.exe]
+		var expectedName string
 		if runtime.GOOS == "windows" {
-			// Find Windows ZIP archive (matching installer)
-			for _, asset := range release.Assets {
-				if strings.Contains(asset.Name, "r2r-cli-") && strings.Contains(asset.Name, "windows-amd64.zip") {
-					selectedAsset = &struct {
-						Name        string `json:"name"`
-						DownloadURL string `json:"browser_download_url"`
-						ID          int    `json:"id"`
-						Size        int    `json:"size"`
-					}{
-						Name:        asset.Name,
-						DownloadURL: asset.DownloadURL,
-						ID:          asset.ID,
-						Size:        asset.Size,
-					}
-					break
-				}
-			}
+			expectedName = fmt.Sprintf("r2r-%s-%s.exe", runtime.GOOS, runtime.GOARCH)
 		} else {
-			// For Unix systems, look for tar.gz files
-			platformSuffix := fmt.Sprintf("%s-%s.tar.gz", runtime.GOOS, runtime.GOARCH)
-			for _, asset := range release.Assets {
-				if strings.Contains(asset.Name, "r2r-cli-") && strings.HasSuffix(asset.Name, platformSuffix) {
-					selectedAsset = &struct {
-						Name        string `json:"name"`
-						DownloadURL string `json:"browser_download_url"`
-						ID          int    `json:"id"`
-						Size        int    `json:"size"`
-					}{
-						Name:        asset.Name,
-						DownloadURL: asset.DownloadURL,
-						ID:          asset.ID,
-						Size:        asset.Size,
-					}
-					break
+			expectedName = fmt.Sprintf("r2r-%s-%s", runtime.GOOS, runtime.GOARCH)
+		}
+
+		for _, asset := range release.Assets {
+			// Match exact name (avoid -upx variants)
+			if asset.Name == expectedName {
+				selectedAsset = &struct {
+					Name        string `json:"name"`
+					DownloadURL string `json:"browser_download_url"`
+					ID          int    `json:"id"`
+					Size        int    `json:"size"`
+				}{
+					Name:        asset.Name,
+					DownloadURL: asset.DownloadURL,
+					ID:          asset.ID,
+					Size:        asset.Size,
 				}
+				break
 			}
 		}
 
 		if selectedAsset == nil {
-			logging.Errorf("Error: No binary found for %s-%s", runtime.GOOS, runtime.GOARCH)
+			logging.Errorf("Error: No binary found matching '%s'", expectedName)
 			logging.Info("Available assets:")
 			for _, asset := range release.Assets {
 				logging.Infof("  - %s", asset.Name)
@@ -148,12 +133,8 @@ var updateCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		// Create temp file with appropriate extension
-		tempSuffix := "r2r-cli-update"
-		if strings.HasSuffix(selectedAsset.Name, ".zip") {
-			tempSuffix += ".zip"
-		}
-		tmpFile, err := os.CreateTemp("", tempSuffix)
+		// Create temp file for download
+		tmpFile, err := os.CreateTemp("", "r2r-cli-update")
 		if err != nil {
 			logging.Errorf("Failed to create temporary file: %v", err)
 			os.Exit(1)
@@ -172,7 +153,7 @@ var updateCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		// Validate downloaded file (matching installer pattern)
+		// Validate downloaded file
 		logging.Info("Validating downloaded file...")
 		fileInfo, err := os.Stat(tmpFile.Name())
 		if err != nil {
@@ -190,37 +171,30 @@ var updateCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		// Check file headers (matching installer pattern)
-		fileBytes, err := os.ReadFile(tmpFile.Name())
+		// Check executable header
+		fileBytes := make([]byte, 4)
+		f, err := os.Open(tmpFile.Name())
 		if err != nil {
-			logging.Errorf("Failed to read downloaded file: %v", err)
+			logging.Errorf("Failed to open downloaded file: %v", err)
+			os.Exit(1)
+		}
+		_, err = f.Read(fileBytes)
+		f.Close()
+		if err != nil {
+			logging.Errorf("Failed to read file header: %v", err)
 			os.Exit(1)
 		}
 
-		if len(fileBytes) < 2 {
-			logging.Error("Downloaded file is too small to be valid")
-			os.Exit(1)
-		}
-
-		isZipFile := strings.HasSuffix(selectedAsset.Name, ".zip")
-		isTarGzFile := strings.HasSuffix(selectedAsset.Name, ".tar.gz")
-
-		if isZipFile {
-			// Check for ZIP header
-			if len(fileBytes) < 2 || string(fileBytes[0:2]) != "PK" {
-				logging.Error("Downloaded file is not a valid ZIP archive")
-				os.Exit(1)
-			}
-		} else if isTarGzFile {
-			// Check for gzip header (1f 8b)
-			if len(fileBytes) < 2 || fileBytes[0] != 0x1f || fileBytes[1] != 0x8b {
-				logging.Error("Downloaded file is not a valid gzip archive")
+		if runtime.GOOS == "windows" {
+			// Check for PE header (MZ)
+			if string(fileBytes[0:2]) != "MZ" {
+				logging.Error("Downloaded file is not a valid Windows executable")
 				os.Exit(1)
 			}
 		} else {
-			// Check for PE header (Windows executable)
-			if runtime.GOOS == "windows" && (len(fileBytes) < 2 || string(fileBytes[0:2]) != "MZ") {
-				logging.Error("Downloaded file is not a valid Windows executable")
+			// Check for ELF header
+			if string(fileBytes[0:4]) != "\x7fELF" {
+				logging.Error("Downloaded file is not a valid ELF executable")
 				os.Exit(1)
 			}
 		}
@@ -239,164 +213,7 @@ var updateCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		var binaryPath string
-
-		if isZipFile {
-			// Extract ZIP file (matching installer pattern)
-			logging.Info("Extracting ZIP archive...")
-
-			extractDir := filepath.Join(os.TempDir(), fmt.Sprintf("r2r-cli-extract-%d", os.Getpid()))
-			if err := os.MkdirAll(extractDir, 0755); err != nil {
-				logging.Errorf("Failed to create extraction directory: %v", err)
-				os.Exit(1)
-			}
-			defer os.RemoveAll(extractDir)
-
-			// Extract ZIP
-			reader, err := zip.OpenReader(tmpFile.Name())
-			if err != nil {
-				logging.Errorf("Failed to open ZIP file: %v", err)
-				os.Exit(1)
-			}
-			defer reader.Close()
-
-			var foundExe string
-			for _, file := range reader.File {
-				if strings.HasSuffix(file.Name, ".exe") || (!strings.Contains(file.Name, ".") && !strings.Contains(file.Name, "/")) {
-					// Prevent Zip Slip: extract only the base filename to avoid directory traversal
-					safeName := filepath.Base(file.Name)
-					if safeName == "." || safeName == ".." || safeName == "" {
-						logging.Warnf("Skipping unsafe archive entry: %s", file.Name)
-						continue
-					}
-					extractPath := filepath.Join(extractDir, safeName)
-
-					rc, err := file.Open()
-					if err != nil {
-						logging.Errorf("Failed to open file in ZIP: file=%s err=%v", file.Name, err)
-						continue
-					}
-
-					outFile, err := os.OpenFile(extractPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, file.Mode())
-					if err != nil {
-						rc.Close()
-						logging.Errorf("Failed to create extracted file: path=%s err=%v", extractPath, err)
-						continue
-					}
-
-					_, err = io.Copy(outFile, rc)
-					outFile.Close()
-					rc.Close()
-
-					if err != nil {
-						logging.Errorf("Failed to extract file: file=%s err=%v", file.Name, err)
-						continue
-					}
-
-					// Look for r2r.exe or r2r-cli*.exe
-					if strings.Contains(filepath.Base(file.Name), "r2r") || foundExe == "" {
-						foundExe = extractPath
-					}
-				}
-			}
-
-			if foundExe == "" {
-				logging.Error("No executable found in ZIP archive")
-				os.Exit(1)
-			}
-
-			binaryPath = foundExe
-			logging.Infof("Using executable: %s", filepath.Base(foundExe))
-		} else if strings.HasSuffix(selectedAsset.Name, ".tar.gz") {
-			// Extract tar.gz file for Unix systems
-			logging.Info("Extracting tar.gz archive...")
-
-			extractDir := filepath.Join(os.TempDir(), fmt.Sprintf("r2r-cli-extract-%d", os.Getpid()))
-			if err := os.MkdirAll(extractDir, 0755); err != nil {
-				logging.Errorf("Failed to create extraction directory: %v", err)
-				os.Exit(1)
-			}
-			defer os.RemoveAll(extractDir)
-
-			// Open tar.gz file
-			file, err := os.Open(tmpFile.Name())
-			if err != nil {
-				logging.Errorf("Failed to open tar.gz file: %v", err)
-				os.Exit(1)
-			}
-			defer file.Close()
-
-			// Create gzip reader
-			gzReader, err := gzip.NewReader(file)
-			if err != nil {
-				logging.Errorf("Failed to create gzip reader: %v", err)
-				os.Exit(1)
-			}
-			defer gzReader.Close()
-
-			// Create tar reader
-			tarReader := tar.NewReader(gzReader)
-
-			var foundExe string
-			for {
-				header, err := tarReader.Next()
-				if err == io.EOF {
-					break
-				}
-				if err != nil {
-					logging.Errorf("Failed to read tar header: %v", err)
-					os.Exit(1)
-				}
-
-				// Look for executable files (r2r-cli* without extension)
-				if header.Typeflag == tar.TypeReg {
-					// Prevent Zip Slip: extract only the base filename to avoid directory traversal
-					safeName := filepath.Base(header.Name)
-					if safeName == "." || safeName == ".." || safeName == "" {
-						logging.Warnf("Skipping unsafe archive entry: %s", header.Name)
-						continue
-					}
-					// Check if this looks like the r2r-cli binary
-					if strings.Contains(safeName, "r2r-cli") || strings.Contains(safeName, "r2r") {
-						extractPath := filepath.Join(extractDir, safeName)
-
-						outFile, err := os.OpenFile(extractPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.FileMode(header.Mode))
-						if err != nil {
-							logging.Errorf("Failed to create extracted file: path=%s err=%v", extractPath, err)
-							continue
-						}
-
-						if _, err := io.Copy(outFile, tarReader); err != nil {
-							outFile.Close()
-							logging.Errorf("Failed to extract file: file=%s err=%v", header.Name, err)
-							continue
-						}
-						outFile.Close()
-
-						// Make executable
-						if err := os.Chmod(extractPath, 0755); err != nil {
-							logging.Errorf("Failed to set executable permissions: path=%s err=%v", extractPath, err)
-							continue
-						}
-
-						// Use the first r2r-cli binary we find
-						if foundExe == "" {
-							foundExe = extractPath
-						}
-					}
-				}
-			}
-
-			if foundExe == "" {
-				logging.Error("No executable found in tar.gz archive")
-				os.Exit(1)
-			}
-
-			binaryPath = foundExe
-			logging.Infof("Using executable: %s", filepath.Base(foundExe))
-		} else {
-			binaryPath = tmpFile.Name()
-		}
+		binaryPath := tmpFile.Name()
 
 		// Make binary executable (for Unix systems)
 		if runtime.GOOS != "windows" {
