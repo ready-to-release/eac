@@ -27,6 +27,14 @@
   <a href="https://ready-to-release.github.io/eac/"><img src="https://img.shields.io/badge/docs-live-22c55e?style=for-the-badge&logo=materialformkdocs&logoColor=white" alt="docs"></a>
 </p>
 
+<p align="center">
+  <a href="https://github.com/ready-to-release/eac/releases?q=tutorials+pdf"><img src="https://img.shields.io/badge/tutorials-pdf-f97316?style=flat-square&logo=adobeacrobatreader&logoColor=white" alt="tutorials"></a>
+  <a href="https://github.com/ready-to-release/eac/releases?q=howto+pdf"><img src="https://img.shields.io/badge/how--to-pdf-f97316?style=flat-square&logo=adobeacrobatreader&logoColor=white" alt="howto"></a>
+  <a href="https://github.com/ready-to-release/eac/releases?q=explanation+pdf"><img src="https://img.shields.io/badge/explanation-pdf-f97316?style=flat-square&logo=adobeacrobatreader&logoColor=white" alt="explanation"></a>
+  <a href="https://github.com/ready-to-release/eac/releases?q=specifications+pdf"><img src="https://img.shields.io/badge/specifications-pdf-f97316?style=flat-square&logo=adobeacrobatreader&logoColor=white" alt="specifications"></a>
+  <a href="https://github.com/ready-to-release/eac/releases?q=repository-report+pdf"><img src="https://img.shields.io/badge/repo--report-pdf-f97316?style=flat-square&logo=adobeacrobatreader&logoColor=white" alt="repository-report"></a>
+</p>
+
 ---
 
 <h2 align="center">The Problem</h2>
@@ -261,28 +269,28 @@ irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/cli
 <a href="https://ready-to-release.github.io/eac/reference/commands/create/design/#create-design"><code>create design</code></a><br>
 <a href="https://ready-to-release.github.io/eac/reference/commands/create/design/#serve-design"><code>serve design</code></a><br>
 <a href="https://ready-to-release.github.io/eac/reference/commands/create/design/#validate-design"><code>validate design</code></a><br>
-<sup><a href="https://ready-to-release.github.io/eac/reference/commands/create/design/">overview</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/create/design/">config</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/create/design/">all</a></sup>
+<sup><a href="https://ready-to-release.github.io/eac/reference/commands/create/design/">overview</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/eac/commands/documentation/">guides</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/categories/create">all</a></sup>
 </td>
 <td align="center">
 <a href="https://ready-to-release.github.io/eac/reference/commands/create/spec/"><img src="https://img.shields.io/badge/📋-Specs-22c55e?style=for-the-badge" alt="Specs"></a><br>
 <a href="https://ready-to-release.github.io/eac/reference/commands/create/spec/#create-spec"><code>create spec</code></a><br>
 <a href="https://ready-to-release.github.io/eac/reference/commands/create/spec/#validate-specs"><code>validate specs</code></a><br>
 <a href="https://ready-to-release.github.io/eac/reference/commands/create/spec/#get-specs-unused-steps"><code>get specs unused-steps</code></a><br>
-<sup><a href="https://ready-to-release.github.io/eac/reference/commands/create/spec/">overview</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/create/spec/">config</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/create/spec/">all</a></sup>
+<sup><a href="https://ready-to-release.github.io/eac/reference/commands/create/spec/">overview</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/eac/commands/documentation/">guides</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/categories/create">all</a></sup>
 </td>
 <td align="center">
 <a href="https://ready-to-release.github.io/eac/reference/commands/templates/"><img src="https://img.shields.io/badge/📄-Templates-14b8a6?style=for-the-badge" alt="Templates"></a><br>
 <a href="https://ready-to-release.github.io/eac/reference/commands/templates/#templates-apply"><code>templates apply</code></a><br>
 <a href="https://ready-to-release.github.io/eac/reference/commands/templates/#templates-list"><code>templates list</code></a><br>
 <a href="https://ready-to-release.github.io/eac/reference/commands/templates/#templates-install"><code>templates install</code></a><br>
-<sup><a href="https://ready-to-release.github.io/eac/reference/commands/templates/">overview</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/templates/">config</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/templates/">all</a></sup>
+<sup><a href="https://ready-to-release.github.io/eac/reference/commands/templates/">overview</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/eac/commands/documentation/">guides</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/categories/templates">all</a></sup>
 </td>
 <td align="center">
 <a href="https://ready-to-release.github.io/eac/reference/commands/show/books/"><img src="https://img.shields.io/badge/📚-Books-6366f1?style=for-the-badge" alt="Books"></a><br>
 <a href="https://ready-to-release.github.io/eac/reference/commands/show/books/#build-with-book"><code>build &lt;module&gt;</code></a><br>
 <a href="https://ready-to-release.github.io/eac/reference/commands/show/books/#show-books"><code>show books</code></a><br>
 <a href="https://ready-to-release.github.io/eac/reference/commands/show/books/#validate-books"><code>validate books</code></a><br>
-<sup><a href="https://ready-to-release.github.io/eac/reference/commands/show/books/">overview</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/validate/books/">config</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/show/books/">all</a></sup>
+<sup><a href="https://ready-to-release.github.io/eac/reference/commands/show/books/">overview</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/validate/books/">validate</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/categories/show">all</a></sup>
 </td>
 </tr>
 <tr>
@@ -291,35 +299,29 @@ irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/cli
 <a href="https://ready-to-release.github.io/eac/reference/commands/test/#test"><code>test</code></a><br>
 <a href="https://ready-to-release.github.io/eac/reference/commands/test/#test-suite"><code>test suite</code></a><br>
 <a href="https://ready-to-release.github.io/eac/reference/commands/test/#test-debug"><code>test debug</code></a><br>
-<sup><a href="https://ready-to-release.github.io/eac/reference/commands/test/">overview</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/test/">config</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/test/">all</a></sup>
+<sup><a href="https://ready-to-release.github.io/eac/reference/commands/test/">overview</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/eac/commands/build-test-validate/">guides</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/categories/test">all</a></sup>
 </td>
 <td align="center">
 <a href="https://ready-to-release.github.io/eac/reference/commands/validate/"><img src="https://img.shields.io/badge/✅-Validate-a855f7?style=for-the-badge" alt="Validate"></a><br>
 <a href="https://ready-to-release.github.io/eac/reference/commands/validate/#validate-contracts"><code>validate contracts</code></a><br>
 <a href="https://ready-to-release.github.io/eac/reference/commands/validate/#validate-dependencies"><code>validate dependencies</code></a><br>
 <a href="https://ready-to-release.github.io/eac/reference/commands/validate/#validate-go-tidy"><code>validate go-tidy</code></a><br>
-<sup><a href="https://ready-to-release.github.io/eac/reference/commands/validate/">overview</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/validate/">config</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/validate/">all</a></sup>
+<sup><a href="https://ready-to-release.github.io/eac/reference/commands/validate/">overview</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/eac/commands/build-test-validate/">guides</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/categories/validate">all</a></sup>
 </td>
 <td align="center">
 <a href="https://ready-to-release.github.io/eac/reference/commands/scan/"><img src="https://img.shields.io/badge/🔒-Scan-eab308?style=for-the-badge" alt="Scan"></a><br>
 <a href="https://ready-to-release.github.io/eac/reference/commands/scan/#scan"><code>scan</code></a><br>
 <a href="https://ready-to-release.github.io/eac/reference/commands/scan/#scan-sast"><code>scan sast</code></a><br>
 <a href="https://ready-to-release.github.io/eac/reference/commands/scan/#scan-sbom"><code>scan sbom</code></a><br>
-<sup><a href="https://ready-to-release.github.io/eac/reference/commands/scan/">overview</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/scan/">config</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/scan/">all</a></sup>
+<sup><a href="https://ready-to-release.github.io/eac/reference/commands/scan/">overview</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/eac/commands/build-test-validate/">guides</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/categories/scan">all</a></sup>
 </td>
-  <td align="center">
-  <a href="https://ready-to-release.github.io/eac/reference/commands/create/"><img
-  src="https://img.shields.io/badge/🛡️-Risk-f97316?style=for-the-badge" alt="Risk"></a><br>
-  <a href="https://ready-to-release.github.io/eac/reference/commands/create/#create-r
-  isk-profile"><code>create risk-profile</code></a><br>
-  <a href="https://ready-to-release.github.io/eac/reference/commands/create/#create-r
-  isk-assess"><code>create risk-assess</code></a><br>
-  <a href="https://ready-to-release.github.io/eac/reference/commands/create/#validate
-  -risk-profile"><code>validate risk-profile</code></a><br>
-  <sup><a href="https://ready-to-release.github.io/eac/reference/commands/create/">overview</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/create
-  guration/">config</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/
-  risks-commands/">all</a></sup>
-  </td>
+<td align="center">
+<a href="https://ready-to-release.github.io/eac/reference/commands/create/"><img src="https://img.shields.io/badge/🛡️-Risk-f97316?style=for-the-badge" alt="Risk"></a><br>
+<a href="https://ready-to-release.github.io/eac/reference/commands/create/risk-profile/"><code>create risk-profile</code></a><br>
+<a href="https://ready-to-release.github.io/eac/reference/commands/create/risk-assess/"><code>create risk-assess</code></a><br>
+<a href="https://ready-to-release.github.io/eac/reference/commands/validate/risk-profile/"><code>validate risk-profile</code></a><br>
+<sup><a href="https://ready-to-release.github.io/eac/reference/commands/create/">overview</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/eac/commands/build-test-validate/">guides</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/categories/create">all</a></sup>
+</td>
 </tr>
 <tr>
 <td align="center">
@@ -327,28 +329,28 @@ irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/cli
 <a href="https://ready-to-release.github.io/eac/reference/commands/work/#work-create"><code>work create</code></a><br>
 <a href="https://ready-to-release.github.io/eac/reference/commands/work/#work-commit"><code>work commit</code></a><br>
 <a href="https://ready-to-release.github.io/eac/reference/commands/work/#work-merge"><code>work merge</code></a><br>
-<sup><a href="https://ready-to-release.github.io/eac/reference/commands/work/">overview</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/work/">config</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/work/">all</a></sup>
+<sup><a href="https://ready-to-release.github.io/eac/reference/commands/work/">overview</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/eac/commands/development-workflow/">guides</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/categories/work">all</a></sup>
 </td>
 <td align="center">
 <a href="https://ready-to-release.github.io/eac/reference/commands/other/build/"><img src="https://img.shields.io/badge/🔨-Build-3b82f6?style=for-the-badge" alt="Build"></a><br>
 <a href="https://ready-to-release.github.io/eac/reference/commands/other/build/#build"><code>build</code></a><br>
 <a href="https://ready-to-release.github.io/eac/reference/commands/other/build/#build"><code>build &lt;module&gt;</code></a><br>
 <a href="https://ready-to-release.github.io/eac/reference/commands/show/modules"><code>show modules</code></a><br>
-<sup><a href="https://ready-to-release.github.io/eac/reference/commands/other/build/">overview</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/other/build/">config</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/other/build/">all</a></sup>
+<sup><a href="https://ready-to-release.github.io/eac/reference/commands/other/build/">overview</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/eac/commands/build-test-validate/">guides</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/categories/other">all</a></sup>
 </td>
 <td align="center">
 <a href="https://ready-to-release.github.io/eac/reference/commands/pipeline/"><img src="https://img.shields.io/badge/⚡-Pipeline-ec4899?style=for-the-badge" alt="Pipeline"></a><br>
 <a href="https://ready-to-release.github.io/eac/reference/commands/pipeline/#pipeline-run"><code>pipeline run</code></a><br>
 <a href="https://ready-to-release.github.io/eac/reference/commands/pipeline/#pipeline-wait"><code>pipeline wait</code></a><br>
 <a href="https://ready-to-release.github.io/eac/reference/commands/pipeline/#pipeline-status"><code>pipeline status</code></a><br>
-<sup><a href="https://ready-to-release.github.io/eac/reference/commands/pipeline/">overview</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/pipeline/">config</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/pipeline/">all</a></sup>
+<sup><a href="https://ready-to-release.github.io/eac/reference/commands/pipeline/">overview</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/eac/commands/build-test-validate/">guides</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/categories/pipeline">all</a></sup>
 </td>
 <td align="center">
 <a href="https://ready-to-release.github.io/eac/reference/commands/release/"><img src="https://img.shields.io/badge/🚀-Release-f43f5e?style=for-the-badge" alt="Release"></a><br>
 <a href="https://ready-to-release.github.io/eac/reference/commands/release/#release-changelog"><code>release changelog</code></a><br>
 <a href="https://ready-to-release.github.io/eac/reference/commands/release/#release-this"><code>release this</code></a><br>
 <a href="https://ready-to-release.github.io/eac/reference/commands/release/#release-generate-module-calver"><code>release generate-module-calver</code></a><br>
-<sup><a href="https://ready-to-release.github.io/eac/reference/commands/release/">overview</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/release/">config</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/release/">all</a></sup>
+<sup><a href="https://ready-to-release.github.io/eac/reference/commands/release/">overview</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/eac/commands/release-management/">guides</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/categories/release">all</a></sup>
 </td>
 </tr>
 </table>

@@ -149,28 +149,48 @@ jobs:
       - name: Create release notes
         id: release_notes
         run: |
-          cat << 'EOF' > release_notes.md
+          TAG_NAME="${{ steps.tag.outputs.tag }}"
+          VERSION="${{ steps.tag.outputs.version }}"
+          REPO="${{ github.repository }}"
+
+          # Book descriptions mapping
+          declare -A DESCRIPTIONS=(
+            ["tutorials-dark.pdf"]="Step-by-step tutorials"
+            ["howto-dark.pdf"]="How-to guides"
+            ["explanation-dark.pdf"]="Conceptual documentation"
+            ["specifications-dark.pdf"]="Technical specifications"
+            ["repository-report-dark.pdf"]="Repository structure report"
+          )
+
+          cat > release_notes.md << 'HEADER'
           ## PDF Books Release
 
           This release includes PDF documentation books for offline reading.
 
           ### Available Books
 
-          | Book | Description |
-          |------|-------------|
-          | `tutorials-dark.pdf` | Step-by-step tutorials |
-          | `howto-dark.pdf` | How-to guides |
-          | `explanation-dark.pdf` | Conceptual documentation |
-          | `specifications-dark.pdf` | Technical specifications |
-          | `repository-report-dark.pdf` | Repository structure report |
+          | Book | Description | Size | Download |
+          |------|-------------|------|----------|
+          HEADER
+
+          # Generate table rows dynamically
+          for pdf in out/build/books/*.pdf; do
+            FILENAME=$(basename "$pdf")
+            SIZE=$(du -h "$pdf" | cut -f1)
+            DESC="${DESCRIPTIONS[$FILENAME]:-Documentation}"
+            DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${TAG_NAME}/${FILENAME}"
+            echo "| \`${FILENAME}\` | ${DESC} | ${SIZE} | [Download](${DOWNLOAD_URL}) |" >> release_notes.md
+          done
+
+          cat >> release_notes.md << EOF
 
           ### Release Information
 
-          - **Version**: ${{ steps.tag.outputs.version }}
+          - **Version**: ${VERSION}
           - **Commit**: ${{ github.sha }}
 
           ---
-          🤖 Generated with [GitHub Actions](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          🤖 Generated with [GitHub Actions](https://github.com/${REPO}/actions/runs/${{ github.run_id }})
           EOF
 
           cat release_notes.md
