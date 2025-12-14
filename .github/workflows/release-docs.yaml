@@ -3,8 +3,12 @@
 # This workflow releases the HTML documentation site to GitHub Pages.
 # It downloads pre-built artifacts from CI and deploys them.
 #
-# CI Verification: Requires a successful ci-docs.yaml run on the exact commit being released.
-# If ci_run_id is not provided, it will find the latest successful CI run for the current commit.
+# CI Verification:
+# - When triggered by CI (ci_run_id provided): Uses that run directly, no waiting
+# - When triggered manually/by tag: Uses `release check-ci` which handles:
+#   - Waiting for CI to complete (with proper chain detection)
+#   - CI inheritance when only changelog changed
+#   - Exports CI_RUN_ID for artifact download
 #
 # Note: PDF books are released separately via the books module (release-books.yaml).
 
@@ -47,12 +51,18 @@ jobs:
         uses: ./.github/actions/setup-commands
 
       - name: Check CI status
+        if: inputs.ci_run_id == ''
         run: |
           COMMANDS="${{ steps.commands.outputs.commands-path }}"
+
+          # Only check CI when not invoked directly from CI workflow
+          # When ci_run_id is provided, CI just completed - no need to wait
           $COMMANDS release check-ci \
             --workflow ci-docs.yaml \
             --commit ${{ github.sha }} \
             --timeout 300
+
+          # CI_RUN_ID and CI_SHA are now available in GITHUB_ENV
         env:
           GH_TOKEN: ${{ github.token }}
 
@@ -105,21 +115,17 @@ jobs:
       - name: Get CI run ID
         id: ci
         run: |
+          # Priority: 1) Input parameter, 2) CI_RUN_ID from check-ci
           if [ -n "${{ inputs.ci_run_id }}" ]; then
             echo "run_id=${{ inputs.ci_run_id }}" >> $GITHUB_OUTPUT
             echo "Using provided CI run ID: ${{ inputs.ci_run_id }}"
+          elif [ -n "$CI_RUN_ID" ]; then
+            echo "run_id=$CI_RUN_ID" >> $GITHUB_OUTPUT
+            echo "Using CI run from check-ci: $CI_RUN_ID (SHA: ${CI_SHA:-unknown})"
           else
-            # Find latest successful CI run for this commit
-            RUN_ID=$(gh run list -w ci-docs.yaml -s success -L 5 --json databaseId,headSha \
-              | jq -r ".[] | select(.headSha == \"${{ github.sha }}\") | .databaseId" | head -1)
-
-            if [ -z "$RUN_ID" ]; then
-              echo "❌ No successful CI run found for commit ${{ github.sha }}"
-              exit 1
-            fi
-
-            echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
-            echo "Found CI run ID: $RUN_ID"
+            echo "❌ No CI run ID available"
+            echo "   check-ci should have set CI_RUN_ID"
+            exit 1
           fi
         env:
           GH_TOKEN: ${{ github.token }}

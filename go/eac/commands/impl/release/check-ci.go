@@ -47,6 +47,8 @@ func init() {
 type CIRunStatus struct {
 	Status     string `json:"status"`
 	Conclusion string `json:"conclusion"`
+	RunID      int64  `json:"databaseId"`
+	HeadSHA    string `json:"headSha"`
 }
 
 func ReleaseCheckCI() int {
@@ -140,6 +142,8 @@ func ReleaseCheckCI() int {
 		// Check module CI result
 		if moduleStatus.success {
 			log.Infof("⏱ %s  ✓ CI passed", elapsedStr)
+			// Export CI run info to GitHub Actions environment
+			exportCIRunInfo(moduleStatus.runID, moduleStatus.ciSHA)
 			return 0
 		}
 		if moduleStatus.failed {
@@ -183,17 +187,19 @@ func ReleaseCheckCI() int {
 				// (safe when only changelog changed for this module)
 				workspaceRoot, rootErr := repository.GetRepositoryRoot("")
 				if rootErr == nil {
-					canInherit, inheritedSHA, inheritMsg := canInheritCIFromPrevious(moduleName, workflow, commitSHA, workspaceRoot)
+					canInherit, inheritedCI, inheritMsg := canInheritCIFromPrevious(moduleName, workflow, commitSHA, workspaceRoot)
 					if canInherit {
 						log.Infof("")
 						log.Infof("✓ %s", inheritMsg)
-						// Export INHERITED_CI_SHA to GitHub Actions environment
+						// Export CI run info to GitHub Actions environment
+						// Note: INHERITED_CI_SHA is kept for backward compatibility
 						if ghEnv := os.Getenv("GITHUB_ENV"); ghEnv != "" {
 							if f, err := os.OpenFile(ghEnv, os.O_APPEND|os.O_WRONLY, 0644); err == nil {
-								fmt.Fprintf(f, "INHERITED_CI_SHA=%s\n", inheritedSHA)
+								fmt.Fprintf(f, "INHERITED_CI_SHA=%s\n", inheritedCI.SHA)
 								f.Close()
 							}
 						}
+						exportCIRunInfo(inheritedCI.RunID, inheritedCI.SHA)
 						return 0
 					}
 					// If we have a specific reason why we can't inherit, show it
@@ -245,6 +251,8 @@ type ModuleCIStatus struct {
 	success bool
 	failed  bool
 	running bool
+	runID   int64  // Run ID of the successful CI (if success=true)
+	ciSHA   string // Commit SHA of the CI run (if success=true)
 }
 
 // getModuleCIStatus checks if the specific module CI has run for the commit
@@ -261,6 +269,8 @@ func getModuleCIStatus(workflow, commitSHA string, strict bool) (ModuleCIStatus,
 		case "completed":
 			if run.Conclusion == "success" {
 				status.success = true
+				status.runID = run.RunID
+				status.ciSHA = run.HeadSHA
 				return status, nil // Success - done
 			} else {
 				status.failed = true
@@ -314,13 +324,6 @@ func getCIChainStatus(commitSHA string) (CIChainStatus, error) {
 	return status, nil
 }
 
-// CIRunWithSHA includes headSha for commit matching
-type CIRunWithSHA struct {
-	Status     string `json:"status"`
-	Conclusion string `json:"conclusion"`
-	HeadSHA    string `json:"headSha"`
-}
-
 // getWorkflowRuns queries GitHub for workflow runs on a specific commit
 // If strict is true, only exact commit matches are accepted
 // If strict is false, falls back to checking if commit is ancestor of recent runs
@@ -349,7 +352,7 @@ func queryRunsByCommit(workflow, commitSHA string) ([]CIRunStatus, error) {
 	cmd := exec.Command("gh", "run", "list",
 		"--commit", commitSHA,
 		"--workflow", workflow,
-		"--json", "status,conclusion",
+		"--json", "status,conclusion,databaseId,headSha",
 		"--limit", "5",
 	)
 
@@ -372,7 +375,7 @@ func queryRecentRunsForCommit(workflow, targetCommit string) ([]CIRunStatus, err
 	cmd := exec.Command("gh", "run", "list",
 		"--workflow", workflow,
 		"--branch", "main",
-		"--json", "status,conclusion,headSha",
+		"--json", "status,conclusion,headSha,databaseId",
 		"--limit", "10",
 	)
 
@@ -381,7 +384,7 @@ func queryRecentRunsForCommit(workflow, targetCommit string) ([]CIRunStatus, err
 		return nil, fmt.Errorf("gh run list failed: %w", err)
 	}
 
-	var runs []CIRunWithSHA
+	var runs []CIRunStatus
 	if err := json.Unmarshal(output, &runs); err != nil {
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
@@ -391,17 +394,11 @@ func queryRecentRunsForCommit(workflow, targetCommit string) ([]CIRunStatus, err
 	for _, run := range runs {
 		if run.HeadSHA == targetCommit {
 			// Exact match
-			matchingRuns = append(matchingRuns, CIRunStatus{
-				Status:     run.Status,
-				Conclusion: run.Conclusion,
-			})
+			matchingRuns = append(matchingRuns, run)
 		} else if run.Status == "completed" && run.Conclusion == "success" {
 			// Check if targetCommit is ancestor of this successful run
 			if isAncestor(targetCommit, run.HeadSHA) {
-				matchingRuns = append(matchingRuns, CIRunStatus{
-					Status:     run.Status,
-					Conclusion: run.Conclusion,
-				})
+				matchingRuns = append(matchingRuns, run)
 			}
 		}
 	}
@@ -470,38 +467,38 @@ func formatElapsed(d time.Duration) string {
 // successful run. This is safe when the only module-owned files that changed since
 // the last successful CI are changelog files.
 //
-// Returns (canInherit bool, inheritedSHA string, message string)
-// - canInherit=true, inheritedSHA=sha, message=success message: Safe to inherit
-// - canInherit=false, inheritedSHA="", message="": No previous CI or error
-// - canInherit=false, inheritedSHA="", message=reason: Specific reason we can't inherit
-func canInheritCIFromPrevious(moduleName, workflow, releaseCommit, workspaceRoot string) (bool, string, string) {
-	// 1. Get the last successful CI SHA for this module's workflow
-	lastCISHA, err := getLastSuccessfulModuleCISHA(workflow, "main", workspaceRoot)
-	if err != nil || lastCISHA == "" {
-		return false, "", "" // No previous successful CI
+// Returns (canInherit bool, inheritedInfo CIRunInfo, message string)
+// - canInherit=true, inheritedInfo with SHA and RunID, message=success message: Safe to inherit
+// - canInherit=false, empty inheritedInfo, message="": No previous CI or error
+// - canInherit=false, empty inheritedInfo, message=reason: Specific reason we can't inherit
+func canInheritCIFromPrevious(moduleName, workflow, releaseCommit, workspaceRoot string) (bool, CIRunInfo, string) {
+	// 1. Get the last successful CI info for this module's workflow
+	lastCI, err := getLastSuccessfulModuleCIInfo(workflow, "main", workspaceRoot)
+	if err != nil || lastCI.SHA == "" {
+		return false, CIRunInfo{}, "" // No previous successful CI
 	}
 
 	// 2. Get changed files between last CI and release commit
-	changedFiles, err := getChangedFilesBetweenCommits(lastCISHA, releaseCommit, workspaceRoot)
+	changedFiles, err := getChangedFilesBetweenCommits(lastCI.SHA, releaseCommit, workspaceRoot)
 	if err != nil {
-		return false, "", "" // Can't determine changes
+		return false, CIRunInfo{}, "" // Can't determine changes
 	}
 
 	if len(changedFiles) == 0 {
 		// No files changed - this shouldn't happen but is safe
-		return true, lastCISHA, fmt.Sprintf("CI inherited from %s (no files changed)", lastCISHA[:7])
+		return true, lastCI, fmt.Sprintf("CI inherited from %s (no files changed)", lastCI.SHA[:7])
 	}
 
 	// 3. Load module registry to determine file ownership and changelog path
 	registry, err := modules.LoadFromWorkspace(workspaceRoot)
 	if err != nil {
-		return false, "", "" // Can't load module registry
+		return false, CIRunInfo{}, "" // Can't load module registry
 	}
 
 	// Find the module contract
 	module, found := registry.Get(moduleName)
 	if !found {
-		return false, "", "" // Module not found
+		return false, CIRunInfo{}, "" // Module not found
 	}
 
 	// 4. Get the changelog path for this module (normalized)
@@ -519,7 +516,7 @@ func canInheritCIFromPrevious(moduleName, workflow, releaseCommit, workspaceRoot
 	// 6. Check if all module changes are just the changelog
 	if len(moduleChangedFiles) == 0 {
 		// No module files changed - safe to inherit
-		return true, lastCISHA, fmt.Sprintf("CI inherited from %s (no module files changed)", lastCISHA[:7])
+		return true, lastCI, fmt.Sprintf("CI inherited from %s (no module files changed)", lastCI.SHA[:7])
 	}
 
 	// Check each changed file - must be the changelog
@@ -533,34 +530,53 @@ func canInheritCIFromPrevious(moduleName, workflow, releaseCommit, workspaceRoot
 	if len(nonChangelogFiles) > 0 {
 		// Module source files changed - cannot inherit
 		if len(nonChangelogFiles) == 1 {
-			return false, "", fmt.Sprintf("Module file changed: %s", nonChangelogFiles[0])
+			return false, CIRunInfo{}, fmt.Sprintf("Module file changed: %s", nonChangelogFiles[0])
 		}
-		return false, "", fmt.Sprintf("Module files changed: %s (and %d more)", nonChangelogFiles[0], len(nonChangelogFiles)-1)
+		return false, CIRunInfo{}, fmt.Sprintf("Module files changed: %s (and %d more)", nonChangelogFiles[0], len(nonChangelogFiles)-1)
 	}
 
 	// Only changelog changed - safe to inherit!
-	return true, lastCISHA, fmt.Sprintf("CI inherited from %s (only changelog changed)", lastCISHA[:7])
+	return true, lastCI, fmt.Sprintf("CI inherited from %s (only changelog changed)", lastCI.SHA[:7])
 }
 
-// getLastSuccessfulModuleCISHA queries gh CLI for the last successful workflow run SHA
-func getLastSuccessfulModuleCISHA(workflow, branch, workspaceRoot string) (string, error) {
+// CIRunInfo contains information about a CI run
+type CIRunInfo struct {
+	SHA   string
+	RunID int64
+}
+
+// getLastSuccessfulModuleCIInfo queries gh CLI for the last successful workflow run info
+func getLastSuccessfulModuleCIInfo(workflow, branch, workspaceRoot string) (CIRunInfo, error) {
 	cmd := exec.Command("gh", "run", "list",
 		"-b", branch,
 		"-s", "success",
 		"-w", workflow,
 		"-L", "1",
-		"--json", "headSha",
-		"-q", ".[0].headSha",
+		"--json", "headSha,databaseId",
 	)
 	cmd.Dir = workspaceRoot
 
 	output, err := cmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("gh command failed: %w", err)
+		return CIRunInfo{}, fmt.Errorf("gh command failed: %w", err)
 	}
 
-	sha := strings.TrimSpace(string(output))
-	return sha, nil
+	var runs []struct {
+		HeadSHA    string `json:"headSha"`
+		DatabaseID int64  `json:"databaseId"`
+	}
+	if err := json.Unmarshal(output, &runs); err != nil {
+		return CIRunInfo{}, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	if len(runs) == 0 {
+		return CIRunInfo{}, nil
+	}
+
+	return CIRunInfo{
+		SHA:   runs[0].HeadSHA,
+		RunID: runs[0].DatabaseID,
+	}, nil
 }
 
 // getChangedFilesBetweenCommits gets the list of files changed between two commits
@@ -584,5 +600,27 @@ func getChangedFilesBetweenCommits(baseSHA, headSHA, workspaceRoot string) ([]st
 // normalizeSlashes converts backslashes to forward slashes for consistent path comparison
 func normalizeSlashes(path string) string {
 	return strings.ReplaceAll(path, "\\", "/")
+}
+
+// exportCIRunInfo exports CI run information to GitHub Actions environment
+// This allows workflows to access the run ID for artifact download
+func exportCIRunInfo(runID int64, ciSHA string) {
+	ghEnv := os.Getenv("GITHUB_ENV")
+	if ghEnv == "" {
+		return // Not running in GitHub Actions
+	}
+
+	f, err := os.OpenFile(ghEnv, os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+
+	if runID > 0 {
+		fmt.Fprintf(f, "CI_RUN_ID=%d\n", runID)
+	}
+	if ciSHA != "" {
+		fmt.Fprintf(f, "CI_SHA=%s\n", ciSHA)
+	}
 }
 
