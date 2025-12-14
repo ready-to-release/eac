@@ -232,6 +232,49 @@ func IsServing(ctx context.Context, namePattern string) (*ServeResult, bool, err
 	return nil, false, nil
 }
 
+// CheckImageStale checks if the image for a config needs to be rebuilt.
+// Returns (stale, reason) - if stale, the image should be rebuilt before serving.
+func CheckImageStale(ctx context.Context, config *ServeConfig) (bool, string, error) {
+	if config.BuildInfo == nil {
+		return false, "", nil // No local build info, can't check staleness
+	}
+
+	cli, err := createDockerClient()
+	if err != nil {
+		return false, "", fmt.Errorf("failed to create Docker client: %w", err)
+	}
+	defer cli.Close()
+
+	// Check if image exists and get its creation time
+	images, err := cli.ImageList(ctx, image.ListOptions{})
+	if err != nil {
+		return false, "", fmt.Errorf("failed to list images: %w", err)
+	}
+
+	var imageCreated time.Time
+	imageExists := false
+	for _, img := range images {
+		for _, tag := range img.RepoTags {
+			if tag == config.Image {
+				imageExists = true
+				imageCreated = time.Unix(img.Created, 0)
+				break
+			}
+		}
+		if imageExists {
+			break
+		}
+	}
+
+	if !imageExists {
+		return true, "image does not exist", nil
+	}
+
+	// Check if source files are newer than image
+	stale, reason := isImageStale(config.BuildInfo.ContextPath, imageCreated)
+	return stale, reason, nil
+}
+
 // ListServing returns all running serve containers matching the name pattern.
 func ListServing(ctx context.Context, namePattern string) ([]*ServeResult, error) {
 	cli, err := createDockerClient()
@@ -375,23 +418,45 @@ func createBuildContext(contextPath, dockerfilePath string) (io.ReadCloser, erro
 	return pr, nil
 }
 
-// ensureImage ensures the Docker image exists, building it if necessary.
+// ensureImage ensures the Docker image exists and is up-to-date, building if necessary.
+// For local builds (BuildInfo != nil), it checks if source files are newer than the image.
 func ensureImage(ctx context.Context, cli DockerClient, config *ServeConfig) error {
-	// Check if image exists
+	// Check if image exists and get its creation time
 	images, err := cli.ImageList(ctx, image.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to list images: %w", err)
 	}
 
+	var imageCreated time.Time
+	imageExists := false
 	for _, img := range images {
 		for _, tag := range img.RepoTags {
 			if tag == config.Image {
-				return nil
+				imageExists = true
+				imageCreated = time.Unix(img.Created, 0)
+				break
 			}
+		}
+		if imageExists {
+			break
 		}
 	}
 
-	// Image doesn't exist
+	// For local builds, check if source files are newer than image
+	needsBuild := !imageExists
+	if imageExists && config.BuildInfo != nil {
+		stale, reason := isImageStale(config.BuildInfo.ContextPath, imageCreated)
+		if stale {
+			fmt.Printf("Image %s is stale: %s\n", config.Image, reason)
+			needsBuild = true
+		}
+	}
+
+	if !needsBuild {
+		return nil
+	}
+
+	// Build or pull the image
 	if config.BuildInfo != nil {
 		// Build locally using Docker SDK
 		fmt.Printf("Building image %s...\n", config.Image)
@@ -409,12 +474,13 @@ func ensureImage(ctx context.Context, cli DockerClient, config *ServeConfig) err
 			return fmt.Errorf("failed to get relative dockerfile path: %w", err)
 		}
 
-		// Build image
+		// Build image with cache
 		buildOptions := types.ImageBuildOptions{
-			Tags:       []string{config.Image},
-			Dockerfile: dockerfileRel,
-			Remove:     true,
+			Tags:        []string{config.Image},
+			Dockerfile:  dockerfileRel,
+			Remove:      true,
 			ForceRemove: true,
+			NoCache:     false, // Use Docker build cache
 		}
 
 		resp, err := cli.ImageBuild(ctx, buildContext, buildOptions)
@@ -451,6 +517,43 @@ func ensureImage(ctx context.Context, cli DockerClient, config *ServeConfig) err
 	}
 
 	return nil
+}
+
+// isImageStale checks if any file in the build context is newer than the image.
+// Returns (true, reason) if stale, (false, "") if up-to-date.
+func isImageStale(contextPath string, imageCreated time.Time) (bool, string) {
+	var newestFile string
+	var newestTime time.Time
+
+	err := filepath.Walk(contextPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil // Skip files we can't read
+		}
+		if info.IsDir() {
+			return nil
+		}
+
+		modTime := info.ModTime()
+		if modTime.After(newestTime) {
+			newestTime = modTime
+			newestFile = path
+		}
+		return nil
+	})
+
+	if err != nil {
+		return false, ""
+	}
+
+	if newestTime.After(imageCreated) {
+		relPath, _ := filepath.Rel(contextPath, newestFile)
+		if relPath == "" {
+			relPath = filepath.Base(newestFile)
+		}
+		return true, fmt.Sprintf("%s modified", relPath)
+	}
+
+	return false, ""
 }
 
 // removeExistingContainer removes an existing container if it exists.

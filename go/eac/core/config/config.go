@@ -668,6 +668,22 @@ func (c *EACConfig) GetDefaultBooksByModule(moniker string) []*Book {
 	return c.Books.GetDefaultBooksByNames(module.Books)
 }
 
+// GetModuleForBook finds which module owns a book by name.
+// Returns the module moniker or empty string if not found.
+func (c *EACConfig) GetModuleForBook(bookName string) string {
+	if c.Repository == nil {
+		return ""
+	}
+	for _, module := range c.Repository.Modules {
+		for _, b := range module.Books {
+			if b == bookName {
+				return module.Moniker
+			}
+		}
+	}
+	return ""
+}
+
 // readConfigFile reads a config file from the config root
 func (c *EACConfig) readConfigFile(filename string) ([]byte, error) {
 	path := filepath.Join(c.ConfigRoot, filename)

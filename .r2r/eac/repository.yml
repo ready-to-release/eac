@@ -58,27 +58,18 @@ modules:
           - scripts/sh/claude/env-setup.sh
 
   # ============================================================================
-  # Documentation - HTML Site + PDF Books
+  # Documentation - HTML Site
   # ============================================================================
   - moniker: docs
-    name: Documentation
+    name: Documentation Site
     type: container
-    description: MkDocs documentation - HTML site (default) and PDF books (with --all)
+    description: MkDocs HTML documentation site for GitHub Pages
     versioning:
       scheme: CalVer
     depends_on:
       - eac-commands
-    # Books define what this module builds - artifacts derived automatically
-    # First book is default, others require --all flag
     books:
-      - site # HTML site (output: site)
-      - tutorials
-      - howto
-      - explanation
-      - specifications
-    # Container selection is automatic based on book output:
-    #   output: site    → containers/mkdocs-site
-    #   output: pdf-*   → containers/mkdocs-pdf
+      - site
     files:
       root: docs
       assets:
@@ -95,6 +86,33 @@ modules:
         other:
           - mkdocs.yml
           - containers/mkdocs-site/**
+          - containers/static-site/**
+
+  # ============================================================================
+  # PDF Books
+  # ============================================================================
+  - moniker: books
+    name: PDF Books
+    type: container
+    description: PDF documentation books for offline reading and distribution
+    versioning:
+      scheme: CalVer
+    depends_on:
+      - docs
+      - eac-commands
+    books:
+      - tutorials
+      - howto
+      - explanation
+      - specifications
+      - repository-report
+    files:
+      changelog: release/books/CHANGELOG.md
+      workflows:
+        ci: .github/workflows/ci-books.yaml
+        release: .github/workflows/release-books.yaml
+      repo:
+        other:
           - containers/mkdocs-pdf/**
 
   # ============================================================================
@@ -452,3 +470,6 @@ modules:
       assets:
         - README.md
         - "**/*.md"
+      exclude:
+        # Changelogs owned by their respective modules (books has no root, so path is from repo root)
+        - books/CHANGELOG.md
