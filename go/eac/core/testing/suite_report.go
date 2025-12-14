@@ -28,6 +28,7 @@ type SuiteTestEntry struct {
 	IsIgnored        bool     `yaml:"is_ignored" json:"is_ignored" toml:"is_ignored"`
 	SkipReason       string   `yaml:"skip_reason,omitempty" json:"skip_reason,omitempty" toml:"skip_reason,omitempty"`
 	IsManual         bool     `yaml:"is_manual" json:"is_manual" toml:"is_manual"`
+	IsSequential     bool     `yaml:"is_sequential" json:"is_sequential" toml:"is_sequential"`
 	RiskControls     []string `yaml:"risk_controls,omitempty" json:"risk_controls,omitempty" toml:"risk_controls,omitempty"`
 	IsGxP            bool     `yaml:"is_gxp" json:"is_gxp" toml:"is_gxp"`
 	IsCriticalAspect bool     `yaml:"is_critical_aspect" json:"is_critical_aspect" toml:"is_critical_aspect"`

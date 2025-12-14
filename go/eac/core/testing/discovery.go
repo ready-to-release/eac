@@ -546,6 +546,7 @@ func parseFeatureFile(filePath string, dc *DiscoveryConfig) ([]TestReference, er
 			// Set execution control fields
 			test.IsIgnored, test.SkipReason = extractSkipReason(test.Tags)
 			test.IsManual = contains(test.Tags, "@Manual")
+			test.IsSequential = contains(test.Tags, "@sequential")
 
 			// Extract dependencies
 			test.SystemDependencies = extractSystemDependencies(test.Tags)
@@ -847,6 +848,8 @@ func parseNodeTestFile(filePath string, testFramework string) ([]TestReference, 
 
 		// Set execution control fields
 		ref.IsIgnored, ref.SkipReason = extractSkipReason(ref.Tags)
+		ref.IsManual = contains(ref.Tags, "@Manual")
+		ref.IsSequential = contains(ref.Tags, "@sequential")
 		ref.SystemDependencies = extractSystemDependencies(ref.Tags)
 		ref.ModuleDependencies = extractModuleDependencies(ref.Tags)
 

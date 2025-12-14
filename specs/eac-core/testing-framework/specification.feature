@@ -1,4 +1,4 @@
-@L1 @ov @depm:eac-core @skip:broken
+@L1 @ov @depm:eac-core @skip:broken @sequential
 Feature: eac-core_testing-framework
 
   As a developer

@@ -370,7 +370,7 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 	}
 
 	// Determine max concurrency from config (respects CI vs devbox environment)
-	maxConcurrency := 4 // Default fallback
+	maxConcurrency := 8 // Default fallback (devbox default)
 	if repoCfg != nil && repoCfg.Repository != nil {
 		maxConcurrency = repoCfg.Repository.EffectiveParallelism(environments.IsCI())
 	}

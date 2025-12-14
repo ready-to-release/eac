@@ -1,4 +1,4 @@
-@deps:go @L1 @ov
+@deps:go @L1 @ov @sequential
 Feature: eac-commands_build
 
   As a developer of the eac platform

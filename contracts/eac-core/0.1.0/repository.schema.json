@@ -83,19 +83,19 @@
           "description": "Maximum parallel workers in CI environment (GitHub Actions)",
           "minimum": 1,
           "maximum": 16,
-          "default": 2
+          "default": 4
         },
         "devbox": {
           "type": "integer",
           "description": "Maximum parallel workers in local development environment",
           "minimum": 1,
           "maximum": 32,
-          "default": 4
+          "default": 8
         }
       },
       "default": {
-        "ci": 2,
-        "devbox": 4
+        "ci": 4,
+        "devbox": 8
       }
     },
     "pr_config": {

@@ -34,6 +34,12 @@ type Model struct {
 	startTime time.Time // Execution start
 	lastError *Line     // Most recent error (sticky display)
 
+	// Per-module tab tracking for Run phase
+	moduleStates map[string]*ModuleState // Per-module state (running, completed, failed)
+	moduleOrder  []string                // Order in which modules started (for tab ordering)
+	activeTab    string                  // Currently selected tab ("" = aggregate view)
+	maxTabs      int                     // Maximum visible tabs before scrolling/hiding
+
 	// Channels for async updates
 	lineChan   <-chan Line   // Incoming output lines
 	statusChan <-chan Status // Status updates
@@ -52,6 +58,40 @@ type Model struct {
 
 	// Quitting state - triggers plain-text final render
 	quitting bool
+}
+
+// ModuleState tracks per-module execution state for tab display
+type ModuleState struct {
+	Moniker   string        // Module identifier
+	Buffer    *RingBuffer   // Module-specific output buffer
+	Status    ModuleStatus  // Running, Complete, Failed
+	StartTime time.Time     // When module started
+	EndTime   time.Time     // When module finished (zero if running)
+	ExitCode  int           // Exit code (only valid when complete/failed)
+	DecayTime time.Time     // When tab should disappear (zero = don't decay)
+}
+
+// ModuleStatus represents the execution state of a module
+type ModuleStatus int
+
+const (
+	ModuleRunning ModuleStatus = iota
+	ModuleComplete
+	ModuleFailed
+)
+
+// Icon returns the icon for a module status
+func (s ModuleStatus) Icon() string {
+	switch s {
+	case ModuleRunning:
+		return "▶"
+	case ModuleComplete:
+		return "✓"
+	case ModuleFailed:
+		return "✗"
+	default:
+		return "?"
+	}
 }
 
 // NewModel creates a new console model.
@@ -86,8 +126,12 @@ func NewModel(height int, showHeader bool, runPhaseName string, lineChan <-chan 
 		statusChan:    statusChan,
 		startTime:     time.Now(),
 		phase:         "Starting",
-		usePanes:      true, // Enable 2-pane mode by default
-		mouseMode:     true, // Start with mouse ON (scrolling enabled)
+		usePanes:      true,                            // Enable 2-pane mode by default
+		mouseMode:     true,                            // Start with mouse ON (scrolling enabled)
+		moduleStates:  make(map[string]*ModuleState),   // Per-module state tracking
+		moduleOrder:   make([]string, 0),               // Tab ordering
+		activeTab:     "",                              // Start with aggregate view
+		maxTabs:       8,                               // Maximum visible tabs
 	}
 }
 
@@ -250,4 +294,134 @@ type SummaryData struct {
 // SetSummaryData updates the summary data for the Summary pane
 func (m *Model) SetSummaryData(data *SummaryData) {
 	m.summaryData = data
+}
+
+// GetOrCreateModuleState gets or creates a module state for the given moniker
+func (m *Model) GetOrCreateModuleState(moniker string) *ModuleState {
+	if state, exists := m.moduleStates[moniker]; exists {
+		return state
+	}
+
+	// Create new module state with its own buffer
+	state := &ModuleState{
+		Moniker:   moniker,
+		Buffer:    NewRingBuffer(200), // Per-module buffer (smaller than pane buffer)
+		Status:    ModuleRunning,
+		StartTime: time.Now(),
+	}
+	m.moduleStates[moniker] = state
+	m.moduleOrder = append(m.moduleOrder, moniker)
+
+	return state
+}
+
+// MarkModuleComplete marks a module as completed
+// If the tab is currently selected, it stays visible until user switches away
+func (m *Model) MarkModuleComplete(moniker string, exitCode int) {
+	state, exists := m.moduleStates[moniker]
+	if !exists {
+		return
+	}
+
+	state.EndTime = time.Now()
+	state.ExitCode = exitCode
+	if exitCode == 0 {
+		state.Status = ModuleComplete
+	} else {
+		state.Status = ModuleFailed
+	}
+
+	// Only remove from tabs if not currently selected
+	// If selected, user can continue viewing it until they switch away
+	if m.activeTab != moniker {
+		m.removeModuleFromTabs(moniker)
+	}
+}
+
+// removeModuleFromTabs removes a module from the tab display
+func (m *Model) removeModuleFromTabs(moniker string) {
+	// Remove from order
+	var newOrder []string
+	for _, name := range m.moduleOrder {
+		if name != moniker {
+			newOrder = append(newOrder, name)
+		}
+	}
+	m.moduleOrder = newOrder
+
+	// Remove from states
+	delete(m.moduleStates, moniker)
+}
+
+// GetVisibleTabs returns the tabs that should be displayed
+// Shows running modules + the active tab (even if completed)
+func (m *Model) GetVisibleTabs() []*ModuleState {
+	var tabs []*ModuleState
+
+	for _, moniker := range m.moduleOrder {
+		state := m.moduleStates[moniker]
+		if state == nil {
+			continue
+		}
+
+		// Show running modules OR the currently selected tab (even if completed)
+		if state.Status == ModuleRunning || moniker == m.activeTab {
+			tabs = append(tabs, state)
+		}
+	}
+
+	// Limit to maxTabs if too many
+	if len(tabs) > m.maxTabs {
+		tabs = tabs[:m.maxTabs]
+	}
+
+	return tabs
+}
+
+// SetActiveTab sets the currently active tab
+// When switching away from a completed tab, it will be removed
+func (m *Model) SetActiveTab(moniker string) {
+	oldTab := m.activeTab
+
+	// Empty moniker = aggregate view (always valid)
+	if moniker == "" {
+		m.activeTab = ""
+	} else {
+		// Validate moniker exists (allow completed tabs that are still selected)
+		state, exists := m.moduleStates[moniker]
+		if !exists {
+			return
+		}
+		// Only allow switching to running modules or the current active tab
+		if state.Status != ModuleRunning && moniker != m.activeTab {
+			return
+		}
+		m.activeTab = moniker
+	}
+
+	// If we switched away from a completed/failed tab, remove it now
+	if oldTab != "" && oldTab != m.activeTab {
+		if state, exists := m.moduleStates[oldTab]; exists {
+			if state.Status == ModuleComplete || state.Status == ModuleFailed {
+				m.removeModuleFromTabs(oldTab)
+			}
+		}
+	}
+}
+
+// GetActiveModuleBuffer returns the buffer for the active tab, or nil for aggregate view
+func (m *Model) GetActiveModuleBuffer() *RingBuffer {
+	if m.activeTab == "" {
+		return nil // Aggregate view - use Run pane buffer
+	}
+	if state, exists := m.moduleStates[m.activeTab]; exists {
+		return state.Buffer
+	}
+	return nil
+}
+
+// CleanupDecayedTabs is a no-op now (tabs removed instantly on completion)
+func (m *Model) CleanupDecayedTabs() {
+	// Tabs are now removed instantly when modules complete
+	// This function is kept for compatibility but does nothing
 }
