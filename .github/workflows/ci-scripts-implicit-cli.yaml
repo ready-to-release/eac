@@ -49,6 +49,7 @@ jobs:
         with:
           module: scripts-implicit-cli
           trigger-run-id: ${{ inputs.trigger_run_id }}
+          commit-sha: ${{ inputs.sha || github.sha }}
           # Build eac-commands dependency for all platforms (including Windows) to support cross-platform tests
           extra-args: --all
 

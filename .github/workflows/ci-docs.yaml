@@ -51,6 +51,7 @@ jobs:
         with:
           module: docs
           trigger-run-id: ${{ inputs.trigger_run_id }}
+          commit-sha: ${{ inputs.sha || github.sha }}
 
   # =============================================================================
   # Test

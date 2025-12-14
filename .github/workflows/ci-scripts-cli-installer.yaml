@@ -49,6 +49,7 @@ jobs:
         with:
           module: scripts-cli-installer
           trigger-run-id: ${{ inputs.trigger_run_id }}
+          commit-sha: ${{ inputs.sha || github.sha }}
           # Build r2r-cli dependency for all platforms (including Windows) to support cross-platform tests
           extra-args: --all
 
