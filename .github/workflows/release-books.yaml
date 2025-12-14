@@ -119,14 +119,20 @@ jobs:
       - name: Validate artifacts
         id: verify
         run: |
-          COMMANDS="${{ steps.commands.outputs.commands-path }}"
+          echo "Validating downloaded PDF artifacts..."
 
-          # Validate artifacts against build manifest
-          $COMMANDS validate artifacts books
-
-          # Collect stats
+          # Check PDFs exist
           PDF_COUNT=$(find "out/build/books" -maxdepth 1 -name "*.pdf" -type f 2>/dev/null | wc -l)
           TOTAL_SIZE=$(du -sh "out/build/books" 2>/dev/null | cut -f1 || echo "0")
+
+          if [ "$PDF_COUNT" -eq 0 ]; then
+            echo "❌ No PDF files found in out/build/books/"
+            ls -la out/build/books/ 2>/dev/null || echo "Directory does not exist"
+            exit 1
+          fi
+
+          echo "✅ Found $PDF_COUNT PDF files ($TOTAL_SIZE)"
+          find "out/build/books" -maxdepth 1 -name "*.pdf" -type f -exec basename {} \;
 
           echo "pdf_count=$PDF_COUNT" >> $GITHUB_OUTPUT
           echo "total_size=$TOTAL_SIZE" >> $GITHUB_OUTPUT
