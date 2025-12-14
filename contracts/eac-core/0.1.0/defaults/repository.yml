@@ -35,6 +35,12 @@ repository:
     # patch-only: Only allow patch bumps during early development
     constraint: patch-only
 
+  # Parallelism limits for build and test commands
+  # CI uses lower limits to avoid resource contention on shared runners
+  parallelism:
+    ci: 2      # Max parallel workers in CI (GitHub Actions)
+    devbox: 4  # Max parallel workers in local development
+
 # Default paths configuration
 paths:
   # Specs root directory - where feature specifications live

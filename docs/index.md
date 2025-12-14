@@ -102,4 +102,11 @@ docs/
 ├── reference/                  # Technical specifications
 └── explanation/                # Conceptual discussions
 ```
-<\!-- test -->
+
+---
+
+## Repository Modules
+
+This repository is organized into modules - each representing a distinct deliverable with its own versioning, CI/CD pipeline, and release process.
+
+<!-- book:insert modules-overview -->

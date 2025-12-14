@@ -24,6 +24,7 @@ type ModuleManifest struct {
 	Moniker             string         `json:"moniker"`                         // Module identifier
 	Type                string         `json:"type"`                            // Module type
 	BuildTime           time.Time      `json:"build_time"`                      // When this module was built
+	DurationSeconds     float64        `json:"duration_seconds,omitempty"`      // Build duration in seconds
 	GitCommit           string         `json:"git_commit,omitempty"`            // Git commit SHA at build time
 	InputHash           string         `json:"input_hash,omitempty"`            // SHA-256 hash of source files at build time
 	RequestedArtifacts  []string       `json:"requested_artifacts,omitempty"`   // Artifact IDs requested to build

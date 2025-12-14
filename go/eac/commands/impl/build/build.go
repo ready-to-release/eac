@@ -7,7 +7,7 @@
 // Long:
 // Long: Expected Output:
 // Long:   - Build logs written to 'out/build/<module>/build.log' (one per module)
-// Long:   - Summary orchestrator log at 'out/build/orchestrator.log'
+// Long:   - Build manifest at 'out/build/<module>/build.manifest.json' (with timing data)
 // Long:   - Failed builds are clearly marked with error details
 // Long:   - Failed builds do not stop execution of remaining modules
 // Long:   - Exit code 0 indicates all builds succeeded
@@ -43,6 +43,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/environments"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
@@ -362,14 +363,25 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 	// Build module type lookup for ALL modules (will be populated after execution plan)
 	moduleTypes := make(map[string]string)
 
+	// Load repository config for parallelism settings
+	repoCfg, err := config.Load(config.DefaultLoadOptions())
+	if err != nil {
+		log.Warnf("Failed to load config for parallelism settings: %v (using defaults)", err)
+	}
+
+	// Determine max concurrency from config (respects CI vs devbox environment)
+	maxConcurrency := 4 // Default fallback
+	if repoCfg != nil && repoCfg.Repository != nil {
+		maxConcurrency = repoCfg.Repository.EffectiveParallelism(environments.IsCI())
+	}
+
 	// Configure orchestrator early so we can use it for Init phase output
 	orchConfig := orchestrator.Config{
 		WorkspaceRoot:        workspaceRoot,
 		OutputBaseDir:        paths.OutBuildRelPath,
 		LogFileName:          "build.log",
-		OrchestratorLogName:  "", // Disable separate orchestrator log - use logging system instead
 		ActionVerb:           "Building",
-		MaxConcurrency:       0, // Use default (number of CPUs)
+		MaxConcurrency:       maxConcurrency,
 		StatusUpdateInterval: 2, // Update every 2 seconds
 		ModuleTypes:          moduleTypes,
 		ShowTimings:          showTimings,
@@ -1346,6 +1358,7 @@ func generateBuildManifest(workspaceRoot string, results []orchestrator.WorkResu
 
 		// Create per-module manifest (immutable - created once per build)
 		manifest := implinternal.NewModuleManifest(moniker, moduleType, gitCommit)
+		manifest.DurationSeconds = result.Duration.Seconds()
 		manifest.RequestedArtifacts = requestedArtifactIDs
 		manifest.Artifacts = artifactInfos
 		manifest.Platforms = []implinternal.PlatformInfo{currentPlatform}

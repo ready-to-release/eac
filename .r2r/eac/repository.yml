@@ -7,6 +7,11 @@
 # Repository settings
 repository:
   type: mono
+  # Parallelism limits for build and test commands
+  # CI uses lower limits to avoid resource contention on shared GitHub Actions runners
+  parallelism:
+    ci: 2      # Max parallel workers in CI (GitHub Actions)
+    devbox: 4  # Max parallel workers in local development
 
 # Path configuration (overrides defaults)
 paths:

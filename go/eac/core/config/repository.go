@@ -31,12 +31,19 @@ type RepositoryConfig struct {
 
 // RepositorySettings holds repository-level configuration
 type RepositorySettings struct {
-	Type             string           `yaml:"type"`                // mono, poly, adjunct
-	TrunkBranch      string           `yaml:"trunk_branch"`        // main branch name
-	MaxBranchAgeDays int              `yaml:"max_branch_age_days"` // max age for feature branches
-	Schemes          []string         `yaml:"schemes"`             // valid versioning schemes
-	PR               PRConfig         `yaml:"pr"`                  // PR workflow config
-	Versioning       VersioningConfig `yaml:"versioning"`          // versioning constraints
+	Type             string            `yaml:"type"`                // mono, poly, adjunct
+	TrunkBranch      string            `yaml:"trunk_branch"`        // main branch name
+	MaxBranchAgeDays int               `yaml:"max_branch_age_days"` // max age for feature branches
+	Schemes          []string          `yaml:"schemes"`             // valid versioning schemes
+	PR               PRConfig          `yaml:"pr"`                  // PR workflow config
+	Versioning       VersioningConfig  `yaml:"versioning"`          // versioning constraints
+	Parallelism      ParallelismConfig `yaml:"parallelism"`         // parallelism limits
+}
+
+// ParallelismConfig holds parallelism limits for build and test operations
+type ParallelismConfig struct {
+	CI     int `yaml:"ci"`     // Max parallel workers in CI (default: 2)
+	Devbox int `yaml:"devbox"` // Max parallel workers locally (default: 4)
 }
 
 // PRConfig holds pull request workflow configuration
@@ -395,4 +402,22 @@ func (c *RepositoryConfig) AllMonikers() []string {
 		monikers[i] = m.Moniker
 	}
 	return monikers
+}
+
+// EffectiveParallelism returns the maximum number of parallel workers
+// based on the runtime environment. Pass isCI=true for CI environments,
+// isCI=false for local development (devbox).
+// Falls back to defaults if not configured: CI=2, Devbox=4.
+func (c *RepositoryConfig) EffectiveParallelism(isCI bool) int {
+	if isCI {
+		if c.Repository.Parallelism.CI > 0 {
+			return c.Repository.Parallelism.CI
+		}
+		return 2 // Default for CI
+	}
+	// Devbox/local environment
+	if c.Repository.Parallelism.Devbox > 0 {
+		return c.Repository.Parallelism.Devbox
+	}
+	return 4 // Default for devbox
 }

@@ -47,6 +47,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/buildstate"
 	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/ready-to-release/eac/go/eac/core/environments"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	moduledeps "github.com/ready-to-release/eac/go/eac/core/module-deps"
@@ -315,7 +316,8 @@ func executeTests(cfg *TestConfig) int {
 	}
 
 	// Configure orchestrator early for phase management
-	maxConcurrency := 4
+	// Use parallelism from config (respects CI vs devbox environment)
+	maxConcurrency := repoCfg.EffectiveParallelism(environments.IsCI())
 	if !cfg.Parallel {
 		maxConcurrency = 1
 	}
@@ -323,7 +325,6 @@ func executeTests(cfg *TestConfig) int {
 		WorkspaceRoot:        workspaceRoot,
 		OutputBaseDir:        repoCfg.TestOutputPath(cfg.SuiteName),
 		LogFileName:          "test.log",
-		OrchestratorLogName:  "", // Disable separate orchestrator log - use logging system instead
 		ActionVerb:           "Testing",
 		MaxConcurrency:       maxConcurrency,
 		StatusUpdateInterval: 2,

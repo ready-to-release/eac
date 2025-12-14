@@ -675,7 +675,6 @@ func TestSuite() int {
 		WorkspaceRoot:        workspaceRootNative,
 		OutputBaseDir:        relTestRunDir,
 		LogFileName:          "test.log",
-		OrchestratorLogName:  "", // Disable separate orchestrator log - use logging system instead
 		ActionVerb:           "Testing",
 		MaxConcurrency:       maxConcurrency,
 		StatusUpdateInterval: 2, // seconds

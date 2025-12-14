@@ -27,7 +27,6 @@ func TestOrchestrator_Basic(t *testing.T) {
 		WorkspaceRoot:        tmpDir,
 		OutputBaseDir:        paths.OutTestRelPath,
 		LogFileName:          "test.log",
-		OrchestratorLogName:  "orchestrator.log",
 		ActionVerb:           "processing",
 		MaxConcurrency:       2,
 		StatusUpdateInterval: 1,
@@ -52,7 +51,7 @@ func TestOrchestrator_Basic(t *testing.T) {
 	monikers := []string{"module1", "module2", "module3"}
 	orch := New(config, worker)
 	results, err := orch.Run(monikers)
-	orch.Close() // Must close to release file handles
+	orch.Close()
 
 	// Verify results
 	if err != nil {
@@ -71,12 +70,6 @@ func TestOrchestrator_Basic(t *testing.T) {
 			t.Errorf("Module %s was not processed", result.Moniker)
 		}
 	}
-
-	// Verify orchestrator log was created
-	logPath := filepath.Join(tmpDir, paths.OutTestRelPath, "orchestrator.log")
-	if _, err := os.Stat(logPath); os.IsNotExist(err) {
-		t.Errorf("Orchestrator log was not created at %s", logPath)
-	}
 }
 
 func TestOrchestrator_WithFailures(t *testing.T) {
@@ -88,7 +81,6 @@ func TestOrchestrator_WithFailures(t *testing.T) {
 		WorkspaceRoot:        tmpDir,
 		OutputBaseDir:        paths.OutTestRelPath,
 		LogFileName:          "test.log",
-		OrchestratorLogName:  "orchestrator.log",
 		ActionVerb:           "processing",
 		MaxConcurrency:       2,
 		StatusUpdateInterval: 1,
@@ -329,7 +321,6 @@ func TestOrchestrator_PrintSummary(t *testing.T) {
 		WorkspaceRoot:        tmpDir,
 		OutputBaseDir:        paths.OutTestRelPath,
 		LogFileName:          "test.log",
-		OrchestratorLogName:  "orchestrator.log",
 		ActionVerb:           "testing",
 		MaxConcurrency:       2,
 		StatusUpdateInterval: 1,
@@ -346,9 +337,8 @@ func TestOrchestrator_PrintSummary(t *testing.T) {
 		{Moniker: "module3", ExitCode: 0},
 	}
 
-	// Create orchestrator log manually for this test
-	logPath := filepath.Join(tmpDir, "out/test/orchestrator.log")
-	os.MkdirAll(filepath.Dir(logPath), 0755)
+	// Create file to capture summary output
+	logPath := filepath.Join(tmpDir, "summary_output.txt")
 	logFile, _ := os.Create(logPath)
 	defer logFile.Close()
 
@@ -358,20 +348,20 @@ func TestOrchestrator_PrintSummary(t *testing.T) {
 	// Print summary
 	orch.PrintSummary(results)
 
-	// Verify log contains expected content
+	// Verify output contains expected content
 	content, err := os.ReadFile(logPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	summary := string(content)
-	if !strings.Contains(summary, "Total modules: 3") {
-		t.Error("Summary should contain total module count")
+	if !strings.Contains(summary, "Modules: 3 total") {
+		t.Errorf("Summary should contain total module count, got: %s", summary)
 	}
-	if !strings.Contains(summary, "Failed: 1") {
-		t.Error("Summary should contain failure count")
+	if !strings.Contains(summary, "1 failed") {
+		t.Errorf("Summary should contain failure count, got: %s", summary)
 	}
-	if !strings.Contains(summary, "Passed: 2") {
-		t.Error("Summary should contain pass count")
+	if !strings.Contains(summary, "2 passed") {
+		t.Errorf("Summary should contain pass count, got: %s", summary)
 	}
 }

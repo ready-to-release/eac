@@ -27,7 +27,7 @@ books:
         from: "docs/assets/**"
         to: "assets/"
 
-      # Inline generated content at markers
+      # Dynamic content insertion into copied markdown
       - type: inline
         target: "index.md"
         inserts:
