@@ -36,8 +36,12 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/work/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 )
 
@@ -69,7 +73,10 @@ func init() {
 
 // Remove removes a workspace and optionally deletes branches
 func Remove() int {
+	startTime := time.Now()
+
 	// Phase 1: Parse configuration
+	phaseStart := time.Now()
 	config, err := parseRemoveConfig()
 	if err != nil {
 		log.Errorf("Error: %v", err)
@@ -77,49 +84,96 @@ func Remove() int {
 	}
 	defer config.base.Logger.Sync()
 
-	config.base.Logger.Debug("Starting work remove command")
-	internal.WriteDebugFile(config.base.Logger, config.base.RepoRoot, "remove-config.txt",
-		fmt.Sprintf("Branch: %s\nKeepBranch: %v\nDeleteRemote: %v\nForce: %v\nPath: %s\n",
-			config.branchName, config.keepBranch, config.deleteRemote, config.force, config.worktreePath))
+	config.base.Logger.Debug("Phase 1: Starting parse configuration", zap.String("phase", "phase1"))
+
+	config.base.Logger.Debug("Phase 1: Completed",
+		zap.String("phase", "phase1"),
+		zap.Duration("duration", time.Since(phaseStart)),
+		zap.String("branchName", config.branchName),
+		zap.String("worktreePath", config.worktreePath),
+		zap.Bool("keepBranch", config.keepBranch),
+		zap.Bool("deleteRemote", config.deleteRemote),
+		zap.Bool("force", config.force))
 
 	// Phase 2: Validate environment
+	phaseStart = time.Now()
+	config.base.Logger.Debug("Phase 2: Starting validate environment", zap.String("phase", "phase2"))
 	config.base.Logger.Info("Checking workspace status...")
 	if err := validateRemoveEnvironment(config); err != nil {
+		config.base.Logger.Debug("Phase 2: Failed",
+			zap.String("phase", "phase2"),
+			zap.Duration("duration", time.Since(phaseStart)),
+			zap.Error(err))
 		config.base.Logger.Error(fmt.Sprintf("Validation failed: %v", err))
 		return 1
 	}
+	config.base.Logger.Debug("Phase 2: Completed",
+		zap.String("phase", "phase2"),
+		zap.Duration("duration", time.Since(phaseStart)))
 
 	// Phase 3: Check for uncommitted changes
+	phaseStart = time.Now()
+	config.base.Logger.Debug("Phase 3: Starting check uncommitted changes", zap.String("phase", "phase3"))
 	if !config.force {
 		clean, err := config.base.GitOps.IsWorktreeClean(config.worktreePath)
 		if err != nil {
+			config.base.Logger.Debug("Phase 3: Failed",
+				zap.String("phase", "phase3"),
+				zap.Duration("duration", time.Since(phaseStart)),
+				zap.Error(err))
 			config.base.Logger.Error(fmt.Sprintf("Failed to check workspace status: %v", err))
 			return 1
 		}
 		if !clean {
+			config.base.Logger.Debug("Phase 3: Failed - uncommitted changes",
+				zap.String("phase", "phase3"),
+				zap.Duration("duration", time.Since(phaseStart)))
 			config.base.Logger.Error("Uncommitted changes detected")
 			config.base.Logger.Error("Commit, stash, or use --force to discard changes")
 			return 1
 		}
+		config.base.Logger.Debug("Phase 3: Completed - worktree clean",
+			zap.String("phase", "phase3"),
+			zap.Duration("duration", time.Since(phaseStart)))
 	} else {
 		// Warn about force flag
 		clean, _ := config.base.GitOps.IsWorktreeClean(config.worktreePath)
 		if !clean {
 			config.base.Logger.Warn("⚠️  Warning: Uncommitted changes will be lost")
+			config.base.Logger.Debug("Phase 3: Completed - force mode with uncommitted changes",
+				zap.String("phase", "phase3"),
+				zap.Duration("duration", time.Since(phaseStart)))
+		} else {
+			config.base.Logger.Debug("Phase 3: Completed - force mode but worktree clean",
+				zap.String("phase", "phase3"),
+				zap.Duration("duration", time.Since(phaseStart)))
 		}
 	}
 
 	// Phase 4: Note about switching (actual directory change happens outside this command)
 	// When running from within the workspace being removed, the caller is responsible
 	// for changing to a safe directory after this command completes.
+	phaseStart = time.Now()
+	config.base.Logger.Debug("Phase 4: Starting check workspace location", zap.String("phase", "phase4"))
 	inWorkspace := isInWorkspace(config.worktreePath, config.base.RepoRoot)
 	if inWorkspace {
 		config.base.Logger.Info("Switching to main...")
 		config.base.Logger.Debug("Note: You are currently in the workspace being removed")
 		config.base.Logger.Debug("Your shell will need to change directories after removal")
+		config.base.Logger.Debug("Phase 4: Completed - in workspace being removed",
+			zap.String("phase", "phase4"),
+			zap.Duration("duration", time.Since(phaseStart)),
+			zap.Bool("inWorkspace", true))
+	} else {
+		config.base.Logger.Debug("Phase 4: Completed - not in workspace",
+			zap.String("phase", "phase4"),
+			zap.Duration("duration", time.Since(phaseStart)),
+			zap.Bool("inWorkspace", false))
 	}
 
 	// Phase 5: Remove workspace
+	phaseStart = time.Now()
+	config.base.Logger.Debug("Phase 5: Starting remove workspace", zap.String("phase", "phase5"))
 	config.base.Logger.Info("Removing workspace...")
 
 	// Use git to find the actual common git directory (works correctly in worktrees)
@@ -127,6 +181,10 @@ func Remove() int {
 	cmd.Dir = config.worktreePath
 	output, err := cmd.Output()
 	if err != nil {
+		config.base.Logger.Debug("Phase 5: Failed - git common dir detection",
+			zap.String("phase", "phase5"),
+			zap.Duration("duration", time.Since(phaseStart)),
+			zap.Error(err))
 		config.base.Logger.Error(fmt.Sprintf("Failed to detect git directory: %v", err))
 		return 1
 	}
@@ -134,52 +192,93 @@ func Remove() int {
 
 	// The common git dir's parent is the main repository root
 	actualRepoRoot := filepath.Dir(gitCommonDir)
-	config.base.Logger.Debug(fmt.Sprintf("Detected actual repository root: %s", actualRepoRoot))
+	config.base.Logger.Debug(fmt.Sprintf("Detected actual repository root: %s", actualRepoRoot),
+		zap.String("gitCommonDir", gitCommonDir),
+		zap.String("actualRepoRoot", actualRepoRoot))
 
 	// Run git worktree remove from the detected repository root
 	cmd = exec.Command("git", "worktree", "remove", config.worktreePath)
 	cmd.Dir = actualRepoRoot
 	output, err = cmd.CombinedOutput()
 	if err != nil {
+		config.base.Logger.Debug("Phase 5: Failed - worktree remove",
+			zap.String("phase", "phase5"),
+			zap.Duration("duration", time.Since(phaseStart)),
+			zap.Error(err))
 		config.base.Logger.Error(fmt.Sprintf("Failed to remove worktree: %v\nOutput: %s", err, string(output)))
 		return 1
 	}
 
 	// Check if folder still exists and inform user
+	folderExists := false
 	if _, err := os.Stat(config.worktreePath); err == nil {
+		folderExists = true
 		config.base.Logger.Info(fmt.Sprintf("ℹ️  Workspace folder still exists: %s", config.worktreePath))
 		config.base.Logger.Info("   You can manually delete this folder if needed")
 	}
 
+	config.base.Logger.Debug("Phase 5: Completed",
+		zap.String("phase", "phase5"),
+		zap.Duration("duration", time.Since(phaseStart)),
+		zap.Bool("folderStillExists", folderExists))
+
 	// Phase 6: Delete local branch (unless --keep-branch)
+	phaseStart = time.Now()
+	config.base.Logger.Debug("Phase 6: Starting delete local branch", zap.String("phase", "phase6"))
 	if !config.keepBranch {
 		config.base.Logger.Info(fmt.Sprintf("Deleting local branch %s...", config.branchName))
 		if err := config.base.GitOps.DeleteBranch(config.branchName, config.force); err != nil {
 			config.base.Logger.Warn(fmt.Sprintf("Failed to delete branch: %v", err))
+			config.base.Logger.Debug("Phase 6: Completed - branch deletion failed",
+				zap.String("phase", "phase6"),
+				zap.Duration("duration", time.Since(phaseStart)),
+				zap.Error(err))
+		} else {
+			config.base.Logger.Debug("Phase 6: Completed - branch deleted",
+				zap.String("phase", "phase6"),
+				zap.Duration("duration", time.Since(phaseStart)))
 		}
 	} else {
 		config.base.Logger.Info(fmt.Sprintf("Branch %s preserved", config.branchName))
+		config.base.Logger.Debug("Phase 6: Completed - branch preserved",
+			zap.String("phase", "phase6"),
+			zap.Duration("duration", time.Since(phaseStart)))
 	}
 
 	// Phase 7: Delete remote branch (if --delete-remote)
+	phaseStart = time.Now()
+	config.base.Logger.Debug("Phase 7: Starting delete remote branch", zap.String("phase", "phase7"))
 	if config.deleteRemote {
 		config.base.Logger.Info(fmt.Sprintf("Deleting remote branch %s...", config.branchName))
 		if err := deleteRemoteBranch(config.base.RepoRoot, config.branchName); err != nil {
 			config.base.Logger.Warn(fmt.Sprintf("Failed to delete remote branch: %v", err))
+			config.base.Logger.Debug("Phase 7: Completed - remote deletion failed",
+				zap.String("phase", "phase7"),
+				zap.Duration("duration", time.Since(phaseStart)),
+				zap.Error(err))
 		} else {
 			config.base.Logger.Info("Deleted remote branch")
+			config.base.Logger.Debug("Phase 7: Completed - remote deleted",
+				zap.String("phase", "phase7"),
+				zap.Duration("duration", time.Since(phaseStart)))
 		}
 	} else {
 		// Check if remote branch exists
-		if remoteExists(config.base.RepoRoot, config.branchName) {
+		remoteExistsFlag := remoteExists(config.base.RepoRoot, config.branchName)
+		if remoteExistsFlag {
 			config.base.Logger.Info(fmt.Sprintf("Remote branch origin/%s preserved", config.branchName))
 		}
+		config.base.Logger.Debug("Phase 7: Completed - remote preserved",
+			zap.String("phase", "phase7"),
+			zap.Duration("duration", time.Since(phaseStart)),
+			zap.Bool("remoteExists", remoteExistsFlag))
 	}
 
 	// Phase 8: Success
 	config.base.Logger.Info("")
 	config.base.Logger.Info(fmt.Sprintf("✓ Removed workspace for %s", config.branchName))
-	config.base.Logger.Debug("Work remove command completed successfully")
+	config.base.Logger.Debug("Work remove command completed successfully",
+		zap.Duration("totalDuration", time.Since(startTime)))
 	return 0
 }
 
@@ -211,12 +310,12 @@ func parseRemoveConfig() (*removeConfig, error) {
 	}
 
 	// Parse flags
-	config.keepBranch = internal.HasFlag(args, "--keep-branch", "")
-	config.deleteRemote = internal.HasFlag(args, "--delete-remote", "")
-	config.force = internal.HasFlag(args, "--force", "")
+	config.keepBranch = flags.HasFlag(args, "--keep-branch", "")
+	config.deleteRemote = flags.HasFlag(args, "--delete-remote", "")
+	config.force = flags.HasFlag(args, "--force", "")
 
 	// Get positional arguments
-	positionalArgs := internal.GetPositionalArgs(args)
+	positionalArgs := flags.GetPositionalArgs(args)
 	var branchArg string
 	if len(positionalArgs) > 0 {
 		branchArg = positionalArgs[0]

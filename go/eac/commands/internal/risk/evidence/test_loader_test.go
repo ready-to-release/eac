@@ -403,3 +403,141 @@ func TestTestResultsFields(t *testing.T) {
 		t.Error("Marshaled data is empty")
 	}
 }
+
+func TestIsCucumberFile(t *testing.T) {
+	tests := []struct {
+		name     string
+		filename string
+		want     bool
+	}{
+		{
+			name:     "old pattern: *.cucumber.json",
+			filename: "repository.cucumber.json",
+			want:     true,
+		},
+		{
+			name:     "new pattern: cucumber-*.json",
+			filename: "cucumber-repository.json",
+			want:     true,
+		},
+		{
+			name:     "cucumber-module-name.json",
+			filename: "cucumber-eac-commands.json",
+			want:     true,
+		},
+		{
+			name:     "not a cucumber file",
+			filename: "unit-test.json",
+			want:     false,
+		},
+		{
+			name:     "not a json file",
+			filename: "cucumber-test.txt",
+			want:     false,
+		},
+		{
+			name:     "cucumber in middle",
+			filename: "test-cucumber-results.json",
+			want:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := isCucumberFile(tt.filename)
+			if got != tt.want {
+				t.Errorf("isCucumberFile(%q) = %v, want %v", tt.filename, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestFindTestResultsForModule_NestedDirectories(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create test run directory structure with nested test packages
+	testRun := filepath.Join(tmpDir, "out", "test", "2024-01-01T10-00-00")
+	moduleDir := filepath.Join(testRun, "eac-commands")
+
+	// Create nested test package directories
+	initDir := filepath.Join(moduleDir, "init")
+	validateDir := filepath.Join(moduleDir, "validate-risk-catalog")
+	os.MkdirAll(initDir, 0755)
+	os.MkdirAll(validateDir, 0755)
+
+	// Create test result files in nested directories
+	// Old pattern: *.cucumber.json
+	oldPatternFile := filepath.Join(initDir, "acceptance.cucumber.json")
+	os.WriteFile(oldPatternFile, []byte(`[]`), 0644)
+
+	// New pattern: cucumber-*.json
+	newPatternFile := filepath.Join(validateDir, "cucumber-eac-commands.json")
+	os.WriteFile(newPatternFile, []byte(`[]`), 0644)
+
+	// Unit test file
+	unitFile := filepath.Join(moduleDir, "unit-test.json")
+	os.WriteFile(unitFile, []byte(`{}`), 0644)
+
+	// Test that both patterns are found in nested directories
+	results, err := FindTestResultsForModule(tmpDir, "eac-commands")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if len(results.AcceptanceFiles) != 2 {
+		t.Errorf("AcceptanceFiles count = %d, want 2 (found: %v)", len(results.AcceptanceFiles), results.AcceptanceFiles)
+	}
+
+	if len(results.UnitTestFiles) != 1 {
+		t.Errorf("UnitTestFiles count = %d, want 1", len(results.UnitTestFiles))
+	}
+
+	// Verify correct files were found
+	foundOldPattern := false
+	foundNewPattern := false
+	for _, file := range results.AcceptanceFiles {
+		if filepath.Base(file) == "acceptance.cucumber.json" {
+			foundOldPattern = true
+		}
+		if filepath.Base(file) == "cucumber-eac-commands.json" {
+			foundNewPattern = true
+		}
+	}
+
+	if !foundOldPattern {
+		t.Error("Old pattern file (*.cucumber.json) not found")
+	}
+	if !foundNewPattern {
+		t.Error("New pattern file (cucumber-*.json) not found")
+	}
+}
+
+func TestFindTestResultsForModuleInSuite_NestedDirectories(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create suite-based test directory structure
+	suiteDir := filepath.Join(tmpDir, "out", "test", "acceptance")
+	moduleDir := filepath.Join(suiteDir, "eac-commands")
+
+	// Create nested test package directories
+	initDir := filepath.Join(moduleDir, "init")
+	validateDir := filepath.Join(moduleDir, "validate-risk-catalog")
+	os.MkdirAll(initDir, 0755)
+	os.MkdirAll(validateDir, 0755)
+
+	// Create test result files in nested directories with both patterns
+	file1 := filepath.Join(initDir, "cucumber-eac-commands.json")
+	file2 := filepath.Join(validateDir, "acceptance.cucumber.json")
+	os.WriteFile(file1, []byte(`[]`), 0644)
+	os.WriteFile(file2, []byte(`[]`), 0644)
+
+	// Test that both files are found
+	results, err := FindTestResultsForModuleInSuite(tmpDir, "eac-commands", "acceptance")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if len(results.AcceptanceFiles) != 2 {
+		t.Errorf("AcceptanceFiles count = %d, want 2 (found: %v)", len(results.AcceptanceFiles), results.AcceptanceFiles)
+	}
+}

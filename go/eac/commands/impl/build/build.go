@@ -818,7 +818,9 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 	// Generate build manifest with successfully built modules
 	// Manifests are also generated in dry-run mode to record what would be built
 	if err := generateBuildManifest(workspaceRoot, results, moduleTypes, executionPlan.ExecutionOrder, buildAll); err != nil {
-		log.Warnf("Failed to generate build manifest: %v", err)
+		log.Errorf("Failed to generate build manifest: %v", err)
+		log.Errorf("Build manifests are required for build timing analysis and artifact tracking")
+		return 1
 	}
 
 	// Update verification timestamp for skipped (unchanged) modules
@@ -1384,7 +1386,7 @@ func generateBuildManifest(workspaceRoot string, results []orchestrator.WorkResu
 		}
 
 		// Validate and save manifest to module's build directory
-		if err := manifest.ValidateAndSave(moduleBuildDir); err != nil {
+		if err := manifest.ValidateAndSaveWithRoot(moduleBuildDir, workspaceRoot); err != nil {
 			return fmt.Errorf("failed to validate/save manifest for %s: %w", moniker, err)
 		}
 

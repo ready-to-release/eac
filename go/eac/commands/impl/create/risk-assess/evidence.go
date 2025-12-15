@@ -8,72 +8,128 @@ package riskassess
 
 import (
 	"fmt"
-	"os"
-	"os/exec"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/evidence"
-	"github.com/ready-to-release/eac/go/eac/core/paths"
+	coreconfig "github.com/ready-to-release/eac/go/eac/core/config"
 )
 
-// preRunTestsForModules runs the test suite before assessment.
-// Tests are always run to ensure fresh results. Security scans are cached.
-func preRunTestsForModules(config *AssessConfig) error {
-	if config.SkipAutoRun {
-		assessLog.Info("Skipping test run (--skip-auto-run specified)")
-		return nil
-	}
-
-	// Always run test suite to get latest test results
-	assessLog.Infof("Running %s test suite...", config.TestSuite)
-
-	if err := runTestSuite(config); err != nil {
-		assessLog.Warnf("Test suite failed: %v", err)
-		return fmt.Errorf("test suite failed: %w", err)
-	}
-
-	return nil
-}
-
-// collectEvidenceForModule gathers evidence for a specific module.
+// collectEvidenceForModule gathers evidence for a specific module (read-only).
+// This function only reads existing evidence and does NOT run tests or scans.
+// It collects whatever evidence is available and records warnings for missing or stale evidence.
 func collectEvidenceForModule(config *AssessConfig, moduleName string) (*evidence.EvidenceCollection, error) {
 	collection := &evidence.EvidenceCollection{
 		Module:      moduleName,
 		CollectedAt: time.Now(),
+		Warnings:    []string{},
 	}
 
-	policy := evidence.EvidenceAgePolicy{
-		MaxAge:        config.MaxEvidenceAge,
-		ForceTests:    config.ForceTests,
-		ForceScan:     config.ForceScan,
-		SkipAutoRun:   config.SkipAutoRun,
-	}
+	// Collect test evidence from all specified suites (read-only)
+	var foundTestResults *evidence.TestResults
+	var checkedSuites []string
 
-	// Collect test evidence
-	testResults, err := collectTestEvidenceForModule(config, moduleName, policy)
-	if err != nil {
-		if config.SkipAutoRun {
-			assessLog.Warnf("No test evidence available for %s: %v", moduleName, err)
-		} else {
-			assessLog.Warnf("Test evidence collection failed for %s: %v", moduleName, err)
+	for _, suite := range config.TestSuites {
+		testResults, err := evidence.FindTestResultsForModuleInSuite(
+			config.WorkspaceRoot,
+			moduleName,
+			suite,
+		)
+		checkedSuites = append(checkedSuites, suite)
+
+		if err == nil && testResults != nil {
+			// Check test evidence age
+			age := time.Since(testResults.LastModified)
+			if !testResults.LastModified.IsZero() && age >= config.MaxEvidenceAge {
+				// Get the actual directory that was checked
+				actualPath := testResults.TestRunDirectory
+				relPath, err := filepath.Rel(config.WorkspaceRoot, actualPath)
+				if err != nil {
+					relPath = actualPath
+				}
+
+				warning := fmt.Sprintf(
+					"⚠️  Test evidence for suite '%s' is too old (Age: %s, max: %s) - Location: %s - Latest modified: %s",
+					suite,
+					formatDuration(age),
+					formatDuration(config.MaxEvidenceAge),
+					relPath,
+					testResults.LastModified.Format("2006-01-02 15:04:05 MST"),
+				)
+				collection.Warnings = append(collection.Warnings, warning)
+
+				// Still use the stale evidence but warn about it
+				if foundTestResults == nil {
+					foundTestResults = testResults
+					summary, _ := evidence.GetTestSummaryForModule(config.WorkspaceRoot, moduleName, suite)
+					collection.TestSummary = summary
+				}
+			} else {
+				// Use the first valid test results found
+				if foundTestResults == nil {
+					foundTestResults = testResults
+					// Calculate test summary
+					summary, _ := evidence.GetTestSummaryForModule(config.WorkspaceRoot, moduleName, suite)
+					collection.TestSummary = summary
+				}
+			}
 		}
-	} else {
-		collection.TestResults = testResults
-
-		// Calculate test summary from suite results
-		summary, _ := evidence.GetTestSummaryForModule(config.WorkspaceRoot, moduleName, config.TestSuite)
-		collection.TestSummary = summary
 	}
 
-	// Collect security evidence
-	securityResults, err := collectSecurityEvidenceForModule(config, moduleName, policy)
-	if err != nil {
-		if config.SkipAutoRun {
-			assessLog.Warnf("No security evidence available for %s: %v", moduleName, err)
-		} else {
-			assessLog.Warnf("Security evidence collection failed for %s: %v", moduleName, err)
-		}
+	if foundTestResults != nil {
+		collection.TestResults = foundTestResults
 	} else {
+		// No test results found - add warning
+		// Load config to get correct test output paths
+		cfg, err := coreconfig.Load(coreconfig.LoadOptions{RepoRoot: config.WorkspaceRoot})
+		if err == nil {
+			suiteList := strings.Join(checkedSuites, ", ")
+			var testLocations []string
+			for _, suite := range checkedSuites {
+				suiteDir := cfg.Repository.TestModuleOutputPathAbs(config.WorkspaceRoot, suite, moduleName)
+				relPath, err := filepath.Rel(config.WorkspaceRoot, suiteDir)
+				if err != nil {
+					relPath = suiteDir
+				}
+				testLocations = append(testLocations, relPath)
+			}
+			warning := fmt.Sprintf(
+				"⚠️  No test evidence found in suites: %s - Checked: %s",
+				suiteList,
+				strings.Join(testLocations, ", "),
+			)
+			collection.Warnings = append(collection.Warnings, warning)
+		}
+	}
+
+	// Collect security evidence (read-only)
+	securityResults, err := evidence.FindSecurityResultsForModule(config.WorkspaceRoot, moduleName)
+	if err == nil && securityResults != nil {
+		// Check security evidence age
+		age := time.Since(securityResults.LastModified)
+		if !securityResults.LastModified.IsZero() && age >= config.MaxEvidenceAge {
+			// Get the actual directory that was checked using config-based paths
+			cfg, err := coreconfig.Load(coreconfig.LoadOptions{RepoRoot: config.WorkspaceRoot})
+			if err == nil {
+				scanBaseDir := cfg.Repository.SecurityModuleOutputPathAbs(config.WorkspaceRoot, moduleName)
+				relPath, err := filepath.Rel(config.WorkspaceRoot, scanBaseDir)
+				if err != nil {
+					relPath = scanBaseDir
+				}
+
+				warning := fmt.Sprintf(
+					"⚠️  Security evidence is too old (Age: %s, max: %s) - Location: %s - Latest modified: %s",
+					formatDuration(age),
+					formatDuration(config.MaxEvidenceAge),
+					relPath,
+					securityResults.LastModified.Format("2006-01-02 15:04:05 MST"),
+				)
+				collection.Warnings = append(collection.Warnings, warning)
+			}
+		}
+
+		// Use security evidence even if stale
 		collection.SecurityResults = securityResults
 
 		// Calculate vulnerability summary
@@ -89,142 +145,53 @@ func collectEvidenceForModule(config *AssessConfig, moduleName string) (*evidenc
 			sbomSummary, _ := evidence.ParseSBOMSummary(sbomEvidence)
 			collection.SBOMSummary = sbomSummary
 		}
+	} else {
+		// No security results found - add warning using config-based paths
+		cfg, err := coreconfig.Load(coreconfig.LoadOptions{RepoRoot: config.WorkspaceRoot})
+		if err == nil {
+			scanDir := cfg.Repository.SecurityModuleOutputPathAbs(config.WorkspaceRoot, moduleName)
+			scanRelPath, err := filepath.Rel(config.WorkspaceRoot, scanDir)
+			if err != nil {
+				scanRelPath = scanDir
+			}
+			warning := fmt.Sprintf(
+				"⚠️  No security scan evidence found - Expected location: %s",
+				scanRelPath,
+			)
+			collection.Warnings = append(collection.Warnings, warning)
+		}
 	}
 
-	if !collection.HasAnyEvidence() {
-		assessLog.Infof("No evidence available for module '%s' (module may not have tests in suite '%s')", moduleName, config.TestSuite)
-		assessLog.Info("Controls will be marked as not-satisfied")
-		return collection, nil
-	}
-
+	// Always return the collection with whatever evidence was found
+	// The warnings field will document any issues
 	return collection, nil
 }
 
-// collectTestEvidenceForModule collects test evidence for a specific module.
-// Note: Tests are pre-run by preRunTestsForModules(), so this just loads existing evidence.
-// If a module has no tests, returns nil (not an error).
-func collectTestEvidenceForModule(config *AssessConfig, moduleName string, policy evidence.EvidenceAgePolicy) (*evidence.TestResults, error) {
-	// Look for test results in the suite directory (e.g., out/test/acceptance/<module>/)
-	results, err := evidence.FindTestResultsForModuleInSuite(config.WorkspaceRoot, moduleName, config.TestSuite)
-
-	if err != nil {
-		// Module has no test results - this is okay, many modules don't have tests in all suites
-		assessLog.Debugf("No test results for %s in suite %s (module may not have tests)", moduleName, config.TestSuite)
-		return nil, nil // Return nil results, not an error
-	}
-
-	return results, nil
-}
-
-// collectSecurityEvidenceForModule collects security evidence for a specific module.
-func collectSecurityEvidenceForModule(config *AssessConfig, moduleName string, policy evidence.EvidenceAgePolicy) (*evidence.SecurityResults, error) {
-	results, err := evidence.FindSecurityResultsForModule(config.WorkspaceRoot, moduleName)
-
-	// Determine if we need to run scans
-	needsRun := false
-	if err != nil {
-		needsRun = true
-	} else if policy.ForceScan {
-		needsRun = true
-		assessLog.Infof("Forcing security scan re-run for %s...", moduleName)
-	} else if results.VulnFile != "" && !evidence.IsEvidenceFresh(results.VulnFile, policy.MaxAge) {
-		needsRun = true
-		age, _ := evidence.GetEvidenceAge(results.VulnFile)
-		assessLog.Infof("Security evidence for %s is %s old, running scans...", moduleName, formatDuration(age))
-	}
-
-	if needsRun && !policy.SkipAutoRun {
-		// Run security scans
-		if err := runSecurityScansForModule(config, moduleName); err != nil {
-			assessLog.Warnf("Security scan failed for %s: %v", moduleName, err)
-			// Continue with partial results
-		}
-
-		// Retry discovery
-		results, err = evidence.FindSecurityResultsForModule(config.WorkspaceRoot, moduleName)
-	}
-
-	return results, err
-}
-
-// runTestSuite runs the test suite once for all modules.
-// This is more efficient than running tests per-module and produces proper output structure.
-func runTestSuite(config *AssessConfig) error {
-	// Use the canonical binary path
-	binaryPath := paths.CommandsBinaryPath(config.WorkspaceRoot)
-
-	assessLog.Infof("Running %s test suite...", config.TestSuite)
-
-	// Run test suite without module filter (covers all modules)
-	cmd := exec.Command(binaryPath, "test", "--suite", config.TestSuite)
-	cmd.Dir = config.WorkspaceRoot
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("test suite failed: %w", err)
-	}
-
-	return nil
-}
-
-// runTestsForModule runs the test suite for a specific module.
-// Uses the specified test suite (default: acceptance) to run tests.
-// Called sequentially from preRunTestsForModules, so no locking needed.
-func runTestsForModule(config *AssessConfig, moduleName string) error {
-	// Use the canonical binary path
-	binaryPath := paths.CommandsBinaryPath(config.WorkspaceRoot)
-
-	assessLog.Infof("Running %s tests for %s...", config.TestSuite, moduleName)
-	assessLog.Debugf("Test command: %s test --suite %s %s", binaryPath, config.TestSuite, moduleName)
-
-	// Run test with specified suite (--suite must come before module name)
-	cmd := exec.Command(binaryPath, "test", "--suite", config.TestSuite, moduleName)
-	cmd.Dir = config.WorkspaceRoot
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("test command failed: %w", err)
-	}
-
-	return nil
-}
-
-// runSecurityScansForModule runs security scans for a specific module.
-func runSecurityScansForModule(config *AssessConfig, moduleName string) error {
-	assessLog.Infof("Running security scans for %s...", moduleName)
-
-	// Use the canonical binary path
-	binaryPath := paths.CommandsBinaryPath(config.WorkspaceRoot)
-
-	// Run vulnerability scan
-	cmd := exec.Command(binaryPath, "scan", "vuln", moduleName)
-	cmd.Dir = config.WorkspaceRoot
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Run() // Don't fail on security scan errors
-
-	// Run SBOM
-	cmd = exec.Command(binaryPath, "scan", "sbom", moduleName)
-	cmd.Dir = config.WorkspaceRoot
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Run()
-
-	return nil
-}
-
-// formatDuration formats a duration in a human-readable way.
+// formatDuration formats a duration in a human-readable way with more precision.
 func formatDuration(d time.Duration) string {
 	if d < time.Minute {
-		return fmt.Sprintf("%d seconds", int(d.Seconds()))
+		return fmt.Sprintf("%.0f seconds", d.Seconds())
 	}
 	if d < time.Hour {
-		return fmt.Sprintf("%d minutes", int(d.Minutes()))
+		minutes := int(d.Minutes())
+		seconds := int(d.Seconds()) % 60
+		if seconds > 0 {
+			return fmt.Sprintf("%d minutes %d seconds", minutes, seconds)
+		}
+		return fmt.Sprintf("%d minutes", minutes)
 	}
 	if d < 24*time.Hour {
-		return fmt.Sprintf("%d hours", int(d.Hours()))
+		hours := int(d.Hours())
+		minutes := int(d.Minutes()) % 60
+		if minutes > 0 {
+			return fmt.Sprintf("%d hours %d minutes", hours, minutes)
+		}
+		return fmt.Sprintf("%d hours", hours)
 	}
-	return fmt.Sprintf("%d days", int(d.Hours()/24))
+	days := int(d.Hours() / 24)
+	hours := int(d.Hours()) % 24
+	if hours > 0 {
+		return fmt.Sprintf("%d days %d hours", days, hours)
+	}
+	return fmt.Sprintf("%d days", days)
 }

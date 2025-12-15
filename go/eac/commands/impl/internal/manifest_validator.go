@@ -186,7 +186,12 @@ func findWorkspaceRoot(startDir string) string {
 
 // ValidateAndSave validates the manifest against the schema, verifies artifacts exist, and saves if valid
 func (m *ModuleManifest) ValidateAndSave(moduleBuildDir string) error {
-	validator, err := GetManifestValidator()
+	return m.ValidateAndSaveWithRoot(moduleBuildDir, "")
+}
+
+// ValidateAndSaveWithRoot validates the manifest against the schema with explicit workspace root
+func (m *ModuleManifest) ValidateAndSaveWithRoot(moduleBuildDir string, workspaceRoot string) error {
+	validator, err := GetManifestValidatorWithRoot(workspaceRoot)
 	if err != nil {
 		return fmt.Errorf("failed to get manifest validator: %w", err)
 	}

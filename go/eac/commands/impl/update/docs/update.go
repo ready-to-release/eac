@@ -24,9 +24,12 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/books"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/buildutil"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
+
+var log = logging.C()
 
 func init() {
 	registry.Register(UpdateDocs)
@@ -54,7 +57,7 @@ func UpdateDocs() int {
 	// Get repo root
 	repoRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("Error: %v", err)
 		return 1
 	}
 
@@ -104,7 +107,7 @@ func UpdateDocs() int {
 	})
 
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error scanning docs: %v\n", err)
+		log.Errorf("Error scanning docs: %v", err)
 		return 1
 	}
 
@@ -121,7 +124,7 @@ func UpdateDocs() int {
 
 	// Ensure cache directory exists
 	if err := os.MkdirAll(mermaidCacheDir, 0755); err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating cache directory: %v\n", err)
+		log.Errorf("Error creating cache directory: %v", err)
 		return 1
 	}
 
@@ -179,14 +182,14 @@ func UpdateDocs() int {
 		} else {
 			// Check Docker availability
 			if !buildutil.IsDockerAvailable() {
-				fmt.Fprintln(os.Stderr, "Error: Docker is not available but required for mermaid rendering")
-				fmt.Fprintln(os.Stderr, "Ensure Docker is installed and the daemon is running")
+				log.Errorf("Error: Docker is not available but required for mermaid rendering")
+				log.Errorf("Ensure Docker is installed and the daemon is running")
 				mermaidFailed = true
 			} else {
 				// Ensure mermaid Docker image exists
 				fmt.Println("Ensuring mermaid-cli Docker image...")
 				if err := books.EnsureMermaidImage(repoRoot, logWriter); err != nil {
-					fmt.Fprintf(os.Stderr, "Error ensuring mermaid image: %v\n", err)
+					log.Errorf("Error ensuring mermaid image: %v", err)
 					mermaidFailed = true
 				} else {
 					// Render cache misses
@@ -208,7 +211,7 @@ func UpdateDocs() int {
 						// Render the diagram
 						err := books.RenderSingleDiagram(block, status.CachePath, repoRoot, logWriter)
 						if err != nil {
-							fmt.Fprintf(os.Stderr, "  ❌ Failed to render %s [%d]: %v\n",
+							log.Errorf("  ❌ Failed to render %s [%d]: %v",
 								relPath, block.BlockIndex, err)
 							failed++
 							continue
@@ -219,7 +222,7 @@ func UpdateDocs() int {
 						if err := cache.PutMermaid(status.CachePath, books.MermaidCacheKey{
 							Code: cleanContent,
 						}); err != nil {
-							fmt.Fprintf(os.Stderr, "  ⚠️  Failed to cache %s [%d]: %v\n",
+							log.Errorf("  ⚠️  Failed to cache %s [%d]: %v",
 								relPath, block.BlockIndex, err)
 							// Non-fatal - continue
 						}
@@ -252,7 +255,7 @@ func UpdateDocs() int {
 	// Find all drawio.png images in docs/
 	drawioImages, err := books.FindDrawioImages(docsDir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error scanning for drawio images: %v\n", err)
+		log.Errorf("Error scanning for drawio images: %v", err)
 		return 1
 	}
 
@@ -269,7 +272,7 @@ func UpdateDocs() int {
 	// Ensure drawio cache directory exists
 	drawioCacheDir := filepath.Join(cacheDir, "drawio")
 	if err := os.MkdirAll(drawioCacheDir, 0755); err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating drawio cache directory: %v\n", err)
+		log.Errorf("Error creating drawio cache directory: %v", err)
 		return 1
 	}
 
@@ -346,7 +349,7 @@ func UpdateDocs() int {
 		// Optimize the image
 		err := books.OptimizeSingleImage(img.SourceFile, status.CachePath, books.MaxImageWidthPDF)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "  ❌ Failed to optimize %s: %v\n", img.RelPath, err)
+			log.Errorf("  ❌ Failed to optimize %s: %v", img.RelPath, err)
 			drawioFailed++
 			continue
 		}
@@ -356,7 +359,7 @@ func UpdateDocs() int {
 			SourceHash: img.Hash,
 			MaxWidth:   books.MaxImageWidthPDF,
 		}); err != nil {
-			fmt.Fprintf(os.Stderr, "  ⚠️  Failed to cache %s: %v\n", img.RelPath, err)
+			log.Errorf("  ⚠️  Failed to cache %s: %v", img.RelPath, err)
 			// Non-fatal - continue
 		}
 

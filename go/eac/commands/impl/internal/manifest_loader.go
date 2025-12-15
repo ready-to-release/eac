@@ -34,7 +34,7 @@ type ManifestValidationSummary struct {
 // 1. Schema validation against the build-manifest contract
 // 2. Artifact existence validation (files actually exist on disk)
 func LoadAndValidateManifests(workspaceRoot string, monikers []string, cfg *config.EACConfig) (*ManifestValidationSummary, error) {
-	validator, err := GetManifestValidator()
+	validator, err := GetManifestValidatorWithRoot(workspaceRoot)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get manifest validator: %w", err)
 	}

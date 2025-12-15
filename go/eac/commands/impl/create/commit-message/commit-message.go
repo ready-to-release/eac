@@ -26,12 +26,14 @@ import (
 	"strings"
 
 	commitmessageinternal "github.com/ready-to-release/eac/go/eac/commands/impl/create/commit-message/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/git"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 	"github.com/ready-to-release/eac/go/eac/core/repository/reports"
+	"go.uber.org/zap"
 )
 
 var log = logging.C()
@@ -109,7 +111,7 @@ func CreateCommitMessage() int {
 	// Parse configuration early to get debug mode, auto-commit flag, and workspace root
 	debug, autoCommit, workspaceRoot, err := parseConfig()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
+		log.Errorf("ERROR: %v", err)
 		return 1
 	}
 
@@ -138,7 +140,7 @@ func CreateCommitMessage() int {
 
 		// Show warning after multiple retries
 		if attempt > 3 {
-			logger.Warn(fmt.Sprintf("Retry attempt %d/%d", attempt, maxRetries))
+			logger.Warn("retry attempt", zap.Int("attempt", attempt), zap.Int("max", maxRetries))
 		}
 
 		result, shouldRetry, generatedMessage := commitAIAttemptWithMessage(logger, workspaceRoot, debug)
@@ -161,7 +163,7 @@ func CreateCommitMessage() int {
 			return 1
 		}
 
-		logger.Info(fmt.Sprintf("Retrying commit message generation (%d/%d)...", attempt+1, maxRetries))
+		logger.Info("retrying commit message generation", zap.Int("attempt", attempt+1), zap.Int("max", maxRetries))
 	}
 
 	return 1
@@ -185,7 +187,7 @@ func commitAIAttemptWithMessage(logger *logging.Logger, workspaceRoot string, de
 	// Phase 2: Build Execution Context
 	cfg, stagedFilesTable, diffStats, err := buildExecutionContext(workspaceRoot, logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: Build context failed: %v\n", err)
+		log.Errorf("ERROR: Build context failed: %v", err)
 		return 1, false, ""
 	}
 	if cfg == nil {
@@ -196,14 +198,14 @@ func commitAIAttemptWithMessage(logger *logging.Logger, workspaceRoot string, de
 	// Phase 3: Generate Top-Level Summary
 	topLevel, err := generateTopLevelSummary(cfg, stagedFilesTable, diffStats, logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: Top-level generation failed: %v\n", err)
+		log.Errorf("ERROR: Top-level generation failed: %v", err)
 		return 1, false, ""
 	}
 
 	// Phase 4: Generate Module Sections
 	moduleSections, err := generateModuleSections(cfg, logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: Module section generation failed: %v\n", err)
+		log.Errorf("ERROR: Module section generation failed: %v", err)
 		return 1, false, ""
 	}
 
@@ -217,15 +219,11 @@ func commitAIAttemptWithMessage(logger *logging.Logger, workspaceRoot string, de
 
 // Phase 1: Parse Configuration
 func parseConfig() (debug bool, autoCommit bool, workspaceRoot string, err error) {
-	// Parse flags
-	for _, arg := range os.Args[3:] { // Skip program name, "create", and "commit-message"
-		switch arg {
-		case "--debug", "-d":
-			debug = true
-		case "--commit", "-c":
-			autoCommit = true
-		}
-	}
+	args := os.Args[3:] // Skip program name, "create", and "commit-message"
+
+	// Parse flags using shared package
+	debug = flags.ParseDebugFlag(args)
+	autoCommit = flags.HasFlag(args, "--commit", "-c")
 
 	// Get repository root
 	workspaceRoot, err = repository.GetRepositoryRoot("")
@@ -243,7 +241,7 @@ func verifyContractImplementation(workspaceRoot string, logger *logging.Logger) 
 	_, err := commitmessageinternal.LoadContractFromConfig(workspaceRoot)
 	if err != nil {
 		logger.Error("Contract implementation verification failed")
-		logger.Error(fmt.Sprintf("  [CONTRACT_LOAD_ERROR] %s", err.Error()))
+		logger.Error("contract load error", zap.Error(err))
 		return fmt.Errorf("contract verification failed: %w", err)
 	}
 	log.Debug("verifyContractImplementation: contract verified")
@@ -331,7 +329,7 @@ func extractAffectedModules(report *reports.FilesModulesReport, logger *logging.
 			if isValidModuleName(module) {
 				moduleSet[module] = true
 			} else {
-				logger.Warn(fmt.Sprintf("Skipping invalid module name: %s", module))
+				logger.Warn("skipping invalid module name", zap.String("module", module))
 			}
 		}
 	}
@@ -372,7 +370,7 @@ func getGitDiffAndStats(workspaceRoot string, logger *logging.Logger) (string, s
 	log.Debug("getGitDiffAndStats: calling StagedDiffStats")
 	diffStats, err := repo.StagedDiffStats()
 	if err != nil {
-		logger.Warn(fmt.Sprintf("Failed to get diff stats: %v", err))
+		logger.Warn("failed to get diff stats", zap.Error(err))
 		diffStats = ""
 	}
 	log.Debug("getGitDiffAndStats: StagedDiffStats complete")
@@ -473,7 +471,7 @@ func validateAndOutput(cfg *executionConfig, message string) (int, bool) {
 func performAutoCommit(workspaceRoot string, message string, logger *logging.Logger) int {
 	repo, err := getGitRepo(workspaceRoot)
 	if err != nil {
-		logger.Error(fmt.Sprintf("Auto-commit failed: %v", err))
+		logger.Error("auto-commit failed", zap.Error(err))
 		return 1
 	}
 
@@ -489,7 +487,7 @@ func performAutoCommit(workspaceRoot string, message string, logger *logging.Log
 	// Perform the commit
 	hash, err := repo.Commit(message, authorName, authorEmail)
 	if err != nil {
-		logger.Error(fmt.Sprintf("Git commit failed: %v", err))
+		logger.Error("git commit failed", zap.Error(err))
 		return 1
 	}
 

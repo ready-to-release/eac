@@ -33,11 +33,13 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"github.com/ready-to-release/eac/go/eac/core/git"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
+	"go.uber.org/zap"
 )
 
 func init() {
@@ -79,14 +81,14 @@ func CreateSquashMessage() int {
 	// Phase 1: Parse configuration
 	config, err := parseConfig()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
+		log.Errorf("ERROR: %v", err)
 		return 1
 	}
 
 	// Phase 2: Get workspace root (needed for logger)
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: Failed to get workspace root: %v\n", err)
+		log.Errorf("ERROR: Failed to get workspace root: %v", err)
 		return 1
 	}
 
@@ -98,7 +100,7 @@ func CreateSquashMessage() int {
 		logger, err = logging.NewDefault("create", workspaceRoot)
 	}
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: Failed to initialize logger: %v\n", err)
+		log.Errorf("ERROR: Failed to initialize logger: %v", err)
 		return 1
 	}
 	defer logger.Sync()
@@ -108,47 +110,47 @@ func CreateSquashMessage() int {
 	// Phase 4: Open git repository
 	repo, err := getGitRepo(workspaceRoot)
 	if err != nil {
-		logger.Error(fmt.Sprintf("Failed to open git repository: %v", err))
+		logger.Error("Failed to open git repository", zap.Error(err))
 		return 1
 	}
 
 	// Phase 5: Get current branch
 	currentBranch, err := repo.CurrentBranch()
 	if err != nil {
-		logger.Error(fmt.Sprintf("Failed to get current branch: %v", err))
+		logger.Error("Failed to get current branch", zap.Error(err))
 		return 1
 	}
-	logger.Debug(fmt.Sprintf("Current branch: %s", currentBranch))
+	logger.Debug("Current branch", zap.String("branch", currentBranch))
 
 	// Phase 6: Get branch commits
-	logger.Info(fmt.Sprintf("Analyzing commits from %s...HEAD", config.baseBranch))
+	logger.Info("Analyzing commits from base branch to HEAD", zap.String("baseBranch", config.baseBranch))
 	commits, err := repo.GetBranchCommits(config.baseBranch)
 	if err != nil {
-		logger.Error(fmt.Sprintf("Failed to get branch commits: %v", err))
-		logger.Error(fmt.Sprintf("Ensure branch '%s' exists and you have commits ahead of it", config.baseBranch))
+		// Log the error and ensure "no commits ahead" message is in stdout
+		logger.Error(err.Error())
 		return 1
 	}
-	logger.Debug(fmt.Sprintf("Found %d commits", len(commits)))
+	logger.Debug("Found commits", zap.Int("count", len(commits)))
 
 	// Phase 7: Get branch diff and files
 	diff, err := repo.GetBranchDiff(config.baseBranch)
 	if err != nil {
-		logger.Warn(fmt.Sprintf("Failed to get branch diff: %v", err))
+		logger.Warn("Failed to get branch diff", zap.Error(err))
 		diff = ""
 	}
 
 	diffStats, err := repo.GetBranchDiffStats(config.baseBranch)
 	if err != nil {
-		logger.Warn(fmt.Sprintf("Failed to get diff stats: %v", err))
+		logger.Warn("Failed to get diff stats", zap.Error(err))
 		diffStats = ""
 	}
 
 	fileNames, err := repo.GetBranchFiles(config.baseBranch)
 	if err != nil {
-		logger.Error(fmt.Sprintf("Failed to get branch files: %v", err))
+		logger.Error("Failed to get branch files", zap.Error(err))
 		return 1
 	}
-	logger.Debug(fmt.Sprintf("Found %d changed files", len(fileNames)))
+	logger.Debug("Found changed files", zap.Int("count", len(fileNames)))
 
 	// Phase 8: Get module mappings
 	// Convert file names to FileInfo
@@ -165,12 +167,12 @@ func CreateSquashMessage() int {
 	// Enrich with module information
 	filesWithModules, err := repository.EnrichFilesWithModules(fileInfos, workspaceRoot)
 	if err != nil {
-		logger.Error(fmt.Sprintf("Failed to get module mappings: %v", err))
+		logger.Error("Failed to get module mappings", zap.Error(err))
 		return 1
 	}
 
 	affectedModules := extractAffectedModules(filesWithModules)
-	logger.Debug(fmt.Sprintf("Affected modules: %v", affectedModules))
+	logger.Debug("Affected modules", zap.Strings("modules", affectedModules))
 
 	// Phase 9: Build prompt context
 	context := buildSquashContext(currentBranch, config.baseBranch, commits, filesWithModules, diff, diffStats, affectedModules)
@@ -180,14 +182,14 @@ func CreateSquashMessage() int {
 	logger.Info("Generating squash commit message using AI...")
 	topLevelMessage, err := generateTopLevelMessage(workspaceRoot, logger, context)
 	if err != nil {
-		logger.Error(fmt.Sprintf("Failed to generate top-level message: %v", err))
+		logger.Error("Failed to generate top-level message", zap.Error(err))
 		return 1
 	}
 
 	// Phase 11: Generate module sections (reuse commit-message logic)
 	moduleSections, err := generateModuleSections(workspaceRoot, logger, affectedModules, filesWithModules, diff)
 	if err != nil {
-		logger.Error(fmt.Sprintf("Failed to generate module sections: %v", err))
+		logger.Error("Failed to generate module sections", zap.Error(err))
 		return 1
 	}
 
@@ -218,6 +220,9 @@ func parseConfig() (*squashConfig, error) {
 		debug:      false,
 	}
 
+	// Parse debug flag using shared package
+	cfg.debug = flags.ParseDebugFlag(args)
+
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 		if strings.HasPrefix(arg, "--base=") {
@@ -230,7 +235,7 @@ func parseConfig() (*squashConfig, error) {
 				return nil, fmt.Errorf("--base requires a value")
 			}
 		} else if arg == "--debug" || arg == "-d" {
-			cfg.debug = true
+			// Already handled by shared flags package
 		} else {
 			return nil, fmt.Errorf("unknown flag: %s", arg)
 		}

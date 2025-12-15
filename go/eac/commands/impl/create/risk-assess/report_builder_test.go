@@ -555,7 +555,7 @@ func TestBuildReportData(t *testing.T) {
 		WorkspaceRoot: "/workspace",
 		OutputDir:     "/workspace/out",
 		ProfilePath:   "/workspace/specs/.risk-controls/risk-profile.json",
-		TestSuite:     "acceptance",
+		TestSuites:    []string{"acceptance"},
 	}
 
 	results := []*ModuleAssessmentResult{

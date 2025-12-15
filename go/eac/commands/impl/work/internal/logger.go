@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 
 	"github.com/ready-to-release/eac/go/eac/core/logging"
-	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 // InitLogger creates a logger for work commands.
@@ -21,14 +20,13 @@ func InitLogger(debug bool, workspaceRoot string) (*logging.Logger, error) {
 }
 
 // WriteDebugFile writes content to a debug file when debug mode is enabled.
-// Files are written to out/logs/work/<filename> in the workspace root.
-// This is a no-op if debug mode is disabled.
-func WriteDebugFile(logger *logging.Logger, workspaceRoot, filename, content string) {
+// Files are written to out/work/<filename> in the workspace root.
+func WriteDebugFile(logger *logging.Logger, workspaceRoot string, filename string, content string) {
 	if logger == nil || !logger.IsDebugMode() {
 		return
 	}
 
-	debugDir := paths.CommandLogsPath(workspaceRoot, "work")
+	debugDir := filepath.Join(workspaceRoot, "out", "work")
 	if err := os.MkdirAll(debugDir, 0755); err != nil {
 		logger.Warn(fmt.Sprintf("Failed to create debug directory: %v", err))
 		return
@@ -43,8 +41,7 @@ func WriteDebugFile(logger *logging.Logger, workspaceRoot, filename, content str
 }
 
 // WriteDebugFilef writes content to a debug file with formatted filename.
-// The filename format string and args are passed to fmt.Sprintf.
-func WriteDebugFilef(logger *logging.Logger, workspaceRoot, format string, content string, args ...interface{}) {
+func WriteDebugFilef(logger *logging.Logger, workspaceRoot string, format string, content string, args ...interface{}) {
 	if logger == nil || !logger.IsDebugMode() {
 		return
 	}
