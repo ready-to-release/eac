@@ -4,7 +4,7 @@
 # It triggers the release workflow which creates a GitHub release marked as "Latest"
 # containing links to all module releases.
 
-name: "ci-release (stage 1-7)"
+name: "ci-r2r-eac (stage 1-7)"
 
 on:
   workflow_call:
@@ -60,9 +60,9 @@ jobs:
         run: |
           COMMANDS="${{ steps.commands.outputs.commands-path }}"
 
-          # Validate the release module exists and is properly configured
-          $COMMANDS get modules --as-json | jq -e '.[] | select(.moniker == "release")' > /dev/null
-          echo "✅ Release module configuration valid"
+          # Validate the r2r-eac module exists and is properly configured
+          $COMMANDS get modules --as-json | jq -e '.[] | select(.moniker == "r2r-eac")' > /dev/null
+          echo "✅ r2r-eac module configuration valid"
 
   # =============================================================================
   # Trigger Release (main branch only)
@@ -79,8 +79,8 @@ jobs:
       - name: Trigger Release
         uses: ./.github/actions/trigger-release
         with:
-          module: release
-          workflow: release-github-latest.yaml
+          module: r2r-eac
+          workflow: release-r2r-eac.yaml
           workflow-description: Create Latest GitHub Release bundle
           ci-run-id: ${{ github.run_id }}
           trigger-run-id: ${{ inputs.trigger_run_id }}
