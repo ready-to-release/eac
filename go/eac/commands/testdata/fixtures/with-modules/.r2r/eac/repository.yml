@@ -1,0 +1,31 @@
+# Repository configuration with sample modules for testing
+name: test-repo
+description: Test repository with modules
+
+versioning:
+  scheme: SemVer
+
+paths:
+  out:
+    root: out
+    build: out/build
+    test: out/test
+    coverage: out/coverage
+
+modules:
+  - moniker: core-lib
+    name: Core Library
+    type: go-library
+    description: Core shared library
+
+  - moniker: api-service
+    name: API Service
+    type: go-binary
+    description: Main API service
+    depends_on:
+      - core-lib
+
+  - moniker: web-app
+    name: Web Application
+    type: npm-library
+    description: Frontend web application
