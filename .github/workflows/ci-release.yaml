@@ -61,7 +61,7 @@ jobs:
           COMMANDS="${{ steps.commands.outputs.commands-path }}"
 
           # Validate the release module exists and is properly configured
-          $COMMANDS show modules --format json | jq -e '.[] | select(.moniker == "release")' > /dev/null
+          $COMMANDS get modules --as-json | jq -e '.[] | select(.moniker == "release")' > /dev/null
           echo "✅ Release module configuration valid"
 
   # =============================================================================
