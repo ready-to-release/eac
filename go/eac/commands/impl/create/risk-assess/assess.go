@@ -8,7 +8,7 @@
 // Long: and re-run only if older than the specified max-evidence-age (default: 24 hours).
 // Long:
 // Long: Evidence is collected from:
-// Long: - Test results: out/test/<suite>/<module>/*.json
+// Long: - Test results: out/test/<module>/*.json
 // Long: - Security scans: out/security/<module>/**/*.json
 // Long:
 // Long: Expected Output:

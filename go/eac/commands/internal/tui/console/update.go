@@ -20,36 +20,30 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		// Reset scroll offsets when window size changes
-		if m.usePanes {
-			for _, pane := range m.panes {
-				if pane != nil && !pane.autoScroll {
-					// If user was scrolled up, try to maintain position, but cap at new max
-					initH, runH, summaryH := m.calculatePaneHeights()
-					paneHeight := initH
-					if pane.Phase == PhaseRun {
-						paneHeight = runH
-					} else if pane.Phase == PhaseSummary {
-						paneHeight = summaryH
-					}
-					pane.UpdateMaxScroll(paneHeight)
+		for _, pane := range m.panes {
+			if pane != nil && !pane.autoScroll {
+				// If user was scrolled up, try to maintain position, but cap at new max
+				initH, runH, summaryH := m.calculatePaneHeights()
+				paneHeight := initH
+				if pane.Phase == PhaseRun {
+					paneHeight = runH
+				} else if pane.Phase == PhaseSummary {
+					paneHeight = summaryH
 				}
+				pane.UpdateMaxScroll(paneHeight)
 			}
 		}
 		return m, nil
 
 	case lineMsg:
 		line := Line(msg)
-		// Write to active phase's buffer in pane mode
-		if m.usePanes {
-			pane := m.panes[m.activePhase]
-			pane.Buffer.Push(line)
-			// If pane is scrolled up (not auto-scrolling), increment offset to keep view locked
-			if !pane.autoScroll && pane.scrollOffset > 0 {
-				pane.scrollOffset++
-			}
+		// Write to active phase's buffer
+		pane := m.panes[m.activePhase]
+		pane.Buffer.Push(line)
+		// If pane is scrolled up (not auto-scrolling), increment offset to keep view locked
+		if !pane.autoScroll && pane.scrollOffset > 0 {
+			pane.scrollOffset++
 		}
-		// Also write to legacy buffer for backward compatibility
-		m.buffer.Push(line)
 
 		// Route to per-module buffer if this is a module output line
 		// (Source is the module moniker, not "system" or phase name)
@@ -77,7 +71,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case PhaseLineMsg:
 		// Write to specific phase's buffer
-		if m.usePanes && m.panes[msg.Phase] != nil {
+		if m.panes[msg.Phase] != nil {
 			pane := m.panes[msg.Phase]
 			pane.Buffer.Push(msg.Line)
 			// If pane is scrolled up (not auto-scrolling), increment offset to keep view locked
@@ -85,7 +79,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				pane.scrollOffset++
 			}
 		}
-		m.buffer.Push(msg.Line)
 		return m, nil
 
 	case ResultLineMsg:
@@ -142,7 +135,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case statusMsg:
 		status := Status(msg)
-		m.phase = status.Phase
 
 		// Detect modules that were running but are now gone (completed)
 		// Compare old running list with new one
@@ -352,11 +344,6 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 
 	// Handle wheel events FIRST - scrolling should never change tabs
 	if msg.Button == tea.MouseButtonWheelUp || msg.Button == tea.MouseButtonWheelDown {
-		// Only handle scrolling in pane mode
-		if !m.usePanes {
-			return m, nil
-		}
-
 		// Determine which pane the mouse is over
 		paneIdx := m.getPaneAtPosition(msg.Y)
 		if paneIdx < 0 || paneIdx >= len(m.panes) {
@@ -402,7 +389,7 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	// Handle left mouse button click for tab selection (use Press for responsiveness)
 	if msg.Button == tea.MouseButtonLeft && msg.Action == tea.MouseActionPress {
 		// Check if click is on the tab bar (always shown when Run phase is active)
-		if m.usePanes && m.panes[PhaseRun].Status != PhasePending {
+		if m.panes[PhaseRun].Status != PhasePending {
 			tabBarY := m.getTabBarY()
 			if msg.Y == tabBarY {
 				// Click is on the tab bar - determine which tab was clicked
@@ -491,10 +478,6 @@ func (m Model) getTabAtPosition(x int) string {
 // Returns -1 if not over any pane content area.
 // All panes are always visible with dynamic heights based on terminal size.
 func (m Model) getPaneAtPosition(y int) int {
-	if !m.usePanes {
-		return -1
-	}
-
 	// Calculate pane boundaries dynamically based on terminal height
 	initH, runH, summaryH := m.calculatePaneHeights()
 

@@ -176,6 +176,7 @@ func Build() int {
 	skipDepm := false             // Skip including transitive module dependencies in execution plan
 	useExistingDepm := false      // Use existing module dependency artifacts (skip building if present)
 	forceRebuild := false         // Force full rebuild, ignoring incremental build state (--rebuild)
+	layeredBuild := false         // Execute in layers sequentially (default: all parallel)
 	showTimings := false
 	debugMode := false // Enable debug logs to console
 	version := ""
@@ -201,6 +202,8 @@ func Build() int {
 			useExistingDepm = true
 		case "--rebuild":
 			forceRebuild = true
+		case "--layered-build":
+			layeredBuild = true
 		case "--skip-deps-verification":
 			skipDepsVerification = true
 		case "--timings":
@@ -315,7 +318,7 @@ func Build() int {
 
 	// Run build (single or multiple modules) - phases are handled inside
 	// Note: Logging is configured inside buildMultipleModules after TUI is initialized
-	return buildMultipleModules(monikers, workspaceRoot, moduleReport, tidyFirst, tidyExplicitlySet, version, skipDepsVerification, skipDepm, useExistingDepm, forceRebuild, showTimings, debugMode, dryRun, buildAll, useTUI, tuiHeight, explicitlyRequested)
+	return buildMultipleModules(monikers, workspaceRoot, moduleReport, tidyFirst, tidyExplicitlySet, version, skipDepsVerification, skipDepm, useExistingDepm, forceRebuild, layeredBuild, showTimings, debugMode, dryRun, buildAll, useTUI, tuiHeight, explicitlyRequested)
 }
 
 // parseIntArg parses a string argument as an integer
@@ -359,7 +362,7 @@ func listModuleArtifacts(monikers []string, workspaceRoot string, moduleReport *
 }
 
 // buildMultipleModules builds multiple modules in parallel using the orchestrator
-func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport *reports.ModuleContractReport, tidyFirst bool, tidyExplicitlySet bool, version string, skipDepsVerification bool, skipDepm bool, useExistingDepm bool, forceRebuild bool, showTimings bool, debugMode bool, dryRun bool, buildAll bool, useTUI bool, tuiHeight int, explicitlyRequested bool) int {
+func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport *reports.ModuleContractReport, tidyFirst bool, tidyExplicitlySet bool, version string, skipDepsVerification bool, skipDepm bool, useExistingDepm bool, forceRebuild bool, layeredBuild bool, showTimings bool, debugMode bool, dryRun bool, buildAll bool, useTUI bool, tuiHeight int, explicitlyRequested bool) int {
 	// Build module type lookup for ALL modules (will be populated after execution plan)
 	moduleTypes := make(map[string]string)
 
@@ -588,6 +591,7 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 				initSummary := initsummary.New("build").
 					SetRequest(monikers, executionPlan.ExecutionOrder).
 					SetExecutionPlan(executionPlan.Layers).
+					SetFlatExecution(!layeredBuild).
 					SetExecutionContext(string(logging.GetExecutionContext())).
 					SetIncremental(&initsummary.IncrementalInfo{
 						Enabled:       true,
@@ -700,6 +704,7 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 			initSummary := initsummary.New("build").
 				SetRequest(monikers, executionPlan.ExecutionOrder).
 				SetExecutionPlan(executionPlan.Layers).
+				SetFlatExecution(!layeredBuild).
 				SetExecutionContext(string(logging.GetExecutionContext())).
 				SetDepsStatus(depsStatus).
 				SetOutputDir(paths.OutBuildRelPath + "/")
@@ -715,6 +720,7 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 	initSummary := initsummary.New("build").
 		SetRequest(monikers, executionPlan.ExecutionOrder).
 		SetExecutionPlan(executionPlan.Layers).
+		SetFlatExecution(!layeredBuild).
 		SetExecutionContext(string(logging.GetExecutionContext())).
 		SetFlags(initsummary.Flags{
 			TidyFirst:            tidyFirst,
@@ -808,8 +814,14 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 	}
 	orch.SetWorker(worker)
 
-	// Run orchestrator with layered execution (TUI transitions to Run phase automatically)
-	results, err := orch.RunLayered(executionPlan.Layers)
+	// Run orchestrator (TUI transitions to Run phase automatically)
+	// Default: all modules in parallel; --layered-build: sequential layers
+	var results []orchestrator.WorkResult
+	if layeredBuild {
+		results, err = orch.RunLayered(executionPlan.Layers)
+	} else {
+		results, err = orch.Run(executionPlan.ExecutionOrder)
+	}
 	if err != nil {
 		log.Errorf("Error: %v", err)
 		return 1
@@ -1113,6 +1125,7 @@ func printBuildUsage() {
 	log.Info("  --tidy-first              Run 'go mod tidy' before building (default for local)")
 	log.Info("  --no-tidy                 Skip 'go mod tidy' (default for CI)")
 	log.Info("  --rebuild                 Force full rebuild, ignoring incremental build state")
+	log.Info("  --layered-build           Execute layers sequentially (default: all modules in parallel)")
 	log.Info("  --skip-depm               Only build specified modules (skip transitive module dependencies)")
 	log.Info("  --use-existing-depm       Skip building module dependencies if artifacts exist (for CI incremental builds)")
 	log.Info("  --skip-deps-verification  Skip system dependency verification (go, docker, etc.)")

@@ -22,13 +22,18 @@ type TestManifest struct {
 	TestTime            time.Time              `json:"test_time"`                       // When this manifest was last updated
 	DurationSeconds     float64                `json:"duration_seconds,omitempty"`      // Total test duration in seconds
 	GitCommit           string                 `json:"git_commit,omitempty"`            // Git commit SHA at test time
-	InputHash           string                 `json:"input_hash,omitempty"`            // SHA-256 hash of source/test files
 	Summary             TestSummary            `json:"summary"`                         // Aggregated test counts
 	Suites              map[string]SuiteResult `json:"suites,omitempty"`                // Per-suite results
 	Tests               []TestEntry            `json:"tests"`                           // Individual test results
 	Artifacts           []TestArtifactInfo     `json:"artifacts"`                       // Test artifacts
 	VerifiedUnchangedAt string                 `json:"verified_unchanged_at,omitempty"` // Git SHA when verified unchanged
 	Version             string                 `json:"version"`                         // Manifest format version
+
+	// Incremental test state
+	SourceHash   string   `json:"source_hash,omitempty"`   // SHA-256 hash of module source files
+	TestHash     string   `json:"test_hash,omitempty"`     // SHA-256 hash of module test files
+	BuildID      string   `json:"build_id,omitempty"`      // BuildID from build manifest (links tests to specific build)
+	Dependencies []string `json:"dependencies,omitempty"`  // Module dependencies at time of test
 }
 
 // TestSummary holds aggregated test counts
@@ -281,4 +286,88 @@ func GetTestManifestPath(moduleTestDir string) string {
 func TestManifestExists(moduleTestDir string) bool {
 	_, err := os.Stat(GetTestManifestPath(moduleTestDir))
 	return err == nil
+}
+
+// SetIncrementalState sets the incremental test state fields.
+// This should be called after tests complete to record state for change detection.
+func (m *TestManifest) SetIncrementalState(sourceHash, testHash, buildID string, dependencies []string) {
+	m.SourceHash = sourceHash
+	m.TestHash = testHash
+	m.BuildID = buildID
+	m.Dependencies = dependencies
+}
+
+// NeedsRetest checks if the module needs retesting based on stored incremental state.
+// Returns (needsRetest bool, reason string).
+// A module needs retesting if:
+// 1. Source files changed (SourceHash differs)
+// 2. Test files changed (TestHash differs)
+// 3. Build changed (BuildID differs)
+// 4. Previous tests failed
+// 5. No previous test state exists
+func (m *TestManifest) NeedsRetest(currentSourceHash, currentTestHash, currentBuildID string) (bool, string) {
+	// No source hash stored = no prior test state
+	if m.SourceHash == "" {
+		return true, "no prior test state"
+	}
+
+	// Previous tests failed
+	if !m.AllPassed() {
+		return true, "previous test failed"
+	}
+
+	// Source files changed
+	if currentSourceHash != "" && m.SourceHash != currentSourceHash {
+		return true, "source files changed"
+	}
+
+	// Test files changed
+	if currentTestHash != "" && m.TestHash != currentTestHash {
+		return true, "test files changed"
+	}
+
+	// Build changed (rebuild detected)
+	if currentBuildID != "" && m.BuildID != "" && m.BuildID != currentBuildID {
+		return true, "build changed (rebuild detected)"
+	}
+
+	// New build detected (module was tested without build, now has one)
+	if currentBuildID != "" && m.BuildID == "" {
+		return true, "new build detected"
+	}
+
+	return false, ""
+}
+
+// GetSuiteNames returns the list of suite names that have been run for this module.
+func (m *TestManifest) GetSuiteNames() []string {
+	if m.Suites == nil {
+		return nil
+	}
+	names := make([]string, 0, len(m.Suites))
+	for name := range m.Suites {
+		names = append(names, name)
+	}
+	return names
+}
+
+// HasSuiteRun checks if a specific suite has been run for this module.
+func (m *TestManifest) HasSuiteRun(suiteName string) bool {
+	if m.Suites == nil {
+		return false
+	}
+	_, exists := m.Suites[suiteName]
+	return exists
+}
+
+// GetLastSuiteRunTime returns when a specific suite was last run.
+// Returns zero time if suite hasn't been run.
+func (m *TestManifest) GetLastSuiteRunTime(suiteName string) time.Time {
+	if m.Suites == nil {
+		return time.Time{}
+	}
+	if result, ok := m.Suites[suiteName]; ok {
+		return result.RunTime
+	}
+	return time.Time{}
 }

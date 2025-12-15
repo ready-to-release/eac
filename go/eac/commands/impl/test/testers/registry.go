@@ -73,7 +73,3 @@ func GetTestFunc(moduleType string) TestFunc {
 	}
 }
 
-// RunTestSuiteForModule is a callback that will be set by the test package
-// to allow testers to run test suites without circular imports.
-// This enables testers like TestGoCLI to delegate to the full test suite infrastructure.
-var RunTestSuiteForModule func(moniker string, suiteName string) int

@@ -102,8 +102,8 @@ func findLatestAssessmentResults(moduleDir string) (string, error) {
 		}
 
 		name := entry.Name()
-		// Match both legacy and timestamped formats
-		if name == "assessment-results.json" || (strings.HasPrefix(name, "assessment-results-") && strings.HasSuffix(name, ".json")) {
+		// Match timestamped format (assessment-results-YYYYMMDD-HHMMSS.json)
+		if strings.HasPrefix(name, "assessment-results-") && strings.HasSuffix(name, ".json") {
 			assessmentFiles = append(assessmentFiles, name)
 		}
 	}

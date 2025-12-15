@@ -1,5 +1,7 @@
 // Package teststate manages incremental test state for detecting which modules need retesting.
 // It uses file hashing and dependency propagation - if a dependency changes, all dependents need retesting.
+//
+// State is stored per-module in test.manifest.json files (out/test/<module>/test.manifest.json).
 package teststate
 
 import (
@@ -18,22 +20,8 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
-// State represents the test state for incremental testing
-type State struct {
-	// Git commit SHA at time of last test
-	Commit string `json:"commit"`
-
-	// Hash of uncommitted changes at test time (empty if clean)
-	UncommittedHash string `json:"uncommitted_hash,omitempty"`
-
-	// Per-module test state
-	Modules map[string]ModuleTestState `json:"modules"`
-
-	// Timestamp of last state update
-	UpdatedAt time.Time `json:"updated_at"`
-}
-
-// ModuleTestState represents test state for a single module
+// ModuleTestState represents test state for a single module.
+// This is now stored in each module's test.manifest.json.
 type ModuleTestState struct {
 	// Hash of all source files in the module
 	SourceHash string `json:"source_hash"`
@@ -88,50 +76,74 @@ type ModuleTestFiles struct {
 	BuildID string
 }
 
-const (
-	stateFileName = "test-suite.state.json"
-)
+// testManifestFileName is the name of the per-module test manifest file
+const testManifestFileName = "test.manifest.json"
 
-// Load loads test state from the test output directory
-func Load(workspaceRoot string) (*State, error) {
-	statePath := paths.TestStatePath(workspaceRoot, stateFileName)
-
-	data, err := os.ReadFile(statePath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil // No state file = fresh test run
-		}
-		return nil, fmt.Errorf("failed to read test state: %w", err)
-	}
-
-	var state State
-	if err := json.Unmarshal(data, &state); err != nil {
-		return nil, fmt.Errorf("failed to parse test state: %w", err)
-	}
-
-	return &state, nil
+// testManifest is a minimal struct for loading test manifest files.
+// We only need the fields relevant for incremental test detection.
+type testManifest struct {
+	SourceHash   string                    `json:"source_hash"`
+	BuildID      string                    `json:"build_id"`
+	Dependencies []string                  `json:"dependencies"`
+	Summary      testSummary               `json:"summary"`
+	Suites       map[string]suiteRunResult `json:"suites"` // Track which suites have been run
 }
 
-// Save saves test state to the test output directory
-func (s *State) Save(workspaceRoot string) error {
-	testDir := filepath.Join(workspaceRoot, paths.OutTestRelPath)
-	if err := os.MkdirAll(testDir, 0755); err != nil {
-		return fmt.Errorf("failed to create test directory: %w", err)
+// suiteRunResult tracks when a suite was run
+type suiteRunResult struct {
+	RunTime string      `json:"run_time"`
+	Tests   testSummary `json:"tests"`
+}
+
+type testSummary struct {
+	Failed    int `json:"failed"`
+	Undefined int `json:"undefined"`
+	Pending   int `json:"pending"`
+}
+
+// allPassed returns true if all tests passed (no failures, undefined, or pending)
+func (m *testManifest) allPassed() bool {
+	return m.Summary.Failed == 0 && m.Summary.Undefined == 0 && m.Summary.Pending == 0
+}
+
+// hasSuite returns true if the specified suite has been run
+func (m *testManifest) hasSuite(suiteName string) bool {
+	if m.Suites == nil {
+		return false
 	}
+	_, exists := m.Suites[suiteName]
+	return exists
+}
 
-	s.UpdatedAt = time.Now()
+// suitePassed returns true if the specified suite passed (no failures)
+func (m *testManifest) suitePassed(suiteName string) bool {
+	if m.Suites == nil {
+		return false
+	}
+	suite, exists := m.Suites[suiteName]
+	if !exists {
+		return false
+	}
+	return suite.Tests.Failed == 0 && suite.Tests.Undefined == 0 && suite.Tests.Pending == 0
+}
 
-	data, err := json.MarshalIndent(s, "", "  ")
+// loadModuleTestManifest loads a module's test manifest from its test output directory.
+// Returns nil if no manifest exists (module not yet tested).
+func loadModuleTestManifest(workspaceRoot, moniker string) *testManifest {
+	moduleTestDir := paths.TestModuleDir(workspaceRoot, moniker)
+	manifestPath := filepath.Join(moduleTestDir, testManifestFileName)
+
+	data, err := os.ReadFile(manifestPath)
 	if err != nil {
-		return fmt.Errorf("failed to marshal test state: %w", err)
+		return nil // No manifest = module not yet tested
 	}
 
-	statePath := filepath.Join(testDir, stateFileName)
-	if err := os.WriteFile(statePath, data, 0644); err != nil {
-		return fmt.Errorf("failed to write test state: %w", err)
+	var manifest testManifest
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		return nil // Invalid manifest = treat as not tested
 	}
 
-	return nil
+	return &manifest
 }
 
 // DependencyBuildIDLoader is a function that loads the current BuildID for a dependency module.
@@ -141,34 +153,52 @@ type DependencyBuildIDLoader func(moniker string) string
 
 // DetectChanges detects which modules need retesting based on file changes and dependency propagation.
 // moduleInfo maps moniker -> ModuleTestFiles (source files, test files, dependencies)
+// suiteNames is the list of test suites being run - detection checks ALL suites
+// For composite suites like "all", pass the constituent suites: ["component", "integration", "acceptance"]
 //
 // A module needs retesting if:
 // 1. Its source files changed
-// 2. Its test files changed
-// 3. Any of its dependencies (transitively) need retesting
-// 4. Its previous test run failed
+// 2. Any of its dependencies (transitively) need retesting
+// 3. Any of the specified suites hasn't been run before
+// 4. Any suite's previous run failed
 // 5. It's a new module (not in previous state)
 // 6. Any dependency was rebuilt (BuildID changed) - even if not in current test run
-func DetectChanges(workspaceRoot string, moduleInfo map[string]ModuleTestFiles) (*TestChangeResult, error) {
-	return DetectChangesWithLoader(workspaceRoot, moduleInfo, nil)
+func DetectChanges(workspaceRoot string, moduleInfo map[string]ModuleTestFiles, suiteNames []string) (*TestChangeResult, error) {
+	return DetectChangesWithLoader(workspaceRoot, moduleInfo, suiteNames, nil)
 }
 
 // DetectChangesWithLoader is like DetectChanges but accepts an optional loader function
 // to check BuildIDs of dependencies that aren't in the current test run.
-func DetectChangesWithLoader(workspaceRoot string, moduleInfo map[string]ModuleTestFiles, loadDepBuildID DependencyBuildIDLoader) (*TestChangeResult, error) {
+// State is now read from per-module test.manifest.json files instead of a global state file.
+// suiteNames specifies which suites are being run - detection checks if ALL specified suites need to run.
+func DetectChangesWithLoader(workspaceRoot string, moduleInfo map[string]ModuleTestFiles, suiteNames []string, loadDepBuildID DependencyBuildIDLoader) (*TestChangeResult, error) {
 	start := time.Now()
 
 	result := &TestChangeResult{
 		ChangeReasons: make(map[string]string),
 	}
 
-	// Load previous state
-	prevState, err := Load(workspaceRoot)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load test state: %w", err)
+	// Cache for loaded manifests
+	manifestCache := make(map[string]*testManifest)
+	getManifest := func(moniker string) *testManifest {
+		if m, ok := manifestCache[moniker]; ok {
+			return m
+		}
+		m := loadModuleTestManifest(workspaceRoot, moniker)
+		manifestCache[moniker] = m
+		return m
 	}
 
-	if prevState == nil {
+	// Check if this is a fresh run (no manifests exist for any module)
+	anyManifestExists := false
+	for moniker := range moduleInfo {
+		if getManifest(moniker) != nil {
+			anyManifestExists = true
+			break
+		}
+	}
+
+	if !anyManifestExists {
 		// Fresh test run - all modules need testing
 		result.FreshRun = true
 		for moniker := range moduleInfo {
@@ -183,31 +213,62 @@ func DetectChangesWithLoader(workspaceRoot string, moduleInfo map[string]ModuleT
 	// First pass: detect directly changed modules (source or test files changed, or build changed)
 	directlyChanged := make(map[string]bool)
 	for moniker, info := range moduleInfo {
-		prevModState, exists := prevState.Modules[moniker]
+		prevManifest := getManifest(moniker)
 
-		if !exists {
+		if prevManifest == nil {
 			directlyChanged[moniker] = true
-			result.ChangeReasons[moniker] = "new module (not in previous test)"
+			result.ChangeReasons[moniker] = "new module (not previously tested)"
 			continue
 		}
 
-		// Check if previous test failed
-		if !prevModState.Passed {
+		// Check if manifest has incremental state fields (SourceHash must be set)
+		// If not, treat as if not tested (legacy manifest without incremental fields)
+		if prevManifest.SourceHash == "" {
 			directlyChanged[moniker] = true
-			result.ChangeReasons[moniker] = "previous test failed"
+			result.ChangeReasons[moniker] = "no incremental state in manifest"
+			continue
+		}
+
+		// Check if ALL specified suites have been run before and passed
+		// For composite suites like "all", suiteNames contains all constituent suites
+		missingSuites := []string{}
+		failedSuites := []string{}
+		for _, suiteName := range suiteNames {
+			if !prevManifest.hasSuite(suiteName) {
+				missingSuites = append(missingSuites, suiteName)
+			} else if !prevManifest.suitePassed(suiteName) {
+				failedSuites = append(failedSuites, suiteName)
+			}
+		}
+		if len(missingSuites) > 0 {
+			directlyChanged[moniker] = true
+			if len(missingSuites) == 1 {
+				result.ChangeReasons[moniker] = fmt.Sprintf("suite '%s' not previously run", missingSuites[0])
+			} else {
+				result.ChangeReasons[moniker] = fmt.Sprintf("suites not previously run: %s", strings.Join(missingSuites, ", "))
+			}
+			continue
+		}
+		if len(failedSuites) > 0 {
+			directlyChanged[moniker] = true
+			if len(failedSuites) == 1 {
+				result.ChangeReasons[moniker] = fmt.Sprintf("suite '%s' previously failed", failedSuites[0])
+			} else {
+				result.ChangeReasons[moniker] = fmt.Sprintf("suites previously failed: %s", strings.Join(failedSuites, ", "))
+			}
 			continue
 		}
 
 		// Check if build changed (rebuild detected via manifest BuildID)
 		// This ensures `build --rebuild` triggers `test --retest`
-		if info.BuildID != "" && prevModState.BuildID != "" && info.BuildID != prevModState.BuildID {
+		if info.BuildID != "" && prevManifest.BuildID != "" && info.BuildID != prevManifest.BuildID {
 			directlyChanged[moniker] = true
 			result.ChangeReasons[moniker] = "build changed (rebuild detected)"
 			continue
 		}
 
 		// Check if module was tested without a build but now has one
-		if info.BuildID != "" && prevModState.BuildID == "" {
+		if info.BuildID != "" && prevManifest.BuildID == "" {
 			directlyChanged[moniker] = true
 			result.ChangeReasons[moniker] = "new build detected"
 			continue
@@ -222,26 +283,14 @@ func DetectChangesWithLoader(workspaceRoot string, moduleInfo map[string]ModuleT
 		}
 
 		// Check source files changed
-		if currentSourceHash != prevModState.SourceHash {
+		if currentSourceHash != prevManifest.SourceHash {
 			directlyChanged[moniker] = true
 			result.ChangeReasons[moniker] = "source files changed"
 			continue
 		}
 
-		// Calculate current test hash
-		currentTestHash, err := hashFiles(workspaceRoot, info.TestFiles)
-		if err != nil {
-			directlyChanged[moniker] = true
-			result.ChangeReasons[moniker] = fmt.Sprintf("test hash error: %v", err)
-			continue
-		}
-
-		// Check test files changed
-		if currentTestHash != prevModState.TestHash {
-			directlyChanged[moniker] = true
-			result.ChangeReasons[moniker] = "test files changed"
-			continue
-		}
+		// Note: We don't check test_hash anymore since it was suite-specific and caused
+		// false positives when switching suites. Suite tracking handles this instead.
 	}
 
 	// Second pass: propagate changes through dependency chain
@@ -262,14 +311,13 @@ func DetectChangesWithLoader(workspaceRoot string, moduleInfo map[string]ModuleT
 			return directlyChanged[dep]
 		}
 
-		// Dependency not in current test run - check its BuildID against stored state
-		if loadDepBuildID != nil && prevState != nil {
+		// Dependency not in current test run - check its BuildID against stored manifest
+		if loadDepBuildID != nil {
 			currentBuildID := loadDepBuildID(dep)
-			if prevDepState, exists := prevState.Modules[dep]; exists {
-				if currentBuildID != "" && prevDepState.BuildID != "" && currentBuildID != prevDepState.BuildID {
-					depBuildIDChanged[dep] = true
-					return true
-				}
+			prevManifest := getManifest(dep)
+			if prevManifest != nil && currentBuildID != "" && prevManifest.BuildID != "" && currentBuildID != prevManifest.BuildID {
+				depBuildIDChanged[dep] = true
+				return true
 			}
 		}
 
@@ -343,57 +391,77 @@ func DetectChangesWithLoader(workspaceRoot string, moduleInfo map[string]ModuleT
 	return result, nil
 }
 
-// UpdateModuleState updates the test state for modules that were tested
+// UpdateModuleState updates the incremental test state in each module's test.manifest.json.
+// This should be called after tests complete to record state for change detection.
+// It updates the SourceHash, TestHash, BuildID, and Dependencies fields in each manifest.
 func UpdateModuleState(workspaceRoot string, testedModules map[string]bool, moduleInfo map[string]ModuleTestFiles) error {
-	// Load or create state
-	state, err := Load(workspaceRoot)
-	if err != nil {
-		return err
-	}
-	if state == nil {
-		state = &State{
-			Modules: make(map[string]ModuleTestState),
-		}
-	}
+	gitCommit, _ := getGitCommit(workspaceRoot)
 
-	// Update git state
-	state.Commit, _ = getGitCommit(workspaceRoot)
-	uncommittedFiles, _ := getUncommittedFiles(workspaceRoot)
-	if len(uncommittedFiles) > 0 {
-		state.UncommittedHash = hashUncommittedFiles(workspaceRoot, uncommittedFiles)
-	} else {
-		state.UncommittedHash = ""
-	}
-
-	// Update each tested module
-	for moniker, passed := range testedModules {
+	// Update each tested module's manifest
+	for moniker := range testedModules {
 		info, ok := moduleInfo[moniker]
 		if !ok {
 			continue
 		}
 
+		moduleTestDir := paths.TestModuleDir(workspaceRoot, moniker)
+		manifestPath := filepath.Join(moduleTestDir, testManifestFileName)
+
+		// Load existing manifest (should exist after test run)
+		data, err := os.ReadFile(manifestPath)
+		if err != nil {
+			// No manifest - skip this module (shouldn't happen normally)
+			continue
+		}
+
+		// Parse as generic map to preserve all fields
+		var manifest map[string]interface{}
+		if err := json.Unmarshal(data, &manifest); err != nil {
+			continue
+		}
+
+		// Calculate and update incremental state fields
 		sourceHash, _ := hashFiles(workspaceRoot, info.SourceFiles)
 		testHash, _ := hashFiles(workspaceRoot, info.TestFiles)
 
-		state.Modules[moniker] = ModuleTestState{
-			SourceHash:   sourceHash,
-			TestHash:     testHash,
-			BuildID:      info.BuildID, // Record which build was tested
-			Passed:       passed,
-			TestedAt:     time.Now(),
-			Dependencies: info.Dependencies,
+		manifest["source_hash"] = sourceHash
+		manifest["test_hash"] = testHash
+		manifest["build_id"] = info.BuildID
+		manifest["dependencies"] = info.Dependencies
+		manifest["git_commit"] = gitCommit
+
+		// Write updated manifest
+		updatedData, err := json.MarshalIndent(manifest, "", "  ")
+		if err != nil {
+			continue
+		}
+
+		if err := os.WriteFile(manifestPath, updatedData, 0644); err != nil {
+			return fmt.Errorf("failed to update manifest for %s: %w", moniker, err)
 		}
 	}
 
-	return state.Save(workspaceRoot)
+	return nil
 }
 
-// ClearState removes the test state file (for --retest)
+// ClearState removes test manifests for all modules under out/test/ (for --retest).
+// This forces a full retest by removing the incremental state.
 func ClearState(workspaceRoot string) error {
-	statePath := paths.TestStatePath(workspaceRoot, stateFileName)
-	err := os.Remove(statePath)
-	if os.IsNotExist(err) {
+	testDir := filepath.Join(workspaceRoot, paths.OutTestRelPath)
+
+	// Walk the test output directory and remove all test.manifest.json files
+	err := filepath.Walk(testDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil // Skip errors
+		}
+		if !info.IsDir() && info.Name() == testManifestFileName {
+			os.Remove(path) // Ignore errors on individual files
+		}
 		return nil
+	})
+
+	if os.IsNotExist(err) {
+		return nil // No test directory = nothing to clear
 	}
 	return err
 }
@@ -407,51 +475,6 @@ func getGitCommit(workspaceRoot string) (string, error) {
 		return "", err
 	}
 	return strings.TrimSpace(string(out)), nil
-}
-
-// getUncommittedFiles returns list of uncommitted file paths (relative to repo root)
-func getUncommittedFiles(workspaceRoot string) ([]string, error) {
-	cmd := exec.Command("git", "status", "--porcelain")
-	cmd.Dir = workspaceRoot
-	out, err := cmd.Output()
-	if err != nil {
-		return nil, err
-	}
-
-	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
-	var files []string
-	for _, line := range lines {
-		if len(line) < 3 {
-			continue
-		}
-		path := strings.TrimSpace(line[3:])
-		path = strings.Trim(path, "\"")
-		files = append(files, path)
-	}
-
-	return files, nil
-}
-
-// hashUncommittedFiles creates a hash representing the uncommitted state
-func hashUncommittedFiles(workspaceRoot string, files []string) string {
-	h := sha256.New()
-
-	sorted := make([]string, len(files))
-	copy(sorted, files)
-	sort.Strings(sorted)
-
-	for _, file := range sorted {
-		path := filepath.Join(workspaceRoot, file)
-		f, err := os.Open(path)
-		if err != nil {
-			h.Write([]byte(file + ":deleted\n"))
-			continue
-		}
-		io.Copy(h, f)
-		f.Close()
-	}
-
-	return hex.EncodeToString(h.Sum(nil))[:16]
 }
 
 // hashFiles computes a hash of all files

@@ -26,7 +26,6 @@ const (
 // Config configures the console window.
 type Config struct {
 	Height       int    // Total height (default: DefaultHeight)
-	ShowHeader   bool   // Show status header (default: true)
 	BufferSize   int    // Line buffer size (default: 1000)
 	RunPhaseName string // Custom name for Run phase (e.g., "building", "testing")
 }
@@ -80,7 +79,6 @@ func (c *Console) Start(ctx context.Context) error {
 
 	model := console.NewModel(
 		c.config.Height,
-		c.config.ShowHeader,
 		c.config.RunPhaseName,
 		c.lineChan,
 		c.statusChan,

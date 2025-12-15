@@ -51,7 +51,6 @@ type RunResult struct {
 type RunConfig struct {
 	WorkspaceRoot  string
 	TestRunDir     string
-	ReportFormat   string
 	Coverage       bool
 	SuiteTagFilter string
 	Parallelism    int

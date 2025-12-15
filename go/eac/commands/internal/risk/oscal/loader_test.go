@@ -270,11 +270,11 @@ func TestDiscoverAssessmentResults(t *testing.T) {
 	os.MkdirAll(billingDir, 0755)
 	os.MkdirAll(authDir, 0755)
 
-	// Create assessment-results files
+	// Create assessment-results files (timestamped format)
 	ar1 := `{"assessment-results": {"uuid": "ar1"}}`
 	ar2 := `{"assessment-results": {"uuid": "ar2"}}`
-	os.WriteFile(filepath.Join(billingDir, "assessment-results.json"), []byte(ar1), 0644)
-	os.WriteFile(filepath.Join(authDir, "assessment-results.json"), []byte(ar2), 0644)
+	os.WriteFile(filepath.Join(billingDir, "assessment-results-20250101-120000.json"), []byte(ar1), 0644)
+	os.WriteFile(filepath.Join(authDir, "assessment-results-20250101-120000.json"), []byte(ar2), 0644)
 
 	results, err := DiscoverAssessmentResults(tmpDir)
 	if err != nil {

@@ -15,10 +15,7 @@ func (m Model) View() string {
 	if m.quitting {
 		return ""
 	}
-	if m.usePanes {
-		return m.viewPanes()
-	}
-	return m.viewLegacy()
+	return m.viewPanes()
 }
 
 // ViewFinal renders a clean plain-text version of all panes (no ANSI escape codes)
@@ -381,80 +378,6 @@ func (m Model) renderResults() string {
 	return b.String()
 }
 
-// viewLegacy renders the original single-buffer view (for backward compatibility)
-func (m Model) viewLegacy() string {
-	var b strings.Builder
-
-	// Calculate available lines for output
-	outputLines := m.height
-	if m.showHeader {
-		outputLines--
-		b.WriteString(m.renderHeader())
-		b.WriteString("\n")
-	}
-
-	// Get lines to display
-	lines := m.getDisplayLines(outputLines)
-
-	for i, line := range lines {
-		b.WriteString(m.renderLine(line))
-		if i < len(lines)-1 {
-			b.WriteString("\n")
-		}
-	}
-
-	// Pad with empty lines if needed
-	for i := len(lines); i < outputLines; i++ {
-		if i > 0 || len(lines) > 0 {
-			b.WriteString("\n")
-		}
-		b.WriteString(Styles.Dim.Render("│ "))
-	}
-
-	return b.String()
-}
-
-func (m Model) renderHeader() string {
-	elapsed := time.Since(m.startTime).Round(time.Millisecond * 100)
-
-	// Build status indicators
-	var status string
-	if len(m.running) > 0 {
-		if len(m.running) <= 2 {
-			status = strings.Join(m.running, ", ")
-		} else {
-			status = fmt.Sprintf("%s +%d more", m.running[0], len(m.running)-1)
-		}
-	}
-
-	// Format: [Phase] 12.3s | 3/10 | running: module-a, module-b
-	left := fmt.Sprintf("%s %s │ %d/%d",
-		Styles.Phase.Render(m.phase),
-		Styles.Time.Render(formatElapsed(elapsed)),
-		m.completed,
-		m.total,
-	)
-
-	right := ""
-	if status != "" {
-		right = Styles.Running.Render(IconRunning + " " + status)
-	}
-	if m.paused {
-		right = Styles.Paused.Render(IconPaused+" PAUSED") + " " + right
-	}
-	if m.errorMode {
-		right = Styles.Error.Render("ERRORS ONLY") + " " + right
-	}
-
-	// Fit to width
-	gap := m.width - lipgloss.Width(left) - lipgloss.Width(right) - 2
-	if gap < 0 {
-		gap = 1
-	}
-
-	return left + strings.Repeat(" ", gap) + right
-}
-
 func (m Model) renderLine(line Line) string {
 	// Strip newlines to prevent multi-line rendering (keeps pane height fixed)
 	text := strings.ReplaceAll(line.Text, "\n", " ")
@@ -484,15 +407,6 @@ func (m Model) renderLine(line Line) string {
 	}
 
 	return prefix + " " + styled
-}
-
-func (m Model) getDisplayLines(count int) []Line {
-	if m.errorMode {
-		// Filter to errors only
-		return m.buffer.LastByLevel(count, LevelError)
-	}
-
-	return m.buffer.Last(count)
 }
 
 // formatElapsed formats a duration for display.

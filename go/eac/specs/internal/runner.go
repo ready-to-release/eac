@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -79,12 +80,9 @@ func buildPlatformTagFilter() string {
 }
 
 // BuildOptions constructs godog options from environment and config.
+// Generates cucumber.json report when output directory is set.
 func BuildOptions(specsPath, defaultReportName string, t *testing.T) *godog.Options {
 	outputDir := os.Getenv("GODOG_OUTPUT_DIR")
-	reportFormat := os.Getenv("GODOG_REPORT_FORMAT")
-	if reportFormat == "" {
-		reportFormat = "cucumber"
-	}
 
 	consoleFormat := os.Getenv("GODOG_FORMAT")
 	if consoleFormat == "" {
@@ -104,18 +102,17 @@ func BuildOptions(specsPath, defaultReportName string, t *testing.T) *godog.Opti
 		Strict:   true,
 	}
 
-	// Add report formatter if output directory is set
+	// Add cucumber report formatter if output directory is set
 	if outputDir != "" {
 		reportName := os.Getenv("GODOG_REPORT_NAME")
 		if reportName == "" {
-			if reportFormat == "junit" {
-				reportName = defaultReportName + ".xml"
-			} else {
-				reportName = defaultReportName + ".json"
-			}
+			reportName = defaultReportName
 		}
-		reportPath := fmt.Sprintf("%s/%s", outputDir, reportName)
-		opts.Format = fmt.Sprintf("%s,%s:%s", consoleFormat, reportFormat, reportPath)
+		// Strip any extension from reportName
+		reportName = strings.TrimSuffix(reportName, ".json")
+
+		cucumberPath := fmt.Sprintf("%s/%s.cucumber.json", outputDir, reportName)
+		opts.Format = fmt.Sprintf("%s,cucumber:%s", consoleFormat, cucumberPath)
 	}
 
 	return opts

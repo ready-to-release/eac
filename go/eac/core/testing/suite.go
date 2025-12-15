@@ -13,16 +13,16 @@ var log = logging.C()
 
 // GetSuite retrieves a suite by its moniker from configuration.
 // Returns error if config is unavailable (fail-closed - no hardcoded fallbacks).
-// Special case: "all" returns a combined suite (component + integration + acceptance).
+// Supports composite suites with "+" separator (e.g., "component+integration").
 func GetSuite(moniker string) (*TestSuite, error) {
 	cfg := config.Global()
 	if cfg == nil || cfg.TestSuites == nil {
 		return nil, fmt.Errorf("cannot get suite '%s': config unavailable (ensure config is loaded)", moniker)
 	}
 
-	// Handle special "all" suite that combines component, integration, and acceptance
-	if moniker == "all" {
-		return buildAllSuite()
+	// Handle composite suites with "+" separator (e.g., "component+integration")
+	if strings.Contains(moniker, "+") {
+		return buildCompositeSuite(moniker, cfg)
 	}
 
 	suiteDef := cfg.TestSuites.Get(moniker)
@@ -32,21 +32,51 @@ func GetSuite(moniker string) (*TestSuite, error) {
 	return nil, fmt.Errorf("suite not found: %s", moniker)
 }
 
-// buildAllSuite creates a combined suite from component, integration, and acceptance.
-// This matches tests with @L0, @L1, @L2, or @L3 tags (excludes @L4/production-verification).
-// The combined suite uses a single selector matching any of L0-L3 to avoid cross-exclusion issues.
-func buildAllSuite() (*TestSuite, error) {
-	// Instead of combining individual selectors (which have cross-exclusions),
-	// create a single clean selector that matches L0, L1, L2, or L3.
-	// Only exclude L4 (production-verification).
+// buildCompositeSuite creates a combined suite from multiple suites joined by "+".
+// Example: "component+integration" combines tests from both suites.
+func buildCompositeSuite(moniker string, cfg *config.EACConfig) (*TestSuite, error) {
+	parts := strings.Split(moniker, "+")
+
+	// Collect all L-tags from constituent suites
+	var allAnyOfTags []string
+	var names []string
+
+	for _, part := range parts {
+		suiteDef := cfg.TestSuites.Get(part)
+		if suiteDef == nil {
+			return nil, fmt.Errorf("suite not found in composite '%s': %s", moniker, part)
+		}
+		names = append(names, suiteDef.Name)
+
+		// Get L-tags from config
+		ltags := cfg.TestSuites.GetSuiteLTags(part)
+		allAnyOfTags = append(allAnyOfTags, ltags...)
+	}
+
+	// Build exclude list from L-tag to suite mapping (exclude anything not in our set)
+	ltagMap := cfg.TestSuites.GetLTagToSuiteMap()
+	var excludeTags []string
+	for ltag := range ltagMap {
+		found := false
+		for _, included := range allAnyOfTags {
+			if ltag == included {
+				found = true
+				break
+			}
+		}
+		if !found {
+			excludeTags = append(excludeTags, ltag)
+		}
+	}
+
 	return &TestSuite{
-		Moniker:     "all",
-		Name:        "All Tests (component + integration + acceptance)",
-		Description: "Combined suite: L0-L3 tests (excludes L4/production-verification)",
+		Moniker:     moniker,
+		Name:        strings.Join(names, " + "),
+		Description: fmt.Sprintf("Combined suite: %s", moniker),
 		Selectors: []TagSelector{
 			{
-				AnyOfTags:   []string{"@L0", "@L1", "@L2", "@L3"},
-				ExcludeTags: []string{"@L4"},
+				AnyOfTags:   allAnyOfTags,
+				ExcludeTags: excludeTags,
 			},
 		},
 		Inferences: GetGlobalInferences(),
