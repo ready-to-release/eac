@@ -3,6 +3,7 @@
 # Checks for pending releases from two sources:
 # 1. Semver modules: changelog versions without corresponding git tags
 # 2. Calver modules: modules with CI triggered that auto-release on every push
+#    (auto-detected from module contracts: versioning.scheme=CalVer + has CI workflow)
 #
 # Returns the list of modules needing release along with execution order based on
 # their dependency graph.
@@ -11,7 +12,7 @@
 #   - uses: ./.github/actions/check-pending-releases
 #     id: pending
 #     with:
-#       dispatched-modules: "docs books r2r-cli"  # modules that had CI run
+#       dispatched-modules: ${{ needs.detect-changes.outputs.changed-modules }}
 #   - run: echo "${{ steps.pending.outputs.has_pending }}"
 
 name: Check Pending Releases
@@ -27,9 +28,9 @@ inputs:
     required: false
     default: ''
   calver-modules:
-    description: 'Space-separated list of calver modules that auto-release on CI pass'
+    description: 'Space-separated list of calver modules that auto-release on CI pass (auto-detected if empty)'
     required: false
-    default: 'docs books'
+    default: ''
 
 outputs:
   has_pending:
@@ -95,7 +96,16 @@ runs:
         CALVER_MODULES="${{ inputs.calver-modules }}"
 
         echo "Dispatched modules: $DISPATCHED"
-        echo "Calver modules: $CALVER_MODULES"
+
+        # Auto-detect CalVer modules with CI workflows if not specified
+        if [ -z "$CALVER_MODULES" ]; then
+          echo "Auto-detecting CalVer modules with CI workflows..."
+          # Get all modules, filter for CalVer versioning + has CI workflow
+          CALVER_MODULES=$($COMMANDS get modules --as-json 2>/dev/null | jq -r '.[] | select(.versioning.scheme == "CalVer") | select(.files.workflows.ci != null and .files.workflows.ci != "") | .moniker' | tr '\n' ' ')
+          echo "Auto-detected CalVer modules: $CALVER_MODULES"
+        else
+          echo "Using provided CalVer modules: $CALVER_MODULES"
+        fi
 
         CALVER_PENDING="[]"
 

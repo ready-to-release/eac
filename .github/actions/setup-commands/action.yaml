@@ -204,6 +204,7 @@ runs:
         name: commands-binary
         path: out/tools/commands
         if-no-files-found: error
+        overwrite: true  # Handle parallel jobs both building from source
 
     - name: Upload Windows artifact (cross-compiled from Linux)
       if: runner.os == 'Linux' && steps.check.outputs.available != 'true' && inputs.cross-compile-windows == 'true'
@@ -212,6 +213,7 @@ runs:
         name: commands-binary-windows
         path: out/tools/commands.exe
         if-no-files-found: error
+        overwrite: true
 
     - name: Upload artifact (for downstream jobs, Windows)
       if: runner.os == 'Windows' && steps.check-windows.outputs.available != 'true'
@@ -220,6 +222,7 @@ runs:
         name: commands-binary-windows
         path: out/tools/commands.exe
         if-no-files-found: error
+        overwrite: true
 
     - name: Set output (Linux/macOS)
       id: setup
