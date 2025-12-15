@@ -80,7 +80,7 @@ jobs:
         uses: ./.github/actions/trigger-release
         with:
           module: release
-          workflow: release-release.yaml
+          workflow: release-github-latest.yaml
           workflow-description: Create Latest GitHub Release bundle
           ci-run-id: ${{ github.run_id }}
           trigger-run-id: ${{ inputs.trigger_run_id }}

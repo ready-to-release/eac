@@ -7,7 +7,7 @@
 # Title format: "r2r (x.y.z) + eac (x.y.z)"
 # Body: Table with links to all module releases
 
-name: "release-release (stage 8+)"
+name: "release-github-latest (stage 8+)"
 
 on:
   push:
