@@ -121,6 +121,41 @@ modules:
           - containers/mkdocs-pdf/**
 
   # ============================================================================
+  # Release Bundle
+  # ============================================================================
+  - moniker: release
+    name: Release Bundle
+    type: static
+    description: Aggregated release bundle with links to all module releases - this becomes the "Latest" GitHub release
+    versioning:
+      scheme: CalVer
+    depends_on:
+      - docs
+    books:
+      - release-evidence
+    release_bundle:
+      title_format: "r2r ({r2r_version}) + eac ({eac_version})"
+      headline:
+        r2r: r2r-cli
+        eac: ext-eac
+      categories:
+        - name: Core Tools
+          description: CLI tools and extensions
+          modules:
+            - r2r-cli
+            - ext-eac
+        - name: Documentation
+          description: Documentation and guides
+          modules:
+            - docs
+            - books
+    files:
+      root: release/bundle
+      workflows:
+        ci: .github/workflows/ci-release.yaml
+        release: .github/workflows/release-github-latest.yaml
+
+  # ============================================================================
   # EAC Extension
   # ============================================================================
   - moniker: ext-eac

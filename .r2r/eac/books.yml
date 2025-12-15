@@ -273,3 +273,37 @@ books:
           title: "Module Dependencies"
           description: "Dependency relationships between modules"
         order: 2
+
+  # ==============================================================================
+  # Release Evidence (for release module)
+  # ==============================================================================
+  - name: release-evidence
+    title: "Release Evidence Package"
+    description: "Documentation of all module versions included in a release bundle"
+    output: pdf-dark
+    site_url: "https://ready-to-release.github.io/eac/"
+
+    sources:
+      # Assets for PDF rendering
+      - type: copy
+        from: "docs/assets/**"
+        to: "assets/"
+        exclude:
+          - "docs/assets/lfs/pdf/**"
+
+      # Dynamic content - module versions and release info
+      - type: command
+        command: "show modules"
+        target: "modules.md"
+        frontmatter:
+          title: "Included Modules"
+          description: "All modules in this release bundle"
+        order: 1
+
+      - type: command
+        command: "show dependencies"
+        target: "dependencies.md"
+        frontmatter:
+          title: "Module Dependencies"
+          description: "Dependency graph for included modules"
+        order: 2
