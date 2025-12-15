@@ -148,7 +148,7 @@ jobs:
           fetch-depth: 0
 
       - name: Download commands binary
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: commands-binary
           path: out/tools
@@ -334,7 +334,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Download commands binary
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: commands-binary
           path: out/tools
@@ -404,7 +404,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Download commands binary
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: commands-binary
           path: out/tools
