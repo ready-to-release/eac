@@ -59,7 +59,7 @@ jobs:
         uses: ./.github/actions/build-module
         with:
           module: repository
-          trigger-run-id: ${{ github.run_id }}
+          # No trigger-run-id: this IS the trigger workflow, build from source
           setup-deps: auto
           upload-artifact: 'false'
 
