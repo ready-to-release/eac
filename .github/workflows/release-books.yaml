@@ -196,6 +196,7 @@ jobs:
               --title "PDF Books $VERSION" \
               --notes-file release_notes.md \
               --target "${{ github.sha }}" \
+              --prerelease \
               --latest=false \
               $PDF_FILES
           else
@@ -204,6 +205,7 @@ jobs:
               --title "PDF Books $VERSION" \
               --notes-file release_notes.md \
               --verify-tag \
+              --prerelease \
               --latest=false \
               $PDF_FILES
           fi

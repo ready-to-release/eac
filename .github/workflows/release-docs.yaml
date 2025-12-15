@@ -184,6 +184,7 @@ jobs:
               --title "Documentation Site $VERSION" \
               --notes-file release_notes.md \
               --target "${{ github.sha }}" \
+              --prerelease \
               --latest=false
           else
             echo "Tag trigger: using existing tag"
@@ -191,6 +192,7 @@ jobs:
               --title "Documentation Site $VERSION" \
               --notes-file release_notes.md \
               --verify-tag \
+              --prerelease \
               --latest=false
           fi
 
