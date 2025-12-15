@@ -56,6 +56,10 @@ on:
         default: false
         type: boolean
 
+concurrency:
+  group: release-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
   actions: write  # Required to trigger workflow_dispatch on release workflows

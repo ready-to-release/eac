@@ -30,6 +30,10 @@ on:
         description: 'Run ID of trigger workflow (for artifact download)'
         default: ''
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   packages: write
