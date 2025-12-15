@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
@@ -25,7 +26,7 @@ func buildReportData(
 	data := &RiskAssessmentReportData{
 		GeneratedAt:      time.Now().Format("2006-01-02 15:04:05 MST"),
 		ProfileName:      filepath.Base(config.ProfilePath),
-		TestSuite:        config.TestSuite,
+		TestSuite:        strings.Join(config.TestSuites, ", "),
 		ModuleResults:    make([]ModuleReportData, len(results)),
 	}
 
@@ -77,6 +78,7 @@ func buildModuleReportData(config *AssessConfig, result *ModuleAssessmentResult)
 		Satisfied:    result.Satisfied,
 		NotSatisfied: result.NotSatisfied,
 		RiskScore:    result.RiskScore,
+		Warnings:     result.Warnings,
 	}
 
 	// Format risk score

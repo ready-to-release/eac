@@ -38,8 +38,17 @@ func WriteEvidence(workspaceRoot, module string, scanner ScannerType, findings i
 		return "", fmt.Errorf("failed to load config: %w", err)
 	}
 
-	// Create output directory (per-module organization)
-	outputDir := filepath.Join(workspaceRoot, cfg.Repository.Paths.Out.Root, cfg.Repository.Paths.Out.Security, module, string(scanner))
+	// Build output directory path
+	// Security path already includes "out" prefix (e.g., "out/security")
+	// Join directly with workspaceRoot like other commands do (build, test, etc.)
+	var outputDir string
+	if filepath.IsAbs(cfg.Repository.Paths.Out.Security) {
+		// If Security is absolute, use it directly
+		outputDir = filepath.Join(cfg.Repository.Paths.Out.Security, module, string(scanner))
+	} else {
+		// If Security is relative, join with workspaceRoot
+		outputDir = filepath.Join(workspaceRoot, cfg.Repository.Paths.Out.Security, module, string(scanner))
+	}
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create output directory: %w", err)
 	}

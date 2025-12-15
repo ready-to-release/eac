@@ -280,14 +280,15 @@ func (r *GoRunner) Execute(pkgPath string, tests []testing.TestReference, tuiWri
 		if cfg.SuiteTagFilter != "" {
 			cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_SUITE_TAGS=%s", cfg.SuiteTagFilter))
 		}
+
+		// Always set report output for godog tests
+		cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_OUTPUT_DIR=%s", logDir))
+		cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_REPORT_FORMAT=%s", cfg.ReportFormat))
+
 		if relFeatureFile != "" {
 			relFeaturePath, _ := filepath.Rel(actualPkgDir, filepath.Join(cfg.WorkspaceRoot, relFeatureFile))
 			relFeaturePath = filepath.ToSlash(relFeaturePath)
 			cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_PATHS=%s", relFeaturePath))
-
-			// Set report output for feature files
-			cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_OUTPUT_DIR=%s", logDir))
-			cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_REPORT_FORMAT=%s", cfg.ReportFormat))
 		}
 	}
 

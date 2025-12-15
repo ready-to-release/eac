@@ -11,7 +11,7 @@ type RiskAssessmentReportData struct {
 	GeneratedAt       string
 	ScopeDescription  string // "Full Assessment (all 19 modules)" or "Subset Assessment (3 of 19 modules)"
 	ProfileName       string
-	TestSuite         string
+	TestSuite         string // Comma-separated list of test suites (singular for template compatibility)
 
 	// Executive summary
 	Summary ExecutiveSummary
@@ -46,6 +46,7 @@ type ModuleReportData struct {
 	NotSatisfiedControls      []string
 	NotSatisfiedFindings      []FindingData
 	ReportPath                string
+	Warnings                  []string // Evidence collection warnings
 }
 
 // FindingData holds simplified finding information

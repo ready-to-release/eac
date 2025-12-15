@@ -222,6 +222,16 @@ func RunTrivyVuln(moduleRoot string, severityFilter []Severity, trivyImage strin
 		return nil, fmt.Errorf("trivy returned non-JSON output (likely an error): %s", outputPreview)
 	}
 
+	// Normalize Trivy output: ensure Results field exists
+	// When no vulnerabilities are found, Trivy omits the Results field entirely.
+	// We add an empty array for consistency and clarity.
+	if findingsMap, ok := findings.(map[string]interface{}); ok {
+		if findingsMap["Results"] == nil {
+			findingsMap["Results"] = []interface{}{}
+			logger.Debug("Normalized Trivy output: added empty Results array (no vulnerabilities found)")
+		}
+	}
+
 	return findings, nil
 }
 

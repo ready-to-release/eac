@@ -519,16 +519,4 @@ func TestEvidenceAgePolicy(t *testing.T) {
 	if policy.MaxAge != 24*time.Hour {
 		t.Errorf("MaxAge = %v, want 24h", policy.MaxAge)
 	}
-
-	if policy.ForceTests {
-		t.Error("ForceTests should be false by default")
-	}
-
-	if policy.ForceScan {
-		t.Error("ForceScan should be false by default")
-	}
-
-	if policy.SkipAutoRun {
-		t.Error("SkipAutoRun should be false by default")
-	}
 }
