@@ -131,7 +131,7 @@ jobs:
           docker images ext-eac:ci-test
 
       - name: Download r2r-cli Artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: build-artifacts-r2r-cli-for-ext-eac
           path: out/build/
