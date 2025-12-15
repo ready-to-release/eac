@@ -184,12 +184,11 @@ func FindTestResultsForModule(workspaceRoot, moduleName string) (*TestResults, e
 }
 
 // FindAcceptanceTestResults finds acceptance test results for a module.
-// Checks both the timestamped directory and the acceptance subdirectory.
-// Recursively scans subdirectories to handle test-package organization.
+// Scans out/test/<module>/packages/ for cucumber JSON files.
 func FindAcceptanceTestResults(workspaceRoot, moduleName string) ([]string, error) {
 	var acceptanceFiles []string
 
-	// Check module test output directory
+	// Check module test output directory: out/test/<module>/packages/
 	moduleDir := config.GetTestModuleOutputPath(workspaceRoot, moduleName)
 	packagesDir := filepath.Join(moduleDir, "packages")
 
@@ -197,25 +196,16 @@ func FindAcceptanceTestResults(workspaceRoot, moduleName string) ([]string, erro
 		return acceptanceFiles, nil
 	}
 
-	// Also check acceptance directory: out/test/acceptance/<module>/
-	cfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot})
-	if err != nil {
-		return acceptanceFiles, nil // Return what we have so far
-	}
-	acceptanceDir := cfg.Repository.TestModuleOutputPathAbs(workspaceRoot, "acceptance", moduleName)
-
-	// Recursively scan acceptance directory for cucumber files
-	if _, err := os.Stat(acceptanceDir); err == nil {
-		filepath.WalkDir(acceptanceDir, func(path string, d os.DirEntry, err error) error {
-			if err != nil {
-				return nil // Continue on errors
-			}
-			if !d.IsDir() && isCucumberFile(d.Name()) {
-				acceptanceFiles = append(acceptanceFiles, path)
-			}
-			return nil
-		})
-	}
+	// Recursively scan packages directory for cucumber files
+	filepath.WalkDir(packagesDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return nil // Continue on errors
+		}
+		if !d.IsDir() && isCucumberFile(d.Name()) {
+			acceptanceFiles = append(acceptanceFiles, path)
+		}
+		return nil
+	})
 
 	return acceptanceFiles, nil
 }
