@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	designInternal "github.com/ready-to-release/eac/go/eac/commands/impl/design/helper"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
@@ -40,20 +41,17 @@ func ValidateDesign() int {
 
 	var module string
 	var file string
-	var all bool
-	var verbose bool
 
-	// Parse arguments
+	// Use shared flags package for boolean flags
+	all := flags.HasFlag(args, "--all", "-a")
+	verbose := flags.HasFlag(args, "--verbose", "-v")
+	debug := flags.ParseDebugFlag(args) // Accepted but currently unused
+
+	// Parse value flags and positional args
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 
 		switch {
-		case arg == "--all" || arg == "-a":
-			all = true
-		case arg == "--debug" || arg == "-d":
-			// debug flag accepted but ignored (no logger)
-		case arg == "--verbose" || arg == "-v":
-			verbose = true
 		case arg == "--help" || arg == "-h":
 			printDesignValidateUsage()
 			return 0
@@ -64,14 +62,17 @@ func ValidateDesign() int {
 		case (arg == "--file" || arg == "-f") && i+1 < len(args):
 			i++
 			file = args[i]
-		case arg[0] != '-':
+		case !strings.HasPrefix(arg, "-"):
 			module = arg
+		case arg == "-a" || arg == "--all" || arg == "-v" || arg == "--verbose" || arg == "-d" || arg == "--debug":
+			// Already handled by shared flags package
 		default:
 			log.Errorf("unknown flag: %s", arg)
 			printDesignValidateUsage()
 			return 1
 		}
 	}
+	_ = debug // Suppress unused variable warning
 
 	// Initialize logger
 	repoRoot, err := repository.GetRepositoryRoot("")

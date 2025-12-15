@@ -1,11 +1,13 @@
 // Command: create risk-assess
-// Short: Update OSCAL assessment-results with test and security evidence
-// Long: The create risk-assess command creates or updates OSCAL assessment-results for modules
-// Long: by collecting test results and security scan evidence. It maps @control tags in
+// Short: Create OSCAL assessment-results from existing test and security evidence
+// Long: The create risk-assess command creates OSCAL assessment-results for modules
+// Long: by reading existing test results and security scan evidence. It maps @control tags in
 // Long: feature files to OSCAL control IDs and determines satisfied/not-satisfied status.
 // Long:
-// Long: Tests are run automatically to get the latest results. Security scans are cached
-// Long: and re-run only if older than the specified max-evidence-age (default: 24 hours).
+// Long: This command does NOT run tests or scans. It only reads existing evidence.
+// Long: The command will warn (but continue) if:
+// Long: - Evidence is missing
+// Long: - Evidence is older than max-evidence-age (default: 24h)
 // Long:
 // Long: Evidence is collected from:
 // Long: - Test results: out/test/<module>/*.json
@@ -14,12 +16,10 @@
 // Long: Expected Output:
 // Long: - OSCAL assessment-results JSON file
 // Long: - Control status (satisfied/not-satisfied) based on test results
-// Long: - Evidence from out/test/ and out/security/
+// Long: - Risk assessment reports in Markdown format
 // Flag.profile: type=string, shorthand=p, required=true, usage=Path to OSCAL profile JSON file
-// Flag.max-evidence-age: type=string, default=24h, usage=Maximum age for security evidence before auto-refresh (e.g., 24h, 7d)
-// Flag.force-scan: type=bool, default=false, usage=Force re-run security scans regardless of age
-// Flag.skip-auto-run: type=bool, default=false, usage=Use existing evidence only, fail if missing
-// Flag.suite: type=string, default=acceptance, usage=Test suite to run (e.g., acceptance, component)
+// Flag.max-evidence-age: type=string, default=24h, usage=Maximum age for evidence before warning (e.g., 24h, 7d)
+// Flag.suites: type=[]string, default=all, usage=Test suites to check for evidence (e.g., all, integration, acceptance)
 // Flag.report-template: type=string, default=risk-assessment-detailed, usage=Report template variant (risk-assessment, risk-assessment-summary, risk-assessment-detailed)
 // Flag.sequential: type=bool, default=false, usage=Run assessments sequentially instead of parallel
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Save intermediate outputs to out/logs/risk/
@@ -37,6 +37,7 @@ import (
 	"go.uber.org/zap"
 
 	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/oscal"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/scoring"
 	sharedTemplate "github.com/ready-to-release/eac/go/eac/commands/internal/template"
@@ -58,17 +59,14 @@ type AssessConfig struct {
 	Modules        []string // Module names to assess
 	ProfilePath    string
 	MaxEvidenceAge time.Duration
-	ForceTests     bool
-	ForceScan      bool
-	SkipAutoRun    bool
 	Sequential     bool // Disable parallel execution
 	Debug          bool
 	WorkspaceRoot  string
 	Logger         *logging.Logger
-	Timestamp      string // Timestamp for this assessment run (format: 2006-01-02T15-04-05)
-	OutputDir      string // Base output directory for this run: out/risk/<timestamp>/
-	TestSuite      string // Test suite to run (default: acceptance)
-	ReportTemplate string // Report template variant (default: risk-assessment-detailed)
+	Timestamp      string   // Timestamp for this assessment run (format: 2006-01-02T15-04-05)
+	OutputDir      string   // Base output directory for this run: out/risk/<timestamp>/
+	TestSuites     []string // Test suites to check (default: integration)
+	ReportTemplate string   // Report template variant (default: risk-assessment-detailed)
 }
 
 // ModuleAssessmentResult holds the results of assessing a single module.
@@ -80,6 +78,7 @@ type ModuleAssessmentResult struct {
 	NotSatisfied      int
 	RiskScore         *scoring.RiskScore
 	Error             error
+	Warnings          []string // Evidence collection warnings
 }
 
 // CreateRiskAssess is the entry point for the create risk-assess command.
@@ -142,11 +141,6 @@ func CreateRiskAssess() int {
 	assessLog.Infof("Loaded profile with %d controls: %s", len(controlIDs), strings.Join(controlIDs, ", "))
 	assessLog.Info("")
 
-	// Pre-run tests for all modules if needed (before parallel assessment)
-	if err := preRunTestsForModules(config); err != nil {
-		assessLog.Warnf("Test pre-run completed with warnings: %v", err)
-	}
-
 	// Run assessments (parallel or sequential)
 	var results []*ModuleAssessmentResult
 
@@ -174,13 +168,20 @@ func CreateRiskAssess() int {
 			assessLog.Errorf("Module %s failed: %v", result.Module, result.Error)
 		} else {
 			successfulResults = append(successfulResults, result)
+			// Display warnings for this module if any
+			if len(result.Warnings) > 0 {
+				for _, warning := range result.Warnings {
+					assessLog.Warnf("[%s] %s", result.Module, warning)
+				}
+			}
 		}
 	}
 
 	// Create aggregated report file
 	if len(successfulResults) > 0 {
 		if err := writeAggregatedReport(config, successfulResults, profile); err != nil {
-			assessLog.Warnf("Failed to write aggregated report: %v", err)
+			assessLog.Errorf("⚠️  Failed to write aggregated report: %v", err)
+			assessLog.Error("Individual module reports are still available in module subdirectories")
 		}
 	}
 
@@ -223,15 +224,20 @@ func parseAssessConfig() (*AssessConfig, error) {
 
 	config := &AssessConfig{
 		MaxEvidenceAge: 24 * time.Hour,
-		TestSuite:      "acceptance",               // Default to acceptance suite
+		TestSuites:     []string{"all"},            // Default to all test suites
 		ReportTemplate: "risk-assessment-detailed", // Default to detailed template
 	}
+
+	// Parse debug flag using shared package
+	config.Debug = flags.ParseDebugFlag(args)
+	config.Sequential = flags.HasFlag(args, "--sequential", "")
 
 	// Get workspace root
 	workspaceRoot, err := registry.GetWorkspaceRoot()
 	if err != nil {
 		return nil, fmt.Errorf("failed to find workspace root: %w", err)
 	}
+
 	config.WorkspaceRoot = workspaceRoot
 
 	// Collect positional arguments (module names) before flags
@@ -293,32 +299,17 @@ func parseAssessConfig() (*AssessConfig, error) {
 			config.MaxEvidenceAge = duration
 			i += 2
 
-		case arg == "--force-tests":
-			config.ForceTests = true
-			i++
-
-		case arg == "--force-scan":
-			config.ForceScan = true
-			i++
-
-		case arg == "--skip-auto-run":
-			config.SkipAutoRun = true
-			i++
-
-		case arg == "--sequential":
-			config.Sequential = true
-			i++
-
-		case arg == "--debug" || arg == "-d":
-			config.Debug = true
-			i++
-
-		case arg == "--suite":
+		case arg == "--suites":
 			if i+1 >= len(args) {
-				return nil, fmt.Errorf("--suite requires a value")
+				return nil, fmt.Errorf("--suites requires at least one value")
 			}
-			config.TestSuite = args[i+1]
-			i += 2
+			// Collect all suite names until next flag
+			config.TestSuites = []string{}
+			i++
+			for i < len(args) && !strings.HasPrefix(args[i], "-") {
+				config.TestSuites = append(config.TestSuites, args[i])
+				i++
+			}
 
 		case arg == "--report-template":
 			if i+1 >= len(args) {
@@ -339,6 +330,10 @@ func parseAssessConfig() (*AssessConfig, error) {
 			}
 			config.ReportTemplate = template
 			i += 2
+
+		case arg == "--debug" || arg == "-d" || arg == "--sequential":
+			// Already handled by shared flags package
+			i++
 
 		case strings.HasPrefix(arg, "-"):
 			return nil, fmt.Errorf("unknown flag: %s", arg)
@@ -402,16 +397,6 @@ Try:
 		return nil, fmt.Errorf("--profile flag is required")
 	}
 
-	// Validate flag combinations
-	if config.SkipAutoRun {
-		if config.ForceTests {
-			return nil, fmt.Errorf("--skip-auto-run conflicts with --force-tests")
-		}
-		if config.ForceScan {
-			return nil, fmt.Errorf("--skip-auto-run conflicts with --force-scan")
-		}
-	}
-
 	return config, nil
 }
 
@@ -419,7 +404,10 @@ Try:
 func showAssessHelp() {
 	help := `Usage: create risk-assess [module...] --profile <path> [flags]
 
-Update OSCAL assessment-results with test and security evidence
+Create OSCAL assessment-results from existing test and security evidence
+
+NOTE: This command does NOT run tests or scans. It only reads existing evidence.
+      The command will warn (but continue) if evidence is missing or too old.
 
 Arguments:
   module...            Module name(s) to assess (space-separated)
@@ -429,12 +417,11 @@ Required Flags:
   -p, --profile <path>               Path to OSCAL profile JSON file
 
 Optional Flags:
-      --suite <name>                 Test suite to run (default: acceptance)
-                                     Options: acceptance, commit, production-verification
-      --max-evidence-age <duration>  Maximum age for evidence (default: 24h)
-      --force-tests                  Force re-run tests regardless of age
-      --force-scan                   Force re-run security scans regardless of age
-      --skip-auto-run                Use existing evidence only, fail if missing
+      --suites <name...>             Test suites to check for evidence (default: all)
+                                     Can specify multiple: --suites integration acceptance
+                                     Options: all, integration, acceptance, commit, production-verification
+      --max-evidence-age <duration>  Maximum age for evidence before warning (default: 24h)
+                                     Evidence older than this will be flagged in the report
       --sequential                   Run assessments sequentially (default: parallel)
   -d, --debug                        Save intermediate outputs to out/logs/risk/
 
@@ -446,23 +433,23 @@ Output:
     └── ...
 
 Examples:
-  # Assess all modules with acceptance tests (default)
+  # Assess all modules with all test suites (default)
   create risk-assess --profile specs/.risk-controls/risk-profile.json
 
   # Assess specific modules (parallel, space-separated)
   create risk-assess billing api auth --profile specs/.risk-controls/risk-profile.json
 
-  # Use different test suite
-  create risk-assess --profile specs/.risk-controls/risk-profile.json --suite component
+  # Check specific test suites
+  create risk-assess --profile specs/.risk-controls/risk-profile.json --suites integration acceptance
+
+  # Use single test suite
+  create risk-assess --profile specs/.risk-controls/risk-profile.json --suites component
 
   # Assess single module with production tests
-  create risk-assess billing --profile specs/.risk-controls/risk-profile.json --suite production-verification
+  create risk-assess billing --profile specs/.risk-controls/risk-profile.json --suites production-verification
 
   # Sequential execution for debugging
   create risk-assess --profile specs/.risk-controls/risk-profile.json --sequential
-
-  # Force fresh evidence for all modules
-  create risk-assess --profile specs/.risk-controls/risk-profile.json --force-tests
 
   # Set custom evidence freshness threshold
   create risk-assess data --profile specs/.risk-controls/risk-profile.json --max-evidence-age 1h
@@ -521,7 +508,7 @@ func generateMarkdownReport(config *AssessConfig, results []*ModuleAssessmentRes
 
 	// Use selected template variant
 	templateName := config.ReportTemplate + ".md"
-	templatePath := filepath.Join(config.WorkspaceRoot, cfg.Repository.Paths.Templates, "reports", templateName)
+	templatePath := filepath.Join(config.WorkspaceRoot, cfg.Repository.Paths.Templates, "reports", "risk", templateName)
 	renderer := sharedTemplate.NewRenderer(templatePath)
 
 	return renderer.RenderToString(reportData)

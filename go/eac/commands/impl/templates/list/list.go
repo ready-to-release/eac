@@ -23,6 +23,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/templates/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	eacConfig "github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
@@ -218,15 +219,16 @@ func parseConfig() (*Config, error) {
 		args = os.Args[3:]
 	}
 
-	// Parse flags manually
+	// Parse flags using shared package
 	var templateSource string
-	debug := false
+	debug := flags.ParseDebugFlag(args)
 
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 		switch arg {
 		case "--debug", "-d":
-			debug = true
+			// Already handled by shared flags package
+			continue
 		case "--template":
 			if i+1 < len(args) {
 				templateSource = args[i+1]

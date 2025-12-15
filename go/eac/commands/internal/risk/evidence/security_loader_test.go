@@ -6,15 +6,14 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
-
-	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 func TestFindLatestSecurityScan(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	// Create out/scan/billing/vuln directory structure
-	vulnDir := filepath.Join(tmpDir, paths.OutDir, paths.SecurityDir, "billing", "vuln")
+	// Create out/security/billing/vuln directory structure
+	// (using default security path from contract defaults)
+	vulnDir := filepath.Join(tmpDir, "out", "security", "billing", "vuln")
 	os.MkdirAll(vulnDir, 0755)
 
 	// Create security scan files with timestamps
@@ -87,8 +86,9 @@ func TestFindSecurityResultsForModule(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create security scan files for billing module
-	vulnDir := filepath.Join(tmpDir, paths.OutDir, paths.SecurityDir, "billing", "vuln")
-	sbomDir := filepath.Join(tmpDir, paths.OutDir, paths.SecurityDir, "billing", "sbom")
+	// (using default security path from contract defaults)
+	vulnDir := filepath.Join(tmpDir, "out", "security", "billing", "vuln")
+	sbomDir := filepath.Join(tmpDir, "out", "security", "billing", "sbom")
 	os.MkdirAll(vulnDir, 0755)
 	os.MkdirAll(sbomDir, 0755)
 
@@ -518,17 +518,5 @@ func TestEvidenceAgePolicy(t *testing.T) {
 
 	if policy.MaxAge != 24*time.Hour {
 		t.Errorf("MaxAge = %v, want 24h", policy.MaxAge)
-	}
-
-	if policy.ForceTests {
-		t.Error("ForceTests should be false by default")
-	}
-
-	if policy.ForceScan {
-		t.Error("ForceScan should be false by default")
-	}
-
-	if policy.SkipAutoRun {
-		t.Error("SkipAutoRun should be false by default")
 	}
 }

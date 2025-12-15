@@ -32,6 +32,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/specs"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/oscal"
 	aimock "github.com/ready-to-release/eac/go/eac/core/ai"
@@ -491,13 +492,15 @@ func parseConfig() (*SpecsConfig, error) {
 	var description string
 
 	args := os.Args[3:] // Skip program name, "create", and "spec"
+
+	// Parse flags using shared package
+	config.Debug = flags.ParseDebugFlag(args)
+	config.Force = flags.HasFlag(args, "--force", "")
+
+	// Parse value flags
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 		switch arg {
-		case "-d", "--debug":
-			config.Debug = true
-		case "--force":
-			config.Force = true
 		case "-m", "--module":
 			if i+1 < len(args) {
 				config.Module = args[i+1]
