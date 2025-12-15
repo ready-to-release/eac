@@ -248,6 +248,9 @@ modules:
     depends_on:
       - eac-core
       - r2r-config
+    # books:
+    #   - repository-report # PDF (output: pdf-dark)
+    #   - risk-evidence-package # PDF (output: pdf-dark)
     files:
       root: /
       config:
