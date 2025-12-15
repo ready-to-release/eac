@@ -3,6 +3,7 @@ nav:
   - architecture.md
   - viewing-architecture.md
   - modules.md
+  - dependency-system.md
   - module-types-reference.md
   - contracts.md
   - repository-layout.md

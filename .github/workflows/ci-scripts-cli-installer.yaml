@@ -55,6 +55,7 @@ jobs:
           trigger-run-id: ${{ inputs.trigger_run_id }}
           commit-sha: ${{ inputs.sha || github.sha }}
           # Build r2r-cli dependency for all platforms (including Windows) to support cross-platform tests
+          no-deps: 'false'
           extra-args: --all
 
   test-linux:

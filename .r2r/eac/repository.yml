@@ -130,7 +130,7 @@ modules:
     versioning:
       scheme: CalVer
     depends_on:
-      - docs
+      - books #set to whatever is last, so we are always really last
     books:
       - release-evidence
     release_bundle:
@@ -166,6 +166,7 @@ modules:
       scheme: SemVer
     depends_on:
       - eac-commands
+      - r2r-cli
     build:
       artifacts:
         - id: image
