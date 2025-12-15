@@ -47,6 +47,12 @@ inputs:
       Default: true (CI isolation). Set to false only for integration builds that need deps.
     required: false
     default: 'true'
+  cross-compile-windows:
+    description: |
+      Cross-compile for Windows when building on Linux. Default: false.
+      Set to true only for workflows that have Windows test jobs (r2r-cli, scripts-*).
+    required: false
+    default: 'false'
 
 outputs:
   artifact-name:
@@ -65,6 +71,7 @@ runs:
       with:
         go-version: ${{ inputs.go-version }}
         trigger-run-id: ${{ inputs.trigger-run-id }}
+        cross-compile-windows: ${{ inputs.cross-compile-windows }}
 
     - name: Setup Module Dependencies
       if: inputs.setup-deps != 'none'
@@ -126,7 +133,7 @@ runs:
           fi
 
           # Find successful run from current trigger chain (same SHA)
-          # trigger-ci dispatches in layers and waits, so deps should be complete
+          # change-trigger dispatches in layers and waits, so deps should be complete
           CURRENT_RUN=$(gh run list -w "ci-${dep}.yaml" -s success -L 5 --json databaseId,headSha \
             | jq -r ".[] | select(.headSha == \"$ARTIFACT_SHA\") | .databaseId" | head -1 2>/dev/null || echo "")
 
@@ -176,51 +183,6 @@ runs:
           exit 1
         fi
 
-    - name: Pre-Upload Diagnostics
-      if: inputs.upload-artifact == 'true'
-      shell: bash
-      env:
-        MODULE: ${{ inputs.module }}
-      run: |
-        echo "=== Pre-Upload Artifact Diagnostics ==="
-        echo "Module: $MODULE"
-        echo "Upload path: out/build/"
-        echo ""
-
-        if [ ! -d "out/build" ]; then
-          echo "❌ ERROR: out/build directory does not exist!"
-          ls -la out/ 2>/dev/null || echo "out/ directory also missing"
-          exit 1
-        fi
-
-        echo "Directory structure:"
-        find out/build -type d 2>/dev/null | head -20 || true
-        echo ""
-
-        echo "All files to upload:"
-        find out/build -type f 2>/dev/null | head -50 || true
-        echo ""
-
-        echo "Total files: $(find out/build -type f | wc -l)"
-        echo "Total size: $(du -sh out/build | cut -f1)"
-        echo ""
-
-        # Check for manifest files specifically
-        echo "Manifest files:"
-        find out/build -name "build.manifest.json" -type f
-        MANIFEST_COUNT=$(find out/build -name "build.manifest.json" -type f | wc -l)
-        echo "Found $MANIFEST_COUNT manifest file(s)"
-
-        # Verify module manifest exists
-        if [ -f "out/build/$MODULE/build.manifest.json" ]; then
-          echo "✓ Module manifest exists: out/build/$MODULE/build.manifest.json"
-          echo "  Size: $(stat -c%s "out/build/$MODULE/build.manifest.json" 2>/dev/null || stat -f%z "out/build/$MODULE/build.manifest.json" 2>/dev/null) bytes"
-        else
-          echo "❌ ERROR: Module manifest missing: out/build/$MODULE/build.manifest.json"
-          echo "Contents of out/build/$MODULE/:"
-          ls -la "out/build/$MODULE/" 2>/dev/null || echo "  Directory does not exist"
-        fi
-
     - name: Upload Build Artifacts (including dependencies)
       id: upload
       if: inputs.upload-artifact == 'true'
@@ -229,17 +191,6 @@ runs:
         name: ${{ steps.vars.outputs.artifact-name }}
         path: out/build/
         if-no-files-found: error
-
-    - name: Post-Upload Diagnostics
-      if: inputs.upload-artifact == 'true'
-      shell: bash
-      env:
-        MODULE: ${{ inputs.module }}
-        ARTIFACT_NAME: ${{ steps.vars.outputs.artifact-name }}
-      run: |
-        echo "=== Post-Upload Diagnostics ==="
-        echo "Artifact name: $ARTIFACT_NAME"
-        echo "Upload completed successfully"
 
     - name: Build Summary
       if: always()

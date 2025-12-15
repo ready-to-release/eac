@@ -8,11 +8,16 @@
 // Long:
 // Long: The validation includes:
 // Long: - Target module artifacts (executables, files, directories, etc.)
-// Long: - All transitive dependency artifacts (recursive check)
+// Long: - All transitive dependency artifacts (recursive check, unless --no-deps)
 // Long: - Platform-specific artifacts for current platform (or all if built)
 // Long: - Marker files for modules with no traditional build outputs
 // Long:
 // Long: Validation failures indicate missing artifacts that must be built before testing.
+// Long:
+// Long: Flags:
+// Long:   --no-deps    Skip validation of transitive dependencies (for release workflows)
+// Long:   --os         Target OS for platform-specific artifacts
+// Long:   --arch       Target architecture for platform-specific artifacts
 // Long:
 // Long: Expected Output:
 // Long:   Displays validation results for target module and all dependency artifacts.
@@ -22,6 +27,7 @@
 // Long: Example:
 // Long:   validate artifacts eac-commands
 // Long:   validate artifacts r2r-cli --all-platforms
+// Long:   validate artifacts docs --no-deps       # Release context: skip deps
 package validate
 
 import (
@@ -53,6 +59,7 @@ func ValidateArtifacts() int {
 	moduleName := args[0]
 	targetOS := runtime.GOOS
 	targetArch := runtime.GOARCH
+	noDeps := false
 
 	// Parse flags
 	for i := 1; i < len(args); i++ {
@@ -64,13 +71,15 @@ func ValidateArtifacts() int {
 		case arg == "--arch" && i+1 < len(args):
 			targetArch = args[i+1]
 			i++
+		case arg == "--no-deps":
+			noDeps = true
 		}
 	}
 
-	return validateArtifactsForModule(moduleName, targetOS, targetArch)
+	return validateArtifactsForModule(moduleName, targetOS, targetArch, noDeps)
 }
 
-func validateArtifactsForModule(moduleName, targetOS, targetArch string) int {
+func validateArtifactsForModule(moduleName, targetOS, targetArch string, noDeps bool) int {
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
@@ -98,10 +107,18 @@ func validateArtifactsForModule(moduleName, targetOS, targetArch string) int {
 		return 1
 	}
 
-	// Validate artifacts for module and all dependencies
-	results, err := implinternal.ValidateArtifactsWithDependencies(
-		moduleName, cfg, moduleRegistry, targetOS, targetArch, workspaceRoot,
-	)
+	var results *implinternal.ValidationResults
+	if noDeps {
+		// Validate only target module (for release workflows)
+		results, err = implinternal.ValidateArtifactsTargetOnly(
+			moduleName, cfg, moduleRegistry, targetOS, targetArch, workspaceRoot,
+		)
+	} else {
+		// Validate artifacts for module and all dependencies
+		results, err = implinternal.ValidateArtifactsWithDependencies(
+			moduleName, cfg, moduleRegistry, targetOS, targetArch, workspaceRoot,
+		)
+	}
 	if err != nil {
 		log.Errorf("validation error: %v", err)
 		return 1

@@ -1,0 +1,207 @@
+# Check Pending Releases Action
+#
+# Checks for pending releases from two sources:
+# 1. Semver modules: changelog versions without corresponding git tags
+# 2. Calver modules: modules with CI triggered that auto-release on every push
+#
+# Returns the list of modules needing release along with execution order based on
+# their dependency graph.
+#
+# Usage:
+#   - uses: ./.github/actions/check-pending-releases
+#     id: pending
+#     with:
+#       dispatched-modules: "docs books r2r-cli"  # modules that had CI run
+#   - run: echo "${{ steps.pending.outputs.has_pending }}"
+
+name: Check Pending Releases
+description: Check for pending semver releases (changelog) and calver releases (CI triggered)
+
+inputs:
+  module:
+    description: 'Module to check (or empty for all)'
+    required: false
+    default: ''
+  dispatched-modules:
+    description: 'Space-separated list of modules that had CI dispatched (for calver detection)'
+    required: false
+    default: ''
+  calver-modules:
+    description: 'Space-separated list of calver modules that auto-release on CI pass'
+    required: false
+    default: 'docs books'
+
+outputs:
+  has_pending:
+    description: 'true if there are pending releases'
+    value: ${{ steps.combine.outputs.has_pending }}
+  modules_json:
+    description: 'JSON array of modules needing release [{module, version, tag, type}]'
+    value: ${{ steps.combine.outputs.modules_json }}
+  layers_json:
+    description: 'JSON array of layers for dependency-ordered release [[layer0], [layer1], ...]'
+    value: ${{ steps.order.outputs.layers_json }}
+  layer_count:
+    description: 'Number of dependency layers'
+    value: ${{ steps.order.outputs.layer_count }}
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Commands Binary
+      id: commands
+      uses: ./.github/actions/setup-commands
+
+    - name: Check semver pending releases
+      id: semver
+      shell: bash
+      run: |
+        COMMANDS="${{ steps.commands.outputs.commands-path }}"
+        MODULE="${{ inputs.module }}"
+
+        if [ -n "$MODULE" ]; then
+          RESULT=$($COMMANDS release tag-pending "$MODULE")
+        else
+          RESULT=$($COMMANDS release tag-pending --all)
+        fi
+
+        echo "Semver tag-pending result:"
+        echo "$RESULT" | jq .
+
+        # Parse result (handles both single and multi-module responses)
+        if echo "$RESULT" | jq -e '.has_pending' > /dev/null 2>&1; then
+          # Multi-module response
+          MODULES_JSON=$(echo "$RESULT" | jq -c '[.results[] | select(.needs_tag == true) | . + {type: "semver"}]')
+        else
+          # Single module response
+          NEEDS_TAG=$(echo "$RESULT" | jq -r '.needs_tag')
+          if [ "$NEEDS_TAG" = "true" ]; then
+            MODULES_JSON=$(echo "[$RESULT]" | jq -c '[.[] | . + {type: "semver"}]')
+          else
+            MODULES_JSON="[]"
+          fi
+        fi
+
+        echo "semver_modules=$MODULES_JSON" >> $GITHUB_OUTPUT
+
+    - name: Check calver pending releases
+      id: calver
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        COMMANDS="${{ steps.commands.outputs.commands-path }}"
+        DISPATCHED="${{ inputs.dispatched-modules }}"
+        CALVER_MODULES="${{ inputs.calver-modules }}"
+
+        echo "Dispatched modules: $DISPATCHED"
+        echo "Calver modules: $CALVER_MODULES"
+
+        CALVER_PENDING="[]"
+
+        for calver_mod in $CALVER_MODULES; do
+          # Check if this calver module was dispatched (CI was triggered)
+          if echo "$DISPATCHED" | grep -qw "$calver_mod"; then
+            echo "  $calver_mod: CI was dispatched - will release"
+
+            # Generate calver version (YYYY.MMDD.HHMM)
+            VERSION=$(date -u +"%Y.%m%d.%H%M")
+            TAG="${calver_mod}/${VERSION}"
+
+            CALVER_PENDING=$(echo "$CALVER_PENDING" | jq -c ". + [{\"module\": \"$calver_mod\", \"version\": \"$VERSION\", \"tag\": \"$TAG\", \"needs_tag\": true, \"type\": \"calver\"}]")
+          else
+            echo "  $calver_mod: CI not dispatched - skipping"
+          fi
+        done
+
+        echo "Calver pending:"
+        echo "$CALVER_PENDING" | jq .
+
+        echo "calver_modules=$CALVER_PENDING" >> $GITHUB_OUTPUT
+
+    - name: Combine pending releases
+      id: combine
+      shell: bash
+      run: |
+        SEMVER_JSON='${{ steps.semver.outputs.semver_modules }}'
+        CALVER_JSON='${{ steps.calver.outputs.calver_modules }}'
+
+        # Combine semver and calver pending releases
+        COMBINED=$(echo "$SEMVER_JSON $CALVER_JSON" | jq -s 'add')
+
+        PENDING_COUNT=$(echo "$COMBINED" | jq 'length')
+
+        if [ "$PENDING_COUNT" -gt 0 ]; then
+          HAS_PENDING="true"
+        else
+          HAS_PENDING="false"
+        fi
+
+        echo "Combined pending releases ($PENDING_COUNT):"
+        echo "$COMBINED" | jq .
+
+        echo "has_pending=$HAS_PENDING" >> $GITHUB_OUTPUT
+        echo "modules_json=$COMBINED" >> $GITHUB_OUTPUT
+
+        # Extract just the module names for execution order calculation
+        PENDING_MODULES=$(echo "$COMBINED" | jq -r '.[].module' | tr '\n' ' ')
+        echo "pending_modules=$PENDING_MODULES" >> $GITHUB_OUTPUT
+
+    - name: Calculate execution order
+      id: order
+      if: steps.combine.outputs.has_pending == 'true'
+      shell: bash
+      run: |
+        COMMANDS="${{ steps.commands.outputs.commands-path }}"
+        PENDING_MODULES="${{ steps.combine.outputs.pending_modules }}"
+        MODULES_JSON='${{ steps.combine.outputs.modules_json }}'
+
+        if [ -z "$PENDING_MODULES" ]; then
+          echo "layers_json=[]" >> $GITHUB_OUTPUT
+          echo "layer_count=0" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        echo "Calculating execution order for: $PENDING_MODULES"
+
+        # Get execution order with dependency layers
+        # Use --no-deps to only order the pending modules (don't expand to include their deps)
+        EXEC_ORDER=$($COMMANDS get execution order $PENDING_MODULES --no-deps --as-json 2>/dev/null || echo '{"layers":[],"layer_count":0}')
+
+        echo "Execution order:"
+        echo "$EXEC_ORDER" | jq .
+
+        # Extract layers and enrich with version/tag info
+        LAYERS=$(echo "$EXEC_ORDER" | jq -c '.layers')
+        LAYER_COUNT=$(echo "$EXEC_ORDER" | jq -r '.layer_count')
+
+        # Build enriched layers with version info
+        ENRICHED_LAYERS="[]"
+        for i in $(seq 0 $((LAYER_COUNT - 1))); do
+          LAYER=$(echo "$LAYERS" | jq -c ".[$i]")
+          ENRICHED_LAYER="[]"
+
+          for MODULE in $(echo "$LAYER" | jq -r '.[]'); do
+            # Find this module in the pending modules JSON
+            MODULE_INFO=$(echo "$MODULES_JSON" | jq -c ".[] | select(.module == \"$MODULE\")")
+            if [ -n "$MODULE_INFO" ]; then
+              ENRICHED_LAYER=$(echo "$ENRICHED_LAYER" | jq -c ". + [$MODULE_INFO]")
+            fi
+          done
+
+          ENRICHED_LAYERS=$(echo "$ENRICHED_LAYERS" | jq -c ". + [$ENRICHED_LAYER]")
+        done
+
+        echo ""
+        echo "Enriched layers:"
+        echo "$ENRICHED_LAYERS" | jq .
+
+        echo "layers_json=$ENRICHED_LAYERS" >> $GITHUB_OUTPUT
+        echo "layer_count=$LAYER_COUNT" >> $GITHUB_OUTPUT
+
+    - name: Set empty outputs if no pending
+      if: steps.combine.outputs.has_pending != 'true'
+      shell: bash
+      run: |
+        echo "layers_json=[]" >> $GITHUB_OUTPUT
+        echo "layer_count=0" >> $GITHUB_OUTPUT

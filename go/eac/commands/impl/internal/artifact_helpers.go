@@ -290,6 +290,44 @@ type ValidationResults struct {
 	Passed       bool                     `json:"passed" yaml:"passed"`
 }
 
+// ValidateArtifactsTargetOnly validates artifacts for a single module without checking dependencies.
+// Use this in release workflows where CI already validated and dependencies are not downloaded.
+func ValidateArtifactsTargetOnly(
+	targetModule string,
+	cfg *config.EACConfig,
+	registry *modules.Registry,
+	targetOS, targetArch string,
+	workspaceRoot string,
+) (*ValidationResults, error) {
+	// Load per-module manifest to get requested artifacts and platform info
+	moduleBuildDir := cfg.Repository.BuildOutputPathAbs(workspaceRoot, targetModule)
+	var requestedArtifacts []string
+	manifest, err := LoadModuleManifest(moduleBuildDir)
+	if err == nil && manifest != nil {
+		requestedArtifacts = manifest.GetRequestedArtifacts()
+	}
+
+	// Validate only the target module
+	results := &ValidationResults{
+		TargetModule: targetModule,
+		Modules:      []ModuleValidationResult{},
+	}
+
+	modResult := validateSingleModule(targetModule, targetModule, cfg, registry, targetOS, targetArch, workspaceRoot, requestedArtifacts)
+	results.Modules = append(results.Modules, modResult)
+
+	if modResult.Error != "" || (modResult.Summary != nil && modResult.Summary.Missing > 0) {
+		results.FailedCount++
+	} else {
+		results.PassedCount++
+	}
+
+	results.TotalModules = 1
+	results.Passed = results.FailedCount == 0
+
+	return results, nil
+}
+
 // ValidateArtifactsWithDependencies validates artifacts for a module and all transitive dependencies
 func ValidateArtifactsWithDependencies(
 	targetModule string,

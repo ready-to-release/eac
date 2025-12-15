@@ -57,6 +57,7 @@ jobs:
           # Build eac-commands dependency for all platforms (including Windows) to support cross-platform tests
           no-deps: 'false'
           extra-args: --all
+          cross-compile-windows: 'true'
 
   test-linux:
     name: Test (Linux)

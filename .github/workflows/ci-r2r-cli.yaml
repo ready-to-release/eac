@@ -57,6 +57,7 @@ jobs:
           artifact-name: build-artifacts-r2r-cli
           upload-artifact: 'true'
           extra-args: '--all'
+          cross-compile-windows: 'true'
 
   test-linux:
     name: Test (Linux)
@@ -75,13 +76,6 @@ jobs:
           results-artifact-name: test-results-r2r-cli-linux
           # PRs run component suite only; main/release branches run full suite
           suites: ${{ (inputs.ref != '' && startsWith(inputs.ref, 'refs/pull/')) && 'component' || 'component,integration,acceptance' }}
-
-      - name: Restore Executable Permissions
-        run: |
-          chmod +x out/build/r2r-cli/r2r-linux-amd64
-          chmod +x out/build/r2r-cli/r2r-linux-arm64
-          chmod +x out/build/r2r-cli/r2r-darwin-amd64
-          chmod +x out/build/r2r-cli/r2r-darwin-arm64
 
   test-windows:
     name: Test (Windows)

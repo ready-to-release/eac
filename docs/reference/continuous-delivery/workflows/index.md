@@ -18,7 +18,7 @@ The repository uses GitHub Actions workflows organized into four categories:
 | Reference                                           | Description                                           |
 | --------------------------------------------------- | ----------------------------------------------------- |
 | [Overview](./overview.md)                           | Workflow architecture and design principles           |
-| [Trigger Orchestration](./trigger-orchestration.md) | Change trigger orchestration system (trigger-ci.yaml) |
+| [Trigger Orchestration](./trigger-orchestration.md) | Change trigger orchestration system (change-trigger.yaml) |
 | [CI Workflows](./ci-workflows.md)                   | Module CI workflows (ci-\*.yaml)                      |
 | [Release Workflows](./release-workflows.md)         | Release workflows (release-\*.yaml)                   |
 | [Security Workflows](./security-workflows.md)       | Security scanning workflows (codeql.yaml)             |
@@ -55,7 +55,7 @@ Workflows that publish deployable artifacts to production:
 
 Workflows that coordinate CI/CD execution:
 
-- `trigger-ci.yaml` - Main CI orchestrator with incremental change detection
+- `change-trigger.yaml` - Main CI orchestrator with incremental change detection
 - `trigger-release.yaml` - Release orchestrator
 - `cron-full-trigger.yaml` - Scheduled full rebuild (every 2 hours)
 

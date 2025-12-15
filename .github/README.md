@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ready-to-release/eac/actions/workflows/trigger-ci.yaml"><img src="https://img.shields.io/github/actions/workflow/status/ready-to-release/eac/trigger-ci.yaml?style=flat-square&label=ci" alt="CI"></a>
+  <a href="https://github.com/ready-to-release/eac/actions/workflows/change-trigger.yaml"><img src="https://img.shields.io/github/actions/workflow/status/ready-to-release/eac/change-trigger.yaml?style=flat-square&label=ci" alt="CI"></a>
   <a href="https://github.com/ready-to-release/eac/stargazers"><img src="https://img.shields.io/github/stars/ready-to-release/eac?style=flat-square" alt="Stars"></a>
   <a href="https://github.com/ready-to-release/eac/commits/main"><img src="https://img.shields.io/github/last-commit/ready-to-release/eac?style=flat-square" alt="Last Commit"></a>
   <a href="https://github.com/ready-to-release/eac/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-lightgray?style=flat-square" alt="MIT"></a>

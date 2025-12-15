@@ -29,7 +29,7 @@ This repository implements a sophisticated CI/CD pipeline with:
 | --------------------- | ----- | -------------------------------------- |
 | **CI Workflows**      | 11    | Build and test modules on PR/main      |
 | **Release Workflows** | 4     | Publish artifacts to GitHub/GHCR/Pages |
-| **Orchestration**     | 3     | Coordinate CI/release execution        |
+| **Orchestration**     | 2     | Coordinate CI/release execution        |
 | **Security**          | 1     | CodeQL scanning                        |
 
 ### Core Actions
@@ -51,17 +51,20 @@ This repository implements a sophisticated CI/CD pipeline with:
 ┌─────────────────────────────────────────────────────────────┐
 │                   GITHUB EVENTS (Triggers)                   │
 └─────────────────────────────────────────────────────────────┘
-         │                    │                  │
-    Push/PR              CHANGELOG            Tag push
-      main                change
-         │                    │                  │
-         ▼                    ▼                  ▼
-┌─────────────────┐  ┌─────────────────┐  ┌──────────────┐
-│  trigger-ci     │  │ trigger-release │  │  Release     │
-│  (orchestrate)  │  │ (detect tags)   │  │  Workflows   │
-└─────────────────┘  └─────────────────┘  └──────────────┘
-         │                    │
-         ▼                    ▼
+         │                                      │
+    Push/PR to main                         Tag push
+         │                                      │
+         ▼                                      ▼
+┌─────────────────────────────────────┐  ┌──────────────┐
+│             change-trigger               │  │  Release     │
+│  (orchestrate CI + detect releases)  │  │  Workflows   │
+└─────────────────────────────────────┘  └──────────────┘
+         │
+         ├─────► CI WORKFLOWS (parallel dispatch)
+         │
+         └─────► [main only] Await CI → Check pending releases
+                 → Create tags → Dispatch releases (by layer)
+         ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    CI WORKFLOWS (11)                         │
 │           Build → Test → Optionally trigger release          │
@@ -100,7 +103,7 @@ Special Modules (3):
 ### Artifact Flow
 
 ```text
-trigger-ci (build-tooling job)
+change-trigger (build-tooling job)
   │
   ├─ Upload: commands-binary
   │
@@ -268,41 +271,54 @@ test-windows:
 
 ## 5. CI → Release Flow
 
-### Automated (Docs & Books)
+All releases are triggered via `change-trigger.yaml` after CI workflows complete on main branch.
+The workflow detects pending releases from two sources and processes them in dependency order.
 
-CI workflows trigger releases automatically on main branch:
+### Release Types
 
-| CI Workflow | →   | Release Workflow | Trigger           | Parameters  |
-| ----------- | --- | ---------------- | ----------------- | ----------- |
-| ci-docs     | →   | release-docs     | `gh workflow run` | `ci_run_id` |
-| ci-books    | →   | release-books    | `gh workflow run` | `ci_run_id` |
+| Type     | Detection                                    | Versioning     | Examples          |
+| -------- | -------------------------------------------- | -------------- | ----------------- |
+| **Semver** | CHANGELOG version without corresponding tag | Developer sets | r2r-cli, ext-eac  |
+| **Calver** | Module had CI dispatched (auto-release)     | YYYY.MMDD.HHMM | docs, books       |
 
-**Flow:**
+### Unified Release Flow
 
-1. PR merged to main
-2. CI runs, builds artifacts
-3. CI triggers release workflow with `ci_run_id`
-4. Release downloads artifacts, deploys
+**All modules (on push to main):**
 
----
+1. `change-trigger` dispatches CI workflows for changed modules
+2. `change-trigger` awaits all CI workflow completion
+3. `change-trigger` checks for pending releases:
+   - Semver: CHANGELOG versions without git tags
+   - Calver: CI was dispatched for auto-release modules (docs, books)
+4. Releases are processed in dependency layer order
+5. For each layer: create tags → dispatch releases → await completion
+6. Next layer only starts after previous layer completes
 
-### Manual (r2r-cli & ext-eac)
+### Developer-Initiated (Semver)
 
-Developer-initiated release via CHANGELOG:
-
-**Flow:**
+For modules with changelog-based releases (r2r-cli, ext-eac):
 
 1. Run `release this <module>` locally
 2. CHANGELOG updated, PR created
 3. PR reviewed and merged
-4. `trigger-release` workflow detects CHANGELOG change
-5. Creates git tag (e.g., `r2r-cli/0.1.0`)
-6. Tag push triggers release workflow
+4. `change-trigger` detects pending release (CHANGELOG version without tag)
+5. Release is triggered after CI passes
+
+### Auto-Release (Calver)
+
+For modules that auto-release on every main push (docs, books):
+
+1. PR merged to main
+2. CI builds and tests module
+3. `change-trigger` detects CI was dispatched for calver module
+4. Release is triggered with calver tag (e.g., `docs/2025.0116.1234`)
 
 **Workflows:**
 
 - `release-r2r-cli`: Builds binaries from source, uploads to GitHub Releases
 - `release-ext-eac`: Retags CI container image from `sha-{short}` to `{version}`
+- `release-docs`: Deploys site to GitHub Pages
+- `release-books`: Uploads PDFs to GitHub Releases
 
 ---
 
@@ -320,7 +336,7 @@ Developer-initiated release via CHANGELOG:
 
 ### Change Detection
 
-**trigger-ci** workflow detects changes and only runs affected modules:
+**change-trigger** workflow detects changes and only runs affected modules:
 
 - Analyzes changed files
 - Determines affected modules via dependency graph
@@ -352,7 +368,7 @@ suites: ${{ startsWith(inputs.ref, 'refs/pull/') && 'component' || 'component,in
 
 All workflows need the `commands` binary. Three modes:
 
-1. **CI orchestration:** `trigger-ci` builds once, uploads artifact
+1. **CI orchestration:** `change-trigger` builds once, uploads artifact
 2. **CI modules:** Download from `trigger-run-id`, fall back to building
 3. **Release/manual:** Build from source
 
@@ -396,16 +412,16 @@ All workflows need the `commands` binary. Three modes:
 1. Create module contract in `.r2r/eac/repository.yml`
 2. Copy `ci-eac-core.yaml` → `ci-my-module.yaml`
 3. Replace `eac-core` with `my-module` throughout
-4. Update `trigger-ci.yaml` to include new workflow (if dependency-based orchestration needed)
+4. Update `change-trigger.yaml` to include new workflow (if dependency-based orchestration needed)
 5. Test with `workflow_dispatch`
 
 ### Trigger a Release
 
-**For modules with automated releases (docs, books):**
+**For calver modules (docs, books):**
 
-- Merge to main → automatic
+- Merge to main → `change-trigger` auto-detects and releases with calver tag
 
-**For modules with manual releases (r2r-cli, ext-eac):**
+**For semver modules (r2r-cli, ext-eac):**
 
 ```bash
 # Update CHANGELOG
@@ -413,8 +429,11 @@ All workflows need the `commands` binary. Three modes:
 
 # Create PR, get reviewed, merge
 
-# trigger-release detects change and creates tag
+# change-trigger detects pending release (CHANGELOG version without tag)
+# Awaits CI, creates tag, dispatches release, awaits completion
 ```
+
+All releases go through `change-trigger.yaml` → `trigger-releases` job → processed in dependency order.
 
 ### Debug a Failed Workflow
 
@@ -432,7 +451,7 @@ All workflows need the `commands` binary. Three modes:
 
 ### Update Commands Binary
 
-Commands binary is rebuilt on every `trigger-ci` run. To force rebuild in a specific workflow:
+Commands binary is rebuilt on every `change-trigger` run. To force rebuild in a specific workflow:
 
 ```yaml
 - uses: ./.github/actions/setup-commands
@@ -447,8 +466,9 @@ Commands binary is rebuilt on every `trigger-ci` run. To force rebuild in a spec
 ### Adding New Release Workflows
 
 1. Create `release-my-module.yaml`
-2. Update `trigger-release.yaml` module list (if using changelog-based release)
-3. Document artifact strategy (rebuild vs reuse CI artifacts)
+2. Ensure module has CHANGELOG in `release/<module>/CHANGELOG.md`
+3. `change-trigger` automatically detects pending releases via `release tag-pending`
+4. Document artifact strategy (rebuild vs reuse CI artifacts)
 
 ### Monitoring
 
@@ -474,3 +494,12 @@ Commands binary is rebuilt on every `trigger-ci` run. To force rebuild in a spec
 ### Why Auto-Trigger Some Releases?
 
 **docs/books:** Deployment is low-risk, calver-tagged, auto-deploy on main merge is safe
+
+### Why Unified Release Triggering?
+
+All releases (both semver and calver) go through `change-trigger.yaml`:
+
+1. **Single orchestration point** - One workflow handles CI dispatch, await, and release triggering
+2. **Dependency ordering** - Releases process in correct layer order (respects module dependencies)
+3. **No race conditions** - Awaits CI completion before checking releases, awaits active releases before triggering new ones
+4. **Simplified CI workflows** - Individual CI workflows don't need release logic

@@ -77,7 +77,7 @@ jobs:
         if: steps.check.outputs.skip != 'true'
         run: |
           echo "Triggering full CI rebuild..."
-          gh workflow run trigger-ci.yaml \
+          gh workflow run change-trigger.yaml \
             --repo ${{ github.repository }} \
             --ref main \
             -f trigger-all=true
@@ -90,7 +90,7 @@ jobs:
           for i in 1 2 3 4 5; do
             RUN_ID=$(gh run list \
               --repo ${{ github.repository }} \
-              --workflow "trigger-ci.yaml" \
+              --workflow "change-trigger.yaml" \
               --branch main \
               --limit 1 \
               --json databaseId,status,createdAt \

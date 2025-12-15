@@ -101,7 +101,7 @@ Checks if a full rebuild is needed and triggers it if necessary.
   id: trigger
   if: steps.check.outputs.skip != 'true'
   run: |
-    gh workflow run trigger-ci.yaml \
+    gh workflow run change-trigger.yaml \
       --repo ⟪ github.repository ⟫ \
       --ref main \
       -f trigger-all=true
@@ -111,7 +111,7 @@ Checks if a full rebuild is needed and triggers it if necessary.
 
     # Get the run ID
     RUN_ID=$(gh run list \
-      --workflow "trigger-ci.yaml" \
+      --workflow "change-trigger.yaml" \
       --branch main \
       --limit 1 \
       --json databaseId \
@@ -122,7 +122,7 @@ Checks if a full rebuild is needed and triggers it if necessary.
 
 **Behavior:**
 
-- Triggers `trigger-ci.yaml` with `trigger-all=true` input
+- Triggers `change-trigger.yaml` with `trigger-all=true` input
 - Bypasses incremental change detection
 - Builds all modules regardless of changes
 - Captures run ID for monitoring
@@ -244,7 +244,7 @@ gh run view <run-id> --log-failed
 
 # Compare with recent incremental CI runs
 gh run list \
-  --workflow trigger-ci.yaml \
+  --workflow change-trigger.yaml \
   --branch main \
   --limit 5
 
@@ -349,8 +349,8 @@ schedule:
 
 ## References
 
-- [Trigger Orchestration](./trigger-orchestration.md) - How trigger-ci.yaml works
+- [Trigger Orchestration](./trigger-orchestration.md) - How change-trigger.yaml works
 - Workflow file: `.github/workflows/cron-full-trigger.yaml`
-- Trigger workflow: `.github/workflows/trigger-ci.yaml`
+- Trigger workflow: `.github/workflows/change-trigger.yaml`
 
 {{ diataxis_footer() }}

@@ -2,15 +2,20 @@
 
 {{ page_breadcrumb() }}
 
-Detailed reference for the trigger orchestration system (`trigger-ci.yaml`).
+Detailed reference for the trigger orchestration system (`change-trigger.yaml`).
 
 ## Overview
 
-The `trigger-ci.yaml` workflow implements incremental CI by detecting which modules have changed and orchestrating their build and test execution in dependency order. This workflow serves as the main entry point for continuous integration.
+The `change-trigger.yaml` workflow implements incremental CI by detecting which modules have changed and orchestrating their build and test execution. This workflow serves as the main entry point for continuous integration and handles all release triggering.
 
-The `trigger-release.yaml` workflow orcehstrates pending releases
+On push to main, after CI workflows complete, the workflow checks for pending releases from two sources:
 
-**Location:** `.github/workflows/trigger-ci.yaml`
+- **Semver modules**: Changelog versions without corresponding git tags (r2r-cli, ext-eac)
+- **Calver modules**: Modules that had CI dispatched and auto-release on every push (docs, books)
+
+Releases are triggered in dependency order, with each layer completing before the next begins.
+
+**Location:** `.github/workflows/change-trigger.yaml`
 
 ## Triggers
 
@@ -307,7 +312,7 @@ Compares current commit against last successful CI run:
 commands get changed-modules-ci --as-json
 ```
 
-The command queries GitHub Actions API to find the last successful run of `trigger-ci.yaml` on the main branch.
+The command queries GitHub Actions API to find the last successful run of `change-trigger.yaml` on the main branch.
 
 ### Bootstrap Mode
 
@@ -436,7 +441,7 @@ If no modules need rebuilding:
 
 ## References
 
-- Workflow file: `.github/workflows/trigger-ci.yaml`
+- Workflow file: `.github/workflows/change-trigger.yaml`
 - [Overview](./overview.md) - Workflow architecture
 - [CI Workflows](./ci-workflows.md) - Module CI workflow patterns
 - [Repository Layout](../../r2r-eac/repository-layout.md) - Module structure

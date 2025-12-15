@@ -35,15 +35,15 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  actions: write
   contents: read
+  actions: read
 
 jobs:
   # =============================================================================
-  # Build HTML Site
+  # Build & Test HTML Site
   # =============================================================================
-  build:
-    name: Build
+  build-and-test:
+    name: Build & Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -56,46 +56,14 @@ jobs:
           module: docs
           trigger-run-id: ${{ inputs.trigger_run_id }}
           commit-sha: ${{ inputs.sha || github.sha }}
-
-  # =============================================================================
-  # Test
-  # =============================================================================
-  test:
-    name: Test
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ inputs.ref || github.ref }}
+          upload-artifact: 'false'
 
       - name: Test Module
         uses: ./.github/actions/test-module
         with:
           module: docs
           trigger-run-id: ${{ inputs.trigger_run_id }}
+          download-artifact: 'false'
           # PRs run component suite only; main/release branches run full suite
           suites: ${{ (inputs.ref != '' && startsWith(inputs.ref, 'refs/pull/')) && 'component' || 'component,integration,acceptance' }}
-
-  # =============================================================================
-  # Trigger Release (main branch only)
-  # =============================================================================
-  trigger-release:
-    name: Trigger Release
-    needs: test
-    runs-on: ubuntu-latest
-    # Only trigger release on main branch, NEVER for PRs
-    if: |
-      (github.ref == 'refs/heads/main' || inputs.ref == 'refs/heads/main') && !startsWith(inputs.ref || github.ref, 'refs/pull/')
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Trigger Release
-        uses: ./.github/actions/trigger-release
-        with:
-          module: docs
-          workflow: release-docs.yaml
-          workflow-description: Deploy site to GitHub Pages
-          ci-run-id: ${{ github.run_id }}
-          trigger-run-id: ${{ inputs.trigger_run_id }}
-          github-token: ${{ github.token }}
+          # Note: Release is triggered by change-trigger.yaml after all CI completes (calver auto-release)

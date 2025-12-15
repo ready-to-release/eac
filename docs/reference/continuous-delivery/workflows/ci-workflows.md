@@ -6,7 +6,7 @@ Reference for individual module CI workflows.
 
 ## Overview
 
-Each module with build and test requirements has a dedicated CI workflow following a standard pattern. These workflows are invoked by the CI orchestrator (`trigger-ci.yaml`) and can also be triggered manually for testing individual modules.
+Each module with build and test requirements has a dedicated CI workflow following a standard pattern. These workflows are invoked by the CI orchestrator (`change-trigger.yaml`) and can also be triggered manually for testing individual modules.
 
 **Location:** `.github/workflows/ci-{moniker}.yaml`
 
@@ -102,7 +102,7 @@ Commit SHA to test. Primarily used for display and tracking purposes.
 
 #### `trigger_run_id` (string, optional)
 
-Run ID of the trigger workflow (`trigger-ci.yaml`). Used to download artifacts created by the trigger workflow.
+Run ID of the trigger workflow (`change-trigger.yaml`). Used to download artifacts created by the trigger workflow.
 
 **Default:** Empty string (builds artifacts locally)
 
