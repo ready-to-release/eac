@@ -26,8 +26,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/work/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
@@ -58,7 +62,10 @@ func init() {
 
 // Create creates a new workspace (git worktree) for parallel development
 func Create() int {
+	commandStart := time.Now()
+
 	// Phase 1: Parse configuration
+	phase1Start := time.Now()
 	config, err := parseCreateConfig()
 	if err != nil {
 		log.Errorf("Error: %v", err)
@@ -66,27 +73,77 @@ func Create() int {
 	}
 	defer config.base.Logger.Sync()
 
-	config.base.Logger.Debug("Starting work create command")
-	internal.WriteDebugFile(config.base.Logger, config.base.RepoRoot, "create-config.txt",
-		fmt.Sprintf("Branch: %s\nBase: %s\nPath: %s\nDebug: %v\n",
-			config.branchName, config.baseBranch, config.worktreePath, config.base.Debug))
+	config.base.Logger.Debug("Phase 1: Starting configuration parsing",
+		zap.String("phase", "phase1"),
+		zap.String("description", "parse configuration"))
+
+	config.base.Logger.Debug("Phase 1: Completed",
+		zap.String("phase", "phase1"),
+		zap.Duration("duration", time.Since(phase1Start)),
+		zap.String("branchName", config.branchName),
+		zap.String("baseBranch", config.baseBranch),
+		zap.String("worktreePath", config.worktreePath),
+		zap.Bool("debug", config.base.Debug))
 
 	// Phase 2: Validate environment
+	phase2Start := time.Now()
+	config.base.Logger.Debug("Phase 2: Starting environment validation",
+		zap.String("phase", "phase2"),
+		zap.String("description", "validate environment"),
+		zap.String("branchName", config.branchName),
+		zap.String("baseBranch", config.baseBranch))
+
 	if err := validateCreateEnvironment(config); err != nil {
+		config.base.Logger.Debug("Phase 2: Failed",
+			zap.String("phase", "phase2"),
+			zap.Duration("duration", time.Since(phase2Start)),
+			zap.Error(err))
 		config.base.Logger.Error(fmt.Sprintf("Validation failed: %v", err))
 		return 1
 	}
 
+	config.base.Logger.Debug("Phase 2: Completed",
+		zap.String("phase", "phase2"),
+		zap.Duration("duration", time.Since(phase2Start)))
+
 	// Phase 3: Create worktree
+	phase3Start := time.Now()
+	config.base.Logger.Debug("Phase 3: Starting worktree creation",
+		zap.String("phase", "phase3"),
+		zap.String("description", "create worktree"),
+		zap.String("worktreePath", config.worktreePath),
+		zap.String("branchName", config.branchName),
+		zap.String("baseBranch", config.baseBranch))
+
 	worktreePath, err := createWorktree(config)
 	if err != nil {
+		config.base.Logger.Debug("Phase 3: Failed",
+			zap.String("phase", "phase3"),
+			zap.Duration("duration", time.Since(phase3Start)),
+			zap.Error(err))
 		config.base.Logger.Error(fmt.Sprintf("Failed to create worktree: %v", err))
 		return 1
 	}
 
+	config.base.Logger.Debug("Phase 3: Completed",
+		zap.String("phase", "phase3"),
+		zap.Duration("duration", time.Since(phase3Start)),
+		zap.String("worktreePath", worktreePath))
+
 	// Phase 4: Output success
+	phase4Start := time.Now()
+	config.base.Logger.Debug("Phase 4: Starting success output",
+		zap.String("phase", "phase4"),
+		zap.String("description", "output success"))
+
 	outputCreateSuccess(config.base.Logger, worktreePath, config.branchName)
-	config.base.Logger.Debug("Work create command completed successfully")
+
+	config.base.Logger.Debug("Phase 4: Completed",
+		zap.String("phase", "phase4"),
+		zap.Duration("duration", time.Since(phase4Start)))
+
+	config.base.Logger.Debug("Work create command completed successfully",
+		zap.Duration("totalDuration", time.Since(commandStart)))
 	return 0
 }
 
@@ -111,7 +168,7 @@ func parseCreateConfig() (*createConfig, error) {
 	}
 
 	// Get positional arguments (non-flags)
-	positionalArgs := internal.GetPositionalArgs(args)
+	positionalArgs := flags.GetPositionalArgs(args)
 	if len(positionalArgs) == 0 {
 		return nil, fmt.Errorf("branch name is required\nUsage: work create <branch-name> [--from=main] [--path=<path>] [--debug]")
 	}
@@ -123,10 +180,10 @@ func parseCreateConfig() (*createConfig, error) {
 	}
 
 	// Parse custom flags
-	if fromValue := internal.GetFlagValue(args, "--from"); fromValue != "" {
+	if fromValue := flags.GetFlagValue(args, "--from"); fromValue != "" {
 		config.baseBranch = fromValue
 	}
-	if pathValue := internal.GetFlagValue(args, "--path"); pathValue != "" {
+	if pathValue := flags.GetFlagValue(args, "--path"); pathValue != "" {
 		config.customPath = pathValue
 	}
 
@@ -148,55 +205,161 @@ func parseCreateConfig() (*createConfig, error) {
 
 // validateCreateEnvironment validates the environment before creating worktree
 func validateCreateEnvironment(config *createConfig) error {
-	// Check we're in a git repository
+	logger := config.base.Logger
+
+	// Sub-phase 2.1: Check git repository
+	subPhase1Start := time.Now()
+	logger.Debug("Phase 2.1: Starting git repository check",
+		zap.String("phase", "phase2.1"),
+		zap.String("description", "check git repository"))
+
 	if err := internal.EnsureInGitRepo(); err != nil {
+		logger.Debug("Phase 2.1: Failed",
+			zap.String("phase", "phase2.1"),
+			zap.Duration("duration", time.Since(subPhase1Start)),
+			zap.Error(err))
 		return err
 	}
 
-	// Check if branch already exists
+	logger.Debug("Phase 2.1: Completed",
+		zap.String("phase", "phase2.1"),
+		zap.Duration("duration", time.Since(subPhase1Start)))
+
+	// Sub-phase 2.2: Check if branch already exists
+	subPhase2Start := time.Now()
+	logger.Debug("Phase 2.2: Starting branch existence check",
+		zap.String("phase", "phase2.2"),
+		zap.String("description", "check branch existence"),
+		zap.String("branchName", config.branchName))
+
 	exists, err := config.base.GitOps.BranchExists(config.branchName)
 	if err != nil {
+		logger.Debug("Phase 2.2: Failed",
+			zap.String("phase", "phase2.2"),
+			zap.Duration("duration", time.Since(subPhase2Start)),
+			zap.Error(err))
 		return fmt.Errorf("failed to check branch: %w", err)
 	}
 	if exists {
+		logger.Debug("Phase 2.2: Failed",
+			zap.String("phase", "phase2.2"),
+			zap.Duration("duration", time.Since(subPhase2Start)),
+			zap.String("reason", "branch already exists"))
 		return fmt.Errorf("branch '%s' already exists", config.branchName)
 	}
 
-	// Check if worktree already exists for this branch
+	logger.Debug("Phase 2.2: Completed",
+		zap.String("phase", "phase2.2"),
+		zap.Duration("duration", time.Since(subPhase2Start)),
+		zap.Bool("exists", false))
+
+	// Sub-phase 2.3: Check if worktree already exists for this branch
+	subPhase3Start := time.Now()
+	logger.Debug("Phase 2.3: Starting worktree existence check",
+		zap.String("phase", "phase2.3"),
+		zap.String("description", "check worktree existence"),
+		zap.String("branchName", config.branchName))
+
 	wtExists, err := config.base.GitOps.WorktreeExists(config.branchName)
 	if err != nil {
+		logger.Debug("Phase 2.3: Failed",
+			zap.String("phase", "phase2.3"),
+			zap.Duration("duration", time.Since(subPhase3Start)),
+			zap.Error(err))
 		return fmt.Errorf("failed to check worktree: %w", err)
 	}
 	if wtExists {
+		logger.Debug("Phase 2.3: Failed",
+			zap.String("phase", "phase2.3"),
+			zap.Duration("duration", time.Since(subPhase3Start)),
+			zap.String("reason", "worktree already exists"))
 		return fmt.Errorf("worktree already exists for branch '%s'", config.branchName)
 	}
 
-	// Check if base branch exists
+	logger.Debug("Phase 2.3: Completed",
+		zap.String("phase", "phase2.3"),
+		zap.Duration("duration", time.Since(subPhase3Start)),
+		zap.Bool("exists", false))
+
+	// Sub-phase 2.4: Check if base branch exists
+	subPhase4Start := time.Now()
+	logger.Debug("Phase 2.4: Starting base branch existence check",
+		zap.String("phase", "phase2.4"),
+		zap.String("description", "check base branch existence"),
+		zap.String("baseBranch", config.baseBranch))
+
 	baseExists, err := config.base.GitOps.BranchExists(config.baseBranch)
 	if err != nil {
+		logger.Debug("Phase 2.4: Failed",
+			zap.String("phase", "phase2.4"),
+			zap.Duration("duration", time.Since(subPhase4Start)),
+			zap.Error(err))
 		return fmt.Errorf("failed to check base branch: %w", err)
 	}
 	if !baseExists {
+		logger.Debug("Phase 2.4: Failed",
+			zap.String("phase", "phase2.4"),
+			zap.Duration("duration", time.Since(subPhase4Start)),
+			zap.String("reason", "base branch does not exist"))
 		return fmt.Errorf("base branch '%s' does not exist", config.baseBranch)
 	}
+
+	logger.Debug("Phase 2.4: Completed",
+		zap.String("phase", "phase2.4"),
+		zap.Duration("duration", time.Since(subPhase4Start)),
+		zap.Bool("exists", true))
 
 	return nil
 }
 
 // createWorktree creates the actual git worktree
 func createWorktree(config *createConfig) (string, error) {
-	// Get absolute path for worktree
+	logger := config.base.Logger
+
+	// Sub-phase 3.1: Resolve absolute path
+	subPhase1Start := time.Now()
+	logger.Debug("Phase 3.1: Starting path resolution",
+		zap.String("phase", "phase3.1"),
+		zap.String("description", "resolve absolute path"),
+		zap.String("worktreePath", config.worktreePath))
+
 	absWorktreePath, err := filepath.Abs(config.worktreePath)
 	if err != nil {
+		logger.Debug("Phase 3.1: Failed",
+			zap.String("phase", "phase3.1"),
+			zap.Duration("duration", time.Since(subPhase1Start)),
+			zap.Error(err))
 		return "", fmt.Errorf("failed to resolve worktree path: %w", err)
 	}
 
-	// Create worktree using GitOps
+	logger.Debug("Phase 3.1: Completed",
+		zap.String("phase", "phase3.1"),
+		zap.Duration("duration", time.Since(subPhase1Start)),
+		zap.String("absWorktreePath", absWorktreePath))
+
+	// Sub-phase 3.2: Create worktree using GitOps
+	subPhase2Start := time.Now()
+	logger.Debug("Phase 3.2: Starting git worktree creation",
+		zap.String("phase", "phase3.2"),
+		zap.String("description", "create git worktree"),
+		zap.String("worktreePath", config.worktreePath),
+		zap.String("branchName", config.branchName),
+		zap.String("baseBranch", config.baseBranch))
+
 	if err := config.base.GitOps.CreateWorktree(config.worktreePath, config.branchName, config.baseBranch); err != nil {
+		logger.Debug("Phase 3.2: Failed",
+			zap.String("phase", "phase3.2"),
+			zap.Duration("duration", time.Since(subPhase2Start)),
+			zap.Error(err))
 		return "", err
 	}
 
-	config.base.Logger.Debug(fmt.Sprintf("Created worktree at %s for branch %s", absWorktreePath, config.branchName))
+	logger.Debug("Phase 3.2: Completed",
+		zap.String("phase", "phase3.2"),
+		zap.Duration("duration", time.Since(subPhase2Start)),
+		zap.String("absWorktreePath", absWorktreePath),
+		zap.String("branchName", config.branchName))
+
 	return absWorktreePath, nil
 }
 

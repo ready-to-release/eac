@@ -20,6 +20,7 @@ import (
 	"runtime"
 
 	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
@@ -35,12 +36,7 @@ func init() {
 func ShowModules() int {
 	// Parse flags
 	args := os.Args[1:]
-	withArtifacts := false
-	for _, arg := range args {
-		if arg == "--with-artifacts" {
-			withArtifacts = true
-		}
-	}
+	withArtifacts := flags.HasFlag(args, "--with-artifacts", "")
 
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")

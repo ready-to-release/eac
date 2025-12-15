@@ -109,16 +109,22 @@ func assessSingleModule(
 	profile *oscalTypes.Profile,
 ) *ModuleAssessmentResult {
 	result := &ModuleAssessmentResult{
-		Module: moduleName,
+		Module:   moduleName,
+		Warnings: []string{},
 	}
 
-	// Collect evidence for this module
+	// Collect evidence for this module (read-only, no execution)
 	moduleConfig := *config // Copy config
 
 	evidenceCollection, err := collectEvidenceForModule(&moduleConfig, moduleName)
 	if err != nil {
 		result.Error = fmt.Errorf("error collecting evidence: %w", err)
 		return result
+	}
+
+	// Capture warnings from evidence collection
+	if evidenceCollection != nil && len(evidenceCollection.Warnings) > 0 {
+		result.Warnings = evidenceCollection.Warnings
 	}
 
 	// Build assessment-results

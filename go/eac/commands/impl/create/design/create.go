@@ -30,8 +30,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	"go.uber.org/zap"
+
 	design "github.com/ready-to-release/eac/go/eac/commands/impl/design"
 	designInternal "github.com/ready-to-release/eac/go/eac/commands/impl/design/helper"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
@@ -230,28 +233,31 @@ func parseCreateCommandArgs(args []string) (string, *createFlags, error) {
 	}
 
 	// Parse flags and positional arguments
-	flags := &createFlags{}
+	cmdFlags := &createFlags{}
 	var positionalArgs []string
 
-	for i := startPos; i < len(args); i++ {
-		arg := args[i]
+	// Extract args from startPos onward for flag parsing
+	argsToParse := args[startPos:]
 
-		if arg == "--debug" || arg == "-d" {
-			flags.debug = true
-		} else if arg == "--force" {
-			flags.force = true
-		} else if arg == "--skip-validation" {
-			flags.skipValidation = true
-		} else if arg == "--output" || arg == "-o" {
+	// Use shared flags package for debug flag
+	cmdFlags.debug = flags.ParseDebugFlag(argsToParse)
+	cmdFlags.force = flags.HasFlag(argsToParse, "--force", "")
+	cmdFlags.skipValidation = flags.HasFlag(argsToParse, "--skip-validation", "")
+
+	// Parse value flags and positional args
+	for i := 0; i < len(argsToParse); i++ {
+		arg := argsToParse[i]
+
+		if arg == "--output" || arg == "-o" {
 			// Next argument is the output path
-			if i+1 < len(args) {
-				flags.outputPath = args[i+1]
+			if i+1 < len(argsToParse) {
+				cmdFlags.outputPath = argsToParse[i+1]
 				i++ // Skip next arg
 			}
 		} else if arg == "--prompt" {
 			// Next argument is the prompt path
-			if i+1 < len(args) {
-				flags.promptPath = args[i+1]
+			if i+1 < len(argsToParse) {
+				cmdFlags.promptPath = argsToParse[i+1]
 				i++ // Skip next arg
 			}
 		} else if !strings.HasPrefix(arg, "-") {
@@ -264,7 +270,7 @@ func parseCreateCommandArgs(args []string) (string, *createFlags, error) {
 		return "", nil, fmt.Errorf("module name required\n\nUsage: create design <module>\nExample: create design r2r-cli")
 	}
 
-	return positionalArgs[0], flags, nil
+	return positionalArgs[0], cmdFlags, nil
 }
 
 // formatModuleList returns a formatted list of available modules
@@ -319,8 +325,8 @@ func loadAndBuildPrompt(config *DesignConfig, out *design.Output, logger *loggin
 		return "", err
 	}
 
-	if config.Debug {
-		design.WriteDebugFile(config.TemplateRoot, logger, "design-debug-full-prompt.md", fullPrompt)
+	if config.Debug && logger != nil {
+		logger.Debug("Full AI prompt built", zap.Int("promptLength", len(fullPrompt)))
 	}
 
 	return fullPrompt, nil

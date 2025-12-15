@@ -27,7 +27,7 @@ func TestMockTrivyOutput(t *testing.T) {
 	defer logger.Sync()
 
 	// Test SBOM with mock
-	result, err := RunTrivySBOM("/fake/path", "cyclonedx", logger)
+	result, err := RunTrivySBOM(tmpDir, "/fake/path", "cyclonedx", "test-image:latest", logger)
 	if err != nil {
 		t.Errorf("RunTrivySBOM() with mock error = %v", err)
 	}
@@ -60,7 +60,7 @@ func TestResetMockTrivyOutput(t *testing.T) {
 	defer logger.Sync()
 
 	// Should try to run real trivy (may succeed or fail depending on Docker availability)
-	result, err := RunTrivySBOM("/fake/path", "cyclonedx", logger)
+	result, err := RunTrivySBOM(tmpDir, "/fake/path", "cyclonedx", "test-image:latest", logger)
 	// If Docker is available, trivy might run successfully (though may error on invalid path)
 	// If Docker is not available, we expect an error
 	// The key is that we're not using mock data anymore
@@ -95,7 +95,7 @@ func TestRunTrivyVulnWithMock(t *testing.T) {
 	defer logger.Sync()
 
 	severityFilter := []Severity{SeverityHigh, SeverityCritical}
-	result, err := RunTrivyVuln("/fake/path", severityFilter, logger)
+	result, err := RunTrivyVuln("/fake/path", severityFilter, "test-image:latest", logger)
 	if err != nil {
 		t.Errorf("RunTrivyVuln() with mock error = %v", err)
 	}
@@ -120,7 +120,7 @@ func TestRunTrivySecretsWithMock(t *testing.T) {
 	}
 	defer logger.Sync()
 
-	result, err := RunTrivySecrets("/fake/path", logger)
+	result, err := RunTrivySecrets("/fake/path", "test-image:latest", logger)
 	if err != nil {
 		t.Errorf("RunTrivySecrets() with mock error = %v", err)
 	}
@@ -144,7 +144,7 @@ func TestRunTrivyComplianceWithMock(t *testing.T) {
 	}
 	defer logger.Sync()
 
-	result, err := RunTrivyCompliance("/fake/path", "k8s-cis", logger)
+	result, err := RunTrivyCompliance("/fake/path", "k8s-cis", "test-image:latest", logger)
 	if err != nil {
 		t.Errorf("RunTrivyCompliance() with mock error = %v", err)
 	}
@@ -169,7 +169,7 @@ func TestRunTrivyIaCWithMock(t *testing.T) {
 	}
 	defer logger.Sync()
 
-	result, err := RunTrivyIaC("/fake/path", logger)
+	result, err := RunTrivyIaC("/fake/path", "test-image:latest", logger)
 	if err != nil {
 		t.Errorf("RunTrivyIaC() with mock error = %v", err)
 	}

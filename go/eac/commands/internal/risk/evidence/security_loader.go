@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ready-to-release/eac/go/eac/core/paths"
+	"github.com/ready-to-release/eac/go/eac/core/config"
 )
 
 // ScannerType represents the type of security scanner.
@@ -27,11 +27,18 @@ const (
 )
 
 // FindLatestSecurityScan finds the most recent security scan file for a module and scanner type.
-// Security scan files are stored in: out/scan/<module>/<scanner>/<timestamp>.json
+// Security scan files are stored in: <security_path>/<module>/<scanner>/<timestamp>.json
 // The timestamp format is sortable: "2006-01-02T15-04-05Z"
+// Uses config.Repository.Paths.Out.Security to determine the security output directory.
 func FindLatestSecurityScan(workspaceRoot, moduleName string, scannerType ScannerType) (string, error) {
-	// Construct scanner directory path using repository constants
-	scanDir := filepath.Join(workspaceRoot, paths.OutDir, paths.SecurityDir, moduleName, string(scannerType))
+	// Load config to get security output path (respects repository contracts)
+	cfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot})
+	if err != nil {
+		return "", fmt.Errorf("failed to load config: %w", err)
+	}
+
+	// Construct scanner directory path using config-based security path
+	scanDir := cfg.Repository.SecurityScanOutputPathAbs(workspaceRoot, moduleName, string(scannerType))
 
 	// Read directory contents
 	entries, err := os.ReadDir(scanDir)

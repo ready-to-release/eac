@@ -106,23 +106,18 @@ type EvidenceCollection struct {
 	VulnSummary      *VulnerabilitySummary `json:"vuln_summary,omitempty"`
 	SBOMSummary      *SBOMSummary       `json:"sbom_summary,omitempty"`
 	CollectedAt      time.Time          `json:"collected_at"`
+	Warnings         []string           `json:"warnings,omitempty"` // Warnings about missing or stale evidence
 }
 
-// EvidenceAgePolicy controls when to auto-run evidence collection.
+// EvidenceAgePolicy controls evidence age validation.
 type EvidenceAgePolicy struct {
-	MaxAge      time.Duration `json:"max_age"`
-	ForceTests  bool          `json:"force_tests"`
-	ForceScan   bool          `json:"force_scan"`
-	SkipAutoRun bool          `json:"skip_auto_run"`
+	MaxAge time.Duration `json:"max_age"`
 }
 
 // DefaultEvidenceAgePolicy returns the default evidence age policy (24 hours).
 func DefaultEvidenceAgePolicy() EvidenceAgePolicy {
 	return EvidenceAgePolicy{
-		MaxAge:      24 * time.Hour,
-		ForceTests:  false,
-		ForceScan:   false,
-		SkipAutoRun: false,
+		MaxAge: 24 * time.Hour,
 	}
 }
 

@@ -23,9 +23,13 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"time"
+
+	"go.uber.org/zap"
 
 	commitmessage "github.com/ready-to-release/eac/go/eac/commands/impl/create/commit-message"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/work/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
@@ -55,6 +59,8 @@ func init() {
 
 // Commit commits changes with AI-generated or custom message
 func Commit() int {
+	startTime := time.Now()
+
 	// Phase 1: Parse configuration
 	config, err := parseCommitConfig()
 	if err != nil {
@@ -63,46 +69,97 @@ func Commit() int {
 	}
 	defer config.base.Logger.Sync()
 
-	config.base.Logger.Debug("Starting work commit command")
-	internal.WriteDebugFile(config.base.Logger, config.base.RepoRoot, "commit-config.txt",
-		fmt.Sprintf("StageAll: %v\nCustomMessage: %s\nDebug: %v\n",
-			config.stageAll, config.customMessage, config.base.Debug))
+	logger := config.base.Logger
+	logger.Debug("Phase 1: Starting parse configuration",
+		zap.String("phase", "phase1"))
+	logger.Debug("Phase 1: Completed",
+		zap.String("phase", "phase1"),
+		zap.Bool("stageAll", config.stageAll),
+		zap.String("customMessage", config.customMessage),
+		zap.Bool("debug", config.base.Debug))
 
 	// Phase 2: Validate environment
+	logger.Debug("Phase 2: Starting validate environment",
+		zap.String("phase", "phase2"))
 	if err := internal.EnsureInGitRepo(); err != nil {
-		config.base.Logger.Error(fmt.Sprintf("Not in git repository: %v", err))
+		logger.Debug("Phase 2: Failed",
+			zap.String("phase", "phase2"),
+			zap.Error(err))
+		logger.Error("Not in git repository", zap.Error(err))
 		return 1
 	}
+	logger.Debug("Phase 2: Completed",
+		zap.String("phase", "phase2"))
 
 	// Phase 3: Stage changes if --all
 	if config.stageAll {
-		if err := stageAllChanges(config.base.Logger); err != nil {
-			config.base.Logger.Error(fmt.Sprintf("Failed to stage changes: %v", err))
+		logger.Debug("Phase 3: Starting stage changes",
+			zap.String("phase", "phase3"))
+		if err := stageAllChanges(logger); err != nil {
+			logger.Debug("Phase 3: Failed",
+				zap.String("phase", "phase3"),
+				zap.Error(err))
+			logger.Error("Failed to stage changes", zap.Error(err))
 			return 1
 		}
+		logger.Debug("Phase 3: Completed",
+			zap.String("phase", "phase3"))
+	} else {
+		logger.Debug("Phase 3: Skipped (--all not specified)",
+			zap.String("phase", "phase3"))
 	}
 
 	// Phase 4: Check for staged changes
+	logger.Debug("Phase 4: Starting check for staged changes",
+		zap.String("phase", "phase4"))
 	hasStagedChanges, err := checkStagedChanges()
 	if err != nil {
-		config.base.Logger.Error(fmt.Sprintf("Failed to check staged changes: %v", err))
+		logger.Debug("Phase 4: Failed",
+			zap.String("phase", "phase4"),
+			zap.Error(err))
+		logger.Error("Failed to check staged changes", zap.Error(err))
 		return 1
 	}
 	if !hasStagedChanges {
-		config.base.Logger.Error("No staged changes")
-		config.base.Logger.Error("Use 'work commit --all' to stage and commit all changes")
+		logger.Debug("Phase 4: Failed",
+			zap.String("phase", "phase4"),
+			zap.Error(fmt.Errorf("no staged changes")))
+		logger.Error("No staged changes")
+		logger.Error("Use 'work commit --all' to stage and commit all changes")
 		return 1
 	}
+	logger.Debug("Phase 4: Completed",
+		zap.String("phase", "phase4"),
+		zap.Bool("hasStagedChanges", hasStagedChanges))
 
 	// Phase 5: Commit
+	logger.Debug("Phase 5: Starting commit",
+		zap.String("phase", "phase5"),
+		zap.Bool("useCustomMessage", config.customMessage != ""))
+
+	var exitCode int
 	if config.customMessage != "" {
 		// Use custom message
-		return commitWithMessage(config.base.Logger, config.customMessage)
+		exitCode = commitWithMessage(logger, config.customMessage)
+	} else {
+		// Use AI to generate message
+		logger.Debug("Delegating to commit message for AI generation")
+		exitCode = commitWithAI(config.base.Debug)
 	}
 
-	// Use AI to generate message
-	config.base.Logger.Debug("Delegating to commit message for AI generation")
-	return commitWithAI(config.base.Debug)
+	if exitCode != 0 {
+		logger.Debug("Phase 5: Failed",
+			zap.String("phase", "phase5"),
+			zap.Int("exitCode", exitCode))
+		return exitCode
+	}
+
+	duration := time.Since(startTime)
+	logger.Debug("Phase 5: Completed",
+		zap.String("phase", "phase5"),
+		zap.Duration("totalDuration", duration))
+
+	return 0
 }
 
 // commitConfig holds configuration for the commit command
@@ -127,7 +184,7 @@ func parseCommitConfig() (*commitConfig, error) {
 	}
 
 	// Parse flags
-	config.stageAll = internal.HasFlag(args, "--all", "-a")
+	config.stageAll = flags.HasFlag(args, "--all", "-a")
 
 	// Parse --message/-m flag
 	for i := 0; i < len(args); i++ {
@@ -180,7 +237,7 @@ func commitWithMessage(logger *logging.Logger, message string) int {
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()
 	if err != nil {
-		logger.Error(fmt.Sprintf("Failed to create commit: %v", err))
+		logger.Error("Failed to create commit", zap.Error(err))
 		return 1
 	}
 	logger.Debug("Created commit with custom message")

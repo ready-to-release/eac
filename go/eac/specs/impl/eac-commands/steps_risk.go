@@ -324,22 +324,100 @@ paths:
 		return internal.CreateFile(ctx, "specs/.risk-controls/risk-profile.json", profile)
 	})
 
-	sc.Step(`^module "([^"]*)" has test results with @control tags$`, func(module string) error {
-		// Create mock cucumber results with timestamp directory (as expected by evidence loader)
+	sc.Step(`^module "([^"]*)" has fresh test results with @control tags$`, func(module string) error {
+		// Create mock cucumber results with fresh timestamp
 		cucumberJSON := createMockCucumberResults([]string{"ac-2"})
-		// Use a recent timestamp so evidence is fresh
-		timestamp := time.Now().Format("2006-01-02T15-04-05")
-		testDir := filepath.Join("out", "test", timestamp, module)
+		testDir := filepath.Join("out", "test", "integration", module)
 		return internal.CreateFile(ctx, filepath.Join(testDir, "results.cucumber.json"), cucumberJSON)
 	})
 
-	sc.Step(`^module "([^"]*)" has security scan results$`, func(module string) error {
-		// Create mock security scan results with timestamp filename (as expected by evidence loader)
-		// Use a recent timestamp so evidence is fresh
+	sc.Step(`^module "([^"]*)" has no test results$`, func(module string) error {
+		// Module exists but has no test results - only create security evidence if requested separately
+		return nil
+	})
+
+	sc.Step(`^module "([^"]*)" has test results older than 24 hours$`, func(module string) error {
+		// Create test results with old timestamp (26 hours ago to ensure it's > 24 hours)
+		cucumberJSON := createMockCucumberResults([]string{"ac-2"})
+		testDir := filepath.Join("out", "test", "integration", module)
+		filePath := filepath.Join(testDir, "results.cucumber.json")
+
+		if err := internal.CreateFile(ctx, filePath, cucumberJSON); err != nil {
+			return err
+		}
+
+		// Set file modification time to 26 hours ago
+		oldTime := time.Now().Add(-26 * time.Hour)
+		fullPath := filepath.Join(ctx.CurrentWorkDir, filePath)
+		return os.Chtimes(fullPath, oldTime, oldTime)
+	})
+
+	sc.Step(`^module "([^"]*)" has fresh security scan results$`, func(module string) error {
+		// Create mock security scan results with fresh timestamp
 		timestamp := time.Now().Format("2006-01-02T15-04-05Z")
 		securityDir := filepath.Join(paths.OutDir, paths.SecurityDir, module, "vuln")
 		trivyJSON := `{"Results": [{"Vulnerabilities": [{"VulnerabilityID": "CVE-2024-0001", "Severity": "HIGH"}]}]}`
 		return internal.CreateFile(ctx, filepath.Join(securityDir, fmt.Sprintf("%s.json", timestamp)), trivyJSON)
+	})
+
+	sc.Step(`^module "([^"]*)" has security scan results older than 24 hours$`, func(module string) error {
+		// Create security results with old timestamp (26 hours ago)
+		timestamp := time.Now().Add(-26 * time.Hour).Format("2006-01-02T15-04-05Z")
+		securityDir := filepath.Join(paths.OutDir, paths.SecurityDir, module, "vuln")
+		trivyJSON := `{"Results": [{"Vulnerabilities": [{"VulnerabilityID": "CVE-2024-0001", "Severity": "HIGH"}]}]}`
+		filePath := filepath.Join(securityDir, fmt.Sprintf("%s.json", timestamp))
+
+		if err := internal.CreateFile(ctx, filePath, trivyJSON); err != nil {
+			return err
+		}
+
+		// Set file modification time to 26 hours ago
+		oldTime := time.Now().Add(-26 * time.Hour)
+		fullPath := filepath.Join(ctx.CurrentWorkDir, filePath)
+		return os.Chtimes(fullPath, oldTime, oldTime)
+	})
+
+	sc.Step(`^all modules have fresh test and security evidence$`, func() error {
+		// This step assumes modules were already created in a previous step
+		// We need to get the list of modules from the repository.yml
+		repositoryYmlPath := filepath.Join(ctx.CurrentWorkDir, ".r2r", "eac", "repository.yml")
+		content, err := os.ReadFile(repositoryYmlPath)
+		if err != nil {
+			return fmt.Errorf("failed to read repository.yml: %w", err)
+		}
+
+		// Simple parsing to extract module names
+		lines := strings.Split(string(content), "\n")
+		var modules []string
+		for _, line := range lines {
+			if strings.Contains(line, "moniker:") {
+				parts := strings.Split(line, "moniker:")
+				if len(parts) > 1 {
+					module := strings.TrimSpace(parts[1])
+					modules = append(modules, module)
+				}
+			}
+		}
+
+		// Create fresh evidence for each module
+		for _, module := range modules {
+			// Create test results
+			cucumberJSON := createMockCucumberResults([]string{"ac-2"})
+			testDir := filepath.Join("out", "test", "integration", module)
+			if err := internal.CreateFile(ctx, filepath.Join(testDir, "results.cucumber.json"), cucumberJSON); err != nil {
+				return err
+			}
+
+			// Create security results
+			timestamp := time.Now().Format("2006-01-02T15-04-05Z")
+			securityDir := filepath.Join(paths.OutDir, paths.SecurityDir, module, "vuln")
+			trivyJSON := `{"Results": [{"Vulnerabilities": [{"VulnerabilityID": "CVE-2024-0001", "Severity": "HIGH"}]}]}`
+			if err := internal.CreateFile(ctx, filepath.Join(securityDir, fmt.Sprintf("%s.json", timestamp)), trivyJSON); err != nil {
+				return err
+			}
+		}
+
+		return nil
 	})
 
 	// ==================== Then Steps ====================
