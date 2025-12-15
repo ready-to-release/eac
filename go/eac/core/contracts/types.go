@@ -71,18 +71,33 @@ type ModuleVersioning struct {
 
 // BaseContract represents the base structure for module contracts
 type BaseContract struct {
-	Moniker     string                 `yaml:"moniker"`
-	Name        string                 `yaml:"name"`
-	Type        string                 `yaml:"type"`
-	Description string                 `yaml:"description"`
-	DependsOn   []string               `yaml:"depends_on"`
-	Versioning  *ModuleVersioning      `yaml:"versioning,omitempty"`  // Module versioning configuration
-	Build       *ModuleBuild           `yaml:"build,omitempty"`       // Per-module build configuration (artifacts, options)
-	DockerBuild map[string]interface{} `yaml:"docker_build,omitempty"` // Per-module Docker build configuration
-	Books       []string               `yaml:"books,omitempty"`        // Book names to build for this module (references books.yml)
-	Files       Files                  `yaml:"files"`
-	Flags       Flags                  `yaml:"flags"`
-	Metadata    map[string]string      `yaml:"metadata,omitempty"` // Generic key-value store for module-specific data
+	Moniker       string                 `yaml:"moniker"`
+	Name          string                 `yaml:"name"`
+	Type          string                 `yaml:"type"`
+	Description   string                 `yaml:"description"`
+	DependsOn     []string               `yaml:"depends_on"`
+	Versioning    *ModuleVersioning      `yaml:"versioning,omitempty"`    // Module versioning configuration
+	Build         *ModuleBuild           `yaml:"build,omitempty"`         // Per-module build configuration (artifacts, options)
+	DockerBuild   map[string]interface{} `yaml:"docker_build,omitempty"`  // Per-module Docker build configuration
+	Books         []string               `yaml:"books,omitempty"`         // Book names to build for this module (references books.yml)
+	ReleaseBundle *ReleaseBundle         `yaml:"release_bundle,omitempty"` // Release bundle configuration (for release modules)
+	Files         Files                  `yaml:"files"`
+	Flags         Flags                  `yaml:"flags"`
+	Metadata      map[string]string      `yaml:"metadata,omitempty"` // Generic key-value store for module-specific data
+}
+
+// ReleaseBundle configures how the release module creates GitHub releases
+type ReleaseBundle struct {
+	TitleFormat string                  `yaml:"title_format" json:"title_format"` // Title template, e.g., "{r2r} ({r2r_version}) + {eac} ({eac_version})"
+	Headline    map[string]string       `yaml:"headline" json:"headline"`         // Map of label -> moniker for title modules
+	Categories  []ReleaseBundleCategory `yaml:"categories" json:"categories"`     // Grouped modules for release notes
+}
+
+// ReleaseBundleCategory groups modules in release notes
+type ReleaseBundleCategory struct {
+	Name        string   `yaml:"name" json:"name"`               // Category name, e.g., "Core Tools"
+	Description string   `yaml:"description" json:"description"` // Category description
+	Modules     []string `yaml:"modules" json:"modules"`         // Module monikers in this category
 }
 
 // ModuleBuild contains per-module build configuration

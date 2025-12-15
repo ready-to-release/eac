@@ -352,9 +352,62 @@
           "type": "object",
           "description": "Per-module Docker build configuration",
           "additionalProperties": true
+        },
+        "release_bundle": {
+          "$ref": "#/definitions/release_bundle",
+          "description": "Release bundle configuration for modules that create aggregated releases"
         }
       },
       "required": ["moniker", "name"]
+    },
+    "release_bundle": {
+      "type": "object",
+      "description": "Configuration for release bundle modules that aggregate multiple module releases into a single GitHub release",
+      "properties": {
+        "title_format": {
+          "type": "string",
+          "description": "Release title template with placeholders. Use {label} for version, {label_version} for explicit version. Example: '{r2r} ({r2r_version}) + {eac} ({eac_version})'"
+        },
+        "headline": {
+          "type": "object",
+          "description": "Map of label -> moniker for headline modules shown in title",
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          }
+        },
+        "categories": {
+          "type": "array",
+          "description": "Grouped modules for release notes",
+          "items": {
+            "$ref": "#/definitions/release_bundle_category"
+          }
+        }
+      },
+      "required": ["title_format", "headline", "categories"]
+    },
+    "release_bundle_category": {
+      "type": "object",
+      "description": "A category of modules in release notes",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Category name (e.g., 'Core Tools')"
+        },
+        "description": {
+          "type": "string",
+          "description": "Category description"
+        },
+        "modules": {
+          "type": "array",
+          "description": "Module monikers in this category",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          }
+        }
+      },
+      "required": ["name", "modules"]
     },
     "module_build": {
       "type": "object",

@@ -109,6 +109,30 @@ func loadModules(workspaceRoot string, noValidation bool) (*Registry, error) {
 				})
 			}
 		}
+
+		// Convert Versioning config if present
+		if m.Versioning != nil {
+			base.Versioning = &contracts.ModuleVersioning{
+				Scheme:  m.Versioning.Scheme,
+				Current: m.Versioning.Current,
+			}
+		}
+
+		// Convert ReleaseBundle config if present
+		if m.ReleaseBundle != nil {
+			base.ReleaseBundle = &contracts.ReleaseBundle{
+				TitleFormat: m.ReleaseBundle.TitleFormat,
+				Headline:    m.ReleaseBundle.Headline,
+			}
+			for _, cat := range m.ReleaseBundle.Categories {
+				base.ReleaseBundle.Categories = append(base.ReleaseBundle.Categories, contracts.ReleaseBundleCategory{
+					Name:        cat.Name,
+					Description: cat.Description,
+					Modules:     cat.Modules,
+				})
+			}
+		}
+
 		// Note: Defaults are already applied by config.RepositoryConfig.applyModuleDefaults() and ApplyTypeDefaults()
 
 		// Validate required fields
