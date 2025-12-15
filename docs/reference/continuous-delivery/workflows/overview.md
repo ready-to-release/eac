@@ -208,7 +208,7 @@ Extracts and validates version from git tag or workflow input.
 
 ## References
 
-- [Trigger Orchestration](./trigger-orchestration.md) - Detailed trigger-ci.yaml specification
+- [Trigger Orchestration](./trigger-orchestration.md) - Detailed change-trigger.yaml specification
 - [CI Workflows](./ci-workflows.md) - Module CI workflow patterns
 - [Repository Layout](../../r2r-eac/repository-layout.md) - Module structure and dependencies
 

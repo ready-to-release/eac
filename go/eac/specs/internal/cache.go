@@ -68,7 +68,7 @@ func (c *TestCache) EnsurePopulated(repoRoot string) error {
 
 	// Load git tracked files - this is the ONLY git operation per process!
 	// First check for pre-computed file list (CI optimization via GitHub API)
-	// In CI: trigger-ci.yaml pre-computes this using GitHub Tree API (~5s vs 84s for git ls-files)
+	// In CI: change-trigger.yaml pre-computes this using GitHub Tree API (~5s vs 84s for git ls-files)
 	// Locally: file doesn't exist, falls through to git ls-files (fast on local storage)
 	cachedFilePath := filepath.Join(repoRoot, ".git", "cached-files.txt")
 	if cachedData, err := os.ReadFile(cachedFilePath); err == nil && len(cachedData) > 0 {

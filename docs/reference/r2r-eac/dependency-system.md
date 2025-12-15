@@ -147,7 +147,7 @@ CI workflows run in parallel for all changed modules. Release workflows verify d
 ### CI Dispatch
 
 ```text
-trigger-ci.yaml
+change-trigger.yaml
     │
     └──► Dispatch ALL CI workflows in parallel
          [eac-core, eac-commands, r2r-cli, ext-eac, docs, books, ...]

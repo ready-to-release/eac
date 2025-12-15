@@ -152,7 +152,6 @@ modules:
     files:
       root: release/bundle
       workflows:
-        ci: .github/workflows/ci-r2r-eac.yaml
         release: .github/workflows/release-r2r-eac.yaml
 
   # ============================================================================
@@ -272,8 +271,7 @@ modules:
           - .github/workflows/change-trigger.yaml
           - .github/workflows/cron-full-trigger.yaml
           - .github/workflows/codeql.yaml
-          - .github/workflows/trigger-ci.yaml
-          - .github/workflows/trigger-release.yaml
+          - .github/workflows/change-trigger.yaml
           - go/eac/core/testing/testdata/meta-tests/**
 
   # ============================================================================

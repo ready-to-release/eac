@@ -1,19 +1,17 @@
-# CI Orchestrator - Optimized Module Build Trigger
+# Change Trigger - Optimized Module Build Orchestrator
 #
 # This workflow implements incremental CI by only building modules that have changed
 # since the last successful CI run. It uses the repository's dependency graph to ensure
 # that when a module changes, all modules that depend on it are also rebuilt (cache invalidation).
 #
 # Pipeline stages:
-# 1. build-tooling: Build/cache the commands binary for fast subsequent operations
-# 2. PARALLEL FLOWS:
+# 1. PARALLEL FLOWS:
 #    Flow A (Repository Validation):
-#      - build-repository: Build repository module
-#      - validate-repository: Run repository component suite (contract validation)
+#      - build-and-test-repository: Build and test repository module (contract validation)
 #    Flow B (Module CI Orchestration):
-#      - detect-changes: Determine which modules need CI workflows triggered
+#      - detect-changes: Build commands binary + determine which modules need CI workflows triggered
 #      - execute-workflows: Dispatch ALL module CI workflows in parallel
-# 3. summary: Report results (waits for both flows)
+# 2. summary: Report results (waits for both flows)
 #
 # NOTE: All CI workflows run in parallel. Dependency verification happens at RELEASE time
 # via the `release await-deps` command, not during CI dispatch.
@@ -22,7 +20,7 @@
 # For push: Compares against last successful CI SHA
 # Bootstrap (no previous success): Builds all modules
 
-name: "CI Trigger"
+name: "Change Trigger"
 
 on:
   push:
@@ -45,35 +43,14 @@ concurrency:
 
 permissions:
   actions: write
-  contents: read
+  contents: write  # Required for creating release tags
 
 jobs:
   # =========================================
-  # Stage 0: Build CI Tooling
-  # =========================================
-  build-tooling:
-    name: Build CI Tooling
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Setup Commands Binary
-        id: commands
-        uses: ./.github/actions/setup-commands
-        # Don't require artifact - this is the job that creates it
-
-      - name: Build Summary
-        run: |
-          echo "## Build CI Tooling" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Commands binary: ${{ steps.commands.outputs.source }}" >> $GITHUB_STEP_SUMMARY
-
-  # =========================================
   # Flow A: Repository Validation (runs in parallel with Flow B)
   # =========================================
-  build-repository:
-    name: Build Repository
-    needs: build-tooling
+  build-and-test-repository:
+    name: Build & Test Repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -84,13 +61,7 @@ jobs:
           module: repository
           trigger-run-id: ${{ github.run_id }}
           setup-deps: auto
-
-  validate-repository:
-    name: Test Repository
-    needs: build-repository
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
+          upload-artifact: 'false'
 
       # Pre-compute git file list using GitHub API (fast) instead of git ls-files (84s)
       # GitHub API reads from database, not slow runner storage
@@ -126,6 +97,7 @@ jobs:
           module: repository
           trigger-run-id: ${{ github.run_id }}
           setup-deps: auto
+          download-artifact: 'false'
           suites: component
 
   # =========================================
@@ -133,7 +105,6 @@ jobs:
   # =========================================
   detect-changes:
     name: Detect Changed Modules
-    needs: build-tooling
     runs-on: ubuntu-latest
     outputs:
       changed-modules: ${{ steps.detect.outputs.modules }}
@@ -149,22 +120,16 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Download commands binary
-        uses: actions/download-artifact@v7
-        with:
-          name: commands-binary
-          path: out/tools
-
-      - name: Make executable
-        run: chmod +x out/tools/commands
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
 
       - name: Detect Changed Modules
         id: detect
         env:
           GH_TOKEN: ${{ github.token }}
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
         run: |
-          COMMANDS="./out/tools/commands"
-
           # Check if trigger-all override is enabled
           TRIGGER_ALL="${{ inputs.trigger-all }}"
 
@@ -323,7 +288,7 @@ jobs:
           fi
 
   # =========================================
-  # Stage 3: Execute Module Workflows (All Parallel)
+  # Stage 2: Execute Module Workflows (All Parallel)
   # =========================================
   execute-workflows:
     name: Dispatch All CI
@@ -413,7 +378,7 @@ jobs:
   # =========================================
   summary:
     name: Summary
-    needs: [build-tooling, build-repository, validate-repository, detect-changes, execute-workflows]
+    needs: [build-and-test-repository, detect-changes, execute-workflows]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -427,29 +392,13 @@ jobs:
           echo "**Commit**: [\`${{ github.sha }}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          # Check build-tooling status
-          BUILD_TOOLING="${{ needs.build-tooling.result }}"
-          BUILD_REPOSITORY="${{ needs.build-repository.result }}"
-          VALIDATE_REPOSITORY="${{ needs.validate-repository.result }}"
+          # Check job statuses
+          REPO_VALIDATION="${{ needs.build-and-test-repository.result }}"
 
-          if [ "$BUILD_TOOLING" = "failure" ]; then
-            echo "### Build Tooling Failed" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Failed to build the commands binary. Check the build-tooling job for details." >> $GITHUB_STEP_SUMMARY
-            exit 0
-          fi
-
-          if [ "$BUILD_REPOSITORY" = "failure" ]; then
-            echo "### Repository Build Failed" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Repository module build failed. Check the build-repository job for details." >> $GITHUB_STEP_SUMMARY
-            exit 0
-          fi
-
-          if [ "$VALIDATE_REPOSITORY" = "failure" ]; then
+          if [ "$REPO_VALIDATION" = "failure" ]; then
             echo "### Repository Validation Failed" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Repository component suite failed. Fix test failures before continuing." >> $GITHUB_STEP_SUMMARY
+            echo "Repository build or test failed. Check the build-and-test-repository job for details." >> $GITHUB_STEP_SUMMARY
             exit 0
           fi
 
@@ -499,33 +448,15 @@ jobs:
           echo "| Stage | Status | Description |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|--------|-------------|" >> $GITHUB_STEP_SUMMARY
 
-          # Build tooling stage
-          if [ "$BUILD_TOOLING" = "success" ]; then
-            echo "| Build Tooling | Pass | Commands binary built/cached |" >> $GITHUB_STEP_SUMMARY
+          # Repository validation stage
+          if [ "$REPO_VALIDATION" = "success" ]; then
+            echo "| Repository Validation | Pass | Build + component suite passed |" >> $GITHUB_STEP_SUMMARY
+          elif [ "$REPO_VALIDATION" = "failure" ]; then
+            echo "| Repository Validation | Fail | Build or test failed |" >> $GITHUB_STEP_SUMMARY
+          elif [ "$REPO_VALIDATION" = "skipped" ]; then
+            echo "| Repository Validation | Skip | Skipped |" >> $GITHUB_STEP_SUMMARY
           else
-            echo "| Build Tooling | $BUILD_TOOLING | Unexpected state |" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          # Build repository stage
-          if [ "$BUILD_REPOSITORY" = "success" ]; then
-            echo "| Build Repository | Pass | Repository module built |" >> $GITHUB_STEP_SUMMARY
-          elif [ "$BUILD_REPOSITORY" = "failure" ]; then
-            echo "| Build Repository | Fail | Build failed |" >> $GITHUB_STEP_SUMMARY
-          elif [ "$BUILD_REPOSITORY" = "skipped" ]; then
-            echo "| Build Repository | Skip | Skipped |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| Build Repository | $BUILD_REPOSITORY | Unexpected state |" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          # Validation stage
-          if [ "$VALIDATE_REPOSITORY" = "success" ]; then
-            echo "| Test Repository | Pass | Repository component suite passed |" >> $GITHUB_STEP_SUMMARY
-          elif [ "$VALIDATE_REPOSITORY" = "failure" ]; then
-            echo "| Test Repository | Fail | Repository test failures found |" >> $GITHUB_STEP_SUMMARY
-          elif [ "$VALIDATE_REPOSITORY" = "skipped" ]; then
-            echo "| Test Repository | Skip | Skipped |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| Test Repository | $VALIDATE_REPOSITORY | Unexpected state |" >> $GITHUB_STEP_SUMMARY
+            echo "| Repository Validation | $REPO_VALIDATION | Unexpected state |" >> $GITHUB_STEP_SUMMARY
           fi
 
           # Module builds (dispatched)
@@ -538,3 +469,278 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "> **Note**: Module CI workflows report their own statuses as separate checks." >> $GITHUB_STEP_SUMMARY
           echo "> Check individual \`CI: <module>\` checks for build results." >> $GITHUB_STEP_SUMMARY
+
+  # =========================================
+  # Release Trigger (push to main only)
+  # =========================================
+  # After CI workflows are dispatched, check for pending releases and trigger them.
+  # Releases are processed in dependency order (layer by layer) with await.
+  trigger-releases:
+    name: Trigger Releases
+    needs: [summary, detect-changes]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
+
+      # Step 1: Wait for all dispatched CI workflows to complete
+      - name: Await CI workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "Waiting for CI workflows to complete before checking releases..."
+          echo ""
+
+          TIMEOUT=1800  # 30 minutes max
+          START_TIME=$(date +%s)
+
+          while true; do
+            ACTIVE_COUNT=0
+
+            # Check for in-progress CI workflows (ci-*.yaml)
+            for workflow in .github/workflows/ci-*.yaml; do
+              if [ -f "$workflow" ]; then
+                WF_NAME=$(basename "$workflow")
+                IN_PROGRESS=$(gh run list -w "$WF_NAME" -s in_progress --json databaseId -q 'length' 2>/dev/null || echo "0")
+                QUEUED=$(gh run list -w "$WF_NAME" -s queued --json databaseId -q 'length' 2>/dev/null || echo "0")
+                TOTAL=$((IN_PROGRESS + QUEUED))
+                if [ "$TOTAL" -gt 0 ]; then
+                  ACTIVE_COUNT=$((ACTIVE_COUNT + TOTAL))
+                fi
+              fi
+            done
+
+            if [ "$ACTIVE_COUNT" -eq 0 ]; then
+              echo "✅ All CI workflows completed"
+              break
+            fi
+
+            ELAPSED=$(($(date +%s) - START_TIME))
+            if [ "$ELAPSED" -ge "$TIMEOUT" ]; then
+              echo "::warning::Timeout waiting for CI workflows after ${ELAPSED}s"
+              break
+            fi
+
+            echo "  Waiting for $ACTIVE_COUNT active CI workflow(s)... (${ELAPSED}s)"
+            sleep 30
+          done
+
+      # Step 2: Wait for any active release workflows to complete
+      - name: Await active releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "Checking for active release workflows..."
+          echo ""
+
+          TIMEOUT=600  # 10 minutes max
+          START_TIME=$(date +%s)
+
+          while true; do
+            ACTIVE_COUNT=0
+
+            # Check for in-progress release workflows (release-*.yaml)
+            for workflow in .github/workflows/release-*.yaml; do
+              if [ -f "$workflow" ]; then
+                WF_NAME=$(basename "$workflow")
+                IN_PROGRESS=$(gh run list -w "$WF_NAME" -s in_progress --json databaseId -q 'length' 2>/dev/null || echo "0")
+                QUEUED=$(gh run list -w "$WF_NAME" -s queued --json databaseId -q 'length' 2>/dev/null || echo "0")
+                TOTAL=$((IN_PROGRESS + QUEUED))
+                if [ "$TOTAL" -gt 0 ]; then
+                  echo "  $WF_NAME: $TOTAL active"
+                  ACTIVE_COUNT=$((ACTIVE_COUNT + TOTAL))
+                fi
+              fi
+            done
+
+            if [ "$ACTIVE_COUNT" -eq 0 ]; then
+              echo "✅ No active release workflows"
+              break
+            fi
+
+            ELAPSED=$(($(date +%s) - START_TIME))
+            if [ "$ELAPSED" -ge "$TIMEOUT" ]; then
+              echo "::warning::Timeout waiting for release workflows after ${ELAPSED}s"
+              break
+            fi
+
+            echo ""
+            echo "  Waiting for $ACTIVE_COUNT active release workflow(s)... (${ELAPSED}s)"
+            sleep 30
+          done
+
+      # Step 3: Check for pending releases (semver from changelog, calver from dispatched CI)
+      - name: Check for pending releases
+        id: check
+        uses: ./.github/actions/check-pending-releases
+        with:
+          dispatched-modules: ${{ needs.detect-changes.outputs.changed-modules }}
+
+      # Step 4: Trigger releases in dependency order (layer by layer)
+      - name: Trigger releases by layer
+        if: steps.check.outputs.has_pending == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LAYERS_JSON: ${{ steps.check.outputs.layers_json }}
+          LAYER_COUNT: ${{ steps.check.outputs.layer_count }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          echo "Processing $LAYER_COUNT release layer(s) in dependency order..."
+          echo ""
+
+          FAILED_MODULES=""
+
+          # Process each layer sequentially
+          for LAYER_IDX in $(seq 0 $((LAYER_COUNT - 1))); do
+            LAYER=$(echo "$LAYERS_JSON" | jq -c ".[$LAYER_IDX]")
+            LAYER_SIZE=$(echo "$LAYER" | jq 'length')
+
+            if [ "$LAYER_SIZE" -eq 0 ]; then
+              continue
+            fi
+
+            echo ""
+            echo "=========================================="
+            echo "Layer $((LAYER_IDX + 1))/$LAYER_COUNT ($LAYER_SIZE module(s))"
+            echo "=========================================="
+
+            # Collect run IDs for this layer (for await)
+            LAYER_RUNS=""
+
+            # Trigger all modules in this layer
+            for i in $(seq 0 $((LAYER_SIZE - 1))); do
+              MODULE_INFO=$(echo "$LAYER" | jq -c ".[$i]")
+              MODULE=$(echo "$MODULE_INFO" | jq -r '.module')
+              VERSION=$(echo "$MODULE_INFO" | jq -r '.version')
+              TAG=$(echo "$MODULE_INFO" | jq -r '.tag')
+              TYPE=$(echo "$MODULE_INFO" | jq -r '.type')
+              WORKFLOW="release-${MODULE}.yaml"
+
+              echo ""
+              echo "  [$MODULE] ($TYPE) Creating tag: $TAG"
+
+              # Create and push tag
+              git tag -a "$TAG" -m "Release $MODULE v$VERSION"
+              git push origin "$TAG"
+
+              # Dispatch release workflow
+              if [ ! -f ".github/workflows/$WORKFLOW" ]; then
+                echo "  [$MODULE] ⚠️ No release workflow found: $WORKFLOW"
+                continue
+              fi
+
+              echo "  [$MODULE] Dispatching $WORKFLOW"
+              if grep -q "inputs:" ".github/workflows/$WORKFLOW" && \
+                 grep -A 10 "inputs:" ".github/workflows/$WORKFLOW" | grep -q "version:"; then
+                gh workflow run "$WORKFLOW" -f version="$VERSION"
+              else
+                gh workflow run "$WORKFLOW"
+              fi
+
+              # Wait briefly for workflow to register
+              sleep 5
+
+              # Find run ID
+              RUN_ID=$(gh run list -w "$WORKFLOW" -L 1 --json databaseId,status \
+                -q '.[0] | select(.status == "queued" or .status == "in_progress") | .databaseId' 2>/dev/null || echo "")
+
+              if [ -n "$RUN_ID" ]; then
+                echo "  [$MODULE] Run ID: $RUN_ID"
+                LAYER_RUNS="$LAYER_RUNS $MODULE:$RUN_ID"
+              fi
+            done
+
+            # Await all runs in this layer to complete before next layer
+            echo ""
+            echo "  Awaiting layer $((LAYER_IDX + 1)) completion..."
+
+            for ENTRY in $LAYER_RUNS; do
+              MODULE=$(echo "$ENTRY" | cut -d: -f1)
+              RUN_ID=$(echo "$ENTRY" | cut -d: -f2)
+
+              TIMEOUT=900  # 15 min per release
+              START_TIME=$(date +%s)
+
+              while true; do
+                STATUS=$(gh run view "$RUN_ID" --json status -q '.status' 2>/dev/null || echo "unknown")
+
+                if [ "$STATUS" = "completed" ]; then
+                  CONCLUSION=$(gh run view "$RUN_ID" --json conclusion -q '.conclusion' 2>/dev/null || echo "unknown")
+                  if [ "$CONCLUSION" = "success" ]; then
+                    echo "  [$MODULE] ✅ Completed successfully"
+                  else
+                    echo "  [$MODULE] ❌ Failed: $CONCLUSION"
+                    FAILED_MODULES="$FAILED_MODULES $MODULE"
+                  fi
+                  break
+                fi
+
+                ELAPSED=$(($(date +%s) - START_TIME))
+                if [ "$ELAPSED" -ge "$TIMEOUT" ]; then
+                  echo "  [$MODULE] ⚠️ Timeout after ${ELAPSED}s"
+                  FAILED_MODULES="$FAILED_MODULES $MODULE(timeout)"
+                  break
+                fi
+
+                sleep 30
+              done
+            done
+          done
+
+          echo ""
+          if [ -n "$FAILED_MODULES" ]; then
+            echo "::warning::Some releases failed:$FAILED_MODULES"
+          else
+            echo "✅ All releases completed successfully"
+          fi
+
+      - name: Release Summary
+        if: always()
+        run: |
+          echo "## Release Trigger" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ steps.check.outputs.has_pending }}" = "true" ]; then
+            LAYER_COUNT="${{ steps.check.outputs.layer_count }}"
+            echo "### Releases Triggered ($LAYER_COUNT layer(s))" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Releases were processed in dependency order:" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            LAYERS_JSON='${{ steps.check.outputs.layers_json }}'
+
+            for LAYER_IDX in $(seq 0 $((LAYER_COUNT - 1))); do
+              LAYER=$(echo "$LAYERS_JSON" | jq -c ".[$LAYER_IDX]")
+              LAYER_SIZE=$(echo "$LAYER" | jq 'length')
+
+              if [ "$LAYER_SIZE" -gt 0 ]; then
+                echo "**Layer $((LAYER_IDX + 1))**" >> $GITHUB_STEP_SUMMARY
+                echo "" >> $GITHUB_STEP_SUMMARY
+                echo "| Module | Type | Version | Tag |" >> $GITHUB_STEP_SUMMARY
+                echo "|--------|------|---------|-----|" >> $GITHUB_STEP_SUMMARY
+
+                for i in $(seq 0 $((LAYER_SIZE - 1))); do
+                  MODULE=$(echo "$LAYER" | jq -r ".[$i].module")
+                  TYPE=$(echo "$LAYER" | jq -r ".[$i].type")
+                  VERSION=$(echo "$LAYER" | jq -r ".[$i].version")
+                  TAG=$(echo "$LAYER" | jq -r ".[$i].tag")
+                  echo "| $MODULE | $TYPE | \`$VERSION\` | \`$TAG\` |" >> $GITHUB_STEP_SUMMARY
+                done
+                echo "" >> $GITHUB_STEP_SUMMARY
+              fi
+            done
+          else
+            echo "No pending releases." >> $GITHUB_STEP_SUMMARY
+          fi

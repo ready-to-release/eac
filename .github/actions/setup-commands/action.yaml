@@ -13,6 +13,12 @@ inputs:
       if only Linux artifact exists (cross-platform CI support).
       If empty, builds from source.
     default: ''
+  cross-compile-windows:
+    description: |
+      Cross-compile for Windows when building on Linux. Default: false.
+      Set to true only for workflows that have Windows test jobs (r2r-cli, scripts-*).
+      This avoids unnecessary Windows builds for Linux-only CI workflows.
+    default: 'false'
 
 outputs:
   commands-path:
@@ -173,7 +179,7 @@ runs:
         echo "✓ Commands binary built (native)"
 
     - name: Cross-compile for Windows (from Linux)
-      if: runner.os == 'Linux' && steps.check.outputs.available != 'true'
+      if: runner.os == 'Linux' && steps.check.outputs.available != 'true' && inputs.cross-compile-windows == 'true'
       shell: bash
       run: |
         echo "Cross-compiling commands binary for Windows..."
@@ -200,7 +206,7 @@ runs:
         if-no-files-found: error
 
     - name: Upload Windows artifact (cross-compiled from Linux)
-      if: runner.os == 'Linux' && steps.check.outputs.available != 'true'
+      if: runner.os == 'Linux' && steps.check.outputs.available != 'true' && inputs.cross-compile-windows == 'true'
       uses: actions/upload-artifact@v5
       with:
         name: commands-binary-windows
