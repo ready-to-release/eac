@@ -11,15 +11,17 @@ package extension
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"gopkg.in/yaml.v3"
 )
 
 func init() {
 	registry.Register(ExtensionMeta)
 }
+
+var log = logging.C()
 
 // Metadata defines the extension metadata structure for r2r CLI
 type Metadata struct {
@@ -167,7 +169,7 @@ func ExtensionMeta() int {
 	// Marshal to YAML
 	yamlData, err := yaml.Marshal(&metadata)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error marshaling metadata: %v\n", err)
+		log.Errorf("Error marshaling metadata: %v", err)
 		return 1
 	}
 

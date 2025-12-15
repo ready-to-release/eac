@@ -3,6 +3,7 @@ package templates
 import (
 	"fmt"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
@@ -17,14 +18,15 @@ type BaseConfig struct {
 // parseBaseFlags parses common flags (--debug/-d) from args and returns BaseConfig
 // Returns the config and remaining unparsed args
 func parseBaseFlags(args []string) (*BaseConfig, []string, error) {
-	debug := false
+	// Parse debug flag using shared package
+	debug := flags.ParseDebugFlag(args)
 	var remaining []string
 
 	// Parse flags
 	for _, arg := range args {
 		switch arg {
 		case "--debug", "-d":
-			debug = true
+			// Already handled by shared flags package
 		default:
 			// Keep non-flag args for further processing
 			remaining = append(remaining, arg)

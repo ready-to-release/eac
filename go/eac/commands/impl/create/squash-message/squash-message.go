@@ -33,6 +33,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"github.com/ready-to-release/eac/go/eac/core/git"
@@ -79,14 +80,14 @@ func CreateSquashMessage() int {
 	// Phase 1: Parse configuration
 	config, err := parseConfig()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
+		log.Errorf("ERROR: %v", err)
 		return 1
 	}
 
 	// Phase 2: Get workspace root (needed for logger)
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: Failed to get workspace root: %v\n", err)
+		log.Errorf("ERROR: Failed to get workspace root: %v", err)
 		return 1
 	}
 
@@ -98,7 +99,7 @@ func CreateSquashMessage() int {
 		logger, err = logging.NewDefault("create", workspaceRoot)
 	}
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: Failed to initialize logger: %v\n", err)
+		log.Errorf("ERROR: Failed to initialize logger: %v", err)
 		return 1
 	}
 	defer logger.Sync()
@@ -218,6 +219,9 @@ func parseConfig() (*squashConfig, error) {
 		debug:      false,
 	}
 
+	// Parse debug flag using shared package
+	cfg.debug = flags.ParseDebugFlag(args)
+
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 		if strings.HasPrefix(arg, "--base=") {
@@ -230,7 +234,7 @@ func parseConfig() (*squashConfig, error) {
 				return nil, fmt.Errorf("--base requires a value")
 			}
 		} else if arg == "--debug" || arg == "-d" {
-			cfg.debug = true
+			// Already handled by shared flags package
 		} else {
 			return nil, fmt.Errorf("unknown flag: %s", arg)
 		}

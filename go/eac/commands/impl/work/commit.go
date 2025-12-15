@@ -24,8 +24,11 @@ import (
 	"os"
 	"os/exec"
 
+	"go.uber.org/zap"
+
 	commitmessage "github.com/ready-to-release/eac/go/eac/commands/impl/create/commit-message"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/work/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
@@ -63,10 +66,10 @@ func Commit() int {
 	}
 	defer config.base.Logger.Sync()
 
-	config.base.Logger.Debug("Starting work commit command")
-	internal.WriteDebugFile(config.base.Logger, config.base.RepoRoot, "commit-config.txt",
-		fmt.Sprintf("StageAll: %v\nCustomMessage: %s\nDebug: %v\n",
-			config.stageAll, config.customMessage, config.base.Debug))
+	config.base.Logger.Debug("Starting work commit command",
+		zap.Bool("stageAll", config.stageAll),
+		zap.String("customMessage", config.customMessage),
+		zap.Bool("debug", config.base.Debug))
 
 	// Phase 2: Validate environment
 	if err := internal.EnsureInGitRepo(); err != nil {
@@ -127,7 +130,7 @@ func parseCommitConfig() (*commitConfig, error) {
 	}
 
 	// Parse flags
-	config.stageAll = internal.HasFlag(args, "--all", "-a")
+	config.stageAll = flags.HasFlag(args, "--all", "-a")
 
 	// Parse --message/-m flag
 	for i := 0; i < len(args); i++ {

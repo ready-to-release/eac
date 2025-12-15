@@ -31,8 +31,11 @@ import (
 	"os/exec"
 	"strings"
 
+	"go.uber.org/zap"
+
 	commitmessage "github.com/ready-to-release/eac/go/eac/commands/impl/create/commit-message"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/work/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
@@ -71,10 +74,11 @@ func Merge() int {
 	}
 	defer config.base.Logger.Sync()
 
-	config.base.Logger.Debug("Starting work merge command")
-	internal.WriteDebugFile(config.base.Logger, config.base.RepoRoot, "merge-config.txt",
-		fmt.Sprintf("CurrentBranch: %s\nTarget: %s\nNoSquash: %v\nKeepWorktree: %v\n",
-			config.currentBranch, config.targetBranch, config.noSquash, config.keepWorktree))
+	config.base.Logger.Debug("Starting work merge command",
+		zap.String("currentBranch", config.currentBranch),
+		zap.String("targetBranch", config.targetBranch),
+		zap.Bool("noSquash", config.noSquash),
+		zap.Bool("keepWorktree", config.keepWorktree))
 
 	// Phase 2: Validate environment
 	if err := validateMergeEnvironment(config); err != nil {
@@ -167,11 +171,11 @@ func parseMergeConfig() (*mergeConfig, error) {
 	}
 
 	// Parse flags
-	if targetValue := internal.GetFlagValue(args, "--target"); targetValue != "" {
+	if targetValue := flags.GetFlagValue(args, "--target"); targetValue != "" {
 		config.targetBranch = targetValue
 	}
-	config.noSquash = internal.HasFlag(args, "--no-squash", "")
-	config.keepWorktree = internal.HasFlag(args, "--keep-worktree", "")
+	config.noSquash = flags.HasFlag(args, "--no-squash", "")
+	config.keepWorktree = flags.HasFlag(args, "--keep-worktree", "")
 
 	// Get current branch from current working directory (not repoRoot)
 	// This ensures we get the correct branch in worktree environments

@@ -37,7 +37,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"go.uber.org/zap"
+
 	"github.com/ready-to-release/eac/go/eac/commands/impl/work/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 )
 
@@ -77,10 +80,12 @@ func Remove() int {
 	}
 	defer config.base.Logger.Sync()
 
-	config.base.Logger.Debug("Starting work remove command")
-	internal.WriteDebugFile(config.base.Logger, config.base.RepoRoot, "remove-config.txt",
-		fmt.Sprintf("Branch: %s\nKeepBranch: %v\nDeleteRemote: %v\nForce: %v\nPath: %s\n",
-			config.branchName, config.keepBranch, config.deleteRemote, config.force, config.worktreePath))
+	config.base.Logger.Debug("Starting work remove command",
+		zap.String("branch", config.branchName),
+		zap.Bool("keepBranch", config.keepBranch),
+		zap.Bool("deleteRemote", config.deleteRemote),
+		zap.Bool("force", config.force),
+		zap.String("path", config.worktreePath))
 
 	// Phase 2: Validate environment
 	config.base.Logger.Info("Checking workspace status...")
@@ -211,12 +216,12 @@ func parseRemoveConfig() (*removeConfig, error) {
 	}
 
 	// Parse flags
-	config.keepBranch = internal.HasFlag(args, "--keep-branch", "")
-	config.deleteRemote = internal.HasFlag(args, "--delete-remote", "")
-	config.force = internal.HasFlag(args, "--force", "")
+	config.keepBranch = flags.HasFlag(args, "--keep-branch", "")
+	config.deleteRemote = flags.HasFlag(args, "--delete-remote", "")
+	config.force = flags.HasFlag(args, "--force", "")
 
 	// Get positional arguments
-	positionalArgs := internal.GetPositionalArgs(args)
+	positionalArgs := flags.GetPositionalArgs(args)
 	var branchArg string
 	if len(positionalArgs) > 0 {
 		branchArg = positionalArgs[0]

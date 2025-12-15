@@ -30,7 +30,10 @@ import (
 	"fmt"
 	"os"
 
+	"go.uber.org/zap"
+
 	"github.com/ready-to-release/eac/go/eac/commands/impl/work/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
@@ -69,10 +72,11 @@ func Pull() int {
 	}
 	defer config.base.Logger.Sync()
 
-	config.base.Logger.Debug("Starting work pull command")
-	internal.WriteDebugFile(config.base.Logger, config.base.RepoRoot, "pull-config.txt",
-		fmt.Sprintf("CurrentBranch: %s\nTarget: %s\nAutostash: %v\nNoFetch: %v\n",
-			config.currentBranch, config.targetBranch, config.autostash, config.noFetch))
+	config.base.Logger.Debug("Starting work pull command",
+		zap.String("currentBranch", config.currentBranch),
+		zap.String("targetBranch", config.targetBranch),
+		zap.Bool("autostash", config.autostash),
+		zap.Bool("noFetch", config.noFetch))
 
 	// Phase 2: Validate environment
 	if err := validatePullEnvironment(config); err != nil {
@@ -172,11 +176,11 @@ func parsePullConfig() (*pullConfig, error) {
 	}
 
 	// Parse flags
-	if targetValue := internal.GetFlagValue(args, "--target"); targetValue != "" {
+	if targetValue := flags.GetFlagValue(args, "--target"); targetValue != "" {
 		config.targetBranch = targetValue
 	}
-	config.autostash = internal.HasFlag(args, "--autostash", "")
-	config.noFetch = internal.HasFlag(args, "--no-fetch", "")
+	config.autostash = flags.HasFlag(args, "--autostash", "")
+	config.noFetch = flags.HasFlag(args, "--no-fetch", "")
 
 	// Get current branch from current working directory (not repoRoot)
 	// This ensures we get the correct branch in worktree environments

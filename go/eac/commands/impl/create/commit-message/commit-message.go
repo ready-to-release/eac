@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	commitmessageinternal "github.com/ready-to-release/eac/go/eac/commands/impl/create/commit-message/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/git"
@@ -109,7 +110,7 @@ func CreateCommitMessage() int {
 	// Parse configuration early to get debug mode, auto-commit flag, and workspace root
 	debug, autoCommit, workspaceRoot, err := parseConfig()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
+		log.Errorf("ERROR: %v", err)
 		return 1
 	}
 
@@ -185,7 +186,7 @@ func commitAIAttemptWithMessage(logger *logging.Logger, workspaceRoot string, de
 	// Phase 2: Build Execution Context
 	cfg, stagedFilesTable, diffStats, err := buildExecutionContext(workspaceRoot, logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: Build context failed: %v\n", err)
+		log.Errorf("ERROR: Build context failed: %v", err)
 		return 1, false, ""
 	}
 	if cfg == nil {
@@ -196,14 +197,14 @@ func commitAIAttemptWithMessage(logger *logging.Logger, workspaceRoot string, de
 	// Phase 3: Generate Top-Level Summary
 	topLevel, err := generateTopLevelSummary(cfg, stagedFilesTable, diffStats, logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: Top-level generation failed: %v\n", err)
+		log.Errorf("ERROR: Top-level generation failed: %v", err)
 		return 1, false, ""
 	}
 
 	// Phase 4: Generate Module Sections
 	moduleSections, err := generateModuleSections(cfg, logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: Module section generation failed: %v\n", err)
+		log.Errorf("ERROR: Module section generation failed: %v", err)
 		return 1, false, ""
 	}
 
@@ -217,15 +218,11 @@ func commitAIAttemptWithMessage(logger *logging.Logger, workspaceRoot string, de
 
 // Phase 1: Parse Configuration
 func parseConfig() (debug bool, autoCommit bool, workspaceRoot string, err error) {
-	// Parse flags
-	for _, arg := range os.Args[3:] { // Skip program name, "create", and "commit-message"
-		switch arg {
-		case "--debug", "-d":
-			debug = true
-		case "--commit", "-c":
-			autoCommit = true
-		}
-	}
+	args := os.Args[3:] // Skip program name, "create", and "commit-message"
+
+	// Parse flags using shared package
+	debug = flags.ParseDebugFlag(args)
+	autoCommit = flags.HasFlag(args, "--commit", "-c")
 
 	// Get repository root
 	workspaceRoot, err = repository.GetRepositoryRoot("")

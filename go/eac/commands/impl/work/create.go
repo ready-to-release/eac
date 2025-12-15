@@ -27,7 +27,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"go.uber.org/zap"
+
 	"github.com/ready-to-release/eac/go/eac/commands/impl/work/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
@@ -66,10 +69,11 @@ func Create() int {
 	}
 	defer config.base.Logger.Sync()
 
-	config.base.Logger.Debug("Starting work create command")
-	internal.WriteDebugFile(config.base.Logger, config.base.RepoRoot, "create-config.txt",
-		fmt.Sprintf("Branch: %s\nBase: %s\nPath: %s\nDebug: %v\n",
-			config.branchName, config.baseBranch, config.worktreePath, config.base.Debug))
+	config.base.Logger.Debug("Starting work create command",
+		zap.String("branchName", config.branchName),
+		zap.String("baseBranch", config.baseBranch),
+		zap.String("worktreePath", config.worktreePath),
+		zap.Bool("debug", config.base.Debug))
 
 	// Phase 2: Validate environment
 	if err := validateCreateEnvironment(config); err != nil {
@@ -111,7 +115,7 @@ func parseCreateConfig() (*createConfig, error) {
 	}
 
 	// Get positional arguments (non-flags)
-	positionalArgs := internal.GetPositionalArgs(args)
+	positionalArgs := flags.GetPositionalArgs(args)
 	if len(positionalArgs) == 0 {
 		return nil, fmt.Errorf("branch name is required\nUsage: work create <branch-name> [--from=main] [--path=<path>] [--debug]")
 	}
@@ -123,10 +127,10 @@ func parseCreateConfig() (*createConfig, error) {
 	}
 
 	// Parse custom flags
-	if fromValue := internal.GetFlagValue(args, "--from"); fromValue != "" {
+	if fromValue := flags.GetFlagValue(args, "--from"); fromValue != "" {
 		config.baseBranch = fromValue
 	}
-	if pathValue := internal.GetFlagValue(args, "--path"); pathValue != "" {
+	if pathValue := flags.GetFlagValue(args, "--path"); pathValue != "" {
 		config.customPath = pathValue
 	}
 

@@ -37,6 +37,7 @@ import (
 	"go.uber.org/zap"
 
 	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/oscal"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/scoring"
 	sharedTemplate "github.com/ready-to-release/eac/go/eac/commands/internal/template"
@@ -227,6 +228,10 @@ func parseAssessConfig() (*AssessConfig, error) {
 		ReportTemplate: "risk-assessment-detailed", // Default to detailed template
 	}
 
+	// Parse debug flag using shared package
+	config.Debug = flags.ParseDebugFlag(args)
+	config.Sequential = flags.HasFlag(args, "--sequential", "")
+
 	// Get workspace root
 	workspaceRoot, err := registry.GetWorkspaceRoot()
 	if err != nil {
@@ -294,14 +299,6 @@ func parseAssessConfig() (*AssessConfig, error) {
 			config.MaxEvidenceAge = duration
 			i += 2
 
-		case arg == "--sequential":
-			config.Sequential = true
-			i++
-
-		case arg == "--debug" || arg == "-d":
-			config.Debug = true
-			i++
-
 		case arg == "--suites":
 			if i+1 >= len(args) {
 				return nil, fmt.Errorf("--suites requires at least one value")
@@ -333,6 +330,10 @@ func parseAssessConfig() (*AssessConfig, error) {
 			}
 			config.ReportTemplate = template
 			i += 2
+
+		case arg == "--debug" || arg == "-d" || arg == "--sequential":
+			// Already handled by shared flags package
+			i++
 
 		case strings.HasPrefix(arg, "-"):
 			return nil, fmt.Errorf("unknown flag: %s", arg)

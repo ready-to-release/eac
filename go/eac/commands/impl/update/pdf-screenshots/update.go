@@ -34,9 +34,12 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/buildutil"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/serve"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
+
+var log = logging.C()
 
 const (
 	// pdfToolsImage is the Docker image for PDF operations
@@ -99,7 +102,7 @@ func UpdatePDFScreenshots() int {
 	// Get repo root
 	repoRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Errorf("Error: %v", err)
 		return 1
 	}
 
@@ -109,7 +112,7 @@ func UpdatePDFScreenshots() int {
 	buildDir := filepath.Join(repoRoot, paths.OutBuildRelPath)
 	pdfs, err := scanForPDFs(buildDir, moduleFilter)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error scanning for PDFs: %v\n", err)
+		log.Errorf("Error scanning for PDFs: %v", err)
 		return 1
 	}
 
@@ -181,7 +184,7 @@ func UpdatePDFScreenshots() int {
 	// Create Docker client
 	dockerClient, err := serve.NewDockerClient()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating Docker client: %v\n", err)
+		log.Errorf("Error creating Docker client: %v", err)
 		return 1
 	}
 	defer dockerClient.Close()
@@ -189,13 +192,13 @@ func UpdatePDFScreenshots() int {
 	// Build the pdf-tools image if needed
 	fmt.Println("Ensuring pdf-tools Docker image...")
 	if err := ensurePDFToolsImage(repoRoot); err != nil {
-		fmt.Fprintf(os.Stderr, "Error building pdf-tools image: %v\n", err)
+		log.Errorf("Error building pdf-tools image: %v", err)
 		return 1
 	}
 
 	// Ensure cache root exists
 	if err := os.MkdirAll(cacheRoot, 0755); err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating cache directory: %v\n", err)
+		log.Errorf("Error creating cache directory: %v", err)
 		return 1
 	}
 
@@ -219,14 +222,14 @@ func UpdatePDFScreenshots() int {
 
 		// Create cache directory for this PDF
 		if err := os.MkdirAll(pdf.CacheDir, 0755); err != nil {
-			fmt.Fprintf(os.Stderr, "  ❌ Failed to create cache dir for %s: %v\n", pdf.RelPath, err)
+			log.Errorf("  ❌ Failed to create cache dir for %s: %v", pdf.RelPath, err)
 			failed++
 			continue
 		}
 
 		// Extract pages using pdftoppm
 		if err := extractPages(dockerClient, pdf.Path, pdf.CacheDir, dpi); err != nil {
-			fmt.Fprintf(os.Stderr, "  ❌ Failed to extract %s: %v\n", pdf.RelPath, err)
+			log.Errorf("  ❌ Failed to extract %s: %v", pdf.RelPath, err)
 			// Clean up partial cache
 			os.RemoveAll(pdf.CacheDir)
 			failed++
@@ -236,7 +239,7 @@ func UpdatePDFScreenshots() int {
 		// Write hash marker file
 		hashMarker := filepath.Join(pdf.CacheDir, pdf.Hash+".cache")
 		if err := os.WriteFile(hashMarker, []byte(pdf.Hash), 0644); err != nil {
-			fmt.Fprintf(os.Stderr, "  ⚠️  Failed to write cache marker for %s: %v\n", pdf.RelPath, err)
+			log.Errorf("  ⚠️  Failed to write cache marker for %s: %v", pdf.RelPath, err)
 		}
 
 		// Count extracted pages

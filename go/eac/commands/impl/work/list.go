@@ -23,9 +23,12 @@ import (
 	"os"
 	"strings"
 
+	"go.uber.org/zap"
+
 	"github.com/ready-to-release/eac/go/eac/commands/impl/work/internal"
-	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
+	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
@@ -62,10 +65,10 @@ func ShowWorkspaces() int {
 	}
 	defer config.base.Logger.Sync()
 
-	config.base.Logger.Debug("Starting work list command")
-	internal.WriteDebugFile(config.base.Logger, config.base.RepoRoot, "list-config.txt",
-		fmt.Sprintf("Verbose: %v\nDebug: %v\nRepoRoot: %s\n",
-			config.verbose, config.base.Debug, config.base.RepoRoot))
+	config.base.Logger.Debug("Starting work list command",
+		zap.Bool("verbose", config.verbose),
+		zap.Bool("debug", config.base.Debug),
+		zap.String("repoRoot", config.base.RepoRoot))
 
 	// Phase 2: Validate environment
 	if err := internal.EnsureInGitRepo(); err != nil {
@@ -80,8 +83,9 @@ func ShowWorkspaces() int {
 		return 1
 	}
 
-	internal.WriteDebugFile(config.base.Logger, config.base.RepoRoot, "list-worktrees.txt",
-		fmt.Sprintf("Found %d worktrees:\n%+v\n", len(worktrees), worktrees))
+	config.base.Logger.Debug("Found worktrees",
+		zap.Int("count", len(worktrees)),
+		zap.Any("worktrees", worktrees))
 
 	// Phase 4: Display worktrees
 	displayWorktrees(config.base.Logger, worktrees, config.verbose)
@@ -111,7 +115,7 @@ func parseListConfig() (*listConfig, error) {
 	}
 
 	// Parse verbose flag
-	config.verbose = internal.HasFlag(args, "--verbose", "-v")
+	config.verbose = flags.HasFlag(args, "--verbose", "-v")
 
 	return config, nil
 }

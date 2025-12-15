@@ -32,7 +32,10 @@ import (
 	"os/exec"
 	"strings"
 
+	"go.uber.org/zap"
+
 	"github.com/ready-to-release/eac/go/eac/commands/impl/work/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
@@ -71,10 +74,11 @@ func CreatePR() int {
 	}
 	defer config.base.Logger.Sync()
 
-	config.base.Logger.Debug("Starting work pr command")
-	internal.WriteDebugFile(config.base.Logger, config.base.RepoRoot, "pr-config.txt",
-		fmt.Sprintf("CurrentBranch: %s\nTarget: %s\nCustomTitle: %s\n",
-			config.currentBranch, config.targetBranch, config.customTitle))
+	config.base.Logger.Debug("Starting work pr command",
+		zap.String("currentBranch", config.currentBranch),
+		zap.String("targetBranch", config.targetBranch),
+		zap.String("customTitle", config.customTitle),
+		zap.Bool("debug", config.base.Debug))
 
 	// Phase 2: Validate environment
 	if err := validatePREnvironment(config); err != nil {
@@ -154,10 +158,10 @@ func parsePRConfig() (*prConfig, error) {
 	}
 
 	// Parse flags
-	if targetValue := internal.GetFlagValue(args, "--target"); targetValue != "" {
+	if targetValue := flags.GetFlagValue(args, "--target"); targetValue != "" {
 		config.targetBranch = targetValue
 	}
-	if titleValue := internal.GetFlagValue(args, "--title"); titleValue != "" {
+	if titleValue := flags.GetFlagValue(args, "--title"); titleValue != "" {
 		config.customTitle = titleValue
 	}
 
