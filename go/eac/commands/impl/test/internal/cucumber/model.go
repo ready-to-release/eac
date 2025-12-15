@@ -143,3 +143,14 @@ func (s *Scenario) GetAcceptanceCriteria() string {
 	}
 	return ""
 }
+
+// GetDurationMs returns the total scenario duration in milliseconds.
+// Duration is calculated by summing all step durations (which are in nanoseconds).
+func (s *Scenario) GetDurationMs() int64 {
+	var totalNs int64
+	for _, step := range s.Steps {
+		totalNs += step.Result.Duration
+	}
+	// Convert nanoseconds to milliseconds
+	return totalNs / 1_000_000
+}

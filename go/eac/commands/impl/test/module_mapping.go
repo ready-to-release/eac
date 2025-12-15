@@ -122,23 +122,24 @@ func (m *ModuleMapper) GetModuleForPackagePath(pkgPath string) string {
 
 
 // BuildModuleOutputPath constructs the output path for a module's test results.
-// Returns a path like "<module-moniker>/<package-suffix>" or "<module-moniker>/<feature-name>" for godog
+// Returns a path like "<module-moniker>/packages/<package-suffix>" or "<module-moniker>/packages/<feature-name>" for godog
+// The new structure is: out/test/<module>/packages/<package>/
 func (m *ModuleMapper) BuildModuleOutputPath(pkgPath, moduleMoniker string) string {
 	if moduleMoniker == "" {
-		// No module found, use sanitized package path
-		return sanitizePathForLog(pkgPath)
+		// No module found, use sanitized package path under "unknown" module
+		return filepath.ToSlash(filepath.Join("unknown", "packages", sanitizePathForLog(pkgPath)))
 	}
 
 	// Handle godog paths: "featureName:testRoot:featurePath"
 	parts := strings.SplitN(pkgPath, ":", 3)
 	if len(parts) == 3 {
-		// Godog format: use module/featureName for cleaner output
+		// Godog format: use module/packages/featureName for cleaner output
 		featureName := parts[0]
-		return filepath.ToSlash(filepath.Join(moduleMoniker, featureName))
+		return filepath.ToSlash(filepath.Join(moduleMoniker, "packages", featureName))
 	}
 
 	// Extract the suffix after the module's directory
-	// e.g., for "go/eac/core/contracts" and module "eac-core", return "eac-core/contracts"
+	// e.g., for "go/eac/core/contracts" and module "eac-core", return "eac-core/packages/contracts"
 	normalizedPath := filepath.ToSlash(pkgPath)
 
 	// Handle legacy two-part paths
@@ -151,9 +152,13 @@ func (m *ModuleMapper) BuildModuleOutputPath(pkgPath, moduleMoniker string) stri
 	// Try to find the module root in the path
 	suffix := extractPathSuffix(normalizedPath, moduleMoniker)
 
-	result := moduleMoniker
+	// Build path with packages/ directory
+	result := filepath.Join(moduleMoniker, "packages")
 	if suffix != "" {
-		result = filepath.Join(moduleMoniker, suffix)
+		result = filepath.Join(result, suffix)
+	} else {
+		// If no suffix, use "root" to avoid empty path
+		result = filepath.Join(result, "root")
 	}
 	if featureSuffix != "" {
 		result = filepath.Join(result, sanitizePathForLog(featureSuffix))

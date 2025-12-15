@@ -157,17 +157,16 @@ func parseTestLog(logPath string) ([]TestTiming, error) {
 	defer file.Close()
 
 	// Extract module and package from path
-	// Path format: out/test/<suite>/<module>/<package>/test.log
-	relPath, err := filepath.Rel(filepath.Join(filepath.Dir(logPath), "..", "..", ".."), logPath)
-	if err != nil {
-		relPath = logPath
-	}
+	// Path format: out/test/<module>/packages/<package>/test.log
+	logDir := filepath.Dir(logPath)        // .../packages/<package>
+	pkg := filepath.Base(logDir)           // <package>
+	packagesDir := filepath.Dir(logDir)    // .../packages
+	moduleDir := filepath.Dir(packagesDir) // .../<module>
+	module := filepath.Base(moduleDir)     // <module>
 
-	parts := strings.Split(filepath.ToSlash(relPath), "/")
-	var module, pkg string
-	if len(parts) >= 4 {
-		module = parts[1]
-		pkg = parts[2]
+	// Skip files not in the expected packages/ structure
+	if filepath.Base(packagesDir) != "packages" {
+		return nil, nil
 	}
 
 	var timings []TestTiming

@@ -111,12 +111,13 @@ func WriteFixtureFile(t *testing.T, baseDir, relPath, content string) {
 
 // SetupMinimalFixture creates a minimal valid EAC config fixture in a temp directory.
 // Returns the path to the fixture root.
+// Note: module-types.yml is not created - the system uses defaults when missing.
 func SetupMinimalFixture(t *testing.T) string {
 	t.Helper()
 
 	dir := TempDir(t, "eac-test-*")
 
-	// Create minimal repository.yml
+	// Create minimal repository.yml (module-types.yml not needed - defaults are used)
 	WriteFixtureFile(t, dir, ".r2r/eac/repository.yml", `
 name: test-repo
 description: Test repository for unit tests
@@ -125,15 +126,12 @@ versioning:
 modules: []
 `)
 
-	// Create minimal module-types.yml
-	WriteFixtureFile(t, dir, ".r2r/eac/module-types.yml", `
-module_types: []
-`)
-
 	return dir
 }
 
 // SetupFixtureWithModules creates a fixture with specified modules.
+// Note: module-types.yml is not created - the system uses defaults when missing.
+// Module types referenced by modules should exist in the contract defaults.
 func SetupFixtureWithModules(t *testing.T, modules []ModuleSpec) string {
 	t.Helper()
 
@@ -150,26 +148,13 @@ func SetupFixtureWithModules(t *testing.T, modules []ModuleSpec) string {
 		}
 	}
 
-	// Create repository.yml
+	// Create repository.yml (module-types.yml not needed - defaults are used)
 	WriteFixtureFile(t, dir, ".r2r/eac/repository.yml", `
 name: test-repo
 description: Test repository for unit tests
 versioning:
   scheme: SemVer
 `+modulesYAML)
-
-	// Create minimal module-types.yml with referenced types
-	typesYAML := "module_types:\n"
-	seenTypes := make(map[string]bool)
-	for _, m := range modules {
-		if !seenTypes[m.Type] {
-			typesYAML += "  - name: " + m.Type + "\n"
-			typesYAML += "    description: " + m.Type + " module type\n"
-			seenTypes[m.Type] = true
-		}
-	}
-
-	WriteFixtureFile(t, dir, ".r2r/eac/module-types.yml", typesYAML)
 
 	return dir
 }

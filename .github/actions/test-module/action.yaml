@@ -42,7 +42,7 @@ inputs:
     required: false
     default: ''
   results-artifact-path:
-    description: 'Path pattern for test results to upload. If empty, uses out/test/**/{module}/**'
+    description: 'Path pattern for test results to upload. If empty, uses out/test/'
     required: false
     default: ''
   extra-args:
@@ -109,7 +109,7 @@ runs:
         if [ -n "$INPUT_RESULTS_ARTIFACT_PATH" ]; then
           echo "results-artifact-path=$INPUT_RESULTS_ARTIFACT_PATH" >> $GITHUB_OUTPUT
         else
-          # Upload all test output - structured as out/test/<suite>/<module-path>/
+          # Upload all test output - structured as out/test/<module>/packages/<package>/
           echo "results-artifact-path=out/test/" >> $GITHUB_OUTPUT
         fi
 

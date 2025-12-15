@@ -181,6 +181,7 @@ func (r *GitRepo) HasStagedChanges() bool {
 }
 
 // SetupEACConfig creates a minimal EAC config in the git repository.
+// Note: module-types.yml is not created - the system uses defaults when missing.
 func (r *GitRepo) SetupEACConfig() {
 	r.t.Helper()
 
@@ -191,13 +192,11 @@ versioning:
   scheme: SemVer
 modules: []
 `)
-
-	r.WriteFile(".r2r/eac/module-types.yml", `
-module_types: []
-`)
 }
 
 // SetupEACConfigWithModules creates an EAC config with the given modules.
+// Note: module-types.yml is not created - the system uses defaults when missing.
+// Module types referenced by modules should exist in the contract defaults.
 func (r *GitRepo) SetupEACConfigWithModules(modules []ModuleSpec) {
 	r.t.Helper()
 
@@ -218,17 +217,4 @@ description: Test repository
 versioning:
   scheme: SemVer
 `+modulesYAML)
-
-	// Create minimal module-types.yml with referenced types
-	typesYAML := "module_types:\n"
-	seenTypes := make(map[string]bool)
-	for _, m := range modules {
-		if !seenTypes[m.Type] {
-			typesYAML += "  - name: " + m.Type + "\n"
-			typesYAML += "    description: " + m.Type + " module type\n"
-			seenTypes[m.Type] = true
-		}
-	}
-
-	r.WriteFile(".r2r/eac/module-types.yml", typesYAML)
 }
