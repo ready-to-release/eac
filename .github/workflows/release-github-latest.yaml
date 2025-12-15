@@ -42,6 +42,7 @@ jobs:
       tag_name: ${{ steps.gate.outputs.tag_name }}
       ci_sha: ${{ steps.gate.outputs.ci_sha }}
       ci_run_id: ${{ inputs.ci_run_id }}
+      releases: ${{ steps.await.outputs.releases }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -56,6 +57,12 @@ jobs:
           version-type: calver
           skip-ci-check: ${{ inputs.ci_run_id != '' || inputs.skip-ci-check || 'false' }}
           timeout: '300'
+
+      - name: Await module releases
+        id: await
+        uses: ./.github/actions/await-module-releases
+        with:
+          timeout: '600'
 
   # =============================================================================
   # Create Release Bundle
@@ -92,8 +99,8 @@ jobs:
           TITLE_FORMAT=$(echo "$BUNDLE" | jq -r '.title_format')
           echo "Title format: $TITLE_FORMAT"
 
-          # Get all GitHub releases once
-          RELEASES=$(gh release list --limit 100)
+          # Get all GitHub releases once (as JSON for reliable parsing)
+          RELEASES=$(gh release list --limit 100 --json tagName -q '.[].tagName')
 
           # Gather all unique module monikers from headline and categories
           ALL_MONIKERS=$(echo "$BUNDLE" | jq -r '
@@ -110,7 +117,7 @@ jobs:
           declare -A TAGS
 
           for MONIKER in $ALL_MONIKERS; do
-            TAG=$(echo "$RELEASES" | grep "^${MONIKER}/" | head -1 | awk '{print $1}' || echo "")
+            TAG=$(echo "$RELEASES" | grep "^${MONIKER}/" | head -1 || echo "")
             VERSION="${TAG#${MONIKER}/}"
             VERSIONS[$MONIKER]="$VERSION"
             TAGS[$MONIKER]="$TAG"
