@@ -27,6 +27,7 @@ import (
 	"go.uber.org/zap"
 
 	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/oscal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	eacConfig "github.com/ready-to-release/eac/go/eac/core/config"
@@ -242,6 +243,9 @@ func parseConfig() (*Config, error) {
 	}
 	config.WorkspaceRoot = workspaceRoot
 
+	// Parse debug flag using shared package
+	config.Debug = flags.ParseDebugFlag(args)
+
 	// Parse flags and arguments
 	i := 0
 	for i < len(args) {
@@ -270,7 +274,7 @@ func parseConfig() (*Config, error) {
 			i++
 
 		case arg == "--debug" || arg == "-d":
-			config.Debug = true
+			// Already handled by shared flags package
 			i++
 
 		case arg == "--max-retries":

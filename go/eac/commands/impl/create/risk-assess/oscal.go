@@ -25,9 +25,17 @@ func buildAssessmentResultsForModule(config *AssessConfig, moduleName string, pr
 
 	// Get control evidence directly from cucumber test results
 	// This extracts @control: tags and test status from the cucumber JSON
-	controlTestEvidence, err := evidence.GetControlTestEvidence(config.WorkspaceRoot, moduleName, config.TestSuite)
-	if err != nil {
-		assessLog.Debugf("Failed to load control evidence for %s: %v", moduleName, err)
+	// Try each suite until we find evidence
+	var controlTestEvidence map[string]*evidence.ControlTestEvidence
+	for _, suite := range config.TestSuites {
+		var err error
+		controlTestEvidence, err = evidence.GetControlTestEvidence(config.WorkspaceRoot, moduleName, suite)
+		if err == nil && len(controlTestEvidence) > 0 {
+			break
+		}
+	}
+	if controlTestEvidence == nil {
+		assessLog.Debugf("No control evidence found for %s in any suite", moduleName)
 		controlTestEvidence = make(map[string]*evidence.ControlTestEvidence)
 	}
 

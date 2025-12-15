@@ -48,9 +48,9 @@ func FindLatestTestRun(workspaceRoot string) (string, error) {
 	return filepath.Join(testDir, timestampDirs[0]), nil
 }
 
-// FindTestResultsForModuleInSuite discovers test result files for a given module.
-// Test results are stored in: out/test/<module>/packages/<package>/
-// Note: suiteName parameter is kept for API compatibility but is no longer used in paths.
+// FindTestResultsForModuleInSuite discovers test result files for a given module in a specific test suite.
+// Test results are stored in: out/test/<suite>/<module>/
+// This function recursively scans subdirectories to handle test-package organization.
 func FindTestResultsForModuleInSuite(workspaceRoot, moduleName, suiteName string) (*TestResults, error) {
 	// Use helper function for clean fallback to defaults in test environments
 	moduleDir := config.GetTestModuleOutputPath(workspaceRoot, moduleName)
@@ -62,29 +62,35 @@ func FindTestResultsForModuleInSuite(workspaceRoot, moduleName, suiteName string
 
 	results := &TestResults{
 		ModuleName:       moduleName,
-		TestRunDirectory: moduleDir,
+		TestRunDirectory: moduleDir, // Use module-specific directory for freshness checks
 	}
 
+	// Recursively collect test result files from module directory and subdirectories
 	var latestModTime time.Time
+	err := filepath.WalkDir(moduleDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
 
-	// Walk packages directory to find all test result files
-	err := filepath.Walk(packagesDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() {
+		// Skip directories
+		if d.IsDir() {
 			return nil
 		}
 
-		filename := info.Name()
+		filename := d.Name()
 
 		// Track modification time
-		if info.ModTime().After(latestModTime) {
-			latestModTime = info.ModTime()
+		if info, err := d.Info(); err == nil {
+			if info.ModTime().After(latestModTime) {
+				latestModTime = info.ModTime()
+			}
 		}
 
-		// Categorize files - cucumber files can be named cucumber-*.json or *.cucumber.json
-		if strings.HasSuffix(filename, ".cucumber.json") ||
-			(strings.HasPrefix(filename, "cucumber-") && strings.HasSuffix(filename, ".json")) {
+		// Categorize files
+		// Accept both naming patterns: cucumber-*.json and *.cucumber.json
+		if isCucumberFile(filename) {
 			results.AcceptanceFiles = append(results.AcceptanceFiles, path)
-		} else if strings.HasSuffix(filename, ".json") && filename != "test.manifest.json" {
+		} else if strings.HasSuffix(filename, ".json") {
 			results.UnitTestFiles = append(results.UnitTestFiles, path)
 		}
 
@@ -92,15 +98,33 @@ func FindTestResultsForModuleInSuite(workspaceRoot, moduleName, suiteName string
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to read module test directory: %w", err)
+		return nil, fmt.Errorf("failed to scan module test directory: %w", err)
 	}
 
 	results.LastModified = latestModTime
 	return results, nil
 }
 
+// isCucumberFile checks if a filename is a cucumber test result file.
+// Accepts both patterns: cucumber-*.json and *.cucumber.json
+func isCucumberFile(filename string) bool {
+	if !strings.HasSuffix(filename, ".json") {
+		return false
+	}
+	// Pattern 1: *.cucumber.json (e.g., "repository.cucumber.json")
+	if strings.HasSuffix(filename, ".cucumber.json") {
+		return true
+	}
+	// Pattern 2: cucumber-*.json (e.g., "cucumber-repository.json")
+	if strings.HasPrefix(filename, "cucumber-") {
+		return true
+	}
+	return false
+}
+
 // FindTestResultsForModule discovers test result files for a given module.
 // Test results are stored in: out/test/<timestamp>/<module>/
+// This function recursively scans subdirectories to handle test-package organization.
 func FindTestResultsForModule(workspaceRoot, moduleName string) (*TestResults, error) {
 	// Find latest test run directory
 	latestTestRun, err := FindLatestTestRun(workspaceRoot)
@@ -119,34 +143,40 @@ func FindTestResultsForModule(workspaceRoot, moduleName string) (*TestResults, e
 		TestRunDirectory: latestTestRun,
 	}
 
-	// Collect test result files
-	entries, err := os.ReadDir(moduleDir)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read module test directory: %w", err)
-	}
-
+	// Recursively collect test result files from module directory and subdirectories
 	var latestModTime time.Time
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
+	err = filepath.WalkDir(moduleDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
 		}
 
-		filename := entry.Name()
-		fullPath := filepath.Join(moduleDir, filename)
+		// Skip directories
+		if d.IsDir() {
+			return nil
+		}
+
+		filename := d.Name()
 
 		// Track modification time
-		if info, err := entry.Info(); err == nil {
+		if info, err := d.Info(); err == nil {
 			if info.ModTime().After(latestModTime) {
 				latestModTime = info.ModTime()
 			}
 		}
 
 		// Categorize files
-		if strings.HasSuffix(filename, ".cucumber.json") {
-			results.AcceptanceFiles = append(results.AcceptanceFiles, fullPath)
+		// Accept both naming patterns: cucumber-*.json and *.cucumber.json
+		if isCucumberFile(filename) {
+			results.AcceptanceFiles = append(results.AcceptanceFiles, path)
 		} else if strings.HasSuffix(filename, ".json") {
-			results.UnitTestFiles = append(results.UnitTestFiles, fullPath)
+			results.UnitTestFiles = append(results.UnitTestFiles, path)
 		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to scan module test directory: %w", err)
 	}
 
 	results.LastModified = latestModTime
@@ -154,7 +184,8 @@ func FindTestResultsForModule(workspaceRoot, moduleName string) (*TestResults, e
 }
 
 // FindAcceptanceTestResults finds acceptance test results for a module.
-// Test results are stored in: out/test/<module>/packages/<package>/
+// Checks both the timestamped directory and the acceptance subdirectory.
+// Recursively scans subdirectories to handle test-package organization.
 func FindAcceptanceTestResults(workspaceRoot, moduleName string) ([]string, error) {
 	var acceptanceFiles []string
 
@@ -166,24 +197,24 @@ func FindAcceptanceTestResults(workspaceRoot, moduleName string) ([]string, erro
 		return acceptanceFiles, nil
 	}
 
-	// Walk packages directory to find all cucumber files
-	err := filepath.Walk(packagesDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() {
-			return nil
-		}
-
-		filename := info.Name()
-		// Cucumber files can be named cucumber-*.json or *.cucumber.json
-		if strings.HasSuffix(filename, ".cucumber.json") ||
-			(strings.HasPrefix(filename, "cucumber-") && strings.HasSuffix(filename, ".json")) {
-			acceptanceFiles = append(acceptanceFiles, path)
-		}
-
-		return nil
-	})
-
+	// Also check acceptance directory: out/test/acceptance/<module>/
+	cfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot})
 	if err != nil {
-		return acceptanceFiles, fmt.Errorf("failed to walk test directory: %w", err)
+		return acceptanceFiles, nil // Return what we have so far
+	}
+	acceptanceDir := cfg.Repository.TestModuleOutputPathAbs(workspaceRoot, "acceptance", moduleName)
+
+	// Recursively scan acceptance directory for cucumber files
+	if _, err := os.Stat(acceptanceDir); err == nil {
+		filepath.WalkDir(acceptanceDir, func(path string, d os.DirEntry, err error) error {
+			if err != nil {
+				return nil // Continue on errors
+			}
+			if !d.IsDir() && isCucumberFile(d.Name()) {
+				acceptanceFiles = append(acceptanceFiles, path)
+			}
+			return nil
+		})
 	}
 
 	return acceptanceFiles, nil
@@ -206,12 +237,12 @@ type CucumberTag struct {
 
 // CucumberElement represents a scenario or background in Cucumber JSON.
 type CucumberElement struct {
-	ID          string          `json:"id,omitempty"`
-	Type        string          `json:"type"` // "scenario", "background"
-	Name        string          `json:"name"`
-	Description string          `json:"description,omitempty"`
-	Tags        []CucumberTag   `json:"tags,omitempty"`
-	Steps       []CucumberStep  `json:"steps,omitempty"`
+	ID          string         `json:"id,omitempty"`
+	Type        string         `json:"type"` // "scenario", "background"
+	Name        string         `json:"name"`
+	Description string         `json:"description,omitempty"`
+	Tags        []CucumberTag  `json:"tags,omitempty"`
+	Steps       []CucumberStep `json:"steps,omitempty"`
 }
 
 // CucumberStep represents a step in Cucumber JSON.
@@ -223,8 +254,8 @@ type CucumberStep struct {
 
 // CucumberResult represents the result of a step.
 type CucumberResult struct {
-	Status   string `json:"status"` // "passed", "failed", "skipped", "pending"
-	Duration int64  `json:"duration,omitempty"`
+	Status       string `json:"status"` // "passed", "failed", "skipped", "pending"
+	Duration     int64  `json:"duration,omitempty"`
 	ErrorMessage string `json:"error_message,omitempty"`
 }
 
@@ -622,4 +653,3 @@ func determineScenarioStatus(steps []CucumberStep) string {
 
 	return status
 }
-

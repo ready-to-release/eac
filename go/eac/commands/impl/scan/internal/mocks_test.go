@@ -26,7 +26,7 @@ func TestTrivyMockOutput(t *testing.T) {
 	}
 
 	// Run scanner - should return mock data
-	result, err := RunTrivySBOM(tempDir, "json", logger)
+	result, err := RunTrivySBOM(tempDir, tempDir, "json", "test-image:latest", logger)
 	if err != nil {
 		t.Fatalf("RunTrivySBOM failed: %v", err)
 	}
@@ -55,7 +55,7 @@ func TestSemgrepMockOutput(t *testing.T) {
 		t.Fatalf("Failed to create logger: %v", err)
 	}
 
-	result, err := RunSemgrepSAST(tempDir, "auto", logger)
+	result, err := RunSemgrepSAST(tempDir, tempDir, "auto", "test-image:latest", logger)
 	if err != nil {
 		t.Fatalf("RunSemgrepSAST failed: %v", err)
 	}
@@ -83,7 +83,7 @@ func TestZAPMockOutput(t *testing.T) {
 		t.Fatalf("Failed to create logger: %v", err)
 	}
 
-	result, err := RunZAPScan("http://localhost:8080", "baseline", tempDir, logger)
+	result, err := RunZAPScan("http://localhost:8080", "baseline", tempDir, "test-image:latest", logger)
 	if err != nil {
 		t.Fatalf("RunZAPScan failed: %v", err)
 	}
@@ -131,7 +131,7 @@ func TestMockPriority(t *testing.T) {
 		t.Fatalf("Failed to create logger: %v", err)
 	}
 
-	result, err := RunTrivySBOM(tempDir, "json", logger)
+	result, err := RunTrivySBOM(tempDir, tempDir, "json", "test-image:latest", logger)
 	if err != nil {
 		t.Fatalf("RunTrivySBOM failed: %v", err)
 	}
@@ -163,19 +163,19 @@ func TestAllTrivyScannersMockable(t *testing.T) {
 		fn   func() (interface{}, error)
 	}{
 		{"SBOM", func() (interface{}, error) {
-			return RunTrivySBOM(tempDir, "json", logger)
+			return RunTrivySBOM(tempDir, tempDir, "json", "test-image:latest", logger)
 		}},
 		{"Vuln", func() (interface{}, error) {
-			return RunTrivyVuln(tempDir, nil, logger)
+			return RunTrivyVuln(tempDir, nil, "test-image:latest", logger)
 		}},
 		{"Secrets", func() (interface{}, error) {
-			return RunTrivySecrets(tempDir, logger)
+			return RunTrivySecrets(tempDir, "test-image:latest", logger)
 		}},
 		{"Compliance", func() (interface{}, error) {
-			return RunTrivyCompliance(tempDir, "k8s-cis", logger)
+			return RunTrivyCompliance(tempDir, "k8s-cis", "test-image:latest", logger)
 		}},
 		{"IaC", func() (interface{}, error) {
-			return RunTrivyIaC(tempDir, logger)
+			return RunTrivyIaC(tempDir, "test-image:latest", logger)
 		}},
 	}
 

@@ -30,9 +30,13 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
+
+	"go.uber.org/zap"
 
 	commitmessage "github.com/ready-to-release/eac/go/eac/commands/impl/create/commit-message"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/work/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
@@ -63,6 +67,8 @@ func init() {
 
 // Merge merges the current workspace into the target branch
 func Merge() int {
+	startTime := time.Now()
+
 	// Phase 1: Parse configuration
 	config, err := parseMergeConfig()
 	if err != nil {
@@ -71,42 +77,71 @@ func Merge() int {
 	}
 	defer config.base.Logger.Sync()
 
-	config.base.Logger.Debug("Starting work merge command")
-	internal.WriteDebugFile(config.base.Logger, config.base.RepoRoot, "merge-config.txt",
-		fmt.Sprintf("CurrentBranch: %s\nTarget: %s\nNoSquash: %v\nKeepWorktree: %v\n",
-			config.currentBranch, config.targetBranch, config.noSquash, config.keepWorktree))
+	config.base.Logger.Debug("Phase 1: Starting parse configuration", zap.String("phase", "phase1"))
+
+	config.base.Logger.Debug("Phase 1: Completed",
+		zap.String("phase", "phase1"),
+		zap.String("currentBranch", config.currentBranch),
+		zap.String("targetBranch", config.targetBranch),
+		zap.Bool("noSquash", config.noSquash),
+		zap.Bool("keepWorktree", config.keepWorktree))
 
 	// Phase 2: Validate environment
+	config.base.Logger.Debug("Phase 2: Starting validate environment", zap.String("phase", "phase2"))
 	if err := validateMergeEnvironment(config); err != nil {
+		config.base.Logger.Debug("Phase 2: Failed", zap.String("phase", "phase2"), zap.Error(err))
 		config.base.Logger.Error(fmt.Sprintf("Validation failed: %v", err))
 		return 1
 	}
+	config.base.Logger.Debug("Phase 2: Completed", zap.String("phase", "phase2"))
 
 	// Phase 3: Check branch is up to date
+	config.base.Logger.Debug("Phase 3: Starting check branch is up to date",
+		zap.String("phase", "phase3"),
+		zap.String("currentBranch", config.currentBranch),
+		zap.String("targetBranch", config.targetBranch))
 	if err := checkBranchUpToDate(config); err != nil {
+		config.base.Logger.Debug("Phase 3: Failed", zap.String("phase", "phase3"), zap.Error(err))
 		config.base.Logger.Error(fmt.Sprintf("Branch check failed: %v", err))
 		return 1
 	}
+	config.base.Logger.Debug("Phase 3: Completed", zap.String("phase", "phase3"))
 
 	// Phase 4: Switch to target branch
+	config.base.Logger.Debug("Phase 4: Starting switch to target branch",
+		zap.String("phase", "phase4"),
+		zap.String("targetBranch", config.targetBranch))
 	config.base.Logger.Info(fmt.Sprintf("Switching to %s...", config.targetBranch))
 	if err := switchToTargetBranch(config.base.Logger, config.targetBranch, config.base.RepoRoot); err != nil {
+		config.base.Logger.Debug("Phase 4: Failed", zap.String("phase", "phase4"), zap.Error(err))
 		config.base.Logger.Error(fmt.Sprintf("Failed to switch: %v", err))
 		return 1
 	}
+	config.base.Logger.Debug("Phase 4: Completed", zap.String("phase", "phase4"))
 
 	// Phase 5: Update target branch
+	config.base.Logger.Debug("Phase 5: Starting update target branch",
+		zap.String("phase", "phase5"),
+		zap.String("targetBranch", config.targetBranch))
 	config.base.Logger.Info(fmt.Sprintf("Updating %s from remote...", config.targetBranch))
 	if err := updateTargetBranch(config.targetBranch); err != nil {
+		config.base.Logger.Debug("Phase 5: Failed", zap.String("phase", "phase5"), zap.Error(err))
 		config.base.Logger.Error(fmt.Sprintf("Failed to update: %v", err))
 		return 1
 	}
+	config.base.Logger.Debug("Phase 5: Completed", zap.String("phase", "phase5"))
 
 	// Phase 6: Perform merge
+	config.base.Logger.Debug("Phase 6: Starting perform merge",
+		zap.String("phase", "phase6"),
+		zap.String("currentBranch", config.currentBranch),
+		zap.String("targetBranch", config.targetBranch),
+		zap.Bool("squash", !config.noSquash))
 	var mergeType string
 	if config.noSquash {
 		config.base.Logger.Info(fmt.Sprintf("\nMerging %s into %s (regular merge)...", config.currentBranch, config.targetBranch))
 		if err := config.base.GitOps.Merge(config.currentBranch, false); err != nil {
+			config.base.Logger.Debug("Phase 6: Failed", zap.String("phase", "phase6"), zap.Error(err))
 			handleMergeError(config, err)
 			return 1
 		}
@@ -114,28 +149,51 @@ func Merge() int {
 	} else {
 		config.base.Logger.Info(fmt.Sprintf("\nMerging %s into %s (squash)...", config.currentBranch, config.targetBranch))
 		if err := performSquashMerge(config); err != nil {
+			config.base.Logger.Debug("Phase 6: Failed", zap.String("phase", "phase6"), zap.Error(err))
 			handleMergeError(config, err)
 			return 1
 		}
 		mergeType = "squash"
 	}
+	config.base.Logger.Debug("Phase 6: Completed",
+		zap.String("phase", "phase6"),
+		zap.String("mergeType", mergeType))
 
 	// Phase 7: Cleanup workspace
+	config.base.Logger.Debug("Phase 7: Starting cleanup workspace",
+		zap.String("phase", "phase7"),
+		zap.Bool("keepWorktree", config.keepWorktree),
+		zap.String("worktreePath", config.worktreePath))
 	if !config.keepWorktree {
 		config.base.Logger.Info("\nRemoving workspace...")
 		if err := removeWorkspace(config); err != nil {
+			config.base.Logger.Debug("Phase 7: Failed to remove workspace",
+				zap.String("phase", "phase7"),
+				zap.Error(err))
 			config.base.Logger.Warn(fmt.Sprintf("Failed to remove workspace: %v", err))
 		} else {
 			config.base.Logger.Info(fmt.Sprintf("✓ Removed workspace: %s", config.worktreePath))
+			config.base.Logger.Debug("Phase 7: Completed",
+				zap.String("phase", "phase7"),
+				zap.String("worktreePath", config.worktreePath))
 		}
 	} else {
 		config.base.Logger.Info(fmt.Sprintf("\n✓ Workspace preserved at: %s", config.worktreePath))
+		config.base.Logger.Debug("Phase 7: Completed (workspace preserved)",
+			zap.String("phase", "phase7"),
+			zap.String("worktreePath", config.worktreePath))
 	}
 
 	// Phase 8: Success
+	duration := time.Since(startTime)
 	config.base.Logger.Info("")
 	config.base.Logger.Info(fmt.Sprintf("✓ Merged %s into %s (%s)", config.currentBranch, config.targetBranch, mergeType))
-	config.base.Logger.Debug("Work merge command completed successfully")
+	config.base.Logger.Debug("Phase 8: Completed",
+		zap.String("phase", "phase8"),
+		zap.String("currentBranch", config.currentBranch),
+		zap.String("targetBranch", config.targetBranch),
+		zap.String("mergeType", mergeType),
+		zap.Duration("totalDuration", duration))
 	return 0
 }
 
@@ -167,11 +225,11 @@ func parseMergeConfig() (*mergeConfig, error) {
 	}
 
 	// Parse flags
-	if targetValue := internal.GetFlagValue(args, "--target"); targetValue != "" {
+	if targetValue := flags.GetFlagValue(args, "--target"); targetValue != "" {
 		config.targetBranch = targetValue
 	}
-	config.noSquash = internal.HasFlag(args, "--no-squash", "")
-	config.keepWorktree = internal.HasFlag(args, "--keep-worktree", "")
+	config.noSquash = flags.HasFlag(args, "--no-squash", "")
+	config.keepWorktree = flags.HasFlag(args, "--keep-worktree", "")
 
 	// Get current branch from current working directory (not repoRoot)
 	// This ensures we get the correct branch in worktree environments

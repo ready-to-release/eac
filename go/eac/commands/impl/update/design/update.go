@@ -27,9 +27,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	"go.uber.org/zap"
+
 	designHelper "github.com/ready-to-release/eac/go/eac/commands/impl/design"
 	designInternal "github.com/ready-to-release/eac/go/eac/commands/impl/design/helper"
 	createDesign "github.com/ready-to-release/eac/go/eac/commands/impl/create/design"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
@@ -200,29 +203,39 @@ func parseUpdateCommandArgs(args []string) (string, *updateFlags, error) {
 	}
 
 	// Parse flags and positional arguments
-	flags := &updateFlags{}
+	cmdArgs := args[cmdPos+1:]
+	updateFlags := &updateFlags{}
 	var positionalArgs []string
 
-	for i := cmdPos + 1; i < len(args); i++ {
-		arg := args[i]
+	// Parse debug flag using shared package
+	updateFlags.debug = flags.ParseDebugFlag(cmdArgs)
 
-		if arg == "--debug" || arg == "-d" {
-			flags.debug = true
-		} else if arg == "--force" {
-			flags.force = true
-		} else if arg == "--output" || arg == "-o" {
+	for i := 0; i < len(cmdArgs); i++ {
+		arg := cmdArgs[i]
+
+		switch {
+		case arg == "--debug" || arg == "-d":
+			// Already handled by shared flags package
+			continue
+
+		case arg == "--force":
+			updateFlags.force = true
+
+		case arg == "--output" || arg == "-o":
 			// Next argument is the output path
-			if i+1 < len(args) {
-				flags.outputPath = args[i+1]
+			if i+1 < len(cmdArgs) {
+				updateFlags.outputPath = cmdArgs[i+1]
 				i++ // Skip next arg
 			}
-		} else if arg == "--prompt" {
+
+		case arg == "--prompt":
 			// Next argument is the prompt path
-			if i+1 < len(args) {
-				flags.promptPath = args[i+1]
+			if i+1 < len(cmdArgs) {
+				updateFlags.promptPath = cmdArgs[i+1]
 				i++ // Skip next arg
 			}
-		} else if !strings.HasPrefix(arg, "-") {
+
+		case !strings.HasPrefix(arg, "-"):
 			positionalArgs = append(positionalArgs, arg)
 		}
 	}
@@ -232,7 +245,7 @@ func parseUpdateCommandArgs(args []string) (string, *updateFlags, error) {
 		return "", nil, fmt.Errorf("module name required\n\nUsage: design update <module>\nExample: design update r2r-cli")
 	}
 
-	return positionalArgs[0], flags, nil
+	return positionalArgs[0], updateFlags, nil
 }
 
 // formatModuleList returns a formatted list of available modules
@@ -359,8 +372,8 @@ func buildUpdatePrompt(config *UpdateConfig, out *designHelper.Output, logger *l
 
 	fullPrompt := prompt.String()
 
-	if config.Debug {
-		designHelper.WriteDebugFile(config.TemplateRoot, logger, "update-debug-full-prompt.md", fullPrompt)
+	if config.Debug && logger != nil {
+		logger.Debug("Full AI prompt built", zap.Int("promptLength", len(fullPrompt)))
 	}
 
 	return fullPrompt, nil

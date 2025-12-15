@@ -22,10 +22,14 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/work/internal"
-	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
+	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
@@ -54,7 +58,10 @@ func init() {
 
 // ShowWorkspaces displays all git worktrees in a formatted table
 func ShowWorkspaces() int {
+	cmdStart := time.Now()
+
 	// Phase 1: Parse configuration
+	phase1Start := time.Now()
 	config, err := parseListConfig()
 	if err != nil {
 		log.Errorf("Error: %v", err)
@@ -62,30 +69,72 @@ func ShowWorkspaces() int {
 	}
 	defer config.base.Logger.Sync()
 
-	config.base.Logger.Debug("Starting work list command")
-	internal.WriteDebugFile(config.base.Logger, config.base.RepoRoot, "list-config.txt",
-		fmt.Sprintf("Verbose: %v\nDebug: %v\nRepoRoot: %s\n",
-			config.verbose, config.base.Debug, config.base.RepoRoot))
+	config.base.Logger.Debug("Phase 1: Starting configuration parsing",
+		zap.String("phase", "phase1"))
+
+	config.base.Logger.Debug("Starting work list command",
+		zap.Bool("verbose", config.verbose),
+		zap.Bool("debug", config.base.Debug),
+		zap.String("repoRoot", config.base.RepoRoot))
+
+	config.base.Logger.Debug("Phase 1: Completed",
+		zap.String("phase", "phase1"),
+		zap.Duration("duration", time.Since(phase1Start)))
 
 	// Phase 2: Validate environment
+	phase2Start := time.Now()
+	config.base.Logger.Debug("Phase 2: Starting environment validation",
+		zap.String("phase", "phase2"))
+
 	if err := internal.EnsureInGitRepo(); err != nil {
+		config.base.Logger.Debug("Phase 2: Failed",
+			zap.String("phase", "phase2"),
+			zap.Error(err),
+			zap.Duration("duration", time.Since(phase2Start)))
 		config.base.Logger.Error(fmt.Sprintf("Not in a git repository: %v", err))
 		return 1
 	}
 
+	config.base.Logger.Debug("Phase 2: Completed",
+		zap.String("phase", "phase2"),
+		zap.Duration("duration", time.Since(phase2Start)))
+
 	// Phase 3: Get worktrees
+	phase3Start := time.Now()
+	config.base.Logger.Debug("Phase 3: Starting worktree retrieval",
+		zap.String("phase", "phase3"),
+		zap.String("repoRoot", config.base.RepoRoot))
+
 	worktrees, err := internal.GetWorktrees(config.base.RepoRoot)
 	if err != nil {
+		config.base.Logger.Debug("Phase 3: Failed",
+			zap.String("phase", "phase3"),
+			zap.Error(err),
+			zap.Duration("duration", time.Since(phase3Start)))
 		config.base.Logger.Error(fmt.Sprintf("Failed to get worktrees: %v", err))
 		return 1
 	}
 
-	internal.WriteDebugFile(config.base.Logger, config.base.RepoRoot, "list-worktrees.txt",
-		fmt.Sprintf("Found %d worktrees:\n%+v\n", len(worktrees), worktrees))
+	config.base.Logger.Debug("Phase 3: Completed",
+		zap.String("phase", "phase3"),
+		zap.Int("count", len(worktrees)),
+		zap.Duration("duration", time.Since(phase3Start)))
 
 	// Phase 4: Display worktrees
+	phase4Start := time.Now()
+	config.base.Logger.Debug("Phase 4: Starting worktree display",
+		zap.String("phase", "phase4"),
+		zap.Int("count", len(worktrees)),
+		zap.Bool("verbose", config.verbose))
+
 	displayWorktrees(config.base.Logger, worktrees, config.verbose)
-	config.base.Logger.Debug("Work list command completed successfully")
+
+	config.base.Logger.Debug("Phase 4: Completed",
+		zap.String("phase", "phase4"),
+		zap.Duration("duration", time.Since(phase4Start)))
+
+	config.base.Logger.Debug("Work list command completed successfully",
+		zap.Duration("totalDuration", time.Since(cmdStart)))
 	return 0
 }
 
@@ -111,7 +160,7 @@ func parseListConfig() (*listConfig, error) {
 	}
 
 	// Parse verbose flag
-	config.verbose = internal.HasFlag(args, "--verbose", "-v")
+	config.verbose = flags.HasFlag(args, "--verbose", "-v")
 
 	return config, nil
 }
@@ -119,12 +168,30 @@ func parseListConfig() (*listConfig, error) {
 // displayWorktrees formats and displays worktrees in a table
 func displayWorktrees(logger *logging.Logger, worktrees []internal.Worktree, verbose bool) {
 	if len(worktrees) == 0 {
+		logger.Debug("No worktrees to display")
 		logger.Info("No worktrees found")
 		return
 	}
 
-	// Build table
+	// Phase 4.1: Build table
+	phase41Start := time.Now()
+	logger.Debug("Phase 4.1: Starting table building",
+		zap.String("phase", "phase4.1"),
+		zap.Int("worktreeCount", len(worktrees)),
+		zap.Bool("verbose", verbose))
+
 	table := buildWorktreeTable(worktrees, verbose)
+
+	logger.Debug("Phase 4.1: Completed",
+		zap.String("phase", "phase4.1"),
+		zap.Int("tableLength", len(table)),
+		zap.Duration("duration", time.Since(phase41Start)))
+
+	// Phase 4.2: Display results
+	phase42Start := time.Now()
+	logger.Debug("Phase 4.2: Starting result display",
+		zap.String("phase", "phase4.2"))
+
 	logger.Info(table)
 	logger.Info("")
 
@@ -134,6 +201,10 @@ func displayWorktrees(logger *logging.Logger, worktrees []internal.Worktree, ver
 	} else {
 		logger.Info(fmt.Sprintf("%d worktrees total", len(worktrees)))
 	}
+
+	logger.Debug("Phase 4.2: Completed",
+		zap.String("phase", "phase4.2"),
+		zap.Duration("duration", time.Since(phase42Start)))
 }
 
 // buildWorktreeTable creates a formatted table of worktrees

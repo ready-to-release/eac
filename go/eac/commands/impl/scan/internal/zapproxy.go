@@ -86,7 +86,8 @@ func RunZAPScan(targetURL, scanType, workspaceRoot string, zapImage string, logg
 	}
 
 	// Create temporary output directory for ZAP report
-	outputDir := filepath.Join(workspaceRoot, cfg.Repository.Paths.Out.Root, cfg.Repository.Paths.Out.Security, "zap-temp")
+	// Security path already includes "out" prefix (e.g., "out/security")
+	outputDir := filepath.Join(workspaceRoot, cfg.Repository.Paths.Out.Security, "zap-temp")
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create ZAP output directory: %w", err)
 	}
