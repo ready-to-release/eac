@@ -57,19 +57,19 @@ runs:
             break
           fi
 
-          # Check for in-progress release workflows (release-*.yaml)
+          # Check for in-progress release workflows (release-*.yaml), excluding ourselves
           IN_PROGRESS=$(gh run list \
             --status in_progress \
             --limit 50 \
             --json workflowName,status \
-            -q '[.[] | select(.workflowName | startswith("release-"))] | length')
+            -q '[.[] | select(.workflowName | startswith("release-") and (contains("github-latest") | not))] | length')
 
           # Also check queued
           QUEUED=$(gh run list \
             --status queued \
             --limit 50 \
             --json workflowName,status \
-            -q '[.[] | select(.workflowName | startswith("release-"))] | length')
+            -q '[.[] | select(.workflowName | startswith("release-") and (contains("github-latest") | not))] | length')
 
           TOTAL=$((IN_PROGRESS + QUEUED))
 
