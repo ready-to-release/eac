@@ -31,36 +31,40 @@ func ShowTests() int {
 	// Get repository root
 	cwd, err := os.Getwd()
 	if err != nil {
-		log.Errorf("failed to get current directory: %v", err)
+		fmt.Fprintf(os.Stderr, "Error: failed to get current directory: %v\n", err)
 		return 1
 	}
 
 	repoRoot, err := testdata.FindRepoRoot(cwd)
 	if err != nil {
-		log.Errorf("failed to find repository root: %v", err)
+		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
 		return 1
 	}
 
 	// Get all tests with metadata and aggregations
 	data, err := testdata.GetAllTests(repoRoot)
 	if err != nil {
-		log.Errorf("failed to get tests: %v", err)
+		fmt.Fprintf(os.Stderr, "Error: failed to get tests: %v\n", err)
 		return 1
 	}
 
 	// Display header
-	log.Info("# Test Repository Overview\n")
-	log.Infof("**Total Assertions**: %d  \n", data.TotalCount)
+	fmt.Println("# Test Repository Overview")
+	fmt.Println("")
+	fmt.Printf("**Total Assertions**: %d  \n", data.TotalCount)
 
 	// Build module overview table with OS filtering info
-	log.Info("## Module Overview\n")
+	fmt.Println("## Module Overview")
+	fmt.Println("")
 	moduleOverview := buildModuleOverview(data.Tests, data.OSFilteredCount, data.CurrentOS)
-	log.Info(moduleOverview)
-	log.Info("")
+	fmt.Println(moduleOverview)
+	fmt.Println("")
 
 	// Build assertions table with inferred indicators
-	log.Info("## All Assertions\n")
-	log.Info("Legend: `*` = inferred tag, `~` = inferred from module type\n")
+	fmt.Println("## All Assertions")
+	fmt.Println("")
+	fmt.Println("Legend: `*` = inferred tag, `~` = inferred from module type")
+	fmt.Println("")
 
 	tb := render.NewTableBuilder().
 		WithHeaders("#", "Module", "Package", "Assertion", "Type", "Level", "Verify", "Deps")
@@ -84,25 +88,28 @@ func ShowTests() int {
 		)
 	}
 
-	log.Info(tb.Build())
-	log.Info("")
+	fmt.Println(tb.Build())
+	fmt.Println("")
 
 	// Display summary by type
-	log.Info("## Summary\n")
-	log.Info("### By Type\n")
+	fmt.Println("## Summary")
+	fmt.Println("")
+	fmt.Println("### By Type")
+	fmt.Println("")
 	for testType, count := range data.ByType {
-		log.Infof("- **%s**: %d assertions", testType, count)
+		fmt.Printf("- **%s**: %d assertions\n", testType, count)
 	}
-	log.Info("")
+	fmt.Println("")
 
 	// Display summary by level (ordered)
-	log.Info("### By Level\n")
+	fmt.Println("### By Level")
+	fmt.Println("")
 	for _, level := range []string{"@L0", "@L1", "@L2", "@L3", "@L4"} {
 		if count, ok := data.ByLevel[level]; ok {
-			log.Infof("- **%s**: %d assertions", level, count)
+			fmt.Printf("- **%s**: %d assertions\n", level, count)
 		}
 	}
-	log.Info("")
+	fmt.Println("")
 
 	return 0
 }

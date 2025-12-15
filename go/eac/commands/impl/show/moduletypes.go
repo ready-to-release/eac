@@ -11,8 +11,11 @@
 package show
 
 import (
-	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"fmt"
+	"os"
+
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
+	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
@@ -25,14 +28,14 @@ func ShowModuleTypes() int {
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		log.Errorf("failed to find repository root: %v", err)
+		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
 		return 1
 	}
 
 	// Generate module contracts report
 	report, err := reports.GetModuleContracts(workspaceRoot)
 	if err != nil {
-		log.Errorf("%v", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
 
@@ -66,6 +69,6 @@ func ShowModuleTypes() int {
 	// Add footer with total
 	tb.WithFooter("Total Types", len(types))
 
-	log.Info(tb.Build())
+	fmt.Println(tb.Build())
 	return 0
 }

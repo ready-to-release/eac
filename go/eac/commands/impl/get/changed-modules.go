@@ -20,6 +20,7 @@ package get
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"os/exec"
 	"strings"
@@ -37,7 +38,7 @@ func GetChangedModules() int {
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		log.Errorf("failed to find repository root: %v", err)
+		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
 		return 1
 	}
 
@@ -65,7 +66,7 @@ func GetChangedModules() int {
 			}
 		}
 		if err := scanner.Err(); err != nil {
-			log.Errorf("reading from stdin: %v", err)
+			fmt.Fprintf(os.Stderr, "Error: reading from stdin: %v\n", err)
 			return 1
 		}
 	} else {
@@ -74,7 +75,7 @@ func GetChangedModules() int {
 		cmd.Dir = workspaceRoot
 		output, err := cmd.Output()
 		if err != nil {
-			log.Errorf("getting changed files: %v", err)
+			fmt.Fprintf(os.Stderr, "Error: getting changed files: %v\n", err)
 			return 1
 		}
 

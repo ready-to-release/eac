@@ -41,20 +41,20 @@ func ShowBuildTimesForModules(modules []string, topN int, buildOutputDir string)
 	if buildOutputDir == "" {
 		cwd, err := os.Getwd()
 		if err != nil {
-			log.Errorf("failed to get current directory: %v", err)
+			fmt.Fprintf(os.Stderr, "Error: failed to get current directory: %v\n", err)
 			return 1
 		}
 
 		repoRoot, err = testdata.FindRepoRoot(cwd)
 		if err != nil {
-			log.Errorf("failed to find repository root: %v", err)
+			fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
 			return 1
 		}
 
 		// Load config to get build output directory
 		cfg, err := config.Load(config.LoadOptions{RepoRoot: repoRoot})
 		if err != nil {
-			log.Errorf("failed to load config: %v", err)
+			fmt.Fprintf(os.Stderr, "Error: failed to load config: %v\n", err)
 			return 1
 		}
 
@@ -64,27 +64,27 @@ func ShowBuildTimesForModules(modules []string, topN int, buildOutputDir string)
 		var err error
 		repoRoot, err = testdata.FindRepoRoot(buildOutputDir)
 		if err != nil {
-			log.Errorf("failed to find repository root: %v", err)
+			fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
 			return 1
 		}
 	}
 
 	if _, err := os.Stat(buildOutputDir); os.IsNotExist(err) {
-		log.Errorf("build output directory not found: %s (run build first)", buildOutputDir)
+		fmt.Fprintf(os.Stderr, "Error: build output directory not found: %s (run build first)\n", buildOutputDir)
 		return 1
 	}
 
 	// Parse build logs using the get command logic
 	timings, err := get.ParseBuildLog(buildOutputDir)
 	if err != nil {
-		log.Errorf("failed to parse build logs: %v", err)
+		fmt.Fprintf(os.Stderr, "Error: failed to parse build logs: %v\n", err)
 		return 1
 	}
 
 	// Populate module types from contracts
 	moduleReport, err := reports.GetModuleContracts(repoRoot)
 	if err != nil {
-		log.Errorf("failed to load module contracts: %v", err)
+		fmt.Fprintf(os.Stderr, "Error: failed to load module contracts: %v\n", err)
 		return 1
 	}
 
@@ -103,9 +103,9 @@ func ShowBuildTimesForModules(modules []string, topN int, buildOutputDir string)
 
 	if len(timings) == 0 {
 		if len(modules) > 0 {
-			log.Errorf("no build timing data found for modules: %v", modules)
+			fmt.Fprintf(os.Stderr, "Error: no build timing data found for modules: %v\n", modules)
 		} else {
-			log.Errorf("no build timing data found in %s (run build first)", buildOutputDir)
+			fmt.Fprintf(os.Stderr, "Error: no build timing data found in %s (run build first)\n", buildOutputDir)
 		}
 		return 1
 	}
@@ -145,9 +145,10 @@ func filterBuildTimingsByModules(timings []get.BuildTiming, modules []string) []
 
 // displayBuildOverallSummary shows high-level statistics
 func displayBuildOverallSummary(summary *get.BuildTimingSummary) {
-	log.Info("# Build Timing Analysis\n")
-	log.Infof("**Build Output Directory**: `%s`\n", summary.BuildOutputDir)
-	log.Info("")
+	fmt.Println("# Build Timing Analysis")
+	fmt.Println("")
+	fmt.Printf("**Build Output Directory**: `%s`\n", summary.BuildOutputDir)
+	fmt.Println("")
 
 	// Build summary table
 	tb := render.NewTableBuilder().
@@ -159,13 +160,14 @@ func displayBuildOverallSummary(summary *get.BuildTimingSummary) {
 	tb.AddRow("Total Duration", fmt.Sprintf("%.2fs", summary.TotalDuration))
 	tb.AddRow("Average Duration", fmt.Sprintf("%.2fs", summary.AvgDuration))
 
-	log.Info(tb.Build())
-	log.Info("")
+	fmt.Println(tb.Build())
+	fmt.Println("")
 }
 
 // displayBuildTypeSummary shows timing breakdown by module type
 func displayBuildTypeSummary(summary *get.BuildTimingSummary) {
-	log.Info("## Summary by Type\n")
+	fmt.Println("## Summary by Type")
+	fmt.Println("")
 
 	// Convert map to slice for sorting
 	type typeStat struct {
@@ -209,13 +211,14 @@ func displayBuildTypeSummary(summary *get.BuildTimingSummary) {
 		)
 	}
 
-	log.Info(tb.Build())
-	log.Info("")
+	fmt.Println(tb.Build())
+	fmt.Println("")
 }
 
 // displaySlowestBuilds shows the top N slowest individual module builds
 func displaySlowestBuilds(summary *get.BuildTimingSummary, topN int) {
-	log.Infof("## Top %d Slowest Builds\n", topN)
+	fmt.Printf("## Top %d Slowest Builds\n", topN)
+	fmt.Println("")
 
 	// Sort timings by duration (slowest first)
 	sortedTimings := make([]get.BuildTiming, len(summary.Timings))
@@ -249,6 +252,6 @@ func displaySlowestBuilds(summary *get.BuildTimingSummary, topN int) {
 		)
 	}
 
-	log.Info(tb.Build())
-	log.Info("")
+	fmt.Println(tb.Build())
+	fmt.Println("")
 }

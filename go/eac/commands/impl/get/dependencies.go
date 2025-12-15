@@ -17,6 +17,7 @@
 package get
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -33,7 +34,7 @@ func GetDependencies() int {
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		log.Errorf("Error: failed to find repository root: %v", err)
+		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
 		return 1
 	}
 
@@ -62,12 +63,12 @@ func GetDependencies() int {
 func outputPlantUML(workspaceRoot string) int {
 	graph, err := repository.GetModuleDependencyGraph(workspaceRoot)
 	if err != nil {
-		log.Errorf("Error: %v", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
 
 	diagram := repository.GetPlantUMLDiagram(graph)
-	log.Info(diagram)
+	fmt.Println(diagram)
 	return 0
 }
 
@@ -75,12 +76,12 @@ func outputPlantUML(workspaceRoot string) int {
 func outputMermaid(workspaceRoot string) int {
 	graph, err := repository.GetModuleDependencyGraph(workspaceRoot)
 	if err != nil {
-		log.Errorf("Error: %v", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
 
 	diagram := repository.GetMermaidDiagram(graph)
-	log.Info(diagram)
+	fmt.Println(diagram)
 	return 0
 }
 
@@ -88,7 +89,7 @@ func outputMermaid(workspaceRoot string) int {
 func outputExecutionOrder(workspaceRoot string) int {
 	plan, err := repository.CalculateExecutionOrder(nil, workspaceRoot)
 	if err != nil {
-		log.Errorf("Error: %v", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
 

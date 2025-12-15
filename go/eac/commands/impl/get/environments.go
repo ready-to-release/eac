@@ -12,6 +12,7 @@ package get
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
@@ -32,7 +33,7 @@ func GetEnvironments() int {
 
 		// Validate contract
 		if err := cfg.Environments.Validate(); err != nil {
-			log.Warnf("Warning: environment contract validation failed: %v", err)
+			fmt.Fprintf(os.Stderr, "Warning: environment contract validation failed: %v\n", err)
 		}
 
 		return cfg.Environments.Environments, nil

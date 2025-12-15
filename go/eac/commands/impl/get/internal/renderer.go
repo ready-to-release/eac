@@ -6,11 +6,8 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
-	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"gopkg.in/yaml.v3"
 )
-
-var log = logging.C()
 
 // getCallerCommandName extracts the canonical command name from the calling file
 // Returns kebab-case format (e.g., "get-files")
@@ -94,30 +91,31 @@ func RenderAndOutput(data interface{}, format *OutputFormat, commandName string)
 	}
 
 	// Then render in the requested format
+	// Use fmt.Print for clean stdout output (parseable by jq, etc.)
 	if format.CustomRenderer != "" {
 		// Use custom renderer (pass command name for filtering)
 		output, err := render.RenderAsCustom(data, format.CustomRenderer, commandName)
 		if err != nil {
 			return fmt.Errorf("custom renderer failed: %w", err)
 		}
-		log.Info(output)
+		fmt.Println(output)
 	} else if format.AsJSON {
 		// Render as JSON
 		output, err := render.RenderAsJSON(data)
 		if err != nil {
 			return fmt.Errorf("failed to render JSON: %w", err)
 		}
-		log.Info(output)
+		fmt.Println(output)
 	} else if format.AsTOML {
 		// Render as TOML
 		output, err := render.RenderAsTOML(data)
 		if err != nil {
 			return fmt.Errorf("failed to render TOML: %w", err)
 		}
-		log.Info(output)
+		fmt.Println(output)
 	} else {
 		// Default: output as YAML
-		log.Info(string(yamlBytes))
+		fmt.Println(string(yamlBytes))
 	}
 
 	return nil
@@ -134,20 +132,20 @@ func ExecuteGetCommand(dataFetcher func() (interface{}, error)) int {
 	// Parse output format flags (with command-specific filtering)
 	format, err := ParseOutputFlags(os.Args[1:], commandName)
 	if err != nil {
-		log.Errorf("Error: %v", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
 
 	// Fetch the data
 	data, err := dataFetcher()
 	if err != nil {
-		log.Errorf("Error: %v", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
 
 	// Render and output (with command name for custom renderer filtering)
 	if err := RenderAndOutput(data, format, commandName); err != nil {
-		log.Errorf("Error rendering output: %v", err)
+		fmt.Fprintf(os.Stderr, "Error rendering output: %v\n", err)
 		return 1
 	}
 

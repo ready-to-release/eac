@@ -10,10 +10,12 @@
 package show
 
 import (
+	"fmt"
+	"os"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
+	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 	"github.com/ready-to-release/eac/go/eac/core/repository/reports"
 )
@@ -26,14 +28,14 @@ func ShowFilesStaged() int {
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		log.Errorf("failed to find repository root: %v", err)
+		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
 		return 1
 	}
 
 	// Generate report for staged files only
 	report, err := reports.GetFilesModulesReport(true, false, true, workspaceRoot)
 	if err != nil {
-		log.Errorf("%v", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
 
@@ -49,6 +51,6 @@ func ShowFilesStaged() int {
 		tb.AddRow(file.Name, modules)
 	}
 
-	log.Info(tb.Build())
+	fmt.Println(tb.Build())
 	return 0
 }
