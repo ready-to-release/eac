@@ -19,6 +19,10 @@ on:
     - cron: '0 */2 * * *'  # Every 2 hours: 00:00, 02:00, 04:00, etc. UTC
   workflow_dispatch:       # Manual trigger to test the change-detection logic
 
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 permissions:
   actions: write
   contents: read

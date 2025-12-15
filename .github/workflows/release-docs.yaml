@@ -27,6 +27,10 @@ on:
         type: boolean
         default: false
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
   pages: write
@@ -177,6 +181,12 @@ jobs:
           VERSION="${{ needs.approve.outputs.version }}"
 
           echo "Creating release for tag: $TAG_NAME"
+
+          # Idempotency check: skip if release already exists
+          if gh release view "$TAG_NAME" &>/dev/null; then
+            echo "✅ Release $TAG_NAME already exists - skipping creation (idempotent)"
+            exit 0
+          fi
 
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "Manual trigger: creating tag and release together"
