@@ -39,6 +39,7 @@ import (
 	"github.com/gofrs/flock"
 	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/show"
+	"github.com/ready-to-release/eac/go/eac/commands/impl/test/internal/cucumber"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/test/internal/runner"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/test/runners"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/initsummary"
@@ -308,8 +309,9 @@ func executeTests(cfg *TestConfig) int {
 	}
 	defer releaseTestLock(lock)
 
-	// Create test output directory
-	testRunDir := filepath.Join(workspaceRoot, repoCfg.TestOutputPath(cfg.SuiteName))
+	// Create test output directory (now module-based: out/test/<module>)
+	// testRunDir is the root test output directory, individual module dirs are created as needed
+	testRunDir := filepath.Join(workspaceRoot, repoCfg.TestOutputDir())
 	if err := os.MkdirAll(testRunDir, 0755); err != nil {
 		log.Errorf("failed to create test directory: %v", err)
 		return 1
@@ -323,7 +325,7 @@ func executeTests(cfg *TestConfig) int {
 	}
 	orchConfig := orchestrator.Config{
 		WorkspaceRoot:        workspaceRoot,
-		OutputBaseDir:        repoCfg.TestOutputPath(cfg.SuiteName),
+		OutputBaseDir:        repoCfg.TestOutputDir(), // Module-based: out/test (individual module dirs created by runners)
 		LogFileName:          "test.log",
 		ActionVerb:           "Testing",
 		MaxConcurrency:       maxConcurrency,
@@ -919,6 +921,10 @@ func executeTests(cfg *TestConfig) int {
 		testsTotal += result.TestsTotal
 	}
 
+	// Generate test.manifest.json for each tested module
+	testDuration := time.Since(testStartTime)
+	generateTestManifests(execCtx, results, testsByModulePath, cfg.SuiteName, testDuration, workspaceRoot, repoCfg, eacCfg)
+
 	// Update incremental test state (only in local devbox mode)
 	log.Debugf("State update check: useIncremental=%v, registryNil=%v", useIncremental, moduleRegistry == nil)
 	if useIncremental && moduleRegistry != nil {
@@ -1078,17 +1084,13 @@ func (ctx *TestExecutionContext) createWorker() orchestrator.WorkerFunc {
 	}
 }
 
-// getEffectiveTestRunDir returns the appropriate test run directory for a package.
-// For "all" suite, routes to component/integration/acceptance based on test L-level tags.
-// For other suites, returns the context's testRunDir.
+// getEffectiveTestRunDir returns the test run directory for a package.
+// With the module-based output structure, all tests go to the same root directory
+// (out/test) and the module-specific paths are constructed by the module mapper.
 func (ctx *TestExecutionContext) getEffectiveTestRunDir(tests []testing.TestReference) string {
-	if ctx.suiteMoniker != "all" || ctx.repoCfg == nil {
-		return ctx.testRunDir
-	}
-
-	// Determine effective suite based on test tags
-	effectiveSuite := getEffectiveSuiteForTests(tests, "component")
-	return filepath.Join(ctx.workspaceRoot, ctx.repoCfg.TestOutputPath(effectiveSuite))
+	// Module-based structure: always use the test output root
+	// Individual module paths are handled by BuildModuleOutputPath
+	return ctx.testRunDir
 }
 
 // runPackageTests executes tests for a single package with streaming output
@@ -1643,10 +1645,12 @@ func testTUISummary(
 ) *tui.SummaryData {
 	testsSkipped := testsTotal - testsPassed - testsFailed
 
-	// Format suite name with included suites for "all"
-	displaySuiteName := suiteName
+	// Format suite name(s) for display
+	displaySuiteNames := suiteName
+	suiteLabel := "suite"
 	if suitesIncluded := getSuitesIncluded(suiteMoniker); len(suitesIncluded) > 0 {
-		displaySuiteName = fmt.Sprintf("%s (%s)", suiteName, strings.Join(suitesIncluded, ", "))
+		displaySuiteNames = strings.Join(suitesIncluded, ", ")
+		suiteLabel = "suite(s)"
 	}
 
 	// Init summary: test cases selected (scenarios/functions we chose to run)
@@ -1710,7 +1714,7 @@ func testTUISummary(
 	if packagesFailed > 0 || testsFailed > 0 {
 		nextSteps = "Review detailed failure output below"
 	} else {
-		nextSteps = fmt.Sprintf("All tests passed for suite: %s", displaySuiteName)
+		nextSteps = fmt.Sprintf("All tests passed for %s: %s", suiteLabel, displaySuiteNames)
 	}
 
 	return &tui.SummaryData{
@@ -2059,4 +2063,287 @@ func getEffectiveSuiteForTests(tests []testing.TestReference, fallback string) s
 		}
 	}
 	return fallback
+}
+
+// generateTestManifests creates/updates test.manifest.json for each tested module.
+// The manifest aggregates results across suite runs and tracks all test artifacts.
+func generateTestManifests(
+	execCtx *TestExecutionContext,
+	results []PackageResult,
+	testsByModulePath map[string][]testing.TestReference,
+	suiteName string,
+	duration time.Duration,
+	workspaceRoot string,
+	repoCfg *config.RepositoryConfig,
+	eacCfg *config.EACConfig,
+) {
+	// Get current git commit
+	gitCommit := getGitCommit(workspaceRoot)
+
+	// Group results by module moniker
+	resultsByModule := make(map[string][]PackageResult)
+	for _, result := range results {
+		moniker := result.ModuleMoniker
+		if moniker == "" {
+			// Extract from path if not set
+			parts := strings.Split(result.PackageName, "/")
+			if len(parts) > 0 {
+				moniker = parts[0]
+			}
+		}
+		if moniker != "" {
+			resultsByModule[moniker] = append(resultsByModule[moniker], result)
+		}
+	}
+
+	// Group tests by module for test entries
+	testsByModule := make(map[string][]testing.TestReference)
+	for modulePath, tests := range testsByModulePath {
+		// Extract module moniker from path (first component)
+		parts := strings.Split(modulePath, "/")
+		if len(parts) > 0 {
+			moniker := parts[0]
+			testsByModule[moniker] = append(testsByModule[moniker], tests...)
+		}
+	}
+
+	// Generate manifest for each module
+	for moniker, moduleResults := range resultsByModule {
+		moduleTestDir := repoCfg.TestModuleDirAbs(workspaceRoot, moniker)
+
+		// Load or create manifest (to aggregate with previous suite runs)
+		module := eacCfg.Repository.GetByMoniker(moniker)
+		moduleType := ""
+		if module != nil {
+			moduleType = module.Type
+		}
+
+		manifest, err := implinternal.LoadOrCreateTestManifest(moduleTestDir, moniker, moduleType, gitCommit)
+		if err != nil {
+			log.Warnf("Failed to load test manifest for %s: %v", moniker, err)
+			manifest = implinternal.NewTestManifest(moniker, moduleType, gitCommit)
+		}
+
+		// Calculate suite-level summary
+		suiteSummary := implinternal.TestSummary{}
+		for _, result := range moduleResults {
+			suiteSummary.Total += result.TestsTotal
+			suiteSummary.Passed += result.TestsPassed
+			suiteSummary.Failed += result.TestsFailed
+			suiteSummary.Skipped += result.TestsSkipped
+		}
+
+		// Add/update suite result
+		manifest.AddSuiteResult(suiteName, implinternal.SuiteResult{
+			RunTime:         time.Now(),
+			DurationSeconds: duration.Seconds(),
+			Tests:           suiteSummary,
+		})
+
+		// Clear old tests for this suite and add fresh results
+		manifest.ClearSuiteTests(suiteName)
+
+		// Parse cucumber.json files to get actual test results with durations
+		cucumberResults := parseCucumberResults(moduleTestDir)
+
+		// Add test entries from cucumber results (godog tests)
+		for _, result := range cucumberResults {
+			manifest.AddTest(implinternal.TestEntry{
+				Name:       result.ScenarioName,
+				Package:    result.FeaturePath,
+				Type:       "godog",
+				Suite:      suiteName,
+				Status:     result.Status,
+				DurationMs: result.DurationMs,
+				Tags:       result.Tags,
+				FilePath:   result.FeaturePath,
+			})
+		}
+
+		// Add non-godog tests from test references (go tests without cucumber reports)
+		if tests, ok := testsByModule[moniker]; ok {
+			// Build a set of scenarios already added from cucumber results
+			addedScenarios := make(map[string]bool)
+			for _, r := range cucumberResults {
+				addedScenarios[r.ScenarioName] = true
+			}
+
+			for _, test := range tests {
+				// Skip if already added from cucumber results
+				if addedScenarios[test.TestName] {
+					continue
+				}
+
+				// Determine status based on results (simplified - we track at package level)
+				status := implinternal.TestStatusPassed
+				for _, result := range moduleResults {
+					if result.TestsFailed > 0 && strings.Contains(result.PackageName, filepath.Base(filepath.Dir(test.FilePath))) {
+						status = implinternal.TestStatusFailed
+						break
+					}
+				}
+				if test.IsIgnored {
+					status = implinternal.TestStatusSkipped
+				}
+
+				manifest.AddTest(implinternal.TestEntry{
+					Name:     test.TestName,
+					Package:  filepath.Dir(test.FilePath),
+					Type:     test.Type,
+					Suite:    suiteName,
+					Status:   status,
+					Tags:     test.Tags,
+					FilePath: test.FilePath,
+				})
+			}
+		}
+
+		// Collect artifacts (log files, cucumber reports, coverage)
+		collectTestArtifacts(manifest, moduleTestDir)
+
+		// Update timing
+		manifest.DurationSeconds = duration.Seconds()
+
+		// Save manifest
+		if err := manifest.Save(moduleTestDir); err != nil {
+			log.Warnf("Failed to save test manifest for %s: %v", moniker, err)
+		} else {
+			log.Debugf("Generated test manifest for %s", moniker)
+		}
+	}
+}
+
+// collectTestArtifacts walks the module test directory and adds artifacts to the manifest
+func collectTestArtifacts(manifest *implinternal.TestManifest, moduleTestDir string) {
+	// Walk packages directory to find test artifacts
+	packagesDir := filepath.Join(moduleTestDir, "packages")
+	if _, err := os.Stat(packagesDir); os.IsNotExist(err) {
+		return
+	}
+
+	_ = filepath.Walk(packagesDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return nil
+		}
+
+		relPath, err := filepath.Rel(moduleTestDir, path)
+		if err != nil {
+			return nil
+		}
+		relPath = filepath.ToSlash(relPath)
+
+		// Determine artifact type and ID
+		var artifactType, artifactID string
+		switch {
+		case strings.HasSuffix(path, "test.log"):
+			artifactType = implinternal.TestArtifactTypeLog
+			artifactID = "log-" + strings.ReplaceAll(filepath.Dir(relPath), "/", "-")
+		case strings.HasSuffix(path, ".cucumber.json") || strings.HasSuffix(path, "cucumber.json"):
+			artifactType = implinternal.TestArtifactTypeReport
+			artifactID = "report-" + strings.ReplaceAll(filepath.Dir(relPath), "/", "-")
+		case strings.HasSuffix(path, "coverage.out"):
+			artifactType = implinternal.TestArtifactTypeCoverage
+			artifactID = "coverage-" + strings.ReplaceAll(filepath.Dir(relPath), "/", "-")
+		default:
+			// Skip other files
+			return nil
+		}
+
+		// Get file size and hash
+		size, sha256, _ := implinternal.HashArtifactFile(path)
+
+		manifest.AddArtifact(implinternal.TestArtifactInfo{
+			Type:   artifactType,
+			ID:     artifactID,
+			Name:   info.Name(),
+			Path:   relPath,
+			Size:   size,
+			SHA256: sha256,
+		})
+
+		return nil
+	})
+}
+
+// getGitCommit returns the current git commit SHA
+func getGitCommit(workspaceRoot string) string {
+	cmd := exec.Command("git", "rev-parse", "HEAD")
+	cmd.Dir = workspaceRoot
+	output, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(output))
+}
+
+// cucumberTestResult holds parsed test result data from a cucumber.json file
+type cucumberTestResult struct {
+	ScenarioName string
+	FeaturePath  string
+	Status       string
+	DurationMs   int64
+	Tags         []string
+}
+
+// parseCucumberResults walks the module test directory and parses all cucumber.json files
+// to extract actual test results with durations.
+func parseCucumberResults(moduleTestDir string) []cucumberTestResult {
+	var results []cucumberTestResult
+
+	packagesDir := filepath.Join(moduleTestDir, "packages")
+	if _, err := os.Stat(packagesDir); os.IsNotExist(err) {
+		return results
+	}
+
+	_ = filepath.Walk(packagesDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return nil
+		}
+
+		// Only process cucumber JSON files (various naming patterns)
+		// Patterns: *.cucumber.json, cucumber.json, cucumber-*.json
+		fileName := info.Name()
+		if !strings.HasSuffix(fileName, ".cucumber.json") &&
+			fileName != "cucumber.json" &&
+			!(strings.HasPrefix(fileName, "cucumber-") && strings.HasSuffix(fileName, ".json")) {
+			return nil
+		}
+
+		// Parse the cucumber report
+		report, err := cucumber.ParseFile(path)
+		if err != nil {
+			log.Debugf("Failed to parse cucumber file %s: %v", path, err)
+			return nil
+		}
+
+		// Extract results from each feature and scenario
+		for _, feature := range report {
+			featurePath := feature.URI
+
+			for _, scenario := range feature.Elements {
+				// Skip background elements
+				if scenario.Type == "background" {
+					continue
+				}
+
+				// Extract tags as strings
+				var tags []string
+				for _, tag := range scenario.Tags {
+					tags = append(tags, tag.Name)
+				}
+
+				results = append(results, cucumberTestResult{
+					ScenarioName: scenario.Name,
+					FeaturePath:  featurePath,
+					Status:       scenario.GetStatus(),
+					DurationMs:   scenario.GetDurationMs(),
+					Tags:         tags,
+				})
+			}
+		}
+
+		return nil
+	})
+
+	return results
 }

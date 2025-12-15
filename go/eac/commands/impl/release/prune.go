@@ -18,7 +18,7 @@
 // Long:   release prune docs              # Keep 3 newest docs/* releases
 // Long:   release prune books --keep 5    # Keep 5 newest books/* releases
 // Long:   release prune --all --keep 3    # Prune all modules
-// Flag.keep: type=int, default=3, usage=Number of releases to keep per module
+// Flag.keep: type=int, default=1, usage=Number of releases to keep per module
 // Flag.all: type=bool, usage=Prune all modules with releases
 // Flag.dry-run: type=bool, usage=Show what would be deleted without deleting
 package release
@@ -40,7 +40,7 @@ func init() {
 
 func ReleasePrune() int {
 	// Parse flags
-	keepCount := 3
+	keepCount := 1
 	dryRun := false
 	pruneAll := false
 	module := ""
@@ -161,8 +161,8 @@ func pruneModule(module string, keepCount int, dryRun bool) (int, error) {
 }
 
 func listModuleReleases(module string) ([]string, error) {
-	// Use gh release list and filter by module prefix
-	cmd := exec.Command("gh", "release", "list", "--limit", "100")
+	// Use gh release list with JSON output to correctly parse tag names
+	cmd := exec.Command("gh", "release", "list", "--limit", "100", "--json", "tagName", "-q", ".[].tagName")
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, err
@@ -171,14 +171,12 @@ func listModuleReleases(module string) ([]string, error) {
 	var releases []string
 	prefix := module + "/"
 	for _, line := range strings.Split(string(output), "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" {
+		tag := strings.TrimSpace(line)
+		if tag == "" {
 			continue
 		}
-		// First column is the tag name
-		parts := strings.Fields(line)
-		if len(parts) > 0 && strings.HasPrefix(parts[0], prefix) {
-			releases = append(releases, parts[0])
+		if strings.HasPrefix(tag, prefix) {
+			releases = append(releases, tag)
 		}
 	}
 
@@ -214,8 +212,8 @@ func deleteReleaseAndTag(tagName string) error {
 }
 
 func getModulesWithReleases(workspaceRoot string) ([]string, error) {
-	// Get all releases and extract unique module prefixes
-	cmd := exec.Command("gh", "release", "list", "--limit", "100")
+	// Get all releases and extract unique module prefixes using JSON output
+	cmd := exec.Command("gh", "release", "list", "--limit", "100", "--json", "tagName", "-q", ".[].tagName")
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, err
@@ -223,16 +221,12 @@ func getModulesWithReleases(workspaceRoot string) ([]string, error) {
 
 	moduleSet := make(map[string]bool)
 	for _, line := range strings.Split(string(output), "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" {
+		tag := strings.TrimSpace(line)
+		if tag == "" {
 			continue
 		}
-		parts := strings.Fields(line)
-		if len(parts) > 0 {
-			tag := parts[0]
-			if idx := strings.Index(tag, "/"); idx > 0 {
-				moduleSet[tag[:idx]] = true
-			}
+		if idx := strings.Index(tag, "/"); idx > 0 {
+			moduleSet[tag[:idx]] = true
 		}
 	}
 
@@ -253,7 +247,7 @@ func printPruneHelp() {
 	log.Info("  <module>     Module name (e.g., docs, books, r2r-cli)")
 	log.Info("")
 	log.Info("Flags:")
-	log.Info("  --keep N     Number of releases to keep (default: 3)")
+	log.Info("  --keep N     Number of releases to keep (default: 1)")
 	log.Info("  --all        Prune all modules with releases")
 	log.Info("  --dry-run    Show what would be deleted without deleting")
 	log.Info("")

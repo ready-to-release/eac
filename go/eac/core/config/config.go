@@ -1087,10 +1087,21 @@ func GetTestOutputPath(repoRoot string) string {
 
 // GetTestSuiteOutputPath returns the test suite output path with graceful fallback to defaults.
 // If config loading fails, returns "out/test/<suiteName>" relative to repoRoot.
+// Deprecated: Suite-level paths are no longer used. Use GetTestModuleOutputPath instead.
 func GetTestSuiteOutputPath(repoRoot string, suiteName string) string {
 	cfg := LoadOrNil(repoRoot)
 	if cfg == nil {
 		return filepath.Join(repoRoot, "out", "test", suiteName)
 	}
 	return cfg.Repository.TestSuiteOutputPathAbs(repoRoot, suiteName)
+}
+
+// GetTestModuleOutputPath returns the test module output path with graceful fallback to defaults.
+// If config loading fails, returns "out/test/<moniker>" relative to repoRoot.
+func GetTestModuleOutputPath(repoRoot string, moniker string) string {
+	cfg := LoadOrNil(repoRoot)
+	if cfg == nil {
+		return filepath.Join(repoRoot, "out", "test", moniker)
+	}
+	return cfg.Repository.TestModuleDirAbs(repoRoot, moniker)
 }

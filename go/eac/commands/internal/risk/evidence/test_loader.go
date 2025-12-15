@@ -53,13 +53,11 @@ func FindLatestTestRun(workspaceRoot string) (string, error) {
 // This function recursively scans subdirectories to handle test-package organization.
 func FindTestResultsForModuleInSuite(workspaceRoot, moduleName, suiteName string) (*TestResults, error) {
 	// Use helper function for clean fallback to defaults in test environments
-	testRunDir := config.GetTestSuiteOutputPath(workspaceRoot, suiteName)
+	moduleDir := config.GetTestModuleOutputPath(workspaceRoot, moduleName)
+	packagesDir := filepath.Join(moduleDir, "packages")
 
-	// Look for module test results in the suite directory
-	moduleDir := filepath.Join(testRunDir, moduleName)
-
-	if _, err := os.Stat(moduleDir); os.IsNotExist(err) {
-		return nil, fmt.Errorf("no test results for module '%s' in suite '%s'", moduleName, suiteName)
+	if _, err := os.Stat(packagesDir); os.IsNotExist(err) {
+		return nil, fmt.Errorf("no test results for module '%s'", moduleName)
 	}
 
 	results := &TestResults{
@@ -191,10 +189,12 @@ func FindTestResultsForModule(workspaceRoot, moduleName string) (*TestResults, e
 func FindAcceptanceTestResults(workspaceRoot, moduleName string) ([]string, error) {
 	var acceptanceFiles []string
 
-	// Check timestamped test run directory
-	results, err := FindTestResultsForModule(workspaceRoot, moduleName)
-	if err == nil {
-		acceptanceFiles = append(acceptanceFiles, results.AcceptanceFiles...)
+	// Check module test output directory
+	moduleDir := config.GetTestModuleOutputPath(workspaceRoot, moduleName)
+	packagesDir := filepath.Join(moduleDir, "packages")
+
+	if _, err := os.Stat(packagesDir); os.IsNotExist(err) {
+		return acceptanceFiles, nil
 	}
 
 	// Also check acceptance directory: out/test/acceptance/<module>/
@@ -237,12 +237,12 @@ type CucumberTag struct {
 
 // CucumberElement represents a scenario or background in Cucumber JSON.
 type CucumberElement struct {
-	ID          string          `json:"id,omitempty"`
-	Type        string          `json:"type"` // "scenario", "background"
-	Name        string          `json:"name"`
-	Description string          `json:"description,omitempty"`
-	Tags        []CucumberTag   `json:"tags,omitempty"`
-	Steps       []CucumberStep  `json:"steps,omitempty"`
+	ID          string         `json:"id,omitempty"`
+	Type        string         `json:"type"` // "scenario", "background"
+	Name        string         `json:"name"`
+	Description string         `json:"description,omitempty"`
+	Tags        []CucumberTag  `json:"tags,omitempty"`
+	Steps       []CucumberStep `json:"steps,omitempty"`
 }
 
 // CucumberStep represents a step in Cucumber JSON.
@@ -254,8 +254,8 @@ type CucumberStep struct {
 
 // CucumberResult represents the result of a step.
 type CucumberResult struct {
-	Status   string `json:"status"` // "passed", "failed", "skipped", "pending"
-	Duration int64  `json:"duration,omitempty"`
+	Status       string `json:"status"` // "passed", "failed", "skipped", "pending"
+	Duration     int64  `json:"duration,omitempty"`
 	ErrorMessage string `json:"error_message,omitempty"`
 }
 
@@ -653,4 +653,3 @@ func determineScenarioStatus(steps []CucumberStep) string {
 
 	return status
 }
-

@@ -1,0 +1,15 @@
+# Minimal valid repository configuration for testing
+name: test-repo
+description: Minimal test repository fixture
+
+versioning:
+  scheme: SemVer
+
+paths:
+  out:
+    root: out
+    build: out/build
+    test: out/test
+    coverage: out/coverage
+
+modules: []
