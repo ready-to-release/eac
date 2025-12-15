@@ -112,7 +112,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
       - name: Download CI artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: build-artifacts-docs
           path: out/build
