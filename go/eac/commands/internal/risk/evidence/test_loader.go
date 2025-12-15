@@ -48,52 +48,51 @@ func FindLatestTestRun(workspaceRoot string) (string, error) {
 	return filepath.Join(testDir, timestampDirs[0]), nil
 }
 
-// FindTestResultsForModuleInSuite discovers test result files for a given module in a specific test suite.
-// Test results are stored in: out/test/<suite>/<module>/
+// FindTestResultsForModuleInSuite discovers test result files for a given module.
+// Test results are stored in: out/test/<module>/packages/<package>/
+// Note: suiteName parameter is kept for API compatibility but is no longer used in paths.
 func FindTestResultsForModuleInSuite(workspaceRoot, moduleName, suiteName string) (*TestResults, error) {
 	// Use helper function for clean fallback to defaults in test environments
-	testRunDir := config.GetTestSuiteOutputPath(workspaceRoot, suiteName)
+	moduleDir := config.GetTestModuleOutputPath(workspaceRoot, moduleName)
+	packagesDir := filepath.Join(moduleDir, "packages")
 
-	// Look for module test results in the suite directory
-	moduleDir := filepath.Join(testRunDir, moduleName)
-
-	if _, err := os.Stat(moduleDir); os.IsNotExist(err) {
-		return nil, fmt.Errorf("no test results for module '%s' in suite '%s'", moduleName, suiteName)
+	if _, err := os.Stat(packagesDir); os.IsNotExist(err) {
+		return nil, fmt.Errorf("no test results for module '%s'", moduleName)
 	}
 
 	results := &TestResults{
 		ModuleName:       moduleName,
-		TestRunDirectory: moduleDir, // Use module-specific directory for freshness checks
-	}
-
-	// Collect test result files
-	entries, err := os.ReadDir(moduleDir)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read module test directory: %w", err)
+		TestRunDirectory: moduleDir,
 	}
 
 	var latestModTime time.Time
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
+
+	// Walk packages directory to find all test result files
+	err := filepath.Walk(packagesDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return nil
 		}
 
-		filename := entry.Name()
-		fullPath := filepath.Join(moduleDir, filename)
+		filename := info.Name()
 
 		// Track modification time
-		if info, err := entry.Info(); err == nil {
-			if info.ModTime().After(latestModTime) {
-				latestModTime = info.ModTime()
-			}
+		if info.ModTime().After(latestModTime) {
+			latestModTime = info.ModTime()
 		}
 
-		// Categorize files
-		if strings.HasSuffix(filename, ".cucumber.json") {
-			results.AcceptanceFiles = append(results.AcceptanceFiles, fullPath)
-		} else if strings.HasSuffix(filename, ".json") {
-			results.UnitTestFiles = append(results.UnitTestFiles, fullPath)
+		// Categorize files - cucumber files can be named cucumber-*.json or *.cucumber.json
+		if strings.HasSuffix(filename, ".cucumber.json") ||
+			(strings.HasPrefix(filename, "cucumber-") && strings.HasSuffix(filename, ".json")) {
+			results.AcceptanceFiles = append(results.AcceptanceFiles, path)
+		} else if strings.HasSuffix(filename, ".json") && filename != "test.manifest.json" {
+			results.UnitTestFiles = append(results.UnitTestFiles, path)
 		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to read module test directory: %w", err)
 	}
 
 	results.LastModified = latestModTime
@@ -155,28 +154,36 @@ func FindTestResultsForModule(workspaceRoot, moduleName string) (*TestResults, e
 }
 
 // FindAcceptanceTestResults finds acceptance test results for a module.
-// Checks both the timestamped directory and the acceptance subdirectory.
+// Test results are stored in: out/test/<module>/packages/<package>/
 func FindAcceptanceTestResults(workspaceRoot, moduleName string) ([]string, error) {
 	var acceptanceFiles []string
 
-	// Check timestamped test run directory
-	results, err := FindTestResultsForModule(workspaceRoot, moduleName)
-	if err == nil {
-		acceptanceFiles = append(acceptanceFiles, results.AcceptanceFiles...)
+	// Check module test output directory
+	moduleDir := config.GetTestModuleOutputPath(workspaceRoot, moduleName)
+	packagesDir := filepath.Join(moduleDir, "packages")
+
+	if _, err := os.Stat(packagesDir); os.IsNotExist(err) {
+		return acceptanceFiles, nil
 	}
 
-	// Also check acceptance directory: out/test/acceptance/<module>/
-	cfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot})
-	if err != nil {
-		return acceptanceFiles, nil // Return what we have so far
-	}
-	acceptanceDir := cfg.Repository.TestModuleOutputPathAbs(workspaceRoot, "acceptance", moduleName)
-	if entries, err := os.ReadDir(acceptanceDir); err == nil {
-		for _, entry := range entries {
-			if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".cucumber.json") {
-				acceptanceFiles = append(acceptanceFiles, filepath.Join(acceptanceDir, entry.Name()))
-			}
+	// Walk packages directory to find all cucumber files
+	err := filepath.Walk(packagesDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return nil
 		}
+
+		filename := info.Name()
+		// Cucumber files can be named cucumber-*.json or *.cucumber.json
+		if strings.HasSuffix(filename, ".cucumber.json") ||
+			(strings.HasPrefix(filename, "cucumber-") && strings.HasSuffix(filename, ".json")) {
+			acceptanceFiles = append(acceptanceFiles, path)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return acceptanceFiles, fmt.Errorf("failed to walk test directory: %w", err)
 	}
 
 	return acceptanceFiles, nil

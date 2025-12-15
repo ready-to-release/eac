@@ -62,6 +62,7 @@ type ConfigOptions struct {
 	DocsDir         string // Path to docs directory (relative to container mount)
 	Theme           string // Theme name: "dark" or "light" (for PDF)
 	OutputFormat    string // Output format: "site", "pdf-dark", "pdf-light"
+	PDFConcurrency  int    // Playwright concurrency for PDF export (CI: 4, devbox: 8)
 }
 
 // GenerateMkDocsConfig generates a final mkdocs.yml by loading a template
@@ -94,6 +95,11 @@ func GenerateMkDocsConfig(workspaceRoot string, opts ConfigOptions) ([]byte, err
 	// For PDF builds, update the theme-specific paths
 	if opts.OutputFormat != "site" && opts.Theme != "" {
 		content = updatePDFThemeString(content, opts.Theme, opts.DocsDir)
+	}
+
+	// For PDF builds, update concurrency if specified
+	if opts.PDFConcurrency > 0 {
+		content = replacePDFConcurrency(content, opts.PDFConcurrency)
 	}
 
 	return []byte(content), nil
@@ -138,6 +144,14 @@ func updatePDFThemeString(content, theme, docsDir string) string {
 	content = themePattern.ReplaceAllString(content, fmt.Sprintf("${1}%s", theme))
 
 	return content
+}
+
+// replacePDFConcurrency updates the PDF exporter concurrency setting
+// Matches "concurrency: N" within the exporter plugin's pdf formats section
+func replacePDFConcurrency(content string, concurrency int) string {
+	// Match "concurrency: <number>" with proper indentation (10 spaces in pdf formats section)
+	pattern := regexp.MustCompile(`(?m)^(\s+concurrency:\s*)\d+\s*$`)
+	return pattern.ReplaceAllString(content, fmt.Sprintf("${1}%d", concurrency))
 }
 
 // WriteMkDocsConfig writes a generated mkdocs.yml to the specified path

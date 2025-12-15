@@ -114,7 +114,7 @@ func testSummaryContent(f *SummaryFormatter, module *config.Module, suite, statu
 }
 
 func testMetricsSection(f *SummaryFormatter, module *config.Module, suite string, cfg *config.EACConfig) string {
-	outputDir := cfg.Repository.TestSuiteOutputPath(suite)
+	outputDir := cfg.Repository.TestModuleDir(module.Moniker)
 
 	// Try to read test summary JSON if available
 	summaryFile := filepath.Join(outputDir, fmt.Sprintf("%s-summary.json", module.Moniker))
@@ -207,25 +207,22 @@ func testDiagnosticsSection(f *SummaryFormatter, module *config.Module, suite st
 	var diagnostics string
 
 	// Read actual test log from the correct output directory
-	// Test logs are output to out/test/{suite}/{module}/test.log
+	// Test logs are output to out/test/<module>/packages/<package>/test.log
 	// For modules with subpackages, logs may be in subdirectories
-	moduleDir := cfg.Repository.TestModuleOutputPath(suite, module.Moniker)
-	rootLogPath := filepath.Join(moduleDir, "test.log")
-	logContent := readLogTail(rootLogPath, 100) // Last 100 lines for test failures
+	moduleDir := cfg.Repository.TestModuleDir(module.Moniker)
+	packagesDir := filepath.Join(moduleDir, "packages")
 
-	if logContent == "" {
-		// Try to find test.log files in subdirectories
-		logContent = findAndReadSubpackageLogs(moduleDir, 100)
-	}
+	// Try to find test.log files in the packages directory
+	logContent := findAndReadSubpackageLogs(packagesDir, 100)
 
 	if logContent != "" {
 		diagnostics += f.Section(Emoji("diagnostics")+" Test Log (last 100 lines)", f.CodeBlock("", logContent))
 	} else {
-		diagnostics += f.Section(Emoji("diagnostics")+" Diagnostics", fmt.Sprintf("Tests failed - no log file found in %s", moduleDir))
+		diagnostics += f.Section(Emoji("diagnostics")+" Diagnostics", fmt.Sprintf("Tests failed - no log file found in %s", packagesDir))
 	}
 
 	// Show test timing if available
-	timingPath := cfg.Repository.TestTimingPath(suite)
+	timingPath := cfg.Repository.TestModuleTimingPath(module.Moniker)
 	if timing, err := os.ReadFile(timingPath); err == nil {
 		diagnostics += f.Section(Emoji("time")+" Timing", string(timing))
 	}
@@ -279,7 +276,7 @@ func testConfigSection(f *SummaryFormatter, module *config.Module, suite string,
 	}
 
 	// Output directory
-	configDetails += fmt.Sprintf("- %s: %s\n", Bold("Output"), Code(cfg.Repository.TestSuiteOutputPath(suite)))
+	configDetails += fmt.Sprintf("- %s: %s\n", Bold("Output"), Code(cfg.Repository.TestModuleDir(module.Moniker)))
 
 	return f.CollapsibleSection(Emoji("config")+" Test Configuration", configDetails)
 }

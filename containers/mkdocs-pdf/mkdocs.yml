@@ -3,6 +3,7 @@
 # Dynamic values are injected by the Go build layer:
 #   - site_name, site_url, docs_dir, extra_css are set at build time
 #   - extra_css is set based on theme (pdf-dark or pdf-light)
+#   - pdf.concurrency is set based on environment (CI: 4, devbox: 8)
 
 site_name: Documentation
 site_description: Generated PDF documentation
@@ -36,11 +37,20 @@ plugins:
   #         htmlLabels: false
   # PDF export plugin - Playwright-based
   - exporter:
+      # Browser configuration for Playwright stability
+      browser:
+        timeout: 120000  # 2 minutes for browser operations (default: 60000)
+        args:
+          - --disable-dev-shm-usage  # Prevent shared memory issues in Docker
+          - --no-sandbox  # Required in Docker
+          - --disable-gpu  # Disable GPU for stability
       formats:
         pdf:
           enabled: true
-          # Use concurrent PDF generation for speed (max 16)
-          concurrency: 8
+          # Concurrency injected at build time (CI: 4, devbox: 8)
+          concurrency: 4
+          # Page render timeout - 2 minutes (default: 60000ms)
+          timeout: 120000
           # Custom stylesheet for PDF - injected at build time based on theme
           stylesheets:
             - assets/templates/pdf-dark/styles.css

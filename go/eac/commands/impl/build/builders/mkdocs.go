@@ -14,8 +14,41 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/books"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/environments"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
+
+// pdfExportSemaphore limits concurrent PDF exports to 1.
+// mkdocs-exporter uses Playwright which is resource-intensive.
+// Preprocessing and other operations can run in parallel.
+var pdfExportSemaphore = make(chan struct{}, 1)
+
+// getPDFConcurrency returns the Playwright concurrency for PDF exports.
+// Uses repository parallelism config: CI=4, devbox=8.
+// Since only one mkdocs-exporter runs at a time (via semaphore),
+// we can use all available cores for internal page rendering.
+func getPDFConcurrency(workspaceRoot string) int {
+	cfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot})
+	if err != nil {
+		// Fallback to sensible defaults
+		if environments.IsCI() {
+			return 4
+		}
+		return 8
+	}
+
+	if environments.IsCI() {
+		if cfg.Repository.Repository.Parallelism.CI > 0 {
+			return cfg.Repository.Repository.Parallelism.CI
+		}
+		return 4
+	}
+
+	if cfg.Repository.Repository.Parallelism.Devbox > 0 {
+		return cfg.Repository.Repository.Parallelism.Devbox
+	}
+	return 8
+}
 
 func init() {
 	RegisterHandler(&MkDocsHandler{})
@@ -409,8 +442,8 @@ func ensureMkDocsImage(imageName, dockerfilePath, contextPath string, logWriter 
 	return nil
 }
 
-// buildModuleBooks builds all books for a module.
-// Books are built in parallel with isolated staging directories.
+// buildModuleBooks builds all books for a module in parallel.
+// Preprocessing runs in parallel; PDF exports are serialized via semaphore.
 // Final PDFs are moved to the module output root with naming: {book-name}-{theme}.pdf
 func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book, workspaceRoot string, outputDir string, logWriter io.Writer) int {
 	if len(moduleBooks) > 1 {
@@ -418,7 +451,7 @@ func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book
 		for _, book := range moduleBooks {
 			Logln(logWriter, "   - %s (%s)", book.Name, book.GetOutput())
 		}
-		Logln(logWriter, "\n🚀 Building %d books in parallel...", len(moduleBooks))
+		Logln(logWriter, "\n🚀 Building %d books in parallel (PDF exports serialized)...", len(moduleBooks))
 	}
 
 	// Pre-build: ensure drawio cache is up to date
@@ -431,7 +464,7 @@ func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book
 		Logln(logWriter, "📊 Updated drawio cache: %d image(s) optimized", optimized)
 	}
 
-	// Build books (parallel if multiple, sequential if single)
+	// Build books in parallel (PDF exports serialized via pdfExportSemaphore)
 	var wg sync.WaitGroup
 	results := make(chan int, len(moduleBooks))
 
@@ -464,7 +497,7 @@ func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book
 				bookLogWriter = logWriter
 			}
 
-			// Build the book
+			// Build the book (PDF exports will be serialized via semaphore)
 			exitCode := buildSingleBook(module, b, workspaceRoot, outputDir, bookOutputDir, bookLogWriter)
 
 			if exitCode != 0 {
@@ -801,6 +834,7 @@ func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName str
 	}
 
 	outputFormat := fmt.Sprintf("pdf-%s", theme)
+	pdfConcurrency := getPDFConcurrency(workspaceRoot)
 	configOpts := books.ConfigOptions{
 		SiteName:        bookName,
 		SiteDescription: fmt.Sprintf("Generated PDF documentation for %s", bookName),
@@ -810,6 +844,7 @@ func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName str
 		DocsDir:         relStagingDir,
 		Theme:           theme,
 		OutputFormat:    outputFormat,
+		PDFConcurrency:  pdfConcurrency,
 	}
 	if err := books.WriteMkDocsConfig(workspaceRoot, configPath, configOpts); err != nil {
 		Logln(logWriter, "❌ Failed to generate mkdocs.yml: %v", err)
@@ -819,6 +854,7 @@ func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName str
 	Logln(logWriter, "📄 Building MkDocs site with PDF export (%s theme)", theme)
 	Logln(logWriter, "   Config: %s (from template)", configPath)
 	Logln(logWriter, "   Theme: pdf-%s", theme)
+	Logln(logWriter, "   Concurrency: %d (environment: %s)", pdfConcurrency, environments.DetectRuntime())
 	Logln(logWriter, "   WorkspaceRoot: %s", workspaceRoot)
 
 	// For Docker-in-Docker: use host path for volume mount
@@ -909,10 +945,36 @@ func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName str
 		Logln(logWriter, "   Mode: non-strict, incremental (preserving previous PDFs)")
 	}
 
-	exitCode := RunCommandWithLog(workspaceRoot, logWriter, "docker", buildArgs...)
+	// Acquire semaphore - only one PDF export at a time (Playwright is resource-intensive)
+	Logln(logWriter, "⏳ Waiting for PDF export slot...")
+	pdfExportSemaphore <- struct{}{}
+	Logln(logWriter, "🔓 Acquired PDF export slot")
+
+	// Retry logic for PDF builds - Playwright can have transient timeouts
+	maxRetries := 2
+	var exitCode int
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		if attempt > 1 {
+			Logln(logWriter, "🔄 Retrying PDF build (attempt %d/%d)...", attempt, maxRetries)
+		}
+
+		exitCode = RunCommandWithLog(workspaceRoot, logWriter, "docker", buildArgs...)
+
+		if exitCode == 0 {
+			break // Success
+		}
+
+		if attempt < maxRetries {
+			Logln(logWriter, "⚠️  PDF build failed, will retry...")
+		}
+	}
+
+	// Release semaphore - PDF export done, merge can proceed in parallel
+	<-pdfExportSemaphore
+	Logln(logWriter, "🔓 Released PDF export slot")
 
 	if exitCode != 0 {
-		Logln(logWriter, "❌ MkDocs PDF build failed (%s theme)", theme)
+		Logln(logWriter, "❌ MkDocs PDF build failed (%s theme) after %d attempts", theme, maxRetries)
 		return exitCode
 	}
 
