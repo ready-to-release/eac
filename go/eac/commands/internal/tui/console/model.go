@@ -12,16 +12,12 @@ type Model struct {
 	// Configuration
 	height       int    // Total height (default: tui.DefaultHeight)
 	width        int    // Terminal width
-	showHeader   bool   // Show status header
 	runPhaseName string // Custom name for Run phase (e.g., "building", "testing")
 
 	// 3-pane state
 	panes       [3]*Pane     // Init, Run, Summary panes
 	activePhase Phase        // Currently active phase
 	summaryData *SummaryData // Structured data for Summary pane
-
-	// Legacy single-buffer support (for backward compatibility)
-	buffer *RingBuffer // Shared buffer when not using panes
 
 	// Results buffer for post-execution output
 	resultsBuffer *RingBuffer // Output that appears after Run phase completes
@@ -30,7 +26,6 @@ type Model struct {
 	running     []string  // Currently running module monikers
 	completed   int       // Completed count
 	total       int       // Total modules
-	phase       string    // Current phase name (legacy)
 	layer       int       // Current layer being executed (1-indexed, 0 = not using layers)
 	totalLayers int       // Total number of layers (0 = not using layers)
 	startTime   time.Time // Execution start
@@ -54,9 +49,6 @@ type Model struct {
 	// Done state
 	linesDone  bool
 	statusDone bool
-
-	// Feature flag for 3-pane mode
-	usePanes bool
 
 	// Quitting state - triggers plain-text final render
 	quitting bool
@@ -97,7 +89,7 @@ func (s ModuleStatus) Icon() string {
 }
 
 // NewModel creates a new console model.
-func NewModel(height int, showHeader bool, runPhaseName string, lineChan <-chan Line, statusChan <-chan Status) Model {
+func NewModel(height int, runPhaseName string, lineChan <-chan Line, statusChan <-chan Status) Model {
 	if height <= 0 {
 		height = 5
 	}
@@ -118,22 +110,18 @@ func NewModel(height int, showHeader bool, runPhaseName string, lineChan <-chan 
 	return Model{
 		height:        height,
 		width:         80, // Default, will be updated on WindowSizeMsg
-		showHeader:    showHeader,
 		runPhaseName:  runPhaseName,
-		buffer:        NewRingBuffer(1000), // Legacy buffer
-		resultsBuffer: NewRingBuffer(100),  // Results buffer
+		resultsBuffer: NewRingBuffer(100), // Results buffer
 		panes:         panes,
 		activePhase:   PhaseInit, // Start with Init phase
 		lineChan:      lineChan,
 		statusChan:    statusChan,
 		startTime:     time.Now(),
-		phase:         "Starting",
-		usePanes:      true,                            // Enable 2-pane mode by default
-		mouseMode:     true,                            // Start with mouse ON (scrolling enabled)
-		moduleStates:  make(map[string]*ModuleState),   // Per-module state tracking
-		moduleOrder:   make([]string, 0),               // Tab ordering
-		activeTab:     "",                              // Start with aggregate view
-		maxTabs:       8,                               // Maximum visible tabs
+		mouseMode:     true,                          // Start with mouse ON (scrolling enabled)
+		moduleStates:  make(map[string]*ModuleState), // Per-module state tracking
+		moduleOrder:   make([]string, 0),             // Tab ordering
+		activeTab:     "",                            // Start with aggregate view
+		maxTabs:       8,                             // Maximum visible tabs
 	}
 }
 
@@ -186,11 +174,6 @@ func (m *Model) SetTotal(total int) {
 	m.total = total
 }
 
-// SetPhase sets the current phase name (legacy).
-func (m *Model) SetPhase(phase string) {
-	m.phase = phase
-}
-
 // SetActivePhase switches to a new phase
 func (m *Model) SetActivePhase(phase Phase) {
 	// Mark previous phase as complete if it was active
@@ -212,11 +195,9 @@ func (m *Model) GetActivePane() *Pane {
 
 // WriteToPhase writes a line to a specific phase's buffer
 func (m *Model) WriteToPhase(phase Phase, line Line) {
-	if m.usePanes && m.panes[phase] != nil {
+	if m.panes[phase] != nil {
 		m.panes[phase].Buffer.Push(line)
 	}
-	// Also write to legacy buffer for backward compatibility
-	m.buffer.Push(line)
 }
 
 // SetPhaseSummary sets the summary text for a phase (shown when collapsed)
@@ -266,16 +247,6 @@ func (m Model) calculatePaneHeights() (initH, runH, summaryH int) {
 	}
 
 	return
-}
-
-// UsePanes returns whether 2-pane mode is enabled
-func (m Model) UsePanes() bool {
-	return m.usePanes
-}
-
-// SetUsePanes enables or disables 2-pane mode
-func (m *Model) SetUsePanes(use bool) {
-	m.usePanes = use
 }
 
 // WriteResult writes a line to the results buffer

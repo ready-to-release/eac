@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ready-to-release/eac/go/eac/commands/impl/test/internal/ctrf"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/test/internal/runner"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/testing"
@@ -285,14 +286,26 @@ func (r *GoRunner) Execute(pkgPath string, tests []testing.TestReference, tuiWri
 			relFeaturePath = filepath.ToSlash(relFeaturePath)
 			cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_PATHS=%s", relFeaturePath))
 
-			// Set report output for feature files
+			// Set report output for feature files (cucumber.json generated)
 			cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_OUTPUT_DIR=%s", logDir))
-			cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_REPORT_FORMAT=%s", cfg.ReportFormat))
 		}
 	}
 
 	// Run tests with streaming output
 	testResult, runErr := streamingRunner.Run(cmd)
+
+	// Save CTRF JSON output for unit tests (non-godog)
+	// Godog tests save cucumber.json via GODOG_OUTPUT_DIR
+	if !isGodogTest {
+		events := streamingRunner.GetEvents()
+		if len(events) > 0 {
+			report := convertGoTestEventsToCTRF(events)
+			if ctrfData, err := report.ToJSON(); err == nil {
+				jsonPath := filepath.Join(logDir, "unit.json")
+				os.WriteFile(jsonPath, ctrfData, 0644)
+			}
+		}
+	}
 
 	result.TestsPassed = testResult.TestsPassed
 	result.TestsFailed = testResult.TestsFailed
@@ -403,4 +416,90 @@ func extractGoBuildTags(suiteTagFilter string) string {
 	}
 
 	return strings.Join(tags, ",")
+}
+
+// durationMs converts seconds to milliseconds, ensuring minimum 1ms for non-zero durations
+func durationMs(seconds float64) int64 {
+	if seconds <= 0 {
+		return 0
+	}
+	ms := int64(seconds * 1000)
+	if ms == 0 {
+		return 1 // Round up sub-millisecond to 1ms
+	}
+	return ms
+}
+
+// convertGoTestEventsToCTRF converts go test -json events to CTRF format
+func convertGoTestEventsToCTRF(events []runner.TestEvent) *ctrf.Report {
+	report := ctrf.NewReport("go-test")
+
+	// Track test state: map test name -> output lines and elapsed time
+	type testState struct {
+		output  []string
+		elapsed float64
+	}
+	tests := make(map[string]*testState)
+
+	// Track start/stop times from events
+	var startTime, stopTime time.Time
+	for _, event := range events {
+		if event.Time != "" {
+			if t, err := time.Parse(time.RFC3339Nano, event.Time); err == nil {
+				if startTime.IsZero() || t.Before(startTime) {
+					startTime = t
+				}
+				if t.After(stopTime) {
+					stopTime = t
+				}
+			}
+		}
+
+		// Skip package-level events (no test name)
+		if event.Test == "" {
+			continue
+		}
+
+		// Initialize test state if needed
+		if tests[event.Test] == nil {
+			tests[event.Test] = &testState{}
+		}
+
+		switch event.Action {
+		case "output":
+			tests[event.Test].output = append(tests[event.Test].output, event.Output)
+		case "pass":
+			tests[event.Test].elapsed = event.Elapsed
+			report.AddTest(ctrf.Test{
+				Name:     event.Test,
+				Status:   ctrf.StatusPassed,
+				Duration: durationMs(event.Elapsed),
+				Suite:    event.Package,
+			})
+		case "fail":
+			tests[event.Test].elapsed = event.Elapsed
+			report.AddTest(ctrf.Test{
+				Name:     event.Test,
+				Status:   ctrf.StatusFailed,
+				Duration: durationMs(event.Elapsed),
+				Suite:    event.Package,
+				Trace:    strings.Join(tests[event.Test].output, ""),
+			})
+		case "skip":
+			report.AddTest(ctrf.Test{
+				Name:     event.Test,
+				Status:   ctrf.StatusSkipped,
+				Duration: durationMs(event.Elapsed),
+				Suite:    event.Package,
+			})
+		}
+	}
+
+	// Set actual test times
+	if !startTime.IsZero() && !stopTime.IsZero() {
+		report.SetTimes(startTime.UnixMilli(), stopTime.UnixMilli())
+	} else {
+		report.Finalize()
+	}
+	return report
 }

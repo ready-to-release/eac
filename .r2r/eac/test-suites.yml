@@ -36,6 +36,7 @@ suites:
   - moniker: acceptance
     name: Acceptance Tests
     description: "Stage 6 - L3 production-like system tests"
+    extended_suite: true
     selectors:
       - any_of_tags:
           - "@L3"
@@ -51,6 +52,7 @@ suites:
   - moniker: production-verification
     name: Production Installation Verification
     description: "Stage 11-12 - Production smoke tests"
+    extended_suite: true
     selectors:
       - require_tags:
           - "@L4"

@@ -9,7 +9,6 @@ import (
 func TestNewPathHelpers(t *testing.T) {
 	repoRoot := "/repo"
 	moniker := "test-module"
-	suiteName := "acceptance"
 
 	tests := []struct {
 		name     string
@@ -32,19 +31,19 @@ func TestNewPathHelpers(t *testing.T) {
 			expected: filepath.Join(repoRoot, "out", "build", moniker, "build-timing.txt"),
 		},
 		{
-			name:     "TestSuiteOutputPath",
-			fn:       func() string { return TestSuiteOutputPath(repoRoot, suiteName) },
-			expected: filepath.Join(repoRoot, "out", "test", suiteName),
+			name:     "TestModuleDir",
+			fn:       func() string { return TestModuleDir(repoRoot, moniker) },
+			expected: filepath.Join(repoRoot, "out", "test", moniker),
 		},
 		{
-			name:     "TestModuleOutputPath",
-			fn:       func() string { return TestModuleOutputPath(repoRoot, suiteName, moniker) },
-			expected: filepath.Join(repoRoot, "out", "test", suiteName, moniker),
+			name:     "TestModuleTimingPath",
+			fn:       func() string { return TestModuleTimingPath(repoRoot, moniker) },
+			expected: filepath.Join(repoRoot, "out", "test", moniker, "test-timing.txt"),
 		},
 		{
-			name:     "TestTimingPath",
-			fn:       func() string { return TestTimingPath(repoRoot, suiteName) },
-			expected: filepath.Join(repoRoot, "out", "test", suiteName, "test-timing.txt"),
+			name:     "TestOutputDir",
+			fn:       func() string { return TestOutputDir(repoRoot) },
+			expected: filepath.Join(repoRoot, "out", "test"),
 		},
 		{
 			name:     "RiskControlsPath",

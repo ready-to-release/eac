@@ -625,24 +625,6 @@ func BuildTimingPath(repoRoot, moniker string) string {
 	return filepath.Join(repoRoot, OutDir, BuildDir, moniker, "build-timing.txt")
 }
 
-// TestSuiteOutputPath returns the path to a test suite's output directory
-// Deprecated: Suite-level paths are no longer used. Use TestModuleDir instead.
-func TestSuiteOutputPath(repoRoot, suiteName string) string {
-	return filepath.Join(repoRoot, OutDir, TestDir, suiteName)
-}
-
-// TestModuleOutputPath returns the path to a module's test output within a suite
-// Deprecated: Use TestModuleDir instead (no suite parameter).
-func TestModuleOutputPath(repoRoot, suiteName, moniker string) string {
-	return filepath.Join(repoRoot, OutDir, TestDir, suiteName, moniker)
-}
-
-// TestTimingPath returns the path to a test suite's test-timing.txt file
-// Deprecated: Use TestModuleTimingPath instead.
-func TestTimingPath(repoRoot, suiteName string) string {
-	return filepath.Join(repoRoot, OutDir, TestDir, suiteName, "test-timing.txt")
-}
-
 // TestModuleDir returns the path to a module's test output directory
 // Path: out/test/<module>
 func TestModuleDir(repoRoot, moniker string) string {

@@ -21,6 +21,7 @@ type Summary struct {
 	// Execution Plan
 	ExecutionLayers [][]string // Modules grouped by dependency layer
 	LayerCount      int        // Number of layers
+	FlatExecution   bool       // True if running all layers in parallel (ignoring layer order)
 
 	// Flags & Configuration
 	Flags Flags // All active flags
@@ -39,7 +40,7 @@ type Summary struct {
 	ArtifactValidation *ArtifactValidationInfo // nil if not validated
 
 	// Output directory
-	OutputDir string // out/build/ or out/test/<suite>/
+	OutputDir string // out/build/<module>/ or out/test/<module>/
 }
 
 // Flags captures all command-line flags that affect execution.
@@ -181,6 +182,12 @@ func (s *Summary) SetRequest(requested, calculated []string) *Summary {
 func (s *Summary) SetExecutionPlan(layers [][]string) *Summary {
 	s.ExecutionLayers = layers
 	s.LayerCount = len(layers)
+	return s
+}
+
+// SetFlatExecution sets whether layers are executed in parallel (ignoring order).
+func (s *Summary) SetFlatExecution(flat bool) *Summary {
+	s.FlatExecution = flat
 	return s
 }
 

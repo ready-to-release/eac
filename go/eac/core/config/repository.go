@@ -181,12 +181,6 @@ func (c *RepositoryConfig) TemplatePathAbs(workspaceRoot string, pathComponents 
 	return filepath.Join(workspaceRoot, c.TemplatePath(pathComponents...))
 }
 
-// TestOutputPath returns the path to a test suite's output
-// Deprecated: Use TestModuleDir for module-based test output paths (out/test/<module>)
-func (c *RepositoryConfig) TestOutputPath(suiteName string) string {
-	return c.Paths.Out.Test + "/" + suiteName
-}
-
 // TestModuleDir returns the path to a module's test output directory.
 // New structure: out/test/<module>
 func (c *RepositoryConfig) TestModuleDir(moniker string) string {
@@ -293,42 +287,6 @@ func (c *RepositoryConfig) TestOutputDir() string {
 // TestOutputDirAbs returns the absolute root test output directory
 func (c *RepositoryConfig) TestOutputDirAbs(workspaceRoot string) string {
 	return filepath.Join(workspaceRoot, c.Paths.Out.Test)
-}
-
-// TestSuiteOutputPath returns the path to a test suite's output directory
-// Deprecated: Suite-level paths are no longer used. Use TestModuleDir instead.
-func (c *RepositoryConfig) TestSuiteOutputPath(suiteName string) string {
-	return c.Paths.Out.Test + "/" + suiteName
-}
-
-// TestSuiteOutputPathAbs returns the absolute path to a test suite's output directory
-// Deprecated: Suite-level paths are no longer used. Use TestModuleDirAbs instead.
-func (c *RepositoryConfig) TestSuiteOutputPathAbs(workspaceRoot, suiteName string) string {
-	return filepath.Join(workspaceRoot, c.Paths.Out.Test, suiteName)
-}
-
-// TestModuleOutputPath returns the path to a module's test output within a suite
-// Deprecated: Use TestModuleDir(moniker) instead (no suite parameter)
-func (c *RepositoryConfig) TestModuleOutputPath(suiteName, moniker string) string {
-	return c.Paths.Out.Test + "/" + suiteName + "/" + moniker
-}
-
-// TestModuleOutputPathAbs returns the absolute path to a module's test output within a suite
-// Deprecated: Use TestModuleDirAbs(workspaceRoot, moniker) instead (no suite parameter)
-func (c *RepositoryConfig) TestModuleOutputPathAbs(workspaceRoot, suiteName, moniker string) string {
-	return filepath.Join(workspaceRoot, c.Paths.Out.Test, suiteName, moniker)
-}
-
-// TestTimingPath returns the path to a test suite's test-timing.txt file
-// Deprecated: Use TestModuleTimingPath for module-level timing files
-func (c *RepositoryConfig) TestTimingPath(suiteName string) string {
-	return c.Paths.Out.Test + "/" + suiteName + "/" + c.Conventions.TestTiming
-}
-
-// TestTimingPathAbs returns the absolute path to a test suite's test-timing.txt file
-// Deprecated: Use TestModuleTimingPathAbs for module-level timing files
-func (c *RepositoryConfig) TestTimingPathAbs(workspaceRoot, suiteName string) string {
-	return filepath.Join(workspaceRoot, c.Paths.Out.Test, suiteName, c.Conventions.TestTiming)
 }
 
 // TestModuleTimingPath returns the path to a module's test timing file

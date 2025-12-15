@@ -25,13 +25,17 @@ func FormatCompact(s *Summary) string {
 
 	// Layers (only if multiple)
 	if s.LayerCount > 1 {
-		b.WriteString(fmt.Sprintf("Layers: %d (%s)\n", s.LayerCount, formatLayerSizes(s.LayerSizes())))
+		layerInfo := fmt.Sprintf("Layers: %d (%s)", s.LayerCount, formatLayerSizes(s.LayerSizes()))
+		if s.FlatExecution {
+			layerInfo += " (running all layers in parallel)"
+		}
+		b.WriteString(layerInfo + "\n")
 	}
 
 	// Test suite info
 	if s.HasTestInfo() {
 		if len(s.Test.SuitesIncluded) > 0 {
-			b.WriteString(fmt.Sprintf("Suite: %s (%s)\n", s.Test.SuiteName, strings.Join(s.Test.SuitesIncluded, ", ")))
+			b.WriteString(fmt.Sprintf("Suite(s): %s\n", strings.Join(s.Test.SuitesIncluded, ", ")))
 		} else {
 			b.WriteString(fmt.Sprintf("Suite: %s\n", s.Test.SuiteName))
 		}
@@ -194,7 +198,11 @@ func FormatDetailed(s *Summary) string {
 	// Execution plan
 	if s.LayerCount > 0 {
 		b.WriteString("── Execution Plan ──\n")
-		b.WriteString(fmt.Sprintf("  Layers: %d\n", s.LayerCount))
+		if s.FlatExecution {
+			b.WriteString(fmt.Sprintf("  Layers: %d (running all layers in parallel)\n", s.LayerCount))
+		} else {
+			b.WriteString(fmt.Sprintf("  Layers: %d\n", s.LayerCount))
+		}
 		for i, layer := range s.ExecutionLayers {
 			b.WriteString(fmt.Sprintf("  Layer %d: %s\n", i+1, strings.Join(layer, ", ")))
 		}
@@ -339,12 +347,6 @@ func FormatDetailed(s *Summary) string {
 	b.WriteString("═══════════════════════════════\n")
 
 	return b.String()
-}
-
-// FormatConsole formats the summary for console output (legacy, medium detail).
-// Kept for backwards compatibility.
-func FormatConsole(s *Summary) string {
-	return FormatDetailed(s)
 }
 
 // formatModuleListInline formats a list of modules for inline display.

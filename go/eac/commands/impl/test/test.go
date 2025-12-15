@@ -6,13 +6,13 @@
 // Long: This command discovers tests, applies inference rules (e.g., Go tests default to @L1),
 // Long: filters by suite tags, and runs matching tests with consistent summary output.
 // Long:
-// Long: Use --suite to select which tests to run. The default suite is "component" which
-// Long: includes L0 and L1 tests (fast unit tests for component-level validation).
+// Long: Use --suite to select which tests to run. The default runs suites not marked
+// Long: as extended_suite in config (typically component + integration).
 // Long:
 // Long: Expected Output:
 // Long:   - Test execution results with pass/fail status
 // Long:   - Detailed test summary table showing modules, packages, and assertions
-// Long:   - Test logs written to out/test/<suite-name>/ directory
+// Long:   - Test logs written to out/test/<module>/ directory
 // Long:   - Exit code 0 if all tests pass, non-zero on failure
 // Long:
 // Long: Example:
@@ -20,10 +20,11 @@
 // Long:   test eac-core r2r-cli                # Test multiple modules
 // Long:   test                                 # Test all modules
 // Long:   test eac-commands --suite acceptance # Run acceptance tests only
-// Flag.suite: type=string, usage=Filter tests by suite (default: "component")
+// Flag.suite: type=string, usage=Filter tests by suite (default: non-extended suites from config)
 package test
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -39,8 +40,8 @@ import (
 	"github.com/gofrs/flock"
 	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/show"
+	"github.com/ready-to-release/eac/go/eac/commands/impl/test/internal/ctrf"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/test/internal/cucumber"
-	"github.com/ready-to-release/eac/go/eac/commands/impl/test/internal/runner"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/test/runners"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/initsummary"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
@@ -70,17 +71,15 @@ func init() {
 type TestConfig struct {
 	Monikers     []string
 	SuiteName    string
-	ReportFormat string
 	Coverage     bool
 	SkipDeps     bool
 	ListOnly     bool
 	ShowTimings  bool
 	DebugMode    bool
-	UseTUI       bool
-	TUIHeight    int
-	Parallel     bool
-	ForceRetest  bool // --retest flag to bypass incremental testing
-	RunAllSuites bool // --all flag to run component, integration, and acceptance suites
+	UseTUI      bool
+	TUIHeight   int
+	Parallel    bool
+	ForceRetest bool // --retest flag to bypass incremental testing
 }
 
 // TestExecutionContext holds shared state for parallel test execution
@@ -89,15 +88,14 @@ type TestExecutionContext struct {
 	modulePathToPkg map[string]string                  // Maps module path -> original package path (e.g., go/eac/core/config)
 	testParallelism int
 	testRunDir      string
-	reportFormat    string
 	coverage        bool
 	suiteTagFilter  string
 	workspaceRoot   string
 	moduleMapper    *ModuleMapper // Maps package paths to module monikers
 
-	// Suite routing for "all" suite
-	suiteMoniker   string                    // "all" or specific suite name
-	repoCfg        *config.RepositoryConfig  // For computing suite output paths
+	// Suite routing
+	suiteMoniker string // Suite moniker (single or composite like "component+integration")
+	repoCfg      *config.RepositoryConfig // For computing suite output paths
 
 	// Thread-safe result storage
 	mu      sync.Mutex
@@ -139,29 +137,8 @@ func Test() int {
 		return 1
 	}
 
-	// Handle --all flag: run component, integration, and acceptance suites sequentially
-	if cfg.RunAllSuites {
-		return executeAllSuites(cfg)
-	}
-
 	// Execute tests directly (like build command)
 	return executeTests(cfg)
-}
-
-// executeAllSuites runs component, integration, and acceptance suites in a SINGLE test pass.
-// This creates a combined suite from all 3 suites and runs them together to avoid
-// multiple logging sessions and the "file already closed" errors.
-func executeAllSuites(cfg *TestConfig) int {
-	// Create a combined suite that matches L0, L1, L2, and L3 tests
-	// This is equivalent to: component (L0,L1) + integration (L2) + acceptance (L3)
-	suiteCfg := *cfg
-	suiteCfg.SuiteName = "all" // Use virtual "all" suite
-	suiteCfg.RunAllSuites = false // Prevent recursion
-
-	log.Infof("Running combined suites: component + integration + acceptance")
-	log.Info("")
-
-	return executeTests(&suiteCfg)
 }
 
 // parseTestArgs parses command line arguments into TestConfig
@@ -172,10 +149,9 @@ func parseTestArgs(args []string) *TestConfig {
 	isLocalConsole := !isCI && !isContainer
 
 	cfg := &TestConfig{
-		SuiteName:    "component",
-		ReportFormat: "cucumber",
-		TUIHeight:    tui.DefaultHeight,
-		Parallel:     true,
+		SuiteName: "", // Empty means "use default suites from config"
+		TUIHeight: tui.DefaultHeight,
+		Parallel:  true,
 		UseTUI:       isLocalConsole, // TUI enabled by default for local console mode
 	}
 
@@ -191,10 +167,6 @@ func parseTestArgs(args []string) *TestConfig {
 			}
 			i++
 			cfg.SuiteName = args[i]
-		case arg == "--as-junit":
-			cfg.ReportFormat = "junit"
-		case arg == "--as-cucumber":
-			cfg.ReportFormat = "cucumber"
 		case arg == "--coverage":
 			cfg.Coverage = true
 		case arg == "--skip-deps":
@@ -215,8 +187,6 @@ func parseTestArgs(args []string) *TestConfig {
 			cfg.Parallel = false
 		case arg == "--retest":
 			cfg.ForceRetest = true
-		case arg == "--all":
-			cfg.RunAllSuites = true
 		case arg == "--tui-height":
 			if i+1 >= len(args) {
 				log.Errorf("--tui-height requires a value")
@@ -239,7 +209,7 @@ func parseTestArgs(args []string) *TestConfig {
 			}
 		case strings.HasPrefix(arg, "--") || strings.HasPrefix(arg, "-"):
 			log.Errorf("unknown flag: %s", arg)
-			log.Errorf("Valid flags: --suite, --all, --as-junit, --as-cucumber, --coverage, --skip-deps, --list-only, --timings, --debug, --tui, --no-tui, --tui-height, --sequential, --retest")
+			log.Errorf("Valid flags: --suite, --coverage, --skip-deps, --list-only, --timings, --debug, --tui, --no-tui, --tui-height, --sequential, --retest")
 			return nil
 		default:
 			cfg.Monikers = append(cfg.Monikers, arg)
@@ -270,12 +240,8 @@ func executeTests(cfg *TestConfig) int {
 
 	// Configure logging for test command
 	// Debug always goes to file, also to console if --debug flag set
-	// Logs will go to: out/test/<suite>/test-<suite>.log
-	pathSegments := []string{}
-	if cfg.SuiteName != "" {
-		pathSegments = append(pathSegments, cfg.SuiteName)
-	}
-	if err := logging.ConfigureLoggingSimple(workspaceRoot, "test", pathSegments, cfg.DebugMode); err != nil {
+	// Logs go to out/test/test.log (module-based structure, no suite subdirectory)
+	if err := logging.ConfigureLoggingSimple(workspaceRoot, "test", nil, cfg.DebugMode); err != nil {
 		log.Warnf("Failed to configure logging: %v", err)
 	}
 	defer logging.CloseLogging()
@@ -289,6 +255,17 @@ func executeTests(cfg *TestConfig) int {
 
 	// Use repository config from EAC config (properly merged with defaults)
 	repoCfg := eacCfg.Repository
+
+	// Resolve default suite from config if not specified
+	if cfg.SuiteName == "" {
+		defaultSuites := eacCfg.TestSuites.ListDefault()
+		if len(defaultSuites) == 0 {
+			log.Errorf("no default suites configured (no suites without extended_suite: true)")
+			return 1
+		}
+		cfg.SuiteName = strings.Join(defaultSuites, "+")
+		log.Debugf("Using default suites: %s", cfg.SuiteName)
+	}
 
 	// Load suite configuration
 	suite, err := testing.GetSuite(cfg.SuiteName)
@@ -714,8 +691,13 @@ func executeTests(cfg *TestConfig) int {
 			return ""
 		}
 
-		// Detect which modules need testing
-		changeResult, err := teststate.DetectChangesWithLoader(workspaceRoot, moduleTestInfo, loadDepBuildID)
+		// Detect which modules need testing for this specific suite
+		// For composite suites like "all", expand to constituent suites
+		suiteNames := getSuitesIncluded(cfg.SuiteName)
+		if suiteNames == nil {
+			suiteNames = []string{cfg.SuiteName}
+		}
+		changeResult, err := teststate.DetectChangesWithLoader(workspaceRoot, moduleTestInfo, suiteNames, loadDepBuildID)
 		if err != nil {
 			log.Warnf("Incremental test detection failed, running all tests: %v", err)
 		} else {
@@ -827,18 +809,17 @@ func executeTests(cfg *TestConfig) int {
 
 	// Create test execution context using module-based paths
 	execCtx := &TestExecutionContext{
-		testsByPackage:    testsByModulePath,    // Now keyed by module path
-		modulePathToPkg:   modulePathToPkg,      // Reverse mapping for runner
-		testParallelism:   testParallelism,
-		testRunDir:        testRunDir,
-		reportFormat:      cfg.ReportFormat,
-		coverage:          cfg.Coverage,
-		suiteTagFilter:    suiteTagFilter,
-		workspaceRoot:     workspaceRoot,
-		moduleMapper:      moduleMapper,
-		suiteMoniker:      suite.Moniker,
-		repoCfg:           repoCfg,
-		results:           make(map[string]PackageResult),
+		testsByPackage:  testsByModulePath,  // Now keyed by module path
+		modulePathToPkg: modulePathToPkg,    // Reverse mapping for runner
+		testParallelism: testParallelism,
+		testRunDir:      testRunDir,
+		coverage:        cfg.Coverage,
+		suiteTagFilter:  suiteTagFilter,
+		workspaceRoot:   workspaceRoot,
+		moduleMapper:    moduleMapper,
+		suiteMoniker:    suite.Moniker,
+		repoCfg:         repoCfg,
+		results:         make(map[string]PackageResult),
 	}
 
 	// Build moniker list and type map using module-based paths
@@ -925,9 +906,21 @@ func executeTests(cfg *TestConfig) int {
 	testDuration := time.Since(testStartTime)
 	generateTestManifests(execCtx, results, testsByModulePath, cfg.SuiteName, testDuration, workspaceRoot, repoCfg, eacCfg)
 
-	// Update incremental test state (only in local devbox mode)
-	log.Debugf("State update check: useIncremental=%v, registryNil=%v", useIncremental, moduleRegistry == nil)
-	if useIncremental && moduleRegistry != nil {
+	// Aggregate all cucumber.json files into a single out/test/cucumber.json
+	if aggregatedPath := aggregateCucumberReports(testRunDir); aggregatedPath != "" {
+		log.Infof("Aggregated cucumber report: %s", aggregatedPath)
+	}
+
+	// Aggregate all unit.json (CTRF) files into a single out/test/unit.json
+	if aggregatedPath := aggregateCTRFReports(testRunDir); aggregatedPath != "" {
+		log.Infof("Aggregated CTRF report: %s", aggregatedPath)
+	}
+
+	// Update incremental test state in per-module manifests (only in local devbox mode)
+	// Note: We always save state after tests run, regardless of whether --retest was used.
+	// This ensures incremental testing works on subsequent runs.
+	log.Debugf("State update check: isCI=%v, registryNil=%v", isCI, moduleRegistry == nil)
+	if !isCI && moduleRegistry != nil {
 		log.Debugf("Updating incremental test state for %d module paths", len(testsByModulePath))
 		// Build map of module -> pass/fail from results
 		testedModuleResults := make(map[string]bool)
@@ -1108,135 +1101,38 @@ func (ctx *TestExecutionContext) runPackageTests(modulePath string, tests []test
 	testType := getPackageTestType(tests)
 	testRunner := runners.Get(testType)
 
-	// If we have a registered runner, use it
-	if testRunner != nil {
-		// Extract module moniker from modulePath (format: "<moniker>/<subpath>" or just "<moniker>")
-		moduleMoniker := modulePath
-		if idx := strings.Index(modulePath, "/"); idx > 0 {
-			moduleMoniker = modulePath[:idx]
-		}
-
-		// Get effective test run dir (routes to correct suite folder for "all")
-		effectiveTestRunDir := ctx.getEffectiveTestRunDir(tests)
-
-		// Use the module path directly as the output path (orchestrator already uses this)
-		cfg := runners.RunConfig{
-			WorkspaceRoot:    ctx.workspaceRoot,
-			TestRunDir:       effectiveTestRunDir,
-			ReportFormat:     ctx.reportFormat,
-			Coverage:         ctx.coverage,
-			SuiteTagFilter:   ctx.suiteTagFilter,
-			Parallelism:      ctx.testParallelism,
-			ModuleMoniker:    moduleMoniker, // For result aggregation
-			ModuleOutputPath: modulePath,    // Orchestrator creates this directory
-		}
-		// Pass original package path to runner for test execution
-		runResult := testRunner.Execute(originalPkgPath, tests, tuiWriter, cfg)
-		return PackageResult{
-			ModuleMoniker: runResult.ModuleMoniker,
-			PackageName:   runResult.PackageName,
-			LogFilePath:   runResult.LogFilePath,
-			TestsPassed:   runResult.TestsPassed,
-			TestsFailed:   runResult.TestsFailed,
-			TestsSkipped:  runResult.TestsSkipped,
-			TestsTotal:    runResult.TestsTotal,
-			PackageFailed: runResult.PackageFailed,
-			Duration:      runResult.Duration,
-		}
+	// Extract module moniker from modulePath (format: "<moniker>/<subpath>" or just "<moniker>")
+	moduleMoniker := modulePath
+	if idx := strings.Index(modulePath, "/"); idx > 0 {
+		moduleMoniker = modulePath[:idx]
 	}
 
-	// Fallback to inline Go test execution (legacy path, should not be reached)
-	start := time.Now()
-	result := PackageResult{PackageName: modulePath}
+	// Get effective test run dir (routes to correct suite folder for composite suites)
+	effectiveTestRunDir := ctx.getEffectiveTestRunDir(tests)
 
-	// Determine package directory from original package path
-	var relPkgPath, relFeatureFile string
-	if strings.Contains(originalPkgPath, ":") {
-		parts := strings.SplitN(originalPkgPath, ":", 2)
-		relPkgPath = parts[0]
-		relFeatureFile = parts[1]
-	} else {
-		relPkgPath = originalPkgPath
+	// Use the module path directly as the output path (orchestrator already uses this)
+	cfg := runners.RunConfig{
+		WorkspaceRoot:    ctx.workspaceRoot,
+		TestRunDir:       effectiveTestRunDir,
+		Coverage:         ctx.coverage,
+		SuiteTagFilter:   ctx.suiteTagFilter,
+		Parallelism:      ctx.testParallelism,
+		ModuleMoniker:    moduleMoniker, // For result aggregation
+		ModuleOutputPath: modulePath,    // Orchestrator creates this directory
 	}
-
-	_ = relFeatureFile // Used in fallback godog setup below
-
-	actualPkgDir := filepath.Join(ctx.workspaceRoot, relPkgPath)
-
-	// Create log file using module path (orchestrator creates this directory)
-	logDir := filepath.Join(ctx.testRunDir, modulePath)
-	if err := os.MkdirAll(logDir, 0755); err != nil {
-		fmt.Fprintf(tuiWriter, "❌ Failed to create log directory: %v\n", err)
-		result.PackageFailed = true
-		return result
+	// Pass original package path to runner for test execution
+	runResult := testRunner.Execute(originalPkgPath, tests, tuiWriter, cfg)
+	return PackageResult{
+		ModuleMoniker: runResult.ModuleMoniker,
+		PackageName:   runResult.PackageName,
+		LogFilePath:   runResult.LogFilePath,
+		TestsPassed:   runResult.TestsPassed,
+		TestsFailed:   runResult.TestsFailed,
+		TestsSkipped:  runResult.TestsSkipped,
+		TestsTotal:    runResult.TestsTotal,
+		PackageFailed: runResult.PackageFailed,
+		Duration:      runResult.Duration,
 	}
-
-	logFilePath := filepath.Join(logDir, "test.log")
-	logFile, err := os.Create(logFilePath)
-	if err != nil {
-		fmt.Fprintf(tuiWriter, "❌ Failed to create log file: %v\n", err)
-		result.PackageFailed = true
-		return result
-	}
-	defer logFile.Close()
-	result.LogFilePath = logFilePath
-
-	// Create streaming test runner
-	streamingRunner := runner.NewStreamingRunner(tuiWriter, logFile)
-
-	// Build go test command
-	goTestArgs := []string{"test", "-json", "-v", "-parallel", fmt.Sprintf("%d", ctx.testParallelism)}
-
-	// Add coverage if enabled
-	if ctx.coverage {
-		coverageFile := filepath.Join(logDir, "coverage.out")
-		goTestArgs = append(goTestArgs, "-cover", "-coverprofile="+coverageFile)
-	}
-
-	// Add package path
-	goTestArgs = append(goTestArgs, ".")
-
-	cmd := newCommand("go", goTestArgs...)
-	cmd.Dir = actualPkgDir
-	cmd.Env = os.Environ()
-
-	// Set test run ID for nested commands
-	testRunID := filepath.Base(ctx.testRunDir)
-	cmd.Env = append(cmd.Env, fmt.Sprintf("R2R_TEST_RUN_ID=%s", testRunID))
-
-	// Disable file logging in test subprocesses to prevent polluting out/commands.log
-	cmd.Env = append(cmd.Env, "R2R_TEST_LOGGING_ACTIVE=true")
-
-	// Set godog environment variables if this is a godog test
-	isGodogTest := fileExists(filepath.Join(actualPkgDir, "godog_test.go"))
-	if isGodogTest {
-		cmd.Env = append(cmd.Env, "GODOG_FORMAT=progress")
-		if ctx.suiteTagFilter != "" {
-			cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_SUITE_TAGS=%s", ctx.suiteTagFilter))
-		}
-		if relFeatureFile != "" {
-			relFeaturePath, _ := filepath.Rel(actualPkgDir, filepath.Join(ctx.workspaceRoot, relFeatureFile))
-			relFeaturePath = filepath.ToSlash(relFeaturePath)
-			cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_PATHS=%s", relFeaturePath))
-
-			// Set report output for feature files
-			reportDir := logDir
-			cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_OUTPUT_DIR=%s", reportDir))
-			cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_REPORT_FORMAT=%s", ctx.reportFormat))
-		}
-	}
-
-	// Run tests with streaming output
-	testResult, runErr := streamingRunner.Run(cmd)
-
-	result.TestsPassed = testResult.TestsPassed
-	result.TestsFailed = testResult.TestsFailed
-	result.TestsSkipped = testResult.TestsSkipped
-	result.TestsTotal = testResult.TestsTotal
-	result.PackageFailed = testResult.PackageFailed || runErr != nil
-	result.Duration = time.Since(start)
-
-	return result
 }
 
 // runTscucumberPackageTests executes TypeScript cucumber-js tests
@@ -1539,10 +1435,7 @@ func printTestUsage() {
 	log.Info("Usage: r2r eac test [module1] [module2] ... [options]")
 	log.Info("")
 	log.Info("Options:")
-	log.Info("  --suite <name>         Filter tests by suite (default: \"component\")")
-	log.Info("  --all                  Run all suites: component, integration, acceptance (excludes production-verification)")
-	log.Info("  --as-cucumber          Generate Cucumber JSON reports (default)")
-	log.Info("  --as-junit             Generate JUnit XML reports")
+	log.Info("  --suite <name>         Filter tests by suite (default: component+integration)")
 	log.Info("  --coverage             Generate coverage reports (coverage.out, coverage.json)")
 	log.Info("  --skip-deps            Skip dependency verification before running tests")
 	log.Info("  --list-only            List tests that would run without executing them")
@@ -1559,17 +1452,15 @@ func printTestUsage() {
 	log.Info("  acceptance               L3 tests (production-like tests)")
 	log.Info("  production-verification  L4+PIV tests (production smoke)")
 	log.Info("")
+	log.Info("Composite suites (use + to combine):")
+	log.Info("  component+integration+acceptance      # Run multiple suites together")
+	log.Info("")
 	log.Info("Examples:")
-	log.Info("  r2r eac test                          # Test all modules (component suite)")
-	log.Info("  r2r eac test --all                    # Run component, integration, acceptance")
+	log.Info("  r2r eac test                          # Test all modules (default suites)")
 	log.Info("  r2r eac test eac-commands             # Test single module")
 	log.Info("  r2r eac test r2r-cli eac-core         # Test multiple modules")
-	log.Info("  r2r eac test eac-commands --suite acceptance")
+	log.Info("  r2r eac test --suite acceptance       # Run acceptance suite")
 	log.Info("  r2r eac test eac-commands --no-tui    # Disable TUI display")
-	log.Info("")
-	log.Info("Related commands:")
-	log.Info("  r2r eac test suite <name>             # Run a specific test suite")
-	log.Info("  r2r eac test list-suites              # List all available test suites")
 }
 
 // printTestSummary prints unified test summary to a writer (for non-TUI mode)
@@ -2034,32 +1925,36 @@ func isTestFile(path string) bool {
 		strings.HasSuffix(path, ".spec.ts")
 }
 
-// getSuitesIncluded returns the list of suites included for the "all" suite.
-// For other suites, returns nil.
+// getSuitesIncluded returns the list of suites included for composite suites.
+// Handles composite suite syntax: "component+integration" -> ["component", "integration"]
+// For single suites, returns nil.
 func getSuitesIncluded(suiteMoniker string) []string {
-	if suiteMoniker == "all" {
-		return []string{"component", "integration", "acceptance"}
+	// Handle "+" joined composite suites (e.g., "component+integration")
+	if strings.Contains(suiteMoniker, "+") {
+		return strings.Split(suiteMoniker, "+")
 	}
 	return nil
 }
 
 // getEffectiveSuiteForTests determines which suite a set of tests belongs to based on L-level tags.
-// Returns "component" for L0/L1, "integration" for L2, "acceptance" for L3.
+// Uses config to map L-tags to suite monikers.
 // If tests have mixed levels or no L-level tags, returns the provided fallback.
 func getEffectiveSuiteForTests(tests []testing.TestReference, fallback string) string {
 	if len(tests) == 0 {
 		return fallback
 	}
 
+	cfg := config.Global()
+	if cfg == nil || cfg.TestSuites == nil {
+		return fallback
+	}
+
 	// Check L-level tags of first test (tests in same package should have same level)
 	for _, tag := range tests[0].Tags {
-		switch tag {
-		case "@L0", "@L1":
-			return "component"
-		case "@L2":
-			return "integration"
-		case "@L3":
-			return "acceptance"
+		if len(tag) >= 2 && tag[0] == '@' && tag[1] == 'L' {
+			if suite := cfg.TestSuites.GetSuiteForLTag(tag); suite != "" {
+				return suite
+			}
 		}
 	}
 	return fallback
@@ -2124,27 +2019,91 @@ func generateTestManifests(
 			manifest = implinternal.NewTestManifest(moniker, moduleType, gitCommit)
 		}
 
-		// Calculate suite-level summary
-		suiteSummary := implinternal.TestSummary{}
-		for _, result := range moduleResults {
-			suiteSummary.Total += result.TestsTotal
-			suiteSummary.Passed += result.TestsPassed
-			suiteSummary.Failed += result.TestsFailed
-			suiteSummary.Skipped += result.TestsSkipped
+		// For composite suites (e.g., "component+integration"), record each constituent suite separately
+		// based on test L-levels. For single suites, record under the config suite name.
+		constituentSuites := getSuitesIncluded(suiteName)
+		if constituentSuites != nil {
+			// Composite suite: calculate per-suite summaries based on test L-levels
+			suiteSummaries := make(map[string]*implinternal.TestSummary)
+			for _, s := range constituentSuites {
+				suiteSummaries[s] = &implinternal.TestSummary{}
+			}
+
+			// Get tests for this module to determine L-levels
+			moduleTests := testsByModule[moniker]
+
+			for _, result := range moduleResults {
+				// Determine effective suite from test L-levels
+				var pkgTests []testing.TestReference
+				for _, t := range moduleTests {
+					if strings.Contains(result.PackageName, filepath.Base(filepath.Dir(t.FilePath))) {
+						pkgTests = append(pkgTests, t)
+						break // Just need one to determine L-level
+					}
+				}
+				// Use first default suite as fallback
+				fallbackSuite := ""
+				if defaults := eacCfg.TestSuites.ListDefault(); len(defaults) > 0 {
+					fallbackSuite = defaults[0]
+				}
+				effectiveSuite := getEffectiveSuiteForTests(pkgTests, fallbackSuite)
+				if summary, ok := suiteSummaries[effectiveSuite]; ok {
+					summary.Total += result.TestsTotal
+					summary.Passed += result.TestsPassed
+					summary.Failed += result.TestsFailed
+					summary.Skipped += result.TestsSkipped
+				}
+			}
+
+			// Record each constituent suite (even if empty - marks it as "run")
+			for _, s := range constituentSuites {
+				manifest.AddSuiteResult(s, implinternal.SuiteResult{
+					RunTime:         time.Now(),
+					DurationSeconds: duration.Seconds() / float64(len(constituentSuites)), // Approximate
+					Tests:           *suiteSummaries[s],
+				})
+				manifest.ClearSuiteTests(s)
+			}
+		} else {
+			// Non-composite suite: record under the config suite name
+			suiteSummary := implinternal.TestSummary{}
+			for _, result := range moduleResults {
+				suiteSummary.Total += result.TestsTotal
+				suiteSummary.Passed += result.TestsPassed
+				suiteSummary.Failed += result.TestsFailed
+				suiteSummary.Skipped += result.TestsSkipped
+			}
+
+			manifest.AddSuiteResult(suiteName, implinternal.SuiteResult{
+				RunTime:         time.Now(),
+				DurationSeconds: duration.Seconds(),
+				Tests:           suiteSummary,
+			})
+			manifest.ClearSuiteTests(suiteName)
 		}
-
-		// Add/update suite result
-		manifest.AddSuiteResult(suiteName, implinternal.SuiteResult{
-			RunTime:         time.Now(),
-			DurationSeconds: duration.Seconds(),
-			Tests:           suiteSummary,
-		})
-
-		// Clear old tests for this suite and add fresh results
-		manifest.ClearSuiteTests(suiteName)
 
 		// Parse cucumber.json files to get actual test results with durations
 		cucumberResults := parseCucumberResults(moduleTestDir)
+
+		// Helper to determine effective suite name for a test
+		getEffectiveSuite := func(tags []string) string {
+			if constituentSuites != nil {
+				// Composite suite: determine from L-level tags using config
+				for _, tag := range tags {
+					if len(tag) >= 2 && tag[0] == '@' && tag[1] == 'L' {
+						if suite := eacCfg.TestSuites.GetSuiteForLTag(tag); suite != "" {
+							return suite
+						}
+					}
+				}
+				// Default to first default suite for composite suites
+				if defaults := eacCfg.TestSuites.ListDefault(); len(defaults) > 0 {
+					return defaults[0]
+				}
+				return ""
+			}
+			return suiteName // Non-composite: use config suite name
+		}
 
 		// Add test entries from cucumber results (godog tests)
 		for _, result := range cucumberResults {
@@ -2152,7 +2111,7 @@ func generateTestManifests(
 				Name:       result.ScenarioName,
 				Package:    result.FeaturePath,
 				Type:       "godog",
-				Suite:      suiteName,
+				Suite:      getEffectiveSuite(result.Tags),
 				Status:     result.Status,
 				DurationMs: result.DurationMs,
 				Tags:       result.Tags,
@@ -2190,7 +2149,7 @@ func generateTestManifests(
 					Name:     test.TestName,
 					Package:  filepath.Dir(test.FilePath),
 					Type:     test.Type,
-					Suite:    suiteName,
+					Suite:    getEffectiveSuite(test.Tags),
 					Status:   status,
 					Tags:     test.Tags,
 					FilePath: test.FilePath,
@@ -2346,4 +2305,157 @@ func parseCucumberResults(moduleTestDir string) []cucumberTestResult {
 	})
 
 	return results
+}
+
+// aggregateCucumberReports collects all cucumber.json files from module test directories
+// and aggregates them into a single out/test/cucumber.json file.
+// Returns the path to the aggregated file, or empty string if no cucumber files found.
+func aggregateCucumberReports(testRunDir string) string {
+	var allFeatures cucumber.CucumberReport
+
+	// Walk through all module directories in out/test/
+	entries, err := os.ReadDir(testRunDir)
+	if err != nil {
+		log.Debugf("Failed to read test directory: %v", err)
+		return ""
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		// Skip hidden directories
+		if strings.HasPrefix(entry.Name(), ".") {
+			continue
+		}
+
+		moduleDir := filepath.Join(testRunDir, entry.Name())
+		packagesDir := filepath.Join(moduleDir, "packages")
+
+		if _, err := os.Stat(packagesDir); os.IsNotExist(err) {
+			continue
+		}
+
+		// Walk through packages directory to find cucumber files
+		_ = filepath.Walk(packagesDir, func(path string, info os.FileInfo, err error) error {
+			if err != nil || info.IsDir() {
+				return nil
+			}
+
+			// Match cucumber JSON files (various naming patterns)
+			fileName := info.Name()
+			if !strings.HasSuffix(fileName, ".cucumber.json") &&
+				fileName != "cucumber.json" &&
+				!(strings.HasPrefix(fileName, "cucumber-") && strings.HasSuffix(fileName, ".json")) {
+				return nil
+			}
+
+			// Parse and aggregate
+			report, err := cucumber.ParseFile(path)
+			if err != nil {
+				log.Debugf("Failed to parse cucumber file %s: %v", path, err)
+				return nil
+			}
+
+			allFeatures = append(allFeatures, report...)
+			return nil
+		})
+	}
+
+	if len(allFeatures) == 0 {
+		return ""
+	}
+
+	// Write aggregated report
+	aggregatedPath := filepath.Join(testRunDir, "cucumber.json")
+	data, err := json.MarshalIndent(allFeatures, "", "  ")
+	if err != nil {
+		log.Warnf("Failed to marshal aggregated cucumber report: %v", err)
+		return ""
+	}
+
+	if err := os.WriteFile(aggregatedPath, data, 0644); err != nil {
+		log.Warnf("Failed to write aggregated cucumber report: %v", err)
+		return ""
+	}
+
+	log.Debugf("Aggregated %d cucumber features to %s", len(allFeatures), aggregatedPath)
+	return aggregatedPath
+}
+
+// aggregateCTRFReports collects all unit.json (CTRF) files from module test directories
+// and aggregates them into a single out/test/unit.json file.
+// Returns the path to the aggregated file, or empty string if no CTRF files found.
+func aggregateCTRFReports(testRunDir string) string {
+	aggregatedReport := ctrf.NewEmptyReport("aggregated")
+
+	// Walk through all module directories in out/test/
+	entries, err := os.ReadDir(testRunDir)
+	if err != nil {
+		log.Debugf("Failed to read test directory: %v", err)
+		return ""
+	}
+
+	foundCount := 0
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		// Skip hidden directories
+		if strings.HasPrefix(entry.Name(), ".") {
+			continue
+		}
+
+		moduleDir := filepath.Join(testRunDir, entry.Name())
+		packagesDir := filepath.Join(moduleDir, "packages")
+
+		if _, err := os.Stat(packagesDir); os.IsNotExist(err) {
+			continue
+		}
+
+		// Walk through packages directory to find unit.json files
+		_ = filepath.Walk(packagesDir, func(path string, info os.FileInfo, err error) error {
+			if err != nil || info.IsDir() {
+				return nil
+			}
+
+			// Match unit.json files
+			if info.Name() != "unit.json" {
+				return nil
+			}
+
+			// Parse and aggregate
+			report, err := ctrf.ParseFile(path)
+			if err != nil {
+				log.Debugf("Failed to parse CTRF file %s: %v", path, err)
+				return nil
+			}
+
+			aggregatedReport.Merge(report)
+			foundCount++
+			return nil
+		})
+	}
+
+	if foundCount == 0 {
+		return ""
+	}
+
+	// Write aggregated report
+	aggregatedPath := filepath.Join(testRunDir, "unit.json")
+	data, err := aggregatedReport.ToJSON()
+	if err != nil {
+		log.Warnf("Failed to marshal aggregated CTRF report: %v", err)
+		return ""
+	}
+
+	if err := os.WriteFile(aggregatedPath, data, 0644); err != nil {
+		log.Warnf("Failed to write aggregated CTRF report: %v", err)
+		return ""
+	}
+
+	log.Debugf("Aggregated %d CTRF reports (%d tests) to %s", foundCount, aggregatedReport.Results.Summary.Tests, aggregatedPath)
+	return aggregatedPath
 }

@@ -2,6 +2,7 @@
 package runners
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ready-to-release/eac/go/eac/commands/impl/test/internal/ctrf"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/platform"
 	"github.com/ready-to-release/eac/go/eac/core/testing"
@@ -123,8 +125,9 @@ func (r *MochaRunner) Execute(pkgPath string, tests []testing.TestReference, tui
 		return result
 	}
 
-	// Build npm test command
-	args := []string{"test"}
+	// Build npm test command with JSON reporter for structured output
+	// Mocha's built-in json reporter outputs results to stdout
+	args := []string{"test", "--", "--reporter", "json"}
 
 	// Log command
 	fmt.Fprintf(logFile, "=== Testing TypeScript mocha tests ===\n")
@@ -138,9 +141,40 @@ func (r *MochaRunner) Execute(pkgPath string, tests []testing.TestReference, tui
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, "R2R_TEST_LOGGING_ACTIVE=true")
 
-	// Capture output
-	output, runErr := cmd.CombinedOutput()
-	fmt.Fprintf(logFile, "%s\n", output)
+	// Capture stdout (JSON) and stderr separately
+	stdout, _ := cmd.StdoutPipe()
+	stderr, _ := cmd.StderrPipe()
+
+	runErr := cmd.Start()
+	if runErr != nil {
+		fmt.Fprintf(tuiWriter, "Failed to start mocha: %v\n", runErr)
+		fmt.Fprintf(logFile, "Failed to start: %v\n", runErr)
+		result.PackageFailed = true
+		return result
+	}
+
+	// Read stdout (JSON output)
+	jsonOutput, _ := io.ReadAll(stdout)
+	// Read stderr (error messages)
+	stderrOutput, _ := io.ReadAll(stderr)
+
+	runErr = cmd.Wait()
+
+	// Write stderr to log file
+	if len(stderrOutput) > 0 {
+		fmt.Fprintf(logFile, "%s\n", stderrOutput)
+	}
+
+	// Convert mocha JSON to CTRF and save
+	if len(jsonOutput) > 0 {
+		if ctrfReport := convertMochaJSONToCTRF(jsonOutput); ctrfReport != nil {
+			if ctrfData, err := ctrfReport.ToJSON(); err == nil {
+				jsonPath := filepath.Join(logDir, "unit.json")
+				os.WriteFile(jsonPath, ctrfData, 0644)
+				fmt.Fprintf(logFile, "CTRF JSON saved to unit.json (%d bytes)\n", len(ctrfData))
+			}
+		}
+	}
 
 	// Parse results
 	if runErr != nil {
@@ -156,4 +190,99 @@ func (r *MochaRunner) Execute(pkgPath string, tests []testing.TestReference, tui
 	result.Duration = time.Since(start)
 
 	return result
+}
+
+// mochaReport represents mocha's native JSON output format
+type mochaReport struct {
+	Stats struct {
+		Suites   int    `json:"suites"`
+		Tests    int    `json:"tests"`
+		Passes   int    `json:"passes"`
+		Pending  int    `json:"pending"`
+		Failures int    `json:"failures"`
+		Start    string `json:"start"`
+		End      string `json:"end"`
+		Duration int    `json:"duration"`
+	} `json:"stats"`
+	Tests    []mochaTest `json:"tests"`
+	Passes   []mochaTest `json:"passes"`
+	Failures []mochaTest `json:"failures"`
+	Pending  []mochaTest `json:"pending"`
+}
+
+type mochaTest struct {
+	Title        string   `json:"title"`
+	FullTitle    string   `json:"fullTitle"`
+	Duration     float64  `json:"duration"`
+	CurrentRetry int      `json:"currentRetry"`
+	Err          mochaErr `json:"err"`
+}
+
+type mochaErr struct {
+	Message string `json:"message"`
+	Stack   string `json:"stack"`
+}
+
+// mochaDurationMs converts mocha duration (already in ms) ensuring minimum 1ms for non-zero
+func mochaDurationMs(ms float64) int64 {
+	if ms <= 0 {
+		return 0
+	}
+	result := int64(ms + 0.5) // Round to nearest
+	if result == 0 {
+		return 1 // Minimum 1ms for non-zero durations
+	}
+	return result
+}
+
+// convertMochaJSONToCTRF converts mocha's native JSON output to CTRF format
+func convertMochaJSONToCTRF(jsonData []byte) *ctrf.Report {
+	var mocha mochaReport
+	if err := json.Unmarshal(jsonData, &mocha); err != nil {
+		return nil
+	}
+
+	report := ctrf.NewReport("mocha")
+
+	// Add passed tests
+	for _, t := range mocha.Passes {
+		report.AddTest(ctrf.Test{
+			Name:     t.FullTitle,
+			Status:   ctrf.StatusPassed,
+			Duration: mochaDurationMs(t.Duration),
+		})
+	}
+
+	// Add failed tests
+	for _, t := range mocha.Failures {
+		report.AddTest(ctrf.Test{
+			Name:     t.FullTitle,
+			Status:   ctrf.StatusFailed,
+			Duration: mochaDurationMs(t.Duration),
+			Message:  t.Err.Message,
+			Trace:    t.Err.Stack,
+		})
+	}
+
+	// Add pending tests
+	for _, t := range mocha.Pending {
+		report.AddTest(ctrf.Test{
+			Name:     t.FullTitle,
+			Status:   ctrf.StatusPending,
+			Duration: mochaDurationMs(t.Duration),
+		})
+	}
+
+	// Set actual test times from mocha stats
+	if mocha.Stats.Start != "" && mocha.Stats.End != "" {
+		if startTime, err := time.Parse(time.RFC3339, mocha.Stats.Start); err == nil {
+			if endTime, err := time.Parse(time.RFC3339, mocha.Stats.End); err == nil {
+				report.SetTimes(startTime.UnixMilli(), endTime.UnixMilli())
+			}
+		}
+	} else {
+		report.Finalize()
+	}
+
+	return report
 }

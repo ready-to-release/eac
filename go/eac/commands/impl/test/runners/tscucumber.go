@@ -187,6 +187,10 @@ func (r *TsCucumberRunner) Execute(pkgPath string, tests []testing.TestReference
 	// Build cucumber-js command
 	args := []string{"cucumber-js"}
 
+	// Add cucumber.json output format
+	cucumberJSONPath := filepath.Join(logDir, "cucumber.json")
+	args = append(args, "--format", fmt.Sprintf("json:%s", cucumberJSONPath))
+
 	// Add tag filter if provided
 	if cfg.SuiteTagFilter != "" {
 		tagExpr := convertToCucumberTagExpr(cfg.SuiteTagFilter)

@@ -60,7 +60,6 @@ func New(config Config, worker WorkerFunc) *Orchestrator {
 	if config.TUI {
 		o.tuiConsole = tui.New(tui.Config{
 			Height:       config.TUIHeight,
-			ShowHeader:   true,
 			BufferSize:   1000,
 			RunPhaseName: config.ActionVerb,
 		})

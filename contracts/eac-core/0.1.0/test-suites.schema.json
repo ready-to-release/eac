@@ -42,6 +42,11 @@
             "$ref": "#/definitions/tag_selector"
           },
           "minItems": 1
+        },
+        "extended_suite": {
+          "type": "boolean",
+          "description": "If true, this suite is not included in default test runs and requires explicit selection. Used for acceptance/production suites that need longer execution time or special infrastructure.",
+          "default": false
         }
       },
       "required": ["moniker", "name", "selectors"]
