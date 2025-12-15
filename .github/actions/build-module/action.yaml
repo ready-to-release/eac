@@ -41,6 +41,12 @@ inputs:
     description: Additional arguments to pass to the build command
     required: false
     default: ''
+  no-deps:
+    description: |
+      Build in isolated mode - no dependency artifact downloads, no dependency resolution.
+      Default: true (CI isolation). Set to false only for integration builds that need deps.
+    required: false
+    default: 'true'
 
 outputs:
   artifact-name:
@@ -90,6 +96,7 @@ runs:
         fi
 
     - name: Download Dependency Artifacts
+      if: inputs.no-deps != 'true'
       shell: bash
       env:
         COMMANDS: ${{ steps.commands.outputs.commands-path }}
@@ -149,11 +156,20 @@ runs:
         COMMANDS: ${{ steps.commands.outputs.commands-path }}
         MODULE: ${{ inputs.module }}
         EXTRA_ARGS: ${{ inputs.extra-args }}
+        NO_DEPS: ${{ inputs.no-deps }}
       run: |
-        # CI builds THIS module only:
+        # Build flags:
         # --rebuild: force full build (CI was triggered, so build fresh)
-        # --use-existing-depm: use dependency artifacts from previous/current CI runs
-        if $COMMANDS build $MODULE --rebuild --use-existing-depm $EXTRA_ARGS; then
+        # --no-deps: isolated build, no dependency resolution (CI isolation mode)
+        # --use-existing-depm: use dependency artifacts from previous/current CI runs (legacy mode)
+        BUILD_FLAGS="--rebuild"
+        if [ "$NO_DEPS" = "true" ]; then
+          BUILD_FLAGS="$BUILD_FLAGS --no-deps"
+        else
+          BUILD_FLAGS="$BUILD_FLAGS --use-existing-depm"
+        fi
+
+        if $COMMANDS build $MODULE $BUILD_FLAGS $EXTRA_ARGS; then
           echo "build-failed=0" >> $GITHUB_OUTPUT
         else
           echo "build-failed=1" >> $GITHUB_OUTPUT

@@ -12,9 +12,11 @@
 #      - validate-repository: Run repository component suite (contract validation)
 #    Flow B (Module CI Orchestration):
 #      - detect-changes: Determine which modules need CI workflows triggered
-#      - calculate-order: Compute dependency-based execution order
-#      - execute-layers: Trigger child workflows in dependency order
+#      - execute-workflows: Dispatch ALL module CI workflows in parallel
 # 3. summary: Report results (waits for both flows)
+#
+# NOTE: All CI workflows run in parallel. Dependency verification happens at RELEASE time
+# via the `release await-deps` command, not during CI dispatch.
 #
 # For PRs: Compares against PR base SHA
 # For push: Compares against last successful CI SHA
@@ -321,112 +323,27 @@ jobs:
           fi
 
   # =========================================
-  # Stage 3: Calculate Execution Order
+  # Stage 3: Execute Module Workflows (All Parallel)
   # =========================================
-  calculate-order:
-    name: Calculate Execution Order
+  execute-workflows:
+    name: Dispatch All CI
     needs: [detect-changes]
     runs-on: ubuntu-latest
-    outputs:
-      execution-plan: ${{ steps.calculate.outputs.plan }}
-      layer-count: ${{ steps.calculate.outputs.layer-count }}
     steps:
       - uses: actions/checkout@v6
 
-      - name: Download commands binary
-        uses: actions/download-artifact@v7
-        with:
-          name: commands-binary
-          path: out/tools
-
-      - name: Make executable
-        run: chmod +x out/tools/commands
-
-      - name: Calculate Execution Order
-        id: calculate
-        run: |
-          COMMANDS="./out/tools/commands"
-
-          # Get execution order for changed modules
-          MODULES="${{ needs.detect-changes.outputs.changed-modules }}"
-
-          # Calculate execution order for detected modules
-          # --no-deps: Don't expand to include transitive dependencies (they're already built)
-          # The detection step already includes dependents (modules affected by changes)
-          PLAN=$($COMMANDS get execution order $MODULES --no-deps --as-json)
-
-          echo "Execution plan:"
-          echo "$PLAN" | jq .
-
-          # Save plan
-          echo "plan<<EOF" >> $GITHUB_OUTPUT
-          echo "$PLAN" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-          # Extract layer count
-          LAYER_COUNT=$(echo "$PLAN" | jq -r '.layer_count')
-          echo "layer-count=$LAYER_COUNT" >> $GITHUB_OUTPUT
-
-          # Generate step summary
-          IS_PR="${{ github.event_name == 'pull_request' }}"
-
-          echo "## Execution Order" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          if [ "$IS_PR" = "true" ]; then
-            echo "**Mode**: PR (parallel execution, component tests only)" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            ALL_MODULES=$(echo "$PLAN" | jq -r '[.layers[][]] | join(", ")')
-            echo "All modules will run in parallel: \`$ALL_MODULES\`" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "**Mode**: Trunk (layered execution, full test suite)" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Modules will be built in **$LAYER_COUNT layer(s)** based on dependency order:" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-
-            for ((i=0; i<LAYER_COUNT; i++)); do
-              LAYER_MODULES=$(echo "$PLAN" | jq -r ".layers[$i] | join(\", \")")
-              echo "**Layer $((i+1))**: \`$LAYER_MODULES\`" >> $GITHUB_STEP_SUMMARY
-            done
-
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "> Modules in the same layer run in parallel. Layers run sequentially." >> $GITHUB_STEP_SUMMARY
-          fi
-
-  # =========================================
-  # Stage 4: Execute Module Workflows
-  # =========================================
-  execute-layers:
-    name: Dispatch Layered CI
-    needs: [detect-changes, calculate-order]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Download commands binary
-        uses: actions/download-artifact@v7
-        with:
-          name: commands-binary
-          path: out/tools
-
-      - name: Make executable
-        run: chmod +x out/tools/commands
-
-      - name: Execute All Layers via Dispatch
+      - name: Dispatch all workflows in parallel
         run: |
           # Early exit if no changes - job runs to satisfy status checks but skips execution
           if [ "${{ needs.detect-changes.outputs.has-changes }}" != "true" ]; then
             echo "No modules require building - skipping execution"
-            echo "## Dispatch Layered CI" >> $GITHUB_STEP_SUMMARY
+            echo "## Dispatch All CI" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "No module CI workflows to execute." >> $GITHUB_STEP_SUMMARY
             exit 0
           fi
 
-          COMMANDS="./out/tools/commands"
-          PLAN='${{ needs.calculate-order.outputs.execution-plan }}'
-          LAYER_COUNT=$(echo "$PLAN" | jq -r '.layer_count')
-          IS_PR="${{ github.event_name == 'pull_request' }}"
+          MODULES="${{ needs.detect-changes.outputs.changed-modules }}"
 
           # Determine the correct ref for workflow_dispatch
           # For PRs: use head_ref (the PR source branch)
@@ -441,120 +358,53 @@ jobs:
           fi
 
           echo "Event: ${{ github.event_name }}"
-          echo "Is PR: $IS_PR"
           echo "DISPATCH_REF: $DISPATCH_REF"
-          echo "Layer count: $LAYER_COUNT"
+          echo "Modules: $MODULES"
+          echo ""
 
-          # For PRs: run all workflows in parallel (faster feedback, commit tests only)
-          # For main/release: run in dependency layers (full integration testing)
-          if [ "$IS_PR" = "true" ]; then
-            echo ""
-            echo "PR Mode: Running all workflows in parallel"
+          # Dispatch ALL workflows in parallel - no layering
+          # Dependency verification happens at RELEASE time via `release await-deps`
+          echo "Dispatching all module CI workflows in parallel..."
+          echo ""
 
-            ALL_MODULES=$(echo "$PLAN" | jq -r '.layers[][]')
-            DISPATCHED_COUNT=0
+          DISPATCHED_COUNT=0
+          DISPATCHED_LIST=""
 
-            for module in $ALL_MODULES; do
-              if [ -f ".github/workflows/ci-${module}.yaml" ]; then
-                echo "Dispatching: ci-${module}.yaml"
-                gh workflow run "ci-${module}.yaml" \
-                  --ref "$DISPATCH_REF" \
-                  -f ref=${{ github.ref }} \
-                  -f sha=${{ github.sha }} \
-                  -f trigger_run_id=${{ github.run_id }}
-                DISPATCHED_COUNT=$((DISPATCHED_COUNT + 1))
-                sleep 2
-              fi
-            done
-
-            echo ""
-            echo "Dispatched $DISPATCHED_COUNT workflow(s)"
-            echo "Child workflows will report their own statuses to the PR"
-          else
-            echo ""
-            echo "Trunk Mode: Dispatching $LAYER_COUNT layer(s) in dependency order"
-
-            TOTAL_DISPATCHED=0
-            for ((layer_idx=0; layer_idx<LAYER_COUNT; layer_idx++)); do
-              LAYER_NUM=$((layer_idx + 1))
-              LAYER_MODULES=$(echo "$PLAN" | jq -r ".layers[$layer_idx][]")
-
-              if [ -z "$LAYER_MODULES" ]; then
-                continue
-              fi
-
-              echo ""
-              echo "======================================================================"
-              echo "Layer $LAYER_NUM: $LAYER_MODULES"
-              echo "======================================================================"
-
-              # Dispatch all workflows in this layer
-              DISPATCHED_WORKFLOWS=""
-              for module in $LAYER_MODULES; do
-                if [ -f ".github/workflows/ci-${module}.yaml" ]; then
-                  echo "  Dispatching: ci-${module}.yaml"
-                  gh workflow run "ci-${module}.yaml" \
-                    --ref "$DISPATCH_REF" \
-                    -f ref=${{ github.ref }} \
-                    -f sha=${{ github.sha }} \
-                    -f trigger_run_id=${{ github.run_id }}
-                  DISPATCHED_WORKFLOWS="$DISPATCHED_WORKFLOWS ci-${module}.yaml"
-                  TOTAL_DISPATCHED=$((TOTAL_DISPATCHED + 1))
-                  sleep 2
-                fi
-              done
-
-              # Wait for workflows to appear and collect their run IDs
-              if [ -n "$DISPATCHED_WORKFLOWS" ]; then
-                echo ""
-                echo "Waiting for workflows to start..."
-                sleep 10  # Give GitHub Actions time to register the runs
-
-                # Collect run IDs for this layer
-                LAYER_RUN_IDS=""
-                for workflow in $DISPATCHED_WORKFLOWS; do
-                  # Get the most recent run for this workflow matching our commit
-                  RUN_ID=$(gh run list \
-                    --workflow="$workflow" \
-                    --commit="${{ github.sha }}" \
-                    --limit=1 \
-                    --json databaseId \
-                    --jq '.[0].databaseId' 2>/dev/null || echo "")
-
-                  if [ -n "$RUN_ID" ]; then
-                    LAYER_RUN_IDS="$LAYER_RUN_IDS $RUN_ID"
-                    echo "  Found run ID $RUN_ID for $workflow"
-                  else
-                    echo "  ⚠️  Warning: Could not find run ID for $workflow"
-                  fi
-                done
-
-                # Wait for all workflows in this layer to complete
-                if [ -n "$LAYER_RUN_IDS" ]; then
-                  echo ""
-                  echo "Waiting for layer $LAYER_NUM to complete..."
-                  if ! $COMMANDS pipeline wait $LAYER_RUN_IDS --timeout 3600; then
-                    echo ""
-                    echo "❌ Layer $LAYER_NUM failed - stopping execution"
-                    exit 1
-                  fi
-                  echo ""
-                  echo "✅ Layer $LAYER_NUM completed successfully"
-                else
-                  echo "⚠️  No run IDs collected for layer $LAYER_NUM - cannot wait"
-                fi
-              fi
-            done
-
-            echo ""
-            echo "======================================================================"
-            echo "All $LAYER_COUNT layer(s) completed successfully"
-            echo "Total workflows dispatched: $TOTAL_DISPATCHED"
-            echo "======================================================================"
-          fi
+          for module in $MODULES; do
+            if [ -f ".github/workflows/ci-${module}.yaml" ]; then
+              echo "  Dispatching: ci-${module}.yaml"
+              gh workflow run "ci-${module}.yaml" \
+                --ref "$DISPATCH_REF" \
+                -f ref=${{ github.ref }} \
+                -f sha=${{ github.sha }} \
+                -f trigger_run_id=${{ github.run_id }}
+              DISPATCHED_COUNT=$((DISPATCHED_COUNT + 1))
+              DISPATCHED_LIST="$DISPATCHED_LIST $module"
+              sleep 2
+            fi
+          done
 
           echo ""
-          echo "All workflow dispatches completed"
+          echo "======================================================================"
+          echo "Dispatched $DISPATCHED_COUNT workflow(s) in parallel"
+          echo "======================================================================"
+          echo ""
+          echo "Child workflows will report their own statuses."
+          echo "Dependency verification happens at release time."
+
+          # Generate step summary
+          echo "## Dispatch All CI" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Mode**: Parallel execution (all modules)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Dispatched **$DISPATCHED_COUNT** CI workflow(s):" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "$DISPATCHED_LIST" | xargs >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "> **Note**: All workflows run in parallel. Dependency CI verification" >> $GITHUB_STEP_SUMMARY
+          echo "> happens at release time via \`release await-deps\`." >> $GITHUB_STEP_SUMMARY
         env:
           GH_TOKEN: ${{ github.token }}
 
@@ -563,7 +413,7 @@ jobs:
   # =========================================
   summary:
     name: Summary
-    needs: [build-tooling, build-repository, validate-repository, detect-changes, calculate-order, execute-layers]
+    needs: [build-tooling, build-repository, validate-repository, detect-changes, execute-workflows]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -679,9 +529,9 @@ jobs:
           fi
 
           # Module builds (dispatched)
-          EXECUTION="${{ needs.execute-layers.result }}"
+          EXECUTION="${{ needs.execute-workflows.result }}"
           if [ "$EXECUTION" = "success" ]; then
-            echo "| Module Workflows | Dispatched | $TOTAL_COUNT workflow(s) triggered successfully |" >> $GITHUB_STEP_SUMMARY
+            echo "| Module Workflows | Dispatched | $TOTAL_COUNT workflow(s) triggered in parallel |" >> $GITHUB_STEP_SUMMARY
           else
             echo "| Module Workflows | $EXECUTION | Failed to dispatch workflows |" >> $GITHUB_STEP_SUMMARY
           fi

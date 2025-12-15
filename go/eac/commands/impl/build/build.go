@@ -196,7 +196,7 @@ func Build() int {
 		case "--no-tidy":
 			tidyFirst = false
 			tidyExplicitlySet = true
-		case "--skip-depm":
+		case "--skip-depm", "--no-deps":
 			skipDepm = true
 		case "--use-existing-depm":
 			useExistingDepm = true
@@ -1128,7 +1128,8 @@ func printBuildUsage() {
 	log.Info("  --no-tidy                 Skip 'go mod tidy' (default for CI)")
 	log.Info("  --rebuild                 Force full rebuild, ignoring incremental build state")
 	log.Info("  --layered-build           Execute layers sequentially (default: all modules in parallel)")
-	log.Info("  --skip-depm               Only build specified modules (skip transitive module dependencies)")
+	log.Info("  --no-deps                 Only build specified modules, no dependency resolution (CI isolation)")
+	log.Info("                            Alias: --skip-depm")
 	log.Info("  --use-existing-depm       Skip building module dependencies if artifacts exist (for CI incremental builds)")
 	log.Info("  --skip-deps-verification  Skip system dependency verification (go, docker, etc.)")
 	log.Info("  --timings                 Show detailed timing summary")

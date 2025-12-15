@@ -1,0 +1,120 @@
+# Await Dependency CI Action
+#
+# Waits for all transitive dependency modules to have passing CI before allowing release.
+# This ensures that releasing a module won't proceed if any of its dependencies have
+# failing CI runs.
+#
+# For each dependency:
+# 1. Find the commit where the dependency was last changed
+# 2. Verify that CI passed for that commit
+# 3. If CI is in-progress, wait until completion
+# 4. If CI failed, block the release with a clear error message
+#
+# Usage:
+#   jobs:
+#     release:
+#       steps:
+#         - uses: ./.github/actions/await-dependency-ci
+#           with:
+#             module: ext-eac
+#             timeout: '600'
+
+name: Await Dependency CI
+description: Wait for all dependency module CI workflows to pass
+
+inputs:
+  module:
+    description: 'Module name to check dependencies for (e.g., ext-eac, docs)'
+    required: true
+  timeout:
+    description: 'Maximum wait time per dependency in seconds'
+    required: false
+    default: '300'
+  skip-static:
+    description: 'Skip static modules without CI workflows'
+    required: false
+    default: 'true'
+
+outputs:
+  passed_count:
+    description: 'Number of dependencies that passed CI'
+    value: ${{ steps.await.outputs.passed_count }}
+  skipped_count:
+    description: 'Number of dependencies that were skipped (no CI workflow)'
+    value: ${{ steps.await.outputs.skipped_count }}
+  total_deps:
+    description: 'Total number of transitive dependencies'
+    value: ${{ steps.await.outputs.total_deps }}
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Commands Binary
+      id: commands
+      uses: ./.github/actions/setup-commands
+
+    - name: Await dependency CI
+      id: await
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        COMMANDS="${{ steps.commands.outputs.commands-path }}"
+        MODULE="${{ inputs.module }}"
+        TIMEOUT="${{ inputs.timeout }}"
+        SKIP_STATIC="${{ inputs.skip-static }}"
+
+        echo "Awaiting dependency CI for module: $MODULE"
+        echo ""
+
+        # Build flags
+        FLAGS="--timeout $TIMEOUT"
+        if [ "$SKIP_STATIC" = "true" ]; then
+          FLAGS="$FLAGS --skip-static"
+        else
+          FLAGS="$FLAGS --no-skip-static"
+        fi
+
+        # Run the await-deps command
+        # Capture output for parsing while also displaying it
+        OUTPUT=$($COMMANDS release await-deps "$MODULE" $FLAGS 2>&1) || EXIT_CODE=$?
+        echo "$OUTPUT"
+
+        # Parse output for counts (basic parsing)
+        PASSED=$(echo "$OUTPUT" | grep -oP 'All \K\d+(?= dependency CI)' || echo "0")
+        SKIPPED=$(echo "$OUTPUT" | grep -oP '\(\K\d+(?= skipped\))' || echo "0")
+        TOTAL=$((PASSED + SKIPPED))
+
+        echo "passed_count=$PASSED" >> $GITHUB_OUTPUT
+        echo "skipped_count=$SKIPPED" >> $GITHUB_OUTPUT
+        echo "total_deps=$TOTAL" >> $GITHUB_OUTPUT
+
+        # Exit with the command's exit code
+        exit ${EXIT_CODE:-0}
+
+    - name: Summary
+      if: always()
+      shell: bash
+      run: |
+        MODULE="${{ inputs.module }}"
+        PASSED="${{ steps.await.outputs.passed_count }}"
+        SKIPPED="${{ steps.await.outputs.skipped_count }}"
+        TOTAL="${{ steps.await.outputs.total_deps }}"
+
+        echo "## Dependency CI Check: $MODULE" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        if [ "${{ steps.await.outcome }}" = "success" ]; then
+          echo ":white_check_mark: All dependency CI checks passed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Dependencies Checked | $PASSED |" >> $GITHUB_STEP_SUMMARY
+          if [ "$SKIPPED" != "0" ]; then
+            echo "| Skipped (no CI) | $SKIPPED |" >> $GITHUB_STEP_SUMMARY
+          fi
+        else
+          echo ":x: Dependency CI check failed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "One or more dependencies have failing CI. See logs for details." >> $GITHUB_STEP_SUMMARY
+        fi
