@@ -7,12 +7,12 @@
 # Title format: "r2r (x.y.z) + eac (x.y.z)"
 # Body: Table with links to all module releases
 
-name: "release-github-latest (stage 8+)"
+name: "release-r2r-eac (stage 8+)"
 
 on:
   push:
     tags:
-      - 'release/*'
+      - 'r2r-eac/*'
   workflow_dispatch:
     inputs:
       ci_run_id:
@@ -53,7 +53,7 @@ jobs:
         id: gate
         uses: ./.github/actions/approve-release
         with:
-          module: release
+          module: r2r-eac
           version-type: calver
           skip-ci-check: ${{ inputs.ci_run_id != '' || inputs.skip-ci-check || 'false' }}
           timeout: '300'
@@ -245,8 +245,7 @@ jobs:
       - name: Cleanup old releases
         uses: ./.github/actions/cleanup-pre-releases
         with:
-          module: release
-          keep-count: '3'
+          module: r2r-eac
 
   # ==========================================================================
   # Summary

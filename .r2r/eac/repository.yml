@@ -123,7 +123,7 @@ modules:
   # ============================================================================
   # Release Bundle
   # ============================================================================
-  - moniker: release
+  - moniker: r2r-eac
     name: Release Bundle
     type: static
     description: Aggregated release bundle with links to all module releases - this becomes the "Latest" GitHub release
@@ -152,8 +152,8 @@ modules:
     files:
       root: release/bundle
       workflows:
-        ci: .github/workflows/ci-release.yaml
-        release: .github/workflows/release-github-latest.yaml
+        ci: .github/workflows/ci-r2r-eac.yaml
+        release: .github/workflows/release-r2r-eac.yaml
 
   # ============================================================================
   # EAC Extension

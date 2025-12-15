@@ -26,9 +26,9 @@ inputs:
     description: 'Module prefix for releases (e.g., docs, books)'
     required: true
   keep-count:
-    description: 'Number of releases to keep (default: 3 = latest + 2 old)'
+    description: 'Number of releases to keep (default: 1 = latest only)'
     required: false
-    default: '3'
+    default: '1'
 
 runs:
   using: composite

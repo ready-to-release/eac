@@ -218,7 +218,6 @@ jobs:
         uses: ./.github/actions/cleanup-pre-releases
         with:
           module: docs
-          keep-count: '3'
 
   # ==========================================================================
   # Summary

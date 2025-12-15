@@ -1,7 +1,7 @@
 # Await Module Releases Action
 #
 # Waits for all in-flight module release workflows to complete before proceeding.
-# Used by release-github-latest to ensure the bundle contains all current releases.
+# Used by release-r2r-eac to ensure the bundle contains all current releases.
 #
 # This action:
 # 1. Gets the list of modules in the release bundle
@@ -57,19 +57,19 @@ runs:
             break
           fi
 
-          # Check for in-progress release workflows (release-*.yaml), excluding ourselves
+          # Check for in-progress release workflows (release-*.yaml), excluding ourselves (release-r2r-eac)
           IN_PROGRESS=$(gh run list \
             --status in_progress \
             --limit 50 \
             --json workflowName,status \
-            -q '[.[] | select(.workflowName | startswith("release-") and (contains("github-latest") | not))] | length')
+            -q '[.[] | select(.workflowName | startswith("release-") and (contains("r2r-eac") | not))] | length')
 
           # Also check queued
           QUEUED=$(gh run list \
             --status queued \
             --limit 50 \
             --json workflowName,status \
-            -q '[.[] | select(.workflowName | startswith("release-") and (contains("github-latest") | not))] | length')
+            -q '[.[] | select(.workflowName | startswith("release-") and (contains("r2r-eac") | not))] | length')
 
           TOTAL=$((IN_PROGRESS + QUEUED))
 

@@ -232,7 +232,6 @@ jobs:
         uses: ./.github/actions/cleanup-pre-releases
         with:
           module: books
-          keep-count: '3'
 
   # ==========================================================================
   # Summary
