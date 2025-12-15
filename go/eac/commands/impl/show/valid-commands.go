@@ -10,6 +10,7 @@
 package show
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
@@ -51,6 +52,6 @@ func ShowValidCommands() int {
 
 	tb.WithFooter("Total Commands", len(commands))
 
-	log.Info(tb.Build())
+	fmt.Println(tb.Build())
 	return 0
 }

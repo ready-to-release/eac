@@ -48,35 +48,35 @@ func GetBuildDeps() int {
 	}
 
 	if moniker == "" {
-		log.Errorf("Usage: get build-deps <module>")
+		fmt.Fprintf(os.Stderr, "Usage: get build-deps <module>\n")
 		return 1
 	}
 
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		log.Errorf("failed to find repository root: %v", err)
+		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
 		return 1
 	}
 
 	// Load module contracts to get module type
 	moduleReport, err := reports.GetModuleContracts(workspaceRoot)
 	if err != nil {
-		log.Errorf("failed to load module contracts: %v", err)
+		fmt.Fprintf(os.Stderr, "Error: failed to load module contracts: %v\n", err)
 		return 1
 	}
 
 	// Find the module
 	module, exists := moduleReport.Registry.Get(moniker)
 	if !exists {
-		log.Errorf("module not found: %s", moniker)
+		fmt.Fprintf(os.Stderr, "Error: module not found: %s\n", moniker)
 		return 1
 	}
 
 	// Get build deps from module types config
 	cfg := config.Global()
 	if cfg == nil || cfg.ModuleTypes == nil {
-		log.Errorf("module types configuration not loaded")
+		fmt.Fprintf(os.Stderr, "Error: module types configuration not loaded\n")
 		return 1
 	}
 

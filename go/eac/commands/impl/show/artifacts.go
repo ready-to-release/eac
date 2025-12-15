@@ -33,7 +33,7 @@ func ShowArtifacts() int {
 	args := os.Args[3:] // Skip program name, "show", and "artifacts"
 
 	if len(args) == 0 {
-		log.Errorf("Usage: show artifacts <module> [--all-platforms] [--missing-only]")
+		fmt.Fprintln(os.Stderr, "Usage: show artifacts <module> [--all-platforms] [--missing-only]")
 		return 1
 	}
 
@@ -71,28 +71,28 @@ func showArtifactsForModule(moduleName, targetOS, targetArch string, allPlatform
 	// Get workspace root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		log.Errorf("failed to find repository root: %v", err)
+		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
 		return 1
 	}
 
 	// Load configuration
 	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
-		log.Errorf("failed to load config: %v", err)
+		fmt.Fprintf(os.Stderr, "Error: failed to load config: %v\n", err)
 		return 1
 	}
 
 	// Get module
 	module, ok := cfg.Repository.GetModule(moduleName)
 	if !ok {
-		log.Errorf("module not found: %s", moduleName)
+		fmt.Fprintf(os.Stderr, "Error: module not found: %s\n", moduleName)
 		return 1
 	}
 
 	// Get module type
 	moduleType := cfg.ModuleTypes.Get(module.Type)
 	if moduleType == nil {
-		log.Errorf("module type not found: %s", module.Type)
+		fmt.Fprintf(os.Stderr, "Error: module type not found: %s\n", module.Type)
 		return 1
 	}
 
@@ -121,7 +121,7 @@ func showArtifactsForModule(moduleName, targetOS, targetArch string, allPlatform
 				module, moduleType, buildDir, plat.OS, plat.Arch, cfg,
 			)
 			if err != nil {
-				log.Errorf("failed to resolve artifacts for %s/%s: %v", plat.OS, plat.Arch, err)
+				fmt.Fprintf(os.Stderr, "Error: failed to resolve artifacts for %s/%s: %v\n", plat.OS, plat.Arch, err)
 				continue
 			}
 
@@ -149,7 +149,7 @@ func showArtifactsForModule(moduleName, targetOS, targetArch string, allPlatform
 			module, moduleType, buildDir, targetOS, targetArch, cfg,
 		)
 		if err != nil {
-			log.Errorf("failed to resolve artifacts: %v", err)
+			fmt.Fprintf(os.Stderr, "Error: failed to resolve artifacts: %v\n", err)
 			return 1
 		}
 	}
@@ -164,7 +164,7 @@ func showArtifactsForModule(moduleName, targetOS, targetArch string, allPlatform
 		}
 		results = filtered
 		if len(results) == 0 {
-			log.Info("All artifacts exist")
+			fmt.Println("All artifacts exist")
 			return 0
 		}
 	}
@@ -203,7 +203,7 @@ func showArtifactsForModule(moduleName, targetOS, targetArch string, allPlatform
 		output += "Use --missing-only to show only missing artifacts\n"
 	}
 
-	log.Info(output)
+	fmt.Print(output)
 	return 0
 }
 

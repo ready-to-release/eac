@@ -58,23 +58,23 @@ func ShowBooks() int {
 
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		log.Errorf("failed to find repository root: %v", err)
+		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
 		return 1
 	}
 
 	cfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot, LazyLoad: true})
 	if err != nil {
-		log.Errorf("failed to load config: %v", err)
+		fmt.Fprintf(os.Stderr, "Error: failed to load config: %v\n", err)
 		return 1
 	}
 
 	if err := cfg.LoadBooks(false); err != nil {
-		log.Errorf("failed to load books: %v", err)
+		fmt.Fprintf(os.Stderr, "Error: failed to load books: %v\n", err)
 		return 1
 	}
 
 	if err := cfg.LoadRepository(false); err != nil {
-		log.Errorf("failed to load repository: %v", err)
+		fmt.Fprintf(os.Stderr, "Error: failed to load repository: %v\n", err)
 		return 1
 	}
 
@@ -83,9 +83,9 @@ func ShowBooks() int {
 			fmt.Println("[]")
 			return 0
 		}
-		log.Info("No books configured")
-		log.Info("")
-		log.Info("Create .r2r/eac/books.yml to define books.")
+		fmt.Println("No books configured")
+		fmt.Println("")
+		fmt.Println("Create .r2r/eac/books.yml to define books.")
 		return 0
 	}
 
@@ -139,7 +139,7 @@ func ShowBooks() int {
 		)
 	}
 
-	log.Info(tb.Build())
+	fmt.Println(tb.Build())
 	return 0
 }
 
@@ -179,7 +179,7 @@ func outputBooksJSON(cfg *config.EACConfig, bookToModules map[string][]string) i
 
 	jsonBytes, err := json.MarshalIndent(books, "", "  ")
 	if err != nil {
-		log.Errorf("failed to marshal books to JSON: %v", err)
+		fmt.Fprintf(os.Stderr, "Error: failed to marshal books to JSON: %v\n", err)
 		return 1
 	}
 

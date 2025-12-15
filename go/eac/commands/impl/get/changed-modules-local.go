@@ -15,6 +15,7 @@
 package get
 
 import (
+	"fmt"
 	"os"
 	"time"
 
@@ -42,7 +43,7 @@ func GetChangedModulesLocal() int {
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		log.Errorf("failed to find repository root: %v", err)
+		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
 		return 1
 	}
 
@@ -81,7 +82,7 @@ func detectLocalChanges(workspaceRoot string, requestedModules []string) (*Local
 		for _, moniker := range requestedModules {
 			contract, ok := reg.Get(moniker)
 			if !ok {
-				log.Warnf("module not found: %s", moniker)
+				fmt.Fprintf(os.Stderr, "Warning: module not found: %s\n", moniker)
 				continue
 			}
 			modulesMap[moniker] = contract

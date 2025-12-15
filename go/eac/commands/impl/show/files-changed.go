@@ -10,11 +10,13 @@
 package show
 
 import (
+	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
+	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 	"github.com/ready-to-release/eac/go/eac/core/repository/reports"
 )
@@ -27,7 +29,7 @@ func ShowFilesChanged() int {
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		log.Errorf("failed to find repository root: %v", err)
+		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
 		return 1
 	}
 
@@ -36,7 +38,7 @@ func ShowFilesChanged() int {
 	cmd.Dir = workspaceRoot
 	output, err := cmd.Output()
 	if err != nil {
-		log.Errorf("Error getting changed files: %v", err)
+		fmt.Fprintf(os.Stderr, "Error: getting changed files: %v\n", err)
 		return 1
 	}
 
@@ -48,7 +50,7 @@ func ShowFilesChanged() int {
 	// Get full report for all tracked files
 	report, err := reports.GetFilesModulesReport(true, false, false, workspaceRoot)
 	if err != nil {
-		log.Errorf("%v", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
 
@@ -74,7 +76,7 @@ func ShowFilesChanged() int {
 
 	result := tb.Build()
 	if result != "" {
-		log.Info(result)
+		fmt.Println(result)
 	}
 
 	return 0

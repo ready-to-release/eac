@@ -19,10 +19,11 @@ package show
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
+	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
@@ -34,24 +35,24 @@ func ShowDependencies() int {
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		log.Errorf("failed to find repository root: %v", err)
+		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
 		return 1
 	}
 
 	// Get dependency graph
 	graph, err := repository.GetModuleDependencyGraph(workspaceRoot)
 	if err != nil {
-		log.Errorf("%v", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
 
 	// Print header
-	log.Info("# Module Dependency Graph")
-	log.Info("")
+	fmt.Println("# Module Dependency Graph")
+	fmt.Println("")
 
 	// Print statistics
-	log.Info("## Statistics")
-	log.Info("")
+	fmt.Println("## Statistics")
+	fmt.Println("")
 	stats := render.NewTableBuilder().
 		WithHeaders("Metric", "Value")
 
@@ -62,12 +63,12 @@ func ShowDependencies() int {
 	stats.AddRow("Max Dependencies", graph.Stats.MaxDependencies)
 	stats.AddRow("Max Dependents", graph.Stats.MaxDependents)
 
-	log.Info(stats.Build())
-	log.Info("")
+	fmt.Println(stats.Build())
+	fmt.Println("")
 
 	// Print module dependencies table
-	log.Info("## Module Dependencies")
-	log.Info("")
+	fmt.Println("## Module Dependencies")
+	fmt.Println("")
 
 	tb := render.NewTableBuilder().
 		WithHeaders("Module", "Depends On", "Used By")
@@ -89,18 +90,18 @@ func ShowDependencies() int {
 		tb.AddRow(moniker, depsStr, deptsStr)
 	}
 
-	log.Info(tb.Build())
-	log.Info("")
+	fmt.Println(tb.Build())
+	fmt.Println("")
 
 	// Calculate and show execution order
 	plan, err := repository.CalculateExecutionOrder(nil, workspaceRoot)
 	if err != nil {
-		log.Errorf("Warning: Could not calculate execution order: %v", err)
+		fmt.Fprintf(os.Stderr, "Warning: Could not calculate execution order: %v\n", err)
 	} else {
-		log.Info("## Execution Order")
-		log.Info("")
-		log.Infof("Total layers: %d", plan.LayerCount)
-		log.Info("")
+		fmt.Println("## Execution Order")
+		fmt.Println("")
+		fmt.Printf("Total layers: %d\n", plan.LayerCount)
+		fmt.Println("")
 
 		layerTable := render.NewTableBuilder().
 			WithHeaders("Layer", "Modules (can run in parallel)", "Count")
@@ -113,8 +114,8 @@ func ShowDependencies() int {
 			)
 		}
 
-		log.Info(layerTable.Build())
-		log.Info("")
+		fmt.Println(layerTable.Build())
+		fmt.Println("")
 	}
 
 	return 0
