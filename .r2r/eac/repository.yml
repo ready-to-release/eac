@@ -375,6 +375,7 @@ modules:
       assets:
         - "README.md"
         - "**/README.md"
+        - "testdata/**/*.yml"
       repo:
         other:
           - containers/mermaid-cli/Dockerfile
