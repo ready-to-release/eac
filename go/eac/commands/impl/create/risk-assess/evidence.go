@@ -9,7 +9,6 @@ package riskassess
 import (
 	"fmt"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/evidence"
@@ -81,23 +80,16 @@ func collectEvidenceForModule(config *AssessConfig, moduleName string) (*evidenc
 		collection.TestResults = foundTestResults
 	} else {
 		// No test results found - add warning
-		// Load config to get correct test output paths
 		cfg, err := coreconfig.Load(coreconfig.LoadOptions{RepoRoot: config.WorkspaceRoot})
 		if err == nil {
-			suiteList := strings.Join(checkedSuites, ", ")
-			var testLocations []string
-			for _, suite := range checkedSuites {
-				suiteDir := cfg.Repository.TestModuleOutputPathAbs(config.WorkspaceRoot, suite, moduleName)
-				relPath, err := filepath.Rel(config.WorkspaceRoot, suiteDir)
-				if err != nil {
-					relPath = suiteDir
-				}
-				testLocations = append(testLocations, relPath)
+			testDir := cfg.Repository.TestModuleDirAbs(config.WorkspaceRoot, moduleName)
+			relPath, err := filepath.Rel(config.WorkspaceRoot, testDir)
+			if err != nil {
+				relPath = testDir
 			}
 			warning := fmt.Sprintf(
-				"⚠️  No test evidence found in suites: %s - Checked: %s",
-				suiteList,
-				strings.Join(testLocations, ", "),
+				"⚠️  No test evidence found - Checked: %s",
+				relPath,
 			)
 			collection.Warnings = append(collection.Warnings, warning)
 		}
