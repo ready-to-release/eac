@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/evidence"
-	"github.com/ready-to-release/eac/go/eac/core/paths"
+	coreconfig "github.com/ready-to-release/eac/go/eac/core/config"
 )
 
 // collectEvidenceForModule gathers evidence for a specific module (read-only).
@@ -81,22 +81,26 @@ func collectEvidenceForModule(config *AssessConfig, moduleName string) (*evidenc
 		collection.TestResults = foundTestResults
 	} else {
 		// No test results found - add warning
-		suiteList := strings.Join(checkedSuites, ", ")
-		var testLocations []string
-		for _, suite := range checkedSuites {
-			suiteDir := filepath.Join(config.WorkspaceRoot, paths.OutDir, paths.TestDir, suite, moduleName)
-			relPath, err := filepath.Rel(config.WorkspaceRoot, suiteDir)
-			if err != nil {
-				relPath = suiteDir
+		// Load config to get correct test output paths
+		cfg, err := coreconfig.Load(coreconfig.LoadOptions{RepoRoot: config.WorkspaceRoot})
+		if err == nil {
+			suiteList := strings.Join(checkedSuites, ", ")
+			var testLocations []string
+			for _, suite := range checkedSuites {
+				suiteDir := cfg.Repository.TestModuleOutputPathAbs(config.WorkspaceRoot, suite, moduleName)
+				relPath, err := filepath.Rel(config.WorkspaceRoot, suiteDir)
+				if err != nil {
+					relPath = suiteDir
+				}
+				testLocations = append(testLocations, relPath)
 			}
-			testLocations = append(testLocations, relPath)
+			warning := fmt.Sprintf(
+				"⚠️  No test evidence found in suites: %s - Checked: %s",
+				suiteList,
+				strings.Join(testLocations, ", "),
+			)
+			collection.Warnings = append(collection.Warnings, warning)
 		}
-		warning := fmt.Sprintf(
-			"⚠️  No test evidence found in suites: %s - Checked: %s",
-			suiteList,
-			strings.Join(testLocations, ", "),
-		)
-		collection.Warnings = append(collection.Warnings, warning)
 	}
 
 	// Collect security evidence (read-only)
@@ -105,21 +109,24 @@ func collectEvidenceForModule(config *AssessConfig, moduleName string) (*evidenc
 		// Check security evidence age
 		age := time.Since(securityResults.LastModified)
 		if !securityResults.LastModified.IsZero() && age >= config.MaxEvidenceAge {
-			// Get the actual directory that was checked
-			scanBaseDir := filepath.Join(config.WorkspaceRoot, paths.OutDir, paths.SecurityDir, moduleName)
-			relPath, err := filepath.Rel(config.WorkspaceRoot, scanBaseDir)
-			if err != nil {
-				relPath = scanBaseDir
-			}
+			// Get the actual directory that was checked using config-based paths
+			cfg, err := coreconfig.Load(coreconfig.LoadOptions{RepoRoot: config.WorkspaceRoot})
+			if err == nil {
+				scanBaseDir := cfg.Repository.SecurityModuleOutputPathAbs(config.WorkspaceRoot, moduleName)
+				relPath, err := filepath.Rel(config.WorkspaceRoot, scanBaseDir)
+				if err != nil {
+					relPath = scanBaseDir
+				}
 
-			warning := fmt.Sprintf(
-				"⚠️  Security evidence is too old (Age: %s, max: %s) - Location: %s - Latest modified: %s",
-				formatDuration(age),
-				formatDuration(config.MaxEvidenceAge),
-				relPath,
-				securityResults.LastModified.Format("2006-01-02 15:04:05 MST"),
-			)
-			collection.Warnings = append(collection.Warnings, warning)
+				warning := fmt.Sprintf(
+					"⚠️  Security evidence is too old (Age: %s, max: %s) - Location: %s - Latest modified: %s",
+					formatDuration(age),
+					formatDuration(config.MaxEvidenceAge),
+					relPath,
+					securityResults.LastModified.Format("2006-01-02 15:04:05 MST"),
+				)
+				collection.Warnings = append(collection.Warnings, warning)
+			}
 		}
 
 		// Use security evidence even if stale
@@ -139,17 +146,20 @@ func collectEvidenceForModule(config *AssessConfig, moduleName string) (*evidenc
 			collection.SBOMSummary = sbomSummary
 		}
 	} else {
-		// No security results found - add warning
-		scanDir := filepath.Join(config.WorkspaceRoot, paths.OutDir, paths.SecurityDir, moduleName)
-		scanRelPath, err := filepath.Rel(config.WorkspaceRoot, scanDir)
-		if err != nil {
-			scanRelPath = scanDir
+		// No security results found - add warning using config-based paths
+		cfg, err := coreconfig.Load(coreconfig.LoadOptions{RepoRoot: config.WorkspaceRoot})
+		if err == nil {
+			scanDir := cfg.Repository.SecurityModuleOutputPathAbs(config.WorkspaceRoot, moduleName)
+			scanRelPath, err := filepath.Rel(config.WorkspaceRoot, scanDir)
+			if err != nil {
+				scanRelPath = scanDir
+			}
+			warning := fmt.Sprintf(
+				"⚠️  No security scan evidence found - Expected location: %s",
+				scanRelPath,
+			)
+			collection.Warnings = append(collection.Warnings, warning)
 		}
-		warning := fmt.Sprintf(
-			"⚠️  No security scan evidence found - Expected location: %s",
-			scanRelPath,
-		)
-		collection.Warnings = append(collection.Warnings, warning)
 	}
 
 	// Always return the collection with whatever evidence was found

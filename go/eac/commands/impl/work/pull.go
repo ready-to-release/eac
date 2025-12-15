@@ -29,6 +29,7 @@ package work
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -64,6 +65,8 @@ func init() {
 
 // Pull syncs the current branch with target branch via rebase
 func Pull() int {
+	startTime := time.Now()
+
 	// Phase 1: Parse configuration
 	config, err := parsePullConfig()
 	if err != nil {
@@ -72,6 +75,14 @@ func Pull() int {
 	}
 	defer config.base.Logger.Sync()
 
+	logger := config.base.Logger
+	logger.Debug("Phase 1: Completed",
+		zap.String("phase", "phase1"),
+		zap.String("currentBranch", config.currentBranch),
+		zap.String("targetBranch", config.targetBranch),
+		zap.Bool("autostash", config.autostash),
+		zap.Bool("noFetch", config.noFetch))
+
 	config.base.Logger.Debug("Starting work pull command",
 		zap.String("currentBranch", config.currentBranch),
 		zap.String("targetBranch", config.targetBranch),
@@ -79,14 +90,25 @@ func Pull() int {
 		zap.Bool("noFetch", config.noFetch))
 
 	// Phase 2: Validate environment
+	phase2Start := time.Now()
+	config.base.Logger.Debug("Phase 2: Starting validate environment", zap.String("phase", "phase2"))
+
 	if err := validatePullEnvironment(config); err != nil {
+		config.base.Logger.Debug("Phase 2: Failed", zap.String("phase", "phase2"), zap.Error(err))
 		config.base.Logger.Error(fmt.Sprintf("Validation failed: %v", err))
 		return 1
 	}
 
+	phase2Duration := time.Since(phase2Start)
+	config.base.Logger.Debug("Phase 2: Completed", zap.String("phase", "phase2"), zap.Duration("duration", phase2Duration))
+
 	// Phase 3: Handle uncommitted changes
+	phase3Start := time.Now()
+	config.base.Logger.Debug("Phase 3: Starting handle uncommitted changes", zap.String("phase", "phase3"))
+
 	if config.autostash {
 		if err := config.base.GitOps.Stash("work-pull autostash"); err != nil {
+			config.base.Logger.Debug("Phase 3: Failed", zap.String("phase", "phase3"), zap.Error(err))
 			config.base.Logger.Error(fmt.Sprintf("Failed to stash changes: %v", err))
 			return 1
 		}
@@ -101,44 +123,92 @@ func Pull() int {
 		}()
 	}
 
+	phase3Duration := time.Since(phase3Start)
+	config.base.Logger.Debug("Phase 3: Completed", zap.String("phase", "phase3"), zap.Duration("duration", phase3Duration))
+
 	// Phase 4: Fetch target branch
+	phase4Start := time.Now()
+	config.base.Logger.Debug("Phase 4: Starting fetch target branch", zap.String("phase", "phase4"))
+
 	if !config.noFetch {
 		config.base.Logger.Info(fmt.Sprintf("Fetching origin/%s...", config.targetBranch))
 		if err := config.base.GitOps.FetchBranch(config.targetBranch); err != nil {
+			config.base.Logger.Debug("Phase 4: Failed", zap.String("phase", "phase4"), zap.Error(err))
 			config.base.Logger.Error(fmt.Sprintf("Failed to fetch: %v", err))
 			return 1
 		}
 	}
 
+	phase4Duration := time.Since(phase4Start)
+	config.base.Logger.Debug("Phase 4: Completed", zap.String("phase", "phase4"), zap.Duration("duration", phase4Duration))
+
 	// Phase 5: Get rebase info
+	phase5Start := time.Now()
+	config.base.Logger.Debug("Phase 5: Starting get rebase info", zap.String("phase", "phase5"))
+
 	info, err := getRebaseInfo(config)
 	if err != nil {
+		config.base.Logger.Debug("Phase 5: Failed", zap.String("phase", "phase5"), zap.Error(err))
 		config.base.Logger.Error(fmt.Sprintf("Failed to get rebase info: %v", err))
 		return 1
 	}
 
+	phase5Duration := time.Since(phase5Start)
+	config.base.Logger.Debug("Phase 5: Completed", zap.String("phase", "phase5"), zap.Duration("duration", phase5Duration))
+
 	// Phase 6: Check if already up to date
+	phase6Start := time.Now()
+	config.base.Logger.Debug("Phase 6: Starting check if up to date", zap.String("phase", "phase6"))
+
 	if info.upToDate {
+		phase6Duration := time.Since(phase6Start)
+		config.base.Logger.Debug("Phase 6: Completed", zap.String("phase", "phase6"), zap.Duration("duration", phase6Duration))
 		config.base.Logger.Info("Already up to date")
+		totalDuration := time.Since(startTime)
+		config.base.Logger.Debug("Work pull command completed successfully", zap.Duration("totalDuration", totalDuration))
 		return 0
 	}
 
+	phase6Duration := time.Since(phase6Start)
+	config.base.Logger.Debug("Phase 6: Completed", zap.String("phase", "phase6"), zap.Duration("duration", phase6Duration))
+
 	// Phase 7: Show rebase preview
+	phase7Start := time.Now()
+	config.base.Logger.Debug("Phase 7: Starting show rebase preview", zap.String("phase", "phase7"))
+
 	showRebasePreview(config.base.Logger, config.currentBranch, config.targetBranch, info)
 
+	phase7Duration := time.Since(phase7Start)
+	config.base.Logger.Debug("Phase 7: Completed", zap.String("phase", "phase7"), zap.Duration("duration", phase7Duration))
+
 	// Phase 8: Perform rebase
+	phase8Start := time.Now()
+	config.base.Logger.Debug("Phase 8: Starting perform rebase", zap.String("phase", "phase8"))
 	config.base.Logger.Info(fmt.Sprintf("\nRebasing %s onto origin/%s...", config.currentBranch, config.targetBranch))
+
 	if err := config.base.GitOps.Rebase(config.targetBranch); err != nil {
+		config.base.Logger.Debug("Phase 8: Failed", zap.String("phase", "phase8"), zap.Error(err))
 		handleRebaseError(config, err)
 		return 1
 	}
 
+	phase8Duration := time.Since(phase8Start)
+	config.base.Logger.Debug("Phase 8: Completed", zap.String("phase", "phase8"), zap.Duration("duration", phase8Duration))
+
 	// Phase 9: Success
+	phase9Start := time.Now()
+	config.base.Logger.Debug("Phase 9: Starting report success", zap.String("phase", "phase9"))
+
 	config.base.Logger.Info("")
 	config.base.Logger.Info(fmt.Sprintf("✓ Rebased %s onto origin/%s", config.currentBranch, config.targetBranch))
 	config.base.Logger.Info(fmt.Sprintf("  Your commits: %d", info.currentCommits))
 	config.base.Logger.Info(fmt.Sprintf("  New commits from %s: %d", config.targetBranch, info.newCommits))
-	config.base.Logger.Debug("Work pull command completed successfully")
+
+	phase9Duration := time.Since(phase9Start)
+	config.base.Logger.Debug("Phase 9: Completed", zap.String("phase", "phase9"), zap.Duration("duration", phase9Duration))
+
+	totalDuration := time.Since(startTime)
+	config.base.Logger.Debug("Work pull command completed successfully", zap.Duration("totalDuration", totalDuration))
 	return 0
 }
 

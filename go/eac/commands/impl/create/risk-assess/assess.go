@@ -9,9 +9,9 @@
 // Long: - Evidence is missing
 // Long: - Evidence is older than max-evidence-age (default: 24h)
 // Long:
-// Long: Evidence is read from:
-// Long: - Test results: out/test/<suite>/<module>/*.json
-// Long: - Security scans: out/security/<module>/**/*.json
+// Long: Evidence is read from (paths configured via repository contracts):
+// Long: - Test results: <test_output>/<suite>/<module>/*.json (default: out/test)
+// Long: - Security scans: <security_output>/<module>/<scanner>/*.json (default: out/security)
 // Long:
 // Long: Expected Output:
 // Long: - OSCAL assessment-results JSON file

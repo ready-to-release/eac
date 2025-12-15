@@ -33,6 +33,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 	"github.com/ready-to-release/eac/go/eac/core/repository/reports"
+	"go.uber.org/zap"
 )
 
 var log = logging.C()
@@ -139,7 +140,7 @@ func CreateCommitMessage() int {
 
 		// Show warning after multiple retries
 		if attempt > 3 {
-			logger.Warn(fmt.Sprintf("Retry attempt %d/%d", attempt, maxRetries))
+			logger.Warn("retry attempt", zap.Int("attempt", attempt), zap.Int("max", maxRetries))
 		}
 
 		result, shouldRetry, generatedMessage := commitAIAttemptWithMessage(logger, workspaceRoot, debug)
@@ -162,7 +163,7 @@ func CreateCommitMessage() int {
 			return 1
 		}
 
-		logger.Info(fmt.Sprintf("Retrying commit message generation (%d/%d)...", attempt+1, maxRetries))
+		logger.Info("retrying commit message generation", zap.Int("attempt", attempt+1), zap.Int("max", maxRetries))
 	}
 
 	return 1
@@ -240,7 +241,7 @@ func verifyContractImplementation(workspaceRoot string, logger *logging.Logger) 
 	_, err := commitmessageinternal.LoadContractFromConfig(workspaceRoot)
 	if err != nil {
 		logger.Error("Contract implementation verification failed")
-		logger.Error(fmt.Sprintf("  [CONTRACT_LOAD_ERROR] %s", err.Error()))
+		logger.Error("contract load error", zap.Error(err))
 		return fmt.Errorf("contract verification failed: %w", err)
 	}
 	log.Debug("verifyContractImplementation: contract verified")
@@ -328,7 +329,7 @@ func extractAffectedModules(report *reports.FilesModulesReport, logger *logging.
 			if isValidModuleName(module) {
 				moduleSet[module] = true
 			} else {
-				logger.Warn(fmt.Sprintf("Skipping invalid module name: %s", module))
+				logger.Warn("skipping invalid module name", zap.String("module", module))
 			}
 		}
 	}
@@ -369,7 +370,7 @@ func getGitDiffAndStats(workspaceRoot string, logger *logging.Logger) (string, s
 	log.Debug("getGitDiffAndStats: calling StagedDiffStats")
 	diffStats, err := repo.StagedDiffStats()
 	if err != nil {
-		logger.Warn(fmt.Sprintf("Failed to get diff stats: %v", err))
+		logger.Warn("failed to get diff stats", zap.Error(err))
 		diffStats = ""
 	}
 	log.Debug("getGitDiffAndStats: StagedDiffStats complete")
@@ -470,7 +471,7 @@ func validateAndOutput(cfg *executionConfig, message string) (int, bool) {
 func performAutoCommit(workspaceRoot string, message string, logger *logging.Logger) int {
 	repo, err := getGitRepo(workspaceRoot)
 	if err != nil {
-		logger.Error(fmt.Sprintf("Auto-commit failed: %v", err))
+		logger.Error("auto-commit failed", zap.Error(err))
 		return 1
 	}
 
@@ -486,7 +487,7 @@ func performAutoCommit(workspaceRoot string, message string, logger *logging.Log
 	// Perform the commit
 	hash, err := repo.Commit(message, authorName, authorEmail)
 	if err != nil {
-		logger.Error(fmt.Sprintf("Git commit failed: %v", err))
+		logger.Error("git commit failed", zap.Error(err))
 		return 1
 	}
 

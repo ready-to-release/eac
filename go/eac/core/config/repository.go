@@ -290,6 +290,37 @@ func (c *RepositoryConfig) TestTimingPathAbs(workspaceRoot, suiteName string) st
 	return filepath.Join(workspaceRoot, c.Paths.Out.Test, suiteName, c.Conventions.TestTiming)
 }
 
+// SecurityOutputDir returns the root security output directory
+func (c *RepositoryConfig) SecurityOutputDir() string {
+	return c.Paths.Out.Security
+}
+
+// SecurityOutputDirAbs returns the absolute root security output directory
+func (c *RepositoryConfig) SecurityOutputDirAbs(workspaceRoot string) string {
+	return filepath.Join(workspaceRoot, c.Paths.Out.Security)
+}
+
+// SecurityModuleOutputPath returns the path to a module's security scan output directory
+func (c *RepositoryConfig) SecurityModuleOutputPath(moduleName string) string {
+	return c.Paths.Out.Security + "/" + moduleName
+}
+
+// SecurityModuleOutputPathAbs returns the absolute path to a module's security scan output directory
+func (c *RepositoryConfig) SecurityModuleOutputPathAbs(workspaceRoot, moduleName string) string {
+	return filepath.Join(workspaceRoot, c.Paths.Out.Security, moduleName)
+}
+
+// SecurityScanOutputPath returns the path to a specific scanner's output directory for a module
+// Example: SecurityScanOutputPath("eac-core", "vuln") → "out/security/eac-core/vuln"
+func (c *RepositoryConfig) SecurityScanOutputPath(moduleName, scannerType string) string {
+	return c.Paths.Out.Security + "/" + moduleName + "/" + scannerType
+}
+
+// SecurityScanOutputPathAbs returns the absolute path to a specific scanner's output directory
+func (c *RepositoryConfig) SecurityScanOutputPathAbs(workspaceRoot, moduleName, scannerType string) string {
+	return filepath.Join(workspaceRoot, c.Paths.Out.Security, moduleName, scannerType)
+}
+
 // LogsPathAbs returns the absolute path to logs for a command with optional path segments
 // Delegates to paths.CommandLogsPath for consistency
 // Examples:
