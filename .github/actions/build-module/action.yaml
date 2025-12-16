@@ -186,7 +186,7 @@ runs:
     - name: Upload Build Artifacts (including dependencies)
       id: upload
       if: inputs.upload-artifact == 'true'
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ steps.vars.outputs.artifact-name }}
         path: out/build/
