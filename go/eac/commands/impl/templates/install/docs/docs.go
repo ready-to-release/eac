@@ -29,12 +29,8 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
-)
-
-const (
-	defaultDocsSourcePath = "templates/docs"
-	defaultDocsDest       = "docs/reference/"
 )
 
 var log = logging.C()
@@ -104,7 +100,7 @@ func resolveTemplateDirectory(config *Config) (string, func(), error) {
 			zap.String("workspaceRoot", root))
 	}
 
-	templateDir := filepath.Join(root, defaultDocsSourcePath)
+	templateDir := paths.TemplatePath(root, "docs")
 
 	// Verify directory exists
 	if _, err := os.Stat(templateDir); os.IsNotExist(err) {
@@ -175,7 +171,7 @@ func parseConfig() (*Config, error) {
 	}
 
 	// Parse flags manually
-	destination := defaultDocsDest
+	destination := filepath.Join(paths.DocsDir, "reference")
 	debug := false
 
 	for i := 0; i < len(args); i++ {

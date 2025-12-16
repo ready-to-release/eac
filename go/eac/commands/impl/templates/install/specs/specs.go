@@ -28,12 +28,8 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
-)
-
-const (
-	defaultSpecsSourcePath = "templates/specs"
-	defaultSpecsDest       = "specs/risk-controls/"
 )
 
 var log = logging.C()
@@ -103,7 +99,7 @@ func resolveTemplateDirectory(config *Config) (string, func(), error) {
 			zap.String("workspaceRoot", root))
 	}
 
-	templateDir := filepath.Join(root, defaultSpecsSourcePath)
+	templateDir := paths.TemplateSpecsPath(root)
 
 	// Verify directory exists
 	if _, err := os.Stat(templateDir); os.IsNotExist(err) {
@@ -202,7 +198,7 @@ func parseConfig() (*Config, error) {
 	}
 
 	// Use fixed destination path
-	destination := filepath.Join(workspaceRoot, defaultSpecsDest)
+	destination := paths.RiskControlsPath(workspaceRoot)
 
 	config := &Config{
 		Destination:   destination,

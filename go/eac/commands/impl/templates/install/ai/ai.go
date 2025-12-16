@@ -28,12 +28,8 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
-)
-
-const (
-	defaultAISourcePath = "templates/ai"
-	defaultAIDest       = ".r2r/eac/templates/ai/"
 )
 
 var log = logging.C()
@@ -103,7 +99,7 @@ func resolveTemplateDirectory(config *Config) (string, func(), error) {
 			zap.String("workspaceRoot", root))
 	}
 
-	templateDir := filepath.Join(root, defaultAISourcePath)
+	templateDir := paths.TemplatePath(root, "ai")
 
 	// Verify directory exists
 	if _, err := os.Stat(templateDir); os.IsNotExist(err) {
@@ -202,7 +198,7 @@ func parseConfig() (*Config, error) {
 	}
 
 	// Use fixed destination path
-	destination := filepath.Join(workspaceRoot, defaultAIDest)
+	destination := filepath.Join(workspaceRoot, paths.R2RDir, paths.EACDir, "templates", "ai")
 
 	config := &Config{
 		Destination:   destination,
