@@ -13,6 +13,7 @@
 // Long:   show specs ext-eac latest
 // Long:   show specs ext-eac unreleased
 // Long:   show specs ext-eac 0.0.7
+// Flag.branch: type=string, usage=Branch to query (default: trunk branch from config, usually "main"). Use "HEAD" for current branch
 // Args: module [version]
 package show
 
@@ -39,6 +40,15 @@ func ShowSpecs() int {
 	for i := 0; i < len(args)-1; i++ {
 		if args[i] == "show" && args[i+1] == "specs" {
 			cmdIdx = i + 2
+			break
+		}
+	}
+
+	// Parse flags
+	branch := ""
+	for i := 0; i < len(args)-1; i++ {
+		if args[i] == "--branch" {
+			branch = args[i+1]
 			break
 		}
 	}
@@ -73,7 +83,7 @@ func ShowSpecs() int {
 	}
 
 	// Get specs data using core function
-	report, err := reports.GetSpecs(workspaceRoot, module, version)
+	report, err := reports.GetSpecs(workspaceRoot, module, version, branch)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1

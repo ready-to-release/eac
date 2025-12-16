@@ -9,6 +9,7 @@ Display repository information in human-readable format for interactive terminal
 | Command | Purpose |
 |---------|---------|
 | [show](./show.md) | Base show command |
+| [show approval-comments](./approval-comments.md) | Display PR approval comments in human-readable format |
 | [show artifacts](./artifacts.md) | Display artifacts with status |
 | [show books](./books.md) | Display all book configurations |
 | [show build-summary](./build-summary.md) | Generate pretty build summary |

@@ -1,23 +1,22 @@
-// Command: get specs
-// Description: Get specifications data in structured format
+// Command: get approval-comments
+// Description: Get PR approval comments in structured format
 // Flags:
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML
+//   --include-all-reviews: Include all review states (not just APPROVED)
 //   --branch: Branch to query (default: trunk branch from config, usually "main")
 // Args: module [version]
 // Long:
 // Long: Expected Output:
-// Long: YAML/JSON/TOML representation of specifications including:
+// Long: YAML/JSON/TOML representation of PR approval comments including:
 // Long:   - module: Module moniker
 // Long:   - version: Version number or "Unreleased"
-// Long:   - spec_files: Array of specification files with status and metadata
-// Long:   - added_count: Number of added specs
-// Long:   - modified_count: Number of modified specs
-// Long:   - deleted_count: Number of deleted specs
-// Long:   - total_scenarios: Total scenario count across all specs
+// Long:   - total_prs: Number of PRs with spec files
+// Long:   - total_approvals: Total number of approval reviews
+// Long:   - approvals: Array of approval reviews with PR details
 // Long:
-// Long: If version is specified, returns specs for that version.
+// Long: If version is specified, returns approvals for that version.
 package get
 
 import (
@@ -31,28 +30,31 @@ import (
 )
 
 func init() {
-	registry.Register(GetSpecs)
+	registry.Register(GetApprovalComments)
 }
 
-func GetSpecs() int {
-	// Parse arguments - expect module after "get specs"
+func GetApprovalComments() int {
+	// Parse arguments - expect module after "get approval-comments"
 	args := os.Args[1:]
 
-	// Find where "get specs" ends
+	// Find where "get approval-comments" ends
 	cmdIdx := -1
 	for i := 0; i < len(args)-1; i++ {
-		if args[i] == "get" && args[i+1] == "specs" {
+		if args[i] == "get" && args[i+1] == "approval-comments" {
 			cmdIdx = i + 2
 			break
 		}
 	}
 
 	// Parse flags
+	includeAllReviews := false
 	branch := ""
-	for i := 0; i < len(args)-1; i++ {
-		if args[i] == "--branch" {
+	for i := 0; i < len(args); i++ {
+		if args[i] == "--include-all-reviews" {
+			includeAllReviews = true
+		}
+		if args[i] == "--branch" && i+1 < len(args) {
 			branch = args[i+1]
-			break
 		}
 	}
 
@@ -68,12 +70,12 @@ func GetSpecs() int {
 
 	if len(positional) < 1 {
 		fmt.Fprintf(os.Stderr, "Error: module argument required\n")
-		fmt.Fprintf(os.Stderr, "Usage: get specs <module> [version]\n")
+		fmt.Fprintf(os.Stderr, "Usage: get approval-comments <module> [version] [--include-all-reviews]\n")
 		return 1
 	}
 
 	module := positional[0]
-	var version string
+	version := ""
 	if len(positional) > 1 {
 		version = positional[1]
 	}
@@ -87,11 +89,6 @@ func GetSpecs() int {
 
 	// Use the shared get command helper
 	return getInternal.ExecuteGetCommand(func() (interface{}, error) {
-		report, err := reports.GetSpecs(workspaceRoot, module, version, branch)
-		if err != nil {
-			return nil, err
-		}
-
-		return report, nil
+		return reports.GetApprovalComments(workspaceRoot, module, version, includeAllReviews, branch)
 	})
 }

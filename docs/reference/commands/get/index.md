@@ -9,6 +9,7 @@ Retrieve repository data in structured JSON format for automation and scripting.
 | Command | Purpose |
 |---------|---------|
 | [get](./get.md) | Base get command |
+| [get approval-comments](./approval-comments.md) | Get PR approval comments in structured format |
 | [get artifacts](./artifacts.md) | Get resolved artifacts for a module |
 | [get build-deps](./build-deps.md) | Get build dependencies for a module |
 | [get build-times](./build-times.md) | Get build timing information |

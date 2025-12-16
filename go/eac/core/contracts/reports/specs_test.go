@@ -67,7 +67,7 @@ func TestGetSpecs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			report, err := GetSpecs(workspaceRoot, tt.module, tt.version)
+			report, err := GetSpecs(workspaceRoot, tt.module, tt.version, "")
 
 			if tt.wantErr {
 				if err == nil {
@@ -128,13 +128,13 @@ func TestGetSpecs_BundleModuleAggregation(t *testing.T) {
 
 	// Test ext-eac bundle module (depends on eac-commands and r2r-cli)
 	t.Run("ext-eac aggregates specs from dependencies", func(t *testing.T) {
-		bundleReport, err := GetSpecs(workspaceRoot, "ext-eac", "unreleased")
+		bundleReport, err := GetSpecs(workspaceRoot, "ext-eac", "unreleased", "")
 		if err != nil {
 			t.Fatalf("GetSpecs(ext-eac) failed: %v", err)
 		}
 
 		// Get specs for dependency module directly
-		depReport, err := GetSpecs(workspaceRoot, "eac-commands", "unreleased")
+		depReport, err := GetSpecs(workspaceRoot, "eac-commands", "unreleased", "")
 		if err != nil {
 			t.Fatalf("GetSpecs(eac-commands) failed: %v", err)
 		}
@@ -163,7 +163,7 @@ func TestGetSpecs_BundleModuleAggregation(t *testing.T) {
 
 	// Test regular module (no dependencies)
 	t.Run("regular module only includes own specs", func(t *testing.T) {
-		report, err := GetSpecs(workspaceRoot, "eac-commands", "unreleased")
+		report, err := GetSpecs(workspaceRoot, "eac-commands", "unreleased", "")
 		if err != nil {
 			t.Fatalf("GetSpecs(eac-commands) failed: %v", err)
 		}

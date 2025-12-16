@@ -59,7 +59,8 @@ func SetGitRepo(repo git.GitRepository) {
 // GetSpecs loads specifications for a module and version
 // Version can be: empty (unreleased), "latest", "unreleased", or specific version number
 // For bundle/container modules with dependencies, specs are aggregated from all dependent modules
-func GetSpecs(workspaceRoot, module, version string) (*SpecsReport, error) {
+// Branch specifies which branch to query (default "main"). Use "HEAD" or "current" for current branch.
+func GetSpecs(workspaceRoot, module, version, branch string) (*SpecsReport, error) {
 	// Load config to get module information
 	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
@@ -85,7 +86,22 @@ func GetSpecs(workspaceRoot, module, version string) (*SpecsReport, error) {
 
 	// Get commits for the version range
 	var commits []git.CommitInfo
-	endRef := "HEAD" // Default to HEAD for unreleased changes
+
+	// Determine end reference based on branch parameter and version
+	endRef := branch
+	if endRef == "" {
+		// Default to configured trunk branch (usually "main" or "master")
+		endRef = cfg.Repository.Repository.TrunkBranch
+		if endRef == "" {
+			endRef = "main" // Fallback if not configured
+		}
+	}
+	// Special case: "HEAD" or "current" means use current branch
+	if endRef == "HEAD" || endRef == "current" {
+		endRef = "HEAD"
+	}
+	// Try origin/branch if local branch doesn't exist
+	// (resolveRef in git layer handles this automatically)
 
 	// For specific versions (not unreleased), use the version's tag as end point
 	if !versionInfo.IsUnreleased && versionInfo.GitTag != "" {

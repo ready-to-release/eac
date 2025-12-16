@@ -24,6 +24,12 @@ r2r eac show specs <module> unreleased
 | `module` | Yes | Module moniker (e.g., `ext-eac`, `eac-commands`) |
 | `version` | No | Version number or special keyword (`latest`, `unreleased`) |
 
+## Options
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--branch` | string | Branch to query (default: trunk branch from config, usually `main`). Use `HEAD` or `current` for current branch |
+
 ## Special Keywords
 
 | Keyword | Description |
@@ -71,6 +77,12 @@ r2r eac show specs ext-eac latest
 
 # Show specs for specific version
 r2r eac show specs ext-eac 0.0.7
+
+# Query from current branch instead of main
+r2r eac show specs ext-eac --branch HEAD
+
+# Query from specific branch
+r2r eac show specs ext-eac --branch develop
 
 # Save to file
 r2r eac show specs eac-commands > specs-output.md

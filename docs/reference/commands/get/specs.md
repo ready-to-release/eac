@@ -33,6 +33,12 @@ r2r eac get specs <module> unreleased
 | `--as-toml` | TOML | Configuration files |
 | `--as-yaml` | YAML | Explicit YAML output |
 
+## Options
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--branch` | string | Branch to query (default: trunk branch from config, usually `main`). Use `HEAD` or `current` for current branch |
+
 ## Special Keywords
 
 | Keyword | Description | Output |
@@ -110,6 +116,15 @@ r2r eac get specs ext-eac unreleased --as-json
 
 # Get specific version
 r2r eac get specs ext-eac 0.0.7 --as-json
+
+# Query from main branch (default)
+r2r eac get specs ext-eac --as-json
+
+# Query from current branch
+r2r eac get specs ext-eac --branch HEAD --as-json
+
+# Query from specific branch
+r2r eac get specs ext-eac --branch develop --as-json
 
 # Count total scenarios
 r2r eac get specs ext-eac --as-json | jq '.total_scenarios'

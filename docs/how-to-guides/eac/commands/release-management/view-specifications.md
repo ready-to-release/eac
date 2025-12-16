@@ -50,6 +50,26 @@ r2r eac show specs ext-eac latest
 r2r eac show specs ext-eac 0.0.7
 ```
 
+## Query from Different Branches
+
+By default, commands query from the trunk branch (usually `main`). Use `--branch` to query from other branches:
+
+```bash
+# Query from main branch (default)
+r2r eac show specs ext-eac
+
+# Query from current branch (useful when working in feature branches)
+r2r eac show specs ext-eac --branch HEAD
+
+# Query from specific branch
+r2r eac show specs ext-eac --branch develop
+```
+
+**When to use this:**
+- Working in a feature branch and want to see specs relative to that branch
+- Comparing specs across different branches
+- CI/CD pipelines running on non-main branches
+
 ## Export Structured Data
 
 ### As JSON
