@@ -5,6 +5,7 @@
 // Long:
 // Long: Available commands:
 // Long:   dispatch-and-wait   Dispatch a workflow and wait for completion
+// Long:   get-run-id          Get CI run ID for a workflow and commit SHA
 // Long:   summary-link        Generate diagnostic markdown for CI summaries
 package ci
 
@@ -29,7 +30,7 @@ func PipelineCI() int {
 
 	subcommand := os.Args[3]
 	switch subcommand {
-	case "dispatch-and-wait", "summary-link":
+	case "dispatch-and-wait", "get-run-id", "summary-link":
 		// These are handled by their own registrations
 		return 0
 	case "--help", "-h":
@@ -49,6 +50,7 @@ func printCIUsage() {
 	log.Info("")
 	log.Info("Commands:")
 	log.Info("  dispatch-and-wait   Dispatch a workflow and wait for completion")
+	log.Info("  get-run-id          Get CI run ID for a workflow and commit SHA")
 	log.Info("  summary-link        Generate diagnostic markdown for CI summaries")
 	log.Info("")
 	log.Info("Use 'pipeline ci <command> --help' for more information.")
