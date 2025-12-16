@@ -1,9 +1,12 @@
 # Check Pending Releases Action
 #
-# Checks for pending releases from two sources:
+# Checks for pending releases from three sources:
 # 1. Semver modules: changelog versions without corresponding git tags
-# 2. Calver modules: modules with CI triggered that auto-release on every push
-#    (auto-detected from module contracts: versioning.scheme=CalVer + has CI workflow)
+# 2. Calver modules with CI: auto-release when their CI was dispatched
+#    (auto-detected: versioning.scheme=CalVer + has CI workflow)
+# 3. Calver bundle modules: auto-release when ANY dependency was dispatched
+#    (auto-detected: versioning.scheme=CalVer + has release workflow but NO CI workflow)
+#    Example: r2r-eac bundle releases when books or eac-commands are released
 #
 # Returns the list of modules needing release along with execution order based on
 # their dependency graph.
@@ -97,30 +100,64 @@ runs:
 
         echo "Dispatched modules: $DISPATCHED"
 
-        # Auto-detect CalVer modules with CI workflows if not specified
+        # Auto-detect CalVer modules if not specified
         if [ -z "$CALVER_MODULES" ]; then
-          echo "Auto-detecting CalVer modules with CI workflows..."
-          # Get all modules, filter for CalVer versioning + has CI workflow
-          CALVER_MODULES=$($COMMANDS get modules --as-json 2>/dev/null | jq -r '.[] | select(.versioning.scheme == "CalVer") | select(.files.workflows.ci != null and .files.workflows.ci != "") | .moniker' | tr '\n' ' ')
-          echo "Auto-detected CalVer modules: $CALVER_MODULES"
+          echo "Auto-detecting CalVer modules..."
+
+          # Get CalVer modules WITH CI workflows (release on CI dispatch)
+          CALVER_WITH_CI=$($COMMANDS get modules --as-json 2>/dev/null | jq -r '.[] | select(.versioning.scheme == "CalVer") | select(.files.workflows.ci != null and .files.workflows.ci != "") | .moniker' | tr '\n' ' ')
+          echo "  CalVer modules with CI: $CALVER_WITH_CI"
+
+          # Get CalVer modules WITHOUT CI but WITH release workflow (bundle releases)
+          # These release when ANY of their dependencies are being released
+          CALVER_BUNDLES=$($COMMANDS get modules --as-json 2>/dev/null | jq -r '.[] | select(.versioning.scheme == "CalVer") | select((.files.workflows.ci == null or .files.workflows.ci == "") and (.files.workflows.release != null and .files.workflows.release != "")) | .moniker' | tr '\n' ' ')
+          echo "  CalVer bundle modules (no CI): $CALVER_BUNDLES"
+
+          CALVER_MODULES="$CALVER_WITH_CI"
         else
           echo "Using provided CalVer modules: $CALVER_MODULES"
+          CALVER_BUNDLES=""
         fi
 
         CALVER_PENDING="[]"
 
+        # Process CalVer modules with CI (release when CI was dispatched)
         for calver_mod in $CALVER_MODULES; do
-          # Check if this calver module was dispatched (CI was triggered)
           if echo "$DISPATCHED" | grep -qw "$calver_mod"; then
             echo "  $calver_mod: CI was dispatched - will release"
 
-            # Generate calver version (YYYY.MMDD.HHMM)
             VERSION=$(date -u +"%Y.%m%d.%H%M")
             TAG="${calver_mod}/${VERSION}"
 
             CALVER_PENDING=$(echo "$CALVER_PENDING" | jq -c ". + [{\"module\": \"$calver_mod\", \"version\": \"$VERSION\", \"tag\": \"$TAG\", \"needs_tag\": true, \"type\": \"calver\"}]")
           else
             echo "  $calver_mod: CI not dispatched - skipping"
+          fi
+        done
+
+        # Process CalVer bundle modules (release when any dependency is being released)
+        for bundle_mod in $CALVER_BUNDLES; do
+          # Get dependencies of this bundle module
+          BUNDLE_DEPS=$($COMMANDS get modules --as-json 2>/dev/null | jq -r --arg mod "$bundle_mod" '.[] | select(.moniker == $mod) | .depends_on // [] | .[]' | tr '\n' ' ')
+          echo "  $bundle_mod dependencies: $BUNDLE_DEPS"
+
+          # Check if any dependency was dispatched
+          SHOULD_RELEASE=false
+          for dep in $BUNDLE_DEPS; do
+            if echo "$DISPATCHED" | grep -qw "$dep"; then
+              echo "  $bundle_mod: dependency '$dep' was dispatched - will release"
+              SHOULD_RELEASE=true
+              break
+            fi
+          done
+
+          if [ "$SHOULD_RELEASE" = "true" ]; then
+            VERSION=$(date -u +"%Y.%m%d.%H%M")
+            TAG="${bundle_mod}/${VERSION}"
+
+            CALVER_PENDING=$(echo "$CALVER_PENDING" | jq -c ". + [{\"module\": \"$bundle_mod\", \"version\": \"$VERSION\", \"tag\": \"$TAG\", \"needs_tag\": true, \"type\": \"calver\"}]")
+          else
+            echo "  $bundle_mod: no dependencies dispatched - skipping"
           fi
         done
 
