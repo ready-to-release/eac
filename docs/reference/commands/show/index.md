@@ -24,6 +24,7 @@ Display repository information in human-readable format for interactive terminal
 | [show modules](./modules.md) | Display all module contracts in table |
 | [show moduletypes](./moduletypes.md) | Show all module types grouped by count |
 | [show release-notes](./release-notes.md) | Display release notes in human-readable format |
+| [show specs](./specs.md) | Display specifications for a release |
 | [show suite](./suite.md) | Display detailed test suite information |
 | [show test-summary](./test-summary.md) | Generate pretty test summary |
 | [show test-timings](./test-timings.md) | Show test timing analysis |

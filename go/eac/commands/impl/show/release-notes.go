@@ -86,24 +86,22 @@ func ShowReleaseNotes() int {
 	var ver *releasenotes.ReleaseNotesVersion
 
 	if versionNum != "" {
-		// Show specific version or special keyword
-		if versionNum == "latest" {
-			// Show latest version (same as no version specified)
-			if len(rn.Versions) == 0 {
-				fmt.Printf("No release notes found for module: %s\n", module)
-				return 0
-			}
-			ver = &rn.Versions[0]
-		} else {
-			v, err := rn.GetVersion(versionNum)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				return 1
-			}
-			ver = v
+		// Resolve version using common helper
+		versionInfo, err := reports.ResolveVersion(workspaceRoot, module, versionNum)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			return 1
 		}
+
+		// Get specific version
+		v, err := rn.GetVersion(versionInfo.VersionNumber)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			return 1
+		}
+		ver = v
 	} else {
-		// Show latest version
+		// Show latest version by default
 		if len(rn.Versions) == 0 {
 			fmt.Printf("No release notes found for module: %s\n", module)
 			return 0

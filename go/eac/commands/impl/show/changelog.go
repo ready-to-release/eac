@@ -88,25 +88,25 @@ func ShowChangelog() int {
 	var versionsToShow []*changelog.Version
 
 	if version != "" {
+		// Resolve version using common helper
+		versionInfo, err := reports.ResolveVersion(workspaceRoot, module, version)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			return 1
+		}
+
 		// Show specific version
-		if version == "unreleased" {
+		if versionInfo.IsUnreleased {
 			if log.Unreleased != nil && log.Unreleased.HasEntries() {
 				versionsToShow = []*changelog.Version{log.Unreleased}
 			} else {
 				fmt.Printf("No unreleased changes for module: %s\n", module)
 				return 0
 			}
-		} else if version == "latest" {
-			latestVer := log.LatestVersion()
-			if latestVer == nil {
-				fmt.Printf("No released versions for module: %s\n", module)
-				return 0
-			}
-			versionsToShow = []*changelog.Version{latestVer}
 		} else {
-			ver := log.GetVersion(version)
+			ver := log.GetVersion(versionInfo.VersionNumber)
 			if ver == nil {
-				fmt.Fprintf(os.Stderr, "Error: version not found: %s\n", version)
+				fmt.Fprintf(os.Stderr, "Error: version not found: %s\n", versionInfo.VersionNumber)
 				return 1
 			}
 			versionsToShow = []*changelog.Version{ver}

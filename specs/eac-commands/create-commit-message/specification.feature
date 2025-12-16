@@ -1,4 +1,4 @@
-@L2 @deps:go @deps:git @ov @env:isolated-test-project @control:ai-2 @control:ai-1
+@L2 @deps:go @deps:git @ov @env:isolated-test-project @control:ai-2
 Feature: eac-commands_create-commit-message
 
   As a developer using the eac platform

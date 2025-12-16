@@ -80,29 +80,29 @@ func GetChangelog() int {
 			return nil, err
 		}
 
-		// Return specific version if requested
-		if version != "" {
-			if version == "unreleased" {
-				if report.Changelog.Unreleased == nil {
-					return nil, fmt.Errorf("no unreleased changes found")
-				}
-				return report.Changelog.Unreleased, nil
-			}
-			if version == "latest" {
-				latestVer := report.Changelog.LatestVersion()
-				if latestVer == nil {
-					return nil, fmt.Errorf("no released versions found")
-				}
-				return latestVer, nil
-			}
-			ver := report.Changelog.GetVersion(version)
-			if ver == nil {
-				return nil, fmt.Errorf("version not found: %s", version)
-			}
-			return ver, nil
+		// If no version specified, return full changelog
+		if version == "" {
+			return report.Changelog, nil
 		}
 
-		// Return full changelog
-		return report.Changelog, nil
+		// Resolve version using common helper
+		versionInfo, err := reports.ResolveVersion(workspaceRoot, module, version)
+		if err != nil {
+			return nil, err
+		}
+
+		// Return data based on version type
+		if versionInfo.IsUnreleased {
+			if report.Changelog.Unreleased == nil {
+				return nil, fmt.Errorf("no unreleased changes found")
+			}
+			return report.Changelog.Unreleased, nil
+		}
+
+		ver := report.Changelog.GetVersion(versionInfo.VersionNumber)
+		if ver == nil {
+			return nil, fmt.Errorf("version not found: %s", versionInfo.VersionNumber)
+		}
+		return ver, nil
 	})
 }

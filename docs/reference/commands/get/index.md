@@ -23,6 +23,7 @@ Retrieve repository data in structured JSON format for automation and scripting.
 | [get files](./files.md) | Get repository files with module ownership |
 | [get modules](./modules.md) | Get all module contracts |
 | [get release-notes](./release-notes.md) | Get release notes data in structured format |
+| [get specs](./specs.md) | Get specifications data in structured format |
 | [get specs-unused-steps](./specs-unused-steps.md) | Detect unused godog step definitions |
 | [get suite](./suite.md) | Get test suite information |
 | [get test-timings](./test-timings.md) | Get test timing information |
