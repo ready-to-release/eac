@@ -1,0 +1,120 @@
+name: Download CI Artifacts
+description: Download build artifacts from a CI workflow run
+
+inputs:
+  module:
+    description: Module moniker (used to derive artifact name and CI workflow)
+    required: true
+  ci-run-id:
+    description: 'CI workflow run ID. If provided, downloads from this run directly.'
+    required: false
+    default: ''
+  ci-sha:
+    description: 'Commit SHA to find CI run for. Used when ci-run-id is not provided.'
+    required: false
+    default: ''
+  ci-workflow:
+    description: 'CI workflow filename (e.g., ci-docs.yaml). If empty, uses ci-{module}.yaml'
+    required: false
+    default: ''
+  artifact-name:
+    description: 'Artifact name to download. If empty, uses build-artifacts-{module}'
+    required: false
+    default: ''
+  artifact-path:
+    description: 'Path to download artifacts to'
+    required: false
+    default: 'out/build'
+  commands-path:
+    description: 'Path to commands binary. If empty, will setup commands.'
+    required: false
+    default: ''
+
+outputs:
+  run-id:
+    description: The CI run ID used for download
+    value: ${{ steps.resolve.outputs.run_id }}
+  artifact-name:
+    description: Name of the downloaded artifact
+    value: ${{ steps.vars.outputs.artifact_name }}
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Commands Binary
+      id: commands
+      if: inputs.commands-path == ''
+      uses: ./.github/actions/setup-commands
+
+    - name: Set variables
+      id: vars
+      shell: bash
+      env:
+        MODULE: ${{ inputs.module }}
+        INPUT_WORKFLOW: ${{ inputs.ci-workflow }}
+        INPUT_ARTIFACT_NAME: ${{ inputs.artifact-name }}
+      run: |
+        # Derive workflow name
+        if [ -n "$INPUT_WORKFLOW" ]; then
+          echo "workflow=$INPUT_WORKFLOW" >> $GITHUB_OUTPUT
+        else
+          echo "workflow=ci-${MODULE}.yaml" >> $GITHUB_OUTPUT
+        fi
+
+        # Derive artifact name
+        if [ -n "$INPUT_ARTIFACT_NAME" ]; then
+          echo "artifact_name=$INPUT_ARTIFACT_NAME" >> $GITHUB_OUTPUT
+        else
+          echo "artifact_name=build-artifacts-${MODULE}" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Resolve CI run ID
+      id: resolve
+      shell: bash
+      env:
+        CI_RUN_ID: ${{ inputs.ci-run-id }}
+        CI_SHA: ${{ inputs.ci-sha }}
+        WORKFLOW: ${{ steps.vars.outputs.workflow }}
+        COMMANDS: ${{ inputs.commands-path || steps.commands.outputs.commands-path }}
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        # Priority: 1) ci-run-id from input, 2) lookup from ci-sha
+        if [ -n "$CI_RUN_ID" ]; then
+          echo "run_id=$CI_RUN_ID" >> $GITHUB_OUTPUT
+          echo "Using CI run ID from input: $CI_RUN_ID"
+        else
+          if [ -z "$CI_SHA" ]; then
+            echo "::error::Either ci-run-id or ci-sha must be provided"
+            exit 1
+          fi
+
+          RUN_ID=$($COMMANDS pipeline ci get-run-id --workflow "$WORKFLOW" --sha "$CI_SHA" 2>/dev/null || echo "")
+
+          if [ -z "$RUN_ID" ]; then
+            echo "::error::Could not find CI run for SHA: $CI_SHA (workflow: $WORKFLOW)"
+            exit 1
+          fi
+
+          echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
+          echo "Using CI run ID from lookup: $RUN_ID (SHA: $CI_SHA)"
+        fi
+
+    - name: Download CI artifacts
+      uses: actions/download-artifact@v7
+      with:
+        name: ${{ steps.vars.outputs.artifact_name }}
+        path: ${{ inputs.artifact-path }}
+        run-id: ${{ steps.resolve.outputs.run_id }}
+        github-token: ${{ github.token }}
+
+    - name: Verify download
+      shell: bash
+      env:
+        ARTIFACT_PATH: ${{ inputs.artifact-path }}
+        ARTIFACT_NAME: ${{ steps.vars.outputs.artifact_name }}
+      run: |
+        if [ ! -d "$ARTIFACT_PATH" ] || [ -z "$(ls -A "$ARTIFACT_PATH" 2>/dev/null)" ]; then
+          echo "::error::Artifact download failed or directory is empty: $ARTIFACT_PATH"
+          exit 1
+        fi
+        echo "Downloaded artifact '$ARTIFACT_NAME' to $ARTIFACT_PATH"

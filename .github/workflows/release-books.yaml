@@ -74,42 +74,17 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Download CI Artifacts
+        id: artifacts
+        uses: ./.github/actions/download-ci-artifacts
+        with:
+          module: books
+          ci-run-id: ${{ needs.approve.outputs.ci_run_id }}
+          ci-sha: ${{ needs.approve.outputs.ci_sha }}
+
       - name: Setup Commands Binary
         id: commands
         uses: ./.github/actions/setup-commands
-
-      - name: Get CI run ID
-        id: ci
-        run: |
-          # Priority: 1) ci_run_id from CI trigger, 2) lookup from ci_sha
-          if [ -n "${{ needs.approve.outputs.ci_run_id }}" ]; then
-            echo "run_id=${{ needs.approve.outputs.ci_run_id }}" >> $GITHUB_OUTPUT
-            echo "Using CI run ID from trigger: ${{ needs.approve.outputs.ci_run_id }}"
-          else
-            COMMANDS="${{ steps.commands.outputs.commands-path }}"
-            CI_SHA="${{ needs.approve.outputs.ci_sha }}"
-            WORKFLOW="ci-books.yaml"
-
-            RUN_ID=$($COMMANDS pipeline ci get-run-id --workflow "$WORKFLOW" --sha "$CI_SHA" 2>/dev/null || echo "")
-
-            if [ -z "$RUN_ID" ]; then
-              echo "❌ Could not find CI run for SHA: $CI_SHA"
-              exit 1
-            fi
-
-            echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
-            echo "Using CI run ID from lookup: $RUN_ID (SHA: $CI_SHA)"
-          fi
-        env:
-          GH_TOKEN: ${{ github.token }}
-
-      - name: Download CI artifacts
-        uses: actions/download-artifact@v7
-        with:
-          name: build-artifacts-books
-          path: out/build
-          run-id: ${{ steps.ci.outputs.run_id }}
-          github-token: ${{ github.token }}
 
       - name: Validate artifacts
         id: verify

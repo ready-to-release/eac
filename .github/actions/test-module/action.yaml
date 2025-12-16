@@ -118,7 +118,7 @@ runs:
     - name: Download Build Artifacts
       id: download
       if: inputs.download-artifact == 'true'
-      uses: actions/download-artifact@v6
+      uses: actions/download-artifact@v7
       with:
         name: ${{ steps.vars.outputs.build-artifact-name }}
         path: ${{ steps.vars.outputs.build-artifact-path }}
@@ -150,7 +150,7 @@ runs:
 
     - name: Upload Test Results
       if: always()
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ steps.vars.outputs.results-artifact-name }}
         path: ${{ steps.vars.outputs.results-artifact-path }}
