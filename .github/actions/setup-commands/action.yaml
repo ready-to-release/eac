@@ -229,32 +229,59 @@ runs:
         go build -o ../../../out/tools/commands.exe .
         Write-Host "✓ Commands binary built"
 
-    - name: Upload artifact (for downstream jobs, Linux/macOS)
+    - name: Check if Linux artifact exists
+      id: check-linux-artifact
       if: runner.os != 'Windows' && steps.check.outputs.available != 'true'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        RESULT=$(gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts" \
+          --jq '.artifacts[] | select(.name == "commands-binary") | .id' 2>/dev/null || echo "")
+        if [ -n "$RESULT" ]; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Upload artifact (for downstream jobs, Linux/macOS)
+      if: runner.os != 'Windows' && steps.check.outputs.available != 'true' && steps.check-linux-artifact.outputs.exists != 'true'
       uses: actions/upload-artifact@v6
       with:
         name: commands-binary
         path: out/tools/commands
         if-no-files-found: error
-        overwrite: true  # Handle parallel jobs both building from source
+
+    - name: Check if Windows artifact exists
+      id: check-windows-artifact
+      if: (runner.os == 'Linux' && steps.check.outputs.available != 'true' && inputs.cross-compile-windows == 'true') || (runner.os == 'Windows' && steps.check-windows.outputs.available != 'true')
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        RESULT=$(gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts" \
+          --jq '.artifacts[] | select(.name == "commands-binary-windows") | .id' 2>/dev/null || echo "")
+        if [ -n "$RESULT" ]; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
 
     - name: Upload Windows artifact (cross-compiled from Linux)
-      if: runner.os == 'Linux' && steps.check.outputs.available != 'true' && inputs.cross-compile-windows == 'true'
+      if: runner.os == 'Linux' && steps.check.outputs.available != 'true' && inputs.cross-compile-windows == 'true' && steps.check-windows-artifact.outputs.exists != 'true'
       uses: actions/upload-artifact@v6
       with:
         name: commands-binary-windows
         path: out/tools/commands.exe
         if-no-files-found: error
-        overwrite: true
 
     - name: Upload artifact (for downstream jobs, Windows)
-      if: runner.os == 'Windows' && steps.check-windows.outputs.available != 'true'
+      if: runner.os == 'Windows' && steps.check-windows.outputs.available != 'true' && steps.check-windows-artifact.outputs.exists != 'true'
       uses: actions/upload-artifact@v6
       with:
         name: commands-binary-windows
         path: out/tools/commands.exe
         if-no-files-found: error
-        overwrite: true
 
     - name: Set output (Linux/macOS)
       id: setup
