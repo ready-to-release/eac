@@ -168,6 +168,13 @@ runs:
         GH_TOKEN: ${{ github.token }}
         RESULTS_ARTIFACT_NAME: ${{ steps.vars.outputs.results-artifact-name }}
       run: |
+        # Validate COMMANDS is set
+        if [ -z "$COMMANDS" ] || [ ! -f "$COMMANDS" ]; then
+          echo "## ⚠️ Test Summary Unavailable" >> $GITHUB_STEP_SUMMARY
+          echo "Commands binary not available - cannot generate detailed summary." >> $GITHUB_STEP_SUMMARY
+          exit 0
+        fi
+
         # Determine status from test result
         if [ "$TEST_FAILED" = "0" ]; then
           STATUS="success"
