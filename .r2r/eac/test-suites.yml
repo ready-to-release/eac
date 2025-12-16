@@ -1,10 +1,10 @@
 # yaml-language-server: $schema=../../contracts/eac-core/0.1.0/test-suites.schema.json
 suites:
   # ============================================================================
-  # Component Suite - Fast unit tests for component-level validation
+  # Unit Suite - Fast unit tests for module-level validation
   # ============================================================================
-  - moniker: component
-    name: Component Tests
+  - moniker: unit
+    name: Unit Tests
     description: "Fast tests for Stage 2-4 (Pre-commit, MR, Commit) - L0-L1"
     selectors:
       - any_of_tags:

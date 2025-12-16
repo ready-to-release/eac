@@ -57,34 +57,34 @@ func TestTargetFileCore(t *testing.T) {
 	tests := []struct {
 		name         string
 		command      string
-		unit         string
+		module       string
 		expectTarget bool
 		expectedPath string
 	}{
 		{
-			name:         "build with unit creates target log",
+			name:         "build with module creates target log",
 			command:      "build",
-			unit:         "eac-core",
+			module:       "eac-core",
 			expectTarget: true,
 			expectedPath: "out/build/eac-core/build.log",
 		},
 		{
-			name:         "test with unit creates target log",
+			name:         "test with module creates target log",
 			command:      "test",
-			unit:         "component",
+			module:       "eac-core",
 			expectTarget: true,
-			expectedPath: "out/test/component/test.log",
+			expectedPath: "out/test/eac-core/test.log",
 		},
 		{
-			name:         "build without unit returns nil",
+			name:         "build without module returns nil",
 			command:      "build",
-			unit:         "",
+			module:       "",
 			expectTarget: false,
 		},
 		{
 			name:         "create command returns nil (no target configured)",
 			command:      "create",
-			unit:         "something",
+			module:       "something",
 			expectTarget: false,
 		},
 	}
@@ -95,7 +95,7 @@ func TestTargetFileCore(t *testing.T) {
 
 			cfg := Config{
 				Command:           tt.command,
-				Unit:              tt.unit,
+				Module:            tt.module,
 				WorkspaceRoot:     tmpDir,
 				EnableFileLogging: true,
 			}
@@ -104,12 +104,12 @@ func TestTargetFileCore(t *testing.T) {
 			logCfg := LoggingConfig{
 				Targets: map[string]TargetConfig{
 					"build": {
-						Path:      "out/build/{unit}/build.log",
+						Path:      "out/build/{module}/build.log",
 						Levels:    []string{"debug", "info", "warn", "error"},
 						Formatter: FormatterJSON,
 					},
 					"test": {
-						Path:      "out/test/{unit}/test.log",
+						Path:      "out/test/{module}/test.log",
 						Levels:    []string{"debug", "info", "warn", "error"},
 						Formatter: FormatterJSON,
 					},

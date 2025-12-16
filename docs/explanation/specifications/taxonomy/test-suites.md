@@ -2,7 +2,7 @@
 
 {{ page_breadcrumb() }}
 
-> **Component, integration, acceptance, and production verification suites**
+> **Unit, integration, acceptance, and production verification suites**
 
 Test suites select tests by tags for execution at specific CD Model stages.
 
@@ -10,14 +10,14 @@ Test suites select tests by tags for execution at specific CD Model stages.
 
 ---
 
-## component
+## unit
 
 **Selects**: `@L0`, `@L1`
 **Excludes**: `@L2`, `@L3`, `@L4`, `@ignore`
 **Time**: 2-5 minutes
-**Purpose**: Fast component-level validation
+**Purpose**: Fast module-level validation
 **Environment**: DevBox or Build Agent
-**Run**: `r2r eac test component`
+**Run**: `r2r eac test <module> --suite unit`
 
 ### What It Tests
 
@@ -27,8 +27,8 @@ Test suites select tests by tags for execution at specific CD Model stages.
 ### Example
 
 ```bash
-# Run component suite
-r2r eac test component
+# Run unit suite
+r2r eac test unit
 
 # Runs all scenarios with:
 # - @L0 or @L1
@@ -44,7 +44,7 @@ r2r eac test component
 **Time**: 5-15 minutes
 **Purpose**: Emulated system tests with Docker
 **Environment**: Build Agent with Docker
-**Run**: `r2r eac test integration`
+**Run**: `r2r eac test <module> --suite integration`
 
 ### What It Tests
 
@@ -72,7 +72,7 @@ r2r eac test integration
 **Time**: 1-2 hours
 **Purpose**: Production-like system tests in PLTE
 **Environment**: PLTE (Production-Like Test Environment)
-**Run**: `r2r eac test acceptance`
+**Run**: `r2r eac test <module> --suite acceptance`
 
 ### What It Tests
 
@@ -100,7 +100,7 @@ r2r eac test acceptance
 **Time**: Continuous
 **Purpose**: Production smoke tests
 **Environment**: Production
-**Run**: `r2r eac test production-verification`
+**Run**: `r2r eac test <module> --suite production-verification`
 
 ### What It Tests
 
@@ -124,7 +124,7 @@ r2r eac test production-verification
 
 ## Test Suite Selection Logic
 
-### component Suite
+### unit Suite
 
 ```gherkin
 @L0 @ov
@@ -206,23 +206,19 @@ Scenario: Ignored test
 
 ---
 
-## Running All Suites
-
-Use `--all` to run component, integration, and acceptance suites in a single pass:
+## Running Default Suites
 
 ```bash
 # Run all suites (single init, single summary)
-r2r eac test --all
+r2r eac test
 
 # Run all suites for a specific module
-r2r eac test my-module --all
+r2r eac test my-module
 ```
 
-This runs tests from all three suites while routing output to the correct folders:
+This runs tests from all three suites while routing output to the module's test folder:
 
-- `out/test/component/` - L0, L1 tests
-- `out/test/integration/` - L2 tests
-- `out/test/acceptance/` - L3 tests
+- `out/test/<module>/` - All test results for the module (unit, integration, acceptance)
 
 Benefits:
 
@@ -232,7 +228,7 @@ Benefits:
 - Useful for local development comprehensive testing
 
 !!! note "CI Pipelines"
-    CI pipelines typically run suites separately (`--suite component`, `--suite integration`, etc.) for better failure isolation and parallel job distribution.
+    CI pipelines typically run suites separately (`--suite unit`, `--suite integration`, etc.) for better failure isolation and parallel job distribution.
 
 ---
 
@@ -240,7 +236,7 @@ Benefits:
 
 | CD Stage | Test Suite | Tags Selected | Environment |
 |----------|-----------|---------------|-------------|
-| **Pre-commit/MR/Commit** | component | `@L0`, `@L1` | DevBox/Agent |
+| **Pre-commit/MR/Commit** | unit | `@L0`, `@L1` | DevBox/Agent |
 | **Integration** | integration | `@L2` | Agent + Docker |
 | **Acceptance** | acceptance | `@L3` | PLTE |
 | **Production** | production-verification | `@L4` + `@piv` | Production |
@@ -253,16 +249,16 @@ Benefits:
 
 **DO**:
 
-- Run component tests before every commit (fast feedback)
+- Run unit tests before every commit (fast feedback)
 - Run integration tests before merging (Docker validation)
 - Run acceptance tests in PLTE after deployment
 - Run production-verification continuously in production
-- Keep component suite < 5 minutes
+- Keep unit suite < 5 minutes
 - Keep integration suite < 15 minutes
 
 **DON'T**:
 
-- Skip component tests (catch issues early)
+- Skip unit tests (catch issues early)
 - Skip integration tests (Docker issues caught here)
 - Run production tests in PLTE (environment mismatch)
 - Run PLTE tests in production (excessive load)

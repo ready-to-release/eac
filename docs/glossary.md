@@ -174,7 +174,7 @@ A Gherkin `.feature` file describing software behavior in Given-When-Then format
 
 ### Suite
 
-A named collection of tests grouped by purpose and test level. Standard suites: `component` (L0-L1), `integration` (L2), `acceptance` (L3), `production-verification` (L4). Commands: [test suite](./reference/commands/test/suite.md), [show suite](./reference/commands/show/suite.md). See [Test Suites](./explanation/specifications/taxonomy/test-suites.md).
+A named collection of tests grouped by purpose and test level. Standard suites: `unit` (L0-L1), `integration` (L2), `acceptance` (L3), `production-verification` (L4). Commands: [test suite](./reference/commands/test/suite.md), [show suite](./reference/commands/show/suite.md). See [Test Suites](./explanation/specifications/taxonomy/test-suites.md).
 
 ---
 

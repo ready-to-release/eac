@@ -33,7 +33,7 @@ This tutorial teaches you how to efficiently build and test only the modules aff
    - View build artifacts: `r2r show artifacts <module>`
 
 3. **Running tests efficiently**
-   - Fast feedback: `r2r test <module>` (component suite, L0-L1)
+   - Fast feedback: `r2r test <module>` (unit suite, L0-L1)
    - Full validation: `r2r test <module> --suite acceptance`
    - Understand test selection and filtering
 
@@ -78,7 +78,7 @@ The tutorial will walk through a realistic scenario:
 ### Best Practices
 
 - Always check `r2r show files changed` before building
-- Run component suite locally, acceptance suite in CI
+- Run unit suite locally, acceptance suite in CI
 - Validate before committing (use pre-commit hooks)
 - Build and test only affected modules
 - Use `r2r test debug` to quickly find failures

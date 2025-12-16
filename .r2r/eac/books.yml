@@ -226,12 +226,8 @@ books:
       # 02 - Test Evidence
       # ==========================================================================
       - type: copy
-        from: "out/test/acceptance/**/*.json"
-        to: "02-test-evidence/acceptance/"
-
-      - type: copy
-        from: "out/test/commit/**/*.json"
-        to: "02-test-evidence/commit/"
+        from: "out/test/**/*.json"
+        to: "02-test-evidence/"
 
       - type: command
         command: "show tests"

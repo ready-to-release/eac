@@ -110,7 +110,7 @@ func (o *Orchestrator) RunLayered(layers [][]string) ([]WorkResult, error) {
 
 	// Create and start display manager (only when TUI is not enabled)
 	if !o.config.TUI {
-		o.display = newDisplayManager(o.logger, o.config.ActionVerb, len(allMonikers), o.config.StatusUpdateInterval)
+		o.display = newDisplayManager(o.logger, o.config.ActionVerb, len(allMonikers), o.config.StatusUpdateInterval, false)
 		o.display.start()
 	}
 
@@ -221,7 +221,7 @@ func (o *Orchestrator) Run(monikers []string) ([]WorkResult, error) {
 
 	// Create and start display manager (only when TUI is not enabled)
 	if !o.config.TUI {
-		o.display = newDisplayManager(o.logger, o.config.ActionVerb, len(monikers), o.config.StatusUpdateInterval)
+		o.display = newDisplayManager(o.logger, o.config.ActionVerb, len(monikers), o.config.StatusUpdateInterval, false)
 		o.display.start()
 	}
 

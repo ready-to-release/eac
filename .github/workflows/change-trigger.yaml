@@ -98,7 +98,8 @@ jobs:
           trigger-run-id: ${{ github.run_id }}
           setup-deps: auto
           download-artifact: 'false'
-          suites: component
+          # PR: fast feedback with unit+integration; main: thorough with acceptance
+          suites: ${{ github.event_name == 'pull_request' && 'unit,integration' || 'unit,integration,acceptance' }}
 
   # =========================================
   # Flow B: Module CI Orchestration (runs in parallel with Flow A)
@@ -297,6 +298,58 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Setup Commands Binary
+        id: commands
+        if: needs.detect-changes.outputs.has-changes == 'true'
+        uses: ./.github/actions/setup-commands
+
+      - name: Filter modules with valid CI
+        id: filter
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
+        run: |
+          # Early exit if no changes
+          if [ "${{ needs.detect-changes.outputs.has-changes }}" != "true" ]; then
+            echo "modules=" >> $GITHUB_OUTPUT
+            echo "skipped=" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          DIRECTLY_CHANGED="${{ needs.detect-changes.outputs.directly_changed }}"
+          INVALIDATED="${{ needs.detect-changes.outputs.invalidated }}"
+
+          echo "Filtering modules that already have valid CI..."
+          echo "  Directly changed: $DIRECTLY_CHANGED"
+          echo "  Invalidated: $INVALIDATED"
+          echo ""
+
+          # Use Go command to filter modules
+          RESULT=$($COMMANDS get ci-dispatch \
+            --directly-changed "$DIRECTLY_CHANGED" \
+            --invalidated "$INVALIDATED" \
+            --head-sha "${{ github.sha }}" \
+            --as-json)
+
+          echo "Filter result:"
+          echo "$RESULT" | jq .
+          echo ""
+
+          # Extract dispatch and skipped lists
+          DISPATCH_LIST=$(echo "$RESULT" | jq -r '.dispatch | join(" ")')
+          SKIPPED_LIST=$(echo "$RESULT" | jq -r '.skipped | join(" ")')
+
+          # Show per-module reasoning
+          echo "Per-module decisions:"
+          echo "$RESULT" | jq -r '.reasons | to_entries[] | "  \(.key): \(.value)"'
+          echo ""
+
+          echo "Final dispatch list: $DISPATCH_LIST"
+          echo "Skipped modules: $SKIPPED_LIST"
+
+          echo "modules=$DISPATCH_LIST" >> $GITHUB_OUTPUT
+          echo "skipped=$SKIPPED_LIST" >> $GITHUB_OUTPUT
+
       - name: Dispatch all workflows in parallel
         run: |
           # Early exit if no changes - job runs to satisfy status checks but skips execution
@@ -308,7 +361,19 @@ jobs:
             exit 0
           fi
 
-          MODULES="${{ needs.detect-changes.outputs.changed-modules }}"
+          MODULES="${{ steps.filter.outputs.modules }}"
+          SKIPPED="${{ steps.filter.outputs.skipped }}"
+
+          # Check if all modules were skipped
+          if [ -z "$MODULES" ]; then
+            echo "All modules have valid CI at current HEAD - nothing to dispatch"
+            echo "## Dispatch All CI" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**All modules skipped** - valid CI already exists at current HEAD." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Skipped modules: \`$SKIPPED\`" >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
 
           # Determine the correct ref for workflow_dispatch
           # For PRs: use head_ref (the PR source branch)
@@ -367,6 +432,13 @@ jobs:
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           echo "$DISPATCHED_LIST" | xargs >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+          # Show skipped modules if any
+          if [ -n "$SKIPPED" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Skipped** (valid CI exists at HEAD): \`$SKIPPED\`" >> $GITHUB_STEP_SUMMARY
+          fi
+
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "> **Note**: All workflows run in parallel. Dependency CI verification" >> $GITHUB_STEP_SUMMARY
           echo "> happens at release time via \`release await-deps\`." >> $GITHUB_STEP_SUMMARY
@@ -449,8 +521,10 @@ jobs:
           echo "|-------|--------|-------------|" >> $GITHUB_STEP_SUMMARY
 
           # Repository validation stage
+          # PR runs unit+integration, main runs unit+integration+acceptance
+          SUITES="${{ github.event_name == 'pull_request' && 'unit,integration' || 'unit,integration,acceptance' }}"
           if [ "$REPO_VALIDATION" = "success" ]; then
-            echo "| Repository Validation | Pass | Build + component suite passed |" >> $GITHUB_STEP_SUMMARY
+            echo "| Repository Validation | Pass | Build + test suites ($SUITES) passed |" >> $GITHUB_STEP_SUMMARY
           elif [ "$REPO_VALIDATION" = "failure" ]; then
             echo "| Repository Validation | Fail | Build or test failed |" >> $GITHUB_STEP_SUMMARY
           elif [ "$REPO_VALIDATION" = "skipped" ]; then

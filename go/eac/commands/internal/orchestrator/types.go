@@ -50,8 +50,8 @@ type Config struct {
 	ActionVerb string
 	// MaxConcurrency is the maximum number of concurrent workers (0 = number of CPUs)
 	MaxConcurrency int
-	// StatusUpdateInterval is how often to show status updates (default: 2 seconds)
-	StatusUpdateInterval int // in seconds
+	// StatusUpdateInterval is how often to show status updates (default: 500ms)
+	StatusUpdateInterval int // in milliseconds
 	// ModuleTypes maps moniker to type string (e.g., "go", "container") for display
 	ModuleTypes map[string]string
 	// ShowTimings enables the timing summary section (use --timings flag)

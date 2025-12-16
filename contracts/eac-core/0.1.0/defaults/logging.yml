@@ -35,20 +35,20 @@ file:
 
 # Extra log targets for specific commands
 # Each target creates an additional log file beyond out/commands.log
-# The {unit} placeholder is replaced with the module/suite name
+# The {module} placeholder is replaced with the module name
 targets:
-  # Build command: creates out/build/{unit}/build.log
+  # Build command: creates out/build/{module}/build.log
   build:
-    path: "out/build/{unit}/build.log"
+    path: "out/build/{module}/build.log"
     levels:
       - debug
       - info
       - warn
       - error
     formatter: timestamped
-  # Test command: creates out/test/{unit}/test.log
+  # Test command: creates out/test/{module}/test.log
   test:
-    path: "out/test/{unit}/test.log"
+    path: "out/test/{module}/test.log"
     levels:
       - debug
       - info

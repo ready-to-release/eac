@@ -27,7 +27,7 @@ func Get() int {
 	case "--help", "-h":
 		printGetUsage()
 		return 0
-	case "build-times", "changed-modules", "changed-modules-ci", "config", "dependencies", "environments", "execution", "files", "modules", "release-bundle", "suite", "tests", "test-timings", "valid-commands":
+	case "artifacts", "build-deps", "build-times", "changed-modules", "changed-modules-ci", "changed-modules-local", "ci-dispatch", "config", "dependencies", "environments", "execution-order", "files", "modules", "release-bundle", "suite", "tests", "test-timings", "valid-commands":
 		// Handled by separate registrations in respective files
 		return 0
 	default:
@@ -48,15 +48,21 @@ func printGetUsage() {
 	fmt.Println("Repository Structure:")
 	fmt.Println("  modules                   Get all module contracts")
 	fmt.Println("  dependencies              Get module dependency graph")
-	fmt.Println("  execution order           Get build order for modules based on dependencies")
+	fmt.Println("  execution-order           Get build order for modules based on dependencies")
 	fmt.Println("")
 	fmt.Println("Files and Changes:")
 	fmt.Println("  files                     Get repository files with module mappings")
 	fmt.Println("  changed-modules           Get modules affected by changed files")
 	fmt.Println("  changed-modules-ci        Get modules requiring rebuild since last successful CI")
+	fmt.Println("  changed-modules-local     Get modules requiring rebuild based on local build state")
+	fmt.Println("")
+	fmt.Println("CI/CD:")
+	fmt.Println("  ci-dispatch               Filter modules for CI dispatch (skip those with valid CI)")
 	fmt.Println("")
 	fmt.Println("Build:")
 	fmt.Println("  build-times               Get build timing data from build logs")
+	fmt.Println("  build-deps                Get build dependencies for a module")
+	fmt.Println("  artifacts                 Get resolved artifacts for a module")
 	fmt.Println("")
 	fmt.Println("Testing:")
 	fmt.Println("  tests                     Get all tests in structured format")

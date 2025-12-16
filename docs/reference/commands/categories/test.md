@@ -96,11 +96,11 @@ r2r eac show test-summary src-auth
 ### CI/CD Integration
 
 ```bash
-# Run tests in CI
-r2r eac test --all --parallel
+# Run tests in CI (unit + integration for PR, add acceptance for main)
+r2r eac test --suite unit+integration
 
 # Run specific suite for stage
-r2r eac test suite smoke
+r2r eac test --suite acceptance
 
 # Check test results
 r2r eac show test-timings
@@ -270,8 +270,8 @@ r2r eac test suite unit
 # Skip slow integration tests
 r2r eac test --exclude-tags @slow
 
-# Parallel execution for speed
-r2r eac test --all --parallel
+# All suites (parallel is default)
+r2r eac test --suite unit+integration+acceptance
 ```
 
 ## Common Patterns
@@ -288,13 +288,13 @@ r2r eac test $CHANGED
 
 ```bash
 # Full test suite with coverage
-r2r eac test --all --parallel --coverage
+r2r eac test --suite unit+integration+acceptance --coverage
 
-# Smoke tests for quick feedback
-r2r eac test suite smoke
+# Acceptance tests for thorough testing
+r2r eac test --suite acceptance
 
-# Regression tests before release
-r2r eac test suite regression
+# Integration tests with coverage
+r2r eac test --suite integration --coverage
 ```
 
 ### Test-Driven Development
@@ -443,18 +443,18 @@ r2r eac test src-auth
 # Pre-commit: Test changed modules
 r2r eac test $(r2r eac get changed-modules | jq -r '.changed_modules[]')
 
-# CI: Test all
-r2r eac test --all
+# CI: Test all modules with all suites
+r2r eac test --suite unit+integration+acceptance
 ```
 
 ### Organize with Suites
 
 ```bash
 # Fast feedback with unit tests
-r2r eac test suite unit
+r2r eac test --suite unit
 
-# Comprehensive validation with full suite
-r2r eac test suite regression
+# Comprehensive validation with all suites
+r2r eac test --suite unit+integration+acceptance
 ```
 
 ### Monitor Performance
@@ -512,10 +512,10 @@ r2r eac test debug
 r2r eac show test-timings
 
 # Run only fast tests during development
-r2r eac test suite unit
+r2r eac test --suite unit
 
-# Use parallel execution
-r2r eac test --all --parallel
+# Run all suites (parallel is default)
+r2r eac test --suite unit+integration+acceptance
 ```
 
 ### Test Discovery Issues
@@ -545,11 +545,11 @@ r2r eac test src-auth
 # Multiple modules
 r2r eac test src-auth src-api
 
-# All modules
-r2r eac test --all
+# All modules (no args = all modules)
+r2r eac test
 
-# With options
-r2r eac test src-auth --verbose --coverage
+# With specific suites and coverage
+r2r eac test src-auth --suite unit+integration --coverage
 ```
 
 ### test suite

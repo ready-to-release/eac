@@ -269,10 +269,10 @@ gh run view <run-id> --json jobs \
 
    ```bash
    # Build all modules
-   r2r eac build --all
+   r2r eac build
 
-   # Test all modules
-   r2r eac test --all --suite commit,acceptance
+   # Test all modules with all suites
+   r2r eac test --suite unit+integration+acceptance
    ```
 
 4. **Check change detection:**

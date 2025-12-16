@@ -49,7 +49,7 @@ r2r eac show test-summary --suite integration
 
 Standard test suites (defined in `.r2r/eac/test-suites.yml`):
 
-- **component** - L0-L1 fast unit tests (pre-commit, <5 min)
+- **unit** - L0-L1 fast unit tests (pre-commit, <5 min)
 - **integration** - L2 Docker-based emulated tests (<15 min)
 - **acceptance** - L3 production-like tests in PLTE (1-2 hours)
 - **production-verification** - L4 production smoke tests (continuous)
@@ -62,7 +62,7 @@ Running integration tests before merge:
 # See what suites exist
 r2r eac test list-suites
 # Available suites:
-# - component: L0-L1 fast unit tests
+# - unit: L0-L1 fast unit tests
 # - integration: L2 Docker-based tests
 # - acceptance: L3 production-like tests
 # - production-verification: L4 production smoke tests
@@ -83,42 +83,39 @@ r2r eac test suite integration
 r2r eac show test-summary --suite integration
 ```
 
-## Running All Suites at Once
+## Running Multiple Suites at Once
 
-Use `--all` to run component, integration, and acceptance suites in a single pass:
+Use composite suites with `+` to run multiple suites in a single pass:
 
 ```bash
 # Run all suites (single init, single summary)
-r2r eac test --all
+r2r eac test --suite unit+integration+acceptance
 
-# Run all suites for a specific module
-r2r eac test src-auth --all
+# Run unit and integration for a specific module
+r2r eac test src-auth --suite unit+integration
 ```
 
 **What happens**:
 
 - Single initialization phase
-- Tests routed to correct output folders (`out/test/component/`, `out/test/integration/`, `out/test/acceptance/`)
+- Tests output to module folder (`out/test/<module>/`)
 - Single summary showing results from all suites
 
-This is useful for local development when you want comprehensive test coverage without running three separate commands.
+This is useful for local development when you want comprehensive test coverage without running separate commands.
 
 ## CI Pipeline Example
 
 ```bash
-# Quick feedback (L0-L1)
-r2r eac test suite component
+# PR workflow: quick feedback (unit + integration)
+r2r eac test --suite unit+integration
 
-# If component passes, run integration (L2)
-r2r eac test suite integration
-
-# If all pass, run acceptance in PLTE (L3)
-r2r eac test suite acceptance
+# Main branch: comprehensive testing
+r2r eac test --suite unit+integration+acceptance
 ```
 
 !!! note "CI vs Local"
-    CI pipelines typically run suites separately for better failure isolation and parallel job distribution.
-    Use `--all` for local development convenience.
+    CI pipelines typically run unit+integration for PRs and add acceptance for main branch commits.
+    Use composite suites for convenience.
 
 ## Common Issues
 

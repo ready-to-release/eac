@@ -13,14 +13,14 @@ var log = logging.C()
 
 // GetSuite retrieves a suite by its moniker from configuration.
 // Returns error if config is unavailable (fail-closed - no hardcoded fallbacks).
-// Supports composite suites with "+" separator (e.g., "component+integration").
+// Supports composite suites with "+" separator (e.g., "unit+integration").
 func GetSuite(moniker string) (*TestSuite, error) {
 	cfg := config.Global()
 	if cfg == nil || cfg.TestSuites == nil {
 		return nil, fmt.Errorf("cannot get suite '%s': config unavailable (ensure config is loaded)", moniker)
 	}
 
-	// Handle composite suites with "+" separator (e.g., "component+integration")
+	// Handle composite suites with "+" separator (e.g., "unit+integration")
 	if strings.Contains(moniker, "+") {
 		return buildCompositeSuite(moniker, cfg)
 	}
@@ -33,7 +33,7 @@ func GetSuite(moniker string) (*TestSuite, error) {
 }
 
 // buildCompositeSuite creates a combined suite from multiple suites joined by "+".
-// Example: "component+integration" combines tests from both suites.
+// Example: "unit+integration" combines tests from both suites.
 func buildCompositeSuite(moniker string, cfg *config.EACConfig) (*TestSuite, error) {
 	parts := strings.Split(moniker, "+")
 

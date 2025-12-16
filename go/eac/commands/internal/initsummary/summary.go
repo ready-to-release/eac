@@ -111,7 +111,7 @@ type TestInfo struct {
 	// Suite information
 	SuiteName        string   // Name of the test suite
 	SuiteDescription string   // Suite description
-	SuitesIncluded   []string // For "all" suite: component, integration, acceptance
+	SuitesIncluded   []string // For "all" suite: unit, integration, acceptance
 
 	// Discovery stats (tests)
 	TotalDiscovered  int // Total tests discovered in codebase

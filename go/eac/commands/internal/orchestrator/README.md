@@ -72,7 +72,7 @@ config := orchestrator.Config{
     OrchestratorLogName:  "orchestrator.log",
     ActionVerb:           "building",
     MaxConcurrency:       0, // 0 = use number of CPUs
-    StatusUpdateInterval: 2, // Update every 2 seconds
+    StatusUpdateInterval: 500, // Update every 500ms
 }
 
 // Create worker function

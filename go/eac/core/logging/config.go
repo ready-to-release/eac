@@ -26,10 +26,10 @@ type Config struct {
 	// Command name (e.g., "build", "test", "create")
 	Command string
 
-	// Unit is the target unit for build/test commands (optional)
-	// Used with logging.yml targets to create unit-specific logs
-	// Examples: "eac-core" for build, "component" for test
-	Unit string
+	// Module is the target module for build/test commands (optional)
+	// Used with logging.yml targets to create module-specific logs
+	// Examples: "eac-core" for build, "eac-core" for test
+	Module string
 
 	// WorkspaceRoot is the repository root path
 	WorkspaceRoot string
@@ -74,9 +74,9 @@ func (c Config) WithFileLogging(enabled bool) Config {
 	return c
 }
 
-// WithUnit returns a new config with unit set.
+// WithModule returns a new config with module set.
 // Used for build/test to enable target-specific logging.
-func (c Config) WithUnit(unit string) Config {
-	c.Unit = unit
+func (c Config) WithModule(module string) Config {
+	c.Module = module
 	return c
 }

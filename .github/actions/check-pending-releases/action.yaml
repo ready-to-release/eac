@@ -136,8 +136,8 @@ runs:
         SEMVER_JSON='${{ steps.semver.outputs.semver_modules }}'
         CALVER_JSON='${{ steps.calver.outputs.calver_modules }}'
 
-        # Combine semver and calver pending releases
-        COMBINED=$(echo "$SEMVER_JSON $CALVER_JSON" | jq -s 'add')
+        # Combine semver and calver pending releases (use -c for compact single-line JSON)
+        COMBINED=$(echo "$SEMVER_JSON $CALVER_JSON" | jq -sc 'add')
 
         PENDING_COUNT=$(echo "$COMBINED" | jq 'length')
 

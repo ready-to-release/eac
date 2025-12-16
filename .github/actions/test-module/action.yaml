@@ -22,9 +22,11 @@ inputs:
     required: false
     default: 'auto'
   suites:
-    description: Comma-separated list of test suites to run
+    description: |
+      Comma-separated list of test suites to run.
+      Recommended: 'unit,integration' for PRs, 'unit,integration,acceptance' for main/release.
     required: false
-    default: 'commit,acceptance'
+    default: 'unit,integration'
   download-artifact:
     description: Whether to download build artifacts first
     required: false

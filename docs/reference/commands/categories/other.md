@@ -289,7 +289,7 @@ r2r eac validate
 r2r eac build --all
 
 # 5. Run tests
-r2r eac test --all
+r2r eac test
 ```
 
 ### Development Cycle

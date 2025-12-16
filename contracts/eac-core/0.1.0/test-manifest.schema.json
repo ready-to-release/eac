@@ -53,7 +53,7 @@
       "additionalProperties": {
         "$ref": "#/definitions/suite_result"
       },
-      "description": "Per-suite test results, keyed by suite moniker (component, integration, acceptance, etc.)"
+      "description": "Per-suite test results, keyed by suite moniker (unit, integration, acceptance, etc.)"
     },
     "tests": {
       "type": "array",
