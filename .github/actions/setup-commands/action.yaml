@@ -247,6 +247,7 @@ runs:
     - name: Upload artifact (for downstream jobs, Linux/macOS)
       if: runner.os != 'Windows' && steps.check.outputs.available != 'true' && steps.check-linux-artifact.outputs.exists != 'true'
       uses: actions/upload-artifact@v6
+      continue-on-error: true  # Ignore 409 if another job uploaded first
       with:
         name: commands-binary
         path: out/tools/commands
@@ -270,6 +271,7 @@ runs:
     - name: Upload Windows artifact (cross-compiled from Linux)
       if: runner.os == 'Linux' && steps.check.outputs.available != 'true' && inputs.cross-compile-windows == 'true' && steps.check-windows-artifact.outputs.exists != 'true'
       uses: actions/upload-artifact@v6
+      continue-on-error: true  # Ignore 409 if another job uploaded first
       with:
         name: commands-binary-windows
         path: out/tools/commands.exe
@@ -278,6 +280,7 @@ runs:
     - name: Upload artifact (for downstream jobs, Windows)
       if: runner.os == 'Windows' && steps.check-windows.outputs.available != 'true' && steps.check-windows-artifact.outputs.exists != 'true'
       uses: actions/upload-artifact@v6
+      continue-on-error: true  # Ignore 409 if another job uploaded first
       with:
         name: commands-binary-windows
         path: out/tools/commands.exe
