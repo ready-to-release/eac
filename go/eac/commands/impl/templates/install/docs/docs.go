@@ -1,21 +1,22 @@
-// Command: templates install reports
-// Short: Install report templates without value replacements
-// Long: Install report templates by copying files as-is (no variable substitution).
+// Command: templates install docs
+// Short: Install documentation templates without value replacements
+// Long: Install documentation templates by copying files as-is (no variable substitution).
 // Long: Templates preserve {{ .Variable }} placeholders for later customization.
 // Long:
-// Long: Template Source and Destination:
-// Long:   Source: templates/reports/ (fixed)
-// Long:   Destination: .r2r/templates/reports/ (fixed)
+// Long: Template Source:
+// Long:   Always uses local templates/docs/ directory from the repository.
 // Long:
 // Long: Use Case:
 // Long:   Install templates once to your project, then customize them as needed.
 // Long:   This command copies files without replacing placeholders.
 // Long:
 // Long: Examples:
-// Long:   templates install reports
-// Long:   templates install reports --debug
+// Long:   templates install docs
+// Long:   templates install docs --destination ./custom-docs
+// Long:   templates install docs --destination docs/api --debug
+// Flag.destination: type=string, usage=Output directory (default: docs/reference/)
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Save detailed logs to out/logs/templates/install/
-package reports
+package docs
 
 import (
 	"fmt"
@@ -32,17 +33,17 @@ import (
 )
 
 const (
-	defaultReportsSourcePath = "templates/reports"
-	defaultReportsDest       = ".r2r/templates/reports/"
+	defaultDocsSourcePath = "templates/docs"
+	defaultDocsDest       = "docs/reference/"
 )
 
 var log = logging.C()
 
 func init() {
-	registry.Register(TemplatesInstallReports)
+	registry.Register(TemplatesInstallDocs)
 }
 
-// Config holds configuration for the reports install command
+// Config holds configuration for the docs install command
 type Config struct {
 	Destination   string
 	WorkspaceRoot string
@@ -50,8 +51,8 @@ type Config struct {
 	Logger        *logging.Logger
 }
 
-// TemplatesInstallReports installs report templates
-func TemplatesInstallReports() int {
+// TemplatesInstallDocs installs documentation templates
+func TemplatesInstallDocs() int {
 	// Parse configuration
 	config, err := parseConfig()
 	if err != nil {
@@ -60,7 +61,7 @@ func TemplatesInstallReports() int {
 	}
 	defer config.Logger.Sync()
 
-	config.Logger.Info("Starting templates install reports command",
+	config.Logger.Info("Starting templates install docs command",
 		zap.String("destination", config.Destination),
 		zap.Bool("debug", config.Debug))
 
@@ -80,9 +81,9 @@ func TemplatesInstallReports() int {
 		return 1
 	}
 
-	config.Logger.Info("Report templates installed successfully",
+	config.Logger.Info("Documentation templates installed successfully",
 		zap.String("destination", config.Destination))
-	log.Infof("✓ Report templates installed successfully to %s", config.Destination)
+	log.Infof("✓ Documentation templates installed successfully to %s", config.Destination)
 
 	return 0
 }
@@ -103,7 +104,7 @@ func resolveTemplateDirectory(config *Config) (string, func(), error) {
 			zap.String("workspaceRoot", root))
 	}
 
-	templateDir := filepath.Join(root, defaultReportsSourcePath)
+	templateDir := filepath.Join(root, defaultDocsSourcePath)
 
 	// Verify directory exists
 	if _, err := os.Stat(templateDir); os.IsNotExist(err) {
@@ -170,10 +171,11 @@ func writeDebugFile(c *Config, filename string, content string) {
 func parseConfig() (*Config, error) {
 	args := []string{}
 	if len(os.Args) > 4 {
-		args = os.Args[4:] // Skip "binary templates install reports"
+		args = os.Args[4:] // Skip "binary templates install docs"
 	}
 
-	// Parse flags manually (only --debug supported)
+	// Parse flags manually
+	destination := defaultDocsDest
 	debug := false
 
 	for i := 0; i < len(args); i++ {
@@ -181,6 +183,11 @@ func parseConfig() (*Config, error) {
 		switch arg {
 		case "--debug", "-d":
 			debug = true
+		case "--destination":
+			if i+1 < len(args) {
+				destination = args[i+1]
+				i++
+			}
 		}
 	}
 
@@ -201,8 +208,10 @@ func parseConfig() (*Config, error) {
 		return nil, fmt.Errorf("failed to initialize logger: %w", err)
 	}
 
-	// Use fixed destination path
-	destination := filepath.Join(workspaceRoot, defaultReportsDest)
+	// Resolve destination path
+	if !filepath.IsAbs(destination) {
+		destination = filepath.Join(workspaceRoot, destination)
+	}
 
 	config := &Config{
 		Destination:   destination,

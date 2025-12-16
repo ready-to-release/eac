@@ -1,21 +1,21 @@
-// Command: templates install reports
-// Short: Install report templates without value replacements
-// Long: Install report templates by copying files as-is (no variable substitution).
+// Command: templates install ai
+// Short: Install AI prompt templates without value replacements
+// Long: Install AI prompt templates by copying files as-is (no variable substitution).
 // Long: Templates preserve {{ .Variable }} placeholders for later customization.
 // Long:
 // Long: Template Source and Destination:
-// Long:   Source: templates/reports/ (fixed)
-// Long:   Destination: .r2r/templates/reports/ (fixed)
+// Long:   Source: templates/ai/ (fixed)
+// Long:   Destination: .r2r/eac/templates/ai/ (fixed)
 // Long:
 // Long: Use Case:
-// Long:   Install templates once to your project, then customize them as needed.
+// Long:   Install AI prompt templates once to your project, then customize them as needed.
 // Long:   This command copies files without replacing placeholders.
 // Long:
 // Long: Examples:
-// Long:   templates install reports
-// Long:   templates install reports --debug
+// Long:   templates install ai
+// Long:   templates install ai --debug
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Save detailed logs to out/logs/templates/install/
-package reports
+package ai
 
 import (
 	"fmt"
@@ -32,17 +32,17 @@ import (
 )
 
 const (
-	defaultReportsSourcePath = "templates/reports"
-	defaultReportsDest       = ".r2r/templates/reports/"
+	defaultAISourcePath = "templates/ai"
+	defaultAIDest       = ".r2r/eac/templates/ai/"
 )
 
 var log = logging.C()
 
 func init() {
-	registry.Register(TemplatesInstallReports)
+	registry.Register(TemplatesInstallAI)
 }
 
-// Config holds configuration for the reports install command
+// Config holds configuration for the AI install command
 type Config struct {
 	Destination   string
 	WorkspaceRoot string
@@ -50,8 +50,8 @@ type Config struct {
 	Logger        *logging.Logger
 }
 
-// TemplatesInstallReports installs report templates
-func TemplatesInstallReports() int {
+// TemplatesInstallAI installs AI prompt templates
+func TemplatesInstallAI() int {
 	// Parse configuration
 	config, err := parseConfig()
 	if err != nil {
@@ -60,7 +60,7 @@ func TemplatesInstallReports() int {
 	}
 	defer config.Logger.Sync()
 
-	config.Logger.Info("Starting templates install reports command",
+	config.Logger.Info("Starting templates install ai command",
 		zap.String("destination", config.Destination),
 		zap.Bool("debug", config.Debug))
 
@@ -80,9 +80,9 @@ func TemplatesInstallReports() int {
 		return 1
 	}
 
-	config.Logger.Info("Report templates installed successfully",
+	config.Logger.Info("AI templates installed successfully",
 		zap.String("destination", config.Destination))
-	log.Infof("✓ Report templates installed successfully to %s", config.Destination)
+	log.Infof("✓ AI templates installed successfully to %s", config.Destination)
 
 	return 0
 }
@@ -103,7 +103,7 @@ func resolveTemplateDirectory(config *Config) (string, func(), error) {
 			zap.String("workspaceRoot", root))
 	}
 
-	templateDir := filepath.Join(root, defaultReportsSourcePath)
+	templateDir := filepath.Join(root, defaultAISourcePath)
 
 	// Verify directory exists
 	if _, err := os.Stat(templateDir); os.IsNotExist(err) {
@@ -170,7 +170,7 @@ func writeDebugFile(c *Config, filename string, content string) {
 func parseConfig() (*Config, error) {
 	args := []string{}
 	if len(os.Args) > 4 {
-		args = os.Args[4:] // Skip "binary templates install reports"
+		args = os.Args[4:] // Skip "binary templates install ai"
 	}
 
 	// Parse flags manually (only --debug supported)
@@ -202,7 +202,7 @@ func parseConfig() (*Config, error) {
 	}
 
 	// Use fixed destination path
-	destination := filepath.Join(workspaceRoot, defaultReportsDest)
+	destination := filepath.Join(workspaceRoot, defaultAIDest)
 
 	config := &Config{
 		Destination:   destination,

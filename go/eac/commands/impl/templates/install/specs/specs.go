@@ -1,21 +1,21 @@
-// Command: templates install reports
-// Short: Install report templates without value replacements
-// Long: Install report templates by copying files as-is (no variable substitution).
+// Command: templates install specs
+// Short: Install specification templates without value replacements
+// Long: Install specification templates by copying files as-is (no variable substitution).
 // Long: Templates preserve {{ .Variable }} placeholders for later customization.
 // Long:
 // Long: Template Source and Destination:
-// Long:   Source: templates/reports/ (fixed)
-// Long:   Destination: .r2r/templates/reports/ (fixed)
+// Long:   Source: templates/specs/ (fixed)
+// Long:   Destination: specs/risk-controls/ (fixed)
 // Long:
 // Long: Use Case:
-// Long:   Install templates once to your project, then customize them as needed.
+// Long:   Install specification templates once to your project, then customize them as needed.
 // Long:   This command copies files without replacing placeholders.
 // Long:
 // Long: Examples:
-// Long:   templates install reports
-// Long:   templates install reports --debug
+// Long:   templates install specs
+// Long:   templates install specs --debug
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Save detailed logs to out/logs/templates/install/
-package reports
+package specs
 
 import (
 	"fmt"
@@ -32,17 +32,17 @@ import (
 )
 
 const (
-	defaultReportsSourcePath = "templates/reports"
-	defaultReportsDest       = ".r2r/templates/reports/"
+	defaultSpecsSourcePath = "templates/specs"
+	defaultSpecsDest       = "specs/risk-controls/"
 )
 
 var log = logging.C()
 
 func init() {
-	registry.Register(TemplatesInstallReports)
+	registry.Register(TemplatesInstallSpecs)
 }
 
-// Config holds configuration for the reports install command
+// Config holds configuration for the specs install command
 type Config struct {
 	Destination   string
 	WorkspaceRoot string
@@ -50,8 +50,8 @@ type Config struct {
 	Logger        *logging.Logger
 }
 
-// TemplatesInstallReports installs report templates
-func TemplatesInstallReports() int {
+// TemplatesInstallSpecs installs specification templates
+func TemplatesInstallSpecs() int {
 	// Parse configuration
 	config, err := parseConfig()
 	if err != nil {
@@ -60,7 +60,7 @@ func TemplatesInstallReports() int {
 	}
 	defer config.Logger.Sync()
 
-	config.Logger.Info("Starting templates install reports command",
+	config.Logger.Info("Starting templates install specs command",
 		zap.String("destination", config.Destination),
 		zap.Bool("debug", config.Debug))
 
@@ -80,9 +80,9 @@ func TemplatesInstallReports() int {
 		return 1
 	}
 
-	config.Logger.Info("Report templates installed successfully",
+	config.Logger.Info("Specification templates installed successfully",
 		zap.String("destination", config.Destination))
-	log.Infof("✓ Report templates installed successfully to %s", config.Destination)
+	log.Infof("✓ Specification templates installed successfully to %s", config.Destination)
 
 	return 0
 }
@@ -103,7 +103,7 @@ func resolveTemplateDirectory(config *Config) (string, func(), error) {
 			zap.String("workspaceRoot", root))
 	}
 
-	templateDir := filepath.Join(root, defaultReportsSourcePath)
+	templateDir := filepath.Join(root, defaultSpecsSourcePath)
 
 	// Verify directory exists
 	if _, err := os.Stat(templateDir); os.IsNotExist(err) {
@@ -170,7 +170,7 @@ func writeDebugFile(c *Config, filename string, content string) {
 func parseConfig() (*Config, error) {
 	args := []string{}
 	if len(os.Args) > 4 {
-		args = os.Args[4:] // Skip "binary templates install reports"
+		args = os.Args[4:] // Skip "binary templates install specs"
 	}
 
 	// Parse flags manually (only --debug supported)
@@ -202,7 +202,7 @@ func parseConfig() (*Config, error) {
 	}
 
 	// Use fixed destination path
-	destination := filepath.Join(workspaceRoot, defaultReportsDest)
+	destination := filepath.Join(workspaceRoot, defaultSpecsDest)
 
 	config := &Config{
 		Destination:   destination,

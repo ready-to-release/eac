@@ -4,125 +4,128 @@
 
 ## What You'll Accomplish
 
-Apply documentation templates for consistent project documentation with variable substitution.
+Install documentation templates to bootstrap consistent project documentation structure.
 
 ## Prerequisites
 
-- Templates available (or install them)
-- Template variables defined
+- Repository initialized with EAC
+- Template files available in `templates/` directory
 
 ## Steps
 
-### 1. Install Templates
+### 1. Install Documentation Templates
 
 ```bash
-r2r eac templates install
+r2r templates install docs
 ```
 
-**What happens**: Installs templates to project without variable substitution
+**What happens**: Installs documentation templates to `docs/reference/`
 
-### 2. List Template Variables
+### 2. Install to Custom Location (Optional)
 
 ```bash
-r2r eac templates list
+r2r templates install docs --destination ./custom-docs
 ```
 
-**What happens**: Shows available placeholder variables
+**What happens**: Installs templates to your specified directory
 
-### 3. Apply Templates with Values
+### 3. Customize Templates
+
+Edit the installed template files to replace placeholders with your specific values:
 
 ```bash
-r2r eac templates apply --module src-auth
+# Edit installed templates
+code docs/reference/
 ```
 
-**What happens**: Applies templates with variable substitution for src-auth module
+**What happens**: You manually customize templates for your project
 
-### 4. Verify Generated Docs
+### 4. Verify Installed Templates
 
 ```bash
-ls docs/
+ls docs/reference/
 ```
 
-**What happens**: Templates are applied with values filled in
+**What happens**: See all installed documentation templates
 
 ## Template Types
 
-Available templates:
+Available templates for installation:
 
-- **Documentation templates** - README, guides, references
-- **Report templates** - Test reports, build summaries
-- **Specification templates** - Gherkin scenarios
+- **docs** - Documentation templates (README, guides, references)
+- **ai** - AI prompt templates (for code generation commands)
+- **reports** - Report templates (test reports, build summaries)
+- **specs** - Specification templates (Gherkin scenarios for compliance)
 
 ## Example Scenario
 
-Setting up documentation for new module:
+Setting up documentation structure for a new project:
 
 ```bash
-# Install templates first
-r2r eac templates install
-# ✓ Installed documentation templates
-# ✓ Installed report templates
+# Install documentation templates
+r2r templates install docs
+# ✓ Installed to docs/reference/
+# ✓ Files: README.md, architecture.md, operations/...
 
-# List available variables
-r2r eac templates list
-# Available placeholders:
-# - {{MODULE_NAME}}
-# - {{MODULE_TYPE}}
-# - {{MODULE_PATH}}
-# - {{MODULE_DESCRIPTION}}
+# Install AI prompt templates
+r2r templates install ai
+# ✓ Installed to .r2r/eac/templates/ai/
 
-# Apply templates for module
-r2r eac templates apply --module src-auth
+# Install report templates
+r2r templates install reports
+# ✓ Installed to .r2r/templates/reports/
 
-# Output:
-# Applying templates for src-auth...
-# ✓ Generated docs/README.md
-# ✓ Generated docs/architecture.md
-# ✓ Generated docs/api.md
-
-# Review generated docs
-cat docs/README.md
-# # src-auth Module
-#
-# Authentication module for JWT token management...
+# Review installed docs
+ls docs/reference/
+# README.md
+# architecture.md
+# implementation-plan.md
+# operations/
 ```
 
-## Custom Templates
+## Installing Multiple Template Types
 
 ```bash
-# Install only docs templates
-r2r eac templates apply-docs --module src-auth
+# Install docs to default location
+r2r templates install docs
 
-# Install only report templates
-r2r eac templates install-reports
+# Install AI templates
+r2r templates install ai
+
+# Install report templates with debug logging
+r2r templates install reports --debug
+
+# Install specification templates
+r2r templates install specs
 ```
 
-## Template Variables
+## Template Destinations
 
-Common variables:
-
-- `{{MODULE_NAME}}` - Module moniker
-- `{{MODULE_TYPE}}` - Module type (go-library, etc.)
-- `{{MODULE_PATH}}` - Path to module
-- `{{DESCRIPTION}}` - Module description
-- `{{DATE}}` - Current date
+| Template Type | Default Destination | Custom Path Support |
+|---------------|---------------------|---------------------|
+| docs | `docs/reference/` | Yes (`--destination`) |
+| ai | `.r2r/eac/templates/ai/` | No |
+| reports | `.r2r/templates/reports/` | No |
+| specs | `specs/risk-controls/` | No |
 
 ## Common Issues
 
 | Problem | Solution |
 |---------|----------|
-| Template not found | Run `templates install` first |
-| Variables not replaced | Check module exists in contracts |
-| Wrong values | Update module.yml metadata |
+| Template directory not found | Ensure `templates/` directory exists in repository |
+| Permission denied | Check write permissions for destination directory |
+| Files already exist | Templates won't overwrite; delete or move existing files |
 
 ## Next Steps
 
-- [Build Documentation Site](./build-documentation-site.md) → Generate site
+- [Build Documentation Site](./build-documentation-site.md) → Generate static site from docs
+- [create design](../../../../reference/commands/create/design.md) → Generate architecture diagrams
 
 ## Related Commands
 
-- [`templates install`](../../../../reference/commands/templates/install.md) - Install templates
-- [`templates apply`](../../../../reference/commands/templates/apply.md) - Apply with substitution
-- [`templates list`](../../../../reference/commands/templates/list.md) - List variables
+- [`templates install`](../../../../reference/commands/templates/index.md) - Install templates overview
+- [`templates install-docs`](../../../../reference/commands/templates/install-docs.md) - Documentation templates
+- [`templates install-ai`](../../../../reference/commands/templates/install-ai.md) - AI prompt templates
+- [`templates install-reports`](../../../../reference/commands/templates/install-reports.md) - Report templates
 
 {{ diataxis_footer() }}

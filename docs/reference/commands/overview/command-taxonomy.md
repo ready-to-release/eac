@@ -321,21 +321,20 @@ Serve commands start local servers for documentation and architecture visualizat
 
 ---
 
-### 12. templates (7 commands)
+### 12. templates (6 commands)
 
 **Purpose**: Template management for documentation and specifications
 
-Templates commands manage project templates for consistent documentation and specification creation.
+Templates commands install project templates for consistent documentation and specification creation.
 
 **Commands**:
 
-- `templates list` - List template placeholder variables
-- `templates tags` - Extract template tags
-- `templates apply` - Apply templates with value replacements
-- `templates apply docs` - Apply documentation templates
-- `templates install` - Install templates without value replacements
+- `templates install` - Install templates overview
+- `templates install docs` - Install documentation templates
+- `templates install ai` - Install AI prompt templates
 - `templates install reports` - Install report templates
-- `templates` - Manage project templates (base command)
+- `templates install specs` - Install specification templates
+- `templates` - Base templates command
 
 **When to use**: When setting up new modules or generating standardized documentation.
 
@@ -405,9 +404,11 @@ Some categories have hierarchical subcommands:
 - `pipeline ci` (base)
   - `pipeline ci dispatch-and-wait`
   - `pipeline ci summary-link`
-- `templates` (base)
-  - `templates apply`
-  - `templates apply docs`
+- `templates install` (base)
+  - `templates install docs`
+  - `templates install ai`
+  - `templates install reports`
+  - `templates install specs`
 
 See [Naming Conventions](./naming-conventions.md) for detailed rules.
 

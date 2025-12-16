@@ -2,28 +2,31 @@
 
 {{ page_breadcrumb() }}
 
-Manage project templates for documentation and specifications.
+Install project templates for documentation, AI prompts, reports, and specifications.
 
 ## Commands in this Category
 
 | Command | Purpose |
 |---------|---------|
-| [templates](./templates.md) | Base templates command |
-| [templates apply](./apply.md) | Apply templates with value replacements |
-| [templates apply-docs](./apply-docs.md) | Apply documentation templates |
-| [templates install](./install.md) | Install templates without value replacements |
+| [templates install-docs](./install-docs.md) | Install documentation templates |
+| [templates install-ai](./install-ai.md) | Install AI prompt templates |
 | [templates install-reports](./install-reports.md) | Install report templates |
-| [templates list](./list.md) | List template placeholder variables |
-| [templates tags](./tags.md) | Extract template tags |
+| [templates install-specs](./install-specs.md) | Install specification templates |
 
 ## Quick Examples
 
 ```bash
-# Install templates
-r2r eac templates install
+# Install documentation templates
+r2r templates install docs
 
-# Apply with values
-r2r eac templates apply --module src-auth
+# Install to custom location
+r2r templates install docs --destination ./custom-docs
+
+# Install AI templates
+r2r templates install ai
+
+# Install with debug logging
+r2r templates install reports --debug
 ```
 
 ## See Also

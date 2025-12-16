@@ -4,48 +4,60 @@
 
 ## Overview
 
-The **templates** category contains 5 commands for managing project templates for documentation and specifications.
+The **templates** category contains 6 commands for installing project templates for documentation, AI prompts, reports, and specifications.
 
 ## Commands
 
-| Command                                      | Purpose                                      |
-| -------------------------------------------- | -------------------------------------------- |
-| [templates](../templates/templates.md)       | Manage project templates                     |
-| [templates apply](../templates/apply.md)     | Apply templates with value replacements      |
-| [templates install](../templates/install.md) | Install templates without value replacements |
-| [templates list](../templates/list.md)       | List template placeholder variables          |
-| [templates tags](../templates/tags.md)       | Extract template tags                        |
+| Command                                              | Purpose                                      |
+| ---------------------------------------------------- | -------------------------------------------- |
+| [templates install-docs](../templates/install-docs.md) | Install documentation templates            |
+| [templates install-ai](../templates/install-ai.md)   | Install AI prompt templates                  |
+| [templates install-reports](../templates/install-reports.md) | Install report templates          |
+| [templates install-specs](../templates/install-specs.md) | Install specification templates        |
 
 ## Common Use Cases
 
-### Install Templates
+### Install Documentation Templates
 
 ```bash
-r2r eac templates install
+# Install to default location
+r2r templates install docs
+
+# Install to custom location
+r2r templates install docs --destination ./custom-docs
 ```
 
-### Apply Templates with Values
+### Install AI Prompt Templates
 
 ```bash
-r2r eac templates apply --module src-auth
+r2r templates install ai
 ```
 
-### List Template Variables
+### Install Report Templates
 
 ```bash
-r2r eac templates list
+r2r templates install reports --debug
+```
+
+### Install Specification Templates
+
+```bash
+r2r templates install specs
 ```
 
 ## Key Features
 
-- Template installation for documentation
-- Variable substitution and value replacement
-- Placeholder discovery
-- Tag extraction for navigation
+- Install documentation templates for consistent project structure
+- Install AI prompt templates for code generation commands
+- Install report templates for test and build summaries
+- Install specification templates for compliance testing
+- Debug logging support for troubleshooting
 
 ## See Also
 
-- [create spec](../create/spec.md)
+- [create design](../create/design.md) - AI architecture design
+- [create spec](../create/spec.md) - AI specification generation
+- [create commit-message](../create/commit-message.md) - AI commit messages
 - [validate markdown](../validate/markdown.md)
 - [validate books](../validate/books.md)
 

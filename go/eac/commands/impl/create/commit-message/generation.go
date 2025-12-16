@@ -28,29 +28,6 @@ func ResetMockAIResponse() {
 	mockAIResponse = ""
 }
 
-// loadPromptWithFallback implements prompt loading from AI configs:
-// 1. AI config: .r2r/eac/ai/commit-message/<name>.md
-// 2. Built-in: embedded prompts/<name>.md
-func loadPromptWithFallback(promptName string, workspaceRoot string) (string, error) {
-	// Create contract loader for AI config
-	loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "")
-
-	// No embedded prompt - load with three-tier priority:
-	// 1. Command flag (not applicable - internal function)
-	// 2. Team override (.r2r/eac/templates/ai/commit-message/<promptName>.md)
-	// 3. System default (templates/ai/commit-message/<promptName>.md)
-	// Note: Variants like "module" and "top-level" (convention adds .md automatically)
-	var embeddedPrompt string
-
-	// Load prompt using three-tier priority system (convention adds .md)
-	agentContent, _, err := loader.LoadPrompt(promptName, embeddedPrompt)
-	if err != nil {
-		return "", fmt.Errorf("failed to load prompt: %w", err)
-	}
-
-	return agentContent, nil
-}
-
 // GenerationResult holds the result of AI generation including metadata
 type GenerationResult struct {
 	Output       string // The generated output
@@ -80,7 +57,8 @@ func generateWithPromptResult(promptName string, userPrompt string, workspaceRoo
 	}
 
 	// Load prompt template using three-tier system
-	promptTemplate, err := loadPromptWithFallback(promptName, workspaceRoot)
+	loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "")
+	promptTemplate, _, err := loader.LoadPrompt(promptName, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to load prompt template: %w", err)
 	}
@@ -100,7 +78,7 @@ func generateWithPromptResult(promptName string, userPrompt string, workspaceRoo
 	fullPrompt := promptTemplate + "\n\n>>>>>>>>>>INPUT STARTS NOW<<<<<<<<<<<\n\n" + userPrompt
 
 	// Load contract and anti-corruption rules for validation only
-	loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "0.1.0")
+	loader = contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "0.1.0")
 	antiCorruptionRules, err := loader.LoadAntiCorruptionRules()
 	if err != nil {
 		// If anti-corruption rules fail, fall back to non-validated generation
@@ -133,7 +111,7 @@ func generateWithPromptResult(promptName string, userPrompt string, workspaceRoo
 	}
 
 	// Wrap executor to match contract.AIExecutor interface
-	executorAdapter := &aiExecutorAdapter{executor: executor, model: model}
+	executorAdapter := ai.NewExecutorAdapterWithModel(executor, model)
 
 	// Setup debug directory if needed
 	debugOutputDir := ""
