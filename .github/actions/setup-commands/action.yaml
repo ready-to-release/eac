@@ -35,11 +35,37 @@ outputs:
 runs:
   using: composite
   steps:
+    # FIRST: Check if binary already exists on disk (from previous step in same job)
+    # This handles cases like build-module followed by test-module in the same job
+    - name: Check for existing binary (Linux/macOS)
+      id: existing-check
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        if [ -f "out/tools/commands" ]; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+          echo "✓ Commands binary already exists on disk - skipping download/build"
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Check for existing binary (Windows)
+      id: existing-check-windows
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        if (Test-Path "out/tools/commands.exe") {
+          echo "exists=true" >> $env:GITHUB_OUTPUT
+          Write-Host "✓ Commands binary already exists on disk - skipping download/build"
+        } else {
+          echo "exists=false" >> $env:GITHUB_OUTPUT
+        }
+
     # When trigger-run-id is provided, download from that specific run
     # On Windows, check if Windows-specific artifact exists before attempting download
     - name: Check if Windows artifact exists in trigger workflow
       id: check-trigger-windows
-      if: inputs.trigger-run-id != '' && runner.os == 'Windows'
+      if: steps.existing-check-windows.outputs.exists != 'true' && inputs.trigger-run-id != '' && runner.os == 'Windows'
       shell: bash
       env:
         GH_TOKEN: ${{ github.token }}
@@ -61,7 +87,7 @@ runs:
 
     - name: Download from trigger workflow (Windows)
       id: download-trigger-windows
-      if: inputs.trigger-run-id != '' && runner.os == 'Windows' && steps.check-trigger-windows.outputs.exists == 'true'
+      if: steps.existing-check-windows.outputs.exists != 'true' && inputs.trigger-run-id != '' && runner.os == 'Windows' && steps.check-trigger-windows.outputs.exists == 'true'
       uses: actions/download-artifact@v6
       with:
         name: commands-binary-windows
@@ -74,7 +100,7 @@ runs:
     # Windows will fall through to build from source or use cached artifact from current run.
     - name: Download from trigger workflow (Linux/macOS)
       id: download-trigger
-      if: inputs.trigger-run-id != '' && runner.os != 'Windows'
+      if: steps.existing-check.outputs.exists != 'true' && inputs.trigger-run-id != '' && runner.os != 'Windows'
       uses: actions/download-artifact@v6
       with:
         name: commands-binary
@@ -87,7 +113,7 @@ runs:
     # This avoids noisy error messages when artifact doesn't exist yet
     - name: Check if artifact exists (current run)
       id: artifact-check
-      if: inputs.trigger-run-id == '' || (runner.os == 'Windows' && steps.check-trigger-windows.outputs.exists != 'true')
+      if: (steps.existing-check.outputs.exists != 'true' && steps.existing-check-windows.outputs.exists != 'true') && (inputs.trigger-run-id == '' || (runner.os == 'Windows' && steps.check-trigger-windows.outputs.exists != 'true'))
       shell: bash
       env:
         GH_TOKEN: ${{ github.token }}
@@ -118,7 +144,7 @@ runs:
     # Only download if artifact exists in current run
     - name: Download from current run
       id: download-current
-      if: (inputs.trigger-run-id == '' || (runner.os == 'Windows' && steps.check-trigger-windows.outputs.exists != 'true')) && steps.artifact-check.outputs.exists == 'true'
+      if: (steps.existing-check.outputs.exists != 'true' && steps.existing-check-windows.outputs.exists != 'true') && (inputs.trigger-run-id == '' || (runner.os == 'Windows' && steps.check-trigger-windows.outputs.exists != 'true')) && steps.artifact-check.outputs.exists == 'true'
       uses: actions/download-artifact@v6
       with:
         name: ${{ steps.artifact-check.outputs.artifact_name }}
@@ -131,12 +157,18 @@ runs:
       run: |
         if [ -f "out/tools/commands" ]; then
           echo "available=true" >> $GITHUB_OUTPUT
-          echo "✓ Commands binary downloaded from artifact"
+          # Distinguish between pre-existing and downloaded
+          if [ "${{ steps.existing-check.outputs.exists }}" = "true" ]; then
+            echo "✓ Commands binary already existed on disk"
+          else
+            echo "✓ Commands binary downloaded from artifact"
+          fi
         else
           echo "available=false" >> $GITHUB_OUTPUT
 
-          # If trigger-run-id was provided, artifact MUST exist
-          if [ -n "${{ inputs.trigger-run-id }}" ]; then
+          # If trigger-run-id was provided AND binary didn't already exist, artifact MUST exist
+          # But skip this error if we're in the same run (trigger-run-id == github.run_id)
+          if [ -n "${{ inputs.trigger-run-id }}" ] && [ "${{ inputs.trigger-run-id }}" != "${{ github.run_id }}" ]; then
             echo "::error::Commands artifact not found in trigger workflow run ${{ inputs.trigger-run-id }}"
             exit 1
           fi
@@ -239,7 +271,10 @@ runs:
         chmod +x "$BINARY_PATH"
         echo "path=$GITHUB_WORKSPACE/$BINARY_PATH" >> $GITHUB_OUTPUT
 
-        if [ "${{ steps.check.outputs.available }}" = "true" ]; then
+        # Determine source: existing (from previous step), artifact (downloaded), or built
+        if [ "${{ steps.existing-check.outputs.exists }}" = "true" ]; then
+          echo "source=existing" >> $GITHUB_OUTPUT
+        elif [ "${{ steps.check.outputs.available }}" = "true" ]; then
           echo "source=artifact" >> $GITHUB_OUTPUT
         else
           echo "source=built" >> $GITHUB_OUTPUT
@@ -259,7 +294,10 @@ runs:
 
         echo "path=$env:GITHUB_WORKSPACE\$BINARY_PATH" >> $env:GITHUB_OUTPUT
 
-        if ("${{ steps.check-windows.outputs.available }}" -eq "true") {
+        # Determine source: existing (from previous step), artifact (downloaded), or built
+        if ("${{ steps.existing-check-windows.outputs.exists }}" -eq "true") {
+          echo "source=existing" >> $env:GITHUB_OUTPUT
+        } elseif ("${{ steps.check-windows.outputs.available }}" -eq "true") {
           echo "source=artifact" >> $env:GITHUB_OUTPUT
         } else {
           echo "source=built" >> $env:GITHUB_OUTPUT
