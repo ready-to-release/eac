@@ -56,7 +56,7 @@ jobs:
           module: docs
           trigger-run-id: ${{ inputs.trigger_run_id }}
           commit-sha: ${{ inputs.sha || github.sha }}
-          upload-artifact: 'false'
+          upload-artifact: 'true'
 
       - name: Test Module
         uses: ./.github/actions/test-module
