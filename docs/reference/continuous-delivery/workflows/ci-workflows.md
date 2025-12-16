@@ -187,8 +187,8 @@ Runs both commit and acceptance test suites (full validation)
 | `ci-vscode-ext-commit.yaml`     | vscode-ext-commit     | VSCode extension  | Build, Test | commit, acceptance |
 | `ci-books.yaml`                 | books                 | PDF documentation | Build, Test | commit, acceptance |
 | `ci-docs.yaml`                  | docs                  | MkDocs site       | Build, Test | commit, acceptance |
-| `ci-scripts-cli-installer.yaml` | scripts-cli-installer | Shell scripts     | Build, Test | commit, acceptance |
-| `ci-scripts-implicit-cli.yaml`  | scripts-implicit-cli  | Shell scripts     | Build, Test | commit, acceptance |
+| `ci-r2r-installer.yaml`         | r2r-installer         | Shell scripts     | Build, Test | commit, acceptance |
+| `ci-implicit-r2r-cli.yaml`      | implicit-r2r-cli      | Shell scripts     | Build, Test | commit, acceptance |
 
 ## Example: ci-eac-commands.yaml
 

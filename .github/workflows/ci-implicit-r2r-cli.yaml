@@ -1,4 +1,4 @@
-name: "ci-scripts-cli-installer (stage 1-7)"
+name: "ci-implicit-r2r-cli (stage 1-7)"
 
 on:
   workflow_call:
@@ -51,10 +51,10 @@ jobs:
       - name: Build Module
         uses: ./.github/actions/build-module
         with:
-          module: scripts-cli-installer
+          module: implicit-r2r-cli
           trigger-run-id: ${{ inputs.trigger_run_id }}
           commit-sha: ${{ inputs.sha || github.sha }}
-          # Build r2r-cli dependency for all platforms (including Windows) to support cross-platform tests
+          # Build eac-commands dependency for all platforms (including Windows) to support cross-platform tests
           no-deps: 'false'
           extra-args: --all
           cross-compile-windows: 'true'
@@ -71,11 +71,11 @@ jobs:
       - name: Test Module
         uses: ./.github/actions/test-module
         with:
-          module: scripts-cli-installer
+          module: implicit-r2r-cli
           trigger-run-id: ${{ inputs.trigger_run_id }}
+          results-artifact-name: test-results-implicit-r2r-cli-linux
           # PRs run unit+integration; main/release branches run full suite
           suites: ${{ (inputs.ref != '' && startsWith(inputs.ref, 'refs/pull/')) && 'unit+integration' || 'unit+integration+acceptance' }}
-          results-artifact-name: test-results-scripts-cli-installer-linux
 
   test-windows:
     name: Test (Windows)
@@ -89,8 +89,8 @@ jobs:
       - name: Test Module
         uses: ./.github/actions/test-module
         with:
-          module: scripts-cli-installer
+          module: implicit-r2r-cli
           trigger-run-id: ${{ inputs.trigger_run_id }}
+          results-artifact-name: test-results-implicit-r2r-cli-windows
           # PRs run unit+integration; main/release branches run full suite
           suites: ${{ (inputs.ref != '' && startsWith(inputs.ref, 'refs/pull/')) && 'unit+integration' || 'unit+integration+acceptance' }}
-          results-artifact-name: test-results-scripts-cli-installer-windows

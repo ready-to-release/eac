@@ -375,7 +375,7 @@ modules:
       exclude:
         - workflows/*.yaml
 
-  - moniker: scripts-cli-installer
+  - moniker: r2r-installer
     name: R2R CLI Installer Scripts
     type: static
     description: Cross-platform installer scripts for downloading and installing the R2R CLI from GitHub releases
@@ -392,12 +392,12 @@ modules:
       exclude:
         - CHANGELOG.md
       workflows:
-        ci: .github/workflows/ci-scripts-cli-installer.yaml
+        ci: .github/workflows/ci-r2r-installer.yaml
         release: ""
       repo:
-        test_impl: go/eac/specs/impl/scripts-cli-installer
+        test_impl: go/eac/specs/impl/r2r-installer
 
-  - moniker: scripts-implicit-cli
+  - moniker: implicit-r2r-cli
     name: Go Command Invoker Scripts
     type: static
     description: Cross-shell wrappers with tab completion for running Go commands from go/eac/commands/
@@ -412,7 +412,7 @@ modules:
       source:
         - "*/go-invoker/**"
       workflows:
-        ci: .github/workflows/ci-scripts-implicit-cli.yaml
+        ci: .github/workflows/ci-implicit-r2r-cli.yaml
         release: ""
       repo:
         other:

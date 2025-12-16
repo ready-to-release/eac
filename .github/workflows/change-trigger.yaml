@@ -564,14 +564,14 @@ jobs:
           echo "> Check individual \`CI: <module>\` checks for build results." >> $GITHUB_STEP_SUMMARY
 
   # =========================================
-  # Release Trigger (push to main only)
+  # Release Trigger (push or workflow_dispatch to main)
   # =========================================
   # After CI workflows are dispatched, check for pending releases and trigger them.
   # Releases are processed in dependency order (layer by layer) with await.
   trigger-releases:
     name: Trigger Releases
     needs: [setup, summary, detect-changes]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: write

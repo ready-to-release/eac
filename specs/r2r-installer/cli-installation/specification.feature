@@ -1,6 +1,6 @@
 @env:isolated-test-project
-@ov @depm:scripts-cli-installer
-Feature: scripts-cli-installer_cli-installation
+@ov @depm:r2r-installer
+Feature: r2r-installer_cli-installation
 
   As a user
   I want to install the R2R CLI using platform-specific installer scripts
@@ -11,7 +11,7 @@ Feature: scripts-cli-installer_cli-installation
 
   Rule: Installer downloads and installs CLI binary
 
-    @ov @deps:windows @depm:scripts-cli-installer @L3
+    @ov @deps:windows @depm:r2r-installer @L3
     Scenario: Install latest version on Windows
       Given I am on Windows with PowerShell 5.1 or later
       When I run the PowerShell installer
@@ -19,7 +19,7 @@ Feature: scripts-cli-installer_cli-installation
       And the binary is installed to "%LOCALAPPDATA%\r2r\r2r.exe"
       And the installation is verified by running "r2r --version"
 
-    @ov @deps:linux @deps:curl @depm:scripts-cli-installer @L3
+    @ov @deps:linux @deps:curl @depm:r2r-installer @L3
     Scenario: Install latest version on Linux
       Given I am on Linux with bash and curl available
       When I run the bash installer
@@ -29,14 +29,14 @@ Feature: scripts-cli-installer_cli-installation
 
   Rule: Installer handles errors gracefully
 
-    @L2 @ov @deps:windows @depm:scripts-cli-installer
+    @L2 @ov @deps:windows @depm:r2r-installer
     Scenario: Windows installer fails when release does not exist
       Given I am on Windows
       When I run the PowerShell installer with "-Version v999.999.999"
       Then the installer displays an error about the failed download
       And exits with a non-zero exit code
 
-    @L2 @ov @deps:linux @deps:curl @depm:scripts-cli-installer
+    @L2 @ov @deps:linux @deps:curl @depm:r2r-installer
     Scenario: Linux installer fails when release does not exist
       Given I am on Linux
       When I run the bash installer with "--version v999.999.999"

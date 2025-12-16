@@ -391,7 +391,7 @@ The difference isn't less compliance—it's <strong>automated compliance</strong
 
 <p align="center">
 <a href="https://github.com/ready-to-release/eac"><img src="https://img.shields.io/badge/🐕-Dogfooding-f97316?style=flat-square" alt="Dogfooding"></a><br>
-<sub>This repository uses R2R and EAC to build itself—living proof of the paradigm.</sub>
+<sub>This repository uses R2R and EAC to build itself—living proof of the toolings efficacy.</sub>
 </p>
 
 ---

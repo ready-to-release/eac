@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to **scripts-cli-installer** will be documented in this file.
+All notable changes to **r2r-installer** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
@@ -24,6 +24,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - refactor(multi-module): reorganize registry and consolidate dependencies
 - refactor(multi-module): standardize platform-specific binary naming
 
-[Unreleased]: https://github.com/ready-to-release/eac/compare/scripts-implicit-cli/0.0.3...HEAD
-[0.0.3]: https://github.com/ready-to-release/eac/compare/scripts-implicit-cli/0.0.2...scripts-implicit-cli/0.0.3
-[0.0.2]: https://github.com/ready-to-release/eac/releases/tag/scripts-implicit-cli/0.0.2
+[Unreleased]: https://github.com/ready-to-release/eac/compare/r2r-installer/0.0.3...HEAD
+[0.0.3]: https://github.com/ready-to-release/eac/compare/r2r-installer/0.0.2...r2r-installer/0.0.3
+[0.0.2]: https://github.com/ready-to-release/eac/releases/tag/r2r-installer/0.0.2
