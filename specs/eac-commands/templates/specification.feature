@@ -38,7 +38,7 @@ Feature: eac-commands_templates
     Scenario: Install specs templates
       When I run the templates command "templates install specs"
       Then the command should succeed
-      And the file "specs/risk-controls/risk-catalog/controls.catalog.json" should exist
+      And the file "specs/.risk-controls/risk-catalog/controls.catalog.json" should exist
 
     Scenario: Install with debug flag creates debug logs
       When I run the templates command "templates install reports --debug"
