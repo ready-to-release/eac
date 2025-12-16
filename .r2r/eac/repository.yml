@@ -430,8 +430,10 @@ modules:
     versioning:
       scheme: CalVer
     depends_on:
+      - r2r-cli
+      - ext-eac
+      - docs
       - books
-      - eac-commands
     books:
       - release-evidence
     release_bundle:
