@@ -280,9 +280,10 @@ irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/cli
 </td>
 <td align="center">
 <a href="https://ready-to-release.github.io/eac/reference/commands/templates/"><img src="https://img.shields.io/badge/📄-Templates-14b8a6?style=for-the-badge" alt="Templates"></a><br>
-<a href="https://ready-to-release.github.io/eac/reference/commands/templates/#templates-apply"><code>templates apply</code></a><br>
-<a href="https://ready-to-release.github.io/eac/reference/commands/templates/#templates-list"><code>templates list</code></a><br>
-<a href="https://ready-to-release.github.io/eac/reference/commands/templates/#templates-install"><code>templates install</code></a><br>
+<a href="https://ready-to-release.github.io/eac/reference/commands/templates/#templates-install-docs"><code>templates install docs</code></a><br>
+<a href="https://ready-to-release.github.io/eac/reference/commands/templates/#templates-install-ai"><code>templates install ai</code></a><br>
+<a href="https://ready-to-release.github.io/eac/reference/commands/templates/#templates-install-reports"><code>templates install reports</code></a><br>
+<a href="https://ready-to-release.github.io/eac/reference/commands/templates/#templates-install-specs"><code>templates install specs</code></a><br>
 <sup><a href="https://ready-to-release.github.io/eac/reference/commands/templates/">overview</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/eac/commands/documentation/">guides</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/categories/templates">all</a></sup>
 </td>
 <td align="center">

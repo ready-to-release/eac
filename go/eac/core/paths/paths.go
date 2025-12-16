@@ -424,6 +424,11 @@ func ChangelogPath(repoRoot, module string) string {
 	return filepath.Join(repoRoot, ReleaseDir, module, "CHANGELOG.md")
 }
 
+// ReleaseNotesPath returns the path to a module's RELEASE-NOTES.md file
+func ReleaseNotesPath(repoRoot, module string) string {
+	return filepath.Join(repoRoot, ReleaseDir, module, "RELEASE-NOTES.md")
+}
+
 // WorkflowPath returns the path to a GitHub workflow file
 func WorkflowPath(repoRoot, workflow string) string {
 	return filepath.Join(repoRoot, GitHubDir, WorkflowsDir, workflow)

@@ -55,13 +55,17 @@ go run . list commands
 Current commands include:
 
 - **`commit`** - Show staged changes with their module mappings for AI commit message generation
+- **`get changelog`** - Get changelog data in structured format (YAML/JSON/TOML)
 - **`get commands`** - Output structured command information for shell integration
+- **`get release-notes`** - Get release notes data in structured format (YAML/JSON/TOML)
+- **`show changelog`** - Display changelog entries in human-readable markdown format
 - **`show help`** - Show all available commands
 - **`show files`** - Show all tracked repository files with module ownership
 - **`show files-staged`** - Show only staged files with module ownership
 - **`show files-changed`** - Show only modified/unstaged files with module ownership
 - **`show modules`** - Show all module contracts in the repository (markdown table)
 - **`show moduletypes`** - Show module types grouped by count (markdown table)
+- **`show release-notes`** - Display release notes in human-readable markdown format
 
 ### Parent Commands (Implicit Help)
 

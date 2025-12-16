@@ -85,3 +85,19 @@ func (a *ExecutorAdapter) Execute(ctx interface{}, prompt string, opts ...interf
 
 	return a.executor.Execute(actualCtx, prompt, aiOpts...)
 }
+
+// GetProviderName returns the name of the AI provider used for the last execution.
+// Implements contracts.AIExecutorWithProviderInfo interface.
+//
+// Returns:
+//   - Provider name if an execution has occurred and provider info is available
+//   - Empty string if no execution has occurred or provider info is unavailable
+//
+// This method enables debugging and error reporting by exposing which provider
+// was actually used during generation.
+func (a *ExecutorAdapter) GetProviderName() string {
+	if provider := a.executor.GetLastUsedProvider(); provider != nil {
+		return provider.Name()
+	}
+	return ""
+}

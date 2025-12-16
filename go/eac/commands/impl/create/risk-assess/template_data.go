@@ -41,6 +41,8 @@ type ModuleReportData struct {
 	RiskScore                 *scoring.RiskScore
 	RiskScoreFormatted        string
 	TestEvidenceFormatted     string
+	TestTypeBreakdown         string   // Test type breakdown (e.g., "45 godog, 12 gotest")
+	SuiteSummary              string   // Suite-level summaries
 	SecurityEvidenceFormatted string
 	SatisfiedControls         []string
 	NotSatisfiedControls      []string

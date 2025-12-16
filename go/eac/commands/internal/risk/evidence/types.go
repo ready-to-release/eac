@@ -99,14 +99,44 @@ type SBOMSummary struct {
 
 // EvidenceCollection holds all collected evidence for a module.
 type EvidenceCollection struct {
-	Module           string             `json:"module"`
-	TestResults      *TestResults       `json:"test_results,omitempty"`
-	SecurityResults  *SecurityResults   `json:"security_results,omitempty"`
-	TestSummary      *TestSummary       `json:"test_summary,omitempty"`
+	Module           string                `json:"module"`
+	TestManifestData *TestManifestData     `json:"test_manifest_data,omitempty"` // Simplified test manifest data
+	SecurityResults  *SecurityResults      `json:"security_results,omitempty"`
+	TestSummary      *TestSummary          `json:"test_summary,omitempty"`
 	VulnSummary      *VulnerabilitySummary `json:"vuln_summary,omitempty"`
-	SBOMSummary      *SBOMSummary       `json:"sbom_summary,omitempty"`
-	CollectedAt      time.Time          `json:"collected_at"`
-	Warnings         []string           `json:"warnings,omitempty"` // Warnings about missing or stale evidence
+	SBOMSummary      *SBOMSummary          `json:"sbom_summary,omitempty"`
+	CollectedAt      time.Time             `json:"collected_at"`
+	Warnings         []string              `json:"warnings,omitempty"` // Warnings about missing or stale evidence
+}
+
+// TestManifestData holds simplified test manifest information for evidence collection.
+// This avoids import cycle issues with impl/internal package.
+type TestManifestData struct {
+	TestID       string                      `json:"test_id"`
+	TestAgent    string                      `json:"test_agent"`
+	GitCommit    string                      `json:"git_commit,omitempty"`
+	BuildID      string                      `json:"build_id,omitempty"`
+	TestTime     time.Time                   `json:"test_time"`
+	Tests        []TestEntryData             `json:"tests"`
+	Suites       map[string]SuiteResultData  `json:"suites,omitempty"`
+	Artifacts    []TestArtifactData          `json:"artifacts"`
+}
+
+// SuiteResultData holds per-suite test result information
+type SuiteResultData struct {
+	RunTime         time.Time   `json:"run_time"`
+	DurationSeconds float64     `json:"duration_seconds"`
+	Total           int         `json:"total"`
+	Passed          int         `json:"passed"`
+	Failed          int         `json:"failed"`
+	Skipped         int         `json:"skipped"`
+}
+
+// TestArtifactData holds test artifact information
+type TestArtifactData struct {
+	Type string `json:"type"`
+	Name string `json:"name"`
+	Path string `json:"path"`
 }
 
 // EvidenceAgePolicy controls evidence age validation.
@@ -123,7 +153,7 @@ func DefaultEvidenceAgePolicy() EvidenceAgePolicy {
 
 // HasAnyEvidence returns true if the collection has any evidence.
 func (ec *EvidenceCollection) HasAnyEvidence() bool {
-	if ec.TestResults != nil && (len(ec.TestResults.UnitTestFiles) > 0 || len(ec.TestResults.AcceptanceFiles) > 0) {
+	if ec.TestManifestData != nil && len(ec.TestManifestData.Tests) > 0 {
 		return true
 	}
 	if ec.SecurityResults != nil && (ec.SecurityResults.VulnFile != "" || ec.SecurityResults.SBOMFile != "") {
@@ -134,7 +164,7 @@ func (ec *EvidenceCollection) HasAnyEvidence() bool {
 
 // HasTestEvidence returns true if test evidence exists.
 func (ec *EvidenceCollection) HasTestEvidence() bool {
-	return ec.TestResults != nil && (len(ec.TestResults.UnitTestFiles) > 0 || len(ec.TestResults.AcceptanceFiles) > 0)
+	return ec.TestManifestData != nil && len(ec.TestManifestData.Tests) > 0
 }
 
 // HasSecurityEvidence returns true if security evidence exists.
@@ -146,8 +176,8 @@ func (ec *EvidenceCollection) HasSecurityEvidence() bool {
 func (ec *EvidenceCollection) LatestModTime() time.Time {
 	var latest time.Time
 
-	if ec.TestResults != nil && ec.TestResults.LastModified.After(latest) {
-		latest = ec.TestResults.LastModified
+	if ec.TestManifestData != nil && ec.TestManifestData.TestTime.After(latest) {
+		latest = ec.TestManifestData.TestTime
 	}
 	if ec.SecurityResults != nil && ec.SecurityResults.LastModified.After(latest) {
 		latest = ec.SecurityResults.LastModified

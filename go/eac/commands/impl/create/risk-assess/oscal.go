@@ -23,20 +23,17 @@ import (
 func buildAssessmentResultsForModule(config *AssessConfig, moduleName string, profile *oscalTypes.Profile, ec *evidence.EvidenceCollection) (*oscalTypes.AssessmentResults, error) {
 	controlIDs := oscal.GetProfileControlIDs(profile)
 
-	// Get control evidence directly from cucumber test results
-	// This extracts @control: tags and test status from the cucumber JSON
-	// Try each suite until we find evidence
-	var controlTestEvidence map[string]*evidence.ControlTestEvidence
-	for _, suite := range config.TestSuites {
-		var err error
-		controlTestEvidence, err = evidence.GetControlTestEvidence(config.WorkspaceRoot, moduleName, suite)
-		if err == nil && len(controlTestEvidence) > 0 {
-			break
-		}
+	// Get control evidence directly from test manifest
+	// This extracts @control: tags and test status from the manifest test entries
+	controlTestEvidence := make(map[string]*evidence.ControlTestEvidence)
+
+	if ec.TestManifestData != nil {
+		// Search all tests regardless of suite
+		controlTestEvidence = evidence.GetControlTestEvidenceFromManifest(ec.TestManifestData.Tests, "")
 	}
-	if controlTestEvidence == nil {
+
+	if len(controlTestEvidence) == 0 {
 		assessLog.Debugf("No control evidence found for %s in any suite", moduleName)
-		controlTestEvidence = make(map[string]*evidence.ControlTestEvidence)
 	}
 
 	// Create assessment-results
@@ -93,41 +90,72 @@ func createObservationsForModule(config *AssessConfig, moduleName string, ec *ev
 	var observations []oscalTypes.Observation
 	now := time.Now().UTC()
 
-	// Create observation for test evidence
-	if ec.TestResults != nil {
+	// Create observation for test evidence from manifest
+	if ec.TestManifestData != nil {
 		var relevantEvidence []oscalTypes.RelevantEvidence
 
-		// Add evidence references
-		for _, file := range ec.TestResults.AcceptanceFiles {
-			relPath, _ := filepath.Rel(config.WorkspaceRoot, file)
-			relevantEvidence = append(relevantEvidence, oscalTypes.RelevantEvidence{
-				Href:        relPath,
-				Description: "Acceptance test results (Cucumber JSON)",
-			})
-		}
-
-		for _, file := range ec.TestResults.UnitTestFiles {
-			relPath, _ := filepath.Rel(config.WorkspaceRoot, file)
-			relevantEvidence = append(relevantEvidence, oscalTypes.RelevantEvidence{
-				Href:        relPath,
-				Description: "Unit test results",
-			})
+		// Add artifact references from manifest
+		for _, artifact := range ec.TestManifestData.Artifacts {
+			if artifact.Type == "report" || artifact.Type == "coverage" || artifact.Type == "log" {
+				relevantEvidence = append(relevantEvidence, oscalTypes.RelevantEvidence{
+					Href:        artifact.Path,
+					Description: fmt.Sprintf("%s artifact: %s", artifact.Type, artifact.Name),
+				})
+			}
 		}
 
 		var props []oscalTypes.Property
+
+		// Add manifest metadata properties
+		props = append(props,
+			oscalTypes.Property{Name: "test-agent", Value: ec.TestManifestData.TestAgent},
+			oscalTypes.Property{Name: "test-id", Value: ec.TestManifestData.TestID},
+		)
+
+		if ec.TestManifestData.GitCommit != "" {
+			props = append(props, oscalTypes.Property{Name: "git-commit", Value: ec.TestManifestData.GitCommit})
+		}
+
+		if ec.TestManifestData.BuildID != "" {
+			props = append(props, oscalTypes.Property{Name: "build-id", Value: ec.TestManifestData.BuildID})
+		}
+
 		// Add summary props
 		if ec.TestSummary != nil {
 			props = append(props,
 				oscalTypes.Property{Name: "total-tests", Value: fmt.Sprintf("%d", ec.TestSummary.Total)},
 				oscalTypes.Property{Name: "passed-tests", Value: fmt.Sprintf("%d", ec.TestSummary.Passed)},
 				oscalTypes.Property{Name: "failed-tests", Value: fmt.Sprintf("%d", ec.TestSummary.Failed)},
+				oscalTypes.Property{Name: "skipped-tests", Value: fmt.Sprintf("%d", ec.TestSummary.Skipped)},
+			)
+		}
+
+		// Add suite-level breakdown
+		for suiteName, suiteResult := range ec.TestManifestData.Suites {
+			props = append(props,
+				oscalTypes.Property{
+					Name:  fmt.Sprintf("suite-%s-total", suiteName),
+					Value: fmt.Sprintf("%d", suiteResult.Total),
+				},
+				oscalTypes.Property{
+					Name:  fmt.Sprintf("suite-%s-passed", suiteName),
+					Value: fmt.Sprintf("%d", suiteResult.Passed),
+				},
+				oscalTypes.Property{
+					Name:  fmt.Sprintf("suite-%s-failed", suiteName),
+					Value: fmt.Sprintf("%d", suiteResult.Failed),
+				},
+				oscalTypes.Property{
+					Name:  fmt.Sprintf("suite-%s-skipped", suiteName),
+					Value: fmt.Sprintf("%d", suiteResult.Skipped),
+				},
 			)
 		}
 
 		testObs := oscalTypes.Observation{
 			UUID:             uuid.New().String(),
 			Title:            "Test Results",
-			Description:      fmt.Sprintf("Test evidence for module %s", moduleName),
+			Description:      fmt.Sprintf("Test evidence for module %s from test manifest", moduleName),
 			Methods:          []string{oscal.MethodTestAutomated},
 			Collected:        now,
 			RelevantEvidence: &relevantEvidence,
