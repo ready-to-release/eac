@@ -5,13 +5,14 @@
 # that when a module changes, all modules that depend on it are also rebuilt (cache invalidation).
 #
 # Pipeline stages:
-# 1. PARALLEL FLOWS:
+# 1. setup: Build commands binary (shared by all jobs)
+# 2. PARALLEL FLOWS (after setup):
 #    Flow A (Repository Validation):
 #      - build-and-test-repository: Build and test repository module (contract validation)
 #    Flow B (Module CI Orchestration):
-#      - detect-changes: Build commands binary + determine which modules need CI workflows triggered
+#      - detect-changes: Determine which modules need CI workflows triggered
 #      - execute-workflows: Dispatch ALL module CI workflows in parallel
-# 2. summary: Report results (waits for both flows)
+# 3. summary: Report results (waits for both flows)
 #
 # NOTE: All CI workflows run in parallel. Dependency verification happens at RELEASE time
 # via the `release await-deps` command, not during CI dispatch.
@@ -47,10 +48,23 @@ permissions:
 
 jobs:
   # =========================================
-  # Flow A: Repository Validation (runs in parallel with Flow B)
+  # Setup: Build commands binary (runs first, shared by all jobs)
+  # =========================================
+  setup:
+    name: Setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Commands Binary
+        uses: ./.github/actions/setup-commands
+
+  # =========================================
+  # Flow A: Repository Validation (after setup, parallel with Flow B)
   # =========================================
   build-and-test-repository:
     name: Build & Test Repository
+    needs: setup
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -59,7 +73,7 @@ jobs:
         uses: ./.github/actions/build-module
         with:
           module: repository
-          # No trigger-run-id: this IS the trigger workflow, build from source
+          trigger-run-id: ${{ github.run_id }}
           setup-deps: auto
           upload-artifact: 'false'
 
@@ -96,16 +110,17 @@ jobs:
         with:
           module: repository
           trigger-run-id: ${{ github.run_id }}
-          setup-deps: auto
+          setup-deps: none  # Already set up by build-module
           download-artifact: 'false'
           # PR: fast feedback with unit+integration; main: thorough with acceptance
           suites: ${{ github.event_name == 'pull_request' && 'unit,integration' || 'unit,integration,acceptance' }}
 
   # =========================================
-  # Flow B: Module CI Orchestration (runs in parallel with Flow A)
+  # Flow B: Module CI Orchestration (after setup, parallel with Flow A)
   # =========================================
   detect-changes:
     name: Detect Changed Modules
+    needs: setup
     runs-on: ubuntu-latest
     outputs:
       changed-modules: ${{ steps.detect.outputs.modules }}
@@ -124,6 +139,8 @@ jobs:
       - name: Setup Commands Binary
         id: commands
         uses: ./.github/actions/setup-commands
+        with:
+          trigger-run-id: ${{ github.run_id }}
 
       - name: Detect Changed Modules
         id: detect
@@ -292,8 +309,8 @@ jobs:
   # Stage 2: Execute Module Workflows (All Parallel)
   # =========================================
   execute-workflows:
-    name: Dispatch All CI
-    needs: [detect-changes]
+    name: Dispatch CI
+    needs: [setup, detect-changes]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -302,6 +319,8 @@ jobs:
         id: commands
         if: needs.detect-changes.outputs.has-changes == 'true'
         uses: ./.github/actions/setup-commands
+        with:
+          trigger-run-id: ${{ github.run_id }}
 
       - name: Filter modules with valid CI
         id: filter
@@ -355,7 +374,7 @@ jobs:
           # Early exit if no changes - job runs to satisfy status checks but skips execution
           if [ "${{ needs.detect-changes.outputs.has-changes }}" != "true" ]; then
             echo "No modules require building - skipping execution"
-            echo "## Dispatch All CI" >> $GITHUB_STEP_SUMMARY
+            echo "## Dispatch CI" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "No module CI workflows to execute." >> $GITHUB_STEP_SUMMARY
             exit 0
@@ -367,7 +386,7 @@ jobs:
           # Check if all modules were skipped
           if [ -z "$MODULES" ]; then
             echo "All modules have valid CI at current HEAD - nothing to dispatch"
-            echo "## Dispatch All CI" >> $GITHUB_STEP_SUMMARY
+            echo "## Dispatch CI" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "**All modules skipped** - valid CI already exists at current HEAD." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
@@ -423,7 +442,7 @@ jobs:
           echo "Dependency verification happens at release time."
 
           # Generate step summary
-          echo "## Dispatch All CI" >> $GITHUB_STEP_SUMMARY
+          echo "## Dispatch CI" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Mode**: Parallel execution (all modules)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -450,7 +469,7 @@ jobs:
   # =========================================
   summary:
     name: Summary
-    needs: [build-and-test-repository, detect-changes, execute-workflows]
+    needs: [setup, build-and-test-repository, detect-changes, execute-workflows]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -551,7 +570,7 @@ jobs:
   # Releases are processed in dependency order (layer by layer) with await.
   trigger-releases:
     name: Trigger Releases
-    needs: [summary, detect-changes]
+    needs: [setup, summary, detect-changes]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
@@ -566,6 +585,8 @@ jobs:
       - name: Setup Commands Binary
         id: commands
         uses: ./.github/actions/setup-commands
+        with:
+          trigger-run-id: ${{ github.run_id }}
 
       # Step 1: Wait for all dispatched CI workflows to complete
       - name: Await CI workflows
