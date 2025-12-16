@@ -135,12 +135,12 @@ To run tests for your project:
 r2r test
 ```
 
-This runs all modules with the default "component" test suite (L0-L1 fast tests).
+This runs all modules with the default test suites (L0-L2 fast tests).
 
 To test a specific module:
 
 ```bash
-r2r test eac-commands
+r2r test eac-commands # default fast suites
 ```
 
 To run a different test suite:
@@ -151,7 +151,7 @@ r2r test --suite acceptance
 
 Available test suites:
 
-- `component` - L0-L1 tests (fast unit tests, <5 min)
+- `unit` - L0-L1 tests (fast unit tests, <5 min)
 - `integration` - L2 tests (Docker-based emulated tests, <15 min)
 - `acceptance` - L3 tests (production-like tests in PLTE, 1-2 hours)
 - `production-verification` - L4+PIV tests (production smoke tests)
@@ -172,14 +172,16 @@ Congratulations! You've successfully:
 - **Project initialization** - Setting up `.r2r/eac/` configuration
 - **AI provider configuration** - Claude, OpenAI, or Gemini integration
 - **Repository exploration** - Using `show` commands to understand structure
-- **Test suites** - Different test levels (component, integration, acceptance, production-verification)
+- **Test suites** - Different test levels (unit, integration, acceptance, production-verification)
 
 ## Next Steps
 
 ### Continue Learning
+
 - **Next tutorial:** [Your First Feature Specification](./first-specification.md) - Learn to write Gherkin specifications
 
 ### Apply What You Learned
+
 Now that you know the basics of r2r, you can accomplish these tasks:
 
 - **[Get Help with Commands](../../how-to-guides/eac/commands/getting-started/get-help-with-commands.md)** - Find and understand any r2r command
@@ -187,6 +189,7 @@ Now that you know the basics of r2r, you can accomplish these tasks:
 - **[Setup AI Provider](../../how-to-guides/eac/commands/getting-started/setup-ai-provider.md)** - Configure Claude, OpenAI, or Gemini
 
 ### Dive Deeper
+
 - [Everything as Code Paradigm](../../explanation/everything-as-code/paradigm.md) - Understand the philosophy
 - [Command Reference](../../reference/commands/) - Complete command documentation
 

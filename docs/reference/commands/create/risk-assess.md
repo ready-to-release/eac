@@ -21,7 +21,7 @@ r2r eac create risk-assess
 r2r eac create risk-assess
 
 # Run tests and scans first
-r2r eac test --all
+r2r eac test --suite unit+integration+acceptance
 r2r eac scan vuln
 r2r eac create risk-assess
 ```

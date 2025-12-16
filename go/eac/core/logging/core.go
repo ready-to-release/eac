@@ -84,17 +84,17 @@ func buildFileCore(cfg Config, logCfg LoggingConfig) (zapcore.Core, io.Closer, e
 }
 
 // buildTargetFileCore creates extra log core from logging.yml targets config.
-// Returns nil if no target is configured for this command or no unit is specified.
-// Target logs use simple file output (no rolling) since they're per-unit.
+// Returns nil if no target is configured for this command or no module is specified.
+// Target logs use simple file output (no rolling) since they're per-module.
 func buildTargetFileCore(cfg Config, logCfg LoggingConfig) (zapcore.Core, io.Closer, error) {
 	// Check if command has a target configured
 	target, ok := logCfg.GetTarget(cfg.Command)
-	if !ok || cfg.Unit == "" {
+	if !ok || cfg.Module == "" {
 		return nil, nil, nil
 	}
 
-	// Resolve path pattern with unit
-	targetPath := target.ResolveTargetPath(cfg.WorkspaceRoot, cfg.Unit)
+	// Resolve path pattern with module
+	targetPath := target.ResolveTargetPath(cfg.WorkspaceRoot, cfg.Module)
 	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
 		return nil, nil, err
 	}
@@ -137,7 +137,7 @@ func buildCore(cfg Config) (zapcore.Core, []io.Closer, error) {
 		}
 	}
 
-	// Add target core if configured (for build/test with unit) - always enabled
+	// Add target core if configured (for build/test with module) - always enabled
 	if logCfg.File.IsEnabled() && cfg.EnableFileLogging {
 		targetCore, targetFile, err := buildTargetFileCore(cfg, logCfg)
 		if err == nil && targetCore != nil {

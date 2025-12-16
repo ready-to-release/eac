@@ -7,7 +7,7 @@
 // Long: filters by suite tags, and runs matching tests with consistent summary output.
 // Long:
 // Long: Use --suite to select which tests to run. The default runs suites not marked
-// Long: as extended_suite in config (typically component + integration).
+// Long: as extended_suite in config (typically unit + integration).
 // Long:
 // Long: Expected Output:
 // Long:   - Test execution results with pass/fail status
@@ -94,7 +94,7 @@ type TestExecutionContext struct {
 	moduleMapper    *ModuleMapper // Maps package paths to module monikers
 
 	// Suite routing
-	suiteMoniker string // Suite moniker (single or composite like "component+integration")
+	suiteMoniker string // Suite moniker (single or composite like "unit+integration")
 	repoCfg      *config.RepositoryConfig // For computing suite output paths
 
 	// Thread-safe result storage
@@ -306,7 +306,7 @@ func executeTests(cfg *TestConfig) int {
 		LogFileName:          "test.log",
 		ActionVerb:           "Testing",
 		MaxConcurrency:       maxConcurrency,
-		StatusUpdateInterval: 2,
+		StatusUpdateInterval: 500, // Update every 500ms for responsive feedback
 		TUI:                  cfg.UseTUI,
 		TUIHeight:            cfg.TUIHeight,
 	}
@@ -337,9 +337,8 @@ func executeTests(cfg *TestConfig) int {
 			}
 		}
 
-		// Give TUI time to fully initialize and render first frame
-		// before sending messages to prevent partial renders
-		time.Sleep(50 * time.Millisecond)
+		// Brief pause to ensure TUI is ready before sending messages
+		time.Sleep(10 * time.Millisecond)
 	}
 
 	// Helper to write output to console/log OR TUI Init phase
@@ -1435,7 +1434,7 @@ func printTestUsage() {
 	log.Info("Usage: r2r eac test [module1] [module2] ... [options]")
 	log.Info("")
 	log.Info("Options:")
-	log.Info("  --suite <name>         Filter tests by suite (default: component+integration)")
+	log.Info("  --suite <name>         Filter tests by suite (default: unit+integration)")
 	log.Info("  --coverage             Generate coverage reports (coverage.out, coverage.json)")
 	log.Info("  --skip-deps            Skip dependency verification before running tests")
 	log.Info("  --list-only            List tests that would run without executing them")
@@ -1447,13 +1446,13 @@ func printTestUsage() {
 	log.Info("  --retest               Force full test run, bypassing incremental detection")
 	log.Info("")
 	log.Info("Available suites:")
-	log.Info("  component                L0-L1 tests (fast unit tests)")
+	log.Info("  unit                     L0-L1 tests (fast unit tests)")
 	log.Info("  integration              L2 tests (Docker-based emulated tests)")
 	log.Info("  acceptance               L3 tests (production-like tests)")
 	log.Info("  production-verification  L4+PIV tests (production smoke)")
 	log.Info("")
 	log.Info("Composite suites (use + to combine):")
-	log.Info("  component+integration+acceptance      # Run multiple suites together")
+	log.Info("  unit+integration+acceptance           # Run multiple suites together")
 	log.Info("")
 	log.Info("Examples:")
 	log.Info("  r2r eac test                          # Test all modules (default suites)")
@@ -1926,10 +1925,10 @@ func isTestFile(path string) bool {
 }
 
 // getSuitesIncluded returns the list of suites included for composite suites.
-// Handles composite suite syntax: "component+integration" -> ["component", "integration"]
+// Handles composite suite syntax: "unit+integration" -> ["unit", "integration"]
 // For single suites, returns nil.
 func getSuitesIncluded(suiteMoniker string) []string {
-	// Handle "+" joined composite suites (e.g., "component+integration")
+	// Handle "+" joined composite suites (e.g., "unit+integration")
 	if strings.Contains(suiteMoniker, "+") {
 		return strings.Split(suiteMoniker, "+")
 	}
@@ -2019,7 +2018,7 @@ func generateTestManifests(
 			manifest = implinternal.NewTestManifest(moniker, moduleType, gitCommit)
 		}
 
-		// For composite suites (e.g., "component+integration"), record each constituent suite separately
+		// For composite suites (e.g., "unit+integration"), record each constituent suite separately
 		// based on test L-levels. For single suites, record under the config suite name.
 		constituentSuites := getSuitesIncluded(suiteName)
 		if constituentSuites != nil {

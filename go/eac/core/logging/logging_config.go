@@ -38,7 +38,7 @@ type SinkConfig struct {
 
 // TargetConfig holds configuration for an extra log target (build/test specific logs)
 type TargetConfig struct {
-	// Path pattern with {unit} placeholder, e.g., "out/build/{unit}/build.log"
+	// Path pattern with {module} placeholder, e.g., "out/build/{module}/build.log"
 	Path string `yaml:"path"`
 	// Levels to output: debug, info, warn, error
 	Levels []string `yaml:"levels"`
@@ -46,9 +46,9 @@ type TargetConfig struct {
 	Formatter FormatterType `yaml:"formatter"`
 }
 
-// ResolveTargetPath replaces {unit} placeholder with actual unit name
-func (t TargetConfig) ResolveTargetPath(repoRoot, unit string) string {
-	path := strings.Replace(t.Path, "{unit}", unit, -1)
+// ResolveTargetPath replaces {module} placeholder with actual module name
+func (t TargetConfig) ResolveTargetPath(repoRoot, module string) string {
+	path := strings.Replace(t.Path, "{module}", module, -1)
 	return filepath.Join(repoRoot, path)
 }
 

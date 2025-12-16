@@ -22,7 +22,7 @@
       "properties": {
         "moniker": {
           "type": "string",
-          "description": "Unique suite identifier (e.g., 'component', 'acceptance')",
+          "description": "Unique suite identifier (e.g., 'unit', 'acceptance')",
           "pattern": "^[a-z][a-z0-9-]*$",
           "minLength": 1
         },
@@ -89,8 +89,8 @@
     {
       "suites": [
         {
-          "moniker": "component",
-          "name": "Component Tests",
+          "moniker": "unit",
+          "name": "Unit Tests",
           "description": "Fast tests for Stage 2-4 (Pre-commit, MR, Commit) - L0-L1",
           "selectors": [
             {

@@ -385,7 +385,7 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 		LogFileName:          "build.log",
 		ActionVerb:           "Building",
 		MaxConcurrency:       maxConcurrency,
-		StatusUpdateInterval: 2, // Update every 2 seconds
+		StatusUpdateInterval: 500, // Update every 500ms for responsive feedback
 		ModuleTypes:          moduleTypes,
 		ShowTimings:          showTimings,
 		DryRun:               dryRun,
@@ -408,9 +408,8 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 		}
 		orch.StartTUI()
 
-		// Give TUI time to fully initialize and render first frame
-		// before sending messages to prevent partial renders
-		time.Sleep(50 * time.Millisecond)
+		// Brief pause to ensure TUI is ready before sending messages
+		time.Sleep(10 * time.Millisecond)
 	}
 
 	// Configure unified logging system

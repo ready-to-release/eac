@@ -27,14 +27,14 @@ var (
 //
 // This is the ONE function to call for logging setup. It configures:
 //   - File logging: All logs go to unified out/commands.log
-//   - Target logging: For build/test, additional logs go to out/build/<unit>/build.log or out/test/<unit>/test.log
+//   - Target logging: For build/test, additional logs go to out/build/<module>/build.log or out/test/<module>/test.log
 //   - Console logging: Info/Warn/Error always, Debug only if debugToConsole=true
 //   - TUI logging: If tuiWriter provided, logs also go to TUI pane
 //
 // Parameters:
 //   - workspaceRoot: repository root for log file location
 //   - command: command name (e.g., "build", "test", "design")
-//   - pathSegments: optional path segments. For build/test, first segment is the unit name
+//   - pathSegments: optional path segments. For build/test, first segment is the module name
 //   - debugToConsole: if true, debug logs also appear on console (use with --debug flag)
 //   - tuiWriter: if non-nil, logs also go to TUI pane (pass nil for non-TUI mode)
 //
@@ -52,8 +52,8 @@ var (
 //	if err := logging.ConfigureLogging(workspaceRoot, "build", []string{"eac-core"}, debugMode, tuiWriter); err != nil {
 //	    log.Warnf("Failed to configure logging: %v", err)
 //	}
-//	// Test with suite: logs to out/commands.log + out/test/commit/test.log
-//	if err := logging.ConfigureLogging(workspaceRoot, "test", []string{"commit"}, debugMode, tuiWriter); err != nil {
+//	// Test with module: logs to out/commands.log + out/test/eac-core/test.log
+//	if err := logging.ConfigureLogging(workspaceRoot, "test", []string{"eac-core"}, debugMode, tuiWriter); err != nil {
 //	    log.Warnf("Failed to configure logging: %v", err)
 //	}
 //	defer logging.CloseLogging()
@@ -129,10 +129,10 @@ func ConfigureLogging(workspaceRoot, command string, pathSegments []string, debu
 			cores = append(cores, fileCore)
 		}
 
-		// 2b. Target file core (for build/test with unit) - always enabled
+		// 2b. Target file core (for build/test with module) - always enabled
 		if target, ok := logCfg.GetTarget(command); ok && len(pathSegments) > 0 {
-			unit := pathSegments[0] // First path segment is the unit
-			targetPath := target.ResolveTargetPath(workspaceRoot, unit)
+			module := pathSegments[0] // First path segment is the module
+			targetPath := target.ResolveTargetPath(workspaceRoot, module)
 			if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err == nil {
 				targetFile, err := os.OpenFile(targetPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 				if err == nil {

@@ -443,7 +443,7 @@ Examples:
   create risk-assess --profile specs/.risk-controls/risk-profile.json --suites integration acceptance
 
   # Use single test suite
-  create risk-assess --profile specs/.risk-controls/risk-profile.json --suites component
+  create risk-assess --profile specs/.risk-controls/risk-profile.json --suites unit
 
   # Assess single module with production tests
   create risk-assess billing --profile specs/.risk-controls/risk-profile.json --suites production-verification

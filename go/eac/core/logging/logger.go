@@ -46,13 +46,13 @@ func NewDefault(command, workspaceRoot string) (*Logger, error) {
 	return New(cfg)
 }
 
-// NewForUnit creates a logger for build/test with unit-based logging.
+// NewForModule creates a logger for build/test with module-based logging.
 // Logs go to: out/commands.log + target from logging.yml (if configured)
 // Example for build: out/commands.log + out/build/eac-core/build.log
-// Example for test: out/commands.log + out/test/component/test.log
-func NewForUnit(command, workspaceRoot, unit string) (*Logger, error) {
+// Example for test: out/commands.log + out/test/eac-core/test.log
+func NewForModule(command, workspaceRoot, module string) (*Logger, error) {
 	cfg := DefaultConfig(command, workspaceRoot).
-		WithUnit(unit).
+		WithModule(module).
 		WithFileLogging(true)
 	return New(cfg)
 }

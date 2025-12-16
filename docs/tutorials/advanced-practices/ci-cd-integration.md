@@ -56,7 +56,7 @@ This tutorial teaches you how to set up automated CI/CD pipelines with quality g
            run: r2r get changed-modules-ci
          - name: Build changed modules
            run: r2r build $(r2r get changed-modules-ci)
-         - name: Test changed modules (component suite)
+         - name: Test changed modules (unit suite)
            run: r2r test $(r2r get changed-modules-ci)
          - name: Validate all
            run: r2r validate
@@ -112,7 +112,7 @@ r2r validate
 **Commit pipeline (on push):**
 
 - Build changed modules
-- Test changed modules (component suite)
+- Test changed modules (unit suite)
 - Validate contracts and specs
 
 **Pull request pipeline (on PR):**
@@ -184,7 +184,7 @@ jobs:
         if: steps.changed.outputs.modules != ''
         run: r2r build ⟪ steps.changed.outputs.modules ⟫
 
-      - name: Test (component suite)
+      - name: Test (unit suite)
         if: steps.changed.outputs.modules != ''
         run: r2r test ⟪ steps.changed.outputs.modules ⟫
 

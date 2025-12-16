@@ -14,7 +14,7 @@ This tutorial will teach you about the test pyramid, test levels, and how to cho
 
 - Understand the test pyramid (L0 unit → L4 smoke)
 - Learn verification types (@ov, @iv, @pv)
-- Use the four built-in test suites: component, integration, acceptance, production-verification
+- Use the four built-in test suites: unit, integration, acceptance, production-verification
 - Know when to use each test level and suite
 - Run specific test suites with `r2r test --suite <name>`
 - Configure custom test suites in contracts
@@ -37,16 +37,16 @@ This tutorial will teach you about the test pyramid, test levels, and how to cho
    - When to use each type
 
 3. **Built-in Test Suites**
-   - **component**: L0-L1 tests (fast feedback, component-level)
+   - **unit**: L0-L1 tests (fast feedback, module-level)
    - **integration**: L2 tests (Docker-based emulated tests)
    - **acceptance**: L3 tests (PLTE production-like tests)
    - **production-verification**: L4+PIV (production smoke tests)
    - Trade-offs: speed vs. confidence
 
 4. **Running Test Suites**
-   - Default: `r2r test` (runs component suite)
+   - Default: `r2r test` (runs unit suite)
    - Specific suite: `r2r test --suite acceptance`
-   - Specific module: `r2r test eac-commands --suite component`
+   - Specific module: `r2r test eac-commands --suite unit`
    - List suites: `r2r test list-suites`
 
 5. **Understanding Test Results**
@@ -63,7 +63,7 @@ This tutorial will teach you about the test pyramid, test levels, and how to cho
 
 The tutorial will walk through practical examples:
 
-- **Pre-commit hook**: Use `component` suite for fast L0-L1 validation
+- **Pre-commit hook**: Use `unit` suite for fast L0-L1 validation
 - **Pull request CI**: Use `integration` suite for Docker-based L2 validation
 - **PLTE deployment**: Use `acceptance` suite for production-like L3 validation
 - **Production deployment**: Use `production-verification` for L4 smoke tests
@@ -79,7 +79,7 @@ The tutorial will walk through practical examples:
 
 ### Best Practices
 
-- Run L0-L1 tests locally (fast feedback with component suite)
+- Run L0-L1 tests locally (fast feedback with unit suite)
 - Run L2 tests in CI (integration suite with Docker)
 - Run L3 tests in PLTE (acceptance suite for production-like validation)
 - Run L4 tests post-deployment (production-verification smoke tests)

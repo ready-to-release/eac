@@ -27,12 +27,13 @@ type displayManager struct {
 	statusTicker    *time.Ticker
 	done            chan bool
 	completedLines  []string // collected completion lines for batch output
+	tuiMode         bool     // when true, skip running list (TUI tabs show it)
 }
 
 // newDisplayManager creates a new display manager
-func newDisplayManager(logger *log.Logger, actionVerb string, total int, updateIntervalSec int) *displayManager {
-	if updateIntervalSec <= 0 {
-		updateIntervalSec = 2 // default to 2 seconds
+func newDisplayManager(logger *log.Logger, actionVerb string, total int, updateIntervalMs int, tuiMode bool) *displayManager {
+	if updateIntervalMs <= 0 {
+		updateIntervalMs = 500 // default to 500ms for responsive feedback
 	}
 
 	return &displayManager{
@@ -42,9 +43,10 @@ func newDisplayManager(logger *log.Logger, actionVerb string, total int, updateI
 		running:        make(map[string]bool),
 		completed:      0,
 		total:          total,
-		updateInterval: time.Duration(updateIntervalSec) * time.Second,
+		updateInterval: time.Duration(updateIntervalMs) * time.Millisecond,
 		completionChan: make(chan *WorkResult, 100),
 		done:           make(chan bool),
+		tuiMode:        tuiMode,
 	}
 }
 
@@ -159,7 +161,21 @@ func (dm *displayManager) displayStatus() {
 	elapsed := time.Since(dm.startTime)
 	runningCount := len(dm.running)
 
-	// Get sorted list of running monikers (convert to display names and normalize)
+	// Note: On Windows, log.Printf only adds \n, but Windows console needs \r\n
+	// LineEndingPrefix adds \r on Windows so the final output is \r\n (log adds \n automatically)
+	failedStr := ""
+	if dm.failed > 0 {
+		failedStr = fmt.Sprintf(" (%d failed)", dm.failed)
+	}
+
+	// In TUI mode, skip the running list - TUI tabs already show running modules
+	if dm.tuiMode {
+		dm.logger.Printf("Status: %s elapsed, %d/%d completed%s. %d running%s",
+			formatDuration(elapsed), dm.completed, dm.total, failedStr, runningCount, LineEndingPrefix)
+		return
+	}
+
+	// Non-TUI mode: include running module names for visibility
 	names := make([]string, 0, len(dm.running))
 	for name := range dm.running {
 		displayName := output.PackageDisplayName(name)
@@ -167,7 +183,6 @@ func (dm *displayManager) displayStatus() {
 	}
 	sort.Strings(names)
 
-	// Format status message
 	nameList := ""
 	for i, name := range names {
 		if i > 0 {
@@ -176,12 +191,6 @@ func (dm *displayManager) displayStatus() {
 		nameList += name
 	}
 
-	// Note: On Windows, log.Printf only adds \n, but Windows console needs \r\n
-	// LineEndingPrefix adds \r on Windows so the final output is \r\n (log adds \n automatically)
-	failedStr := ""
-	if dm.failed > 0 {
-		failedStr = fmt.Sprintf(" (%d failed)", dm.failed)
-	}
 	dm.logger.Printf("Status: %s elapsed, %d/%d completed%s. %d running (%s)%s",
 		formatDuration(elapsed), dm.completed, dm.total, failedStr, runningCount, nameList, LineEndingPrefix)
 }

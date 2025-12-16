@@ -154,7 +154,7 @@ type DependencyBuildIDLoader func(moniker string) string
 // DetectChanges detects which modules need retesting based on file changes and dependency propagation.
 // moduleInfo maps moniker -> ModuleTestFiles (source files, test files, dependencies)
 // suiteNames is the list of test suites being run - detection checks ALL suites
-// For composite suites like "all", pass the constituent suites: ["component", "integration", "acceptance"]
+// For composite suites (e.g., "unit+integration"), pass constituent suites: ["unit", "integration"]
 //
 // A module needs retesting if:
 // 1. Its source files changed
@@ -230,7 +230,7 @@ func DetectChangesWithLoader(workspaceRoot string, moduleInfo map[string]ModuleT
 		}
 
 		// Check if ALL specified suites have been run before and passed
-		// For composite suites like "all", suiteNames contains all constituent suites
+		// For composite suites (e.g., "unit+integration"), suiteNames contains constituent suites
 		missingSuites := []string{}
 		failedSuites := []string{}
 		for _, suiteName := range suiteNames {

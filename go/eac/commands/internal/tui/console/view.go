@@ -226,26 +226,13 @@ func (m Model) renderPaneHeader(phase Phase) string {
 			left += " " + Styles.Dim.Render(fmt.Sprintf("(layer %d/%d)", m.layer, m.totalLayers))
 		}
 
-		// Build status indicators
-		var status string
-		if len(m.running) > 0 {
-			if len(m.running) <= 2 {
-				status = strings.Join(m.running, ", ")
-			} else {
-				status = fmt.Sprintf("%s +%d more", m.running[0], len(m.running)-1)
-			}
-		}
-
+		// Show elapsed time and progress count (running modules shown via tabs)
 		left = fmt.Sprintf("%s %s %d/%d",
 			left,
 			Styles.Time.Render(formatElapsed(elapsed)),
 			m.completed,
 			m.total,
 		)
-
-		if status != "" {
-			left += " " + Styles.Running.Render(IconRunning+" "+status)
-		}
 	}
 
 	// Add summary for completed phases
@@ -523,21 +510,10 @@ func (m Model) renderPaneHeaderPlain(phase Phase) string {
 	// Build header content
 	left := icon + " " + name
 
-	// Add status info for Run phase when active
+	// Add status info for Run phase when active (running modules shown via tabs)
 	if phase == PhaseRun && pane.Status == PhaseActive {
 		elapsed := time.Since(m.startTime).Round(time.Millisecond * 100)
-		var status string
-		if len(m.running) > 0 {
-			if len(m.running) <= 2 {
-				status = strings.Join(m.running, ", ")
-			} else {
-				status = fmt.Sprintf("%s +%d more", m.running[0], len(m.running)-1)
-			}
-		}
 		left = fmt.Sprintf("%s %s │ %d/%d", left, formatElapsed(elapsed), m.completed, m.total)
-		if status != "" {
-			left += " ▶ " + status
-		}
 	}
 
 	// Add summary for completed phases

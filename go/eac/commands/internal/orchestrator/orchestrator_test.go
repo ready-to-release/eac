@@ -29,7 +29,7 @@ func TestOrchestrator_Basic(t *testing.T) {
 		LogFileName:          "test.log",
 		ActionVerb:           "processing",
 		MaxConcurrency:       2,
-		StatusUpdateInterval: 1,
+		StatusUpdateInterval: 100, // 100ms for fast test feedback
 	}
 
 	// Track which modules were processed
@@ -83,7 +83,7 @@ func TestOrchestrator_WithFailures(t *testing.T) {
 		LogFileName:          "test.log",
 		ActionVerb:           "processing",
 		MaxConcurrency:       2,
-		StatusUpdateInterval: 1,
+		StatusUpdateInterval: 100, // 100ms for fast test feedback
 	}
 
 	// Create worker function that fails for specific modules
@@ -273,7 +273,7 @@ func TestDisplayManager(t *testing.T) {
 	// Create display manager with logger writing to buffer
 	var buf bytes.Buffer
 	logger := log.New(&buf, "", 0)
-	dm := newDisplayManager(logger, "testing", 3, 1)
+	dm := newDisplayManager(logger, "testing", 3, 100, false) // 100ms for fast test
 
 	// Start display manager
 	dm.start()
@@ -323,7 +323,7 @@ func TestOrchestrator_PrintSummary(t *testing.T) {
 		LogFileName:          "test.log",
 		ActionVerb:           "testing",
 		MaxConcurrency:       2,
-		StatusUpdateInterval: 1,
+		StatusUpdateInterval: 100, // 100ms for fast test feedback
 	}
 
 	// Create orchestrator

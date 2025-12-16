@@ -58,7 +58,7 @@ type TestEntry struct {
 	Name       string   `json:"name"`                 // Test name or scenario name
 	Package    string   `json:"package"`              // Package path
 	Type       string   `json:"type"`                 // gotest, godog, mocha, tscucumber
-	Suite      string   `json:"suite"`                // Suite moniker (component, integration, etc.)
+	Suite      string   `json:"suite"`                // Suite moniker (unit, integration, etc.)
 	Status     string   `json:"status"`               // passed, failed, skipped, undefined, pending
 	DurationMs int64    `json:"duration_ms,omitempty"`// Test duration in milliseconds
 	Tags       []string `json:"tags,omitempty"`       // Test tags
