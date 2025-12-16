@@ -4,6 +4,9 @@
 # It becomes the "Latest" release on the repository, providing a single entry point
 # to find all current module versions.
 #
+# NOTE: r2r-eac is a bundle module with NO CI workflow. It auto-releases when any of
+# its dependencies (r2r-cli, ext-eac, docs, books) are released. CI check is skipped.
+#
 # Title format: "r2r (x.y.z) + eac (x.y.z)"
 # Body: Table with links to all module releases
 
@@ -59,7 +62,8 @@ jobs:
         with:
           module: r2r-eac
           version-type: calver
-          skip-ci-check: ${{ inputs.ci_run_id != '' || inputs.skip-ci-check || 'false' }}
+          # r2r-eac is a bundle module with no CI workflow - always skip CI check
+          skip-ci-check: 'true'
           timeout: '300'
 
       - name: Await module releases
