@@ -481,11 +481,25 @@ func TestEvidenceCollection(t *testing.T) {
 	now := time.Now()
 	collection := &EvidenceCollection{
 		Module: "billing",
-		TestResults: &TestResults{
-			ModuleName:      "billing",
-			UnitTestFiles:   []string{"/path/to/unit.json"},
-			AcceptanceFiles: []string{"/path/to/acceptance.cucumber.json"},
-			LastModified:    now.Add(-1 * time.Hour),
+		TestManifestData: &TestManifestData{
+			TestID:    "test-123",
+			TestAgent: "ci",
+			GitCommit: "abc123",
+			BuildID:   "build-456",
+			TestTime:  now.Add(-1 * time.Hour),
+			Tests: []TestEntryData{
+				{
+					Name:     "Test example",
+					Package:  "billing",
+					Type:     "godog",
+					Suite:    "acceptance",
+					Status:   "passed",
+					Tags:     []string{"@control:ac-2"},
+					FilePath: "specs/billing.feature",
+				},
+			},
+			Suites:    make(map[string]SuiteResultData),
+			Artifacts: []TestArtifactData{},
 		},
 		SecurityResults: &SecurityResults{
 			ModuleName:   "billing",

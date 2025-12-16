@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/ready-to-release/eac/go/eac/commands/impl/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/evidence"
 	coreconfig "github.com/ready-to-release/eac/go/eac/core/config"
 )
@@ -25,70 +26,48 @@ func collectEvidenceForModule(config *AssessConfig, moduleName string) (*evidenc
 		Warnings:    []string{},
 	}
 
-	// Collect test evidence from all specified suites (read-only)
-	var foundTestResults *evidence.TestResults
-	var checkedSuites []string
+	// Collect test evidence from test manifest (read-only)
+	cfg, _ := coreconfig.Load(coreconfig.LoadOptions{RepoRoot: config.WorkspaceRoot})
+	if cfg != nil {
+		testDir := cfg.Repository.TestModuleDirAbs(config.WorkspaceRoot, moduleName)
+		manifest, err := internal.LoadTestManifest(testDir)
 
-	for _, suite := range config.TestSuites {
-		testResults, err := evidence.FindTestResultsForModuleInSuite(
-			config.WorkspaceRoot,
-			moduleName,
-			suite,
-		)
-		checkedSuites = append(checkedSuites, suite)
-
-		if err == nil && testResults != nil {
+		if err == nil && manifest != nil {
 			// Check test evidence age
-			age := time.Since(testResults.LastModified)
-			if !testResults.LastModified.IsZero() && age >= config.MaxEvidenceAge {
-				// Get the actual directory that was checked
-				actualPath := testResults.TestRunDirectory
-				relPath, err := filepath.Rel(config.WorkspaceRoot, actualPath)
+			age := time.Since(manifest.TestTime)
+			if !manifest.TestTime.IsZero() && age >= config.MaxEvidenceAge {
+				relPath, err := filepath.Rel(config.WorkspaceRoot, testDir)
 				if err != nil {
-					relPath = actualPath
+					relPath = testDir
 				}
 
 				warning := fmt.Sprintf(
-					"⚠️  Test evidence for suite '%s' is too old (Age: %s, max: %s) - Location: %s - Latest modified: %s",
-					suite,
+					"⚠️  Test evidence is too old (Age: %s, max: %s) - Location: %s - Latest test run: %s",
 					formatDuration(age),
 					formatDuration(config.MaxEvidenceAge),
 					relPath,
-					testResults.LastModified.Format("2006-01-02 15:04:05 MST"),
+					manifest.TestTime.Format("2006-01-02 15:04:05 MST"),
 				)
 				collection.Warnings = append(collection.Warnings, warning)
-
-				// Still use the stale evidence but warn about it
-				if foundTestResults == nil {
-					foundTestResults = testResults
-					summary, _ := evidence.GetTestSummaryForModule(config.WorkspaceRoot, moduleName, suite)
-					collection.TestSummary = summary
-				}
-			} else {
-				// Use the first valid test results found
-				if foundTestResults == nil {
-					foundTestResults = testResults
-					// Calculate test summary
-					summary, _ := evidence.GetTestSummaryForModule(config.WorkspaceRoot, moduleName, suite)
-					collection.TestSummary = summary
-				}
 			}
-		}
-	}
 
-	if foundTestResults != nil {
-		collection.TestResults = foundTestResults
-	} else {
-		// No test results found - add warning
-		cfg, err := coreconfig.Load(coreconfig.LoadOptions{RepoRoot: config.WorkspaceRoot})
-		if err == nil {
-			testDir := cfg.Repository.TestModuleDirAbs(config.WorkspaceRoot, moduleName)
+			// Convert to simplified manifest data
+			collection.TestManifestData = convertToManifestData(manifest)
+			collection.TestSummary = &evidence.TestSummary{
+				Total:   manifest.Summary.Total,
+				Passed:  manifest.Summary.Passed,
+				Failed:  manifest.Summary.Failed,
+				Skipped: manifest.Summary.Skipped,
+			}
+		} else {
+			// No test manifest found - add warning
 			relPath, err := filepath.Rel(config.WorkspaceRoot, testDir)
 			if err != nil {
 				relPath = testDir
 			}
 			warning := fmt.Sprintf(
-				"⚠️  No test evidence found - Checked: %s",
+				"⚠️  No test manifest found for module '%s' - Expected location: %s/test.manifest.json",
+				moduleName,
 				relPath,
 			)
 			collection.Warnings = append(collection.Warnings, warning)
@@ -157,6 +136,61 @@ func collectEvidenceForModule(config *AssessConfig, moduleName string) (*evidenc
 	// Always return the collection with whatever evidence was found
 	// The warnings field will document any issues
 	return collection, nil
+}
+
+// convertToManifestData converts internal.TestManifest to simplified evidence.TestManifestData
+func convertToManifestData(manifest *internal.TestManifest) *evidence.TestManifestData {
+	if manifest == nil {
+		return nil
+	}
+
+	// Convert test entries
+	tests := make([]evidence.TestEntryData, len(manifest.Tests))
+	for i, test := range manifest.Tests {
+		tests[i] = evidence.TestEntryData{
+			Name:     test.Name,
+			Package:  test.Package,
+			Type:     test.Type,
+			Suite:    test.Suite,
+			Status:   test.Status,
+			Tags:     test.Tags,
+			FilePath: test.FilePath,
+		}
+	}
+
+	// Convert suites
+	suites := make(map[string]evidence.SuiteResultData)
+	for name, suite := range manifest.Suites {
+		suites[name] = evidence.SuiteResultData{
+			RunTime:         suite.RunTime,
+			DurationSeconds: suite.DurationSeconds,
+			Total:           suite.Tests.Total,
+			Passed:          suite.Tests.Passed,
+			Failed:          suite.Tests.Failed,
+			Skipped:         suite.Tests.Skipped,
+		}
+	}
+
+	// Convert artifacts
+	artifacts := make([]evidence.TestArtifactData, len(manifest.Artifacts))
+	for i, artifact := range manifest.Artifacts {
+		artifacts[i] = evidence.TestArtifactData{
+			Type: artifact.Type,
+			Name: artifact.Name,
+			Path: artifact.Path,
+		}
+	}
+
+	return &evidence.TestManifestData{
+		TestID:    manifest.TestID,
+		TestAgent: manifest.TestAgent,
+		GitCommit: manifest.GitCommit,
+		BuildID:   manifest.BuildID,
+		TestTime:  manifest.TestTime,
+		Tests:     tests,
+		Suites:    suites,
+		Artifacts: artifacts,
+	}
 }
 
 // formatDuration formats a duration in a human-readable way with more precision.

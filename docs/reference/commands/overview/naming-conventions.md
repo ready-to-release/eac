@@ -41,7 +41,7 @@ Commands use semantically meaningful verbs that clearly indicate their purpose:
 | `work`      | Manage workspaces             | Varies         | `work create`, `work commit`           |
 | `pipeline`  | CI/CD orchestration           | Varies         | `pipeline run`, `pipeline status`      |
 | `serve`     | Start servers                 | Server process | `serve docs`, `serve design`           |
-| `templates` | Manage templates              | Varies         | `templates apply`, `templates list`    |
+| `templates` | Install templates             | Varies         | `templates install docs`, `templates install ai` |
 | `update`    | Modify existing               | Varies         | `update design`                        |
 
 ### 3. Consistent Naming Within Categories
@@ -148,12 +148,11 @@ pipeline ci summary-link         # Subcategory + action
 **templates commands**:
 
 ```bash
-templates list
-templates tags
-templates apply
-templates apply docs            # With modifier
 templates install
-templates install reports       # With modifier
+templates install docs          # With type specifier
+templates install ai            # With type specifier
+templates install reports       # With type specifier
+templates install specs         # With type specifier
 ```
 
 **release commands**:
@@ -183,8 +182,8 @@ Some commands include additional context:
 
 ```bash
 get changed-modules-ci          # "ci" modifier specifies CI context
-templates apply docs            # "docs" modifier specifies template type
-templates install reports       # "reports" modifier specifies template type
+templates install docs          # "docs" specifies template type
+templates install reports       # "reports" specifies template type
 show files-changed              # "changed" modifier filters files
 show files-staged               # "staged" modifier filters files
 ```

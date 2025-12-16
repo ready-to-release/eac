@@ -6,10 +6,13 @@
 // Long: All {{ .Variable }} placeholders remain unchanged for later customization.
 // Long:
 // Long: Available template types:
-// Long:   reports  - Report templates (outputs to .r2r/templates/reports)
+// Long:   docs     - Documentation templates (outputs to docs/reference/)
+// Long:   ai       - AI prompt templates (outputs to .r2r/eac/templates/ai/)
+// Long:   reports  - Report templates (outputs to .r2r/templates/reports/)
+// Long:   specs    - Specification templates (outputs to specs/risk-controls/)
 // Long:
 // Long: How it works:
-// Long:   1. Fetches template files (from local directory or GitHub)
+// Long:   1. Uses local template files from repository
 // Long:   2. Copies files as-is to destination directory
 // Long:   3. Preserves all {{ .Variable }} placeholders unchanged
 // Long:
@@ -19,17 +22,21 @@
 // Long:
 // Long: Use Case:
 // Long:   Install templates once to your project, then customize them as needed.
-// Long:   Unlike "apply", this command does NOT replace placeholders.
 // Long:
 // Long: Examples:
+// Long:   templates install docs
+// Long:   templates install ai
 // Long:   templates install reports
-// Long:   templates install reports --source ./my-templates
+// Long:   templates install specs
+// Long:   templates install docs --destination ./custom-docs
 // Long:
 // Long: Use "help templates install <template-type>" for detailed information.
 package templates
 
 import (
 	"os"
+	"sort"
+	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 )
@@ -68,4 +75,48 @@ func TemplatesInstall() int {
 	log.Errorf("Error: unknown template: %s", templateName)
 	showAvailableTemplates("install")
 	return 1
+}
+
+// showAvailableTemplates lists all available templates for a given category
+func showAvailableTemplates(category string) {
+	templates := getAvailableTemplates(category)
+
+	if len(templates) == 0 {
+		log.Errorf("No templates available for category: %s", category)
+		return
+	}
+
+	log.Info("Available templates:")
+	log.Info("  docs     - Documentation templates")
+	log.Info("  ai       - AI prompt templates")
+	log.Info("  reports  - Report templates")
+	log.Info("  specs    - Specification templates")
+}
+
+// getAvailableTemplates scans the registry for templates in a given category
+func getAvailableTemplates(category string) []string {
+	prefix := "templates " + category + " "
+	commands := registry.GetCommands()
+
+	templateMap := make(map[string]bool)
+	for cmdName := range commands {
+		if strings.HasPrefix(cmdName, prefix) {
+			// Extract template name (everything after "templates <category> ")
+			templateName := strings.TrimPrefix(cmdName, prefix)
+			// Only take the first word (in case there are nested subcommands)
+			parts := strings.Fields(templateName)
+			if len(parts) > 0 {
+				templateMap[parts[0]] = true
+			}
+		}
+	}
+
+	// Convert map to sorted slice
+	templates := make([]string, 0, len(templateMap))
+	for name := range templateMap {
+		templates = append(templates, name)
+	}
+	sort.Strings(templates)
+
+	return templates
 }

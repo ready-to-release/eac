@@ -313,13 +313,19 @@ r2r eac serve docs --stop
 
 ```bash
 # Install documentation templates
-r2r eac templates install
+r2r templates install docs
 
-# Apply templates with values
-r2r eac templates apply --module src-auth
+# Install to custom location
+r2r templates install docs --destination ./custom-docs
 
-# List template variables
-r2r eac templates list
+# Install AI prompt templates
+r2r templates install ai
+
+# Install report templates
+r2r templates install reports
+
+# Install specification templates
+r2r templates install specs
 ```
 
 ---

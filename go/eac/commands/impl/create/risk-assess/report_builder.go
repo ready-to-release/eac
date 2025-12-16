@@ -26,7 +26,7 @@ func buildReportData(
 	data := &RiskAssessmentReportData{
 		GeneratedAt:      time.Now().Format("2006-01-02 15:04:05 MST"),
 		ProfileName:      filepath.Base(config.ProfilePath),
-		TestSuite:        strings.Join(config.TestSuites, ", "),
+		TestSuite:        "all", // Always uses all tests
 		ModuleResults:    make([]ModuleReportData, len(results)),
 	}
 
@@ -90,6 +90,9 @@ func buildModuleReportData(config *AssessConfig, result *ModuleAssessmentResult)
 
 	// Extract test and security evidence
 	data.TestEvidenceFormatted, data.SecurityEvidenceFormatted = extractEvidenceFormatted(result)
+
+	// Extract test type breakdown and suite summaries from manifest
+	data.TestTypeBreakdown, data.SuiteSummary = extractManifestDetails(result)
 
 	// Extract control lists and findings
 	data.SatisfiedControls, data.NotSatisfiedControls, data.NotSatisfiedFindings = extractControlsAndFindings(result)
@@ -199,6 +202,49 @@ func extractControlsAndFindings(result *ModuleAssessmentResult) (satisfied, notS
 				Title:     finding.Title,
 			})
 		}
+	}
+
+	return
+}
+
+// extractManifestDetails extracts test type breakdown and suite summaries from manifest metadata
+func extractManifestDetails(result *ModuleAssessmentResult) (testTypeBreakdown, suiteSummary string) {
+	testTypeBreakdown = "N/A"
+	suiteSummary = "N/A"
+
+	// Check if we have test manifest in evidence collection
+	if result.Evidence == nil || result.Evidence.TestManifestData == nil {
+		return
+	}
+
+	manifest := result.Evidence.TestManifestData
+
+	// Build test type breakdown
+	typeBreakdown := make(map[string]int)
+	for _, test := range manifest.Tests {
+		typeBreakdown[test.Type]++
+	}
+
+	if len(typeBreakdown) > 0 {
+		var typeParts []string
+		for testType, count := range typeBreakdown {
+			typeParts = append(typeParts, fmt.Sprintf("%d %s", count, testType))
+		}
+		testTypeBreakdown = strings.Join(typeParts, ", ")
+	}
+
+	// Build suite-level summaries
+	if len(manifest.Suites) > 0 {
+		var suiteLines []string
+		for suiteName, suiteResult := range manifest.Suites {
+			suiteLines = append(suiteLines, fmt.Sprintf(
+				"  - %s: %d/%d passed",
+				suiteName,
+				suiteResult.Passed,
+				suiteResult.Total,
+			))
+		}
+		suiteSummary = strings.Join(suiteLines, "\n")
 	}
 
 	return

@@ -29,7 +29,7 @@ func Templates() int {
 	case "--help", "-h":
 		printTemplatesUsage()
 		return 0
-	case "apply", "install", "list", "tags":
+	case "install":
 		// Handled by separate registrations in respective files
 		return 0
 	default:
@@ -40,28 +40,25 @@ func Templates() int {
 }
 
 func printTemplatesUsage() {
-	log.Info("Manage project templates for documentation and specifications")
+	log.Info("Install project templates for documentation, AI prompts, and specifications")
 	log.Info("")
-	log.Info("Usage: r2r templates <subcommand> [args...]")
+	log.Info("Usage: r2r templates install <template-type> [flags...]")
 	log.Info("")
-	log.Info("Subcommands:")
-	log.Info("  apply                     Apply templates with variable substitution")
-	log.Info("  install                   Install template files to local directory")
-	log.Info("  list                      List all placeholder variables in templates")
-	log.Info("  tags                      Extract and validate Gherkin tags from templates")
+	log.Info("Template Types:")
+	log.Info("  docs      Install documentation templates to docs/reference/")
+	log.Info("  ai        Install AI prompt templates to .r2r/eac/templates/ai/")
+	log.Info("  reports   Install report templates to .r2r/templates/reports/")
+	log.Info("  specs     Install specification templates to specs/risk-controls/")
 	log.Info("")
 	log.Info("Examples:")
-	log.Info("  # List all template variables")
-	log.Info("  r2r templates list")
+	log.Info("  # Install documentation templates")
+	log.Info("  r2r templates install docs")
 	log.Info("")
-	log.Info("  # Install specification templates")
-	log.Info("  r2r templates install specs")
+	log.Info("  # Install docs to custom location")
+	log.Info("  r2r templates install docs --destination ./custom-docs")
 	log.Info("")
-	log.Info("  # Apply documentation templates")
-	log.Info("  r2r templates apply docs")
+	log.Info("  # Install AI templates with debug logging")
+	log.Info("  r2r templates install ai --debug")
 	log.Info("")
-	log.Info("  # Extract and validate template tags")
-	log.Info("  r2r templates tags")
-	log.Info("")
-	log.Info("Use 'r2r templates <subcommand> --help' for more information about a command.")
+	log.Info("Use 'r2r templates install <template-type> --help' for more information.")
 }

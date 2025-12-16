@@ -3,20 +3,17 @@
 // Long: Install report templates by copying files as-is (no variable substitution).
 // Long: Templates preserve {{ .Variable }} placeholders for later customization.
 // Long:
-// Long: Template Source (--source):
-// Long:   If provided: uses local directory containing template files
-// Long:   If omitted: automatically clones from https://github.com/ready-to-release/eac
+// Long: Template Source and Destination:
+// Long:   Source: templates/reports/ (fixed)
+// Long:   Destination: .r2r/templates/reports/ (fixed)
 // Long:
 // Long: Use Case:
 // Long:   Install templates once to your project, then customize them as needed.
-// Long:   Unlike 'apply', this command does NOT replace placeholders.
+// Long:   This command copies files without replacing placeholders.
 // Long:
 // Long: Examples:
 // Long:   templates install reports
-// Long:   templates install reports --source ./my-templates
-// Long:   templates install reports --destination ./.r2r/templates --debug
-// Flag.source: type=string, usage=Local template directory (default: clones from GitHub)
-// Flag.destination: type=string, usage=Output directory (default: .r2r/templates/reports)
+// Long:   templates install reports --debug
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Save detailed logs to out/logs/templates/install/
 package reports
 
@@ -31,13 +28,8 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
-)
-
-const (
-	defaultReportsRepoURL    = "https://github.com/ready-to-release/eac"
-	defaultReportsSourcePath = "templates/reports"
-	defaultReportsDest       = ".r2r/templates/reports"
 )
 
 var log = logging.C()
@@ -48,12 +40,10 @@ func init() {
 
 // Config holds configuration for the reports install command
 type Config struct {
-	Source        string
 	Destination   string
 	WorkspaceRoot string
 	Debug         bool
 	Logger        *logging.Logger
-	IsLocalSource bool
 }
 
 // TemplatesInstallReports installs report templates
@@ -68,7 +58,6 @@ func TemplatesInstallReports() int {
 
 	config.Logger.Info("Starting templates install reports command",
 		zap.String("destination", config.Destination),
-		zap.String("source", config.Source),
 		zap.Bool("debug", config.Debug))
 
 	// Resolve template directory
@@ -94,55 +83,34 @@ func TemplatesInstallReports() int {
 	return 0
 }
 
-// resolveTemplateDirectory determines the template directory
+// resolveTemplateDirectory determines the template directory (always local)
 func resolveTemplateDirectory(config *Config) (string, func(), error) {
-	var templateDir string
-	var cleanup func()
-
-	if config.IsLocalSource {
-		// Use local directory
-		config.Logger.Info("Using local templates",
-			zap.String("path", config.Source))
-		templateDir = config.Source
-
-		// Verify directory exists
-		if _, err := os.Stat(templateDir); os.IsNotExist(err) {
-			return "", nil, fmt.Errorf("local template directory does not exist: %s", config.Source)
-		}
-
-		config.Logger.Debug("Local templates validated",
-			zap.String("dir", templateDir))
-		log.Infof("Using local templates from %s", templateDir)
-		cleanup = func() {}
+	// Always use local templates from appropriate root
+	var root string
+	if containerRoot := repository.GetContainerRoot(); containerRoot != "" {
+		// Running in container - use container root
+		root = containerRoot
+		config.Logger.Info("Running in container, using local templates",
+			zap.String("containerRoot", containerRoot))
 	} else {
-		// Use local templates from appropriate root
-		var root string
-		if containerRoot := repository.GetContainerRoot(); containerRoot != "" {
-			// Running in container - use container root
-			root = containerRoot
-			config.Logger.Info("Running in container, using local templates",
-				zap.String("containerRoot", containerRoot))
-		} else {
-			// Not in container - use workspace root
-			root = config.WorkspaceRoot
-			config.Logger.Info("Using local templates from repository",
-				zap.String("workspaceRoot", root))
-		}
-
-		templateDir = filepath.Join(root, defaultReportsSourcePath)
-
-		// Verify directory exists
-		if _, err := os.Stat(templateDir); os.IsNotExist(err) {
-			return "", nil, fmt.Errorf("template directory does not exist: %s", templateDir)
-		}
-
-		config.Logger.Debug("Local templates validated",
-			zap.String("dir", templateDir))
-		log.Infof("Using templates from %s", templateDir)
-		cleanup = func() {}
+		// Not in container - use workspace root
+		root = config.WorkspaceRoot
+		config.Logger.Info("Using local templates from repository",
+			zap.String("workspaceRoot", root))
 	}
 
-	return templateDir, cleanup, nil
+	templateDir := paths.TemplateReportsPath(root)
+
+	// Verify directory exists
+	if _, err := os.Stat(templateDir); os.IsNotExist(err) {
+		return "", nil, fmt.Errorf("template directory does not exist: %s", templateDir)
+	}
+
+	config.Logger.Debug("Local templates validated",
+		zap.String("dir", templateDir))
+	log.Infof("Using templates from %s", templateDir)
+
+	return templateDir, func() {}, nil
 }
 
 // installTemplates copies templates to destination
@@ -201,9 +169,7 @@ func parseConfig() (*Config, error) {
 		args = os.Args[4:] // Skip "binary templates install reports"
 	}
 
-	// Parse flags manually
-	var source string
-	destination := defaultReportsDest
+	// Parse flags manually (only --debug supported)
 	debug := false
 
 	for i := 0; i < len(args); i++ {
@@ -211,16 +177,6 @@ func parseConfig() (*Config, error) {
 		switch arg {
 		case "--debug", "-d":
 			debug = true
-		case "--source":
-			if i+1 < len(args) {
-				source = args[i+1]
-				i++
-			}
-		case "--destination":
-			if i+1 < len(args) {
-				destination = args[i+1]
-				i++
-			}
 		}
 	}
 
@@ -241,26 +197,14 @@ func parseConfig() (*Config, error) {
 		return nil, fmt.Errorf("failed to initialize logger: %w", err)
 	}
 
-	// Resolve destination path
-	if !filepath.IsAbs(destination) {
-		destination = filepath.Join(workspaceRoot, destination)
-	}
-
-	// Resolve source path
-	isLocalSource := source != ""
-	if isLocalSource {
-		if !filepath.IsAbs(source) {
-			source = filepath.Join(workspaceRoot, source)
-		}
-	}
+	// Use fixed destination path
+	destination := filepath.Join(workspaceRoot, paths.R2RDir, "templates", "reports")
 
 	config := &Config{
-		Source:        source,
 		Destination:   destination,
 		WorkspaceRoot: workspaceRoot,
 		Debug:         debug,
 		Logger:        logger,
-		IsLocalSource: isLocalSource,
 	}
 
 	return config, nil

@@ -150,9 +150,9 @@ AI providers adapt output to module context.
 
 - [`serve-docs`](./serve/docs.md) - Starts MkDocs server
 - [`serve-design`](./serve/design.md) - Starts Structurizr Lite server
-- [`templates-apply`](./templates/apply.md) - Applies documentation templates
-- [`templates-install`](./templates/install.md) - Installs templates
-- [`templates-list`](./templates/list.md) - Lists template variables
+- [`templates-install`](./templates/index.md) - Installs project templates
+- [`templates-install-docs`](./templates/install-docs.md) - Installs documentation templates
+- [`templates-install-ai`](./templates/install-ai.md) - Installs AI prompt templates
 
 ---
 

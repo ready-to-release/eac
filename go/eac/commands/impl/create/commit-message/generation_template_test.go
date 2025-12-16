@@ -51,7 +51,8 @@ func TestPromptTemplateRendering(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Load prompt template
-			promptTemplate, err := loadPromptWithFallback(tc.promptName, workspaceRoot)
+			loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "")
+			promptTemplate, _, err := loader.LoadPrompt(tc.promptName, "")
 			if err != nil {
 				t.Fatalf("Failed to load prompt %s: %v", tc.promptName, err)
 			}
@@ -75,7 +76,8 @@ func TestPromptContractEmbedding(t *testing.T) {
 	}
 
 	// Load prompt
-	promptContent, err := loadPromptWithFallback("top-level", workspaceRoot)
+	loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "")
+	promptContent, _, err := loader.LoadPrompt("top-level", "")
 	if err != nil {
 		t.Fatalf("Failed to load top-level prompt: %v", err)
 	}
@@ -105,7 +107,7 @@ func TestPromptContractEmbedding(t *testing.T) {
 	}
 
 	// Verify contract can still be loaded for validation (even though not embedded in prompt)
-	loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "0.1.0")
+	loader = contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "0.1.0")
 	_, err = loader.LoadContract()
 	if err != nil {
 		t.Errorf("Failed to load contract: %v", err)

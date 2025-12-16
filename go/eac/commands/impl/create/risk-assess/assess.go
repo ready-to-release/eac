@@ -38,6 +38,7 @@ import (
 
 	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/evidence"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/oscal"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/scoring"
 	sharedTemplate "github.com/ready-to-release/eac/go/eac/commands/internal/template"
@@ -63,16 +64,16 @@ type AssessConfig struct {
 	Debug          bool
 	WorkspaceRoot  string
 	Logger         *logging.Logger
-	Timestamp      string   // Timestamp for this assessment run (format: 2006-01-02T15-04-05)
-	OutputDir      string   // Base output directory for this run: out/risk/<timestamp>/
-	TestSuites     []string // Test suites to check (default: integration)
-	ReportTemplate string   // Report template variant (default: risk-assessment-detailed)
+	Timestamp      string // Timestamp for this assessment run (format: 2006-01-02T15-04-05)
+	OutputDir      string // Base output directory for this run: out/risk/<timestamp>/
+	ReportTemplate string // Report template variant (default: risk-assessment-detailed)
 }
 
 // ModuleAssessmentResult holds the results of assessing a single module.
 type ModuleAssessmentResult struct {
 	Module            string
 	AssessmentResults *oscalTypes.AssessmentResults
+	Evidence          *evidence.EvidenceCollection // Evidence collection for reporting
 	OutputPath        string
 	Satisfied         int
 	NotSatisfied      int
@@ -224,7 +225,6 @@ func parseAssessConfig() (*AssessConfig, error) {
 
 	config := &AssessConfig{
 		MaxEvidenceAge: 24 * time.Hour,
-		TestSuites:     []string{"all"},            // Default to all test suites
 		ReportTemplate: "risk-assessment-detailed", // Default to detailed template
 	}
 
@@ -298,18 +298,6 @@ func parseAssessConfig() (*AssessConfig, error) {
 
 			config.MaxEvidenceAge = duration
 			i += 2
-
-		case arg == "--suites":
-			if i+1 >= len(args) {
-				return nil, fmt.Errorf("--suites requires at least one value")
-			}
-			// Collect all suite names until next flag
-			config.TestSuites = []string{}
-			i++
-			for i < len(args) && !strings.HasPrefix(args[i], "-") {
-				config.TestSuites = append(config.TestSuites, args[i])
-				i++
-			}
 
 		case arg == "--report-template":
 			if i+1 >= len(args) {

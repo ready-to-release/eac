@@ -10,6 +10,9 @@ Learn how to prepare and publish releases with changelog generation and version 
 |-------|------------------------|
 | [Prepare Module Release](./prepare-module-release.md) | Complete pre-release checklist and create release |
 | [Generate Changelog](./generate-changelog.md) | Create changelog from Git commits |
+| [View Changelog and Release Notes](./view-changelog-release-notes.md) | Display changelog and release notes for modules |
+| [View Release Specifications](./view-specifications.md) | View and analyze specification files for a release |
+| [View PR Approval Comments](./view-approval-comments.md) | View and analyze PR approval comments for a release |
 | [Create Release Tag](./create-release-tag.md) | Tag release with proper version |
 | [Check CI Before Release](./check-ci-before-release.md) | Verify CI passes before releasing |
 
