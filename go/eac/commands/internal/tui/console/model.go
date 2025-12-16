@@ -32,10 +32,11 @@ type Model struct {
 	lastError   *Line     // Most recent error (sticky display)
 
 	// Per-module tab tracking for Run phase
-	moduleStates map[string]*ModuleState // Per-module state (running, completed, failed)
-	moduleOrder  []string                // Order in which modules started (for tab ordering)
-	activeTab    string                  // Currently selected tab ("" = aggregate view)
-	maxTabs      int                     // Maximum visible tabs before scrolling/hiding
+	moduleStates   map[string]*ModuleState // Per-module state (running, completed, failed)
+	moduleOrder    []string                // Order in which modules started (for tab ordering)
+	nextModuleIdx  int                     // Counter for assigning unique indices to modules
+	activeTab      string                  // Currently selected tab ("" = aggregate view)
+	maxTabs        int                     // Maximum visible tabs before scrolling/hiding
 
 	// Channels for async updates
 	lineChan   <-chan Line   // Incoming output lines
@@ -57,6 +58,7 @@ type Model struct {
 // ModuleState tracks per-module execution state for tab display
 type ModuleState struct {
 	Moniker   string        // Module identifier
+	Index     int           // 1-based index in execution order (for tab display)
 	Buffer    *RingBuffer   // Module-specific output buffer
 	Status    ModuleStatus  // Running, Complete, Failed
 	StartTime time.Time     // When module started
@@ -275,10 +277,14 @@ func (m *Model) GetOrCreateModuleState(moniker string) *ModuleState {
 		return state
 	}
 
+	// Increment counter first to get unique index
+	m.nextModuleIdx++
+
 	// Create new module state with its own buffer
 	state := &ModuleState{
 		Moniker:   moniker,
-		Buffer:    NewRingBuffer(200), // Per-module buffer (smaller than pane buffer)
+		Index:     m.nextModuleIdx, // Unique 1-based index from counter
+		Buffer:    NewRingBuffer(200),
 		Status:    ModuleRunning,
 		StartTime: time.Now(),
 	}

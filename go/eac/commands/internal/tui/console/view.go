@@ -143,9 +143,9 @@ func (m Model) renderTabBar(tabs []*ModuleState) string {
 			label = label[:maxLabelLen-1] + "…"
 		}
 
-		// Add status icon
+		// Add index and status icon: "1 ▶ name"
 		icon := state.Status.Icon()
-		tabText := icon + " " + label
+		tabText := fmt.Sprintf("%d %s %s", state.Index, icon, label)
 
 		// Check if we have room for this tab
 		tabWidth := lipgloss.Width(tabText) + 2 // +2 for padding
