@@ -127,6 +127,9 @@ func assessSingleModule(
 		result.Warnings = evidenceCollection.Warnings
 	}
 
+	// Store evidence collection for reporting
+	result.Evidence = evidenceCollection
+
 	// Build assessment-results
 	// Use timestamped directory: out/risk/<timestamp>/<module>/assessment-results.json
 	moduleOutputDir := filepath.Join(config.OutputDir, moduleName)

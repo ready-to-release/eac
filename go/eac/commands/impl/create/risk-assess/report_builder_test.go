@@ -555,7 +555,6 @@ func TestBuildReportData(t *testing.T) {
 		WorkspaceRoot: "/workspace",
 		OutputDir:     "/workspace/out",
 		ProfilePath:   "/workspace/specs/.risk-controls/risk-profile.json",
-		TestSuites:    []string{"acceptance"},
 	}
 
 	results := []*ModuleAssessmentResult{
@@ -593,7 +592,7 @@ func TestBuildReportData(t *testing.T) {
 		assert.NotEmpty(t, data.GeneratedAt)
 		assert.Equal(t, "Full Assessment (all 2 modules)", data.ScopeDescription)
 		assert.Equal(t, "risk-profile.json", data.ProfileName)
-		assert.Equal(t, "acceptance", data.TestSuite)
+		assert.Equal(t, "all", data.TestSuite)
 
 		assert.Equal(t, 2, data.Summary.ModulesAssessed)
 		assert.Equal(t, 20, data.Summary.TotalControls)
