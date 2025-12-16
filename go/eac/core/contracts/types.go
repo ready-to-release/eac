@@ -132,6 +132,7 @@ type Files struct {
 	Assets       []string `yaml:"assets"`        // Static assets, templates, docs
 	Tests        []string `yaml:"tests"`         // Test files
 	Exclude      []string `yaml:"exclude"`       // Patterns to exclude
+	Ignore       []string `yaml:"ignore"`        // Patterns owned but not triggering change detection
 	Changelog    string   `yaml:"changelog"`     // Changelog file path
 	ReleaseNotes string   `yaml:"release_notes"` // Release notes file path
 

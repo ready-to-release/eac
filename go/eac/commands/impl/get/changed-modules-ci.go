@@ -339,9 +339,8 @@ func filterModulesWithWorkflows(monikers []string, workspaceRoot string) ([]stri
 }
 
 // getCIExcludedFiles returns a set of file paths that should not trigger CI.
-// These files are owned by modules but changes to them don't affect module functionality:
-// - files.workflows.release: Release workflow configuration
-// - files.changelog: Release documentation
+// Uses files.ignore patterns from module contracts - files that are owned but
+// changes to them don't affect module functionality.
 func getCIExcludedFiles(workspaceRoot string) map[string]bool {
 	result := make(map[string]bool)
 
@@ -351,43 +350,80 @@ func getCIExcludedFiles(workspaceRoot string) map[string]bool {
 	}
 
 	for _, module := range registry.All() {
-		// Exclude release workflows
-		if module.Files.Workflows.Release != "" {
-			path := strings.TrimPrefix(module.Files.Workflows.Release, "./")
-			result[path] = true
-		}
-
-		// Exclude changelogs
-		changelogPath := module.GetChangelogPath()
-		if changelogPath != "" {
-			result[changelogPath] = true
+		// Use files.ignore patterns from module contract
+		for _, pattern := range module.Files.Ignore {
+			resolvedPattern := resolveIgnorePattern(pattern, module.Files.Root)
+			result[resolvedPattern] = true
 		}
 	}
 
 	return result
 }
 
+// resolveIgnorePattern resolves an ignore pattern to an absolute repo path.
+// Patterns starting with .github/, release/, or containing .. are resolved relative to module root.
+// Other patterns are joined with the module root.
+func resolveIgnorePattern(pattern, moduleRoot string) string {
+	// Normalize pattern to forward slashes
+	pattern = strings.ReplaceAll(pattern, "\\", "/")
+
+	// If pattern contains .., resolve it relative to module root using filepath.Clean
+	if strings.Contains(pattern, "..") && moduleRoot != "" && moduleRoot != "/" {
+		resolved := filepath.Join(moduleRoot, pattern)
+		resolved = filepath.Clean(resolved)
+		return strings.ReplaceAll(resolved, "\\", "/")
+	}
+
+	// If pattern starts with known repo-root prefixes, use as-is
+	if strings.HasPrefix(pattern, ".github/") || strings.HasPrefix(pattern, "release/") ||
+		strings.HasPrefix(pattern, "contracts/") || strings.HasPrefix(pattern, "go/") {
+		return pattern
+	}
+
+	// Otherwise, resolve relative to module root
+	if moduleRoot != "" && moduleRoot != "/" {
+		resolved := filepath.Join(moduleRoot, pattern)
+		return strings.ReplaceAll(resolved, "\\", "/")
+	}
+
+	return pattern
+}
+
 // filterOutCIExcludedFiles removes files that shouldn't trigger CI from the changed files list.
-func filterOutCIExcludedFiles(files []string, excluded map[string]bool) []string {
+// Supports both exact matches and glob patterns from files.ignore.
+func filterOutCIExcludedFiles(files []string, excludedPatterns map[string]bool) []string {
 	result := make([]string, 0, len(files))
 	for _, f := range files {
-		// Check exact match for excluded files (release workflows, changelogs)
-		if excluded[f] {
+		if isFileExcluded(f, excludedPatterns) {
 			continue
 		}
-
-		// Check for README.md files (documentation only)
-		if isReadmeFile(f) {
-			continue
-		}
-
 		result = append(result, f)
 	}
 	return result
 }
 
-// isReadmeFile returns true if the file is a README.md file
-func isReadmeFile(filePath string) bool {
-	base := filepath.Base(filePath)
-	return strings.EqualFold(base, "README.md")
+// isFileExcluded checks if a file matches any of the excluded patterns.
+// Supports exact matches and glob patterns (*, **, ?).
+func isFileExcluded(filePath string, patterns map[string]bool) bool {
+	for pattern := range patterns {
+		// Try exact match first
+		if filePath == pattern {
+			return true
+		}
+		// Try glob match for patterns containing wildcards
+		if strings.ContainsAny(pattern, "*?") {
+			if matched, _ := filepath.Match(pattern, filePath); matched {
+				return true
+			}
+			// Handle ** patterns by checking if file is under the pattern's directory
+			if strings.Contains(pattern, "**") {
+				// Convert ** pattern to prefix match
+				prefix := strings.Split(pattern, "**")[0]
+				if strings.HasPrefix(filePath, prefix) {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }

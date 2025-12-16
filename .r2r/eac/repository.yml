@@ -19,238 +19,16 @@ paths:
 
 # Module Contracts
 # Type defaults (files.source, files.tests, files.config) loaded from contract defaults
+# Ordered by dependency layer (Layer 0 first, then Layer 1, etc.)
 modules:
   # ============================================================================
-  # R2R Configuration
+  # LAYER 0 - Root modules (no dependencies)
   # ============================================================================
-  - moniker: r2r-config
-    name: EAC Repository Configuration
-    type: static
-    description: Everything as Code configuration including modules, environments, AI prompts, and test suites
-    files:
-      root: .r2r
-      config:
-        - r2r-cli.yml
-        - "eac/**/*.yml"
-        - "eac/**/*.yaml"
-      assets:
-        - "eac/**/*.md"
 
-  # ============================================================================
-  # Claude Code Configuration
-  # ============================================================================
-  - moniker: claude
-    name: Claude Code Configuration
-    type: static
-    description: Claude Code CLI configuration including agents, hooks, commands, and settings
-    files:
-      root: .claude
-      source:
-        - hooks/*.sh
-        - hooks/*.ps1
-      config:
-        - "*.json"
-        - "*.md"
-        - agents/*.md
-        - commands/*.md
-        - logs/README.md
-      repo:
-        other:
-          - .mcp.json
-          - agent.md
-          - "**/agent.md"
-          - scripts/pwsh/claude/env-setup.ps1
-          - scripts/sh/claude/env-setup.sh
-
-  # ============================================================================
-  # Documentation - HTML Site
-  # ============================================================================
-  - moniker: docs
-    name: Documentation Site
-    type: container
-    description: MkDocs HTML documentation site for GitHub Pages
-    versioning:
-      scheme: CalVer
-    depends_on:
-      - eac-commands
-    books:
-      - site
-    files:
-      root: docs
-      assets:
-        - "**/*.md"
-        - "**/.nav.yml"
-        - assets/**
-        - LICENSE
-        - reference/**
-      changelog: ../release/docs/CHANGELOG.md
-      workflows:
-        ci: .github/workflows/ci-docs.yaml
-        release: .github/workflows/release-docs.yaml
-      repo:
-        other:
-          - mkdocs.yml
-          - containers/mkdocs-site/**
-          - containers/static-site/**
-
-  # ============================================================================
-  # PDF Books
-  # ============================================================================
-  - moniker: books
-    name: PDF Books
-    type: container
-    description: PDF documentation books for offline reading and distribution
-    versioning:
-      scheme: CalVer
-    depends_on:
-      - docs
-      - eac-commands
-    books:
-      - tutorials
-      - howto
-      - explanation
-      - specifications
-      - repository-report
-    files:
-      changelog: release/books/CHANGELOG.md
-      workflows:
-        ci: .github/workflows/ci-books.yaml
-        release: .github/workflows/release-books.yaml
-      repo:
-        other:
-          - containers/mkdocs-pdf/**
-
-  # ============================================================================
-  # Release Bundle
-  # ============================================================================
-  - moniker: r2r-eac
-    name: Release Bundle
-    type: static
-    description: Aggregated release bundle with links to all module releases - this becomes the "Latest" GitHub release
-    versioning:
-      scheme: CalVer
-    depends_on:
-      - books #set to whatever is last, so we are always really last
-    books:
-      - release-evidence
-    release_bundle:
-      title_format: "r2r ({r2r_version}) + eac ({eac_version})"
-      headline:
-        r2r: r2r-cli
-        eac: ext-eac
-      categories:
-        - name: Core Tools
-          description: CLI tools and extensions
-          modules:
-            - r2r-cli
-            - ext-eac
-        - name: Documentation
-          description: Documentation and guides
-          modules:
-            - docs
-            - books
-    files:
-      root: release/bundle
-      workflows:
-        release: .github/workflows/release-r2r-eac.yaml
-
-  # ============================================================================
-  # EAC Extension
-  # ============================================================================
-  - moniker: ext-eac
-    name: EAC Extension for R2R CLI
-    type: container
-    description: Docker-based extension providing EAC (Everything as Code) for R2R CLI integration
-    versioning:
-      scheme: SemVer
-    depends_on:
-      - eac-commands
-      - r2r-cli
-    build:
-      artifacts:
-        - id: image
-          type: image
-          pattern: "{moniker}:latest"
-    docker_build:
-      container: "{moniker}"
-      context: "."
-      dockerfile: "containers/{moniker}/Dockerfile"
-      platforms:
-        - linux/amd64
-        - linux/arm64
-      tags:
-        - "ghcr.io/ready-to-release/{moniker}:ci"
-        - "ghcr.io/ready-to-release/{moniker}:sha-{short_sha}"
-      push: true
-      registry: ghcr.io
-      cache:
-        type: registry
-        from: "ghcr.io/ready-to-release/{moniker}:buildcache"
-        to: "ghcr.io/ready-to-release/{moniker}:buildcache"
-        mode: max
-      sbom: true
-      provenance: true
-    files:
-      root: containers/ext-eac
-      changelog: ../../release/ext-eac/CHANGELOG.md
-      workflows:
-        ci: .github/workflows/ci-ext-eac.yaml
-        release: .github/workflows/release-ext-eac.yaml
-
-  # ============================================================================
-  # GitHub Configuration
-  # ============================================================================
-  - moniker: github
-    name: GitHub Configuration
-    type: static
-    description: GitHub workflows, actions, and CI/CD configuration
-    files:
-      root: .github
-      config:
-        - "**/*"
-      assets:
-        - README.md
-      exclude:
-        - workflows/*.yaml
-
-  # ============================================================================
-  # Scripts: Go Command Invoker
-  # ============================================================================
-  - moniker: scripts-implicit-cli
-    name: Go Command Invoker Scripts
-    type: static
-    description: Cross-shell wrappers with tab completion for running Go commands from go/eac/commands/
-    versioning:
-      scheme: SemVer
-    depends_on:
-      - eac-commands
-    build:
-      handler: scripts
-    files:
-      root: scripts
-      source:
-        - "*/go-invoker/**"
-      workflows:
-        ci: .github/workflows/ci-scripts-implicit-cli.yaml
-        release: ""
-      repo:
-        other:
-          - importer.ps1
-          - importer.sh
-
-  # ============================================================================
-  # Repository Root
-  # ============================================================================
   - moniker: repository
     name: Repository Root Module
     type: static
     description: Repository root module including configuration files, build tools, and git settings
-    depends_on:
-      - eac-core
-      - r2r-config
-    # books:
-    #   - repository-report # PDF (output: pdf-dark)
-    #   - risk-evidence-package # PDF (output: pdf-dark)
     files:
       root: /
       config:
@@ -264,6 +42,17 @@ modules:
         - test-repository-validations.sh
         - CHANGELOG.md
         - SECURITY.md
+        - .r2r/**
+        - .vscode/**
+        - .claude/**
+        - .mcp.json
+        - agent.md
+        - "**/agent.md"
+      ignore:
+        - "**/README.md"
+        - CHANGELOG.md
+        - .claude/**
+        - .vscode/**
       repo:
         test_impl: go/eac/specs/impl/repository
         design: ""
@@ -271,12 +60,128 @@ modules:
           - .github/workflows/change-trigger.yaml
           - .github/workflows/cron-full-trigger.yaml
           - .github/workflows/codeql.yaml
-          - .github/workflows/change-trigger.yaml
+          - scripts/pwsh/claude/env-setup.ps1
+          - scripts/sh/claude/env-setup.sh
+          - scripts/sh/vscode/**
           - go/eac/core/testing/testdata/meta-tests/**
 
+  - moniker: eac-core
+    name: Core Domain Libraries
+    type: go
+    description: Core library containing contracts and repository operations
+    versioning:
+      scheme: SemVer
+    flags:
+      explicit_ownership: true
+    files:
+      root: go/eac/core
+      source:
+        - "**/*.go"
+      config:
+        - go.mod
+        - go.sum
+        - contracts/schema/schemas/*.json
+      workflows:
+        ci: .github/workflows/ci-eac-core.yaml
+      repo:
+        other:
+          - contracts/eac-core/**
+
+  - moniker: release-docs
+    name: Release Documentation
+    type: static
+    description: Release notes and changelogs for published artifacts
+    versioning:
+      scheme: CalVer
+    files:
+      root: release
+      assets:
+        - README.md
+        - "**/*.md"
+      exclude:
+        # Changelogs owned by their respective modules (books has no root, so path is from repo root)
+        - books/CHANGELOG.md
+
   # ============================================================================
-  # Source: CLI
+  # LAYER 1 - Depends on Layer 0
   # ============================================================================
+
+  - moniker: docs
+    name: Documentation Site
+    type: container
+    description: MkDocs HTML documentation site for GitHub Pages
+    versioning:
+      scheme: CalVer
+    depends_on:
+      - repository
+    books:
+      - site
+    files:
+      root: docs
+      assets:
+        - "**/*.md"
+        - "**/.nav.yml"
+        - assets/**
+        - LICENSE
+        - reference/**
+      ignore:
+        - "../release/docs/CHANGELOG.md"
+        - ".github/workflows/release-docs.yaml"
+      changelog: ../release/docs/CHANGELOG.md
+      workflows:
+        ci: .github/workflows/ci-docs.yaml
+        release: .github/workflows/release-docs.yaml
+      repo:
+        other:
+          - mkdocs.yml
+          - containers/mkdocs-site/**
+          - containers/static-site/**
+
+  - moniker: eac-commands
+    name: Go Commands Library
+    type: go
+    description: Go library containing CLI command implementations
+    versioning:
+      scheme: SemVer
+    depends_on:
+      - eac-core
+    build:
+      artifacts:
+        - id: commands
+          type: executable
+          pattern: "commands{ext}"
+    files:
+      root: go/eac/commands
+      exclude:
+        - ext/**
+      workflows:
+        ci: .github/workflows/ci-eac-commands.yaml
+      assets:
+        - "README.md"
+        - "**/README.md"
+        - "testdata/**/*.yml"
+      repo:
+        other:
+          - containers/mermaid-cli/Dockerfile
+          - containers/mermaid-cli/*.json
+          - containers/pdf-tools/Dockerfile
+
+  - moniker: eac-specs
+    name: Test Infrastructure
+    type: go
+    description: Shared godog test infrastructure (internal utilities only - impl/ owned by respective modules via test_impl)
+    depends_on:
+      - eac-core
+    files:
+      root: go/eac/specs
+      source:
+        - internal/**/*.go
+      config:
+        - go.mod
+        - go.sum
+      exclude:
+        - impl/**
+
   - moniker: r2r-cli
     name: The CLI of CLIs
     type: go
@@ -316,6 +221,9 @@ modules:
           derive_from: "r2r-windows-amd64.exe"
     files:
       root: go/r2r/cli
+      ignore:
+        - "../../../release/r2r-cli/CHANGELOG.md"
+        - ".github/workflows/release-r2r-cli.yaml"
       changelog: ../../../release/r2r-cli/CHANGELOG.md
       workflows:
         ci: .github/workflows/ci-r2r-cli.yaml
@@ -324,9 +232,149 @@ modules:
         other:
           - contracts/r2r-cli/**
 
+  - moniker: templates
+    name: Project Templates
+    type: static
+    description: Template files for documentation, specifications, and design records
+    depends_on:
+      - repository
+    files:
+      root: templates
+      assets:
+        - "**/*.json"
+        - "**/*.md"
+        - "**/*.feature"
+        - "**/*.yml"
+        - "**/*.go"
+      repo:
+        other:
+          - specs/.risk-controls/**
+
+  - moniker: vscode-ext-commit
+    name: VSCode Extension - Git Commit
+    type: typescript
+    description: VSCode extension providing Git toolbar and Claude MCP integration UI
+    versioning:
+      scheme: SemVer
+    depends_on:
+      - repository
+    files:
+      root: typescript/vscode-ext-commit
+      workflows:
+        ci: .github/workflows/ci-vscode-ext-commit.yaml
+      repo:
+        other:
+          - contracts/vscode-commit/**
+          - "typescript/vscode-ext-commit/*"
+          - "typescript/vscode-ext-commit/test/*"
+
   # ============================================================================
-  # Scripts: CLI Installer
+  # LAYER 2 - Depends on Layer 1
   # ============================================================================
+
+  - moniker: books
+    name: PDF Books
+    type: container
+    description: PDF documentation books for offline reading and distribution
+    versioning:
+      scheme: CalVer
+    depends_on:
+      - docs
+      - eac-commands
+    books:
+      - tutorials
+      - howto
+      - explanation
+      - specifications
+      - repository-report
+    files:
+      ignore:
+        - "release/books/CHANGELOG.md"
+        - ".github/workflows/release-books.yaml"
+      changelog: release/books/CHANGELOG.md
+      workflows:
+        ci: .github/workflows/ci-books.yaml
+        release: .github/workflows/release-books.yaml
+      repo:
+        other:
+          - containers/mkdocs-pdf/**
+
+  - moniker: eac-mcp-commands
+    name: Go Commands MCP Server
+    type: go
+    description: Internal MCP server for Commands
+    versioning:
+      scheme: SemVer
+    depends_on:
+      - eac-commands
+    build:
+      artifacts:
+        - id: mcp-server
+          type: executable
+          pattern: "{moniker}{ext}"
+    files:
+      root: go/eac/mcp/commands
+      workflows:
+        ci: .github/workflows/ci-eac-mcp-commands.yaml
+
+  - moniker: ext-eac
+    name: EAC Extension for R2R CLI
+    type: container
+    description: Docker-based extension providing EAC (Everything as Code) for R2R CLI integration
+    versioning:
+      scheme: SemVer
+    depends_on:
+      - eac-commands
+      - r2r-cli
+    build:
+      artifacts:
+        - id: image
+          type: image
+          pattern: "{moniker}:latest"
+    docker_build:
+      container: "{moniker}"
+      context: "."
+      dockerfile: "containers/{moniker}/Dockerfile"
+      platforms:
+        - linux/amd64
+        - linux/arm64
+      tags:
+        - "ghcr.io/ready-to-release/{moniker}:ci"
+        - "ghcr.io/ready-to-release/{moniker}:sha-{short_sha}"
+      push: true
+      registry: ghcr.io
+      cache:
+        type: registry
+        from: "ghcr.io/ready-to-release/{moniker}:buildcache"
+        to: "ghcr.io/ready-to-release/{moniker}:buildcache"
+        mode: max
+      sbom: true
+      provenance: true
+    files:
+      root: containers/ext-eac
+      ignore:
+        - "../../release/ext-eac/CHANGELOG.md"
+        - ".github/workflows/release-ext-eac.yaml"
+      changelog: ../../release/ext-eac/CHANGELOG.md
+      workflows:
+        ci: .github/workflows/ci-ext-eac.yaml
+        release: .github/workflows/release-ext-eac.yaml
+
+  - moniker: github
+    name: GitHub Configuration
+    type: static
+    description: GitHub workflows, actions, and CI/CD configuration
+    depends_on:
+      - eac-commands
+    files:
+      root: .github
+      config:
+        - "**/*"
+      assets:
+        - README.md
+      exclude:
+        - workflows/*.yaml
+
   - moniker: scripts-cli-installer
     name: R2R CLI Installer Scripts
     type: static
@@ -349,167 +397,62 @@ modules:
       repo:
         test_impl: go/eac/specs/impl/scripts-cli-installer
 
-  # ============================================================================
-  # Source: Commands Library
-  # ============================================================================
-  - moniker: eac-commands
-    name: Go Commands Library
-    type: go
-    description: Go library containing CLI command implementations
+  - moniker: scripts-implicit-cli
+    name: Go Command Invoker Scripts
+    type: static
+    description: Cross-shell wrappers with tab completion for running Go commands from go/eac/commands/
     versioning:
       scheme: SemVer
     depends_on:
-      - eac-core
+      - eac-commands
     build:
-      artifacts:
-        - id: commands
-          type: executable
-          pattern: "commands{ext}"
+      handler: scripts
     files:
-      root: go/eac/commands
-      exclude:
-        - ext/**
-      workflows:
-        ci: .github/workflows/ci-eac-commands.yaml
-      assets:
-        - "README.md"
-        - "**/README.md"
-        - "testdata/**/*.yml"
-      repo:
-        other:
-          - containers/mermaid-cli/Dockerfile
-          - containers/mermaid-cli/*.json
-          - containers/pdf-tools/Dockerfile
-
-  # ============================================================================
-  # Source: Core Domain Libraries
-  # ============================================================================
-  - moniker: eac-core
-    name: Core Domain Libraries
-    type: go
-    description: Core library containing contracts and repository operations
-    versioning:
-      scheme: SemVer
-    flags:
-      explicit_ownership: true
-    files:
-      root: go/eac/core
+      root: scripts
       source:
-        - "**/*.go"
-      config:
-        - go.mod
-        - go.sum
-        - contracts/schema/schemas/*.json
+        - "*/go-invoker/**"
       workflows:
-        ci: .github/workflows/ci-eac-core.yaml
+        ci: .github/workflows/ci-scripts-implicit-cli.yaml
+        release: ""
       repo:
         other:
-          - contracts/eac-core/**
+          - importer.ps1
+          - importer.sh
 
   # ============================================================================
-  # Source: Test Infrastructure
+  # LAYER 3 - Depends on Layer 2
   # ============================================================================
-  - moniker: eac-specs
-    name: Test Infrastructure
-    type: go
-    description: Shared godog test infrastructure (internal utilities only - impl/ owned by respective modules via test_impl)
-    depends_on:
-      - eac-core
-    files:
-      root: go/eac/specs
-      source:
-        - internal/**/*.go
-      config:
-        - go.mod
-        - go.sum
-      exclude:
-        - impl/**
 
-  # ============================================================================
-  # Source: MCP Commands Server
-  # ============================================================================
-  - moniker: eac-mcp-commands
-    name: Go Commands MCP Server
-    type: go
-    description: Internal MCP server for Commands
-    versioning:
-      scheme: SemVer
-    depends_on:
-      - eac-core
-    build:
-      artifacts:
-        - id: mcp-server
-          type: executable
-          pattern: "{moniker}{ext}"
-    files:
-      root: go/eac/mcp/commands
-      workflows:
-        ci: .github/workflows/ci-eac-mcp-commands.yaml
-
-  # ============================================================================
-  # Templates
-  # ============================================================================
-  - moniker: templates
-    name: Project Templates
+  - moniker: r2r-eac
+    name: Release Bundle
     type: static
-    description: Template files for documentation, specifications, and design records
-    files:
-      root: templates
-      assets:
-        - "**/*.json"
-        - "**/*.md"
-        - "**/*.feature"
-        - "**/*.yml"
-        - "**/*.go"
-      repo:
-        other:
-          - specs/.risk-controls/**
-
-  # ============================================================================
-  # VSCode Configuration
-  # ============================================================================
-  - moniker: vscode
-    name: VSCode Repository Configuration
-    type: static
-    description: VSCode repository configuration
-    files:
-      root: .vscode
-      exclude:
-        - extensions/**
-      repo:
-        other:
-          - scripts/sh/vscode/**
-
-  - moniker: vscode-ext-commit
-    name: VSCode Extension - Git Commit
-    type: typescript
-    description: VSCode extension providing Git toolbar and Claude MCP integration UI
-    versioning:
-      scheme: SemVer
-    files:
-      root: typescript/vscode-ext-commit
-      workflows:
-        ci: .github/workflows/ci-vscode-ext-commit.yaml
-      repo:
-        other:
-          - contracts/vscode-commit/**
-          - "typescript/vscode-ext-commit/*"
-          - "typescript/vscode-ext-commit/test/*"
-
-  # ============================================================================
-  # Release Documentation
-  # ============================================================================
-  - moniker: release-docs
-    name: Release Documentation
-    type: static
-    description: Release notes and changelogs for published artifacts
+    description: Aggregated release bundle with links to all module releases - this becomes the "Latest" GitHub release
     versioning:
       scheme: CalVer
+    depends_on:
+      - books
+      - eac-commands
+    books:
+      - release-evidence
+    release_bundle:
+      title_format: "r2r-({r2r_version}) ∞ eac-({eac_version})"
+      headline:
+        r2r: r2r-cli
+        eac: ext-eac
+      categories:
+        - name: Core Tools
+          description: CLI tools and extensions
+          modules:
+            - r2r-cli
+            - ext-eac
+        - name: Documentation
+          description: Documentation and guides
+          modules:
+            - docs
+            - books
     files:
-      root: release
-      assets:
-        - README.md
-        - "**/*.md"
-      exclude:
-        # Changelogs owned by their respective modules (books has no root, so path is from repo root)
-        - books/CHANGELOG.md
+      root: release/bundle
+      ignore:
+        - ".github/workflows/release-r2r-eac.yaml"
+      workflows:
+        release: .github/workflows/release-r2r-eac.yaml

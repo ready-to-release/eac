@@ -62,5 +62,5 @@ jobs:
           module: eac-core
           trigger-run-id: ${{ inputs.trigger_run_id }}
           download-artifact: 'false'
-          # PRs run unit suite only; main/release branches run full suite
-          suites: ${{ (inputs.ref != '' && startsWith(inputs.ref, 'refs/pull/')) && 'unit' || 'unit,integration,acceptance' }}
+          # PRs run unit+integration; main/release branches run full suite
+          suites: ${{ (inputs.ref != '' && startsWith(inputs.ref, 'refs/pull/')) && 'unit+integration' || 'unit+integration+acceptance' }}
