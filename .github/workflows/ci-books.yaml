@@ -65,5 +65,5 @@ jobs:
           module: books
           trigger-run-id: ${{ inputs.trigger_run_id }}
           download-artifact: 'false'
-          suites: ${{ (inputs.ref != '' && startsWith(inputs.ref, 'refs/pull/')) && 'unit' || 'unit,integration,acceptance' }}
+          suites: ${{ (inputs.ref != '' && startsWith(inputs.ref, 'refs/pull/')) && 'unit+integration' || 'unit+integration+acceptance' }}
           # Note: Release is triggered by change-trigger.yaml after all CI completes (calver auto-release)

@@ -174,14 +174,14 @@ jobs:
           module: my-module
           trigger-run-id: ${{ inputs.trigger_run_id }}
           setup-deps: auto
-          suites: ${{ startsWith(inputs.ref, 'refs/pull/') && 'unit' || 'unit,integration,acceptance' }}
+          suites: ${{ startsWith(inputs.ref, 'refs/pull/') && 'unit+integration' || 'unit+integration+acceptance' }}
 ```
 
 **Key points:**
 
 - `trigger-run-id` enables artifact caching from orchestrator
-- PRs run `unit` suite only (fast)
-- Main branch runs `unit,integration,acceptance` (full validation)
+- PRs run `unit+integration` suites (fast feedback)
+- Main branch runs `unit+integration+acceptance` (full validation)
 - `build-module` and `test-module` handle all artifact operations + summaries
 
 ---
@@ -353,13 +353,13 @@ For modules that auto-release on every main push (docs, books):
 
 | Branch       | Suites                         | Duration   | Purpose         |
 | ------------ | ------------------------------ | ---------- | --------------- |
-| Pull Request | `unit` only                    | ~5-10 min  | Fast feedback   |
-| Main (trunk) | `unit,integration,acceptance`  | ~15-30 min | Full validation |
+| Pull Request | `unit+integration`             | ~5-10 min  | Fast feedback   |
+| Main (trunk) | `unit+integration+acceptance`  | ~15-30 min | Full validation |
 
 **Implementation:**
 
 ```yaml
-suites: ${{ startsWith(inputs.ref, 'refs/pull/') && 'unit' || 'unit,integration,acceptance' }}
+suites: ${{ startsWith(inputs.ref, 'refs/pull/') && 'unit+integration' || 'unit+integration+acceptance' }}
 ```
 
 ---

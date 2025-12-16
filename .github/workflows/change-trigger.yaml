@@ -113,7 +113,7 @@ jobs:
           setup-deps: none  # Already set up by build-module
           download-artifact: 'false'
           # PR: fast feedback with unit+integration; main: thorough with acceptance
-          suites: ${{ github.event_name == 'pull_request' && 'unit,integration' || 'unit,integration,acceptance' }}
+          suites: ${{ github.event_name == 'pull_request' && 'unit+integration' || 'unit+integration+acceptance' }}
 
   # =========================================
   # Flow B: Module CI Orchestration (after setup, parallel with Flow A)
@@ -541,7 +541,7 @@ jobs:
 
           # Repository validation stage
           # PR runs unit+integration, main runs unit+integration+acceptance
-          SUITES="${{ github.event_name == 'pull_request' && 'unit,integration' || 'unit,integration,acceptance' }}"
+          SUITES="${{ github.event_name == 'pull_request' && 'unit+integration' || 'unit+integration+acceptance' }}"
           if [ "$REPO_VALIDATION" = "success" ]; then
             echo "| Repository Validation | Pass | Build + test suites ($SUITES) passed |" >> $GITHUB_STEP_SUMMARY
           elif [ "$REPO_VALIDATION" = "failure" ]; then

@@ -510,6 +510,14 @@
           },
           "default": []
         },
+        "ignore": {
+          "type": "array",
+          "description": "File patterns that are owned but do not trigger change detection (e.g., release workflows, changelogs, README.md). These files belong to the module but changes to them won't trigger CI rebuilds.",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
         "changelog": {
           "type": "string",
           "description": "Changelog file path relative to module root (defaults to 'CHANGELOG.md')",
