@@ -245,7 +245,7 @@ trigger-release:
 
 ---
 
-### Multi-Platform Testing (scripts-cli-installer)
+### Multi-Platform Testing (r2r-installer)
 
 **Difference:** Separate test jobs for Linux and Windows
 
@@ -255,7 +255,7 @@ test-linux:
   steps:
     - uses: ./.github/actions/test-module
       with:
-        module: scripts-cli-installer
+        module: r2r-installer
         setup-deps: auto
 
 test-windows:
@@ -263,8 +263,8 @@ test-windows:
   steps:
     - uses: ./.github/actions/test-module
       with:
-        module: scripts-cli-installer
-        build-artifact-name: build-artifacts-scripts-cli-installer
+        module: r2r-installer
+        build-artifact-name: build-artifacts-r2r-installer
 ```
 
 ---

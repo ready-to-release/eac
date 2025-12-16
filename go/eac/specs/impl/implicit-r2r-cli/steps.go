@@ -1,11 +1,11 @@
-// Package scriptsimplicitcli contains godog step implementations for specs/scripts-implicit-cli.
+// Package implicitr2rcli contains godog step implementations for specs/implicit-r2r-cli.
 //
 // Features:
-// - specs/scripts-implicit-cli/importer/
+// - specs/implicit-r2r-cli/importer/
 //
 // These tests invoke the importer scripts and verify they work correctly.
 // Platform-specific scenarios use runtime detection to skip on non-matching platforms.
-package scriptsimplicitcli
+package implicitr2rcli
 
 import (
 	"context"
@@ -31,7 +31,7 @@ type importerContext struct {
 
 var impCtx *importerContext
 
-// RegisterSteps registers all scripts-implicit-cli specific step definitions.
+// RegisterSteps registers all implicit-r2r-cli specific step definitions.
 func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	impCtx = &importerContext{sharedCtx: ctx}
 

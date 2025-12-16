@@ -1,11 +1,11 @@
-// Package scriptsinstaller contains godog step implementations for specs/scripts-cli-installer.
+// Package r2rinstaller contains godog step implementations for specs/r2r-installer.
 //
-// This package tests scripts-cli-installer features (CLI installation scripts)
+// This package tests r2r-installer features (CLI installation scripts)
 // via subprocess execution of PowerShell/Bash installer scripts.
 //
 // These tests invoke the installer scripts and verify they work correctly.
 // Platform-specific scenarios use runtime detection to skip on non-matching platforms.
-package scriptscliinstaller
+package r2rinstaller
 
 import (
 	"os"
@@ -15,10 +15,10 @@ import (
 	"github.com/ready-to-release/eac/go/eac/specs/internal"
 )
 
-func TestScriptsInstallerFeatures(t *testing.T) {
+func TestR2RInstallerFeatures(t *testing.T) {
 	cfg := internal.RunnerConfig{
-		SpecsPath:         "../../../../../specs/scripts-cli-installer",
-		DefaultReportName: "cucumber-scripts-cli-installer",
+		SpecsPath:         "../../../../../specs/r2r-installer",
+		DefaultReportName: "cucumber-r2r-installer",
 		RegisterSteps:     RegisterSteps,
 	}
 

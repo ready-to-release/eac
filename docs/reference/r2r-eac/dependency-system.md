@@ -129,7 +129,7 @@ The `build-module` action defaults to isolated mode (`no-deps: true`).
 # Explicit: build with dependencies (for integration tests)
 - uses: ./.github/actions/build-module
   with:
-    module: scripts-cli-installer
+    module: r2r-installer
     no-deps: 'false'  # Download dependency artifacts from other CI runs
 ```
 
@@ -224,11 +224,11 @@ eac-core (root)
     │        │          │
     │        ├──► docs ──► books
     │        │
-    │        └──► scripts-implicit-cli
+    │        └──► implicit-r2r-cli
     │
     ├──► r2r-cli ──┬──► ext-eac (also depends on eac-commands)
     │              │
-    │              └──► scripts-cli-installer
+    │              └──► r2r-installer
     │
     ├──► eac-specs
     │

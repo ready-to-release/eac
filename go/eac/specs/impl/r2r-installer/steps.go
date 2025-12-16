@@ -1,11 +1,11 @@
-// Package scriptsinstaller contains godog step implementations for specs/scripts-cli-installer.
+// Package r2rinstaller contains godog step implementations for specs/r2r-installer.
 //
 // Features:
-// - specs/scripts-cli-installer/cli-installation/
+// - specs/r2r-installer/cli-installation/
 //
 // These tests invoke the installer scripts and verify they work correctly.
 // Platform-specific scenarios use runtime detection to skip on non-matching platforms.
-package scriptscliinstaller
+package r2rinstaller
 
 import (
 	"context"
@@ -33,7 +33,7 @@ type installerContext struct {
 
 var instCtx *installerContext
 
-// RegisterSteps registers all scripts-cli-installer specific step definitions.
+// RegisterSteps registers all r2r-installer specific step definitions.
 func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	instCtx = &installerContext{sharedCtx: ctx}
 
@@ -68,7 +68,7 @@ func initializeInstallerContext() {
 	// Use OriginalRepoRoot (not IsolatedDir) because build output is read-only
 	// and doesn't need to be copied to isolated test environments
 	repoRoot := instCtx.sharedCtx.OriginalRepoRoot
-	instCtx.scriptsRoot = paths.BuildOutputPath(repoRoot, "scripts-cli-installer")
+	instCtx.scriptsRoot = paths.BuildOutputPath(repoRoot, "r2r-installer")
 
 	// Create isolated temp directory for this test scenario
 	tempDir, err := os.MkdirTemp("", "r2r-installer-test-*")

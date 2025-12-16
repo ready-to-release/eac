@@ -1,11 +1,11 @@
-// Package scriptsimplicitcli contains godog step implementations for specs/scripts-implicit-cli.
+// Package implicitr2rcli contains godog step implementations for specs/implicit-r2r-cli.
 //
-// This package tests scripts-implicit-cli features (importer scripts)
+// This package tests implicit-r2r-cli features (importer scripts)
 // via subprocess execution of PowerShell/Bash scripts.
 //
 // These tests invoke the importer scripts and verify they work correctly.
 // Platform-specific scenarios use runtime detection to skip on non-matching platforms.
-package scriptsimplicitcli
+package implicitr2rcli
 
 import (
 	"os"
@@ -17,8 +17,8 @@ import (
 
 func TestScriptsImplicitCLIFeatures(t *testing.T) {
 	cfg := internal.RunnerConfig{
-		SpecsPath:         "../../../../../specs/scripts-implicit-cli",
-		DefaultReportName: "cucumber-scripts-implicit-cli",
+		SpecsPath:         "../../../../../specs/implicit-r2r-cli",
+		DefaultReportName: "cucumber-implicit-r2r-cli",
 		RegisterSteps:     RegisterSteps,
 	}
 

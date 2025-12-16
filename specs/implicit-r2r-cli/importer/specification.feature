@@ -1,6 +1,6 @@
 @env:isolated-test-project
-@ov @depm:scripts-implicit-cli
-Feature: scripts-implicit-cli_importer
+@ov @depm:implicit-r2r-cli
+Feature: implicit-r2r-cli_importer
 
   As a developer
   I want to import the Go command invoker module using platform-specific scripts
@@ -8,7 +8,7 @@ Feature: scripts-implicit-cli_importer
 
   Rule: Importer loads the command invoker module
 
-    @ov @deps:windows @depm:scripts-implicit-cli @L2
+    @ov @deps:windows @depm:implicit-r2r-cli @L2
     Scenario: PowerShell importer loads module successfully
       Given I am on Windows with PowerShell
       And the go-invoker module exists at "scripts/pwsh/go-invoker/go.psm1"
@@ -16,7 +16,7 @@ Feature: scripts-implicit-cli_importer
       Then the output contains "CommandRunner module imported successfully"
       And the exit code is 0
 
-    @ov @deps:linux @depm:scripts-implicit-cli @L2
+    @ov @deps:linux @depm:implicit-r2r-cli @L2
     Scenario: Bash importer loads module successfully
       Given I am on Linux with bash
       And the go-invoker module exists at "scripts/sh/go-invoker/go.sh"
@@ -26,7 +26,7 @@ Feature: scripts-implicit-cli_importer
 
   Rule: Importer handles missing module gracefully
 
-    @ov @deps:windows @depm:scripts-implicit-cli @L2
+    @ov @deps:windows @depm:implicit-r2r-cli @L2
     Scenario: PowerShell importer fails when module is missing
       Given I am on Windows with PowerShell
       And the go-invoker module does not exist
@@ -34,7 +34,7 @@ Feature: scripts-implicit-cli_importer
       Then the output contains "Module not found"
       And the exit code is non-zero
 
-    @ov @deps:linux @depm:scripts-implicit-cli @L2
+    @ov @deps:linux @depm:implicit-r2r-cli @L2
     Scenario: Bash importer fails when module is missing
       Given I am on Linux with bash
       And the go-invoker module does not exist
@@ -44,7 +44,7 @@ Feature: scripts-implicit-cli_importer
 
   Rule: Importer supports --no-alias flag
 
-    @ov @deps:windows @depm:scripts-implicit-cli @L2
+    @ov @deps:windows @depm:implicit-r2r-cli @L2
     Scenario: PowerShell importer skips aliases with -NoAlias
       Given I am on Windows with PowerShell
       And the go-invoker module exists at "scripts/pwsh/go-invoker/go.psm1"
@@ -52,7 +52,7 @@ Feature: scripts-implicit-cli_importer
       Then the output contains "Invoke-GoSrcCommand"
       And the exit code is 0
 
-    @ov @deps:linux @depm:scripts-implicit-cli @L2
+    @ov @deps:linux @depm:implicit-r2r-cli @L2
     Scenario: Bash importer skips aliases with --no-alias
       Given I am on Linux with bash
       And the go-invoker module exists at "scripts/sh/go-invoker/go.sh"

@@ -39,8 +39,8 @@ Module-specific continuous integration workflows that build and test individual 
 - `ci-vscode-ext-commit.yaml` - VSCode Extension module CI
 - `ci-books.yaml` - Books documentation module CI
 - `ci-docs.yaml` - Docs site module CI
-- `ci-scripts-cli-installer.yaml` - CLI Installer scripts CI
-- `ci-scripts-implicit-cli.yaml` - Implicit CLI scripts CI
+- `ci-r2r-installer.yaml` - R2R CLI Installer scripts CI
+- `ci-implicit-r2r-cli.yaml` - Implicit R2R CLI scripts CI
 
 ### Release Workflows
 

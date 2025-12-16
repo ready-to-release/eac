@@ -127,8 +127,8 @@ function Install-Binary {
             Write-ColorOutput "Test mode: Using pre-built binary from out/build (skipping download)" "Gray"
 
             # Use the actual built r2r-cli binary from the build output
-            # This is available because scripts-cli-installer depends on r2r-cli module
-            # When running from build output: out/build/scripts-cli-installer/pwsh/cli/
+            # This is available because r2r-installer depends on r2r-cli module
+            # When running from build output: out/build/r2r-installer/pwsh/cli/
             # Go up 3 levels to out/build, then access r2r-cli
             $builtBinary = Join-Path $PSScriptRoot "..\..\..\r2r-cli\r2r-windows-amd64.exe"
 

@@ -18,15 +18,15 @@ func TestValidateFeatureLevelTags(t *testing.T) {
 		{
 			name: "Feature with L2, Scenario with L3 - should error",
 			featureContent: `@env:isolated-test-project
-@L2 @ov @depm:scripts-cli-installer
-Feature: scripts-cli-installer_cli-installation
+@L2 @ov @depm:r2r-installer
+Feature: r2r-installer_cli-installation
 
   As a user
   I want to install the CLI
 
   Rule: Installer downloads and installs CLI binary
 
-    @L3 @ov @deps:windows @depm:scripts-cli-installer
+    @L3 @ov @deps:windows @depm:r2r-installer
     Scenario: Install latest version on Windows
       Given I am on Windows
       When I run the PowerShell installer
@@ -56,15 +56,15 @@ Feature: r2r-cli_cli-invocation
 		},
 		{
 			name: "Feature without L-tag, Scenario with L3 - should not error",
-			featureContent: `@ov @depm:scripts-cli-installer
-Feature: scripts-cli-installer_cli-installation
+			featureContent: `@ov @depm:r2r-installer
+Feature: r2r-installer_cli-installation
 
   As a user
   I want to install the CLI
 
   Rule: Installer downloads and installs CLI binary
 
-    @L3 @ov @deps:windows @depm:scripts-cli-installer
+    @L3 @ov @deps:windows @depm:r2r-installer
     Scenario: Install latest version on Windows
       Given I am on Windows
       When I run the PowerShell installer
