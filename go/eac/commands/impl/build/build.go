@@ -172,7 +172,7 @@ func Build() int {
 	var monikers []string
 	tidyFirst := !isCI // Default: true for local, false for CI
 	tidyExplicitlySet := false
-	skipDepsVerification := false // Skip system dependency verification (go, docker, etc.)
+	skipDeps := false // Skip system dependency verification (go, docker, etc.)
 	skipDepm := false             // Skip including transitive module dependencies in execution plan
 	useExistingDepm := false      // Use existing module dependency artifacts (skip building if present)
 	forceRebuild := false         // Force full rebuild, ignoring incremental build state (--rebuild)
@@ -196,7 +196,7 @@ func Build() int {
 		case "--no-tidy":
 			tidyFirst = false
 			tidyExplicitlySet = true
-		case "--skip-depm", "--no-deps":
+		case "--skip-depm":
 			skipDepm = true
 		case "--use-existing-depm":
 			useExistingDepm = true
@@ -204,8 +204,8 @@ func Build() int {
 			forceRebuild = true
 		case "--layered-build":
 			layeredBuild = true
-		case "--skip-deps-verification":
-			skipDepsVerification = true
+		case "--skip-deps":
+			skipDeps = true
 		case "--timings":
 			showTimings = true
 		case "--debug":
@@ -318,7 +318,7 @@ func Build() int {
 
 	// Run build (single or multiple modules) - phases are handled inside
 	// Note: Logging is configured inside buildMultipleModules after TUI is initialized
-	return buildMultipleModules(monikers, workspaceRoot, moduleReport, tidyFirst, tidyExplicitlySet, version, skipDepsVerification, skipDepm, useExistingDepm, forceRebuild, layeredBuild, showTimings, debugMode, dryRun, buildAll, useTUI, tuiHeight, explicitlyRequested)
+	return buildMultipleModules(monikers, workspaceRoot, moduleReport, tidyFirst, tidyExplicitlySet, version, skipDeps, skipDepm, useExistingDepm, forceRebuild, layeredBuild, showTimings, debugMode, dryRun, buildAll, useTUI, tuiHeight, explicitlyRequested)
 }
 
 // parseIntArg parses a string argument as an integer
@@ -362,7 +362,7 @@ func listModuleArtifacts(monikers []string, workspaceRoot string, moduleReport *
 }
 
 // buildMultipleModules builds multiple modules in parallel using the orchestrator
-func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport *reports.ModuleContractReport, tidyFirst bool, tidyExplicitlySet bool, version string, skipDepsVerification bool, skipDepm bool, useExistingDepm bool, forceRebuild bool, layeredBuild bool, showTimings bool, debugMode bool, dryRun bool, buildAll bool, useTUI bool, tuiHeight int, explicitlyRequested bool) int {
+func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport *reports.ModuleContractReport, tidyFirst bool, tidyExplicitlySet bool, version string, skipDeps bool, skipDepm bool, useExistingDepm bool, forceRebuild bool, layeredBuild bool, showTimings bool, debugMode bool, dryRun bool, buildAll bool, useTUI bool, tuiHeight int, explicitlyRequested bool) int {
 	// Build module type lookup for ALL modules (will be populated after execution plan)
 	moduleTypes := make(map[string]string)
 
@@ -693,7 +693,7 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 	// Dependency Verification (system dependencies like go, docker, etc.)
 	// Use the expanded execution order to verify deps for ALL modules that will be built
 	var depsStatus initsummary.DepsStatus
-	if skipDepsVerification {
+	if skipDeps {
 		depsStatus = initsummary.DepsStatus{Skipped: true}
 	} else {
 		var exitCode int
@@ -710,7 +710,7 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 			writeInitSummary(initSummary)
 			log.Errorf("")
 			log.Errorf("❌ Required build dependencies are missing: %s", strings.Join(depsStatus.Missing, ", "))
-			log.Errorf("   Use --skip-deps-verification to bypass this check")
+			log.Errorf("   Use --skip-deps to bypass this check")
 			return exitCode
 		}
 	}
@@ -726,7 +726,7 @@ func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport 
 			TidyExplicit:         tidyExplicitlySet,
 			SkipDepm:             skipDepm,
 			UseExistingDepm:      useExistingDepm,
-			SkipDepsVerification: skipDepsVerification,
+			SkipDeps:             skipDeps,
 			ForceRebuild:         forceRebuild,
 			DryRun:               dryRun,
 			BuildAll:             buildAll,
@@ -1127,10 +1127,9 @@ func printBuildUsage() {
 	log.Info("  --no-tidy                 Skip 'go mod tidy' (default for CI)")
 	log.Info("  --rebuild                 Force full rebuild, ignoring incremental build state")
 	log.Info("  --layered-build           Execute layers sequentially (default: all modules in parallel)")
-	log.Info("  --no-deps                 Only build specified modules, no dependency resolution (CI isolation)")
-	log.Info("                            Alias: --skip-depm")
+	log.Info("  --skip-depm               Only build specified modules, no module dependency resolution (CI isolation)")
 	log.Info("  --use-existing-depm       Skip building module dependencies if artifacts exist (for CI incremental builds)")
-	log.Info("  --skip-deps-verification  Skip system dependency verification (go, docker, etc.)")
+	log.Info("  --skip-deps               Skip system dependency verification (go, docker, etc.)")
 	log.Info("  --timings                 Show detailed timing summary")
 	log.Info("  --debug                   Enable debug logs to console (file logging always enabled)")
 	log.Info("  --tui                     Enable TUI console (default for local, errors in CI/container)")

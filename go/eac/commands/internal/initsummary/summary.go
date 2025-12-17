@@ -54,7 +54,7 @@ type Flags struct {
 	UseExistingDepm bool // --use-existing-depm: skip building if artifacts exist
 
 	// System dependency handling (deps)
-	SkipDepsVerification bool // --skip-deps-verification: skip go, docker, etc. checks
+	SkipDeps bool // --skip-deps: skip go, docker, etc. checks
 
 	// Build behavior
 	ForceRebuild bool   // --rebuild: force full rebuild, ignore incremental state
@@ -83,8 +83,8 @@ type DepmStatus struct {
 
 // DepsStatus captures system dependency (deps) verification results.
 type DepsStatus struct {
-	Verified  bool         // Were system deps checked? (false if --skip-deps-verification)
-	Skipped   bool         // Was --skip-deps-verification used?
+	Verified  bool         // Were system deps checked? (false if --skip-deps)
+	Skipped   bool         // Was --skip-deps used?
 	Required  []string     // Required system deps (go, docker, npm, etc.)
 	Available []DepsResult // Verification results for each
 	Missing   []string     // Missing deps (would cause build failure)

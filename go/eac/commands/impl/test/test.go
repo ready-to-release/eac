@@ -72,7 +72,8 @@ type TestConfig struct {
 	Monikers     []string
 	SuiteName    string
 	Coverage     bool
-	SkipDeps     bool
+	SkipDeps     bool // Skip system dependency verification (--skip-deps)
+	SkipDepm     bool // Skip dependency module build artifact validation (--skip-depm)
 	ListOnly     bool
 	ShowTimings  bool
 	DebugMode    bool
@@ -171,6 +172,8 @@ func parseTestArgs(args []string) *TestConfig {
 			cfg.Coverage = true
 		case arg == "--skip-deps":
 			cfg.SkipDeps = true
+		case arg == "--skip-depm":
+			cfg.SkipDepm = true
 		case arg == "--list-only":
 			cfg.ListOnly = true
 		case arg == "--timings":
@@ -209,7 +212,7 @@ func parseTestArgs(args []string) *TestConfig {
 			}
 		case strings.HasPrefix(arg, "--") || strings.HasPrefix(arg, "-"):
 			log.Errorf("unknown flag: %s", arg)
-			log.Errorf("Valid flags: --suite, --coverage, --skip-deps, --list-only, --timings, --debug, --tui, --no-tui, --tui-height, --sequential, --retest")
+			log.Errorf("Valid flags: --suite, --coverage, --skip-deps, --skip-depm, --list-only, --timings, --debug, --tui, --no-tui, --tui-height, --sequential, --retest")
 			return nil
 		default:
 			cfg.Monikers = append(cfg.Monikers, arg)
@@ -566,7 +569,7 @@ func executeTests(cfg *TestConfig) int {
 	// Build Artifact Validation (includes staleness check)
 	var artifactValidation *initsummary.ArtifactValidationInfo
 
-	if len(stats.ModulesInScope) > 0 {
+	if len(stats.ModulesInScope) > 0 && !cfg.SkipDepm {
 		artifactValidation = validateBuildArtifactsQuiet(stats.ModulesInScope, eacCfg, workspaceRoot, moduleRegistry)
 
 		if !artifactValidation.AllValid() {
@@ -1436,7 +1439,8 @@ func printTestUsage() {
 	log.Info("Options:")
 	log.Info("  --suite <name>         Filter tests by suite (default: unit+integration)")
 	log.Info("  --coverage             Generate coverage reports (coverage.out, coverage.json)")
-	log.Info("  --skip-deps            Skip dependency verification before running tests")
+	log.Info("  --skip-deps            Skip system dependency verification before running tests")
+	log.Info("  --skip-depm            Skip module dependency build artifact validation")
 	log.Info("  --list-only            List tests that would run without executing them")
 	log.Info("  --timings              Show detailed timing summary")
 	log.Info("  --debug                Enable debug logs to console (file logging always enabled)")

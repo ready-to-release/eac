@@ -51,6 +51,10 @@ inputs:
     description: Additional arguments to pass to the test command
     required: false
     default: ''
+  skip-depm:
+    description: 'Skip module dependency build artifact validation (use when deps are compiled from source)'
+    required: false
+    default: 'false'
 
 outputs:
   artifact-name:
@@ -131,15 +135,21 @@ runs:
         MODULE: ${{ inputs.module }}
         SUITES: ${{ inputs.suites }}
         EXTRA_ARGS: ${{ inputs.extra-args }}
+        SKIP_DEPM: ${{ inputs.skip-depm }}
       run: |
         # CI tests THIS module only:
         # --retest: force full test run (no incremental detection, CI handles orchestration)
+        # --skip-depm: skip module dependency build artifact validation (deps compiled from source)
         test_failed=0
+        SKIP_DEPM_FLAG=""
+        if [ "$SKIP_DEPM" = "true" ]; then
+          SKIP_DEPM_FLAG="--skip-depm"
+        fi
         IFS=',' read -ra SUITE_ARRAY <<< "$SUITES"
         for suite in "${SUITE_ARRAY[@]}"; do
           suite=$(echo "$suite" | xargs)  # trim whitespace
           echo "Running test suite: $suite"
-          if ! $COMMANDS test $MODULE --suite $suite --retest $EXTRA_ARGS; then
+          if ! $COMMANDS test $MODULE --suite $suite --retest $SKIP_DEPM_FLAG $EXTRA_ARGS; then
             test_failed=1
           fi
         done

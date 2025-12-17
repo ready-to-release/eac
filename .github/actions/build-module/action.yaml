@@ -88,8 +88,8 @@ runs:
         MODULE: ${{ inputs.module }}
         EXTRA_ARGS: ${{ inputs.extra-args }}
       run: |
-        # Build in isolation: --rebuild forces fresh build, --no-deps skips dependency resolution
-        if $COMMANDS build $MODULE --rebuild --no-deps $EXTRA_ARGS; then
+        # Build in isolation: --rebuild forces fresh build, --skip-depm skips module dependency resolution
+        if $COMMANDS build $MODULE --rebuild --skip-depm $EXTRA_ARGS; then
           echo "build-failed=0" >> $GITHUB_OUTPUT
         else
           echo "build-failed=1" >> $GITHUB_OUTPUT
