@@ -43,12 +43,10 @@ inputs:
     description: 'Go version for building commands from source'
     required: false
     default: '1.24.4'
-  no-deps:
-    description: |
-      Build in isolated mode - no dependency artifact downloads.
-      Default: true (CI isolation). Set to false for integration builds.
+  download-modules:
+    description: 'Space-separated list of modules to download from CI before build'
     required: false
-    default: 'true'
+    default: ''
   upload-artifact:
     description: Whether to upload build artifacts
     required: false
@@ -99,15 +97,22 @@ runs:
         echo "  Module: $MODULE"
         echo "  Image: $IMAGE_NAME:$IMAGE_TAG"
 
+    # Download specific modules needed for integration testing
+    - name: Download Module Dependencies
+      if: ${{ inputs.download-modules != '' }}
+      uses: ./.github/actions/download-module-deps
+      with:
+        module: ${{ inputs.download-modules }}
+        trigger-run-id: ${{ inputs.trigger-run-id }}
+        commit-sha: ${{ inputs.commit-sha || github.sha }}
+
     - name: Build container module
       id: build
       uses: ./.github/actions/build-module
       with:
         module: ${{ inputs.module }}
         trigger-run-id: ${{ inputs.trigger-run-id }}
-        commit-sha: ${{ inputs.commit-sha }}
         go-version: ${{ inputs.go-version }}
-        no-deps: ${{ inputs.no-deps }}
         upload-artifact: ${{ inputs.upload-artifact }}
         extra-args: ${{ inputs.extra-args }}
         # Container modules use buildx which is auto-detected from module type

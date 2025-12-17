@@ -39,7 +39,7 @@
 #       with:
 #         module: ext-eac
 #         container: true
-#         no-deps: false  # Need deps for integration testing
+#         download-modules: r2r-cli  # Specific modules needed for integration testing
 
 name: Module CI
 
@@ -76,11 +76,11 @@ on:
         required: false
         type: boolean
         default: false
-      no-deps:
-        description: 'Build in isolated mode without dependency artifacts'
+      download-modules:
+        description: 'Space-separated list of modules to download from CI before build (for integration testing)'
         required: false
-        type: boolean
-        default: true
+        type: string
+        default: ''
       container:
         description: 'Build as container module (uses build-container action)'
         required: false
@@ -189,6 +189,15 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
 
+      # Download specific modules needed for integration testing
+      - name: Download Module Dependencies
+        if: ${{ !inputs.container && inputs.download-modules != '' }}
+        uses: ./.github/actions/download-module-deps
+        with:
+          module: ${{ inputs.download-modules }}
+          trigger-run-id: ${{ inputs.trigger_run_id }}
+          commit-sha: ${{ inputs.sha || github.sha }}
+
       # Binary build (default)
       - name: Build Module
         if: ${{ !inputs.container }}
@@ -196,11 +205,9 @@ jobs:
         with:
           module: ${{ inputs.module }}
           trigger-run-id: ${{ inputs.trigger_run_id }}
-          commit-sha: ${{ inputs.sha || github.sha }}
           upload-artifact: ${{ inputs.upload-build-artifact && 'true' || 'false' }}
           extra-args: ${{ inputs.build-args }}
           cross-compile-windows: ${{ inputs.cross-compile-windows && 'true' || 'false' }}
-          no-deps: ${{ inputs.no-deps && 'true' || 'false' }}
 
       # Container build (when container: true)
       - name: Build Container
@@ -213,7 +220,7 @@ jobs:
           commit-sha: ${{ inputs.sha || github.sha }}
           upload-artifact: ${{ inputs.upload-build-artifact && 'true' || 'false' }}
           extra-args: ${{ inputs.build-args }}
-          no-deps: ${{ inputs.no-deps && 'true' || 'false' }}
+          download-modules: ${{ inputs.download-modules }}
           registry: ${{ inputs.container-registry }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -340,7 +347,6 @@ jobs:
           docker images ${{ inputs.module }}:ci-test
 
       - name: Download Build Artifacts
-        if: ${{ !inputs.no-deps }}
         uses: actions/download-artifact@v7
         with:
           name: build-artifacts-${{ inputs.module }}
