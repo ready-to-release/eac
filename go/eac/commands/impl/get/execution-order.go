@@ -6,11 +6,11 @@
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML
 //   --format: Output format (list = one per line, space = space-separated)
-//   --no-deps: Don't expand to include transitive dependencies (only order the specified modules)
+//   --skip-depm: Don't expand to include transitive module dependencies (only order the specified modules)
 // Long:
 // Long: Expected Output:
 // Long: YAML ordered list of modules for execution, topologically sorted based on dependencies.
-// Long: By default includes transitive dependencies. Use --no-deps to only order specified modules.
+// Long: By default includes transitive dependencies. Use --skip-depm to only order specified modules.
 // Long:
 // Long: Example:
 // Long:   get execution-order r2r-cli                     # YAML output with deps
@@ -57,7 +57,7 @@ func GetExecutionOrder() int {
 	for i := 4; i < len(os.Args); i++ {
 		arg := os.Args[i]
 		switch {
-		case arg == "--no-deps":
+		case arg == "--skip-depm":
 			includeDeps = false
 		case arg == "--format" && i+1 < len(os.Args):
 			format = os.Args[i+1]

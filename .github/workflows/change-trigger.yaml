@@ -438,7 +438,14 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
+
       - name: Generate Summary
+        env:
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           echo "## CI/CD Orchestration Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -453,6 +460,8 @@ jobs:
             echo "### Repository Validation Failed" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "Repository build or test failed. Check the build-and-test-repository job for details." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            $COMMANDS pipeline ci summary-link ${{ github.run_id }} --type test --artifact "test-results-repository" >> $GITHUB_STEP_SUMMARY
             exit 0
           fi
 

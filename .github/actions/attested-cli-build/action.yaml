@@ -147,28 +147,35 @@ runs:
         echo "Verifying uploaded assets..."
         gh release view "$TAG_NAME" --json assets --jq '.assets[] | .name'
 
-    - name: Summary
+    - name: Build Summary
       if: always()
       shell: bash
       env:
-        MODULE: r2r-cli
         VERSION: ${{ inputs.version }}
         TAG_NAME: ${{ inputs.tag_name }}
       run: |
+        # Generate build summary
+        # Note: Diagnostic links are handled centrally by the release workflow on failure
         RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"
 
-        echo "## :package: r2r-cli v$VERSION Released" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Release**: [$TAG_NAME]($RELEASE_URL)" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### Binaries" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "| Platform | Standard | UPX |" >> $GITHUB_STEP_SUMMARY
-        echo "|----------|----------|-----|" >> $GITHUB_STEP_SUMMARY
-        echo "| Linux AMD64 | :white_check_mark: | :white_check_mark: |" >> $GITHUB_STEP_SUMMARY
-        echo "| Linux ARM64 | :white_check_mark: | - |" >> $GITHUB_STEP_SUMMARY
-        echo "| macOS Intel | :white_check_mark: | - |" >> $GITHUB_STEP_SUMMARY
-        echo "| macOS ARM64 | :white_check_mark: | - |" >> $GITHUB_STEP_SUMMARY
-        echo "| Windows AMD64 | :white_check_mark: | :white_check_mark: |" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo ":lock: All binaries have build attestations" >> $GITHUB_STEP_SUMMARY
+        if [ "${{ job.status }}" = "success" ]; then
+          echo "## :package: r2r-cli v$VERSION Released" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Release**: [$TAG_NAME]($RELEASE_URL)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Binaries" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | Standard | UPX |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|----------|-----|" >> $GITHUB_STEP_SUMMARY
+          echo "| Linux AMD64 | :white_check_mark: | :white_check_mark: |" >> $GITHUB_STEP_SUMMARY
+          echo "| Linux ARM64 | :white_check_mark: | - |" >> $GITHUB_STEP_SUMMARY
+          echo "| macOS Intel | :white_check_mark: | - |" >> $GITHUB_STEP_SUMMARY
+          echo "| macOS ARM64 | :white_check_mark: | - |" >> $GITHUB_STEP_SUMMARY
+          echo "| Windows AMD64 | :white_check_mark: | :white_check_mark: |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo ":lock: All binaries have build attestations" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "### Build Failed: r2r-cli v$VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Release build or publish failed. See workflow logs for details." >> $GITHUB_STEP_SUMMARY
+        fi

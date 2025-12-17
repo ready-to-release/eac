@@ -39,7 +39,7 @@
 #       with:
 #         module: ext-eac
 #         container: true
-#         no-deps: false  # Need deps for integration testing
+#         download-modules: r2r-cli  # Specific modules needed for integration testing
 
 name: Module CI
 
@@ -76,11 +76,11 @@ on:
         required: false
         type: boolean
         default: false
-      no-deps:
-        description: 'Build in isolated mode without dependency artifacts'
+      download-modules:
+        description: 'Space-separated list of modules to download from CI before build (for integration testing)'
         required: false
-        type: boolean
-        default: true
+        type: string
+        default: ''
       container:
         description: 'Build as container module (uses build-container action)'
         required: false
@@ -196,11 +196,9 @@ jobs:
         with:
           module: ${{ inputs.module }}
           trigger-run-id: ${{ inputs.trigger_run_id }}
-          commit-sha: ${{ inputs.sha || github.sha }}
           upload-artifact: ${{ inputs.upload-build-artifact && 'true' || 'false' }}
           extra-args: ${{ inputs.build-args }}
           cross-compile-windows: ${{ inputs.cross-compile-windows && 'true' || 'false' }}
-          no-deps: ${{ inputs.no-deps && 'true' || 'false' }}
 
       # Container build (when container: true)
       - name: Build Container
@@ -213,7 +211,7 @@ jobs:
           commit-sha: ${{ inputs.sha || github.sha }}
           upload-artifact: ${{ inputs.upload-build-artifact && 'true' || 'false' }}
           extra-args: ${{ inputs.build-args }}
-          no-deps: ${{ inputs.no-deps && 'true' || 'false' }}
+          download-modules: ${{ inputs.download-modules }}
           registry: ${{ inputs.container-registry }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -232,6 +230,14 @@ jobs:
         uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.ref }}
+
+      - name: Download Module Dependencies
+        if: ${{ inputs.download-modules != '' }}
+        uses: ./.github/actions/download-module-deps
+        with:
+          module: ${{ inputs.download-modules }}
+          trigger-run-id: ${{ inputs.trigger_run_id }}
+          commit-sha: ${{ inputs.sha || github.sha }}
 
       - name: Determine test suites
         id: suites
@@ -252,6 +258,7 @@ jobs:
           trigger-run-id: ${{ inputs.trigger_run_id }}
           suites: ${{ steps.suites.outputs.suites }}
           results-artifact-name: test-results-${{ inputs.module }}-linux
+          skip-depm: ${{ inputs.download-modules == '' }}
 
   # ===========================================================================
   # Job B2: Test (Windows) - optional, parallel with scan
@@ -266,6 +273,14 @@ jobs:
         uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.ref }}
+
+      - name: Download Module Dependencies
+        if: ${{ inputs.download-modules != '' }}
+        uses: ./.github/actions/download-module-deps
+        with:
+          module: ${{ inputs.download-modules }}
+          trigger-run-id: ${{ inputs.trigger_run_id }}
+          commit-sha: ${{ inputs.sha || github.sha }}
 
       - name: Determine test suites
         id: suites
@@ -285,6 +300,7 @@ jobs:
           trigger-run-id: ${{ inputs.trigger_run_id }}
           suites: ${{ steps.suites.outputs.suites }}
           results-artifact-name: test-results-${{ inputs.module }}-windows
+          skip-depm: ${{ inputs.download-modules == '' }}
 
   # ===========================================================================
   # Job C: Scan - parallel with test
@@ -340,7 +356,6 @@ jobs:
           docker images ${{ inputs.module }}:ci-test
 
       - name: Download Build Artifacts
-        if: ${{ !inputs.no-deps }}
         uses: actions/download-artifact@v7
         with:
           name: build-artifacts-${{ inputs.module }}
@@ -425,3 +440,17 @@ jobs:
 
           # Generate summary using Go command
           $COMMANDS show ci-summary $FLAGS >> $GITHUB_STEP_SUMMARY
+
+      # Centralized failure handling - diagnostic link for any CI failure
+      - name: Diagnostic Link on Failure
+        if: contains(needs.*.result, 'failure')
+        env:
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
+          MODULE: ${{ inputs.module }}
+          CONTAINER: ${{ inputs.container }}
+        run: |
+          if [ "$CONTAINER" = "true" ]; then
+            $COMMANDS pipeline ci summary-link ${{ github.run_id }} --type container >> $GITHUB_STEP_SUMMARY
+          else
+            $COMMANDS pipeline ci summary-link ${{ github.run_id }} --type test --artifact "test-results-$MODULE-linux" >> $GITHUB_STEP_SUMMARY
+          fi

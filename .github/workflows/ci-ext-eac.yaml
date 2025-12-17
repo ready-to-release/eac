@@ -7,6 +7,11 @@ on:
         required: false
         type: string
         default: ''
+      sha:
+        required: false
+        type: string
+        description: 'Commit SHA to test'
+        default: ''
       trigger_run_id:
         required: false
         type: string
@@ -41,7 +46,7 @@ permissions:
 
 jobs:
   # =============================================================================
-  # Build ext-eac container (downloads r2r-cli dependency for testing)
+  # Build ext-eac container
   # =============================================================================
   build:
     name: Build
@@ -62,8 +67,6 @@ jobs:
           module: ext-eac
           trigger-run-id: ${{ inputs.trigger_run_id }}
           commit-sha: ${{ inputs.sha || github.sha }}
-          # Download r2r-cli dependency for integration testing
-          no-deps: 'false'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -88,10 +91,10 @@ jobs:
           results-artifact-name: test-results-ext-eac
 
   # =============================================================================
-  # Integration tests with r2r CLI and direct Docker
+  # Container tests with r2r CLI and direct Docker
   # =============================================================================
   integration-test:
-    name: Integration Test
+    name: Container Test
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -121,6 +124,12 @@ jobs:
         with:
           name: build-artifacts-ext-eac
           path: out/build/
+
+      - name: Download r2r-cli for testing
+        uses: ./.github/actions/download-module-deps
+        with:
+          module: r2r-cli
+          commit-sha: ${{ inputs.sha || github.sha }}
 
       - name: Setup r2r CLI
         run: |
@@ -178,18 +187,14 @@ jobs:
           echo "Direct Docker tests passed"
 
       - name: Test Summary
-        if: always()
+        if: success()
         env:
           IMAGE_NAME: ${{ needs.build.outputs.image-name }}
           IMAGE_TAG: ${{ needs.build.outputs.image-tag }}
         run: |
-          echo "## Integration Test: ext-eac" >> $GITHUB_STEP_SUMMARY
+          echo "## Container Test: ext-eac" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ job.status }}" = "success" ]; then
-            echo "All extension tests passed." >> $GITHUB_STEP_SUMMARY
-          else
-            echo "Extension tests failed." >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "All extension tests passed." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           echo "### Tests Executed" >> $GITHUB_STEP_SUMMARY
@@ -205,3 +210,36 @@ jobs:
           echo "### Tested Image" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "\`$IMAGE_NAME:$IMAGE_TAG\`" >> $GITHUB_STEP_SUMMARY
+
+  # =============================================================================
+  # Summary - Centralized status and failure handling
+  # =============================================================================
+  summary:
+    name: Summary
+    needs: [build, test, integration-test]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
+
+      - name: Generate Summary
+        env:
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
+          BUILD_RESULT: ${{ needs.build.result }}
+          TEST_RESULT: ${{ needs.test.result }}
+          INTEGRATION_RESULT: ${{ needs.integration-test.result }}
+        run: |
+          echo "## CI Summary: ext-eac" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          $COMMANDS show ci-summary --container --build=$BUILD_RESULT --container-test-enabled --container-test=$INTEGRATION_RESULT >> $GITHUB_STEP_SUMMARY
+
+      - name: Diagnostic Link on Failure
+        if: contains(needs.*.result, 'failure')
+        env:
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
+        run: |
+          $COMMANDS pipeline ci summary-link ${{ github.run_id }} --type container >> $GITHUB_STEP_SUMMARY

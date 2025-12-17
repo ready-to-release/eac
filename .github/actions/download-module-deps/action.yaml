@@ -1,0 +1,131 @@
+name: Download Module Dependencies
+description: Download build artifacts for modules from CI
+
+inputs:
+  module:
+    description: 'Module moniker(s) to download - space-separated for multiple'
+    required: true
+  include-transitive:
+    description: 'Download all transitive dependencies of the specified module(s)'
+    required: false
+    default: 'false'
+  trigger-run-id:
+    description: 'Run ID of trigger workflow (for commands binary download)'
+    required: false
+    default: ''
+  commit-sha:
+    description: 'Commit SHA for artifact lookup. Falls back to github.sha if empty.'
+    required: false
+    default: ''
+  go-version:
+    description: 'Go version for building commands from source'
+    required: false
+    default: '1.24.4'
+  await-timeout:
+    description: 'Timeout in seconds to wait for CI to complete'
+    required: false
+    default: '300'
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Commands Binary
+      id: commands
+      uses: ./.github/actions/setup-commands
+      with:
+        go-version: ${{ inputs.go-version }}
+        trigger-run-id: ${{ inputs.trigger-run-id }}
+
+    - name: Download Module Artifacts
+      shell: bash
+      env:
+        COMMANDS: ${{ steps.commands.outputs.commands-path }}
+        MODULE: ${{ inputs.module }}
+        INCLUDE_TRANSITIVE: ${{ inputs.include-transitive }}
+        AWAIT_TIMEOUT: ${{ inputs.await-timeout }}
+        GH_TOKEN: ${{ github.token }}
+        ARTIFACT_SHA: ${{ inputs.commit-sha || github.sha }}
+      run: |
+        # Determine which modules to download
+        if [ "$INCLUDE_TRANSITIVE" = "true" ]; then
+          # Get transitive dependencies for each specified module
+          MODULES=""
+          for mod in $MODULE; do
+            DEPS=$($COMMANDS get build-deps "$mod" --format space 2>/dev/null || echo "")
+            MODULES="$MODULES $DEPS"
+          done
+          MODULES=$(echo "$MODULES" | xargs)  # trim whitespace
+          if [ -z "$MODULES" ]; then
+            echo "No dependencies to download"
+            exit 0
+          fi
+          echo "Downloading transitive dependencies: $MODULES"
+        else
+          # Download exactly the specified module(s)
+          MODULES="$MODULE"
+          echo "Downloading modules: $MODULES"
+        fi
+
+        echo "Artifact lookup SHA: $ARTIFACT_SHA"
+        mkdir -p out/build
+
+        for mod in $MODULES; do
+          echo ""
+          echo "Processing: $mod"
+
+          # Skip if already exists
+          if [ -d "out/build/$mod" ]; then
+            echo "  ✓ $mod: already exists"
+            continue
+          fi
+
+          WORKFLOW="ci-${mod}.yaml"
+
+          # Wait for CI to complete for this SHA
+          echo "  Awaiting CI for $mod..."
+          if ! $COMMANDS pipeline await-ci \
+              --pattern "$WORKFLOW" \
+              --sha "$ARTIFACT_SHA" \
+              --timeout "$AWAIT_TIMEOUT" \
+              --interval 15; then
+            echo "  ✗ CI failed or timed out for $mod at SHA $ARTIFACT_SHA"
+            exit 1
+          fi
+
+          # Download from current SHA
+          CURRENT_RUN=$(gh run list -w "$WORKFLOW" -c "$ARTIFACT_SHA" -s success -L 1 --json databaseId -q '.[0].databaseId' 2>/dev/null || echo "")
+
+          if [ -z "$CURRENT_RUN" ]; then
+            echo "  ✗ No successful CI run found for $mod at SHA $ARTIFACT_SHA"
+            exit 1
+          fi
+
+          echo "  ↓ $mod: downloading from run $CURRENT_RUN"
+
+          # Download with retry (GitHub API can have transient failures)
+          DOWNLOAD_RETRIES=3
+          DOWNLOAD_DELAY=5
+          DOWNLOAD_SUCCESS=false
+
+          for download_attempt in $(seq 1 $DOWNLOAD_RETRIES); do
+            if gh run download "$CURRENT_RUN" -n "build-artifacts-$mod" -D out/build/; then
+              DOWNLOAD_SUCCESS=true
+              break
+            fi
+            if [ $download_attempt -lt $DOWNLOAD_RETRIES ]; then
+              echo "  ⚠️ Download failed, retrying in ${DOWNLOAD_DELAY}s (attempt $download_attempt/$DOWNLOAD_RETRIES)..."
+              sleep $DOWNLOAD_DELAY
+              DOWNLOAD_DELAY=$((DOWNLOAD_DELAY * 2))
+            fi
+          done
+
+          if [ "$DOWNLOAD_SUCCESS" != "true" ]; then
+            echo "  ✗ Failed to download artifacts for $mod after $DOWNLOAD_RETRIES attempts"
+            exit 1
+          fi
+
+          echo "  ✓ $mod: downloaded successfully"
+        done
+
+        echo ""
+        echo "Download complete"

@@ -185,7 +185,7 @@ Computes dependency-based execution order for changed modules.
 **Command:**
 
 ```bash
-PLAN=$(commands get execution order $MODULES --no-deps --as-json)
+PLAN=$(commands get execution-order $MODULES --skip-depm --as-json)
 ```
 
 **Outputs:**
