@@ -1,19 +1,11 @@
 # templates Commands
-
-{{ page_breadcrumb() }}
-
 ## Overview
 
 The **templates** category contains 6 commands for installing project templates for documentation, AI prompts, reports, and specifications.
 
 ## Commands
 
-| Command                                              | Purpose                                      |
-| ---------------------------------------------------- | -------------------------------------------- |
-| [templates install-docs](../templates/install-docs.md) | Install documentation templates            |
-| [templates install-ai](../templates/install-ai.md)   | Install AI prompt templates                  |
-| [templates install-reports](../templates/install-reports.md) | Install report templates          |
-| [templates install-specs](../templates/install-specs.md) | Install specification templates        |
+<!-- book:category-commands templates -->
 
 ## Common Use Cases
 
@@ -60,5 +52,3 @@ r2r templates install specs
 - [create commit-message](../create/commit-message.md) - AI commit messages
 - [validate markdown](../validate/markdown.md)
 - [validate books](../validate/books.md)
-
-{{ diataxis_footer() }}

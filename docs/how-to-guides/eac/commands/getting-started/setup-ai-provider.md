@@ -1,7 +1,4 @@
 # Setup AI Provider
-
-{{ page_breadcrumb() }}
-
 ## What You'll Accomplish
 
 Configure AI provider (Anthropic Claude, OpenAI, or Google Gemini) to enable AI-powered features like commit message generation, PR descriptions, and specification creation.
@@ -268,8 +265,6 @@ git status | grep eac-config-personal
 
 ## Related Commands
 
-- [`init`](../../../../reference/commands/other/init.md) - Full init command reference
+- [`init`](../../../../reference/commands/init/init.md) - Full init command reference
 - [`work commit`](../../../../reference/commands/work/commit.md) - Commit with AI messages
 - [`create commit-message`](../../../../reference/commands/create/commit-message.md) - Generate commit messages
-
-{{ diataxis_footer() }}

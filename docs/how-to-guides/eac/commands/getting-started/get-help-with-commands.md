@@ -1,7 +1,4 @@
 # Get Help with Commands
-
-{{ page_breadcrumb() }}
-
 ## What You'll Accomplish
 
 Discover available EAC commands and learn how to use them effectively using the built-in help system.
@@ -78,8 +75,6 @@ r2r eac help release changelog
 
 ## Related Commands
 
-- [`help`](../../../../reference/commands/other/help.md) - Display help information
+- [`help`](../../../../reference/commands/help/help.md) - Display help information
 - [`show help`](../../../../reference/commands/show/help.md) - Show help in table format
 - [`get commands`](../../../../reference/commands/get/commands.md) - Get commands as JSON
-
-{{ diataxis_footer() }}

@@ -1,7 +1,4 @@
 # Making Your First Release
-
-{{ page_breadcrumb() }}
-
 **Status:** Placeholder - Content coming soon
 
 **Prerequisites:** [Working with Git Worktrees](./working-with-worktrees.md), completed feature ready to release
@@ -178,5 +175,3 @@ Common issues:
 ### Next Steps
 
 Congratulations! You now understand the complete development lifecycle from feature creation to release. Continue to [Advanced Practices](../advanced-practices/) to learn about compliance automation and CI/CD integration.
-
-{{ diataxis_footer() }}

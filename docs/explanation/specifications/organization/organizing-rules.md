@@ -1,7 +1,4 @@
 # Organizing Rules
-
-{{ page_breadcrumb() }}
-
 > **Rule blocks and measurable acceptance criteria**
 
 Rules define acceptance criteria - the conditions that must be satisfied for a feature to be accepted.
@@ -256,5 +253,3 @@ Use this checklist when writing Rules:
 - [Organizing Scenarios](./organizing-scenarios.md) - How to write scenarios for Rules
 - [Size Guidelines](./size-guidelines.md) - Rule and scenario count limits
 - [Example Mapping](../discovery/example-mapping.md) - Discovering Rules through workshops
-
-{{ diataxis_footer() }}

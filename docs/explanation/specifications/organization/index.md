@@ -1,7 +1,4 @@
 # Organizing Specifications
-
-{{ page_breadcrumb() }}
-
 > **How to structure and organize Gherkin specification files**
 
 Learn how to organize specifications for maintainability, clarity, and discoverability.
@@ -109,5 +106,3 @@ Feature: cli_init-project
 - [Three-Layer Approach](../concepts/three-layer-approach.md) - Rules/Scenarios/Unit Tests
 - [Example Mapping](../discovery/example-mapping.md) - Discovery workshops
 - [Testing Taxonomy](../taxonomy/) - Tags and test levels
-
-{{ diataxis_footer() }}

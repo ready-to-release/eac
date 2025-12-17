@@ -1,7 +1,4 @@
 # Command Reference
-
-{{ page_breadcrumb() }}
-
 Complete technical reference for all EAC commands.
 
 ## Quick Access
@@ -17,20 +14,21 @@ Complete technical reference for all EAC commands.
 
 | Category | Commands | Purpose |
 |----------|----------|---------|
+| [build](./categories/build.md) | 1 | Module building and compilation |
 | [create](./categories/create.md) | 7 | AI-powered generation (commits, specs, designs, PRs) |
 | [get](./categories/get.md) | 18 | JSON output for automation and scripting |
-| [show](./categories/show.md) | 17 | Human-readable output for interactive use |
-| [validate](./categories/validate.md) | 20 | Contract and dependency validation |
-| [work](./categories/work.md) | 6 | Workspace management (git worktrees) |
-| [test](./categories/test.md) | 4 | Testing and test suite management |
-| [build](./categories/other.md#build) | 1 | Module building |
+| [help](./categories/help.md) | 1 | Display help information |
+| [init](./categories/init.md) | 1 | Project initialization |
 | [pipeline](./categories/pipeline.md) | 6 | CI/CD orchestration |
 | [release](./categories/release.md) | 8 | Release management and versioning |
 | [scan](./categories/scan.md) | 8 | Security scanning (SAST, secrets, vulnerabilities) |
 | [serve](./categories/serve.md) | 2 | Local development servers |
+| [show](./categories/show.md) | 17 | Human-readable output for interactive use |
 | [templates](./categories/templates.md) | 7 | Template management |
+| [test](./categories/test.md) | 4 | Testing and test suite management |
 | [update](./categories/update.md) | 1 | Update operations |
-| [other](./categories/other.md) | 3 | Help, init, extension metadata |
+| [validate](./categories/validate.md) | 20 | Contract and dependency validation |
+| [work](./categories/work.md) | 6 | Workspace management (git worktrees) |
 
 **Total**: 108 commands
 
@@ -39,7 +37,7 @@ Complete technical reference for all EAC commands.
 ### Module Development
 
 - [show modules](./show/modules.md) - List all modules
-- [build](./other/build.md) - Build modules
+- [build](./build/build.md) - Build modules
 - [test](./test/test.md) - Test modules
 - [validate dependencies](./validate/dependencies.md) - Check contracts
 
@@ -174,7 +172,7 @@ Generate content using AI:
 
 **Setup**: Run `r2r eac init` to configure your AI provider
 
-**See**: [Create Commands Category](./categories/create.md), [Init Command](./other/init.md)
+**See**: [Create Commands Category](./categories/create.md), [Init Command]../init/init.md)
 
 ### Information Commands (get/show)
 
@@ -340,5 +338,3 @@ Command reference pages should include:
 ### How-to Guides
 
 - [Command Guides](../../how-to-guides/eac/commands/index.md) - Task-oriented guides
-
-{{ diataxis_footer() }}

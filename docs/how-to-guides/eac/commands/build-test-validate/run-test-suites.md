@@ -1,7 +1,4 @@
 # Run Test Suites
-
-{{ page_breadcrumb() }}
-
 ## What You'll Accomplish
 
 Execute specific test suites (commit, integration, acceptance, production-verification) for targeted testing.
@@ -134,5 +131,3 @@ r2r eac test --suite unit+integration+acceptance
 - [`test suite`](../../../../reference/commands/test/suite.md) - Run test suite
 - [`test list-suites`](../../../../reference/commands/test/list-suites.md) - List suites
 - [`show suite`](../../../../reference/commands/show/suite.md) - Suite details
-
-{{ diataxis_footer() }}

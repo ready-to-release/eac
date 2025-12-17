@@ -1,7 +1,4 @@
 # Creating Custom Commands
-
-{{ page_breadcrumb() }}
-
 **Status:** Placeholder - Content coming soon
 
 **Prerequisites:** [Your First Module](../getting-started/first-module.md), Go programming knowledge
@@ -267,5 +264,3 @@ func (s *CommandsMCPServer) ExecuteTool(name string, args map[string]interface{}
 ### Next Steps
 
 After completing this tutorial, you've mastered advanced r2r CLI practices. Explore [Specialized Topics](../specialized-topics/) for deep dives into BDD techniques, architecture documentation, and security scanning.
-
-{{ diataxis_footer() }}

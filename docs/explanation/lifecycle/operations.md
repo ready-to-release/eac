@@ -1,7 +1,4 @@
 # Operations
-
-{{ page_breadcrumb() }}
-
 Operations is not a separate phase but an integral part of the continuous delivery lifecycle.
 
 In a DevOps model, the team that builds the system also runs and maintains it.
@@ -87,5 +84,3 @@ Record all production incidents in the IT service management system. Complete th
 - Conduct [Blameless Post Mortem](https://github.com/ready-to-release/eac/blob/main/templates/docs/reference/operations/blameless-post-mortem.md) for significant incidents
 
 Templates: [Incident](https://github.com/ready-to-release/eac/blob/main/templates/docs/reference/operations/incident.md)
-
-{{ diataxis_footer() }}

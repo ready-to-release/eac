@@ -1,7 +1,4 @@
 # Check CI Before Release
-
-{{ page_breadcrumb() }}
-
 ## What You'll Accomplish
 
 Verify CI pipeline passes before creating a release to ensure quality.
@@ -126,5 +123,3 @@ r2r eac release this
 - [`release check-ci`](../../../../reference/commands/release/check-ci.md) - Check CI status
 - [`pipeline status`](../../../../reference/commands/pipeline/status.md) - Current status
 - [`pipeline wait`](../../../../reference/commands/pipeline/wait.md) - Wait for completion
-
-{{ diataxis_footer() }}

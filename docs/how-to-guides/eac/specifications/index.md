@@ -1,7 +1,4 @@
 # Writing Specifications
-
-{{ page_breadcrumb() }}
-
 Learn how to write and manage BDD/Gherkin specifications for your modules.
 
 ## Coming Soon
@@ -54,5 +51,3 @@ While this section is being developed, see:
 For detailed specification contracts and validation rules:
 
 **→ Specification Reference** (Coming)
-
-{{ diataxis_footer() }}

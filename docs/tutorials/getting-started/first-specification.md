@@ -1,7 +1,4 @@
 # Your First Feature Specification
-
-{{ page_breadcrumb() }}
-
 Learn how to write Gherkin feature specifications that describe system behavior in a structured, testable format using the Given/When/Then pattern.
 
 **Prerequisites:** [Quick Start Guide](./quick-start.md), basic understanding of software requirements
@@ -300,5 +297,3 @@ Now that you can write specifications, you can accomplish these tasks:
 - [Specifications Explanation](../../explanation/specifications/) - Understand BDD concepts and philosophy
 - [Gherkin Best Practices](../../explanation/specifications/quality/) - Writing effective scenarios
 - [Tag Taxonomy](../../explanation/specifications/taxonomy/) - Complete guide to test tags
-
-{{ diataxis_footer() }}

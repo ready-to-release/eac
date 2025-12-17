@@ -1,7 +1,4 @@
 # Tutorials
-
-{{ page_breadcrumb() }}
-
 Step-by-step guides to help you get started and master r2r and Everything-as-Code workflows. These learning-oriented tutorials take you from installation through advanced practices.
 
 ## Learning Paths
@@ -94,5 +91,3 @@ These tutorials follow the [Diataxis framework](https://diataxis.fr/) and are **
 - **Need more detail?** See the [Reference](../reference/) documentation
 - **Want to understand why?** See [Explanation](../explanation/) docs
 - **Have feedback?** Open an issue on GitHub
-
-{{ diataxis_footer() }}

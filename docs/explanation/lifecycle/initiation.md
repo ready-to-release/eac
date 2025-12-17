@@ -1,7 +1,4 @@
 # Initiation
-
-{{ page_breadcrumb() }}
-
 The initiation process evaluates whether good ideas are truly great ideas using **Design Thinking**, where user researchers and designers collaborate iteratively to assess three key criteria:
 
 - **Feasibility:** Can it be developed with available technology, skills, and resources?
@@ -80,5 +77,3 @@ The **intended use** is a regulatory requirement that formally defines the purpo
 **Specifications** then translate the intended use into specific, testable, and compliant requirements that guide development, validation, and regulatory adherence.
 
 Templates: [Intended Use Template](https://github.com/ready-to-release/eac/blob/main/templates/docs/reference/intended-use.md)
-
-{{ diataxis_footer() }}

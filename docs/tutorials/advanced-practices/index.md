@@ -1,7 +1,4 @@
 # Advanced Practices
-
-{{ page_breadcrumb() }}
-
 Master advanced workflows including compliance automation, CI/CD integration, multi-module development, and CLI extensibility.
 
 ## Learning Path
@@ -58,5 +55,3 @@ These tutorials are for:
 ## Next Steps
 
 After mastering advanced practices, explore [Specialized Topics](../specialized-topics/) for deep dives into specific areas like BDD techniques, architecture documentation, and security scanning.
-
-{{ diataxis_footer() }}

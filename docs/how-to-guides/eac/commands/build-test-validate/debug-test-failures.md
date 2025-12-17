@@ -1,7 +1,4 @@
 # Debug Test Failures
-
-{{ page_breadcrumb() }}
-
 ## What You'll Accomplish
 
 Identify and understand test failures with detailed output and timing information.
@@ -97,5 +94,3 @@ r2r eac test src-auth --fail-fast
 - [`test debug`](../../../../reference/commands/test/debug.md) - List failures
 - [`show test-timings`](../../../../reference/commands/show/test-timings.md) - Test performance
 - [`test`](../../../../reference/commands/test/test.md) - Run tests
-
-{{ diataxis_footer() }}

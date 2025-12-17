@@ -1,7 +1,4 @@
 # View PR Approval Comments
-
-{{ page_breadcrumb() }}
-
 ## What You'll Accomplish
 
 Learn how to view and analyze PR approval comments for specification-related pull requests using the `show approval-comments` and `get approval-comments` commands.
@@ -484,5 +481,3 @@ If a PR has no description or merge message, it will show "(No description provi
 - [get approval-comments Reference](../../../../reference/commands/get/approval-comments.md) - JSON/YAML output reference
 - [View Specifications](./view-specifications.md) - View spec files for a release
 - [View Changelog and Release Notes](./view-changelog-release-notes.md) - View changes and notes
-
-{{ diataxis_footer() }}

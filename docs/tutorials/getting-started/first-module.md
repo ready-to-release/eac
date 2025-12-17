@@ -1,7 +1,4 @@
 # Your First Module
-
-{{ page_breadcrumb() }}
-
 **Status:** Placeholder - Content coming soon
 
 **Prerequisites:** [Quick Start Guide](./quick-start.md), Go 1.21+ installed
@@ -79,5 +76,3 @@ With comprehensive table-driven tests and proper error handling.
 ### Next Steps
 
 After completing this tutorial, you'll understand module fundamentals. Continue to [Understanding Test Suites](./understanding-test-suites.md) to learn about test levels and when to use each.
-
-{{ diataxis_footer() }}

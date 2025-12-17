@@ -1,6 +1,4 @@
-# pipeline Commands
-
-{{ page_breadcrumb() }}
+# Pipeline Commands
 
 ## Overview
 
@@ -8,14 +6,7 @@ The **pipeline** category contains 7 commands for CI/CD orchestration and diagno
 
 ## Commands
 
-| Command                                                              | Purpose                                          |
-| -------------------------------------------------------------------- | ------------------------------------------------ |
-| [pipeline run](../pipeline/run.md)                                   | Execute module pipelines respecting dependencies |
-| [pipeline status](../pipeline/status.md)                             | Show CI status for head of trunk                 |
-| [pipeline wait](../pipeline/wait.md)                                 | Wait for GitHub workflow runs to complete        |
-| [pipeline ci](../pipeline/ci.md)                                     | CI orchestration and diagnostics                 |
-| [pipeline ci-dispatch-and-wait](../pipeline/ci-dispatch-and-wait.md) | Wait for GitHub workflow runs                    |
-| [pipeline ci-summary-link](../pipeline/ci-summary-link.md)           | Generate diagnostic markdown for CI summaries    |
+<!-- book:category-commands pipeline -->
 
 ## Common Use Cases
 
@@ -48,8 +39,6 @@ r2r eac pipeline ci-dispatch-and-wait
 
 ## See Also
 
-- [build](../other/build.md)
+- [build](../build/build.md)
 - [test Commands](./test.md)
 - [get execution-order](../get/execution-order.md)
-
-{{ diataxis_footer() }}

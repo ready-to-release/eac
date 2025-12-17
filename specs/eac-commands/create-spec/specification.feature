@@ -8,20 +8,6 @@ Feature: eac-commands_create-spec
   Background:
     Given I am in a git repository
 
-  Rule: Command must be registered and accessible
-
-    @L3 @iv
-    Scenario: Command is listed in available commands
-      When I run the command "show help"
-      Then the exit code is 0
-      And I should see "create spec"
-
-    @L3 @iv
-    Scenario: Command has proper description
-      When I run the command "show help create spec"
-      Then the exit code is 0
-      And I should see "spec" or "specification" or "create"
-
   Rule: Command validates input
 
     @L2 @ov

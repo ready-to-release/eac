@@ -1,15 +1,13 @@
 # Language-Specific Commands
 
-{{ page_breadcrumb() }}
-
 Most EAC commands are language-agnostic and work across all supported languages. However, some commands are specific to certain languages.
 
 ## Go-Specific Commands
 
-| Command | Purpose | Why Go-Only? |
-|---------|---------|--------------|
-| [`validate-go-tidy`](./validate/go-tidy.md) | Validates Go module dependencies are tidy | Runs `go mod tidy` and checks for changes |
-| [`validate-dependencies`](./validate/dependencies.md) | Checks go.mod against module contracts | Parses `go.mod` files to build dependency graph |
+| Command                                               | Purpose                                   | Why Go-Only?                                    |
+| ----------------------------------------------------- | ----------------------------------------- | ----------------------------------------------- |
+| [`validate-go-tidy`](./validate/go-tidy.md)           | Validates Go module dependencies are tidy | Runs `go mod tidy` and checks for changes       |
+| [`validate-dependencies`](./validate/dependencies.md) | Checks go.mod against module contracts    | Parses `go.mod` files to build dependency graph |
 
 These commands specifically interact with Go's module system (`go.mod`) and toolchain.
 
@@ -23,17 +21,17 @@ All other commands work across languages via **capability-based dispatch**. Comm
 
 **Dispatch to language-specific handlers:**
 
-| Module Type | Handler | Builds |
-|-------------|---------|--------|
-| `go` | GoHandler | Go libraries and executables with cross-compilation |
-| `typescript` | NpmHandler | npm packages via `npm install` and `tsc` |
-| `container` | BuildxHandler | Docker images with multi-platform support |
-| `docs` | MkdocsHandler | Documentation sites and PDFs |
-| `static` | NoneHandler or ScriptsHandler | No build or custom scripts |
+| Module Type  | Handler                       | Builds                                              |
+| ------------ | ----------------------------- | --------------------------------------------------- |
+| `go`         | GoHandler                     | Go libraries and executables with cross-compilation |
+| `typescript` | NpmHandler                    | npm packages via `npm install` and `tsc`            |
+| `container`  | BuildxHandler                 | Docker images with multi-platform support           |
+| `docs`       | MkdocsHandler                 | Documentation sites and PDFs                        |
+| `static`     | NoneHandler or ScriptsHandler | No build or custom scripts                          |
 
 **Commands:**
 
-- [`build`](./other/build.md) - Builds modules using appropriate handler
+- [`build`](./build/build.md) - Builds modules using appropriate handler
 - [`show-build-summary`](./show/build-summary.md) - Shows build results
 - [`show-build-times`](./show/build-times.md) - Analyzes build performance
 
@@ -43,10 +41,10 @@ All other commands work across languages via **capability-based dispatch**. Comm
 
 **Dispatch to language-specific runners:**
 
-| Module Type | Test Types | Runners |
-|-------------|------------|---------|
-| `go` | `gotest`, `godog` | GoRunner - Runs `go test` and `godog` |
-| `typescript` | `mocha`, `cucumber-js` | MochaRunner, TsCucumberRunner |
+| Module Type  | Test Types             | Runners                               |
+| ------------ | ---------------------- | ------------------------------------- |
+| `go`         | `gotest`, `godog`      | GoRunner - Runs `go test` and `godog` |
+| `typescript` | `mocha`, `cucumber-js` | MochaRunner, TsCucumberRunner         |
 
 **Commands:**
 
@@ -212,15 +210,15 @@ See [Module Types Reference](../r2r-eac/module-types-reference.md#adding-custom-
 
 ## Language Support Summary
 
-| Language | Native Support | Build | Test | Notes |
-|----------|----------------|-------|------|-------|
-| **Go** | ✅ Yes | ✅ Full | ✅ gotest, godog | Complete toolchain integration |
-| **TypeScript** | ✅ Yes | ✅ Full | ✅ mocha, cucumber-js | npm and tsc support |
-| **JavaScript** | ✅ Yes | ✅ npm | ✅ mocha, cucumber-js | Via TypeScript module type |
-| **Docker** | ✅ Yes | ✅ buildx | - | Language-agnostic containerization |
-| **Python** | ⚠️ Container | ⚠️ Custom | ⚠️ Custom | Use `container` type with Dockerfile |
-| **Rust** | ⚠️ Container | ⚠️ Custom | ⚠️ Custom | Use `container` type with Dockerfile |
-| **Java** | ⚠️ Container | ⚠️ Custom | ⚠️ Custom | Use `container` type with Dockerfile |
+| Language       | Native Support | Build     | Test                  | Notes                                |
+| -------------- | -------------- | --------- | --------------------- | ------------------------------------ |
+| **Go**         | ✅ Yes         | ✅ Full   | ✅ gotest, godog      | Complete toolchain integration       |
+| **TypeScript** | ✅ Yes         | ✅ Full   | ✅ mocha, cucumber-js | npm and tsc support                  |
+| **JavaScript** | ✅ Yes         | ✅ npm    | ✅ mocha, cucumber-js | Via TypeScript module type           |
+| **Docker**     | ✅ Yes         | ✅ buildx | -                     | Language-agnostic containerization   |
+| **Python**     | ⚠️ Container   | ⚠️ Custom | ⚠️ Custom             | Use `container` type with Dockerfile |
+| **Rust**       | ⚠️ Container   | ⚠️ Custom | ⚠️ Custom             | Use `container` type with Dockerfile |
+| **Java**       | ⚠️ Container   | ⚠️ Custom | ⚠️ Custom             | Use `container` type with Dockerfile |
 
 **Legend:**
 
@@ -234,7 +232,5 @@ See [Module Types Reference](../r2r-eac/module-types-reference.md#adding-custom-
 
 - [Module Types Reference](../r2r-eac/module-types-reference.md) - Detailed module type specifications
 - [Architecture](../r2r-eac/architecture.md) - System architecture and component design
-- [Build Command](./other/build.md) - Build command reference
+- [Build Command](./build/build.md) - Build command reference
 - [Test Command](./test/test.md) - Test command reference
-
-{{ diataxis_footer() }}

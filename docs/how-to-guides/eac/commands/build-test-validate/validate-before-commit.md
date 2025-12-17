@@ -1,7 +1,4 @@
 # Validate Before Commit
-
-{{ page_breadcrumb() }}
-
 ## What You'll Accomplish
 
 Run comprehensive quality checks before committing to ensure code meets repository standards.
@@ -117,5 +114,3 @@ r2r eac validate || exit 1
 - [`validate`](../../../../reference/commands/validate/validate.md) - Run all validations
 - [`validate specs`](../../../../reference/commands/validate/specs.md) - Validate specifications
 - [`validate dependencies`](../../../../reference/commands/validate/dependencies.md) - Check dependencies
-
-{{ diataxis_footer() }}

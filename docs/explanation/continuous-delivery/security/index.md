@@ -1,7 +1,4 @@
 # Security
-
-{{ page_breadcrumb() }}
-
 Security integration throughout all stages of the Continuous Delivery Model using open-source solutions.
 
 ## In This Section
@@ -9,5 +6,3 @@ Security integration throughout all stages of the Continuous Delivery Model usin
 | Topic                                     | Description                                                                                         |
 | ----------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | [Security in the CD Model](./security.md) | Shift-left security practices, tools (Trivy, OWASP ZAP, Dependabot), and stage-by-stage integration |
-
-{{ diataxis_footer() }}

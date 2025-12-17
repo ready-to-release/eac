@@ -1,7 +1,4 @@
 # Tag Inheritance
-
-{{ page_breadcrumb() }}
-
 > **How tags accumulate and override**
 
 Tags accumulate from Feature → Rule → Scenario levels with specific override rules.
@@ -290,5 +287,3 @@ r2r eac validate specs --show-effective-tags
 - [Verification Tags](./verification-tags.md) - Types of validation tags
 - [Dependency Tags](./dependency-tags.md) - System and module dependencies
 - [Test Suites](./test-suites.md) - How tags are used in test selection
-
-{{ diataxis_footer() }}

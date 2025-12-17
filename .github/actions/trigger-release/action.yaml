@@ -62,37 +62,38 @@ runs:
 
         echo "✅ Dispatched $WORKFLOW"
 
+    - name: Setup Commands Binary
+      id: commands
+      uses: ./.github/actions/setup-commands
+
     - name: Release Trigger Summary
       shell: bash
       env:
+        COMMANDS: ${{ steps.commands.outputs.commands-path }}
         MODULE: ${{ inputs.module }}
         WORKFLOW: ${{ inputs.workflow }}
         WORKFLOW_DESC: ${{ inputs.workflow-description }}
-        CI_RUN_ID: ${{ inputs.ci-run-id }}
         TRIGGER_RUN_ID: ${{ inputs.trigger-run-id }}
         VERSION: ${{ inputs.version }}
       run: |
-        echo "## Release Triggered: $MODULE" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "Triggered release workflow:" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "| Workflow | Description |" >> $GITHUB_STEP_SUMMARY
-        echo "|----------|-------------|" >> $GITHUB_STEP_SUMMARY
-        echo "| \`$WORKFLOW\` | $WORKFLOW_DESC |" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
-        echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-
+        # Build optional flags
+        VERSION_FLAG=""
         if [ -n "$VERSION" ]; then
-          echo "| Version | \`$VERSION\` |" >> $GITHUB_STEP_SUMMARY
+          VERSION_FLAG="--version=$VERSION"
         fi
 
+        TRIGGER_FLAG=""
         if [ -n "$TRIGGER_RUN_ID" ]; then
-          echo "| Trigger Run ID | \`$TRIGGER_RUN_ID\` |" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "| Trigger Run ID | \`none (standalone)\` |" >> $GITHUB_STEP_SUMMARY
+          TRIGGER_FLAG="--trigger-run-id=$TRIGGER_RUN_ID"
         fi
 
-        echo "| CI Run ID | \`${{ github.run_id }}\` |" >> $GITHUB_STEP_SUMMARY
-        echo "| Branch | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
-        echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+        # Generate summary using Go command
+        $COMMANDS show trigger-summary \
+          --module="$MODULE" \
+          --workflow="$WORKFLOW" \
+          --workflow-desc="$WORKFLOW_DESC" \
+          --ci-run-id="${{ github.run_id }}" \
+          --branch="${{ github.ref_name }}" \
+          --commit="${{ github.sha }}" \
+          $VERSION_FLAG \
+          $TRIGGER_FLAG >> $GITHUB_STEP_SUMMARY

@@ -1,7 +1,4 @@
 # Best Practices
-
-{{ page_breadcrumb() }}
-
 > **Testing patterns and conventions for Go/Godog**
 
 Follow these best practices to write clear, maintainable, and reliable tests.
@@ -462,5 +459,3 @@ defer func() {
 - [File Organization](./file-organization.md) - Test file structure
 - [Test Levels](./test-levels.md) - Build tags and isolation
 - [Step Definitions](./step-definitions.md) - Godog patterns
-
-{{ diataxis_footer() }}

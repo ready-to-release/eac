@@ -38,17 +38,21 @@ type BuildDepsResult struct {
 func GetBuildDeps() int {
 	args := os.Args[3:] // Skip program name, "get", and "build-deps"
 
-	// Parse module moniker from args (skip flags)
+	// Parse module moniker and flags from args
 	var moniker string
-	for _, arg := range args {
-		if !strings.HasPrefix(arg, "--") {
+	format := ""
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if arg == "--format" && i+1 < len(args) {
+			format = args[i+1]
+			i++
+		} else if !strings.HasPrefix(arg, "--") && moniker == "" {
 			moniker = arg
-			break
 		}
 	}
 
 	if moniker == "" {
-		fmt.Fprintf(os.Stderr, "Usage: get build-deps <module>\n")
+		fmt.Fprintf(os.Stderr, "Usage: get build-deps <module> [--format shell]\n")
 		return 1
 	}
 
@@ -82,6 +86,13 @@ func GetBuildDeps() int {
 
 	// Aggregate build deps from module and all its dependencies
 	buildDeps := aggregateBuildDeps(moniker, moduleReport.Registry, cfg.ModuleTypes, cfg.SystemDependencies)
+
+	// Handle shell format output
+	if format == "shell" {
+		fmt.Printf("MODULE_TYPE=\"%s\"\n", module.Type)
+		fmt.Printf("BUILD_DEPS=\"%s\"\n", strings.Join(buildDeps, ","))
+		return 0
+	}
 
 	// Use the shared get command helper for output formatting
 	return internal.ExecuteGetCommand(func() (interface{}, error) {

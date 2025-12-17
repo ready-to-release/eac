@@ -1,7 +1,4 @@
 # Workflow Architecture
-
-{{ page_breadcrumb() }}
-
 Architectural overview of the GitHub Actions workflow system.
 
 ## Workflow Architecture
@@ -211,5 +208,3 @@ Extracts and validates version from git tag or workflow input.
 - [Trigger Orchestration](./trigger-orchestration.md) - Detailed change-trigger.yaml specification
 - [CI Workflows](./ci-workflows.md) - Module CI workflow patterns
 - [Repository Layout](../../r2r-eac/repository-layout.md) - Module structure and dependencies
-
-{{ diataxis_footer() }}

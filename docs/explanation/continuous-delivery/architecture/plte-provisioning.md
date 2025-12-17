@@ -1,7 +1,4 @@
 # Provisioning PLTE Environments
-
-{{ page_breadcrumb() }}
-
 How to create and manage Production-Like Test Environments.
 
 ## Ephemeral PLTE Lifecycle
@@ -103,5 +100,3 @@ resource "azurerm_resource_group" "plte" {
 
 - [Environments](./environments.md)
 - [Deployment Strategies](../deployment/deployment-strategies.md)
-
-{{ diataxis_footer() }}

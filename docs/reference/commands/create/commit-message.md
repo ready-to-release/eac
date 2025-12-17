@@ -1,43 +1,10 @@
 # Commit Command Reference
 
-{{ page_breadcrumb() }}
+<!-- book:cmd create commit-message -->
 
 Complete technical reference for the `commit` command.
 
 For practical usage and workflows, see the [How-to Guide](../../../how-to-guides/eac/commands/development-workflow/make-commits-with-ai.md).
-
-## Command Syntax
-
-```bash
-r2r eac create commit-message [options]
-```
-
-## Options and Flags
-
-| Flag       | Short | Description                                                  | Default             |
-| ---------- | ----- | ------------------------------------------------------------ | ------------------- |
-| `--commit` | `-c`  | Automatically create the commit without opening editor       | `false`             |
-| `--debug`  | `-d`  | Save intermediate outputs to `out/` directory for inspection | `false`             |
-| `--prompt` |       | Custom prompt file path (overrides team and system defaults) | System/team default |
-
-### Examples
-
-```bash
-# Generate message and open editor
-r2r eac create commit-message
-
-# Generate and commit automatically
-r2r eac create commit-message --commit
-
-# Debug AI generation process
-r2r eac create commit-message --debug
-
-# Use custom prompt
-r2r eac create commit-message --prompt /path/to/custom-prompt.md
-
-# Auto-commit with debug output
-r2r eac create commit-message --commit --debug
-```
 
 ## Commit Types
 
@@ -430,6 +397,7 @@ Customize AI behavior using the **three-tier prompt system**. Prompts are loaded
    Use for one-off experiments or testing new prompts
 
 2. **Team Override** (version controlled)
+
    - Location: `.r2r/eac/templates/ai/commit/`
    - For team-wide customizations
    - Committed to git, affects entire team
@@ -441,10 +409,10 @@ Customize AI behavior using the **three-tier prompt system**. Prompts are loaded
 
 #### Available Prompts
 
-| Prompt File | Purpose | Override Location |
-|-------------|---------|-------------------|
-| `module.md` | Multi-module commit sections | `.r2r/eac/templates/ai/commit/module.md` |
-| `top-level.md` | Top-level commit header | `.r2r/eac/templates/ai/commit/top-level.md` |
+| Prompt File    | Purpose                      | Override Location                           |
+| -------------- | ---------------------------- | ------------------------------------------- |
+| `module.md`    | Multi-module commit sections | `.r2r/eac/templates/ai/commit/module.md`    |
+| `top-level.md` | Top-level commit header      | `.r2r/eac/templates/ai/commit/top-level.md` |
 
 #### Creating Team Overrides
 
@@ -638,5 +606,3 @@ Files modified:
 
 - [How-to Guide](../../../how-to-guides/eac/commands/development-workflow/make-commits-with-ai.md) - Quick start and common workflows
 - [Workspace Commands](../work/index.md) - Workspace-aware development
-
-{{ diataxis_footer() }}

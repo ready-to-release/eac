@@ -1,7 +1,7 @@
 # Await Module Releases Action
 #
 # Waits for all in-flight module release workflows to complete before proceeding.
-# Used by release-r2r-eac to ensure the bundle contains all current releases.
+# Used by release-r2r-eac-bundle to ensure the bundle contains all current releases.
 #
 # This action:
 # 1. Gets the list of modules in the release bundle
@@ -41,120 +41,45 @@ runs:
       shell: bash
       env:
         GH_TOKEN: ${{ github.token }}
+        COMMANDS: ${{ steps.commands.outputs.commands-path }}
         TIMEOUT: ${{ inputs.timeout }}
       run: |
-        echo "Checking for in-flight release workflows..."
-
-        START_TIME=$(date +%s)
-        MAX_WAIT=$TIMEOUT
-
-        while true; do
-          CURRENT_TIME=$(date +%s)
-          ELAPSED=$((CURRENT_TIME - START_TIME))
-
-          if [ $ELAPSED -ge $MAX_WAIT ]; then
-            echo "::warning::Timeout waiting for release workflows"
-            break
-          fi
-
-          # Check for in-progress release workflows (release-*.yaml), excluding ourselves (release-r2r-eac)
-          IN_PROGRESS=$(gh run list \
-            --status in_progress \
-            --limit 50 \
-            --json workflowName,status \
-            -q '[.[] | select(.workflowName | startswith("release-") and (contains("r2r-eac") | not))] | length')
-
-          # Also check queued
-          QUEUED=$(gh run list \
-            --status queued \
-            --limit 50 \
-            --json workflowName,status \
-            -q '[.[] | select(.workflowName | startswith("release-") and (contains("r2r-eac") | not))] | length')
-
-          TOTAL=$((IN_PROGRESS + QUEUED))
-
-          if [ "$TOTAL" = "0" ]; then
-            echo "No release workflows in progress or queued"
-            break
-          fi
-
-          echo "Waiting for $TOTAL release workflow(s) to complete... (${ELAPSED}s elapsed)"
-          sleep 15
-        done
+        # Wait for all release workflows except our own (r2r-eac-bundle)
+        $COMMANDS pipeline await-release --timeout $TIMEOUT --exclude r2r-eac-bundle
 
     - name: Collect module releases
       id: collect
       shell: bash
       env:
         GH_TOKEN: ${{ github.token }}
+        COMMANDS: ${{ steps.commands.outputs.commands-path }}
       run: |
-        COMMANDS="${{ steps.commands.outputs.commands-path }}"
-
         echo "Collecting release information for bundle modules..."
 
-        # Get release bundle config
-        BUNDLE=$($COMMANDS get release-bundle --as-json)
-
-        # Extract all monikers from the bundle
-        ALL_MONIKERS=$(echo "$BUNDLE" | jq -r '
-          ([.headline | to_entries[].value.moniker] +
-           [.categories[].modules[].moniker])
-          | unique | .[]
-        ')
-
-        echo "Bundle modules: $ALL_MONIKERS"
-        echo ""
-
-        # Get all releases (as tag names)
-        RELEASES=$(gh release list --limit 100 --json tagName -q '.[].tagName')
-
-        # Build JSON object of releases
-        RELEASE_MAP="{}"
-        ALL_FOUND=true
-
-        for MONIKER in $ALL_MONIKERS; do
-          TAG=$(echo "$RELEASES" | grep "^${MONIKER}/" | head -1 || echo "")
-
-          if [ -n "$TAG" ]; then
-            VERSION="${TAG#${MONIKER}/}"
-            echo "  $MONIKER: $VERSION"
-            RELEASE_MAP=$(echo "$RELEASE_MAP" | jq --arg m "$MONIKER" --arg t "$TAG" --arg v "$VERSION" \
-              '. + {($m): {"tag": $t, "version": $v}}')
-          else
-            echo "  $MONIKER: (no release)"
-            ALL_FOUND=false
-          fi
-        done
+        # Get release bundle status using shell format (no jq needed)
+        # Shell format outputs: RELEASE_MAP, ALL_RELEASED
+        eval $($COMMANDS get release-bundle --format shell)
 
         echo ""
-        echo "Release map:"
-        echo "$RELEASE_MAP" | jq .
+        echo "All released: $ALL_RELEASED"
 
         # Output
-        echo "releases=$(echo "$RELEASE_MAP" | jq -c .)" >> $GITHUB_OUTPUT
-        echo "all_released=$ALL_FOUND" >> $GITHUB_OUTPUT
+        echo "releases=$RELEASE_MAP" >> $GITHUB_OUTPUT
+        echo "all_released=$ALL_RELEASED" >> $GITHUB_OUTPUT
 
     - name: Summary
       shell: bash
+      env:
+        COMMANDS: ${{ steps.commands.outputs.commands-path }}
+        GH_TOKEN: ${{ github.token }}
       run: |
-        RELEASES='${{ steps.collect.outputs.releases }}'
         ALL_RELEASED="${{ steps.collect.outputs.all_released }}"
 
         echo "## Module Releases" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
 
-        echo "| Module | Version | Status |" >> $GITHUB_STEP_SUMMARY
-        echo "|--------|---------|--------|" >> $GITHUB_STEP_SUMMARY
-
-        # Parse releases JSON and output table
-        for MONIKER in $(echo "$RELEASES" | jq -r 'keys[]'); do
-          VERSION=$(echo "$RELEASES" | jq -r --arg m "$MONIKER" '.[$m].version // "—"')
-          if [ "$VERSION" != "—" ] && [ -n "$VERSION" ]; then
-            echo "| $MONIKER | \`$VERSION\` | :white_check_mark: |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| $MONIKER | — | :grey_question: |" >> $GITHUB_STEP_SUMMARY
-          fi
-        done
+        # Use table format for summary (no jq needed)
+        $COMMANDS get release-bundle --format table >> $GITHUB_STEP_SUMMARY
 
         echo "" >> $GITHUB_STEP_SUMMARY
 

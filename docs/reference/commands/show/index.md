@@ -1,7 +1,4 @@
 # show Commands
-
-{{ page_breadcrumb() }}
-
 Display repository information in human-readable format for interactive terminal use.
 
 ## Commands in this Category
@@ -47,5 +44,3 @@ r2r eac show dependencies
 
 - [Category Overview](../categories/show.md)
 - [get Commands](../get/index.md) - JSON output
-
-{{ diataxis_footer() }}

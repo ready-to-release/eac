@@ -1,7 +1,4 @@
 # Use Documentation Templates
-
-{{ page_breadcrumb() }}
-
 ## What You'll Accomplish
 
 Install documentation templates to bootstrap consistent project documentation structure.
@@ -127,5 +124,3 @@ r2r templates install specs
 - [`templates install-docs`](../../../../reference/commands/templates/install-docs.md) - Documentation templates
 - [`templates install-ai`](../../../../reference/commands/templates/install-ai.md) - AI prompt templates
 - [`templates install-reports`](../../../../reference/commands/templates/install-reports.md) - Report templates
-
-{{ diataxis_footer() }}

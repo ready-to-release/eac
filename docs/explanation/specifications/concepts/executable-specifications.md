@@ -1,7 +1,4 @@
 # Executable Specifications
-
-{{ page_breadcrumb() }}
-
 > **From discovery to implementation**
 
 Learn how to move from collaborative discovery to running, automated specifications.
@@ -334,5 +331,3 @@ Rule: Command completes within 2 seconds for projects with 100 files
 - [Specifications Evolution](./specifications-evolution.md) - How specifications evolve
 - [Three-Layer Approach](./three-layer-approach.md) - Rules/Scenarios/Unit Tests
 - [Example Mapping](../discovery/example-mapping.md) - Requirements discovery
-
-{{ diataxis_footer() }}

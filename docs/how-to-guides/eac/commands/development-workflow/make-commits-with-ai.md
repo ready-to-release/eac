@@ -1,7 +1,4 @@
 # Make Commits with AI
-
-{{ page_breadcrumb() }}
-
 ## What You'll Accomplish
 
 Generate semantic commit messages automatically from your staged changes using AI analysis of code diffs.
@@ -91,5 +88,3 @@ r2r eac create commit-message
 - [`create commit-message`](../../../../reference/commands/create/commit-message.md) - Full command reference
 - [`work commit`](../../../../reference/commands/work/commit.md) - Commit in workspace
 - [`create squash-message`](../../../../reference/commands/create/squash-message.md) - Generate squash message
-
-{{ diataxis_footer() }}

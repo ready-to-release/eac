@@ -1,7 +1,4 @@
 # Deployable Modules
-
-{{ page_breadcrumb() }}
-
 ## Introduction
 
 A Deployable Module is the fundamental building block of Continuous Delivery. It represents the discrete body of work that is built, tested, and delivered as a cohesive whole through the CD Model's 12 stages.
@@ -586,5 +583,3 @@ Deployable modules are the fundamental building blocks of Continuous Delivery:
 - [Calendar Versioning (CalVer)](https://calver.org/) - Versioning standard for runtime systems
 - [Conventional Commits](https://www.conventionalcommits.org/) - Commit message convention
 - [Trunk-Based Development](https://trunkbaseddevelopment.com/) - Branching strategy and workflow
-
-{{ diataxis_footer() }}

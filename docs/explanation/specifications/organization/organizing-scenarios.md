@@ -1,7 +1,4 @@
 # Organizing Scenarios
-
-{{ page_breadcrumb() }}
-
 > **Scenario coverage strategy and independence**
 
 Learn how to write effective scenarios that thoroughly test each Rule.
@@ -257,5 +254,3 @@ Rule: Creates project directory structure
 - [Organizing Rules](./organizing-rules.md) - Creating acceptance criteria
 - [File Structure](./file-structure.md) - Where scenarios live
 - [Size Guidelines](./size-guidelines.md) - How many scenarios per Rule
-
-{{ diataxis_footer() }}

@@ -1,7 +1,4 @@
 # Step Definitions
-
-{{ page_breadcrumb() }}
-
 > **Writing and organizing Godog step definitions**
 
 Learn how to create effective step definitions that connect Gherkin scenarios to Go code.
@@ -689,5 +686,3 @@ godog run --format=progress specs/cli/init-project/
 - [File Organization](./file-organization.md) - Where to place step definition files
 - [Test Levels](./test-levels.md) - Understanding test isolation
 - [Best Practices](./best-practices.md) - Testing patterns and conventions
-
-{{ diataxis_footer() }}

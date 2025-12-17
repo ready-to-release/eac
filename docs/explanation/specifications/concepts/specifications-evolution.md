@@ -1,7 +1,4 @@
 # Specifications Evolution
-
-{{ page_breadcrumb() }}
-
 > **How specifications evolve with understanding**
 
 Specifications are living documents that evolve as your understanding deepens through implementation, usage, and feedback.
@@ -311,5 +308,3 @@ When updating specifications, check:
 - [Executable Specifications](./executable-specifications.md) - From discovery to implementation
 - [Review and Iterate](../quality/review-and-iterate.md) - Detailed evolution practices
 - [Ubiquitous Language](./ubiquitous-language.md) - Domain language evolution
-
-{{ diataxis_footer() }}

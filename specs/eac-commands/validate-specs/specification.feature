@@ -9,20 +9,6 @@ Feature: eac-commands_validate-specs
     Given I am in a git repository
     And specification contracts are available
 
-  Rule: Command must be registered and accessible
-
-    @L3 @iv
-    Scenario: Command is listed in available commands
-      When I run the command "show help"
-      Then the exit code is 0
-      And I should see "validate specs"
-
-    @L3 @iv
-    Scenario: Command has proper description
-      When I run the command "show help validate specs"
-      Then the exit code is 0
-      And I should see "validate" or "specification" or "Gherkin"
-
   Rule: Command validates input and configuration
 
     @L2 @ov

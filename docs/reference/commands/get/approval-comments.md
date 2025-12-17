@@ -1,52 +1,14 @@
-# get approval-comments
+# Get approval-comments
 
-{{ page_breadcrumb() }}
-
-## Overview
-
-**Command**: `r2r eac get approval-comments <module> [version]`
-**Purpose**: Get PR approval comments in structured format (YAML/JSON/TOML)
-**Category**: [get](../categories/get.md)
-
-## Syntax
-
-```bash
-r2r eac get approval-comments <module>
-r2r eac get approval-comments <module> <version>
-r2r eac get approval-comments <module> latest
-r2r eac get approval-comments <module> unreleased
-```
-
-## Arguments
-
-| Argument | Required | Description |
-|----------|----------|-------------|
-| `module` | Yes | Module moniker (e.g., `ext-eac`, `eac-commands`) |
-| `version` | No | Version number or special keyword (`latest`, `unreleased`) |
-
-## Output Formats
-
-| Flag | Format | Use Case |
-|------|--------|----------------|
-| *(none)* | YAML | Default, human-readable structured data |
-| `--as-json` | JSON | Machine parsing, API integration |
-| `--as-toml` | TOML | Configuration files |
-| `--as-yaml` | YAML | Explicit YAML output |
-
-## Options
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--include-all-reviews` | boolean | Include all review states (APPROVED, CHANGES_REQUESTED, COMMENTED). Default: only APPROVED reviews |
-| `--branch` | string | Branch to query (default: trunk branch from config, usually `main`). Use `HEAD` or `current` for current branch |
+<!-- book:cmd get approval-comments -->
 
 ## Special Keywords
 
-| Keyword | Description | Output |
-|---------|-------------|--------|
-| `latest` | Most recent released version | Approvals from that release |
-| `unreleased` | Pending unreleased changes | Approvals since last release |
-| *(omit)* | Same as `unreleased` (default) | Approvals since last release |
+| Keyword      | Description                    | Output                       |
+| ------------ | ------------------------------ | ---------------------------- |
+| `latest`     | Most recent released version   | Approvals from that release  |
+| `unreleased` | Pending unreleased changes     | Approvals since last release |
+| _(omit)_     | Same as `unreleased` (default) | Approvals since last release |
 
 ## Bundle Modules
 
@@ -59,6 +21,7 @@ r2r eac get approval-comments ext-eac --as-json
 ```
 
 Returns approvals for PRs containing spec files from:
+
 - `specs/eac-commands/` (dependency)
 - `specs/r2r-cli/` (dependency)
 - `specs/ext-eac/` (if any)
@@ -179,55 +142,6 @@ approvals:
     merged_at: "2025-12-11T15:00:00Z"
 ```
 
-## Examples
-
-```bash
-# Get approvals as YAML (default)
-r2r eac get approval-comments ext-eac
-
-# Get as JSON
-r2r eac get approval-comments ext-eac --as-json
-
-# Get latest version approvals
-r2r eac get approval-comments ext-eac latest --as-json
-
-# Get unreleased approvals
-r2r eac get approval-comments ext-eac unreleased --as-json
-
-# Get specific version
-r2r eac get approval-comments ext-eac 0.0.7 --as-json
-
-# Include all review states (not just APPROVED)
-r2r eac get approval-comments ext-eac --include-all-reviews --as-json
-
-# Get all reviews for latest version
-r2r eac get approval-comments ext-eac latest --include-all-reviews --as-json
-
-# Query from current branch instead of main
-r2r eac get approval-comments ext-eac --branch HEAD --as-json
-
-# Query from specific branch
-r2r eac get approval-comments ext-eac --branch develop --as-json
-
-# Count total approvals
-r2r eac get approval-comments ext-eac --as-json | jq '.total_approvals'
-
-# List all reviewers
-r2r eac get approval-comments ext-eac --as-json | jq -r '.approvals[].reviewer' | sort -u
-
-# Count approvals per PR
-r2r eac get approval-comments ext-eac --as-json | jq '.approvals | group_by(.pr_number) | map({pr: .[0].pr_number, approvals: length})'
-
-# Filter approvals by specific reviewer
-r2r eac get approval-comments ext-eac --as-json | jq '.approvals[] | select(.reviewer == "username")'
-
-# Show only CHANGES_REQUESTED reviews
-r2r eac get approval-comments ext-eac --include-all-reviews --as-json | jq '.approvals[] | select(.review_state == "CHANGES_REQUESTED")'
-
-# Count reviews by state
-r2r eac get approval-comments ext-eac --include-all-reviews --as-json | jq '.approvals | group_by(.review_state) | map({state: .[0].review_state, count: length})'
-```
-
 ## How It Works
 
 1. **Extract PR Numbers**: Scans git commits for PR references (e.g., `#123` or `Merge pull request #123`)
@@ -243,16 +157,14 @@ r2r eac get approval-comments ext-eac --include-all-reviews --as-json | jq '.app
 
 ## Error Handling
 
-| Error | Exit Code | Solution |
-|-------|-----------|----------|
-| `module not found` | 1 | Verify module with `show modules` |
-| `version not found` | 1 | List versions with `get changelog <module> --as-json \| jq '.versions[].number'` |
-| `no released versions found` | 1 | Normal if no releases yet |
-| `gh command failed` | Skips PR | Install and authenticate GitHub CLI |
+| Error                        | Exit Code | Solution                                                                         |
+| ---------------------------- | --------- | -------------------------------------------------------------------------------- |
+| `module not found`           | 1         | Verify module with `show modules`                                                |
+| `version not found`          | 1         | List versions with `get changelog <module> --as-json \| jq '.versions[].number'` |
+| `no released versions found` | 1         | Normal if no releases yet                                                        |
+| `gh command failed`          | Skips PR  | Install and authenticate GitHub CLI                                              |
 
 ## See Also
 
 - [show approval-comments](../show/approval-comments.md) - Human-readable markdown output
 - [How-To Guide](../../../how-to-guides/eac/commands/release-management/view-approval-comments.md)
-
-{{ diataxis_footer() }}

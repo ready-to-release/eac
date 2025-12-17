@@ -1,7 +1,4 @@
 # Incident Response
-
-{{ page_breadcrumb() }}
-
 How to respond to production incidents.
 
 ## Incident Severity Levels
@@ -175,5 +172,3 @@ Within 48 hours, conduct post-mortem:
 - [Live Monitoring](../cd-model/cd-model-stages-8-12.md#stage-11-live) - CD Model Stage 11
 - [Release Quality Thresholds](../quality-gates/release-gates.md) - Quality gate criteria
 - [Deployment Strategies](./deployment-strategies.md) - Deployment patterns and approaches
-
-{{ diataxis_footer() }}

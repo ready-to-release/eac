@@ -1,7 +1,4 @@
 # Build, Test & Validate
-
-{{ page_breadcrumb() }}
-
 Learn how to build modules, run tests, and validate quality before committing.
 
 ## In This Section
@@ -78,5 +75,3 @@ go run ./go/eac/commands validate
 # Security scan
 go run ./go/eac/commands scan
 ```
-
-{{ diataxis_footer() }}

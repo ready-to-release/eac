@@ -1,7 +1,4 @@
 # Modules
-
-{{ page_breadcrumb() }}
-
 ## Overview
 
 The EAC module system provides **independently buildable, testable units** with explicit contracts, dependency management, and file ownership. Modules are defined in YAML contracts, validated against schemas, and built in topological order based on their dependencies.
@@ -658,5 +655,3 @@ r2r eac release-this <module>      # Create release
 - [Overview](./index.md) - System overview and key concepts
 - [Architecture](./architecture.md) - System architecture and components
 - [Contracts](./contracts.md) - Contract system and YAML schemas
-
-{{ diataxis_footer() }}

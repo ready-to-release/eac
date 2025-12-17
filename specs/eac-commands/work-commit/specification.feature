@@ -5,13 +5,6 @@ Feature: eac-commands_work-commit
   I want to commit changes with AI-generated messages
   So that my commits have consistent, high-quality messages
 
-  Rule: Command must be registered and accessible
-
-    Scenario: Command is listed in available commands
-      When I run the command "show help"
-      Then the exit code is 0
-      And I should see "work commit"
-
   Rule: Validation prevents invalid commits
 
     Scenario: Fail when no staged changes

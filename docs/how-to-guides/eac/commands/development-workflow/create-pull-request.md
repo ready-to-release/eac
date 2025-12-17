@@ -1,7 +1,4 @@
 # Create Pull Request
-
-{{ page_breadcrumb() }}
-
 ## What You'll Accomplish
 
 Generate a pull request with AI-written description that summarizes all branch changes.
@@ -105,5 +102,3 @@ r2r eac create pr
 
 - [`create pr`](../../../../reference/commands/create/pr.md) - Full command reference
 - [`create squash-message`](../../../../reference/commands/create/squash-message.md) - Generate squash message
-
-{{ diataxis_footer() }}

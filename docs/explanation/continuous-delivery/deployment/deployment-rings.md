@@ -1,7 +1,4 @@
 # Deployment Rings
-
-{{ page_breadcrumb() }}
-
 ## Introduction
 
 Deployment rings are a **progressive rollout strategy** that deploys to increasingly larger user groups (rings) over time. Each ring serves as validation for the next, building confidence through production exposure while limiting blast radius.
@@ -591,5 +588,3 @@ Example:
 | 0         | 1       | No critical errors, metrics stable        |
 | 1         | 2       | Error rate < threshold, positive feedback |
 | 2         | 3       | All metrics healthy, no regressions       |
-
-{{ diataxis_footer() }}

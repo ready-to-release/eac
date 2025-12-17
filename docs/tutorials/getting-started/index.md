@@ -1,7 +1,4 @@
 # Getting Started
-
-{{ page_breadcrumb() }}
-
 Begin your journey with r2r and Everything-as-Code. These foundational tutorials will take you from installation through creating your first modules and understanding the testing framework.
 
 ## Learning Path
@@ -35,5 +32,3 @@ After completing these tutorials, you'll be able to:
 ## Next Steps
 
 Once you've completed the getting started tutorials, continue to [Core Workflows](../core-workflows/) to learn daily development practices.
-
-{{ diataxis_footer() }}

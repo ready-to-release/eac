@@ -1,7 +1,4 @@
 # Build Documentation Site
-
-{{ page_breadcrumb() }}
-
 ## What You'll Accomplish
 
 Generate and preview documentation site using MkDocs with validation.
@@ -122,5 +119,3 @@ find docs -name ".nav.yml" -exec cat {} \;
 - [`serve docs`](../../../../reference/commands/serve/docs.md) - Start dev server
 - [`validate markdown`](../../../../reference/commands/validate/markdown.md) - Check syntax
 - [`validate books`](../../../../reference/commands/validate/books.md) - Validate config
-
-{{ diataxis_footer() }}

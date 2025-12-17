@@ -1,7 +1,4 @@
 # Command Cheat Sheet
-
-{{ page_breadcrumb() }}
-
 Quick reference for the most commonly used EAC commands. Commands are organized by workflow and use case for fast lookup.
 
 ## Quick Navigation
@@ -524,5 +521,3 @@ r2r eac pipeline wait
 - [Command Taxonomy](./overview/command-taxonomy.md) - How commands are organized
 - [Common Flags](./overview/common-flags.md) - Global options
 - [Output Formats](./overview/output-formats.md) - JSON vs formatted output
-
-{{ diataxis_footer() }}

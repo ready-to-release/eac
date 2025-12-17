@@ -1,7 +1,4 @@
 # Go Implementation Guide
-
-{{ page_breadcrumb() }}
-
 > **Implementation-specific guide for Go/Godog BDD and testing**
 
 Complete guide for implementing BDD specifications with Go and Godog.
@@ -53,5 +50,3 @@ go tool cover -html=coverage.out
 
 - [Organizing Specifications](../../organization/) - Specification structure
 - [Example Mapping](../../discovery/example-mapping.md) - Requirements discovery
-
-{{ diataxis_footer() }}

@@ -1,7 +1,4 @@
 # BDD Fundamentals
-
-{{ page_breadcrumb() }}
-
 > **Understanding Behavior-Driven Development and specifications**
 
 Learn the foundations of BDD and how it enables shared understanding through executable specifications.
@@ -214,5 +211,3 @@ A feature is ready to implement when you have:
 - [Three-Layer Approach](./three-layer-approach.md) - Rules/Scenarios/Unit Tests
 - [Ubiquitous Language](./ubiquitous-language.md) - DDD and shared vocabulary
 - [Example Mapping](../discovery/example-mapping.md) - Requirements discovery
-
-{{ diataxis_footer() }}

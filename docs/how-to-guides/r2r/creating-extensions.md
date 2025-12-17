@@ -1,7 +1,4 @@
 # Creating r2r Extensions
-
-{{ page_breadcrumb() }}
-
 **Problem**: You want to add custom automation commands to r2r that can be shared across teams and run consistently in any environment.
 
 **Solution**: Create a Docker-based extension that r2r invokes as a container.
@@ -275,5 +272,3 @@ docker buildx build \
 | No output | Check container logs with `docker logs` |
 | Wrong arguments | Extension receives args after extension name |
 | Mount issues | Verify volume paths exist on host |
-
-{{ diataxis_footer() }}

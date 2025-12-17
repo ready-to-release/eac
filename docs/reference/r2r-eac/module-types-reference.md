@@ -1,7 +1,4 @@
 # Module Types Reference
-
-{{ page_breadcrumb() }}
-
 EAC supports different module types, each optimized for specific languages and build requirements.
 
 ## Available Module Types
@@ -369,5 +366,3 @@ artifacts:
 - [Contracts](./contracts.md) - Module contract specification
 - [Creating Modules](../../how-to-guides/eac/modules/creating-modules.md) - Step-by-step guide
 - [Creating Module Types](../../how-to-guides/eac/modules/creating-module-types.md) - Custom type definitions
-
-{{ diataxis_footer() }}

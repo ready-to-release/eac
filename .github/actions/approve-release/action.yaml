@@ -204,30 +204,32 @@ runs:
         VERSION_TYPE="${{ inputs.version-type }}"
         WORKFLOW="ci-${MODULE}.yaml"
 
-        echo "## Release Approval: $MODULE" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
-        echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
-        echo "| Version | \`$VERSION\` ($VERSION_TYPE) |" >> $GITHUB_STEP_SUMMARY
-        echo "| Tag | \`$TAG_NAME\` |" >> $GITHUB_STEP_SUMMARY
-        echo "| Commit | \`${COMMIT:0:7}\` |" >> $GITHUB_STEP_SUMMARY
-
-        # Show success status only if job succeeded
+        # Determine status
         if [ "${{ job.status }}" != "failure" ]; then
-          if [ "$VERSION_TYPE" = "semver" ]; then
-            echo "| Changelog | :white_check_mark: Updated |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| Changelog | :white_check_mark: N/A (calver) |" >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "| Existing Release | :white_check_mark: None |" >> $GITHUB_STEP_SUMMARY
-
-          if [ "$SKIP_CI" = "true" ]; then
-            echo "| CI Check | :warning: Skipped |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| CI Check | :white_check_mark: Passed (strict) |" >> $GITHUB_STEP_SUMMARY
-          fi
+          STATUS="success"
         else
-          # On failure, add diagnostic link
+          STATUS="failure"
+        fi
+
+        # Build CI skipped flag
+        CI_SKIPPED_FLAG=""
+        if [ "$SKIP_CI" = "true" ]; then
+          CI_SKIPPED_FLAG="--ci-skipped"
+        fi
+
+        # Generate summary using Go command
+        $COMMANDS show approve-summary \
+          --module="$MODULE" \
+          --version="$VERSION" \
+          --tag="$TAG_NAME" \
+          --commit="$COMMIT" \
+          --version-type="$VERSION_TYPE" \
+          --status="$STATUS" \
+          --run-id="$RUN_ID" \
+          $CI_SKIPPED_FLAG >> $GITHUB_STEP_SUMMARY
+
+        # On failure, add diagnostic link
+        if [ "$STATUS" = "failure" ]; then
           echo "" >> $GITHUB_STEP_SUMMARY
           $COMMANDS pipeline ci summary-link $RUN_ID --type release --workflow "$WORKFLOW" --commit "$COMMIT" >> $GITHUB_STEP_SUMMARY
         fi

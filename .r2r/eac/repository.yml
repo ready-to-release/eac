@@ -57,12 +57,13 @@ modules:
         test_impl: go/eac/specs/impl/repository
         design: ""
         other:
+          - scripts/pwsh/claude/*.*
+          - scripts/sh/claude/*.*
+          - scripts/sh/vscode/*.*
+          - .github/workflows/_module-ci.yaml
           - .github/workflows/change-trigger.yaml
           - .github/workflows/cron-full-trigger.yaml
           - .github/workflows/codeql.yaml
-          - scripts/pwsh/claude/env-setup.ps1
-          - scripts/sh/claude/env-setup.sh
-          - scripts/sh/vscode/**
           - go/eac/core/testing/testdata/meta-tests/**
 
   - moniker: eac-core
@@ -188,6 +189,8 @@ modules:
     description: The extendable go-based CLI tool
     versioning:
       scheme: SemVer
+    evidence_books:
+      - release-evidence
     depends_on:
       - eac-core
     build:
@@ -323,6 +326,8 @@ modules:
     description: Docker-based extension providing EAC (Everything as Code) for R2R CLI integration
     versioning:
       scheme: SemVer
+    evidence_books:
+      - release-evidence
     depends_on:
       - eac-commands
       - r2r-cli
@@ -423,7 +428,7 @@ modules:
   # LAYER 3 - Depends on Layer 2
   # ============================================================================
 
-  - moniker: r2r-eac
+  - moniker: r2r-eac-bundle
     name: Release Bundle
     type: static
     description: Aggregated release bundle with links to all module releases - this becomes the "Latest" GitHub release
@@ -455,6 +460,6 @@ modules:
     files:
       root: release/bundle
       ignore:
-        - ".github/workflows/release-r2r-eac.yaml"
+        - ".github/workflows/release-r2r-eac-bundle.yaml"
       workflows:
-        release: .github/workflows/release-r2r-eac.yaml
+        release: .github/workflows/release-r2r-eac-bundle.yaml

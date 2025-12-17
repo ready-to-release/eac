@@ -40,6 +40,9 @@ const (
 	// RiskDir is the subdirectory under OutDir for risk assessment outputs
 	RiskDir = "risk"
 
+	// EvidenceDir is the subdirectory under OutDir for evidence outputs
+	EvidenceDir = "evidence"
+
 	// RiskControlsDir is the subdirectory under SpecsDir for OSCAL profiles
 	RiskControlsDir = ".risk-controls"
 
@@ -140,6 +143,11 @@ func TestOutputPath(repoRoot, moniker string) string {
 // TestOutputDir returns the root test output directory
 func TestOutputDir(repoRoot string) string {
 	return filepath.Join(repoRoot, OutDir, TestDir)
+}
+
+// EvidenceOutputPath returns the path to a module's evidence output directory
+func EvidenceOutputPath(repoRoot, moniker string) string {
+	return filepath.Join(repoRoot, OutDir, EvidenceDir, moniker)
 }
 
 // StagingPath returns the path to a module's staging directory

@@ -113,8 +113,8 @@ runs:
         # Falls back to github.sha for direct triggers (push, pull_request)
         ARTIFACT_SHA: ${{ inputs.commit-sha || github.sha }}
       run: |
-        # Get module dependencies from contract
-        DEPS=$($COMMANDS get modules --as-json | jq -r ".[] | select(.moniker == \"$MODULE\") | .depends_on[]" 2>/dev/null || echo "")
+        # Get module dependencies using dedicated command
+        DEPS=$($COMMANDS get dependencies "$MODULE" --format space 2>/dev/null || echo "")
 
         if [ -z "$DEPS" ]; then
           echo "No module dependencies to download"
@@ -134,8 +134,10 @@ runs:
 
           # Find successful run from current trigger chain (same SHA)
           # change-trigger dispatches in layers and waits, so deps should be complete
-          CURRENT_RUN=$(gh run list -w "ci-${dep}.yaml" -s success -L 5 --json databaseId,headSha \
-            | jq -r ".[] | select(.headSha == \"$ARTIFACT_SHA\") | .databaseId" | head -1 2>/dev/null || echo "")
+          CURRENT_RUN=$($COMMANDS pipeline find-run-id \
+            --workflow "ci-${dep}.yaml" \
+            --sha "$ARTIFACT_SHA" \
+            --status success 2>/dev/null || echo "")
 
           if [ -n "$CURRENT_RUN" ]; then
             echo "  ↓ $dep: downloading from current trigger (run $CURRENT_RUN)"

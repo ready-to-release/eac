@@ -1,7 +1,4 @@
 # Event Storming Formats
-
-{{ page_breadcrumb() }}
-
 > **Big Picture, Process Modeling, and Software Design formats**
 
 Event Storming has three formats, each serving a different purpose.
@@ -231,5 +228,3 @@ Event Storming uses color-coded sticky notes as a visual language:
 - [Event Storming Overview](./event-storming-overview.md) - What and why
 - [Event Storming Facilitation](./event-storming-facilitation.md) - Running workshops
 - [Example Mapping](./example-mapping.md) - Next step after Process Modeling
-
-{{ diataxis_footer() }}

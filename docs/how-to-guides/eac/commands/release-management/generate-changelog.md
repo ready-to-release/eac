@@ -1,7 +1,4 @@
 # Generate Changelog
-
-{{ page_breadcrumb() }}
-
 ## What You'll Accomplish
 
 Create changelog from Git commits with automatic version detection and formatting.
@@ -126,5 +123,3 @@ Version is determined by commit types:
 - [`release changelog`](../../../../reference/commands/release/changelog.md) - Generate changelog
 - [`release get-version`](../../../../reference/commands/release/get-version.md) - Extract version
 - [`validate release`](../../../../reference/commands/validate/release.md) - Validate format
-
-{{ diataxis_footer() }}

@@ -1,7 +1,4 @@
 # Repository Changelog
-
-{{ page_breadcrumb() }}
-
 Reference for the repository-level changelog.
 
 ## Overview
@@ -334,5 +331,3 @@ Check that footer links are updated:
 - [Module Changelogs](./module-changelogs.md) - Module-level conventions
 - [Versioning](./versioning.md) - Semantic versioning rules
 - [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
-
-{{ diataxis_footer() }}

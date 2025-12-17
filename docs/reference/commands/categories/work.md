@@ -1,7 +1,5 @@
 # Work Commands
 
-{{ page_breadcrumb() }}
-
 ## Overview
 
 Work commands manage parallel development workspaces using **git worktrees**. They enable multiple topic branches to be worked on simultaneously without switching contexts, providing isolated development environments for each feature.
@@ -18,14 +16,7 @@ Work commands manage parallel development workspaces using **git worktrees**. Th
 
 ## All Work Commands
 
-| Command                                  | Purpose                 | Use Case                                  |
-| ---------------------------------------- | ----------------------- | ----------------------------------------- |
-| [work create](../work/create.md)         | Create new workspace    | Start new feature in isolated environment |
-| [work commit](../work/commit.md)         | Commit with AI messages | Commit changes with generated messages    |
-| [work pull](../work/pull.md)             | Sync with main          | Update workspace with latest changes      |
-| [work merge](../work/merge.md)           | Merge to main           | Complete feature and integrate            |
-| [work remove](../work/remove.md)         | Remove workspace        | Clean up after merge                      |
-| [show workspaces](../show/workspaces.md) | List all workspaces     | See all active workspaces                 |
+<!-- book:category-commands work -->
 
 ## Git Worktrees Explained
 
@@ -445,5 +436,3 @@ fi
 - [create commit-message](../create/commit-message.md) - AI commit messages
 - [create squash-message](../create/squash-message.md) - Squash merge messages
 - [Workspace Commands Guide](../work/index.md)
-
-{{ diataxis_footer() }}

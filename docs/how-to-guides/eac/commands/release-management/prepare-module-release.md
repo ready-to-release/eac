@@ -1,7 +1,4 @@
 # Prepare Module Release
-
-{{ page_breadcrumb() }}
-
 ## What You'll Accomplish
 
 Prepare and release a new version of your module following a complete pre-release checklist with changelog generation, CI validation, and git tagging.
@@ -125,5 +122,3 @@ git push origin src-auth/v1.2.0
 - [`release changelog`](../../../../reference/commands/release/changelog.md) - Generate changelog
 - [`release this`](../../../../reference/commands/release/this.md) - Create release
 - [`release check-ci`](../../../../reference/commands/release/check-ci.md) - Verify CI
-
-{{ diataxis_footer() }}

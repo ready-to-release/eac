@@ -1,0 +1,238 @@
+# Release Bundle - Creates the "Latest" GitHub release
+#
+# This workflow creates a GitHub release that aggregates links to all module releases.
+# It becomes the "Latest" release on the repository, providing a single entry point
+# to find all current module versions.
+#
+# NOTE: r2r-eac-bundle is a bundle module with NO CI workflow. It auto-releases when any of
+# its dependencies (r2r-cli, ext-eac, docs, books) are released. CI check is skipped.
+#
+# Title format: "r2r (x.y.z) + eac (x.y.z)"
+# Body: Table with links to all module releases
+
+name: "release-r2r-eac-bundle (stage 8+)"
+
+on:
+  push:
+    tags:
+      - 'r2r-eac-bundle/*'
+  workflow_dispatch:
+    inputs:
+      ci_run_id:
+        description: 'CI workflow run ID (passed from CI)'
+        required: false
+        type: string
+        default: ''
+      skip-ci-check:
+        description: 'Skip CI verification'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  # =============================================================================
+  # Approve Release
+  # =============================================================================
+  approve:
+    name: Approve Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.gate.outputs.version }}
+      tag_name: ${{ steps.gate.outputs.tag_name }}
+      ci_sha: ${{ steps.gate.outputs.ci_sha }}
+      ci_run_id: ${{ inputs.ci_run_id }}
+      releases: ${{ steps.await.outputs.releases }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Approve release
+        id: gate
+        uses: ./.github/actions/approve-release
+        with:
+          module: r2r-eac-bundle
+          version-type: calver
+          # r2r-eac-bundle is a bundle module with no CI workflow - always skip CI check
+          skip-ci-check: 'true'
+          timeout: '300'
+
+      - name: Await module releases
+        id: await
+        uses: ./.github/actions/await-module-releases
+        with:
+          timeout: '600'
+
+  # =============================================================================
+  # Create Release Bundle
+  # =============================================================================
+  release:
+    name: Create Release Bundle
+    needs: approve
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
+
+      - name: Gather module versions
+        id: versions
+        run: |
+          COMMANDS="${{ steps.commands.outputs.commands-path }}"
+          REPO="${{ github.repository }}"
+
+          echo "Loading release bundle with resolved versions..."
+
+          # Get the title (with versions resolved)
+          TITLE=$($COMMANDS get release-bundle --title-only)
+          echo "Release title: $TITLE"
+          echo "title=$TITLE" >> $GITHUB_OUTPUT
+
+          # Get markdown body directly from Go command
+          echo ""
+          echo "Building release notes..."
+          $COMMANDS get release-bundle --format markdown > release_notes.md
+
+          # Append quick install section
+          cat >> release_notes.md << FOOTER
+
+### Quick Install
+
+\`\`\`bash
+# Install r2r CLI (Linux/macOS)
+curl -fsSL https://raw.githubusercontent.com/${REPO}/main/scripts/sh/cli/install.sh | bash
+
+# Install r2r CLI (Windows PowerShell)
+iwr -useb https://raw.githubusercontent.com/${REPO}/main/scripts/pwsh/cli/install.ps1 | iex
+\`\`\`
+
+---
+Generated with [GitHub Actions](https://github.com/${REPO}/actions/runs/${{ github.run_id }})
+FOOTER
+
+          echo ""
+          echo "Release notes:"
+          cat release_notes.md
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Create GitHub Release
+        run: |
+          TAG_NAME="${{ needs.approve.outputs.tag_name }}"
+          TITLE="${{ steps.versions.outputs.title }}"
+
+          echo "Creating release: $TITLE"
+          echo "Tag: $TAG_NAME"
+
+          # Idempotency check: skip if release already exists
+          if gh release view "$TAG_NAME" &>/dev/null; then
+            echo "✅ Release $TAG_NAME already exists - skipping creation (idempotent)"
+            exit 0
+          fi
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual trigger: creating tag and release together"
+            gh release create "$TAG_NAME" \
+              --title "$TITLE" \
+              --notes-file release_notes.md \
+              --target "${{ github.sha }}" \
+              --latest
+          else
+            echo "Tag trigger: using existing tag"
+            gh release create "$TAG_NAME" \
+              --title "$TITLE" \
+              --notes-file release_notes.md \
+              --verify-tag \
+              --latest
+          fi
+
+          echo "✅ Release created successfully"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  # ==========================================================================
+  # Cleanup Old Releases
+  # ==========================================================================
+  cleanup:
+    name: Cleanup Old Releases
+    needs: [approve, release]
+    if: needs.release.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Cleanup old releases
+        uses: ./.github/actions/cleanup-pre-releases
+        with:
+          module: r2r-eac-bundle
+
+  # ==========================================================================
+  # Summary
+  # ==========================================================================
+  summary:
+    name: Summary
+    needs: [approve, release, cleanup]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
+
+      - name: Generate summary
+        run: |
+          VERSION="${{ needs.approve.outputs.version }}"
+          TAG_NAME="${{ needs.approve.outputs.tag_name }}"
+          APPROVE_RESULT="${{ needs.approve.result }}"
+          RELEASE_RESULT="${{ needs.release.result }}"
+
+          if [ "$APPROVE_RESULT" = "success" ] && [ "$RELEASE_RESULT" = "success" ]; then
+            echo "## ✅ Release Bundle Created" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Successfully created release bundle **${VERSION}**." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "This release is now marked as **Latest** on GitHub." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "- **Version**: \`${VERSION}\` (calver)" >> $GITHUB_STEP_SUMMARY
+            echo "- **Tag**: \`${TAG_NAME}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- **Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "📦 [**View Release**](https://github.com/${{ github.repository }}/releases/tag/${TAG_NAME})" >> $GITHUB_STEP_SUMMARY
+          elif [ "$APPROVE_RESULT" = "failure" ]; then
+            echo "## ❌ Release Approval Failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Release was not approved. Check the approve job for details." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ❌ Release Bundle Failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Release failed after approval. Check the release job for details." >> $GITHUB_STEP_SUMMARY
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}

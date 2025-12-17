@@ -1,7 +1,4 @@
 # Testing Strategy: Integration with CD Model
-
-{{ page_breadcrumb() }}
-
 ## Introduction
 
 This article explains how test levels integrate with CD Model stages, the process isolation strategies for each level, and how testing aligns with the Rules/Scenarios/Unit Tests approach. Understanding this integration ensures you execute the right tests at the right stages with appropriate quality gates.
@@ -363,5 +360,3 @@ Maximize testing at L0-L3 (left) and L4 (right) to avoid horizontal pre-producti
 
 - [CD Model Overview](../cd-model/cd-model-overview.md)
 - [Three-Layer Testing Approach](../../specifications/concepts/three-layer-approach.md)
-
-{{ diataxis_footer() }}

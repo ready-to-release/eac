@@ -83,25 +83,20 @@ jobs:
         run: |
           echo "Fetching file list via GitHub API..."
 
-          # Try GitHub API first (fast: ~2-5s)
-          if curl -s -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-               -H "Accept: application/vnd.github.v3+json" \
-               "https://api.github.com/repos/${{ github.repository }}/git/trees/${{ github.sha }}?recursive=1" \
-               | jq -r '.tree[] | select(.type=="blob") | .path' \
-               > .git/cached-files.txt 2>/dev/null; then
-
+          # Use Go command to fetch tree files (uses GitHub API, fast)
+          if $COMMANDS pipeline get-tree-files --sha "${{ github.sha }}" > .git/cached-files.txt 2>/dev/null; then
             FILE_COUNT=$(wc -l < .git/cached-files.txt)
             if [ "$FILE_COUNT" -gt 0 ]; then
-              echo "✓ Cached $FILE_COUNT files from GitHub API (~5s)"
+              echo "✓ Cached $FILE_COUNT files from GitHub API"
               exit 0
             fi
           fi
 
-          # Fallback to git ls-files if API fails (slow: ~84s)
-          echo "⚠ GitHub API failed, falling back to git ls-files (slow)..."
+          # Fallback to git ls-files if API fails
+          echo "⚠ GitHub API failed, falling back to git ls-files..."
           git ls-files > .git/cached-files.txt
           FILE_COUNT=$(wc -l < .git/cached-files.txt)
-          echo "✓ Cached $FILE_COUNT files from git ls-files (~84s)"
+          echo "✓ Cached $FILE_COUNT files from git ls-files"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -154,16 +149,8 @@ jobs:
           if [ "$TRIGGER_ALL" = "true" ]; then
             echo "Trigger-all override enabled - building all modules"
 
-            # Dynamically discover all CI workflows by scanning for ci-*.yaml files
-            WORKFLOW_MODULES=""
-            for workflow in .github/workflows/ci-*.yaml; do
-              if [ -f "$workflow" ]; then
-                # Extract module name from ci-<module>.yaml
-                module=$(basename "$workflow" .yaml | sed 's/^ci-//')
-                WORKFLOW_MODULES="$WORKFLOW_MODULES $module"
-              fi
-            done
-            WORKFLOW_MODULES=$(echo $WORKFLOW_MODULES | xargs)
+            # Dynamically discover all CI workflows
+            WORKFLOW_MODULES=$($COMMANDS get ci-workflows --format space)
 
             echo "Discovered CI workflows: $WORKFLOW_MODULES"
             echo "directly_changed=all" >> $GITHUB_OUTPUT
@@ -177,25 +164,15 @@ jobs:
 
             # For PRs: compare against PR base (what the PR introduces)
             # For push: compare against last successful CI (incremental since last success)
+            # Use --format shell to get variables directly (no jq needed)
+            # Shell format outputs: MODULES, DIRECTLY_CHANGED, INVALIDATED, BASE_SHA, IS_BOOTSTRAP, CHANGED_FILE_COUNT, FILES_BY_MODULE
             if [ "${{ github.event_name }}" = "pull_request" ]; then
               echo "Pull Request detected - comparing against PR base"
-              RESULT=$($COMMANDS get changed-modules-ci --pr-base "${{ github.event.pull_request.base.sha }}" --as-json)
+              eval $($COMMANDS get changed-modules-ci --pr-base "${{ github.event.pull_request.base.sha }}" --format shell)
             else
               echo "Push detected - comparing against last successful CI"
-              RESULT=$($COMMANDS get changed-modules-ci --as-json)
+              eval $($COMMANDS get changed-modules-ci --format shell)
             fi
-
-            echo "Raw result:"
-            echo "$RESULT" | jq .
-
-            # Extract the analysis results
-            MODULES=$(echo "$RESULT" | jq -r '.modules | join(" ")')
-            DIRECTLY_CHANGED=$(echo "$RESULT" | jq -r '.directly_changed | join(" ")')
-            INVALIDATED=$(echo "$RESULT" | jq -r '.invalidated | join(" ")')
-            BASE_SHA=$(echo "$RESULT" | jq -r '.base_sha')
-            IS_BOOTSTRAP=$(echo "$RESULT" | jq -r '.is_bootstrap')
-            CHANGED_FILE_COUNT=$(echo "$RESULT" | jq -r '.changed_file_count')
-            FILES_BY_MODULE=$(echo "$RESULT" | jq -c '.files_by_module')
 
             echo ""
             echo "Analysis Results:"
@@ -277,13 +254,13 @@ jobs:
 
               # Process directly changed modules
               for module in $DIRECTLY_CHANGED; do
-                FILE_COUNT=$(echo "$FILES_BY_MODULE" | jq -r --arg m "$module" '.[$m] | length // 0')
+                FILE_COUNT=$($COMMANDS get files-by-module "$module" --json "$FILES_BY_MODULE" --count)
 
                 echo "<details>" >> $GITHUB_STEP_SUMMARY
                 echo "<summary><strong>$module</strong> - $FILE_COUNT file(s) changed</summary>" >> $GITHUB_STEP_SUMMARY
                 echo "" >> $GITHUB_STEP_SUMMARY
                 echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-                echo "$FILES_BY_MODULE" | jq -r --arg m "$module" '.[$m] // [] | .[]' >> $GITHUB_STEP_SUMMARY
+                $COMMANDS get files-by-module "$module" --json "$FILES_BY_MODULE" --format list >> $GITHUB_STEP_SUMMARY
                 echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
                 echo "</details>" >> $GITHUB_STEP_SUMMARY
                 echo "" >> $GITHUB_STEP_SUMMARY
@@ -344,30 +321,16 @@ jobs:
           echo ""
 
           # Use Go command to filter modules
-          RESULT=$($COMMANDS get ci-dispatch \
+          # Shell format outputs reasoning to stderr (for logs) and variables to stdout (for eval)
+          eval $($COMMANDS get ci-dispatch \
             --directly-changed "$DIRECTLY_CHANGED" \
             --invalidated "$INVALIDATED" \
             --head-sha "${{ github.sha }}" \
-            --as-json)
+            --format shell)
 
-          echo "Filter result:"
-          echo "$RESULT" | jq .
-          echo ""
-
-          # Extract dispatch and skipped lists
-          DISPATCH_LIST=$(echo "$RESULT" | jq -r '.dispatch | join(" ")')
-          SKIPPED_LIST=$(echo "$RESULT" | jq -r '.skipped | join(" ")')
-
-          # Show per-module reasoning
-          echo "Per-module decisions:"
-          echo "$RESULT" | jq -r '.reasons | to_entries[] | "  \(.key): \(.value)"'
-          echo ""
-
-          echo "Final dispatch list: $DISPATCH_LIST"
-          echo "Skipped modules: $SKIPPED_LIST"
-
-          echo "modules=$DISPATCH_LIST" >> $GITHUB_OUTPUT
-          echo "skipped=$SKIPPED_LIST" >> $GITHUB_OUTPUT
+          # DISPATCH and SKIPPED variables are now set
+          echo "modules=$DISPATCH" >> $GITHUB_OUTPUT
+          echo "skipped=$SKIPPED" >> $GITHUB_OUTPUT
 
       - name: Dispatch all workflows in parallel
         run: |
@@ -592,87 +555,17 @@ jobs:
       - name: Await CI workflows
         env:
           GH_TOKEN: ${{ github.token }}
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
         run: |
-          echo "Waiting for CI workflows to complete before checking releases..."
-          echo ""
-
-          TIMEOUT=1800  # 30 minutes max
-          START_TIME=$(date +%s)
-
-          while true; do
-            ACTIVE_COUNT=0
-
-            # Check for in-progress CI workflows (ci-*.yaml)
-            for workflow in .github/workflows/ci-*.yaml; do
-              if [ -f "$workflow" ]; then
-                WF_NAME=$(basename "$workflow")
-                IN_PROGRESS=$(gh run list -w "$WF_NAME" -s in_progress --json databaseId -q 'length' 2>/dev/null || echo "0")
-                QUEUED=$(gh run list -w "$WF_NAME" -s queued --json databaseId -q 'length' 2>/dev/null || echo "0")
-                TOTAL=$((IN_PROGRESS + QUEUED))
-                if [ "$TOTAL" -gt 0 ]; then
-                  ACTIVE_COUNT=$((ACTIVE_COUNT + TOTAL))
-                fi
-              fi
-            done
-
-            if [ "$ACTIVE_COUNT" -eq 0 ]; then
-              echo "✅ All CI workflows completed"
-              break
-            fi
-
-            ELAPSED=$(($(date +%s) - START_TIME))
-            if [ "$ELAPSED" -ge "$TIMEOUT" ]; then
-              echo "::warning::Timeout waiting for CI workflows after ${ELAPSED}s"
-              break
-            fi
-
-            echo "  Waiting for $ACTIVE_COUNT active CI workflow(s)... (${ELAPSED}s)"
-            sleep 30
-          done
+          $COMMANDS pipeline await-ci --timeout 1800
 
       # Step 2: Wait for any active release workflows to complete
       - name: Await active releases
         env:
           GH_TOKEN: ${{ github.token }}
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
         run: |
-          echo "Checking for active release workflows..."
-          echo ""
-
-          TIMEOUT=600  # 10 minutes max
-          START_TIME=$(date +%s)
-
-          while true; do
-            ACTIVE_COUNT=0
-
-            # Check for in-progress release workflows (release-*.yaml)
-            for workflow in .github/workflows/release-*.yaml; do
-              if [ -f "$workflow" ]; then
-                WF_NAME=$(basename "$workflow")
-                IN_PROGRESS=$(gh run list -w "$WF_NAME" -s in_progress --json databaseId -q 'length' 2>/dev/null || echo "0")
-                QUEUED=$(gh run list -w "$WF_NAME" -s queued --json databaseId -q 'length' 2>/dev/null || echo "0")
-                TOTAL=$((IN_PROGRESS + QUEUED))
-                if [ "$TOTAL" -gt 0 ]; then
-                  echo "  $WF_NAME: $TOTAL active"
-                  ACTIVE_COUNT=$((ACTIVE_COUNT + TOTAL))
-                fi
-              fi
-            done
-
-            if [ "$ACTIVE_COUNT" -eq 0 ]; then
-              echo "✅ No active release workflows"
-              break
-            fi
-
-            ELAPSED=$(($(date +%s) - START_TIME))
-            if [ "$ELAPSED" -ge "$TIMEOUT" ]; then
-              echo "::warning::Timeout waiting for release workflows after ${ELAPSED}s"
-              break
-            fi
-
-            echo ""
-            echo "  Waiting for $ACTIVE_COUNT active release workflow(s)... (${ELAPSED}s)"
-            sleep 30
-          done
+          $COMMANDS pipeline await-release --timeout 600
 
       # Step 3: Check for pending releases (semver from changelog, calver from dispatched CI)
       - name: Check for pending releases
@@ -686,156 +579,23 @@ jobs:
         if: steps.check.outputs.has_pending == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
           LAYERS_JSON: ${{ steps.check.outputs.layers_json }}
-          LAYER_COUNT: ${{ steps.check.outputs.layer_count }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          echo "Processing $LAYER_COUNT release layer(s) in dependency order..."
-          echo ""
-
-          FAILED_MODULES=""
-
-          # Process each layer sequentially
-          for LAYER_IDX in $(seq 0 $((LAYER_COUNT - 1))); do
-            LAYER=$(echo "$LAYERS_JSON" | jq -c ".[$LAYER_IDX]")
-            LAYER_SIZE=$(echo "$LAYER" | jq 'length')
-
-            if [ "$LAYER_SIZE" -eq 0 ]; then
-              continue
-            fi
-
-            echo ""
-            echo "=========================================="
-            echo "Layer $((LAYER_IDX + 1))/$LAYER_COUNT ($LAYER_SIZE module(s))"
-            echo "=========================================="
-
-            # Collect run IDs for this layer (for await)
-            LAYER_RUNS=""
-
-            # Trigger all modules in this layer
-            for i in $(seq 0 $((LAYER_SIZE - 1))); do
-              MODULE_INFO=$(echo "$LAYER" | jq -c ".[$i]")
-              MODULE=$(echo "$MODULE_INFO" | jq -r '.module')
-              VERSION=$(echo "$MODULE_INFO" | jq -r '.version')
-              TAG=$(echo "$MODULE_INFO" | jq -r '.tag')
-              TYPE=$(echo "$MODULE_INFO" | jq -r '.type')
-              WORKFLOW="release-${MODULE}.yaml"
-
-              echo ""
-              echo "  [$MODULE] ($TYPE) Creating tag: $TAG"
-
-              # Create and push tag
-              git tag -a "$TAG" -m "Release $MODULE v$VERSION"
-              git push origin "$TAG"
-
-              # Dispatch release workflow
-              if [ ! -f ".github/workflows/$WORKFLOW" ]; then
-                echo "  [$MODULE] ⚠️ No release workflow found: $WORKFLOW"
-                continue
-              fi
-
-              echo "  [$MODULE] Dispatching $WORKFLOW"
-              if grep -q "inputs:" ".github/workflows/$WORKFLOW" && \
-                 grep -A 10 "inputs:" ".github/workflows/$WORKFLOW" | grep -q "version:"; then
-                gh workflow run "$WORKFLOW" -f version="$VERSION"
-              else
-                gh workflow run "$WORKFLOW"
-              fi
-
-              # Wait briefly for workflow to register
-              sleep 5
-
-              # Find run ID
-              RUN_ID=$(gh run list -w "$WORKFLOW" -L 1 --json databaseId,status \
-                -q '.[0] | select(.status == "queued" or .status == "in_progress") | .databaseId' 2>/dev/null || echo "")
-
-              if [ -n "$RUN_ID" ]; then
-                echo "  [$MODULE] Run ID: $RUN_ID"
-                LAYER_RUNS="$LAYER_RUNS $MODULE:$RUN_ID"
-              fi
-            done
-
-            # Await all runs in this layer to complete before next layer
-            echo ""
-            echo "  Awaiting layer $((LAYER_IDX + 1)) completion..."
-
-            for ENTRY in $LAYER_RUNS; do
-              MODULE=$(echo "$ENTRY" | cut -d: -f1)
-              RUN_ID=$(echo "$ENTRY" | cut -d: -f2)
-
-              TIMEOUT=900  # 15 min per release
-              START_TIME=$(date +%s)
-
-              while true; do
-                STATUS=$(gh run view "$RUN_ID" --json status -q '.status' 2>/dev/null || echo "unknown")
-
-                if [ "$STATUS" = "completed" ]; then
-                  CONCLUSION=$(gh run view "$RUN_ID" --json conclusion -q '.conclusion' 2>/dev/null || echo "unknown")
-                  if [ "$CONCLUSION" = "success" ]; then
-                    echo "  [$MODULE] ✅ Completed successfully"
-                  else
-                    echo "  [$MODULE] ❌ Failed: $CONCLUSION"
-                    FAILED_MODULES="$FAILED_MODULES $MODULE"
-                  fi
-                  break
-                fi
-
-                ELAPSED=$(($(date +%s) - START_TIME))
-                if [ "$ELAPSED" -ge "$TIMEOUT" ]; then
-                  echo "  [$MODULE] ⚠️ Timeout after ${ELAPSED}s"
-                  FAILED_MODULES="$FAILED_MODULES $MODULE(timeout)"
-                  break
-                fi
-
-                sleep 30
-              done
-            done
-          done
-
-          echo ""
-          if [ -n "$FAILED_MODULES" ]; then
-            echo "::warning::Some releases failed:$FAILED_MODULES"
-          else
-            echo "✅ All releases completed successfully"
-          fi
+          $COMMANDS release execute-layers --layers "$LAYERS_JSON"
 
       - name: Release Summary
         if: always()
+        env:
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
         run: |
           echo "## Release Trigger" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           if [ "${{ steps.check.outputs.has_pending }}" = "true" ]; then
             LAYER_COUNT="${{ steps.check.outputs.layer_count }}"
-            echo "### Releases Triggered ($LAYER_COUNT layer(s))" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Releases were processed in dependency order:" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-
             LAYERS_JSON='${{ steps.check.outputs.layers_json }}'
-
-            for LAYER_IDX in $(seq 0 $((LAYER_COUNT - 1))); do
-              LAYER=$(echo "$LAYERS_JSON" | jq -c ".[$LAYER_IDX]")
-              LAYER_SIZE=$(echo "$LAYER" | jq 'length')
-
-              if [ "$LAYER_SIZE" -gt 0 ]; then
-                echo "**Layer $((LAYER_IDX + 1))**" >> $GITHUB_STEP_SUMMARY
-                echo "" >> $GITHUB_STEP_SUMMARY
-                echo "| Module | Type | Version | Tag |" >> $GITHUB_STEP_SUMMARY
-                echo "|--------|------|---------|-----|" >> $GITHUB_STEP_SUMMARY
-
-                for i in $(seq 0 $((LAYER_SIZE - 1))); do
-                  MODULE=$(echo "$LAYER" | jq -r ".[$i].module")
-                  TYPE=$(echo "$LAYER" | jq -r ".[$i].type")
-                  VERSION=$(echo "$LAYER" | jq -r ".[$i].version")
-                  TAG=$(echo "$LAYER" | jq -r ".[$i].tag")
-                  echo "| $MODULE | $TYPE | \`$VERSION\` | \`$TAG\` |" >> $GITHUB_STEP_SUMMARY
-                done
-                echo "" >> $GITHUB_STEP_SUMMARY
-              fi
-            done
+            $COMMANDS show release-summary --layers-json "$LAYERS_JSON" >> $GITHUB_STEP_SUMMARY
           else
             echo "No pending releases." >> $GITHUB_STEP_SUMMARY
           fi

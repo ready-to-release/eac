@@ -1,0 +1,210 @@
+# Scan Module Action
+#
+# Runs security scans on a module using the EAC scan commands.
+# Similar pattern to build-module and test-module.
+#
+# Available scans:
+#   - sbom: Software Bill of Materials (Trivy)
+#   - vuln: Vulnerability scanning (Trivy)
+#   - secrets: Secrets detection (Trivy)
+#   - compliance: CIS compliance checking (Trivy)
+#   - iac: Infrastructure as Code scanning (Trivy)
+#   - sast: Static Application Security Testing (Semgrep)
+#   - zap: Dynamic Application Security Testing (OWASP ZAP)
+#
+# Output structure: out/security/<module>/<scanner>/
+#
+# Usage:
+#   - uses: ./.github/actions/scan-module
+#     with:
+#       module: eac-core
+#       scans: sbom,vuln,secrets
+
+name: Scan Module
+description: Run security scans on a module
+
+inputs:
+  module:
+    description: 'Module moniker to scan'
+    required: true
+  scans:
+    description: |
+      Comma-separated list of scans to run.
+      Available: sbom, vuln, secrets, compliance, iac, sast, zap
+    required: false
+    default: 'sbom,vuln,secrets'
+  trigger-run-id:
+    description: 'Run ID of trigger workflow (for artifact download)'
+    required: false
+    default: ''
+  download-artifact:
+    description: 'Whether to download build artifacts first'
+    required: false
+    default: 'true'
+  build-artifact-name:
+    description: 'Name of build artifact to download. If empty, uses build-artifacts-{module}'
+    required: false
+    default: ''
+  upload-artifact:
+    description: 'Whether to upload scan results'
+    required: false
+    default: 'true'
+  fail-on-error:
+    description: |
+      How to handle scan failures:
+      - error: Exit with error code (default)
+      - warn: Log warning but continue
+      - ignore: Silently continue
+    required: false
+    default: 'error'
+  extra-args:
+    description: 'Additional arguments to pass to scan commands'
+    required: false
+    default: ''
+
+outputs:
+  artifact-name:
+    description: 'Name of the uploaded scan results artifact'
+    value: ${{ steps.vars.outputs.scan-artifact-name }}
+  scan-failed:
+    description: 'true if any scan failed'
+    value: ${{ steps.scan.outputs.scan-failed }}
+  scans-run:
+    description: 'Comma-separated list of scans that were executed'
+    value: ${{ steps.scan.outputs.scans-run }}
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Commands Binary
+      id: commands
+      uses: ./.github/actions/setup-commands
+      with:
+        trigger-run-id: ${{ inputs.trigger-run-id }}
+
+    - name: Setup Docker
+      uses: docker/setup-buildx-action@v3
+
+    - name: Set variables
+      id: vars
+      shell: bash
+      env:
+        MODULE: ${{ inputs.module }}
+        INPUT_BUILD_ARTIFACT_NAME: ${{ inputs.build-artifact-name }}
+      run: |
+        # Build artifact name
+        if [ -n "$INPUT_BUILD_ARTIFACT_NAME" ]; then
+          echo "build-artifact-name=$INPUT_BUILD_ARTIFACT_NAME" >> $GITHUB_OUTPUT
+        else
+          echo "build-artifact-name=build-artifacts-${MODULE}" >> $GITHUB_OUTPUT
+        fi
+
+        # Scan results artifact name
+        echo "scan-artifact-name=scan-results-${MODULE}" >> $GITHUB_OUTPUT
+
+    - name: Download Build Artifacts
+      id: download
+      if: inputs.download-artifact == 'true'
+      uses: actions/download-artifact@v7
+      with:
+        name: ${{ steps.vars.outputs.build-artifact-name }}
+        path: out/build/
+
+    - name: Run Scans
+      id: scan
+      shell: bash
+      env:
+        COMMANDS: ${{ steps.commands.outputs.commands-path }}
+        MODULE: ${{ inputs.module }}
+        SCANS: ${{ inputs.scans }}
+        FAIL_ON_ERROR: ${{ inputs.fail-on-error }}
+        EXTRA_ARGS: ${{ inputs.extra-args }}
+      run: |
+        echo "Running security scans for $MODULE..."
+        echo "Scans: $SCANS"
+        echo "Failure mode: $FAIL_ON_ERROR"
+        echo ""
+
+        mkdir -p out/security/$MODULE
+
+        scan_failed=false
+        scans_run=""
+        failed_scans=""
+
+        IFS=',' read -ra SCAN_ARRAY <<< "$SCANS"
+        for scan in "${SCAN_ARRAY[@]}"; do
+          scan=$(echo "$scan" | xargs)  # trim whitespace
+
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Running scan: $scan"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+          if $COMMANDS scan $scan $MODULE $EXTRA_ARGS; then
+            echo "✓ $scan completed"
+            scans_run="$scans_run,$scan"
+          else
+            echo "✗ $scan failed"
+            scan_failed=true
+            failed_scans="$failed_scans $scan"
+
+            case "$FAIL_ON_ERROR" in
+              error)
+                echo "::error::Scan '$scan' failed for $MODULE"
+                ;;
+              warn)
+                echo "::warning::Scan '$scan' failed for $MODULE"
+                ;;
+              ignore)
+                # Silent
+                ;;
+            esac
+          fi
+          echo ""
+        done
+
+        # Remove leading comma
+        scans_run="${scans_run#,}"
+
+        echo "scan-failed=$scan_failed" >> $GITHUB_OUTPUT
+        echo "scans-run=$scans_run" >> $GITHUB_OUTPUT
+        echo "failed-scans=$failed_scans" >> $GITHUB_OUTPUT
+
+        # Exit based on failure mode
+        if [ "$scan_failed" = "true" ] && [ "$FAIL_ON_ERROR" = "error" ]; then
+          echo ""
+          echo "::error::One or more scans failed:$failed_scans"
+          exit 1
+        fi
+
+    - name: Upload Scan Results
+      if: inputs.upload-artifact == 'true' && always()
+      uses: actions/upload-artifact@v6
+      with:
+        name: ${{ steps.vars.outputs.scan-artifact-name }}
+        path: out/security/
+        if-no-files-found: warn
+
+    - name: Scan Summary
+      if: always()
+      shell: bash
+      env:
+        COMMANDS: ${{ steps.commands.outputs.commands-path }}
+        MODULE: ${{ inputs.module }}
+        SCANS: ${{ inputs.scans }}
+        SCAN_FAILED: ${{ steps.scan.outputs.scan-failed }}
+        FAILED_SCANS: ${{ steps.scan.outputs.failed-scans }}
+        ARTIFACT_NAME: ${{ steps.vars.outputs.scan-artifact-name }}
+      run: |
+        # Determine status
+        if [ "$SCAN_FAILED" = "true" ]; then
+          STATUS="failure"
+        else
+          STATUS="success"
+        fi
+
+        # Generate summary using Go command
+        $COMMANDS show scan-summary "$MODULE" \
+          --scans="$SCANS" \
+          --failed-scans="$FAILED_SCANS" \
+          --artifact-name="$ARTIFACT_NAME" \
+          --status="$STATUS" >> $GITHUB_STEP_SUMMARY

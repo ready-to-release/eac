@@ -1,7 +1,4 @@
 # Discovery Techniques
-
-{{ page_breadcrumb() }}
-
 > **Workshop methods for discovering requirements and building shared understanding**
 
 Learn collaborative techniques for discovering business rules, acceptance criteria, and domain language before development begins.
@@ -217,5 +214,3 @@ See: [Card Reference](./card-reference.md) for detailed usage.
 ### Quality
 
 - [Review and Iterate](../quality/review-and-iterate.md) - Maintaining living specifications
-
-{{ diataxis_footer() }}

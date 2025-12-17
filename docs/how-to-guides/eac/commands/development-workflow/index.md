@@ -1,7 +1,4 @@
 # Development Workflow
-
-{{ page_breadcrumb() }}
-
 Learn how to manage your daily development workflow with workspaces, commits, and pull requests.
 
 ## In This Section
@@ -28,5 +25,3 @@ Learn how to manage your daily development workflow with workspaces, commits, an
 - Work on multiple features simultaneously using separate workspaces
 - Switch between features without branch conflicts
 - Merge each feature independently
-
-{{ diataxis_footer() }}

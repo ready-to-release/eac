@@ -1,7 +1,4 @@
 # Environments Architecture
-
-{{ page_breadcrumb() }}
-
 ## Introduction
 
 Environments are the foundation of the Continuous Delivery Model.
@@ -400,5 +397,3 @@ For detailed PLTE provisioning procedures, lifecycle management, and Infrastruct
 - [Stages 1-7](../cd-model/cd-model-stages-1-7.md)
 - [Stages 8-12](../cd-model/cd-model-stages-8-12.md)
 - [Testing Strategy Overview](../testing/testing-strategy-overview.md)
-
-{{ diataxis_footer() }}

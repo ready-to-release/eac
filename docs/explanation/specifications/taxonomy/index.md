@@ -1,7 +1,4 @@
 # Testing Taxonomy
-
-{{ page_breadcrumb() }}
-
 Complete reference for the testing taxonomy and tag system.
 
 ---
@@ -72,5 +69,3 @@ Feature: Container Tests
 - [Three-Layer Approach](../concepts/three-layer-approach.md) - Conceptual overview
 - [Go Implementation](../implementation/go/) - Build tags and test levels in Go
 - [Organizing Specifications](../organization/) - File structure and naming
-
-{{ diataxis_footer() }}

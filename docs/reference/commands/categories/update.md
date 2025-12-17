@@ -1,16 +1,11 @@
 # update Commands
-
-{{ page_breadcrumb() }}
-
 ## Overview
 
 The **update** category contains 2 commands for updating existing documentation and architecture diagrams.
 
 ## Commands
 
-| Command                              | Purpose                                             |
-| ------------------------------------ | --------------------------------------------------- |
-| [update design](../update/design.md) | Update existing workspace.dsl for a module using AI |
+<!-- book:category-commands update -->
 
 ## Common Use Cases
 
@@ -31,5 +26,3 @@ r2r eac update design src-auth
 - [create design](../create/design.md)
 - [serve design](../serve/design.md)
 - [validate design](../validate/design.md)
-
-{{ diataxis_footer() }}

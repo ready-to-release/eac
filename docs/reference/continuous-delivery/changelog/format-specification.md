@@ -1,7 +1,4 @@
 # Changelog Format Specification
-
-{{ page_breadcrumb() }}
-
 Detailed specification of the Keep a Changelog format used in the repository.
 
 ## Overview
@@ -408,5 +405,3 @@ r2r eac validate release-version <version>
 - [Semantic Versioning](./versioning.md) - Version numbering
 - [Repository Changelog](./repository-changelog.md) - Repository-level conventions
 - [Module Changelogs](./module-changelogs.md) - Module-level conventions
-
-{{ diataxis_footer() }}

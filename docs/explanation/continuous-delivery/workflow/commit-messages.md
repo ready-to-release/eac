@@ -1,7 +1,4 @@
 # Commit Messages
-
-{{ page_breadcrumb() }}
-
 How to write semantic commit messages that maintain traceability.
 
 ## Format
@@ -118,5 +115,3 @@ fi
 - [Pre-commit Setup](../quality-gates/precommit-setup.md)
 - [Trunk-Based Development](./trunk-based-development.md)
 - [Branching Strategies](./branching-strategies.md)
-
-{{ diataxis_footer() }}

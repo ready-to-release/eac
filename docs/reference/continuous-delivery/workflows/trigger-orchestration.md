@@ -1,7 +1,4 @@
 # Trigger Orchestration
-
-{{ page_breadcrumb() }}
-
 Detailed reference for the trigger orchestration system (`change-trigger.yaml`).
 
 ## Overview
@@ -445,5 +442,3 @@ If no modules need rebuilding:
 - [Overview](./overview.md) - Workflow architecture
 - [CI Workflows](./ci-workflows.md) - Module CI workflow patterns
 - [Repository Layout](../../r2r-eac/repository-layout.md) - Module structure
-
-{{ diataxis_footer() }}

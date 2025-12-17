@@ -1,7 +1,4 @@
 # Go/Godog Overview
-
-{{ page_breadcrumb() }}
-
 > **Introduction to Go/Godog BDD testing**
 
 This guide provides Go-specific implementation details for the BDD and testing approach described in [Three-Layer Testing](../../concepts/three-layer-approach.md).
@@ -145,5 +142,3 @@ godog run --tags=@ov
 - [Test Levels](./test-levels.md) - Understand L0-L4 test isolation with build tags
 - [Step Definitions](./step-definitions.md) - Write effective step definitions
 - [Best Practices](./best-practices.md) - Follow Go testing best practices
-
-{{ diataxis_footer() }}

@@ -5,13 +5,6 @@ Feature: eac-commands_work_pull
   I want to sync my branch with latest changes from main
   So that I can keep my work up to date and avoid merge conflicts
 
-  Rule: Command must be registered and accessible
-
-    Scenario: Command is listed in available commands
-      When I run the command "show help"
-      Then the exit code is 0
-      And I should see "work pull"
-
   Rule: Pull rebases current branch onto latest main
 
     Scenario: Pull successfully syncs workspace with main

@@ -1,7 +1,4 @@
 # Merge Workspace Changes
-
-{{ page_breadcrumb() }}
-
 ## What You'll Accomplish
 
 Merge your topic branch back to main using squash merge, then clean up the workspace.
@@ -112,5 +109,3 @@ r2r eac work remove add-jwt-auth
 - [`work merge`](../../../../reference/commands/work/merge.md) - Merge workspace
 - [`work pull`](../../../../reference/commands/work/pull.md) - Sync with main
 - [`work remove`](../../../../reference/commands/work/remove.md) - Clean up workspace
-
-{{ diataxis_footer() }}

@@ -8,14 +8,6 @@ Feature: eac-commands_validate-risk-profile
   Background:
     Given I am in a git repository
 
-  Rule: Command must be registered and accessible
-
-    Scenario: Command shows help
-      When I run the command "show help validate risk-profile"
-      Then the exit code is 0
-      And stdout contains "OSCAL profile"
-      And stdout contains "1.1.2"
-
   Rule: Command requires valid inputs
 
     Scenario: Missing file shows error

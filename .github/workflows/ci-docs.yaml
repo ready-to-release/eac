@@ -30,40 +30,14 @@ on:
         description: 'Run ID of trigger workflow (for artifact download)'
         default: ''
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
-  cancel-in-progress: true
-
-permissions:
-  contents: read
-  actions: read
+# Note: Release is triggered by change-trigger.yaml after all CI completes (calver auto-release)
 
 jobs:
-  # =============================================================================
-  # Build & Test HTML Site
-  # =============================================================================
-  build-and-test:
-    name: Build & Test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ inputs.ref || github.ref }}
-
-      - name: Build Module
-        uses: ./.github/actions/build-module
-        with:
-          module: docs
-          trigger-run-id: ${{ inputs.trigger_run_id }}
-          commit-sha: ${{ inputs.sha || github.sha }}
-          upload-artifact: 'true'
-
-      - name: Test Module
-        uses: ./.github/actions/test-module
-        with:
-          module: docs
-          trigger-run-id: ${{ inputs.trigger_run_id }}
-          download-artifact: 'false'
-          # PRs run unit+integration; main/release branches run full suite
-          suites: ${{ (inputs.ref != '' && startsWith(inputs.ref, 'refs/pull/')) && 'unit+integration' || 'unit+integration+acceptance' }}
-          # Note: Release is triggered by change-trigger.yaml after all CI completes (calver auto-release)
+  ci:
+    uses: ./.github/workflows/_module-ci.yaml
+    with:
+      module: docs
+      ref: ${{ inputs.ref }}
+      sha: ${{ inputs.sha }}
+      trigger_run_id: ${{ inputs.trigger_run_id }}
+      scans: ''  # No scans for documentation

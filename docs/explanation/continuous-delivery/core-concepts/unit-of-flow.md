@@ -1,7 +1,4 @@
 # Unit of Flow
-
-{{ page_breadcrumb() }}
-
 ## Introduction
 
 The Unit of Flow is a conceptual framework that divides Continuous Delivery into four discrete, interconnected components.
@@ -374,5 +371,3 @@ The Unit of Flow provides a mental model for Continuous Delivery:
 - [Stages 1-7](../cd-model/cd-model-stages-1-7.md)
 - [Stages 8-12](../cd-model/cd-model-stages-8-12.md)
 - [Implementation Patterns](../cd-model/implementation-patterns.md)
-
-{{ diataxis_footer() }}

@@ -1,7 +1,4 @@
 # Core Concepts
-
-{{ page_breadcrumb() }}
-
 > **Foundational concepts for Behavior-Driven Development and testing**
 
 Understand the principles and practices that underpin specification-driven development.
@@ -127,5 +124,3 @@ See: [Canon TDD Workflow](./canon-tdd-workflow.md)
 
 - [Go Implementation Guide](../implementation/go/) - Go/Godog BDD implementation
 - [Quality & Maintenance](../quality/) - Review and iterate on specifications
-
-{{ diataxis_footer() }}

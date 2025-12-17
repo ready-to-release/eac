@@ -1,7 +1,4 @@
 # Working with Git Worktrees
-
-{{ page_breadcrumb() }}
-
 **Status:** Placeholder - Content coming soon
 
 **Prerequisites:** [Building and Testing Changes](./building-and-testing.md), Git fundamentals
@@ -146,5 +143,3 @@ Common issues and solutions:
 ### Next Steps
 
 After completing this tutorial, you'll be able to work on multiple features in parallel. Continue to [Making Your First Release](./making-first-release.md) to learn how to prepare and release modules.
-
-{{ diataxis_footer() }}

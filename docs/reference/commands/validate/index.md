@@ -1,7 +1,4 @@
 # validate Commands
-
-{{ page_breadcrumb() }}
-
 Validate repository contracts, dependencies, and compliance for quality gates.
 
 ## Commands in this Category
@@ -40,5 +37,3 @@ r2r eac validate dependencies
 
 - [Category Overview](../categories/validate.md)
 - [scan Commands](../scan/index.md)
-
-{{ diataxis_footer() }}

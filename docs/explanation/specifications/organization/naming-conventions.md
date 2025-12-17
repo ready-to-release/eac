@@ -1,7 +1,4 @@
 # Naming Conventions
-
-{{ page_breadcrumb() }}
-
 > **Feature and file naming standards**
 
 Consistent naming conventions enable traceability and organization across the codebase.
@@ -233,5 +230,3 @@ Use this checklist when naming a new feature:
 - [File Structure](./file-structure.md) - Where to place specification files
 - [Size Guidelines](./size-guidelines.md) - How to name when splitting features
 - [Organizing Rules](./organizing-rules.md) - Naming Rules within features
-
-{{ diataxis_footer() }}

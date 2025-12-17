@@ -1,7 +1,4 @@
 # update Commands
-
-{{ page_breadcrumb() }}
-
 Update existing documentation and architecture diagrams using AI.
 
 ## Commands in this Category
@@ -22,5 +19,3 @@ r2r eac update design src-auth
 
 - [Category Overview](../categories/update.md)
 - [create design](../create/design.md)
-
-{{ diataxis_footer() }}

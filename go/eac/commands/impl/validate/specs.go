@@ -91,6 +91,10 @@ func ResetGitRepo() {
 func ValidateSpecs() int {
 	// Parse configuration
 	config, err := parseValidateConfig()
+	if config == nil && err == nil {
+		// --help was requested, framework handles it
+		return 0
+	}
 	if err != nil {
 		log.Errorf("Error: %v", err)
 		return 1
@@ -286,6 +290,9 @@ func parseValidateConfig() (*ValidateConfig, error) {
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 		switch arg {
+		case "-h", "--help":
+			// Help is handled by the framework via command comments
+			return nil, nil
 		case "-q", "--quiet":
 			config.Quiet = true
 		case "-v", "--verbose":

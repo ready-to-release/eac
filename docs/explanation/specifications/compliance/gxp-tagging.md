@@ -1,7 +1,4 @@
 # GxP Tagging
-
-{{ page_breadcrumb() }}
-
 > **Understanding tagging for regulated software development in pharmaceutical and medical device contexts.**
 
 ---
@@ -393,5 +390,3 @@ At release approval, regulatory tags enable automatic generation of:
 
 - [File Structure](../organization/file-structure.md) - Organizing specifications
 - [Risk Controls](risk-controls.md) - Risk control specifications
-
-{{ diataxis_footer() }}

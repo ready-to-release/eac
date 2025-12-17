@@ -1,7 +1,4 @@
 # Specification Quality Checklist
-
-{{ page_breadcrumb() }}
-
 Reference for evaluating specification health.
 
 ## Health Indicators
@@ -61,5 +58,3 @@ Reference for evaluating specification health.
 - [Review and Iterate](./review-and-iterate.md)
 - [Specifications Evolution](../concepts/specifications-evolution.md)
 - [Size Guidelines](../organization/size-guidelines.md)
-
-{{ diataxis_footer() }}

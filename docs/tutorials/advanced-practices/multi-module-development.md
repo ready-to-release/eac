@@ -1,7 +1,4 @@
 # Multi-Module Development
-
-{{ page_breadcrumb() }}
-
 **Status:** Placeholder - Content coming soon
 
 **Prerequisites:** [Your First Module](../getting-started/first-module.md), [Building and Testing Changes](../core-workflows/building-and-testing.md)
@@ -199,5 +196,3 @@ Use test level tags:
 ### Next Steps
 
 After completing this tutorial, you'll be able to manage complex multi-module systems. Continue to [Creating Custom Commands](./creating-custom-commands.md) to learn how to extend the r2r CLI.
-
-{{ diataxis_footer() }}

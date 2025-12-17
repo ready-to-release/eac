@@ -109,6 +109,7 @@ const (
 //   - TestingTags:        GUARANTEED non-nil (empty if file missing)
 //   - TestSuites:         GUARANTEED non-nil (empty if file missing)
 //   - Books:              GUARANTEED non-nil (empty if file missing)
+//   - Commands:           GUARANTEED non-nil (uses defaults if file missing)
 //
 // # Module Access
 //
@@ -137,6 +138,7 @@ type EACConfig struct {
 	SystemDependencies *SystemDependenciesConfig
 	Books              *BooksConfig
 	SecurityTools      *SecurityToolsConfig
+	Commands           *CommandsConfig
 
 	// Schema validator (lazy initialized)
 	validator     *schema.Validator
@@ -303,6 +305,10 @@ func (c *EACConfig) LoadAll(validateSchemas bool) error {
 
 	if err := c.LoadSecurityTools(validateSchemas); err != nil {
 		errs = append(errs, fmt.Errorf("security-tools: %w", err))
+	}
+
+	if err := c.LoadCommands(validateSchemas); err != nil {
+		errs = append(errs, fmt.Errorf("commands: %w", err))
 	}
 
 	if len(errs) > 0 {
@@ -632,6 +638,44 @@ func (c *EACConfig) LoadSecurityTools(validateSchema bool) error {
 	return nil
 }
 
+// LoadCommands loads the commands configuration (optional - uses defaults if file missing)
+func (c *EACConfig) LoadCommands(validateSchema bool) error {
+	// Check if commands file exists - it's optional
+	commandsPath := filepath.Join(c.ConfigRoot, CommandsFileName)
+	if _, err := os.Stat(commandsPath); os.IsNotExist(err) {
+		// Use defaults if file doesn't exist
+		c.Commands = DefaultCommandsConfig()
+		if err := c.Commands.Initialize(); err != nil {
+			return fmt.Errorf("failed to initialize default commands config: %w", err)
+		}
+		return nil
+	}
+
+	data, err := c.readConfigFile(CommandsFileName)
+	if err != nil {
+		return err
+	}
+
+	if validateSchema {
+		if err := c.validateSchema(schema.SchemaCommands, data); err != nil {
+			return err
+		}
+	}
+
+	var cfg CommandsConfig
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return fmt.Errorf("failed to parse %s: %w", CommandsFileName, err)
+	}
+
+	// Initialize (compile regex patterns)
+	if err := cfg.Initialize(); err != nil {
+		return fmt.Errorf("failed to initialize commands config: %w", err)
+	}
+
+	c.Commands = &cfg
+	return nil
+}
+
 // GetBookByName finds a book by its name
 func (c *EACConfig) GetBookByName(name string) *Book {
 	if c.Books == nil {
@@ -682,6 +726,33 @@ func (c *EACConfig) GetModuleForBook(bookName string) string {
 		}
 	}
 	return ""
+}
+
+// GetEvidenceBooksByModule returns all evidence books for a module.
+// Evidence books are built via 'update evidence' command, not the build command.
+func (c *EACConfig) GetEvidenceBooksByModule(moniker string) []*Book {
+	if c.Books == nil || c.Repository == nil {
+		return nil
+	}
+	module := c.Repository.GetByMoniker(moniker)
+	if module == nil {
+		return nil
+	}
+	return c.Books.GetBooksByNames(module.EvidenceBooks)
+}
+
+// GetModulesWithEvidenceBooks returns all module monikers that have evidence_books configured.
+func (c *EACConfig) GetModulesWithEvidenceBooks() []string {
+	if c.Repository == nil {
+		return nil
+	}
+	var modules []string
+	for _, module := range c.Repository.Modules {
+		if len(module.EvidenceBooks) > 0 {
+			modules = append(modules, module.Moniker)
+		}
+	}
+	return modules
 }
 
 // readConfigFile reads a config file from the config root

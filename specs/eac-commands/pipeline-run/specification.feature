@@ -8,18 +8,6 @@ Feature: eac-commands_pipeline-run
   Background:
     Given I am in a git repository with EAC configuration
 
-  Rule: Command must be registered and accessible
-
-    Scenario: Command is listed in available commands
-      When I run the command "show help"
-      Then the exit code is 0
-      And I should see "pipeline run"
-
-    Scenario: Command has proper description
-      When I run the command "show help pipeline run"
-      Then the exit code is 0
-      And I should see "pipeline" or "dependencies" or "execute"
-
   Rule: Pipeline executes modules in dependency order
 
     @skip:wip

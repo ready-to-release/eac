@@ -1,7 +1,4 @@
 # Security in the CD Model
-
-{{ page_breadcrumb() }}
-
 ## Introduction
 
 Security is not a separate phase or stage - it's a continuous practice integrated throughout all 12 stages of the CD Model. This approach, often called "DevSecOps" or "shift-left security," ensures vulnerabilities are detected and addressed as early as possible when they're cheapest and fastest to fix.
@@ -758,5 +755,3 @@ By integrating these free, open-source tools throughout the CD Model, teams achi
 - [Trivy Documentation](https://aquasecurity.github.io/trivy/)
 - [Dependabot Documentation](https://docs.github.com/en/code-security/dependabot)
 - [OWASP Top 10](https://owasp.org/www-project-top-ten/)
-
-{{ diataxis_footer() }}

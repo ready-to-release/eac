@@ -1,7 +1,4 @@
 # Architecture
-
-{{ page_breadcrumb() }}
-
 ## Overview
 
 R2R and EAC implement a **container-based, contract-driven architecture** for everything-as-code workflows. The system uses multiple execution models optimized for different use cases: isolated Docker containers for reproducibility, direct Go execution for speed, and MCP protocol for AI integration.
@@ -395,5 +392,3 @@ api_key_env: ANTHROPIC_API_KEY
 - [Overview](./index.md) - System overview and key concepts
 - [Contracts](./contracts.md) - Contract system and YAML schemas
 - [Modules](./modules.md) - Module system and types
-
-{{ diataxis_footer() }}
