@@ -37,6 +37,11 @@ on:
 
 # Note: Release is triggered by change-trigger.yaml after all CI completes (calver auto-release)
 
+permissions:
+  contents: read
+  packages: write
+  actions: read
+
 jobs:
   ci:
     uses: ./.github/workflows/_module-ci.yaml

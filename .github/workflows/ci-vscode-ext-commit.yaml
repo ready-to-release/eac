@@ -35,6 +35,11 @@ on:
         description: 'Run ID of trigger workflow (for artifact download)'
         default: ''
 
+permissions:
+  contents: read
+  packages: write
+  actions: read
+
 jobs:
   ci:
     uses: ./.github/workflows/_module-ci.yaml
