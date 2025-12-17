@@ -98,7 +98,7 @@ func validateNoCircularDependencies(reg *modules.Registry, report *moduleHierarc
 ```text
 Default:           All modules run in parallel (up to MaxConcurrency)
 --layered-build:   Layer-sequential execution (Layer 0, then Layer 1, etc.)
---no-deps:         Isolated build - only build specified module, no dependency resolution
+--skip-depm:       Isolated build - only build specified module, no dependency resolution
 ```
 
 ## CI Isolation
@@ -108,10 +108,10 @@ Each CI workflow builds its module in **isolation** - no cross-CI artifact downl
 ### Build Command Flag
 
 ```bash
-build <module> --no-deps    # Build only this module, skip dependency handling
+build <module> --skip-depm    # Build only this module, skip module dependency handling
 ```
 
-The `--no-deps` flag:
+The `--skip-depm` flag:
 - Skips downloading artifacts from other CI workflows
 - Skips adding transitive dependencies to execution plan
 - Builds only the explicitly specified module(s)

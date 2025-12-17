@@ -258,6 +258,7 @@ jobs:
           trigger-run-id: ${{ inputs.trigger_run_id }}
           suites: ${{ steps.suites.outputs.suites }}
           results-artifact-name: test-results-${{ inputs.module }}-linux
+          skip-depm: ${{ inputs.download-modules == '' }}
 
   # ===========================================================================
   # Job B2: Test (Windows) - optional, parallel with scan
@@ -299,6 +300,7 @@ jobs:
           trigger-run-id: ${{ inputs.trigger_run_id }}
           suites: ${{ steps.suites.outputs.suites }}
           results-artifact-name: test-results-${{ inputs.module }}-windows
+          skip-depm: ${{ inputs.download-modules == '' }}
 
   # ===========================================================================
   # Job C: Scan - parallel with test

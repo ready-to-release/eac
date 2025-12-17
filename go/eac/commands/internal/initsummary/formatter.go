@@ -73,7 +73,7 @@ func FormatCompact(s *Summary) string {
 
 	// Deps status
 	if s.DepsStatus.Skipped {
-		b.WriteString("Deps: ⏭️  skipped (--skip-deps-verification)\n")
+		b.WriteString("Deps: ⏭️  skipped (--skip-deps)\n")
 	} else if s.DepsStatus.Verified && len(s.DepsStatus.Missing) > 0 {
 		b.WriteString(fmt.Sprintf("Deps: ❌ %d/%d available (%s missing)\n",
 			len(s.DepsStatus.Available)-len(s.DepsStatus.Missing),
@@ -245,7 +245,7 @@ func FormatDetailed(s *Summary) string {
 	// System dependencies (deps)
 	b.WriteString("── System Dependencies (deps) ──\n")
 	if s.DepsStatus.Skipped {
-		b.WriteString("  ⏭️  Skipped (--skip-deps-verification)\n")
+		b.WriteString("  ⏭️  Skipped (--skip-deps)\n")
 	} else if !s.DepsStatus.Verified {
 		b.WriteString("  Not verified\n")
 	} else if len(s.DepsStatus.Required) == 0 {
@@ -399,7 +399,7 @@ func formatFlagsCompact(f Flags) string {
 	if f.SkipDepm {
 		parts = append(parts, "skip-depm")
 	}
-	if f.SkipDepsVerification {
+	if f.SkipDeps {
 		parts = append(parts, "skip-deps")
 	}
 	if f.ForceRebuild {
@@ -455,8 +455,8 @@ func formatFlagsDetailed(f Flags, command string) string {
 		lines = append(lines, "  ⚠️  skip-depm: enabled")
 	}
 
-	if f.SkipDepsVerification {
-		lines = append(lines, "  ⚠️  skip-deps-verification: enabled")
+	if f.SkipDeps {
+		lines = append(lines, "  ⚠️  skip-deps: enabled")
 	}
 
 	if f.DryRun {

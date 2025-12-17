@@ -100,9 +100,9 @@ jobs:
           COMMANDS="${{ steps.commands.outputs.commands-path }}"
 
           # Validate artifacts against build manifest (checks existence, paths, hashes)
-          # Use --no-deps since release workflows only download target module artifacts
+          # Use --skip-depm since release workflows only download target module artifacts
           # (CI already validated dependencies during build)
-          $COMMANDS validate artifacts docs --no-deps
+          $COMMANDS validate artifacts docs --skip-depm
 
           # Collect stats for summary
           SITE_DIR="out/build/docs/site"

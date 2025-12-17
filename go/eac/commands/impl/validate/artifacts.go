@@ -8,14 +8,14 @@
 // Long:
 // Long: The validation includes:
 // Long: - Target module artifacts (executables, files, directories, etc.)
-// Long: - All transitive dependency artifacts (recursive check, unless --no-deps)
+// Long: - All transitive dependency artifacts (recursive check, unless --skip-depm)
 // Long: - Platform-specific artifacts for current platform (or all if built)
 // Long: - Marker files for modules with no traditional build outputs
 // Long:
 // Long: Validation failures indicate missing artifacts that must be built before testing.
 // Long:
 // Long: Flags:
-// Long:   --no-deps    Skip validation of transitive dependencies (for release workflows)
+// Long:   --skip-depm  Skip validation of transitive module dependencies (for release workflows)
 // Long:   --os         Target OS for platform-specific artifacts
 // Long:   --arch       Target architecture for platform-specific artifacts
 // Long:
@@ -27,7 +27,7 @@
 // Long: Example:
 // Long:   validate artifacts eac-commands
 // Long:   validate artifacts r2r-cli --all-platforms
-// Long:   validate artifacts docs --no-deps       # Release context: skip deps
+// Long:   validate artifacts docs --skip-depm     # Release context: skip module deps
 package validate
 
 import (
@@ -71,7 +71,7 @@ func ValidateArtifacts() int {
 		case arg == "--arch" && i+1 < len(args):
 			targetArch = args[i+1]
 			i++
-		case arg == "--no-deps":
+		case arg == "--skip-depm":
 			noDeps = true
 		}
 	}
