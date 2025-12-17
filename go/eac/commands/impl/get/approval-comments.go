@@ -35,17 +35,10 @@ func init() {
 }
 
 // approvalCommentsFlags defines valid flags for the get approval-comments command
-var approvalCommentsFlags = []flags.FlagDefinition{
-	{Name: "--include-all-reviews", HasValue: false, ValueType: "bool"},
-	{Name: "--branch", HasValue: true, ValueType: "string"},
-	{Name: "--as-yaml", HasValue: false, ValueType: "bool"},
-	{Name: "--as-json", HasValue: false, ValueType: "bool"},
-	{Name: "--as-toml", HasValue: false, ValueType: "bool"},
-}
 
 func GetApprovalComments() int {
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(os.Args[3:], approvalCommentsFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		return 1
 	}

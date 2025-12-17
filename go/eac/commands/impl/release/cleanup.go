@@ -33,13 +33,10 @@ func init() {
 	registry.Register(ReleaseCleanup)
 }
 
-var cleanupFlags = []flags.FlagDefinition{
-	{Name: "--tag", HasValue: true, ValueType: "string"},
-}
 
 func ReleaseCleanup() int {
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(os.Args[3:], cleanupFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

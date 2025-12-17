@@ -50,12 +50,6 @@ func init() {
 }
 
 // removeFlags defines valid flags for the remove command
-var removeFlags = []flags.FlagDefinition{
-	{Name: "--keep-branch", HasValue: false, ValueType: "bool"},
-	{Name: "--delete-remote", HasValue: false, ValueType: "bool"},
-	{Name: "--force", Shorthand: "-f", HasValue: false, ValueType: "bool"},
-	{Name: "--debug", Shorthand: "-d", HasValue: false, ValueType: "bool"},
-}
 
 // Intent: Remove workspace from git tracking and clean up associated branches
 //
@@ -84,7 +78,7 @@ func Remove() int {
 	startTime := time.Now()
 
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(os.Args[3:], removeFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

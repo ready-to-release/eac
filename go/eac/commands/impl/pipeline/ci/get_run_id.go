@@ -25,10 +25,6 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
-var getRunIDFlags = []flags.FlagDefinition{
-	{Name: "--workflow", HasValue: true, ValueType: "string"},
-	{Name: "--sha", HasValue: true, ValueType: "string"},
-}
 
 func init() {
 	registry.Register(PipelineCIGetRunID)
@@ -36,7 +32,7 @@ func init() {
 
 func PipelineCIGetRunID() int {
 	// Validate flags before parsing (args start at index 4 for "pipeline ci get-run-id")
-	if err := flags.ValidateFlags(os.Args[4:], getRunIDFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

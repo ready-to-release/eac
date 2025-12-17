@@ -24,18 +24,13 @@ func init() {
 
 // ValidateModuleFiles validates file ownership in modules
 func ValidateModuleFiles() int {
-	args := os.Args[3:] // Skip program name, "validate", and "module-files"
-
-	// Define expected flags
-	commandFlags := []flags.FlagDefinition{
-		{Name: "--help", Shorthand: "-h", HasValue: false},
-	}
-
-	// Validate flags
-	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}
+
+	args := os.Args[3:] // Skip program name, "validate", and "module-files"
 
 	// Check for help flag
 	if len(args) > 0 && (args[0] == "--help" || args[0] == "-h") {

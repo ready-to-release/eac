@@ -24,18 +24,13 @@ func init() {
 
 // ValidateMarkdown validates all markdown files in the repository
 func ValidateMarkdown() int {
-	args := os.Args[3:] // Skip program name, "validate", and "markdown"
-
-	// Define expected flags
-	commandFlags := []flags.FlagDefinition{
-		{Name: "--help", Shorthand: "-h", HasValue: false},
-	}
-
-	// Validate flags
-	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}
+
+	args := os.Args[3:] // Skip program name, "validate", and "markdown"
 
 	// Check for help flag
 	if len(args) > 0 && (args[0] == "--help" || args[0] == "-h") {

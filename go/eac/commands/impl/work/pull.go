@@ -44,12 +44,6 @@ func init() {
 }
 
 // pullFlags defines valid flags for the pull command
-var pullFlags = []flags.FlagDefinition{
-	{Name: "--target", HasValue: true, ValueType: "string"},
-	{Name: "--autostash", HasValue: false, ValueType: "bool"},
-	{Name: "--no-fetch", HasValue: false, ValueType: "bool"},
-	{Name: "--debug", Shorthand: "-d", HasValue: false, ValueType: "bool"},
-}
 
 // Intent: Sync workspace branch with latest main via rebase
 //
@@ -76,7 +70,7 @@ func Pull() int {
 	startTime := time.Now()
 
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(os.Args[3:], pullFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

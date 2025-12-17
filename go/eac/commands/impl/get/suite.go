@@ -33,16 +33,11 @@ func init() {
 }
 
 // suiteFlags defines valid flags for the get suite command
-var suiteFlags = []flags.FlagDefinition{
-	{Name: "--as-yaml", HasValue: false, ValueType: "bool"},
-	{Name: "--as-json", HasValue: false, ValueType: "bool"},
-	{Name: "--as-toml", HasValue: false, ValueType: "bool"},
-}
 
 // GetSuite returns test suite information as structured data (YAML/JSON/TOML)
 func GetSuite() int {
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(os.Args[3:], suiteFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		return 1
 	}

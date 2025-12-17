@@ -29,11 +29,6 @@ func init() {
 }
 
 // configFlags defines valid flags for the get config command
-var configFlags = []flags.FlagDefinition{
-	{Name: "--as-yaml", HasValue: false, ValueType: "bool"},
-	{Name: "--as-json", HasValue: false, ValueType: "bool"},
-	{Name: "--as-toml", HasValue: false, ValueType: "bool"},
-}
 
 // ConfigOutput represents the structured output of all configs
 type ConfigOutput struct {
@@ -46,7 +41,7 @@ type ConfigOutput struct {
 
 func GetConfig() int {
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(os.Args[3:], configFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		return 1
 	}

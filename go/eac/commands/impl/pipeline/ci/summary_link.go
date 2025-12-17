@@ -35,13 +35,6 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 )
 
-var summaryLinkFlags = []flags.FlagDefinition{
-	{Name: "--type", HasValue: true, ValueType: "string"},
-	{Name: "--artifact", HasValue: true, ValueType: "string"},
-	{Name: "--image", HasValue: true, ValueType: "string"},
-	{Name: "--workflow", HasValue: true, ValueType: "string"},
-	{Name: "--commit", HasValue: true, ValueType: "string"},
-}
 
 func init() {
 	registry.Register(PipelineCISummaryLink)
@@ -49,7 +42,7 @@ func init() {
 
 func PipelineCISummaryLink() int {
 	// Validate flags before parsing (args start at index 5 for "pipeline ci summary-link <run-id>")
-	if err := flags.ValidateFlags(os.Args[5:], summaryLinkFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

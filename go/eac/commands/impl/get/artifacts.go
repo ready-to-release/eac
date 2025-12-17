@@ -32,19 +32,11 @@ func init() {
 }
 
 // artifactsFlags defines valid flags for the get artifacts command
-var artifactsFlags = []flags.FlagDefinition{
-	{Name: "--all-platforms", HasValue: false, ValueType: "bool"},
-	{Name: "--as-json", HasValue: false, ValueType: "bool"},
-	{Name: "--as-yaml", HasValue: false, ValueType: "bool"},
-	{Name: "--yaml", HasValue: false, ValueType: "bool"},
-	{Name: "--os", HasValue: true, ValueType: "string"},
-	{Name: "--arch", HasValue: true, ValueType: "string"},
-}
 
 // GetArtifacts returns resolved artifacts for a module
 func GetArtifacts() int {
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(os.Args[3:], artifactsFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		return 1
 	}

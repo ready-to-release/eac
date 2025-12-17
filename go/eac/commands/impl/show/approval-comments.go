@@ -38,18 +38,14 @@ func init() {
 }
 
 func ShowApprovalComments() int {
-	// Parse arguments - expect module after "show approval-comments"
-	args := os.Args[1:]
-
-	// Validate flags
-	commandFlags := []flags.FlagDefinition{
-		{Name: "--include-all-reviews", HasValue: false},
-		{Name: "--branch", HasValue: true},
-	}
-	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
+
+	// Parse arguments - expect module after "show approval-comments"
+	args := os.Args[1:]
 
 	// Find where "show approval-comments" ends
 	cmdIdx := -1

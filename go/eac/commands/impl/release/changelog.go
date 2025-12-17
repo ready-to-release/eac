@@ -45,18 +45,10 @@ func init() {
 	registry.Register(ReleaseChangelog)
 }
 
-var changelogFlags = []flags.FlagDefinition{
-	{Name: "--write", HasValue: false, ValueType: "bool"},
-	{Name: "--breaking", HasValue: false, ValueType: "bool"},
-	{Name: "--from", HasValue: true, ValueType: "string"},
-	{Name: "--to", HasValue: true, ValueType: "string"},
-	{Name: "--version", HasValue: true, ValueType: "string"},
-	{Name: "--date", HasValue: true, ValueType: "string"},
-}
 
 func ReleaseChangelog() int {
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(os.Args[3:], changelogFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

@@ -50,13 +50,10 @@ type TagPendingReport struct {
 	HasPending  bool               `json:"has_pending"`
 }
 
-var tagPendingFlags = []flags.FlagDefinition{
-	{Name: "--all", HasValue: false, ValueType: "bool"},
-}
 
 func ReleaseTagPending() int {
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(os.Args[3:], tagPendingFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		tagPendingLog.Errorf("%v", err)
 		return 1
 	}

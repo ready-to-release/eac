@@ -35,10 +35,6 @@ import (
 )
 
 // commandFlags defines valid flags for the templates install docs command
-var commandFlags = []flags.FlagDefinition{
-	{Name: "--destination", HasValue: true, ValueType: "string"},
-	{Name: "--debug", Shorthand: "-d", HasValue: false, ValueType: "bool"},
-}
 
 var log = logging.C()
 
@@ -56,12 +52,8 @@ type Config struct {
 
 // TemplatesInstallDocs installs documentation templates
 func TemplatesInstallDocs() int {
-	// Validate flags
-	args := []string{}
-	if len(os.Args) > 4 {
-		args = os.Args[4:] // Skip "binary templates install docs"
-	}
-	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

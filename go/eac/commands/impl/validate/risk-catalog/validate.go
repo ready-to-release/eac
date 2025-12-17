@@ -78,17 +78,12 @@ func ValidateRiskCatalog() int {
 
 // parseConfig parses command line configuration.
 func parseConfig() (*Config, error) {
-	args := os.Args[3:] // Skip program name, "validate", and "risk-catalog"
-
-	// Define expected flags
-	commandFlags := []flags.FlagDefinition{
-		{Name: "--help", Shorthand: "-h", HasValue: false},
-	}
-
-	// Validate flags
-	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		return nil, err
 	}
+
+	args := os.Args[3:] // Skip program name, "validate", and "risk-catalog"
 
 	config := &Config{}
 

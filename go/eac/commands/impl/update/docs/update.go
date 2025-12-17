@@ -31,11 +31,6 @@ import (
 )
 
 // commandFlags defines valid flags for the update docs command
-var commandFlags = []flags.FlagDefinition{
-	{Name: "--dry-run", HasValue: false, ValueType: "bool"},
-	{Name: "--force", HasValue: false, ValueType: "bool"},
-	{Name: "--verbose", Shorthand: "-v", HasValue: false, ValueType: "bool"},
-}
 
 var log = logging.C()
 
@@ -47,7 +42,7 @@ func init() {
 func UpdateDocs() int {
 	// Validate flags
 	args := os.Args[2:]
-	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

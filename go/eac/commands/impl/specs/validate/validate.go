@@ -34,14 +34,6 @@ import (
 )
 
 // commandFlags defines valid flags for the specs validate command
-var commandFlags = []flags.FlagDefinition{
-	{Name: "--quiet", Shorthand: "-q", HasValue: false, ValueType: "bool"},
-	{Name: "--verbose", Shorthand: "-v", HasValue: false, ValueType: "bool"},
-	{Name: "--format", Shorthand: "-f", HasValue: true, ValueType: "string"},
-	{Name: "--check-tags", HasValue: false, ValueType: "bool"},
-	{Name: "--no-check-tags", HasValue: false, ValueType: "bool"},
-	{Name: "--fix", HasValue: false, ValueType: "bool"},
-}
 
 var log = logging.C()
 
@@ -100,8 +92,7 @@ func ResetGitRepo() {
 // SpecsValidate validates existing Gherkin specification files
 func SpecsValidate() int {
 	// Validate flags
-	args := os.Args[3:] // Skip program name, "specs", and "validate"
-	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}
@@ -289,9 +280,9 @@ type ValidateConfig struct {
 
 // ValidationResult holds the validation result for a single file
 type ValidationResult struct {
-	Path   string                       `json:"path"`
-	Valid  bool                         `json:"valid"`
-	Errors []contracts.ValidationError   `json:"errors"`
+	Path   string                      `json:"path"`
+	Valid  bool                        `json:"valid"`
+	Errors []contracts.ValidationError `json:"errors"`
 }
 
 // parseValidateConfig parses command line arguments into configuration
@@ -723,9 +714,9 @@ func normalizePath(path string) string {
 
 // FixResult holds the result of fixing a single file
 type FixResult struct {
-	Path    string
-	Fixes   []FixedIssue
-	Error   error
+	Path  string
+	Fixes []FixedIssue
+	Error error
 }
 
 // FixedIssue represents a single fix applied

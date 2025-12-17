@@ -22,9 +22,6 @@ import (
 )
 
 // commandFlags defines valid flags for the help command
-var commandFlags = []flags.FlagDefinition{
-	{Name: "--verbose", Shorthand: "-v", HasValue: false, ValueType: "bool"},
-}
 
 var log = logging.C()
 
@@ -37,7 +34,7 @@ func Help() int {
 	args := os.Args[2:] // Skip program name and "help"
 
 	// Validate flags
-	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

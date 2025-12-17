@@ -23,8 +23,6 @@ import (
 )
 
 // commandFlags defines valid flags for the test list-suites command
-var listSuitesCommandFlags = []flags.FlagDefinition{}
-
 func init() {
 	registry.Register(ListSuites)
 }
@@ -32,8 +30,7 @@ func init() {
 // ListSuites lists all available test suites
 func ListSuites() int {
 	// Validate flags
-	args := os.Args[2:] // Skip program name and "test list-suites"
-	if err := flags.ValidateFlags(args, listSuitesCommandFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

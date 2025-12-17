@@ -36,16 +36,10 @@ func init() {
 }
 
 // specsFlags defines valid flags for the get specs command
-var specsFlags = []flags.FlagDefinition{
-	{Name: "--as-yaml", HasValue: false, ValueType: "bool"},
-	{Name: "--as-json", HasValue: false, ValueType: "bool"},
-	{Name: "--as-toml", HasValue: false, ValueType: "bool"},
-	{Name: "--branch", HasValue: true, ValueType: "string"},
-}
 
 func GetSpecs() int {
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(os.Args[3:], specsFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		return 1
 	}

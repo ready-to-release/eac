@@ -34,9 +34,6 @@ import (
 )
 
 // commandFlags defines valid flags for the templates install reports command
-var commandFlags = []flags.FlagDefinition{
-	{Name: "--debug", Shorthand: "-d", HasValue: false, ValueType: "bool"},
-}
 
 var log = logging.C()
 
@@ -54,12 +51,8 @@ type Config struct {
 
 // TemplatesInstallReports installs report templates
 func TemplatesInstallReports() int {
-	// Validate flags
-	args := []string{}
-	if len(os.Args) > 4 {
-		args = os.Args[4:] // Skip "binary templates install reports"
-	}
-	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

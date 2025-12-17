@@ -27,16 +27,13 @@ func init() {
 }
 
 func ShowConfig() int {
-	args := os.Args[2:]
-
-	// Validate flags
-	commandFlags := []flags.FlagDefinition{
-		{Name: "--help", Shorthand: "-h", HasValue: false},
-	}
-	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
+
+	args := os.Args[2:]
 
 	// Check for help flag
 	if flags.HasFlag(args, "--help", "-h") {

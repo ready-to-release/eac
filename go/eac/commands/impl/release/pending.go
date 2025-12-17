@@ -79,15 +79,10 @@ type PendingResult struct {
 	HasAnyChange bool             `json:"has_any_change"`
 }
 
-var pendingFlags = []flags.FlagDefinition{
-	{Name: "--quiet", HasValue: false, ValueType: "bool"},
-	{Name: "-q", HasValue: false, ValueType: "bool"},
-	{Name: "--all", HasValue: false, ValueType: "bool"},
-}
 
 func ReleasePending() int {
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(os.Args[3:], pendingFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

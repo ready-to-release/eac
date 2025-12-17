@@ -90,19 +90,8 @@ func ResetGitRepo() {
 
 // ValidateSpecs validates existing Gherkin specification files
 func ValidateSpecs() int {
-	// Define expected flags
-	commandFlags := []flags.FlagDefinition{
-		{Name: "--quiet", Shorthand: "-q", HasValue: false},
-		{Name: "--verbose", Shorthand: "-v", HasValue: false},
-		{Name: "--format", Shorthand: "-f", HasValue: true, ValueType: "string"},
-		{Name: "--check-tags", HasValue: false},
-		{Name: "--no-check-tags", HasValue: false},
-		{Name: "--fix", HasValue: false},
-	}
-
-	// Validate flags
-	args := os.Args[3:] // Skip program name, "validate", and "specs"
-	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

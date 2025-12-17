@@ -17,15 +17,12 @@ func init() {
 }
 
 // commandFlags defines valid flags for the templates command
-var commandFlags = []flags.FlagDefinition{
-	{Name: "--help", Shorthand: "-h", HasValue: false, ValueType: "bool"},
-}
 
 // Templates command entry point
 func Templates() int {
 	args := os.Args[2:] // Skip program name and "templates"
 
-	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

@@ -40,18 +40,13 @@ func init() {
 
 // ValidateReleaseVersion validates a release version string
 func ValidateReleaseVersion() int {
-	args := os.Args[3:] // Skip binary, "validate", "release-version"
-
-	// Define expected flags
-	commandFlags := []flags.FlagDefinition{
-		{Name: "--help", Shorthand: "-h", HasValue: false},
-	}
-
-	// Validate flags
-	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}
+
+	args := os.Args[3:] // Skip binary, "validate", "release-version"
 
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" {
 		printReleaseVersionUsage()

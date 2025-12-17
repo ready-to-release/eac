@@ -1,13 +1,10 @@
 // Command: get ci-dispatch
 // Short: Filter modules for CI dispatch based on existing valid CI
-// Flags:
-//   --directly-changed <modules>: Space-separated list of directly changed modules (always dispatched)
-//   --invalidated <modules>: Space-separated list of invalidated modules (checked for valid CI)
-//   --head-sha <sha>: Current HEAD SHA to check against (defaults to git HEAD)
-//   --mock <json>: Use mock CI status instead of querying GitHub
-//   --format shell: Output as shell variable assignments for eval
-//   --as-yaml: Output as YAML (default)
-//   --as-json: Output as JSON
+// Flag.directly-changed: type=string, usage=Space-separated list of directly changed modules (always dispatched)
+// Flag.invalidated: type=string, usage=Space-separated list of invalidated modules (checked for valid CI)
+// Flag.head-sha: type=string, usage=Current HEAD SHA to check against (defaults to git HEAD)
+// Flag.mock: type=string, usage=Use mock CI status instead of querying GitHub (JSON format)
+// Flag.format: type=string, usage=Output format (shell outputs shell variables; otherwise uses standard get command formats)
 // Long:
 // Long: Filters modules for CI dispatch by checking if invalidated modules already have
 // Long: valid CI at the current HEAD. Directly changed modules are always dispatched.
@@ -39,15 +36,6 @@ func init() {
 }
 
 // ciDispatchFlags defines valid flags for the get ci-dispatch command
-var ciDispatchFlags = []flags.FlagDefinition{
-	{Name: "--directly-changed", HasValue: true, ValueType: "string"},
-	{Name: "--invalidated", HasValue: true, ValueType: "string"},
-	{Name: "--head-sha", HasValue: true, ValueType: "string"},
-	{Name: "--mock", HasValue: true, ValueType: "string"},
-	{Name: "--help", Shorthand: "-h", HasValue: false, ValueType: "bool"},
-	{Name: "--as-yaml", HasValue: false, ValueType: "bool"},
-	{Name: "--as-json", HasValue: false, ValueType: "bool"},
-}
 
 // CIDispatchResult represents the output of the get ci-dispatch command
 type CIDispatchResult struct {
@@ -63,7 +51,7 @@ type CIDispatchResult struct {
 
 func GetCIDispatch() int {
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(os.Args[3:], ciDispatchFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		return 1
 	}

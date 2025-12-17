@@ -38,10 +38,6 @@ func init() {
 }
 
 // listFlags defines valid flags for the list command
-var listFlags = []flags.FlagDefinition{
-	{Name: "--verbose", Shorthand: "-v", HasValue: false, ValueType: "bool"},
-	{Name: "--debug", Shorthand: "-d", HasValue: false, ValueType: "bool"},
-}
 
 // Intent: List all workspaces (git worktrees) with their status
 //
@@ -67,7 +63,7 @@ func ShowWorkspaces() int {
 	cmdStart := time.Now()
 
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(os.Args[3:], listFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

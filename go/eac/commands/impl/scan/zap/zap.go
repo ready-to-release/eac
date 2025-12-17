@@ -57,14 +57,9 @@ func ZAP() int {
 	}
 
 	// Define valid flags
-	commandFlags := []flags.FlagDefinition{
-		{Name: "--target", HasValue: true, ValueType: "string"},
-		{Name: "--scan-type", HasValue: true, ValueType: "string"},
-		{Name: "--debug", Shorthand: "-d", HasValue: false},
-	}
 
 	// Validate flags
-	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		printZAPUsage()
 		return 1

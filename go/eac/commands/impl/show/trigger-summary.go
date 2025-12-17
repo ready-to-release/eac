@@ -1,6 +1,14 @@
 // Command: show trigger-summary
 // Description: Generate release trigger summary
 // Short: Generate release trigger summary
+// Flag.module: type=string, usage=Module name (required)
+// Flag.workflow: type=string, usage=Workflow filename (required)
+// Flag.workflow-desc: type=string, usage=Workflow description
+// Flag.version: type=string, usage=Version being released (optional)
+// Flag.trigger-run-id: type=string, usage=Original trigger workflow run ID
+// Flag.ci-run-id: type=string, usage=CI workflow run ID (required)
+// Flag.branch: type=string, usage=Git branch name (required)
+// Flag.commit: type=string, usage=Git commit SHA (required)
 // Long: The show trigger-summary command generates a formatted summary when a release workflow is triggered.
 // Long: This command is designed to be used in GitHub Actions workflows to create consistent trigger summaries.
 // Long: The output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.
@@ -9,15 +17,6 @@
 // Long: - Markdown-formatted trigger summary with workflow and property tables
 // Long: - Shows workflow name and description
 // Long: - Shows version, run IDs, branch, and commit information
-// Long:
-// Long: Flag.module: type=string, usage=Module name (required)
-// Long: Flag.workflow: type=string, usage=Workflow filename (required)
-// Long: Flag.workflow-desc: type=string, usage=Workflow description
-// Long: Flag.version: type=string, usage=Version being released (optional)
-// Long: Flag.trigger-run-id: type=string, usage=Original trigger workflow run ID
-// Long: Flag.ci-run-id: type=string, usage=CI workflow run ID (required)
-// Long: Flag.branch: type=string, usage=Git branch name (required)
-// Long: Flag.commit: type=string, usage=Git commit SHA (required)
 package show
 
 import (
@@ -27,6 +26,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 )
 
 func init() {
@@ -35,6 +35,12 @@ func init() {
 
 // ShowTriggerSummary generates a release trigger summary
 func ShowTriggerSummary() int {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	args := os.Args[3:] // Skip program name, "show", and "trigger-summary"
 
 	module := ""

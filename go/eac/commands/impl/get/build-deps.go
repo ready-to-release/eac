@@ -37,14 +37,10 @@ type BuildDepsResult struct {
 }
 
 // buildDepsFlags defines valid flags for the get build-deps command
-var buildDepsFlags = []flags.FlagDefinition{
-	{Name: "--as-yaml", HasValue: false, ValueType: "bool"},
-	{Name: "--as-json", HasValue: false, ValueType: "bool"},
-}
 
 func GetBuildDeps() int {
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(os.Args[3:], buildDepsFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		return 1
 	}

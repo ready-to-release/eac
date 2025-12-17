@@ -24,11 +24,8 @@ func init() {
 }
 
 func ShowValidCommands() int {
-	args := os.Args[3:] // Skip program name, "show", and "valid-commands"
-
-	// Validate flags (no flags expected for this command)
-	commandFlags := []flags.FlagDefinition{}
-	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}

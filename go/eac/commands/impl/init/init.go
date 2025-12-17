@@ -97,20 +97,10 @@ func ResetGitRepo() {
 //   - Config file is YAML - human readable and safe to commit
 //   - Logger integration for consistent output and debugging
 
-// initFlags defines valid flags for the init command
-var initFlags = []flags.FlagDefinition{
-	{Name: "--ai-provider", Shorthand: "-a", HasValue: true, ValueType: "string"},
-	{Name: "--ai-token", HasValue: true, ValueType: "string", Aliases: []string{"--api-token", "--token"}},
-	{Name: "--git-token", HasValue: true, ValueType: "string"},
-	{Name: "--copy-templates", HasValue: false, ValueType: "bool"},
-	{Name: "--force", HasValue: false, ValueType: "bool"},
-	{Name: "--debug", Shorthand: "-d", HasValue: false, ValueType: "bool"},
-}
-
 // Init initializes EAC project configuration
 func Init() int {
-	// Validate flags before parsing
-	if err := flags.ValidateFlags(os.Args[2:], initFlags); err != nil {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

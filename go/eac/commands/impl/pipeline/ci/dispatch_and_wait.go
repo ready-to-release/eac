@@ -35,13 +35,6 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
-var dispatchAndWaitFlags = []flags.FlagDefinition{
-	{Name: "--workflow", HasValue: true, ValueType: "string"},
-	{Name: "--ref", HasValue: true, ValueType: "string"},
-	{Name: "--run-id", HasValue: true, ValueType: "string"},
-	{Name: "--timeout", HasValue: true, ValueType: "int"},
-	{Name: "--inputs", HasValue: true, ValueType: "string"},
-}
 
 func init() {
 	registry.Register(PipelineCIDispatchAndWait)
@@ -49,7 +42,7 @@ func init() {
 
 func PipelineCIDispatchAndWait() int {
 	// Validate flags before parsing (args start at index 4 for "pipeline ci dispatch-and-wait")
-	if err := flags.ValidateFlags(os.Args[4:], dispatchAndWaitFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

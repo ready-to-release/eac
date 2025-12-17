@@ -29,17 +29,13 @@ func init() {
 
 // ShowTestSummary generates a pretty test summary
 func ShowTestSummary() int {
-	args := os.Args[3:] // Skip program name, "show", and "test-summary"
-
-	// Validate flags
-	commandFlags := []flags.FlagDefinition{
-		{Name: "--status", HasValue: true},
-		{Name: "--run-id", HasValue: true},
-	}
-	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
+
+	args := os.Args[3:] // Skip program name, "show", and "test-summary"
 
 	if len(args) < 2 {
 		log.Errorf("Usage: show test-summary <module> <suite> [--status=success|failure] [--run-id=<id>]")

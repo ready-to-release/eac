@@ -39,11 +39,6 @@ func init() {
 }
 
 // commitFlags defines valid flags for the commit command
-var commitFlags = []flags.FlagDefinition{
-	{Name: "--all", Shorthand: "-a", HasValue: false, ValueType: "bool"},
-	{Name: "--message", Shorthand: "-m", HasValue: true, ValueType: "string"},
-	{Name: "--debug", Shorthand: "-d", HasValue: false, ValueType: "bool"},
-}
 
 // Intent: Commit changes with AI-generated messages in a workspace
 //
@@ -69,7 +64,7 @@ func Commit() int {
 	startTime := time.Now()
 
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(os.Args[3:], commitFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

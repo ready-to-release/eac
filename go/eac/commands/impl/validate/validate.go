@@ -15,21 +15,16 @@ func init() {
 
 // Validate command entry point
 func Validate() int {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	args := os.Args[2:] // Skip program name and "validate"
 
 	if len(args) == 0 {
 		printValidateUsage()
-		return 1
-	}
-
-	// Define expected flags (none - subcommands will validate their own flags)
-	commandFlags := []flags.FlagDefinition{
-		{Name: "--help", Shorthand: "-h", HasValue: false},
-	}
-
-	// Validate flags (only top-level help flag)
-	if err := flags.ValidateFlags(args, commandFlags); err != nil {
-		log.Errorf("%v", err)
 		return 1
 	}
 

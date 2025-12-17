@@ -58,13 +58,8 @@ type ControlTagUsage struct {
 
 // ControlTags validates @control and @controls tags against OSCAL catalog
 func ControlTags() int {
-	args := os.Args[3:] // Skip program name, "validate", and "control-tags"
-
-	// Define expected flags (none for this command)
-	commandFlags := []flags.FlagDefinition{}
-
-	// Validate flags
-	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		ctlog.Errorf("%v", err)
 		return 1
 	}

@@ -1,18 +1,17 @@
 // Command: release extract-version
 // Description: Extract and validate release version from tag or input
 // Short: Extract and validate release version from tag or input
+// Flag.module: type=string, usage=Module prefix (e.g., r2r-cli, docs)
+// Flag.type: type=string, default=semver, usage=Version type (semver or calver)
+// Flag.ref: type=string, usage=Git ref (e.g., refs/tags/r2r-cli/1.0.0)
+// Flag.version: type=string, usage=Explicit version (for workflow_dispatch)
+// Flag.format: type=string, default=shell, usage=Output format (shell, json, yaml)
 // Long: The release extract-version command extracts version information from a git tag ref
 // Long: or explicit version input, validates the format (semver or calver), and outputs
 // Long: structured data for use in release workflows.
 // Long:
 // Long: This command replaces the extract-release-version GitHub Action with pure Go logic,
 // Long: making it testable and usable locally.
-// Long:
-// Long: Flag.module: type=string, usage=Module prefix (e.g., r2r-cli, docs)
-// Long: Flag.type: type=string, default=semver, usage=Version type (semver or calver)
-// Long: Flag.ref: type=string, usage=Git ref (e.g., refs/tags/r2r-cli/1.0.0)
-// Long: Flag.version: type=string, usage=Explicit version (for workflow_dispatch)
-// Long: Flag.format: type=string, default=shell, usage=Output format (shell, json, yaml)
 // Long:
 // Long: Expected Output (--format shell):
 // Long:   VERSION="1.0.0"
@@ -33,6 +32,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"gopkg.in/yaml.v3"
 )
@@ -51,6 +51,12 @@ type ExtractVersionOutput struct {
 
 // ExtractVersion extracts and validates a release version
 func ExtractVersion() int {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		return 1
+	}
+
 	args := os.Args[3:] // Skip program name, "release", and "extract-version"
 
 	module := ""

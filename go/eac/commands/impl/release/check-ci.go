@@ -52,17 +52,10 @@ type CIRunStatus struct {
 	HeadSHA    string `json:"headSha"`
 }
 
-var checkCIFlags = []flags.FlagDefinition{
-	{Name: "--workflow", HasValue: true, ValueType: "string"},
-	{Name: "--commit", HasValue: true, ValueType: "string"},
-	{Name: "--timeout", HasValue: true, ValueType: "int"},
-	{Name: "--interval", HasValue: true, ValueType: "int"},
-	{Name: "--strict", HasValue: false, ValueType: "bool"},
-}
 
 func ReleaseCheckCI() int {
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(os.Args[3:], checkCIFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

@@ -46,11 +46,6 @@ func init() {
 }
 
 // prFlags defines valid flags for the pr command
-var prFlags = []flags.FlagDefinition{
-	{Name: "--target", HasValue: true, ValueType: "string"},
-	{Name: "--title", HasValue: true, ValueType: "string"},
-	{Name: "--debug", Shorthand: "-d", HasValue: false, ValueType: "bool"},
-}
 
 // Intent: Create pull request with AI-generated description
 //
@@ -77,7 +72,7 @@ func CreatePR() int {
 	cmdStart := time.Now()
 
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(os.Args[3:], prFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

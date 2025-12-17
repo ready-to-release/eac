@@ -21,6 +21,16 @@
 // Long:   test                                 # Test all modules
 // Long:   test eac-commands --suite acceptance # Run acceptance tests only
 // Flag.suite: type=string, usage=Filter tests by suite (default: non-extended suites from config)
+// Flag.coverage: type=bool, usage=Enable coverage reporting
+// Flag.skip-deps: type=bool, usage=Skip dependency checks before running tests
+// Flag.list-only: type=bool, usage=List tests without running them
+// Flag.timings: type=bool, usage=Show detailed timing summary after tests complete
+// Flag.debug: type=bool, usage=Enable debug logs to console (file logging always enabled)
+// Flag.tui: type=bool, usage=Enable TUI console (default for local console mode)
+// Flag.no-tui: type=bool, usage=Disable TUI console (use plain output)
+// Flag.sequential: type=bool, usage=Run tests sequentially instead of parallel
+// Flag.retest: type=bool, usage=Force retest, bypassing incremental test state
+// Flag.tui-height: type=int, usage=Set TUI console height (3-20, default: 6)
 package test
 
 import (
@@ -143,25 +153,11 @@ func Test() int {
 }
 
 // testFlags defines valid flags for the test command
-var testFlags = []flags.FlagDefinition{
-	{Name: "--suite", HasValue: true, ValueType: "string"},
-	{Name: "--coverage", HasValue: false, ValueType: "bool"},
-	{Name: "--skip-deps", HasValue: false, ValueType: "bool"},
-	{Name: "--list-only", HasValue: false, ValueType: "bool"},
-	{Name: "--timings", HasValue: false, ValueType: "bool"},
-	{Name: "--debug", HasValue: false, ValueType: "bool"},
-	{Name: "--tui", HasValue: false, ValueType: "bool"},
-	{Name: "--no-tui", HasValue: false, ValueType: "bool"},
-	{Name: "--tui-height", HasValue: true, ValueType: "int"},
-	{Name: "--sequential", HasValue: false, ValueType: "bool"},
-	{Name: "--retest", HasValue: false, ValueType: "bool"},
-	{Name: "--help", Shorthand: "-h", HasValue: false, ValueType: "bool"},
-}
 
 // parseTestArgs parses command line arguments into TestConfig
 func parseTestArgs(args []string) *TestConfig {
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(args, testFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return nil
 	}

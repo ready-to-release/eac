@@ -219,20 +219,13 @@ func loadModuleRegistry(workspaceRoot string) (*modules.Registry, error) {
 	return modules.LoadFromWorkspace(workspaceRoot)
 }
 
-var assessFlags = []flags.FlagDefinition{
-	{Name: "--profile", Shorthand: "-p", HasValue: true, ValueType: "string"},
-	{Name: "--max-evidence-age", Shorthand: "", HasValue: true, ValueType: "string"},
-	{Name: "--report-template", Shorthand: "", HasValue: true, ValueType: "string"},
-	{Name: "--sequential", Shorthand: "", HasValue: false, ValueType: "bool"},
-	{Name: "--debug", Shorthand: "-d", HasValue: false, ValueType: "bool"},
-}
 
 // parseAssessConfig parses command line configuration.
 func parseAssessConfig() (*AssessConfig, error) {
 	args := os.Args[3:] // Skip program name, "create", and "risk-assess"
 
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(args, assessFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		return nil, err
 	}
 

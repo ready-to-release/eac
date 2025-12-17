@@ -55,18 +55,10 @@ func init() {
 var log = logging.C()
 
 // commandFlags defines valid flags for the create design command
-var commandFlags = []flags.FlagDefinition{
-	{Name: "--debug", Shorthand: "-d", HasValue: false, ValueType: "bool"},
-	{Name: "--force", Shorthand: "-f", HasValue: false, ValueType: "bool"},
-	{Name: "--output", Shorthand: "-o", HasValue: true, ValueType: "string"},
-	{Name: "--prompt", HasValue: true, ValueType: "string"},
-	{Name: "--skip-validation", HasValue: false, ValueType: "bool"},
-}
 
 func CreateDesign() int {
 	// Validate flags
-	args := os.Args[2:] // Skip program name and "create design"
-	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

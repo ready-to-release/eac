@@ -92,14 +92,10 @@ type ReleaseBundleModule struct {
 }
 
 // releaseBundleFlags defines valid flags for the get release-bundle command
-var releaseBundleFlags = []flags.FlagDefinition{
-	{Name: "--as-yaml", HasValue: false, ValueType: "bool"},
-	{Name: "--as-json", HasValue: false, ValueType: "bool"},
-}
 
 func GetReleaseBundle() int {
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(os.Args[3:], releaseBundleFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		return 1
 	}

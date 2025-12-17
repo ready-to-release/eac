@@ -29,10 +29,6 @@ import (
 )
 
 // commandFlags defines valid flags for the serve design command
-var commandFlags = []flags.FlagDefinition{
-	{Name: "--help", Shorthand: "-h", HasValue: false, ValueType: "bool"},
-	{Name: "--force", HasValue: false, ValueType: "bool"},
-}
 
 var log = logging.C()
 
@@ -45,7 +41,7 @@ func ServeDesign() int {
 	args := os.Args[3:] // Skip program, "serve", and "design"
 
 	// Validate flags
-	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

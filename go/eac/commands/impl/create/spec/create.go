@@ -459,13 +459,6 @@ func writeOutputAndReportSuccess(outputPath string, content string, config *Spec
 
 // parseConfig parses command line arguments into configuration
 // specFlags defines valid flags for the create spec command
-var specFlags = []flags.FlagDefinition{
-	{Name: "--debug", Shorthand: "-d", HasValue: false, ValueType: "bool"},
-	{Name: "--force", HasValue: false, ValueType: "bool"},
-	{Name: "--module", Shorthand: "-m", HasValue: true, ValueType: "string", Aliases: []string{"--mod"}},
-	{Name: "--output", Shorthand: "-o", HasValue: true, ValueType: "string"},
-	{Name: "--prompt", HasValue: true, ValueType: "string"},
-}
 
 func parseConfig() (*SpecsConfig, error) {
 	config := &SpecsConfig{}
@@ -474,7 +467,7 @@ func parseConfig() (*SpecsConfig, error) {
 	args := os.Args[3:] // Skip program name, "create", and "spec"
 
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(args, specFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		return nil, err
 	}
 

@@ -227,21 +227,13 @@ func CreateRiskProfile() int {
 	return 0
 }
 
-var profileFlags = []flags.FlagDefinition{
-	{Name: "--catalog", Shorthand: "", HasValue: true, ValueType: "string"},
-	{Name: "--output", Shorthand: "-o", HasValue: true, ValueType: "string"},
-	{Name: "--force", Shorthand: "", HasValue: false, ValueType: "bool"},
-	{Name: "--debug", Shorthand: "-d", HasValue: false, ValueType: "bool"},
-	{Name: "--max-retries", Shorthand: "", HasValue: true, ValueType: "int"},
-	{Name: "--help", Shorthand: "-h", HasValue: false, ValueType: "bool"},
-}
 
 // parseConfig parses command line configuration.
 func parseConfig() (*Config, error) {
 	args := os.Args[3:] // Skip program name, "create", and "risk-profile"
 
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(args, profileFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		return nil, err
 	}
 

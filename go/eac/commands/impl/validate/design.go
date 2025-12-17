@@ -37,22 +37,13 @@ func init() {
 
 // ValidateDesign validates workspace files using Structurizr CLI
 func ValidateDesign() int {
-	args := os.Args[3:] // Skip program, "validate", and "design"
-
-	// Define expected flags
-	commandFlags := []flags.FlagDefinition{
-		{Name: "--all", Shorthand: "-a", HasValue: false},
-		{Name: "--file", Shorthand: "-f", HasValue: true, ValueType: "string"},
-		{Name: "--debug", Shorthand: "-d", HasValue: false},
-		{Name: "--verbose", Shorthand: "-v", HasValue: false},
-		{Name: "--help", Shorthand: "-h", HasValue: false},
-	}
-
-	// Validate flags
-	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}
+
+	args := os.Args[3:] // Skip program, "validate", and "design"
 
 	var module string
 	var file string

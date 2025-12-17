@@ -50,23 +50,16 @@ func init() {
 }
 
 func ValidateArtifacts() int {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	args := os.Args[3:] // Skip program name, "validate", and "artifacts"
 
 	if len(args) == 0 {
 		log.Errorf("Usage: validate artifacts <module>")
-		return 1
-	}
-
-	// Define expected flags
-	commandFlags := []flags.FlagDefinition{
-		{Name: "--os", HasValue: true, ValueType: "string"},
-		{Name: "--arch", HasValue: true, ValueType: "string"},
-		{Name: "--no-deps", HasValue: false},
-	}
-
-	// Validate flags
-	if err := flags.ValidateFlags(args, commandFlags); err != nil {
-		log.Errorf("%v", err)
 		return 1
 	}
 

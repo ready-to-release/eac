@@ -32,11 +32,6 @@ func init() {
 }
 
 // changedModulesLocalFlags defines valid flags for the get changed-modules-local command
-var changedModulesLocalFlags = []flags.FlagDefinition{
-	{Name: "--as-yaml", HasValue: false, ValueType: "bool"},
-	{Name: "--as-json", HasValue: false, ValueType: "bool"},
-	{Name: "--as-toml", HasValue: false, ValueType: "bool"},
-}
 
 // LocalChangedModulesResult represents the output of the get changed-modules-local command
 type LocalChangedModulesResult struct {
@@ -49,7 +44,7 @@ type LocalChangedModulesResult struct {
 
 func GetChangedModulesLocal() int {
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(os.Args[3:], changedModulesLocalFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		return 1
 	}

@@ -35,10 +35,6 @@ import (
 
 var log = logging.C()
 
-var pipelineWaitFlags = []flags.FlagDefinition{
-	{Name: "--timeout", HasValue: true, ValueType: "int"},
-	{Name: "--interval", HasValue: true, ValueType: "int"},
-}
 
 func init() {
 	registry.Register(PipelineWait)
@@ -55,7 +51,7 @@ type WorkflowRun struct {
 
 func PipelineWait() int {
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(os.Args[3:], pipelineWaitFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

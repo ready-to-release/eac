@@ -43,8 +43,6 @@ import (
 )
 
 // commandFlags defines valid flags for the templates install command
-var installCommandFlags = []flags.FlagDefinition{}
-
 func init() {
 	registry.Register(TemplatesInstall)
 }
@@ -53,7 +51,7 @@ func init() {
 // It handles unknown template names and shows helpful error messages
 func TemplatesInstall() int {
 	// Validate flags
-	if err := flags.ValidateFlags(os.Args[3:], installCommandFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

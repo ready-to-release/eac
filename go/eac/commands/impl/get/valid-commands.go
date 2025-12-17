@@ -21,11 +21,6 @@ func init() {
 }
 
 // validCommandsFlags defines valid flags for the get valid-commands command
-var validCommandsFlags = []flags.FlagDefinition{
-	{Name: "--as-yaml", HasValue: false, ValueType: "bool"},
-	{Name: "--as-json", HasValue: false, ValueType: "bool"},
-	{Name: "--as-toml", HasValue: false, ValueType: "bool"},
-}
 
 // CommandInfo represents a command with its description
 type CommandInfo struct {
@@ -35,7 +30,7 @@ type CommandInfo struct {
 
 func GetValidCommands() int {
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(os.Args[3:], validCommandsFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		return 1
 	}

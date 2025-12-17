@@ -71,15 +71,10 @@ type ReleaseResult struct {
 	Error           string `json:"error,omitempty"`
 }
 
-var thisFlags = []flags.FlagDefinition{
-	{Name: "--dry-run", HasValue: false, ValueType: "bool"},
-	{Name: "--json", HasValue: false, ValueType: "bool"},
-	{Name: "--date", HasValue: true, ValueType: "string"},
-}
 
 func ReleaseThis() int {
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(os.Args[3:], thisFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

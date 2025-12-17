@@ -28,15 +28,10 @@ func init() {
 	registry.Register(ReleaseExtEac)
 }
 
-var extEacFlags = []flags.FlagDefinition{
-	{Name: "--tag-direct", HasValue: false, ValueType: "bool"},
-	{Name: "--dry-run", HasValue: false, ValueType: "bool"},
-	{Name: "--push", HasValue: true, ValueType: "string"},
-}
 
 func ReleaseExtEac() int {
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(os.Args[3:], extEacFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

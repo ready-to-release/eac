@@ -33,8 +33,6 @@ import (
 )
 
 // commandFlags defines valid flags for the test debug command
-var debugCommandFlags = []flags.FlagDefinition{}
-
 // ansiRegex matches ANSI escape sequences for color/formatting
 var ansiRegex = regexp.MustCompile(`\x1b\[[0-9;]*m`)
 
@@ -55,8 +53,7 @@ type Failure struct {
 // TestDebug parses test results and lists all failures
 func TestDebug() int {
 	// Validate flags
-	args := os.Args[2:] // Skip program name and "test debug"
-	if err := flags.ValidateFlags(args, debugCommandFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

@@ -35,10 +35,6 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
-var pipelineRunFlags = []flags.FlagDefinition{
-	{Name: "--changed-only", HasValue: false, ValueType: "bool"},
-	{Name: "--ref", HasValue: true, ValueType: "string"},
-}
 
 func init() {
 	registry.Register(PipelineRun)
@@ -46,7 +42,7 @@ func init() {
 
 func PipelineRun() int {
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(os.Args[3:], pipelineRunFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

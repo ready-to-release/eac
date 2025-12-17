@@ -30,10 +30,6 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 )
 
-var pipelineStatusFlags = []flags.FlagDefinition{
-	{Name: "--ref", HasValue: true, ValueType: "string"},
-	{Name: "--commit", HasValue: true, ValueType: "string"},
-}
 
 func init() {
 	registry.Register(PipelineStatus)
@@ -62,7 +58,7 @@ type StatusCommitInfo struct {
 
 func PipelineStatus() int {
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(os.Args[3:], pipelineStatusFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

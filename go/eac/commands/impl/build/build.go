@@ -18,6 +18,24 @@
 // Long:   build eac-commands              # Build a single module
 // Long:   build eac-core r2r-cli          # Build specific modules
 // Long:   build --tidy-first eac-commands # Build with go mod tidy first
+// Flag.tidy-first: type=bool, usage=Run 'go mod tidy' before building (default for local)
+// Flag.no-tidy: type=bool, usage=Skip 'go mod tidy' (default for CI)
+// Flag.rebuild: type=bool, usage=Force full rebuild, ignoring incremental build state
+// Flag.layered-build: type=bool, usage=Execute layers sequentially (default: all modules in parallel)
+// Flag.skip-depm: type=bool, usage=Only build specified modules, no dependency resolution (CI isolation)
+// Flag.no-deps: type=bool, usage=Alias for --skip-depm
+// Flag.use-existing-depm: type=bool, usage=Skip building module dependencies if artifacts exist (for CI incremental builds)
+// Flag.skip-deps-verification: type=bool, usage=Skip system dependency verification (go, docker, etc.)
+// Flag.timings: type=bool, usage=Show detailed timing summary
+// Flag.debug: type=bool, usage=Enable debug logs to console (file logging always enabled)
+// Flag.tui: type=bool, usage=Enable TUI console (default for local, errors in CI/container)
+// Flag.no-tui: type=bool, usage=Disable TUI console (use plain output)
+// Flag.tui-height: type=int, usage=Set TUI console height (3-20, default: 6)
+// Flag.version: type=string, usage=Inject version string into binary (Go modules with executable artifacts)
+// Flag.accept-warnings: type=bool, usage=Don't fail on MkDocs warnings (non-strict mode)
+// Flag.all: type=bool, usage=Include non-default books (those with default: false)
+// Flag.list-artifacts: type=bool, usage=List artifacts that would be produced (no build)
+// Flag.dry-run: type=bool, usage=Simulate build without running actual commands
 // Args: modules
 package build
 
@@ -153,27 +171,6 @@ func ensureCommandsBinary(workspaceRoot string) error {
 }
 
 // buildFlags defines valid flags for the build command
-var buildFlags = []flags.FlagDefinition{
-	{Name: "--tidy-first", HasValue: false, ValueType: "bool"},
-	{Name: "--no-tidy", HasValue: false, ValueType: "bool"},
-	{Name: "--skip-depm", HasValue: false, ValueType: "bool"},
-	{Name: "--no-deps", HasValue: false, ValueType: "bool"},
-	{Name: "--use-existing-depm", HasValue: false, ValueType: "bool"},
-	{Name: "--rebuild", HasValue: false, ValueType: "bool"},
-	{Name: "--layered-build", HasValue: false, ValueType: "bool"},
-	{Name: "--skip-deps-verification", HasValue: false, ValueType: "bool"},
-	{Name: "--timings", HasValue: false, ValueType: "bool"},
-	{Name: "--debug", HasValue: false, ValueType: "bool"},
-	{Name: "--accept-warnings", HasValue: false, ValueType: "bool"},
-	{Name: "--list-artifacts", HasValue: false, ValueType: "bool"},
-	{Name: "--dry-run", HasValue: false, ValueType: "bool"},
-	{Name: "--all", HasValue: false, ValueType: "bool"},
-	{Name: "--tui", HasValue: false, ValueType: "bool"},
-	{Name: "--no-tui", HasValue: false, ValueType: "bool"},
-	{Name: "--tui-height", HasValue: true, ValueType: "int"},
-	{Name: "--version", HasValue: false, ValueType: "bool"},
-	{Name: "--help", Shorthand: "-h", HasValue: false, ValueType: "bool"},
-}
 
 // Build command entry point - builds one or more modules
 func Build() int {
@@ -186,7 +183,7 @@ func Build() int {
 	}
 
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(args, buildFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}

@@ -34,11 +34,6 @@ func init() {
 }
 
 // testTimingsFlags defines valid flags for the get test-timings command
-var testTimingsFlags = []flags.FlagDefinition{
-	{Name: "--as-yaml", HasValue: false, ValueType: "bool"},
-	{Name: "--as-json", HasValue: false, ValueType: "bool"},
-	{Name: "--as-toml", HasValue: false, ValueType: "bool"},
-}
 
 // TestTiming represents timing data for a single test scenario
 type TestTiming struct {
@@ -74,7 +69,7 @@ type TestTimingSummary struct {
 
 func GetTestTimings() int {
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(os.Args[3:], testTimingsFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		return 1
 	}

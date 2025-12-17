@@ -27,17 +27,13 @@ func init() {
 
 // ShowBuildSummary generates a pretty build summary
 func ShowBuildSummary() int {
-	args := os.Args[3:] // Skip program name, "show", and "build-summary"
-
-	// Validate flags
-	commandFlags := []flags.FlagDefinition{
-		{Name: "--status", HasValue: true},
-		{Name: "--run-id", HasValue: true},
-	}
-	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
+
+	args := os.Args[3:] // Skip program name, "show", and "build-summary"
 
 	if len(args) == 0 {
 		log.Errorf("Usage: show build-summary <module> [--status=success|failure] [--run-id=<id>]")

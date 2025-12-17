@@ -40,13 +40,8 @@ var eacConfig *config.EACConfig
 
 // TestTags validates that all test tags are defined in the tag contract
 func TestTags() int {
-	args := os.Args[3:] // Skip program name, "validate", and "test-tags"
-
-	// Define expected flags (none for this command)
-	commandFlags := []flags.FlagDefinition{}
-
-	// Validate flags
-	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

@@ -1,6 +1,10 @@
 // Command: show scan-summary
 // Description: Generate pretty scan summary for a module
 // Short: Generate pretty scan summary for a module
+// Flag.scans: type=string, usage=Comma-separated list of scans that were run (e.g., sbom,vuln,secrets)
+// Flag.failed-scans: type=string, usage=Space-separated list of scans that failed
+// Flag.artifact-name: type=string, usage=Name of the artifact containing scan results
+// Flag.status: type=string, usage=Overall status (success or failure)
 // Long: The show scan-summary command generates a formatted security scan summary with status per scan.
 // Long: This command is designed to be used in GitHub Actions workflows to create consistent, attractive scan summaries.
 // Long: The output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.
@@ -9,11 +13,6 @@
 // Long: - Markdown-formatted scan summary with emojis and styling
 // Long: - Table showing each scan type with its pass/fail status
 // Long: - Artifact name for results download
-// Long:
-// Long: Flag.scans: type=string, usage=Comma-separated list of scans that were run (e.g., sbom,vuln,secrets)
-// Long: Flag.failed-scans: type=string, usage=Space-separated list of scans that failed
-// Long: Flag.artifact-name: type=string, usage=Name of the artifact containing scan results
-// Long: Flag.status: type=string, usage=Overall status (success or failure)
 package show
 
 import (
@@ -24,6 +23,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 )
 
 func init() {
@@ -32,6 +32,12 @@ func init() {
 
 // ShowScanSummary generates a pretty scan summary
 func ShowScanSummary() int {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	args := os.Args[3:] // Skip program name, "show", and "scan-summary"
 
 	if len(args) == 0 {

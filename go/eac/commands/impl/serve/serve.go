@@ -34,16 +34,6 @@ import (
 )
 
 // commandFlags defines valid flags for the serve command
-var commandFlags = []flags.FlagDefinition{
-	{Name: "--no-browser", HasValue: false, ValueType: "bool"},
-	{Name: "--port", Shorthand: "-p", HasValue: true, ValueType: "int"},
-	{Name: "--stop", HasValue: false, ValueType: "bool"},
-	{Name: "--reload", HasValue: false, ValueType: "bool"},
-	{Name: "--rebuild", HasValue: false, ValueType: "bool"},
-	{Name: "--debug", HasValue: false, ValueType: "bool"},
-	{Name: "--book", Shorthand: "-b", HasValue: true, ValueType: "string"},
-	{Name: "--help", Shorthand: "-h", HasValue: false, ValueType: "bool"},
-}
 
 var log = logging.C()
 
@@ -109,7 +99,7 @@ func Serve() int {
 	args := os.Args[2:] // Skip program name and "serve"
 
 	// Validate flags
-	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

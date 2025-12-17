@@ -46,12 +46,6 @@ func init() {
 }
 
 // mergeFlags defines valid flags for the merge command
-var mergeFlags = []flags.FlagDefinition{
-	{Name: "--target", HasValue: true, ValueType: "string"},
-	{Name: "--no-squash", HasValue: false, ValueType: "bool"},
-	{Name: "--keep-worktree", HasValue: false, ValueType: "bool"},
-	{Name: "--debug", Shorthand: "-d", HasValue: false, ValueType: "bool"},
-}
 
 // Intent: Merge workspace changes back to main with squash merge as default
 //
@@ -78,7 +72,7 @@ func Merge() int {
 	startTime := time.Now()
 
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(os.Args[3:], mergeFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

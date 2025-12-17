@@ -31,19 +31,13 @@ func init() {
 
 // ShowArtifacts displays resolved artifacts for a module
 func ShowArtifacts() int {
-	args := os.Args[3:] // Skip program name, "show", and "artifacts"
-
-	// Validate flags
-	commandFlags := []flags.FlagDefinition{
-		{Name: "--all-platforms", HasValue: false},
-		{Name: "--missing-only", HasValue: false},
-		{Name: "--os", HasValue: true},
-		{Name: "--arch", HasValue: true},
-	}
-	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
+
+	args := os.Args[3:] // Skip program name, "show", and "artifacts"
 
 	if len(args) == 0 {
 		fmt.Fprintln(os.Stderr, "Usage: show artifacts <module> [--all-platforms] [--missing-only]")

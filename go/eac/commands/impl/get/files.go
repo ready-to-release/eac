@@ -52,19 +52,10 @@ func init() {
 }
 
 // filesFlags defines valid flags for the get files command
-var filesFlags = []flags.FlagDefinition{
-	{Name: "--as-yaml", HasValue: false, ValueType: "bool"},
-	{Name: "--as-json", HasValue: false, ValueType: "bool"},
-	{Name: "--as-toml", HasValue: false, ValueType: "bool"},
-	{Name: "--changed-only", HasValue: false, ValueType: "bool"},
-	{Name: "--staged-only", HasValue: false, ValueType: "bool"},
-	{Name: "--module", HasValue: true, ValueType: "string"},
-	{Name: "--pattern", HasValue: true, ValueType: "string"},
-}
 
 func GetFiles() int {
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(os.Args[3:], filesFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		return 1
 	}

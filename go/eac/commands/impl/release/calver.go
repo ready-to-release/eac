@@ -37,15 +37,10 @@ func init() {
 	registry.Register(ReleaseCalver)
 }
 
-var calverFlags = []flags.FlagDefinition{
-	{Name: "--create", HasValue: false, ValueType: "bool"},
-	{Name: "--push", HasValue: false, ValueType: "bool"},
-	{Name: "--dry-run", HasValue: false, ValueType: "bool"},
-}
 
 func ReleaseCalver() int {
 	// Validate flags before parsing
-	if err := flags.ValidateFlags(os.Args[3:], calverFlags); err != nil {
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

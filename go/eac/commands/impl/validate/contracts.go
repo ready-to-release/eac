@@ -39,13 +39,8 @@ func init() {
 
 // ValidateContracts validates all repository contracts against JSON schemas
 func ValidateContracts() int {
-	args := os.Args[3:] // Skip program name, "validate", and "contracts"
-
-	// Define expected flags (none for this command)
-	commandFlags := []flags.FlagDefinition{}
-
-	// Validate flags
-	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}

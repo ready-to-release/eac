@@ -34,15 +34,10 @@ func init() {
 	registry.Register(ReleaseSrcCli)
 }
 
-var r2rCliFlags = []flags.FlagDefinition{
-	{Name: "--tag-direct", HasValue: false, ValueType: "bool"},
-	{Name: "--dry-run", HasValue: false, ValueType: "bool"},
-	{Name: "--push", HasValue: true, ValueType: "string"},
-}
 
 func ReleaseSrcCli() int {
-	// Validate flags before parsing
-	if err := flags.ValidateFlags(os.Args[3:], r2rCliFlags); err != nil {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}
