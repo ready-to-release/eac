@@ -201,7 +201,7 @@ This copies configuration files like `ai-config.yml`, `module-types.yml`, etc. t
 └── (other copied files...)
 ```
 
-For details on the file formats, see the [Init Command Reference](../../reference/commands/other/init.md#advanced-copying-system-templates).
+For details on the file formats, see the [Init Command Reference](../../reference/commands/init/init.md#advanced-copying-system-templates).
 
 ---
 
