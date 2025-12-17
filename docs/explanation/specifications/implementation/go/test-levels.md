@@ -1,7 +1,4 @@
 # Test Levels with Go Build Tags
-
-{{ page_breadcrumb() }}
-
 > **Build tags and test isolation (L0-L4)**
 
 Go build tags control which tests run based on isolation level.
@@ -326,5 +323,3 @@ func TestCreateConfig_InReadOnlyDirectory_ShouldFail(t *testing.T) {
 - [File Organization](./file-organization.md) - Directory structure and file naming
 - [Testing Taxonomy](../../taxonomy/) - Complete tag reference
 - [Three-Layer Approach](../../concepts/three-layer-approach.md) - Conceptual overview
-
-{{ diataxis_footer() }}

@@ -81,8 +81,7 @@ func ReleaseCalver() int {
 	}
 
 	// Generate tag with current UTC timestamp: prefix/YYYY.MMDD.HHMM
-	now := time.Now().UTC()
-	tag := fmt.Sprintf("%s/%s.%s", prefix, now.Format("2006.0102"), now.Format("1504"))
+	tag := GenerateCalverTag(prefix, time.Now().UTC())
 
 	// If not creating, just output the tag name
 	if !create {
@@ -116,4 +115,71 @@ func ReleaseCalver() int {
 	}
 
 	return 0
+}
+
+// GenerateCalverTag generates a calendar-versioned tag in format prefix/YYYY.MMDD.HHMM
+func GenerateCalverTag(prefix string, t time.Time) string {
+	return fmt.Sprintf("%s/%s.%s", prefix, t.Format("2006.0102"), t.Format("1504"))
+}
+
+// ParseCalverTag parses a calver tag and returns the prefix and timestamp
+// Returns prefix, time, and error if parsing fails
+func ParseCalverTag(tag string) (string, time.Time, error) {
+	parts := strings.SplitN(tag, "/", 2)
+	if len(parts) != 2 {
+		return "", time.Time{}, fmt.Errorf("invalid calver tag format: %s", tag)
+	}
+
+	prefix := parts[0]
+	version := parts[1]
+
+	// Parse YYYY.MMDD.HHMM format
+	versionParts := strings.Split(version, ".")
+	if len(versionParts) != 3 {
+		return "", time.Time{}, fmt.Errorf("invalid calver version format: %s", version)
+	}
+
+	// Reconstruct as parseable time string: YYYY-MM-DD HH:MM
+	year := versionParts[0]
+	mmdd := versionParts[1]
+	hhmm := versionParts[2]
+
+	if len(mmdd) != 4 || len(hhmm) != 4 {
+		return "", time.Time{}, fmt.Errorf("invalid calver components: %s", version)
+	}
+
+	timeStr := fmt.Sprintf("%s-%s-%s %s:%s", year, mmdd[:2], mmdd[2:], hhmm[:2], hhmm[2:])
+	t, err := time.Parse("2006-01-02 15:04", timeStr)
+	if err != nil {
+		return "", time.Time{}, fmt.Errorf("failed to parse calver time: %w", err)
+	}
+
+	return prefix, t.UTC(), nil
+}
+
+// IsValidCalverVersion checks if a version string matches calver format YYYY.MMDD.HHMM
+func IsValidCalverVersion(version string) bool {
+	parts := strings.Split(version, ".")
+	if len(parts) != 3 {
+		return false
+	}
+
+	// Check year: 4 digits, reasonable range
+	if len(parts[0]) != 4 {
+		return false
+	}
+
+	// Check MMDD: 4 digits
+	if len(parts[1]) != 4 {
+		return false
+	}
+
+	// Check HHMM: 4 digits
+	if len(parts[2]) != 4 {
+		return false
+	}
+
+	// Try parsing to validate
+	_, _, err := ParseCalverTag("test/" + version)
+	return err == nil
 }

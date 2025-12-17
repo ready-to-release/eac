@@ -1,7 +1,4 @@
 # Merge Request Quality Gates
-
-{{ page_breadcrumb() }}
-
 ## Introduction
 
 Merge request quality gates operate at **Stage 3** of the CD Model, serving as the primary approval checkpoint before code merges to the main branch. Stage 3 combines **automated validation** (repeated pre-commit checks plus integration tests) with **human judgment** (peer review).
@@ -556,5 +553,3 @@ Use bots to provide automated feedback:
 - [Release Quality Gates](./release-gates.md) - Stage 9 validation
 - [CD Model Stages 1-7](../cd-model/cd-model-stages-1-7.md) - See Stage 3 in full context
 - [Implementation Patterns](../cd-model/implementation-patterns.md) - RA vs CDe approval differences
-
-{{ diataxis_footer() }}

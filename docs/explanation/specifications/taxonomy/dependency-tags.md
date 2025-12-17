@@ -1,7 +1,4 @@
 # Dependency Tags
-
-{{ page_breadcrumb() }}
-
 > **System, module, and environment dependencies**
 
 Declare required tooling and dependencies for test execution.
@@ -236,5 +233,3 @@ grep -r "@depm:cli-core" specs/
 - [Test Levels](./test-levels.md) - Where dependencies are used
 - [Tag Inheritance](./tag-inheritance.md) - How dependencies accumulate
 - [Test Suites](./test-suites.md) - Dependency handling in test suites
-
-{{ diataxis_footer() }}

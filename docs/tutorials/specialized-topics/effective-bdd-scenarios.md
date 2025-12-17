@@ -1,7 +1,4 @@
 # Effective BDD Scenarios
-
-{{ page_breadcrumb() }}
-
 **Status:** Placeholder - Content coming soon
 
 **Prerequisites:** [Your First Specification](../getting-started/first-specification.md), [TDD with Specifications](../core-workflows/tdd-with-specifications.md)
@@ -175,5 +172,3 @@ Rule: Different discount types calculate correctly
 ### Next Steps
 
 After completing this tutorial, you'll write high-quality specifications. Explore other specialized topics based on your needs: [Architecture Documentation](./architecture-documentation.md), [Security Scanning](./security-scanning-workflow.md), or [TypeScript Setup](./typescript-module-setup.md).
-
-{{ diataxis_footer() }}

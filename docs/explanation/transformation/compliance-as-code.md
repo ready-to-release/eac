@@ -1,7 +1,4 @@
 # Compliance as Code Principles
-
-{{ page_breadcrumb() }}
-
 ## Introduction
 
 "Compliance as Code" applies software engineering best practices to regulatory compliance. Instead of manual documentation and periodic reviews, organizations encode requirements as executable specifications, automate validation, and generate evidence as a delivery pipeline byproduct.
@@ -206,5 +203,3 @@ Organizations typically implement in this order:
 
 - [Why Transform](./why-transformation.md) - Business case
 - [Transformation Framework](./transformation-framework.md) - How to implement
-
-{{ diataxis_footer() }}

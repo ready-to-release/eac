@@ -1,7 +1,4 @@
 # Command Taxonomy
-
-{{ page_breadcrumb() }}
-
 ## Overview
 
 EAC commands are organized into a hierarchical taxonomy based on their primary function. Understanding this organization helps you quickly find the right command for your task.
@@ -235,7 +232,7 @@ Test commands run tests, manage test suites, and analyze test results.
 
 **When to use**: To compile modules in dependency order, both locally and in CI/CD pipelines.
 
-**See also**: [Build Command Reference](../other/build.md)
+**See also**: [Build Command Reference](../build/build.md)
 
 ---
 
@@ -372,7 +369,7 @@ Commands that don't fit into the verb-based categorization:
 - `init`: First-time setup or when changing AI providers
 - `extension-meta`: When integrating with r2r CLI
 
-**See also**: [Other Commands Category](../categories/other.md)
+**See also**: [Build Commands Category](../categories/build.md)
 
 ---
 
@@ -501,5 +498,3 @@ r2r eac get commands
 - [Output Formats](./output-formats.md) - Understanding JSON vs human-readable output
 - [Categories Index](../categories/index.md) - Browse all command categories
 - [Main Index](../index.md) - Command reference home
-
-{{ diataxis_footer() }}

@@ -1,14 +1,14 @@
 # Get Commands
 
-{{ page_breadcrumb() }}
-
 ## Overview
 
-Get commands provide structured JSON output designed for automation, CI/CD pipelines, build scripts, and programmatic processing. All get commands output valid JSON that can be piped through `jq` or processed by other tools.
+Get commands provide structured YAML/JSON/TOML output designed for automation, CI/CD pipelines, build scripts, and programmatic processing.
+
+All get commands output valid YAML/JSON/TOML that can be piped through `jq` or processed by other tools.
 
 **Key Characteristics**:
 
-- Valid JSON output
+- Valid YAML/JSON/TOML output
 - Machine-readable structured data
 - Designed for automation
 - Deterministic and cacheable
@@ -20,53 +20,7 @@ Get commands provide structured JSON output designed for automation, CI/CD pipel
 
 ## All Get Commands
 
-### Module & Repository Information
-
-| Command                                    | Purpose                 | Output Schema                    |
-| ------------------------------------------ | ----------------------- | -------------------------------- |
-| [get modules](../get/modules.md)           | Module contracts        | `{modules: [...]}`               |
-| [get dependencies](../get/dependencies.md) | Dependency graph        | `{dependencies: {...}}`          |
-| [get files](../get/files.md)               | File-to-module mappings | `{files: [...], total: N}`       |
-| [get config](../get/config.md)             | EAC configuration       | `{repository: {...}, ai: {...}}` |
-| [get environments](../get/environments.md) | Environment contracts   | `{environments: [...]}`          |
-
-### Build & Test Information
-
-| Command                                          | Purpose                       | Output Schema              |
-| ------------------------------------------------ | ----------------------------- | -------------------------- |
-| [get artifacts](../get/artifacts.md)             | Resolved artifacts for module | `{artifacts: [...]}`       |
-| [get build-deps](../get/build-deps.md)           | Build dependencies            | `{dependencies: [...]}`    |
-| [get build-times](../get/build-times.md)         | Build performance data        | `{builds: [...]}`          |
-| [get execution order](../get/execution-order.md) | Dependency-based build order  | `{execution_order: [...]}` |
-| [get suite](../get/suite.md)                     | Test suite information        | `{name: ..., tests: N}`    |
-| [get tests](../get/tests.md)                     | All tests in repository       | `{tests: [...], total: N}` |
-| [get test-timings](../get/test-timings.md)       | Test performance data         | `{tests: [...]}`           |
-
-### Change Detection
-
-| Command                                                | Purpose                           | Output Schema                                |
-| ------------------------------------------------------ | --------------------------------- | -------------------------------------------- |
-| [get changed-modules](../get/changed-modules.md)       | Modules affected by local changes | `{changed_modules: [...]}`                   |
-| [get changed-modules-ci](../get/changed-modules-ci.md) | Modules requiring rebuild         | `{changed_modules: [...], base_commit: ...}` |
-
-### Command Metadata
-
-| Command                                        | Purpose                                | Output Schema                    |
-| ---------------------------------------------- | -------------------------------------- | -------------------------------- |
-| [get commands](../get/commands.md)             | Command metadata for shell integration | `{commands: [...], tree: {...}}` |
-| [get valid-commands](../get/valid-commands.md) | All valid commands                     | `{commands: [...]}`              |
-
-### Specifications
-
-| Command                                                | Purpose                       | Output Schema           |
-| ------------------------------------------------------ | ----------------------------- | ----------------------- |
-| [get specs unused-steps](../get/specs-unused-steps.md) | Unused godog step definitions | `{unused_steps: [...]}` |
-
-### Base Command
-
-| Command              | Purpose                  | Output Schema        |
-| -------------------- | ------------------------ | -------------------- |
-| [get](../get/get.md) | Retrieve repository data | Varies by subcommand |
+<!-- book:category-commands get -->
 
 ## Common Patterns
 
@@ -416,5 +370,3 @@ r2r eac get modules | jq '.modules[] | "\(.moniker): \(.files) files"'
 - [Show Commands](./show.md) - Human-readable output
 - [Output Formats](../overview/output-formats.md) - JSON vs formatted
 - [Command Taxonomy](../overview/command-taxonomy.md) - Command organization
-
-{{ diataxis_footer() }}

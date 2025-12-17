@@ -1,7 +1,4 @@
 # Quality Gates
-
-{{ page_breadcrumb() }}
-
 ## Introduction
 
 Quality gates are automated and manual checkpoints throughout the software delivery pipeline that ensure code meets defined standards before progressing to the next stage. They embody a fundamental principle: **catch issues early, when they're cheapest and easiest to fix**.
@@ -300,5 +297,3 @@ Later stages assume earlier stages passed - don't repeat validations unnecessari
 - [CD Model Stages 1-7](../cd-model/cd-model-stages-1-7.md) - See gates in development context
 - [Implementation Patterns](../cd-model/implementation-patterns.md) - RA vs CDe gate differences
 - [Testing Strategy](../testing/testing-strategy-overview.md) - How testing integrates with gates
-
-{{ diataxis_footer() }}

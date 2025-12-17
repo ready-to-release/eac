@@ -1,8 +1,5 @@
 
 # CD Model: Stages 8-12 (Release to Production)
-
-{{ page_breadcrumb() }}
-
 ## Introduction
 
 Stages 8-12 of the Continuous Delivery Model cover the release, deployment, and operational phases. These stages transition validated software from testing environments into production, where it serves end users. The focus shifts from development and testing to stakeholder validation, controlled deployment, and operational excellence.
@@ -543,5 +540,3 @@ These stages emphasize controlled release, comprehensive monitoring, and risk mi
 - [CD Model Overview](cd-model-overview.md)
 - [Stages 1-7](cd-model-stages-1-7.md)
 - [Trunk-Based Development](../workflow/trunk-based-development.md)
-
-{{ diataxis_footer() }}

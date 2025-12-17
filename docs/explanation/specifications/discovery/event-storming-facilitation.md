@@ -1,7 +1,4 @@
 # Event Storming Facilitation
-
-{{ page_breadcrumb() }}
-
 > **Running effective Event Storming workshops**
 
 Learn how to facilitate successful Event Storming sessions.
@@ -421,5 +418,3 @@ Use this checklist when preparing to facilitate:
 - [Event Storming Formats](./event-storming-formats.md) - Big Picture, Process, Design
 - [Example Mapping](./example-mapping.md) - Next step after Event Storming
 - [Ubiquitous Language](../concepts/ubiquitous-language.md) - Using discovered vocabulary
-
-{{ diataxis_footer() }}

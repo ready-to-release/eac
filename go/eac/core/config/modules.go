@@ -18,6 +18,7 @@ type Module struct {
 	Build         *ModuleBuild           `yaml:"build,omitempty"`          // Per-module build configuration
 	DockerBuild   map[string]interface{} `yaml:"docker_build,omitempty"`   // Per-module Docker build configuration
 	Books         []string               `yaml:"books,omitempty"`          // Book names to build for this module (references books.yml)
+	EvidenceBooks []string               `yaml:"evidence_books,omitempty"` // Evidence book names, built via 'update evidence' command
 	ReleaseBundle *ReleaseBundle         `yaml:"release_bundle,omitempty"` // Release bundle configuration (for release modules)
 	Files         Files                  `yaml:"files"`
 	Flags         Flags                  `yaml:"flags"`

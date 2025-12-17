@@ -1,7 +1,4 @@
 # CI/CD Integration
-
-{{ page_breadcrumb() }}
-
 **Status:** Placeholder - Content coming soon
 
 **Prerequisites:** [Making Your First Release](../core-workflows/making-first-release.md), GitHub Actions basics
@@ -204,5 +201,3 @@ Common issues and solutions:
 ### Next Steps
 
 After completing this tutorial, you'll have a complete CI/CD pipeline. Continue to [Multi-Module Development](./multi-module-development.md) to learn how to manage dependencies across multiple modules.
-
-{{ diataxis_footer() }}

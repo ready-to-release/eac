@@ -1,7 +1,4 @@
 # templates Commands
-
-{{ page_breadcrumb() }}
-
 Install project templates for documentation, AI prompts, reports, and specifications.
 
 ## Commands in this Category
@@ -33,5 +30,3 @@ r2r templates install reports --debug
 
 - [Category Overview](../categories/templates.md)
 - [create spec](../create/spec.md)
-
-{{ diataxis_footer() }}

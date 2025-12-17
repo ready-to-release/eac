@@ -1,7 +1,4 @@
 # Explore Your Repository
-
-{{ page_breadcrumb() }}
-
 ## What You'll Accomplish
 
 Discover what modules, files, and dependencies exist in your repository using show commands.
@@ -86,5 +83,3 @@ r2r eac get modules | jq '.modules[] | select(.moniker == "src-auth")'
 - [`show dependencies`](../../../../reference/commands/show/dependencies.md) - Show dependency graph
 - [`show files`](../../../../reference/commands/show/files.md) - Show file ownership
 - [`get modules`](../../../../reference/commands/get/modules.md) - Get modules as JSON
-
-{{ diataxis_footer() }}

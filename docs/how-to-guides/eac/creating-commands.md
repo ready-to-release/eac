@@ -1,7 +1,4 @@
 # Creating CLI Commands
-
-{{ page_breadcrumb() }}
-
 This guide is for developers contributing new commands to the EAC CLI in `go/eac/commands/impl/`.
 
 ## Overview
@@ -363,5 +360,3 @@ See these well-documented commands for examples:
 - `go/eac/commands/impl/validate/specs.go` - Format flag with completion
 - `go/eac/commands/impl/show/modules.go` - Simple read-only command
 - `go/eac/commands/impl/help/help.go` - Command with verbose flag
-
-{{ diataxis_footer() }}

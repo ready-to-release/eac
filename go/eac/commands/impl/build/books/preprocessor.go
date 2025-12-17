@@ -98,9 +98,16 @@ func (p *Preprocessor) Preprocess() error {
 		return fmt.Errorf("step 6 (inline): %w", err)
 	}
 
-	// Step 8: Strip nav titles and macros (PDF only)
-	// awesome-nav warns about top-level titles which conflict with PDF navigation
-	// Macros like {{ diataxis_footer() }} are only processed by site builds
+	// Step 6b: Process command help markers
+	// Replaces <!-- book:cmd build --> with formatted command help
+	p.log("  Step 6b: Processing command help markers...")
+	if err := p.processCommandMarkers(); err != nil {
+		return fmt.Errorf("step 6b (command markers): %w", err)
+	}
+
+	// Step 8: Handle navigation macros
+	// PDF mode: Strip nav titles and macros (not processed by PDF builds)
+	// Site mode: Inject navigation macros for Diátaxis sections
 	if p.pdfMode {
 		p.log("  Step 8a: Stripping nav titles...")
 		if err := p.stripNavTitles(); err != nil {
@@ -109,6 +116,13 @@ func (p *Preprocessor) Preprocess() error {
 		p.log("  Step 8b: Stripping macros...")
 		if err := p.stripMacros(); err != nil {
 			return fmt.Errorf("step 8b (strip macros): %w", err)
+		}
+	} else {
+		// Site mode: inject navigation macros into Diátaxis sections
+		// Adds {{ page_breadcrumb() }} after title and {{ diataxis_footer() }} at end
+		p.log("  Step 8: Injecting navigation macros...")
+		if err := p.injectMacros(); err != nil {
+			return fmt.Errorf("step 8 (inject macros): %w", err)
 		}
 	}
 

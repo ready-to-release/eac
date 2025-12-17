@@ -1,7 +1,4 @@
 # Documentation
-
-{{ page_breadcrumb() }}
-
 Learn how to create and maintain documentation with templates, specifications, and architecture diagrams.
 
 ## In This Section
@@ -32,5 +29,3 @@ Learn how to create and maintain documentation with templates, specifications, a
 - MkDocs documentation sites
 - Template-based consistency
 - Automated generation
-
-{{ diataxis_footer() }}

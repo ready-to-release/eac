@@ -1,7 +1,4 @@
 # Deployment
-
-{{ page_breadcrumb() }}
-
 ## Introduction
 
 Deployment is the process of delivering software from artifacts to running production environments. How you deploy directly impacts risk, downtime, and ability to respond to problems.
@@ -98,5 +95,3 @@ The right strategy depends on:
 
 - [Deployment Strategies Reference](./deployment-strategies.md) - Strategy comparison table
 - [Deployment Rings Reference](./deployment-rings.md) - Ring structure table
-
-{{ diataxis_footer() }}

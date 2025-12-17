@@ -1,7 +1,4 @@
 # get Commands
-
-{{ page_breadcrumb() }}
-
 Retrieve repository data in structured JSON format for automation and scripting.
 
 ## Commands in this Category
@@ -45,5 +42,3 @@ r2r eac get changed-modules-ci
 
 - [Category Overview](../categories/get.md)
 - [show Commands](../show/index.md) - Human-readable output
-
-{{ diataxis_footer() }}

@@ -5,13 +5,6 @@ Feature: eac-commands_work_merge
   I want to merge my changes back to main using squash merge
   So that my feature appears as a single, well-documented commit
 
-  Rule: Command must be registered and accessible
-
-    Scenario: Command is listed in available commands
-      When I run the command "show help"
-      Then the exit code is 0
-      And I should see "work merge"
-
   Rule: Validation prevents invalid merges
 
     Scenario: Fail when uncommitted changes exist

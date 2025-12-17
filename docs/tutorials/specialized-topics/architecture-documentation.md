@@ -1,7 +1,4 @@
 # Architecture Documentation
-
-{{ page_breadcrumb() }}
-
 **Status:** Placeholder - Content coming soon
 
 **Prerequisites:** [Your First Module](../getting-started/first-module.md), understanding of C4 model
@@ -215,5 +212,3 @@ The tutorial uses Structurizr Lite (Docker) to view diagrams:
 ### Next Steps
 
 After completing this tutorial, you'll maintain living architecture documentation. Explore other specialized topics: [Effective BDD Scenarios](./effective-bdd-scenarios.md), [Security Scanning](./security-scanning-workflow.md), or [TypeScript Setup](./typescript-module-setup.md).
-
-{{ diataxis_footer() }}

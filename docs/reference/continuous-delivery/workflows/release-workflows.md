@@ -1,7 +1,4 @@
 # Release Workflows
-
-{{ page_breadcrumb() }}
-
 Reference for release workflows that publish deployable artifacts.
 
 ## Overview
@@ -522,5 +519,3 @@ ls -lh out/build/r2r-cli/
 - [Versioning](../changelog/versioning.md) - Semantic versioning rules
 - [Repository Layout](../../r2r-eac/repository-layout.md) - Module structure
 - Release workflow files: `.github/workflows/release-*.yaml`
-
-{{ diataxis_footer() }}

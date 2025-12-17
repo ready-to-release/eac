@@ -1,7 +1,4 @@
 # Show Commands
-
-{{ page_breadcrumb() }}
-
 ## Overview
 
 Show commands display repository information in human-readable formats optimized for interactive terminal use. They provide formatted tables, lists, and text designed for visual consumption rather than programmatic processing.
@@ -20,44 +17,7 @@ Show commands display repository information in human-readable formats optimized
 
 ## All Show Commands
 
-### Module & Repository Information
-
-| Command                                        | Purpose                         | Output         |
-| ---------------------------------------------- | ------------------------------- | -------------- |
-| [show modules](../show/modules.md)             | Display module contracts        | Table          |
-| [show moduletypes](../show/moduletypes.md)     | Module types grouped by count   | Grouped list   |
-| [show dependencies](../show/dependencies.md)   | Module dependency graph         | Table          |
-| [show files](../show/files.md)                 | Repository files with ownership | Table          |
-| [show files-changed](../show/files-changed.md) | Modified files with ownership   | Table          |
-| [show files-staged](../show/files-staged.md)   | Staged files with ownership     | Table          |
-| [show config](../show/config.md)               | Configuration with defaults     | Formatted text |
-
-### Build & Test Results
-
-| Command                                        | Purpose                          | Output          |
-| ---------------------------------------------- | -------------------------------- | --------------- |
-| [show build-summary](../show/build-summary.md) | Build summary for GitHub Actions | Markdown report |
-| [show build-times](../show/build-times.md)     | Build timing analysis            | Table           |
-| [show test-summary](../show/test-summary.md)   | Test summary for GitHub Actions  | Markdown report |
-| [show test-timings](../show/test-timings.md)   | Test timing analysis             | Table           |
-| [show tests](../show/tests.md)                 | All tests in repository          | Table           |
-| [show suite](../show/suite.md)                 | Test suite details               | Formatted text  |
-
-### Environment & Workspace
-
-| Command                                      | Purpose                     | Output |
-| -------------------------------------------- | --------------------------- | ------ |
-| [show environments](../show/environments.md) | Environment contracts       | Table  |
-| [show workspaces](../show/workspaces.md)     | Git worktrees and status    | Table  |
-| [show artifacts](../show/artifacts.md)       | Build artifacts with status | Table  |
-| [show books](../show/books.md)               | Documentation books         | Table  |
-
-### Help System
-
-| Command                                          | Purpose                  | Output         |
-| ------------------------------------------------ | ------------------------ | -------------- |
-| [show help](../show/help.md)                     | Command help information | Formatted text |
-| [show valid-commands](../show/valid-commands.md) | All valid commands       | Table          |
+<!-- book:category-commands show -->
 
 ## Common Patterns
 
@@ -386,5 +346,3 @@ r2r eac get modules | jq -r '.modules[] | "\(.moniker): \(.type)"'
 - [Output Formats](../overview/output-formats.md) - Understanding output types
 - [Command Taxonomy](../overview/command-taxonomy.md) - Command organization
 - [Show Commands Guide](../../../how-to-guides/eac/commands/getting-started/explore-your-repository.md) - How-to guide
-
-{{ diataxis_footer() }}

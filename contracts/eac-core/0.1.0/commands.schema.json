@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "commands.schema.json",
+  "title": "EAC Commands Configuration",
+  "description": "Configuration for CLI command documentation mapping rules",
+  "type": "object",
+  "required": ["categories"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Schema reference"
+    },
+    "defaults": {
+      "type": "object",
+      "description": "Default behavior settings",
+      "properties": {
+        "docs_base": {
+          "type": "string",
+          "description": "Base path for command documentation",
+          "default": "docs/reference/commands"
+        },
+        "uncategorized_folder": {
+          "type": "string",
+          "description": "Folder for single-word commands that aren't category roots",
+          "default": "core"
+        }
+      },
+      "additionalProperties": false
+    },
+    "categories": {
+      "type": "object",
+      "description": "Allowed command categories (verbs). Keys are category names.",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Human-readable description of this category"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "overrides": {
+      "type": "object",
+      "description": "Per-command explicit overrides. Keys are command names.",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Explicit documentation path override"
+          },
+          "skip_docs": {
+            "type": "boolean",
+            "description": "Skip documentation requirement for this command"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

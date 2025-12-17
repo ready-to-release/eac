@@ -1,7 +1,4 @@
 # Quality & Maintenance
-
-{{ page_breadcrumb() }}
-
 > **Maintaining healthy, living specifications**
 
 Learn how to keep specifications synchronized with implementation through continuous review and iteration.
@@ -349,5 +346,3 @@ r2r eac validate test-tags
 
 - [Size Guidelines](../organization/size-guidelines.md) - Rule and scenario limits
 - [File Structure](../organization/file-structure.md) - Organizing specifications
-
-{{ diataxis_footer() }}

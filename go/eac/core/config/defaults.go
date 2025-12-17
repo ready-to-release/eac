@@ -378,6 +378,9 @@ func MergeRepository(defaults, user *RepositoryConfig) *RepositoryConfig {
 	if user.Repository.Parallelism.Devbox != 0 {
 		result.Repository.Parallelism.Devbox = user.Repository.Parallelism.Devbox
 	}
+	if user.Repository.OptimizeGitLsInCI {
+		result.Repository.OptimizeGitLsInCI = user.Repository.OptimizeGitLsInCI
+	}
 
 	// Override paths if set
 	if user.Paths.SpecsRoot != "" {

@@ -1,7 +1,4 @@
 # Control Tags
-
-{{ page_breadcrumb() }}
-
 > **Risk and compliance control linkage**
 
 Link scenarios to standardized security and compliance requirements using [NIST OSCAL](https://pages.nist.gov/OSCAL/) format.
@@ -280,5 +277,3 @@ Feature: auth_password-authentication
 - [Risk Controls](../compliance/risk-controls.md) - Complete risk control documentation
 - [GxP Tagging](../compliance/gxp-tagging.md) - Regulatory compliance tagging
 - [Verification Tags](./verification-tags.md) - Types of validation
-
-{{ diataxis_footer() }}

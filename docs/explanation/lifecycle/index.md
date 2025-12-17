@@ -1,7 +1,4 @@
 # Software Development Lifecycle
-
-{{ page_breadcrumb() }}
-
 The complete software lifecycle from initiation through end-of-life, balancing regulatory compliance with continuous delivery in a DevOps model.
 
 ## In This Section
@@ -23,5 +20,3 @@ The complete software lifecycle from initiation through end-of-life, balancing r
 The drawing below is interactive, allowing you to navigate to relevant sections of the documentation by clicking the boxes.
 
 ![](../../assets/lifecycle/lifecycle.drawio){ width="100%" }
-
-{{ diataxis_footer() }}

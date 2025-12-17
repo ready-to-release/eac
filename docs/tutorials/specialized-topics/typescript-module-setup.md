@@ -1,7 +1,4 @@
 # TypeScript Module Setup
-
-{{ page_breadcrumb() }}
-
 **Status:** Placeholder - Content coming soon
 
 **Prerequisites:** [Your First Module](../getting-started/first-module.md), Node.js and npm installed
@@ -278,5 +275,3 @@ jobs:
 ### Next Steps
 
 After completing this tutorial, you can work with TypeScript modules in the monorepo. Explore other specialized topics based on your needs: [Effective BDD Scenarios](./effective-bdd-scenarios.md), [Architecture Documentation](./architecture-documentation.md), or [Security Scanning](./security-scanning-workflow.md).
-
-{{ diataxis_footer() }}

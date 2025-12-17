@@ -75,18 +75,18 @@ runs:
           FLAGS="$FLAGS --no-skip-static"
         fi
 
-        # Run the await-deps command
-        # Capture output for parsing while also displaying it
-        OUTPUT=$($COMMANDS release await-deps "$MODULE" $FLAGS 2>&1) || EXIT_CODE=$?
-        echo "$OUTPUT"
+        # First run in text mode for display
+        $COMMANDS release await-deps "$MODULE" $FLAGS 2>&1 || true
 
-        # Parse output for counts (basic parsing)
-        PASSED=$(echo "$OUTPUT" | grep -oP 'All \K\d+(?= dependency CI)' || echo "0")
-        SKIPPED=$(echo "$OUTPUT" | grep -oP '\(\K\d+(?= skipped\))' || echo "0")
-        TOTAL=$((PASSED + SKIPPED))
+        # Then run in shell mode for structured output
+        # Shell format outputs: HAS_FAILED, PASSED_COUNT, SKIPPED_COUNT, DEPS_LIST
+        SHELL_OUTPUT=$($COMMANDS release await-deps "$MODULE" $FLAGS --format shell 2>/dev/null) || EXIT_CODE=$?
+        eval "$SHELL_OUTPUT"
 
-        echo "passed_count=$PASSED" >> $GITHUB_OUTPUT
-        echo "skipped_count=$SKIPPED" >> $GITHUB_OUTPUT
+        # Set outputs from shell variables
+        TOTAL=$((PASSED_COUNT + SKIPPED_COUNT))
+        echo "passed_count=$PASSED_COUNT" >> $GITHUB_OUTPUT
+        echo "skipped_count=$SKIPPED_COUNT" >> $GITHUB_OUTPUT
         echo "total_deps=$TOTAL" >> $GITHUB_OUTPUT
 
         # Exit with the command's exit code
@@ -95,26 +95,23 @@ runs:
     - name: Summary
       if: always()
       shell: bash
+      env:
+        COMMANDS: ${{ steps.commands.outputs.commands-path }}
       run: |
         MODULE="${{ inputs.module }}"
         PASSED="${{ steps.await.outputs.passed_count }}"
         SKIPPED="${{ steps.await.outputs.skipped_count }}"
-        TOTAL="${{ steps.await.outputs.total_deps }}"
 
-        echo "## Dependency CI Check: $MODULE" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-
+        # Determine status
         if [ "${{ steps.await.outcome }}" = "success" ]; then
-          echo ":white_check_mark: All dependency CI checks passed" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Dependencies Checked | $PASSED |" >> $GITHUB_STEP_SUMMARY
-          if [ "$SKIPPED" != "0" ]; then
-            echo "| Skipped (no CI) | $SKIPPED |" >> $GITHUB_STEP_SUMMARY
-          fi
+          STATUS="success"
         else
-          echo ":x: Dependency CI check failed" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "One or more dependencies have failing CI. See logs for details." >> $GITHUB_STEP_SUMMARY
+          STATUS="failure"
         fi
+
+        # Generate summary using Go command
+        $COMMANDS show dependency-ci-summary \
+          --module="$MODULE" \
+          --passed="$PASSED" \
+          --skipped="$SKIPPED" \
+          --status="$STATUS" >> $GITHUB_STEP_SUMMARY

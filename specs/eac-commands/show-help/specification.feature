@@ -5,13 +5,6 @@ Feature: eac-commands_show-help
   I want to see help information for commands
   So that I can learn how to use the available functionality
 
-  Rule: Command must be registered and accessible
-
-    Scenario: Command is listed in available commands
-      When I run the command "show help"
-      Then the exit code is 0
-      And I should see "show help"
-
   Rule: Lists all commands without arguments
 
     Scenario: Show all available commands

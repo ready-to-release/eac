@@ -47,20 +47,18 @@ jobs:
           # This workflow only triggers full rebuilds, so any success means HEAD was fully tested
           TWO_HOURS_AGO=$(date -u -d '2 hours ago' '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || date -u -v-2H '+%Y-%m-%dT%H:%M:%SZ')
 
-          echo "Looking for successful runs since: $TWO_HOURS_AGO"
+          echo "Looking for successful runs in the last 2 hours..."
 
-          RECENT_SUCCESS=$(gh run list \
-            --repo ${{ github.repository }} \
+          # Use Go command to check for recent successful run
+          eval $($COMMANDS pipeline check-recent-run \
             --workflow "cron-full-trigger.yaml" \
-            --branch main \
-            --status success \
-            --json headSha,createdAt \
-            | jq --arg cutoff "$TWO_HOURS_AGO" --arg sha "${{ github.sha }}" \
-              '[.[] | select(.createdAt > $cutoff and .headSha == $sha)] | length')
+            --sha "${{ github.sha }}" \
+            --since 2h \
+            --format shell)
 
-          echo "Recent successful full rebuilds for this HEAD: ${RECENT_SUCCESS:-0}"
+          echo "Has recent successful rebuild: $HAS_RECENT"
 
-          if [ "${RECENT_SUCCESS:-0}" -gt 0 ]; then
+          if [ "$HAS_RECENT" = "true" ]; then
             echo "skip=true" >> $GITHUB_OUTPUT
             echo ""
             echo "HEAD already has successful full rebuild within last 2 hours - skipping"

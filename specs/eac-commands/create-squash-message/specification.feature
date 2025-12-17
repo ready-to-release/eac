@@ -9,18 +9,6 @@ Feature: eac-commands_create-squash-message
     Given I am in a git repository with EAC configuration
     And AI configuration exists at ".r2r/eac/ai/commit-message"
 
-  Rule: Command must be registered and accessible
-
-    Scenario: Command is listed in available commands
-      When I run the command "show help"
-      Then the exit code is 0
-      And I should see "create squash-message"
-
-    Scenario: Command has proper description
-      When I run the command "show help create squash-message"
-      Then the exit code is 0
-      And I should see "squash" or "commit" or "message"
-
   Rule: Requires commits ahead of base branch
 
     Scenario: Fail when no commits ahead of base

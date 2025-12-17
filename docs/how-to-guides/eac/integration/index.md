@@ -1,7 +1,4 @@
 # Integration Guides
-
-{{ page_breadcrumb() }}
-
 Learn how to integrate EAC with your development tools and workflows.
 
 ## Coming Soon
@@ -167,5 +164,3 @@ While this section is being developed, see:
 - [Development Workflow](../commands/development-workflow/index.md)
 - [Build, Test & Validate](../commands/build-test-validate/index.md)
 - [Release Management](../commands/release-management/index.md)
-
-{{ diataxis_footer() }}

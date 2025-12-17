@@ -1,7 +1,4 @@
 # work Commands
-
-{{ page_breadcrumb() }}
-
 Workspace management using git worktrees for parallel development.
 
 ## Commands in this Category
@@ -32,5 +29,3 @@ r2r eac work merge
 
 - [Category Overview](../categories/work.md)
 - [create commit-message](../create/commit-message.md)
-
-{{ diataxis_footer() }}

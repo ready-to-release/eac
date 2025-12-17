@@ -1,7 +1,4 @@
 # Run Tests for Module
-
-{{ page_breadcrumb() }}
-
 ## What You'll Accomplish
 
 Execute tests for a module and view results with timing information and coverage.
@@ -99,5 +96,3 @@ r2r eac show test-timings src-auth
 - [`test`](../../../../reference/commands/test/test.md) - Full command reference
 - [`show test-summary`](../../../../reference/commands/show/test-summary.md) - View summary
 - [`test debug`](../../../../reference/commands/test/debug.md) - Debug failures
-
-{{ diataxis_footer() }}

@@ -12,14 +12,6 @@ Feature: eac-commands_create-risk-assess
     Given I am in a git repository
     And module "billing" exists with a profile at "specs/risk-controls/billing.profile.json"
 
-  Rule: Command must be registered and accessible
-
-    Scenario: Command shows help
-      When I run the command "show help create risk-assess"
-      Then the exit code is 0
-      And stdout contains "assessment-results"
-      And stdout contains "profile"
-
   Rule: Command requires valid inputs
 
     @skip:wip

@@ -1,7 +1,4 @@
 # Event Storming Overview
-
-{{ page_breadcrumb() }}
-
 > **Collaborative technique for discovering Ubiquitous Language through domain exploration**
 
 ---
@@ -167,5 +164,3 @@ Feature: Order Approval Process
 - [Event Storming Facilitation](./event-storming-facilitation.md) - How to run workshops
 - [Ubiquitous Language](../concepts/ubiquitous-language.md) - DDD foundation for shared vocabulary
 - [Example Mapping](./example-mapping.md) - Requirements discovery using Event Storming vocabulary
-
-{{ diataxis_footer() }}

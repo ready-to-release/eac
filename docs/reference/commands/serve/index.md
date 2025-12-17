@@ -1,7 +1,4 @@
 # serve Commands
-
-{{ page_breadcrumb() }}
-
 Start development servers for documentation and architecture visualization.
 
 ## Commands in this Category
@@ -25,5 +22,3 @@ r2r eac serve design src-auth
 
 - [Category Overview](../categories/serve.md)
 - [create design](../create/design.md)
-
-{{ diataxis_footer() }}

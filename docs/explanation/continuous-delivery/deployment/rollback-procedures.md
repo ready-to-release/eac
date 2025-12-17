@@ -1,7 +1,4 @@
 # Rollback Procedures
-
-{{ page_breadcrumb() }}
-
 How to plan and execute production rollbacks.
 
 ## When to Roll Back
@@ -149,5 +146,3 @@ Schedule regular rollback drills:
 - [Production Deployment](../cd-model/cd-model-stages-8-12.md#stage-10-production-deployment) - CD Model Stage 10
 - [Incident Response](./incident-response.md) - Handle production incidents
 - [Feature Flags](./feature-flags.md) - Instant rollback via feature toggles
-
-{{ diataxis_footer() }}

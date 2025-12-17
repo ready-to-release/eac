@@ -1,7 +1,4 @@
 # Compliance Transformation Framework
-
-{{ page_breadcrumb() }}
-
 ## Introduction
 
 Compliance transformation is a journey, not a destination. Organizations that successfully transform compliance practices do so through a structured, phased approach that proves the concept with a pilot, builds reusable automation, and scales systematically across the organization.
@@ -478,5 +475,3 @@ To begin transformation:
 - [Compliance as Code](compliance-as-code.md) - Core principles
 - [CD Model](../continuous-delivery/cd-model/cd-model-overview.md) - Pipeline integration points
 - [Testing Strategy](../continuous-delivery/testing/testing-strategy-overview.md) - Testing approach
-
-{{ diataxis_footer() }}

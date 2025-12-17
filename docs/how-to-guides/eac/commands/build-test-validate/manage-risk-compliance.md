@@ -1,7 +1,4 @@
 # Manage Risk Compliance
-
-{{ page_breadcrumb() }}
-
 ## What You'll Accomplish
 
 Track security compliance using OSCAL (Open Security Controls Assessment Language) with automated evidence collection.
@@ -157,5 +154,3 @@ When tests run, evidence is collected for AC-1.
 - [`create risk-assess`](../../../../reference/commands/create/risk-assess.md) - Update assessment
 - [`scan compliance`](../../../../reference/commands/scan/compliance.md) - Check compliance
 - [`validate risk-profile`](../../../../reference/commands/validate/risk-profile.md) - Validate profile
-
-{{ diataxis_footer() }}

@@ -1,7 +1,4 @@
 # Review and Iterate: Living Specifications
-
-{{ page_breadcrumb() }}
-
 ## Overview
 
 Specifications are living documents that evolve with understanding. This article explains how to continuously refine specifications after Example Mapping.
@@ -335,5 +332,3 @@ grep -r "Scenario:" specs/ | cut -d: -f1 | uniq -c | sort -rn
 ## Quick Reference
 
 - [Spec Quality Checklist](spec-quality-checklist.md) - Health indicators
-
-{{ diataxis_footer() }}

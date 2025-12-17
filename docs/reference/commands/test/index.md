@@ -1,7 +1,4 @@
 # test Commands
-
-{{ page_breadcrumb() }}
-
 Testing and test suite management for BDD specifications and unit tests.
 
 ## Commands in this Category
@@ -30,5 +27,3 @@ r2r eac test debug
 
 - [Category Overview](../categories/test.md)
 - [show test-summary](../show/test-summary.md)
-
-{{ diataxis_footer() }}

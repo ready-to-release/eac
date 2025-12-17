@@ -1,7 +1,4 @@
 # View Release Specifications
-
-{{ page_breadcrumb() }}
-
 ## What You'll Accomplish
 
 Learn how to view and analyze specification files (.feature files) that were added or modified for a specific release using the `show specs` and `get specs` commands.
@@ -284,5 +281,3 @@ r2r eac show specs eac-commands
 - [get specs Reference](../../../../reference/commands/get/specs.md) - JSON/YAML output reference
 - [View Changelog and Release Notes](./view-changelog-release-notes.md) - View changes and notes
 - [Generate Changelog](./generate-changelog.md) - Create changelog entries
-
-{{ diataxis_footer() }}

@@ -1,7 +1,4 @@
 # Implementation Guides
-
-{{ page_breadcrumb() }}
-
 > **Language-specific guides for implementing BDD specifications**
 
 Learn how to implement executable specifications using your programming language and BDD framework.
@@ -319,5 +316,3 @@ src/mymodule/tests/
 ### Quality
 
 - [Review and Iterate](../quality/review-and-iterate.md) - Maintaining specifications
-
-{{ diataxis_footer() }}

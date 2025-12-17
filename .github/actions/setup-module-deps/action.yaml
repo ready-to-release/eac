@@ -48,11 +48,11 @@ runs:
         fi
 
         if [ "$INPUT_DEPS" = "auto" ]; then
-          # Get build dependencies directly from the commands binary
+          # Get build dependencies directly from the commands binary (shell format)
           # This queries module-types.yml configuration - the source of truth
-          RESULT=$($COMMANDS get build-deps "$MODULE" --as-json)
-          MODULE_TYPE=$(echo "$RESULT" | jq -r '.type')
-          DEPS=$(echo "$RESULT" | jq -r '.build_deps | join(",")')
+          eval $($COMMANDS get build-deps "$MODULE" --format shell)
+          # Shell format sets: MODULE_TYPE, BUILD_DEPS
+          DEPS="$BUILD_DEPS"
 
           echo "Module: $MODULE"
           echo "Type: $MODULE_TYPE"
@@ -189,6 +189,7 @@ runs:
       if: steps.resolve.outputs.deps != ''
       shell: bash
       env:
+        COMMANDS: ${{ inputs.commands-path }}
         DEPS: ${{ steps.resolve.outputs.deps }}
         MODULE: ${{ inputs.module }}
         GO_AVAILABLE: ${{ steps.go-check.outputs.available }}
@@ -197,48 +198,14 @@ runs:
         QEMU_AVAILABLE: ${{ steps.qemu-check.outputs.available }}
         UPX_AVAILABLE: ${{ steps.upx-check.outputs.available }}
       run: |
-        echo "### Dependencies Setup for \`${MODULE}\`" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "| Dependency | Status |" >> $GITHUB_STEP_SUMMARY
-        echo "|------------|--------|" >> $GITHUB_STEP_SUMMARY
+        # Build flags for Go command
+        FLAGS="--module=$MODULE --deps=$DEPS"
 
-        if [[ "$DEPS" == *"go"* ]]; then
-          if [ "$GO_AVAILABLE" = "true" ]; then
-            echo "| Go | Already available |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| Go | Installed |" >> $GITHUB_STEP_SUMMARY
-          fi
-        fi
-        if [[ "$DEPS" == *"upx"* ]]; then
-          if [ "$UPX_AVAILABLE" = "true" ]; then
-            echo "| UPX | Already available |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| UPX | Installed |" >> $GITHUB_STEP_SUMMARY
-          fi
-        fi
-        if [[ "$DEPS" == *"node"* ]] || [[ "$DEPS" == *"npm"* ]]; then
-          if [ "$NODE_AVAILABLE" = "true" ]; then
-            echo "| Node.js | Already available |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| Node.js | Installed |" >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "| npm packages | Installed |" >> $GITHUB_STEP_SUMMARY
-        fi
-        if [[ "$DEPS" == *"buildx"* ]]; then
-          if [ "$BUILDX_AVAILABLE" = "true" ]; then
-            echo "| Docker Buildx | Already configured |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| Docker Buildx | Configured |" >> $GITHUB_STEP_SUMMARY
-          fi
-          if [ "$QEMU_AVAILABLE" = "true" ]; then
-            echo "| QEMU | Already available |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| QEMU | Configured |" >> $GITHUB_STEP_SUMMARY
-          fi
-        elif [[ "$DEPS" == *"docker"* ]]; then
-          if [ "$BUILDX_AVAILABLE" = "true" ]; then
-            echo "| Docker Buildx | Already configured |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| Docker Buildx | Configured |" >> $GITHUB_STEP_SUMMARY
-          fi
-        fi
+        [ "$GO_AVAILABLE" = "true" ] && FLAGS="$FLAGS --go-available"
+        [ "$NODE_AVAILABLE" = "true" ] && FLAGS="$FLAGS --node-available"
+        [ "$BUILDX_AVAILABLE" = "true" ] && FLAGS="$FLAGS --buildx-available"
+        [ "$QEMU_AVAILABLE" = "true" ] && FLAGS="$FLAGS --qemu-available"
+        [ "$UPX_AVAILABLE" = "true" ] && FLAGS="$FLAGS --upx-available"
+
+        # Generate summary using Go command
+        $COMMANDS show deps-setup-summary $FLAGS >> $GITHUB_STEP_SUMMARY

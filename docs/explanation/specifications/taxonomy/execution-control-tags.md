@@ -1,7 +1,4 @@
 # Execution Control Tags
-
-{{ page_breadcrumb() }}
-
 > **Skipping and manual test execution**
 
 Control how tests are executed in the test suite.
@@ -231,5 +228,3 @@ specs/.evidence/
 - [Verification Tags](./verification-tags.md) - Types of validation
 - [Test Suites](./test-suites.md) - How ignored tests are excluded
 - [GxP Tagging](../compliance/gxp-tagging.md) - Regulatory compliance evidence
-
-{{ diataxis_footer() }}

@@ -344,6 +344,14 @@
             "pattern": "^[a-z0-9-]+$"
           }
         },
+        "evidence_books": {
+          "type": "array",
+          "description": "Book names for evidence documentation, built via 'update evidence' command. Unlike regular books, these are built independently of the build command.",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          }
+        },
         "build": {
           "$ref": "#/definitions/module_build",
           "description": "Per-module build configuration"

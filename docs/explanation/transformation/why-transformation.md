@@ -1,7 +1,4 @@
 # Why Compliance Transformation?
-
-{{ page_breadcrumb() }}
-
 ## Introduction
 
 Most software development organizations treat compliance as a necessary burden - a series of manual checklists, periodic audits, and late-stage validations that slow delivery without delivering proportional value. Teams experience compliance as friction: weeks spent preparing for audits, days waiting for approvals, and hours documenting activities that could be automated.
@@ -416,5 +413,3 @@ If prerequisites are missing, focus on building foundational capabilities first.
 - [Transformation Framework](transformation-framework.md) - How to execute transformation
 - [CD Model Overview](../continuous-delivery/cd-model/cd-model-overview.md) - Delivery pipeline foundation
 - [Testing Strategy](../continuous-delivery/testing/testing-strategy-overview.md) - Testing practices foundation
-
-{{ diataxis_footer() }}

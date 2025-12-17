@@ -7,7 +7,10 @@ import (
 	"os"
 
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
+
+var log = logging.C()
 
 func init() {
 	registry.Register(Get)

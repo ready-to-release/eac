@@ -809,3 +809,103 @@ func (p *Preprocessor) stripNavTitles() error {
 	p.log("    Stripped titles from %d .nav.yml files", stripped)
 	return nil
 }
+
+// diátaxisSections are the four documentation sections that should have navigation macros
+var diataxisSections = map[string]bool{
+	"tutorials":     true,
+	"how-to-guides": true,
+	"explanation":   true,
+	"reference":     true,
+}
+
+// injectMacros adds Jinja2 navigation macros to markdown files (site builds only)
+// Injects {{ page_breadcrumb() }} after the title and {{ diataxis_footer() }} at the end
+// Only processes files in Diátaxis sections (tutorials, how-to-guides, explanation, reference)
+func (p *Preprocessor) injectMacros() error {
+	p.log("    Injecting navigation macros into markdown files...")
+
+	// Pattern to find the first H1 title line
+	titlePattern := regexp.MustCompile(`(?m)^#\s+.+$`)
+
+	// Pattern to check if macros already exist (for idempotency)
+	breadcrumbPattern := regexp.MustCompile(`\{\{\s*page_breadcrumb\(\)\s*\}\}`)
+	footerPattern := regexp.MustCompile(`\{\{\s*diataxis_footer\(\)\s*\}\}`)
+
+	injected := 0
+	filesModified := 0
+
+	err := filepath.WalkDir(p.stagingDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if d.IsDir() || !strings.HasSuffix(path, ".md") {
+			return nil
+		}
+
+		// Get relative path from staging root to determine section
+		relPath, err := filepath.Rel(p.stagingDir, path)
+		if err != nil {
+			return err
+		}
+
+		// Normalize path separators and get first directory component
+		relPath = filepath.ToSlash(relPath)
+		parts := strings.Split(relPath, "/")
+		if len(parts) == 0 {
+			return nil
+		}
+
+		// Check if file is in a Diátaxis section
+		section := parts[0]
+		if !diataxisSections[section] {
+			return nil // Skip files not in a Diátaxis section
+		}
+
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+
+		original := string(content)
+		modified := original
+		macrosAdded := 0
+
+		// Check if breadcrumb already exists
+		if !breadcrumbPattern.MatchString(modified) {
+			// Find first H1 title and insert breadcrumb after it
+			loc := titlePattern.FindStringIndex(modified)
+			if loc != nil {
+				titleEnd := loc[1]
+				// Insert breadcrumb macro after the title line
+				modified = modified[:titleEnd] + "\n\n{{ page_breadcrumb() }}" + modified[titleEnd:]
+				macrosAdded++
+			}
+		}
+
+		// Check if footer already exists
+		if !footerPattern.MatchString(modified) {
+			// Append footer at end of file
+			modified = strings.TrimRight(modified, "\n\r\t ") + "\n\n{{ diataxis_footer() }}\n"
+			macrosAdded++
+		}
+
+		if modified != original {
+			injected += macrosAdded
+			filesModified++
+
+			if err := os.WriteFile(path, []byte(modified), 0644); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	p.log("    Injected %d macros into %d files", injected, filesModified)
+	return nil
+}

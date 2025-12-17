@@ -1,7 +1,4 @@
 # Release Notes
-
-{{ page_breadcrumb() }}
-
 How to create comprehensive release notes for production releases.
 
 ## Release Notes Template
@@ -154,5 +151,3 @@ Before publishing release notes:
 - [Start Release](../cd-model/cd-model-stages-8-12.md#stage-8-start-release)
 - [Release Documentation](./release-documentation.md)
 - [Commit Messages](../workflow/commit-messages.md)
-
-{{ diataxis_footer() }}

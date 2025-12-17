@@ -1,7 +1,4 @@
 # Contracts
-
-{{ page_breadcrumb() }}
-
 ## Overview
 
 The EAC contract system defines all configuration via **YAML contracts validated against JSON schemas**. Configuration, architecture, and behavior are version-controlled and validated before execution.
@@ -630,5 +627,3 @@ r2r eac get-config              # Config JSON
 - [Overview](./index.md) - System overview and key concepts
 - [Architecture](./architecture.md) - System architecture and components
 - [Modules](./modules.md) - Module system and dependency management
-
-{{ diataxis_footer() }}

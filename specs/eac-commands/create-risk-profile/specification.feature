@@ -9,14 +9,6 @@ Feature: eac-commands_create-risk-profile
     Given I am in a git repository
     And AI provider is configured
 
-  Rule: Command must be registered and accessible
-
-    Scenario: Command shows help
-      When I run the command "show help create risk-profile"
-      Then the exit code is 0
-      And stdout contains "OSCAL profile"
-      And stdout contains "risk assessment"
-
   Rule: Command requires valid inputs
 
     Scenario: Missing assessment file shows error

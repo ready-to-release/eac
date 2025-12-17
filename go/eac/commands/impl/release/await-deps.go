@@ -18,6 +18,7 @@
 // Flag.timeout: type=int, usage=Maximum wait time per dependency in seconds (default: 300)
 // Flag.interval: type=int, usage=Poll interval in seconds (default: 15)
 // Flag.skip-static: type=bool, usage=Skip static modules without CI workflows (default: true)
+// Flag.format: type=string, usage=Output format (text or shell for eval)
 package release
 
 import (
@@ -72,6 +73,7 @@ func ReleaseAwaitDeps() int {
 	timeout := 300
 	interval := 15
 	skipStatic := true
+	format := "text"
 
 	args := os.Args[3:] // Skip "commands release await-deps"
 	for i := 0; i < len(args); i++ {
@@ -91,6 +93,11 @@ func ReleaseAwaitDeps() int {
 				}
 				i++
 			}
+		case "--format":
+			if i+1 < len(args) {
+				format = args[i+1]
+				i++
+			}
 		case "--skip-static":
 			skipStatic = true
 		case "--no-skip-static":
@@ -99,7 +106,9 @@ func ReleaseAwaitDeps() int {
 			printAwaitDepsUsage()
 			return 0
 		default:
-			if !strings.HasPrefix(arg, "--") && module == "" {
+			if strings.HasPrefix(arg, "--format=") {
+				format = strings.TrimPrefix(arg, "--format=")
+			} else if !strings.HasPrefix(arg, "--") && module == "" {
 				module = arg
 			}
 		}
@@ -135,7 +144,14 @@ func ReleaseAwaitDeps() int {
 	// Get transitive dependencies
 	deps := getTransitiveDeps(module, reg)
 	if len(deps) == 0 {
-		log.Infof("Module %s has no dependencies", module)
+		if format == "shell" {
+			fmt.Printf("HAS_FAILED=%q\n", "false")
+			fmt.Printf("PASSED_COUNT=%q\n", "0")
+			fmt.Printf("SKIPPED_COUNT=%q\n", "0")
+			fmt.Printf("DEPS_LIST=%q\n", "")
+		} else {
+			log.Infof("Module %s has no dependencies", module)
+		}
 		return 0
 	}
 
@@ -203,7 +219,34 @@ func ReleaseAwaitDeps() int {
 		log.Infof("")
 	}
 
-	// Summary
+	// Count results
+	passedCount := 0
+	skippedCount := 0
+	for _, r := range results {
+		if r.Status == "success" {
+			passedCount++
+		} else if r.Status == "skipped" {
+			skippedCount++
+		}
+	}
+
+	// Shell format output (for eval in bash)
+	if format == "shell" {
+		fmt.Printf("HAS_FAILED=%q\n", fmt.Sprintf("%t", anyFailed))
+		fmt.Printf("PASSED_COUNT=%q\n", fmt.Sprintf("%d", passedCount))
+		fmt.Printf("SKIPPED_COUNT=%q\n", fmt.Sprintf("%d", skippedCount))
+		depsList := make([]string, 0, len(results))
+		for _, r := range results {
+			depsList = append(depsList, r.Moniker)
+		}
+		fmt.Printf("DEPS_LIST=%q\n", strings.Join(depsList, ","))
+		if anyFailed {
+			return 1
+		}
+		return 0
+	}
+
+	// Summary (text format)
 	if anyFailed {
 		log.Infof("✗ Dependency CI check failed")
 		log.Infof("")
@@ -219,16 +262,6 @@ func ReleaseAwaitDeps() int {
 			}
 		}
 		return 1
-	}
-
-	passedCount := 0
-	skippedCount := 0
-	for _, r := range results {
-		if r.Status == "success" {
-			passedCount++
-		} else if r.Status == "skipped" {
-			skippedCount++
-		}
 	}
 
 	if skippedCount > 0 {
@@ -545,8 +578,16 @@ func printAwaitDepsUsage() {
 	log.Info("  --interval N      Poll interval in seconds (default: 15)")
 	log.Info("  --skip-static     Skip modules without CI workflows (default)")
 	log.Info("  --no-skip-static  Require CI for all dependencies")
+	log.Info("  --format FORMAT   Output format: text (default) or shell (for eval)")
+	log.Info("")
+	log.Info("Shell format output (for bash eval):")
+	log.Info("  HAS_FAILED=\"true|false\"")
+	log.Info("  PASSED_COUNT=\"N\"")
+	log.Info("  SKIPPED_COUNT=\"N\"")
+	log.Info("  DEPS_LIST=\"dep1,dep2,...\"")
 	log.Info("")
 	log.Info("Examples:")
 	log.Info("  release await-deps ext-eac")
 	log.Info("  release await-deps ext-eac --timeout 600")
+	log.Info("  eval $(release await-deps ext-eac --format shell)")
 }

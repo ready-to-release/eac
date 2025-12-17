@@ -98,6 +98,24 @@ func ShowConfig() int {
 
 	// Display detailed tables for each config
 
+	// Repository Settings
+	if cfg.Repository != nil {
+		fmt.Println("## Repository Settings")
+		fmt.Println("")
+		settingsTb := render.NewTableBuilder().
+			WithHeaders("Setting", "Value")
+		settingsTb.AddRow("type", valueOrDefault(cfg.Repository.Repository.Type, "-"))
+		settingsTb.AddRow("trunk_branch", valueOrDefault(cfg.Repository.Repository.TrunkBranch, "main"))
+		settingsTb.AddRow("max_branch_age_days", cfg.Repository.Repository.MaxBranchAgeDays)
+		settingsTb.AddRow("optimize_git_ls_in_ci", cfg.Repository.Repository.OptimizeGitLsInCI)
+		if cfg.Repository.Repository.Parallelism.CI > 0 || cfg.Repository.Repository.Parallelism.Devbox > 0 {
+			settingsTb.AddRow("parallelism.ci", cfg.Repository.Repository.Parallelism.CI)
+			settingsTb.AddRow("parallelism.devbox", cfg.Repository.Repository.Parallelism.Devbox)
+		}
+		fmt.Println(settingsTb.Build())
+		fmt.Println("")
+	}
+
 	// Modules
 	if cfg.Repository != nil && len(cfg.Repository.Modules) > 0 {
 		fmt.Println("## Modules")
@@ -214,4 +232,12 @@ func printShowConfigUsage() {
 	fmt.Println("  - test_suites: Test suite configurations")
 	fmt.Println("")
 	fmt.Println("For full structured output, use 'r2r get config'.")
+}
+
+// valueOrDefault returns the value if non-empty, otherwise the default
+func valueOrDefault(value, defaultVal string) string {
+	if value == "" {
+		return defaultVal
+	}
+	return value
 }

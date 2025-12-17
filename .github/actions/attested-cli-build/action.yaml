@@ -65,71 +65,28 @@ runs:
           out/build/r2r-cli/r2r-windows-amd64.exe
           out/build/r2r-cli/r2r-windows-amd64-upx.exe
 
+    - name: Setup Commands Binary
+      id: commands
+      uses: ./.github/actions/setup-commands
+
     - name: Create release notes
       id: release_notes
       shell: bash
       env:
+        COMMANDS: ${{ steps.commands.outputs.commands-path }}
         MODULE: r2r-cli
         VERSION: ${{ inputs.version }}
         TAG_NAME: ${{ inputs.tag_name }}
       run: |
-        get_size_mb() {
-          local file="$1"
-          if [ -f "$file" ]; then
-            size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file")
-            echo "scale=1; $size / 1048576" | bc
-          else
-            echo "?"
-          fi
-        }
-
-        BINARY_PREFIX="r2r"
-
-        SIZE_LINUX_AMD64=$(get_size_mb "out/build/r2r-cli/${BINARY_PREFIX}-linux-amd64")
-        SIZE_LINUX_ARM64=$(get_size_mb "out/build/r2r-cli/${BINARY_PREFIX}-linux-arm64")
-        SIZE_DARWIN_AMD64=$(get_size_mb "out/build/r2r-cli/${BINARY_PREFIX}-darwin-amd64")
-        SIZE_DARWIN_ARM64=$(get_size_mb "out/build/r2r-cli/${BINARY_PREFIX}-darwin-arm64")
-        SIZE_WINDOWS_AMD64=$(get_size_mb "out/build/r2r-cli/${BINARY_PREFIX}-windows-amd64.exe")
-        SIZE_LINUX_AMD64_UPX=$(get_size_mb "out/build/r2r-cli/${BINARY_PREFIX}-linux-amd64-upx")
-        SIZE_WINDOWS_AMD64_UPX=$(get_size_mb "out/build/r2r-cli/${BINARY_PREFIX}-windows-amd64-upx.exe")
-
-        cat << EOF > release_notes.md
-        # r2r-cli v$VERSION
-
-        ## Installation
-
-        Download the appropriate binary for your platform:
-
-        ### Standard Binaries (Recommended)
-
-        - **Linux (AMD64)** - \`${BINARY_PREFIX}-linux-amd64\` (${SIZE_LINUX_AMD64} MB)
-        - **Linux (ARM64)** - \`${BINARY_PREFIX}-linux-arm64\` (${SIZE_LINUX_ARM64} MB)
-        - **macOS (Intel)** - \`${BINARY_PREFIX}-darwin-amd64\` (${SIZE_DARWIN_AMD64} MB)
-        - **macOS (Apple Silicon)** - \`${BINARY_PREFIX}-darwin-arm64\` (${SIZE_DARWIN_ARM64} MB)
-        - **Windows (AMD64)** - \`${BINARY_PREFIX}-windows-amd64.exe\` (${SIZE_WINDOWS_AMD64} MB)
-
-        ### UPX-Compressed Binaries (Minimal Size)
-
-        - **Linux (AMD64)** - \`${BINARY_PREFIX}-linux-amd64-upx\` (${SIZE_LINUX_AMD64_UPX} MB)
-        - **Windows (AMD64)** - \`${BINARY_PREFIX}-windows-amd64-upx.exe\` (${SIZE_WINDOWS_AMD64_UPX} MB)
-
-        ## Supply Chain Security
-
-        All binaries include [build attestations](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations). Verify with:
-
-        \`\`\`bash
-        gh attestation verify <binary-file> --repo ${{ github.repository }}
-        \`\`\`
-
-        ## Release Information
-
-        - **Version**: $VERSION
-        - **Commit**: ${{ github.sha }}
-        - **Tag**: $TAG_NAME
-
-        ---
-        Generated with [GitHub Actions](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
-        EOF
+        # Generate release notes using Go command
+        $COMMANDS get cli-release-notes \
+          --module r2r-cli \
+          --binary-prefix r2r \
+          --version "$VERSION" \
+          --tag "$TAG_NAME" \
+          --commit "${{ github.sha }}" \
+          --repo "${{ github.repository }}" \
+          --run-id "${{ github.run_id }}" > release_notes.md
 
         cat release_notes.md
 

@@ -16,6 +16,10 @@ import (
 )
 
 func TestR2RInstallerFeatures(t *testing.T) {
+	// Enable mock mode to skip GitHub API calls during tests
+	// This avoids 3+ second network latency per test
+	os.Setenv("__R2R_TEST_MOCK", "1")
+
 	cfg := internal.RunnerConfig{
 		SpecsPath:         "../../../../../specs/r2r-installer",
 		DefaultReportName: "cucumber-r2r-installer",

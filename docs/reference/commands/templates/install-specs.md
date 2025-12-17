@@ -1,32 +1,6 @@
-# templates install-specs
+# Templates install-specs
 
-{{ page_breadcrumb() }}
-
-## Overview
-
-**Command**: `r2r templates install specs`
-**Purpose**: Install specification templates without value replacements
-**Category**: [templates](../categories/templates.md)
-
-## Syntax
-
-```bash
-r2r templates install specs [--debug]
-```
-
-## Options
-
-- `--debug, -d`: Save detailed logs to `out/logs/templates/install/`
-
-## Examples
-
-```bash
-# Install specification templates
-r2r templates install specs
-
-# Install with debug logging
-r2r templates install specs --debug
-```
+<!-- book:cmd templates install-specs -->
 
 ## Details
 
@@ -54,5 +28,3 @@ These templates provide starter Gherkin specifications for:
 - [validate specs](../validate/specs.md) - Validate Gherkin specifications
 - [test](../test/test.md) - Run BDD tests
 - [templates Commands](../categories/templates.md)
-
-{{ diataxis_footer() }}

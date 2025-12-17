@@ -1,7 +1,4 @@
 # R2R and EAC System Overview
-
-{{ page_breadcrumb() }}
-
 ## What is EAC?
 
 **EAC (Everything as Code)** is a comprehensive collection of commands designed to streamline **everything-as-code** workflows across your development lifecycle. It helps teams codify and version-control all aspects of software development—configuration, contracts, architecture, specifications, tests, security policies, and infrastructure.
@@ -184,5 +181,3 @@ All modules defined in `.r2r/eac/repository.yml` with explicit dependencies and 
 - **[Command Reference](../commands/)** - Complete reference for all EAC commands
 - **[How-To Guides](../../how-to-guides/eac/)** - Task-oriented guides for using EAC
 - **[Decision Records](../decision-records/)** - Architectural decisions and rationale
-
-{{ diataxis_footer() }}

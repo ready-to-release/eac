@@ -1,7 +1,4 @@
 # Repository Layout and Module Structure
-
-{{ page_breadcrumb() }}
-
 ## Overview
 
 This repository is organized as a **modular monorepo** with clearly defined module boundaries using the EAC (Everything as Code) system.
@@ -171,5 +168,3 @@ For comprehensive information about the R2R and EAC system:
 - `.r2r/eac/repository.yml` - Module registry and dependencies
 - `.r2r/eac/module-types.yml` - Module type templates
 - `contracts/eac-core/0.1.0/` - JSON schemas for validation
-
-{{ diataxis_footer() }}

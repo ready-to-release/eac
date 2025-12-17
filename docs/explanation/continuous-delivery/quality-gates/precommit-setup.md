@@ -1,7 +1,4 @@
 # Pre-commit Setup
-
-{{ page_breadcrumb() }}
-
 How to configure pre-commit hooks for Stage 2 validation.
 
 ## Pre-commit Hook Script
@@ -121,5 +118,3 @@ git commit --no-verify -m "emergency fix"
 
 - [Pre-commit Quality Gates](./precommit-gates.md)
 - [CD Model Stages 1-7](../cd-model/cd-model-stages-1-7.md)
-
-{{ diataxis_footer() }}

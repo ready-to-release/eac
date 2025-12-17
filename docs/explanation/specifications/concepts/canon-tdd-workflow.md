@@ -1,7 +1,4 @@
 # Canon TDD Workflow
-
-{{ page_breadcrumb() }}
-
 Reference for Kent Beck's test-driven development process.
 
 ## The Five Steps
@@ -131,5 +128,3 @@ Based on [Canon TDD by Kent Beck](https://tidyfirst.substack.com/p/canon-tdd).
 - [Three-Layer Approach](./three-layer-approach.md)
 - [BDD Fundamentals](./bdd-fundamentals.md)
 - [Go Test Levels](../implementation/go/test-levels.md)
-
-{{ diataxis_footer() }}

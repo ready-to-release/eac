@@ -1,7 +1,4 @@
 # Security Workflows
-
-{{ page_breadcrumb() }}
-
 Reference for security scanning workflows.
 
 ## Overview
@@ -353,5 +350,3 @@ See module documentation for detailed scan command specifications.
 - CodeQL Documentation: [https://codeql.github.com/docs/](https://codeql.github.com/docs/)
 - Security Best Practices: [https://docs.github.com/en/code-security](https://docs.github.com/en/code-security)
 - Workflow file: `.github/workflows/codeql.yaml`
-
-{{ diataxis_footer() }}

@@ -47,21 +47,17 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     outputs:
-      image-name: ghcr.io/ready-to-release/ext-eac
-      short-sha: ${{ steps.sha.outputs.short }}
+      image-name: ${{ steps.container.outputs.image-name }}
+      image-tag: ${{ steps.container.outputs.image-tag }}
+      short-sha: ${{ steps.container.outputs.short-sha }}
     steps:
       - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.ref }}
 
-      - name: Get short SHA
-        id: sha
-        run: |
-          SHORT_SHA="${{ github.sha }}"
-          echo "short=${SHORT_SHA:0:7}" >> $GITHUB_OUTPUT
-
-      - name: Build ext-eac
-        uses: ./.github/actions/build-module
+      - name: Build Container
+        id: container
+        uses: ./.github/actions/build-container
         with:
           module: ext-eac
           trigger-run-id: ${{ inputs.trigger_run_id }}
@@ -71,27 +67,31 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Verify pushed image
-        run: |
-          IMAGE_NAME="ghcr.io/ready-to-release/ext-eac"
-          SHORT_SHA="${{ steps.sha.outputs.short }}"
-
-          echo "Pulling and verifying pushed image..."
-          docker pull "$IMAGE_NAME:sha-$SHORT_SHA"
-
-          echo ""
-          echo "Checking image labels..."
-          docker inspect "$IMAGE_NAME:sha-$SHORT_SHA" --format='{{json .Config.Labels}}' | jq '.'
-
-          echo ""
-          echo "Testing extension metadata..."
-          docker run --rm "$IMAGE_NAME:sha-$SHORT_SHA" extension-meta
-
   # =============================================================================
-  # Test ext-eac
+  # Run module tests (specs/unit tests if defined)
   # =============================================================================
   test:
-    name: Test Extension
+    name: Test
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Test Module
+        uses: ./.github/actions/test-module
+        with:
+          module: ext-eac
+          trigger-run-id: ${{ inputs.trigger_run_id }}
+          suites: unit,integration
+          results-artifact-name: test-results-ext-eac
+
+  # =============================================================================
+  # Integration tests with r2r CLI and direct Docker
+  # =============================================================================
+  integration-test:
+    name: Integration Test
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -107,14 +107,13 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Pull CI image from GHCR
+        env:
+          IMAGE_NAME: ${{ needs.build.outputs.image-name }}
+          IMAGE_TAG: ${{ needs.build.outputs.image-tag }}
         run: |
-          COMMIT_SHA="${{ github.sha }}"
-          SHORT_SHA="${COMMIT_SHA:0:7}"
-          IMAGE_NAME="ghcr.io/ready-to-release/ext-eac"
-
           echo "Pulling CI image..."
-          docker pull "$IMAGE_NAME:sha-$SHORT_SHA"
-          docker tag "$IMAGE_NAME:sha-$SHORT_SHA" ext-eac:ci-test
+          docker pull "$IMAGE_NAME:$IMAGE_TAG"
+          docker tag "$IMAGE_NAME:$IMAGE_TAG" ext-eac:ci-test
           docker images ext-eac:ci-test
 
       - name: Download Build Artifacts
@@ -180,11 +179,11 @@ jobs:
 
       - name: Test Summary
         if: always()
+        env:
+          IMAGE_NAME: ${{ needs.build.outputs.image-name }}
+          IMAGE_TAG: ${{ needs.build.outputs.image-tag }}
         run: |
-          COMMIT_SHA="${{ github.sha }}"
-          SHORT_SHA="${COMMIT_SHA:0:7}"
-
-          echo "## Test: ext-eac" >> $GITHUB_STEP_SUMMARY
+          echo "## Integration Test: ext-eac" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ "${{ job.status }}" = "success" ]; then
             echo "All extension tests passed." >> $GITHUB_STEP_SUMMARY
@@ -205,4 +204,4 @@ jobs:
 
           echo "### Tested Image" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "\`ghcr.io/ready-to-release/ext-eac:sha-${SHORT_SHA}\`" >> $GITHUB_STEP_SUMMARY
+          echo "\`$IMAGE_NAME:$IMAGE_TAG\`" >> $GITHUB_STEP_SUMMARY

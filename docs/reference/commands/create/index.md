@@ -1,7 +1,4 @@
 # create Commands
-
-{{ page_breadcrumb() }}
-
 AI-powered content generation commands for creating commits, specifications, PRs, and documentation.
 
 ## Commands in this Category
@@ -33,5 +30,3 @@ r2r eac create spec "User can login"
 
 - [Category Overview](../categories/create.md)
 - [Command Reference Index](../index.md)
-
-{{ diataxis_footer() }}

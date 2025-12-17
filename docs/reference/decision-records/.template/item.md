@@ -1,7 +1,4 @@
 # DR-XXX: [Title]
-
-{{ page_breadcrumb() }}
-
 ## Status
 
 - [ ] Accepted
@@ -47,5 +44,3 @@
 ## Related Decisions
 
 - [DR-XXX: Related decision]
-
-{{ diataxis_footer() }}

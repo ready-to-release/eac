@@ -126,13 +126,13 @@ func ShowApprovalComments() int {
 
 		fmt.Println(tb.Build())
 	} else {
-		fmt.Println("No PR approvals found for this version.\n")
+		fmt.Println("No PR approvals found for this version.")
 	}
 
 	// Print detailed PR information (body and merge message) for ALL found PRs
 	// Display even if PRs have no reviews/approvals
 	if len(report.PRs) > 0 {
-		fmt.Println("\n## PR Details\n")
+		fmt.Print("\n## PR Details\n\n")
 
 		for _, pr := range report.PRs {
 			fmt.Printf("### PR #%d: %s\n\n", pr.Number, pr.Title)
@@ -140,16 +140,16 @@ func ShowApprovalComments() int {
 			if pr.Body != "" {
 				fmt.Printf("**Description:**\n\n%s\n\n", pr.Body)
 			} else {
-				fmt.Println("**Description:** (No description provided)\n")
+				fmt.Println("**Description:** (No description provided)")
 			}
 
 			if pr.MergeCommitMessage != "" {
 				fmt.Printf("**Merge Commit Message:**\n\n%s\n\n", pr.MergeCommitMessage)
 			} else {
-				fmt.Println("**Merge Commit Message:** (No merge message)\n")
+				fmt.Println("**Merge Commit Message:** (No merge message)")
 			}
 
-			fmt.Println("---\n")
+			fmt.Print("---\n\n")
 		}
 	}
 

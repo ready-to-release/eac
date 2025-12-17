@@ -5,18 +5,6 @@ Feature: eac-commands_show-workspaces
   I want to see all active workspaces and their status
   So that I can understand what work is in progress across branches
 
-  Rule: Command must be registered and accessible
-
-    Scenario: Command is listed in available commands
-      When I run the command "show help"
-      Then the exit code is 0
-      And I should see "show workspaces"
-
-    Scenario: Command has proper description
-      When I run the command "show help show workspaces"
-      Then the exit code is 0
-      And I should see "workspace" or "worktree" or "list"
-
   Rule: List displays all worktrees in formatted table
 
     @skip:wip

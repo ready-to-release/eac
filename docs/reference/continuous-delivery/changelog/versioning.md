@@ -1,7 +1,4 @@
 # Versioning
-
-{{ page_breadcrumb() }}
-
 Semantic versioning and calendar versioning conventions for repository and module releases.
 
 ## Overview
@@ -482,5 +479,3 @@ r2r eac release generate-module-calver {moniker}
 - [Repository Changelog](./repository-changelog.md) - Repository versioning
 - [Module Changelogs](./module-changelogs.md) - Module versioning
 - Decision Record: [DR-002 - Use Semantic Versioning](../../decision-records/dr002.md)
-
-{{ diataxis_footer() }}

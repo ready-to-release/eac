@@ -1,0 +1,191 @@
+# Build Evidence Books Action
+#
+# Builds evidence PDFs for a module by:
+# 1. Awaiting all dependency CI workflows to complete (using await-dependency-ci)
+# 2. Downloading artifacts from each dependency's CI workflow
+# 3. Running 'update evidence <module>' to generate PDFs
+#
+# The evidence books aggregate CI artifacts (test results, security scans, etc.)
+# as compliance documentation.
+#
+# Usage:
+#   - uses: ./.github/actions/build-evidence-books
+#     with:
+#       module: r2r-cli
+
+name: Build Evidence Books
+description: Build evidence PDFs for a module, collecting CI artifacts as evidence
+
+inputs:
+  module:
+    description: 'Module moniker to build evidence for'
+    required: true
+  trigger-run-id:
+    description: 'Trigger workflow run ID (for commands binary download)'
+    required: false
+    default: ''
+  timeout:
+    description: 'Timeout in seconds for awaiting dependency CI'
+    required: false
+    default: '600'
+  upload-artifact:
+    description: 'Whether to upload evidence artifacts'
+    required: false
+    default: 'true'
+  artifact-name:
+    description: 'Name for the evidence artifact. If empty, uses evidence-artifacts-{module}'
+    required: false
+    default: ''
+
+outputs:
+  artifact-name:
+    description: 'Name of the uploaded evidence artifact'
+    value: ${{ steps.vars.outputs.artifact-name }}
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Commands Binary
+      id: commands
+      uses: ./.github/actions/setup-commands
+      with:
+        trigger-run-id: ${{ inputs.trigger-run-id }}
+
+    - name: Set variables
+      id: vars
+      shell: bash
+      env:
+        MODULE: ${{ inputs.module }}
+        INPUT_ARTIFACT_NAME: ${{ inputs.artifact-name }}
+      run: |
+        if [ -n "$INPUT_ARTIFACT_NAME" ]; then
+          echo "artifact-name=$INPUT_ARTIFACT_NAME" >> $GITHUB_OUTPUT
+        else
+          echo "artifact-name=evidence-artifacts-${MODULE}" >> $GITHUB_OUTPUT
+        fi
+
+    # Step 1: Wait for all dependency CIs to complete
+    - name: Await dependency CI
+      uses: ./.github/actions/await-dependency-ci
+      with:
+        module: ${{ inputs.module }}
+        timeout: ${{ inputs.timeout }}
+
+    # Step 2: Download artifacts from completed CI runs
+    - name: Download dependency artifacts
+      id: download
+      shell: bash
+      env:
+        COMMANDS: ${{ steps.commands.outputs.commands-path }}
+        MODULE: ${{ inputs.module }}
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        echo "Downloading CI artifacts for evidence collection..."
+        echo ""
+
+        mkdir -p out/build
+        FAILED=""
+        DOWNLOADED=0
+
+        # Get transitive dependencies in execution order (one per line)
+        for dep in $($COMMANDS get execution-order $MODULE --format list 2>/dev/null); do
+          # Skip the target module itself
+          [ "$dep" = "$MODULE" ] && continue
+
+          # Get CI workflow for this dependency
+          WORKFLOW_FILE=$($COMMANDS get module-ci-workflow $dep 2>/dev/null || echo "")
+          [ -z "$WORKFLOW_FILE" ] && continue
+
+          # Skip if already downloaded
+          if [ -d "out/build/$dep" ] && [ -n "$(ls -A out/build/$dep 2>/dev/null)" ]; then
+            echo "  ✓ $dep: already exists"
+            continue
+          fi
+
+          # CI is guaranteed complete (await passed), get latest successful run
+          RUN_ID=$(gh run list --workflow "$WORKFLOW_FILE" --status success --limit 1 \
+            --json databaseId -q '.[0].databaseId' 2>/dev/null || echo "")
+
+          if [ -z "$RUN_ID" ]; then
+            echo "  ✗ $dep: no successful CI run found"
+            FAILED="$FAILED $dep"
+            continue
+          fi
+
+          if gh run download "$RUN_ID" -n "build-artifacts-$dep" -D out/build/ 2>/dev/null; then
+            echo "  ✓ $dep: downloaded (run $RUN_ID)"
+            DOWNLOADED=$((DOWNLOADED + 1))
+          else
+            echo "  ✗ $dep: download failed"
+            FAILED="$FAILED $dep"
+          fi
+        done
+
+        echo ""
+        echo "Downloaded: $DOWNLOADED artifacts"
+
+        if [ -n "$FAILED" ]; then
+          echo "::error::Failed to download artifacts for:$FAILED"
+          exit 1
+        fi
+
+    - name: Setup Docker
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build evidence
+      id: build
+      shell: bash
+      env:
+        COMMANDS: ${{ steps.commands.outputs.commands-path }}
+        MODULE: ${{ inputs.module }}
+      run: |
+        echo "Building evidence for $MODULE..."
+
+        if $COMMANDS update evidence $MODULE; then
+          echo "build-failed=false" >> $GITHUB_OUTPUT
+          echo ""
+          echo "✓ Evidence build complete"
+        else
+          echo "build-failed=true" >> $GITHUB_OUTPUT
+          echo ""
+          echo "::error::Evidence build failed for $MODULE"
+          exit 1
+        fi
+
+    - name: Upload evidence artifacts
+      if: inputs.upload-artifact == 'true'
+      uses: actions/upload-artifact@v6
+      with:
+        name: ${{ steps.vars.outputs.artifact-name }}
+        path: out/evidence/
+        if-no-files-found: error
+
+    - name: Summary
+      if: always()
+      shell: bash
+      env:
+        MODULE: ${{ inputs.module }}
+        BUILD_FAILED: ${{ steps.build.outputs.build-failed }}
+        ARTIFACT_NAME: ${{ steps.vars.outputs.artifact-name }}
+      run: |
+        echo "## 📚 Evidence Build: $MODULE" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        if [ "$BUILD_FAILED" = "true" ]; then
+          echo "❌ **Build failed**" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "✅ **Build successful**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Artifact**: \`$ARTIFACT_NAME\`" >> $GITHUB_STEP_SUMMARY
+
+          # List generated PDFs
+          if [ -d "out/evidence/$MODULE" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Generated Files" >> $GITHUB_STEP_SUMMARY
+            for pdf in out/evidence/$MODULE/*.pdf; do
+              if [ -f "$pdf" ]; then
+                echo "- \`$(basename $pdf)\`" >> $GITHUB_STEP_SUMMARY
+              fi
+            done
+          fi
+        fi

@@ -1,7 +1,4 @@
 # Common Flags and Options
-
-{{ page_breadcrumb() }}
-
 ## Overview
 
 EAC commands share common flags and patterns that work consistently across the command set. Understanding these global options helps you use commands more effectively.
@@ -549,7 +546,7 @@ temperature: 0.7
 
 **Set with**: `r2r eac init`
 
-**See also**: [Init Command](../other/init.md)
+**See also**: [Init Command](../init/init.md)
 
 ---
 
@@ -625,7 +622,5 @@ temperature: 0.7
 - [Command Taxonomy](./command-taxonomy.md) - How commands are organized
 - [Naming Conventions](./naming-conventions.md) - Command naming patterns
 - [Output Formats](./output-formats.md) - Understanding command output
-- [Help Command](../other/help.md) - Using the help system
-- [Init Command](../other/init.md) - Initialize AI configuration
-
-{{ diataxis_footer() }}
+- [Help Command](../help/help.md) - Using the help system
+- [Init Command](../init/init.md) - Initialize AI configuration

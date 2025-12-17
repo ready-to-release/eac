@@ -1,7 +1,4 @@
 # CD Model: Stages 1-7 (Development to Testing)
-
-{{ page_breadcrumb() }}
-
 ## Introduction
 
 Stages 1-7 of the Continuous Delivery Model cover the development and testing phases, from initial code authoring through comprehensive validation in production-like environments. These stages emphasize shift-left practices, rapid feedback, and automated quality gates to ensure high-quality software before release.
@@ -493,7 +490,6 @@ Extended testing runs in **PLTE** environments, often with longer-lived instance
 
 ---
 
-
 ## Stage 7: Exploration
 
 **Purpose**: Enable stakeholder validation and exploratory testing in a production-like environment.
@@ -602,5 +598,3 @@ Each stage builds confidence incrementally, with quality gates preventing defect
 - [Environments Architecture](../architecture/environments.md)
 - [Security](../security/security.md)
 - [Repository Layout](../../../reference/r2r-eac/repository-layout.md)
-
-{{ diataxis_footer() }}

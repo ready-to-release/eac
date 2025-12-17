@@ -1,0 +1,58 @@
+# Build Commands
+
+## Overview
+
+Build commands compile and package modules in the repository. They handle dependency resolution, incremental builds, and cross-platform compilation.
+
+**Key Characteristics**:
+
+- Dependency-aware build ordering
+- Incremental build support
+- Multi-language support (Go, TypeScript, Docker)
+- Parallel execution by default
+
+**When to use**: When compiling modules, preparing releases, or verifying that code changes compile correctly.
+
+## All Build Commands
+
+<!-- book:category-commands build -->
+
+## Common Workflows
+
+### Building During Development
+
+```bash
+# Build all modules
+r2r eac build
+
+# Build specific module
+r2r eac build eac-commands
+
+# Build multiple modules
+r2r eac build eac-core r2r-cli
+```
+
+### Building with Dependencies
+
+```bash
+# Build module and its dependencies
+r2r eac build r2r-cli
+# Automatically builds: eac-core → eac-commands → r2r-cli
+```
+
+### CI/CD Integration
+
+```bash
+# Build all modules in CI
+r2r eac build
+
+# Build changed modules only
+r2r eac build $(r2r eac get changed-modules | jq -r '.changed_modules[]')
+```
+
+## See Also
+
+- [get build-deps](../get/build-deps.md) - View build dependencies
+- [show build-summary](../show/build-summary.md) - Build execution summary
+- [show build-times](../show/build-times.md) - Build performance analysis
+- [test](build.md) - Test after building
