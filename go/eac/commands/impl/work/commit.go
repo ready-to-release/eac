@@ -38,6 +38,13 @@ func init() {
 	registry.Register(Commit)
 }
 
+// commitFlags defines valid flags for the commit command
+var commitFlags = []flags.FlagDefinition{
+	{Name: "--all", Shorthand: "-a", HasValue: false, ValueType: "bool"},
+	{Name: "--message", Shorthand: "-m", HasValue: true, ValueType: "string"},
+	{Name: "--debug", Shorthand: "-d", HasValue: false, ValueType: "bool"},
+}
+
 // Intent: Commit changes with AI-generated messages in a workspace
 //
 // Design (Three Rules of Vibe Coding):
@@ -60,6 +67,12 @@ func init() {
 // Commit commits changes with AI-generated or custom message
 func Commit() int {
 	startTime := time.Now()
+
+	// Validate flags before parsing
+	if err := flags.ValidateFlags(os.Args[3:], commitFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
 
 	// Phase 1: Parse configuration
 	config, err := parseCommitConfig()

@@ -18,6 +18,9 @@
 package validate
 
 import (
+	"os"
+
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -29,6 +32,17 @@ func init() {
 }
 
 func ValidateDependencies() int {
+	args := os.Args[3:] // Skip program name, "validate", and "dependencies"
+
+	// Define expected flags (none for this command)
+	commandFlags := []flags.FlagDefinition{}
+
+	// Validate flags
+	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {

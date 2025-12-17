@@ -30,6 +30,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/oscal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
@@ -57,6 +58,17 @@ type ControlTagUsage struct {
 
 // ControlTags validates @control and @controls tags against OSCAL catalog
 func ControlTags() int {
+	args := os.Args[3:] // Skip program name, "validate", and "control-tags"
+
+	// Define expected flags (none for this command)
+	commandFlags := []flags.FlagDefinition{}
+
+	// Validate flags
+	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+		ctlog.Errorf("%v", err)
+		return 1
+	}
+
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {

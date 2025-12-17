@@ -43,6 +43,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/impl/test/internal/ctrf"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/test/internal/cucumber"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/test/runners"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/initsummary"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
@@ -141,8 +142,30 @@ func Test() int {
 	return executeTests(cfg)
 }
 
+// testFlags defines valid flags for the test command
+var testFlags = []flags.FlagDefinition{
+	{Name: "--suite", HasValue: true, ValueType: "string"},
+	{Name: "--coverage", HasValue: false, ValueType: "bool"},
+	{Name: "--skip-deps", HasValue: false, ValueType: "bool"},
+	{Name: "--list-only", HasValue: false, ValueType: "bool"},
+	{Name: "--timings", HasValue: false, ValueType: "bool"},
+	{Name: "--debug", HasValue: false, ValueType: "bool"},
+	{Name: "--tui", HasValue: false, ValueType: "bool"},
+	{Name: "--no-tui", HasValue: false, ValueType: "bool"},
+	{Name: "--tui-height", HasValue: true, ValueType: "int"},
+	{Name: "--sequential", HasValue: false, ValueType: "bool"},
+	{Name: "--retest", HasValue: false, ValueType: "bool"},
+	{Name: "--help", Shorthand: "-h", HasValue: false, ValueType: "bool"},
+}
+
 // parseTestArgs parses command line arguments into TestConfig
 func parseTestArgs(args []string) *TestConfig {
+	// Validate flags before parsing
+	if err := flags.ValidateFlags(args, testFlags); err != nil {
+		log.Errorf("%v", err)
+		return nil
+	}
+
 	// Detect execution environment for TUI defaults
 	isCI := os.Getenv("CI") != "" || os.Getenv("GITHUB_ACTIONS") != "" || os.Getenv("GITLAB_CI") != ""
 	isContainer := logging.GetExecutionContext() == logging.ContextR2RCLI

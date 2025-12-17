@@ -20,12 +20,19 @@ import (
 	"strings"
 
 	designInternal "github.com/ready-to-release/eac/go/eac/commands/impl/design/helper"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
+
+// commandFlags defines valid flags for the serve design command
+var commandFlags = []flags.FlagDefinition{
+	{Name: "--help", Shorthand: "-h", HasValue: false, ValueType: "bool"},
+	{Name: "--force", HasValue: false, ValueType: "bool"},
+}
 
 var log = logging.C()
 
@@ -36,6 +43,12 @@ func init() {
 // ServeDesign starts Structurizr Lite viewer for a module
 func ServeDesign() int {
 	args := os.Args[3:] // Skip program, "serve", and "design"
+
+	// Validate flags
+	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
 
 	if len(args) == 0 {
 		log.Info("❌ Error: module name required")

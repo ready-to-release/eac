@@ -3,8 +3,6 @@ package commitmessage
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
 	commitmessageinternal "github.com/ready-to-release/eac/go/eac/commands/impl/create/commit-message/internal"
@@ -12,7 +10,6 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
 	aimock "github.com/ready-to-release/eac/go/eac/core/ai"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
-	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 // mockAIResponse holds the mock response for testing. When set, AI calls return this.
@@ -113,17 +110,10 @@ func generateWithPromptResult(promptName string, userPrompt string, workspaceRoo
 	// Wrap executor to match contract.AIExecutor interface
 	executorAdapter := ai.NewExecutorAdapterWithModel(executor, model)
 
-	// Setup debug directory if needed
-	debugOutputDir := ""
-	if debugEnabled {
-		debugOutputDir = filepath.Join(paths.LogsPath(workspaceRoot), "commit")
-		if err := os.MkdirAll(debugOutputDir, 0755); err != nil {
-			log.Warnf("Failed to create debug directory: %v", err)
-		}
-	}
-
 	// Configure retry behavior
-	retryConfig := buildRetryConfig(executorAdapter, validator, antiCorruptionRules, affectedModules, debugEnabled, debugOutputDir)
+	// Note: debugEnabled controls logger-based debug output (via logDebugArtifact)
+	// The retry config's Debug mode is always set to false since we use logger-based debugging
+	retryConfig := buildRetryConfig(executorAdapter, validator, antiCorruptionRules, affectedModules, false, "unused")
 
 	// Generate with retry
 	ctx := context.Background()

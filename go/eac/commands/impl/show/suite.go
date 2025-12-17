@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/internal/testdata"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
@@ -41,6 +42,13 @@ func init() {
 func ShowSuite() int {
 	// Parse arguments - expect suite moniker after "show suite"
 	args := os.Args[1:]
+
+	// Validate flags (no flags expected for this command)
+	commandFlags := []flags.FlagDefinition{}
+	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
 
 	// Find where "show suite" ends
 	suiteIdx := -1

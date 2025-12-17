@@ -45,6 +45,13 @@ func init() {
 	registry.Register(CreatePR)
 }
 
+// prFlags defines valid flags for the pr command
+var prFlags = []flags.FlagDefinition{
+	{Name: "--target", HasValue: true, ValueType: "string"},
+	{Name: "--title", HasValue: true, ValueType: "string"},
+	{Name: "--debug", Shorthand: "-d", HasValue: false, ValueType: "bool"},
+}
+
 // Intent: Create pull request with AI-generated description
 //
 // Design (Three Rules of Vibe Coding):
@@ -68,6 +75,12 @@ func init() {
 // CreatePR creates a pull request for the current workspace
 func CreatePR() int {
 	cmdStart := time.Now()
+
+	// Validate flags before parsing
+	if err := flags.ValidateFlags(os.Args[3:], prFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
 
 	// Phase 1: Parse configuration
 	phase1Start := time.Now()

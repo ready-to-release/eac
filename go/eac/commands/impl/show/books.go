@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
@@ -41,19 +42,21 @@ type BookInfo struct {
 
 // ShowBooks displays all configured books in a table format
 func ShowBooks() int {
-	// Parse flags
-	format := "table"
 	args := os.Args[3:] // Skip program name, "show", and "books"
-	for i := 0; i < len(args); i++ {
-		arg := args[i]
-		if arg == "--format" {
-			if i+1 < len(args) {
-				format = args[i+1]
-				i++
-			}
-		} else if len(arg) > 9 && arg[:9] == "--format=" {
-			format = arg[9:]
-		}
+
+	// Validate flags
+	commandFlags := []flags.FlagDefinition{
+		{Name: "--format", HasValue: true},
+	}
+	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
+
+	// Parse flags
+	format := flags.GetFlagValue(args, "--format")
+	if format == "" {
+		format = "table"
 	}
 
 	workspaceRoot, err := repository.GetRepositoryRoot("")

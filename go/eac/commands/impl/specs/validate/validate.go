@@ -24,6 +24,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
@@ -31,6 +32,16 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
+
+// commandFlags defines valid flags for the specs validate command
+var commandFlags = []flags.FlagDefinition{
+	{Name: "--quiet", Shorthand: "-q", HasValue: false, ValueType: "bool"},
+	{Name: "--verbose", Shorthand: "-v", HasValue: false, ValueType: "bool"},
+	{Name: "--format", Shorthand: "-f", HasValue: true, ValueType: "string"},
+	{Name: "--check-tags", HasValue: false, ValueType: "bool"},
+	{Name: "--no-check-tags", HasValue: false, ValueType: "bool"},
+	{Name: "--fix", HasValue: false, ValueType: "bool"},
+}
 
 var log = logging.C()
 
@@ -88,6 +99,13 @@ func ResetGitRepo() {
 
 // SpecsValidate validates existing Gherkin specification files
 func SpecsValidate() int {
+	// Validate flags
+	args := os.Args[3:] // Skip program name, "specs", and "validate"
+	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	// Parse configuration
 	config, err := parseValidateConfig()
 	if err != nil {

@@ -28,11 +28,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
 var log = logging.C()
+
+var pipelineWaitFlags = []flags.FlagDefinition{
+	{Name: "--timeout", HasValue: true, ValueType: "int"},
+	{Name: "--interval", HasValue: true, ValueType: "int"},
+}
 
 func init() {
 	registry.Register(PipelineWait)
@@ -48,6 +54,12 @@ type WorkflowRun struct {
 }
 
 func PipelineWait() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlags(os.Args[3:], pipelineWaitFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	// Parse flags and run IDs
 	timeout := 1800 // 30 minutes default
 	interval := 10  // 10 seconds default

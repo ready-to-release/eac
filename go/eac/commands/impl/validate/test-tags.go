@@ -26,6 +26,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 )
@@ -39,6 +40,17 @@ var eacConfig *config.EACConfig
 
 // TestTags validates that all test tags are defined in the tag contract
 func TestTags() int {
+	args := os.Args[3:] // Skip program name, "validate", and "test-tags"
+
+	// Define expected flags (none for this command)
+	commandFlags := []flags.FlagDefinition{}
+
+	// Validate flags
+	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	// Load central config
 	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {

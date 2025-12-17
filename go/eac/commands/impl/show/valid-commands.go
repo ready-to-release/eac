@@ -11,8 +11,10 @@ package show
 
 import (
 	"fmt"
+	"os"
 	"sort"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 )
@@ -22,6 +24,15 @@ func init() {
 }
 
 func ShowValidCommands() int {
+	args := os.Args[3:] // Skip program name, "show", and "valid-commands"
+
+	// Validate flags (no flags expected for this command)
+	commandFlags := []flags.FlagDefinition{}
+	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
+
 	reg := registry.GetCommandRegistry()
 
 	// Extract and sort commands

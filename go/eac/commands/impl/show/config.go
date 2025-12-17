@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
@@ -26,12 +27,21 @@ func init() {
 }
 
 func ShowConfig() int {
+	args := os.Args[2:]
+
+	// Validate flags
+	commandFlags := []flags.FlagDefinition{
+		{Name: "--help", Shorthand: "-h", HasValue: false},
+	}
+	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
+
 	// Check for help flag
-	for _, arg := range os.Args[2:] {
-		if arg == "--help" || arg == "-h" {
-			printShowConfigUsage()
-			return 0
-		}
+	if flags.HasFlag(args, "--help", "-h") {
+		printShowConfigUsage()
+		return 0
 	}
 
 	// Load all configs with defaults applied

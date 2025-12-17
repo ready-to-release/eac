@@ -30,6 +30,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
@@ -38,7 +39,19 @@ func init() {
 	registry.Register(ReleasePrune)
 }
 
+var pruneFlags = []flags.FlagDefinition{
+	{Name: "--keep", HasValue: true, ValueType: "int"},
+	{Name: "--dry-run", HasValue: false, ValueType: "bool"},
+	{Name: "--all", HasValue: false, ValueType: "bool"},
+}
+
 func ReleasePrune() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlags(os.Args[3:], pruneFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	// Parse flags
 	keepCount := 1
 	dryRun := false

@@ -37,6 +37,7 @@ import (
 	"strings"
 
 	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
@@ -53,6 +54,19 @@ func ValidateArtifacts() int {
 
 	if len(args) == 0 {
 		log.Errorf("Usage: validate artifacts <module>")
+		return 1
+	}
+
+	// Define expected flags
+	commandFlags := []flags.FlagDefinition{
+		{Name: "--os", HasValue: true, ValueType: "string"},
+		{Name: "--arch", HasValue: true, ValueType: "string"},
+		{Name: "--no-deps", HasValue: false},
+	}
+
+	// Validate flags
+	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+		log.Errorf("%v", err)
 		return 1
 	}
 

@@ -5,6 +5,7 @@ package validate
 import (
 	"os"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 )
 
@@ -18,6 +19,17 @@ func Validate() int {
 
 	if len(args) == 0 {
 		printValidateUsage()
+		return 1
+	}
+
+	// Define expected flags (none - subcommands will validate their own flags)
+	commandFlags := []flags.FlagDefinition{
+		{Name: "--help", Shorthand: "-h", HasValue: false},
+	}
+
+	// Validate flags (only top-level help flag)
+	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+		log.Errorf("%v", err)
 		return 1
 	}
 

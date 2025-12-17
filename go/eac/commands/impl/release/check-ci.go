@@ -34,6 +34,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -51,7 +52,21 @@ type CIRunStatus struct {
 	HeadSHA    string `json:"headSha"`
 }
 
+var checkCIFlags = []flags.FlagDefinition{
+	{Name: "--workflow", HasValue: true, ValueType: "string"},
+	{Name: "--commit", HasValue: true, ValueType: "string"},
+	{Name: "--timeout", HasValue: true, ValueType: "int"},
+	{Name: "--interval", HasValue: true, ValueType: "int"},
+	{Name: "--strict", HasValue: false, ValueType: "bool"},
+}
+
 func ReleaseCheckCI() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlags(os.Args[3:], checkCIFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	// Parse flags
 	workflow := ""
 	commitSHA := ""

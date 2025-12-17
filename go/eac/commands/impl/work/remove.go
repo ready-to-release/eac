@@ -49,6 +49,14 @@ func init() {
 	registry.Register(Remove)
 }
 
+// removeFlags defines valid flags for the remove command
+var removeFlags = []flags.FlagDefinition{
+	{Name: "--keep-branch", HasValue: false, ValueType: "bool"},
+	{Name: "--delete-remote", HasValue: false, ValueType: "bool"},
+	{Name: "--force", Shorthand: "-f", HasValue: false, ValueType: "bool"},
+	{Name: "--debug", Shorthand: "-d", HasValue: false, ValueType: "bool"},
+}
+
 // Intent: Remove workspace from git tracking and clean up associated branches
 //
 // Design (Three Rules of Vibe Coding):
@@ -74,6 +82,12 @@ func init() {
 // Remove removes a workspace and optionally deletes branches
 func Remove() int {
 	startTime := time.Now()
+
+	// Validate flags before parsing
+	if err := flags.ValidateFlags(os.Args[3:], removeFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
 
 	// Phase 1: Parse configuration
 	phaseStart := time.Now()

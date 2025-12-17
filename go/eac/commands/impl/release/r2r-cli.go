@@ -25,6 +25,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 )
@@ -33,7 +34,19 @@ func init() {
 	registry.Register(ReleaseSrcCli)
 }
 
+var r2rCliFlags = []flags.FlagDefinition{
+	{Name: "--tag-direct", HasValue: false, ValueType: "bool"},
+	{Name: "--dry-run", HasValue: false, ValueType: "bool"},
+	{Name: "--push", HasValue: true, ValueType: "string"},
+}
+
 func ReleaseSrcCli() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlags(os.Args[3:], r2rCliFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	fs := flag.NewFlagSet("release r2r-cli", flag.ExitOnError)
 	tagDirect := fs.Bool("tag-direct", false, "Required flag to confirm direct tagging from devbox")
 	dryRun := fs.Bool("dry-run", false, "Show what would be done without actually creating the tag")

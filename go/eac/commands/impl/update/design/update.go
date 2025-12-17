@@ -45,6 +45,14 @@ import (
 
 var log = logging.C()
 
+// commandFlags defines valid flags for the update design command
+var commandFlags = []flags.FlagDefinition{
+	{Name: "--debug", Shorthand: "-d", HasValue: false, ValueType: "bool"},
+	{Name: "--force", Shorthand: "-f", HasValue: false, ValueType: "bool"},
+	{Name: "--output", Shorthand: "-o", HasValue: true, ValueType: "string"},
+	{Name: "--prompt", HasValue: true, ValueType: "string"},
+}
+
 func init() {
 	registry.Register(UpdateDesign)
 }
@@ -53,6 +61,13 @@ func init() {
 //
 // UpdateDesign orchestrates the architecture design update workflow
 func UpdateDesign() int {
+	// Validate flags
+	args := os.Args[2:] // Skip program name and "update design"
+	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	// Parse configuration
 	config, err := parseConfig()
 	if err != nil {

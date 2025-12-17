@@ -45,6 +45,14 @@ func init() {
 	registry.Register(Merge)
 }
 
+// mergeFlags defines valid flags for the merge command
+var mergeFlags = []flags.FlagDefinition{
+	{Name: "--target", HasValue: true, ValueType: "string"},
+	{Name: "--no-squash", HasValue: false, ValueType: "bool"},
+	{Name: "--keep-worktree", HasValue: false, ValueType: "bool"},
+	{Name: "--debug", Shorthand: "-d", HasValue: false, ValueType: "bool"},
+}
+
 // Intent: Merge workspace changes back to main with squash merge as default
 //
 // Design (Three Rules of Vibe Coding):
@@ -68,6 +76,12 @@ func init() {
 // Merge merges the current workspace into the target branch
 func Merge() int {
 	startTime := time.Now()
+
+	// Validate flags before parsing
+	if err := flags.ValidateFlags(os.Args[3:], mergeFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
 
 	// Phase 1: Parse configuration
 	config, err := parseMergeConfig()

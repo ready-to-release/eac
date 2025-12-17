@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/changelog"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
@@ -49,7 +50,17 @@ type TagPendingReport struct {
 	HasPending  bool               `json:"has_pending"`
 }
 
+var tagPendingFlags = []flags.FlagDefinition{
+	{Name: "--all", HasValue: false, ValueType: "bool"},
+}
+
 func ReleaseTagPending() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlags(os.Args[3:], tagPendingFlags); err != nil {
+		tagPendingLog.Errorf("%v", err)
+		return 1
+	}
+
 	// Parse flags
 	module := ""
 	checkAll := false

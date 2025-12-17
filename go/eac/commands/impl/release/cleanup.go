@@ -25,6 +25,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 )
 
@@ -32,7 +33,17 @@ func init() {
 	registry.Register(ReleaseCleanup)
 }
 
+var cleanupFlags = []flags.FlagDefinition{
+	{Name: "--tag", HasValue: true, ValueType: "string"},
+}
+
 func ReleaseCleanup() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlags(os.Args[3:], cleanupFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	// Parse flags
 	tagName := ""
 

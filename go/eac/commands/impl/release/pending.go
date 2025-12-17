@@ -37,6 +37,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/changelog"
 	"github.com/ready-to-release/eac/go/eac/core/config"
@@ -78,7 +79,19 @@ type PendingResult struct {
 	HasAnyChange bool             `json:"has_any_change"`
 }
 
+var pendingFlags = []flags.FlagDefinition{
+	{Name: "--quiet", HasValue: false, ValueType: "bool"},
+	{Name: "-q", HasValue: false, ValueType: "bool"},
+	{Name: "--all", HasValue: false, ValueType: "bool"},
+}
+
 func ReleasePending() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlags(os.Args[3:], pendingFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	// Parse flags
 	module := ""
 	quiet := false

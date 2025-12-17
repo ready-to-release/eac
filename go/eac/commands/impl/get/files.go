@@ -40,6 +40,7 @@ import (
 	"strings"
 
 	"github.com/bmatcuk/doublestar/v4"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -50,7 +51,24 @@ func init() {
 	registry.Register(GetFiles)
 }
 
+// filesFlags defines valid flags for the get files command
+var filesFlags = []flags.FlagDefinition{
+	{Name: "--as-yaml", HasValue: false, ValueType: "bool"},
+	{Name: "--as-json", HasValue: false, ValueType: "bool"},
+	{Name: "--as-toml", HasValue: false, ValueType: "bool"},
+	{Name: "--changed-only", HasValue: false, ValueType: "bool"},
+	{Name: "--staged-only", HasValue: false, ValueType: "bool"},
+	{Name: "--module", HasValue: true, ValueType: "string"},
+	{Name: "--pattern", HasValue: true, ValueType: "string"},
+}
+
 func GetFiles() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlags(os.Args[3:], filesFlags); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		return 1
+	}
+
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {

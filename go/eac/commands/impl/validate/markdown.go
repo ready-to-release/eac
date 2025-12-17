@@ -12,6 +12,7 @@ package validate
 import (
 	"os"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/markdown"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -23,11 +24,17 @@ func init() {
 
 // ValidateMarkdown validates all markdown files in the repository
 func ValidateMarkdown() int {
-	args := os.Args[2:] // Skip program name and "validate"
+	args := os.Args[3:] // Skip program name, "validate", and "markdown"
 
-	// Check if this is being called as a subcommand
-	if len(args) > 0 && args[0] == "markdown" {
-		args = args[1:] // Skip the subcommand name
+	// Define expected flags
+	commandFlags := []flags.FlagDefinition{
+		{Name: "--help", Shorthand: "-h", HasValue: false},
+	}
+
+	// Validate flags
+	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
 	}
 
 	// Check for help flag

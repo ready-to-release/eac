@@ -40,6 +40,13 @@ func init() {
 	registry.Register(Create)
 }
 
+// createFlags defines valid flags for the create command
+var createFlags = []flags.FlagDefinition{
+	{Name: "--from", HasValue: true, ValueType: "string"},
+	{Name: "--path", HasValue: true, ValueType: "string"},
+	{Name: "--debug", Shorthand: "-d", HasValue: false, ValueType: "bool"},
+}
+
 // Intent: Create a new workspace (git worktree) for parallel development
 //
 // Design (Three Rules of Vibe Coding):
@@ -63,6 +70,12 @@ func init() {
 // Create creates a new workspace (git worktree) for parallel development
 func Create() int {
 	commandStart := time.Now()
+
+	// Validate flags before parsing
+	if err := flags.ValidateFlags(os.Args[3:], createFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
 
 	// Phase 1: Parse configuration
 	phase1Start := time.Now()

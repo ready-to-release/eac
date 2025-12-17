@@ -23,6 +23,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -30,6 +31,17 @@ import (
 
 func init() {
 	registry.Register(GetCIDispatch)
+}
+
+// ciDispatchFlags defines valid flags for the get ci-dispatch command
+var ciDispatchFlags = []flags.FlagDefinition{
+	{Name: "--directly-changed", HasValue: true, ValueType: "string"},
+	{Name: "--invalidated", HasValue: true, ValueType: "string"},
+	{Name: "--head-sha", HasValue: true, ValueType: "string"},
+	{Name: "--mock", HasValue: true, ValueType: "string"},
+	{Name: "--help", Shorthand: "-h", HasValue: false, ValueType: "bool"},
+	{Name: "--as-yaml", HasValue: false, ValueType: "bool"},
+	{Name: "--as-json", HasValue: false, ValueType: "bool"},
 }
 
 // CIDispatchResult represents the output of the get ci-dispatch command
@@ -45,6 +57,12 @@ type CIDispatchResult struct {
 }
 
 func GetCIDispatch() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlags(os.Args[3:], ciDispatchFlags); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		return 1
+	}
+
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {

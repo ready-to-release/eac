@@ -43,6 +43,14 @@ func init() {
 	registry.Register(Pull)
 }
 
+// pullFlags defines valid flags for the pull command
+var pullFlags = []flags.FlagDefinition{
+	{Name: "--target", HasValue: true, ValueType: "string"},
+	{Name: "--autostash", HasValue: false, ValueType: "bool"},
+	{Name: "--no-fetch", HasValue: false, ValueType: "bool"},
+	{Name: "--debug", Shorthand: "-d", HasValue: false, ValueType: "bool"},
+}
+
 // Intent: Sync workspace branch with latest main via rebase
 //
 // Design (Three Rules of Vibe Coding):
@@ -66,6 +74,12 @@ func init() {
 // Pull syncs the current branch with target branch via rebase
 func Pull() int {
 	startTime := time.Now()
+
+	// Validate flags before parsing
+	if err := flags.ValidateFlags(os.Args[3:], pullFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
 
 	// Phase 1: Parse configuration
 	config, err := parsePullConfig()

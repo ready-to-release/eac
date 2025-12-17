@@ -37,6 +37,7 @@ import (
 	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/builders"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/show"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/initsummary"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
@@ -151,6 +152,29 @@ func ensureCommandsBinary(workspaceRoot string) error {
 	return nil
 }
 
+// buildFlags defines valid flags for the build command
+var buildFlags = []flags.FlagDefinition{
+	{Name: "--tidy-first", HasValue: false, ValueType: "bool"},
+	{Name: "--no-tidy", HasValue: false, ValueType: "bool"},
+	{Name: "--skip-depm", HasValue: false, ValueType: "bool"},
+	{Name: "--no-deps", HasValue: false, ValueType: "bool"},
+	{Name: "--use-existing-depm", HasValue: false, ValueType: "bool"},
+	{Name: "--rebuild", HasValue: false, ValueType: "bool"},
+	{Name: "--layered-build", HasValue: false, ValueType: "bool"},
+	{Name: "--skip-deps-verification", HasValue: false, ValueType: "bool"},
+	{Name: "--timings", HasValue: false, ValueType: "bool"},
+	{Name: "--debug", HasValue: false, ValueType: "bool"},
+	{Name: "--accept-warnings", HasValue: false, ValueType: "bool"},
+	{Name: "--list-artifacts", HasValue: false, ValueType: "bool"},
+	{Name: "--dry-run", HasValue: false, ValueType: "bool"},
+	{Name: "--all", HasValue: false, ValueType: "bool"},
+	{Name: "--tui", HasValue: false, ValueType: "bool"},
+	{Name: "--no-tui", HasValue: false, ValueType: "bool"},
+	{Name: "--tui-height", HasValue: true, ValueType: "int"},
+	{Name: "--version", HasValue: false, ValueType: "bool"},
+	{Name: "--help", Shorthand: "-h", HasValue: false, ValueType: "bool"},
+}
+
 // Build command entry point - builds one or more modules
 func Build() int {
 	args := os.Args[2:] // Skip program name and "build"
@@ -159,6 +183,12 @@ func Build() int {
 	if len(args) > 0 && (args[0] == "--help" || args[0] == "-h") {
 		printBuildUsage()
 		return 0
+	}
+
+	// Validate flags before parsing
+	if err := flags.ValidateFlags(args, buildFlags); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
 	}
 
 	// Detect execution environment

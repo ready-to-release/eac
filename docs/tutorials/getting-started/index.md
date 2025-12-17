@@ -11,6 +11,7 @@ Follow these tutorials in order:
 | Tutorial | Description |
 |----------|-------------|
 | [Quick Start](./quick-start.md) | Install r2r CLI and run your first commands |
+| [Understanding Configuration Files](./configuration-files.md) | Learn about `.r2r/eac/` files and how they work |
 | [Your First Specification](./first-specification.md) | Write Gherkin specifications using Given/When/Then |
 | [Your First Module](./first-module.md) | Create a Go module with tests from scratch |
 | [Understanding Test Suites](./understanding-test-suites.md) | Learn test levels and when to use each suite |
@@ -20,6 +21,7 @@ Follow these tutorials in order:
 After completing these tutorials, you'll be able to:
 
 - Install and configure the r2r CLI
+- Understand EAC configuration files and when to customize them
 - Write Gherkin specifications that describe system behavior
 - Create and test Go modules in a monorepo
 - Choose and run appropriate test suites for different scenarios

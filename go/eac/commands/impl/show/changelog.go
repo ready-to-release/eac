@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/changelog"
@@ -36,6 +37,13 @@ func init() {
 func ShowChangelog() int {
 	// Parse arguments - expect module after "show changelog"
 	args := os.Args[1:]
+
+	// Validate flags (no flags expected for this command)
+	commandFlags := []flags.FlagDefinition{}
+	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
 
 	// Find where "show changelog" ends
 	cmdIdx := -1

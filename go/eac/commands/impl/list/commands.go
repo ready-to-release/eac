@@ -12,10 +12,16 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
+
+// commandFlags defines valid flags for the list commands command
+var commandFlags = []flags.FlagDefinition{
+	{Name: "--verbose", Shorthand: "-v", HasValue: false, ValueType: "bool"},
+}
 
 var log = logging.C()
 
@@ -25,6 +31,12 @@ func init() {
 
 func ShowHelp() int {
 	args := os.Args[3:] // Skip program name, "show", and "help"
+
+	// Validate flags
+	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
 
 	verbose := false
 	var commandParts []string

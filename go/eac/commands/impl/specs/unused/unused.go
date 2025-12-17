@@ -16,10 +16,18 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
+
+// commandFlags defines valid flags for the specs unused command
+var commandFlags = []flags.FlagDefinition{
+	{Name: "--verbose", Shorthand: "-v", HasValue: false, ValueType: "bool"},
+	{Name: "--module", Shorthand: "-m", HasValue: true, ValueType: "string"},
+	{Name: "--help", Shorthand: "-h", HasValue: false, ValueType: "bool"},
+}
 
 var log = logging.C()
 
@@ -30,6 +38,12 @@ func init() {
 // SpecsUnusedSteps is the entry point for the specs unused-steps command.
 func SpecsUnusedSteps() int {
 	args := os.Args[3:] // Skip program name, "specs", and "unused-steps"
+
+	// Validate flags
+	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
 
 	verbose := false
 	moduleFilter := ""

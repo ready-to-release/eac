@@ -36,6 +36,16 @@ func init() {
 func ShowModules() int {
 	// Parse flags
 	args := os.Args[1:]
+
+	// Validate flags
+	commandFlags := []flags.FlagDefinition{
+		{Name: "--with-artifacts", HasValue: false},
+	}
+	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
+
 	withArtifacts := flags.HasFlag(args, "--with-artifacts", "")
 
 	// Get repository root

@@ -15,6 +15,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
@@ -25,6 +26,15 @@ func init() {
 }
 
 func ShowEnvironments() int {
+	args := os.Args[3:] // Skip program name, "show", and "environments"
+
+	// Validate flags (no flags expected for this command)
+	commandFlags := []flags.FlagDefinition{}
+	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
+
 	// Load environment contract using central config
 	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {

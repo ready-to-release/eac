@@ -16,6 +16,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
@@ -35,7 +36,19 @@ type BuildDepsResult struct {
 	BuildDeps []string `json:"build_deps" yaml:"build_deps"`
 }
 
+// buildDepsFlags defines valid flags for the get build-deps command
+var buildDepsFlags = []flags.FlagDefinition{
+	{Name: "--as-yaml", HasValue: false, ValueType: "bool"},
+	{Name: "--as-json", HasValue: false, ValueType: "bool"},
+}
+
 func GetBuildDeps() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlags(os.Args[3:], buildDepsFlags); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		return 1
+	}
+
 	args := os.Args[3:] // Skip program name, "get", and "build-deps"
 
 	// Parse module moniker from args (skip flags)

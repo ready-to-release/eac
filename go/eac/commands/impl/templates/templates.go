@@ -5,6 +5,7 @@ package templates
 import (
 	"os"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
@@ -15,9 +16,19 @@ func init() {
 	registry.Register(Templates)
 }
 
+// commandFlags defines valid flags for the templates command
+var commandFlags = []flags.FlagDefinition{
+	{Name: "--help", Shorthand: "-h", HasValue: false, ValueType: "bool"},
+}
+
 // Templates command entry point
 func Templates() int {
 	args := os.Args[2:] // Skip program name and "templates"
+
+	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
 
 	if len(args) == 0 {
 		printTemplatesUsage()

@@ -31,6 +31,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -52,7 +53,20 @@ type DepCIStatus struct {
 	SkipReason    string
 }
 
+var awaitDepsFlags = []flags.FlagDefinition{
+	{Name: "--timeout", HasValue: true, ValueType: "int"},
+	{Name: "--interval", HasValue: true, ValueType: "int"},
+	{Name: "--skip-static", HasValue: false, ValueType: "bool"},
+	{Name: "--no-skip-static", HasValue: false, ValueType: "bool"},
+}
+
 func ReleaseAwaitDeps() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlags(os.Args[3:], awaitDepsFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	// Parse arguments
 	module := ""
 	timeout := 300

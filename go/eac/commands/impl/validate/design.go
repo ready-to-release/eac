@@ -39,6 +39,21 @@ func init() {
 func ValidateDesign() int {
 	args := os.Args[3:] // Skip program, "validate", and "design"
 
+	// Define expected flags
+	commandFlags := []flags.FlagDefinition{
+		{Name: "--all", Shorthand: "-a", HasValue: false},
+		{Name: "--file", Shorthand: "-f", HasValue: true, ValueType: "string"},
+		{Name: "--debug", Shorthand: "-d", HasValue: false},
+		{Name: "--verbose", Shorthand: "-v", HasValue: false},
+		{Name: "--help", Shorthand: "-h", HasValue: false},
+	}
+
+	// Validate flags
+	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	var module string
 	var file string
 

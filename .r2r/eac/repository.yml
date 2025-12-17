@@ -61,6 +61,7 @@ modules:
           - .github/workflows/cron-full-trigger.yaml
           - .github/workflows/codeql.yaml
           - scripts/pwsh/claude/env-setup.ps1
+          - scripts/pwsh/local-dev/**
           - scripts/sh/claude/env-setup.sh
           - scripts/sh/vscode/**
           - go/eac/core/testing/testdata/meta-tests/**

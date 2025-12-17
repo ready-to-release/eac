@@ -15,9 +15,15 @@
 package test
 
 import (
+	"os"
+
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/testing"
 )
+
+// commandFlags defines valid flags for the test list-suites command
+var listSuitesCommandFlags = []flags.FlagDefinition{}
 
 func init() {
 	registry.Register(ListSuites)
@@ -25,6 +31,13 @@ func init() {
 
 // ListSuites lists all available test suites
 func ListSuites() int {
+	// Validate flags
+	args := os.Args[2:] // Skip program name and "test list-suites"
+	if err := flags.ValidateFlags(args, listSuitesCommandFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	log.Info("Available test suites:")
 	log.Info("")
 

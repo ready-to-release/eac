@@ -16,6 +16,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 )
@@ -28,24 +29,27 @@ func init() {
 func ShowBuildSummary() int {
 	args := os.Args[3:] // Skip program name, "show", and "build-summary"
 
+	// Validate flags
+	commandFlags := []flags.FlagDefinition{
+		{Name: "--status", HasValue: true},
+		{Name: "--run-id", HasValue: true},
+	}
+	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
+
 	if len(args) == 0 {
 		log.Errorf("Usage: show build-summary <module> [--status=success|failure] [--run-id=<id>]")
 		return 1
 	}
 
 	module := args[0]
-	status := "success"
-	runID := ""
-
-	// Parse flags
-	for i := 1; i < len(args); i++ {
-		arg := args[i]
-		if len(arg) > 9 && arg[:9] == "--status=" {
-			status = arg[9:]
-		} else if len(arg) > 9 && arg[:9] == "--run-id=" {
-			runID = arg[9:]
-		}
+	status := flags.GetFlagValue(args, "--status")
+	if status == "" {
+		status = "success"
 	}
+	runID := flags.GetFlagValue(args, "--run-id")
 
 	return generateBuildSummary(module, status, runID)
 }

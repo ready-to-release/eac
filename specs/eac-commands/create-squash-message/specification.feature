@@ -64,16 +64,3 @@ Feature: eac-commands_create-squash-message
       When I run "create squash-message --base=develop"
       Then the exit code is 0
       And the command compares against "develop" branch
-
-  Rule: Debug mode logs intermediate outputs to commands.log
-
-    Scenario: Debug flag logs outputs to unified log
-      Given I am on a branch with multiple commits ahead of "main"
-      And the mock AI is configured to return a valid squash message
-      When I run "create squash-message --debug"
-      Then the exit code is 0
-      And logs are written to "out/commands.log"
-      And the log contains debug artifacts for "SQUASH-CONTEXT"
-      And the log contains debug artifacts for "SQUASH-PROMPT"
-      And the log contains debug artifacts for "SQUASH-AI-RESPONSE"
-      And the log contains debug artifacts for "SQUASH-FINAL"

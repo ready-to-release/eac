@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -25,7 +26,21 @@ func init() {
 	registry.Register(GetExecutionOrder)
 }
 
+// executionOrderFlags defines valid flags for the get execution-order command
+var executionOrderFlags = []flags.FlagDefinition{
+	{Name: "--as-yaml", HasValue: false, ValueType: "bool"},
+	{Name: "--as-json", HasValue: false, ValueType: "bool"},
+	{Name: "--as-toml", HasValue: false, ValueType: "bool"},
+	{Name: "--no-deps", HasValue: false, ValueType: "bool"},
+}
+
 func GetExecutionOrder() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlags(os.Args[3:], executionOrderFlags); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		return 1
+	}
+
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {

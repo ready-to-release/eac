@@ -211,9 +211,19 @@ type squashConfig struct {
 	debug      bool
 }
 
+var squashMessageFlags = []flags.FlagDefinition{
+	{Name: "--base", Shorthand: "", HasValue: true, ValueType: "string"},
+	{Name: "--debug", Shorthand: "-d", HasValue: false, ValueType: "bool"},
+}
+
 // parseConfig parses command line arguments
 func parseConfig() (*squashConfig, error) {
 	args := os.Args[3:] // Skip "r2r", "create", "squash-message"
+
+	// Validate flags before parsing
+	if err := flags.ValidateFlags(args, squashMessageFlags); err != nil {
+		return nil, err
+	}
 
 	cfg := &squashConfig{
 		baseBranch: "main",

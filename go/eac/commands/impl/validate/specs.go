@@ -27,6 +27,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
@@ -89,6 +90,23 @@ func ResetGitRepo() {
 
 // ValidateSpecs validates existing Gherkin specification files
 func ValidateSpecs() int {
+	// Define expected flags
+	commandFlags := []flags.FlagDefinition{
+		{Name: "--quiet", Shorthand: "-q", HasValue: false},
+		{Name: "--verbose", Shorthand: "-v", HasValue: false},
+		{Name: "--format", Shorthand: "-f", HasValue: true, ValueType: "string"},
+		{Name: "--check-tags", HasValue: false},
+		{Name: "--no-check-tags", HasValue: false},
+		{Name: "--fix", HasValue: false},
+	}
+
+	// Validate flags
+	args := os.Args[3:] // Skip program name, "validate", and "specs"
+	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	// Parse configuration
 	config, err := parseValidateConfig()
 	if err != nil {

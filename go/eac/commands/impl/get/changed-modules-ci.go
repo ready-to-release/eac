@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
@@ -33,6 +34,17 @@ import (
 
 func init() {
 	registry.Register(GetChangedModulesCI)
+}
+
+// changedModulesCIFlags defines valid flags for the get changed-modules-ci command
+var changedModulesCIFlags = []flags.FlagDefinition{
+	{Name: "--as-yaml", HasValue: false, ValueType: "bool"},
+	{Name: "--as-json", HasValue: false, ValueType: "bool"},
+	{Name: "--as-toml", HasValue: false, ValueType: "bool"},
+	{Name: "--pr-base", HasValue: true, ValueType: "string"},
+	{Name: "--workflow", HasValue: true, ValueType: "string"},
+	{Name: "--branch", HasValue: true, ValueType: "string"},
+	{Name: "--filter-workflows", HasValue: false, ValueType: "bool"},
 }
 
 // CIChangedModulesResult represents the output of the get changed-modules-ci command
@@ -52,6 +64,12 @@ type CIChangedModulesResult struct {
 }
 
 func GetChangedModulesCI() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlags(os.Args[3:], changedModulesCIFlags); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		return 1
+	}
+
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {

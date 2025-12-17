@@ -20,6 +20,7 @@ import (
 	"flag"
 	"os"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 )
 
@@ -27,7 +28,19 @@ func init() {
 	registry.Register(ReleaseExtEac)
 }
 
+var extEacFlags = []flags.FlagDefinition{
+	{Name: "--tag-direct", HasValue: false, ValueType: "bool"},
+	{Name: "--dry-run", HasValue: false, ValueType: "bool"},
+	{Name: "--push", HasValue: true, ValueType: "string"},
+}
+
 func ReleaseExtEac() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlags(os.Args[3:], extEacFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	fs := flag.NewFlagSet("release ext-eac", flag.ExitOnError)
 	tagDirect := fs.Bool("tag-direct", false, "Required flag to confirm direct tagging from devbox")
 	dryRun := fs.Bool("dry-run", false, "Show what would be done without actually creating the tag")

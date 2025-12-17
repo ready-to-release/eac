@@ -532,6 +532,20 @@ func (v *GherkinValidator) getVerificationTags() []string {
 
 	// Try structure contract
 	if v.contract != nil && v.contract.RawData != nil {
+		// Try new unified config key first (ai-config.yml format)
+		if tagsVal, ok := v.contract.RawData["required_tags"].([]interface{}); ok {
+			var tags []string
+			for _, tag := range tagsVal {
+				if tagStr, ok := tag.(string); ok {
+					tags = append(tags, tagStr)
+				}
+			}
+			if len(tags) > 0 {
+				return tags
+			}
+		}
+
+		// Fall back to legacy key name for backward compatibility
 		if tagsVal, ok := v.contract.RawData["required_verification_tags"].([]interface{}); ok {
 			var tags []string
 			for _, tag := range tagsVal {

@@ -43,6 +43,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/changelog"
 	"github.com/ready-to-release/eac/go/eac/core/config"
@@ -70,7 +71,19 @@ type ReleaseResult struct {
 	Error           string `json:"error,omitempty"`
 }
 
+var thisFlags = []flags.FlagDefinition{
+	{Name: "--dry-run", HasValue: false, ValueType: "bool"},
+	{Name: "--json", HasValue: false, ValueType: "bool"},
+	{Name: "--date", HasValue: true, ValueType: "string"},
+}
+
 func ReleaseThis() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlags(os.Args[3:], thisFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	// Parse flags
 	module := ""
 	dryRun := false

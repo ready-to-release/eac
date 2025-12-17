@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	getInternal "github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
@@ -25,6 +26,13 @@ import (
 
 func init() {
 	registry.Register(GetConfig)
+}
+
+// configFlags defines valid flags for the get config command
+var configFlags = []flags.FlagDefinition{
+	{Name: "--as-yaml", HasValue: false, ValueType: "bool"},
+	{Name: "--as-json", HasValue: false, ValueType: "bool"},
+	{Name: "--as-toml", HasValue: false, ValueType: "bool"},
 }
 
 // ConfigOutput represents the structured output of all configs
@@ -37,6 +45,12 @@ type ConfigOutput struct {
 }
 
 func GetConfig() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlags(os.Args[3:], configFlags); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		return 1
+	}
+
 	// Use the shared get command helper
 	return getInternal.ExecuteGetCommand(func() (interface{}, error) {
 		// Load all configs with defaults applied

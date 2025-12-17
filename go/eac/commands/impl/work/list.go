@@ -37,6 +37,12 @@ func init() {
 	registry.Register(ShowWorkspaces)
 }
 
+// listFlags defines valid flags for the list command
+var listFlags = []flags.FlagDefinition{
+	{Name: "--verbose", Shorthand: "-v", HasValue: false, ValueType: "bool"},
+	{Name: "--debug", Shorthand: "-d", HasValue: false, ValueType: "bool"},
+}
+
 // Intent: List all workspaces (git worktrees) with their status
 //
 // Design (Three Rules of Vibe Coding):
@@ -59,6 +65,12 @@ func init() {
 // ShowWorkspaces displays all git worktrees in a formatted table
 func ShowWorkspaces() int {
 	cmdStart := time.Now()
+
+	// Validate flags before parsing
+	if err := flags.ValidateFlags(os.Args[3:], listFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
 
 	// Phase 1: Parse configuration
 	phase1Start := time.Now()

@@ -22,6 +22,7 @@
 package sbom
 
 import (
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"os"
 	"strings"
 
@@ -48,6 +49,19 @@ func SBOM() int {
 	if len(args) > 0 && (args[0] == "--help" || args[0] == "-h") {
 		printSBOMUsage()
 		return 0
+	}
+
+	// Define valid flags
+	commandFlags := []flags.FlagDefinition{
+		{Name: "--format", HasValue: true, ValueType: "string"},
+		{Name: "--debug", Shorthand: "-d", HasValue: false},
+	}
+
+	// Validate flags
+	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+		log.Errorf("%v", err)
+		printSBOMUsage()
+		return 1
 	}
 
 	// Parse module monikers and flags

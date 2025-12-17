@@ -41,7 +41,7 @@ export ANTHROPIC_API_KEY="sk-ant-api03-..."
 r2r eac init --ai claude-api
 ```
 
-**What happens**: Creates `.r2r/eac/eac-config.yml` that references `ANTHROPIC_API_KEY` environment variable.
+**What happens**: Creates `.r2r/eac/ai-provider.yml` that references `ANTHROPIC_API_KEY` environment variable.
 
 **Advantages**:
 - Config file can be safely committed to git
@@ -57,7 +57,7 @@ Store the actual API token directly in a personal config file:
 r2r eac init --ai claude-api --ai-token sk-ant-api03-...
 ```
 
-**What happens**: Creates `.r2r/eac/eac-config-personal.yml` with the actual API key stored directly.
+**What happens**: Creates `.r2r/eac/ai-provider.personal.yml` with the actual API key stored directly.
 
 **Advantages**:
 - No need to manage environment variables
@@ -102,10 +102,10 @@ Check that the config file was created:
 
 ```bash
 # For environment variables approach
-cat .r2r/eac/eac-config.yml
+cat .r2r/eac/ai-provider.yml
 
 # For personal config approach
-cat .r2r/eac/eac-config-personal.yml
+cat .r2r/eac/ai-provider.personal.yml
 ```
 
 ### Test AI Features
@@ -126,9 +126,9 @@ r2r eac work commit
 
 The init command creates one of two config files depending on the approach used:
 
-### Environment Variables Config (`.r2r/eac/eac-config.yml`)
+### Environment Variables Config (`.r2r/eac/ai-provider.yml`)
 
-Created when using `--ai` without `--ai-token`. References environment variables:
+Created when using `--ai-provider` without `--ai-token`. References environment variables:
 
 ```yaml
 provider: claude-api
@@ -140,7 +140,7 @@ temperature: 0.7
 
 **Safe to commit**: This file only contains the environment variable name, not the actual key.
 
-### Personal Config (`.r2r/eac/eac-config-personal.yml`)
+### Personal Config (`.r2r/eac/ai-provider.personal.yml`)
 
 Created when using `--ai-token`. Stores the actual API key:
 
@@ -166,7 +166,7 @@ export ANTHROPIC_API_KEY="sk-ant-api03-..."
 r2r eac init --ai claude-api
 
 # Output:
-# ✓ Created configuration at .r2r/eac/eac-config.yml
+# ✓ Created configuration at .r2r/eac/ai-provider.yml
 # ✓ Provider: claude-api
 # ✓ Model: claude-sonnet-4-5
 
@@ -190,7 +190,7 @@ r2r eac create commit-message
 r2r eac init --ai claude-api --ai-token sk-ant-api03-...
 
 # Output:
-# ✓ Created personal configuration at .r2r/eac/eac-config-personal.yml
+# ✓ Created personal configuration at .r2r/eac/ai-provider.personal.yml
 # ✓ Provider: claude-api
 # ✓ Model: claude-sonnet-4-5
 # ⚠ This file is gitignored - do not commit it
@@ -208,11 +208,11 @@ r2r eac create commit-message
 | Problem | Solution |
 |---------|----------|
 | "API key not found" (env vars) | Set `ANTHROPIC_API_KEY` environment variable before running init |
-| "API key not found" (personal) | Check `.r2r/eac/eac-config-personal.yml` exists and contains `api_key` field |
+| "API key not found" (personal) | Check `.r2r/eac/ai-provider.personal.yml` exists and contains `api_key` field |
 | "Invalid provider" | Only `claude-api` is currently supported |
 | "Permission denied" | Check directory permissions for `.r2r/eac/` |
 | AI features not working (env vars) | Verify `ANTHROPIC_API_KEY` is still set in current session |
-| Personal config committed to git | Add `.r2r/eac/eac-config-personal.yml` to `.gitignore` immediately |
+| Personal config committed to git | Add `.r2r/eac/ai-provider.personal.yml` to `.gitignore` immediately |
 
 ## Making Environment Variables Permanent (Option A Only)
 
@@ -245,14 +245,14 @@ If you chose Option B (personal config with `--ai-token`), ensure it's in `.giti
 
 ```gitignore
 # AI provider personal configuration (contains actual API keys)
-.r2r/eac/eac-config-personal.yml
+.r2r/eac/ai-provider.personal.yml
 ```
 
 ### Verify It's Ignored
 
 ```bash
 # Should show nothing (file is ignored)
-git status | grep eac-config-personal
+git status | grep ai-provider.personal
 
 # If it shows up, you need to add it to .gitignore
 ```

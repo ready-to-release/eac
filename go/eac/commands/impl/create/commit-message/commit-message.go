@@ -217,9 +217,19 @@ func commitAIAttemptWithMessage(logger *logging.Logger, workspaceRoot string, de
 	return exitCode, shouldRetry, finalMessage
 }
 
+var commitMessageFlags = []flags.FlagDefinition{
+	{Name: "--debug", Shorthand: "-d", HasValue: false, ValueType: "bool"},
+	{Name: "--commit", Shorthand: "-c", HasValue: false, ValueType: "bool"},
+}
+
 // Phase 1: Parse Configuration
 func parseConfig() (debug bool, autoCommit bool, workspaceRoot string, err error) {
 	args := os.Args[3:] // Skip program name, "create", and "commit-message"
+
+	// Validate flags before parsing
+	if validationErr := flags.ValidateFlags(args, commitMessageFlags); validationErr != nil {
+		return false, false, "", validationErr
+	}
 
 	// Parse flags using shared package
 	debug = flags.ParseDebugFlag(args)

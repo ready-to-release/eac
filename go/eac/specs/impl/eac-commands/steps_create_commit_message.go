@@ -5,7 +5,6 @@ package srccommands
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -165,41 +164,6 @@ func registerCreateCommitMessageSteps(sc *godog.ScenarioContext, ctx *internal.T
 			return fmt.Errorf("commit message doesn't match generated message")
 		}
 
-		return nil
-	})
-
-	// Log file verification
-	sc.Step(`^logs are written to "([^"]*)"$`, func(logPath string) error {
-		logFile := filepath.Join(ctx.IsolatedDir, logPath)
-		if _, err := os.Stat(logFile); os.IsNotExist(err) {
-			return fmt.Errorf("log file %s not found", logFile)
-		}
-		return nil
-	})
-
-	sc.Step(`^the log contains debug artifacts for AI prompts$`, func() error {
-		logFile := filepath.Join(ctx.IsolatedDir, "out/commands.log")
-		content, err := os.ReadFile(logFile)
-		if err != nil {
-			return fmt.Errorf("failed to read log file: %w", err)
-		}
-		// Check for TOP-LEVEL-CONTEXT which contains the AI prompt
-		if !strings.Contains(string(content), "=== TOP-LEVEL-CONTEXT START ===") {
-			return fmt.Errorf("log doesn't contain AI prompt artifacts")
-		}
-		return nil
-	})
-
-	sc.Step(`^the log contains debug artifacts for AI responses$`, func() error {
-		logFile := filepath.Join(ctx.IsolatedDir, "out/commands.log")
-		content, err := os.ReadFile(logFile)
-		if err != nil {
-			return fmt.Errorf("failed to read log file: %w", err)
-		}
-		// Check for TOP-LEVEL-OUTPUT which contains the AI response
-		if !strings.Contains(string(content), "=== TOP-LEVEL-OUTPUT START ===") {
-			return fmt.Errorf("log doesn't contain AI response artifacts")
-		}
 		return nil
 	})
 

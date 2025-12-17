@@ -18,12 +18,14 @@
 // Long:   init                                                      # Initialize project (no AI config)
 // Long:   init --ai-provider claude-api                             # Configure AI provider
 // Long:   init --ai-provider claude-api --ai-token sk-ant-xxx       # Configure with actual token
+// Long:   init --copy-templates                                     # Copy system config files for customization
 // Long:   init --ai-provider claude-api --force                     # Overwrite existing config
-// Flag.ai-provider: type=string, shorthand=a, usage=AI provider to configure (optional), completion=claude-api,openai,gemini
-// Flag.ai-token: type=string, usage=AI provider API token (creates personal config if provided)
-// Flag.git-token: type=string, usage=Git provider API token for repository operations (supports GitHub, GitLab, etc.) (optional)
-// Flag.force: type=bool, shorthand=f, default=false, usage=Overwrite existing config file if it exists
-// Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug mode to save intermediate outputs to the 'out' directory for troubleshooting and analysis
+// Flag.ai-provider: type=string, shorthand=a, usage=AI provider to configure (optional), required=false, completion=claude-api,openai,gemini
+// Flag.ai-token: type=string, usage=AI provider API token (creates personal config if provided), required=false
+// Flag.git-token: type=string, usage=Git provider API token for repository operations (supports GitHub, GitLab, etc.) (optional), required=false
+// Flag.copy-templates: type=bool, default=false, usage=Copy system default configuration files to repository for customization, required=false
+// Flag.force: type=bool, shorthand=f, default=false, usage=Overwrite existing config file if it exists, required=false
+// Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug mode to save intermediate outputs to the 'out' directory for troubleshooting and analysis, required=false
 package init
 
 import (
@@ -32,6 +34,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/git"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
@@ -89,22 +92,40 @@ func ResetGitRepo() {
 //
 // Hard to break:
 //   - Tests cover all providers and error cases
-//   - Validation happens early (--ai flag required, provider supported)
+//   - Validation happens early (provider supported when specified)
 //   - Creates directories safely (no errors if already exist)
 //   - Config file is YAML - human readable and safe to commit
 //   - Logger integration for consistent output and debugging
 
+// initFlags defines valid flags for the init command
+var initFlags = []flags.FlagDefinition{
+	{Name: "--ai-provider", Shorthand: "-a", HasValue: true, ValueType: "string"},
+	{Name: "--ai-token", HasValue: true, ValueType: "string", Aliases: []string{"--api-token", "--token"}},
+	{Name: "--git-token", HasValue: true, ValueType: "string"},
+	{Name: "--copy-templates", HasValue: false, ValueType: "bool"},
+	{Name: "--force", HasValue: false, ValueType: "bool"},
+	{Name: "--debug", Shorthand: "-d", HasValue: false, ValueType: "bool"},
+}
+
 // Init initializes EAC project configuration
 func Init() int {
-	// Parse flags early to get all options
+	// Validate flags before parsing
+	if err := flags.ValidateFlags(os.Args[2:], initFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
+	// Parse flags to get all options
 	aiProvider := ""
 	aiToken := ""
 	gitToken := ""
+	copyTemplates := false
 	force := false
 	debug := false
 
 	for i := 2; i < len(os.Args); i++ {
-		switch os.Args[i] {
+		arg := os.Args[i]
+		switch arg {
 		case "--ai-provider", "-a":
 			if i+1 < len(os.Args) {
 				aiProvider = os.Args[i+1]
@@ -120,6 +141,8 @@ func Init() int {
 				gitToken = os.Args[i+1]
 				i++ // Skip the value
 			}
+		case "--copy-templates":
+			copyTemplates = true
 		case "--force":
 			force = true
 		case "--debug", "-d":
@@ -149,11 +172,24 @@ func Init() int {
 
 	// Create .r2r/eac directory structure (always)
 	logger.Info("📁 Initializing EAC project...")
-	if err := createDirectoryStructure(workspaceRoot); err != nil {
+	logger.Info(fmt.Sprintf("   Repository root: %s", workspaceRoot))
+	logger.Info("")
+	if err := createDirectoryStructure(workspaceRoot, logger); err != nil {
 		logger.Error(fmt.Sprintf("Error creating directory structure: %v", err))
 		return 1
 	}
 	logger.Info("✅ Directory structure created")
+
+	// Copy system templates if requested
+	if copyTemplates {
+		logger.Info("")
+		logger.Info("📄 Copying system template files...")
+		if err := copySystemTemplates(workspaceRoot, force, logger); err != nil {
+			logger.Error(fmt.Sprintf("Error copying templates: %v", err))
+			return 1
+		}
+		logger.Info("✅ System templates copied")
+	}
 
 	// If no AI provider specified, just initialize directory structure
 	if aiProvider == "" {
@@ -358,11 +394,18 @@ func displayProviderInfo(config *agentConfig, logger *logging.Logger) {
 }
 
 // createDirectoryStructure creates the .r2r/eac directory structure
-func createDirectoryStructure(workspaceRoot string) error {
+func createDirectoryStructure(workspaceRoot string, logger *logging.Logger) error {
 	// Create .r2r/eac directory
 	eacDir := paths.EACConfigPath(workspaceRoot)
+	logger.Info(fmt.Sprintf("   Creating directory: %s", eacDir))
+
 	if err := os.MkdirAll(eacDir, 0755); err != nil {
 		return fmt.Errorf("failed to create .r2r/eac directory: %w", err)
+	}
+
+	// Verify directory was created
+	if _, err := os.Stat(eacDir); os.IsNotExist(err) {
+		return fmt.Errorf("directory creation reported success but directory does not exist: %s", eacDir)
 	}
 
 	return nil
@@ -457,4 +500,68 @@ func buildConfigContent(config *agentConfig, tokens *tokenConfig, useEnvVars boo
 	}
 
 	return content.String()
+}
+
+// copySystemTemplates copies system default configuration files to user repository
+func copySystemTemplates(workspaceRoot string, force bool, logger *logging.Logger) error {
+	// Get system root (Docker container or local dev)
+	systemRoot := os.Getenv("R2R_CONTAINER_ROOT")
+	if systemRoot == "" {
+		// Local dev mode - system defaults are in workspace root
+		systemRoot = workspaceRoot
+	}
+
+	// List of Category B files (system defaults) to copy
+	templateFiles := []string{
+		"ai-config.yml",
+		"module-types.yml",
+		"system-dependencies.yml",
+		"security-tools.yml",
+		"logging.yml",
+		"environments.yml",
+		"testing-tags.yml",
+	}
+
+	eacDir := paths.EACConfigPath(workspaceRoot)
+	systemEacDir := paths.EACConfigPath(systemRoot)
+
+	copiedCount := 0
+	skippedCount := 0
+
+	for _, filename := range templateFiles {
+		srcPath := fmt.Sprintf("%s/%s", systemEacDir, filename)
+		dstPath := fmt.Sprintf("%s/%s", eacDir, filename)
+
+		// Check if destination exists
+		if fileExists(dstPath) && !force {
+			logger.Info(fmt.Sprintf("   ⏭️  Skipping %s (already exists, use --force to overwrite)", filename))
+			skippedCount++
+			continue
+		}
+
+		// Check if source exists
+		if !fileExists(srcPath) {
+			logger.Warn(fmt.Sprintf("   ⚠️  System template not found: %s", filename))
+			continue
+		}
+
+		// Read source file
+		data, err := os.ReadFile(srcPath)
+		if err != nil {
+			return fmt.Errorf("failed to read %s: %w", srcPath, err)
+		}
+
+		// Write to destination
+		if err := os.WriteFile(dstPath, data, 0644); err != nil {
+			return fmt.Errorf("failed to write %s: %w", dstPath, err)
+		}
+
+		logger.Info(fmt.Sprintf("   ✓ Copied %s", filename))
+		copiedCount++
+	}
+
+	logger.Info("")
+	logger.Info(fmt.Sprintf("   📊 Summary: %d copied, %d skipped", copiedCount, skippedCount))
+
+	return nil
 }

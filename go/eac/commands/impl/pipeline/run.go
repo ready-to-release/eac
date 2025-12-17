@@ -29,16 +29,27 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	pipelinerunner "github.com/ready-to-release/eac/go/eac/commands/impl/pipeline/helper"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
+
+var pipelineRunFlags = []flags.FlagDefinition{
+	{Name: "--changed-only", HasValue: false, ValueType: "bool"},
+	{Name: "--ref", HasValue: true, ValueType: "string"},
+}
 
 func init() {
 	registry.Register(PipelineRun)
 }
 
 func PipelineRun() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlags(os.Args[3:], pipelineRunFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
 	// Parse flags
 	changedOnly := false
 	ref := getCurrentBranch()

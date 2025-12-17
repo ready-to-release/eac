@@ -30,15 +30,29 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
+
+var dispatchAndWaitFlags = []flags.FlagDefinition{
+	{Name: "--workflow", HasValue: true, ValueType: "string"},
+	{Name: "--ref", HasValue: true, ValueType: "string"},
+	{Name: "--run-id", HasValue: true, ValueType: "string"},
+	{Name: "--timeout", HasValue: true, ValueType: "int"},
+	{Name: "--inputs", HasValue: true, ValueType: "string"},
+}
 
 func init() {
 	registry.Register(PipelineCIDispatchAndWait)
 }
 
 func PipelineCIDispatchAndWait() int {
+	// Validate flags before parsing (args start at index 4 for "pipeline ci dispatch-and-wait")
+	if err := flags.ValidateFlags(os.Args[4:], dispatchAndWaitFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
 	// Get workspace root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {

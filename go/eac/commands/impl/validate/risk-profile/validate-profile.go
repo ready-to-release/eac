@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
@@ -77,6 +78,16 @@ func ValidateRiskProfile() int {
 func parseConfig() (*Config, error) {
 	args := os.Args[3:] // Skip program name, "validate", and "risk-profile"
 
+	// Define expected flags
+	commandFlags := []flags.FlagDefinition{
+		{Name: "--help", Shorthand: "-h", HasValue: false},
+	}
+
+	// Validate flags
+	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+		return nil, err
+	}
+
 	config := &Config{}
 
 	// Get workspace root
@@ -94,9 +105,6 @@ func parseConfig() (*Config, error) {
 		switch {
 		case arg == "--help" || arg == "-h":
 			return nil, fmt.Errorf("help requested")
-
-		case strings.HasPrefix(arg, "-"):
-			return nil, fmt.Errorf("unknown flag: %s", arg)
 
 		default:
 			// Positional argument: file path

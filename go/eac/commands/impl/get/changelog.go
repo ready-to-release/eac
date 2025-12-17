@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	getInternal "github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
@@ -31,7 +32,20 @@ func init() {
 	registry.Register(GetChangelog)
 }
 
+// changelogFlags defines valid flags for the get changelog command
+var changelogFlags = []flags.FlagDefinition{
+	{Name: "--as-yaml", HasValue: false, ValueType: "bool"},
+	{Name: "--as-json", HasValue: false, ValueType: "bool"},
+	{Name: "--as-toml", HasValue: false, ValueType: "bool"},
+}
+
 func GetChangelog() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlags(os.Args[3:], changelogFlags); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		return 1
+	}
+
 	// Parse arguments - expect module after "get changelog"
 	args := os.Args[1:]
 

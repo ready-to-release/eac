@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
@@ -23,7 +24,20 @@ func init() {
 	registry.Register(GetEnvironments)
 }
 
+// environmentsFlags defines valid flags for the get environments command
+var environmentsFlags = []flags.FlagDefinition{
+	{Name: "--as-yaml", HasValue: false, ValueType: "bool"},
+	{Name: "--as-json", HasValue: false, ValueType: "bool"},
+	{Name: "--as-toml", HasValue: false, ValueType: "bool"},
+}
+
 func GetEnvironments() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlags(os.Args[3:], environmentsFlags); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		return 1
+	}
+
 	// Use the shared get command helper
 	return internal.ExecuteGetCommand(func() (interface{}, error) {
 		cfg, err := config.Load(config.DefaultLoadOptions())

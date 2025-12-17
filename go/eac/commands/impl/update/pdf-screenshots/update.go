@@ -32,12 +32,23 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/buildutil"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/serve"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
+
+// commandFlags defines valid flags for the update pdf-screenshots command
+var commandFlags = []flags.FlagDefinition{
+	{Name: "--dry-run", HasValue: false, ValueType: "bool"},
+	{Name: "--force", Shorthand: "-f", HasValue: false, ValueType: "bool"},
+	{Name: "--verbose", Shorthand: "-v", HasValue: false, ValueType: "bool"},
+	{Name: "--dpi", HasValue: true, ValueType: "int"},
+	{Name: "--module", Shorthand: "-m", HasValue: true, ValueType: "string"},
+	{Name: "--help", Shorthand: "-h", HasValue: false, ValueType: "bool"},
+}
 
 var log = logging.C()
 
@@ -65,8 +76,14 @@ func init() {
 
 // UpdatePDFScreenshots scans out/build for PDFs and extracts pages as images
 func UpdatePDFScreenshots() int {
-	// Parse flags
+	// Validate flags
 	args := os.Args[2:]
+	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
+	// Parse flags
 	dryRun := false
 	force := false
 	verbose := false

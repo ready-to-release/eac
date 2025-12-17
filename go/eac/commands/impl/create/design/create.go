@@ -54,7 +54,23 @@ func init() {
 // CreateDesign orchestrates the architecture design generation workflow
 var log = logging.C()
 
+// commandFlags defines valid flags for the create design command
+var commandFlags = []flags.FlagDefinition{
+	{Name: "--debug", Shorthand: "-d", HasValue: false, ValueType: "bool"},
+	{Name: "--force", Shorthand: "-f", HasValue: false, ValueType: "bool"},
+	{Name: "--output", Shorthand: "-o", HasValue: true, ValueType: "string"},
+	{Name: "--prompt", HasValue: true, ValueType: "string"},
+	{Name: "--skip-validation", HasValue: false, ValueType: "bool"},
+}
+
 func CreateDesign() int {
+	// Validate flags
+	args := os.Args[2:] // Skip program name and "create design"
+	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	// Parse configuration
 	config, err := parseConfig()
 	if err != nil {
@@ -462,11 +478,7 @@ func generateAndValidate(config *DesignConfig, prompt string, out *design.Output
 		ContentMarker:  "workspace",
 		MaxAttempts:    3,
 		Debug:          config.Debug,
-	}
-
-	if config.Debug {
-		// Use helper function for clean fallback to defaults in test environments
-		retryConfig.DebugOutputDir = eacConfig.GetLogsPath(config.TemplateRoot, "design")
+		DebugOutputDir: "", // No longer writing debug files to disk
 	}
 
 	result, err := contracts.GenerateWithRetry(

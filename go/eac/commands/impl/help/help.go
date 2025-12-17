@@ -16,9 +16,15 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
+
+// commandFlags defines valid flags for the help command
+var commandFlags = []flags.FlagDefinition{
+	{Name: "--verbose", Shorthand: "-v", HasValue: false, ValueType: "bool"},
+}
 
 var log = logging.C()
 
@@ -29,6 +35,12 @@ func init() {
 // Help displays help information for commands
 func Help() int {
 	args := os.Args[2:] // Skip program name and "help"
+
+	// Validate flags
+	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
 
 	verbose := false
 	var commandParts []string

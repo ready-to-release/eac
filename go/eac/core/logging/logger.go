@@ -101,6 +101,50 @@ func (l *Logger) Error(msg string, fields ...zap.Field) {
 	l.Logger.Error(msg, fields...)
 }
 
+// LogDebugContent logs debug content to the logger instead of writing to a file.
+// This replaces the pattern: os.WriteFile("out/logs/debug-*.md", content, 0644)
+//
+// The content is logged as a debug message with structured fields for filtering.
+// Only logs when debug mode is enabled.
+//
+// Example:
+//
+//	if logger != nil && logger.IsDebugMode() {
+//	    logger.LogDebugContent("full-prompt", promptText)
+//	}
+func (l *Logger) LogDebugContent(contentType, content string) {
+	if l == nil || !l.IsDebugMode() {
+		return
+	}
+
+	l.Debug("Debug content",
+		zap.String("type", contentType),
+		zap.String("content", content))
+}
+
+// LogDebugContentLines logs large content in chunks for readability.
+// Each line is logged separately with a line number for easier viewing.
+// Only logs when debug mode is enabled.
+//
+// Example:
+//
+//	if logger != nil && logger.IsDebugMode() {
+//	    lines := strings.Split(largeContent, "\n")
+//	    logger.LogDebugContentLines("analysis-output", lines)
+//	}
+func (l *Logger) LogDebugContentLines(contentType string, lines []string) {
+	if l == nil || !l.IsDebugMode() {
+		return
+	}
+
+	for i, line := range lines {
+		l.Debug("Debug content line",
+			zap.String("type", contentType),
+			zap.Int("line", i+1),
+			zap.String("content", line))
+	}
+}
+
 // With creates a child logger with additional fields.
 // Note: child loggers share the same closers with parent.
 func (l *Logger) With(fields ...zap.Field) *Logger {

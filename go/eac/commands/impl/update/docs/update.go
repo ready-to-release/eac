@@ -23,11 +23,19 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/books"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/buildutil"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
+
+// commandFlags defines valid flags for the update docs command
+var commandFlags = []flags.FlagDefinition{
+	{Name: "--dry-run", HasValue: false, ValueType: "bool"},
+	{Name: "--force", HasValue: false, ValueType: "bool"},
+	{Name: "--verbose", Shorthand: "-v", HasValue: false, ValueType: "bool"},
+}
 
 var log = logging.C()
 
@@ -37,8 +45,14 @@ func init() {
 
 // UpdateDocs scans docs/ for mermaid diagrams and drawio images, updates the cache
 func UpdateDocs() int {
-	// Parse flags
+	// Validate flags
 	args := os.Args[2:]
+	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
+	// Parse flags
 	dryRun := false
 	force := false
 	verbose := false

@@ -26,12 +26,19 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/templates/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
+
+// commandFlags defines valid flags for the templates install docs command
+var commandFlags = []flags.FlagDefinition{
+	{Name: "--destination", HasValue: true, ValueType: "string"},
+	{Name: "--debug", Shorthand: "-d", HasValue: false, ValueType: "bool"},
+}
 
 var log = logging.C()
 
@@ -49,6 +56,16 @@ type Config struct {
 
 // TemplatesInstallDocs installs documentation templates
 func TemplatesInstallDocs() int {
+	// Validate flags
+	args := []string{}
+	if len(os.Args) > 4 {
+		args = os.Args[4:] // Skip "binary templates install docs"
+	}
+	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	// Parse configuration
 	config, err := parseConfig()
 	if err != nil {

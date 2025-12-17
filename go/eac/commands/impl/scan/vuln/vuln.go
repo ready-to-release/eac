@@ -22,6 +22,7 @@
 package vuln
 
 import (
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"os"
 	"strings"
@@ -48,6 +49,19 @@ func Vuln() int {
 	if len(args) > 0 && (args[0] == "--help" || args[0] == "-h") {
 		printVulnUsage()
 		return 0
+	}
+
+	// Define valid flags
+	commandFlags := []flags.FlagDefinition{
+		{Name: "--severity", HasValue: true, ValueType: "string"},
+		{Name: "--debug", Shorthand: "-d", HasValue: false},
+	}
+
+	// Validate flags
+	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+		log.Errorf("%v", err)
+		printVulnUsage()
+		return 1
 	}
 
 	// Parse module monikers and flags

@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/internal/testdata"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
@@ -27,7 +28,20 @@ func init() {
 	registry.Register(GetTests)
 }
 
+// testsFlags defines valid flags for the get tests command
+var testsFlags = []flags.FlagDefinition{
+	{Name: "--as-yaml", HasValue: false, ValueType: "bool"},
+	{Name: "--as-json", HasValue: false, ValueType: "bool"},
+	{Name: "--as-toml", HasValue: false, ValueType: "bool"},
+}
+
 func GetTests() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlags(os.Args[3:], testsFlags); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		return 1
+	}
+
 	return internal.ExecuteGetCommand(func() (interface{}, error) {
 		// Get repository root
 		cwd, err := os.Getwd()

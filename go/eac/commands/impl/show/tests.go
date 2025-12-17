@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/internal/testdata"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/testing"
@@ -28,6 +29,15 @@ func init() {
 }
 
 func ShowTests() int {
+	args := os.Args[3:] // Skip program name, "show", and "tests"
+
+	// Validate flags (no flags expected for this command)
+	commandFlags := []flags.FlagDefinition{}
+	if err := flags.ValidateFlags(args, commandFlags); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
+
 	// Get repository root
 	cwd, err := os.Getwd()
 	if err != nil {

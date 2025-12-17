@@ -31,14 +31,28 @@ import (
 	"os"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 )
+
+var summaryLinkFlags = []flags.FlagDefinition{
+	{Name: "--type", HasValue: true, ValueType: "string"},
+	{Name: "--artifact", HasValue: true, ValueType: "string"},
+	{Name: "--image", HasValue: true, ValueType: "string"},
+	{Name: "--workflow", HasValue: true, ValueType: "string"},
+	{Name: "--commit", HasValue: true, ValueType: "string"},
+}
 
 func init() {
 	registry.Register(PipelineCISummaryLink)
 }
 
 func PipelineCISummaryLink() int {
+	// Validate flags before parsing (args start at index 5 for "pipeline ci summary-link <run-id>")
+	if err := flags.ValidateFlags(os.Args[5:], summaryLinkFlags); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
 	// Parse arguments (args start at index 4 for "pipeline ci summary-link")
 	if len(os.Args) < 5 {
 		log.Error("Error: run ID required")

@@ -733,6 +733,67 @@ Feature: eac-core_test
 	}
 }
 
+func TestGherkinValidator_UnifiedConfigFormat(t *testing.T) {
+	// Test that the new unified config format (required_tags) works correctly
+	// This simulates the actual config format used in ai-config.yml
+	contract := &Contract{
+		Version: "0.1.0",
+		Name:    "Gherkin Specification Structure",
+		RawData: map[string]interface{}{
+			"feature_naming_pattern": "^[a-z][a-z0-9-]*_[a-z][a-z0-9-]*$",
+			// New unified config uses "required_tags" (not "required_verification_tags")
+			"required_tags": []interface{}{
+				"@ov", "@iv", "@pv", "@piv", "@ppv",
+			},
+		},
+	}
+	validator := NewGherkinValidator(contract, nil)
+
+	tests := []struct {
+		name        string
+		tags        string
+		expectError bool
+	}{
+		{name: "has @ov", tags: "@ov", expectError: false},
+		{name: "has @iv", tags: "@iv", expectError: false},
+		{name: "has @pv", tags: "@pv", expectError: false},
+		{name: "missing verification tag", tags: "@L1 @deps:docker", expectError: true},
+		{name: "no tags", tags: "", expectError: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tagLine := ""
+			if tt.tags != "" {
+				tagLine = "    " + tt.tags + "\n"
+			}
+			input := `Feature: eac-core_test
+
+  Rule: Test rule
+
+` + tagLine + `    Scenario: Test scenario
+      Given something`
+
+			errors := validator.Validate(input, nil)
+
+			hasMissingTag := false
+			for _, err := range errors {
+				if err.Code == "MISSING_VERIFICATION_TAG" {
+					hasMissingTag = true
+					break
+				}
+			}
+
+			if tt.expectError && !hasMissingTag {
+				t.Errorf("expected MISSING_VERIFICATION_TAG error")
+			}
+			if !tt.expectError && hasMissingTag {
+				t.Errorf("unexpected MISSING_VERIFICATION_TAG error")
+			}
+		})
+	}
+}
+
 func TestGherkinValidator_VerifyImplementation(t *testing.T) {
 	t.Run("with both contracts", func(t *testing.T) {
 		contract := createTestContract()
