@@ -50,6 +50,6 @@ jobs:
       trigger_run_id: ${{ inputs.trigger_run_id }}
       build-args: '--all'
       cross-compile-windows: true
-      no-deps: false  # Needs r2r-cli dependency for testing
+      download-modules: r2r-cli  # Specific module needed for testing
       test-on-windows: true
       scans: ''  # No scans for installer scripts

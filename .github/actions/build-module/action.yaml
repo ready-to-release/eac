@@ -1,16 +1,12 @@
 name: Build Module
-description: Build any module using the EAC commands binary
+description: Build a single module in isolation using the EAC commands binary
 
 inputs:
   module:
     description: Module moniker to build
     required: true
   trigger-run-id:
-    description: 'Run ID of trigger workflow (for artifact download). If empty, builds from source.'
-    required: false
-    default: ''
-  commit-sha:
-    description: 'Commit SHA for artifact lookup. Use when github.sha might differ (workflow_dispatch). Falls back to github.sha if empty.'
+    description: 'Run ID of trigger workflow (for commands binary download). If empty, builds from source.'
     required: false
     default: ''
   go-version:
@@ -29,10 +25,6 @@ inputs:
     description: 'Name for the build artifact. If empty, uses build-artifacts-{module}'
     required: false
     default: ''
-  artifact-path:
-    description: 'Path pattern for artifacts to upload. If empty, uses out/build/{module}/**'
-    required: false
-    default: ''
   upload-artifact:
     description: Whether to upload build artifacts
     required: false
@@ -41,12 +33,6 @@ inputs:
     description: Additional arguments to pass to the build command
     required: false
     default: ''
-  no-deps:
-    description: |
-      Build in isolated mode - no dependency artifact downloads, no dependency resolution.
-      Default: true (CI isolation). Set to false only for integration builds that need deps.
-    required: false
-    default: 'true'
   cross-compile-windows:
     description: |
       Cross-compile for Windows when building on Linux. Default: false.
@@ -87,76 +73,12 @@ runs:
       env:
         MODULE: ${{ inputs.module }}
         INPUT_ARTIFACT_NAME: ${{ inputs.artifact-name }}
-        INPUT_ARTIFACT_PATH: ${{ inputs.artifact-path }}
       run: |
-        # Use provided values or defaults
         if [ -n "$INPUT_ARTIFACT_NAME" ]; then
           echo "artifact-name=$INPUT_ARTIFACT_NAME" >> $GITHUB_OUTPUT
         else
           echo "artifact-name=build-artifacts-${MODULE}" >> $GITHUB_OUTPUT
         fi
-
-        if [ -n "$INPUT_ARTIFACT_PATH" ]; then
-          echo "artifact-path=$INPUT_ARTIFACT_PATH" >> $GITHUB_OUTPUT
-        else
-          echo "artifact-path=out/build/${MODULE}/**" >> $GITHUB_OUTPUT
-        fi
-
-    - name: Download Dependency Artifacts
-      if: inputs.no-deps != 'true'
-      shell: bash
-      env:
-        COMMANDS: ${{ steps.commands.outputs.commands-path }}
-        MODULE: ${{ inputs.module }}
-        GH_TOKEN: ${{ github.token }}
-        # Use explicit commit-sha if provided (for workflow_dispatch where github.sha can drift)
-        # Falls back to github.sha for direct triggers (push, pull_request)
-        ARTIFACT_SHA: ${{ inputs.commit-sha || github.sha }}
-      run: |
-        # Get module dependencies using dedicated command
-        DEPS=$($COMMANDS get dependencies "$MODULE" --format space 2>/dev/null || echo "")
-
-        if [ -z "$DEPS" ]; then
-          echo "No module dependencies to download"
-          exit 0
-        fi
-
-        echo "Artifact lookup SHA: $ARTIFACT_SHA"
-        echo "Downloading dependency artifacts..."
-        mkdir -p out/build
-
-        for dep in $DEPS; do
-          # Skip if already exists
-          if [ -d "out/build/$dep" ]; then
-            echo "  ✓ $dep: already exists"
-            continue
-          fi
-
-          # Find successful run from current trigger chain (same SHA)
-          # change-trigger dispatches in layers and waits, so deps should be complete
-          CURRENT_RUN=$($COMMANDS pipeline find-run-id \
-            --workflow "ci-${dep}.yaml" \
-            --sha "$ARTIFACT_SHA" \
-            --status success 2>/dev/null || echo "")
-
-          if [ -n "$CURRENT_RUN" ]; then
-            echo "  ↓ $dep: downloading from current trigger (run $CURRENT_RUN)"
-            if gh run download "$CURRENT_RUN" -n "build-artifacts-$dep" -D out/build/ 2>/dev/null; then
-              continue
-            fi
-          fi
-
-          # Fallback: Use last successful run from any commit (incremental CI)
-          # Valid when dependency module hasn't changed (no CI triggered for it)
-          LAST_SUCCESS=$(gh run list -w "ci-${dep}.yaml" -s success -L 1 --json databaseId -q '.[0].databaseId' 2>/dev/null || echo "")
-
-          if [ -n "$LAST_SUCCESS" ]; then
-            echo "  ↓ $dep: downloading from previous CI (run $LAST_SUCCESS)"
-            gh run download "$LAST_SUCCESS" -n "build-artifacts-$dep" -D out/build/ 2>/dev/null || echo "    ⚠ download failed"
-          else
-            echo "  ⚠ $dep: no successful CI run found (will build from source if needed)"
-          fi
-        done
 
     - name: Build Module
       id: build
@@ -165,33 +87,22 @@ runs:
         COMMANDS: ${{ steps.commands.outputs.commands-path }}
         MODULE: ${{ inputs.module }}
         EXTRA_ARGS: ${{ inputs.extra-args }}
-        NO_DEPS: ${{ inputs.no-deps }}
       run: |
-        # Build flags:
-        # --rebuild: force full build (CI was triggered, so build fresh)
-        # --no-deps: isolated build, no dependency resolution (CI isolation mode)
-        # --use-existing-depm: use dependency artifacts from previous/current CI runs (legacy mode)
-        BUILD_FLAGS="--rebuild"
-        if [ "$NO_DEPS" = "true" ]; then
-          BUILD_FLAGS="$BUILD_FLAGS --no-deps"
-        else
-          BUILD_FLAGS="$BUILD_FLAGS --use-existing-depm"
-        fi
-
-        if $COMMANDS build $MODULE $BUILD_FLAGS $EXTRA_ARGS; then
+        # Build in isolation: --rebuild forces fresh build, --no-deps skips dependency resolution
+        if $COMMANDS build $MODULE --rebuild --no-deps $EXTRA_ARGS; then
           echo "build-failed=0" >> $GITHUB_OUTPUT
         else
           echo "build-failed=1" >> $GITHUB_OUTPUT
           exit 1
         fi
 
-    - name: Upload Build Artifacts (including dependencies)
+    - name: Upload Build Artifacts
       id: upload
       if: inputs.upload-artifact == 'true'
       uses: actions/upload-artifact@v6
       with:
         name: ${{ steps.vars.outputs.artifact-name }}
-        path: out/build/
+        path: out/build/${{ inputs.module }}/
         if-no-files-found: error
 
     - name: Build Summary

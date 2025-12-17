@@ -46,7 +46,7 @@ permissions:
 
 jobs:
   # =============================================================================
-  # Build ext-eac container (downloads r2r-cli dependency for testing)
+  # Build ext-eac container
   # =============================================================================
   build:
     name: Build
@@ -67,8 +67,6 @@ jobs:
           module: ext-eac
           trigger-run-id: ${{ inputs.trigger_run_id }}
           commit-sha: ${{ inputs.sha || github.sha }}
-          # Download r2r-cli dependency for integration testing
-          no-deps: 'false'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -93,10 +91,10 @@ jobs:
           results-artifact-name: test-results-ext-eac
 
   # =============================================================================
-  # Integration tests with r2r CLI and direct Docker
+  # Container tests with r2r CLI and direct Docker
   # =============================================================================
   integration-test:
-    name: Integration Test
+    name: Container Test
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -126,6 +124,12 @@ jobs:
         with:
           name: build-artifacts-ext-eac
           path: out/build/
+
+      - name: Download r2r-cli for testing
+        uses: ./.github/actions/download-module-deps
+        with:
+          module: r2r-cli
+          commit-sha: ${{ inputs.sha || github.sha }}
 
       - name: Setup r2r CLI
         run: |
@@ -188,7 +192,7 @@ jobs:
           IMAGE_NAME: ${{ needs.build.outputs.image-name }}
           IMAGE_TAG: ${{ needs.build.outputs.image-tag }}
         run: |
-          echo "## Integration Test: ext-eac" >> $GITHUB_STEP_SUMMARY
+          echo "## Container Test: ext-eac" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ "${{ job.status }}" = "success" ]; then
             echo "All extension tests passed." >> $GITHUB_STEP_SUMMARY
