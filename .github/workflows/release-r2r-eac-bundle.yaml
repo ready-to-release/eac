@@ -112,21 +112,21 @@ jobs:
           $COMMANDS get release-bundle --format markdown > release_notes.md
 
           # Append quick install section
-          cat >> release_notes.md << FOOTER
+          cat >> release_notes.md << 'FOOTER'
 
 ### Quick Install
 
-\`\`\`bash
+```bash
 # Install r2r CLI (Linux/macOS)
 curl -fsSL https://raw.githubusercontent.com/${REPO}/main/scripts/sh/cli/install.sh | bash
 
 # Install r2r CLI (Windows PowerShell)
 iwr -useb https://raw.githubusercontent.com/${REPO}/main/scripts/pwsh/cli/install.ps1 | iex
-\`\`\`
+```
 
 ---
-Generated with [GitHub Actions](https://github.com/${REPO}/actions/runs/${{ github.run_id }})
 FOOTER
+          echo "Generated with [GitHub Actions](https://github.com/${REPO}/actions/runs/${{ github.run_id }})" >> release_notes.md
 
           echo ""
           echo "Release notes:"
