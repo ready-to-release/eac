@@ -125,7 +125,33 @@ runs:
 
     - name: Setup Docker Buildx
       if: (contains(steps.resolve.outputs.deps, 'docker') || contains(steps.resolve.outputs.deps, 'buildx')) && steps.buildx-check.outputs.available != 'true'
-      uses: docker/setup-buildx-action@v3
+      shell: bash
+      run: |
+        # Setup buildx with retry logic (Docker Hub can have transient 500 errors)
+        MAX_RETRIES=3
+        RETRY_DELAY=10
+
+        for attempt in $(seq 1 $MAX_RETRIES); do
+          echo "Setting up Docker Buildx (attempt $attempt/$MAX_RETRIES)..."
+
+          # Create and bootstrap buildx builder
+          if docker buildx create --name ci-builder --driver docker-container --use --bootstrap 2>&1; then
+            echo "✓ Docker Buildx builder created successfully"
+            docker buildx inspect
+            exit 0
+          fi
+
+          if [ $attempt -lt $MAX_RETRIES ]; then
+            echo "⚠️ Buildx setup failed, retrying in ${RETRY_DELAY}s..."
+            # Clean up failed builder if it exists
+            docker buildx rm ci-builder 2>/dev/null || true
+            sleep $RETRY_DELAY
+            RETRY_DELAY=$((RETRY_DELAY * 2))
+          fi
+        done
+
+        echo "❌ Failed to setup Docker Buildx after $MAX_RETRIES attempts"
+        exit 1
 
     - name: Check if QEMU is already available
       id: qemu-check
@@ -142,7 +168,29 @@ runs:
 
     - name: Setup QEMU
       if: contains(steps.resolve.outputs.deps, 'buildx') && steps.qemu-check.outputs.available != 'true'
-      uses: docker/setup-qemu-action@v3
+      shell: bash
+      run: |
+        # Setup QEMU with retry logic (Docker Hub can have transient 500 errors)
+        MAX_RETRIES=3
+        RETRY_DELAY=10
+
+        for attempt in $(seq 1 $MAX_RETRIES); do
+          echo "Setting up QEMU (attempt $attempt/$MAX_RETRIES)..."
+
+          if docker run --rm --privileged tonistiigi/binfmt --install all 2>&1; then
+            echo "✓ QEMU installed successfully"
+            exit 0
+          fi
+
+          if [ $attempt -lt $MAX_RETRIES ]; then
+            echo "⚠️ QEMU setup failed, retrying in ${RETRY_DELAY}s..."
+            sleep $RETRY_DELAY
+            RETRY_DELAY=$((RETRY_DELAY * 2))
+          fi
+        done
+
+        echo "❌ Failed to setup QEMU after $MAX_RETRIES attempts"
+        exit 1
 
     - name: Check if UPX is available
       id: upx-check
@@ -161,29 +209,72 @@ runs:
       if: contains(steps.resolve.outputs.deps, 'upx') && steps.upx-check.outputs.available != 'true' && runner.os == 'Linux'
       shell: bash
       run: |
-        echo "Installing UPX for binary compression..."
-        # UPX is available in Ubuntu repos
-        sudo apt-get update -qq
-        sudo apt-get install -y upx-ucl
-        echo "✓ UPX installed: $(upx --version 2>&1 | head -1 || true)"
+        # Install UPX with retry logic (apt mirrors can have transient failures)
+        MAX_RETRIES=3
+        RETRY_DELAY=5
+
+        for attempt in $(seq 1 $MAX_RETRIES); do
+          echo "Installing UPX (attempt $attempt/$MAX_RETRIES)..."
+          if sudo apt-get update -qq && sudo apt-get install -y upx-ucl; then
+            echo "✓ UPX installed: $(upx --version 2>&1 | head -1 || true)"
+            exit 0
+          fi
+          if [ $attempt -lt $MAX_RETRIES ]; then
+            echo "⚠️ apt-get failed, retrying in ${RETRY_DELAY}s..."
+            sleep $RETRY_DELAY
+            RETRY_DELAY=$((RETRY_DELAY * 2))
+          fi
+        done
+        echo "❌ Failed to install UPX after $MAX_RETRIES attempts"
+        exit 1
 
     - name: Install UPX (Windows)
       if: contains(steps.resolve.outputs.deps, 'upx') && steps.upx-check.outputs.available != 'true' && runner.os == 'Windows'
       shell: pwsh
       run: |
-        Write-Host "Installing UPX for binary compression..."
-        # UPX is available via Chocolatey on Windows runners
-        choco install upx -y --no-progress
-        Write-Host "✓ UPX installed: $(upx --version | Select-Object -First 1)"
+        # Install UPX with retry logic (Chocolatey can have transient failures)
+        $maxRetries = 3
+        $retryDelay = 5
+
+        for ($attempt = 1; $attempt -le $maxRetries; $attempt++) {
+          Write-Host "Installing UPX (attempt $attempt/$maxRetries)..."
+          try {
+            choco install upx -y --no-progress
+            Write-Host "✓ UPX installed: $(upx --version | Select-Object -First 1)"
+            exit 0
+          } catch {
+            if ($attempt -lt $maxRetries) {
+              Write-Host "⚠️ choco failed, retrying in ${retryDelay}s..."
+              Start-Sleep -Seconds $retryDelay
+              $retryDelay = $retryDelay * 2
+            }
+          }
+        }
+        Write-Host "❌ Failed to install UPX after $maxRetries attempts"
+        exit 1
 
     - name: Install UPX (macOS)
       if: contains(steps.resolve.outputs.deps, 'upx') && steps.upx-check.outputs.available != 'true' && runner.os == 'macOS'
       shell: bash
       run: |
-        echo "Installing UPX for binary compression..."
-        # UPX is available via Homebrew on macOS
-        brew install upx
-        echo "✓ UPX installed: $(upx --version 2>&1 | head -1 || true)"
+        # Install UPX with retry logic (Homebrew can have transient failures)
+        MAX_RETRIES=3
+        RETRY_DELAY=5
+
+        for attempt in $(seq 1 $MAX_RETRIES); do
+          echo "Installing UPX (attempt $attempt/$MAX_RETRIES)..."
+          if brew install upx; then
+            echo "✓ UPX installed: $(upx --version 2>&1 | head -1 || true)"
+            exit 0
+          fi
+          if [ $attempt -lt $MAX_RETRIES ]; then
+            echo "⚠️ brew failed, retrying in ${RETRY_DELAY}s..."
+            sleep $RETRY_DELAY
+            RETRY_DELAY=$((RETRY_DELAY * 2))
+          fi
+        done
+        echo "❌ Failed to install UPX after $MAX_RETRIES attempts"
+        exit 1
 
     - name: Summary
       if: steps.resolve.outputs.deps != ''

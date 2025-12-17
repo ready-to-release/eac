@@ -207,11 +207,15 @@ jobs:
         uses: ./.github/actions/setup-commands
 
       - name: Generate summary
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
         run: |
           VERSION="${{ needs.approve.outputs.version }}"
           TAG_NAME="${{ needs.approve.outputs.tag_name }}"
           APPROVE_RESULT="${{ needs.approve.result }}"
           RELEASE_RESULT="${{ needs.release.result }}"
+          RUN_ID="${{ github.run_id }}"
 
           if [ "$APPROVE_RESULT" = "success" ] && [ "$RELEASE_RESULT" = "success" ]; then
             echo "## ✅ Release Bundle Created" >> $GITHUB_STEP_SUMMARY
@@ -229,10 +233,12 @@ jobs:
             echo "## ❌ Release Approval Failed" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "Release was not approved. Check the approve job for details." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            $COMMANDS pipeline ci summary-link $RUN_ID --type release >> $GITHUB_STEP_SUMMARY
           else
             echo "## ❌ Release Bundle Failed" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "Release failed after approval. Check the release job for details." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            $COMMANDS pipeline ci summary-link $RUN_ID --type release >> $GITHUB_STEP_SUMMARY
           fi
-        env:
-          GH_TOKEN: ${{ github.token }}

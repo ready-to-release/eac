@@ -155,13 +155,17 @@ runs:
         IMAGE_NAME: ${{ steps.vars.outputs.image-name }}
         IMAGE_TAG: ${{ steps.vars.outputs.image-tag }}
       run: |
+        # Generate build summary
+        # Note: Diagnostic links are handled centrally by the calling workflow on failure
+        echo "### Container Build: \`$MODULE\`" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+        echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Image | \`$IMAGE_NAME\` |" >> $GITHUB_STEP_SUMMARY
+        echo "| Tag | \`$IMAGE_TAG\` |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
         if [ "${{ job.status }}" = "success" ]; then
-          echo "### Container Build: \`$MODULE\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Image | \`$IMAGE_NAME\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Tag | \`$IMAGE_TAG\` |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
           echo "Container image pushed and verified." >> $GITHUB_STEP_SUMMARY
+        else
+          echo "Container build failed. See workflow logs for details." >> $GITHUB_STEP_SUMMARY
         fi
