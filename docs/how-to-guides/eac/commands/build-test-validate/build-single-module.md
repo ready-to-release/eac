@@ -1,7 +1,4 @@
 # Build Single Module
-
-{{ page_breadcrumb() }}
-
 ## What You'll Accomplish
 
 Compile a module and generate its artifacts, automatically handling dependencies in the correct order.
@@ -99,8 +96,6 @@ r2r eac show artifacts src-auth
 
 ## Related Commands
 
-- [`build`](../../../../reference/commands/other/build.md) - Full command reference
+- [`build`](../../../../reference/commands/build/build.md) - Full command reference
 - [`show artifacts`](../../../../reference/commands/show/artifacts.md) - View artifacts
 - [`validate artifacts`](../../../../reference/commands/validate/artifacts.md) - Verify artifacts
-
-{{ diataxis_footer() }}

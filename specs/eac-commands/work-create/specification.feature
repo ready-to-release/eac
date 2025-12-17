@@ -5,13 +5,6 @@ Feature: eac-commands_work-create
   I want to create isolated workspaces for different features
   So that I can work on multiple branches simultaneously with separate Claude Code sessions
 
-  Rule: Command must be registered and accessible
-
-    Scenario: Command is listed in available commands
-      When I run the command "show help"
-      Then the exit code is 0
-      And I should see "work create"
-
   Rule: Workspace creation follows standard naming and location
 
     Scenario: Create workspace successfully

@@ -1,7 +1,4 @@
 # Test Levels
-
-{{ page_breadcrumb() }}
-
 > **Execution environments and test scope (L0-L4)**
 
 Test level tags define the execution environment and scope based on the [Testing Taxonomy](../../continuous-delivery/testing/index.md).
@@ -238,5 +235,3 @@ Feature: Production Smoke Tests
 - [Verification Tags](./verification-tags.md) - Types of validation (@ov, @iv, @pv, etc.)
 - [Test Suites](./test-suites.md) - How test levels map to test suites
 - [Go Implementation](../implementation/go/test-levels.md) - Build tags in Go
-
-{{ diataxis_footer() }}

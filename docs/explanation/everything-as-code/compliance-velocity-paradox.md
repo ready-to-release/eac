@@ -1,7 +1,4 @@
 # The Compliance-Velocity Paradox
-
-{{ page_breadcrumb() }}
-
 > **The fundamental contradiction facing regulated industries**
 
 ## The Challenge
@@ -264,5 +261,3 @@ This is the promise of [Everything as Code](paradigm.md).
 - [Accelerate: The Science of Lean Software and DevOps](../references.md#accelerate)
 - [State of DevOps Report 2025 - DORA / Google Cloud](../references.md#state-of-devops)
 - [The DevOps Handbook](../references.md#the-devops-handbook)
-
-{{ diataxis_footer() }}

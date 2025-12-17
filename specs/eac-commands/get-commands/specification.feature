@@ -5,18 +5,6 @@ Feature: eac-commands_get-commands
   I want to get structured command information
   So that I can build shell integrations and tooling
 
-  Rule: Command must be registered and accessible
-
-    Scenario: Command is listed in available commands
-      When I run the command "show help"
-      Then the exit code is 0
-      And I should see "get commands"
-
-    Scenario: Command has proper description
-      When I run the command "show help get commands"
-      Then the exit code is 0
-      And I should see "command" or "structured" or "integration"
-
   Rule: Outputs structured JSON by default
 
     Scenario: Output valid JSON

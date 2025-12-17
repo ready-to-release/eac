@@ -1,7 +1,4 @@
 # Release Quality Gates
-
-{{ page_breadcrumb() }}
-
 ## Introduction
 
 Release quality gates operate at **Stage 9** of the CD Model, serving as the final checkpoint before production deployment. Stage 9 answers the critical question: **"Is this code ready for production?"**
@@ -711,5 +708,3 @@ def evaluate_release_gate():
 - [Merge Request Quality Gates](./merge-request-gates.md) - Stage 3 validation
 - [CD Model Stages 8-12](../cd-model/cd-model-stages-8-12.md) - See Stage 9 in full context
 - [Implementation Patterns](../cd-model/implementation-patterns.md) - RA vs CDe approval differences
-
-{{ diataxis_footer() }}

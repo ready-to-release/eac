@@ -30,6 +30,9 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	// Register test sanity steps
 	registerTestSanitySteps(sc, ctx)
 
+	// Register command docs coverage steps
+	registerCommandDocsSteps(sc, ctx)
+
 	// Initialize version consistency contexts
 	// Note: contexts will get repoRoot lazily when needed
 	goVersionCtx := &goVersionContext{
@@ -455,10 +458,14 @@ func (c *repositoryContext) discoverAllMarkdownFiles() error {
 	}
 
 	// Get all .md files from cache and convert to absolute paths
+	// Filter out files that no longer exist on disk (e.g., deleted but not yet staged)
 	relPaths := c.sharedCtx.OriginalRepoCache.FilesByExtension(".md")
-	c.markdownFiles = make([]string, len(relPaths))
-	for i, relPath := range relPaths {
-		c.markdownFiles[i] = c.sharedCtx.OriginalRepoCache.AbsolutePath(relPath)
+	c.markdownFiles = make([]string, 0, len(relPaths))
+	for _, relPath := range relPaths {
+		absPath := c.sharedCtx.OriginalRepoCache.AbsolutePath(relPath)
+		if _, err := os.Stat(absPath); err == nil {
+			c.markdownFiles = append(c.markdownFiles, absPath)
+		}
 	}
 	return nil
 }

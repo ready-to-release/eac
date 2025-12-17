@@ -1,7 +1,4 @@
 # Check Dependencies
-
-{{ page_breadcrumb() }}
-
 ## What You'll Accomplish
 
 Verify module dependencies match contracts and are properly configured.
@@ -102,5 +99,3 @@ r2r eac get dependencies | jq '.dependencies["src-api"]'
 - [`validate dependencies`](../../../../reference/commands/validate/dependencies.md) - Check contracts
 - [`show dependencies`](../../../../reference/commands/show/dependencies.md) - View graph
 - [`validate go-tidy`](../../../../reference/commands/validate/go-tidy.md) - Check tidiness
-
-{{ diataxis_footer() }}

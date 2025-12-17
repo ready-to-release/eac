@@ -1,7 +1,4 @@
 # Continuous Delivery
-
-{{ page_breadcrumb() }}
-
 Understanding the Continuous Delivery Model, a comprehensive framework for delivering software from development through production with quality, traceability, and compliance built in.
 
 ## In This Section
@@ -17,5 +14,3 @@ Understanding the Continuous Delivery Model, a comprehensive framework for deliv
 | [Release Management](./release-management/) | Release documentation and approval patterns (RA vs CDe)                      |
 | [Architecture](./architecture/)             | Environment types and repository organization patterns                       |
 | [Security](./security/)                     | Security integration using open-source tools                                 |
-
-{{ diataxis_footer() }}

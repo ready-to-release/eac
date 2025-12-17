@@ -1,7 +1,4 @@
 # Repository Patterns
-
-{{ page_breadcrumb() }}
-
 ## Introduction
 
 Repository organization is a foundational decision that affects how teams collaborate, how code is versioned, and how the CD Model is implemented.
@@ -527,5 +524,3 @@ Poly and Mono both:
 - [CD Model Overview](../cd-model/cd-model-overview.md)
 - [Trunk-Based Development](../workflow/trunk-based-development.md)
 - [Repository Layout](../../../reference/r2r-eac/repository-layout.md)
-
-{{ diataxis_footer() }}

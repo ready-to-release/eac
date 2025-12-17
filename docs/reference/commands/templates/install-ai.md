@@ -1,32 +1,6 @@
-# templates install-ai
+# Templates install-ai
 
-{{ page_breadcrumb() }}
-
-## Overview
-
-**Command**: `r2r templates install ai`
-**Purpose**: Install AI prompt templates without value replacements
-**Category**: [templates](../categories/templates.md)
-
-## Syntax
-
-```bash
-r2r templates install ai [--debug]
-```
-
-## Options
-
-- `--debug, -d`: Save detailed logs to `out/logs/templates/install/`
-
-## Examples
-
-```bash
-# Install AI prompt templates
-r2r templates install ai
-
-# Install with debug logging
-r2r templates install ai --debug
-```
+<!-- book:cmd templates install-ai -->
 
 ## Details
 
@@ -54,5 +28,3 @@ These templates are used by AI-powered commands like:
 - [create design](../create/design.md) - AI architecture design
 - [create spec](../create/spec.md) - AI specification generation
 - [templates Commands](../categories/templates.md)
-
-{{ diataxis_footer() }}

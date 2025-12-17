@@ -1,7 +1,4 @@
 # Risk Control Traceability
-
-{{ page_breadcrumb() }}
-
 > **Control-based risk management with automated evidence collection**
 
 ## What Are Risk Controls?
@@ -406,5 +403,3 @@ Skip for:
 - [Testing Taxonomy](../taxonomy/) - Complete tag documentation
 - [OSCAL Documentation](https://pages.nist.gov/OSCAL/) - Official OSCAL standard
 - [NIST 800-53](https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final) - Security control catalog
-
-{{ diataxis_footer() }}

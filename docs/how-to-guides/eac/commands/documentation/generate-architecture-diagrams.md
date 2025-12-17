@@ -1,7 +1,4 @@
 # Generate Architecture Diagrams
-
-{{ page_breadcrumb() }}
-
 ## What You'll Accomplish
 
 Create C4 model architecture diagrams using AI to analyze your code and generate Structurizr workspace files.
@@ -127,5 +124,3 @@ workspace "src-auth" {
 - [`update design`](../../../../reference/commands/update/design.md) - Update existing
 - [`serve design`](../../../../reference/commands/serve/design.md) - View in browser
 - [`validate design`](../../../../reference/commands/validate/design.md) - Check syntax
-
-{{ diataxis_footer() }}

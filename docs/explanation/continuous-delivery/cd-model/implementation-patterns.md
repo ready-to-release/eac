@@ -1,7 +1,4 @@
 # Implementation Patterns
-
-{{ page_breadcrumb() }}
-
 ## Introduction
 
 The Continuous Delivery Model can be implemented in different patterns based on your system's regulatory requirements, risk profile, and organizational maturity. Understanding these patterns helps you choose the right approach for your context and implement the CD Model effectively.
@@ -483,5 +480,3 @@ Choose based on regulatory requirements, risk profile, and organizational maturi
 | Third-level | Stage 12 | Feature owner | Feature exposure (via flags) |
 
 **Note**: In CDe, Stage 3 approval also approves production deployment. By merging, the reviewer approves the change going to production.
-
-{{ diataxis_footer() }}

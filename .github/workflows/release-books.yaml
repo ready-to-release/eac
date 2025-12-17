@@ -115,9 +115,6 @@ jobs:
           VERSION="${{ needs.approve.outputs.version }}"
           REPO="${{ github.repository }}"
 
-          # Get book metadata from the commands binary (source of truth from books.yml)
-          BOOKS_JSON=$($COMMANDS show books --format json)
-
           cat > release_notes.md << 'HEADER'
           ## PDF Books Release
 
@@ -132,11 +129,8 @@ jobs:
             FILENAME=$(basename "$pdf")
             SIZE=$(du -h "$pdf" | cut -f1)
 
-            # Look up description from books JSON
-            DESC=$(echo "$BOOKS_JSON" | jq -r --arg filename "$FILENAME" '.[] | select(.filename == $filename) | .description // "Documentation"')
-            if [ -z "$DESC" ] || [ "$DESC" = "null" ]; then
-              DESC="Documentation"
-            fi
+            # Look up description from books config
+            DESC=$($COMMANDS get book-description "$FILENAME" --default "Documentation")
 
             DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${TAG_NAME}/${FILENAME}"
             echo "- **${FILENAME}** - ${DESC} (${SIZE}) - [Download](${DOWNLOAD_URL})" >> release_notes.md

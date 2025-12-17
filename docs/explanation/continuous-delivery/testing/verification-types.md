@@ -1,7 +1,4 @@
 # Verification Types
-
-{{ page_breadcrumb() }}
-
 ## Introduction
 
 Verification types are a **taxonomy for acceptance testing** that classifies tests by **what** they verify, not **how** they execute. This classification helps teams ensure comprehensive validation at **Stage 5 (Acceptance Testing)** in production-like environments (PLTE).
@@ -684,5 +681,3 @@ Validation ensures:
 | -------------------- | --------------------- | ----------- |
 | Stage 5 (Acceptance) | IV, OV, PV            | PLTE        |
 | Stage 6 (Extended)   | Extended PV, Security | PLTE        |
-
-{{ diataxis_footer() }}

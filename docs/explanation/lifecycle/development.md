@@ -1,7 +1,4 @@
 # Development
-
-{{ page_breadcrumb() }}
-
 This phase implements the [Continuous Delivery Model](../continuous-delivery/index.md), taking the solution from design through to production deployment.
 
 ---
@@ -84,5 +81,3 @@ All tests should be automated and run in the pipeline. Manual testing occurs dur
 ## Documenting Changes
 
 This is a fully automated process handled by the pipeline. It prepares all artifacts needed for [Release Approval](../continuous-delivery/cd-model/cd-model-stages-8-12.md#stage-9-release-approval).
-
-{{ diataxis_footer() }}

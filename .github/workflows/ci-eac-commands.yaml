@@ -30,37 +30,12 @@ on:
         description: 'Run ID of trigger workflow (for artifact download)'
         default: ''
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
-  cancel-in-progress: true
-
-permissions:
-  contents: read
-  packages: read
-  actions: read
-
 jobs:
-  build-and-test:
-    name: Build & Test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ inputs.ref || github.ref }}
-
-      - name: Build Module
-        uses: ./.github/actions/build-module
-        with:
-          module: eac-commands
-          trigger-run-id: ${{ inputs.trigger_run_id }}
-          commit-sha: ${{ inputs.sha || github.sha }}
-          upload-artifact: 'false'
-
-      - name: Test Module
-        uses: ./.github/actions/test-module
-        with:
-          module: eac-commands
-          trigger-run-id: ${{ inputs.trigger_run_id }}
-          download-artifact: 'false'
-          # PRs run unit+integration; main/release branches run full suite
-          suites: ${{ (inputs.ref != '' && startsWith(inputs.ref, 'refs/pull/')) && 'unit+integration' || 'unit+integration+acceptance' }}
+  ci:
+    uses: ./.github/workflows/_module-ci.yaml
+    with:
+      module: eac-commands
+      ref: ${{ inputs.ref }}
+      sha: ${{ inputs.sha }}
+      trigger_run_id: ${{ inputs.trigger_run_id }}
+      scans: ''  # No scans for commands library

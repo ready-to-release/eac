@@ -1,7 +1,4 @@
 # Security Scanning Workflow
-
-{{ page_breadcrumb() }}
-
 **Status:** Placeholder - Content coming soon
 
 **Prerequisites:** [Your First Module](../getting-started/first-module.md), [CI/CD Integration](../advanced-practices/ci-cd-integration.md)
@@ -240,5 +237,3 @@ Supported compliance standards:
 ### Next Steps
 
 After completing this tutorial, you'll have integrated security scanning into your workflow. Explore other specialized topics: [Effective BDD Scenarios](./effective-bdd-scenarios.md), [Architecture Documentation](./architecture-documentation.md), or [TypeScript Setup](./typescript-module-setup.md).
-
-{{ diataxis_footer() }}

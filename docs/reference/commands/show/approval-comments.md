@@ -1,43 +1,14 @@
-# show approval-comments
+# Show approval-comments
 
-{{ page_breadcrumb() }}
-
-## Overview
-
-**Command**: `r2r eac show approval-comments <module> [version]`
-**Purpose**: Display PR approval comments in human-readable markdown format
-**Category**: [show](../categories/show.md)
-
-## Syntax
-
-```bash
-r2r eac show approval-comments <module>
-r2r eac show approval-comments <module> <version>
-r2r eac show approval-comments <module> latest
-r2r eac show approval-comments <module> unreleased
-```
-
-## Arguments
-
-| Argument | Required | Description |
-|----------|----------|-------------|
-| `module` | Yes | Module moniker (e.g., `ext-eac`, `eac-commands`) |
-| `version` | No | Version number or special keyword (`latest`, `unreleased`) |
-
-## Options
-
-| Flag | Type | Description |
-|------|------|-------------|
-| `--include-all-reviews` | boolean | Include all review states (APPROVED, CHANGES_REQUESTED, COMMENTED). Default: only APPROVED reviews |
-| `--branch` | string | Branch to query (default: trunk branch from config, usually `main`). Use `HEAD` or `current` for current branch |
+<!-- book:cmd show approval-comments -->
 
 ## Special Keywords
 
-| Keyword | Description |
-|---------|-------------|
-| `latest` | Show approvals from the most recent released version |
-| `unreleased` | Show approvals since last release (default) |
-| *(omit)* | Same as `unreleased` - approvals since last release |
+| Keyword      | Description                                          |
+| ------------ | ---------------------------------------------------- |
+| `latest`     | Show approvals from the most recent released version |
+| `unreleased` | Show approvals since last release (default)          |
+| _(omit)_     | Same as `unreleased` - approvals since last release  |
 
 ## Bundle Modules
 
@@ -50,6 +21,7 @@ r2r eac show approval-comments ext-eac
 ```
 
 **Shows approvals from PRs containing:**
+
 - `specs/eac-commands/` (dependency)
 - `specs/r2r-cli/` (dependency)
 - `specs/ext-eac/` (if any)
@@ -65,6 +37,7 @@ The command displays two sections:
 ### 1. Summary Table
 
 Markdown-formatted table with:
+
 - Version header (`# PR Approvals: module (version)`)
 - Summary line with PR and approval counts
 - Table columns: PR, Title, Reviewer, Review State, Reviewed At
@@ -73,40 +46,13 @@ Markdown-formatted table with:
 ### 2. PR Details Section
 
 Detailed information for **all PRs found** (even those with no reviews) including:
+
 - PR description/body from GitHub
 - Merge commit message (headline + body)
 
 **Note:** This section displays for ALL PRs that contain spec files, regardless of whether they have any reviews/approvals.
 
 If a PR has no description or merge message, it displays "(No description provided)" or "(No merge message)" respectively.
-
-## Examples
-
-```bash
-# Show approvals since last release (unreleased)
-r2r eac show approval-comments ext-eac
-
-# Show approvals for latest release
-r2r eac show approval-comments ext-eac latest
-
-# Show approvals for specific version
-r2r eac show approval-comments ext-eac 0.0.7
-
-# Include all review states (not just APPROVED)
-r2r eac show approval-comments ext-eac --include-all-reviews
-
-# Show all reviews for latest version
-r2r eac show approval-comments ext-eac latest --include-all-reviews
-
-# Query from current branch instead of main
-r2r eac show approval-comments ext-eac --branch HEAD
-
-# Query from specific branch
-r2r eac show approval-comments ext-eac --branch develop
-
-# Save to file
-r2r eac show approval-comments eac-commands > approvals.md
-```
 
 ## Example Output
 
@@ -117,11 +63,11 @@ r2r eac show approval-comments eac-commands > approvals.md
 
 **Summary:** 3 PRs, 3 approvals
 
-| PR | Title | Reviewer | Review State | Reviewed At |
-|----|-------|----------|--------------|-------------|
-| #123 | Add new feature | @reviewer1 | APPROVED | 2025-12-10 |
-| #124 | Update spec | @reviewer3 | APPROVED | 2025-12-11 |
-| #125 | Fix bug | @reviewer1 | APPROVED | 2025-12-12 |
+| PR   | Title           | Reviewer   | Review State | Reviewed At |
+| ---- | --------------- | ---------- | ------------ | ----------- |
+| #123 | Add new feature | @reviewer1 | APPROVED     | 2025-12-10  |
+| #124 | Update spec     | @reviewer3 | APPROVED     | 2025-12-11  |
+| #125 | Fix bug         | @reviewer1 | APPROVED     | 2025-12-12  |
 
 ## PR Details
 
@@ -167,6 +113,7 @@ Merge pull request #125 from user/bugfix
 Fixed bug in approval logic
 
 ---
+
 ```
 
 **With `--include-all-reviews` flag:**
@@ -176,14 +123,14 @@ Fixed bug in approval logic
 
 **Summary:** 3 PRs, 6 approvals
 
-| PR | Title | Reviewer | Review State | Reviewed At |
-|----|-------|----------|--------------|-------------|
-| #123 | Add new feature | @reviewer1 | APPROVED | 2025-12-10 |
-| #123 | Add new feature | @reviewer2 | CHANGES_REQUESTED | 2025-12-10 |
-| #124 | Update spec | @reviewer3 | APPROVED | 2025-12-11 |
-| #124 | Update spec | @reviewer4 | COMMENTED | 2025-12-11 |
-| #125 | Fix bug | @reviewer1 | APPROVED | 2025-12-12 |
-| #125 | Fix bug | @reviewer5 | CHANGES_REQUESTED | 2025-12-12 |
+| PR   | Title           | Reviewer   | Review State      | Reviewed At |
+| ---- | --------------- | ---------- | ----------------- | ----------- |
+| #123 | Add new feature | @reviewer1 | APPROVED          | 2025-12-10  |
+| #123 | Add new feature | @reviewer2 | CHANGES_REQUESTED | 2025-12-10  |
+| #124 | Update spec     | @reviewer3 | APPROVED          | 2025-12-11  |
+| #124 | Update spec     | @reviewer4 | COMMENTED         | 2025-12-11  |
+| #125 | Fix bug         | @reviewer1 | APPROVED          | 2025-12-12  |
+| #125 | Fix bug         | @reviewer5 | CHANGES_REQUESTED | 2025-12-12  |
 
 ## PR Details
 
@@ -229,6 +176,7 @@ Merge pull request #125 from user/bugfix
 Fixed bug in approval logic
 
 ---
+
 ```
 
 ## How It Works
@@ -247,12 +195,12 @@ Fixed bug in approval logic
 
 ## Error Handling
 
-| Error | Exit Code | Solution |
-|-------|-----------|----------|
-| `module not found` | 1 | Verify module with `r2r eac show modules` |
-| `version not found` | 1 | Check available versions with `r2r eac show changelog <module>` |
-| `gh command failed` | Skips PR | Install and authenticate GitHub CLI: `gh auth login` |
-| No approvals found | 0 | Normal - shows friendly message |
+| Error               | Exit Code | Solution                                                        |
+| ------------------- | --------- | --------------------------------------------------------------- |
+| `module not found`  | 1         | Verify module with `r2r eac show modules`                       |
+| `version not found` | 1         | Check available versions with `r2r eac show changelog <module>` |
+| `gh command failed` | Skips PR  | Install and authenticate GitHub CLI: `gh auth login`            |
+| No approvals found  | 0         | Normal - shows friendly message                                 |
 
 ## Troubleshooting
 
@@ -261,6 +209,7 @@ Fixed bug in approval logic
 **Problem:** GitHub CLI not installed or not authenticated
 
 **Solution:**
+
 ```bash
 # Install GitHub CLI
 # See: https://cli.github.com/
@@ -274,12 +223,14 @@ gh auth login
 **Problem:** Command shows "No PR approvals found"
 
 **Possible Causes:**
+
 - No PRs merged in the version range
 - PRs don't contain `.feature` files
 - No APPROVED reviews on spec PRs (default behavior only shows APPROVED)
 - GitHub CLI unavailable
 
 **Solution:** Verify PRs exist and contain spec files:
+
 ```bash
 # Check recent commits
 git log --oneline
@@ -298,5 +249,3 @@ r2r eac show approval-comments ext-eac --include-all-reviews
 
 - [get approval-comments](../get/approval-comments.md) - JSON/YAML output
 - [How-To Guide](../../../how-to-guides/eac/commands/release-management/view-approval-comments.md)
-
-{{ diataxis_footer() }}

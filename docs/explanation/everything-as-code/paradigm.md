@@ -1,7 +1,4 @@
 # The "Everything as Code" Paradigm
-
-{{ page_breadcrumb() }}
-
 > **What it means to treat everything as version-controlled, executable artifacts**
 
 ## What "Everything as Code" Means
@@ -271,5 +268,3 @@ Duplication causes drift:
 - [Accelerate: The Science of Lean Software and DevOps](../references.md#accelerate)
 - [The DevOps Handbook](../references.md#the-devops-handbook)
 - [Continuous Delivery](../references.md#continuous-delivery)
-
-{{ diataxis_footer() }}

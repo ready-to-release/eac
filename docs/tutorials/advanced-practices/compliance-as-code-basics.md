@@ -1,7 +1,4 @@
 # Compliance-as-Code Basics
-
-{{ page_breadcrumb() }}
-
 **Status:** Placeholder - Content coming soon
 
 **Prerequisites:** [Your First Specification](../getting-started/first-specification.md), understanding of compliance requirements
@@ -150,5 +147,3 @@ Scenario: FDA-regulated medical device software
 ### Next Steps
 
 After completing this tutorial, you'll understand compliance automation basics. Continue to [CI/CD Integration](./ci-cd-integration.md) to learn how to automate compliance validation in your pipeline.
-
-{{ diataxis_footer() }}

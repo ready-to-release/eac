@@ -1,7 +1,4 @@
 # Workflows
-
-{{ page_breadcrumb() }}
-
 GitHub Actions workflow specifications for continuous integration and RA and continuous deployment releases.
 
 ## Overview
@@ -64,5 +61,3 @@ Workflows that coordinate CI/CD execution:
 Workflows that perform security analysis:
 
 - `codeql.yaml` - CodeQL security scanning
-
-{{ diataxis_footer() }}

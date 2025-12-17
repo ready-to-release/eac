@@ -2,31 +2,35 @@
 package repository
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 
 	"github.com/ready-to-release/eac/go/eac/core/git"
+	"github.com/ready-to-release/eac/go/eac/core/github"
 )
 
 // FileCache provides cached access to repository files.
-// It caches the output of `git ls-files` and provides efficient filtered views.
+// It caches the output of `git ls-files` (or GitHub Trees API in CI) and provides efficient filtered views.
 //
 // The cache is thread-safe and lazily populated on first access.
 // All paths are normalized to forward slashes for cross-platform consistency.
 //
 // Example:
 //
-//	cache := repository.NewFileCache(repoRoot)
+//	cache := repository.NewFileCache(repoRoot, false)  // use git ls-files
+//	cache := repository.NewFileCache(repoRoot, true)   // use GitHub API in CI
 //	mdFiles := cache.FilesByExtension(".md")
 //	goFiles := cache.FilesInDirWithExtension("go/", ".go")
 type FileCache struct {
 	mu sync.RWMutex
 
-	repoRoot string
-	gitRepo  *git.Repository
+	repoRoot       string
+	gitRepo        *git.Repository
+	useGitHubInCI  bool // Use GitHub Trees API in CI (faster than git ls-files)
 
-	// trackedFiles is the cached output of `git ls-files`
+	// trackedFiles is the cached output of `git ls-files` or GitHub Trees API
 	// All paths are normalized to forward slashes
 	trackedFiles []string
 	populated    bool
@@ -34,20 +38,30 @@ type FileCache struct {
 	// Cached filtered views (computed on demand)
 	byExtension map[string][]string
 	bySuffix    map[string][]string
+
+	// testGitRepo is used for testing to inject a mock git repository
+	testGitRepo git.GitRepository
 }
 
 // NewFileCache creates a new file cache for the given repository root.
 // The cache is lazily populated - no git operations are performed until
 // files are requested.
-func NewFileCache(repoRoot string) *FileCache {
+//
+// If useGitHubInCI is true and running in CI (detected via environments.IsCI()),
+// the cache will use the GitHub Trees API (via GITHUB_SHA env var) instead of
+// git ls-files. This is significantly faster in CI environments.
+func NewFileCache(repoRoot string, useGitHubInCI bool) *FileCache {
 	return &FileCache{
-		repoRoot:    repoRoot,
-		byExtension: make(map[string][]string),
-		bySuffix:    make(map[string][]string),
+		repoRoot:      repoRoot,
+		useGitHubInCI: useGitHubInCI,
+		byExtension:   make(map[string][]string),
+		bySuffix:      make(map[string][]string),
 	}
 }
 
-// ensurePopulated ensures the cache is populated with git ls-files data.
+// ensurePopulated ensures the cache is populated with file data.
+// In CI with useGitHubInCI enabled, uses GitHub Trees API (fast).
+// Otherwise uses git ls-files (local).
 // Thread-safe and idempotent.
 func (c *FileCache) ensurePopulated() error {
 	c.mu.Lock()
@@ -57,15 +71,24 @@ func (c *FileCache) ensurePopulated() error {
 		return nil
 	}
 
-	// Open git repository
-	repo, err := git.Open(c.repoRoot)
-	if err != nil {
-		return err
-	}
-	c.gitRepo = repo
+	var files []string
+	var err error
 
-	// Get tracked files (uses native git ls-files for performance)
-	files, err := repo.TrackedFiles()
+	// In CI with optimization enabled, try GitHub Trees API first
+	// CI detection: check CI or GITHUB_ACTIONS env vars (same as environments.IsCI())
+	isCI := os.Getenv("CI") != "" || os.Getenv("GITHUB_ACTIONS") != ""
+	if c.useGitHubInCI && isCI {
+		files, err = c.populateFromGitHub()
+		if err != nil {
+			// Fall back to git ls-files on GitHub API failure
+			log.Debugf("GitHub Trees API failed, falling back to git ls-files: %v", err)
+			files, err = c.populateFromGit()
+		}
+	} else {
+		// DevBox or optimization disabled: use git ls-files
+		files, err = c.populateFromGit()
+	}
+
 	if err != nil {
 		return err
 	}
@@ -80,6 +103,39 @@ func (c *FileCache) ensurePopulated() error {
 
 	c.populated = true
 	return nil
+}
+
+// populateFromGitHub fetches file list using GitHub Trees API.
+// Requires GITHUB_SHA env var and github.Global() to be set.
+func (c *FileCache) populateFromGitHub() ([]string, error) {
+	sha := os.Getenv("GITHUB_SHA")
+	if sha == "" {
+		return nil, &RepositoryError{Op: "github-trees", Message: "GITHUB_SHA not set"}
+	}
+
+	api := github.Global()
+	if api == nil {
+		return nil, &RepositoryError{Op: "github-trees", Message: "GitHub API not initialized"}
+	}
+
+	log.Debugf("Using GitHub Trees API with SHA: %s", sha)
+	return api.GetTreeFiles(sha)
+}
+
+// populateFromGit fetches file list using git ls-files.
+func (c *FileCache) populateFromGit() ([]string, error) {
+	// Use injected test repo if available (for unit testing)
+	if c.testGitRepo != nil {
+		return c.testGitRepo.TrackedFiles()
+	}
+
+	repo, err := git.Open(c.repoRoot)
+	if err != nil {
+		return nil, err
+	}
+	c.gitRepo = repo
+
+	return repo.TrackedFiles()
 }
 
 // TrackedFiles returns all git-tracked files (normalized to forward slashes).

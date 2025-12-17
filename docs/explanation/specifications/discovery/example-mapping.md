@@ -1,7 +1,4 @@
 # Example Mapping
-
-{{ page_breadcrumb() }}
-
 Workshop technique for discovering requirements through collaborative conversation in 15-25 minutes.
 
 ---
@@ -476,5 +473,3 @@ Split when:
 ## Quick Reference
 
 - [Example Mapping Cards](card-reference.md) - Card colors and quantities
-
-{{ diataxis_footer() }}

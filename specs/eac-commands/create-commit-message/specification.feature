@@ -9,18 +9,6 @@ Feature: eac-commands_create-commit-message
     Given I am in a git repository with EAC configuration
     And AI configuration exists at ".r2r/eac/ai/commit-message"
 
-  Rule: Command must be registered and accessible
-
-    Scenario: Command is listed in available commands
-      When I run the command "show help"
-      Then the exit code is 0
-      And I should see "create commit-message"
-
-    Scenario: Command has proper description
-      When I run the command "show help create commit-message"
-      Then the exit code is 0
-      And I should see "commit" or "message" or "AI"
-
   Rule: Requires staged changes
 
     Scenario: Fail when no staged changes

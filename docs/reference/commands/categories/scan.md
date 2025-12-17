@@ -1,6 +1,4 @@
-# scan Commands
-
-{{ page_breadcrumb() }}
+# Scan Commands
 
 ## Overview
 
@@ -8,16 +6,7 @@ The **scan** category contains 8 commands for security scanning and evidence col
 
 ## Commands
 
-| Command                                  | Purpose                                              |
-| ---------------------------------------- | ---------------------------------------------------- |
-| [scan](../scan/scan.md)                  | Run all security scans                               |
-| [scan vuln](../scan/vuln.md)             | Scan for vulnerabilities using Trivy                 |
-| [scan sast](../scan/sast.md)             | Static Application Security Testing using Semgrep    |
-| [scan secrets](../scan/secrets.md)       | Detect secrets and credentials using Trivy           |
-| [scan iac](../scan/iac.md)               | Scan Infrastructure as Code for misconfigurations    |
-| [scan sbom](../scan/sbom.md)             | Generate Software Bill of Materials                  |
-| [scan compliance](../scan/compliance.md) | Check compliance with security standards             |
-| [scan zap](../scan/zap.md)               | Dynamic Application Security Testing using OWASP ZAP |
+<!-- book:category-commands scan -->
 
 ## Common Use Cases
 
@@ -62,5 +51,3 @@ r2r eac scan zap http://localhost:8080
 - [validate Commands](./validate.md)
 - [create risk-assess](../create/risk-assess.md)
 - [validate control-tags](../validate/control-tags.md)
-
-{{ diataxis_footer() }}

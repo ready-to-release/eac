@@ -1,7 +1,4 @@
 # Testing Strategy: Overview
-
-{{ page_breadcrumb() }}
-
 ## Introduction
 
 Testing is integrated throughout every stage of the Continuous Delivery Model. Rather than treating testing as a separate phase that happens after development, the CD Model embraces continuous validation through multiple test levels executed at different stages.
@@ -740,5 +737,3 @@ See **[Testing Taxonomy](../../specifications/taxonomy/)** for complete document
 - [CD Model Overview](../cd-model/cd-model-overview.md)
 - [Stages 1-7](../cd-model/cd-model-stages-1-7.md)
 - [Three-Layer Testing](../../specifications/concepts/three-layer-approach.md)
-
-{{ diataxis_footer() }}

@@ -1,7 +1,4 @@
 # release Commands
-
-{{ page_breadcrumb() }}
-
 Release management and version control for changelogs and tagging.
 
 ## Commands in this Category
@@ -37,5 +34,3 @@ r2r eac release this
 
 - [Category Overview](../categories/release.md)
 - [pipeline status](../pipeline/status.md)
-
-{{ diataxis_footer() }}

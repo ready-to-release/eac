@@ -1,7 +1,4 @@
 # pipeline Commands
-
-{{ page_breadcrumb() }}
-
 CI/CD orchestration and diagnostics for module-aware build pipelines.
 
 ## Commands in this Category
@@ -29,6 +26,4 @@ r2r eac pipeline status
 ## See Also
 
 - [Category Overview](../categories/pipeline.md)
-- [build](../other/build.md)
-
-{{ diataxis_footer() }}
+- [build](../build/build.md)

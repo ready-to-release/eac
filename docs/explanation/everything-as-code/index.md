@@ -1,7 +1,4 @@
 # Everything as Code
-
-{{ page_breadcrumb() }}
-
 The foundational practice of representing all aspects of your system lifecycle as version-controlled, executable, machine-readable artifacts.
 
 ## In This Section
@@ -12,5 +9,3 @@ The foundational practice of representing all aspects of your system lifecycle a
 | [Understanding Through Cynefin](./cynefin-framework.md)             | Why compliance can and should be automated using the Cynefin framework                                     |
 | [The Everything as Code Paradigm](./paradigm.md)                    | What it means to treat everything as code and the three fundamental changes this creates                   |
 | [Measuring and Improving Flow](./measuring-and-improving-flow.md)   | How to use DORA metrics and Value Stream Mapping to improve delivery performance                           |
-
-{{ diataxis_footer() }}

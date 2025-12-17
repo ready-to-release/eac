@@ -1,7 +1,4 @@
 # Specifications Concepts
-
-{{ page_breadcrumb() }}
-
 Understanding specifications, BDD, TDD, and executable testing practices.
 
 ---
@@ -79,5 +76,3 @@ New to specifications? Start here:
 2. [Three-Layer Approach](./concepts/three-layer-approach.md)
 3. [Example Mapping Workshop](./discovery/example-mapping.md)
 4. [Organizing Your First Feature](./organization/file-structure.md)
-
-{{ diataxis_footer() }}

@@ -1,7 +1,4 @@
 # Three-Layer Testing Approach
-
-{{ page_breadcrumb() }}
-
 How Rules, Scenarios, and unit tests work together to deliver quality software.
 
 ---
@@ -443,5 +440,3 @@ For complete tag documentation, see:
 
 - [Canon TDD Workflow](canon-tdd-workflow.md) - Kent Beck's TDD steps
 - [Executable Specifications](executable-specifications.md) - BDD development workflow
-
-{{ diataxis_footer() }}

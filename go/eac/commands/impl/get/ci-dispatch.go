@@ -5,6 +5,7 @@
 //   --invalidated <modules>: Space-separated list of invalidated modules (checked for valid CI)
 //   --head-sha <sha>: Current HEAD SHA to check against (defaults to git HEAD)
 //   --mock <json>: Use mock CI status instead of querying GitHub
+//   --format shell: Output as shell variable assignments for eval
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 // Long:
@@ -14,17 +15,21 @@
 // Long: Mock mode (--mock) accepts JSON mapping module names to CI validity:
 // Long:   {"eac-commands": true, "docs": false}
 // Long: where true = has valid CI (skip), false = needs CI (dispatch)
+// Long:
+// Long: With --format shell, outputs shell variable assignments:
+// Long:   DISPATCH="mod1 mod2 mod3"
+// Long:   SKIPPED="mod4 mod5"
 package get
 
 import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/core/github"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
@@ -57,6 +62,7 @@ func GetCIDispatch() int {
 	invalidated := ""
 	headSHA := ""
 	mockJSON := ""
+	format := ""
 
 	for i, arg := range os.Args {
 		switch arg {
@@ -76,21 +82,23 @@ func GetCIDispatch() int {
 			if i+1 < len(os.Args) {
 				mockJSON = os.Args[i+1]
 			}
+		case "--format":
+			if i+1 < len(os.Args) {
+				format = os.Args[i+1]
+			}
 		case "--help", "-h":
 			printCIDispatchUsage()
 			return 0
 		}
 	}
 
-	// Get HEAD SHA if not provided
-	if headSHA == "" {
-		sha, err := getCurrentSHA(workspaceRoot)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: failed to get current SHA: %v\n", err)
-			return 1
-		}
-		headSHA = sha
+	// Detect HEAD SHA using shared logic (explicit > GITHUB_SHA > origin/main)
+	shaResult, err := DetectCurrentSHA(workspaceRoot, headSHA)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to detect SHA: %v\n", err)
+		return 1
 	}
+	headSHA = shaResult.SHA
 
 	// Parse mock data if provided
 	var mockStatus map[string]bool
@@ -101,8 +109,38 @@ func GetCIDispatch() int {
 		}
 	}
 
+	// Build result
+	result, err := filterCIDispatch(directlyChanged, invalidated, headSHA, mockStatus, workspaceRoot)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
+
+	// Handle shell format output
+	if format == "shell" {
+		// Output reasoning to stderr for logging (doesn't interfere with eval)
+		fmt.Fprintf(os.Stderr, "Per-module decisions:\n")
+		for _, module := range result.Dispatch {
+			if reason, ok := result.Reasons[module]; ok {
+				fmt.Fprintf(os.Stderr, "  %s: %s (DISPATCH)\n", module, reason)
+			}
+		}
+		for _, module := range result.Skipped {
+			if reason, ok := result.Reasons[module]; ok {
+				fmt.Fprintf(os.Stderr, "  %s: %s (SKIP)\n", module, reason)
+			}
+		}
+		fmt.Fprintf(os.Stderr, "\nFinal dispatch list: %s\n", strings.Join(result.Dispatch, " "))
+		fmt.Fprintf(os.Stderr, "Skipped modules: %s\n\n", strings.Join(result.Skipped, " "))
+
+		// Output variables to stdout for eval
+		fmt.Printf("DISPATCH=\"%s\"\n", strings.Join(result.Dispatch, " "))
+		fmt.Printf("SKIPPED=\"%s\"\n", strings.Join(result.Skipped, " "))
+		return 0
+	}
+
 	return internal.ExecuteGetCommand(func() (interface{}, error) {
-		return filterCIDispatch(directlyChanged, invalidated, headSHA, mockStatus, workspaceRoot)
+		return result, nil
 	})
 }
 
@@ -164,7 +202,14 @@ func parseModuleList(input string) []string {
 // checkModuleCIValidity checks if a module has valid CI at the given HEAD SHA
 // Returns (hasValidCI, reason, error)
 func checkModuleCIValidity(module, headSHA string, mockStatus map[string]bool, workspaceRoot string) (bool, string, error) {
-	// Use mock status if provided
+	return checkModuleCIValidityWithAPI(module, headSHA, mockStatus, workspaceRoot, nil)
+}
+
+// checkModuleCIValidityWithAPI checks if a module has valid CI at the given HEAD SHA
+// Accepts an optional github.API for testing. If nil, creates a new GHClient.
+// Returns (hasValidCI, reason, error)
+func checkModuleCIValidityWithAPI(module, headSHA string, mockStatus map[string]bool, workspaceRoot string, api github.API) (bool, string, error) {
+	// Use mock status if provided (for backward compatibility with --mock flag)
 	if mockStatus != nil {
 		if valid, exists := mockStatus[module]; exists {
 			if valid {
@@ -176,9 +221,14 @@ func checkModuleCIValidity(module, headSHA string, mockStatus map[string]bool, w
 		return false, "mock:not_specified", nil
 	}
 
+	// Use provided API or create a new client
+	if api == nil {
+		api = github.NewGHClient(workspaceRoot)
+	}
+
 	// Query GitHub for last successful CI run
 	workflowName := fmt.Sprintf("ci-%s.yaml", module)
-	lastSuccessSHA, err := getLastSuccessfulWorkflowSHA(workflowName, workspaceRoot)
+	lastSuccessSHA, err := getLastSuccessfulWorkflowSHAWithAPI(workflowName, api)
 	if err != nil {
 		return false, fmt.Sprintf("query_failed: %v", err), nil // Non-fatal, dispatch to be safe
 	}
@@ -194,24 +244,21 @@ func checkModuleCIValidity(module, headSHA string, mockStatus map[string]bool, w
 	return false, fmt.Sprintf("ci_at_different_sha:%s", lastSuccessSHA[:min(7, len(lastSuccessSHA))]), nil
 }
 
-// getLastSuccessfulWorkflowSHA queries GitHub for the last successful run of a workflow
-func getLastSuccessfulWorkflowSHA(workflowName, workspaceRoot string) (string, error) {
-	cmd := exec.Command("gh", "run", "list",
-		"-w", workflowName,
-		"-s", "success",
-		"-L", "1",
-		"--json", "headSha",
-		"-q", ".[0].headSha",
-	)
-	cmd.Dir = workspaceRoot
-
-	output, err := cmd.Output()
+// getLastSuccessfulWorkflowSHAWithAPI queries GitHub for the last successful run of a workflow using the API interface
+func getLastSuccessfulWorkflowSHAWithAPI(workflowName string, api github.API) (string, error) {
+	runs, err := api.ListRuns(workflowName, github.ListRunsOpts{
+		Status: "success",
+		Limit:  1,
+	})
 	if err != nil {
-		return "", fmt.Errorf("gh command failed: %w", err)
+		return "", fmt.Errorf("ListRuns failed: %w", err)
 	}
 
-	sha := strings.TrimSpace(string(output))
-	return sha, nil
+	if len(runs) == 0 {
+		return "", nil
+	}
+
+	return runs[0].HeadSHA, nil
 }
 
 func printCIDispatchUsage() {

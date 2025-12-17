@@ -1,7 +1,4 @@
 # Viewing Architecture Diagrams
-
-{{ page_breadcrumb() }}
-
 All modules include C4 architecture diagrams defined in Structurizr DSL format.
 
 ## Quick Start
@@ -208,5 +205,3 @@ Generates a workspace.dsl file based on code analysis.
 - [Architecture](./architecture.md) - System architecture overview
 - [Modules](./modules.md) - Module system and organization
 - [How-To: Generate Architecture Diagrams](../../how-to-guides/eac/commands/documentation/generate-architecture-diagrams.md)
-
-{{ diataxis_footer() }}

@@ -1,7 +1,4 @@
 # View Changelog and Release Notes
-
-{{ page_breadcrumb() }}
-
 Learn how to view changelog entries and release notes for modules in both human-readable and structured formats.
 
 ## What You'll Accomplish
@@ -299,5 +296,3 @@ Commands expect files in these locations:
 - [Prepare Module Release](./prepare-module-release.md) - Complete release checklist
 - [show Commands Reference](../../../../reference/commands/show/index.md)
 - [get Commands Reference](../../../../reference/commands/get/index.md)
-
-{{ diataxis_footer() }}

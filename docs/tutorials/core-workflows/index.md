@@ -1,7 +1,4 @@
 # Core Workflows
-
-{{ page_breadcrumb() }}
-
 Essential workflows for daily development with r2r and Everything-as-Code. These tutorials teach you the practices you'll use every day as a productive developer.
 
 ## Learning Path
@@ -50,5 +47,3 @@ These tutorials teach the daily development cycle:
 ## Next Steps
 
 Once you've mastered core workflows, explore [Advanced Practices](../advanced-practices/) for compliance automation, CI/CD integration, and multi-module development.
-
-{{ diataxis_footer() }}

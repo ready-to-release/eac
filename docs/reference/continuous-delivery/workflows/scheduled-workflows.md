@@ -1,7 +1,4 @@
 # Scheduled Workflows
-
-{{ page_breadcrumb() }}
-
 Reference for scheduled (cron) workflows.
 
 ## Overview
@@ -352,5 +349,3 @@ schedule:
 - [Trigger Orchestration](./trigger-orchestration.md) - How change-trigger.yaml works
 - Workflow file: `.github/workflows/cron-full-trigger.yaml`
 - Trigger workflow: `.github/workflows/change-trigger.yaml`
-
-{{ diataxis_footer() }}

@@ -1,7 +1,4 @@
 # Feature Flags
-
-{{ page_breadcrumb() }}
-
 How to implement, operate, and retire feature flags.
 
 ## Flag Lifecycle
@@ -185,5 +182,3 @@ Alert when deadline approaches or passes.
 - [Deployment Rings](./deployment-rings.md) - Progressive rollout to user groups
 - [Rollback Procedures](./rollback-procedures.md) - Emergency response procedures
 - [Deployment Strategies](./deployment-strategies.md) - Decoupling deployment from release
-
-{{ diataxis_footer() }}

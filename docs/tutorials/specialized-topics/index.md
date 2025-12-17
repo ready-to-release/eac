@@ -1,7 +1,4 @@
 # Specialized Topics
-
-{{ page_breadcrumb() }}
-
 Deep dive tutorials covering specialized areas of r2r and Everything-as-Code. These optional tutorials provide in-depth coverage of specific techniques and tools.
 
 ## Available Topics
@@ -57,5 +54,3 @@ After completing specialized tutorials, refer to:
 - [How-to Guides](../../how-to-guides/) for task-specific instructions
 - [Reference](../../reference/) for technical details
 - [Explanation](../../explanation/) for conceptual understanding
-
-{{ diataxis_footer() }}

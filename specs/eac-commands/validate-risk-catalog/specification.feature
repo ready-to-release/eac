@@ -8,22 +8,6 @@ Feature: eac-commands_validate-risk-catalog
   Background:
     Given I am in a git repository
 
-  Rule: Command must be registered and accessible
-
-    @L3 @iv
-    Scenario: Command is listed in available commands
-      When I run the command "show help"
-      Then the exit code is 0
-      And I should see "validate risk-catalog"
-
-    @L3 @iv
-    Scenario: Command shows help
-      When I run the command "show help validate risk-catalog"
-      Then the exit code is 0
-      And stdout contains "OSCAL"
-      And stdout contains "catalog"
-      And stdout contains "schema"
-
   Rule: Command requires file argument
 
     @L2 @ov

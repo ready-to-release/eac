@@ -3,16 +3,19 @@ nav:
   - index.md
   - overview/
   - categories/
+  - build/
   - create/
   - get/
-  - show/
-  - validate/
-  - work/
-  - test/
+  - help/
+  - init/
   - pipeline/
   - release/
   - scan/
   - serve/
+  - show/
   - templates/
+  - test/
   - update/
-  - other/
+  - validate/
+  - work/
+  - extension-meta.md

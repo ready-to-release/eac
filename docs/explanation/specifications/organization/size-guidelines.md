@@ -1,7 +1,4 @@
 # Size Guidelines
-
-{{ page_breadcrumb() }}
-
 > **Rule and scenario count limits**
 
 Guidelines for maintaining readable and maintainable feature files.
@@ -292,5 +289,3 @@ If you answer "no" to multiple questions, consider splitting the feature.
 - [Organizing Rules](./organizing-rules.md) - How to create focused Rules
 - [Organizing Scenarios](./organizing-scenarios.md) - How to write concise scenarios
 - [Naming Conventions](./naming-conventions.md) - How to name split features
-
-{{ diataxis_footer() }}

@@ -1,7 +1,4 @@
 # Quick Start Guide
-
-{{ page_breadcrumb() }}
-
 Get up and running with the r2r CLI. This tutorial walks you through installation, initialization, and running your first commands.
 
 **Prerequisites:** Command-line access, internet connection
@@ -192,5 +189,3 @@ Now that you know the basics of r2r, you can accomplish these tasks:
 
 - [Everything as Code Paradigm](../../explanation/everything-as-code/paradigm.md) - Understand the philosophy
 - [Command Reference](../../reference/commands/) - Complete command documentation
-
-{{ diataxis_footer() }}

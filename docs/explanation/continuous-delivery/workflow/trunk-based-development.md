@@ -1,7 +1,4 @@
 # Trunk-Based Development
-
-{{ page_breadcrumb() }}
-
 ## Introduction
 
 **Trunk-Based Development (TBD) is the branching strategy that enables Continuous Integration and Continuous Delivery.**
@@ -571,5 +568,3 @@ When conflicts occur: pull latest, resolve locally. Remember to rebase main on t
 
 - [Feature Branches Considered Evil (YouTube)](https://www.youtube.com/watch?v=h7LeD7VevyI)
 - [Why CI is Better Than Feature Branching (YouTube)](https://www.youtube.com/watch?v=lXQEi1O5IOI)
-
-{{ diataxis_footer() }}

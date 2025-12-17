@@ -1,7 +1,4 @@
 # Branching Strategies
-
-{{ page_breadcrumb() }}
-
 ## Introduction
 
 Branching strategies define how code flows through the CD Model's 12 stages. While [Trunk-Based Development](trunk-based-development.md) establishes the core principles and branch types, this article provides detailed branching flows for the two primary implementation patterns:
@@ -838,5 +835,3 @@ Choose the pattern that matches your regulatory requirements, risk profile, and 
 - [Unit of Flow](../core-concepts/unit-of-flow.md)
 - [Repository Layout](../../../reference/r2r-eac/repository-layout.md)
 - [Trunk-Based Development (trunkbaseddevelopment.com)](https://trunkbaseddevelopment.com/)
-
-{{ diataxis_footer() }}

@@ -1,7 +1,4 @@
 # CI Modules
-
-{{ page_breadcrumb() }}
-
 Reference for individual module CI workflows.
 
 ## Overview
@@ -398,5 +395,3 @@ r2r eac test eac-commands --suite commit,acceptance
 - [Overview](./overview.md) - Workflow architecture
 - Reusable actions: `.github/actions/build-module`, `.github/actions/test-module`
 - Module contracts: `.r2r/eac/repository.yml`
-
-{{ diataxis_footer() }}

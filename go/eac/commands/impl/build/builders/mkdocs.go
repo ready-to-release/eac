@@ -498,7 +498,7 @@ func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book
 			}
 
 			// Build the book (PDF exports will be serialized via semaphore)
-			exitCode := buildSingleBook(module, b, workspaceRoot, outputDir, bookOutputDir, bookLogWriter)
+			exitCode := BuildSingleBook(module, b, workspaceRoot, outputDir, bookOutputDir, bookLogWriter)
 
 			if exitCode != 0 {
 				if len(moduleBooks) > 1 {
@@ -560,10 +560,11 @@ func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book
 	return 0
 }
 
-// buildSingleBook builds a single book based on its output configuration
-// moduleOutputDir is the module's base output directory (used for staging)
-// bookOutputDir is where this book's final output goes
-func buildSingleBook(module *modules.ModuleContract, book *config.Book, workspaceRoot string, moduleOutputDir string, bookOutputDir string, logWriter io.Writer) int {
+// BuildSingleBook builds a single book based on its output configuration.
+// moduleOutputDir is the module's base output directory (used for staging).
+// bookOutputDir is where this book's final output goes.
+// Exported for use by the evidence builder and other book-building commands.
+func BuildSingleBook(module *modules.ModuleContract, book *config.Book, workspaceRoot string, moduleOutputDir string, bookOutputDir string, logWriter io.Writer) int {
 	bookOutput := book.GetOutput()
 
 	// Check Docker availability first - fail fast if unavailable

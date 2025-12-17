@@ -1,7 +1,4 @@
 # Deployment Strategies
-
-{{ page_breadcrumb() }}
-
 ## Introduction
 
 A deployment strategy determines **how** new code reaches production and **what happens** if problems are detected. The right strategy balances:
@@ -877,5 +874,3 @@ All strategies require:
 | Blue-Green | Instant        | None          | Medium     | High (2x)     |
 | Canary     | Instant        | None          | High       | Medium        |
 | Rings      | Gradual        | None          | High       | Medium        |
-
-{{ diataxis_footer() }}

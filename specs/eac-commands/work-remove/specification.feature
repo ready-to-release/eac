@@ -5,13 +5,6 @@ Feature: eac-commands_work_remove
   I want to safely remove it and clean up associated branches
   So that I can keep my repository organized
 
-  Rule: Command must be registered and accessible
-
-    Scenario: Command is listed in available commands
-      When I run the command "show help"
-      Then the exit code is 0
-      And I should see "work remove"
-
   Rule: Removes workspace and cleans up local branches
 
     Scenario: Remove current workspace

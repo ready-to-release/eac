@@ -1,7 +1,4 @@
 # Configuration and Setup
-
-{{ page_breadcrumb() }}
-
 Learn how to configure EAC for your project and understand the contract system.
 
 ## Coming Soon
@@ -89,5 +86,3 @@ go run ./go/eac/commands show config
 # View all modules
 go run ./go/eac/commands show modules
 ```
-
-{{ diataxis_footer() }}

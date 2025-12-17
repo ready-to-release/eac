@@ -65,6 +65,9 @@ func ReleaseValidate() int {
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 		switch {
+		case arg == "--help" || arg == "-h":
+			// Help is handled by the framework via command comments
+			return 0
 		case arg == "--all":
 			checkAll = true
 		case arg == "--json":

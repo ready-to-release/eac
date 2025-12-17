@@ -86,6 +86,16 @@ func main() {
 		}
 	}
 
+	if exists {
+		// Check if --help or -h is in arguments after the command
+		for _, arg := range os.Args[1:] {
+			if arg == "--help" || arg == "-h" {
+				printCommandHelp(cmdFunc)
+				os.Exit(0)
+			}
+		}
+	}
+
 	if !exists {
 		// Check if this is a parent command (has subcommands)
 		// We need to find where the command args end and flags/args begin
@@ -212,5 +222,67 @@ func printUsage() {
 
 	for _, name := range names {
 		fmt.Printf("  %s\n", name)
+	}
+}
+
+// printCommandHelp prints help information for a command using its registration metadata
+func printCommandHelp(_ registry.CommandFunc) {
+	// Find command by reconstructing the command name from args
+	cmdRegistry := registry.GetCommandRegistry()
+	var cmdName string
+	for argCount := len(os.Args) - 1; argCount >= 1; argCount-- {
+		testPath := strings.Join(os.Args[1:argCount+1], " ")
+		// Skip if this looks like a flag
+		if strings.HasPrefix(os.Args[argCount], "-") {
+			continue
+		}
+		if _, found := cmdRegistry[testPath]; found {
+			cmdName = testPath
+			break
+		}
+	}
+
+	if cmdName == "" {
+		fmt.Println("No help available.")
+		return
+	}
+
+	reg := cmdRegistry[cmdName]
+	if reg == nil {
+		fmt.Println("No help available.")
+		return
+	}
+
+	// Print command name and short description
+	fmt.Printf("%s - %s\n", reg.ActualCommand, reg.Short)
+	fmt.Println()
+
+	// Print long description if available
+	if reg.Long != "" {
+		fmt.Println(reg.Long)
+		fmt.Println()
+	}
+
+	// Print flags if any
+	if len(reg.Flags) > 0 {
+		fmt.Println("Flags:")
+		for _, flag := range reg.Flags {
+			shorthand := ""
+			if flag.Shorthand != "" {
+				shorthand = fmt.Sprintf("-%s, ", flag.Shorthand)
+			}
+			defaultVal := ""
+			if flag.DefaultValue != "" {
+				defaultVal = fmt.Sprintf(" (default: %s)", flag.DefaultValue)
+			}
+			required := ""
+			if flag.Required {
+				required = " [required]"
+			}
+			fmt.Printf("  %s--%s%s%s\n", shorthand, flag.Name, defaultVal, required)
+			if flag.Usage != "" {
+				fmt.Printf("      %s\n", flag.Usage)
+			}
+		}
 	}
 }

@@ -1,7 +1,4 @@
 # Verification Tags
-
-{{ page_breadcrumb() }}
-
 > **Operational, installation, and performance verification types**
 
 **REQUIRED for all Gherkin scenarios**. Verification tags categorize the type of validation being performed.
@@ -247,5 +244,3 @@ Scenario: Deployment validation in PLTE
 - [Test Levels](./test-levels.md) - L0-L4 execution environments
 - [Test Suites](./test-suites.md) - How verification tags map to test suites
 - [Tag Inheritance](./tag-inheritance.md) - How tags accumulate
-
-{{ diataxis_footer() }}

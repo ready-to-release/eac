@@ -1,7 +1,4 @@
 # Command How-To Guides
-
-{{ page_breadcrumb() }}
-
 Learn how to accomplish specific tasks with EAC commands through practical, step-by-step guides.
 
 ## Choose by Your Goal
@@ -44,5 +41,3 @@ Learn how to accomplish specific tasks with EAC commands through practical, step
 These how-to guides focus on accomplishing tasks. For complete command syntax and options:
 
 **→ [Command Reference Documentation](../../../reference/commands/index.md)**
-
-{{ diataxis_footer() }}

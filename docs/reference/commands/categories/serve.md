@@ -1,17 +1,11 @@
 # serve Commands
-
-{{ page_breadcrumb() }}
-
 ## Overview
 
 The **serve** category contains 2 commands for starting development servers for documentation and architecture diagrams.
 
 ## Commands
 
-| Command                            | Purpose                                                      |
-| ---------------------------------- | ------------------------------------------------------------ |
-| [serve docs](../serve/docs.md)     | Start or stop MkDocs server                                  |
-| [serve design](../serve/design.md) | View architecture diagrams in browser using Structurizr Lite |
+<!-- book:category-commands serve -->
 
 ## Common Use Cases
 
@@ -44,5 +38,3 @@ r2r eac serve design src-auth
 - [update design](../update/design.md)
 - [validate design](../validate/design.md)
 - [validate markdown](../validate/markdown.md)
-
-{{ diataxis_footer() }}

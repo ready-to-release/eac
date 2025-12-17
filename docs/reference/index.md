@@ -1,7 +1,4 @@
 # Reference
-
-{{ page_breadcrumb() }}
-
 Technical reference material providing information-oriented documentation for the EAC system. Includes API specifications, command references, decision records, and architectural documentation.
 
 ## Quick Access
@@ -18,5 +15,3 @@ Technical reference material providing information-oriented documentation for th
 | [Commands](./commands/) | Command-line interface reference documentation |
 | [Continuous Delivery](./continuous-delivery/) | CI/CD pipeline and deployment reference materials |
 | [Decision Records](./decision-records/) | Architectural decisions and their rationale |
-
-{{ diataxis_footer() }}

@@ -1,7 +1,4 @@
 # Create Specifications
-
-{{ page_breadcrumb() }}
-
 ## What You'll Accomplish
 
 Generate Gherkin BDD specifications from natural language requirements using AI.
@@ -122,5 +119,3 @@ Generated specifications include:
 
 - [`create spec`](../../../../reference/commands/create/spec.md) - Generate specification
 - [`validate specs`](../../../../reference/commands/validate/specs.md) - Validate quality
-
-{{ diataxis_footer() }}

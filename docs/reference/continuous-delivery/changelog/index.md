@@ -1,7 +1,4 @@
 # Changelog
-
-{{ page_breadcrumb() }}
-
 Changelog format and versioning conventions for repository-level and module-level change documentation.
 
 ## Overview
@@ -16,5 +13,3 @@ The repository uses [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) for
 | [Repository Changelog](./repository-changelog.md) | Repository-level changelog conventions    |
 | [Module Changelogs](./module-changelogs.md)       | Module-level changelog conventions        |
 | [Versioning](./versioning.md)                     | Semantic versioning rules and conventions |
-
-{{ diataxis_footer() }}

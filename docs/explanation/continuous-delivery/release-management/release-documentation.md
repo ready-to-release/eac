@@ -1,7 +1,4 @@
 # Release Documentation
-
-{{ page_breadcrumb() }}
-
 ## Introduction
 
 Release documentation is the **complete set of artifacts** that describe what's changing, how to deploy it, and how to recover if problems arise. Proper documentation is essential for:
@@ -566,5 +563,3 @@ echo "- Code coverage: $(cat test-results/coverage.txt)" >> RELEASE_NOTES.md
 | Security      | Security approval    | If applicable |
 | Compliance    | Regulatory approval  | If applicable |
 | Operations    | Deployment readiness | Required      |
-
-{{ diataxis_footer() }}

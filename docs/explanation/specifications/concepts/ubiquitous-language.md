@@ -1,7 +1,4 @@
 # Ubiquitous Language: Building Shared Vocabulary
-
-{{ page_breadcrumb() }}
-
 > **How shared domain vocabulary creates the foundation for executable specifications**
 
 ---
@@ -247,5 +244,3 @@ Code using Ubiquitous Language:
 - [Review and Iterate](../quality/review-and-iterate.md) - How specifications evolve with language
 - [BDD Fundamentals](bdd-fundamentals.md) - Writing specifications
 - [Three-Layer Approach](./three-layer-approach.md) - How Rule/Scenario/Unit Test work together
-
-{{ diataxis_footer() }}

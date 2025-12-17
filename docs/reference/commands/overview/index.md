@@ -1,7 +1,4 @@
 # Command Overview
-
-{{ page_breadcrumb() }}
-
 Conceptual documentation explaining the design, organization, and usage patterns of EAC commands. These guides help you understand how commands work together and how to use them effectively.
 
 ## In This Section
@@ -40,5 +37,3 @@ For immediate command usage, see:
 - [All Commands by Category](../categories/index.md)
 - [Command Quick Reference](../index.md#command-categories)
 - [Common Workflows](../index.md#common-workflows)
-
-{{ diataxis_footer() }}

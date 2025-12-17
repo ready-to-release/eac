@@ -1,7 +1,4 @@
 # Module Changelogs
-
-{{ page_breadcrumb() }}
-
 Reference for module-level changelogs.
 
 ## Overview
@@ -466,5 +463,3 @@ r2r eac validate release r2r-cli
 - [Repository Changelog](./repository-changelog.md) - Repository-level conventions
 - [Versioning](./versioning.md) - Semantic versioning and CalVer
 - [Release Workflows](../workflows/release-workflows.md) - Release automation
-
-{{ diataxis_footer() }}

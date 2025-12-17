@@ -25,6 +25,7 @@ const (
 	SchemaEACConfig          SchemaType = "ai-provider"
 	SchemaBooks              SchemaType = "books"
 	SchemaSecurityTools      SchemaType = "security-tools"
+	SchemaCommands           SchemaType = "commands"
 )
 
 // schemaFileNames maps schema types to their file names (without path)
@@ -38,6 +39,7 @@ var schemaFileNames = map[SchemaType]string{
 	SchemaEACConfig:          "ai-provider.schema.json",
 	SchemaBooks:              "books.schema.json",
 	SchemaSecurityTools:      "security-tools.schema.json",
+	SchemaCommands:           "commands.schema.json",
 }
 
 // ContractVersion is the schema contract version

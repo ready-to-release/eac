@@ -1,7 +1,4 @@
 # Output Formats
-
-{{ page_breadcrumb() }}
-
 ## Overview
 
 EAC commands produce output in different formats optimized for their use case. Understanding these formats helps you choose the right command and process its output effectively.
@@ -714,5 +711,3 @@ Fix errors and run: r2r eac build eac-commands
 - [Common Flags](./common-flags.md) - Global options
 - [Get Commands Category](../categories/get.md) - All JSON commands
 - [Show Commands Category](../categories/show.md) - All formatted commands
-
-{{ diataxis_footer() }}

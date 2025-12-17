@@ -1,0 +1,162 @@
+# Build Container Action
+#
+# Builds a container module and verifies the pushed image.
+# Wraps build-module with container-specific verification.
+#
+# Container modules must have docker_build configuration in repository.yml
+# with push: true and registry: ghcr.io
+#
+# Usage:
+#   jobs:
+#     build:
+#       runs-on: ubuntu-latest
+#       permissions:
+#         packages: write
+#       outputs:
+#         image-name: ${{ steps.build.outputs.image-name }}
+#         short-sha: ${{ steps.build.outputs.short-sha }}
+#       steps:
+#         - uses: actions/checkout@v6
+#         - uses: ./.github/actions/build-container
+#           id: build
+#           with:
+#             module: ext-eac
+#           env:
+#             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+name: Build Container
+description: Build a container module and verify pushed image
+
+inputs:
+  module:
+    description: Module moniker to build
+    required: true
+  trigger-run-id:
+    description: 'Run ID of trigger workflow (for artifact download). If empty, builds from source.'
+    required: false
+    default: ''
+  commit-sha:
+    description: 'Commit SHA for artifact lookup and image tagging. Falls back to github.sha if empty.'
+    required: false
+    default: ''
+  go-version:
+    description: 'Go version for building commands from source'
+    required: false
+    default: '1.24.4'
+  no-deps:
+    description: |
+      Build in isolated mode - no dependency artifact downloads.
+      Default: true (CI isolation). Set to false for integration builds.
+    required: false
+    default: 'true'
+  upload-artifact:
+    description: Whether to upload build artifacts
+    required: false
+    default: 'true'
+  extra-args:
+    description: Additional arguments to pass to the build command
+    required: false
+    default: ''
+  registry:
+    description: Container registry
+    required: false
+    default: 'ghcr.io'
+
+outputs:
+  image-name:
+    description: Full image name (registry/owner/module)
+    value: ${{ steps.vars.outputs.image-name }}
+  short-sha:
+    description: Short commit SHA used for image tag
+    value: ${{ steps.vars.outputs.short-sha }}
+  image-tag:
+    description: Full image tag (sha-{short-sha})
+    value: ${{ steps.vars.outputs.image-tag }}
+  artifact-name:
+    description: Name of the uploaded artifact
+    value: ${{ steps.build.outputs.artifact-name }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set variables
+      id: vars
+      shell: bash
+      env:
+        MODULE: ${{ inputs.module }}
+        REGISTRY: ${{ inputs.registry }}
+        COMMIT_SHA: ${{ inputs.commit-sha || github.sha }}
+      run: |
+        SHORT_SHA="${COMMIT_SHA:0:7}"
+        IMAGE_NAME="$REGISTRY/${{ github.repository_owner }}/$MODULE"
+        IMAGE_TAG="sha-$SHORT_SHA"
+
+        echo "short-sha=$SHORT_SHA" >> $GITHUB_OUTPUT
+        echo "image-name=$IMAGE_NAME" >> $GITHUB_OUTPUT
+        echo "image-tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+        echo "Container build configuration:"
+        echo "  Module: $MODULE"
+        echo "  Image: $IMAGE_NAME:$IMAGE_TAG"
+
+    - name: Build container module
+      id: build
+      uses: ./.github/actions/build-module
+      with:
+        module: ${{ inputs.module }}
+        trigger-run-id: ${{ inputs.trigger-run-id }}
+        commit-sha: ${{ inputs.commit-sha }}
+        go-version: ${{ inputs.go-version }}
+        no-deps: ${{ inputs.no-deps }}
+        upload-artifact: ${{ inputs.upload-artifact }}
+        extra-args: ${{ inputs.extra-args }}
+        # Container modules use buildx which is auto-detected from module type
+
+    - name: Verify pushed image
+      shell: bash
+      env:
+        IMAGE_NAME: ${{ steps.vars.outputs.image-name }}
+        IMAGE_TAG: ${{ steps.vars.outputs.image-tag }}
+        MODULE: ${{ inputs.module }}
+      run: |
+        echo "Verifying pushed image..."
+        echo ""
+
+        # Pull the image to verify it was pushed successfully
+        echo "Pulling $IMAGE_NAME:$IMAGE_TAG..."
+        if ! docker pull "$IMAGE_NAME:$IMAGE_TAG"; then
+          echo "::error::Failed to pull container image $IMAGE_NAME:$IMAGE_TAG"
+          echo "The container build may have failed to push to the registry."
+          echo ""
+          echo "Troubleshooting:"
+          echo "  1. Ensure GITHUB_TOKEN has packages:write permission"
+          echo "  2. Check the build logs above for push errors"
+          echo "  3. Verify the module's docker_build configuration"
+          exit 1
+        fi
+
+        echo ""
+        echo "Checking image labels..."
+        docker inspect "$IMAGE_NAME:$IMAGE_TAG" --format='{{json .Config.Labels}}' | jq '.' || true
+
+        echo ""
+        echo "✓ Container image verified: $IMAGE_NAME:$IMAGE_TAG"
+
+    - name: Container Build Summary
+      if: always()
+      shell: bash
+      env:
+        MODULE: ${{ inputs.module }}
+        IMAGE_NAME: ${{ steps.vars.outputs.image-name }}
+        IMAGE_TAG: ${{ steps.vars.outputs.image-tag }}
+      run: |
+        if [ "${{ job.status }}" = "success" ]; then
+          echo "### Container Build: \`$MODULE\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Image | \`$IMAGE_NAME\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tag | \`$IMAGE_TAG\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Container image pushed and verified." >> $GITHUB_STEP_SUMMARY
+        fi

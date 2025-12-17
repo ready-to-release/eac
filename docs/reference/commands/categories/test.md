@@ -1,7 +1,4 @@
 # Test Commands
-
-{{ page_breadcrumb() }}
-
 ## Overview
 
 Test commands execute and manage tests across the repository. They provide parallel test execution, suite-based organization, and comprehensive failure diagnostics for quality assurance.
@@ -18,12 +15,7 @@ Test commands execute and manage tests across the repository. They provide paral
 
 ## All Test Commands
 
-| Command                                    | Purpose                    | Use Case                              |
-| ------------------------------------------ | -------------------------- | ------------------------------------- |
-| [test](../test/test.md)                    | Run tests for modules      | Execute tests for one or more modules |
-| [test suite](../test/suite.md)             | Run specific test suite    | Execute tests organized by suite      |
-| [test list-suites](../test/list-suites.md) | List available suites      | Discover available test suites        |
-| [test debug](../test/debug.md)             | Parse and analyze failures | Debug failed tests                    |
+<!-- book:category-commands test -->
 
 ## Test Organization
 
@@ -600,11 +592,9 @@ r2r eac test debug
 
 ## See Also
 
-- [build](../other/build.md) - Build modules before testing
+- [build](../build/build.md) - Build modules before testing
 - [validate specs](../validate/specs.md) - Validate Gherkin specifications
 - [show tests](../show/tests.md) - List all tests
 - [show test-summary](../show/test-summary.md) - Test execution summary
 - [show test-timings](../show/test-timings.md) - Test performance analysis
 - [get tests](../get/tests.md) - Test metadata as JSON
-
-{{ diataxis_footer() }}

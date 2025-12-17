@@ -1,7 +1,4 @@
 # Troubleshooting
-
-{{ page_breadcrumb() }}
-
 Solutions to common problems when working with EAC.
 
 ## Coming Soon
@@ -152,5 +149,3 @@ If you can't find a solution:
 2. Review the reference documentation
 3. Check project issues on GitHub
 4. Consult the development team
-
-{{ diataxis_footer() }}

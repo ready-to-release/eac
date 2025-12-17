@@ -1,7 +1,4 @@
 # File Organization
-
-{{ page_breadcrumb() }}
-
 > **Directory structure and file naming conventions for Go/Godog projects**
 
 Learn how to organize specification files, step definitions, and unit tests in Go projects.
@@ -288,5 +285,3 @@ go test ./...
 - [Test Levels](./test-levels.md) - Build tags and test isolation (L0-L4)
 - [Step Definitions](./step-definitions.md) - Writing Godog step definitions
 - [Best Practices](./best-practices.md) - Go testing best practices
-
-{{ diataxis_footer() }}

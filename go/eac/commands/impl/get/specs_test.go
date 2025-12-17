@@ -4,11 +4,8 @@ import (
 	"testing"
 )
 
-func TestGetSpecs(t *testing.T) {
-	// Verify command is registered
-	// Command registration happens in init(), so we just need to verify
-	// the function exists and can be called
-	if GetSpecs == nil {
-		t.Error("GetSpecs command is nil")
-	}
+func TestGetSpecs_Exists(t *testing.T) {
+	// Verify command function exists (registration happens in init())
+	// This is a compile-time check - if GetSpecs doesn't exist, this won't compile
+	var _ func() int = GetSpecs
 }

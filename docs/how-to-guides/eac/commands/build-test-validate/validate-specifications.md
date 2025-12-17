@@ -1,7 +1,4 @@
 # Validate Specifications
-
-{{ page_breadcrumb() }}
-
 ## What You'll Accomplish
 
 Check Gherkin BDD specifications for quality and detect unused step definitions.
@@ -112,5 +109,3 @@ r2r eac validate specs || exit 1
 
 - [`validate specs`](../../../../reference/commands/validate/specs.md) - Validate Gherkin
 - [`get specs-unused-steps`](../../../../reference/commands/get/specs-unused-steps.md) - Find unused
-
-{{ diataxis_footer() }}

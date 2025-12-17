@@ -1,7 +1,4 @@
 # Create Feature Workspace
-
-{{ page_breadcrumb() }}
-
 ## What You'll Accomplish
 
 Set up an isolated workspace for developing a new feature without affecting your main branch. Uses git worktrees to enable parallel development on multiple features.
@@ -88,5 +85,3 @@ code .
 - [`work create`](../../../../reference/commands/work/create.md) - Full command reference
 - [`show workspaces`](../../../../reference/commands/show/workspaces.md) - List all workspaces
 - [`work remove`](../../../../reference/commands/work/remove.md) - Delete workspace
-
-{{ diataxis_footer() }}

@@ -1,7 +1,4 @@
 # File Structure
-
-{{ page_breadcrumb() }}
-
 > **Specifications vs implementation separation**
 
 Understanding the philosophy and structure of separating WHAT from HOW.
@@ -322,5 +319,3 @@ r2r eac test <module> --suite pre-commit
 - [Organizing Rules](./organizing-rules.md) - Creating acceptance criteria
 - [Organizing Scenarios](./organizing-scenarios.md) - Scenario structure
 - [Go Implementation](../implementation/go/file-organization.md) - Go-specific file structure
-
-{{ diataxis_footer() }}

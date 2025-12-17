@@ -4,6 +4,7 @@
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML
+//   --format shell: Output as shell variable assignments for eval
 //   --pr-base <sha>: For PRs, the base SHA to compare against
 //   --workflow <name>: Workflow name to find last success (default: "CI Trigger")
 //   --branch <name>: Branch to check for last success (default: main)
@@ -16,9 +17,18 @@
 // Long:   - Invalidated modules (transitive dependents requiring rebuild)
 // Long:   - Base and head SHAs, bootstrap flag, changed files list
 // Long:   - Files-by-module mapping for detailed change reasoning
+// Long:
+// Long: With --format shell, outputs shell variable assignments:
+// Long:   MODULES="mod1 mod2 mod3"
+// Long:   DIRECTLY_CHANGED="mod1 mod2"
+// Long:   INVALIDATED="mod3"
+// Long:   BASE_SHA="abc123"
+// Long:   IS_BOOTSTRAP="false"
+// Long:   CHANGED_FILE_COUNT="5"
 package get
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -64,6 +74,7 @@ func GetChangedModulesCI() int {
 	workflow := "CI Trigger"
 	branch := "main"
 	filterWorkflows := false
+	format := ""
 
 	for i, arg := range os.Args {
 		switch arg {
@@ -81,6 +92,10 @@ func GetChangedModulesCI() int {
 			}
 		case "--filter-workflows":
 			filterWorkflows = true
+		case "--format":
+			if i+1 < len(os.Args) {
+				format = os.Args[i+1]
+			}
 		}
 	}
 
@@ -91,122 +106,150 @@ func GetChangedModulesCI() int {
 		return 1
 	}
 
-	// Get current HEAD SHA
-	headSHA, err := getCurrentSHA(workspaceRoot)
+	// Get current HEAD SHA using shared detection logic
+	shaResult, err := DetectCurrentSHA(workspaceRoot, "")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: getting current SHA: %v\n", err)
 		return 1
 	}
+	headSHA := shaResult.SHA
 
-	// Use the shared get command helper
+	// Build the result
+	result, err := buildCIChangedModulesResult(workspaceRoot, baseSHA, headSHA, isBootstrap, filterWorkflows)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
+
+	// Handle shell format output
+	if format == "shell" {
+		fmt.Printf("MODULES=\"%s\"\n", strings.Join(result.Modules, " "))
+		fmt.Printf("DIRECTLY_CHANGED=\"%s\"\n", strings.Join(result.DirectlyChanged, " "))
+		fmt.Printf("INVALIDATED=\"%s\"\n", strings.Join(result.Invalidated, " "))
+		fmt.Printf("BASE_SHA=\"%s\"\n", result.BaseSHA)
+		fmt.Printf("IS_BOOTSTRAP=\"%t\"\n", result.IsBootstrap)
+		fmt.Printf("CHANGED_FILE_COUNT=\"%d\"\n", result.ChangedFileCount)
+		// Include FILES_BY_MODULE as JSON for detailed reporting
+		if filesJSON, err := json.Marshal(result.FilesByModule); err == nil {
+			fmt.Printf("FILES_BY_MODULE='%s'\n", string(filesJSON))
+		}
+		return 0
+	}
+
+	// Use the shared get command helper for YAML/JSON/TOML output
 	return internal.ExecuteGetCommand(func() (interface{}, error) {
-		// If bootstrap (no previous success), return all modules
-		if isBootstrap {
-			allModules, err := getAllModuleMonikers(workspaceRoot)
-			if err != nil {
-				return nil, err
-			}
+		return result, nil
+	})
+}
 
-			// Apply workflow filter if requested
-			var filteredOut []string
-			if filterWorkflows {
-				allModules, filteredOut = filterModulesWithWorkflows(allModules, workspaceRoot)
-			}
-
-			return CIChangedModulesResult{
-				Modules:          allModules,
-				DirectlyChanged:  allModules,
-				Invalidated:      []string{},
-				BaseSHA:          "",
-				HeadSHA:          headSHA,
-				IsBootstrap:      true,
-				ChangedFiles:     []string{},
-				ChangedFileCount: 0,
-				FilesByModule:    map[string][]string{},
-				FilteredOut:      filteredOut,
-			}, nil
-		}
-
-		// Get changed files between base and head
-		changedFiles, err := getChangedFilesBetweenSHAs(baseSHA, headSHA, workspaceRoot)
+// buildCIChangedModulesResult builds the result structure
+func buildCIChangedModulesResult(workspaceRoot, baseSHA, headSHA string, isBootstrap, filterWorkflows bool) (*CIChangedModulesResult, error) {
+	// If bootstrap (no previous success), return all modules
+	if isBootstrap {
+		allModules, err := getAllModuleMonikers(workspaceRoot)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get changed files: %w", err)
-		}
-
-		// Filter out files that are owned by modules but shouldn't trigger CI:
-		// - Release workflows (files.workflows.release): only affect release process
-		// - Changelogs (files.changelog): only affect release documentation
-		// - README.md files: documentation only
-		ciExcludedFiles := getCIExcludedFiles(workspaceRoot)
-		changedFiles = filterOutCIExcludedFiles(changedFiles, ciExcludedFiles)
-
-		if len(changedFiles) == 0 {
-			return CIChangedModulesResult{
-				Modules:          []string{},
-				DirectlyChanged:  []string{},
-				Invalidated:      []string{},
-				BaseSHA:          baseSHA,
-				HeadSHA:          headSHA,
-				IsBootstrap:      false,
-				ChangedFiles:     []string{},
-				ChangedFileCount: 0,
-				FilesByModule:    map[string][]string{},
-			}, nil
-		}
-
-		// Get directly changed modules
-		directlyChanged, err := repository.GetChangedModules(changedFiles, workspaceRoot)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get changed modules: %w", err)
-		}
-
-		// Get all modules requiring rebuild (includes transitive dependents)
-		allRequiringRebuild, err := repository.GetModulesRequiringRebuild(changedFiles, workspaceRoot)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get modules requiring rebuild: %w", err)
-		}
-
-		// Calculate invalidated (all requiring rebuild minus directly changed)
-		directlyChangedSet := make(map[string]bool)
-		for _, m := range directlyChanged {
-			directlyChangedSet[m] = true
-		}
-
-		invalidated := []string{}
-		for _, m := range allRequiringRebuild {
-			if !directlyChangedSet[m] {
-				invalidated = append(invalidated, m)
-			}
-		}
-
-		// Build files-by-module map for detailed reasoning
-		filesByModule, err := getFilesByModule(changedFiles, workspaceRoot)
-		if err != nil {
-			// Non-fatal: just use empty map if we can't build it
-			filesByModule = map[string][]string{}
+			return nil, err
 		}
 
 		// Apply workflow filter if requested
 		var filteredOut []string
 		if filterWorkflows {
-			allRequiringRebuild, filteredOut = filterModulesWithWorkflows(allRequiringRebuild, workspaceRoot)
-			directlyChanged, _ = filterModulesWithWorkflows(directlyChanged, workspaceRoot)
-			invalidated, _ = filterModulesWithWorkflows(invalidated, workspaceRoot)
+			allModules, filteredOut = filterModulesWithWorkflows(allModules, workspaceRoot)
 		}
 
-		return CIChangedModulesResult{
-			Modules:          allRequiringRebuild,
-			DirectlyChanged:  directlyChanged,
-			Invalidated:      invalidated,
+		return &CIChangedModulesResult{
+			Modules:          allModules,
+			DirectlyChanged:  allModules,
+			Invalidated:      []string{},
+			BaseSHA:          "",
+			HeadSHA:          headSHA,
+			IsBootstrap:      true,
+			ChangedFiles:     []string{},
+			ChangedFileCount: 0,
+			FilesByModule:    map[string][]string{},
+			FilteredOut:      filteredOut,
+		}, nil
+	}
+
+	// Get changed files between base and head
+	changedFiles, err := getChangedFilesBetweenSHAs(baseSHA, headSHA, workspaceRoot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get changed files: %w", err)
+	}
+
+	// Filter out files that are owned by modules but shouldn't trigger CI:
+	// - Release workflows (files.workflows.release): only affect release process
+	// - Changelogs (files.changelog): only affect release documentation
+	// - README.md files: documentation only
+	ciExcludedFiles := getCIExcludedFiles(workspaceRoot)
+	changedFiles = filterOutCIExcludedFiles(changedFiles, ciExcludedFiles)
+
+	if len(changedFiles) == 0 {
+		return &CIChangedModulesResult{
+			Modules:          []string{},
+			DirectlyChanged:  []string{},
+			Invalidated:      []string{},
 			BaseSHA:          baseSHA,
 			HeadSHA:          headSHA,
 			IsBootstrap:      false,
-			ChangedFiles:     changedFiles,
-			ChangedFileCount: len(changedFiles),
-			FilesByModule:    filesByModule,
-			FilteredOut:      filteredOut,
+			ChangedFiles:     []string{},
+			ChangedFileCount: 0,
+			FilesByModule:    map[string][]string{},
 		}, nil
-	})
+	}
+
+	// Get directly changed modules
+	directlyChanged, err := repository.GetChangedModules(changedFiles, workspaceRoot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get changed modules: %w", err)
+	}
+
+	// Get all modules requiring rebuild (includes transitive dependents)
+	allRequiringRebuild, err := repository.GetModulesRequiringRebuild(changedFiles, workspaceRoot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get modules requiring rebuild: %w", err)
+	}
+
+	// Calculate invalidated (all requiring rebuild minus directly changed)
+	directlyChangedSet := make(map[string]bool)
+	for _, m := range directlyChanged {
+		directlyChangedSet[m] = true
+	}
+
+	invalidated := []string{}
+	for _, m := range allRequiringRebuild {
+		if !directlyChangedSet[m] {
+			invalidated = append(invalidated, m)
+		}
+	}
+
+	// Build files-by-module map for detailed reasoning
+	filesByModule, err := getFilesByModule(changedFiles, workspaceRoot)
+	if err != nil {
+		// Non-fatal: just use empty map if we can't build it
+		filesByModule = map[string][]string{}
+	}
+
+	// Apply workflow filter if requested
+	var filteredOut []string
+	if filterWorkflows {
+		allRequiringRebuild, filteredOut = filterModulesWithWorkflows(allRequiringRebuild, workspaceRoot)
+		directlyChanged, _ = filterModulesWithWorkflows(directlyChanged, workspaceRoot)
+		invalidated, _ = filterModulesWithWorkflows(invalidated, workspaceRoot)
+	}
+
+	return &CIChangedModulesResult{
+		Modules:          allRequiringRebuild,
+		DirectlyChanged:  directlyChanged,
+		Invalidated:      invalidated,
+		BaseSHA:          baseSHA,
+		HeadSHA:          headSHA,
+		IsBootstrap:      false,
+		ChangedFiles:     changedFiles,
+		ChangedFileCount: len(changedFiles),
+		FilesByModule:    filesByModule,
+		FilteredOut:      filteredOut,
+	}, nil
 }
 
 // determineBaseSHA determines the base SHA for comparison

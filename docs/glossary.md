@@ -1,7 +1,4 @@
 # Glossary
-
-{{ page_breadcrumb() }}
-
 Definitions of key terms and concepts used throughout the documentation.
 
 ---
@@ -313,5 +310,3 @@ An EAC term for a git worktree used for feature development. Enables parallel de
 - [R2R and EAC](./reference/r2r-eac/index.md) - System architecture
 - [Decision Records](./reference/decision-records/index.md) - Architectural decisions
 - [Everything as Code](./explanation/everything-as-code/index.md) - Core philosophy
-
-{{ diataxis_footer() }}

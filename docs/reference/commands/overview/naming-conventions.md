@@ -1,7 +1,4 @@
 # Command Naming Conventions
-
-{{ page_breadcrumb() }}
-
 ## Overview
 
 EAC commands follow consistent naming conventions that make them predictable and discoverable. Understanding these conventions helps you guess command names and understand their purpose.
@@ -478,6 +475,4 @@ validate contracts       # Clear verb
 - [Command Taxonomy](./command-taxonomy.md) - How commands are organized into categories
 - [Common Flags](./common-flags.md) - Global options available to commands
 - [Output Formats](./output-formats.md) - Understanding command output formats
-- [Help Command](../other/help.md) - Using the help system
-
-{{ diataxis_footer() }}
+- [Help Command](../help/help.md) - Using the help system

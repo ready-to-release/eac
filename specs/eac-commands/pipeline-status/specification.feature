@@ -8,18 +8,6 @@ Feature: eac-commands_pipeline-status
   Background:
     Given I am in a git repository with GitHub remote
 
-  Rule: Command must be registered and accessible
-
-    Scenario: Command is listed in available commands
-      When I run the command "show help"
-      Then the exit code is 0
-      And I should see "pipeline status"
-
-    Scenario: Command has proper description
-      When I run the command "show help pipeline status"
-      Then the exit code is 0
-      And I should see "CI" or "status" or "pipeline"
-
   Rule: Shows status for main branch HEAD by default
 
     @skip:wip

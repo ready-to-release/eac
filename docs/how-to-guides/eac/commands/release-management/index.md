@@ -1,7 +1,4 @@
 # Release Management
-
-{{ page_breadcrumb() }}
-
 Learn how to prepare and publish releases with changelog generation and version tagging.
 
 ## In This Section
@@ -32,5 +29,3 @@ Learn how to prepare and publish releases with changelog generation and version 
 - CalVer for modules (date-based)
 - SemVer for CLI tools (semantic versioning)
 - Automated version extraction
-
-{{ diataxis_footer() }}

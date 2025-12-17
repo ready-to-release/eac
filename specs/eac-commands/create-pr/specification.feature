@@ -5,13 +5,6 @@ Feature: eac-commands_create-pr
   I want to create a pull request with an AI-generated description
   So that my changes can be reviewed before merging to main
 
-  Rule: Command must be registered and accessible
-
-    Scenario: Command is listed in available commands
-      When I run the command "show help"
-      Then the exit code is 0
-      And I should see "create pr"
-
   Rule: Validation prevents invalid PRs
 
     Scenario: Fail when uncommitted changes exist

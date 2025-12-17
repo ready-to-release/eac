@@ -1,7 +1,4 @@
 # Understanding Test Suites
-
-{{ page_breadcrumb() }}
-
 **Status:** Placeholder - Content coming soon
 
 **Prerequisites:** [Your First Module](./first-module.md)
@@ -89,5 +86,3 @@ The tutorial will walk through practical examples:
 ### Next Steps
 
 You now understand testing fundamentals. Continue to [Core Workflows](../core-workflows/) to learn daily development practices with TDD and specifications.
-
-{{ diataxis_footer() }}

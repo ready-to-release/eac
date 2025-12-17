@@ -1,7 +1,4 @@
 # Scan for Security Issues
-
-{{ page_breadcrumb() }}
-
 ## What You'll Accomplish
 
 Detect security vulnerabilities, secrets, and compliance issues before committing code.
@@ -108,5 +105,3 @@ r2r eac scan || exit 1
 - [`scan`](../../../../reference/commands/scan/scan.md) - Run all scans
 - [`scan vuln`](../../../../reference/commands/scan/vuln.md) - Vulnerability scan
 - [`scan secrets`](../../../../reference/commands/scan/secrets.md) - Secret detection
-
-{{ diataxis_footer() }}

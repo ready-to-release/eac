@@ -1,7 +1,4 @@
 # Compliance & Risk
-
-{{ page_breadcrumb() }}
-
 > **Linking specifications to regulatory requirements and security controls**
 
 Integrate compliance and risk management into your BDD specifications using standardized control tagging.
@@ -276,5 +273,3 @@ See [Risk Controls](./risk-controls.md) for complete reference.
 
 - [File Structure](../organization/file-structure.md) - Where to put specifications
 - [Organizing Rules](../organization/organizing-rules.md) - Structuring acceptance criteria
-
-{{ diataxis_footer() }}

@@ -1,7 +1,4 @@
 # TDD with Specifications
-
-{{ page_breadcrumb() }}
-
 **Status:** Placeholder - Content coming soon
 
 **Prerequisites:** [Your First Specification](../getting-started/first-specification.md), [Your First Module](../getting-started/first-module.md)
@@ -130,5 +127,3 @@ The tutorial demonstrates how this approach satisfies:
 ### Next Steps
 
 After completing this tutorial, you'll understand the core TDD workflow. Continue to [Building and Testing Changes](./building-and-testing.md) to learn how to efficiently build and validate your changes.
-
-{{ diataxis_footer() }}

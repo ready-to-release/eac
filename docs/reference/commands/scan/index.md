@@ -1,7 +1,4 @@
 # scan Commands
-
-{{ page_breadcrumb() }}
-
 Security scanning and evidence collection for audit compliance.
 
 ## Commands in this Category
@@ -34,5 +31,3 @@ r2r eac scan secrets
 
 - [Category Overview](../categories/scan.md)
 - [validate Commands](../validate/index.md)
-
-{{ diataxis_footer() }}

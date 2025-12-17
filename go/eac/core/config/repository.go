@@ -31,13 +31,14 @@ type RepositoryConfig struct {
 
 // RepositorySettings holds repository-level configuration
 type RepositorySettings struct {
-	Type             string            `yaml:"type"`                // mono, poly, adjunct
-	TrunkBranch      string            `yaml:"trunk_branch"`        // main branch name
-	MaxBranchAgeDays int               `yaml:"max_branch_age_days"` // max age for feature branches
-	Schemes          []string          `yaml:"schemes"`             // valid versioning schemes
-	PR               PRConfig          `yaml:"pr"`                  // PR workflow config
-	Versioning       VersioningConfig  `yaml:"versioning"`          // versioning constraints
-	Parallelism      ParallelismConfig `yaml:"parallelism"`         // parallelism limits
+	Type              string            `yaml:"type"`                  // mono, poly, adjunct
+	TrunkBranch       string            `yaml:"trunk_branch"`          // main branch name
+	MaxBranchAgeDays  int               `yaml:"max_branch_age_days"`   // max age for feature branches
+	Schemes           []string          `yaml:"schemes"`               // valid versioning schemes
+	PR                PRConfig          `yaml:"pr"`                    // PR workflow config
+	Versioning        VersioningConfig  `yaml:"versioning"`            // versioning constraints
+	Parallelism       ParallelismConfig `yaml:"parallelism"`           // parallelism limits
+	OptimizeGitLsInCI bool              `yaml:"optimize_git_ls_in_ci"` // Use GitHub API for file listing in CI (faster than git ls-files)
 }
 
 // ParallelismConfig holds parallelism limits for build and test operations

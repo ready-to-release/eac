@@ -1,7 +1,4 @@
 # Building and Testing Your Changes
-
-{{ page_breadcrumb() }}
-
 **Status:** Placeholder - Content coming soon
 
 **Prerequisites:** [Your First Module](../getting-started/first-module.md), [Understanding Test Suites](../getting-started/understanding-test-suites.md)
@@ -107,5 +104,3 @@ git commit -m "feat(eac-commands): improve build command error handling"
 ### Next Steps
 
 After completing this tutorial, you'll have an efficient build and test workflow. Continue to [Working with Git Worktrees](./working-with-worktrees.md) to learn parallel development with isolated workspaces.
-
-{{ diataxis_footer() }}

@@ -1,7 +1,4 @@
 # Example Mapping Card Colors
-
-{{ page_breadcrumb() }}
-
 Reference for card colors and meanings in Example Mapping workshops.
 
 ## Card Color Reference
@@ -114,5 +111,3 @@ G1a G1b    G2a G2b    G3a G3b
 ## Related
 
 - [Example Mapping](./example-mapping.md) - Complete facilitation and translation guide
-
-{{ diataxis_footer() }}

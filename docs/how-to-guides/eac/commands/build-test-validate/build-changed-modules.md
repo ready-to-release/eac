@@ -1,7 +1,4 @@
 # Build Changed Modules
-
-{{ page_breadcrumb() }}
-
 ## What You'll Accomplish
 
 Build only the modules affected by your changes for efficient CI/CD pipelines.
@@ -108,5 +105,3 @@ r2r eac get changed-modules-ci | jq -r '.changed_modules[]' | xargs r2r eac buil
 - [`get changed-modules`](../../../../reference/commands/get/changed-modules.md) - Local changes
 - [`get changed-modules-ci`](../../../../reference/commands/get/changed-modules-ci.md) - CI changes
 - [`get execution-order`](../../../../reference/commands/get/execution-order.md) - Build order
-
-{{ diataxis_footer() }}

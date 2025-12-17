@@ -1,7 +1,4 @@
 # Continuous Delivery
-
-{{ page_breadcrumb() }}
-
 Technical reference documentation for the continuous delivery system, including CI/CD workflows and changelog conventions.
 
 ## In This Section
@@ -10,5 +7,3 @@ Technical reference documentation for the continuous delivery system, including 
 | ------------------------- | ------------------------------------------------------- |
 | [Workflows](./workflows/) | GitHub Actions workflow specifications and architecture |
 | [Changelog](./changelog/) | Changelog format and versioning conventions             |
-
-{{ diataxis_footer() }}
