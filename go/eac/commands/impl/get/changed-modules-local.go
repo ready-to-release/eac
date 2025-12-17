@@ -1,6 +1,5 @@
 // Command: get changed-modules-local
 // Short: Get modules requiring rebuild based on local build state
-// Flags:
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML

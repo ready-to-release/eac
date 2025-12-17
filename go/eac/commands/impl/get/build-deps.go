@@ -1,7 +1,6 @@
 // Command: get build-deps
 // Description: Get build dependencies for a module
 // Args: module (required) - Module moniker
-// Flags:
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 // Long:

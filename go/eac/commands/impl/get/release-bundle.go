@@ -2,7 +2,6 @@
 // Description: Get release bundle configuration with module details
 // Flag.with-versions: type=bool, default=false, usage=Resolve current versions from GitHub releases
 // Flag.format: type=string, usage=Output format: markdown, flat, shell, table
-// Flags:
 //
 //	--as-yaml: Output as YAML (default)
 //	--as-json: Output as JSON

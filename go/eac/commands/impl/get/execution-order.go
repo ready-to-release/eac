@@ -1,7 +1,6 @@
 // Command: get execution-order
 // Description: Get execution order for specific modules based on dependencies
 // Usage: get execution-order <moniker1> <moniker2> ...
-// Flags:
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML

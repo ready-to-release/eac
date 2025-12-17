@@ -11,7 +11,6 @@
 // Flag.verbose: type=bool, shorthand=v, default=false, usage=Show detailed validation output including metadata and additional context
 // Flag.format: type=string, shorthand=f, default=text, completion=text,json, usage=Output format for validation results (text for human-readable, json for machine-readable)
 // Usage: specs validate <path> [--quiet] [--verbose] [--format json]
-// Flags: --quiet (show only errors), --verbose (detailed output), --format (output format: text|json)
 package validate
 
 import (

@@ -1,6 +1,5 @@
 // Command: get tests
 // Description: Get all tests in the repository
-// Flags:
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML

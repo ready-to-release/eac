@@ -1,6 +1,5 @@
 // Command: get approval-comments
 // Description: Get PR approval comments in structured format
-// Flags:
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML

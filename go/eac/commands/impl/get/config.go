@@ -1,6 +1,5 @@
 // Command: get config
 // Description: Get all EAC configuration in structured format
-// Flags:
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML

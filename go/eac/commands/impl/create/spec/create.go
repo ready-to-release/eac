@@ -17,7 +17,6 @@
 // Flag.output: type=string, shorthand=o, usage=Custom output path for the specification file. If not provided, the path is determined from the feature name and module
 // Flag.prompt: type=string, usage=Path to a custom system prompt file. Overrides both user override prompts and built-in prompts
 // Usage: create spec <description>
-// Flags: --debug (save intermediate outputs), --module (target module), --output (output path), --prompt (custom system prompt)
 package spec
 
 import (

@@ -5,7 +5,6 @@
 // Flag.with-ci: type=bool, default=false, usage=Filter to modules that have a CI workflow
 // Flag.with-release: type=bool, default=false, usage=Filter to modules that have a release workflow
 // Flag.bundle: type=bool, default=false, usage=Filter to bundle modules (CalVer with release but no CI)
-// Flags:
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML

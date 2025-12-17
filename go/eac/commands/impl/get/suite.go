@@ -1,7 +1,6 @@
 // Command: get suite
 // Description: Get test suite information as structured data
 // Usage: get suite <suite-moniker>
-// Flags:
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML

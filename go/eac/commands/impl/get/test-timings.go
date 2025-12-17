@@ -1,6 +1,5 @@
 // Command: get test-timings
 // Description: Get test timing information from test logs
-// Flags:
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML
