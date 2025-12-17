@@ -56,7 +56,7 @@ func buildConsoleCore(cfg Config, logCfg LoggingConfig) zapcore.Core {
 		enabler = newConfigLevelEnabler(levels)
 	}
 
-	return zapcore.NewCore(encoder, zapcore.AddSync(os.Stdout), enabler)
+	return zapcore.NewCore(encoder, zapcore.AddSync(os.Stderr), enabler)
 }
 
 // buildFileCore creates a file output core for unified commands.log with rolling support.

@@ -76,12 +76,27 @@ func loadAllValidCommandsFromCLI() error {
 	}
 
 	// Run the CLI to get valid commands
-	cmdBinary := filepath.Join(repoRoot, "go", "eac", "commands", "build", "commands.exe")
-	if _, err := os.Stat(cmdBinary); os.IsNotExist(err) {
-		// Try without .exe for non-Windows
-		cmdBinary = filepath.Join(repoRoot, "go", "eac", "commands", "build", "commands")
-		if _, err := os.Stat(cmdBinary); os.IsNotExist(err) {
-			return fmt.Errorf("commands binary not found at %s - run 'go build' first", cmdBinary)
+	// Check multiple locations in order of preference:
+	// 1. COMMANDS_PATH environment variable (set by CI)
+	// 2. out/tools/commands (CI artifact location)
+	// 3. go/eac/commands/build/commands (local dev build location)
+	cmdBinary := os.Getenv("COMMANDS_PATH")
+	if cmdBinary == "" {
+		// Check CI artifact location first
+		candidates := []string{
+			filepath.Join(repoRoot, "out", "tools", "commands.exe"),
+			filepath.Join(repoRoot, "out", "tools", "commands"),
+			filepath.Join(repoRoot, "go", "eac", "commands", "build", "commands.exe"),
+			filepath.Join(repoRoot, "go", "eac", "commands", "build", "commands"),
+		}
+		for _, candidate := range candidates {
+			if _, err := os.Stat(candidate); err == nil {
+				cmdBinary = candidate
+				break
+			}
+		}
+		if cmdBinary == "" {
+			return fmt.Errorf("commands binary not found - run 'go build' or set COMMANDS_PATH")
 		}
 	}
 
