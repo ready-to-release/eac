@@ -101,8 +101,26 @@ runs:
           fi
 
           echo "  ↓ $mod: downloading from run $CURRENT_RUN"
-          if ! gh run download "$CURRENT_RUN" -n "build-artifacts-$mod" -D out/build/; then
-            echo "  ✗ Failed to download artifacts for $mod"
+
+          # Download with retry (GitHub API can have transient failures)
+          DOWNLOAD_RETRIES=3
+          DOWNLOAD_DELAY=5
+          DOWNLOAD_SUCCESS=false
+
+          for download_attempt in $(seq 1 $DOWNLOAD_RETRIES); do
+            if gh run download "$CURRENT_RUN" -n "build-artifacts-$mod" -D out/build/; then
+              DOWNLOAD_SUCCESS=true
+              break
+            fi
+            if [ $download_attempt -lt $DOWNLOAD_RETRIES ]; then
+              echo "  ⚠️ Download failed, retrying in ${DOWNLOAD_DELAY}s (attempt $download_attempt/$DOWNLOAD_RETRIES)..."
+              sleep $DOWNLOAD_DELAY
+              DOWNLOAD_DELAY=$((DOWNLOAD_DELAY * 2))
+            fi
+          done
+
+          if [ "$DOWNLOAD_SUCCESS" != "true" ]; then
+            echo "  ✗ Failed to download artifacts for $mod after $DOWNLOAD_RETRIES attempts"
             exit 1
           fi
 

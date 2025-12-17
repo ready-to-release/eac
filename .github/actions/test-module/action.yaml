@@ -196,10 +196,5 @@ runs:
         PRIMARY_SUITE=$(echo "$SUITES" | cut -d',' -f1 | xargs)
 
         # Generate comprehensive summary using Go command
+        # Note: Diagnostic links are handled centrally by _module-ci.yaml on failure
         $COMMANDS show test-summary $MODULE $PRIMARY_SUITE --status=$STATUS --run-id=$RUN_ID >> $GITHUB_STEP_SUMMARY
-
-        # Add diagnostic link on failure
-        if [ "$STATUS" = "failure" ]; then
-          echo "" >> $GITHUB_STEP_SUMMARY
-          $COMMANDS pipeline ci summary-link $RUN_ID --type test --artifact "$RESULTS_ARTIFACT_NAME" >> $GITHUB_STEP_SUMMARY
-        fi

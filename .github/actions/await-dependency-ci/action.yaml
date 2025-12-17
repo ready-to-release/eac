@@ -98,6 +98,8 @@ runs:
       env:
         COMMANDS: ${{ steps.commands.outputs.commands-path }}
       run: |
+        # Generate summary using Go command
+        # Note: Diagnostic links are handled centrally by the release workflow on failure
         MODULE="${{ inputs.module }}"
         PASSED="${{ steps.await.outputs.passed_count }}"
         SKIPPED="${{ steps.await.outputs.skipped_count }}"
@@ -109,7 +111,6 @@ runs:
           STATUS="failure"
         fi
 
-        # Generate summary using Go command
         $COMMANDS show dependency-ci-summary \
           --module="$MODULE" \
           --passed="$PASSED" \

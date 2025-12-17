@@ -203,6 +203,7 @@ runs:
         fi
 
         # Generate summary using Go command
+        # Note: Diagnostic links are handled centrally by _module-ci.yaml on failure
         $COMMANDS show scan-summary "$MODULE" \
           --scans="$SCANS" \
           --failed-scans="$FAILED_SCANS" \
