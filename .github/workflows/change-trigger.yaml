@@ -6,13 +6,9 @@
 #
 # Pipeline stages:
 # 1. setup: Build commands binary (shared by all jobs)
-# 2. PARALLEL FLOWS (after setup):
-#    Flow A (Repository Validation):
-#      - build-and-test-repository: Build and test repository module (contract validation)
-#    Flow B (Module CI Orchestration):
-#      - detect-changes: Determine which modules need CI workflows triggered
-#      - execute-workflows: Dispatch ALL module CI workflows in parallel
-# 3. summary: Report results (waits for both flows)
+# 2. detect-changes: Determine which modules need CI workflows triggered
+# 3. execute-workflows: Dispatch ALL module CI workflows in parallel (including repository)
+# 4. summary: Report results
 #
 # NOTE: All CI workflows run in parallel. Dependency verification happens at RELEASE time
 # via the `release await-deps` command, not during CI dispatch.
@@ -60,58 +56,7 @@ jobs:
         uses: ./.github/actions/setup-commands
 
   # =========================================
-  # Flow A: Repository Validation (after setup, parallel with Flow B)
-  # =========================================
-  build-and-test-repository:
-    name: Build & Test Repository
-    needs: setup
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Build Module
-        uses: ./.github/actions/build-module
-        with:
-          module: repository
-          trigger-run-id: ${{ github.run_id }}
-          setup-deps: auto
-          upload-artifact: 'false'
-
-      # Pre-compute git file list using GitHub API (fast) instead of git ls-files (84s)
-      # GitHub API reads from database, not slow runner storage
-      - name: Pre-compute git file list via GitHub API
-        run: |
-          echo "Fetching file list via GitHub API..."
-
-          # Use Go command to fetch tree files (uses GitHub API, fast)
-          if $COMMANDS pipeline get-tree-files --sha "${{ github.sha }}" > .git/cached-files.txt 2>/dev/null; then
-            FILE_COUNT=$(wc -l < .git/cached-files.txt)
-            if [ "$FILE_COUNT" -gt 0 ]; then
-              echo "✓ Cached $FILE_COUNT files from GitHub API"
-              exit 0
-            fi
-          fi
-
-          # Fallback to git ls-files if API fails
-          echo "⚠ GitHub API failed, falling back to git ls-files..."
-          git ls-files > .git/cached-files.txt
-          FILE_COUNT=$(wc -l < .git/cached-files.txt)
-          echo "✓ Cached $FILE_COUNT files from git ls-files"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Test Module
-        uses: ./.github/actions/test-module
-        with:
-          module: repository
-          trigger-run-id: ${{ github.run_id }}
-          setup-deps: none  # Already set up by build-module
-          download-artifact: 'false'
-          # PR: fast feedback with unit+integration; main: thorough with acceptance
-          suites: ${{ github.event_name == 'pull_request' && 'unit+integration' || 'unit+integration+acceptance' }}
-
-  # =========================================
-  # Flow B: Module CI Orchestration (after setup, parallel with Flow A)
+  # Detect Changed Modules
   # =========================================
   detect-changes:
     name: Detect Changed Modules
@@ -283,11 +228,11 @@ jobs:
           fi
 
   # =========================================
-  # Stage 2: Execute Module Workflows (All Parallel)
+  # Execute Module Workflows (All Parallel)
   # =========================================
   execute-workflows:
     name: Dispatch CI
-    needs: [setup, detect-changes]
+    needs: detect-changes
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -428,11 +373,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
   # =========================================
-  # Summary (waits for both parallel flows)
+  # Summary
   # =========================================
   summary:
     name: Summary
-    needs: [setup, build-and-test-repository, detect-changes, execute-workflows]
+    needs: [detect-changes, execute-workflows]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -452,18 +397,6 @@ jobs:
           echo "**Trigger**: \`${{ github.event_name }}\` on \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
           echo "**Commit**: [\`${{ github.sha }}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-
-          # Check job statuses
-          REPO_VALIDATION="${{ needs.build-and-test-repository.result }}"
-
-          if [ "$REPO_VALIDATION" = "failure" ]; then
-            echo "### Repository Validation Failed" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Repository build or test failed. Check the build-and-test-repository job for details." >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            $COMMANDS pipeline ci summary-link ${{ github.run_id }} --type test --artifact "test-results-repository" >> $GITHUB_STEP_SUMMARY
-            exit 0
-          fi
 
           if [ "${{ needs.detect-changes.outputs.has-changes }}" != "true" ]; then
             echo "### No CI Workflows Triggered" >> $GITHUB_STEP_SUMMARY
@@ -497,40 +430,21 @@ jobs:
             exit 0
           fi
 
-          # All validation passed
+          # Workflows dispatched successfully
           TOTAL_MODULES="${{ needs.detect-changes.outputs.changed-modules }}"
           TOTAL_COUNT=$(echo "$TOTAL_MODULES" | wc -w | tr -d ' ')
-
-          echo "### Validation Passed" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "All validation checks passed. Module workflows are running in the background." >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "### Pipeline Stages" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Stage | Status | Description |" >> $GITHUB_STEP_SUMMARY
-          echo "|-------|--------|-------------|" >> $GITHUB_STEP_SUMMARY
-
-          # Repository validation stage
-          # PR runs unit+integration, main runs unit+integration+acceptance
-          SUITES="${{ github.event_name == 'pull_request' && 'unit+integration' || 'unit+integration+acceptance' }}"
-          if [ "$REPO_VALIDATION" = "success" ]; then
-            echo "| Repository Validation | Pass | Build + test suites ($SUITES) passed |" >> $GITHUB_STEP_SUMMARY
-          elif [ "$REPO_VALIDATION" = "failure" ]; then
-            echo "| Repository Validation | Fail | Build or test failed |" >> $GITHUB_STEP_SUMMARY
-          elif [ "$REPO_VALIDATION" = "skipped" ]; then
-            echo "| Repository Validation | Skip | Skipped |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| Repository Validation | $REPO_VALIDATION | Unexpected state |" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          # Module builds (dispatched)
           EXECUTION="${{ needs.execute-workflows.result }}"
+
           if [ "$EXECUTION" = "success" ]; then
-            echo "| Module Workflows | Dispatched | $TOTAL_COUNT workflow(s) triggered in parallel |" >> $GITHUB_STEP_SUMMARY
+            echo "### ✅ CI Workflows Dispatched" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**$TOTAL_COUNT** module CI workflow(s) triggered in parallel." >> $GITHUB_STEP_SUMMARY
           else
-            echo "| Module Workflows | $EXECUTION | Failed to dispatch workflows |" >> $GITHUB_STEP_SUMMARY
+            echo "### ❌ Dispatch Failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Failed to dispatch module workflows. Check the execute-workflows job for details." >> $GITHUB_STEP_SUMMARY
           fi
+
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "> **Note**: Module CI workflows report their own statuses as separate checks." >> $GITHUB_STEP_SUMMARY
           echo "> Check individual \`CI: <module>\` checks for build results." >> $GITHUB_STEP_SUMMARY
@@ -542,7 +456,7 @@ jobs:
   # Releases are processed in dependency order (layer by layer) with await.
   trigger-releases:
     name: Trigger Releases
-    needs: [setup, summary, detect-changes]
+    needs: [summary, detect-changes]
     if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
