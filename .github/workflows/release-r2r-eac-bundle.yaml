@@ -61,7 +61,7 @@ jobs:
           version-type: calver
           # r2r-eac-bundle is a bundle module with no CI workflow
           skip-ci-check: 'true'
-          timeout: '300'
+          timeout: '600'
 
       - name: Await module releases
         id: await

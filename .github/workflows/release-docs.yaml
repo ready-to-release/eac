@@ -57,7 +57,7 @@ jobs:
           version-type: calver
           # Skip CI check when triggered from CI (ci_run_id provided) or manually skipped
           skip-ci-check: ${{ inputs.ci_run_id != '' || inputs.skip-ci-check || 'false' }}
-          timeout: '300'
+          timeout: '600'
 
   release:
     name: Deploy Site
