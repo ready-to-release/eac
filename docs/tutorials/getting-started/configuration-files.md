@@ -10,14 +10,71 @@ Learn about the configuration files in `.r2r/eac/` and how they're managed by EA
 
 By the end of this tutorial, you'll understand:
 
-- What configuration files exist in `.r2r/eac/`
+- The difference between R2R CLI and EAC configuration
+- What configuration files exist in `.r2r/`
 - Which files are created by commands vs. exist as system defaults
 - How to customize configurations when needed
 - Which files to commit to git
 
-## The `.r2r/eac/` Directory
+## Configuration Overview
 
-After running `r2r eac init`, you'll have a `.r2r/eac/` directory in your repository. This directory contains configuration files that control how EAC works.
+R2R uses two layers of configuration:
+
+| Layer | File/Directory | Purpose | Created By |
+|-------|---------------|---------|------------|
+| **Framework** | `.r2r/r2r-cli.yml` | Extension management | `r2r init` |
+| **Extension** | `.r2r/eac/` | EAC-specific settings | `r2r eac init` |
+
+### R2R CLI vs EAC Configuration
+
+Understanding the two configuration layers:
+
+**`.r2r/r2r-cli.yml`** (Framework Configuration)
+- Created by: `r2r init`
+- Purpose: Manages which extensions are available
+- Scope: Framework-level (applies to all extensions)
+- Example content: Extension registry, Docker images
+
+**`.r2r/eac/`** (EAC Extension Configuration)
+- Created by: `r2r eac init`
+- Purpose: Configures how the EAC extension behaves
+- Scope: Extension-specific (only affects EAC)
+- Example content: AI provider settings, module configuration
+
+See [CLI vs Extensions](../../reference/r2r-eac/cli-vs-extensions.md) for detailed architecture explanation.
+
+## R2R CLI Configuration
+
+### The `.r2r/r2r-cli.yml` File
+
+This file is created by `r2r init` and manages extension installation:
+
+```yaml
+extensions:
+  - name: 'eac'
+    image: 'ghcr.io/ready-to-release/ext-eac:latest'
+    description: 'Everything-as-Code automation'
+```
+
+**Purpose:**
+- Defines which extensions are available
+- Specifies Docker images for each extension
+- Configures registry and pull policies
+
+**When to edit:**
+- Adding new extensions (or use `r2r install <extension>`)
+- Changing extension versions
+- Configuring local development images
+
+**Should you commit it?** ✅ Yes - team needs to know which extensions are used
+
+For complete reference, see [R2R CLI Configuration Guide](../../reference/r2r-cli/configuration.md).
+
+## EAC Extension Configuration
+
+### The `.r2r/eac/` Directory
+
+After running `r2r eac init`, you'll have a `.r2r/eac/` directory in your repository. This directory contains configuration files that control how the EAC extension works.
 
 ## File Categories
 

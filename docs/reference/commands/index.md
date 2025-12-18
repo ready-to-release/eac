@@ -1,5 +1,22 @@
 # Command Reference
-Complete technical reference for all EAC commands.
+
+This section documents **EAC extension commands** - the automation tools provided by the EAC extension.
+
+!!! info "Looking for R2R CLI commands?"
+    For framework commands like `r2r init`, `r2r install`, and `r2r list`, see:
+
+    **[R2R CLI Command Reference](../r2r-cli/index.md)**
+
+    R2R uses a two-tier architecture:
+
+    - **R2R CLI** (framework) - Manages extensions
+    - **EAC Extension** (this section) - Provides automation tools
+
+    Learn more: [CLI vs Extensions Architecture](../r2r-eac/cli-vs-extensions.md)
+
+## EAC Extension Commands
+
+Complete technical reference for all EAC extension commands (invoked as `r2r eac <command>`).
 
 ## Quick Access
 

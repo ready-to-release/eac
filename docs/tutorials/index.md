@@ -11,11 +11,22 @@ Choose your path based on your experience level:
 
 Start here if you're new to r2r and Everything-as-Code:
 
-1. [Getting Started](./getting-started/) - Installation, first spec, first module, test suites
-   - [Quick Start](./getting-started/quick-start.md) - Install and run first commands
+1. [Getting Started](./getting-started/) - Complete setup and fundamentals
+   - [Quick Start](./getting-started/quick-start.md) - Install R2R CLI, initialize configuration, install EAC extension
+   - [Understanding Configuration Files](./getting-started/configuration-files.md) - R2R CLI and EAC configuration
    - [Your First Specification](./getting-started/first-specification.md) - Write Gherkin specs
    - [Your First Module](./getting-started/first-module.md) - Create a Go module
    - [Understanding Test Suites](./getting-started/understanding-test-suites.md) - Test levels and suites
+
+!!! tip "New to R2R?"
+    The Quick Start guide walks you through the complete setup:
+
+    1. Install R2R CLI binary
+    2. Initialize R2R configuration (`r2r init`)
+    3. Install EAC extension (`r2r install eac`)
+    4. Configure EAC (`r2r eac init`)
+
+    See [CLI vs Extensions](../reference/r2r-eac/cli-vs-extensions.md) to understand the two-tier architecture.
 
 ### Developer Path
 

@@ -514,4 +514,10 @@ cat .r2r\r2r-cli.local.yml
 - [Creating Extensions](./creating-extensions.md) - Learn how to create r2r extensions
 - [Testing in External Repositories](./testing-in-external-repos.md) - Test extensions in other projects
 
+## See Also
+
+- [R2R CLI init command](../../reference/r2r-cli/init.md) - Initialize R2R configuration
+- [R2R CLI Configuration](../../reference/r2r-cli/configuration.md) - Configuration file reference
+- [CLI vs Extensions Architecture](../../reference/r2r-eac/cli-vs-extensions.md) - Understanding the two-tier system
+
 {{ diataxis_footer() }}

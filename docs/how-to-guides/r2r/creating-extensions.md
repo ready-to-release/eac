@@ -272,3 +272,10 @@ docker buildx build \
 | No output | Check container logs with `docker logs` |
 | Wrong arguments | Extension receives args after extension name |
 | Mount issues | Verify volume paths exist on host |
+
+## See Also
+
+- [R2R CLI install command](../../reference/r2r-cli/install.md) - Installing extensions
+- [R2R CLI Configuration](../../reference/r2r-cli/configuration.md) - Extension configuration reference
+- [CLI vs Extensions Architecture](../../reference/r2r-eac/cli-vs-extensions.md) - Understanding the system
+- [Local Development Workflows](./local-development.md) - Testing extensions locally
