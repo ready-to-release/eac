@@ -387,7 +387,7 @@ jobs:
             # Layer 1 modules depend on r2r-cli - wait for it if dispatched
             if echo "$LAYER_0" | grep -qw "r2r-cli"; then
               echo "Waiting for r2r-cli CI to complete..."
-              $COMMANDS pipeline wait --workflow ci-r2r-cli.yaml --sha "${{ github.sha }}" --timeout 1200 || {
+              $COMMANDS pipeline await-ci --pattern "ci-r2r-cli.yaml" --sha "${{ github.sha }}" --timeout 1200 --interval 15 || {
                 echo "::error::r2r-cli CI did not complete successfully"
                 exit 1
               }

@@ -1,9 +1,13 @@
 // Command: pipeline await-ci
 // Short: Wait for CI workflows to complete for a specific commit
-// Long: Wait for CI workflows (ci-*.yaml) to complete for a specific commit SHA.
+// Long: Wait for CI workflows to complete. Can wait by pattern+SHA or by run ID.
 // Long:
-// Long: This command polls GitHub Actions for in_progress or queued CI workflow
-// Long: runs that match the specified SHA and waits until all complete.
+// Long: Mode 1 - Pattern+SHA (default):
+// Long:   Polls GitHub Actions for in_progress or queued CI workflow runs
+// Long:   that match the specified SHA and waits until all complete.
+// Long:
+// Long: Mode 2 - Run ID:
+// Long:   Wait for a specific workflow run to complete by its run ID.
 // Long:
 // Long: SHA Detection (in order of precedence):
 // Long:   1. --sha flag (explicit override)
@@ -16,11 +20,14 @@
 // Long:   - Exit code 1 on timeout or failure
 // Long:
 // Long: Example:
-// Long:   pipeline await-ci                              # Auto-detect SHA
+// Long:   pipeline await-ci                              # Auto-detect SHA, all ci-*.yaml
 // Long:   pipeline await-ci --sha abc123                 # Explicit SHA
+// Long:   pipeline await-ci --pattern ci-r2r-cli.yaml    # Specific workflow
+// Long:   pipeline await-ci --run-id 12345               # Wait for specific run
 // Long:   pipeline await-ci --timeout 600                # 10 minute timeout
 // Long:   pipeline await-ci --exclude ci-foo             # Exclude workflow
 // Flag.sha: type=string, usage=Commit SHA to filter runs (auto-detected if not provided)
+// Flag.run-id: type=string, usage=Specific workflow run ID to wait for (alternative to pattern+sha)
 // Flag.timeout: type=int, default=1800, usage=Maximum wait time in seconds (default: 1800)
 // Flag.interval: type=int, default=30, usage=Poll interval in seconds (default: 30)
 // Flag.pattern: type=string, default=ci-*.yaml, usage=Workflow file pattern to match
@@ -55,6 +62,7 @@ func PipelineAwaitCI() int {
 
 	// Parse flags
 	sha := ""
+	runID := ""
 	timeout := 1800 // 30 minutes default
 	interval := 30  // 30 seconds default
 	pattern := "ci-*.yaml"
@@ -65,6 +73,9 @@ func PipelineAwaitCI() int {
 		switch {
 		case arg == "--sha" && i+1 < len(os.Args):
 			sha = os.Args[i+1]
+			i++
+		case arg == "--run-id" && i+1 < len(os.Args):
+			runID = os.Args[i+1]
 			i++
 		case arg == "--timeout" && i+1 < len(os.Args):
 			if v, err := strconv.Atoi(os.Args[i+1]); err == nil {
@@ -85,6 +96,12 @@ func PipelineAwaitCI() int {
 		}
 	}
 
+	// Mode 2: Wait for specific run ID
+	if runID != "" {
+		return awaitRunByID(runID, timeout, interval)
+	}
+
+	// Mode 1: Wait by pattern+SHA
 	// Auto-detect SHA using shared detection logic
 	result, err := get.DetectCurrentSHA(workspaceRoot, sha)
 	if err != nil {
@@ -215,4 +232,58 @@ func getRunStatusForSHA(workflowName, sha string) (string, int) {
 		return "success", 0
 	}
 	return "none", 0
+}
+
+// runByIDInfo holds workflow run info for a specific run ID
+type runByIDInfo struct {
+	DatabaseID   int64  `json:"databaseId"`
+	Status       string `json:"status"`
+	Conclusion   string `json:"conclusion"`
+	WorkflowName string `json:"workflowName"`
+}
+
+// awaitRunByID waits for a specific workflow run to complete
+func awaitRunByID(runID string, timeout, interval int) int {
+	log.Infof("Waiting for workflow run %s to complete...", runID)
+	log.Info("")
+
+	startTime := time.Now()
+
+	for {
+		elapsed := time.Since(startTime)
+		if elapsed.Seconds() >= float64(timeout) {
+			log.Warnf("Timeout waiting for run %s after %v", runID, elapsed.Round(time.Second))
+			return 1
+		}
+
+		// Get run status
+		cmd := exec.Command("gh", "run", "view", runID, "--json", "databaseId,status,conclusion,workflowName")
+		output, err := cmd.Output()
+		if err != nil {
+			log.Errorf("Error getting run status: %v", err)
+			return 1
+		}
+
+		var run runByIDInfo
+		if err := json.Unmarshal(output, &run); err != nil {
+			log.Errorf("Error parsing run status: %v", err)
+			return 1
+		}
+
+		switch run.Status {
+		case "completed":
+			if run.Conclusion == "success" || run.Conclusion == "skipped" {
+				log.Infof("✅ Workflow %s completed successfully", run.WorkflowName)
+				return 0
+			}
+			log.Warnf("❌ Workflow %s failed with conclusion: %s", run.WorkflowName, run.Conclusion)
+			return 1
+		case "in_progress", "queued", "waiting", "pending":
+			log.Infof("  Run %s (%s) is %s... (%v)", runID, run.WorkflowName, run.Status, elapsed.Round(time.Second))
+		default:
+			log.Warnf("  Run %s has unexpected status: %s", runID, run.Status)
+		}
+
+		time.Sleep(time.Duration(interval) * time.Second)
+	}
 }
