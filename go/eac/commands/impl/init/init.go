@@ -74,29 +74,6 @@ func ResetGitRepo() {
 	gitRepo = nil
 }
 
-// Intent: Initialize AI provider configuration for a project
-//
-// Design (Three Rules of Vibe Coding):
-//
-// Easy to understand:
-//   - Clear sequential flow: parse args → validate → create dirs → write config
-//   - Helper functions with single responsibility (configureProvider, writeAgentConfig, etc.)
-//   - User feedback at each step via logger
-//   - Error messages indicate what went wrong and how to fix it
-//
-// Easy to change:
-//   - Provider configuration isolated in configureProvider()
-//   - Directory creation isolated in createDirectoryStructure()
-//   - Config writing isolated in writeAgentConfig()
-//   - Adding new providers only requires updating configureProvider()
-//
-// Hard to break:
-//   - Tests cover all providers and error cases
-//   - Validation happens early (provider supported when specified)
-//   - Creates directories safely (no errors if already exist)
-//   - Config file is YAML - human readable and safe to commit
-//   - Logger integration for consistent output and debugging
-
 // Init initializes EAC project configuration
 func Init() int {
 	// Validate flags against registry metadata

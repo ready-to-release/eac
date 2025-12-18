@@ -4,29 +4,7 @@ package ai
 
 import "context"
 
-// Provider defines the simple interface that all AI providers must implement.
-//
-// Intent: Provide a minimal, consistent interface for AI provider integrations.
-//
-// Design (Three Rules of Vibe Coding):
-//
-// Easy to understand:
-//   - Single Execute() method with clear signature
-//   - Name() method for provider identification
-//   - Functional options pattern for optional parameters
-//   - No hidden state or complex lifecycle
-//
-// Easy to change:
-//   - Providers are independently replaceable
-//   - Adding new providers doesn't modify existing code
-//   - Options can be extended without breaking existing calls
-//   - Context.Context allows for cancellation and timeouts
-//
-// Hard to break:
-//   - Interface is minimal - hard to misimplement
-//   - Compile-time check ensures all providers implement interface
-//   - Context parameter prevents hanging operations
-//   - Options are optional - no required configuration in method signature
+// Provider defines the interface that all AI providers must implement.
 type Provider interface {
 	// Name returns the provider name for identification and logging
 	Name() string

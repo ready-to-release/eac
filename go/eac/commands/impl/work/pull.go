@@ -43,28 +43,6 @@ func init() {
 	registry.Register(Pull)
 }
 
-// pullFlags defines valid flags for the pull command
-
-// Intent: Sync workspace branch with latest main via rebase
-//
-// Design (Three Rules of Vibe Coding):
-//
-// Easy to understand:
-//   - Clear flow: validate → fetch → check status → rebase → report
-//   - Explicit error messages for each failure case
-//   - Progress feedback at each step
-//
-// Easy to change:
-//   - Autostash logic isolated
-//   - Rebase execution separated from status checking
-//   - Target branch configurable
-//
-// Hard to break:
-//   - Validates uncommitted changes before rebasing
-//   - Detects and reports conflicts clearly
-//   - Provides resolution instructions
-//   - Prevents rebasing main onto itself
-
 // Pull syncs the current branch with target branch via rebase
 func Pull() int {
 	startTime := time.Now()

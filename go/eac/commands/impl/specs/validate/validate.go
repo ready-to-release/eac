@@ -68,26 +68,6 @@ func ResetGitRepo() {
 
 // ============================================================================
 
-// Intent: Validate Gherkin specifications against the contract
-//
-// Design (Three Rules of Vibe Coding):
-//
-// Easy to understand:
-//   - Clear separation of concerns (parse config, validate, format output)
-//   - Descriptive function names reveal intent
-//   - Single responsibility per function
-//
-// Easy to change:
-//   - Configuration struct decouples CLI parsing from validation logic
-//   - Validation logic reuses existing GherkinValidator
-//   - Output formatting is separate from validation
-//
-// Hard to break:
-//   - Path security validation prevents traversal attacks
-//   - Comprehensive error handling with context
-//   - Validation uses battle-tested contract framework
-//   - Returns non-zero exit code on validation failures
-
 // SpecsValidate validates existing Gherkin specification files
 func SpecsValidate() int {
 	// Validate flags

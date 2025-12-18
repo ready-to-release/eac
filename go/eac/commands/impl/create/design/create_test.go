@@ -13,22 +13,6 @@ import (
 	design "github.com/ready-to-release/eac/go/eac/commands/impl/design"
 )
 
-// Intent: Test design create command core functionality
-//
-// Design (Three Rules of Vibe Coding):
-//
-// Easy to understand:
-//   - Table-driven tests with clear test case names
-//   - Each test focuses on a single behavior
-//
-// Easy to change:
-//   - Test data is clearly separated from test logic
-//   - Helper functions reduce duplication
-//
-// Hard to break:
-//   - Tests cover happy path and error cases
-//   - File system operations use t.TempDir() for isolation
-
 func TestParseConfig(t *testing.T) {
 	// Save original args and restore after test
 	origArgs := os.Args

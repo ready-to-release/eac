@@ -11,27 +11,6 @@ import (
 
 var log = logging.C()
 
-// Intent: Provide generic retry framework for AI generation with validation feedback
-//
-// Design (Three Rules of Vibe Coding):
-//
-// Easy to understand:
-//   - Clear configuration struct shows all options
-//   - Simple flow: Generate → Validate → Retry if needed
-//   - Interface-based design (SpecValidator, RetryPromptBuilder)
-//
-// Easy to change:
-//   - Pluggable validators per command
-//   - Pluggable prompt builders for custom retry messages
-//   - Configurable max attempts
-//   - Debug mode for troubleshooting
-//
-// Hard to break:
-//   - Validation happens on every attempt
-//   - Detailed error reporting with line numbers
-//   - Type-safe interfaces
-//   - Tests with mock executors and validators
-
 // RetryPromptBuilder builds retry prompts with error feedback
 type RetryPromptBuilder interface {
 	// BuildRetryPrompt creates a new prompt that includes:

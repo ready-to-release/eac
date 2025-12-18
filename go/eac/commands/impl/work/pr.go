@@ -45,28 +45,6 @@ func init() {
 	registry.Register(CreatePR)
 }
 
-// prFlags defines valid flags for the pr command
-
-// Intent: Create pull request with AI-generated description
-//
-// Design (Three Rules of Vibe Coding):
-//
-// Easy to understand:
-//   - Clear flow: validate → push → generate description → create PR
-//   - Uses gh CLI for PR creation
-//   - AI generates comprehensive description from all commits
-//
-// Easy to change:
-//   - PR generation logic isolated
-//   - Target branch configurable
-//   - Custom title supported
-//
-// Hard to break:
-//   - Validates uncommitted changes
-//   - Checks gh CLI availability
-//   - Ensures commits exist before creating PR
-//   - Pushes branch automatically if needed
-
 // CreatePR creates a pull request for the current workspace
 func CreatePR() int {
 	cmdStart := time.Now()

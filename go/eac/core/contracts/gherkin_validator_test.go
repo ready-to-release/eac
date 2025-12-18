@@ -9,25 +9,6 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/config"
 )
 
-// Intent: Comprehensive tests for GherkinValidator with TagContract integration
-//
-// Design (Three Rules of Vibe Coding):
-//
-// Easy to understand:
-//   - Table-driven tests with clear test case names
-//   - Each test covers a specific validation rule
-//   - Expected outcomes are explicit
-//
-// Easy to change:
-//   - Tests organized by validation category
-//   - Shared test helpers reduce duplication
-//   - Contract fixtures are reusable
-//
-// Hard to break:
-//   - Tests cover all validation rules from contracts
-//   - Edge cases and error conditions tested
-//   - Both positive and negative test cases
-
 // createTestTagsConfig creates a TestingTagsConfig for testing
 func createTestTagsConfig() *config.TestingTagsConfig {
 	tc := &config.TestingTagsConfig{
@@ -58,6 +39,9 @@ func createTestTagsConfig() *config.TestingTagsConfig {
 			// GxP
 			{Tag: "@gxp", Description: "GxP requirement", Type: "gxp_regulatory"},
 			{Tag: "@gmp-critical-aspect", Description: "GmP Critical Aspect", Type: "gxp_regulatory"},
+			// OSCAL Control tags
+			{Tag: "@control:<control-id>", Description: "Link to OSCAL control", Type: "oscal_control", Pattern: "^@control:[a-z]{2,4}-[0-9]+(?:\\([0-9]+\\))?$", Example: "@control:ac-2"},
+			{Tag: "@controls:<id1>,<id2>", Description: "Multiple OSCAL controls", Type: "oscal_control_multi", Pattern: "^@controls:(?:[a-z]{2,4}-[0-9]+(?:\\([0-9]+\\))?,)*[a-z]{2,4}-[0-9]+(?:\\([0-9]+\\))?$", Example: "@controls:ac-2,au-3"},
 		},
 		SkipReasons: []config.SkipReason{
 			{Code: "wip", Name: "Work In Progress"},
@@ -110,15 +94,22 @@ func TestGherkinValidator_BasicStructure(t *testing.T) {
 			expectErrors: []string{"EMPTY_OUTPUT"},
 		},
 		{
-			name: "valid minimal specification",
+			name: "valid minimal specification with multiple rules",
 			input: `Feature: eac-core_test-feature
   As a developer
   I want to test
 
-  Rule: Basic rule
+  Rule: First rule
 
     @ov @L1
     Scenario: Test scenario
+      Given something
+      Then something happens
+
+  Rule: Second rule
+
+    @ov @L1
+    Scenario: Another scenario
       Given something
       Then something happens`,
 			expectNoErrors: true,
@@ -191,7 +182,8 @@ Feature: eac-core_second
 
 func TestGherkinValidator_FeatureNaming(t *testing.T) {
 	contract := createTestContract()
-	validator := NewGherkinValidator(contract, nil)
+	tagsConfig := createTestTagsConfig()
+	validator := NewGherkinValidatorWithTags(contract, tagsConfig, nil)
 
 	tests := []struct {
 		name        string
@@ -395,19 +387,22 @@ func TestGherkinValidator_GxPRequirements(t *testing.T) {
 	validator := NewGherkinValidatorWithTags(contract, tagsConfig, nil)
 
 	tests := []struct {
-		name        string
-		tags        string
-		expectError string
+		name          string
+		tags          string
+		expectError   string
+		expectWarning string
 	}{
 		{
-			name:        "@gxp without risk control",
-			tags:        "@ov @gxp",
-			expectError: "GXP_MISSING_RISK_CONTROL",
+			name:          "@gxp without control tag",
+			tags:          "@ov @gxp",
+			expectError:   "",
+			expectWarning: "GXP_MISSING_CONTROL",
 		},
 		{
-			name:        "@gxp with valid risk control",
-			tags:        "@ov @gxp @risk-control:gxp-account-lockout",
-			expectError: "",
+			name:          "@gxp with valid control tag",
+			tags:          "@ov @gxp @control:ac-2",
+			expectError:   "",
+			expectWarning: "",
 		},
 		{
 			name:        "@gmp-critical-aspect without @gxp",
@@ -415,14 +410,9 @@ func TestGherkinValidator_GxPRequirements(t *testing.T) {
 			expectError: "CRITICAL_ASPECT_REQUIRES_GXP",
 		},
 		{
-			name:        "@gmp-critical-aspect with @gxp and risk control",
-			tags:        "@ov @gxp @gmp-critical-aspect @risk-control:gxp-data-integrity",
+			name:        "@gmp-critical-aspect with @gxp and control",
+			tags:        "@ov @gxp @gmp-critical-aspect @control:au-3",
 			expectError: "",
-		},
-		{
-			name:        "@gxp with non-gxp risk control",
-			tags:        "@ov @gxp @risk-control:auth-mfa-01",
-			expectError: "GXP_MISSING_RISK_CONTROL",
 		},
 	}
 
@@ -438,10 +428,11 @@ func TestGherkinValidator_GxPRequirements(t *testing.T) {
 
 			errors := validator.Validate(input, nil)
 
+			// Check for expected error
 			if tt.expectError != "" {
 				found := false
 				for _, err := range errors {
-					if err.Code == tt.expectError {
+					if err.Code == tt.expectError && err.Severity == "error" {
 						found = true
 						break
 					}
@@ -449,10 +440,27 @@ func TestGherkinValidator_GxPRequirements(t *testing.T) {
 				if !found {
 					t.Errorf("expected error %s for tags '%s', got: %v", tt.expectError, tt.tags, errors)
 				}
-			} else {
+			}
+
+			// Check for expected warning
+			if tt.expectWarning != "" {
+				found := false
 				for _, err := range errors {
-					if err.Code == "GXP_MISSING_RISK_CONTROL" || err.Code == "CRITICAL_ASPECT_REQUIRES_GXP" {
-						t.Errorf("unexpected GxP error %s for tags '%s'", err.Code, tt.tags)
+					if err.Code == tt.expectWarning && err.Severity == "warning" {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Errorf("expected warning %s for tags '%s', got: %v", tt.expectWarning, tt.tags, errors)
+				}
+			}
+
+			// If no error or warning expected, check we don't have GxP validation issues
+			if tt.expectError == "" && tt.expectWarning == "" {
+				for _, err := range errors {
+					if err.Code == "GXP_MISSING_CONTROL" || err.Code == "CRITICAL_ASPECT_REQUIRES_GXP" {
+						t.Errorf("unexpected GxP validation issue %s for tags '%s'", err.Code, tt.tags)
 					}
 				}
 			}
@@ -561,7 +569,7 @@ func TestGherkinValidator_RiskControlPatterns(t *testing.T) {
 
 func TestGherkinValidator_WithoutTagContract(t *testing.T) {
 	contract := createTestContract()
-	// Create validator WITHOUT tag contract
+	// Create validator WITHOUT tag contract - should fail with MISSING_TAGS_CONFIG
 	validator := NewGherkinValidator(contract, nil)
 
 	input := `Feature: eac-core_test
@@ -574,7 +582,20 @@ func TestGherkinValidator_WithoutTagContract(t *testing.T) {
 
 	errors := validator.Validate(input, nil)
 
-	// Should still validate verification tags but not advanced tag rules
+	// Should fail immediately with MISSING_TAGS_CONFIG
+	hasMissingConfigError := false
+	for _, err := range errors {
+		if err.Code == "MISSING_TAGS_CONFIG" {
+			hasMissingConfigError = true
+			break
+		}
+	}
+
+	if !hasMissingConfigError {
+		t.Error("expected MISSING_TAGS_CONFIG error when validator created without tags config")
+	}
+
+	// Should NOT perform any advanced tag validation
 	for _, err := range errors {
 		if err.Code == "UNKNOWN_TAG" || err.Code == "MUTUAL_EXCLUSION_VIOLATION" {
 			t.Errorf("unexpected advanced validation error without tag contract: %v", err)
@@ -734,20 +755,17 @@ Feature: eac-core_test
 }
 
 func TestGherkinValidator_UnifiedConfigFormat(t *testing.T) {
-	// Test that the new unified config format (required_tags) works correctly
-	// This simulates the actual config format used in ai-config.yml
+	// Test validation with proper tags config
+	// Tags config is now REQUIRED - no fallback to contract.RawData
 	contract := &Contract{
 		Version: "0.1.0",
 		Name:    "Gherkin Specification Structure",
 		RawData: map[string]interface{}{
 			"feature_naming_pattern": "^[a-z][a-z0-9-]*_[a-z][a-z0-9-]*$",
-			// New unified config uses "required_tags" (not "required_verification_tags")
-			"required_tags": []interface{}{
-				"@ov", "@iv", "@pv", "@piv", "@ppv",
-			},
 		},
 	}
-	validator := NewGherkinValidator(contract, nil)
+	tagsConfig := createTestTagsConfig()
+	validator := NewGherkinValidatorWithTags(contract, tagsConfig, nil)
 
 	tests := []struct {
 		name        string
@@ -813,6 +831,9 @@ func TestGherkinValidator_VerifyImplementation(t *testing.T) {
 		contract := createTestContract()
 		validator := NewGherkinValidator(contract, nil)
 
+		// NOTE: VerifyImplementation is separate from Validate
+		// VerifyImplementation checks if validator is configured correctly
+		// It should still work and report NO_TAG_CONTRACT warning
 		errors := validator.VerifyImplementation()
 
 		hasNoTagWarning := false
@@ -824,7 +845,7 @@ func TestGherkinValidator_VerifyImplementation(t *testing.T) {
 		}
 
 		if !hasNoTagWarning {
-			t.Error("expected NO_TAG_CONTRACT warning")
+			t.Error("expected NO_TAG_CONTRACT warning in VerifyImplementation")
 		}
 	})
 

@@ -24,28 +24,6 @@ const (
 const DefaultClaudeCLIModel = ClaudeCLIModelHaiku
 
 // ClaudeCLI provider uses Claude CLI tool with subscription authentication
-//
-// Intent: Invoke Claude via CLI tool using subscription credits (no API costs).
-//
-// Design (Three Rules of Vibe Coding):
-//
-// Easy to understand:
-//   - Single Execute() method with clear flow
-//   - Explicit command building with args
-//   - Environment variable removal is visible and explicit
-//   - Error messages include both stdout and stderr for debugging
-//
-// Easy to change:
-//   - Model mapping is isolated in helper function
-//   - Command args are built in clear steps
-//   - Can add more CLI flags without changing structure
-//   - removeAPIKeyFromEnv is a pure function
-//
-// Hard to break:
-//   - Tests use exec.LookPath to skip if claude CLI unavailable
-//   - Errors wrapped with context
-//   - Both stdout and stderr captured for debugging
-//   - API key removal is tested separately
 type ClaudeCLI struct {
 	defaultModel string
 }

@@ -1,24 +1,3 @@
-// Intent: Provide fast in-process DSL validation to catch common errors
-// without Docker overhead
-//
-// Design (Three Rules of Vibe Coding):
-//
-// Easy to understand:
-//   - Simple regex-based validation rules
-//   - Clear error messages with line numbers
-//   - Single-purpose validation functions
-//
-// Easy to change:
-//   - Add new validation rules easily
-//   - Rules are independent and composable
-//   - No external dependencies
-//
-// Hard to break:
-//   - Each rule has clear success criteria
-//   - Comprehensive error reporting
-//   - Fails fast on critical errors
-//   - Doesn't replace full validation, just catches common cases
-
 package design
 
 import (

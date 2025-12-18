@@ -40,28 +40,6 @@ func init() {
 	registry.Register(Create)
 }
 
-// createFlags defines valid flags for the create command
-
-// Intent: Create a new workspace (git worktree) for parallel development
-//
-// Design (Three Rules of Vibe Coding):
-//
-// Easy to understand:
-//   - Clear sequential flow: validate → check branch → create worktree → output
-//   - Descriptive variable names and error messages
-//   - Single responsibility functions
-//
-// Easy to change:
-//   - Path generation isolated in internal package
-//   - Branch validation separated from worktree creation
-//   - Configuration parsing in dedicated function
-//
-// Hard to break:
-//   - Validates git repo before proceeding
-//   - Checks for existing branches and worktrees
-//   - Clear error messages with actionable guidance
-//   - Tests cover success and error cases
-
 // Create creates a new workspace (git worktree) for parallel development
 func Create() int {
 	commandStart := time.Now()

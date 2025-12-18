@@ -1,23 +1,4 @@
 // Package unused provides detection of unused godog step definitions.
-//
-// Intent: Discover impl↔specs pairs and find step definitions not used by any feature file.
-//
-// Design (Three Rules of Vibe Coding):
-//
-// Easy to understand:
-//   - Clear separation: discovery, parsing, matching, reporting
-//   - Each type has a single responsibility
-//   - Descriptive names for all fields
-//
-// Easy to change:
-//   - Modular design allows swapping parsers
-//   - Configuration via options struct
-//   - No global state
-//
-// Hard to break:
-//   - All paths validated before use
-//   - Errors returned with context
-//   - Comprehensive test coverage
 package unused
 
 import (

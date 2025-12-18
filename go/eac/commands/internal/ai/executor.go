@@ -1,28 +1,4 @@
 // File: go/eac/commands/internal/ai/executor.go
-// Intent: Orchestrate AI provider invocation with configuration loading and error handling
-//
-// Design (Three Rules of Vibe Coding):
-//
-// Easy to understand:
-//   - Single Execute() method with clear signature
-//   - No fallback behavior - fails fast with clear error messages
-//   - Provider loading separated into LoadProvider() function
-//   - Functional options pattern for flexibility
-//   - Debug logging included in output when requested, never written to files
-//
-// Easy to change:
-//   - Provider factories registered in map (easy to add new providers)
-//   - Config loading delegated to LoadConfig()
-//   - Error handling provides clear recovery instructions
-//   - Debug output controlled by option, not hardcoded
-//
-// Hard to break:
-//   - Always validates configuration before use
-//   - Provider validation before execution
-//   - Context passed through for cancellation
-//   - Comprehensive tests cover all error scenarios
-//   - No fallback means clear failure modes
-
 package ai
 
 import (

@@ -11,21 +11,6 @@ import (
 	"testing"
 )
 
-// Intent: Test specification creation command core functionality
-//
-// Design (Three Rules of Vibe Coding):
-//
-// Easy to understand:
-//   - Table-driven tests with clear test case names
-//   - Each test focuses on a single behavior
-//
-// Easy to change:
-//   - Test data is clearly separated from test logic
-//
-// Hard to break:
-//   - Tests cover happy path and error cases
-//   - File system operations use t.TempDir() for isolation
-
 func TestLoadPromptWithFallback(t *testing.T) {
 	tests := []struct {
 		name              string
