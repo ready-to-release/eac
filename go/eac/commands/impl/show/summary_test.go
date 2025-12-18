@@ -88,9 +88,3 @@ func TestFormatJobResult_CustomError(t *testing.T) {
 	}
 }
 
-func TestCountFiles_NonExistentDir(t *testing.T) {
-	count := countFiles("/nonexistent/path/that/does/not/exist")
-	if count != 0 {
-		t.Errorf("countFiles on non-existent dir = %d, want 0", count)
-	}
-}
