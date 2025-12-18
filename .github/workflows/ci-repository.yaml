@@ -1,0 +1,67 @@
+# Repository CI - Contract and Configuration Validation
+#
+# This workflow validates repository contracts, configurations, and shared
+# infrastructure. It runs the repository module's test suites which include:
+# - Contract validation (module contracts, dependencies)
+# - Configuration validation (eac config, books, environments)
+# - Specification validation (Gherkin specs, control tags)
+#
+# PR: Runs unit+integration tests (fast feedback)
+# Main: Runs unit+integration+acceptance tests (thorough validation)
+
+name: "ci-repository (stage 1-7)"
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        required: false
+        type: string
+        default: ''
+      sha:
+        required: false
+        type: string
+        description: 'Commit SHA to test'
+        default: ''
+      trigger_run_id:
+        required: false
+        type: string
+        description: 'Run ID of trigger workflow (for artifact download)'
+        default: ''
+  workflow_dispatch:
+    inputs:
+      ref:
+        required: false
+        type: string
+        description: 'Git ref to checkout'
+        default: ''
+      sha:
+        required: false
+        type: string
+        description: 'Commit SHA to test'
+        default: ''
+      trigger_run_id:
+        required: false
+        type: string
+        description: 'Run ID of trigger workflow (for artifact download)'
+        default: ''
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  ci-repository:
+    uses: ./.github/workflows/_module-ci.yaml
+    with:
+      module: repository
+      ref: ${{ inputs.ref }}
+      sha: ${{ inputs.sha }}
+      trigger_run_id: ${{ inputs.trigger_run_id }}
+      # Repository module doesn't produce uploadable build artifacts
+      upload-build-artifact: false
+      # No security scans for repository (no binaries/containers)
+      scans: ''
+      # Test suites: PR gets fast feedback, main gets thorough validation
+      test-suites: 'unit,integration'
+      test-suites-full: 'unit,integration,acceptance'
