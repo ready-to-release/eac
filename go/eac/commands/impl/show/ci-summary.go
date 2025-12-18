@@ -10,15 +10,15 @@
 // Long: - Shows build, test (Linux/Windows), container test, and scan results
 // Long: - Supports both container and binary module types
 // Long:
-// Long: Flag.build: type=string, usage=Build job result (success/failure/skipped)
-// Long: Flag.container: type=bool, default=false, usage=Whether this is a container module
-// Long: Flag.container-test: type=string, usage=Container test result (for container modules)
-// Long: Flag.container-test-enabled: type=bool, default=false, usage=Whether container test was enabled
-// Long: Flag.test-linux: type=string, usage=Linux test result (for binary modules)
-// Long: Flag.test-windows: type=string, usage=Windows test result (for binary modules)
-// Long: Flag.test-on-windows: type=bool, default=false, usage=Whether Windows tests were enabled
-// Long: Flag.scan: type=string, usage=Security scan result
-// Long: Flag.scans-enabled: type=bool, default=false, usage=Whether scans were enabled
+// Flag.build: type=string, usage=Build job result (success/failure/skipped)
+// Flag.container: type=bool, default=false, usage=Whether this is a container module
+// Flag.container-test: type=string, usage=Container test result (for container modules)
+// Flag.container-test-enabled: type=bool, default=false, usage=Whether container test was enabled
+// Flag.test-linux: type=string, usage=Linux test result (for binary modules)
+// Flag.test-windows: type=string, usage=Windows test result (for binary modules)
+// Flag.test-on-windows: type=bool, default=false, usage=Whether Windows tests were enabled
+// Flag.scan: type=string, usage=Security scan result
+// Flag.scans-enabled: type=bool, default=false, usage=Whether scans were enabled
 package show
 
 import (

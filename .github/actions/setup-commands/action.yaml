@@ -88,7 +88,7 @@ runs:
     - name: Download from trigger workflow (Windows)
       id: download-trigger-windows
       if: steps.existing-check-windows.outputs.exists != 'true' && inputs.trigger-run-id != '' && runner.os == 'Windows' && steps.check-trigger-windows.outputs.exists == 'true'
-      uses: actions/download-artifact@v7
+      uses: ./.github/actions/download-artifact-retry
       with:
         name: commands-binary-windows
         path: out/tools
@@ -101,7 +101,7 @@ runs:
     - name: Download from trigger workflow (Linux/macOS)
       id: download-trigger
       if: steps.existing-check.outputs.exists != 'true' && inputs.trigger-run-id != '' && runner.os != 'Windows'
-      uses: actions/download-artifact@v7
+      uses: ./.github/actions/download-artifact-retry
       with:
         name: commands-binary
         path: out/tools
@@ -145,7 +145,7 @@ runs:
     - name: Download from current run
       id: download-current
       if: (steps.existing-check.outputs.exists != 'true' && steps.existing-check-windows.outputs.exists != 'true') && (inputs.trigger-run-id == '' || (runner.os == 'Windows' && steps.check-trigger-windows.outputs.exists != 'true')) && steps.artifact-check.outputs.exists == 'true'
-      uses: actions/download-artifact@v7
+      uses: ./.github/actions/download-artifact-retry
       with:
         name: ${{ steps.artifact-check.outputs.artifact_name }}
         path: out/tools
@@ -246,7 +246,7 @@ runs:
 
     - name: Upload artifact (for downstream jobs, Linux/macOS)
       if: runner.os != 'Windows' && steps.check.outputs.available != 'true' && steps.check-linux-artifact.outputs.exists != 'true'
-      uses: actions/upload-artifact@v6
+      uses: ./.github/actions/upload-artifact-retry
       continue-on-error: true  # Ignore 409 if another job uploaded first
       with:
         name: commands-binary
@@ -270,7 +270,7 @@ runs:
 
     - name: Upload Windows artifact (cross-compiled from Linux)
       if: runner.os == 'Linux' && steps.check.outputs.available != 'true' && inputs.cross-compile-windows == 'true' && steps.check-windows-artifact.outputs.exists != 'true'
-      uses: actions/upload-artifact@v6
+      uses: ./.github/actions/upload-artifact-retry
       continue-on-error: true  # Ignore 409 if another job uploaded first
       with:
         name: commands-binary-windows
@@ -279,7 +279,7 @@ runs:
 
     - name: Upload artifact (for downstream jobs, Windows)
       if: runner.os == 'Windows' && steps.check-windows.outputs.available != 'true' && steps.check-windows-artifact.outputs.exists != 'true'
-      uses: actions/upload-artifact@v6
+      uses: ./.github/actions/upload-artifact-retry
       continue-on-error: true  # Ignore 409 if another job uploaded first
       with:
         name: commands-binary-windows

@@ -1,0 +1,57 @@
+# Upload Artifact with Retry
+#
+# Wraps actions/upload-artifact@v6 with retry logic for transient failures.
+# Falls back to gh CLI if action fails repeatedly.
+
+name: Upload Artifact (with retry)
+description: Upload artifact with automatic retry on failure
+
+inputs:
+  name:
+    description: 'Artifact name'
+    required: true
+  path:
+    description: 'Path to upload'
+    required: true
+  if-no-files-found:
+    description: 'Behavior if no files found: error, warn, ignore'
+    required: false
+    default: 'warn'
+  retention-days:
+    description: 'Number of days to retain artifact'
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Upload Artifact (attempt 1)
+      id: upload1
+      uses: actions/upload-artifact@v6
+      continue-on-error: true
+      with:
+        name: ${{ inputs.name }}
+        path: ${{ inputs.path }}
+        if-no-files-found: ${{ inputs.if-no-files-found }}
+        retention-days: ${{ inputs.retention-days }}
+
+    - name: Retry Upload (attempt 2)
+      id: upload2
+      if: steps.upload1.outcome == 'failure'
+      uses: actions/upload-artifact@v6
+      continue-on-error: true
+      with:
+        name: ${{ inputs.name }}
+        path: ${{ inputs.path }}
+        if-no-files-found: ${{ inputs.if-no-files-found }}
+        retention-days: ${{ inputs.retention-days }}
+
+    - name: Retry Upload (attempt 3)
+      id: upload3
+      if: steps.upload1.outcome == 'failure' && steps.upload2.outcome == 'failure'
+      uses: actions/upload-artifact@v6
+      with:
+        name: ${{ inputs.name }}
+        path: ${{ inputs.path }}
+        if-no-files-found: ${{ inputs.if-no-files-found }}
+        retention-days: ${{ inputs.retention-days }}

@@ -108,7 +108,7 @@ runs:
     - name: Download Build Artifacts
       id: download
       if: inputs.download-artifact == 'true'
-      uses: actions/download-artifact@v7
+      uses: ./.github/actions/download-artifact-retry
       with:
         name: ${{ steps.vars.outputs.build-artifact-name }}
         path: ${{ steps.vars.outputs.build-artifact-path }}
@@ -178,7 +178,7 @@ runs:
 
     - name: Upload Scan Results
       if: inputs.upload-artifact == 'true' && always()
-      uses: actions/upload-artifact@v6
+      uses: ./.github/actions/upload-artifact-retry
       with:
         name: ${{ steps.vars.outputs.scan-artifact-name }}
         path: out/scan/

@@ -8,11 +8,11 @@
 // Long: This command replaces the extract-release-version GitHub Action with pure Go logic,
 // Long: making it testable and usable locally.
 // Long:
-// Long: Flag.module: type=string, usage=Module prefix (e.g., r2r-cli, docs)
-// Long: Flag.type: type=string, default=semver, usage=Version type (semver or calver)
-// Long: Flag.ref: type=string, usage=Git ref (e.g., refs/tags/r2r-cli/1.0.0)
-// Long: Flag.version: type=string, usage=Explicit version (for workflow_dispatch)
-// Long: Flag.format: type=string, default=shell, usage=Output format (shell, json, yaml)
+// Flag.module: type=string, usage=Module prefix (e.g., r2r-cli, docs)
+// Flag.type: type=string, default=semver, usage=Version type (semver or calver)
+// Flag.ref: type=string, usage=Git ref (e.g., refs/tags/r2r-cli/1.0.0)
+// Flag.version: type=string, usage=Explicit version (for workflow_dispatch)
+// Flag.format: type=string, default=shell, usage=Output format (shell, json, yaml)
 // Long:
 // Long: Expected Output (--format shell):
 // Long:   VERSION="1.0.0"

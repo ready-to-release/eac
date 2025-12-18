@@ -1,0 +1,71 @@
+# Download Artifact with Retry
+#
+# Wraps actions/download-artifact@v7 with retry logic for transient failures.
+
+name: Download Artifact (with retry)
+description: Download artifact with automatic retry on failure
+
+inputs:
+  name:
+    description: 'Artifact name'
+    required: true
+  path:
+    description: 'Path to download to'
+    required: false
+    default: ''
+  run-id:
+    description: 'Run ID to download from'
+    required: false
+    default: ''
+  github-token:
+    description: 'GitHub token for cross-run downloads'
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Download Artifact (attempt 1)
+      id: download1
+      uses: actions/download-artifact@v7
+      continue-on-error: true
+      with:
+        name: ${{ inputs.name }}
+        path: ${{ inputs.path }}
+        run-id: ${{ inputs.run-id }}
+        github-token: ${{ inputs.github-token || github.token }}
+
+    - name: Wait before retry
+      if: steps.download1.outcome == 'failure'
+      shell: bash
+      run: |
+        echo "Download failed, waiting 10s before retry..."
+        sleep 10
+
+    - name: Retry Download (attempt 2)
+      id: download2
+      if: steps.download1.outcome == 'failure'
+      uses: actions/download-artifact@v7
+      continue-on-error: true
+      with:
+        name: ${{ inputs.name }}
+        path: ${{ inputs.path }}
+        run-id: ${{ inputs.run-id }}
+        github-token: ${{ inputs.github-token || github.token }}
+
+    - name: Wait before retry
+      if: steps.download1.outcome == 'failure' && steps.download2.outcome == 'failure'
+      shell: bash
+      run: |
+        echo "Download failed again, waiting 30s before final retry..."
+        sleep 30
+
+    - name: Retry Download (attempt 3)
+      id: download3
+      if: steps.download1.outcome == 'failure' && steps.download2.outcome == 'failure'
+      uses: actions/download-artifact@v7
+      with:
+        name: ${{ inputs.name }}
+        path: ${{ inputs.path }}
+        run-id: ${{ inputs.run-id }}
+        github-token: ${{ inputs.github-token || github.token }}

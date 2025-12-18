@@ -6,13 +6,13 @@
 // Long: It includes installation instructions, binary download links with sizes, and supply chain
 // Long: security information about build attestations.
 // Long:
-// Long: Flag.module: type=string, default=r2r-cli, usage=Module name
-// Long: Flag.binary-prefix: type=string, default=r2r, usage=Binary name prefix
-// Long: Flag.version: type=string, usage=Version string (required)
-// Long: Flag.tag: type=string, usage=Git tag name (required)
-// Long: Flag.commit: type=string, usage=Git commit SHA (required)
-// Long: Flag.repo: type=string, usage=GitHub repository (owner/repo)
-// Long: Flag.run-id: type=string, usage=GitHub Actions run ID
+// Flag.module: type=string, default=r2r-cli, usage=Module name
+// Flag.binary-prefix: type=string, default=r2r, usage=Binary name prefix
+// Flag.version: type=string, usage=Version string (required)
+// Flag.tag: type=string, usage=Git tag name (required)
+// Flag.commit: type=string, usage=Git commit SHA (required)
+// Flag.repo: type=string, usage=GitHub repository (owner/repo)
+// Flag.run-id: type=string, usage=GitHub Actions run ID
 // Long:
 // Long: Example:
 // Long:   get cli-release-notes --version 1.0.0 --tag r2r-cli/1.0.0 --commit abc123
