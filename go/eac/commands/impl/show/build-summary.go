@@ -9,6 +9,7 @@
 // Long: - Markdown-formatted build summary with emojis and styling, suitable for GitHub Actions $GITHUB_STEP_SUMMARY
 // Long: - Success: includes status section, build output metrics table, artifacts section, and collapsible configuration
 // Long: - Failure: includes status section, diagnostics with last 50 lines of build log, timing data, and configuration
+// Flag.run-id: type=string, usage=GitHub Actions run ID for linking to workflow
 package show
 
 import (
