@@ -11,9 +11,6 @@
 name: "release-books (stage 8+)"
 
 on:
-  push:
-    tags:
-      - 'books/*'
   workflow_dispatch:
     inputs:
       ci_run_id:
@@ -169,23 +166,13 @@ jobs:
             exit 1
           fi
 
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "Manual trigger: creating tag and release together"
-            gh release create "$TAG_NAME" \
-              --title "PDF Books $VERSION" \
-              --notes-file release_notes.md \
-              --target "${{ github.sha }}" \
-              --latest=false \
-              $PDF_FILES
-          else
-            echo "Tag trigger: using existing tag"
-            gh release create "$TAG_NAME" \
-              --title "PDF Books $VERSION" \
-              --notes-file release_notes.md \
-              --verify-tag \
-              --latest=false \
-              $PDF_FILES
-          fi
+          # Create tag and release together (tag created on success only)
+          gh release create "$TAG_NAME" \
+            --title "PDF Books $VERSION" \
+            --notes-file release_notes.md \
+            --target "${{ github.sha }}" \
+            --latest=false \
+            $PDF_FILES
 
           echo "✅ Release created successfully"
         env:

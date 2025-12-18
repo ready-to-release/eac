@@ -11,9 +11,6 @@
 name: "release-docs (stage 8+)"
 
 on:
-  push:
-    tags:
-      - 'docs/*'
   workflow_dispatch:
     inputs:
       ci_run_id:
@@ -165,21 +162,12 @@ jobs:
             exit 0
           fi
 
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "Manual trigger: creating tag and release together"
-            gh release create "$TAG_NAME" \
-              --title "Documentation Site $VERSION" \
-              --notes-file release_notes.md \
-              --target "${{ github.sha }}" \
-              --latest=false
-          else
-            echo "Tag trigger: using existing tag"
-            gh release create "$TAG_NAME" \
-              --title "Documentation Site $VERSION" \
-              --notes-file release_notes.md \
-              --verify-tag \
-              --latest=false
-          fi
+          # Create tag and release together (tag created on success only)
+          gh release create "$TAG_NAME" \
+            --title "Documentation Site $VERSION" \
+            --notes-file release_notes.md \
+            --target "${{ github.sha }}" \
+            --latest=false
 
           echo "✅ Release created successfully"
         env:
