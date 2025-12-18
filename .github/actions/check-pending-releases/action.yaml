@@ -72,3 +72,18 @@ runs:
         echo "modules_json=$MODULES_JSON" >> $GITHUB_OUTPUT
         echo "layers_json=$LAYERS_JSON" >> $GITHUB_OUTPUT
         echo "layer_count=$LAYER_COUNT" >> $GITHUB_OUTPUT
+
+        # Summary
+        echo "### Check Pending Releases" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+        echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Has Pending | \`$HAS_PENDING\` |" >> $GITHUB_STEP_SUMMARY
+        echo "| Layer Count | \`$LAYER_COUNT\` |" >> $GITHUB_STEP_SUMMARY
+        if [ -n "$DISPATCHED" ]; then
+          echo "| Dispatched | \`$DISPATCHED\` |" >> $GITHUB_STEP_SUMMARY
+        fi
+        if [ -n "$MODULES" ] && [ "$HAS_PENDING" = "true" ]; then
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Pending modules:** \`$MODULES\`" >> $GITHUB_STEP_SUMMARY
+        fi

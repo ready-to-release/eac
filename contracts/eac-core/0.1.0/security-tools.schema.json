@@ -24,6 +24,19 @@
       },
       "required": ["trivy", "semgrep", "zap"],
       "additionalProperties": false
+    },
+    "default_scanners": {
+      "type": "object",
+      "description": "Default scanners to run per module type when no --scanner flag is provided",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": ["sbom", "vuln", "secrets", "iac", "compliance", "sast", "zap"]
+        },
+        "minItems": 1,
+        "description": "List of scanner types to run by default for this module type"
+      }
     }
   },
   "required": ["docker_images"],

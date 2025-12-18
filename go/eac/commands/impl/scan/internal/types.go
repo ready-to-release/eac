@@ -30,6 +30,28 @@ const (
 	ScannerDAST       ScannerType = "zap"
 )
 
+// ParseScannerType converts a string to ScannerType
+func ParseScannerType(s string) (ScannerType, bool) {
+	switch s {
+	case "sbom":
+		return ScannerSBOM, true
+	case "vuln":
+		return ScannerVuln, true
+	case "secrets":
+		return ScannerSecrets, true
+	case "compliance":
+		return ScannerCompliance, true
+	case "iac":
+		return ScannerIaC, true
+	case "sast":
+		return ScannerSAST, true
+	case "zap":
+		return ScannerDAST, true
+	default:
+		return "", false
+	}
+}
+
 // ScanResult holds the outcome of a security scan
 type ScanResult struct {
 	Success      bool

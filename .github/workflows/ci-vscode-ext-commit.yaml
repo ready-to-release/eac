@@ -41,7 +41,7 @@ permissions:
   actions: read
 
 jobs:
-  ci:
+  ci-vscode-ext-commit:
     uses: ./.github/workflows/_module-ci.yaml
     with:
       module: vscode-ext-commit

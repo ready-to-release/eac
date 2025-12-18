@@ -85,8 +85,8 @@ func FormatCompact(s *Summary) string {
 			len(s.DepsStatus.Required)))
 	}
 
-	// Artifact validation (test only)
-	if s.HasArtifactValidation() {
+	// Artifact validation (test/scan only - build creates artifacts, doesn't need them)
+	if s.Command != "build" && s.HasArtifactValidation() {
 		av := s.ArtifactValidation
 		if av.AllValid() {
 			b.WriteString(fmt.Sprintf("Artifacts: ✅ %d module(s) validated\n", len(av.ModulesChecked)))
@@ -265,8 +265,8 @@ func FormatDetailed(s *Summary) string {
 	}
 	b.WriteString("\n")
 
-	// Artifact validation (test only)
-	if s.HasArtifactValidation() {
+	// Artifact validation (test/scan only - build creates artifacts, doesn't need them)
+	if s.Command != "build" && s.HasArtifactValidation() {
 		b.WriteString("── Build Artifacts ──\n")
 		av := s.ArtifactValidation
 		if av.AllValid() {

@@ -16,9 +16,11 @@ import (
 	"os"
 	"time"
 
+	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
 func init() {
@@ -36,21 +38,17 @@ func ShowBuildSummary() int {
 	args := os.Args[3:] // Skip program name, "show", and "build-summary"
 
 	if len(args) == 0 {
-		log.Errorf("Usage: show build-summary <module> [--status=success|failure] [--run-id=<id>]")
+		log.Errorf("Usage: show build-summary <module> [--run-id=<id>]")
 		return 1
 	}
 
 	module := args[0]
-	status := flags.GetFlagValue(args, "--status")
-	if status == "" {
-		status = "success"
-	}
 	runID := flags.GetFlagValue(args, "--run-id")
 
-	return generateBuildSummary(module, status, runID)
+	return generateBuildSummary(module, runID)
 }
 
-func generateBuildSummary(moduleName, status, runID string) int {
+func generateBuildSummary(moduleName, runID string) int {
 	startTime := time.Now()
 
 	// Load configuration
@@ -66,6 +64,9 @@ func generateBuildSummary(moduleName, status, runID string) int {
 		log.Errorf("module not found: %s", moduleName)
 		return 1
 	}
+
+	// Derive status from build manifest
+	status := deriveBuildStatus(cfg, moduleName)
 
 	// Create formatter
 	formatter := NewSummaryFormatter(moduleName, status)
@@ -277,4 +278,32 @@ func formatSlice(items []string) string {
 		result += Code(item)
 	}
 	return result
+}
+
+// deriveBuildStatus determines build status from manifest.
+// Status is derived as:
+// - "success" if manifest exists and has artifacts
+// - "failure" if manifest is missing or has no artifacts
+func deriveBuildStatus(cfg *config.EACConfig, moduleName string) string {
+	// Get workspace root for absolute path
+	workspaceRoot, err := repository.GetRepositoryRoot("")
+	if err != nil {
+		// Can't find workspace root - assume failure
+		return "failure"
+	}
+
+	// Load build manifest
+	moduleBuildDir := cfg.Repository.BuildOutputPathAbs(workspaceRoot, moduleName)
+	manifest, err := implinternal.LoadModuleManifest(moduleBuildDir)
+	if err != nil {
+		// No manifest = failure
+		return "failure"
+	}
+
+	// Check if manifest has artifacts
+	if len(manifest.Artifacts) == 0 {
+		return "failure"
+	}
+
+	return "success"
 }

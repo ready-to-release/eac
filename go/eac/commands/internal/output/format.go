@@ -4,6 +4,7 @@ package output
 
 import (
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -130,9 +131,9 @@ func OutputDir(path string) string {
 	return fmt.Sprintf("Output: %s", path)
 }
 
-// Writeln writes a formatted line with platform-specific line ending.
-func Writeln(w fmt.Stringer, format string, args ...interface{}) {
-	// This is a helper for io.Writer - actual implementation below
+// Writeln writes a formatted line with platform-specific line ending to the writer.
+func Writeln(w io.Writer, format string, args ...interface{}) {
+	fmt.Fprintf(w, format+platform.LineEnding, args...)
 }
 
 // FormatLine formats a line with platform-specific line ending.
@@ -274,13 +275,20 @@ func ListFormatWithPrefix(prefix string, items []string, maxInlineLen, itemsPerL
 }
 
 // PackageDisplayName extracts the display name from a package path.
-// For BDD tests with format "featureName:testRoot:featurePath", returns "featureName:testRoot".
+// For BDD tests with format "featureName:implPath:featurePath", returns "module/featureName"
+// to ensure uniqueness (e.g., "vscode-ext-commit/progress-buffer").
 // For unit tests with format "path", returns "path" unchanged.
 func PackageDisplayName(pkgPath string) string {
 	parts := strings.Split(pkgPath, ":")
-	if len(parts) == 3 {
-		// BDD format: return first two parts (featureName:testRoot)
-		return parts[0] + ":" + parts[1]
+	if len(parts) >= 2 {
+		specName := parts[0]
+		implPath := parts[1]
+		// Extract module name from implPath (last component)
+		// e.g., "typescript/vscode-ext-commit" -> "vscode-ext-commit"
+		// e.g., "go/eac/specs/impl/eac-commands" -> "eac-commands"
+		implParts := strings.Split(implPath, "/")
+		moduleName := implParts[len(implParts)-1]
+		return moduleName + "/" + specName
 	}
 	// Unit test or other format: return as-is
 	return pkgPath

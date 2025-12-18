@@ -5,7 +5,8 @@ const SecurityToolsFileName = "security-tools.yml"
 
 // SecurityToolsConfig holds security tool configuration
 type SecurityToolsConfig struct {
-	DockerImages DockerImagesConfig `yaml:"docker_images"`
+	DockerImages    DockerImagesConfig   `yaml:"docker_images"`
+	DefaultScanners map[string][]string  `yaml:"default_scanners,omitempty"`
 }
 
 // DockerImagesConfig holds Docker image specifications
@@ -27,6 +28,32 @@ func (d *DockerImage) FullImage() string {
 	return d.Image + ":" + d.Tag
 }
 
+// GetDefaultScanners returns the default scanners for a given module type.
+// Falls back to "default" key if the specific module type is not configured.
+// Returns a slice of scanner type strings (e.g., ["sbom", "vuln", "secrets"]).
+func (c *SecurityToolsConfig) GetDefaultScanners(moduleType string) []string {
+	if c.DefaultScanners == nil {
+		return defaultScannerList()
+	}
+
+	// Try module-specific scanners first
+	if scanners, ok := c.DefaultScanners[moduleType]; ok && len(scanners) > 0 {
+		return scanners
+	}
+
+	// Fall back to default
+	if scanners, ok := c.DefaultScanners["default"]; ok && len(scanners) > 0 {
+		return scanners
+	}
+
+	return defaultScannerList()
+}
+
+// defaultScannerList returns the built-in default scanner list
+func defaultScannerList() []string {
+	return []string{"sbom", "vuln", "secrets"}
+}
+
 // DefaultSecurityToolsConfig returns default configuration
 func DefaultSecurityToolsConfig() SecurityToolsConfig {
 	return SecurityToolsConfig{
@@ -43,6 +70,9 @@ func DefaultSecurityToolsConfig() SecurityToolsConfig {
 				Image: "zaproxy/zap-stable",
 				Tag:   "latest",
 			},
+		},
+		DefaultScanners: map[string][]string{
+			"default": {"sbom", "vuln", "secrets"},
 		},
 	}
 }

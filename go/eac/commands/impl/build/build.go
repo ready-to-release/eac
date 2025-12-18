@@ -49,34 +49,33 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
-	"github.com/gofrs/flock"
-	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/builders"
-	"github.com/ready-to-release/eac/go/eac/commands/impl/show"
+	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/cmdframework"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/environment"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/git"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/initsummary"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/output"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/core/buildstate"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
-	"github.com/ready-to-release/eac/go/eac/core/environments"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
-	"github.com/ready-to-release/eac/go/eac/core/platform"
-	"github.com/ready-to-release/eac/go/eac/core/buildstate"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 	systemdeps "github.com/ready-to-release/eac/go/eac/core/system-deps"
 )
 
 var log = logging.C()
 
-// writeln writes a formatted string with platform-specific line ending to the writer
+// writeln writes a formatted message followed by a newline to the writer.
 func writeln(w io.Writer, format string, args ...interface{}) {
-	fmt.Fprintf(w, format+platform.LineEnding, args...)
+	fmt.Fprintf(w, format+"\n", args...)
 }
 
 func init() {
@@ -89,49 +88,6 @@ type BuildResult struct {
 	ExitCode int
 	Warnings []string
 	Errors   []string
-}
-
-// acquireModuleBuildLock attempts to acquire an exclusive lock for building a module.
-// Returns the lock handle and nil error on success.
-// Returns nil and error if lock is already held (module is being built).
-func acquireModuleBuildLock(moniker, workspaceRoot string) (*flock.Flock, error) {
-	// Ensure out/build directory exists (parent directory for lock files)
-	buildDir := filepath.Join(workspaceRoot, paths.OutBuildRelPath)
-	if err := os.MkdirAll(buildDir, 0755); err != nil {
-		return nil, fmt.Errorf("failed to create build directory: %w", err)
-	}
-
-	// Create lock file path in parent directory (so it survives directory purge)
-	// Use module moniker as the mutex identifier
-	lockPath := filepath.Join(buildDir, fmt.Sprintf(".lock-%s", moniker))
-
-	// Create flock instance
-	lock := flock.New(lockPath)
-
-	// Try to acquire lock (non-blocking)
-	locked, err := lock.TryLock()
-	if err != nil {
-		return nil, fmt.Errorf("failed to acquire lock: %w", err)
-	}
-
-	if !locked {
-		return nil, fmt.Errorf("module '%s' is already being built", moniker)
-	}
-
-	return lock, nil
-}
-
-// releaseModuleBuildLock releases the lock and removes the lock file
-func releaseModuleBuildLock(lock *flock.Flock) {
-	if lock == nil {
-		return
-	}
-
-	lockPath := lock.Path()
-	lock.Unlock()
-
-	// Clean up the lock file
-	os.Remove(lockPath)
 }
 
 // ensureCommandsBinary rebuilds the commands binary on every local build call.
@@ -189,28 +145,23 @@ func Build() int {
 	}
 
 	// Detect execution environment
-	isCI := os.Getenv("CI") != "" || os.Getenv("GITHUB_ACTIONS") != "" || os.Getenv("GITLAB_CI") != ""
-	isContainer := logging.GetExecutionContext() == logging.ContextR2RCLI
-	// Detect test context: R2R_TEST_RUN_ID (test runner), GODOG_FORMAT (godog tests), R2R_MOCK_SECURITY (spec test subprocess)
-	isTestContext := os.Getenv("R2R_TEST_RUN_ID") != "" || os.Getenv("GODOG_FORMAT") != "" || os.Getenv("R2R_MOCK_SECURITY") != ""
-	isLocalConsole := !isCI && !isContainer && !isTestContext
+	env := environment.Detect()
 
 	// Parse module monikers and flags
 	var monikers []string
-	tidyFirst := !isCI // Default: true for local, false for CI
-	tidyExplicitlySet := false
-	skipDeps := false // Skip system dependency verification (go, docker, etc.)
-	skipDepm := false             // Skip including transitive module dependencies in execution plan
-	useExistingDepm := false      // Use existing module dependency artifacts (skip building if present)
-	forceRebuild := false         // Force full rebuild, ignoring incremental build state (--rebuild)
-	layeredBuild := false         // Execute in layers sequentially (default: all parallel)
+	tidyFirst := !env.IsCI   // Default: true for local, false for CI
+	skipDeps := false        // Skip system dependency verification (go, docker, etc.)
+	skipDepm := false        // Skip including transitive module dependencies in execution plan
+	useExistingDepm := false // Use existing module dependency artifacts (skip building if present)
+	forceRebuild := false    // Force full rebuild, ignoring incremental build state (--rebuild)
+	layeredBuild := false    // Execute in layers sequentially (default: all parallel)
 	showTimings := false
 	debugMode := false // Enable debug logs to console
 	version := ""
 	listArtifacts := false
 	dryRun := false
-	buildAll := false        // Include non-default books (those with default: false)
-	useTUI := isLocalConsole // TUI enabled by default for local console mode
+	buildAll := false            // Include non-default books (those with default: false)
+	useTUI := env.ShouldUseTUI() // TUI enabled by default for local console mode
 	tuiExplicitlySet := false
 	tuiHeight := tui.DefaultHeight // TUI console height
 
@@ -219,10 +170,8 @@ func Build() int {
 		switch arg {
 		case "--tidy-first":
 			tidyFirst = true
-			tidyExplicitlySet = true
 		case "--no-tidy":
 			tidyFirst = false
-			tidyExplicitlySet = true
 		case "--skip-depm":
 			skipDepm = true
 		case "--use-existing-depm":
@@ -297,12 +246,8 @@ func Build() int {
 	}
 
 	// Validate TUI usage - error if explicitly enabled in CI or container mode
-	if tuiExplicitlySet && useTUI && (isCI || isContainer) {
-		if isCI {
-			log.Errorf("Error: --tui cannot be used in CI environments")
-		} else {
-			log.Errorf("Error: --tui cannot be used in container/extension mode (use local console instead)")
-		}
+	if err := env.ValidateTUI(tuiExplicitlySet, useTUI); err != nil {
+		log.Errorf("Error: %v", err)
 		return 1
 	}
 
@@ -314,7 +259,7 @@ func Build() int {
 	}
 
 	// Ensure commands binary exists (devbox only - CI uses setup-commands action)
-	if !isCI && !isContainer {
+	if env.IsLocalConsole {
 		if err := ensureCommandsBinary(workspaceRoot); err != nil {
 			log.Errorf("Error: failed to build commands binary: %v", err)
 			return 1
@@ -328,9 +273,6 @@ func Build() int {
 		return 1
 	}
 
-	// Track if user explicitly requested specific modules (vs building all)
-	explicitlyRequested := len(monikers) > 0
-
 	// If no monikers provided, default to all buildable modules (before dependency check)
 	if len(monikers) == 0 {
 		for _, module := range moduleReport.Registry.All() {
@@ -343,9 +285,42 @@ func Build() int {
 		return listModuleArtifacts(monikers, workspaceRoot, moduleReport)
 	}
 
-	// Run build (single or multiple modules) - phases are handled inside
-	// Note: Logging is configured inside buildMultipleModules after TUI is initialized
-	return buildMultipleModules(monikers, workspaceRoot, moduleReport, tidyFirst, tidyExplicitlySet, version, skipDeps, skipDepm, useExistingDepm, forceRebuild, layeredBuild, showTimings, debugMode, dryRun, buildAll, useTUI, tuiHeight, explicitlyRequested)
+	// Build requested set for --use-existing-depm logic
+	requestedSet := make(map[string]bool)
+	for _, m := range monikers {
+		requestedSet[m] = true
+	}
+
+	// Create command config for framework
+	cmdCfg := &cmdframework.CommandConfig{
+		Type:         cmdframework.CommandTypeBuild,
+		ActionVerb:   "Building",
+		OutputDir:    paths.OutBuildRelPath,
+		LogFileName:  "build.log",
+		Monikers:     monikers,
+		IncludeDepm:  !skipDepm,
+		SkipDeps:     skipDeps,
+		SkipDepm:     skipDepm,
+		ForceRebuild: forceRebuild,
+		Layered:      true, // Build always uses layered execution
+		DryRun:       dryRun,
+		UseTUI:       useTUI,
+		TUIHeight:    tuiHeight,
+		ShowTimings:  showTimings,
+		DebugMode:    debugMode,
+	}
+
+	// Create build-specific config
+	buildCfg := &BuildConfig{
+		TidyFirst:       tidyFirst,
+		Version:         version,
+		BuildAll:        buildAll,
+		UseExistingDepm: useExistingDepm,
+		LayeredBuild:    layeredBuild,
+		RequestedSet:    requestedSet,
+	}
+
+	return RunBuildWithFramework(cmdCfg, buildCfg)
 }
 
 // parseIntArg parses a string argument as an integer
@@ -388,650 +363,18 @@ func listModuleArtifacts(monikers []string, workspaceRoot string, moduleReport *
 	return 0
 }
 
-// buildMultipleModules builds multiple modules in parallel using the orchestrator
-func buildMultipleModules(monikers []string, workspaceRoot string, moduleReport *reports.ModuleContractReport, tidyFirst bool, tidyExplicitlySet bool, version string, skipDeps bool, skipDepm bool, useExistingDepm bool, forceRebuild bool, layeredBuild bool, showTimings bool, debugMode bool, dryRun bool, buildAll bool, useTUI bool, tuiHeight int, explicitlyRequested bool) int {
-	// Build module type lookup for ALL modules (will be populated after execution plan)
-	moduleTypes := make(map[string]string)
-
-	// Load repository config for parallelism settings
-	repoCfg, err := config.Load(config.DefaultLoadOptions())
-	if err != nil {
-		log.Warnf("Failed to load config for parallelism settings: %v (using defaults)", err)
-	}
-
-	// Determine max concurrency from config (respects CI vs devbox environment)
-	maxConcurrency := 8 // Default fallback (devbox default)
-	if repoCfg != nil && repoCfg.Repository != nil {
-		maxConcurrency = repoCfg.Repository.EffectiveParallelism(environments.IsCI())
-	}
-
-	// Configure orchestrator early so we can use it for Init phase output
-	orchConfig := orchestrator.Config{
-		WorkspaceRoot:        workspaceRoot,
-		OutputBaseDir:        paths.OutBuildRelPath,
-		LogFileName:          "build.log",
-		ActionVerb:           "Building",
-		MaxConcurrency:       maxConcurrency,
-		StatusUpdateInterval: 500, // Update every 500ms for responsive feedback
-		ModuleTypes:          moduleTypes,
-		ShowTimings:          showTimings,
-		DryRun:               dryRun,
-		TUI:                  useTUI,
-		TUIHeight:            tuiHeight,
-	}
-
-	// Create orchestrator early for phase management
-	orch := orchestrator.New(orchConfig, nil) // Worker set later
-	defer orch.Close()
-
-	// Track execution start time for summary
-	executionStart := time.Now()
-
-	// Initialize and start TUI if enabled (for Init phase output)
-	if useTUI {
-		if err := orch.Init(); err != nil {
-			log.Errorf("Error initializing orchestrator: %v", err)
-			return 1
-		}
-		orch.StartTUI()
-
-		// Brief pause to ensure TUI is ready before sending messages
-		time.Sleep(10 * time.Millisecond)
-	}
-
-	// Configure unified logging system
-	// - Debug logs ALWAYS go to file (out/build/build.log)
-	// - Debug logs go to console only if debugMode=true
-	// - TUI output if TUI is enabled
-	var tuiWriter io.Writer
-	if useTUI {
-		tuiWriter = orch.GetTUIWriter(tui.PhaseInit)
-	}
-	if err := logging.ConfigureLogging(workspaceRoot, "build", nil, debugMode, tuiWriter); err != nil {
-		log.Warnf("Failed to configure logging: %v", err)
-	}
-	defer logging.CloseLogging()
-
-	log.Debugf("Build logging configured: debugMode=%v, useTUI=%v", debugMode, useTUI)
-
-	// Helper to write output to console OR TUI Init phase
-	writeInit := func(format string, args ...interface{}) {
-		msg := fmt.Sprintf(format, args...)
-		if useTUI {
-			orch.SendInitLine(msg)
-		} else {
-			log.Info(msg)
-		}
-	}
-
-	// writeInitSummary outputs the full initialization summary
-	writeInitSummary := func(summary *initsummary.Summary) {
-		var formatted string
-		if useTUI {
-			formatted = initsummary.FormatCompact(summary)
-		} else {
-			formatted = initsummary.FormatDetailed(summary)
-		}
-		for _, line := range strings.Split(strings.TrimSpace(formatted), "\n") {
-			if line != "" {
-				writeInit("%s", line)
-			}
-		}
-	}
-
-	// Calculate execution order to determine module dependencies early
-	includeDepm := !skipDepm
-	executionPlan, err := repository.CalculateExecutionOrder(monikers, workspaceRoot, includeDepm)
-	if err != nil {
-		log.Errorf("Failed to calculate execution order: %v", err)
-		return 1
-	}
-
-	// Track total modules for summary
-	totalModules := len(executionPlan.ExecutionOrder)
-
-	// Calculate added depm (modules added as dependencies)
-	var addedDepm []string
-	requestedSet := make(map[string]bool)
-	for _, m := range monikers {
-		requestedSet[m] = true
-	}
-	if includeDepm {
-		for _, m := range executionPlan.ExecutionOrder {
-			if !requestedSet[m] {
-				addedDepm = append(addedDepm, m)
-			}
-		}
-	}
-
-	// With --use-existing-depm: filter out dependency modules that already have artifacts
-	// This enables CI to only build the requested module, using pre-downloaded deps
-	var existingDepm []string
-	if useExistingDepm && !dryRun {
-		var filteredOrder []string
-		var filteredLayers [][]string
-		var filteredAddedDepm []string
-
-		for _, layer := range executionPlan.Layers {
-			var filteredLayer []string
-			for _, m := range layer {
-				// Always include requested modules
-				if requestedSet[m] {
-					filteredLayer = append(filteredLayer, m)
-					filteredOrder = append(filteredOrder, m)
-					continue
-				}
-				// For deps, check if artifacts exist
-				moduleType := ""
-				if module, exists := moduleReport.Registry.Get(m); exists {
-					moduleType = module.Type
-				}
-				if hasExistingArtifacts(m, moduleType, workspaceRoot, buildAll) {
-					existingDepm = append(existingDepm, m)
-					log.Debugf("Skipping dep %s (artifacts exist)", m)
-				} else {
-					filteredLayer = append(filteredLayer, m)
-					filteredOrder = append(filteredOrder, m)
-					filteredAddedDepm = append(filteredAddedDepm, m)
-				}
-			}
-			if len(filteredLayer) > 0 {
-				filteredLayers = append(filteredLayers, filteredLayer)
-			}
-		}
-
-		executionPlan.ExecutionOrder = filteredOrder
-		executionPlan.Layers = filteredLayers
-		addedDepm = filteredAddedDepm
-		totalModules = len(filteredOrder)
-
-		if len(existingDepm) > 0 {
-			log.Debugf("Using existing artifacts for %d deps: %v", len(existingDepm), existingDepm)
-		}
-	}
-
-	// Incremental Build Detection (devbox only)
-	// For local builds, detect which modules actually need rebuilding
-	// CI always does full builds (controlled by --use-existing-depm for layer skipping)
-	// Note: --use-existing-depm disables incremental detection since it's for CI where
-	// downloaded artifacts should be used directly without source change analysis
-	isCI := os.Getenv("CI") != "" || os.Getenv("GITHUB_ACTIONS") != "" || os.Getenv("GITLAB_CI") != ""
-	useIncremental := !isCI && !forceRebuild && !dryRun && !useExistingDepm
-	log.Debugf("Incremental build detection: isCI=%v, forceRebuild=%v, dryRun=%v, useExistingDepm=%v, useIncremental=%v", isCI, forceRebuild, dryRun, useExistingDepm, useIncremental)
-
-	var skippedModules []string
-	var incrementalInfo *initsummary.IncrementalInfo
-	var incrementalDetectionTime time.Duration
-
-	if useIncremental {
-		log.Debugf("Getting source files for %d modules", len(executionPlan.ExecutionOrder))
-		// Build modules map for change detection using shared interface
-		modulesMap := make(map[string]buildstate.ModuleFileGetter)
-		for _, moniker := range executionPlan.ExecutionOrder {
-			if contract, ok := moduleReport.Registry.Get(moniker); ok {
-				modulesMap[moniker] = contract
-			}
-		}
-
-		log.Debugf("Detecting changes...")
-		moduleFiles, err := buildstate.GetModuleSourceFiles(workspaceRoot, modulesMap)
-		if err != nil {
-			log.Debugf("Failed to get module source files: %v", err)
-			log.Warnf("Failed to get module files: %v - falling back to full rebuild", err)
-		}
-		for moniker, files := range moduleFiles {
-			log.Debugf("Module %s has %d source files for change detection", moniker, len(files))
-		}
-
-		var changeResult *buildstate.ChangeResult
-		if err == nil {
-			changeResult, err = buildstate.DetectChanges(workspaceRoot, moduleFiles)
-		}
-		if err != nil {
-			// On error, fall back to full build
-			log.Debugf("Incremental detection error: %v", err)
-			log.Warnf("Incremental detection failed: %v - falling back to full rebuild", err)
-		} else if changeResult.FreshBuild {
-			log.Debugf("Fresh build detected (no prior state)")
-			incrementalInfo = &initsummary.IncrementalInfo{
-				Enabled:    true,
-				FreshBuild: true,
-			}
-		} else {
-			log.Debugf("Change detection result: %d changed, %d up-to-date, detection time=%v",
-				len(changeResult.ChangedModules), len(changeResult.UpToDateModules), changeResult.DetectionTime)
-			incrementalDetectionTime = changeResult.DetectionTime
-
-			// Build set of explicitly requested modules - these should always be built
-			requestedSet := make(map[string]bool)
-			if explicitlyRequested {
-				for _, m := range monikers {
-					requestedSet[m] = true
-				}
-			}
-
-			// Filter execution plan to only changed modules
-			// But don't skip if user explicitly requested specific modules
-			if len(changeResult.ChangedModules) == 0 && !explicitlyRequested {
-				// All modules up-to-date and no specific modules requested - output summary and exit
-				initSummary := initsummary.New("build").
-					SetRequest(monikers, executionPlan.ExecutionOrder).
-					SetExecutionPlan(executionPlan.Layers).
-					SetFlatExecution(!layeredBuild).
-					SetExecutionContext(string(logging.GetExecutionContext())).
-					SetIncremental(&initsummary.IncrementalInfo{
-						Enabled:       true,
-						DetectionTime: changeResult.DetectionTime,
-						Changed:       []string{},
-						UpToDate:      changeResult.UpToDateModules,
-					}).
-					SetOutputDir(paths.OutBuildRelPath + "/")
-
-				writeInitSummary(initSummary)
-				writeInit("")
-				writeInit("✅ All modules up-to-date (nothing to build)")
-				writeInit("   Use --rebuild to force a full rebuild")
-
-				// Stop TUI cleanly before exiting
-				if useTUI {
-					orch.StopTUI()
-				}
-				return 0
-			}
-
-			// Propagate changes through dependency graph:
-			// If module A changed and module B depends on A, then B also needs rebuilding
-			// This ensures dependents are rebuilt when their dependencies change
-			propagatedModules := propagateChangesToDependents(changeResult.ChangedModules, moduleReport.Registry)
-			log.Debugf("Change propagation: %d direct changes -> %d total (including dependents)",
-				len(changeResult.ChangedModules), len(propagatedModules))
-
-			// Filter skipped modules to exclude explicitly requested ones AND propagated ones
-			propagatedSet := make(map[string]bool)
-			for _, m := range propagatedModules {
-				propagatedSet[m] = true
-			}
-			for _, m := range changeResult.UpToDateModules {
-				if !requestedSet[m] && !propagatedSet[m] {
-					skippedModules = append(skippedModules, m)
-				}
-			}
-
-			// Update execution plan to only include changed modules + propagated dependents + explicitly requested
-			changedSet := make(map[string]bool)
-			for _, m := range propagatedModules {
-				changedSet[m] = true
-			}
-			// Always include explicitly requested modules
-			for _, m := range monikers {
-				changedSet[m] = true
-			}
-
-			// Save original execution order before filtering
-			originalOrder := executionPlan.ExecutionOrder
-
-			// Filter execution order to only include modules that need building
-			var filteredOrder []string
-			var filteredLayers [][]string
-			for _, layer := range executionPlan.Layers {
-				var filteredLayer []string
-				for _, m := range layer {
-					if changedSet[m] {
-						filteredLayer = append(filteredLayer, m)
-						filteredOrder = append(filteredOrder, m)
-					}
-				}
-				if len(filteredLayer) > 0 {
-					filteredLayers = append(filteredLayers, filteredLayer)
-				}
-			}
-			executionPlan.ExecutionOrder = filteredOrder
-			executionPlan.Layers = filteredLayers
-			totalModules = len(filteredOrder)
-
-			// Calculate skipped modules as: original execution order - filtered order
-			// This ensures Changed + UpToDate = total modules
-			filteredSet := make(map[string]bool)
-			for _, m := range filteredOrder {
-				filteredSet[m] = true
-			}
-			var actualSkipped []string
-			for _, m := range originalOrder {
-				if !filteredSet[m] {
-					actualSkipped = append(actualSkipped, m)
-				}
-			}
-
-			incrementalInfo = &initsummary.IncrementalInfo{
-				Enabled:       true,
-				DetectionTime: incrementalDetectionTime,
-				Changed:       filteredOrder,   // Modules that will be built
-				UpToDate:      actualSkipped,   // Modules that will be skipped
-			}
-		}
-	} else if forceRebuild {
-		// Clear build state to ensure fresh state after this build
-		buildstate.ClearState(workspaceRoot)
-		incrementalInfo = &initsummary.IncrementalInfo{
-			Enabled: false, // Disabled due to --rebuild
-		}
-	}
-
-	// Dependency Verification (system dependencies like go, docker, etc.)
-	// Use the expanded execution order to verify deps for ALL modules that will be built
-	var depsStatus initsummary.DepsStatus
-	if skipDeps {
-		depsStatus = initsummary.DepsStatus{Skipped: true}
-	} else {
-		var exitCode int
-		exitCode, depsStatus = verifyBuildDependenciesQuiet(executionPlan.ExecutionOrder, moduleReport)
-		if exitCode != 0 {
-			// Output summary showing what failed before returning
-			initSummary := initsummary.New("build").
-				SetRequest(monikers, executionPlan.ExecutionOrder).
-				SetExecutionPlan(executionPlan.Layers).
-				SetFlatExecution(!layeredBuild).
-				SetExecutionContext(string(logging.GetExecutionContext())).
-				SetDepsStatus(depsStatus).
-				SetOutputDir(paths.OutBuildRelPath + "/")
-			writeInitSummary(initSummary)
-			log.Errorf("")
-			log.Errorf("❌ Required build dependencies are missing: %s", strings.Join(depsStatus.Missing, ", "))
-			log.Errorf("   Use --skip-deps to bypass this check")
-			return exitCode
-		}
-	}
-
-	// Build the structured initialization summary
-	initSummary := initsummary.New("build").
-		SetRequest(monikers, executionPlan.ExecutionOrder).
-		SetExecutionPlan(executionPlan.Layers).
-		SetFlatExecution(!layeredBuild).
-		SetExecutionContext(string(logging.GetExecutionContext())).
-		SetFlags(initsummary.Flags{
-			TidyFirst:            tidyFirst,
-			TidyExplicit:         tidyExplicitlySet,
-			SkipDepm:             skipDepm,
-			UseExistingDepm:      useExistingDepm,
-			SkipDeps:             skipDeps,
-			ForceRebuild:         forceRebuild,
-			DryRun:               dryRun,
-			BuildAll:             buildAll,
-			ShowTimings:          showTimings,
-			DebugMode:            debugMode,
-			UseTUI:               useTUI,
-			Version:              version,
-		}).
-		SetDepmStatus(initsummary.DepmStatus{
-			Verified: includeDepm,
-			Skipped:  skipDepm,
-			Total:    len(addedDepm) + len(existingDepm),
-			Resolved: addedDepm,
-			Existing: existingDepm,
-		}).
-		SetDepsStatus(depsStatus).
-		SetOutputDir(paths.OutBuildRelPath + "/")
-
-	// Set incremental info if applicable
-	if incrementalInfo != nil {
-		initSummary.SetIncremental(incrementalInfo)
-	}
-
-	// Output the structured initialization summary
-	writeInitSummary(initSummary)
-
-	// Build module type lookup for ALL modules in execution plan (including dependencies)
-	for _, mon := range executionPlan.ExecutionOrder {
-		if module, exists := moduleReport.Registry.Get(mon); exists {
-			moduleTypes[mon] = module.Type
-		}
-	}
-	orch.SetModuleTypes(moduleTypes)
-
-	// Note: requestedSet was already built at line 454 - reuse it for worker skip logic
-
-	// Create worker function that builds a single module and returns type info
-	worker := func(moniker string, logWriter io.Writer) int {
-		module, exists := moduleReport.Registry.Get(moniker)
-		if !exists {
-			fmt.Fprintf(logWriter, "Error: module not found: %s\n", moniker)
-			return 1
-		}
-
-		// With --use-existing-depm: skip building if module DEPENDENCY artifacts already exist
-		// This enables incremental CI where dependencies are downloaded from previous runs
-		// IMPORTANT: Only skip dependencies, NOT the originally requested modules
-		// When --rebuild is used, the requested modules should always be rebuilt
-		isRequestedModule := requestedSet[moniker]
-		if useExistingDepm && !dryRun && !isRequestedModule {
-			if hasExistingArtifacts(moniker, moduleTypes[moniker], workspaceRoot, buildAll) {
-				fmt.Fprintf(logWriter, "⏭️  Skipping %s (module dependency artifacts exist)\n", moniker)
-				return 0
-			}
-		}
-
-		// Skip lock acquisition in dry-run mode since we're not actually building
-		if !dryRun {
-			// Acquire exclusive lock for this module FIRST (before any directory operations)
-			lockFile, err := acquireModuleBuildLock(moniker, workspaceRoot)
-			if err != nil {
-				fmt.Fprintf(logWriter, "Error: module '%s' is already being built\n", moniker)
-				fmt.Fprintf(logWriter, "Details: %v\n", err)
-				return 1
-			}
-			defer releaseModuleBuildLock(lockFile)
-		}
-
-		moduleOutputDir := paths.BuildOutputPath(workspaceRoot, moniker)
-		exitCode := runModuleBuild(module, workspaceRoot, moduleOutputDir, logWriter, tidyFirst, version, dryRun, buildAll)
-
-		// If build succeeded and not dry-run, validate artifacts were created
-		if exitCode == 0 && !dryRun {
-			modType, ok := moduleTypes[moniker]
-			if ok {
-				if err := validateModuleBuildOutputs(moniker, modType, workspaceRoot, logWriter, buildAll); err != nil {
-					fmt.Fprintf(logWriter, "\n❌ Build artifact validation failed: %v\n", err)
-					return 1
-				}
-			}
-		}
-
-		return exitCode
-	}
-	orch.SetWorker(worker)
-
-	// Run orchestrator (TUI transitions to Run phase automatically)
-	// Default: all modules in parallel; --layered-build: sequential layers
-	var results []orchestrator.WorkResult
-	if layeredBuild {
-		results, err = orch.RunLayered(executionPlan.Layers)
-	} else {
-		results, err = orch.Run(executionPlan.ExecutionOrder)
-	}
-	if err != nil {
-		log.Errorf("Error: %v", err)
-		return 1
-	}
-
-	// Generate build manifest with successfully built modules
-	// Manifests are also generated in dry-run mode to record what would be built
-	if err := generateBuildManifest(workspaceRoot, results, moduleTypes, executionPlan.ExecutionOrder, buildAll); err != nil {
-		log.Errorf("Failed to generate build manifest: %v", err)
-		log.Errorf("Build manifests are required for build timing analysis and artifact tracking")
-		return 1
-	}
-
-	// Update verification timestamp for skipped (unchanged) modules
-	if !dryRun && len(skippedModules) > 0 {
-		gitCommit := getGitCommitSHA(workspaceRoot)
-		updateSkippedModuleManifests(workspaceRoot, skippedModules, gitCommit)
-	}
-
-	// Update incremental build state for successfully built modules (devbox only)
-	// Also update after --rebuild so next build can use incremental detection
-	if (useIncremental || forceRebuild) && !dryRun {
-		log.Debugf("Incremental mode: updating build state")
-
-		// Collect successfully built modules
-		var successfulModules []string
-		for _, result := range results {
-			if result.ExitCode == 0 {
-				successfulModules = append(successfulModules, result.Moniker)
-			}
-		}
-		log.Debugf("Successfully built modules: %v", successfulModules)
-
-		// Also include skipped modules (they were already up-to-date)
-		allSuccessful := append(successfulModules, skippedModules...)
-		log.Debugf("Total modules for state update (built + skipped): %d", len(allSuccessful))
-
-		// Build modules map for state update using shared interface
-		modulesMap := make(map[string]buildstate.ModuleFileGetter)
-		for _, moniker := range allSuccessful {
-			if contract, ok := moduleReport.Registry.Get(moniker); ok {
-				modulesMap[moniker] = contract
-			}
-		}
-
-		// Get module files for state update
-		moduleFiles, err := buildstate.GetModuleSourceFiles(workspaceRoot, modulesMap)
-		if err != nil {
-			log.Warnf("Failed to get module files for state update: %v", err)
-		} else {
-			for moniker, files := range moduleFiles {
-				log.Debugf("Module %s: %d source files", moniker, len(files))
-			}
-
-			if err := buildstate.UpdateModuleState(workspaceRoot, allSuccessful, moduleFiles); err != nil {
-				log.Warnf("Failed to update build state: %v", err)
-			} else {
-				log.Debugf("Build state updated successfully")
-			}
-		}
-	} else {
-		log.Debugf("Skipping build state update (useIncremental=%v, dryRun=%v)", useIncremental, dryRun)
-	}
-
-	// Build and send summary data to TUI, then wait for user to exit
-	if useTUI {
-		buildSummary := buildTUISummary(results, time.Since(executionStart), totalModules, dryRun)
-		orch.SendSummary(buildSummary)
-		// Wait for user to press any key to exit
-		orch.WaitTUI()
-	} else {
-		// Stop TUI and print plain text summary
-		orch.StopTUI()
-		orch.PrintSummary(results)
-	}
-
-	// Show rich timing analysis if requested
-	if showTimings {
-		log.Info("")
-		// Get the list of modules that were built
-		builtModules := executionPlan.ExecutionOrder
-
-		// Display rich timing analysis for the modules that were built
-		buildOutputDir := filepath.Join(workspaceRoot, paths.OutBuildRelPath)
-		show.ShowBuildTimesForModules(builtModules, 10, buildOutputDir)
-	}
-
-	// Return exit code based on results
-	return orchestrator.GetExitCode(results)
-}
-
-// buildTUISummary creates summary data for the TUI Summary pane
-func buildTUISummary(results []orchestrator.WorkResult, totalTime time.Duration, totalModules int, dryRun bool) *tui.SummaryData {
-	// Count successes and failures
-	successCount := 0
-	failCount := 0
-	var failedModules []string
-
-	for _, result := range results {
-		if result.ExitCode == 0 {
-			successCount++
-		} else {
-			failCount++
-			failedModules = append(failedModules, result.Moniker)
-		}
-	}
-
-	// Build init summary
-	initSummary := fmt.Sprintf("%d modules prepared", totalModules)
-
-	// Build run summary
-	runSummary := fmt.Sprintf("%d/%d modules built", successCount, totalModules)
-	if dryRun {
-		runSummary += " (dry-run)"
-	}
-
-	// Build details
-	var details []string
-	if failCount > 0 {
-		details = append(details, fmt.Sprintf("Failed: %d (%s)", failCount, strings.Join(failedModules, ", ")))
-		details = append(details, "")  // Blank line
-
-		// Add error messages from failed modules (top 5 per module)
-		for _, result := range results {
-			if result.ExitCode != 0 {
-				if len(result.Errors) > 0 {
-					// Show module name with log path
-					details = append(details, fmt.Sprintf("%s (%s):", result.Moniker, result.LogPath))
-					// Show up to 5 errors
-					errorCount := len(result.Errors)
-					if errorCount > 5 {
-						errorCount = 5
-					}
-					for i := 0; i < errorCount; i++ {
-						errMsg := result.Errors[i]
-						// Truncate very long error messages (keep enough for full paths in errors)
-						if len(errMsg) > 300 {
-							errMsg = errMsg[:297] + "..."
-							details = append(details, fmt.Sprintf("  • %s", errMsg))
-							details = append(details, fmt.Sprintf("    See: %s", result.LogPath))
-						} else {
-							details = append(details, fmt.Sprintf("  • %s", errMsg))
-						}
-					}
-					if len(result.Errors) > 5 {
-						details = append(details, fmt.Sprintf("  ...and %d more errors", len(result.Errors)-5))
-					}
-				}
-			}
-		}
-	}
-	details = append(details, "")  // Blank line
-	details = append(details, "Output: out/build/")
-
-	// Build next steps
-	nextSteps := ""
-	if failCount > 0 {
-		nextSteps = fmt.Sprintf("Review full logs: out/build/%s/build.log", failedModules[0])
-	} else if !dryRun {
-		nextSteps = "Run 'test' to verify builds"
-	}
-
-	return &tui.SummaryData{
-		Success:     failCount == 0,
-		TotalTime:   totalTime,
-		InitSummary: initSummary,
-		RunSummary:  runSummary,
-		Details:     details,
-		NextSteps:   nextSteps,
-	}
-}
-
 // runModuleBuild runs build for a single module
 func runModuleBuild(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, tidyFirst bool, version string, dryRun bool, buildAll bool) int {
 	// Get handler for module (checks per-module handler first, then type)
 	handler := builders.GetHandlerForModule(module, module.Type)
 	if handler == nil {
-		writeln(logWriter, "❌ No handler found for module type: %s", module.Type)
+		output.Writeln(logWriter, "❌ No handler found for module type: %s", module.Type)
 		return 1
 	}
 
 	// Validate module before building
 	if err := handler.ValidateModule(module, workspaceRoot); err != nil {
-		writeln(logWriter, "❌ Module validation failed: %v", err)
+		output.Writeln(logWriter, "❌ Module validation failed: %v", err)
 		return 1
 	}
 
@@ -1047,12 +390,12 @@ func runModuleBuild(module *modules.ModuleContract, workspaceRoot string, output
 
 	// In dry-run mode, simulate a successful build
 	if dryRun {
-		writeln(logWriter, "Build: %s (dry-run)", module.Moniker)
-		writeln(logWriter, "Type: %s", module.Type)
-		writeln(logWriter, "Handler: %s", handler.Name())
-		writeln(logWriter, "Root: %s", module.Files.Root)
-		writeln(logWriter, "")
-		writeln(logWriter, "Dry-run mode: skipping actual build")
+		output.Writeln(logWriter, "Build: %s (dry-run)", module.Moniker)
+		output.Writeln(logWriter, "Type: %s", module.Type)
+		output.Writeln(logWriter, "Handler: %s", handler.Name())
+		output.Writeln(logWriter, "Root: %s", module.Files.Root)
+		output.Writeln(logWriter, "")
+		output.Writeln(logWriter, "Dry-run mode: skipping actual build")
 		return 0
 	}
 
@@ -1069,7 +412,7 @@ func runModuleBuild(module *modules.ModuleContract, workspaceRoot string, output
 		// Pass buildAll=true to include all derived artifacts (UPX variants, etc.)
 		mergedArtifacts := cfg.GetBuildArtifacts(module.Moniker, true)
 		if err := ProcessArtifactDerivations(module.Moniker, mergedArtifacts, outputDir, opts.RequestedArtifacts, module.Metadata, logWriter); err != nil {
-			writeln(logWriter, "❌ Artifact derivation failed: %v", err)
+			output.Writeln(logWriter, "❌ Artifact derivation failed: %v", err)
 			return 1
 		}
 	}
@@ -1273,7 +616,7 @@ func hasExistingArtifacts(moniker, moduleType, workspaceRoot string, buildAll bo
 // Each module gets its own immutable manifest at out/build/<module>/build.manifest.json
 func generateBuildManifest(workspaceRoot string, results []orchestrator.WorkResult, moduleTypes map[string]string, executionOrder []string, buildAll bool) error {
 	// Get git commit SHA
-	gitCommit := getGitCommitSHA(workspaceRoot)
+	gitCommit := git.GetCommitSHA(workspaceRoot)
 
 	// Load config for artifact resolution
 	cfg, err := config.Load(config.DefaultLoadOptions())
@@ -1459,62 +802,6 @@ func updateSkippedModuleManifests(workspaceRoot string, skippedModules []string,
 			log.Warnf("Failed to update verification status for %s: %v", moniker, err)
 		} else {
 			log.Debugf("Updated verification status for %s to %s", moniker, gitCommit)
-		}
-	}
-}
-
-// getGitCommitSHA gets the current git commit SHA
-func getGitCommitSHA(workspaceRoot string) string {
-	cmd := exec.Command("git", "rev-parse", "HEAD")
-	cmd.Dir = workspaceRoot
-	output, err := cmd.Output()
-	if err != nil {
-		return ""
-	}
-	return strings.TrimSpace(string(output))
-}
-
-// propagateChangesToDependents expands a list of changed modules to include all
-// modules that transitively depend on them. This ensures that when a library changes,
-// all executables/modules that use it are also rebuilt.
-//
-// Example: If eac-core changes and eac-commands depends on eac-core,
-// this returns [eac-core, eac-commands] (plus any other dependents).
-func propagateChangesToDependents(changedModules []string, registry *modules.Registry) []string {
-	if len(changedModules) == 0 {
-		return changedModules
-	}
-
-	// Build reverse dependency graph: module -> modules that depend on it
-	dependentsGraph := registry.GetReverseDependencyGraph()
-
-	// Start with directly changed modules
-	result := make(map[string]bool)
-	for _, m := range changedModules {
-		result[m] = true
-	}
-
-	// Recursively add all transitive dependents
-	for _, changedModule := range changedModules {
-		addTransitiveDependentsLocal(changedModule, dependentsGraph, result)
-	}
-
-	// Convert to sorted slice for consistent output
-	modules := make([]string, 0, len(result))
-	for m := range result {
-		modules = append(modules, m)
-	}
-	sort.Strings(modules)
-
-	return modules
-}
-
-// addTransitiveDependentsLocal recursively adds all modules that depend on the given module
-func addTransitiveDependentsLocal(module string, dependentsGraph map[string][]string, result map[string]bool) {
-	for _, dependent := range dependentsGraph[module] {
-		if !result[dependent] {
-			result[dependent] = true
-			addTransitiveDependentsLocal(dependent, dependentsGraph, result)
 		}
 	}
 }

@@ -366,7 +366,7 @@ func (c *EACConfig) LoadRepository(validateSchema bool) error {
 						Build:    "out/build",
 						Test:     "out/test",
 						Logs:     "out/logs",
-						Security: "out/security",
+						Scan:     "out/scan",
 						Tools:    "out/tools",
 					},
 				},

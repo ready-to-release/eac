@@ -5,17 +5,14 @@
 // Long: including each book's name, description, and source counts.
 // Long: Books aggregate static content with dynamically-generated content
 // Long: from EAC commands for MkDocs documentation sites.
-// Long: Use --format json for machine-readable output.
 // Long:
 // Long: Expected Output:
 // Long: - Table with columns: Name, Output, Modules, Description, Copy (count), Cmd (count), Inline (count)
 // Long: - Each row shows a book with its source counts and which modules reference it
-// Flag.format: type=string, default=table, usage=Output format (table, json)
-// Usage: show books [--format <format>]
+// Usage: show books
 package show
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 
@@ -28,16 +25,6 @@ import (
 
 func init() {
 	registry.Register(ShowBooks)
-}
-
-// BookInfo represents book information for JSON output
-type BookInfo struct {
-	Name        string   `json:"name"`
-	Title       string   `json:"title"`
-	Description string   `json:"description"`
-	Output      string   `json:"output"`
-	Filename    string   `json:"filename"`
-	Modules     []string `json:"modules"`
 }
 
 // ShowBooks displays all configured books in a table format
@@ -79,10 +66,6 @@ func ShowBooks() int {
 	}
 
 	if cfg.Books == nil || len(cfg.Books.Books) == 0 {
-		if format == "json" {
-			fmt.Println("[]")
-			return 0
-		}
 		fmt.Println("No books configured")
 		fmt.Println("")
 		fmt.Println("Create .r2r/eac/books.yml to define books.")
@@ -99,12 +82,7 @@ func ShowBooks() int {
 		}
 	}
 
-	// JSON output
-	if format == "json" {
-		return outputBooksJSON(cfg, bookToModules)
-	}
-
-	// Table output (default)
+	// Table output
 	tb := render.NewTableBuilder().
 		WithHeaders("Name", "Output", "Modules", "Description", "Copy", "Cmd", "Inline")
 
@@ -140,49 +118,5 @@ func ShowBooks() int {
 	}
 
 	fmt.Println(tb.Build())
-	return 0
-}
-
-// outputBooksJSON outputs books in JSON format
-func outputBooksJSON(cfg *config.EACConfig, bookToModules map[string][]string) int {
-	var books []BookInfo
-
-	for _, book := range cfg.Books.Books {
-		modules := bookToModules[book.Name]
-		if modules == nil {
-			modules = []string{}
-		}
-
-		// Determine filename based on output format
-		filename := book.Name
-		output := book.GetOutput()
-		if output == "site" {
-			filename = "" // HTML site, no single file
-		} else if output == "pdf-dark" || output == "pdf-light" {
-			// PDF output: {name}-{theme}.pdf
-			theme := "dark"
-			if output == "pdf-light" {
-				theme = "light"
-			}
-			filename = fmt.Sprintf("%s-%s.pdf", book.Name, theme)
-		}
-
-		books = append(books, BookInfo{
-			Name:        book.Name,
-			Title:       book.Title,
-			Description: book.Description,
-			Output:      output,
-			Filename:    filename,
-			Modules:     modules,
-		})
-	}
-
-	jsonBytes, err := json.MarshalIndent(books, "", "  ")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to marshal books to JSON: %v\n", err)
-		return 1
-	}
-
-	fmt.Println(string(jsonBytes))
 	return 0
 }

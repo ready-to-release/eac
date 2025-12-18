@@ -18,9 +18,11 @@ import (
 	"path/filepath"
 	"time"
 
+	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
 func init() {
@@ -38,22 +40,18 @@ func ShowTestSummary() int {
 	args := os.Args[3:] // Skip program name, "show", and "test-summary"
 
 	if len(args) < 2 {
-		log.Errorf("Usage: show test-summary <module> <suite> [--status=success|failure] [--run-id=<id>]")
+		log.Errorf("Usage: show test-summary <module> <suite> [--run-id=<id>]")
 		return 1
 	}
 
 	module := args[0]
 	suite := args[1]
-	status := flags.GetFlagValue(args, "--status")
-	if status == "" {
-		status = "success"
-	}
 	runID := flags.GetFlagValue(args, "--run-id")
 
-	return generateTestSummary(module, suite, status, runID)
+	return generateTestSummary(module, suite, runID)
 }
 
-func generateTestSummary(moduleName, suite, status, runID string) int {
+func generateTestSummary(moduleName, suite, runID string) int {
 	startTime := time.Now()
 
 	// Load configuration
@@ -69,6 +67,9 @@ func generateTestSummary(moduleName, suite, status, runID string) int {
 		log.Errorf("module not found: %s", moduleName)
 		return 1
 	}
+
+	// Derive status from test manifest
+	status := deriveTestStatus(cfg, moduleName)
 
 	// Create formatter
 	formatter := NewSummaryFormatter(moduleName, status)
@@ -279,4 +280,32 @@ func testConfigSection(f *SummaryFormatter, module *config.Module, suite string,
 	configDetails += fmt.Sprintf("- %s: %s\n", Bold("Output"), Code(cfg.Repository.TestModuleDir(module.Moniker)))
 
 	return f.CollapsibleSection(Emoji("config")+" Test Configuration", configDetails)
+}
+
+// deriveTestStatus determines test status from manifest.
+// Status is derived as:
+// - "success" if manifest exists and AllPassed() returns true
+// - "failure" if manifest is missing or has failures
+func deriveTestStatus(cfg *config.EACConfig, moduleName string) string {
+	// Get workspace root for absolute path
+	workspaceRoot, err := repository.GetRepositoryRoot("")
+	if err != nil {
+		// Can't find workspace root - assume failure
+		return "failure"
+	}
+
+	// Load test manifest
+	moduleTestDir := filepath.Join(workspaceRoot, cfg.Repository.TestModuleDir(moduleName))
+	manifest, err := implinternal.LoadTestManifest(moduleTestDir)
+	if err != nil {
+		// No manifest = failure
+		return "failure"
+	}
+
+	// Check if all tests passed
+	if manifest.AllPassed() {
+		return "success"
+	}
+
+	return "failure"
 }

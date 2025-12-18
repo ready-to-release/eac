@@ -11,19 +11,14 @@ import (
 func TestFindLatestSecurityScan(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	// Create out/security/billing/vuln directory structure
-	// (using default security path from contract defaults)
-	vulnDir := filepath.Join(tmpDir, "out", "security", "billing", "vuln")
-	os.MkdirAll(vulnDir, 0755)
+	// Create out/scan/billing directory structure
+	// (using default scan path from contract defaults)
+	scanDir := filepath.Join(tmpDir, "out", "scan", "billing")
+	os.MkdirAll(scanDir, 0755)
 
-	// Create security scan files with timestamps
-	scan1 := filepath.Join(vulnDir, "2024-01-01T10-00-00Z.json")
-	scan2 := filepath.Join(vulnDir, "2024-01-02T10-00-00Z.json")
-	scan3 := filepath.Join(vulnDir, "2024-01-03T10-00-00Z.json")
-
-	os.WriteFile(scan1, []byte(`{"Results":[]}`), 0644)
-	os.WriteFile(scan2, []byte(`{"Results":[]}`), 0644)
-	os.WriteFile(scan3, []byte(`{"Results":[]}`), 0644)
+	// Create security scan file (single file per scanner type)
+	vulnFile := filepath.Join(scanDir, "vuln.json")
+	os.WriteFile(vulnFile, []byte(`{"Results":[]}`), 0644)
 
 	tests := []struct {
 		name        string
@@ -34,11 +29,11 @@ func TestFindLatestSecurityScan(t *testing.T) {
 		wantErr     bool
 	}{
 		{
-			name:        "find latest vuln scan",
+			name:        "find vuln scan",
 			repoRoot:    tmpDir,
 			moduleName:  "billing",
 			scannerType: ScannerVuln,
-			wantFile:    scan3,
+			wantFile:    vulnFile,
 			wantErr:     false,
 		},
 		{
@@ -86,14 +81,12 @@ func TestFindSecurityResultsForModule(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create security scan files for billing module
-	// (using default security path from contract defaults)
-	vulnDir := filepath.Join(tmpDir, "out", "security", "billing", "vuln")
-	sbomDir := filepath.Join(tmpDir, "out", "security", "billing", "sbom")
-	os.MkdirAll(vulnDir, 0755)
-	os.MkdirAll(sbomDir, 0755)
+	// (using default scan path from contract defaults)
+	scanDir := filepath.Join(tmpDir, "out", "scan", "billing")
+	os.MkdirAll(scanDir, 0755)
 
-	vulnFile := filepath.Join(vulnDir, "2024-01-01T10-00-00Z.json")
-	sbomFile := filepath.Join(sbomDir, "2024-01-01T10-00-00Z.json")
+	vulnFile := filepath.Join(scanDir, "vuln.json")
+	sbomFile := filepath.Join(scanDir, "sbom.json")
 	os.WriteFile(vulnFile, []byte(`{"Results":[]}`), 0644)
 	os.WriteFile(sbomFile, []byte(`{"Results":[]}`), 0644)
 

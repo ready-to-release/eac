@@ -41,7 +41,7 @@ permissions:
   actions: read
 
 jobs:
-  ci:
+  ci-r2r-installer:
     uses: ./.github/workflows/_module-ci.yaml
     with:
       module: r2r-installer

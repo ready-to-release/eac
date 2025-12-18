@@ -12,7 +12,7 @@
 #   - sast: Static Application Security Testing (Semgrep)
 #   - zap: Dynamic Application Security Testing (OWASP ZAP)
 #
-# Output structure: out/security/<module>/<scanner>/
+# Output structure: out/scan/<module>/<scanner>/
 #
 # Usage:
 #   - uses: ./.github/actions/scan-module
@@ -99,6 +99,9 @@ runs:
           echo "build-artifact-name=build-artifacts-${MODULE}" >> $GITHUB_OUTPUT
         fi
 
+        # Build artifact path - download to out/build/<module>/ to match build-module upload
+        echo "build-artifact-path=out/build/${MODULE}/" >> $GITHUB_OUTPUT
+
         # Scan results artifact name
         echo "scan-artifact-name=scan-results-${MODULE}" >> $GITHUB_OUTPUT
 
@@ -108,7 +111,7 @@ runs:
       uses: actions/download-artifact@v7
       with:
         name: ${{ steps.vars.outputs.build-artifact-name }}
-        path: out/build/
+        path: ${{ steps.vars.outputs.build-artifact-path }}
 
     - name: Run Scans
       id: scan
@@ -125,42 +128,39 @@ runs:
         echo "Failure mode: $FAIL_ON_ERROR"
         echo ""
 
-        mkdir -p out/security/$MODULE
+        mkdir -p out/scan/$MODULE
 
         scan_failed=false
         scans_run=""
         failed_scans=""
 
-        IFS=',' read -ra SCAN_ARRAY <<< "$SCANS"
-        for scan in "${SCAN_ARRAY[@]}"; do
-          scan=$(echo "$scan" | xargs)  # trim whitespace
+        # Run scan command with module and all scanners
+        # Usage: scan <module> --scanner <types>
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "Running scans: $SCANS"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "Running scan: $scan"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        if $COMMANDS scan $MODULE --scanner "$SCANS" --no-tui $EXTRA_ARGS; then
+          echo "✓ scans completed"
+          scans_run="$SCANS"
+        else
+          echo "✗ scans failed"
+          scan_failed=true
+          failed_scans="$SCANS"
 
-          if $COMMANDS scan $scan $MODULE $EXTRA_ARGS; then
-            echo "✓ $scan completed"
-            scans_run="$scans_run,$scan"
-          else
-            echo "✗ $scan failed"
-            scan_failed=true
-            failed_scans="$failed_scans $scan"
-
-            case "$FAIL_ON_ERROR" in
-              error)
-                echo "::error::Scan '$scan' failed for $MODULE"
-                ;;
-              warn)
-                echo "::warning::Scan '$scan' failed for $MODULE"
-                ;;
-              ignore)
-                # Silent
-                ;;
-            esac
-          fi
-          echo ""
-        done
+          case "$FAIL_ON_ERROR" in
+            error)
+              echo "::error::Scans failed for $MODULE"
+              ;;
+            warn)
+              echo "::warning::Scans failed for $MODULE"
+              ;;
+            ignore)
+              # Silent
+              ;;
+          esac
+        fi
+        echo ""
 
         # Remove leading comma
         scans_run="${scans_run#,}"
@@ -181,7 +181,7 @@ runs:
       uses: actions/upload-artifact@v6
       with:
         name: ${{ steps.vars.outputs.scan-artifact-name }}
-        path: out/security/
+        path: out/scan/
         if-no-files-found: warn
 
     - name: Scan Summary
@@ -190,22 +190,9 @@ runs:
       env:
         COMMANDS: ${{ steps.commands.outputs.commands-path }}
         MODULE: ${{ inputs.module }}
-        SCANS: ${{ inputs.scans }}
-        SCAN_FAILED: ${{ steps.scan.outputs.scan-failed }}
-        FAILED_SCANS: ${{ steps.scan.outputs.failed-scans }}
         ARTIFACT_NAME: ${{ steps.vars.outputs.scan-artifact-name }}
       run: |
-        # Determine status
-        if [ "$SCAN_FAILED" = "true" ]; then
-          STATUS="failure"
-        else
-          STATUS="success"
-        fi
-
         # Generate summary using Go command
+        # Status is derived from scan manifest (success if all scans passed)
         # Note: Diagnostic links are handled centrally by _module-ci.yaml on failure
-        $COMMANDS show scan-summary "$MODULE" \
-          --scans="$SCANS" \
-          --failed-scans="$FAILED_SCANS" \
-          --artifact-name="$ARTIFACT_NAME" \
-          --status="$STATUS" >> $GITHUB_STEP_SUMMARY
+        $COMMANDS show scan-summary "$MODULE" --artifact-name="$ARTIFACT_NAME" >> $GITHUB_STEP_SUMMARY

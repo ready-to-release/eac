@@ -47,6 +47,8 @@ func ShowReleaseSummary() int {
 		case arg == "--layers" && i+1 < len(os.Args):
 			layersJSON = os.Args[i+1]
 			i++
+		case strings.HasPrefix(arg, "--layers="):
+			layersJSON = strings.TrimPrefix(arg, "--layers=")
 		}
 	}
 

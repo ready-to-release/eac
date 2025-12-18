@@ -10,7 +10,7 @@ Feature: security_sbom
     Scenario: Generate SBOM for single module with mocked tool
       When I run the command "scan sbom eac-core"
       Then the exit code is 0
-      And evidence files should exist in directory "out/security/eac-core/sbom/"
+      And evidence files should exist in directory "out/scan/eac-core/sbom/"
       And the latest evidence file should have JSON field "module" with value "eac-core"
       And the latest evidence file should have JSON field "scanner" with value "sbom"
       And the latest evidence file should have JSON field "timestamp" matching RFC3339 format

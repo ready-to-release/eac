@@ -41,7 +41,7 @@ permissions:
   actions: read
 
 jobs:
-  ci:
+  ci-implicit-r2r-cli:
     uses: ./.github/workflows/_module-ci.yaml
     with:
       module: implicit-r2r-cli

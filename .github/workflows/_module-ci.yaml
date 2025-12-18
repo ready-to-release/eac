@@ -17,7 +17,7 @@
 #
 # Usage in ci-*.yaml:
 #   jobs:
-#     ci:
+#     ci-eac-core:
 #       uses: ./.github/workflows/_module-ci.yaml
 #       with:
 #         module: eac-core
@@ -25,7 +25,7 @@
 #
 # For modules needing Windows testing:
 #   jobs:
-#     ci:
+#     ci-r2r-cli:
 #       uses: ./.github/workflows/_module-ci.yaml
 #       with:
 #         module: r2r-cli
@@ -34,7 +34,7 @@
 #
 # For container modules:
 #   jobs:
-#     ci:
+#     ci-ext-eac:
 #       uses: ./.github/workflows/_module-ci.yaml
 #       with:
 #         module: ext-eac
@@ -306,7 +306,7 @@ jobs:
   # Job C: Scan - parallel with test
   # ===========================================================================
   scan:
-    name: Security Scan
+    name: Scan
     needs: build
     if: inputs.scans != ''
     runs-on: ubuntu-latest

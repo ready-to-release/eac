@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 
 	"github.com/docker/docker/api/types/container"
-	"github.com/ready-to-release/eac/go/eac/core/logging"
-	"go.uber.org/zap"
 )
 
 // NOTE: SemgrepImage constant removed - now configured via security-tools.yml
@@ -41,20 +39,20 @@ func getDefaultMockSemgrepOutput() map[string]interface{} {
 }
 
 // RunSemgrepSAST executes Semgrep static analysis via Docker
-func RunSemgrepSAST(workspaceRoot, moduleRoot string, config string, semgrepImage string, logger *logging.Logger) (interface{}, error) {
+func RunSemgrepSAST(workspaceRoot, moduleRoot string, config string, semgrepImage string) (interface{}, error) {
 	// Check for mock output (testing only)
 	// Priority: in-process mock > environment variable mock
 	if mockSemgrepOutput != nil {
-		logger.Debug("Using mocked Semgrep output (in-process)")
+		log.Debug("Using mocked Semgrep output (in-process)")
 		return mockSemgrepOutput, nil
 	}
 	if os.Getenv("R2R_MOCK_SECURITY") != "" {
-		logger.Debug("Using mocked Semgrep output (environment)")
+		log.Debug("Using mocked Semgrep output (environment)")
 		return getDefaultMockSemgrepOutput(), nil
 	}
 
 	// Create Docker runner
-	dockerRunner, err := NewOneOffDockerRunner(logger)
+	dockerRunner, err := NewOneOffDockerRunner()
 	if err != nil {
 		return nil, err
 	}
@@ -65,22 +63,15 @@ func RunSemgrepSAST(workspaceRoot, moduleRoot string, config string, semgrepImag
 		return nil, err
 	}
 
-	logger.Info("Running Semgrep SAST scanner via Docker",
-		zap.String("moduleRoot", moduleRoot),
-		zap.String("config", config))
+	log.Infof("Running Semgrep SAST scanner via Docker: moduleRoot=%s config=%s", moduleRoot, config)
 
 	// Resolve module root relative to workspace root
 	absModuleRoot := filepath.Join(workspaceRoot, moduleRoot)
-	logger.Debug("Resolved module path",
-		zap.String("workspaceRoot", workspaceRoot),
-		zap.String("moduleRoot", moduleRoot),
-		zap.String("absolute", absModuleRoot))
+	log.Debugf("Resolved module path: workspaceRoot=%s moduleRoot=%s absolute=%s", workspaceRoot, moduleRoot, absModuleRoot)
 
 	// Convert to Docker-compatible path format (handles Windows paths)
 	dockerPath := ToDockerPath(absModuleRoot)
-	logger.Debug("Docker bind mount path",
-		zap.String("original", absModuleRoot),
-		zap.String("docker", dockerPath))
+	log.Debugf("Docker bind mount path: original=%s docker=%s", absModuleRoot, dockerPath)
 
 	// Configure container
 	containerConfig := &container.Config{
@@ -102,15 +93,14 @@ func RunSemgrepSAST(workspaceRoot, moduleRoot string, config string, semgrepImag
 	// Run container and capture output
 	output, err := dockerRunner.RunContainer(containerConfig, hostConfig)
 	if err != nil {
-		logger.Error("Semgrep SAST scan failed", zap.Error(err))
+		log.Errorf("Semgrep SAST scan failed: %v", err)
 		return nil, fmt.Errorf("semgrep sast failed: %w", err)
 	}
 
 	// Strip Docker log headers if present
 	cleanOutput := stripDockerLogHeaders(output)
 
-	logger.Debug("Semgrep SAST scan completed",
-		zap.Int("outputSize", len(cleanOutput)))
+	log.Debugf("Semgrep SAST scan completed: outputSize=%d", len(cleanOutput))
 
 	// Parse JSON output
 	var findings interface{}
