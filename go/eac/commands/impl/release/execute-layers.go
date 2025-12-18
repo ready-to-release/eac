@@ -154,13 +154,13 @@ func ReleaseExecuteLayers() int {
 			}
 
 			if dryRun {
-				log.Infof("  [%s] (dry-run) Would dispatch %s", mod.Module, workflow)
+				log.Infof("  [%s] (dry-run) Would dispatch %s with version=%s", mod.Module, workflow, mod.Version)
 				continue
 			}
 
-			// Dispatch workflow
+			// Dispatch workflow with version input
 			log.Infof("  [%s] Dispatching %s", mod.Module, workflow)
-			runID, err := dispatchAndGetRunID(workspaceRoot, workflow)
+			runID, err := dispatchAndGetRunID(workspaceRoot, workflow, mod.Version)
 			if err != nil {
 				log.Errorf("  [%s] Error dispatching workflow: %v", mod.Module, err)
 				failedModules = append(failedModules, mod.Module)
@@ -207,9 +207,15 @@ func ReleaseExecuteLayers() int {
 }
 
 // dispatchAndGetRunID dispatches a workflow and returns the run ID
-func dispatchAndGetRunID(workspaceRoot, workflow string) (string, error) {
-	// Dispatch the workflow
-	cmd := exec.Command("gh", "workflow", "run", workflow)
+func dispatchAndGetRunID(workspaceRoot, workflow, version string) (string, error) {
+	// Dispatch the workflow with version input
+	// Note: version is required for semver releases (r2r-cli, ext-eac)
+	// but not for calver releases (books, docs) which auto-generate versions
+	args := []string{"workflow", "run", workflow}
+	if version != "" {
+		args = append(args, "-f", fmt.Sprintf("version=%s", version))
+	}
+	cmd := exec.Command("gh", args...)
 	cmd.Dir = workspaceRoot
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return "", fmt.Errorf("dispatch failed: %s: %w", strings.TrimSpace(string(output)), err)
