@@ -99,6 +99,9 @@ runs:
           echo "build-artifact-name=build-artifacts-${MODULE}" >> $GITHUB_OUTPUT
         fi
 
+        # Build artifact path - download to out/build/<module>/ to match build-module upload
+        echo "build-artifact-path=out/build/${MODULE}/" >> $GITHUB_OUTPUT
+
         # Scan results artifact name
         echo "scan-artifact-name=scan-results-${MODULE}" >> $GITHUB_OUTPUT
 
@@ -108,7 +111,7 @@ runs:
       uses: actions/download-artifact@v7
       with:
         name: ${{ steps.vars.outputs.build-artifact-name }}
-        path: out/build/
+        path: ${{ steps.vars.outputs.build-artifact-path }}
 
     - name: Run Scans
       id: scan

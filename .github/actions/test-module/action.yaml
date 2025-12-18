@@ -102,7 +102,8 @@ runs:
         if [ -n "$INPUT_BUILD_ARTIFACT_PATH" ]; then
           echo "build-artifact-path=$INPUT_BUILD_ARTIFACT_PATH" >> $GITHUB_OUTPUT
         else
-          echo "build-artifact-path=out/build/" >> $GITHUB_OUTPUT
+          # Download to out/build/<module>/ to match build-module upload path
+          echo "build-artifact-path=out/build/${MODULE}/" >> $GITHUB_OUTPUT
         fi
 
         # Results artifact settings
