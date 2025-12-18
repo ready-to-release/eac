@@ -47,7 +47,7 @@ jobs:
         with:
           module: r2r-cli
           skip-ci-check: ${{ inputs.skip-ci-check || 'false' }}
-          timeout: '300'
+          timeout: '600'
 
   release:
     name: Build & Publish
