@@ -353,7 +353,8 @@ func checkModuleCIStatusPerModule(module, headSHA, prBase, workspaceRoot string,
 	}
 }
 
-// filterFilesForModule returns files that affect a given module (directly or via dependencies).
+// filterFilesForModule returns files that are directly owned by a given module.
+// This only returns files that the module directly owns, NOT files that affect it via dependencies.
 func filterFilesForModule(files []string, module, workspaceRoot string, ciExcludedFiles map[string]bool) []string {
 	// First filter out CI-excluded files
 	filteredFiles := filterOutCIExcludedFiles(files, ciExcludedFiles)
@@ -362,27 +363,16 @@ func filterFilesForModule(files []string, module, workspaceRoot string, ciExclud
 		return []string{}
 	}
 
-	// Get modules affected by these files (including transitive dependents)
-	affectedModules, err := repository.GetModulesRequiringRebuild(filteredFiles, workspaceRoot)
+	// Get files directly owned by this module (not transitive)
+	directFiles, err := getFilesByModule(filteredFiles, workspaceRoot)
 	if err != nil {
-		// On error, assume all files affect this module
-		return filteredFiles
+		return []string{}
 	}
 
-	// Check if our module is in the affected set
-	for _, affected := range affectedModules {
-		if affected == module {
-			// Module is affected - return the files that directly belong to it
-			directFiles, _ := getFilesByModule(filteredFiles, workspaceRoot)
-			if moduleFiles, ok := directFiles[module]; ok {
-				return moduleFiles
-			}
-			// If we can't determine direct files, return all (conservative)
-			return filteredFiles
-		}
+	if moduleFiles, ok := directFiles[module]; ok {
+		return moduleFiles
 	}
 
-	// Module not affected by these files
 	return []string{}
 }
 
