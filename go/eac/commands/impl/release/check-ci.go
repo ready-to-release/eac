@@ -123,6 +123,7 @@ func ReleaseCheckCI() int {
 	lastStatus := ""
 	noCIFoundCount := 0
 	chainCompletedCount := 0
+	inheritanceChecked := false // Only check inheritance once
 	const noCIFoundThreshold = 4      // After 4 checks (~60s), fail fast if no CI exists
 	const chainCompletedThreshold = 2 // After 2 checks (~30s), confirm chain really completed (runner startup buffer)
 
@@ -171,8 +172,40 @@ func ReleaseCheckCI() int {
 		}
 
 		// ===========================================
-		// Question 2: Should we keep waiting?
-		// Module CI not found - check if CI chain is in progress
+		// Question 2: Can we inherit from previous CI?
+		// Try inheritance FIRST before waiting for CI chain (only check once)
+		// ===========================================
+		if !inheritanceChecked {
+			inheritanceChecked = true
+			workspaceRoot, rootErr := repository.GetRepositoryRoot("")
+			if rootErr == nil {
+				canInherit, inheritedCI, inheritMsg := canInheritCIFromPrevious(moduleName, workflow, commitSHA, workspaceRoot)
+				if canInherit {
+					log.Infof("")
+					log.Infof("✓ %s", inheritMsg)
+					// Export CI run info to GitHub Actions environment
+					if ghEnv := os.Getenv("GITHUB_ENV"); ghEnv != "" {
+						if f, err := os.OpenFile(ghEnv, os.O_APPEND|os.O_WRONLY, 0644); err == nil {
+							fmt.Fprintf(f, "INHERITED_CI_SHA=%s\n", inheritedCI.SHA)
+							f.Close()
+						}
+					}
+					exportCIRunInfo(inheritedCI.RunID, inheritedCI.SHA)
+					return 0
+				}
+				// If we have a specific reason why we can't inherit, fail fast
+				if inheritMsg != "" {
+					log.Infof("")
+					log.Infof("✗ Cannot inherit CI: %s", inheritMsg)
+					log.Infof("  Manually trigger: gh workflow run %s", workflow)
+					return 1
+				}
+			}
+		}
+
+		// ===========================================
+		// Question 3: Should we keep waiting?
+		// Module CI not found and can't inherit - check if CI chain is in progress
 		// ===========================================
 		chainStatus, chainErr := getCIChainStatus(commitSHA)
 		if chainErr != nil {
@@ -186,41 +219,9 @@ func ReleaseCheckCI() int {
 			noCIFoundCount = 0      // Reset - CI is happening
 			chainCompletedCount = 0 // Reset - chain is still running
 		} else if chainStatus.completed {
-			// CI chain appears completed but our module CI wasn't triggered
-			// Wait a bit longer to account for GitHub runner startup delays
+			// CI chain completed but our module wasn't triggered and we couldn't inherit
 			chainCompletedCount++
 			if chainCompletedCount >= chainCompletedThreshold {
-				// Confirmed: chain completed but module wasn't in changed set
-				// Check if we can inherit CI from previous successful run
-				// (safe when only changelog changed for this module)
-				workspaceRoot, rootErr := repository.GetRepositoryRoot("")
-				if rootErr == nil {
-					canInherit, inheritedCI, inheritMsg := canInheritCIFromPrevious(moduleName, workflow, commitSHA, workspaceRoot)
-					if canInherit {
-						log.Infof("")
-						log.Infof("✓ %s", inheritMsg)
-						// Export CI run info to GitHub Actions environment
-						// Note: INHERITED_CI_SHA is kept for backward compatibility
-						if ghEnv := os.Getenv("GITHUB_ENV"); ghEnv != "" {
-							if f, err := os.OpenFile(ghEnv, os.O_APPEND|os.O_WRONLY, 0644); err == nil {
-								fmt.Fprintf(f, "INHERITED_CI_SHA=%s\n", inheritedCI.SHA)
-								f.Close()
-							}
-						}
-						exportCIRunInfo(inheritedCI.RunID, inheritedCI.SHA)
-						return 0
-					}
-					// If we have a specific reason why we can't inherit, show it
-					if inheritMsg != "" {
-						log.Infof("")
-						log.Infof("✗ CI chain completed but %s was not tested", moduleName)
-						log.Infof("")
-						log.Infof("  %s", inheritMsg)
-						log.Infof("  Manually trigger: gh workflow run %s", workflow)
-						return 1
-					}
-				}
-				// Default failure message
 				log.Infof("")
 				log.Infof("✗ CI chain completed but %s was not tested", moduleName)
 				log.Infof("")
