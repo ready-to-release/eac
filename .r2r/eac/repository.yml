@@ -62,6 +62,7 @@ modules:
           - scripts/sh/vscode/*.*
           - .github/workflows/_module-ci.yaml
           - .github/workflows/change-trigger.yaml
+          - .github/workflows/ci-repository.yaml
           - .github/workflows/cron-full-trigger.yaml
           - .github/workflows/codeql.yaml
           - scripts/pwsh/claude/env-setup.ps1
