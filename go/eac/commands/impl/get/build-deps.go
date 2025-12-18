@@ -1,13 +1,12 @@
 // Command: get build-deps
 // Description: Get build dependencies for a module
 // Args: module (required) - Module moniker
-//   --as-yaml: Output as YAML (default)
-//   --as-json: Output as JSON
 // Long:
 // Long: Expected Output:
 // Long: YAML list of module build dependencies, aggregated from the module and all its transitive
 // Long: dependencies. Includes system dependencies resolved from module type capabilities (e.g., go,
 // Long: node, docker) and artifact-specific requirements (e.g., upx for compression).
+// Flag.format: type=string, usage=Output format (shell, space, yaml, json)
 package get
 
 import (
