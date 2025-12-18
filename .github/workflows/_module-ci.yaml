@@ -6,11 +6,12 @@
 #   │  Build  │ (Job A)
 #   └────┬────┘
 #        │
-#   ┌────┴────┐
-#   ▼         ▼
-# ┌─────┐  ┌──────┐
-# │Test │  │ Scan │ (Jobs B & C - parallel)
-# └─────┘  └──────┘
+#   ┌────┼────────────┬────────────┐
+#   ▼    ▼            ▼            ▼
+# ┌─────┐ ┌─────────┐ ┌───────┐ ┌──────┐
+# │Test │ │ Test    │ │ Test  │ │ Scan │ (Jobs B, B2, B3, C - parallel)
+# │Linux│ │ Windows │ │ macOS │ │      │
+# └─────┘ └─────────┘ └───────┘ └──────┘
 #
 # Underscore prefix convention: internal/shared workflows that are not meant
 # to be triggered directly. This workflow is called by ci-*.yaml workflows.
@@ -31,6 +32,14 @@
 #         module: r2r-cli
 #         test-on-windows: true
 #         cross-compile-windows: true
+#
+# For modules needing macOS testing:
+#   jobs:
+#     ci-r2r-cli:
+#       uses: ./.github/workflows/_module-ci.yaml
+#       with:
+#         module: r2r-cli
+#         test-on-macos: true
 #
 # For container modules:
 #   jobs:
@@ -112,6 +121,11 @@ on:
         required: false
         type: boolean
         default: false
+      test-on-macos:
+        description: 'Also run tests on macOS'
+        required: false
+        type: boolean
+        default: false
       # Scan options
       scans:
         description: 'Security scans to run (comma-separated, empty to skip)'
@@ -145,6 +159,9 @@ on:
       test-windows-result:
         description: 'Test job result (Windows)'
         value: ${{ jobs.test-windows.result }}
+      test-macos-result:
+        description: 'Test job result (macOS)'
+        value: ${{ jobs.test-macos.result }}
       scan-result:
         description: 'Scan job result'
         value: ${{ jobs.scan.result }}
@@ -305,6 +322,49 @@ jobs:
           download-artifact: ${{ inputs.upload-build-artifact }}
 
   # ===========================================================================
+  # Job B3: Test (macOS) - optional, parallel with scan
+  # ===========================================================================
+  test-macos:
+    name: Test (macOS)
+    needs: build
+    if: inputs.test-on-macos
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Download Module Dependencies
+        if: ${{ inputs.download-modules != '' }}
+        uses: ./.github/actions/download-module-deps
+        with:
+          module: ${{ inputs.download-modules }}
+          trigger-run-id: ${{ inputs.trigger_run_id }}
+          commit-sha: ${{ inputs.sha || github.sha }}
+
+      - name: Determine test suites
+        id: suites
+        shell: bash
+        run: |
+          REF="${{ inputs.ref || github.ref }}"
+          if [[ "$REF" == refs/pull/* ]] || [[ "$REF" == *"/pull/"* ]]; then
+            echo "suites=${{ inputs.test-suites }}" >> $GITHUB_OUTPUT
+          else
+            echo "suites=${{ inputs.test-suites-full }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Test Module
+        uses: ./.github/actions/test-module
+        with:
+          module: ${{ inputs.module }}
+          trigger-run-id: ${{ inputs.trigger_run_id }}
+          suites: ${{ steps.suites.outputs.suites }}
+          results-artifact-name: test-results-${{ inputs.module }}-macos
+          skip-depm: ${{ inputs.download-modules == '' }}
+          download-artifact: ${{ inputs.upload-build-artifact }}
+
+  # ===========================================================================
   # Job C: Scan - parallel with test
   # ===========================================================================
   scan:
@@ -393,7 +453,7 @@ jobs:
   # ===========================================================================
   summary:
     name: Summary
-    needs: [build, test-linux, test-windows, container-test, scan]
+    needs: [build, test-linux, test-windows, test-macos, container-test, scan]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -411,9 +471,11 @@ jobs:
           BUILD_RESULT: ${{ needs.build.result }}
           TEST_LINUX_RESULT: ${{ needs.test-linux.result }}
           TEST_WINDOWS_RESULT: ${{ needs.test-windows.result }}
+          TEST_MACOS_RESULT: ${{ needs.test-macos.result }}
           CONTAINER_TEST_RESULT: ${{ needs.container-test.result }}
           SCAN_RESULT: ${{ needs.scan.result }}
           TEST_ON_WINDOWS: ${{ inputs.test-on-windows }}
+          TEST_ON_MACOS: ${{ inputs.test-on-macos }}
           CONTAINER: ${{ inputs.container }}
           CONTAINER_TEST_ENABLED: ${{ inputs.container-test-enabled }}
           SCANS: ${{ inputs.scans }}
@@ -433,6 +495,9 @@ jobs:
             FLAGS="$FLAGS --test-linux=$TEST_LINUX_RESULT"
             if [ "$TEST_ON_WINDOWS" = "true" ]; then
               FLAGS="$FLAGS --test-on-windows --test-windows=$TEST_WINDOWS_RESULT"
+            fi
+            if [ "$TEST_ON_MACOS" = "true" ]; then
+              FLAGS="$FLAGS --test-on-macos --test-macos=$TEST_MACOS_RESULT"
             fi
           fi
 

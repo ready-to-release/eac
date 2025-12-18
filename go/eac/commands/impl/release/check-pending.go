@@ -30,7 +30,6 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/changelog"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	"github.com/ready-to-release/eac/go/eac/core/git"
-	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
 func init() {
@@ -125,32 +124,40 @@ func ReleaseCheckPending() int {
 		return 0
 	}
 
-	// Get execution order
-	pendingMonikers := make([]string, len(allPending))
-	for i, p := range allPending {
-		pendingMonikers[i] = p.Module
-	}
+	// Build release layers using bundle-aware strategy:
+	// - Layer 0: All non-bundle releases (can run in parallel)
+	// - Layer 1: All bundle releases (must wait for dependencies)
+	//
+	// This is different from build layering which uses depends_on.
+	// For releases, only bundles need to wait because they aggregate
+	// release notes from their dependencies.
+	var layer0 []PendingModule // non-bundles
+	var layer1 []PendingModule // bundles
 
-	execPlan, err := repository.CalculateExecutionOrder(pendingMonikers, workspaceRoot, false)
-	if err != nil {
-		log.Errorf("failed to calculate execution order: %v", err)
-		return 1
-	}
-
-	// Build enriched layers
-	pendingMap := make(map[string]PendingModule)
 	for _, p := range allPending {
-		pendingMap[p.Module] = p
+		mod, exists := moduleRegistry.Get(p.Module)
+		if !exists {
+			// Module not found, treat as non-bundle
+			layer0 = append(layer0, p)
+			continue
+		}
+
+		if mod.ReleaseBundle != nil {
+			// Bundle release - must wait for dependencies
+			layer1 = append(layer1, p)
+		} else {
+			// Regular release - can run in parallel
+			layer0 = append(layer0, p)
+		}
 	}
 
-	enrichedLayers := make([][]PendingModule, len(execPlan.Layers))
-	for i, layer := range execPlan.Layers {
-		enrichedLayers[i] = make([]PendingModule, 0, len(layer))
-		for _, moniker := range layer {
-			if p, ok := pendingMap[moniker]; ok {
-				enrichedLayers[i] = append(enrichedLayers[i], p)
-			}
-		}
+	// Build enriched layers (only include non-empty layers)
+	var enrichedLayers [][]PendingModule
+	if len(layer0) > 0 {
+		enrichedLayers = append(enrichedLayers, layer0)
+	}
+	if len(layer1) > 0 {
+		enrichedLayers = append(enrichedLayers, layer1)
 	}
 
 	result := CheckPendingResult{
