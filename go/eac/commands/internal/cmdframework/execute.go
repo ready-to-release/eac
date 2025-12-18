@@ -16,6 +16,13 @@ func phaseExecute(ctx *ExecutionContext, worker WorkerFunc) error {
 		return fmt.Errorf("worker function is required")
 	}
 
+	// Early return if nothing to execute
+	monikers := ctx.GetExecutionMonikers()
+	if len(monikers) == 0 {
+		ctx.Results = []orchestrator.WorkResult{}
+		return nil
+	}
+
 	// Wrap the user's worker to match orchestrator signature
 	orchWorker := func(moniker string, logWriter io.Writer) int {
 		return worker(ctx, moniker, logWriter)
