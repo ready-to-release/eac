@@ -14,7 +14,7 @@ inputs:
     required: false
     default: ''
   run-id:
-    description: 'Run ID to download from'
+    description: 'Run ID to download from (omit to download from current run)'
     required: false
     default: ''
   github-token:
@@ -25,8 +25,10 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Download Artifact (attempt 1)
-      id: download1
+    # When run-id IS provided - download from specific run
+    - name: Download Artifact (attempt 1, cross-run)
+      id: download1-cross
+      if: inputs.run-id != ''
       uses: actions/download-artifact@v7
       continue-on-error: true
       with:
@@ -35,16 +37,16 @@ runs:
         run-id: ${{ inputs.run-id }}
         github-token: ${{ inputs.github-token || github.token }}
 
-    - name: Wait before retry
-      if: steps.download1.outcome == 'failure'
+    - name: Wait before retry (cross-run)
+      if: inputs.run-id != '' && steps.download1-cross.outcome == 'failure'
       shell: bash
       run: |
         echo "Download failed, waiting 10s before retry..."
         sleep 10
 
-    - name: Retry Download (attempt 2)
-      id: download2
-      if: steps.download1.outcome == 'failure'
+    - name: Retry Download (attempt 2, cross-run)
+      id: download2-cross
+      if: inputs.run-id != '' && steps.download1-cross.outcome == 'failure'
       uses: actions/download-artifact@v7
       continue-on-error: true
       with:
@@ -53,19 +55,60 @@ runs:
         run-id: ${{ inputs.run-id }}
         github-token: ${{ inputs.github-token || github.token }}
 
-    - name: Wait before retry
-      if: steps.download1.outcome == 'failure' && steps.download2.outcome == 'failure'
+    - name: Wait before final retry (cross-run)
+      if: inputs.run-id != '' && steps.download1-cross.outcome == 'failure' && steps.download2-cross.outcome == 'failure'
       shell: bash
       run: |
         echo "Download failed again, waiting 30s before final retry..."
         sleep 30
 
-    - name: Retry Download (attempt 3)
-      id: download3
-      if: steps.download1.outcome == 'failure' && steps.download2.outcome == 'failure'
+    - name: Retry Download (attempt 3, cross-run)
+      id: download3-cross
+      if: inputs.run-id != '' && steps.download1-cross.outcome == 'failure' && steps.download2-cross.outcome == 'failure'
       uses: actions/download-artifact@v7
       with:
         name: ${{ inputs.name }}
         path: ${{ inputs.path }}
         run-id: ${{ inputs.run-id }}
         github-token: ${{ inputs.github-token || github.token }}
+
+    # When run-id is NOT provided - download from current run
+    - name: Download Artifact (attempt 1, current run)
+      id: download1-current
+      if: inputs.run-id == ''
+      uses: actions/download-artifact@v7
+      continue-on-error: true
+      with:
+        name: ${{ inputs.name }}
+        path: ${{ inputs.path }}
+
+    - name: Wait before retry (current run)
+      if: inputs.run-id == '' && steps.download1-current.outcome == 'failure'
+      shell: bash
+      run: |
+        echo "Download failed, waiting 10s before retry..."
+        sleep 10
+
+    - name: Retry Download (attempt 2, current run)
+      id: download2-current
+      if: inputs.run-id == '' && steps.download1-current.outcome == 'failure'
+      uses: actions/download-artifact@v7
+      continue-on-error: true
+      with:
+        name: ${{ inputs.name }}
+        path: ${{ inputs.path }}
+
+    - name: Wait before final retry (current run)
+      if: inputs.run-id == '' && steps.download1-current.outcome == 'failure' && steps.download2-current.outcome == 'failure'
+      shell: bash
+      run: |
+        echo "Download failed again, waiting 30s before final retry..."
+        sleep 30
+
+    - name: Retry Download (attempt 3, current run)
+      id: download3-current
+      if: inputs.run-id == '' && steps.download1-current.outcome == 'failure' && steps.download2-current.outcome == 'failure'
+      uses: actions/download-artifact@v7
+      with:
+        name: ${{ inputs.name }}
+        path: ${{ inputs.path }}
