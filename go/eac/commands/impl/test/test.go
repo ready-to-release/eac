@@ -23,6 +23,7 @@
 // Flag.suite: type=string, usage=Filter tests by suite (default: non-extended suites from config)
 // Flag.coverage: type=bool, usage=Enable coverage reporting
 // Flag.skip-deps: type=bool, usage=Skip dependency checks before running tests
+// Flag.skip-depm: type=bool, usage=Skip module dependency build artifact validation
 // Flag.list-only: type=bool, usage=List tests without running them
 // Flag.timings: type=bool, usage=Show detailed timing summary after tests complete
 // Flag.debug: type=bool, usage=Enable debug logs to console (file logging always enabled)
