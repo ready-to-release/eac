@@ -259,6 +259,7 @@ jobs:
           suites: ${{ steps.suites.outputs.suites }}
           results-artifact-name: test-results-${{ inputs.module }}-linux
           skip-depm: ${{ inputs.download-modules == '' }}
+          download-artifact: ${{ inputs.upload-build-artifact }}
 
   # ===========================================================================
   # Job B2: Test (Windows) - optional, parallel with scan
@@ -301,6 +302,7 @@ jobs:
           suites: ${{ steps.suites.outputs.suites }}
           results-artifact-name: test-results-${{ inputs.module }}-windows
           skip-depm: ${{ inputs.download-modules == '' }}
+          download-artifact: ${{ inputs.upload-build-artifact }}
 
   # ===========================================================================
   # Job C: Scan - parallel with test
