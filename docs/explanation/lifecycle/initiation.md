@@ -1,4 +1,5 @@
 # Initiation
+
 The initiation process evaluates whether good ideas are truly great ideas using **Design Thinking**, where user researchers and designers collaborate iteratively to assess three key criteria:
 
 - **Feasibility:** Can it be developed with available technology, skills, and resources?

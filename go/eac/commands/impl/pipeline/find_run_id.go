@@ -1,6 +1,5 @@
 // Command: pipeline find-run-id
 // Short: Find workflow run ID by SHA
-// Flags:
 //   --workflow <name>: Workflow file name (required)
 //   --sha <sha>: HEAD SHA to find (required)
 //   --status <status>: Filter by status (optional, e.g., success)

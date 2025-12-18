@@ -27,6 +27,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/changelog"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
@@ -54,7 +55,14 @@ type ValidationReport struct {
 	AllValid bool               `json:"all_valid"`
 }
 
+
 func ReleaseValidate() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		validateLog.Errorf("%v", err)
+		return 1
+	}
+
 	// Parse flags
 	module := ""
 	checkAll := false

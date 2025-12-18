@@ -1,6 +1,7 @@
 nav:
   - index.md
   - architecture.md
+  - cli-vs-extensions.md
   - viewing-architecture.md
   - modules.md
   - dependency-system.md

@@ -1,4 +1,5 @@
 # Making Your First Release
+
 **Status:** Placeholder - Content coming soon
 
 **Prerequisites:** [Working with Git Worktrees](./working-with-worktrees.md), completed feature ready to release
@@ -135,6 +136,7 @@ Understanding commit message format:
 ```
 
 Types:
+
 - `feat`: New feature (MINOR)
 - `fix`: Bug fix (PATCH)
 - `docs`: Documentation changes

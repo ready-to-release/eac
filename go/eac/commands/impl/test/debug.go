@@ -27,10 +27,12 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/test/internal/cucumber"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/test/internal/testjson"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
+// commandFlags defines valid flags for the test debug command
 // ansiRegex matches ANSI escape sequences for color/formatting
 var ansiRegex = regexp.MustCompile(`\x1b\[[0-9;]*m`)
 
@@ -50,6 +52,12 @@ type Failure struct {
 
 // TestDebug parses test results and lists all failures
 func TestDebug() int {
+	// Validate flags
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	workspaceRoot, err := registry.GetWorkspaceRoot()
 	if err != nil {
 		log.Errorf("failed to get workspace root: %v", err)

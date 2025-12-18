@@ -38,9 +38,11 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 )
 
+// commandFlags defines valid flags for the templates install command
 func init() {
 	registry.Register(TemplatesInstall)
 }
@@ -48,6 +50,12 @@ func init() {
 // TemplatesInstall is the base handler for templates install commands
 // It handles unknown template names and shows helpful error messages
 func TemplatesInstall() int {
+	// Validate flags
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	// Check if a template name was provided
 	// Args: [binary, "templates", "install", <template-name>, ...flags]
 	if len(os.Args) < 4 {

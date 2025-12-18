@@ -1,4 +1,5 @@
 # Event Storming Formats
+>
 > **Big Picture, Process Modeling, and Software Design formats**
 
 Event Storming has three formats, each serving a different purpose.

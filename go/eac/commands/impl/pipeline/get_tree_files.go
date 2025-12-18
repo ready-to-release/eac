@@ -1,6 +1,5 @@
 // Command: pipeline get-tree-files
 // Short: Get repository file list from GitHub Trees API
-// Flags:
 //   --sha <sha>: Tree SHA to fetch (default: HEAD)
 // Long:
 // Long: Fetches the list of all files in the repository at a given SHA using

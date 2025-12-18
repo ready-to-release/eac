@@ -1,4 +1,5 @@
 # Organizing Rules
+>
 > **Rule blocks and measurable acceptance criteria**
 
 Rules define acceptance criteria - the conditions that must be satisfied for a feature to be accepted.
@@ -31,6 +32,7 @@ Rule: Error handling works correctly
 ```
 
 **Problems**:
+
 - Subjective ("user-friendly", "acceptable")
 - Not measurable
 - Unclear success criteria
@@ -46,6 +48,7 @@ Rule: Missing configuration file displays error with path and suggestion
 ```
 
 **Why these are good**:
+
 - Objective and testable
 - Specific metrics when relevant
 - Clear pass/fail criteria
@@ -76,6 +79,7 @@ Large Rule count suggests the feature does too much. Features should have a focu
 ### Maintainability
 
 Smaller features are easier to:
+
 - Review and understand
 - Update when requirements change
 - Test thoroughly
@@ -110,6 +114,7 @@ Feature: project_validation
 ```
 
 **Problems**:
+
 - Too many concerns in one feature
 - Hard to understand at a glance
 - Long test execution time
@@ -138,6 +143,7 @@ Feature: project_security-validation
 ```
 
 **Benefits**:
+
 - Each feature has a clear focus
 - Easier to understand and review
 - Faster test execution (can run in parallel)

@@ -227,9 +227,15 @@ func CreateRiskProfile() int {
 	return 0
 }
 
+
 // parseConfig parses command line configuration.
 func parseConfig() (*Config, error) {
 	args := os.Args[3:] // Skip program name, "create", and "risk-profile"
+
+	// Validate flags before parsing
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		return nil, err
+	}
 
 	config := &Config{
 		CatalogURL: oscal.NIST80053Rev5CatalogURL,

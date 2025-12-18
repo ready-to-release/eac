@@ -37,28 +37,15 @@ func init() {
 	registry.Register(ShowWorkspaces)
 }
 
-// Intent: List all workspaces (git worktrees) with their status
-//
-// Design (Three Rules of Vibe Coding):
-//
-// Easy to understand:
-//   - Clear flow: validate → get worktrees → format → display
-//   - Table-based output for easy scanning
-//   - Status indicators (clean/dirty) are self-explanatory
-//
-// Easy to change:
-//   - Formatting isolated in buildWorktreeTable function
-//   - Verbose mode easily extended with additional columns
-//   - Uses shared worktree utilities
-//
-// Hard to break:
-//   - Validates git repo before proceeding
-//   - Handles empty worktree list
-//   - Clear error messages for failure cases
-
 // ShowWorkspaces displays all git worktrees in a formatted table
 func ShowWorkspaces() int {
 	cmdStart := time.Now()
+
+	// Validate flags before parsing
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
 
 	// Phase 1: Parse configuration
 	phase1Start := time.Now()

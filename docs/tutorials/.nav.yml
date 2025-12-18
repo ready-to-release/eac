@@ -5,6 +5,7 @@ nav:
   - Getting Started:
     - getting-started/index.md
     - Quick Start: getting-started/quick-start.md
+    - Understanding Configuration Files: getting-started/configuration-files.md
     - Your First Specification: getting-started/first-specification.md
     - Your First Module: getting-started/first-module.md
     - Understanding Test Suites: getting-started/understanding-test-suites.md

@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -439,18 +440,16 @@ func (c *EACConfig) LoadModuleTypes(validateSchema bool) error {
 	return nil
 }
 
-// LoadEnvironments loads the environments configuration (optional).
+// LoadEnvironments loads the environments configuration with fallback to system defaults.
 func (c *EACConfig) LoadEnvironments(validateSchema bool) error {
-	// Check if file exists - it's optional
-	envsPath := filepath.Join(c.ConfigRoot, EnvironmentsFileName)
-	if _, err := os.Stat(envsPath); os.IsNotExist(err) {
-		// Initialize empty config to guarantee non-nil
-		c.Environments = &EnvironmentsConfig{}
-		return nil
-	}
-
-	data, err := c.readConfigFile(EnvironmentsFileName)
+	// Try loading with fallback (user override → system default)
+	data, err := c.readConfigFileWithFallback(EnvironmentsFileName)
 	if err != nil {
+		// If file not found in either location, use empty config
+		if os.IsNotExist(err) || (err != nil && os.IsNotExist(err)) {
+			c.Environments = &EnvironmentsConfig{}
+			return nil
+		}
 		return err
 	}
 
@@ -469,18 +468,16 @@ func (c *EACConfig) LoadEnvironments(validateSchema bool) error {
 	return nil
 }
 
-// LoadTestingTags loads the testing-tags configuration (optional).
+// LoadTestingTags loads the testing-tags configuration with fallback to system defaults.
 func (c *EACConfig) LoadTestingTags(validateSchema bool) error {
-	// Check if file exists - it's optional
-	tagsPath := filepath.Join(c.ConfigRoot, TestingTagsFileName)
-	if _, err := os.Stat(tagsPath); os.IsNotExist(err) {
-		// Initialize empty config to guarantee non-nil
-		c.TestingTags = &TestingTagsConfig{}
-		return nil
-	}
-
-	data, err := c.readConfigFile(TestingTagsFileName)
+	// Try loading with fallback (user override → system default)
+	data, err := c.readConfigFileWithFallback(TestingTagsFileName)
 	if err != nil {
+		// If file not found in either location, initialize empty config
+		if os.IsNotExist(err) || (err != nil && strings.Contains(err.Error(), "not found")) {
+			c.TestingTags = &TestingTagsConfig{}
+			return nil
+		}
 		return err
 	}
 
@@ -607,19 +604,17 @@ func (c *EACConfig) LoadBooks(validateSchema bool) error {
 	return nil
 }
 
-// LoadSecurityTools loads the security tools configuration (optional - only if file exists)
+// LoadSecurityTools loads the security tools configuration with fallback to system defaults.
 func (c *EACConfig) LoadSecurityTools(validateSchema bool) error {
-	// Check if file exists - it's optional for backwards compatibility
-	toolsPath := filepath.Join(c.ConfigRoot, SecurityToolsFileName)
-	if _, err := os.Stat(toolsPath); os.IsNotExist(err) {
-		// Use defaults if file doesn't exist (backwards compatible)
-		cfg := DefaultSecurityToolsConfig()
-		c.SecurityTools = &cfg
-		return nil
-	}
-
-	data, err := c.readConfigFile(SecurityToolsFileName)
+	// Try loading with fallback (user override → system default → hardcoded defaults)
+	data, err := c.readConfigFileWithFallback(SecurityToolsFileName)
 	if err != nil {
+		// If file not found in either location, use hardcoded defaults (backwards compatible)
+		if os.IsNotExist(err) || (err != nil && os.IsNotExist(err)) {
+			cfg := DefaultSecurityToolsConfig()
+			c.SecurityTools = &cfg
+			return nil
+		}
 		return err
 	}
 
@@ -766,6 +761,39 @@ func (c *EACConfig) readConfigFile(filename string) ([]byte, error) {
 		return nil, fmt.Errorf("failed to read %s: %w", path, err)
 	}
 	return data, nil
+}
+
+// readConfigFileWithFallback reads a config file with fallback to system defaults.
+// It tries user override first (c.ConfigRoot), then falls back to system defaults
+// in the Docker image (R2R_CONTAINER_ROOT/.r2r/eac/).
+// Returns error only if neither location has the file.
+func (c *EACConfig) readConfigFileWithFallback(filename string) ([]byte, error) {
+	// Try user override first
+	userPath := filepath.Join(c.ConfigRoot, filename)
+	data, err := os.ReadFile(userPath)
+	if err == nil {
+		return data, nil
+	}
+
+	// If not found in user config, try system defaults
+	if os.IsNotExist(err) {
+		systemRoot := os.Getenv("R2R_CONTAINER_ROOT")
+		if systemRoot == "" {
+			// Local dev mode - system defaults are same as user config root
+			systemRoot = c.RepoRoot
+		}
+		systemPath := filepath.Join(systemRoot, ".r2r", "eac", filename)
+		data, err = os.ReadFile(systemPath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return nil, fmt.Errorf("config file not found in user repo (%s) or system defaults (%s)", userPath, systemPath)
+			}
+			return nil, fmt.Errorf("failed to read %s from system defaults: %w", filename, err)
+		}
+		return data, nil
+	}
+
+	return nil, fmt.Errorf("failed to read %s: %w", userPath, err)
 }
 
 // validateSchema validates data against a JSON schema

@@ -21,6 +21,16 @@
 // Long:   test                                 # Test all modules
 // Long:   test eac-commands --suite acceptance # Run acceptance tests only
 // Flag.suite: type=string, usage=Filter tests by suite (default: non-extended suites from config)
+// Flag.coverage: type=bool, usage=Enable coverage reporting
+// Flag.skip-deps: type=bool, usage=Skip dependency checks before running tests
+// Flag.list-only: type=bool, usage=List tests without running them
+// Flag.timings: type=bool, usage=Show detailed timing summary after tests complete
+// Flag.debug: type=bool, usage=Enable debug logs to console (file logging always enabled)
+// Flag.tui: type=bool, usage=Enable TUI console (default for local console mode)
+// Flag.no-tui: type=bool, usage=Disable TUI console (use plain output)
+// Flag.sequential: type=bool, usage=Run tests sequentially instead of parallel
+// Flag.retest: type=bool, usage=Force retest, bypassing incremental test state
+// Flag.tui-height: type=int, usage=Set TUI console height (3-20, default: 6)
 package test
 
 import (
@@ -39,6 +49,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/impl/test/runners"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/cmdframework"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/environment"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
@@ -56,14 +67,14 @@ func init() {
 
 // TestConfig holds test execution configuration
 type TestConfig struct {
-	Monikers     []string
-	SuiteName    string
-	Coverage     bool
-	SkipDeps     bool // Skip system dependency verification (--skip-deps)
-	SkipDepm     bool // Skip dependency module build artifact validation (--skip-depm)
-	ListOnly     bool
-	ShowTimings  bool
-	DebugMode    bool
+	Monikers    []string
+	SuiteName   string
+	Coverage    bool
+	SkipDeps    bool // Skip system dependency verification (--skip-deps)
+	SkipDepm    bool // Skip dependency module build artifact validation (--skip-depm)
+	ListOnly    bool
+	ShowTimings bool
+	DebugMode   bool
 	UseTUI      bool
 	TUIHeight   int
 	Parallel    bool
@@ -82,7 +93,7 @@ type TestExecutionContext struct {
 	moduleMapper    *ModuleMapper // Maps package paths to module monikers
 
 	// Suite routing
-	suiteMoniker string // Suite moniker (single or composite like "unit+integration")
+	suiteMoniker string                   // Suite moniker (single or composite like "unit+integration")
 	repoCfg      *config.RepositoryConfig // For computing suite output paths
 
 	// Thread-safe result storage
@@ -145,8 +156,16 @@ func Test() int {
 	return RunTestWithFramework(cmdCfg, testCfg)
 }
 
+// testFlags defines valid flags for the test command
+
 // parseTestArgs parses command line arguments into TestConfig
 func parseTestArgs(args []string) *TestConfig {
+	// Validate flags before parsing
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		log.Errorf("%v", err)
+		return nil
+	}
+
 	// Detect execution environment for TUI defaults
 	env := environment.Detect()
 
@@ -764,7 +783,6 @@ func getUniqueModulesFromTests(tests []testing.TestReference) []string {
 	return modules
 }
 
-
 // incrementalTestInfo holds information about incremental test detection results
 type incrementalTestInfo struct {
 	detectionTime   time.Duration
@@ -773,7 +791,3 @@ type incrementalTestInfo struct {
 	freshRun        bool
 	changeReasons   map[string]string
 }
-
-
-
-

@@ -1,4 +1,5 @@
 # show Commands
+
 Display repository information in human-readable format for interactive terminal use.
 
 ## Commands in this Category

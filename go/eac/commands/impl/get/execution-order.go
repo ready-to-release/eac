@@ -1,7 +1,6 @@
 // Command: get execution-order
 // Description: Get execution order for specific modules based on dependencies
 // Usage: get execution-order <moniker1> <moniker2> ...
-// Flags:
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML
@@ -24,6 +23,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -33,7 +33,15 @@ func init() {
 	registry.Register(GetExecutionOrder)
 }
 
+// executionOrderFlags defines valid flags for the get execution-order command
+
 func GetExecutionOrder() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		return 1
+	}
+
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {

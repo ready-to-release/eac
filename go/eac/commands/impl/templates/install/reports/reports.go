@@ -25,12 +25,15 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/templates/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
+
+// commandFlags defines valid flags for the templates install reports command
 
 var log = logging.C()
 
@@ -48,6 +51,12 @@ type Config struct {
 
 // TemplatesInstallReports installs report templates
 func TemplatesInstallReports() int {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	// Parse configuration
 	config, err := parseConfig()
 	if err != nil {

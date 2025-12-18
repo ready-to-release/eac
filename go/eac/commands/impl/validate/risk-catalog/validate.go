@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
@@ -78,6 +78,11 @@ func ValidateRiskCatalog() int {
 
 // parseConfig parses command line configuration.
 func parseConfig() (*Config, error) {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		return nil, err
+	}
+
 	args := os.Args[3:] // Skip program name, "validate", and "risk-catalog"
 
 	config := &Config{}
@@ -97,9 +102,6 @@ func parseConfig() (*Config, error) {
 		switch {
 		case arg == "--help" || arg == "-h":
 			return nil, fmt.Errorf("help requested")
-
-		case strings.HasPrefix(arg, "-"):
-			return nil, fmt.Errorf("unknown flag: %s", arg)
 
 		default:
 			// Positional argument: file path

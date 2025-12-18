@@ -1,4 +1,5 @@
 # Quick Start Guide
+
 Get up and running with the r2r CLI. This tutorial walks you through installation, initialization, and running your first commands.
 
 **Prerequisites:** Command-line access, internet connection
@@ -67,13 +68,41 @@ r2r --version
 
 You should see version information displayed.
 
-## Step 3: Initialize Your Project
+## Step 3: Initialize R2R Configuration
 
-Navigate to your project directory and initialize the R2R configuration:
+Navigate to your project directory and create the R2R CLI configuration:
 
 ```bash
 cd /path/to/your/project
-r2r init --ai claude-api
+r2r init
+```
+
+This command:
+
+- Creates the `.r2r/` directory
+- Generates `r2r-cli.yml` for extension management
+- Sets up the extension registry configuration
+
+## Step 4: Install EAC Extension
+
+Install the Everything-as-Code (EAC) extension:
+
+```bash
+r2r install eac
+```
+
+This command:
+
+- Pulls the EAC extension Docker image from the registry
+- Registers the `eac` extension in your configuration
+- Makes `r2r eac` commands available
+
+## Step 5: Initialize EAC in Your Project
+
+Configure the EAC extension for your project:
+
+```bash
+r2r eac init --ai-provider claude-api
 ```
 
 This command:
@@ -81,6 +110,7 @@ This command:
 - Creates the `.r2r/eac/` directory structure
 - Generates `ai-provider.yml` with AI provider settings
 - Uses environment variable placeholders for API keys (safe to commit)
+- Other configuration files use system defaults automatically (no copying needed)
 
 Available AI providers:
 
@@ -91,29 +121,62 @@ Available AI providers:
 To use a personal configuration with actual API tokens (gitignored):
 
 ```bash
-r2r init --ai claude-api --ai-token sk-ant-your-key-here
+r2r eac init --ai-provider claude-api --ai-token sk-ant-your-key-here
 ```
 
-## Step 4: Explore Available Commands
+!!! tip "Configuration Files"
+    The init command only creates user-specific files (`ai-provider.yml`). Other configuration files like `ai-config.yml` and templates are automatically loaded from built-in system defaults. See [Understanding Configuration Files](./configuration-files.md) to learn more.
+
+## Step 6: Set Your API Key
+
+Before running commands that use AI, set your API key as an environment variable:
+
+**Linux/macOS:**
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-your-key-here
+```
+
+**Windows (PowerShell):**
+
+```powershell
+$env:ANTHROPIC_API_KEY = "sk-ant-your-key-here"
+```
+
+## Step 7: Explore Available Commands
 
 List all available commands:
 
 ```bash
-r2r show help
+r2r eac help
 ```
 
 Get help for a specific command:
 
 ```bash
-r2r show help show modules
+r2r eac help show
 ```
 
-## Step 5: View Your Project Structure
+## Step 8: Analyze Your Repository
 
-Show all modules in your repository:
+Before using other commands, analyze your repository structure:
 
 ```bash
-r2r show modules
+r2r eac analyze modules
+```
+
+This command:
+
+- Scans your repository to discover modules
+- Generates `.r2r/eac/repository.yml` with module metadata
+- Creates `.r2r/eac/books.yml` with architecture patterns
+
+## Step 9: View Your Project Structure
+
+Show all modules discovered in your repository:
+
+```bash
+r2r eac show modules
 ```
 
 This displays a table of all modules with their type and root path.
@@ -121,15 +184,15 @@ This displays a table of all modules with their type and root path.
 Show the project configuration:
 
 ```bash
-r2r show config
+r2r eac show config
 ```
 
-## Step 6: Run Tests
+## Step 10: Run Tests
 
 To run tests for your project:
 
 ```bash
-r2r test
+r2r eac test
 ```
 
 This runs all modules with the default test suites (L0-L2 fast tests).
@@ -137,13 +200,13 @@ This runs all modules with the default test suites (L0-L2 fast tests).
 To test a specific module:
 
 ```bash
-r2r test eac-commands # default fast suites
+r2r eac test eac-commands # default fast suites
 ```
 
 To run a different test suite:
 
 ```bash
-r2r test --suite acceptance
+r2r eac test --suite acceptance
 ```
 
 Available test suites:
@@ -158,16 +221,24 @@ Available test suites:
 Congratulations! You've successfully:
 
 - ✅ Installed the r2r CLI on your system
-- ✅ Initialized r2r configuration with AI provider settings
-- ✅ Explored available commands with `r2r show help`
-- ✅ Viewed repository structure with `r2r show modules`
+- ✅ Initialized R2R CLI configuration with `r2r init`
+- ✅ Installed the EAC extension with `r2r install eac`
+- ✅ Configured EAC with AI provider settings
+- ✅ Set up your API key for AI-powered commands
+- ✅ Analyzed your repository to discover modules
+- ✅ Explored available commands with `r2r eac help`
+- ✅ Viewed repository structure with `r2r eac show modules`
 - ✅ Ran tests with different test suites
 
 ## Key Concepts Covered
 
 - **r2r CLI installation** - Binary distribution for multiple platforms
-- **Project initialization** - Setting up `.r2r/eac/` configuration
+- **R2R CLI initialization** - Creating `.r2r/r2r-cli.yml` for extension management
+- **Extension installation** - Installing containerized extensions like EAC
+- **EAC configuration** - Setting up `.r2r/eac/` with AI provider settings
+- **Configuration layering** - System defaults vs. user overrides
 - **AI provider configuration** - Claude, OpenAI, or Gemini integration
+- **Repository analysis** - Discovering modules and architecture patterns
 - **Repository exploration** - Using `show` commands to understand structure
 - **Test suites** - Different test levels (unit, integration, acceptance, production-verification)
 
@@ -175,7 +246,8 @@ Congratulations! You've successfully:
 
 ### Continue Learning
 
-- **Next tutorial:** [Your First Feature Specification](./first-specification.md) - Learn to write Gherkin specifications
+- **Next tutorial:** [Understanding Configuration Files](./configuration-files.md) - Learn about `.r2r/eac/` files
+- **Then:** [Your First Feature Specification](./first-specification.md) - Learn to write Gherkin specifications
 
 ### Apply What You Learned
 

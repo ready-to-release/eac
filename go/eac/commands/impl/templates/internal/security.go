@@ -1,25 +1,5 @@
 // File: go/eac/commands/impl/templates/internal/security.go
 // Security validation functions to prevent path traversal attacks
-//
-// Intent: Protect template system from malicious input by validating paths.
-//
-// Design (Three Rules of Vibe Coding):
-//
-// Easy to understand:
-//   - Clear function names (ValidatePath, SecureFilePath)
-//   - Explicit error messages with security context
-//   - Simple validation logic with clear intent
-//
-// Easy to change:
-//   - Pure functions with no side effects
-//   - Validation logic separated from business logic
-//   - Can add new validation rules without changing callers
-//
-// Hard to break:
-//   - Comprehensive input validation
-//   - Defense in depth (multiple checks)
-//   - Clear error messages for debugging
-//   - Table-driven tests cover all cases
 package internal
 
 import (

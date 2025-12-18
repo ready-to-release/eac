@@ -15,28 +15,6 @@ import (
 const DefaultClaudeAPIModel = "claude-3-haiku-20240307"
 
 // ClaudeAPI provider uses Anthropic API with API key authentication
-//
-// Intent: Call Claude API directly using API key (costs apply, more control).
-//
-// Design (Three Rules of Vibe Coding):
-//
-// Easy to understand:
-//   - Clear separation: validation, API call, response extraction
-//   - API key and model stored in struct
-//   - Execute() method has single responsibility
-//   - Error messages include context
-//
-// Easy to change:
-//   - API client initialization is separate
-//   - Can switch to different SDK easily
-//   - Model and options are configurable
-//   - No global state
-//
-// Hard to break:
-//   - API key validation happens at construction
-//   - Model validation happens at construction
-//   - Context allows cancellation
-//   - Errors wrapped with context
 type ClaudeAPI struct {
 	client anthropic.Client
 	model  string

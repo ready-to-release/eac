@@ -1,5 +1,9 @@
 // Package flags provides shared flag parsing utilities for commands.
+// Flag validation is now handled by ValidateFlagsFromRegistry in registry.go,
+// which validates against registry metadata instead of hardcoded definitions.
 package flags
+
+import ()
 
 // ParseDebugFlag checks if the debug flag is present in the arguments.
 // It accepts both --debug and -d shorthand.

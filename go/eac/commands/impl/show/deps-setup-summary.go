@@ -1,14 +1,6 @@
 // Command: show deps-setup-summary
 // Description: Generate dependencies setup summary
 // Short: Generate dependencies setup summary
-// Long: The show deps-setup-summary command generates a formatted summary of dependency setup results.
-// Long: This command is designed to be used in GitHub Actions workflows to create consistent setup summaries.
-// Long: The output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.
-// Long:
-// Long: Expected Output:
-// Long: - Markdown-formatted setup summary with dependencies table
-// Long: - Shows which dependencies were installed or already available
-// Long:
 // Flag.module: type=string, usage=Module name (required)
 // Flag.deps: type=string, usage=Comma-separated list of dependencies (go,node,docker,buildx,upx)
 // Flag.go-available: type=bool, usage=Whether Go was already available
@@ -16,6 +8,14 @@
 // Flag.buildx-available: type=bool, usage=Whether Docker Buildx was already available
 // Flag.qemu-available: type=bool, usage=Whether QEMU was already available
 // Flag.upx-available: type=bool, usage=Whether UPX was already available
+// Long: The show deps-setup-summary command generates a formatted summary of dependency setup results.
+// Long: This command is designed to be used in GitHub Actions workflows to create consistent setup summaries.
+// Long: The output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.
+// Long:
+// Long: Expected Output:
+// Long: - Markdown-formatted setup summary with dependencies table
+// Long: - Shows which dependencies were installed or already available
+
 package show
 
 import (
@@ -23,6 +23,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 )
@@ -33,6 +34,12 @@ func init() {
 
 // ShowDepsSetupSummary generates a dependencies setup summary
 func ShowDepsSetupSummary() int {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	args := os.Args[3:] // Skip program name, "show", and "deps-setup-summary"
 
 	module := ""

@@ -1,6 +1,10 @@
 // Command: show dependency-ci-summary
 // Description: Generate dependency CI check summary
 // Short: Generate dependency CI check summary
+// Flag.module: type=string, usage=Module name (required)
+// Flag.passed: type=int, default=0, usage=Number of dependencies that passed CI
+// Flag.skipped: type=int, default=0, usage=Number of dependencies skipped (no CI workflow)
+// Flag.status: type=string, default=success, usage=Overall status (success or failure)
 // Long: The show dependency-ci-summary command generates a formatted summary of dependency CI check results.
 // Long: This command is designed to be used in GitHub Actions workflows to create consistent CI check summaries.
 // Long: The output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.
@@ -9,11 +13,7 @@
 // Long: - Markdown-formatted dependency CI summary with metrics table
 // Long: - Shows passed and skipped counts on success
 // Long: - Shows failure message on failure
-// Long:
-// Flag.module: type=string, usage=Module name (required)
-// Flag.passed: type=int, default=0, usage=Number of dependencies that passed CI
-// Flag.skipped: type=int, default=0, usage=Number of dependencies skipped (no CI workflow)
-// Flag.status: type=string, default=success, usage=Overall status (success or failure)
+
 package show
 
 import (
@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 )
@@ -32,6 +33,12 @@ func init() {
 
 // ShowDependencyCISummary generates a dependency CI check summary
 func ShowDependencyCISummary() int {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	args := os.Args[3:] // Skip program name, "show", and "dependency-ci-summary"
 
 	module := ""

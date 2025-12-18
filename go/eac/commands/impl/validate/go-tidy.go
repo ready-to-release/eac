@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
@@ -27,12 +28,13 @@ func init() {
 
 // ValidateGoTidy validates that all Go modules have tidy dependencies
 func ValidateGoTidy() int {
-	args := os.Args[2:] // Skip program name and "validate"
-
-	// Check if this is being called as a subcommand
-	if len(args) > 0 && args[0] == "go-tidy" {
-		args = args[1:] // Skip the subcommand name
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		log.Errorf("%v", err)
+		return 1
 	}
+
+	args := os.Args[3:] // Skip program name, "validate", and "go-tidy"
 
 	// Check for help flag
 	if len(args) > 0 && (args[0] == "--help" || args[0] == "-h") {

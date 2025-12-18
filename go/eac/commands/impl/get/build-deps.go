@@ -1,7 +1,6 @@
 // Command: get build-deps
 // Description: Get build dependencies for a module
 // Args: module (required) - Module moniker
-// Flags:
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 // Long:
@@ -16,6 +15,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
@@ -35,7 +35,15 @@ type BuildDepsResult struct {
 	BuildDeps []string `json:"build_deps" yaml:"build_deps"`
 }
 
+// buildDepsFlags defines valid flags for the get build-deps command
+
 func GetBuildDeps() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		return 1
+	}
+
 	args := os.Args[3:] // Skip program name, "get", and "build-deps"
 
 	// Parse module moniker and flags from args

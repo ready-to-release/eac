@@ -8,21 +8,6 @@ import (
 	"testing"
 )
 
-// Intent: Test Gherkin validation functionality
-//
-// Design (Three Rules of Vibe Coding):
-//
-// Easy to understand:
-//   - Table-driven tests with clear test case names
-//   - Each test focuses on a single validation aspect
-//
-// Easy to change:
-//   - Test data is clearly separated from test logic
-//
-// Hard to break:
-//   - Tests cover happy path and error cases
-//   - Edge cases are explicitly tested
-
 func TestValidateGherkinContent(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -155,7 +140,7 @@ Feature: Test
 			wantErr: true, // ✅ NEW: Improved validation detects wrong order
 		},
 		{
-			name: "Feature in comment",
+			name:    "Feature in comment",
 			content: `# This comment mentions Feature: and Rule: and Scenario:`,
 			wantErr: true, // ✅ NEW: Improved validation correctly fails (no actual Feature)
 		},

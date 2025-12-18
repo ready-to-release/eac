@@ -1,4 +1,5 @@
 # Architecture Documentation
+
 **Status:** Placeholder - Content coming soon
 
 **Prerequisites:** [Your First Module](../getting-started/first-module.md), understanding of C4 model
@@ -68,6 +69,7 @@ This tutorial teaches you how to create and maintain architecture documentation 
 The tutorial documents the architecture of a module:
 
 **Generated `workspace.dsl`:**
+
 ```dsl
 workspace "EAC Commands" {
 
@@ -137,21 +139,25 @@ r2r update design eac-commands
 ### C4 Model Levels
 
 **Level 1 - Context:**
+
 - System and its users
 - External dependencies
 - High-level overview
 
 **Level 2 - Container:**
+
 - Deployable units (apps, services, databases)
 - Communication protocols
 - Technology choices
 
 **Level 3 - Component:**
+
 - Major code structures
 - Responsibilities
 - Interactions
 
 **Level 4 - Code:**
+
 - Class diagrams (rarely used)
 - Generated from code
 

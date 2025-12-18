@@ -38,28 +38,15 @@ func init() {
 	registry.Register(Commit)
 }
 
-// Intent: Commit changes with AI-generated messages in a workspace
-//
-// Design (Three Rules of Vibe Coding):
-//
-// Easy to understand:
-//   - Clear flow: validate → stage (if --all) → generate message → commit
-//   - Reuses existing commit for message generation
-//   - Flags mirror git commit conventions (--all, --message)
-//
-// Easy to change:
-//   - Staging logic isolated
-//   - Message generation delegated to commit
-//   - Custom message path separate from AI path
-//
-// Hard to break:
-//   - Validates git repo and changes before proceeding
-//   - Clear error messages for each failure case
-//   - Tests verify all code paths
-
 // Commit commits changes with AI-generated or custom message
 func Commit() int {
 	startTime := time.Now()
+
+	// Validate flags before parsing
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
 
 	// Phase 1: Parse configuration
 	config, err := parseCommitConfig()

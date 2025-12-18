@@ -15,7 +15,6 @@
 // Long: - Debug outputs in out/ if --debug enabled
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Enable debug mode to save intermediate outputs (context, prompts, AI responses) to the 'out' directory for troubleshooting and analysis
 // Flag.commit: type=bool, shorthand=c, default=false, usage=Automatically create git commit with generated message
-// Flags: --debug (save intermediate outputs and show debug info), --commit (auto-commit)
 package commitmessage
 
 import (
@@ -217,9 +216,15 @@ func commitAIAttemptWithMessage(logger *logging.Logger, workspaceRoot string, de
 	return exitCode, shouldRetry, finalMessage
 }
 
+
 // Phase 1: Parse Configuration
 func parseConfig() (debug bool, autoCommit bool, workspaceRoot string, err error) {
 	args := os.Args[3:] // Skip program name, "create", and "commit-message"
+
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		return false, false, "", err
+	}
 
 	// Parse flags using shared package
 	debug = flags.ParseDebugFlag(args)

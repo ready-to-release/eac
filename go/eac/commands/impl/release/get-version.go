@@ -25,6 +25,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/changelog"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
@@ -46,7 +47,14 @@ type VersionInfo struct {
 	VersionType string `json:"version_type"`
 }
 
+
 func ReleaseGetVersion() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		getVersionLog.Errorf("%v", err)
+		return 1
+	}
+
 	// Parse flags
 	module := ""
 	asTag := false

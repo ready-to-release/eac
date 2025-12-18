@@ -1,4 +1,5 @@
 # Creating Modules
+
 **Problem**: You want to add a new component to your repository with proper file ownership, dependencies, and build configuration.
 
 **Solution**: Define a module contract in `.r2r/eac/repository.yml`.

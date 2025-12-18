@@ -1,22 +1,3 @@
-// Intent: Combine quick and full validation for optimal performance
-//
-// Design (Three Rules of Vibe Coding):
-//
-// Easy to understand:
-//   - Clear two-phase validation: quick then full
-//   - Explicit decision logic
-//   - Aggregates errors from both validators
-//
-// Easy to change:
-//   - Validators are pluggable
-//   - Can easily add more validation phases
-//   - Configuration controls behavior
-//
-// Hard to break:
-//   - Always runs quick validation
-//   - Only runs expensive validation when needed
-//   - Collects all errors for better feedback
-
 package design
 
 import (

@@ -14,7 +14,6 @@
 // Flag.verbose: type=bool, shorthand=v, default=false, usage=Show detailed validation output including metadata and additional context
 // Flag.format: type=string, shorthand=f, default=text, completion=text,json, usage=Output format for validation results (text for human-readable, json for machine-readable)
 // Usage: validate specs <path> [--quiet] [--verbose] [--format json]
-// Flags: --quiet (show only errors), --verbose (detailed output), --format (output format: text|json)
 package validate
 
 import (
@@ -27,6 +26,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
@@ -67,28 +67,14 @@ func ResetGitRepo() {
 
 // ============================================================================
 
-// Intent: Validate Gherkin specifications against the contract
-//
-// Design (Three Rules of Vibe Coding):
-//
-// Easy to understand:
-//   - Clear separation of concerns (parse config, validate, format output)
-//   - Descriptive function names reveal intent
-//   - Single responsibility per function
-//
-// Easy to change:
-//   - Configuration struct decouples CLI parsing from validation logic
-//   - Validation logic reuses existing GherkinValidator
-//   - Output formatting is separate from validation
-//
-// Hard to break:
-//   - Path security validation prevents traversal attacks
-//   - Comprehensive error handling with context
-//   - Validation uses battle-tested contract framework
-//   - Returns non-zero exit code on validation failures
-
 // ValidateSpecs validates existing Gherkin specification files
 func ValidateSpecs() int {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	// Parse configuration
 	config, err := parseValidateConfig()
 	if config == nil && err == nil {

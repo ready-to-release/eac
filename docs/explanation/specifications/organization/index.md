@@ -1,4 +1,5 @@
 # Organizing Specifications
+>
 > **How to structure and organize Gherkin specification files**
 
 Learn how to organize specifications for maintainability, clarity, and discoverability.

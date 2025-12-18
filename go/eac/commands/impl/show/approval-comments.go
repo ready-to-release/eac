@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
@@ -37,6 +38,12 @@ func init() {
 }
 
 func ShowApprovalComments() int {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
+
 	// Parse arguments - expect module after "show approval-comments"
 	args := os.Args[1:]
 
@@ -50,16 +57,8 @@ func ShowApprovalComments() int {
 	}
 
 	// Parse flags
-	includeAllReviews := false
-	branch := ""
-	for i := 0; i < len(args); i++ {
-		if args[i] == "--include-all-reviews" {
-			includeAllReviews = true
-		}
-		if args[i] == "--branch" && i+1 < len(args) {
-			branch = args[i+1]
-		}
-	}
+	includeAllReviews := flags.HasFlag(args, "--include-all-reviews", "")
+	branch := flags.GetFlagValue(args, "--branch")
 
 	// Collect positional arguments (non-flag arguments after command)
 	var positional []string

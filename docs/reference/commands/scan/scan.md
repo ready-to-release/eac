@@ -2,19 +2,62 @@
 
 <!-- book:cmd scan -->
 
+## Scanner Types
+
+The scan command supports multiple scanner types via the `--scanner` flag:
+
+| Type | Description | Tool |
+|------|-------------|------|
+| `sbom` | Software Bill of Materials | Trivy |
+| `vuln` | Vulnerability scanning | Trivy |
+| `secrets` | Secret detection | Trivy |
+| `iac` | Infrastructure as Code scanning | Trivy |
+| `compliance` | Compliance checking | Trivy |
+| `sast` | Static Application Security Testing | Semgrep |
+| `zap` | Dynamic Application Security Testing | OWASP ZAP (see subcommand below) |
+
 ## Subcommands
 
 | Command | Purpose |
 |---------|---------|
-| [scan vuln](./vuln.md) | Vulnerability scanning |
-| [scan sast](./sast.md) | Static code analysis |
-| [scan secrets](./secrets.md) | Secret detection |
-| [scan iac](./iac.md) | IaC misconfiguration |
-| [scan sbom](./sbom.md) | Generate SBOM |
-| [scan compliance](./compliance.md) | Compliance checking |
-| [scan zap](./zap.md) | Dynamic testing (DAST) |
+| [scan zap](./zap.md) | Dynamic testing (DAST) - requires URL target |
+
+## Usage Examples
+
+### Run Default Scanners
+
+```bash
+# All modules with default scanners
+r2r eac scan
+
+# Specific module with default scanners
+r2r eac scan eac-core
+```
+
+### Run Specific Scanner Types
+
+```bash
+# Single scanner type
+r2r eac scan --scanner vuln
+r2r eac scan --scanner sbom
+
+# Multiple scanner types
+r2r eac scan --scanner vuln,secrets,sbom
+
+# Specific module with specific scanners
+r2r eac scan eac-core --scanner vuln,secrets
+```
+
+### Dynamic Testing (ZAP)
+
+ZAP is a special case requiring a URL target, so it has its own subcommand:
+
+```bash
+r2r eac scan zap eac-api --target http://localhost:8080
+```
 
 ## See Also
 
-- [create risk-assess](../create/risk-assess.md)
+- [scan zap](./zap.md) - Dynamic Application Security Testing
 - [scan Commands Category](../categories/scan.md)
+- [validate control-tags](../validate/control-tags.md) - Validate security control mappings

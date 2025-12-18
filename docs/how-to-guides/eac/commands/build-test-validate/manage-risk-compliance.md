@@ -1,4 +1,5 @@
 # Manage Risk Compliance
+
 ## What You'll Accomplish
 
 Track security compliance using OSCAL (Open Security Controls Assessment Language) with automated evidence collection.
@@ -22,7 +23,7 @@ r2r eac create risk-profile --catalog nist-800-53
 ### 2. Run Security Scans
 
 ```bash
-r2r eac scan compliance
+r2r eac scan --scanner compliance
 ```
 
 **What happens**: Collects evidence for compliance controls
@@ -100,7 +101,7 @@ r2r eac create risk-profile --catalog nist-800-53
 # Included 25 controls
 
 # Run compliance scans
-r2r eac scan compliance
+r2r eac scan --scanner compliance
 
 # Output:
 # Checking AC-1 (Access Control Policy)... ✓
@@ -152,5 +153,5 @@ When tests run, evidence is collected for AC-1.
 
 - [`create risk-profile`](../../../../reference/commands/create/risk-profile.md) - Create profile
 - [`create risk-assess`](../../../../reference/commands/create/risk-assess.md) - Update assessment
-- [`scan compliance`](../../../../reference/commands/scan/compliance.md) - Check compliance
+- [`scan`](../../../../reference/commands/scan/scan.md) - Check compliance with --scanner compliance
 - [`validate risk-profile`](../../../../reference/commands/validate/risk-profile.md) - Validate profile

@@ -1,4 +1,5 @@
 # The "Everything as Code" Paradigm
+>
 > **What it means to treat everything as version-controlled, executable artifacts**
 
 ## What "Everything as Code" Means

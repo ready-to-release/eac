@@ -13,6 +13,7 @@ r2r eac get approval-comments ext-eac --as-json
 ```
 
 Returns approvals for PRs containing spec files from:
+
 - `specs/eac-commands/` (dependency)
 - `specs/r2r-cli/` (dependency)
 - `specs/ext-eac/` (if any)

@@ -1,6 +1,5 @@
 // Command: get changed-modules-local
 // Short: Get modules requiring rebuild based on local build state
-// Flags:
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML
@@ -19,6 +18,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/buildstate"
@@ -30,6 +30,8 @@ func init() {
 	registry.Register(GetChangedModulesLocal)
 }
 
+// changedModulesLocalFlags defines valid flags for the get changed-modules-local command
+
 // LocalChangedModulesResult represents the output of the get changed-modules-local command
 type LocalChangedModulesResult struct {
 	Modules       []string          `json:"modules" yaml:"modules" toml:"modules"`
@@ -40,6 +42,12 @@ type LocalChangedModulesResult struct {
 }
 
 func GetChangedModulesLocal() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		return 1
+	}
+
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {

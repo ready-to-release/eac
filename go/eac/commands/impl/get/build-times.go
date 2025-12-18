@@ -1,6 +1,5 @@
 // Command: get build-times
 // Description: Get build timing information from build manifests
-// Flags:
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML

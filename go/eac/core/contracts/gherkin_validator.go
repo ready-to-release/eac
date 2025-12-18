@@ -8,26 +8,6 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/config"
 )
 
-// Intent: Validate Gherkin specifications against structure and tag contracts
-//
-// Design (Three Rules of Vibe Coding):
-//
-// Easy to understand:
-//   - Clear validation rules matching contract requirements
-//   - Each check has a specific error code
-//   - Error messages are descriptive and actionable
-//
-// Easy to change:
-//   - Validation rules are separate functions
-//   - Structure contract (contract.yml) and tag contract (tags.yml) loaded externally
-//   - Easy to add new validation rules
-//
-// Hard to break:
-//   - Validates against formal contracts
-//   - Returns detailed errors with line numbers
-//   - Comprehensive test coverage
-//   - Self-verification with VerifyImplementation()
-
 // GherkinValidator validates Gherkin specifications against structure and tag contracts
 type GherkinValidator struct {
 	contract       *Contract
@@ -105,12 +85,18 @@ func (v *GherkinValidator) SetTagsConfig(tagsConfig *config.TestingTagsConfig) {
 // - Rule blocks present
 // - Scenarios present under Rules
 // - Proper keyword ordering
-// - Verification tags present on scenarios
-// - Tag format validation (patterns from tags.yml)
+// - Hierarchical structure: Scenarios nested under Rules (Enhancement 1)
+// - Each Rule has at least one Scenario (Enhancement 1)
+// - No orphaned scenarios outside Rules (Enhancement 1)
+// - File size constraints: 2-6 Rules ideal, >10 error (Enhancement 3)
+// - Scenario count: 10-20 ideal, >30 error (Enhancement 3)
+// - Proper indentation: Scenarios indented under Rules (Enhancement 5)
+// - Verification tags present on scenarios (from testing-tags.yml)
+// - Tag format validation (patterns from testing-tags.yml)
 // - Skip reason validation
 // - Mutual exclusion constraints (@Manual vs @L0-L4)
 // - GxP tag requirements
-// - Unknown tag warnings
+// - Unknown tag warnings (validates against testing-tags.yml)
 //
 // Returns a list of validation errors (empty if valid)
 func (v *GherkinValidator) Validate(output string, context map[string]interface{}) []ValidationError {
@@ -125,11 +111,28 @@ func (v *GherkinValidator) Validate(output string, context map[string]interface{
 		return errors
 	}
 
+	// Tags config is required for validation - fail immediately if not loaded
+	if v.tagsConfig == nil {
+		errors = append(errors, ValidationError{
+			Code:     "MISSING_TAGS_CONFIG",
+			Message:  "Testing tags configuration (testing-tags.yml) not loaded - cannot perform tag validation. Ensure .r2r/eac/testing-tags.yml exists and is valid.",
+			Severity: "error",
+		})
+		return errors
+	}
+
 	lines := strings.Split(output, "\n")
 	state := &gherkinValidationState{
-		seenFeature:  false,
-		seenRule:     false,
-		seenScenario: false,
+		seenFeature:          false,
+		seenRule:             false,
+		seenScenario:         false,
+		currentRuleIndex:     0,
+		rulesWithScenarios:   make(map[int]bool),
+		scenariosOutsideRule: []int{},
+		allRules:             []RuleInfo{},
+		allScenarios:         []ScenarioInfo{},
+		currentRuleIndent:    -1,
+		lastRuleLine:         0,
 	}
 
 	// Track feature name for naming convention validation
@@ -191,6 +194,19 @@ func (v *GherkinValidator) Validate(output string, context map[string]interface{
 				})
 			} else {
 				state.seenRule = true
+				state.currentRuleIndex++
+				state.lastRuleLine = lineNum
+
+				ruleDesc := strings.TrimSpace(strings.TrimPrefix(trimmed, "Rule:"))
+				indentLevel := getIndentLevel(line)
+				state.currentRuleIndent = indentLevel
+
+				state.allRules = append(state.allRules, RuleInfo{
+					Line:          lineNum,
+					Description:   ruleDesc,
+					ScenarioCount: 0,
+					IndentLevel:   indentLevel,
+				})
 			}
 			continue
 		}
@@ -206,6 +222,41 @@ func (v *GherkinValidator) Validate(output string, context map[string]interface{
 				})
 			} else {
 				state.seenScenario = true
+
+				scenarioDesc := strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(trimmed, "Scenario Outline:"), "Scenario:"))
+				indentLevel := getIndentLevel(line)
+
+				// Track scenario metadata
+				state.allScenarios = append(state.allScenarios, ScenarioInfo{
+					Line:        lineNum,
+					Description: scenarioDesc,
+					IndentLevel: indentLevel,
+				})
+
+				// Enhancement 1: Check if scenario is under a Rule
+				if !state.seenRule {
+					// Scenario before any Rule
+					state.scenariosOutsideRule = append(state.scenariosOutsideRule, lineNum)
+				} else {
+					// Check if scenario appears to be nested under current Rule
+					// A scenario is considered "nested" if it appears after a Rule and before the next Rule
+					if state.currentRuleIndex > 0 {
+						state.rulesWithScenarios[state.currentRuleIndex] = true
+						if state.currentRuleIndex <= len(state.allRules) {
+							state.allRules[state.currentRuleIndex-1].ScenarioCount++
+						}
+					}
+
+					// Enhancement 5: Check indentation (scenario should be indented more than Rule)
+					if state.currentRuleIndent >= 0 && indentLevel <= state.currentRuleIndent {
+						errors = append(errors, ValidationError{
+							Code:     "INCORRECT_INDENTATION",
+							Message:  fmt.Sprintf("Scenario should be indented under its Rule (Rule at line %d has %d spaces, Scenario has %d spaces)", state.lastRuleLine, state.currentRuleIndent, indentLevel),
+							Line:     lineNum,
+							Severity: "error",
+						})
+					}
+				}
 			}
 			continue
 		}
@@ -245,6 +296,69 @@ func (v *GherkinValidator) Validate(output string, context map[string]interface{
 		errors = append(errors, ValidationError{
 			Code:     "MISSING_SCENARIO",
 			Message:  "Missing Scenario: declaration (required for behavior examples)",
+			Severity: "error",
+		})
+	}
+
+	// Enhancement 1: Check for Rules without scenarios
+	for i, rule := range state.allRules {
+		ruleIndex := i + 1
+		if !state.rulesWithScenarios[ruleIndex] {
+			errors = append(errors, ValidationError{
+				Code:     "RULE_WITHOUT_SCENARIOS",
+				Message:  fmt.Sprintf("Rule '%s' has no scenarios nested under it (each Rule must have at least one Scenario)", rule.Description),
+				Line:     rule.Line,
+				Severity: "error",
+			})
+		}
+	}
+
+	// Enhancement 1: Check for orphaned scenarios
+	if len(state.scenariosOutsideRule) > 0 {
+		errors = append(errors, ValidationError{
+			Code:     "SCENARIOS_OUTSIDE_RULE",
+			Message:  fmt.Sprintf("Found %d scenario(s) not nested under any Rule (scenarios must be under Rule blocks)", len(state.scenariosOutsideRule)),
+			Line:     state.scenariosOutsideRule[0],
+			Severity: "error",
+		})
+	}
+
+	// Enhancement 3: File size and complexity warnings
+	ruleCount := len(state.allRules)
+	scenarioCount := len(state.allScenarios)
+
+	// Rule count validation
+	if ruleCount > 10 {
+		errors = append(errors, ValidationError{
+			Code:     "TOO_MANY_RULES",
+			Message:  fmt.Sprintf("File has %d Rules (>10 is too large - must split feature)", ruleCount),
+			Severity: "error",
+		})
+	} else if ruleCount > 6 {
+		errors = append(errors, ValidationError{
+			Code:     "LARGE_RULE_COUNT",
+			Message:  fmt.Sprintf("File has %d Rules (>6 is large - consider splitting feature)", ruleCount),
+			Severity: "error",
+		})
+	} else if ruleCount < 2 && ruleCount > 0 {
+		errors = append(errors, ValidationError{
+			Code:     "TOO_FEW_RULES",
+			Message:  fmt.Sprintf("File has %d Rule (2-6 Rules recommended for proper feature scope)", ruleCount),
+			Severity: "error",
+		})
+	}
+
+	// Scenario count validation
+	if scenarioCount > 30 {
+		errors = append(errors, ValidationError{
+			Code:     "TOO_MANY_SCENARIOS",
+			Message:  fmt.Sprintf("File has %d Scenarios (>30 is too large - must split feature)", scenarioCount),
+			Severity: "error",
+		})
+	} else if scenarioCount > 20 {
+		errors = append(errors, ValidationError{
+			Code:     "LARGE_SCENARIO_COUNT",
+			Message:  fmt.Sprintf("File has %d Scenarios (>20 should split for better maintainability)", scenarioCount),
 			Severity: "error",
 		})
 	}
@@ -396,13 +510,163 @@ func (v *GherkinValidator) combineInheritedTags(featureTags, ruleTags, scenarioT
 	return result
 }
 
+// validateTagAgainstSchema validates a single tag against the schema definition
+func (v *GherkinValidator) validateTagAgainstSchema(tag string, lineNum int, isFeature bool) []ValidationError {
+	var errors []ValidationError
+
+	// Get tag definition from schema
+	tagDef, known := v.tagsConfig.GetTag(tag)
+
+	if !known {
+		// Unknown tag - warning only
+		errors = append(errors, ValidationError{
+			Code:     "UNKNOWN_TAG",
+			Message:  fmt.Sprintf("Unknown tag '%s' not defined in testing-tags.yml", tag),
+			Line:     lineNum,
+			Severity: "warning",
+		})
+		return errors
+	}
+
+	// Validate tag format using schema pattern
+	if formatErr := v.tagsConfig.ValidateTag(tag); formatErr != nil {
+		errors = append(errors, ValidationError{
+			Code:     "INVALID_TAG_FORMAT",
+			Message:  formatErr.Error(),
+			Line:     lineNum,
+			Severity: "error",
+		})
+	}
+
+	// Validate level constraint from schema
+	if tagDef.Level == "scenario" && isFeature {
+		errors = append(errors, ValidationError{
+			Code:     "INVALID_TAG_LEVEL",
+			Message:  fmt.Sprintf("Tag '%s' can only be used on scenarios, not features (level: scenario)", tag),
+			Line:     lineNum,
+			Severity: "error",
+		})
+	}
+
+	if tagDef.Level == "feature" && !isFeature {
+		errors = append(errors, ValidationError{
+			Code:     "INVALID_TAG_LEVEL",
+			Message:  fmt.Sprintf("Tag '%s' can only be used on features, not scenarios (level: feature)", tag),
+			Line:     lineNum,
+			Severity: "error",
+		})
+	}
+
+	return errors
+}
+
+// validateSchemaConstraints validates constraint rules defined in the schema
+func (v *GherkinValidator) validateSchemaConstraints(tags []string, lineNum int) []ValidationError {
+	var errors []ValidationError
+
+	// Find tags with constraints
+	var constrainedTags []string
+	for _, tag := range tags {
+		if v.tagsConfig.HasConstraint(tag, "mutually_exclusive_with_taxonomy_levels") {
+			constrainedTags = append(constrainedTags, tag)
+		}
+	}
+
+	if len(constrainedTags) == 0 {
+		return errors
+	}
+
+	// Check if any taxonomy-level tags are present
+	taxonomyTags := v.tagsConfig.GetTaxonomyLevelTags()
+	for _, tag := range tags {
+		for _, taxonomyTag := range taxonomyTags {
+			if tag == taxonomyTag {
+				// Found a taxonomy tag - this violates the constraint
+				errors = append(errors, ValidationError{
+					Code:     "MUTUAL_EXCLUSION_VIOLATION",
+					Message:  fmt.Sprintf("Tags %v cannot be used with taxonomy level tags (found: %s)", constrainedTags, tag),
+					Line:     lineNum,
+					Severity: "error",
+				})
+				return errors
+			}
+		}
+	}
+
+	return errors
+}
+
+// validateGxPTagsFromSchema validates GxP-related tags using schema definitions
+func (v *GherkinValidator) validateGxPTagsFromSchema(tags []string, lineNum int) []ValidationError {
+	var errors []ValidationError
+
+	hasGxP := false
+	hasGmpCriticalAspect := false
+	hasControlTag := false
+
+	for _, tag := range tags {
+		tagDef, ok := v.tagsConfig.GetTag(tag)
+		if !ok {
+			continue
+		}
+
+		// Check for GxP regulatory tags
+		if tagDef.Type == "gxp_regulatory" {
+			if tag == "@gxp" {
+				hasGxP = true
+			}
+			if tag == "@gmp-critical-aspect" {
+				hasGmpCriticalAspect = true
+			}
+		}
+
+		// Check for OSCAL control tags
+		if tagDef.Type == "oscal_control" || tagDef.Type == "oscal_control_multi" {
+			hasControlTag = true
+		}
+	}
+
+	// @gmp-critical-aspect requires @gxp
+	if hasGmpCriticalAspect && !hasGxP {
+		errors = append(errors, ValidationError{
+			Code:     "CRITICAL_ASPECT_REQUIRES_GXP",
+			Message:  "@gmp-critical-aspect tag requires @gxp tag to be present",
+			Line:     lineNum,
+			Severity: "error",
+		})
+	}
+
+	// @gxp should have @control: tag (warning, not error per schema notes)
+	if hasGxP && !hasControlTag {
+		errors = append(errors, ValidationError{
+			Code:     "GXP_MISSING_CONTROL",
+			Message:  "@gxp tag should link to OSCAL controls using @control: tag (see testing-tags.yml note)",
+			Line:     lineNum,
+			Severity: "warning",
+		})
+	}
+
+	return errors
+}
+
 // validateTagsForScenario validates all tags for a single scenario
 func (v *GherkinValidator) validateTagsForScenario(tags []string, tagLines []int, scenarioLine int) []ValidationError {
 	var errors []ValidationError
 
+	// Tags config is required - fail if not available
+	if v.tagsConfig == nil {
+		errors = append(errors, ValidationError{
+			Code:     "MISSING_TAGS_CONFIG",
+			Message:  "Testing tags configuration not loaded - cannot validate tags",
+			Line:     scenarioLine,
+			Severity: "error",
+		})
+		return errors
+	}
+
 	// 1. Check verification tags (required)
 	if !v.hasVerificationTag(tags) {
-		verificationTags := v.getVerificationTags()
+		verificationTags := v.tagsConfig.GetVerificationTags()
 		errors = append(errors, ValidationError{
 			Code:     "MISSING_VERIFICATION_TAG",
 			Message:  fmt.Sprintf("Scenario missing verification tag (required: %s)", strings.Join(verificationTags, ", ")),
@@ -411,102 +675,37 @@ func (v *GherkinValidator) validateTagsForScenario(tags []string, tagLines []int
 		})
 	}
 
-	// Only perform advanced tag validation if tagContract is available
-	if v.tagsConfig == nil {
-		return errors
-	}
-
-	// 2. Validate tag formats and collect metadata
-	hasManual := false
-	hasTaxonomyLevel := false
-	hasGxP := false
-	hasGxPRiskControl := false
-	taxonomyLevelTags := v.tagsConfig.GetTaxonomyLevelTags()
-
+	// Schema-driven tag validation
 	for i, tag := range tags {
 		lineNum := scenarioLine
 		if i < len(tagLines) {
 			lineNum = tagLines[i]
 		}
 
-		// Validate tag format
-		if formatErr := v.tagsConfig.ValidateTag(tag); formatErr != nil {
-			errors = append(errors, ValidationError{
-				Code:     "INVALID_TAG_FORMAT",
-				Message:  formatErr.Error(),
-				Line:     lineNum,
-				Severity: "error",
-			})
-		}
-
-		// Track special tags for constraint validation
-		if tag == "@Manual" {
-			hasManual = true
-		}
-		if v.isInTagList(tag, taxonomyLevelTags) {
-			hasTaxonomyLevel = true
-		}
-		if tag == "@gxp" {
-			hasGxP = true
-		}
-		if strings.HasPrefix(tag, "@risk-control:gxp-") {
-			hasGxPRiskControl = true
-		}
-
-		// 7. Check for unknown tags (warning only)
-		if !v.tagsConfig.IsKnownTag(tag) {
-			errors = append(errors, ValidationError{
-				Code:     "UNKNOWN_TAG",
-				Message:  fmt.Sprintf("Unknown tag '%s' - possible typo? Check %s/testing-tags.yml for valid tags", tag, EACConfigRelPath),
-				Line:     lineNum,
-				Severity: "warning",
-			})
-		}
+		// Validate each tag against schema
+		tagErrors := v.validateTagAgainstSchema(tag, lineNum, false)
+		errors = append(errors, tagErrors...)
 	}
 
-	// 5. Enforce mutual exclusion: @Manual cannot be used with @L0-@L4
-	if hasManual && hasTaxonomyLevel {
-		errors = append(errors, ValidationError{
-			Code:     "MUTUAL_EXCLUSION_VIOLATION",
-			Message:  "@Manual tag cannot be used with taxonomy level tags (@L0-@L4, @HE2E) - manual tests are not automated",
-			Line:     scenarioLine,
-			Severity: "error",
-		})
-	}
+	// Schema-driven constraint validation
+	constraintErrors := v.validateSchemaConstraints(tags, scenarioLine)
+	errors = append(errors, constraintErrors...)
 
-	// 6. Validate GxP requirements: @gxp requires @risk-control:gxp-*
-	if hasGxP && !hasGxPRiskControl {
-		errors = append(errors, ValidationError{
-			Code:     "GXP_MISSING_RISK_CONTROL",
-			Message:  "@gxp tag requires a corresponding @risk-control:gxp-<name> tag",
-			Line:     scenarioLine,
-			Severity: "error",
-		})
-	}
-
-	// Check @gmp-critical-aspect requires @gxp
-	for i, tag := range tags {
-		if tag == "@gmp-critical-aspect" && !hasGxP {
-			lineNum := scenarioLine
-			if i < len(tagLines) {
-				lineNum = tagLines[i]
-			}
-			errors = append(errors, ValidationError{
-				Code:     "CRITICAL_ASPECT_REQUIRES_GXP",
-				Message:  "@gmp-critical-aspect tag requires @gxp tag to be present",
-				Line:     lineNum,
-				Severity: "error",
-			})
-			break
-		}
-	}
+	// Schema-driven GxP validation
+	gxpErrors := v.validateGxPTagsFromSchema(tags, scenarioLine)
+	errors = append(errors, gxpErrors...)
 
 	return errors
 }
 
 // hasVerificationTag checks if tag list contains at least one verification tag
 func (v *GherkinValidator) hasVerificationTag(tags []string) bool {
-	verificationTags := v.getVerificationTags()
+	// Tags config must be available
+	if v.tagsConfig == nil {
+		return false
+	}
+
+	verificationTags := v.tagsConfig.GetVerificationTags()
 	tagMap := make(map[string]bool)
 	for _, vTag := range verificationTags {
 		tagMap[vTag] = true
@@ -520,43 +719,6 @@ func (v *GherkinValidator) hasVerificationTag(tags []string) bool {
 	return false
 }
 
-// getVerificationTags returns verification tags from contract or defaults
-func (v *GherkinValidator) getVerificationTags() []string {
-	// Try tag contract first
-	if v.tagsConfig != nil {
-		tags := v.tagsConfig.GetVerificationTags()
-		if len(tags) > 0 {
-			return tags
-		}
-	}
-
-	// Try structure contract
-	if v.contract != nil && v.contract.RawData != nil {
-		if tagsVal, ok := v.contract.RawData["required_verification_tags"].([]interface{}); ok {
-			var tags []string
-			for _, tag := range tagsVal {
-				if tagStr, ok := tag.(string); ok {
-					tags = append(tags, tagStr)
-				}
-			}
-			if len(tags) > 0 {
-				return tags
-			}
-		}
-	}
-
-	// Try global config as last resort
-	if cfg := config.Global(); cfg != nil && cfg.TestingTags != nil {
-		tags := cfg.TestingTags.GetVerificationTags()
-		if len(tags) > 0 {
-			return tags
-		}
-	}
-
-	// Fallback to hardcoded defaults (should rarely be reached)
-	return []string{"@ov", "@iv", "@pv", "@piv", "@ppv"}
-}
-
 // isInTagList checks if a tag is in the given list
 func (v *GherkinValidator) isInTagList(tag string, list []string) bool {
 	for _, t := range list {
@@ -565,6 +727,21 @@ func (v *GherkinValidator) isInTagList(tag string, list []string) bool {
 		}
 	}
 	return false
+}
+
+// getIndentLevel returns the indentation level (number of leading spaces/tabs) of a line
+func getIndentLevel(line string) int {
+	count := 0
+	for _, ch := range line {
+		if ch == ' ' {
+			count++
+		} else if ch == '\t' {
+			count += 4 // Count tabs as 4 spaces
+		} else {
+			break
+		}
+	}
+	return count
 }
 
 // VerifyImplementation verifies that the validator implements all contract rules
@@ -616,7 +793,29 @@ func (v *GherkinValidator) VerifyImplementation() []ValidationError {
 
 // gherkinValidationState tracks Gherkin structure during validation
 type gherkinValidationState struct {
-	seenFeature  bool
-	seenRule     bool
-	seenScenario bool
+	seenFeature          bool
+	seenRule             bool
+	seenScenario         bool
+	currentRuleIndex     int              // Track which Rule we're currently in
+	rulesWithScenarios   map[int]bool     // Track which Rules have scenarios
+	scenariosOutsideRule []int            // Track line numbers of scenarios not under any Rule
+	allRules             []RuleInfo       // Track all Rules with metadata
+	allScenarios         []ScenarioInfo   // Track all Scenarios for counting
+	currentRuleIndent    int              // Indentation level of current Rule
+	lastRuleLine         int              // Line number of last Rule seen
+}
+
+// RuleInfo holds metadata about a Rule
+type RuleInfo struct {
+	Line          int
+	Description   string
+	ScenarioCount int
+	IndentLevel   int
+}
+
+// ScenarioInfo holds metadata about a Scenario
+type ScenarioInfo struct {
+	Line        int
+	Description string
+	IndentLevel int
 }

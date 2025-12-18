@@ -1,4 +1,5 @@
 # Command Taxonomy
+
 ## Overview
 
 EAC commands are organized into a hierarchical taxonomy based on their primary function. Understanding this organization helps you quickly find the right command for your task.
@@ -288,14 +289,14 @@ Scan commands perform various security scans and generate compliance evidence.
 
 **Commands**:
 
-- `scan vuln` - Scan for vulnerabilities using Trivy
-- `scan secrets` - Detect secrets and credentials using Trivy
-- `scan sast` - Static Application Security Testing using Semgrep
-- `scan iac` - Scan Infrastructure as Code for misconfigurations
-- `scan compliance` - Check compliance with security standards
-- `scan sbom` - Generate Software Bill of Materials
-- `scan zap` - Dynamic Application Security Testing using OWASP ZAP
-- `scan` - Security scanning and evidence collection (orchestrator)
+- `scan --scanner vuln` - Scan for vulnerabilities using Trivy
+- `scan --scanner secrets` - Detect secrets and credentials using Trivy
+- `scan --scanner sast` - Static Application Security Testing using Semgrep
+- `scan --scanner iac` - Scan Infrastructure as Code for misconfigurations
+- `scan --scanner compliance` - Check compliance with security standards
+- `scan --scanner sbom` - Generate Software Bill of Materials
+- `scan zap` - Dynamic Application Security Testing using OWASP ZAP (special subcommand)
+- `scan` - Security scanning orchestrator with --scanner flag
 
 **When to use**: In pre-commit hooks (fast scans), CI pipelines (comprehensive scans), and for compliance evidence generation.
 

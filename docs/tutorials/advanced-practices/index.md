@@ -1,4 +1,5 @@
 # Advanced Practices
+
 Master advanced workflows including compliance automation, CI/CD integration, multi-module development, and CLI extensibility.
 
 ## Learning Path

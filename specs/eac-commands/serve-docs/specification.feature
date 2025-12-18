@@ -69,4 +69,4 @@ Feature: eac-commands_serve-docs
     Scenario: Handle unknown flag
       When I run the command "serve docs --unknown-flag"
       Then the exit code is 1
-      And I should see "Error: unknown flag: --unknown-flag"
+      And I should see "Unknown flag: --unknown-flag"

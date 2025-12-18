@@ -1,6 +1,7 @@
 nav:
   - index.md
   - r2r-eac
+  - r2r-cli
   - continuous-delivery
   - decision-records
   - commands

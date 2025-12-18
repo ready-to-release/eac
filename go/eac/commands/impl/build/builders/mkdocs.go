@@ -872,14 +872,11 @@ func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName str
 	dockerCfg := getMkDocsDockerConfig(module, workspaceRoot, true)
 	imageName := dockerCfg.ImageName
 
-	var dockerfilePath, contextPath string
-	if isDinD {
-		dockerfilePath = hostRepoRoot + "\\containers\\" + dockerCfg.ContainerDir + "\\Dockerfile"
-		contextPath = hostRepoRoot + "\\containers\\" + dockerCfg.ContainerDir
-	} else {
-		dockerfilePath = dockerCfg.DockerfilePath
-		contextPath = dockerCfg.ContextPath
-	}
+	// Use container paths for docker build context
+	// The Docker CLI (running in container) needs to access these paths to tar up the context
+	// Host paths are only needed for volume mounts, not build context
+	dockerfilePath := dockerCfg.DockerfilePath
+	contextPath := dockerCfg.ContextPath
 
 	if err := ensureMkDocsImage(imageName, dockerfilePath, contextPath, logWriter); err != nil {
 		Logln(logWriter, "❌ Failed to ensure Docker image: %v", err)

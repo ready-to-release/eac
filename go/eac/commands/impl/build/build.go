@@ -18,6 +18,24 @@
 // Long:   build eac-commands              # Build a single module
 // Long:   build eac-core r2r-cli          # Build specific modules
 // Long:   build --tidy-first eac-commands # Build with go mod tidy first
+// Flag.tidy-first: type=bool, usage=Run 'go mod tidy' before building (default for local)
+// Flag.no-tidy: type=bool, usage=Skip 'go mod tidy' (default for CI)
+// Flag.rebuild: type=bool, usage=Force full rebuild, ignoring incremental build state
+// Flag.layered-build: type=bool, usage=Execute layers sequentially (default: all modules in parallel)
+// Flag.skip-depm: type=bool, usage=Only build specified modules, no dependency resolution (CI isolation)
+// Flag.no-deps: type=bool, usage=Alias for --skip-depm
+// Flag.use-existing-depm: type=bool, usage=Skip building module dependencies if artifacts exist (for CI incremental builds)
+// Flag.skip-deps-verification: type=bool, usage=Skip system dependency verification (go, docker, etc.)
+// Flag.timings: type=bool, usage=Show detailed timing summary
+// Flag.debug: type=bool, usage=Enable debug logs to console (file logging always enabled)
+// Flag.tui: type=bool, usage=Enable TUI console (default for local, errors in CI/container)
+// Flag.no-tui: type=bool, usage=Disable TUI console (use plain output)
+// Flag.tui-height: type=int, usage=Set TUI console height (3-20, default: 6)
+// Flag.version: type=string, usage=Inject version string into binary (Go modules with executable artifacts)
+// Flag.accept-warnings: type=bool, usage=Don't fail on MkDocs warnings (non-strict mode)
+// Flag.all: type=bool, usage=Include non-default books (those with default: false)
+// Flag.list-artifacts: type=bool, usage=List artifacts that would be produced (no build)
+// Flag.dry-run: type=bool, usage=Simulate build without running actual commands
 // Args: modules
 package build
 
@@ -32,10 +50,11 @@ import (
 	"strconv"
 	"strings"
 
-	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/builders"
+	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/cmdframework"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/environment"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/git"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/initsummary"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
@@ -107,6 +126,8 @@ func ensureCommandsBinary(workspaceRoot string) error {
 	return nil
 }
 
+// buildFlags defines valid flags for the build command
+
 // Build command entry point - builds one or more modules
 func Build() int {
 	args := os.Args[2:] // Skip program name and "build"
@@ -117,23 +138,29 @@ func Build() int {
 		return 0
 	}
 
+	// Validate flags before parsing
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
+
 	// Detect execution environment
 	env := environment.Detect()
 
 	// Parse module monikers and flags
 	var monikers []string
-	tidyFirst := !env.IsCI // Default: true for local, false for CI
-	skipDeps := false      // Skip system dependency verification (go, docker, etc.)
-	skipDepm := false             // Skip including transitive module dependencies in execution plan
-	useExistingDepm := false      // Use existing module dependency artifacts (skip building if present)
-	forceRebuild := false         // Force full rebuild, ignoring incremental build state (--rebuild)
-	layeredBuild := false         // Execute in layers sequentially (default: all parallel)
+	tidyFirst := !env.IsCI   // Default: true for local, false for CI
+	skipDeps := false        // Skip system dependency verification (go, docker, etc.)
+	skipDepm := false        // Skip including transitive module dependencies in execution plan
+	useExistingDepm := false // Use existing module dependency artifacts (skip building if present)
+	forceRebuild := false    // Force full rebuild, ignoring incremental build state (--rebuild)
+	layeredBuild := false    // Execute in layers sequentially (default: all parallel)
 	showTimings := false
 	debugMode := false // Enable debug logs to console
 	version := ""
 	listArtifacts := false
 	dryRun := false
-	buildAll := false              // Include non-default books (those with default: false)
+	buildAll := false            // Include non-default books (those with default: false)
 	useTUI := env.ShouldUseTUI() // TUI enabled by default for local console mode
 	tuiExplicitlySet := false
 	tuiHeight := tui.DefaultHeight // TUI console height
@@ -266,21 +293,21 @@ func Build() int {
 
 	// Create command config for framework
 	cmdCfg := &cmdframework.CommandConfig{
-		Type:           cmdframework.CommandTypeBuild,
-		ActionVerb:     "Building",
-		OutputDir:      paths.OutBuildRelPath,
-		LogFileName:    "build.log",
-		Monikers:       monikers,
-		IncludeDepm:    !skipDepm,
-		SkipDeps:       skipDeps,
-		SkipDepm:       skipDepm,
-		ForceRebuild:   forceRebuild,
-		Layered:        true, // Build always uses layered execution
-		DryRun:         dryRun,
-		UseTUI:         useTUI,
-		TUIHeight:      tuiHeight,
-		ShowTimings:    showTimings,
-		DebugMode:      debugMode,
+		Type:         cmdframework.CommandTypeBuild,
+		ActionVerb:   "Building",
+		OutputDir:    paths.OutBuildRelPath,
+		LogFileName:  "build.log",
+		Monikers:     monikers,
+		IncludeDepm:  !skipDepm,
+		SkipDeps:     skipDeps,
+		SkipDepm:     skipDepm,
+		ForceRebuild: forceRebuild,
+		Layered:      true, // Build always uses layered execution
+		DryRun:       dryRun,
+		UseTUI:       useTUI,
+		TUIHeight:    tuiHeight,
+		ShowTimings:  showTimings,
+		DebugMode:    debugMode,
 	}
 
 	// Create build-specific config
@@ -335,7 +362,6 @@ func listModuleArtifacts(monikers []string, workspaceRoot string, moduleReport *
 
 	return 0
 }
-
 
 // runModuleBuild runs build for a single module
 func runModuleBuild(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, tidyFirst bool, version string, dryRun bool, buildAll bool) int {

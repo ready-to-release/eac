@@ -1,4 +1,5 @@
 # templates Commands
+
 Install project templates for documentation, AI prompts, reports, and specifications.
 
 ## Commands in this Category

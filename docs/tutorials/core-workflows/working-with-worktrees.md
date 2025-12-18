@@ -1,4 +1,5 @@
 # Working with Git Worktrees
+
 **Status:** Placeholder - Content coming soon
 
 **Prerequisites:** [Building and Testing Changes](./building-and-testing.md), Git fundamentals
@@ -62,15 +63,19 @@ This tutorial teaches you how to use git worktrees for parallel development, ena
 The tutorial will demonstrate a realistic parallel development scenario:
 
 **Main working directory:**
+
 - Working on feature A (dashboard improvements)
 
 **Worktree 1 (../worktrees/api-auth):**
+
 - Working on feature B (API authentication)
 
 **Worktree 2 (../worktrees/fix-bug-123):**
+
 - Working on urgent bugfix
 
 You can:
+
 - Switch between workspaces instantly (just `cd`)
 - Build and test independently
 - Commit to different branches simultaneously

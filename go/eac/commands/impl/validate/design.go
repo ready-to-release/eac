@@ -37,6 +37,12 @@ func init() {
 
 // ValidateDesign validates workspace files using Structurizr CLI
 func ValidateDesign() int {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	args := os.Args[3:] // Skip program, "validate", and "design"
 
 	var module string

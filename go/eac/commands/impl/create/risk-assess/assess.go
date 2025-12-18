@@ -219,9 +219,15 @@ func loadModuleRegistry(workspaceRoot string) (*modules.Registry, error) {
 	return modules.LoadFromWorkspace(workspaceRoot)
 }
 
+
 // parseAssessConfig parses command line configuration.
 func parseAssessConfig() (*AssessConfig, error) {
 	args := os.Args[3:] // Skip program name, "create", and "risk-assess"
+
+	// Validate flags before parsing
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		return nil, err
+	}
 
 	config := &AssessConfig{
 		MaxEvidenceAge: 24 * time.Hour,

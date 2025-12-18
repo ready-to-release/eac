@@ -1,4 +1,5 @@
 # Build Changed Modules
+
 ## What You'll Accomplish
 
 Build only the modules affected by your changes for efficient CI/CD pipelines.
@@ -6,10 +7,13 @@ Build only the modules affected by your changes for efficient CI/CD pipelines.
 ## Prerequisites
 
 ### Required Knowledge
+
 **New to efficient builds?** Learn these concepts first:
+
 - [Building and Testing Changes](../../../../tutorials/core-workflows/building-and-testing.md) - Understand incremental builds and changed module detection
 
 ### Required Setup
+
 - Working in git repository with changes
 - Module contracts defined
 

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -32,6 +33,12 @@ func init() {
 
 // ShowSpecs displays specifications in human-readable markdown format
 func ShowSpecs() int {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
+
 	// Parse arguments - expect module after "show specs"
 	args := os.Args[1:]
 
@@ -45,13 +52,7 @@ func ShowSpecs() int {
 	}
 
 	// Parse flags
-	branch := ""
-	for i := 0; i < len(args)-1; i++ {
-		if args[i] == "--branch" {
-			branch = args[i+1]
-			break
-		}
-	}
+	branch := flags.GetFlagValue(args, "--branch")
 
 	// Collect positional arguments (non-flag arguments after command)
 	var positional []string

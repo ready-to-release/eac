@@ -7,8 +7,11 @@
 package get
 
 import (
+	"fmt"
+	"os"
 	"sort"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	gethelper "github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 )
@@ -17,6 +20,8 @@ func init() {
 	registry.Register(GetValidCommands)
 }
 
+// validCommandsFlags defines valid flags for the get valid-commands command
+
 // CommandInfo represents a command with its description
 type CommandInfo struct {
 	Command     string `json:"command" yaml:"command"`
@@ -24,6 +29,12 @@ type CommandInfo struct {
 }
 
 func GetValidCommands() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		return 1
+	}
+
 	return gethelper.ExecuteGetCommand(func() (interface{}, error) {
 		reg := registry.GetCommandRegistry()
 

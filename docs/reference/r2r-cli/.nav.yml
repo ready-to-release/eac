@@ -1,0 +1,13 @@
+title: R2R CLI Commands
+nav:
+  - index.md
+  - init.md
+  - install.md
+  - list.md
+  - validate.md
+  - verify.md
+  - cleanup.md
+  - interactive.md
+  - metadata.md
+  - version.md
+  - configuration.md

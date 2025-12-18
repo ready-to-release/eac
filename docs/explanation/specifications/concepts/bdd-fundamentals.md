@@ -1,4 +1,5 @@
 # BDD Fundamentals
+>
 > **Understanding Behavior-Driven Development and specifications**
 
 Learn the foundations of BDD and how it enables shared understanding through executable specifications.

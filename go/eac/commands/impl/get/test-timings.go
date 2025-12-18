@@ -1,6 +1,5 @@
 // Command: get test-timings
 // Description: Get test timing information from test logs
-// Flags:
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML
@@ -22,6 +21,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/internal/testdata"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
@@ -31,6 +31,8 @@ import (
 func init() {
 	registry.Register(GetTestTimings)
 }
+
+// testTimingsFlags defines valid flags for the get test-timings command
 
 // TestTiming represents timing data for a single test scenario
 type TestTiming struct {
@@ -65,6 +67,12 @@ type TestTimingSummary struct {
 }
 
 func GetTestTimings() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		return 1
+	}
+
 	return GetTestTimingsFiltered(nil)
 }
 

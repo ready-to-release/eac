@@ -1,4 +1,5 @@
 # Changelog Format Specification
+
 Detailed specification of the Keep a Changelog format used in the repository.
 
 ## Overview

@@ -11,7 +11,6 @@
 // Flag.verbose: type=bool, shorthand=v, default=false, usage=Show detailed validation output including metadata and additional context
 // Flag.format: type=string, shorthand=f, default=text, completion=text,json, usage=Output format for validation results (text for human-readable, json for machine-readable)
 // Usage: specs validate <path> [--quiet] [--verbose] [--format json]
-// Flags: --quiet (show only errors), --verbose (detailed output), --format (output format: text|json)
 package validate
 
 import (
@@ -24,6 +23,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
@@ -31,6 +31,8 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
+
+// commandFlags defines valid flags for the specs validate command
 
 var log = logging.C()
 
@@ -66,28 +68,14 @@ func ResetGitRepo() {
 
 // ============================================================================
 
-// Intent: Validate Gherkin specifications against the contract
-//
-// Design (Three Rules of Vibe Coding):
-//
-// Easy to understand:
-//   - Clear separation of concerns (parse config, validate, format output)
-//   - Descriptive function names reveal intent
-//   - Single responsibility per function
-//
-// Easy to change:
-//   - Configuration struct decouples CLI parsing from validation logic
-//   - Validation logic reuses existing GherkinValidator
-//   - Output formatting is separate from validation
-//
-// Hard to break:
-//   - Path security validation prevents traversal attacks
-//   - Comprehensive error handling with context
-//   - Validation uses battle-tested contract framework
-//   - Returns non-zero exit code on validation failures
-
 // SpecsValidate validates existing Gherkin specification files
 func SpecsValidate() int {
+	// Validate flags
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	// Parse configuration
 	config, err := parseValidateConfig()
 	if config == nil && err == nil {
@@ -271,9 +259,9 @@ type ValidateConfig struct {
 
 // ValidationResult holds the validation result for a single file
 type ValidationResult struct {
-	Path   string                       `json:"path"`
-	Valid  bool                         `json:"valid"`
-	Errors []contracts.ValidationError   `json:"errors"`
+	Path   string                      `json:"path"`
+	Valid  bool                        `json:"valid"`
+	Errors []contracts.ValidationError `json:"errors"`
 }
 
 // parseValidateConfig parses command line arguments into configuration
@@ -705,9 +693,9 @@ func normalizePath(path string) string {
 
 // FixResult holds the result of fixing a single file
 type FixResult struct {
-	Path    string
-	Fixes   []FixedIssue
-	Error   error
+	Path  string
+	Fixes []FixedIssue
+	Error error
 }
 
 // FixedIssue represents a single fix applied

@@ -1,6 +1,9 @@
 // Command: get binary-sizes
 // Description: Get binary file sizes for a module
 // Short: Get binary file sizes for a module
+// Flag.module: type=string, usage=Module to get binary sizes for (required)
+// Flag.binary-prefix: type=string, usage=Binary name prefix (e.g., r2r for r2r-linux-amd64)
+// Flag.format: type=string, default=shell, usage=Output format (shell, json, yaml, markdown)
 // Long: The get binary-sizes command calculates file sizes for binaries produced by a module build.
 // Long:
 // Long: It scans the build output directory for the specified module and reports sizes for all
@@ -11,10 +14,6 @@
 // Long:   SIZE_LINUX_AMD64_UPX="4.5"
 // Long:   SIZE_DARWIN_ARM64="13.1"
 // Long:   ...
-// Long:
-// Flag.module: type=string, usage=Module to get binary sizes for (required)
-// Flag.binary-prefix: type=string, usage=Binary name prefix (e.g., r2r for r2r-linux-amd64)
-// Flag.format: type=string, default=shell, usage=Output format (shell, json, yaml, markdown)
 // Long:
 // Long: Example:
 // Long:   get binary-sizes --module r2r-cli --binary-prefix r2r
@@ -28,6 +27,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -40,11 +40,11 @@ func init() {
 
 // BinarySize represents a single binary file's size
 type BinarySize struct {
-	Name     string  `json:"name" yaml:"name"`
-	Path     string  `json:"path" yaml:"path"`
-	SizeBytes int64  `json:"size_bytes" yaml:"size_bytes"`
-	SizeMB   float64 `json:"size_mb" yaml:"size_mb"`
-	Exists   bool    `json:"exists" yaml:"exists"`
+	Name      string  `json:"name" yaml:"name"`
+	Path      string  `json:"path" yaml:"path"`
+	SizeBytes int64   `json:"size_bytes" yaml:"size_bytes"`
+	SizeMB    float64 `json:"size_mb" yaml:"size_mb"`
+	Exists    bool    `json:"exists" yaml:"exists"`
 }
 
 // BinarySizesOutput contains all binary sizes
@@ -69,6 +69,12 @@ var standardBinaryVariants = []struct {
 }
 
 func GetBinarySizes() int {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	args := os.Args[3:] // Skip program name, "get", and "binary-sizes"
 
 	module := ""

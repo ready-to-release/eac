@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
 func TestCreateDirectoryStructure(t *testing.T) {
@@ -25,8 +27,15 @@ func TestCreateDirectoryStructure(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tmpDir := t.TempDir()
 
+			// Create a test logger
+			logger, err := logging.NewDefault("init_test", tmpDir)
+			if err != nil {
+				t.Fatalf("Failed to create test logger: %v", err)
+			}
+			defer logger.Sync()
+
 			// Test directory structure creation
-			err := createDirectoryStructure(tmpDir)
+			err = createDirectoryStructure(tmpDir, logger)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("createDirectoryStructure() error = %v, wantErr %v", err, tt.wantErr)
 				return

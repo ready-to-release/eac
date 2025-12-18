@@ -1,4 +1,5 @@
 # Commit Messages
+
 How to write semantic commit messages that maintain traceability.
 
 ## Format

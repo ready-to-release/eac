@@ -1,6 +1,5 @@
 // Command: pipeline check-recent-run
 // Short: Check if a recent successful workflow run exists
-// Flags:
 //   --workflow <name>: Workflow file name (required)
 //   --sha <sha>: HEAD SHA to check (default: current HEAD)
 //   --since <duration>: Time window to check (default: 2h)

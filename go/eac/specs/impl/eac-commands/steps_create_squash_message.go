@@ -5,7 +5,6 @@ package srccommands
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -267,20 +266,4 @@ Changes: 2 files, +10 insertions, -0 deletions`
 	})
 
 	// Log file verification - step "logs are written to" is defined in steps_create_commit_message.go
-
-	// Debug artifact verification in log
-	sc.Step(`^the log contains debug artifacts for "([^"]*)"$`, func(label string) error {
-		logFile := filepath.Join(ctx.IsolatedDir, "out/commands.log")
-		content, err := os.ReadFile(logFile)
-		if err != nil {
-			return fmt.Errorf("failed to read log file: %w", err)
-		}
-		startMarker := fmt.Sprintf("=== %s START ===", label)
-		endMarker := fmt.Sprintf("=== %s END ===", label)
-		logContent := string(content)
-		if !strings.Contains(logContent, startMarker) || !strings.Contains(logContent, endMarker) {
-			return fmt.Errorf("log doesn't contain debug artifacts for %s", label)
-		}
-		return nil
-	})
 }

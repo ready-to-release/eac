@@ -14,11 +14,6 @@
 // Long:
 // Long: Validation failures indicate missing artifacts that must be built before testing.
 // Long:
-// Long: Flags:
-// Long:   --skip-depm  Skip validation of transitive module dependencies (for release workflows)
-// Long:   --os         Target OS for platform-specific artifacts
-// Long:   --arch       Target architecture for platform-specific artifacts
-// Long:
 // Long: Expected Output:
 // Long:   Displays validation results for target module and all dependency artifacts.
 // Long:   Exit code 0 if all artifacts present, non-zero if any missing.
@@ -26,8 +21,14 @@
 // Long:
 // Long: Example:
 // Long:   validate artifacts eac-commands
-// Long:   validate artifacts r2r-cli --all-platforms
+// Long:   validate artifacts r2r-cli --os linux --arch amd64
 // Long:   validate artifacts docs --skip-depm     # Release context: skip module deps
+//
+// Args: module
+//
+// Flag.skip-depm: type=bool, default=false, usage=Skip validation of transitive module dependencies (for release workflows)
+// Flag.os: type=string, default=runtime.GOOS, usage=Target OS for platform-specific artifacts
+// Flag.arch: type=string, default=runtime.GOARCH, usage=Target architecture for platform-specific artifacts
 package validate
 
 import (
@@ -37,6 +38,7 @@ import (
 	"strings"
 
 	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
@@ -49,6 +51,12 @@ func init() {
 }
 
 func ValidateArtifacts() int {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	args := os.Args[3:] // Skip program name, "validate", and "artifacts"
 
 	if len(args) == 0 {

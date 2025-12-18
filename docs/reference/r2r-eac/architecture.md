@@ -1,4 +1,5 @@
 # Architecture
+
 ## Overview
 
 R2R and EAC implement a **container-based, contract-driven architecture** for everything-as-code workflows. The system uses multiple execution models optimized for different use cases: isolated Docker containers for reproducibility, direct Go execution for speed, and MCP protocol for AI integration.

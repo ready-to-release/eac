@@ -1,4 +1,5 @@
 # EAC Guides
+
 Guides for the Everything as Code (EAC) system. Learn how to use CLI commands, write BDD specifications, configure integrations, and manage modules.
 
 ## In This Section

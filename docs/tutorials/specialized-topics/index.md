@@ -1,4 +1,5 @@
 # Specialized Topics
+
 Deep dive tutorials covering specialized areas of r2r and Everything-as-Code. These optional tutorials provide in-depth coverage of specific techniques and tools.
 
 ## Available Topics

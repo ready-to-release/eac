@@ -1,4 +1,5 @@
 # CD Model: The 12-Stage Framework
+
 The Continuous Delivery Model is a comprehensive framework for delivering software from development through production with quality, traceability, and compliance built in.
 
 ## In This Section

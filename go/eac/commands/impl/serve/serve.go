@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/serve"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/buildstate"
@@ -31,6 +32,8 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 	"go.uber.org/zap"
 )
+
+// commandFlags defines valid flags for the serve command
 
 var log = logging.C()
 
@@ -94,6 +97,12 @@ func Serve() int {
 	}
 
 	args := os.Args[2:] // Skip program name and "serve"
+
+	// Validate flags
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
 
 	var moduleMoniker string
 	var noBrowser bool

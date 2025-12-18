@@ -1,4 +1,5 @@
 # Module Types Reference
+
 EAC supports different module types, each optimized for specific languages and build requirements.
 
 ## Available Module Types

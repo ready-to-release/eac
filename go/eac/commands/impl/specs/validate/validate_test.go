@@ -13,23 +13,6 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
 )
 
-// Intent: Test specification validation command core functionality
-//
-// Design (Three Rules of Vibe Coding):
-//
-// Easy to understand:
-//   - Table-driven tests with clear test case names
-//   - Each test focuses on a single behavior
-//
-// Easy to change:
-//   - Test data is clearly separated from test logic
-//   - Reusable test fixtures and helpers
-//
-// Hard to break:
-//   - Tests cover happy path and error cases
-//   - File system operations use t.TempDir() for isolation
-//   - Comprehensive edge case coverage
-
 func TestValidateGherkinFile_ValidFile(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -124,8 +107,8 @@ Feature: eac-commands_multi-test
 
 func TestValidateGherkinFile_InvalidFile(t *testing.T) {
 	tests := []struct {
-		name         string
-		content      string
+		name          string
+		content       string
 		wantErrorCode string
 	}{
 		{
@@ -636,18 +619,18 @@ func TestParseValidateConfig_Flags(t *testing.T) {
 			wantErr:    false,
 		},
 		{
-			name:      "quiet flag short",
-			args:      []string{"r2r", "specs", "validate", "-q", "specs/test.feature"},
-			wantQuiet: true,
+			name:       "quiet flag short",
+			args:       []string{"r2r", "specs", "validate", "-q", "specs/test.feature"},
+			wantQuiet:  true,
 			wantFormat: "text",
-			wantErr:   false,
+			wantErr:    false,
 		},
 		{
-			name:      "quiet flag long",
-			args:      []string{"r2r", "specs", "validate", "--quiet", "specs/test.feature"},
-			wantQuiet: true,
+			name:       "quiet flag long",
+			args:       []string{"r2r", "specs", "validate", "--quiet", "specs/test.feature"},
+			wantQuiet:  true,
 			wantFormat: "text",
-			wantErr:   false,
+			wantErr:    false,
 		},
 		{
 			name:        "verbose flag short",

@@ -1,4 +1,5 @@
 # Pre-commit Setup
+
 How to configure pre-commit hooks for Stage 2 validation.
 
 ## Pre-commit Hook Script

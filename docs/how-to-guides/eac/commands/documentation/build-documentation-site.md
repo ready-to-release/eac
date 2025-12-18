@@ -1,4 +1,5 @@
 # Build Documentation Site
+
 ## What You'll Accomplish
 
 Generate and preview documentation site using MkDocs with validation.

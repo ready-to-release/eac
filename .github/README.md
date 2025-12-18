@@ -65,7 +65,7 @@
 <td align="center">
 <a href="https://ready-to-release.github.io/eac/reference/commands/scan/"><img src="https://img.shields.io/badge/⏰-Audit_Prep-dc2626?style=for-the-badge" alt="Audit Prep"></a><br>
 <sub>Takes months, not minutes</sub><br>
-<sup><a href="https://ready-to-release.github.io/eac/reference/commands/scan/">scan</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/create/">risk</a></sup>
+<sup><a href="https://ready-to-release.github.io/eac/reference/commands/scan/">scan</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/create/risk-assess/">risk-assess</a></sup>
 </td>
 <td align="center">
 <a href="https://ready-to-release.github.io/eac/reference/commands/validate/"><img src="https://img.shields.io/badge/📦-Evidence_Scattered-dc2626?style=for-the-badge" alt="Evidence Scattered"></a><br>
@@ -99,7 +99,7 @@
 <td align="center">
 <a href="https://ready-to-release.github.io/eac/reference/commands/create/"><img src="https://img.shields.io/badge/📋-Copy--Paste_Compliance-dc2626?style=for-the-badge" alt="Copy-Paste Compliance"></a><br>
 <sub>Same docs, different date</sub><br>
-<sup><a href="https://ready-to-release.github.io/eac/reference/commands/create/">risk</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/templates/">templates</a></sup>
+<sup><a href="https://ready-to-release.github.io/eac/reference/commands/create/risk-profile/">risk-profile</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/templates/">templates</a></sup>
 </td>
 <td align="center">
 <a href="https://ready-to-release.github.io/eac/reference/commands/pipeline/"><img src="https://img.shields.io/badge/🚧-Manual_Gates-dc2626?style=for-the-badge" alt="Manual Gates"></a><br>
@@ -197,7 +197,7 @@ One commit. Validated build. Auditable release.
 <a href="https://ready-to-release.github.io/eac/reference/commands/scan/"><img src="https://img.shields.io/badge/🛡️-Audit-f97316?style=for-the-badge" alt="Audit"></a><br>
 <sub><del>Months of prep</del></sub><br>
 <strong>Always ready</strong><br>
-<sup><a href="https://ready-to-release.github.io/eac/reference/commands/scan/">Scan →</a></sup>
+<sup><a href="https://ready-to-release.github.io/eac/reference/commands/scan/">scan</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/create/risk-assess/">risk-assess</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/update/evidence/">evidence</a></sup>
 </td>
 </tr>
 </table>
@@ -312,8 +312,8 @@ irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/cli
 <td align="center">
 <a href="https://ready-to-release.github.io/eac/reference/commands/scan/"><img src="https://img.shields.io/badge/🔒-Scan-eab308?style=for-the-badge" alt="Scan"></a><br>
 <a href="https://ready-to-release.github.io/eac/reference/commands/scan/#scan"><code>scan</code></a><br>
-<a href="https://ready-to-release.github.io/eac/reference/commands/scan/#scan-sast"><code>scan sast</code></a><br>
-<a href="https://ready-to-release.github.io/eac/reference/commands/scan/#scan-sbom"><code>scan sbom</code></a><br>
+<a href="https://ready-to-release.github.io/eac/reference/commands/scan/#scan-vuln"><code>scan vuln</code></a><br>
+<a href="https://ready-to-release.github.io/eac/reference/commands/scan/#scan-compliance"><code>scan compliance</code></a><br>
 <sup><a href="https://ready-to-release.github.io/eac/reference/commands/scan/">overview</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/eac/commands/build-test-validate/">guides</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/categories/scan">all</a></sup>
 </td>
 <td align="center">

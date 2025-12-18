@@ -1,4 +1,5 @@
 # TDD with Specifications
+
 **Status:** Placeholder - Content coming soon
 
 **Prerequisites:** [Your First Specification](../getting-started/first-specification.md), [Your First Module](../getting-started/first-module.md)
@@ -62,6 +63,7 @@ This tutorial teaches the complete test-driven development loop using executable
 The tutorial will implement a tax calculation feature end-to-end:
 
 **Specification:**
+
 ```gherkin
 @L2 @ov @deps:go
 Feature: billing_calculate-tax
@@ -80,6 +82,7 @@ Feature: billing_calculate-tax
 ```
 
 **Step Definitions:**
+
 ```go
 func (s *TaxContext) anInvoiceWithSubtotal(amount string) error {
     s.invoice = &Invoice{Subtotal: parseAmount(amount)}
@@ -100,6 +103,7 @@ func (s *TaxContext) theTaxAmountShouldBe(expected string) error {
 ```
 
 **Implementation:**
+
 ```go
 func CalculateTax(invoice *Invoice) *TaxResult {
     tax := invoice.Subtotal * 0.20

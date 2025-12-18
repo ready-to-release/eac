@@ -1,4 +1,5 @@
 # Security Workflows
+
 Reference for security scanning workflows.
 
 ## Overview
@@ -324,23 +325,23 @@ While CodeQL is the primary security workflow, the repository uses additional se
 
 ```bash
 # Vulnerability scanning
-r2r eac scan vuln
+r2r eac scan --scanner vuln
 
 # Secret detection
-r2r eac scan secrets
+r2r eac scan --scanner secrets
 
 # IaC scanning
-r2r eac scan iac
+r2r eac scan --scanner iac
 
 # Compliance checking
-r2r eac scan compliance
+r2r eac scan --scanner compliance
 ```
 
 ### Semgrep SAST
 
 ```bash
 # Static analysis
-r2r eac scan sast
+r2r eac scan --scanner sast
 ```
 
 See module documentation for detailed scan command specifications.

@@ -23,8 +23,8 @@ Browse EAC commands organized by function. Each category groups commands that se
 - **...validate contracts**: [validate contracts](../validate/contracts.md)
 - **...check dependencies**: [validate dependencies](../validate/dependencies.md)
 - **...validate specs**: [validate specs](../validate/specs.md)
-- **...scan for secrets**: [scan secrets](../scan/secrets.md)
-- **...check for vulnerabilities**: [scan vuln](../scan/vuln.md)
+- **...scan for secrets**: [scan](../scan/scan.md) with `--scanner secrets`
+- **...check for vulnerabilities**: [scan](../scan/scan.md) with `--scanner vuln`
 
 ### Building & Testing
 

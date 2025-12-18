@@ -1,4 +1,5 @@
 # Testing Strategy
+
 Comprehensive testing strategy integrated throughout all stages of the Continuous Delivery Model.
 
 ## In This Section

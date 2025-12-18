@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/internal/testdata"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
@@ -39,6 +40,12 @@ func init() {
 // - Markdown table with one row per test
 // - Columns: Test Name, Type, Module, Tags
 func ShowSuite() int {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
+
 	// Parse arguments - expect suite moniker after "show suite"
 	args := os.Args[1:]
 

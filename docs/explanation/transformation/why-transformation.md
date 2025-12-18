@@ -1,4 +1,5 @@
 # Why Compliance Transformation?
+
 ## Introduction
 
 Most software development organizations treat compliance as a necessary burden - a series of manual checklists, periodic audits, and late-stage validations that slow delivery without delivering proportional value. Teams experience compliance as friction: weeks spent preparing for audits, days waiting for approvals, and hours documenting activities that could be automated.
@@ -364,11 +365,11 @@ These must exist or be established:
 
 These improve likelihood of success:
 
-6. **Automated Testing**: Testing practices already established
-7. **Version Control Maturity**: Teams comfortable with Git workflows
-8. **Infrastructure-as-Code**: Infrastructure automation in place
-9. **Organizational Readiness**: Culture supportive of continuous improvement
-10. **Measurement Baseline**: Ability to track before/after metrics
+1. **Automated Testing**: Testing practices already established
+2. **Version Control Maturity**: Teams comfortable with Git workflows
+3. **Infrastructure-as-Code**: Infrastructure automation in place
+4. **Organizational Readiness**: Culture supportive of continuous improvement
+5. **Measurement Baseline**: Ability to track before/after metrics
 
 ### Building Prerequisites
 

@@ -11,12 +11,15 @@ package extension
 
 import (
 	"fmt"
+	"os"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"gopkg.in/yaml.v3"
 )
 
+// commandFlags defines valid flags for the extension-meta command
 func init() {
 	registry.Register(ExtensionMeta)
 }
@@ -77,6 +80,12 @@ type ExtensionMetadata struct {
 
 // ExtensionMeta outputs extension metadata in YAML format for r2r CLI
 func ExtensionMeta() int {
+	// Validate flags
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	// Get command registry
 	cmdRegistry := registry.GetCommandRegistry()
 

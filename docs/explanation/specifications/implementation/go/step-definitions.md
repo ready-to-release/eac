@@ -1,4 +1,5 @@
 # Step Definitions
+>
 > **Writing and organizing Godog step definitions**
 
 Learn how to create effective step definitions that connect Gherkin scenarios to Go code.
@@ -106,12 +107,14 @@ ctx.Step(`^the command should( not)? succeed$`, theCommandShouldSucceed)
 ### Keep Steps Reusable
 
 **Good - reusable across scenarios**:
+
 ```go
 ctx.Step(`^I run "([^"]*)"$`, iRun)
 ctx.Step(`^a file named "([^"]*)" should exist$`, aFileNamedShouldExist)
 ```
 
 **Bad - too specific**:
+
 ```go
 ctx.Step(`^I run the init command$`, iRunInitCommand)
 ctx.Step(`^the r2r\.yaml file should exist$`, theR2RYamlShouldExist)
@@ -120,12 +123,14 @@ ctx.Step(`^the r2r\.yaml file should exist$`, theR2RYamlShouldExist)
 ### Avoid Overly Generic Steps
 
 **Bad - Too generic**:
+
 ```go
 ctx.Step(`^I do something$`, iDoSomething)
 ctx.Step(`^it should work$`, itShouldWork)
 ```
 
 **Good - Specific and clear**:
+
 ```go
 ctx.Step(`^I initialize a new project$`, iInitializeNewProject)
 ctx.Step(`^the project structure should be created$`, theProjectStructureShouldBeCreated)

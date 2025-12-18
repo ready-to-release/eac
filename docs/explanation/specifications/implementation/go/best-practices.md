@@ -1,4 +1,5 @@
 # Best Practices
+>
 > **Testing patterns and conventions for Go/Godog**
 
 Follow these best practices to write clear, maintainable, and reliable tests.
@@ -175,6 +176,7 @@ func TestCreateConfig_InEmptyDirectory_ShouldSucceed(t *testing.T) {
 ### Provide Context in Errors
 
 **Bad**:
+
 ```go
 if err != nil {
     t.Fatal("failed")
@@ -182,6 +184,7 @@ if err != nil {
 ```
 
 **Good**:
+
 ```go
 if err != nil {
     t.Fatalf("CreateConfig failed: %v", err)
@@ -191,6 +194,7 @@ if err != nil {
 ### Show Expected vs Actual
 
 **Bad**:
+
 ```go
 if got != want {
     t.Error("values don't match")
@@ -198,6 +202,7 @@ if got != want {
 ```
 
 **Good**:
+
 ```go
 if got != want {
     t.Errorf("want %v, got %v", want, got)
@@ -269,6 +274,7 @@ func TestParseConfig(t *testing.T) {
 ### Be Careful with Shared State
 
 **Bad**:
+
 ```go
 var globalState string // Shared across parallel tests - race condition!
 
@@ -279,6 +285,7 @@ func TestFunction(t *testing.T) {
 ```
 
 **Good**:
+
 ```go
 func TestFunction(t *testing.T) {
     t.Parallel()
@@ -337,12 +344,14 @@ go tool cover -func=coverage.out
 ### Focus on Meaningful Coverage
 
 Don't chase 100% coverage. Focus on:
+
 - Business logic
 - Error handling paths
 - Edge cases
 - Complex functions
 
 Skip coverage for:
+
 - Trivial getters/setters
 - Auto-generated code
 - Test helpers
@@ -391,6 +400,7 @@ benchcmp old.txt new.txt
 ### Don't Use `t.FailNow()` in Goroutines
 
 **Bad**:
+
 ```go
 func TestConcurrent(t *testing.T) {
     go func() {
@@ -400,6 +410,7 @@ func TestConcurrent(t *testing.T) {
 ```
 
 **Good**:
+
 ```go
 func TestConcurrent(t *testing.T) {
     errCh := make(chan error, 1)
@@ -416,6 +427,7 @@ func TestConcurrent(t *testing.T) {
 ### Capture Range Variables in Loops
 
 **Bad**:
+
 ```go
 for _, tt := range tests {
     t.Run(tt.name, func(t *testing.T) {
@@ -426,6 +438,7 @@ for _, tt := range tests {
 ```
 
 **Good**:
+
 ```go
 for _, tt := range tests {
     tt := tt // Capture range variable
@@ -439,11 +452,13 @@ for _, tt := range tests {
 ### Don't Ignore Cleanup Errors
 
 **Bad**:
+
 ```go
 defer os.RemoveAll(tmpDir) // Ignores error
 ```
 
 **Good**:
+
 ```go
 defer func() {
     if err := os.RemoveAll(tmpDir); err != nil {
