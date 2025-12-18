@@ -319,6 +319,15 @@
           },
           "default": []
         },
+        "depends_on_ci": {
+          "type": "array",
+          "description": "Module dependencies that require CI artifact downloads. These are merged into depends_on AND tracked separately for CI dispatch layering. Use when this module's CI workflow needs to download build artifacts from the dependency's CI.",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "default": []
+        },
         "files": {
           "$ref": "#/definitions/files"
         },

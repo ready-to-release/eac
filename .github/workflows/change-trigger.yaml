@@ -228,7 +228,7 @@ jobs:
           fi
 
   # =========================================
-  # Execute Module Workflows (All Parallel)
+  # Execute Module Workflows (Layered by CI Artifact Dependencies)
   # =========================================
   execute-workflows:
     name: Dispatch CI
@@ -266,7 +266,6 @@ jobs:
           echo ""
 
           # Use Go command to filter modules
-          # Shell format outputs reasoning to stderr (for logs) and variables to stdout (for eval)
           eval $($COMMANDS get ci-dispatch \
             --directly-changed "$DIRECTLY_CHANGED" \
             --invalidated "$INVALIDATED" \
@@ -277,9 +276,32 @@ jobs:
           echo "modules=$DISPATCH" >> $GITHUB_OUTPUT
           echo "skipped=$SKIPPED" >> $GITHUB_OUTPUT
 
-      - name: Dispatch all workflows in parallel
+      - name: Compute CI dispatch layers
+        id: layers
+        if: steps.filter.outputs.modules != ''
+        env:
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
         run: |
-          # Early exit if no changes - job runs to satisfy status checks but skips execution
+          MODULES="${{ steps.filter.outputs.modules }}"
+
+          echo "Computing CI dispatch layers for: $MODULES"
+          echo ""
+
+          # Get layers based on CI artifact dependencies
+          eval $($COMMANDS get ci-dispatch-layers --modules "$MODULES" --format shell)
+
+          # LAYER_COUNT, LAYER_0, LAYER_1, LAYERS_JSON are now set
+          echo "layer_count=$LAYER_COUNT" >> $GITHUB_OUTPUT
+          echo "layer_0=$LAYER_0" >> $GITHUB_OUTPUT
+          echo "layer_1=${LAYER_1:-}" >> $GITHUB_OUTPUT
+          echo "layers_json=$LAYERS_JSON" >> $GITHUB_OUTPUT
+
+      - name: Dispatch CI workflows in layers
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
+        run: |
+          # Early exit if no changes
           if [ "${{ needs.detect-changes.outputs.has-changes }}" != "true" ]; then
             echo "No modules require building - skipping execution"
             echo "## Dispatch CI" >> $GITHUB_STEP_SUMMARY
@@ -303,74 +325,109 @@ jobs:
           fi
 
           # Determine the correct ref for workflow_dispatch
-          # For PRs: use head_ref (the PR source branch)
-          # For push: use ref_name (the branch name)
           HEAD_REF="${{ github.head_ref }}"
           REF_NAME="${{ github.ref_name }}"
-
           if [ -n "$HEAD_REF" ]; then
             DISPATCH_REF="$HEAD_REF"
           else
             DISPATCH_REF="$REF_NAME"
           fi
 
+          LAYER_COUNT="${{ steps.layers.outputs.layer_count }}"
+          LAYER_0="${{ steps.layers.outputs.layer_0 }}"
+          LAYER_1="${{ steps.layers.outputs.layer_1 }}"
+
           echo "Event: ${{ github.event_name }}"
           echo "DISPATCH_REF: $DISPATCH_REF"
-          echo "Modules: $MODULES"
+          echo "Layer count: $LAYER_COUNT"
           echo ""
 
-          # Dispatch ALL workflows in parallel - no layering
-          # Dependency verification happens at RELEASE time via `release await-deps`
-          echo "Dispatching all module CI workflows in parallel..."
-          echo ""
-
-          DISPATCHED_COUNT=0
+          TOTAL_DISPATCHED=0
           DISPATCHED_LIST=""
 
-          for module in $MODULES; do
-            if [ -f ".github/workflows/ci-${module}.yaml" ]; then
-              echo "  Dispatching: ci-${module}.yaml"
-              gh workflow run "ci-${module}.yaml" \
-                --ref "$DISPATCH_REF" \
-                -f ref=${{ github.ref }} \
-                -f sha=${{ github.sha }} \
-                -f trigger_run_id=${{ github.run_id }}
-              DISPATCHED_COUNT=$((DISPATCHED_COUNT + 1))
-              DISPATCHED_LIST="$DISPATCHED_LIST $module"
-              sleep 2
+          # Helper function to dispatch a layer
+          dispatch_layer() {
+            local layer_num=$1
+            local modules=$2
+
+            if [ -z "$modules" ]; then
+              return 0
             fi
-          done
+
+            echo ""
+            echo "=============================================="
+            echo "Layer $layer_num: $modules"
+            echo "=============================================="
+
+            for module in $modules; do
+              if [ -f ".github/workflows/ci-${module}.yaml" ]; then
+                echo "  Dispatching: ci-${module}.yaml"
+                gh workflow run "ci-${module}.yaml" \
+                  --ref "$DISPATCH_REF" \
+                  -f ref=${{ github.ref }} \
+                  -f sha=${{ github.sha }} \
+                  -f trigger_run_id=${{ github.run_id }}
+                TOTAL_DISPATCHED=$((TOTAL_DISPATCHED + 1))
+                DISPATCHED_LIST="$DISPATCHED_LIST $module"
+                sleep 2
+              fi
+            done
+          }
+
+          # Dispatch Layer 0 (modules with no CI artifact dependencies)
+          dispatch_layer 0 "$LAYER_0"
+
+          # If there's a Layer 1, wait for Layer 0 deps then dispatch
+          if [ -n "$LAYER_1" ]; then
+            echo ""
+            echo "=============================================="
+            echo "Waiting for Layer 0 dependencies to complete..."
+            echo "=============================================="
+
+            # Layer 1 modules depend on r2r-cli - wait for it if dispatched
+            if echo "$LAYER_0" | grep -qw "r2r-cli"; then
+              echo "Waiting for r2r-cli CI to complete..."
+              $COMMANDS pipeline wait --workflow ci-r2r-cli.yaml --sha "${{ github.sha }}" --timeout 1200 || {
+                echo "::error::r2r-cli CI did not complete successfully"
+                exit 1
+              }
+              echo "✅ r2r-cli CI completed"
+            fi
+
+            # Dispatch Layer 1
+            dispatch_layer 1 "$LAYER_1"
+          fi
 
           echo ""
           echo "======================================================================"
-          echo "Dispatched $DISPATCHED_COUNT workflow(s) in parallel"
+          echo "Dispatched $TOTAL_DISPATCHED workflow(s) in $LAYER_COUNT layer(s)"
           echo "======================================================================"
-          echo ""
-          echo "Child workflows will report their own statuses."
-          echo "Dependency verification happens at release time."
 
           # Generate step summary
           echo "## Dispatch CI" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Mode**: Parallel execution (all modules)" >> $GITHUB_STEP_SUMMARY
+          echo "**Mode**: Layered execution (CI artifact dependencies)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Dispatched **$DISPATCHED_COUNT** CI workflow(s):" >> $GITHUB_STEP_SUMMARY
+          echo "Dispatched **$TOTAL_DISPATCHED** CI workflow(s) in **$LAYER_COUNT** layer(s):" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Layer 0 (no CI deps)" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          echo "$DISPATCHED_LIST" | xargs >> $GITHUB_STEP_SUMMARY
+          echo "$LAYER_0" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
 
-          # Show skipped modules if any
+          if [ -n "$LAYER_1" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Layer 1 (depends on r2r-cli)" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "$LAYER_1" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          fi
+
           if [ -n "$SKIPPED" ]; then
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "**Skipped** (valid CI exists at HEAD): \`$SKIPPED\`" >> $GITHUB_STEP_SUMMARY
           fi
-
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "> **Note**: All workflows run in parallel. Dependency CI verification" >> $GITHUB_STEP_SUMMARY
-          echo "> happens at release time via \`release await-deps\`." >> $GITHUB_STEP_SUMMARY
-        env:
-          GH_TOKEN: ${{ github.token }}
 
   # =========================================
   # Summary

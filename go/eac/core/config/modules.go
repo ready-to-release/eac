@@ -15,6 +15,8 @@ type Module struct {
 	Type          string                 `yaml:"type"`
 	Description   string                 `yaml:"description"`
 	DependsOn     []string               `yaml:"depends_on"`
+	DependsOnCI   []string               `yaml:"depends_on_ci"`            // CI artifact dependencies (merged into DependsOn)
+	CIDeps        []string               `yaml:"-"`                        // Computed: CI artifact deps for dispatch layering
 	Build         *ModuleBuild           `yaml:"build,omitempty"`          // Per-module build configuration
 	DockerBuild   map[string]interface{} `yaml:"docker_build,omitempty"`   // Per-module Docker build configuration
 	Books         []string               `yaml:"books,omitempty"`          // Book names to build for this module (references books.yml)
@@ -198,6 +200,25 @@ func (c *RepositoryConfig) applyModuleDefaults() {
 		if m.DependsOn == nil {
 			m.DependsOn = []string{}
 		}
+
+		// Merge depends_on_ci into depends_on and track separately as CIDeps
+		if len(m.DependsOnCI) > 0 {
+			m.CIDeps = make([]string, len(m.DependsOnCI))
+			copy(m.CIDeps, m.DependsOnCI)
+
+			// Merge into DependsOn (avoiding duplicates)
+			existing := make(map[string]bool)
+			for _, dep := range m.DependsOn {
+				existing[dep] = true
+			}
+			for _, ciDep := range m.DependsOnCI {
+				if !existing[ciDep] {
+					m.DependsOn = append(m.DependsOn, ciDep)
+					existing[ciDep] = true
+				}
+			}
+		}
+
 		// Note: Other defaults (Source, Config, Changelog, Specs, etc.) are now
 		// applied by ApplyTypeDefaults using type-specific defaults with fallback.
 	}
