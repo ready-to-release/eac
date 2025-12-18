@@ -158,9 +158,9 @@ func ReleaseExecuteLayers() int {
 				continue
 			}
 
-			// Dispatch workflow with version input
+			// Dispatch workflow (version only for semver modules)
 			log.Infof("  [%s] Dispatching %s", mod.Module, workflow)
-			runID, err := dispatchAndGetRunID(workspaceRoot, workflow, mod.Version)
+			runID, err := dispatchAndGetRunID(workspaceRoot, workflow, mod.Version, mod.Type)
 			if err != nil {
 				log.Errorf("  [%s] Error dispatching workflow: %v", mod.Module, err)
 				failedModules = append(failedModules, mod.Module)
@@ -207,12 +207,12 @@ func ReleaseExecuteLayers() int {
 }
 
 // dispatchAndGetRunID dispatches a workflow and returns the run ID
-func dispatchAndGetRunID(workspaceRoot, workflow, version string) (string, error) {
-	// Dispatch the workflow with version input
-	// Note: version is required for semver releases (r2r-cli, ext-eac)
-	// but not for calver releases (books, docs) which auto-generate versions
+func dispatchAndGetRunID(workspaceRoot, workflow, version, versionType string) (string, error) {
+	// Dispatch the workflow
+	// Semver releases (r2r-cli, ext-eac) require version input
+	// Calver releases (books, docs, r2r-eac-bundle) auto-generate versions
 	args := []string{"workflow", "run", workflow}
-	if version != "" {
+	if versionType == "semver" {
 		args = append(args, "-f", fmt.Sprintf("version=%s", version))
 	}
 	cmd := exec.Command("gh", args...)
