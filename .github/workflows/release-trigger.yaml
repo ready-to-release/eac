@@ -48,8 +48,7 @@ jobs:
       - name: Setup Commands Binary
         id: commands
         uses: ./.github/actions/setup-commands
-        with:
-          trigger-run-id: ${{ github.run_id }}
+        # No trigger-run-id - this is a standalone workflow dispatch, build from source
 
       # Step 1: Verify CI has passed (should be instant if called from change-trigger)
       - name: Await CI workflows
