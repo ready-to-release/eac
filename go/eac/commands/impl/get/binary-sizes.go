@@ -12,9 +12,9 @@
 // Long:   SIZE_DARWIN_ARM64="13.1"
 // Long:   ...
 // Long:
-// Long: Flag.module: type=string, usage=Module to get binary sizes for (required)
-// Long: Flag.binary-prefix: type=string, usage=Binary name prefix (e.g., r2r for r2r-linux-amd64)
-// Long: Flag.format: type=string, default=shell, usage=Output format (shell, json, yaml, markdown)
+// Flag.module: type=string, usage=Module to get binary sizes for (required)
+// Flag.binary-prefix: type=string, usage=Binary name prefix (e.g., r2r for r2r-linux-amd64)
+// Flag.format: type=string, default=shell, usage=Output format (shell, json, yaml, markdown)
 // Long:
 // Long: Example:
 // Long:   get binary-sizes --module r2r-cli --binary-prefix r2r

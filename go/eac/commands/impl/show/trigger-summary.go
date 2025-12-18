@@ -10,14 +10,14 @@
 // Long: - Shows workflow name and description
 // Long: - Shows version, run IDs, branch, and commit information
 // Long:
-// Long: Flag.module: type=string, usage=Module name (required)
-// Long: Flag.workflow: type=string, usage=Workflow filename (required)
-// Long: Flag.workflow-desc: type=string, usage=Workflow description
-// Long: Flag.version: type=string, usage=Version being released (optional)
-// Long: Flag.trigger-run-id: type=string, usage=Original trigger workflow run ID
-// Long: Flag.ci-run-id: type=string, usage=CI workflow run ID (required)
-// Long: Flag.branch: type=string, usage=Git branch name (required)
-// Long: Flag.commit: type=string, usage=Git commit SHA (required)
+// Flag.module: type=string, usage=Module name (required)
+// Flag.workflow: type=string, usage=Workflow filename (required)
+// Flag.workflow-desc: type=string, usage=Workflow description
+// Flag.version: type=string, usage=Version being released (optional)
+// Flag.trigger-run-id: type=string, usage=Original trigger workflow run ID
+// Flag.ci-run-id: type=string, usage=CI workflow run ID (required)
+// Flag.branch: type=string, usage=Git branch name (required)
+// Flag.commit: type=string, usage=Git commit SHA (required)
 package show
 
 import (

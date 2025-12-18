@@ -9,13 +9,13 @@
 // Long: - Markdown-formatted setup summary with dependencies table
 // Long: - Shows which dependencies were installed or already available
 // Long:
-// Long: Flag.module: type=string, usage=Module name (required)
-// Long: Flag.deps: type=string, usage=Comma-separated list of dependencies (go,node,docker,buildx,upx)
-// Long: Flag.go-available: type=bool, usage=Whether Go was already available
-// Long: Flag.node-available: type=bool, usage=Whether Node was already available
-// Long: Flag.buildx-available: type=bool, usage=Whether Docker Buildx was already available
-// Long: Flag.qemu-available: type=bool, usage=Whether QEMU was already available
-// Long: Flag.upx-available: type=bool, usage=Whether UPX was already available
+// Flag.module: type=string, usage=Module name (required)
+// Flag.deps: type=string, usage=Comma-separated list of dependencies (go,node,docker,buildx,upx)
+// Flag.go-available: type=bool, usage=Whether Go was already available
+// Flag.node-available: type=bool, usage=Whether Node was already available
+// Flag.buildx-available: type=bool, usage=Whether Docker Buildx was already available
+// Flag.qemu-available: type=bool, usage=Whether QEMU was already available
+// Flag.upx-available: type=bool, usage=Whether UPX was already available
 package show
 
 import (

@@ -10,14 +10,14 @@
 // Long: - Shows version, tag, commit, changelog, existing release, and CI check status
 // Long: - On failure, can output diagnostic link via pipeline ci summary-link
 // Long:
-// Long: Flag.module: type=string, usage=Module name (required)
-// Long: Flag.version: type=string, usage=Release version (required)
-// Long: Flag.tag: type=string, usage=Full tag name (required)
-// Long: Flag.commit: type=string, usage=Commit SHA (required)
-// Long: Flag.version-type: type=string, default=semver, usage=Version type (semver or calver)
-// Long: Flag.ci-skipped: type=bool, default=false, usage=Whether CI check was skipped
-// Long: Flag.status: type=string, default=success, usage=Overall status (success or failure)
-// Long: Flag.run-id: type=string, usage=Run ID for diagnostic links on failure
+// Flag.module: type=string, usage=Module name (required)
+// Flag.version: type=string, usage=Release version (required)
+// Flag.tag: type=string, usage=Full tag name (required)
+// Flag.commit: type=string, usage=Commit SHA (required)
+// Flag.version-type: type=string, default=semver, usage=Version type (semver or calver)
+// Flag.ci-skipped: type=bool, default=false, usage=Whether CI check was skipped
+// Flag.status: type=string, default=success, usage=Overall status (success or failure)
+// Flag.run-id: type=string, usage=Run ID for diagnostic links on failure
 package show
 
 import (

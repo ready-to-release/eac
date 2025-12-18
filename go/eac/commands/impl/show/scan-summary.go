@@ -13,7 +13,7 @@
 // Long: - Table showing each scan type with its pass/fail status
 // Long: - Artifact name for results download
 // Long:
-// Long: Flag.artifact-name: type=string, usage=Name of the artifact containing scan results
+// Flag.artifact-name: type=string, usage=Name of the artifact containing scan results
 package show
 
 import (

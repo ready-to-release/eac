@@ -10,10 +10,10 @@
 // Long: - Shows passed and skipped counts on success
 // Long: - Shows failure message on failure
 // Long:
-// Long: Flag.module: type=string, usage=Module name (required)
-// Long: Flag.passed: type=int, default=0, usage=Number of dependencies that passed CI
-// Long: Flag.skipped: type=int, default=0, usage=Number of dependencies skipped (no CI workflow)
-// Long: Flag.status: type=string, default=success, usage=Overall status (success or failure)
+// Flag.module: type=string, usage=Module name (required)
+// Flag.passed: type=int, default=0, usage=Number of dependencies that passed CI
+// Flag.skipped: type=int, default=0, usage=Number of dependencies skipped (no CI workflow)
+// Flag.status: type=string, default=success, usage=Overall status (success or failure)
 package show
 
 import (
