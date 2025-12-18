@@ -209,19 +209,17 @@ func packageBreakdown(f *SummaryFormatter, details []PackageTestResults) string 
 func testDiagnosticsSection(f *SummaryFormatter, module *config.Module, suite string, cfg *config.EACConfig) string {
 	var diagnostics string
 
-	// Read actual test log from the correct output directory
-	// Test logs are output to out/test/<module>/packages/<package>/test.log
-	// For modules with subpackages, logs may be in subdirectories
+	// Read actual test log from the module's test output directory
+	// Test logs are output to out/test/<module>/<subpackage>/test.log
 	moduleDir := cfg.Repository.TestModuleDir(module.Moniker)
-	packagesDir := filepath.Join(moduleDir, "packages")
 
-	// Try to find test.log files in the packages directory
-	logContent := findAndReadSubpackageLogs(packagesDir, 100)
+	// Try to find test.log files in the module directory and subdirectories
+	logContent := findAndReadSubpackageLogs(moduleDir, 100)
 
 	if logContent != "" {
 		diagnostics += f.Section(Emoji("diagnostics")+" Test Log (last 100 lines)", f.CodeBlock("", logContent))
 	} else {
-		diagnostics += f.Section(Emoji("diagnostics")+" Diagnostics", fmt.Sprintf("Tests failed - no log file found in %s", packagesDir))
+		diagnostics += f.Section(Emoji("diagnostics")+" Diagnostics", fmt.Sprintf("Tests failed - no log file found in %s", moduleDir))
 	}
 
 	// Show test timing if available
