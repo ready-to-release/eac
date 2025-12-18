@@ -1,4 +1,5 @@
 # Operations
+
 Operations is not a separate phase but an integral part of the continuous delivery lifecycle.
 
 In a DevOps model, the team that builds the system also runs and maintains it.

@@ -37,12 +37,14 @@ Testing in external repositories ensures your extension:
 Before testing in external repositories:
 
 1. **Complete development in EAC repository** using `importer.ps1`:
+
    ```powershell
    cd C:\source\ready-to-release\eac
    .\scripts\pwsh\importer.ps1
    ```
 
 2. **Build local Docker image** when ready for external testing:
+
    ```powershell
    cd C:\source\ready-to-release\eac
    .\scripts\pwsh\local-dev\build-local.ps1
@@ -94,8 +96,10 @@ cd C:\path\to\external-repo
 ```
 
 **Requirements:**
+
 - Directory must be a git repository
 - If not, initialize git first:
+
   ```powershell
   git init
   ```
@@ -142,6 +146,7 @@ r2r eac init
 ```
 
 Follow the prompts to configure:
+
 - AI provider (Claude API, OpenAI, or Gemini)
 - API tokens
 - Git integration
@@ -273,6 +278,7 @@ project-b/
 When you make changes to the EAC extension:
 
 1. **Develop with importer.ps1 first** for fast iteration:
+
    ```powershell
    cd C:\source\ready-to-release\eac
 
@@ -282,12 +288,14 @@ When you make changes to the EAC extension:
    ```
 
 2. **Rebuild the Docker image** when ready to test in external repos:
+
    ```powershell
    cd C:\source\ready-to-release\eac
    .\scripts\pwsh\local-dev\build-local.ps1
    ```
 
 3. **Test in external repository** (no reconfiguration needed):
+
    ```powershell
    cd C:\path\to\external-repo
    $env:R2R_REPO_ROOT = (Get-Location)
@@ -368,16 +376,19 @@ $env:R2R_REPO_ROOT = (Get-Location)
 **Solutions**:
 
 1. **Verify image exists**:
+
    ```powershell
    docker images ext-eac:dev
    ```
 
 2. **Check local config**:
+
    ```powershell
    cat .r2r\r2r-cli.local.yml
    ```
 
    Should contain:
+
    ```yaml
    load_local: true
    extensions:
@@ -387,6 +398,7 @@ $env:R2R_REPO_ROOT = (Get-Location)
    ```
 
 3. **Rebuild if missing**:
+
    ```powershell
    cd C:\source\ready-to-release\eac
    .\scripts\pwsh\local-dev\build-local.ps1
@@ -399,17 +411,20 @@ $env:R2R_REPO_ROOT = (Get-Location)
 **Solutions**:
 
 1. **Verify file location**:
+
    ```powershell
    # Should be in repository root
    Test-Path .r2r\r2r-cli.local.yml
    ```
 
 2. **Check YAML syntax**:
+
    ```powershell
    cat .r2r\r2r-cli.local.yml
    ```
 
 3. **Recreate configuration**:
+
    ```powershell
    C:\source\ready-to-release\eac\scripts\pwsh\cli\init-local.ps1 -Force
    ```
@@ -421,21 +436,25 @@ $env:R2R_REPO_ROOT = (Get-Location)
 **Solutions**:
 
 1. **Set repository root**:
+
    ```powershell
    $env:R2R_REPO_ROOT = (Get-Location)
    ```
 
 2. **Verify Docker image**:
+
    ```powershell
    docker images ext-eac:dev
    ```
 
 3. **Check local config exists**:
+
    ```powershell
    Test-Path .r2r\r2r-cli.local.yml
    ```
 
 4. **Run init again**:
+
    ```powershell
    r2r eac init
    ```

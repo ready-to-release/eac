@@ -1,4 +1,5 @@
 # View Changelog and Release Notes
+
 Learn how to view changelog entries and release notes for modules in both human-readable and structured formats.
 
 ## What You'll Accomplish

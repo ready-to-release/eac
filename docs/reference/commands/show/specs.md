@@ -13,6 +13,7 @@ r2r eac show specs ext-eac
 ```
 
 Shows specs from:
+
 - `specs/eac-commands/` (dependency)
 - `specs/r2r-cli/` (dependency)
 - `specs/ext-eac/` (if any)

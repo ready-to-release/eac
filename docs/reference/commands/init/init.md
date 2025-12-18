@@ -7,16 +7,20 @@
 The init command creates configuration files at:
 
 **Team/Environment Config (safe to commit):**
+
 ```text
 .r2r/eac/ai-provider.yml
 ```
+
 Contains environment variable references (e.g., `${ANTHROPIC_API_KEY}`).
 **Safe to commit** - no secrets stored directly.
 
 **Personal Config (never commit):**
+
 ```text
 .r2r/eac/ai-provider.personal.yml
 ```
+
 Created when using `--ai-token` flag. Contains actual API keys.
 **NEVER commit** - automatically gitignored.
 
@@ -32,6 +36,7 @@ r2r eac init --copy-templates
 ```
 
 This copies these files to `.r2r/eac/`:
+
 - `ai-config.yml` - AI type definitions (specs, commit-message)
 - `module-types.yml` - Module type definitions
 - `system-dependencies.yml` - System dependency definitions
@@ -42,11 +47,13 @@ This copies these files to `.r2r/eac/`:
 Once copied, you can edit these files and commit them. Your versions will take precedence over system defaults.
 
 **When to use `--copy-templates`:**
+
 - ✅ You need custom AI type definitions
 - ✅ You need custom module types
 - ✅ You want to version control these configurations
 
 **When NOT to use `--copy-templates`:**
+
 - ❌ Default configurations work for you (most users)
 - ❌ You want automatic upgrades (system defaults update with EAC version)
 

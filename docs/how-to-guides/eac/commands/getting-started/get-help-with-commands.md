@@ -1,4 +1,5 @@
 # Get Help with Commands
+
 ## What You'll Accomplish
 
 Discover available EAC commands and learn how to use them effectively using the built-in help system.
@@ -6,10 +7,13 @@ Discover available EAC commands and learn how to use them effectively using the 
 ## Prerequisites
 
 ### Required Knowledge
+
 **New to r2r?** Learn these concepts first:
+
 - [Quick Start Guide](../../../../tutorials/getting-started/quick-start.md) - Install r2r and understand basic commands
 
 ### Required Setup
+
 - EAC installed and accessible via `r2r eac`
 
 ## Steps

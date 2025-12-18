@@ -1,4 +1,5 @@
 # Trigger Orchestration
+
 Detailed reference for the trigger orchestration system (`change-trigger.yaml`).
 
 ## Overview

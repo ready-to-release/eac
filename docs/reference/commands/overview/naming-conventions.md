@@ -1,4 +1,5 @@
 # Command Naming Conventions
+
 ## Overview
 
 EAC commands follow consistent naming conventions that make them predictable and discoverable. Understanding these conventions helps you guess command names and understand their purpose.
@@ -16,7 +17,7 @@ get modules          # verb: get, noun: modules
 show dependencies    # verb: show, noun: dependencies
 validate contracts   # verb: validate, noun: contracts
 create commit-message  # verb: create, noun: commit-message
-scan secrets         # verb: scan, noun: secrets
+scan --scanner vuln  # verb: scan, scanner type: vuln
 ```
 
 **Rationale**: Verb-first naming groups commands by action, making it easier to find commands when you know what you want to do.
@@ -31,7 +32,7 @@ Commands use semantically meaningful verbs that clearly indicate their purpose:
 | `show`      | Display formatted information | Human-readable | `show modules`, `show dependencies`    |
 | `create`    | Generate new content          | Varies         | `create spec`, `create pr`             |
 | `validate`  | Check correctness             | Pass/fail      | `validate contracts`, `validate specs` |
-| `scan`      | Analyze for issues            | Report         | `scan secrets`, `scan vuln`            |
+| `scan`      | Analyze for issues            | Report         | `scan --scanner vuln`, `scan zap`      |
 | `test`      | Execute tests                 | Test results   | `test`, `test suite`                   |
 | `build`     | Compile/build                 | Artifacts      | `build`                                |
 | `release`   | Manage releases               | Varies         | `release changelog`, `release this`    |
@@ -416,11 +417,12 @@ validate design            # Validate architecture syntax
 ### scan commands
 
 ```bash
-scan secrets               # Detect secrets
-scan vuln                  # Scan vulnerabilities
-scan sast                  # Static analysis
-scan iac                   # Infrastructure scan
-scan compliance            # Compliance check
+scan --scanner secrets     # Detect secrets
+scan --scanner vuln        # Scan vulnerabilities
+scan --scanner sast        # Static analysis
+scan --scanner iac         # Infrastructure scan
+scan --scanner compliance  # Compliance check
+scan zap                   # Dynamic testing (special subcommand)
 ```
 
 ---

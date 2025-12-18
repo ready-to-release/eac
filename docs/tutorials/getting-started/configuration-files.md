@@ -30,12 +30,14 @@ R2R uses two layers of configuration:
 Understanding the two configuration layers:
 
 **`.r2r/r2r-cli.yml`** (Framework Configuration)
+
 - Created by: `r2r init`
 - Purpose: Manages which extensions are available
 - Scope: Framework-level (applies to all extensions)
 - Example content: Extension registry, Docker images
 
 **`.r2r/eac/`** (EAC Extension Configuration)
+
 - Created by: `r2r eac init`
 - Purpose: Configures how the EAC extension behaves
 - Scope: Extension-specific (only affects EAC)
@@ -57,11 +59,13 @@ extensions:
 ```
 
 **Purpose:**
+
 - Defines which extensions are available
 - Specifies Docker images for each extension
 - Configures registry and pull policies
 
 **When to edit:**
+
 - Adding new extensions (or use `r2r install <extension>`)
 - Changing extension versions
 - Configuring local development images
@@ -90,6 +94,7 @@ These files are created when you run `r2r eac init` and contain your team or per
 | `ai-provider.personal.yml` | Personal AI overrides | ❌ Never (personal secrets) |
 
 **Example: `ai-provider.yml`**
+
 ```yaml
 ai:
   provider: claude-api
@@ -102,6 +107,7 @@ git:
 ```
 
 **When to edit:**
+
 - Change AI model
 - Switch AI providers
 - Update API endpoints
@@ -223,6 +229,7 @@ r2r eac create spec my-module
 ```
 
 **Files created:**
+
 ```
 .r2r/eac/
 ├── ai-provider.yml          (your provider config)
@@ -250,6 +257,7 @@ This copies configuration files like `ai-config.yml`, `module-types.yml`, etc. t
 3. EAC will automatically use your versions instead of system defaults
 
 **Example file structure after copying:**
+
 ```
 .r2r/eac/
 ├── ai-provider.yml          (created by init)
@@ -265,22 +273,28 @@ For details on the file formats, see the [Init Command Reference](../../referenc
 ## What to Commit to Git
 
 ### Always Commit
+
 ✅ Generated files (documents your repository structure)
+
 - `repository.yml`
 - `books.yml`
 - `test-suites.yml`
 
 ✅ Team configuration (optional, team decides)
+
 - `ai-provider.yml` (if sharing team config)
 
 ✅ Custom overrides (if you customized them)
+
 - `ai-config.yml` (only if you created a custom version)
 - `module-types.yml` (only if you created a custom version)
 - `testing-tags.yml` (only if you created a custom version)
 - etc.
 
 ### Never Commit
+
 ❌ Personal secrets and preferences
+
 - `*.personal.yml` (personal API keys)
 - `*.local.yml` (local overrides)
 
@@ -379,6 +393,7 @@ Priority 3: Hardcoded defaults (in code)
 ```
 
 This means:
+
 - **If you create a file locally, it takes precedence**
 - **If not, system defaults are used automatically**
 - **You only customize what you need**
@@ -392,6 +407,7 @@ This means:
 If you're using system defaults (most users):
 
 **Automatic upgrade:**
+
 - Install new version of r2r CLI
 - System defaults automatically updated
 - No configuration changes needed
@@ -401,6 +417,7 @@ If you're using system defaults (most users):
 If you've created custom configuration files:
 
 **Manual review:**
+
 - Install new version of r2r CLI
 - Review release notes for configuration changes
 - Update your custom files if needed

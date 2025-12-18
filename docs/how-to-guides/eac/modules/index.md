@@ -1,4 +1,5 @@
 # Module Management
+
 Guides for creating and configuring EAC modules and module types in the repository.
 
 ## In This Section

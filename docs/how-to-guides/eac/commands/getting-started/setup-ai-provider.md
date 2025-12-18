@@ -1,4 +1,5 @@
 # Setup AI Provider
+
 ## What You'll Accomplish
 
 Configure AI provider (Anthropic Claude, OpenAI, or Google Gemini) to enable AI-powered features like commit message generation, PR descriptions, and specification creation.
@@ -9,7 +10,9 @@ Configure AI provider (Anthropic Claude, OpenAI, or Google Gemini) to enable AI-
 ## Prerequisites
 
 ### Required Knowledge
+
 **New to r2r?** Learn these concepts first:
+
 - [Quick Start Guide](../../../../tutorials/getting-started/quick-start.md) - Initialize r2r and understand AI provider configuration
 
 ### Required Setup
@@ -41,6 +44,7 @@ r2r eac init --ai claude-api
 **What happens**: Creates `.r2r/eac/ai-provider.yml` that references `ANTHROPIC_API_KEY` environment variable.
 
 **Advantages**:
+
 - Config file can be safely committed to git
 - Easy to use different keys per environment (dev/staging/prod)
 - Works well in CI/CD pipelines
@@ -57,6 +61,7 @@ r2r eac init --ai claude-api --ai-token sk-ant-api03-...
 **What happens**: Creates `.r2r/eac/ai-provider.personal.yml` with the actual API key stored directly.
 
 **Advantages**:
+
 - No need to manage environment variables
 - Simpler for personal development
 - Automatically gitignored
@@ -255,6 +260,7 @@ git status | grep ai-provider.personal
 ```
 
 **Critical**: If you accidentally committed this file, you must:
+
 1. Remove it from git history
 2. Rotate (regenerate) your API key immediately
 3. Add it to `.gitignore`

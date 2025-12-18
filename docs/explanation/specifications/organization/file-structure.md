@@ -1,4 +1,5 @@
 # File Structure
+>
 > **Specifications vs implementation separation**
 
 Understanding the philosophy and structure of separating WHAT from HOW.
@@ -35,6 +36,7 @@ specs/<module>/<feature>/
 > **Implementation**: Step definitions are organized in a module-specific test directory.
 >
 > Common patterns:
+>
 > - **Go**: `src/<module>/tests/steps_test.go`
 > - **Python**: `src/<module>/tests/steps.py`
 > - **Java**: `src/test/java/<package>/StepDefinitions.java`
@@ -49,6 +51,7 @@ specs/<module>/<feature>/
 ### Business Reviews Specs Without Seeing Technical Code
 
 Stakeholders can review feature files without understanding:
+
 - Programming languages
 - Technical implementation details
 - Test frameworks
@@ -56,6 +59,7 @@ Stakeholders can review feature files without understanding:
 ### Developers Refactor Implementations Without Changing Specs
 
 If behavior is unchanged, developers can:
+
 - Optimize implementation
 - Switch frameworks
 - Refactor code structure

@@ -1,4 +1,5 @@
 # Creating Custom Commands
+
 **Status:** Placeholder - Content coming soon
 
 **Prerequisites:** [Your First Module](../getting-started/first-module.md), Go programming knowledge
@@ -67,11 +68,13 @@ This tutorial teaches you how to extend the r2r CLI with custom commands, integr
 The tutorial creates a custom command for pre-deployment checks:
 
 **Command usage:**
+
 ```bash
 r2r run-checks --module api-gateway --env production
 ```
 
 **Implementation structure:**
+
 ```text
 go/eac-extensions/
 ├── commands/
@@ -84,6 +87,7 @@ go/eac-extensions/
 ```
 
 **Command implementation:**
+
 ```go
 package checks
 

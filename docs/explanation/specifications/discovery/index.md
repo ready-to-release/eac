@@ -1,4 +1,5 @@
 # Discovery Techniques
+>
 > **Workshop methods for discovering requirements and building shared understanding**
 
 Learn collaborative techniques for discovering business rules, acceptance criteria, and domain language before development begins.

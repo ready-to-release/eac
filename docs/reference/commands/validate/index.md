@@ -1,4 +1,5 @@
 # validate Commands
+
 Validate repository contracts, dependencies, and compliance for quality gates.
 
 ## Commands in this Category

@@ -1,4 +1,5 @@
 # Workflow Architecture
+
 Architectural overview of the GitHub Actions workflow system.
 
 ## Workflow Architecture

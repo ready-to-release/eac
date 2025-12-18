@@ -14,11 +14,6 @@
 // Long:
 // Long: Validation failures indicate missing artifacts that must be built before testing.
 // Long:
-// Long: Flags:
-// Long:   --skip-depm  Skip validation of transitive module dependencies (for release workflows)
-// Long:   --os         Target OS for platform-specific artifacts
-// Long:   --arch       Target architecture for platform-specific artifacts
-// Long:
 // Long: Expected Output:
 // Long:   Displays validation results for target module and all dependency artifacts.
 // Long:   Exit code 0 if all artifacts present, non-zero if any missing.
@@ -26,8 +21,14 @@
 // Long:
 // Long: Example:
 // Long:   validate artifacts eac-commands
-// Long:   validate artifacts r2r-cli --all-platforms
+// Long:   validate artifacts r2r-cli --os linux --arch amd64
 // Long:   validate artifacts docs --skip-depm     # Release context: skip module deps
+//
+// Args: module
+//
+// Flag.skip-depm: type=bool, default=false, usage=Skip validation of transitive module dependencies (for release workflows)
+// Flag.os: type=string, default=runtime.GOOS, usage=Target OS for platform-specific artifacts
+// Flag.arch: type=string, default=runtime.GOARCH, usage=Target architecture for platform-specific artifacts
 package validate
 
 import (

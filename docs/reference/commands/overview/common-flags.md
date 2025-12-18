@@ -1,4 +1,5 @@
 # Common Flags and Options
+
 ## Overview
 
 EAC commands share common flags and patterns that work consistently across the command set. Understanding these global options helps you use commands more effectively.
@@ -204,13 +205,13 @@ r2r eac test suite integration --stop-on-failure
 
 ```bash
 # Only high and critical vulnerabilities
-r2r eac scan vuln --severity HIGH,CRITICAL
+r2r eac scan --scanner vuln --severity HIGH,CRITICAL
 
 # JSON output for CI
-r2r eac scan secrets --format json --output secrets-report.json
+r2r eac scan --scanner secrets --format json --output secrets-report.json
 
 # SARIF format for GitHub integration
-r2r eac scan sast --format sarif --output sast-results.sarif
+r2r eac scan --scanner sast --format sarif --output sast-results.sarif
 ```
 
 #### validate commands

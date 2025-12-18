@@ -1,4 +1,5 @@
 # Viewing Architecture Diagrams
+
 All modules include C4 architecture diagrams defined in Structurizr DSL format.
 
 ## Quick Start

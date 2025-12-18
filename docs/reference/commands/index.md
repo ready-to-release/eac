@@ -237,7 +237,7 @@ Manage development workflows:
 # Fast validation (< 10 min)
 r2r eac validate specs || exit 1
 r2r eac validate go-tidy || exit 1
-r2r eac scan secrets || exit 1
+r2r eac scan --scanner secrets || exit 1
 r2r eac test --short || exit 1
 
 echo "✓ Pre-commit checks passed"
@@ -271,8 +271,8 @@ jobs:
 
       - name: Security Scan
         run: |
-          r2r eac scan compliance
-          r2r eac scan vuln
+          r2r eac scan --scanner compliance
+          r2r eac scan --scanner vuln
 ```
 
 ### Release Script

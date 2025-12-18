@@ -1,4 +1,5 @@
 # Make Commits with AI
+
 ## What You'll Accomplish
 
 Generate semantic commit messages automatically from your staged changes using AI analysis of code diffs.

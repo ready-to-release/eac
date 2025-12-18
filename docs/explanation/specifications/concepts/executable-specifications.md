@@ -1,4 +1,5 @@
 # Executable Specifications
+>
 > **From discovery to implementation**
 
 Learn how to move from collaborative discovery to running, automated specifications.

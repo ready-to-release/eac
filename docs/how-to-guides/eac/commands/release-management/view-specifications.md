@@ -1,4 +1,5 @@
 # View Release Specifications
+
 ## What You'll Accomplish
 
 Learn how to view and analyze specification files (.feature files) that were added or modified for a specific release using the `show specs` and `get specs` commands.
@@ -22,6 +23,7 @@ r2r eac show specs ext-eac unreleased
 ```
 
 **Output:**
+
 ```markdown
 # Specifications: ext-eac (Unreleased)
 
@@ -63,6 +65,7 @@ r2r eac show specs ext-eac --branch develop
 ```
 
 **When to use this:**
+
 - Working in a feature branch and want to see specs relative to that branch
 - Comparing specs across different branches
 - CI/CD pipelines running on non-main branches
@@ -99,6 +102,7 @@ r2r eac get specs ext-eac unreleased --as-json | jq '.total_scenarios'
 ```
 
 **Example Output:**
+
 ```
 15
 ```
@@ -110,6 +114,7 @@ r2r eac get specs ext-eac latest --as-json | jq -r '.spec_files[] | select(.stat
 ```
 
 **Example Output:**
+
 ```
 specs/eac-commands/show-specs/specification.feature
 specs/eac-commands/get-specs/specification.feature
@@ -122,6 +127,7 @@ r2r eac get specs ext-eac --as-json | jq '.spec_files[] | {file: .feature_name, 
 ```
 
 **Example Output:**
+
 ```json
 {
   "file": "show-specs",
@@ -144,6 +150,7 @@ r2r eac get specs ext-eac --as-json | jq '{added: .added_count, modified: .modif
 ```
 
 **Example Output:**
+
 ```json
 {
   "added": 2,
@@ -159,6 +166,7 @@ r2r eac get specs ext-eac --as-json | jq '.spec_files | sort_by(.scenario_count)
 ```
 
 **Example Output:**
+
 ```json
 {
   "file": "build",
@@ -173,6 +181,7 @@ r2r eac get specs ext-eac --as-json | jq '.deleted_count > 0'
 ```
 
 **Example Output:**
+
 ```
 false
 ```
@@ -193,6 +202,7 @@ r2r eac get specs ext-eac latest --as-json | jq -r '.spec_files[] | select(.stat
 ```
 
 **Example Output:**
+
 ```markdown
 ## Specification Changes
 
@@ -212,6 +222,7 @@ r2r eac get specs ext-eac latest --as-json | jq -r '.spec_files[] | select(.stat
 **Problem:** The module moniker is invalid or doesn't exist.
 
 **Solution:** List available modules:
+
 ```bash
 r2r eac show modules
 ```
@@ -221,6 +232,7 @@ r2r eac show modules
 **Problem:** The specified version doesn't exist in the changelog.
 
 **Solution:** List available versions:
+
 ```bash
 r2r eac get changelog ext-eac --as-json | jq -r '.versions[].number'
 ```
@@ -230,6 +242,7 @@ r2r eac get changelog ext-eac --as-json | jq -r '.versions[].number'
 **Problem:** Using `latest` keyword but module has no releases yet.
 
 **Solution:** This is normal for new modules. Use `unreleased` or omit version parameter:
+
 ```bash
 r2r eac show specs ext-eac unreleased
 ```
@@ -239,11 +252,13 @@ r2r eac show specs ext-eac unreleased
 **Problem:** Git history doesn't show any .feature file changes for the version.
 
 **Possible Causes:**
+
 - No spec files were actually modified in git commits
 - Spec files exist but weren't committed
 - Looking at wrong version
 
 **Solution:** Verify spec files were committed:
+
 ```bash
 # Check if specs directory exists
 ls specs/<module>/
@@ -259,11 +274,13 @@ git log --oneline --name-status | grep ".feature"
 **Answer:** Container/bundle modules like `ext-eac` automatically **aggregate specs from all their dependencies**. This is intentional and provides a complete view of all specifications included in the release bundle.
 
 **Example:**
+
 - `ext-eac` depends on `eac-commands` and `r2r-cli`
 - Running `r2r eac show specs ext-eac` shows specs from all three modules
 - This ensures you see the full scope of the release
 
 **To see only a specific module's specs:**
+
 ```bash
 # Query the dependency directly
 r2r eac show specs eac-commands

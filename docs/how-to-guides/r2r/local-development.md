@@ -5,6 +5,7 @@
 **Problem**: You want to develop and test r2r extensions without pushing to remote registries during development.
 
 **Solution**: Use different workflows depending on where you're working:
+
 - **EAC repository**: Use `importer.ps1` to load commands directly from source
 - **External repositories**: Use Docker-based local development with locally built images
 
@@ -31,6 +32,7 @@ r2r eac <command>
 ```
 
 **Advantages:**
+
 - Instant feedback on code changes
 - No Docker build required
 - Fastest iteration cycle
@@ -51,6 +53,7 @@ C:\source\ready-to-release\eac\scripts\pwsh\local-dev\setup.ps1 -TargetRepo .
 ```
 
 **Advantages:**
+
 - Tests in realistic deployment environment
 - Validates Dockerfile and container configuration
 - Tests across different repository structures
@@ -129,6 +132,7 @@ C:\source\ready-to-release\eac\scripts\pwsh\local-dev\setup.ps1 -TargetRepo .
 ```
 
 This will:
+
 1. Check prerequisites
 2. Build the Docker image as `ext-eac:dev` in EAC repo
 3. Install the r2r binary (if not already installed)
@@ -312,17 +316,20 @@ extensions:
 When developing and testing in external repositories:
 
 1. **Modify code in EAC repository**:
+
    ```powershell
    cd C:\source\ready-to-release\eac
    # Edit files in go/eac/commands/
    ```
 
 2. **Rebuild Docker image**:
+
    ```powershell
    .\scripts\pwsh\local-dev\build-local.ps1
    ```
 
 3. **Test in external repository**:
+
    ```powershell
    cd C:\path\to\external-repo
    $env:R2R_REPO_ROOT = (Get-Location)
@@ -454,21 +461,25 @@ cat .r2r\r2r-cli.local.yml
 **Solutions**:
 
 1. **Check Docker is running**:
+
    ```powershell
    docker version
    ```
 
 2. **Check Dockerfile exists**:
+
    ```powershell
    Test-Path containers\ext-eac\Dockerfile
    ```
 
 3. **Try legacy builder**:
+
    ```powershell
    .\scripts\pwsh\local-dev\build-local.ps1 -NoBuildKit
    ```
 
 4. **Check repository root**:
+
    ```powershell
    git rev-parse --show-toplevel
    ```

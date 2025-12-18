@@ -1,4 +1,5 @@
 # Merge Workspace Changes
+
 ## What You'll Accomplish
 
 Merge your topic branch back to main using squash merge, then clean up the workspace.

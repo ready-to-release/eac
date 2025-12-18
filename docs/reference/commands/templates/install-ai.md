@@ -10,6 +10,7 @@
 ## Use Case
 
 Install AI prompt templates for customization. Used by:
+
 - `create commit-message` - Commit messages
 - `create design` - Architecture diagrams
 - `create spec` - Gherkin specifications

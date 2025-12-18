@@ -1,4 +1,5 @@
 # Branching Strategies
+
 ## Introduction
 
 Branching strategies define how code flows through the CD Model's 12 stages. While [Trunk-Based Development](trunk-based-development.md) establishes the core principles and branch types, this article provides detailed branching flows for the two primary implementation patterns:

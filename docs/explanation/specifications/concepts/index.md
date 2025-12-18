@@ -1,4 +1,5 @@
 # Core Concepts
+>
 > **Foundational concepts for Behavior-Driven Development and testing**
 
 Understand the principles and practices that underpin specification-driven development.

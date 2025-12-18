@@ -1,4 +1,5 @@
 # The Compliance-Velocity Paradox
+>
 > **The fundamental contradiction facing regulated industries**
 
 ## The Challenge

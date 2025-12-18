@@ -1,4 +1,5 @@
 # Getting Started
+
 Begin your journey with r2r and Everything-as-Code. These foundational tutorials will take you from installation through creating your first modules and understanding the testing framework.
 
 ## Learning Path

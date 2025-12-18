@@ -1,4 +1,5 @@
 # Show Commands
+
 ## Overview
 
 Show commands display repository information in human-readable formats optimized for interactive terminal use. They provide formatted tables, lists, and text designed for visual consumption rather than programmatic processing.

@@ -1,4 +1,5 @@
 # Creating CLI Commands
+
 This guide is for developers contributing new commands to the EAC CLI in `go/eac/commands/impl/`.
 
 ## Overview
@@ -296,6 +297,7 @@ func MyCommand() int {
 ```
 
 **Benefits:**
+
 - ✅ Catches typos (e.g., `--mod` suggests `--module`)
 - ✅ Shows all valid flags when unknown flag detected
 - ✅ Consistent error messages across commands
@@ -328,6 +330,7 @@ if logger.IsDebugMode() {
 ```
 
 **Benefits:**
+
 - ✅ All debug output in unified `commands.log`
 - ✅ No scattered debug files in `out/logs/`
 - ✅ Can filter by content type in log viewer

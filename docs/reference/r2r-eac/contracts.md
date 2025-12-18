@@ -1,4 +1,5 @@
 # Contracts
+
 ## Overview
 
 The EAC contract system defines all configuration via **YAML contracts validated against JSON schemas**. Configuration, architecture, and behavior are version-controlled and validated before execution.

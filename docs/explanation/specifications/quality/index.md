@@ -1,4 +1,5 @@
 # Quality & Maintenance
+>
 > **Maintaining healthy, living specifications**
 
 Learn how to keep specifications synchronized with implementation through continuous review and iteration.

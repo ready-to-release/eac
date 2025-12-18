@@ -1,4 +1,5 @@
 # Generate Architecture Diagrams
+
 ## What You'll Accomplish
 
 Create C4 model architecture diagrams using AI to analyze your code and generate Structurizr workspace files.

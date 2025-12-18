@@ -1,4 +1,5 @@
 # Use Documentation Templates
+
 ## What You'll Accomplish
 
 Install documentation templates to bootstrap consistent project documentation structure.

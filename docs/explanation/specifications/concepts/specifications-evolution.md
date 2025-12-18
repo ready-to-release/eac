@@ -1,4 +1,5 @@
 # Specifications Evolution
+>
 > **How specifications evolve with understanding**
 
 Specifications are living documents that evolve as your understanding deepens through implementation, usage, and feedback.

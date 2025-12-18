@@ -1,4 +1,5 @@
 # Environments Architecture
+
 ## Introduction
 
 Environments are the foundation of the Continuous Delivery Model.

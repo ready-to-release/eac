@@ -97,6 +97,7 @@ Example: `.r2r/eac/` contains EAC-specific config like `ai-provider.yml`.
 ### How They Work Together
 
 1. **R2R CLI** manages extensions:
+
    ```bash
    r2r init          # CLI creates config
    r2r install eac   # CLI pulls Docker image
@@ -104,6 +105,7 @@ Example: `.r2r/eac/` contains EAC-specific config like `ai-provider.yml`.
    ```
 
 2. **Extensions** provide tools:
+
    ```bash
    r2r eac build     # Extension runs in container
    r2r eac test      # Extension runs in container
@@ -162,6 +164,7 @@ Project Root/
 ### Configuration Purposes
 
 **Tier 1** (`.r2r/r2r-cli.yml`):
+
 ```yaml
 extensions:
   - name: 'eac'
@@ -169,14 +172,17 @@ extensions:
   - name: 'pwsh'
     image: 'ghcr.io/ready-to-release/ext-pwsh:latest'
 ```
+
 → Tells R2R CLI which extensions are available
 
 **Tier 2** (`.r2r/eac/ai-provider.yml`):
+
 ```yaml
 ai:
   provider: claude-api
   model: claude-sonnet-4-5
 ```
+
 → Tells EAC extension which AI provider to use
 
 ## Why This Architecture?
@@ -219,6 +225,7 @@ r2r pwsh run-script.ps1
 ### Example 2: Development vs CI
 
 **Development** (`.r2r/r2r-cli.local.yml`):
+
 ```yaml
 extensions:
   - name: 'eac'
@@ -227,6 +234,7 @@ extensions:
 ```
 
 **CI** (`.r2r/r2r-cli.yml`):
+
 ```yaml
 extensions:
   - name: 'eac'
@@ -246,6 +254,7 @@ extensions:
 ```
 
 Use different versions side by side:
+
 ```bash
 r2r eac build          # Uses v1.2.3
 r2r eac-beta build     # Uses v2.0.0-beta
@@ -306,6 +315,7 @@ r2r eac --help         # Extension help
 ### Quick Reference
 
 **Use R2R CLI commands when:**
+
 - ✅ Setting up a new project
 - ✅ Installing or managing extensions
 - ✅ Maintaining Docker images
@@ -313,6 +323,7 @@ r2r eac --help         # Extension help
 - ✅ Configuring extension registry
 
 **Use Extension commands when:**
+
 - ✅ Building, testing, or validating code
 - ✅ Running automation workflows
 - ✅ Executing project-specific tasks

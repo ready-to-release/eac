@@ -1,4 +1,5 @@
 # Output Formats
+
 ## Overview
 
 EAC commands produce output in different formats optimized for their use case. Understanding these formats helps you choose the right command and process its output effectively.

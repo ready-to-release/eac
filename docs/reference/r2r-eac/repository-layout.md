@@ -1,4 +1,5 @@
 # Repository Layout and Module Structure
+
 ## Overview
 
 This repository is organized as a **modular monorepo** with clearly defined module boundaries using the EAC (Everything as Code) system.

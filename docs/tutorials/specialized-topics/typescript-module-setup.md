@@ -1,4 +1,5 @@
 # TypeScript Module Setup
+
 **Status:** Placeholder - Content coming soon
 
 **Prerequisites:** [Your First Module](../getting-started/first-module.md), Node.js and npm installed
@@ -72,6 +73,7 @@ This tutorial teaches you how to set up and work with TypeScript/npm modules in 
 The tutorial creates a TypeScript service:
 
 **Directory structure:**
+
 ```text
 go/api-client/
 ├── src/
@@ -86,6 +88,7 @@ go/api-client/
 ```
 
 **Module contract (`.r2r/eac/repository.yml`):**
+
 ```yaml
 modules:
   - name: api-client
@@ -98,6 +101,7 @@ modules:
 ```
 
 **Package.json:**
+
 ```json
 {
   "name": "@r2r/api-client",
@@ -118,6 +122,7 @@ modules:
 ```
 
 **TypeScript config:**
+
 ```json
 {
   "compilerOptions": {
@@ -167,16 +172,19 @@ r2r eac show artifacts api-client
 ### npm Module Types
 
 **npm-app:**
+
 - Standalone application
 - Produces executable artifact
 - Example: CLI tool, web server
 
 **npm-lib:**
+
 - Shared library
 - Consumed by other modules
 - Example: API client, utilities
 
 **npm-tool:**
+
 - Build/development tool
 - Used during build process
 - Example: Code generator, linter
@@ -195,6 +203,7 @@ r2r eac show artifacts api-client
 ### Testing TypeScript Modules
 
 **Jest configuration:**
+
 ```json
 {
   "preset": "ts-jest",
@@ -205,6 +214,7 @@ r2r eac show artifacts api-client
 ```
 
 **Example test:**
+
 ```typescript
 import { APIClient } from '../src/client';
 
@@ -229,10 +239,12 @@ go/
 ```
 
 **Dependencies:**
+
 - `eac-web-ui` depends on `api-client` (TypeScript → TypeScript)
 - `eac-commands` is independent (Go)
 
 **Build order:**
+
 1. Build `api-client` (TypeScript lib)
 2. Build `eac-web-ui` (depends on api-client)
 3. Build `eac-commands` (independent)
@@ -240,15 +252,19 @@ go/
 ### Common Issues
 
 **Issue: Module not found**
+
 - Solution: Run `npm install` in module directory
 
 **Issue: Build fails**
+
 - Solution: Check `tsconfig.json` configuration
 
 **Issue: Tests not running**
+
 - Solution: Verify test script in `package.json`
 
 **Issue: Artifact not generated**
+
 - Solution: Check `outDir` in `tsconfig.json` matches artifacts in contract
 
 ### Integration with CI/CD

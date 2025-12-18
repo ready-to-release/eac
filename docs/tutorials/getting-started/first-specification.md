@@ -1,4 +1,5 @@
 # Your First Feature Specification
+
 Learn how to write Gherkin feature specifications that describe system behavior in a structured, testable format using the Given/When/Then pattern.
 
 **Prerequisites:** [Quick Start Guide](./quick-start.md), basic understanding of software requirements
@@ -283,10 +284,12 @@ Congratulations! You've successfully:
 ## Next Steps
 
 ### Continue Learning
+
 - **Next tutorial:** [Your First Module](./first-module.md) - Create a Go module with tests
 - **Advanced:** [TDD with Specifications](../core-workflows/tdd-with-specifications.md) - Full TDD development loop
 
 ### Apply What You Learned
+
 Now that you can write specifications, you can accomplish these tasks:
 
 - **[Create Specifications](../../how-to-guides/eac/commands/documentation/create-specifications.md)** - Generate specs from descriptions with AI
@@ -294,6 +297,7 @@ Now that you can write specifications, you can accomplish these tasks:
 - **Browse existing specs** - Look in the `specs/` directory for real-world examples
 
 ### Dive Deeper
+
 - [Specifications Explanation](../../explanation/specifications/) - Understand BDD concepts and philosophy
 - [Gherkin Best Practices](../../explanation/specifications/quality/) - Writing effective scenarios
 - [Tag Taxonomy](../../explanation/specifications/taxonomy/) - Complete guide to test tags

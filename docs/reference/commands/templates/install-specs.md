@@ -10,6 +10,7 @@
 ## Use Case
 
 Install specification templates for compliance testing:
+
 - Security control validation
 - Compliance testing scenarios
 - Risk control implementation tests

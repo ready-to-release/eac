@@ -1,4 +1,5 @@
 # Verification Tags
+>
 > **Operational, installation, and performance verification types**
 
 **REQUIRED for all Gherkin scenarios**. Verification tags categorize the type of validation being performed.
@@ -187,6 +188,7 @@ Scenario: Service deployment includes functional validation
 ```
 
 This scenario validates both:
+
 - **Installation** (`@iv`): Service deployed and responds
 - **Operations** (`@ov`): Core functionality works
 

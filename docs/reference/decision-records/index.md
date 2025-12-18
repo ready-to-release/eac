@@ -1,4 +1,5 @@
 # Decision Records
+
 Architectural Decision Records (ADRs) documenting significant design choices and their rationale. Each record captures the context, decision, and consequences of important architectural decisions.
 
 ## In This Section

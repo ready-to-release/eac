@@ -1,4 +1,5 @@
 # Naming Conventions
+>
 > **Feature and file naming standards**
 
 Consistent naming conventions enable traceability and organization across the codebase.
@@ -42,18 +43,22 @@ Feature name appears in:
 ### Benefits
 
 **Find all tests** for a feature:
+
 ```bash
 grep -r "Feature: cli_init-project" src/
 ```
 
 **Module context** visible in the name itself:
+
 - `cli_init-project` immediately tells you this is a CLI module feature
 
 **Unique identifiers** across the codebase:
+
 - No feature name collisions between modules
 - Clear ownership and organization
 
 **Consistent** with file system paths:
+
 - Feature name matches directory structure
 - Easy to navigate between specs and implementation
 
@@ -64,11 +69,13 @@ grep -r "Feature: cli_init-project" src/
 ### Specification Files
 
 **Pattern**:
+
 ```text
 specs/<module>/<feature>/specification.feature
 ```
 
 **Examples**:
+
 ```text
 specs/cli/init-project/specification.feature
 specs/eac-commands/design-command/specification.feature
@@ -94,6 +101,7 @@ specs/vscode-extension/status-bar/specification.feature
 **Format**: Lowercase, kebab-case
 
 **Examples**:
+
 - `cli`
 - `eac-commands`
 - `vscode-extension`
@@ -104,17 +112,20 @@ specs/vscode-extension/status-bar/specification.feature
 **Format**: Lowercase, kebab-case
 
 **Guidelines**:
+
 - Use noun-verb or action-oriented names
 - Be specific but concise
 - Focus on user-facing capability
 
 **Good examples**:
+
 - `init-project`
 - `design-command`
 - `status-bar`
 - `tools-registration`
 
 **Bad examples**:
+
 - `feature1` (meaningless)
 - `InitProject` (wrong case)
 - `init_project` (underscore instead of hyphen)
@@ -152,6 +163,7 @@ Feature: cli_init-project
 **Format**: Lowercase, matches module name
 
 **Examples**:
+
 ```gherkin
 @cli
 @eac-commands
@@ -166,6 +178,7 @@ Feature: cli_init-project
 **Format**: Lowercase, one of: `@critical`, `@high`, `@medium`, `@low`
 
 **Examples**:
+
 ```gherkin
 @critical  # Must work for basic functionality
 @high      # Important but not blocking
@@ -178,6 +191,7 @@ Feature: cli_init-project
 **Format**: `@ac<number>` where number is 1-indexed
 
 **Examples**:
+
 ```gherkin
 @ac1  # Links to first acceptance criterion (Rule)
 @ac2  # Links to second acceptance criterion (Rule)

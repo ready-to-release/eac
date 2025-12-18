@@ -1,4 +1,5 @@
 # Quick Start Guide
+
 Get up and running with the r2r CLI. This tutorial walks you through installation, initialization, and running your first commands.
 
 **Prerequisites:** Command-line access, internet connection
@@ -131,11 +132,13 @@ r2r eac init --ai-provider claude-api --ai-token sk-ant-your-key-here
 Before running commands that use AI, set your API key as an environment variable:
 
 **Linux/macOS:**
+
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-your-key-here
 ```
 
 **Windows (PowerShell):**
+
 ```powershell
 $env:ANTHROPIC_API_KEY = "sk-ant-your-key-here"
 ```
@@ -163,6 +166,7 @@ r2r eac analyze modules
 ```
 
 This command:
+
 - Scans your repository to discover modules
 - Generates `.r2r/eac/repository.yml` with module metadata
 - Creates `.r2r/eac/books.yml` with architecture patterns

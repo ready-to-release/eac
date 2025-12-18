@@ -1,4 +1,5 @@
 # Your First Module
+
 **Status:** Placeholder - Content coming soon
 
 **Prerequisites:** [Quick Start Guide](./quick-start.md), Go 1.21+ installed

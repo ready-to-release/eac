@@ -1,4 +1,5 @@
 # Size Guidelines
+>
 > **Rule and scenario count limits**
 
 Guidelines for maintaining readable and maintainable feature files.
@@ -70,6 +71,7 @@ If you have 8+ Rules, create separate features:
 **Before**: `audit-logging.feature` (40 scenarios, 8 Rules)
 
 **After**:
+
 ```text
 ├── audit-logging_user-actions.feature (15 scenarios, 3 Rules)
 ├── audit-logging_admin-actions.feature (15 scenarios, 3 Rules)
@@ -87,6 +89,7 @@ If scenarios cluster around different user workflows:
 **Before**: `user-management.feature` (35 scenarios, 6 Rules)
 
 **After**:
+
 ```text
 ├── user-management_registration.feature (12 scenarios, 2 Rules)
 ├── user-management_authentication.feature (15 scenarios, 2 Rules)
@@ -104,6 +107,7 @@ If you have many error scenarios:
 **Before**: `config-validation.feature` (30 scenarios, 4 Rules)
 
 **After**:
+
 ```text
 ├── config-validation.feature (15 scenarios, 4 Rules - happy paths)
 └── config-validation_errors.feature (15 scenarios, 4 Rules - error cases)
@@ -135,6 +139,7 @@ Feature: project_validation  # 12 Rules, 40 scenarios
 ```
 
 **Problems**:
+
 - 12 Rules (too many acceptance criteria)
 - 40 Scenarios (file too long)
 - Mixed concerns (structure, quality, security)
@@ -170,6 +175,7 @@ Feature: project_security-validation  # 4 Rules, 12 scenarios
 ```
 
 **Benefits**:
+
 - Each feature has 4 Rules (ideal range)
 - Each feature has 12-15 scenarios (optimal readability)
 - Clear separation of concerns
@@ -266,16 +272,19 @@ Watch for these warning signs that a feature needs splitting:
 Use this checklist to evaluate feature size:
 
 **Rule Count**:
+
 - [ ] Does the feature have 2-6 Rules?
 - [ ] Are all Rules closely related?
 - [ ] Can each Rule be understood independently?
 
 **Scenario Count**:
+
 - [ ] Does the feature have 10-20 scenarios?
 - [ ] Does each Rule have 2-4 scenarios?
 - [ ] Is the file under 500 lines?
 
 **Maintainability**:
+
 - [ ] Can a new team member understand the feature quickly?
 - [ ] Can scenarios run in under 5 minutes?
 - [ ] Do scenarios naturally group together?

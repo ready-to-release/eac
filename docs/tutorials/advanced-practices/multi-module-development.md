@@ -1,4 +1,5 @@
 # Multi-Module Development
+
 **Status:** Placeholder - Content coming soon
 
 **Prerequisites:** [Your First Module](../getting-started/first-module.md), [Building and Testing Changes](../core-workflows/building-and-testing.md)
@@ -74,18 +75,22 @@ This tutorial teaches you how to work effectively across multiple modules, manag
 The tutorial implements authentication across three modules:
 
 **auth-lib** (base library):
+
 - Provides JWT token validation
 - No dependencies on other modules
 
 **api-gateway** (depends on auth-lib):
+
 - Uses auth-lib for authentication
 - Routes requests to services
 
 **user-service** (depends on auth-lib):
+
 - Uses auth-lib to verify requests
 - Manages user data
 
 **Dependency graph:**
+
 ```text
 auth-lib
 ├── api-gateway
@@ -93,6 +98,7 @@ auth-lib
 ```
 
 **Build order:**
+
 1. Build auth-lib first
 2. Build api-gateway and user-service in parallel
 3. Integration test all three together
@@ -158,6 +164,7 @@ modules:
 ### Common Patterns
 
 **Layered architecture:**
+
 ```text
 infrastructure (base)
 ├── domain (business logic)
@@ -166,6 +173,7 @@ infrastructure (base)
 ```
 
 **Shared library pattern:**
+
 ```text
 common-lib (shared utilities)
 ├── service-a
@@ -174,6 +182,7 @@ common-lib (shared utilities)
 ```
 
 **Microservices pattern:**
+
 ```text
 (independent modules, communication via APIs)
 service-a  service-b  service-c
@@ -188,6 +197,7 @@ Testing across module boundaries:
 3. **End-to-end tests**: Full system scenarios
 
 Use test level tags:
+
 - L0-L1: Unit tests (within module)
 - L2: Component tests (module as a whole)
 - L3: Integration tests (multiple modules)

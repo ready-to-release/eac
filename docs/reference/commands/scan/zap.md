@@ -4,6 +4,5 @@
 
 ## See Also
 
-- [scan vuln](./vuln.md)
-- [scan sast](./sast.md)
-- [scan Commands](../categories/scan.md)
+- [scan](./scan.md) - Main scan command with --scanner flag
+- [scan Commands Category](../categories/scan.md)

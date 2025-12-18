@@ -1,4 +1,5 @@
 # Quality Gates
+
 ## Introduction
 
 Quality gates are automated and manual checkpoints throughout the software delivery pipeline that ensure code meets defined standards before progressing to the next stage. They embody a fundamental principle: **catch issues early, when they're cheapest and easiest to fix**.

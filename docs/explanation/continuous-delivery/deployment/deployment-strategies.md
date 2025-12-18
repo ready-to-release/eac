@@ -1,4 +1,5 @@
 # Deployment Strategies
+
 ## Introduction
 
 A deployment strategy determines **how** new code reaches production and **what happens** if problems are detected. The right strategy balances:

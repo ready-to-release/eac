@@ -1,4 +1,5 @@
 # Glossary
+
 Definitions of key terms and concepts used throughout the documentation.
 
 ---
@@ -155,11 +156,11 @@ A checkpoint in the release process requiring validation before proceeding. See 
 
 ### SAST (Static Application Security Testing)
 
-Analysis of source code for security vulnerabilities without executing it. Command: [scan sast](./reference/commands/scan/sast.md).
+Analysis of source code for security vulnerabilities without executing it. Command: [scan](./reference/commands/scan/scan.md) with `--scanner sast`.
 
 ### SBOM (Software Bill of Materials)
 
-A complete inventory of components in a software product. Command: [scan sbom](./reference/commands/scan/sbom.md).
+A complete inventory of components in a software product. Command: [scan](./reference/commands/scan/scan.md) with `--scanner sbom`.
 
 ### SemVer (Semantic Versioning)
 

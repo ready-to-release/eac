@@ -1,4 +1,5 @@
 # Workflow Practices
+
 Day-to-day development workflow practices that enable Continuous Integration and Continuous Delivery.
 
 ## In This Section
