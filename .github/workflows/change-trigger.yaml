@@ -604,7 +604,7 @@ jobs:
           if [ "${{ steps.check.outputs.has_pending }}" = "true" ]; then
             LAYER_COUNT="${{ steps.check.outputs.layer_count }}"
             LAYERS_JSON='${{ steps.check.outputs.layers_json }}'
-            $COMMANDS show release-summary --layers-json "$LAYERS_JSON" >> $GITHUB_STEP_SUMMARY
+            $COMMANDS show release-summary --layers "$LAYERS_JSON" >> $GITHUB_STEP_SUMMARY
           else
             echo "No pending releases." >> $GITHUB_STEP_SUMMARY
           fi
