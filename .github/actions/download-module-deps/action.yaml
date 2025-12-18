@@ -24,7 +24,7 @@ inputs:
   await-timeout:
     description: 'Timeout in seconds to wait for CI to complete'
     required: false
-    default: '300'
+    default: '600'
 
 runs:
   using: composite
