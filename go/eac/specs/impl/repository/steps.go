@@ -1616,12 +1616,16 @@ func (c *repositoryContext) scanReleaseDirectoryForChangelogFiles() error {
 
 		hasChangelog := false
 		for _, subEntry := range subEntries {
-			if subEntry.Name() == "CHANGELOG.md" {
+			name := subEntry.Name()
+			if name == "CHANGELOG.md" {
 				hasChangelog = true
+			} else if name == "RELEASE-NOTES.md" {
+				// RELEASE-NOTES.md is allowed
+				continue
 			} else if !subEntry.IsDir() {
 				// Unexpected file in release subdirectory
 				c.unexpectedReleaseFiles = append(c.unexpectedReleaseFiles,
-					fmt.Sprintf("release/%s/%s", entry.Name(), subEntry.Name()))
+					fmt.Sprintf("release/%s/%s", entry.Name(), name))
 			}
 		}
 
@@ -1650,7 +1654,7 @@ func (c *repositoryContext) everyChangelogShouldHaveValidFormat() error {
 
 func (c *repositoryContext) noUnexpectedFilesInReleaseSubdirs() error {
 	if len(c.unexpectedReleaseFiles) > 0 {
-		return fmt.Errorf("found %d unexpected file(s) in release subdirectories:\n  %s\n\nOnly CHANGELOG.md is expected in release/<module>/ directories.",
+		return fmt.Errorf("found %d unexpected file(s) in release subdirectories:\n  %s\n\nOnly CHANGELOG.md and RELEASE-NOTES.md are expected in release/<module>/ directories.",
 			len(c.unexpectedReleaseFiles), strings.Join(c.unexpectedReleaseFiles, "\n  "))
 	}
 	return nil
