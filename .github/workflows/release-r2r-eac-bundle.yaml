@@ -13,9 +13,6 @@
 name: "release-r2r-eac-bundle (stage 8+)"
 
 on:
-  push:
-    tags:
-      - 'r2r-eac-bundle/*'
   workflow_dispatch:
     inputs:
       ci_run_id:
@@ -148,21 +145,12 @@ jobs:
             exit 0
           fi
 
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "Manual trigger: creating tag and release together"
-            gh release create "$TAG_NAME" \
-              --title "$TITLE" \
-              --notes-file release_notes.md \
-              --target "${{ github.sha }}" \
-              --latest
-          else
-            echo "Tag trigger: using existing tag"
-            gh release create "$TAG_NAME" \
-              --title "$TITLE" \
-              --notes-file release_notes.md \
-              --verify-tag \
-              --latest
-          fi
+          # Create tag and release together (tag created on success only)
+          gh release create "$TAG_NAME" \
+            --title "$TITLE" \
+            --notes-file release_notes.md \
+            --target "${{ github.sha }}" \
+            --latest
 
           echo "✅ Release created successfully"
         env:

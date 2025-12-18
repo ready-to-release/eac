@@ -10,9 +10,6 @@
 name: "release-ext-eac (stage 8+)"
 
 on:
-  push:
-    tags:
-      - 'ext-eac/*'
   workflow_dispatch:
     inputs:
       version:

@@ -5,10 +5,12 @@
 // Long: This command takes a JSON array of release layers (from check-pending-releases)
 // Long: and processes them in order:
 // Long:   1. For each module in the current layer:
-// Long:      - Creates and pushes a git tag
-// Long:      - Dispatches the release workflow
+// Long:      - Dispatches the release workflow with version info
 // Long:   2. Waits for all workflows in the layer to complete
 // Long:   3. Moves to the next layer
+// Long:
+// Long: The release workflow is responsible for creating the git tag on success
+// Long: (via gh release create). This ensures tags only exist for successful releases.
 // Long:
 // Long: The layers JSON format is:
 // Long:   [[{module, version, tag, type}, ...], [...], ...]
@@ -24,7 +26,7 @@
 // Flag.layers: type=string, usage=JSON array of release layers
 // Flag.layers-file: type=string, usage=File containing JSON array of release layers
 // Flag.timeout: type=int, default=900, usage=Timeout per release in seconds (default: 900)
-// Flag.dry-run: type=bool, usage=Preview without creating tags or dispatching workflows
+// Flag.dry-run: type=bool, usage=Preview without dispatching workflows
 package release
 
 import (
@@ -119,14 +121,6 @@ func ReleaseExecuteLayers() int {
 		return 0
 	}
 
-	// Configure git
-	if !dryRun {
-		if err := configureGit(workspaceRoot); err != nil {
-			log.Errorf("Error configuring git: %v", err)
-			return 1
-		}
-	}
-
 	log.Infof("Processing %d release layer(s) in dependency order...", len(layers))
 	log.Info("")
 
@@ -149,21 +143,8 @@ func ReleaseExecuteLayers() int {
 		// Trigger all modules in this layer
 		for _, mod := range layer {
 			log.Info("")
-			log.Infof("  [%s] (%s) Creating tag: %s", mod.Module, mod.Type, mod.Tag)
+			log.Infof("  [%s] (%s) Releasing version: %s", mod.Module, mod.Type, mod.Version)
 
-			if dryRun {
-				log.Infof("  [%s] (dry-run) Would create tag and dispatch workflow", mod.Module)
-				continue
-			}
-
-			// Create and push tag
-			if err := createAndPushTag(workspaceRoot, mod.Tag, mod.Module, mod.Version); err != nil {
-				log.Errorf("  [%s] Error creating tag: %v", mod.Module, err)
-				failedModules = append(failedModules, mod.Module)
-				continue
-			}
-
-			// Wait for tag-triggered release workflow
 			workflow := fmt.Sprintf("release-%s.yaml", mod.Module)
 			workflowPath := filepath.Join(workspaceRoot, ".github", "workflows", workflow)
 
@@ -172,11 +153,16 @@ func ReleaseExecuteLayers() int {
 				continue
 			}
 
-			log.Infof("  [%s] Waiting for %s (triggered by tag push)", mod.Module, workflow)
+			if dryRun {
+				log.Infof("  [%s] (dry-run) Would dispatch %s", mod.Module, workflow)
+				continue
+			}
 
-			runID, err := waitForTagTriggeredWorkflow(workspaceRoot, workflow, mod.Tag)
+			// Dispatch workflow
+			log.Infof("  [%s] Dispatching %s", mod.Module, workflow)
+			runID, err := dispatchAndGetRunID(workspaceRoot, workflow)
 			if err != nil {
-				log.Errorf("  [%s] Error finding workflow run: %v", mod.Module, err)
+				log.Errorf("  [%s] Error dispatching workflow: %v", mod.Module, err)
 				failedModules = append(failedModules, mod.Module)
 				continue
 			}
@@ -220,55 +206,23 @@ func ReleaseExecuteLayers() int {
 	return 0
 }
 
-// configureGit sets up git user for tagging
-func configureGit(workspaceRoot string) error {
-	cmds := [][]string{
-		{"git", "config", "user.name", "github-actions[bot]"},
-		{"git", "config", "user.email", "github-actions[bot]@users.noreply.github.com"},
-	}
-
-	for _, args := range cmds {
-		cmd := exec.Command(args[0], args[1:]...)
-		cmd.Dir = workspaceRoot
-		if err := cmd.Run(); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// createAndPushTag creates and pushes a git tag
-func createAndPushTag(workspaceRoot, tag, module, version string) error {
-	message := fmt.Sprintf("Release %s v%s", module, version)
-
-	// Create tag
-	cmd := exec.Command("git", "tag", "-a", tag, "-m", message)
+// dispatchAndGetRunID dispatches a workflow and returns the run ID
+func dispatchAndGetRunID(workspaceRoot, workflow string) (string, error) {
+	// Dispatch the workflow
+	cmd := exec.Command("gh", "workflow", "run", workflow)
 	cmd.Dir = workspaceRoot
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("git tag failed: %s: %w", string(output), err)
+		return "", fmt.Errorf("dispatch failed: %s: %w", strings.TrimSpace(string(output)), err)
 	}
 
-	// Push tag
-	cmd = exec.Command("git", "push", "origin", tag)
-	cmd.Dir = workspaceRoot
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("git push failed: %s: %w", string(output), err)
-	}
+	// Wait a moment for GitHub to register the run
+	time.Sleep(3 * time.Second)
 
-	return nil
-}
-
-// waitForTagTriggeredWorkflow waits for a workflow triggered by tag push and returns the run ID
-func waitForTagTriggeredWorkflow(workspaceRoot, workflow, tag string) (string, error) {
-	// Wait for the tag-triggered workflow to appear (tag push triggers it automatically)
-	// Poll for up to 30 seconds
-	for i := 0; i < 6; i++ {
-		time.Sleep(5 * time.Second)
-
-		// Find run triggered by tag push
-		cmd := exec.Command("gh", "run", "list", "-w", workflow, "-L", "5",
-			"--json", "databaseId,status,event,headBranch",
-			"-q", fmt.Sprintf(`.[] | select(.headBranch == "%s" and (.status == "queued" or .status == "in_progress" or .status == "completed")) | .databaseId`, tag))
+	// Find the run ID - look for the most recent queued/in_progress run
+	for i := 0; i < 10; i++ {
+		cmd = exec.Command("gh", "run", "list", "-w", workflow, "-L", "1",
+			"--json", "databaseId,status",
+			"-q", `.[0] | select(.status == "queued" or .status == "in_progress" or .status == "pending") | .databaseId`)
 		cmd.Dir = workspaceRoot
 
 		output, err := cmd.Output()
@@ -276,19 +230,21 @@ func waitForTagTriggeredWorkflow(workspaceRoot, workflow, tag string) (string, e
 			return strings.TrimSpace(string(output)), nil
 		}
 
-		// Also try finding by recent runs (fallback)
+		// Also check for recently completed (might have started fast)
 		cmd = exec.Command("gh", "run", "list", "-w", workflow, "-L", "1",
-			"--json", "databaseId,status",
-			"-q", `.[0] | select(.status == "queued" or .status == "in_progress") | .databaseId`)
+			"--json", "databaseId,status,createdAt",
+			"-q", `.[0].databaseId`)
 		cmd.Dir = workspaceRoot
 
 		output, err = cmd.Output()
 		if err == nil && len(strings.TrimSpace(string(output))) > 0 {
 			return strings.TrimSpace(string(output)), nil
 		}
+
+		time.Sleep(2 * time.Second)
 	}
 
-	return "", fmt.Errorf("workflow run not found after tag push")
+	return "", fmt.Errorf("could not find workflow run after dispatch")
 }
 
 // awaitWorkflowRun waits for a workflow run to complete
