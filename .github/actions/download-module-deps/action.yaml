@@ -109,7 +109,8 @@ runs:
           DOWNLOAD_SUCCESS=false
 
           for download_attempt in $(seq 1 $DOWNLOAD_RETRIES); do
-            if gh run download "$CURRENT_RUN" -n "build-artifacts-$mod" -D out/build/; then
+            # Download to out/build/<module>/ to match build-module upload structure
+            if gh run download "$CURRENT_RUN" -n "build-artifacts-$mod" -D "out/build/$mod/"; then
               DOWNLOAD_SUCCESS=true
               break
             fi
