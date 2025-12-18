@@ -6,6 +6,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.8] - 2025-12-18
+
+### Added
+
+- feat(multi-module): unified release and CI orchestration system
+
+### Changed
+
+- chore(multi-module): normalize line endings across GitHub Actions
+- chore(multi-module): streamline release workflows to remove tag creation
+- chore(multi-module): refactor commands and security scanning
+- ci: centralize workflow diagnostic links and improve retries
+- ci: fix
+- ci: fix
+- chore(multi-module): simplify CI and add release gating
+- chore(multi-module): add concurrency controls to GitHub workflows
+- chore(deps): bump actions/download-artifact from 6 to 7 (#60)
+- chore(multi-module): refactor release workflows and add cleanup actions
+- chore(multi-module): improve CI artifact resolution
+- refactor(multi-module): improve command documentation
+
+### Fixed
+
+- fix(multi-module): align CD model stages and update documentation
+
 ## [0.0.7] - 2025-12-11
 
 ### Fixed
@@ -99,7 +124,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial container-based extension release
 
-[Unreleased]: https://github.com/ready-to-release/eac/compare/ext-eac/0.0.7...HEAD
+[Unreleased]: https://github.com/ready-to-release/eac/compare/ext-eac/0.0.8...HEAD
+[0.0.8]: https://github.com/ready-to-release/eac/compare/ext-eac/0.0.7...ext-eac/0.0.8
 [0.0.7]: https://github.com/ready-to-release/eac/compare/ext-eac/0.0.6...ext-eac/0.0.7
 [0.0.6]: https://github.com/ready-to-release/eac/compare/ext-eac/0.0.5...ext-eac/0.0.6
 [0.0.5]: https://github.com/ready-to-release/eac/compare/ext-eac/0.0.4...ext-eac/0.0.5
