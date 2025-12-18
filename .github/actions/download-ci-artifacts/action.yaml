@@ -22,9 +22,9 @@ inputs:
     required: false
     default: ''
   artifact-path:
-    description: 'Path to download artifacts to'
+    description: 'Path to download artifacts to. If empty, uses out/build/{module}/'
     required: false
-    default: 'out/build'
+    default: ''
   commands-path:
     description: 'Path to commands binary. If empty, will setup commands.'
     required: false
@@ -53,6 +53,7 @@ runs:
         MODULE: ${{ inputs.module }}
         INPUT_WORKFLOW: ${{ inputs.ci-workflow }}
         INPUT_ARTIFACT_NAME: ${{ inputs.artifact-name }}
+        INPUT_ARTIFACT_PATH: ${{ inputs.artifact-path }}
       run: |
         # Derive workflow name
         if [ -n "$INPUT_WORKFLOW" ]; then
@@ -66,6 +67,13 @@ runs:
           echo "artifact_name=$INPUT_ARTIFACT_NAME" >> $GITHUB_OUTPUT
         else
           echo "artifact_name=build-artifacts-${MODULE}" >> $GITHUB_OUTPUT
+        fi
+
+        # Derive artifact path - download to out/build/<module>/ to match build-module upload
+        if [ -n "$INPUT_ARTIFACT_PATH" ]; then
+          echo "artifact_path=$INPUT_ARTIFACT_PATH" >> $GITHUB_OUTPUT
+        else
+          echo "artifact_path=out/build/${MODULE}/" >> $GITHUB_OUTPUT
         fi
 
     - name: Resolve CI run ID
@@ -103,14 +111,14 @@ runs:
       uses: ./.github/actions/download-artifact-retry
       with:
         name: ${{ steps.vars.outputs.artifact_name }}
-        path: ${{ inputs.artifact-path }}
+        path: ${{ steps.vars.outputs.artifact_path }}
         run-id: ${{ steps.resolve.outputs.run_id }}
         github-token: ${{ github.token }}
 
     - name: Verify download
       shell: bash
       env:
-        ARTIFACT_PATH: ${{ inputs.artifact-path }}
+        ARTIFACT_PATH: ${{ steps.vars.outputs.artifact_path }}
         ARTIFACT_NAME: ${{ steps.vars.outputs.artifact_name }}
       run: |
         if [ ! -d "$ARTIFACT_PATH" ] || [ -z "$(ls -A "$ARTIFACT_PATH" 2>/dev/null)" ]; then
@@ -126,7 +134,7 @@ runs:
         MODULE: ${{ inputs.module }}
         RUN_ID: ${{ steps.resolve.outputs.run_id }}
         ARTIFACT_NAME: ${{ steps.vars.outputs.artifact_name }}
-        ARTIFACT_PATH: ${{ inputs.artifact-path }}
+        ARTIFACT_PATH: ${{ steps.vars.outputs.artifact_path }}
         WORKFLOW: ${{ steps.vars.outputs.workflow }}
       run: |
         echo "### Download CI Artifacts" >> $GITHUB_STEP_SUMMARY
