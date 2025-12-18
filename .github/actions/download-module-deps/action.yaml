@@ -82,22 +82,36 @@ runs:
 
           WORKFLOW="ci-${mod}.yaml"
 
-          # Wait for CI to complete for this SHA
-          echo "  Awaiting CI for $mod..."
-          if ! $COMMANDS pipeline await-ci \
-              --pattern "$WORKFLOW" \
-              --sha "$ARTIFACT_SHA" \
-              --timeout "$AWAIT_TIMEOUT" \
-              --interval 15; then
-            echo "  ✗ CI failed or timed out for $mod at SHA $ARTIFACT_SHA"
-            exit 1
-          fi
-
-          # Download from current SHA
+          # Try to find CI run at current SHA first
           CURRENT_RUN=$(gh run list -w "$WORKFLOW" -c "$ARTIFACT_SHA" -s success -L 1 --json databaseId -q '.[0].databaseId' 2>/dev/null || echo "")
 
           if [ -z "$CURRENT_RUN" ]; then
-            echo "  ✗ No successful CI run found for $mod at SHA $ARTIFACT_SHA"
+            # No run at current SHA - check if CI is in progress
+            IN_PROGRESS=$(gh run list -w "$WORKFLOW" -c "$ARTIFACT_SHA" -s in_progress -L 1 --json databaseId -q '.[0].databaseId' 2>/dev/null || echo "")
+            QUEUED=$(gh run list -w "$WORKFLOW" -c "$ARTIFACT_SHA" -s queued -L 1 --json databaseId -q '.[0].databaseId' 2>/dev/null || echo "")
+
+            if [ -n "$IN_PROGRESS" ] || [ -n "$QUEUED" ]; then
+              # CI is running for this SHA - wait for it
+              echo "  Awaiting CI for $mod..."
+              if ! $COMMANDS pipeline await-ci \
+                  --pattern "$WORKFLOW" \
+                  --sha "$ARTIFACT_SHA" \
+                  --timeout "$AWAIT_TIMEOUT" \
+                  --interval 15; then
+                echo "  ✗ CI failed or timed out for $mod at SHA $ARTIFACT_SHA"
+                exit 1
+              fi
+              # Re-fetch run ID after await
+              CURRENT_RUN=$(gh run list -w "$WORKFLOW" -c "$ARTIFACT_SHA" -s success -L 1 --json databaseId -q '.[0].databaseId' 2>/dev/null || echo "")
+            else
+              # No CI at current SHA (not changed) - fall back to latest successful
+              echo "  No CI run at current SHA, using latest successful..."
+              CURRENT_RUN=$(gh run list -w "$WORKFLOW" -s success -L 1 --json databaseId -q '.[0].databaseId' 2>/dev/null || echo "")
+            fi
+          fi
+
+          if [ -z "$CURRENT_RUN" ]; then
+            echo "  ✗ No successful CI run found for $mod"
             exit 1
           fi
 
