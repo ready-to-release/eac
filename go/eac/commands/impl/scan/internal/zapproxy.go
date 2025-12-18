@@ -9,8 +9,6 @@ import (
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/ready-to-release/eac/go/eac/core/config"
-	"github.com/ready-to-release/eac/go/eac/core/logging"
-	"go.uber.org/zap"
 )
 
 // NOTE: ZAPImage constant removed - now configured via security-tools.yml
@@ -49,22 +47,22 @@ func getDefaultMockZAPOutput() map[string]interface{} {
 }
 
 // RunZAPScan executes OWASP ZAP dynamic security scan via Docker
-func RunZAPScan(targetURL, scanType, workspaceRoot string, zapImage string, logger *logging.Logger) (interface{}, error) {
+func RunZAPScan(targetURL, scanType, workspaceRoot string, zapImage string) (interface{}, error) {
 	// Check for mock output (testing only)
 	// Priority: in-process mock > environment variable mock
 	if mockZAPOutput != nil {
-		logger.Debug("Using mocked ZAP output (in-process)")
+		log.Debug("Using mocked ZAP output (in-process)")
 		return mockZAPOutput, nil
 	}
 
 	// Check for environment-based mocking (for subprocess tests)
 	if os.Getenv("R2R_MOCK_SECURITY") != "" {
-		logger.Debug("Using mocked ZAP output (environment)")
+		log.Debug("Using mocked ZAP output (environment)")
 		return getDefaultMockZAPOutput(), nil
 	}
 
 	// Create Docker runner
-	dockerRunner, err := NewOneOffDockerRunner(logger)
+	dockerRunner, err := NewOneOffDockerRunner()
 	if err != nil {
 		return nil, err
 	}
@@ -75,9 +73,7 @@ func RunZAPScan(targetURL, scanType, workspaceRoot string, zapImage string, logg
 		return nil, err
 	}
 
-	logger.Info("Running OWASP ZAP scan",
-		zap.String("targetURL", targetURL),
-		zap.String("scanType", scanType))
+	log.Infof("Running OWASP ZAP scan: targetURL=%s scanType=%s", targetURL, scanType)
 
 	// Load config for path resolution
 	cfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot})
@@ -86,8 +82,8 @@ func RunZAPScan(targetURL, scanType, workspaceRoot string, zapImage string, logg
 	}
 
 	// Create temporary output directory for ZAP report
-	// Security path already includes "out" prefix (e.g., "out/security")
-	outputDir := filepath.Join(workspaceRoot, cfg.Repository.Paths.Out.Security, "zap-temp")
+	// Scan path already includes "out" prefix (e.g., "out/scan")
+	outputDir := filepath.Join(workspaceRoot, cfg.Repository.Paths.Out.Scan, "zap-temp")
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create ZAP output directory: %w", err)
 	}
@@ -136,12 +132,12 @@ func RunZAPScan(targetURL, scanType, workspaceRoot string, zapImage string, logg
 		// ZAP may return non-zero exit code even with successful scan
 		// Check if report file was created
 		if _, statErr := os.Stat(reportPath); statErr != nil {
-			logger.Error("ZAP scan failed", zap.Error(err))
+			log.Errorf("ZAP scan failed: %v", err)
 			return nil, fmt.Errorf("zap scan failed: %w", err)
 		}
-		logger.Debug("ZAP scan completed with warnings", zap.String("output", string(output)))
+		log.Debugf("ZAP scan completed with warnings: output=%s", string(output))
 	} else {
-		logger.Debug("ZAP scan completed", zap.Int("outputSize", len(output)))
+		log.Debugf("ZAP scan completed: outputSize=%d", len(output))
 	}
 
 	// Read and parse ZAP report

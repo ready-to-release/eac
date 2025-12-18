@@ -91,9 +91,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.summaryData = msg.Data
 		// Automatically activate Summary pane
 		if m.activePhase != PhaseSummary {
-			// Mark current phase as complete
+			// Mark current phase as complete or failed based on success
 			if m.panes[m.activePhase].Status == PhaseActive {
-				m.panes[m.activePhase].Status = PhaseComplete
+				if msg.Data != nil && !msg.Data.Success {
+					m.panes[m.activePhase].Status = PhaseFailed
+				} else {
+					m.panes[m.activePhase].Status = PhaseComplete
+				}
 				m.panes[m.activePhase].EndTime = time.Now()
 			}
 			// Activate Summary pane
@@ -101,8 +105,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.panes[PhaseSummary].Status = PhaseActive
 			m.panes[PhaseSummary].StartTime = time.Now()
 		}
-		// Mark as complete and quit immediately
-		m.panes[PhaseSummary].Status = PhaseComplete
+		// Mark summary pane as complete/failed and quit immediately
+		if msg.Data != nil && !msg.Data.Success {
+			m.panes[PhaseSummary].Status = PhaseFailed
+		} else {
+			m.panes[PhaseSummary].Status = PhaseComplete
+		}
 		m.panes[PhaseSummary].EndTime = time.Now()
 		m.quitting = true
 		return m, tea.Quit

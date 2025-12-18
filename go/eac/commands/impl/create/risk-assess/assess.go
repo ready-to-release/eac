@@ -11,7 +11,7 @@
 // Long:
 // Long: Evidence is collected from:
 // Long: - Test results: out/test/<module>/*.json
-// Long: - Security scans: out/security/<module>/**/*.json
+// Long: - Security scans: out/scan/<module>/**/*.json
 // Long:
 // Long: Expected Output:
 // Long: - OSCAL assessment-results JSON file

@@ -17,7 +17,7 @@
 #
 # Usage in ci-*.yaml:
 #   jobs:
-#     ci:
+#     ci-eac-core:
 #       uses: ./.github/workflows/_module-ci.yaml
 #       with:
 #         module: eac-core
@@ -25,7 +25,7 @@
 #
 # For modules needing Windows testing:
 #   jobs:
-#     ci:
+#     ci-r2r-cli:
 #       uses: ./.github/workflows/_module-ci.yaml
 #       with:
 #         module: r2r-cli
@@ -34,7 +34,7 @@
 #
 # For container modules:
 #   jobs:
-#     ci:
+#     ci-ext-eac:
 #       uses: ./.github/workflows/_module-ci.yaml
 #       with:
 #         module: ext-eac
@@ -176,7 +176,7 @@ jobs:
   # Job A: Build
   # ===========================================================================
   build:
-    name: Build
+    name: Build (${{ inputs.module }})
     runs-on: ubuntu-latest
     outputs:
       # Container outputs (only populated when container: true)
@@ -221,7 +221,7 @@ jobs:
   # Skip for container modules (use container-test instead)
   # ===========================================================================
   test-linux:
-    name: Test (Linux)
+    name: Test (${{ inputs.module }}, Linux)
     needs: build
     if: ${{ !inputs.container }}
     runs-on: ubuntu-latest
@@ -264,7 +264,7 @@ jobs:
   # Job B2: Test (Windows) - optional, parallel with scan
   # ===========================================================================
   test-windows:
-    name: Test (Windows)
+    name: Test (${{ inputs.module }}, Windows)
     needs: build
     if: inputs.test-on-windows
     runs-on: windows-latest
@@ -306,7 +306,7 @@ jobs:
   # Job C: Scan - parallel with test
   # ===========================================================================
   scan:
-    name: Security Scan
+    name: Scan (${{ inputs.module }})
     needs: build
     if: inputs.scans != ''
     runs-on: ubuntu-latest
@@ -328,7 +328,7 @@ jobs:
   # Job B3: Container Test - for container modules
   # ===========================================================================
   container-test:
-    name: Container Test
+    name: Container Test (${{ inputs.module }})
     needs: build
     if: ${{ inputs.container && inputs.container-test-enabled }}
     runs-on: ubuntu-latest
@@ -390,7 +390,7 @@ jobs:
   # Summary
   # ===========================================================================
   summary:
-    name: Summary
+    name: CI Summary (${{ inputs.module }})
     needs: [build, test-linux, test-windows, container-test, scan]
     if: always()
     runs-on: ubuntu-latest

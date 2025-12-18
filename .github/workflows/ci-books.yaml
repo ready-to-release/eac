@@ -43,7 +43,7 @@ permissions:
   actions: read
 
 jobs:
-  ci:
+  ci-books:
     uses: ./.github/workflows/_module-ci.yaml
     with:
       module: books

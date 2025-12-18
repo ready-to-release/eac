@@ -1,0 +1,172 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ready-to-release.org/schemas/eac-core/scan-manifest/0.1.0",
+  "title": "Scan Manifest Schema",
+  "description": "Schema for per-module scan manifests stored at out/scan/<module>/scan.manifest.json. Each manifest aggregates scan results from all scanner runs and tracks security scan state.",
+  "type": "object",
+  "properties": {
+    "scan_id": {
+      "type": "string",
+      "description": "Unique identifier for this scan session (UUID locally, GitHub run ID in CI)"
+    },
+    "scan_agent": {
+      "type": "string",
+      "enum": ["ci", "devbox"],
+      "description": "Scan agent type: 'ci' for GitHub Actions runs, 'devbox' for local developer runs"
+    },
+    "moniker": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Module identifier (moniker) that was scanned"
+    },
+    "type": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Module type (e.g., go, container, typescript, static)"
+    },
+    "scan_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of when the scan manifest was last updated"
+    },
+    "duration_seconds": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Total scan duration in seconds (most recent session)"
+    },
+    "git_commit": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$",
+      "description": "Git commit SHA (40 hex characters) at scan time"
+    },
+    "summary": {
+      "$ref": "#/definitions/scan_summary",
+      "description": "Aggregated scan counts across all scanners"
+    },
+    "scans": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/scanner_result"
+      },
+      "description": "Per-scanner results, keyed by scanner type (sbom, vuln, secrets, compliance, iac, sast, zap)"
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/artifact_info"
+      },
+      "description": "Scan artifacts produced (evidence files, reports)"
+    },
+    "version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Manifest format version"
+    }
+  },
+  "required": ["scan_id", "scan_agent", "moniker", "scan_time", "summary", "scans", "version"],
+  "definitions": {
+    "scan_summary": {
+      "type": "object",
+      "description": "Aggregated scan counts",
+      "properties": {
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total number of scanners run"
+        },
+        "passed": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of scanners that passed"
+        },
+        "failed": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of scanners that failed"
+        },
+        "skipped": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of scanners that were skipped"
+        }
+      },
+      "required": ["total", "passed", "failed"]
+    },
+    "scanner_result": {
+      "type": "object",
+      "description": "Results for a specific scanner run",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["passed", "failed", "skipped"],
+          "description": "Scanner execution status"
+        },
+        "run_time": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when this scanner was run"
+        },
+        "duration_seconds": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Scanner execution duration in seconds"
+        },
+        "evidence_path": {
+          "type": "string",
+          "description": "Path to evidence file relative to security output directory"
+        },
+        "error": {
+          "type": "string",
+          "description": "Error message if scanner failed"
+        },
+        "findings_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of findings (vulnerabilities, secrets, issues, etc.)"
+        }
+      },
+      "required": ["status", "run_time"]
+    },
+    "artifact_info": {
+      "type": "object",
+      "description": "Information about a scan artifact",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["evidence", "report", "log"],
+          "description": "Artifact type"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Artifact identifier"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Artifact filename"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Relative path from module security output directory"
+        },
+        "scanner": {
+          "type": "string",
+          "description": "Scanner that produced this artifact"
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "File size in bytes"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$",
+          "description": "SHA-256 hash of artifact content"
+        }
+      },
+      "required": ["type", "id", "path", "scanner"]
+    }
+  }
+}

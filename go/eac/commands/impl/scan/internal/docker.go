@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"sync/atomic"
 	"time"
 
 	"github.com/docker/docker/api/types/container"
@@ -13,19 +14,23 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/serve"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
-	"go.uber.org/zap"
 )
+
+// containerCounter ensures unique container names even with parallel execution
+var containerCounter uint64
+
+// Package-level logger for internal scanner operations
+var log = logging.C()
 
 // OneOffDockerRunner wraps serve.DockerClient for running one-off container executions.
 // It provides utilities for running security scanners and other short-lived containers
 // with automatic cleanup after execution.
 type OneOffDockerRunner struct {
 	client serve.DockerClient
-	logger *logging.Logger
 }
 
 // NewOneOffDockerRunner creates a new one-off Docker runner
-func NewOneOffDockerRunner(logger *logging.Logger) (*OneOffDockerRunner, error) {
+func NewOneOffDockerRunner() (*OneOffDockerRunner, error) {
 	client, err := serve.NewDockerClient()
 	if err != nil {
 		return nil, fmt.Errorf("Docker is not available. Please install and start Docker:\n"+
@@ -34,15 +39,13 @@ func NewOneOffDockerRunner(logger *logging.Logger) (*OneOffDockerRunner, error) 
 	}
 	return &OneOffDockerRunner{
 		client: client,
-		logger: logger,
 	}, nil
 }
 
 // NewOneOffDockerRunnerWithClient creates a runner with a custom Docker client (for testing)
-func NewOneOffDockerRunnerWithClient(client serve.DockerClient, logger *logging.Logger) *OneOffDockerRunner {
+func NewOneOffDockerRunnerWithClient(client serve.DockerClient) *OneOffDockerRunner {
 	return &OneOffDockerRunner{
 		client: client,
-		logger: logger,
 	}
 }
 
@@ -51,7 +54,7 @@ func (r *OneOffDockerRunner) CheckAndPullImage(imageName string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
-	r.logger.Info("Checking Docker image", zap.String("image", imageName))
+	log.Debugf("Checking Docker image: %s", imageName)
 
 	// Check if image exists locally
 	images, err := r.client.ImageList(ctx, image.ListOptions{})
@@ -63,14 +66,14 @@ func (r *OneOffDockerRunner) CheckAndPullImage(imageName string) error {
 	for _, img := range images {
 		for _, tag := range img.RepoTags {
 			if tag == imageName {
-				r.logger.Debug("Docker image already exists locally", zap.String("image", imageName))
+				log.Debugf("Docker image already exists locally: %s", imageName)
 				return nil
 			}
 		}
 	}
 
 	// Image doesn't exist, pull it
-	r.logger.Info("Pulling Docker image (this may take a few minutes)...", zap.String("image", imageName))
+	log.Debugf("Pulling Docker image (this may take a few minutes)... %s", imageName)
 	reader, err := r.client.ImagePull(ctx, imageName, image.PullOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to pull image %s: %w", imageName, err)
@@ -82,7 +85,7 @@ func (r *OneOffDockerRunner) CheckAndPullImage(imageName string) error {
 		return fmt.Errorf("failed to read pull output: %w", err)
 	}
 
-	r.logger.Info("Docker image pulled successfully", zap.String("image", imageName))
+	log.Debugf("Docker image pulled successfully: %s", imageName)
 	return nil
 }
 
@@ -91,11 +94,20 @@ func (r *OneOffDockerRunner) RunContainer(containerConfig *container.Config, hos
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
 
-	// Create container with a unique name
-	containerName := fmt.Sprintf("security-scan-%d", time.Now().UnixNano())
-	r.logger.Debug("Creating container",
-		zap.String("name", containerName),
-		zap.String("image", containerConfig.Image))
+	// Ensure AutoRemove is set so Docker cleans up container on exit
+	if hostConfig == nil {
+		hostConfig = &container.HostConfig{}
+	}
+	hostConfig.AutoRemove = true
+
+	// Ensure container has stdout/stderr attached for capturing output
+	containerConfig.AttachStdout = true
+	containerConfig.AttachStderr = true
+
+	// Create container with a unique name (timestamp + atomic counter for parallel safety)
+	seq := atomic.AddUint64(&containerCounter, 1)
+	containerName := fmt.Sprintf("security-scan-%d-%d", time.Now().UnixNano(), seq)
+	log.Debugf("Creating container: name=%s image=%s autoRemove=true", containerName, containerConfig.Image)
 
 	resp, err := r.client.ContainerCreate(ctx, containerConfig, hostConfig, nil, nil, containerName)
 	if err != nil {
@@ -103,18 +115,30 @@ func (r *OneOffDockerRunner) RunContainer(containerConfig *container.Config, hos
 	}
 	containerID := resp.ID
 
-	// Ensure container is cleaned up
-	defer func() {
-		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cleanupCancel()
-		r.gracefulCleanup(cleanupCtx, containerID, containerName)
-	}()
+	// Attach to container BEFORE starting to capture all output
+	// This is required when using AutoRemove since container is deleted on exit
+	log.Debugf("Attaching to container: id=%s", containerID)
+	attachResp, err := r.client.ContainerAttach(ctx, containerID, container.AttachOptions{
+		Stream: true,
+		Stdout: true,
+		Stderr: true,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to attach to container: %w", err)
+	}
+	defer attachResp.Close()
 
-	r.logger.Debug("Starting container", zap.String("id", containerID))
+	log.Debugf("Starting container: id=%s", containerID)
 
 	// Start container
 	if err := r.client.ContainerStart(ctx, containerID, container.StartOptions{}); err != nil {
 		return nil, fmt.Errorf("failed to start container: %w", err)
+	}
+
+	// Read output from attached stream (demultiplex stdout/stderr)
+	var stdout, stderr bytes.Buffer
+	if _, err := stdcopy.StdCopy(&stdout, &stderr, attachResp.Reader); err != nil {
+		return nil, fmt.Errorf("failed to read container output: %w", err)
 	}
 
 	// Wait for container to complete
@@ -123,48 +147,28 @@ func (r *OneOffDockerRunner) RunContainer(containerConfig *container.Config, hos
 	select {
 	case err := <-errChan:
 		if err != nil {
-			return nil, fmt.Errorf("error waiting for container: %w", err)
+			// Container may already be removed by AutoRemove, which is fine
+			log.Debugf("Container wait: %v (may be auto-removed)", err)
 		}
 	case waitResp := <-waitChan:
-		r.logger.Debug("Container completed",
-			zap.String("id", containerID),
-			zap.Int64("exitCode", waitResp.StatusCode))
+		log.Debugf("Container completed: id=%s exitCode=%d", containerID, waitResp.StatusCode)
 	case <-ctx.Done():
 		return nil, fmt.Errorf("container execution timed out")
 	}
 
-	// Get container logs
-	r.logger.Debug("Retrieving container logs", zap.String("id", containerID))
-	logsReader, err := r.client.ContainerLogs(ctx, containerID, container.LogsOptions{
-		ShowStdout: true,
-		ShowStderr: true,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get container logs: %w", err)
-	}
-	defer logsReader.Close()
-
-	// Demultiplex Docker logs (stdout and stderr are multiplexed with 8-byte headers)
-	var stdout, stderr bytes.Buffer
-	if _, err := stdcopy.StdCopy(&stdout, &stderr, logsReader); err != nil {
-		return nil, fmt.Errorf("failed to demultiplex container logs: %w", err)
-	}
-
-	r.logger.Debug("Container output captured",
-		zap.Int("stdoutSize", stdout.Len()),
-		zap.Int("stderrSize", stderr.Len()))
+	log.Debugf("Container output captured: stdoutSize=%d stderrSize=%d", stdout.Len(), stderr.Len())
 
 	// Combine stdout and stderr (stderr usually has diagnostic info, stdout has JSON)
 	// Prefer stdout if it has content, otherwise use stderr
 	output := stdout.Bytes()
 	if len(output) == 0 && stderr.Len() > 0 {
-		r.logger.Debug("No stdout, using stderr output")
+		log.Debug("No stdout, using stderr output")
 		output = stderr.Bytes()
 	}
 
 	// If we have both stdout and stderr, log stderr for diagnostics
 	if stdout.Len() > 0 && stderr.Len() > 0 {
-		r.logger.Debug("Container stderr", zap.String("stderr", string(stderr.Bytes())))
+		log.Debugf("Container stderr: %s", string(stderr.Bytes()))
 	}
 
 	return output, nil
@@ -172,23 +176,19 @@ func (r *OneOffDockerRunner) RunContainer(containerConfig *container.Config, hos
 
 // gracefulCleanup stops and removes a container gracefully
 func (r *OneOffDockerRunner) gracefulCleanup(ctx context.Context, containerID, containerName string) {
-	r.logger.Debug("Cleaning up container", zap.String("id", containerID))
+	log.Debugf("Cleaning up container: id=%s", containerID)
 
 	// Stop container with timeout
 	timeout := 10
 	if err := r.client.ContainerStop(ctx, containerID, container.StopOptions{Timeout: &timeout}); err != nil {
-		r.logger.Debug("Container stop completed or already stopped",
-			zap.String("id", containerID),
-			zap.Error(err))
+		log.Debugf("Container stop completed or already stopped: id=%s err=%v", containerID, err)
 	}
 
 	// Remove container
 	if err := r.client.ContainerRemove(ctx, containerID, container.RemoveOptions{Force: true}); err != nil {
-		r.logger.Warn("Failed to remove container",
-			zap.String("id", containerID),
-			zap.Error(err))
+		log.Warnf("Failed to remove container: id=%s err=%v", containerID, err)
 	} else {
-		r.logger.Debug("Container cleaned up successfully", zap.String("name", containerName))
+		log.Debugf("Container cleaned up successfully: name=%s", containerName)
 	}
 }
 

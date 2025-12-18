@@ -8,7 +8,7 @@
 # Upgrading versions:
 # 1. Check release notes for breaking changes
 # 2. Update the tag and description below
-# 3. Test with: scan sbom <module> or scan vuln <module>
+# 3. Test with: scan <module> --scanner sbom or scan <module> --scanner vuln
 # 4. Commit with explanation of version change
 
 docker_images:
@@ -26,3 +26,39 @@ docker_images:
     image: "zaproxy/zap-stable"
     tag: "2.14.0"
     description: "OWASP ZAP v2.14.0 - dynamic application security testing (DAST) tool"
+
+# Default scanners to run per module type when no --scanner flag is provided.
+# Running `scan <module>` will execute these scanners for the module's type.
+# To run specific scanners: `scan <module> --scanner sbom,vuln`
+#
+# Available scanners: sbom, vuln, secrets, iac, compliance, sast, zap
+default_scanners:
+  # Standard Go modules - SBOM, vulnerability, and secrets scanning
+  go-module:
+    - sbom
+    - vuln
+    - secrets
+    - sast
+
+  # Go feature modules (part of larger module)
+  go-feature-module:
+    - sbom
+    - vuln
+    - secrets
+
+  # Container modules - add IaC scanning for Dockerfiles
+  container:
+    - sbom
+    - vuln
+    - secrets
+    - iac
+
+  # Documentation modules - minimal scanning
+  docs:
+    - secrets
+
+  # Default for any unspecified module type
+  default:
+    - sbom
+    - vuln
+    - secrets

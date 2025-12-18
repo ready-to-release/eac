@@ -83,7 +83,7 @@ func collectEvidenceForModule(config *AssessConfig, moduleName string) (*evidenc
 			// Get the actual directory that was checked using config-based paths
 			cfg, err := coreconfig.Load(coreconfig.LoadOptions{RepoRoot: config.WorkspaceRoot})
 			if err == nil {
-				scanBaseDir := cfg.Repository.SecurityModuleOutputPathAbs(config.WorkspaceRoot, moduleName)
+				scanBaseDir := cfg.Repository.ScanModuleOutputPathAbs(config.WorkspaceRoot, moduleName)
 				relPath, err := filepath.Rel(config.WorkspaceRoot, scanBaseDir)
 				if err != nil {
 					relPath = scanBaseDir
@@ -120,7 +120,7 @@ func collectEvidenceForModule(config *AssessConfig, moduleName string) (*evidenc
 		// No security results found - add warning using config-based paths
 		cfg, err := coreconfig.Load(coreconfig.LoadOptions{RepoRoot: config.WorkspaceRoot})
 		if err == nil {
-			scanDir := cfg.Repository.SecurityModuleOutputPathAbs(config.WorkspaceRoot, moduleName)
+			scanDir := cfg.Repository.ScanModuleOutputPathAbs(config.WorkspaceRoot, moduleName)
 			scanRelPath, err := filepath.Rel(config.WorkspaceRoot, scanDir)
 			if err != nil {
 				scanRelPath = scanDir

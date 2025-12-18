@@ -26,7 +26,7 @@ type displayManager struct {
 	completionChan  chan *WorkResult
 	statusTicker    *time.Ticker
 	done            chan bool
-	completedLines  []string // collected completion lines for batch output
+	completedResults []*WorkResult // collected results for summary generation
 	tuiMode         bool     // when true, skip running list (TUI tabs show it)
 }
 
@@ -66,14 +66,122 @@ func (dm *displayManager) stop() {
 	close(dm.completionChan)
 }
 
-// flushCompletedLines prints all collected completion lines
+// typeSummary holds aggregated stats for a test type
+type typeSummary struct {
+	Type      string
+	Packages  int
+	Passed    int
+	Failed    int
+	Warnings  int
+}
+
+// flushCompletedLines prints summary table for successes and individual lines for failures/warnings
 // Should be called after stop() to ensure all completions are processed
 func (dm *displayManager) flushCompletedLines() {
 	dm.mu.Lock()
 	defer dm.mu.Unlock()
 
-	for _, line := range dm.completedLines {
-		dm.logger.Print(line)
+	// Separate successful results from failed/warning results
+	var failedOrWarnResults []*WorkResult
+	summaryByType := make(map[string]*typeSummary)
+
+	for _, result := range dm.completedResults {
+		typeStr := result.Type
+		if typeStr == "" {
+			typeStr = "-"
+		}
+
+		// Initialize summary for this type if not exists
+		if _, ok := summaryByType[typeStr]; !ok {
+			summaryByType[typeStr] = &typeSummary{Type: typeStr}
+		}
+		summaryByType[typeStr].Packages++
+
+		if result.ExitCode != 0 {
+			summaryByType[typeStr].Failed++
+			failedOrWarnResults = append(failedOrWarnResults, result)
+		} else if len(result.Warnings) > 0 {
+			summaryByType[typeStr].Warnings++
+			failedOrWarnResults = append(failedOrWarnResults, result)
+		} else {
+			summaryByType[typeStr].Passed++
+		}
+	}
+
+	// Print summary table if there are any results
+	if len(summaryByType) > 0 {
+		dm.printSummaryTable(summaryByType)
+	}
+
+	// Print individual lines for failed/warning results with error context
+	for _, result := range failedOrWarnResults {
+		dm.printResultWithErrors(result)
+	}
+}
+
+// printSummaryTable prints a markdown-style table grouped by test type
+func (dm *displayManager) printSummaryTable(summaryByType map[string]*typeSummary) {
+	// Collect and sort types for consistent output
+	types := make([]string, 0, len(summaryByType))
+	for t := range summaryByType {
+		types = append(types, t)
+	}
+	sort.Strings(types)
+
+	// Print table header
+	dm.logger.Printf("| %-12s | %8s | %6s | %6s | %8s |%s", "Type", "Packages", "Passed", "Failed", "Warnings", LineEndingPrefix)
+	dm.logger.Printf("|%s|%s|%s|%s|%s|%s", strings.Repeat("-", 14), strings.Repeat("-", 10), strings.Repeat("-", 8), strings.Repeat("-", 8), strings.Repeat("-", 10), LineEndingPrefix)
+
+	// Print rows
+	for _, t := range types {
+		s := summaryByType[t]
+		dm.logger.Printf("| %-12s | %8d | %6d | %6d | %8d |%s", s.Type, s.Packages, s.Passed, s.Failed, s.Warnings, LineEndingPrefix)
+	}
+	dm.logger.Printf("%s", LineEndingPrefix)
+}
+
+// printResultWithErrors prints a failed/warning result with its error lines
+func (dm *displayManager) printResultWithErrors(result *WorkResult) {
+	displayName := output.PackageDisplayName(result.Moniker)
+	displayName = strings.ReplaceAll(displayName, "\\", "/")
+
+	var icon string
+	var suffix string
+
+	if result.ExitCode != 0 {
+		icon = output.IconFail
+		if len(result.Errors) > 0 {
+			suffix = fmt.Sprintf("(%d errors)", len(result.Errors))
+		}
+	} else if len(result.Warnings) > 0 {
+		icon = output.IconWarn
+		suffix = fmt.Sprintf("(%d warnings)", len(result.Warnings))
+	}
+
+	typeStr := result.Type
+	if typeStr == "" {
+		typeStr = "-"
+	}
+
+	// Print the status line
+	timing := fmt.Sprintf("%5.1fs", result.Duration.Seconds())
+	baseLine := output.ResultLineNoTimeWithSuffix(icon, displayName, typeStr, "", suffix)
+	statusLine := fmt.Sprintf("%s %s %s", icon, timing, baseLine[len(icon)+1:])
+	dm.logger.Printf("%s%s", statusLine, LineEndingPrefix)
+
+	// Print error/warning details (up to 5 lines)
+	var details []string
+	if result.ExitCode != 0 && len(result.Errors) > 0 {
+		details = result.Errors
+	} else if len(result.Warnings) > 0 {
+		details = result.Warnings
+	}
+
+	for _, msg := range details {
+		if len(msg) > 120 {
+			msg = msg[:117] + "..."
+		}
+		dm.logger.Printf("    %s%s", msg, LineEndingPrefix)
 	}
 }
 
@@ -103,7 +211,7 @@ func (dm *displayManager) displayLoop() {
 	}
 }
 
-// handleCompletion processes a completed work item and prints its status
+// handleCompletion processes a completed work item and stores it for summary
 func (dm *displayManager) handleCompletion(result *WorkResult) {
 	dm.mu.Lock()
 	defer dm.mu.Unlock()
@@ -111,42 +219,12 @@ func (dm *displayManager) handleCompletion(result *WorkResult) {
 	delete(dm.running, result.Moniker)
 	dm.completed++
 
-	// Extract display name and normalize path separators to forward slashes
-	displayName := output.PackageDisplayName(result.Moniker)
-	displayName = strings.ReplaceAll(displayName, "\\", "/")
-
-	// Format completion line with timing after the icon
-	// Format: "✅ 6.2s  module-name                    type     -"
-	var icon string
-	var suffix string
-
 	if result.ExitCode != 0 {
-		icon = output.IconFail
 		dm.failed++
-		if len(result.Errors) > 0 {
-			suffix = fmt.Sprintf("(%d errors)", len(result.Errors))
-		}
-	} else if len(result.Warnings) > 0 {
-		icon = output.IconWarn
-		suffix = fmt.Sprintf("(%d warnings)", len(result.Warnings))
-	} else {
-		icon = output.IconPass
 	}
 
-	// Use Type from result, fallback to "-" if not set
-	typeStr := result.Type
-	if typeStr == "" {
-		typeStr = "-"
-	}
-
-	// Format: icon + timing + name + type + suffix (no result column for builds)
-	timing := fmt.Sprintf("%5.1fs", result.Duration.Seconds())
-	baseLine := output.ResultLineNoTimeWithSuffix(icon, displayName, typeStr, "", suffix)
-	// Insert timing after the icon (icon is first 2-3 chars including space)
-	statusLine := fmt.Sprintf("%s %s %s", icon, timing, baseLine[len(icon)+1:]) + LineEndingPrefix
-
-	// Store for later batch output instead of printing immediately
-	dm.completedLines = append(dm.completedLines, statusLine)
+	// Store result for later summary generation
+	dm.completedResults = append(dm.completedResults, result)
 }
 
 // displayStatus shows periodic status updates

@@ -11,7 +11,7 @@ Feature: security_vuln
     Scenario: Scan module for vulnerabilities with mocked tool
       When I run the command "scan vuln eac-core"
       Then the exit code is 0
-      And evidence files should exist in directory "out/security/eac-core/vuln/"
+      And evidence files should exist in directory "out/scan/eac-core/vuln/"
       And the latest evidence file should have JSON field "module" with value "eac-core"
       And the latest evidence file should have JSON field "scanner" with value "vuln"
       And the latest evidence file should have JSON field "timestamp" matching RFC3339 format
@@ -22,7 +22,7 @@ Feature: security_vuln
     Scenario: Vulnerability scan with severity filter
       When I run the command "scan vuln eac-core --severity HIGH,CRITICAL"
       Then the exit code is 0
-      And evidence files should exist in directory "out/security/eac-core/vuln/"
+      And evidence files should exist in directory "out/scan/eac-core/vuln/"
 
     Scenario: Vulnerability scan with debug logging
       When I run the command "scan vuln eac-core --debug"

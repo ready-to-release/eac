@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 
 	"github.com/docker/docker/api/types/container"
-	"github.com/ready-to-release/eac/go/eac/core/logging"
-	"go.uber.org/zap"
 )
 
 // NOTE: trivyImage constant removed - now configured via security-tools.yml
@@ -44,20 +42,20 @@ func getDefaultMockTrivyOutput() map[string]interface{} {
 }
 
 // RunTrivySBOM executes Trivy SBOM scanner via Docker
-func RunTrivySBOM(workspaceRoot, moduleRoot, format string, trivyImage string, logger *logging.Logger) (interface{}, error) {
+func RunTrivySBOM(workspaceRoot, moduleRoot, format string, trivyImage string) (interface{}, error) {
 	// Check for mock output (testing only)
 	// Priority: in-process mock > environment variable mock
 	if mockTrivyOutput != nil {
-		logger.Debug("Using mocked Trivy SBOM output (in-process)")
+		log.Debug("Using mocked Trivy SBOM output (in-process)")
 		return mockTrivyOutput, nil
 	}
 	if os.Getenv("R2R_MOCK_SECURITY") != "" {
-		logger.Debug("Using mocked Trivy SBOM output (environment)")
+		log.Debug("Using mocked Trivy SBOM output (environment)")
 		return getDefaultMockTrivyOutput(), nil
 	}
 
 	// Create Docker runner
-	dockerRunner, err := NewOneOffDockerRunner(logger)
+	dockerRunner, err := NewOneOffDockerRunner()
 	if err != nil {
 		return nil, err
 	}
@@ -68,22 +66,15 @@ func RunTrivySBOM(workspaceRoot, moduleRoot, format string, trivyImage string, l
 		return nil, err
 	}
 
-	logger.Info("Running Trivy SBOM scanner via Docker",
-		zap.String("moduleRoot", moduleRoot),
-		zap.String("format", format))
+	log.Debugf("Running Trivy SBOM scanner via Docker: moduleRoot=%s format=%s", moduleRoot, format)
 
 	// Resolve module root relative to workspace root
 	absModuleRoot := filepath.Join(workspaceRoot, moduleRoot)
-	logger.Debug("Resolved module path",
-		zap.String("workspaceRoot", workspaceRoot),
-		zap.String("moduleRoot", moduleRoot),
-		zap.String("absolute", absModuleRoot))
+	log.Debugf("Resolved module path: workspaceRoot=%s moduleRoot=%s absolute=%s", workspaceRoot, moduleRoot, absModuleRoot)
 
 	// Convert to Docker-compatible path format (handles Windows paths)
 	dockerPath := ToDockerPath(absModuleRoot)
-	logger.Debug("Docker bind mount path",
-		zap.String("original", absModuleRoot),
-		zap.String("docker", dockerPath))
+	log.Debugf("Docker bind mount path: original=%s docker=%s", absModuleRoot, dockerPath)
 
 	// Configure container
 	config := &container.Config{
@@ -103,15 +94,13 @@ func RunTrivySBOM(workspaceRoot, moduleRoot, format string, trivyImage string, l
 	// Run container and capture output
 	output, err := dockerRunner.RunContainer(config, hostConfig)
 	if err != nil {
-		logger.Error("Trivy SBOM scan failed", zap.Error(err))
 		return nil, fmt.Errorf("trivy sbom failed: %w", err)
 	}
 
 	// Strip Docker log headers if present
 	cleanOutput := stripDockerLogHeaders(output)
 
-	logger.Debug("Trivy SBOM scan completed",
-		zap.Int("outputSize", len(cleanOutput)))
+	log.Debugf("Trivy SBOM scan completed: outputSize=%d", len(cleanOutput))
 
 	// Parse JSON output
 	var findings interface{}
@@ -129,20 +118,20 @@ func RunTrivySBOM(workspaceRoot, moduleRoot, format string, trivyImage string, l
 }
 
 // RunTrivyVuln executes Trivy vulnerability scanner via Docker
-func RunTrivyVuln(moduleRoot string, severityFilter []Severity, trivyImage string, logger *logging.Logger) (interface{}, error) {
+func RunTrivyVuln(moduleRoot string, severityFilter []Severity, trivyImage string) (interface{}, error) {
 	// Check for mock output (testing only)
 	// Priority: in-process mock > environment variable mock
 	if mockTrivyOutput != nil {
-		logger.Debug("Using mocked Trivy vulnerability output (in-process)")
+		log.Debug("Using mocked Trivy vulnerability output (in-process)")
 		return mockTrivyOutput, nil
 	}
 	if os.Getenv("R2R_MOCK_SECURITY") != "" {
-		logger.Debug("Using mocked Trivy vulnerability output (environment)")
+		log.Debug("Using mocked Trivy vulnerability output (environment)")
 		return getDefaultMockTrivyOutput(), nil
 	}
 
 	// Create Docker runner
-	dockerRunner, err := NewOneOffDockerRunner(logger)
+	dockerRunner, err := NewOneOffDockerRunner()
 	if err != nil {
 		return nil, err
 	}
@@ -153,9 +142,7 @@ func RunTrivyVuln(moduleRoot string, severityFilter []Severity, trivyImage strin
 		return nil, err
 	}
 
-	logger.Info("Running Trivy vulnerability scanner via Docker",
-		zap.String("moduleRoot", moduleRoot),
-		zap.Any("severityFilter", severityFilter))
+	log.Debugf("Running Trivy vulnerability scanner via Docker: moduleRoot=%s severityFilter=%v", moduleRoot, severityFilter)
 
 	// Get absolute path for volume mount
 	absModuleRoot, err := filepath.Abs(moduleRoot)
@@ -165,9 +152,7 @@ func RunTrivyVuln(moduleRoot string, severityFilter []Severity, trivyImage strin
 
 	// Convert to Docker-compatible path format (handles Windows paths)
 	dockerPath := ToDockerPath(absModuleRoot)
-	logger.Debug("Docker bind mount path",
-		zap.String("original", absModuleRoot),
-		zap.String("docker", dockerPath))
+	log.Debugf("Docker bind mount path: original=%s docker=%s", absModuleRoot, dockerPath)
 
 	// Build command arguments
 	cmd := []string{
@@ -200,15 +185,11 @@ func RunTrivyVuln(moduleRoot string, severityFilter []Severity, trivyImage strin
 	// Run container and capture output
 	output, err := dockerRunner.RunContainer(config, hostConfig)
 	if err != nil {
-		logger.Error("Trivy vulnerability scan failed", zap.Error(err))
 		return nil, fmt.Errorf("trivy vulnerability scan failed: %w", err)
 	}
 
 	// Strip Docker log headers if present
 	cleanOutput := stripDockerLogHeaders(output)
-
-	logger.Debug("Trivy vulnerability scan completed",
-		zap.Int("outputSize", len(cleanOutput)))
 
 	// Parse JSON output
 	var findings interface{}
@@ -228,7 +209,7 @@ func RunTrivyVuln(moduleRoot string, severityFilter []Severity, trivyImage strin
 	if findingsMap, ok := findings.(map[string]interface{}); ok {
 		if findingsMap["Results"] == nil {
 			findingsMap["Results"] = []interface{}{}
-			logger.Debug("Normalized Trivy output: added empty Results array (no vulnerabilities found)")
+			log.Debug("Normalized Trivy output: added empty Results array (no vulnerabilities found)")
 		}
 	}
 
@@ -236,20 +217,20 @@ func RunTrivyVuln(moduleRoot string, severityFilter []Severity, trivyImage strin
 }
 
 // RunTrivySecrets executes Trivy secrets scanner via Docker
-func RunTrivySecrets(moduleRoot string, trivyImage string, logger *logging.Logger) (interface{}, error) {
+func RunTrivySecrets(moduleRoot string, trivyImage string) (interface{}, error) {
 	// Check for mock output (testing only)
 	// Priority: in-process mock > environment variable mock
 	if mockTrivyOutput != nil {
-		logger.Debug("Using mocked Trivy secrets output (in-process)")
+		log.Debug("Using mocked Trivy secrets output (in-process)")
 		return mockTrivyOutput, nil
 	}
 	if os.Getenv("R2R_MOCK_SECURITY") != "" {
-		logger.Debug("Using mocked Trivy secrets output (environment)")
+		log.Debug("Using mocked Trivy secrets output (environment)")
 		return getDefaultMockTrivyOutput(), nil
 	}
 
 	// Create Docker runner
-	dockerRunner, err := NewOneOffDockerRunner(logger)
+	dockerRunner, err := NewOneOffDockerRunner()
 	if err != nil {
 		return nil, err
 	}
@@ -260,8 +241,7 @@ func RunTrivySecrets(moduleRoot string, trivyImage string, logger *logging.Logge
 		return nil, err
 	}
 
-	logger.Info("Running Trivy secrets scanner via Docker",
-		zap.String("moduleRoot", moduleRoot))
+	log.Debugf("Running Trivy secrets scanner via Docker: moduleRoot=%s", moduleRoot)
 
 	// Get absolute path for volume mount
 	absModuleRoot, err := filepath.Abs(moduleRoot)
@@ -271,9 +251,7 @@ func RunTrivySecrets(moduleRoot string, trivyImage string, logger *logging.Logge
 
 	// Convert to Docker-compatible path format (handles Windows paths)
 	dockerPath := ToDockerPath(absModuleRoot)
-	logger.Debug("Docker bind mount path",
-		zap.String("original", absModuleRoot),
-		zap.String("docker", dockerPath))
+	log.Debugf("Docker bind mount path: original=%s docker=%s", absModuleRoot, dockerPath)
 
 	// Configure container
 	config := &container.Config{
@@ -294,15 +272,14 @@ func RunTrivySecrets(moduleRoot string, trivyImage string, logger *logging.Logge
 	// Run container and capture output
 	output, err := dockerRunner.RunContainer(config, hostConfig)
 	if err != nil {
-		logger.Error("Trivy secrets scan failed", zap.Error(err))
+		log.Debugf("Trivy secrets scan failed: %v", err)
 		return nil, fmt.Errorf("trivy secrets scan failed: %w", err)
 	}
 
 	// Strip Docker log headers if present
 	cleanOutput := stripDockerLogHeaders(output)
 
-	logger.Debug("Trivy secrets scan completed",
-		zap.Int("outputSize", len(cleanOutput)))
+	log.Debugf("Trivy secrets scan completed: outputSize=%d", len(cleanOutput))
 
 	// Parse JSON output
 	var findings interface{}
@@ -320,20 +297,20 @@ func RunTrivySecrets(moduleRoot string, trivyImage string, logger *logging.Logge
 }
 
 // RunTrivyCompliance executes Trivy compliance scanner via Docker
-func RunTrivyCompliance(moduleRoot, compliance string, trivyImage string, logger *logging.Logger) (interface{}, error) {
+func RunTrivyCompliance(moduleRoot, compliance string, trivyImage string) (interface{}, error) {
 	// Check for mock output (testing only)
 	// Priority: in-process mock > environment variable mock
 	if mockTrivyOutput != nil {
-		logger.Debug("Using mocked Trivy compliance output (in-process)")
+		log.Debug("Using mocked Trivy compliance output (in-process)")
 		return mockTrivyOutput, nil
 	}
 	if os.Getenv("R2R_MOCK_SECURITY") != "" {
-		logger.Debug("Using mocked Trivy compliance output (environment)")
+		log.Debug("Using mocked Trivy compliance output (environment)")
 		return getDefaultMockTrivyOutput(), nil
 	}
 
 	// Create Docker runner
-	dockerRunner, err := NewOneOffDockerRunner(logger)
+	dockerRunner, err := NewOneOffDockerRunner()
 	if err != nil {
 		return nil, err
 	}
@@ -344,9 +321,7 @@ func RunTrivyCompliance(moduleRoot, compliance string, trivyImage string, logger
 		return nil, err
 	}
 
-	logger.Info("Running Trivy compliance scanner via Docker",
-		zap.String("moduleRoot", moduleRoot),
-		zap.String("compliance", compliance))
+	log.Debugf("Running Trivy compliance scanner via Docker: moduleRoot=%s compliance=%s", moduleRoot, compliance)
 
 	// Get absolute path for volume mount
 	absModuleRoot, err := filepath.Abs(moduleRoot)
@@ -356,9 +331,7 @@ func RunTrivyCompliance(moduleRoot, compliance string, trivyImage string, logger
 
 	// Convert to Docker-compatible path format (handles Windows paths)
 	dockerPath := ToDockerPath(absModuleRoot)
-	logger.Debug("Docker bind mount path",
-		zap.String("original", absModuleRoot),
-		zap.String("docker", dockerPath))
+	log.Debugf("Docker bind mount path: original=%s docker=%s", absModuleRoot, dockerPath)
 
 	// Configure container
 	config := &container.Config{
@@ -379,15 +352,14 @@ func RunTrivyCompliance(moduleRoot, compliance string, trivyImage string, logger
 	// Run container and capture output
 	output, err := dockerRunner.RunContainer(config, hostConfig)
 	if err != nil {
-		logger.Error("Trivy compliance scan failed", zap.Error(err))
+		log.Debugf("Trivy compliance scan failed: %v", err)
 		return nil, fmt.Errorf("trivy compliance scan failed: %w", err)
 	}
 
 	// Strip Docker log headers if present
 	cleanOutput := stripDockerLogHeaders(output)
 
-	logger.Debug("Trivy compliance scan completed",
-		zap.Int("outputSize", len(cleanOutput)))
+	log.Debugf("Trivy compliance scan completed: outputSize=%d", len(cleanOutput))
 
 	// Parse JSON output
 	var findings interface{}
@@ -405,20 +377,20 @@ func RunTrivyCompliance(moduleRoot, compliance string, trivyImage string, logger
 }
 
 // RunTrivyIaC executes Trivy Infrastructure as Code scanner via Docker
-func RunTrivyIaC(moduleRoot string, trivyImage string, logger *logging.Logger) (interface{}, error) {
+func RunTrivyIaC(moduleRoot string, trivyImage string) (interface{}, error) {
 	// Check for mock output (testing only)
 	// Priority: in-process mock > environment variable mock
 	if mockTrivyOutput != nil {
-		logger.Debug("Using mocked Trivy IaC output (in-process)")
+		log.Debug("Using mocked Trivy IaC output (in-process)")
 		return mockTrivyOutput, nil
 	}
 	if os.Getenv("R2R_MOCK_SECURITY") != "" {
-		logger.Debug("Using mocked Trivy IaC output (environment)")
+		log.Debug("Using mocked Trivy IaC output (environment)")
 		return getDefaultMockTrivyOutput(), nil
 	}
 
 	// Create Docker runner
-	dockerRunner, err := NewOneOffDockerRunner(logger)
+	dockerRunner, err := NewOneOffDockerRunner()
 	if err != nil {
 		return nil, err
 	}
@@ -429,8 +401,7 @@ func RunTrivyIaC(moduleRoot string, trivyImage string, logger *logging.Logger) (
 		return nil, err
 	}
 
-	logger.Info("Running Trivy IaC scanner via Docker",
-		zap.String("moduleRoot", moduleRoot))
+	log.Debugf("Running Trivy IaC scanner via Docker: moduleRoot=%s", moduleRoot)
 
 	// Get absolute path for volume mount
 	absModuleRoot, err := filepath.Abs(moduleRoot)
@@ -440,9 +411,7 @@ func RunTrivyIaC(moduleRoot string, trivyImage string, logger *logging.Logger) (
 
 	// Convert to Docker-compatible path format (handles Windows paths)
 	dockerPath := ToDockerPath(absModuleRoot)
-	logger.Debug("Docker bind mount path",
-		zap.String("original", absModuleRoot),
-		zap.String("docker", dockerPath))
+	log.Debugf("Docker bind mount path: original=%s docker=%s", absModuleRoot, dockerPath)
 
 	// Configure container
 	config := &container.Config{
@@ -462,15 +431,14 @@ func RunTrivyIaC(moduleRoot string, trivyImage string, logger *logging.Logger) (
 	// Run container and capture output
 	output, err := dockerRunner.RunContainer(config, hostConfig)
 	if err != nil {
-		logger.Error("Trivy IaC scan failed", zap.Error(err))
+		log.Debugf("Trivy IaC scan failed: %v", err)
 		return nil, fmt.Errorf("trivy iac scan failed: %w", err)
 	}
 
 	// Strip Docker log headers if present
 	cleanOutput := stripDockerLogHeaders(output)
 
-	logger.Debug("Trivy IaC scan completed",
-		zap.Int("outputSize", len(cleanOutput)))
+	log.Debugf("Trivy IaC scan completed: outputSize=%d", len(cleanOutput))
 
 	// Parse JSON output
 	var findings interface{}

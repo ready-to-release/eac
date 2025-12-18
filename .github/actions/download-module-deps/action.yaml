@@ -68,6 +68,7 @@ runs:
 
         echo "Artifact lookup SHA: $ARTIFACT_SHA"
         mkdir -p out/build
+        DOWNLOADED_MODULES=""
 
         for mod in $MODULES; do
           echo ""
@@ -125,7 +126,24 @@ runs:
           fi
 
           echo "  ✓ $mod: downloaded successfully"
+          DOWNLOADED_MODULES="$DOWNLOADED_MODULES $mod"
         done
 
         echo ""
         echo "Download complete"
+
+        # Summary
+        echo "### Download Module Dependencies" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+        echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Requested | \`$MODULE\` |" >> $GITHUB_STEP_SUMMARY
+        echo "| Transitive | \`$INCLUDE_TRANSITIVE\` |" >> $GITHUB_STEP_SUMMARY
+        echo "| SHA | \`${ARTIFACT_SHA:0:7}\` |" >> $GITHUB_STEP_SUMMARY
+        if [ -n "$DOWNLOADED_MODULES" ]; then
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Downloaded:**" >> $GITHUB_STEP_SUMMARY
+          for mod in $DOWNLOADED_MODULES; do
+            echo "- \`$mod\` ✓" >> $GITHUB_STEP_SUMMARY
+          done
+        fi

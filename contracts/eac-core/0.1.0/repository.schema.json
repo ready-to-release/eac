@@ -207,10 +207,10 @@
           "description": "Logs output directory",
           "default": "out/logs"
         },
-        "security": {
+        "scan": {
           "type": "string",
           "description": "Security scan output directory",
-          "default": "out/security"
+          "default": "out/scan"
         },
         "tools": {
           "type": "string",

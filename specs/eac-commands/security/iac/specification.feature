@@ -10,7 +10,7 @@ Feature: security_iac
     Scenario: Scan IaC files with mocked tool
       When I run the command "scan iac eac-core"
       Then the exit code is 0 or 1
-      And evidence files should exist in directory "out/security/eac-core/iac/"
+      And evidence files should exist in directory "out/scan/eac-core/iac/"
       And the latest evidence file should have JSON field "module" with value "eac-core"
       And the latest evidence file should have JSON field "scanner" with value "iac"
       And the latest evidence file should have JSON field "timestamp" matching RFC3339 format

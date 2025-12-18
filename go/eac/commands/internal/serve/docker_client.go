@@ -45,6 +45,9 @@ type DockerClient interface {
 	// ContainerLogs gets the logs from a container
 	ContainerLogs(ctx context.Context, containerID string, options container.LogsOptions) (io.ReadCloser, error)
 
+	// ContainerAttach attaches to a container for streaming stdout/stderr
+	ContainerAttach(ctx context.Context, containerID string, options container.AttachOptions) (types.HijackedResponse, error)
+
 	// Close closes the Docker client connection
 	Close() error
 }

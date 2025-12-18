@@ -1,27 +1,21 @@
 package internal
 
 import (
-	"os"
 	"testing"
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/serve"
-	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestOneOffDockerRunner_Creation(t *testing.T) {
-	tempDir := t.TempDir()
-	logger, err := logging.NewDefault("test", tempDir)
-	assert.NoError(t, err)
-
 	// Test with mock client
 	mockClient := new(serve.MockDockerClient)
 	mockClient.On("Close").Return(nil)
 
-	runner := NewOneOffDockerRunnerWithClient(mockClient, logger)
+	runner := NewOneOffDockerRunnerWithClient(mockClient)
 	assert.NotNil(t, runner)
 
-	err = runner.Close()
+	err := runner.Close()
 	assert.NoError(t, err)
 	mockClient.AssertExpectations(t)
 }
@@ -78,20 +72,15 @@ func TestStripDockerLogHeaders(t *testing.T) {
 }
 
 func TestOneOffDockerRunner_WithMockClient(t *testing.T) {
-	tempDir := t.TempDir()
-	logger, err := logging.NewDefault("test", tempDir)
-	assert.NoError(t, err)
-	defer os.RemoveAll(tempDir)
-
 	mockClient := new(serve.MockDockerClient)
 
 	// Create runner with mock
-	runner := NewOneOffDockerRunnerWithClient(mockClient, logger)
+	runner := NewOneOffDockerRunnerWithClient(mockClient)
 	assert.NotNil(t, runner)
 
 	// Test Close
 	mockClient.On("Close").Return(nil).Once()
-	err = runner.Close()
+	err := runner.Close()
 	assert.NoError(t, err)
 
 	mockClient.AssertExpectations(t)

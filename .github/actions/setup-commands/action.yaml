@@ -332,3 +332,25 @@ runs:
         } else {
           echo "source=built" >> $env:GITHUB_OUTPUT
         }
+
+    - name: Summary
+      if: always()
+      shell: bash
+      env:
+        SOURCE: ${{ steps.setup.outputs.source || steps.setup-windows.outputs.source }}
+        PATH_OUT: ${{ steps.setup.outputs.path || steps.setup-windows.outputs.path }}
+        TRIGGER_RUN_ID: ${{ inputs.trigger-run-id }}
+        CROSS_COMPILE: ${{ inputs.cross-compile-windows }}
+      run: |
+        echo "### Setup Commands" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+        echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Source | \`$SOURCE\` |" >> $GITHUB_STEP_SUMMARY
+        echo "| Platform | \`$RUNNER_OS\` |" >> $GITHUB_STEP_SUMMARY
+        if [ -n "$TRIGGER_RUN_ID" ]; then
+          echo "| Trigger Run | \`$TRIGGER_RUN_ID\` |" >> $GITHUB_STEP_SUMMARY
+        fi
+        if [ "$CROSS_COMPILE" = "true" ]; then
+          echo "| Cross-compile Windows | ✓ |" >> $GITHUB_STEP_SUMMARY
+        fi

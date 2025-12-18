@@ -3,20 +3,19 @@ package test
 import (
 	"bufio"
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/core/platform"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/output"
 	"github.com/ready-to-release/eac/go/eac/core/testing"
 )
 
 // writeln writes a formatted string with platform-specific line ending to the writer
 func writeln(w io.Writer, format string, args ...interface{}) {
-	fmt.Fprintf(w, format+platform.LineEnding, args...)
+	output.Writeln(w, format, args...)
 }
 
 // extractModuleFromPath extracts the module moniker from a test file path
