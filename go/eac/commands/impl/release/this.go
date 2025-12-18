@@ -26,9 +26,10 @@
 // Long:   - Changelog file ready to be committed and submitted in a pull request
 // Long:
 // Long: Examples:
-// Long:   release this r2r-cli              # Update changelog
-// Long:   release this r2r-cli --dry-run    # Preview without writing
-// Long:   release this r2r-cli --json       # Output result as JSON
+// Long:   release this r2r-cli                      # Update single module changelog
+// Long:   release this r2r-cli ext-eac              # Update multiple modules
+// Long:   release this r2r-cli ext-eac --dry-run    # Preview without writing
+// Long:   release this r2r-cli --json               # Output result as JSON
 // Flag.dry-run: type=bool, usage=Preview changes without writing to changelog
 // Flag.json: type=bool, usage=Output result in JSON format
 // Flag.date: type=string, usage=Override release date (YYYY-MM-DD format)
@@ -80,7 +81,7 @@ func ReleaseThis() int {
 	}
 
 	// Parse flags
-	module := ""
+	var moduleList []string
 	dryRun := false
 	asJSON := false
 	overrideDate := ""
@@ -100,58 +101,93 @@ func ReleaseThis() int {
 			i++
 			overrideDate = args[i]
 		default:
-			if !strings.HasPrefix(arg, "--") && module == "" {
-				module = arg
+			if !strings.HasPrefix(arg, "--") {
+				moduleList = append(moduleList, arg)
 			}
 		}
 	}
 
-	if module == "" {
+	if len(moduleList) == 0 {
 		log.Error("module moniker required")
-		log.Info("Usage: release this <module> [--dry-run] [--json]")
+		log.Info("Usage: release this <module> [<module>...] [--dry-run] [--json]")
 		return 1
 	}
 
-	result := performRelease(module, dryRun, overrideDate)
+	// Process all modules
+	var results []ReleaseResult
+	for _, module := range moduleList {
+		result := performRelease(module, dryRun, overrideDate)
+		results = append(results, result)
+	}
 
+	// Output results
 	if asJSON {
-		jsonBytes, err := json.MarshalIndent(result, "", "  ")
+		jsonBytes, err := json.MarshalIndent(results, "", "  ")
 		if err != nil {
 			log.Errorf("failed to marshal JSON: %v", err)
 			return 1
 		}
 		log.Info(string(jsonBytes))
 	} else {
-		if result.Error != "" {
-			log.Errorf("%s", result.Error)
-			return 1
-		}
-
 		if dryRun {
 			log.Info("=== DRY RUN - No changes written ===")
 			log.Info("")
 		}
 
-		log.Infof("Module: %s", result.Module)
-		log.Infof("Previous version: %s", result.PreviousVersion)
-		log.Infof("New version: %s", result.NewVersion)
-		log.Infof("Tag: %s", result.Tag)
-		log.Infof("Entries added: %d", result.EntriesAdded)
+		for i, result := range results {
+			if i > 0 {
+				log.Info("---")
+				log.Info("")
+			}
 
-		if !dryRun {
-			log.Info("")
-			log.Infof("Updated: %s", result.ChangelogPath)
-			log.Info("")
-			log.Info("Next steps:")
-			log.Infof("  1. git add %s", result.ChangelogPath)
-			log.Infof("  2. git commit -m \"release(%s): %s\"", result.Module, result.NewVersion)
-			log.Info("  3. Create PR and merge to main")
-			log.Info("  4. release-auto workflow will create tag and trigger release")
+			if result.Error != "" {
+				log.Errorf("Module %s: %s", result.Module, result.Error)
+				continue
+			}
+
+			log.Infof("Module: %s", result.Module)
+			log.Infof("Previous version: %s", result.PreviousVersion)
+			log.Infof("New version: %s", result.NewVersion)
+			log.Infof("Tag: %s", result.Tag)
+			log.Infof("Entries added: %d", result.EntriesAdded)
+
+			if !dryRun {
+				log.Info("")
+				log.Infof("Updated: %s", result.ChangelogPath)
+			}
+		}
+
+		if !dryRun && len(results) > 0 {
+			// Collect successful modules for next steps
+			var successfulModules []string
+			var changelogPaths []string
+			for _, r := range results {
+				if r.Success {
+					successfulModules = append(successfulModules, r.Module)
+					changelogPaths = append(changelogPaths, r.ChangelogPath)
+				}
+			}
+
+			if len(successfulModules) > 0 {
+				log.Info("")
+				log.Info("Next steps:")
+				log.Infof("  1. git add %s", strings.Join(changelogPaths, " "))
+				if len(successfulModules) == 1 {
+					log.Infof("  2. git commit -m \"release(%s): %s\"", results[0].Module, results[0].NewVersion)
+				} else {
+					log.Infof("  2. git commit -m \"release: %s\"", strings.Join(successfulModules, ", "))
+				}
+				log.Info("  3. Create PR and merge to main")
+				log.Info("  4. release-auto workflow will create tags and trigger releases")
+			}
 		}
 	}
 
-	if !result.Success {
-		return 1
+	// Return failure if any module failed
+	for _, result := range results {
+		if !result.Success {
+			return 1
+		}
 	}
 	return 0
 }

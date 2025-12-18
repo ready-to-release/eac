@@ -6,6 +6,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.23] - 2025-12-18
+
+### Added
+
+- feat(multi-module): unified release and CI orchestration system
+
+### Changed
+
+- chore(multi-module): streamline release workflows to remove tag creation
+- chore(multi-module): refactor commands and security scanning
+- ci: fix
+- ci: fix
+- chore(multi-module): reorganize modules by dependency layer
+- chore(multi-module): standardize test suite terminology and CI dispatch
+- chore(multi-module): simplify CI and add release gating
+- chore(multi-module): add concurrency controls to GitHub workflows
+- chore(multi-module): improve CI artifact resolution
+- refactor(multi-module): improve command documentation
+
+### Fixed
+
+- fix(multi-module): align CD model stages and update documentation
+- fix(multi-module): refactor test suites and CI configuration
+
 ## [0.0.22] - 2025-12-11
 
 ### Fixed
@@ -164,7 +188,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release with core CLI functionality
 
-[Unreleased]: https://github.com/ready-to-release/eac/compare/r2r-cli/0.0.22...HEAD
+[Unreleased]: https://github.com/ready-to-release/eac/compare/r2r-cli/0.0.23...HEAD
+[0.0.23]: https://github.com/ready-to-release/eac/compare/r2r-cli/0.0.22...r2r-cli/0.0.23
 [0.0.22]: https://github.com/ready-to-release/eac/compare/r2r-cli/0.0.21...r2r-cli/0.0.22
 [0.0.21]: https://github.com/ready-to-release/eac/compare/r2r-cli/0.0.19...r2r-cli/0.0.21
 [0.0.19]: https://github.com/ready-to-release/eac/compare/r2r-cli/0.0.17...r2r-cli/0.0.19
