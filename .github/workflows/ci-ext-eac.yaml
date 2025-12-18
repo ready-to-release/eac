@@ -49,7 +49,7 @@ jobs:
   # Build ext-eac container
   # =============================================================================
   build:
-    name: Build
+    name: Build (ext-eac)
     runs-on: ubuntu-latest
     outputs:
       image-name: ${{ steps.container.outputs.image-name }}
@@ -74,7 +74,7 @@ jobs:
   # Run module tests (specs/unit tests if defined)
   # =============================================================================
   test:
-    name: Test
+    name: Test (ext-eac)
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -94,7 +94,7 @@ jobs:
   # Container tests with r2r CLI and direct Docker
   # =============================================================================
   integration-test:
-    name: Container Test
+    name: Container Test (ext-eac)
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -215,7 +215,7 @@ jobs:
   # Summary - Centralized status and failure handling
   # =============================================================================
   summary:
-    name: Summary
+    name: CI Summary (ext-eac)
     needs: [build, test, integration-test]
     if: always()
     runs-on: ubuntu-latest

@@ -12,7 +12,7 @@
 // Long: organization only.
 // Long:
 // Long: Expected Output:
-// Long:   Timestamped JSON evidence files are written to out/security/<module>/zap/<timestamp>.json
+// Long:   Evidence files are written to out/scan/<module>/zap/
 // Long:
 // Long: Example:
 // Long:   security zap src-api --target http://localhost:8080              # Baseline scan
@@ -27,14 +27,17 @@
 package zap
 
 import (
-	"github.com/ready-to-release/eac/go/eac/core/config"
 	"os"
+	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/scan/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"github.com/ready-to-release/eac/go/eac/core/manifest"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 	"go.uber.org/zap"
 )
@@ -46,6 +49,8 @@ func init() {
 }
 
 // ZAP command entry point
+// Note: ZAP is special - it scans a running application URL, not module files,
+// and only accepts a single module for evidence file organization.
 func ZAP() int {
 	args := os.Args[3:] // Skip program name, "security", and "zap"
 
@@ -66,7 +71,7 @@ func ZAP() int {
 		switch arg {
 		case "--target":
 			if i+1 >= len(args) {
-				log.Errorf( "Error: --target requires a value\n")
+				log.Errorf("Error: --target requires a value\n")
 				printZAPUsage()
 				return 1
 			}
@@ -74,7 +79,7 @@ func ZAP() int {
 			targetURL = args[i]
 		case "--scan-type":
 			if i+1 >= len(args) {
-				log.Errorf( "Error: --scan-type requires a value\n")
+				log.Errorf("Error: --scan-type requires a value\n")
 				printZAPUsage()
 				return 1
 			}
@@ -82,7 +87,7 @@ func ZAP() int {
 			scanType = args[i]
 			// Validate scan type
 			if scanType != "baseline" && scanType != "full" && scanType != "api" {
-				log.Errorf( "Error: invalid scan type: %s (must be baseline, full, or api)\n", scanType)
+				log.Errorf("Error: invalid scan type: %s (must be baseline, full, or api)\n", scanType)
 				printZAPUsage()
 				return 1
 			}
@@ -94,19 +99,19 @@ func ZAP() int {
 			} else if strings.HasPrefix(arg, "--scan-type=") {
 				scanType = strings.TrimPrefix(arg, "--scan-type=")
 				if scanType != "baseline" && scanType != "full" && scanType != "api" {
-					log.Errorf( "Error: invalid scan type: %s (must be baseline, full, or api)\n", scanType)
+					log.Errorf("Error: invalid scan type: %s (must be baseline, full, or api)\n", scanType)
 					printZAPUsage()
 					return 1
 				}
 			} else if strings.HasPrefix(arg, "--") {
-				log.Errorf( "Error: unknown flag: %s\n", arg)
+				log.Errorf("Error: unknown flag: %s\n", arg)
 				printZAPUsage()
 				return 1
 			} else {
 				if moniker == "" {
 					moniker = arg
 				} else {
-					log.Errorf( "Error: only one module argument allowed for ZAP scans\n")
+					log.Errorf("Error: only one module argument allowed for ZAP scans\n")
 					printZAPUsage()
 					return 1
 				}
@@ -116,36 +121,35 @@ func ZAP() int {
 
 	// Validate required arguments
 	if moniker == "" {
-		log.Errorf( "Error: module argument required\n")
+		log.Errorf("Error: module argument required\n")
 		printZAPUsage()
 		return 1
 	}
 	if targetURL == "" {
-		log.Errorf( "Error: --target flag is required\n")
+		log.Errorf("Error: --target flag is required\n")
 		printZAPUsage()
 		return 1
 	}
 
-	// Initialize logger
-	var logger *logging.Logger
+	// Initialize
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		log.Errorf( "Error: failed to find repository root: %v\n", err)
+		log.Errorf("Error: failed to find repository root: %v\n", err)
 		return 1
 	}
 
+	var logger *logging.Logger
 	if debug {
 		logger, err = logging.NewWithDebug("security", workspaceRoot)
 	} else {
 		logger, err = logging.NewDefault("security", workspaceRoot)
 	}
 	if err != nil {
-		log.Errorf( "Error: failed to initialize logger: %v\n", err)
+		log.Errorf("Error: failed to initialize logger: %v\n", err)
 		return 1
 	}
 	defer logger.Sync()
 
-	// Load configuration
 	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
 		logger.Error("Failed to load configuration", zap.Error(err))
@@ -153,7 +157,6 @@ func ZAP() int {
 		return 1
 	}
 
-	// Get Docker image from config
 	zapImage := cfg.SecurityTools.DockerImages.ZAP.FullImage()
 	logger.Debug("Using ZAP image", zap.String("image", zapImage))
 
@@ -163,30 +166,34 @@ func ZAP() int {
 		zap.String("scanType", scanType),
 		zap.Bool("debug", debug))
 
-	// Load module contracts
 	moduleReport, err := reports.GetModuleContracts(workspaceRoot)
 	if err != nil {
 		logger.Error("Failed to load module contracts", zap.Error(err))
-		log.Errorf( "Error: failed to load module contracts: %v\n", err)
+		log.Errorf("Error: failed to load module contracts: %v\n", err)
 		return 1
 	}
 
+	gitCommit := internal.GetGitCommit(workspaceRoot)
+
 	// Verify module exists
-	_, exists := moduleReport.Registry.Get(moniker)
+	module, exists := moduleReport.Registry.Get(moniker)
 	if !exists {
 		logger.Error("Module not found", zap.String("moniker", moniker))
-		log.Errorf( "Error: module not found: %s\n", moniker)
+		log.Errorf("Error: module not found: %s\n", moniker)
 		return 1
 	}
 
 	logger.Info("Scanning target", zap.String("moniker", moniker), zap.String("target", targetURL))
 	log.Infof("🕷️  Scanning %s at %s...\n", moniker, targetURL)
 
+	scanStart := time.Now()
+	moduleScanDir := filepath.Join(workspaceRoot, cfg.Repository.Paths.Out.Scan, moniker)
+
 	// Run OWASP ZAP scan
-	findings, err := internal.RunZAPScan(targetURL, scanType, workspaceRoot, zapImage, logger)
+	findings, err := internal.RunZAPScan(targetURL, scanType, workspaceRoot, zapImage)
 	if err != nil {
 		logger.Error("ZAP scan failed", zap.String("moniker", moniker), zap.Error(err))
-		log.Errorf( "  ❌ Failed: %v\n", err)
+		log.Errorf("  ❌ Failed: %v\n", err)
 
 		// Write error evidence
 		outputPath, writeErr := internal.WriteErrorEvidence(workspaceRoot, moniker, internal.ScannerDAST, err.Error())
@@ -197,6 +204,8 @@ func ZAP() int {
 			log.Infof("  📄 Error evidence: %s\n", outputPath)
 		}
 
+		// Update scan manifest with failure
+		updateScanManifest(moduleScanDir, moniker, module.Type, gitCommit, manifest.ScanStatusFailed, time.Since(scanStart), outputPath, err.Error(), logger)
 		return 1
 	}
 
@@ -204,14 +213,45 @@ func ZAP() int {
 	outputPath, err := internal.WriteEvidence(workspaceRoot, moniker, internal.ScannerDAST, findings)
 	if err != nil {
 		logger.Error("Failed to write evidence", zap.String("moniker", moniker), zap.Error(err))
-		log.Errorf( "  ❌ Failed to write evidence: %v\n", err)
+		log.Errorf("  ❌ Failed to write evidence: %v\n", err)
+
+		// Update scan manifest with failure
+		updateScanManifest(moduleScanDir, moniker, module.Type, gitCommit, manifest.ScanStatusFailed, time.Since(scanStart), "", err.Error(), logger)
 		return 1
 	}
+
+	// Update scan manifest with success
+	updateScanManifest(moduleScanDir, moniker, module.Type, gitCommit, manifest.ScanStatusPassed, time.Since(scanStart), outputPath, "", logger)
 
 	logger.Info("ZAP scan completed", zap.String("moniker", moniker), zap.String("evidence", outputPath))
 	log.Infof("  ✅ Success: %s\n", outputPath)
 
 	return 0
+}
+
+// updateScanManifest loads or creates the scan manifest, adds the scanner result, and saves it.
+func updateScanManifest(moduleScanDir, moniker, moduleType, gitCommit, status string, duration time.Duration, evidencePath, errorMsg string, logger *logging.Logger) {
+	mf, err := manifest.LoadOrCreateScanManifest(moduleScanDir, moniker, moduleType, gitCommit)
+	if err != nil {
+		logger.Warn("Failed to load/create scan manifest", zap.Error(err))
+		return
+	}
+
+	result := manifest.ScannerResult{
+		Status:          status,
+		RunTime:         time.Now(),
+		DurationSeconds: duration.Seconds(),
+		EvidencePath:    evidencePath,
+		Error:           errorMsg,
+	}
+	mf.AddScannerResult(string(internal.ScannerDAST), result)
+
+	if err := mf.Save(moduleScanDir); err != nil {
+		logger.Warn("Failed to save scan manifest", zap.Error(err))
+		return
+	}
+
+	logger.Debug("Scan manifest updated", zap.String("path", manifest.GetScanManifestPath(moduleScanDir)))
 }
 
 func printZAPUsage() {
@@ -240,7 +280,7 @@ func printZAPUsage() {
 	log.Info("  security zap src-api --target http://localhost:8080 --debug      # Debug logging")
 	log.Info("")
 	log.Info("Output:")
-	log.Info("  out/security/<module>/zap/<timestamp>.json")
+	log.Info("  out/scan/<module>/zap/")
 	log.Info("")
 	log.Info("Requirements:")
 	log.Info("  - Docker must be installed and running")

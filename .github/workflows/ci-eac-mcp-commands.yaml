@@ -41,7 +41,7 @@ permissions:
   actions: read
 
 jobs:
-  ci:
+  ci-eac-mcp-commands:
     uses: ./.github/workflows/_module-ci.yaml
     with:
       module: eac-mcp-commands

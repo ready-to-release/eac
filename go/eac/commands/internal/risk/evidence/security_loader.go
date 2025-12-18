@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 
@@ -26,50 +25,28 @@ const (
 	ScannerDAST       ScannerType = "zap"
 )
 
-// FindLatestSecurityScan finds the most recent security scan file for a module and scanner type.
-// Security scan files are stored in: <security_path>/<module>/<scanner>/<timestamp>.json
-// The timestamp format is sortable: "2006-01-02T15-04-05Z"
-// Uses config.Repository.Paths.Out.Security to determine the security output directory.
+// FindLatestSecurityScan finds the security scan file for a module and scanner type.
+// Scan files are stored in: <scan_path>/<module>/<scanner>.json
+// Uses config.Repository.Paths.Out.Scan to determine the scan output directory.
 func FindLatestSecurityScan(workspaceRoot, moduleName string, scannerType ScannerType) (string, error) {
-	// Load config to get security output path (respects repository contracts)
+	// Load config to get scan output path (respects repository contracts)
 	cfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot})
 	if err != nil {
 		return "", fmt.Errorf("failed to load config: %w", err)
 	}
 
-	// Construct scanner directory path using config-based security path
-	scanDir := cfg.Repository.SecurityScanOutputPathAbs(workspaceRoot, moduleName, string(scannerType))
+	// Construct scanner file path: out/scan/<module>/<scanner>.json
+	scanFile := filepath.Join(cfg.Repository.ScanModuleOutputPathAbs(workspaceRoot, moduleName), string(scannerType)+".json")
 
-	// Read directory contents
-	entries, err := os.ReadDir(scanDir)
-	if err != nil {
+	// Check if file exists
+	if _, err := os.Stat(scanFile); err != nil {
 		if os.IsNotExist(err) {
-			return "", fmt.Errorf("no %s scans found for module '%s' (directory does not exist)", scannerType, moduleName)
+			return "", fmt.Errorf("no %s scan found for module '%s'", scannerType, moduleName)
 		}
-		return "", fmt.Errorf("failed to read %s scan directory for module '%s': %w", scannerType, moduleName, err)
+		return "", fmt.Errorf("failed to access %s scan for module '%s': %w", scannerType, moduleName, err)
 	}
 
-	// Collect all JSON files
-	var jsonFiles []string
-	for _, entry := range entries {
-		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".json") {
-			jsonFiles = append(jsonFiles, entry.Name())
-		}
-	}
-
-	if len(jsonFiles) == 0 {
-		return "", fmt.Errorf("no %s evidence files found for module '%s'", scannerType, moduleName)
-	}
-
-	// Sort by filename (timestamp) in descending order to get latest
-	// Timestamp format "2006-01-02T15-04-05Z" is lexicographically sortable
-	sort.Slice(jsonFiles, func(i, j int) bool {
-		return jsonFiles[i] > jsonFiles[j] // Descending: latest first
-	})
-
-	// Return full path to latest file
-	latestFile := filepath.Join(scanDir, jsonFiles[0])
-	return latestFile, nil
+	return scanFile, nil
 }
 
 // FindSecurityResultsForModule discovers latest security scan results for a module.

@@ -41,6 +41,16 @@ runs:
       shell: bash
       env:
         GH_TOKEN: ${{ github.token }}
+        MODULE: ${{ inputs.module }}
+        KEEP_COUNT: ${{ inputs.keep-count }}
       run: |
         COMMANDS="${{ steps.commands.outputs.commands-path }}"
-        $COMMANDS release prune "${{ inputs.module }}" --keep "${{ inputs.keep-count }}"
+        $COMMANDS release prune "$MODULE" --keep "$KEEP_COUNT"
+
+        # Summary
+        echo "### Cleanup Pre-Releases" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+        echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Module | \`$MODULE\` |" >> $GITHUB_STEP_SUMMARY
+        echo "| Keep Count | \`$KEEP_COUNT\` |" >> $GITHUB_STEP_SUMMARY

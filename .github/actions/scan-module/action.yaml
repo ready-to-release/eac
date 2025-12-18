@@ -12,7 +12,7 @@
 #   - sast: Static Application Security Testing (Semgrep)
 #   - zap: Dynamic Application Security Testing (OWASP ZAP)
 #
-# Output structure: out/security/<module>/<scanner>/
+# Output structure: out/scan/<module>/<scanner>/
 #
 # Usage:
 #   - uses: ./.github/actions/scan-module
@@ -125,7 +125,7 @@ runs:
         echo "Failure mode: $FAIL_ON_ERROR"
         echo ""
 
-        mkdir -p out/security/$MODULE
+        mkdir -p out/scan/$MODULE
 
         scan_failed=false
         scans_run=""
@@ -181,7 +181,7 @@ runs:
       uses: actions/upload-artifact@v6
       with:
         name: ${{ steps.vars.outputs.scan-artifact-name }}
-        path: out/security/
+        path: out/scan/
         if-no-files-found: warn
 
     - name: Scan Summary
@@ -190,22 +190,9 @@ runs:
       env:
         COMMANDS: ${{ steps.commands.outputs.commands-path }}
         MODULE: ${{ inputs.module }}
-        SCANS: ${{ inputs.scans }}
-        SCAN_FAILED: ${{ steps.scan.outputs.scan-failed }}
-        FAILED_SCANS: ${{ steps.scan.outputs.failed-scans }}
         ARTIFACT_NAME: ${{ steps.vars.outputs.scan-artifact-name }}
       run: |
-        # Determine status
-        if [ "$SCAN_FAILED" = "true" ]; then
-          STATUS="failure"
-        else
-          STATUS="success"
-        fi
-
         # Generate summary using Go command
+        # Status is derived from scan manifest (success if all scans passed)
         # Note: Diagnostic links are handled centrally by _module-ci.yaml on failure
-        $COMMANDS show scan-summary "$MODULE" \
-          --scans="$SCANS" \
-          --failed-scans="$FAILED_SCANS" \
-          --artifact-name="$ARTIFACT_NAME" \
-          --status="$STATUS" >> $GITHUB_STEP_SUMMARY
+        $COMMANDS show scan-summary "$MODULE" --artifact-name="$ARTIFACT_NAME" >> $GITHUB_STEP_SUMMARY

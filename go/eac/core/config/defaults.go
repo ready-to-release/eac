@@ -404,8 +404,8 @@ func MergeRepository(defaults, user *RepositoryConfig) *RepositoryConfig {
 	if user.Paths.Out.Logs != "" {
 		result.Paths.Out.Logs = user.Paths.Out.Logs
 	}
-	if user.Paths.Out.Security != "" {
-		result.Paths.Out.Security = user.Paths.Out.Security
+	if user.Paths.Out.Scan != "" {
+		result.Paths.Out.Scan = user.Paths.Out.Scan
 	}
 	if user.Paths.Out.Tools != "" {
 		result.Paths.Out.Tools = user.Paths.Out.Tools

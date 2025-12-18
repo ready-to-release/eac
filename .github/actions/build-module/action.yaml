@@ -112,7 +112,6 @@ runs:
         COMMANDS: ${{ steps.commands.outputs.commands-path }}
         MODULE: ${{ inputs.module }}
         RUN_ID: ${{ github.run_id }}
-        BUILD_FAILED: ${{ steps.build.outputs.build-failed }}
         GH_TOKEN: ${{ github.token }}
       run: |
         # Validate COMMANDS is set
@@ -122,13 +121,7 @@ runs:
           exit 0
         fi
 
-        # Determine status from build result
-        if [ "$BUILD_FAILED" = "0" ]; then
-          STATUS="success"
-        else
-          STATUS="failure"
-        fi
-
         # Generate comprehensive summary using Go command
+        # Status is derived from build manifest (success if artifacts exist)
         # Note: Diagnostic links are handled centrally by _module-ci.yaml on failure
-        $COMMANDS show build-summary $MODULE --status=$STATUS --run-id=$RUN_ID >> $GITHUB_STEP_SUMMARY
+        $COMMANDS show build-summary $MODULE --run-id=$RUN_ID >> $GITHUB_STEP_SUMMARY

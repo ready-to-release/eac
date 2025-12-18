@@ -76,3 +76,18 @@ runs:
         else
           echo "::warning::$MESSAGE"
         fi
+
+        # Summary
+        echo "### Extract Release Version" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+        echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Module | \`$MODULE_PREFIX\` |" >> $GITHUB_STEP_SUMMARY
+        echo "| Version | \`$VERSION\` |" >> $GITHUB_STEP_SUMMARY
+        echo "| Tag | \`$TAG_NAME\` |" >> $GITHUB_STEP_SUMMARY
+        echo "| Type | \`$VERSION_TYPE\` |" >> $GITHUB_STEP_SUMMARY
+        if [ "$IS_VALID" = "true" ]; then
+          echo "| Valid | ✓ |" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "| Valid | ✗ |" >> $GITHUB_STEP_SUMMARY
+        fi

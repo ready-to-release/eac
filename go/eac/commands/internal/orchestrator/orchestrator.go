@@ -294,8 +294,8 @@ func (o *Orchestrator) processWorkItem(item WorkItem) WorkResult {
 	}
 
 	// Create output directory for this module
-	// Sanitize moniker for filesystem (replace : with _ for Windows compatibility)
-	sanitizedMoniker := sanitizePathForFS(item.Moniker)
+	// Use simplified display name for cleaner paths, then sanitize for filesystem
+	sanitizedMoniker := sanitizePathForFS(output.PackageDisplayName(item.Moniker))
 	moduleOutputDir := filepath.Join(o.config.WorkspaceRoot, o.config.OutputBaseDir, sanitizedMoniker)
 	parentDir := filepath.Dir(moduleOutputDir)
 

@@ -5,10 +5,17 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"gopkg.in/yaml.v3"
 )
+
+// sanitizeMonikerForPath converts a moniker to a filesystem-safe path component.
+// Replaces : with _ (Windows doesn't allow : in paths)
+func sanitizeMonikerForPath(moniker string) string {
+	return strings.ReplaceAll(moniker, ":", "_")
+}
 
 // RepositoryFileName is the config file for all repository settings
 const RepositoryFileName = "repository.yml"
@@ -94,7 +101,7 @@ type OutConfig struct {
 	Build    string `yaml:"build"`
 	Test     string `yaml:"test"`
 	Logs     string `yaml:"logs"`
-	Security string `yaml:"security"`
+	Scan     string `yaml:"scan"`
 	Tools    string `yaml:"tools"` // CI tools like the commands binary (not build outputs)
 }
 
@@ -184,36 +191,42 @@ func (c *RepositoryConfig) TemplatePathAbs(workspaceRoot string, pathComponents 
 
 // TestModuleDir returns the path to a module's test output directory.
 // New structure: out/test/<module>
+// Sanitizes moniker for filesystem safety (replaces : with _)
 func (c *RepositoryConfig) TestModuleDir(moniker string) string {
-	return c.Paths.Out.Test + "/" + moniker
+	return c.Paths.Out.Test + "/" + sanitizeMonikerForPath(moniker)
 }
 
 // TestModuleDirAbs returns the absolute path to a module's test output directory.
 // New structure: out/test/<module>
+// Sanitizes moniker for filesystem safety (replaces : with _)
 func (c *RepositoryConfig) TestModuleDirAbs(workspaceRoot, moniker string) string {
-	return filepath.Join(workspaceRoot, c.Paths.Out.Test, moniker)
+	return filepath.Join(workspaceRoot, c.Paths.Out.Test, sanitizeMonikerForPath(moniker))
 }
 
 // TestManifestPath returns the path to a module's test manifest file.
 // Path: out/test/<module>/test.manifest.json
+// Sanitizes moniker for filesystem safety (replaces : with _)
 func (c *RepositoryConfig) TestManifestPath(moniker string) string {
-	return c.Paths.Out.Test + "/" + moniker + "/test.manifest.json"
+	return c.Paths.Out.Test + "/" + sanitizeMonikerForPath(moniker) + "/test.manifest.json"
 }
 
 // TestManifestPathAbs returns the absolute path to a module's test manifest file.
+// Sanitizes moniker for filesystem safety (replaces : with _)
 func (c *RepositoryConfig) TestManifestPathAbs(workspaceRoot, moniker string) string {
-	return filepath.Join(workspaceRoot, c.Paths.Out.Test, moniker, "test.manifest.json")
+	return filepath.Join(workspaceRoot, c.Paths.Out.Test, sanitizeMonikerForPath(moniker), "test.manifest.json")
 }
 
 // TestPackageDir returns the path to a package's test output within a module.
 // Path: out/test/<module>/packages/<package>
+// Sanitizes moniker for filesystem safety (replaces : with _)
 func (c *RepositoryConfig) TestPackageDir(moniker, pkgPath string) string {
-	return c.Paths.Out.Test + "/" + moniker + "/packages/" + pkgPath
+	return c.Paths.Out.Test + "/" + sanitizeMonikerForPath(moniker) + "/packages/" + pkgPath
 }
 
 // TestPackageDirAbs returns the absolute path to a package's test output within a module.
+// Sanitizes moniker for filesystem safety (replaces : with _)
 func (c *RepositoryConfig) TestPackageDirAbs(workspaceRoot, moniker, pkgPath string) string {
-	return filepath.Join(workspaceRoot, c.Paths.Out.Test, moniker, "packages", pkgPath)
+	return filepath.Join(workspaceRoot, c.Paths.Out.Test, sanitizeMonikerForPath(moniker), "packages", pkgPath)
 }
 
 // LogsPath returns the path to logs for a command
@@ -241,7 +254,7 @@ func (c *RepositoryConfig) GetPathVariables() map[string]string {
 		"out_build":      c.Paths.Out.Build,
 		"out_test":       c.Paths.Out.Test,
 		"out_logs":       c.Paths.Out.Logs,
-		"out_security":   c.Paths.Out.Security,
+		"out_scan":       c.Paths.Out.Scan,
 		"out_tools":      c.Paths.Out.Tools,
 	}
 }
@@ -292,44 +305,46 @@ func (c *RepositoryConfig) TestOutputDirAbs(workspaceRoot string) string {
 
 // TestModuleTimingPath returns the path to a module's test timing file
 // Path: out/test/<module>/test-timing.txt
+// Sanitizes moniker for filesystem safety (replaces : with _)
 func (c *RepositoryConfig) TestModuleTimingPath(moniker string) string {
-	return c.Paths.Out.Test + "/" + moniker + "/" + c.Conventions.TestTiming
+	return c.Paths.Out.Test + "/" + sanitizeMonikerForPath(moniker) + "/" + c.Conventions.TestTiming
 }
 
 // TestModuleTimingPathAbs returns the absolute path to a module's test timing file
+// Sanitizes moniker for filesystem safety (replaces : with _)
 func (c *RepositoryConfig) TestModuleTimingPathAbs(workspaceRoot, moniker string) string {
-	return filepath.Join(workspaceRoot, c.Paths.Out.Test, moniker, c.Conventions.TestTiming)
+	return filepath.Join(workspaceRoot, c.Paths.Out.Test, sanitizeMonikerForPath(moniker), c.Conventions.TestTiming)
 }
 
-// SecurityOutputDir returns the root security output directory
-func (c *RepositoryConfig) SecurityOutputDir() string {
-	return c.Paths.Out.Security
+// ScanOutputDir returns the root scan output directory
+func (c *RepositoryConfig) ScanOutputDir() string {
+	return c.Paths.Out.Scan
 }
 
-// SecurityOutputDirAbs returns the absolute root security output directory
-func (c *RepositoryConfig) SecurityOutputDirAbs(workspaceRoot string) string {
-	return filepath.Join(workspaceRoot, c.Paths.Out.Security)
+// ScanOutputDirAbs returns the absolute root scan output directory
+func (c *RepositoryConfig) ScanOutputDirAbs(workspaceRoot string) string {
+	return filepath.Join(workspaceRoot, c.Paths.Out.Scan)
 }
 
-// SecurityModuleOutputPath returns the path to a module's security scan output directory
-func (c *RepositoryConfig) SecurityModuleOutputPath(moduleName string) string {
-	return c.Paths.Out.Security + "/" + moduleName
+// ScanModuleOutputPath returns the path to a module's scan output directory
+func (c *RepositoryConfig) ScanModuleOutputPath(moduleName string) string {
+	return c.Paths.Out.Scan + "/" + moduleName
 }
 
-// SecurityModuleOutputPathAbs returns the absolute path to a module's security scan output directory
-func (c *RepositoryConfig) SecurityModuleOutputPathAbs(workspaceRoot, moduleName string) string {
-	return filepath.Join(workspaceRoot, c.Paths.Out.Security, moduleName)
+// ScanModuleOutputPathAbs returns the absolute path to a module's scan output directory
+func (c *RepositoryConfig) ScanModuleOutputPathAbs(workspaceRoot, moduleName string) string {
+	return filepath.Join(workspaceRoot, c.Paths.Out.Scan, moduleName)
 }
 
-// SecurityScanOutputPath returns the path to a specific scanner's output directory for a module
-// Example: SecurityScanOutputPath("eac-core", "vuln") → "out/security/eac-core/vuln"
-func (c *RepositoryConfig) SecurityScanOutputPath(moduleName, scannerType string) string {
-	return c.Paths.Out.Security + "/" + moduleName + "/" + scannerType
+// ScanManifestPath returns the path to a module's scan manifest file.
+// Path: out/scan/<module>/scan.manifest.json
+func (c *RepositoryConfig) ScanManifestPath(moniker string) string {
+	return c.Paths.Out.Scan + "/" + moniker + "/scan.manifest.json"
 }
 
-// SecurityScanOutputPathAbs returns the absolute path to a specific scanner's output directory
-func (c *RepositoryConfig) SecurityScanOutputPathAbs(workspaceRoot, moduleName, scannerType string) string {
-	return filepath.Join(workspaceRoot, c.Paths.Out.Security, moduleName, scannerType)
+// ScanManifestPathAbs returns the absolute path to a module's scan manifest file.
+func (c *RepositoryConfig) ScanManifestPathAbs(workspaceRoot, moniker string) string {
+	return filepath.Join(workspaceRoot, c.Paths.Out.Scan, moniker, "scan.manifest.json")
 }
 
 // LogsPathAbs returns the absolute path to logs for a command with optional path segments

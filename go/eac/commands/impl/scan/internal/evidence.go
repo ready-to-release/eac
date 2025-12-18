@@ -14,7 +14,7 @@ import (
 
 // WriteEvidence writes a security evidence file with SHA256 integrity hash.
 //
-// Output structure: out/security/<module>/<scanner>/<timestamp>.json
+// Output structure: out/scan/<module>/<scanner>/
 //
 // Parameters:
 //   - workspaceRoot: Repository root directory
@@ -39,15 +39,15 @@ func WriteEvidence(workspaceRoot, module string, scanner ScannerType, findings i
 	}
 
 	// Build output directory path
-	// Security path already includes "out" prefix (e.g., "out/security")
+	// Scan path already includes "out" prefix (e.g., "out/scan")
 	// Join directly with workspaceRoot like other commands do (build, test, etc.)
 	var outputDir string
-	if filepath.IsAbs(cfg.Repository.Paths.Out.Security) {
-		// If Security is absolute, use it directly
-		outputDir = filepath.Join(cfg.Repository.Paths.Out.Security, module, string(scanner))
+	if filepath.IsAbs(cfg.Repository.Paths.Out.Scan) {
+		// If Scan is absolute, use it directly
+		outputDir = filepath.Join(cfg.Repository.Paths.Out.Scan, module)
 	} else {
-		// If Security is relative, join with workspaceRoot
-		outputDir = filepath.Join(workspaceRoot, cfg.Repository.Paths.Out.Security, module, string(scanner))
+		// If Scan is relative, join with workspaceRoot
+		outputDir = filepath.Join(workspaceRoot, cfg.Repository.Paths.Out.Scan, module)
 	}
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create output directory: %w", err)
@@ -81,8 +81,8 @@ func WriteEvidence(workspaceRoot, module string, scanner ScannerType, findings i
 		return "", fmt.Errorf("failed to marshal evidence: %w", err)
 	}
 
-	// Generate filename with filesystem-safe timestamp
-	filename := fmt.Sprintf("%s.json", GetFilenameTimestamp())
+	// Generate filename based on scanner type (e.g., vuln.json, sbom.json)
+	filename := fmt.Sprintf("%s.json", scanner)
 	outputPath := filepath.Join(outputDir, filename)
 
 	// Write evidence file

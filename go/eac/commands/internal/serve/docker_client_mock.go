@@ -82,6 +82,11 @@ func (m *MockDockerClient) ContainerLogs(ctx context.Context, containerID string
 	return nil, args.Error(1)
 }
 
+func (m *MockDockerClient) ContainerAttach(ctx context.Context, containerID string, options container.AttachOptions) (types.HijackedResponse, error) {
+	args := m.Called(ctx, containerID, options)
+	return args.Get(0).(types.HijackedResponse), args.Error(1)
+}
+
 func (m *MockDockerClient) Close() error {
 	args := m.Called()
 	return args.Error(0)
