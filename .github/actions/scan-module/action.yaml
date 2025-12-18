@@ -131,36 +131,33 @@ runs:
         scans_run=""
         failed_scans=""
 
-        IFS=',' read -ra SCAN_ARRAY <<< "$SCANS"
-        for scan in "${SCAN_ARRAY[@]}"; do
-          scan=$(echo "$scan" | xargs)  # trim whitespace
+        # Run scan command with module and all scanners
+        # Usage: scan <module> --scanner <types>
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "Running scans: $SCANS"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "Running scan: $scan"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        if $COMMANDS scan $MODULE --scanner "$SCANS" --no-tui $EXTRA_ARGS; then
+          echo "✓ scans completed"
+          scans_run="$SCANS"
+        else
+          echo "✗ scans failed"
+          scan_failed=true
+          failed_scans="$SCANS"
 
-          if $COMMANDS scan $scan $MODULE $EXTRA_ARGS; then
-            echo "✓ $scan completed"
-            scans_run="$scans_run,$scan"
-          else
-            echo "✗ $scan failed"
-            scan_failed=true
-            failed_scans="$failed_scans $scan"
-
-            case "$FAIL_ON_ERROR" in
-              error)
-                echo "::error::Scan '$scan' failed for $MODULE"
-                ;;
-              warn)
-                echo "::warning::Scan '$scan' failed for $MODULE"
-                ;;
-              ignore)
-                # Silent
-                ;;
-            esac
-          fi
-          echo ""
-        done
+          case "$FAIL_ON_ERROR" in
+            error)
+              echo "::error::Scans failed for $MODULE"
+              ;;
+            warn)
+              echo "::warning::Scans failed for $MODULE"
+              ;;
+            ignore)
+              # Silent
+              ;;
+          esac
+        fi
+        echo ""
 
         # Remove leading comma
         scans_run="${scans_run#,}"

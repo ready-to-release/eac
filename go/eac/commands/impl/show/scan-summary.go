@@ -65,10 +65,10 @@ func ShowScanSummary() int {
 	}
 
 	// Load scan manifest
-	moduleSecurityDir := filepath.Join(workspaceRoot, "out", "security", module)
-	mf, err := manifest.LoadScanManifest(moduleSecurityDir)
+	moduleScanDir := filepath.Join(workspaceRoot, "out", "scan", module)
+	mf, err := manifest.LoadScanManifest(moduleScanDir)
 	if err != nil {
-		log.Errorf("No scan manifest found at %s: %v", moduleSecurityDir, err)
+		log.Errorf("No scan manifest found at %s: %v", moduleScanDir, err)
 		return 1
 	}
 

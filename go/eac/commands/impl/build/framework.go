@@ -4,6 +4,7 @@ package build
 import (
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/internal/artifacts"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/cmdframework"
@@ -120,6 +121,8 @@ func buildAfterResolve(ctx *cmdframework.ExecutionContext) error {
 
 // detectIncrementalChanges performs incremental build detection
 func detectIncrementalChanges(ctx *cmdframework.ExecutionContext, bctx *buildContext) {
+	startTime := time.Now()
+
 	// Build modules map for change detection
 	modulesMap := make(map[string]buildstate.ModuleFileGetter)
 	for _, moniker := range ctx.GetExecutionMonikers() {
@@ -140,8 +143,18 @@ func detectIncrementalChanges(ctx *cmdframework.ExecutionContext, bctx *buildCon
 		return
 	}
 
+	detectionTime := time.Since(startTime)
+
 	if changeResult.FreshBuild {
 		log.Debugf("Fresh build detected, no incremental filtering")
+		// Report fresh build in init summary
+		if ctx.InitSummary != nil {
+			ctx.InitSummary.SetIncremental(&initsummary.IncrementalInfo{
+				Enabled:       true,
+				DetectionTime: detectionTime,
+				FreshBuild:    true,
+			})
+		}
 		return
 	}
 
@@ -173,6 +186,17 @@ func detectIncrementalChanges(ctx *cmdframework.ExecutionContext, bctx *buildCon
 
 	ctx.ExecutionPlan.ExecutionOrder = filteredOrder
 	ctx.ExecutionPlan.Layers = filteredLayers
+
+	// Report incremental detection in init summary
+	if ctx.InitSummary != nil {
+		ctx.InitSummary.SetIncremental(&initsummary.IncrementalInfo{
+			Enabled:       true,
+			DetectionTime: detectionTime,
+			Changed:       filteredOrder,
+			UpToDate:      bctx.skippedModules,
+			FreshBuild:    false,
+		})
+	}
 
 	log.Debugf("Incremental: %d modules to build, %d skipped",
 		len(filteredOrder), len(bctx.skippedModules))
