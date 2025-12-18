@@ -93,7 +93,9 @@ func PipelineCISummaryLink() int {
 	// Generate markdown based on type
 	var sb strings.Builder
 
+	// Add clickable link to the run
 	sb.WriteString("### Diagnose Locally\n\n")
+	sb.WriteString(fmt.Sprintf("[View Run #%s](https://github.com/%s/actions/runs/%s)\n\n", runID, repo, runID))
 	sb.WriteString("```bash\n")
 
 	switch failureType {
