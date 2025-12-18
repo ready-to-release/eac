@@ -123,6 +123,7 @@ func ReleaseGetVersion() int {
 	}
 
 	// Output based on format
+	// NOTE: Output to stdout (fmt.Print), not logger, so it can be captured by shell scripts
 	if asJSON {
 		info := VersionInfo{
 			Module:      module,
@@ -139,11 +140,11 @@ func ReleaseGetVersion() int {
 			getVersionLog.Errorf("failed to marshal JSON: %v", err)
 			return 1
 		}
-		getVersionLog.Info(string(output))
+		fmt.Println(string(output))
 	} else if asTag {
-		getVersionLog.Info(tag)
+		fmt.Println(tag)
 	} else {
-		getVersionLog.Info(version)
+		fmt.Println(version)
 	}
 
 	return 0
