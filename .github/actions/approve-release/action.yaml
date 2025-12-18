@@ -39,7 +39,7 @@ inputs:
     required: false
     default: 'semver'
   skip-ci-check:
-    description: 'Skip CI verification (dangerous - for hotfixes only)'
+    description: 'Skip CI verification (for modules without CI or hotfixes)'
     required: false
     default: 'false'
   timeout:
@@ -174,19 +174,12 @@ runs:
         # Use inherited SHA if CI was inherited from previous run, otherwise current commit
         echo "ci_sha=${INHERITED_CI_SHA:-${{ github.sha }}}" >> $GITHUB_OUTPUT
 
-    - name: Skip CI check warning
+    - name: Set CI SHA (skip mode)
       id: ci_check_skip
       if: inputs.skip-ci-check == 'true'
       shell: bash
       run: |
-        echo "::warning::CI check skipped - releasing without CI verification"
-        echo ""
-        echo "⚠️  DANGER: Releasing without CI verification"
-        echo "   Module: ${{ inputs.module }}"
-        echo "   Commit: ${{ github.sha }}"
-        echo ""
-        echo "   This should only be used for critical hotfixes."
-        # When skipping CI, use current commit SHA
+        # When skipping CI check, use current commit SHA
         echo "ci_sha=${{ github.sha }}" >> $GITHUB_OUTPUT
 
     - name: Summary

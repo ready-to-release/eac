@@ -23,10 +23,10 @@ inputs:
 outputs:
   commands-path:
     description: Absolute path to the commands binary
-    value: ${{ steps.setup.outputs.path || steps.setup-windows.outputs.path }}
+    value: ${{ steps.setup.outputs.path || steps.setup-macos.outputs.path || steps.setup-windows.outputs.path }}
   source:
     description: How the binary was obtained (artifact or built)
-    value: ${{ steps.setup.outputs.source || steps.setup-windows.outputs.source }}
+    value: ${{ steps.setup.outputs.source || steps.setup-macos.outputs.source || steps.setup-windows.outputs.source }}
 
 # NOTE: Commands binary is stored in out/tools/ (not out/build/) because it's a
 # CI tool used to create builds, not a build output itself. This separation ensures
@@ -37,9 +37,21 @@ runs:
   steps:
     # FIRST: Check if binary already exists on disk (from previous step in same job)
     # This handles cases like build-module followed by test-module in the same job
-    - name: Check for existing binary (Linux/macOS)
+    - name: Check for existing binary (Linux)
       id: existing-check
-      if: runner.os != 'Windows'
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        if [ -f "out/tools/commands" ]; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+          echo "✓ Commands binary already exists on disk - skipping download/build"
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Check for existing binary (macOS)
+      id: existing-check-macos
+      if: runner.os == 'macOS'
       shell: bash
       run: |
         if [ -f "out/tools/commands" ]; then
@@ -95,12 +107,12 @@ runs:
         github-token: ${{ github.token }}
         run-id: ${{ inputs.trigger-run-id }}
 
-    # On Linux/macOS only - download standard artifact from trigger workflow
-    # NOTE: We intentionally skip this on Windows because the Linux binary cannot execute on Windows.
-    # Windows will fall through to build from source or use cached artifact from current run.
-    - name: Download from trigger workflow (Linux/macOS)
+    # On Linux only - download standard artifact from trigger workflow
+    # NOTE: We intentionally skip this on Windows and macOS because the Linux binary cannot execute there.
+    # Windows and macOS will fall through to build from source or use cached artifact from current run.
+    - name: Download from trigger workflow (Linux)
       id: download-trigger
-      if: steps.existing-check.outputs.exists != 'true' && inputs.trigger-run-id != '' && runner.os != 'Windows'
+      if: steps.existing-check.outputs.exists != 'true' && inputs.trigger-run-id != '' && runner.os == 'Linux'
       uses: ./.github/actions/download-artifact-retry
       with:
         name: commands-binary
@@ -111,9 +123,10 @@ runs:
     # Check if artifact exists in current run before attempting download
     # This runs when: no trigger-run-id provided, OR on Windows when trigger artifact wasn't available
     # This avoids noisy error messages when artifact doesn't exist yet
+    # NOTE: macOS always builds from source, so skip artifact check on macOS
     - name: Check if artifact exists (current run)
       id: artifact-check
-      if: (steps.existing-check.outputs.exists != 'true' && steps.existing-check-windows.outputs.exists != 'true') && (inputs.trigger-run-id == '' || (runner.os == 'Windows' && steps.check-trigger-windows.outputs.exists != 'true'))
+      if: runner.os != 'macOS' && (steps.existing-check.outputs.exists != 'true' && steps.existing-check-windows.outputs.exists != 'true') && (inputs.trigger-run-id == '' || (runner.os == 'Windows' && steps.check-trigger-windows.outputs.exists != 'true'))
       shell: bash
       env:
         GH_TOKEN: ${{ github.token }}
@@ -141,18 +154,18 @@ runs:
           echo "No artifact available - will build from source"
         fi
 
-    # Only download if artifact exists in current run
+    # Only download if artifact exists in current run (skip on macOS - builds from source)
     - name: Download from current run
       id: download-current
-      if: (steps.existing-check.outputs.exists != 'true' && steps.existing-check-windows.outputs.exists != 'true') && (inputs.trigger-run-id == '' || (runner.os == 'Windows' && steps.check-trigger-windows.outputs.exists != 'true')) && steps.artifact-check.outputs.exists == 'true'
+      if: runner.os != 'macOS' && (steps.existing-check.outputs.exists != 'true' && steps.existing-check-windows.outputs.exists != 'true') && (inputs.trigger-run-id == '' || (runner.os == 'Windows' && steps.check-trigger-windows.outputs.exists != 'true')) && steps.artifact-check.outputs.exists == 'true'
       uses: ./.github/actions/download-artifact-retry
       with:
         name: ${{ steps.artifact-check.outputs.artifact_name }}
         path: out/tools
 
-    - name: Check binary availability (Linux/macOS)
+    - name: Check binary availability (Linux)
       id: check
-      if: runner.os != 'Windows'
+      if: runner.os == 'Linux'
       shell: bash
       run: |
         if [ -f "out/tools/commands" ]; then
@@ -176,6 +189,23 @@ runs:
           echo "Building commands binary from source"
         fi
 
+    - name: Check binary availability (macOS)
+      id: check-macos
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        if [ -f "out/tools/commands" ]; then
+          echo "available=true" >> $GITHUB_OUTPUT
+          if [ "${{ steps.existing-check-macos.outputs.exists }}" = "true" ]; then
+            echo "✓ Commands binary already existed on disk"
+          else
+            echo "✓ Commands binary available"
+          fi
+        else
+          echo "available=false" >> $GITHUB_OUTPUT
+          echo "Building commands binary from source (macOS always builds from source)"
+        fi
+
     - name: Check binary availability (Windows)
       id: check-windows
       if: runner.os == 'Windows'
@@ -190,7 +220,7 @@ runs:
         }
 
     - name: Setup Go
-      if: (runner.os != 'Windows' && steps.check.outputs.available != 'true') || (runner.os == 'Windows' && steps.check-windows.outputs.available != 'true')
+      if: (runner.os == 'Linux' && steps.check.outputs.available != 'true') || (runner.os == 'macOS' && steps.check-macos.outputs.available != 'true') || (runner.os == 'Windows' && steps.check-windows.outputs.available != 'true')
       uses: actions/setup-go@v5
       with:
         go-version: ${{ inputs.go-version }}
@@ -200,8 +230,8 @@ runs:
           go/eac/specs/go.sum
           go/eac/mcp/commands/go.sum
 
-    - name: Build from source (Linux/macOS)
-      if: runner.os != 'Windows' && steps.check.outputs.available != 'true'
+    - name: Build from source (Linux)
+      if: runner.os == 'Linux' && steps.check.outputs.available != 'true'
       shell: bash
       run: |
         echo "Building commands binary from source..."
@@ -209,6 +239,16 @@ runs:
         cd go/eac/commands
         go build -o ../../../out/tools/commands .
         echo "✓ Commands binary built (native)"
+
+    - name: Build from source (macOS)
+      if: runner.os == 'macOS' && steps.check-macos.outputs.available != 'true'
+      shell: bash
+      run: |
+        echo "Building commands binary from source (macOS)..."
+        mkdir -p out/tools
+        cd go/eac/commands
+        go build -o ../../../out/tools/commands .
+        echo "✓ Commands binary built (native macOS)"
 
     - name: Cross-compile for Windows (from Linux)
       if: runner.os == 'Linux' && steps.check.outputs.available != 'true' && inputs.cross-compile-windows == 'true'
@@ -231,7 +271,7 @@ runs:
 
     - name: Check if Linux artifact exists
       id: check-linux-artifact
-      if: runner.os != 'Windows' && steps.check.outputs.available != 'true'
+      if: runner.os == 'Linux' && steps.check.outputs.available != 'true'
       shell: bash
       env:
         GH_TOKEN: ${{ github.token }}
@@ -244,8 +284,8 @@ runs:
           echo "exists=false" >> $GITHUB_OUTPUT
         fi
 
-    - name: Upload artifact (for downstream jobs, Linux/macOS)
-      if: runner.os != 'Windows' && steps.check.outputs.available != 'true' && steps.check-linux-artifact.outputs.exists != 'true'
+    - name: Upload artifact (for downstream jobs, Linux)
+      if: runner.os == 'Linux' && steps.check.outputs.available != 'true' && steps.check-linux-artifact.outputs.exists != 'true'
       uses: ./.github/actions/upload-artifact-retry
       continue-on-error: true  # Ignore 409 if another job uploaded first
       with:
@@ -286,9 +326,9 @@ runs:
         path: out/tools/commands.exe
         if-no-files-found: error
 
-    - name: Set output (Linux/macOS)
+    - name: Set output (Linux)
       id: setup
-      if: runner.os != 'Windows'
+      if: runner.os == 'Linux'
       shell: bash
       run: |
         BINARY_PATH="out/tools/commands"
@@ -306,6 +346,28 @@ runs:
           echo "source=existing" >> $GITHUB_OUTPUT
         elif [ "${{ steps.check.outputs.available }}" = "true" ]; then
           echo "source=artifact" >> $GITHUB_OUTPUT
+        else
+          echo "source=built" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Set output (macOS)
+      id: setup-macos
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        BINARY_PATH="out/tools/commands"
+
+        if [ ! -f "$BINARY_PATH" ]; then
+          echo "::error::Commands binary not found at $BINARY_PATH"
+          exit 1
+        fi
+
+        chmod +x "$BINARY_PATH"
+        echo "path=$GITHUB_WORKSPACE/$BINARY_PATH" >> $GITHUB_OUTPUT
+
+        # Determine source: existing (from previous step) or built (macOS always builds from source)
+        if [ "${{ steps.existing-check-macos.outputs.exists }}" = "true" ]; then
+          echo "source=existing" >> $GITHUB_OUTPUT
         else
           echo "source=built" >> $GITHUB_OUTPUT
         fi
@@ -337,8 +399,8 @@ runs:
       if: always()
       shell: bash
       env:
-        SOURCE: ${{ steps.setup.outputs.source || steps.setup-windows.outputs.source }}
-        PATH_OUT: ${{ steps.setup.outputs.path || steps.setup-windows.outputs.path }}
+        SOURCE: ${{ steps.setup.outputs.source || steps.setup-macos.outputs.source || steps.setup-windows.outputs.source }}
+        PATH_OUT: ${{ steps.setup.outputs.path || steps.setup-macos.outputs.path || steps.setup-windows.outputs.path }}
         TRIGGER_RUN_ID: ${{ inputs.trigger-run-id }}
         CROSS_COMPILE: ${{ inputs.cross-compile-windows }}
       run: |

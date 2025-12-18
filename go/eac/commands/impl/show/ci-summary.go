@@ -7,7 +7,9 @@
 // Flag.container-test-enabled: type=bool, default=false, usage=Whether container test was enabled
 // Flag.test-linux: type=string, usage=Linux test result (for binary modules)
 // Flag.test-windows: type=string, usage=Windows test result (for binary modules)
+// Flag.test-macos: type=string, usage=macOS test result (for binary modules)
 // Flag.test-on-windows: type=bool, default=false, usage=Whether Windows tests were enabled
+// Flag.test-on-macos: type=bool, default=false, usage=Whether macOS tests were enabled
 // Flag.scan: type=string, usage=Security scan result
 // Flag.scans-enabled: type=bool, default=false, usage=Whether scans were enabled
 // Long: The show ci-summary command generates a formatted CI workflow summary with job results.
@@ -16,7 +18,7 @@
 // Long:
 // Long: Expected Output:
 // Long: - Markdown-formatted CI summary with job results table
-// Long: - Shows build, test (Linux/Windows), container test, and scan results
+// Long: - Shows build, test (Linux/Windows/macOS), container test, and scan results
 // Long: - Supports both container and binary module types
 
 package show
@@ -51,7 +53,9 @@ func ShowCISummary() int {
 	containerTestEnabled := false
 	testLinuxResult := ""
 	testWindowsResult := ""
+	testMacOSResult := ""
 	testOnWindows := false
+	testOnMacOS := false
 	scanResult := ""
 	scansEnabled := false
 
@@ -73,8 +77,12 @@ func ShowCISummary() int {
 			testLinuxResult = strings.TrimPrefix(arg, "--test-linux=")
 		case strings.HasPrefix(arg, "--test-windows="):
 			testWindowsResult = strings.TrimPrefix(arg, "--test-windows=")
+		case strings.HasPrefix(arg, "--test-macos="):
+			testMacOSResult = strings.TrimPrefix(arg, "--test-macos=")
 		case arg == "--test-on-windows" || arg == "--test-on-windows=true":
 			testOnWindows = true
+		case arg == "--test-on-macos" || arg == "--test-on-macos=true":
+			testOnMacOS = true
 		case strings.HasPrefix(arg, "--scan="):
 			scanResult = strings.TrimPrefix(arg, "--scan=")
 		case arg == "--scans-enabled" || arg == "--scans-enabled=true":
@@ -83,11 +91,11 @@ func ShowCISummary() int {
 	}
 
 	return generateCISummary(buildResult, isContainer, containerTestResult, containerTestEnabled,
-		testLinuxResult, testWindowsResult, testOnWindows, scanResult, scansEnabled)
+		testLinuxResult, testWindowsResult, testMacOSResult, testOnWindows, testOnMacOS, scanResult, scansEnabled)
 }
 
 func generateCISummary(buildResult string, isContainer bool, containerTestResult string, containerTestEnabled bool,
-	testLinuxResult, testWindowsResult string, testOnWindows bool, scanResult string, scansEnabled bool) int {
+	testLinuxResult, testWindowsResult, testMacOSResult string, testOnWindows, testOnMacOS bool, scanResult string, scansEnabled bool) int {
 
 	var sb strings.Builder
 
@@ -104,11 +112,14 @@ func generateCISummary(buildResult string, isContainer bool, containerTestResult
 			overall = "failure"
 		}
 	} else {
-		// Binary modules use test-linux (and optionally test-windows)
+		// Binary modules use test-linux (and optionally test-windows and test-macos)
 		if testLinuxResult != "success" && testLinuxResult != "skipped" {
 			overall = "failure"
 		}
 		if testOnWindows && testWindowsResult != "success" && testWindowsResult != "skipped" {
+			overall = "failure"
+		}
+		if testOnMacOS && testMacOSResult != "success" && testMacOSResult != "skipped" {
 			overall = "failure"
 		}
 	}
@@ -141,6 +152,11 @@ func generateCISummary(buildResult string, isContainer bool, containerTestResult
 	// Test Windows (if enabled, binary modules only)
 	if !isContainer && testOnWindows {
 		tb.AddRow("Test (Windows)", formatJobResult(testWindowsResult))
+	}
+
+	// Test macOS (if enabled, binary modules only)
+	if !isContainer && testOnMacOS {
+		tb.AddRow("Test (macOS)", formatJobResult(testMacOSResult))
 	}
 
 	// Scan (if enabled)

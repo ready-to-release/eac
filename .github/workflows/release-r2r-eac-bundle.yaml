@@ -59,7 +59,7 @@ jobs:
         with:
           module: r2r-eac-bundle
           version-type: calver
-          # r2r-eac-bundle is a bundle module with no CI workflow - always skip CI check
+          # r2r-eac-bundle is a bundle module with no CI workflow
           skip-ci-check: 'true'
           timeout: '300'
 
