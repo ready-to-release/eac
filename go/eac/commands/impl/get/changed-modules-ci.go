@@ -138,6 +138,10 @@ func GetChangedModulesCI() int {
 		if filesJSON, err := json.Marshal(result.FilesByModule); err == nil {
 			fmt.Printf("FILES_BY_MODULE='%s'\n", string(filesJSON))
 		}
+		// Include MODULE_STATUS as JSON for trigger reasons
+		if statusJSON, err := json.Marshal(result.ModuleStatus); err == nil {
+			fmt.Printf("MODULE_STATUS='%s'\n", string(statusJSON))
+		}
 		return 0
 	}
 
