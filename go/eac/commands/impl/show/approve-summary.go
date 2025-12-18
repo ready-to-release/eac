@@ -17,6 +17,7 @@
 // Long: - Markdown-formatted approval summary with check status table
 // Long: - Shows version, tag, commit, changelog, existing release, and CI check status
 // Long: - On failure, can output diagnostic link via pipeline ci summary-link
+
 package show
 
 import (
@@ -24,9 +25,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 )
 
 func init() {

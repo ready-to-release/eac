@@ -16,6 +16,7 @@
 // Long: - Markdown-formatted scan summary with emojis and styling
 // Long: - Table showing each scan type with its pass/fail status
 // Long: - Artifact name for results download
+
 package show
 
 import (

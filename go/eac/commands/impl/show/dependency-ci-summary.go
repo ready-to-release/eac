@@ -13,6 +13,7 @@
 // Long: - Markdown-formatted dependency CI summary with metrics table
 // Long: - Shows passed and skipped counts on success
 // Long: - Shows failure message on failure
+
 package show
 
 import (
@@ -21,9 +22,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 )
 
 func init() {

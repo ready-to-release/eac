@@ -17,6 +17,7 @@
 // Long: - Markdown-formatted trigger summary with workflow and property tables
 // Long: - Shows workflow name and description
 // Long: - Shows version, run IDs, branch, and commit information
+
 package show
 
 import (
@@ -24,9 +25,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 )
 
 func init() {

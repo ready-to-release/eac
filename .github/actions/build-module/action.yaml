@@ -99,7 +99,7 @@ runs:
     - name: Upload Build Artifacts
       id: upload
       if: inputs.upload-artifact == 'true'
-      uses: actions/upload-artifact@v6
+      uses: ./.github/actions/upload-artifact-retry
       with:
         name: ${{ steps.vars.outputs.artifact-name }}
         path: out/build/${{ inputs.module }}/

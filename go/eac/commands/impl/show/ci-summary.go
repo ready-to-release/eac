@@ -18,6 +18,7 @@
 // Long: - Markdown-formatted CI summary with job results table
 // Long: - Shows build, test (Linux/Windows), container test, and scan results
 // Long: - Supports both container and binary module types
+
 package show
 
 import (
@@ -25,9 +26,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 )
 
 func init() {

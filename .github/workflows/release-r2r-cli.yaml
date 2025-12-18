@@ -10,9 +10,6 @@
 name: "release-r2r-cli (stage 8+)"
 
 on:
-  push:
-    tags:
-      - 'r2r-cli/*'
   workflow_dispatch:
     inputs:
       version:
@@ -20,7 +17,7 @@ on:
         required: true
         type: string
       skip-ci-check:
-        description: 'Skip CI verification (dangerous - hotfixes only)'
+        description: 'Skip CI verification (dangerous and only used for testing internals)'
         required: false
         type: boolean
         default: false

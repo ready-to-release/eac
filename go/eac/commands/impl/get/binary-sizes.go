@@ -15,7 +15,6 @@
 // Long:   SIZE_DARWIN_ARM64="13.1"
 // Long:   ...
 // Long:
-// Long:
 // Long: Example:
 // Long:   get binary-sizes --module r2r-cli --binary-prefix r2r
 // Long:   eval $(get binary-sizes --module r2r-cli --binary-prefix r2r --format shell)
@@ -41,11 +40,11 @@ func init() {
 
 // BinarySize represents a single binary file's size
 type BinarySize struct {
-	Name     string  `json:"name" yaml:"name"`
-	Path     string  `json:"path" yaml:"path"`
-	SizeBytes int64  `json:"size_bytes" yaml:"size_bytes"`
-	SizeMB   float64 `json:"size_mb" yaml:"size_mb"`
-	Exists   bool    `json:"exists" yaml:"exists"`
+	Name      string  `json:"name" yaml:"name"`
+	Path      string  `json:"path" yaml:"path"`
+	SizeBytes int64   `json:"size_bytes" yaml:"size_bytes"`
+	SizeMB    float64 `json:"size_mb" yaml:"size_mb"`
+	Exists    bool    `json:"exists" yaml:"exists"`
 }
 
 // BinarySizesOutput contains all binary sizes
