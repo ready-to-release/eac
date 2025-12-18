@@ -1,24 +1,30 @@
 // Command: get changed-modules-ci
 // Short: Get modules requiring rebuild since last successful CI run
 // Flag.pr-base: type=string, usage=For PRs, the base SHA to compare against
-// Flag.workflow: type=string, default=CI Trigger, usage=Workflow name to find last success
-// Flag.branch: type=string, default=main, usage=Branch to check for last success
 // Flag.filter-workflows: type=bool, usage=Only include modules that have a ci-{module}.yaml workflow file
 // Flag.format: type=string, usage=Output format (shell outputs shell variables; otherwise uses standard get command formats)
 // Long:
 // Long: Expected Output:
-// Long: YAML list of modules needing rebuild based on CI state, including:
+// Long: YAML list of modules needing rebuild based on per-module CI state.
+// Long:
+// Long: Per-module change detection:
+// Long:   For each module with a ci-{module}.yaml workflow:
+// Long:   1. Query the module's last successful CI run
+// Long:   2. If CI passed at current HEAD SHA → skip (no rebuild needed)
+// Long:   3. If CI passed at different SHA → check if module's files changed
+// Long:   4. If no CI history → module needs CI (but NOT bootstrap for all)
+// Long:
+// Long: Output includes:
 // Long:   - All modules requiring rebuild (directly changed + transitive dependents)
-// Long:   - Directly changed modules (files modified since base SHA)
+// Long:   - Directly changed modules (files modified since module's last CI success)
 // Long:   - Invalidated modules (transitive dependents requiring rebuild)
-// Long:   - Base and head SHAs, bootstrap flag, changed files list
-// Long:   - Files-by-module mapping for detailed change reasoning
+// Long:   - Per-module CI status reasoning
 // Long:
 // Long: With --format shell, outputs shell variable assignments:
 // Long:   MODULES="mod1 mod2 mod3"
 // Long:   DIRECTLY_CHANGED="mod1 mod2"
 // Long:   INVALIDATED="mod3"
-// Long:   BASE_SHA="abc123"
+// Long:   BASE_SHA="per-module"
 // Long:   IS_BOOTSTRAP="false"
 // Long:   CHANGED_FILE_COUNT="5"
 package get
@@ -31,18 +37,17 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/github"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
 func init() {
 	registry.Register(GetChangedModulesCI)
 }
-
-// changedModulesCIFlags defines valid flags for the get changed-modules-ci command
 
 // CIChangedModulesResult represents the output of the get changed-modules-ci command
 type CIChangedModulesResult struct {
@@ -56,8 +61,20 @@ type CIChangedModulesResult struct {
 	ChangedFiles      []string            `json:"changed_files" yaml:"changed_files" toml:"changed_files"`
 	ChangedFileCount  int                 `json:"changed_file_count" yaml:"changed_file_count" toml:"changed_file_count"`
 	FilesByModule     map[string][]string `json:"files_by_module" yaml:"files_by_module" toml:"files_by_module"`
+	// Per-module CI status (why each module needs/doesn't need CI)
+	ModuleStatus map[string]ModuleCIStatus `json:"module_status,omitempty" yaml:"module_status,omitempty" toml:"module_status,omitempty"`
+	// Modules that were skipped (have valid CI at HEAD)
+	Skipped []string `json:"skipped,omitempty" yaml:"skipped,omitempty" toml:"skipped,omitempty"`
 	// Workflow filtering (only present when --filter-workflows is used)
 	FilteredOut []string `json:"filtered_out,omitempty" yaml:"filtered_out,omitempty" toml:"filtered_out,omitempty"`
+}
+
+// ModuleCIStatus tracks the CI status for a single module
+type ModuleCIStatus struct {
+	HasValidCI     bool   `json:"has_valid_ci" yaml:"has_valid_ci" toml:"has_valid_ci"`
+	LastSuccessSHA string `json:"last_success_sha,omitempty" yaml:"last_success_sha,omitempty" toml:"last_success_sha,omitempty"`
+	Reason         string `json:"reason" yaml:"reason" toml:"reason"`
+	FilesChanged   int    `json:"files_changed,omitempty" yaml:"files_changed,omitempty" toml:"files_changed,omitempty"`
 }
 
 func GetChangedModulesCI() int {
@@ -76,8 +93,6 @@ func GetChangedModulesCI() int {
 
 	// Parse flags
 	prBase := ""
-	workflow := "CI Trigger"
-	branch := "main"
 	filterWorkflows := false
 	format := ""
 
@@ -86,14 +101,6 @@ func GetChangedModulesCI() int {
 		case "--pr-base":
 			if i+1 < len(os.Args) {
 				prBase = os.Args[i+1]
-			}
-		case "--workflow":
-			if i+1 < len(os.Args) {
-				workflow = os.Args[i+1]
-			}
-		case "--branch":
-			if i+1 < len(os.Args) {
-				branch = os.Args[i+1]
 			}
 		case "--filter-workflows":
 			filterWorkflows = true
@@ -104,13 +111,6 @@ func GetChangedModulesCI() int {
 		}
 	}
 
-	// Determine base SHA
-	baseSHA, isBootstrap, err := determineBaseSHA(prBase, workflow, branch, workspaceRoot)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: determining base SHA: %v\n", err)
-		return 1
-	}
-
 	// Get current HEAD SHA using shared detection logic
 	shaResult, err := DetectCurrentSHA(workspaceRoot, "")
 	if err != nil {
@@ -119,8 +119,8 @@ func GetChangedModulesCI() int {
 	}
 	headSHA := shaResult.SHA
 
-	// Build the result
-	result, err := buildCIChangedModulesResult(workspaceRoot, baseSHA, headSHA, isBootstrap, filterWorkflows)
+	// Build the result using per-module change detection
+	result, err := buildPerModuleCIResult(workspaceRoot, headSHA, prBase, filterWorkflows)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
@@ -147,7 +147,242 @@ func GetChangedModulesCI() int {
 	})
 }
 
-// buildCIChangedModulesResult builds the result structure
+// buildPerModuleCIResult implements per-module change detection.
+// Instead of using a single repo-wide base SHA, it checks each module's CI workflow independently.
+func buildPerModuleCIResult(workspaceRoot, headSHA, prBase string, filterWorkflows bool) (*CIChangedModulesResult, error) {
+	// Get all modules with CI workflows
+	allModules, err := getAllModuleMonikers(workspaceRoot)
+	if err != nil {
+		return nil, err
+	}
+
+	// Filter to only modules with CI workflows
+	modulesWithCI, filteredOut := filterModulesWithWorkflows(allModules, workspaceRoot)
+
+	// Create GitHub API client
+	api := github.NewGHClient(workspaceRoot)
+
+	// Track results
+	result := &CIChangedModulesResult{
+		Modules:          []string{},
+		DirectlyChanged:  []string{},
+		Invalidated:      []string{},
+		BaseSHA:          "per-module", // Indicate per-module mode
+		HeadSHA:          headSHA,
+		IsBootstrap:      false,
+		ChangedFiles:     []string{},
+		ChangedFileCount: 0,
+		FilesByModule:    map[string][]string{},
+		ModuleStatus:     map[string]ModuleCIStatus{},
+		Skipped:          []string{},
+		FilteredOut:      filteredOut,
+	}
+
+	// CI-excluded files (changelogs, release workflows, etc.)
+	ciExcludedFiles := getCIExcludedFiles(workspaceRoot)
+
+	// Track all changed files across modules for aggregate reporting
+	allChangedFilesSet := make(map[string]bool)
+
+	// Check each module's CI status
+	for _, module := range modulesWithCI {
+		status := checkModuleCIStatusPerModule(module, headSHA, prBase, workspaceRoot, api, ciExcludedFiles)
+		result.ModuleStatus[module] = status
+
+		if status.HasValidCI {
+			// Module has valid CI at HEAD - skip it
+			result.Skipped = append(result.Skipped, module)
+		} else {
+			// Module needs CI
+			result.Modules = append(result.Modules, module)
+			result.DirectlyChanged = append(result.DirectlyChanged, module)
+
+			// Track changed files for this module
+			if status.FilesChanged > 0 {
+				// Get the actual changed files for this module for reporting
+				if baseSHA := status.LastSuccessSHA; baseSHA != "" {
+					files, _ := getChangedFilesBetweenSHAs(baseSHA, headSHA, workspaceRoot)
+					moduleFiles := filterFilesForModule(files, module, workspaceRoot, ciExcludedFiles)
+					result.FilesByModule[module] = moduleFiles
+					for _, f := range files {
+						allChangedFilesSet[f] = true
+					}
+				}
+			}
+		}
+	}
+
+	// Calculate transitive invalidation
+	// Modules that have valid CI but depend on modules that need CI
+	depGraph, err := repository.GetModuleDependencyGraph(workspaceRoot)
+	if err == nil {
+		needsCISet := make(map[string]bool)
+		for _, m := range result.DirectlyChanged {
+			needsCISet[m] = true
+		}
+
+		// Check each skipped module to see if its dependencies need CI
+		newInvalidated := []string{}
+		for _, skippedModule := range result.Skipped {
+			if deps, ok := depGraph.Dependencies[skippedModule]; ok {
+				for _, dep := range deps {
+					if needsCISet[dep] {
+						// This skipped module depends on a module that needs CI
+						newInvalidated = append(newInvalidated, skippedModule)
+						result.ModuleStatus[skippedModule] = ModuleCIStatus{
+							HasValidCI: false,
+							Reason:     fmt.Sprintf("dependency %s needs CI", dep),
+						}
+						break
+					}
+				}
+			}
+		}
+
+		// Move invalidated modules from Skipped to Invalidated
+		if len(newInvalidated) > 0 {
+			// Remove from skipped
+			newSkipped := []string{}
+			invalidatedSet := make(map[string]bool)
+			for _, m := range newInvalidated {
+				invalidatedSet[m] = true
+			}
+			for _, m := range result.Skipped {
+				if !invalidatedSet[m] {
+					newSkipped = append(newSkipped, m)
+				}
+			}
+			result.Skipped = newSkipped
+			result.Invalidated = newInvalidated
+			result.Modules = append(result.Modules, newInvalidated...)
+		}
+	}
+
+	// Aggregate changed files for summary
+	for f := range allChangedFilesSet {
+		result.ChangedFiles = append(result.ChangedFiles, f)
+	}
+	result.ChangedFileCount = len(result.ChangedFiles)
+
+	// Apply workflow filter if not already applied
+	if !filterWorkflows {
+		// Already filtered above, but re-filter the final lists to be safe
+		result.Modules, _ = filterModulesWithWorkflows(result.Modules, workspaceRoot)
+		result.DirectlyChanged, _ = filterModulesWithWorkflows(result.DirectlyChanged, workspaceRoot)
+		result.Invalidated, _ = filterModulesWithWorkflows(result.Invalidated, workspaceRoot)
+	}
+
+	return result, nil
+}
+
+// checkModuleCIStatusPerModule checks the CI status for a single module.
+// Returns whether the module has valid CI and why.
+func checkModuleCIStatusPerModule(module, headSHA, prBase, workspaceRoot string, api github.API, ciExcludedFiles map[string]bool) ModuleCIStatus {
+	workflowName := fmt.Sprintf("ci-%s.yaml", module)
+
+	// Query module's CI workflow for last successful run
+	runs, err := api.ListRuns(workflowName, github.ListRunsOpts{
+		Status: "success",
+		Limit:  1,
+	})
+	if err != nil {
+		return ModuleCIStatus{
+			HasValidCI: false,
+			Reason:     fmt.Sprintf("query_failed: %v", err),
+		}
+	}
+
+	// No successful CI runs for this module
+	if len(runs) == 0 {
+		return ModuleCIStatus{
+			HasValidCI: false,
+			Reason:     "no_ci_history",
+		}
+	}
+
+	lastSuccessSHA := runs[0].HeadSHA
+
+	// If CI passed at current HEAD, module has valid CI
+	if lastSuccessSHA == headSHA {
+		return ModuleCIStatus{
+			HasValidCI:     true,
+			LastSuccessSHA: lastSuccessSHA,
+			Reason:         "valid_ci_at_head",
+		}
+	}
+
+	// CI passed at different SHA - check if module's files changed
+	baseSHA := lastSuccessSHA
+	if prBase != "" {
+		// For PRs, use PR base instead of last CI success
+		baseSHA = prBase
+	}
+
+	// Get files changed since last CI success
+	changedFiles, err := getChangedFilesBetweenSHAs(baseSHA, headSHA, workspaceRoot)
+	if err != nil {
+		return ModuleCIStatus{
+			HasValidCI:     false,
+			LastSuccessSHA: lastSuccessSHA,
+			Reason:         fmt.Sprintf("diff_failed: %v", err),
+		}
+	}
+
+	// Filter to files that affect this module (directly or via dependencies)
+	moduleFiles := filterFilesForModule(changedFiles, module, workspaceRoot, ciExcludedFiles)
+
+	if len(moduleFiles) == 0 {
+		// No files affecting this module changed - CI is still valid
+		return ModuleCIStatus{
+			HasValidCI:     true,
+			LastSuccessSHA: lastSuccessSHA,
+			Reason:         "no_affecting_changes",
+		}
+	}
+
+	// Files affecting this module changed - needs new CI
+	return ModuleCIStatus{
+		HasValidCI:     false,
+		LastSuccessSHA: lastSuccessSHA,
+		Reason:         fmt.Sprintf("files_changed_since_%s", lastSuccessSHA[:min(7, len(lastSuccessSHA))]),
+		FilesChanged:   len(moduleFiles),
+	}
+}
+
+// filterFilesForModule returns files that affect a given module (directly or via dependencies).
+func filterFilesForModule(files []string, module, workspaceRoot string, ciExcludedFiles map[string]bool) []string {
+	// First filter out CI-excluded files
+	filteredFiles := filterOutCIExcludedFiles(files, ciExcludedFiles)
+
+	if len(filteredFiles) == 0 {
+		return []string{}
+	}
+
+	// Get modules affected by these files (including transitive dependents)
+	affectedModules, err := repository.GetModulesRequiringRebuild(filteredFiles, workspaceRoot)
+	if err != nil {
+		// On error, assume all files affect this module
+		return filteredFiles
+	}
+
+	// Check if our module is in the affected set
+	for _, affected := range affectedModules {
+		if affected == module {
+			// Module is affected - return the files that directly belong to it
+			directFiles, _ := getFilesByModule(filteredFiles, workspaceRoot)
+			if moduleFiles, ok := directFiles[module]; ok {
+				return moduleFiles
+			}
+			// If we can't determine direct files, return all (conservative)
+			return filteredFiles
+		}
+	}
+
+	// Module not affected by these files
+	return []string{}
+}
+
+// buildCIChangedModulesResult builds the result structure (legacy, kept for compatibility)
 func buildCIChangedModulesResult(workspaceRoot, baseSHA, headSHA string, isBootstrap, filterWorkflows bool) (*CIChangedModulesResult, error) {
 	// If bootstrap (no previous success), return all modules
 	if isBootstrap {
