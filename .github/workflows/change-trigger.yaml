@@ -110,7 +110,7 @@ jobs:
             # For PRs: compare against PR base (what the PR introduces)
             # For push: compare against last successful CI (incremental since last success)
             # Use --format shell to get variables directly (no jq needed)
-            # Shell format outputs: MODULES, DIRECTLY_CHANGED, INVALIDATED, BASE_SHA, IS_BOOTSTRAP, CHANGED_FILE_COUNT, FILES_BY_MODULE
+            # Shell format outputs: MODULES, DIRECTLY_CHANGED, INVALIDATED, BASE_SHA, IS_BOOTSTRAP, CHANGED_FILE_COUNT, FILES_BY_MODULE, MODULE_STATUS
             if [ "${{ github.event_name }}" = "pull_request" ]; then
               echo "Pull Request detected - comparing against PR base"
               eval $($COMMANDS get changed-modules-ci --pr-base "${{ github.event.pull_request.base.sha }}" --format shell)
@@ -213,14 +213,12 @@ jobs:
 
               # Process invalidated modules (triggered due to dependency changes)
               for module in $INVALIDATED; do
+                # Get the specific reason (which dependency triggered this module)
+                TRIGGER_REASON=$($COMMANDS get module-trigger-reason "$module" --json "$MODULE_STATUS")
                 echo "<details>" >> $GITHUB_STEP_SUMMARY
-                echo "<summary><strong>$module</strong> - dependency changed</summary>" >> $GITHUB_STEP_SUMMARY
+                echo "<summary><strong>$module</strong> - $TRIGGER_REASON</summary>" >> $GITHUB_STEP_SUMMARY
                 echo "" >> $GITHUB_STEP_SUMMARY
-                echo "Triggered because a dependency was modified:" >> $GITHUB_STEP_SUMMARY
-                echo "" >> $GITHUB_STEP_SUMMARY
-                for dep in $DIRECTLY_CHANGED; do
-                  echo "- \`$dep\`" >> $GITHUB_STEP_SUMMARY
-                done
+                echo "Triggered because dependency \`$TRIGGER_REASON\` requires CI rebuild." >> $GITHUB_STEP_SUMMARY
                 echo "</details>" >> $GITHUB_STEP_SUMMARY
                 echo "" >> $GITHUB_STEP_SUMMARY
               done
