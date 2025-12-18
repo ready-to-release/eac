@@ -120,7 +120,7 @@ jobs:
           docker images ext-eac:ci-test
 
       - name: Download Build Artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v4
         with:
           name: build-artifacts-ext-eac
           path: out/build/
