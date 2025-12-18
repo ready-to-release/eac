@@ -210,6 +210,27 @@ func isBookModule(moduleType string) bool {
 	return moduleType == "container" || strings.Contains(moduleType, "mkdocs")
 }
 
+// isContainerModule checks if a module produces container images that are pushed to registry.
+// For such modules, we don't download build artifacts - we pull from registry instead.
+func isContainerModule(moduleType string, module *config.Module, cfg *config.EACConfig) bool {
+	// Check module-level docker config
+	dockerConfig := module.GetDockerBuildConfig()
+	if dockerConfig != nil && dockerConfig.Push {
+		return true
+	}
+
+	// Check type-level docker config
+	if cfg != nil && cfg.ModuleTypes != nil {
+		if typeDef := cfg.ModuleTypes.Get(moduleType); typeDef != nil {
+			if typeDef.DockerBuild != nil && typeDef.DockerBuild.Push {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
 // expandBookArtifacts expands wildcard PDF patterns to specific book PDFs
 // The first book in the module's books list is the default; others require --all flag.
 func expandBookArtifacts(module *config.Module, artifacts []config.Artifact, cfg *config.EACConfig, buildAll bool) []config.Artifact {
@@ -434,6 +455,15 @@ func validateSingleModule(
 	module, ok := cfg.Repository.GetModule(moniker)
 	if !ok {
 		result.Error = fmt.Sprintf("module not found in config")
+		return result
+	}
+
+	// For container-type DEPENDENCIES, skip local artifact validation.
+	// Container deps are pulled from registry at runtime, not downloaded as build artifacts.
+	// We only download the build manifest (to know the image tag), not the full build output.
+	if result.IsDependency && isContainerModule(moduleContract.Type, module, cfg) {
+		result.HasBuildArtifacts = false
+		result.Summary = &ArtifactResolutionSummary{}
 		return result
 	}
 
