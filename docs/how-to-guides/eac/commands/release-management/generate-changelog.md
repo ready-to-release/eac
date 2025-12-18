@@ -1,4 +1,5 @@
 # Generate Changelog
+
 ## What You'll Accomplish
 
 Create changelog from Git commits with automatic version detection and formatting.

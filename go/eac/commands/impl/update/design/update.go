@@ -45,6 +45,8 @@ import (
 
 var log = logging.C()
 
+// commandFlags defines valid flags for the update design command
+
 func init() {
 	registry.Register(UpdateDesign)
 }
@@ -53,6 +55,12 @@ func init() {
 //
 // UpdateDesign orchestrates the architecture design update workflow
 func UpdateDesign() int {
+	// Validate flags
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	// Parse configuration
 	config, err := parseConfig()
 	if err != nil {

@@ -17,6 +17,7 @@ import (
 	"time"
 
 	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -28,6 +29,12 @@ func init() {
 
 // ShowBuildSummary generates a pretty build summary
 func ShowBuildSummary() int {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
+
 	args := os.Args[3:] // Skip program name, "show", and "build-summary"
 
 	if len(args) == 0 {
@@ -36,15 +43,7 @@ func ShowBuildSummary() int {
 	}
 
 	module := args[0]
-	runID := ""
-
-	// Parse flags
-	for i := 1; i < len(args); i++ {
-		arg := args[i]
-		if len(arg) > 9 && arg[:9] == "--run-id=" {
-			runID = arg[9:]
-		}
-	}
+	runID := flags.GetFlagValue(args, "--run-id")
 
 	return generateBuildSummary(module, runID)
 }

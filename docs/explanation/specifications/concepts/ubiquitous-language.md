@@ -1,4 +1,5 @@
 # Ubiquitous Language: Building Shared Vocabulary
+>
 > **How shared domain vocabulary creates the foundation for executable specifications**
 
 ---

@@ -1,4 +1,5 @@
 # Organizing Scenarios
+>
 > **Scenario coverage strategy and independence**
 
 Learn how to write effective scenarios that thoroughly test each Rule.
@@ -40,6 +41,7 @@ Rule: Configuration file must contain valid module definitions
 ```
 
 **Coverage breakdown**:
+
 - **Scenario 1**: Happy path - valid configuration
 - **Scenario 2**: Error case - missing required field
 - **Scenario 3**: Error case - invalid field value
@@ -53,19 +55,23 @@ Rule: Configuration file must contain valid module definitions
 ### Why Independence Matters
 
 **Parallel Execution**:
+
 - Scenarios may run in **any order**
 - Test runners execute scenarios concurrently for speed
 - No guaranteed execution order
 
 **Filtered Runs**:
+
 - You may run subset of scenarios (by tag, by feature, etc.)
 - Scenarios cannot rely on others having run first
 
 **Failure Isolation**:
+
 - Scenario failure doesn't cascade to others
 - Each scenario can be debugged independently
 
 **Self-Documentation**:
+
 - Each scenario is self-documenting
 - Complete context visible within the scenario
 - No need to read other scenarios to understand this one
@@ -162,16 +168,19 @@ These steps are vague and tied to specific context.
 ### Benefits of Reusability
 
 **Consistent Language**:
+
 - Team discovers similarities in the domain
 - Extracts and makes them explicit
 - Deepens the ubiquitous language
 
 **Cleaner Implementation**:
+
 - Each step gets a clean, reusable implementation
 - Less code duplication in step definitions
 - Easier to maintain
 
 **Domain Understanding**:
+
 - Reusable steps reveal domain patterns
 - Explicit context in specifications
 - Better communication between stakeholders and developers
@@ -242,6 +251,7 @@ Rule: Creates project directory structure
 ```
 
 **Why these scenarios are independent**:
+
 - Each scenario sets up its own context (empty folder, existing project, etc.)
 - No scenario depends on another having run
 - Each can run in any order

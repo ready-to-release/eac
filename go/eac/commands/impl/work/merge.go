@@ -45,29 +45,15 @@ func init() {
 	registry.Register(Merge)
 }
 
-// Intent: Merge workspace changes back to main with squash merge as default
-//
-// Design (Three Rules of Vibe Coding):
-//
-// Easy to understand:
-//   - Clear flow: validate → update target → merge → commit → cleanup
-//   - Squash merge is the sensible default for feature branches
-//   - Uses commit for high-quality squash commit messages
-//
-// Easy to change:
-//   - Squash and regular merge paths are separate
-//   - Worktree cleanup is optional
-//   - Target branch is configurable
-//
-// Hard to break:
-//   - Validates uncommitted changes before proceeding
-//   - Checks branch is up to date with target
-//   - Prevents merging main into itself
-//   - Preserves workspace on merge conflicts
-
 // Merge merges the current workspace into the target branch
 func Merge() int {
 	startTime := time.Now()
+
+	// Validate flags before parsing
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
 
 	// Phase 1: Parse configuration
 	config, err := parseMergeConfig()

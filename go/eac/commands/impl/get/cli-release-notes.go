@@ -1,11 +1,6 @@
 // Command: get cli-release-notes
 // Description: Generate release notes for CLI releases
 // Short: Generate release notes for CLI releases
-// Long: The get cli-release-notes command generates release notes markdown for CLI binary releases.
-// Long:
-// Long: It includes installation instructions, binary download links with sizes, and supply chain
-// Long: security information about build attestations.
-// Long:
 // Flag.module: type=string, default=r2r-cli, usage=Module name
 // Flag.binary-prefix: type=string, default=r2r, usage=Binary name prefix
 // Flag.version: type=string, usage=Version string (required)
@@ -13,6 +8,10 @@
 // Flag.commit: type=string, usage=Git commit SHA (required)
 // Flag.repo: type=string, usage=GitHub repository (owner/repo)
 // Flag.run-id: type=string, usage=GitHub Actions run ID
+// Long: The get cli-release-notes command generates release notes markdown for CLI binary releases.
+// Long:
+// Long: It includes installation instructions, binary download links with sizes, and supply chain
+// Long: security information about build attestations.
 // Long:
 // Long: Example:
 // Long:   get cli-release-notes --version 1.0.0 --tag r2r-cli/1.0.0 --commit abc123
@@ -24,6 +23,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
@@ -33,6 +33,12 @@ func init() {
 }
 
 func GetCLIReleaseNotes() int {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	args := os.Args[3:] // Skip program name, "get", and "cli-release-notes"
 
 	module := "r2r-cli"

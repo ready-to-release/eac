@@ -1,4 +1,5 @@
 # Core Workflows
+
 Essential workflows for daily development with r2r and Everything-as-Code. These tutorials teach you the practices you'll use every day as a productive developer.
 
 ## Learning Path

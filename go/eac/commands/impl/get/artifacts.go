@@ -19,6 +19,7 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	getinternal "github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
@@ -30,8 +31,16 @@ func init() {
 	registry.Register(GetArtifacts)
 }
 
+// artifactsFlags defines valid flags for the get artifacts command
+
 // GetArtifacts returns resolved artifacts for a module
 func GetArtifacts() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		return 1
+	}
+
 	args := os.Args[3:] // Skip program name, "get", and "artifacts"
 
 	if len(args) == 0 {

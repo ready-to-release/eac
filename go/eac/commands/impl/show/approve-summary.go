@@ -1,15 +1,6 @@
 // Command: show approve-summary
 // Description: Generate release approval summary
 // Short: Generate release approval summary
-// Long: The show approve-summary command generates a formatted release approval summary.
-// Long: This command is designed to be used in GitHub Actions workflows to create consistent approval summaries.
-// Long: The output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.
-// Long:
-// Long: Expected Output:
-// Long: - Markdown-formatted approval summary with check status table
-// Long: - Shows version, tag, commit, changelog, existing release, and CI check status
-// Long: - On failure, can output diagnostic link via pipeline ci summary-link
-// Long:
 // Flag.module: type=string, usage=Module name (required)
 // Flag.version: type=string, usage=Release version (required)
 // Flag.tag: type=string, usage=Full tag name (required)
@@ -18,6 +9,15 @@
 // Flag.ci-skipped: type=bool, default=false, usage=Whether CI check was skipped
 // Flag.status: type=string, default=success, usage=Overall status (success or failure)
 // Flag.run-id: type=string, usage=Run ID for diagnostic links on failure
+// Long: The show approve-summary command generates a formatted release approval summary.
+// Long: This command is designed to be used in GitHub Actions workflows to create consistent approval summaries.
+// Long: The output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.
+// Long:
+// Long: Expected Output:
+// Long: - Markdown-formatted approval summary with check status table
+// Long: - Shows version, tag, commit, changelog, existing release, and CI check status
+// Long: - On failure, can output diagnostic link via pipeline ci summary-link
+
 package show
 
 import (
@@ -25,6 +25,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 )
@@ -35,6 +36,12 @@ func init() {
 
 // ShowApproveSummary generates a release approval summary
 func ShowApproveSummary() int {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	args := os.Args[3:] // Skip program name, "show", and "approve-summary"
 
 	module := ""

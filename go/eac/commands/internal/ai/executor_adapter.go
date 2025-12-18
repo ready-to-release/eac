@@ -8,25 +8,6 @@ import "context"
 // This adapter bridges the gap between the concrete ai.Executor type
 // and the interface expected by the contracts package, allowing for
 // flexible dependency injection and easier testing.
-//
-// Intent: Provide a clean adapter for AI executor in contract-based generation
-//
-// Design (Three Rules of Vibe Coding):
-//
-// Easy to understand:
-//   - Simple adapter pattern with single responsibility
-//   - Clear interface conversion logic
-//   - Minimal abstraction
-//
-// Easy to change:
-//   - Decoupled from contract implementation details
-//   - Optional model override support
-//   - Pure function for type conversion
-//
-// Hard to break:
-//   - Nil-safe context handling
-//   - Type-safe option conversion
-//   - Graceful fallback for missing context
 type ExecutorAdapter struct {
 	executor *Executor
 	model    string // Optional model override

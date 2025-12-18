@@ -1,4 +1,5 @@
 # Configuration and Setup
+
 Learn how to configure EAC for your project and understand the contract system.
 
 ## Coming Soon

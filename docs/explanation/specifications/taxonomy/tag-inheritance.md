@@ -1,4 +1,5 @@
 # Tag Inheritance
+>
 > **How tags accumulate and override**
 
 Tags accumulate from Feature → Rule → Scenario levels with specific override rules.

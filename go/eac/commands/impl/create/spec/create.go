@@ -17,7 +17,6 @@
 // Flag.output: type=string, shorthand=o, usage=Custom output path for the specification file. If not provided, the path is determined from the feature name and module
 // Flag.prompt: type=string, usage=Path to a custom system prompt file. Overrides both user override prompts and built-in prompts
 // Usage: create spec <description>
-// Flags: --debug (save intermediate outputs), --module (target module), --output (output path), --prompt (custom system prompt)
 package spec
 
 import (
@@ -242,26 +241,10 @@ func loadAndBuildPrompt(config *SpecsConfig) (string, error) {
 		config.Logger.Debug("Prompt built successfully", zap.Int("promptLength", len(fullPrompt)))
 	}
 
-	if config.Debug {
-		// Write debug output to out/logs/specs/ for consistency
-		debugDir := config.EACConfig.Repository.LogsPathAbs(config.TemplateRoot, "specs")
-		if err := os.MkdirAll(debugDir, 0755); err != nil {
-			if config.Logger != nil {
-				config.Logger.Warn("Failed to create debug directory", zap.Error(err))
-			}
-		}
-		debugPath := filepath.Join(debugDir, "debug-full-prompt.md")
-		if err := os.WriteFile(debugPath, []byte(fullPrompt), 0644); err != nil {
-			if config.Logger != nil {
-				config.Logger.Warn("Failed to save debug prompt", zap.String("path", debugPath), zap.Error(err))
-			}
-			log.Errorf("⚠️  DEBUG: Failed to save prompt to %s: %v", debugPath, err)
-		} else {
-			if config.Logger != nil {
-				config.Logger.Debug("Saved full prompt to file", zap.String("path", debugPath))
-			}
-			log.Errorf("🔍 DEBUG: Saved full prompt to %s", debugPath)
-		}
+	if config.Debug && config.Logger != nil {
+		// Log debug content to logger instead of writing to file
+		config.Logger.LogDebugContent("full-prompt", fullPrompt)
+		log.Errorf("🔍 DEBUG: Full prompt logged to commands.log")
 	}
 
 	return fullPrompt, nil
@@ -308,19 +291,6 @@ func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 	// Create validator
 	validator := contracts.NewGherkinValidator(contractData, antiCorruptionRules)
 
-	// Setup debug directory if needed - use out/logs/specs/ for consistency
-	debugOutputDir := ""
-	if config.Debug {
-		debugOutputDir = config.EACConfig.Repository.LogsPathAbs(config.TemplateRoot, "specs")
-		// Ensure debug directory exists
-		if err := os.MkdirAll(debugOutputDir, 0755); err != nil {
-			if config.Logger != nil {
-				config.Logger.Warn("Failed to create debug directory", zap.Error(err))
-			}
-			log.Errorf("⚠️  Failed to create debug directory: %v", err)
-		}
-	}
-
 	// Configure retry behavior
 	retryConfig := &contracts.RetryConfig{
 		Executor:       executorAdapter,
@@ -330,7 +300,7 @@ func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 		ContentMarker:  "Feature:",
 		MaxAttempts:    2,
 		Debug:          config.Debug,
-		DebugOutputDir: debugOutputDir,
+		DebugOutputDir: "", // No longer writing debug files to disk
 	}
 
 	if config.Logger != nil {
@@ -487,11 +457,18 @@ func writeOutputAndReportSuccess(outputPath string, content string, config *Spec
 }
 
 // parseConfig parses command line arguments into configuration
+// specFlags defines valid flags for the create spec command
+
 func parseConfig() (*SpecsConfig, error) {
 	config := &SpecsConfig{}
 	var description string
 
 	args := os.Args[3:] // Skip program name, "create", and "spec"
+
+	// Validate flags before parsing
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		return nil, err
+	}
 
 	// Parse flags using shared package
 	config.Debug = flags.ParseDebugFlag(args)

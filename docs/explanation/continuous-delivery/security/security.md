@@ -1,4 +1,5 @@
 # Security in the CD Model
+
 ## Introduction
 
 Security is not a separate phase or stage - it's a continuous practice integrated throughout all 12 stages of the CD Model. This approach, often called "DevSecOps" or "shift-left security," ensures vulnerabilities are detected and addressed as early as possible when they're cheapest and fastest to fix.

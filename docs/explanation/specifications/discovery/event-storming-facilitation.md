@@ -1,4 +1,5 @@
 # Event Storming Facilitation
+>
 > **Running effective Event Storming workshops**
 
 Learn how to facilitate successful Event Storming sessions.

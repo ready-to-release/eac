@@ -1,4 +1,5 @@
 # Command Cheat Sheet
+
 Quick reference for the most commonly used EAC commands. Commands are organized by workflow and use case for fast lookup.
 
 ## Quick Navigation
@@ -340,25 +341,25 @@ r2r eac scan
 
 ```bash
 # Scan for vulnerabilities
-r2r eac scan vuln
+r2r eac scan --scanner vuln
 
 # Scan for secrets
-r2r eac scan secrets
+r2r eac scan --scanner secrets
 
 # Static analysis (SAST)
-r2r eac scan sast
+r2r eac scan --scanner sast
 
 # Infrastructure as Code scan
-r2r eac scan iac
+r2r eac scan --scanner iac
 
 # Generate SBOM
-r2r eac scan sbom
+r2r eac scan --scanner sbom
 
 # Check compliance
-r2r eac scan compliance
+r2r eac scan --scanner compliance
 
 # Dynamic analysis (DAST)
-r2r eac scan zap http://localhost:8080
+r2r eac scan zap eac-api --target http://localhost:8080
 ```
 
 ---

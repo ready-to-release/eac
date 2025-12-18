@@ -1,4 +1,5 @@
 # Check CI Before Release
+
 ## What You'll Accomplish
 
 Verify CI pipeline passes before creating a release to ensure quality.

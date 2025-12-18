@@ -2,7 +2,6 @@
 // Description: Get release bundle configuration with module details
 // Flag.with-versions: type=bool, default=false, usage=Resolve current versions from GitHub releases
 // Flag.format: type=string, usage=Output format: markdown, flat, shell, table
-// Flags:
 //
 //	--as-yaml: Output as YAML (default)
 //	--as-json: Output as JSON
@@ -45,6 +44,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
@@ -90,7 +90,15 @@ type ReleaseBundleModule struct {
 	ReleaseURL string `yaml:"release_url,omitempty" json:"release_url,omitempty"`
 }
 
+// releaseBundleFlags defines valid flags for the get release-bundle command
+
 func GetReleaseBundle() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		return 1
+	}
+
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {

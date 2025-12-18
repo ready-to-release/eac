@@ -1,4 +1,5 @@
 # Tutorials
+
 Step-by-step guides to help you get started and master r2r and Everything-as-Code workflows. These learning-oriented tutorials take you from installation through advanced practices.
 
 ## Learning Paths
@@ -11,11 +12,22 @@ Choose your path based on your experience level:
 
 Start here if you're new to r2r and Everything-as-Code:
 
-1. [Getting Started](./getting-started/) - Installation, first spec, first module, test suites
-   - [Quick Start](./getting-started/quick-start.md) - Install and run first commands
+1. [Getting Started](./getting-started/) - Complete setup and fundamentals
+   - [Quick Start](./getting-started/quick-start.md) - Install R2R CLI, initialize configuration, install EAC extension
+   - [Understanding Configuration Files](./getting-started/configuration-files.md) - R2R CLI and EAC configuration
    - [Your First Specification](./getting-started/first-specification.md) - Write Gherkin specs
    - [Your First Module](./getting-started/first-module.md) - Create a Go module
    - [Understanding Test Suites](./getting-started/understanding-test-suites.md) - Test levels and suites
+
+!!! tip "New to R2R?"
+    The Quick Start guide walks you through the complete setup:
+
+    1. Install R2R CLI binary
+    2. Initialize R2R configuration (`r2r init`)
+    3. Install EAC extension (`r2r install eac`)
+    4. Configure EAC (`r2r eac init`)
+
+    See [CLI vs Extensions](../reference/r2r-eac/cli-vs-extensions.md) to understand the two-tier architecture.
 
 ### Developer Path
 
@@ -23,7 +35,7 @@ Start here if you're new to r2r and Everything-as-Code:
 
 Continue here to learn productive development practices:
 
-2. [Core Workflows](./core-workflows/) - TDD, building, testing, worktrees, releases
+1. [Core Workflows](./core-workflows/) - TDD, building, testing, worktrees, releases
    - [TDD with Specifications](./core-workflows/tdd-with-specifications.md) - Full TDD loop
    - [Building and Testing Changes](./core-workflows/building-and-testing.md) - Efficient builds
    - [Working with Git Worktrees](./core-workflows/working-with-worktrees.md) - Parallel development
@@ -35,7 +47,7 @@ Continue here to learn productive development practices:
 
 Continue here for power user features:
 
-3. [Advanced Practices](./advanced-practices/) - Compliance, CI/CD, multi-module, extensions
+1. [Advanced Practices](./advanced-practices/) - Compliance, CI/CD, multi-module, extensions
    - [Compliance-as-Code Basics](./advanced-practices/compliance-as-code-basics.md) - GxP automation
    - [CI/CD Integration](./advanced-practices/ci-cd-integration.md) - GitHub Actions setup
    - [Multi-Module Development](./advanced-practices/multi-module-development.md) - Dependencies
@@ -47,7 +59,7 @@ Continue here for power user features:
 
 Choose topics based on your needs:
 
-4. [Specialized Topics](./specialized-topics/) - BDD, architecture, security, TypeScript
+1. [Specialized Topics](./specialized-topics/) - BDD, architecture, security, TypeScript
    - [Effective BDD Scenarios](./specialized-topics/effective-bdd-scenarios.md) - Example Mapping
    - [Architecture Documentation](./specialized-topics/architecture-documentation.md) - C4 diagrams
    - [Security Scanning Workflow](./specialized-topics/security-scanning-workflow.md) - SAST, SBOM

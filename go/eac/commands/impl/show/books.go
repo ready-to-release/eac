@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
@@ -28,6 +29,20 @@ func init() {
 
 // ShowBooks displays all configured books in a table format
 func ShowBooks() int {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
+
+	args := os.Args[3:] // Skip program name, "show", and "books"
+
+	// Parse flags
+	format := flags.GetFlagValue(args, "--format")
+	if format == "" {
+		format = "table"
+	}
+
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)

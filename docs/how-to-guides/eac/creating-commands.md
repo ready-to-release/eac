@@ -1,4 +1,5 @@
 # Creating CLI Commands
+
 This guide is for developers contributing new commands to the EAC CLI in `go/eac/commands/impl/`.
 
 ## Overview
@@ -253,6 +254,87 @@ func parseConfig() (*Config, error) {
 2. **Clear Naming**: Command names should be verb-noun (create, validate) or verb (show)
 3. **Consistent Structure**: All commands follow the same pattern
 4. **Error Handling**: Always return meaningful error messages with context
+
+## Modern Flag Validation (Recommended)
+
+Instead of manual switch-based flag parsing, use the centralized flag validation infrastructure:
+
+```go
+import (
+    "github.com/ready-to-release/eac/go/eac/commands/internal/flags"
+)
+
+// Define your command's flags
+var myCommandFlags = []flags.FlagDefinition{
+    {
+        Name:      "--module",
+        Shorthand: "-m",
+        HasValue:  true,
+        ValueType: "string",
+        Aliases:   []string{"--mod"}, // Common typos to catch
+    },
+    {
+        Name:      "--debug",
+        Shorthand: "-d",
+        HasValue:  false,
+        ValueType: "bool",
+    },
+}
+
+func MyCommand() int {
+    // Validate flags BEFORE parsing
+    if err := flags.ValidateFlags(os.Args[2:], myCommandFlags); err != nil {
+        log.Errorf("%v", err)
+        return 1
+    }
+
+    // Now do your normal flag parsing
+    // Invalid flags are already caught with helpful error messages
+    for i := 2; i < len(os.Args); i++ {
+        // ... your parsing logic
+    }
+}
+```
+
+**Benefits:**
+
+- ✅ Catches typos (e.g., `--mod` suggests `--module`)
+- ✅ Shows all valid flags when unknown flag detected
+- ✅ Consistent error messages across commands
+- ✅ No code duplication
+
+## Debug Content Logging
+
+When implementing `--debug` functionality, log debug content via the logger instead of writing files:
+
+```go
+import (
+    "github.com/ready-to-release/eac/go/eac/core/logging"
+)
+
+// Initialize logger
+logger, err := logging.NewWithDebug("my-command", workspaceRoot)
+if err != nil {
+    return 1
+}
+defer logger.Sync()
+
+// Later, instead of writing debug files:
+// ❌ OLD: os.WriteFile("out/logs/my-command/debug-prompt.md", content, 0644)
+
+// ✅ NEW: Use logger
+if logger.IsDebugMode() {
+    logger.LogDebugContent("prompt", promptText)
+    log.Info("Debug content logged to commands.log")
+}
+```
+
+**Benefits:**
+
+- ✅ All debug output in unified `commands.log`
+- ✅ No scattered debug files in `out/logs/`
+- ✅ Can filter by content type in log viewer
+- ✅ Respects logging configuration
 
 ## Testing Your Help Text
 

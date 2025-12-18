@@ -1,4 +1,5 @@
 # Review and Iterate: Living Specifications
+
 ## Overview
 
 Specifications are living documents that evolve with understanding. This article explains how to continuously refine specifications after Example Mapping.

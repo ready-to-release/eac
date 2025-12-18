@@ -1,4 +1,5 @@
 # Testing Strategy: Integration with CD Model
+
 ## Introduction
 
 This article explains how test levels integrate with CD Model stages, the process isolation strategies for each level, and how testing aligns with the Rules/Scenarios/Unit Tests approach. Understanding this integration ensures you execute the right tests at the right stages with appropriate quality gates.

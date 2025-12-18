@@ -1,26 +1,4 @@
 // File: go/eac/commands/internal/ai/providers/gemini.go
-// Intent: Call Google Gemini API using official SDK
-//
-// Design (Three Rules of Vibe Coding):
-//
-// Easy to understand:
-//   - Clear validation at construction
-//   - Single Execute() method with options
-//   - API client initialization separated
-//   - Error messages with context
-//
-// Easy to change:
-//   - SDK version can be upgraded
-//   - Model and options are configurable
-//   - No global state
-//   - Can switch models at runtime via options
-//
-// Hard to break:
-//   - API key validation at construction
-//   - Model validation at construction
-//   - Context allows cancellation
-//   - Errors wrapped with context
-
 package providers
 
 import (

@@ -1,4 +1,5 @@
 # Unit of Flow
+
 ## Introduction
 
 The Unit of Flow is a conceptual framework that divides Continuous Delivery into four discrete, interconnected components.

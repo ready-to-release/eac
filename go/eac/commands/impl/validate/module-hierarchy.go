@@ -13,6 +13,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -24,12 +25,13 @@ func init() {
 
 // ValidateModuleHierarchy validates the module dependency graph
 func ValidateModuleHierarchy() int {
-	args := os.Args[2:] // Skip program name and "validate"
-
-	// Check if this is being called as a subcommand
-	if len(args) > 0 && args[0] == "module-hierarchy" {
-		args = args[1:] // Skip the subcommand name
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		log.Errorf("%v", err)
+		return 1
 	}
+
+	args := os.Args[3:] // Skip program name, "validate", and "module-hierarchy"
 
 	// Check for help flag
 	if len(args) > 0 && (args[0] == "--help" || args[0] == "-h") {

@@ -8,25 +8,6 @@ import "errors"
 var ErrAIProviderNotConfigured = errors.New("ai provider not configured, please run eac init --ai-provider to initialize it")
 
 // Config represents AI and Git configuration loaded from .r2r/eac/ai-provider.yml
-//
-// Intent: Hold provider configuration with environment variable references.
-//
-// Design (Three Rules of Vibe Coding):
-//
-// Easy to understand:
-//   - Self-documenting field names
-//   - YAML tags match config file structure
-//   - Nested structure separates AI and Git configuration
-//
-// Easy to change:
-//   - Can add new fields without breaking existing configs
-//   - Separate from loading logic
-//   - No behavior - just data
-//
-// Hard to break:
-//   - Required fields validated during loading
-//   - Immutable after creation (no setters)
-//   - Clear separation between config and runtime values
 type Config struct {
 	AI  AIConfig  `yaml:"ai"`  // AI provider configuration
 	Git GitConfig `yaml:"git"` // Git provider configuration

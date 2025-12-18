@@ -1,4 +1,5 @@
 # Effective BDD Scenarios
+
 **Status:** Placeholder - Content coming soon
 
 **Prerequisites:** [Your First Specification](../getting-started/first-specification.md), [TDD with Specifications](../core-workflows/tdd-with-specifications.md)
@@ -71,6 +72,7 @@ This tutorial teaches advanced BDD techniques including Example Mapping for spec
 The tutorial includes a complete Example Mapping session:
 
 **User Story:**
+
 ```text
 As a customer
 I want to apply discount codes to my order
@@ -78,24 +80,28 @@ So that I can save money on purchases
 ```
 
 **Rules discovered:**
+
 - Discount codes must be valid and not expired
 - Only one discount code per order
 - Discount applies before tax
 - Some products excluded from discounts
 
 **Examples (become scenarios):**
+
 - Valid code with 20% discount → price reduced
 - Expired code → error message
 - Apply second code → first code removed
 - Discount on excluded product → discount not applied
 
 **Questions:**
+
 - Can codes be combined? (No → Rule)
 - What if code format is invalid? (Error → Scenario)
 
 ### Scenario Quality Checklist
 
 Good scenarios are:
+
 - [ ] Concrete (specific values)
 - [ ] Independent (any order)
 - [ ] Focused (one behavior)
@@ -115,6 +121,7 @@ Good scenarios are:
 ### Before and After Examples
 
 **BEFORE (Poor scenario):**
+
 ```gherkin
 Scenario: Discounts work
   Given there are discounts
@@ -123,6 +130,7 @@ Scenario: Discounts work
 ```
 
 **AFTER (Effective scenario):**
+
 ```gherkin
 Scenario: Apply 20% discount to eligible order
   Given I have items worth $100.00 in my cart

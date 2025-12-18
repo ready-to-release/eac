@@ -1,30 +1,39 @@
 # scan Commands
+
 Security scanning and evidence collection for audit compliance.
 
 ## Commands in this Category
 
 | Command | Purpose |
 |---------|---------|
-| [scan](./scan.md) | Run all security scans |
-| [scan vuln](./vuln.md) | Scan for vulnerabilities using Trivy |
-| [scan sast](./sast.md) | Static Application Security Testing using Semgrep |
-| [scan secrets](./secrets.md) | Detect secrets and credentials |
-| [scan iac](./iac.md) | Scan Infrastructure as Code for misconfigurations |
-| [scan sbom](./sbom.md) | Generate Software Bill of Materials |
-| [scan compliance](./compliance.md) | Check compliance with security standards |
-| [scan zap](./zap.md) | Dynamic Application Security Testing using OWASP ZAP |
+| [scan](./scan.md) | Run security scans with --scanner flag |
+| [scan zap](./zap.md) | Dynamic Application Security Testing (DAST) |
+
+## Scanner Types
+
+The main `scan` command supports these scanner types via `--scanner` flag:
+
+- `sbom` - Software Bill of Materials (Trivy)
+- `vuln` - Vulnerability scanning (Trivy)
+- `secrets` - Secret detection (Trivy)
+- `iac` - Infrastructure as Code scanning (Trivy)
+- `compliance` - Compliance checking (Trivy)
+- `sast` - Static Application Security Testing (Semgrep)
 
 ## Quick Examples
 
 ```bash
-# Run all security scans
+# Run all default scans
 r2r eac scan
 
-# Scan for vulnerabilities
-r2r eac scan vuln
+# Specific scanner types
+r2r eac scan --scanner vuln,secrets
 
-# Detect secrets
-r2r eac scan secrets
+# Multiple modules with specific scanners
+r2r eac scan eac-core eac-commands --scanner sbom,vuln
+
+# Dynamic testing (separate subcommand)
+r2r eac scan zap eac-api --target http://localhost:8080
 ```
 
 ## See Also

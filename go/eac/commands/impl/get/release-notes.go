@@ -1,6 +1,5 @@
 // Command: get release-notes
 // Description: Get release notes data in structured format
-// Flags:
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML
@@ -20,6 +19,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	getInternal "github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
@@ -30,7 +30,15 @@ func init() {
 	registry.Register(GetReleaseNotes)
 }
 
+// releaseNotesFlags defines valid flags for the get release-notes command
+
 func GetReleaseNotes() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		return 1
+	}
+
 	// Parse arguments - expect module after "get release-notes"
 	args := os.Args[1:]
 

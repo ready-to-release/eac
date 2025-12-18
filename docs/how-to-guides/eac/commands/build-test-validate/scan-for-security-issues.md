@@ -1,4 +1,5 @@
 # Scan for Security Issues
+
 ## What You'll Accomplish
 
 Detect security vulnerabilities, secrets, and compliance issues before committing code.
@@ -21,7 +22,7 @@ r2r eac scan
 ### 2. Scan for Vulnerabilities
 
 ```bash
-r2r eac scan vuln
+r2r eac scan --scanner vuln
 ```
 
 **What happens**: Uses Trivy to scan for known CVEs in dependencies
@@ -29,7 +30,7 @@ r2r eac scan vuln
 ### 3. Detect Secrets
 
 ```bash
-r2r eac scan secrets
+r2r eac scan --scanner secrets
 ```
 
 **What happens**: Scans for exposed API keys, passwords, tokens
@@ -37,7 +38,7 @@ r2r eac scan secrets
 ### 4. Static Analysis
 
 ```bash
-r2r eac scan sast
+r2r eac scan --scanner sast
 ```
 
 **What happens**: Uses Semgrep for code security issues
@@ -46,13 +47,16 @@ r2r eac scan sast
 
 ```bash
 # Scan infrastructure code
-r2r eac scan iac
+r2r eac scan --scanner iac
 
 # Check compliance standards
-r2r eac scan compliance
+r2r eac scan --scanner compliance
 
 # Generate SBOM
-r2r eac scan sbom
+r2r eac scan --scanner sbom
+
+# Run multiple scan types together
+r2r eac scan --scanner vuln,secrets,sbom
 ```
 
 ## Example Scenario
@@ -77,7 +81,7 @@ r2r eac scan
 # Remove hardcoded API key, use environment variable
 
 # Scan again
-r2r eac scan secrets
+r2r eac scan --scanner secrets
 # ✓ No secrets detected
 ```
 
@@ -94,7 +98,7 @@ r2r eac scan || exit 1
 |---------|----------|
 | False positives | Add to ignore list in config |
 | Scanner not found | Install Trivy/Semgrep |
-| Slow scans | Use targeted scans only |
+| Slow scans | Use targeted scans with --scanner |
 
 ## Next Steps
 
@@ -102,6 +106,5 @@ r2r eac scan || exit 1
 
 ## Related Commands
 
-- [`scan`](../../../../reference/commands/scan/scan.md) - Run all scans
-- [`scan vuln`](../../../../reference/commands/scan/vuln.md) - Vulnerability scan
-- [`scan secrets`](../../../../reference/commands/scan/secrets.md) - Secret detection
+- [`scan`](../../../../reference/commands/scan/scan.md) - Run all scans with --scanner flag
+- [`scan zap`](../../../../reference/commands/scan/zap.md) - Dynamic testing (DAST)

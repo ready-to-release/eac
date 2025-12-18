@@ -1,4 +1,5 @@
 # Test Levels with Go Build Tags
+>
 > **Build tags and test isolation (L0-L4)**
 
 Go build tags control which tests run based on isolation level.
@@ -40,6 +41,7 @@ func TestAdd_TwoNumbers_ReturnsSum(t *testing.T) {
 ```
 
 **Characteristics**:
+
 - Runs in microseconds
 - No external dependencies
 - Pure functions only
@@ -88,6 +90,7 @@ func TestCreateTempFile_WithContent_ShouldWriteFile(t *testing.T) {
 ```
 
 **Characteristics**:
+
 - Default test level (no build tag needed)
 - Can use `t.TempDir()` for filesystem
 - Simple mocks allowed
@@ -138,6 +141,7 @@ func TestDatabase_Connect_ShouldSucceed(t *testing.T) {
 ```
 
 **Characteristics**:
+
 - Uses test containers, mocked APIs
 - Emulated dependencies
 - Slower (seconds per test)
@@ -165,6 +169,7 @@ Scenario: Deploy application to PLTE
 ```
 
 **Characteristics**:
+
 - Real infrastructure (test environment)
 - Full integration testing
 - Deployment verification
@@ -192,6 +197,7 @@ Scenario: Production health check
 ```
 
 **Characteristics**:
+
 - Runs against production
 - Read-only operations
 - Continuous monitoring

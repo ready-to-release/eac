@@ -49,31 +49,15 @@ func init() {
 	registry.Register(Remove)
 }
 
-// Intent: Remove workspace from git tracking and clean up associated branches
-//
-// Design (Three Rules of Vibe Coding):
-//
-// Easy to understand:
-//   - Clear flow: validate → switch branch → remove worktree → delete branch
-//   - Explicit warnings for destructive operations
-//   - Sensible defaults (delete local, keep remote)
-//   - Informs user if manual folder deletion is needed
-//
-// Easy to change:
-//   - Branch deletion is optional
-//   - Remote deletion configurable
-//   - Force flag for edge cases
-//
-// Hard to break:
-//   - Validates uncommitted changes
-//   - Prevents removing main workspace
-//   - Confirms workspace exists before removing
-//   - Switches away from workspace before removing it
-//   - Does not force folder deletion to avoid data loss
-
 // Remove removes a workspace and optionally deletes branches
 func Remove() int {
 	startTime := time.Now()
+
+	// Validate flags before parsing
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
 
 	// Phase 1: Parse configuration
 	phaseStart := time.Now()

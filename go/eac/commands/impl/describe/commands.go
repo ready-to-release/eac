@@ -8,12 +8,14 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
+// commandFlags defines valid flags for the describe commands command
 var log = logging.C()
 
 func init() {
@@ -38,6 +40,12 @@ type CommandTree struct {
 }
 
 func GetCommands() int {
+	// Validate flags
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	tree := buildCommandTree()
 
 	// Output as JSON

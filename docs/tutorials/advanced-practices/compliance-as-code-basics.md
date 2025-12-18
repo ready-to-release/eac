@@ -1,4 +1,5 @@
 # Compliance-as-Code Basics
+
 **Status:** Placeholder - Content coming soon
 
 **Prerequisites:** [Your First Specification](../getting-started/first-specification.md), understanding of compliance requirements
@@ -36,6 +37,7 @@ This tutorial teaches you how to implement compliance automation by tagging spec
    - Compliance tags: `@cfr21part11`, `@gamp5`
 
 4. **Example: Access Control Specification**
+
    ```gherkin
    @L2 @ov @deps:go @control:AC-1 @control:AC-2 @cfr21part11
    Feature: user-auth_access-control

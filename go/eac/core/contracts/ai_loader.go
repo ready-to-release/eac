@@ -24,15 +24,29 @@ func NewAIConfigLoader(workspaceRoot string) *AIConfigLoader {
 	}
 }
 
-// Load loads the unified ai-config.yml file
+// Load loads the unified ai-config.yml file with fallback to system defaults
 func (l *AIConfigLoader) Load() (*AIConfig, error) {
 	if l.config != nil {
 		return l.config, nil
 	}
 
+	// Try user override first (/var/task/.r2r/eac/ai-config.yml)
 	configPath := filepath.Join(l.workspaceRoot, paths.R2RDir, paths.EACDir, "ai-config.yml")
 	data, err := os.ReadFile(configPath)
-	if err != nil {
+
+	// If not found, fall back to system default (/app/.r2r/eac/ai-config.yml)
+	if os.IsNotExist(err) {
+		systemRoot := os.Getenv("R2R_CONTAINER_ROOT")
+		if systemRoot == "" {
+			// Local dev mode - try workspace root
+			systemRoot = l.workspaceRoot
+		}
+		systemPath := filepath.Join(systemRoot, paths.R2RDir, paths.EACDir, "ai-config.yml")
+		data, err = os.ReadFile(systemPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read AI config from user repo (%s) or system defaults (%s): %w", configPath, systemPath, err)
+		}
+	} else if err != nil {
 		return nil, fmt.Errorf("failed to read AI config %s: %w", configPath, err)
 	}
 
@@ -125,14 +139,38 @@ func (l *AIConfigLoader) LoadData(typeName string, dataKey string) ([]byte, erro
 	return data, nil
 }
 
-// LoadReferencedFile loads a file by path relative to workspace root
+// LoadReferencedFile loads a file by path relative to workspace root.
+// Falls back to system defaults if not found in user repository.
+// This allows commands to work without requiring all files in user repos.
 func (l *AIConfigLoader) LoadReferencedFile(relativePath string) ([]byte, error) {
+	// Try user override first
 	fullPath := filepath.Join(l.workspaceRoot, relativePath)
 	data, err := os.ReadFile(fullPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read file %s: %w", fullPath, err)
+	if err == nil {
+		return data, nil
 	}
-	return data, nil
+
+	// If not found in user repo, fall back to system defaults
+	if os.IsNotExist(err) {
+		systemRoot := os.Getenv("R2R_CONTAINER_ROOT")
+		if systemRoot == "" {
+			// Local dev mode - system defaults are same as workspace root
+			// This means no fallback is available, return original error
+			systemRoot = l.workspaceRoot
+		}
+		systemPath := filepath.Join(systemRoot, relativePath)
+		data, err = os.ReadFile(systemPath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return nil, fmt.Errorf("failed to read file from user repo (%s) or system defaults (%s): %w", fullPath, systemPath, err)
+			}
+			return nil, fmt.Errorf("failed to read file from system defaults (%s): %w", systemPath, err)
+		}
+		return data, nil
+	}
+
+	// Other error (not IsNotExist)
+	return nil, fmt.Errorf("failed to read file %s: %w", fullPath, err)
 }
 
 // GetWorkspaceRoot returns the workspace root

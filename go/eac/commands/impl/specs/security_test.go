@@ -13,21 +13,6 @@ import (
 	"testing"
 )
 
-// Intent: Test security validation functionality
-//
-// Design (Three Rules of Vibe Coding):
-//
-// Easy to understand:
-//   - Table-driven tests with clear test case names
-//   - Each test focuses on a single security aspect
-//
-// Easy to change:
-//   - Test data is clearly separated from test logic
-//
-// Hard to break:
-//   - Tests cover security edge cases exhaustively
-//   - Path traversal, injection, and validation attacks tested
-
 func TestExtractFeatureName(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -855,4 +840,3 @@ func TestValidateWindowsReservedNames(t *testing.T) {
 		})
 	}
 }
-

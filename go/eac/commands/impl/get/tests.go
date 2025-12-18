@@ -1,6 +1,5 @@
 // Command: get tests
 // Description: Get all tests in the repository
-// Flags:
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML
@@ -18,6 +17,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/internal/testdata"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
@@ -27,7 +27,15 @@ func init() {
 	registry.Register(GetTests)
 }
 
+// testsFlags defines valid flags for the get tests command
+
 func GetTests() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		return 1
+	}
+
 	return internal.ExecuteGetCommand(func() (interface{}, error) {
 		// Get repository root
 		cwd, err := os.Getwd()

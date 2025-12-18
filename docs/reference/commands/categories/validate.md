@@ -1,4 +1,5 @@
 # validate Commands
+
 ## Overview
 
 The **validate** category contains 15 commands for validating repository contracts, dependencies, and compliance.

@@ -13,26 +13,6 @@ import (
 
 // TestProvider is a provider for acceptance tests that reads mock responses from files.
 //
-// Intent: Enable AI mocking in subprocess-based acceptance tests where package-level
-// variables cannot be shared across process boundaries.
-//
-// Design (Three Rules of Vibe Coding):
-//
-// Easy to understand:
-//   - Reads mock response from well-known file location
-//   - Falls back to environment variable for simple cases
-//   - Clear error messages when mock response not found
-//
-// Easy to change:
-//   - File location can be customized via config
-//   - Environment variable fallback is optional
-//   - Can extend to support multiple mock responses
-//
-// Hard to break:
-//   - No external API calls
-//   - Deterministic output based on file/env content
-//   - Fast execution for quick test feedback
-//
 // Mock Response Resolution Order:
 //  1. File: .r2r/test/ai-mock.txt (relative to repo root)
 //  2. Environment variable: R2R_TEST_AI_RESPONSE

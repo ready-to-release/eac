@@ -1,6 +1,5 @@
 // Command: get changelog
 // Description: Get changelog data in structured format
-// Flags:
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML
@@ -21,6 +20,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	getInternal "github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
@@ -31,7 +31,15 @@ func init() {
 	registry.Register(GetChangelog)
 }
 
+// changelogFlags defines valid flags for the get changelog command
+
 func GetChangelog() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		return 1
+	}
+
 	// Parse arguments - expect module after "get changelog"
 	args := os.Args[1:]
 

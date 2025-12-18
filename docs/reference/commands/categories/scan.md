@@ -2,11 +2,22 @@
 
 ## Overview
 
-The **scan** category contains 8 commands for security scanning and evidence collection for audit compliance.
+The **scan** category provides security scanning with multiple scanner types via the `--scanner` flag, plus a dedicated subcommand for dynamic testing.
 
 ## Commands
 
 <!-- book:category-commands scan -->
+
+## Scanner Types
+
+| Type | Description | Tool |
+|------|-------------|------|
+| `sbom` | Software Bill of Materials | Trivy |
+| `vuln` | Vulnerability scanning | Trivy |
+| `secrets` | Secret detection | Trivy |
+| `iac` | Infrastructure as Code scanning | Trivy |
+| `compliance` | Compliance checking | Trivy |
+| `sast` | Static Application Security Testing | Semgrep |
 
 ## Common Use Cases
 
@@ -19,22 +30,23 @@ r2r eac scan
 ### Vulnerability Assessment
 
 ```bash
-r2r eac scan vuln
-r2r eac scan secrets
+r2r eac scan --scanner vuln,secrets
 ```
 
 ### Compliance Checking
 
 ```bash
-r2r eac scan compliance
-r2r eac scan sbom
+r2r eac scan --scanner compliance,sbom
 ```
 
 ### Application Security Testing
 
 ```bash
-r2r eac scan sast
-r2r eac scan zap http://localhost:8080
+# Static analysis
+r2r eac scan --scanner sast
+
+# Dynamic testing (requires running application)
+r2r eac scan zap eac-api --target http://localhost:8080
 ```
 
 ## Key Features

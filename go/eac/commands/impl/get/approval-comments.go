@@ -1,6 +1,5 @@
 // Command: get approval-comments
 // Description: Get PR approval comments in structured format
-// Flags:
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML
@@ -23,6 +22,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	getInternal "github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
@@ -33,7 +33,14 @@ func init() {
 	registry.Register(GetApprovalComments)
 }
 
+// approvalCommentsFlags defines valid flags for the get approval-comments command
+
 func GetApprovalComments() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		return 1
+	}
 	// Parse arguments - expect module after "get approval-comments"
 	args := os.Args[1:]
 

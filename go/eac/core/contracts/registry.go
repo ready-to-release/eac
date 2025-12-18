@@ -5,25 +5,6 @@ import (
 	"sync"
 )
 
-// Intent: Provide a global registry for validators
-//
-// Design (Three Rules of Vibe Coding):
-//
-// Easy to understand:
-//   - Simple map-based registry
-//   - Clear registration pattern (init() functions)
-//   - Type-safe validator lookup
-//
-// Easy to change:
-//   - Add new validators by calling Register()
-//   - No code changes needed in registry itself
-//   - Pluggable architecture
-//
-// Hard to break:
-//   - Thread-safe registration with mutex
-//   - Duplicate registration detection
-//   - Not-found errors with clear messages
-
 // ValidatorRegistry manages registered validators by name
 type ValidatorRegistry struct {
 	mu         sync.RWMutex

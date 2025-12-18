@@ -1,4 +1,5 @@
 # End of Life
+
 The End of Life phase ensures the systematic and compliant decommissioning of IT systems, protecting data and maintaining business continuity throughout the transition.
 
 ## Checkpoints

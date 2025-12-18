@@ -1,4 +1,5 @@
 # Security Scanning Workflow
+
 **Status:** Placeholder - Content coming soon
 
 **Prerequisites:** [Your First Module](../getting-started/first-module.md), [CI/CD Integration](../advanced-practices/ci-cd-integration.md)
@@ -9,12 +10,12 @@ This tutorial teaches you how to integrate security scanning into your developme
 
 ### What You'll Learn
 
-- Scan for vulnerabilities: `r2r scan vuln`
-- Perform SAST (Static Application Security Testing): `r2r scan sast`
-- Detect secrets: `r2r scan secrets`
-- Scan Infrastructure as Code: `r2r scan iac`
-- Check compliance: `r2r scan compliance`
-- Generate SBOM (Software Bill of Materials): `r2r scan sbom`
+- Scan for vulnerabilities: `r2r scan --scanner vuln`
+- Perform SAST (Static Application Security Testing): `r2r scan --scanner sast`
+- Detect secrets: `r2r scan --scanner secrets`
+- Scan Infrastructure as Code: `r2r scan --scanner iac`
+- Check compliance: `r2r scan --scanner compliance`
+- Generate SBOM (Software Bill of Materials): `r2r scan --scanner sbom`
 - Integrate security scanning in CI/CD
 - Understand scan results and remediation
 
@@ -27,37 +28,37 @@ This tutorial teaches you how to integrate security scanning into your developme
    - Shift-left security
 
 2. **Vulnerability scanning with Trivy**
-   - Scan dependencies: `r2r scan vuln`
+   - Scan dependencies: `r2r scan --scanner vuln`
    - Understand CVE severity (Critical, High, Medium, Low)
    - Review scan results
    - Remediate vulnerabilities
 
 3. **SAST with Semgrep**
-   - Static code analysis: `r2r scan sast`
+   - Static code analysis: `r2r scan --scanner sast`
    - Detect security issues in code
    - Common vulnerability patterns
    - Fix SAST findings
 
 4. **Secret detection**
-   - Detect hardcoded credentials: `r2r scan secrets`
+   - Detect hardcoded credentials: `r2r scan --scanner secrets`
    - Prevent secret leaks
    - Use environment variables instead
    - `.gitignore` for sensitive files
 
 5. **Infrastructure as Code scanning**
-   - Scan IaC configs: `r2r scan iac`
+   - Scan IaC configs: `r2r scan --scanner iac`
    - Detect misconfigurations
    - Dockerfile best practices
    - Kubernetes security
 
 6. **Compliance scanning**
-   - Check compliance standards: `r2r scan compliance`
+   - Check compliance standards: `r2r scan --scanner compliance`
    - NIST, CIS benchmarks
    - Generate compliance reports
    - Remediate compliance issues
 
 7. **Software Bill of Materials (SBOM)**
-   - Generate SBOM: `r2r scan sbom`
+   - Generate SBOM: `r2r scan --scanner sbom`
    - SPDX and CycloneDX formats
    - Track dependencies for supply chain security
    - SBOM in compliance and audits
@@ -74,28 +75,32 @@ The tutorial demonstrates a comprehensive security workflow:
 
 ```bash
 # 1. Vulnerability scanning (dependencies)
-r2r scan vuln eac-commands
+r2r scan eac-commands --scanner vuln
 # Scans Go modules, npm packages, container images
 
 # 2. SAST (static analysis)
-r2r scan sast eac-commands
+r2r scan eac-commands --scanner sast
 # Analyzes Go code for security issues
 
 # 3. Secret detection
-r2r scan secrets
+r2r scan --scanner secrets
 # Scans all files for hardcoded credentials
 
 # 4. IaC scanning
-r2r scan iac
+r2r scan --scanner iac
 # Scans Dockerfiles, k8s manifests, Terraform
 
 # 5. Compliance scanning
-r2r scan compliance eac-commands --compliance nist-800-53
+r2r scan eac-commands --scanner compliance --compliance nist-800-53
 # Checks against compliance framework
 
 # 6. Generate SBOM
-r2r scan sbom eac-commands
+r2r scan eac-commands --scanner sbom
 # Creates software bill of materials
+
+# 7. Run multiple scans together
+r2r scan eac-commands --scanner vuln,secrets,sbom
+# Combines multiple scanner types
 ```
 
 ### Key Concepts Covered
@@ -111,6 +116,7 @@ r2r scan sbom eac-commands
 ### Understanding Scan Results
 
 **Vulnerability scan output:**
+
 ```text
 Scanning eac-commands for vulnerabilities...
 
@@ -129,6 +135,7 @@ Total: 1 vulnerability found
 ```
 
 **SAST output:**
+
 ```text
 Running SAST scan...
 
@@ -170,20 +177,20 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Vulnerability Scan
-        run: r2r scan vuln
+        run: r2r scan --scanner vuln
         continue-on-error: false
 
       - name: SAST
-        run: r2r scan sast
+        run: r2r scan --scanner sast
 
       - name: Secret Detection
-        run: r2r scan secrets
+        run: r2r scan --scanner secrets
 
       - name: IaC Scan
-        run: r2r scan iac
+        run: r2r scan --scanner iac
 
       - name: Generate SBOM
-        run: r2r scan sbom
+        run: r2r scan --scanner sbom
 ```
 
 ### Security Quality Gates

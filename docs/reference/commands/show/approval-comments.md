@@ -13,6 +13,7 @@ r2r eac show approval-comments ext-eac
 ```
 
 Shows approvals from PRs containing:
+
 - `specs/eac-commands/` (dependency)
 - `specs/r2r-cli/` (dependency)
 - `specs/ext-eac/` (if any)
@@ -36,6 +37,7 @@ Shows approvals from PRs containing:
 ### No Approvals Shown
 
 Possible causes:
+
 - No PRs merged in the version range
 - PRs don't contain `.feature` files
 - No APPROVED reviews (try `--include-all-reviews`)

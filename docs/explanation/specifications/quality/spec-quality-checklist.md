@@ -1,4 +1,5 @@
 # Specification Quality Checklist
+
 Reference for evaluating specification health.
 
 ## Health Indicators

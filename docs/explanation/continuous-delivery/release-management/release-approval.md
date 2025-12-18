@@ -1,4 +1,5 @@
 # Release Approval Patterns
+
 ## Introduction
 
 Release approval is the **final decision** before production deployment: "Is this code ready for production?" The CD Model supports two fundamentally different approaches to this decision:

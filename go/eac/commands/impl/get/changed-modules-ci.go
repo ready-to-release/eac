@@ -1,14 +1,10 @@
 // Command: get changed-modules-ci
 // Short: Get modules requiring rebuild since last successful CI run
-// Flags:
-//   --as-yaml: Output as YAML (default)
-//   --as-json: Output as JSON
-//   --as-toml: Output as TOML
-//   --format shell: Output as shell variable assignments for eval
-//   --pr-base <sha>: For PRs, the base SHA to compare against
-//   --workflow <name>: Workflow name to find last success (default: "CI Trigger")
-//   --branch <name>: Branch to check for last success (default: main)
-//   --filter-workflows: Only include modules that have a ci-{module}.yaml workflow file
+// Flag.pr-base: type=string, usage=For PRs, the base SHA to compare against
+// Flag.workflow: type=string, default=CI Trigger, usage=Workflow name to find last success
+// Flag.branch: type=string, default=main, usage=Branch to check for last success
+// Flag.filter-workflows: type=bool, usage=Only include modules that have a ci-{module}.yaml workflow file
+// Flag.format: type=string, usage=Output format (shell outputs shell variables; otherwise uses standard get command formats)
 // Long:
 // Long: Expected Output:
 // Long: YAML list of modules needing rebuild based on CI state, including:
@@ -35,6 +31,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
@@ -44,6 +41,8 @@ import (
 func init() {
 	registry.Register(GetChangedModulesCI)
 }
+
+// changedModulesCIFlags defines valid flags for the get changed-modules-ci command
 
 // CIChangedModulesResult represents the output of the get changed-modules-ci command
 type CIChangedModulesResult struct {
@@ -62,6 +61,12 @@ type CIChangedModulesResult struct {
 }
 
 func GetChangedModulesCI() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		return 1
+	}
+
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {

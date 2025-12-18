@@ -74,14 +74,14 @@ All other commands work across languages via **capability-based dispatch**. Comm
 
 **Scan any codebase with language-aware tools:**
 
-- [`scan`](./scan/scan.md) - Runs all security scans
-- [`scan-vuln`](./scan/vuln.md) - Vulnerability scanning (Trivy)
-- [`scan-sast`](./scan/sast.md) - Static analysis (Semgrep)
-- [`scan-secrets`](./scan/secrets.md) - Secret detection (Trivy)
-- [`scan-iac`](./scan/iac.md) - Infrastructure as Code scanning (Trivy)
-- [`scan-sbom`](./scan/sbom.md) - Software Bill of Materials generation
-- [`scan-compliance`](./scan/compliance.md) - Compliance checking (Trivy)
-- [`scan-zap`](./scan/zap.md) - Dynamic application security testing (OWASP ZAP)
+- [`scan`](./scan/scan.md) - Runs security scans with `--scanner` flag
+  - `--scanner vuln` - Vulnerability scanning (Trivy)
+  - `--scanner sast` - Static analysis (Semgrep)
+  - `--scanner secrets` - Secret detection (Trivy)
+  - `--scanner iac` - Infrastructure as Code scanning (Trivy)
+  - `--scanner sbom` - Software Bill of Materials generation
+  - `--scanner compliance` - Compliance checking (Trivy)
+- [`scan zap`](./scan/zap.md) - Dynamic application security testing (OWASP ZAP)
 
 Security tools detect languages automatically.
 

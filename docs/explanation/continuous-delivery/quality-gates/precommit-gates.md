@@ -1,4 +1,5 @@
 # Pre-commit Quality Gates
+
 ## Introduction
 
 Pre-commit quality gates are the first line of defense in the CD Model, executing at **Stage 2** before code is committed to version control. These gates provide immediate feedback to developers while context is fresh, catching issues when they're easiest and cheapest to fix.

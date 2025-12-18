@@ -1,4 +1,5 @@
 # Example Mapping Card Colors
+
 Reference for card colors and meanings in Example Mapping workshops.
 
 ## Card Color Reference

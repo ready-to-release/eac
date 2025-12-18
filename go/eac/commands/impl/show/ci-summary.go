@@ -1,15 +1,6 @@
 // Command: show ci-summary
 // Description: Generate CI workflow summary for a module
 // Short: Generate CI workflow summary for a module
-// Long: The show ci-summary command generates a formatted CI workflow summary with job results.
-// Long: This command is designed to be used in GitHub Actions workflows to create consistent CI summaries.
-// Long: The output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.
-// Long:
-// Long: Expected Output:
-// Long: - Markdown-formatted CI summary with job results table
-// Long: - Shows build, test (Linux/Windows), container test, and scan results
-// Long: - Supports both container and binary module types
-// Long:
 // Flag.build: type=string, usage=Build job result (success/failure/skipped)
 // Flag.container: type=bool, default=false, usage=Whether this is a container module
 // Flag.container-test: type=string, usage=Container test result (for container modules)
@@ -19,6 +10,15 @@
 // Flag.test-on-windows: type=bool, default=false, usage=Whether Windows tests were enabled
 // Flag.scan: type=string, usage=Security scan result
 // Flag.scans-enabled: type=bool, default=false, usage=Whether scans were enabled
+// Long: The show ci-summary command generates a formatted CI workflow summary with job results.
+// Long: This command is designed to be used in GitHub Actions workflows to create consistent CI summaries.
+// Long: The output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.
+// Long:
+// Long: Expected Output:
+// Long: - Markdown-formatted CI summary with job results table
+// Long: - Shows build, test (Linux/Windows), container test, and scan results
+// Long: - Supports both container and binary module types
+
 package show
 
 import (
@@ -26,6 +26,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 )
@@ -36,6 +37,12 @@ func init() {
 
 // ShowCISummary generates a CI workflow summary
 func ShowCISummary() int {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	args := os.Args[3:] // Skip program name, "show", and "ci-summary"
 
 	buildResult := ""

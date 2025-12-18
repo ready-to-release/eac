@@ -7,25 +7,6 @@ import (
 	"path/filepath"
 )
 
-// Intent: Provide a high-level helper for AI-powered contract generation
-//
-// Design (Three Rules of Vibe Coding):
-//
-// Easy to understand:
-//   - Single function call to generate with validation
-//   - Automatic contract loading from standard paths
-//   - Clear configuration struct
-//
-// Easy to change:
-//   - Pluggable executors (OpenAI, Anthropic, etc.)
-//   - Optional debug mode
-//   - Configurable retry attempts
-//
-// Hard to break:
-//   - Automatic anti-corruption filtering
-//   - Validation with retry
-//   - Detailed error reporting
-
 // GeneratorConfig configures AI generation with contracts
 type GeneratorConfig struct {
 	// ContractName is the name of the contract (e.g., "commit-message", "specifications")

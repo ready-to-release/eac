@@ -19,6 +19,7 @@ import (
 
 	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
 	showinternal "github.com/ready-to-release/eac/go/eac/commands/impl/show/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -30,6 +31,12 @@ func init() {
 
 // ShowArtifacts displays resolved artifacts for a module
 func ShowArtifacts() int {
+	// Validate flags against registry metadata
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
+
 	args := os.Args[3:] // Skip program name, "show", and "artifacts"
 
 	if len(args) == 0 {
@@ -40,28 +47,17 @@ func ShowArtifacts() int {
 	moduleName := args[0]
 	targetOS := runtime.GOOS
 	targetArch := runtime.GOARCH
-	allPlatforms := false
-	missingOnly := false
+	allPlatforms := flags.HasFlag(args, "--all-platforms", "")
+	missingOnly := flags.HasFlag(args, "--missing-only", "")
 
 	// Parse flags
-	for i := 1; i < len(args); i++ {
-		arg := args[i]
-		switch arg {
-		case "--all-platforms":
-			allPlatforms = true
-		case "--missing-only":
-			missingOnly = true
-		case "--os":
-			if i+1 < len(args) {
-				targetOS = args[i+1]
-				i++
-			}
-		case "--arch":
-			if i+1 < len(args) {
-				targetArch = args[i+1]
-				i++
-			}
-		}
+	targetOS = flags.GetFlagValue(args, "--os")
+	if targetOS == "" {
+		targetOS = runtime.GOOS
+	}
+	targetArch = flags.GetFlagValue(args, "--arch")
+	if targetArch == "" {
+		targetArch = runtime.GOARCH
 	}
 
 	return showArtifactsForModule(moduleName, targetOS, targetArch, allPlatforms, missingOnly)

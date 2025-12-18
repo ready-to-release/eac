@@ -1,7 +1,6 @@
 // Command: get suite
 // Description: Get test suite information as structured data
 // Usage: get suite <suite-moniker>
-// Flags:
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML
@@ -18,6 +17,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/internal/testdata"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
@@ -31,8 +31,16 @@ func init() {
 	registry.Register(GetSuite)
 }
 
+// suiteFlags defines valid flags for the get suite command
+
 // GetSuite returns test suite information as structured data (YAML/JSON/TOML)
 func GetSuite() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		return 1
+	}
+
 	// Parse arguments - expect suite moniker after "get suite"
 	args := os.Args[1:]
 

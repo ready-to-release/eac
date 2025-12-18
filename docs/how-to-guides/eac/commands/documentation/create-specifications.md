@@ -1,4 +1,5 @@
 # Create Specifications
+
 ## What You'll Accomplish
 
 Generate Gherkin BDD specifications from natural language requirements using AI.
@@ -6,10 +7,13 @@ Generate Gherkin BDD specifications from natural language requirements using AI.
 ## Prerequisites
 
 ### Required Knowledge
+
 **New to specifications?** Learn these concepts first:
+
 - [Your First Feature Specification](../../../../tutorials/getting-started/first-specification.md) - Understand Gherkin syntax and Given/When/Then pattern
 
 ### Required Setup
+
 - AI provider configured
 - Clear requirements or user stories
 - Specifications directory exists

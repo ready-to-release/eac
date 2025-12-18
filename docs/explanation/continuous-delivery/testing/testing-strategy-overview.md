@@ -1,4 +1,5 @@
 # Testing Strategy: Overview
+
 ## Introduction
 
 Testing is integrated throughout every stage of the Continuous Delivery Model. Rather than treating testing as a separate phase that happens after development, the CD Model embraces continuous validation through multiple test levels executed at different stages.

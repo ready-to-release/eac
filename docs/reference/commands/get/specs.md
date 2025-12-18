@@ -13,6 +13,7 @@ r2r eac get specs ext-eac --as-json
 ```
 
 Returns specs from:
+
 - `specs/eac-commands/` (dependency)
 - `specs/r2r-cli/` (dependency)
 - `specs/ext-eac/` (if any)

@@ -1,4 +1,5 @@
 # Event Storming Overview
+>
 > **Collaborative technique for discovering Ubiquitous Language through domain exploration**
 
 ---

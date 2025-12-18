@@ -26,8 +26,10 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 )
+
 
 func init() {
 	registry.Register(PipelineStatus)
@@ -55,6 +57,12 @@ type StatusCommitInfo struct {
 }
 
 func PipelineStatus() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
 	// Parse flags
 	ref := "main"
 	commitSHA := ""

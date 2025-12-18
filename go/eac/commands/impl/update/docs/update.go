@@ -23,11 +23,14 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/books"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/buildutil"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
+
+// commandFlags defines valid flags for the update docs command
 
 var log = logging.C()
 
@@ -37,8 +40,14 @@ func init() {
 
 // UpdateDocs scans docs/ for mermaid diagrams and drawio images, updates the cache
 func UpdateDocs() int {
-	// Parse flags
+	// Validate flags
 	args := os.Args[2:]
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		log.Errorf("%v", err)
+		return 1
+	}
+
+	// Parse flags
 	dryRun := false
 	force := false
 	verbose := false

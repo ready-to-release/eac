@@ -33,6 +33,7 @@ import (
 	"time"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/scan/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
@@ -58,6 +59,15 @@ func ZAP() int {
 	if len(args) > 0 && (args[0] == "--help" || args[0] == "-h") {
 		printZAPUsage()
 		return 0
+	}
+
+	// Define valid flags
+
+	// Validate flags
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		log.Errorf("%v", err)
+		printZAPUsage()
+		return 1
 	}
 
 	// Parse module moniker and flags

@@ -1,4 +1,5 @@
 # Create Feature Workspace
+
 ## What You'll Accomplish
 
 Set up an isolated workspace for developing a new feature without affecting your main branch. Uses git worktrees to enable parallel development on multiple features.
@@ -6,10 +7,13 @@ Set up an isolated workspace for developing a new feature without affecting your
 ## Prerequisites
 
 ### Required Knowledge
+
 **New to git worktrees?** Learn these concepts first:
+
 - [Working with Git Worktrees](../../../../tutorials/core-workflows/working-with-worktrees.md) - Understand parallel development with workspaces
 
 ### Required Setup
+
 - Working in a git repository
 - Changes in current workspace committed
 - Know the feature name or branch you want to create

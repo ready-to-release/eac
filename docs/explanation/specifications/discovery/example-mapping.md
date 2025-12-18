@@ -1,4 +1,5 @@
 # Example Mapping
+
 Workshop technique for discovering requirements through collaborative conversation in 15-25 minutes.
 
 ---

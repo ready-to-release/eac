@@ -1,4 +1,5 @@
 # File Organization
+>
 > **Directory structure and file naming conventions for Go/Godog projects**
 
 Learn how to organize specification files, step definitions, and unit tests in Go projects.
@@ -165,6 +166,7 @@ project/
 **Pattern**: `<name>.go`
 
 **Examples**:
+
 - `config.go` - Configuration handling
 - `parser.go` - Parsing logic
 - `validator.go` - Validation logic
@@ -174,6 +176,7 @@ project/
 **Pattern**: `<name>_test.go`
 
 **Examples**:
+
 - `config_test.go` - Tests for config.go
 - `parser_test.go` - Tests for parser.go
 - `validator_test.go` - Tests for validator.go
@@ -185,6 +188,7 @@ project/
 **Purpose**: Clearly identify ultra-fast tests
 
 **Examples**:
+
 - `parser_l0_test.go` - L0 tests for parser
 - `validator_l0_test.go` - L0 tests for validator
 
@@ -197,6 +201,7 @@ project/
 **Build Tag**: `//go:build L2`
 
 **Examples**:
+
 - `database_integration_test.go`
 - `api_integration_test.go`
 

@@ -1,4 +1,5 @@
 # Getting Started with Commands
+
 Learn the basics of using EAC commands to explore and interact with your repository.
 
 ## In This Section
