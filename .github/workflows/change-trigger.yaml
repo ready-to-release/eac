@@ -505,23 +505,17 @@ jobs:
           echo "> Check individual \`CI: <module>\` checks for build results." >> $GITHUB_STEP_SUMMARY
 
   # =========================================
-  # Release Trigger (push or workflow_dispatch to main)
+  # Dispatch Release Trigger (push or workflow_dispatch to main)
   # =========================================
-  # After CI workflows are dispatched, check for pending releases and trigger them.
-  # Releases are processed in dependency order (layer by layer) with await.
-  trigger-releases:
-    name: Trigger Releases
+  # After CI completes, dispatch to release-trigger.yaml for release orchestration.
+  # The release-trigger workflow handles: CI await, release await, pending checks, layer execution.
+  dispatch-releases:
+    name: Dispatch Releases
     needs: [summary, detect-changes]
     if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      actions: write
     steps:
       - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Commands Binary
         id: commands
@@ -529,51 +523,36 @@ jobs:
         with:
           trigger-run-id: ${{ github.run_id }}
 
-      # Step 1: Wait for all dispatched CI workflows to complete
+      # Wait for CI workflows to complete before triggering releases
       - name: Await CI workflows
         env:
           GH_TOKEN: ${{ github.token }}
           COMMANDS: ${{ steps.commands.outputs.commands-path }}
         run: |
+          echo "Waiting for CI workflows to complete..."
           $COMMANDS pipeline await-ci --timeout 1800
+          echo "✅ CI workflows complete"
 
-      # Step 2: Wait for any active release workflows to complete
-      - name: Await active releases
+      # Dispatch release-trigger.yaml with modules that had CI dispatched
+      - name: Dispatch release trigger
         env:
           GH_TOKEN: ${{ github.token }}
-          COMMANDS: ${{ steps.commands.outputs.commands-path }}
         run: |
-          $COMMANDS pipeline await-release --timeout 600
+          DISPATCHED_MODULES="${{ needs.detect-changes.outputs.changed-modules }}"
 
-      # Step 3: Check for pending releases (semver from changelog, calver from dispatched CI)
-      - name: Check for pending releases
-        id: check
-        uses: ./.github/actions/check-pending-releases
-        with:
-          dispatched-modules: ${{ needs.detect-changes.outputs.changed-modules }}
+          echo "Dispatching release-trigger.yaml..."
+          echo "  Dispatched modules: $DISPATCHED_MODULES"
+          echo ""
 
-      # Step 4: Trigger releases in dependency order (layer by layer)
-      - name: Trigger releases by layer
-        if: steps.check.outputs.has_pending == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          COMMANDS: ${{ steps.commands.outputs.commands-path }}
-          LAYERS_JSON: ${{ steps.check.outputs.layers_json }}
-        run: |
-          $COMMANDS release execute-layers --layers "$LAYERS_JSON"
+          gh workflow run release-trigger.yaml \
+            --ref main \
+            -f skip-ci-await=true \
+            -f dispatched-modules="$DISPATCHED_MODULES"
 
-      - name: Release Summary
-        if: always()
-        env:
-          COMMANDS: ${{ steps.commands.outputs.commands-path }}
-        run: |
+          echo "✅ Release trigger dispatched"
+          echo ""
           echo "## Release Trigger" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-
-          if [ "${{ steps.check.outputs.has_pending }}" = "true" ]; then
-            LAYER_COUNT="${{ steps.check.outputs.layer_count }}"
-            LAYERS_JSON='${{ steps.check.outputs.layers_json }}'
-            $COMMANDS show release-summary --layers "$LAYERS_JSON" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "No pending releases." >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "Dispatched \`release-trigger.yaml\` to handle pending releases." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Dispatched modules**: \`$DISPATCHED_MODULES\`" >> $GITHUB_STEP_SUMMARY

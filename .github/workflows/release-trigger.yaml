@@ -1,0 +1,118 @@
+# Release Trigger - Orchestrates pending releases after CI completion
+#
+# This workflow checks for pending releases and triggers them in dependency order.
+# It can be invoked:
+# 1. Automatically by change-trigger.yaml after CI completes
+# 2. Manually via workflow_dispatch to retry failed releases
+#
+# Pipeline:
+# 1. await-ci: Verify CI has passed (should be instant if called from change-trigger)
+# 2. await-releases: Wait for any active release workflows to complete
+# 3. check-pending: Detect pending releases (semver from changelog, calver from CI)
+# 4. execute-layers: Trigger releases in dependency order
+#
+# Releases are processed layer by layer:
+# - Layer 0: Independent modules (r2r-cli, ext-eac, docs, books)
+# - Layer 1: Bundle modules that depend on Layer 0 (r2r-eac-bundle)
+
+name: "Release Trigger"
+
+on:
+  workflow_dispatch:
+    inputs:
+      skip-ci-await:
+        description: 'Skip CI await (use when CI already verified)'
+        required: false
+        type: boolean
+        default: false
+      dispatched-modules:
+        description: 'Space-separated list of modules that had CI dispatched (optional, for calver detection)'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  trigger-releases:
+    name: Trigger Releases
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
+        with:
+          trigger-run-id: ${{ github.run_id }}
+
+      # Step 1: Verify CI has passed (should be instant if called from change-trigger)
+      - name: Await CI workflows
+        if: inputs.skip-ci-await != true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
+        run: |
+          echo "Verifying CI has passed for current commit..."
+          echo ""
+          # Short timeout since CI should already be complete
+          $COMMANDS pipeline await-ci --timeout 60 || {
+            echo ""
+            echo "::warning::CI not complete - waiting longer..."
+            $COMMANDS pipeline await-ci --timeout 1800
+          }
+          echo ""
+          echo "✅ CI verification complete"
+
+      # Step 2: Wait for any active release workflows to complete
+      - name: Await active releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
+        run: |
+          echo "Checking for active release workflows..."
+          $COMMANDS pipeline await-release --timeout 600
+          echo "✅ No conflicting releases in progress"
+
+      # Step 3: Check for pending releases (semver from changelog, calver from dispatched CI)
+      - name: Check for pending releases
+        id: check
+        uses: ./.github/actions/check-pending-releases
+        with:
+          dispatched-modules: ${{ inputs.dispatched-modules }}
+
+      # Step 4: Trigger releases in dependency order (layer by layer)
+      - name: Trigger releases by layer
+        if: steps.check.outputs.has_pending == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
+          LAYERS_JSON: ${{ steps.check.outputs.layers_json }}
+        run: |
+          echo "Executing releases in dependency order..."
+          echo ""
+          $COMMANDS release execute-layers --layers "$LAYERS_JSON"
+
+      - name: Release Summary
+        if: always()
+        env:
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
+        run: |
+          echo "## Release Trigger" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ steps.check.outputs.has_pending }}" = "true" ]; then
+            LAYERS_JSON='${{ steps.check.outputs.layers_json }}'
+            $COMMANDS show release-summary --layers "$LAYERS_JSON" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No pending releases detected." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Releases are triggered when:" >> $GITHUB_STEP_SUMMARY
+            echo "- **Semver modules**: CHANGELOG.md has unreleased version" >> $GITHUB_STEP_SUMMARY
+            echo "- **Calver modules**: CI passed for module with release workflow" >> $GITHUB_STEP_SUMMARY
+          fi

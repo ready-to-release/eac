@@ -208,7 +208,8 @@ func buildPerModuleCIResult(workspaceRoot, headSHA, prBase string, filterWorkflo
 					files, _ := getChangedFilesBetweenSHAs(baseSHA, headSHA, workspaceRoot)
 					moduleFiles := filterFilesForModule(files, module, workspaceRoot, ciExcludedFiles)
 					result.FilesByModule[module] = moduleFiles
-					for _, f := range files {
+					// Only count files directly owned by this module
+					for _, f := range moduleFiles {
 						allChangedFilesSet[f] = true
 					}
 				}
