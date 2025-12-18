@@ -330,6 +330,7 @@ modules:
       - release-evidence
     depends_on:
       - eac-commands
+    depends_on_ci:
       - r2r-cli
     build:
       artifacts:
@@ -386,7 +387,7 @@ modules:
     description: Cross-platform installer scripts for downloading and installing the R2R CLI from GitHub releases
     versioning:
       scheme: SemVer
-    depends_on:
+    depends_on_ci:
       - r2r-cli
     build:
       handler: scripts
@@ -410,6 +411,8 @@ modules:
       scheme: SemVer
     depends_on:
       - eac-commands
+    depends_on_ci:
+      - r2r-cli
     build:
       handler: scripts
     files:
