@@ -1,10 +1,10 @@
 // Command: get changed-modules
 // Short: Get modules affected by changed files
-//   --as-yaml: Output as YAML (default)
-//   --as-json: Output as JSON
-//   --as-toml: Output as TOML
-//   --base <ref>: Base ref to compare against (default: HEAD)
-//   --from-stdin: Read file paths from stdin (one per line) instead of git diff
+// Flag.as-yaml: type=bool, usage=Output as YAML (default)
+// Flag.as-json: type=bool, usage=Output as JSON
+// Flag.as-toml: type=bool, usage=Output as TOML
+// Flag.base: type=string, usage=Base ref to compare against (default: HEAD)
+// Flag.from-stdin: type=bool, usage=Read file paths from stdin (one per line) instead of git diff
 // Long:
 // Long: Expected Output:
 // Long: YAML list of module monikers that have changes based on git diff against the specified base ref,
