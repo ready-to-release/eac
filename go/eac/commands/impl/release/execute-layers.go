@@ -163,7 +163,7 @@ func ReleaseExecuteLayers() int {
 				continue
 			}
 
-			// Dispatch release workflow
+			// Wait for tag-triggered release workflow
 			workflow := fmt.Sprintf("release-%s.yaml", mod.Module)
 			workflowPath := filepath.Join(workspaceRoot, ".github", "workflows", workflow)
 
@@ -172,11 +172,11 @@ func ReleaseExecuteLayers() int {
 				continue
 			}
 
-			log.Infof("  [%s] Dispatching %s", mod.Module, workflow)
+			log.Infof("  [%s] Waiting for %s (triggered by tag push)", mod.Module, workflow)
 
-			runID, err := dispatchReleaseWorkflow(workspaceRoot, workflow, mod.Version)
+			runID, err := waitForTagTriggeredWorkflow(workspaceRoot, workflow, mod.Tag)
 			if err != nil {
-				log.Errorf("  [%s] Error dispatching workflow: %v", mod.Module, err)
+				log.Errorf("  [%s] Error finding workflow run: %v", mod.Module, err)
 				failedModules = append(failedModules, mod.Module)
 				continue
 			}
@@ -258,47 +258,37 @@ func createAndPushTag(workspaceRoot, tag, module, version string) error {
 	return nil
 }
 
-// dispatchReleaseWorkflow dispatches a release workflow and returns the run ID
-func dispatchReleaseWorkflow(workspaceRoot, workflow, version string) (string, error) {
-	workflowPath := filepath.Join(workspaceRoot, ".github", "workflows", workflow)
+// waitForTagTriggeredWorkflow waits for a workflow triggered by tag push and returns the run ID
+func waitForTagTriggeredWorkflow(workspaceRoot, workflow, tag string) (string, error) {
+	// Wait for the tag-triggered workflow to appear (tag push triggers it automatically)
+	// Poll for up to 30 seconds
+	for i := 0; i < 6; i++ {
+		time.Sleep(5 * time.Second)
 
-	// Check if workflow accepts version input
-	content, err := os.ReadFile(workflowPath)
-	if err != nil {
-		return "", err
+		// Find run triggered by tag push
+		cmd := exec.Command("gh", "run", "list", "-w", workflow, "-L", "5",
+			"--json", "databaseId,status,event,headBranch",
+			"-q", fmt.Sprintf(`.[] | select(.headBranch == "%s" and (.status == "queued" or .status == "in_progress" or .status == "completed")) | .databaseId`, tag))
+		cmd.Dir = workspaceRoot
+
+		output, err := cmd.Output()
+		if err == nil && len(strings.TrimSpace(string(output))) > 0 {
+			return strings.TrimSpace(string(output)), nil
+		}
+
+		// Also try finding by recent runs (fallback)
+		cmd = exec.Command("gh", "run", "list", "-w", workflow, "-L", "1",
+			"--json", "databaseId,status",
+			"-q", `.[0] | select(.status == "queued" or .status == "in_progress") | .databaseId`)
+		cmd.Dir = workspaceRoot
+
+		output, err = cmd.Output()
+		if err == nil && len(strings.TrimSpace(string(output))) > 0 {
+			return strings.TrimSpace(string(output)), nil
+		}
 	}
 
-	// Simple check for version input
-	hasVersionInput := strings.Contains(string(content), "inputs:") &&
-		strings.Contains(string(content), "version:")
-
-	var cmd *exec.Cmd
-	if hasVersionInput {
-		cmd = exec.Command("gh", "workflow", "run", workflow, "-f", fmt.Sprintf("version=%s", version))
-	} else {
-		cmd = exec.Command("gh", "workflow", "run", workflow)
-	}
-	cmd.Dir = workspaceRoot
-
-	if err := cmd.Run(); err != nil {
-		return "", err
-	}
-
-	// Wait briefly for workflow to register
-	time.Sleep(5 * time.Second)
-
-	// Find run ID
-	cmd = exec.Command("gh", "run", "list", "-w", workflow, "-L", "1",
-		"--json", "databaseId,status",
-		"-q", `.[0] | select(.status == "queued" or .status == "in_progress") | .databaseId`)
-	cmd.Dir = workspaceRoot
-
-	output, err := cmd.Output()
-	if err != nil {
-		return "", nil // Non-fatal, run might not be found yet
-	}
-
-	return strings.TrimSpace(string(output)), nil
+	return "", fmt.Errorf("workflow run not found after tag push")
 }
 
 // awaitWorkflowRun waits for a workflow run to complete
