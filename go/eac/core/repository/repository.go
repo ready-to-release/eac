@@ -67,12 +67,6 @@ func GetRepositoryRoot(startPath string) (string, error) {
 		return filepath.Clean(repoRoot), nil
 	}
 
-	// Check for Docker R2R mode - repository is mounted at /var/task
-	// Only applies when no explicit override is set
-	if os.Getenv("R2R_DOCKER_MODE") == "true" {
-		return "/var/task", nil
-	}
-
 	// Use current directory if no path provided
 	if startPath == "" {
 		var err error
@@ -103,10 +97,19 @@ func GetRepositoryRoot(startPath string) (string, error) {
 		parentPath := filepath.Dir(currentPath)
 		if parentPath == currentPath {
 			// Reached filesystem root without finding .git
-			return "", NewRepositoryError("find", absPath, nil, "not a git repository (or any parent up to mount point)")
+			break
 		}
 		currentPath = parentPath
 	}
+
+	// If in Docker mode and no git root found, fall back to /var/task
+	// This handles the case where we're in a subdirectory of the mounted repo
+	if os.Getenv("R2R_DOCKER_MODE") == "true" {
+		return "/var/task", nil
+	}
+
+	// Not in Docker mode and no git root found - error
+	return "", NewRepositoryError("find", absPath, nil, "not a git repository (or any parent up to mount point)")
 }
 
 // FileInfo represents information about a repository file

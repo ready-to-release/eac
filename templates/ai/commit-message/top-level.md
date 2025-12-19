@@ -33,15 +33,15 @@ Changes: N files, +X insertions, -Y deletions
 ## Example
 
 ```text
-refactor(multi-module): simplify commit message prompts
+feat(api): add user authentication endpoint
 
-Auditor-Summary: Removed template embedding for clearer AI instructions.
+Auditor-Summary: Implements JWT-based authentication for API access.
 
-This commit simplifies the prompts by removing YAML template variables
-and using direct format instructions. Updated both top-level and module
-prompts to show concrete examples rather than abstract schemas.
+This commit adds a new authentication endpoint that validates user
+credentials and returns JWT tokens. Includes rate limiting and input
+validation for security.
 
-Changes: 8 files, +95 insertions, -150 deletions
+Changes: 12 files, +450 insertions, -20 deletions
 ```
 
 ## Output Rules

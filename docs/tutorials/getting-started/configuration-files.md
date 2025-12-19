@@ -126,6 +126,7 @@ These files ship with EAC and provide default configurations. You **don't need t
 | `security-tools.yml` | Security tool configurations | ❌ No (uses system default) |
 | `logging.yml` | Logging configuration | ❌ No (uses system default) |
 | `environments.yml` | Test environment definitions | ❌ No (uses system default) |
+| `test-suites.yml` | Test suite definitions (unit, integration, acceptance, production-verification) | ❌ No (uses system default) |
 | `testing-tags.yml` | Test tag definitions | ❌ No (uses system default) |
 
 **How it works:**
@@ -165,7 +166,12 @@ These files are created by EAC commands and stored in your repository:
 |------|-----------|---------|---------|
 | `repository.yml` | `r2r eac analyze modules` | Repository metadata and discovered modules | ✅ Yes |
 | `books.yml` | `r2r eac analyze books` | Architecture patterns found in code | ✅ Yes |
-| `test-suites.yml` | `r2r eac analyze tests` | Test suite configurations | ✅ Yes |
+
+**Note on `test-suites.yml`**: This file has **system defaults** (see Section 2 above) providing standard test suites (unit, integration, acceptance, production-verification). You can optionally generate a customized version:
+
+| File | Created By | Purpose | Commit? |
+|------|-----------|---------|---------|
+| `test-suites.yml` | `r2r eac analyze tests` (optional) | Custom test suite configurations | ✅ Yes (if customized) |
 
 **Example: `repository.yml` (generated)**
 
@@ -193,7 +199,7 @@ modules:
 # Run analyze to create repository.yml and books.yml
 r2r eac analyze modules
 
-# Run analyze tests to create test-suites.yml and testing-tags.yml
+# Optional: Generate custom test-suites.yml (system defaults work automatically)
 r2r eac analyze tests
 ```
 
@@ -278,7 +284,6 @@ For details on the file formats, see the [Init Command Reference](../../referenc
 
 - `repository.yml`
 - `books.yml`
-- `test-suites.yml`
 
 ✅ Team configuration (optional, team decides)
 
@@ -288,6 +293,7 @@ For details on the file formats, see the [Init Command Reference](../../referenc
 
 - `ai-config.yml` (only if you created a custom version)
 - `module-types.yml` (only if you created a custom version)
+- `test-suites.yml` (only if you generated/customized it)
 - `testing-tags.yml` (only if you created a custom version)
 - etc.
 
