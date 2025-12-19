@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/test/internal/cucumber"
+	sharedTemplate "github.com/ready-to-release/eac/go/eac/commands/internal/template"
 )
 
 // CollectModuleReports finds and parses all cucumber.json and .log files in the test run directory
@@ -134,7 +135,7 @@ func processeCucumberReport(path, testRunDir string, moduleMap map[string]*Modul
 		featureInfo := FeatureReportData{
 			Name:          feature.Name,
 			URI:           feature.URI,
-			NormalizedURI: NormalizeSpecPath(feature.URI),
+			NormalizedURI: sharedTemplate.NormalizeSpecPath(feature.URI),
 			Tags:          tags,
 			TestCount:     testCount,
 			PassedCount:   passedCount,

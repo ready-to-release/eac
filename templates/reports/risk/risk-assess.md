@@ -1,4 +1,4 @@
-# Risk Assessment Report (Detailed)
+# Risk Assessment Report
 
 **Generated:** {{ .GeneratedAt }}
 

@@ -439,6 +439,12 @@ func MergeRepository(defaults, user *RepositoryConfig) *RepositoryConfig {
 	if user.Conventions.RiskControlsDir != "" {
 		result.Conventions.RiskControlsDir = user.Conventions.RiskControlsDir
 	}
+	if user.Conventions.RiskReportsCategory != "" {
+		result.Conventions.RiskReportsCategory = user.Conventions.RiskReportsCategory
+	}
+	if user.Conventions.RiskAssessmentTemplate != "" {
+		result.Conventions.RiskAssessmentTemplate = user.Conventions.RiskAssessmentTemplate
+	}
 	if user.Conventions.TemplateSpecsDir != "" {
 		result.Conventions.TemplateSpecsDir = user.Conventions.TemplateSpecsDir
 	}

@@ -20,7 +20,6 @@
 // Flag.profile: type=string, shorthand=p, required=true, usage=Path to OSCAL profile JSON file
 // Flag.max-evidence-age: type=string, default=24h, usage=Maximum age for evidence before warning (e.g., 24h, 7d)
 // Flag.suites: type=[]string, default=all, usage=Test suites to check for evidence (e.g., all, integration, acceptance)
-// Flag.report-template: type=string, default=risk-assessment-detailed, usage=Report template variant (risk-assessment, risk-assessment-summary, risk-assessment-detailed)
 // Flag.sequential: type=bool, default=false, usage=Run assessments sequentially instead of parallel
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Save intermediate outputs to out/logs/risk/
 // Args: modules
@@ -66,7 +65,6 @@ type AssessConfig struct {
 	Logger         *logging.Logger
 	Timestamp      string // Timestamp for this assessment run (format: 2006-01-02T15-04-05)
 	OutputDir      string // Base output directory for this run: out/risk/<timestamp>/
-	ReportTemplate string // Report template variant (default: risk-assessment-detailed)
 }
 
 // ModuleAssessmentResult holds the results of assessing a single module.
@@ -231,7 +229,6 @@ func parseAssessConfig() (*AssessConfig, error) {
 
 	config := &AssessConfig{
 		MaxEvidenceAge: 24 * time.Hour,
-		ReportTemplate: "risk-assessment-detailed", // Default to detailed template
 	}
 
 	// Parse debug flag using shared package
@@ -303,26 +300,6 @@ func parseAssessConfig() (*AssessConfig, error) {
 			}
 
 			config.MaxEvidenceAge = duration
-			i += 2
-
-		case arg == "--report-template":
-			if i+1 >= len(args) {
-				return nil, fmt.Errorf("--report-template requires a value")
-			}
-			template := args[i+1]
-			// Validate template variant
-			validTemplates := []string{"risk-assessment", "risk-assessment-summary", "risk-assessment-detailed"}
-			valid := false
-			for _, vt := range validTemplates {
-				if template == vt {
-					valid = true
-					break
-				}
-			}
-			if !valid {
-				return nil, fmt.Errorf("invalid template variant: %s (must be one of: %s)", template, strings.Join(validTemplates, ", "))
-			}
-			config.ReportTemplate = template
 			i += 2
 
 		case arg == "--debug" || arg == "-d" || arg == "--sequential":
@@ -494,18 +471,52 @@ func generateMarkdownReport(config *AssessConfig, results []*ModuleAssessmentRes
 	// Build template data
 	reportData := buildReportData(config, results, profile, isSubset, totalModules)
 
-	// Load EAC config for template path
-	cfg, err := eacConfig.Load(eacConfig.LoadOptions{RepoRoot: config.WorkspaceRoot})
+	// Load template with fallback (team override -> system default)
+	templatePath, err := loadRiskAssessmentTemplate(config.WorkspaceRoot)
+	if err != nil {
+		return "", err
+	}
+
+	renderer := sharedTemplate.NewRenderer(templatePath)
+	return renderer.RenderToString(reportData)
+}
+
+// loadRiskAssessmentTemplate loads the risk assessment template with fallback logic.
+// Priority 1: Team override (.r2r/eac/templates/reports/risk/risk-assess.md)
+// Priority 2: System default (templates/reports/risk/risk-assess.md)
+// This follows the same pattern as AI prompt loading (see contracts/ai_loader.go:LoadPrompt)
+func loadRiskAssessmentTemplate(workspaceRoot string) (string, error) {
+	// Load EAC config for template directory paths and filenames
+	cfg, err := eacConfig.Load(eacConfig.LoadOptions{RepoRoot: workspaceRoot})
 	if err != nil {
 		return "", fmt.Errorf("failed to load config: %w", err)
 	}
 
-	// Use selected template variant
-	templateName := config.ReportTemplate + ".md"
-	templatePath := filepath.Join(config.WorkspaceRoot, cfg.Repository.Paths.Templates, "reports", "risk", templateName)
-	renderer := sharedTemplate.NewRenderer(templatePath)
+	// Get template configuration from contracts (no hardcoded values)
+	category := cfg.Repository.Conventions.RiskReportsCategory
+	templateFilename := cfg.Repository.Conventions.RiskAssessmentTemplate
+	reportsDir := cfg.Repository.Conventions.TemplateReportsDir
 
-	return renderer.RenderToString(reportData)
+	// Priority 1: Team override (.r2r/eac/templates/reports/<category>/<template>)
+	teamOverridePath := filepath.Join(workspaceRoot, paths.R2RDir, paths.EACDir, paths.TemplatesDir, reportsDir, category, templateFilename)
+	if _, err := os.Stat(teamOverridePath); err == nil {
+		return teamOverridePath, nil
+	}
+
+	// Priority 2: System default (templates/reports/<category>/<template>)
+	// In container: uses R2R_CONTAINER_ROOT (/app where Dockerfile copies templates)
+	// In local dev: uses workspaceRoot (repo root where templates/ exists)
+	distRoot := workspaceRoot
+	if containerRoot := os.Getenv("R2R_CONTAINER_ROOT"); containerRoot != "" {
+		distRoot = containerRoot
+	}
+	systemDefaultPath := filepath.Join(distRoot, paths.TemplatesDir, reportsDir, category, templateFilename)
+	if _, err := os.Stat(systemDefaultPath); err == nil {
+		return systemDefaultPath, nil
+	}
+
+	return "", fmt.Errorf("risk assessment template not found: %s (checked team override: %s and system default: %s)",
+		templateFilename, teamOverridePath, systemDefaultPath)
 }
 
 // writeAggregatedOSCALReport creates a consolidated OSCAL JSON file (kept for compatibility).

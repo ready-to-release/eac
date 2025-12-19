@@ -145,6 +145,12 @@ When tests run, evidence is collected for AC-1.
 | Invalid OSCAL | Validate against schema |
 | Missing evidence | Run security scans and tests |
 
+## Customizing Reports
+
+The `create risk-assess` command generates reports using templates that can be customized:
+
+**Custom template**: `.r2r/eac/templates/reports/risk/risk-assess.md`
+
 ## Next Steps
 
 - [Scan for Security Issues](./scan-for-security-issues.md) → Collect evidence
