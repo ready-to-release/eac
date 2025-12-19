@@ -44,8 +44,11 @@ runs:
         COMMANDS: ${{ steps.commands.outputs.commands-path }}
         TIMEOUT: ${{ inputs.timeout }}
       run: |
-        # Wait for all release workflows except our own (r2r-eac-bundle)
-        $COMMANDS pipeline await-release --timeout $TIMEOUT --exclude r2r-eac-bundle
+        # Wait for all release workflows except:
+        # - release-r2r-eac-bundle.yaml (ourselves)
+        # - release-trigger.yaml (the orchestrator that dispatched us)
+        $COMMANDS pipeline await-release --timeout $TIMEOUT \
+          --exclude "release-r2r-eac-bundle.yaml,release-trigger.yaml"
 
     - name: Collect module releases
       id: collect

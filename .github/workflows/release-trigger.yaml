@@ -75,7 +75,8 @@ jobs:
           COMMANDS: ${{ steps.commands.outputs.commands-path }}
         run: |
           echo "Checking for active release workflows..."
-          $COMMANDS pipeline await-release --timeout 600
+          # Exclude ourselves to avoid waiting for our own workflow
+          $COMMANDS pipeline await-release --timeout 600 --exclude release-trigger.yaml
           echo "✅ No conflicting releases in progress"
 
       # Step 3: Check for pending releases (semver from changelog, calver from dispatched CI)
