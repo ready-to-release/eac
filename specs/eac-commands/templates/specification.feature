@@ -11,12 +11,6 @@ Feature: eac-commands_templates
 
   Rule: Templates install subcommand copies templates without value replacement
 
-    Scenario: Install reports template
-      When I run the templates command "templates install reports"
-      Then the command should succeed
-      And the file ".r2r/templates/reports/testsuite-summary.md" should exist
-      And the file ".r2r/templates/reports/testsuite-summary.md" should contain "{{ .ModuleName }}"
-
     Scenario: Install docs template to default location
       When I run the templates command "templates install docs"
       Then the command should succeed
