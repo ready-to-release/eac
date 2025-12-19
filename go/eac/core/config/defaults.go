@@ -460,6 +460,64 @@ func MergeRepository(defaults, user *RepositoryConfig) *RepositoryConfig {
 	return &result
 }
 
+// LoadTestSuitesDefaults loads default test suites from contract defaults.
+// Returns nil (not error) when defaults don't exist - allows tests to work without contracts folder.
+func LoadTestSuitesDefaults(repoRoot string) (*TestSuitesConfig, error) {
+	data, err := loadDefaultFile(repoRoot, "test-suites.yml")
+	if err != nil {
+		// Defaults are optional - return nil if they don't exist
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("loading test-suites defaults: %w", err)
+	}
+
+	var cfg TestSuitesConfig
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return nil, fmt.Errorf("parsing test-suites defaults: %w", err)
+	}
+
+	cfg.buildSuiteMap()
+	return &cfg, nil
+}
+
+// MergeTestSuites merges user-defined test suites with defaults.
+// User suites with same moniker override defaults, new suites are appended.
+func MergeTestSuites(defaults, user *TestSuitesConfig) *TestSuitesConfig {
+	if defaults == nil {
+		return user
+	}
+	if user == nil {
+		return defaults
+	}
+
+	// Start with defaults
+	result := &TestSuitesConfig{
+		Suites: make([]TestSuiteDef, len(defaults.Suites)),
+	}
+	copy(result.Suites, defaults.Suites)
+
+	// Build map for fast lookup
+	suiteMap := make(map[string]int)
+	for i, suite := range result.Suites {
+		suiteMap[suite.Moniker] = i
+	}
+
+	// Merge user suites (override or append)
+	for _, userSuite := range user.Suites {
+		if idx, exists := suiteMap[userSuite.Moniker]; exists {
+			// User suite completely overrides default suite with same moniker
+			result.Suites[idx] = userSuite
+		} else {
+			// Append new suite
+			result.Suites = append(result.Suites, userSuite)
+		}
+	}
+
+	result.buildSuiteMap()
+	return result
+}
+
 // MergeSystemDependencies merges user system dependencies with defaults.
 // User entries with same moniker override defaults, new entries are appended.
 func MergeSystemDependencies(defaults, user *SystemDependenciesConfig) *SystemDependenciesConfig {
