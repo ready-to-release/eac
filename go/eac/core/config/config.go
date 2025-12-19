@@ -500,13 +500,25 @@ func (c *EACConfig) LoadTestingTags(validateSchema bool) error {
 	return nil
 }
 
-// LoadTestSuites loads the test-suites configuration (optional).
+// LoadTestSuites loads the test-suites configuration.
+// Merges contract defaults with user config.
 func (c *EACConfig) LoadTestSuites(validateSchema bool) error {
-	// Check if file exists - it's optional
+	// Load defaults from contract
+	defaults, err := LoadTestSuitesDefaults(c.RepoRoot)
+	if err != nil {
+		return fmt.Errorf("loading test-suites defaults: %w", err)
+	}
+
+	// Check if user config exists
 	suitesPath := filepath.Join(c.ConfigRoot, TestSuitesFileName)
 	if _, err := os.Stat(suitesPath); os.IsNotExist(err) {
-		// Initialize empty config to guarantee non-nil
-		c.TestSuites = &TestSuitesConfig{}
+		// Use defaults only (may be nil in test environments without contract files)
+		if defaults == nil {
+			// Create empty config to guarantee non-nil
+			defaults = &TestSuitesConfig{}
+		}
+		defaults.buildSuiteMap()
+		c.TestSuites = defaults
 		return nil
 	}
 
@@ -521,13 +533,13 @@ func (c *EACConfig) LoadTestSuites(validateSchema bool) error {
 		}
 	}
 
-	var cfg TestSuitesConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
+	var userCfg TestSuitesConfig
+	if err := yaml.Unmarshal(data, &userCfg); err != nil {
 		return fmt.Errorf("failed to parse %s: %w", TestSuitesFileName, err)
 	}
 
-	cfg.buildSuiteMap()
-	c.TestSuites = &cfg
+	// Merge defaults with user config
+	c.TestSuites = MergeTestSuites(defaults, &userCfg)
 	return nil
 }
 
