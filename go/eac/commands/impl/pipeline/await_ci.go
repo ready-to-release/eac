@@ -116,8 +116,16 @@ func PipelineAwaitCI() int {
 // awaitWorkflows waits for all matching workflows to complete for a specific SHA
 func awaitWorkflows(workspaceRoot, pattern, exclude, sha string, timeout, interval int, workflowType string) int {
 	log.Infof("Waiting for %s workflows to complete...", workflowType)
+
+	// Parse comma-separated exclude list
+	var excludeList []string
 	if exclude != "" {
-		log.Infof("  Excluding workflows containing: %s", exclude)
+		for _, e := range strings.Split(exclude, ",") {
+			if trimmed := strings.TrimSpace(e); trimmed != "" {
+				excludeList = append(excludeList, trimmed)
+			}
+		}
+		log.Infof("  Excluding: %s", strings.Join(excludeList, ", "))
 	}
 	log.Info("")
 
@@ -146,8 +154,15 @@ func awaitWorkflows(workspaceRoot, pattern, exclude, sha string, timeout, interv
 		for _, wfPath := range matches {
 			wfName := filepath.Base(wfPath)
 
-			// Skip excluded workflows
-			if exclude != "" && strings.Contains(wfName, exclude) {
+			// Skip excluded workflows (exact match on filename)
+			excluded := false
+			for _, e := range excludeList {
+				if wfName == e {
+					excluded = true
+					break
+				}
+			}
+			if excluded {
 				continue
 			}
 
