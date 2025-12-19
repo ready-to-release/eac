@@ -585,11 +585,14 @@ func convertPkgPathToModulePath(pkgPath, workspaceRoot string, cfg *config.EACCo
 		// Find the module moniker for this root - check both Files.Root and Files.Repo.TestImpl
 		for _, module := range cfg.Repository.Modules {
 			// Check Files.Root (for modules where tests live in the module root)
-			if filepath.ToSlash(module.Files.Root) == moduleRoot {
+			moduleRootPath := filepath.ToSlash(module.Files.Root)
+			if moduleRoot == moduleRootPath || strings.HasPrefix(moduleRoot, moduleRootPath+"/") {
 				return module.Moniker + "/" + featureName
 			}
 			// Check Files.Repo.TestImpl (for modules like "repository" where test_impl is separate)
-			if filepath.ToSlash(module.Files.Repo.TestImpl) == moduleRoot {
+			// Use HasPrefix to match subdirectories of test_impl (e.g., go/eac/specs/impl/eac-core/config-defaults)
+			testImplPath := filepath.ToSlash(module.Files.Repo.TestImpl)
+			if testImplPath != "" && (moduleRoot == testImplPath || strings.HasPrefix(moduleRoot, testImplPath+"/")) {
 				return module.Moniker + "/" + featureName
 			}
 		}
