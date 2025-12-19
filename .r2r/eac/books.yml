@@ -288,18 +288,18 @@ books:
           - "docs/assets/lfs/pdf/**"
 
       # Dynamic content - module versions and release info
-      - type: command
-        command: "show modules"
-        target: "modules.md"
-        frontmatter:
-          title: "Included Modules"
-          description: "All modules in this release bundle"
-        order: 1
+      # - type: command
+      #   command: "show release-notes"
+      #   target: "release-notes.md"
+      #   frontmatter:
+      #     title: "Release notes"
+      #     description: "All modules in this release bundle"
+      #   order: 1
 
-      - type: command
-        command: "show dependencies"
-        target: "dependencies.md"
-        frontmatter:
-          title: "Module Dependencies"
-          description: "Dependency graph for included modules"
-        order: 2
+      # - type: command
+      #   command: "show test-summary r2r-eac-bundle"
+      #   target: "dependencies.md"
+      #   frontmatter:
+      #     title: "Module Dependencies"
+      #     description: "Dependency graph for included modules"
+      #   order: 2

@@ -448,7 +448,7 @@ modules:
       - ext-eac
       - docs
       - books
-    books:
+    evidence_books:
       - release-evidence
     release_bundle:
       title_format: "r2r-({r2r_version}) ∞ eac-({eac_version})"
