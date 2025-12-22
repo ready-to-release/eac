@@ -207,33 +207,6 @@ cat specs/eac-commands/show-help/specification.feature
 cat specs/eac-commands/init/specification.feature
 ```
 
-## Advanced: Using Background
-
-If multiple scenarios share the same setup, use `Background`:
-
-```gherkin
-Feature: my-app_shopping-cart
-
-  As a customer
-  I want to manage items in my cart
-  So that I can purchase products
-
-  Background:
-    Given I am logged in as "customer@example.com"
-    And I have an empty shopping cart
-
-  Rule: Items can be added to cart
-
-    Scenario: Add single item
-      When I add product "Widget" to cart
-      Then my cart contains 1 item
-
-    Scenario: Add multiple items
-      When I add product "Widget" to cart
-      And I add product "Gadget" to cart
-      Then my cart contains 2 items
-```
-
 The `Background` steps run before each scenario.
 
 ## Best Practices
