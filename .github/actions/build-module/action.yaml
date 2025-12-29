@@ -87,6 +87,8 @@ runs:
         COMMANDS: ${{ steps.commands.outputs.commands-path }}
         MODULE: ${{ inputs.module }}
         EXTRA_ARGS: ${{ inputs.extra-args }}
+        GITHUB_TOKEN: ${{ github.token }}
+        GITHUB_ACTOR: ${{ github.actor }}
       run: |
         # Build in isolation: --rebuild forces fresh build, --skip-depm skips module dependency resolution
         if ${COMMANDS:?COMMANDS not set} build $MODULE --rebuild --skip-depm $EXTRA_ARGS; then
