@@ -2,6 +2,7 @@ package get
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/ready-to-release/eac/go/eac/core/github"
@@ -156,7 +157,8 @@ func TestFilterCIDispatch_HeadSHA(t *testing.T) {
 }
 
 func TestFilterCIDispatch_MultipleDirectlyChanged(t *testing.T) {
-	result, err := filterCIDispatch("mod1 mod2 mod3", "", "abc123", nil, "")
+	// Use empty mock to skip file-based validation (testing directly_changed logic)
+	result, err := filterCIDispatch("mod1 mod2 mod3", "", "abc123", map[string]bool{}, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -405,6 +407,34 @@ func TestCheckModuleCIValidity_NilMockStatus(t *testing.T) {
 	// This will actually try to run gh, which may fail in test env
 	// So we just verify the function signature and parameters work correctly
 	// The actual GitHub query is integration-tested separately
+}
+
+func TestFilterCIDispatch_InvalidModule_ReturnsError(t *testing.T) {
+	// When mock is nil (production mode), invalid modules should return error
+	// Use actual workspace root to trigger validation
+	workspaceRoot := "../../../../../" // Go up to repo root from test file
+
+	// Test with a fake module that doesn't exist
+	_, err := filterCIDispatch("fake-module-xyz", "", "abc123", nil, workspaceRoot)
+	if err == nil {
+		t.Errorf("expected error for invalid module, got nil")
+	}
+	if err != nil && !strings.Contains(err.Error(), "invalid module") {
+		t.Errorf("expected 'invalid module' error, got: %v", err)
+	}
+}
+
+func TestFilterCIDispatch_InvalidInvalidatedModule_ReturnsError(t *testing.T) {
+	// Invalid modules in invalidated list should also error
+	workspaceRoot := "../../../../../"
+
+	_, err := filterCIDispatch("", "nonexistent-module", "abc123", nil, workspaceRoot)
+	if err == nil {
+		t.Errorf("expected error for invalid invalidated module, got nil")
+	}
+	if err != nil && !strings.Contains(err.Error(), "invalid module") {
+		t.Errorf("expected 'invalid module' error, got: %v", err)
+	}
 }
 
 func TestParseModuleList_EdgeCases(t *testing.T) {
