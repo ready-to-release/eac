@@ -8,7 +8,8 @@ import (
 )
 
 // ApplyInferences applies inference rules to enrich test tags
-// NOTE: L-level tags (@L0-@L4) are NEVER inferred - tests MUST have explicit L-tags.
+// L-level tags (@L1) are inferred for gotest since Go files cannot have explicit tags.
+// Godog scenarios MUST have explicit L-tags (no inference for godog).
 // Verification tags (@ov) ARE inferred: if no verification tag is present, @ov is added.
 // Tracks which tags were inferred in TestReference.InferredTags
 // Captures SourceTags (pre-inference tags) if not already set
@@ -160,9 +161,10 @@ func isDependencyInference(tags []string) bool {
 
 // GetGlobalInferences returns the standard inference rules
 //
-// NOTE: L-level tags are NOT inferred. All tests must have explicit L-tags.
-// This ensures godog can filter scenarios correctly without needing inference logic.
-// Validation enforces that all tests have proper L-tags and verification tags.
+// L-level tags are inferred for gotest (Go unit tests) since Go source files
+// cannot have explicit tag annotations like feature files can.
+// Godog scenarios MUST have explicit L-tags (no inference for godog).
+// Verification tags (@ov) are inferred if no verification tag is present.
 func GetGlobalInferences() []Inference {
 	return []Inference{
 		// Type-based: Go tests require Go toolchain
@@ -171,6 +173,15 @@ func GetGlobalInferences() []Inference {
 			IfTags:      []string{},
 			ThenAddTags: []string{"@deps:go"},
 			Description: "Go tests require Go toolchain",
+		},
+		// Go unit tests default to @L1 (unit test level)
+		// This is necessary because Go source files cannot have explicit tag annotations
+		// Unlike .feature files where you can add @L0/@L1/@L2 tags directly
+		{
+			TestTypes:   []string{"gotest"},
+			IfTags:      []string{},
+			ThenAddTags: []string{"@L1"},
+			Description: "Go unit tests default to L1 (unit test level)",
 		},
 	}
 }

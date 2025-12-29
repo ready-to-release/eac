@@ -765,10 +765,11 @@ func truncateString(s string, maxLen int) string {
 // - "Assertions" = actual test executions reported by runner (includes subtests)
 
 // getUniqueModulesFromTests extracts unique module monikers from test references
-func getUniqueModulesFromTests(tests []testing.TestReference) []string {
+// Uses ModuleMapper for accurate module ownership lookup from registry
+func getUniqueModulesFromTests(tests []testing.TestReference, mapper *ModuleMapper) []string {
 	moduleSet := make(map[string]bool)
 	for _, test := range tests {
-		module := extractModuleFromPath(test.FilePath)
+		module := mapper.GetModuleForFile(test.FilePath)
 		if module != "" {
 			moduleSet[module] = true
 		}

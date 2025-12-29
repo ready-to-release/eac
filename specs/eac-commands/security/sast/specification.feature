@@ -1,4 +1,4 @@
-@ov @deps:go @deps:docker @env:isolated-test-project @skip:broken @control:si-3 @control:sa-11
+@L2 @ov @deps:go @deps:docker @env:isolated-test-project @skip:broken @control:si-3 @control:sa-11
 Feature: security_sast
 
   As a security auditor

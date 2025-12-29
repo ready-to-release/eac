@@ -446,7 +446,7 @@ func (c *EACConfig) LoadEnvironments(validateSchema bool) error {
 	data, err := c.readConfigFileWithFallback(EnvironmentsFileName)
 	if err != nil {
 		// If file not found in either location, use empty config
-		if os.IsNotExist(err) || (err != nil && os.IsNotExist(err)) {
+		if os.IsNotExist(err) || strings.Contains(err.Error(), "not found") {
 			c.Environments = &EnvironmentsConfig{}
 			return nil
 		}
@@ -474,7 +474,7 @@ func (c *EACConfig) LoadTestingTags(validateSchema bool) error {
 	data, err := c.readConfigFileWithFallback(TestingTagsFileName)
 	if err != nil {
 		// If file not found in either location, initialize empty config
-		if os.IsNotExist(err) || (err != nil && strings.Contains(err.Error(), "not found")) {
+		if os.IsNotExist(err) || strings.Contains(err.Error(), "not found") {
 			c.TestingTags = &TestingTagsConfig{}
 			return nil
 		}
@@ -622,7 +622,7 @@ func (c *EACConfig) LoadSecurityTools(validateSchema bool) error {
 	data, err := c.readConfigFileWithFallback(SecurityToolsFileName)
 	if err != nil {
 		// If file not found in either location, use hardcoded defaults (backwards compatible)
-		if os.IsNotExist(err) || (err != nil && os.IsNotExist(err)) {
+		if os.IsNotExist(err) || strings.Contains(err.Error(), "not found") {
 			cfg := DefaultSecurityToolsConfig()
 			c.SecurityTools = &cfg
 			return nil
