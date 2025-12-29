@@ -279,6 +279,7 @@ modules:
         - tsconfig.json
         - cucumber.js
         - ".mocharc.json"
+        - ".vscodeignore"
       assets:
         - README.md
       workflows:
