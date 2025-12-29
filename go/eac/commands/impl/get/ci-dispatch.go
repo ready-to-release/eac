@@ -22,10 +22,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/github"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -158,15 +159,35 @@ func filterCIDispatch(directlyChangedStr, invalidatedStr, headSHA string, mockSt
 		HeadSHA:  headSHA,
 	}
 
+	// Get valid CI workflow modules for validation (skip when using mock for tests)
+	var validModules map[string]bool
+	if mockStatus == nil {
+		var err error
+		validModules, err = getValidCIModules(workspaceRoot)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get valid CI modules: %w", err)
+		}
+	}
+
 	// Parse directly changed modules (always dispatch)
 	directlyChanged := parseModuleList(directlyChangedStr)
 	for _, module := range directlyChanged {
+		// Validate module exists (skip validation in mock mode)
+		if validModules != nil && !validModules[module] {
+			return nil, fmt.Errorf("invalid module %q: no CI workflow ci-%s.yaml exists", module, module)
+		}
 		result.Dispatch = append(result.Dispatch, module)
 		result.Reasons[module] = "directly_changed"
 	}
 
 	// Parse invalidated modules (check for valid CI)
 	invalidatedModules := parseModuleList(invalidatedStr)
+	for _, module := range invalidatedModules {
+		// Validate module exists (skip validation in mock mode)
+		if validModules != nil && !validModules[module] {
+			return nil, fmt.Errorf("invalid module %q: no CI workflow ci-%s.yaml exists", module, module)
+		}
+	}
 
 	for _, module := range invalidatedModules {
 		hasValidCI, reason, err := checkModuleCIValidity(module, headSHA, mockStatus, workspaceRoot)
@@ -303,4 +324,25 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// getValidCIModules returns a set of valid CI workflow module names
+func getValidCIModules(workspaceRoot string) (map[string]bool, error) {
+	workflowsDir := workspaceRoot + "/.github/workflows"
+	pattern := workflowsDir + "/ci-*.yaml"
+
+	matches, err := filepath.Glob(pattern)
+	if err != nil {
+		return nil, fmt.Errorf("failed to glob CI workflows: %w", err)
+	}
+
+	modules := make(map[string]bool, len(matches))
+	for _, match := range matches {
+		base := filepath.Base(match)
+		// ci-foo.yaml -> foo
+		module := strings.TrimSuffix(strings.TrimPrefix(base, "ci-"), ".yaml")
+		modules[module] = true
+	}
+
+	return modules, nil
 }
