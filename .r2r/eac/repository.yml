@@ -273,6 +273,14 @@ modules:
         - "**/*.ts"
       tests:
         - "**/*.test.ts"
+      config:
+        - package.json
+        - package-lock.json
+        - tsconfig.json
+        - cucumber.js
+        - ".mocharc.json"
+      assets:
+        - README.md
       workflows:
         ci: .github/workflows/ci-vscode-ext-commit.yaml
       repo:
