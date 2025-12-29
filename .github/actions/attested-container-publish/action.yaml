@@ -287,7 +287,7 @@ runs:
         if [ "${{ job.status }}" = "failure" ]; then
           echo "## :x: Container Publish Failed" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          $COMMANDS pipeline ci summary-link $RUN_ID --type container --image "$IMAGE_BASE:$SOURCE_TAG" >> $GITHUB_STEP_SUMMARY
+          ${COMMANDS:?COMMANDS not set} pipeline ci summary-link $RUN_ID --type container --image "$IMAGE_BASE:$SOURCE_TAG" >> $GITHUB_STEP_SUMMARY
           exit 0
         fi
 

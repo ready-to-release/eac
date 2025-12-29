@@ -95,7 +95,7 @@ jobs:
             echo "Trigger-all override enabled - building all modules"
 
             # Dynamically discover all CI workflows
-            WORKFLOW_MODULES=$($COMMANDS get ci-workflows --format space)
+            WORKFLOW_MODULES=$(${COMMANDS:?COMMANDS not set} get ci-workflows --format space)
 
             echo "Discovered CI workflows: $WORKFLOW_MODULES"
             echo "directly_changed=all" >> $GITHUB_OUTPUT
@@ -113,10 +113,10 @@ jobs:
             # Shell format outputs: MODULES, DIRECTLY_CHANGED, INVALIDATED, BASE_SHA, IS_BOOTSTRAP, CHANGED_FILE_COUNT, FILES_BY_MODULE, MODULE_STATUS
             if [ "${{ github.event_name }}" = "pull_request" ]; then
               echo "Pull Request detected - comparing against PR base"
-              eval $($COMMANDS get changed-modules-ci --pr-base "${{ github.event.pull_request.base.sha }}" --format shell)
+              eval $(${COMMANDS:?COMMANDS not set} get changed-modules-ci --pr-base "${{ github.event.pull_request.base.sha }}" --format shell)
             else
               echo "Push detected - comparing against last successful CI"
-              eval $($COMMANDS get changed-modules-ci --format shell)
+              eval $(${COMMANDS:?COMMANDS not set} get changed-modules-ci --format shell)
             fi
 
             echo ""
@@ -199,13 +199,13 @@ jobs:
 
               # Process directly changed modules
               for module in $DIRECTLY_CHANGED; do
-                FILE_COUNT=$($COMMANDS get files-by-module "$module" --json "$FILES_BY_MODULE" --count)
+                FILE_COUNT=$(${COMMANDS:?COMMANDS not set} get files-by-module "$module" --json "$FILES_BY_MODULE" --count)
 
                 echo "<details>" >> $GITHUB_STEP_SUMMARY
                 echo "<summary><strong>$module</strong> - $FILE_COUNT file(s) changed</summary>" >> $GITHUB_STEP_SUMMARY
                 echo "" >> $GITHUB_STEP_SUMMARY
                 echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-                $COMMANDS get files-by-module "$module" --json "$FILES_BY_MODULE" --format list >> $GITHUB_STEP_SUMMARY
+                ${COMMANDS:?COMMANDS not set} get files-by-module "$module" --json "$FILES_BY_MODULE" --format list >> $GITHUB_STEP_SUMMARY
                 echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
                 echo "</details>" >> $GITHUB_STEP_SUMMARY
                 echo "" >> $GITHUB_STEP_SUMMARY
@@ -214,7 +214,7 @@ jobs:
               # Process invalidated modules (triggered due to dependency changes)
               for module in $INVALIDATED; do
                 # Get the specific reason (which dependency triggered this module)
-                TRIGGER_REASON=$($COMMANDS get module-trigger-reason "$module" --json "$MODULE_STATUS")
+                TRIGGER_REASON=$(${COMMANDS:?COMMANDS not set} get module-trigger-reason "$module" --json "$MODULE_STATUS")
                 echo "<details>" >> $GITHUB_STEP_SUMMARY
                 echo "<summary><strong>$module</strong> - $TRIGGER_REASON</summary>" >> $GITHUB_STEP_SUMMARY
                 echo "" >> $GITHUB_STEP_SUMMARY
@@ -264,7 +264,7 @@ jobs:
           echo ""
 
           # Use Go command to filter modules
-          eval $($COMMANDS get ci-dispatch \
+          eval $(${COMMANDS:?COMMANDS not set} get ci-dispatch \
             --directly-changed "$DIRECTLY_CHANGED" \
             --invalidated "$INVALIDATED" \
             --head-sha "${{ github.sha }}" \
@@ -286,7 +286,7 @@ jobs:
           echo ""
 
           # Get layers based on CI artifact dependencies
-          eval $($COMMANDS get ci-dispatch-layers --modules "$MODULES" --format shell)
+          eval $(${COMMANDS:?COMMANDS not set} get ci-dispatch-layers --modules "$MODULES" --format shell)
 
           # LAYER_COUNT, LAYER_0, LAYER_1, LAYERS_JSON are now set
           echo "layer_count=$LAYER_COUNT" >> $GITHUB_OUTPUT
@@ -385,7 +385,7 @@ jobs:
             # Layer 1 modules depend on r2r-cli - wait for it if dispatched
             if echo "$LAYER_0" | grep -qw "r2r-cli"; then
               echo "Waiting for r2r-cli CI to complete..."
-              $COMMANDS pipeline await-ci --pattern "ci-r2r-cli.yaml" --sha "${{ github.sha }}" --timeout 1200 --interval 15 || {
+              ${COMMANDS:?COMMANDS not set} pipeline await-ci --pattern "ci-r2r-cli.yaml" --sha "${{ github.sha }}" --timeout 1200 --interval 15 || {
                 echo "::error::r2r-cli CI did not complete successfully"
                 exit 1
               }
@@ -530,7 +530,7 @@ jobs:
           COMMANDS: ${{ steps.commands.outputs.commands-path }}
         run: |
           echo "Waiting for CI workflows to complete..."
-          $COMMANDS pipeline await-ci --timeout 1800
+          ${COMMANDS:?COMMANDS not set} pipeline await-ci --timeout 1800
           echo "✅ CI workflows complete"
 
       # Dispatch release-trigger.yaml with modules that had CI dispatched

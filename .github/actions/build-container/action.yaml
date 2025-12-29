@@ -59,6 +59,10 @@ inputs:
     description: Container registry
     required: false
     default: 'ghcr.io'
+  token:
+    description: 'GitHub token for registry authentication (defaults to github.token)'
+    required: false
+    default: ''
 
 outputs:
   image-name:
@@ -96,6 +100,14 @@ runs:
         echo "Container build configuration:"
         echo "  Module: $MODULE"
         echo "  Image: $IMAGE_NAME:$IMAGE_TAG"
+
+    # Login to container registry before build (required for push)
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ inputs.registry }}
+        username: ${{ github.actor }}
+        password: ${{ inputs.token || github.token }}
 
     # Download specific modules needed for integration testing
     - name: Download Module Dependencies

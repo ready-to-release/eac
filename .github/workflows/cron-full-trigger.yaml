@@ -36,6 +36,13 @@ jobs:
       run_id: ${{ steps.trigger.outputs.run_id }}
       result: ${{ steps.wait.outputs.result }}
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Commands Binary
+        id: commands
+        uses: ./.github/actions/setup-commands
+
       - name: Check if full rebuild needed
         id: check
         run: |
@@ -50,7 +57,7 @@ jobs:
           echo "Looking for successful runs in the last 2 hours..."
 
           # Use Go command to check for recent successful run
-          eval $($COMMANDS pipeline check-recent-run \
+          eval $(${COMMANDS:?COMMANDS not set} pipeline check-recent-run \
             --workflow "cron-full-trigger.yaml" \
             --sha "${{ github.sha }}" \
             --since 2h \
@@ -68,6 +75,7 @@ jobs:
             echo "No recent full rebuild found - will trigger full rebuild"
           fi
         env:
+          COMMANDS: ${{ steps.commands.outputs.commands-path }}
           GH_TOKEN: ${{ github.token }}
 
       - name: Trigger full rebuild
@@ -192,7 +200,7 @@ jobs:
             echo "- **Integration issue**: Modules work individually but fail together" >> $GITHUB_STEP_SUMMARY
             echo "- **Environment drift**: CI environment changed between runs" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            $COMMANDS pipeline ci summary-link "$RUN_ID" --type deviation >> $GITHUB_STEP_SUMMARY
+            ${COMMANDS:?COMMANDS not set} pipeline ci summary-link "$RUN_ID" --type deviation >> $GITHUB_STEP_SUMMARY
           else
             echo "| Result | Unknown |" >> $GITHUB_STEP_SUMMARY
           fi

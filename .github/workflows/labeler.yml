@@ -47,7 +47,7 @@ jobs:
           # This avoids ARG_MAX limits for PRs with many files
           RESULT=$(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files \
             --jq '.[].filename' \
-            | $COMMANDS get changed-modules --from-stdin --as-json 2>/dev/null || echo '{"modules":[]}')
+            | ${COMMANDS:?COMMANDS not set} get changed-modules --from-stdin --as-json 2>/dev/null || echo '{"modules":[]}')
 
           echo "Raw result: $RESULT"
 

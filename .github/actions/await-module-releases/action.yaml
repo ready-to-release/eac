@@ -47,7 +47,7 @@ runs:
         # Wait for all release workflows except:
         # - release-r2r-eac-bundle.yaml (ourselves)
         # - release-trigger.yaml (the orchestrator that dispatched us)
-        $COMMANDS pipeline await-release --timeout $TIMEOUT \
+        ${COMMANDS:?COMMANDS not set} pipeline await-release --timeout $TIMEOUT \
           --exclude "release-r2r-eac-bundle.yaml,release-trigger.yaml"
 
     - name: Collect module releases
@@ -61,7 +61,7 @@ runs:
 
         # Get release bundle status using shell format (no jq needed)
         # Shell format outputs: RELEASE_MAP, ALL_RELEASED
-        eval $($COMMANDS get release-bundle --format shell)
+        eval $(${COMMANDS:?COMMANDS not set} get release-bundle --format shell)
 
         echo ""
         echo "All released: $ALL_RELEASED"
@@ -82,7 +82,7 @@ runs:
         echo "" >> $GITHUB_STEP_SUMMARY
 
         # Use table format for summary (no jq needed)
-        $COMMANDS get release-bundle --format table >> $GITHUB_STEP_SUMMARY
+        ${COMMANDS:?COMMANDS not set} get release-bundle --format table >> $GITHUB_STEP_SUMMARY
 
         echo "" >> $GITHUB_STEP_SUMMARY
 

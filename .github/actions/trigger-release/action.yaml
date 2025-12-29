@@ -88,7 +88,7 @@ runs:
         fi
 
         # Generate summary using Go command
-        $COMMANDS show trigger-summary \
+        ${COMMANDS:?COMMANDS not set} show trigger-summary \
           --module="$MODULE" \
           --workflow="$WORKFLOW" \
           --workflow-desc="$WORKFLOW_DESC" \

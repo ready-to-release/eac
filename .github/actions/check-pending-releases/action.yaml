@@ -58,9 +58,9 @@ runs:
         # Use Go command to check all pending releases (semver + calver + bundles)
         # Shell format outputs: HAS_PENDING, MODULES, LAYER_COUNT, LAYERS_JSON, MODULES_JSON
         if [ -n "$DISPATCHED" ]; then
-          eval $($COMMANDS release check-pending --dispatched "$DISPATCHED" --format shell)
+          eval $(${COMMANDS:?COMMANDS not set} release check-pending --dispatched "$DISPATCHED" --format shell)
         else
-          eval $($COMMANDS release check-pending --format shell)
+          eval $(${COMMANDS:?COMMANDS not set} release check-pending --format shell)
         fi
 
         echo "Summary:"

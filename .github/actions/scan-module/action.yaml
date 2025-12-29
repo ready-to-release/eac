@@ -140,7 +140,7 @@ runs:
         echo "Running scans: $SCANS"
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-        if $COMMANDS scan $MODULE --scanner "$SCANS" --no-tui $EXTRA_ARGS; then
+        if ${COMMANDS:?COMMANDS not set} scan $MODULE --scanner "$SCANS" --no-tui $EXTRA_ARGS; then
           echo "✓ scans completed"
           scans_run="$SCANS"
         else
@@ -195,4 +195,4 @@ runs:
         # Generate summary using Go command
         # Status is derived from scan manifest (success if all scans passed)
         # Note: Diagnostic links are handled centrally by _module-ci.yaml on failure
-        $COMMANDS show scan-summary "$MODULE" --artifact-name="$ARTIFACT_NAME" >> $GITHUB_STEP_SUMMARY
+        ${COMMANDS:?COMMANDS not set} show scan-summary "$MODULE" --artifact-name="$ARTIFACT_NAME" >> $GITHUB_STEP_SUMMARY

@@ -50,7 +50,7 @@ runs:
         if [ "$INPUT_DEPS" = "auto" ]; then
           # Get build dependencies directly from the commands binary (shell format)
           # This queries module-types.yml configuration - the source of truth
-          eval $($COMMANDS get build-deps "$MODULE" --format shell)
+          eval $(${COMMANDS:?COMMANDS not set} get build-deps "$MODULE" --format shell)
           # Shell format sets: MODULE_TYPE, BUILD_DEPS
           DEPS="$BUILD_DEPS"
 
@@ -299,4 +299,4 @@ runs:
         [ "$UPX_AVAILABLE" = "true" ] && FLAGS="$FLAGS --upx-available"
 
         # Generate summary using Go command
-        $COMMANDS show deps-setup-summary $FLAGS >> $GITHUB_STEP_SUMMARY
+        ${COMMANDS:?COMMANDS not set} show deps-setup-summary $FLAGS >> $GITHUB_STEP_SUMMARY

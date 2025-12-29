@@ -79,7 +79,7 @@ runs:
         TAG_NAME: ${{ inputs.tag_name }}
       run: |
         # Generate release notes using Go command
-        $COMMANDS get cli-release-notes \
+        ${COMMANDS:?COMMANDS not set} get cli-release-notes \
           --module r2r-cli \
           --binary-prefix r2r \
           --version "$VERSION" \

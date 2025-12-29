@@ -42,7 +42,7 @@ runs:
         TAG_NAME: ${{ inputs.tag_name }}
       run: |
         COMMANDS="${{ steps.commands.outputs.commands-path }}"
-        $COMMANDS release cleanup --tag "$TAG_NAME"
+        ${COMMANDS:?COMMANDS not set} release cleanup --tag "$TAG_NAME"
 
         # Summary
         echo "### Cleanup Failed Release" >> $GITHUB_STEP_SUMMARY

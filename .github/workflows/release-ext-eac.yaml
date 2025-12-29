@@ -130,7 +130,7 @@ jobs:
               echo "Tag cleaned up. Retry after fixing." >> $GITHUB_STEP_SUMMARY
             fi
             echo "" >> $GITHUB_STEP_SUMMARY
-            $COMMANDS pipeline ci summary-link $RUN_ID --type release --workflow ci-ext-eac.yaml --commit "$COMMIT" >> $GITHUB_STEP_SUMMARY
+            ${COMMANDS:?COMMANDS not set} pipeline ci summary-link $RUN_ID --type release --workflow ci-ext-eac.yaml --commit "$COMMIT" >> $GITHUB_STEP_SUMMARY
           elif [ "$RELEASE_RESULT" = "failure" ]; then
             echo "## :x: Release Failed - Publish" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
@@ -140,7 +140,7 @@ jobs:
               echo "Tag cleaned up. Retry with same version." >> $GITHUB_STEP_SUMMARY
             fi
             echo "" >> $GITHUB_STEP_SUMMARY
-            $COMMANDS pipeline ci summary-link $RUN_ID --type container --image "$IMAGE_NAME:sha-$SHORT_SHA" >> $GITHUB_STEP_SUMMARY
+            ${COMMANDS:?COMMANDS not set} pipeline ci summary-link $RUN_ID --type container --image "$IMAGE_NAME:sha-$SHORT_SHA" >> $GITHUB_STEP_SUMMARY
           elif [ "$RELEASE_RESULT" = "success" ]; then
             RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"
             echo "## :white_check_mark: ext-eac v$VERSION Released" >> $GITHUB_STEP_SUMMARY

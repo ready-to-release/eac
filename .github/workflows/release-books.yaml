@@ -127,7 +127,7 @@ jobs:
             SIZE=$(du -h "$pdf" | cut -f1)
 
             # Look up description from books config
-            DESC=$($COMMANDS get book-description "$FILENAME" --default "Documentation")
+            DESC=$(${COMMANDS:?COMMANDS not set} get book-description "$FILENAME" --default "Documentation")
 
             DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${TAG_NAME}/${FILENAME}"
             echo "- **${FILENAME}** - ${DESC} (${SIZE}) - [Download](${DOWNLOAD_URL})" >> release_notes.md
@@ -239,13 +239,13 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "Release was not approved. Check the approve job for details." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            $COMMANDS pipeline ci summary-link ${{ github.run_id }} --type release --workflow ci-books.yaml --commit ${{ github.sha }} >> $GITHUB_STEP_SUMMARY
+            ${COMMANDS:?COMMANDS not set} pipeline ci summary-link ${{ github.run_id }} --type release --workflow ci-books.yaml --commit ${{ github.sha }} >> $GITHUB_STEP_SUMMARY
           else
             echo "## ❌ PDF Books Release Failed" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "Release failed after approval. Check the release job for details." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            $COMMANDS pipeline ci summary-link ${{ github.run_id }} --type release --workflow ci-books.yaml --commit ${{ github.sha }} >> $GITHUB_STEP_SUMMARY
+            ${COMMANDS:?COMMANDS not set} pipeline ci summary-link ${{ github.run_id }} --type release --workflow ci-books.yaml --commit ${{ github.sha }} >> $GITHUB_STEP_SUMMARY
           fi
         env:
           GH_TOKEN: ${{ github.token }}

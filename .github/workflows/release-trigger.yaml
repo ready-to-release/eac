@@ -60,10 +60,10 @@ jobs:
           echo "Verifying CI has passed for current commit..."
           echo ""
           # Short timeout since CI should already be complete
-          $COMMANDS pipeline await-ci --timeout 60 || {
+          ${COMMANDS:?COMMANDS not set} pipeline await-ci --timeout 60 || {
             echo ""
             echo "::warning::CI not complete - waiting longer..."
-            $COMMANDS pipeline await-ci --timeout 1800
+            ${COMMANDS:?COMMANDS not set} pipeline await-ci --timeout 1800
           }
           echo ""
           echo "✅ CI verification complete"
@@ -76,7 +76,7 @@ jobs:
         run: |
           echo "Checking for active release workflows..."
           # Exclude ourselves to avoid waiting for our own workflow
-          $COMMANDS pipeline await-release --timeout 600 --exclude release-trigger.yaml
+          ${COMMANDS:?COMMANDS not set} pipeline await-release --timeout 600 --exclude release-trigger.yaml
           echo "✅ No conflicting releases in progress"
 
       # Step 3: Check for pending releases (semver from changelog, calver from dispatched CI)
@@ -96,7 +96,7 @@ jobs:
         run: |
           echo "Executing releases in dependency order..."
           echo ""
-          $COMMANDS release execute-layers --layers "$LAYERS_JSON"
+          ${COMMANDS:?COMMANDS not set} release execute-layers --layers "$LAYERS_JSON"
 
       - name: Release Summary
         if: always()
@@ -108,7 +108,7 @@ jobs:
 
           if [ "${{ steps.check.outputs.has_pending }}" = "true" ]; then
             LAYERS_JSON='${{ steps.check.outputs.layers_json }}'
-            $COMMANDS show release-summary --layers "$LAYERS_JSON" >> $GITHUB_STEP_SUMMARY
+            ${COMMANDS:?COMMANDS not set} show release-summary --layers "$LAYERS_JSON" >> $GITHUB_STEP_SUMMARY
           else
             echo "No pending releases detected." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
