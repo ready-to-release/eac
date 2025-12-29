@@ -43,12 +43,34 @@ function Get-CommandStructure {
         }
     }
 
-    # Cache miss - fetch from Go
+    # Cache miss - fetch from commands binary (or build it)
     $commandsPath = Join-Path $Script:RepoRoot "go/eac/commands"
+    $commandsBinary = Join-Path $Script:RepoRoot "out/tools/commands.exe"
 
-    Push-Location $commandsPath
+    # Build commands.exe if missing
+    if (-not (Test-Path $commandsBinary)) {
+        Write-Host "   Building commands executable..." -ForegroundColor DarkGray
+        # Ensure output directory exists
+        $toolsDir = Split-Path $commandsBinary -Parent
+        if (-not (Test-Path $toolsDir)) {
+            New-Item -Path $toolsDir -ItemType Directory -Force | Out-Null
+        }
+        Push-Location $commandsPath
+        try {
+            & go build -o $commandsBinary .
+            if ($LASTEXITCODE -ne 0) {
+                Write-Verbose "Failed to build commands binary"
+                Pop-Location
+                return $null
+            }
+        } finally {
+            Pop-Location
+        }
+    }
+
     try {
-        $jsonOutput = & go run . get commands 2>$null
+        $jsonOutput = & $commandsBinary get commands 2>$null
+
         if ($LASTEXITCODE -eq 0) {
             # Store in environment variable as JSON string
             $env:SRC_COMMANDS_DESCRIBE = $jsonOutput
@@ -59,8 +81,6 @@ function Get-CommandStructure {
         }
     } catch {
         Write-Verbose "Failed to get command structure: $_"
-    } finally {
-        Pop-Location
     }
 
     return $null
@@ -350,14 +370,8 @@ function New-TopLevelAliases {
     [CmdletBinding()]
     param()
 
-    # Measure time to get command structure
-    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-
     # This function populates cache via Get-TopLevelCommands -> Get-CommandStructure
     $topLevelCommands = Get-TopLevelCommands
-
-    $stopwatch.Stop()
-    $fetchTimeMs = $stopwatch.ElapsedMilliseconds
 
     if ($topLevelCommands.Count -eq 0) {
         Write-Host "⚠️  No commands found" -ForegroundColor Yellow
@@ -398,8 +412,9 @@ function New-TopLevelAliases {
 
     foreach ($cmdName in $topLevelCommands) {
         # IDEMPOTENT: Always delete existing function/alias before creating new one
-        $existingFunction = Get-Command $cmdName -CommandType Function -ErrorAction SilentlyContinue
-        $existingAlias = Get-Alias $cmdName -ErrorAction SilentlyContinue
+        # Use Test-Path instead of slow Get-Command
+        $existingFunction = Test-Path "function:Global:$cmdName"
+        $existingAlias = Test-Path "alias:$cmdName"
 
         if ($existingFunction) {
             Remove-Item "function:Global:$cmdName" -Force -ErrorAction SilentlyContinue
@@ -441,7 +456,7 @@ function New-TopLevelAliases {
     if ($deletedAliases.Count -gt 0) {
         Write-Host "🔄 Refreshed $($deletedAliases.Count) existing command(s)" -ForegroundColor Yellow
     }
-    Write-Host "✅ Created $($createdAliases.Count) command aliases (loaded in ${fetchTimeMs}ms)" -ForegroundColor Green
+    Write-Host "✅ Created $($createdAliases.Count) command aliases" -ForegroundColor Green
     Write-Host ""
 
     if ($createdAliases.Count -gt 0) {

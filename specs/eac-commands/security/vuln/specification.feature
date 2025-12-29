@@ -1,4 +1,4 @@
-@ov @deps:go @deps:docker @env:isolated-test-project @skip:broken
+@L2 @ov @deps:go @deps:docker @env:isolated-test-project @skip:broken
 Feature: security_vuln
 
   As a security auditor

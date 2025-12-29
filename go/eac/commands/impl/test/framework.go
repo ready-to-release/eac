@@ -147,6 +147,9 @@ func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 	suite := testCfg.Suite
 	stats := testCfg.Stats
 
+	// Build module mapper early - used for test filtering and module ownership
+	testCfg.ModuleMapper = NewModuleMapper(ctx.EACConfig, ctx.WorkspaceRoot)
+
 	// Test Discovery with suite-specific inferences
 	allTests, err := testing.DiscoverAndEnrich(ctx.WorkspaceRoot, testing.DiscoveryOptions{
 		Inferences: suite.Inferences,
@@ -165,6 +168,7 @@ func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 	}
 
 	var selectedTests []testing.TestReference
+	var unmappedTests []string
 	for _, test := range allTests {
 		// Check for @skip tags
 		isSkipped := false
@@ -190,16 +194,31 @@ func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 			continue
 		}
 
+		// Get module ownership from registry (not heuristic)
+		testModule := testCfg.ModuleMapper.GetModuleForFile(test.FilePath)
+		if testModule == "" {
+			// Track unmapped tests for fail-fast reporting
+			unmappedTests = append(unmappedTests, test.FilePath)
+			continue
+		}
+
 		// Check module filter if specified
-		if len(requestedMonikers) > 0 {
-			testModule := extractModuleFromPath(test.FilePath)
-			if !requestedMonikers[testModule] {
-				continue
-			}
+		if len(requestedMonikers) > 0 && !requestedMonikers[testModule] {
+			continue
 		}
 
 		selectedTests = append(selectedTests, test)
 	}
+
+	// Fail fast if tests couldn't be mapped to modules
+	if len(unmappedTests) > 0 {
+		log.Warnf("Found %d tests that could not be mapped to any module:", len(unmappedTests))
+		for _, path := range unmappedTests {
+			log.Warnf("  - %s", path)
+		}
+		return fmt.Errorf("test discovery failed: %d tests have no module ownership - check repository.yml module patterns", len(unmappedTests))
+	}
+
 	stats.Selected = len(selectedTests)
 
 	// Filter by OS compatibility
@@ -209,7 +228,7 @@ func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 	testCfg.OSFilteredCount = stats.OSFiltered
 
 	// Calculate module stats
-	stats.ModulesInScope = getUniqueModulesFromTests(selectedTests)
+	stats.ModulesInScope = getUniqueModulesFromTests(selectedTests, testCfg.ModuleMapper)
 
 	// Find modules with no tests
 	inScopeSet := make(map[string]bool)
@@ -274,9 +293,6 @@ func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 	testsByModulePath, modulePathToPkg := convertToModulePaths(testsByPackage, ctx.WorkspaceRoot, ctx.EACConfig)
 	testCfg.TestsByModulePath = testsByModulePath
 	testCfg.ModulePathToPkg = modulePathToPkg
-
-	// Build module mapper
-	testCfg.ModuleMapper = NewModuleMapper(ctx.EACConfig, ctx.WorkspaceRoot)
 
 	// Separate parallel vs sequential paths
 	var parallelPaths, sequentialPaths []string

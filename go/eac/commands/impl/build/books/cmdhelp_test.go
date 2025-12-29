@@ -60,7 +60,7 @@ Example:
 `,
 			wantDesc:  "get modules - Get all module contracts in structured format\n\nReturns all module contracts in YAML/JSON format.",
 			wantUsage: "get modules [flags]",
-			wantNotes: "**Expected Output:**\n- modules: array of module contracts\n- count: total number of modules\n",
+			wantNotes: "**Expected Output:**\n\n- modules: array of module contracts\n- count: total number of modules\n",
 			wantExamples: "get modules | jq '.modules[]'",
 			wantFlags: 1,
 		},
