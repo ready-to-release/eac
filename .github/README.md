@@ -174,32 +174,36 @@ One commit. Validated build. Auditable release.
 <div align="center">
 <table>
 <tr>
-<td align="center"><a href="https://ready-to-release.github.io/eac/reference/commands/create/spec/"><img src="https://img.shields.io/badge/Requirements-22c55e?style=for-the-badge" alt="Requirements"></a></td>
-<td align="center"><a href="https://ready-to-release.github.io/eac/reference/commands/templates/"><img src="https://img.shields.io/badge/Documentation-14b8a6?style=for-the-badge" alt="Documentation"></a></td>
-<td align="center"><a href="https://ready-to-release.github.io/eac/reference/commands/validate/"><img src="https://img.shields.io/badge/Compliance-a855f7?style=for-the-badge" alt="Compliance"></a></td>
-<td align="center"><a href="https://ready-to-release.github.io/eac/reference/commands/pipeline/"><img src="https://img.shields.io/badge/Traceability-ec4899?style=for-the-badge" alt="Traceability"></a></td>
-<td align="center"><a href="https://ready-to-release.github.io/eac/reference/commands/scan/"><img src="https://img.shields.io/badge/Audit-f97316?style=for-the-badge" alt="Audit"></a></td>
-</tr>
-<tr>
-<td align="center"><del>Word documents</del></td>
-<td align="center"><del>Wiki pages that drift</del></td>
-<td align="center"><del>Manual checklists</del></td>
-<td align="center"><del>Audit spreadsheets</del></td>
-<td align="center"><del>Months of prep</del></td>
-</tr>
-<tr>
-<td align="center"><strong>Executable specs</strong></td>
-<td align="center"><strong>Generated from code</strong></td>
-<td align="center"><strong>Automated gates</strong></td>
-<td align="center"><strong>Git history</strong></td>
-<td align="center"><strong>Always ready</strong></td>
-</tr>
-<tr>
-<td align="center"><a href="https://ready-to-release.github.io/eac/reference/commands/create/spec/">Specs →</a></td>
-<td align="center"><a href="https://ready-to-release.github.io/eac/reference/commands/templates/">Templates →</a></td>
-<td align="center"><a href="https://ready-to-release.github.io/eac/reference/commands/validate/">Validate →</a></td>
-<td align="center"><a href="https://ready-to-release.github.io/eac/reference/commands/pipeline/">Pipeline →</a></td>
-<td align="center"><a href="https://ready-to-release.github.io/eac/reference/commands/scan/">scan</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/update/evidence/">evidence</a></td>
+<td align="center">
+<a href="https://ready-to-release.github.io/eac/reference/commands/create/spec/"><img src="https://img.shields.io/badge/Requirements-22c55e?style=for-the-badge" alt="Requirements"></a><br>
+<sub><del>Word documents</del></sub><br>
+<strong>Executable specs</strong><br>
+<sup><a href="https://ready-to-release.github.io/eac/reference/commands/create/spec/">Specs →</a></sup>
+</td>
+<td align="center">
+<a href="https://ready-to-release.github.io/eac/reference/commands/templates/"><img src="https://img.shields.io/badge/Documentation-14b8a6?style=for-the-badge" alt="Documentation"></a><br>
+<sub><del>Wiki pages that drift</del></sub><br>
+<strong>Generated from code</strong><br>
+<sup><a href="https://ready-to-release.github.io/eac/reference/commands/templates/">Templates →</a></sup>
+</td>
+<td align="center">
+<a href="https://ready-to-release.github.io/eac/reference/commands/validate/"><img src="https://img.shields.io/badge/Compliance-a855f7?style=for-the-badge" alt="Compliance"></a><br>
+<sub><del>Manual checklists</del></sub><br>
+<strong>Automated gates</strong><br>
+<sup><a href="https://ready-to-release.github.io/eac/reference/commands/validate/">Validate →</a></sup>
+</td>
+<td align="center">
+<a href="https://ready-to-release.github.io/eac/reference/commands/pipeline/"><img src="https://img.shields.io/badge/Traceability-ec4899?style=for-the-badge" alt="Traceability"></a><br>
+<sub><del>Audit spreadsheets</del></sub><br>
+<strong>Git history</strong><br>
+<sup><a href="https://ready-to-release.github.io/eac/reference/commands/pipeline/">Pipeline →</a></sup>
+</td>
+<td align="center">
+<a href="https://ready-to-release.github.io/eac/reference/commands/scan/"><img src="https://img.shields.io/badge/Audit-f97316?style=for-the-badge" alt="Audit"></a><br>
+<sub><del>Months of prep</del></sub><br>
+<strong>Always ready</strong><br>
+<sup><a href="https://ready-to-release.github.io/eac/reference/commands/scan/">scan</a> · <a href="https://ready-to-release.github.io/eac/reference/commands/update/evidence/">evidence</a></sup>
+</td>
 </tr>
 </table>
 </div>
@@ -240,19 +244,21 @@ irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/cli
 <div align="center">
 <table>
 <tr>
-<td align="center"><a href="https://ready-to-release.github.io/eac/tutorials/"><img src="https://img.shields.io/badge/1-Install_R2R-3b82f6?style=for-the-badge" alt="1 Install R2R"></a></td>
-<td align="center"><a href="https://ready-to-release.github.io/eac/tutorials/getting-started/quick-start"><img src="https://img.shields.io/badge/2-Setup-10b981?style=for-the-badge" alt="2 Setup"></a></td>
-<td align="center"><a href="https://ready-to-release.github.io/eac/reference/commands/other/init"><img src="https://img.shields.io/badge/3-Initialize-8b5cf6?style=for-the-badge" alt="3 Initialize"></a></td>
-</tr>
-<tr>
-<td align="center">CLI for your platform</td>
-<td align="center"><code>r2r init</code></td>
-<td align="center"><code>r2r eac init</code></td>
-</tr>
-<tr>
-<td align="center"><a href="https://ready-to-release.github.io/eac/tutorials/getting-started/quick-start">Linux/macOS</a> · <a href="https://ready-to-release.github.io/eac/tutorials/getting-started/quick-start">Windows</a></td>
-<td align="center"><code>r2r install eac</code></td>
-<td align="center">Creates module contracts</td>
+<td align="center">
+<a href="https://ready-to-release.github.io/eac/tutorials/"><img src="https://img.shields.io/badge/1-Install_R2R-3b82f6?style=for-the-badge" alt="1 Install R2R"></a><br>
+<sub>CLI for your platform</sub><br>
+<sup><a href="https://ready-to-release.github.io/eac/tutorials/getting-started/quick-start">Linux/macOS</a> · <a href="https://ready-to-release.github.io/eac/tutorials/getting-started/quick-start">Windows</a></sup>
+</td>
+<td align="center">
+<a href="https://ready-to-release.github.io/eac/tutorials/getting-started/quick-start"><img src="https://img.shields.io/badge/2-Setup-10b981?style=for-the-badge" alt="2 Setup"></a><br>
+<sub><code>r2r init</code></sub><br>
+<sup><code>r2r install eac</code></sup>
+</td>
+<td align="center">
+<a href="https://ready-to-release.github.io/eac/reference/commands/other/init"><img src="https://img.shields.io/badge/3-Initialize-8b5cf6?style=for-the-badge" alt="3 Initialize"></a><br>
+<sub><code>r2r eac init</code></sub><br>
+<sup>Creates module contracts</sup>
+</td>
 </tr>
 </table>
 </div>
@@ -268,58 +274,70 @@ irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/cli
 <div align="center">
 <table>
 <tr>
-<td align="center"><a href="https://ready-to-release.github.io/eac/reference/commands/create/design/"><img src="https://img.shields.io/badge/Design-8b5cf6?style=for-the-badge" alt="Design"></a></td>
-<td align="center"><a href="https://ready-to-release.github.io/eac/reference/commands/create/spec/"><img src="https://img.shields.io/badge/Specs-22c55e?style=for-the-badge" alt="Specs"></a></td>
-<td align="center"><a href="https://ready-to-release.github.io/eac/reference/commands/templates/"><img src="https://img.shields.io/badge/Templates-14b8a6?style=for-the-badge" alt="Templates"></a></td>
-<td align="center"><a href="https://ready-to-release.github.io/eac/reference/commands/show/books/"><img src="https://img.shields.io/badge/Books-6366f1?style=for-the-badge" alt="Books"></a></td>
+<td align="center">
+<a href="https://ready-to-release.github.io/eac/reference/commands/create/design/"><img src="https://img.shields.io/badge/Design-8b5cf6?style=for-the-badge" alt="Design"></a><br>
+<sub><code>create design</code></sub><br>
+<sup><code>validate design</code></sup>
+</td>
+<td align="center">
+<a href="https://ready-to-release.github.io/eac/reference/commands/create/spec/"><img src="https://img.shields.io/badge/Specs-22c55e?style=for-the-badge" alt="Specs"></a><br>
+<sub><code>create spec</code></sub><br>
+<sup><code>validate specs</code></sup>
+</td>
+<td align="center">
+<a href="https://ready-to-release.github.io/eac/reference/commands/templates/"><img src="https://img.shields.io/badge/Templates-14b8a6?style=for-the-badge" alt="Templates"></a><br>
+<sub><code>templates install</code></sub><br>
+<sup><code>templates install ai</code></sup>
+</td>
+<td align="center">
+<a href="https://ready-to-release.github.io/eac/reference/commands/show/books/"><img src="https://img.shields.io/badge/Books-6366f1?style=for-the-badge" alt="Books"></a><br>
+<sub><code>build &lt;module&gt;</code></sub><br>
+<sup><code>show books</code></sup>
+</td>
 </tr>
 <tr>
-<td align="center"><code>create design</code></td>
-<td align="center"><code>create spec</code></td>
-<td align="center"><code>templates install</code></td>
-<td align="center"><code>build &lt;module&gt;</code></td>
+<td align="center">
+<a href="https://ready-to-release.github.io/eac/reference/commands/test/"><img src="https://img.shields.io/badge/Test-10b981?style=for-the-badge" alt="Test"></a><br>
+<sub><code>test</code></sub><br>
+<sup><code>test suite</code></sup>
+</td>
+<td align="center">
+<a href="https://ready-to-release.github.io/eac/reference/commands/validate/"><img src="https://img.shields.io/badge/Validate-a855f7?style=for-the-badge" alt="Validate"></a><br>
+<sub><code>validate contracts</code></sub><br>
+<sup><code>validate deps</code></sup>
+</td>
+<td align="center">
+<a href="https://ready-to-release.github.io/eac/reference/commands/scan/"><img src="https://img.shields.io/badge/Scan-eab308?style=for-the-badge" alt="Scan"></a><br>
+<sub><code>scan</code></sub><br>
+<sup><code>scan vuln</code></sup>
+</td>
+<td align="center">
+<a href="https://ready-to-release.github.io/eac/reference/commands/create/"><img src="https://img.shields.io/badge/Risk-f97316?style=for-the-badge" alt="Risk"></a><br>
+<sub><code>create risk-profile</code></sub><br>
+<sup><code>create risk-assess</code></sup>
+</td>
 </tr>
 <tr>
-<td align="center"><code>validate design</code></td>
-<td align="center"><code>validate specs</code></td>
-<td align="center"><code>templates install ai</code></td>
-<td align="center"><code>show books</code></td>
-</tr>
-<tr>
-<td align="center"><a href="https://ready-to-release.github.io/eac/reference/commands/test/"><img src="https://img.shields.io/badge/Test-10b981?style=for-the-badge" alt="Test"></a></td>
-<td align="center"><a href="https://ready-to-release.github.io/eac/reference/commands/validate/"><img src="https://img.shields.io/badge/Validate-a855f7?style=for-the-badge" alt="Validate"></a></td>
-<td align="center"><a href="https://ready-to-release.github.io/eac/reference/commands/scan/"><img src="https://img.shields.io/badge/Scan-eab308?style=for-the-badge" alt="Scan"></a></td>
-<td align="center"><a href="https://ready-to-release.github.io/eac/reference/commands/create/"><img src="https://img.shields.io/badge/Risk-f97316?style=for-the-badge" alt="Risk"></a></td>
-</tr>
-<tr>
-<td align="center"><code>test</code></td>
-<td align="center"><code>validate contracts</code></td>
-<td align="center"><code>scan</code></td>
-<td align="center"><code>create risk-profile</code></td>
-</tr>
-<tr>
-<td align="center"><code>test suite</code></td>
-<td align="center"><code>validate deps</code></td>
-<td align="center"><code>scan vuln</code></td>
-<td align="center"><code>create risk-assess</code></td>
-</tr>
-<tr>
-<td align="center"><a href="https://ready-to-release.github.io/eac/reference/commands/work/"><img src="https://img.shields.io/badge/Workspace-0ea5e9?style=for-the-badge" alt="Workspace"></a></td>
-<td align="center"><a href="https://ready-to-release.github.io/eac/reference/commands/other/build/"><img src="https://img.shields.io/badge/Build-3b82f6?style=for-the-badge" alt="Build"></a></td>
-<td align="center"><a href="https://ready-to-release.github.io/eac/reference/commands/pipeline/"><img src="https://img.shields.io/badge/Pipeline-ec4899?style=for-the-badge" alt="Pipeline"></a></td>
-<td align="center"><a href="https://ready-to-release.github.io/eac/reference/commands/release/"><img src="https://img.shields.io/badge/Release-f43f5e?style=for-the-badge" alt="Release"></a></td>
-</tr>
-<tr>
-<td align="center"><code>work create</code></td>
-<td align="center"><code>build</code></td>
-<td align="center"><code>pipeline run</code></td>
-<td align="center"><code>release changelog</code></td>
-</tr>
-<tr>
-<td align="center"><code>work merge</code></td>
-<td align="center"><code>build &lt;module&gt;</code></td>
-<td align="center"><code>pipeline wait</code></td>
-<td align="center"><code>release this</code></td>
+<td align="center">
+<a href="https://ready-to-release.github.io/eac/reference/commands/work/"><img src="https://img.shields.io/badge/Workspace-0ea5e9?style=for-the-badge" alt="Workspace"></a><br>
+<sub><code>work create</code></sub><br>
+<sup><code>work merge</code></sup>
+</td>
+<td align="center">
+<a href="https://ready-to-release.github.io/eac/reference/commands/other/build/"><img src="https://img.shields.io/badge/Build-3b82f6?style=for-the-badge" alt="Build"></a><br>
+<sub><code>build</code></sub><br>
+<sup><code>build &lt;module&gt;</code></sup>
+</td>
+<td align="center">
+<a href="https://ready-to-release.github.io/eac/reference/commands/pipeline/"><img src="https://img.shields.io/badge/Pipeline-ec4899?style=for-the-badge" alt="Pipeline"></a><br>
+<sub><code>pipeline run</code></sub><br>
+<sup><code>pipeline wait</code></sup>
+</td>
+<td align="center">
+<a href="https://ready-to-release.github.io/eac/reference/commands/release/"><img src="https://img.shields.io/badge/Release-f43f5e?style=for-the-badge" alt="Release"></a><br>
+<sub><code>release changelog</code></sub><br>
+<sup><code>release this</code></sup>
+</td>
 </tr>
 </table>
 </div>
@@ -339,14 +357,18 @@ irm https://raw.githubusercontent.com/ready-to-release/eac/main/scripts/pwsh/cli
 <div align="center">
 <table>
 <tr>
-<td align="center"><a href="https://dora.dev/research/"><img src="https://img.shields.io/badge/208×-Faster_Deploys-22c55e?style=for-the-badge" alt="208x Faster Deploys"></a></td>
-<td align="center"><a href="https://dora.dev/research/"><img src="https://img.shields.io/badge/106×-Faster_Lead_Time-3b82f6?style=for-the-badge" alt="106x Faster Lead Time"></a></td>
-<td align="center"><a href="https://dora.dev/research/"><img src="https://img.shields.io/badge/7×-Lower_Failure_Rate-8b5cf6?style=for-the-badge" alt="7x Lower Failure Rate"></a></td>
-</tr>
-<tr>
-<td align="center">Deployment frequency</td>
-<td align="center">Commit to production</td>
-<td align="center">Change failure rate</td>
+<td align="center">
+<a href="https://dora.dev/research/"><img src="https://img.shields.io/badge/208×-Faster_Deploys-22c55e?style=for-the-badge" alt="208x Faster Deploys"></a><br>
+<sub>Deployment frequency</sub>
+</td>
+<td align="center">
+<a href="https://dora.dev/research/"><img src="https://img.shields.io/badge/106×-Faster_Lead_Time-3b82f6?style=for-the-badge" alt="106x Faster Lead Time"></a><br>
+<sub>Commit to production</sub>
+</td>
+<td align="center">
+<a href="https://dora.dev/research/"><img src="https://img.shields.io/badge/7×-Lower_Failure_Rate-8b5cf6?style=for-the-badge" alt="7x Lower Failure Rate"></a><br>
+<sub>Change failure rate</sub>
+</td>
 </tr>
 </table>
 </div>
@@ -372,24 +394,16 @@ Build once. Reuse everywhere.
 <div align="center">
 <table>
 <tr>
-<td align="center"><a href="https://ready-to-release.github.io/eac/how-to-guides/r2r/creating-extensions/"><img src="https://img.shields.io/badge/R2R_Extensions-3b82f6?style=for-the-badge" alt="R2R Extensions"></a></td>
-<td align="center"><a href="https://ready-to-release.github.io/eac/how-to-guides/eac/modules/creating-modules"><img src="https://img.shields.io/badge/EAC_Modules-8b5cf6?style=for-the-badge" alt="EAC Modules"></a></td>
-</tr>
-<tr>
-<td align="center"><code>extensions:</code></td>
-<td align="center"><code>modules:</code></td>
-</tr>
-<tr>
-<td align="center"><code>  - name: 'my-ext'</code></td>
-<td align="center"><code>  - moniker: my-svc</code></td>
-</tr>
-<tr>
-<td align="center"><code>    image: 'ghcr.io/...'</code></td>
-<td align="center"><code>    type: go</code></td>
-</tr>
-<tr>
-<td align="center"><a href="https://ready-to-release.github.io/eac/how-to-guides/r2r/creating-extensions/">Create extensions →</a></td>
-<td align="center"><a href="https://ready-to-release.github.io/eac/how-to-guides/eac/modules/creating-modules">Add modules →</a></td>
+<td align="center">
+<a href="https://ready-to-release.github.io/eac/how-to-guides/r2r/creating-extensions/"><img src="https://img.shields.io/badge/R2R_Extensions-3b82f6?style=for-the-badge" alt="R2R Extensions"></a><br>
+<sub><code>extensions:</code><br><code>  - name: 'my-ext'</code><br><code>    image: 'ghcr.io/...'</code></sub><br>
+<sup><a href="https://ready-to-release.github.io/eac/how-to-guides/r2r/creating-extensions/">Create extensions →</a></sup>
+</td>
+<td align="center">
+<a href="https://ready-to-release.github.io/eac/how-to-guides/eac/modules/creating-modules"><img src="https://img.shields.io/badge/EAC_Modules-8b5cf6?style=for-the-badge" alt="EAC Modules"></a><br>
+<sub><code>modules:</code><br><code>  - moniker: my-svc</code><br><code>    type: go</code></sub><br>
+<sup><a href="https://ready-to-release.github.io/eac/how-to-guides/eac/modules/creating-modules">Add modules →</a></sup>
+</td>
 </tr>
 </table>
 </div>
@@ -409,22 +423,26 @@ Four paths to understanding—pick your learning style.
 <div align="center">
 <table>
 <tr>
-<td align="center"><a href="https://ready-to-release.github.io/eac/tutorials/"><img src="https://img.shields.io/badge/Tutorials-22c55e?style=for-the-badge" alt="Tutorials"></a></td>
-<td align="center"><a href="https://ready-to-release.github.io/eac/how-to-guides/"><img src="https://img.shields.io/badge/How--to-3b82f6?style=for-the-badge" alt="How-to"></a></td>
-<td align="center"><a href="https://ready-to-release.github.io/eac/reference/"><img src="https://img.shields.io/badge/Reference-8b5cf6?style=for-the-badge" alt="Reference"></a></td>
-<td align="center"><a href="https://ready-to-release.github.io/eac/explanation/"><img src="https://img.shields.io/badge/Explanation-f97316?style=for-the-badge" alt="Explanation"></a></td>
-</tr>
-<tr>
-<td align="center">Learn step-by-step</td>
-<td align="center">Accomplish tasks</td>
-<td align="center">Technical details</td>
-<td align="center">Understand why</td>
-</tr>
-<tr>
-<td align="center"><a href="https://ready-to-release.github.io/eac/tutorials/">Start learning →</a></td>
-<td align="center"><a href="https://ready-to-release.github.io/eac/how-to-guides/">Find guides →</a></td>
-<td align="center"><a href="https://ready-to-release.github.io/eac/reference/">Look it up →</a></td>
-<td align="center"><a href="https://ready-to-release.github.io/eac/explanation/">Deep dive →</a></td>
+<td align="center">
+<a href="https://ready-to-release.github.io/eac/tutorials/"><img src="https://img.shields.io/badge/Tutorials-22c55e?style=for-the-badge" alt="Tutorials"></a><br>
+<sub>Learn step-by-step</sub><br>
+<sup><a href="https://ready-to-release.github.io/eac/tutorials/">Start learning →</a></sup>
+</td>
+<td align="center">
+<a href="https://ready-to-release.github.io/eac/how-to-guides/"><img src="https://img.shields.io/badge/How--to-3b82f6?style=for-the-badge" alt="How-to"></a><br>
+<sub>Accomplish tasks</sub><br>
+<sup><a href="https://ready-to-release.github.io/eac/how-to-guides/">Find guides →</a></sup>
+</td>
+<td align="center">
+<a href="https://ready-to-release.github.io/eac/reference/"><img src="https://img.shields.io/badge/Reference-8b5cf6?style=for-the-badge" alt="Reference"></a><br>
+<sub>Technical details</sub><br>
+<sup><a href="https://ready-to-release.github.io/eac/reference/">Look it up →</a></sup>
+</td>
+<td align="center">
+<a href="https://ready-to-release.github.io/eac/explanation/"><img src="https://img.shields.io/badge/Explanation-f97316?style=for-the-badge" alt="Explanation"></a><br>
+<sub>Understand why</sub><br>
+<sup><a href="https://ready-to-release.github.io/eac/explanation/">Deep dive →</a></sup>
+</td>
 </tr>
 </table>
 </div>
@@ -444,22 +462,26 @@ Built by practitioners who ship to production daily.
 <div align="center">
 <table>
 <tr>
-<td align="center"><a href="https://github.com/casperease"><img src="https://img.shields.io/badge/casperease-3b82f6?style=for-the-badge" alt="casperease"></a></td>
-<td align="center"><a href="https://github.com/miohansen"><img src="https://img.shields.io/badge/miohansen-8b5cf6?style=for-the-badge" alt="miohansen"></a></td>
-<td align="center"><a href="https://claude.ai/code"><img src="https://img.shields.io/badge/claude_code-f97316?style=for-the-badge" alt="claude code"></a></td>
-<td align="center"><a href="https://www.linkedin.com/in/tomasmalmsten/"><img src="https://img.shields.io/badge/tomasmalmsten-22c55e?style=for-the-badge" alt="tomasmalmsten"></a></td>
-</tr>
-<tr>
-<td align="center">Core maintainer</td>
-<td align="center">Core maintainer</td>
-<td align="center">Assistant developer</td>
-<td align="center">Contributor</td>
-</tr>
-<tr>
-<td align="center"><a href="https://www.linkedin.com/in/casper-nielsen-1a9a208/">linkedin</a> · <a href="https://github.com/casperease">github</a></td>
-<td align="center"><a href="https://www.linkedin.com/in/mikaelottesenhansen/">linkedin</a> · <a href="https://github.com/miohansen">github</a></td>
-<td align="center"><a href="https://claude.ai/code">claude.ai</a> · <a href="https://docs.anthropic.com/en/docs/claude-code">docs</a></td>
-<td align="center"><a href="https://www.linkedin.com/in/tomasmalmsten/">linkedin</a></td>
+<td align="center">
+<a href="https://github.com/casperease"><img src="https://img.shields.io/badge/casperease-3b82f6?style=for-the-badge" alt="casperease"></a><br>
+<sub>Core maintainer</sub><br>
+<sup><a href="https://www.linkedin.com/in/casper-nielsen-1a9a208/">linkedin</a> · <a href="https://github.com/casperease">github</a></sup>
+</td>
+<td align="center">
+<a href="https://github.com/miohansen"><img src="https://img.shields.io/badge/miohansen-8b5cf6?style=for-the-badge" alt="miohansen"></a><br>
+<sub>Core maintainer</sub><br>
+<sup><a href="https://www.linkedin.com/in/mikaelottesenhansen/">linkedin</a> · <a href="https://github.com/miohansen">github</a></sup>
+</td>
+<td align="center">
+<a href="https://claude.ai/code"><img src="https://img.shields.io/badge/claude_code-f97316?style=for-the-badge" alt="claude code"></a><br>
+<sub>Assistant developer</sub><br>
+<sup><a href="https://claude.ai/code">claude.ai</a> · <a href="https://docs.anthropic.com/en/docs/claude-code">docs</a></sup>
+</td>
+<td align="center">
+<a href="https://www.linkedin.com/in/tomasmalmsten/"><img src="https://img.shields.io/badge/tomasmalmsten-22c55e?style=for-the-badge" alt="tomasmalmsten"></a><br>
+<sub>Contributor</sub><br>
+<sup><a href="https://www.linkedin.com/in/tomasmalmsten/">linkedin</a></sup>
+</td>
 </tr>
 </table>
 </div>

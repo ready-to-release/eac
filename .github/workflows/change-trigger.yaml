@@ -98,8 +98,9 @@ jobs:
             WORKFLOW_MODULES=$(${COMMANDS:?COMMANDS not set} get ci-workflows --format space)
 
             echo "Discovered CI workflows: $WORKFLOW_MODULES"
-            echo "directly_changed=all" >> $GITHUB_OUTPUT
-            echo "invalidated=none" >> $GITHUB_OUTPUT
+            # Pass actual module list (not literal "all") so ci-dispatch can process them
+            echo "directly_changed=$WORKFLOW_MODULES" >> $GITHUB_OUTPUT
+            echo "invalidated=" >> $GITHUB_OUTPUT
             echo "base_sha=N/A" >> $GITHUB_OUTPUT
             echo "is_bootstrap=false" >> $GITHUB_OUTPUT
             echo "changed_file_count=N/A" >> $GITHUB_OUTPUT
