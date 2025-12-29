@@ -69,6 +69,7 @@ type ReleaseResult struct {
 	ChangelogPath   string `json:"changelog_path"`
 	EntriesAdded    int    `json:"entries_added"`
 	DryRun          bool   `json:"dry_run,omitempty"`
+	AlreadyPending  bool   `json:"already_pending,omitempty"`
 	Error           string `json:"error,omitempty"`
 }
 
@@ -149,33 +150,46 @@ func ReleaseThis() int {
 			log.Infof("Previous version: %s", result.PreviousVersion)
 			log.Infof("New version: %s", result.NewVersion)
 			log.Infof("Tag: %s", result.Tag)
-			log.Infof("Entries added: %d", result.EntriesAdded)
 
-			if !dryRun {
+			if result.AlreadyPending {
 				log.Info("")
-				log.Infof("Updated: %s", result.ChangelogPath)
+				log.Info("Already pending release - no changes made")
+			} else {
+				log.Infof("Entries added: %d", result.EntriesAdded)
+				if !dryRun {
+					log.Info("")
+					log.Infof("Updated: %s", result.ChangelogPath)
+				}
 			}
 		}
 
 		if !dryRun && len(results) > 0 {
-			// Collect successful modules for next steps
-			var successfulModules []string
+			// Collect modules that were actually modified (not already pending)
+			var modifiedModules []string
 			var changelogPaths []string
 			for _, r := range results {
-				if r.Success {
-					successfulModules = append(successfulModules, r.Module)
+				if r.Success && !r.AlreadyPending {
+					modifiedModules = append(modifiedModules, r.Module)
 					changelogPaths = append(changelogPaths, r.ChangelogPath)
 				}
 			}
 
-			if len(successfulModules) > 0 {
+			if len(modifiedModules) > 0 {
 				log.Info("")
 				log.Info("Next steps:")
 				log.Infof("  1. git add %s", strings.Join(changelogPaths, " "))
-				if len(successfulModules) == 1 {
-					log.Infof("  2. git commit -m \"release(%s): %s\"", results[0].Module, results[0].NewVersion)
+				if len(modifiedModules) == 1 {
+					// Find the version for this module
+					var version string
+					for _, r := range results {
+						if r.Module == modifiedModules[0] {
+							version = r.NewVersion
+							break
+						}
+					}
+					log.Infof("  2. git commit -m \"release(%s): %s\"", modifiedModules[0], version)
 				} else {
-					log.Infof("  2. git commit -m \"release: %s\"", strings.Join(successfulModules, ", "))
+					log.Infof("  2. git commit -m \"release: %s\"", strings.Join(modifiedModules, ", "))
 				}
 				log.Info("  3. Create PR and merge to main")
 				log.Info("  4. release-auto workflow will create tags and trigger releases")
@@ -270,10 +284,10 @@ func performRelease(module string, dryRun bool, overrideDate string) ReleaseResu
 	}
 	result.VersionType = versionType.String()
 
-	// Get current version
+	// Get current version from changelog
 	result.PreviousVersion = existingChangelog.LatestVersionNumber()
 	if result.PreviousVersion == "" {
-		result.PreviousVersion = "0.0.1"
+		result.PreviousVersion = "0.0.0" // Start from 0.0.0 so first release is 0.0.1
 	}
 
 	// Find latest tag for this module
@@ -281,6 +295,21 @@ func performRelease(module string, dryRun bool, overrideDate string) ReleaseResu
 	fromRef, err := repo.LatestTag(tagPattern)
 	if err != nil {
 		fromRef = ""
+	}
+
+	// Idempotency check: if changelog has a version without a corresponding tag,
+	// that version is already pending release - don't bump again
+	if result.PreviousVersion != "0.0.0" {
+		expectedTag := fmt.Sprintf("%s/%s", module, result.PreviousVersion)
+		tagExists, _ := repo.TagExists(expectedTag)
+		if !tagExists {
+			// Changelog has a version that hasn't been tagged yet - already pending
+			result.NewVersion = result.PreviousVersion
+			result.Tag = expectedTag
+			result.AlreadyPending = true
+			result.Success = true
+			return result
+		}
 	}
 
 	// Get commits since last release
@@ -338,12 +367,6 @@ func performRelease(module string, dryRun bool, overrideDate string) ReleaseResu
 		existingVersions = append(existingVersions, v.Number)
 	}
 
-	// Calculate next version with constraints
-	maxBump := changelog.BumpMajor
-	if versioning.IsPatchOnly() {
-		maxBump = changelog.BumpPatch
-	}
-
 	// Determine release date
 	releaseDate := time.Now()
 	if overrideDate != "" {
@@ -352,6 +375,12 @@ func performRelease(module string, dryRun bool, overrideDate string) ReleaseResu
 			result.Error = fmt.Sprintf("invalid date format '%s' (use YYYY-MM-DD)", overrideDate)
 			return result
 		}
+	}
+
+	// Calculate next version with constraints
+	maxBump := changelog.BumpMajor
+	if versioning.IsPatchOnly() {
+		maxBump = changelog.BumpPatch
 	}
 
 	// Pass hasFileChanges to ensure version bumps even without conventional commits
@@ -444,8 +473,12 @@ func performRelease(module string, dryRun bool, overrideDate string) ReleaseResu
 	if err := rn.ValidateVersion(newVersion); err != nil {
 		result.Error = fmt.Sprintf(
 			"RELEASE-NOTES.md validation failed: %v\n\n"+
-				"Please add version [%s] to %s",
-			err, newVersion, releaseNotesPath)
+				"Please add version [%s] to %s\n\n"+
+				"Expected format:\n\n"+
+				"  ## [%s] - %s\n\n"+
+				"  ### Summary\n\n"+
+				"  Your release description here...",
+			err, newVersion, releaseNotesPath, newVersion, releaseDate.Format("2006-01-02"))
 		return result // HALT - version missing or empty
 	}
 

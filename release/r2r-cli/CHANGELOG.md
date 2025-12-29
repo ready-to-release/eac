@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.24] - 2025-12-29
+
+### Changed
+
+- chore(github): improve shell variable safety in CI workflows
+
 ## [0.0.23] - 2025-12-18
 
 ### Added
@@ -188,7 +194,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release with core CLI functionality
 
-[Unreleased]: https://github.com/ready-to-release/eac/compare/r2r-cli/0.0.23...HEAD
+[Unreleased]: https://github.com/ready-to-release/eac/compare/r2r-cli/0.0.24...HEAD
+[0.0.24]: https://github.com/ready-to-release/eac/compare/r2r-cli/0.0.23...r2r-cli/0.0.24
 [0.0.23]: https://github.com/ready-to-release/eac/compare/r2r-cli/0.0.22...r2r-cli/0.0.23
 [0.0.22]: https://github.com/ready-to-release/eac/compare/r2r-cli/0.0.21...r2r-cli/0.0.22
 [0.0.21]: https://github.com/ready-to-release/eac/compare/r2r-cli/0.0.19...r2r-cli/0.0.21
