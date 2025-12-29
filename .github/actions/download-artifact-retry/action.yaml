@@ -1,6 +1,6 @@
 # Download Artifact with Retry
 #
-# Wraps actions/download-artifact@v4 with retry logic for transient failures.
+# Wraps actions/download-artifact@v7 with retry logic for transient failures.
 
 name: Download Artifact (with retry)
 description: Download artifact with automatic retry on failure
@@ -29,7 +29,7 @@ runs:
     - name: Download Artifact (attempt 1, cross-run)
       id: download1-cross
       if: inputs.run-id != ''
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v7
       continue-on-error: true
       with:
         name: ${{ inputs.name }}
@@ -47,7 +47,7 @@ runs:
     - name: Retry Download (attempt 2, cross-run)
       id: download2-cross
       if: inputs.run-id != '' && steps.download1-cross.outcome == 'failure'
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v7
       continue-on-error: true
       with:
         name: ${{ inputs.name }}
@@ -65,7 +65,7 @@ runs:
     - name: Retry Download (attempt 3, cross-run)
       id: download3-cross
       if: inputs.run-id != '' && steps.download1-cross.outcome == 'failure' && steps.download2-cross.outcome == 'failure'
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v7
       with:
         name: ${{ inputs.name }}
         path: ${{ inputs.path }}
@@ -76,7 +76,7 @@ runs:
     - name: Download Artifact (attempt 1, current run)
       id: download1-current
       if: inputs.run-id == ''
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v7
       continue-on-error: true
       with:
         name: ${{ inputs.name }}
@@ -92,7 +92,7 @@ runs:
     - name: Retry Download (attempt 2, current run)
       id: download2-current
       if: inputs.run-id == '' && steps.download1-current.outcome == 'failure'
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v7
       continue-on-error: true
       with:
         name: ${{ inputs.name }}
@@ -108,7 +108,7 @@ runs:
     - name: Retry Download (attempt 3, current run)
       id: download3-current
       if: inputs.run-id == '' && steps.download1-current.outcome == 'failure' && steps.download2-current.outcome == 'failure'
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v7
       with:
         name: ${{ inputs.name }}
         path: ${{ inputs.path }}

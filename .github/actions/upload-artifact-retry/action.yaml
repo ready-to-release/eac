@@ -1,6 +1,6 @@
 # Upload Artifact with Retry
 #
-# Wraps actions/upload-artifact@v4 with retry logic for transient failures.
+# Wraps actions/upload-artifact@v6 with retry logic for transient failures.
 # Falls back to gh CLI if action fails repeatedly.
 
 name: Upload Artifact (with retry)
@@ -27,7 +27,7 @@ runs:
   steps:
     - name: Upload Artifact (attempt 1)
       id: upload1
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       continue-on-error: true
       with:
         name: ${{ inputs.name }}
@@ -38,7 +38,7 @@ runs:
     - name: Retry Upload (attempt 2)
       id: upload2
       if: steps.upload1.outcome == 'failure'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       continue-on-error: true
       with:
         name: ${{ inputs.name }}
@@ -49,7 +49,7 @@ runs:
     - name: Retry Upload (attempt 3)
       id: upload3
       if: steps.upload1.outcome == 'failure' && steps.upload2.outcome == 'failure'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ inputs.name }}
         path: ${{ inputs.path }}
