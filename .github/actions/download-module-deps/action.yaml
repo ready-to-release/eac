@@ -51,7 +51,7 @@ runs:
           # Get transitive dependencies for each specified module
           MODULES=""
           for mod in $MODULE; do
-            DEPS=$($COMMANDS get build-deps "$mod" --format space 2>/dev/null || echo "")
+            DEPS=$(${COMMANDS:?COMMANDS not set} get build-deps "$mod" --format space 2>/dev/null || echo "")
             MODULES="$MODULES $DEPS"
           done
           MODULES=$(echo "$MODULES" | xargs)  # trim whitespace
@@ -93,7 +93,7 @@ runs:
             if [ -n "$IN_PROGRESS" ] || [ -n "$QUEUED" ]; then
               # CI is running for this SHA - wait for it
               echo "  Awaiting CI for $mod..."
-              if ! $COMMANDS pipeline await-ci \
+              if ! ${COMMANDS:?COMMANDS not set} pipeline await-ci \
                   --pattern "$WORKFLOW" \
                   --sha "$ARTIFACT_SHA" \
                   --timeout "$AWAIT_TIMEOUT" \

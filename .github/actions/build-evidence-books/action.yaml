@@ -84,7 +84,7 @@ runs:
       run: |
         echo "Building evidence for $MODULE..."
 
-        if $COMMANDS update evidence $MODULE; then
+        if ${COMMANDS:?COMMANDS not set} update evidence $MODULE; then
           echo "build-failed=false" >> $GITHUB_OUTPUT
           echo ""
           echo "✓ Evidence build complete"

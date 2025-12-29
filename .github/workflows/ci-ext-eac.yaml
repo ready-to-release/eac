@@ -235,11 +235,11 @@ jobs:
         run: |
           echo "## CI Summary: ext-eac" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          $COMMANDS show ci-summary --container --build=$BUILD_RESULT --container-test-enabled --container-test=$INTEGRATION_RESULT >> $GITHUB_STEP_SUMMARY
+          ${COMMANDS:?COMMANDS not set} show ci-summary --container --build=$BUILD_RESULT --container-test-enabled --container-test=$INTEGRATION_RESULT >> $GITHUB_STEP_SUMMARY
 
       - name: Diagnostic Link on Failure
         if: contains(needs.*.result, 'failure')
         env:
           COMMANDS: ${{ steps.commands.outputs.commands-path }}
         run: |
-          $COMMANDS pipeline ci summary-link ${{ github.run_id }} --type container >> $GITHUB_STEP_SUMMARY
+          ${COMMANDS:?COMMANDS not set} pipeline ci summary-link ${{ github.run_id }} --type container >> $GITHUB_STEP_SUMMARY

@@ -45,7 +45,7 @@ runs:
         KEEP_COUNT: ${{ inputs.keep-count }}
       run: |
         COMMANDS="${{ steps.commands.outputs.commands-path }}"
-        $COMMANDS release prune "$MODULE" --keep "$KEEP_COUNT"
+        ${COMMANDS:?COMMANDS not set} release prune "$MODULE" --keep "$KEEP_COUNT"
 
         # Summary
         echo "### Cleanup Pre-Releases" >> $GITHUB_STEP_SUMMARY

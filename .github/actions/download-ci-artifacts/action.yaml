@@ -96,7 +96,7 @@ runs:
             exit 1
           fi
 
-          RUN_ID=$($COMMANDS pipeline ci get-run-id --workflow "$WORKFLOW" --sha "$CI_SHA" 2>/dev/null || echo "")
+          RUN_ID=$(${COMMANDS:?COMMANDS not set} pipeline ci get-run-id --workflow "$WORKFLOW" --sha "$CI_SHA" 2>/dev/null || echo "")
 
           if [ -z "$RUN_ID" ]; then
             echo "::error::Could not find CI run for SHA: $CI_SHA (workflow: $WORKFLOW)"

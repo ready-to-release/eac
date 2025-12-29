@@ -99,7 +99,7 @@ jobs:
           # Validate artifacts against build manifest (checks existence, paths, hashes)
           # Use --skip-depm since release workflows only download target module artifacts
           # (CI already validated dependencies during build)
-          $COMMANDS validate artifacts docs --skip-depm
+          ${COMMANDS:?COMMANDS not set} validate artifacts docs --skip-depm
 
           # Collect stats for summary
           SITE_DIR="out/build/docs/site"
@@ -234,13 +234,13 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "Release was not approved. Check the approve job for details." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            $COMMANDS pipeline ci summary-link ${{ github.run_id }} --type release --workflow ci-docs.yaml --commit ${{ github.sha }} >> $GITHUB_STEP_SUMMARY
+            ${COMMANDS:?COMMANDS not set} pipeline ci summary-link ${{ github.run_id }} --type release --workflow ci-docs.yaml --commit ${{ github.sha }} >> $GITHUB_STEP_SUMMARY
           else
             echo "## ❌ Documentation Release Failed" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "Release failed after approval. Check the release job for details." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            $COMMANDS pipeline ci summary-link ${{ github.run_id }} --type release --workflow ci-docs.yaml --commit ${{ github.sha }} >> $GITHUB_STEP_SUMMARY
+            ${COMMANDS:?COMMANDS not set} pipeline ci summary-link ${{ github.run_id }} --type release --workflow ci-docs.yaml --commit ${{ github.sha }} >> $GITHUB_STEP_SUMMARY
           fi
         env:
           GH_TOKEN: ${{ github.token }}

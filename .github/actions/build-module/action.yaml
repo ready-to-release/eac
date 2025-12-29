@@ -89,7 +89,7 @@ runs:
         EXTRA_ARGS: ${{ inputs.extra-args }}
       run: |
         # Build in isolation: --rebuild forces fresh build, --skip-depm skips module dependency resolution
-        if $COMMANDS build $MODULE --rebuild --skip-depm $EXTRA_ARGS; then
+        if ${COMMANDS:?COMMANDS not set} build $MODULE --rebuild --skip-depm $EXTRA_ARGS; then
           echo "build-failed=0" >> $GITHUB_OUTPUT
         else
           echo "build-failed=1" >> $GITHUB_OUTPUT
@@ -124,4 +124,4 @@ runs:
         # Generate comprehensive summary using Go command
         # Status is derived from build manifest (success if artifacts exist)
         # Note: Diagnostic links are handled centrally by _module-ci.yaml on failure
-        $COMMANDS show build-summary $MODULE --run-id=$RUN_ID >> $GITHUB_STEP_SUMMARY
+        ${COMMANDS:?COMMANDS not set} show build-summary $MODULE --run-id=$RUN_ID >> $GITHUB_STEP_SUMMARY

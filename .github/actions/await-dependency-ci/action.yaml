@@ -76,11 +76,11 @@ runs:
         fi
 
         # First run in text mode for display
-        $COMMANDS release await-deps "$MODULE" $FLAGS 2>&1 || true
+        ${COMMANDS:?COMMANDS not set} release await-deps "$MODULE" $FLAGS 2>&1 || true
 
         # Then run in shell mode for structured output
         # Shell format outputs: HAS_FAILED, PASSED_COUNT, SKIPPED_COUNT, DEPS_LIST
-        SHELL_OUTPUT=$($COMMANDS release await-deps "$MODULE" $FLAGS --format shell 2>/dev/null) || EXIT_CODE=$?
+        SHELL_OUTPUT=$(${COMMANDS:?COMMANDS not set} release await-deps "$MODULE" $FLAGS --format shell 2>/dev/null) || EXIT_CODE=$?
         eval "$SHELL_OUTPUT"
 
         # Set outputs from shell variables
@@ -111,7 +111,7 @@ runs:
           STATUS="failure"
         fi
 
-        $COMMANDS show dependency-ci-summary \
+        ${COMMANDS:?COMMANDS not set} show dependency-ci-summary \
           --module="$MODULE" \
           --passed="$PASSED" \
           --skipped="$SKIPPED" \

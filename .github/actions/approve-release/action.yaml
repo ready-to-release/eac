@@ -99,7 +99,7 @@ runs:
         COMMANDS="${{ steps.commands.outputs.commands-path }}"
 
         # Get the latest version from changelog
-        CHANGELOG_VERSION=$($COMMANDS release get-version "$MODULE" 2>/dev/null || echo "")
+        CHANGELOG_VERSION=$(${COMMANDS:?COMMANDS not set} release get-version "$MODULE" 2>/dev/null || echo "")
 
         if [ -z "$CHANGELOG_VERSION" ]; then
           echo "::error::No changelog found for module $MODULE"
@@ -160,7 +160,7 @@ runs:
 
         # Verify CI passed for this commit (or inherit from previous if only changelog changed)
         # On success, may set INHERITED_CI_SHA in GITHUB_ENV for next step
-        $COMMANDS release check-ci \
+        ${COMMANDS:?COMMANDS not set} release check-ci \
           --workflow "$WORKFLOW" \
           --commit "$COMMIT" \
           --timeout "$TIMEOUT" \
@@ -211,7 +211,7 @@ runs:
         fi
 
         # Generate summary using Go command
-        $COMMANDS show approve-summary \
+        ${COMMANDS:?COMMANDS not set} show approve-summary \
           --module="$MODULE" \
           --version="$VERSION" \
           --tag="$TAG_NAME" \
@@ -224,5 +224,5 @@ runs:
         # On failure, add diagnostic link
         if [ "$STATUS" = "failure" ]; then
           echo "" >> $GITHUB_STEP_SUMMARY
-          $COMMANDS pipeline ci summary-link $RUN_ID --type release --workflow "$WORKFLOW" --commit "$COMMIT" >> $GITHUB_STEP_SUMMARY
+          ${COMMANDS:?COMMANDS not set} pipeline ci summary-link $RUN_ID --type release --workflow "$WORKFLOW" --commit "$COMMIT" >> $GITHUB_STEP_SUMMARY
         fi

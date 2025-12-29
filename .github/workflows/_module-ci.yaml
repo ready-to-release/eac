@@ -506,7 +506,7 @@ jobs:
           fi
 
           # Generate summary using Go command
-          $COMMANDS show ci-summary $FLAGS >> $GITHUB_STEP_SUMMARY
+          ${COMMANDS:?COMMANDS not set} show ci-summary $FLAGS >> $GITHUB_STEP_SUMMARY
 
       # Centralized failure handling - diagnostic link for any CI failure
       - name: Diagnostic Link on Failure
@@ -517,7 +517,7 @@ jobs:
           CONTAINER: ${{ inputs.container }}
         run: |
           if [ "$CONTAINER" = "true" ]; then
-            $COMMANDS pipeline ci summary-link ${{ github.run_id }} --type container >> $GITHUB_STEP_SUMMARY
+            ${COMMANDS:?COMMANDS not set} pipeline ci summary-link ${{ github.run_id }} --type container >> $GITHUB_STEP_SUMMARY
           else
-            $COMMANDS pipeline ci summary-link ${{ github.run_id }} --type test --artifact "test-results-$MODULE-linux" >> $GITHUB_STEP_SUMMARY
+            ${COMMANDS:?COMMANDS not set} pipeline ci summary-link ${{ github.run_id }} --type test --artifact "test-results-$MODULE-linux" >> $GITHUB_STEP_SUMMARY
           fi
