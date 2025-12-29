@@ -269,13 +269,17 @@ modules:
       - repository
     files:
       root: typescript/vscode-ext-commit
+      source:
+        - "**/*.ts"
+      tests:
+        - "**/*.test.ts"
       workflows:
         ci: .github/workflows/ci-vscode-ext-commit.yaml
       repo:
+        specs:
+          - specs/vscode-ext-commit/**
         other:
           - contracts/vscode-commit/**
-          - "typescript/vscode-ext-commit/*"
-          - "typescript/vscode-ext-commit/test/*"
 
   # ============================================================================
   # LAYER 2 - Depends on Layer 1
