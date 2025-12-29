@@ -60,7 +60,7 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile",
-    "test": "mocha",
+    "test": "node --import tsx node_modules/mocha/bin/mocha.js \"test/**/*.test.ts\"",
     "test:bdd": "cucumber-js",
     "lint": "eslint src --ext ts"
   },
