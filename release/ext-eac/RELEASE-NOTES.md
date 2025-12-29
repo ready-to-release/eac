@@ -1,5 +1,11 @@
 # Release release_notes
 
+## [0.0.9] - 2025-12-29
+
+### Summary
+
+Dependecy mgmt.
+
 ## [0.0.8] - 2025-12-18
 
 ### Summary
