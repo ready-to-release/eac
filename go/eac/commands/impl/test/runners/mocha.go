@@ -125,6 +125,35 @@ func (r *MochaRunner) Execute(pkgPath string, tests []testing.TestReference, tui
 		return result
 	}
 
+	// Install dependencies if node_modules doesn't exist (CI runs build and test in separate jobs)
+	nodeModules := filepath.Join(moduleRoot, "node_modules")
+	if _, err := os.Stat(nodeModules); os.IsNotExist(err) {
+		// Use npm ci if package-lock.json exists (faster, deterministic), otherwise npm install
+		packageLock := filepath.Join(moduleRoot, "package-lock.json")
+		var npmCmd string
+		if _, err := os.Stat(packageLock); err == nil {
+			npmCmd = "ci"
+		} else {
+			npmCmd = "install"
+		}
+
+		fmt.Fprintf(logFile, "Installing npm dependencies (npm %s)...\n", npmCmd)
+		fmt.Fprintf(tuiWriter, "Installing dependencies...\n")
+		installName, installArgs := platform.WrapCommand("npm", npmCmd)
+		installCmd := exec.Command(installName, installArgs...)
+		installCmd.Dir = moduleRoot
+		installCmd.Env = os.Environ()
+		installOutput, installErr := installCmd.CombinedOutput()
+		fmt.Fprintf(logFile, "%s\n", installOutput)
+		if installErr != nil {
+			fmt.Fprintf(tuiWriter, "npm %s failed\n", npmCmd)
+			fmt.Fprintf(logFile, "npm %s failed: %v\n", npmCmd, installErr)
+			result.PackageFailed = true
+			return result
+		}
+		fmt.Fprintf(logFile, "Dependencies installed successfully\n\n")
+	}
+
 	// Build npm test command with JSON reporter for structured output
 	// Mocha's built-in json reporter outputs results to stdout
 	args := []string{"test", "--", "--reporter", "json"}
