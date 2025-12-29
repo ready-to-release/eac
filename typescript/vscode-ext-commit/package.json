@@ -60,7 +60,7 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile",
-    "test": "mocha -r ts-node/register \"test/**/*.test.ts\"",
+    "test": "mocha",
     "test:bdd": "cucumber-js",
     "lint": "eslint src --ext ts"
   },
@@ -76,6 +76,7 @@
     "eslint": "^9.0.0",
     "mocha": "^11.7.5",
     "ts-node": "^10.9.0",
+    "tsx": "^4.19.0",
     "typescript": "^5.0.0"
   },
   "dependencies": {}
