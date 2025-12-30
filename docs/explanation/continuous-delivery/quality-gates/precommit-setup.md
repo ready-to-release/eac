@@ -118,4 +118,4 @@ git commit --no-verify -m "emergency fix"
 ## Related
 
 - [Pre-commit Quality Gates](./precommit-gates.md)
-- [CD Model Stages 1-7](../cd-model/cd-model-stages-1-7.md)
+- [CD Model Stages 1-7](../cd-model/stages.md#development-stages)

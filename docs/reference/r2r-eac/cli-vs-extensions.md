@@ -16,7 +16,7 @@ graph TB
         B[Containerized Automation Tools<br/>Example: EAC]
     end
 
-    tier1 -->|Manages & Executes| tier2
+    tier1 -->|Manages and Executes| tier2
 
     style tier1 fill:#e1f5ff,stroke:#0066cc,stroke-width:2px
     style tier2 fill:#fff4e6,stroke:#ff9900,stroke-width:2px
@@ -37,14 +37,14 @@ The R2R CLI is the **framework** that manages containerized extensions. It handl
 
 Framework commands that manage extensions:
 
-| Command | Purpose |
-|---------|---------|
-| `r2r init` | Initialize configuration |
-| `r2r install` | Install extensions |
-| `r2r list` | Browse available extensions |
-| `r2r validate` | Validate configuration |
-| `r2r cleanup` | Clean up old images |
-| `r2r verify` | Check system prerequisites |
+| Command        | Purpose                     |
+| -------------- | --------------------------- |
+| `r2r init`     | Initialize configuration    |
+| `r2r install`  | Install extensions          |
+| `r2r list`     | Browse available extensions |
+| `r2r validate` | Validate configuration      |
+| `r2r cleanup`  | Clean up old images         |
+| `r2r verify`   | Check system prerequisites  |
 
 ### Where It Runs
 
@@ -71,12 +71,12 @@ Extensions are **containerized tools** that provide automation capabilities. Eac
 
 ### Examples
 
-| Extension | Commands | Purpose |
-|-----------|----------|---------|
-| **eac** | build, test, validate, scan | Everything-as-Code automation |
-| **pwsh** | script execution | PowerShell automation |
-| **python** | script execution | Python automation |
-| **docker-builder** | multi-platform builds | Docker utilities |
+| Extension          | Commands                    | Purpose                       |
+| ------------------ | --------------------------- | ----------------------------- |
+| **eac**            | build, test, validate, scan | Everything-as-Code automation |
+| **pwsh**           | script execution            | PowerShell automation         |
+| **python**         | script execution            | Python automation             |
+| **docker-builder** | multi-platform builds       | Docker utilities              |
 
 ### Where They Run
 
@@ -137,15 +137,15 @@ User runs: r2r eac build
 
 ## Key Differences
 
-| Aspect | R2R CLI (Tier 1) | Extensions (Tier 2) |
-|--------|------------------|---------------------|
-| **Purpose** | Extension management | Automation tools |
-| **Installation** | System-wide binary | Per-project Docker images |
-| **Runs** | On host machine | Inside containers |
-| **Updates** | `r2r update` | Automatic via registry |
-| **Configuration** | `.r2r/r2r-cli.yml` | `.r2r/<extension>/` |
-| **Commands** | Framework operations | Tool-specific operations |
-| **Examples** | init, install, cleanup | build, test, scan |
+| Aspect            | R2R CLI (Tier 1)       | Extensions (Tier 2)       |
+| ----------------- | ---------------------- | ------------------------- |
+| **Purpose**       | Extension management   | Automation tools          |
+| **Installation**  | System-wide binary     | Per-project Docker images |
+| **Runs**          | On host machine        | Inside containers         |
+| **Updates**       | `r2r update`           | Automatic via registry    |
+| **Configuration** | `.r2r/r2r-cli.yml`     | `.r2r/<extension>/`       |
+| **Commands**      | Framework operations   | Tool-specific operations  |
+| **Examples**      | init, install, cleanup | build, test, scan         |
 
 ## Configuration Layering
 

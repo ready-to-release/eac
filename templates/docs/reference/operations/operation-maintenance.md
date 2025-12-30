@@ -191,7 +191,7 @@ Security patches are managed by the organization's IT operations team in accorda
 
 ---
 
-## Performance & Capacity
+## Performance and Capacity
 
 <!--{% remove %}-->
 !!! note

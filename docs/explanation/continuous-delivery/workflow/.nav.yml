@@ -2,4 +2,9 @@ title: Workflow Practices
 nav:
   - index.md
   - trunk-based-development.md
+  - branch-types.md
   - branching-strategies.md
+  - cherry-picking.md
+  - feature-hiding.md
+  - dependency-management.md
+  - commit-messages.md

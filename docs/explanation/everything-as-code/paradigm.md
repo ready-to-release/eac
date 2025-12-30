@@ -1,5 +1,5 @@
 # The "Everything as Code" Paradigm
->
+
 > **What it means to treat everything as version-controlled, executable artifacts**
 
 ## What "Everything as Code" Means
@@ -154,6 +154,7 @@ flowchart LR
 #### Traditional Approach: Manual Gates
 
 ```mermaid
+%%{size:small}%%
 flowchart TD
     A[Build when developer remembers] --> B[Test when QA has time]
     B --> C[Deploy when change control approves]

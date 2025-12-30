@@ -95,24 +95,9 @@ Releases: v1.2.0
 - Missing issue references for tracked work
 - Implementation details that belong in code comments
 
-## Automation
-
-Enable commit message validation with git hooks:
-
-```bash
-#!/bin/sh
-# .git/hooks/commit-msg
-commit_regex='^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?: .{1,50}'
-
-if ! grep -qE "$commit_regex" "$1"; then
-    echo "Invalid commit message format"
-    exit 1
-fi
-```
-
 ## Related
 
-- [Traceability Requirements](../cd-model/cd-model-stages-1-7.md#traceability-requirements)
+- [Traceability Requirements](../cd-model/stages.md#stage-4-commit)
 - [Pre-commit Setup](../quality-gates/precommit-setup.md)
 - [Trunk-Based Development](./trunk-based-development.md)
 - [Branching Strategies](./branching-strategies.md)

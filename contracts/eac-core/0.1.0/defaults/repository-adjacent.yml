@@ -3,12 +3,6 @@
 #
 # Merge order: base defaults → type-specific defaults → user config
 # User values always win over these defaults.
-#
-# Adjacent repos are supporting repositories that complement a main codebase:
-# - Documentation repositories
-# - Tool/utility repositories
-# - Configuration/infrastructure repositories
-# - Shared library repositories
 
 repository:
   # Adjacent repos often have simpler, documentation-focused changes

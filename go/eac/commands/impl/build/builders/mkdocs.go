@@ -597,8 +597,8 @@ func BuildSingleBook(module *modules.ModuleContract, book *config.Book, workspac
 		if pdfTheme == "all" {
 			// Build both themes sequentially, sharing preprocessing
 			// Staging is always at module output root for isolation
-			stagingDir, bookUsed := preprocessBook(book, workspaceRoot, moduleOutputDir, logWriter, true)
-			if bookUsed && stagingDir == "" {
+			stagingDir, ok := preprocessBook(book, workspaceRoot, moduleOutputDir, logWriter, true)
+			if !ok {
 				return 1 // Preprocessing failed
 			}
 
@@ -659,9 +659,9 @@ func preprocessBook(book *config.Book, workspaceRoot string, moduleOutputDir str
 // buildBookWithTheme builds a book as PDF with a specific theme
 // moduleOutputDir is used for staging, bookOutputDir is for final output
 func buildBookWithTheme(module *modules.ModuleContract, book *config.Book, workspaceRoot string, moduleOutputDir string, bookOutputDir string, logWriter io.Writer, theme string) int {
-	stagingDir, bookUsed := preprocessBook(book, workspaceRoot, moduleOutputDir, logWriter, true)
-	if bookUsed && stagingDir == "" {
-		return 1
+	stagingDir, ok := preprocessBook(book, workspaceRoot, moduleOutputDir, logWriter, true)
+	if !ok {
+		return 1 // Preprocessing failed
 	}
 	return buildBookWithThemeAndStaging(module, book, workspaceRoot, bookOutputDir, logWriter, theme, true, stagingDir)
 }
@@ -676,9 +676,9 @@ func buildBookWithThemeAndStaging(module *modules.ModuleContract, book *config.B
 // moduleOutputDir is used for staging, bookOutputDir is for final output
 func buildBookHTML(module *modules.ModuleContract, book *config.Book, workspaceRoot string, moduleOutputDir string, bookOutputDir string, logWriter io.Writer) int {
 	// Preprocess the book - staging is always at module output root for isolation
-	stagingDir, bookUsed := preprocessBook(book, workspaceRoot, moduleOutputDir, logWriter, false)
-	if bookUsed && stagingDir == "" {
-		return 1
+	stagingDir, ok := preprocessBook(book, workspaceRoot, moduleOutputDir, logWriter, false)
+	if !ok {
+		return 1 // Preprocessing failed
 	}
 
 	// Build using existing HTML logic with the staging directory

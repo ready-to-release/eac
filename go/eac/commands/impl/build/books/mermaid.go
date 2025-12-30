@@ -113,13 +113,12 @@ func wrapMermaidBlocks(content string) string {
 		}
 
 		// Build wrapped block
-		// Use both data-size attribute (for CSS) and inline style (for PDF)
+		// Store size in data-size attribute for img tag to read
+		// Don't set width on div - let img handle its own sizing
 		var wrapper strings.Builder
 		wrapper.WriteString("<div class=\"mermaid-wrapper\" data-size=\"")
 		wrapper.WriteString(strings.ToLower(sizeValue))
-		wrapper.WriteString("\" style=\"max-width:")
-		wrapper.WriteString(width)
-		wrapper.WriteString("; margin: 0 auto;\">\n\n")
+		wrapper.WriteString("\">\n\n")
 		wrapper.WriteString("```mermaid\n")
 		wrapper.WriteString(mermaidContent)
 		wrapper.WriteString("```\n\n</div>")
@@ -148,7 +147,6 @@ type MermaidBlock struct {
 	StartPos   int    // Start position in file (for replacement later)
 	EndPos     int    // End position in file (for replacement later)
 }
-
 
 // extractMermaidBlocks scans a markdown file for mermaid code blocks
 // Returns all blocks with metadata for caching and rendering
@@ -344,13 +342,13 @@ func RenderSingleDiagram(block MermaidBlock, outputPath string, workspaceRoot st
 		"run", "--rm",
 		"-v", dockerVolume + ":/docs",
 		"-w", "/docs",
-		"--shm-size=1gb", // Increase shared memory for Chromium (prevents crashes)
+		"--shm-size=1gb",                       // Increase shared memory for Chromium (prevents crashes)
 		"--security-opt", "seccomp=unconfined", // Allow Chromium to run without sandboxing restrictions
 		mermaidImageName,
 		"mmdc",
 		"-i", dockerTmpFile,
 		"-o", dockerOutputPath,
-		"-t", "dark",        // Theme (dark for PDF)
+		"-t", "dark", // Theme (dark for PDF)
 		"-b", "transparent", // Background
 		"--configFile", "/etc/mermaid/mermaid-config.json", // Disable htmlLabels for PDF compatibility
 		"-p", "/etc/mermaid/puppeteer-config.json", // Puppeteer config for container environment
@@ -572,10 +570,39 @@ func (p *Preprocessor) replaceMermaidBlocksWithImages(blocksByFile map[string][]
 				relPath = "../" + relPath
 			}
 
+			// Check if this block is wrapped in a mermaid-wrapper div with data-size
+			// Look backwards from the block start to find the wrapper
+			imgWidth := "100%"
+			prefix := modified[:block.StartPos]
+			if wrapperIdx := strings.LastIndex(prefix, "data-size=\""); wrapperIdx >= 0 {
+				// Extract size value from data-size="value"
+				rest := prefix[wrapperIdx+11:] // Skip data-size="
+				if endIdx := strings.Index(rest, "\""); endIdx > 0 {
+					sizeVal := rest[:endIdx]
+					// Convert preset to percentage
+					switch strings.ToLower(sizeVal) {
+					case "small":
+						imgWidth = "33%"
+					case "medium":
+						imgWidth = "50%"
+					case "large":
+						imgWidth = "66%"
+					case "full":
+						imgWidth = "100%"
+					default:
+						// Custom value
+						if strings.HasSuffix(sizeVal, "%") || strings.HasSuffix(sizeVal, "px") {
+							imgWidth = sizeVal
+						}
+					}
+				}
+			}
+
 			// Build img tag with relative path to SVG
+			// Apply width directly to img for reliable sizing
 			imgTag := fmt.Sprintf(
-				"<img src=\"%s\" alt=\"Mermaid diagram\" style=\"max-width: 100%%;\">",
-				relPath,
+				"<img src=\"%s\" alt=\"Mermaid diagram\" style=\"display:block; width:%s; margin:0 auto;\">",
+				relPath, imgWidth,
 			)
 
 			// Replace mermaid block with img tag

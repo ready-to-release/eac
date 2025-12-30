@@ -1,4 +1,4 @@
-# Build, Test & Validate
+# Build, Test and Validate
 
 Learn how to build modules, run tests, and validate quality before committing.
 
@@ -6,28 +6,28 @@ Learn how to build modules, run tests, and validate quality before committing.
 
 ### Building Modules
 
-| Guide | What You'll Accomplish |
-|-------|------------------------|
-| [Build Single Module](./build-single-module.md) | Compile a module and generate artifacts |
+| Guide                                               | What You'll Accomplish                     |
+| --------------------------------------------------- | ------------------------------------------ |
+| [Build Single Module](./build-single-module.md)     | Compile a module and generate artifacts    |
 | [Build Changed Modules](./build-changed-modules.md) | Build only affected modules for efficiency |
 
 ### Testing
 
-| Guide | What You'll Accomplish |
-|-------|------------------------|
+| Guide                                             | What You'll Accomplish         |
+| ------------------------------------------------- | ------------------------------ |
 | [Run Tests for Module](./run-tests-for-module.md) | Execute tests and view results |
-| [Debug Test Failures](./debug-test-failures.md) | Identify and fix failing tests |
-| [Run Test Suites](./run-test-suites.md) | Execute specific test suites |
+| [Debug Test Failures](./debug-test-failures.md)   | Identify and fix failing tests |
+| [Run Test Suites](./run-test-suites.md)           | Execute specific test suites   |
 
 ### Validation and Quality
 
-| Guide | What You'll Accomplish |
-|-------|------------------------|
-| [Validate Before Commit](./validate-before-commit.md) | Run comprehensive quality checks |
-| [Check Dependencies](./check-dependencies.md) | Verify dependency contracts |
-| [Validate Specifications](./validate-specifications.md) | Check Gherkin specs for quality |
-| [Scan for Security Issues](./scan-for-security-issues.md) | Detect vulnerabilities and secrets |
-| [Manage Risk Compliance](./manage-risk-compliance.md) | Track OSCAL compliance with automated evidence |
+| Guide                                                     | What You'll Accomplish                         |
+| --------------------------------------------------------- | ---------------------------------------------- |
+| [Validate Before Commit](./validate-before-commit.md)     | Run comprehensive quality checks               |
+| [Check Dependencies](./check-dependencies.md)             | Verify dependency contracts                    |
+| [Validate Specifications](./validate-specifications.md)   | Check Gherkin specs for quality                |
+| [Scan for Security Issues](./scan-for-security-issues.md) | Detect vulnerabilities and secrets             |
+| [Manage Risk Compliance](./manage-risk-compliance.md)     | Track OSCAL compliance with automated evidence |
 
 ## Complete Development Workflow
 

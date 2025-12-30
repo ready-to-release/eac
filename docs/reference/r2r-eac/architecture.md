@@ -371,7 +371,7 @@ api_key_env: ANTHROPIC_API_KEY
 
 ---
 
-## Performance & Scalability
+## Performance and Scalability
 
 ### Parallel Execution
 

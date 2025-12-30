@@ -1,9 +1,9 @@
 title: Explanation
 nav:
   - index.md
-  - references.md
   - everything-as-code
-  - specifications
   - continuous-delivery
   - lifecycle
   - transformation
+  - specifications
+  - references.md

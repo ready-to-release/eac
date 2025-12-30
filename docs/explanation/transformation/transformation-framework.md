@@ -121,7 +121,7 @@ Choose pilot team carefully:
 Create vision and plan:
 
 - How requirements become executable specifications (Gherkin format)
-- Which CD Model stages validate compliance (see [CD Model](../continuous-delivery/cd-model/cd-model-overview.md))
+- Which CD Model stages validate compliance (see [CD Model](../continuous-delivery/cd-model/overview.md))
 - How evidence will be collected automatically
 - Transformation timeline with milestones
 - Resource requirements and budget
@@ -175,9 +175,9 @@ Transition from document management to version control:
 
 Integrate compliance into CI/CD:
 
-- Map compliance checks to CD Model stages (see [CD Model](../continuous-delivery/cd-model/cd-model-overview.md))
+- Map compliance checks to CD Model stages (see [CD Model](../continuous-delivery/cd-model/overview.md))
 - Implement validation at Stages 2 (pre-commit), 4 (commit), 5 (acceptance), 11 (production)
-- Design PLTE for L3 testing (see [Testing Strategy](../continuous-delivery/testing/testing-strategy-overview.md))
+- Design PLTE for L3 testing (see [Testing Strategy](../continuous-delivery/testing/index.md))
 - Implement quality gates that block non-compliant changes
 
 **Security Integration**: See [Security in CD Model](../continuous-delivery/security/index.md) for security tooling
@@ -474,5 +474,5 @@ To begin transformation:
 
 - [Why Transformation?](why-transformation.md) - Business case and opportunity
 - [Compliance as Code](compliance-as-code.md) - Core principles
-- [CD Model](../continuous-delivery/cd-model/cd-model-overview.md) - Pipeline integration points
-- [Testing Strategy](../continuous-delivery/testing/testing-strategy-overview.md) - Testing approach
+- [CD Model](../continuous-delivery/cd-model/overview.md) - Pipeline integration points
+- [Testing Strategy](../continuous-delivery/testing/index.md) - Testing approach

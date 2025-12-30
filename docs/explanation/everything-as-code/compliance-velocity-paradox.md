@@ -1,5 +1,5 @@
 # The Compliance-Velocity Paradox
->
+
 > **The fundamental contradiction facing regulated industries**
 
 ## The Challenge
@@ -33,7 +33,7 @@ Organizations must now navigate an increasingly complex web of regulations:
 - **SOC 2** - Service Organization Controls (Trust Services Criteria)
 - **NIST Cybersecurity Framework** - Risk management framework
 
-**Data Protection & Privacy:**
+**Data Protection and Privacy:**
 
 - **GDPR** - EU General Data Protection Regulation
 - **HIPAA** - Health Insurance Portability and Accountability Act
@@ -107,7 +107,9 @@ This creates:
 
 ## Evidence from Research: DORA Metrics Apply to Regulated Industries
 
-The [DevOps Research and Assessment (DORA)](https://dora.dev/research/) program has measured software delivery performance across industries since 2014. Their research shows that **DORA metrics are applicable across all industries**, including highly regulated ones.
+The [DevOps Research and Assessment (DORA)](https://dora.dev/research/) program has measured software delivery performance across industries since 2014.
+
+Their research shows that **DORA metrics are applicable across all industries**, including highly regulated ones.
 
 ### Industry Representation in DORA Research
 
@@ -124,7 +126,7 @@ The State of DevOps Report 2025 includes respondents from regulated industries:
 
 > Source: [State of DevOps Report 2025](../references.md#state-of-devops)
 
-**Key insight:** While regulated industries are underrepresented in DevOps research, they ARE included proving that DORA metrics and modern software engineering practices are applicable to regulated environments.
+**Key insight:** While regulated industries are underrepresented in DevOps research, they ARE included indicating that DORA metrics and modern software engineering practices are applicable to regulated environments.
 
 ### High Performers Exist in Regulated Industries
 

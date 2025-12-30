@@ -30,7 +30,7 @@ Group risks into security domains (examples):
 
 - **Access Control**: Who can access what resources
 - **Authentication/Identity**: How users prove their identity
-- **Audit & Monitoring**: Detection and evidence collection
+- **Audit and Monitoring**: Detection and evidence collection
 - **Data Protection**: Encryption, secure storage, transmission
 - **Integrity**: Prevention of tampering, validation
 - **Supply Chain**: Third-party dependencies, provenance
@@ -80,20 +80,20 @@ For each identified risk, select controls that:
 
 These examples use NIST 800-53 syntax but apply conceptually to any catalog:
 
-| Risk Category | Example Controls | Rationale |
-|--------------|------------------|-----------|
-| **Credential leakage** | `ia-5`, `ia-5(1)`, `ia-5(7)` | Authenticator management, no embedded credentials |
-| **Unauthorized access** | `ac-2`, `ac-3`, `ac-6` | Account management, access enforcement, least privilege |
-| **Supply chain compromise** | `sr-3`, `sr-4`, `sr-5`, `sr-11` | Supply chain controls, provenance, authenticity |
-| **Dependency vulnerabilities** | `ra-5`, `si-2` | Vulnerability scanning, flaw remediation |
-| **Injection attacks** | `si-10`, `si-15` | Input validation, output encoding |
-| **Data exposure** | `sc-8`, `sc-13`, `sc-28` | Transmission protection, cryptographic protection, at-rest encryption |
-| **Audit trail tampering** | `au-2`, `au-3`, `au-6` | Audit events, content, review |
-| **Insufficient logging** | `au-2`, `au-3`, `au-6`, `au-12` | Audit events, content, review, generation |
-| **Configuration drift** | `cm-2`, `cm-3`, `cm-6`, `cm-7` | Baseline, change control, settings, least functionality |
-| **Privilege escalation** | `ac-6`, `ac-6(1)`, `ac-6(2)` | Least privilege, no privilege without authorization, separation |
-| **Session hijacking** | `ac-12`, `sc-23` | Session termination, session authenticity |
-| **Malicious code** | `si-3`, `si-7` | Malicious code protection, integrity verification |
+| Risk Category                  | Example Controls                | Rationale                                                             |
+| ------------------------------ | ------------------------------- | --------------------------------------------------------------------- |
+| **Credential leakage**         | `ia-5`, `ia-5(1)`, `ia-5(7)`    | Authenticator management, no embedded credentials                     |
+| **Unauthorized access**        | `ac-2`, `ac-3`, `ac-6`          | Account management, access enforcement, least privilege               |
+| **Supply chain compromise**    | `sr-3`, `sr-4`, `sr-5`, `sr-11` | Supply chain controls, provenance, authenticity                       |
+| **Dependency vulnerabilities** | `ra-5`, `si-2`                  | Vulnerability scanning, flaw remediation                              |
+| **Injection attacks**          | `si-10`, `si-15`                | Input validation, output encoding                                     |
+| **Data exposure**              | `sc-8`, `sc-13`, `sc-28`        | Transmission protection, cryptographic protection, at-rest encryption |
+| **Audit trail tampering**      | `au-2`, `au-3`, `au-6`          | Audit events, content, review                                         |
+| **Insufficient logging**       | `au-2`, `au-3`, `au-6`, `au-12` | Audit events, content, review, generation                             |
+| **Configuration drift**        | `cm-2`, `cm-3`, `cm-6`, `cm-7`  | Baseline, change control, settings, least functionality               |
+| **Privilege escalation**       | `ac-6`, `ac-6(1)`, `ac-6(2)`    | Least privilege, no privilege without authorization, separation       |
+| **Session hijacking**          | `ac-12`, `sc-23`                | Session termination, session authenticity                             |
+| **Malicious code**             | `si-3`, `si-7`                  | Malicious code protection, integrity verification                     |
 
 **For custom catalogs**: Look for equivalent concepts even if control IDs differ.
 
@@ -234,9 +234,11 @@ Before returning your response, verify:
 
 **Catalog Source**: `{{.Custom.CatalogURL}}`
 
-**CRITICAL**: You MUST select controls ONLY from this list. The catalog you are working with contains ONLY these controls:
+**CRITICAL**: You MUST select controls ONLY from this list.
 
-```
+The catalog you are working with contains ONLY these controls:
+
+```text
 {{.Custom.AvailableControls}}
 ```
 

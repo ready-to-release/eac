@@ -95,7 +95,7 @@ Every feature file follows this hierarchy:
 ```mermaid
 flowchart TD
     Feature["Feature: module_feature-name<br/>(Yellow Card from Example Mapping)"]
-    Tags["@module @priority tags<br/>(Filtering & reporting)"]
+    Tags["@module @priority tags<br/>(Filtering and reporting)"]
     Story["As a...I want...So that...<br/>(User story - business context)"]
     Background["Background: (optional)<br/>(Common setup for all scenarios)"]
 

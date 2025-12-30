@@ -64,7 +64,9 @@ func (p *Preprocessor) cleanupLinksForPDF() error {
 
 // imagePattern matches markdown images: ![alt](path)
 // Captures: [1]=alt text, [2]=path, [3]=optional existing attributes
-var imagePattern = regexp.MustCompile(`!\[([^\]]*)\]\(([^)]+)\)(\s*\{[^}]*\})?`)
+// Note: Only matches single-brace attr_list { }, NOT Jinja2 macros {{ }}
+// The negative character class [^{}] ensures we don't match nested/double braces
+var imagePattern = regexp.MustCompile(`!\[([^\]]*)\]\(([^)]+)\)(\s*\{[^{}\n]*\})?`)
 
 // imageWithAttrsPattern matches markdown images with attr_list: ![alt](path){attrs}
 // Supports: {width=100}, {width="100"}, {width="100px"}, {: width="100" }
@@ -124,6 +126,7 @@ func (p *Preprocessor) convertAttrListImagesToHTML() error {
 // (MkDocs converts file.md to file/index.html, changing relative path depth)
 // NOTE: When using LinkTranslator for path management, set adjustPaths=false
 // as the translator handles all path adjustments based on source→staging mapping
+// NOTE: Raw .drawio files are NOT converted - they need markdown syntax for the drawio plugin
 func convertAttrListImages(content string, adjustPaths bool) (string, int) {
 	count := 0
 
@@ -136,6 +139,12 @@ func convertAttrListImages(content string, adjustPaths bool) (string, int) {
 		alt := parts[1]
 		src := parts[2]
 		attrs := parts[3]
+
+		// Skip raw .drawio files - they need markdown syntax for the MkDocs drawio plugin
+		// Note: .drawio.png files ARE images and should be converted
+		if strings.HasSuffix(src, ".drawio") {
+			return match
+		}
 
 		// Parse attributes from attr_list format
 		htmlAttrs := parseAttrListToHTML(attrs)
@@ -203,6 +212,12 @@ func addImageWidthConstraints(content string) (string, int) {
 		existingAttrs := ""
 		if len(parts) > 3 {
 			existingAttrs = parts[3]
+		}
+
+		// Skip raw .drawio files - they're handled by the drawio plugin which doesn't support attr_list
+		// Note: .drawio.png files ARE images and can have width constraints
+		if strings.HasSuffix(path, ".drawio") {
+			return match
 		}
 
 		// Skip small inline images (icons, badges, emojis)
@@ -577,12 +592,13 @@ func (t *LinkTranslator) logDebug(format string, args ...any) {
 	}
 }
 
-// relativeLinkPattern matches markdown images, links, and HTML img tags
+// relativeLinkPattern matches markdown images, links, and HTML img/anchor tags
 // Captures relative paths (not http://, https://, /, or #)
 var (
-	mdImagePattern = regexp.MustCompile(`!\[.*?\]\(([^)]+)\)`)      // ![alt](path)
-	mdLinkPattern  = regexp.MustCompile(`\[.*?\]\(([^)]+)\)`)       // [text](path)
-	htmlImgPattern = regexp.MustCompile(`<img[^>]+src="([^"]+)"`)  // <img src="path">
+	mdImagePattern  = regexp.MustCompile(`!\[.*?\]\(([^)]+)\)`)       // ![alt](path)
+	mdLinkPattern   = regexp.MustCompile(`\[.*?\]\(([^)]+)\)`)        // [text](path)
+	htmlImgPattern  = regexp.MustCompile(`<img[^>]+src="([^"]+)"`)    // <img src="path">
+	htmlLinkPattern = regexp.MustCompile(`<a[^>]+href="([^"]+)"`)     // <a href="path">
 )
 
 // stripCodeBlocks removes both fenced and indented code blocks from markdown content
@@ -641,6 +657,17 @@ func extractRelativeLinks(content string) []string {
 
 	// Extract from HTML img tags
 	for _, match := range htmlImgPattern.FindAllStringSubmatch(content, -1) {
+		if len(match) >= 2 {
+			path := match[1]
+			if isRelativePathRef(path) && !seen[path] {
+				links = append(links, path)
+				seen[path] = true
+			}
+		}
+	}
+
+	// Extract from HTML anchor tags
+	for _, match := range htmlLinkPattern.FindAllStringSubmatch(content, -1) {
 		if len(match) >= 2 {
 			path := match[1]
 			if isRelativePathRef(path) && !seen[path] {
@@ -751,7 +778,33 @@ func (t *LinkTranslator) BuildTranslations(siteURL string) error {
 				// If it doesn't exist anywhere, FAIL FAST (broken link)
 
 				docsDir := paths.DocsSourcePath(t.sourceRoot)
-				if _, err := os.Stat(absSourcePath); err == nil && strings.HasPrefix(absSourcePath, docsDir) {
+
+				// Check if target exists: either as file, directory, or directory with index.md
+				targetExists := false
+				if info, err := os.Stat(absSourcePath); err == nil {
+					targetExists = true
+					// If it's a directory, also check for index.md
+					if info.IsDir() {
+						indexPath := filepath.Join(absSourcePath, "index.md")
+						if _, err := os.Stat(indexPath); err != nil {
+							// Directory exists but no index.md - still valid for web links
+							targetExists = true
+						}
+					}
+				} else {
+					// Path doesn't exist as-is, try with .md extension
+					if _, err := os.Stat(absSourcePath + ".md"); err == nil {
+						targetExists = true
+					} else {
+						// Try as directory with index.md
+						indexPath := filepath.Join(absSourcePath, "index.md")
+						if _, err := os.Stat(indexPath); err == nil {
+							targetExists = true
+						}
+					}
+				}
+
+				if targetExists && strings.HasPrefix(absSourcePath, docsDir) {
 					// File exists in docs/ but wasn't copied
 					if t.pdfMode {
 						// PDF mode: strip the link (keep text, remove href)
@@ -860,7 +913,7 @@ func (t *LinkTranslator) applyTranslation(stagingFile string, trans *LinkTransla
 		}
 	}
 
-	// Apply replacements
+	// Apply replacements only outside code blocks
 	for _, pair := range pairs {
 		// Check if this is a stripped external link (PDF mode)
 		if strings.HasPrefix(pair.new, "##EXTERNAL_STRIPPED##") {
@@ -869,8 +922,8 @@ func (t *LinkTranslator) applyTranslation(stagingFile string, trans *LinkTransla
 			// We need to extract the text and keep it, but remove the link
 			modified = replaceMarkdownLinks(modified, pair.old, true)
 		} else {
-			// Normal path replacement
-			modified = strings.ReplaceAll(modified, pair.old, pair.new)
+			// Normal path replacement - but skip code blocks
+			modified = replaceOutsideCodeBlocks(modified, pair.old, pair.new)
 		}
 	}
 
@@ -882,6 +935,31 @@ func (t *LinkTranslator) applyTranslation(stagingFile string, trans *LinkTransla
 	}
 
 	return nil
+}
+
+// replaceOutsideCodeBlocks replaces old with new, but only outside fenced code blocks
+func replaceOutsideCodeBlocks(content, old, new string) string {
+	// Pattern to match fenced code blocks: ```...```
+	// Uses (?s) to make . match newlines, .*? for non-greedy matching
+	codeBlockPattern := regexp.MustCompile("(?s)(```.*?```)")
+
+	// Split content by code blocks, keeping the code blocks as separators
+	parts := codeBlockPattern.Split(content, -1)
+	codeBlocks := codeBlockPattern.FindAllString(content, -1)
+
+	// Apply replacements only to non-code-block parts
+	var result strings.Builder
+	for i, part := range parts {
+		// Replace in this non-code part
+		result.WriteString(strings.ReplaceAll(part, old, new))
+
+		// Add back the code block (unchanged) if there is one
+		if i < len(codeBlocks) {
+			result.WriteString(codeBlocks[i])
+		}
+	}
+
+	return result.String()
 }
 
 // replaceMarkdownLinks finds markdown links with the specified path and either

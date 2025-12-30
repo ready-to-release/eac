@@ -2,4 +2,7 @@ title: Core Concepts
 nav:
   - index.md
   - unit-of-flow.md
+  - trunk.md
   - deployable-modules.md
+  - pipeline.md
+  - live.md

@@ -231,45 +231,93 @@ func findDrawioReferences(content string) []string {
 	return refs
 }
 
+// fullDrawioImagePattern matches full markdown images with optional attr_list:
+// ![alt](path.drawio.png) or ![alt](path.drawio.png){ width="100%" }
+var fullDrawioImagePattern = regexp.MustCompile(`!\[([^\]]*)\]\(([^)]*\.drawio\.png)\)(\s*\{[^}]*\})?`)
+
+// htmlDrawioSrcPattern matches HTML img src: src="path.drawio.png"
+var htmlDrawioSrcPattern = regexp.MustCompile(`src="([^"]*\.drawio\.png)"`)
+
 // rewriteDrawioReferences updates drawio.png paths to point to cached images
+// For site mode (non-PDF), converts markdown images to HTML <img> tags with path adjustment
+// For PDF mode, preserves the original format
 func (p *Preprocessor) rewriteDrawioReferences(content string, mdPath string, cachePathBySource map[string]string) string {
 	mdDir := filepath.Dir(mdPath)
 
-	return drawioPattern.ReplaceAllStringFunc(content, func(match string) string {
-		// Determine if this is markdown ]( or HTML src="
-		var prefix string
-		var oldPath string
-
-		if strings.Contains(match, "](") {
-			// Markdown syntax: ](path.drawio.png)
-			prefix = "]("
-			pathStart := strings.Index(match, "](") + 2
-			oldPath = match[pathStart:]
-		} else {
-			// HTML syntax: src="path.drawio.png"
-			prefix = "src=\""
-			pathStart := strings.Index(match, "src=\"") + 5
-			oldPath = match[pathStart:]
-		}
-
-		// Resolve to absolute path to look up cache path
+	// Helper to calculate new path from old path
+	getNewPath := func(oldPath string) (string, bool) {
 		absPath := filepath.Clean(filepath.Join(mdDir, oldPath))
 		cachePath, found := cachePathBySource[absPath]
 		if !found {
-			return match // Keep original if not found
+			return "", false
 		}
 
-		// Calculate relative path from markdown file to cached image
 		relPath, err := filepath.Rel(mdDir, cachePath)
 		if err != nil {
-			return match // Keep original on error
+			return "", false
 		}
 
-		// Build new path using forward slashes (markdown standard)
 		newPath := filepath.ToSlash(relPath)
 
-		return prefix + newPath
+		// For site mode, add extra ../ to account for MkDocs converting file.md to file/index.html
+		if !p.pdfMode {
+			newPath = "../" + newPath
+		}
+
+		return newPath, true
+	}
+
+	// First pass: Convert full markdown images to HTML (site mode) or update paths (PDF mode)
+	content = fullDrawioImagePattern.ReplaceAllStringFunc(content, func(match string) string {
+		parts := fullDrawioImagePattern.FindStringSubmatch(match)
+		if len(parts) < 3 {
+			return match
+		}
+
+		alt := parts[1]
+		oldPath := parts[2]
+		attrList := ""
+		if len(parts) >= 4 {
+			attrList = parts[3] // Optional attr_list like { width="100%" }
+		}
+
+		newPath, ok := getNewPath(oldPath)
+		if !ok {
+			return match
+		}
+
+		if p.pdfMode {
+			// PDF mode: keep markdown format with attr_list
+			return fmt.Sprintf("![%s](%s)%s", alt, newPath, attrList)
+		}
+
+		// Site mode: convert to HTML <img> tag
+		// Parse attr_list and convert to HTML attributes
+		style := ""
+		if strings.Contains(attrList, `width="100%"`) || strings.Contains(attrList, "width=100%") {
+			style = ` style="max-width: 100%;"`
+		}
+		return fmt.Sprintf(`<img src="%s" alt="%s"%s>`, newPath, alt, style)
 	})
+
+	// Second pass: Update any existing HTML img src attributes
+	content = htmlDrawioSrcPattern.ReplaceAllStringFunc(content, func(match string) string {
+		parts := htmlDrawioSrcPattern.FindStringSubmatch(match)
+		if len(parts) < 2 {
+			return match
+		}
+
+		oldPath := parts[1]
+
+		newPath, ok := getNewPath(oldPath)
+		if !ok {
+			return match
+		}
+
+		return fmt.Sprintf(`src="%s"`, newPath)
+	})
+
+	return content
 }
 
 // optimizeImage resizes a PNG image to maxWidth while preserving aspect ratio

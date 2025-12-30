@@ -124,4 +124,4 @@ See: [Canon TDD Workflow](./canon-tdd-workflow.md)
 ### Implementation
 
 - [Go Implementation Guide](../implementation/go/) - Go/Godog BDD implementation
-- [Quality & Maintenance](../quality/) - Review and iterate on specifications
+- [Quality and Maintenance](../quality/) - Review and iterate on specifications

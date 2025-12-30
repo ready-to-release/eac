@@ -121,7 +121,7 @@ Each command has a dedicated reference page with:
 
 - **Overview**: Command purpose and use cases
 - **Syntax**: Full command syntax with options
-- **Arguments & Flags**: Detailed parameter documentation
+- **Arguments and Flags**: Detailed parameter documentation
 - **Output**: Output format and schema (for JSON commands)
 - **Examples**: Common usage patterns
 - **Error Handling**: Common errors and solutions

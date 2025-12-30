@@ -1,5 +1,5 @@
-# Compliance & Risk
->
+# Compliance and Risk
+
 > **Linking specifications to regulatory requirements and security controls**
 
 Integrate compliance and risk management into your BDD specifications using standardized control tagging.

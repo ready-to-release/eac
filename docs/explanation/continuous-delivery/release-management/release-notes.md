@@ -149,6 +149,6 @@ Before publishing release notes:
 
 ## Related
 
-- [Start Release](../cd-model/cd-model-stages-8-12.md#stage-8-start-release)
+- [Start Release](../cd-model/stages.md#stage-8-start-release)
 - [Release Documentation](./release-documentation.md)
 - [Commit Messages](../workflow/commit-messages.md)

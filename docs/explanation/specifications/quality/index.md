@@ -1,4 +1,4 @@
-# Quality & Maintenance
+# Quality and Maintenance
 >
 > **Maintaining healthy, living specifications**
 
