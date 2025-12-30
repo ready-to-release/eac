@@ -47,14 +47,14 @@ Collaborative workshop techniques for discovering requirements.
 - Example Mapping
 - Card Reference
 
-### [Quality & Maintenance](./quality/)
+### [Quality and Maintenance](./quality/)
 
 Maintaining living specifications through continuous improvement.
 
 - Specification Quality Checklist
 - Review and Iterate
 
-### [Compliance & Risk](./compliance/)
+### [Compliance and Risk](./compliance/)
 
 Risk-based testing and regulatory compliance.
 

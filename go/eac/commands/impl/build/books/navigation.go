@@ -102,13 +102,9 @@ type tocEntry struct {
 }
 
 // collectTOCEntries recursively collects markdown files for TOC
+// Uses .nav.yml order when available to preserve source navigation structure
 func (p *Preprocessor) collectTOCEntries(dir string, depth int) []tocEntry {
 	var entries []tocEntry
-
-	items, err := os.ReadDir(dir)
-	if err != nil {
-		return entries
-	}
 
 	// DEBUG: Log directory scanning
 	relDir, _ := filepath.Rel(p.stagingDir, dir)
@@ -116,6 +112,117 @@ func (p *Preprocessor) collectTOCEntries(dir string, depth int) []tocEntry {
 		relDir = "(root)"
 	}
 	navLog.Debugf("[TOC] Scanning directory: %s", relDir)
+
+	// Try to read .nav.yml for ordering
+	navPath := paths.NavigationConfigPath(dir)
+	navFile, err := p.parseNavFile(navPath)
+
+	if err == nil && len(navFile.Nav) > 0 {
+		// Use .nav.yml order
+		entries = p.collectTOCFromNav(dir, depth, navFile.Nav)
+	} else {
+		// Fallback to filesystem order (for directories without .nav.yml)
+		entries = p.collectTOCFromFilesystem(dir, depth)
+	}
+
+	return entries
+}
+
+// collectTOCFromNav collects TOC entries using .nav.yml order
+func (p *Preprocessor) collectTOCFromNav(dir string, depth int, nav []any) []tocEntry {
+	var entries []tocEntry
+
+	for _, item := range nav {
+		switch v := item.(type) {
+		case string:
+			// Simple entry: "file.md", "subdir/", or "subdir" (directory without slash)
+			name := v
+			// Check if it's a directory (with or without trailing slash)
+			subdirName := strings.TrimSuffix(name, "/")
+			subdir := filepath.Join(dir, subdirName)
+
+			if info, err := os.Stat(subdir); err == nil && info.IsDir() {
+				// Directory reference
+				// Add directory entry if it has index.md
+				indexPath := paths.IndexMarkdownPath(subdir)
+				if _, err := os.Stat(indexPath); err == nil {
+					title := p.getTitleFromFile(indexPath)
+					relPath, _ := filepath.Rel(p.stagingDir, subdir)
+					relPath = filepath.ToSlash(relPath)
+					entries = append(entries, tocEntry{
+						title: title,
+						path:  relPath + "/",
+						depth: depth,
+					})
+				}
+				// Recurse into subdirectory
+				subEntries := p.collectTOCEntries(subdir, depth+1)
+				entries = append(entries, subEntries...)
+			} else if strings.HasSuffix(name, ".md") && name != "index.md" {
+				// Markdown file
+				filePath := filepath.Join(dir, name)
+				if _, err := os.Stat(filePath); err == nil {
+					title := p.getTitleFromFile(filePath)
+					relPath, _ := filepath.Rel(p.stagingDir, filePath)
+					relPath = filepath.ToSlash(relPath)
+					entries = append(entries, tocEntry{
+						title: title,
+						path:  relPath,
+						depth: depth,
+					})
+				}
+			}
+		case map[string]any:
+			// Map entry: "Title": "file.md" or "Title": "subdir/"
+			for title, target := range v {
+				targetStr, ok := target.(string)
+				if !ok {
+					continue
+				}
+				// Check if it's a directory
+				subdirName := strings.TrimSuffix(targetStr, "/")
+				subdir := filepath.Join(dir, subdirName)
+
+				if info, err := os.Stat(subdir); err == nil && info.IsDir() {
+					// Directory with custom title
+					relPath, _ := filepath.Rel(p.stagingDir, subdir)
+					relPath = filepath.ToSlash(relPath)
+					entries = append(entries, tocEntry{
+						title: title,
+						path:  relPath + "/",
+						depth: depth,
+					})
+					// Recurse into subdirectory
+					subEntries := p.collectTOCEntries(subdir, depth+1)
+					entries = append(entries, subEntries...)
+				} else if strings.HasSuffix(targetStr, ".md") && targetStr != "index.md" {
+					// File with custom title
+					filePath := filepath.Join(dir, targetStr)
+					if _, err := os.Stat(filePath); err == nil {
+						relPath, _ := filepath.Rel(p.stagingDir, filePath)
+						relPath = filepath.ToSlash(relPath)
+						entries = append(entries, tocEntry{
+							title: title,
+							path:  relPath,
+							depth: depth,
+						})
+					}
+				}
+			}
+		}
+	}
+
+	return entries
+}
+
+// collectTOCFromFilesystem collects TOC entries from filesystem (fallback)
+func (p *Preprocessor) collectTOCFromFilesystem(dir string, depth int) []tocEntry {
+	var entries []tocEntry
+
+	items, err := os.ReadDir(dir)
+	if err != nil {
+		return entries
+	}
 
 	// Separate files and directories
 	var files, dirs []os.DirEntry
@@ -620,6 +727,20 @@ func (p *Preprocessor) validateNavEntry(entry any, dirPath string, actualFiles, 
 							referenced[dirName+"/"] = true
 						}
 					}
+				} else {
+					// {"Title": "subdir"} - directory without trailing slash
+					// awesome-nav allows both formats
+					if actualDirs[c] {
+						validatedMap[title] = c
+						referenced[c+"/"] = true
+					} else if strings.Contains(c, "/") {
+						// For relative paths, check filesystem
+						fullPath := filepath.Join(dirPath, c)
+						if info, err := os.Stat(fullPath); err == nil && info.IsDir() {
+							validatedMap[title] = c
+							referenced[c+"/"] = true
+						}
+					}
 				}
 				// If file/dir missing, omit this entry
 
@@ -705,8 +826,7 @@ func (p *Preprocessor) validateAndCleanNav(navPath, dirPath string) error {
 	}
 
 	// 6. Write updated .nav.yml
-	// Clear title to let nav system auto-generate from markdown files
-	navFile.Title = ""
+	// Preserve title if set - awesome-nav uses it for navigation display
 	navFile.Nav = validatedNav
 	data, err := yaml.Marshal(navFile)
 	if err != nil {

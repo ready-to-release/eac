@@ -163,5 +163,5 @@ go run ./go/eac/commands validate || exit 1
 While this section is being developed, see:
 
 - [Development Workflow](../commands/development-workflow/index.md)
-- [Build, Test & Validate](../commands/build-test-validate/index.md)
+- [Build, Test and Validate](../commands/build-test-validate/index.md)
 - [Release Management](../commands/release-management/index.md)

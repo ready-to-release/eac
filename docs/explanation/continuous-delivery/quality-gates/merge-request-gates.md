@@ -552,5 +552,5 @@ Use bots to provide automated feedback:
 
 - [Pre-commit Quality Gates](./precommit-gates.md) - Stage 2 validation
 - [Release Quality Gates](./release-gates.md) - Stage 9 validation
-- [CD Model Stages 1-7](../cd-model/cd-model-stages-1-7.md) - See Stage 3 in full context
-- [Implementation Patterns](../cd-model/implementation-patterns.md) - RA vs CDe approval differences
+- [CD Model Stages 1-7](../cd-model/stages.md#development-stages) - See Stage 3 in full context
+- [CD Variants](../cd-model/variants.md) - RA vs CDe approval differences

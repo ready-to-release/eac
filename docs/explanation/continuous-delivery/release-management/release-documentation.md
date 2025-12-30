@@ -516,7 +516,7 @@ echo "- Code coverage: $(cat test-results/coverage.txt)" >> RELEASE_NOTES.md
 
 - [Release Approval Patterns](./release-approval.md) - How documentation is reviewed
 - [Release Quality Gates](../quality-gates/release-gates.md) - Stage 9 approval process
-- [CD Model Stages 8-12](../cd-model/cd-model-stages-8-12.md) - Release stages in context
+- [CD Model Stages 8-12](../cd-model/stages.md#release-stages) - Release stages in context
 
 ## Quick Reference
 

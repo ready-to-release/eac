@@ -1,4 +1,8 @@
 title: Security
 nav:
   - index.md
-  - security.md
+  - shift-left.md
+  - sast.md
+  - dast.md
+  - supply-chain.md
+  - remediation.md

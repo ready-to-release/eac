@@ -9,7 +9,7 @@ The initiation process evaluates whether good ideas are truly great ideas using 
 ## Key Activities
 
 - Create Git repository
-- Register system in relevant tracking systems
+- Register system in relevant external compliance systems (such as ServiceNow).
 - Develop initial documentation: design overview, intended use, implementation plan, specifications, and risk assessment
 
 ---

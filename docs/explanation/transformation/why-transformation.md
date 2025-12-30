@@ -412,5 +412,5 @@ If prerequisites are missing, focus on building foundational capabilities first.
 
 - [Compliance as Code](compliance-as-code.md) - The modern approach explained
 - [Transformation Framework](transformation-framework.md) - How to execute transformation
-- [CD Model Overview](../continuous-delivery/cd-model/cd-model-overview.md) - Delivery pipeline foundation
-- [Testing Strategy](../continuous-delivery/testing/testing-strategy-overview.md) - Testing practices foundation
+- [CD Model Overview](../continuous-delivery/cd-model/overview.md) - Delivery pipeline foundation
+- [Testing Strategy](../continuous-delivery/testing/index.md) - Testing practices foundation

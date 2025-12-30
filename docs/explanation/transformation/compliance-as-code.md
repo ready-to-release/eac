@@ -56,7 +56,7 @@ Compliance checked on every commit, not periodically. Compliance tests run in CI
 
 **Why It Matters**: Continuous validation provides immediate feedback when violations occur, prevents compliance drift, scales without manual review overhead, and provides continuous audit readiness.
 
-**See**: [CD Model Stages 1-7](../continuous-delivery/cd-model/cd-model-stages-1-7.md) for how continuous validation integrates into development stages.
+**See**: [CD Model Stages 1-7](../continuous-delivery/cd-model/stages.md#development-stages) for how continuous validation integrates into development stages.
 
 ---
 
@@ -80,7 +80,7 @@ Validate compliance as early as possible in the delivery lifecycle - ideally bef
 - PLTE runs acceptance tests
 - Production monitoring detects drift
 
-**See**: [Testing Strategy Overview](../continuous-delivery/testing/testing-strategy-overview.md) for comprehensive shift-left testing approach.
+**See**: [Testing Strategy](../continuous-delivery/testing/index.md) for comprehensive shift-left testing approach.
 
 ---
 
@@ -196,8 +196,8 @@ Organizations typically implement in this order:
 
 **Technical implementation**:
 
-- [CD Model Overview](../continuous-delivery/cd-model/cd-model-overview.md) - Where compliance integrates
-- [Testing Strategy](../continuous-delivery/testing/testing-strategy-overview.md) - Shift-left approach
+- [CD Model Overview](../continuous-delivery/cd-model/overview.md) - Where compliance integrates
+- [Testing Strategy](../continuous-delivery/testing/index.md) - Shift-left approach
 - [Specifications](../specifications/index.md) - How to write executable specifications
 
 **Transformation**:

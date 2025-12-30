@@ -116,7 +116,7 @@ cat .r2r/oscal/assessment-results.json
 - **Profile**: Control baseline (selected controls)
 - **Assessment Plan**: How controls will be tested
 - **Assessment Results**: Test results and findings
-- **POA&M**: Plan of Action & Milestones
+- **POA&M**: Plan of Action and Milestones
 
 ### Benefits of Compliance-as-Code
 

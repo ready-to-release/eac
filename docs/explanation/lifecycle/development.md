@@ -75,10 +75,10 @@ Templates: [Implementation Report](https://github.com/ready-to-release/eac/blob/
 
 ## Testing
 
-All tests should be automated and run in the pipeline. Manual testing occurs during the [Exploration stage](../continuous-delivery/cd-model/cd-model-stages-1-7.md#exploratory-testing-approach). Collect test evidence and save it in Git for inclusion in the implementation report.
+All tests should be automated and run in the pipeline. Manual testing occurs during the [Exploration stage](../continuous-delivery/cd-model/stages.md#stage-7-exploration). Collect test evidence and save it in Git for inclusion in the implementation report.
 
 ---
 
 ## Documenting Changes
 
-This is a fully automated process handled by the pipeline. It prepares all artifacts needed for [Release Approval](../continuous-delivery/cd-model/cd-model-stages-8-12.md#stage-9-release-approval).
+This is a fully automated process handled by the pipeline. It prepares all artifacts needed for [Release Approval](../continuous-delivery/cd-model/stages.md#stage-9-release-approval).

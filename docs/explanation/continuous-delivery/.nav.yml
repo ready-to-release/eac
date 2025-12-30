@@ -1,12 +1,13 @@
 title: Continuous Delivery
 nav:
   - index.md
-  - core-concepts/
-  - cd-model/
-  - workflow/
-  - testing/
-  - quality-gates/
-  - architecture/
-  - deployment/
-  - release-management/
-  - security/
+  - Core Concepts: core-concepts
+  - CD Model: cd-model
+  - Workflow: workflow
+  - Testing: testing
+  - Quality Gates: quality-gates
+  - Environments: environments
+  - Deployment: deployment
+  - Release Toggling: release-toggling
+  - Release Management: release-management
+  - Security: security

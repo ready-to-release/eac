@@ -71,10 +71,12 @@ This project uses **MCP (Model Context Protocol) servers** to provide specialize
 During initialization, you MUST verify MCP server availability:
 
 1. **Check for MCP tools** in your available tool list:
+
    - Look for tools prefixed with `mcp__commands__*`
    - Look for tools prefixed with `mcp__github__*`
 
 2. **Determine MCP status**:
+
    - ✅ **CONNECTED**: If `mcp__commands__*` tools are available
    - ⚠️ **NOT CONNECTED**: If no `mcp__*` tools are found
    - ⚠️ **PARTIAL**: If some but not all expected servers are available
@@ -92,7 +94,7 @@ During initialization, you MUST verify MCP server availability:
 - **Module Discovery**: `get-modules`, `show-modules`, `show-moduletypes`, `get-files`, `show-files`
 - **Dependency Management**: `get-dependencies`, `show-dependencies`, `validate-dependencies`, `get-execution-order`
 - **Architecture Documentation**: `design-create*`, `design-validate*`, `design-serve*`
-- **Build & Test**: `build-module`, `build-modules`, `test-module`, `test-modules`, `pipeline-run`
+- **Build and Test**: `build-module`, `build-modules`, `test-module`, `test-modules`, `pipeline-run`
 - **Documentation**: `docs-serve` (MkDocs integration)
 - **Git Operations**: `commit`, `show-files-changed`, `show-files-staged`, `get-changed-modules`
 - **Specifications**: `specs-create`, `specs-validate`
@@ -109,14 +111,14 @@ During initialization, you MUST verify MCP server availability:
 
 If MCP servers are NOT CONNECTED, use direct CLI commands:
 
-| MCP Tool | Fallback Command |
-|----------|------------------|
-| `mcp__commands__show-modules` | `go run ./go/eac/commands show modules` |
-| `mcp__commands__test-module` | `go run ./go/eac/commands test module <name>` |
-| `mcp__commands__build-module` | `go run ./go/eac/commands build module <name>` |
-| `mcp__commands__specs-create` | `go run ./go/eac/commands create spec <description>` |
-| `mcp__commands__specs-validate` | `go run ./go/eac/commands validate specs` |
-| All other tools | `go run ./go/eac/commands <command> [args]` |
+| MCP Tool                        | Fallback Command                                     |
+| ------------------------------- | ---------------------------------------------------- |
+| `mcp__commands__show-modules`   | `go run ./go/eac/commands show modules`              |
+| `mcp__commands__test-module`    | `go run ./go/eac/commands test module <name>`        |
+| `mcp__commands__build-module`   | `go run ./go/eac/commands build module <name>`       |
+| `mcp__commands__specs-create`   | `go run ./go/eac/commands create spec <description>` |
+| `mcp__commands__specs-validate` | `go run ./go/eac/commands validate specs`            |
+| All other tools                 | `go run ./go/eac/commands <command> [args]`          |
 
 **Note**: GitHub MCP server has no CLI fallback - it uses the official MCP implementation from GitHub.
 
@@ -391,7 +393,7 @@ Go does not enforce strict limits, but large files reduce clarity and increase c
 
 Files should be organized by **behavior and domain**, not by generic categories (avoid `utils.go`, `helpers.go`, etc.).
 
-### Function Size & Modularity
+### Function Size and Modularity
 
 Functions should be small, intention-revealing, and focused.
 
@@ -409,7 +411,7 @@ Split functions when:
 
 Prefer several small, well-named functions over one large “god function.”
 
-### Responsibilities & Composition
+### Responsibilities and Composition
 
 - Keep files cohesive: one clear responsibility per file
 - Use interfaces and small helpers to isolate behavior

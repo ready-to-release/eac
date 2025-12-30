@@ -3,7 +3,7 @@ mkdocs>=1.5
 mkdocs-material>=9.4
 
 # Navigation
-mkdocs-awesome-nav>=1.0.0
+mkdocs-awesome-nav>=3.3.0
 
 # Markdown extensions
 pymdown-extensions

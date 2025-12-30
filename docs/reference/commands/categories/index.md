@@ -16,7 +16,7 @@ Browse EAC commands organized by function. Each category groups commands that se
 - **...write specifications**: [create spec](../create/spec.md)
 - **...generate diagrams**: [create design](../create/design.md)
 
-### Quality & Validation
+### Quality and Validation
 
 **I want to...**
 
@@ -26,7 +26,7 @@ Browse EAC commands organized by function. Each category groups commands that se
 - **...scan for secrets**: [scan](../scan/scan.md) with `--scanner secrets`
 - **...check for vulnerabilities**: [scan](../scan/scan.md) with `--scanner vuln`
 
-### Building & Testing
+### Building and Testing
 
 **I want to...**
 
@@ -36,7 +36,7 @@ Browse EAC commands organized by function. Each category groups commands that se
 - **...see test results**: [show test-summary](../show/test-summary.md)
 - **...get build order**: [get execution order](../get/execution-order.md)
 
-### Committing & PRs
+### Committing and PRs
 
 **I want to...**
 
@@ -45,7 +45,7 @@ Browse EAC commands organized by function. Each category groups commands that se
 - **...see changed files**: [show files-changed](../show/files-changed.md)
 - **...get changed modules**: [get changed-modules](../get/changed-modules.md)
 
-### Release & Deployment
+### Release and Deployment
 
 **I want to...**
 

@@ -13,5 +13,5 @@ Understanding the Continuous Delivery Model, a comprehensive framework for deliv
 | [Quality Gates](./quality-gates/)           | Quality gate philosophy and Stage 2, 3, 9 gate explanations                  |
 | [Deployment](./deployment/)                 | Deployment strategies and ring-based rollout patterns                        |
 | [Release Management](./release-management/) | Release documentation and approval patterns (RA vs CDe)                      |
-| [Architecture](./architecture/)             | Environment types and repository organization patterns                       |
+| [Environments](./environments/)             | Environment types and network security zones                                 |
 | [Security](./security/)                     | Security integration using open-source tools                                 |

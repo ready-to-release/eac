@@ -13,11 +13,15 @@ The complete software lifecycle from initiation through end-of-life, balancing r
 
 ## Interactive lifecycle
 
-- <span style="color:#D6B656">Lifecycle Phases</span> - Stages the project/solution progresses through
-- <span style="color:#6C8EBF">Documents</span> - Artifacts in Markdown and Gherkin format
-- <span style="color:#B85450">Automation</span> - Automated pipeline processes
-- <span style="color:#666666">CD Stages</span> - Continuous Delivery stages
+- **Lifecycle Phases** - Stages the project/solution progresses through
+- **Documents** - Artifacts in Markdown and Gherkin format
+- **Automation** - Automated pipeline processes
+- **CD Stages** - Continuous Delivery stages
 
 The drawing below is interactive, allowing you to navigate to relevant sections of the documentation by clicking the boxes.
 
-![](../../assets/lifecycle/lifecycle.drawio){ width="100%" }
+<!-- markdownlint-disable MD045 -->
+<!-- mkdocs-drawio uses alt text as a page selector for multi-page diagrams - not as accessibility text, leave it blank  -->
+![](../../assets/lifecycle/lifecycle.drawio)
+
+<!-- markdownlint-enable MD045 -->

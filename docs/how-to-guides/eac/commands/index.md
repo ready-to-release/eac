@@ -29,13 +29,13 @@ Learn how to accomplish specific tasks with EAC commands through practical, step
 
 ## All Guide Categories
 
-| Category | What You'll Learn |
-|----------|-------------------|
-| [Getting Started](./getting-started/index.md) | Basic command usage and repository exploration |
-| [Development Workflow](./development-workflow/index.md) | Workspaces, commits, and pull requests |
-| [Build, Test & Validate](./build-test-validate/index.md) | Compiling modules, running tests, and quality checks |
-| [Release Management](./release-management/index.md) | Preparing and publishing releases |
-| [Documentation](./documentation/index.md) | Creating specs and diagrams |
+| Category                                                   | What You'll Learn                                    |
+| ---------------------------------------------------------- | ---------------------------------------------------- |
+| [Getting Started](./getting-started/index.md)              | Basic command usage and repository exploration       |
+| [Development Workflow](./development-workflow/index.md)    | Workspaces, commits, and pull requests               |
+| [Build, Test and Validate](./build-test-validate/index.md) | Compiling modules, running tests, and quality checks |
+| [Release Management](./release-management/index.md)        | Preparing and publishing releases                    |
+| [Documentation](./documentation/index.md)                  | Creating specs and diagrams                          |
 
 ## Need Command Details?
 

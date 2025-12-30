@@ -1,4 +1,4 @@
-# Everything as Code
+# Overview
 
 > **Help turn every commit into deployable, compliant software you can trust**
 
@@ -37,6 +37,7 @@ Traditional compliance creates friction: manual documentation, periodic audits, 
 
 Documentation is organized using the [Diataxis framework](https://diataxis.fr/) - a systematic approach to technical documentation authoring:
 
+<!-- markdownlint-disable MD033 -->
 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2em; margin: 2em 0;">
 <div>
 <h3><a href="tutorials/">Tutorials</a></h3>
@@ -79,6 +80,7 @@ Documentation is organized using the [Diataxis framework](https://diataxis.fr/) 
 </ul>
 </div>
 </div>
+<!-- markdownlint-enable MD033 -->
 
 **Choose your path:**
 

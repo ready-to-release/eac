@@ -1,8 +1,6 @@
 title: Deployment
 nav:
   - index.md
-  - deployment-rings.md
   - deployment-strategies.md
-  - feature-flags.md
-  - incident-response.md
   - rollback-procedures.md
+  - incident-response.md

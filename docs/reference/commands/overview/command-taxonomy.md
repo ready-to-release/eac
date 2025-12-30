@@ -45,7 +45,7 @@ Get commands provide machine-readable JSON output designed for CI/CD pipelines, 
 
 **Command groups**:
 
-**Module & Repository Information**:
+**Module and Repository Information**:
 
 - `get modules` - Module contracts
 - `get dependencies` - Dependency graph
@@ -53,7 +53,7 @@ Get commands provide machine-readable JSON output designed for CI/CD pipelines, 
 - `get config` - EAC configuration
 - `get environments` - Environment contracts
 
-**Build & Test Information**:
+**Build and Test Information**:
 
 - `get artifacts` - Resolved artifacts
 - `get build-deps` - Build dependencies

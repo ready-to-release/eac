@@ -179,7 +179,7 @@ As specifications evolve:
 flowchart TD
     Initial["Initial Understanding"] --> SpecV1["Specification v1"]
     SpecV1 --> Impl1["Implementation"]
-    Impl1 --> Learn1["Discovery & Learning"]
+    Impl1 --> Learn1["Discovery and Learning"]
     Learn1 --> SpecV2["Specification v2<br/>(refined)"]
     SpecV2 --> Impl2["More Implementation"]
     Impl2 --> Learn2["More Learning"]

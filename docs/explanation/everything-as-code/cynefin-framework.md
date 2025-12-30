@@ -205,7 +205,7 @@ Cynefin shows us that domains aren't fixed. We can intentionally move practices 
 
 ```mermaid
 flowchart LR
-    A[Chaotic<br/>crisis] --> B[Complicated<br/>analyze & establish rules]
+    A[Chaotic<br/>crisis] --> B[Complicated<br/>analyze and establish rules]
     B --> C[Clear<br/>best practice]
 ```
 

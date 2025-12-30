@@ -5,11 +5,11 @@ Quick reference for the most commonly used EAC commands. Commands are organized 
 ## Quick Navigation
 
 - [Module Development](#module-development)
-- [Building & Testing](#building-testing)
+- [Building and Testing](#building-and-testing)
 - [Git Workflow](#git-workflow)
 - [CI/CD](#cicd)
 - [Release Management](#release-management)
-- [Quality & Validation](#quality-validation)
+- [Quality and Validation](#quality-and-validation)
 - [Documentation](#documentation)
 - [Security Scanning](#security-scanning)
 
@@ -51,7 +51,7 @@ r2r eac show files-staged
 
 ---
 
-## Building & Testing
+## Building and Testing
 
 ### Build Commands
 
@@ -223,7 +223,7 @@ r2r eac validate release-version
 
 ---
 
-## Quality & Validation
+## Quality and Validation
 
 ### Pre-Commit Validation
 
@@ -385,13 +385,13 @@ r2r eac get modules | jq '.modules | length'
 
 Information commands come in pairs:
 
-| JSON (automation) | Human-readable (interactive) |
-|-------------------|------------------------------|
-| `get modules` | `show modules` |
-| `get dependencies` | `show dependencies` |
-| `get files` | `show files` |
-| `get tests` | `show tests` |
-| `get config` | `show config` |
+| JSON (automation)  | Human-readable (interactive) |
+| ------------------ | ---------------------------- |
+| `get modules`      | `show modules`               |
+| `get dependencies` | `show dependencies`          |
+| `get files`        | `show files`                 |
+| `get tests`        | `show tests`                 |
+| `get config`       | `show config`                |
 
 ### Command Help
 
@@ -426,7 +426,7 @@ alias r2r-changed='r2r eac get changed-modules'
 
 ## Common Workflows
 
-### Full Build & Test Cycle
+### Full Build and Test Cycle
 
 ```bash
 # 1. Make changes
@@ -483,36 +483,36 @@ r2r eac pipeline wait
 
 ### Most Common Commands
 
-| Command | Purpose |
-|---------|---------|
-| `show modules` | List all modules |
-| `build <module>` | Build a module |
-| `test <module>` | Test a module |
-| `validate` | Validate everything |
-| `work commit` | Commit with AI |
+| Command               | Purpose              |
+| --------------------- | -------------------- |
+| `show modules`        | List all modules     |
+| `build <module>`      | Build a module       |
+| `test <module>`       | Test a module        |
+| `validate`            | Validate everything  |
+| `work commit`         | Commit with AI       |
 | `get changed-modules` | Find changed modules |
-| `show help <cmd>` | Get command help |
+| `show help <cmd>`     | Get command help     |
 
 ### Output Format Commands
 
-| JSON Output | Formatted Output |
-|-------------|------------------|
-| `get modules` | `show modules` |
+| JSON Output        | Formatted Output    |
+| ------------------ | ------------------- |
+| `get modules`      | `show modules`      |
 | `get dependencies` | `show dependencies` |
-| `get files` | `show files` |
-| `get config` | `show config` |
-| `get tests` | `show tests` |
+| `get files`        | `show files`        |
+| `get config`       | `show config`       |
+| `get tests`        | `show tests`        |
 
 ### Validation Commands
 
-| Command | What It Checks |
-|---------|----------------|
-| `validate` | Everything |
-| `validate contracts` | Contract schemas |
-| `validate dependencies` | Module dependencies |
-| `validate specs` | Gherkin specifications |
-| `validate markdown` | Markdown syntax |
-| `validate design` | Architecture diagrams |
+| Command                 | What It Checks         |
+| ----------------------- | ---------------------- |
+| `validate`              | Everything             |
+| `validate contracts`    | Contract schemas       |
+| `validate dependencies` | Module dependencies    |
+| `validate specs`        | Gherkin specifications |
+| `validate markdown`     | Markdown syntax        |
+| `validate design`       | Architecture diagrams  |
 
 ---
 

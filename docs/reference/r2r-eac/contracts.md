@@ -514,7 +514,7 @@ contracts/
 
 ---
 
-## Display & Query Commands
+## Display and Query Commands
 
 ### Display Commands (Human-Readable)
 

@@ -1,7 +1,8 @@
-title: CD Model
 nav:
   - index.md
-  - cd-model-overview.md
-  - cd-model-stages-1-7.md
-  - cd-model-stages-8-12.md
-  - implementation-patterns.md
+  - Overview: overview.md
+  - Visual Notation: notation.md
+  - Key Principles: principles.md
+  - The 12 Stages: stages.md
+  - Variants: variants.md
+  - Compliance: compliance.md
