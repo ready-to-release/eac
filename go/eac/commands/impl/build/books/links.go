@@ -938,6 +938,8 @@ func (t *LinkTranslator) applyTranslation(stagingFile string, trans *LinkTransla
 }
 
 // replaceOutsideCodeBlocks replaces old with new, but only outside fenced code blocks
+// and only within link contexts (markdown links/images, HTML src/href attributes).
+// This prevents corrupting URLs when path patterns overlap (e.g., "reference/r2r" vs "reference/").
 func replaceOutsideCodeBlocks(content, old, new string) string {
 	// Pattern to match fenced code blocks: ```...```
 	// Uses (?s) to make . match newlines, .*? for non-greedy matching
@@ -950,8 +952,8 @@ func replaceOutsideCodeBlocks(content, old, new string) string {
 	// Apply replacements only to non-code-block parts
 	var result strings.Builder
 	for i, part := range parts {
-		// Replace in this non-code part
-		result.WriteString(strings.ReplaceAll(part, old, new))
+		// Replace only within link contexts (not arbitrary substrings)
+		result.WriteString(replaceLinkPaths(part, old, new))
 
 		// Add back the code block (unchanged) if there is one
 		if i < len(codeBlocks) {
@@ -960,6 +962,43 @@ func replaceOutsideCodeBlocks(content, old, new string) string {
 	}
 
 	return result.String()
+}
+
+// replaceLinkPaths replaces old path with new path only within link contexts:
+// - Markdown links: [text](path) or [text](path#anchor)
+// - Markdown images: ![alt](path)
+// - HTML src attributes: src="path"
+// - HTML href attributes: href="path"
+// This prevents corrupting text when path patterns overlap.
+func replaceLinkPaths(content, old, new string) string {
+	escapedOld := regexp.QuoteMeta(old)
+
+	// Pattern for markdown links and images: [text](old_path) or ![alt](old_path)
+	// Captures: [1]=optional !, [2]=text/alt, [3]=path (should match old), [4]=optional anchor
+	mdLinkPattern := regexp.MustCompile(`(!?)\[([^\]]*)\]\((` + escapedOld + `)(#[^)]+)?\)`)
+	content = mdLinkPattern.ReplaceAllStringFunc(content, func(match string) string {
+		parts := mdLinkPattern.FindStringSubmatch(match)
+		if len(parts) < 4 {
+			return match
+		}
+		bang := parts[1]   // "!" for images, "" for links
+		text := parts[2]   // link text or alt text
+		anchor := ""
+		if len(parts) > 4 {
+			anchor = parts[4] // optional anchor like #section
+		}
+		return fmt.Sprintf("%s[%s](%s%s)", bang, text, new, anchor)
+	})
+
+	// Pattern for HTML src attributes: src="old_path"
+	srcPattern := regexp.MustCompile(`(src=")` + escapedOld + `(")`)
+	content = srcPattern.ReplaceAllString(content, "${1}"+new+"${2}")
+
+	// Pattern for HTML href attributes: href="old_path"
+	hrefPattern := regexp.MustCompile(`(href=")` + escapedOld + `(")`)
+	content = hrefPattern.ReplaceAllString(content, "${1}"+new+"${2}")
+
+	return content
 }
 
 // replaceMarkdownLinks finds markdown links with the specified path and either

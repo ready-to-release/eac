@@ -71,14 +71,14 @@ Evidence is automatically generated and stored throughout the pipeline, linked t
 
 ### Automated Evidence Collection
 
-| Stage | Evidence Type | Storage |
-|-------|---------------|---------|
-| Stage 2 (Pre-commit) | Lint reports, unit test results, security scans | Build artifacts |
-| Stage 3 (Merge Request) | Code review approvals, CI check results | VCS + Build artifacts |
-| Stage 5 (Acceptance) | IV/OV/PV reports, screenshots, API logs | Artifact repository |
-| Stage 6 (Extended) | Performance reports, security scan results | Artifact repository |
-| Stage 9 (Approval) | Approval records, quality metrics snapshot | Compliance system |
-| Stage 11 (Live) | Monitoring dashboards, incident reports | Observability platform |
+| Stage                   | Evidence Type                                   | Storage                |
+| ----------------------- | ----------------------------------------------- | ---------------------- |
+| Stage 2 (Pre-commit)    | Lint reports, unit test results, security scans | Build artifacts        |
+| Stage 3 (Merge Request) | Code review approvals, CI check results         | VCS + Build artifacts  |
+| Stage 5 (Acceptance)    | IV/OV/PV reports, screenshots, API logs         | Artifact repository    |
+| Stage 6 (Extended)      | Performance reports, security scan results      | Artifact repository    |
+| Stage 9 (Approval)      | Approval records, quality metrics snapshot      | Compliance system      |
+| Stage 11 (Live)         | Monitoring dashboards, incident reports         | Observability platform |
 
 ### Evidence Linking
 
@@ -115,10 +115,10 @@ The CD Model includes formal signoff points where human or automated approval is
 
 **Purpose:** Validate production readiness before deployment.
 
-| Pattern | Approver | Mechanism |
-|---------|----------|-----------|
-| RA (Release Approval) | Release manager or approval board | Manual review and sign-off |
-| CDe (Continuous Deployment) | Automated quality gates | All gates pass → auto-approve |
+| Pattern                     | Approver                          | Mechanism                     |
+| --------------------------- | --------------------------------- | ----------------------------- |
+| RA (Release Approval)       | Release manager or approval board | Manual review and sign-off    |
+| CDe (Continuous Deployment) | Automated quality gates           | All gates pass → auto-approve |
 
 **What's validated:**
 
@@ -170,14 +170,14 @@ Deployment Records
 
 For each change, the audit trail captures:
 
-| Question | Evidence |
-|----------|----------|
-| **Who** made the change? | Commit author, PR creator |
-| **Who** reviewed it? | PR approvers, release approver |
-| **When** was it made? | Commit timestamps, approval timestamps |
-| **Why** was it made? | Linked requirement, PR description |
-| **What** was changed? | Diff, affected files |
-| **How** was it validated? | Test results, scan reports |
+| Question                  | Evidence                               |
+| ------------------------- | -------------------------------------- |
+| **Who** made the change?  | Commit author, PR creator              |
+| **Who** reviewed it?      | PR approvers, release approver         |
+| **When** was it made?     | Commit timestamps, approval timestamps |
+| **Why** was it made?      | Linked requirement, PR description     |
+| **What** was changed?     | Diff, affected files                   |
+| **How** was it validated? | Test results, scan reports             |
 
 ### Retention Requirements
 
