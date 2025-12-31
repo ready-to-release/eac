@@ -1,6 +1,7 @@
 title: Release Management
 nav:
   - index.md
-  - release-approval.md
-  - release-documentation.md
+  - changelog-system.md
+  - approval-patterns.md
+  - release-evidence.md
   - release-notes.md

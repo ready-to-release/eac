@@ -1,14 +1,17 @@
 # Release Notes
 
-How to create comprehensive release notes for production releases.
+## Overview
 
-## Release Notes Template
+Release notes communicate **what changed** to stakeholders. Good release notes help users understand new features, prepare for breaking changes, and know about security fixes.
+
+---
+
+## Template
 
 ```markdown
 # Release v1.2.0
 
 **Release Date:** YYYY-MM-DD
-**Release Manager:** [Name]
 
 ## Summary
 
@@ -41,19 +44,15 @@ How to create comprehensive release notes for production releases.
 ## Known Issues
 
 - [Documented limitations]
-
-## Upgrade Instructions
-
-[Steps for upgrading from previous version]
 ```
+
+---
 
 ## Section Guidelines
 
 ### Summary
 
-- 1-2 sentences maximum
-- Highlight the most important change
-- Use user-focused language
+1-2 sentences maximum. Highlight the most important change.
 
 **Good:** "This release adds OAuth2 authentication and improves search performance by 50%."
 
@@ -61,20 +60,16 @@ How to create comprehensive release notes for production releases.
 
 ### New Features
 
-- Focus on user benefit, not implementation
-- Include brief "how to use" if not obvious
-- Link to documentation
+Focus on user benefit, not implementation. Link to documentation.
 
 ```markdown
-- **OAuth2 Login**: Users can now sign in with Google, GitHub, or Microsoft accounts.
+- **OAuth2 Login**: Users can now sign in with Google, GitHub, or Microsoft.
   See [Authentication Guide](docs/auth.md) for setup.
 ```
 
 ### Bug Fixes
 
-- Reference issue numbers
-- Describe the user-visible problem fixed
-- Keep technical details minimal
+Reference issue numbers. Describe the user-visible problem fixed.
 
 ```markdown
 - Fixed crash when uploading files larger than 100MB (#234)
@@ -83,53 +78,69 @@ How to create comprehensive release notes for production releases.
 
 ### Breaking Changes
 
-- Clearly mark as breaking
-- Provide migration path
-- Include code examples if applicable
+Clearly mark as breaking. Provide migration path.
 
-**Example:**
-
-```text
-- **API Change**: `/api/v1/users` endpoint removed. Migrate to `/api/v2/users`.
-
-  Before: curl https://api.example.com/v1/users
-  After:  curl https://api.example.com/v2/users
+```markdown
+- **API Change**: `/api/v1/users` removed. Migrate to `/api/v2/users`.
+  Before: `GET /api/v1/users`
+  After:  `GET /api/v2/users`
 ```
 
 ### Security
 
-- Reference CVE numbers when applicable
-- Describe impact without disclosing exploit details
-- Recommend immediate upgrade for critical fixes
+Reference CVE numbers. Describe impact without exploit details.
 
-**Example:**
-
-```text
+```markdown
 - Updated dependencies to address CVE-2024-1234 (high severity).
   Recommend upgrading immediately.
 ```
 
-## Auto-Generation from Commits
+---
 
-Use semantic commits to auto-generate release notes:
+## Writing Guidelines
+
+**DO:**
+
+- Write for your audience (technical vs end-user)
+- Be specific ("50% faster" not "improved performance")
+- Link to issue tracker (#1234)
+- Provide migration guidance for breaking changes
+- Use active voice ("Added feature" not "Feature was added")
+
+**DON'T:**
+
+- Use jargon for end-user release notes
+- Omit breaking changes
+- Be vague ("various bug fixes")
+- Forget to mention security fixes
+- Skip documentation for "obvious" changes
+
+---
+
+## Auto-Generation
+
+Use conventional commits to auto-generate release notes:
 
 ```bash
 # Generate from git log
 git log v1.1.0..HEAD --pretty=format:"%s" | \
-  grep -E "^(feat|fix|docs)" | \
-  sed 's/^feat:/- **New:**/' | \
-  sed 's/^fix:/- **Fixed:**/'
+  grep -E "^(feat|fix|docs)"
 ```
 
-Or use tools like:
+Or use the changelog system:
 
-- `semantic-release`
-- `conventional-changelog`
-- `release-it`
+```bash
+# Generate changelog entries from commits
+r2r release this <module>
+```
+
+See [Changelog System](./changelog-system.md) for the full release workflow.
+
+---
 
 ## Review Checklist
 
-Before publishing release notes:
+Before publishing:
 
 - [ ] All sections complete
 - [ ] No typos or grammatical errors
@@ -138,17 +149,10 @@ Before publishing release notes:
 - [ ] Migration instructions tested
 - [ ] Security issues properly disclosed
 - [ ] Known issues documented
-- [ ] Links to documentation valid
 
-## Publishing
+---
 
-1. **Internal review** - Technical lead and product owner approve
-2. **Staging** - Publish to staging environment
-3. **Production** - Publish with release deployment
-4. **Notify** - Email, Slack, or other channels
+## Next Steps
 
-## Related
-
-- [Start Release](../cd-model/stages.md#stage-8-start-release)
-- [Release Documentation](./release-documentation.md)
-- [Commit Messages](../workflow/commit-messages.md)
+- [Changelog System](./changelog-system.md) - How to create releases
+- [Commit Messages](../workflow/commit-messages.md) - Conventional commit format

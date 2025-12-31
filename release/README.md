@@ -90,6 +90,7 @@ r2r release pending r2r-cli --quiet
 ```
 
 Output includes:
+
 - `has_changes`: whether there are releasable changes
 - `current_version`: the current released version
 - `next_version`: the calculated next version
@@ -114,6 +115,7 @@ r2r release this r2r-cli --date 2024-01-15
 ```
 
 This command:
+
 1. Analyzes commits since the last release tag
 2. Generates changelog entries from conventional commits
 3. Calculates the next version (respecting constraints)
@@ -148,6 +150,7 @@ r2r release validate r2r-cli --json
 ```
 
 Checks performed:
+
 - File exists at expected path
 - Valid Keep a Changelog header format
 - Version entries have valid format
@@ -160,12 +163,14 @@ Checks performed:
 Changelogs follow the [Keep a Changelog](https://keepachangelog.com/) format.
 
 **How entries are generated:**
+
 - Most entries are **auto-generated from conventional commits**
 - The `## [Unreleased]` section is for **manual additions** (optional)
 - When you run `release this`, manual entries in `[Unreleased]` are **merged** with commit-generated entries
 - After release, `[Unreleased]` becomes empty again
 
 **When to use `[Unreleased]`:**
+
 - Adding entries not tied to a specific commit
 - Rewording auto-generated entries before release
 - Adding context or details beyond commit messages
@@ -203,14 +208,14 @@ All notable changes to **module-name** will be documented in this file.
 
 ### Change Types
 
-| Type | Description | Conventional Commit |
-|------|-------------|---------------------|
-| Added | New features | `feat:` |
-| Changed | Changes to existing functionality | `refactor:`, `perf:` |
-| Deprecated | Soon-to-be removed features | `deprecate:` |
-| Removed | Removed features | `remove:` |
-| Fixed | Bug fixes | `fix:` |
-| Security | Security fixes | `security:` |
+| Type       | Description                       | Conventional Commit  |
+| ---------- | --------------------------------- | -------------------- |
+| Added      | New features                      | `feat:`              |
+| Changed    | Changes to existing functionality | `refactor:`, `perf:` |
+| Deprecated | Soon-to-be removed features       | `deprecate:`         |
+| Removed    | Removed features                  | `remove:`            |
+| Fixed      | Bug fixes                         | `fix:`               |
+| Security   | Security fixes                    | `security:`          |
 
 ## Versioning
 
@@ -242,7 +247,7 @@ versioning:
 
 ## Directory Structure
 
-```
+```text
 release/
 ├── README.md           # This file
 ├── r2r-cli/
@@ -262,6 +267,7 @@ go/eac/core/
 To make a module releasable via the automated workflow:
 
 1. Set the changelog path in the module contract:
+
    ```yaml
    files:
      changelog: ../../release/<module>/CHANGELOG.md
@@ -323,7 +329,7 @@ git push origin "r2r-cli/0.1.0"
 
 The release system requires conventional commit messages. Ensure commits follow the format:
 
-```
+```text
 type(scope): description
 
 feat: add new feature
@@ -338,6 +344,7 @@ Commits are filtered by module file patterns. Ensure your changes touch files ow
 ### Changelog validation errors
 
 Run `r2r release validate <module>` to check for format issues. Common problems:
+
 - Invalid version format
 - Duplicate versions
 - Versions out of order
@@ -345,5 +352,6 @@ Run `r2r release validate <module>` to check for format issues. Common problems:
 ### Tag already exists
 
 If a tag already exists for a version, the release workflow will fail. Either:
+
 - Delete the existing tag and release
 - Increment the version number
