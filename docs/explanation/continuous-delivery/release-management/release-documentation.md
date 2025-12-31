@@ -469,32 +469,6 @@ Test evidence provides **proof of quality**, demonstrating the release meets pro
 - Risk assessment: Evaluate business impact
 - Stakeholder communication: Contextual decisions
 
-### Automation Example
-
-```bash
-# generate-release-notes.sh
-
-# Extract version
-VERSION=$(git describe --tags)
-
-# Generate release notes from commits
-echo "# Release $VERSION" > RELEASE_NOTES.md
-echo "" >> RELEASE_NOTES.md
-
-# New features (commits with feat:)
-echo "## New Features" >> RELEASE_NOTES.md
-git log --oneline --grep="feat:" v1.1.0..HEAD | sed 's/^/- /' >> RELEASE_NOTES.md
-
-# Bug fixes (commits with fix:)
-echo "## Bug Fixes" >> RELEASE_NOTES.md
-git log --oneline --grep="fix:" v1.1.0..HEAD | sed 's/^/- /' >> RELEASE_NOTES.md
-
-# Attach test evidence
-echo "## Test Evidence" >> RELEASE_NOTES.md
-echo "- Test pass rate: $(cat test-results/pass-rate.txt)" >> RELEASE_NOTES.md
-echo "- Code coverage: $(cat test-results/coverage.txt)" >> RELEASE_NOTES.md
-```
-
 ---
 
 ## Best Practices Summary

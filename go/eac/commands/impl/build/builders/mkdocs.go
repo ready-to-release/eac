@@ -1400,16 +1400,39 @@ def parse_nav_yml(nav_dir, base_path=''):
                 sub_entries = parse_nav_yml(subdir_path, sub_base)
                 entries.extend(sub_entries)
         elif isinstance(item, dict):
-            # Titled section: {"Title": [...]} or {"Title": "path.md"}
+            # Titled section: {"Title": [...]} or {"Title": "path.md"} or {"Title": "subdirectory"}
             for title, content in item.items():
                 if isinstance(content, str):
-                    # Single file with custom title
-                    file_path = os.path.join(base_path, content)
                     if content.endswith('.md'):
+                        # Single file with custom title
+                        file_path = os.path.join(base_path, content)
                         site_path = os.path.join(base_path, content[:-3])
+                        entries.append((title, site_path, file_path))
                     else:
-                        site_path = os.path.join(base_path, content)
-                    entries.append((title, site_path, file_path))
+                        # Subdirectory with custom title - add header and recurse
+                        subdir = content.rstrip('/')
+                        subdir_path = os.path.join(nav_dir, subdir)
+                        sub_base = os.path.join(base_path, subdir) if base_path else subdir
+
+                        # Check if subdirectory exists
+                        if os.path.isdir(subdir_path):
+                            # Add the directory's index.md as an entry with the custom title
+                            index_site_path = sub_base
+                            index_file_path = os.path.join(sub_base, 'index.md')
+                            entries.append((title, index_site_path, index_file_path))
+
+                            # Recursively parse subdirectory
+                            sub_entries = parse_nav_yml(subdir_path, sub_base)
+                            # Skip the subdirectory's index.md since we added it with custom title
+                            for sub_entry in sub_entries:
+                                sub_title, sub_site_path, sub_file_path = sub_entry
+                                if sub_file_path != os.path.join(sub_base, 'index.md'):
+                                    entries.append(sub_entry)
+                        else:
+                            # Fallback: treat as file path
+                            file_path = os.path.join(base_path, content)
+                            site_path = os.path.join(base_path, content)
+                            entries.append((title, site_path, file_path))
                 elif isinstance(content, list):
                     # Inline section with items - add section header first
                     # Use special marker for section headers (no PDF, just TOC entry)
