@@ -202,6 +202,11 @@ type runInfo struct {
 
 // getRunStatusForSHA checks workflow runs for a specific SHA
 // Returns: status ("active", "success", "failed", "none"), count of active runs
+//
+// Important: Only the MOST RECENT run for this SHA determines success/failure.
+// If a workflow was re-run after a failure, only the latest run matters.
+// GitHub returns runs in order (most recent first), so we track which runs
+// we've already seen for this SHA and only count the first completed one.
 func getRunStatusForSHA(workflowName, sha string) (string, int) {
 	// Get recent runs for this workflow
 	cmd := exec.Command("gh", "run", "list", "-w", workflowName, "--limit", "20",
@@ -217,9 +222,12 @@ func getRunStatusForSHA(workflowName, sha string) (string, int) {
 	}
 
 	// Find runs matching our SHA
+	// Count all active runs (we want to wait for all of them)
+	// But for completed runs, only consider the most recent one
+	// (GitHub returns runs in reverse chronological order)
 	activeCount := 0
-	hasCompleted := false
-	hasFailed := false
+	foundCompleted := false
+	mostRecentFailed := false
 
 	for _, run := range runs {
 		if run.HeadSHA != sha {
@@ -230,20 +238,24 @@ func getRunStatusForSHA(workflowName, sha string) (string, int) {
 		case "in_progress", "queued", "waiting", "pending":
 			activeCount++
 		case "completed":
-			hasCompleted = true
-			if run.Conclusion != "success" && run.Conclusion != "skipped" {
-				hasFailed = true
+			// Only the first (most recent) completed run determines success/failure
+			if !foundCompleted {
+				foundCompleted = true
+				if run.Conclusion != "success" && run.Conclusion != "skipped" {
+					mostRecentFailed = true
+				}
 			}
+			// Ignore older completed runs - they may be failed retries
 		}
 	}
 
 	if activeCount > 0 {
 		return "active", activeCount
 	}
-	if hasFailed {
+	if mostRecentFailed {
 		return "failed", 0
 	}
-	if hasCompleted {
+	if foundCompleted {
 		return "success", 0
 	}
 	return "none", 0
