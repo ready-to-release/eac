@@ -260,26 +260,54 @@ Get help for a specific command:
 r2r eac help <command>
 ```
 
-Get structured command information in JSON format:
+Get structured command information:
 
 ```bash
-r2r eac get-valid-commands --format json
+r2r eac show valid-commands  # Table format
+r2r eac get valid-commands   # JSON format
 ```
 
-### Common Command Categories
+### Command Categories
 
-| Category | Example Commands | Description |
-|----------|------------------|-------------|
-| **Repository Structure** | `show`, `show modules`, `get modules` | View repository organization |
-| **Building** | `build`, `show-build-summary` | Build modules and track progress |
-| **Testing** | `test`, `show-test-summary`, `get-tests` | Run tests and view results |
-| **Dependencies** | `show-dependencies`, `get-dependencies` | Explore module relationships |
-| **Files** | `get-files`, `show-files`, `get-files-by-module` | Find and analyze files |
-| **CI/CD** | `pipeline-ci`, `show-ci-summary` | Continuous integration workflows |
-| **Releases** | `release-this`, `show-release-notes` | Version management and releases |
-| **Documentation** | `serve`, `update-docs`, `show-books` | Build and serve docs |
-| **Validation** | `validate`, `validate-contracts` | Verify repository integrity |
-| **Specifications** | `create-spec`, `show-specs`, `get-specs` | Write and manage Gherkin specs |
+EAC provides 147 commands organized into logical groups. Here are the main categories:
+
+| Category | Commands | Description |
+|----------|----------|-------------|
+| **Viewing Repository** | `show`, `get` | Display repository information (modules, files, dependencies) |
+| **Building & Testing** | `build`, `test` | Build modules and run test suites |
+| **Development** | `create`, `update` | Generate specs, commit messages, designs, and PR descriptions |
+| **Validation** | `validate` | Verify contracts, dependencies, specs, and release readiness |
+| **Release Management** | `release` | Changelog, versioning, and release execution |
+| **CI/CD Integration** | `pipeline` | Continuous integration orchestration and status |
+| **Workspace Management** | `work` | Parallel development with git worktrees |
+| **Documentation** | `serve`, `update docs` | Build and serve documentation sites |
+| **Templates** | `templates` | Manage documentation and specification templates |
+| **Security** | `scan` | Security scanning and compliance evidence |
+
+#### Common Command Patterns
+
+**Show vs Get:**
+- `show` commands display human-readable output (tables, summaries)
+- `get` commands return structured JSON data for scripting
+
+**Examples:**
+```bash
+r2r eac show modules          # Pretty table for humans
+r2r eac get modules           # JSON for scripts
+```
+
+#### Most Frequently Used Commands
+
+| Command | Purpose |
+|---------|---------|
+| `r2r eac show modules` | View all modules in your repository |
+| `r2r eac show files-changed` | See which files changed and their module ownership |
+| `r2r eac build <module>` | Build a specific module |
+| `r2r eac test <module>` | Run tests for a module |
+| `r2r eac validate` | Validate all repository contracts |
+| `r2r eac create spec "description"` | Generate a Gherkin specification |
+| `r2r eac release this` | Prepare a module for release |
+| `r2r eac work create <name>` | Create a new development workspace |
 
 ### Quick Reference Links
 
