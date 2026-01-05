@@ -442,7 +442,8 @@ If you've created custom configuration files:
 
 ## Next Steps
 
-- **Next tutorial:** [Your First Specification](./first-specification.md) - Write Gherkin specs
+- **Next tutorial:** [Creating Your First Extension](./creating-your-first-extension.md) - Build a custom r2r extension
+- **Learn about specifications:** [BDD Fundamentals](../../explanation/specifications/concepts/bdd-fundamentals.md) - Understand Gherkin and BDD
 - **If customizing (advanced):** See reference documentation for configuration file formats
 
 {{ diataxis_footer() }}

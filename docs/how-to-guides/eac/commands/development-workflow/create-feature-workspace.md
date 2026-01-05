@@ -6,12 +6,6 @@ Set up an isolated workspace for developing a new feature without affecting your
 
 ## Prerequisites
 
-### Required Knowledge
-
-**New to git worktrees?** Learn these concepts first:
-
-- [Working with Git Worktrees](../../../../tutorials/core-workflows/working-with-worktrees.md) - Understand parallel development with workspaces
-
 ### Required Setup
 
 - Working in a git repository

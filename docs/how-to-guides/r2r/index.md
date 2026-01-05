@@ -14,7 +14,7 @@ Guides for working with the r2r (Ready to Release) command-line interface. Learn
 
 - **Creating your first extension?** Start with [Creating Extensions](./creating-extensions.md)
 - **Developing ext-eac commands?** See [Local Development - EAC Repository](./local-development.md#eac-repository-development)
-- **Building a standalone extension?** See [Local Development - Standalone Extensions](./local-development.md#standalone-extension-development)
+- **Building a standalone extension?** See [Local Development - External Repository Testing](./local-development.md#external-repository-testing)
 - **Testing in another repo?** See [Testing in External Repositories](./testing-in-external-repos.md)
 
 ### Reference Implementation
