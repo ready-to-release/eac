@@ -6,9 +6,20 @@ Guides for working with the r2r (Ready to Release) command-line interface. Learn
 
 | Guide | Description |
 |-------|-------------|
-| [Creating Extensions](./creating-extensions.md) | Build custom CLI extensions as Docker containers |
-| [Local Development Workflows](./local-development.md) | Choose the right workflow: importer.ps1 vs Docker |
-| [Testing in External Repositories](./testing-in-external-repos.md) | Test extensions in different repositories using Docker |
+| [Creating Extensions](./creating-extensions.md) | Build production-ready extensions: project structure, metadata, testing, Dockerfile optimization, and EAC integration |
+| [Local Development Workflows](./local-development.md) | Develop and test extensions locally: importer.ps1 for EAC, Docker for standalone extensions |
+| [Testing in External Repositories](./testing-in-external-repos.md) | Test ext-eac and standalone extensions in external repositories using Docker |
+
+### Quick Links
+
+- **Creating your first extension?** Start with [Creating Extensions](./creating-extensions.md)
+- **Developing ext-eac commands?** See [Local Development - EAC Repository](./local-development.md#eac-repository-development)
+- **Building a standalone extension?** See [Local Development - Standalone Extensions](./local-development.md#standalone-extension-development)
+- **Testing in another repo?** See [Testing in External Repositories](./testing-in-external-repos.md)
+
+### Reference Implementation
+
+For a complete, production-ready example, see [ext-env-check](https://github.com/ready-to-release/ext-env-check):
 
 ## See Also
 

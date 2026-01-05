@@ -8,6 +8,15 @@
 
 ## Overview
 
+### Extension Types
+
+This guide covers testing two types of extensions in external repositories:
+
+1. **ext-eac**: The EAC command extension (built in EAC repository)
+2. **Standalone extensions**: Custom extensions like ext-env-check (separate repositories)
+
+Both types use Docker-based testing in external repositories, but they're built differently.
+
 ### Why Test in External Repositories?
 
 Testing in external repositories ensures your extension:
@@ -17,13 +26,16 @@ Testing in external repositories ensures your extension:
 - Functions correctly outside the development environment
 - Integrates properly with existing workflows
 - Validates Dockerfile and container configuration
+- Verifies cross-repository compatibility
 
 ### Development vs Testing Workflow
 
-| Location | Workflow | Purpose |
-|----------|----------|---------|
-| **EAC Repository** | `importer.ps1` | Fast development and debugging |
-| **External Repositories** | Docker (this guide) | Realistic integration testing |
+| Extension Type | Build Location | Dev Workflow | Test in External Repo |
+|----------------|----------------|--------------|----------------------|
+| **ext-eac** | EAC repository | `importer.ps1` | Docker image |
+| **Standalone** | Own repository | Docker build | Docker image |
+
+**This guide focuses on ext-eac**, but the same principles apply to standalone extensions. See the [Testing Standalone Extensions](#testing-standalone-extensions-in-external-repos) section for standalone-specific guidance.
 
 **Workflow Summary:**
 
@@ -257,7 +269,7 @@ C:\source\ready-to-release\eac\scripts\pwsh\local-dev\setup.ps1 -TargetRepo . -S
 
 Each repository maintains its own configuration:
 
-```
+```text
 project-a/
   .r2r/
     r2r-cli.local.yml      # Points to ext-eac:dev
@@ -306,19 +318,168 @@ The external repository automatically uses the updated image.
 
 ### Recommended Iteration Pattern
 
+```mermaid
+flowchart LR
+    subgraph eac["EAC Repo<br/>(importer.ps1)<br/>Fast - seconds"]
+        direction TB
+        edit["1. Edit code"]
+        reload["2. r2r load-cmds"]
+        test["3. Test quickly"]
+        iterate["4. Iterate..."]
+        edit --> reload --> test --> iterate
+        iterate -.-> edit
+    end
+
+    subgraph external["External Repo<br/>(Docker)<br/>Thorough - minutes"]
+        direction TB
+        build["5. Build image"]
+        testRepo["6. Test in repo"]
+        validate["7. Validate"]
+        build --> testRepo --> validate
+    end
+
+    iterate ==>|"When ready"| build
+
+    style eac fill:#e1f5e1
+    style external fill:#e1e5f5
 ```
-EAC Repo (importer.ps1)          External Repo (Docker)
-┌──────────────────┐              ┌──────────────────┐
-│ 1. Edit code     │              │                  │
-│ 2. r2r load-cmds │              │                  │
-│ 3. Test quickly  │              │                  │
-│ 4. Iterate...    │              │                  │
-│                  │   ──────>    │ 5. Build image   │
-│                  │              │ 6. Test in repo  │
-│                  │              │ 7. Validate      │
-└──────────────────┘              └──────────────────┘
-   Fast (seconds)                    Thorough (minutes)
+
+---
+
+## Testing Standalone Extensions in External Repos
+
+If you're developing a standalone extension (like ext-env-check) and want to test it in external repos, follow this workflow.
+
+### Prerequisites
+
+1. **Your extension repository** with Dockerfile
+2. **External test repository** (different from your extension repo)
+3. **r2r CLI installed**
+
+### Quick Start
+
+**1. Build your extension locally:**
+
+```powershell
+cd C:\path\to\your-extension
+docker build -f containers\your-extension\Dockerfile -t your-extension:dev .
 ```
+
+**2. Navigate to external test repo:**
+
+```powershell
+cd C:\path\to\external-test-repo
+```
+
+**3. Create local r2r config:**
+
+```yaml
+# .r2r/r2r-cli.local.yml
+version: "1.0"
+extensions:
+  - name: your-extension
+    image: your-extension:dev
+    load_local: true
+    image_pull_policy: Never
+```
+
+**4. Test:**
+
+```powershell
+r2r your-extension --help
+r2r your-extension <command>
+```
+
+### Iteration Workflow
+
+**After making changes to your extension:**
+
+1. **Rebuild container** in extension repo:
+
+   ```powershell
+   cd C:\path\to\your-extension
+   docker build -f containers\your-extension\Dockerfile -t your-extension:dev .
+   ```
+
+2. **Test immediately** in external repo (no reconfiguration needed):
+
+   ```powershell
+   cd C:\path\to\external-test-repo
+   r2r your-extension <command>
+   ```
+
+### Multiple Test Repositories
+
+Test your extension in different repository structures:
+
+```powershell
+# Build once
+cd C:\path\to\your-extension
+docker build -f containers\your-extension\Dockerfile -t your-extension:dev .
+
+# Test in monorepo
+cd C:\repos\test-monorepo
+# Create .r2r/r2r-cli.local.yml
+r2r your-extension <command>
+
+# Test in single-module repo
+cd C:\repos\test-single-module
+# Create .r2r/r2r-cli.local.yml
+r2r your-extension <command>
+
+# Test in polyglot repo
+cd C:\repos\test-polyglot
+# Create .r2r/r2r-cli.local.yml
+r2r your-extension <command>
+```
+
+### Testing with Repository Access
+
+Extensions that need repository access receive it automatically:
+
+```powershell
+# Extension receives repository mounted at /var/task
+r2r your-extension <command>
+```
+
+The r2r CLI automatically mounts the current directory at `/var/task` in the container.
+
+### Example: Testing ext-env-check
+
+```powershell
+# 1. Build ext-env-check
+cd C:\source\ready-to-release\ext-env-check
+docker build -f containers\ext-env-check\Dockerfile -t ext-env-check:dev .
+
+# 2. Create test repo
+cd C:\temp\test-project
+git init
+
+# 3. Configure r2r
+New-Item -ItemType Directory -Force .r2r
+@"
+version: "1.0"
+extensions:
+  - name: env-check
+    image: ext-env-check:dev
+    load_local: true
+    image_pull_policy: Never
+"@ | Out-File -FilePath .r2r\r2r-cli.local.yml -Encoding UTF8
+
+# 4. Test
+r2r env-check HOME USER SHELL
+```
+
+### Comparing Extension Testing
+
+| Aspect | ext-eac | Standalone Extension |
+|--------|---------|---------------------|
+| Build location | EAC repo | Extension repo |
+| Dev iteration | importer.ps1 | Docker rebuild |
+| External test setup | Setup script | Manual config |
+| Image update | Rebuild in EAC repo | Rebuild in own repo |
+| Config file | Same pattern | Same pattern |
+| Test commands | `r2r eac <cmd>` | `r2r <ext> <cmd>` |
 
 ### Testing Different Versions
 
@@ -334,247 +495,7 @@ cd C:\path\to\external-repo
 .\scripts\pwsh\cli\init-local.ps1 -ImageTag "ext-eac:test-v2" -Force
 ```
 
-## Troubleshooting
-
-### Repository Not Found
-
-**Problem**: Setup script reports "Target repository not found"
-
-**Solution**: Verify the path exists and is a git repository:
-
-```powershell
-# Check path exists
-Test-Path C:\path\to\external-repo
-
-# Check git repository
-cd C:\path\to\external-repo
-git rev-parse --show-toplevel
-
-# Initialize if needed
-git init
-```
-
-### Commands Create Files in Wrong Location
-
-**Problem**: EAC commands create files in the wrong directory
-
-**Solution**: Check and set `R2R_REPO_ROOT` environment variable:
-
-```powershell
-# Check current value
-echo $env:R2R_REPO_ROOT
-
-# Set to external repository
-cd C:\path\to\external-repo
-$env:R2R_REPO_ROOT = (Get-Location)
-```
-
-### Image Not Found
-
-**Problem**: r2r reports "image not found" in external repository
-
-**Solutions**:
-
-1. **Verify image exists**:
-
-   ```powershell
-   docker images ext-eac:dev
-   ```
-
-2. **Check local config**:
-
-   ```powershell
-   cat .r2r\r2r-cli.local.yml
-   ```
-
-   Should contain:
-
-   ```yaml
-   load_local: true
-   extensions:
-     - name: 'eac'
-       image: 'ext-eac:dev'
-       image_pull_policy: 'Never'
-   ```
-
-3. **Rebuild if missing**:
-
-   ```powershell
-   cd C:\source\ready-to-release\eac
-   .\scripts\pwsh\local-dev\build-local.ps1
-   ```
-
-### Configuration Not Applied
-
-**Problem**: Changes to `.r2r/r2r-cli.local.yml` not taking effect
-
-**Solutions**:
-
-1. **Verify file location**:
-
-   ```powershell
-   # Should be in repository root
-   Test-Path .r2r\r2r-cli.local.yml
-   ```
-
-2. **Check YAML syntax**:
-
-   ```powershell
-   cat .r2r\r2r-cli.local.yml
-   ```
-
-3. **Recreate configuration**:
-
-   ```powershell
-   C:\source\ready-to-release\eac\scripts\pwsh\cli\init-local.ps1 -Force
-   ```
-
-### Init Command Fails
-
-**Problem**: `r2r eac init` fails in external repository
-
-**Solutions**:
-
-1. **Set repository root**:
-
-   ```powershell
-   $env:R2R_REPO_ROOT = (Get-Location)
-   ```
-
-2. **Verify Docker image**:
-
-   ```powershell
-   docker images ext-eac:dev
-   ```
-
-3. **Check local config exists**:
-
-   ```powershell
-   Test-Path .r2r\r2r-cli.local.yml
-   ```
-
-4. **Run init again**:
-
-   ```powershell
-   r2r eac init
-   ```
-
-### Different Behavior Than EAC Repo
-
-**Problem**: Commands behave differently in external repo vs EAC repo
-
-**Causes**:
-
-1. **Different repository structures** - Expected behavior
-2. **Different configurations** - Check `.r2r/eac/agent.yml`
-3. **Environment variables** - Verify `R2R_REPO_ROOT` is set
-4. **Docker image version** - Ensure using same image
-
-**Solutions**:
-
-```powershell
-# Compare configurations
-diff (cat C:\source\ready-to-release\eac\.r2r\r2r-cli.local.yml) `
-     (cat C:\path\to\external-repo\.r2r\r2r-cli.local.yml)
-
-# Verify environment
-echo "EAC: $(cd C:\source\ready-to-release\eac; $env:R2R_REPO_ROOT)"
-echo "External: $(cd C:\path\to\external-repo; $env:R2R_REPO_ROOT)"
-
-# Check Docker image
-docker images ext-eac:dev
-```
-
-## Best Practices
-
-1. **Develop with importer.ps1 first**: Use `importer.ps1` in EAC repo for fast development
-2. **Build Docker for validation**: Only build Docker when ready for external testing
-3. **One setup per repository**: Run setup once per external repository
-4. **Set environment variable**: Always set `R2R_REPO_ROOT` in new terminal sessions
-5. **Keep configs local**: Don't commit `.r2r/*.local.yml` to git
-6. **Test incrementally**: Test one command at a time to isolate issues
-7. **Use meaningful names**: Name external test repositories clearly
-8. **Document test cases**: Keep notes on what you're testing in each repository
-9. **Clean up**: Remove test configurations when done
-
-## Environment Variable Management
-
-### PowerShell Profile
-
-Add to your PowerShell profile for automatic setup:
-
-```powershell
-# Edit profile
-notepad $PROFILE
-
-# Add function
-function Set-R2RRepo {
-    $env:R2R_REPO_ROOT = (Get-Location).Path
-    Write-Host "R2R_REPO_ROOT set to: $env:R2R_REPO_ROOT" -ForegroundColor Green
-}
-
-# Use in any repository
-cd C:\path\to\external-repo
-Set-R2RRepo
-```
-
-### Session Management
-
-Create a setup script for each external repository:
-
-```powershell
-# C:\repos\project-a\setup-r2r.ps1
-$env:R2R_REPO_ROOT = "C:\repos\project-a"
-Write-Host "Ready to use r2r commands in project-a" -ForegroundColor Green
-```
-
-Usage:
-
-```powershell
-cd C:\repos\project-a
-.\setup-r2r.ps1
-r2r eac <command>
-```
-
-## Reference
-
-### Setup Command
-
-```powershell
-C:\source\ready-to-release\eac\scripts\pwsh\setup-local-dev.ps1 `
-    -TargetRepo <path> `
-    [-SkipBuild] `
-    [-SkipInstall] `
-    [-SkipTest] `
-    [-ImageTag <tag>] `
-    [-Force]
-```
-
-### Required Files
-
-After setup, external repository should have:
-
-```
-external-repo/
-  .git/                           # Git repository
-  .r2r/
-    r2r-cli.local.yml            # R2R local config (gitignored)
-    eac/
-      agent.yml                   # EAC config (after r2r eac init)
-  .gitignore                      # Updated with .r2r/*.local.yml
-```
-
-### Environment Variables
-
-| Variable | Required | Purpose |
-|----------|----------|---------|
-| `R2R_REPO_ROOT` | Yes | Points to repository root |
-
-Set in each session:
-
-```powershell
-$env:R2R_REPO_ROOT = (Get-Location)
-```
+---
 
 ## Related Guides
 
