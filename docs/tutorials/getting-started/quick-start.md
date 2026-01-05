@@ -287,10 +287,12 @@ EAC provides 147 commands organized into logical groups. Here are the main categ
 #### Common Command Patterns
 
 **Show vs Get:**
+
 - `show` commands display human-readable output (tables, summaries)
 - `get` commands return structured JSON data for scripting
 
 **Examples:**
+
 ```bash
 r2r eac show modules          # Pretty table for humans
 r2r eac get modules           # JSON for scripts
