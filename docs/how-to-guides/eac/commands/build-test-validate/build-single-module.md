@@ -6,13 +6,6 @@ Compile a module and generate its artifacts, automatically handling dependencies
 
 ## Prerequisites
 
-### Required Knowledge
-
-**New to r2r modules?** Learn these concepts first:
-
-- [Your First Module](../../../../tutorials/getting-started/first-module.md) - Understand module structure and contracts
-- [Building and Testing Changes](../../../../tutorials/core-workflows/building-and-testing.md) - Efficient build workflows
-
 ### Required Setup
 
 - Module contract exists (module.yml)

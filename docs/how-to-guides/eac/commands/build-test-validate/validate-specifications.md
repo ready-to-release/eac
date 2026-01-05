@@ -10,7 +10,7 @@ Check Gherkin BDD specifications for quality and detect unused step definitions.
 
 **New to specifications?** Learn these concepts first:
 
-- [Your First Feature Specification](../../../../tutorials/getting-started/first-specification.md) - Understand specification structure and quality standards
+- [BDD Fundamentals](../../../../explanation/specifications/concepts/bdd-fundamentals.md) - Understand specification structure and quality standards
 
 ### Required Setup
 

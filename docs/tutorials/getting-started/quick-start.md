@@ -242,16 +242,65 @@ Congratulations! You've successfully:
 - **Repository exploration** - Using `show` commands to understand structure
 - **Test suites** - Different test levels (unit, integration, acceptance, production-verification)
 
+## Discovering Available Commands
+
+The EAC extension provides many commands organized by category. Here's how to discover and use them:
+
+### Get Help
+
+List all available commands:
+
+```bash
+r2r eac help
+```
+
+Get help for a specific command:
+
+```bash
+r2r eac help <command>
+```
+
+Get structured command information in JSON format:
+
+```bash
+r2r eac get-valid-commands --format json
+```
+
+### Common Command Categories
+
+| Category | Example Commands | Description |
+|----------|------------------|-------------|
+| **Repository Structure** | `show`, `show modules`, `get modules` | View repository organization |
+| **Building** | `build`, `show-build-summary` | Build modules and track progress |
+| **Testing** | `test`, `show-test-summary`, `get-tests` | Run tests and view results |
+| **Dependencies** | `show-dependencies`, `get-dependencies` | Explore module relationships |
+| **Files** | `get-files`, `show-files`, `get-files-by-module` | Find and analyze files |
+| **CI/CD** | `pipeline-ci`, `show-ci-summary` | Continuous integration workflows |
+| **Releases** | `release-this`, `show-release-notes` | Version management and releases |
+| **Documentation** | `serve`, `update-docs`, `show-books` | Build and serve docs |
+| **Validation** | `validate`, `validate-contracts` | Verify repository integrity |
+| **Specifications** | `create-spec`, `show-specs`, `get-specs` | Write and manage Gherkin specs |
+
+### Quick Reference Links
+
+For detailed command documentation, see:
+
+- **[Command Reference](../../reference/commands/)** - Complete alphabetical listing
+- **[Getting Started Commands](../../how-to-guides/eac/commands/getting-started/)** - Beginner-friendly guides
+- **[Development Workflow Commands](../../how-to-guides/eac/commands/development-workflow/)** - Daily development tasks
+- **[Build, Test & Validate Commands](../../how-to-guides/eac/commands/build-test-validate/)** - Build and test execution
+- **[Release Management Commands](../../how-to-guides/eac/commands/release-management/)** - Version management
+
 ## Next Steps
 
 ### Continue Learning
 
-- **Next tutorial:** [Understanding Configuration Files](./configuration-files.md) - Learn about `.r2r/eac/` files
-- **Then:** [Your First Feature Specification](./first-specification.md) - Learn to write Gherkin specifications
+- **Next tutorial:** [Understanding Configuration Files](./configuration-files.md) - Learn about `.r2r/` and `.r2r/eac/` files
+- **Then:** [Creating Your First Extension](./creating-your-first-extension.md) - Build a custom r2r extension
 
-### Apply What You Learned
+### Try Common Tasks
 
-Now that you know the basics of r2r, you can accomplish these tasks:
+Now that you know the basics of r2r, try these common tasks:
 
 - **[Get Help with Commands](../../how-to-guides/eac/commands/getting-started/get-help-with-commands.md)** - Find and understand any r2r command
 - **[Explore Your Repository](../../how-to-guides/eac/commands/getting-started/explore-your-repository.md)** - Discover modules, files, and structure
@@ -259,5 +308,6 @@ Now that you know the basics of r2r, you can accomplish these tasks:
 
 ### Dive Deeper
 
-- [Everything as Code Paradigm](../../explanation/everything-as-code/paradigm.md) - Understand the philosophy
-- [Command Reference](../../reference/commands/) - Complete command documentation
+- **[Everything as Code Paradigm](../../explanation/everything-as-code/paradigm.md)** - Understand the philosophy
+- **[Command Reference](../../reference/commands/)** - Complete command documentation
+- **[Creating Extensions Guide](../../how-to-guides/r2r/creating-extensions.md)** - Build custom extensions

@@ -45,7 +45,7 @@ Documentation is organized using the [Diataxis framework](https://diataxis.fr/) 
 <p>Step-by-step lessons that take you through a series of steps to complete a project. Start here if you're new to the CLI and want hands-on guidance through core concepts.</p>
 <ul>
 <li><a href="tutorials/getting-started/quick-start/">Quick Start Guide</a></li>
-<li><a href="tutorials/getting-started/first-specification/">Your First Feature Specification</a></li>
+<li><a href="tutorials/getting-started/creating-your-first-extension/">Creating Your First Extension</a></li>
 </ul>
 </div>
 <div>
