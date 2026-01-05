@@ -12,7 +12,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/stretchr/testify v1.11.1
-	github.com/yuin/goldmark v1.7.13
+	github.com/yuin/goldmark v1.7.14
 	go.uber.org/zap v1.27.1
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
