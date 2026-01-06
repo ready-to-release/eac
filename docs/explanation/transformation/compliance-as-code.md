@@ -31,9 +31,11 @@ All compliance artifacts stored as version-controlled text files in Git. Instead
 **In practice**:
 
 - Policies in Markdown (or kept in existing document management system)
-- **Requirements as Gherkin specifications** (MUST be in `specs/risk-controls/*.feature`)
 - Procedures as Markdown with executable examples
 - Evidence automatically referenced from version control
+
+!!! note "Requirements Storage"
+    Requirements MUST be stored as Gherkin specifications in `specs/risk-controls/*.feature`
 
 **Why It Matters**: Version control provides traceability, collaboration via pull requests, searchability, immutability, and automation capabilities impossible with traditional document management.
 
@@ -66,12 +68,13 @@ Compliance checked on every commit, not periodically. Compliance tests run in CI
 
 Validate compliance as early as possible in the delivery lifecycle - ideally before code commits.
 
-**Cost Differential**:
+!!! tip "Shift-Left Economics"
+    The earlier you catch issues, the cheaper they are to fix:
 
-- **Pre-commit** (Stage 2): 5 minutes to fix
-- **CI** (Stage 4): 15 minutes to fix
-- **PLTE** (Stage 5): 1 hour to fix
-- **Production** (Stage 11): Days to fix + incident response
+    - **Pre-commit** (Stage 2): 5 minutes to fix
+    - **CI** (Stage 4): 15 minutes to fix
+    - **PLTE** (Stage 5): 1 hour to fix
+    - **Production** (Stage 11): Days to fix + incident response
 
 **In practice**:
 
@@ -117,14 +120,14 @@ Compliance requirements expressed as Gherkin scenarios that can be executed as a
 # @iso27001 @hipaa @fda-21cfr11
 # @implementation:required @automation:full
 
-@risk-control:auth-mfa
+@control:ia-2(1)
 Feature: Multi-Factor Authentication
 
   # Source: Risk Assessment RA-2025-001
 
   Rule: Authentication requires multiple factors
 
-    @risk-control:auth-mfa-01
+    @control:ia-2(1)
     Scenario: MFA required for all access
       Given a system with protected resources
       Then all user access MUST require at least two factors
@@ -132,21 +135,21 @@ Feature: Multi-Factor Authentication
       And failed authentication attempts MUST be logged
 ```
 
-**User Scenarios** link to risk controls via `@risk-control:<name>-<id>` tags:
+**User Scenarios** link to risk controls via `@control:<id>` tags:
 
 ```gherkin
 Feature: cli_user-login
 
   Rule: Users must authenticate before accessing protected resources
 
-    @ov @risk-control:auth-mfa-01
+    @ov @control:ia-2(1)
     Scenario: Valid credentials with MFA grant access
       Given I have valid credentials and MFA token
       When I run "r2r login --user admin --mfa"
       Then I should be authenticated
 ```
 
-**Traceability Chain**: Regulatory requirement → Risk control specification (`@risk-control:auth-mfa-01`) → User scenarios (`@risk-control:auth-mfa-01` tag) → Step implementations → Production code
+**Traceability Chain**: Regulatory requirement → Risk control specification (`@control:ia-2(1)`) → User scenarios (`@control:ia-2(1)` tag) → Step implementations → Production code
 
 **See**:
 
@@ -174,15 +177,19 @@ Together: **70-80% reduction in compliance overhead** while **improving complian
 
 Organizations typically implement in this order:
 
-**Phase 1** (Pilot):
+!!! info "Implementation Sequence"
+    **Phase 1 - Pilot** (12-16 weeks):
 
-1. Start with Everything as Code (specs in Git)
-2. Add Executable Specifications (risk controls in Gherkin)
-3. Enable Continuous Validation (CI runs specs)
+    1. Start with Everything as Code (specs in Git)
+    2. Add Executable Specifications (risk controls in Gherkin)
+    3. Enable Continuous Validation (CI runs specs)
 
-**Phase 2** (Scale): 4. Implement Shift-Left (pre-commit hooks) 5. Automate Evidence Collection (pipeline integration)
+    **Phase 2 - Scale** (8-12 weeks):
 
-**Timeline**: 12-16 weeks for pilot, 8-12 weeks for automation tooling
+    4. Implement Shift-Left (pre-commit hooks)
+    5. Automate Evidence Collection (pipeline integration)
+
+    **Timeline**: 12-16 weeks for pilot, 8-12 weeks for automation tooling
 
 **See**: [Transformation Framework](./transformation-framework.md) for detailed phased approach.
 

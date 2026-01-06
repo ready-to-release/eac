@@ -233,11 +233,12 @@ Organizations that transform compliance practices achieve:
 
 #### Reduced Overhead
 
-Substantial reduction in manual compliance work:
+!!! info "Typical Improvements"
+    Substantial reduction in manual compliance work:
 
-- Less time spent per team on weekly compliance activities
-- Dramatically reduced audit preparation time
-- Significant annual labor cost savings
+      - Less time spent per team on weekly compliance activities
+      - Dramatically reduced audit preparation time
+      - Significant annual labor cost savings
 
 #### Faster Delivery
 
@@ -353,13 +354,16 @@ Before starting transformation:
 
 ### Essential Prerequisites
 
-These must exist or be established:
+!!! warning "Essential Prerequisites"
+    These MUST exist before starting transformation:
 
-1. **Executive Sponsorship**: VP-level or C-level champion who can remove blockers
-2. **Compliance Office Buy-In**: Compliance officer must co-sponsor transformation
-3. **Basic CI/CD Pipelines**: Delivery automation must exist at basic level
-4. **Budget**: Resources for multi-month transformation initiative
-5. **Pilot Team**: Identified team willing to be first adopter
+    1. **Executive Sponsorship**: VP-level or C-level champion who can remove blockers
+    2. **Compliance Office Buy-In**: Compliance officer must co-sponsor transformation
+    3. **Basic CI/CD Pipelines**: Delivery automation must exist at basic level
+    4. **Budget**: Resources for multi-month transformation initiative
+    5. **Pilot Team**: Identified team willing to be first adopter
+
+    Missing any of these significantly increases failure risk.
 
 ### Recommended Prerequisites
 
