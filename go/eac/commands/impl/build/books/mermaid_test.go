@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ready-to-release/eac/go/eac/commands/impl/build/buildutil"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/dockerutil"
 )
 
 func TestExtractMermaidBlocks(t *testing.T) {
@@ -386,9 +386,9 @@ func TestFormatDockerVolumePath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := buildutil.FormatDockerVolumePath(tt.input)
+			result := dockerutil.FormatDockerVolume(tt.input)
 			if result != tt.expected {
-				t.Errorf("buildutil.FormatDockerVolumePath(%q) = %q, want %q",
+				t.Errorf("dockerutil.FormatDockerVolume(%q) = %q, want %q",
 					tt.input, result, tt.expected)
 			}
 		})

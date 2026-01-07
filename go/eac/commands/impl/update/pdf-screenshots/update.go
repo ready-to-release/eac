@@ -31,7 +31,7 @@ import (
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/ready-to-release/eac/go/eac/commands/impl/build/buildutil"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/dockerutil"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/serve"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
@@ -184,7 +184,7 @@ func UpdatePDFScreenshots() int {
 	}
 
 	// Check Docker availability
-	if !buildutil.IsDockerAvailable() {
+	if !dockerutil.IsDockerAvailable() {
 		fmt.Fprintln(os.Stderr, "Error: Docker is not available but required for PDF extraction")
 		fmt.Fprintln(os.Stderr, "Ensure Docker is installed and the daemon is running")
 		return 1
@@ -402,8 +402,8 @@ func extractPages(client serve.DockerClient, pdfPath, outputDir string, dpi int)
 	pdfName := filepath.Base(pdfPath)
 
 	// Format paths for Docker
-	inputMount := buildutil.FormatDockerVolumePath(pdfDir)
-	outputMount := buildutil.FormatDockerVolumePath(outputDir)
+	inputMount := dockerutil.FormatDockerVolume(pdfDir)
+	outputMount := dockerutil.FormatDockerVolume(outputDir)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()

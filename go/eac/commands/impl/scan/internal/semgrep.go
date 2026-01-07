@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/docker/docker/api/types/container"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/dockerutil"
 )
 
 // NOTE: SemgrepImage constant removed - now configured via security-tools.yml
@@ -69,9 +70,15 @@ func RunSemgrepSAST(workspaceRoot, moduleRoot string, config string, semgrepImag
 	absModuleRoot := filepath.Join(workspaceRoot, moduleRoot)
 	log.Debugf("Resolved module path: workspaceRoot=%s moduleRoot=%s absolute=%s", workspaceRoot, moduleRoot, absModuleRoot)
 
+	// Translate path for Docker-in-Docker environments
+	hostPath, err := dockerutil.TranslatePathForMount(absModuleRoot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to translate path for mount: %w", err)
+	}
+
 	// Convert to Docker-compatible path format (handles Windows paths)
-	dockerPath := ToDockerPath(absModuleRoot)
-	log.Debugf("Docker bind mount path: original=%s docker=%s", absModuleRoot, dockerPath)
+	dockerPath := dockerutil.FormatDockerVolume(hostPath)
+	log.Debugf("Docker bind mount path: container=%s host=%s docker=%s", absModuleRoot, hostPath, dockerPath)
 
 	// Configure container
 	containerConfig := &container.Config{

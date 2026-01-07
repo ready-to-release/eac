@@ -1,6 +1,6 @@
 //go:build L2 && (integration || dind)
 
-package serve
+package dockerutil
 
 import (
 	"context"

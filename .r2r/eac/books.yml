@@ -313,19 +313,27 @@ books:
         exclude:
           - "docs/assets/lfs/pdf/**"
 
-      # Dynamic content - module versions and release info
-      # - type: command
-      #   command: "show release-notes"
-      #   target: "release-notes.md"
-      #   frontmatter:
-      #     title: "Release notes"
-      #     description: "All modules in this release bundle"
-      #   order: 1
+      # Dynamic content - module information and evidence
+      - type: command
+        command: "show modules"
+        target: "01-modules.md"
+        frontmatter:
+          title: "Module Overview"
+          description: "All modules in this release"
+        order: 1
 
-      # - type: command
-      #   command: "show test-summary r2r-eac-bundle"
-      #   target: "dependencies.md"
-      #   frontmatter:
-      #     title: "Module Dependencies"
-      #     description: "Dependency graph for included modules"
-      #   order: 2
+      - type: command
+        command: "show dependencies"
+        target: "02-dependencies.md"
+        frontmatter:
+          title: "Module Dependencies"
+          description: "Dependency relationships between modules"
+        order: 2
+
+      - type: command
+        command: "show tests"
+        target: "03-tests.md"
+        frontmatter:
+          title: "Test Coverage"
+          description: "All test assertions in the repository"
+        order: 3

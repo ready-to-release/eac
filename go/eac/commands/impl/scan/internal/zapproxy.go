@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/docker/docker/api/types/container"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/dockerutil"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 )
 
@@ -91,12 +92,21 @@ func RunZAPScan(targetURL, scanType, workspaceRoot string, zapImage string) (int
 
 	reportPath := filepath.Join(outputDir, "zap-report.json")
 
-	// Get absolute path and convert to Docker-compatible format for volume mount
+	// Get absolute path for volume mount
 	absOutputDir, err := filepath.Abs(outputDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get absolute path: %w", err)
 	}
-	dockerOutputDir := ToDockerPath(absOutputDir)
+
+	// Translate path for Docker-in-Docker environments
+	hostPath, err := dockerutil.TranslatePathForMount(absOutputDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to translate path for mount: %w", err)
+	}
+
+	// Convert to Docker-compatible path format for volume mount
+	dockerOutputDir := dockerutil.FormatDockerVolume(hostPath)
+	log.Debugf("Docker bind mount path: container=%s host=%s docker=%s", absOutputDir, hostPath, dockerOutputDir)
 
 	// Build ZAP scan command based on scan type
 	var zapScript string

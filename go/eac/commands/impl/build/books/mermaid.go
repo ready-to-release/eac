@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/commands/impl/build/buildutil"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/dockerutil"
 )
 
 // Size presets for mermaid diagrams
@@ -254,7 +254,7 @@ func EnsureMermaidImage(workspaceRoot string, logWriter io.Writer) error {
 	fmt.Fprintf(logWriter, "    Building Docker image: %s\n", mermaidImageName)
 
 	// Detect Docker-in-Docker mode for path handling
-	isDinD := buildutil.IsDockerInDocker()
+	isDinD := dockerutil.IsDinD()
 	hostRepoRoot := workspaceRoot
 	if isDinD {
 		if hostRoot := os.Getenv("R2R_HOST_REPOROOT"); hostRoot != "" {
@@ -295,7 +295,7 @@ func EnsureMermaidImage(workspaceRoot string, logWriter io.Writer) error {
 // Exported for use by update docs command
 func RenderSingleDiagram(block MermaidBlock, outputPath string, workspaceRoot string, logWriter io.Writer) error {
 	// Detect Docker-in-Docker mode
-	isDinD := buildutil.IsDockerInDocker()
+	isDinD := dockerutil.IsDinD()
 	hostRepoRoot := workspaceRoot
 	if isDinD {
 		if hostRoot := os.Getenv("R2R_HOST_REPOROOT"); hostRoot != "" {
@@ -333,7 +333,7 @@ func RenderSingleDiagram(block MermaidBlock, outputPath string, workspaceRoot st
 	dockerOutputPath := "/docs/" + strings.ReplaceAll(relOutputPath, "\\", "/")
 
 	// Format Docker volume path using host paths for DinD
-	dockerVolume := buildutil.FormatDockerVolumePath(hostRepoRoot)
+	dockerVolume := dockerutil.FormatDockerVolume(hostRepoRoot)
 
 	// Build Docker command
 	// Use dedicated cli-mkdocs-mermaid container for diagram rendering
@@ -389,9 +389,9 @@ func RenderSingleDiagram(block MermaidBlock, outputPath string, workspaceRoot st
 // Returns number of diagrams rendered and any error
 func (p *Preprocessor) renderMermaidDiagrams(statuses []CacheStatus) (int, error) {
 	// Check Docker availability first - fail fast if unavailable
-	if !buildutil.IsDockerAvailable() {
+	if !dockerutil.IsDockerAvailable() {
 		errorMsg := "Docker is not available but required for mermaid diagram rendering"
-		if buildutil.IsDockerInDocker() {
+		if dockerutil.IsDinD() {
 			errorMsg += "\nRunning in container: mount Docker socket with -v /var/run/docker.sock:/var/run/docker.sock"
 		} else {
 			errorMsg += "\nEnsure Docker is installed and the daemon is running"
