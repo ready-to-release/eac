@@ -108,6 +108,8 @@ modules:
       exclude:
         # Changelogs owned by their respective modules (books has no root, so path is from repo root)
         - books/CHANGELOG.md
+        # Bundle changelog owned by r2r-eac-bundle module
+        - r2r-eac-bundle/CHANGELOG.md
 
   # ============================================================================
   # LAYER 1 - Depends on Layer 0
@@ -480,7 +482,7 @@ modules:
             - docs
             - books
     files:
-      root: release/bundle
+      root: release/r2r-eac-bundle
       ignore:
         - ".github/workflows/release-r2r-eac-bundle.yaml"
       workflows:
