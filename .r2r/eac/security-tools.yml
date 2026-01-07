@@ -14,13 +14,13 @@
 docker_images:
   trivy:
     image: "ghcr.io/aquasecurity/trivy"
-    tag: "0.50.0"
-    description: "Trivy v0.50.0 - comprehensive vulnerability and misconfiguration scanner"
+    tag: "0.68.2"
+    description: "Trivy v0.68.2 - comprehensive vulnerability and misconfiguration scanner"
 
   semgrep:
     image: "semgrep/semgrep"
-    tag: "1.60.1"
-    description: "Semgrep v1.60.1 - static application security testing (SAST) tool"
+    tag: "1.145.1"
+    description: "Semgrep v1.145.1 - static application security testing (SAST) tool"
 
   zap:
     image: "zaproxy/zap-stable"
@@ -57,8 +57,18 @@ default_scanners:
   docs:
     - secrets
 
+  # Static modules (config files, scripts, documentation) - secrets only
+  # These modules contain no code or dependencies to scan for vulnerabilities
+  static:
+    - secrets
+
   # Default for any unspecified module type
   default:
     - sbom
     - vuln
     - secrets
+
+# Modules to skip by default when scanning
+# Can be overridden with CLI using --skip flag
+skip_modules:
+  - repository  # Skip repository module (large workspace root scan)

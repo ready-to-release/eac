@@ -81,7 +81,13 @@ func RunSemgrepSAST(workspaceRoot, moduleRoot string, config string, semgrepImag
 			"scan",
 			"--config", config,
 			"--json",
-			"--quiet",
+			// Exclude problematic directories that cause scanning issues
+			"--exclude", "mnt",
+			"--exclude", ".git",
+			"--exclude", "node_modules",
+			"--exclude", "vendor",
+			"--exclude", "out",
+			"--exclude", "bin",
 			"/src",
 		},
 	}
