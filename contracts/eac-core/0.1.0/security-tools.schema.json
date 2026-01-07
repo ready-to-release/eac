@@ -37,6 +37,16 @@
         "minItems": 1,
         "description": "List of scanner types to run by default for this module type"
       }
+    },
+    "skip_modules": {
+      "type": "array",
+      "description": "Modules to skip by default when scanning (can be overridden with CLI)",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9-]+$",
+        "description": "Module moniker to skip"
+      },
+      "uniqueItems": true
     }
   },
   "required": ["docker_images"],

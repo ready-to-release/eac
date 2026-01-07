@@ -312,9 +312,18 @@ func RunMultiScan(cmdCfg *cmdframework.CommandConfig, multiCfg *MultiScanConfig)
 	return cmdframework.Run(cmdCfg, multiScanWorker, hooks)
 }
 
-// multiScanAfterInit resolves scanners to run based on module types
+// multiScanAfterInit resolves scanners to run based on module types and sets up skip list
 func multiScanAfterInit(ctx *cmdframework.ExecutionContext) error {
 	multiCfg := ctx.Config.Extra["multiScanConfig"].(*MultiScanConfig)
+
+	// Read skip_modules from security-tools.yml and populate Extra["skipMonikers"]
+	// The framework's applySkipFilter will use this list during module resolution
+	if ctx.EACConfig != nil {
+		skipModules := ctx.EACConfig.SecurityTools.GetSkipModules()
+		if len(skipModules) > 0 {
+			ctx.Config.Extra["skipMonikers"] = skipModules
+		}
+	}
 
 	// If scanners were explicitly specified, use them for all modules
 	if len(multiCfg.Scanners) > 0 {

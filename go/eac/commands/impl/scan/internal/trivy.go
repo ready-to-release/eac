@@ -83,6 +83,8 @@ func RunTrivySBOM(workspaceRoot, moduleRoot, format string, trivyImage string) (
 			"fs",
 			"--format", format,
 			"--quiet",
+			// Skip problematic directories that cause scanning issues
+			"--skip-dirs", "/scan/mnt,/scan/.git,/scan/node_modules,/scan/vendor,/scan/out,/scan/bin",
 			"/scan",
 		},
 	}
@@ -157,8 +159,11 @@ func RunTrivyVuln(moduleRoot string, severityFilter []Severity, trivyImage strin
 	// Build command arguments
 	cmd := []string{
 		"fs",
+		"--scanners", "vuln", // Only vulnerability scanning, not secrets
 		"--format", "json",
 		"--quiet",
+		// Skip problematic directories that cause scanning issues
+		"--skip-dirs", "/scan/mnt,/scan/.git,/scan/node_modules,/scan/vendor,/scan/out,/scan/bin",
 	}
 
 	// Add severity filter if provided
@@ -261,6 +266,8 @@ func RunTrivySecrets(moduleRoot string, trivyImage string) (interface{}, error) 
 			"--scanners", "secret",
 			"--format", "json",
 			"--quiet",
+			// Skip problematic directories that cause scanning issues
+			"--skip-dirs", "/scan/mnt,/scan/.git,/scan/node_modules,/scan/vendor,/scan/out,/scan/bin",
 			"/scan",
 		},
 	}
@@ -341,6 +348,8 @@ func RunTrivyCompliance(moduleRoot, compliance string, trivyImage string) (inter
 			"--compliance", compliance,
 			"--format", "json",
 			"--quiet",
+			// Skip problematic directories that cause scanning issues
+			"--skip-dirs", "/scan/mnt,/scan/.git,/scan/node_modules,/scan/vendor,/scan/out,/scan/bin",
 			"/scan",
 		},
 	}
@@ -420,6 +429,8 @@ func RunTrivyIaC(moduleRoot string, trivyImage string) (interface{}, error) {
 			"config",
 			"--format", "json",
 			"--quiet",
+			// Skip problematic directories that cause scanning issues
+			"--skip-dirs", "/scan/mnt,/scan/.git,/scan/node_modules,/scan/vendor,/scan/out,/scan/bin",
 			"/scan",
 		},
 	}

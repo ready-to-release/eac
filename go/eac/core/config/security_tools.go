@@ -7,6 +7,7 @@ const SecurityToolsFileName = "security-tools.yml"
 type SecurityToolsConfig struct {
 	DockerImages    DockerImagesConfig   `yaml:"docker_images"`
 	DefaultScanners map[string][]string  `yaml:"default_scanners,omitempty"`
+	SkipModules     []string             `yaml:"skip_modules,omitempty"`
 }
 
 // DockerImagesConfig holds Docker image specifications
@@ -54,6 +55,25 @@ func defaultScannerList() []string {
 	return []string{"sbom", "vuln", "secrets"}
 }
 
+// GetSkipModules returns the list of modules to skip during scanning.
+// Returns an empty slice if no skip list is configured.
+func (c *SecurityToolsConfig) GetSkipModules() []string {
+	if c.SkipModules == nil {
+		return []string{}
+	}
+	return c.SkipModules
+}
+
+// ShouldSkipModule returns true if the given module moniker should be skipped.
+func (c *SecurityToolsConfig) ShouldSkipModule(moniker string) bool {
+	for _, skip := range c.SkipModules {
+		if skip == moniker {
+			return true
+		}
+	}
+	return false
+}
+
 // DefaultSecurityToolsConfig returns default configuration
 func DefaultSecurityToolsConfig() SecurityToolsConfig {
 	return SecurityToolsConfig{
@@ -74,5 +94,6 @@ func DefaultSecurityToolsConfig() SecurityToolsConfig {
 		DefaultScanners: map[string][]string{
 			"default": {"sbom", "vuln", "secrets"},
 		},
+		SkipModules: []string{},
 	}
 }

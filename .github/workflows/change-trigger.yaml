@@ -513,7 +513,7 @@ jobs:
   dispatch-releases:
     name: Dispatch Releases
     needs: [summary, detect-changes]
-    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && needs.detect-changes.outputs.has-changes == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6

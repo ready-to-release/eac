@@ -10,6 +10,7 @@ import (
 // phaseResolve handles the module resolution phase:
 // - Load module contracts
 // - Resolve monikers (all modules if none specified)
+// - Apply skip filters (from CLI flags or config)
 // - Calculate execution order (with or without dependencies)
 // - Build module type lookup
 func phaseResolve(ctx *ExecutionContext) error {
@@ -30,6 +31,10 @@ func phaseResolve(ctx *ExecutionContext) error {
 		ctx.Config.Monikers = monikers
 		log.Debugf("No modules specified, using all %d modules", len(monikers))
 	}
+
+	// Apply skip filter (available to all commands via Extra["skipMonikers"])
+	monikers = applySkipFilter(monikers, ctx)
+	ctx.Config.Monikers = monikers
 
 	// Validate all monikers exist
 	for _, moniker := range monikers {
@@ -105,4 +110,46 @@ func (ctx *ExecutionContext) GetLayers() [][]string {
 	}
 	// Single layer with all monikers for non-layered execution
 	return [][]string{ctx.Config.Monikers}
+}
+
+// applySkipFilter removes modules from the list based on skip configuration.
+func applySkipFilter(monikers []string, ctx *ExecutionContext) []string {
+	// Check if command provided a skip list
+	if ctx.Config.Extra == nil {
+		return monikers
+	}
+
+	skipList, ok := ctx.Config.Extra["skipMonikers"].([]string)
+	if !ok || len(skipList) == 0 {
+		return monikers
+	}
+
+	// Build skip set for O(1) lookup
+	skipSet := make(map[string]bool)
+	for _, skip := range skipList {
+		skipSet[skip] = true
+	}
+
+	// If no skip filters configured, return original list
+	if len(skipSet) == 0 {
+		return monikers
+	}
+
+	// Filter out skipped modules
+	filtered := make([]string, 0, len(monikers))
+	var skipped []string
+	for _, moniker := range monikers {
+		if skipSet[moniker] {
+			skipped = append(skipped, moniker)
+		} else {
+			filtered = append(filtered, moniker)
+		}
+	}
+
+	// Log what was filtered
+	if len(skipped) > 0 {
+		log.Infof("Skipping %d module(s): %v", len(skipped), skipped)
+	}
+
+	return filtered
 }

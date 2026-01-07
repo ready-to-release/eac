@@ -309,6 +309,7 @@ func printScanUsage() {
 	log.Info("")
 	log.Info("Configuration:")
 	log.Info("  Default scanners per module type: .r2r/eac/security-tools.yml")
+	log.Info("  Modules to skip (skip_modules):   .r2r/eac/security-tools.yml")
 	log.Info("  Docker image versions:            .r2r/eac/security-tools.yml")
 	log.Info("")
 	log.Info("External tools:")
