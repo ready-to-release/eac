@@ -30,5 +30,8 @@ automation/.external/** filter=lfs diff=lfs merge=lfs -text
 *.mod text eol=lf
 *.sum text eol=lf
 
+# Markdown files must use LF line endings (for consistent mermaid diagram hashing)
+*.md text eol=lf
+
 # Shell scripts must use LF line endings
 *.sh text eol=lf
