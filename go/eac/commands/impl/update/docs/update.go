@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/books"
-	"github.com/ready-to-release/eac/go/eac/commands/impl/build/buildutil"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/dockerutil"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
@@ -190,7 +190,7 @@ func UpdateDocs() int {
 			}
 		} else {
 			// Check Docker availability
-			if !buildutil.IsDockerAvailable() {
+			if !dockerutil.IsDockerAvailable() {
 				log.Errorf("Error: Docker is not available but required for mermaid rendering")
 				log.Errorf("Ensure Docker is installed and the daemon is running")
 				mermaidFailed = true

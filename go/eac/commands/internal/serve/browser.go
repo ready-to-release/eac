@@ -4,13 +4,15 @@ import (
 	"fmt"
 	"os/exec"
 	"runtime"
+
+	"github.com/ready-to-release/eac/go/eac/commands/internal/dockerutil"
 )
 
 // OpenBrowser opens the default web browser to the given URL.
 // In DinD mode, this is a no-op since there's no browser available inside containers.
 // Returns an error only if not in DinD mode and browser opening fails.
 func OpenBrowser(url string) error {
-	if IsDinD() {
+	if dockerutil.IsDinD() {
 		// In DinD mode, we can't open a browser - this is expected
 		// Return nil to indicate "success" (no error, just nothing to do)
 		return nil
@@ -22,7 +24,7 @@ func OpenBrowser(url string) error {
 // OpenBrowserWithFallback opens the browser and returns whether it was skipped due to DinD.
 // This allows callers to show appropriate messages.
 func OpenBrowserWithFallback(url string) (opened bool, err error) {
-	if IsDinD() {
+	if dockerutil.IsDinD() {
 		return false, nil
 	}
 

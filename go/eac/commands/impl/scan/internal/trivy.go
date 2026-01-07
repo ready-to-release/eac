@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/docker/docker/api/types/container"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/dockerutil"
 )
 
 // NOTE: trivyImage constant removed - now configured via security-tools.yml
@@ -66,22 +67,31 @@ func RunTrivySBOM(workspaceRoot, moduleRoot, format string, trivyImage string) (
 		return nil, err
 	}
 
-	log.Debugf("Running Trivy SBOM scanner via Docker: moduleRoot=%s format=%s", moduleRoot, format)
+	log.Debugf("Running Trivy SBOM generator via Docker: moduleRoot=%s format=%s scanners=vuln list-all-pkgs=true", moduleRoot, format)
 
 	// Resolve module root relative to workspace root
 	absModuleRoot := filepath.Join(workspaceRoot, moduleRoot)
 	log.Debugf("Resolved module path: workspaceRoot=%s moduleRoot=%s absolute=%s", workspaceRoot, moduleRoot, absModuleRoot)
 
+	// Translate path for Docker-in-Docker environments
+	hostPath, err := dockerutil.TranslatePathForMount(absModuleRoot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to translate path for mount: %w", err)
+	}
+	log.Debugf("Translated path for DinD: container=%s host=%s", absModuleRoot, hostPath)
+
 	// Convert to Docker-compatible path format (handles Windows paths)
-	dockerPath := ToDockerPath(absModuleRoot)
-	log.Debugf("Docker bind mount path: original=%s docker=%s", absModuleRoot, dockerPath)
+	dockerPath := dockerutil.FormatDockerVolume(hostPath)
+	log.Debugf("Docker bind mount path: host=%s docker=%s", hostPath, dockerPath)
 
 	// Configure container
 	config := &container.Config{
 		Image: trivyImage,
 		Cmd: []string{
 			"fs",
+			"--scanners", "vuln",  // Enable vulnerability/package analysis for SBOM generation
 			"--format", format,
+			"--list-all-pkgs",     // Include all packages in SBOM, not just vulnerable ones
 			"--quiet",
 			// Skip problematic directories that cause scanning issues
 			"--skip-dirs", "/scan/mnt,/scan/.git,/scan/node_modules,/scan/vendor,/scan/out,/scan/bin",
@@ -103,6 +113,13 @@ func RunTrivySBOM(workspaceRoot, moduleRoot, format string, trivyImage string) (
 	cleanOutput := stripDockerLogHeaders(output)
 
 	log.Debugf("Trivy SBOM scan completed: outputSize=%d", len(cleanOutput))
+
+	// TEMPORARY DEBUG: Log first 500 chars of output
+	outputPreview := string(cleanOutput)
+	if len(outputPreview) > 500 {
+		outputPreview = outputPreview[:500]
+	}
+	log.Infof("Trivy SBOM output preview: %s", outputPreview)
 
 	// Parse JSON output
 	var findings interface{}
@@ -152,9 +169,15 @@ func RunTrivyVuln(moduleRoot string, severityFilter []Severity, trivyImage strin
 		return nil, fmt.Errorf("failed to get absolute path: %w", err)
 	}
 
+	// Translate path for Docker-in-Docker environments
+	hostPath, err := dockerutil.TranslatePathForMount(absModuleRoot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to translate path for mount: %w", err)
+	}
+
 	// Convert to Docker-compatible path format (handles Windows paths)
-	dockerPath := ToDockerPath(absModuleRoot)
-	log.Debugf("Docker bind mount path: original=%s docker=%s", absModuleRoot, dockerPath)
+	dockerPath := dockerutil.FormatDockerVolume(hostPath)
+	log.Debugf("Docker bind mount path: container=%s host=%s docker=%s", absModuleRoot, hostPath, dockerPath)
 
 	// Build command arguments
 	cmd := []string{
@@ -254,9 +277,15 @@ func RunTrivySecrets(moduleRoot string, trivyImage string) (interface{}, error) 
 		return nil, fmt.Errorf("failed to get absolute path: %w", err)
 	}
 
+	// Translate path for Docker-in-Docker environments
+	hostPath, err := dockerutil.TranslatePathForMount(absModuleRoot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to translate path for mount: %w", err)
+	}
+
 	// Convert to Docker-compatible path format (handles Windows paths)
-	dockerPath := ToDockerPath(absModuleRoot)
-	log.Debugf("Docker bind mount path: original=%s docker=%s", absModuleRoot, dockerPath)
+	dockerPath := dockerutil.FormatDockerVolume(hostPath)
+	log.Debugf("Docker bind mount path: container=%s host=%s docker=%s", absModuleRoot, hostPath, dockerPath)
 
 	// Configure container
 	config := &container.Config{
@@ -336,9 +365,15 @@ func RunTrivyCompliance(moduleRoot, compliance string, trivyImage string) (inter
 		return nil, fmt.Errorf("failed to get absolute path: %w", err)
 	}
 
+	// Translate path for Docker-in-Docker environments
+	hostPath, err := dockerutil.TranslatePathForMount(absModuleRoot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to translate path for mount: %w", err)
+	}
+
 	// Convert to Docker-compatible path format (handles Windows paths)
-	dockerPath := ToDockerPath(absModuleRoot)
-	log.Debugf("Docker bind mount path: original=%s docker=%s", absModuleRoot, dockerPath)
+	dockerPath := dockerutil.FormatDockerVolume(hostPath)
+	log.Debugf("Docker bind mount path: container=%s host=%s docker=%s", absModuleRoot, hostPath, dockerPath)
 
 	// Configure container
 	config := &container.Config{
@@ -418,9 +453,15 @@ func RunTrivyIaC(moduleRoot string, trivyImage string) (interface{}, error) {
 		return nil, fmt.Errorf("failed to get absolute path: %w", err)
 	}
 
+	// Translate path for Docker-in-Docker environments
+	hostPath, err := dockerutil.TranslatePathForMount(absModuleRoot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to translate path for mount: %w", err)
+	}
+
 	// Convert to Docker-compatible path format (handles Windows paths)
-	dockerPath := ToDockerPath(absModuleRoot)
-	log.Debugf("Docker bind mount path: original=%s docker=%s", absModuleRoot, dockerPath)
+	dockerPath := dockerutil.FormatDockerVolume(hostPath)
+	log.Debugf("Docker bind mount path: container=%s host=%s docker=%s", absModuleRoot, hostPath, dockerPath)
 
 	// Configure container
 	config := &container.Config{

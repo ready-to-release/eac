@@ -15,6 +15,7 @@ import (
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/go-connections/nat"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/dockerutil"
 )
 
 // ServeConfig holds configuration for serving a website in a container.
@@ -117,13 +118,13 @@ func StartServe(ctx context.Context, config *ServeConfig) (*ServeResult, error) 
 	}
 
 	// Translate content path for DinD
-	mountSource, err := TranslatePathForMount(config.ContentPath)
+	mountSource, err := dockerutil.TranslatePathForMount(config.ContentPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to translate path: %w", err)
 	}
 
 	// Format for Docker volume mount
-	mountSource = FormatDockerVolume(mountSource)
+	mountSource = dockerutil.FormatDockerVolume(mountSource)
 
 	// Remove existing container with same name if stopped
 	removeExistingContainer(ctx, cli, containerName)

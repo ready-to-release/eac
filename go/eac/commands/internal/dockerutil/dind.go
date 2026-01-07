@@ -1,8 +1,12 @@
-package serve
+// Package dockerutil provides shared Docker utilities for Docker-in-Docker (DinD) scenarios
+// and general Docker operations used across multiple commands.
+package dockerutil
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -17,15 +21,47 @@ const (
 	// view of the repository root (typically /var/task)
 	EnvContainerRepoRoot = "R2R_CONTAINER_REPOROOT"
 
+	// EnvDockerMode is explicitly set by r2r CLI when launching containers
+	EnvDockerMode = "R2R_DOCKER_MODE"
+
 	// DefaultContainerRepoRoot is the default path where the repository is mounted
 	// inside the r2r CLI container
 	DefaultContainerRepoRoot = "/var/task"
 )
 
 // IsDinD returns true if running inside a Docker container (DinD mode).
-// This is detected by the presence of the R2R_HOST_REPOROOT environment variable.
+// Uses multiple signals for robust detection:
+// 1. R2R_HOST_REPOROOT environment variable (primary indicator)
+// 2. R2R_DOCKER_MODE explicit flag
+// 3. Windows host path while running on Linux
+// 4. /.dockerenv file exists
 func IsDinD() bool {
-	return os.Getenv(EnvHostRepoRoot) != ""
+	// Primary check: R2R_HOST_REPOROOT is set
+	if os.Getenv(EnvHostRepoRoot) != "" {
+		return true
+	}
+
+	// Secondary check: explicit env var
+	if os.Getenv(EnvDockerMode) == "true" {
+		return true
+	}
+
+	// Fallback: R2R_HOST_REPOROOT is set with Windows path but we're on Linux
+	// This catches old r2r CLI binaries that don't set R2R_DOCKER_MODE
+	hostRoot := os.Getenv(EnvHostRepoRoot)
+	if hostRoot != "" && runtime.GOOS == "linux" {
+		// Windows paths have backslashes or drive letters
+		if strings.Contains(hostRoot, "\\") || (len(hostRoot) >= 2 && hostRoot[1] == ':') {
+			return true
+		}
+	}
+
+	// Final fallback: check for Docker container indicator file
+	if _, err := os.Stat("/.dockerenv"); err == nil {
+		return true
+	}
+
+	return false
 }
 
 // GetHostRepoRoot returns the host's repository root path.
@@ -138,4 +174,13 @@ func FormatDockerVolume(path string) string {
 
 	// Already Unix-style or relative path
 	return strings.ReplaceAll(path, "\\", "/")
+}
+
+// IsDockerAvailable checks if Docker daemon is accessible by attempting to run 'docker info'.
+// Returns true if Docker daemon is accessible, false otherwise.
+func IsDockerAvailable() bool {
+	cmd := exec.Command("docker", "info")
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	return cmd.Run() == nil
 }

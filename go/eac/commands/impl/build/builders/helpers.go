@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/bmatcuk/doublestar/v4"
-	"github.com/ready-to-release/eac/go/eac/commands/impl/build/buildutil"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/dockerutil"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/platform"
 )
@@ -92,17 +92,17 @@ func CopyFile(src, dst string) error {
 // FormatDockerVolumePath formats a path for use as a Docker volume mount source
 // On Windows, converts C:\path to /c/path for Docker compatibility
 func FormatDockerVolumePath(path string) string {
-	return buildutil.FormatDockerVolumePath(path)
+	return dockerutil.FormatDockerVolume(path)
 }
 
 // IsDockerInDocker detects if we're running inside a Docker container
 func IsDockerInDocker() bool {
-	return buildutil.IsDockerInDocker()
+	return dockerutil.IsDinD()
 }
 
 // IsDockerAvailable checks if Docker daemon is accessible
 func IsDockerAvailable() bool {
-	return buildutil.IsDockerAvailable()
+	return dockerutil.IsDockerAvailable()
 }
 
 // ExecutePostBuildSteps runs any post-build steps defined for the module type.
