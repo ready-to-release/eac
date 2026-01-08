@@ -30,7 +30,7 @@ func Show() int {
 	case "--help", "-h":
 		printShowUsage()
 		return 0
-	case "books", "build-summary", "build-times", "config", "dependencies", "environments", "files", "files-changed", "files-staged", "modules", "moduletypes", "suite", "test-summary", "tests", "test-timings", "valid-commands", "workspaces":
+	case "books", "build-summary", "build-times", "config", "dependencies", "environments", "files", "files-changed", "files-staged", "modules", "moduletypes", "suite", "test-results", "test-summary", "tests", "test-timings", "valid-commands", "workspaces":
 		// Handled by separate registrations in respective files
 		return 0
 	default:
@@ -66,6 +66,7 @@ func printShowUsage() {
 	fmt.Println("  build-times               Show build timing analysis from recent builds")
 	fmt.Println("")
 	fmt.Println("Testing:")
+	fmt.Println("  test-results              Display test execution results in human-readable format")
 	fmt.Println("  test-summary <module> <suite>  Generate pretty test summary for GitHub Actions")
 	fmt.Println("  tests                     Show all tests in the repository")
 	fmt.Println("  suite <name>              Show detailed test suite information")

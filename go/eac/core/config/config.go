@@ -155,6 +155,9 @@ type LoadOptions struct {
 	ValidateSchemas bool
 	// LazyLoad defers loading until first access (default: false)
 	LazyLoad bool
+	// SkipWorkflowValidation skips GitHub workflow file validation (default: false)
+	// Useful for test environments or commands that don't need workflow information
+	SkipWorkflowValidation bool
 }
 
 // DefaultLoadOptions returns the default load options
@@ -217,7 +220,7 @@ func Load(opts LoadOptions) (*EACConfig, error) {
 	}
 
 	// Load all configs (validation happens inside LoadAll)
-	if err := cfg.LoadAll(opts.ValidateSchemas); err != nil {
+	if err := cfg.LoadAll(opts); err != nil {
 		return nil, err
 	}
 
@@ -257,7 +260,8 @@ func countConfigFiles(cfg *EACConfig) int {
 // LoadAll loads all configuration files.
 // Core configs (Repository, ModuleTypes) must load successfully - fails immediately on error.
 // Optional configs (Environments, TestingTags, etc.) collect errors but continue loading.
-func (c *EACConfig) LoadAll(validateSchemas bool) error {
+func (c *EACConfig) LoadAll(opts LoadOptions) error {
+	validateSchemas := opts.ValidateSchemas
 	// === CORE CONFIGS: Fail fast if any of these fail ===
 	// These are required for the system to function correctly
 
@@ -276,8 +280,11 @@ func (c *EACConfig) LoadAll(validateSchemas bool) error {
 		c.Repository.ApplyTypeDefaults(c.ModuleTypes)
 
 		// Validate defined workflow paths and auto-discover missing ones
-		if err := c.Repository.ValidateAndDiscoverWorkflows(c.RepoRoot); err != nil {
-			return fmt.Errorf("workflow validation failed: %w", err)
+		// Skip if explicitly disabled (useful for test environments)
+		if !opts.SkipWorkflowValidation {
+			if err := c.Repository.ValidateAndDiscoverWorkflows(c.RepoRoot); err != nil {
+				return fmt.Errorf("workflow validation failed: %w", err)
+			}
 		}
 	}
 

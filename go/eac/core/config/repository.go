@@ -118,6 +118,8 @@ type ConventionsConfig struct {
 	RiskControlsDir        string `yaml:"risk_controls_dir"`
 	RiskReportsCategory    string `yaml:"risk_reports_category"`
 	RiskAssessmentTemplate string `yaml:"risk_assessment_template"`
+	TestReportsCategory    string `yaml:"test_reports_category"`
+	TestResultsTemplate    string `yaml:"test_results_template"`
 	TemplateSpecsDir       string `yaml:"template_specs_dir"`
 	TemplateReportsDir     string `yaml:"template_reports_dir"`
 	TemplateRiskCatalogDir string `yaml:"template_risk_catalog_dir"`

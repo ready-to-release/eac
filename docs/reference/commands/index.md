@@ -33,21 +33,21 @@ Complete technical reference for all EAC extension commands (invoked as `r2r eac
 |----------|----------|---------|
 | [build](./categories/build.md) | 1 | Module building and compilation |
 | [create](./categories/create.md) | 7 | AI-powered generation (commits, specs, designs, PRs) |
-| [get](./categories/get.md) | 18 | JSON output for automation and scripting |
+| [get](./categories/get.md) | 19 | JSON output for automation and scripting |
 | [help](./categories/help.md) | 1 | Display help information |
 | [init](./categories/init.md) | 1 | Project initialization |
 | [pipeline](./categories/pipeline.md) | 6 | CI/CD orchestration |
 | [release](./categories/release.md) | 8 | Release management and versioning |
 | [scan](./categories/scan.md) | 8 | Security scanning (SAST, secrets, vulnerabilities) |
 | [serve](./categories/serve.md) | 2 | Local development servers |
-| [show](./categories/show.md) | 17 | Human-readable output for interactive use |
+| [show](./categories/show.md) | 18 | Human-readable output for interactive use |
 | [templates](./categories/templates.md) | 7 | Template management |
 | [test](./categories/test.md) | 4 | Testing and test suite management |
 | [update](./categories/update.md) | 1 | Update operations |
 | [validate](./categories/validate.md) | 20 | Contract and dependency validation |
 | [work](./categories/work.md) | 6 | Workspace management (git worktrees) |
 
-**Total**: 108 commands
+**Total**: 110 commands
 
 ## Common Workflows
 

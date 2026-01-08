@@ -126,12 +126,14 @@ func isNonStepKeyword(line string) bool {
 }
 
 // NormalizeForMatching prepares a step text for regex matching.
-// It handles Scenario Outline placeholders by converting them to regex wildcards.
+// It handles Scenario Outline placeholders by converting them to example values.
 func NormalizeForMatching(stepText string) string {
-	// Replace <placeholder> with a pattern that matches anything
+	// Replace <placeholder> with a sample value that will match common regex patterns
+	// For example, <format> becomes "ABC" which matches patterns like:
+	// ([A-Z]+), ([a-zA-Z]+), (.*), (\w+), etc.
 	// This allows step definitions to match Scenario Outline steps
 	placeholderPattern := regexp.MustCompile(`<[^>]+>`)
-	normalized := placeholderPattern.ReplaceAllString(stepText, `[^"]*`)
+	normalized := placeholderPattern.ReplaceAllString(stepText, "ABC")
 	return normalized
 }
 
