@@ -30,7 +30,7 @@ func Get() int {
 	case "--help", "-h":
 		printGetUsage()
 		return 0
-	case "artifacts", "build-deps", "build-times", "changed-modules", "changed-modules-ci", "changed-modules-local", "ci-dispatch", "config", "dependencies", "environments", "execution-order", "files", "modules", "release-bundle", "suite", "tests", "test-timings", "valid-commands":
+	case "artifacts", "build-deps", "build-times", "changed-modules", "changed-modules-ci", "changed-modules-local", "ci-dispatch", "config", "dependencies", "environments", "execution-order", "files", "modules", "release-bundle", "suite", "test-results", "tests", "test-timings", "valid-commands":
 		// Handled by separate registrations in respective files
 		return 0
 	default:
@@ -68,6 +68,7 @@ func printGetUsage() {
 	fmt.Println("  artifacts                 Get resolved artifacts for a module")
 	fmt.Println("")
 	fmt.Println("Testing:")
+	fmt.Println("  test-results              Get test execution results from test manifests")
 	fmt.Println("  tests                     Get all tests in structured format")
 	fmt.Println("  suite <name>              Get test suite information")
 	fmt.Println("  test-timings              Get test timing data from test logs")

@@ -181,16 +181,42 @@ func Remove() int {
 		zap.String("actualRepoRoot", actualRepoRoot))
 
 	// Run git worktree remove from the detected repository root
-	cmd = exec.Command("git", "worktree", "remove", config.worktreePath)
+	// On Windows, use --force by default to handle locked files
+	cmd = exec.Command("git", "worktree", "remove", "--force", config.worktreePath)
 	cmd.Dir = actualRepoRoot
 	output, err = cmd.CombinedOutput()
 	if err != nil {
-		config.base.Logger.Debug("Phase 5: Failed - worktree remove",
-			zap.String("phase", "phase5"),
-			zap.Duration("duration", time.Since(phaseStart)),
-			zap.Error(err))
-		config.base.Logger.Error(fmt.Sprintf("Failed to remove worktree: %v\nOutput: %s", err, string(output)))
-		return 1
+		// On Windows, even with --force, git may fail to delete locked directories
+		// Check if it's a permission error and if the worktree was successfully unregistered
+		outputStr := string(output)
+		if strings.Contains(outputStr, "Permission denied") || strings.Contains(outputStr, "failed to delete") {
+			// Check if worktree is still registered
+			cmd = exec.Command("git", "worktree", "list")
+			cmd.Dir = actualRepoRoot
+			listOutput, listErr := cmd.Output()
+			if listErr == nil && !strings.Contains(string(listOutput), config.worktreePath) {
+				// Worktree was successfully unregistered, just couldn't delete directory
+				config.base.Logger.Debug("Worktree unregistered but directory couldn't be deleted",
+					zap.String("output", outputStr))
+				// Continue execution - folder will be reported as still existing below
+			} else {
+				// Worktree is still registered, this is a real failure
+				config.base.Logger.Debug("Phase 5: Failed - worktree still registered",
+					zap.String("phase", "phase5"),
+					zap.Duration("duration", time.Since(phaseStart)),
+					zap.Error(err))
+				config.base.Logger.Error(fmt.Sprintf("Failed to remove worktree: %v\nOutput: %s", err, outputStr))
+				return 1
+			}
+		} else {
+			// Some other error
+			config.base.Logger.Debug("Phase 5: Failed - worktree remove",
+				zap.String("phase", "phase5"),
+				zap.Duration("duration", time.Since(phaseStart)),
+				zap.Error(err))
+			config.base.Logger.Error(fmt.Sprintf("Failed to remove worktree: %v\nOutput: %s", err, string(output)))
+			return 1
+		}
 	}
 
 	// Check if folder still exists and inform user

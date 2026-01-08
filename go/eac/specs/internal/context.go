@@ -17,6 +17,16 @@ import (
 	coretesting "github.com/ready-to-release/eac/go/eac/core/testing"
 )
 
+// Environment variable names used in test contexts
+const (
+	EnvR2RTestLoggingActive = "R2R_TEST_LOGGING_ACTIVE"
+	EnvR2RPWD               = "R2R_PWD"
+	EnvR2RRepoRoot          = "R2R_REPO_ROOT"
+	EnvR2RContainerRoot     = "R2R_CONTAINER_ROOT"
+	EnvR2RMockAIDir         = "R2R_MOCK_AI_DIR"
+	EnvR2RMockSecurity      = "R2R_MOCK_SECURITY"
+)
+
 // TestContext wraps the core SharedTestContext with additional spec-specific state.
 type TestContext struct {
 	*coretesting.SharedTestContext
@@ -131,8 +141,83 @@ func (c *TestContext) CleanupIsolation() {
 	c.SharedTestContext.ClearIsolation()
 }
 
+// getEffectiveWorkDir returns the working directory for command execution.
+// Returns CurrentWorkDir if set, otherwise falls back to IsolatedDir.
+func (c *TestContext) getEffectiveWorkDir() string {
+	if c.CurrentWorkDir != "" {
+		return c.CurrentWorkDir
+	}
+	return c.IsolatedDir
+}
+
+// buildBaseEnvironment creates base environment, filtering out test-specific vars.
+// For isolated tests, filters out R2R_TEST_LOGGING_ACTIVE so unified log works.
+func (c *TestContext) buildBaseEnvironment() []string {
+	env := make([]string, 0, len(os.Environ()))
+	for _, e := range os.Environ() {
+		if c.IsolatedDir != "" && strings.HasPrefix(e, EnvR2RTestLoggingActive+"=") {
+			continue // Don't inherit - isolated tests need unified log to work
+		}
+		env = append(env, e)
+	}
+	return env
+}
+
+// buildIsolationEnvironment adds isolation-specific environment variables.
+// Sets R2R_PWD and R2R_REPO_ROOT for isolated test execution.
+func (c *TestContext) buildIsolationEnvironment(env []string) []string {
+	if c.IsolatedDir == "" {
+		return env
+	}
+
+	// R2R_PWD: current working directory (may be worktree)
+	// R2R_REPO_ROOT: main repository root (never changes)
+	workDir := c.getEffectiveWorkDir()
+	env = append(env, fmt.Sprintf("%s=%s", EnvR2RPWD, workDir))
+	env = append(env, fmt.Sprintf("%s=%s", EnvR2RRepoRoot, c.IsolatedDir))
+	return env
+}
+
+// buildMockingEnvironment adds mocking environment variables for tests.
+// Sets R2R_CONTAINER_ROOT, R2R_MOCK_AI_DIR, and R2R_MOCK_SECURITY.
+func (c *TestContext) buildMockingEnvironment(env []string) []string {
+	// Set distribution root for template loading
+	// Templates are NOT copied to isolated test directories - they live in the original repo
+	// This allows AI commands to load system default templates from templates/ai/
+	env = append(env, fmt.Sprintf("%s=%s", EnvR2RContainerRoot, c.OriginalRepoRoot))
+
+	// Set mock AI directory for subprocess commands
+	// This enables commands to use mock responses instead of real AI calls
+	// Use container root if in container, otherwise repo root
+	assetsRoot := repository.GetDistRoot(c.OriginalRepoRoot)
+	if assetsRoot != "" {
+		assetsDir := filepath.Join(assetsRoot, "go", "eac", "specs", "impl", "eac-commands", "assets")
+		if _, err := os.Stat(assetsDir); err == nil {
+			env = append(env, fmt.Sprintf("%s=%s", EnvR2RMockAIDir, assetsDir))
+		}
+	}
+
+	// Enable security tool mocking for subprocess commands
+	// This enables security commands to use mock responses instead of real Docker tools
+	env = append(env, fmt.Sprintf("%s=true", EnvR2RMockSecurity))
+
+	return env
+}
+
+// applyMockOverrides applies per-scenario mock overrides to the environment.
+func (c *TestContext) applyMockOverrides(env []string) []string {
+	for key, value := range c.MockOverrides {
+		env = append(env, fmt.Sprintf("%s=%s", key, value))
+	}
+	return env
+}
+
 // RunCommand executes a command and captures output.
 // This is the core command execution used by step definitions.
+//
+// Returns nil if command succeeds with exit code 0.
+// Returns nil (not error) if command fails with non-zero exit code - check ExitCode field.
+// Returns error only for execution failures (binary not found, permission denied, etc).
 func (c *TestContext) RunCommand(cmdLine string) error {
 	parts := parseCommandLine(cmdLine)
 	if len(parts) == 0 {
@@ -142,51 +227,16 @@ func (c *TestContext) RunCommand(cmdLine string) error {
 	// Try to use pre-built binary for better performance
 	cmd := c.createCommand(parts)
 
-	// Build environment
-	// For isolated tests, filter out R2R_TEST_LOGGING_ACTIVE so unified log works
-	env := make([]string, 0, len(os.Environ()))
-	for _, e := range os.Environ() {
-		if c.IsolatedDir != "" && strings.HasPrefix(e, "R2R_TEST_LOGGING_ACTIVE=") {
-			continue // Don't inherit - isolated tests need unified log to work
-		}
-		env = append(env, e)
-	}
+	// Set working directory for isolated tests
 	if c.IsolatedDir != "" {
-		// R2R_PWD: current working directory (may be worktree)
-		// R2R_REPO_ROOT: main repository root (never changes)
-		pwd := c.CurrentWorkDir
-		if pwd == "" {
-			pwd = c.IsolatedDir
-		}
-		env = append(env, fmt.Sprintf("R2R_PWD=%s", pwd))
-		env = append(env, fmt.Sprintf("R2R_REPO_ROOT=%s", c.IsolatedDir))
+		cmd.Dir = c.getEffectiveWorkDir()
 	}
 
-	// Set distribution root for template loading
-	// Templates are NOT copied to isolated test directories - they live in the original repo
-	// This allows AI commands to load system default templates from templates/ai/
-	env = append(env, fmt.Sprintf("R2R_CONTAINER_ROOT=%s", c.OriginalRepoRoot))
-
-	// Set mock AI directory for subprocess commands
-	// This enables commands to use mock responses instead of real AI calls
-	// Use container root if in container, otherwise repo root
-	assetsRoot := repository.GetDistRoot(c.OriginalRepoRoot)
-	if assetsRoot != "" {
-		assetsDir := filepath.Join(assetsRoot, "go", "eac", "specs", "impl", "eac-commands", "assets")
-		if _, err := os.Stat(assetsDir); err == nil {
-			env = append(env, fmt.Sprintf("R2R_MOCK_AI_DIR=%s", assetsDir))
-		}
-	}
-
-	// Enable security tool mocking for subprocess commands
-	// This enables security commands to use mock responses instead of real Docker tools
-	env = append(env, "R2R_MOCK_SECURITY=true")
-
-	// Apply per-scenario mock overrides
-	for key, value := range c.MockOverrides {
-		env = append(env, fmt.Sprintf("%s=%s", key, value))
-	}
-
+	// Build environment with all necessary variables
+	env := c.buildBaseEnvironment()
+	env = c.buildIsolationEnvironment(env)
+	env = c.buildMockingEnvironment(env)
+	env = c.applyMockOverrides(env)
 	cmd.Env = env
 
 	output, err := cmd.CombinedOutput()
@@ -206,6 +256,62 @@ func (c *TestContext) RunCommand(cmdLine string) error {
 		c.ExitCode = 0
 	}
 
+	return nil
+}
+
+// ============================================================================
+// State Validation Methods
+// ============================================================================
+
+// IsIsolated returns true if the test context is running in an isolated environment.
+func (c *TestContext) IsIsolated() bool {
+	return c.IsolatedDir != ""
+}
+
+// ValidateState checks if the context is in a valid state for test execution.
+// Returns an error if required fields are not set.
+func (c *TestContext) ValidateState() error {
+	if c.OriginalRepoRoot == "" {
+		return fmt.Errorf("OriginalRepoRoot not set - test context not properly initialized")
+	}
+	return nil
+}
+
+// MustBeIsolated panics if the test context is not running in isolation.
+// Use this in step definitions that require isolation to catch setup errors early.
+func (c *TestContext) MustBeIsolated() {
+	if !c.IsIsolated() {
+		panic("test must run in isolated environment (missing @env:isolated-test-project tag?)")
+	}
+}
+
+// ============================================================================
+// Command Execution Helper Methods
+// ============================================================================
+
+// CommandSucceeded returns true if the last command succeeded (exit code 0).
+func (c *TestContext) CommandSucceeded() bool {
+	return c.ExitCode == 0
+}
+
+// CommandFailed returns true if the last command failed (non-zero exit code).
+func (c *TestContext) CommandFailed() bool {
+	return c.ExitCode != 0
+}
+
+// MustSucceed returns an error if the last command failed.
+// Use this in step definitions that expect command success.
+//
+// Example:
+//   err := ctx.RunCommand("build eac-core")
+//   if err != nil {
+//       return err
+//   }
+//   return ctx.MustSucceed() // Fail test if build failed
+func (c *TestContext) MustSucceed() error {
+	if c.CommandFailed() {
+		return fmt.Errorf("command failed with exit code %d: %s", c.ExitCode, c.CommandOutput)
+	}
 	return nil
 }
 

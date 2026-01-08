@@ -8,8 +8,16 @@ import (
 	"path/filepath"
 )
 
-// FindRepoRoot finds the repository root by looking for .git directory
+// FindRepoRoot finds the repository root by looking for .git directory.
+// In isolated test environments, respects R2R_REPO_ROOT environment variable.
 func FindRepoRoot(startPath string) (string, error) {
+	// Check if running in isolated test environment
+	// Trust this environment variable when set - it's explicitly configured by the test framework
+	if repoRoot := os.Getenv("R2R_REPO_ROOT"); repoRoot != "" {
+		return repoRoot, nil
+	}
+
+	// Normal mode: walk up looking for .git
 	current := startPath
 	for {
 		gitPath := filepath.Join(current, ".git")

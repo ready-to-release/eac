@@ -313,27 +313,34 @@ books:
         exclude:
           - "docs/assets/lfs/pdf/**"
 
-      # Dynamic content - module information and evidence
+      # Dynamic content
       - type: command
-        command: "show modules"
-        target: "01-modules.md"
+        command: "show test-results"
+        target: "01-test-results.md"
         frontmatter:
-          title: "Module Overview"
-          description: "All modules in this release"
+          title: "Test Results"
+          description: "All test results"
         order: 1
+      # - type: command
+      #   command: "show modules"
+      #   target: "01-modules.md"
+      #   frontmatter:
+      #     title: "Module Overview"
+      #     description: "All modules in this release"
+      #   order: 1
 
-      - type: command
-        command: "show dependencies"
-        target: "02-dependencies.md"
-        frontmatter:
-          title: "Module Dependencies"
-          description: "Dependency relationships between modules"
-        order: 2
+      # - type: command
+      #   command: "show dependencies"
+      #   target: "02-dependencies.md"
+      #   frontmatter:
+      #     title: "Module Dependencies"
+      #     description: "Dependency relationships between modules"
+      #   order: 2
 
-      - type: command
-        command: "show tests"
-        target: "03-tests.md"
-        frontmatter:
-          title: "Test Coverage"
-          description: "All test assertions in the repository"
-        order: 3
+      # - type: command
+      #   command: "show tests"
+      #   target: "03-tests.md"
+      #   frontmatter:
+      #     title: "Test Coverage"
+      #     description: "All test assertions in the repository"
+      #   order: 3

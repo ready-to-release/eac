@@ -1,0 +1,63 @@
+{
+  "test_id": "test-eac-core",
+  "test_agent": "devbox",
+  "moniker": "eac-core",
+  "type": "go",
+  "test_time": "2026-01-07T15:42:56Z",
+  "duration_seconds": 2.5,
+  "summary": {
+    "total": 5,
+    "passed": 5,
+    "failed": 0,
+    "skipped": 0
+  },
+  "tests": [
+    {
+      "name": "TestConfig",
+      "package": "github.com/ready-to-release/eac/go/eac/core/config",
+      "type": "gotest",
+      "status": "passed",
+      "duration_ms": 500,
+      "suite": "unit",
+      "tags": ["@L2", "@deps:go"]
+    },
+    {
+      "name": "TestRepository",
+      "package": "github.com/ready-to-release/eac/go/eac/core/repo",
+      "type": "gotest",
+      "status": "passed",
+      "duration_ms": 600,
+      "suite": "unit",
+      "tags": ["@L2", "@deps:go"]
+    },
+    {
+      "name": "TestModules",
+      "package": "github.com/ready-to-release/eac/go/eac/core/modules",
+      "type": "gotest",
+      "status": "passed",
+      "duration_ms": 400,
+      "suite": "unit",
+      "tags": ["@L2", "@deps:go"]
+    },
+    {
+      "name": "TestLoader",
+      "package": "github.com/ready-to-release/eac/go/eac/core/loader",
+      "type": "gotest",
+      "status": "passed",
+      "duration_ms": 500,
+      "suite": "unit",
+      "tags": ["@L2", "@deps:go"]
+    },
+    {
+      "name": "TestValidator",
+      "package": "github.com/ready-to-release/eac/go/eac/core/validator",
+      "type": "gotest",
+      "status": "passed",
+      "duration_ms": 500,
+      "suite": "unit",
+      "tags": ["@L2", "@deps:go"]
+    }
+  ],
+  "artifacts": [],
+  "version": "1.0"
+}

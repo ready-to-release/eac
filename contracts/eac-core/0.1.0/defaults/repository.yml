@@ -82,6 +82,8 @@ conventions:
   risk_controls_dir: .risk-controls
   risk_reports_category: risk
   risk_assessment_template: risk-assess.md
+  test_reports_category: tests
+  test_results_template: test-results.md
   template_specs_dir: specs
   template_reports_dir: reports
   template_risk_catalog_dir: risk-catalog
