@@ -52,3 +52,4 @@ jobs:
       cross-compile-windows: true
       test-on-windows: true
       scans: sbom,vuln,secrets
+      build-evidence: true

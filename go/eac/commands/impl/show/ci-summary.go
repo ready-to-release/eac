@@ -12,6 +12,8 @@
 // Flag.test-on-macos: type=bool, default=false, usage=Whether macOS tests were enabled
 // Flag.scan: type=string, usage=Security scan result
 // Flag.scans-enabled: type=bool, default=false, usage=Whether scans were enabled
+// Flag.evidence: type=string, usage=Evidence build result
+// Flag.evidence-enabled: type=bool, default=false, usage=Whether evidence building was enabled
 // Long: The show ci-summary command generates a formatted CI workflow summary with job results.
 // Long: This command is designed to be used in GitHub Actions workflows to create consistent CI summaries.
 // Long: The output is formatted as Markdown and can be redirected to $GITHUB_STEP_SUMMARY.
@@ -58,6 +60,8 @@ func ShowCISummary() int {
 	testOnMacOS := false
 	scanResult := ""
 	scansEnabled := false
+	evidenceResult := ""
+	evidenceEnabled := false
 
 	// Parse flags
 	for i := 0; i < len(args); i++ {
@@ -87,15 +91,21 @@ func ShowCISummary() int {
 			scanResult = strings.TrimPrefix(arg, "--scan=")
 		case arg == "--scans-enabled" || arg == "--scans-enabled=true":
 			scansEnabled = true
+		case strings.HasPrefix(arg, "--evidence="):
+			evidenceResult = strings.TrimPrefix(arg, "--evidence=")
+		case arg == "--evidence-enabled" || arg == "--evidence-enabled=true":
+			evidenceEnabled = true
 		}
 	}
 
 	return generateCISummary(buildResult, isContainer, containerTestResult, containerTestEnabled,
-		testLinuxResult, testWindowsResult, testMacOSResult, testOnWindows, testOnMacOS, scanResult, scansEnabled)
+		testLinuxResult, testWindowsResult, testMacOSResult, testOnWindows, testOnMacOS, scanResult, scansEnabled,
+		evidenceResult, evidenceEnabled)
 }
 
 func generateCISummary(buildResult string, isContainer bool, containerTestResult string, containerTestEnabled bool,
-	testLinuxResult, testWindowsResult, testMacOSResult string, testOnWindows, testOnMacOS bool, scanResult string, scansEnabled bool) int {
+	testLinuxResult, testWindowsResult, testMacOSResult string, testOnWindows, testOnMacOS bool, scanResult string, scansEnabled bool,
+	evidenceResult string, evidenceEnabled bool) int {
 
 	var sb strings.Builder
 
@@ -162,6 +172,11 @@ func generateCISummary(buildResult string, isContainer bool, containerTestResult
 	// Scan (if enabled)
 	if scansEnabled {
 		tb.AddRow("Security Scan", formatScanResult(scanResult))
+	}
+
+	// Evidence (if enabled)
+	if evidenceEnabled {
+		tb.AddRow("Evidence", formatJobResult(evidenceResult))
 	}
 
 	sb.WriteString(tb.Build())
