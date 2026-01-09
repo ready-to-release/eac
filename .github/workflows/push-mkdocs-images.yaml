@@ -1,0 +1,57 @@
+# Push MkDocs Docker Images to GHCR
+#
+# Pushes pre-built mkdocs-pdf and mkdocs-site images to GHCR for CI performance.
+# Evidence builds pull these instead of building from scratch (~100s savings).
+#
+# Triggers:
+# - Manual dispatch
+# - Changes to container files on main
+
+name: Push MkDocs Images
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'containers/mkdocs-pdf/**'
+      - 'containers/mkdocs-site/**'
+      - '.github/workflows/push-mkdocs-images.yaml'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  push-images:
+    name: Push Images
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        image:
+          - name: mkdocs-pdf
+            context: containers/mkdocs-pdf
+          - name: mkdocs-site
+            context: containers/mkdocs-site
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.image.context }}
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/cli-${{ matrix.image.name }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

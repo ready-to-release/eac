@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -423,12 +424,30 @@ func buildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 	return 0
 }
 
-// ensureMkDocsImage ensures the cli-mkdocs Docker image is built.
-// Always runs docker build - Docker's layer cache handles efficiency.
+// ensureMkDocsImage ensures the cli-mkdocs Docker image is available.
+// First checks if image exists locally, then tries to pull from GHCR,
+// finally builds from Dockerfile if needed.
 // In DinD mode, dockerfilePath and contextPath are host (Windows) paths.
 func ensureMkDocsImage(imageName, dockerfilePath, contextPath string, logWriter io.Writer) error {
-	Logln(logWriter, "   Building Docker image: %s", imageName)
+	// Check if image already exists locally
+	if imageExists(imageName) {
+		Logln(logWriter, "   Docker image exists: %s", imageName)
+		return nil
+	}
 
+	// Try to pull from GHCR (pre-built images for CI performance)
+	ghcrImage := "ghcr.io/ready-to-release/eac/" + imageName
+	Logln(logWriter, "   Pulling Docker image: %s", ghcrImage)
+	pullExitCode := RunCommandWithLog("", logWriter, "docker", "pull", ghcrImage)
+	if pullExitCode == 0 {
+		// Tag as local name for compatibility
+		RunCommandWithLog("", logWriter, "docker", "tag", ghcrImage, imageName)
+		Logln(logWriter, "   Pulled and tagged as: %s", imageName)
+		return nil
+	}
+
+	// Fall back to building from Dockerfile
+	Logln(logWriter, "   Building Docker image: %s", imageName)
 	exitCode := RunCommandWithLog("", logWriter,
 		"docker", "build",
 		"-t", imageName,
@@ -440,6 +459,16 @@ func ensureMkDocsImage(imageName, dockerfilePath, contextPath string, logWriter 
 	}
 
 	return nil
+}
+
+// imageExists checks if a Docker image exists locally
+func imageExists(imageName string) bool {
+	cmd := exec.Command("docker", "images", "-q", imageName)
+	output, err := cmd.Output()
+	if err != nil {
+		return false
+	}
+	return len(strings.TrimSpace(string(output))) > 0
 }
 
 // buildModuleBooks builds all books for a module in parallel.
