@@ -212,11 +212,33 @@ jobs:
           echo "\`$IMAGE_NAME:$IMAGE_TAG\`" >> $GITHUB_STEP_SUMMARY
 
   # =============================================================================
+  # Build Evidence Books
+  # =============================================================================
+  evidence:
+    name: Evidence (ext-eac)
+    needs: [build, test, integration-test]
+    if: success()
+    runs-on: ubuntu-latest
+    outputs:
+      artifact-name: ${{ steps.evidence.outputs.artifact-name }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Build Evidence Books
+        id: evidence
+        uses: ./.github/actions/build-evidence-books
+        with:
+          module: ext-eac
+          trigger-run-id: ${{ inputs.trigger_run_id }}
+
+  # =============================================================================
   # Summary - Centralized status and failure handling
   # =============================================================================
   summary:
     name: CI Summary (ext-eac)
-    needs: [build, test, integration-test]
+    needs: [build, test, integration-test, evidence]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -232,10 +254,11 @@ jobs:
           BUILD_RESULT: ${{ needs.build.result }}
           TEST_RESULT: ${{ needs.test.result }}
           INTEGRATION_RESULT: ${{ needs.integration-test.result }}
+          EVIDENCE_RESULT: ${{ needs.evidence.result }}
         run: |
           echo "## CI Summary: ext-eac" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          ${COMMANDS:?COMMANDS not set} show ci-summary --container --build=$BUILD_RESULT --container-test-enabled --container-test=$INTEGRATION_RESULT >> $GITHUB_STEP_SUMMARY
+          ${COMMANDS:?COMMANDS not set} show ci-summary --container --build=$BUILD_RESULT --container-test-enabled --container-test=$INTEGRATION_RESULT --evidence-enabled --evidence=$EVIDENCE_RESULT >> $GITHUB_STEP_SUMMARY
 
       - name: Diagnostic Link on Failure
         if: contains(needs.*.result, 'failure')

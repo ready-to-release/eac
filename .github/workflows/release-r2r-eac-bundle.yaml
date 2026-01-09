@@ -157,12 +157,39 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
   # ==========================================================================
+  # Update Evidence
+  # ==========================================================================
+  evidence:
+    name: Update Evidence
+    needs: [approve, release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    outputs:
+      evidence-count: ${{ steps.evidence.outputs.evidence-count }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Update evidence
+        id: evidence
+        uses: ./.github/actions/update-evidence
+        with:
+          module: r2r-eac-bundle
+          tag_name: ${{ needs.approve.outputs.tag_name }}
+          ci-run-id: ${{ needs.approve.outputs.ci_run_id }}
+          ci-sha: ${{ needs.approve.outputs.ci_sha }}
+
+  # ==========================================================================
   # Cleanup Old Releases
   # ==========================================================================
   cleanup:
     name: Cleanup Old Releases
-    needs: [approve, release]
-    if: needs.release.result == 'success'
+    needs: [approve, release, evidence]
+    if: needs.release.result == 'success' && needs.evidence.result != 'failure'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -180,7 +207,7 @@ jobs:
   # ==========================================================================
   summary:
     name: Summary
-    needs: [approve, release, cleanup]
+    needs: [approve, release, evidence, cleanup]
     if: always()
     runs-on: ubuntu-latest
     permissions:
@@ -203,9 +230,11 @@ jobs:
           TAG_NAME="${{ needs.approve.outputs.tag_name }}"
           APPROVE_RESULT="${{ needs.approve.result }}"
           RELEASE_RESULT="${{ needs.release.result }}"
+          EVIDENCE_RESULT="${{ needs.evidence.result }}"
+          EVIDENCE_COUNT="${{ needs.evidence.outputs.evidence-count }}"
           RUN_ID="${{ github.run_id }}"
 
-          if [ "$APPROVE_RESULT" = "success" ] && [ "$RELEASE_RESULT" = "success" ]; then
+          if [ "$APPROVE_RESULT" = "success" ] && [ "$RELEASE_RESULT" = "success" ] && [ "$EVIDENCE_RESULT" != "failure" ]; then
             echo "## ✅ Release Bundle Created" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "Successfully created release bundle **${VERSION}**." >> $GITHUB_STEP_SUMMARY
@@ -215,12 +244,21 @@ jobs:
             echo "- **Version**: \`${VERSION}\` (calver)" >> $GITHUB_STEP_SUMMARY
             echo "- **Tag**: \`${TAG_NAME}\`" >> $GITHUB_STEP_SUMMARY
             echo "- **Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+            if [ -n "$EVIDENCE_COUNT" ] && [ "$EVIDENCE_COUNT" != "0" ]; then
+              echo "- **Evidence**: $EVIDENCE_COUNT file(s) attached" >> $GITHUB_STEP_SUMMARY
+            fi
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "📦 [**View Release**](https://github.com/${{ github.repository }}/releases/tag/${TAG_NAME})" >> $GITHUB_STEP_SUMMARY
           elif [ "$APPROVE_RESULT" = "failure" ]; then
             echo "## ❌ Release Approval Failed" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "Release was not approved. Check the approve job for details." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            ${COMMANDS:?COMMANDS not set} pipeline ci summary-link $RUN_ID --type release >> $GITHUB_STEP_SUMMARY
+          elif [ "$EVIDENCE_RESULT" = "failure" ]; then
+            echo "## ❌ Release Failed - Evidence" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Release published but evidence generation failed." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             ${COMMANDS:?COMMANDS not set} pipeline ci summary-link $RUN_ID --type release >> $GITHUB_STEP_SUMMARY
           else

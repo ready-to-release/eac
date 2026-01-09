@@ -148,6 +148,12 @@ on:
         required: false
         type: string
         default: ''
+      # Evidence options
+      build-evidence:
+        description: 'Build evidence books (PDF compliance docs from test/scan results)'
+        required: false
+        type: boolean
+        default: false
 
     outputs:
       build-result:
@@ -178,6 +184,12 @@ on:
       container-short-sha:
         description: 'Short SHA used for container tag (when container: true)'
         value: ${{ jobs.build.outputs.short-sha }}
+      evidence-result:
+        description: 'Evidence job result'
+        value: ${{ jobs.evidence.result }}
+      evidence-artifact:
+        description: 'Evidence artifact name (when build-evidence: true)'
+        value: ${{ jobs.evidence.outputs.artifact-name }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
@@ -449,11 +461,34 @@ jobs:
           echo "**Image**: \`$IMAGE_NAME:$IMAGE_TAG\`" >> $GITHUB_STEP_SUMMARY
 
   # ===========================================================================
+  # Job D: Evidence - builds compliance PDFs from test/scan results
+  # ===========================================================================
+  evidence:
+    name: Evidence
+    needs: [build, test-linux, test-windows, test-macos, container-test, scan]
+    if: inputs.build-evidence && !contains(needs.*.result, 'failure')
+    runs-on: ubuntu-latest
+    outputs:
+      artifact-name: ${{ steps.evidence.outputs.artifact-name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Build Evidence Books
+        id: evidence
+        uses: ./.github/actions/build-evidence-books
+        with:
+          module: ${{ inputs.module }}
+          trigger-run-id: ${{ inputs.trigger_run_id }}
+
+  # ===========================================================================
   # Summary
   # ===========================================================================
   summary:
     name: Summary
-    needs: [build, test-linux, test-windows, test-macos, container-test, scan]
+    needs: [build, test-linux, test-windows, test-macos, container-test, scan, evidence]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -474,11 +509,13 @@ jobs:
           TEST_MACOS_RESULT: ${{ needs.test-macos.result }}
           CONTAINER_TEST_RESULT: ${{ needs.container-test.result }}
           SCAN_RESULT: ${{ needs.scan.result }}
+          EVIDENCE_RESULT: ${{ needs.evidence.result }}
           TEST_ON_WINDOWS: ${{ inputs.test-on-windows }}
           TEST_ON_MACOS: ${{ inputs.test-on-macos }}
           CONTAINER: ${{ inputs.container }}
           CONTAINER_TEST_ENABLED: ${{ inputs.container-test-enabled }}
           SCANS: ${{ inputs.scans }}
+          BUILD_EVIDENCE: ${{ inputs.build-evidence }}
         run: |
           echo "## CI Summary: $MODULE" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -503,6 +540,10 @@ jobs:
 
           if [ -n "$SCANS" ]; then
             FLAGS="$FLAGS --scans-enabled --scan=$SCAN_RESULT"
+          fi
+
+          if [ "$BUILD_EVIDENCE" = "true" ]; then
+            FLAGS="$FLAGS --evidence-enabled --evidence=$EVIDENCE_RESULT"
           fi
 
           # Generate summary using Go command

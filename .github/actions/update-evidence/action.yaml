@@ -1,0 +1,163 @@
+# Update Evidence Action
+#
+# Downloads pre-built evidence PDFs from CI artifacts and uploads them to a GitHub release.
+# Evidence is built during CI (using build-evidence-books action), not during release.
+#
+# Usage:
+#   - uses: ./.github/actions/update-evidence
+#     with:
+#       module: r2r-cli
+#       tag_name: r2r-cli/1.0.0
+
+name: Update Evidence
+description: Download evidence PDFs from CI and upload to GitHub release
+
+inputs:
+  module:
+    description: 'Module moniker to get evidence for'
+    required: true
+  tag_name:
+    description: 'GitHub release tag name to upload evidence to'
+    required: true
+  ci-run-id:
+    description: 'CI workflow run ID for artifact download'
+    required: false
+    default: ''
+  ci-sha:
+    description: 'CI commit SHA for artifact download'
+    required: false
+    default: ''
+
+outputs:
+  evidence-count:
+    description: 'Number of evidence PDFs uploaded'
+    value: ${{ steps.upload.outputs.evidence-count }}
+  evidence-files:
+    description: 'Comma-separated list of uploaded evidence files'
+    value: ${{ steps.upload.outputs.evidence-files }}
+
+runs:
+  using: composite
+  steps:
+    - name: Download evidence artifacts
+      id: download
+      uses: ./.github/actions/download-ci-artifacts
+      with:
+        module: ${{ inputs.module }}
+        artifact-name: evidence-artifacts-${{ inputs.module }}
+        artifact-path: out/evidence/${{ inputs.module }}/
+        ci-run-id: ${{ inputs.ci-run-id }}
+        ci-sha: ${{ inputs.ci-sha }}
+      continue-on-error: true
+
+    - name: Check for evidence
+      id: check
+      shell: bash
+      env:
+        MODULE: ${{ inputs.module }}
+        DOWNLOAD_RESULT: ${{ steps.download.outcome }}
+      run: |
+        EVIDENCE_DIR="out/evidence/$MODULE"
+
+        if [ "$DOWNLOAD_RESULT" != "success" ]; then
+          echo "has-evidence=false" >> $GITHUB_OUTPUT
+          echo "No evidence artifacts found for $MODULE (CI may not produce evidence for this module)"
+          exit 0
+        fi
+
+        if [ ! -d "$EVIDENCE_DIR" ]; then
+          echo "has-evidence=false" >> $GITHUB_OUTPUT
+          echo "Evidence directory not found: $EVIDENCE_DIR"
+          exit 0
+        fi
+
+        PDF_COUNT=$(find "$EVIDENCE_DIR" -name "*.pdf" -type f 2>/dev/null | wc -l)
+        if [ "$PDF_COUNT" -eq 0 ]; then
+          echo "has-evidence=false" >> $GITHUB_OUTPUT
+          echo "No evidence PDFs found in $EVIDENCE_DIR"
+          exit 0
+        fi
+
+        echo "has-evidence=true" >> $GITHUB_OUTPUT
+        echo "Found $PDF_COUNT evidence PDF(s) for $MODULE"
+
+    - name: Upload evidence to release
+      id: upload
+      if: steps.check.outputs.has-evidence == 'true'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        MODULE: ${{ inputs.module }}
+        TAG_NAME: ${{ inputs.tag_name }}
+      run: |
+        EVIDENCE_DIR="out/evidence/$MODULE"
+
+        if [ ! -d "$EVIDENCE_DIR" ]; then
+          echo "::error::Evidence directory not found: $EVIDENCE_DIR"
+          exit 1
+        fi
+
+        # Find all PDF files
+        PDF_FILES=$(find "$EVIDENCE_DIR" -name "*.pdf" -type f 2>/dev/null || true)
+
+        if [ -z "$PDF_FILES" ]; then
+          echo "::warning::No evidence PDFs found in $EVIDENCE_DIR"
+          echo "evidence-count=0" >> $GITHUB_OUTPUT
+          echo "evidence-files=" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        # Count files
+        FILE_COUNT=$(echo "$PDF_FILES" | wc -l)
+        echo "Found $FILE_COUNT evidence PDF(s)"
+
+        # Upload each PDF to the release
+        UPLOADED_FILES=""
+        for pdf in $PDF_FILES; do
+          FILENAME=$(basename "$pdf")
+          echo "Uploading $FILENAME to release $TAG_NAME..."
+
+          if gh release upload "$TAG_NAME" "$pdf" --clobber; then
+            echo "  Uploaded: $FILENAME"
+            if [ -n "$UPLOADED_FILES" ]; then
+              UPLOADED_FILES="$UPLOADED_FILES,$FILENAME"
+            else
+              UPLOADED_FILES="$FILENAME"
+            fi
+          else
+            echo "::error::Failed to upload $FILENAME"
+            exit 1
+          fi
+        done
+
+        echo "evidence-count=$FILE_COUNT" >> $GITHUB_OUTPUT
+        echo "evidence-files=$UPLOADED_FILES" >> $GITHUB_OUTPUT
+        echo ""
+        echo "Successfully uploaded $FILE_COUNT evidence file(s) to release $TAG_NAME"
+
+    - name: Summary
+      if: always()
+      shell: bash
+      env:
+        MODULE: ${{ inputs.module }}
+        TAG_NAME: ${{ inputs.tag_name }}
+        HAS_EVIDENCE: ${{ steps.check.outputs.has-evidence }}
+        EVIDENCE_COUNT: ${{ steps.upload.outputs.evidence-count || '0' }}
+        EVIDENCE_FILES: ${{ steps.upload.outputs.evidence-files || '' }}
+      run: |
+        echo "## 📋 Evidence: $MODULE" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        if [ "$HAS_EVIDENCE" != "true" ]; then
+          echo "No evidence artifacts found in CI (module may not have evidence_books configured)." >> $GITHUB_STEP_SUMMARY
+        elif [ "$EVIDENCE_COUNT" = "0" ]; then
+          echo "No evidence PDFs found in artifacts." >> $GITHUB_STEP_SUMMARY
+        else
+          echo "**$EVIDENCE_COUNT** evidence file(s) uploaded to release \`$TAG_NAME\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Files" >> $GITHUB_STEP_SUMMARY
+          IFS=',' read -ra FILES <<< "$EVIDENCE_FILES"
+          for file in "${FILES[@]}"; do
+            echo "- \`$file\`" >> $GITHUB_STEP_SUMMARY
+          done
+        fi
