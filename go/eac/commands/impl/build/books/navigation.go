@@ -47,20 +47,23 @@ func (p *Preprocessor) ensureRootIndex() error {
 func (p *Preprocessor) generateRootIndex() string {
 	var sb strings.Builder
 
-	// Frontmatter
+	// Frontmatter - use Title for display
 	sb.WriteString("---\n")
-	sb.WriteString(fmt.Sprintf("title: %s\n", p.book.Name))
+	title := p.book.Title
+	if title == "" {
+		title = p.book.Name
+	}
+	sb.WriteString(fmt.Sprintf("title: %s\n", title))
 	if p.book.Description != "" {
 		sb.WriteString(fmt.Sprintf("description: %s\n", p.book.Description))
 	}
 	sb.WriteString("---\n\n")
 
-	// Title
-	title := p.book.Name
+	// Title heading
 	if title == "" {
 		title = "Documentation"
 	}
-	sb.WriteString(fmt.Sprintf("# %s\n\n", toTitleCase(title)))
+	sb.WriteString(fmt.Sprintf("# %s\n\n", title))
 
 	// Description
 	if p.book.Description != "" {

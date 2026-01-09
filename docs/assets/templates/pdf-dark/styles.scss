@@ -185,11 +185,35 @@ $accent-purple: #d2a8ff;
 
   // Tables
   table {
-    width: 100%;
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
     border-collapse: collapse;
     margin: 1em 0;
     page-break-inside: avoid;
     font-size: 9pt;
+    table-layout: fixed !important;
+  }
+
+  // Ensure table wrapper maintains width
+  .md-typeset table:not([class]),
+  .md-typeset__table {
+    width: 100% !important;
+    margin: 1em 0;
+    overflow-x: visible;
+  }
+
+  tbody {
+    page-break-inside: auto;
+    orphans: 2;
+    widows: 2;
+    width: 100% !important;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+    width: 100% !important;
   }
 
   th, td {
@@ -197,6 +221,7 @@ $accent-purple: #d2a8ff;
     padding: 0.5em;
     text-align: left;
     color: $text-primary !important;
+    box-sizing: border-box !important;
   }
 
   th {

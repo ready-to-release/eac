@@ -5,15 +5,23 @@
 // Long:   - Specification coverage for godog tests
 // Long:   - Control tag summaries
 // Long:   - Detailed test results table
+// Long:
+// Long: Example:
+// Long:   show test-results
+// Long:   show test-results ext-eac
+// Long:   show test-results ext-eac r2r-cli
+// Args: [module...]
 package show
 
 import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 	"time"
 
+	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/internal/manifests"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/internal/testdata"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
@@ -69,6 +77,32 @@ func ShowTestResults() int {
 		return 1
 	}
 
+	// Parse module arguments
+	args := os.Args[1:]
+	var monikers []string
+
+	// Skip command name and collect module arguments
+	inCommand := false
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+
+		// Skip until we find "test-results"
+		if !inCommand {
+			if arg == "test-results" {
+				inCommand = true
+			}
+			continue
+		}
+
+		// Skip flags
+		if strings.HasPrefix(arg, "--") {
+			continue
+		}
+
+		// Collect module monikers
+		monikers = append(monikers, arg)
+	}
+
 	// Get repository root
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -82,16 +116,32 @@ func ShowTestResults() int {
 		return 1
 	}
 
-	// Load manifests
-	manifestList, err := manifests.LoadAllTestManifests(repoRoot)
-	if err != nil {
-		log.Errorf("failed to load manifests: %v", err)
-		return 1
+	// Load test manifests for specified modules (or all if no modules specified)
+	var manifestList []*implinternal.TestManifest
+	if len(monikers) == 0 {
+		// No modules specified - scan all modules with test manifests
+		manifestList, err = manifests.LoadAllTestManifests(repoRoot)
+		if err != nil {
+			log.Errorf("failed to load manifests: %v", err)
+			return 1
+		}
+	} else {
+		// Specific modules requested
+		manifestList, err = manifests.LoadTestManifestsForModules(repoRoot, monikers)
+		if err != nil {
+			log.Errorf("failed to load manifests: %v", err)
+			return 1
+		}
 	}
 
 	if len(manifestList) == 0 {
-		log.Errorf("no test manifests found in %s/out/test/", repoRoot)
-		log.Errorf("Run tests first: test <module>")
+		if len(monikers) == 0 {
+			log.Errorf("no test manifests found")
+			log.Errorf("Run tests first: test <module>")
+		} else {
+			log.Errorf("no test manifests found for modules: %s", strings.Join(monikers, ", "))
+			log.Errorf("Run tests first: test %s", strings.Join(monikers, " "))
+		}
 		return 1
 	}
 
