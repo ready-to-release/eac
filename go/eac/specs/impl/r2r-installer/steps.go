@@ -347,6 +347,10 @@ func iRunTheBashInstaller() error {
 
 	// Use --upx flag for faster download (smaller binary) - only effective on linux-amd64
 	cmd := exec.CommandContext(ctx, "bash", scriptPath, "--install-dir", instCtx.tempInstallDir, "--upx")
+
+	// Isolate PATH modifications to this process only - don't let the installer pollute system PATH
+	cmd.Env = isolatePathEnv()
+
 	output, err := cmd.CombinedOutput()
 	instCtx.sharedCtx.CommandOutput = string(output)
 
@@ -386,6 +390,10 @@ func iRunTheBashInstallerWithArgs(args string) error {
 	cmdArgs = append(cmdArgs, strings.Fields(args)...)
 
 	cmd := exec.CommandContext(ctx, "bash", cmdArgs...)
+
+	// Isolate PATH modifications to this process only - don't let the installer pollute system PATH
+	cmd.Env = isolatePathEnv()
+
 	output, err := cmd.CombinedOutput()
 	instCtx.sharedCtx.CommandOutput = string(output)
 
