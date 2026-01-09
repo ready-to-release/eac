@@ -1,16 +1,19 @@
 # Build Evidence Books Action
 #
 # Builds evidence PDFs for a module by:
-# 1. Downloading test results and scan artifacts from the current workflow
-# 2. Downloading dependency artifacts (awaits CI completion automatically)
-# 3. Running 'update evidence <module>' to generate PDFs
+# 1. Downloading test/scan artifacts from the module AND all its dependencies' CI runs
+# 2. Running 'update evidence <module>' to generate PDFs
 #
 # The evidence books aggregate CI artifacts (test results, security scans, etc.)
-# as compliance documentation.
+# from the ENTIRE dependency chain as compliance documentation.
 #
-# By default, automatically downloads artifacts matching:
-# - test-results-{module}*  (test results from all platforms)
-# - scan-results-{module}   (security scan results)
+# For each module in the dependency chain with a ci-{module}.yaml workflow:
+# - Downloads test-results-{module}*  (test results from all platforms)
+# - Downloads scan-results-{module}   (security scan results)
+#
+# Example: r2r-cli depends on eac-core, so r2r-cli evidence includes:
+# - test-results-r2r-cli-* from ci-r2r-cli.yaml
+# - test-results-eac-core-* from ci-eac-core.yaml
 #
 # Usage:
 #   - uses: ./.github/actions/build-evidence-books
@@ -28,10 +31,6 @@ inputs:
     description: 'Trigger workflow run ID (for commands binary download)'
     required: false
     default: ''
-  timeout:
-    description: 'Timeout in seconds for awaiting dependency CI'
-    required: false
-    default: '600'
   upload-artifact:
     description: 'Whether to upload evidence artifacts'
     required: false
@@ -68,58 +67,16 @@ runs:
           echo "artifact-name=evidence-artifacts-${MODULE}" >> $GITHUB_OUTPUT
         fi
 
-    # Download test and scan results from the current workflow run
+    # Download test and scan results from module and all dependency CI runs
     - name: Download CI artifacts
       shell: bash
       env:
+        COMMANDS: ${{ steps.commands.outputs.commands-path }}
         MODULE: ${{ inputs.module }}
         GH_TOKEN: ${{ github.token }}
       run: |
-        echo "Downloading CI artifacts for module: $MODULE"
-
-        # List all artifacts from this run
-        ARTIFACTS=$(gh run view ${{ github.run_id }} --json artifacts -q '.artifacts[].name' 2>/dev/null || echo "")
-
-        if [ -z "$ARTIFACTS" ]; then
-          echo "No artifacts found in this workflow run"
-          exit 0
-        fi
-
-        echo "Available artifacts:"
-        echo "$ARTIFACTS" | sed 's/^/  /'
-        echo ""
-
-        # Download test results matching test-results-{module}*
-        echo "Downloading test artifacts (test-results-${MODULE}*)..."
-        for artifact in $ARTIFACTS; do
-          if [[ "$artifact" == test-results-${MODULE}* ]]; then
-            echo "  Downloading: $artifact"
-            gh run download ${{ github.run_id }} --name "$artifact" --dir out/test/ || echo "  Warning: Failed to download $artifact"
-          fi
-        done
-
-        # Download scan results matching scan-results-{module}
-        echo "Downloading scan artifacts (scan-results-${MODULE})..."
-        for artifact in $ARTIFACTS; do
-          if [[ "$artifact" == "scan-results-${MODULE}" ]]; then
-            echo "  Downloading: $artifact"
-            gh run download ${{ github.run_id }} --name "$artifact" --dir out/scan/ || echo "  Warning: Failed to download $artifact"
-          fi
-        done
-
-        echo ""
-        echo "Downloaded artifacts:"
-        ls -la out/test/ 2>/dev/null || echo "  (no test artifacts)"
-        ls -la out/scan/ 2>/dev/null || echo "  (no scan artifacts)"
-
-    # Download all dependency artifacts (awaits CI completion automatically)
-    - name: Download dependency artifacts
-      uses: ./.github/actions/download-module-deps
-      with:
-        module: ${{ inputs.module }}
-        include-transitive: 'true'
-        trigger-run-id: ${{ inputs.trigger-run-id }}
-        await-timeout: ${{ inputs.timeout }}
+        # Download artifacts from module and all dependencies' CI runs
+        ${COMMANDS:?COMMANDS not set} pipeline download-evidence-artifacts "$MODULE"
 
     - name: Setup Docker
       uses: docker/setup-buildx-action@v3
