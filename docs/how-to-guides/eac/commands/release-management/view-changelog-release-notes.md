@@ -27,15 +27,15 @@ r2r eac show changelog <module>
 **Example:**
 
 ```bash
-r2r eac show changelog eac-commands
+r2r eac show changelog my-module
 ```
 
 **Output:**
 
 ```markdown
-# Changelog: eac-commands
+# Changelog: my-module
 
-## [0.0.2] - 2025-12-01
+## [1.2.2] - 2025-12-01
 
 ### Added
 
@@ -63,7 +63,7 @@ r2r eac show changelog <module> <version>
 **Example:**
 
 ```bash
-r2r eac show changelog eac-commands 0.0.2
+r2r eac show changelog my-module 1.2.2
 ```
 
 ### Display Latest Release
@@ -77,7 +77,7 @@ r2r eac show changelog <module> latest
 **Example:**
 
 ```bash
-r2r eac show changelog ext-eac latest
+r2r eac show changelog my-module latest
 ```
 
 ### Display Unreleased Changes
@@ -101,17 +101,17 @@ r2r eac show release-notes <module>
 **Example:**
 
 ```bash
-r2r eac show release-notes ext-eac
+r2r eac show release-notes my-module
 ```
 
 **Output:**
 
 ```markdown
-## [0.0.7] - 2025-12-11
+## [1.2.3] - 2025-12-11
 
 ### Conclusion on Fitness for Intended Use
 
-This release enhances the EAC extension...
+This release enhances the module...
 
 ### Impact on Business Process
 
@@ -129,7 +129,7 @@ r2r eac show release-notes <module> latest
 **Example:**
 
 ```bash
-r2r eac show release-notes ext-eac latest
+r2r eac show release-notes my-module latest
 ```
 
 ### Display Specific Version
@@ -143,7 +143,7 @@ r2r eac show release-notes <module> <version>
 **Example:**
 
 ```bash
-r2r eac show release-notes ext-eac 0.0.6
+r2r eac show release-notes my-module 1.2.2
 ```
 
 ## Export Structured Data
@@ -159,7 +159,7 @@ r2r eac get changelog <module> --as-json
 **Example:**
 
 ```bash
-r2r eac get changelog eac-commands --as-json | jq '.versions[0].number'
+r2r eac get changelog my-module --as-json | jq '.versions[0].number'
 ```
 
 ### Export Changelog as YAML
@@ -187,7 +187,7 @@ r2r eac get changelog <module> <version> --as-json
 **Example:**
 
 ```bash
-r2r eac get changelog eac-commands 0.0.2 --as-json
+r2r eac get changelog my-module 1.2.2 --as-json
 ```
 
 ### Export Release Notes
@@ -216,13 +216,13 @@ View two different versions side by side:
 
 ```bash
 # PowerShell
-r2r eac show changelog eac-commands 0.0.1 > old.md
-r2r eac show changelog eac-commands 0.0.2 > new.md
+r2r eac show changelog my-module 1.2.1 > old.md
+r2r eac show changelog my-module 1.2.2 > new.md
 code --diff old.md new.md
 
 # Bash
-r2r eac show changelog eac-commands 0.0.1 > old.md
-r2r eac show changelog eac-commands 0.0.2 > new.md
+r2r eac show changelog my-module 1.2.1 > old.md
+r2r eac show changelog my-module 1.2.2 > new.md
 diff old.md new.md
 ```
 
@@ -232,10 +232,10 @@ Get the latest version programmatically:
 
 ```bash
 # PowerShell
-$version = (r2r eac get changelog eac-commands --as-json | ConvertFrom-Json).versions[0].number
+$version = (r2r eac get changelog my-module --as-json | ConvertFrom-Json).versions[0].number
 
 # Bash
-version=$(r2r eac get changelog eac-commands --as-json | jq -r '.versions[0].number')
+version=$(r2r eac get changelog my-module --as-json | jq -r '.versions[0].number')
 ```
 
 ### Generate Release Report
@@ -243,40 +243,8 @@ version=$(r2r eac get changelog eac-commands --as-json | jq -r '.versions[0].num
 Combine changelog and release notes for a report:
 
 ```bash
-r2r eac show release-notes ext-eac 0.0.7 > report.md
-r2r eac show changelog ext-eac 0.0.7 >> report.md
-```
-
-## Troubleshooting
-
-### "Module not found" Error
-
-**Problem:** Command reports module doesn't exist.
-
-**Solution:** Verify module moniker:
-
-```bash
-r2r eac show modules | grep <module>
-```
-
-### "Failed to parse changelog" Error
-
-**Problem:** Changelog file doesn't exist or has incorrect format.
-
-**Solution:** Check file exists and follows [Keep a Changelog](https://keepachangelog.com/) format:
-
-```bash
-ls <module-root>/CHANGELOG.md
-```
-
-### "Version not found" Error
-
-**Problem:** Requested version doesn't exist in changelog.
-
-**Solution:** List all available versions:
-
-```bash
-r2r eac get changelog <module> --as-json | jq '.versions[].number'
+r2r eac show release-notes my-module 1.2.3 > report.md
+r2r eac show changelog my-module 1.2.3 >> report.md
 ```
 
 ## File Location Requirements
@@ -286,10 +254,10 @@ Commands expect files in these locations:
 - **Changelog:** `<module-root>/CHANGELOG.md`
 - **Release Notes:** `<module-root>/RELEASE-NOTES.md`
 
-**Example:** For module `eac-commands` with root `go/eac/commands`:
+**Example:** For module `my-module` with root `src/my-module`:
 
-- Changelog: `go/eac/commands/CHANGELOG.md`
-- Release Notes: `go/eac/commands/RELEASE-NOTES.md`
+- Changelog: `src/my-module/CHANGELOG.md`
+- Release Notes: `src/my-module/RELEASE-NOTES.md`
 
 ## See Also
 

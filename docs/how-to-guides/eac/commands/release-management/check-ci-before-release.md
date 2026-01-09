@@ -107,14 +107,6 @@ fi
 r2r eac release this
 ```
 
-## Common Issues
-
-| Problem | Solution |
-|---------|----------|
-| CI still running | Use `pipeline wait` |
-| CI failed | Fix issues and retry |
-| No CI configured | Set up CI before releasing |
-
 ## Next Steps
 
 - [Prepare Module Release](./prepare-module-release.md) → Complete workflow
