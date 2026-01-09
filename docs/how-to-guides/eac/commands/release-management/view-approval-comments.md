@@ -31,19 +31,19 @@ Show approval comments for PRs merged since the last release:
 
 ```bash
 # Human-readable markdown output (only APPROVED reviews)
-r2r eac show approval-comments ext-eac
+r2r eac show approval-comments my-module
 
 # or explicitly
-r2r eac show approval-comments ext-eac unreleased
+r2r eac show approval-comments my-module unreleased
 
 # Include all review states (APPROVED, CHANGES_REQUESTED, COMMENTED)
-r2r eac show approval-comments ext-eac --include-all-reviews
+r2r eac show approval-comments my-module --include-all-reviews
 ```
 
 **Output:**
 
 ```markdown
-# PR Approvals: ext-eac (Unreleased)
+# PR Approvals: my-module (Unreleased)
 
 **Summary:** 3 PRs, 5 approvals
 
@@ -59,7 +59,7 @@ r2r eac show approval-comments ext-eac --include-all-reviews
 
 **Description:**
 
-This PR adds a new feature to the eac-commands module with enhanced
+This PR adds a new feature to the module with enhanced
 functionality for processing specifications.
 
 **Merge Commit Message:**
@@ -74,13 +74,13 @@ Added new feature implementation with tests
 
 **Description:**
 
-Updated specification files for r2r-cli module
+Updated specification files for the module
 
 **Merge Commit Message:**
 
 Merge pull request #124 from user/spec-update
 
-Updated r2r-cli specification
+Updated module specification
 
 ---
 ```
@@ -90,13 +90,13 @@ Updated r2r-cli specification
 Show approval comments included in the most recent release:
 
 ```bash
-r2r eac show approval-comments ext-eac latest
+r2r eac show approval-comments my-module latest
 ```
 
 ## View Approvals for Specific Version
 
 ```bash
-r2r eac show approval-comments ext-eac 0.0.7
+r2r eac show approval-comments my-module 1.2.3
 ```
 
 ## Query from Different Branches
@@ -105,13 +105,13 @@ By default, commands query from the trunk branch (usually `main`). Use `--branch
 
 ```bash
 # Query from main branch (default)
-r2r eac show approval-comments ext-eac
+r2r eac show approval-comments my-module
 
 # Query from current branch (useful when working in feature branches)
-r2r eac show approval-comments ext-eac --branch HEAD
+r2r eac show approval-comments my-module --branch HEAD
 
 # Query from specific branch
-r2r eac show approval-comments ext-eac --branch develop
+r2r eac show approval-comments my-module --branch develop
 ```
 
 **When to use this:**
@@ -128,31 +128,31 @@ r2r eac show approval-comments ext-eac --branch develop
 
 ```bash
 # Only APPROVED reviews (default)
-r2r eac get approval-comments ext-eac --as-json
+r2r eac get approval-comments my-module --as-json
 
 # Include all review states
-r2r eac get approval-comments ext-eac --include-all-reviews --as-json
+r2r eac get approval-comments my-module --include-all-reviews --as-json
 ```
 
 ### As YAML (default)
 
 ```bash
-r2r eac get approval-comments ext-eac
+r2r eac get approval-comments my-module
 
 # or explicitly
-r2r eac get approval-comments ext-eac --as-yaml
+r2r eac get approval-comments my-module --as-yaml
 
 # Include all review states
-r2r eac get approval-comments ext-eac --include-all-reviews --as-yaml
+r2r eac get approval-comments my-module --include-all-reviews --as-yaml
 ```
 
 ### As TOML
 
 ```bash
-r2r eac get approval-comments ext-eac --as-toml
+r2r eac get approval-comments my-module --as-toml
 
 # Include all review states
-r2r eac get approval-comments ext-eac --include-all-reviews --as-toml
+r2r eac get approval-comments my-module --include-all-reviews --as-toml
 ```
 
 ## Common Use Cases
@@ -160,7 +160,7 @@ r2r eac get approval-comments ext-eac --include-all-reviews --as-toml
 ### 1. Count Total Approvals
 
 ```bash
-r2r eac get approval-comments ext-eac --as-json | jq '.total_approvals'
+r2r eac get approval-comments my-module --as-json | jq '.total_approvals'
 ```
 
 **Example Output:**
@@ -172,7 +172,7 @@ r2r eac get approval-comments ext-eac --as-json | jq '.total_approvals'
 ### 2. List All Reviewers
 
 ```bash
-r2r eac get approval-comments ext-eac --as-json | jq -r '.approvals[].reviewer' | sort -u
+r2r eac get approval-comments my-module --as-json | jq -r '.approvals[].reviewer' | sort -u
 ```
 
 **Example Output:**
@@ -187,7 +187,7 @@ reviewer4
 ### 3. Count Approvals Per PR
 
 ```bash
-r2r eac get approval-comments ext-eac --as-json | jq '.approvals | group_by(.pr_number) | map({pr: .[0].pr_number, title: .[0].pr_title, approvals: length})'
+r2r eac get approval-comments my-module --as-json | jq '.approvals | group_by(.pr_number) | map({pr: .[0].pr_number, title: .[0].pr_title, approvals: length})'
 ```
 
 **Example Output:**
@@ -210,7 +210,7 @@ r2r eac get approval-comments ext-eac --as-json | jq '.approvals | group_by(.pr_
 ### 4. Filter Approvals by Specific Reviewer
 
 ```bash
-r2r eac get approval-comments ext-eac --as-json | jq '.approvals[] | select(.reviewer == "reviewer1")'
+r2r eac get approval-comments my-module --as-json | jq '.approvals[] | select(.reviewer == "reviewer1")'
 ```
 
 **Example Output:**
@@ -228,7 +228,7 @@ r2r eac get approval-comments ext-eac --as-json | jq '.approvals[] | select(.rev
 ### 5. List PRs with Multiple Approvals
 
 ```bash
-r2r eac get approval-comments ext-eac --as-json | jq '.approvals | group_by(.pr_number) | map(select(length > 1) | {pr: .[0].pr_number, title: .[0].pr_title, approvals: length})'
+r2r eac get approval-comments my-module --as-json | jq '.approvals | group_by(.pr_number) | map(select(length > 1) | {pr: .[0].pr_number, title: .[0].pr_title, approvals: length})'
 ```
 
 **Example Output:**
@@ -246,7 +246,7 @@ r2r eac get approval-comments ext-eac --as-json | jq '.approvals | group_by(.pr_
 ### 6. Find PRs Approved by Specific User
 
 ```bash
-r2r eac get approval-comments ext-eac --as-json | jq '.approvals | group_by(.pr_number) | map(select(any(.[]; .reviewer == "reviewer1")) | {pr: .[0].pr_number, title: .[0].pr_title})'
+r2r eac get approval-comments my-module --as-json | jq '.approvals | group_by(.pr_number) | map(select(any(.[]; .reviewer == "reviewer1")) | {pr: .[0].pr_number, title: .[0].pr_title})'
 ```
 
 **Example Output:**
@@ -269,7 +269,7 @@ r2r eac get approval-comments ext-eac --as-json | jq '.approvals | group_by(.pr_
 Count how many reviews of each type exist:
 
 ```bash
-r2r eac get approval-comments ext-eac --include-all-reviews --as-json | jq '.approvals | group_by(.review_state) | map({state: .[0].review_state, count: length})'
+r2r eac get approval-comments my-module --include-all-reviews --as-json | jq '.approvals | group_by(.review_state) | map({state: .[0].review_state, count: length})'
 ```
 
 **Example Output:**
@@ -296,7 +296,7 @@ r2r eac get approval-comments ext-eac --include-all-reviews --as-json | jq '.app
 Identify PRs that need attention:
 
 ```bash
-r2r eac get approval-comments ext-eac --include-all-reviews --as-json | jq '.approvals | group_by(.pr_number) | map(select(any(.[]; .review_state == "CHANGES_REQUESTED")) | {pr: .[0].pr_number, title: .[0].pr_title})'
+r2r eac get approval-comments my-module --include-all-reviews --as-json | jq '.approvals | group_by(.pr_number) | map(select(any(.[]; .review_state == "CHANGES_REQUESTED")) | {pr: .[0].pr_number, title: .[0].pr_title})'
 ```
 
 **Example Output:**
@@ -317,11 +317,11 @@ Create a summary for regulatory compliance:
 ```bash
 echo "## PR Approval Summary"
 echo ""
-echo "- Total PRs: $(r2r eac get approval-comments ext-eac latest --as-json | jq '.total_prs')"
-echo "- Total Approvals: $(r2r eac get approval-comments ext-eac latest --as-json | jq '.total_approvals')"
+echo "- Total PRs: $(r2r eac get approval-comments my-module latest --as-json | jq '.total_prs')"
+echo "- Total Approvals: $(r2r eac get approval-comments my-module latest --as-json | jq '.total_approvals')"
 echo ""
 echo "### Reviewers:"
-r2r eac get approval-comments ext-eac latest --as-json | jq -r '.approvals[].reviewer' | sort -u | sed 's/^/- /'
+r2r eac get approval-comments my-module latest --as-json | jq -r '.approvals[].reviewer' | sort -u | sed 's/^/- /'
 ```
 
 **Example Output:**
@@ -339,102 +339,7 @@ r2r eac get approval-comments ext-eac latest --as-json | jq -r '.approvals[].rev
 - reviewer4
 ```
 
-## Troubleshooting
-
-### "module not found" Error
-
-**Problem:** The module moniker is invalid or doesn't exist.
-
-**Solution:** List available modules:
-
-```bash
-r2r eac show modules
-```
-
-### "version not found" Error
-
-**Problem:** The specified version doesn't exist in the changelog.
-
-**Solution:** List available versions:
-
-```bash
-r2r eac get changelog ext-eac --as-json | jq -r '.versions[].number'
-```
-
-### "no released versions found" Error
-
-**Problem:** Using `latest` keyword but module has no releases yet.
-
-**Solution:** This is normal for new modules. Use `unreleased` or omit version parameter:
-
-```bash
-r2r eac show approval-comments ext-eac unreleased
-```
-
-### No Approvals Shown
-
-**Problem:** Command shows "No PR approvals found for this version."
-
-**Possible Causes:**
-
-- No PRs were merged in the version range
-- PRs don't contain `.feature` specification files
-- No APPROVED reviews on spec-related PRs (default behavior only shows APPROVED)
-- GitHub CLI not available
-
-**Solution:** Verify PRs and spec files:
-
-```bash
-# Check recent commits for PR references
-git log --oneline | grep "#"
-
-# Check for .feature files in commits
-git log --name-only | grep ".feature"
-
-# Try including all review states (not just APPROVED)
-r2r eac show approval-comments ext-eac --include-all-reviews
-
-# Manually check a specific PR (if gh CLI available)
-gh pr view 123 --json files,reviews
-```
-
-### GitHub CLI Not Available
-
-**Problem:** `gh` command not found or not authenticated.
-
-**Solution:**
-
-```bash
-# Install GitHub CLI
-# See: https://cli.github.com/
-
-# Authenticate
-gh auth login
-
-# Test authentication
-gh auth status
-```
-
-**Graceful Degradation**: The command continues without `gh` CLI but shows limited data from git commits only.
-
-### Bundle Modules Show Approvals from Multiple Modules
-
-**Question:** Why do I see approvals for `eac-commands` PRs when querying `ext-eac`?
-
-**Answer:** Container/bundle modules like `ext-eac` automatically **aggregate approvals from all their dependencies**. This is intentional and provides a complete view of all PR approvals included in the release bundle.
-
-**Example:**
-
-- `ext-eac` depends on `eac-commands` and `r2r-cli`
-- Running `r2r eac show approval-comments ext-eac` shows approvals from all three modules
-- This ensures you see the full scope of reviews for the release
-
-**To see only a specific module's approvals:**
-
-```bash
-# Query the dependency directly
-r2r eac show approval-comments eac-commands
-```
+---
 
 ## PR Detection
 
@@ -454,10 +359,10 @@ To include all review states, use the `--include-all-reviews` flag:
 
 ```bash
 # Show only APPROVED reviews (default)
-r2r eac show approval-comments ext-eac
+r2r eac show approval-comments my-module
 
 # Show all review states
-r2r eac show approval-comments ext-eac --include-all-reviews
+r2r eac show approval-comments my-module --include-all-reviews
 ```
 
 **Available review states:**
@@ -490,6 +395,8 @@ Detailed information for **all PRs found** (even those with no reviews) includin
 **Important:** This section displays for ALL PRs that contain spec files, regardless of whether they have any reviews/approvals. This means you'll see PR details even when "No PR approvals found" is shown.
 
 If a PR has no description or merge message, it will show "(No description provided)" or "(No merge message)" respectively.
+
+---
 
 ## File Location Requirements
 

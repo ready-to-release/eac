@@ -2,50 +2,59 @@
 
 ## What You'll Accomplish
 
-Create changelog from Git commits with automatic version detection and formatting.
+Create changelog from Git commits with automatic version detection and formatting. This is a **manual step** in the automated release workflow.
 
 ## Prerequisites
 
 - Git repository with commits
 - Module has changes since last release
+- Conventional commit messages used
 
 ## Steps
 
 ### 1. Generate Changelog
 
+**Action Type**: 🧑 Manual
+
 ```bash
-r2r eac release changelog
+r2r release this my-module
 ```
 
 **What happens**:
 
-- Analyzes commits since last release
+- Analyzes commits since last release (tag `my-module/1.2.3`)
 - Determines version bump (patch/minor/major)
-- Generates CHANGELOG.md with sections
+- Generates/updates `release/my-module/CHANGELOG.md`
 
 ### 2. Review Generated Changelog
 
+**Action Type**: 🧑 Manual
+
 ```bash
-cat CHANGELOG.md
+cat release/my-module/CHANGELOG.md
 ```
 
 **What happens**: View generated changelog content
 
 ### 3. Edit if Needed
 
+**Action Type**: 🧑 Manual
+
 ```bash
-nano CHANGELOG.md
+code release/my-module/CHANGELOG.md
 ```
 
-**What happens**: Manually refine entries if needed
+**What happens**: Manually refine entries if descriptions need improvement
 
 ### 4. Validate Format
 
+**Action Type**: 🧑 Manual
+
 ```bash
-r2r eac validate release
+r2r validate release my-module
 ```
 
-**What happens**: Checks changelog follows format standards
+**What happens**: Checks changelog follows Keep a Changelog format standards
 
 ## Changelog Sections
 
@@ -60,59 +69,59 @@ Generated changelog includes:
 
 ## Example Scenario
 
-Preparing release after multiple commits:
+Preparing my-module release after multiple commits:
 
 ```bash
-# Generate changelog
-r2r eac release changelog
+# Generate changelog for my-module
+r2r release this my-module
 
 # Output:
-# Analyzing commits since v1.1.0...
-# Found 8 commits
-# Detected version: v1.2.0 (minor bump)
-# Generated CHANGELOG.md
+moniker: my-module
+current_version: 1.2.3
+next_version: 1.2.4
+change_summary:
+  feat: 2
+  fix: 1
+
+Updated: release/my-module/CHANGELOG.md
 
 # Review
-cat CHANGELOG.md
+cat release/my-module/CHANGELOG.md
 
-# ## [1.2.0] - 2025-12-09
+# ## [1.2.4] - 2026-01-09
 #
 # ### Added
-# - JWT authentication support
-# - Refresh token endpoint
+# - feat: add config validation for module contracts
+# - feat: support custom templates in documentation
 #
 # ### Fixed
-# - Login timeout issue
-# - Password validation bug
+# - fix: handle empty files correctly in changelog parser
 #
-# ### Changed
-# - Updated authentication flow
+# ## [1.2.3] - 2026-01-08
+# ...
 
 # Validate format
-r2r eac validate release
-# ✓ Changelog format valid
+r2r validate release my-module
+# Output:
+# ✓ Changelog exists: release/my-module/CHANGELOG.md
+# ✓ Valid header format
+# ✓ Valid version format: 1.2.4
+# ✓ Versions in descending order
 
-# Get version for tagging
-VERSION=$(r2r eac release get-version)
-echo $VERSION
-# v1.2.0
+# Get version for verification
+r2r release get-version my-module
+# Output: 1.2.4
 ```
 
 ## Version Detection
 
-Version is determined by commit types:
+Version is determined by commit types (for SemVer modules):
 
-- `feat:` → Minor bump (1.1.0 → 1.2.0)
-- `fix:` → Patch bump (1.1.0 → 1.1.1)
-- `BREAKING CHANGE:` → Major bump (1.1.0 → 2.0.0)
+- `feat:` → Minor bump (1.2.3 → 1.3.0) *or Patch in pre-1.0 versions*
+- `fix:` → Patch bump (1.2.3 → 1.2.4)
+- `BREAKING CHANGE:` → Major bump (1.3.0 → 2.0.0)
 
-## Common Issues
-
-| Problem | Solution |
-|---------|----------|
-| "No changes detected" | Ensure commits since last tag |
-| Version incorrect | Manually edit CHANGELOG.md |
-| Format invalid | Fix format per validation errors |
+**For CalVer modules**: Version is today's date (YYYY.MMDD)
 
 ## Next Steps
 

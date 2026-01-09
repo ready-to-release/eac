@@ -54,7 +54,6 @@ Documentation is organized using the [Diataxis framework](https://diataxis.fr/) 
 <p>Guides that show you how to solve specific problems. Use these when you need to accomplish a particular task.</p>
 <ul>
 <li><a href="how-to-guides/eac/commands/">EAC Commands</a></li>
-<li><a href="how-to-guides/eac/configuration/">EAC Configuration</a></li>
 <li><a href="how-to-guides/eac/modules/">EAC Modules</a></li>
 </ul>
 </div>

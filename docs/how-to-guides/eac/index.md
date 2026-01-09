@@ -6,12 +6,8 @@ Guides for the Everything as Code (EAC) system. Learn how to use CLI commands, w
 
 | Guide | Description |
 |-------|-------------|
-| [Configuration](./configuration/) | Setup EAC and understand contracts (modules, environments, books) |
 | [Commands](./commands/) | CLI commands for build, test, validate, release, and more |
-| [Specifications](./specifications/) | Writing and managing BDD/Gherkin specifications |
 | [Modules](./modules/) | Creating modules and module types |
-| [Integration](./integration/) | Integrate with CI/CD, IDEs, Git hooks, and tools |
-| [Troubleshooting](./troubleshooting/) | Solutions to common problems |
 
 ## Language Support
 
@@ -28,9 +24,8 @@ Other languages can use container-based or script-based builds. See [R2R and EAC
 
 New to EAC? Start here:
 
-1. **[Configuration](./configuration/)** - Set up EAC in your project
-2. **[Commands](./commands/)** - Learn the essential commands
-3. **[Modules](./modules/)** - Create your first module
+1. **[Commands](./commands/)** - Learn the essential commands
+2. **[Modules](./modules/)** - Create your first module
 
 ## Common Tasks
 

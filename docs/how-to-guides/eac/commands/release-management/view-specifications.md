@@ -16,23 +16,23 @@ Show specifications that have been added or modified since the last release:
 
 ```bash
 # Human-readable markdown output
-r2r eac show specs ext-eac
+r2r eac show specs my-module
 
 # or explicitly
-r2r eac show specs ext-eac unreleased
+r2r eac show specs my-module unreleased
 ```
 
 **Output:**
 
 ```markdown
-# Specifications: ext-eac (Unreleased)
+# Specifications: my-module (Unreleased)
 
 **Summary:** 2 added, 1 modified, 0 deleted (15 total scenarios)
 
 | File | Status | Scenarios | Feature |
 |------|--------|-----------|---------|
-| specs/eac-commands/show-specs/specification.feature | ✨ Added | 5 | show-specs |
-| specs/eac-commands/build/specification.feature | 📝 Modified | 6 | build |
+| specs/my-module/show-specs/specification.feature | ✨ Added | 5 | show-specs |
+| specs/my-module/build/specification.feature | 📝 Modified | 6 | build |
 ```
 
 ## View Specifications for Latest Release
@@ -40,13 +40,13 @@ r2r eac show specs ext-eac unreleased
 Show specifications that were included in the most recent release:
 
 ```bash
-r2r eac show specs ext-eac latest
+r2r eac show specs my-module latest
 ```
 
 ## View Specifications for Specific Version
 
 ```bash
-r2r eac show specs ext-eac 0.0.7
+r2r eac show specs my-module 1.2.3
 ```
 
 ## Query from Different Branches
@@ -55,13 +55,13 @@ By default, commands query from the trunk branch (usually `main`). Use `--branch
 
 ```bash
 # Query from main branch (default)
-r2r eac show specs ext-eac
+r2r eac show specs my-module
 
 # Query from current branch (useful when working in feature branches)
-r2r eac show specs ext-eac --branch HEAD
+r2r eac show specs my-module --branch HEAD
 
 # Query from specific branch
-r2r eac show specs ext-eac --branch develop
+r2r eac show specs my-module --branch develop
 ```
 
 **When to use this:**
@@ -75,22 +75,22 @@ r2r eac show specs ext-eac --branch develop
 ### As JSON
 
 ```bash
-r2r eac get specs ext-eac --as-json
+r2r eac get specs my-module --as-json
 ```
 
 ### As YAML (default)
 
 ```bash
-r2r eac get specs ext-eac
+r2r eac get specs my-module
 
 # or explicitly
-r2r eac get specs ext-eac --as-yaml
+r2r eac get specs my-module --as-yaml
 ```
 
 ### As TOML
 
 ```bash
-r2r eac get specs ext-eac --as-toml
+r2r eac get specs my-module --as-toml
 ```
 
 ## Common Use Cases
@@ -98,32 +98,32 @@ r2r eac get specs ext-eac --as-toml
 ### 1. Count Total Scenarios in Unreleased Specs
 
 ```bash
-r2r eac get specs ext-eac unreleased --as-json | jq '.total_scenarios'
+r2r eac get specs my-module unreleased --as-json | jq '.total_scenarios'
 ```
 
 **Example Output:**
 
-```
+```text
 15
 ```
 
 ### 2. List All Added Specifications
 
 ```bash
-r2r eac get specs ext-eac latest --as-json | jq -r '.spec_files[] | select(.status == "Added") | .relative_path'
+r2r eac get specs my-module latest --as-json | jq -r '.spec_files[] | select(.status == "Added") | .relative_path'
 ```
 
 **Example Output:**
 
-```
-specs/eac-commands/show-specs/specification.feature
-specs/eac-commands/get-specs/specification.feature
+```text
+specs/my-module/show-specs/specification.feature
+specs/my-module/get-specs/specification.feature
 ```
 
 ### 3. Get Scenario Count Per Specification
 
 ```bash
-r2r eac get specs ext-eac --as-json | jq '.spec_files[] | {file: .feature_name, scenarios: .scenario_count}'
+r2r eac get specs my-module --as-json | jq '.spec_files[] | {file: .feature_name, scenarios: .scenario_count}'
 ```
 
 **Example Output:**
@@ -146,7 +146,7 @@ r2r eac get specs ext-eac --as-json | jq '.spec_files[] | {file: .feature_name, 
 ### 4. Count Specifications by Status
 
 ```bash
-r2r eac get specs ext-eac --as-json | jq '{added: .added_count, modified: .modified_count, deleted: .deleted_count}'
+r2r eac get specs my-module --as-json | jq '{added: .added_count, modified: .modified_count, deleted: .deleted_count}'
 ```
 
 **Example Output:**
@@ -162,7 +162,7 @@ r2r eac get specs ext-eac --as-json | jq '{added: .added_count, modified: .modif
 ### 5. Find Specifications with Most Scenarios
 
 ```bash
-r2r eac get specs ext-eac --as-json | jq '.spec_files | sort_by(.scenario_count) | reverse | .[0] | {file: .feature_name, scenarios: .scenario_count}'
+r2r eac get specs my-module --as-json | jq '.spec_files | sort_by(.scenario_count) | reverse | .[0] | {file: .feature_name, scenarios: .scenario_count}'
 ```
 
 **Example Output:**
@@ -177,12 +177,12 @@ r2r eac get specs ext-eac --as-json | jq '.spec_files | sort_by(.scenario_count)
 ### 6. Check if Any Specs Were Deleted
 
 ```bash
-r2r eac get specs ext-eac --as-json | jq '.deleted_count > 0'
+r2r eac get specs my-module --as-json | jq '.deleted_count > 0'
 ```
 
 **Example Output:**
 
-```
+```text
 false
 ```
 
@@ -193,12 +193,12 @@ Create a summary for release notes:
 ```bash
 echo "## Specification Changes"
 echo ""
-echo "- Added: $(r2r eac get specs ext-eac latest --as-json | jq '.added_count') specifications"
-echo "- Modified: $(r2r eac get specs ext-eac latest --as-json | jq '.modified_count') specifications"
-echo "- Total Scenarios: $(r2r eac get specs ext-eac latest --as-json | jq '.total_scenarios')"
+echo "- Added: $(r2r eac get specs my-module latest --as-json | jq '.added_count') specifications"
+echo "- Modified: $(r2r eac get specs my-module latest --as-json | jq '.modified_count') specifications"
+echo "- Total Scenarios: $(r2r eac get specs my-module latest --as-json | jq '.total_scenarios')"
 echo ""
 echo "### Added Specifications:"
-r2r eac get specs ext-eac latest --as-json | jq -r '.spec_files[] | select(.status == "Added") | "- " + .feature_name + " (" + (.scenario_count | tostring) + " scenarios)"'
+r2r eac get specs my-module latest --as-json | jq -r '.spec_files[] | select(.status == "Added") | "- " + .feature_name + " (" + (.scenario_count | tostring) + " scenarios)"'
 ```
 
 **Example Output:**
@@ -213,77 +213,6 @@ r2r eac get specs ext-eac latest --as-json | jq -r '.spec_files[] | select(.stat
 ### Added Specifications:
 - show-specs (5 scenarios)
 - get-specs (4 scenarios)
-```
-
-## Troubleshooting
-
-### "module not found" Error
-
-**Problem:** The module moniker is invalid or doesn't exist.
-
-**Solution:** List available modules:
-
-```bash
-r2r eac show modules
-```
-
-### "version not found" Error
-
-**Problem:** The specified version doesn't exist in the changelog.
-
-**Solution:** List available versions:
-
-```bash
-r2r eac get changelog ext-eac --as-json | jq -r '.versions[].number'
-```
-
-### "no released versions found" Error
-
-**Problem:** Using `latest` keyword but module has no releases yet.
-
-**Solution:** This is normal for new modules. Use `unreleased` or omit version parameter:
-
-```bash
-r2r eac show specs ext-eac unreleased
-```
-
-### No Specifications Shown
-
-**Problem:** Git history doesn't show any .feature file changes for the version.
-
-**Possible Causes:**
-
-- No spec files were actually modified in git commits
-- Spec files exist but weren't committed
-- Looking at wrong version
-
-**Solution:** Verify spec files were committed:
-
-```bash
-# Check if specs directory exists
-ls specs/<module>/
-
-# Check git history for .feature files
-git log --oneline --name-status | grep ".feature"
-```
-
-### Bundle Modules Show Specs from Multiple Directories
-
-**Question:** Why do I see specs from `eac-commands` when querying `ext-eac`?
-
-**Answer:** Container/bundle modules like `ext-eac` automatically **aggregate specs from all their dependencies**. This is intentional and provides a complete view of all specifications included in the release bundle.
-
-**Example:**
-
-- `ext-eac` depends on `eac-commands` and `r2r-cli`
-- Running `r2r eac show specs ext-eac` shows specs from all three modules
-- This ensures you see the full scope of the release
-
-**To see only a specific module's specs:**
-
-```bash
-# Query the dependency directly
-r2r eac show specs eac-commands
 ```
 
 ## File Location Requirements

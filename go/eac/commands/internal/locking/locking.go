@@ -22,8 +22,10 @@ type Config struct {
 // Returns the lock handle on success, or an error if the lock cannot be acquired.
 func Acquire(workspaceRoot string, cfg Config) (*flock.Flock, error) {
 	lockDir := filepath.Join(workspaceRoot, cfg.BaseDir)
+
+	// Ensure directory exists with proper permissions
 	if err := os.MkdirAll(lockDir, 0755); err != nil {
-		return nil, fmt.Errorf("failed to create lock directory: %w", err)
+		return nil, fmt.Errorf("failed to create lock directory %s: %w", lockDir, err)
 	}
 
 	lockPath := filepath.Join(lockDir, fmt.Sprintf(".lock-%s", cfg.Identifier))
@@ -31,11 +33,12 @@ func Acquire(workspaceRoot string, cfg Config) (*flock.Flock, error) {
 
 	locked, err := lock.TryLock()
 	if err != nil {
-		return nil, fmt.Errorf("failed to acquire lock: %w", err)
+		return nil, fmt.Errorf("failed to acquire lock at %s: %w", lockPath, err)
 	}
 	if !locked {
 		return nil, fmt.Errorf("%s '%s' is %s", cfg.ResourceType, cfg.Identifier, cfg.ActionVerb)
 	}
+
 	return lock, nil
 }
 
