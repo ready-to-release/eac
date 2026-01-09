@@ -5,6 +5,7 @@
   -webkit-print-color-adjust: exact !important;
   print-color-adjust: exact !important;
   color-adjust: exact !important;
+  box-sizing: border-box !important;
 }
 
 @page {
@@ -120,11 +121,22 @@ pre code {
 
 /* Tables */
 table {
-  width: 100%;
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
   border-collapse: collapse;
   margin: 1em 0;
   page-break-inside: auto;  /* Allow tables to break across pages if needed */
   font-size: 10pt;
+  table-layout: fixed !important;
+}
+
+/* Ensure table wrapper maintains width */
+.md-typeset table:not([class]),
+.md-typeset__table {
+  width: 100% !important;
+  margin: 1em 0;
+  overflow-x: visible;
 }
 
 thead {
@@ -135,11 +147,13 @@ tbody {
   page-break-inside: auto;
   orphans: 2;  /* Minimum rows at bottom of page */
   widows: 2;   /* Minimum rows at top of page */
+  width: 100% !important;
 }
 
 tr {
   page-break-inside: avoid;  /* Keep rows together */
   page-break-after: auto;    /* Allow breaks between rows */
+  width: 100% !important;
 }
 
 th, td {
@@ -147,6 +161,7 @@ th, td {
   padding: 0.5em 0.75em;
   text-align: left;
   color: #e6edf3 !important;
+  box-sizing: border-box !important;
 }
 
 th {
