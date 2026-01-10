@@ -297,11 +297,11 @@ books:
         order: 2
 
   # ==============================================================================
-  # Release Evidence (for release module)
+  # Release Evidence - ext-eac
   # ==============================================================================
-  - name: release-evidence
-    title: "Release Evidence Package"
-    description: "Documentation of all module versions included in a release bundle"
+  - name: release-evidence-ext-eac
+    title: "ext-eac Release Evidence Package"
+    description: "Release evidence for ext-eac module with dependency test results"
     output: pdf-dark
     site_url: "https://ready-to-release.github.io/eac/"
 
@@ -313,34 +313,217 @@ books:
         exclude:
           - "docs/assets/lfs/pdf/**"
 
-      # Dynamic content
       - type: command
-        command: "show test-results"
-        target: "01-test-results.md"
+        command: "show release-notes ext-eac latest"
+        target: "release-notes.md"
+        frontmatter:
+          title: "Release Notes"
+          description: "Release notes for ext-eac module"
+        order: 1
+
+      - type: command
+        command: "show changelog ext-eac latest"
+        target: "changelog.md"
+        frontmatter:
+          title: "Changelog"
+          description: "Detailed changelog for ext-eac module"
+        order: 2
+
+      - type: command
+        command: "show specs ext-eac latest"
+        target: "specifications.md"
+        frontmatter:
+          title: "Specifications"
+          description: "Specifications for ext-eac module"
+        order: 3
+
+      - type: command
+        command: "show approval-comments ext-eac latest"
+        target: "approval-comments.md"
+        frontmatter:
+          title: "PR Approvals"
+          description: "PR approval comments for ext-eac module"
+        order: 4
+
+      - type: command
+        command: "show test-results ext-eac"
+        target: "test-results.md"
         frontmatter:
           title: "Test Results"
-          description: "All test results"
+          description: "Test results for ext-eac and its dependencies"
+        order: 5
+
+  # ==============================================================================
+  # Release Evidence - r2r-cli
+  # ==============================================================================
+  - name: release-evidence-r2r-cli
+    title: "r2r-cli Release Evidence Package"
+    description: "Release evidence for r2r-cli module with dependency test results"
+    output: pdf-dark
+    site_url: "https://ready-to-release.github.io/eac/"
+
+    sources:
+      # Assets for PDF rendering
+      - type: copy
+        from: "docs/assets/**"
+        to: "assets/"
+        exclude:
+          - "docs/assets/lfs/pdf/**"
+
+      - type: command
+        command: "show release-notes r2r-cli latest"
+        target: "release-notes.md"
+        frontmatter:
+          title: "Release Notes"
+          description: "Release notes for r2r-cli module"
         order: 1
-      # - type: command
-      #   command: "show modules"
-      #   target: "01-modules.md"
-      #   frontmatter:
-      #     title: "Module Overview"
-      #     description: "All modules in this release"
-      #   order: 1
 
-      # - type: command
-      #   command: "show dependencies"
-      #   target: "02-dependencies.md"
-      #   frontmatter:
-      #     title: "Module Dependencies"
-      #     description: "Dependency relationships between modules"
-      #   order: 2
+      - type: command
+        command: "show changelog r2r-cli latest"
+        target: "changelog.md"
+        frontmatter:
+          title: "Changelog"
+          description: "Detailed changelog for r2r-cli module"
+        order: 2
 
-      # - type: command
-      #   command: "show tests"
-      #   target: "03-tests.md"
-      #   frontmatter:
-      #     title: "Test Coverage"
-      #     description: "All test assertions in the repository"
-      #   order: 3
+      - type: command
+        command: "show specs r2r-cli latest"
+        target: "specifications.md"
+        frontmatter:
+          title: "Specifications"
+          description: "Specifications for r2r-cli module"
+        order: 3
+
+      - type: command
+        command: "show approval-comments r2r-cli latest"
+        target: "approval-comments.md"
+        frontmatter:
+          title: "PR Approvals"
+          description: "PR approval comments for r2r-cli module"
+        order: 4
+
+      - type: command
+        command: "show test-results r2r-cli"
+        target: "test-results.md"
+        frontmatter:
+          title: "Test Results"
+          description: "Test results for r2r-cli and its dependencies"
+        order: 5
+
+  # ==============================================================================
+  # Release Evidence - r2r-eac-bundle
+  # ==============================================================================
+  - name: release-evidence-r2r-eac-bundle
+    title: "r2r-eac-bundle Release Evidence Package"
+    description: "Complete release evidence for r2r-eac bundle with all module releases"
+    output: pdf-dark
+    site_url: "https://ready-to-release.github.io/eac/"
+
+    sources:
+      # Assets for PDF rendering
+      - type: copy
+        from: "docs/assets/**"
+        to: "assets/"
+        exclude:
+          - "docs/assets/lfs/pdf/**"
+
+      # ===========================================================================
+      # ext-eac Evidence
+      # ===========================================================================
+      - type: command
+        command: "show release-notes ext-eac latest"
+        target: "ext-eac-release-notes.md"
+        frontmatter:
+          title: "ext-eac Release Notes"
+          description: "Release notes for ext-eac module"
+        order: 1
+
+      - type: command
+        command: "show changelog ext-eac latest"
+        target: "ext-eac-changelog.md"
+        frontmatter:
+          title: "ext-eac Changelog"
+          description: "Detailed changelog for ext-eac module"
+        order: 2
+
+      # ===========================================================================
+      # r2r-cli Evidence
+      # ===========================================================================
+      - type: command
+        command: "show release-notes r2r-cli latest"
+        target: "r2r-cli-release-notes.md"
+        frontmatter:
+          title: "r2r-cli Release Notes"
+          description: "Release notes for r2r-cli module"
+        order: 3
+
+      - type: command
+        command: "show changelog r2r-cli latest"
+        target: "r2r-cli-changelog.md"
+        frontmatter:
+          title: "r2r-cli Changelog"
+          description: "Detailed changelog for r2r-cli module"
+        order: 4
+
+      # ===========================================================================
+      # ext-eac Specifications
+      # ===========================================================================
+      - type: command
+        command: "show specs ext-eac latest"
+        target: "ext-eac-specifications.md"
+        frontmatter:
+          title: "ext-eac Specifications"
+          description: "Specifications for ext-eac module"
+        order: 5
+
+      # ===========================================================================
+      # ext-eac PR Approvals
+      # ===========================================================================
+      - type: command
+        command: "show approval-comments ext-eac latest"
+        target: "ext-eac-approval-comments.md"
+        frontmatter:
+          title: "ext-eac PR Approvals"
+          description: "PR approval comments for ext-eac module"
+        order: 6
+
+      # ===========================================================================
+      # r2r-cli Specifications
+      # ===========================================================================
+      - type: command
+        command: "show specs r2r-cli latest"
+        target: "r2r-cli-specifications.md"
+        frontmatter:
+          title: "r2r-cli Specifications"
+          description: "Specifications for r2r-cli module"
+        order: 7
+
+      # ===========================================================================
+      # r2r-cli PR Approvals
+      # ===========================================================================
+      - type: command
+        command: "show approval-comments r2r-cli latest"
+        target: "r2r-cli-approval-comments.md"
+        frontmatter:
+          title: "r2r-cli PR Approvals"
+          description: "PR approval comments for r2r-cli module"
+        order: 8
+
+      # ===========================================================================
+      # Test Results (Last)
+      # ===========================================================================
+      - type: command
+        command: "show test-results ext-eac"
+        target: "ext-eac-test-results.md"
+        frontmatter:
+          title: "ext-eac Test Results"
+          description: "Test results for ext-eac and its dependencies"
+        order: 9
+
+      - type: command
+        command: "show test-results r2r-cli"
+        target: "r2r-cli-test-results.md"
+        frontmatter:
+          title: "r2r-cli Test Results"
+          description: "Test results for r2r-cli and its dependencies"
+        order: 10
