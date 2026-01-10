@@ -31,8 +31,9 @@ Each layer serves a distinct purpose, uses different tools, and addresses differ
 > - **Go**: Godog + go test
 > - **Python**: behave/pytest-bdd + pytest
 > - **Java**: Cucumber + JUnit
-> - **TypeScript**: Cucumber-js + Jest
+> - **TypeScript**: Cucumber-js + Mocha (or Jest)
 > - **Ruby**: Cucumber + RSpec
+> - **C#/.NET**: SpecFlow + xUnit/NUnit
 >
 > See your language implementation guide for setup and configuration.
 
@@ -57,8 +58,12 @@ Feature: cli_init-project
   Rule: Command completes in under 2 seconds
 ```
 
+<!-- markdownlint-disable MD033 -->
+
 **Origin**: <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="2" fill="#5BA3F7" stroke="#4A89D6"/></svg> Blue cards from Example Mapping
 **Location**: `specs/<module>/<feature>/specification.feature`
+
+<!-- markdownlint-enable MD033 -->
 
 ### Layer 2: Scenarios
 
@@ -84,11 +89,15 @@ Rule: Creates project directory structure
     And stderr should contain "already initialized"
 ```
 
+<!-- markdownlint-disable MD033 -->
+
 **Origin**: <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="2" fill="#7EDC7A" stroke="#68B666"/></svg> Green cards from Example Mapping
 **Specification**: Written in specification files
 **Implementation**: Test implementation files (step definitions)
 
 > **Implementation**: Step definitions are organized in a dedicated test directory within each module. Location and naming conventions vary by language. See your implementation guide for details.
+
+<!-- markdownlint-enable MD033 -->
 
 ### Layer 3: Unit Tests
 

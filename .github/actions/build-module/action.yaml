@@ -9,10 +9,6 @@ inputs:
     description: 'Run ID of trigger workflow (for commands binary download). If empty, builds from source.'
     required: false
     default: ''
-  go-version:
-    description: 'Go version for building commands from source'
-    required: false
-    default: '1.24.4'
   setup-deps:
     description: |
       Setup system dependencies before build:
@@ -55,7 +51,6 @@ runs:
       id: commands
       uses: ./.github/actions/setup-commands
       with:
-        go-version: ${{ inputs.go-version }}
         trigger-run-id: ${{ inputs.trigger-run-id }}
         cross-compile-windows: ${{ inputs.cross-compile-windows }}
 

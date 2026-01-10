@@ -39,10 +39,6 @@ inputs:
     description: 'Commit SHA for artifact lookup and image tagging. Falls back to github.sha if empty.'
     required: false
     default: ''
-  go-version:
-    description: 'Go version for building commands from source'
-    required: false
-    default: '1.24.4'
   download-modules:
     description: 'Space-separated list of modules to download from CI before build'
     required: false
@@ -124,7 +120,6 @@ runs:
       with:
         module: ${{ inputs.module }}
         trigger-run-id: ${{ inputs.trigger-run-id }}
-        go-version: ${{ inputs.go-version }}
         upload-artifact: ${{ inputs.upload-artifact }}
         extra-args: ${{ inputs.extra-args }}
         # Container modules use buildx which is auto-detected from module type
