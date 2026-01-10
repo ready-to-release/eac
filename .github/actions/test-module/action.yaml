@@ -9,10 +9,6 @@ inputs:
     description: 'Run ID of trigger workflow (for artifact download). If empty, builds from source.'
     required: false
     default: ''
-  go-version:
-    description: 'Go version for building commands from source'
-    required: false
-    default: '1.24.4'
   setup-deps:
     description: |
       Setup system dependencies before test:
@@ -71,7 +67,6 @@ runs:
       id: commands
       uses: ./.github/actions/setup-commands
       with:
-        go-version: ${{ inputs.go-version }}
         trigger-run-id: ${{ inputs.trigger-run-id }}
 
     - name: Setup Module Dependencies
@@ -137,6 +132,7 @@ runs:
         SUITES: ${{ inputs.suites }}
         EXTRA_ARGS: ${{ inputs.extra-args }}
         SKIP_DEPM: ${{ inputs.skip-depm }}
+        GITHUB_TOKEN: ${{ github.token }}
       run: |
         # CI tests THIS module only:
         # --retest: force full test run (no incremental detection, CI handles orchestration)
