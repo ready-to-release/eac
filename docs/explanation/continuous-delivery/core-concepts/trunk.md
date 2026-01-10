@@ -236,7 +236,7 @@ Splitting repositories by technical boundary (frontend/, backend/, scripts/, inf
 
 **Automation**:
 
-- Monorepo: Change detection, selective builds (Nx, Bazel, Turborepo)
+- Monorepo: Change detection, selective builds tooling ([r2r+eac](./../../../reference/index.md), Nx, Bazel, Turborepo)
 - Both: Repository templates, shared pipeline definitions, Dependabot
 
 ---

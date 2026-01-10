@@ -34,5 +34,3 @@ Feature: repository_go-version-consistency
       When I extract the Go version from system-dependencies.yml
       Then .github/actions/setup-commands/action.yaml should have matching go-version default
       And .github/actions/setup-module-deps/action.yaml should have matching go-version default
-      And .github/actions/build-module/action.yaml should have matching go-version default
-      And .github/actions/test-module/action.yaml should have matching go-version default

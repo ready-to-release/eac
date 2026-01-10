@@ -17,10 +17,6 @@ inputs:
     description: 'Commit SHA for artifact lookup. Falls back to github.sha if empty.'
     required: false
     default: ''
-  go-version:
-    description: 'Go version for building commands from source'
-    required: false
-    default: '1.24.4'
   await-timeout:
     description: 'Timeout in seconds to wait for CI to complete'
     required: false
@@ -33,7 +29,6 @@ runs:
       id: commands
       uses: ./.github/actions/setup-commands
       with:
-        go-version: ${{ inputs.go-version }}
         trigger-run-id: ${{ inputs.trigger-run-id }}
 
     - name: Download Module Artifacts
