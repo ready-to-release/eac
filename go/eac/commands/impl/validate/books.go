@@ -220,6 +220,10 @@ func isValidCommand(cmd string) bool {
 		"show config",
 		"show suite",
 		"show books",
+		"show approval-comments",
+		"show specs",
+		"show changelog",
+		"show release-notes",
 	}
 
 	for _, valid := range validCommands {

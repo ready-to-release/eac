@@ -1123,7 +1123,7 @@ def get_title_from_markdown(md_path):
         end_idx = content.find('---', 3)
         if end_idx > 0:
             frontmatter = content[3:end_idx]
-            match = re.search(r'^title:\s*["\']?([^"\'\\n]+)["\']?', frontmatter, re.MULTILINE)
+            match = re.search(r'^title:\s*["\']?([^"\'\n]+)["\']?', frontmatter, re.MULTILINE)
             if match:
                 return match.group(1).strip()
 
@@ -1156,15 +1156,17 @@ def create_page_footer_overlay(page_num, total_pages, book_title, section_title=
     page_text = str(page_num)
     c.drawCentredString(width / 2, footer_y, page_text)
 
-    # Book title - left (truncate if too long)
+    # Book title - left (truncate to fit available width)
     c.setFont('Helvetica', 8)
     c.setFillColor(FOOTER_COLOR)
-    display_title = book_title[:40] + '...' if len(book_title) > 40 else book_title
+    max_book_title_width = (width / 2) - 3*cm
+    display_title = truncate_text_to_width(c, book_title, 'Helvetica', 8, max_book_title_width)
     c.drawString(2 * cm, footer_y, display_title)
 
-    # Section title - right (truncate if too long)
+    # Section title - right (truncate to fit available width)
     if section_title:
-        display_section = section_title[:35] + '...' if len(section_title) > 35 else section_title
+        max_section_width = (width / 2) - 1*cm
+        display_section = truncate_text_to_width(c, section_title, 'Helvetica', 8, max_section_width)
         c.drawRightString(width - 2 * cm, footer_y, display_section)
 
     c.save()
@@ -1198,6 +1200,51 @@ def draw_wrapped_text(canvas, text, x, y, max_width, font='Helvetica', size=12, 
             canvas.drawString(x, y - (i * line_height), line)
 
     return len(lines)  # Return number of lines drawn
+
+def truncate_text_to_width(canvas, text, font, size, max_width):
+    """Truncate text to fit within max_width, preferring word boundaries.
+
+    Args:
+        canvas: ReportLab canvas object
+        text: Text to truncate
+        font: Font name (e.g., 'Helvetica')
+        size: Font size in points
+        max_width: Maximum width in points
+
+    Returns:
+        Truncated text with '...' if needed, or original text if it fits
+    """
+    # Check if full text fits
+    if canvas.stringWidth(text, font, size) <= max_width:
+        return text
+
+    # Reserve space for ellipsis
+    ellipsis = '...'
+    ellipsis_width = canvas.stringWidth(ellipsis, font, size)
+    available_width = max_width - ellipsis_width
+
+    # Try word-boundary truncation first
+    words = text.split()
+    if len(words) > 1:
+        truncated = []
+        for word in words:
+            test_text = ' '.join(truncated + [word])
+            if canvas.stringWidth(test_text, font, size) <= available_width:
+                truncated.append(word)
+            else:
+                break
+
+        if truncated:
+            return ' '.join(truncated) + ellipsis
+
+    # Fallback: character-by-character truncation for single long word
+    for i in range(len(text), 0, -1):
+        truncated = text[:i]
+        if canvas.stringWidth(truncated, font, size) <= available_width:
+            return truncated + ellipsis
+
+    # Edge case: even one character is too wide
+    return ellipsis
 
 def create_cover_page():
     """Create a cover page PDF with title, subtitle, and metadata."""
@@ -1341,18 +1388,34 @@ def create_toc_pages(toc_entries, content_start_page):
         x = 2*cm + indent
 
         # Font size and style based on depth
-        if depth == 1:
-            c.setFont('Helvetica-Bold', 11)
+        # Treat depth 0 and 1 as top-level items (bold, larger font)
+        if depth <= 1:
+            font_name = 'Helvetica-Bold'
+            font_size = 11
+            c.setFont(font_name, font_size)
             c.setFillColor(TEXT_COLOR)
         elif depth == 2:
-            c.setFont('Helvetica', 10)
+            font_name = 'Helvetica'
+            font_size = 10
+            c.setFont(font_name, font_size)
             c.setFillColor(TEXT_COLOR)
         else:  # depth 3, 4, etc. - all same format
-            c.setFont('Helvetica', 9)
+            font_name = 'Helvetica'
+            font_size = 9
+            c.setFont(font_name, font_size)
             c.setFillColor(TEXT_COLOR)
 
+        # Calculate available width for title (leave space for page number and padding)
+        # Page numbers are right-aligned at (width - 2*cm), leave 1.5cm space before them
+        page_num_x = width - 2*cm
+        max_title_x = page_num_x - 1.5*cm
+        max_title_width = max_title_x - x
+
+        # Truncate title to fit available width
+        display_title = truncate_text_to_width(c, title, font_name, font_size, max_title_width)
+
         # Draw title
-        c.drawString(x, y, title)
+        c.drawString(x, y, display_title)
 
         # Draw page number (content pages start at 1)
         display_page = page_num + 1
@@ -1369,7 +1432,8 @@ def create_toc_pages(toc_entries, content_start_page):
         c.setStrokeColor(HexColor('#30363d'))
         c.setLineWidth(0.3)
         c.setDash(1, 2)
-        title_width = c.stringWidth(title, 'Helvetica-Bold' if depth == 1 else 'Helvetica', 11 if depth == 1 else (10 if depth == 2 else 9))
+        # Use truncated title width for dotted line calculation
+        title_width = c.stringWidth(display_title, font_name, font_size)
         line_start = x + title_width + 0.3*cm
         line_end = width - 2*cm - 0.5*cm
         if line_end > line_start:
