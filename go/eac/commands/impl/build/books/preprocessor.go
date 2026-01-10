@@ -147,6 +147,14 @@ func (p *Preprocessor) Preprocess() error {
 		return fmt.Errorf("step 9b (mermaid replace): %w", err)
 	}
 
+	// Step 9c: Process Structurizr diagrams (both PDF and site)
+	// Scans for <!-- structurizr:module:view --> markers and replaces with img tags
+	// pointing to cached SVGs from docs/assets/cache/structurizr/
+	p.log("  Step 9c: Processing Structurizr diagrams...")
+	if err := p.processStructurizrDiagrams(); err != nil {
+		return fmt.Errorf("step 9c (structurizr): %w", err)
+	}
+
 	// Step 10: Convert .drawio to cached images (PDF only)
 	// Interactive .drawio diagrams can't display in PDFs, so render to static images
 	// For HTML site, .drawio files are rendered by JavaScript viewer

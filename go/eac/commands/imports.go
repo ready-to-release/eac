@@ -36,6 +36,7 @@ import (
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/update/docs"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/update/evidence"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/update/pdf-screenshots"
+	_ "github.com/ready-to-release/eac/go/eac/commands/impl/update/structurizr"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/validate"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/validate/risk-catalog"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/validate/risk-profile"

@@ -111,6 +111,54 @@ modules:
         # Bundle changelog owned by r2r-eac-bundle module
         - r2r-eac-bundle/CHANGELOG.md
 
+  - moniker: mkdocs-pdf
+    name: MkDocs PDF Container
+    type: container
+    description: Pre-built Docker container for MkDocs PDF generation (Chromium, Playwright)
+    files:
+      root: containers/mkdocs-pdf
+      source:
+        - "**/*"
+      workflows:
+        ci: .github/workflows/ci-mkdocs-pdf.yaml
+    docker_build:
+      container: "cli-{moniker}"
+      context: "containers/mkdocs-pdf"
+      dockerfile: "containers/mkdocs-pdf/Dockerfile"
+      platforms:
+        - linux/amd64
+      tags:
+        - "ghcr.io/ready-to-release/eac/cli-{moniker}:latest"
+        - "ghcr.io/ready-to-release/eac/cli-{moniker}:sha-{short_sha}"
+      push: true
+      registry: ghcr.io
+      cache:
+        type: gha
+
+  - moniker: mkdocs-site
+    name: MkDocs Site Container
+    type: container
+    description: Pre-built Docker container for MkDocs HTML site generation
+    files:
+      root: containers/mkdocs-site
+      source:
+        - "**/*"
+      workflows:
+        ci: .github/workflows/ci-mkdocs-site.yaml
+    docker_build:
+      container: "cli-{moniker}"
+      context: "containers/mkdocs-site"
+      dockerfile: "containers/mkdocs-site/Dockerfile"
+      platforms:
+        - linux/amd64
+      tags:
+        - "ghcr.io/ready-to-release/eac/cli-{moniker}:latest"
+        - "ghcr.io/ready-to-release/eac/cli-{moniker}:sha-{short_sha}"
+      push: true
+      registry: ghcr.io
+      cache:
+        type: gha
+
   # ============================================================================
   # LAYER 1 - Depends on Layer 0
   # ============================================================================
@@ -123,6 +171,7 @@ modules:
       scheme: CalVer
     depends_on:
       - repository
+      - mkdocs-site
     books:
       - site
     files:
@@ -143,7 +192,6 @@ modules:
       repo:
         other:
           - mkdocs.yml
-          - containers/mkdocs-site/**
           - containers/static-site/**
 
   - moniker: eac-commands
@@ -305,6 +353,7 @@ modules:
     depends_on:
       - docs
       - eac-commands
+      - mkdocs-pdf
     books:
       - tutorials
       - howto
@@ -319,9 +368,6 @@ modules:
       workflows:
         ci: .github/workflows/ci-books.yaml
         release: .github/workflows/release-books.yaml
-      repo:
-        other:
-          - containers/mkdocs-pdf/**
 
   - moniker: eac-mcp-commands
     name: Go Commands MCP Server

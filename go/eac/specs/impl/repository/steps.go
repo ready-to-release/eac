@@ -284,6 +284,20 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 		return repoCtx.ifImagesMissingShowUpdateCommand(expected)
 	})
 
+	// Docs structurizr cache validation steps
+	sc.Step(`^I scan specs/ for all workspace\.dsl files$`, func() error {
+		return repoCtx.scanSpecsForWorkspaceDSLFiles()
+	})
+	sc.Step(`^I check each Structurizr view against the cache$`, func() error {
+		return repoCtx.checkStructurizrViewsAgainstCache()
+	})
+	sc.Step(`^all Structurizr views should have cached SVGs$`, func() error {
+		return repoCtx.allStructurizrViewsShouldHaveCachedSVGs()
+	})
+	sc.Step(`^if any views are missing from cache, I should see:$`, func(expected *godog.DocString) error {
+		return repoCtx.ifViewsMissingShowUpdateCommand(expected)
+	})
+
 	// Release folder validation steps
 	sc.Step(`^I scan the release directory for subdirectories$`, func() error {
 		return repoCtx.scanReleaseDirectoryForSubdirectories()
@@ -353,6 +367,10 @@ type repositoryContext struct {
 	drawioImages         []drawioImageInfo
 	uncachedDrawioImages []drawioImageInfo
 
+	// Docs structurizr cache validation
+	structurizrViews         []structurizrViewInfo
+	uncachedStructurizrViews []structurizrViewInfo
+
 	// Release folder validation
 	releaseSubdirs       []string
 	orphanReleaseDirs    []string
@@ -375,6 +393,15 @@ type drawioImageInfo struct {
 	sourceFile string
 	relPath    string
 	hash       string
+}
+
+// structurizrViewInfo is a local struct for structurizr view tracking
+// (to avoid importing design package which violates module isolation)
+type structurizrViewInfo struct {
+	module   string // Module name (e.g., "eac-commands")
+	viewKey  string // View key (e.g., "SystemContext")
+	dslHash  string // Hash of workspace.dsl content
+	dslPath  string // Path to workspace.dsl file
 }
 
 func (c *repositoryContext) ensureRepoRoot() error {
@@ -1528,6 +1555,125 @@ func (c *repositoryContext) allDrawioImagesShouldHaveCachedPNGs() error {
 
 func (c *repositoryContext) ifImagesMissingShowUpdateCommand(expected *godog.DocString) error {
 	// This is a passive assertion - the error message from allDrawioImagesShouldHaveCachedPNGs
+	// already includes the update command instruction
+	return nil
+}
+
+// ============================================================================
+// Docs Structurizr Cache Validation Steps
+// ============================================================================
+
+// viewDefinitionPatternLocal extracts view keys from workspace.dsl content
+// Matches patterns like: systemContext softwareSystem "ViewKey"
+var viewDefinitionPatternLocal = regexp.MustCompile(`(?m)^\s*(systemContext|container|component|dynamic|deployment|custom|filtered)\s+\S+\s+"([^"]+)"`)
+
+func (c *repositoryContext) scanSpecsForWorkspaceDSLFiles() error {
+	if err := c.ensureRepoRoot(); err != nil {
+		return err
+	}
+
+	c.structurizrViews = []structurizrViewInfo{}
+	specsDir := filepath.Join(c.repoRoot, "specs")
+
+	entries, err := os.ReadDir(specsDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil // No specs directory is fine
+		}
+		return fmt.Errorf("failed to read specs directory: %w", err)
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		moduleName := entry.Name()
+		workspacePath := paths.WorkspaceDSLPath(c.repoRoot, moduleName)
+
+		// Check if workspace.dsl exists
+		content, err := os.ReadFile(workspacePath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue // Module doesn't have workspace.dsl
+			}
+			return fmt.Errorf("failed to read %s: %w", workspacePath, err)
+		}
+
+		// Hash the workspace.dsl content
+		dslHash := hashDSLContent(string(content))
+
+		// Extract view keys from DSL
+		viewKeys := extractViewKeysFromDSL(string(content))
+
+		for _, viewKey := range viewKeys {
+			c.structurizrViews = append(c.structurizrViews, structurizrViewInfo{
+				module:  moduleName,
+				viewKey: viewKey,
+				dslHash: dslHash,
+				dslPath: workspacePath,
+			})
+		}
+	}
+
+	return nil
+}
+
+// hashDSLContent returns the first 8 characters of SHA256 hash of DSL content
+// Must match the algorithm in design/helper/export.go
+func hashDSLContent(content string) string {
+	h := sha256.Sum256([]byte(content))
+	return fmt.Sprintf("%x", h)[:8]
+}
+
+// extractViewKeysFromDSL extracts view keys from workspace.dsl content
+func extractViewKeysFromDSL(content string) []string {
+	matches := viewDefinitionPatternLocal.FindAllStringSubmatch(content, -1)
+	keys := make([]string, 0, len(matches))
+	for _, match := range matches {
+		if len(match) >= 3 {
+			keys = append(keys, match[2])
+		}
+	}
+	return keys
+}
+
+func (c *repositoryContext) checkStructurizrViewsAgainstCache() error {
+	if err := c.ensureRepoRoot(); err != nil {
+		return err
+	}
+
+	cacheDir := paths.StructurizrCachePath(c.repoRoot)
+	c.uncachedStructurizrViews = []structurizrViewInfo{}
+
+	for _, view := range c.structurizrViews {
+		// Check if cached SVG exists: {module}_{viewKey}_{hash}.svg
+		cachePath := paths.StructurizrDocsCachePath(c.repoRoot, view.module, view.viewKey, view.dslHash)
+		if _, err := os.Stat(cachePath); os.IsNotExist(err) {
+			c.uncachedStructurizrViews = append(c.uncachedStructurizrViews, view)
+		}
+	}
+	_ = cacheDir // Prevent unused variable warning
+	return nil
+}
+
+func (c *repositoryContext) allStructurizrViewsShouldHaveCachedSVGs() error {
+	if len(c.uncachedStructurizrViews) > 0 {
+		var details strings.Builder
+		details.WriteString(fmt.Sprintf("Found %d Structurizr view(s) missing from cache:\n\n", len(c.uncachedStructurizrViews)))
+
+		for _, view := range c.uncachedStructurizrViews {
+			details.WriteString(fmt.Sprintf("  - %s:%s (hash %s)\n", view.module, view.viewKey, view.dslHash))
+		}
+
+		details.WriteString("\nRun 'r2r eac update structurizr' to update the Structurizr cache.\n")
+		return fmt.Errorf("%s", details.String())
+	}
+	return nil
+}
+
+func (c *repositoryContext) ifViewsMissingShowUpdateCommand(expected *godog.DocString) error {
+	// This is a passive assertion - the error message from allStructurizrViewsShouldHaveCachedSVGs
 	// already includes the update command instruction
 	return nil
 }
