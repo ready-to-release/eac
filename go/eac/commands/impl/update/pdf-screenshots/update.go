@@ -102,9 +102,6 @@ func UpdatePDFScreenshots() int {
 				i++
 				moduleFilter = args[i]
 			}
-		case "-h", "--help":
-			printUsage()
-			return 0
 		}
 	}
 
@@ -536,24 +533,4 @@ func renameToZeroPadded(dir string) error {
 	}
 
 	return nil
-}
-
-func printUsage() {
-	fmt.Println(`Usage: r2r update pdf-screenshots [flags]
-
-Extract PDF pages as PNG images for documentation cache.
-
-Flags:
-  --dry-run       Show what would be done without making changes
-  -f, --force     Regenerate all images ignoring cache
-  -v, --verbose   Show detailed progress
-  --dpi N         Image resolution, 72-300 (default: 150)
-  -m, --module M  Process only specific module's PDFs
-  -h, --help      Show this help
-
-Examples:
-  r2r update pdf-screenshots                # Process all PDFs
-  r2r update pdf-screenshots --dry-run      # Preview what would happen
-  r2r update pdf-screenshots -m docs        # Only process docs module
-  r2r update pdf-screenshots --dpi 300      # High-resolution images`)
 }

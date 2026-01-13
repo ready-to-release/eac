@@ -43,10 +43,6 @@ type Config struct {
 func ValidateRiskProfile() int {
 	config, err := parseConfig()
 	if err != nil {
-		if err.Error() == "help requested" {
-			showHelp()
-			return 0
-		}
 		log.Errorf("Error: %v", err)
 		return 1
 	}
@@ -93,9 +89,6 @@ func parseConfig() (*Config, error) {
 		arg := args[i]
 
 		switch {
-		case arg == "--help" || arg == "-h":
-			return nil, fmt.Errorf("help requested")
-
 		default:
 			// Positional argument: file path
 			if config.FilePath == "" {
@@ -211,29 +204,4 @@ func reportValidationResults(config *Config, errors []validation.ValidationError
 		}
 		log.Info("")
 	}
-}
-
-// showHelp displays help information.
-func showHelp() {
-	help := `Usage: validate risk-profile <file> [flags]
-
-Validate OSCAL profile documents against OSCAL 1.1.2 schema
-
-Arguments:
-  file                 Path to OSCAL profile JSON file
-
-Flags:
-  -h, --help           Show this help message
-
-Examples:
-  # Validate profile
-  validate risk-profile specs/risk-controls/billing.profile.json
-
-  # Validate all profiles in directory
-  for f in specs/risk-controls/*.profile.json; do validate risk-profile "$f"; done
-
-For assessment-results validation, use: validate risk-assess
-For catalog validation, use: validate risk-catalog
-`
-	log.Info(help)
 }

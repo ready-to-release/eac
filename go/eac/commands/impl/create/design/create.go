@@ -1,5 +1,4 @@
 // Command: create design
-// Description: Generate workspace.dsl for a module using AI
 // Short: Generate workspace.dsl for a module using AI
 // Long: Generates Structurizr DSL workspace files for a module by analyzing its source code using AI.
 // Long: The AI analyzes the source code in go/eac/<module>/ and creates comprehensive architecture

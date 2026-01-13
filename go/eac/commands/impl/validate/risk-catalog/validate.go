@@ -44,10 +44,6 @@ type Config struct {
 func ValidateRiskCatalog() int {
 	config, err := parseConfig()
 	if err != nil {
-		if err.Error() == "help requested" {
-			showHelp()
-			return 0
-		}
 		log.Errorf("Error: %v", err)
 		return 1
 	}
@@ -88,9 +84,6 @@ func parseConfig() (*Config, error) {
 		arg := args[i]
 
 		switch {
-		case arg == "--help" || arg == "-h":
-			return nil, fmt.Errorf("help requested")
-
 		default:
 			// Positional argument: file path
 			if config.FilePath == "" {
@@ -206,45 +199,4 @@ func reportValidationResults(config *Config, errors []validation.ValidationError
 		}
 		log.Info("")
 	}
-}
-
-// showHelp displays help information.
-func showHelp() {
-	help := `Usage: validate risk-catalog <file>
-
-Validate OSCAL catalogs against OSCAL 1.1.3 schema
-
-Arguments:
-  file                   Path to OSCAL catalog document to validate
-
-Flags:
-  -h, --help             Show this help message
-
-Examples:
-  # Validate a catalog
-  validate risk-catalog catalogs/nist-800-53-rev5.json
-
-  # Validate catalog from URL (download first)
-  curl -o catalog.json https://raw.githubusercontent.com/usnistgov/oscal-content/main/nist.gov/SP800-53/rev5/json/NIST_SP-800-53_rev5_catalog.json
-  validate risk-catalog catalog.json
-
-OSCAL Catalog Structure:
-  Catalogs define security control libraries with:
-  - Metadata (title, version, last-modified, OSCAL version)
-  - Groups (control families like Access Control, System Integrity)
-  - Controls (individual security requirements with statements)
-  - Parameters (configurable values within controls)
-  - Back-matter (supporting resources and references)
-
-  Official NIST 800-53 Rev 5 catalog:
-  https://raw.githubusercontent.com/usnistgov/oscal-content/main/nist.gov/SP800-53/rev5/json/NIST_SP-800-53_rev5_catalog.json
-
-Validation:
-  This command validates catalogs against the official OSCAL 1.1.3 JSON schema
-  maintained by NIST. The schema ensures complete compliance with the OSCAL
-  specification including all required fields, data types, and structural constraints.
-
-  Schema URL: https://github.com/usnistgov/OSCAL/releases/download/v1.1.3/oscal_catalog_schema.json
-`
-	log.Info(help)
 }

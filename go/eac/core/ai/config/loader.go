@@ -31,7 +31,7 @@ func NewAIConfigLoader(workspaceRoot string) *AIConfigLoader {
 	}
 }
 
-// Load loads the unified ai-config.yml file with fallback to system defaults
+// Load loads the unified ai-config.yml file with fallback to system defaults and contracts defaults
 func (l *AIConfigLoader) Load() (*AIConfig, error) {
 	if l.config != nil {
 		return l.config, nil
@@ -50,8 +50,20 @@ func (l *AIConfigLoader) Load() (*AIConfig, error) {
 		}
 		systemPath := filepath.Join(systemRoot, paths.R2RDir, paths.EACDir, paths.AIConfigFilename)
 		data, err = os.ReadFile(systemPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read AI config from user repo (%s) or system defaults (%s): %w", configPath, systemPath, err)
+
+		// If still not found, try contracts default (ultimate fallback)
+		if os.IsNotExist(err) {
+			// contracts/eac-core/0.1.0/defaults/ai-config.yml
+			// Use workspaceRoot (in container, this is /app; in dev, this is repo root)
+			contractsRoot := l.workspaceRoot
+			contractsPath := filepath.Join(contractsRoot, "contracts", "eac-core", "0.1.0", "defaults", paths.AIConfigFilename)
+			data, err = os.ReadFile(contractsPath)
+			if err != nil {
+				return nil, fmt.Errorf("failed to read AI config from user repo (%s), system defaults (%s), or contracts defaults (%s): %w",
+					configPath, systemPath, contractsPath, err)
+			}
+		} else if err != nil {
+			return nil, fmt.Errorf("failed to read AI config from system defaults %s: %w", systemPath, err)
 		}
 	} else if err != nil {
 		return nil, fmt.Errorf("failed to read AI config %s: %w", configPath, err)

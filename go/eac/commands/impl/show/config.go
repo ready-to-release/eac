@@ -1,5 +1,4 @@
 // Command: show config
-// Description: Display all EAC configuration in human-readable format
 // Short: Display all loaded configurations with defaults applied
 // Long: The show config command displays all EAC repository configurations
 // Long: loaded with their defaults applied. This includes modules, module types,

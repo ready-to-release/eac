@@ -1,5 +1,4 @@
 // Command: show trigger-summary
-// Description: Generate release trigger summary
 // Short: Generate release trigger summary
 // Flag.module: type=string, usage=Module name (required)
 // Flag.workflow: type=string, usage=Workflow filename (required)

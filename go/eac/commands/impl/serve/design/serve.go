@@ -1,5 +1,4 @@
 // Command: serve design
-// Description: View architecture diagrams in browser using Structurizr Lite (Docker)
 // Short: View architecture diagrams in browser using Structurizr Lite (Docker)
 // Long: Launches a Docker container running Structurizr Lite web viewer and opens your default browser.
 // Long: The viewer provides interactive C4 model diagrams (system context, containers, components) defined

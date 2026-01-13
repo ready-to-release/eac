@@ -1,5 +1,4 @@
 // Command: create spec
-// Description: Create a new specification using AI from a natural language description
 // Short: Generate Gherkin specifications from natural language descriptions
 // Long: The create spec command uses AI to transform natural language feature descriptions into
 // Long: properly formatted Gherkin specifications following Rules/Scenarios patterns. The generated specifications

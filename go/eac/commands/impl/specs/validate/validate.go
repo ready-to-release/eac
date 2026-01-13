@@ -1,5 +1,4 @@
 // Command: specs validate
-// Description: Validate existing Gherkin specifications against contracts
 // Short: Validate Gherkin specifications against quality contracts
 // Long: The specs validate command checks existing .feature files against the specification contract,
 // Long: ensuring they follow proper Gherkin syntax, and project standards.

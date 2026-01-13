@@ -1,5 +1,4 @@
 // Command: update design
-// Description: Update existing workspace.dsl for a module using AI
 // Short: Update existing workspace.dsl for a module using AI
 // Long: Updates an existing Structurizr DSL workspace file for a module by analyzing its current
 // Long: source code using AI. The AI re-analyzes the source code in src/<module>/ and updates

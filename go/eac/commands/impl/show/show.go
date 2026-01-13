@@ -1,5 +1,4 @@
 // Command: show
-// Description: Display repository information in human-readable format
 package show
 
 import (
@@ -25,11 +24,8 @@ func Show() int {
 		return 1
 	}
 
-	// Check for help flag
+	// Check for subcommands
 	switch args[0] {
-	case "--help", "-h":
-		printShowUsage()
-		return 0
 	case "books", "build-summary", "build-times", "config", "dependencies", "environments", "files", "files-changed", "files-staged", "modules", "moduletypes", "suite", "test-results", "test-summary", "tests", "test-timings", "valid-commands", "workspaces":
 		// Handled by separate registrations in respective files
 		return 0

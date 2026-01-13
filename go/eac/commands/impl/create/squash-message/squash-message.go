@@ -1,5 +1,4 @@
 // Command: create squash-message
-// Description: Generate squash commit message from branch commits
 // Short: Generate squash commit message from branch commits
 // Long: Analyzes all commits in the current branch compared to the base branch
 // Long: and generates a comprehensive, cohesive commit message suitable for

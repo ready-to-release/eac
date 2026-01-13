@@ -1,5 +1,4 @@
 // Command: validate markdown
-// Description: Validate markdown file syntax
 // Short: Validate markdown file syntax
 // Long: Validates markdown files for proper syntax, heading hierarchy, and code block formatting.
 // Long:

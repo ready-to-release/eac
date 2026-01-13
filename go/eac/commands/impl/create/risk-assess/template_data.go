@@ -23,14 +23,31 @@ type RiskAssessmentReportData struct {
 	AggregatedReportPath string
 }
 
-// ExecutiveSummary holds summary statistics
+// ExecutiveSummary holds summary statistics and AI-generated content
 type ExecutiveSummary struct {
-	TotalControls      int
-	Satisfied          int
-	NotSatisfied       int
-	SatisfactionRate   float64
-	NotSatisfiedRate   float64
-	ModulesAssessed    int
+	// Basic stats (existing)
+	TotalControls    int
+	Satisfied        int
+	NotSatisfied     int
+	SatisfactionRate float64
+	NotSatisfiedRate float64
+	ModulesAssessed  int
+
+	// AI-generated content (NEW)
+	OverallRiskPosture       string                `json:"overall_risk_posture"`       // critical/high/moderate/low
+	SummaryNarrative         string                `json:"summary_narrative"`          // 2-3 paragraph executive summary
+	KeyFindings              []string              `json:"key_findings"`               // Bullet points
+	CriticalModules          []CriticalModuleInfo  `json:"critical_modules"`           // Modules needing attention
+	Trends                   []string              `json:"trends"`                     // Patterns across modules
+	StrategicRecommendations []string              `json:"strategic_recommendations"`  // High-level actions
+	AIConfidence             float64               `json:"ai_confidence"`              // 0.0-1.0
+	HasAISummary             bool                  `json:"has_ai_summary"`             // Whether AI summary was generated
+}
+
+// CriticalModuleInfo holds critical module information from AI analysis
+type CriticalModuleInfo struct {
+	Module string `json:"module"`
+	Reason string `json:"reason"`
 }
 
 // ModuleReportData holds per-module report data

@@ -1,5 +1,4 @@
 // Command: show build-summary
-// Description: Generate pretty build summary for a module
 // Short: Generate pretty build summary for a module
 // Long: The show build-summary command generates a formatted build summary with module-specific metrics and diagnostics.
 // Long: This command is designed to be used in GitHub Actions workflows to create consistent, attractive build summaries.
