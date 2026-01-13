@@ -1,5 +1,4 @@
 // Command: get cli-release-notes
-// Description: Generate release notes for CLI releases
 // Short: Generate release notes for CLI releases
 // Flag.module: type=string, default=r2r-cli, usage=Module name
 // Flag.binary-prefix: type=string, default=r2r, usage=Binary name prefix

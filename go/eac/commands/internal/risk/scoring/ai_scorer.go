@@ -10,7 +10,6 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
 	aimock "github.com/ready-to-release/eac/go/eac/core/ai"
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
 )
 
 // defaultRiskAnalysisPrompt is the fallback prompt when file is not found.
@@ -92,7 +91,7 @@ func (s *AIScorer) buildPrompt(input *AIAnalysisInput) (string, error) {
 	// Convention: Empty string uses type name (risk-access.md)
 	systemPrompt := defaultRiskAnalysisPrompt
 	if s.workspaceRoot != "" {
-		loader := contracts.NewContractLoader(s.workspaceRoot, "ai/risk-access", "")
+		loader := aimock.NewContractLoader(s.workspaceRoot, "ai/risk-access", "")
 		if loadedPrompt, _, err := loader.LoadPrompt("", defaultRiskAnalysisPrompt); err == nil {
 			systemPrompt = loadedPrompt
 		}

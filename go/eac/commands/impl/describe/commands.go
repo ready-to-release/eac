@@ -1,5 +1,4 @@
 // Command: get commands
-// Description: Output structured command information for shell integration
 package describe
 
 import (

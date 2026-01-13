@@ -5,9 +5,9 @@ const SecurityToolsFileName = "security-tools.yml"
 
 // SecurityToolsConfig holds security tool configuration
 type SecurityToolsConfig struct {
-	DockerImages    DockerImagesConfig   `yaml:"docker_images"`
-	DefaultScanners map[string][]string  `yaml:"default_scanners,omitempty"`
-	SkipModules     []string             `yaml:"skip_modules,omitempty"`
+	DockerImages    DockerImagesConfig  `yaml:"docker_images"`
+	DefaultScanners map[string][]string `yaml:"default_scanners,omitempty"`
+	SkipModules     []string            `yaml:"skip_modules,omitempty"`
 }
 
 // DockerImagesConfig holds Docker image specifications

@@ -1,5 +1,4 @@
 // Command: show ci-summary
-// Description: Generate CI workflow summary for a module
 // Short: Generate CI workflow summary for a module
 // Flag.build: type=string, usage=Build job result (success/failure/skipped)
 // Flag.container: type=bool, default=false, usage=Whether this is a container module

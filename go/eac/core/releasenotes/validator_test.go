@@ -11,12 +11,12 @@ import (
 
 func TestParseContent(t *testing.T) {
 	tests := []struct {
-		name           string
-		content        string
-		wantVersions   int
-		wantFirstVer   string
-		wantSections   int
-		wantErr        bool
+		name         string
+		content      string
+		wantVersions int
+		wantFirstVer string
+		wantSections int
+		wantErr      bool
 	}{
 		{
 			name: "valid release notes with single version",

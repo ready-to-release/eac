@@ -1,5 +1,4 @@
 // Command: show suite
-// Description: Display detailed information about a test suite
 // Short: Display test suite details with all tests
 // Long: The show suite command displays detailed information about a specific test suite.
 // Long: Shows selection criteria, production tests with their metadata, and summary statistics.

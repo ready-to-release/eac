@@ -1,0 +1,95 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "squash-message.schema.json",
+  "title": "Squash Commit Message",
+  "description": "Structured squash commit message for PR merges",
+  "type": "object",
+  "required": ["type", "scope", "subject", "body"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": ["feat", "fix", "refactor", "docs", "chore", "test", "perf", "style"],
+      "description": "Primary semantic commit type for the entire PR"
+    },
+    "scope": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Primary scope or module affected by the PR",
+      "minLength": 1
+    },
+    "subject": {
+      "type": "string",
+      "description": "Summary of the entire PR in imperative mood",
+      "maxLength": 72,
+      "minLength": 10
+    },
+    "body": {
+      "type": "string",
+      "description": "Detailed description of all changes in the PR",
+      "minLength": 20
+    },
+    "breaking": {
+      "type": "boolean",
+      "description": "Whether the PR contains breaking changes",
+      "default": false
+    },
+    "breaking_description": {
+      "type": "string",
+      "description": "Description of breaking changes (required if breaking is true)"
+    },
+    "changes": {
+      "type": "array",
+      "description": "List of individual changes included in the PR",
+      "items": {
+        "type": "object",
+        "required": ["type", "description"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["feat", "fix", "refactor", "docs", "chore", "test", "perf", "style"]
+          },
+          "scope": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 5
+          }
+        }
+      }
+    },
+    "modules": {
+      "type": "array",
+      "description": "All modules affected by the PR",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "uniqueItems": true
+    },
+    "pr_number": {
+      "type": "integer",
+      "description": "Pull request number (if applicable)",
+      "minimum": 1
+    },
+    "auditor_summary": {
+      "type": "string",
+      "description": "High-level summary for auditors and compliance",
+      "minLength": 20
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "breaking": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "required": ["breaking_description"]
+      }
+    }
+  ]
+}

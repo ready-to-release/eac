@@ -1,5 +1,4 @@
 // Command: get dependencies
-// Description: Get module dependency graph in structured format
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML

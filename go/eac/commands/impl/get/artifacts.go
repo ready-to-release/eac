@@ -1,5 +1,4 @@
 // Command: get artifacts
-// Description: Get resolved artifacts for a module with metadata overrides
 // Short: Get resolved artifacts for a module
 // Long: The get artifacts command returns all build artifacts for a module with metadata overrides applied.
 // Long: Output includes resolved names, paths, existence status, and which overrides were used.

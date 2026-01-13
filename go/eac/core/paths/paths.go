@@ -99,6 +99,15 @@ const (
 
 	// DefaultsDir is the defaults subdirectory under a contract version
 	DefaultsDir = "defaults"
+
+	// AIDir is the AI configuration subdirectory
+	AIDir = "ai"
+
+	// AIConfigFilename is the AI configuration filename
+	AIConfigFilename = "ai-config.yml"
+
+	// ContainerRootEnv is the environment variable for container root path
+	ContainerRootEnv = "R2R_CONTAINER_ROOT"
 )
 
 // Relative path constants
@@ -210,7 +219,7 @@ func CommandsBinaryPathWithToolsDir(repoRoot string, toolsDir string) string {
 	// Note: Can't import repository package here to avoid cycles, so inline the check
 	// See repository.GetDistRoot() for the canonical implementation
 	distRoot := repoRoot
-	if containerRoot := os.Getenv("R2R_CONTAINER_ROOT"); containerRoot != "" {
+	if containerRoot := os.Getenv(ContainerRootEnv); containerRoot != "" {
 		distRoot = containerRoot
 	}
 
@@ -311,7 +320,7 @@ func LoggingDefaultsPath(repoRoot string) string {
 
 // defaultsRoot returns the root for loading defaults (container-aware)
 func defaultsRoot(repoRoot string) string {
-	if containerRoot := os.Getenv("R2R_CONTAINER_ROOT"); containerRoot != "" {
+	if containerRoot := os.Getenv(ContainerRootEnv); containerRoot != "" {
 		return containerRoot
 	}
 	return repoRoot
@@ -356,9 +365,10 @@ func TemplatePath(repoRoot string, subpaths ...string) string {
 
 // CommandLogsPath returns the path to a command's log directory
 // Supports flexible path construction with optional path segments:
-//   CommandLogsPath(root, "design") → out/design/
-//   CommandLogsPath(root, "build", "eac-core") → out/build/eac-core/
-//   CommandLogsPath(root, "templates", "apply") → out/templates/apply/
+//
+//	CommandLogsPath(root, "design") → out/design/
+//	CommandLogsPath(root, "build", "eac-core") → out/build/eac-core/
+//	CommandLogsPath(root, "templates", "apply") → out/templates/apply/
 func CommandLogsPath(repoRoot, command string, pathSegments ...string) string {
 	parts := []string{repoRoot, OutDir, command}
 	parts = append(parts, pathSegments...)
@@ -390,7 +400,7 @@ func ExtractMonikerFromSpecsPath(specsPath string) string {
 
 // AIConfigPath returns the path to AI configuration for a command
 func AIConfigPath(repoRoot, command string) string {
-	return filepath.Join(repoRoot, R2RDir, EACDir, "ai", command)
+	return filepath.Join(repoRoot, R2RDir, EACDir, AIDir, command)
 }
 
 // AIConfigFile returns the path to a specific AI config file
@@ -407,9 +417,9 @@ func AITestMockPath(repoRoot string) string {
 // promptType: "team" for .r2r/eac/templates/ai, "system" for templates/ai
 func AIPromptsPath(repoRoot string, promptType, command, filename string) string {
 	if promptType == "team" {
-		return filepath.Join(repoRoot, R2RDir, EACDir, "templates", "ai", command, filename)
+		return filepath.Join(repoRoot, R2RDir, EACDir, TemplatesDir, AIDir, command, filename)
 	}
-	return filepath.Join(repoRoot, TemplatesDir, "ai", command, filename)
+	return filepath.Join(repoRoot, TemplatesDir, AIDir, command, filename)
 }
 
 // EACConfigFilePath returns the path to the main EAC configuration file

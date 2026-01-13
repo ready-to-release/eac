@@ -3,13 +3,12 @@ package commitmessage
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"strings"
 	"sync"
 
+	"github.com/ready-to-release/eac/go/eac/core/ai"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
-	"gopkg.in/yaml.v3"
 )
 
 // Lazy-loaded regular expressions for performance (compiled only when needed)
@@ -54,68 +53,31 @@ type CommitMessageContract struct {
 	SubjectLineFormat string           `yaml:"subject_line_format"`
 	Constraints       map[string]any   `yaml:"constraints"`
 	MarkdownRules     []map[string]any `yaml:"markdown_rules"`
-	AntiCorruption    map[string]any   `yaml:"anti_corruption"`
 }
 
-// AntiCorruptionRules is an alias to the core contract AntiCorruptionRules
-type AntiCorruptionRules = contracts.AntiCorruptionRules
-
-// LoadAntiCorruptionRules loads anti-corruption rules using the core framework
-func LoadAntiCorruptionRules(rulesPath string) (*AntiCorruptionRules, error) {
-	data, err := os.ReadFile(rulesPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read anti-corruption rules file: %w", err)
-	}
-
-	var rules AntiCorruptionRules
-	if err := yaml.Unmarshal(data, &rules); err != nil {
-		return nil, fmt.Errorf("failed to parse anti-corruption rules YAML: %w", err)
-	}
-
-	return &rules, nil
-}
-
-// LoadContractFromConfig loads commit-message contract from unified ai-config.yml
+// LoadContractFromConfig loads commit-message contract from ai-config.yml
+// Note: Validation is now done via JSON schema. This function returns minimal contract info.
 func LoadContractFromConfig(workspaceRoot string) (*CommitMessageContract, error) {
-	loader := contracts.NewAIConfigLoader(workspaceRoot)
+	loader := ai.NewAIConfigLoader(workspaceRoot)
 	typeConfig, err := loader.GetType("commit-message")
 	if err != nil {
 		return nil, fmt.Errorf("failed to load commit-message config: %w", err)
 	}
 
-	// Build CommitMessageContract from unified config
+	// Build minimal CommitMessageContract with standard defaults
+	// Actual validation is done via JSON schema (commit-message.schema.json)
 	contract := &CommitMessageContract{
-		Version:     "0.1.0",
-		Name:        typeConfig.Name,
-		Description: typeConfig.Description,
-	}
-
-	// Extract validation fields from typeConfig.Validation map
-	if typeConfig.Validation != nil {
-		if types, ok := typeConfig.Validation["semantic_types"].([]interface{}); ok {
-			for _, t := range types {
-				if s, ok := t.(string); ok {
-					contract.SemanticTypes = append(contract.SemanticTypes, s)
-				}
-			}
-		}
-		// Set expected subject line format
-		contract.SubjectLineFormat = "<module>: <type>: <description>"
-
-		// Build constraints map
-		contract.Constraints = make(map[string]any)
-		if maxLen, ok := typeConfig.Validation["max_line_length"]; ok {
-			contract.Constraints["max_line_length"] = maxLen
-		}
-		if scopeReq, ok := typeConfig.Validation["scope_required"]; ok {
-			contract.Constraints["scope_required"] = scopeReq
-		}
-		if noTrailing, ok := typeConfig.Validation["no_trailing_periods"]; ok {
-			contract.Constraints["no_trailing_periods"] = noTrailing
-		}
-
-		// Build structure (standard commit message structure)
-		contract.Structure = []struct {
+		Version:           "0.1.0",
+		Name:              typeConfig.Name,
+		Description:       typeConfig.Description,
+		SubjectLineFormat: "type(scope): subject",
+		SemanticTypes:     []string{"feat", "fix", "refactor", "docs", "chore", "test", "perf", "style", "ci", "build"},
+		Constraints: map[string]any{
+			"max_line_length":      72,
+			"scope_required":       true,
+			"no_trailing_periods":  true,
+		},
+		Structure: []struct {
 			Section   string `yaml:"section"`
 			Required  bool   `yaml:"required"`
 			Format    string `yaml:"format"`
@@ -125,7 +87,7 @@ func LoadContractFromConfig(workspaceRoot string) (*CommitMessageContract, error
 			{Section: "auditor-summary", Required: false, Format: "single-line"},
 			{Section: "body", Required: false, Format: "markdown"},
 			{Section: "modules", Required: false, Format: "module-sections"},
-		}
+		},
 	}
 
 	return contract, nil
@@ -139,11 +101,12 @@ func VerifyCommitMessageContract(commitMessage string, affectedModules []string)
 
 	lines := strings.Split(commitMessage, "\n")
 	if len(lines) == 0 {
-		errors = append(errors, ValidationError{
-			Code:     "EMPTY_MESSAGE",
-			Message:  "Commit message is empty",
-			Severity: "error",
-		})
+		errors = append(errors, *contracts.NewLegacyValidationError(
+			"EMPTY_MESSAGE",
+			"Commit message is empty",
+			0,
+			"error",
+		))
 		return errors
 	}
 
@@ -166,32 +129,32 @@ func validateHeader(lines []string) []ValidationError {
 	// RULE 1: First line must be conventional commit header with scope
 	// Format: <type>(<scope>): <summary>
 	if !getConventionalCommitRegex().MatchString(lines[0]) {
-		errors = append(errors, ValidationError{
-			Code:     "INVALID_HEADER_FORMAT",
-			Message:  "Header must follow format: <type>(<scope>): <summary> (e.g., feat(cli): add new command)",
-			Line:     1,
-			Severity: "error",
-		})
+		errors = append(errors, *contracts.NewLegacyValidationError(
+			"INVALID_HEADER_FORMAT",
+			"Header must follow format: <type>(<scope>): <summary> (e.g., feat(cli): add new command)",
+			1,
+			"error",
+		))
 	}
 
 	// RULE 2: Header max length
 	if len(lines[0]) > MaxHeaderLength {
-		errors = append(errors, ValidationError{
-			Code:     "HEADER_TOO_LONG",
-			Message:  fmt.Sprintf("Header exceeds %d characters (%d chars)", MaxHeaderLength, len(lines[0])),
-			Line:     1,
-			Severity: "error",
-		})
+		errors = append(errors, *contracts.NewLegacyValidationError(
+			"HEADER_TOO_LONG",
+			fmt.Sprintf("Header exceeds %d characters (%d chars)", MaxHeaderLength, len(lines[0])),
+			1,
+			"error",
+		))
 	}
 
 	// RULE 3: No trailing period (except ellipsis "...")
 	if strings.HasSuffix(lines[0], ".") && !strings.HasSuffix(lines[0], "...") {
-		errors = append(errors, ValidationError{
-			Code:     "HEADER_TRAILING_PERIOD",
-			Message:  "Header must not end with period",
-			Line:     1,
-			Severity: "error",
-		})
+		errors = append(errors, *contracts.NewLegacyValidationError(
+			"HEADER_TRAILING_PERIOD",
+			"Header must not end with period",
+			1,
+			"error",
+		))
 	}
 
 	return errors
@@ -210,11 +173,12 @@ func validateTopLevelBody(lines []string) []ValidationError {
 		}
 	}
 	if !hasAuditorSummary {
-		errors = append(errors, ValidationError{
-			Code:     "MISSING_AUDITOR_SUMMARY",
-			Message:  "Missing Auditor-Summary field after header",
-			Severity: "error",
-		})
+		errors = append(errors, *contracts.NewLegacyValidationError(
+			"MISSING_AUDITOR_SUMMARY",
+			"Missing Auditor-Summary field after header",
+			0,
+			"error",
+		))
 	}
 
 	// RULE 5: Check for top-level body text
@@ -242,11 +206,12 @@ func validateTopLevelBody(lines []string) []ValidationError {
 	}
 
 	if !hasTopLevelBody {
-		errors = append(errors, ValidationError{
-			Code:     "MISSING_TOP_LEVEL_BODY",
-			Message:  "Missing top-level body text after title (before module sections)",
-			Severity: "error",
-		})
+		errors = append(errors, *contracts.NewLegacyValidationError(
+			"MISSING_TOP_LEVEL_BODY",
+			"Missing top-level body text after title (before module sections)",
+			0,
+			"error",
+		))
 	}
 
 	return errors
@@ -278,11 +243,12 @@ func validateModuleSections(lines []string, affectedModules []string) []Validati
 	// Multi-module commits MUST have module sections
 	if len(foundModules) == 0 {
 		moduleList := strings.Join(affectedModules, ", ")
-		errors = append(errors, ValidationError{
-			Code:     "MISSING_MODULE_SECTION",
-			Message:  fmt.Sprintf("Multi-module commit missing module sections. Expected: %s", moduleList),
-			Severity: "error",
-		})
+		errors = append(errors, *contracts.NewLegacyValidationError(
+			"MISSING_MODULE_SECTION",
+			fmt.Sprintf("Multi-module commit missing module sections. Expected: %s", moduleList),
+			0,
+			"error",
+		))
 		return errors
 	}
 
@@ -296,11 +262,12 @@ func validateModuleSections(lines []string, affectedModules []string) []Validati
 
 	if len(missingModules) > 0 {
 		moduleList := strings.Join(missingModules, ", ")
-		errors = append(errors, ValidationError{
-			Code:     "MISSING_MODULE_SECTION",
-			Message:  fmt.Sprintf("Missing module sections for: %s", moduleList),
-			Severity: "error",
-		})
+		errors = append(errors, *contracts.NewLegacyValidationError(
+			"MISSING_MODULE_SECTION",
+			fmt.Sprintf("Missing module sections for: %s", moduleList),
+			0,
+			"error",
+		))
 	}
 
 	return errors
@@ -331,12 +298,12 @@ func validateLineLength(lines []string) []ValidationError {
 			if len(preview) > 60 {
 				preview = preview[:57] + "..."
 			}
-			errors = append(errors, ValidationError{
-				Code:     "LINE_TOO_LONG",
-				Message:  fmt.Sprintf("Line exceeds %d characters (%d chars): %s", MaxLineLength, len(trimmed), preview),
-				Line:     lineNum,
-				Severity: "warning",
-			})
+			errors = append(errors, *contracts.NewLegacyValidationError(
+			"LINE_TOO_LONG",
+			fmt.Sprintf("Line exceeds %d characters (%d chars): %s", MaxLineLength, len(trimmed), preview),
+			lineNum,
+			"warning",
+		))
 		}
 	}
 
@@ -370,11 +337,12 @@ func validateModuleSubjectLines(lines []string) []ValidationError {
 			if isModuleName(prevLine) {
 				// If we were in a module section and didn't find subject line
 				if inModuleSection && !foundSubjectLine {
-					errors = append(errors, ValidationError{
-						Code:     "MISSING_SUBJECT_LINE",
-						Message:  fmt.Sprintf("Module '%s' missing subject line", currentModule),
-						Severity: "error",
-					})
+					errors = append(errors, *contracts.NewLegacyValidationError(
+			"MISSING_SUBJECT_LINE",
+			fmt.Sprintf("Module '%s' missing subject line", currentModule),
+			lineNum,
+			"error",
+		))
 				}
 
 				inModuleSection = true
@@ -393,31 +361,31 @@ func validateModuleSubjectLines(lines []string) []ValidationError {
 
 			// This should be the subject line
 			if !getModuleSubjectLineRegex().MatchString(trimmed) {
-				errors = append(errors, ValidationError{
-					Code:     "INVALID_SUBJECT_FORMAT",
-					Message:  fmt.Sprintf("Subject line does not follow '<module>: <type>: <description>' format: %s", trimmed),
-					Line:     lineNum,
-					Severity: "error",
-				})
+				errors = append(errors, *contracts.NewLegacyValidationError(
+			"INVALID_SUBJECT_FORMAT",
+			fmt.Sprintf("Subject line does not follow '<module>: <type>: <description>' format: %s", trimmed),
+			0,
+			"error",
+		))
 			} else {
 				// Validate subject line length
 				if len(trimmed) > MaxSubjectLength {
-					errors = append(errors, ValidationError{
-						Code:     "SUBJECT_TOO_LONG",
-						Message:  fmt.Sprintf("Subject line exceeds %d characters (%d chars)", MaxSubjectLength, len(trimmed)),
-						Line:     lineNum,
-						Severity: "error",
-					})
+					errors = append(errors, *contracts.NewLegacyValidationError(
+			"SUBJECT_TOO_LONG",
+			fmt.Sprintf("Subject line exceeds %d characters (%d chars)", MaxSubjectLength, len(trimmed)),
+			0,
+			"error",
+		))
 				}
 
 				// Check no trailing period (except ellipsis "...")
 				if strings.HasSuffix(trimmed, ".") && !strings.HasSuffix(trimmed, "...") {
-					errors = append(errors, ValidationError{
-						Code:     "SUBJECT_TRAILING_PERIOD",
-						Message:  "Subject line must not end with period",
-						Line:     lineNum,
-						Severity: "error",
-					})
+					errors = append(errors, *contracts.NewLegacyValidationError(
+			"SUBJECT_TRAILING_PERIOD",
+			"Subject line must not end with period",
+			0,
+			"error",
+		))
 				}
 			}
 
@@ -427,11 +395,12 @@ func validateModuleSubjectLines(lines []string) []ValidationError {
 		// Exit module section when we hit horizontal rule
 		if trimmed == "---" {
 			if inModuleSection && !foundSubjectLine {
-				errors = append(errors, ValidationError{
-					Code:     "MISSING_SUBJECT_LINE",
-					Message:  fmt.Sprintf("Module '%s' missing subject line", currentModule),
-					Severity: "error",
-				})
+				errors = append(errors, *contracts.NewLegacyValidationError(
+			"MISSING_SUBJECT_LINE",
+			fmt.Sprintf("Module '%s' missing subject line", currentModule),
+			0,
+			"error",
+		))
 			}
 			inModuleSection = false
 		}
@@ -464,11 +433,12 @@ func validateCodeBlocks(lines []string) []ValidationError {
 	}
 
 	if codeBlockOpen {
-		errors = append(errors, ValidationError{
-			Code:     "UNCLOSED_CODE_BLOCK",
-			Message:  fmt.Sprintf("Code block opened at line %d is not closed", codeBlockLine),
-			Severity: "error",
-		})
+		errors = append(errors, *contracts.NewLegacyValidationError(
+			"UNCLOSED_CODE_BLOCK",
+			fmt.Sprintf("Code block opened at line %d is not closed", codeBlockLine),
+			0,
+			"error",
+		))
 	}
 
 	return errors
@@ -496,12 +466,12 @@ func validateModuleSectionStructure(lines []string) []ValidationError {
 
 			// If previous line wasn't a valid module name, this is an orphaned dashes line
 			if !isModuleName(prevNonEmpty) {
-				errors = append(errors, ValidationError{
-					Code:     "ORPHANED_DASHES_LINE",
-					Message:  fmt.Sprintf("Orphaned dashes line at line %d - must be preceded by module name", i+1),
-					Line:     i + 1,
-					Severity: "error",
-				})
+				errors = append(errors, *contracts.NewLegacyValidationError(
+			"ORPHANED_DASHES_LINE",
+			fmt.Sprintf("Orphaned dashes line at line %d - must be preceded by module name", i+1),
+			0,
+			"error",
+		))
 			}
 		}
 
@@ -533,26 +503,26 @@ func validateModuleSectionStructure(lines []string) []ValidationError {
 			// Subject line should have module name and dashes before it
 			if !foundModuleName || !foundDashes {
 				if !foundModuleName && !foundDashes {
-					errors = append(errors, ValidationError{
-						Code:     "MALFORMED_MODULE_SECTION",
-						Message:  fmt.Sprintf("Module section at line %d missing module name and dashes header", i+1),
-						Line:     i + 1,
-						Severity: "error",
-					})
+					errors = append(errors, *contracts.NewLegacyValidationError(
+			"MALFORMED_MODULE_SECTION",
+			fmt.Sprintf("Module section at line %d missing module name and dashes header", i+1),
+			0,
+			"error",
+		))
 				} else if !foundModuleName {
-					errors = append(errors, ValidationError{
-						Code:     "MISSING_MODULE_NAME",
-						Message:  fmt.Sprintf("Module section at line %d missing module name (has dashes but no name)", i+1),
-						Line:     i + 1,
-						Severity: "error",
-					})
+					errors = append(errors, *contracts.NewLegacyValidationError(
+			"MISSING_MODULE_NAME",
+			fmt.Sprintf("Module section at line %d missing module name (has dashes but no name)", i+1),
+			0,
+			"error",
+		))
 				} else if !foundDashes {
-					errors = append(errors, ValidationError{
-						Code:     "MISSING_MODULE_DASHES",
-						Message:  fmt.Sprintf("Module section at line %d missing dashes separator (has name but no dashes)", i+1),
-						Line:     i + 1,
-						Severity: "error",
-					})
+					errors = append(errors, *contracts.NewLegacyValidationError(
+			"MISSING_MODULE_DASHES",
+			fmt.Sprintf("Module section at line %d missing dashes separator (has name but no dashes)", i+1),
+			0,
+			"error",
+		))
 				}
 			}
 		}

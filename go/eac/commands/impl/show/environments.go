@@ -1,5 +1,4 @@
 // Command: show environments
-// Description: Show all environment contracts in a human-readable table
 // Short: Display all environment configurations
 // Long: The show environments command displays all environment contracts defined in environments.yml.
 // Long: Shows environment details including moniker, name, level, type, and system dependencies.

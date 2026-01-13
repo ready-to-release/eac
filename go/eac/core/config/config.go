@@ -369,12 +369,12 @@ func (c *EACConfig) LoadRepository(validateSchema bool) error {
 				Paths: PathsConfig{
 					SpecsRoot: "specs",
 					Out: OutConfig{
-						Root:     "out",
-						Build:    "out/build",
-						Test:     "out/test",
-						Logs:     "out/logs",
-						Scan:     "out/scan",
-						Tools:    "out/tools",
+						Root:  "out",
+						Build: "out/build",
+						Test:  "out/test",
+						Logs:  "out/logs",
+						Scan:  "out/scan",
+						Tools: "out/tools",
 					},
 				},
 			}

@@ -1,5 +1,4 @@
 // Command: show test-timings
-// Description: Show test timing analysis in a human-readable format
 // Short: Display test timing metrics in tables
 // Long: The show test-timings command displays test timing analysis parsed from test logs.
 // Long: Shows overall statistics, breakdown by module, and the slowest individual test scenarios.

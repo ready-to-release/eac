@@ -1,5 +1,4 @@
 // Command: show test-results
-// Description: Display test execution results in human-readable format
 // Long: Shows test execution results from test manifests with:
 // Long:   - Module overview with pass/fail counts
 // Long:   - Specification coverage for godog tests

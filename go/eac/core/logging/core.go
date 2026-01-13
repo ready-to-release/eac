@@ -71,7 +71,7 @@ func buildFileCore(cfg Config, logCfg LoggingConfig) (zapcore.Core, io.Closer, e
 	logPath := paths.CommandsLogPath(cfg.WorkspaceRoot)
 	writer := &lumberjack.Logger{
 		Filename:   logPath,
-		MaxSize:    logCfg.File.MaxSizeMB,  // MB
+		MaxSize:    logCfg.File.MaxSizeMB, // MB
 		MaxBackups: logCfg.File.MaxBackups,
 		MaxAge:     logCfg.File.MaxAgeDays, // days
 		Compress:   logCfg.File.Compress != nil && *logCfg.File.Compress,

@@ -1,5 +1,4 @@
 // Command: get release-bundle
-// Description: Get release bundle configuration with module details
 // Flag.with-versions: type=bool, default=false, usage=Resolve current versions from GitHub releases
 // Flag.title-only: type=bool, default=false, usage=Output only the resolved release title
 // Flag.format: type=string, usage=Output format: markdown, flat, shell, table

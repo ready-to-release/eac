@@ -2,33 +2,71 @@
 
 Generate a module section for a multi-module commit message.
 
-## Structure
+Your task is to generate structured JSON data. The command will automatically format it into a module section.
 
-```text
-<module-name>
-------------
-<module>: <type>: <description>
+## JSON Output Structure
 
-<body: 2-4 sentences, wrapped at 72 chars>
+Generate a JSON object matching this schema:
+
+```json
+{
+  "module": "module-name",
+  "type": "refactor",
+  "description": "brief description of change",
+  "body": "2-4 sentences explaining what changed in this module"
+}
 ```
 
-## Requirements
+### JSON Field Requirements
 
-**Line 1**: Module name only (e.g., `eac-commands`, `contracts`)
+**module** (required): Module name (e.g., `eac-commands`, `contracts`)
+- Lowercase with hyphens
+- Length: 1-30 characters
 
-**Line 2**: Exactly 12 dashes: `------------`
+**type** (required): One of: `feat`, `fix`, `refactor`, `docs`, `chore`, `test`, `perf`, `style`, `ci`, `build`
 
-**Line 3**: `<module>: <type>: <description>`
+**description** (required): Brief description of changes in this module
+- Max 72 characters when combined with `module: type: `
+- No trailing period
+- Lowercase first letter
 
-- Types: feat, fix, refactor, docs, chore, test, perf, style
-- Max 72 chars, no trailing period
+**body** (required): 2-4 sentences explaining what changed
+- Each line wrapped at 72 characters
+- Provide specific details about this module's changes
 
-**Line 4**: Empty line
+### JSON Generation Rules
 
-**Lines 5+**: Body text (2-4 sentences, wrapped at 72 chars)
+- Generate ONLY valid JSON
+- No markdown code fences (no ```json)
+- No explanations or commentary before/after the JSON
+- Just pure JSON starting with `{` and ending with `}`
+- All string fields must use double quotes
+- Use proper JSON escaping for special characters (especially newlines: `\n`)
 
-## Example
+### Example JSON Output
 
+```json
+{
+  "module": "eac-commands",
+  "type": "refactor",
+  "description": "simplify commit message generation",
+  "body": "Removed template variable embedding from generation logic and updated\nprompts to use direct format instructions. Simplified assembly code to\nuse blank line separators instead of dashes between module sections."
+}
+```
+
+## Output Format (for your reference)
+
+The JSON will be automatically converted to module section format:
+
+```text
+module
+------------
+module: type: description
+
+body
+```
+
+Example final output:
 ```text
 eac-commands
 ------------
@@ -41,9 +79,8 @@ use blank line separators instead of dashes between module sections.
 
 ## Output Rules
 
-- Output ONLY the module section
-- No questions, clarifications, or explanations
-- No markdown fences
-- No conversational text
+- Generate ONLY valid JSON
+- No markdown headers or formatting within JSON strings
+- No conversational text before or after JSON
 
-Generate now based on the context below:
+Generate JSON now based on the context below:

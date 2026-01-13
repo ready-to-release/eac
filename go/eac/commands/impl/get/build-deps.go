@@ -1,5 +1,4 @@
 // Command: get build-deps
-// Description: Get build dependencies for a module
 // Args: module (required) - Module moniker
 // Long:
 // Long: Expected Output:

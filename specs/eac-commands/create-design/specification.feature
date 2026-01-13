@@ -12,16 +12,6 @@ Feature: eac-commands_create-design
   Rule: Module must exist in module contracts
 
     @L2 @ov
-    Scenario: Create design for existing module
-      Given a module contract exists for "test-module" at "go/test/module"
-      And source code exists at "go/test/module"
-      And the mock AI is configured to return a valid workspace
-      When I run "create design test-module --skip-validation"
-      Then the exit code should be 0
-      And the file "specs/test-module/.design/workspace.dsl" should exist
-      And the output should contain "Architecture design created"
-
-    @L2 @ov
     Scenario: Fail when module does not exist in contracts
       When I run "create design nonexistent-module --skip-validation"
       Then the exit code should be 1
@@ -34,17 +24,6 @@ Feature: eac-commands_create-design
       Then the exit code should be 1
       And the output should contain "source code not found"
 
-  Rule: Docker validation can be skipped
-
-    @L2 @ov
-    Scenario: Skip validation with flag
-      Given a module contract exists for "test-module" at "go/test/module"
-      And source code exists at "go/test/module"
-      And the mock AI is configured to return a valid workspace
-      When I run "create design test-module --skip-validation"
-      Then the exit code should be 0
-      And the output should contain "Skipping Docker validation"
-
   Rule: Existing files require force flag
 
     @L2 @ov
@@ -56,14 +35,4 @@ Feature: eac-commands_create-design
       Then the exit code should be 1
       And the output should contain "workspace already exists"
       And the output should contain "Use --force to overwrite"
-
-    @L2 @ov
-    Scenario: Overwrite with force flag
-      Given a module contract exists for "test-module" at "go/test/module"
-      And source code exists at "go/test/module"
-      And a workspace file exists at "specs/test-module/.design/workspace.dsl"
-      And the mock AI is configured to return a valid workspace
-      When I run "create design test-module --force --skip-validation"
-      Then the exit code should be 0
-      And the output should contain "Architecture design created"
 

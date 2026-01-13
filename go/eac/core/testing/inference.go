@@ -127,7 +127,6 @@ func isLevelInference(inference Inference) bool {
 	return false
 }
 
-
 // matchesConditions checks if tags match inference conditions
 func matchesConditions(tags []string, conditions []string, thenAddTags []string) bool {
 	// Special case: dependency inferences always apply (regardless of level tags)

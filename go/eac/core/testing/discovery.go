@@ -921,4 +921,3 @@ func parseDescribeTags(descName string) ([]string, string) {
 	name := strings.Join(parts[nameStart:], " ")
 	return tags, name
 }
-

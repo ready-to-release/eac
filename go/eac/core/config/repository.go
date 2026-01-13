@@ -97,12 +97,12 @@ type PathsConfig struct {
 
 // OutConfig defines output directory structure
 type OutConfig struct {
-	Root     string `yaml:"root"`
-	Build    string `yaml:"build"`
-	Test     string `yaml:"test"`
-	Logs     string `yaml:"logs"`
-	Scan     string `yaml:"scan"`
-	Tools    string `yaml:"tools"` // CI tools like the commands binary (not build outputs)
+	Root  string `yaml:"root"`
+	Build string `yaml:"build"`
+	Test  string `yaml:"test"`
+	Logs  string `yaml:"logs"`
+	Scan  string `yaml:"scan"`
+	Tools string `yaml:"tools"` // CI tools like the commands binary (not build outputs)
 }
 
 // ConventionsConfig defines conventional filenames

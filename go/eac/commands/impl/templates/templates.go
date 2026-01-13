@@ -1,5 +1,4 @@
 // Command: templates
-// Description: Manage project templates for documentation and specifications
 package templates
 
 import (

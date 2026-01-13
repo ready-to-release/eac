@@ -66,9 +66,6 @@ func ReleasePrune() int {
 			dryRun = true
 		case "--all":
 			pruneAll = true
-		case "--help", "-h":
-			printPruneHelp()
-			return 0
 		default:
 			if !strings.HasPrefix(arg, "-") && module == "" {
 				module = arg
@@ -78,7 +75,6 @@ func ReleasePrune() int {
 
 	if module == "" && !pruneAll {
 		log.Errorf("Error: module name required (or use --all)")
-		printPruneHelp()
 		return 1
 	}
 
@@ -243,25 +239,4 @@ func getModulesWithReleases(workspaceRoot string) ([]string, error) {
 		modules = append(modules, mod)
 	}
 	return modules, nil
-}
-
-func printPruneHelp() {
-	log.Info("Remove old pre-releases and their tags, keeping only the newest N")
-	log.Info("")
-	log.Info("Usage: release prune <module> [flags]")
-	log.Info("       release prune --all [flags]")
-	log.Info("")
-	log.Info("Arguments:")
-	log.Info("  <module>     Module name (e.g., docs, books, r2r-cli)")
-	log.Info("")
-	log.Info("Flags:")
-	log.Info("  --keep N     Number of releases to keep (default: 1)")
-	log.Info("  --all        Prune all modules with releases")
-	log.Info("  --dry-run    Show what would be deleted without deleting")
-	log.Info("")
-	log.Info("Examples:")
-	log.Info("  release prune docs              # Keep 3 newest docs/* releases")
-	log.Info("  release prune books --keep 5    # Keep 5 newest books/* releases")
-	log.Info("  release prune --all --keep 3    # Prune all modules")
-	log.Info("  release prune docs --dry-run    # Preview what would be deleted")
 }

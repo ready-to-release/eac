@@ -1,5 +1,4 @@
 // Command: show files
-// Description: Show repository files with their module ownership
 // Short: Display all tracked files and their owning modules
 // Long: The show files command displays all tracked files in the repository with their module ownership.
 // Long: Shows which files belong to which modules, helping understand repository structure.

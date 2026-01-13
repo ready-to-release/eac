@@ -2,26 +2,19 @@ package contracts
 
 // BaseValidator provides common validation utilities for contracts
 type BaseValidator struct {
-	contract       *Contract
-	antiCorruption *AntiCorruptionRules
+	contract *Contract
 }
 
 // NewBaseValidator creates a new base validator
-func NewBaseValidator(contract *Contract, antiCorruption *AntiCorruptionRules) *BaseValidator {
+func NewBaseValidator(contract *Contract) *BaseValidator {
 	return &BaseValidator{
-		contract:       contract,
-		antiCorruption: antiCorruption,
+		contract: contract,
 	}
 }
 
 // GetContract returns the contract
 func (v *BaseValidator) GetContract() *Contract {
 	return v.contract
-}
-
-// GetAntiCorruptionRules returns the anti-corruption rules
-func (v *BaseValidator) GetAntiCorruptionRules() *AntiCorruptionRules {
-	return v.antiCorruption
 }
 
 // ValidationContext holds context information for validation
