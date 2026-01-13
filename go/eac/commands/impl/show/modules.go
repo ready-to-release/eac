@@ -1,5 +1,4 @@
 // Command: show modules
-// Description: Show all module contracts in the repository
 // Short: Display all module contracts in a human-readable table
 // Long: The show modules command displays all module contracts defined in the repository,
 // Long: including each module's moniker (identifier), type, and root path.

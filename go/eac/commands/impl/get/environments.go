@@ -1,5 +1,4 @@
 // Command: get environments
-// Description: Get all environment contracts
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON
 //   --as-toml: Output as TOML

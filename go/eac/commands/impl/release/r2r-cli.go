@@ -1,5 +1,4 @@
 // Command: release r2r-cli
-// Description: Create a release tag for r2r-cli module
 // Short: Create a git tag for releasing r2r-cli using semver format
 // Long: Creates a git tag in the format 'r2r-cli/x.y.z' to trigger the release workflow.
 // Long: The tag follows semantic versioning (semver) and will automatically trigger

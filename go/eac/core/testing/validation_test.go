@@ -10,10 +10,10 @@ import (
 
 func TestValidateFeatureLevelTags(t *testing.T) {
 	tests := []struct {
-		name          string
+		name           string
 		featureContent string
-		expectErrors  int
-		errorContains string
+		expectErrors   int
+		errorContains  string
 	}{
 		{
 			name: "Feature with L2, Scenario with L3 - should error",

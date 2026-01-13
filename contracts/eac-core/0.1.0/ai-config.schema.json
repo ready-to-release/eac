@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "ai-config.schema.json",
   "title": "AI Configuration",
-  "description": "Configuration for AI-assisted generation including validation rules and anti-corruption filters",
+  "description": "Configuration for AI-assisted generation - AI generates structured output, commands handle formatting",
   "type": "object",
   "required": ["version", "name", "types"],
   "properties": {
@@ -20,8 +20,9 @@
       "description": "Description of this configuration"
     },
     "defaults": {
-      "$ref": "#/$defs/defaults",
-      "description": "Default settings inherited by all types"
+      "type": "object",
+      "description": "Default settings inherited by all types (currently unused but reserved for future use)",
+      "additionalProperties": true
     },
     "types": {
       "type": "object",
@@ -32,63 +33,39 @@
     }
   },
   "$defs": {
-    "antiCorruptionRules": {
+    "retryStrategy": {
       "type": "object",
-      "description": "Rules for filtering AI output noise",
+      "description": "Retry strategy configuration for AI generation",
       "properties": {
-        "forbidden_prefixes": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Prefixes to strip from output start"
-        },
-        "forbidden_contains": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Substrings indicating noise to filter"
-        },
-        "forbidden_emojis": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Emojis to remove from output"
-        },
-        "agent_signatures": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Agent signature patterns to strip"
-        }
-      },
-      "additionalProperties": false
-    },
-    "defaults": {
-      "type": "object",
-      "description": "Default settings inherited by all types",
-      "properties": {
-        "anti_corruption": {
-          "$ref": "#/$defs/antiCorruptionRules"
-        }
-      },
-      "additionalProperties": false
-    },
-    "outputConfig": {
-      "type": "object",
-      "description": "Output parsing configuration",
-      "properties": {
-        "start_marker": {
-          "type": ["string", "null"],
-          "description": "Marker indicating start of valid content (null = immediate start)"
-        },
-        "format": {
+        "type": {
           "type": "string",
-          "enum": ["text", "dsl", "gherkin", "yaml", "json", "markdown"],
-          "description": "Expected output format"
+          "enum": ["standard", "focused", "escalating", "escalating-focused"],
+          "description": "Retry strategy type: standard (retry on any retriable error), focused (retry on specific categories), escalating (increase urgency), escalating-focused (combine both)",
+          "default": "standard"
+        },
+        "focus_categories": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["structure", "semantic", "format", "constraint"]
+          },
+          "description": "Error categories to focus on (for focused/escalating-focused strategies)"
+        },
+        "max_attempts": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "description": "Maximum retry attempts",
+          "default": 3
         }
       },
+      "required": ["type"],
       "additionalProperties": false
     },
     "typeConfig": {
       "type": "object",
-      "description": "Configuration for a specific AI generation type",
-      "required": ["name"],
+      "description": "Configuration for a specific AI generation type. AI generates structured output in output_format, then commands handle formatting.",
+      "required": ["name", "output_format"],
       "properties": {
         "name": {
           "type": "string",
@@ -98,25 +75,21 @@
           "type": "string",
           "description": "Description of what this type generates"
         },
-        "output": {
-          "$ref": "#/$defs/outputConfig",
-          "description": "Output parsing configuration"
-        },
-        "validation": {
-          "type": "object",
-          "description": "Type-specific validation rules",
-          "additionalProperties": true
+        "output_format": {
+          "type": "string",
+          "enum": ["json", "gherkin", "oscal-catalog", "oscal-profile", "structurizr", "plaintext"],
+          "description": "REQUIRED: Output format. AI generates structured content in this format (validated against schema). Commands then format the output deterministically."
         },
         "data": {
           "type": "object",
-          "description": "Reference data files to inject (key: path)",
+          "description": "Reference data files to inject into prompt (key: path)",
           "additionalProperties": {
             "type": "string"
           }
         },
-        "anti_corruption": {
-          "$ref": "#/$defs/antiCorruptionRules",
-          "description": "Type-specific anti-corruption additions/overrides"
+        "retry_strategy": {
+          "$ref": "#/$defs/retryStrategy",
+          "description": "Retry strategy configuration for generation"
         }
       },
       "additionalProperties": false

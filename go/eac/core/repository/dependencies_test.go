@@ -13,8 +13,8 @@ func TestCalculateGraphStats(t *testing.T) {
 		wantStats    DependencyGraphStats
 	}{
 		{
-			name:     "empty graph",
-			monikers: []string{},
+			name:         "empty graph",
+			monikers:     []string{},
 			dependencies: map[string][]string{},
 			dependents:   map[string][]string{},
 			wantStats: DependencyGraphStats{
@@ -151,10 +151,10 @@ func TestAddTransitiveDependents(t *testing.T) {
 	// Dependents: B depends on nothing, A depends on B, etc.
 	// Reverse: D is depended on by A, B is depended on by A
 	dependentsGraph := map[string][]string{
-		"mod-a": {},               // nothing depends on A
-		"mod-b": {"mod-a"},        // A depends on B
-		"mod-c": {"mod-b"},        // B depends on C
-		"mod-d": {"mod-a"},        // A depends on D
+		"mod-a": {},        // nothing depends on A
+		"mod-b": {"mod-a"}, // A depends on B
+		"mod-c": {"mod-b"}, // B depends on C
+		"mod-d": {"mod-a"}, // A depends on D
 	}
 
 	tests := []struct {

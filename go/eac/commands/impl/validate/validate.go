@@ -1,5 +1,4 @@
 // Command: validate
-// Description: Validate repository contracts and dependencies
 package validate
 
 import (

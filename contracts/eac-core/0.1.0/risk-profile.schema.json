@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "risk-profile.schema.json",
+  "title": "OSCAL Risk Profile",
+  "description": "OSCAL profile structure mapping risk assessment to security controls",
+  "type": "object",
+  "required": ["controls", "reasoning"],
+  "properties": {
+    "controls": {
+      "type": "array",
+      "description": "Array of security control IDs from NIST 800-53 or other catalogs",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z]{2}-[0-9]+$",
+        "description": "Control ID in lowercase format (e.g., 'ac-2', 'ia-5', 'si-10')"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "reasoning": {
+      "type": "string",
+      "description": "Explanation of why these controls were selected based on the risk assessment",
+      "minLength": 10
+    },
+    "risk_areas": {
+      "type": "array",
+      "description": "Key risk areas identified from the assessment",
+      "items": {
+        "type": "object",
+        "required": ["area", "controls"],
+        "properties": {
+          "area": {
+            "type": "string",
+            "description": "Risk area category (e.g., 'authentication', 'data protection')"
+          },
+          "controls": {
+            "type": "array",
+            "description": "Controls addressing this risk area",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z]{2}-[0-9]+$"
+            }
+          }
+        }
+      }
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["high", "medium", "low"],
+      "description": "Confidence level in the control mapping",
+      "default": "medium"
+    }
+  }
+}

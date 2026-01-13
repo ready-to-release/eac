@@ -1,5 +1,4 @@
 // Command: get binary-sizes
-// Description: Get binary file sizes for a module
 // Short: Get binary file sizes for a module
 // Flag.module: type=string, usage=Module to get binary sizes for (required)
 // Flag.binary-prefix: type=string, usage=Binary name prefix (e.g., r2r for r2r-linux-amd64)

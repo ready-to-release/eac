@@ -11,11 +11,11 @@ import (
 
 // ArtifactResolver resolves artifact patterns to concrete file paths
 type ArtifactResolver struct {
-	Moniker   string            // Module moniker
-	BuildDir  string            // Build output directory (e.g., out/build/<module>)
-	OS        string            // Target OS (linux, windows, darwin)
-	Arch      string            // Target architecture (amd64, arm64)
-	Metadata  map[string]string // Module metadata for custom artifact names
+	Moniker  string            // Module moniker
+	BuildDir string            // Build output directory (e.g., out/build/<module>)
+	OS       string            // Target OS (linux, windows, darwin)
+	Arch     string            // Target architecture (amd64, arm64)
+	Metadata map[string]string // Module metadata for custom artifact names
 }
 
 // NewArtifactResolver creates a new resolver for a module

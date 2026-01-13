@@ -26,9 +26,9 @@ import (
 type FileCache struct {
 	mu sync.RWMutex
 
-	repoRoot       string
-	gitRepo        *git.Repository
-	useGitHubInCI  bool // Use GitHub Trees API in CI (faster than git ls-files)
+	repoRoot      string
+	gitRepo       *git.Repository
+	useGitHubInCI bool // Use GitHub Trees API in CI (faster than git ls-files)
 
 	// trackedFiles is the cached output of `git ls-files` or GitHub Trees API
 	// All paths are normalized to forward slashes

@@ -1,5 +1,4 @@
 // Command: show scan-summary
-// Description: Generate pretty scan summary for a module
 // Short: Generate pretty scan summary for a module
 // Flag.scans: type=string, usage=Comma-separated list of scans that were run (e.g., sbom,vuln,secrets)
 // Flag.failed-scans: type=string, usage=Space-separated list of scans that failed

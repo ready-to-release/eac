@@ -1,5 +1,4 @@
 // Command: show dependency-ci-summary
-// Description: Generate dependency CI check summary
 // Short: Generate dependency CI check summary
 // Flag.module: type=string, usage=Module name (required)
 // Flag.passed: type=int, default=0, usage=Number of dependencies that passed CI

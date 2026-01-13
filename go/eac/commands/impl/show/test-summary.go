@@ -1,5 +1,4 @@
 // Command: show test-summary
-// Description: Generate pretty test summary for a module
 // Short: Generate pretty test summary for a module
 // Long: The show test-summary command generates a formatted test summary with test results, metrics, and diagnostics.
 // Long: This command is designed to be used in GitHub Actions workflows to create consistent, attractive test summaries.

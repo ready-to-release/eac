@@ -69,10 +69,6 @@ type Config struct {
 func CreateRiskProfile() int {
 	config, err := parseConfig()
 	if err != nil {
-		if err.Error() == "help requested" {
-			showHelp()
-			return 0
-		}
 		log.Errorf("Error: %v", err)
 		return 1
 	}
@@ -258,9 +254,6 @@ func parseConfig() (*Config, error) {
 		arg := args[i]
 
 		switch {
-		case arg == "--help" || arg == "-h":
-			return nil, fmt.Errorf("help requested")
-
 		case arg == "--catalog":
 			if i+1 >= len(args) {
 				return nil, fmt.Errorf("--catalog requires a value")
@@ -418,41 +411,4 @@ func validateProfileWithCatalog(profile *oscalTypes.Profile, catalogURL string, 
 	}
 
 	return nil
-}
-
-
-// showHelp displays help information.
-func showHelp() {
-	help := `Usage: create risk-profile <assessment-file> [flags]
-
-Create OSCAL profile from risk assessment using AI for the entire solution
-
-Arguments:
-  assessment-file    Path to the risk assessment document (markdown, text, etc.)
-
-Optional Flags:
-      --catalog <url>      Catalog URL for control selection and validation (default: NIST 800-53 Rev 5)
-  -o, --output <path>      Custom output path for the profile file
-      --force              Overwrite existing profile file
-  -d, --debug              Save intermediate outputs to out/logs/risk/
-      --max-retries <n>    Maximum AI generation retries (default: 3)
-  -h, --help               Show this help message
-
-Output:
-  Profile is saved to: specs/.risk-controls/risk-profile.json
-
-Examples:
-  # Create profile from assessment document
-  create risk-profile docs/security-assessment.md
-
-  # Use local catalog for validation
-  create risk-profile assessment.md --catalog catalogs/nist-800-53.json
-
-  # Force overwrite existing profile
-  create risk-profile assessment.md --force
-
-  # Use debug mode to inspect AI reasoning
-  create risk-profile assessment.md --debug
-`
-	log.Info(help)
 }

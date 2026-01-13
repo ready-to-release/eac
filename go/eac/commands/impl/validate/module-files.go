@@ -1,5 +1,4 @@
 // Command: validate module-files
-// Description: Validate module file ownership
 // Short: Validate module file ownership
 // Long: Validates that all files have proper module ownership and no files are unordered.
 // Long:

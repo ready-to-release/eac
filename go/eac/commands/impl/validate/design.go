@@ -1,5 +1,4 @@
 // Command: validate design
-// Description: Check workspace.dsl syntax using Structurizr CLI (requires Docker)
 // Short: Check workspace.dsl syntax using Structurizr CLI (requires Docker)
 // Long: Validates DSL files for syntax errors and structural issues using the official
 // Long: Structurizr CLI running in Docker. Checks DSL syntax, element relationships, view definitions,

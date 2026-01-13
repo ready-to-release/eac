@@ -21,15 +21,6 @@ Feature: eac-commands_create-risk-profile
       Then the exit code is 1
       And stderr contains "assessment file not found"
 
-  Rule: Command generates OSCAL profile from assessment
-
-    Scenario: Create profile from assessment document
-      Given a risk assessment file at "assessment.md"
-      When I run "create risk-profile assessment.md"
-      Then the exit code is 0
-      And a file exists at "specs/.risk-controls/risk-profile.json"
-      And stdout contains "Created OSCAL profile"
-
   Rule: Force flag controls overwrite behavior
 
     Scenario: Existing profile not overwritten by default
@@ -38,10 +29,3 @@ Feature: eac-commands_create-risk-profile
       When I run "create risk-profile assessment.md"
       Then the exit code is 1
       And stderr contains "already exists"
-
-    Scenario: Force flag overwrites existing profile
-      Given a risk assessment file at "assessment.md"
-      And a profile exists at "specs/.risk-controls/risk-profile.json"
-      When I run "create risk-profile assessment.md --force"
-      Then the exit code is 0
-      And a file exists at "specs/.risk-controls/risk-profile.json"

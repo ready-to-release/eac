@@ -1,5 +1,4 @@
 // Command: create squash-message
-// Description: Generate squash commit message from branch commits
 // Short: Generate squash commit message from branch commits
 // Long: Analyzes all commits in the current branch compared to the base branch
 // Long: and generates a comprehensive, cohesive commit message suitable for
@@ -35,8 +34,10 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	coreai "github.com/ready-to-release/eac/go/eac/core/ai"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"github.com/ready-to-release/eac/go/eac/core/git"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 	"go.uber.org/zap"
@@ -223,26 +224,23 @@ func parseConfig() (*squashConfig, error) {
 
 	cfg := &squashConfig{
 		baseBranch: "main",
-		debug:      false,
+		debug:      flags.ParseDebugFlag(args),
 	}
-
-	// Parse debug flag using shared package
-	cfg.debug = flags.ParseDebugFlag(args)
 
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
-		if strings.HasPrefix(arg, "--base=") {
+		switch {
+		case strings.HasPrefix(arg, "--base="):
 			cfg.baseBranch = strings.TrimPrefix(arg, "--base=")
-		} else if arg == "--base" {
-			if i+1 < len(args) {
-				cfg.baseBranch = args[i+1]
-				i++
-			} else {
+		case arg == "--base":
+			if i+1 >= len(args) {
 				return nil, fmt.Errorf("--base requires a value")
 			}
-		} else if arg == "--debug" || arg == "-d" {
+			i++
+			cfg.baseBranch = args[i]
+		case arg == "--debug" || arg == "-d":
 			// Already handled by shared flags package
-		} else {
+		default:
 			return nil, fmt.Errorf("unknown flag: %s", arg)
 		}
 	}
@@ -355,12 +353,17 @@ func buildFilesTable(files []repository.RepositoryFileWithModule) string {
 
 // generateTopLevelMessage generates the top-level commit message using AI
 func generateTopLevelMessage(workspaceRoot string, logger *logging.Logger, promptContext string) (string, error) {
+	// Check for mock response from file-based mock system (subprocess testing)
+	if mock, ok := coreai.GetMockResponse("squash-message"); ok {
+		return mock, nil
+	}
+
 	// Load squash prompt template with three-tier priority:
 	// 1. Command flag (not applicable - internal function)
-	// 2. Team override (.r2r/eac/templates/ai/commit-message/squash.md)
-	// 3. System default (templates/ai/commit-message/squash.md)
+	// 2. Team override (.r2r/eac/templates/coreai.TypeCommitMessage/squash.md)
+	// 3. System default (templates/coreai.TypeCommitMessage/squash.md)
 	// Note: "squash" is a variant prompt (convention adds .md automatically)
-	loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "")
+	loader := coreai.NewContractLoader(workspaceRoot, coreai.TypeCommitMessage, "")
 	promptTemplate, _, err := loader.LoadPrompt("squash", "")
 	if err != nil {
 		return "", fmt.Errorf("failed to load squash.md template: %w", err)
@@ -371,18 +374,71 @@ func generateTopLevelMessage(workspaceRoot string, logger *logging.Logger, promp
 
 	logDebugArtifact(logger, "SQUASH-PROMPT", prompt)
 
-	// Execute AI (includes test provider support for mocking)
+	// Execute AI with two-phase generation and retry
 	executor := ai.NewExecutor(workspaceRoot)
 	providers.RegisterBuiltIn(executor)
-	ctx := context.Background()
-	result, err := executor.Execute(ctx, prompt)
-	if err != nil {
-		return "", fmt.Errorf("AI execution failed: %w", err)
+	executorAdapter := ai.NewExecutorAdapter(executor)
+
+	// Load AI config
+	aiConfig, _ := coreai.LoadAIConfig(workspaceRoot)
+
+	// Get retry strategy
+	maxAttempts := 3
+	var strategy coreai.RetryStrategy
+	if aiConfig != nil {
+		if typeConfig, ok := aiConfig.Types[coreai.TypeSquashMessage]; ok {
+			if typeConfig.RetryStrategy != nil && typeConfig.RetryStrategy.MaxAttempts > 0 {
+				maxAttempts = typeConfig.RetryStrategy.MaxAttempts
+			}
+			if typeConfig.RetryStrategy != nil {
+				var focusCategories []string
+				if typeConfig.RetryStrategy.FocusCategories != nil {
+					focusCategories = typeConfig.RetryStrategy.FocusCategories
+				}
+				strategy, _ = coreai.GetRetryStrategy(typeConfig.RetryStrategy.Type, focusCategories)
+			}
+		}
+	}
+	if strategy == nil {
+		strategy = &coreai.StandardStrategy{}
 	}
 
-	logDebugArtifact(logger, "SQUASH-AI-RESPONSE", result)
+	// Create JSON schema validator for Phase 1 JSON validation
+	// Phase 1 generates JSON output that matches squash-message.schema.json
+	// The formatter then converts JSON → plaintext squash message (no AI involved)
+	schemaPath := filepath.Join(paths.ContractsVersionPath(workspaceRoot, paths.EACCoreModule, paths.DefaultsVersion), "squash-message.schema.json")
+	validator, err := contracts.NewJSONSchemaValidator(schemaPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to create JSON schema validator: %w", err)
+	}
 
-	return strings.TrimSpace(result), nil
+	// Configure retry for JSON generation
+	retryConfig := &coreai.RetryConfig{
+		TypeName:      coreai.TypeSquashMessage,
+		OutputFormat:  coreai.FormatJSON, // Generate structured JSON (commands format to text)
+		Executor:      executorAdapter,
+		Validator:     validator, // Validate JSON schema output
+		TemplateRoot:  workspaceRoot,
+		MaxAttempts:   maxAttempts,
+		Strategy:      strategy,
+	}
+
+	ctx := context.Background()
+	retryResult, err := coreai.GenerateWithRetry(ctx, retryConfig, prompt)
+	if err != nil {
+		return "", fmt.Errorf("AI generation failed: %w", err)
+	}
+
+	jsonResult := retryResult.Output
+	logDebugArtifact(logger, "SQUASH-AI-JSON-RESPONSE", jsonResult)
+
+	// Format JSON → squash commit text (no AI)
+	formattedResult, err := FormatSquashMessage(jsonResult)
+	if err != nil {
+		return "", fmt.Errorf("failed to format squash message: %w", err)
+	}
+
+	return strings.TrimSpace(formattedResult), nil
 }
 
 // generateModuleSections generates per-module sections (reuse commit-message logic)

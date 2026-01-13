@@ -26,6 +26,7 @@
 package riskassess
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -84,10 +85,6 @@ type ModuleAssessmentResult struct {
 func CreateRiskAssess() int {
 	config, err := parseAssessConfig()
 	if err != nil {
-		if err.Error() == "help requested" {
-			showAssessHelp()
-			return 0
-		}
 		assessLog.Errorf("Error: %v", err)
 		return 1
 	}
@@ -173,6 +170,26 @@ func CreateRiskAssess() int {
 					assessLog.Warnf("[%s] %s", result.Module, warning)
 				}
 			}
+		}
+	}
+
+	// Generate AI-powered risk assessment
+	if len(successfulResults) > 0 {
+		assessLog.Info("")
+		assessLog.Info("🤖 Generating AI-powered risk assessment...")
+
+		aiInput := buildAIRiskAssessmentInput(config, successfulResults, profile)
+
+		aiOutput, err := GenerateRiskAssessment(context.Background(), config, aiInput)
+		if err != nil {
+			assessLog.Warnf("⚠️  AI risk assessment failed: %v", err)
+			assessLog.Info("Falling back to basic risk scoring...")
+			// Apply basic fallback scoring
+			applyBasicRiskScoring(successfulResults)
+		} else {
+			assessLog.Info("✅ AI risk assessment completed")
+			// Apply AI-generated risk scores
+			ApplyAIRiskAssessment(successfulResults, aiOutput, config.Logger.Sugar())
 		}
 	}
 
@@ -369,63 +386,6 @@ Try:
 	}
 
 	return config, nil
-}
-
-// showAssessHelp displays help information.
-func showAssessHelp() {
-	help := `Usage: create risk-assess [module...] --profile <path> [flags]
-
-Create OSCAL assessment-results from existing test and security evidence
-
-NOTE: This command does NOT run tests or scans. It only reads existing evidence.
-      The command will warn (but continue) if evidence is missing or too old.
-
-Arguments:
-  module...            Module name(s) to assess (space-separated)
-                       If omitted, all modules are assessed
-
-Required Flags:
-  -p, --profile <path>               Path to OSCAL profile JSON file
-
-Optional Flags:
-      --suites <name...>             Test suites to check for evidence (default: all)
-                                     Can specify multiple: --suites integration acceptance
-                                     Options: all, integration, acceptance, commit, production-verification
-      --max-evidence-age <duration>  Maximum age for evidence before warning (default: 24h)
-                                     Evidence older than this will be flagged in the report
-      --sequential                   Run assessments sequentially (default: parallel)
-  -d, --debug                        Save intermediate outputs to out/logs/risk/
-
-Output:
-  out/risk/<timestamp>/
-    ├── risk-assessment-<timestamp>-all.md         # Aggregated Markdown report (all modules)
-    ├── risk-assessment-<timestamp>-subset-NofM.md # Aggregated Markdown report (subset)
-    ├── <module>/assessment-results.json           # Per-module OSCAL JSON
-    └── ...
-
-Examples:
-  # Assess all modules with all test suites (default)
-  create risk-assess --profile specs/.risk-controls/risk-profile.json
-
-  # Assess specific modules (parallel, space-separated)
-  create risk-assess billing api auth --profile specs/.risk-controls/risk-profile.json
-
-  # Check specific test suites
-  create risk-assess --profile specs/.risk-controls/risk-profile.json --suites integration acceptance
-
-  # Use single test suite
-  create risk-assess --profile specs/.risk-controls/risk-profile.json --suites unit
-
-  # Assess single module with production tests
-  create risk-assess billing --profile specs/.risk-controls/risk-profile.json --suites production-verification
-
-  # Sequential execution for debugging
-  create risk-assess --profile specs/.risk-controls/risk-profile.json --sequential
-
-  # Set custom evidence freshness threshold
-  create risk-assess data --profile specs/.risk-controls/risk-profile.json --max-evidence-age 1h
-`
-	assessLog.Info(help)
 }
 
 // writeAggregatedReport creates a consolidated Markdown report combining all module results.
@@ -649,4 +609,131 @@ func writeAggregatedOSCALReport(config *AssessConfig, results []*ModuleAssessmen
 
 	assessLog.Infof("Created aggregated report: %s", outputPath)
 	return nil
+}
+
+// buildAIRiskAssessmentInput prepares input data for AI risk analysis.
+func buildAIRiskAssessmentInput(
+	config *AssessConfig,
+	results []*ModuleAssessmentResult,
+	profile *oscalTypes.Profile,
+) *AIRiskAssessmentInput {
+	// Load module registry for context
+	registry, err := loadModuleRegistry(config.WorkspaceRoot)
+	if err != nil {
+		assessLog.Warnf("Failed to load module registry: %v", err)
+		registry = nil
+	}
+
+	// Count total controls from profile
+	totalControls := 0
+	satisfiedControls := 0
+	notSatisfiedControls := 0
+
+	// Build per-module inputs
+	var moduleInputs []ModuleAnalysisInput
+	for _, result := range results {
+		// Extract vulnerability findings from evidence
+		vulnFindings := scoring.ExtractVulnerabilityFindings(result.Evidence)
+
+		// Extract satisfied control IDs
+		satisfiedControlIDs := extractSatisfiedControlIDs(result)
+
+		// Build module context
+		moduleContext := scoring.BuildModuleContext(result.Module, registry, satisfiedControlIDs)
+
+		// Determine impact based on module criticality
+		impact := 3 // Default medium
+		switch moduleContext.Criticality {
+		case "high":
+			impact = 4
+		case "low":
+			impact = 2
+		}
+
+		moduleInputs = append(moduleInputs, ModuleAnalysisInput{
+			Module:                result.Module,
+			VulnerabilityFindings: vulnFindings,
+			Context:               moduleContext,
+			ControlsSatisfied:     result.Satisfied,
+			ControlsNotSatisfied:  result.NotSatisfied,
+			Impact:                impact,
+		})
+
+		// Aggregate control counts
+		satisfiedControls += result.Satisfied
+		notSatisfiedControls += result.NotSatisfied
+	}
+
+	// Calculate total unique controls from profile
+	if profile != nil && profile.Imports != nil {
+		for _, imp := range profile.Imports {
+			if imp.IncludeControls != nil {
+				for _, includeControl := range *imp.IncludeControls {
+					if includeControl.WithIds != nil {
+						totalControls += len(*includeControl.WithIds)
+					}
+				}
+			}
+		}
+	}
+
+	// Get profile name from path
+	profileName := filepath.Base(config.ProfilePath)
+
+	return &AIRiskAssessmentInput{
+		Modules:               moduleInputs,
+		ProfileName:           profileName,
+		TotalControls:         totalControls,
+		SatisfiedControls:     satisfiedControls,
+		NotSatisfiedControls:  notSatisfiedControls,
+	}
+}
+
+// extractSatisfiedControlIDs extracts control IDs from findings that are satisfied.
+func extractSatisfiedControlIDs(result *ModuleAssessmentResult) []string {
+	var controlIDs []string
+
+	if result.AssessmentResults == nil || result.AssessmentResults.Results == nil {
+		return controlIDs
+	}
+
+	for _, assessmentResult := range result.AssessmentResults.Results {
+		if assessmentResult.Findings != nil {
+			for _, finding := range *assessmentResult.Findings {
+				// Check if finding is satisfied
+				if finding.Target.Status.State == oscal.StateSatisfied {
+					controlID := finding.Target.TargetId
+					if controlID != "" {
+						controlIDs = append(controlIDs, controlID)
+					}
+				}
+			}
+		}
+	}
+
+	return controlIDs
+}
+
+// applyBasicRiskScoring applies fallback basic scoring when AI generation fails.
+func applyBasicRiskScoring(results []*ModuleAssessmentResult) {
+	for _, result := range results {
+		// Use fixed likelihood of 3 (moderate) as fallback
+		likelihood := 3
+		impact := 3 // Default medium impact
+
+		// Simple reasoning for fallback
+		reasoning := fmt.Sprintf("Basic scoring applied: %d controls satisfied, %d not satisfied",
+			result.Satisfied, result.NotSatisfied)
+
+		// Compute risk score using scoring package
+		result.RiskScore = scoring.ComputeRiskScore(
+			result.Module,
+			likelihood,
+			impact,
+			reasoning,
+		)
+
+		assessLog.Debugf("Applied basic risk score to %s: likelihood=%d, impact=%d, score=%d",
+			result.Module, likelihood, impact, result.RiskScore.Score)
+	}
 }

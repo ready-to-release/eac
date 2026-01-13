@@ -1,5 +1,4 @@
 // Command: get dependencies
-// Description: Get dependencies for a specific module
 // Usage: get dependencies <module>
 //   --as-yaml: Output as YAML (default)
 //   --as-json: Output as JSON

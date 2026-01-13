@@ -15,11 +15,11 @@ type ModuleDependency struct {
 
 // ModuleDependencyGraph represents the full dependency graph
 type ModuleDependencyGraph struct {
-	Modules      []string                  `json:"modules" yaml:"modules"`           // All module monikers
-	Dependencies map[string][]string       `json:"dependencies" yaml:"dependencies"` // Module -> its dependencies
-	Dependents   map[string][]string       `json:"dependents" yaml:"dependents"`     // Module -> modules that depend on it
-	Edges        []ModuleDependency        `json:"edges" yaml:"edges"`               // All dependency edges for visualization
-	Stats        DependencyGraphStats      `json:"stats" yaml:"stats"`               // Graph statistics
+	Modules      []string             `json:"modules" yaml:"modules"`           // All module monikers
+	Dependencies map[string][]string  `json:"dependencies" yaml:"dependencies"` // Module -> its dependencies
+	Dependents   map[string][]string  `json:"dependents" yaml:"dependents"`     // Module -> modules that depend on it
+	Edges        []ModuleDependency   `json:"edges" yaml:"edges"`               // All dependency edges for visualization
+	Stats        DependencyGraphStats `json:"stats" yaml:"stats"`               // Graph statistics
 }
 
 // DependencyGraphStats provides statistics about the dependency graph

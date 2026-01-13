@@ -30,10 +30,10 @@ type SinkConfig struct {
 	// Enabled controls whether this sink is active (file only)
 	Enabled *bool `yaml:"enabled,omitempty"`
 	// Rolling log configuration (file only)
-	MaxSizeMB   int `yaml:"max_size_mb,omitempty"`   // Max size in MB before rotation (default: 5)
-	MaxBackups  int `yaml:"max_backups,omitempty"`   // Max number of old log files to keep (default: 3)
-	MaxAgeDays  int `yaml:"max_age_days,omitempty"`  // Max days to retain old log files (default: 7)
-	Compress    *bool `yaml:"compress,omitempty"`    // Compress rotated files (default: false)
+	MaxSizeMB  int   `yaml:"max_size_mb,omitempty"`  // Max size in MB before rotation (default: 5)
+	MaxBackups int   `yaml:"max_backups,omitempty"`  // Max number of old log files to keep (default: 3)
+	MaxAgeDays int   `yaml:"max_age_days,omitempty"` // Max days to retain old log files (default: 7)
+	Compress   *bool `yaml:"compress,omitempty"`     // Compress rotated files (default: false)
 }
 
 // TargetConfig holds configuration for an extra log target (build/test specific logs)
@@ -77,9 +77,9 @@ func DefaultLoggingConfig() LoggingConfig {
 			Levels:     []string{"debug", "info", "warn", "error"},
 			Formatter:  FormatterTimestamped,
 			Enabled:    &enabled,
-			MaxSizeMB:  5,  // 5MB before rotation
-			MaxBackups: 3,  // keep 3 old files
-			MaxAgeDays: 7,  // delete files older than 7 days
+			MaxSizeMB:  5, // 5MB before rotation
+			MaxBackups: 3, // keep 3 old files
+			MaxAgeDays: 7, // delete files older than 7 days
 		},
 	}
 }
