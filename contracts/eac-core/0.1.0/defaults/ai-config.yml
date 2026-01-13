@@ -55,3 +55,11 @@ types:
     retry_strategy:
       type: "standard"
       max_attempts: 3
+
+  risk-assessment:
+    name: "Risk Assessment Analysis"
+    description: "Comprehensive risk assessment with AI-powered scoring and executive summary"
+    output_format: json        # AI generates unified risk assessment JSON (per-module + executive summary)
+    retry_strategy:
+      type: "standard"
+      max_attempts: 3
