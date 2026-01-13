@@ -19,7 +19,7 @@ var logModules = logging.C("modules")
 // Parameters:
 //   - files: List of FileInfo from GetRepositoryFiles
 //   - workspaceRoot: Root directory of the workspace
-//   (no version - repository config is unversioned)
+//     (no version - repository config is unversioned)
 //
 // Returns:
 //   - List of RepositoryFileWithModule with normalized paths and module ownership
@@ -136,7 +136,7 @@ func filterClosestModules(matchingModules []*modules.ModuleContract, registry *m
 //   - trackedOnly: if true, only return files tracked by Git
 //   - includeIgnored: if true, include files ignored by .gitignore
 //   - stagedOnly: if true, only return files currently staged in Git index
-//   (no version - repository config is unversioned)
+//     (no version - repository config is unversioned)
 //
 // Returns:
 //   - List of files with module ownership information

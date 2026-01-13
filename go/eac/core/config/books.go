@@ -12,7 +12,7 @@ type BooksConfig struct {
 // Book represents a single book configuration
 type Book struct {
 	Name         string         `yaml:"name"`
-	Title        string         `yaml:"title,omitempty"`    // Book-specific title for cover page (optional, defaults to Name)
+	Title        string         `yaml:"title,omitempty"` // Book-specific title for cover page (optional, defaults to Name)
 	Description  string         `yaml:"description"`
 	Output       string         `yaml:"output,omitempty"`   // Default output mode: "site", "pdf-dark", "pdf-light", "pdf-all" (default: "pdf-dark" for book modules)
 	SiteURL      string         `yaml:"site_url,omitempty"` // Base URL for GitHub Pages (e.g., https://ready-to-release.github.io/eac/)

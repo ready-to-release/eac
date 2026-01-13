@@ -78,12 +78,12 @@ var BuildPromptWithTemplate = templates.BuildPromptWithTemplate
 type StructuredFormat = generation.StructuredFormat
 
 const (
-	FormatJSON          = generation.FormatJSON
-	FormatGherkin       = generation.FormatGherkin
-	FormatOSCALCatalog  = generation.FormatOSCALCatalog
-	FormatOSCALProfile  = generation.FormatOSCALProfile
-	FormatStructurizr   = generation.FormatStructurizr
-	FormatPlainText     = generation.FormatPlainText
+	FormatJSON         = generation.FormatJSON
+	FormatGherkin      = generation.FormatGherkin
+	FormatOSCALCatalog = generation.FormatOSCALCatalog
+	FormatOSCALProfile = generation.FormatOSCALProfile
+	FormatStructurizr  = generation.FormatStructurizr
+	FormatPlainText    = generation.FormatPlainText
 )
 
 type StructuredGenerator = generation.StructuredGenerator

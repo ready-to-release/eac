@@ -35,25 +35,25 @@ type MockRepository struct {
 	branchFiles     []string
 
 	// Error injection for testing failure paths
-	RemoteURLError         error
-	CurrentBranchError     error
-	HeadSHAError           error
-	TrackedFilesError      error
-	StagedFilesError       error
-	StagedDiffError        error
-	StagedDiffStatsError   error
-	AddError               error
-	CommitError            error
-	ConfigSetError         error
-	AddRemoteError         error
-	CommitsBetweenError    error
-	TagsMatchingError      error
-	TagCommitError         error
-	TagDateError           error
-	GetBranchCommitsError  error
-	GetBranchDiffError     error
+	RemoteURLError          error
+	CurrentBranchError      error
+	HeadSHAError            error
+	TrackedFilesError       error
+	StagedFilesError        error
+	StagedDiffError         error
+	StagedDiffStatsError    error
+	AddError                error
+	CommitError             error
+	ConfigSetError          error
+	AddRemoteError          error
+	CommitsBetweenError     error
+	TagsMatchingError       error
+	TagCommitError          error
+	TagDateError            error
+	GetBranchCommitsError   error
+	GetBranchDiffError      error
 	GetBranchDiffStatsError error
-	GetBranchFilesError    error
+	GetBranchFilesError     error
 }
 
 // MockTag represents a mock tag for testing

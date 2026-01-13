@@ -20,12 +20,12 @@ type ApprovalComment struct {
 	PRNumber     int       `json:"pr_number" yaml:"pr_number" toml:"pr_number"`
 	PRTitle      string    `json:"pr_title" yaml:"pr_title" toml:"pr_title"`
 	PRAuthor     string    `json:"pr_author" yaml:"pr_author" toml:"pr_author"`
-	PRBody       string    `json:"pr_body" yaml:"pr_body" toml:"pr_body"`                         // PR description/body
-	MergeMessage string    `json:"merge_message" yaml:"merge_message" toml:"merge_message"`       // Merge commit message
+	PRBody       string    `json:"pr_body" yaml:"pr_body" toml:"pr_body"`                   // PR description/body
+	MergeMessage string    `json:"merge_message" yaml:"merge_message" toml:"merge_message"` // Merge commit message
 	Reviewer     string    `json:"reviewer" yaml:"reviewer" toml:"reviewer"`
-	ReviewState  string    `json:"review_state" yaml:"review_state" toml:"review_state"`          // APPROVED, CHANGES_REQUESTED
+	ReviewState  string    `json:"review_state" yaml:"review_state" toml:"review_state"` // APPROVED, CHANGES_REQUESTED
 	ReviewedAt   time.Time `json:"reviewed_at" yaml:"reviewed_at" toml:"reviewed_at"`
-	SpecFiles    []string  `json:"spec_files" yaml:"spec_files" toml:"spec_files"`                // .feature files in PR
+	SpecFiles    []string  `json:"spec_files" yaml:"spec_files" toml:"spec_files"` // .feature files in PR
 	MergedAt     time.Time `json:"merged_at" yaml:"merged_at" toml:"merged_at"`
 }
 
@@ -95,10 +95,10 @@ func (r *realGitHubCLI) GetPR(workspaceRoot string, prNumber int) (*PRData, erro
 
 	// Parse JSON response
 	var result struct {
-		Number   int    `json:"number"`
-		Title    string `json:"title"`
-		Body     string `json:"body"`
-		Author   struct {
+		Number int    `json:"number"`
+		Title  string `json:"title"`
+		Body   string `json:"body"`
+		Author struct {
 			Login string `json:"login"`
 		} `json:"author"`
 		MergedAt    time.Time `json:"mergedAt"`

@@ -40,7 +40,7 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 	if len(lines) == 0 {
 		errors = append(errors, *contracts.NewLegacyValidationError(
 			"EMPTY_MESSAGE",
-			fmt.Sprintf("Top-level commit message is empty"),
+			"Top-level commit message is empty",
 			0,
 			"error",
 		))
@@ -52,7 +52,7 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 	if !getConventionalCommitRegex().MatchString(firstLine) {
 		errors = append(errors, *contracts.NewLegacyValidationError(
 			"INVALID_HEADER_FORMAT",
-			fmt.Sprintf("Header must follow format: <type>(<scope>): <summary> (e.g., feat(cli): add new command)"),
+			"Header must follow format: <type>(<scope>): <summary> (e.g., feat(cli): add new command)",
 			1,
 			"error",
 		))
@@ -72,7 +72,7 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 	if strings.HasSuffix(firstLine, ".") && !strings.HasSuffix(firstLine, "...") {
 		errors = append(errors, *contracts.NewLegacyValidationError(
 			"HEADER_TRAILING_PERIOD",
-			fmt.Sprintf("Header must not end with period"),
+			"Header must not end with period",
 			1,
 			"error",
 		))
@@ -89,7 +89,7 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 	if !hasAuditorSummary {
 		errors = append(errors, *contracts.NewLegacyValidationError(
 			"MISSING_AUDITOR_SUMMARY",
-			fmt.Sprintf("Missing Auditor-Summary field after header"),
+			"Missing Auditor-Summary field after header",
 			0,
 			"error",
 		))
@@ -118,7 +118,7 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 	if !hasBody {
 		errors = append(errors, *contracts.NewLegacyValidationError(
 			"MISSING_BODY",
-			fmt.Sprintf("Missing body text after Auditor-Summary"),
+			"Missing body text after Auditor-Summary",
 			0,
 			"error",
 		))

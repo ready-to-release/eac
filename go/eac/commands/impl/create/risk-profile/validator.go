@@ -22,83 +22,50 @@ func (v *RiskProfileValidator) Validate(output string, context map[string]interf
 	// Parse JSON
 	var data map[string]interface{}
 	if err := json.Unmarshal([]byte(output), &data); err != nil {
-		errors = append(errors, contracts.ValidationError{
-			Code:       &contracts.ErrInvalidJSON,
-			LegacyCode: contracts.ErrInvalidJSON.Code,
-			Message:    fmt.Sprintf("Invalid JSON: %v", err),
-			Line:       0,
-			Severity:   string(contracts.ErrInvalidJSON.Severity),
-		})
-		return errors
+		return []contracts.ValidationError{
+			*contracts.NewValidationError(contracts.ErrInvalidJSON, fmt.Sprintf("Invalid JSON: %v", err), 0),
+		}
 	}
 
 	// Check for required controls field
 	controls, ok := data["controls"]
 	if !ok {
-		errors = append(errors, contracts.ValidationError{
-			Code:       &contracts.ErrMissingRequiredElement,
-			LegacyCode: contracts.ErrMissingRequiredElement.Code,
-			Message:    "Missing required field: controls",
-			Line:       0,
-			Severity:   string(contracts.ErrMissingRequiredElement.Severity),
-		})
-		return errors
+		return []contracts.ValidationError{
+			*contracts.NewValidationError(contracts.ErrMissingRequiredElement, "Missing required field: controls", 0),
+		}
 	}
 
 	// Validate controls is an array
 	controlsArray, ok := controls.([]interface{})
 	if !ok {
-		errors = append(errors, contracts.ValidationError{
-			Code:       &contracts.ErrInvalidPattern,
-			LegacyCode: contracts.ErrInvalidPattern.Code,
-			Message:    "Field 'controls' must be an array",
-			Line:       0,
-			Severity:   string(contracts.ErrInvalidPattern.Severity),
-		})
-		return errors
+		return []contracts.ValidationError{
+			*contracts.NewValidationError(contracts.ErrInvalidPattern, "Field 'controls' must be an array", 0),
+		}
 	}
 
 	// Validate at least one control
 	if len(controlsArray) == 0 {
-		errors = append(errors, contracts.ValidationError{
-			Code:       &contracts.ErrMissingRequiredElement,
-			LegacyCode: contracts.ErrMissingRequiredElement.Code,
-			Message:    "At least one control ID is required",
-			Line:       0,
-			Severity:   string(contracts.ErrMissingRequiredElement.Severity),
-		})
+		errors = append(errors, *contracts.NewValidationError(
+			contracts.ErrMissingRequiredElement, "At least one control ID is required", 0,
+		))
 	}
 
 	// Validate control ID format (lowercase with hyphen: ac-2, ia-5, etc.)
 	for i, ctrl := range controlsArray {
 		ctrlStr, ok := ctrl.(string)
 		if !ok {
-			errors = append(errors, contracts.ValidationError{
-				Code:       &contracts.ErrInvalidPattern,
-				LegacyCode: contracts.ErrInvalidPattern.Code,
-				Message:    fmt.Sprintf("Control at index %d is not a string", i),
-				Line:       0,
-				Severity:   string(contracts.ErrInvalidPattern.Severity),
-			})
+			errors = append(errors, *contracts.NewValidationError(
+				contracts.ErrInvalidPattern, fmt.Sprintf("Control at index %d is not a string", i), 0,
+			))
 			continue
 		}
 
 		// Basic format check: should be lowercase letters, hyphen, numbers
 		if len(ctrlStr) < 4 || (len(ctrlStr) > 2 && ctrlStr[2] != '-') {
-			errors = append(errors, contracts.ValidationError{
-				Code:       &contracts.ErrInvalidPattern,
-				LegacyCode: contracts.ErrInvalidPattern.Code,
-				Message:    fmt.Sprintf("Control '%s' has invalid format (expected: xx-#)", ctrlStr),
-				Line:       0,
-				Severity:   string(contracts.ErrInvalidPattern.Severity),
-			})
+			errors = append(errors, *contracts.NewValidationError(
+				contracts.ErrInvalidPattern, fmt.Sprintf("Control '%s' has invalid format (expected: xx-#)", ctrlStr), 0,
+			))
 		}
-	}
-
-	// Check for reasoning field (recommended but not required)
-	if _, ok := data["reasoning"]; !ok {
-		// Not an error, just log it
-		// Could add a warning here if we implement warning system
 	}
 
 	return errors

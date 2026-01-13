@@ -182,7 +182,7 @@ func (v *QuickValidator) validateRelationships(lines []string) []validation.Vali
 
 	// Track elements and their potential parents
 	elementHierarchy := make(map[string]string) // element -> parent
-	var currentContext []string // Stack of current context (for nesting)
+	var currentContext []string                 // Stack of current context (for nesting)
 
 	for i, line := range lines {
 		lineNum := i + 1

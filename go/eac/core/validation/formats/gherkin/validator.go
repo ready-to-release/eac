@@ -548,15 +548,6 @@ func (v *Validator) hasVerificationTag(tags []string) bool {
 	return false
 }
 
-// isInTagList checks if a tag is in the given list
-func (v *Validator) isInTagList(tag string, list []string) bool {
-	for _, t := range list {
-		if t == tag {
-			return true
-		}
-	}
-	return false
-}
 
 // getIndentLevel returns the indentation level (number of leading spaces/tabs) of a line
 func getIndentLevel(line string) int {
@@ -608,13 +599,13 @@ type gherkinValidationState struct {
 	seenFeature          bool
 	seenRule             bool
 	seenScenario         bool
-	currentRuleIndex     int              // Track which Rule we're currently in
-	rulesWithScenarios   map[int]bool     // Track which Rules have scenarios
-	scenariosOutsideRule []int            // Track line numbers of scenarios not under any Rule
-	allRules             []RuleInfo       // Track all Rules with metadata
-	allScenarios         []ScenarioInfo   // Track all Scenarios for counting
-	currentRuleIndent    int              // Indentation level of current Rule
-	lastRuleLine         int              // Line number of last Rule seen
+	currentRuleIndex     int            // Track which Rule we're currently in
+	rulesWithScenarios   map[int]bool   // Track which Rules have scenarios
+	scenariosOutsideRule []int          // Track line numbers of scenarios not under any Rule
+	allRules             []RuleInfo     // Track all Rules with metadata
+	allScenarios         []ScenarioInfo // Track all Scenarios for counting
+	currentRuleIndent    int            // Indentation level of current Rule
+	lastRuleLine         int            // Line number of last Rule seen
 }
 
 // RuleInfo holds metadata about a Rule

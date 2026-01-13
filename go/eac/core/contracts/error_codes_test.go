@@ -54,39 +54,39 @@ func TestGetErrorCode(t *testing.T) {
 // TestErrorCodeMetadata tests error code metadata
 func TestErrorCodeMetadata(t *testing.T) {
 	tests := []struct {
-		name           string
-		code           string
-		wantCategory   ErrorCategory
-		wantRetriable  bool
-		wantSeverity   ErrorSeverity
+		name          string
+		code          string
+		wantCategory  ErrorCategory
+		wantRetriable bool
+		wantSeverity  ErrorSeverity
 	}{
 		{
-			name:           "EMPTY_OUTPUT is critical and non-retriable",
-			code:           "EMPTY_OUTPUT",
-			wantCategory:   CategoryStructure,
-			wantRetriable:  false,
-			wantSeverity:   SeverityError,
+			name:          "EMPTY_OUTPUT is critical and non-retriable",
+			code:          "EMPTY_OUTPUT",
+			wantCategory:  CategoryStructure,
+			wantRetriable: false,
+			wantSeverity:  SeverityError,
 		},
 		{
-			name:           "MISSING_FEATURE is semantic and retriable",
-			code:           "MISSING_FEATURE",
-			wantCategory:   CategorySemantic,
-			wantRetriable:  true,
-			wantSeverity:   SeverityError,
+			name:          "MISSING_FEATURE is semantic and retriable",
+			code:          "MISSING_FEATURE",
+			wantCategory:  CategorySemantic,
+			wantRetriable: true,
+			wantSeverity:  SeverityError,
 		},
 		{
-			name:           "LINE_TOO_LONG is format and retriable",
-			code:           "LINE_TOO_LONG",
-			wantCategory:   CategoryFormat,
-			wantRetriable:  true,
-			wantSeverity:   SeverityError,
+			name:          "LINE_TOO_LONG is format and retriable",
+			code:          "LINE_TOO_LONG",
+			wantCategory:  CategoryFormat,
+			wantRetriable: true,
+			wantSeverity:  SeverityError,
 		},
 		{
-			name:           "UNKNOWN_TAG is warning",
-			code:           "UNKNOWN_TAG",
-			wantCategory:   CategoryFormat,
-			wantRetriable:  true,
-			wantSeverity:   SeverityWarning,
+			name:          "UNKNOWN_TAG is warning",
+			code:          "UNKNOWN_TAG",
+			wantCategory:  CategoryFormat,
+			wantRetriable: true,
+			wantSeverity:  SeverityWarning,
 		},
 	}
 
@@ -254,12 +254,12 @@ func TestValidationErrorWithStructuredCode(t *testing.T) {
 // TestLegacyValidationError tests backward compatibility
 func TestLegacyValidationError(t *testing.T) {
 	tests := []struct {
-		name        string
-		code        string
-		message     string
-		line        int
-		severity    string
-		wantKnown   bool
+		name      string
+		code      string
+		message   string
+		line      int
+		severity  string
+		wantKnown bool
 	}{
 		{
 			name:      "known legacy code EMPTY_OUTPUT",

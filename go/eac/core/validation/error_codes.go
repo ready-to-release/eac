@@ -15,11 +15,11 @@ type ErrorCode struct {
 type ErrorCategory string
 
 const (
-	CategoryStructure   ErrorCategory = "structure"   // Critical structural issues (empty output, missing config)
-	CategorySemantic    ErrorCategory = "semantic"    // Semantic/logical issues (missing elements, wrong order)
-	CategoryFormat      ErrorCategory = "format"      // Format issues (naming, patterns, indentation)
-	CategoryConstraint  ErrorCategory = "constraint"  // Constraint violations (size limits, counts)
-	CategoryCorruption  ErrorCategory = "corruption"  // AI noise corruption (forbidden content)
+	CategoryStructure  ErrorCategory = "structure"  // Critical structural issues (empty output, missing config)
+	CategorySemantic   ErrorCategory = "semantic"   // Semantic/logical issues (missing elements, wrong order)
+	CategoryFormat     ErrorCategory = "format"     // Format issues (naming, patterns, indentation)
+	CategoryConstraint ErrorCategory = "constraint" // Constraint violations (size limits, counts)
+	CategoryCorruption ErrorCategory = "corruption" // AI noise corruption (forbidden content)
 )
 
 // ErrorSeverity represents the severity level of an error
@@ -67,13 +67,13 @@ var (
 		Description: "Validation contract not loaded",
 	}
 
-	// ErrMissingStartMarker indicates output missing required start marker
-	ErrMissingStartMarker = ErrorCode{
-		Code:        "MISSING_START_MARKER",
+	// ErrUnsupportedFormat indicates unsupported output format specified
+	ErrUnsupportedFormat = ErrorCode{
+		Code:        "UNSUPPORTED_FORMAT",
 		Category:    CategoryStructure,
-		Retriable:   true,
+		Retriable:   false,
 		Severity:    SeverityError,
-		Description: "Output missing required start marker",
+		Description: "Unsupported output format specified",
 	}
 
 	// ErrInvalidJSON indicates invalid JSON syntax
@@ -209,6 +209,7 @@ var (
 	}
 
 	// ErrInvalidSemanticType indicates invalid semantic type (e.g., commit type)
+	// RESERVED: Planned for commit message type validation (feat, fix, docs, etc.)
 	ErrInvalidSemanticType = ErrorCode{
 		Code:        "INVALID_SEMANTIC_TYPE",
 		Category:    CategorySemantic,
@@ -349,10 +350,12 @@ var (
 
 // ===============================================
 // Corruption Errors (Retriable)
+// RESERVED for AI safety and content filtering features
 // ===============================================
 
 var (
 	// ErrForbiddenPrefix indicates output contains forbidden prefix
+	// RESERVED: Planned for AI safety filtering to detect harmful output patterns
 	ErrForbiddenPrefix = ErrorCode{
 		Code:        "FORBIDDEN_PREFIX",
 		Category:    CategoryCorruption,
@@ -362,6 +365,7 @@ var (
 	}
 
 	// ErrForbiddenContent indicates output contains forbidden content
+	// RESERVED: Planned for AI safety filtering to detect harmful content
 	ErrForbiddenContent = ErrorCode{
 		Code:        "FORBIDDEN_CONTENT",
 		Category:    CategoryCorruption,
@@ -428,15 +432,6 @@ var (
 		Retriable:   true,
 		Severity:    SeverityError,
 		Description: "DSL validation error",
-	}
-
-	// ErrConfigError indicates configuration loading error
-	ErrConfigError = ErrorCode{
-		Code:        "CONFIG_ERROR",
-		Category:    CategoryStructure,
-		Retriable:   false,
-		Severity:    SeverityError,
-		Description: "Failed to load configuration",
 	}
 
 	// ErrSetupError indicates setup/initialization error
@@ -629,60 +624,59 @@ var (
 
 var errorCodeRegistry = map[string]*ErrorCode{
 	// Structure errors
-	"EMPTY_OUTPUT":                &ErrEmptyOutput,
-	"MISSING_TAGS_CONFIG":         &ErrMissingTagsConfig,
-	"NO_CONTRACT":                 &ErrNoContract,
-	"MISSING_START_MARKER":        &ErrMissingStartMarker,
-	"INVALID_JSON":                &ErrInvalidJSON,
-	"JSON_SCHEMA_VIOLATION":       &ErrJSONSchemaViolation,
+	"EMPTY_OUTPUT":          &ErrEmptyOutput,
+	"MISSING_TAGS_CONFIG":   &ErrMissingTagsConfig,
+	"NO_CONTRACT":           &ErrNoContract,
+	"UNSUPPORTED_FORMAT":    &ErrUnsupportedFormat,
+	"INVALID_JSON":          &ErrInvalidJSON,
+	"JSON_SCHEMA_VIOLATION": &ErrJSONSchemaViolation,
 
 	// Semantic errors
-	"MISSING_FEATURE":             &ErrMissingFeature,
-	"MISSING_RULE":                &ErrMissingRule,
-	"MISSING_SCENARIO":            &ErrMissingScenario,
-	"MULTIPLE_FEATURES":           &ErrMultipleFeatures,
-	"RULE_BEFORE_FEATURE":         &ErrRuleBeforeFeature,
-	"SCENARIO_BEFORE_FEATURE":     &ErrScenarioBeforeFeature,
-	"BACKGROUND_BEFORE_FEATURE":   &ErrBackgroundBeforeFeature,
-	"EXAMPLES_WITHOUT_SCENARIO":   &ErrExamplesWithoutScenario,
-	"RULE_WITHOUT_SCENARIOS":      &ErrRuleWithoutScenarios,
-	"SCENARIOS_OUTSIDE_RULE":      &ErrScenariosOutsideRule,
-	"MISSING_VERIFICATION_TAG":    &ErrMissingVerificationTag,
-	"MISSING_REQUIRED_ELEMENT":    &ErrMissingRequiredElement,
-	"INVALID_SEMANTIC_TYPE":       &ErrInvalidSemanticType,
+	"MISSING_FEATURE":           &ErrMissingFeature,
+	"MISSING_RULE":              &ErrMissingRule,
+	"MISSING_SCENARIO":          &ErrMissingScenario,
+	"MULTIPLE_FEATURES":         &ErrMultipleFeatures,
+	"RULE_BEFORE_FEATURE":       &ErrRuleBeforeFeature,
+	"SCENARIO_BEFORE_FEATURE":   &ErrScenarioBeforeFeature,
+	"BACKGROUND_BEFORE_FEATURE": &ErrBackgroundBeforeFeature,
+	"EXAMPLES_WITHOUT_SCENARIO": &ErrExamplesWithoutScenario,
+	"RULE_WITHOUT_SCENARIOS":    &ErrRuleWithoutScenarios,
+	"SCENARIOS_OUTSIDE_RULE":    &ErrScenariosOutsideRule,
+	"MISSING_VERIFICATION_TAG":  &ErrMissingVerificationTag,
+	"MISSING_REQUIRED_ELEMENT":  &ErrMissingRequiredElement,
+	"INVALID_SEMANTIC_TYPE":     &ErrInvalidSemanticType,
 
 	// Format errors
-	"INVALID_FEATURE_NAMING":      &ErrInvalidFeatureNaming,
-	"INCORRECT_INDENTATION":       &ErrIncorrectIndentation,
-	"INVALID_TAG_FORMAT":          &ErrInvalidTagFormat,
-	"INVALID_TAG_LEVEL":           &ErrInvalidTagLevel,
-	"LINE_TOO_LONG":               &ErrLineTooLong,
-	"INVALID_PATTERN":             &ErrInvalidPattern,
+	"INVALID_FEATURE_NAMING": &ErrInvalidFeatureNaming,
+	"INCORRECT_INDENTATION":  &ErrIncorrectIndentation,
+	"INVALID_TAG_FORMAT":     &ErrInvalidTagFormat,
+	"INVALID_TAG_LEVEL":      &ErrInvalidTagLevel,
+	"LINE_TOO_LONG":          &ErrLineTooLong,
+	"INVALID_PATTERN":        &ErrInvalidPattern,
 
 	// Constraint errors
-	"TOO_MANY_RULES":              &ErrTooManyRules,
-	"LARGE_RULE_COUNT":            &ErrLargeRuleCount,
-	"TOO_FEW_RULES":               &ErrTooFewRules,
-	"TOO_MANY_SCENARIOS":          &ErrTooManyScenarios,
-	"LARGE_SCENARIO_COUNT":        &ErrLargeScenarioCount,
-	"MUTUAL_EXCLUSION_VIOLATION":  &ErrMutualExclusionViolation,
+	"TOO_MANY_RULES":               &ErrTooManyRules,
+	"LARGE_RULE_COUNT":             &ErrLargeRuleCount,
+	"TOO_FEW_RULES":                &ErrTooFewRules,
+	"TOO_MANY_SCENARIOS":           &ErrTooManyScenarios,
+	"LARGE_SCENARIO_COUNT":         &ErrLargeScenarioCount,
+	"MUTUAL_EXCLUSION_VIOLATION":   &ErrMutualExclusionViolation,
 	"CRITICAL_ASPECT_REQUIRES_GXP": &ErrCriticalAspectRequiresGxP,
 
 	// Corruption errors
-	"FORBIDDEN_PREFIX":            &ErrForbiddenPrefix,
-	"FORBIDDEN_CONTENT":           &ErrForbiddenContent,
+	"FORBIDDEN_PREFIX":  &ErrForbiddenPrefix,
+	"FORBIDDEN_CONTENT": &ErrForbiddenContent,
 
 	// Structurizr DSL errors
-	"MISSING_WORKSPACE":           &ErrMissingWorkspace,
-	"UNMATCHED_BRACE":             &ErrUnmatchedBrace,
-	"UNCLOSED_BRACE":              &ErrUnclosedBrace,
-	"INVALID_IDENTIFIER":          &ErrInvalidIdentifier,
-	"PARENT_CHILD_RELATIONSHIP":   &ErrParentChildRelationship,
-	"DSL_VALIDATION":              &ErrDSLValidation,
-	"CONFIG_ERROR":                &ErrConfigError,
-	"SETUP_ERROR":                 &ErrSetupError,
-	"VALIDATION_ERROR":            &ErrValidationError,
-	"QUICK_VALIDATION_FAILED":     &ErrQuickValidationFailed,
+	"MISSING_WORKSPACE":         &ErrMissingWorkspace,
+	"UNMATCHED_BRACE":           &ErrUnmatchedBrace,
+	"UNCLOSED_BRACE":            &ErrUnclosedBrace,
+	"INVALID_IDENTIFIER":        &ErrInvalidIdentifier,
+	"PARENT_CHILD_RELATIONSHIP": &ErrParentChildRelationship,
+	"DSL_VALIDATION":            &ErrDSLValidation,
+	"SETUP_ERROR":               &ErrSetupError,
+	"VALIDATION_ERROR":          &ErrValidationError,
+	"QUICK_VALIDATION_FAILED":   &ErrQuickValidationFailed,
 
 	// OSCAL errors
 	"OSCAL_INVALID_DOCUMENT":      &ErrOSCALInvalidDocument,
@@ -698,11 +692,11 @@ var errorCodeRegistry = map[string]*ErrorCode{
 	"OSCAL_FILE_READ":             &ErrOSCALFileRead,
 
 	// Warning-level errors
-	"UNKNOWN_TAG":                 &ErrUnknownTag,
-	"GXP_MISSING_CONTROL":         &ErrGxPMissingControl,
-	"CONTRACT_NAME_MISMATCH":      &ErrContractNameMismatch,
-	"NO_TAG_CONTRACT":             &ErrNoTagContract,
-	"CONTRACT_VERSION_MISMATCH":   &ErrContractVersionMismatch,
+	"UNKNOWN_TAG":               &ErrUnknownTag,
+	"GXP_MISSING_CONTROL":       &ErrGxPMissingControl,
+	"CONTRACT_NAME_MISMATCH":    &ErrContractNameMismatch,
+	"NO_TAG_CONTRACT":           &ErrNoTagContract,
+	"CONTRACT_VERSION_MISMATCH": &ErrContractVersionMismatch,
 }
 
 // GetErrorCode retrieves error code metadata by string code

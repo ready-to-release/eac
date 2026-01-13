@@ -19,9 +19,6 @@ const (
 
 // Path constants for template and contract resolution
 const (
-	// AIPromptsPath is the base path for AI prompts (deprecated - use templates/ai)
-	AIPromptsPath = "ai/prompts"
-
 	// AITemplatesPath is the base path for AI templates
 	AITemplatesPath = "templates/ai"
 )

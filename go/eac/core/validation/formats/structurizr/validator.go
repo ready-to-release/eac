@@ -9,8 +9,8 @@ type ValidatorMode int
 
 const (
 	ModeQuick     ValidatorMode = iota // Fast, no Docker (AI generation)
-	ModeFull                            // Docker validation (validate command)
-	ModeComposite                       // Quick then full (create command)
+	ModeFull                           // Docker validation (validate command)
+	ModeComposite                      // Quick then full (create command)
 )
 
 // Validator is the base interface for Structurizr validators

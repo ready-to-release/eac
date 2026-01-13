@@ -27,11 +27,12 @@ type PromptData struct {
 // - {{.Custom.TagsSpec}} - Custom data by key
 //
 // Example template:
-//   ## Contract Requirements
-//   {{.Contract}}
 //
-//   ## Tags
-//   {{.Custom.TagsSpec}}
+//	## Contract Requirements
+//	{{.Contract}}
+//
+//	## Tags
+//	{{.Custom.TagsSpec}}
 //
 // Returns rendered prompt or error if template execution fails.
 func BuildPromptWithTemplate(

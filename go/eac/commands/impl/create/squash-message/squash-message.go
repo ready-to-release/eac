@@ -225,26 +225,23 @@ func parseConfig() (*squashConfig, error) {
 
 	cfg := &squashConfig{
 		baseBranch: "main",
-		debug:      false,
+		debug:      flags.ParseDebugFlag(args),
 	}
-
-	// Parse debug flag using shared package
-	cfg.debug = flags.ParseDebugFlag(args)
 
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
-		if strings.HasPrefix(arg, "--base=") {
+		switch {
+		case strings.HasPrefix(arg, "--base="):
 			cfg.baseBranch = strings.TrimPrefix(arg, "--base=")
-		} else if arg == "--base" {
-			if i+1 < len(args) {
-				cfg.baseBranch = args[i+1]
-				i++
-			} else {
+		case arg == "--base":
+			if i+1 >= len(args) {
 				return nil, fmt.Errorf("--base requires a value")
 			}
-		} else if arg == "--debug" || arg == "-d" {
+			i++
+			cfg.baseBranch = args[i]
+		case arg == "--debug" || arg == "-d":
 			// Already handled by shared flags package
-		} else {
+		default:
 			return nil, fmt.Errorf("unknown flag: %s", arg)
 		}
 	}

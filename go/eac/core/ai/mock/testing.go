@@ -22,8 +22,8 @@ func (m *MockAIExecutor) Execute(ctx interface{}, prompt string, opts ...interfa
 // MockValidator implements validation.Validator for testing
 type MockValidator struct {
 	ValidationResults [][]validation.ValidationError // Queue of validation results
-	ValidationIndex   int                           // Current validation index
-	ValidationCount   int                           // Number of times Validate was called
+	ValidationIndex   int                            // Current validation index
+	ValidationCount   int                            // Number of times Validate was called
 }
 
 func (m *MockValidator) Validate(output string, context map[string]interface{}) []validation.ValidationError {

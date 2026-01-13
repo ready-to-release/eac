@@ -99,4 +99,3 @@ func (c *EnvironmentsConfig) Validate() error {
 
 	return nil
 }
-

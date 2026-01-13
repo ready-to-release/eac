@@ -495,9 +495,9 @@ func TestConvention_TypeNameExtraction(t *testing.T) {
 		{"ai/commit-message", "commit-message.md"},
 		{"ai/risk-profile", "risk-profile.md"},
 		{"ai/risk-access", "risk-access.md"},
-		{"specs", "specs.md"},           // No "ai/" prefix
-		{"commit", "commit.md"},         // Simple name
-		{"a/b/c/deep", "deep.md"},       // Deep path
+		{"specs", "specs.md"},     // No "ai/" prefix
+		{"commit", "commit.md"},   // Simple name
+		{"a/b/c/deep", "deep.md"}, // Deep path
 	}
 
 	tmpDir, err := os.MkdirTemp("", "extraction-test-*")

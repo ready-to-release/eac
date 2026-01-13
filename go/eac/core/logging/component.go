@@ -158,8 +158,8 @@ func inferComponent() string {
 	// Look for /go/eac/ or /go/r2r/ in the file path
 	for _, boundary := range []string{"/go/eac/", "/go/r2r/"} {
 		if idx := strings.Index(file, boundary); idx != -1 {
-			relPath := file[idx+len(boundary):]   // "commands/impl/security/sast/sast.go"
-			relPath = filepath.Dir(relPath)       // "commands/impl/security/sast"
+			relPath := file[idx+len(boundary):] // "commands/impl/security/sast/sast.go"
+			relPath = filepath.Dir(relPath)     // "commands/impl/security/sast"
 			return filepath.ToSlash(relPath)
 		}
 	}

@@ -545,51 +545,6 @@ func execCommandReal(name string, args ...string) *exec.Cmd {
 	return exec.Command(name, args...)
 }
 
-// promptYN prompts the user with a yes/no question
-// Returns "y" or "n"
-func promptYN(question string) string {
-	return promptYNWithRetries(question, 0)
-}
-
-// promptYNWithRetries prompts with retry limit to prevent infinite recursion
-func promptYNWithRetries(question string, attempt int) string {
-	const maxAttempts = 3
-
-	if attempt >= maxAttempts {
-		log.Info("\nToo many invalid inputs. Defaulting to 'no'.")
-		return "n"
-	}
-
-	log.Infof("%s (y/n): ", question)
-
-	var response string
-	_, err := fmt.Scanln(&response)
-
-	// If we can't read from stdin (non-interactive), default to "no"
-	if err != nil {
-		log.Info("\nNo input available (non-interactive mode). Defaulting to 'no'.")
-		return "n"
-	}
-
-	response = strings.ToLower(strings.TrimSpace(response))
-
-	// If response is empty (stdin exhausted), default to "no"
-	if response == "" {
-		log.Info("\nEmpty input received. Defaulting to 'no'.")
-		return "n"
-	}
-
-	switch response {
-	case "y", "yes":
-		return "y"
-	case "n", "no":
-		return "n"
-	default:
-		log.Infof("Invalid input '%s'. Please enter y (yes) or n (no).", response)
-		return promptYNWithRetries(question, attempt+1)
-	}
-}
-
 // stripModuleSectionsFromTopLevel removes any module-like sections that appear
 // after the "Changes:" line in the top-level commit message.
 // The AI sometimes includes module summaries here despite being told not to.

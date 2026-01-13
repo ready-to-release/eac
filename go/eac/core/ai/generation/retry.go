@@ -28,8 +28,8 @@ type RetryConfig struct {
 	TypeName string
 
 	// Generation configuration (MANDATORY)
-	OutputFormat StructuredFormat      // Output format (json, gherkin, oscal, structurizr, plaintext)
-	Validator    validation.Validator  // Validator (optional - will auto-load if not provided)
+	OutputFormat StructuredFormat     // Output format (json, gherkin, oscal, structurizr, plaintext)
+	Validator    validation.Validator // Validator (optional - will auto-load if not provided)
 
 	// Executor performs AI generation
 	Executor validation.AIExecutor
@@ -52,12 +52,12 @@ type RetryConfig struct {
 
 // RetryResult holds the result of generation with retry
 type RetryResult struct {
-	Output            string                        // Final formatted output
-	ValidationErrors  []validation.ValidationError  // Validation errors (empty if valid)
-	Attempts          int                           // Total attempts made
-	RetriedWithErrors bool                          // Whether a retry was triggered
-	ProviderName      string                        // AI provider name (e.g., "claude-cli")
-	GeneratedContent  string                        // Generated content (format depends on OutputFormat)
+	Output            string                       // Final formatted output
+	ValidationErrors  []validation.ValidationError // Validation errors (empty if valid)
+	Attempts          int                          // Total attempts made
+	RetriedWithErrors bool                         // Whether a retry was triggered
+	ProviderName      string                       // AI provider name (e.g., "claude-cli")
+	GeneratedContent  string                       // Generated content (format depends on OutputFormat)
 }
 
 // GenerateWithRetry generates AI output using format-aware generation

@@ -7,8 +7,8 @@ import (
 // CompositeValidator runs quick validation followed by full validation
 // Used for create command to provide fast feedback with comprehensive validation
 type CompositeValidator struct {
-	quickValidator *QuickValidator
-	fullValidator  *DockerValidator
+	quickValidator        *QuickValidator
+	fullValidator         *DockerValidator
 	skipFullOnQuickErrors bool // Skip Docker validation if quick validation fails
 }
 

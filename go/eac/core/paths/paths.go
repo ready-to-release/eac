@@ -365,9 +365,10 @@ func TemplatePath(repoRoot string, subpaths ...string) string {
 
 // CommandLogsPath returns the path to a command's log directory
 // Supports flexible path construction with optional path segments:
-//   CommandLogsPath(root, "design") → out/design/
-//   CommandLogsPath(root, "build", "eac-core") → out/build/eac-core/
-//   CommandLogsPath(root, "templates", "apply") → out/templates/apply/
+//
+//	CommandLogsPath(root, "design") → out/design/
+//	CommandLogsPath(root, "build", "eac-core") → out/build/eac-core/
+//	CommandLogsPath(root, "templates", "apply") → out/templates/apply/
 func CommandLogsPath(repoRoot, command string, pathSegments ...string) string {
 	parts := []string{repoRoot, OutDir, command}
 	parts = append(parts, pathSegments...)
