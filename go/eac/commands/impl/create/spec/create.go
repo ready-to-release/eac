@@ -41,7 +41,9 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/git"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
+	"github.com/ready-to-release/eac/go/eac/core/validation/formats/gherkin"
 )
 
 var log = logging.C()
@@ -103,7 +105,12 @@ func CreateSpec() int {
 	}
 
 	// Load EAC configuration for path access
-	eacCfg, err := config.Load(config.LoadOptions{RepoRoot: specsConfig.TemplateRoot})
+	// Skip workflow validation for test environments where workflow files may not exist
+	// We only need template path configuration, not full workflow information
+	eacCfg, err := config.Load(config.LoadOptions{
+		RepoRoot:               specsConfig.TemplateRoot,
+		SkipWorkflowValidation: true, // Not needed for content generation
+	})
 	if err != nil {
 		log.Errorf("Error: failed to load EAC config: %v", err)
 		return 1
@@ -258,12 +265,20 @@ func loadAndBuildPrompt(config *SpecsConfig) (string, error) {
 // - Validates Gherkin structure with automatic retry on errors
 // - Optionally saves debug outputs
 func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
+	// Check for subprocess mock response (used in acceptance tests)
+	if mock, ok := aimock.GetMockResponse("specs"); ok {
+		if config.Logger != nil {
+			config.Logger.Debug("Using subprocess mock response")
+		}
+		return mock, nil
+	}
+
 	if config.Logger != nil {
 		config.Logger.Debug("Starting AI generation with retry")
 	}
 
 	// Load contract and anti-corruption rules for validator
-	loader := contracts.NewContractLoader(config.TemplateRoot, "ai/specs", "0.1.0")
+	loader := aimock.NewContractLoader(config.TemplateRoot, aimock.TypeSpecs, paths.DefaultsVersion)
 
 	contractData, err := loader.LoadContract()
 	if err != nil {
@@ -273,14 +288,6 @@ func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 		return "", fmt.Errorf("failed to load contract: %w", err)
 	}
 
-	antiCorruptionRules, err := loader.LoadAntiCorruptionRules()
-	if err != nil {
-		if config.Logger != nil {
-			config.Logger.Error("Failed to load anti-corruption rules", zap.Error(err))
-		}
-		return "", fmt.Errorf("failed to load anti-corruption rules: %w", err)
-	}
-
 	// Create executor
 	executor := ai.NewExecutor(config.TemplateRoot)
 	providers.RegisterBuiltIn(executor)
@@ -288,19 +295,26 @@ func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 	// Wrap executor to match contract.AIExecutor interface
 	executorAdapter := ai.NewExecutorAdapter(executor)
 
-	// Create validator
-	validator := contracts.NewGherkinValidator(contractData, antiCorruptionRules)
+	// Create validator (JSON schema validated in Phase 1)
+	validator := gherkin.NewValidator(contractData)
 
-	// Configure retry behavior
-	retryConfig := &contracts.RetryConfig{
-		Executor:       executorAdapter,
-		Validator:      validator,
-		PromptBuilder:  &contracts.DefaultRetryPromptBuilder{},
-		AntiCorruption: antiCorruptionRules,
-		ContentMarker:  "Feature:",
-		MaxAttempts:    2,
-		Debug:          config.Debug,
-		DebugOutputDir: "", // No longer writing debug files to disk
+	// Load AI config to get retry strategy
+	var aiConfig *aimock.AIConfig
+	aiConfig, err = aimock.LoadAIConfig(config.TemplateRoot)
+	if err != nil {
+		if config.Logger != nil {
+			config.Logger.Warn("Could not load AI config, using default retry strategy", zap.Error(err))
+		}
+		aiConfig = nil
+	}
+
+	// Build retry configuration with strategy
+	retryConfig, err := buildRetryConfig(executorAdapter, validator, config, aiConfig)
+	if err != nil {
+		if config.Logger != nil {
+			config.Logger.Error("Failed to build retry config", zap.Error(err))
+		}
+		return "", fmt.Errorf("failed to build retry config: %w", err)
 	}
 
 	if config.Logger != nil {
@@ -311,7 +325,7 @@ func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 
 	// Generate with retry
 	ctx := context.Background()
-	result, err := contracts.GenerateWithRetry(ctx, retryConfig, prompt)
+	result, err := aimock.GenerateWithRetry(ctx, retryConfig, prompt)
 	if err != nil {
 		if config.Logger != nil {
 			config.Logger.Error("AI generation failed after retries", zap.Error(err))
@@ -562,7 +576,7 @@ func formatModuleList(moduleReport *reports.ModuleContractReport) string {
 
 // loadPromptWithFallback implements prompt loading:
 // 1. Custom path (if specified via --prompt flag)
-// 2. AI config: .r2r/eac/ai/specs/specification.md
+// 2. AI config: .r2r/eac/aimock.TypeSpecs/specification.md
 // 3. Built-in: embedded prompts/specification.md
 func loadPromptWithFallback(templateRoot string, customPath string) (string, error) {
 	// Tier 1: Check for custom path (from --prompt flag)
@@ -582,10 +596,10 @@ func loadPromptWithFallback(templateRoot string, customPath string) (string, err
 
 	// Load prompt with three-tier priority:
 	// 1. Command flag (--prompt)
-	// 2. Team override (.r2r/eac/templates/ai/specs/specs.md)
-	// 3. System default (templates/ai/specs/specs.md)
+	// 2. Team override (.r2r/eac/templates/aimock.TypeSpecs/specs.md)
+	// 3. System default (templates/aimock.TypeSpecs/specs.md)
 	// Convention: Empty string uses type name (specs.md)
-	loader := contracts.NewContractLoader(templateRoot, "ai/specs", "")
+	loader := aimock.NewContractLoader(templateRoot, aimock.TypeSpecs, "")
 	prompt, source, err := loader.LoadPromptWithPriority("", "")
 	if err != nil {
 		return "", fmt.Errorf("failed to load prompt: %w", err)
@@ -597,105 +611,6 @@ func loadPromptWithFallback(templateRoot string, customPath string) (string, err
 	}
 
 	return prompt, nil
-}
-
-// generateWithAI invokes the AI provider with the prompt
-func generateWithAI(templateRoot string, prompt string, debug bool) (string, error) {
-	// Check for mock response from file-based mock system (subprocess testing)
-	if mock, ok := aimock.GetMockResponse("specs"); ok {
-		return mock, nil
-	}
-
-	// Check for mock response (test mode)
-	if mockAIResponse != "" {
-		return mockAIResponse, nil
-	}
-
-	// Create executor
-	executor := ai.NewExecutor(templateRoot)
-	providers.RegisterBuiltIn(executor)
-
-	// Execute
-	ctx := context.Background()
-	var opts []ai.Option
-	if debug {
-		opts = append(opts, ai.WithDebug(true))
-	}
-
-	output, err := executor.Execute(ctx, prompt, opts...)
-
-	// Log provider information after execution
-	provider := executor.GetLastUsedProvider()
-	if provider != nil && debug {
-		log.Infof("  → AI provider used: %s", provider.Name())
-	}
-
-	if err != nil {
-		return "", fmt.Errorf("AI execution failed: %w", err)
-	}
-
-	return strings.TrimSpace(output), nil
-}
-
-// stripAgentNoise removes initialization messages and markdown code fences
-func stripAgentNoise(output string) string {
-	output = strings.TrimSpace(output)
-
-	// Remove wrapping markdown code fences if entire output is wrapped
-	if strings.HasPrefix(output, "```") {
-		lines := strings.Split(output, "\n")
-		if len(lines) > 0 {
-			// Remove opening fence (may have language identifier like ```gherkin)
-			lines = lines[1:]
-		}
-		// Remove closing fence
-		if len(lines) > 0 && strings.HasPrefix(strings.TrimSpace(lines[len(lines)-1]), "```") {
-			lines = lines[:len(lines)-1]
-		}
-		output = strings.Join(lines, "\n")
-	}
-
-	// Remove common initialization messages
-	lines := strings.Split(output, "\n")
-	var cleaned []string
-	foundFeature := false
-
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-
-		// Skip noise before Feature: declaration
-		if !foundFeature {
-			// Skip initialization messages
-			if strings.Contains(trimmed, "**Initialized") ||
-				strings.Contains(trimmed, "ready to assist") ||
-				strings.Contains(trimmed, "I'll help") ||
-				strings.Contains(trimmed, "I'll create") ||
-				strings.Contains(trimmed, "I'll generate") ||
-				strings.Contains(trimmed, "Here's") ||
-				strings.Contains(trimmed, "Here is") {
-				continue
-			}
-
-			// Skip horizontal rules before content
-			if trimmed == "---" || trimmed == "___" || trimmed == "***" {
-				continue
-			}
-
-			// Skip empty lines before content
-			if trimmed == "" {
-				continue
-			}
-
-			// Found Feature: - content starts
-			if strings.HasPrefix(trimmed, "Feature:") {
-				foundFeature = true
-			}
-		}
-
-		cleaned = append(cleaned, line)
-	}
-
-	return strings.TrimSpace(strings.Join(cleaned, "\n"))
 }
 
 // buildContractBasedPrompt loads contract files and builds comprehensive AI prompt
@@ -724,17 +639,12 @@ func loadPromptTemplates(config *SpecsConfig) (string, error) {
 	}
 
 	// Use generalized contract loader
-	loader := contracts.NewContractLoader(config.TemplateRoot, "ai/specs", "0.1.0")
+	loader := aimock.NewContractLoader(config.TemplateRoot, aimock.TypeSpecs, paths.DefaultsVersion)
 
-	// Load contract and anti-corruption rules
+	// Load contract
 	contractData, err := loader.LoadContract()
 	if err != nil {
 		return "", fmt.Errorf("failed to load contract: %w", err)
-	}
-
-	antiCorruption, err := loader.LoadAntiCorruptionRules()
-	if err != nil {
-		return "", fmt.Errorf("failed to load anti-corruption rules: %w", err)
 	}
 
 	// Load referenced files (tags)
@@ -753,10 +663,9 @@ func loadPromptTemplates(config *SpecsConfig) (string, error) {
 		"AvailableControls": availableControls,
 	}
 
-	promptTemplate, err := contracts.BuildPromptWithTemplate(
+	promptTemplate, err := aimock.BuildPromptWithTemplate(
 		promptContent,
 		contractData,
-		antiCorruption,
 		customData,
 	)
 	if err != nil {
@@ -796,22 +705,6 @@ func buildUserInputSection(config *SpecsConfig) string {
 	prompt.WriteString("Return ONLY the Gherkin content starting with 'Feature:' - no markdown fences, no explanations.\n")
 
 	return prompt.String()
-}
-
-// stripAgentNoiseWithContract applies anti-corruption rules from contract using generalized framework
-func stripAgentNoiseWithContract(output string, templateRoot string) string {
-	// Use generalized contract loader
-	loader := contracts.NewContractLoader(templateRoot, "ai/specs", "0.1.0")
-
-	// Try to load anti-corruption rules
-	rules, err := loader.LoadAntiCorruptionRules()
-	if err != nil {
-		// Fall back to original stripAgentNoise if contract not available
-		return stripAgentNoise(output)
-	}
-
-	// Use generalized anti-corruption filter with "Feature:" as content start marker
-	return contracts.ApplyWithFallback(output, rules, "Feature:")
 }
 
 // loadModuleControlsContext loads OSCAL profile and formats controls for AI prompt
@@ -891,4 +784,58 @@ func loadModuleControlsContext(workspaceRoot string, moduleName string, cfg *con
 	sb.WriteString("- Omit control tags for non-security scenarios\n")
 
 	return sb.String()
+}
+
+// buildRetryConfig creates RetryConfig with strategy from AI config
+func buildRetryConfig(
+	executor contracts.AIExecutor,
+	validator contracts.Validator,
+	config *SpecsConfig,
+	aiConfig *aimock.AIConfig,
+) (*aimock.RetryConfig, error) {
+	maxAttempts := 2
+	var strategy aimock.RetryStrategy
+
+	// Load retry strategy from config if available
+	if aiConfig != nil {
+		if typeConfig, ok := aiConfig.Types[aimock.TypeSpecs]; ok {
+			if typeConfig.RetryStrategy != nil && typeConfig.RetryStrategy.MaxAttempts > 0 {
+				maxAttempts = typeConfig.RetryStrategy.MaxAttempts
+			}
+
+			if typeConfig.RetryStrategy != nil {
+				var focusCategories []string
+				if typeConfig.RetryStrategy.FocusCategories != nil {
+					focusCategories = typeConfig.RetryStrategy.FocusCategories
+				}
+
+				var err error
+				strategy, err = aimock.GetRetryStrategy(typeConfig.RetryStrategy.Type, focusCategories)
+				if err != nil {
+					return nil, fmt.Errorf("failed to create retry strategy: %w", err)
+				}
+				if config.Logger != nil {
+					config.Logger.Info("Using retry strategy",
+						zap.String("strategy", strategy.Name()),
+						zap.Int("maxAttempts", maxAttempts))
+				}
+			}
+		}
+	}
+
+	// Default to StandardStrategy if not configured
+	if strategy == nil {
+		strategy = &aimock.StandardStrategy{}
+	}
+
+	return &aimock.RetryConfig{
+		TypeName:        aimock.TypeSpecs,
+		OutputFormat:    aimock.FormatGherkin, // Generate Gherkin directly
+		Validator:       validator,            // Validate Gherkin output
+		Executor:        executor,
+		TemplateRoot:    config.TemplateRoot,
+		MaxAttempts:     maxAttempts,
+		Debug:           config.Debug,
+		Strategy:        strategy,
+	}, nil
 }

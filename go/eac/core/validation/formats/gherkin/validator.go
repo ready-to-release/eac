@@ -1,4 +1,4 @@
-package contracts
+package gherkin
 
 import (
 	"fmt"
@@ -6,75 +6,34 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/ready-to-release/eac/go/eac/core/contracts"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
+	"github.com/ready-to-release/eac/go/eac/core/validation"
 )
 
-// GherkinValidator validates Gherkin specifications against structure and tag contracts
-type GherkinValidator struct {
-	contract       *Contract
-	tagsConfig     *config.TestingTagsConfig
-	antiCorruption *AntiCorruptionRules
+// Validator validates Gherkin specifications against structure and tag contracts
+type Validator struct {
+	contract   *contracts.Contract
+	tagsConfig *config.TestingTagsConfig
 }
 
-// NewGherkinValidator creates a new Gherkin specification validator
-func NewGherkinValidator(contract *Contract, antiCorruption *AntiCorruptionRules) *GherkinValidator {
-	return &GherkinValidator{
-		contract:       contract,
-		antiCorruption: antiCorruption,
-	}
-}
-
-// NewGherkinValidatorWithTags creates a validator with both structure and tag configs
-func NewGherkinValidatorWithTags(contract *Contract, tagsConfig *config.TestingTagsConfig, antiCorruption *AntiCorruptionRules) *GherkinValidator {
-	return &GherkinValidator{
-		contract:       contract,
-		tagsConfig:     tagsConfig,
-		antiCorruption: antiCorruption,
+// NewValidator creates a new Gherkin specification validator
+func NewValidator(contract *contracts.Contract) *Validator {
+	return &Validator{
+		contract: contract,
 	}
 }
 
-// NewGherkinValidatorFromConfig creates a validator from the unified AI config
-func NewGherkinValidatorFromConfig(loader *AIConfigLoader, typeName string, antiCorruption *AntiCorruptionRules) *GherkinValidator {
-	// Get validation rules from the type config
-	validation, err := loader.GetValidation(typeName)
-	if err != nil {
-		// Return validator without contract data
-		return &GherkinValidator{
-			antiCorruption: antiCorruption,
-		}
-	}
-
-	// Convert validation map to Contract for backward compatibility
-	contract := &Contract{
-		Version: "0.1.0",
-		Name:    "Gherkin Specification Structure",
-		RawData: make(map[string]interface{}),
-	}
-
-	// Extract feature_naming_pattern from patterns.feature_naming
-	if patterns := ExtractMap(validation, "patterns"); patterns != nil {
-		if featureNaming := ExtractString(patterns, "feature_naming"); featureNaming != "" {
-			contract.RawData["feature_naming_pattern"] = featureNaming
-		}
-	}
-
-	// Extract required_verification_tags from required_tags
-	if requiredTags := ExtractStringList(validation, "required_tags"); len(requiredTags) > 0 {
-		// Convert []string to []interface{} for RawData compatibility
-		tags := make([]interface{}, len(requiredTags))
-		for i, t := range requiredTags {
-			tags[i] = t
-		}
-		contract.RawData["required_verification_tags"] = tags
-	}
-
-	return &GherkinValidator{
-		contract:       contract,
-		antiCorruption: antiCorruption,
+// NewValidatorWithTags creates a validator with both structure and tag configs
+func NewValidatorWithTags(contract *contracts.Contract, tagsConfig *config.TestingTagsConfig) *Validator {
+	return &Validator{
+		contract:   contract,
+		tagsConfig: tagsConfig,
 	}
 }
 
 // SetTagsConfig sets the tags config for tag validation
-func (v *GherkinValidator) SetTagsConfig(tagsConfig *config.TestingTagsConfig) {
+func (v *Validator) SetTagsConfig(tagsConfig *config.TestingTagsConfig) {
 	v.tagsConfig = tagsConfig
 }
 
@@ -99,25 +58,17 @@ func (v *GherkinValidator) SetTagsConfig(tagsConfig *config.TestingTagsConfig) {
 // - Unknown tag warnings (validates against testing-tags.yml)
 //
 // Returns a list of validation errors (empty if valid)
-func (v *GherkinValidator) Validate(output string, context map[string]interface{}) []ValidationError {
-	var errors []ValidationError
+func (v *Validator) Validate(output string, context map[string]interface{}) []validation.ValidationError {
+	var errors []validation.ValidationError
 
 	if strings.TrimSpace(output) == "" {
-		errors = append(errors, ValidationError{
-			Code:     "EMPTY_OUTPUT",
-			Message:  "Generated output is empty",
-			Severity: "error",
-		})
+		errors = append(errors, *validation.NewValidationError(validation.ErrEmptyOutput, "Generated output is empty", 0))
 		return errors
 	}
 
 	// Tags config is required for validation - fail immediately if not loaded
 	if v.tagsConfig == nil {
-		errors = append(errors, ValidationError{
-			Code:     "MISSING_TAGS_CONFIG",
-			Message:  "Testing tags configuration (testing-tags.yml) not loaded - cannot perform tag validation. Ensure .r2r/eac/testing-tags.yml exists and is valid.",
-			Severity: "error",
-		})
+		errors = append(errors, *validation.NewValidationError(validation.ErrMissingTagsConfig, "Testing tags configuration (testing-tags.yml) not loaded - cannot perform tag validation. Ensure .r2r/eac/testing-tags.yml exists and is valid.", 0))
 		return errors
 	}
 
@@ -151,19 +102,14 @@ func (v *GherkinValidator) Validate(output string, context map[string]interface{
 		// Check for Feature declaration
 		if strings.HasPrefix(trimmed, "Feature:") {
 			if state.seenFeature {
-				errors = append(errors, ValidationError{
-					Code:     "MULTIPLE_FEATURES",
-					Message:  "Multiple Feature declarations found (only one allowed per file)",
-					Line:     lineNum,
-					Severity: "error",
-				})
+				errors = append(errors, *validation.NewValidationError(validation.ErrMultipleFeatures, "Multiple Feature declarations found (only one allowed per file)", lineNum))
 			} else {
 				state.seenFeature = true
 				featureName = strings.TrimSpace(strings.TrimPrefix(trimmed, "Feature:"))
 
 				// Validate naming convention
 				namingError := v.validateFeatureNaming(featureName, lineNum)
-				if namingError.Code != "" { // Non-empty error
+				if namingError.Code != nil { // Non-empty error
 					errors = append(errors, namingError)
 				}
 			}
@@ -173,12 +119,7 @@ func (v *GherkinValidator) Validate(output string, context map[string]interface{
 		// Check for Background declaration
 		if strings.HasPrefix(trimmed, "Background:") {
 			if !state.seenFeature {
-				errors = append(errors, ValidationError{
-					Code:     "BACKGROUND_BEFORE_FEATURE",
-					Message:  "Background must come after Feature declaration",
-					Line:     lineNum,
-					Severity: "error",
-				})
+				errors = append(errors, *validation.NewValidationError(validation.ErrBackgroundBeforeFeature, "Background must come after Feature declaration", lineNum))
 			}
 			continue
 		}
@@ -186,12 +127,7 @@ func (v *GherkinValidator) Validate(output string, context map[string]interface{
 		// Check for Rule declaration
 		if strings.HasPrefix(trimmed, "Rule:") {
 			if !state.seenFeature {
-				errors = append(errors, ValidationError{
-					Code:     "RULE_BEFORE_FEATURE",
-					Message:  "Rule must come after Feature declaration",
-					Line:     lineNum,
-					Severity: "error",
-				})
+				errors = append(errors, *validation.NewValidationError(validation.ErrRuleBeforeFeature, "Rule must come after Feature declaration", lineNum))
 			} else {
 				state.seenRule = true
 				state.currentRuleIndex++
@@ -214,12 +150,7 @@ func (v *GherkinValidator) Validate(output string, context map[string]interface{
 		// Check for Scenario declaration
 		if strings.HasPrefix(trimmed, "Scenario:") || strings.HasPrefix(trimmed, "Scenario Outline:") {
 			if !state.seenFeature {
-				errors = append(errors, ValidationError{
-					Code:     "SCENARIO_BEFORE_FEATURE",
-					Message:  "Scenario must come after Feature declaration",
-					Line:     lineNum,
-					Severity: "error",
-				})
+				errors = append(errors, *validation.NewValidationError(validation.ErrScenarioBeforeFeature, "Scenario must come after Feature declaration", lineNum))
 			} else {
 				state.seenScenario = true
 
@@ -249,12 +180,7 @@ func (v *GherkinValidator) Validate(output string, context map[string]interface{
 
 					// Enhancement 5: Check indentation (scenario should be indented more than Rule)
 					if state.currentRuleIndent >= 0 && indentLevel <= state.currentRuleIndent {
-						errors = append(errors, ValidationError{
-							Code:     "INCORRECT_INDENTATION",
-							Message:  fmt.Sprintf("Scenario should be indented under its Rule (Rule at line %d has %d spaces, Scenario has %d spaces)", state.lastRuleLine, state.currentRuleIndent, indentLevel),
-							Line:     lineNum,
-							Severity: "error",
-						})
+						errors = append(errors, *validation.NewValidationError(validation.ErrIncorrectIndentation, fmt.Sprintf("Scenario should be indented under its Rule (Rule at line %d has %d spaces, Scenario has %d spaces)", state.lastRuleLine, state.currentRuleIndent, indentLevel), lineNum))
 					}
 				}
 			}
@@ -264,12 +190,7 @@ func (v *GherkinValidator) Validate(output string, context map[string]interface{
 		// Check for Examples (must follow Scenario Outline)
 		if strings.HasPrefix(trimmed, "Examples:") {
 			if !state.seenScenario {
-				errors = append(errors, ValidationError{
-					Code:     "EXAMPLES_WITHOUT_SCENARIO",
-					Message:  "Examples must come after Scenario Outline",
-					Line:     lineNum,
-					Severity: "error",
-				})
+				errors = append(errors, *validation.NewValidationError(validation.ErrExamplesWithoutScenario, "Examples must come after Scenario Outline", lineNum))
 			}
 			continue
 		}
@@ -277,50 +198,28 @@ func (v *GherkinValidator) Validate(output string, context map[string]interface{
 
 	// Final state validation
 	if !state.seenFeature {
-		errors = append(errors, ValidationError{
-			Code:     "MISSING_FEATURE",
-			Message:  "Missing Feature: declaration",
-			Severity: "error",
-		})
+		errors = append(errors, *validation.NewValidationError(validation.ErrMissingFeature, "Missing Feature: declaration", 0))
 	}
 
 	if !state.seenRule {
-		errors = append(errors, ValidationError{
-			Code:     "MISSING_RULE",
-			Message:  "Missing Rule: declaration (required for acceptance criteria)",
-			Severity: "error",
-		})
+		errors = append(errors, *validation.NewValidationError(validation.ErrMissingRule, "Missing Rule: declaration (required for acceptance criteria)", 0))
 	}
 
 	if !state.seenScenario {
-		errors = append(errors, ValidationError{
-			Code:     "MISSING_SCENARIO",
-			Message:  "Missing Scenario: declaration (required for behavior examples)",
-			Severity: "error",
-		})
+		errors = append(errors, *validation.NewValidationError(validation.ErrMissingScenario, "Missing Scenario: declaration (required for behavior examples)", 0))
 	}
 
 	// Enhancement 1: Check for Rules without scenarios
 	for i, rule := range state.allRules {
 		ruleIndex := i + 1
 		if !state.rulesWithScenarios[ruleIndex] {
-			errors = append(errors, ValidationError{
-				Code:     "RULE_WITHOUT_SCENARIOS",
-				Message:  fmt.Sprintf("Rule '%s' has no scenarios nested under it (each Rule must have at least one Scenario)", rule.Description),
-				Line:     rule.Line,
-				Severity: "error",
-			})
+			errors = append(errors, *validation.NewValidationError(validation.ErrRuleWithoutScenarios, fmt.Sprintf("Rule '%s' has no scenarios nested under it (each Rule must have at least one Scenario)", rule.Description), rule.Line))
 		}
 	}
 
 	// Enhancement 1: Check for orphaned scenarios
 	if len(state.scenariosOutsideRule) > 0 {
-		errors = append(errors, ValidationError{
-			Code:     "SCENARIOS_OUTSIDE_RULE",
-			Message:  fmt.Sprintf("Found %d scenario(s) not nested under any Rule (scenarios must be under Rule blocks)", len(state.scenariosOutsideRule)),
-			Line:     state.scenariosOutsideRule[0],
-			Severity: "error",
-		})
+		errors = append(errors, *validation.NewValidationError(validation.ErrScenariosOutsideRule, fmt.Sprintf("Found %d scenario(s) not nested under any Rule (scenarios must be under Rule blocks)", len(state.scenariosOutsideRule)), state.scenariosOutsideRule[0]))
 	}
 
 	// Enhancement 3: File size and complexity warnings
@@ -329,38 +228,18 @@ func (v *GherkinValidator) Validate(output string, context map[string]interface{
 
 	// Rule count validation
 	if ruleCount > 10 {
-		errors = append(errors, ValidationError{
-			Code:     "TOO_MANY_RULES",
-			Message:  fmt.Sprintf("File has %d Rules (>10 is too large - must split feature)", ruleCount),
-			Severity: "error",
-		})
+		errors = append(errors, *validation.NewValidationError(validation.ErrTooManyRules, fmt.Sprintf("File has %d Rules (>10 is too large - must split feature)", ruleCount), 0))
 	} else if ruleCount > 6 {
-		errors = append(errors, ValidationError{
-			Code:     "LARGE_RULE_COUNT",
-			Message:  fmt.Sprintf("File has %d Rules (>6 is large - consider splitting feature)", ruleCount),
-			Severity: "error",
-		})
+		errors = append(errors, *validation.NewValidationError(validation.ErrLargeRuleCount, fmt.Sprintf("File has %d Rules (>6 is large - consider splitting feature)", ruleCount), 0))
 	} else if ruleCount < 2 && ruleCount > 0 {
-		errors = append(errors, ValidationError{
-			Code:     "TOO_FEW_RULES",
-			Message:  fmt.Sprintf("File has %d Rule (2-6 Rules recommended for proper feature scope)", ruleCount),
-			Severity: "error",
-		})
+		errors = append(errors, *validation.NewValidationError(validation.ErrTooFewRules, fmt.Sprintf("File has %d Rule (2-6 Rules recommended for proper feature scope)", ruleCount), 0))
 	}
 
 	// Scenario count validation
 	if scenarioCount > 30 {
-		errors = append(errors, ValidationError{
-			Code:     "TOO_MANY_SCENARIOS",
-			Message:  fmt.Sprintf("File has %d Scenarios (>30 is too large - must split feature)", scenarioCount),
-			Severity: "error",
-		})
+		errors = append(errors, *validation.NewValidationError(validation.ErrTooManyScenarios, fmt.Sprintf("File has %d Scenarios (>30 is too large - must split feature)", scenarioCount), 0))
 	} else if scenarioCount > 20 {
-		errors = append(errors, ValidationError{
-			Code:     "LARGE_SCENARIO_COUNT",
-			Message:  fmt.Sprintf("File has %d Scenarios (>20 should split for better maintainability)", scenarioCount),
-			Severity: "error",
-		})
+		errors = append(errors, *validation.NewValidationError(validation.ErrLargeScenarioCount, fmt.Sprintf("File has %d Scenarios (>20 should split for better maintainability)", scenarioCount), 0))
 	}
 
 	// Validate tags on scenarios (verification, format, constraints)
@@ -374,7 +253,7 @@ func (v *GherkinValidator) Validate(output string, context map[string]interface{
 //
 // Expected format: <module>_<feature-name>
 // Pattern is read from contract.feature_naming_pattern
-func (v *GherkinValidator) validateFeatureNaming(featureName string, lineNum int) ValidationError {
+func (v *Validator) validateFeatureNaming(featureName string, lineNum int) validation.ValidationError {
 	// Get naming pattern from contract
 	pattern := `^[a-z][a-z0-9-]*_[a-z][a-z0-9-]*$` // Default fallback
 	if v.contract != nil && v.contract.RawData != nil {
@@ -385,18 +264,13 @@ func (v *GherkinValidator) validateFeatureNaming(featureName string, lineNum int
 
 	matched, err := regexp.MatchString(pattern, featureName)
 	if err != nil || !matched {
-		return ValidationError{
-			Code: "INVALID_FEATURE_NAMING",
-			Message: fmt.Sprintf(
-				"Feature name '%s' does not follow naming convention '<module>_<feature-name>' (lowercase with hyphens, e.g., 'eac-commands_user-auth')",
-				featureName,
-			),
-			Line:     lineNum,
-			Severity: "error",
-		}
+		return *validation.NewValidationError(validation.ErrInvalidFeatureNaming, fmt.Sprintf(
+			"Feature name '%s' does not follow naming convention '<module>_<feature-name>' (lowercase with hyphens, e.g., 'eac-commands_user-auth')",
+			featureName,
+		), lineNum)
 	}
 
-	return ValidationError{} // No error (empty struct)
+	return validation.ValidationError{} // No error (empty struct)
 }
 
 // validateScenarioTags validates all tag-related rules on scenarios:
@@ -410,8 +284,8 @@ func (v *GherkinValidator) validateFeatureNaming(featureName string, lineNum int
 // Tag inheritance follows Gherkin semantics:
 // - Feature tags are inherited by all Rules and Scenarios
 // - Rule tags are inherited by all Scenarios within that Rule
-func (v *GherkinValidator) validateScenarioTags(lines []string) []ValidationError {
-	var errors []ValidationError
+func (v *Validator) validateScenarioTags(lines []string) []validation.ValidationError {
+	var errors []validation.ValidationError
 
 	// Inherited tags from Feature and Rule levels
 	var featureTags []string     // Tags on the Feature (inherited by all)
@@ -483,7 +357,7 @@ func (v *GherkinValidator) validateScenarioTags(lines []string) []ValidationErro
 
 // combineInheritedTags merges tags from Feature, Rule, and Scenario levels
 // Returns a deduplicated list of all applicable tags
-func (v *GherkinValidator) combineInheritedTags(featureTags, ruleTags, scenarioTags []string) []string {
+func (v *Validator) combineInheritedTags(featureTags, ruleTags, scenarioTags []string) []string {
 	seen := make(map[string]bool)
 	var result []string
 
@@ -511,58 +385,38 @@ func (v *GherkinValidator) combineInheritedTags(featureTags, ruleTags, scenarioT
 }
 
 // validateTagAgainstSchema validates a single tag against the schema definition
-func (v *GherkinValidator) validateTagAgainstSchema(tag string, lineNum int, isFeature bool) []ValidationError {
-	var errors []ValidationError
+func (v *Validator) validateTagAgainstSchema(tag string, lineNum int, isFeature bool) []validation.ValidationError {
+	var errors []validation.ValidationError
 
 	// Get tag definition from schema
 	tagDef, known := v.tagsConfig.GetTag(tag)
 
 	if !known {
 		// Unknown tag - warning only
-		errors = append(errors, ValidationError{
-			Code:     "UNKNOWN_TAG",
-			Message:  fmt.Sprintf("Unknown tag '%s' not defined in testing-tags.yml", tag),
-			Line:     lineNum,
-			Severity: "warning",
-		})
+		errors = append(errors, *validation.NewValidationError(validation.ErrUnknownTag, fmt.Sprintf("Unknown tag '%s' not defined in testing-tags.yml", tag), lineNum))
 		return errors
 	}
 
 	// Validate tag format using schema pattern
 	if formatErr := v.tagsConfig.ValidateTag(tag); formatErr != nil {
-		errors = append(errors, ValidationError{
-			Code:     "INVALID_TAG_FORMAT",
-			Message:  formatErr.Error(),
-			Line:     lineNum,
-			Severity: "error",
-		})
+		errors = append(errors, *validation.NewValidationError(validation.ErrInvalidTagFormat, formatErr.Error(), lineNum))
 	}
 
 	// Validate level constraint from schema
 	if tagDef.Level == "scenario" && isFeature {
-		errors = append(errors, ValidationError{
-			Code:     "INVALID_TAG_LEVEL",
-			Message:  fmt.Sprintf("Tag '%s' can only be used on scenarios, not features (level: scenario)", tag),
-			Line:     lineNum,
-			Severity: "error",
-		})
+		errors = append(errors, *validation.NewValidationError(validation.ErrInvalidTagLevel, fmt.Sprintf("Tag '%s' can only be used on scenarios, not features (level: scenario)", tag), lineNum))
 	}
 
 	if tagDef.Level == "feature" && !isFeature {
-		errors = append(errors, ValidationError{
-			Code:     "INVALID_TAG_LEVEL",
-			Message:  fmt.Sprintf("Tag '%s' can only be used on features, not scenarios (level: feature)", tag),
-			Line:     lineNum,
-			Severity: "error",
-		})
+		errors = append(errors, *validation.NewValidationError(validation.ErrInvalidTagLevel, fmt.Sprintf("Tag '%s' can only be used on features, not scenarios (level: feature)", tag), lineNum))
 	}
 
 	return errors
 }
 
 // validateSchemaConstraints validates constraint rules defined in the schema
-func (v *GherkinValidator) validateSchemaConstraints(tags []string, lineNum int) []ValidationError {
-	var errors []ValidationError
+func (v *Validator) validateSchemaConstraints(tags []string, lineNum int) []validation.ValidationError {
+	var errors []validation.ValidationError
 
 	// Find tags with constraints
 	var constrainedTags []string
@@ -582,12 +436,7 @@ func (v *GherkinValidator) validateSchemaConstraints(tags []string, lineNum int)
 		for _, taxonomyTag := range taxonomyTags {
 			if tag == taxonomyTag {
 				// Found a taxonomy tag - this violates the constraint
-				errors = append(errors, ValidationError{
-					Code:     "MUTUAL_EXCLUSION_VIOLATION",
-					Message:  fmt.Sprintf("Tags %v cannot be used with taxonomy level tags (found: %s)", constrainedTags, tag),
-					Line:     lineNum,
-					Severity: "error",
-				})
+				errors = append(errors, *validation.NewValidationError(validation.ErrMutualExclusionViolation, fmt.Sprintf("Tags %v cannot be used with taxonomy level tags (found: %s)", constrainedTags, tag), lineNum))
 				return errors
 			}
 		}
@@ -597,8 +446,8 @@ func (v *GherkinValidator) validateSchemaConstraints(tags []string, lineNum int)
 }
 
 // validateGxPTagsFromSchema validates GxP-related tags using schema definitions
-func (v *GherkinValidator) validateGxPTagsFromSchema(tags []string, lineNum int) []ValidationError {
-	var errors []ValidationError
+func (v *Validator) validateGxPTagsFromSchema(tags []string, lineNum int) []validation.ValidationError {
+	var errors []validation.ValidationError
 
 	hasGxP := false
 	hasGmpCriticalAspect := false
@@ -628,51 +477,31 @@ func (v *GherkinValidator) validateGxPTagsFromSchema(tags []string, lineNum int)
 
 	// @gmp-critical-aspect requires @gxp
 	if hasGmpCriticalAspect && !hasGxP {
-		errors = append(errors, ValidationError{
-			Code:     "CRITICAL_ASPECT_REQUIRES_GXP",
-			Message:  "@gmp-critical-aspect tag requires @gxp tag to be present",
-			Line:     lineNum,
-			Severity: "error",
-		})
+		errors = append(errors, *validation.NewValidationError(validation.ErrCriticalAspectRequiresGxP, "@gmp-critical-aspect tag requires @gxp tag to be present", lineNum))
 	}
 
 	// @gxp should have @control: tag (warning, not error per schema notes)
 	if hasGxP && !hasControlTag {
-		errors = append(errors, ValidationError{
-			Code:     "GXP_MISSING_CONTROL",
-			Message:  "@gxp tag should link to OSCAL controls using @control: tag (see testing-tags.yml note)",
-			Line:     lineNum,
-			Severity: "warning",
-		})
+		errors = append(errors, *validation.NewValidationError(validation.ErrGxPMissingControl, "@gxp tag should link to OSCAL controls using @control: tag (see testing-tags.yml note)", lineNum))
 	}
 
 	return errors
 }
 
 // validateTagsForScenario validates all tags for a single scenario
-func (v *GherkinValidator) validateTagsForScenario(tags []string, tagLines []int, scenarioLine int) []ValidationError {
-	var errors []ValidationError
+func (v *Validator) validateTagsForScenario(tags []string, tagLines []int, scenarioLine int) []validation.ValidationError {
+	var errors []validation.ValidationError
 
 	// Tags config is required - fail if not available
 	if v.tagsConfig == nil {
-		errors = append(errors, ValidationError{
-			Code:     "MISSING_TAGS_CONFIG",
-			Message:  "Testing tags configuration not loaded - cannot validate tags",
-			Line:     scenarioLine,
-			Severity: "error",
-		})
+		errors = append(errors, *validation.NewValidationError(validation.ErrMissingTagsConfig, "Testing tags configuration not loaded - cannot validate tags", scenarioLine))
 		return errors
 	}
 
 	// 1. Check verification tags (required)
 	if !v.hasVerificationTag(tags) {
 		verificationTags := v.tagsConfig.GetVerificationTags()
-		errors = append(errors, ValidationError{
-			Code:     "MISSING_VERIFICATION_TAG",
-			Message:  fmt.Sprintf("Scenario missing verification tag (required: %s)", strings.Join(verificationTags, ", ")),
-			Line:     scenarioLine,
-			Severity: "error",
-		})
+		errors = append(errors, *validation.NewValidationError(validation.ErrMissingVerificationTag, fmt.Sprintf("Scenario missing verification tag (required: %s)", strings.Join(verificationTags, ", ")), scenarioLine))
 	}
 
 	// Schema-driven tag validation
@@ -699,7 +528,7 @@ func (v *GherkinValidator) validateTagsForScenario(tags []string, tagLines []int
 }
 
 // hasVerificationTag checks if tag list contains at least one verification tag
-func (v *GherkinValidator) hasVerificationTag(tags []string) bool {
+func (v *Validator) hasVerificationTag(tags []string) bool {
 	// Tags config must be available
 	if v.tagsConfig == nil {
 		return false
@@ -720,7 +549,7 @@ func (v *GherkinValidator) hasVerificationTag(tags []string) bool {
 }
 
 // isInTagList checks if a tag is in the given list
-func (v *GherkinValidator) isInTagList(tag string, list []string) bool {
+func (v *Validator) isInTagList(tag string, list []string) bool {
 	for _, t := range list {
 		if t == tag {
 			return true
@@ -747,45 +576,28 @@ func getIndentLevel(line string) int {
 // VerifyImplementation verifies that the validator implements all contract rules
 //
 // This is a self-check to ensure the validator stays in sync with the contract
-func (v *GherkinValidator) VerifyImplementation() []ValidationError {
-	var errors []ValidationError
+func (v *Validator) VerifyImplementation() []validation.ValidationError {
+	var errors []validation.ValidationError
 
 	// Check that contract is loaded
 	if v.contract == nil {
-		errors = append(errors, ValidationError{
-			Code:     "NO_CONTRACT",
-			Message:  "Contract not loaded",
-			Severity: "error",
-		})
+		errors = append(errors, *validation.NewValidationError(validation.ErrNoContract, "Contract not loaded", 0))
 		return errors
 	}
 
 	// Verify contract version matches
-	expectedVersion := "0.1.0"
-	if v.contract.Version != expectedVersion {
-		errors = append(errors, ValidationError{
-			Code:     "CONTRACT_VERSION_MISMATCH",
-			Message:  fmt.Sprintf("Expected contract version %s, got %s", expectedVersion, v.contract.Version),
-			Severity: "error",
-		})
+	if v.contract.Version != paths.DefaultsVersion {
+		errors = append(errors, *validation.NewValidationError(validation.ErrContractVersionMismatch, fmt.Sprintf("Expected contract version %s, got %s", paths.DefaultsVersion, v.contract.Version), 0))
 	}
 
 	// Verify contract name
 	if v.contract.Name != "Gherkin Specification Structure" {
-		errors = append(errors, ValidationError{
-			Code:     "CONTRACT_NAME_MISMATCH",
-			Message:  fmt.Sprintf("Expected contract name 'Gherkin Specification Structure', got '%s'", v.contract.Name),
-			Severity: "warning",
-		})
+		errors = append(errors, *validation.NewValidationError(validation.ErrContractNameMismatch, fmt.Sprintf("Expected contract name 'Gherkin Specification Structure', got '%s'", v.contract.Name), 0))
 	}
 
 	// Verify tag contract is loaded (warning only, not required)
 	if v.tagsConfig == nil {
-		errors = append(errors, ValidationError{
-			Code:     "NO_TAG_CONTRACT",
-			Message:  "Tag contract not loaded - advanced tag validation disabled",
-			Severity: "warning",
-		})
+		errors = append(errors, *validation.NewValidationError(validation.ErrNoTagContract, "Tag contract not loaded - advanced tag validation disabled", 0))
 	}
 
 	return errors

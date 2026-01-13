@@ -61,16 +61,10 @@ func registerGoVersionSteps(sc *godog.ScenarioContext, ctx *goVersionContext, no
 
 	// Hardcoded action file validation steps
 	sc.Step(`^\.github/actions/setup-commands/action\.yaml should have matching go-version default$`, func() error {
-		return ctx.validateActionGoVersion(".github/actions/setup-commands/action.yaml")
+		return ctx.validateSpecificActionGoVersion(repoCtx, "setup-commands")
 	})
 	sc.Step(`^\.github/actions/setup-module-deps/action\.yaml should have matching go-version default$`, func() error {
-		return ctx.validateActionGoVersion(".github/actions/setup-module-deps/action.yaml")
-	})
-	sc.Step(`^\.github/actions/build-module/action\.yaml should have matching go-version default$`, func() error {
-		return ctx.validateActionGoVersion(".github/actions/build-module/action.yaml")
-	})
-	sc.Step(`^\.github/actions/test-module/action\.yaml should have matching go-version default$`, func() error {
-		return ctx.validateActionGoVersion(".github/actions/test-module/action.yaml")
+		return ctx.validateSpecificActionGoVersion(repoCtx, "setup-module-deps")
 	})
 }
 
@@ -265,13 +259,18 @@ func (c *goVersionContext) githubActionsShouldMatchSystemDeps() error {
 	return nil
 }
 
-// validateActionGoVersion validates a specific action file has the correct go-version default
-func (c *goVersionContext) validateActionGoVersion(relPath string) error {
-	actionPath := filepath.Join(c.repoRoot, relPath)
+// validateSpecificActionGoVersion validates a specific GitHub Action has the correct go-version default
+func (c *goVersionContext) validateSpecificActionGoVersion(repoCtx *repositoryContext, actionName string) error {
+	if err := c.ensureRepoRoot(repoCtx); err != nil {
+		return err
+	}
 
-	data, err := os.ReadFile(actionPath)
+	actionFile := filepath.Join(c.repoRoot, ".github", "actions", actionName, "action.yaml")
+
+	// Read the action file
+	data, err := os.ReadFile(actionFile)
 	if err != nil {
-		return fmt.Errorf("failed to read %s: %w", relPath, err)
+		return fmt.Errorf("failed to read %s: %w", actionFile, err)
 	}
 
 	// Pattern to match go-version input with default value
@@ -279,15 +278,19 @@ func (c *goVersionContext) validateActionGoVersion(relPath string) error {
 	matches := re.FindStringSubmatch(string(data))
 
 	if len(matches) < 2 {
-		return fmt.Errorf("%s does not have a go-version default", relPath)
+		return fmt.Errorf("go-version default not found in %s", actionFile)
 	}
 
 	actualVersion := matches[1]
 	if actualVersion != c.sysDepsVersion {
 		return fmt.Errorf(
-			"%s has go-version default '%s' but system-dependencies.yml specifies '%s'",
-			relPath,
+			"GitHub Action go-version mismatch:\n"+
+				"  %s: %s\n"+
+				"  Expected: %s (from system-dependencies.yml)\n\n"+
+				"Update the action file to use go-version default: '%s'",
+			actionFile,
 			actualVersion,
+			c.sysDepsVersion,
 			c.sysDepsVersion,
 		)
 	}

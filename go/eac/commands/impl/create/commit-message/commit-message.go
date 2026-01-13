@@ -28,6 +28,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	aimock "github.com/ready-to-release/eac/go/eac/core/ai"
 	"github.com/ready-to-release/eac/go/eac/core/git"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -239,17 +240,24 @@ func parseConfig() (debug bool, autoCommit bool, workspaceRoot string, err error
 	return debug, autoCommit, workspaceRoot, nil
 }
 
-// verifyContractImplementation checks if the contract implementation is valid
+// verifyContractImplementation checks if the AI config is valid
 func verifyContractImplementation(workspaceRoot string, logger *logging.Logger) error {
 	log.Debug("verifyContractImplementation: start")
-	// Verify that unified ai-config.yml can be loaded for commit-message type
-	_, err := commitmessageinternal.LoadContractFromConfig(workspaceRoot)
+	// Verify that ai-config.yml can be loaded and has commit-message type
+	aiConfig, err := aimock.LoadAIConfig(workspaceRoot)
 	if err != nil {
-		logger.Error("Contract implementation verification failed")
-		logger.Error("contract load error", zap.Error(err))
-		return fmt.Errorf("contract verification failed: %w", err)
+		logger.Error("AI config verification failed")
+		logger.Error("config load error", zap.Error(err))
+		return fmt.Errorf("config verification failed: %w", err)
 	}
-	log.Debug("verifyContractImplementation: contract verified")
+
+	// Check that commit-message type exists
+	if _, ok := aiConfig.Types["commit-message"]; !ok {
+		logger.Error("AI config missing commit-message type")
+		return fmt.Errorf("ai-config.yml must define 'commit-message' type")
+	}
+
+	log.Debug("verifyContractImplementation: config verified")
 	return nil
 }
 
@@ -436,9 +444,11 @@ func assembleFinalMessage(cfg *executionConfig, topLevel string, moduleSections 
 	cleanedOutput := commitmessageinternal.AutoCleanup(combinedMessage)
 	logDebugArtifact(logger, "AFTER-CLEANUP", cleanedOutput)
 
-	// Add missing modules
-	cleanedOutput = addMissingModules(cleanedOutput, cfg.affectedModules, cfg.stagedFiles, cfg.gitDiff)
-	logDebugArtifact(logger, "AFTER-MISSING-MODULES", cleanedOutput)
+	// NOTE: addMissingModules fallback is no longer needed with parallel generation
+	// The new generateModuleSectionsParallel guarantees all affected modules get sections
+	// Keeping the fallback causes duplicate sections, so it's disabled
+	// cleanedOutput = addMissingModules(cleanedOutput, cfg.affectedModules, cfg.stagedFiles, cfg.gitDiff)
+	// logDebugArtifact(logger, "AFTER-MISSING-MODULES", cleanedOutput)
 
 	return cleanedOutput
 }

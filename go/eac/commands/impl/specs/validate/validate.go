@@ -25,11 +25,13 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/core/ai"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"github.com/ready-to-release/eac/go/eac/core/git"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
+	"github.com/ready-to-release/eac/go/eac/core/validation/formats/gherkin"
 )
 
 // commandFlags defines valid flags for the specs validate command
@@ -397,16 +399,11 @@ func validateGherkinFile(filePath string, repoRoot string, checkTags bool) ([]co
 	}
 
 	// Load contract and validator
-	loader := contracts.NewContractLoader(repoRoot, "ai/specs", "0.1.0")
+	loader := ai.NewContractLoader(repoRoot, ai.TypeSpecs, "0.1.0")
 
 	contractData, err := loader.LoadContract()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load contract: %w", err)
-	}
-
-	antiCorruptionRules, err := loader.LoadAntiCorruptionRules()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load anti-corruption rules: %w", err)
 	}
 
 	// Load tags config for advanced tag validation (only when checkTags is enabled)
@@ -420,7 +417,7 @@ func validateGherkinFile(filePath string, repoRoot string, checkTags bool) ([]co
 	}
 
 	// Create validator with tags config support
-	validator := contracts.NewGherkinValidatorWithTags(contractData, tagsConfig, antiCorruptionRules)
+	validator := gherkin.NewValidatorWithTags(contractData, tagsConfig)
 
 	// Validate content
 	errors := validator.Validate(string(content), nil)
@@ -732,7 +729,7 @@ func fixGherkinFile(filePath string, errors []contracts.ValidationError) (*FixRe
 
 	// First pass: fix feature naming (do this first as it doesn't change line numbers)
 	for _, e := range errors {
-		if e.Code == "INVALID_FEATURE_NAMING" && e.Line > 0 {
+		if e.GetCode() == "INVALID_FEATURE_NAMING" && e.Line > 0 {
 			idx := e.Line - 1
 			if idx >= 0 && idx < len(lines) {
 				newFeatureName := generateFeatureName(filePath, lines[idx])
@@ -754,7 +751,7 @@ func fixGherkinFile(filePath string, errors []contracts.ValidationError) (*FixRe
 	// Second pass: collect lines needing @ov insertion
 	linesToFix := []int{}
 	for _, e := range errors {
-		if e.Code == "MISSING_VERIFICATION_TAG" && e.Line > 0 {
+		if e.GetCode() == "MISSING_VERIFICATION_TAG" && e.Line > 0 {
 			linesToFix = append(linesToFix, e.Line)
 		}
 	}

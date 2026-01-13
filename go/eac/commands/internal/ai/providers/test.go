@@ -18,15 +18,11 @@ import (
 //  2. Environment variable: R2R_TEST_AI_RESPONSE
 //  3. Error if neither is available
 type TestProvider struct {
-	repoRoot string
 }
 
 // NewTestProvider creates a test provider for acceptance testing
 func NewTestProvider() *TestProvider {
-	repoRoot, _ := repository.GetRepositoryRoot("")
-	return &TestProvider{
-		repoRoot: repoRoot,
-	}
+	return &TestProvider{}
 }
 
 // Name returns "test" for provider identification
@@ -37,8 +33,9 @@ func (p *TestProvider) Name() string {
 // Execute returns the mock response from file or environment variable
 func (p *TestProvider) Execute(ctx context.Context, input string, opts ...ai.Option) (string, error) {
 	// 1. Try file-based mock response
-	if p.repoRoot != "" {
-		mockFilePath := paths.AITestMockPath(p.repoRoot)
+	// Get repo root dynamically to support isolated test environments
+	if repoRoot, _ := repository.GetRepositoryRoot(""); repoRoot != "" {
+		mockFilePath := paths.AITestMockPath(repoRoot)
 		if content, err := os.ReadFile(mockFilePath); err == nil {
 			return string(content), nil
 		}

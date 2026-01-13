@@ -1,5 +1,5 @@
-// Package contracts provides generalized contract-based validation framework
-package contracts
+// Package config handles AI configuration loading and management
+package config
 
 import (
 	"fmt"
@@ -7,8 +7,15 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"gopkg.in/yaml.v3"
+)
+
+const (
+	// Local AI configuration constants
+	promptExtension = ".md"
+	promptsSubdir   = "prompts"
 )
 
 // AIConfigLoader loads the unified AI configuration
@@ -31,17 +38,17 @@ func (l *AIConfigLoader) Load() (*AIConfig, error) {
 	}
 
 	// Try user override first (/var/task/.r2r/eac/ai-config.yml)
-	configPath := filepath.Join(l.workspaceRoot, paths.R2RDir, paths.EACDir, "ai-config.yml")
+	configPath := filepath.Join(l.workspaceRoot, paths.R2RDir, paths.EACDir, paths.AIConfigFilename)
 	data, err := os.ReadFile(configPath)
 
 	// If not found, fall back to system default (/app/.r2r/eac/ai-config.yml)
 	if os.IsNotExist(err) {
-		systemRoot := os.Getenv("R2R_CONTAINER_ROOT")
+		systemRoot := os.Getenv(paths.ContainerRootEnv)
 		if systemRoot == "" {
 			// Local dev mode - try workspace root
 			systemRoot = l.workspaceRoot
 		}
-		systemPath := filepath.Join(systemRoot, paths.R2RDir, paths.EACDir, "ai-config.yml")
+		systemPath := filepath.Join(systemRoot, paths.R2RDir, paths.EACDir, paths.AIConfigFilename)
 		data, err = os.ReadFile(systemPath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read AI config from user repo (%s) or system defaults (%s): %w", configPath, systemPath, err)
@@ -59,7 +66,7 @@ func (l *AIConfigLoader) Load() (*AIConfig, error) {
 	return &config, nil
 }
 
-// GetType returns the configuration for a specific AI type with merged anti-corruption rules
+// GetType returns the configuration for a specific AI type
 func (l *AIConfigLoader) GetType(typeName string) (*AITypeConfig, error) {
 	config, err := l.Load()
 	if err != nil {
@@ -74,44 +81,9 @@ func (l *AIConfigLoader) GetType(typeName string) (*AITypeConfig, error) {
 	return &typeConfig, nil
 }
 
-// GetAntiCorruptionRules returns merged anti-corruption rules for a type (defaults + type-specific)
-func (l *AIConfigLoader) GetAntiCorruptionRules(typeName string) (*AntiCorruptionRules, error) {
-	config, err := l.Load()
-	if err != nil {
-		return nil, err
-	}
-
-	typeConfig, ok := config.Types[typeName]
-	if !ok {
-		return nil, fmt.Errorf("unknown AI type: %s", typeName)
-	}
-
-	// Merge defaults with type-specific rules
-	merged := config.Defaults.AntiCorruption.Merge(typeConfig.AntiCorruption)
-	return &merged, nil
-}
-
-// GetStartMarker returns the content start marker for a type (nil means immediate start)
-func (l *AIConfigLoader) GetStartMarker(typeName string) (*string, error) {
-	typeConfig, err := l.GetType(typeName)
-	if err != nil {
-		return nil, err
-	}
-	return typeConfig.Output.StartMarker, nil
-}
-
-// GetValidation returns the validation rules for a type
-func (l *AIConfigLoader) GetValidation(typeName string) (map[string]interface{}, error) {
-	typeConfig, err := l.GetType(typeName)
-	if err != nil {
-		return nil, err
-	}
-	return typeConfig.Validation, nil
-}
-
 // LoadPrompt loads a prompt file from ai/prompts/<name>.md
 func (l *AIConfigLoader) LoadPrompt(promptName string) (string, error) {
-	promptPath := filepath.Join(l.workspaceRoot, paths.R2RDir, paths.EACDir, "ai", "prompts", promptName)
+	promptPath := filepath.Join(l.workspaceRoot, paths.R2RDir, paths.EACDir, paths.AIDir, promptsSubdir, promptName)
 	data, err := os.ReadFile(promptPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to read prompt %s: %w", promptPath, err)
@@ -152,7 +124,7 @@ func (l *AIConfigLoader) LoadReferencedFile(relativePath string) ([]byte, error)
 
 	// If not found in user repo, fall back to system defaults
 	if os.IsNotExist(err) {
-		systemRoot := os.Getenv("R2R_CONTAINER_ROOT")
+		systemRoot := os.Getenv(paths.ContainerRootEnv)
 		if systemRoot == "" {
 			// Local dev mode - system defaults are same as workspace root
 			// This means no fallback is available, return original error
@@ -191,8 +163,9 @@ type ContractLoader struct {
 func NewContractLoader(workspaceRoot string, contractPath string, version string) *ContractLoader {
 	// Extract type name from path (e.g., "ai/specs" -> "specs")
 	typeName := contractPath
-	if len(contractPath) > 3 && contractPath[:3] == "ai/" {
-		typeName = contractPath[3:]
+	aiPrefix := paths.AIDir + "/"
+	if strings.HasPrefix(contractPath, aiPrefix) {
+		typeName = contractPath[len(aiPrefix):]
 	}
 
 	return &ContractLoader{
@@ -202,27 +175,24 @@ func NewContractLoader(workspaceRoot string, contractPath string, version string
 }
 
 // LoadContract loads validation config as a Contract for backward compatibility
-func (cl *ContractLoader) LoadContract() (*Contract, error) {
+// Note: Validation is now done via JSON schema. This returns minimal contract info.
+func (cl *ContractLoader) LoadContract() (*contracts.Contract, error) {
 	typeConfig, err := cl.loader.GetType(cl.typeName)
 	if err != nil {
 		return nil, err
 	}
 
-	// Create Contract from type config
-	contract := &Contract{
-		Version:     "0.1.0",
+	// Create minimal Contract from type config
+	// Actual validation is done via JSON schema
+	contract := &contracts.Contract{
+		Version:     paths.DefaultsVersion,
 		Name:        typeConfig.Name,
 		Description: typeConfig.Description,
-		Type:        ContractTypeAI,
-		RawData:     typeConfig.Validation,
+		Type:        contracts.ContractTypeAI,
+		RawData:     make(map[string]interface{}), // Empty - using JSON schema now
 	}
 
 	return contract, nil
-}
-
-// LoadAntiCorruptionRules loads merged anti-corruption rules
-func (cl *ContractLoader) LoadAntiCorruptionRules() (*AntiCorruptionRules, error) {
-	return cl.loader.GetAntiCorruptionRules(cl.typeName)
 }
 
 // LoadPrompt loads a prompt with three-tier priority:
@@ -241,8 +211,8 @@ func (cl *ContractLoader) LoadPrompt(promptName string, fallback string) (string
 	}
 
 	// Normalize: Add .md extension if missing (unless absolute path)
-	if !filepath.IsAbs(promptName) && !strings.HasSuffix(promptName, ".md") {
-		promptName = promptName + ".md"
+	if !filepath.IsAbs(promptName) && !strings.HasSuffix(promptName, promptExtension) {
+		promptName = promptName + promptExtension
 	}
 
 	// Priority 1: Custom path from --prompt flag (absolute path)
@@ -256,7 +226,7 @@ func (cl *ContractLoader) LoadPrompt(promptName string, fallback string) (string
 
 	// Priority 2: Team override (.r2r/eac/templates/ai/<type>/<name>)
 	// Note: Team override uses "ai/<type>" path structure
-	teamOverridePath := filepath.Join(cl.loader.workspaceRoot, paths.R2RDir, paths.EACDir, "templates", "ai", cl.typeName, promptName)
+	teamOverridePath := filepath.Join(cl.loader.workspaceRoot, paths.R2RDir, paths.EACDir, paths.TemplatesDir, paths.AIDir, cl.typeName, promptName)
 	if content, err := os.ReadFile(teamOverridePath); err == nil {
 		return string(content), "team override", nil
 	}
@@ -267,10 +237,10 @@ func (cl *ContractLoader) LoadPrompt(promptName string, fallback string) (string
 	// This ensures templates work in both container and development scenarios
 	// Note: System default uses "ai/<type>" path structure
 	distRoot := cl.loader.workspaceRoot
-	if containerRoot := os.Getenv("R2R_CONTAINER_ROOT"); containerRoot != "" {
+	if containerRoot := os.Getenv(paths.ContainerRootEnv); containerRoot != "" {
 		distRoot = containerRoot
 	}
-	systemDefaultPath := filepath.Join(distRoot, paths.TemplatesDir, "ai", cl.typeName, promptName)
+	systemDefaultPath := filepath.Join(distRoot, paths.TemplatesDir, paths.AIDir, cl.typeName, promptName)
 	if content, err := os.ReadFile(systemDefaultPath); err == nil {
 		return string(content), "system default", nil
 	}
@@ -291,7 +261,7 @@ func (cl *ContractLoader) getDefaultPromptName() string {
 	// "ai/commit-message" → "commit-message"
 	// "ai/risk-profile" → "risk-profile"
 	baseName := filepath.Base(cl.typeName)
-	return baseName + ".md"
+	return baseName + promptExtension
 }
 
 // LoadPromptWithPriority loads a prompt with explicit priority handling
@@ -320,7 +290,7 @@ func (cl *ContractLoader) LoadReferencedFile(relativePath string) ([]byte, error
 
 // GetContractPath returns the path to the AI config directory
 func (cl *ContractLoader) GetContractPath() string {
-	return filepath.Join(cl.loader.workspaceRoot, paths.R2RDir, paths.EACDir, "ai", cl.typeName)
+	return filepath.Join(cl.loader.workspaceRoot, paths.R2RDir, paths.EACDir, paths.AIDir, cl.typeName)
 }
 
 // IsAI returns true (all ContractLoader instances are for AI configs)
@@ -389,4 +359,10 @@ func ExtractMap(data map[string]interface{}, key string) map[string]interface{} 
 		}
 	}
 	return nil
+}
+
+// LoadAIConfig is a convenience function to load AI configuration
+func LoadAIConfig(workspaceRoot string) (*AIConfig, error) {
+	loader := NewAIConfigLoader(workspaceRoot)
+	return loader.Load()
 }

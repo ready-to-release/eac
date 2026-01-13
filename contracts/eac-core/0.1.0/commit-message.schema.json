@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "commit-message.schema.json",
+  "title": "Commit Message",
+  "description": "Structured commit message data for two-phase generation",
+  "type": "object",
+  "required": ["type", "scope", "subject"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": ["feat", "fix", "refactor", "docs", "chore", "test", "perf", "style", "ci", "build"],
+      "description": "Semantic commit type"
+    },
+    "scope": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "minLength": 1,
+      "maxLength": 20,
+      "description": "Commit scope (module or component)"
+    },
+    "subject": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 72,
+      "description": "Commit subject line"
+    },
+    "body": {
+      "type": "string",
+      "description": "Optional commit body with detailed explanation"
+    },
+    "breaking": {
+      "type": "boolean",
+      "description": "Whether this is a breaking change",
+      "default": false
+    },
+    "modules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "changes"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Module name"
+          },
+          "changes": {
+            "type": "string",
+            "description": "Module-specific changes"
+          }
+        }
+      },
+      "description": "Per-module change details"
+    }
+  }
+}

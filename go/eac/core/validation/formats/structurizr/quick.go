@@ -1,4 +1,4 @@
-package design
+package structurizr
 
 import (
 	"fmt"
@@ -6,18 +6,20 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
+	"github.com/ready-to-release/eac/go/eac/core/validation"
 )
 
-// QuickDSLValidator performs fast syntax validation without Docker
-type QuickDSLValidator struct {
+// QuickValidator performs fast syntax validation without Docker
+// Used for AI generation to provide rapid feedback (< 100ms, no Docker dependency)
+type QuickValidator struct {
 	identifierPattern   *regexp.Regexp
 	relationshipPattern *regexp.Regexp
 	contract            *contracts.Contract
 }
 
-// NewQuickDSLValidator creates a new quick validator
-func NewQuickDSLValidator() *QuickDSLValidator {
-	return &QuickDSLValidator{
+// NewQuickValidator creates a new quick validator
+func NewQuickValidator() *QuickValidator {
+	return &QuickValidator{
 		// Valid identifier: alphanumeric, underscore, dash (not just numbers)
 		identifierPattern: regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_-]*$`),
 		// Relationship pattern: identifier -> identifier "description"
@@ -26,9 +28,9 @@ func NewQuickDSLValidator() *QuickDSLValidator {
 	}
 }
 
-// NewQuickDSLValidatorWithContract creates a new quick validator with contract
-func NewQuickDSLValidatorWithContract(contract *contracts.Contract) *QuickDSLValidator {
-	v := NewQuickDSLValidator()
+// NewQuickValidatorWithContract creates a new quick validator with contract
+func NewQuickValidatorWithContract(contract *contracts.Contract) *QuickValidator {
+	v := NewQuickValidator()
 	v.contract = contract
 
 	// Update identifier pattern from contract if available
@@ -44,8 +46,8 @@ func NewQuickDSLValidatorWithContract(contract *contracts.Contract) *QuickDSLVal
 }
 
 // Validate performs quick syntax validation
-func (v *QuickDSLValidator) Validate(output string, context map[string]interface{}) []contracts.ValidationError {
-	var errors []contracts.ValidationError
+func (v *QuickValidator) Validate(output string, context map[string]interface{}) []validation.ValidationError {
+	var errors []validation.ValidationError
 
 	lines := strings.Split(output, "\n")
 
@@ -73,22 +75,21 @@ func (v *QuickDSLValidator) Validate(output string, context map[string]interface
 }
 
 // validateWorkspaceStart checks if the DSL starts with "workspace"
-func (v *QuickDSLValidator) validateWorkspaceStart(output string) *contracts.ValidationError {
+func (v *QuickValidator) validateWorkspaceStart(output string) *validation.ValidationError {
 	trimmed := strings.TrimSpace(output)
 	if !strings.HasPrefix(trimmed, "workspace") {
-		return &contracts.ValidationError{
-			Code:     "missing_workspace",
-			Message:  "DSL must start with 'workspace' keyword",
-			Severity: "error",
-			Line:     1,
-		}
+		return validation.NewValidationError(
+			validation.ErrMissingWorkspace,
+			"DSL must start with 'workspace' keyword",
+			1,
+		)
 	}
 	return nil
 }
 
 // validateBalancedBraces checks if braces are balanced
-func (v *QuickDSLValidator) validateBalancedBraces(lines []string) []contracts.ValidationError {
-	var errors []contracts.ValidationError
+func (v *QuickValidator) validateBalancedBraces(lines []string) []validation.ValidationError {
+	var errors []validation.ValidationError
 	braceCount := 0
 	var braceStack []int // Track line numbers where braces open
 
@@ -101,12 +102,11 @@ func (v *QuickDSLValidator) validateBalancedBraces(lines []string) []contracts.V
 			} else if char == '}' {
 				braceCount--
 				if braceCount < 0 {
-					errors = append(errors, contracts.ValidationError{
-						Code:     "unmatched_brace",
-						Message:  "Unmatched closing brace '}'",
-						Severity: "error",
-						Line:     lineNum,
-					})
+					errors = append(errors, *validation.NewValidationError(
+						validation.ErrUnmatchedBrace,
+						"Unmatched closing brace '}'",
+						lineNum,
+					))
 					return errors // Stop on first unmatched brace
 				}
 				if len(braceStack) > 0 {
@@ -119,12 +119,11 @@ func (v *QuickDSLValidator) validateBalancedBraces(lines []string) []contracts.V
 	if braceCount > 0 {
 		// Unclosed braces
 		for _, lineNum := range braceStack {
-			errors = append(errors, contracts.ValidationError{
-				Code:     "unclosed_brace",
-				Message:  fmt.Sprintf("Unclosed brace '{' (opened at line %d)", lineNum),
-				Severity: "error",
-				Line:     lineNum,
-			})
+			errors = append(errors, *validation.NewValidationError(
+				validation.ErrUnclosedBrace,
+				fmt.Sprintf("Unclosed brace '{' (opened at line %d)", lineNum),
+				0,
+			))
 		}
 	}
 
@@ -132,8 +131,8 @@ func (v *QuickDSLValidator) validateBalancedBraces(lines []string) []contracts.V
 }
 
 // validateIdentifiers checks for invalid identifier names
-func (v *QuickDSLValidator) validateIdentifiers(lines []string) []contracts.ValidationError {
-	var errors []contracts.ValidationError
+func (v *QuickValidator) validateIdentifiers(lines []string) []validation.ValidationError {
+	var errors []validation.ValidationError
 
 	// Pattern to extract identifiers from common DSL constructs
 	// Matches: person identifier, softwareSystem identifier, container identifier, etc.
@@ -159,12 +158,11 @@ func (v *QuickDSLValidator) validateIdentifiers(lines []string) []contracts.Vali
 						identifier = strings.Trim(identifier, `"`)
 						// Check if it's a valid identifier (not a string literal)
 						if !strings.Contains(parts[j+1], `"`) && !v.identifierPattern.MatchString(identifier) {
-							errors = append(errors, contracts.ValidationError{
-								Code:     "invalid_identifier",
-								Message:  fmt.Sprintf("Invalid identifier '%s' - must start with letter and contain only alphanumeric, underscore, or dash", identifier),
-								Severity: "error",
-								Line:     lineNum,
-							})
+							errors = append(errors, *validation.NewValidationError(
+								validation.ErrInvalidIdentifier,
+								fmt.Sprintf("Invalid identifier '%s' - must start with letter and contain only alphanumeric, underscore, or dash", identifier),
+								lineNum,
+							))
 						}
 					}
 				}
@@ -176,8 +174,8 @@ func (v *QuickDSLValidator) validateIdentifiers(lines []string) []contracts.Vali
 }
 
 // validateRelationships checks for invalid relationships (e.g., parent-child)
-func (v *QuickDSLValidator) validateRelationships(lines []string) []contracts.ValidationError {
-	var errors []contracts.ValidationError
+func (v *QuickValidator) validateRelationships(lines []string) []validation.ValidationError {
+	var errors []validation.ValidationError
 
 	// Build a map of element hierarchies to detect parent-child relationships
 	// This is a simplified check - full validation requires parsing the entire structure
@@ -218,22 +216,20 @@ func (v *QuickDSLValidator) validateRelationships(lines []string) []contracts.Va
 
 				// Check if target is a parent of source
 				if parent, exists := elementHierarchy[source]; exists && parent == target {
-					errors = append(errors, contracts.ValidationError{
-						Code:     "parent_child_relationship",
-						Message:  fmt.Sprintf("Relationships cannot be added between parents and children: %s -> %s", source, target),
-						Severity: "error",
-						Line:     lineNum,
-					})
+					errors = append(errors, *validation.NewValidationError(
+						validation.ErrParentChildRelationship,
+						fmt.Sprintf("Relationships cannot be added between parents and children: %s -> %s", source, target),
+						lineNum,
+					))
 				}
 
 				// Check if source is a parent of target
 				if parent, exists := elementHierarchy[target]; exists && parent == source {
-					errors = append(errors, contracts.ValidationError{
-						Code:     "parent_child_relationship",
-						Message:  fmt.Sprintf("Relationships cannot be added between parents and children: %s -> %s", source, target),
-						Severity: "error",
-						Line:     lineNum,
-					})
+					errors = append(errors, *validation.NewValidationError(
+						validation.ErrParentChildRelationship,
+						fmt.Sprintf("Relationships cannot be added between parents and children: %s -> %s", source, target),
+						lineNum,
+					))
 				}
 			}
 		}
@@ -259,6 +255,6 @@ func (v *QuickDSLValidator) validateRelationships(lines []string) []contracts.Va
 }
 
 // VerifyImplementation verifies the validator is ready
-func (v *QuickDSLValidator) VerifyImplementation() []contracts.ValidationError {
-	return []contracts.ValidationError{}
+func (v *QuickValidator) VerifyImplementation() []validation.ValidationError {
+	return []validation.ValidationError{}
 }

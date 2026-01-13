@@ -1,5 +1,5 @@
-// Package ai provides AI-related utilities including mock support for testing.
-package ai
+// Package mock provides AI-related utilities including mock support for testing.
+package mock
 
 import (
 	"os"

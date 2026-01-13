@@ -17,15 +17,15 @@
 package riskcatalog
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 
-	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"github.com/ready-to-release/eac/go/eac/core/validation"
+	"github.com/ready-to-release/eac/go/eac/core/validation/formats/oscal"
 )
 
 var log = logging.C()
@@ -40,18 +40,6 @@ type Config struct {
 	WorkspaceRoot string
 }
 
-// ValidationError represents a validation failure.
-type ValidationError struct {
-	Field   string `json:"field"`
-	Message string `json:"message"`
-}
-
-// ValidationResult holds the outcome of validation.
-type ValidationResult struct {
-	Valid  bool              `json:"valid"`
-	Errors []ValidationError `json:"errors,omitempty"`
-}
-
 // ValidateRiskCatalog is the entry point for the validate risk-catalog command.
 func ValidateRiskCatalog() int {
 	config, err := parseConfig()
@@ -64,13 +52,13 @@ func ValidateRiskCatalog() int {
 		return 1
 	}
 
-	// Validate the catalog using schema
-	result := validateCatalog(config)
+	// Validate the catalog using core validator
+	errors := validateCatalog(config)
 
 	// Report results
-	reportValidationResults(config, result)
+	reportValidationResults(config, errors)
 
-	if !result.Valid {
+	if len(errors) > 0 {
 		return 1
 	}
 	return 0
@@ -138,90 +126,44 @@ func parseConfig() (*Config, error) {
 	return config, nil
 }
 
-// validateCatalog validates an OSCAL catalog using go-oscal types.
-func validateCatalog(config *Config) *ValidationResult {
-	result := &ValidationResult{Valid: true}
-
+// validateCatalog validates an OSCAL catalog using the core validator.
+func validateCatalog(config *Config) []validation.ValidationError {
 	// Read file
 	data, err := os.ReadFile(config.FilePath)
 	if err != nil {
-		result.Valid = false
-		result.Errors = append(result.Errors, ValidationError{
-			Field:   "file",
-			Message: fmt.Sprintf("failed to read file: %v", err),
-		})
-		return result
+		return []validation.ValidationError{
+			*validation.NewValidationError(
+				validation.ErrOSCALFileRead,
+				fmt.Sprintf("failed to read file: %v", err),
+				0,
+			),
+		}
 	}
 
-	// Parse using go-oscal wrapper type
-	var oscalDoc oscalTypes.OscalModels
-	if err := json.Unmarshal(data, &oscalDoc); err != nil {
-		result.Valid = false
-		result.Errors = append(result.Errors, ValidationError{
-			Field:   "json",
-			Message: fmt.Sprintf("invalid JSON: %v", err),
-		})
-		return result
+	// Create OSCAL catalog validator
+	validator, err := oscal.NewValidator(oscal.TypeCatalog)
+	if err != nil {
+		return []validation.ValidationError{
+			*validation.NewValidationError(
+				validation.ErrSetupError,
+				fmt.Sprintf("failed to create OSCAL validator: %v", err),
+				0,
+			),
+		}
 	}
 
-	// Check if it's a catalog document
-	if oscalDoc.Catalog == nil {
-		result.Valid = false
-		result.Errors = append(result.Errors, ValidationError{
-			Field:   "document",
-			Message: "not an OSCAL catalog document",
-		})
-		return result
+	// Validate the catalog content
+	context := map[string]interface{}{
+		"file_path": config.FilePath,
 	}
-
-	catalog := oscalDoc.Catalog
-
-	// Validate required UUID field
-	if catalog.UUID == "" {
-		result.Valid = false
-		result.Errors = append(result.Errors, ValidationError{
-			Field:   "catalog.uuid",
-			Message: "missing required field: uuid",
-		})
-	}
-
-	// Validate metadata
-	if catalog.Metadata.Title == "" {
-		result.Valid = false
-		result.Errors = append(result.Errors, ValidationError{
-			Field:   "catalog.metadata.title",
-			Message: "missing required field: title",
-		})
-	}
-
-	if catalog.Metadata.LastModified.IsZero() {
-		result.Valid = false
-		result.Errors = append(result.Errors, ValidationError{
-			Field:   "catalog.metadata.last-modified",
-			Message: "missing required field: last-modified",
-		})
-	}
-
-	// Validate that catalog has at least one control or group
-	hasControls := catalog.Controls != nil && len(*catalog.Controls) > 0
-	hasGroups := catalog.Groups != nil && len(*catalog.Groups) > 0
-
-	if !hasControls && !hasGroups {
-		result.Valid = false
-		result.Errors = append(result.Errors, ValidationError{
-			Field:   "catalog",
-			Message: "catalog must have at least one control or group",
-		})
-	}
-
-	return result
+	return validator.Validate(string(data), context)
 }
 
 // reportValidationResults prints validation results.
-func reportValidationResults(config *Config, result *ValidationResult) {
+func reportValidationResults(config *Config, errors []validation.ValidationError) {
 	filename := filepath.Base(config.FilePath)
 
-	if result.Valid {
+	if len(errors) == 0 {
 		log.Info("")
 		log.Infof("Validation passed")
 		log.Infof("Type: catalog")
@@ -236,9 +178,31 @@ func reportValidationResults(config *Config, result *ValidationResult) {
 		log.Errorf("File: %s", filename)
 		log.Info("")
 
-		log.Errorf("Errors: %d", len(result.Errors))
-		for _, e := range result.Errors {
-			log.Errorf("  - %s: %s", e.Field, e.Message)
+		// Separate errors and warnings
+		var errorList []validation.ValidationError
+		var warningList []validation.ValidationError
+
+		for _, e := range errors {
+			if e.Code.Severity == validation.SeverityError {
+				errorList = append(errorList, e)
+			} else {
+				warningList = append(warningList, e)
+			}
+		}
+
+		if len(errorList) > 0 {
+			log.Errorf("Errors: %d", len(errorList))
+			for _, e := range errorList {
+				log.Errorf("  - %s: %s", e.Code.Code, e.Message)
+			}
+		}
+
+		if len(warningList) > 0 {
+			log.Info("")
+			log.Infof("Warnings: %d", len(warningList))
+			for _, w := range warningList {
+				log.Infof("  - %s: %s", w.Code.Code, w.Message)
+			}
 		}
 		log.Info("")
 	}

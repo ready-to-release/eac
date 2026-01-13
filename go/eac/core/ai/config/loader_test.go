@@ -1,7 +1,7 @@
 //go:build L1 && ov
 // +build L1,ov
 
-package contracts
+package config
 
 import (
 	"os"

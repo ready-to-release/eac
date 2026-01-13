@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ready-to-release/eac/go/eac/core/ai"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
@@ -51,7 +52,7 @@ func TestPromptTemplateRendering(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Load prompt template
-			loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "")
+			loader := ai.NewContractLoader(workspaceRoot, ai.TypeCommitMessage, "")
 			promptTemplate, _, err := loader.LoadPrompt(tc.promptName, "")
 			if err != nil {
 				t.Fatalf("Failed to load prompt %s: %v", tc.promptName, err)
@@ -76,7 +77,7 @@ func TestPromptContractEmbedding(t *testing.T) {
 	}
 
 	// Load prompt
-	loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "")
+	loader := ai.NewContractLoader(workspaceRoot, ai.TypeCommitMessage, "")
 	promptContent, _, err := loader.LoadPrompt("top-level", "")
 	if err != nil {
 		t.Fatalf("Failed to load top-level prompt: %v", err)
@@ -107,7 +108,7 @@ func TestPromptContractEmbedding(t *testing.T) {
 	}
 
 	// Verify contract can still be loaded for validation (even though not embedded in prompt)
-	loader = contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "0.1.0")
+	loader = ai.NewContractLoader(workspaceRoot, ai.TypeCommitMessage, "0.1.0")
 	_, err = loader.LoadContract()
 	if err != nil {
 		t.Errorf("Failed to load contract: %v", err)
@@ -125,7 +126,7 @@ func TestTemplateBackwardCompatibility(t *testing.T) {
 	// We can't easily simulate a failure here, so we just verify the code path exists
 	// by checking that the function has proper error handling
 
-	loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "0.1.0")
+	loader := ai.NewContractLoader(workspaceRoot, ai.TypeCommitMessage, "0.1.0")
 	_, err = loader.LoadContract()
 	// Contract loading may fail - that's okay, we fall back gracefully
 	_ = err

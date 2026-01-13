@@ -31,13 +31,24 @@ type Release struct {
 var force bool
 
 func init() {
-	// Add force flag without shorthand to avoid conflicts with existing -f flag
-	updateCmd.Flags().BoolVarP(&force, "force", "", false, "Force update even if current version is latest")
+	// Add force flag to update self command
+	updateSelfCmd.Flags().BoolVarP(&force, "force", "", false, "Force update even if current version is latest")
+
+	// Add update self as subcommand of update
+	updateCmd.AddCommand(updateSelfCmd)
+
+	// Add update to root
 	RootCmd.AddCommand(updateCmd)
 }
 
 var updateCmd = &cobra.Command{
 	Use:   "update",
+	Short: "Update commands",
+	Long:  `Parent command for update operations (update design, etc). Run 'r2r update --help' for available subcommands.`,
+}
+
+var updateSelfCmd = &cobra.Command{
+	Use:   "self",
 	Short: "Update r2r-cli to the latest version",
 	Long:  `Updates r2r-cli to the latest version from GitHub releases.`,
 	Run: func(cmd *cobra.Command, args []string) {

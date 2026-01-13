@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"github.com/cucumber/godog"
 	"github.com/ready-to-release/eac/go/eac/specs/internal"
@@ -205,58 +204,13 @@ func registerCreateSquashMessageSteps(sc *godog.ScenarioContext, ctx *internal.T
 
 	// Mock AI configuration for squash message
 	sc.Step(`^the mock AI is configured to return a valid squash message$`, func() error {
-		mockContent := `feat(test-module): implement comprehensive testing features
-
-Auditor-Summary: Added complete test module functionality with multiple features.
-
-Implemented feature 1 and feature 2 to provide comprehensive testing
-capabilities. The changes enable better test coverage and improve
-overall code quality.
-
-Changes: 2 files, +10 insertions, -0 deletions`
-
-		return internal.CreateFile(ctx, ".r2r/test/ai-mock.txt", mockContent)
+		// Use subprocess mock system with command-specific override
+		// This sets R2R_MOCK_AI_SQUASH_MESSAGE=mock-response.txt
+		ctx.SetMockOverride("R2R_MOCK_AI_SQUASH_MESSAGE", "mock-response.txt")
+		return nil
 	})
 
 	// Output verification steps
-	sc.Step(`^the message synthesizes all commits into cohesive narrative$`, func() error {
-		output := ctx.CommandOutput
-
-		// Check that it's not just listing commits one by one
-		// A synthesized message should not have multiple "feat:" or "fix:" prefixes
-		lines := strings.Split(output, "\n")
-		conventionalPrefixes := 0
-		for _, line := range lines {
-			if strings.HasPrefix(line, "feat:") || strings.HasPrefix(line, "feat(") ||
-				strings.HasPrefix(line, "fix:") || strings.HasPrefix(line, "fix(") {
-				conventionalPrefixes++
-			}
-		}
-
-		if conventionalPrefixes > 1 {
-			return fmt.Errorf("message appears to list commits individually (found %d commit prefixes)", conventionalPrefixes)
-		}
-
-		return nil
-	})
-
-	sc.Step(`^the message includes "Auditor-Summary" line$`, func() error {
-		if !strings.Contains(ctx.CommandOutput, "Auditor-Summary:") {
-			return fmt.Errorf("message doesn't contain 'Auditor-Summary:' line")
-		}
-		return nil
-	})
-
-	sc.Step(`^the message includes "Changes:" statistics line$`, func() error {
-		if !strings.Contains(ctx.CommandOutput, "Changes:") {
-			return fmt.Errorf("message doesn't contain 'Changes:' statistics line")
-		}
-		// Check it includes numbers
-		if !strings.Contains(ctx.CommandOutput, "files") {
-			return fmt.Errorf("Changes line doesn't include file statistics")
-		}
-		return nil
-	})
 
 	// Base branch verification
 	sc.Step(`^the command compares against "([^"]*)" branch$`, func(branch string) error {

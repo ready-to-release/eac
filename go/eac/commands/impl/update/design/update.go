@@ -36,9 +36,11 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
+	coreai "github.com/ready-to-release/eac/go/eac/core/ai"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"github.com/ready-to-release/eac/go/eac/core/validation/formats/structurizr"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
@@ -197,11 +199,11 @@ type updateFlags struct {
 // parseUpdateCommandArgs parses args for the update subcommand
 // Returns: module path, flags, error
 func parseUpdateCommandArgs(args []string) (string, *updateFlags, error) {
-	// Find command position
+	// Find command position (looking for "update" followed by "design")
 	cmdPos := -1
 	for i, arg := range args {
-		if arg == "update" {
-			cmdPos = i
+		if arg == "update" && i+1 < len(args) && args[i+1] == "design" {
+			cmdPos = i + 1 // Position after "design"
 			break
 		}
 	}
@@ -210,7 +212,7 @@ func parseUpdateCommandArgs(args []string) (string, *updateFlags, error) {
 		return "", nil, fmt.Errorf("invalid command structure")
 	}
 
-	// Parse flags and positional arguments
+	// Parse flags and positional arguments (skip "design" subcommand)
 	cmdArgs := args[cmdPos+1:]
 	updateFlags := &updateFlags{}
 	var positionalArgs []string
@@ -308,16 +310,11 @@ func buildUpdatePrompt(config *UpdateConfig, out *designHelper.Output, logger *l
 	out.Progress("📋 Building update prompt...")
 
 	// Load contract using generalized loader
-	loader := contracts.NewContractLoader(config.TemplateRoot, "ai/design", "0.1.0")
+	loader := coreai.NewContractLoader(config.TemplateRoot, coreai.TypeDesign, paths.DefaultsVersion)
 
 	contractData, err := loader.LoadContract()
 	if err != nil {
 		return "", fmt.Errorf("failed to load contract: %w", err)
-	}
-
-	antiCorruption, err := loader.LoadAntiCorruptionRules()
-	if err != nil {
-		return "", fmt.Errorf("failed to load anti-corruption rules: %w", err)
 	}
 
 	// Load prompt (default or custom)
@@ -327,10 +324,9 @@ func buildUpdatePrompt(config *UpdateConfig, out *designHelper.Output, logger *l
 	}
 
 	// Build prompt template
-	promptTemplate, err := contracts.BuildPromptWithTemplate(
+	promptTemplate, err := coreai.BuildPromptWithTemplate(
 		promptContent,
 		contractData,
-		antiCorruption,
 		nil,
 	)
 	if err != nil {
@@ -389,12 +385,12 @@ func buildUpdatePrompt(config *UpdateConfig, out *designHelper.Output, logger *l
 
 // loadPrompt loads the AI prompt for design updates with three-tier priority:
 // 1. Command flag (--prompt)
-// 2. Team override (.r2r/eac/templates/ai/design/design.md)
-// 3. System default (templates/ai/design/design.md)
+// 2. Team override (.r2r/eac/templates/coreai.TypeDesign/design.md)
+// 3. System default (templates/coreai.TypeDesign/design.md)
 // Convention: Empty string uses type name (design.md)
 func loadPrompt(config *UpdateConfig) (string, error) {
 	// Load prompt with three-tier priority system
-	loader := contracts.NewContractLoader(config.TemplateRoot, "ai/design", "")
+	loader := coreai.NewContractLoader(config.TemplateRoot, coreai.TypeDesign, "")
 	prompt, source, err := loader.LoadPromptWithPriority("", config.PromptPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to load prompt: %w", err)
@@ -416,14 +412,6 @@ func generateUpdatedWorkspace(config *UpdateConfig, out *designHelper.Output, pr
 		return mockResponse, nil
 	}
 
-	// Load contract and anti-corruption rules for validator
-	loader := contracts.NewContractLoader(config.TemplateRoot, "ai/design", "0.1.0")
-
-	antiCorruptionRules, err := loader.LoadAntiCorruptionRules()
-	if err != nil {
-		return "", fmt.Errorf("failed to load anti-corruption rules: %w", err)
-	}
-
 	// Create executor
 	executor := ai.NewExecutor(config.TemplateRoot)
 	providers.RegisterBuiltIn(executor)
@@ -432,29 +420,29 @@ func generateUpdatedWorkspace(config *UpdateConfig, out *designHelper.Output, pr
 	executorAdapter := ai.NewExecutorAdapter(executor)
 
 	// Create composite validator (quick + full validation)
-	validator, err := createDesign.NewCompositeValidator(config.Module, config.TemplateRoot, true)
+	validator, err := structurizr.NewCompositeValidator(config.Module, config.TemplateRoot, true)
 	if err != nil {
 		return "", fmt.Errorf("failed to create validator: %w", err)
 	}
 	defer validator.Cleanup()
 
+	// Load AI config to get retry strategy
+	aiConfig, err := coreai.LoadAIConfig(config.TemplateRoot)
+	if err != nil {
+		log.Warnf("Could not load AI config, using default retry strategy: %v", err)
+		aiConfig = nil
+	}
+
+	// Build retry configuration with strategy
+	retryConfig, err := buildRetryConfig(executorAdapter, validator, config, aiConfig)
+	if err != nil {
+		return "", fmt.Errorf("failed to build retry config: %w", err)
+	}
+
 	// Generate with retry and validation
 	out.Progress("🤖 Generating updated architecture design with AI...")
 
-	retryConfig := &contracts.RetryConfig{
-		Executor:       executorAdapter,
-		Validator:      validator,
-		AntiCorruption: antiCorruptionRules,
-		ContentMarker:  "workspace",
-		MaxAttempts:    3,
-		Debug:          config.Debug,
-	}
-
-	if config.Debug {
-		retryConfig.DebugOutputDir = paths.CommandLogsPath(config.TemplateRoot, "design")
-	}
-
-	result, err := contracts.GenerateWithRetry(
+	result, err := coreai.GenerateWithRetry(
 		context.Background(),
 		retryConfig,
 		prompt,
@@ -491,4 +479,55 @@ func writeUpdatedWorkspace(config *UpdateConfig, out *designHelper.Output, works
 	out.Progressf("   4. Validate anytime: design validate %s", config.Module)
 
 	return nil
+}
+
+// buildRetryConfig creates RetryConfig with strategy from AI config
+func buildRetryConfig(
+	executor contracts.AIExecutor,
+	validator contracts.Validator,
+	config *UpdateConfig,
+	aiConfig *coreai.AIConfig,
+) (*coreai.RetryConfig, error) {
+	maxAttempts := 3
+	var strategy coreai.RetryStrategy
+
+	// Load retry strategy from config if available
+	if aiConfig != nil {
+		if typeConfig, ok := aiConfig.Types[coreai.TypeUpdateDesign]; ok {
+			if typeConfig.RetryStrategy != nil && typeConfig.RetryStrategy.MaxAttempts > 0 {
+				maxAttempts = typeConfig.RetryStrategy.MaxAttempts
+			}
+
+			if typeConfig.RetryStrategy != nil {
+				var focusCategories []string
+				if typeConfig.RetryStrategy.FocusCategories != nil {
+					focusCategories = typeConfig.RetryStrategy.FocusCategories
+				}
+
+				var err error
+				strategy, err = coreai.GetRetryStrategy(typeConfig.RetryStrategy.Type, focusCategories)
+				if err != nil {
+					return nil, fmt.Errorf("failed to create retry strategy: %w", err)
+				}
+				log.Infof("Using retry strategy: %s (max attempts: %d)", strategy.Name(), maxAttempts)
+			}
+		}
+	}
+
+	// Default to StandardStrategy if not configured
+	if strategy == nil {
+		strategy = &coreai.StandardStrategy{}
+	}
+
+	// Use "design" type since update-design generates the same output format as create-design
+	return &coreai.RetryConfig{
+		TypeName:        coreai.TypeDesign,
+		OutputFormat:    coreai.FormatStructurizr, // Generate Structurizr DSL directly
+		Validator:       validator,                // Validate DSL output
+		Executor:        executor,
+		TemplateRoot:    config.TemplateRoot,
+		MaxAttempts:     maxAttempts,
+		Debug:           config.Debug,
+		Strategy:        strategy,
+	}, nil
 }

@@ -1,46 +1,37 @@
-package design
+package structurizr
 
 import (
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
+	"github.com/ready-to-release/eac/go/eac/core/validation"
 )
 
 // CompositeValidator runs quick validation followed by full validation
+// Used for create command to provide fast feedback with comprehensive validation
 type CompositeValidator struct {
-	quickValidator *QuickDSLValidator
-	fullValidator  *StructurizrDSLValidator
+	quickValidator *QuickValidator
+	fullValidator  *DockerValidator
 	skipFullOnQuickErrors bool // Skip Docker validation if quick validation fails
 }
 
 // NewCompositeValidator creates a validator that combines quick and full validation
 func NewCompositeValidator(module, templateRoot string, skipFullOnQuickErrors bool) (*CompositeValidator, error) {
-	// Load design contract if available
-	loader := contracts.NewContractLoader(templateRoot, "ai/design", "0.1.0")
-	contract, err := loader.LoadContract()
+	// Use default quick validator
+	quickValidator := NewQuickValidator()
 
-	var quickValidator *QuickDSLValidator
-	if err == nil && contract != nil {
-		// Use contract-aware validator
-		quickValidator = NewQuickDSLValidatorWithContract(contract)
-	} else {
-		// Fallback to default validator
-		quickValidator = NewQuickDSLValidator()
-	}
-
-	fullValidator, err := NewStructurizrDSLValidator(module, templateRoot)
+	fullValidator, err := NewDockerValidator(module, templateRoot)
 	if err != nil {
 		return nil, err
 	}
 
 	return &CompositeValidator{
-		quickValidator: quickValidator,
-		fullValidator:  fullValidator,
+		quickValidator:        quickValidator,
+		fullValidator:         fullValidator,
 		skipFullOnQuickErrors: skipFullOnQuickErrors,
 	}, nil
 }
 
 // Validate runs quick validation first, then full validation if needed
-func (v *CompositeValidator) Validate(output string, context map[string]interface{}) []contracts.ValidationError {
-	var allErrors []contracts.ValidationError
+func (v *CompositeValidator) Validate(output string, context map[string]interface{}) []validation.ValidationError {
+	var allErrors []validation.ValidationError
 
 	// Phase 1: Quick validation (< 100ms)
 	quickErrors := v.quickValidator.Validate(output, context)
@@ -53,11 +44,11 @@ func (v *CompositeValidator) Validate(output string, context map[string]interfac
 		// This saves 6-7 seconds of Docker startup when we know there are basic syntax errors
 		if v.skipFullOnQuickErrors {
 			// Add a helpful note
-			allErrors = append(allErrors, contracts.ValidationError{
-				Code:     "quick_validation_failed",
-				Message:  "Skipping full validation due to syntax errors. Fix the above errors and retry.",
-				Severity: "warning",
-			})
+			allErrors = append(allErrors, *validation.NewValidationError(
+				validation.ErrQuickValidationFailed,
+				"Skipping full validation due to syntax errors. Fix the above errors and retry.",
+				0,
+			))
 			return allErrors
 		}
 	}
@@ -73,8 +64,8 @@ func (v *CompositeValidator) Validate(output string, context map[string]interfac
 }
 
 // VerifyImplementation verifies both validators are ready
-func (v *CompositeValidator) VerifyImplementation() []contracts.ValidationError {
-	var errors []contracts.ValidationError
+func (v *CompositeValidator) VerifyImplementation() []validation.ValidationError {
+	var errors []validation.ValidationError
 
 	quickErrors := v.quickValidator.VerifyImplementation()
 	errors = append(errors, quickErrors...)
