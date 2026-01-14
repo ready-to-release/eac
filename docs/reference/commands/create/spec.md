@@ -2,6 +2,20 @@
 
 <!-- book:cmd create spec -->
 
+## How It Works
+
+The command uses AI generation with Gherkin format support:
+
+- **Format**: Generates .feature files in valid Gherkin syntax (Feature, Scenario, Given/When/Then)
+- **Validation**: Multi-layer validation ensures quality:
+  - Gherkin syntax validation (proper feature file structure)
+  - Step definition validation (steps match implemented step functions)
+  - Quality standards validation (follows specification best practices)
+- **Retry**: If any validation fails, AI receives error feedback and regenerates improved specifications
+- **Customization**: Uses three-tier prompt system for domain-specific specification styles
+
+Supported formats: Gherkin BDD specifications with scenario outlines and examples tables.
+
 ## Custom Prompts
 
 The spec generation supports **three-tier prompt system** for customization:
