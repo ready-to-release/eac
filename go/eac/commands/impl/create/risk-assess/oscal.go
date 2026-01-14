@@ -252,7 +252,7 @@ func createFindingsForModule(config *AssessConfig, moduleName string, controlIDs
 		// Add test coverage info with detailed status
 		if testEv != nil && testEv.HasEvidence {
 			props = append(props, oscalTypes.Property{
-				Name:  "test-coverage",
+				Name: "test-coverage",
 				Value: fmt.Sprintf("%d tests (%d passed, %d failed, %d skipped/not-run)",
 					testEv.TotalTests, testEv.PassedTests, testEv.FailedTests,
 					testEv.SkippedTests+(testEv.TotalTests-testEv.PassedTests-testEv.FailedTests-testEv.SkippedTests)),

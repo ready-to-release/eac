@@ -27,7 +27,6 @@ func init() {
 	registry.Register(ReleaseExtEac)
 }
 
-
 func ReleaseExtEac() int {
 	// Validate flags before parsing
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {

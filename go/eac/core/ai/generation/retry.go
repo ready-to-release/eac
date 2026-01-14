@@ -7,7 +7,6 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/core/ai/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
-	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/validation"
 	"github.com/ready-to-release/eac/go/eac/core/validation/formats/gherkin"
@@ -16,12 +15,14 @@ import (
 	"go.uber.org/zap"
 )
 
-var log = logging.C()
-
 const defaultMaxAttempts = 2
 
 // RetryConfig configures retry behavior with output format specification
 // Commands handle deterministic formatting of the generated output
+//
+// IMPORTANT: This is a CORE library and must NOT use component loggers (logging.C()).
+// All logging must go through the Logger field, which defaults to zap.NewNop() if nil.
+// This ensures the generation layer never writes to command-specific log files.
 type RetryConfig struct {
 	// TypeName is the AI type (e.g., "commit-message", "specs", "design")
 	// Used to load schemas and validators
@@ -46,7 +47,8 @@ type RetryConfig struct {
 	// Strategy determines retry behavior (optional, defaults to StandardStrategy)
 	Strategy RetryStrategy
 
-	// Logger for structured logging (optional)
+	// Logger for structured logging (optional, defaults to zap.NewNop())
+	// NEVER pass component logger (logging.C()) - use nil to disable logging
 	Logger *zap.Logger
 }
 
@@ -139,10 +141,12 @@ func (cfg *RetryConfig) getStrategy() RetryStrategy {
 }
 
 // getLogger returns configured logger or no-op logger
+// NEVER returns component logger (logging.C()) to prevent writing to command log files
 func (cfg *RetryConfig) getLogger() *zap.Logger {
 	if cfg.Logger != nil {
 		return cfg.Logger
 	}
+	// Return no-op logger to discard all logs
 	return zap.NewNop()
 }
 

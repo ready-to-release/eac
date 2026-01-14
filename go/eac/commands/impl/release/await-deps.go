@@ -54,7 +54,6 @@ type DepCIStatus struct {
 	SkipReason    string
 }
 
-
 func ReleaseAwaitDeps() int {
 	// Validate flags before parsing
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {

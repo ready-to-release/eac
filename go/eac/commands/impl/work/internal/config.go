@@ -37,10 +37,13 @@ func ParseBaseConfig(args []string) (*BaseConfig, error) {
 		return nil, fmt.Errorf("failed to find repository root: %w", err)
 	}
 
-	// Initialize logger
-	config.Logger, err = InitLogger(config.Debug, config.RepoRoot)
+	// Initialize logger using ConfigureLogging
+	if err := logging.ConfigureLoggingSimple(config.RepoRoot, "commands", nil, config.Debug); err != nil {
+		return nil, fmt.Errorf("failed to configure logging: %w", err)
+	}
+	config.Logger, err = logging.NewDefault("work", config.RepoRoot)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize logger: %w", err)
+		return nil, fmt.Errorf("failed to create logger: %w", err)
 	}
 
 	// Initialize git operations

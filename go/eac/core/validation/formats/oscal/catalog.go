@@ -19,6 +19,7 @@ type CatalogValidator struct {
 //   - "file_path": path to the file being validated (for better error messages)
 func (v *CatalogValidator) Validate(output string, context map[string]interface{}) []validation.ValidationError {
 	var errors []validation.ValidationError
+	formatter := validation.NewErrorFormatter()
 
 	// Check for empty output
 	if output == "" {
@@ -33,9 +34,20 @@ func (v *CatalogValidator) Validate(output string, context map[string]interface{
 	// Parse JSON using go-oscal wrapper type
 	var oscalDoc oscalTypes.OscalModels
 	if err := json.Unmarshal([]byte(output), &oscalDoc); err != nil {
-		errors = append(errors, *validation.NewValidationError(
+		// Enhanced error for invalid JSON
+		errors = append(errors, *formatter.FormatEnhancedError(
 			validation.ErrInvalidJSON,
-			fmt.Sprintf("invalid JSON: %v", err),
+			fmt.Sprintf("Invalid JSON format: %v", err),
+			formatter.TruncateJSON(output, 10),
+			"Valid JSON with proper syntax",
+			`{
+  "catalog": {
+    "uuid": "550e8400-e29b-41d4-a716-446655440000",
+    "metadata": { ... },
+    ...
+  }
+}`,
+			"Check for common JSON issues:\n• Missing or extra commas\n• Unmatched quotes or brackets\n• Invalid escape sequences",
 			0,
 		))
 		return errors
@@ -43,9 +55,19 @@ func (v *CatalogValidator) Validate(output string, context map[string]interface{
 
 	// Check if it's a catalog document
 	if oscalDoc.Catalog == nil {
-		errors = append(errors, *validation.NewValidationError(
+		// Enhanced error for missing catalog
+		actualFields := formatter.ExtractJSONFields(output)
+		errors = append(errors, *formatter.FormatStructuredError(
 			validation.ErrOSCALInvalidDocument,
-			"not an OSCAL catalog document",
+			"Not an OSCAL catalog document - missing 'catalog' root field",
+			`{
+  "catalog": {
+    "uuid": "...",
+    "metadata": { ... },
+    "controls": [ ... ]
+  }
+}`,
+			actualFields,
 			0,
 		))
 		return errors
@@ -55,27 +77,61 @@ func (v *CatalogValidator) Validate(output string, context map[string]interface{
 
 	// Validate required UUID field
 	if catalog.UUID == "" {
-		errors = append(errors, *validation.NewValidationError(
+		errors = append(errors, *formatter.FormatMissingFieldError(
 			validation.ErrOSCALMissingUUID,
-			"missing required field: uuid",
+			"uuid",
+			"catalog",
+			[]string{"metadata", "controls"},
+			`{
+  "catalog": {
+    "uuid": "550e8400-e29b-41d4-a716-446655440000",
+    "metadata": { ... }
+  }
+}`,
 			0,
 		))
 	}
 
 	// Validate metadata title
 	if catalog.Metadata.Title == "" {
-		errors = append(errors, *validation.NewValidationError(
+		errors = append(errors, *formatter.FormatMissingFieldError(
 			validation.ErrOSCALMissingTitle,
-			"missing required field: title",
+			"metadata.title",
+			"catalog",
+			[]string{},
+			`{
+  "catalog": {
+    "uuid": "...",
+    "metadata": {
+      "title": "My Security Controls Catalog",
+      "last-modified": "2026-01-14T00:00:00Z",
+      "version": "1.0.0",
+      "oscal-version": "1.1.3"
+    }
+  }
+}`,
 			0,
 		))
 	}
 
 	// Validate metadata last-modified
 	if catalog.Metadata.LastModified.IsZero() {
-		errors = append(errors, *validation.NewValidationError(
+		errors = append(errors, *formatter.FormatMissingFieldError(
 			validation.ErrOSCALMissingLastModified,
-			"missing required field: last-modified",
+			"metadata.last-modified",
+			"catalog",
+			[]string{},
+			`{
+  "catalog": {
+    "uuid": "...",
+    "metadata": {
+      "title": "...",
+      "last-modified": "2026-01-14T00:00:00Z",
+      "version": "1.0.0",
+      "oscal-version": "1.1.3"
+    }
+  }
+}`,
 			0,
 		))
 	}
@@ -85,9 +141,42 @@ func (v *CatalogValidator) Validate(output string, context map[string]interface{
 	hasGroups := catalog.Groups != nil && len(*catalog.Groups) > 0
 
 	if !hasControls && !hasGroups {
-		errors = append(errors, *validation.NewValidationError(
+		errors = append(errors, *formatter.FormatEnhancedError(
 			validation.ErrOSCALEmptyCatalog,
-			"catalog must have at least one control or group",
+			"Catalog must have at least one control or group",
+			"",
+			"Catalog with controls or groups",
+			`{
+  "catalog": {
+    "uuid": "...",
+    "metadata": { ... },
+    "controls": [
+      {
+        "id": "ac-1",
+        "title": "Access Control Policy",
+        "params": [],
+        "parts": []
+      }
+    ]
+  }
+}
+
+OR with groups:
+
+{
+  "catalog": {
+    "uuid": "...",
+    "metadata": { ... },
+    "groups": [
+      {
+        "id": "access-control",
+        "title": "Access Control",
+        "controls": [ ... ]
+      }
+    ]
+  }
+}`,
+			"Add at least one control using the 'controls' array, or organize controls into groups using the 'groups' array.",
 			0,
 		))
 	}

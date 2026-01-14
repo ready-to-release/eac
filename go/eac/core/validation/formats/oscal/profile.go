@@ -20,6 +20,7 @@ type ProfileValidator struct {
 //   - "file_path": path to the file being validated (for better error messages)
 func (v *ProfileValidator) Validate(output string, context map[string]interface{}) []validation.ValidationError {
 	var errors []validation.ValidationError
+	formatter := validation.NewErrorFormatter()
 
 	// Check for empty output
 	if output == "" {
@@ -34,9 +35,20 @@ func (v *ProfileValidator) Validate(output string, context map[string]interface{
 	// Parse JSON using go-oscal types
 	var oscalDoc oscalTypes.OscalModels
 	if err := json.Unmarshal([]byte(output), &oscalDoc); err != nil {
-		errors = append(errors, *validation.NewValidationError(
+		// Enhanced error for invalid JSON
+		errors = append(errors, *formatter.FormatEnhancedError(
 			validation.ErrInvalidJSON,
-			fmt.Sprintf("invalid OSCAL profile JSON: %v", err),
+			fmt.Sprintf("Invalid OSCAL profile JSON: %v", err),
+			formatter.TruncateJSON(output, 10),
+			"Valid JSON with proper syntax",
+			`{
+  "profile": {
+    "uuid": "550e8400-e29b-41d4-a716-446655440000",
+    "metadata": { ... },
+    "imports": [ ... ]
+  }
+}`,
+			"Check for common JSON issues:\n• Missing or extra commas\n• Unmatched quotes or brackets\n• Invalid escape sequences",
 			0,
 		))
 		return errors
@@ -44,9 +56,19 @@ func (v *ProfileValidator) Validate(output string, context map[string]interface{
 
 	// Check if document contains a profile
 	if oscalDoc.Profile == nil {
-		errors = append(errors, *validation.NewValidationError(
+		// Enhanced error for missing profile
+		actualFields := formatter.ExtractJSONFields(output)
+		errors = append(errors, *formatter.FormatStructuredError(
 			validation.ErrOSCALInvalidDocument,
-			"document does not contain a profile",
+			"Not an OSCAL profile document - missing 'profile' root field",
+			`{
+  "profile": {
+    "uuid": "...",
+    "metadata": { ... },
+    "imports": [ ... ]
+  }
+}`,
+			actualFields,
 			0,
 		))
 		return errors
@@ -56,36 +78,90 @@ func (v *ProfileValidator) Validate(output string, context map[string]interface{
 
 	// Validate required UUID field
 	if profile.UUID == "" {
-		errors = append(errors, *validation.NewValidationError(
+		errors = append(errors, *formatter.FormatMissingFieldError(
 			validation.ErrOSCALMissingUUID,
-			"missing required field: uuid",
+			"uuid",
+			"profile",
+			[]string{"metadata", "imports"},
+			`{
+  "profile": {
+    "uuid": "550e8400-e29b-41d4-a716-446655440000",
+    "metadata": { ... },
+    "imports": [ ... ]
+  }
+}`,
 			0,
 		))
 	}
 
 	// Validate metadata title
 	if profile.Metadata.Title == "" {
-		errors = append(errors, *validation.NewValidationError(
+		errors = append(errors, *formatter.FormatMissingFieldError(
 			validation.ErrOSCALMissingTitle,
-			"missing required field: metadata.title",
+			"metadata.title",
+			"profile",
+			[]string{},
+			`{
+  "profile": {
+    "uuid": "...",
+    "metadata": {
+      "title": "My Security Controls Profile",
+      "last-modified": "2026-01-14T00:00:00Z",
+      "version": "1.0.0",
+      "oscal-version": "1.1.2"
+    }
+  }
+}`,
 			0,
 		))
 	}
 
 	// Validate metadata last-modified
 	if profile.Metadata.LastModified.IsZero() {
-		errors = append(errors, *validation.NewValidationError(
+		errors = append(errors, *formatter.FormatMissingFieldError(
 			validation.ErrOSCALMissingLastModified,
-			"missing required field: metadata.last-modified",
+			"metadata.last-modified",
+			"profile",
+			[]string{},
+			`{
+  "profile": {
+    "uuid": "...",
+    "metadata": {
+      "title": "...",
+      "last-modified": "2026-01-14T00:00:00Z",
+      "version": "1.0.0",
+      "oscal-version": "1.1.2"
+    }
+  }
+}`,
 			0,
 		))
 	}
 
 	// Validate imports
 	if len(profile.Imports) == 0 {
-		errors = append(errors, *validation.NewValidationError(
+		errors = append(errors, *formatter.FormatEnhancedError(
 			validation.ErrOSCALMissingImports,
-			"missing required field: imports (must have at least one)",
+			"Missing required field: imports - profile must import at least one catalog",
+			"",
+			"Profile with imports array",
+			`{
+  "profile": {
+    "uuid": "...",
+    "metadata": { ... },
+    "imports": [
+      {
+        "href": "https://raw.githubusercontent.com/usnistgov/oscal-content/main/nist.gov/SP800-53/rev5/json/NIST_SP-800-53_rev5_catalog.json",
+        "include-controls": [
+          {
+            "with-ids": ["ac-1", "ac-2", "au-1"]
+          }
+        ]
+      }
+    ]
+  }
+}`,
+			"Add an 'imports' array with at least one import object containing:\n• href: URL to the catalog to import from\n• include-controls: array specifying which controls to include",
 			0,
 		))
 		return errors
@@ -94,9 +170,24 @@ func (v *ProfileValidator) Validate(output string, context map[string]interface{
 	// Validate each import
 	for i, imp := range profile.Imports {
 		if imp.Href == "" {
-			errors = append(errors, *validation.NewValidationError(
+			errors = append(errors, *formatter.FormatEnhancedError(
 				validation.ErrOSCALMissingImportHref,
-				fmt.Sprintf("import[%d] missing required field: href", i),
+				fmt.Sprintf("Import[%d] missing required field: href", i),
+				"",
+				"Import with href to catalog",
+				`{
+  "imports": [
+    {
+      "href": "https://raw.githubusercontent.com/usnistgov/oscal-content/main/nist.gov/SP800-53/rev5/json/NIST_SP-800-53_rev5_catalog.json",
+      "include-controls": [
+        {
+          "with-ids": ["ac-1", "ac-2"]
+        }
+      ]
+    }
+  ]
+}`,
+				"Add an 'href' field with a URL pointing to the OSCAL catalog to import from.",
 				0,
 			))
 		}
@@ -110,9 +201,21 @@ func (v *ProfileValidator) Validate(output string, context map[string]interface{
 				if ctrl.WithIds != nil {
 					for k, id := range *ctrl.WithIds {
 						if !IsValidControlID(id) {
-							errors = append(errors, *validation.NewValidationError(
+							errors = append(errors, *formatter.FormatEnhancedError(
 								validation.ErrOSCALInvalidControlID,
-								fmt.Sprintf("import[%d].include-controls[%d].with-ids[%d]: control ID '%s' may not be valid NIST 800-53 format", i, j, k, id),
+								fmt.Sprintf("Import[%d].include-controls[%d].with-ids[%d]: Invalid control ID '%s'", i, j, k, id),
+								fmt.Sprintf(`"with-ids": ["%s"]`, id),
+								"Valid NIST 800-53 control ID format",
+								`Valid examples:
+  "ac-1"   - Access Control Policy
+  "au-2"   - Audit Events
+  "sc-28"  - Protection of Information at Rest
+  "si-10"  - Information Input Validation
+
+Format: <family>-<number>
+  family: 2 lowercase letters (ac, au, cm, ia, etc.)
+  number: 1 or more digits`,
+								"Use lowercase NIST 800-53 control IDs in the format 'xx-n' (e.g., 'ac-1', 'au-2').",
 								0,
 							))
 						}
@@ -122,9 +225,20 @@ func (v *ProfileValidator) Validate(output string, context map[string]interface{
 		}
 
 		if !hasControls {
-			errors = append(errors, *validation.NewValidationError(
+			errors = append(errors, *formatter.FormatEnhancedError(
 				validation.ErrOSCALEmptyImport,
-				fmt.Sprintf("import[%d] has no control selections", i),
+				fmt.Sprintf("Import[%d] has no control selections - must specify which controls to include", i),
+				"",
+				"Import with control selections",
+				`{
+  "href": "...",
+  "include-controls": [
+    {
+      "with-ids": ["ac-1", "ac-2", "au-1", "au-2"]
+    }
+  ]
+}`,
+				"Add an 'include-controls' array with at least one entry containing 'with-ids' to specify which controls to import.",
 				0,
 			))
 		}

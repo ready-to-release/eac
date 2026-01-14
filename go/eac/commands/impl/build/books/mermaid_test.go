@@ -713,9 +713,9 @@ graph TD
 func contains(s, substr string) bool {
 	return len(s) > 0 && len(substr) > 0 &&
 		(s == substr || len(s) > len(substr) &&
-		(s[:len(substr)] == substr ||
-		 s[len(s)-len(substr):] == substr ||
-		 containsMiddle(s, substr)))
+			(s[:len(substr)] == substr ||
+				s[len(s)-len(substr):] == substr ||
+				containsMiddle(s, substr)))
 }
 
 func containsMiddle(s, substr string) bool {

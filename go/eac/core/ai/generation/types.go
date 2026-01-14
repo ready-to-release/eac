@@ -9,13 +9,13 @@ import (
 
 // AI type names used for template and schema resolution
 const (
-	TypeCommitMessage  = "commit-message"
-	TypeDesign         = "design"
-	TypeSpecs          = "specs"
-	TypeRiskProfile    = "risk-profile"
-	TypeRiskAssessment = "risk-assessment"
-	TypeSquashMessage  = "squash-message"
-	TypeUpdateDesign   = "update-design"
+	TypeCommitMessage = "commit-message"
+	TypeDesign        = "design"
+	TypeSpecs         = "specs"
+	TypeRiskProfile   = "risk-profile"
+	TypeRiskAssess    = "risk-assess"
+	TypeSquashMessage = "squash-message"
+	TypeUpdateDesign  = "update-design"
 )
 
 // Path constants for template and contract resolution

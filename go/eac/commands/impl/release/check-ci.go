@@ -52,7 +52,6 @@ type CIRunStatus struct {
 	HeadSHA    string `json:"headSha"`
 }
 
-
 func ReleaseCheckCI() int {
 	// Validate flags before parsing
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
@@ -123,7 +122,7 @@ func ReleaseCheckCI() int {
 	lastStatus := ""
 	noCIFoundCount := 0
 	chainCompletedCount := 0
-	inheritanceChecked := false // Only check inheritance once
+	inheritanceChecked := false       // Only check inheritance once
 	const noCIFoundThreshold = 4      // After 4 checks (~60s), fail fast if no CI exists
 	const chainCompletedThreshold = 2 // After 2 checks (~30s), confirm chain really completed (runner startup buffer)
 
@@ -632,4 +631,3 @@ func exportCIRunInfo(runID int64, ciSHA string) {
 		fmt.Fprintf(f, "CI_SHA=%s\n", ciSHA)
 	}
 }
-

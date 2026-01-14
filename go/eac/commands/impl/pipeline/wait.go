@@ -35,7 +35,6 @@ import (
 
 var log = logging.C()
 
-
 func init() {
 	registry.Register(PipelineWait)
 }

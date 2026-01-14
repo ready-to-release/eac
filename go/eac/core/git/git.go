@@ -4,7 +4,6 @@ package git
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -13,12 +12,8 @@ import (
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing/format/gitignore"
 	"github.com/go-git/go-git/v5/plumbing/object"
-
-	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"go.uber.org/zap"
 )
-
-// log is the package-level logger for git operations
-var log = logging.C()
 
 // runGitCommand executes a git command in the repository and returns the output.
 // This is used for performance-critical operations where native git is faster than go-git.
@@ -38,64 +33,47 @@ func (r *Repository) runGitCommand(args ...string) (string, error) {
 }
 
 // Repository wraps a go-git repository with convenience methods.
+// Should be created via RepositoryManager for proper logger injection.
 type Repository struct {
 	repo     *gogit.Repository
 	rootPath string
+	logger   *zap.Logger // Logger for observability (guaranteed non-nil when created via manager)
 }
 
 // Open opens an existing Git repository at the given path.
 // If path is empty, uses the current working directory.
 // It searches upward through parent directories to find the repository root.
-func Open(path string) (*Repository, error) {
-	log.Debug("Open: start")
-	if path == "" {
-		var err error
-		path, err = os.Getwd()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get current directory: %w", err)
-		}
-	}
-
-	absPath, err := filepath.Abs(path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get absolute path: %w", err)
-	}
-
-	// Open repository, detecting .git directory by walking up
-	log.Debug("Open: calling PlainOpenWithOptions")
-	repo, err := gogit.PlainOpenWithOptions(absPath, &gogit.PlainOpenOptions{
-		DetectDotGit: true,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to open repository: %w", err)
-	}
-	log.Debug("Open: PlainOpenWithOptions complete")
-
-	// Get the worktree to find the root path
-	log.Debug("Open: getting worktree")
-	wt, err := repo.Worktree()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get worktree: %w", err)
-	}
-	log.Debug("Open: complete")
-
-	return &Repository{
-		repo:     repo,
-		rootPath: wt.Filesystem.Root(),
-	}, nil
+// Pass logger for observability (nil = no logging).
+//
+// Deprecated: Use RepositoryManager.Open() instead for proper dependency injection.
+// This function will be removed in a future version.
+//
+// Migration example:
+//
+//	// Old: repo, _ := git.Open(path, logging.C().Zap())
+//	// New: mgr := git.NewManager(logging.C().Zap())
+//	//      repo, _ := mgr.Open(path)
+func Open(path string, logger *zap.Logger) (*Repository, error) {
+	// Delegate to manager for consistency
+	mgr := NewManager(logger)
+	return mgr.Open(path)
 }
 
 // Init initializes a new Git repository at the given path.
-func Init(path string) (*Repository, error) {
-	repo, err := gogit.PlainInit(path, false)
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize repository: %w", err)
-	}
-
-	return &Repository{
-		repo:     repo,
-		rootPath: path,
-	}, nil
+// Pass logger for observability (nil = no logging).
+//
+// Deprecated: Use RepositoryManager.Init() instead for proper dependency injection.
+// This function will be removed in a future version.
+//
+// Migration example:
+//
+//	// Old: repo, _ := git.Init(path, logging.C().Zap())
+//	// New: mgr := git.NewManager(logging.C().Zap())
+//	//      repo, _ := mgr.Init(path)
+func Init(path string, logger *zap.Logger) (*Repository, error) {
+	// Delegate to manager for consistency
+	mgr := NewManager(logger)
+	return mgr.Init(path)
 }
 
 // RootPath returns the repository root directory path.
@@ -168,20 +146,20 @@ func (r *Repository) TrackedFiles() ([]string, error) {
 // This corresponds to `git diff --cached --name-only --diff-filter=ACMR`.
 // Uses native git command for performance (avoids slow working tree scan).
 func (r *Repository) StagedFiles() ([]string, error) {
-	log.Debug("StagedFiles: start")
-	log.Debug("StagedFiles: calling git diff --cached --name-only")
+	r.logger.Debug("Getting staged files")
 
 	output, err := r.runGitCommand("diff", "--cached", "--name-only", "--diff-filter=ACMR")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get staged files: %w", err)
 	}
-	log.Debug("StagedFiles: git command complete")
 
 	if output == "" {
 		return []string{}, nil
 	}
 
 	files := strings.Split(strings.TrimSpace(output), "\n")
+
+	r.logger.Debug("Staged files retrieved", zap.Int("count", len(files)))
 	return files, nil
 }
 
@@ -337,15 +315,14 @@ func (r *Repository) AddRemote(name, url string) error {
 // Equivalent to `git diff --staged`.
 // Uses native git command for performance (avoids slow working tree scan).
 func (r *Repository) StagedDiff() (string, error) {
-	log.Debug("StagedDiff: start")
-	log.Debug("StagedDiff: calling git diff --cached")
+	r.logger.Debug("Getting staged diff")
 
 	output, err := r.runGitCommand("diff", "--cached")
 	if err != nil {
 		return "", fmt.Errorf("failed to get staged diff: %w", err)
 	}
-	log.Debug("StagedDiff: git command complete")
 
+	r.logger.Debug("Staged diff retrieved", zap.Int("size", len(output)))
 	return output, nil
 }
 
@@ -353,15 +330,14 @@ func (r *Repository) StagedDiff() (string, error) {
 // Equivalent to `git diff --staged --stat`.
 // Uses native git command for performance (avoids slow working tree scan).
 func (r *Repository) StagedDiffStats() (string, error) {
-	log.Debug("StagedDiffStats: start")
-	log.Debug("StagedDiffStats: calling git diff --cached --stat")
+	r.logger.Debug("Getting staged diff stats")
 
 	output, err := r.runGitCommand("diff", "--cached", "--stat")
 	if err != nil {
 		return "", fmt.Errorf("failed to get staged diff stats: %w", err)
 	}
-	log.Debug("StagedDiffStats: git command complete")
 
+	r.logger.Debug("Staged diff stats retrieved")
 	return output, nil
 }
 

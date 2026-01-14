@@ -1,7 +1,9 @@
 // Command: get build-times
-//   --as-yaml: Output as YAML (default)
-//   --as-json: Output as JSON
-//   --as-toml: Output as TOML
+//
+//	--as-yaml: Output as YAML (default)
+//	--as-json: Output as JSON
+//	--as-toml: Output as TOML
+//
 // Long:
 // Long: Expected Output:
 // Long: YAML with build timing metrics parsed from per-module build.manifest.json files:
@@ -37,14 +39,14 @@ type BuildTiming struct {
 
 // BuildTimingSummary represents complete build timing analysis
 type BuildTimingSummary struct {
-	TotalBuilds    int                     `json:"total_builds" yaml:"total_builds"`
-	PassedBuilds   int                     `json:"passed_builds" yaml:"passed_builds"`
-	FailedBuilds   int                     `json:"failed_builds" yaml:"failed_builds"`
-	TotalDuration  float64                 `json:"total_duration_seconds" yaml:"total_duration_seconds"`
-	AvgDuration    float64                 `json:"avg_duration_seconds" yaml:"avg_duration_seconds"`
-	BuildOutputDir string                  `json:"build_output_dir" yaml:"build_output_dir"`
-	Timings        []BuildTiming           `json:"timings" yaml:"timings"`
-	ByType         map[string]TypeSummary  `json:"by_type" yaml:"by_type"`
+	TotalBuilds    int                    `json:"total_builds" yaml:"total_builds"`
+	PassedBuilds   int                    `json:"passed_builds" yaml:"passed_builds"`
+	FailedBuilds   int                    `json:"failed_builds" yaml:"failed_builds"`
+	TotalDuration  float64                `json:"total_duration_seconds" yaml:"total_duration_seconds"`
+	AvgDuration    float64                `json:"avg_duration_seconds" yaml:"avg_duration_seconds"`
+	BuildOutputDir string                 `json:"build_output_dir" yaml:"build_output_dir"`
+	Timings        []BuildTiming          `json:"timings" yaml:"timings"`
+	ByType         map[string]TypeSummary `json:"by_type" yaml:"by_type"`
 }
 
 // TypeSummary represents aggregated timing data by module type

@@ -5,13 +5,13 @@
 // Long: the architecture documentation to reflect current state, preserving the overall structure
 // Long: while incorporating new components, relationships, or changes. All updated workspaces are
 // Long: automatically validated against Structurizr CLI to ensure correct syntax before saving.
-// Long: Use --debug to save intermediate outputs to out/logs/design/ for debugging.
+// Long: Use --debug to save intermediate outputs to out/commands.log for debugging.
 // Long:
 // Long: Expected Output:
 // Long:   - Updated Structurizr DSL workspace file at specs/<module>/.design/workspace.dsl
 // Long:   - Preserves overall structure while incorporating code changes
 // Long:   - Validated syntax (passed Structurizr CLI validation)
-// Flag.debug: type=bool, shorthand=d, default=false, usage=Save intermediate outputs (prompts, raw AI responses, validation results) to out/logs/design/ for debugging
+// Flag.debug: type=bool, shorthand=d, default=false, usage=Save intermediate outputs (prompts, raw AI responses, validation results) to out/commands.log for debugging
 // Flag.force: type=bool, shorthand=f, default=false, usage=Overwrite workspace.dsl even if validation fails
 // Flag.output: type=string, shorthand=o, default=, usage=Custom output path for workspace.dsl (default: specs/<module>/.design/workspace.dsl)
 // Flag.prompt: type=string, shorthand=, default=, usage=Custom AI prompt file path
@@ -26,22 +26,20 @@ import (
 	"path/filepath"
 	"strings"
 
-	"go.uber.org/zap"
-
+	createDesign "github.com/ready-to-release/eac/go/eac/commands/impl/create/design"
 	designHelper "github.com/ready-to-release/eac/go/eac/commands/impl/design"
 	designInternal "github.com/ready-to-release/eac/go/eac/commands/impl/design/helper"
-	createDesign "github.com/ready-to-release/eac/go/eac/commands/impl/create/design"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
-	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
+	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	coreai "github.com/ready-to-release/eac/go/eac/core/ai"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
-	"github.com/ready-to-release/eac/go/eac/core/validation/formats/structurizr"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
+	"github.com/ready-to-release/eac/go/eac/core/validation/formats/structurizr"
 )
 
 var log = logging.C()
@@ -70,19 +68,15 @@ func UpdateDesign() int {
 	}
 
 	// Initialize logger
-	var logger *logging.Logger
-	if config.Debug {
-		logger, err = logging.NewWithDebug("design", config.TemplateRoot)
-	} else {
-		logger, err = logging.NewDefault("design", config.TemplateRoot)
-	}
-	if err != nil {
-		log.Warnf("Warning: failed to initialize logger: %v", err)
+	if err := logging.ConfigureLoggingSimple(config.TemplateRoot, "commands", nil, config.Debug); err != nil {
+		log.Warnf("Failed to configure logging: %v", err)
 		// Continue without logger - output will still work
 	}
+	defer logging.CloseLogging()
+	defer logging.CloseLogging()
 
 	// Create output handler
-	out := designHelper.NewOutput(logger)
+	out := designHelper.NewOutput()
 
 	// Validate module and existing workspace
 	if err := validateModuleAndWorkspace(config, out); err != nil {
@@ -104,7 +98,7 @@ func UpdateDesign() int {
 	}
 
 	// Build update prompt with existing workspace context
-	fullPrompt, err := buildUpdatePrompt(config, out, logger, existingWorkspace)
+	fullPrompt, err := buildUpdatePrompt(config, out, existingWorkspace)
 	if err != nil {
 		out.Errorf("Error: %v", err)
 		return 1
@@ -305,7 +299,7 @@ func loadExistingWorkspace(config *UpdateConfig, out *designHelper.Output, works
 }
 
 // buildUpdatePrompt builds the AI prompt for updating the workspace
-func buildUpdatePrompt(config *UpdateConfig, out *designHelper.Output, logger *logging.Logger, existingWorkspace string) (string, error) {
+func buildUpdatePrompt(config *UpdateConfig, out *designHelper.Output, existingWorkspace string) (string, error) {
 	out.Progress("📋 Building update prompt...")
 
 	// Load contract using generalized loader
@@ -375,8 +369,8 @@ func buildUpdatePrompt(config *UpdateConfig, out *designHelper.Output, logger *l
 
 	fullPrompt := prompt.String()
 
-	if config.Debug && logger != nil {
-		logger.Debug("Full AI prompt built", zap.Int("promptLength", len(fullPrompt)))
+	if config.Debug {
+		log.Debugf("Full AI prompt built: promptLength=%d", len(fullPrompt))
 	}
 
 	return fullPrompt, nil
@@ -520,13 +514,13 @@ func buildRetryConfig(
 
 	// Use "design" type since update-design generates the same output format as create-design
 	return &coreai.RetryConfig{
-		TypeName:        coreai.TypeDesign,
-		OutputFormat:    coreai.FormatStructurizr, // Generate Structurizr DSL directly
-		Validator:       validator,                // Validate DSL output
-		Executor:        executor,
-		TemplateRoot:    config.TemplateRoot,
-		MaxAttempts:     maxAttempts,
-		Debug:           config.Debug,
-		Strategy:        strategy,
+		TypeName:     coreai.TypeDesign,
+		OutputFormat: coreai.FormatStructurizr, // Generate Structurizr DSL directly
+		Validator:    validator,                // Validate DSL output
+		Executor:     executor,
+		TemplateRoot: config.TemplateRoot,
+		MaxAttempts:  maxAttempts,
+		Debug:        config.Debug,
+		Strategy:     strategy,
 	}, nil
 }

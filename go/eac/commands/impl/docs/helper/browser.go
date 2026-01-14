@@ -4,43 +4,40 @@ import (
 	"fmt"
 	"os/exec"
 	"runtime"
-
-	"github.com/ready-to-release/eac/go/eac/core/logging"
-	"go.uber.org/zap"
 )
 
 // openBrowser opens the default web browser to the given URL
-func openBrowser(url string, logger *logging.Logger) error {
-	logger.Debug("Attempting to open browser", zap.String("url", url), zap.String("platform", runtime.GOOS))
+func openBrowser(url string) error {
+	log.Debugf("Attempting to open browser: url=%s, platform=%s", url, runtime.GOOS)
 
 	command := detectBrowser()
 	if command == "" {
-		logger.Error("Unable to detect browser command", zap.String("platform", runtime.GOOS))
+		log.Errorf("Unable to detect browser command: platform=%s", runtime.GOOS)
 		return fmt.Errorf("unable to detect browser command for platform: %s", runtime.GOOS)
 	}
 
-	logger.Debug("Browser command detected", zap.String("command", command))
+	log.Debugf("Browser command detected: command=%s", command)
 
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "windows":
 		cmd = exec.Command("cmd", "/c", "start", url)
-		logger.Debug("Using Windows browser command", zap.Strings("args", []string{"cmd", "/c", "start", url}))
+		log.Debugf("Using Windows browser command: args=[cmd /c start %s]", url)
 	case "darwin":
 		cmd = exec.Command(command, url)
-		logger.Debug("Using macOS browser command", zap.Strings("args", []string{command, url}))
+		log.Debugf("Using macOS browser command: args=[%s %s]", command, url)
 	default: // linux, freebsd, etc.
 		cmd = exec.Command(command, url)
-		logger.Debug("Using Linux/Unix browser command", zap.Strings("args", []string{command, url}))
+		log.Debugf("Using Linux/Unix browser command: args=[%s %s]", command, url)
 	}
 
 	err := cmd.Start()
 	if err != nil {
-		logger.Error("Failed to start browser process", zap.Error(err))
+		log.Errorf("Failed to start browser process: error=%v", err)
 		return fmt.Errorf("failed to open browser: %w", err)
 	}
 
-	logger.Debug("Browser process started successfully")
+	log.Debugf("Browser process started successfully")
 	return nil
 }
 

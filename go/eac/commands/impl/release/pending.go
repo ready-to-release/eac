@@ -43,6 +43,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	"github.com/ready-to-release/eac/go/eac/core/git"
+	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
 func init() {
@@ -78,7 +79,6 @@ type PendingResult struct {
 	Modules      []PendingRelease `json:"modules"`
 	HasAnyChange bool             `json:"has_any_change"`
 }
-
 
 func ReleasePending() int {
 	// Validate flags before parsing
@@ -138,7 +138,9 @@ func ReleasePending() int {
 	}
 
 	// Open git repository
-	repo, err := git.Open("")
+	// Open git repository
+	gitMgr := git.NewManager(logging.C().Zap())
+	repo, err := gitMgr.Open("")
 	if err != nil {
 		log.Errorf("failed to open git repository: %v", err)
 		return 1

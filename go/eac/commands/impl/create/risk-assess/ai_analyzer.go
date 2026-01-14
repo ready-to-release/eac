@@ -9,17 +9,37 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/scoring"
+	coreai "github.com/ready-to-release/eac/go/eac/core/ai"
 	"github.com/ready-to-release/eac/go/eac/core/ai/generation"
-	"go.uber.org/zap"
+	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
+
+// defaultRiskAssessPrompt is the fallback prompt when template is not found
+const defaultRiskAssessPrompt = `# Risk Assessment - Executive Summary
+
+Generate an executive summary analyzing overall risk posture. Output ONLY valid JSON with 2 fields: executive_summary and confidence.
+
+## Output Format
+
+{
+  "executive_summary": {
+    "overall_risk_posture": "moderate",
+    "summary_narrative": "2-3 paragraph narrative (100-1000 chars)",
+    "key_findings": ["Finding 1 (20+ chars)", "Finding 2", "Finding 3"],
+    "strategic_recommendations": ["Recommendation 1 (30+ chars)", "Recommendation 2"]
+  },
+  "confidence": 0.85
+}
+
+Assessment data:`
 
 // AIRiskAssessmentInput holds input for unified AI analysis
 type AIRiskAssessmentInput struct {
-	Modules               []ModuleAnalysisInput
-	ProfileName           string
-	TotalControls         int
-	SatisfiedControls     int
-	NotSatisfiedControls  int
+	Modules              []ModuleAnalysisInput
+	ProfileName          string
+	TotalControls        int
+	SatisfiedControls    int
+	NotSatisfiedControls int
 }
 
 // ModuleAnalysisInput holds per-module input data
@@ -35,7 +55,7 @@ type ModuleAnalysisInput struct {
 // AIRiskAssessmentOutput holds complete AI analysis result
 type AIRiskAssessmentOutput struct {
 	ExecutiveSummary ExecutiveSummaryData `json:"executive_summary"`
-	ModuleAnalyses   []ModuleAnalysisData `json:"module_analyses"`
+	ModuleAnalyses   []ModuleAnalysisData `json:"module_analyses,omitempty"`
 	Confidence       float64              `json:"confidence"`
 }
 
@@ -60,8 +80,8 @@ type ModuleAnalysisData struct {
 
 // GenerateRiskAssessment performs unified AI risk assessment
 func GenerateRiskAssessment(ctx context.Context, config *AssessConfig, input *AIRiskAssessmentInput) (*AIRiskAssessmentOutput, error) {
-	// Build comprehensive prompt
-	prompt, err := buildRiskAssessmentPrompt(input)
+	// Build comprehensive prompt with template
+	prompt, err := buildRiskAssessmentPrompt(config.WorkspaceRoot, input)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build prompt: %w", err)
 	}
@@ -74,14 +94,16 @@ func GenerateRiskAssessment(ctx context.Context, config *AssessConfig, input *AI
 	executorAdapter := ai.NewExecutorAdapter(executor)
 
 	// Call AI with generation layer validation
+	// Pass command's logger for detailed retry logs in commands.log
+	// JSON format automatically uses enhanced JSON validator with pattern detection
 	result, err := generation.GenerateWithRetry(ctx, &generation.RetryConfig{
-		TypeName:     generation.TypeRiskAssessment,
+		TypeName:     generation.TypeRiskAssess,
 		OutputFormat: generation.FormatJSON,
 		Executor:     executorAdapter,
 		TemplateRoot: config.WorkspaceRoot,
 		MaxAttempts:  3,
 		Debug:        config.Debug,
-		Logger:       nil, // Will use no-op logger
+		Logger:       logging.C().Zap(), // ✅ Constructor injection - pass logger once
 	}, prompt)
 
 	if err != nil {
@@ -97,35 +119,62 @@ func GenerateRiskAssessment(ctx context.Context, config *AssessConfig, input *AI
 	return &output, nil
 }
 
-// buildRiskAssessmentPrompt builds comprehensive prompt with all module data
-func buildRiskAssessmentPrompt(input *AIRiskAssessmentInput) (string, error) {
-	// Build structured JSON input with all module data
-	inputJSON, err := json.MarshalIndent(input, "", "  ")
+// buildRiskAssessmentPrompt loads template and appends aggregate statistics
+func buildRiskAssessmentPrompt(workspaceRoot string, input *AIRiskAssessmentInput) (string, error) {
+	// Load prompt template with three-tier priority:
+	// 1. Team override (.r2r/eac/templates/ai/risk-assess/risk-assess.md)
+	// 2. System default (templates/ai/risk-assess/risk-assess.md)
+	loader := coreai.NewContractLoader(workspaceRoot, generation.TypeRiskAssess, "")
+	promptTemplate, _, err := loader.LoadPrompt("", defaultRiskAssessPrompt)
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal input: %w", err)
+		promptTemplate = defaultRiskAssessPrompt
 	}
 
 	var sb strings.Builder
+	sb.WriteString(promptTemplate)
+	sb.WriteString("\n\n")
 
-	// Add summary information
-	sb.WriteString("# Assessment Scope\n\n")
-	sb.WriteString(fmt.Sprintf("- Profile: %s\n", input.ProfileName))
-	sb.WriteString(fmt.Sprintf("- Modules Assessed: %d\n", len(input.Modules)))
-	sb.WriteString(fmt.Sprintf("- Total Controls: %d\n", input.TotalControls))
-	sb.WriteString(fmt.Sprintf("- Controls Satisfied: %d\n", input.SatisfiedControls))
-	sb.WriteString(fmt.Sprintf("- Controls Not Satisfied: %d\n\n", input.NotSatisfiedControls))
+	// Add aggregate summary information only
+	sb.WriteString("Profile: ")
+	sb.WriteString(input.ProfileName)
+	sb.WriteString("\n\n")
 
-	// Add module details
-	sb.WriteString("# Module Assessment Data\n\n")
-	sb.WriteString("```json\n")
-	sb.Write(inputJSON)
-	sb.WriteString("\n```\n")
+	sb.WriteString(fmt.Sprintf("Modules assessed: %d\n", len(input.Modules)))
+	sb.WriteString(fmt.Sprintf("Total controls: %d\n", input.TotalControls))
+	sb.WriteString(fmt.Sprintf("Controls satisfied: %d\n", input.SatisfiedControls))
+	sb.WriteString(fmt.Sprintf("Controls not satisfied: %d\n", input.NotSatisfiedControls))
+
+	// Calculate satisfaction rate
+	satisfactionRate := 0.0
+	if input.TotalControls > 0 {
+		satisfactionRate = float64(input.SatisfiedControls) / float64(input.TotalControls) * 100
+	}
+	sb.WriteString(fmt.Sprintf("Control satisfaction rate: %.1f%%\n\n", satisfactionRate))
+
+	// Count modules by control status
+	modulesWithControls := 0
+	modulesWithoutControls := 0
+	for _, mod := range input.Modules {
+		if mod.ControlsSatisfied > 0 {
+			modulesWithControls++
+		} else {
+			modulesWithoutControls++
+		}
+	}
+
+	sb.WriteString(fmt.Sprintf("Modules with controls implemented: %d\n", modulesWithControls))
+	sb.WriteString(fmt.Sprintf("Modules without controls: %d\n", modulesWithoutControls))
 
 	return sb.String(), nil
 }
 
 // ApplyAIRiskAssessment applies AI-generated results to module assessment results
-func ApplyAIRiskAssessment(results []*ModuleAssessmentResult, aiOutput *AIRiskAssessmentOutput, logger *zap.SugaredLogger) {
+func ApplyAIRiskAssessment(results []*ModuleAssessmentResult, aiOutput *AIRiskAssessmentOutput, log *logging.ComponentLogger) {
+	// Check if per-module analysis was generated
+	if len(aiOutput.ModuleAnalyses) == 0 {
+		return
+	}
+
 	// Map AI module analyses to results
 	analysisMap := make(map[string]*ModuleAnalysisData)
 	for i := range aiOutput.ModuleAnalyses {
@@ -145,10 +194,10 @@ func ApplyAIRiskAssessment(results []*ModuleAssessmentResult, aiOutput *AIRiskAs
 				analysis.Reasoning,
 			)
 
-			logger.Debugf("Applied AI risk score to %s: likelihood=%d, score=%d",
+			log.Debugf("Applied AI risk score: module=%s, likelihood=%d, score=%d",
 				result.Module, analysis.ComputedLikelihood, result.RiskScore.Score)
 		} else {
-			logger.Warnf("No AI analysis found for module %s", result.Module)
+			log.Warnf("No AI analysis found for module: %s", result.Module)
 		}
 	}
 }

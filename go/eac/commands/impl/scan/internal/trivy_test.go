@@ -12,7 +12,7 @@ import (
 func TestMockTrivyOutput(t *testing.T) {
 	// Setup mock
 	mockData := map[string]interface{}{
-		"test": "mock sbom data",
+		"test":     "mock sbom data",
 		"packages": []string{"pkg1", "pkg2"},
 	}
 	SetMockTrivyOutput(mockData)
@@ -132,7 +132,7 @@ func TestRunTrivySecretsWithMock(t *testing.T) {
 func TestRunTrivyComplianceWithMock(t *testing.T) {
 	mockData := map[string]interface{}{
 		"compliance": "k8s-cis",
-		"results": []string{"check1", "check2"},
+		"results":    []string{"check1", "check2"},
 	}
 	SetMockTrivyOutput(mockData)
 	defer ResetMockTrivyOutput()

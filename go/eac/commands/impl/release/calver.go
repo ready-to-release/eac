@@ -37,7 +37,6 @@ func init() {
 	registry.Register(ReleaseCalver)
 }
 
-
 func ReleaseCalver() int {
 	// Validate flags before parsing
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {

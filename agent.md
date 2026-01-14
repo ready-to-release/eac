@@ -8,9 +8,9 @@
 2. **Verify workspace context**: Check if the current directory path matches the detected branch (may be a mismatch in multi-worktree setups)
 3. **Read this file** (`/agent.md`) to load project context
 4. **Verify MCP server availability**:
-   - Check your available tool list for `mcp__commands__*` tools
-   - Check your available tool list for `mcp__github__*` tools
-   - Determine connection status: CONNECTED, NOT CONNECTED, or PARTIAL
+   - Check your available tool list for `mcp__commands__*` tools (Commands Server)
+   - Check your available tool list for `mcp__github__*` tools (GitHub Server)
+   - Determine connection status for each: CONNECTED or NOT CONNECTED
    - Set execution mode accordingly (MCP-First or CLI Fallback)
 5. **Internalize all constraints and guidelines** defined below
 6. **Apply these instructions** throughout the entire session
@@ -20,7 +20,7 @@
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃  ⚡ SYSTEM INITIALIZED ⚡                                      ┃
 ┃  Project context loaded from agent.md                         ┃
-┃  MCP servers: [✅ CONNECTED / ⚠️ NOT CONNECTED / ⚠️ PARTIAL]  ┃
+┃  MCP servers: [✅ CONNECTED / ⚠️ NOT CONNECTED]               ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 Workspace Context:
@@ -33,110 +33,127 @@ Project Context Loaded:
 - Three Rules of Vibe Coding: Easy to understand, Easy to change, Hard to break
 - Three-Phase Development: Specifications → TDD → Validation
 - Go version: ≥ 1.21
+- Claude Code tools: 6 agents, 3 skills, 8 commands available
 
 Active Constraints:
 - Git: READ-ONLY by default. No commits/pushes/branches without explicit user request
 - Multi-Worktree Aware: Operating in [current directory] ([branch])
 - File Organization: Modules in /go, intermediate files in /out
 - Execution Mode: [MCP-First / CLI Fallback] based on MCP server availability
+- Code-simplifier: Must run at end of every session
 
 MCP Server Status:
 Commands Server (mcp__commands__*):
   [✅ CONNECTED - XX tools available / ⚠️ NOT CONNECTED - Using fallback: go run ./go/eac/commands]
 
 GitHub Server (mcp__github__*):
-  [✅ CONNECTED - XX tools available / ⚠️ NOT CONNECTED / ⚠️ NOT CONFIGURED]
+  [✅ CONNECTED - XX tools available / ⚠️ NOT CONNECTED - Using fallback: gh CLI]
 
-[If NOT CONNECTED, include this troubleshooting section:]
-⚠️ MCP Troubleshooting:
-- Servers configured in: .mcp.json and .claude/settings.json
+[If Commands Server NOT CONNECTED, include this troubleshooting section:]
+⚠️ Commands MCP Troubleshooting:
+- Server configured in: .mcp.json
 - Commands server: go run ./go/eac/mcp/commands/main.go
-- GitHub server: Official GitHub MCP server (requires GITHUB_TOKEN)
-- Verify commands server: go run ./go/eac/mcp/commands/main.go < /dev/null
-- Verify GitHub token: echo $GITHUB_TOKEN (bash) or $env:GITHUB_TOKEN (PowerShell)
+- Verify: go run ./go/eac/mcp/commands/main.go < /dev/null
 - Check Claude Code MCP server logs for errors
 - Fallback: Commands operations will use direct CLI commands (go run ./go/eac/commands)
+
+[If GitHub Server NOT CONNECTED, include this troubleshooting section:]
+⚠️ GitHub MCP Troubleshooting:
+- Server configured in: .mcp.json
+- GitHub server: docker run -i --rm -e GITHUB_TOKEN ghcr.io/github/github-mcp-server:v0.21.0
+- Authentication: Set GITHUB_TOKEN environment variable
+  - Windows: $env:GITHUB_TOKEN = "ghp_your_token_here"
+  - Linux/Mac: export GITHUB_TOKEN="ghp_your_token_here"
+- Verify Docker: docker --version
+- Verify token: echo $env:GITHUB_TOKEN (Windows) or echo $GITHUB_TOKEN (Linux/Mac)
+- Fallback: GitHub operations will use gh CLI or git commands
 
 Ready to assist with project tasks.
 ```
 
 **Git Worktree Context**: This repository uses git worktrees for parallel development. The initialization process automatically detects the current branch based on the working directory. If there's a mismatch between the expected worktree path and the current directory, it will be highlighted in the initialization report.
 
-### MCP Server Initialization
+---
+
+## MCP Server Configuration
 
 This project uses **MCP (Model Context Protocol) servers** to provide specialized commands for managing the modular monorepo architecture.
 
-#### Verification Steps
+### Commands Server
 
-During initialization, you MUST verify MCP server availability:
+**Status**: ✅ Active (when connected)
+**Type**: Local Go application
+**Configuration**: `.mcp.json` → `go run ./go/eac/mcp/commands/main.go`
 
-1. **Check for MCP tools** in your available tool list:
-
-   - Look for tools prefixed with `mcp__commands__*`
-   - Look for tools prefixed with `mcp__github__*`
-
-2. **Determine MCP status**:
-
-   - ✅ **CONNECTED**: If `mcp__commands__*` tools are available
-   - ⚠️ **NOT CONNECTED**: If no `mcp__*` tools are found
-   - ⚠️ **PARTIAL**: If some but not all expected servers are available
-
-3. **Report actual status** in initialization report (see below)
-
-4. **Set execution mode**:
-   - If CONNECTED: Use MCP-first approach (prefer `mcp__commands__*` tools)
-   - If NOT CONNECTED: Use fallback CLI approach (`go run ./go/eac/commands`)
-
-#### Expected MCP Servers
-
-**Commands Server** (`mcp__commands__*`):
+**Available Commands** (100+):
 
 - **Module Discovery**: `get-modules`, `show-modules`, `show-moduletypes`, `get-files`, `show-files`
 - **Dependency Management**: `get-dependencies`, `show-dependencies`, `validate-dependencies`, `get-execution-order`
-- **Architecture Documentation**: `design-create*`, `design-validate*`, `design-serve*`
-- **Build and Test**: `build-module`, `build-modules`, `test-module`, `test-modules`, `pipeline-run`
-- **Documentation**: `docs-serve` (MkDocs integration)
-- **Git Operations**: `commit`, `show-files-changed`, `show-files-staged`, `get-changed-modules`
-- **Specifications**: `specs-create`, `specs-validate`
-- **Templates**: `templates-list`, `templates-install`, `templates-apply`
-- **Workspace Management**: `work-create`, `work-list`, `work-commit`
+- **Architecture**: `create-design`, `update-design`, `validate-design`, `serve-design`
+- **Build and Test**: `build`, `test`, `pipeline-run`, `get-test-results`, `show-test-summary`
+- **Documentation**: `serve` (MkDocs), `update-docs`, `create-spec`, `validate-specs`
+- **Git Operations**: `work-commit`, `show-files-changed`, `show-files-staged`, `get-changed-modules`
+- **Release Management**: `release-*`, `get-changelog`, `get-release-notes`
+- **Security**: `scan`, `scan-zap`, `validate-risk-catalog`, `validate-risk-profile`
 
-**GitHub Server** (`mcp__github__*`):
+See full list: Use MCP `show-valid-commands` or `go run ./go/eac/commands show valid-commands`
 
-- Repository operations, issue management, PR operations, workflow execution
-- **Note**: This project uses the official GitHub MCP server (not a local implementation)
-- Configuration: Requires `GITHUB_TOKEN` environment variable
+### MCP Execution Policy
 
-#### Fallback Mode
+**When CONNECTED** (MCP tools available):
 
-If MCP servers are NOT CONNECTED, use direct CLI commands:
+- ✅ Use `mcp__commands__*` tools for all operations
+- Faster, native integration with Claude Code
 
-| MCP Tool                        | Fallback Command                                     |
-| ------------------------------- | ---------------------------------------------------- |
-| `mcp__commands__show-modules`   | `go run ./go/eac/commands show modules`              |
-| `mcp__commands__test-module`    | `go run ./go/eac/commands test module <name>`        |
-| `mcp__commands__build-module`   | `go run ./go/eac/commands build module <name>`       |
-| `mcp__commands__specs-create`   | `go run ./go/eac/commands create spec <description>` |
-| `mcp__commands__specs-validate` | `go run ./go/eac/commands validate specs`            |
-| All other tools                 | `go run ./go/eac/commands <command> [args]`          |
+**When NOT CONNECTED** (fallback mode):
 
-**Note**: GitHub MCP server has no CLI fallback - it uses the official MCP implementation from GitHub.
+- ✅ Use direct CLI: `go run ./go/eac/commands <command> [args]`
+- All functionality remains available
+
+**IMPORTANT during boot**: DO NOT call data-heavy commands like `get-files`, `get-modules`, `get-dependencies` during initialization. Only verify MCP availability, don't invoke large data operations.
+
+### GitHub MCP Server
+
+**Status**: ✅ Configured (requires GITHUB_TOKEN environment variable)
+**Type**: Docker container (GitHub official MCP server)
+**Configuration**: `.mcp.json` → `docker run -i --rm -e GITHUB_TOKEN ghcr.io/github/github-mcp-server:v0.21.0`
+
+**Available Tools** (when connected):
+
+- **Workflow Management**: `list_workflows`, `get_workflow_runs`, `get_workflow_run_logs`
+- **Repository**: `get_repository`, `get_file_contents`, `search_code`
+- **Issues & PRs**: `list_issues`, `create_issue`, `list_pull_requests`
+- **Commits**: `list_commits`, `get_commit`
+
+**Setup Required**:
+
+```powershell
+# Windows PowerShell
+$env:GITHUB_TOKEN = "ghp_your_personal_access_token_here"
+
+# Or add to your PowerShell profile for persistence
+Add-Content $PROFILE '$env:GITHUB_TOKEN = "ghp_your_token_here"'
+```
+
+**When CONNECTED** (GitHub MCP tools available):
+
+- ✅ Use `mcp__github__*` tools for workflow analysis, issue management
+- Used by `go-workflow-engineer` agent for CI/CD analysis
+
+**When NOT CONNECTED** (fallback mode):
+
+- ✅ Use `gh` CLI: `gh workflow list`, `gh run view`, `gh issue list`
+- All GitHub functionality remains available via CLI
+
+**IMPORTANT during boot**: Test GitHub MCP connectivity to determine execution mode. Check for `mcp__github__*` tools in your available tool list.
+
+**Token Permissions Required**:
+
+- `repo` - Full repository access
+- `workflow` - Update GitHub Action workflows
+- `read:org` - Read org data (if analyzing org repos)
 
 ---
-
-## Execution Policy
-
-### When MCP Servers are CONNECTED
-
-**ALWAYS use `mcp__commands__*` tools for project operations.**
-
-Prefer MCP tools over direct CLI commands for all module-related operations.
-
-### When MCP Servers are NOT CONNECTED
-
-**Use CLI fallback commands**: `go run ./go/eac/commands <command> [args]`
-
-Continue working normally using direct CLI commands. All functionality remains available, just accessed differently.
 
 ## Project Constraints
 
@@ -146,7 +163,7 @@ Continue working normally using direct CLI commands. All functionality remains a
 - **READ-ONLY git operations** (`log`, `status`, `diff`) are permitted ONLY when explicitly needed for information gathering
 - **NEVER** run git modifying operations (`commit`, `push`, `add`, `stash`, `checkout`, `branch`, `merge`, `rebase`, `worktree`, etc.)
 - **USER CONTROLS GIT**: The user manages all git operations manually, especially in multi-worktree setups
-- **USE** `commit` ONLY when the user explicitly requests commit message generation
+- **USE** MCP `work-commit` ONLY when the user explicitly requests commit message generation
 
 #### Git Worktree Awareness
 
@@ -175,247 +192,204 @@ Each Claude session works independently. The user handles all git coordination.
 
 ---
 
+## Claude Code Tools
+
+This repository has a complete Claude Code setup with specialized agents, skills, and commands for Go CLI development.
+
+### Available Sub-Agents
+
+Specialized agents for specific tasks (invoke via Task tool):
+
+| Agent | Purpose | When to Use |
+|-------|---------|-------------|
+| **go-architect** | Design architecture and plan modules | Planning features, designing interfaces, evaluating trade-offs |
+| **go-cli-ux** | Design CLI commands, flags, and output | Adding commands, improving output, designing UX |
+| **go-test-engineer** | Write comprehensive tests | Writing tests (TDD), debugging test failures, improving coverage |
+| **go-debugger** | Debug failures and investigate issues | Test failures, runtime panics, performance issues |
+| **go-security-release** | Security scanning and release checks | Pre-release validation, security audits, release readiness |
+| **go-workflow-engineer** | Analyze GitHub workflows and CI/CD | Debugging workflows, optimizing pipelines, validating CD model compliance |
+
+### Available Skills
+
+Orchestrated workflows that combine multiple agents (invoke via Task tool or directly):
+
+| Skill | Purpose | Workflow |
+|-------|---------|----------|
+| **go-cli-feature** | End-to-end feature development | Plan → Specify → Design UX → Test → Implement → Verify → Simplify → Document |
+| **go-cli-release-check** | Pre-release validation checklist | CI checks → Security scans → Build validation → Changelog review → Tests |
+| **go-cli-refactor-safe** | Safe refactoring with validation | Baseline → Plan → Refactor incrementally → Test after each step → Simplify |
+
+### Available Slash Commands
+
+Quick-access commands for common workflows:
+
+| Command | Purpose | Use Case |
+|---------|---------|----------|
+| `/boot` | Initialize session | Start every session |
+| `/go:plan` | Plan feature or change | Before implementing |
+| `/go:implement` | Implement using TDD | After planning |
+| `/go:test` | Write or debug tests | Testing phase |
+| `/go:review` | Review code (runs code-simplifier) | Before committing |
+| `/go:cli-docs` | Update CLI documentation | When CLI surface changes |
+| `/go:release` | Prepare for release | Release readiness check |
+| `/go:debug` | Debug issues | When things break |
+| **`/go:session-end`** | **End session cleanup** | **MANDATORY at end of every session** |
+
+### Recommended Workflows
+
+#### Feature Development
+
+```text
+/boot → /go:plan → /go:implement → /go:test → /go:review → /go:session-end
+```
+
+#### Bug Fix
+
+```text
+/boot → /go:debug → /go:test (regression) → /go:implement → /go:review → /go:session-end
+```
+
+#### Release Preparation
+
+```text
+/boot → /go:release → Address issues → Ready to tag
+```
+
+### Code-Simplifier Integration
+
+**MANDATORY**: The `code-simplifier` plugin must run at the end of every session.
+
+**How it runs**:
+
+1. Automatically via `/go:review` command (before commit/PR)
+2. Automatically via `/go:session-end` command (end of session)
+3. Within skills: `go-cli-feature` (step 7), `go-cli-refactor-safe` (step 5)
+
+**What it does**:
+
+- Simplifies code for clarity and maintainability
+- Removes unnecessary complexity
+- Improves naming and structure
+- Preserves all functionality (refactors, doesn't change behavior)
+
+**User responsibility**:
+
+- MUST run `/go:session-end` at the end of EVERY session
+- Review simplifications (don't blindly accept)
+- Commit simplifications separately from feature work
+
+---
+
 ## Development Workflow
 
-You are an AI coding agent contributing Go code to this repository.
+You are an AI coding agent contributing Go code to this repository following the **Three Rules of Vibe Coding**:
 
-Your work must follow a **mandatory three-phase workflow** guided by the **Three Rules of Vibe Coding**.
-
-Everything you produce must increase clarity, reduce cognitive load, and enable fast, safe iteration.
-
-### Guiding Principles: The Three Rules of Vibe Coding
-
-All code you generate must embody these three rules:
-
-#### Rule 1: Make the code easy to understand
-
-Your outputs must be:
-
-- Direct, explicit, and idiomatic Go
-- Free of unnecessary abstractions, cleverness, or surprises
-- Structured with minimal branching and clear data flow
-- Written using clear, intention-revealing names
-- Supported by comments only when explaining **why**, not **what**
-
-**Agent behaviors:**
-
-- Prefer small, single-purpose functions
-- Keep files cohesive
-- Avoid complexity unless it directly adds clarity
-
-**If the team can understand your code in a single pass, you have succeeded.**
-
-#### Rule 2: Make the code easy to change
-
-Your code must be designed so future changes are safe and simple.
-
-**Agent behaviors:**
-
-- Break work into small, safe, incremental steps
-- Produce complete, compilable code every time — no stubs or placeholders
-- Use stable, predictable package boundaries
-- Avoid deep dependency chains or hidden side effects
-- Prefer pure functions where possible
-- Use `context.Context` consistently for operations that may block or be canceled
-
-**Good code gives the next developer freedom while minimizing mental load.**
-
-#### Rule 3: Make it hard to break
-
-All non-trivial code you generate must include tests.
-
-**Agent behaviors:**
-
-- Produce **table-driven unit tests** for all new logic
-- Tests must be deterministic, fast, and free of external I/O
-- Validate inputs; reject unexpected states early
-- Use clear error messages and wrap errors with context
-- Avoid concurrency unless needed, and when used, design so races are impossible
-
-**Your code should fail safely and visibly when incorrect.**
-
----
-
-### Parallel Agent Workflows
-
-For **complex features or large changes**, you can leverage multiple agents working in parallel to maximize efficiency during the setup phase.
-
-**When to use parallel agents:**
-
-- New features requiring architecture design, specifications, and impact analysis
-- Large refactoring efforts affecting multiple modules
-- Cross-cutting changes that need comprehensive analysis
-- Any work where multiple independent preparation tasks can run concurrently
-
-**Feature Development (Parallel Setup Phase):**
-
-When the user requests parallel development or when working on complex features, spawn multiple agents concurrently:
-
-- **Design Agent**: Create architecture documentation and specifications using `mcp__commands__design-*` and `mcp__commands__specs-create`
-- **Test Agent**: Develop test plan, identify test scenarios, and prepare test scaffolding structure
-- **Analysis Agent**: Perform impact analysis, review dependencies using `mcp__commands__get-dependencies`, and identify affected modules with `mcp__commands__get-changed-modules`
-- **Docs Agent**: Prepare documentation structure and identify documentation updates needed
-
-**How to invoke parallel agents:**
-
-The user can request parallel execution with phrases like:
-
-- "Work on this feature using parallel agents"
-- "Run the design, test, analysis, and docs agents in parallel"
-- "Parallelize the setup phase for this feature"
-
-When parallel execution is requested, spawn all agents in a **single message** with multiple Task tool calls.
-
-**Implementation Phase (Sequential):**
-
-After parallel setup agents complete and report their findings:
-
-1. **Synthesize results** from all parallel agents
-2. **Present unified plan** to the user showing how all findings integrate
-3. **Follow the Three-Phase Development Process** (below) for sequential implementation
-4. Use findings from parallel agents to inform each phase
-
----
+1. **Make the code easy to understand**: Clear, simple, explicit
+2. **Make the code easy to change**: Small functions, stable boundaries, no hidden state
+3. **Make it hard to break**: Tests, validation, clear errors
 
 ### Three-Phase Development Process
 
-**MANDATORY** - Follow these phases for all development tasks:
+**MANDATORY** for all development tasks:
 
-#### Phase 1: Specifications First
+1. **Specifications First**: Write `.feature` files before code (use MCP `create-spec`)
+2. **Test-Driven Development**: Write tests before implementation
+3. **Validation**: Run all tests before reporting complete
 
-**Write specifications BEFORE writing any code**:
+**For detailed guidance**:
 
-Specifications make the intended behavior easy to understand (Rule 1) and provide a contract that makes future changes safer (Rule 2).
+- Architecture & Design → Use **go-architect** agent
+- CLI UX Design → Use **go-cli-ux** agent
+- Test Writing → Use **go-test-engineer** agent
+- Debugging → Use **go-debugger** agent
+- Security & Release → Use **go-security-release** agent
+- Workflow & CI/CD Analysis → Use **go-workflow-engineer** agent
 
-**When specifications are required:**
+**For complete workflows**:
 
-- New features or functionality
-- Changes to business logic
-- Modifications to user-facing behavior
-- Any non-trivial code changes
+- Feature development → Use **go-cli-feature** skill
+- Safe refactoring → Use **go-cli-refactor-safe** skill
+- Release readiness → Use **go-cli-release-check** skill
 
-**For small changes** (bug fixes, typo corrections, minor refactoring):
+**Or use slash commands**:
 
-1. Investigate if existing specifications need updates
-2. Inform the user that you're not writing new specifications
-3. Ask permission to continue without specifications
-4. Proceed only after user approval
-
-**Requirements when writing specifications:**
-
-- **USE** `mcp__commands__specs-create` to generate new specifications from natural language descriptions
-- **USE** `mcp__commands__specs-validate` to validate specifications against contracts before proceeding
-- Create/update `.feature` files in `specs/` directory
-
-#### Phase 2: Test-Driven Development (TDD)
-
-**ALWAYS write tests BEFORE implementation**:
-
-TDD embodies all three rules: tests document behavior (Rule 1), enable safe refactoring (Rule 2), and catch regressions (Rule 3).
-
-**Test file organization:**
-
-- **TDD unit tests**: Place `*_test.go` files alongside the code they test in module `go/` directories
-- **Gherkin step definitions**: Place step implementation files in a dedicated `tests/` folder within each module
-- **Feature files**: Place `.feature` files in the project's `specs/` directory
-
-**Requirements:**
-
-- Write tests first before any implementation
-- Produce **table-driven unit tests** for all new logic
-- Tests must be deterministic, fast, and free of external I/O
-- Implement code to pass the tests
-- Refactor to improve clarity and changeability
-
-**Apply Vibe Coding principles in implementation:**
-
-- **Easy to understand**: Use clear names, simple control flow, minimal abstraction
-- **Easy to change**: Small functions, pure where possible, stable boundaries, no hidden state
-- **Hard to break**: Input validation, early returns, clear errors, comprehensive tests
-
-**Output format for code deliverables:**
-
-Every code implementation must include:
-
-1. **Intent**: One sentence describing what you are implementing or improving
-2. **Design Explanation**: 2–5 bullets linking your design to the Three Rules of Vibe Coding
-   - How does this make code **easy to understand**?
-   - How does this make code **easy to change**?
-   - How does this make code **hard to break**?
-3. **Full Go Implementation**: Complete, compilable, idiomatic Go code blocks (no missing pieces, no pseudocode)
-4. **Unit Tests**: Full table-driven tests in `*_test.go` files, runnable with `go test ./...`
-5. **Run Instructions**: Commands to build and test, including relevant MCP commands
-
-**Every deliverable must be ready to paste into the codebase without modification.**
-
-#### Phase 3: Validation
-
-**ALWAYS run all tests before reporting completion**:
-
-Validation ensures your code actually works and is hard to break (Rule 3).
-
-**Requirements:**
-
-- Use `mcp__commands__test-module` for unit tests
-- Use `mcp__commands__test-suite` for feature/behavior tests
-- Use `mcp__commands__validate-dependencies` to check module contracts
-- Use `mcp__commands__specs-validate` to validate specifications
-- **NEVER** report "implementation done successfully" without running and passing all tests
-- If tests fail, fix the implementation until they pass
-- Verify code follows Go conventions (`gofmt`, `go vet`)
+- `/go:plan` → `/go:implement` → `/go:test` → `/go:review` → `/go:session-end`
 
 ---
 
-## Go-Specific Coding Rules
+## Go-Specific Guidelines
 
-To align with idiomatic and maintainable Go:
+**Requirements**:
 
 - Go version: **≥ 1.21**
-- Enforce: `gofmt`, `go vet`, idiomatic naming
-- Use the standard library unless a dependency truly improves clarity
-- Keep exported APIs minimal and intentional
-- Prefer composition over inheritance
+- Enforce: `gofmt`, `go vet`, `golangci-lint` (config: `.golangci.yml`)
+- Use idiomatic Go: standard library preferred, minimal exported APIs
 - Avoid global mutable state
 
-## Go Code Structure Guidelines
+**Key Patterns**:
 
-To keep the codebase clear, maintainable, and aligned with idiomatic Go, follow these structural guidelines:
+- **Errors**: Wrap with `%w` for context
+- **Context**: Use `context.Context` for all I/O operations
+- **Packages**: Organize by domain, use `internal/` for private code
+- **Functions**: 20-40 lines ideal, <100 lines max
+- **Files**: 200-400 lines ideal, <1000 lines max
 
-### File Length
+**For detailed patterns and examples**, see:
 
-Go does not enforce strict limits, but large files reduce clarity and increase cognitive load.
+- **go-architect** agent: Architecture and interfaces
+- **go-cli-ux** agent: CLI-specific patterns
+- **go-test-engineer** agent: Testing patterns
 
-**Guidelines:**
+---
 
-- Prefer files in the range of **200–400 lines**
-- Review files that grow beyond **600 lines**
-- Avoid files over **1000 lines**, as they usually indicate missing modularity or unclear responsibilities
+## Quality Bars
 
-Files should be organized by **behavior and domain**, not by generic categories (avoid `utils.go`, `helpers.go`, etc.).
+All code must meet these standards before completion:
 
-### Function Size and Modularity
+### Tests
 
-Functions should be small, intention-revealing, and focused.
+- ✅ All tests pass (`go test ./...`)
+- ✅ No race conditions (`go test -race ./...`)
+- ✅ Table-driven tests for multiple scenarios
+- ✅ Test coverage maintained or improved
 
-**Guidelines:**
+### Code Quality
 
-- Aim for functions that fit on **one screen (~20–40 lines)**
-- Revisit functions that exceed **50–80 lines**
-- Avoid functions over **100 lines** unless genuinely necessary
+- ✅ Follows Go conventions (`gofmt`, `go vet`)
+- ✅ Passes linting (`golangci-lint run`)
+- ✅ Functions are small (20-40 lines ideal, <100 lines max)
+- ✅ Clear, intention-revealing names
+- ✅ Errors wrapped with %w for context
+- ✅ No unnecessary complexity
 
-Split functions when:
+### Documentation
 
-- They mix multiple concerns
-- They require long comments to explain the flow
-- They contain deeply nested logic
+- ✅ Public APIs have doc comments
+- ✅ CLI help text updated (if applicable)
+- ✅ How-to guides updated if CLI surface changed
 
-Prefer several small, well-named functions over one large “god function.”
+### Security
 
-### Responsibilities and Composition
+- ✅ No hardcoded secrets
+- ✅ Input validation for user data
+- ✅ Proper error handling (don't leak internals)
 
-- Keep files cohesive: one clear responsibility per file
-- Use interfaces and small helpers to isolate behavior
-- Prefer composition over deep inheritance or nested dependencies
-- Avoid “god files” with many unrelated types or functions
+### End-of-Session Checklist
 
-**Goal:** Keep code easy to understand, easy to change, and hard to break—the same core principles that guide this agent’s workflow.
+**MANDATORY**: Complete these steps at the end of EVERY session:
+
+1. ✅ Run `/go:session-end` command
+2. ✅ Code-simplifier executed and changes applied
+3. ✅ All tests passing (`go test ./...`)
+4. ✅ Clean build (no errors)
+5. ✅ Lint passing (if golangci-lint available)
+6. ✅ Ready for commit/PR
+
+---
+
+## Additional Resources
+
+- **Full command reference**: Use MCP `show-valid-commands` or `go run ./go/eac/commands help`
+- **How-to guide**: See `docs/how-to-guides/eac/claude-code-setup.md` for detailed workflows
+- **Module structure**: Use MCP `show-modules` to see all modules
+- **Dependencies**: Use MCP `show-dependencies <module>` to see dependency graph

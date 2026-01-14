@@ -38,7 +38,6 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/impl/work/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
-	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
 func init() {
@@ -189,7 +188,7 @@ func CreatePR() int {
 		zap.String("title", title))
 
 	config.base.Logger.Info("Creating pull request...")
-	prURL, err := createPullRequest(config.base.Logger, title, description, config.currentBranch, config.targetBranch)
+	prURL, err := createPullRequest(title, description, config.currentBranch, config.targetBranch)
 	if err != nil {
 		config.base.Logger.Debug("Phase 6: Failed",
 			zap.String("phase", "phase6"),
@@ -470,12 +469,8 @@ func generatePRDescription(commits []string, diffStat string) string {
 }
 
 // createPullRequest creates a pull request using gh CLI
-func createPullRequest(logger *logging.Logger, title, description, head, base string) (string, error) {
-	logger.Debug("Executing gh pr create command",
-		zap.String("title", title),
-		zap.String("head", head),
-		zap.String("base", base),
-		zap.Int("descriptionLength", len(description)))
+func createPullRequest(title, description, head, base string) (string, error) {
+	log.Debugf("Executing gh pr create command: title=%s, head=%s, base=%s, descriptionLength=%d", title, head, base, len(description))
 
 	cmd := exec.Command("gh", "pr", "create",
 		"--title", title,
@@ -486,15 +481,12 @@ func createPullRequest(logger *logging.Logger, title, description, head, base st
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		logger.Debug("Failed to execute gh pr create",
-			zap.Error(err),
-			zap.String("output", string(output)))
+		log.Debugf("Failed to execute gh pr create: error=%v, output=%s", err, string(output))
 		return "", fmt.Errorf("failed to create pull request: %w\nOutput: %s", err, string(output))
 	}
 
 	// Extract PR URL from output
 	prURL := strings.TrimSpace(string(output))
-	logger.Debug("Pull request created successfully",
-		zap.String("prURL", prURL))
+	log.Debugf("Pull request created successfully: prURL=%s", prURL)
 	return prURL, nil
 }

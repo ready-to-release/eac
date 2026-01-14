@@ -52,12 +52,12 @@ type CommandInfo struct {
 //   - <!-- book:categories-table --> - Category quick reference table
 //   - <!-- book:categories-list --> - Category list with descriptions
 var cmdMarkerPatterns = map[string]*regexp.Regexp{
-	"cmd":              regexp.MustCompile(`<!--\s*book:cmd\s+([a-zA-Z0-9_-]+(?:\s+[a-zA-Z0-9_-]+)*)\s*-->`),
-	"cmd-group":        regexp.MustCompile(`<!--\s*book:cmd-group\s+([a-zA-Z0-9_-]+)\s*-->`),
-	"cmd-all":          regexp.MustCompile(`<!--\s*book:cmd-all\s*-->`),
-	"cmd-toc":          regexp.MustCompile(`<!--\s*book:cmd-toc\s*-->`),
-	"categories-table": regexp.MustCompile(`<!--\s*book:categories-table\s*-->`),
-	"categories-list":  regexp.MustCompile(`<!--\s*book:categories-list\s*-->`),
+	"cmd":               regexp.MustCompile(`<!--\s*book:cmd\s+([a-zA-Z0-9_-]+(?:\s+[a-zA-Z0-9_-]+)*)\s*-->`),
+	"cmd-group":         regexp.MustCompile(`<!--\s*book:cmd-group\s+([a-zA-Z0-9_-]+)\s*-->`),
+	"cmd-all":           regexp.MustCompile(`<!--\s*book:cmd-all\s*-->`),
+	"cmd-toc":           regexp.MustCompile(`<!--\s*book:cmd-toc\s*-->`),
+	"categories-table":  regexp.MustCompile(`<!--\s*book:categories-table\s*-->`),
+	"categories-list":   regexp.MustCompile(`<!--\s*book:categories-list\s*-->`),
 	"category-section":  regexp.MustCompile(`<!--\s*book:category-section\s+([a-zA-Z0-9_-]+)\s*-->`),
 	"category-commands": regexp.MustCompile(`<!--\s*book:category-commands\s+([a-zA-Z0-9_-]+)\s*-->`),
 	"categories-index":  regexp.MustCompile(`<!--\s*book:categories-index\s*-->`),
@@ -300,8 +300,8 @@ func (p *Preprocessor) formatCommandTOC(cmdBinary string) (string, error) {
 
 // CategoryStats holds category information for documentation
 type CategoryStats struct {
-	Name        string
-	Description string
+	Name         string
+	Description  string
 	CommandCount int
 }
 

@@ -13,9 +13,9 @@ func TestGetChangelog(t *testing.T) {
 	}
 
 	tests := []struct {
-		name        string
-		args        []string
-		wantErr     bool
+		name         string
+		args         []string
+		wantErr      bool
 		expectedExit int
 	}{
 		{

@@ -151,7 +151,7 @@ func TestIsValidCalverVersion(t *testing.T) {
 		{"2025.1214", false},        // missing HHMM
 		{"2025.1214.1630.0", false}, // extra component
 		{"", false},                 // empty
-		{"invalid", false},         // not a version
+		{"invalid", false},          // not a version
 	}
 
 	for _, tt := range tests {

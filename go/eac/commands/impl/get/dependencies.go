@@ -1,10 +1,12 @@
 // Command: get dependencies
-//   --as-yaml: Output as YAML (default)
-//   --as-json: Output as JSON
-//   --as-toml: Output as TOML
-//   --as-plantuml: Output as PlantUML diagram
-//   --as-mermaid: Output as Mermaid diagram
-//   --as-execution-order: Output execution order only
+//
+//	--as-yaml: Output as YAML (default)
+//	--as-json: Output as JSON
+//	--as-toml: Output as TOML
+//	--as-plantuml: Output as PlantUML diagram
+//	--as-mermaid: Output as Mermaid diagram
+//	--as-execution-order: Output execution order only
+//
 // Long:
 // Long: Expected Output:
 // Long: YAML dependency graph showing module relationships, including:
@@ -19,8 +21,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	getInternal "github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )

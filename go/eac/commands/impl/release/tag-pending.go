@@ -38,18 +38,17 @@ func init() {
 
 // TagPendingResult contains info about a version needing a tag
 type TagPendingResult struct {
-	Module  string `json:"module"`
-	Version string `json:"version"`
-	Tag     string `json:"tag"`
+	Module   string `json:"module"`
+	Version  string `json:"version"`
+	Tag      string `json:"tag"`
 	NeedsTag bool   `json:"needs_tag"`
 }
 
 // TagPendingReport contains results for multiple modules
 type TagPendingReport struct {
-	Results     []TagPendingResult `json:"results"`
-	HasPending  bool               `json:"has_pending"`
+	Results    []TagPendingResult `json:"results"`
+	HasPending bool               `json:"has_pending"`
 }
-
 
 func ReleaseTagPending() int {
 	// Validate flags before parsing
@@ -91,7 +90,9 @@ func ReleaseTagPending() int {
 	}
 
 	// Open git repository
-	repo, err := git.Open("")
+	// Open git repository
+	gitMgr := git.NewManager(logging.C().Zap())
+	repo, err := gitMgr.Open("")
 	if err != nil {
 		tagPendingLog.Errorf("failed to open git repository: %v", err)
 		return 1

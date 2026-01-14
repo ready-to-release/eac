@@ -8,12 +8,12 @@ type UnusedStep struct {
 
 // AnalysisResult contains the results of unused step analysis.
 type AnalysisResult struct {
-	Pairs           []PairResult
-	SharedSteps     []StepDefinition // steps from internal/steps.go
-	UnusedShared    []UnusedStep     // shared steps not used by ANY pair
-	TotalUnused     int
-	TotalSteps      int
-	TotalFeatures   int
+	Pairs         []PairResult
+	SharedSteps   []StepDefinition // steps from internal/steps.go
+	UnusedShared  []UnusedStep     // shared steps not used by ANY pair
+	TotalUnused   int
+	TotalSteps    int
+	TotalFeatures int
 }
 
 // PairResult contains unused step analysis for a single impl↔specs pair.

@@ -58,9 +58,9 @@ type CIChangedModulesResult struct {
 	HeadSHA         string   `json:"head_sha" yaml:"head_sha" toml:"head_sha"`
 	IsBootstrap     bool     `json:"is_bootstrap" yaml:"is_bootstrap" toml:"is_bootstrap"`
 	// Additional context for CI reasoning
-	ChangedFiles      []string            `json:"changed_files" yaml:"changed_files" toml:"changed_files"`
-	ChangedFileCount  int                 `json:"changed_file_count" yaml:"changed_file_count" toml:"changed_file_count"`
-	FilesByModule     map[string][]string `json:"files_by_module" yaml:"files_by_module" toml:"files_by_module"`
+	ChangedFiles     []string            `json:"changed_files" yaml:"changed_files" toml:"changed_files"`
+	ChangedFileCount int                 `json:"changed_file_count" yaml:"changed_file_count" toml:"changed_file_count"`
+	FilesByModule    map[string][]string `json:"files_by_module" yaml:"files_by_module" toml:"files_by_module"`
 	// Per-module CI status (why each module needs/doesn't need CI)
 	ModuleStatus map[string]ModuleCIStatus `json:"module_status,omitempty" yaml:"module_status,omitempty" toml:"module_status,omitempty"`
 	// Modules that were skipped (have valid CI at HEAD)
