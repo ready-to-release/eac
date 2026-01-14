@@ -43,7 +43,7 @@ func getGitRepo(workspaceRoot string) (git.GitRepository, error) {
 	if gitRepo != nil {
 		return gitRepo, nil
 	}
-	repo, err := git.Open(workspaceRoot)
+	repo, err := git.Open(workspaceRoot, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open git repository: %w", err)
 	}

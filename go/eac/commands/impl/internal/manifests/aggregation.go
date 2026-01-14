@@ -21,30 +21,30 @@ type TotalCounts struct {
 
 // CompleteTestData holds all test data prepared for display or serialization
 type CompleteTestData struct {
-	ModulesTested  int                `json:"modules_tested" yaml:"modules_tested"`
-	LastRun        time.Time          `json:"last_run" yaml:"last_run"`
-	TotalTests     int                `json:"total_tests" yaml:"total_tests"`
-	TotalPassed    int                `json:"total_passed" yaml:"total_passed"`
-	TotalFailed    int                `json:"total_failed" yaml:"total_failed"`
-	Tests          []TestResult       `json:"tests" yaml:"tests"`
-	SpecCoverage   []SpecCoverage     `json:"spec_coverage" yaml:"spec_coverage"`
-	ControlSummary []ControlSummary   `json:"control_summary" yaml:"control_summary"`
-	ModuleStats    []ModuleStats      `json:"module_stats" yaml:"module_stats"`
-	SummaryByType  []TypeSummary      `json:"summary_by_type" yaml:"summary_by_type"`
-	SummaryBySuite []SuiteSummary     `json:"summary_by_suite" yaml:"summary_by_suite"`
+	ModulesTested  int              `json:"modules_tested" yaml:"modules_tested"`
+	LastRun        time.Time        `json:"last_run" yaml:"last_run"`
+	TotalTests     int              `json:"total_tests" yaml:"total_tests"`
+	TotalPassed    int              `json:"total_passed" yaml:"total_passed"`
+	TotalFailed    int              `json:"total_failed" yaml:"total_failed"`
+	Tests          []TestResult     `json:"tests" yaml:"tests"`
+	SpecCoverage   []SpecCoverage   `json:"spec_coverage" yaml:"spec_coverage"`
+	ControlSummary []ControlSummary `json:"control_summary" yaml:"control_summary"`
+	ModuleStats    []ModuleStats    `json:"module_stats" yaml:"module_stats"`
+	SummaryByType  []TypeSummary    `json:"summary_by_type" yaml:"summary_by_type"`
+	SummaryBySuite []SuiteSummary   `json:"summary_by_suite" yaml:"summary_by_suite"`
 }
 
 // ModuleStats represents test statistics for a module
 type ModuleStats struct {
-	Module          string            `json:"module" yaml:"module"`
-	Total           int               `json:"total" yaml:"total"`
-	Passed          int               `json:"passed" yaml:"passed"`
-	Failed          int               `json:"failed" yaml:"failed"`
-	Skipped         int               `json:"skipped" yaml:"skipped"`
-	DurationSeconds float64           `json:"duration_seconds" yaml:"duration_seconds"`
-	SuiteCounts     map[string]int    `json:"suite_counts" yaml:"suite_counts"`
-	Controls        []string          `json:"controls" yaml:"controls"`
-	Tests           []TestResult      `json:"tests" yaml:"tests"`
+	Module          string         `json:"module" yaml:"module"`
+	Total           int            `json:"total" yaml:"total"`
+	Passed          int            `json:"passed" yaml:"passed"`
+	Failed          int            `json:"failed" yaml:"failed"`
+	Skipped         int            `json:"skipped" yaml:"skipped"`
+	DurationSeconds float64        `json:"duration_seconds" yaml:"duration_seconds"`
+	SuiteCounts     map[string]int `json:"suite_counts" yaml:"suite_counts"`
+	Controls        []string       `json:"controls" yaml:"controls"`
+	Tests           []TestResult   `json:"tests" yaml:"tests"`
 }
 
 // TypeSummary represents test counts by type

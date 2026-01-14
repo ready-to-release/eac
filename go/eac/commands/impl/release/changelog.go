@@ -45,7 +45,6 @@ func init() {
 	registry.Register(ReleaseChangelog)
 }
 
-
 func ReleaseChangelog() int {
 	// Validate flags before parsing
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
@@ -118,7 +117,9 @@ func ReleaseChangelog() int {
 	}
 
 	// Open git repository
-	repo, err := git.Open("")
+	// Open git repository
+	gitMgr := git.NewManager(logging.C().Zap())
+	repo, err := gitMgr.Open("")
 	if err != nil {
 		log.Errorf("failed to open git repository: %v", err)
 		return 1

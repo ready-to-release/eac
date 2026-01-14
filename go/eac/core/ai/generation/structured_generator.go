@@ -12,6 +12,9 @@ import (
 // StructuredGenerator handles AI generation of structured output with validation
 // Generates content in specified format (JSON, Gherkin, OSCAL, Structurizr DSL)
 // Commands handle deterministic formatting of the generated output
+//
+// IMPORTANT: This is a CORE library and must NOT use component loggers (logging.C()).
+// All logging must go through the Logger field, which should be zap.NewNop() by default.
 type StructuredGenerator struct {
 	// Generation configuration
 	OutputFormat StructuredFormat
@@ -22,7 +25,7 @@ type StructuredGenerator struct {
 	MaxAttempts int
 	Strategy    RetryStrategy
 	Debug       bool
-	Logger      *zap.Logger
+	Logger      *zap.Logger // Should be zap.NewNop() to prevent writing to command logs
 }
 
 // GenerationResult contains results from AI generation
@@ -104,6 +107,9 @@ func (g *StructuredGenerator) runGeneration(ctx context.Context, strategy RetryS
 	var lastOutput string
 	var lastErrors []validation.ValidationError
 
+	// Log debug flag state
+	g.logf("Starting generation loop", zap.Bool("debug", g.Debug), zap.Int("maxAttempts", g.MaxAttempts))
+
 	for attempt := 1; attempt <= g.MaxAttempts; attempt++ {
 		output, err := cfg.executor.Execute(ctx, currentPrompt)
 		if err != nil {
@@ -112,6 +118,20 @@ func (g *StructuredGenerator) runGeneration(ctx context.Context, strategy RetryS
 
 		// Clean up output based on format (remove markdown fences, etc.)
 		cleanedOutput := g.cleanupOutput(output, g.OutputFormat)
+
+		// Log the FULL AI output for debugging
+		g.logf("AI generated output",
+			zap.Int("attempt", attempt),
+			zap.Int("outputLength", len(cleanedOutput)))
+
+		// Log the full output as a separate entry so it appears in the log file
+		g.logf("Full AI output", zap.String("content", cleanedOutput))
+
+		// Print full output to stderr if debug is enabled
+		if g.Debug {
+			fmt.Fprintf(os.Stderr, "\nDEBUG: Full AI output (attempt %d/%d):\n", attempt, g.MaxAttempts)
+			fmt.Fprintf(os.Stderr, "---BEGIN AI OUTPUT---\n%s\n---END AI OUTPUT---\n\n", cleanedOutput)
+		}
 
 		errors := cfg.validator.Validate(cleanedOutput, map[string]interface{}{
 			"attempt": attempt,
@@ -131,25 +151,36 @@ func (g *StructuredGenerator) runGeneration(ctx context.Context, strategy RetryS
 
 		g.logWarn("Validation failed, retrying",
 			zap.Int("attempt", attempt),
-			zap.Int("errorCount", len(errors)))
+			zap.Int("errorCount", len(errors)),
+			zap.Bool("debugEnabled", g.Debug))
 
 		// Log detailed error messages if debug is enabled
-		if g.Debug {
-			fmt.Fprintf(os.Stderr, "DEBUG: Validation failed (attempt %d/%d) with %d errors\n", attempt, g.MaxAttempts, len(errors))
-			for i, err := range errors {
-				errorCode := ""
-				if err.Code != nil {
-					errorCode = err.Code.Code
-				}
+		// ALWAYS log the first few errors to help with debugging
+		for i, err := range errors {
+			if i >= 5 {
+				g.logWarn("Additional validation errors truncated", zap.Int("remaining", len(errors)-i))
+				break
+			}
 
-				g.logWarn("Validation error",
-					zap.Int("errorNum", i+1),
-					zap.String("code", errorCode),
-					zap.String("message", err.Message))
+			errorCode := ""
+			if err.Code != nil {
+				errorCode = err.Code.Code
+			}
 
-				// Always print to stderr when debug is enabled
+			g.logWarn("Validation error",
+				zap.Int("errorNum", i+1),
+				zap.String("code", errorCode),
+				zap.String("message", err.Message))
+
+			// Print to stderr if debug is enabled
+			if g.Debug {
 				fmt.Fprintf(os.Stderr, "  Validation error %d [%s]: %s\n", i+1, errorCode, err.Message)
 			}
+		}
+
+		// Print debug header if debug is enabled
+		if g.Debug {
+			fmt.Fprintf(os.Stderr, "DEBUG: Validation failed (attempt %d/%d) with %d errors\n", attempt, g.MaxAttempts, len(errors))
 		}
 
 		currentPrompt = strategy.BuildRetryPrompt(ctx, cfg.originalPrompt, output, errors, attempt)
@@ -212,6 +243,14 @@ func lastIndex(s, substr string) int {
 	return -1
 }
 
+// truncateString truncates a string to maxLen characters
+func truncateString(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
+}
+
 // getStrategy returns the configured strategy or the default
 func (g *StructuredGenerator) getStrategy() RetryStrategy {
 	if g.Strategy != nil {
@@ -221,6 +260,7 @@ func (g *StructuredGenerator) getStrategy() RetryStrategy {
 }
 
 // log writes an info message if logger is configured
+// Logs are discarded if Logger is nil or zap.NewNop()
 func (g *StructuredGenerator) log(msg string) {
 	if g.Logger != nil {
 		g.Logger.Info(msg)
@@ -228,6 +268,7 @@ func (g *StructuredGenerator) log(msg string) {
 }
 
 // logf writes an info message with fields if logger is configured
+// Logs are discarded if Logger is nil or zap.NewNop()
 func (g *StructuredGenerator) logf(msg string, fields ...zap.Field) {
 	if g.Logger != nil {
 		g.Logger.Info(msg, fields...)
@@ -235,6 +276,7 @@ func (g *StructuredGenerator) logf(msg string, fields ...zap.Field) {
 }
 
 // logWarn writes a warning message with fields if logger is configured
+// Logs are discarded if Logger is nil or zap.NewNop()
 func (g *StructuredGenerator) logWarn(msg string, fields ...zap.Field) {
 	if g.Logger != nil {
 		g.Logger.Warn(msg, fields...)

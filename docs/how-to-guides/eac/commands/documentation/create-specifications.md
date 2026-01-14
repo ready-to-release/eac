@@ -18,6 +18,17 @@ Generate Gherkin BDD specifications from natural language requirements using AI.
 - Clear requirements or user stories
 - Specifications directory exists
 
+## How It Works
+
+The command uses AI to generate specifications in valid Gherkin format:
+
+- **Structured Generation**: AI generates specifications following Gherkin syntax rules
+- **Automatic Validation**: Output is validated against Gherkin format requirements
+- **Intelligent Retry**: If validation fails, the AI receives error feedback and regenerates improved output
+- **Quality Assurance**: Generated specs are syntactically correct and ready to use
+
+This ensures high-quality specifications every time.
+
 ## Steps
 
 ### 1. Generate Spec from Description
@@ -26,7 +37,7 @@ Generate Gherkin BDD specifications from natural language requirements using AI.
 r2r eac create spec "User can login with email and password"
 ```
 
-**What happens**: AI generates Gherkin feature file with scenarios
+**What happens**: AI generates a Gherkin feature file with scenarios, validates the syntax, and retries automatically if needed
 
 ### 2. Review Generated Spec
 

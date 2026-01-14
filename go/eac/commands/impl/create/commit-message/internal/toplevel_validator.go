@@ -131,11 +131,11 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 		// Check for any markdown headers (## or ###) - these shouldn't be in top-level
 		if strings.HasPrefix(trimmed, "## ") || strings.HasPrefix(trimmed, "### ") {
 			errors = append(errors, *contracts.NewLegacyValidationError(
-			"UNEXPECTED_MODULE_SECTION",
-			fmt.Sprintf("Top-level output should not contain markdown headers (found: %s)", trimmed),
-			0,
-			"error",
-		))
+				"UNEXPECTED_MODULE_SECTION",
+				fmt.Sprintf("Top-level output should not contain markdown headers (found: %s)", trimmed),
+				0,
+				"error",
+			))
 		}
 
 		// Check for bullet points starting with module-like patterns (- src-, - ext-, etc.)
@@ -144,11 +144,11 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 			// Check if it looks like a file path or module reference
 			if strings.Contains(rest, "/") || strings.HasPrefix(rest, "New ") || strings.HasPrefix(rest, "Updated ") {
 				errors = append(errors, *contracts.NewLegacyValidationError(
-			"UNEXPECTED_FILE_LIST",
-			fmt.Sprintf("Top-level output should not contain file/change lists (found: %s)", trimmed),
-			0,
-			"error",
-		))
+					"UNEXPECTED_FILE_LIST",
+					fmt.Sprintf("Top-level output should not contain file/change lists (found: %s)", trimmed),
+					0,
+					"error",
+				))
 			}
 		}
 
@@ -157,11 +157,11 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 			nextLine := strings.TrimSpace(lines[i+1])
 			if isDashesLine(nextLine) && len(nextLine) > 3 {
 				errors = append(errors, *contracts.NewLegacyValidationError(
-			"UNEXPECTED_MODULE_SECTION",
-			fmt.Sprintf("Top-level output should not contain module sections (found: %s)", trimmed),
-			0,
-			"error",
-		))
+					"UNEXPECTED_MODULE_SECTION",
+					fmt.Sprintf("Top-level output should not contain module sections (found: %s)", trimmed),
+					0,
+					"error",
+				))
 			}
 		}
 	}
@@ -194,11 +194,11 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 				preview = preview[:47] + "..."
 			}
 			errors = append(errors, *contracts.NewLegacyValidationError(
-			"LINE_TOO_LONG",
-			fmt.Sprintf("Line exceeds %d characters (%d chars): %s", MaxLineLength, len(trimmed), preview),
-			0,
-			"warning",
-		))
+				"LINE_TOO_LONG",
+				fmt.Sprintf("Line exceeds %d characters (%d chars): %s", MaxLineLength, len(trimmed), preview),
+				0,
+				"warning",
+			))
 		}
 	}
 

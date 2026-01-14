@@ -36,7 +36,6 @@ import (
 
 	commitmessageinternal "github.com/ready-to-release/eac/go/eac/commands/impl/create/commit-message/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
-	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
@@ -73,15 +72,16 @@ import (
 //   - Error if any module generation fails (first error encountered)
 //
 // Example:
-//   cfg := &executionConfig{
-//       affectedModules: []string{"r2r-cli", "eac-core", "eac-commands"},
-//       ...
-//   }
-//   sections, err := generateModuleSectionsParallel(cfg, logger, nil)
-//   // sections[0] corresponds to "r2r-cli"
-//   // sections[1] corresponds to "eac-core"
-//   // sections[2] corresponds to "eac-commands"
-func generateModuleSectionsParallel(cfg *executionConfig, logger *logging.Logger, testExecutor *ai.Executor) ([]string, error) {
+//
+//	cfg := &executionConfig{
+//	    affectedModules: []string{"r2r-cli", "eac-core", "eac-commands"},
+//	    ...
+//	}
+//	sections, err := generateModuleSectionsParallel(cfg, logger, nil)
+//	// sections[0] corresponds to "r2r-cli"
+//	// sections[1] corresponds to "eac-core"
+//	// sections[2] corresponds to "eac-commands"
+func generateModuleSectionsParallel(cfg *executionConfig, testExecutor *ai.Executor) ([]string, error) {
 	// Validate inputs
 	if cfg == nil {
 		return nil, fmt.Errorf("executionConfig cannot be nil")
@@ -130,7 +130,7 @@ func generateModuleSectionsParallel(cfg *executionConfig, logger *logging.Logger
 			moduleContext := buildModuleContext(moduleName, moduleFiles, cfg.gitDiff)
 
 			// Debug output (thread-safe via logging module)
-			logDebugArtifactf(logger, "MODULE-%d-%s-CONTEXT", moduleContext, idx+1, moduleName)
+			logDebugArtifactf("MODULE-%d-%s-CONTEXT", moduleContext, idx+1, moduleName)
 
 			var output string
 			var providerName string
@@ -148,7 +148,7 @@ func generateModuleSectionsParallel(cfg *executionConfig, logger *logging.Logger
 				return genErr
 			})
 
-			logDebugArtifactf(logger, "MODULE-%d-%s-OUTPUT", output, idx+1, moduleName)
+			logDebugArtifactf("MODULE-%d-%s-OUTPUT", output, idx+1, moduleName)
 
 			// Send result with original index to preserve order
 			// Buffered channel ensures this never blocks

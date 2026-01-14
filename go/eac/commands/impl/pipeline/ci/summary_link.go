@@ -35,7 +35,6 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 )
 
-
 func init() {
 	registry.Register(PipelineCISummaryLink)
 }

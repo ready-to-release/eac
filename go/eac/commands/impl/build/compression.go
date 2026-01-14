@@ -126,9 +126,9 @@ func processDerivedArtifact(moniker string, art config.Artifact, targetOS, targe
 	// Resolve source path - check metadata for custom name
 	// Create a temporary artifact definition for the source to check metadata overrides
 	sourceArtifact := config.Artifact{
-		Type:     art.Type,
-		Pattern:  art.DeriveFrom,
-		ID:       "",
+		Type:      art.Type,
+		Pattern:   art.DeriveFrom,
+		ID:        "",
 		Platforms: art.Platforms,
 	}
 	sourceName := resolver.ResolvePatternWithMetadata(art.DeriveFrom, sourceArtifact)

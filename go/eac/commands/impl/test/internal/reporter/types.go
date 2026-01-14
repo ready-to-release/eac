@@ -5,13 +5,13 @@ import "time"
 // TestSuiteReportData contains all data needed for test suite report generation
 type TestSuiteReportData struct {
 	// Suite information
-	SuiteName     string
-	SuiteMoniker  string
-	StartTime     string
-	EndTime       string
-	Duration      float64
-	Status        string
-	GeneratedAt   string
+	SuiteName    string
+	SuiteMoniker string
+	StartTime    string
+	EndTime      string
+	Duration     float64
+	Status       string
+	GeneratedAt  string
 
 	// Test counts
 	TestsDiscovered        int
@@ -24,10 +24,10 @@ type TestSuiteReportData struct {
 	TestPassRate           float64
 
 	// Package counts
-	PackagesTotal    int
-	PackagesPassed   int
-	PackagesFailed   int
-	PackagePassRate  float64
+	PackagesTotal   int
+	PackagesPassed  int
+	PackagesFailed  int
+	PackagePassRate float64
 
 	// Module breakdown
 	Modules []ModuleReportData
@@ -38,12 +38,12 @@ type TestSuiteReportData struct {
 
 // ModuleReportData contains test results for a single module
 type ModuleReportData struct {
-	ModuleName      string
-	TestResultDir   string
-	Features        []FeatureReportData
-	UnitTests       []UnitTestReportData
-	TotalScenarios  int
-	TotalUnitTests  int
+	ModuleName     string
+	TestResultDir  string
+	Features       []FeatureReportData
+	UnitTests      []UnitTestReportData
+	TotalScenarios int
+	TotalUnitTests int
 }
 
 // FeatureReportData contains information about a BDD feature

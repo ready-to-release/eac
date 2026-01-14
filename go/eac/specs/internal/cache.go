@@ -81,7 +81,8 @@ func (c *TestCache) EnsurePopulated(repoRoot string) error {
 	// Fall back to git ls-files with timing
 	log.Debug("Pre-computed file list not found, using git ls-files")
 	start := time.Now()
-	repo, err := git.Open(repoRoot)
+	gitMgr := git.NewManager(logging.C().Zap())
+	repo, err := gitMgr.Open(repoRoot)
 	openDuration := time.Since(start)
 	if err != nil {
 		return err

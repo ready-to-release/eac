@@ -15,15 +15,13 @@
 // Long:   templates install docs --destination ./custom-docs
 // Long:   templates install docs --destination docs/api --debug
 // Flag.destination: type=string, usage=Output directory (default: docs/reference/)
-// Flag.debug: type=bool, shorthand=d, default=false, usage=Save detailed logs to out/logs/templates/install/
+// Flag.debug: type=bool, shorthand=d, default=false, usage=Save detailed logs to out/commands.log
 package docs
 
 import (
 	"fmt"
 	"os"
 	"path/filepath"
-
-	"go.uber.org/zap"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/templates/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
@@ -47,7 +45,6 @@ type Config struct {
 	Destination   string
 	WorkspaceRoot string
 	Debug         bool
-	Logger        *logging.Logger
 }
 
 // TemplatesInstallDocs installs documentation templates
@@ -64,16 +61,19 @@ func TemplatesInstallDocs() int {
 		log.Errorf("%v", err)
 		return 1
 	}
-	defer config.Logger.Sync()
 
-	config.Logger.Info("Starting templates install docs command",
-		zap.String("destination", config.Destination),
-		zap.Bool("debug", config.Debug))
+	// Configure logging system (logs to out/commands.log)
+	if err := logging.ConfigureLoggingSimple(config.WorkspaceRoot, "commands", nil, config.Debug); err != nil {
+		log.Warnf("Failed to configure logging: %v", err)
+	}
+	defer logging.CloseLogging()
+
+	log.Debugf("Starting templates install docs command: destination=%s, debug=%v", config.Destination, config.Debug)
 
 	// Resolve template directory
 	templateDir, cleanup, err := resolveTemplateDirectory(config)
 	if err != nil {
-		config.Logger.Error("Failed to resolve template directory", zap.Error(err))
+		log.Debugf("Failed to resolve template directory: error=%v", err)
 		log.Errorf("%v", err)
 		return 1
 	}
@@ -81,13 +81,12 @@ func TemplatesInstallDocs() int {
 
 	// Install templates (copy without value replacement)
 	if err := installTemplates(config, templateDir); err != nil {
-		config.Logger.Error("Failed to install templates", zap.Error(err))
+		log.Debugf("Failed to install templates: error=%v", err)
 		log.Errorf("%v", err)
 		return 1
 	}
 
-	config.Logger.Info("Documentation templates installed successfully",
-		zap.String("destination", config.Destination))
+	log.Debugf("Documentation templates installed successfully: destination=%s", config.Destination)
 	log.Infof("✓ Documentation templates installed successfully to %s", config.Destination)
 
 	return 0
@@ -100,13 +99,11 @@ func resolveTemplateDirectory(config *Config) (string, func(), error) {
 	if containerRoot := repository.GetContainerRoot(); containerRoot != "" {
 		// Running in container - use container root
 		root = containerRoot
-		config.Logger.Info("Running in container, using local templates",
-			zap.String("containerRoot", containerRoot))
+		log.Debugf("Running in container, using local templates: containerRoot=%s", containerRoot)
 	} else {
 		// Not in container - use workspace root
 		root = config.WorkspaceRoot
-		config.Logger.Info("Using local templates from repository",
-			zap.String("workspaceRoot", root))
+		log.Debugf("Using local templates from repository: workspaceRoot=%s", root)
 	}
 
 	templateDir := paths.TemplatePath(root, "docs")
@@ -116,8 +113,7 @@ func resolveTemplateDirectory(config *Config) (string, func(), error) {
 		return "", nil, fmt.Errorf("template directory does not exist: %s", templateDir)
 	}
 
-	config.Logger.Debug("Local templates validated",
-		zap.String("dir", templateDir))
+	log.Debugf("Local templates validated: dir=%s", templateDir)
 	log.Infof("Using templates from %s", templateDir)
 
 	return templateDir, func() {}, nil
@@ -125,9 +121,7 @@ func resolveTemplateDirectory(config *Config) (string, func(), error) {
 
 // installTemplates copies templates to destination
 func installTemplates(config *Config, templateDir string) error {
-	config.Logger.Info("Installing templates",
-		zap.String("source", templateDir),
-		zap.String("destination", config.Destination))
+	log.Debugf("Installing templates: source=%s, destination=%s", templateDir, config.Destination)
 	log.Infof("Installing templates to %s...", config.Destination)
 
 	// Create renderer with no values (will just copy files)
@@ -136,7 +130,7 @@ func installTemplates(config *Config, templateDir string) error {
 		return fmt.Errorf("failed to install templates: %w", err)
 	}
 
-	config.Logger.Debug("Templates installed successfully")
+	log.Debugf("Templates installed successfully")
 
 	// Save debug info if enabled
 	if config.Debug {
@@ -158,17 +152,15 @@ func writeDebugFile(c *Config, filename string, content string) {
 	debugDir := filepath.Join(config.GetLogsPath(c.WorkspaceRoot, "templates"), "install")
 
 	if err := os.MkdirAll(debugDir, 0755); err != nil {
-		c.Logger.Warn("Failed to create debug directory", zap.Error(err))
+		log.Debugf("Failed to create debug directory: error=%v", err)
 		return
 	}
 
 	debugFile := filepath.Join(debugDir, filename)
 	if err := os.WriteFile(debugFile, []byte(content), 0644); err != nil {
-		c.Logger.Warn("Failed to write debug file",
-			zap.String("file", debugFile),
-			zap.Error(err))
+		log.Debugf("Failed to write debug file: file=%s, error=%v", debugFile, err)
 	} else {
-		c.Logger.Debug("Saved debug file", zap.String("file", debugFile))
+		log.Debugf("Saved debug file: file=%s", debugFile)
 	}
 }
 
@@ -202,17 +194,6 @@ func parseConfig() (*Config, error) {
 		return nil, fmt.Errorf("failed to find repository root: %w", err)
 	}
 
-	// Initialize logger
-	var logger *logging.Logger
-	if debug {
-		logger, err = logging.NewWithDebug("templates", workspaceRoot)
-	} else {
-		logger, err = logging.NewDefault("templates", workspaceRoot)
-	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize logger: %w", err)
-	}
-
 	// Resolve destination path
 	if !filepath.IsAbs(destination) {
 		destination = filepath.Join(workspaceRoot, destination)
@@ -222,7 +203,6 @@ func parseConfig() (*Config, error) {
 		Destination:   destination,
 		WorkspaceRoot: workspaceRoot,
 		Debug:         debug,
-		Logger:        logger,
 	}
 
 	return config, nil

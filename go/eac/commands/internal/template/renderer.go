@@ -113,11 +113,20 @@ func defaultFuncMap() template.FuncMap {
 		"lte": func(a, b int) bool { return a <= b },
 		"eq":  func(a, b int) bool { return a == b },
 
-		// Math functions
+		// Math functions (integer)
 		"add": func(a, b int) int { return a + b },
 		"sub": func(a, b int) int { return a - b },
 		"mul": func(a, b int) int { return a * b },
 		"div": func(a, b int) int {
+			if b == 0 {
+				return 0
+			}
+			return a / b
+		},
+
+		// Math functions (float64)
+		"mulf": func(a, b float64) float64 { return a * b },
+		"divf": func(a, b float64) float64 {
 			if b == 0 {
 				return 0
 			}

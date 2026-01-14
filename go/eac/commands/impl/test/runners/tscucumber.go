@@ -132,7 +132,7 @@ func (r *TsCucumberRunner) Execute(pkgPath string, tests []testing.TestReference
 		// BDD format: featureName:moduleRoot:featurePath
 		// Display as "featureName:moduleRoot" (without full feature path)
 		displayName = parts[0] + ":" + parts[1]
-		relPkgPath = parts[1]    // moduleRoot
+		relPkgPath = parts[1]     // moduleRoot
 		relFeatureFile = parts[2] // full feature path
 	} else if len(parts) == 1 {
 		// Just the module path

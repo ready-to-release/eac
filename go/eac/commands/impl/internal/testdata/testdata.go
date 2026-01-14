@@ -7,6 +7,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	contractsreports "github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/git"
+	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 	"github.com/ready-to-release/eac/go/eac/core/testing"
 )
@@ -99,7 +100,8 @@ func mapGOOSToDepTag(goos string) string {
 // BuildFileModuleMap creates a mapping from file paths to module monikers
 func BuildFileModuleMap(repoRoot string) (map[string]string, error) {
 	// Open git repository
-	repo, err := git.Open(repoRoot)
+	gitMgr := git.NewManager(logging.C().Zap())
+	repo, err := gitMgr.Open(repoRoot)
 	if err != nil {
 		return nil, err
 	}

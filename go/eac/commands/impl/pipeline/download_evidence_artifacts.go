@@ -37,11 +37,11 @@ func init() {
 
 // DownloadResult tracks what was downloaded
 type DownloadResult struct {
-	Module       string   `json:"module" yaml:"module"`
-	RunID        int      `json:"run_id" yaml:"run_id"`
+	Module        string   `json:"module" yaml:"module"`
+	RunID         int      `json:"run_id" yaml:"run_id"`
 	TestArtifacts []string `json:"test_artifacts,omitempty" yaml:"test_artifacts,omitempty"`
 	ScanArtifacts []string `json:"scan_artifacts,omitempty" yaml:"scan_artifacts,omitempty"`
-	Error        string   `json:"error,omitempty" yaml:"error,omitempty"`
+	Error         string   `json:"error,omitempty" yaml:"error,omitempty"`
 }
 
 func PipelineDownloadEvidenceArtifacts() int {

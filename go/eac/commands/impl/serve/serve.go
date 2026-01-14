@@ -31,7 +31,6 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
-	"go.uber.org/zap"
 )
 
 // commandFlags defines valid flags for the serve command
@@ -129,17 +128,10 @@ func Serve() int {
 	}
 
 	// Initialize logger
-	var logger *logging.Logger
-	if debug {
-		logger, err = logging.NewWithDebug("serve", workspaceRoot)
-	} else {
-		logger, err = logging.NewDefault("serve", workspaceRoot)
+	if err := logging.ConfigureLoggingSimple(workspaceRoot, "commands", nil, debug); err != nil {
+		log.Warnf("Failed to configure logging: %v", err)
 	}
-	if err != nil {
-		log.Errorf("Error initializing logger: %v", err)
-		return 1
-	}
-	defer logger.Sync()
+	defer logging.CloseLogging()
 
 	// Resolve module configuration
 	moduleConfig, err := resolveModuleConfig(workspaceRoot, moduleMoniker, namedBook)
@@ -152,11 +144,11 @@ func Serve() int {
 
 	// Handle --stop flag
 	if stop {
-		return handleStop(workspaceRoot, logger, containerName, moduleMoniker)
+		return handleStop(workspaceRoot, containerName, moduleMoniker)
 	}
 
 	// Get Docker client
-	dockerClient, err := NewDockerClient(logger, containerName)
+	dockerClient, err := NewDockerClient(containerName)
 	if err != nil {
 		log.Errorf("Failed to initialize Docker: %v", err)
 		return 1
@@ -192,7 +184,7 @@ func Serve() int {
 
 			if rebuild {
 				log.Infof("Rebuilding %s...", moduleMoniker)
-				if err := runBuild(workspaceRoot, moduleMoniker, logger); err != nil {
+				if err := runBuild(workspaceRoot, moduleMoniker); err != nil {
 					log.Errorf("Build failed: %v", err)
 					return 1
 				}
@@ -210,7 +202,7 @@ func Serve() int {
 	// Check staleness and auto-rebuild if needed
 	if rebuild {
 		log.Infof("Rebuilding %s...", moduleMoniker)
-		if err := runBuild(workspaceRoot, moduleMoniker, logger); err != nil {
+		if err := runBuild(workspaceRoot, moduleMoniker); err != nil {
 			log.Errorf("Build failed: %v", err)
 			return 1
 		}
@@ -219,7 +211,7 @@ func Serve() int {
 		if needsBuild {
 			log.Infof("Build is stale: %s", reason)
 			log.Infof("Building %s...", moduleMoniker)
-			if err := runBuild(workspaceRoot, moduleMoniker, logger); err != nil {
+			if err := runBuild(workspaceRoot, moduleMoniker); err != nil {
 				log.Errorf("Build failed: %v", err)
 				return 1
 			}
@@ -253,7 +245,7 @@ func Serve() int {
 		dockerClient.StreamLogs()
 	}
 
-	logger.Info("Serve completed", zap.String("module", moduleMoniker), zap.String("url", info.URL))
+	log.Debugf("Serve completed: module=%s, url=%s", moduleMoniker, info.URL)
 	return 0
 }
 
@@ -390,12 +382,10 @@ func checkStaleness(workspaceRoot string, moduleConfig *ModuleServeConfig) (bool
 }
 
 // runBuild executes the build command for a module
-func runBuild(workspaceRoot string, moduleMoniker string, logger *logging.Logger) error {
+func runBuild(workspaceRoot string, moduleMoniker string) error {
 	binaryPath := paths.CommandsBinaryPath(workspaceRoot)
 
-	logger.Debug("Running build command",
-		zap.String("binary", binaryPath),
-		zap.String("module", moduleMoniker))
+	log.Debugf("Running build command: binary=%s, module=%s", binaryPath, moduleMoniker)
 
 	cmd := exec.Command(binaryPath, "build", moduleMoniker, "--no-tui")
 	cmd.Dir = workspaceRoot
@@ -406,8 +396,8 @@ func runBuild(workspaceRoot string, moduleMoniker string, logger *logging.Logger
 }
 
 // handleStop stops the running server
-func handleStop(workspaceRoot string, logger *logging.Logger, containerName string, moduleMoniker string) int {
-	dockerClient, err := NewDockerClient(logger, containerName)
+func handleStop(workspaceRoot string, containerName string, moduleMoniker string) int {
+	dockerClient, err := NewDockerClient(containerName)
 	if err != nil {
 		log.Errorf("Failed to initialize Docker: %v", err)
 		return 1
@@ -429,15 +419,13 @@ func handleStop(workspaceRoot string, logger *logging.Logger, containerName stri
 
 // DockerClient wraps the internal serve package for module serving
 type DockerClient struct {
-	logger        *logging.Logger
 	containerName string
 	ctx           context.Context
 }
 
 // NewDockerClient creates a new Docker client
-func NewDockerClient(logger *logging.Logger, containerName string) (*DockerClient, error) {
+func NewDockerClient(containerName string) (*DockerClient, error) {
 	return &DockerClient{
-		logger:        logger,
 		containerName: containerName,
 		ctx:           context.Background(),
 	}, nil

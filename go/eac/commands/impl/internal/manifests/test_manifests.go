@@ -18,7 +18,7 @@ var log = logging.C()
 
 // PackageResult holds test results for a single package
 type PackageResult struct {
-	ModuleMoniker string        // Module this package belongs to (for aggregation)
+	ModuleMoniker string // Module this package belongs to (for aggregation)
 	PackageName   string
 	LogFilePath   string
 	TestsPassed   int

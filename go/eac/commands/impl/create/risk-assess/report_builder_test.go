@@ -14,14 +14,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestBuildExecutiveSummary(t *testing.T) {
+func TestBuildBasicExecutiveSummary(t *testing.T) {
 	tests := []struct {
 		name     string
 		results  []*ModuleAssessmentResult
 		expected ExecutiveSummary
 	}{
 		{
-			name: "empty results",
+			name:    "empty results",
 			results: []*ModuleAssessmentResult{},
 			expected: ExecutiveSummary{
 				ModulesAssessed:  0,
@@ -30,6 +30,7 @@ func TestBuildExecutiveSummary(t *testing.T) {
 				NotSatisfied:     0,
 				SatisfactionRate: 0,
 				NotSatisfiedRate: 0,
+				HasAISummary:     false,
 			},
 		},
 		{
@@ -48,6 +49,7 @@ func TestBuildExecutiveSummary(t *testing.T) {
 				NotSatisfied:     0,
 				SatisfactionRate: 100.0,
 				NotSatisfiedRate: 0.0,
+				HasAISummary:     false,
 			},
 		},
 		{
@@ -66,6 +68,7 @@ func TestBuildExecutiveSummary(t *testing.T) {
 				NotSatisfied:     2,
 				SatisfactionRate: 60.0,
 				NotSatisfiedRate: 40.0,
+				HasAISummary:     false,
 			},
 		},
 		{
@@ -94,29 +97,31 @@ func TestBuildExecutiveSummary(t *testing.T) {
 				NotSatisfied:     6,
 				SatisfactionRate: 84.61538461538461,
 				NotSatisfiedRate: 15.384615384615385,
+				HasAISummary:     false,
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			summary := buildExecutiveSummary(tt.results)
+			summary := buildBasicExecutiveSummary(tt.results)
 			assert.Equal(t, tt.expected.ModulesAssessed, summary.ModulesAssessed)
 			assert.Equal(t, tt.expected.TotalControls, summary.TotalControls)
 			assert.Equal(t, tt.expected.Satisfied, summary.Satisfied)
 			assert.Equal(t, tt.expected.NotSatisfied, summary.NotSatisfied)
 			assert.InDelta(t, tt.expected.SatisfactionRate, summary.SatisfactionRate, 0.0001)
 			assert.InDelta(t, tt.expected.NotSatisfiedRate, summary.NotSatisfiedRate, 0.0001)
+			assert.Equal(t, tt.expected.HasAISummary, summary.HasAISummary)
 		})
 	}
 }
 
 func TestExtractEvidenceFormatted(t *testing.T) {
 	tests := []struct {
-		name               string
-		result             *ModuleAssessmentResult
-		expectedTest       string
-		expectedSecurity   string
+		name             string
+		result           *ModuleAssessmentResult
+		expectedTest     string
+		expectedSecurity string
 	}{
 		{
 			name: "no assessment results",
@@ -587,7 +592,7 @@ func TestBuildReportData(t *testing.T) {
 	}
 
 	t.Run("full assessment", func(t *testing.T) {
-		data := buildReportData(config, results, profile, false, 2)
+		data := buildReportData(config, results, profile, false, 2, nil)
 
 		assert.NotEmpty(t, data.GeneratedAt)
 		assert.Equal(t, "Full Assessment (all 2 modules)", data.ScopeDescription)
@@ -600,6 +605,7 @@ func TestBuildReportData(t *testing.T) {
 		assert.Equal(t, 2, data.Summary.NotSatisfied)
 		assert.InDelta(t, 90.0, data.Summary.SatisfactionRate, 0.01)
 		assert.InDelta(t, 10.0, data.Summary.NotSatisfiedRate, 0.01)
+		assert.False(t, data.Summary.HasAISummary)
 
 		require.Len(t, data.ModuleResults, 2)
 		assert.Equal(t, "module-1", data.ModuleResults[0].Module)
@@ -607,9 +613,10 @@ func TestBuildReportData(t *testing.T) {
 	})
 
 	t.Run("subset assessment", func(t *testing.T) {
-		data := buildReportData(config, results, profile, true, 10)
+		data := buildReportData(config, results, profile, true, 10, nil)
 
 		assert.Equal(t, "Subset Assessment (2 of 10 modules)", data.ScopeDescription)
 		assert.Equal(t, 2, data.Summary.ModulesAssessed)
+		assert.False(t, data.Summary.HasAISummary)
 	})
 }

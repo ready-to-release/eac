@@ -4,10 +4,8 @@ import (
 	"fmt"
 
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
-	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
-var log = logging.C()
 
 // GraphBuilder builds dependency graphs from go.mod files
 type GraphBuilder struct {
@@ -77,13 +75,7 @@ func (gb *GraphBuilder) Build() (*DependencyGraph, error) {
 		internalPaths := FilterInternalDependencies(info.Requires, gb.mapper.GetBaseModulePath())
 
 		// Convert paths to monikers
-		depMonikers, errors := gb.mapper.MapInternalDependenciesToMonikers(internalPaths)
-		if len(errors) > 0 {
-			// Log errors but continue
-			for _, err := range errors {
-				log.Warnf("%v", err)
-			}
-		}
+		depMonikers, _ := gb.mapper.MapInternalDependenciesToMonikers(internalPaths)
 
 		// Update node and dependencies map
 		if node, ok := graph.Modules[moniker]; ok {

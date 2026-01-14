@@ -35,6 +35,7 @@ modules:
         - LICENSE
         - .gitignore
         - .gitattributes
+        - .golangci.yml
         - .markdownlint.yml
         - cspell.config.yml
         - go.work

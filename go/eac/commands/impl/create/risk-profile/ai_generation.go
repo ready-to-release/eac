@@ -10,7 +10,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/oscal"
 	aimock "github.com/ready-to-release/eac/go/eac/core/ai"
-	"go.uber.org/zap"
+	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
 // defaultProfilePrompt is the fallback prompt when .r2r/eac/aimock.TypeRiskProfile/profile.md is not found.
@@ -36,18 +36,12 @@ func generateProfile(config *Config, assessmentContent string, catalog *oscalTyp
 		return nil, fmt.Errorf("failed to extract control IDs from catalog: %w", err)
 	}
 
-	if config.Logger != nil {
-		config.Logger.Debug("Extracted controls from catalog",
-			zap.Int("control_count", len(availableControls)))
-	}
+	log.Debugf("Extracted controls from catalog: count=%d", len(availableControls))
 
 	// Build AI prompt with available controls
 	prompt := buildProfilePrompt(config.WorkspaceRoot, assessmentContent, config.CatalogURL, availableControls)
 
-	if config.Logger != nil {
-		config.Logger.Debug("AI prompt built",
-			zap.Int("prompt_length", len(prompt)))
-	}
+	log.Debugf("AI prompt built: length=%d", len(prompt))
 
 	// Call AI using two-phase generation
 	ctx := context.Background()
@@ -56,10 +50,7 @@ func generateProfile(config *Config, assessmentContent string, catalog *oscalTyp
 		return nil, fmt.Errorf("AI generation failed: %w", err)
 	}
 
-	if config.Logger != nil {
-		config.Logger.Debug("AI response received",
-			zap.Int("response_length", len(response)))
-	}
+	log.Debugf("AI response received: length=%d", len(response))
 
 	profile, err := parseProfileFromAI(response, config, catalog)
 	if err != nil {
@@ -166,14 +157,15 @@ func callAIWithRetry(ctx context.Context, prompt string, config *Config) (string
 
 	// Configure retry for JSON generation
 	retryConfig := &aimock.RetryConfig{
-		TypeName:      aimock.TypeRiskProfile,
-		OutputFormat:  aimock.FormatJSON, // Generate control mapping JSON (commands format to OSCAL)
-		Executor:      executorAdapter,
-		Validator:     validator, // Validate JSON output
-		TemplateRoot:  config.WorkspaceRoot,
-		MaxAttempts:   maxAttempts,
-		Debug:         config.Debug,
-		Strategy:      strategy,
+		TypeName:     aimock.TypeRiskProfile,
+		OutputFormat: aimock.FormatJSON, // Generate control mapping JSON (commands format to OSCAL)
+		Executor:     executorAdapter,
+		Validator:    validator, // Validate JSON output
+		TemplateRoot: config.WorkspaceRoot,
+		MaxAttempts:  maxAttempts,
+		Debug:        config.Debug,
+		Strategy:     strategy,
+		Logger:       logging.C().Zap(), // ✅ Pass logger for retry observability
 	}
 
 	// Generate with retry
@@ -183,12 +175,8 @@ func callAIWithRetry(ctx context.Context, prompt string, config *Config) (string
 	}
 
 	// Log provider information
-	if config.Logger != nil {
-		config.Logger.Debug("AI call completed",
-			zap.String("provider", result.ProviderName),
-			zap.Int("response_length", len(result.Output)),
-			zap.Int("attempts", result.Attempts))
-	}
+	log.Debugf("AI call completed: provider=%s, response_length=%d, attempts=%d",
+		result.ProviderName, len(result.Output), result.Attempts)
 	if config.Debug {
 		log.Infof("  → AI provider used: %s", result.ProviderName)
 	}
@@ -197,9 +185,7 @@ func callAIWithRetry(ctx context.Context, prompt string, config *Config) (string
 	if len(result.ValidationErrors) > 0 {
 		log.Warnf("  ⚠ Generated output has %d validation issues", len(result.ValidationErrors))
 		for _, verr := range result.ValidationErrors {
-			if config.Logger != nil {
-				config.Logger.Warn("Validation error", zap.String("code", verr.GetCode()), zap.String("message", verr.Message))
-			}
+			log.Warnf("Validation error: code=%s, message=%s", verr.GetCode(), verr.Message)
 		}
 	}
 
@@ -282,11 +268,7 @@ func filterInvalidControls(profile *oscalTypes.Profile, catalog *oscalTypes.Cata
 	// Warn about removed controls
 	if len(removedIDs) > 0 {
 		log.Warnf("  ⚠ Filtered out %d control(s) not in catalog: %s", len(removedIDs), strings.Join(removedIDs, ", "))
-		if config.Logger != nil {
-			config.Logger.Warn("Controls filtered out (not in catalog)",
-				zap.Strings("removed", removedIDs),
-				zap.Strings("kept", filteredIDs))
-		}
+		log.Warnf("Controls filtered out (not in catalog): removed=%v, kept=%v", removedIDs, filteredIDs)
 	}
 
 	// If no valid controls remain, return error

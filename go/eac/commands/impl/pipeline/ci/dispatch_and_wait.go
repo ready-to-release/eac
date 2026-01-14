@@ -35,7 +35,6 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
-
 func init() {
 	registry.Register(PipelineCIDispatchAndWait)
 }

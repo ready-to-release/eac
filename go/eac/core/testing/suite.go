@@ -6,10 +6,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/core/config"
-	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
-
-var log = logging.C()
 
 // GetSuite retrieves a suite by its moniker from configuration.
 // Returns error if config is unavailable (fail-closed - no hardcoded fallbacks).
@@ -241,7 +238,6 @@ func (suite *TestSuite) SelectTestsWithStats(allTests []TestReference) ([]TestRe
 
 	// Log skipped tests if any
 	if stats.Skipped > 0 {
-		log.Infof("%d tests skipped (tagged with @skip:<reason>)", stats.Skipped)
 	}
 
 	return selected, stats

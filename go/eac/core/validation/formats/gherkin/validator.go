@@ -60,6 +60,7 @@ func (v *Validator) SetTagsConfig(tagsConfig *config.TestingTagsConfig) {
 // Returns a list of validation errors (empty if valid)
 func (v *Validator) Validate(output string, context map[string]interface{}) []validation.ValidationError {
 	var errors []validation.ValidationError
+	formatter := validation.NewErrorFormatter()
 
 	if strings.TrimSpace(output) == "" {
 		errors = append(errors, *validation.NewValidationError(validation.ErrEmptyOutput, "Generated output is empty", 0))
@@ -198,15 +199,63 @@ func (v *Validator) Validate(output string, context map[string]interface{}) []va
 
 	// Final state validation
 	if !state.seenFeature {
-		errors = append(errors, *validation.NewValidationError(validation.ErrMissingFeature, "Missing Feature: declaration", 0))
+		// Show first few lines of output to help AI understand what it generated
+		errors = append(errors, *formatter.FormatEnhancedError(
+			validation.ErrMissingFeature,
+			"Missing Feature: declaration - specification must start with a Feature",
+			output,
+			"Feature: <module>_<feature-name>",
+			`Feature: eac-commands_risk-assessment
+
+  Rule: Risk assessment generation
+    Scenario: Generate executive summary
+      Given a profile with security controls
+      When AI generates a risk assessment
+      Then the assessment should have an executive summary`,
+			"Add a Feature: declaration at the start of the file with format '<module>_<feature-name>'.",
+			0,
+		))
 	}
 
 	if !state.seenRule {
-		errors = append(errors, *validation.NewValidationError(validation.ErrMissingRule, "Missing Rule: declaration (required for acceptance criteria)", 0))
+		errors = append(errors, *formatter.FormatEnhancedError(
+			validation.ErrMissingRule,
+			"Missing Rule: declaration - features must contain acceptance criteria as Rules",
+			"",
+			"Feature with Rules",
+			`Feature: eac-commands_risk-assessment
+
+  Rule: Risk assessment generation
+    Scenario: Generate executive summary
+      ...
+
+  Rule: Error handling
+    Scenario: Handle invalid profile
+      ...`,
+			"Add Rule: declarations under the Feature to define acceptance criteria. Each Rule should have at least one Scenario.",
+			0,
+		))
 	}
 
 	if !state.seenScenario {
-		errors = append(errors, *validation.NewValidationError(validation.ErrMissingScenario, "Missing Scenario: declaration (required for behavior examples)", 0))
+		errors = append(errors, *formatter.FormatEnhancedError(
+			validation.ErrMissingScenario,
+			"Missing Scenario: declaration - Rules must contain concrete examples as Scenarios",
+			"",
+			"Rule with Scenarios",
+			`Rule: Risk assessment generation
+  Scenario: Generate executive summary
+    Given a profile with security controls
+    When AI generates a risk assessment
+    Then the assessment should have an executive summary
+
+  Scenario: Include control statistics
+    Given a profile with 21 controls
+    When AI generates the summary
+    Then it should include control satisfaction rates`,
+			"Add Scenario: declarations under each Rule to provide concrete examples of the behavior.",
+			0,
+		))
 	}
 
 	// Enhancement 1: Check for Rules without scenarios
@@ -264,10 +313,24 @@ func (v *Validator) validateFeatureNaming(featureName string, lineNum int) valid
 
 	matched, err := regexp.MatchString(pattern, featureName)
 	if err != nil || !matched {
-		return *validation.NewValidationError(validation.ErrInvalidFeatureNaming, fmt.Sprintf(
-			"Feature name '%s' does not follow naming convention '<module>_<feature-name>' (lowercase with hyphens, e.g., 'eac-commands_user-auth')",
-			featureName,
-		), lineNum)
+		formatter := validation.NewErrorFormatter()
+		return *formatter.FormatEnhancedError(
+			validation.ErrInvalidFeatureNaming,
+			fmt.Sprintf("Feature name '%s' does not follow naming convention", featureName),
+			fmt.Sprintf("Feature: %s", featureName),
+			"Format: <module>_<feature-name>",
+			`Valid examples:
+  Feature: eac-commands_risk-assessment
+  Feature: eac-core_validation-framework
+  Feature: repository_dependency-analysis
+
+Invalid examples:
+  Feature: Risk Assessment          ✗ (missing module prefix)
+  Feature: eac_commands_risk        ✗ (use hyphen, not underscore within names)
+  Feature: EAC-Commands_Risk        ✗ (must be lowercase)`,
+			"Use lowercase letters, numbers, and hyphens. Format: <module>_<feature-name>",
+			lineNum,
+		)
 	}
 
 	return validation.ValidationError{} // No error (empty struct)
@@ -500,8 +563,31 @@ func (v *Validator) validateTagsForScenario(tags []string, tagLines []int, scena
 
 	// 1. Check verification tags (required)
 	if !v.hasVerificationTag(tags) {
+		formatter := validation.NewErrorFormatter()
 		verificationTags := v.tagsConfig.GetVerificationTags()
-		errors = append(errors, *validation.NewValidationError(validation.ErrMissingVerificationTag, fmt.Sprintf("Scenario missing verification tag (required: %s)", strings.Join(verificationTags, ", ")), scenarioLine))
+		currentTags := ""
+		if len(tags) > 0 {
+			currentTags = strings.Join(tags, ", ")
+		} else {
+			currentTags = "(none)"
+		}
+		errors = append(errors, *formatter.FormatEnhancedError(
+			validation.ErrMissingVerificationTag,
+			"Scenario missing verification tag - must specify test level",
+			fmt.Sprintf("Current tags: %s", currentTags),
+			"Add one verification tag",
+			fmt.Sprintf(`Available verification tags:
+  %s
+
+Example:
+  @L0 @Automated
+  Scenario: Generate executive summary
+    Given a profile with security controls
+    When AI generates a risk assessment
+    Then the assessment should have an executive summary`, strings.Join(verificationTags, ", ")),
+			fmt.Sprintf("Add one of these verification tags before the Scenario: %s", strings.Join(verificationTags, ", ")),
+			scenarioLine,
+		))
 	}
 
 	// Schema-driven tag validation

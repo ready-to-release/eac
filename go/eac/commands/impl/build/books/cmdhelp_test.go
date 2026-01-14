@@ -7,15 +7,15 @@ import (
 
 func TestParseHelpOutput(t *testing.T) {
 	tests := []struct {
-		name     string
-		cmdName  string
-		input    string
-		wantDesc string
-		wantUsage string
-		wantNotes string
+		name         string
+		cmdName      string
+		input        string
+		wantDesc     string
+		wantUsage    string
+		wantNotes    string
 		wantExamples string
-		wantArgs  int
-		wantFlags int
+		wantArgs     int
+		wantFlags    int
 	}{
 		{
 			name:    "basic help output",
@@ -58,11 +58,11 @@ Flags:
 Example:
   get modules | jq '.modules[]'
 `,
-			wantDesc:  "get modules - Get all module contracts in structured format\n\nReturns all module contracts in YAML/JSON format.",
-			wantUsage: "get modules [flags]",
-			wantNotes: "**Expected Output:**\n\n- modules: array of module contracts\n- count: total number of modules\n",
+			wantDesc:     "get modules - Get all module contracts in structured format\n\nReturns all module contracts in YAML/JSON format.",
+			wantUsage:    "get modules [flags]",
+			wantNotes:    "**Expected Output:**\n\n- modules: array of module contracts\n- count: total number of modules\n",
 			wantExamples: "get modules | jq '.modules[]'",
-			wantFlags: 1,
+			wantFlags:    1,
 		},
 		{
 			name:    "help with arguments",
@@ -131,10 +131,10 @@ Flags:
 Example:
   validate
 `,
-			wantDesc: "validate - Validate repository contracts\n\nThis command validates all contracts in the repository against their JSON schemas. It ensures data integrity and consistency.\n\nMultiple validation types are supported including module contracts, dependency contracts, and environment contracts.",
-			wantUsage: "validate [flags]",
+			wantDesc:     "validate - Validate repository contracts\n\nThis command validates all contracts in the repository against their JSON schemas. It ensures data integrity and consistency.\n\nMultiple validation types are supported including module contracts, dependency contracts, and environment contracts.",
+			wantUsage:    "validate [flags]",
 			wantExamples: "validate",
-			wantFlags: 1,
+			wantFlags:    1,
 		},
 	}
 
@@ -397,22 +397,22 @@ func TestFormatCommandHelp_NoTitle(t *testing.T) {
 		Description: "First paragraph.\n\nSecond paragraph.",
 		Usage:       "show modules [flags]",
 	}
-	
+
 	// Create a minimal preprocessor (doesn't need workspaceRoot for this test)
 	p := &Preprocessor{}
-	
+
 	result := p.formatCommandHelp(help, 2, false)
-	
+
 	// Should NOT contain "## show modules" since includeTitle=false
 	if strings.Contains(result, "## show modules") {
 		t.Errorf("formatCommandHelp with includeTitle=false should not include title heading, got:\n%s", result)
 	}
-	
+
 	// Should contain the description with paragraph breaks
 	if !strings.Contains(result, "First paragraph.\n\nSecond paragraph.") {
 		t.Errorf("formatCommandHelp should preserve paragraph breaks in description, got:\n%s", result)
 	}
-	
+
 	// Should contain usage
 	if !strings.Contains(result, "**Usage:** `show modules [flags]`") {
 		t.Errorf("formatCommandHelp should include usage, got:\n%s", result)
@@ -424,10 +424,10 @@ func TestFormatCommandHelp_WithTitle(t *testing.T) {
 		Name:        "show modules",
 		Description: "Test description.",
 	}
-	
+
 	p := &Preprocessor{}
 	result := p.formatCommandHelp(help, 2, true)
-	
+
 	// Should contain "## show modules" since includeTitle=true
 	if !strings.Contains(result, "## show modules") {
 		t.Errorf("formatCommandHelp with includeTitle=true should include title heading, got:\n%s", result)

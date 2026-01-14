@@ -38,7 +38,6 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/impl/work/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
-	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
 func init() {
@@ -98,7 +97,7 @@ func Merge() int {
 		zap.String("phase", "phase4"),
 		zap.String("targetBranch", config.targetBranch))
 	config.base.Logger.Info(fmt.Sprintf("Switching to %s...", config.targetBranch))
-	if err := switchToTargetBranch(config.base.Logger, config.targetBranch, config.base.RepoRoot); err != nil {
+	if err := switchToTargetBranch(config.targetBranch, config.base.RepoRoot); err != nil {
 		config.base.Logger.Debug("Phase 4: Failed", zap.String("phase", "phase4"), zap.Error(err))
 		config.base.Logger.Error(fmt.Sprintf("Failed to switch: %v", err))
 		return 1
@@ -301,9 +300,9 @@ func checkBranchUpToDate(config *mergeConfig) error {
 
 // switchToTargetBranch switches to the target branch
 // In multi-worktree setups, it finds and switches to the worktree where the target branch is checked out
-func switchToTargetBranch(logger *logging.Logger, targetBranch, repoRoot string) error {
+func switchToTargetBranch(targetBranch, repoRoot string) error {
 	// First, find where the target branch is checked out
-	targetWorktree, err := findWorktreeForBranch(logger, targetBranch)
+	targetWorktree, err := findWorktreeForBranch(targetBranch)
 	if err != nil {
 		// Branch not checked out anywhere, try normal checkout
 		cmd := exec.Command("git", "checkout", targetBranch)
@@ -320,13 +319,13 @@ func switchToTargetBranch(logger *logging.Logger, targetBranch, repoRoot string)
 		return fmt.Errorf("failed to switch to worktree at %s: %w", targetWorktree, err)
 	}
 
-	logger.Info(fmt.Sprintf("📂 Switched to worktree: %s", targetWorktree))
+	log.Infof("📂 Switched to worktree: %s", targetWorktree)
 	return nil
 }
 
 // findWorktreeForBranch finds the worktree path where a branch is checked out
 // Returns empty string and error if branch is not checked out in any worktree
-func findWorktreeForBranch(logger *logging.Logger, branch string) (string, error) {
+func findWorktreeForBranch(branch string) (string, error) {
 	cmd := exec.Command("git", "worktree", "list", "--porcelain")
 	output, err := cmd.Output()
 	if err != nil {

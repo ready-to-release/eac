@@ -81,17 +81,17 @@ func (h *BuildxHandler) Build(module *modules.ModuleContract, workspaceRoot, out
 
 		// For local builds: use simple tags and local-friendly settings
 		dockerBuild = &config.DockerBuildConfig{
-			Container:   dockerBuild.Container,
-			Context:     dockerBuild.Context,      // Keep original context from config
-			Dockerfile:  dockerBuild.Dockerfile,   // Keep original Dockerfile path
-			Platforms:   []string{localPlatform}, // Auto-detect platform
-			Tags:        localTags,                // Use local-friendly tags
-			Load:        true,                     // Load into local Docker instead of push
-			Push:        false,                    // Don't push to registry
-			Cache:       nil,                      // Skip registry cache for local builds
-			SBOM:        false,                    // Skip SBOM for local builds
-			Provenance:  false,                    // Skip provenance for local builds
-			Registry:    "",
+			Container:  dockerBuild.Container,
+			Context:    dockerBuild.Context,     // Keep original context from config
+			Dockerfile: dockerBuild.Dockerfile,  // Keep original Dockerfile path
+			Platforms:  []string{localPlatform}, // Auto-detect platform
+			Tags:       localTags,               // Use local-friendly tags
+			Load:       true,                    // Load into local Docker instead of push
+			Push:       false,                   // Don't push to registry
+			Cache:      nil,                     // Skip registry cache for local builds
+			SBOM:       false,                   // Skip SBOM for local builds
+			Provenance: false,                   // Skip provenance for local builds
+			Registry:   "",
 		}
 	}
 

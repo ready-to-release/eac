@@ -1,8 +1,10 @@
 // Command: get dependencies
 // Usage: get dependencies <module>
-//   --as-yaml: Output as YAML (default)
-//   --as-json: Output as JSON
-//   --format: Output format (list, space, json)
+//
+//	--as-yaml: Output as YAML (default)
+//	--as-json: Output as JSON
+//	--format: Output format (list, space, json)
+//
 // Long:
 // Long: Returns the direct dependencies of a module.
 // Long:

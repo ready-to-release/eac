@@ -65,10 +65,10 @@ type scanArgs struct {
 	TUIHeight        int
 	TUIExplicitlySet bool
 	// Scanner-specific options
-	SBOMFormat         string               // SBOM format (cyclonedx, spdx, etc.)
-	VulnSeverities     []internal.Severity  // Vuln severity filter
-	SemgrepConfig      string               // SAST config
-	ComplianceStandard string               // Compliance standard
+	SBOMFormat         string              // SBOM format (cyclonedx, spdx, etc.)
+	VulnSeverities     []internal.Severity // Vuln severity filter
+	SemgrepConfig      string              // SAST config
+	ComplianceStandard string              // Compliance standard
 }
 
 // Scan command entry point

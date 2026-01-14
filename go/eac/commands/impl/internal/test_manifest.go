@@ -30,10 +30,10 @@ type TestManifest struct {
 	Version             string                 `json:"version"`                         // Manifest format version
 
 	// Incremental test state
-	SourceHash   string   `json:"source_hash,omitempty"`   // SHA-256 hash of module source files
-	TestHash     string   `json:"test_hash,omitempty"`     // SHA-256 hash of module test files
-	BuildID      string   `json:"build_id,omitempty"`      // BuildID from build manifest (links tests to specific build)
-	Dependencies []string `json:"dependencies,omitempty"`  // Module dependencies at time of test
+	SourceHash   string   `json:"source_hash,omitempty"`  // SHA-256 hash of module source files
+	TestHash     string   `json:"test_hash,omitempty"`    // SHA-256 hash of module test files
+	BuildID      string   `json:"build_id,omitempty"`     // BuildID from build manifest (links tests to specific build)
+	Dependencies []string `json:"dependencies,omitempty"` // Module dependencies at time of test
 }
 
 // TestSummary holds aggregated test counts
@@ -55,15 +55,15 @@ type SuiteResult struct {
 
 // TestEntry represents a single test with its result
 type TestEntry struct {
-	Name       string   `json:"name"`                 // Test name or scenario name
-	Package    string   `json:"package"`              // Package path
-	Type       string   `json:"type"`                 // gotest, godog, mocha, tscucumber
-	Suite      string   `json:"suite"`                // Suite moniker (unit, integration, etc.)
-	Status     string   `json:"status"`               // passed, failed, skipped, undefined, pending
-	DurationMs int64    `json:"duration_ms,omitempty"`// Test duration in milliseconds
-	Tags       []string `json:"tags,omitempty"`       // Test tags
-	Error      string   `json:"error,omitempty"`      // Error message if failed
-	FilePath   string   `json:"file_path,omitempty"`  // Source file path
+	Name       string   `json:"name"`                  // Test name or scenario name
+	Package    string   `json:"package"`               // Package path
+	Type       string   `json:"type"`                  // gotest, godog, mocha, tscucumber
+	Suite      string   `json:"suite"`                 // Suite moniker (unit, integration, etc.)
+	Status     string   `json:"status"`                // passed, failed, skipped, undefined, pending
+	DurationMs int64    `json:"duration_ms,omitempty"` // Test duration in milliseconds
+	Tags       []string `json:"tags,omitempty"`        // Test tags
+	Error      string   `json:"error,omitempty"`       // Error message if failed
+	FilePath   string   `json:"file_path,omitempty"`   // Source file path
 }
 
 // TestArtifactInfo describes a test artifact

@@ -1,6 +1,8 @@
 package logging
 
 import (
+	"fmt"
+
 	"go.uber.org/zap/buffer"
 	"go.uber.org/zap/zapcore"
 )
@@ -56,7 +58,7 @@ func newTimestampedEncoder(module string) zapcore.Encoder {
 	}
 }
 
-// EncodeEntry outputs timestamped format: "HH:MM:SS.mmm  LEVEL  module:message"
+// EncodeEntry outputs timestamped format: "HH:MM:SS.mmm  LEVEL  module:message {fields}"
 func (e *timestampedEncoder) EncodeEntry(entry zapcore.Entry, fields []zapcore.Field) (*buffer.Buffer, error) {
 	buf := buffer.NewPool().Get()
 
@@ -79,6 +81,35 @@ func (e *timestampedEncoder) EncodeEntry(entry zapcore.Entry, fields []zapcore.F
 		buf.AppendString(":")
 	}
 	buf.AppendString(entry.Message)
+
+	// Encode structured fields if present
+	if len(fields) > 0 {
+		// Use the underlying encoder to format fields
+		fieldBuf := buffer.NewPool().Get()
+		defer fieldBuf.Free()
+
+		// Add a separator before fields
+		buf.AppendString("  ")
+
+		// Encode each field
+		enc := zapcore.NewMapObjectEncoder()
+		for _, field := range fields {
+			field.AddTo(enc)
+		}
+
+		// Format fields as key=value pairs
+		first := true
+		for k, v := range enc.Fields {
+			if !first {
+				buf.AppendString(", ")
+			}
+			first = false
+			buf.AppendString(k)
+			buf.AppendString("=")
+			buf.AppendString(fmt.Sprint(v))
+		}
+	}
+
 	buf.AppendString("\n")
 
 	return buf, nil

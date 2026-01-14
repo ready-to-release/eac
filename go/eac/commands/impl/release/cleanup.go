@@ -33,7 +33,6 @@ func init() {
 	registry.Register(ReleaseCleanup)
 }
 
-
 func ReleaseCleanup() int {
 	// Validate flags before parsing
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
