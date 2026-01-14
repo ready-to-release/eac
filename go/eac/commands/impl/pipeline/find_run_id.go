@@ -1,8 +1,10 @@
 // Command: pipeline find-run-id
 // Short: Find workflow run ID by SHA
-//   --workflow <name>: Workflow file name (required)
-//   --sha <sha>: HEAD SHA to find (required)
-//   --status <status>: Filter by status (optional, e.g., success)
+//
+//	--workflow <name>: Workflow file name (required)
+//	--sha <sha>: HEAD SHA to find (required)
+//	--status <status>: Filter by status (optional, e.g., success)
+//
 // Long:
 // Long: Finds a workflow run with the given HEAD SHA. Returns the run ID
 // Long: which can be used with gh run download.

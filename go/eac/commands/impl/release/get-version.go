@@ -47,7 +47,6 @@ type VersionInfo struct {
 	VersionType string `json:"version_type"`
 }
 
-
 func ReleaseGetVersion() int {
 	// Validate flags before parsing
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {

@@ -33,7 +33,6 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/impl/work/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
-	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
 func init() {
@@ -122,7 +121,7 @@ func Create() int {
 		zap.String("phase", "phase4"),
 		zap.String("description", "output success"))
 
-	outputCreateSuccess(config.base.Logger, worktreePath, config.branchName)
+	outputCreateSuccess(worktreePath, config.branchName)
 
 	config.base.Logger.Debug("Phase 4: Completed",
 		zap.String("phase", "phase4"),
@@ -350,13 +349,13 @@ func createWorktree(config *createConfig) (string, error) {
 }
 
 // outputCreateSuccess outputs success message with next steps
-func outputCreateSuccess(logger *logging.Logger, worktreePath, branchName string) {
-	logger.Info(fmt.Sprintf("✓ Created worktree at: %s", worktreePath))
-	logger.Info(fmt.Sprintf("  Branch: %s", branchName))
-	logger.Info("")
-	logger.Info("Start Claude:")
+func outputCreateSuccess(worktreePath, branchName string) {
+	log.Infof("✓ Created worktree at: %s", worktreePath)
+	log.Infof("  Branch: %s", branchName)
+	log.Info("")
+	log.Info("Start Claude:")
 
 	// Convert to forward slashes for cross-platform compatibility
 	displayPath := filepath.ToSlash(worktreePath)
-	logger.Info(fmt.Sprintf("  cd %s && claude-code", displayPath))
+	log.Infof("  cd %s && claude-code", displayPath)
 }

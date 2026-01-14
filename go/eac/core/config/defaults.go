@@ -164,7 +164,6 @@ func loadDefaultFile(repoRoot, filename string) ([]byte, error) {
 		return nil, fmt.Errorf("reading %s: %w", fsPath, err)
 	}
 
-	log.Debugf("Loaded defaults from: %s", fsPath)
 	return data, nil
 }
 

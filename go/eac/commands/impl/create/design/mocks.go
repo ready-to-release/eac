@@ -6,6 +6,7 @@ package design
 
 import (
 	"github.com/ready-to-release/eac/go/eac/core/git"
+	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
 // mockAIResponse holds the mock response for testing. When set, AI calls return this.
@@ -32,13 +33,22 @@ func GetMockAIResponse() string {
 // gitRepo holds the git repository instance for git operations.
 // In production, this is initialized lazily. For tests, it can be injected via SetGitRepo.
 var gitRepo git.GitRepository
+var gitMgr *git.RepositoryManager
+
+// initGitManager initializes the git repository manager if needed.
+func initGitManager() {
+	if gitMgr == nil {
+		gitMgr = git.NewManager(logging.C().Zap())
+	}
+}
 
 // getGitRepo returns the git repository, initializing it if needed.
 func getGitRepo(workspaceRoot string) (git.GitRepository, error) {
 	if gitRepo != nil {
 		return gitRepo, nil
 	}
-	repo, err := git.Open(workspaceRoot)
+	initGitManager()
+	repo, err := gitMgr.Open(workspaceRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -53,4 +63,5 @@ func SetGitRepo(repo git.GitRepository) {
 // ResetGitRepo clears the repository for test cleanup.
 func ResetGitRepo() {
 	gitRepo = nil
+	gitMgr = nil
 }

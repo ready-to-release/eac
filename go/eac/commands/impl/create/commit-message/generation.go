@@ -11,6 +11,7 @@ import (
 	aimock "github.com/ready-to-release/eac/go/eac/core/ai"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
+	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
 // mockAIResponse holds the mock response for testing. When set, AI calls return this.
@@ -186,14 +187,15 @@ func buildRetryConfig(
 	}
 
 	return &aimock.RetryConfig{
-		TypeName:      aimock.TypeCommitMessage,
-		OutputFormat:  aimock.FormatJSON,      // Generate structured JSON (commands format to text)
-		Executor:      executor,
-		Validator:     validator,              // Validate JSON output
-		TemplateRoot:  workspaceRoot,
-		MaxAttempts:   maxAttempts,
-		Strategy:      strategy,
-		Debug:         debug, // Enable debug logging if requested
+		TypeName:     aimock.TypeCommitMessage,
+		OutputFormat: aimock.FormatJSON, // Generate structured JSON (commands format to text)
+		Executor:     executor,
+		Validator:    validator, // Validate JSON output
+		TemplateRoot: workspaceRoot,
+		MaxAttempts:  maxAttempts,
+		Strategy:     strategy,
+		Debug:        debug, // Enable debug logging if requested
+		Logger:       logging.C().Zap(), // ✅ Pass logger for retry observability
 	}, nil
 }
 

@@ -65,11 +65,12 @@ func ValidatePath(basePath, userPath string) error {
 // Use this when constructing file paths from user input.
 //
 // Example:
-//   outputPath, err := SecureFilePath(outputDir, userProvidedPath)
-//   if err != nil {
-//       return fmt.Errorf("invalid path: %w", err)
-//   }
-//   // Safe to use outputPath now
+//
+//	outputPath, err := SecureFilePath(outputDir, userProvidedPath)
+//	if err != nil {
+//	    return fmt.Errorf("invalid path: %w", err)
+//	}
+//	// Safe to use outputPath now
 func SecureFilePath(basePath, userPath string) (string, error) {
 	if err := ValidatePath(basePath, userPath); err != nil {
 		return "", err

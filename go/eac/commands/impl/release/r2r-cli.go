@@ -33,7 +33,6 @@ func init() {
 	registry.Register(ReleaseSrcCli)
 }
 
-
 func ReleaseSrcCli() int {
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {

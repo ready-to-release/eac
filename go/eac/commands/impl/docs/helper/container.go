@@ -13,10 +13,8 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/books"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/serve"
 	"github.com/ready-to-release/eac/go/eac/core/config"
-	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
-	"go.uber.org/zap"
 )
 
 const (
@@ -55,37 +53,34 @@ func getDockerImageConfig() (containerNameBase, imageName, dockerfile string) {
 }
 
 // getRepoRoot returns the repository root directory
-func getRepoRoot(logger *logging.Logger) (string, error) {
-	logger.Debug("Getting repository root")
+func getRepoRoot() (string, error) {
+	log.Debugf("Getting repository root")
 	root, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		logger.Error("Failed to get repository root", zap.Error(err))
+		log.Errorf("Failed to get repository root: error=%v", err)
 		return "", err
 	}
-	logger.Debug("Repository root found", zap.String("root", root))
+	log.Debugf("Repository root found: root=%s", root)
 	return root, nil
 }
 
 // isContainerRunning checks if any MkDocs container is running
-func isContainerRunning(cli *client.Client, ctx context.Context, logger *logging.Logger) (bool, *ContainerInfo, error) {
+func isContainerRunning(cli *client.Client, ctx context.Context) (bool, *ContainerInfo, error) {
 	containerNameBase, _, _ := getDockerImageConfig()
-	logger.Debug("Checking if container is running", zap.String("containerName", containerNameBase))
+	log.Debugf("Checking if container is running: containerName=%s", containerNameBase)
 
 	result, running, err := serve.IsServing(ctx, containerNameBase)
 	if err != nil {
-		logger.Error("Failed to check container status", zap.Error(err))
+		log.Errorf("Failed to check container status: error=%v", err)
 		return false, nil, err
 	}
 
 	if !running || result == nil {
-		logger.Debug("Container is not running")
+		log.Debugf("Container is not running")
 		return false, nil, nil
 	}
 
-	logger.Debug("Container is running",
-		zap.String("containerName", result.ContainerName),
-		zap.String("url", result.URL),
-		zap.Int("port", result.HostPort))
+	log.Debugf("Container is running: containerName=%s, url=%s, port=%d", result.ContainerName, result.URL, result.HostPort)
 
 	return true, &ContainerInfo{
 		Name: result.ContainerName,
@@ -95,21 +90,21 @@ func isContainerRunning(cli *client.Client, ctx context.Context, logger *logging
 }
 
 // startMkDocsContainer starts the MkDocs container
-func startMkDocsContainer(cli *client.Client, ctx context.Context, port int, logger *logging.Logger) (*ContainerInfo, error) {
-	logger.Debug("Starting MkDocs container", zap.Int("requestedPort", port))
+func startMkDocsContainer(cli *client.Client, ctx context.Context, port int) (*ContainerInfo, error) {
+	log.Debugf("Starting MkDocs container: requestedPort=%d", port)
 
 	// Check if container already running
-	running, info, err := isContainerRunning(cli, ctx, logger)
+	running, info, err := isContainerRunning(cli, ctx)
 	if err != nil {
 		return nil, err
 	}
 	if running {
-		logger.Warn("Container is already running", zap.String("url", info.URL))
+		log.Warnf("Container is already running: url=%s", info.URL)
 		return info, fmt.Errorf("container is already running")
 	}
 
 	// Get repo root
-	repoRoot, err := getRepoRoot(logger)
+	repoRoot, err := getRepoRoot()
 	if err != nil {
 		return nil, fmt.Errorf("failed to determine repository root: %w", err)
 	}
@@ -117,7 +112,7 @@ func startMkDocsContainer(cli *client.Client, ctx context.Context, port int, log
 	// Generate mkdocs.yml from site template
 	configDir := paths.ServeOutputPath(repoRoot)
 	if err := os.MkdirAll(configDir, 0755); err != nil {
-		logger.Error("Failed to create serve config directory", zap.Error(err))
+		log.Errorf("Failed to create serve config directory: error=%v", err)
 		return nil, fmt.Errorf("failed to create config directory: %w", err)
 	}
 
@@ -130,10 +125,10 @@ func startMkDocsContainer(cli *client.Client, ctx context.Context, port int, log
 		OutputFormat: "site",
 	}
 	if err := books.WriteMkDocsConfig(repoRoot, configPath, configOpts); err != nil {
-		logger.Error("Failed to generate mkdocs.yml", zap.Error(err))
+		log.Errorf("Failed to generate mkdocs.yml: error=%v", err)
 		return nil, fmt.Errorf("failed to generate mkdocs.yml: %w", err)
 	}
-	logger.Debug("Generated mkdocs.yml from template", zap.String("configPath", configPath))
+	log.Debugf("Generated mkdocs.yml from template: configPath=%s", configPath)
 
 	// Copy mkdocs macros script to serve directory as main.py
 	// mkdocs-macros will automatically find main.py in the same directory as mkdocs.yml
@@ -142,12 +137,12 @@ func startMkDocsContainer(cli *client.Client, ctx context.Context, port int, log
 	macrosData, err := os.ReadFile(macrosSource)
 	if err == nil {
 		if err := os.WriteFile(macrosTarget, macrosData, 0644); err != nil {
-			logger.Warn("Failed to copy mkdocs macros script", zap.Error(err))
+			log.Warnf("Failed to copy mkdocs macros script: error=%v", err)
 		} else {
-			logger.Debug("Copied mkdocs macros to main.py", zap.String("target", macrosTarget))
+			log.Debugf("Copied mkdocs macros to main.py: target=%s", macrosTarget)
 		}
 	} else {
-		logger.Debug("Mkdocs macros script not found (optional)", zap.String("path", macrosSource))
+		log.Debugf("Mkdocs macros script not found (optional): path=%s", macrosSource)
 	}
 
 	// Calculate relative config path for Docker
@@ -161,12 +156,7 @@ func startMkDocsContainer(cli *client.Client, ctx context.Context, port int, log
 	dockerfilePath := filepath.Join(repoRoot, dockerfile)
 	contextPath := filepath.Dir(dockerfilePath)
 
-	logger.Debug("Container configuration",
-		zap.String("dockerfile", dockerfilePath),
-		zap.String("contextPath", contextPath),
-		zap.String("contentPath", repoRoot),
-		zap.String("configPath", dockerConfigPath),
-		zap.Int("containerPort", containerInternalPort))
+	log.Debugf("Container configuration: dockerfile=%s, contextPath=%s, contentPath=%s, configPath=%s, containerPort=%d", dockerfilePath, contextPath, repoRoot, dockerConfigPath, containerInternalPort)
 
 	serveConfig := &serve.ServeConfig{
 		Name:  containerNameBase,
@@ -184,17 +174,14 @@ func startMkDocsContainer(cli *client.Client, ctx context.Context, port int, log
 	}
 
 	// Start the serve container
-	logger.Info("Launching container via serve helper", zap.String("image", imageName))
+	log.Infof("Launching container via serve helper: image=%s", imageName)
 	result, err := serve.StartServe(ctx, serveConfig)
 	if err != nil {
-		logger.Error("Failed to start container", zap.Error(err))
+		log.Errorf("Failed to start container: error=%v", err)
 		return nil, err
 	}
 
-	logger.Info("Container started successfully",
-		zap.String("containerName", result.ContainerName),
-		zap.String("url", result.URL),
-		zap.Int("hostPort", result.HostPort))
+	log.Infof("Container started successfully: containerName=%s, url=%s, hostPort=%d", result.ContainerName, result.URL, result.HostPort)
 
 	return &ContainerInfo{
 		Name: result.ContainerName,
@@ -204,33 +191,33 @@ func startMkDocsContainer(cli *client.Client, ctx context.Context, port int, log
 }
 
 // stopMkDocsContainer stops the MkDocs container
-func stopMkDocsContainer(cli *client.Client, ctx context.Context, logger *logging.Logger) error {
+func stopMkDocsContainer(cli *client.Client, ctx context.Context) error {
 	containerNameBase, _, _ := getDockerImageConfig()
-	logger.Debug("Stopping MkDocs container", zap.String("containerName", containerNameBase))
+	log.Debugf("Stopping MkDocs container: containerName=%s", containerNameBase)
 
 	err := serve.StopServe(ctx, containerNameBase)
 	if err != nil {
-		logger.Error("Failed to stop container", zap.Error(err))
+		log.Errorf("Failed to stop container: error=%v", err)
 		return err
 	}
 
-	logger.Info("Container stopped successfully")
+	log.Info("Container stopped successfully")
 	return nil
 }
 
 // streamContainerLogs streams container logs to stdout
-func streamContainerLogs(cli *client.Client, ctx context.Context, logger *logging.Logger) error {
+func streamContainerLogs(cli *client.Client, ctx context.Context) error {
 	containerNameBase, _, _ := getDockerImageConfig()
-	logger.Debug("Searching for container to stream logs")
+	log.Debugf("Searching for container to stream logs")
 
 	// Find the container
 	containers, err := cli.ContainerList(ctx, container.ListOptions{All: true})
 	if err != nil {
-		logger.Error("Failed to list containers", zap.Error(err))
+		log.Errorf("Failed to list containers: error=%v", err)
 		return fmt.Errorf("failed to list containers: %w", err)
 	}
 
-	logger.Debug("Found containers", zap.Int("count", len(containers)))
+	log.Debugf("Found containers: count=%d", len(containers))
 
 	var containerID string
 	for _, c := range containers {
@@ -238,9 +225,7 @@ func streamContainerLogs(cli *client.Client, ctx context.Context, logger *loggin
 			cleanName := strings.TrimPrefix(name, "/")
 			if cleanName == containerNameBase || strings.HasPrefix(cleanName, containerNameBase+"-") {
 				containerID = c.ID
-				logger.Debug("Found matching container",
-					zap.String("containerID", containerID),
-					zap.String("name", cleanName))
+				log.Debugf("Found matching container: containerID=%s, name=%s", containerID, cleanName)
 				break
 			}
 		}
@@ -250,7 +235,7 @@ func streamContainerLogs(cli *client.Client, ctx context.Context, logger *loggin
 	}
 
 	if containerID == "" {
-		logger.Error("Container not found for log streaming")
+		log.Errorf("Container not found for log streaming")
 		return fmt.Errorf("container not found")
 	}
 
@@ -262,24 +247,24 @@ func streamContainerLogs(cli *client.Client, ctx context.Context, logger *loggin
 		Timestamps: false,
 	}
 
-	logger.Debug("Starting log stream", zap.String("containerID", containerID))
+	log.Debugf("Starting log stream: containerID=%s", containerID)
 	logs, err := cli.ContainerLogs(ctx, containerID, logOptions)
 	if err != nil {
-		logger.Error("Failed to get container logs", zap.Error(err))
+		log.Errorf("Failed to get container logs: error=%v", err)
 		return fmt.Errorf("failed to get container logs: %w", err)
 	}
 	defer logs.Close()
 
-	logger.Debug("Log stream established, copying to stdout/stderr")
+	log.Debugf("Log stream established, copying to stdout/stderr")
 
 	// Copy logs to stdout and stderr
 	// Docker multiplexes stdout and stderr, so we need to demultiplex it
 	_, err = stdcopy.StdCopy(os.Stdout, os.Stderr, logs)
 	if err != nil {
-		logger.Error("Error reading logs", zap.Error(err))
+		log.Errorf("Error reading logs: error=%v", err)
 		return fmt.Errorf("error reading logs: %w", err)
 	}
 
-	logger.Debug("Log streaming completed")
+	log.Debugf("Log streaming completed")
 	return nil
 }

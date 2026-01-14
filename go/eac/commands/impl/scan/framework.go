@@ -274,15 +274,15 @@ func GetDockerImage(ctx *cmdframework.ExecutionContext, scannerType internal.Sca
 // CreateCommandConfig creates a standard command config for scan commands
 func CreateCommandConfig(scannerType internal.ScannerType, scannerName string, monikers []string, debug bool, useTUI bool, tuiHeight int) *cmdframework.CommandConfig {
 	return &cmdframework.CommandConfig{
-		Type:       cmdframework.CommandTypeScan,
-		ActionVerb: fmt.Sprintf("Scanning (%s)", scannerName),
-		OutputDir:  "out/scan",
+		Type:        cmdframework.CommandTypeScan,
+		ActionVerb:  fmt.Sprintf("Scanning (%s)", scannerName),
+		OutputDir:   "out/scan",
 		LogFileName: fmt.Sprintf("%s.log", scannerType),
-		Monikers:   monikers,
-		Layered:    false, // Scan uses parallel execution
-		UseTUI:     useTUI,
-		TUIHeight:  tuiHeight,
-		DebugMode:  debug,
+		Monikers:    monikers,
+		Layered:     false, // Scan uses parallel execution
+		UseTUI:      useTUI,
+		TUIHeight:   tuiHeight,
+		DebugMode:   debug,
 	}
 }
 

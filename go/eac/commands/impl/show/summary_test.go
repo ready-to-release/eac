@@ -87,4 +87,3 @@ func TestFormatJobResult_CustomError(t *testing.T) {
 		}
 	}
 }
-

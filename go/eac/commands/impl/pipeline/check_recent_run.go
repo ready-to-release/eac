@@ -1,9 +1,11 @@
 // Command: pipeline check-recent-run
 // Short: Check if a recent successful workflow run exists
-//   --workflow <name>: Workflow file name (required)
-//   --sha <sha>: HEAD SHA to check (default: current HEAD)
-//   --since <duration>: Time window to check (default: 2h)
-//   --format shell: Output as shell variables
+//
+//	--workflow <name>: Workflow file name (required)
+//	--sha <sha>: HEAD SHA to check (default: current HEAD)
+//	--since <duration>: Time window to check (default: 2h)
+//	--format shell: Output as shell variables
+//
 // Long:
 // Long: Checks if a successful workflow run exists for the given SHA within
 // Long: the specified time window. Used to skip redundant CI runs.

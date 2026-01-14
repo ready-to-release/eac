@@ -67,7 +67,7 @@ Feature: eac-commands_validate-risk-catalog
       When I run "validate risk-catalog invalid.json"
       Then the exit code is 1
       And stdout contains "Validation failed"
-      And stdout contains "invalid JSON"
+      And stdout contains "Invalid JSON format"
 
     @L2 @ov
     Scenario: Missing required catalog fields fails validation
@@ -117,14 +117,14 @@ Feature: eac-commands_validate-risk-catalog
       Given a catalog missing UUID
       When I run "validate risk-catalog catalog.json"
       Then the exit code is 1
-      And stderr contains "missing required field: uuid"
+      And stderr contains "Missing required field: uuid"
 
     @L2 @ov
     Scenario: Metadata validated with go-oscal
       Given a catalog with missing metadata title
       When I run "validate risk-catalog catalog.json"
       Then the exit code is 1
-      And stderr contains "missing required field: title"
+      And stderr contains "Missing required field: metadata.title"
 
     @L2 @ov
     Scenario: Catalog must have controls or groups

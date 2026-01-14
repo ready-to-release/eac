@@ -5,11 +5,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	"github.com/ready-to-release/eac/go/eac/core/git"
-	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
-
-// logModules is the package-level logger for module operations
-var logModules = logging.C("modules")
 
 // EnrichFilesWithModules takes a list of files and determines which module(s) own each file.
 // Returns a list of files with their module ownership information.
@@ -34,14 +30,11 @@ var logModules = logging.C("modules")
 //	    fmt.Printf("%s -> %v\n", f.Name, f.Modules)
 //	}
 func EnrichFilesWithModules(files []FileInfo, workspaceRoot string) ([]RepositoryFileWithModule, error) {
-	logModules.Debug("EnrichFilesWithModules: start")
 	// Load module contracts
-	logModules.Debug("EnrichFilesWithModules: calling modules.LoadFromWorkspace")
 	registry, err := modules.LoadFromWorkspace(workspaceRoot)
 	if err != nil {
 		return nil, NewRepositoryError("enrich", workspaceRoot, err, "failed to load module contracts")
 	}
-	logModules.Debug("EnrichFilesWithModules: modules.LoadFromWorkspace complete")
 
 	// Create result list
 	result := make([]RepositoryFileWithModule, 0, len(files))
@@ -152,21 +145,16 @@ func filterClosestModules(matchingModules []*modules.ModuleContract, registry *m
 //	    }
 //	}
 func GetRepositoryFilesWithModules(repo git.GitRepository, trackedOnly, includeIgnored, stagedOnly bool) ([]RepositoryFileWithModule, error) {
-	logModules.Debug("GetRepositoryFilesWithModules: start")
 	rootPath := repo.RootPath()
 
 	// Get all repository files (exclude Git internal files by default)
-	logModules.Debug("GetRepositoryFilesWithModules: calling GetRepositoryFiles")
 	files, err := GetRepositoryFiles(repo, trackedOnly, includeIgnored, false, stagedOnly)
 	if err != nil {
 		return nil, err
 	}
-	logModules.Debug("GetRepositoryFilesWithModules: GetRepositoryFiles complete")
 
 	// Enrich with module ownership
-	logModules.Debug("GetRepositoryFilesWithModules: calling EnrichFilesWithModules")
 	result, err := EnrichFilesWithModules(files, rootPath)
-	logModules.Debug("GetRepositoryFilesWithModules: EnrichFilesWithModules complete")
 	return result, err
 }
 

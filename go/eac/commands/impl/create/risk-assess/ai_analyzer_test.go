@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/scoring"
+	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap/zaptest"
 )
@@ -37,24 +38,24 @@ func TestBuildRiskAssessmentPrompt(t *testing.T) {
 		},
 	}
 
-	prompt, err := buildRiskAssessmentPrompt(input)
+	prompt, err := buildRiskAssessmentPrompt("", input)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, prompt)
 
 	// Check prompt contains expected sections
-	assert.Contains(t, prompt, "# Assessment Scope")
+	assert.Contains(t, prompt, "executive_summary")
 	assert.Contains(t, prompt, "Profile: test-profile.json")
-	assert.Contains(t, prompt, "Modules Assessed: 1")
-	assert.Contains(t, prompt, "Total Controls: 10")
-	assert.Contains(t, prompt, "Controls Satisfied: 7")
-	assert.Contains(t, prompt, "Controls Not Satisfied: 3")
-	assert.Contains(t, prompt, "# Module Assessment Data")
-	assert.Contains(t, prompt, "test-module")
-	assert.Contains(t, prompt, "CVE-2024-1234")
+	assert.Contains(t, prompt, "Modules assessed: 1")
+	assert.Contains(t, prompt, "Total controls: 10")
+	assert.Contains(t, prompt, "Controls satisfied: 7")
+	assert.Contains(t, prompt, "Controls not satisfied: 3")
 }
 
 func TestApplyAIRiskAssessment(t *testing.T) {
-	logger := zaptest.NewLogger(t).Sugar()
+	// Set up test logger
+	cleanup := logging.SetTestLogger(zaptest.NewLogger(t))
+	defer cleanup()
+	logger := logging.C()
 
 	results := []*ModuleAssessmentResult{
 		{
@@ -100,7 +101,10 @@ func TestApplyAIRiskAssessment(t *testing.T) {
 }
 
 func TestApplyAIRiskAssessment_MissingModule(t *testing.T) {
-	logger := zaptest.NewLogger(t).Sugar()
+	// Set up test logger
+	cleanup := logging.SetTestLogger(zaptest.NewLogger(t))
+	defer cleanup()
+	logger := logging.C()
 
 	results := []*ModuleAssessmentResult{
 		{
@@ -134,6 +138,43 @@ func TestApplyAIRiskAssessment_MissingModule(t *testing.T) {
 	assert.NotNil(t, results[0].RiskScore)
 
 	// Second module should not have risk score (missing from AI output)
+	assert.Nil(t, results[1].RiskScore)
+}
+
+func TestApplyAIRiskAssessment_NoModuleAnalyses(t *testing.T) {
+	// Set up test logger
+	cleanup := logging.SetTestLogger(zaptest.NewLogger(t))
+	defer cleanup()
+	logger := logging.C()
+
+	results := []*ModuleAssessmentResult{
+		{
+			Module:       "module1",
+			Satisfied:    5,
+			NotSatisfied: 2,
+		},
+		{
+			Module:       "module2",
+			Satisfied:    3,
+			NotSatisfied: 1,
+		},
+	}
+
+	// AI output with no per-module analyses (only executive summary)
+	aiOutput := &AIRiskAssessmentOutput{
+		ExecutiveSummary: ExecutiveSummaryData{
+			OverallRiskPosture: "moderate",
+			SummaryNarrative:   "The assessment reveals a moderate risk posture...",
+		},
+		ModuleAnalyses: nil, // No per-module analysis
+		Confidence:     0.85,
+	}
+
+	// Should not panic when module analyses are missing
+	ApplyAIRiskAssessment(results, aiOutput, logger)
+
+	// Modules should not have AI-generated risk scores applied
+	assert.Nil(t, results[0].RiskScore)
 	assert.Nil(t, results[1].RiskScore)
 }
 

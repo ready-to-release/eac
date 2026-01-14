@@ -48,21 +48,22 @@ func NewQuickValidatorWithContract(contract *contracts.Contract) *QuickValidator
 // Validate performs quick syntax validation
 func (v *QuickValidator) Validate(output string, context map[string]interface{}) []validation.ValidationError {
 	var errors []validation.ValidationError
+	formatter := validation.NewErrorFormatter()
 
 	lines := strings.Split(output, "\n")
 
 	// Rule 1: Must start with "workspace"
-	if err := v.validateWorkspaceStart(output); err != nil {
+	if err := v.validateWorkspaceStart(output, formatter); err != nil {
 		errors = append(errors, *err)
 	}
 
 	// Rule 2: Check balanced braces
-	if braceErrors := v.validateBalancedBraces(lines); len(braceErrors) > 0 {
+	if braceErrors := v.validateBalancedBraces(lines, formatter); len(braceErrors) > 0 {
 		errors = append(errors, braceErrors...)
 	}
 
 	// Rule 3: Check for invalid identifiers
-	if identifierErrors := v.validateIdentifiers(lines); len(identifierErrors) > 0 {
+	if identifierErrors := v.validateIdentifiers(lines, formatter); len(identifierErrors) > 0 {
 		errors = append(errors, identifierErrors...)
 	}
 
@@ -75,12 +76,33 @@ func (v *QuickValidator) Validate(output string, context map[string]interface{})
 }
 
 // validateWorkspaceStart checks if the DSL starts with "workspace"
-func (v *QuickValidator) validateWorkspaceStart(output string) *validation.ValidationError {
+func (v *QuickValidator) validateWorkspaceStart(output string, formatter *validation.ErrorFormatter) *validation.ValidationError {
 	trimmed := strings.TrimSpace(output)
 	if !strings.HasPrefix(trimmed, "workspace") {
-		return validation.NewValidationError(
+		// Show what AI actually generated
+		lines := strings.Split(trimmed, "\n")
+		firstLine := lines[0]
+		if len(firstLine) > 50 {
+			firstLine = firstLine[:50] + "..."
+		}
+
+		return formatter.FormatEnhancedError(
 			validation.ErrMissingWorkspace,
 			"DSL must start with 'workspace' keyword",
+			fmt.Sprintf("AI generated output starts with:\n%s", firstLine),
+			"Valid Structurizr DSL structure",
+			`workspace {
+  model {
+    user = person "User"
+    system = softwareSystem "System"
+  }
+  views {
+    systemContext system {
+      include *
+    }
+  }
+}`,
+			"Start the DSL with 'workspace {' then add 'model {' and 'views {' sections inside.",
 			1,
 		)
 	}
@@ -88,7 +110,7 @@ func (v *QuickValidator) validateWorkspaceStart(output string) *validation.Valid
 }
 
 // validateBalancedBraces checks if braces are balanced
-func (v *QuickValidator) validateBalancedBraces(lines []string) []validation.ValidationError {
+func (v *QuickValidator) validateBalancedBraces(lines []string, formatter *validation.ErrorFormatter) []validation.ValidationError {
 	var errors []validation.ValidationError
 	braceCount := 0
 	var braceStack []int // Track line numbers where braces open
@@ -102,9 +124,17 @@ func (v *QuickValidator) validateBalancedBraces(lines []string) []validation.Val
 			} else if char == '}' {
 				braceCount--
 				if braceCount < 0 {
-					errors = append(errors, *validation.NewValidationError(
+					errors = append(errors, *formatter.FormatEnhancedError(
 						validation.ErrUnmatchedBrace,
-						"Unmatched closing brace '}'",
+						fmt.Sprintf("Unmatched closing brace '}' at line %d", lineNum),
+						strings.TrimSpace(line),
+						"Balanced braces",
+						`workspace {     ← opening brace
+  model {        ← opening brace
+    ...
+  }              ← closing brace
+}                ← closing brace`,
+						"Remove the extra closing brace or add a matching opening brace.",
 						lineNum,
 					))
 					return errors // Stop on first unmatched brace
@@ -117,21 +147,32 @@ func (v *QuickValidator) validateBalancedBraces(lines []string) []validation.Val
 	}
 
 	if braceCount > 0 {
-		// Unclosed braces
+		// Unclosed braces - create a single comprehensive error
+		var openLines []string
 		for _, lineNum := range braceStack {
-			errors = append(errors, *validation.NewValidationError(
-				validation.ErrUnclosedBrace,
-				fmt.Sprintf("Unclosed brace '{' (opened at line %d)", lineNum),
-				0,
-			))
+			openLines = append(openLines, fmt.Sprintf("line %d", lineNum))
 		}
+
+		errors = append(errors, *formatter.FormatEnhancedError(
+			validation.ErrUnclosedBrace,
+			fmt.Sprintf("%d unclosed brace(s) '{' - missing closing braces", len(braceStack)),
+			fmt.Sprintf("Opening braces at: %s", strings.Join(openLines, ", ")),
+			"Each opening brace must have a closing brace",
+			`workspace {
+  model {
+    person = person "User"
+  }              ← closes model
+}                ← closes workspace`,
+			fmt.Sprintf("Add %d closing brace(s) '}' at the appropriate locations.", len(braceStack)),
+			0,
+		))
 	}
 
 	return errors
 }
 
 // validateIdentifiers checks for invalid identifier names
-func (v *QuickValidator) validateIdentifiers(lines []string) []validation.ValidationError {
+func (v *QuickValidator) validateIdentifiers(lines []string, formatter *validation.ErrorFormatter) []validation.ValidationError {
 	var errors []validation.ValidationError
 
 	// Pattern to extract identifiers from common DSL constructs
@@ -158,9 +199,28 @@ func (v *QuickValidator) validateIdentifiers(lines []string) []validation.Valida
 						identifier = strings.Trim(identifier, `"`)
 						// Check if it's a valid identifier (not a string literal)
 						if !strings.Contains(parts[j+1], `"`) && !v.identifierPattern.MatchString(identifier) {
-							errors = append(errors, *validation.NewValidationError(
+							// Suggest a corrected identifier
+							suggested := identifier
+							if len(identifier) > 0 && (identifier[0] >= '0' && identifier[0] <= '9') {
+								suggested = "elem_" + identifier
+							}
+
+							errors = append(errors, *formatter.FormatEnhancedError(
 								validation.ErrInvalidIdentifier,
-								fmt.Sprintf("Invalid identifier '%s' - must start with letter and contain only alphanumeric, underscore, or dash", identifier),
+								fmt.Sprintf("Invalid identifier '%s' at line %d", identifier, lineNum),
+								fmt.Sprintf("%s %s = ...", keyword, identifier),
+								"Valid identifier starting with letter, containing only alphanumeric, underscore, or dash",
+								`Valid examples:
+  user = person "User"
+  apiSystem = softwareSystem "API"
+  webApp = container "Web Application"
+  db_server = softwareSystem "Database"
+
+Invalid examples:
+  123system = softwareSystem "System"    ✗ (starts with number)
+  my-system! = softwareSystem "System"   ✗ (contains special char)
+  system space = softwareSystem "Sys"    ✗ (contains space)`,
+								fmt.Sprintf("Change '%s' to '%s' or another valid identifier that starts with a letter.", identifier, suggested),
 								lineNum,
 							))
 						}

@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/ready-to-release/eac/go/eac/core/ai"
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 

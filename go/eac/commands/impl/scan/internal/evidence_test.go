@@ -16,7 +16,7 @@ func TestWriteEvidence(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	testFindings := map[string]interface{}{
-		"test": "data",
+		"test":  "data",
 		"count": 42,
 	}
 

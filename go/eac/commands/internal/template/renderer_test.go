@@ -99,6 +99,32 @@ func TestRenderToString(t *testing.T) {
 			expected: "33.33%",
 		},
 		{
+			name:     "template with mulf (float multiplication)",
+			template: "{{ printf \"%.2f\" (mulf .Value .Multiplier) }}",
+			data: map[string]interface{}{
+				"Value":      0.85,
+				"Multiplier": 100.0,
+			},
+			expected: "85.00",
+		},
+		{
+			name:     "template with mulf for confidence percentage",
+			template: "{{ printf \"%.0f\" (mulf .Confidence 100.0) }}%",
+			data: map[string]interface{}{
+				"Confidence": 0.85,
+			},
+			expected: "85%",
+		},
+		{
+			name:     "template with divf (float division)",
+			template: "{{ printf \"%.2f\" (divf .Value .Divisor) }}",
+			data: map[string]interface{}{
+				"Value":   100.0,
+				"Divisor": 3.0,
+			},
+			expected: "33.33",
+		},
+		{
 			name:     "template with missing key (zero mode)",
 			template: "Value: {{ .Missing }}",
 			data:     map[string]interface{}{},
@@ -210,11 +236,15 @@ func TestDefaultFuncMap(t *testing.T) {
 	assert.NotNil(t, funcs["lte"])
 	assert.NotNil(t, funcs["eq"])
 
-	// Test math functions
+	// Test math functions (integer)
 	assert.NotNil(t, funcs["add"])
 	assert.NotNil(t, funcs["sub"])
 	assert.NotNil(t, funcs["mul"])
 	assert.NotNil(t, funcs["div"])
+
+	// Test math functions (float64)
+	assert.NotNil(t, funcs["mulf"])
+	assert.NotNil(t, funcs["divf"])
 
 	// Test percent functions
 	assert.NotNil(t, funcs["percent"])
@@ -245,7 +275,7 @@ func TestDefaultFuncMap(t *testing.T) {
 		assert.False(t, eqFn(5, 3))
 	})
 
-	t.Run("math functions", func(t *testing.T) {
+	t.Run("math functions (integer)", func(t *testing.T) {
 		addFn := funcs["add"].(func(int, int) int)
 		assert.Equal(t, 8, addFn(5, 3))
 
@@ -258,6 +288,17 @@ func TestDefaultFuncMap(t *testing.T) {
 		divFn := funcs["div"].(func(int, int) int)
 		assert.Equal(t, 5, divFn(15, 3))
 		assert.Equal(t, 0, divFn(15, 0)) // Division by zero returns 0
+	})
+
+	t.Run("math functions (float64)", func(t *testing.T) {
+		mulfFn := funcs["mulf"].(func(float64, float64) float64)
+		assert.InDelta(t, 85.0, mulfFn(0.85, 100.0), 0.001)
+		assert.InDelta(t, 15.5, mulfFn(3.1, 5.0), 0.001)
+
+		divfFn := funcs["divf"].(func(float64, float64) float64)
+		assert.InDelta(t, 5.0, divfFn(15.0, 3.0), 0.001)
+		assert.InDelta(t, 33.333, divfFn(100.0, 3.0), 0.001)
+		assert.Equal(t, 0.0, divfFn(15.0, 0.0)) // Division by zero returns 0
 	})
 
 	t.Run("percent functions", func(t *testing.T) {

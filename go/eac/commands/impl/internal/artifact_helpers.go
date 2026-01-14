@@ -14,11 +14,11 @@ import (
 // ResolvedArtifact represents an artifact with metadata overrides applied and existence checked
 type ResolvedArtifact struct {
 	// From artifact definition
-	Type      string   `json:"type" yaml:"type"`
-	ID        string   `json:"id" yaml:"id"`
-	Pattern   string   `json:"pattern" yaml:"pattern"`
-	Platforms []string `json:"platforms,omitempty" yaml:"platforms,omitempty"`
-	VerifyMode string  `json:"verify_mode,omitempty" yaml:"verify_mode,omitempty"`
+	Type       string   `json:"type" yaml:"type"`
+	ID         string   `json:"id" yaml:"id"`
+	Pattern    string   `json:"pattern" yaml:"pattern"`
+	Platforms  []string `json:"platforms,omitempty" yaml:"platforms,omitempty"`
+	VerifyMode string   `json:"verify_mode,omitempty" yaml:"verify_mode,omitempty"`
 
 	// Resolved information
 	ResolvedName     string `json:"resolved_name" yaml:"resolved_name"`
@@ -46,7 +46,6 @@ func ResolveArtifactsForModule(
 ) ([]ResolvedArtifact, *ArtifactResolutionSummary, error) {
 	return ResolveArtifactsForModuleWithConfig(module, moduleType, buildDir, targetOS, targetArch, nil)
 }
-
 
 // ResolveArtifactsForModuleWithConfig resolves all artifacts for a module with optional books config.
 // The moduleType parameter is deprecated and ignored - artifact resolution uses cfg.GetBuildArtifacts()
@@ -292,13 +291,13 @@ func expandBookArtifacts(module *config.Module, artifacts []config.Artifact, cfg
 
 // ModuleValidationResult represents validation results for a single module
 type ModuleValidationResult struct {
-	Moniker          string                     `json:"moniker" yaml:"moniker"`
-	Type             string                     `json:"type" yaml:"type"`
-	IsDependency     bool                       `json:"is_dependency" yaml:"is_dependency"`
-	HasBuildArtifacts bool                      `json:"has_build_artifacts" yaml:"has_build_artifacts"`
-	Artifacts        []ResolvedArtifact         `json:"artifacts" yaml:"artifacts"`
-	Summary          *ArtifactResolutionSummary `json:"summary" yaml:"summary"`
-	Error            string                     `json:"error,omitempty" yaml:"error,omitempty"`
+	Moniker           string                     `json:"moniker" yaml:"moniker"`
+	Type              string                     `json:"type" yaml:"type"`
+	IsDependency      bool                       `json:"is_dependency" yaml:"is_dependency"`
+	HasBuildArtifacts bool                       `json:"has_build_artifacts" yaml:"has_build_artifacts"`
+	Artifacts         []ResolvedArtifact         `json:"artifacts" yaml:"artifacts"`
+	Summary           *ArtifactResolutionSummary `json:"summary" yaml:"summary"`
+	Error             string                     `json:"error,omitempty" yaml:"error,omitempty"`
 }
 
 // ValidationResults represents validation results for a module and all dependencies

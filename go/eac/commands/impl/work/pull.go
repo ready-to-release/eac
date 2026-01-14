@@ -36,7 +36,6 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/impl/work/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
-	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
 func init() {
@@ -162,7 +161,7 @@ func Pull() int {
 	phase7Start := time.Now()
 	config.base.Logger.Debug("Phase 7: Starting show rebase preview", zap.String("phase", "phase7"))
 
-	showRebasePreview(config.base.Logger, config.currentBranch, config.targetBranch, info)
+	showRebasePreview(config.currentBranch, config.targetBranch, info)
 
 	phase7Duration := time.Since(phase7Start)
 	config.base.Logger.Debug("Phase 7: Completed", zap.String("phase", "phase7"), zap.Duration("duration", phase7Duration))
@@ -320,12 +319,12 @@ func getRebaseInfo(config *pullConfig) (*rebaseInfo, error) {
 }
 
 // showRebasePreview shows what will be rebased
-func showRebasePreview(logger *logging.Logger, currentBranch, targetBranch string, info *rebaseInfo) {
-	logger.Info(fmt.Sprintf("\nRebasing %s onto origin/%s", currentBranch, targetBranch))
-	logger.Info(fmt.Sprintf("  Current branch: %d commits ahead of %s", info.currentCommits, targetBranch))
-	logger.Info(fmt.Sprintf("  %s branch: %d new commits", targetBranch, info.newCommits))
+func showRebasePreview(currentBranch, targetBranch string, info *rebaseInfo) {
+	log.Infof("\nRebasing %s onto origin/%s", currentBranch, targetBranch)
+	log.Infof("  Current branch: %d commits ahead of %s", info.currentCommits, targetBranch)
+	log.Infof("  %s branch: %d new commits", targetBranch, info.newCommits)
 	if info.currentCommits > 0 && info.newCommits > 0 {
-		logger.Info(fmt.Sprintf("  Rebase will replay your %d commits on top of %d new commits", info.currentCommits, info.newCommits))
+		log.Infof("  Rebase will replay your %d commits on top of %d new commits", info.currentCommits, info.newCommits)
 	}
 }
 

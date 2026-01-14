@@ -1,10 +1,10 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "risk-assessment.schema.json",
+  "$id": "risk-assess.schema.json",
   "title": "AI Risk Assessment Output",
-  "description": "Complete risk assessment with executive summary and per-module analysis",
+  "description": "Executive summary for risk assessment across all modules",
   "type": "object",
-  "required": ["executive_summary", "module_analyses", "confidence"],
+  "required": ["executive_summary", "confidence"],
   "properties": {
     "executive_summary": {
       "type": "object",
@@ -69,46 +69,6 @@
           "description": "High-level strategic recommendations for risk mitigation"
         }
       }
-    },
-    "module_analyses": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["module", "computed_likelihood", "reasoning", "risk_summary"],
-        "properties": {
-          "module": {
-            "type": "string",
-            "description": "Module name"
-          },
-          "computed_likelihood": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 5,
-            "description": "Likelihood score (1=Rare, 2=Unlikely, 3=Possible, 4=Likely, 5=Almost Certain)"
-          },
-          "reasoning": {
-            "type": "string",
-            "minLength": 30,
-            "description": "Explanation of how likelihood was computed for this module"
-          },
-          "risk_summary": {
-            "type": "string",
-            "minLength": 20,
-            "maxLength": 200,
-            "description": "One sentence summary of this module's risk posture"
-          },
-          "recommended_controls": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": "^[a-z]{2}-[0-9]+$"
-            },
-            "description": "NIST 800-53 control IDs to reduce likelihood for this module"
-          }
-        }
-      },
-      "minItems": 1,
-      "description": "Per-module risk analysis results"
     },
     "confidence": {
       "type": "number",

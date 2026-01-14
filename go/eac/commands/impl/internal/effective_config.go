@@ -21,10 +21,10 @@ type EffectiveModule struct {
 	Metadata    map[string]string `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 
 	// Calculated fields from type
-	EffectiveBuildDeps    []string `json:"effective_build_deps,omitempty" yaml:"effective_build_deps,omitempty"`
-	EffectiveCapabilities []string `json:"effective_capabilities,omitempty" yaml:"effective_capabilities,omitempty"`
-	EffectiveTestFramework string  `json:"effective_test_framework,omitempty" yaml:"effective_test_framework,omitempty"`
-	EffectiveBDDFramework  string  `json:"effective_bdd_framework,omitempty" yaml:"effective_bdd_framework,omitempty"`
+	EffectiveBuildDeps     []string `json:"effective_build_deps,omitempty" yaml:"effective_build_deps,omitempty"`
+	EffectiveCapabilities  []string `json:"effective_capabilities,omitempty" yaml:"effective_capabilities,omitempty"`
+	EffectiveTestFramework string   `json:"effective_test_framework,omitempty" yaml:"effective_test_framework,omitempty"`
+	EffectiveBDDFramework  string   `json:"effective_bdd_framework,omitempty" yaml:"effective_bdd_framework,omitempty"`
 	ArtifactCount          int      `json:"artifact_count,omitempty" yaml:"artifact_count,omitempty"`
 
 	// Resolved path patterns
@@ -45,14 +45,14 @@ func GetEffectiveModuleConfig(
 	}
 
 	effective := &EffectiveModule{
-		Moniker:      module.Moniker,
-		Name:         module.Name,
-		Type:         module.Type,
-		Description:  module.Description,
-		DependsOn:    module.DependsOn,
-		Files:        module.Files,
-		Flags:        module.Flags,
-		Metadata:     module.Metadata,
+		Moniker:       module.Moniker,
+		Name:          module.Name,
+		Type:          module.Type,
+		Description:   module.Description,
+		DependsOn:     module.DependsOn,
+		Files:         module.Files,
+		Flags:         module.Flags,
+		Metadata:      module.Metadata,
 		ResolvedPaths: make(map[string]string),
 	}
 

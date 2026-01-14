@@ -21,12 +21,12 @@ type ManifestLoadResult struct {
 
 // ManifestValidationSummary summarizes validation across all modules
 type ManifestValidationSummary struct {
-	Results       []ManifestLoadResult
-	TotalModules  int
-	ValidModules  int
+	Results        []ManifestLoadResult
+	TotalModules   int
+	ValidModules   int
 	InvalidModules int
 	MissingModules int
-	AllValid      bool
+	AllValid       bool
 }
 
 // LoadAndValidateManifests loads and validates build manifests for a list of modules.

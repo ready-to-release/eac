@@ -8,16 +8,16 @@ import (
 
 // SquashJSON matches contracts/eac-core/0.1.0/squash-message.schema.json
 type SquashJSON struct {
-	Type                string          `json:"type"`
-	Scope               string          `json:"scope"`
-	Subject             string          `json:"subject"`
-	Body                string          `json:"body"`
-	Breaking            bool            `json:"breaking,omitempty"`
-	BreakingDescription string          `json:"breaking_description,omitempty"`
-	Changes             []ChangeItem    `json:"changes,omitempty"`
-	Modules             []string        `json:"modules,omitempty"`
-	PRNumber            int             `json:"pr_number,omitempty"`
-	AuditorSummary      string          `json:"auditor_summary,omitempty"`
+	Type                string       `json:"type"`
+	Scope               string       `json:"scope"`
+	Subject             string       `json:"subject"`
+	Body                string       `json:"body"`
+	Breaking            bool         `json:"breaking,omitempty"`
+	BreakingDescription string       `json:"breaking_description,omitempty"`
+	Changes             []ChangeItem `json:"changes,omitempty"`
+	Modules             []string     `json:"modules,omitempty"`
+	PRNumber            int          `json:"pr_number,omitempty"`
+	AuditorSummary      string       `json:"auditor_summary,omitempty"`
 }
 
 // ChangeItem represents an individual change in the PR

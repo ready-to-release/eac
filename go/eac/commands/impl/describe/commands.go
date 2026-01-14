@@ -23,11 +23,11 @@ func init() {
 
 // CommandInfo represents structured information about a command
 type CommandInfo struct {
-	Name        string   `json:"name"`        // Full command name: "show modules"
-	Parts       []string `json:"parts"`       // Command parts: ["show", "modules"]
-	Description string   `json:"description"` // Command description
-	Parent      string   `json:"parent"`      // Parent command: "show" (empty for root)
-	IsLeaf      bool     `json:"is_leaf"`     // True if this is an executable command
+	Name        string   `json:"name"`           // Full command name: "show modules"
+	Parts       []string `json:"parts"`          // Command parts: ["show", "modules"]
+	Description string   `json:"description"`    // Command description
+	Parent      string   `json:"parent"`         // Parent command: "show" (empty for root)
+	IsLeaf      bool     `json:"is_leaf"`        // True if this is an executable command
 	Args        string   `json:"args,omitempty"` // Argument completion type: "modules", "files", etc.
 }
 

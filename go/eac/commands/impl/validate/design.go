@@ -86,7 +86,6 @@ func ValidateDesign() int {
 		return 2
 	}
 
-
 	// Create validator
 	validator, err := designInternal.NewValidator()
 	if err != nil {
@@ -173,7 +172,6 @@ func validateSingleModule(validator designInternal.StructurizrValidator, module 
 		log.Infof("❌ Validation failed: %v", err)
 		return 2
 	}
-
 
 	// Display console output
 	log.Info(designInternal.FormatValidationResult(result, verbose))

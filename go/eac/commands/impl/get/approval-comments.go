@@ -1,9 +1,11 @@
 // Command: get approval-comments
-//   --as-yaml: Output as YAML (default)
-//   --as-json: Output as JSON
-//   --as-toml: Output as TOML
-//   --include-all-reviews: Include all review states (not just APPROVED)
-//   --branch: Branch to query (default: trunk branch from config, usually "main")
+//
+//	--as-yaml: Output as YAML (default)
+//	--as-json: Output as JSON
+//	--as-toml: Output as TOML
+//	--include-all-reviews: Include all review states (not just APPROVED)
+//	--branch: Branch to query (default: trunk branch from config, usually "main")
+//
 // Args: module [version]
 // Long:
 // Long: Expected Output:
@@ -21,8 +23,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	getInternal "github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/repository"

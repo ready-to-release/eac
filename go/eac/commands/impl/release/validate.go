@@ -55,7 +55,6 @@ type ValidationReport struct {
 	AllValid bool               `json:"all_valid"`
 }
 
-
 func ReleaseValidate() int {
 	// Validate flags before parsing
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
