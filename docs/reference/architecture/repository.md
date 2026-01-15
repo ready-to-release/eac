@@ -35,12 +35,12 @@ Repository-wide validation and consistency checks.
 
 ## Contract Types
 
-| Contract | Purpose |
-|----------|---------|
-| `repository.yml` | Global repository configuration |
-| `modules.yml` | Module registry and metadata |
-| `books.yml` | Documentation book definitions |
-| `environments.yml` | Environment configurations |
+| Contract           | Purpose                         |
+| ------------------ | ------------------------------- |
+| `repository.yml`   | Global repository configuration |
+| `modules.yml`      | Module registry and metadata    |
+| `books.yml`        | Documentation book definitions  |
+| `environments.yml` | Environment configurations      |
 
 ## Validation Rules
 

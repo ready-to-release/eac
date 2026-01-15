@@ -94,11 +94,11 @@ r2r eac scan || exit 1
 
 ## Common Issues
 
-| Problem | Solution |
-|---------|----------|
-| False positives | Add to ignore list in config |
-| Scanner not found | Install Trivy/Semgrep |
-| Slow scans | Use targeted scans with --scanner |
+| Problem           | Solution                          |
+| ----------------- | --------------------------------- |
+| False positives   | Add to ignore list in config      |
+| Scanner not found | Install Trivy/Semgrep             |
+| Slow scans        | Use targeted scans with --scanner |
 
 ## Next Steps
 

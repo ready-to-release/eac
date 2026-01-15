@@ -63,7 +63,7 @@ Stages 1-7 cover code authoring through comprehensive verification, emphasizing 
 **Key Activities:**
 
 - Code formatting verification
-- Linting for code quality issues
+- SAST code quality issues
 - Unit test execution
 - Security scanning (secrets, vulnerabilities)
 - Build verification
@@ -75,7 +75,7 @@ Stages 1-7 cover code authoring through comprehensive verification, emphasizing 
 | Check        | Pass Criteria                      |
 | ------------ | ---------------------------------- |
 | Formatting   | All files formatted per standards  |
-| Linting      | No high-severity issues            |
+| SAST         | No high-severity issues            |
 | Unit tests   | 100% passing, minimum coverage met |
 | Secrets scan | No hardcoded secrets detected      |
 | Build        | Successful compilation             |

@@ -6,11 +6,11 @@ The CD Model is built on five core principles that guide all stages and practice
 
 Move validation activities as early as possible in the development process:
 
-| Activity | Traditional | CD Model |
-|----------|-------------|----------|
-| Testing | Stage 6 (Extended Test) | Stage 2 (Pre-commit) |
-| Security | Stage 11 (Live) | Stage 2 (Pre-commit) |
-| Compliance | Stage 9 (Approval) | Stage 1 (Authoring) |
+| Activity   | Traditional             | CD Model             |
+| ---------- | ----------------------- | -------------------- |
+| Testing    | Stage 6 (Extended Test) | Stage 2 (Pre-commit) |
+| Security   | Stage 11 (Live)         | Stage 2 (Pre-commit) |
+| Compliance | Stage 9 (Approval)      | Stage 1 (Authoring)  |
 
 Early validation finds defects when they're cheapest to fix and fastest to remediate.
 
@@ -24,21 +24,25 @@ Quality gates at every stage ensure rapid feedback.
 2. The team is notified immediately
 3. The pipeline is blocking—the issue must be fixed before proceeding
 
-This prevents defects from progressing through the pipeline and accumulating. Fail fast, fail early.
+This prevents defects from progressing through the pipeline and accumulating.
+
+!!!! note
+
+     Fail fast! fail early!
 
 ## Automation Over Documentation
 
 While documentation remains important, the CD Model prioritizes executable validation:
 
-| Prefer | Over |
-|--------|------|
-| Automated tests | Manual test plans |
-| Isolated testing infrastructure | Horizontal end-to-end environments |
-| Infrastructure as Code | Environment documentation |
-| Pipeline configuration | Deployment procedures |
-| Automated compliance checks | Manual reviews |
+| Prefer                      | Over                                           |
+| --------------------------- | ---------------------------------------------- |
+| Automated tests             | Manual test plans                              |
+| Vertical end-to-end PLTE's  | Static and Horizontal end-to-end environments  |
+| Infrastructure as Code      | Environment documentation, ex. ServiceNow cm's |
+| Pipeline configuration      | Deployment procedures/SOPS                     |
+| Automated compliance checks | Manual reviews                                 |
 
-This ensures consistency, controls variability, and reduces manual errors.
+This ensures consistency, controls variability, saves resources and reduces manual errors.
 
 ## Continuous Integration
 

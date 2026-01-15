@@ -62,8 +62,8 @@ Why not just deploy after Stage 6 (Extended Testing)? Why have Stage 9 at all?
 
 **Separation of concerns**:
 
-- Stages 5-6: Technical validation ("Does it work correctly?")
-- Stage 9: Business validation ("Should we deploy it now?")
+- Stages 5 through 7: Technical validation ("Does it work correctly?")
+- Stage 9 and 12: Business validation ("Should we deploy it now?")
 
 **Business considerations**:
 

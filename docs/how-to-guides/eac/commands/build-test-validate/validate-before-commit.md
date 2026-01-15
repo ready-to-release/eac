@@ -96,10 +96,10 @@ r2r eac validate || exit 1
 
 ## Common Issues
 
-| Problem | Solution |
-|---------|----------|
-| "Go modules not tidy" | Run `go mod tidy` |
-| "Contract invalid" | Check module.yml format |
+| Problem               | Solution                          |
+| --------------------- | --------------------------------- |
+| "Go modules not tidy" | Run `go mod tidy`                 |
+| "Contract invalid"    | Check module.yml format           |
 | "Dependency mismatch" | Update dependencies in module.yml |
 
 ## Next Steps

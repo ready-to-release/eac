@@ -116,13 +116,13 @@ Specifications evolve through continuous cycles of review and refinement.
 
 ### From Implementation to Specification
 
-| Discovery | Action |
-|-----------|--------|
-| Missing acceptance criteria | Add new `Rule:` block |
-| Ambiguous steps | Refine with concrete examples |
-| Edge cases | Add `@ov` scenarios for error cases |
-| Wrong assumptions | Revise preconditions |
-| Incomplete verification | Add `Then`/`And` steps |
+| Discovery                   | Action                              |
+| --------------------------- | ----------------------------------- |
+| Missing acceptance criteria | Add new `Rule:` block               |
+| Ambiguous steps             | Refine with concrete examples       |
+| Edge cases                  | Add `@ov` scenarios for error cases |
+| Wrong assumptions           | Revise preconditions                |
+| Incomplete verification     | Add `Then`/`And` steps              |
 
 ### From Production to Specification
 
@@ -230,7 +230,7 @@ For each issue found:
 - Scenarios unchanged >6 months while code evolved
 - All scenarios always passing (not testing anything)
 - Testing implementation: "database updated", "cache cleared"
-- >30 scenarios in single file
+- > 30 scenarios in single file
 - Technical jargon: "POST to /api/users", "response code 201"
 
 ### Green Indicators ✅

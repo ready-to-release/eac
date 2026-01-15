@@ -8,13 +8,13 @@ For disabling features via flags, see [Feature Flags](../release-toggling/featur
 
 ## When to Roll Back
 
-| Trigger                    | Action                    | Decision Time |
-| -------------------------- | ------------------------- | ------------- |
-| Error rate > 1%            | Immediate rollback        | < 2 min       |
-| P95 latency > 2x baseline  | Immediate rollback        | < 2 min       |
-| Health checks failing      | Immediate rollback        | < 1 min       |
-| Critical bug discovered    | Immediate rollback        | < 5 min       |
-| Business metrics down 10%+ | Evaluate, likely rollback | < 15 min      |
+| Trigger                    | Action                    | Ex. SLA/SLI Decision Time |
+| -------------------------- | ------------------------- | ------------------------- |
+| Error rate > 1%            | Immediate rollback        | < 2 min                   |
+| P95 latency > 2x baseline  | Immediate rollback        | < 2 min                   |
+| Health checks failing      | Immediate rollback        | < 1 min                   |
+| Critical bug discovered    | Immediate rollback        | < 5 min                   |
+| Business metrics down 10%+ | Evaluate, likely rollback | < 15 min                  |
 
 ---
 
@@ -49,11 +49,11 @@ For disabling features via flags, see [Feature Flags](../release-toggling/featur
 
 An example of a team's objectives:
 
-| Environment           | Target RTO   |
-| --------------------- | ------------ |
-| Production (critical) | < 5 minutes  |
-| Production (standard) | < 15 minutes |
-| Staging               | < 30 minutes |
+| Environment           | Ex. SLA/SLI Target RTO |
+| --------------------- | ---------------------- |
+| Production (critical) | < 5 minutes            |
+| Production (standard) | < 15 minutes           |
+| Staging               | < 30 minutes           |
 
 ---
 

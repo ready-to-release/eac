@@ -99,11 +99,11 @@ r2r eac validate specs || exit 1
 
 ## Common Issues
 
-| Problem | Solution |
-|---------|----------|
-| Undefined steps | Implement step definition |
-| Duplicate scenarios | Remove or rename scenarios |
-| Quality violations | Follow Gherkin best practices |
+| Problem             | Solution                      |
+| ------------------- | ----------------------------- |
+| Undefined steps     | Implement step definition     |
+| Duplicate scenarios | Remove or rename scenarios    |
+| Quality violations  | Follow Gherkin best practices |
 
 ## Next Steps
 

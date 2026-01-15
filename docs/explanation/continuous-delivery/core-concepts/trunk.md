@@ -152,9 +152,11 @@ shared-models-repo/
 
 Not all repositories are trunks. **Adjacent repositories** serve specialized purposes beyond containing deployable modules.
 
-**Example: GitOps Repository**
+#### Example: GitOps Repository
 
 A Kubernetes GitOps repository is a special form of IaC constrained to declarations only. It cannot easily be integrated into a trunk, nor should it be: the GitOps repository's history should be the history of the cluster it controls, one-to-one.
+
+### Summary
 
 | Repository Type   | Purpose                             | Contains Modules? |
 | ----------------- | ----------------------------------- | ----------------- |
@@ -192,8 +194,8 @@ flowchart LR
 | Traceability                 | Single timeline              | Multiple timelines  |
 | Team autonomy                | Limited                      | High                |
 | Pipeline complexity          | Requires specialized tooling | Simple              |
-| Coordinated releases         | Simple                       | Hard                |
-| Code reuse                   | Easy (direct)                | Requires versioning |
+| Coordinated releases         | Simple                       | Harder              |
+| Code reuse                   | Easy (direct consume)        | Requires versioning |
 | Access control               | Coarse-grained               | Fine-grained        |
 | Discoverability              | All in one place             | Spread across repos |
 
@@ -208,7 +210,7 @@ Splitting repositories by technical boundary (frontend/, backend/, scripts/, inf
 **Problems:**
 
 - No coherent version for what a release consists of
-- Changes to one feature require coordinating multiple repositories
+- Changes to one feature require coordinating multiple PR's and repositories
 - No clear deployment boundary
 
 **Avoid:**
@@ -225,19 +227,33 @@ Splitting repositories by technical boundary (frontend/, backend/, scripts/, inf
 
 **Versioning**:
 
-- Monorepo: Independent SemVer/CalVer per module
-- Polyrepo: SemVer/CalVer per repository
+- Monorepo: Independent SemVer/CalVer for each releasable module
+- Polyrepo: One SemVer/CalVer per repository (can still use implicit for supporting modules)
 
 **Dependency Management**:
 
-- Root-level lock files (go.sum, package-lock.json) for consistency
+- Root-level lock files for reproducible builds:
+
+| Ecosystem | Lock File            | Notes                                      |
+| --------- | -------------------- | ------------------------------------------ |
+| Go        | `go.sum`             | Checksums for module dependencies          |
+| Node.js   | `package-lock.json`  | Or `yarn.lock`, `pnpm-lock.yaml`           |
+| Rust      | `Cargo.lock`         | Exact versions for reproducible builds     |
+| Ruby      | `Gemfile.lock`       | Resolved gem versions                      |
+| .NET      | `packages.lock.json` | NuGet package lock (opt-in)                |
+| Python    | `poetry.lock`        | Or `requirements.txt` with pinned versions |
+| Java      | `gradle.lockfile`    | Or Maven's `dependency-lock.json`          |
+
+**Hard dependency rules**:
+
 - In-repository bindings are implicit
 - Cross-repository bindings are pinned and stitched
+- No exceptions: every dependency is either implicit (same repo) or explicitly pinned (external)
 
 **Automation**:
 
 - Monorepo: Change detection, selective builds tooling ([r2r+eac](./../../../reference/index.md), Nx, Bazel, Turborepo)
-- Both: Repository templates, shared pipeline definitions, Dependabot
+- Both: Build, Test, Scans, Verification, Repository templates, shared pipeline definitions, Dependabot
 
 ---
 

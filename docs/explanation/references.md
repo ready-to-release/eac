@@ -45,3 +45,9 @@
 ![Trunk Correlated Practices](../assets/references/correlated-practices.png){ width="400" }
 
 - [Trunk Correlated Practices](../assets/lfs/pdf/Trunk_Correlated_Practices_v2.8.pdf)
+
+## Articles
+
+### [Introduction to Head-to-Head Development, Part 1](https://www.twosigma.com/articles/introduction-to-head-to-head-development-part-1/)
+
+> Nico Kicillof, Two Sigma (2017).

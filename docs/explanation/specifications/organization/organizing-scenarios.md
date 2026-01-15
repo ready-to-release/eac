@@ -1,5 +1,5 @@
 # Organizing Scenarios
->
+
 > **Scenario coverage strategy and independence**
 
 Learn how to write effective scenarios that thoroughly test each Rule.

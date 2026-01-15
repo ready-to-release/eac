@@ -1,5 +1,5 @@
 # Organizing Rules
->
+
 > **Rule blocks and measurable acceptance criteria**
 
 Rules define acceptance criteria - the conditions that must be satisfied for a feature to be accepted.
@@ -57,12 +57,12 @@ Rule: Missing configuration file displays error with path and suggestion
 
 ## How Many Rules Per Feature?
 
-| Rule Count | Assessment | Action |
-|-----------|-----------|--------|
-| **2-4** | ✅ Ideal | Good feature scope |
-| **5-6** | ✅ Acceptable | Monitor complexity |
-| **7-10** | ⚠️ Large | Consider splitting |
-| **>10** | ❌ Too large | Must split feature |
+| Rule Count | Assessment    | Action             |
+| ---------- | ------------- | ------------------ |
+| **2-4**    | ✅ Ideal      | Good feature scope |
+| **5-6**    | ✅ Acceptable | Monitor complexity |
+| **7-10**   | ⚠️ Large      | Consider splitting |
+| **>10**    | ❌ Too large  | Must split feature |
 
 ---
 

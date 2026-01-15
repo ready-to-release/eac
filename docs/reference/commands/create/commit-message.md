@@ -23,10 +23,10 @@ Customize AI behavior using the **three-tier prompt system**. Prompts are loaded
 
 ### Available Prompts
 
-| Prompt File    | Purpose                      | Override Location                                  |
-| -------------- | ---------------------------- | -------------------------------------------------- |
-| `module.md`    | Multi-module commit sections | `.r2r/eac/templates/ai/commit-message/module.md`   |
-| `top-level.md` | Top-level commit header      | `.r2r/eac/templates/ai/commit-message/top-level.md`|
+| Prompt File    | Purpose                      | Override Location                                   |
+| -------------- | ---------------------------- | --------------------------------------------------- |
+| `module.md`    | Multi-module commit sections | `.r2r/eac/templates/ai/commit-message/module.md`    |
+| `top-level.md` | Top-level commit header      | `.r2r/eac/templates/ai/commit-message/top-level.md` |
 
 ### Creating Team Overrides
 

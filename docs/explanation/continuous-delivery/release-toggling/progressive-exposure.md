@@ -45,11 +45,11 @@ Complete rollout after confidence built through Ring 0-2 validation.
 
 ## Progression Criteria
 
-| Transition | Criteria                                           | Wait Time   |
-| ---------- | -------------------------------------------------- | ----------- |
-| Ring 0 → 1 | No critical errors, internal users confirm working | 1-4 hours   |
-| Ring 1 → 2 | Error rate < 0.5%, positive user feedback          | 24-48 hours |
-| Ring 2 → 3 | All metrics healthy, no regressions                | 3-7 days    |
+| Transition | Criteria                                           | Ex. SLI/SLA Wait Time |
+| ---------- | -------------------------------------------------- | --------------------- |
+| Ring 0 → 1 | No critical errors, internal users confirm working | 1-4 hours             |
+| Ring 1 → 2 | Error rate < 0.5%, positive user feedback          | 24-48 hours           |
+| Ring 2 → 3 | All metrics healthy, no regressions                | 3-7 days              |
 
 ---
 

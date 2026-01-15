@@ -29,14 +29,14 @@ The layers and components within the Docker image.
 
 The ext-eac Docker image includes:
 
-| Component | Purpose |
-|-----------|---------|
-| Go Runtime | For executing eac-commands |
+| Component  | Purpose                         |
+| ---------- | ------------------------------- |
+| Go Runtime | For executing eac-commands      |
 | Docker CLI | For Docker-in-Docker operations |
-| Git | For repository operations |
-| PlantUML | For diagram rendering |
-| MkDocs | For documentation building |
-| Pandoc | For PDF generation |
+| Git        | For repository operations       |
+| PlantUML   | For diagram rendering           |
+| MkDocs     | For documentation building      |
+| Pandoc     | For PDF generation              |
 
 ## Usage
 

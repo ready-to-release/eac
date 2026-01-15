@@ -105,11 +105,11 @@ find docs -name ".nav.yml" -exec cat {} \;
 
 ## Common Issues
 
-| Problem | Solution |
-|---------|----------|
+| Problem            | Solution                             |
+| ------------------ | ------------------------------------ |
 | "MkDocs not found" | Install MkDocs: `pip install mkdocs` |
-| Broken links | Check file paths in .nav.yml files |
-| Missing pages | Ensure all referenced files exist |
+| Broken links       | Check file paths in .nav.yml files   |
+| Missing pages      | Ensure all referenced files exist    |
 
 ## Next Steps
 

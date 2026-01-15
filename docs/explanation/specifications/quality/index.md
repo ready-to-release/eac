@@ -1,5 +1,5 @@
 # Quality and Maintenance
->
+
 > **Maintaining healthy, living specifications**
 
 Learn how to keep specifications synchronized with implementation through continuous review and iteration.
@@ -20,10 +20,10 @@ Specifications aren't written once - they evolve with understanding, implementat
 
 ## In This Section
 
-| Topic | Description |
-|-------|-------------|
-| [Review and Iterate](./review-and-iterate.md) | Continuous specification refinement practices |
-| [Spec Quality Checklist](./spec-quality-checklist.md) | Health indicators and quality assessment |
+| Topic                                                 | Description                                   |
+| ----------------------------------------------------- | --------------------------------------------- |
+| [Review and Iterate](./review-and-iterate.md)         | Continuous specification refinement practices |
+| [Spec Quality Checklist](./spec-quality-checklist.md) | Health indicators and quality assessment      |
 
 ---
 
@@ -238,12 +238,12 @@ Split `validation.feature` (40 scenarios) into:
 **Duration**: 30 minutes
 **Attendees**: Developers, QA, Product Owner
 
-| Time | Activity |
-|------|----------|
+| Time   | Activity                     |
+| ------ | ---------------------------- |
 | 10 min | Review new/changed scenarios |
-| 10 min | Discuss ambiguous language |
-| 5 min | Identify missing coverage |
-| 5 min | Refactor verbose scenarios |
+| 10 min | Discuss ambiguous language   |
+| 5 min  | Identify missing coverage    |
+| 5 min  | Refactor verbose scenarios   |
 
 ### Three Amigos (Before New Features)
 
@@ -261,13 +261,13 @@ Split `validation.feature` (40 scenarios) into:
 
 ### From Implementation to Specification
 
-| Discovery | Action |
-|-----------|--------|
-| Missing acceptance criteria | Add new `Rule:` block |
-| Ambiguous steps | Refine with concrete examples |
-| Edge cases | Add `@ov` scenarios for error cases |
-| Wrong assumptions | Revise preconditions |
-| Incomplete verification | Add `Then`/`And` steps |
+| Discovery                   | Action                              |
+| --------------------------- | ----------------------------------- |
+| Missing acceptance criteria | Add new `Rule:` block               |
+| Ambiguous steps             | Refine with concrete examples       |
+| Edge cases                  | Add `@ov` scenarios for error cases |
+| Wrong assumptions           | Revise preconditions                |
+| Incomplete verification     | Add `Then`/`And` steps              |
 
 ### From Production to Specification
 

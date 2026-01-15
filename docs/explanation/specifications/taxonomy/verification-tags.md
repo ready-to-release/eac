@@ -1,5 +1,5 @@
 # Verification Tags
->
+
 > **Operational, installation, and performance verification types**
 
 **REQUIRED for all Gherkin scenarios**. Verification tags categorize the type of validation being performed.
@@ -217,13 +217,13 @@ This scenario validates both:
 
 Verification tags and test levels serve different purposes:
 
-| Verification Tag | Test Level | Meaning |
-|-----------------|------------|---------|
-| `@ov` | Any (L0-L4) | Functional test at any level |
-| `@iv` | L3 (inferred) | Deployment test in PLTE |
-| `@pv` | L3 (inferred) | Performance test in PLTE |
-| `@piv` | L4 (inferred) | Smoke test in production |
-| `@ppv` | L4 (inferred) | Monitoring in production |
+| Verification Tag | Test Level    | Meaning                               |
+| ---------------- | ------------- | ------------------------------------- |
+| `@ov`            | Any (L0-L4)   | Functional test at any level          |
+| `@iv`            | L3 (inferred) | Deployment test in PLTE               |
+| `@pv`            | L3 (inferred) | Performance test in PLTE              |
+| `@piv`           | L4 (inferred) | Smoke test / monitoring in production |
+| `@ppv`           | L4 (inferred) | Monitoring in production              |
 
 **Example**:
 
