@@ -1,8 +1,9 @@
 // Command: get environments
-// Description: Get all environment contracts
-//   --as-yaml: Output as YAML (default)
-//   --as-json: Output as JSON
-//   --as-toml: Output as TOML
+//
+//	--as-yaml: Output as YAML (default)
+//	--as-json: Output as JSON
+//	--as-toml: Output as TOML
+//
 // Long:
 // Long: Expected Output:
 // Long: YAML list of environment definitions with configuration for each environment,
@@ -13,8 +14,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 )

@@ -188,7 +188,7 @@ func TestValidateModuleExists(t *testing.T) {
 			}
 
 			// Run validation
-			out := design.NewOutput(nil)
+			out := design.NewOutput()
 			err := validateModuleExists(config, out)
 
 			// Check error

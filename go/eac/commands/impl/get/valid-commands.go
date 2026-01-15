@@ -11,8 +11,8 @@ import (
 	"os"
 	"sort"
 
-	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	gethelper "github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 )
 

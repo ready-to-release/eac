@@ -32,4 +32,4 @@ Feature: eac-commands_validate-risk-profile
       Given a file "invalid.json" with invalid JSON
       When I run "validate risk-profile invalid.json"
       Then the exit code is 1
-      And stderr contains "invalid OSCAL profile JSON"
+      And stderr contains "Invalid OSCAL profile JSON"

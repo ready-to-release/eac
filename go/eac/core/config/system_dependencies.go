@@ -2,7 +2,7 @@ package config
 
 // SystemDependenciesConfig holds the system dependencies configuration
 type SystemDependenciesConfig struct {
-	Dependencies            []SystemDependency  `yaml:"dependencies"`
+	Dependencies           []SystemDependency  `yaml:"dependencies"`
 	CapabilityRequirements map[string][]string `yaml:"capability_requirements,omitempty"`
 
 	// Runtime lookup map (built after load)
@@ -11,11 +11,11 @@ type SystemDependenciesConfig struct {
 
 // SystemDependency defines a single system dependency
 type SystemDependency struct {
-	Moniker     string                   `yaml:"moniker"`
-	Name        string                   `yaml:"name"`
-	Description string                   `yaml:"description,omitempty"`
-	Version     string                   `yaml:"version"`
-	Verify      SystemDependencyVerify   `yaml:"verify"`
+	Moniker     string                 `yaml:"moniker"`
+	Name        string                 `yaml:"name"`
+	Description string                 `yaml:"description,omitempty"`
+	Version     string                 `yaml:"version"`
+	Verify      SystemDependencyVerify `yaml:"verify"`
 }
 
 // SystemDependencyVerify defines how to verify a dependency is available

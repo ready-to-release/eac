@@ -9,8 +9,8 @@ import (
 	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
-	"github.com/ready-to-release/eac/go/eac/core/teststate"
 	"github.com/ready-to-release/eac/go/eac/core/testing"
+	"github.com/ready-to-release/eac/go/eac/core/teststate"
 )
 
 // buildModuleTestInfo builds test file information for each module from the test packages.

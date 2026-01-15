@@ -224,4 +224,3 @@ func HashArtifactFile(path string) (int64, string, error) {
 
 	return size, hex.EncodeToString(h.Sum(nil)), nil
 }
-

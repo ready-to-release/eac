@@ -10,6 +10,18 @@ Generate semantic commit messages automatically from your staged changes using A
 - Changes staged with `git add`
 - Working in EAC-managed repository
 
+## How It Works
+
+The command uses AI to generate semantic commit messages:
+
+- **Diff Analysis**: AI analyzes staged changes to understand what changed and why
+- **Semantic Format**: Generates messages following conventional commit format (type, scope, description)
+- **Structured Output**: AI generates plaintext following commit message conventions
+- **Validation**: Output format is validated and retried automatically if needed
+- **Quality**: Ensures commit messages are clear, accurate, and follow best practices
+
+This produces professional commit messages that accurately describe your changes.
+
 ## Steps
 
 ### 1. Stage Your Changes
@@ -26,7 +38,7 @@ git add src/auth/login.go src/auth/login_test.go
 r2r eac create commit-message
 ```
 
-**What happens**: AI analyzes changes and generates semantic commit message, opens editor for review
+**What happens**: AI analyzes changes, generates a semantic commit message with validation, and opens editor for review
 
 ### 3. Review and Save
 

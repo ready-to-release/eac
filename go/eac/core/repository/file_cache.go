@@ -26,9 +26,9 @@ import (
 type FileCache struct {
 	mu sync.RWMutex
 
-	repoRoot       string
-	gitRepo        *git.Repository
-	useGitHubInCI  bool // Use GitHub Trees API in CI (faster than git ls-files)
+	repoRoot      string
+	gitRepo       *git.Repository
+	useGitHubInCI bool // Use GitHub Trees API in CI (faster than git ls-files)
 
 	// trackedFiles is the cached output of `git ls-files` or GitHub Trees API
 	// All paths are normalized to forward slashes
@@ -81,7 +81,6 @@ func (c *FileCache) ensurePopulated() error {
 		files, err = c.populateFromGitHub()
 		if err != nil {
 			// Fall back to git ls-files on GitHub API failure
-			log.Debugf("GitHub Trees API failed, falling back to git ls-files: %v", err)
 			files, err = c.populateFromGit()
 		}
 	} else {
@@ -118,7 +117,6 @@ func (c *FileCache) populateFromGitHub() ([]string, error) {
 		return nil, &RepositoryError{Op: "github-trees", Message: "GitHub API not initialized"}
 	}
 
-	log.Debugf("Using GitHub Trees API with SHA: %s", sha)
 	return api.GetTreeFiles(sha)
 }
 
@@ -129,7 +127,7 @@ func (c *FileCache) populateFromGit() ([]string, error) {
 		return c.testGitRepo.TrackedFiles()
 	}
 
-	repo, err := git.Open(c.repoRoot)
+	repo, err := git.Open(c.repoRoot, nil)
 	if err != nil {
 		return nil, err
 	}

@@ -7,7 +7,6 @@ import (
 // CommitMessageValidator implements contracts.Validator for commit message validation
 type CommitMessageValidator struct {
 	contract        *CommitMessageContract
-	antiCorruption  *contracts.AntiCorruptionRules
 	affectedModules []string
 	workspaceRoot   string
 }
@@ -16,18 +15,15 @@ type CommitMessageValidator struct {
 //
 // Parameters:
 //   - contractData: The loaded commit message contract
-//   - antiCorruption: Anti-corruption rules
 //   - affectedModules: List of modules with staged changes
 //   - workspaceRoot: Workspace root for config loading
 func NewCommitMessageValidator(
 	contractData *CommitMessageContract,
-	antiCorruption *contracts.AntiCorruptionRules,
 	affectedModules []string,
 	workspaceRoot string,
 ) *CommitMessageValidator {
 	return &CommitMessageValidator{
 		contract:        contractData,
-		antiCorruption:  antiCorruption,
 		affectedModules: affectedModules,
 		workspaceRoot:   workspaceRoot,
 	}
@@ -55,11 +51,12 @@ func (v *CommitMessageValidator) VerifyImplementation() []contracts.ValidationEr
 	// Verify contract can be loaded from unified config
 	_, err := LoadContractFromConfig(v.workspaceRoot)
 	if err != nil {
-		return []contracts.ValidationError{{
-			Code:     "CONTRACT_LOAD_ERROR",
-			Message:  err.Error(),
-			Severity: "error",
-		}}
+		return []contracts.ValidationError{*contracts.NewLegacyValidationError(
+			"CONTRACT_LOAD_ERROR",
+			err.Error(),
+			0,
+			"error",
+		)}
 	}
 	return nil
 }

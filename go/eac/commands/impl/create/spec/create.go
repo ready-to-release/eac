@@ -1,5 +1,4 @@
 // Command: create spec
-// Description: Create a new specification using AI from a natural language description
 // Short: Generate Gherkin specifications from natural language descriptions
 // Long: The create spec command uses AI to transform natural language feature descriptions into
 // Long: properly formatted Gherkin specifications following Rules/Scenarios patterns. The generated specifications
@@ -27,21 +26,21 @@ import (
 	"path/filepath"
 	"strings"
 
-	"go.uber.org/zap"
-
+	"github.com/ready-to-release/eac/go/eac/commands/impl/specs"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
-	"github.com/ready-to-release/eac/go/eac/commands/impl/specs"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/oscal"
-	aimock "github.com/ready-to-release/eac/go/eac/core/ai"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	aimock "github.com/ready-to-release/eac/go/eac/core/ai"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/git"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
+	"github.com/ready-to-release/eac/go/eac/core/validation/formats/gherkin"
 )
 
 var log = logging.C()
@@ -70,13 +69,21 @@ func ResetMockAIResponse() {
 // gitRepo holds the git repository instance for git operations.
 // In production, this is initialized lazily. For tests, it can be injected via SetGitRepo.
 var gitRepo git.GitRepository
+var gitMgr *git.RepositoryManager
+
+// initGitManager initializes the git repository manager if needed.
+func initGitManager() {
+	if gitMgr == nil {
+		gitMgr = git.NewManager(logging.C().Zap())
+	}
+}
 
 // getGitRepo returns the git repository, creating one if needed
 func getGitRepo(workspaceRoot string) (git.GitRepository, error) {
 	if gitRepo != nil {
 		return gitRepo, nil
 	}
-	return git.Open(workspaceRoot)
+	return gitMgr.Open(workspaceRoot)
 }
 
 // SetGitRepo allows tests to inject a mock repository.
@@ -87,6 +94,7 @@ func SetGitRepo(repo git.GitRepository) {
 // ResetGitRepo clears the mock git repository.
 func ResetGitRepo() {
 	gitRepo = nil
+	gitMgr = nil
 }
 
 // ============================================================================
@@ -103,42 +111,32 @@ func CreateSpec() int {
 	}
 
 	// Load EAC configuration for path access
-	eacCfg, err := config.Load(config.LoadOptions{RepoRoot: specsConfig.TemplateRoot})
+	// Skip workflow validation for test environments where workflow files may not exist
+	// We only need template path configuration, not full workflow information
+	eacCfg, err := config.Load(config.LoadOptions{
+		RepoRoot:               specsConfig.TemplateRoot,
+		SkipWorkflowValidation: true, // Not needed for content generation
+	})
 	if err != nil {
 		log.Errorf("Error: failed to load EAC config: %v", err)
 		return 1
 	}
 	specsConfig.EACConfig = eacCfg
 
-	// Initialize logger (logs to out/logs/specs/)
-	var logger *logging.Logger
-	if specsConfig.Debug {
-		logger, err = logging.NewWithDebug("specs", specsConfig.TemplateRoot)
-	} else {
-		logger, err = logging.NewDefault("specs", specsConfig.TemplateRoot)
+	// Configure logging system (component loggers + file logging)
+	if err := logging.ConfigureLoggingSimple(specsConfig.TemplateRoot, "commands", nil, specsConfig.Debug); err != nil {
+		log.Warnf("Failed to configure logging: %v", err)
 	}
-	if err != nil {
-		log.Errorf("Warning: Failed to initialize logger: %v", err)
-		// Continue without logger - not fatal
-	} else {
-		specsConfig.Logger = logger
-		defer logger.Sync()
-	}
+	defer logging.CloseLogging()
 
 	// Log command start
-	if specsConfig.Logger != nil {
-		specsConfig.Logger.Info("Starting specs create",
-			zap.String("description", truncateForLog(specsConfig.Description, 100)),
-			zap.String("module", specsConfig.Module),
-			zap.Bool("debug", specsConfig.Debug))
-	}
+	log.Infof("Starting specs create: description=%s, module=%s, debug=%v",
+		truncateForLog(specsConfig.Description, 100), specsConfig.Module, specsConfig.Debug)
 
 	// Load contract and build prompt
 	fullPrompt, err := loadAndBuildPrompt(specsConfig)
 	if err != nil {
-		if specsConfig.Logger != nil {
-			specsConfig.Logger.Error("Failed to build prompt", zap.Error(err))
-		}
+		log.Errorf("Failed to build prompt: %v", err)
 		log.Errorf("Error: %v", err)
 		return 1
 	}
@@ -146,9 +144,7 @@ func CreateSpec() int {
 	// Generate and clean output
 	cleanedOutput, err := generateAndClean(specsConfig, fullPrompt)
 	if err != nil {
-		if specsConfig.Logger != nil {
-			specsConfig.Logger.Error("AI generation failed", zap.Error(err))
-		}
+		log.Errorf("AI generation failed: %v", err)
 		log.Errorf("\n❌ Error: %v", err)
 		return 1
 	}
@@ -156,9 +152,7 @@ func CreateSpec() int {
 	// Determine and validate output path
 	finalOutputPath, err := determineAndValidateOutputPath(specsConfig, cleanedOutput)
 	if err != nil {
-		if specsConfig.Logger != nil {
-			specsConfig.Logger.Error("Output path validation failed", zap.Error(err))
-		}
+		log.Errorf("Output path validation failed: %v", err)
 		log.Errorf("\n❌ Error: %v", err)
 		return 1
 	}
@@ -166,11 +160,7 @@ func CreateSpec() int {
 	// Check if file exists and --force not specified
 	if !specsConfig.Force {
 		if _, err := os.Stat(finalOutputPath); err == nil {
-			if specsConfig.Logger != nil {
-				specsConfig.Logger.Warn("File already exists",
-					zap.String("path", finalOutputPath),
-					zap.Bool("force", specsConfig.Force))
-			}
+			log.Warnf("File already exists: path=%s, force=%v", finalOutputPath, specsConfig.Force)
 			log.Errorf("Error: File already exists: %s", finalOutputPath)
 			log.Error("Use --force to overwrite")
 			return 1
@@ -179,19 +169,13 @@ func CreateSpec() int {
 
 	// Write output and report success
 	if err := writeOutputAndReportSuccess(finalOutputPath, cleanedOutput, specsConfig); err != nil {
-		if specsConfig.Logger != nil {
-			specsConfig.Logger.Error("Failed to write output", zap.Error(err))
-		}
+		log.Errorf("Failed to write output: %v", err)
 		log.Errorf("\n❌ Error: %v", err)
 		return 1
 	}
 
 	// Log successful completion
-	if specsConfig.Logger != nil {
-		specsConfig.Logger.Info("Specification created successfully",
-			zap.String("path", finalOutputPath),
-			zap.Int("size", len(cleanedOutput)))
-	}
+	log.Infof("Specification created successfully: path=%s, size=%d", finalOutputPath, len(cleanedOutput))
 
 	return 0
 }
@@ -213,7 +197,6 @@ type SpecsConfig struct {
 	OutputPath   string // -o, --output: Custom output path
 	PromptPath   string // --prompt: Custom system prompt file
 	TemplateRoot string
-	Logger       *logging.Logger
 	EACConfig    *config.EACConfig // Loaded repository configuration
 }
 
@@ -224,26 +207,22 @@ type SpecsConfig struct {
 // - Builds the full AI prompt with contract context
 // - Optionally saves debug output
 func loadAndBuildPrompt(config *SpecsConfig) (string, error) {
-	if config.Logger != nil {
-		config.Logger.Debug("Loading specification contract")
-	}
+	log.Debug("Loading specification contract")
 	log.Info("📋 Loading specification contract...")
 
 	fullPrompt, err := buildContractBasedPrompt(config)
 	if err != nil {
-		if config.Logger != nil {
-			config.Logger.Error("Failed to build contract-based prompt", zap.Error(err))
-		}
+		log.Errorf("Failed to build contract-based prompt: %v", err)
 		return "", err
 	}
 
-	if config.Logger != nil {
-		config.Logger.Debug("Prompt built successfully", zap.Int("promptLength", len(fullPrompt)))
-	}
+	log.Debugf("Prompt built successfully: promptLength=%d", len(fullPrompt))
 
-	if config.Debug && config.Logger != nil {
+	if config.Debug {
 		// Log debug content to logger instead of writing to file
-		config.Logger.LogDebugContent("full-prompt", fullPrompt)
+		log.Debugf("=== full-prompt START ===")
+		log.Debug(fullPrompt)
+		log.Debugf("=== full-prompt END ===")
 		log.Errorf("🔍 DEBUG: Full prompt logged to commands.log")
 	}
 
@@ -258,27 +237,21 @@ func loadAndBuildPrompt(config *SpecsConfig) (string, error) {
 // - Validates Gherkin structure with automatic retry on errors
 // - Optionally saves debug outputs
 func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
-	if config.Logger != nil {
-		config.Logger.Debug("Starting AI generation with retry")
+	// Check for subprocess mock response (used in acceptance tests)
+	if mock, ok := aimock.GetMockResponse("specs"); ok {
+		log.Debug("Using subprocess mock response")
+		return mock, nil
 	}
 
+	log.Debug("Starting AI generation with retry")
+
 	// Load contract and anti-corruption rules for validator
-	loader := contracts.NewContractLoader(config.TemplateRoot, "ai/specs", "0.1.0")
+	loader := aimock.NewContractLoader(config.TemplateRoot, aimock.TypeSpecs, paths.DefaultsVersion)
 
 	contractData, err := loader.LoadContract()
 	if err != nil {
-		if config.Logger != nil {
-			config.Logger.Error("Failed to load contract", zap.Error(err))
-		}
+		log.Errorf("Failed to load contract: %v", err)
 		return "", fmt.Errorf("failed to load contract: %w", err)
-	}
-
-	antiCorruptionRules, err := loader.LoadAntiCorruptionRules()
-	if err != nil {
-		if config.Logger != nil {
-			config.Logger.Error("Failed to load anti-corruption rules", zap.Error(err))
-		}
-		return "", fmt.Errorf("failed to load anti-corruption rules: %w", err)
 	}
 
 	// Create executor
@@ -288,34 +261,31 @@ func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 	// Wrap executor to match contract.AIExecutor interface
 	executorAdapter := ai.NewExecutorAdapter(executor)
 
-	// Create validator
-	validator := contracts.NewGherkinValidator(contractData, antiCorruptionRules)
+	// Create validator (JSON schema validated in Phase 1)
+	validator := gherkin.NewValidator(contractData)
 
-	// Configure retry behavior
-	retryConfig := &contracts.RetryConfig{
-		Executor:       executorAdapter,
-		Validator:      validator,
-		PromptBuilder:  &contracts.DefaultRetryPromptBuilder{},
-		AntiCorruption: antiCorruptionRules,
-		ContentMarker:  "Feature:",
-		MaxAttempts:    2,
-		Debug:          config.Debug,
-		DebugOutputDir: "", // No longer writing debug files to disk
+	// Load AI config to get retry strategy
+	var aiConfig *aimock.AIConfig
+	aiConfig, err = aimock.LoadAIConfig(config.TemplateRoot)
+	if err != nil {
+		log.Warnf("Could not load AI config, using default retry strategy: %v", err)
+		aiConfig = nil
 	}
 
-	if config.Logger != nil {
-		config.Logger.Debug("Configured retry behavior",
-			zap.Int("maxAttempts", retryConfig.MaxAttempts),
-			zap.Bool("debug", config.Debug))
+	// Build retry configuration with strategy
+	retryConfig, err := buildRetryConfig(executorAdapter, validator, config, aiConfig)
+	if err != nil {
+		log.Errorf("Failed to build retry config: %v", err)
+		return "", fmt.Errorf("failed to build retry config: %w", err)
 	}
+
+	log.Debugf("Configured retry behavior: maxAttempts=%d, debug=%v", retryConfig.MaxAttempts, config.Debug)
 
 	// Generate with retry
 	ctx := context.Background()
-	result, err := contracts.GenerateWithRetry(ctx, retryConfig, prompt)
+	result, err := aimock.GenerateWithRetry(ctx, retryConfig, prompt)
 	if err != nil {
-		if config.Logger != nil {
-			config.Logger.Error("AI generation failed after retries", zap.Error(err))
-		}
+		log.Errorf("AI generation failed after retries: %v", err)
 		log.Error("\nTroubleshooting:")
 		log.Error("  1. Ensure AI provider is configured: r2r agent init --ai <provider>")
 		log.Error("  2. Check API key environment variable is set")
@@ -323,23 +293,16 @@ func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 		return "", fmt.Errorf("AI generation failed: %w", err)
 	}
 
-	if config.Logger != nil {
-		config.Logger.Debug("AI generation completed",
-			zap.Int("attempts", result.Attempts),
-			zap.Int("outputLength", len(result.Output)),
-			zap.Int("validationErrors", len(result.ValidationErrors)))
-	}
+	log.Debugf("AI generation completed: attempts=%d, outputLength=%d, validationErrors=%d",
+		result.Attempts, len(result.Output), len(result.ValidationErrors))
 
 	// Handle validation errors
 	if len(result.ValidationErrors) > 0 {
 		criticalErrors := contracts.CountCriticalErrors(result.ValidationErrors)
 
 		if criticalErrors > 0 {
-			if config.Logger != nil {
-				config.Logger.Error("Generated specification has critical validation errors",
-					zap.Int("criticalErrors", criticalErrors),
-					zap.Int("attempts", result.Attempts))
-			}
+			log.Errorf("Generated specification has critical validation errors: criticalErrors=%d, attempts=%d",
+				criticalErrors, result.Attempts)
 			log.Error("")
 			log.Error("⚠️  Generated specification has validation errors:\n")
 			log.Errorf("%s", contracts.FormatValidationErrors(result.ValidationErrors))
@@ -352,10 +315,7 @@ func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 		}
 
 		// Only warnings - log them but continue
-		if config.Logger != nil {
-			config.Logger.Warn("Generated specification has warnings",
-				zap.Int("warnings", len(result.ValidationErrors)))
-		}
+		log.Warnf("Generated specification has warnings: warnings=%d", len(result.ValidationErrors))
 		log.Errorf("\nℹ️  Generated specification has %d warning(s):", len(result.ValidationErrors))
 		log.Errorf("%s", contracts.FormatValidationErrors(result.ValidationErrors))
 	}
@@ -378,24 +338,16 @@ func determineAndValidateOutputPath(config *SpecsConfig, content string) (string
 		if !filepath.IsAbs(finalOutputPath) {
 			finalOutputPath = filepath.Join(config.TemplateRoot, config.OutputPath)
 		}
-		if config.Logger != nil {
-			config.Logger.Debug("Using user-specified output path", zap.String("path", finalOutputPath))
-		}
+		log.Debugf("Using user-specified output path: path=%s", finalOutputPath)
 	} else {
 		// Extract feature name and determine path
 		moduleName, featureName, err := specs.ExtractFeatureName(content)
 		if err != nil {
-			if config.Logger != nil {
-				config.Logger.Error("Failed to extract feature name", zap.Error(err))
-			}
+			log.Errorf("Failed to extract feature name: %v", err)
 			return "", err
 		}
 
-		if config.Logger != nil {
-			config.Logger.Debug("Extracted feature info",
-				zap.String("module", moduleName),
-				zap.String("feature", featureName))
-		}
+		log.Debugf("Extracted feature info: module=%s, feature=%s", moduleName, featureName)
 
 		// Default to specs directory
 		finalOutputPath = specs.DetermineOutputPath(config.TemplateRoot, moduleName, featureName, config.EACConfig)
@@ -403,17 +355,11 @@ func determineAndValidateOutputPath(config *SpecsConfig, content string) (string
 
 	// Security: Validate that output path is within repository
 	if err := specs.ValidateOutputPath(finalOutputPath, config.TemplateRoot); err != nil {
-		if config.Logger != nil {
-			config.Logger.Error("Output path security validation failed",
-				zap.String("path", finalOutputPath),
-				zap.Error(err))
-		}
+		log.Errorf("Output path security validation failed: path=%s, error=%v", finalOutputPath, err)
 		return "", fmt.Errorf("security error: %w", err)
 	}
 
-	if config.Logger != nil {
-		config.Logger.Debug("Output path validated", zap.String("path", finalOutputPath))
-	}
+	log.Debugf("Output path validated: path=%s", finalOutputPath)
 
 	return finalOutputPath, nil
 }
@@ -431,11 +377,7 @@ func writeOutputAndReportSuccess(outputPath string, content string, config *Spec
 	}
 
 	// Log the write operation
-	if config.Logger != nil {
-		config.Logger.Debug("Writing specification file",
-			zap.String("path", outputPath),
-			zap.Int("size", len(content)))
-	}
+	log.Debugf("Writing specification file: path=%s, size=%d", outputPath, len(content))
 
 	// Write file
 	if err := os.WriteFile(outputPath, []byte(content), 0644); err != nil {
@@ -562,7 +504,7 @@ func formatModuleList(moduleReport *reports.ModuleContractReport) string {
 
 // loadPromptWithFallback implements prompt loading:
 // 1. Custom path (if specified via --prompt flag)
-// 2. AI config: .r2r/eac/ai/specs/specification.md
+// 2. AI config: .r2r/eac/aimock.TypeSpecs/specification.md
 // 3. Built-in: embedded prompts/specification.md
 func loadPromptWithFallback(templateRoot string, customPath string) (string, error) {
 	// Tier 1: Check for custom path (from --prompt flag)
@@ -582,10 +524,10 @@ func loadPromptWithFallback(templateRoot string, customPath string) (string, err
 
 	// Load prompt with three-tier priority:
 	// 1. Command flag (--prompt)
-	// 2. Team override (.r2r/eac/templates/ai/specs/specs.md)
-	// 3. System default (templates/ai/specs/specs.md)
+	// 2. Team override (.r2r/eac/templates/aimock.TypeSpecs/specs.md)
+	// 3. System default (templates/aimock.TypeSpecs/specs.md)
 	// Convention: Empty string uses type name (specs.md)
-	loader := contracts.NewContractLoader(templateRoot, "ai/specs", "")
+	loader := aimock.NewContractLoader(templateRoot, aimock.TypeSpecs, "")
 	prompt, source, err := loader.LoadPromptWithPriority("", "")
 	if err != nil {
 		return "", fmt.Errorf("failed to load prompt: %w", err)
@@ -597,105 +539,6 @@ func loadPromptWithFallback(templateRoot string, customPath string) (string, err
 	}
 
 	return prompt, nil
-}
-
-// generateWithAI invokes the AI provider with the prompt
-func generateWithAI(templateRoot string, prompt string, debug bool) (string, error) {
-	// Check for mock response from file-based mock system (subprocess testing)
-	if mock, ok := aimock.GetMockResponse("specs"); ok {
-		return mock, nil
-	}
-
-	// Check for mock response (test mode)
-	if mockAIResponse != "" {
-		return mockAIResponse, nil
-	}
-
-	// Create executor
-	executor := ai.NewExecutor(templateRoot)
-	providers.RegisterBuiltIn(executor)
-
-	// Execute
-	ctx := context.Background()
-	var opts []ai.Option
-	if debug {
-		opts = append(opts, ai.WithDebug(true))
-	}
-
-	output, err := executor.Execute(ctx, prompt, opts...)
-
-	// Log provider information after execution
-	provider := executor.GetLastUsedProvider()
-	if provider != nil && debug {
-		log.Infof("  → AI provider used: %s", provider.Name())
-	}
-
-	if err != nil {
-		return "", fmt.Errorf("AI execution failed: %w", err)
-	}
-
-	return strings.TrimSpace(output), nil
-}
-
-// stripAgentNoise removes initialization messages and markdown code fences
-func stripAgentNoise(output string) string {
-	output = strings.TrimSpace(output)
-
-	// Remove wrapping markdown code fences if entire output is wrapped
-	if strings.HasPrefix(output, "```") {
-		lines := strings.Split(output, "\n")
-		if len(lines) > 0 {
-			// Remove opening fence (may have language identifier like ```gherkin)
-			lines = lines[1:]
-		}
-		// Remove closing fence
-		if len(lines) > 0 && strings.HasPrefix(strings.TrimSpace(lines[len(lines)-1]), "```") {
-			lines = lines[:len(lines)-1]
-		}
-		output = strings.Join(lines, "\n")
-	}
-
-	// Remove common initialization messages
-	lines := strings.Split(output, "\n")
-	var cleaned []string
-	foundFeature := false
-
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-
-		// Skip noise before Feature: declaration
-		if !foundFeature {
-			// Skip initialization messages
-			if strings.Contains(trimmed, "**Initialized") ||
-				strings.Contains(trimmed, "ready to assist") ||
-				strings.Contains(trimmed, "I'll help") ||
-				strings.Contains(trimmed, "I'll create") ||
-				strings.Contains(trimmed, "I'll generate") ||
-				strings.Contains(trimmed, "Here's") ||
-				strings.Contains(trimmed, "Here is") {
-				continue
-			}
-
-			// Skip horizontal rules before content
-			if trimmed == "---" || trimmed == "___" || trimmed == "***" {
-				continue
-			}
-
-			// Skip empty lines before content
-			if trimmed == "" {
-				continue
-			}
-
-			// Found Feature: - content starts
-			if strings.HasPrefix(trimmed, "Feature:") {
-				foundFeature = true
-			}
-		}
-
-		cleaned = append(cleaned, line)
-	}
-
-	return strings.TrimSpace(strings.Join(cleaned, "\n"))
 }
 
 // buildContractBasedPrompt loads contract files and builds comprehensive AI prompt
@@ -724,17 +567,12 @@ func loadPromptTemplates(config *SpecsConfig) (string, error) {
 	}
 
 	// Use generalized contract loader
-	loader := contracts.NewContractLoader(config.TemplateRoot, "ai/specs", "0.1.0")
+	loader := aimock.NewContractLoader(config.TemplateRoot, aimock.TypeSpecs, paths.DefaultsVersion)
 
-	// Load contract and anti-corruption rules
+	// Load contract
 	contractData, err := loader.LoadContract()
 	if err != nil {
 		return "", fmt.Errorf("failed to load contract: %w", err)
-	}
-
-	antiCorruption, err := loader.LoadAntiCorruptionRules()
-	if err != nil {
-		return "", fmt.Errorf("failed to load anti-corruption rules: %w", err)
 	}
 
 	// Load referenced files (tags)
@@ -753,10 +591,9 @@ func loadPromptTemplates(config *SpecsConfig) (string, error) {
 		"AvailableControls": availableControls,
 	}
 
-	promptTemplate, err := contracts.BuildPromptWithTemplate(
+	promptTemplate, err := aimock.BuildPromptWithTemplate(
 		promptContent,
 		contractData,
-		antiCorruption,
 		customData,
 	)
 	if err != nil {
@@ -796,22 +633,6 @@ func buildUserInputSection(config *SpecsConfig) string {
 	prompt.WriteString("Return ONLY the Gherkin content starting with 'Feature:' - no markdown fences, no explanations.\n")
 
 	return prompt.String()
-}
-
-// stripAgentNoiseWithContract applies anti-corruption rules from contract using generalized framework
-func stripAgentNoiseWithContract(output string, templateRoot string) string {
-	// Use generalized contract loader
-	loader := contracts.NewContractLoader(templateRoot, "ai/specs", "0.1.0")
-
-	// Try to load anti-corruption rules
-	rules, err := loader.LoadAntiCorruptionRules()
-	if err != nil {
-		// Fall back to original stripAgentNoise if contract not available
-		return stripAgentNoise(output)
-	}
-
-	// Use generalized anti-corruption filter with "Feature:" as content start marker
-	return contracts.ApplyWithFallback(output, rules, "Feature:")
 }
 
 // loadModuleControlsContext loads OSCAL profile and formats controls for AI prompt
@@ -891,4 +712,55 @@ func loadModuleControlsContext(workspaceRoot string, moduleName string, cfg *con
 	sb.WriteString("- Omit control tags for non-security scenarios\n")
 
 	return sb.String()
+}
+
+// buildRetryConfig creates RetryConfig with strategy from AI config
+func buildRetryConfig(
+	executor contracts.AIExecutor,
+	validator contracts.Validator,
+	config *SpecsConfig,
+	aiConfig *aimock.AIConfig,
+) (*aimock.RetryConfig, error) {
+	maxAttempts := 2
+	var strategy aimock.RetryStrategy
+
+	// Load retry strategy from config if available
+	if aiConfig != nil {
+		if typeConfig, ok := aiConfig.Types[aimock.TypeSpecs]; ok {
+			if typeConfig.RetryStrategy != nil && typeConfig.RetryStrategy.MaxAttempts > 0 {
+				maxAttempts = typeConfig.RetryStrategy.MaxAttempts
+			}
+
+			if typeConfig.RetryStrategy != nil {
+				var focusCategories []string
+				if typeConfig.RetryStrategy.FocusCategories != nil {
+					focusCategories = typeConfig.RetryStrategy.FocusCategories
+				}
+
+				var err error
+				strategy, err = aimock.GetRetryStrategy(typeConfig.RetryStrategy.Type, focusCategories)
+				if err != nil {
+					return nil, fmt.Errorf("failed to create retry strategy: %w", err)
+				}
+				log.Infof("Using retry strategy: strategy=%s, maxAttempts=%d", strategy.Name(), maxAttempts)
+			}
+		}
+	}
+
+	// Default to StandardStrategy if not configured
+	if strategy == nil {
+		strategy = &aimock.StandardStrategy{}
+	}
+
+	return &aimock.RetryConfig{
+		TypeName:     aimock.TypeSpecs,
+		OutputFormat: aimock.FormatGherkin, // Generate Gherkin directly
+		Validator:    validator,            // Validate Gherkin output
+		Executor:     executor,
+		TemplateRoot: config.TemplateRoot,
+		MaxAttempts:  maxAttempts,
+		Debug:        config.Debug,
+		Strategy:     strategy,
+		Logger:       logging.C().Zap(), // ✅ Pass logger for retry observability
+	}, nil
 }

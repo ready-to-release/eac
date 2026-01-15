@@ -3,7 +3,8 @@
 // Long: The serve command starts a Docker container to serve a module's build output.
 // Long: For site-type modules (like docs), serves the HTML site.
 // Long: For PDF-type modules (like books), serves the PDF directory listing.
-// Arg.module: type=string, required=true, usage=Module moniker to serve (e.g., docs, books)
+// Long: Takes a module moniker as argument (e.g., docs, books).
+// Args: module
 // Flag.no-browser: type=bool, default=false, usage=Don't open browser after starting server
 // Flag.port: type=int, shorthand=p, default=9000, usage=Port number for server (auto-allocated from 9000-9999 if not specified)
 // Flag.stop: type=bool, default=false, usage=Stop the running server
@@ -30,7 +31,6 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
-	"go.uber.org/zap"
 )
 
 // commandFlags defines valid flags for the serve command
@@ -39,53 +39,6 @@ var log = logging.C()
 
 func init() {
 	registry.Register(Serve)
-}
-
-// printHelp displays help information
-func printHelp(workspaceRoot string) {
-	log.Info("NAME")
-	log.Info("    serve - Start server for a module's build output")
-	log.Info("")
-	log.Info("SYNOPSIS")
-	log.Info("    eac serve <module> [flags]")
-	log.Info("")
-	log.Info("DESCRIPTION")
-	log.Info("    Serves a module's build output via nginx container.")
-	log.Info("    For site-type books: serves HTML site")
-	log.Info("    For PDF books: serves directory listing with PDFs")
-	log.Info("")
-	log.Info("    By default serves the first 'site' book if one exists,")
-	log.Info("    otherwise serves the first book in the module.")
-	log.Info("")
-	log.Info("ARGUMENTS")
-	log.Info("    module              Module moniker to serve (required)")
-	log.Info("")
-	log.Info("FLAGS")
-	log.Info("    -b, --book          Named book to serve (defaults to first site)")
-	log.Info("    --no-browser        Don't open browser after starting server")
-	log.Info("    -p, --port          Port number (default: auto-allocated 9000-9999)")
-	log.Info("    --stop              Stop the running server")
-	log.Info("    --reload            Force reload")
-	log.Info("    --rebuild           Force rebuild before serving")
-	log.Info("    --debug             Enable debug logging")
-	log.Info("    -h, --help          Show this help message")
-	log.Info("")
-	log.Info("EXAMPLES")
-	log.Info("    eac serve docs                  # Serve documentation site")
-	log.Info("    eac serve books                 # Serve PDF books")
-	log.Info("    eac serve docs --port 9001     # Serve on specific port")
-	log.Info("    eac serve docs --rebuild       # Force rebuild before serving")
-	log.Info("    eac serve docs --stop          # Stop the running server")
-	log.Info("")
-
-	// List servable modules
-	if modules := listServableModules(workspaceRoot); len(modules) > 0 {
-		log.Info("SERVABLE MODULES")
-		for _, m := range modules {
-			log.Infof("    %s", m)
-		}
-		log.Info("")
-	}
 }
 
 // Serve starts the server for a module
@@ -117,9 +70,6 @@ func Serve() int {
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 		switch arg {
-		case "--help", "-h":
-			printHelp(workspaceRoot)
-			return 0
 		case "--no-browser":
 			noBrowser = true
 		case "--stop":
@@ -178,17 +128,10 @@ func Serve() int {
 	}
 
 	// Initialize logger
-	var logger *logging.Logger
-	if debug {
-		logger, err = logging.NewWithDebug("serve", workspaceRoot)
-	} else {
-		logger, err = logging.NewDefault("serve", workspaceRoot)
+	if err := logging.ConfigureLoggingSimple(workspaceRoot, "commands", nil, debug); err != nil {
+		log.Warnf("Failed to configure logging: %v", err)
 	}
-	if err != nil {
-		log.Errorf("Error initializing logger: %v", err)
-		return 1
-	}
-	defer logger.Sync()
+	defer logging.CloseLogging()
 
 	// Resolve module configuration
 	moduleConfig, err := resolveModuleConfig(workspaceRoot, moduleMoniker, namedBook)
@@ -201,11 +144,11 @@ func Serve() int {
 
 	// Handle --stop flag
 	if stop {
-		return handleStop(workspaceRoot, logger, containerName, moduleMoniker)
+		return handleStop(workspaceRoot, containerName, moduleMoniker)
 	}
 
 	// Get Docker client
-	dockerClient, err := NewDockerClient(logger, containerName)
+	dockerClient, err := NewDockerClient(containerName)
 	if err != nil {
 		log.Errorf("Failed to initialize Docker: %v", err)
 		return 1
@@ -241,7 +184,7 @@ func Serve() int {
 
 			if rebuild {
 				log.Infof("Rebuilding %s...", moduleMoniker)
-				if err := runBuild(workspaceRoot, moduleMoniker, logger); err != nil {
+				if err := runBuild(workspaceRoot, moduleMoniker); err != nil {
 					log.Errorf("Build failed: %v", err)
 					return 1
 				}
@@ -259,7 +202,7 @@ func Serve() int {
 	// Check staleness and auto-rebuild if needed
 	if rebuild {
 		log.Infof("Rebuilding %s...", moduleMoniker)
-		if err := runBuild(workspaceRoot, moduleMoniker, logger); err != nil {
+		if err := runBuild(workspaceRoot, moduleMoniker); err != nil {
 			log.Errorf("Build failed: %v", err)
 			return 1
 		}
@@ -268,7 +211,7 @@ func Serve() int {
 		if needsBuild {
 			log.Infof("Build is stale: %s", reason)
 			log.Infof("Building %s...", moduleMoniker)
-			if err := runBuild(workspaceRoot, moduleMoniker, logger); err != nil {
+			if err := runBuild(workspaceRoot, moduleMoniker); err != nil {
 				log.Errorf("Build failed: %v", err)
 				return 1
 			}
@@ -302,7 +245,7 @@ func Serve() int {
 		dockerClient.StreamLogs()
 	}
 
-	logger.Info("Serve completed", zap.String("module", moduleMoniker), zap.String("url", info.URL))
+	log.Debugf("Serve completed: module=%s, url=%s", moduleMoniker, info.URL)
 	return 0
 }
 
@@ -439,12 +382,10 @@ func checkStaleness(workspaceRoot string, moduleConfig *ModuleServeConfig) (bool
 }
 
 // runBuild executes the build command for a module
-func runBuild(workspaceRoot string, moduleMoniker string, logger *logging.Logger) error {
+func runBuild(workspaceRoot string, moduleMoniker string) error {
 	binaryPath := paths.CommandsBinaryPath(workspaceRoot)
 
-	logger.Debug("Running build command",
-		zap.String("binary", binaryPath),
-		zap.String("module", moduleMoniker))
+	log.Debugf("Running build command: binary=%s, module=%s", binaryPath, moduleMoniker)
 
 	cmd := exec.Command(binaryPath, "build", moduleMoniker, "--no-tui")
 	cmd.Dir = workspaceRoot
@@ -455,8 +396,8 @@ func runBuild(workspaceRoot string, moduleMoniker string, logger *logging.Logger
 }
 
 // handleStop stops the running server
-func handleStop(workspaceRoot string, logger *logging.Logger, containerName string, moduleMoniker string) int {
-	dockerClient, err := NewDockerClient(logger, containerName)
+func handleStop(workspaceRoot string, containerName string, moduleMoniker string) int {
+	dockerClient, err := NewDockerClient(containerName)
 	if err != nil {
 		log.Errorf("Failed to initialize Docker: %v", err)
 		return 1
@@ -478,15 +419,13 @@ func handleStop(workspaceRoot string, logger *logging.Logger, containerName stri
 
 // DockerClient wraps the internal serve package for module serving
 type DockerClient struct {
-	logger        *logging.Logger
 	containerName string
 	ctx           context.Context
 }
 
 // NewDockerClient creates a new Docker client
-func NewDockerClient(logger *logging.Logger, containerName string) (*DockerClient, error) {
+func NewDockerClient(containerName string) (*DockerClient, error) {
 	return &DockerClient{
-		logger:        logger,
 		containerName: containerName,
 		ctx:           context.Background(),
 	}, nil

@@ -54,9 +54,9 @@ func RunBuildWithFramework(cmdCfg *cmdframework.CommandConfig, buildCfg *BuildCo
 
 	// Set up hooks
 	hooks := &cmdframework.Hooks{
-		AfterInit:     buildAfterInit,
-		AfterResolve:  buildAfterResolve,
-		AfterExecute:  buildAfterExecute,
+		AfterInit:    buildAfterInit,
+		AfterResolve: buildAfterResolve,
+		AfterExecute: buildAfterExecute,
 	}
 
 	// Register artifact validator

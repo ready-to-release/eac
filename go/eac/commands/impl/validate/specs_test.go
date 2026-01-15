@@ -1,7 +1,7 @@
 //go:build L1 && ov
 // +build L1,ov
 
-// File: go/eac/commands/impl/specs/validate/validate_test.go
+// File: go/eac/commands/impl/validate/specs_test.go
 package validate
 
 import (

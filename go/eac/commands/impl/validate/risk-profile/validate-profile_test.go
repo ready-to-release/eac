@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/ready-to-release/eac/go/eac/core/validation/formats/oscal"
 )
 
 func TestIsValidControlID(t *testing.T) {
@@ -26,9 +28,9 @@ func TestIsValidControlID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := isValidControlID(tt.id)
+			result := oscal.IsValidControlID(tt.id)
 			if result != tt.expected {
-				t.Errorf("isValidControlID(%q) = %v, want %v", tt.id, result, tt.expected)
+				t.Errorf("IsValidControlID(%q) = %v, want %v", tt.id, result, tt.expected)
 			}
 		})
 	}
@@ -66,14 +68,10 @@ func TestValidateProfile_ValidProfile(t *testing.T) {
 		WorkspaceRoot: tmpDir,
 	}
 
-	result := validateProfile(config)
+	errors := validateProfile(config)
 
-	if !result.Valid {
-		t.Errorf("Expected valid profile, got invalid. Errors: %+v", result.Errors)
-	}
-
-	if len(result.Errors) > 0 {
-		t.Errorf("Expected no errors, got %d: %+v", len(result.Errors), result.Errors)
+	if len(errors) > 0 {
+		t.Errorf("Expected valid profile, got invalid. Errors: %+v", errors)
 	}
 }
 
@@ -107,22 +105,22 @@ func TestValidateProfile_MissingUUID(t *testing.T) {
 		WorkspaceRoot: tmpDir,
 	}
 
-	result := validateProfile(config)
+	errors := validateProfile(config)
 
-	if result.Valid {
+	if len(errors) == 0 {
 		t.Error("Expected invalid profile (missing UUID)")
 	}
 
 	foundUUIDError := false
-	for _, err := range result.Errors {
-		if err.Field == "profile.uuid" {
+	for _, err := range errors {
+		if err.GetCode() == "OSCAL_MISSING_UUID" {
 			foundUUIDError = true
 			break
 		}
 	}
 
 	if !foundUUIDError {
-		t.Errorf("Expected UUID error. Errors: %+v", result.Errors)
+		t.Errorf("Expected UUID error. Errors: %+v", errors)
 	}
 }
 
@@ -142,22 +140,22 @@ func TestValidateProfile_InvalidJSON(t *testing.T) {
 		WorkspaceRoot: tmpDir,
 	}
 
-	result := validateProfile(config)
+	errors := validateProfile(config)
 
-	if result.Valid {
+	if len(errors) == 0 {
 		t.Error("Expected invalid result for malformed JSON")
 	}
 
 	foundJSONError := false
-	for _, err := range result.Errors {
-		if err.Field == "json" {
+	for _, err := range errors {
+		if err.GetCode() == "INVALID_JSON" {
 			foundJSONError = true
 			break
 		}
 	}
 
 	if !foundJSONError {
-		t.Errorf("Expected JSON error. Errors: %+v", result.Errors)
+		t.Errorf("Expected JSON error. Errors: %+v", errors)
 	}
 }
 
@@ -187,22 +185,22 @@ func TestValidateProfile_NoImports(t *testing.T) {
 		WorkspaceRoot: tmpDir,
 	}
 
-	result := validateProfile(config)
+	errors := validateProfile(config)
 
-	if result.Valid {
+	if len(errors) == 0 {
 		t.Error("Expected invalid profile (no imports)")
 	}
 
 	foundImportsError := false
-	for _, err := range result.Errors {
-		if err.Field == "profile.imports" {
+	for _, err := range errors {
+		if err.GetCode() == "OSCAL_MISSING_IMPORTS" {
 			foundImportsError = true
 			break
 		}
 	}
 
 	if !foundImportsError {
-		t.Errorf("Expected imports error. Errors: %+v", result.Errors)
+		t.Errorf("Expected imports error. Errors: %+v", errors)
 	}
 }
 
@@ -238,27 +236,37 @@ func TestValidateProfile_InvalidControlIDWarning(t *testing.T) {
 		WorkspaceRoot: tmpDir,
 	}
 
-	result := validateProfile(config)
+	errors := validateProfile(config)
 
-	// Should be valid but with warnings
-	if !result.Valid {
-		t.Errorf("Expected valid profile (invalid control should be warning). Errors: %+v", result.Errors)
+	// Should have warnings but no errors
+	var warnings []string
+	hasErrors := false
+	for _, err := range errors {
+		if err.IsWarning() {
+			warnings = append(warnings, err.GetCode())
+		} else {
+			hasErrors = true
+		}
 	}
 
-	if len(result.Warnings) == 0 {
+	if hasErrors {
+		t.Errorf("Expected no errors, only warnings. Errors: %+v", errors)
+	}
+
+	if len(warnings) == 0 {
 		t.Error("Expected warnings for invalid control ID format")
 	}
 
 	foundControlWarning := false
-	for _, warn := range result.Warnings {
-		if warn.Message == "control ID 'invalid-control-id' may not be valid NIST 800-53 format" {
+	for _, err := range errors {
+		if err.GetCode() == "OSCAL_INVALID_CONTROL_ID" && err.IsWarning() {
 			foundControlWarning = true
 			break
 		}
 	}
 
 	if !foundControlWarning {
-		t.Errorf("Expected warning about invalid control ID. Warnings: %+v", result.Warnings)
+		t.Errorf("Expected warning about invalid control ID. Errors: %+v", errors)
 	}
 }
 
@@ -294,14 +302,24 @@ func TestValidateProfile_OscalVersionMismatch(t *testing.T) {
 		WorkspaceRoot: tmpDir,
 	}
 
-	result := validateProfile(config)
+	errors := validateProfile(config)
 
-	// Should be valid but with version warning
-	if !result.Valid {
-		t.Errorf("Expected valid (version mismatch should be warning). Errors: %+v", result.Errors)
+	// Should have warnings but no errors
+	hasErrors := false
+	hasWarnings := false
+	for _, err := range errors {
+		if err.IsWarning() {
+			hasWarnings = true
+		} else {
+			hasErrors = true
+		}
 	}
 
-	if len(result.Warnings) == 0 {
+	if hasErrors {
+		t.Errorf("Expected no errors, only warnings (version mismatch should be warning). Errors: %+v", errors)
+	}
+
+	if !hasWarnings {
 		t.Error("Expected warning for OSCAL version mismatch")
 	}
 }

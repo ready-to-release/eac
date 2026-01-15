@@ -22,10 +22,10 @@ import (
 
 // ExportedView represents a single exported view from a workspace
 type ExportedView struct {
-	ViewKey    string // View key from DSL (e.g., "SystemContext", "Containers")
-	SVGPath    string // Path to exported SVG file
-	Module     string // Module name the view belongs to
-	DSLHash    string // First 8 chars of SHA256 hash of workspace.dsl content
+	ViewKey string // View key from DSL (e.g., "SystemContext", "Containers")
+	SVGPath string // Path to exported SVG file
+	Module  string // Module name the view belongs to
+	DSLHash string // First 8 chars of SHA256 hash of workspace.dsl content
 }
 
 // ExportResult represents the result of exporting a module's workspace

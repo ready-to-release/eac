@@ -31,7 +31,6 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/impl/work/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
-	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
 func init() {
@@ -82,7 +81,7 @@ func Commit() int {
 	if config.stageAll {
 		logger.Debug("Phase 3: Starting stage changes",
 			zap.String("phase", "phase3"))
-		if err := stageAllChanges(logger); err != nil {
+		if err := stageAllChanges(); err != nil {
 			logger.Debug("Phase 3: Failed",
 				zap.String("phase", "phase3"),
 				zap.Error(err))
@@ -127,7 +126,7 @@ func Commit() int {
 	var exitCode int
 	if config.customMessage != "" {
 		// Use custom message
-		exitCode = commitWithMessage(logger, config.customMessage)
+		exitCode = commitWithMessage(config.customMessage)
 	} else {
 		// Use AI to generate message
 		logger.Debug("Delegating to commit message for AI generation")
@@ -190,13 +189,13 @@ func parseCommitConfig() (*commitConfig, error) {
 }
 
 // stageAllChanges stages all changes in the working directory
-func stageAllChanges(logger *logging.Logger) error {
+func stageAllChanges() error {
 	cmd := exec.Command("git", "add", ".")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to stage changes: %w\nOutput: %s", err, string(output))
 	}
-	logger.Debug("Staged all changes")
+	log.Debugf("Staged all changes")
 	return nil
 }
 
@@ -218,16 +217,16 @@ func checkStagedChanges() (bool, error) {
 }
 
 // commitWithMessage creates a commit with a custom message
-func commitWithMessage(logger *logging.Logger, message string) int {
+func commitWithMessage(message string) int {
 	cmd := exec.Command("git", "commit", "-m", message)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()
 	if err != nil {
-		logger.Error("Failed to create commit", zap.Error(err))
+		log.Errorf("Failed to create commit: error=%v", err)
 		return 1
 	}
-	logger.Debug("Created commit with custom message")
+	log.Debugf("Created commit with custom message")
 	return 0
 }
 

@@ -160,7 +160,7 @@ func TestResolveDefaults_NoTypeDefaults(t *testing.T) {
 	result := ResolveDefaults(
 		nil, // no type defaults
 		"test-module", "src/test", "unknown-type",
-		nil, // pathVars
+		nil,                // pathVars
 		nil, nil, nil, nil, // source, config, assets, tests
 		"",     // changelog
 		"", "", // workflowCI, workflowRelease

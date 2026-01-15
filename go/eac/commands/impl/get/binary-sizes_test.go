@@ -162,12 +162,12 @@ func TestStandardBinaryVariants_EnvVars(t *testing.T) {
 	}
 
 	expected := map[string]string{
-		"linux-amd64":      "SIZE_LINUX_AMD64",
-		"linux-amd64-upx":  "SIZE_LINUX_AMD64_UPX",
-		"linux-arm64":      "SIZE_LINUX_ARM64",
-		"darwin-amd64":     "SIZE_DARWIN_AMD64",
-		"darwin-arm64":     "SIZE_DARWIN_ARM64",
-		"windows-amd64":    "SIZE_WINDOWS_AMD64",
+		"linux-amd64":       "SIZE_LINUX_AMD64",
+		"linux-amd64-upx":   "SIZE_LINUX_AMD64_UPX",
+		"linux-arm64":       "SIZE_LINUX_ARM64",
+		"darwin-amd64":      "SIZE_DARWIN_AMD64",
+		"darwin-arm64":      "SIZE_DARWIN_ARM64",
+		"windows-amd64":     "SIZE_WINDOWS_AMD64",
 		"windows-amd64-upx": "SIZE_WINDOWS_AMD64_UPX",
 	}
 

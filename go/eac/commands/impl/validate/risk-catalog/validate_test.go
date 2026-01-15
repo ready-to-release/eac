@@ -47,14 +47,10 @@ func TestValidateCatalog_ValidMinimalCatalog(t *testing.T) {
 		WorkspaceRoot: tmpDir,
 	}
 
-	result := validateCatalog(config)
+	errors := validateCatalog(config)
 
-	if !result.Valid {
-		t.Errorf("Expected valid catalog, but got invalid. Errors: %+v", result.Errors)
-	}
-
-	if len(result.Errors) > 0 {
-		t.Errorf("Expected no errors, got %d: %+v", len(result.Errors), result.Errors)
+	if len(errors) > 0 {
+		t.Errorf("Expected valid catalog, but got invalid. Errors: %+v", errors)
 	}
 }
 
@@ -90,22 +86,22 @@ func TestValidateCatalog_MissingUUID(t *testing.T) {
 		WorkspaceRoot: tmpDir,
 	}
 
-	result := validateCatalog(config)
+	errors := validateCatalog(config)
 
-	if result.Valid {
+	if len(errors) == 0 {
 		t.Error("Expected invalid catalog (missing UUID), but got valid")
 	}
 
 	foundUUIDError := false
-	for _, err := range result.Errors {
-		if err.Field == "catalog.uuid" {
+	for _, err := range errors {
+		if err.GetCode() == "OSCAL_MISSING_UUID" {
 			foundUUIDError = true
 			break
 		}
 	}
 
 	if !foundUUIDError {
-		t.Errorf("Expected UUID error, but didn't find it. Errors: %+v", result.Errors)
+		t.Errorf("Expected UUID error, but didn't find it. Errors: %+v", errors)
 	}
 }
 
@@ -125,22 +121,22 @@ func TestValidateCatalog_InvalidJSON(t *testing.T) {
 		WorkspaceRoot: tmpDir,
 	}
 
-	result := validateCatalog(config)
+	errors := validateCatalog(config)
 
-	if result.Valid {
+	if len(errors) == 0 {
 		t.Error("Expected invalid result for malformed JSON")
 	}
 
 	foundJSONError := false
-	for _, err := range result.Errors {
-		if err.Field == "json" {
+	for _, err := range errors {
+		if err.GetCode() == "INVALID_JSON" {
 			foundJSONError = true
 			break
 		}
 	}
 
 	if !foundJSONError {
-		t.Errorf("Expected JSON parsing error. Errors: %+v", result.Errors)
+		t.Errorf("Expected JSON parsing error. Errors: %+v", errors)
 	}
 }
 
@@ -167,22 +163,22 @@ func TestValidateCatalog_NotACatalogDocument(t *testing.T) {
 		WorkspaceRoot: tmpDir,
 	}
 
-	result := validateCatalog(config)
+	errors := validateCatalog(config)
 
-	if result.Valid {
+	if len(errors) == 0 {
 		t.Error("Expected invalid result for non-catalog document")
 	}
 
 	foundDocError := false
-	for _, err := range result.Errors {
-		if err.Field == "document" {
+	for _, err := range errors {
+		if err.GetCode() == "OSCAL_INVALID_DOCUMENT" {
 			foundDocError = true
 			break
 		}
 	}
 
 	if !foundDocError {
-		t.Errorf("Expected document type error. Errors: %+v", result.Errors)
+		t.Errorf("Expected document type error. Errors: %+v", errors)
 	}
 }
 
@@ -216,16 +212,16 @@ func TestValidateCatalog_MissingTitleAndLastModified(t *testing.T) {
 		WorkspaceRoot: tmpDir,
 	}
 
-	result := validateCatalog(config)
+	errors := validateCatalog(config)
 
-	if result.Valid {
+	if len(errors) == 0 {
 		t.Error("Expected invalid catalog (missing required metadata fields)")
 	}
 
 	// Should have errors for both missing title and last-modified
-	if len(result.Errors) < 2 {
+	if len(errors) < 2 {
 		t.Errorf("Expected at least 2 errors (title and last-modified), got %d: %+v",
-			len(result.Errors), result.Errors)
+			len(errors), errors)
 	}
 }
 
@@ -254,21 +250,21 @@ func TestValidateCatalog_NoControlsOrGroups(t *testing.T) {
 		WorkspaceRoot: tmpDir,
 	}
 
-	result := validateCatalog(config)
+	errors := validateCatalog(config)
 
-	if result.Valid {
+	if len(errors) == 0 {
 		t.Error("Expected invalid catalog (no controls or groups)")
 	}
 
 	foundControlError := false
-	for _, err := range result.Errors {
-		if err.Field == "catalog" && err.Message == "catalog must have at least one control or group" {
+	for _, err := range errors {
+		if err.GetCode() == "OSCAL_EMPTY_CATALOG" {
 			foundControlError = true
 			break
 		}
 	}
 
 	if !foundControlError {
-		t.Errorf("Expected error about missing controls/groups. Errors: %+v", result.Errors)
+		t.Errorf("Expected error about missing controls/groups. Errors: %+v", errors)
 	}
 }

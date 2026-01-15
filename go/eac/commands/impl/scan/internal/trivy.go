@@ -89,9 +89,9 @@ func RunTrivySBOM(workspaceRoot, moduleRoot, format string, trivyImage string) (
 		Image: trivyImage,
 		Cmd: []string{
 			"fs",
-			"--scanners", "vuln",  // Enable vulnerability/package analysis for SBOM generation
+			"--scanners", "vuln", // Enable vulnerability/package analysis for SBOM generation
 			"--format", format,
-			"--list-all-pkgs",     // Include all packages in SBOM, not just vulnerable ones
+			"--list-all-pkgs", // Include all packages in SBOM, not just vulnerable ones
 			"--quiet",
 			// Skip problematic directories that cause scanning issues
 			"--skip-dirs", "/scan/mnt,/scan/.git,/scan/node_modules,/scan/vendor,/scan/out,/scan/bin",

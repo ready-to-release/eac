@@ -1,5 +1,4 @@
 // Command: work
-// Description: Workspace management for parallel development using git worktrees
 package work
 
 import (

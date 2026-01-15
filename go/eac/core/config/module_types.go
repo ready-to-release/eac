@@ -10,15 +10,15 @@ type ModuleTypesConfig struct {
 
 // ModuleTypeDef defines a module type
 type ModuleTypeDef struct {
-	Name          string              `yaml:"name"`
-	Description   string              `yaml:"description"`
-	BuildDeps     []string            `yaml:"build_deps"`               // System dependencies required for building
-	Capabilities  []string            `yaml:"capabilities"`
-	TestFramework string              `yaml:"test_framework,omitempty"` // Unit test framework: mocha, jest, pytest, go (default)
-	BDDFramework  string              `yaml:"bdd_framework,omitempty"`  // BDD test framework: godog, tscucumber (default: inferred from build_deps)
-	DockerBuild   *DockerBuildConfig  `yaml:"docker_build,omitempty"`   // Docker image build configuration (for docker-build dependency)
-	Build         *BuildConfig        `yaml:"build,omitempty"`
-	Defaults      *TypeDefaults       `yaml:"defaults,omitempty"`
+	Name          string             `yaml:"name"`
+	Description   string             `yaml:"description"`
+	BuildDeps     []string           `yaml:"build_deps"` // System dependencies required for building
+	Capabilities  []string           `yaml:"capabilities"`
+	TestFramework string             `yaml:"test_framework,omitempty"` // Unit test framework: mocha, jest, pytest, go (default)
+	BDDFramework  string             `yaml:"bdd_framework,omitempty"`  // BDD test framework: godog, tscucumber (default: inferred from build_deps)
+	DockerBuild   *DockerBuildConfig `yaml:"docker_build,omitempty"`   // Docker image build configuration (for docker-build dependency)
+	Build         *BuildConfig       `yaml:"build,omitempty"`
+	Defaults      *TypeDefaults      `yaml:"defaults,omitempty"`
 }
 
 // BuildConfig contains build output configuration for a module type
@@ -79,17 +79,17 @@ const (
 
 // DockerBuildConfig contains Docker image build configuration
 type DockerBuildConfig struct {
-	Container   string             `yaml:"container"`             // Container name (references containers/{container}/)
-	Context     string             `yaml:"context"`               // Build context path
-	Dockerfile  string             `yaml:"dockerfile,omitempty"`  // Path to Dockerfile (default: {context}/Dockerfile)
-	Platforms   []string           `yaml:"platforms,omitempty"`   // Target platforms (e.g., linux/amd64, linux/arm64)
-	Tags        []string           `yaml:"tags"`                  // Image tags
-	Load        bool               `yaml:"load,omitempty"`        // Load image to local Docker daemon
-	Push        bool               `yaml:"push,omitempty"`        // Push image to registry
-	Registry    string             `yaml:"registry,omitempty"`    // Registry to push to (if push=true)
-	Cache       *DockerCacheConfig `yaml:"cache,omitempty"`       // Cache configuration
-	SBOM        bool               `yaml:"sbom,omitempty"`        // Generate SBOM
-	Provenance  bool               `yaml:"provenance,omitempty"`  // Generate provenance attestation
+	Container  string             `yaml:"container"`            // Container name (references containers/{container}/)
+	Context    string             `yaml:"context"`              // Build context path
+	Dockerfile string             `yaml:"dockerfile,omitempty"` // Path to Dockerfile (default: {context}/Dockerfile)
+	Platforms  []string           `yaml:"platforms,omitempty"`  // Target platforms (e.g., linux/amd64, linux/arm64)
+	Tags       []string           `yaml:"tags"`                 // Image tags
+	Load       bool               `yaml:"load,omitempty"`       // Load image to local Docker daemon
+	Push       bool               `yaml:"push,omitempty"`       // Push image to registry
+	Registry   string             `yaml:"registry,omitempty"`   // Registry to push to (if push=true)
+	Cache      *DockerCacheConfig `yaml:"cache,omitempty"`      // Cache configuration
+	SBOM       bool               `yaml:"sbom,omitempty"`       // Generate SBOM
+	Provenance bool               `yaml:"provenance,omitempty"` // Generate provenance attestation
 }
 
 // DockerCacheConfig contains Docker build cache configuration
@@ -345,7 +345,6 @@ func (a *Artifact) GetVerifyMode() string {
 func (a *Artifact) IsExecutable() bool {
 	return a.Type == ArtifactTypeExecutable
 }
-
 
 // GetCompression returns the compression type, defaulting to none
 func (a *Artifact) GetCompression() string {

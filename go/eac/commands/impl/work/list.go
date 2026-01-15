@@ -30,7 +30,6 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
-	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
 func init() {
@@ -114,7 +113,7 @@ func ShowWorkspaces() int {
 		zap.Int("count", len(worktrees)),
 		zap.Bool("verbose", config.verbose))
 
-	displayWorktrees(config.base.Logger, worktrees, config.verbose)
+	displayWorktrees(worktrees, config.verbose)
 
 	config.base.Logger.Debug("Phase 4: Completed",
 		zap.String("phase", "phase4"),
@@ -153,45 +152,36 @@ func parseListConfig() (*listConfig, error) {
 }
 
 // displayWorktrees formats and displays worktrees in a table
-func displayWorktrees(logger *logging.Logger, worktrees []internal.Worktree, verbose bool) {
+func displayWorktrees(worktrees []internal.Worktree, verbose bool) {
 	if len(worktrees) == 0 {
-		logger.Debug("No worktrees to display")
-		logger.Info("No worktrees found")
+		log.Debugf("No worktrees to display")
+		log.Info("No worktrees found")
 		return
 	}
 
 	// Phase 4.1: Build table
 	phase41Start := time.Now()
-	logger.Debug("Phase 4.1: Starting table building",
-		zap.String("phase", "phase4.1"),
-		zap.Int("worktreeCount", len(worktrees)),
-		zap.Bool("verbose", verbose))
+	log.Debugf("Phase 4.1: Starting table building: phase=phase4.1, worktreeCount=%d, verbose=%v", len(worktrees), verbose)
 
 	table := buildWorktreeTable(worktrees, verbose)
 
-	logger.Debug("Phase 4.1: Completed",
-		zap.String("phase", "phase4.1"),
-		zap.Int("tableLength", len(table)),
-		zap.Duration("duration", time.Since(phase41Start)))
+	log.Debugf("Phase 4.1: Completed: phase=phase4.1, tableLength=%d, duration=%v", len(table), time.Since(phase41Start))
 
 	// Phase 4.2: Display results
 	phase42Start := time.Now()
-	logger.Debug("Phase 4.2: Starting result display",
-		zap.String("phase", "phase4.2"))
+	log.Debugf("Phase 4.2: Starting result display: phase=phase4.2")
 
-	logger.Info(table)
-	logger.Info("")
+	log.Info(table)
+	log.Info("")
 
 	// Display summary
 	if len(worktrees) == 1 {
-		logger.Info("1 worktree total")
+		log.Info("1 worktree total")
 	} else {
-		logger.Info(fmt.Sprintf("%d worktrees total", len(worktrees)))
+		log.Infof("%d worktrees total", len(worktrees))
 	}
 
-	logger.Debug("Phase 4.2: Completed",
-		zap.String("phase", "phase4.2"),
-		zap.Duration("duration", time.Since(phase42Start)))
+	log.Debugf("Phase 4.2: Completed: phase=phase4.2, duration=%v", time.Since(phase42Start))
 }
 
 // buildWorktreeTable creates a formatted table of worktrees

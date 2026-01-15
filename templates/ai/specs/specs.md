@@ -4,6 +4,8 @@ You are an expert in BDD and Gherkin specification writing.
 
 Generate a complete, well-structured Gherkin feature specification following the guidelines below.
 
+Generate ONLY valid Gherkin syntax directly - no JSON intermediate format.
+
 ## What is Rule/Scenario Testing?
 
 ### Rules (Acceptance Criteria)
@@ -31,67 +33,73 @@ Generate a complete, well-structured Gherkin feature specification following the
   - Use domain language (Ubiquitous Language), not technical jargon
   - Write from user perspective
 
-## Structure Requirements
+### Gherkin Requirements
 
-1. **Feature Declaration**: `Feature: <module>_<feature-name>`
-   - Must follow pattern: lowercase module, underscore, lowercase feature name
-   - Examples: `eac-commands_commit`, `r2r-cli_init-command`
+#### feature (required)
 
-2. **User Story**: As a.../I want.../So that... format
+**name**: Pattern `^[a-z][a-z0-9-]*_[a-z][a-z0-9-]*$`
 
-   ```text
-   As a [role]
-   I want [capability]
-   So that [business value]
-   ```
+- Must follow pattern: lowercase module, underscore, lowercase feature name
+- Examples: `eac-commands_commit`, `r2r-cli_init-command`
 
-3. **Background** (optional): Common setup shared across scenarios
+**description**: Brief feature description (1-2 sentences)
 
-   ```text
-   Background:
-     Given [common precondition]
-   ```
+**tags**: Feature-level tags (optional)
 
-4. **Rules**: At least one Rule with acceptance criteria
+- Include test level tags: `@L2`, `@L3`, `@L4`
+- Include control tags if security/compliance related: `@control:ac-2`
 
-   ```text
-   Rule: [Measurable acceptance criterion]
-   ```
+#### User Story (required)
 
-5. **Scenarios**: At least one Scenario per Rule
+User story format: "As a [role] I want [capability] So that [value]"
 
-   ```text
-   Scenario: [Concrete example]
-     Given [precondition]
-     When [action]
-     Then [outcome]
-   ```
+**role**: User role (e.g., "developer", "admin", "auditor")
+**capability**: What the user wants to do
+**value**: Why they want to do it (business value)
 
-## Tagging Requirements
+#### Background (optional)
 
-### Verification Tags (REQUIRED)
+Shared preconditions for all scenarios in the feature.
 
-EVERY scenario MUST have at least one verification tag:
+- Use "Given" keyword only
+- Indented under Background:
 
-- `@ov` - Operational Verification (functional tests)
-- `@iv` - Installation Verification (deployment validation)
-- `@pv` - Performance Verification (load tests)
-- `@piv` - Production Installation Verification
-- `@ppv` - Production Performance Verification
+#### Rules (required, at least 1)
 
-### Testing Tags
+Each rule represents one measurable acceptance criterion.
 
-{{.Custom.TagsSpec}}
+Format: `Rule: Acceptance criterion description`
 
-### Optional Tags
+#### Scenarios (required, at least 1 per rule)
 
-- `@L0` to `@L4` - Test environment complexity (usually inferred)
-- `@deps:<system>` - External system dependencies (e.g., @deps:docker)
-- `@depm:<module>` - Internal module dependencies (e.g., @depm:r2r-cli)
-- `@control:<control-id>` - OSCAL control evidence link (e.g., @control:ac-2)
-- `@controls:<id1>,<id2>` - Multiple controls (e.g., @controls:ac-2,au-3)
-- `@skip:<reason>` - Temporarily excluded (e.g., @skip:wip)
-- `@Manual` - Manual test (cannot be automated)
+Each scenario is a concrete example under a Rule.
+
+**Scenario name**: Concrete example description
+
+**Scenario tags** (REQUIRED - at least one):
+
+- **MUST include at least one verification tag**:
+  - `@ov` - Operational Verification (functional tests)
+  - `@iv` - Installation Verification (deployment validation)
+  - `@pv` - Performance Verification (load tests)
+  - `@piv` - Production Installation Verification
+  - `@ppv` - Production Performance Verification
+- **Optional tags**:
+  - `@deps:<system>` - External system dependencies (e.g., `@deps:docker`)
+  - `@depm:<module>` - Internal module dependencies (e.g., `@depm:r2r-cli`)
+  - `@control:<control-id>` - OSCAL control evidence link (e.g., `@control:ac-2`)
+  - `@controls:<id1>,<id2>` - Multiple controls (e.g., `@controls:ac-2,au-3`)
+  - `@skip:<reason>` - Temporarily excluded (e.g., `@skip:wip`)
+  - `@Manual` - Manual test (cannot be automated)
+
+**Steps**: Given/When/Then structure
+
+- **Given**: Preconditions (context setup)
+- **When**: Action or event
+- **Then**: Expected outcome
+- **And**: Additional steps of same type
+- **But**: Negative assertion
+- Use domain language, not technical jargon
 
 ### OSCAL Control Tagging
 
@@ -101,6 +109,7 @@ If the feature implements security, compliance, or risk-related functionality, t
 with OSCAL control IDs to enable automated compliance evidence collection.
 
 **How it works:**
+
 1. Your module may have an OSCAL risk profile at `specs/.risk-controls/<module>.profile.json`
 2. This profile lists relevant controls from the catalog
 3. Tag scenarios that provide evidence for those controls
@@ -110,21 +119,9 @@ with OSCAL control IDs to enable automated compliance evidence collection.
 
 - **Single control**: Use `@control:ac-2` when one scenario provides evidence for one control
 - **Multiple controls**: Use `@controls:ac-2,au-3,ia-5` when one scenario covers multiple controls
-- **Place after verification tags**: `@ov @control:ac-2` or `@iv @controls:ac-2,au-3`
+- **Place in scenario tags array**: Each scenario's tags array should include verification tags first, then control tags
 - **Use control IDs from profile**: Check your module's risk profile for available controls
 - **Match control intent**: Tag scenarios that genuinely provide evidence for the control
-
-**Example:**
-
-```gherkin
-@ov @control:ac-2
-Scenario: Create user account with approval workflow
-  Given I am an administrator
-  When I create a new user account
-  Then an approval request must be created
-  And the account must remain disabled until approved
-  # @control:ac-2 = Account Management control
-```
 
 **Common control patterns:**
 
@@ -141,16 +138,13 @@ Scenario: Create user account with approval workflow
 
 {{.Custom.AvailableControls}}
 
-**Instructions:**
-- Review the available controls above
-- Tag scenarios that provide evidence for these controls
-- Use `@control:<id>` for single control evidence
-- Use `@controls:<id1>,<id2>` when a scenario covers multiple controls
-- Omit control tags if the feature is not security/compliance-related
+### Testing Tags
 
-## Common Patterns
+{{.Custom.TagsSpec}}
 
-### Functional Test
+### Common Scenario Patterns
+
+#### Functional Test
 
 ```gherkin
 @ov
@@ -160,7 +154,7 @@ Scenario: User performs successful action
   Then the expected outcome occurs
 ```
 
-### Error Handling
+#### Error Handling
 
 ```gherkin
 @ov
@@ -171,7 +165,7 @@ Scenario: User provides invalid input
   And the system state remains unchanged
 ```
 
-### Deployment Validation
+#### Deployment Validation
 
 ```gherkin
 @iv
@@ -181,7 +175,7 @@ Scenario: Service deploys successfully
   Then the health check passes
 ```
 
-### Performance Test
+#### Performance Test
 
 ```gherkin
 @pv
@@ -191,19 +185,83 @@ Scenario: API meets SLA under load
   Then 95th percentile response time is under 200ms
 ```
 
-## Output Requirements
+#### Security Control Evidence
 
-1. Start with Feature: declaration
-2. Include complete user story
-3. Add at least one Rule (acceptance criterion)
-4. Add at least one Scenario per Rule
-5. Tag ALL scenarios with at least one verification tag
-6. Use Given/When/Then structure
-7. Write in domain language - no technical jargon
-8. Focus on observable behavior - not implementation
-9. Keep scenarios independent and executable
-10. Return ONLY valid Gherkin - no explanations, markdown fences, or commentary
+```gherkin
+@ov @control:ac-2
+Scenario: Create user account with approval workflow
+  Given I am an administrator
+  When I create a new user account
+  Then an approval request must be created
+  And the account must remain disabled until approved
+```
 
-Return ONLY the Gherkin content starting with "Feature:" and ending with the last scenario step.
+### Gherkin Generation Rules
 
-Now generate the specification based on the user's description below:
+- Generate ONLY valid Gherkin syntax
+- No markdown code fences (no ```gherkin)
+- No explanations or commentary before/after the Gherkin
+- Just pure Gherkin starting with Feature: declaration
+- Follow proper indentation (2 spaces per level)
+- Every scenario MUST have at least one verification tag (@ov, @iv, @pv, etc.)
+- Use domain language in step text - no technical jargon
+- Focus on observable behavior - not implementation details
+- Keep scenarios independent and executable
+- Use Feature → Background → Rule → Scenario structure
+
+### Example Gherkin Output
+
+```gherkin
+@L2 @ov
+Feature: eac-commands_init
+  Initialize project structure with EAC configuration
+
+  As a developer
+  I want to initialize an EAC project
+  So that I can start using EAC commands
+
+  Background:
+    Given I am in a git repository
+    And the repository has no EAC configuration
+
+  Rule: Project initialization creates required directories
+
+    @ov
+    Scenario: Initialize creates directory structure
+      Given I am in a git repository
+      When I run "r2r init"
+      Then the ".r2r/eac" directory is created
+      And the "specs" directory is created
+      And the "templates" directory is created
+
+    @ov
+    Scenario: Initialize creates configuration files
+      Given I am in a git repository
+      When I run "r2r init"
+      Then the "repository.yml" file is created
+      And the file contains valid YAML
+
+  Rule: Initialization fails gracefully with errors
+
+    @ov
+    Scenario: Initialize outside git repository
+      Given I am not in a git repository
+      When I run "r2r init"
+      Then the command exits with error
+      And an error message "must be run in a git repository" is displayed
+```
+
+## CRITICAL Rules
+
+- Feature name must match pattern: `module_feature` with underscore separator
+- Every scenario MUST have at least one verification tag
+- Use domain language in steps (user perspective, not technical implementation)
+- Focus on observable behavior (what happens), not how it's implemented
+- Background steps must use "Given" keyword only
+- Steps should be independent and executable
+- Tag security/compliance scenarios with appropriate @control or @controls tags
+- Use proper Gherkin syntax - no JSON, no markdown fences
+- Follow proper indentation (2 spaces per level)
+- Start with Feature: declaration, include user story, organize by Rules
+
+Generate Gherkin now based on the description below:

@@ -1,5 +1,4 @@
 // Command: validate specs
-// Description: Validate existing Gherkin specifications against contracts
 // Short: Validate Gherkin specifications against quality contracts
 // Long: The validate specs command checks existing .feature files against the specification contract,
 // Long: ensuring they follow proper Gherkin syntax, and project standards.
@@ -24,15 +23,16 @@ import (
 	"sort"
 	"strings"
 
-	"go.uber.org/zap"
-
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/core/ai"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"github.com/ready-to-release/eac/go/eac/core/git"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
+	"github.com/ready-to-release/eac/go/eac/core/validation/formats/gherkin"
 )
 
 func init() {
@@ -46,13 +46,21 @@ func init() {
 // gitRepo holds the git repository instance for git operations.
 // In production, this is initialized lazily. For tests, it can be injected via SetGitRepo.
 var gitRepo git.GitRepository
+var gitMgr *git.RepositoryManager
+
+// initGitManager initializes the git repository manager if needed.
+func initGitManager() {
+	if gitMgr == nil {
+		gitMgr = git.NewManager(logging.C().Zap())
+	}
+}
 
 // getGitRepo returns the git repository, creating one if needed
 func getGitRepo(workspaceRoot string) (git.GitRepository, error) {
 	if gitRepo != nil {
 		return gitRepo, nil
 	}
-	return git.Open(workspaceRoot)
+	return gitMgr.Open(workspaceRoot)
 }
 
 // SetGitRepo allows tests to inject a mock repository.
@@ -63,6 +71,7 @@ func SetGitRepo(repo git.GitRepository) {
 // ResetGitRepo clears the mock git repository.
 func ResetGitRepo() {
 	gitRepo = nil
+	gitMgr = nil
 }
 
 // ============================================================================
@@ -86,42 +95,19 @@ func ValidateSpecs() int {
 		return 1
 	}
 
-	// Initialize logger (logs to out/logs/specs/)
-	// Skip logger when format is JSON to avoid corrupting JSON output
-	var logger *logging.Logger
-	if config.Format != "json" {
-		if config.Verbose {
-			logger, err = logging.NewWithDebug("specs", config.RepositoryRoot)
-		} else {
-			logger, err = logging.NewDefault("specs", config.RepositoryRoot)
-		}
-		if err != nil {
-			// Continue without logger - not fatal
-			if config.Verbose {
-				log.Errorf("Warning: Failed to initialize logger: %v", err)
-			}
-		} else {
-			config.Logger = logger
-			defer logger.Sync()
-		}
+	// Initialize logger (logs to out/commands.log)
+	// File logging is separate from stdout, so JSON output is not corrupted
+	if err := logging.ConfigureLoggingSimple(config.RepositoryRoot, "commands", nil, config.Verbose); err != nil {
+		log.Warnf("Failed to configure logging: %v", err)
 	}
+	defer logging.CloseLogging()
 
 	// Log command start
-	if config.Logger != nil {
-		config.Logger.Info("Starting specs validate",
-			zap.String("path", config.Path),
-			zap.String("format", config.Format),
-			zap.Bool("quiet", config.Quiet),
-			zap.Bool("verbose", config.Verbose))
-	}
+	log.Debugf("Starting specs validate: path=%s, format=%s, quiet=%v, verbose=%v", config.Path, config.Format, config.Quiet, config.Verbose)
 
 	// Validate path security
 	if err := validatePath(config.Path, config.RepositoryRoot); err != nil {
-		if config.Logger != nil {
-			config.Logger.Error("Path security validation failed",
-				zap.String("path", config.Path),
-				zap.Error(err))
-		}
+		log.Debugf("Path security validation failed: path=%s, error=%v", config.Path, err)
 		log.Errorf("Error: %v", err)
 		return 1
 	}
@@ -129,29 +115,19 @@ func ValidateSpecs() int {
 	// Determine if path is file or directory
 	info, err := os.Stat(config.Path)
 	if err != nil {
-		if config.Logger != nil {
-			config.Logger.Error("File or directory not found",
-				zap.String("path", config.Path),
-				zap.Error(err))
-		}
+		log.Debugf("File or directory not found: path=%s, error=%v", config.Path, err)
 		log.Errorf("Error: file or directory not found: %s", config.Path)
 		return 1
 	}
 
-	if config.Logger != nil {
-		config.Logger.Debug("Starting validation",
-			zap.String("path", config.Path),
-			zap.Bool("isDir", info.IsDir()))
-	}
+	log.Debugf("Starting validation: path=%s, isDir=%v", config.Path, info.IsDir())
 
 	var results []*ValidationResult
 	if info.IsDir() {
 		// Validate directory (recursive)
-		results, err = validateDirectoryWithLogger(config.Path, config.RepositoryRoot, config.Quiet, config.CheckTags, config.Format, config.Logger)
+		results, err = validateDirectory(config.Path, config.RepositoryRoot, config.Quiet, config.CheckTags, config.Format)
 		if err != nil {
-			if config.Logger != nil {
-				config.Logger.Error("Directory validation failed", zap.Error(err))
-			}
+			log.Debugf("Directory validation failed: error=%v", err)
 			log.Errorf("Error: %v", err)
 			return 1
 		}
@@ -159,11 +135,7 @@ func ValidateSpecs() int {
 		// Validate single file
 		errors, err := validateGherkinFile(config.Path, config.RepositoryRoot, config.CheckTags)
 		if err != nil {
-			if config.Logger != nil {
-				config.Logger.Error("File validation failed",
-					zap.String("path", config.Path),
-					zap.Error(err))
-			}
+			log.Debugf("File validation failed: path=%s, error=%v", config.Path, err)
 			log.Errorf("Error: %v", err)
 			return 1
 		}
@@ -172,30 +144,18 @@ func ValidateSpecs() int {
 		if config.Fix && len(errors) > 0 {
 			fixResult, fixErr := fixGherkinFile(config.Path, errors)
 			if fixErr != nil {
-				if config.Logger != nil {
-					config.Logger.Error("Failed to fix file",
-						zap.String("path", config.Path),
-						zap.Error(fixErr))
-				}
+				log.Debugf("Failed to fix file: path=%s, error=%v", config.Path, fixErr)
 				log.Errorf("Error fixing file: %v", fixErr)
 			} else if fixResult.FixCount() > 0 {
 				// Display fix results
 				log.Info(formatFixResult(fixResult, config.RepositoryRoot))
 
-				if config.Logger != nil {
-					config.Logger.Info("Applied fixes",
-						zap.String("path", config.Path),
-						zap.Int("fixCount", fixResult.FixCount()))
-				}
+				log.Debugf("Applied fixes: path=%s, fixCount=%d", config.Path, fixResult.FixCount())
 
 				// Re-validate after fixes
 				errors, err = validateGherkinFile(config.Path, config.RepositoryRoot, config.CheckTags)
 				if err != nil {
-					if config.Logger != nil {
-						config.Logger.Error("Re-validation failed after fixes",
-							zap.String("path", config.Path),
-							zap.Error(err))
-					}
+					log.Debugf("Re-validation failed after fixes: path=%s, error=%v", config.Path, err)
 					log.Errorf("Error re-validating after fixes: %v", err)
 					return 1
 				}
@@ -211,23 +171,13 @@ func ValidateSpecs() int {
 			},
 		}
 
-		if config.Logger != nil {
-			config.Logger.Debug("Single file validation complete",
-				zap.String("path", config.Path),
-				zap.Bool("valid", criticalCount == 0),
-				zap.Int("errorCount", len(errors)))
-		}
+		log.Debugf("Single file validation complete: path=%s, valid=%v, errorCount=%d", config.Path, criticalCount == 0, len(errors))
 	}
 
 	passed := countPassed(results)
 	failed := countFailed(results)
 
-	if config.Logger != nil {
-		config.Logger.Info("Validation complete",
-			zap.Int("total", len(results)),
-			zap.Int("passed", passed),
-			zap.Int("failed", failed))
-	}
+	log.Debugf("Validation complete: total=%d, passed=%d, failed=%d", len(results), passed, failed)
 
 	// Format and display output
 	if config.Format == "json" {
@@ -253,14 +203,13 @@ type ValidateConfig struct {
 	CheckTags      bool   // --check-tags: Enable tag validation (default: true)
 	Fix            bool   // --fix: Auto-fix correctable tag issues
 	RepositoryRoot string
-	Logger         *logging.Logger
 }
 
 // ValidationResult holds the validation result for a single file
 type ValidationResult struct {
-	Path   string                       `json:"path"`
-	Valid  bool                         `json:"valid"`
-	Errors []contracts.ValidationError   `json:"errors"`
+	Path   string                      `json:"path"`
+	Valid  bool                        `json:"valid"`
+	Errors []contracts.ValidationError `json:"errors"`
 }
 
 // parseValidateConfig parses command line arguments into configuration
@@ -396,16 +345,11 @@ func validateGherkinFile(filePath string, repoRoot string, checkTags bool) ([]co
 	}
 
 	// Load contract and validator
-	loader := contracts.NewContractLoader(repoRoot, "ai/specs", "0.1.0")
+	loader := ai.NewContractLoader(repoRoot, ai.TypeSpecs, paths.DefaultsVersion)
 
 	contractData, err := loader.LoadContract()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load contract: %w", err)
-	}
-
-	antiCorruptionRules, err := loader.LoadAntiCorruptionRules()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load anti-corruption rules: %w", err)
 	}
 
 	// Load tags config for advanced tag validation (only when checkTags is enabled)
@@ -419,7 +363,7 @@ func validateGherkinFile(filePath string, repoRoot string, checkTags bool) ([]co
 	}
 
 	// Create validator with tags config support
-	validator := contracts.NewGherkinValidatorWithTags(contractData, tagsConfig, antiCorruptionRules)
+	validator := gherkin.NewValidatorWithTags(contractData, tagsConfig)
 
 	// Validate content
 	errors := validator.Validate(string(content), nil)
@@ -428,25 +372,15 @@ func validateGherkinFile(filePath string, repoRoot string, checkTags bool) ([]co
 }
 
 // validateDirectory validates all .feature files in a directory (recursive)
-// Deprecated: Use validateDirectoryWithLogger for better logging support
-func validateDirectory(dirPath string, repoRoot string, quiet bool, checkTags bool) ([]*ValidationResult, error) {
-	return validateDirectoryWithLogger(dirPath, repoRoot, quiet, checkTags, "text", nil)
-}
-
-// validateDirectoryWithLogger validates all .feature files in a directory with logging support
-func validateDirectoryWithLogger(dirPath string, repoRoot string, quiet bool, checkTags bool, format string, logger *logging.Logger) ([]*ValidationResult, error) {
+func validateDirectory(dirPath string, repoRoot string, quiet bool, checkTags bool, format string) ([]*ValidationResult, error) {
 	var results []*ValidationResult
 
-	if logger != nil {
-		logger.Debug("Walking directory for .feature files", zap.String("dir", dirPath))
-	}
+	log.Debugf("Walking directory for .feature files: dir=%s", dirPath)
 
 	// Walk directory tree
 	err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			if logger != nil {
-				logger.Warn("Error accessing path", zap.String("path", path), zap.Error(err))
-			}
+			log.Debugf("Error accessing path: path=%s, error=%v", path, err)
 			return err
 		}
 
@@ -460,19 +394,13 @@ func validateDirectoryWithLogger(dirPath string, repoRoot string, quiet bool, ch
 			return nil
 		}
 
-		if logger != nil {
-			logger.Debug("Validating file", zap.String("path", relativePath(path, repoRoot)))
-		}
+		log.Debugf("Validating file: path=%s", relativePath(path, repoRoot))
 
 		// Validate file
 		errors, validateErr := validateGherkinFile(path, repoRoot, checkTags)
 		if validateErr != nil {
 			// Log error but continue processing other files
-			if logger != nil {
-				logger.Warn("Failed to validate file",
-					zap.String("path", path),
-					zap.Error(validateErr))
-			}
+			log.Debugf("Failed to validate file: path=%s, error=%v", path, validateErr)
 			log.Errorf("Warning: failed to validate %s: %v", path, validateErr)
 			return nil
 		}
@@ -486,13 +414,7 @@ func validateDirectoryWithLogger(dirPath string, repoRoot string, quiet bool, ch
 
 		results = append(results, result)
 
-		if logger != nil {
-			logger.Debug("File validation result",
-				zap.String("path", relativePath(path, repoRoot)),
-				zap.Bool("valid", result.Valid),
-				zap.Int("criticalErrors", criticalCount),
-				zap.Int("totalErrors", len(errors)))
-		}
+		log.Debugf("File validation result: path=%s, valid=%v, criticalErrors=%d, totalErrors=%d", relativePath(path, repoRoot), result.Valid, criticalCount, len(errors))
 
 		// In quiet mode, only show progress for invalid files
 		// Skip progress output entirely when format is JSON to avoid corrupting JSON output
@@ -510,16 +432,11 @@ func validateDirectoryWithLogger(dirPath string, repoRoot string, quiet bool, ch
 	})
 
 	if err != nil {
-		if logger != nil {
-			logger.Error("Directory walk failed", zap.Error(err))
-		}
+		log.Debugf("Directory walk failed: error=%v", err)
 		return nil, fmt.Errorf("error walking directory: %w", err)
 	}
 
-	if logger != nil {
-		logger.Debug("Directory walk complete",
-			zap.Int("filesProcessed", len(results)))
-	}
+	log.Debugf("Directory walk complete: filesProcessed=%d", len(results))
 
 	return results, nil
 }
@@ -692,9 +609,9 @@ func normalizePath(path string) string {
 
 // FixResult holds the result of fixing a single file
 type FixResult struct {
-	Path    string
-	Fixes   []FixedIssue
-	Error   error
+	Path  string
+	Fixes []FixedIssue
+	Error error
 }
 
 // FixedIssue represents a single fix applied
@@ -731,7 +648,7 @@ func fixGherkinFile(filePath string, errors []contracts.ValidationError) (*FixRe
 
 	// First pass: fix feature naming (do this first as it doesn't change line numbers)
 	for _, e := range errors {
-		if e.Code == "INVALID_FEATURE_NAMING" && e.Line > 0 {
+		if e.GetCode() == "INVALID_FEATURE_NAMING" && e.Line > 0 {
 			idx := e.Line - 1
 			if idx >= 0 && idx < len(lines) {
 				newFeatureName := generateFeatureName(filePath, lines[idx])
@@ -753,7 +670,7 @@ func fixGherkinFile(filePath string, errors []contracts.ValidationError) (*FixRe
 	// Second pass: collect lines needing @ov insertion
 	linesToFix := []int{}
 	for _, e := range errors {
-		if e.Code == "MISSING_VERIFICATION_TAG" && e.Line > 0 {
+		if e.GetCode() == "MISSING_VERIFICATION_TAG" && e.Line > 0 {
 			linesToFix = append(linesToFix, e.Line)
 		}
 	}

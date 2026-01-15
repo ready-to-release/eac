@@ -1,5 +1,4 @@
 // Command: get build-deps
-// Description: Get build dependencies for a module
 // Args: module (required) - Module moniker
 // Long:
 // Long: Expected Output:
@@ -14,8 +13,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"

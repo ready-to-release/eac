@@ -90,7 +90,7 @@
     },
     "imports": [
       {
-        "href": "C:\\source\\simply-cli\\cli\\templates\\specs\\risk-catalog\\controls.catalog.json",
+        "href": "C:\\source\\ready-to-release\\eac\\templates\\specs\\risk-catalog\\controls.catalog.json",
         "include-controls": [
           {
             "with-ids": [

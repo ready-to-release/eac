@@ -10,20 +10,20 @@ func TestBuildSpecCoverage_SingleFeature(t *testing.T) {
 	// Arrange
 	manifest := implinternal.NewTestManifest("eac-commands", "go", "abc123")
 	manifest.AddTest(implinternal.TestEntry{
-		Name:       "Scenario 1",
-		Type:       "godog",
-		Suite:      "integration",
-		Status:     implinternal.TestStatusPassed,
-		Tags:       []string{"@L2", "@control:ai-2"},
-		FilePath:   "specs/eac-commands/create-design/specification.feature",
+		Name:     "Scenario 1",
+		Type:     "godog",
+		Suite:    "integration",
+		Status:   implinternal.TestStatusPassed,
+		Tags:     []string{"@L2", "@control:ai-2"},
+		FilePath: "specs/eac-commands/create-design/specification.feature",
 	})
 	manifest.AddTest(implinternal.TestEntry{
-		Name:       "Scenario 2",
-		Type:       "godog",
-		Suite:      "integration",
-		Status:     implinternal.TestStatusPassed,
-		Tags:       []string{"@L2", "@control:ai-2"},
-		FilePath:   "specs/eac-commands/create-design/specification.feature",
+		Name:     "Scenario 2",
+		Type:     "godog",
+		Suite:    "integration",
+		Status:   implinternal.TestStatusPassed,
+		Tags:     []string{"@L2", "@control:ai-2"},
+		FilePath: "specs/eac-commands/create-design/specification.feature",
 	})
 
 	manifests := []*implinternal.TestManifest{manifest}
@@ -257,22 +257,22 @@ func TestBuildSpecCoverage_WithEmptyFilePath(t *testing.T) {
 	// but Package field contains the spec path
 	manifest := implinternal.NewTestManifest("eac-commands", "go", "abc123")
 	manifest.AddTest(implinternal.TestEntry{
-		Name:       "Test scenario 1",
-		Package:    "../../../../../specs/eac-commands/create-design",
-		Type:       "godog",
-		Suite:      "integration",
-		Status:     implinternal.TestStatusPassed,
-		FilePath:   "", // Empty in container
-		Tags:       []string{"@L2", "@control:ai-2"},
+		Name:     "Test scenario 1",
+		Package:  "../../../../../specs/eac-commands/create-design",
+		Type:     "godog",
+		Suite:    "integration",
+		Status:   implinternal.TestStatusPassed,
+		FilePath: "", // Empty in container
+		Tags:     []string{"@L2", "@control:ai-2"},
 	})
 	manifest.AddTest(implinternal.TestEntry{
-		Name:       "Test scenario 2",
-		Package:    "../../../../../specs/eac-commands/create-design",
-		Type:       "godog",
-		Suite:      "integration",
-		Status:     implinternal.TestStatusPassed,
-		FilePath:   "", // Empty in container
-		Tags:       []string{"@L2", "@control:ai-3"},
+		Name:     "Test scenario 2",
+		Package:  "../../../../../specs/eac-commands/create-design",
+		Type:     "godog",
+		Suite:    "integration",
+		Status:   implinternal.TestStatusPassed,
+		FilePath: "", // Empty in container
+		Tags:     []string{"@L2", "@control:ai-3"},
 	})
 
 	manifests := []*implinternal.TestManifest{manifest}

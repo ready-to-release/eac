@@ -1,5 +1,4 @@
 // Command: get
-// Description: Retrieve repository data in structured format
 package get
 
 import (

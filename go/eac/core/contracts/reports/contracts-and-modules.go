@@ -5,13 +5,10 @@ import (
 	"sort"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
-	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
-var log = logging.C()
 
 // Global process-level cache for module contracts
 // This prevents repeated parsing of module.contract.yaml files across parallel test packages
@@ -53,7 +50,6 @@ func (c *ModuleContractCache) EnsurePopulated(workspaceRoot string) error {
 	// Fast path: read lock to check if already populated
 	c.mu.RLock()
 	if c.populated && c.workspaceRoot == workspaceRoot {
-		log.Debugf("Module contracts cache hit (workspace: %s)", workspaceRoot)
 		c.mu.RUnlock()
 		return nil
 	}
@@ -65,23 +61,18 @@ func (c *ModuleContractCache) EnsurePopulated(workspaceRoot string) error {
 
 	// Double-check: another goroutine may have populated while we waited
 	if c.populated && c.workspaceRoot == workspaceRoot {
-		log.Debugf("Module contracts cache hit after wait (workspace: %s)", workspaceRoot)
 		return nil
 	}
 
 	// Reset if workspace root changed
 	if c.workspaceRoot != workspaceRoot {
-		log.Debugf("Module contracts cache reset (workspace changed: %s -> %s)", c.workspaceRoot, workspaceRoot)
 		c.report = nil
 		c.populated = false
 		c.workspaceRoot = workspaceRoot
 	}
 
-	// Load and validate module contracts with timing
-	start := time.Now()
-	log.Debugf("Module contracts loading started (workspace: %s)", workspaceRoot)
-
-	// Load all module contracts (VALIDATION happens inside LoadFromWorkspace)
+	// Load and validate module contracts
+	// (VALIDATION happens inside LoadFromWorkspace)
 	registry, err := modules.LoadFromWorkspace(workspaceRoot)
 	if err != nil {
 		return fmt.Errorf("failed to load module contracts: %w", err)
@@ -92,9 +83,6 @@ func (c *ModuleContractCache) EnsurePopulated(workspaceRoot string) error {
 	if err != nil {
 		return fmt.Errorf("failed to build module contract report: %w", err)
 	}
-
-	duration := time.Since(start)
-	log.Debugf("Module contracts loaded: %v, modules=%d", duration, len(report.Modules))
 
 	// Cache the validated report
 	c.report = report
@@ -148,7 +136,6 @@ type ModuleContractReport struct {
 func GetModuleContracts(workspaceRoot string) (*ModuleContractReport, error) {
 	// Initialize global cache once per process
 	globalModuleContractCacheOnce.Do(func() {
-		log.Debug("Initializing global module contract cache")
 		globalModuleContractCache = NewModuleContractCache()
 	})
 
@@ -285,18 +272,10 @@ func (r *ModuleContractReport) GetModulesWithPattern(pattern string) []*modules.
 
 // PrintSummary prints a concise summary of the loaded contracts
 func (r *ModuleContractReport) PrintSummary() {
-	log.Info("=== Module Contracts Summary ===")
-	log.Infof("Total modules:    %d", r.TotalModules)
-	log.Infof("Version:          %s", r.Registry.Version())
 
 	// Count by type
 	typeCount := make(map[string]int)
 	for _, module := range r.Modules {
 		typeCount[module.Type]++
-	}
-
-	log.Info("\nBy type:")
-	for typ, count := range typeCount {
-		log.Infof("  %-20s %d modules", typ, count)
 	}
 }

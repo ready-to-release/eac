@@ -1,5 +1,4 @@
 // Command: create squash-message
-// Description: Generate squash commit message from branch commits
 // Short: Generate squash commit message from branch commits
 // Long: Analyzes all commits in the current branch compared to the base branch
 // Long: and generates a comprehensive, cohesive commit message suitable for
@@ -35,11 +34,12 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	coreai "github.com/ready-to-release/eac/go/eac/core/ai"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"github.com/ready-to-release/eac/go/eac/core/git"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
-	"go.uber.org/zap"
 )
 
 func init() {
@@ -50,21 +50,30 @@ var log = logging.C()
 
 // logDebugArtifact logs debug content with labeled sections to the log file.
 // This replaces writeDebugFile - content goes to out/commands.log instead of separate files.
-func logDebugArtifact(logger *logging.Logger, label string, content string) {
-	logger.Debug(fmt.Sprintf("=== %s START ===", label))
-	logger.Debug(content)
-	logger.Debug(fmt.Sprintf("=== %s END ===", label))
+func logDebugArtifact(label string, content string) {
+	log.Debugf("=== %s START ===", label)
+	log.Debug(content)
+	log.Debugf("=== %s END ===", label)
 }
 
 // gitRepo holds the git repository instance for testing
 var gitRepo git.GitRepository
+var gitMgr *git.RepositoryManager
+
+// initGitManager initializes the git repository manager if needed.
+func initGitManager() {
+	if gitMgr == nil {
+		gitMgr = git.NewManager(logging.C().Zap())
+	}
+}
 
 // getGitRepo returns the git repository, initializing it if needed.
 func getGitRepo(workspaceRoot string) (git.GitRepository, error) {
 	if gitRepo != nil {
 		return gitRepo, nil
 	}
-	repo, err := git.Open(workspaceRoot)
+	initGitManager()
+	repo, err := gitMgr.Open(workspaceRoot)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open git repository: %w", err)
 	}
@@ -92,65 +101,58 @@ func CreateSquashMessage() int {
 		return 1
 	}
 
-	// Phase 3: Initialize logger with workspace root
-	var logger *logging.Logger
-	if config.debug {
-		logger, err = logging.NewWithDebug("create", workspaceRoot)
-	} else {
-		logger, err = logging.NewDefault("create", workspaceRoot)
+	// Phase 3: Configure logging system (component loggers + file logging)
+	if err := logging.ConfigureLoggingSimple(workspaceRoot, "commands", nil, config.debug); err != nil {
+		log.Warnf("Failed to configure logging: %v", err)
 	}
-	if err != nil {
-		log.Errorf("ERROR: Failed to initialize logger: %v", err)
-		return 1
-	}
-	defer logger.Sync()
+	defer logging.CloseLogging()
 
 	log.Debug("Starting create squash-message command")
 
 	// Phase 4: Open git repository
 	repo, err := getGitRepo(workspaceRoot)
 	if err != nil {
-		logger.Error("Failed to open git repository", zap.Error(err))
+		log.Errorf("Failed to open git repository: %v", err)
 		return 1
 	}
 
 	// Phase 5: Get current branch
 	currentBranch, err := repo.CurrentBranch()
 	if err != nil {
-		logger.Error("Failed to get current branch", zap.Error(err))
+		log.Errorf("Failed to get current branch: %v", err)
 		return 1
 	}
-	logger.Debug("Current branch", zap.String("branch", currentBranch))
+	log.Debugf("Current branch: branch=%s", currentBranch)
 
 	// Phase 6: Get branch commits
-	logger.Info("Analyzing commits from base branch to HEAD", zap.String("baseBranch", config.baseBranch))
+	log.Infof("Analyzing commits from base branch to HEAD: baseBranch=%s", config.baseBranch)
 	commits, err := repo.GetBranchCommits(config.baseBranch)
 	if err != nil {
 		// Log the error and ensure "no commits ahead" message is in stdout
-		logger.Error(err.Error())
+		log.Error(err.Error())
 		return 1
 	}
-	logger.Debug("Found commits", zap.Int("count", len(commits)))
+	log.Debugf("Found commits: count=%d", len(commits))
 
 	// Phase 7: Get branch diff and files
 	diff, err := repo.GetBranchDiff(config.baseBranch)
 	if err != nil {
-		logger.Warn("Failed to get branch diff", zap.Error(err))
+		log.Warnf("Failed to get branch diff: %v", err)
 		diff = ""
 	}
 
 	diffStats, err := repo.GetBranchDiffStats(config.baseBranch)
 	if err != nil {
-		logger.Warn("Failed to get diff stats", zap.Error(err))
+		log.Warnf("Failed to get diff stats: %v", err)
 		diffStats = ""
 	}
 
 	fileNames, err := repo.GetBranchFiles(config.baseBranch)
 	if err != nil {
-		logger.Error("Failed to get branch files", zap.Error(err))
+		log.Errorf("Failed to get branch files: %v", err)
 		return 1
 	}
-	logger.Debug("Found changed files", zap.Int("count", len(fileNames)))
+	log.Debugf("Found changed files: count=%d", len(fileNames))
 
 	// Phase 8: Get module mappings
 	// Convert file names to FileInfo
@@ -167,41 +169,41 @@ func CreateSquashMessage() int {
 	// Enrich with module information
 	filesWithModules, err := repository.EnrichFilesWithModules(fileInfos, workspaceRoot)
 	if err != nil {
-		logger.Error("Failed to get module mappings", zap.Error(err))
+		log.Errorf("Failed to get module mappings: %v", err)
 		return 1
 	}
 
 	affectedModules := extractAffectedModules(filesWithModules)
-	logger.Debug("Affected modules", zap.Strings("modules", affectedModules))
+	log.Debugf("Affected modules: modules=%v", affectedModules)
 
 	// Phase 9: Build prompt context
 	context := buildSquashContext(currentBranch, config.baseBranch, commits, filesWithModules, diff, diffStats, affectedModules)
-	logDebugArtifact(logger, "SQUASH-CONTEXT", context)
+	logDebugArtifact("SQUASH-CONTEXT", context)
 
 	// Phase 10: Generate top-level message using AI
-	logger.Info("Generating squash commit message using AI...")
-	topLevelMessage, err := generateTopLevelMessage(workspaceRoot, logger, context)
+	log.Info("Generating squash commit message using AI...")
+	topLevelMessage, err := generateTopLevelMessage(workspaceRoot, context)
 	if err != nil {
-		logger.Error("Failed to generate top-level message", zap.Error(err))
+		log.Errorf("Failed to generate top-level message: %v", err)
 		return 1
 	}
 
 	// Phase 11: Generate module sections (reuse commit-message logic)
-	moduleSections, err := generateModuleSections(workspaceRoot, logger, affectedModules, filesWithModules, diff)
+	moduleSections, err := generateModuleSections(workspaceRoot, affectedModules, filesWithModules, diff)
 	if err != nil {
-		logger.Error("Failed to generate module sections", zap.Error(err))
+		log.Errorf("Failed to generate module sections: %v", err)
 		return 1
 	}
 
 	// Phase 12: Assemble final message
 	finalMessage := assembleMessage(topLevelMessage, moduleSections)
-	logDebugArtifact(logger, "SQUASH-FINAL", finalMessage)
+	logDebugArtifact("SQUASH-FINAL", finalMessage)
 
 	// Phase 13: Output message (validation skipped for now)
 	fmt.Println(">>>>>>OUTPUT START<<<<<<")
 	fmt.Println(finalMessage)
 
-	logger.Debug("Create squash-message command completed successfully")
+	log.Debug("Create squash-message command completed successfully")
 	return 0
 }
 
@@ -210,7 +212,6 @@ type squashConfig struct {
 	baseBranch string
 	debug      bool
 }
-
 
 // parseConfig parses command line arguments
 func parseConfig() (*squashConfig, error) {
@@ -223,26 +224,23 @@ func parseConfig() (*squashConfig, error) {
 
 	cfg := &squashConfig{
 		baseBranch: "main",
-		debug:      false,
+		debug:      flags.ParseDebugFlag(args),
 	}
-
-	// Parse debug flag using shared package
-	cfg.debug = flags.ParseDebugFlag(args)
 
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
-		if strings.HasPrefix(arg, "--base=") {
+		switch {
+		case strings.HasPrefix(arg, "--base="):
 			cfg.baseBranch = strings.TrimPrefix(arg, "--base=")
-		} else if arg == "--base" {
-			if i+1 < len(args) {
-				cfg.baseBranch = args[i+1]
-				i++
-			} else {
+		case arg == "--base":
+			if i+1 >= len(args) {
 				return nil, fmt.Errorf("--base requires a value")
 			}
-		} else if arg == "--debug" || arg == "-d" {
+			i++
+			cfg.baseBranch = args[i]
+		case arg == "--debug" || arg == "-d":
 			// Already handled by shared flags package
-		} else {
+		default:
 			return nil, fmt.Errorf("unknown flag: %s", arg)
 		}
 	}
@@ -354,13 +352,18 @@ func buildFilesTable(files []repository.RepositoryFileWithModule) string {
 }
 
 // generateTopLevelMessage generates the top-level commit message using AI
-func generateTopLevelMessage(workspaceRoot string, logger *logging.Logger, promptContext string) (string, error) {
+func generateTopLevelMessage(workspaceRoot string, promptContext string) (string, error) {
+	// Check for mock response from file-based mock system (subprocess testing)
+	if mock, ok := coreai.GetMockResponse("squash-message"); ok {
+		return mock, nil
+	}
+
 	// Load squash prompt template with three-tier priority:
 	// 1. Command flag (not applicable - internal function)
-	// 2. Team override (.r2r/eac/templates/ai/commit-message/squash.md)
-	// 3. System default (templates/ai/commit-message/squash.md)
+	// 2. Team override (.r2r/eac/templates/coreai.TypeCommitMessage/squash.md)
+	// 3. System default (templates/coreai.TypeCommitMessage/squash.md)
 	// Note: "squash" is a variant prompt (convention adds .md automatically)
-	loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "")
+	loader := coreai.NewContractLoader(workspaceRoot, coreai.TypeCommitMessage, "")
 	promptTemplate, _, err := loader.LoadPrompt("squash", "")
 	if err != nil {
 		return "", fmt.Errorf("failed to load squash.md template: %w", err)
@@ -369,24 +372,78 @@ func generateTopLevelMessage(workspaceRoot string, logger *logging.Logger, promp
 	// Build full prompt
 	prompt := string(promptTemplate) + "\n\n" + promptContext
 
-	logDebugArtifact(logger, "SQUASH-PROMPT", prompt)
+	logDebugArtifact("SQUASH-PROMPT", prompt)
 
-	// Execute AI (includes test provider support for mocking)
+	// Execute AI with two-phase generation and retry
 	executor := ai.NewExecutor(workspaceRoot)
 	providers.RegisterBuiltIn(executor)
-	ctx := context.Background()
-	result, err := executor.Execute(ctx, prompt)
-	if err != nil {
-		return "", fmt.Errorf("AI execution failed: %w", err)
+	executorAdapter := ai.NewExecutorAdapter(executor)
+
+	// Load AI config
+	aiConfig, _ := coreai.LoadAIConfig(workspaceRoot)
+
+	// Get retry strategy
+	maxAttempts := 3
+	var strategy coreai.RetryStrategy
+	if aiConfig != nil {
+		if typeConfig, ok := aiConfig.Types[coreai.TypeSquashMessage]; ok {
+			if typeConfig.RetryStrategy != nil && typeConfig.RetryStrategy.MaxAttempts > 0 {
+				maxAttempts = typeConfig.RetryStrategy.MaxAttempts
+			}
+			if typeConfig.RetryStrategy != nil {
+				var focusCategories []string
+				if typeConfig.RetryStrategy.FocusCategories != nil {
+					focusCategories = typeConfig.RetryStrategy.FocusCategories
+				}
+				strategy, _ = coreai.GetRetryStrategy(typeConfig.RetryStrategy.Type, focusCategories)
+			}
+		}
+	}
+	if strategy == nil {
+		strategy = &coreai.StandardStrategy{}
 	}
 
-	logDebugArtifact(logger, "SQUASH-AI-RESPONSE", result)
+	// Create JSON schema validator for Phase 1 JSON validation
+	// Phase 1 generates JSON output that matches squash-message.schema.json
+	// The formatter then converts JSON → plaintext squash message (no AI involved)
+	schemaPath := filepath.Join(paths.ContractsVersionPath(workspaceRoot, paths.EACCoreModule, paths.DefaultsVersion), "squash-message.schema.json")
+	validator, err := contracts.NewJSONSchemaValidator(schemaPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to create JSON schema validator: %w", err)
+	}
 
-	return strings.TrimSpace(result), nil
+	// Configure retry for JSON generation
+	retryConfig := &coreai.RetryConfig{
+		TypeName:     coreai.TypeSquashMessage,
+		OutputFormat: coreai.FormatJSON, // Generate structured JSON (commands format to text)
+		Executor:     executorAdapter,
+		Validator:    validator, // Validate JSON schema output
+		TemplateRoot: workspaceRoot,
+		MaxAttempts:  maxAttempts,
+		Strategy:     strategy,
+		Logger:       logging.C().Zap(), // ✅ Pass logger for retry observability
+	}
+
+	ctx := context.Background()
+	retryResult, err := coreai.GenerateWithRetry(ctx, retryConfig, prompt)
+	if err != nil {
+		return "", fmt.Errorf("AI generation failed: %w", err)
+	}
+
+	jsonResult := retryResult.Output
+	logDebugArtifact("SQUASH-AI-JSON-RESPONSE", jsonResult)
+
+	// Format JSON → squash commit text (no AI)
+	formattedResult, err := FormatSquashMessage(jsonResult)
+	if err != nil {
+		return "", fmt.Errorf("failed to format squash message: %w", err)
+	}
+
+	return strings.TrimSpace(formattedResult), nil
 }
 
 // generateModuleSections generates per-module sections (reuse commit-message logic)
-func generateModuleSections(workspaceRoot string, logger *logging.Logger, affectedModules []string, files []repository.RepositoryFileWithModule, diff string) (map[string]string, error) {
+func generateModuleSections(workspaceRoot string, affectedModules []string, files []repository.RepositoryFileWithModule, diff string) (map[string]string, error) {
 	// For now, return empty map - module sections can be added later if needed
 	// This keeps the implementation simple
 	return make(map[string]string), nil

@@ -19,13 +19,14 @@ var (
 func initComponentGlobalLogger() {
 	componentOnce.Do(func() {
 		// Create default logger (console only, no file logging)
+		// Commands should call ConfigureLogging() to enable file logging
 		cfg := DefaultConfig("eac", ".")
 		if IsDebugEnabled() {
 			cfg = cfg.WithDebugMode(true)
 		}
 		logger, err := New(cfg)
 		if err != nil {
-			// Fallback to basic logger if config fails
+			// Fallback to basic logger (console only)
 			logger, _ = NewDefault("eac", ".")
 		}
 		componentGlobalLogger = logger
@@ -114,6 +115,13 @@ func (c *ComponentLogger) getZap() *zap.Logger {
 	return componentGlobalLogger.Logger
 }
 
+// Zap returns the underlying zap.Logger for use with external libraries
+// that require direct zap.Logger injection (e.g., core git/repository packages).
+// This allows command layer to pass logger to core libraries via constructor injection.
+func (c *ComponentLogger) Zap() *zap.Logger {
+	return c.getZap()
+}
+
 // Component creates a ComponentLogger, inferring from call site or using explicit name.
 // This is the long form of C() - use when clarity is preferred.
 func Component(component ...string) *ComponentLogger {
@@ -158,8 +166,8 @@ func inferComponent() string {
 	// Look for /go/eac/ or /go/r2r/ in the file path
 	for _, boundary := range []string{"/go/eac/", "/go/r2r/"} {
 		if idx := strings.Index(file, boundary); idx != -1 {
-			relPath := file[idx+len(boundary):]   // "commands/impl/security/sast/sast.go"
-			relPath = filepath.Dir(relPath)       // "commands/impl/security/sast"
+			relPath := file[idx+len(boundary):] // "commands/impl/security/sast/sast.go"
+			relPath = filepath.Dir(relPath)     // "commands/impl/security/sast"
 			return filepath.ToSlash(relPath)
 		}
 	}

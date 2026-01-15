@@ -120,7 +120,6 @@ func (m *ModuleMapper) GetModuleForPackagePath(pkgPath string) string {
 	return ""
 }
 
-
 // BuildModuleOutputPath constructs the output path for a module's test results.
 // Returns a path like "<module-moniker>/packages/<package-suffix>" or "<module-moniker>/packages/<feature-name>" for godog
 // The new structure is: out/test/<module>/packages/<package>/
@@ -176,7 +175,7 @@ func extractPathSuffix(pkgPath, moduleMoniker string) string {
 
 	parts := strings.Split(moduleMoniker, "-")
 	if len(parts) >= 2 {
-		prefix := parts[0] // "eac" or "r2r"
+		prefix := parts[0]                         // "eac" or "r2r"
 		modulePart := strings.Join(parts[1:], "-") // "core", "commands", etc.
 
 		// Try to find "go/<prefix>/<module>/" in the path

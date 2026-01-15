@@ -38,43 +38,44 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 
 	lines := strings.Split(output, "\n")
 	if len(lines) == 0 {
-		errors = append(errors, contracts.ValidationError{
-			Code:     "EMPTY_MESSAGE",
-			Message:  "Top-level commit message is empty",
-			Severity: "error",
-		})
+		errors = append(errors, *contracts.NewLegacyValidationError(
+			"EMPTY_MESSAGE",
+			"Top-level commit message is empty",
+			0,
+			"error",
+		))
 		return errors
 	}
 
 	// Rule 1: First line must be conventional commit header
 	firstLine := strings.TrimSpace(lines[0])
 	if !getConventionalCommitRegex().MatchString(firstLine) {
-		errors = append(errors, contracts.ValidationError{
-			Code:     "INVALID_HEADER_FORMAT",
-			Message:  "Header must follow format: <type>(<scope>): <summary> (e.g., feat(cli): add new command)",
-			Line:     1,
-			Severity: "error",
-		})
+		errors = append(errors, *contracts.NewLegacyValidationError(
+			"INVALID_HEADER_FORMAT",
+			"Header must follow format: <type>(<scope>): <summary> (e.g., feat(cli): add new command)",
+			1,
+			"error",
+		))
 	}
 
 	// Rule 2: Header max length
 	if len(firstLine) > MaxHeaderLength {
-		errors = append(errors, contracts.ValidationError{
-			Code:     "HEADER_TOO_LONG",
-			Message:  fmt.Sprintf("Header exceeds %d characters (%d chars)", MaxHeaderLength, len(firstLine)),
-			Line:     1,
-			Severity: "error",
-		})
+		errors = append(errors, *contracts.NewLegacyValidationError(
+			"HEADER_TOO_LONG",
+			fmt.Sprintf("Header exceeds %d characters (%d chars)", MaxHeaderLength, len(firstLine)),
+			1,
+			"error",
+		))
 	}
 
 	// Rule 3: No trailing period (except ellipsis)
 	if strings.HasSuffix(firstLine, ".") && !strings.HasSuffix(firstLine, "...") {
-		errors = append(errors, contracts.ValidationError{
-			Code:     "HEADER_TRAILING_PERIOD",
-			Message:  "Header must not end with period",
-			Line:     1,
-			Severity: "error",
-		})
+		errors = append(errors, *contracts.NewLegacyValidationError(
+			"HEADER_TRAILING_PERIOD",
+			"Header must not end with period",
+			1,
+			"error",
+		))
 	}
 
 	// Rule 4: Check for Auditor-Summary field
@@ -86,11 +87,12 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 		}
 	}
 	if !hasAuditorSummary {
-		errors = append(errors, contracts.ValidationError{
-			Code:     "MISSING_AUDITOR_SUMMARY",
-			Message:  "Missing Auditor-Summary field after header",
-			Severity: "error",
-		})
+		errors = append(errors, *contracts.NewLegacyValidationError(
+			"MISSING_AUDITOR_SUMMARY",
+			"Missing Auditor-Summary field after header",
+			0,
+			"error",
+		))
 	}
 
 	// Rule 5: Check for body text after Auditor-Summary
@@ -114,11 +116,12 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 		}
 	}
 	if !hasBody {
-		errors = append(errors, contracts.ValidationError{
-			Code:     "MISSING_BODY",
-			Message:  "Missing body text after Auditor-Summary",
-			Severity: "error",
-		})
+		errors = append(errors, *contracts.NewLegacyValidationError(
+			"MISSING_BODY",
+			"Missing body text after Auditor-Summary",
+			0,
+			"error",
+		))
 	}
 
 	// Rule 6: Check that output does NOT contain module sections (those go separately)
@@ -127,12 +130,12 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 
 		// Check for any markdown headers (## or ###) - these shouldn't be in top-level
 		if strings.HasPrefix(trimmed, "## ") || strings.HasPrefix(trimmed, "### ") {
-			errors = append(errors, contracts.ValidationError{
-				Code:     "UNEXPECTED_MODULE_SECTION",
-				Message:  fmt.Sprintf("Top-level output should not contain markdown headers (found: %s)", trimmed),
-				Line:     i + 1,
-				Severity: "error",
-			})
+			errors = append(errors, *contracts.NewLegacyValidationError(
+				"UNEXPECTED_MODULE_SECTION",
+				fmt.Sprintf("Top-level output should not contain markdown headers (found: %s)", trimmed),
+				0,
+				"error",
+			))
 		}
 
 		// Check for bullet points starting with module-like patterns (- src-, - ext-, etc.)
@@ -140,12 +143,12 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 			rest := trimmed[2:]
 			// Check if it looks like a file path or module reference
 			if strings.Contains(rest, "/") || strings.HasPrefix(rest, "New ") || strings.HasPrefix(rest, "Updated ") {
-				errors = append(errors, contracts.ValidationError{
-					Code:     "UNEXPECTED_FILE_LIST",
-					Message:  fmt.Sprintf("Top-level output should not contain file/change lists (found: %s)", trimmed),
-					Line:     i + 1,
-					Severity: "error",
-				})
+				errors = append(errors, *contracts.NewLegacyValidationError(
+					"UNEXPECTED_FILE_LIST",
+					fmt.Sprintf("Top-level output should not contain file/change lists (found: %s)", trimmed),
+					0,
+					"error",
+				))
 			}
 		}
 
@@ -153,19 +156,19 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 		if i < len(lines)-1 && isModuleName(trimmed) {
 			nextLine := strings.TrimSpace(lines[i+1])
 			if isDashesLine(nextLine) && len(nextLine) > 3 {
-				errors = append(errors, contracts.ValidationError{
-					Code:     "UNEXPECTED_MODULE_SECTION",
-					Message:  fmt.Sprintf("Top-level output should not contain module sections (found: %s)", trimmed),
-					Line:     i + 1,
-					Severity: "error",
-				})
+				errors = append(errors, *contracts.NewLegacyValidationError(
+					"UNEXPECTED_MODULE_SECTION",
+					fmt.Sprintf("Top-level output should not contain module sections (found: %s)", trimmed),
+					0,
+					"error",
+				))
 			}
 		}
 	}
 
 	// Rule 7: Check line lengths in body
 	inBody := false
-	for i, line := range lines {
+	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
 
 		if strings.HasPrefix(trimmed, "Auditor-Summary:") {
@@ -190,12 +193,12 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 			if len(preview) > 50 {
 				preview = preview[:47] + "..."
 			}
-			errors = append(errors, contracts.ValidationError{
-				Code:     "LINE_TOO_LONG",
-				Message:  fmt.Sprintf("Line exceeds %d characters (%d chars): %s", MaxLineLength, len(trimmed), preview),
-				Line:     i + 1,
-				Severity: "warning",
-			})
+			errors = append(errors, *contracts.NewLegacyValidationError(
+				"LINE_TOO_LONG",
+				fmt.Sprintf("Line exceeds %d characters (%d chars): %s", MaxLineLength, len(trimmed), preview),
+				0,
+				"warning",
+			))
 		}
 	}
 

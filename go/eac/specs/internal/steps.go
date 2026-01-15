@@ -60,9 +60,6 @@ func RegisterCommonSteps(sc *godog.ScenarioContext, ctx *TestContext) {
 	sc.Step(`^the file "([^"]*)" should exist$`, func(path string) error {
 		return FileExists(ctx, path)
 	})
-	sc.Step(`^a file exists at "([^"]*)"$`, func(path string) error {
-		return FileExists(ctx, path)
-	})
 	sc.Step(`^debug files should exist in "([^"]*)"$`, func(dir string) error {
 		return DirectoryHasFiles(ctx, dir)
 	})

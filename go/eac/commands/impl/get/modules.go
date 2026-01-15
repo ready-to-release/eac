@@ -1,14 +1,15 @@
 // Command: get modules
-// Description: Get all module contracts in the repository
 // Flag.calver: type=bool, default=false, usage=Filter to only CalVer versioned modules
 // Flag.semver: type=bool, default=false, usage=Filter to only SemVer versioned modules
 // Flag.with-ci: type=bool, default=false, usage=Filter to modules that have a CI workflow
 // Flag.with-release: type=bool, default=false, usage=Filter to modules that have a release workflow
 // Flag.bundle: type=bool, default=false, usage=Filter to bundle modules (CalVer with release but no CI)
-//   --as-yaml: Output as YAML (default)
-//   --as-json: Output as JSON
-//   --as-toml: Output as TOML
-//   --as-<name>: Output using custom renderer (e.g., --as-summary, --as-count)
+//
+//	--as-yaml: Output as YAML (default)
+//	--as-json: Output as JSON
+//	--as-toml: Output as TOML
+//	--as-<name>: Output using custom renderer (e.g., --as-summary, --as-count)
+//
 // Long:
 // Long: Expected Output:
 // Long: YAML list of all module contracts, each containing:

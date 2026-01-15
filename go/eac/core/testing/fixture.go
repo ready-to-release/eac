@@ -43,10 +43,10 @@ import (
 // FixturePool manages reusable test environment templates.
 // Templates are created once and can be quickly copied for each scenario.
 type FixturePool struct {
-	mu           sync.Mutex
-	templates    map[string]*FixtureTemplate // Key: originalRepoRoot
-	tempDirs     []string                    // Track all temp dirs for cleanup
-	cleanedUp    bool
+	mu        sync.Mutex
+	templates map[string]*FixtureTemplate // Key: originalRepoRoot
+	tempDirs  []string                    // Track all temp dirs for cleanup
+	cleanedUp bool
 }
 
 // FixtureTemplate represents a reusable test environment template.
@@ -214,9 +214,9 @@ func (p *FixturePool) Stats() FixtureStats {
 // Returns savings in seconds for the given number of scenarios.
 func EstimatePerformanceGain(scenarioCount int) (withoutFixtures, withFixtures, savings float64) {
 	const (
-		setupTimeMin    = 0.3  // Minimum setup time per scenario (seconds)
-		setupTimeMax    = 0.9  // Maximum setup time per scenario (seconds)
-		copyTime        = 0.05 // Fast copy time per scenario (seconds)
+		setupTimeMin     = 0.3  // Minimum setup time per scenario (seconds)
+		setupTimeMax     = 0.9  // Maximum setup time per scenario (seconds)
+		copyTime         = 0.05 // Fast copy time per scenario (seconds)
 		templateCreation = 0.6  // Average template creation time (once)
 	)
 

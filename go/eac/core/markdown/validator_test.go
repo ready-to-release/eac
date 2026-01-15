@@ -13,10 +13,10 @@ import (
 
 func TestValidateFile_EmptyFile(t *testing.T) {
 	tests := []struct {
-		name          string
-		allowEmpty    bool
-		expectValid   bool
-		expectErrors  int
+		name         string
+		allowEmpty   bool
+		expectValid  bool
+		expectErrors int
 	}{
 		{
 			name:         "empty file not allowed",

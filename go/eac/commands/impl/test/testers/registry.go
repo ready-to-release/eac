@@ -72,4 +72,3 @@ func GetTestFunc(moduleType string) TestFunc {
 		return 0
 	}
 }
-

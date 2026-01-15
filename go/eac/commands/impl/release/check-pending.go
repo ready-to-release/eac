@@ -30,6 +30,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/changelog"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	"github.com/ready-to-release/eac/go/eac/core/git"
+	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
 func init() {
@@ -87,7 +88,9 @@ func ReleaseCheckPending() int {
 	}
 
 	// Open git repository
-	repo, err := git.Open("")
+	// Open git repository
+	gitMgr := git.NewManager(logging.C().Zap())
+	repo, err := gitMgr.Open("")
 	if err != nil {
 		log.Errorf("failed to open git repository: %v", err)
 		return 1

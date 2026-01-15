@@ -1,5 +1,4 @@
 // Command: validate go-tidy
-// Description: Validate Go module dependencies are tidy
 // Short: Validate Go module dependencies are tidy
 // Long: Validates that all Go modules have tidy dependencies by running 'go mod tidy -diff'.
 // Long:

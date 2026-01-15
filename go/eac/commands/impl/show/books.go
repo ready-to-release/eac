@@ -1,5 +1,4 @@
 // Command: show books
-// Description: List all configured books and their sources
 // Short: Display all book configurations in a human-readable table
 // Long: The show books command displays all books defined in books.yml,
 // Long: including each book's name, description, and source counts.

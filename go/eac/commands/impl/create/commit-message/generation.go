@@ -3,13 +3,15 @@ package commitmessage
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"strings"
 
-	commitmessageinternal "github.com/ready-to-release/eac/go/eac/commands/impl/create/commit-message/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
 	aimock "github.com/ready-to-release/eac/go/eac/core/ai"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
+	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
 // mockAIResponse holds the mock response for testing. When set, AI calls return this.
@@ -44,7 +46,7 @@ func generateWithPrompt(promptName string, userPrompt string, workspaceRoot stri
 // generateWithPromptResult generates output and returns full metadata including provider info
 func generateWithPromptResult(promptName string, userPrompt string, workspaceRoot string, affectedModules []string, debugEnabled bool, testExecutor *ai.Executor) (*GenerationResult, error) {
 	// Check for mock response from file-based mock system (subprocess testing)
-	if mock, ok := aimock.GetMockResponse("commit"); ok {
+	if mock, ok := aimock.GetMockResponse("commit-message"); ok {
 		return &GenerationResult{Output: mock, ProviderName: "mock-file"}, nil
 	}
 
@@ -54,7 +56,7 @@ func generateWithPromptResult(promptName string, userPrompt string, workspaceRoo
 	}
 
 	// Load prompt template using three-tier system
-	loader := contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "")
+	loader := aimock.NewContractLoader(workspaceRoot, aimock.TypeCommitMessage, "")
 	promptTemplate, _, err := loader.LoadPrompt(promptName, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to load prompt template: %w", err)
@@ -74,50 +76,39 @@ func generateWithPromptResult(promptName string, userPrompt string, workspaceRoo
 	// Build full prompt: prompt template + user input (no template rendering needed)
 	fullPrompt := promptTemplate + "\n\n>>>>>>>>>>INPUT STARTS NOW<<<<<<<<<<<\n\n" + userPrompt
 
-	// Load contract and anti-corruption rules for validation only
-	loader = contracts.NewContractLoader(workspaceRoot, "ai/commit-message", "0.1.0")
-	antiCorruptionRules, err := loader.LoadAntiCorruptionRules()
+	// Load AI config to get retry strategy
+	aiConfig, err := aimock.LoadAIConfig(workspaceRoot)
 	if err != nil {
-		// If anti-corruption rules fail, fall back to non-validated generation
-		log.Warnf("Could not load anti-corruption rules, proceeding without validation: %v", err)
-		return generateWithoutValidationResult(executor, fullPrompt, model, promptName, workspaceRoot)
+		log.Warnf("Could not load AI config, using default retry strategy: %v", err)
+		aiConfig = nil // Will use defaults
 	}
 
-	// Create appropriate validator based on prompt type
-	var validator contracts.Validator
-	switch promptName {
-	case "top-level":
-		// Top-level validator checks header, auditor-summary, body (no module sections)
-		validator = commitmessageinternal.NewTopLevelValidator(affectedModules)
-	case "module":
-		// Module validator checks module section format only
-		validator = commitmessageinternal.NewModuleSectionValidator("")
-	default:
-		// Fallback to full commit message validator for final assembly validation
-		commitContract, err := commitmessageinternal.LoadContractFromConfig(workspaceRoot)
-		if err != nil {
-			log.Warnf("Could not load commit contract, proceeding without validation: %v", err)
-			return generateWithoutValidationResult(executor, fullPrompt, model, promptName, workspaceRoot)
-		}
-		validator = commitmessageinternal.NewCommitMessageValidator(
-			commitContract,
-			antiCorruptionRules,
-			affectedModules,
-			workspaceRoot,
-		)
+	// Create JSON schema validator for Phase 1 JSON validation
+	// Choose schema based on prompt type:
+	// - "module" prompts use commit-message-module.schema.json
+	// - other prompts use commit-message.schema.json
+	schemaFilename := "commit-message.schema.json"
+	if promptName == "module" {
+		schemaFilename = "commit-message-module.schema.json"
+	}
+	schemaPath := filepath.Join(paths.ContractsVersionPath(workspaceRoot, paths.EACCoreModule, paths.DefaultsVersion), schemaFilename)
+	validator, err := contracts.NewJSONSchemaValidator(schemaPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create JSON schema validator: %w", err)
 	}
 
 	// Wrap executor to match contract.AIExecutor interface
 	executorAdapter := ai.NewExecutorAdapterWithModel(executor, model)
 
 	// Configure retry behavior
-	// Note: debugEnabled controls logger-based debug output (via logDebugArtifact)
-	// The retry config's Debug mode is always set to false since we use logger-based debugging
-	retryConfig := buildRetryConfig(executorAdapter, validator, antiCorruptionRules, affectedModules, false, "unused")
+	retryConfig, err := buildRetryConfig(executorAdapter, validator, workspaceRoot, aiConfig, debugEnabled)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build retry config: %w", err)
+	}
 
-	// Generate with retry
+	// Generate with retry (Phase 1: JSON generation)
 	ctx := context.Background()
-	result, err := contracts.GenerateWithRetry(ctx, retryConfig, fullPrompt)
+	result, err := aimock.GenerateWithRetry(ctx, retryConfig, fullPrompt)
 	if err != nil {
 		return nil, fmt.Errorf("AI generation failed: %w", err)
 	}
@@ -131,56 +122,24 @@ func generateWithPromptResult(promptName string, userPrompt string, workspaceRoo
 		log.Warn("")
 	}
 
-	return &GenerationResult{
-		Output:       result.Output,
-		ProviderName: result.ProviderName,
-	}, nil
-}
-
-// generateWithoutValidation is a fallback when contract/validation cannot be loaded
-func generateWithoutValidation(executor *ai.Executor, fullPrompt string, model string, promptName string, workspaceRoot string) (string, error) {
-	result, err := generateWithoutValidationResult(executor, fullPrompt, model, promptName, workspaceRoot)
-	if err != nil {
-		return "", err
-	}
-	return result.Output, nil
-}
-
-// generateWithoutValidationResult is a fallback when contract/validation cannot be loaded.
-// Returns GenerationResult with provider metadata.
-func generateWithoutValidationResult(executor *ai.Executor, fullPrompt string, model string, promptName string, workspaceRoot string) (*GenerationResult, error) {
-	// Prepare options
-	var opts []ai.Option
-	if model != "" {
-		opts = append(opts, ai.WithModel(model))
-	}
-
-	// Execute with context
-	ctx := context.Background()
-	output, err := executor.Execute(ctx, fullPrompt, opts...)
-	if err != nil {
-		return nil, fmt.Errorf("AI execution failed: %w", err)
-	}
-
-	// Get provider name after execution
-	providerName := ""
-	if provider := executor.GetLastUsedProvider(); provider != nil {
-		providerName = provider.Name()
-		// Log provider in debug mode (check for debug output dir as indicator)
-		if workspaceRoot != "" {
-			log.Debugf("AI provider used: %s", providerName)
+	// Format JSON → formatted text (no AI)
+	// Use appropriate formatter based on prompt type
+	var formattedOutput string
+	if promptName == "module" {
+		formattedOutput, err = FormatModuleSection(result.Output)
+		if err != nil {
+			return nil, fmt.Errorf("failed to format module section: %w", err)
+		}
+	} else {
+		formattedOutput, err = FormatCommitMessage(result.Output)
+		if err != nil {
+			return nil, fmt.Errorf("failed to format commit message: %w", err)
 		}
 	}
 
-	// Trim output
-	output = strings.TrimSpace(output)
-
-	// Remove common agent initialization noise using contract-based filtering
-	output = StripAgentNoise(output, promptName, workspaceRoot)
-
 	return &GenerationResult{
-		Output:       output,
-		ProviderName: providerName,
+		Output:       formattedOutput,
+		ProviderName: result.ProviderName,
 	}, nil
 }
 
@@ -188,25 +147,56 @@ func generateWithoutValidationResult(executor *ai.Executor, fullPrompt string, m
 func buildRetryConfig(
 	executor contracts.AIExecutor,
 	validator contracts.Validator,
-	antiCorruption *contracts.AntiCorruptionRules,
-	affectedModules []string,
+	workspaceRoot string,
+	aiConfig *aimock.AIConfig,
 	debug bool,
-	debugOutputDir string,
-) *contracts.RetryConfig {
-	return &contracts.RetryConfig{
-		Executor:       executor,
-		Validator:      validator,
-		PromptBuilder:  &contracts.DefaultRetryPromptBuilder{},
-		AntiCorruption: antiCorruption,
-		Fixer:          commitmessageinternal.AutoCleanup, // Apply line wrapping and formatting fixes before validation
-		ContentMarker:  "", // Commit messages don't have a specific content marker
-		MaxAttempts:    2,
-		Debug:          debug,
-		DebugOutputDir: debugOutputDir,
-		ValidationContext: map[string]interface{}{
-			"affectedModules": affectedModules,
-		},
+) (*aimock.RetryConfig, error) {
+	// Default retry strategy and max attempts
+	maxAttempts := 2
+	var strategy aimock.RetryStrategy
+
+	// Load retry strategy from AI config if available
+	if aiConfig != nil {
+		if typeConfig, ok := aiConfig.Types[aimock.TypeCommitMessage]; ok {
+			// Get max attempts from config
+			if typeConfig.RetryStrategy != nil && typeConfig.RetryStrategy.MaxAttempts > 0 {
+				maxAttempts = typeConfig.RetryStrategy.MaxAttempts
+			}
+
+			// Create retry strategy from config
+			if typeConfig.RetryStrategy != nil {
+				var focusCategories []string
+				if typeConfig.RetryStrategy.FocusCategories != nil {
+					focusCategories = typeConfig.RetryStrategy.FocusCategories
+				}
+
+				var err error
+				strategy, err = aimock.GetRetryStrategy(typeConfig.RetryStrategy.Type, focusCategories)
+				if err != nil {
+					return nil, fmt.Errorf("failed to create retry strategy: %w", err)
+				}
+				log.Infof("Using retry strategy: %s (max attempts: %d)", strategy.Name(), maxAttempts)
+			}
+		}
 	}
+
+	// Default to StandardStrategy if not configured
+	if strategy == nil {
+		strategy = &aimock.StandardStrategy{}
+		log.Debugf("Using default retry strategy: standard (max attempts: %d)", maxAttempts)
+	}
+
+	return &aimock.RetryConfig{
+		TypeName:     aimock.TypeCommitMessage,
+		OutputFormat: aimock.FormatJSON, // Generate structured JSON (commands format to text)
+		Executor:     executor,
+		Validator:    validator, // Validate JSON output
+		TemplateRoot: workspaceRoot,
+		MaxAttempts:  maxAttempts,
+		Strategy:     strategy,
+		Debug:        debug, // Enable debug logging if requested
+		Logger:       logging.C().Zap(), // ✅ Pass logger for retry observability
+	}, nil
 }
 
 // extractModelFromAgent parses agent frontmatter and extracts the model field

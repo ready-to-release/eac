@@ -177,13 +177,13 @@ func initialize(cfg *ScanConfig) (*ScanContext, error) {
 		zap.Bool("debug", cfg.Debug))
 
 	return &ScanContext{
-		Config:         cfg,
-		WorkspaceRoot:  workspaceRoot,
-		Logger:         logger,
-		EACConfig:      eacCfg,
-		ModuleReport:   moduleReport,
-		GitCommit:      GetGitCommit(workspaceRoot),
-		ScanOutDir:     eacCfg.Repository.Paths.Out.Scan,
+		Config:        cfg,
+		WorkspaceRoot: workspaceRoot,
+		Logger:        logger,
+		EACConfig:     eacCfg,
+		ModuleReport:  moduleReport,
+		GitCommit:     GetGitCommit(workspaceRoot),
+		ScanOutDir:    eacCfg.Repository.Paths.Out.Scan,
 	}, nil
 }
 
