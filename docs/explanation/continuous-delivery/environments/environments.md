@@ -2,7 +2,9 @@
 
 ## Introduction
 
-Environments are the foundation of the Continuous Delivery Model. Each serves a specific purpose in the software delivery pipeline.
+Environments are the platform of the Continuous Delivery Model implementation.
+
+Each serves a specific purpose in the software delivery pipeline implementation.
 
 The CD Model reimagines environments as purpose-built, often ephemeral resources that enable parallel execution, rapid feedback, and consistent infrastructure.
 
@@ -10,14 +12,16 @@ The CD Model reimagines environments as purpose-built, often ephemeral resources
 
 ## Overview
 
-| Environment | Purpose | CD Model Stages | Lifespan |
-|-------------|---------|-----------------|----------|
-| DevBox | Local development | 1, 2 | Permanent |
-| Build Agents | CI/CD pipeline execution | 2, 3, 4, 8 | Per-build |
-| Deploy Agents | Production deployment | 10, 11 | Per-deployment |
-| PLTE | Acceptance/extended testing | 5, 6 | Hours |
-| Demo | Stakeholder validation | 7 | Days/weeks |
-| Production | Live user traffic | 10, 11, 12 | Permanent |
+| Environment   | Purpose                     | CD Model Stages       | Lifespan         |
+| ------------- | --------------------------- | --------------------- | ---------------- |
+| Platform      | Ex. GitHub/GitLab/ADO       | all                   | Fixture          |
+| DevBox        | Local development           | 1, 2                  | Fixture          |
+| Build Agents  | CI/CD pipeline execution    | 2, 3, 4, 8            | Per-build        |
+| Deploy Agents | Production deployment       | 10, 11                | Per-deployment   |
+| PLTE          | Acceptance/extended testing | 5, 6                  | minutes to hours |
+| Demo          | Explorative Testing         | 7 (RA trunk)          | Fixture          |
+| Validation    | Stakeholder validation      | 7 (RA release branch) | Fixture          |
+| Production    | Live user traffic           | 10, 11, 12            | Fixture          |
 
 ---
 

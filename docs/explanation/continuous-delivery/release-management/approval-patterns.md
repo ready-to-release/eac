@@ -6,10 +6,10 @@ Release approval is the **final decision** before production deployment: "Is thi
 
 The CD Model supports two approaches:
 
-| Pattern                         | Who Decides             | When                                | Timeline  |
-| ------------------------------- | ----------------------- | ----------------------------------- | --------- |
-| **Release Approval (RA)**       | Human (release manager) | Stage 9                             | 1-2 weeks |
-| **Continuous Deployment (CDe)** | Automation              | Stage 9 (human approved at Stage 3) | 2-4 hours |
+| Pattern                         | Who Decides             | When                                | Timeline                |
+| ------------------------------- | ----------------------- | ----------------------------------- | ----------------------- |
+| **Release Approval (RA)**       | Human (release manager) | Stage 9                             | hours up to 1-2 weeks   |
+| **Continuous Deployment (CDe)** | Automation              | Stage 9 (human approved at Stage 3) | minutes up to 2-4 hours |
 
 Both patterns validate the same quality criteria - they differ in **who decides** and **when**.
 

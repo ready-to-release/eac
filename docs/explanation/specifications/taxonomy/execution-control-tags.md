@@ -1,5 +1,5 @@
 # Execution Control Tags
->
+
 > **Skipping and manual test execution**
 
 Control how tests are executed in the test suite.
@@ -175,7 +175,7 @@ Scenario: Process large dataset
 
 ### Manual Test Evidence Structure
 
-```
+```text
 specs/.evidence/
 └── <module>/
     └── <feature>/

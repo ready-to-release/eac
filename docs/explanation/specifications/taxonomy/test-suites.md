@@ -76,7 +76,7 @@ r2r eac test integration
 
 - Installation verification (@iv) - deployment succeeded
 - Operational verification (@ov) - features work in production-like environment
-- Performance verification (@pv) - meets SLA
+- Performance verification (@pv) - meets SLA/SLI/SLO's
 
 ### Example
 

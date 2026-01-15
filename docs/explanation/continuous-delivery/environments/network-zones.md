@@ -12,7 +12,7 @@ This separation ensures that Build Agents cannot access production, and that env
 
 - Prevent unauthorized environment access
 - Limit blast radius of security breaches
-- Enforce principle of least privilege
+- Enforce principle of least privilege onto the physical layer
 - Meet compliance requirements for production isolation
 
 ---
@@ -81,11 +81,12 @@ Zone B (Production)
 
 ## Implementation
 
-| Platform   | Approach                                                |
-| ---------- | ------------------------------------------------------- |
-| Azure      | Hub-and-spoke architecture with VNets, subnets and NSGs |
-| AWS        | VPC with security groups and private subnets            |
-| On-premise | Network segmentation with firewalls                     |
+| Platform   | Approach                                                 |
+| ---------- | -------------------------------------------------------- |
+| Azure      | Hub-and-spoke architecture with VNets, subnets and NSGs  |
+| AWS        | VPC with security groups and private subnets             |
+| GCP        | Shared VPC with firewall rules and private Google access |
+| On-premise | Network segmentation with firewalls                      |
 
 ---
 

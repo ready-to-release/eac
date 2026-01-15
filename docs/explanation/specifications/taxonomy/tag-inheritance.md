@@ -1,5 +1,5 @@
 # Tag Inheritance
->
+
 > **How tags accumulate and override**
 
 Tags accumulate from Feature → Rule → Scenario levels with specific override rules.
@@ -142,13 +142,13 @@ From highest to lowest priority:
 
 ## When Tags Override vs Accumulate
 
-| Tag Type | Behavior | Reason |
-|----------|----------|--------|
-| Test Level (`@L0`-`@L4`) | Override | Only one execution environment per test |
-| Verification (`@ov`, `@iv`, etc.) | Accumulate | Tests can verify multiple aspects |
-| Dependencies (`@deps:`, `@depm:`, `@env:`) | Accumulate | Tests can need multiple tools |
-| Control (`@control:`) | Accumulate | Tests can satisfy multiple controls |
-| Execution Control (`@ignore`, `@Manual`) | Accumulate | Multiple execution modifiers allowed |
+| Tag Type                                   | Behavior   | Reason                                  |
+| ------------------------------------------ | ---------- | --------------------------------------- |
+| Test Level (`@L0`-`@L4`)                   | Override   | Only one execution environment per test |
+| Verification (`@ov`, `@iv`, etc.)          | Accumulate | Tests can verify multiple aspects       |
+| Dependencies (`@deps:`, `@depm:`, `@env:`) | Accumulate | Tests can need multiple tools           |
+| Control (`@control:`)                      | Accumulate | Tests can satisfy multiple controls     |
+| Execution Control (`@ignore`, `@Manual`)   | Accumulate | Multiple execution modifiers allowed    |
 
 ---
 
@@ -272,13 +272,10 @@ r2r eac validate specs --show-effective-tags
 
 ### Common Issues
 
-**Issue**: Scenario not running in expected test suite
-
-**Solution**: Check if feature-level test level tag is being inherited when you expected a scenario-level override.
-
-**Issue**: Missing dependencies in test execution
-
-**Solution**: Verify feature-level dependencies are declared, or add them at scenario level.
+| Issue                                  | Solution                                                                         |
+| -------------------------------------- | -------------------------------------------------------------------------------- |
+| Scenario not running in expected suite | Check if feature-level test level tag is inherited when you expected an override |
+| Missing dependencies in test execution | Verify feature-level dependencies are declared, or add them at scenario level    |
 
 ---
 

@@ -95,11 +95,11 @@ r2r eac work remove add-jwt-auth
 
 ## Common Issues
 
-| Problem | Solution |
-|---------|----------|
-| Merge conflicts | Resolve conflicts, then retry |
-| "Branch not up to date" | Run `work pull` first |
-| Tests failing | Fix tests before merging |
+| Problem                 | Solution                      |
+| ----------------------- | ----------------------------- |
+| Merge conflicts         | Resolve conflicts, then retry |
+| "Branch not up to date" | Run `work pull` first         |
+| Tests failing           | Fix tests before merging      |
 
 ## Next Steps
 

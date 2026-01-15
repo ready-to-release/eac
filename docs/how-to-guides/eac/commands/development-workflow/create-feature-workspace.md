@@ -67,11 +67,11 @@ code .
 
 ## Common Issues
 
-| Problem | Solution |
-|---------|----------|
-| "Branch already exists" | Use different branch name or delete old branch |
-| "Worktree path exists" | Choose custom path with `--path` flag |
-| Uncommitted changes | Commit or stash changes before creating workspace |
+| Problem                 | Solution                                          |
+| ----------------------- | ------------------------------------------------- |
+| "Branch already exists" | Use different branch name or delete old branch    |
+| "Worktree path exists"  | Choose custom path with `--path` flag             |
+| Uncommitted changes     | Commit or stash changes before creating workspace |
 
 ## Next Steps
 

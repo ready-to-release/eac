@@ -2,15 +2,20 @@
 
 ## Introduction
 
-Quality gates are automated and manual checkpoints throughout the software delivery pipeline that ensure code meets defined standards before progressing to the next stage. They embody a fundamental principle: **catch issues early, when they're cheapest and easiest to fix**.
+Quality gates are automated and manual checkpoints throughout the software delivery pipeline that ensure code meets defined standards before progressing to the next stage.
+They embody a fundamental principle: **catch issues early, when they're cheapest and easiest to fix**.
 
-Every quality gate represents a deliberate decision about what quality means at that point in the pipeline, who verifies it, and what happens when standards aren't met. Well-designed gates provide fast feedback while maintaining high confidence in what reaches production.
+Every quality gate represents a deliberate decision about what quality means at that point in the pipeline, who verifies it, and what happens when standards aren't met.
+Well-designed gates provide fast feedback while maintaining high confidence in what reaches production.
 
 ### Why Quality Gates Matter
 
 **Fast Feedback Loops:**
 
-Without quality gates, issues discovered late in the pipeline (or worse, in production) require expensive context switching. A developer who wrote code yesterday can fix an issue in minutes. The same developer fixing the same issue three weeks later after it reaches production may spend hours reconstructing context.
+Without quality gates, issues discovered late in the pipeline (or worse, in production) require expensive context switching.
+
+A developer who wrote code yesterday can fix an issue in minutes.
+The same developer fixing the same issue three weeks later after it reaches production may spend hours reconstructing context.
 
 Quality gates create increasingly comprehensive validation stages:
 
@@ -61,7 +66,8 @@ Quality gates appear at specific CD Model stages, each with distinct purposes:
 - Dependency vulnerability scanning
 - Successful compilation
 
-**Philosophy**: If it fails pre-commit, it shouldn't be committed. Keep the feedback loop tight so developers can fix issues immediately while the context is fresh.
+**Philosophy**: If it fails pre-commit, it shouldn't be committed.
+Keep the feedback loop tight so developers can fix issues immediately while the context is fresh.
 
 [Learn more: Pre-commit Quality Gates](./precommit-gates.md)
 
@@ -85,7 +91,8 @@ Quality gates appear at specific CD Model stages, each with distinct purposes:
 - Security scans (SAST, dependency scanning)
 - Documentation updates
 
-**Philosophy**: Stage 3 is the first-level approval gate. In RA pattern, it approves code quality. In CDe pattern, it approves both code quality AND production deployment (combined first and second-level approval).
+**Philosophy**: Stage 3 is the first-level approval gate.
+In RA pattern, it approves code quality. In CDe pattern, it approves both code quality AND production deployment (combined first and second-level approval).
 
 [Learn more: Merge Request Quality Gates](./merge-request-gates.md)
 
@@ -283,12 +290,12 @@ Later stages assume earlier stages passed - don't repeat validations unnecessari
 
 ## In This Section
 
-| Topic                                             | Description                                                      |
-| ------------------------------------------------- | ---------------------------------------------------------------- |
-| [Pre-commit Gates](./precommit-gates.md)          | Stage 2 quality gates - fast local validation in 5-10 minutes    |
-| [Pre-commit Setup](./precommit-setup.md)          | Configuration guide for pre-commit hooks and validation          |
-| [Merge Request Gates](./merge-request-gates.md)   | Stage 3 quality gates - peer review and CI validation            |
-| [Release Gates](./release-gates.md)               | Stage 9 quality gates - production readiness validation          |
+| Topic                                           | Description                                                   |
+| ----------------------------------------------- | ------------------------------------------------------------- |
+| [Pre-commit Gates](./precommit-gates.md)        | Stage 2 quality gates - fast local validation in 5-10 minutes |
+| [Pre-commit Setup](./precommit-setup.md)        | Configuration guide for pre-commit hooks and validation       |
+| [Merge Request Gates](./merge-request-gates.md) | Stage 3 quality gates - peer review and CI validation         |
+| [Release Gates](./release-gates.md)             | Stage 9 quality gates - production readiness validation       |
 
 ---
 

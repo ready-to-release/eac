@@ -89,10 +89,10 @@ r2r eac get changed-modules-ci | jq -r '.changed_modules[]' | xargs r2r eac buil
 
 ## Common Issues
 
-| Problem | Solution |
-|---------|----------|
+| Problem               | Solution                            |
+| --------------------- | ----------------------------------- |
 | "No changes detected" | Ensure commits exist vs base branch |
-| Build fails | Check dependencies are built first |
+| Build fails           | Check dependencies are built first  |
 
 ## Next Steps
 

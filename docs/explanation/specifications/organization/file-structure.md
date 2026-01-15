@@ -1,5 +1,5 @@
 # File Structure
->
+
 > **Specifications vs implementation separation**
 
 Understanding the philosophy and structure of separating WHAT from HOW.
@@ -126,7 +126,7 @@ flowchart TD
 
 ### Specification Directory Structure
 
-```
+```text
 specs/
 ├── <module>/
 │   ├── <feature>/
@@ -140,7 +140,7 @@ specs/
 
 ### Implementation Directory Structure (Go Example)
 
-```
+```text
 src/
 └── <module>/
     ├── *.go                          ← Production code

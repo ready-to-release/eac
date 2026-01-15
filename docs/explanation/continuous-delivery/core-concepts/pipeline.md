@@ -47,13 +47,13 @@ Trunk Commit
 
 Pipelines can be triggered by:
 
-| Trigger | When | Purpose |
-|---------|------|---------|
-| Commit | Code merged to trunk | Main validation and artifact creation |
-| Pull Request | PR opened/updated | Pre-merge validation |
-| Schedule | Cron (daily, weekly) | Dependency updates, security scans |
-| Manual | User-initiated | Releases, hotfixes |
-| Tag | Git tag created | Release candidate creation |
+| Trigger      | When                 | Purpose                               |
+| ------------ | -------------------- | ------------------------------------- |
+| Commit       | Code merged to trunk | Main validation and artifact creation |
+| Pull Request | PR opened/updated    | Pre-merge validation                  |
+| Schedule     | Cron (daily, weekly) | Dependency updates, security scans    |
+| Manual       | User-initiated       | Releases, hotfixes                    |
+| Tag          | Git tag created      | Release candidate creation            |
 
 ---
 
@@ -73,11 +73,15 @@ The pipeline implements the CD Model's 12 stages:
 
 **Release Stages (8-12):**
 
+<!-- markdownlint-disable MD029 -->
+
 8. **Start Release** - Create release candidate
 9. **Release Approval** - Manual or automated gate
 10. **Production Deployment** - Deploy to live
 11. **Live** - Monitor in production
 12. **Release Toggling** - Feature flag control
+
+<!-- markdownlint-enable MD029 -->
 
 See [CD Model Stages](../cd-model/stages.md) for detailed stage descriptions.
 
@@ -87,14 +91,14 @@ See [CD Model Stages](../cd-model/stages.md) for detailed stage descriptions.
 
 The pipeline collects evidence at each stage for traceability and compliance:
 
-| Stage | Evidence Collected |
-|-------|-------------------|
-| Pre-commit | Lint results, unit test results |
-| Commit | Build logs, artifact checksums, SBOM |
-| Acceptance Testing | Test reports, coverage metrics |
-| Extended Testing | Performance benchmarks, security scan results |
-| Production Deployment | Deployment logs, health check results |
-| Live | Monitoring dashboards, incident records |
+| Stage                 | Evidence Collected                            |
+| --------------------- | --------------------------------------------- |
+| Pre-commit            | Lint results, unit test results               |
+| Commit                | Build logs, artifact checksums, SBOM          |
+| Acceptance Testing    | Test reports, coverage metrics                |
+| Extended Testing      | Performance benchmarks, security scan results |
+| Production Deployment | Deployment logs, health check results         |
+| Live                  | Monitoring dashboards, incident records       |
 
 Evidence enables:
 

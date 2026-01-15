@@ -6,12 +6,12 @@ How to respond to production incidents effectively.
 
 ## Severity Levels
 
-| Level         | Description             | Response Time | Examples                         |
-| ------------- | ----------------------- | ------------- | -------------------------------- |
-| P1 - Critical | Service down, data loss | < 15 min      | Complete outage, security breach |
-| P2 - High     | Major feature broken    | < 1 hour      | Payment processing failing       |
-| P3 - Medium   | Degraded performance    | < 4 hours     | Slow response times              |
-| P4 - Low      | Minor issue             | < 24 hours    | UI glitch, typo                  |
+| Level         | Description             | Ex. SLA/SLI Response Time | Examples                         |
+| ------------- | ----------------------- | ------------------------- | -------------------------------- |
+| P1 - Critical | Service down, data loss | < 15 min                  | Complete outage, security breach |
+| P2 - High     | Major feature broken    | < 1 hour                  | Payment processing failing       |
+| P3 - Medium   | Degraded performance    | < 4 hours                 | Slow response times              |
+| P4 - Low      | Minor issue             | < 24 hours                | UI glitch, typo                  |
 
 ---
 

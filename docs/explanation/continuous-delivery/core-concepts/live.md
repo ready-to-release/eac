@@ -16,13 +16,13 @@ What "Live" means depends on the module type: a production environment for servi
 
 Live takes different forms depending on the [deployable module](deployable-modules.md) type:
 
-| Module Type | Live Destination | Consumers |
-|-------------|------------------|-----------|
-| Services | Production environment | End users |
-| Libraries | Package registry (NuGet, npm, PyPI) | Developers |
-| CLI tools | Package manager or release page | Users/automation |
-| Container images | Container registry (Docker Hub, GHCR) | Orchestrators |
-| Documentation | Published site (GitHub Pages) | Readers |
+| Module Type      | Live Destination                      | Consumers        |
+| ---------------- | ------------------------------------- | ---------------- |
+| Services         | Production environment                | End users        |
+| Libraries        | Package registry (NuGet, npm, PyPI)   | Developers       |
+| CLI tools        | Package manager or release page       | Users/automation |
+| Container images | Container registry (Docker Hub, GHCR) | Orchestrators    |
+| Documentation    | Published site (GitHub Pages)         | Readers          |
 
 ---
 
@@ -113,20 +113,20 @@ When issues occur in live, rollback provides recovery:
 
 **Services:**
 
-| Strategy | How | Speed |
-|----------|-----|-------|
-| Redeploy previous | Deploy last known good version | Minutes |
-| Feature flag | Disable problematic feature | Seconds |
+| Strategy          | How                                  | Speed   |
+| ----------------- | ------------------------------------ | ------- |
+| Redeploy previous | Deploy last known good version       | Minutes |
+| Feature flag      | Disable problematic feature          | Seconds |
 | Blue-green switch | Route traffic to previous deployment | Seconds |
-| Database rollback | Restore data (if applicable) | Varies |
+| Database rollback | Restore data (if applicable)         | Varies  |
 
 **Artifacts:**
 
-| Strategy | How | Consumer Impact |
-|----------|-----|-----------------|
-| Yank/unpublish | Remove bad version from registry | Breaks builds using it |
-| Patch release | Publish fixed version | Consumers must upgrade |
-| Pin recommendation | Advise pinning to safe version | Manual consumer action |
+| Strategy           | How                              | Consumer Impact        |
+| ------------------ | -------------------------------- | ---------------------- |
+| Yank/unpublish     | Remove bad version from registry | Breaks builds using it |
+| Patch release      | Publish fixed version            | Consumers must upgrade |
+| Pin recommendation | Advise pinning to safe version   | Manual consumer action |
 
 ---
 

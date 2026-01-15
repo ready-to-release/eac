@@ -103,10 +103,10 @@ The flow when installing extensions.
 
 ## Key Features
 
-| Feature | Description |
-|---------|-------------|
-| Containerized Execution | Run commands in isolated Docker containers |
-| Multi-Config Support | Layer configs from repository, local, personal, and dev |
-| Extension Pinning | SHA-based version pinning for reproducibility |
-| TTY Support | Full terminal support including interactive sessions |
-| Cross-Platform | Works on Linux, macOS, and Windows |
+| Feature                 | Description                                             |
+| ----------------------- | ------------------------------------------------------- |
+| Containerized Execution | Run commands in isolated Docker containers              |
+| Multi-Config Support    | Layer configs from repository, local, personal, and dev |
+| Extension Pinning       | SHA-based version pinning for reproducibility           |
+| TTY Support             | Full terminal support including interactive sessions    |
+| Cross-Platform          | Works on Linux, macOS, and Windows                      |

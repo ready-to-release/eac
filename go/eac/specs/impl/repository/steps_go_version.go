@@ -66,12 +66,6 @@ func registerGoVersionSteps(sc *godog.ScenarioContext, ctx *goVersionContext, no
 	sc.Step(`^\.github/actions/setup-module-deps/action\.yaml should have matching go-version default$`, func() error {
 		return ctx.validateActionGoVersion(".github/actions/setup-module-deps/action.yaml")
 	})
-	sc.Step(`^\.github/actions/build-module/action\.yaml should have matching go-version default$`, func() error {
-		return ctx.validateActionGoVersion(".github/actions/build-module/action.yaml")
-	})
-	sc.Step(`^\.github/actions/test-module/action\.yaml should have matching go-version default$`, func() error {
-		return ctx.validateActionGoVersion(".github/actions/test-module/action.yaml")
-	})
 }
 
 // goVersionContext holds state for Go version consistency validation

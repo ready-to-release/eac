@@ -53,10 +53,10 @@ Test utilities and shared test infrastructure.
 
 ## Key Responsibilities
 
-| Component | Purpose |
-|-----------|---------|
-| Config | Multi-layer configuration loading (repository.yml, books.yml, etc.) |
-| Contracts | Module contract definitions and validation |
-| Paths | Standardized path calculations for repository layout |
-| Repository | Git repository discovery and state |
-| Logging | Consistent structured logging across all commands |
+| Component  | Purpose                                                             |
+| ---------- | ------------------------------------------------------------------- |
+| Config     | Multi-layer configuration loading (repository.yml, books.yml, etc.) |
+| Contracts  | Module contract definitions and validation                          |
+| Paths      | Standardized path calculations for repository layout                |
+| Repository | Git repository discovery and state                                  |
+| Logging    | Consistent structured logging across all commands                   |

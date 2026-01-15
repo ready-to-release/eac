@@ -1,5 +1,5 @@
 # Size Guidelines
->
+
 > **Rule and scenario count limits**
 
 Guidelines for maintaining readable and maintainable feature files.
@@ -8,12 +8,12 @@ Guidelines for maintaining readable and maintainable feature files.
 
 ## Rule Count Per Feature
 
-| Rule Count | Assessment | Action |
-|-----------|-----------|--------|
-| **2-4** | ✅ Ideal | Good feature scope |
-| **5-6** | ✅ Acceptable | Monitor complexity |
-| **7-10** | ⚠️ Large | Consider splitting |
-| **>10** | ❌ Too large | Must split feature |
+| Rule Count | Assessment    | Action             |
+| ---------- | ------------- | ------------------ |
+| **2-4**    | ✅ Ideal      | Good feature scope |
+| **5-6**    | ✅ Acceptable | Monitor complexity |
+| **7-10**   | ⚠️ Large      | Consider splitting |
+| **>10**    | ❌ Too large  | Must split feature |
 
 ### Why Limit Rules?
 
@@ -29,12 +29,12 @@ Guidelines for maintaining readable and maintainable feature files.
 
 ## Scenario Count Per Feature
 
-| Scenario Count | Assessment | Action |
-|---------------|-----------|--------|
-| **10-15** | ✅ Ideal | Optimal readability |
-| **15-20** | ✅ Acceptable | Still manageable |
-| **20-30** | ⚠️ Large | Should split |
-| **>30** | ❌ Too large | Must split |
+| Scenario Count | Assessment    | Action              |
+| -------------- | ------------- | ------------------- |
+| **10-15**      | ✅ Ideal      | Optimal readability |
+| **15-20**      | ✅ Acceptable | Still manageable    |
+| **20-30**      | ⚠️ Large      | Should split        |
+| **>30**        | ❌ Too large  | Must split          |
 
 ### Why Limit Scenarios?
 

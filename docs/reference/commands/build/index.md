@@ -4,8 +4,8 @@ Build modules and their dependencies.
 
 ## Commands in this Category
 
-| Command | Purpose |
-|---------|---------|
+| Command             | Purpose                              |
+| ------------------- | ------------------------------------ |
 | [build](./build.md) | Build one or more modules by moniker |
 
 ## Quick Examples

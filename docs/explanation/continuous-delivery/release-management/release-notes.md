@@ -144,7 +144,6 @@ Before publishing:
 
 - [ ] All sections complete
 - [ ] No typos or grammatical errors
-- [ ] Issue numbers linked
 - [ ] Breaking changes clearly marked
 - [ ] Migration instructions tested
 - [ ] Security issues properly disclosed
