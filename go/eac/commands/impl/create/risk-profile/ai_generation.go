@@ -2,6 +2,7 @@ package riskprofile
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -9,11 +10,11 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/oscal"
-	aimock "github.com/ready-to-release/eac/go/eac/core/ai"
+	coreai "github.com/ready-to-release/eac/go/eac/core/ai"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
-// defaultProfilePrompt is the fallback prompt when .r2r/eac/aimock.TypeRiskProfile/profile.md is not found.
+// defaultProfilePrompt is the fallback prompt when .r2r/eac/templates/ai/risk-profile/risk-profile.md is not found.
 const defaultProfilePrompt = `# Risk Assessment to NIST 800-53 Controls Mapper
 
 You are a security controls analyst. Analyze the risk assessment document and identify NIST 800-53 controls.
@@ -26,7 +27,7 @@ func generateProfile(config *Config, assessmentContent string, catalog *oscalTyp
 	if mockAIResponse != "" {
 		return parseProfileFromAI(mockAIResponse, config, catalog)
 	}
-	if mock, ok := aimock.GetMockResponse("risk-profile"); ok {
+	if mock, ok := coreai.GetMockResponse("risk-profile"); ok {
 		return parseProfileFromAI(mock, config, catalog)
 	}
 
@@ -71,10 +72,9 @@ func generateProfile(config *Config, assessmentContent string, catalog *oscalTyp
 func buildProfilePrompt(workspaceRoot, assessmentContent, catalogURL string, availableControls []string) string {
 	// Load prompt template with three-tier priority:
 	// 1. Command flag (not applicable - internal function)
-	// 2. Team override (.r2r/eac/templates/aimock.TypeRiskProfile/risk-profile.md)
-	// 3. System default (templates/aimock.TypeRiskProfile/risk-profile.md)
-	// Convention: Empty string uses type name (risk-profile.md)
-	loader := aimock.NewContractLoader(workspaceRoot, aimock.TypeRiskProfile, "")
+	// 2. Team override (.r2r/eac/templates/ai/risk-profile/risk-profile.md)
+	// 3. System default (templates/ai/risk-profile/risk-profile.md)
+	loader := coreai.NewContractLoader(workspaceRoot, coreai.TypeRiskProfile, "")
 	promptTemplate, _, err := loader.LoadPrompt("", defaultProfilePrompt)
 	if err != nil {
 		promptTemplate = defaultProfilePrompt
@@ -88,7 +88,7 @@ func buildProfilePrompt(workspaceRoot, assessmentContent, catalogURL string, ava
 	}
 
 	// Build prompt with template replacements
-	renderedPrompt, err := aimock.BuildPromptWithTemplate(
+	renderedPrompt, err := coreai.BuildPromptWithTemplate(
 		promptTemplate,
 		nil, // No contract needed
 		customData,
@@ -120,56 +120,30 @@ func callAIWithRetry(ctx context.Context, prompt string, config *Config) (string
 	// Wrap executor to match contracts.AIExecutor interface
 	executorAdapter := ai.NewExecutorAdapter(executor)
 
-	// Load AI config for anti-corruption rules and retry strategy
-	aiConfig, err := aimock.LoadAIConfig(config.WorkspaceRoot)
+	// Load AI config for retry strategy
+	aiConfig, err := coreai.LoadAIConfig(config.WorkspaceRoot)
 	if err != nil {
-		log.Warnf("Could not load AI config, using defaults: %v", err)
+		log.Warnf("Could not load AI config, using default retry strategy: %v", err)
 		aiConfig = nil
 	}
 
-	// Create validator
-	validator := NewRiskProfileValidator()
-
-	// Load retry strategy
-	maxAttempts := 3
-	var strategy aimock.RetryStrategy
-	if aiConfig != nil {
-		if typeConfig, ok := aiConfig.Types[aimock.TypeRiskProfile]; ok {
-			if typeConfig.RetryStrategy != nil && typeConfig.RetryStrategy.MaxAttempts > 0 {
-				maxAttempts = typeConfig.RetryStrategy.MaxAttempts
-			}
-			if typeConfig.RetryStrategy != nil {
-				var focusCategories []string
-				if typeConfig.RetryStrategy.FocusCategories != nil {
-					focusCategories = typeConfig.RetryStrategy.FocusCategories
-				}
-				strategy, err = aimock.GetRetryStrategy(typeConfig.RetryStrategy.Type, focusCategories)
-				if err != nil {
-					log.Warnf("Failed to create retry strategy: %v, using default", err)
-					strategy = &aimock.StandardStrategy{}
-				}
-			}
-		}
-	}
-	if strategy == nil {
-		strategy = &aimock.StandardStrategy{}
-	}
-
-	// Configure retry for JSON generation
-	retryConfig := &aimock.RetryConfig{
-		TypeName:     aimock.TypeRiskProfile,
-		OutputFormat: aimock.FormatJSON, // Generate control mapping JSON (commands format to OSCAL)
-		Executor:     executorAdapter,
-		Validator:    validator, // Validate JSON output
-		TemplateRoot: config.WorkspaceRoot,
-		MaxAttempts:  maxAttempts,
-		Debug:        config.Debug,
-		Strategy:     strategy,
-		Logger:       logging.C().Zap(), // ✅ Pass logger for retry observability
+	// Build retry configuration using factory (validator auto-loaded for FormatOSCALProfile)
+	retryConfig, err := coreai.BuildRetryConfig(
+		coreai.TypeRiskProfile,
+		coreai.FormatOSCALProfile, // Generate and validate OSCAL profile structure
+		executorAdapter,
+		nil, // Let BuildRetryConfig auto-load OSCAL profile validator
+		config.WorkspaceRoot,
+		aiConfig,
+		coreai.WithDebug(config.Debug),
+		coreai.WithLogger(logging.C().Zap()),
+	)
+	if err != nil {
+		return "", fmt.Errorf("failed to build retry config: %w", err)
 	}
 
 	// Generate with retry
-	result, err := aimock.GenerateWithRetry(ctx, retryConfig, prompt)
+	result, err := coreai.GenerateWithRetry(ctx, retryConfig, prompt)
 	if err != nil {
 		return "", fmt.Errorf("AI generation failed: %w", err)
 	}
@@ -193,41 +167,16 @@ func callAIWithRetry(ctx context.Context, prompt string, config *Config) (string
 	return result.Output, nil
 }
 
-// parseProfileFromAI parses AI response into an OSCAL profile.
+// parseProfileFromAI parses AI response (full OSCAL profile JSON) into an OSCAL profile.
 func parseProfileFromAI(response string, config *Config, catalog *oscalTypes.Catalog) (*oscalTypes.Profile, error) {
-	// Extract control IDs from AI response
-	controlIDs, err := extractControlIDs(response)
-	if err != nil {
-		return nil, fmt.Errorf("failed to extract control IDs: %w", err)
+	// Parse the OSCAL profile JSON directly (AI generates full OSCAL structure)
+	var oscalDoc oscalTypes.OscalModels
+	if err := json.Unmarshal([]byte(response), &oscalDoc); err != nil {
+		return nil, fmt.Errorf("failed to parse OSCAL profile JSON: %w", err)
 	}
 
-	if len(controlIDs) == 0 {
-		// Provide more helpful error with response preview
-		responsePreview := response
-		if len(responsePreview) > 200 {
-			responsePreview = responsePreview[:200] + "..."
-		}
-		return nil, fmt.Errorf("AI did not identify any controls (response: %s)", responsePreview)
-	}
-
-	// Fetch control information from catalog for back-matter
-	controlInfo, err := oscal.GetControlInfo(catalog, controlIDs)
-	if err != nil {
-		log.Warnf("Could not fetch control info: %v, creating profile without back-matter", err)
-		// Fallback to basic profile without control info
-		title := "Solution Risk Profile"
-		oscalDoc, err := oscal.NewProfileDocument(title, config.CatalogURL, controlIDs)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create profile: %w", err)
-		}
-		return oscalDoc.Profile, nil
-	}
-
-	// Create profile with control information in back-matter
-	title := "Solution Risk Profile"
-	oscalDoc, err := oscal.NewProfileDocumentWithInfo(title, config.CatalogURL, controlInfo)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create profile: %w", err)
+	if oscalDoc.Profile == nil {
+		return nil, fmt.Errorf("AI response does not contain a valid OSCAL profile")
 	}
 
 	return oscalDoc.Profile, nil

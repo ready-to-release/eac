@@ -34,7 +34,6 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	coreai "github.com/ready-to-release/eac/go/eac/core/ai"
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
@@ -426,8 +425,17 @@ func generateUpdatedWorkspace(config *UpdateConfig, out *designHelper.Output, pr
 		aiConfig = nil
 	}
 
-	// Build retry configuration with strategy
-	retryConfig, err := buildRetryConfig(executorAdapter, validator, config, aiConfig)
+	// Build retry configuration using factory
+	retryConfig, err := coreai.BuildRetryConfig(
+		coreai.TypeDesign,
+		coreai.FormatStructurizr,
+		executorAdapter,
+		validator,
+		config.TemplateRoot,
+		aiConfig,
+		coreai.WithDebug(config.Debug),
+		coreai.WithDefaultMaxAttempts(3),
+	)
 	if err != nil {
 		return "", fmt.Errorf("failed to build retry config: %w", err)
 	}
@@ -472,55 +480,4 @@ func writeUpdatedWorkspace(config *UpdateConfig, out *designHelper.Output, works
 	out.Progressf("   4. Validate anytime: design validate %s", config.Module)
 
 	return nil
-}
-
-// buildRetryConfig creates RetryConfig with strategy from AI config
-func buildRetryConfig(
-	executor contracts.AIExecutor,
-	validator contracts.Validator,
-	config *UpdateConfig,
-	aiConfig *coreai.AIConfig,
-) (*coreai.RetryConfig, error) {
-	maxAttempts := 3
-	var strategy coreai.RetryStrategy
-
-	// Load retry strategy from config if available
-	if aiConfig != nil {
-		if typeConfig, ok := aiConfig.Types[coreai.TypeUpdateDesign]; ok {
-			if typeConfig.RetryStrategy != nil && typeConfig.RetryStrategy.MaxAttempts > 0 {
-				maxAttempts = typeConfig.RetryStrategy.MaxAttempts
-			}
-
-			if typeConfig.RetryStrategy != nil {
-				var focusCategories []string
-				if typeConfig.RetryStrategy.FocusCategories != nil {
-					focusCategories = typeConfig.RetryStrategy.FocusCategories
-				}
-
-				var err error
-				strategy, err = coreai.GetRetryStrategy(typeConfig.RetryStrategy.Type, focusCategories)
-				if err != nil {
-					return nil, fmt.Errorf("failed to create retry strategy: %w", err)
-				}
-				log.Infof("Using retry strategy: %s (max attempts: %d)", strategy.Name(), maxAttempts)
-			}
-		}
-	}
-
-	// Default to StandardStrategy if not configured
-	if strategy == nil {
-		strategy = &coreai.StandardStrategy{}
-	}
-
-	// Use "design" type since update-design generates the same output format as create-design
-	return &coreai.RetryConfig{
-		TypeName:     coreai.TypeDesign,
-		OutputFormat: coreai.FormatStructurizr, // Generate Structurizr DSL directly
-		Validator:    validator,                // Validate DSL output
-		Executor:     executor,
-		TemplateRoot: config.TemplateRoot,
-		MaxAttempts:  maxAttempts,
-		Debug:        config.Debug,
-		Strategy:     strategy,
-	}, nil
 }

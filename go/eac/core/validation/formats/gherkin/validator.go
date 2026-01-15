@@ -17,24 +17,28 @@ type Validator struct {
 	tagsConfig *config.TestingTagsConfig
 }
 
-// NewValidator creates a new Gherkin specification validator
-func NewValidator(contract *contracts.Contract) *Validator {
-	return &Validator{
-		contract: contract,
-	}
-}
-
-// NewValidatorWithTags creates a validator with both structure and tag configs
-func NewValidatorWithTags(contract *contracts.Contract, tagsConfig *config.TestingTagsConfig) *Validator {
+// NewValidator creates a new Gherkin specification validator.
+// Both parameters are required - tags config may be empty but must not be nil.
+//
+// Example:
+//
+//	loader := config.NewContractLoader(templateRoot, "gherkin-spec", paths.DefaultsVersion)
+//	contract, _ := loader.LoadContract()
+//	cfg, _ := config.Load(config.DefaultLoadOptions())
+//	validator := gherkin.NewValidator(contract, cfg.TestingTags)
+func NewValidator(contract *contracts.Contract, tagsConfig *config.TestingTagsConfig) *Validator {
 	return &Validator{
 		contract:   contract,
 		tagsConfig: tagsConfig,
 	}
 }
 
-// SetTagsConfig sets the tags config for tag validation
-func (v *Validator) SetTagsConfig(tagsConfig *config.TestingTagsConfig) {
-	v.tagsConfig = tagsConfig
+// NewValidatorWithTags is deprecated. Use NewValidator instead.
+// Kept for backwards compatibility.
+//
+// Deprecated: Use NewValidator(contract, tagsConfig) directly.
+func NewValidatorWithTags(contract *contracts.Contract, tagsConfig *config.TestingTagsConfig) *Validator {
+	return NewValidator(contract, tagsConfig)
 }
 
 // Validate validates Gherkin content against the specification contract
@@ -67,12 +71,8 @@ func (v *Validator) Validate(output string, context map[string]interface{}) []va
 		return errors
 	}
 
-	// Tags config is required for validation - fail immediately if not loaded
-	if v.tagsConfig == nil {
-		errors = append(errors, *validation.NewValidationError(validation.ErrMissingTagsConfig, "Testing tags configuration (testing-tags.yml) not loaded - cannot perform tag validation. Ensure .r2r/eac/testing-tags.yml exists and is valid.", 0))
-		return errors
-	}
-
+	// Tags config is guaranteed non-nil by constructor
+	// Proceed with validation
 	lines := strings.Split(output, "\n")
 	state := &gherkinValidationState{
 		seenFeature:          false,

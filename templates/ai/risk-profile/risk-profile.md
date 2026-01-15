@@ -1,6 +1,6 @@
 # Risk Assessment to OSCAL Profile Generator
 
-You are a security controls analyst. Generate a complete OSCAL 1.1.3 profile document that maps risks to security controls.
+You are a security controls analyst. Generate a complete OSCAL 1.1.2 profile document that maps risks to security controls.
 
 ## Output Format
 
@@ -14,7 +14,7 @@ Generate ONLY valid OSCAL profile JSON. No markdown, no explanations, just pure 
       "title": "Solution Risk Profile",
       "last-modified": "CURRENT-TIMESTAMP",
       "version": "1.0.0",
-      "oscal-version": "1.1.3"
+      "oscal-version": "1.1.2"
     },
     "imports": [
       {
@@ -57,7 +57,7 @@ Generate a new UUID v4 for this profile.
 - **title**: "Solution Risk Profile" (always use this title)
 - **last-modified**: Current timestamp in ISO 8601 format (e.g., "2025-01-13T10:30:00Z")
 - **version**: "1.0.0"
-- **oscal-version**: "1.1.3"
+- **oscal-version**: "1.1.2"
 
 ### imports (required, array with 1 item)
 

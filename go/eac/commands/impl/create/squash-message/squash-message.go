@@ -360,9 +360,8 @@ func generateTopLevelMessage(workspaceRoot string, promptContext string) (string
 
 	// Load squash prompt template with three-tier priority:
 	// 1. Command flag (not applicable - internal function)
-	// 2. Team override (.r2r/eac/templates/coreai.TypeCommitMessage/squash.md)
-	// 3. System default (templates/coreai.TypeCommitMessage/squash.md)
-	// Note: "squash" is a variant prompt (convention adds .md automatically)
+	// 2. Team override (.r2r/eac/templates/ai/commit-message/squash.md)
+	// 3. System default (templates/ai/commit-message/squash.md)
 	loader := coreai.NewContractLoader(workspaceRoot, coreai.TypeCommitMessage, "")
 	promptTemplate, _, err := loader.LoadPrompt("squash", "")
 	if err != nil {
@@ -379,28 +378,11 @@ func generateTopLevelMessage(workspaceRoot string, promptContext string) (string
 	providers.RegisterBuiltIn(executor)
 	executorAdapter := ai.NewExecutorAdapter(executor)
 
-	// Load AI config
-	aiConfig, _ := coreai.LoadAIConfig(workspaceRoot)
-
-	// Get retry strategy
-	maxAttempts := 3
-	var strategy coreai.RetryStrategy
-	if aiConfig != nil {
-		if typeConfig, ok := aiConfig.Types[coreai.TypeSquashMessage]; ok {
-			if typeConfig.RetryStrategy != nil && typeConfig.RetryStrategy.MaxAttempts > 0 {
-				maxAttempts = typeConfig.RetryStrategy.MaxAttempts
-			}
-			if typeConfig.RetryStrategy != nil {
-				var focusCategories []string
-				if typeConfig.RetryStrategy.FocusCategories != nil {
-					focusCategories = typeConfig.RetryStrategy.FocusCategories
-				}
-				strategy, _ = coreai.GetRetryStrategy(typeConfig.RetryStrategy.Type, focusCategories)
-			}
-		}
-	}
-	if strategy == nil {
-		strategy = &coreai.StandardStrategy{}
+	// Load AI config for retry strategy
+	aiConfig, err := coreai.LoadAIConfig(workspaceRoot)
+	if err != nil {
+		logging.C().Warnf("Could not load AI config, using default retry strategy: %v", err)
+		aiConfig = nil
 	}
 
 	// Create JSON schema validator for Phase 1 JSON validation
@@ -412,16 +394,18 @@ func generateTopLevelMessage(workspaceRoot string, promptContext string) (string
 		return "", fmt.Errorf("failed to create JSON schema validator: %w", err)
 	}
 
-	// Configure retry for JSON generation
-	retryConfig := &coreai.RetryConfig{
-		TypeName:     coreai.TypeSquashMessage,
-		OutputFormat: coreai.FormatJSON, // Generate structured JSON (commands format to text)
-		Executor:     executorAdapter,
-		Validator:    validator, // Validate JSON schema output
-		TemplateRoot: workspaceRoot,
-		MaxAttempts:  maxAttempts,
-		Strategy:     strategy,
-		Logger:       logging.C().Zap(), // ✅ Pass logger for retry observability
+	// Build retry configuration using factory
+	retryConfig, err := coreai.BuildRetryConfig(
+		coreai.TypeSquashMessage,
+		coreai.FormatJSON, // Generate structured JSON (commands format to text)
+		executorAdapter,
+		validator, // Use custom JSON schema validator
+		workspaceRoot,
+		aiConfig,
+		coreai.WithLogger(logging.C().Zap()),
+	)
+	if err != nil {
+		return "", fmt.Errorf("failed to build retry config: %w", err)
 	}
 
 	ctx := context.Background()

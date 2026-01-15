@@ -10,8 +10,8 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
 	aimock "github.com/ready-to-release/eac/go/eac/core/ai"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
-	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 // mockAIResponse holds the mock response for testing. When set, AI calls return this.
@@ -100,8 +100,17 @@ func generateWithPromptResult(promptName string, userPrompt string, workspaceRoo
 	// Wrap executor to match contract.AIExecutor interface
 	executorAdapter := ai.NewExecutorAdapterWithModel(executor, model)
 
-	// Configure retry behavior
-	retryConfig, err := buildRetryConfig(executorAdapter, validator, workspaceRoot, aiConfig, debugEnabled)
+	// Configure retry behavior using factory
+	retryConfig, err := aimock.BuildRetryConfig(
+		aimock.TypeCommitMessage,
+		aimock.FormatJSON,
+		executorAdapter,
+		validator,
+		workspaceRoot,
+		aiConfig,
+		aimock.WithDebug(debugEnabled),
+		aimock.WithLogger(logging.C().Zap()),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build retry config: %w", err)
 	}
@@ -140,62 +149,6 @@ func generateWithPromptResult(promptName string, userPrompt string, workspaceRoo
 	return &GenerationResult{
 		Output:       formattedOutput,
 		ProviderName: result.ProviderName,
-	}, nil
-}
-
-// buildRetryConfig creates a RetryConfig with standard settings for commit message generation
-func buildRetryConfig(
-	executor contracts.AIExecutor,
-	validator contracts.Validator,
-	workspaceRoot string,
-	aiConfig *aimock.AIConfig,
-	debug bool,
-) (*aimock.RetryConfig, error) {
-	// Default retry strategy and max attempts
-	maxAttempts := 2
-	var strategy aimock.RetryStrategy
-
-	// Load retry strategy from AI config if available
-	if aiConfig != nil {
-		if typeConfig, ok := aiConfig.Types[aimock.TypeCommitMessage]; ok {
-			// Get max attempts from config
-			if typeConfig.RetryStrategy != nil && typeConfig.RetryStrategy.MaxAttempts > 0 {
-				maxAttempts = typeConfig.RetryStrategy.MaxAttempts
-			}
-
-			// Create retry strategy from config
-			if typeConfig.RetryStrategy != nil {
-				var focusCategories []string
-				if typeConfig.RetryStrategy.FocusCategories != nil {
-					focusCategories = typeConfig.RetryStrategy.FocusCategories
-				}
-
-				var err error
-				strategy, err = aimock.GetRetryStrategy(typeConfig.RetryStrategy.Type, focusCategories)
-				if err != nil {
-					return nil, fmt.Errorf("failed to create retry strategy: %w", err)
-				}
-				log.Infof("Using retry strategy: %s (max attempts: %d)", strategy.Name(), maxAttempts)
-			}
-		}
-	}
-
-	// Default to StandardStrategy if not configured
-	if strategy == nil {
-		strategy = &aimock.StandardStrategy{}
-		log.Debugf("Using default retry strategy: standard (max attempts: %d)", maxAttempts)
-	}
-
-	return &aimock.RetryConfig{
-		TypeName:     aimock.TypeCommitMessage,
-		OutputFormat: aimock.FormatJSON, // Generate structured JSON (commands format to text)
-		Executor:     executor,
-		Validator:    validator, // Validate JSON output
-		TemplateRoot: workspaceRoot,
-		MaxAttempts:  maxAttempts,
-		Strategy:     strategy,
-		Debug:        debug, // Enable debug logging if requested
-		Logger:       logging.C().Zap(), // ✅ Pass logger for retry observability
 	}, nil
 }
 

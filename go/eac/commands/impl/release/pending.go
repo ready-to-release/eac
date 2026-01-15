@@ -220,7 +220,7 @@ func checkModulePending(module string, moduleRegistry *modules.Registry, repo gi
 	if _, err := os.Stat(fullChangelogPath); err == nil {
 		existingChangelog, err = changelog.Parse(fullChangelogPath)
 		if err != nil {
-			return pending, fmt.Errorf("failed to parse changelog: %v", err)
+			return pending, fmt.Errorf("failed to parse changelog: %w", err)
 		}
 	} else {
 		existingChangelog = &changelog.Changelog{
@@ -260,7 +260,7 @@ func checkModulePending(module string, moduleRegistry *modules.Registry, repo gi
 	// Get commits since last release
 	commits, err := repo.CommitsBetween(fromRef, "HEAD")
 	if err != nil {
-		return pending, fmt.Errorf("failed to get commits: %v", err)
+		return pending, fmt.Errorf("failed to get commits: %w", err)
 	}
 
 	pending.CommitsTotal = len(commits)
@@ -350,7 +350,7 @@ func checkModulePending(module string, moduleRegistry *modules.Registry, repo gi
 		hasFileChanges,
 	)
 	if err != nil {
-		return pending, fmt.Errorf("failed to calculate version: %v", err)
+		return pending, fmt.Errorf("failed to calculate version: %w", err)
 	}
 
 	pending.NextVersion = nextVersion

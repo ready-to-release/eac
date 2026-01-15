@@ -14,7 +14,6 @@
 // Flag.output: type=string, shorthand=o, usage=Custom output path for the profile file
 // Flag.force: type=bool, shorthand=f, default=false, usage=Overwrite existing profile file
 // Flag.debug: type=bool, shorthand=d, default=false, usage=Save intermediate outputs to out/commands.log
-// Flag.max-retries: type=int, default=3, usage=Maximum AI generation retries on validation failure
 // Args: file
 package riskprofile
 
@@ -24,7 +23,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/oscal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
@@ -58,7 +56,6 @@ type Config struct {
 	OutputPath     string
 	Force          bool
 	Debug          bool
-	MaxRetries     int
 	WorkspaceRoot  string
 }
 
@@ -122,52 +119,24 @@ func CreateRiskProfile() int {
 	log.Infof("  ✓ Catalog loaded successfully")
 	log.Info("")
 
-	var profile *oscalTypes.Profile
-	var lastErr error
-
-	for attempt := 1; attempt <= config.MaxRetries; attempt++ {
-		if attempt > 1 {
-			log.Infof("Retry %d/%d...", attempt, config.MaxRetries)
-		}
-
-		log.Infof("Step 1/%d: Calling AI to analyze risks and map controls...", 3)
-		profile, err = generateProfile(config, string(assessmentContent), catalog)
-		if err != nil {
-			lastErr = err
-			log.Warnf("  ✗ AI generation failed: %v", err)
-			log.Warnf("Profile generation failed: attempt=%d, error=%v", attempt, err)
-			continue
-		}
-		log.Infof("  ✓ AI returned %d controls", len(oscal.GetProfileControlIDs(profile)))
-
-		log.Infof("Step 2/%d: Validating profile structure...", 3)
-		if err := validateProfile(profile); err != nil {
-			lastErr = err
-			log.Warnf("  ✗ Validation failed: %v", err)
-			log.Warnf("Profile validation failed: attempt=%d, error=%v", attempt, err)
-			continue
-		}
-		log.Info("  ✓ Profile structure valid")
-
-		log.Infof("Step 3/%d: Validating controls against catalog...", 3)
-		if err := oscal.ValidateControlIDsAgainstCatalog(oscal.GetProfileControlIDs(profile), catalog); err != nil {
-			lastErr = err
-			log.Warnf("  ✗ Catalog validation failed: %v", err)
-			log.Warnf("Catalog validation failed: attempt=%d, error=%v", attempt, err)
-			continue
-		}
-		log.Info("  ✓ All controls validated against catalog")
-		log.Info("")
-
-		// Success - clear lastErr to indicate success
-		lastErr = nil
-		break
-	}
-
-	if profile == nil || lastErr != nil {
-		log.Errorf("Failed to generate valid profile after %d attempts: %v", config.MaxRetries, lastErr)
+	// Generate profile using core AI logic (handles retry and validation)
+	log.Info("Calling AI to analyze risks and map controls...")
+	profile, err := generateProfile(config, string(assessmentContent), catalog)
+	if err != nil {
+		log.Errorf("Failed to generate profile: %v", err)
 		return 1
 	}
+	log.Infof("  ✓ AI returned %d controls", len(oscal.GetProfileControlIDs(profile)))
+	log.Info("")
+
+	// Validate controls against catalog (domain-specific validation)
+	log.Info("Validating controls against catalog...")
+	if err := oscal.ValidateControlIDsAgainstCatalog(oscal.GetProfileControlIDs(profile), catalog); err != nil {
+		log.Errorf("Catalog validation failed: %v", err)
+		return 1
+	}
+	log.Info("  ✓ All controls validated against catalog")
+	log.Info("")
 
 	// Write profile
 	log.Infof("Writing profile to: %s", outputPath)
@@ -203,7 +172,6 @@ func parseConfig() (*Config, error) {
 
 	config := &Config{
 		CatalogURL: oscal.NIST80053Rev5CatalogURL,
-		MaxRetries: 3,
 	}
 
 	// Get workspace root
@@ -243,13 +211,6 @@ func parseConfig() (*Config, error) {
 		case arg == "--debug" || arg == "-d":
 			// Already handled by shared flags package
 			i++
-
-		case arg == "--max-retries":
-			if i+1 >= len(args) {
-				return nil, fmt.Errorf("--max-retries requires a value")
-			}
-			fmt.Sscanf(args[i+1], "%d", &config.MaxRetries)
-			i += 2
 
 		case strings.HasPrefix(arg, "-"):
 			return nil, fmt.Errorf("unknown flag: %s", arg)
@@ -315,59 +276,4 @@ Try:
 	}
 
 	return config, nil
-}
-
-// validateProfile validates the generated profile structure.
-func validateProfile(profile *oscalTypes.Profile) error {
-	if profile == nil {
-		return fmt.Errorf("profile is nil")
-	}
-
-	if profile.UUID == "" {
-		return fmt.Errorf("profile missing UUID")
-	}
-
-	if profile.Metadata.Title == "" {
-		return fmt.Errorf("profile missing title")
-	}
-
-	if len(profile.Imports) == 0 {
-		return fmt.Errorf("profile missing imports")
-	}
-
-	controlIDs := oscal.GetProfileControlIDs(profile)
-	if len(controlIDs) == 0 {
-		return fmt.Errorf("profile has no controls")
-	}
-
-	// Note: Control ID format validation is handled by go-oscal library
-	// and catalog validation. No need for custom format checks here.
-
-	return nil
-}
-
-// validateProfileWithCatalog validates that all control IDs in the profile
-// exist in the specified catalog.
-func validateProfileWithCatalog(profile *oscalTypes.Profile, catalogURL string) error {
-	log.Debugf("Loading catalog for validation: catalog=%s", catalogURL)
-
-	// Load catalog
-	catalog, err := oscal.LoadCatalog(catalogURL)
-	if err != nil {
-		return fmt.Errorf("failed to load catalog: %w", err)
-	}
-
-	log.Debugf("Catalog loaded successfully: uuid=%s", catalog.UUID)
-
-	// Extract control IDs from profile
-	profileControlIDs := oscal.GetProfileControlIDs(profile)
-
-	// Validate control IDs against catalog
-	if err := oscal.ValidateControlIDsAgainstCatalog(profileControlIDs, catalog); err != nil {
-		return fmt.Errorf("control validation failed: %w", err)
-	}
-
-	log.Debugf("All control IDs validated against catalog: count=%d", len(profileControlIDs))
-
-	return nil
 }

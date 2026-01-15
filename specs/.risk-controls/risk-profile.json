@@ -3,129 +3,89 @@
     "back-matter": {
       "resources": [
         {
-          "description": "ac-2: Account Management - The organization shall manage system accounts including creation, modification, enabling, disabling, and removal of accounts with appropriate authorization.",
-          "uuid": "33021ebc-af10-4e2c-b546-201ac65d0e4e"
+          "description": "ia-2: Identification and Authentication (Organizational Users) - Uniquely identify and authenticate organizational users and associate that unique identification with processes acting on behalf of those users.",
+          "uuid": "1127c1e9-3610-42c2-aff9-85c7c37d8655"
         },
         {
-          "description": "ac-3: Access Enforcement - The information system shall enforce approved authorizations for logical access to information and system resources based on applicable access control policies.",
-          "uuid": "693b8e54-ad90-4686-8c0f-25e161564a2e"
+          "description": "ia-5: Authenticator Management - Manage system authenticators by:",
+          "uuid": "d13b4451-b763-4417-91fd-d78b6910b8fe"
         },
         {
-          "description": "ac-6: Least Privilege - The organization shall employ the principle of least privilege, allowing only authorized access for users (or processes acting on behalf of users) which are necessary to accomplish assigned tasks.",
-          "uuid": "f6865c76-a1e3-49b9-b1e8-d238261fd1d0"
+          "description": "si-10: Information Input Validation - Check the validity of the following information inputs: {{ insert: param, si-10_odp }}.",
+          "uuid": "ccefad49-aac6-4917-9972-e47ff94ab825"
         },
         {
-          "description": "au-2: Audit Events - The information system shall generate audit records for system events, configuration changes, security-relevant events including authentication attempts, and access control decisions.",
-          "uuid": "0e5facbf-7e45-4c78-bbc1-e69ad46ed359"
+          "description": "au-2: Event Logging",
+          "uuid": "7080db33-f9a4-495d-9ae5-8f2e93f2b635"
         },
         {
-          "description": "au-3: Content of Audit Records - Audit records shall contain information that establishes: what type of event occurred, when the event occurred, where the event occurred, the source of the event, the outcome of the event, and the ...",
-          "uuid": "b7db69cb-0107-43b4-8a2c-1393aa3db2be"
+          "description": "au-3: Content of Audit Records - Ensure that audit records contain information that establishes the following:",
+          "uuid": "5d9a6840-d130-4464-861f-9385026d4788"
         },
         {
-          "description": "au-6: Audit Review, Analysis, and Reporting - The organization shall review and analyze information system audit records for indications of inappropriate or unusual activity, investigate suspicious activity or suspected violations, and report ...",
-          "uuid": "6db87a83-ab74-42fb-92fd-805985da170c"
+          "description": "au-12: Audit Record Generation",
+          "uuid": "b0f8e171-85b5-4d3d-8272-65b3f37df17a"
         },
         {
-          "description": "au-12: Audit Generation - The information system shall provide audit record generation capability for auditable events and allow authorized personnel to select which auditable events are to be audited by specific components.",
-          "uuid": "6fbf4aef-fdb3-4dfd-b4ee-2c0226ef0112"
+          "description": "sc-8: Transmission Confidentiality and Integrity - Protect the {{ insert: param, sc-08_odp }} of transmitted information.",
+          "uuid": "addca99c-f3a1-42f1-9b42-83e640810881"
         },
         {
-          "description": "cm-2: Baseline Configuration - The organization shall develop, document, and maintain baseline configurations for information systems including software components, dependencies, and security configurations.",
-          "uuid": "a4c2624a-6909-4fde-9941-e763548a8f2c"
+          "description": "sc-13: Cryptographic Protection",
+          "uuid": "b1ad7654-af4c-47f0-b40c-f6588a9da77f"
         },
         {
-          "description": "ia-5: Authenticator Management - The organization shall manage information system authenticators including initial authenticator distribution, establishing minimum authenticator strength requirements, and protecting authenticator ...",
-          "uuid": "c2ff51d6-7c1d-40a9-a3a7-1bd8d2a1ba2e"
+          "description": "sc-28: Protection of Information at Rest - Protect the {{ insert: param, sc-28_odp.01 }} of the following information at rest: {{ insert: param, sc-28_odp.02 }}.",
+          "uuid": "de06b293-6301-461b-8186-27d633b8a1d2"
         },
         {
-          "description": "sc-28: Protection of Information at Rest - The information system shall protect the confidentiality and integrity of sensitive information at rest including credentials, configuration files, and assessment data.",
-          "uuid": "c4e4a131-2eb0-4e23-b5a4-419ac6e71952"
+          "description": "ac-2: Account Management",
+          "uuid": "307ce530-2ff9-4027-a90f-1170d8505c15"
         },
         {
-          "description": "si-2: Flaw Remediation - The organization shall identify, report, and correct information system flaws through systematic flaw remediation processes including security vulnerability scanning and patch management.",
-          "uuid": "c3c3c66f-5154-4d24-8a9a-5e4fc5b192d9"
+          "description": "ac-3: Access Enforcement - Enforce approved authorizations for logical access to information and system resources in accordance with applicable access control policies.",
+          "uuid": "6c75a582-6ee7-4021-b04e-863a144eedf5"
         },
         {
-          "description": "si-3: Malicious Code Protection - The organization shall implement malicious code protection mechanisms including scanning downloaded software, configuration files, and dependencies from external sources.",
-          "uuid": "e7c51b32-2307-4119-aa46-d61679e77d2d"
+          "description": "ra-5: Vulnerability Monitoring and Scanning",
+          "uuid": "ef271d77-c0be-41d6-9061-cae3a62ebb04"
         },
         {
-          "description": "si-4: Information System Monitoring - The organization shall monitor information systems to detect attacks, unauthorized access attempts, and indicators of potential attacks, and identify unauthorized use of the system.",
-          "uuid": "a4623ea9-6c46-4118-8d3e-8b2f0bfdc4c1"
-        },
-        {
-          "description": "si-7: Software, Firmware, and Information Integrity - The information system shall employ integrity verification tools and techniques to detect unauthorized changes to software, firmware, and information including component validation, dependency veri...",
-          "uuid": "a1075f24-f1b2-4e9d-b46c-196c4fc6628d"
-        },
-        {
-          "description": "si-10: Information Input Validation - The information system shall check the validity of user inputs including command arguments, configuration files, and structured documents to prevent injection attacks and ensure data integrity.",
-          "uuid": "b8d3249a-8e13-4b11-9632-c08cb62caa8d"
-        },
-        {
-          "description": "sa-3: System Development Life Cycle - The organization shall manage information systems using a system development life cycle that incorporates information security considerations throughout all phases.",
-          "uuid": "d7787098-bf00-4b12-af50-62d79e011f68"
-        },
-        {
-          "description": "sa-10: Developer Configuration Management - The organization shall require developers to perform configuration management during system development, including tracking security flaws and flaw resolution, and managing component dependencies.",
-          "uuid": "c2876d9f-7682-4010-a6f7-61f8c9abef89"
-        },
-        {
-          "description": "sa-11: Developer Security Testing and Evaluation - The organization shall require developers to create and implement security test and evaluation plans including static analysis, dynamic analysis, and security validation testing.",
-          "uuid": "fe7159ae-a348-467d-8168-a54c13a9fb2a"
-        },
-        {
-          "description": "ai-1: AI System Risk Classification - The organization shall classify AI systems according to their risk level (unacceptable, high, limited, minimal) based on the EU AI Act framework and implement appropriate controls for each risk cat...",
-          "uuid": "f70879eb-f830-4aff-b723-254ebb511290"
-        },
-        {
-          "description": "ai-2: AI Transparency and Explainability - The organization shall ensure AI systems provide appropriate transparency, including disclosure when users are interacting with AI systems, and implement explainability mechanisms for high-risk AI ...",
-          "uuid": "ab5ce065-18f7-40cc-be18-41ce00777cd0"
-        },
-        {
-          "description": "ai-3: AI Training Data Governance - The organization shall implement data governance practices for AI training datasets, including data quality assurance, bias detection and mitigation, and documentation of data sources and character...",
-          "uuid": "04a062b1-f7a0-452e-9de2-4affe90741f1"
+          "description": "si-2: Flaw Remediation",
+          "uuid": "a08293ec-384e-4ca4-9e07-60a52cddc1c9"
         }
       ]
     },
     "imports": [
       {
-        "href": "C:\\source\\ready-to-release\\eac\\templates\\specs\\risk-catalog\\controls.catalog.json",
+        "href": "https://raw.githubusercontent.com/usnistgov/oscal-content/main/nist.gov/SP800-53/rev5/json/NIST_SP-800-53_rev5_catalog.json",
         "include-controls": [
           {
             "with-ids": [
-              "ac-2",
-              "ac-3",
-              "ac-6",
+              "ia-2",
+              "ia-5",
+              "si-10",
               "au-2",
               "au-3",
-              "au-6",
               "au-12",
-              "cm-2",
-              "ia-5",
+              "sc-8",
+              "sc-13",
               "sc-28",
-              "si-2",
-              "si-3",
-              "si-4",
-              "si-7",
-              "si-10",
-              "sa-3",
-              "sa-10",
-              "sa-11",
-              "ai-1",
-              "ai-2",
-              "ai-3"
+              "ac-2",
+              "ac-3",
+              "ra-5",
+              "si-2"
             ]
           }
         ]
       }
     ],
     "metadata": {
-      "last-modified": "2025-12-04T12:24:12.3123199Z",
+      "last-modified": "2026-01-15T17:51:12.3278169Z",
       "oscal-version": "1.1.3",
       "title": "Solution Risk Profile",
       "version": "1.0.0"
     },
-    "uuid": "e4c99ede-bc4e-4878-ba28-7700423c16c6"
+    "uuid": "c0dc5908-7541-4a02-8213-43f468e67770"
   }
 }
