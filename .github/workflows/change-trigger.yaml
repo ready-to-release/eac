@@ -1,5 +1,5 @@
-# Change Trigger - Optimized Module Build Orchestrator
 #
+# Optimized Module CI Orchestrator which holds the m-o-no-repository change-trigger
 # This workflow implements incremental CI by only building modules that have changed
 # since the last successful CI run. It uses the repository's dependency graph to ensure
 # that when a module changes, all modules that depend on it are also rebuilt (cache invalidation).
@@ -17,7 +17,7 @@
 # For push: Compares against last successful CI SHA
 # Bootstrap (no previous success): Builds all modules
 
-name: "Change Trigger"
+name: "ci-orchestrator"
 
 on:
   push:
