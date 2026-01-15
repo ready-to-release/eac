@@ -8,12 +8,11 @@ Comprehensive testing strategy for data pipelines including unit tests, integrat
 
 - pytest installed (`pip install pytest`)
 - chispa for Spark DataFrame assertions (`pip install chispa`)
-- Great Expectations for data quality (optional)
 - Local Spark environment or Databricks Connect
 
 ## Test Pyramid for Data Pipelines
 
-```
+```text
          /\
         /  \  L3: System Tests (Full pipeline, production-like data)
        /----\
@@ -26,6 +25,7 @@ Comprehensive testing strategy for data pipelines including unit tests, integrat
 ```
 
 **Test Distribution:**
+
 - L0 (Unit): 70% of tests, < 1 second each
 - L1 (Component): 20% of tests, < 10 seconds each
 - L2 (Integration): 8% of tests, < 2 minutes each
@@ -369,59 +369,66 @@ def test_pipeline_with_production_scale_data(spark):
 
 ## Data Quality Testing
 
-### Using Great Expectations
+### Basic Data Quality Checks
 
 ```python
 # tests/quality/test_segment_quality.py
-import great_expectations as gx
-from great_expectations.dataset import SparkDFDataset
+from pyspark.sql.functions import col
 
 def test_customer_segments_quality(spark):
-    """Test data quality expectations for customer segments."""
+    """Test data quality for customer segments using simple assertions."""
     segments_df = spark.table("staging.gold.customer_segments")
 
-    # Wrap in Great Expectations dataset
-    ge_df = SparkDFDataset(segments_df)
+    # Check no nulls in key columns
+    null_customer_ids = segments_df.filter(col("customer_id").isNull()).count()
+    assert null_customer_ids == 0, f"Found {null_customer_ids} null customer_ids"
 
-    # Define expectations
-    assert ge_df.expect_column_values_to_not_be_null("customer_id").success
-    assert ge_df.expect_column_values_to_be_unique("customer_id").success
-    assert ge_df.expect_column_values_to_be_in_set(
-        "segment",
-        ["VIP", "Active", "At-Risk", "Churned"]
-    ).success
-    assert ge_df.expect_column_values_to_be_between(
-        "segment_score",
-        min_value=0.0,
-        max_value=1.0
-    ).success
+    null_segments = segments_df.filter(col("segment").isNull()).count()
+    assert null_segments == 0, f"Found {null_segments} null segments"
 
-    # Statistical expectations
-    assert ge_df.expect_column_mean_to_be_between(
-        "segment_score",
-        min_value=0.2,
-        max_value=0.8
-    ).success
+    # Check unique customer_ids
+    total_count = segments_df.count()
+    unique_count = segments_df.select("customer_id").distinct().count()
+    assert total_count == unique_count, f"Duplicate customer_ids found: {total_count - unique_count}"
+
+    # Check valid segment values
+    valid_segments = ["VIP", "Active", "At-Risk", "Churned"]
+    invalid_segments = segments_df.filter(~col("segment").isin(valid_segments)).count()
+    assert invalid_segments == 0, f"Found {invalid_segments} invalid segments"
+
+    # Check all segments exist (business rule validation)
+    segment_counts = {row.segment: row.count for row in segments_df.groupBy("segment").count().collect()}
+    for segment in valid_segments:
+        assert segment in segment_counts, f"Missing segment: {segment}"
 ```
 
 ### Schema Validation
 
 ```python
 # tests/quality/test_schema_validation.py
-from pyspark.sql.types import StructType, StructField, LongType, StringType, DecimalType, DateType
+from pyspark.sql.types import StructType, StructField, LongType, StringType, DateType
 
 def test_customer_segments_schema(spark):
     """Verify customer_segments table schema matches specification."""
     expected_schema = StructType([
         StructField("customer_id", LongType(), nullable=False),
         StructField("segment", StringType(), nullable=False),
-        StructField("segment_score", DecimalType(3, 2), nullable=False),
         StructField("assigned_date", DateType(), nullable=False),
     ])
 
     actual_df = spark.table("staging.gold.customer_segments")
 
-    assert actual_df.schema == expected_schema, f"Schema mismatch:\nExpected: {expected_schema}\nActual: {actual_df.schema}"
+    # Compare schemas
+    assert actual_df.schema == expected_schema, (
+        f"Schema mismatch:\n"
+        f"Expected: {expected_schema}\n"
+        f"Actual: {actual_df.schema}"
+    )
+
+    # Additional validation: column names
+    expected_columns = {"customer_id", "segment", "assigned_date"}
+    actual_columns = set(actual_df.columns)
+    assert actual_columns == expected_columns, f"Column mismatch: expected {expected_columns}, got {actual_columns}"
 ```
 
 ## Test Data Management

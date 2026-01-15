@@ -2,13 +2,14 @@
 
 ## What You'll Learn
 
-How each of the 12 CD model stages applies to Databricks data projects, including notebooks, pipelines, Delta tables, ML models, and dashboards.
+How each of the 12 CD model stages applies to Databricks data projects, including notebooks, pipelines, Delta tables, and business logic.
 
 ## Overview
 
 The 12-stage CD model applies to data projects with specific considerations for data artifacts. This guide maps each stage to data engineering activities.
 
 **Key Differences for Data Projects:**
+
 - Pipelines process data, creating stateful outputs
 - Testing requires realistic data volumes
 - Rollback involves data versioning, not just code
@@ -29,24 +30,39 @@ The 12-stage CD model applies to data projects with specific considerations for 
 | **Specifications** | Write Gherkin specs defining data transformations, schemas, and quality rules |
 | **Schemas** | Define Delta table schemas, partitioning strategies |
 | **Jobs** | Design workflow orchestration, dependencies, scheduling |
-| **ML Models** | Experiment tracking with MLflow, feature engineering notebooks |
+| **Business Rules** | Define segmentation logic, categorization rules, calculations |
 | **Dashboards** | Create visualizations, define metrics |
 
 **Tools:**
+
 - **Databricks Connect** - Execute notebooks locally against remote clusters
 - **VS Code / PyCharm** - Local IDE with Databricks extension
-- **MLflow** - Track experiments and parameters
 - **Git** - Version control for all artifacts
 
 **Example** (Customer Segmentation):
-```python
-# features/customer_segmentation.feature
-Feature: Customer Segmentation Pipeline
-  Scenario: Aggregate customer features
-    Given customer events in bronze layer
-    When I aggregate daily activity metrics
-    Then silver layer contains customer_features table
-    And table has columns: customer_id, total_purchases, avg_order_value
+
+```gherkin
+# features/customer-segmentation_pipeline.feature
+@L2 @ov @control:si-10
+Feature: customer-segmentation_pipeline
+  Segment customers by purchase behavior for targeted campaigns
+
+  As a marketing analyst
+  I want to segment customers by purchase behavior
+  So that I can target campaigns effectively
+
+  Background:
+    Given Unity Catalog is enabled
+    And catalog "production" exists
+
+  Rule: Pipeline aggregates customer features from events
+
+    @ov
+    Scenario: Aggregate customer features
+      Given customer events in bronze layer
+      When I aggregate daily activity metrics
+      Then silver layer contains customer_features table
+      And table has columns: customer_id, total_purchases, avg_order_value
 ```
 
 **Environment**: DevBox (local development)
@@ -68,12 +84,14 @@ Feature: Customer Segmentation Pipeline
 | **Secrets scan** | Detect hardcoded credentials or API keys |
 
 **Tools:**
+
 - **pytest** - Unit test framework
 - **chispa** - Spark DataFrame assertions
 - **databricks CLI** - Bundle validation
 - **pre-commit hooks** - Automated validation
 
 **Example:**
+
 ```python
 # tests/test_customer_features.py
 def test_aggregate_features():
@@ -108,6 +126,7 @@ def test_aggregate_features():
 | **Security review** | Verify access controls, data masking, encryption |
 
 **Quality Gates:**
+
 - ✅ Peer approval from data engineer
 - ✅ All unit tests passing
 - ✅ Bundle validation successful
@@ -115,6 +134,7 @@ def test_aggregate_features():
 - ✅ Specs updated for schema changes
 
 **Tools:**
+
 - **GitHub Pull Requests** - Code review platform
 - **GitHub Actions** - CI automation
 - **Asset Bundles** - Configuration validation
@@ -137,6 +157,7 @@ def test_aggregate_features():
 | **Version tracking** | Tag commit SHA, link to work items |
 
 **Automated Testing:**
+
 - **L0**: Unit tests (transformation logic)
 - **L1**: Component tests (notebook end-to-end with test data)
 - **L2**: Integration tests (multi-notebook pipeline)
@@ -163,17 +184,20 @@ def test_aggregate_features():
 | **Data quality checks** | Validate completeness, accuracy, consistency |
 
 **PLTE Characteristics for Data:**
+
 - **Unity Catalog isolation**: Separate catalog (e.g., `dev`, `staging`)
 - **Delta Lake clones**: `CREATE TABLE staging.customers SHALLOW CLONE prod.customers`
 - **Realistic data**: Sufficient volume to catch performance issues
 - **Ephemeral or persistent**: Choice depends on cost vs setup time
 
 **Verification Types:**
+
 - **IV (Installation Verification)**: Bundle deployed successfully, tables created
 - **OV (Operational Verification)**: Pipeline runs without errors, completes in SLA
 - **PV (Performance Verification)**: Data processing rates acceptable
 
 **Example:**
+
 ```sql
 -- Verify segmentation output
 SELECT segment, COUNT(*) as customer_count
@@ -198,20 +222,22 @@ ORDER BY segment;
 |-----------|----------------|
 | **Performance testing** | Load test with production-scale data volumes |
 | **Security scanning** | DAST with OWASP ZAP, Unity Catalog permission audits |
-| **Data quality validation** | Great Expectations, schema drift detection |
+| **Data quality validation** | pytest assertions, schema drift detection |
 | **Cross-system integration** | External API connections, event streaming |
 | **Cost analysis** | Cluster utilization, compute costs, storage growth |
 
 **Trigger**: Periodic (e.g., nightly) or on-demand, not every commit
 
 **Quality Gates:**
+
 - Performance regression < 5%
 - No critical/high security vulnerabilities
 - Data quality expectations passing
 - Cost within budget thresholds
 
 **Tools:**
-- **Great Expectations** - Data quality assertions
+
+- **pytest** - Data quality assertions
 - **Databricks monitoring** - Query performance metrics
 - **OWASP ZAP** - Security testing
 - **Cost dashboards** - DBU consumption tracking
@@ -235,6 +261,7 @@ ORDER BY segment;
 | **Documentation** | Review data dictionaries, runbooks |
 
 **What Exploration Catches:**
+
 - Incorrect business logic in transformations
 - Missing or unexpected data patterns
 - Confusing dashboard layouts
@@ -260,6 +287,7 @@ ORDER BY segment;
 | **Freeze features** | Only critical fixes allowed after this point |
 
 **Release Notes Include:**
+
 - New pipelines or jobs
 - Schema changes (added columns, renamed tables)
 - Breaking changes (deprecated fields, changed semantics)
@@ -268,19 +296,18 @@ ORDER BY segment;
 - Known limitations
 
 **Example Release Note:**
+
 ```markdown
-## v2024.01.15
+## [2024.01.15] - 2024-01-15
 
-### New Features
-- Customer segmentation pipeline with 4 segments
-- Lifetime value prediction model (accuracy: 0.92 RMSE)
+### Added
+- feat(pipelines): customer segmentation pipeline with 4 segments
+- feat(ml-models): lifetime value prediction model (accuracy: 0.92 RMSE)
+- feat(schema): added `customer_segments.predicted_ltv` column (DECIMAL)
 
-### Schema Changes
-- Added `customer_segments.predicted_ltv` (DECIMAL)
-- Renamed `orders_raw` → `bronze.orders`
-
-### Breaking Changes
-- `customer_features.signup_date` now UTC (was local time)
+### Changed
+- refactor(schema): renamed `orders_raw` table to `bronze.orders`
+- fix(schema): `customer_features.signup_date` now stores UTC timezone (was local time) - **BREAKING**
 ```
 
 **Environment**: Build Agents
@@ -337,12 +364,14 @@ ORDER BY segment;
 | **Feature Flag** | Deploy code with transformation disabled, enable gradually |
 
 **Rollback Planning:**
+
 - Delta Lake time travel: `SELECT * FROM table TIMESTAMP AS OF '2024-01-14'`
 - Job versioning: Keep previous notebook version available
 - Schema rollback: Document reverse migrations
 - Target rollback time: < 15 minutes for critical pipelines
 
 **Example Deployment:**
+
 ```bash
 # Deploy production bundle
 databricks bundle deploy --target prod
@@ -382,6 +411,7 @@ databricks jobs run-now --job-id 12345
 | Row count anomaly | > 2 std dev | Alert data owner |
 
 **Incident Response:**
+
 1. **Detect** - Monitoring alert or user report
 2. **Triage** - Assess impact (data loss? incorrect results?)
 3. **Respond** - Rollback pipeline, pause job, or hotfix
@@ -390,9 +420,9 @@ databricks jobs run-now --job-id 12345
 6. **Post-mortem** - Document incident, improve monitoring
 
 **Tools:**
+
 - **Databricks Job Monitoring** - Run history, error rates
 - **Delta Live Tables** - Built-in expectations and alerts
-- **MLflow** - Model performance tracking
 - **Custom dashboards** - Business-specific data quality metrics
 
 **Environment**: Production
@@ -425,6 +455,7 @@ databricks jobs run-now --job-id 12345
 **Implementation Patterns:**
 
 **Pattern 1: Conditional transformation**
+
 ```python
 # Read feature flag
 use_new_algo = spark.conf.get("feature.new_segmentation", "false") == "true"
@@ -436,6 +467,7 @@ else:
 ```
 
 **Pattern 2: Parallel pipelines**
+
 ```yaml
 # Asset Bundle with feature flag
 resources:
@@ -447,6 +479,7 @@ resources:
 ```
 
 **Flag Lifecycle:**
+
 1. **Create**: Deploy with flag OFF
 2. **Enable**: Gradually roll out (1% → 10% → 50% → 100%)
 3. **Validate**: Monitor data quality, performance
@@ -477,6 +510,7 @@ resources:
 ## Variant Selection: RA vs CDe
 
 **Use Release Approval (RA) when:**
+
 - Regulated industry (finance, healthcare, government)
 - Schema changes affect downstream systems
 - High-risk transformations (PII, financial calculations)
@@ -484,6 +518,7 @@ resources:
 - Manual data validation required
 
 **Use Continuous Deployment (CDe) when:**
+
 - Internal analytics with low business risk
 - Experimental models or features
 - Well-tested transformations with strong quality gates
@@ -491,6 +526,7 @@ resources:
 - Fast feedback loops critical
 
 **Hybrid Approach:**
+
 - CDe for non-production environments
 - RA for production with automated approval for low-risk changes
 - Risk-based routing (low-risk → auto, high-risk → manual review)

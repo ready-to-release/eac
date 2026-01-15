@@ -1,6 +1,6 @@
 # Data Projects
 
-Learn how to apply the 12-stage CD model to Databricks data projects including pipelines, ML models, and dashboards.
+Learn how to apply the 12-stage CD model to Databricks data projects including pipelines, dashboards, and business logic.
 
 ## In This Section
 
@@ -8,7 +8,7 @@ Learn how to apply the 12-stage CD model to Databricks data projects including p
 
 | Guide | What You'll Learn |
 |-------|-------------------|
-| [CD Model for Data Projects](./cd-model-for-data-projects.md) | How each of the 12 stages applies to data pipelines, notebooks, and ML models |
+| [CD Model for Data Projects](./cd-model-for-data-projects.md) | How each of the 12 stages applies to data pipelines, notebooks, and business logic |
 
 ### Development Workflow
 
@@ -31,21 +31,17 @@ Learn how to apply the 12-stage CD model to Databricks data projects including p
 | [Environment Management](./environment-management.md) | Unity Catalog isolation, Delta Lake versioning, and PLTE setup |
 | [Monitoring Data Quality](./monitoring-data-quality.md) | Pipeline observability, data quality metrics, and incident response |
 
-### ML Projects
-
-| Guide | What You'll Learn |
-|-------|-------------------|
-| [ML Model Lifecycle](./ml-model-lifecycle.md) | MLflow integration, model testing, and deployment through the CD pipeline |
-
 ## Why Apply CD Model to Data Projects?
 
 Data projects face unique challenges:
+
 - **Long-running pipelines** require different validation strategies
 - **Data quality** issues emerge in production, not just code bugs
 - **Stateful systems** make rollback more complex
 - **Multiple artifacts** (notebooks, jobs, models, dashboards) must deploy together
 
 The 12-stage CD model provides:
+
 - **Shift-left validation** - Catch data quality issues early
 - **Environment isolation** - Test with production-like data safely
 - **Automated testing** - Validate transformations, schemas, and quality
@@ -61,7 +57,7 @@ The 12-stage CD model provides:
 | 3. Merge Request | Code review, CI validation | GitHub Actions, Asset Bundles |
 | 4. Commit | Build artifacts, version Delta tables | GitHub Actions, Unity Catalog |
 | 5. Acceptance Test | Pipeline testing with realistic data | PLTE, Delta Lake clones |
-| 6. Extended Test | Performance, security, data quality | DAST, Great Expectations |
+| 6. Extended Test | Performance, security, data quality | DAST, pytest assertions |
 | 7. Exploration | Stakeholder validation, dashboard review | Demo workspace |
 | 8. Start Release | Tag version, generate release notes | Git tags, changelog |
 | 9. Release Approval | Approve for production (RA) or auto (CDe) | Quality gates, approvals |
@@ -92,9 +88,8 @@ Before following these guides, ensure you have:
 These guides use a consistent **Customer Segmentation Pipeline** example:
 
 - **Input**: Raw customer events from cloud storage
-- **Transformation**: Feature aggregation and clustering
-- **Output**: Customer segments in Delta table
-- **ML Component**: Customer lifetime value prediction model
+- **Transformation**: Feature aggregation and business rule segmentation
+- **Output**: Customer segments in Delta table (VIP, Active, At-Risk, Churned)
 - **Dashboard**: Segment distribution visualization
 
 This provides continuity across articles and shows how pieces fit together.

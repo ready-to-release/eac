@@ -17,8 +17,9 @@ Develop a complete data pipeline from specifications through production deployme
 This guide develops a pipeline that segments customers based on purchase behavior.
 
 **Pipeline Overview:**
+
 - **Input**: Raw customer events from cloud storage
-- **Transform**: Aggregate features, apply clustering
+- **Transform**: Aggregate features, apply business rules segmentation
 - **Output**: Customer segments in Delta table
 - **Schedule**: Daily at 2 AM UTC
 
@@ -26,12 +27,15 @@ This guide develops a pipeline that segments customers based on purchase behavio
 
 ### Create Feature Specification
 
-Create `specs/customer_segmentation.feature`:
+Create `specs/customer-segmentation_pipeline.feature`:
 
 ```gherkin
-Feature: Customer Segmentation Pipeline
+@L2 @ov @control:si-10
+Feature: customer-segmentation_pipeline
+  Segment customers by purchase behavior for targeted marketing campaigns
+
   As a marketing analyst
-  I need to segment customers by purchase behavior
+  I want to segment customers by purchase behavior
   So that I can target campaigns effectively
 
   Background:
@@ -39,51 +43,64 @@ Feature: Customer Segmentation Pipeline
     And catalog "production" exists
     And schema "analytics" exists
 
-  Scenario: Load customer events from bronze layer
-    Given bronze.customer_events contains purchase data
-    And events include customer_id, event_date, amount
-    When I read events from last 90 days
-    Then I have events for active customers only
-    And events are deduplicated by (customer_id, event_date, event_id)
+  Rule: Pipeline loads and validates customer events from bronze layer
 
-  Scenario: Aggregate customer features
-    Given customer events from bronze layer
-    When I aggregate by customer_id
-    Then silver.customer_features contains:
-      | Column           | Type    | Description                  |
-      | customer_id      | BIGINT  | Unique customer identifier   |
-      | total_purchases  | DECIMAL | Sum of purchase amounts      |
-      | purchase_count   | INT     | Number of purchases          |
-      | avg_order_value  | DECIMAL | Average purchase amount      |
-      | days_since_last  | INT     | Days since most recent order |
-      | first_purchase   | DATE    | Date of first purchase       |
-      | last_purchase    | DATE    | Date of most recent purchase |
+    @ov
+    Scenario: Load customer events from bronze layer
+      Given bronze.customer_events contains purchase data
+      And events include customer_id, event_date, amount
+      When I read events from last 90 days
+      Then I have events for active customers only
+      And events are deduplicated by (customer_id, event_date, event_id)
 
-  Scenario: Apply customer segmentation
-    Given silver.customer_features table
-    When I apply K-means clustering with k=4
-    Then gold.customer_segments contains:
-      | Column        | Type    | Description                     |
-      | customer_id   | BIGINT  | Unique customer identifier      |
-      | segment       | STRING  | Segment: VIP, Active, At-Risk, Churned |
-      | segment_score | DECIMAL | Confidence score (0-1)          |
-      | assigned_date | DATE    | Date segment was assigned       |
-    And each segment has > 100 customers
-    And segment distribution is balanced (15-40% per segment)
+  Rule: Pipeline aggregates customer purchase behavior features
 
-  Scenario: Data quality checks
-    Given gold.customer_segments table
-    Then table has no null customer_ids
-    And table has no duplicate customer_ids
-    And segment values are in allowed list
-    And assigned_date is today's date
+    @ov
+    Scenario: Aggregate customer features
+      Given customer events from bronze layer
+      When I aggregate by customer_id
+      Then silver.customer_features contains:
+        | Column           | Type    | Description                  |
+        | customer_id      | BIGINT  | Unique customer identifier   |
+        | total_purchases  | DECIMAL | Sum of purchase amounts      |
+        | purchase_count   | INT     | Number of purchases          |
+        | avg_order_value  | DECIMAL | Average purchase amount      |
+        | days_since_last  | INT     | Days since most recent order |
+        | first_purchase   | DATE    | Date of first purchase       |
+        | last_purchase    | DATE    | Date of most recent purchase |
+
+  Rule: Pipeline assigns customers to segments using business rules
+
+    @ov
+    Scenario: Apply customer segmentation
+      Given silver.customer_features table
+      When I apply business rules to categorize customers
+      Then gold.customer_segments contains:
+        | Column        | Type    | Description                     |
+        | customer_id   | BIGINT  | Unique customer identifier      |
+        | segment       | STRING  | Segment: VIP, Active, At-Risk, Churned |
+        | assigned_date | DATE    | Date segment was assigned       |
+      And VIP customers have total_purchases > 10000
+      And Active customers have days_since_last <= 30
+      And At-Risk customers have days_since_last between 30 and 90
+      And Churned customers have days_since_last > 90
+
+  Rule: Pipeline enforces data quality requirements
+
+    @ov
+    Scenario: Data quality checks
+      Given gold.customer_segments table
+      Then table has no null customer_ids
+      And table has no duplicate customer_ids
+      And segment values are in allowed list
+      And assigned_date is today's date
 ```
 
 ### Create Notebook Structure
 
 Create notebooks following this structure:
 
-```
+```text
 src/
 ├── bronze/
 │   └── ingest_customer_events.py       # Raw data ingestion
@@ -295,94 +312,46 @@ except Exception as e:
 ```python
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Customer Segmentation (Model Inference)
-# MAGIC Apply pre-trained segmentation model to assign customers to segments
-# MAGIC
-# MAGIC **IMPORTANT**: This notebook uses a pre-trained model from MLflow.
-# MAGIC Model training is done separately to ensure consistent segment definitions.
+# MAGIC # Customer Segmentation (Business Rules)
+# MAGIC Apply deterministic business rules to categorize customers into segments
 
 # COMMAND ----------
-import mlflow
 from pyspark.sql import DataFrame
-from pyspark.sql.functions import col, when, lit, udf
-from pyspark.sql.types import StringType
+from pyspark.sql.functions import col, when, lit
 from delta.tables import DeltaTable
 
 # COMMAND ----------
-def load_segmentation_model(model_uri: str):
-    """Load pre-trained segmentation model from MLflow."""
-    try:
-        model = mlflow.pyfunc.load_model(model_uri)
-        print(f"✅ Loaded model from {model_uri}")
-        return model
-    except Exception as e:
-        print(f"🚨 Error loading model: {str(e)}")
-        raise
+def segment_customers(features_df: DataFrame) -> DataFrame:
+    """Apply business rules to segment customers.
 
-def apply_segmentation_rules(cluster_id: int, total_purchases: float, days_since_last: int) -> str:
-    """Map cluster IDs to business segment names based on rules."""
-    # These rules are derived from model analysis and business requirements
-    if cluster_id == 0 and total_purchases > 1000:
-        return "VIP"
-    elif cluster_id == 1 and days_since_last <= 30:
-        return "Active"
-    elif cluster_id == 2 and days_since_last > 90:
-        return "Churned"
-    else:
-        return "At-Risk"
-
-# Register UDF
-segment_udf = udf(apply_segmentation_rules, StringType())
-
-def segment_customers(features_df: DataFrame, model_uri: str) -> DataFrame:
-    """Apply segmentation model to customer features.
+    Segmentation Logic:
+    - VIP: Total purchases > $10,000
+    - Active: Purchased in last 30 days
+    - At-Risk: Last purchase 30-90 days ago
+    - Churned: No purchase in 90+ days
 
     Args:
         features_df: Customer features DataFrame
-        model_uri: MLflow model URI (e.g., "models:/customer_segmentation/Production")
 
     Returns:
-        DataFrame with customer_id, segment, segment_score, assigned_date
+        DataFrame with customer_id, segment, assigned_date
     """
-    try:
-        # Load pre-trained model (NOT training new model each run!)
-        model = mlflow.pyfunc.spark_udf(
-            spark,
-            model_uri=model_uri,
-            result_type="integer"
+    segments_df = (features_df
+        .withColumn("segment",
+            when(col("total_purchases") > 10000, "VIP")
+            .when(col("days_since_last") <= 30, "Active")
+            .when(col("days_since_last") <= 90, "At-Risk")
+            .otherwise("Churned")
         )
+        .withColumn("assigned_date", col("feature_date"))
+        .select("customer_id", "segment", "assigned_date")
+    )
 
-        # Apply model to get cluster predictions
-        predictions_df = features_df.withColumn(
-            "cluster_id",
-            model(col("total_purchases"), col("purchase_count"),
-                  col("avg_order_value"), col("days_since_last"))
-        )
+    return segments_df
 
-        # Map clusters to business segments
-        segments_df = (predictions_df
-            .withColumn("segment",
-                segment_udf(col("cluster_id"), col("total_purchases"), col("days_since_last"))
-            )
-            .withColumn("segment_score", (col("cluster_id").cast("decimal(3,2)") / 4.0))
-            .withColumn("assigned_date", col("feature_date"))  # Use feature_date for reproducibility
-            .select("customer_id", "segment", "segment_score", "assigned_date")
-        )
-
-        return segments_df
-
-    except Exception as e:
-        print(f"🚨 Error applying segmentation: {str(e)}")
-        raise
-
+# COMMAND ----------
 # Configuration
 catalog = spark.conf.get("catalog", "production")
-model_uri = spark.conf.get(
-    "segmentation_model_uri",
-    f"models:/{catalog}.ml_models.customer_segmentation/Production"
-)
-
-print(f"Using segmentation model: {model_uri}")
 
 try:
     # Load silver data
@@ -393,8 +362,8 @@ try:
         print("⚠️ No features available, skipping segmentation")
         dbutils.notebook.exit("NO_DATA")
 
-    # Apply segmentation model (inference, not training!)
-    segments_df = segment_customers(features_df, model_uri)
+    # Apply business rules
+    segments_df = segment_customers(features_df)
 
     # Write with MERGE for idempotency
     target_table = f"{catalog}.gold.customer_segments"
@@ -414,17 +383,18 @@ try:
 
     # Display summary
     segments_df.groupBy("segment").count().orderBy("segment").show()
+    print(f"✅ Segmentation complete: {segments_df.count()} customers")
 
 except Exception as e:
     print(f"🚨 Segmentation failed: {str(e)}")
     # Log error
-    spark.createDataFrame([(str(e), model_uri)], ["error", "model_uri"]) \
+    spark.createDataFrame([(str(e), catalog)], ["error", "catalog"]) \
          .write.mode("append") \
          .saveAsTable(f"{catalog}.gold.segmentation_errors")
     dbutils.notebook.exit(f"FAILED: {str(e)}")
 ```
 
-**Note on Model Training**: The K-means model should be trained separately in a dedicated notebook/job and registered to MLflow. See [ML Model Lifecycle](./ml-model-lifecycle.md) for model training patterns.
+**Note**: This uses simple, deterministic business rules. For ML-based segmentation, see the ML Model Lifecycle guide (not included in this basic example).
 
 ## Stage 2: Pre-commit - Unit Tests
 
@@ -496,7 +466,7 @@ git commit -m "feat: add customer segmentation pipeline
 
 - Ingest customer events from S3
 - Aggregate purchase behavior features
-- Apply K-means clustering for segmentation
+- Apply business rules for segmentation
 - Create gold.customer_segments table"
 
 git push origin feature/customer-segmentation
@@ -505,6 +475,7 @@ git push origin feature/customer-segmentation
 ### CI Pipeline Validates
 
 GitHub Actions automatically runs:
+
 - Unit tests
 - Linting
 - Bundle validation

@@ -14,6 +14,7 @@ Master Databricks Asset Bundles for unified deployment of notebooks, jobs, pipel
 ## Asset Bundle Overview
 
 Asset Bundles package and deploy:
+
 - Notebooks and Python wheels
 - Jobs and workflows
 - Delta Live Tables pipelines
@@ -22,58 +23,168 @@ Asset Bundles package and deploy:
 - Permissions and access controls
 
 **Benefits:**
+
 - **Single source of truth** - All resources defined as code
 - **Environment consistency** - Same bundle, different targets
 - **Atomic deployment** - All resources deploy together
 - **Version control** - Track infrastructure changes in Git
 - **Validation** - Catch errors before deployment
 
-## Repository Patterns
+## Repository Structure: Monorepo with Modules
 
-### Pattern 1: Single Repository (Recommended)
+Organize data projects as **modules within a monorepo**, following the module contract pattern. Each data pipeline is a module with its own versioning, dependencies, CI workflow, and release cycle.
 
-Code and bundle configuration together:
+**Recommended Structure:**
 
-```
-customer-segmentation/
-├── databricks.yml              # Bundle configuration
-├── src/
-│   ├── bronze/
-│   │   └── ingest_events.py
-│   ├── silver/
-│   │   └── aggregate_features.py
-│   └── gold/
-│       └── segment_customers.py
-├── tests/
-├── requirements.txt
+```text
+data-platform/                    # Repository root
+├── .r2r/eac/
+│   ├── repository.yml           # Module contracts (see below)
+│   └── module-types.yml
+├── pipelines/
+│   ├── customer-segmentation/   # Module: customer-segmentation
+│   │   ├── databricks.yml      # Bundle configuration
+│   │   ├── specs/              # Gherkin specifications
+│   │   │   └── customer-segmentation_pipeline.feature
+│   │   ├── src/                # Source code
+│   │   │   ├── bronze/
+│   │   │   │   └── ingest_events.py
+│   │   │   ├── silver/
+│   │   │   │   └── aggregate_features.py
+│   │   │   └── gold/
+│   │   │       └── segment_customers.py
+│   │   ├── tests/              # Unit/integration tests
+│   │   │   └── test_features.py
+│   │   ├── requirements.txt
+│   │   ├── CHANGELOG.md        # Module-specific changelog
+│   │   └── README.md
+│   │
+│   └── revenue-forecasting/    # Module: revenue-forecasting
+│       ├── databricks.yml
+│       ├── specs/
+│       ├── src/
+│       └── tests/
+├── shared/
+│   └── data-quality-lib/       # Module: shared libraries
+│       ├── src/
+│       └── tests/
+├── .github/workflows/
+│   ├── ci-customer-segmentation.yaml
+│   └── ci-revenue-forecasting.yaml
 └── README.md
 ```
 
-**Advantages:**
-- Atomic changes (code + config in same PR)
-- Simpler CI/CD (one repo to watch)
-- Easier for small teams
+### Module Contract Configuration
 
-### Pattern 2: Separate Repositories
+Define each data pipeline as a module in `.r2r/eac/repository.yml`:
 
-Code and bundles in separate repos:
+```yaml
+repository:
+  type: mono                     # Monorepo
 
+modules:
+  # Shared library (Layer 0)
+  - moniker: data-quality-lib
+    name: Data Quality Library
+    type: python
+    description: Shared data quality utilities
+    versioning:
+      scheme: SemVer
+    files:
+      root: shared/data-quality-lib
+      source:
+        - "**/*.py"
+      tests:
+        - "**/*.py"
+      config:
+        - requirements.txt
+        - setup.py
+      workflows:
+        ci: .github/workflows/ci-data-quality-lib.yaml
+
+  # Customer segmentation pipeline (Layer 1 - depends on shared lib)
+  - moniker: customer-segmentation
+    name: Customer Segmentation Pipeline
+    type: databricks-bundle
+    description: Daily customer segmentation using business rules
+    versioning:
+      scheme: CalVer             # Use CalVer for data pipelines (YYYY.MM.DD)
+    depends_on:
+      - data-quality-lib
+    files:
+      root: pipelines/customer-segmentation
+      source:
+        - "src/**/*.py"
+      tests:
+        - "tests/**/*.py"
+      config:
+        - databricks.yml
+        - requirements.txt
+      workflows:
+        ci: .github/workflows/ci-customer-segmentation.yaml
+        release: .github/workflows/release-customer-segmentation.yaml
+      repo:
+        specs:
+          - specs/**/*.feature
+    databricks_bundle:
+      target_environments:
+        - dev
+        - staging
+        - production
+
+  # Revenue forecasting pipeline (Layer 1)
+  - moniker: revenue-forecasting
+    name: Revenue Forecasting Pipeline
+    type: databricks-bundle
+    description: ML-based revenue forecasting with Prophet
+    versioning:
+      scheme: CalVer
+    depends_on:
+      - data-quality-lib
+      - customer-segmentation      # Depends on segmentation output
+    files:
+      root: pipelines/revenue-forecasting
+      workflows:
+        ci: .github/workflows/ci-revenue-forecasting.yaml
+        release: .github/workflows/release-revenue-forecasting.yaml
 ```
-# Repo 1: customer-segmentation-code
-src/
-tests/
-requirements.txt
 
-# Repo 2: customer-segmentation-infrastructure
-databricks.yml
-job-configs/
-policies/
-```
+### Advantages of Monorepo with Modules
 
-**Advantages:**
-- Separate release cycles
-- Clear separation of concerns
-- Better for large teams with distinct roles
+**Atomic Changes:**
+
+- Code, specs, tests, and bundle config change together in one PR
+- Cross-pipeline changes (e.g., shared library update) are atomic
+
+**Independent Versioning:**
+
+- Each pipeline has its own version (CalVer: 2024.01.15)
+- Shared libraries use SemVer (1.2.3)
+- Independent release cycles per module
+
+**Dependency Management:**
+
+- Explicit `depends_on` relationships between modules
+- CI automatically builds dependencies first
+- Detect which pipelines need rebuild when shared code changes
+
+**Selective CI:**
+
+- Only run CI for changed modules (and their dependents)
+- Faster feedback loops
+- Resource-efficient CI
+
+**Unified Workflows:**
+
+- All pipelines use consistent CI/CD patterns
+- Shared GitHub Actions across modules
+- Centralized monitoring and governance
+
+**Traceability:**
+
+- Single source of truth for all data pipelines
+- Unified change history across pipelines
+- Easier compliance and audit
 
 ## Bundle Structure
 
@@ -183,6 +294,7 @@ targets:
 Split large bundles into multiple files:
 
 `databricks.yml`:
+
 ```yaml
 bundle:
   name: customer-segmentation
@@ -200,6 +312,7 @@ variables:
 ```
 
 `resources/jobs/segmentation.yml`:
+
 ```yaml
 resources:
   jobs:
@@ -212,6 +325,7 @@ resources:
 ```
 
 `resources/pipelines/dlt.yml`:
+
 ```yaml
 resources:
   pipelines:
@@ -272,6 +386,7 @@ databricks bundle deploy --target dev --watch
 ### Using Wheels for Code Packaging
 
 `databricks.yml`:
+
 ```yaml
 artifacts:
   customer_segmentation_lib:
@@ -297,6 +412,7 @@ resources:
 ### Delta Live Tables Pipeline
 
 `databricks.yml`:
+
 ```yaml
 resources:
   pipelines:
@@ -324,29 +440,6 @@ resources:
       configuration:
         catalog: ${var.catalog}
         source_path: ${var.source_path}
-```
-
-### ML Model Deployment
-
-```yaml
-resources:
-  models:
-    customer_ltv_model:
-      name: "customer-ltv"
-      description: "Customer lifetime value prediction model"
-
-      # Register model from MLflow
-      registered_model_name: "customer_ltv_${bundle.target}"
-
-      # Deploy model serving endpoint
-      endpoints:
-        - name: "customer-ltv-serving-${bundle.target}"
-          config:
-            served_models:
-              - model_name: "customer_ltv_${bundle.target}"
-                model_version: "1"
-                workload_size: "Small"
-                scale_to_zero_enabled: true
 ```
 
 ### Permissions and Access Control
@@ -450,11 +543,12 @@ resources:
 
 ### Conditional Resources
 
-**Option 1: Target-Specific Bundle Files**
+**Option 1: Target-Specific Bundle Files**:
 
 Create separate resource files per environment:
 
 `resources/dev_jobs.yml`:
+
 ```yaml
 resources:
   jobs:
@@ -467,6 +561,7 @@ resources:
 ```
 
 `resources/prod_jobs.yml`:
+
 ```yaml
 resources:
   jobs:
@@ -481,6 +576,7 @@ resources:
 ```
 
 `databricks.yml`:
+
 ```yaml
 bundle:
   name: customer-segmentation
@@ -497,7 +593,7 @@ targets:
     # Includes resources/prod_jobs.yml
 ```
 
-**Option 2: Disabled Jobs**
+**Option 2: Disabled Jobs**:
 
 Use `paused` parameter to disable jobs in certain environments:
 
@@ -521,11 +617,12 @@ variables:
       production: true
 ```
 
-**Option 3: Override Per Target**
+**Option 3: Override Per Target**:
 
 Define job in common file, override schedule per target:
 
 `databricks.yml`:
+
 ```yaml
 resources:
   jobs:

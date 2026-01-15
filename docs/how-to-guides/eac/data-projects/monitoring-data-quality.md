@@ -238,82 +238,87 @@ def check_business_rules(table_name: str):
     return len(violations) == 0
 ```
 
-### Statistical Anomaly Detection
+### Simple Anomaly Detection
 
 ```python
-# notebooks/detect_anomalies.py
-import numpy as np
+# notebooks/check_data_volume.py
+def check_data_volume_changes(table_name: str):
+    """Alert on significant data volume changes (simple threshold-based)."""
+    # Compare today vs yesterday
+    result = spark.sql(f"""
+        WITH daily_counts AS (
+            SELECT
+                event_date,
+                COUNT(*) as row_count
+            FROM {table_name}
+            WHERE event_date >= CURRENT_DATE() - INTERVAL 2 DAYS
+            GROUP BY event_date
+        )
+        SELECT
+            MAX(CASE WHEN event_date = CURRENT_DATE() THEN row_count END) as today,
+            MAX(CASE WHEN event_date = CURRENT_DATE() - INTERVAL 1 DAY THEN row_count END) as yesterday
+        FROM daily_counts
+    """).first()
 
-def detect_anomalies(table_name: str, metric_column: str, window_days: int = 30):
-    """Detect anomalies using statistical methods."""
-    # Get historical distribution
-    historical_df = spark.sql(f"""
-        SELECT {metric_column}
-        FROM {table_name}
-        WHERE event_date >= CURRENT_DATE() - INTERVAL {window_days} DAYS
-          AND event_date < CURRENT_DATE()
-    """)
+    if result.today is None:
+        print(f"⚠️ No data for today in {table_name}")
+        return False
 
-    historical_values = historical_df.toPandas()[metric_column]
-    mean = historical_values.mean()
-    std = historical_values.std()
+    # Alert if today's volume is less than 50% of yesterday
+    if result.yesterday and result.today < result.yesterday * 0.5:
+        print(f"🚨 Significant data drop in {table_name}: "
+              f"Today={result.today}, Yesterday={result.yesterday}")
+        return False
 
-    # Get today's values
-    today_df = spark.sql(f"""
-        SELECT {metric_column}
-        FROM {table_name}
-        WHERE event_date = CURRENT_DATE()
-    """)
-
-    today_values = today_df.toPandas()[metric_column]
-    today_mean = today_values.mean()
-
-    # Z-score calculation
-    z_score = (today_mean - mean) / std if std > 0 else 0
-
-    # Alert if anomaly detected (|z| > 3)
-    if abs(z_score) > 3:
-        send_alert(f"🚨 Anomaly detected in {table_name}.{metric_column}: "
-                  f"Today={today_mean:.2f}, Historical={mean:.2f}, Z-score={z_score:.2f}")
-
-    # Log result
-    spark.createDataFrame([{
-        "timestamp": datetime.now(),
-        "table_name": table_name,
-        "metric_column": metric_column,
-        "historical_mean": mean,
-        "historical_std": std,
-        "today_mean": today_mean,
-        "z_score": z_score,
-        "is_anomaly": abs(z_score) > 3
-    }]).write.mode("append").saveAsTable("production.monitoring.anomaly_detection")
-
-    return abs(z_score) <= 3
+    print(f"✅ Data volume normal: Today={result.today}, Yesterday={result.yesterday}")
+    return True
 ```
 
-## Delta Live Tables Expectations
+## Simple Quality Checks
 
-### Built-in Quality Checks
+### Basic Data Validation
 
 ```python
-# dlt_pipeline.py - Define expectations in DLT pipelines
-import dlt
-from pyspark.sql.functions import col
+# notebooks/validate_business_rules.py
+def validate_segment_business_rules(catalog: str):
+    """Validate segmentation business rules are applied correctly."""
+    violations = spark.sql(f"""
+        SELECT
+            'VIP with low purchases' as violation_type,
+            COUNT(*) as count
+        FROM {catalog}.gold.customer_segments s
+        JOIN {catalog}.silver.customer_features f USING (customer_id)
+        WHERE s.segment = 'VIP' AND f.total_purchases <= 10000
 
-@dlt.table(
-    name="customer_features",
-    comment="Customer purchase behavior features"
-)
-@dlt.expect_or_drop("valid_customer_id", "customer_id IS NOT NULL")
-@dlt.expect_or_fail("positive_purchases", "total_purchases >= 0")
-@dlt.expect_or_drop("valid_date_range", "last_purchase >= first_purchase")
-@dlt.expect("recent_data", "last_purchase >= CURRENT_DATE() - INTERVAL 365 DAYS")
-def create_customer_features():
-    return (
-        dlt.read("bronze_events")
-        .groupBy("customer_id")
-        .agg(...)
-    )
+        UNION ALL
+
+        SELECT
+            'Active but not recent' as violation_type,
+            COUNT(*) as count
+        FROM {catalog}.gold.customer_segments s
+        JOIN {catalog}.silver.customer_features f USING (customer_id)
+        WHERE s.segment = 'Active' AND f.days_since_last > 30
+
+        UNION ALL
+
+        SELECT
+            'Churned but recent' as violation_type,
+            COUNT(*) as count
+        FROM {catalog}.gold.customer_segments s
+        JOIN {catalog}.silver.customer_features f USING (customer_id)
+        WHERE s.segment = 'Churned' AND f.days_since_last <= 90
+    """).collect()
+
+    has_violations = any(row.count > 0 for row in violations)
+
+    if has_violations:
+        for row in violations:
+            if row.count > 0:
+                print(f"🚨 Rule violation: {row.violation_type} ({row.count} records)")
+    else:
+        print("✅ All business rules validated successfully")
+
+    return not has_violations
 ```
 
 ### Monitor DLT Expectations
@@ -512,5 +517,4 @@ WHERE timestamp >= CURRENT_TIMESTAMP() - INTERVAL 1 HOUR;
 ## Next Steps
 
 - [CI/CD Pipeline for Databricks](./cicd-pipeline-databricks.md) - Automate monitoring setup
-- [ML Model Lifecycle](./ml-model-lifecycle.md) - Monitor ML model performance
 - [Testing Data Pipelines](./testing-data-pipelines.md) - Prevent issues with comprehensive testing

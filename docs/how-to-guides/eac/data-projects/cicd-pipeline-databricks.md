@@ -14,7 +14,7 @@ Implement automated CI/CD pipelines for Databricks data projects using GitHub Ac
 
 ## Pipeline Overview
 
-```
+```text
 ┌─────────────┐
 │ Git Push    │
 └──────┬──────┘
@@ -83,16 +83,20 @@ jobs:
 ### Service Principal (Alternative)
 
 ```yaml
-# GitHub Secrets:
-# DATABRICKS_HOST: https://staging.cloud.databricks.com
-# DATABRICKS_TOKEN: dapi...
+# Use OIDC (no secrets needed - recommended)
+- name: Authenticate with Databricks
+  uses: databricks/setup-cli@main
+  with:
+    oidc: true
 
-- name: Configure Databricks CLI
-  run: |
-    databricks configure --token <<EOF
-    ${{ secrets.DATABRICKS_HOST }}
-    ${{ secrets.DATABRICKS_TOKEN }}
-    EOF
+# OR use OAuth with client credentials (if OIDC not available)
+# GitHub Secrets needed:
+# DATABRICKS_CLIENT_ID, DATABRICKS_CLIENT_SECRET
+- name: Authenticate with OAuth
+  uses: databricks/setup-cli@main
+  with:
+    oauth-client-id: ${{ secrets.DATABRICKS_CLIENT_ID }}
+    oauth-client-secret: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
 ```
 
 ## CI Pipeline (Stages 2-4)

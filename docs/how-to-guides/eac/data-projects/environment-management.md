@@ -116,29 +116,29 @@ databricks tokens create \
 
 ### Local Development Setup
 
-**Option 1: Databricks Connect**
+**Option 1: Databricks Connect**:
 
 ```python
-# Configure Databricks Connect for local execution
+# Configure Databricks Connect v2+ for local execution (serverless)
 from databricks.connect import DatabricksSession
 
 spark = DatabricksSession.builder \
     .remote(
         host="https://staging.cloud.databricks.com",
-        token="dapi...",
-        cluster_id="1234-567890-abc123"
+        token="dapi..."
+        # No cluster_id needed - uses serverless compute
     ) \
     .getOrCreate()
 
 # Use dev catalog for local work
 spark.sql("USE CATALOG dev")
 
-# Run local notebook against remote cluster
+# Run local notebook against serverless compute
 df = spark.table("dev.bronze.customer_events")
 df.show()
 ```
 
-**Option 2: Local Spark**
+**Option 2: Local Spark**:
 
 ```python
 # For unit tests, use local Spark
@@ -283,6 +283,7 @@ RESTORE TABLE staging.gold.customer_segments TO VERSION AS OF 41;
 ### Clone Types
 
 **Shallow Clone** (metadata only, fast):
+
 ```sql
 -- Shares storage with source, can't modify independently
 CREATE TABLE staging.bronze.events
@@ -290,6 +291,7 @@ SHALLOW CLONE production.bronze.events;
 ```
 
 **Deep Clone** (full copy):
+
 ```sql
 -- Independent copy, can modify without affecting source
 CREATE TABLE staging.bronze.events
