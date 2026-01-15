@@ -363,7 +363,7 @@ func validateGherkinFile(filePath string, repoRoot string, checkTags bool) ([]co
 	}
 
 	// Create validator with tags config support
-	validator := gherkin.NewValidatorWithTags(contractData, tagsConfig)
+	validator := gherkin.NewValidator(contractData, tagsConfig)
 
 	// Validate content
 	errors := validator.Validate(string(content), nil)

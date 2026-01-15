@@ -75,9 +75,9 @@ jobs:
       - name: Authenticate with OIDC
         run: |
           databricks auth login \
-            --host ${{ secrets.DATABRICKS_HOST }} \
-            --client-id ${{ secrets.DATABRICKS_CLIENT_ID }} \
-            --client-secret ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+            --host $<< secrets.DATABRICKS_HOST >> \
+            --client-id $<< secrets.DATABRICKS_CLIENT_ID >> \
+            --client-secret $<< secrets.DATABRICKS_CLIENT_SECRET >>
 ```
 
 ### Service Principal (Alternative)
@@ -95,8 +95,8 @@ jobs:
 - name: Authenticate with OAuth
   uses: databricks/setup-cli@main
   with:
-    oauth-client-id: ${{ secrets.DATABRICKS_CLIENT_ID }}
-    oauth-client-secret: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+    oauth-client-id: $<< secrets.DATABRICKS_CLIENT_ID >>
+    oauth-client-secret: $<< secrets.DATABRICKS_CLIENT_SECRET >>
 ```
 
 ## CI Pipeline (Stages 2-4)
@@ -114,8 +114,8 @@ on:
 
 env:
   PYTHON_VERSION: "3.10"
-  DATABRICKS_HOST: ${{ secrets.DATABRICKS_STAGING_HOST }}
-  DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+  DATABRICKS_HOST: $<< secrets.DATABRICKS_STAGING_HOST >>
+  DATABRICKS_TOKEN: $<< secrets.DATABRICKS_TOKEN >>
 
 jobs:
   lint-and-format:
@@ -127,7 +127,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: $<< env.PYTHON_VERSION >>
 
       - name: Install dependencies
         run: |
@@ -151,7 +151,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: $<< env.PYTHON_VERSION >>
 
       - name: Install dependencies
         run: |
@@ -186,8 +186,8 @@ jobs:
       - name: Configure authentication
         run: |
           databricks configure --token <<EOF
-          ${{ env.DATABRICKS_HOST }}
-          ${{ env.DATABRICKS_TOKEN }}
+          $<< env.DATABRICKS_HOST >>
+          $<< env.DATABRICKS_TOKEN >>
           EOF
 
       - name: Run component tests
@@ -232,7 +232,7 @@ jobs:
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
-          base: ${{ github.event.repository.default_branch }}
+          base: $<< github.event.repository.default_branch >>
           head: HEAD
 ```
 
@@ -248,8 +248,8 @@ on:
     branches: [main]
 
 env:
-  DATABRICKS_HOST: ${{ secrets.DATABRICKS_STAGING_HOST }}
-  DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+  DATABRICKS_HOST: $<< secrets.DATABRICKS_STAGING_HOST >>
+  DATABRICKS_TOKEN: $<< secrets.DATABRICKS_TOKEN >>
 
 jobs:
   build-and-upload:
@@ -278,7 +278,7 @@ jobs:
 
           databricks fs cp \
             $ARTIFACT_PATH \
-            "dbfs:/Volumes/$UC_VOLUME/customer_segmentation-${{ github.sha }}.whl"
+            "dbfs:/Volumes/$UC_VOLUME/customer_segmentation-$<< github.sha >>.whl"
 
   deploy-staging:
     name: Deploy Asset Bundle
@@ -299,13 +299,13 @@ jobs:
         id: trigger_run
         run: |
           RUN_ID=$(databricks jobs run-now \
-            --job-id ${{ secrets.STAGING_JOB_ID }} \
+            --job-id $<< secrets.STAGING_JOB_ID >> \
             --output json | jq -r '.run_id')
           echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
 
       - name: Wait for completion
         run: |
-          databricks runs wait ${{ steps.trigger_run.outputs.run_id }}
+          databricks runs wait $<< steps.trigger_run.outputs.run_id >>
 
   integration-tests:
     name: Integration Tests (L2)
@@ -324,8 +324,8 @@ jobs:
 
       - name: Run integration tests
         env:
-          DATABRICKS_HOST: ${{ env.DATABRICKS_HOST }}
-          DATABRICKS_TOKEN: ${{ env.DATABRICKS_TOKEN }}
+          DATABRICKS_HOST: $<< env.DATABRICKS_HOST >>
+          DATABRICKS_TOKEN: $<< env.DATABRICKS_TOKEN >>
         run: |
           pytest tests/integration/ \
             -v \
@@ -350,7 +350,7 @@ jobs:
       - name: Generate evidence report
         run: |
           python scripts/generate_evidence.py \
-            --commit-sha ${{ github.sha }} \
+            --commit-sha $<< github.sha >> \
             --output evidence/report.json
 
       - name: Upload evidence
@@ -373,8 +373,8 @@ on:
       - 'v*'
 
 env:
-  DATABRICKS_HOST: ${{ secrets.DATABRICKS_PROD_HOST }}
-  DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_PROD_TOKEN }}
+  DATABRICKS_HOST: $<< secrets.DATABRICKS_PROD_HOST >>
+  DATABRICKS_TOKEN: $<< secrets.DATABRICKS_PROD_TOKEN >>
 
 jobs:
   approval-gate:
@@ -394,7 +394,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }}
+          ref: $<< github.ref >>
 
       - name: Set up Databricks CLI
         uses: databricks/setup-cli@main
@@ -407,12 +407,12 @@ jobs:
 
       - name: Upload production artifact
         run: |
-          ARTIFACT_PATH="dist/customer_segmentation-${{ steps.version.outputs.version }}-py3-none-any.whl"
+          ARTIFACT_PATH="dist/customer_segmentation-$<< steps.version.outputs.version >>-py3-none-any.whl"
           UC_VOLUME="production.artifacts.wheels"
 
           databricks fs cp \
             $ARTIFACT_PATH \
-            "dbfs:/Volumes/$UC_VOLUME/customer_segmentation-${{ steps.version.outputs.version }}.whl"
+            "dbfs:/Volumes/$UC_VOLUME/customer_segmentation-$<< steps.version.outputs.version >>.whl"
 
       - name: Deploy bundle
         run: |
@@ -420,7 +420,7 @@ jobs:
 
       - name: Update job schedule
         run: |
-          databricks jobs update ${{ secrets.PROD_JOB_ID }} \
+          databricks jobs update $<< secrets.PROD_JOB_ID >> \
             --json @production-job-config.json
 
   smoke-tests:
@@ -434,13 +434,13 @@ jobs:
         id: trigger_run
         run: |
           RUN_ID=$(databricks jobs run-now \
-            --job-id ${{ secrets.PROD_JOB_ID }} \
+            --job-id $<< secrets.PROD_JOB_ID >> \
             --output json | jq -r '.run_id')
           echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
 
       - name: Monitor first run
         run: |
-          databricks runs wait ${{ steps.trigger_run.outputs.run_id }} \
+          databricks runs wait $<< steps.trigger_run.outputs.run_id >> \
             --timeout 1800
 
       - name: Verify output quality
@@ -454,9 +454,9 @@ jobs:
           status: custom
           text: |
             ✅ Production deployment successful
-            Version: ${{ steps.version.outputs.version }}
-            Run ID: ${{ steps.trigger_run.outputs.run_id }}
-          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+            Version: $<< steps.version.outputs.version >>
+            Run ID: $<< steps.trigger_run.outputs.run_id >>
+          webhook_url: $<< secrets.SLACK_WEBHOOK >>
 
       - name: Rollback on failure
         if: failure()
@@ -507,7 +507,7 @@ jobs:
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
-      modules: ${{ steps.changed.outputs.modules }}
+      modules: $<< steps.changed.outputs.modules >>
     steps:
       - uses: actions/checkout@v4
         with:
@@ -525,10 +525,10 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        module: ${{ fromJson(needs.detect-changes.outputs.modules) }}
+        module: $<< fromJson(needs.detect-changes.outputs.modules) >>
     steps:
-      - name: Test ${{ matrix.module }}
-        run: pytest tests/${{ matrix.module }}/
+      - name: Test $<< matrix.module >>
+        run: pytest tests/$<< matrix.module >>/
 ```
 
 ## Monitoring and Alerts

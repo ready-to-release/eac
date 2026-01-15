@@ -10,7 +10,6 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/scoring"
 	coreai "github.com/ready-to-release/eac/go/eac/core/ai"
-	"github.com/ready-to-release/eac/go/eac/core/ai/generation"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
@@ -93,19 +92,30 @@ func GenerateRiskAssessment(ctx context.Context, config *AssessConfig, input *AI
 	// Wrap executor to match validation.AIExecutor interface
 	executorAdapter := ai.NewExecutorAdapter(executor)
 
-	// Call AI with generation layer validation
-	// Pass command's logger for detailed retry logs in commands.log
-	// JSON format automatically uses enhanced JSON validator with pattern detection
-	result, err := generation.GenerateWithRetry(ctx, &generation.RetryConfig{
-		TypeName:     generation.TypeRiskAssess,
-		OutputFormat: generation.FormatJSON,
-		Executor:     executorAdapter,
-		TemplateRoot: config.WorkspaceRoot,
-		MaxAttempts:  3,
-		Debug:        config.Debug,
-		Logger:       logging.C().Zap(), // ✅ Constructor injection - pass logger once
-	}, prompt)
+	// Load AI config for retry strategy
+	aiConfig, err := coreai.LoadAIConfig(config.WorkspaceRoot)
+	if err != nil {
+		logging.C().Warnf("Could not load AI config, using default retry strategy: %v", err)
+		aiConfig = nil
+	}
 
+	// Build retry configuration using factory (validator auto-loaded for FormatJSON)
+	retryConfig, err := coreai.BuildRetryConfig(
+		coreai.TypeRiskAssess,
+		coreai.FormatJSON, // JSON format with automatic enhanced validation
+		executorAdapter,
+		nil, // Let BuildRetryConfig auto-load JSON validator
+		config.WorkspaceRoot,
+		aiConfig,
+		coreai.WithDebug(config.Debug),
+		coreai.WithLogger(logging.C().Zap()),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build retry config: %w", err)
+	}
+
+	// Generate with retry
+	result, err := coreai.GenerateWithRetry(ctx, retryConfig, prompt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate risk assessment: %w", err)
 	}
@@ -124,7 +134,7 @@ func buildRiskAssessmentPrompt(workspaceRoot string, input *AIRiskAssessmentInpu
 	// Load prompt template with three-tier priority:
 	// 1. Team override (.r2r/eac/templates/ai/risk-assess/risk-assess.md)
 	// 2. System default (templates/ai/risk-assess/risk-assess.md)
-	loader := coreai.NewContractLoader(workspaceRoot, generation.TypeRiskAssess, "")
+	loader := coreai.NewContractLoader(workspaceRoot, coreai.TypeRiskAssess, "")
 	promptTemplate, _, err := loader.LoadPrompt("", defaultRiskAssessPrompt)
 	if err != nil {
 		promptTemplate = defaultRiskAssessPrompt

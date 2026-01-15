@@ -215,23 +215,25 @@ def cleanup_ephemeral_plte(pr_number: int):
 
 **GitHub Actions Integration:**
 
+
 ```yaml
 - name: Create ephemeral PLTE
   id: plte
   run: |
-    CATALOG=$(python scripts/create_ephemeral_plte.py ${{ github.event.number }})
+    CATALOG=$(python scripts/create_ephemeral_plte.py $<< github.event.number >>)
     echo "catalog=$CATALOG" >> $GITHUB_OUTPUT
 
 - name: Run tests in PLTE
   run: |
     pytest tests/integration/ \
-      --catalog ${{ steps.plte.outputs.catalog }}
+      --catalog $<< steps.plte.outputs.catalog >>
 
 - name: Cleanup PLTE
   if: always()
   run: |
-    python scripts/cleanup_ephemeral_plte.py ${{ github.event.number }}
+    python scripts/cleanup_ephemeral_plte.py $<< github.event.number >>
 ```
+
 
 ### Strategy 2: Persistent Staging Environment
 

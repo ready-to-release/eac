@@ -197,7 +197,7 @@ func (g *StructuredGenerator) canRetry(ctx context.Context, strategy RetryStrate
 // cleanupOutput removes common AI output artifacts based on format
 func (g *StructuredGenerator) cleanupOutput(output string, format StructuredFormat) string {
 	switch format {
-	case FormatJSON:
+	case FormatJSON, FormatOSCALCatalog, FormatOSCALProfile:
 		return stripMarkdownFences(output)
 	default:
 		return output
@@ -241,14 +241,6 @@ func lastIndex(s, substr string) int {
 		}
 	}
 	return -1
-}
-
-// truncateString truncates a string to maxLen characters
-func truncateString(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	return s[:maxLen] + "..."
 }
 
 // getStrategy returns the configured strategy or the default
