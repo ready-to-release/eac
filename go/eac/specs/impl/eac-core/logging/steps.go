@@ -230,7 +230,7 @@ func theMessageAppearsInFile(filePath string) error {
 	fullPath := filepath.Join(logCtx.workspaceRoot, filePath)
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
-		return fmt.Errorf("failed to read log file %s: %v", fullPath, err)
+		return fmt.Errorf("failed to read log file %s: %w", fullPath, err)
 	}
 
 	if !strings.Contains(string(content), logCtx.lastMessage) {
@@ -243,7 +243,7 @@ func allMessagesAppearInSpecificFile(filePath string) error {
 	fullPath := filepath.Join(logCtx.workspaceRoot, filePath)
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
-		return fmt.Errorf("failed to read log file %s: %v", fullPath, err)
+		return fmt.Errorf("failed to read log file %s: %w", fullPath, err)
 	}
 
 	contentStr := string(content)
@@ -296,7 +296,7 @@ func allMessagesAppearInLogFile() error {
 	logPath := filepath.Join(logCtx.workspaceRoot, "out", "commands.log")
 	content, err := os.ReadFile(logPath)
 	if err != nil {
-		return fmt.Errorf("failed to read log file: %v", err)
+		return fmt.Errorf("failed to read log file: %w", err)
 	}
 
 	contentStr := string(content)
@@ -312,7 +312,7 @@ func fileContainsCommitLogs(filePath string) error {
 	fullPath := filepath.Join(logCtx.workspaceRoot, filePath)
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
-		return fmt.Errorf("failed to read log file %s: %v", fullPath, err)
+		return fmt.Errorf("failed to read log file %s: %w", fullPath, err)
 	}
 
 	contentStr := string(content)
@@ -326,7 +326,7 @@ func fileContainsBuildLogs(filePath string) error {
 	fullPath := filepath.Join(logCtx.workspaceRoot, filePath)
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
-		return fmt.Errorf("failed to read log file %s: %v", fullPath, err)
+		return fmt.Errorf("failed to read log file %s: %w", fullPath, err)
 	}
 
 	contentStr := string(content)

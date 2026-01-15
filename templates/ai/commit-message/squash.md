@@ -32,7 +32,10 @@ Generate a JSON object matching this schema:
   "subject": "overall feature or change description",
   "auditorSummary": "One sentence describing the overall change across all commits",
   "body": "2-4 sentences explaining what this branch does and why",
-  "changes": "N files, +X insertions, -Y deletions",
+  "changes": [
+    {"type": "feat", "scope": "module-name", "description": "add new feature X"},
+    {"type": "refactor", "scope": "module-name", "description": "improve code structure"}
+  ],
   "breaking": false
 }
 ```
@@ -66,7 +69,12 @@ Generate a JSON object matching this schema:
 - Synthesize information from multiple commits into coherent narrative
 - Mention key architectural decisions or approaches if relevant
 
-**changes** (required): Git statistics from the provided diff stats
+**changes** (required): Array of individual changes included in the PR
+- Each change must have `type` and `description`
+- Optional `scope` field for module/component
+- Group related commits into logical change items (3-10 items typical)
+- Each description should be 5+ characters, clear and specific
+- Example: `[{"type": "feat", "scope": "auth", "description": "add JWT authentication"}]`
 
 **breaking** (optional): Set to `true` if any commit indicates breaking changes
 
@@ -105,7 +113,12 @@ Generate a JSON object matching this schema:
   "subject": "multiple authentication changes",
   "auditorSummary": "Made several commits to add authentication.",
   "body": "First added user model, then implemented JWT tokens, then added\nmiddleware, and finally integrated with API. Fixed some bugs along\nthe way and updated tests.",
-  "changes": "23 files, +1,247 insertions, -89 deletions",
+  "changes": [
+    {"type": "feat", "description": "added user model"},
+    {"type": "feat", "description": "implemented JWT tokens"},
+    {"type": "feat", "description": "added middleware"},
+    {"type": "fix", "description": "fixed various bugs"}
+  ],
   "breaking": false
 }
 ```
@@ -118,7 +131,12 @@ Generate a JSON object matching this schema:
   "subject": "implement JWT-based authentication system",
   "auditorSummary": "Added complete authentication with secure token handling and route protection across user and API modules.",
   "body": "Implemented JWT token generation and validation with bcrypt password\nhashing for secure credential storage. Added authentication middleware\nfor route protection and integrated with existing user management.\nThe system follows security best practices for token handling.",
-  "changes": "23 files, +1,247 insertions, -89 deletions",
+  "changes": [
+    {"type": "feat", "scope": "auth", "description": "add JWT token generation and validation"},
+    {"type": "feat", "scope": "auth", "description": "implement bcrypt password hashing"},
+    {"type": "feat", "scope": "api", "description": "add authentication middleware for route protection"},
+    {"type": "test", "scope": "auth", "description": "add comprehensive authentication tests"}
+  ],
   "breaking": false
 }
 ```
@@ -134,7 +152,9 @@ Auditor-Summary: auditorSummary
 
 body
 
-Changes: changes
+Changes:
+- type(scope): description
+- type(scope): description
 ```
 
 Example final output:
@@ -149,7 +169,11 @@ hashing for secure credential storage. Added authentication middleware
 for route protection and integrated with existing user management.
 The system follows security best practices for token handling.
 
-Changes: 23 files, +1,247 insertions, -89 deletions
+Changes:
+- feat(auth): add JWT token generation and validation
+- feat(auth): implement bcrypt password hashing
+- feat(api): add authentication middleware for route protection
+- test(auth): add comprehensive authentication tests
 ```
 
 ## CRITICAL: What NOT to include

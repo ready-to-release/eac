@@ -169,7 +169,7 @@ func checkTagPending(module string, moduleContract *modules.ModuleContract, repo
 	changelogPath := filepath.Join(workspaceRoot, moduleContract.GetChangelogPath())
 	cl, err := changelog.Parse(changelogPath)
 	if err != nil {
-		return result, fmt.Errorf("failed to parse changelog: %v", err)
+		return result, fmt.Errorf("failed to parse changelog: %w", err)
 	}
 
 	// Get latest version from changelog
@@ -184,7 +184,7 @@ func checkTagPending(module string, moduleContract *modules.ModuleContract, repo
 	// Check if tag exists
 	exists, err := repo.TagExists(result.Tag)
 	if err != nil {
-		return result, fmt.Errorf("failed to check tag: %v", err)
+		return result, fmt.Errorf("failed to check tag: %w", err)
 	}
 
 	result.NeedsTag = !exists
