@@ -175,12 +175,12 @@ func aggregateBuildDeps(moniker string, registry *modules.Registry, moduleTypes 
 func GetBuildDepsPlain(moniker string) (string, error) {
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
-		return "", fmt.Errorf("failed to find repository root: %v", err)
+		return "", fmt.Errorf("failed to find repository root: %w", err)
 	}
 
 	moduleReport, err := reports.GetModuleContracts(workspaceRoot)
 	if err != nil {
-		return "", fmt.Errorf("failed to load module contracts: %v", err)
+		return "", fmt.Errorf("failed to load module contracts: %w", err)
 	}
 
 	_, exists := moduleReport.Registry.Get(moniker)

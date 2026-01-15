@@ -33,7 +33,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/oscal"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	aimock "github.com/ready-to-release/eac/go/eac/core/ai"
-	"github.com/ready-to-release/eac/go/eac/core/config"
+	configpkg "github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/git"
@@ -113,7 +113,7 @@ func CreateSpec() int {
 	// Load EAC configuration for path access
 	// Skip workflow validation for test environments where workflow files may not exist
 	// We only need template path configuration, not full workflow information
-	eacCfg, err := config.Load(config.LoadOptions{
+	eacCfg, err := configpkg.Load(configpkg.LoadOptions{
 		RepoRoot:               specsConfig.TemplateRoot,
 		SkipWorkflowValidation: true, // Not needed for content generation
 	})
@@ -197,7 +197,7 @@ type SpecsConfig struct {
 	OutputPath   string // -o, --output: Custom output path
 	PromptPath   string // --prompt: Custom system prompt file
 	TemplateRoot string
-	EACConfig    *config.EACConfig // Loaded repository configuration
+	EACConfig    *configpkg.EACConfig // Loaded repository configuration
 }
 
 // loadAndBuildPrompt loads the contract and builds the AI prompt
@@ -261,8 +261,15 @@ func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 	// Wrap executor to match contract.AIExecutor interface
 	executorAdapter := ai.NewExecutorAdapter(executor)
 
-	// Create validator (JSON schema validated in Phase 1)
-	validator := gherkin.NewValidator(contractData)
+	// Load tags config for tag validation
+	// The EAC config was already loaded in CreateSpec, use it to get tags config
+	var tagsConfig *configpkg.TestingTagsConfig
+	if config.EACConfig != nil && config.EACConfig.TestingTags != nil {
+		tagsConfig = config.EACConfig.TestingTags
+	}
+
+	// Create validator with tags config (JSON schema validated in Phase 1)
+	validator := gherkin.NewValidator(contractData, tagsConfig)
 
 	// Load AI config to get retry strategy
 	var aiConfig *aimock.AIConfig
@@ -272,8 +279,18 @@ func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 		aiConfig = nil
 	}
 
-	// Build retry configuration with strategy
-	retryConfig, err := buildRetryConfig(executorAdapter, validator, config, aiConfig)
+	// Build retry configuration using factory
+	retryConfig, err := aimock.BuildRetryConfig(
+		aimock.TypeSpecs,
+		aimock.FormatGherkin,
+		executorAdapter,
+		validator,
+		config.TemplateRoot,
+		aiConfig,
+		aimock.WithDebug(config.Debug),
+		aimock.WithLogger(logging.C().Zap()),
+		aimock.WithTagsConfig(tagsConfig),
+	)
 	if err != nil {
 		log.Errorf("Failed to build retry config: %v", err)
 		return "", fmt.Errorf("failed to build retry config: %w", err)
@@ -636,7 +653,7 @@ func buildUserInputSection(config *SpecsConfig) string {
 }
 
 // loadModuleControlsContext loads OSCAL profile and formats controls for AI prompt
-func loadModuleControlsContext(workspaceRoot string, moduleName string, cfg *config.EACConfig) string {
+func loadModuleControlsContext(workspaceRoot string, moduleName string, cfg *configpkg.EACConfig) string {
 	// Only load if module is specified
 	if moduleName == "" {
 		return "(No module specified - control tags optional)"
@@ -712,55 +729,4 @@ func loadModuleControlsContext(workspaceRoot string, moduleName string, cfg *con
 	sb.WriteString("- Omit control tags for non-security scenarios\n")
 
 	return sb.String()
-}
-
-// buildRetryConfig creates RetryConfig with strategy from AI config
-func buildRetryConfig(
-	executor contracts.AIExecutor,
-	validator contracts.Validator,
-	config *SpecsConfig,
-	aiConfig *aimock.AIConfig,
-) (*aimock.RetryConfig, error) {
-	maxAttempts := 2
-	var strategy aimock.RetryStrategy
-
-	// Load retry strategy from config if available
-	if aiConfig != nil {
-		if typeConfig, ok := aiConfig.Types[aimock.TypeSpecs]; ok {
-			if typeConfig.RetryStrategy != nil && typeConfig.RetryStrategy.MaxAttempts > 0 {
-				maxAttempts = typeConfig.RetryStrategy.MaxAttempts
-			}
-
-			if typeConfig.RetryStrategy != nil {
-				var focusCategories []string
-				if typeConfig.RetryStrategy.FocusCategories != nil {
-					focusCategories = typeConfig.RetryStrategy.FocusCategories
-				}
-
-				var err error
-				strategy, err = aimock.GetRetryStrategy(typeConfig.RetryStrategy.Type, focusCategories)
-				if err != nil {
-					return nil, fmt.Errorf("failed to create retry strategy: %w", err)
-				}
-				log.Infof("Using retry strategy: strategy=%s, maxAttempts=%d", strategy.Name(), maxAttempts)
-			}
-		}
-	}
-
-	// Default to StandardStrategy if not configured
-	if strategy == nil {
-		strategy = &aimock.StandardStrategy{}
-	}
-
-	return &aimock.RetryConfig{
-		TypeName:     aimock.TypeSpecs,
-		OutputFormat: aimock.FormatGherkin, // Generate Gherkin directly
-		Validator:    validator,            // Validate Gherkin output
-		Executor:     executor,
-		TemplateRoot: config.TemplateRoot,
-		MaxAttempts:  maxAttempts,
-		Debug:        config.Debug,
-		Strategy:     strategy,
-		Logger:       logging.C().Zap(), // ✅ Pass logger for retry observability
-	}, nil
 }

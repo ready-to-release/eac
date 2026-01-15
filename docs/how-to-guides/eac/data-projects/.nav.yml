@@ -1,0 +1,12 @@
+nav:
+  - index.md
+  - cd-model-for-data-projects.md
+  - Getting Started:
+    - develop-data-pipeline-with-specs.md
+    - databricks-asset-bundles.md
+  - Testing and Quality:
+    - testing-data-pipelines.md
+  - CI/CD and Operations:
+    - cicd-pipeline-databricks.md
+    - environment-management.md
+    - monitoring-data-quality.md

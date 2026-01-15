@@ -101,6 +101,7 @@ const (
 	TypeDesign        = generation.TypeDesign
 	TypeSpecs         = generation.TypeSpecs
 	TypeRiskProfile   = generation.TypeRiskProfile
+	TypeRiskAssess    = generation.TypeRiskAssess
 	TypeUpdateDesign  = generation.TypeUpdateDesign
 )
 
@@ -126,6 +127,45 @@ func GetRetryStrategy(strategyName string, focusCategories []string) (RetryStrat
 
 func GetPhaseInstruction(format StructuredFormat) (string, error) {
 	return generation.GetPhaseInstruction(format)
+}
+
+// BuildRetryConfig creates a RetryConfig from command-level inputs using the factory pattern.
+// See generation.BuildRetryConfig for detailed documentation.
+func BuildRetryConfig(
+	typeName string,
+	outputFormat StructuredFormat,
+	executor validation.AIExecutor,
+	validator validation.Validator,
+	templateRoot string,
+	aiConfig *AIConfig,
+	options ...RetryConfigOption,
+) (*RetryConfig, error) {
+	return generation.BuildRetryConfig(typeName, outputFormat, executor, validator, templateRoot, aiConfig, options...)
+}
+
+// RetryConfigOption configures optional RetryConfig fields using functional options pattern
+type RetryConfigOption = generation.RetryConfigOption
+
+// WithDebug enables debug mode for intermediate output logging
+func WithDebug(debug bool) RetryConfigOption {
+	return generation.WithDebug(debug)
+}
+
+// WithLogger sets a custom logger (defaults to zap.NewNop() if not provided)
+func WithLogger(logger interface{}) RetryConfigOption {
+	// Accept interface{} to allow passing *zap.Logger without importing zap in this file
+	return generation.WithLogger(logger)
+}
+
+// WithTagsConfig sets the testing tags config (required for Gherkin validation)
+func WithTagsConfig(tags interface{}) RetryConfigOption {
+	// Accept interface{} to avoid circular imports
+	return generation.WithTagsConfig(tags)
+}
+
+// WithDefaultMaxAttempts sets the default max attempts (used if not in aiConfig)
+func WithDefaultMaxAttempts(max int) RetryConfigOption {
+	return generation.WithDefaultMaxAttempts(max)
 }
 
 // ============================================================================

@@ -112,11 +112,15 @@ workspace "CLI System" "CLI application with containerized extensions" {
 
 - Every element must have unique identifier
 - Relationships can only reference identifiers that exist in model
+- **NEVER create relationships from a parent to its own children** (e.g., `system -> container` where container is INSIDE system)
+  - ❌ WRONG: `cli -> app` when app is a container inside cli
+  - ✅ CORRECT: `user -> cli` (external to system) or `app -> docker` (container to external system)
 - External systems should not have containers (mark with "External" tag)
 - Always include systemContext view for your main system
 - Always include container view if your system has containers
 - Use lowercase_underscore for ALL identifiers
 - Use proper DSL syntax - no JSON, no markdown fences
 - Include styles section for consistent diagram appearance
+- Relationships should be between peer elements or across hierarchy levels (person→system, container→external system), never parent→child
 
 Generate Structurizr DSL now based on the description below:
