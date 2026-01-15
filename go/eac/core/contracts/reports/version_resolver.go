@@ -5,6 +5,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/core/changelog"
 	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/ready-to-release/eac/go/eac/core/git"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
@@ -66,7 +67,7 @@ func ResolveVersion(workspaceRoot, module, versionStr string) (*VersionInfo, err
 	if versionStr == "latest" {
 		latestVer := log.LatestVersion()
 		if latestVer == nil {
-			return nil, fmt.Errorf("no released versions found")
+			return nil, fmt.Errorf("no released versions found in changelog")
 		}
 
 		info.VersionNumber = latestVer.Number
@@ -102,6 +103,75 @@ func ResolveVersion(workspaceRoot, module, versionStr string) (*VersionInfo, err
 				info.PreviousGitTag = "" // First release
 			}
 			break
+		}
+	}
+
+	return info, nil
+}
+
+// versionResolverRepo holds the git repository instance for testing (allows mock injection)
+var versionResolverRepo git.GitRepository
+
+// SetVersionResolverRepo allows tests to inject a mock repository.
+func SetVersionResolverRepo(repo git.GitRepository) {
+	versionResolverRepo = repo
+}
+
+// getVersionResolverRepo returns the git repository, initializing it if needed.
+func getVersionResolverRepo(workspaceRoot string) (git.GitRepository, error) {
+	if versionResolverRepo != nil {
+		return versionResolverRepo, nil
+	}
+	repo, err := git.Open(workspaceRoot, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open git repository: %w", err)
+	}
+	return repo, nil
+}
+
+// ResolveVersionWithValidation resolves a version and validates that git tags exist.
+// This provides better error messages when tags are missing due to shallow clones.
+func ResolveVersionWithValidation(workspaceRoot, module, versionStr string) (*VersionInfo, error) {
+	info, err := ResolveVersion(workspaceRoot, module, versionStr)
+	if err != nil {
+		return nil, err
+	}
+
+	// For unreleased, we don't strictly need the tag to exist
+	if info.IsUnreleased {
+		return info, nil
+	}
+
+	// Validate that the resolved git tag exists
+	repo, err := getVersionResolverRepo(workspaceRoot)
+	if err != nil {
+		return nil, err
+	}
+
+	if info.GitTag != "" {
+		exists, err := repo.TagExists(info.GitTag)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check tag existence: %w", err)
+		}
+		if !exists {
+			// List available tags to help diagnose
+			tags, _ := repo.TagsMatching(module + "/*")
+			tagList := "none found"
+			if len(tags) > 0 {
+				if len(tags) > 5 {
+					tags = tags[:5]
+				}
+				tagList = fmt.Sprintf("%v", tags)
+			}
+			return nil, fmt.Errorf(
+				"git tag %q not found in local repository\n"+
+					"  Changelog version: %s\n"+
+					"  Available %s tags: %s\n\n"+
+					"Possible causes:\n"+
+					"  - Shallow clone without tags (CI: add fetch-depth: 0 and fetch-tags: true)\n"+
+					"  - Tag not pushed to remote (run: git push origin %s)\n"+
+					"  - Version in changelog but release not completed",
+				info.GitTag, info.VersionNumber, module, tagList, info.GitTag)
 		}
 	}
 
