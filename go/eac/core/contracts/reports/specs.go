@@ -72,8 +72,8 @@ func GetSpecs(workspaceRoot, module, version, branch string) (*SpecsReport, erro
 		return nil, fmt.Errorf("module not found: %s", module)
 	}
 
-	// Resolve version using common helper
-	versionInfo, err := ResolveVersion(workspaceRoot, module, version)
+	// Resolve version using common helper with tag validation
+	versionInfo, err := ResolveVersionWithValidation(workspaceRoot, module, version)
 	if err != nil {
 		return nil, err
 	}
