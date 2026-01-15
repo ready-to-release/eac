@@ -1,5 +1,5 @@
 # Naming Conventions
->
+
 > **Feature and file naming standards**
 
 Consistent naming conventions enable traceability and organization across the codebase.
@@ -84,9 +84,9 @@ specs/vscode-extension/status-bar/specification.feature
 
 ### Relationship Between Name and Path
 
-| Feature Name | File Path |
-|-------------|-----------|
-| `cli_init-project` | `specs/cli/init-project/specification.feature` |
+| Feature Name                  | File Path                                                 |
+| ----------------------------- | --------------------------------------------------------- |
+| `cli_init-project`            | `specs/cli/init-project/specification.feature`            |
 | `eac-commands_design-command` | `specs/eac-commands/design-command/specification.feature` |
 | `vscode-extension_status-bar` | `specs/vscode-extension/status-bar/specification.feature` |
 

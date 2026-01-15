@@ -139,11 +139,11 @@ When tests run, evidence is collected for AC-1.
 
 ## Common Issues
 
-| Problem | Solution |
-|---------|----------|
+| Problem             | Solution                         |
+| ------------------- | -------------------------------- |
 | "Control not found" | Check control ID against catalog |
-| Invalid OSCAL | Validate against schema |
-| Missing evidence | Run security scans and tests |
+| Invalid OSCAL       | Validate against schema          |
+| Missing evidence    | Run security scans and tests     |
 
 ## Customizing Reports
 

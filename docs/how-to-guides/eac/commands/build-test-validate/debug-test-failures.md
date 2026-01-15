@@ -80,11 +80,11 @@ r2r eac test src-auth --fail-fast
 
 ## Common Issues
 
-| Problem | Solution |
-|---------|----------|
-| Flaky tests | Check for timing/race conditions |
-| Timeouts | Increase timeout or optimize test |
-| Setup failures | Verify test fixtures and data |
+| Problem        | Solution                          |
+| -------------- | --------------------------------- |
+| Flaky tests    | Check for timing/race conditions  |
+| Timeouts       | Increase timeout or optimize test |
+| Setup failures | Verify test fixtures and data     |
 
 ## Next Steps
 

@@ -30,10 +30,10 @@ Testing in external repositories ensures your extension:
 
 ### Development vs Testing Workflow
 
-| Extension Type | Build Location | Dev Workflow | Test in External Repo |
-|----------------|----------------|--------------|----------------------|
-| **ext-eac** | EAC repository | `importer.ps1` | Docker image |
-| **Standalone** | Own repository | Docker build | Docker image |
+| Extension Type | Build Location | Dev Workflow   | Test in External Repo |
+| -------------- | -------------- | -------------- | --------------------- |
+| **ext-eac**    | EAC repository | `importer.ps1` | Docker image          |
+| **Standalone** | Own repository | Docker build   | Docker image          |
 
 **This guide focuses on ext-eac**, but the same principles apply to standalone extensions. See the [Testing Standalone Extensions](#testing-standalone-extensions-in-external-repos) section for standalone-specific guidance.
 
@@ -126,14 +126,14 @@ C:\source\ready-to-release\eac\scripts\pwsh\local-dev\setup.ps1 -TargetRepo .
 
 **Options:**
 
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `-TargetRepo` | Path to target repository | Current directory |
-| `-SkipBuild` | Skip Docker build (use existing) | `false` |
-| `-SkipInstall` | Skip r2r installation | `false` |
-| `-SkipTest` | Skip validation tests | `false` |
-| `-ImageTag` | Docker image tag to use | `ext-eac:dev` |
-| `-Force` | Overwrite existing config | `false` |
+| Parameter      | Description                      | Default           |
+| -------------- | -------------------------------- | ----------------- |
+| `-TargetRepo`  | Path to target repository        | Current directory |
+| `-SkipBuild`   | Skip Docker build (use existing) | `false`           |
+| `-SkipInstall` | Skip r2r installation            | `false`           |
+| `-SkipTest`    | Skip validation tests            | `false`           |
+| `-ImageTag`    | Docker image tag to use          | `ext-eac:dev`     |
+| `-Force`       | Overwrite existing config        | `false`           |
 
 ### 3. Set Environment Variable
 
@@ -472,14 +472,14 @@ r2r env-check HOME USER SHELL
 
 ### Comparing Extension Testing
 
-| Aspect | ext-eac | Standalone Extension |
-|--------|---------|---------------------|
-| Build location | EAC repo | Extension repo |
-| Dev iteration | importer.ps1 | Docker rebuild |
-| External test setup | Setup script | Manual config |
-| Image update | Rebuild in EAC repo | Rebuild in own repo |
-| Config file | Same pattern | Same pattern |
-| Test commands | `r2r eac <cmd>` | `r2r <ext> <cmd>` |
+| Aspect              | ext-eac             | Standalone Extension |
+| ------------------- | ------------------- | -------------------- |
+| Build location      | EAC repo            | Extension repo       |
+| Dev iteration       | importer.ps1        | Docker rebuild       |
+| External test setup | Setup script        | Manual config        |
+| Image update        | Rebuild in EAC repo | Rebuild in own repo  |
+| Config file         | Same pattern        | Same pattern         |
+| Test commands       | `r2r eac <cmd>`     | `r2r <ext> <cmd>`    |
 
 ### Testing Different Versions
 

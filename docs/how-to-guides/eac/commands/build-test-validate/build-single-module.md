@@ -80,11 +80,11 @@ r2r eac show artifacts src-auth
 
 ## Common Issues
 
-| Problem | Solution |
-|---------|----------|
-| "Dependency not built" | Build dependency first or build all |
-| Build fails | Check error output, ensure tools installed |
-| Artifacts missing | Run `validate artifacts` for details |
+| Problem                | Solution                                   |
+| ---------------------- | ------------------------------------------ |
+| "Dependency not built" | Build dependency first or build all        |
+| Build fails            | Check error output, ensure tools installed |
+| Artifacts missing      | Run `validate artifacts` for details       |
 
 ## Next Steps
 

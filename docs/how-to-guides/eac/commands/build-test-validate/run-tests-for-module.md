@@ -77,11 +77,11 @@ r2r eac show test-timings src-auth
 
 ## Common Issues
 
-| Problem | Solution |
-|---------|----------|
-| Tests fail | Run `test debug` to see failure details |
-| Timeout | Increase timeout or check for infinite loops |
-| Coverage too low | Add tests for uncovered code |
+| Problem          | Solution                                     |
+| ---------------- | -------------------------------------------- |
+| Tests fail       | Run `test debug` to see failure details      |
+| Timeout          | Increase timeout or check for infinite loops |
+| Coverage too low | Add tests for uncovered code                 |
 
 ## Next Steps
 

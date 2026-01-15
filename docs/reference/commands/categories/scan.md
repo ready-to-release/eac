@@ -10,14 +10,14 @@ The **scan** category provides security scanning with multiple scanner types via
 
 ## Scanner Types
 
-| Type | Description | Tool |
-|------|-------------|------|
-| `sbom` | Software Bill of Materials | Trivy |
-| `vuln` | Vulnerability scanning | Trivy |
-| `secrets` | Secret detection | Trivy |
-| `iac` | Infrastructure as Code scanning | Trivy |
-| `compliance` | Compliance checking | Trivy |
-| `sast` | Static Application Security Testing | Semgrep |
+| Type         | Description                         | Tool    |
+| ------------ | ----------------------------------- | ------- |
+| `sbom`       | Software Bill of Materials          | Trivy   |
+| `vuln`       | Vulnerability scanning              | Trivy   |
+| `secrets`    | Secret detection                    | Trivy   |
+| `iac`        | Infrastructure as Code scanning     | Trivy   |
+| `compliance` | Compliance checking                 | Trivy   |
+| `sast`       | Static Application Security Testing | Semgrep |
 
 ## Common Use Cases
 

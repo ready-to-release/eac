@@ -61,13 +61,13 @@ C:\source\ready-to-release\eac\scripts\pwsh\local-dev\setup.ps1 -TargetRepo .
 
 ### When to Use Which Workflow
 
-| Scenario | Use | Reason |
-|----------|-----|--------|
-| Writing new EAC commands | importer.ps1 | Fastest iteration |
-| Debugging EAC code | importer.ps1 | Direct code execution |
-| Testing in different repo | Docker | Realistic environment |
-| Validating container config | Docker | Production-like setup |
-| Testing multi-repo support | Docker | Integration testing |
+| Scenario                    | Use          | Reason                |
+| --------------------------- | ------------ | --------------------- |
+| Writing new EAC commands    | importer.ps1 | Fastest iteration     |
+| Debugging EAC code          | importer.ps1 | Direct code execution |
+| Testing in different repo   | Docker       | Realistic environment |
+| Validating container config | Docker       | Production-like setup |
+| Testing multi-repo support  | Docker       | Integration testing   |
 
 ## EAC Repository Development
 
@@ -160,13 +160,13 @@ Build the EAC extension Docker image locally in the EAC repository:
 
 **Build Options:**
 
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `-Tag` | Docker image tag | `ext-eac:dev` |
-| `-Platform` | Target platform | `linux/amd64` |
-| `-MultiPlatform` | Build for both amd64 and arm64 | `false` |
-| `-Push` | Push to registry after build | `false` |
-| `-NoBuildKit` | Disable Docker BuildKit | `false` |
+| Parameter        | Description                    | Default       |
+| ---------------- | ------------------------------ | ------------- |
+| `-Tag`           | Docker image tag               | `ext-eac:dev` |
+| `-Platform`      | Target platform                | `linux/amd64` |
+| `-MultiPlatform` | Build for both amd64 and arm64 | `false`       |
+| `-Push`          | Push to registry after build   | `false`       |
+| `-NoBuildKit`    | Disable Docker BuildKit        | `false`       |
 
 **Verify the build:**
 
@@ -194,12 +194,12 @@ Create a local r2r configuration that uses your Docker image:
 
 **Configuration Options:**
 
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `-ImageTag` | Docker image tag to use | `ext-eac:dev` |
-| `-Force` | Overwrite existing config | `false` |
-| `-MountWorkspace` | Add volume mount for live development | `false` |
-| `-EnableDebug` | Add debug environment variables | `false` |
+| Parameter         | Description                           | Default       |
+| ----------------- | ------------------------------------- | ------------- |
+| `-ImageTag`       | Docker image tag to use               | `ext-eac:dev` |
+| `-Force`          | Overwrite existing config             | `false`       |
+| `-MountWorkspace` | Add volume mount for live development | `false`       |
+| `-EnableDebug`    | Add debug environment variables       | `false`       |
 
 This creates `.r2r/r2r-cli.local.yml` with:
 
@@ -340,10 +340,10 @@ When developing and testing in external repositories:
 
 ### Comparison: importer.ps1 vs Docker
 
-| Workflow | Code Changes | Test Changes | Iteration Time |
-|----------|--------------|--------------|----------------|
-| importer.ps1 (EAC repo) | Edit code | `r2r load-commands` | Seconds |
-| Docker (external repo) | Edit code | Rebuild image | Minutes |
+| Workflow                | Code Changes | Test Changes        | Iteration Time |
+| ----------------------- | ------------ | ------------------- | -------------- |
+| importer.ps1 (EAC repo) | Edit code    | `r2r load-commands` | Seconds        |
+| Docker (external repo)  | Edit code    | Rebuild image       | Minutes        |
 
 **Recommendation**: Develop and debug in EAC repo with `importer.ps1`, then validate in external repos with Docker.
 
@@ -498,27 +498,27 @@ cat .r2r\r2r-cli.local.yml
 
 ### Script Locations
 
-| Script | Purpose | Path |
-|--------|---------|------|
-| Build Script | Build local Docker images | `scripts/pwsh/local-dev/build-local.ps1` |
-| Init Script | Create local config | `scripts/pwsh/cli/init-local.ps1` |
-| Setup Script | Complete setup orchestration | `scripts/pwsh/local-dev/setup.ps1` |
-| Install Script | Install r2r binary | `scripts/pwsh/cli/install.ps1` |
+| Script         | Purpose                      | Path                                     |
+| -------------- | ---------------------------- | ---------------------------------------- |
+| Build Script   | Build local Docker images    | `scripts/pwsh/local-dev/build-local.ps1` |
+| Init Script    | Create local config          | `scripts/pwsh/cli/init-local.ps1`        |
+| Setup Script   | Complete setup orchestration | `scripts/pwsh/local-dev/setup.ps1`       |
+| Install Script | Install r2r binary           | `scripts/pwsh/cli/install.ps1`           |
 
 ### Configuration Files
 
-| File | Purpose | Committed |
-|------|---------|-----------|
-| `.r2r/r2r-cli.yml` | Base configuration | Yes |
-| `.r2r/r2r-cli.local.yml` | Local overrides | No (gitignored) |
+| File                     | Purpose            | Committed       |
+| ------------------------ | ------------------ | --------------- |
+| `.r2r/r2r-cli.yml`       | Base configuration | Yes             |
+| `.r2r/r2r-cli.local.yml` | Local overrides    | No (gitignored) |
 
 ### Environment Variables
 
-| Variable | Purpose | Example |
-|----------|---------|---------|
-| `R2R_REPO_ROOT` | Repository root path | `C:\source\ready-to-release\eac` |
-| `EAC_DEBUG` | Enable debug logging | `true` |
-| `R2R_LOCAL_DEV` | Flag for local development | `true` |
+| Variable        | Purpose                    | Example                          |
+| --------------- | -------------------------- | -------------------------------- |
+| `R2R_REPO_ROOT` | Repository root path       | `C:\source\ready-to-release\eac` |
+| `EAC_DEBUG`     | Enable debug logging       | `true`                           |
+| `R2R_LOCAL_DEV` | Flag for local development | `true`                           |
 
 ## Related Guides
 

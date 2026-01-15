@@ -86,11 +86,11 @@ r2r eac create commit-message
 
 ## Common Issues
 
-| Problem | Solution |
-|---------|----------|
-| "No AI provider configured" | Run `r2r eac init` to setup |
-| "No staged changes" | Stage files with `git add` first |
-| Message too generic | Use `--debug` flag to see AI analysis |
+| Problem                     | Solution                              |
+| --------------------------- | ------------------------------------- |
+| "No AI provider configured" | Run `r2r eac init` to setup           |
+| "No staged changes"         | Stage files with `git add` first      |
+| Message too generic         | Use `--debug` flag to see AI analysis |
 
 ## Next Steps
 

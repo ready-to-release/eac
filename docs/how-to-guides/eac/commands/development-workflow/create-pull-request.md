@@ -101,11 +101,11 @@ r2r eac create pr
 
 ## Common Issues
 
-| Problem | Solution |
-|---------|----------|
-| "No commits to analyze" | Ensure branch has commits vs base |
-| "gh not found" | Install GitHub CLI or use --dry-run |
-| Branch not pushed | Run `git push` first |
+| Problem                 | Solution                            |
+| ----------------------- | ----------------------------------- |
+| "No commits to analyze" | Ensure branch has commits vs base   |
+| "gh not found"          | Install GitHub CLI or use --dry-run |
+| Branch not pushed       | Run `git push` first                |
 
 ## Next Steps
 

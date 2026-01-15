@@ -13,25 +13,25 @@ The C4 model provides four levels of abstraction:
 
 ## Core Modules
 
-| Module | Description | Views |
-|--------|-------------|-------|
-| [eac-commands](eac-commands.md) | CLI command implementations | 19 |
-| [eac-core](eac-core.md) | Core libraries and contracts | 7 |
-| [eac-mcp-commands](eac-mcp-commands.md) | MCP server integration | 5 |
-| [r2r-cli](r2r-cli.md) | Ready-to-Release CLI | 15 |
+| Module                                  | Description                  | Views |
+| --------------------------------------- | ---------------------------- | ----- |
+| [eac-commands](eac-commands.md)         | CLI command implementations  | 19    |
+| [eac-core](eac-core.md)                 | Core libraries and contracts | 7     |
+| [eac-mcp-commands](eac-mcp-commands.md) | MCP server integration       | 5     |
+| [r2r-cli](r2r-cli.md)                   | Ready-to-Release CLI         | 15    |
 
 ## Infrastructure Modules
 
-| Module | Description | Views |
-|--------|-------------|-------|
-| [ext-eac](ext-eac.md) | Docker extension image | 3 |
-| [repository](repository.md) | Repository contracts and validation | 4 |
+| Module                      | Description                         | Views |
+| --------------------------- | ----------------------------------- | ----- |
+| [ext-eac](ext-eac.md)       | Docker extension image              | 3     |
+| [repository](repository.md) | Repository contracts and validation | 4     |
 
 ## Supporting Modules
 
-| Module | Description | Views |
-|--------|-------------|-------|
-| [Supporting Modules](supporting-modules/index.md) | docs, templates, r2r-installer, etc. | 12 |
+| Module                                            | Description                          | Views |
+| ------------------------------------------------- | ------------------------------------ | ----- |
+| [Supporting Modules](supporting-modules/index.md) | docs, templates, r2r-installer, etc. | 12    |
 
 ## Viewing Diagrams Interactively
 

@@ -29,7 +29,7 @@ func Get() int {
 	case "--help", "-h":
 		printGetUsage()
 		return 0
-	case "artifacts", "build-deps", "build-times", "changed-modules", "changed-modules-ci", "changed-modules-local", "ci-dispatch", "config", "dependencies", "environments", "execution-order", "files", "modules", "release-bundle", "suite", "test-results", "tests", "test-timings", "valid-commands":
+	case "artifacts", "build-deps", "build-times", "changed-modules", "changed-modules-ci", "changed-modules-local", "ci-dispatch", "config", "dependencies", "documented-commands", "environments", "execution-order", "files", "modules", "release-bundle", "suite", "test-results", "tests", "test-timings", "valid-commands":
 		// Handled by separate registrations in respective files
 		return 0
 	default:
@@ -74,6 +74,7 @@ func printGetUsage() {
 	fmt.Println("")
 	fmt.Println("Commands:")
 	fmt.Println("  valid-commands            Get all valid commands in structured format")
+	fmt.Println("  documented-commands       Get EAC commands documented in markdown files")
 	fmt.Println("")
 	fmt.Println("Release:")
 	fmt.Println("  release-bundle            Get release bundle configuration with module details")

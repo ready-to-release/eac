@@ -32,6 +32,7 @@ flowchart LR
 ### Why It Matters
 
 The extension metadata command allows:
+
 - r2r CLI to discover extension capabilities
 - Version compatibility checking
 - Resource requirement validation
@@ -155,7 +156,7 @@ Expected output:
 
 A well-organized extension follows this structure for maintainability and testability:
 
-```
+```text
 my-extension/
 ├── go/
 │   └── my-extension/
@@ -700,12 +701,12 @@ configPath := filepath.Join(repoRoot, ".r2r", "eac", "repository.yml")
 
 Key environment variables available in extensions:
 
-| Variable | Description |
-|----------|-------------|
+| Variable                 | Description                         |
+| ------------------------ | ----------------------------------- |
 | `R2R_CONTAINER_REPOROOT` | Repository mount path (`/var/task`) |
-| `R2R_HOST_REPOROOT` | Original host path |
-| `R2R_ENV` | Environment identifier |
-| `R2R_OPERATION_ID` | Unique operation ID for tracing |
+| `R2R_HOST_REPOROOT`      | Original host path                  |
+| `R2R_ENV`                | Environment identifier              |
+| `R2R_OPERATION_ID`       | Unique operation ID for tracing     |
 
 ## Publishing Extensions
 
@@ -882,14 +883,14 @@ git commit -m "release(my-extension): 1.2.0"
 
 ### When to Use EAC Integration
 
-| Use Case | Standalone | With EAC |
-|----------|-----------|----------|
-| Simple extension | ✓ Easier | Overkill |
-| Multiple extensions | Manual effort | ✓ Consistent |
-| Semver releases | Manual tagging | ✓ Automated |
-| Multi-platform builds | Manual buildx | ✓ Automated |
-| Dependency tracking | Manual | ✓ Automated |
-| Module contracts | Not available | ✓ Available |
+| Use Case              | Standalone     | With EAC     |
+| --------------------- | -------------- | ------------ |
+| Simple extension      | ✓ Easier       | Overkill     |
+| Multiple extensions   | Manual effort  | ✓ Consistent |
+| Semver releases       | Manual tagging | ✓ Automated  |
+| Multi-platform builds | Manual buildx  | ✓ Automated  |
+| Dependency tracking   | Manual         | ✓ Automated  |
+| Module contracts      | Not available  | ✓ Available  |
 
 **Recommendation**: Use EAC integration if you're managing multiple extensions or want automated release workflows.
 
@@ -905,13 +906,13 @@ git commit -m "release(my-extension): 1.2.0"
 
 ## Troubleshooting
 
-| Problem | Solution |
-|---------|----------|
-| Image not found | Check image name and registry access |
-| Permission denied | Ensure entrypoint is executable |
-| No output | Check container logs with `docker logs` |
-| Wrong arguments | Extension receives args after extension name |
-| Mount issues | Verify volume paths exist on host |
+| Problem           | Solution                                     |
+| ----------------- | -------------------------------------------- |
+| Image not found   | Check image name and registry access         |
+| Permission denied | Ensure entrypoint is executable              |
+| No output         | Check container logs with `docker logs`      |
+| Wrong arguments   | Extension receives args after extension name |
+| Mount issues      | Verify volume paths exist on host            |
 
 ---
 

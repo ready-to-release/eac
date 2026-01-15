@@ -1,5 +1,5 @@
 # Organizing Specifications
->
+
 > **How to structure and organize Gherkin specification files**
 
 Learn how to organize specifications for maintainability, clarity, and discoverability.
@@ -20,13 +20,13 @@ This section covers:
 
 ## In This Section
 
-| Topic | Description |
-|-------|-------------|
-| [File Structure](./file-structure.md) | Specifications vs implementation separation |
-| [Organizing Rules](./organizing-rules.md) | Rule blocks and acceptance criteria |
-| [Organizing Scenarios](./organizing-scenarios.md) | Scenario structure and independence |
-| [Naming Conventions](./naming-conventions.md) | Feature and file naming standards |
-| [Size Guidelines](./size-guidelines.md) | Rule and scenario count limits |
+| Topic                                             | Description                                 |
+| ------------------------------------------------- | ------------------------------------------- |
+| [File Structure](./file-structure.md)             | Specifications vs implementation separation |
+| [Organizing Rules](./organizing-rules.md)         | Rule blocks and acceptance criteria         |
+| [Organizing Scenarios](./organizing-scenarios.md) | Scenario structure and independence         |
+| [Naming Conventions](./naming-conventions.md)     | Feature and file naming standards           |
+| [Size Guidelines](./size-guidelines.md)           | Rule and scenario count limits              |
 
 ---
 

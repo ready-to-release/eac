@@ -85,11 +85,11 @@ r2r eac get dependencies | jq '.dependencies["src-api"]'
 
 ## Common Issues
 
-| Problem | Solution |
-|---------|----------|
-| Version mismatch | Update go.mod to match contract |
-| Missing dependency | Add to module.yml and go.mod |
-| Circular dependency | Refactor module structure |
+| Problem             | Solution                        |
+| ------------------- | ------------------------------- |
+| Version mismatch    | Update go.mod to match contract |
+| Missing dependency  | Add to module.yml and go.mod    |
+| Circular dependency | Refactor module structure       |
 
 ## Next Steps
 

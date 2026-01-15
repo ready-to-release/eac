@@ -112,16 +112,16 @@ r2r eac test --suite unit+integration+acceptance
 ```
 
 !!! note "CI vs Local"
-    CI pipelines typically run unit+integration for PRs and add acceptance for main branch commits.
-    Use composite suites for convenience.
+CI pipelines typically run unit+integration for PRs and add acceptance for main branch commits.
+Use composite suites for convenience.
 
 ## Common Issues
 
-| Problem | Solution |
-|---------|----------|
+| Problem         | Solution                                |
+| --------------- | --------------------------------------- |
 | Suite not found | Run `test list-suites` to see available |
-| Tests timeout | Suite may need more resources |
-| Flaky tests | Check integration test stability |
+| Tests timeout   | Suite may need more resources           |
+| Flaky tests     | Check integration test stability        |
 
 ## Next Steps
 
