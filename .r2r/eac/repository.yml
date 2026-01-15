@@ -123,14 +123,14 @@ modules:
       workflows:
         ci: .github/workflows/ci-mkdocs-pdf.yaml
     docker_build:
-      container: "cli-{moniker}"
+      container: "{moniker}"
       context: "containers/mkdocs-pdf"
       dockerfile: "containers/mkdocs-pdf/Dockerfile"
       platforms:
         - linux/amd64
       tags:
-        - "ghcr.io/ready-to-release/eac/cli-{moniker}:latest"
-        - "ghcr.io/ready-to-release/eac/cli-{moniker}:sha-{short_sha}"
+        - "ghcr.io/ready-to-release/{moniker}:latest"
+        - "ghcr.io/ready-to-release/{moniker}:sha-{short_sha}"
       push: true
       registry: ghcr.io
       cache:
