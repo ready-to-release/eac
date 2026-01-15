@@ -22,12 +22,13 @@ func buildReportData(
 	profile *oscalTypes.Profile,
 	isSubset bool,
 	totalModules int,
+	aiOutput *AIRiskAssessmentOutput,
 ) *RiskAssessmentReportData {
 	data := &RiskAssessmentReportData{
-		GeneratedAt:      time.Now().Format("2006-01-02 15:04:05 MST"),
-		ProfileName:      filepath.Base(config.ProfilePath),
-		TestSuite:        "all", // Always uses all tests
-		ModuleResults:    make([]ModuleReportData, len(results)),
+		GeneratedAt:   time.Now().Format("2006-01-02 15:04:05 MST"),
+		ProfileName:   filepath.Base(config.ProfilePath),
+		TestSuite:     "all", // Always uses all tests
+		ModuleResults: make([]ModuleReportData, len(results)),
 	}
 
 	// Build scope description
@@ -37,8 +38,15 @@ func buildReportData(
 		data.ScopeDescription = fmt.Sprintf("Full Assessment (all %d modules)", len(results))
 	}
 
-	// Build summary statistics
-	data.Summary = buildExecutiveSummary(results)
+	// Build summary statistics (basic)
+	basicSummary := buildBasicExecutiveSummary(results)
+
+	// Enhance with AI-generated content if available
+	if aiOutput != nil {
+		data.Summary = BuildExecutiveSummary(aiOutput, basicSummary)
+	} else {
+		data.Summary = basicSummary
+	}
 
 	// Build per-module data
 	for i, result := range results {
@@ -51,10 +59,11 @@ func buildReportData(
 	return data
 }
 
-// buildExecutiveSummary calculates summary statistics
-func buildExecutiveSummary(results []*ModuleAssessmentResult) ExecutiveSummary {
+// buildBasicExecutiveSummary calculates basic summary statistics
+func buildBasicExecutiveSummary(results []*ModuleAssessmentResult) ExecutiveSummary {
 	summary := ExecutiveSummary{
 		ModulesAssessed: len(results),
+		HasAISummary:    false, // Will be set to true if AI summary is added
 	}
 
 	for _, result := range results {

@@ -1,5 +1,6 @@
 title: eac
 nav:
   - index.md
+  - claude-code-setup.md
   - commands
   - modules

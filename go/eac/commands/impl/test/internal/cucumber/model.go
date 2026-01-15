@@ -43,11 +43,11 @@ type Scenario struct {
 
 // Step represents a test step with its execution result
 type Step struct {
-	Keyword string      `json:"keyword"`
-	Name    string      `json:"name"`
-	Line    int         `json:"line"`
-	Match   StepMatch   `json:"match"`
-	Result  StepResult  `json:"result"`
+	Keyword string     `json:"keyword"`
+	Name    string     `json:"name"`
+	Line    int        `json:"line"`
+	Match   StepMatch  `json:"match"`
+	Result  StepResult `json:"result"`
 }
 
 // StepMatch contains information about the step definition

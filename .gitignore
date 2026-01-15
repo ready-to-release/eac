@@ -19,6 +19,9 @@ temp_*.txt
 **.drawio.png.bkp
 *.log
 
+# Claude Code temporary files
+tmpclaude-*-cwd
+
 .claude/plans/*
 .claude/plans/**
 

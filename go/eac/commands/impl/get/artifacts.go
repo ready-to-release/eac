@@ -1,5 +1,4 @@
 // Command: get artifacts
-// Description: Get resolved artifacts for a module with metadata overrides
 // Short: Get resolved artifacts for a module
 // Long: The get artifacts command returns all build artifacts for a module with metadata overrides applied.
 // Long: Output includes resolved names, paths, existence status, and which overrides were used.
@@ -19,9 +18,9 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	getinternal "github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -166,15 +165,15 @@ func getArtifactsForModule(moduleName, targetOS, targetArch string, allPlatforms
 
 	// Output
 	output := struct {
-		Module        string                                   `json:"module" yaml:"module"`
-		Type          string                                   `json:"type" yaml:"type"`
-		BuildDir      string                                   `json:"build_dir" yaml:"build_dir"`
-		OS            string                                   `json:"os,omitempty" yaml:"os,omitempty"`
-		Arch          string                                   `json:"arch,omitempty" yaml:"arch,omitempty"`
-		BuildModes    *ArtifactBuildModes                      `json:"build_modes" yaml:"build_modes"`
-		Metadata      map[string]string                        `json:"metadata,omitempty" yaml:"metadata,omitempty"`
-		Artifacts     []implinternal.ResolvedArtifact          `json:"artifacts" yaml:"artifacts"`
-		Summary       *implinternal.ArtifactResolutionSummary  `json:"summary" yaml:"summary"`
+		Module     string                                  `json:"module" yaml:"module"`
+		Type       string                                  `json:"type" yaml:"type"`
+		BuildDir   string                                  `json:"build_dir" yaml:"build_dir"`
+		OS         string                                  `json:"os,omitempty" yaml:"os,omitempty"`
+		Arch       string                                  `json:"arch,omitempty" yaml:"arch,omitempty"`
+		BuildModes *ArtifactBuildModes                     `json:"build_modes" yaml:"build_modes"`
+		Metadata   map[string]string                       `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+		Artifacts  []implinternal.ResolvedArtifact         `json:"artifacts" yaml:"artifacts"`
+		Summary    *implinternal.ArtifactResolutionSummary `json:"summary" yaml:"summary"`
 	}{
 		Module:   moduleName,
 		Type:     module.Type,

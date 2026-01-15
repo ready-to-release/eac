@@ -7,12 +7,12 @@ import "time"
 
 // WorkflowRun represents a GitHub Actions workflow run
 type WorkflowRun struct {
-	ID        int       `json:"databaseId"`
-	HeadSHA   string    `json:"headSha"`
-	Status    string    `json:"status"`
-	Conclusion string   `json:"conclusion"`
-	CreatedAt time.Time `json:"createdAt"`
-	Name      string    `json:"name"`
+	ID         int       `json:"databaseId"`
+	HeadSHA    string    `json:"headSha"`
+	Status     string    `json:"status"`
+	Conclusion string    `json:"conclusion"`
+	CreatedAt  time.Time `json:"createdAt"`
+	Name       string    `json:"name"`
 }
 
 // Release represents a GitHub release

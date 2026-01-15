@@ -10,12 +10,12 @@ import (
 
 // StepDefinition represents a registered godog step.
 type StepDefinition struct {
-	Pattern     string         // raw regex pattern string
-	File        string         // source file path
-	Line        int            // line number
-	Regex       *regexp.Regexp // compiled regex
-	CompileErr  error          // error if regex failed to compile
-	IsFromShared bool          // true if from internal/steps.go
+	Pattern      string         // raw regex pattern string
+	File         string         // source file path
+	Line         int            // line number
+	Regex        *regexp.Regexp // compiled regex
+	CompileErr   error          // error if regex failed to compile
+	IsFromShared bool           // true if from internal/steps.go
 }
 
 // ParseStepDefinitions extracts all sc.Step() patterns from the given Go files.

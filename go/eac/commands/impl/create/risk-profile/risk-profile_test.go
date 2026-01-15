@@ -246,8 +246,8 @@ func TestExtractJSONFromMarkdown(t *testing.T) {
 			expected: "some text",
 		},
 		{
-			name: "multiple code blocks",
-			input: "Some text\n```json\n[\"ac-2\"]\n```\nMore text\n```\nother\n```",
+			name:     "multiple code blocks",
+			input:    "Some text\n```json\n[\"ac-2\"]\n```\nMore text\n```\nother\n```",
 			expected: "[\"ac-2\"]",
 		},
 	}

@@ -22,13 +22,13 @@ import (
 
 // FileValidationResult represents the outcome of validating a single DSL file
 type FileValidationResult struct {
-	FileName      string              `json:"file_name"`       // File name (e.g., "workspace.dsl")
-	FilePath      string              `json:"file_path"`       // Full path to file
-	Valid         bool                `json:"valid"`           // Validation status for this file
-	Errors        []ValidationMessage `json:"errors"`          // Validation errors
-	Warnings      []ValidationMessage `json:"warnings"`        // Validation warnings
-	RawOutput     string              `json:"raw_output"`      // Raw Structurizr CLI output
-	ExecutionTime time.Duration       `json:"execution_time"`  // Time taken to validate
+	FileName      string              `json:"file_name"`      // File name (e.g., "workspace.dsl")
+	FilePath      string              `json:"file_path"`      // Full path to file
+	Valid         bool                `json:"valid"`          // Validation status for this file
+	Errors        []ValidationMessage `json:"errors"`         // Validation errors
+	Warnings      []ValidationMessage `json:"warnings"`       // Validation warnings
+	RawOutput     string              `json:"raw_output"`     // Raw Structurizr CLI output
+	ExecutionTime time.Duration       `json:"execution_time"` // Time taken to validate
 }
 
 // ValidationResult represents the outcome of validating a module's workspace(s)
@@ -55,14 +55,14 @@ type ValidationMessage struct {
 
 // ValidationSummary aggregates results for multiple modules
 type ValidationSummary struct {
-	TotalModules   int                `json:"total_modules"`   // Number of modules validated
-	PassedModules  int                `json:"passed_modules"`  // Number that passed
-	FailedModules  int                `json:"failed_modules"`  // Number that failed
-	TotalErrors    int                `json:"total_errors"`    // Sum of all errors
-	TotalWarnings  int                `json:"total_warnings"`  // Sum of all warnings
-	Results        []ValidationResult `json:"results"`         // Individual results
-	ExecutionTime  time.Duration      `json:"execution_time"`  // Total time
-	Timestamp      time.Time          `json:"timestamp"`       // When validation occurred
+	TotalModules  int                `json:"total_modules"`  // Number of modules validated
+	PassedModules int                `json:"passed_modules"` // Number that passed
+	FailedModules int                `json:"failed_modules"` // Number that failed
+	TotalErrors   int                `json:"total_errors"`   // Sum of all errors
+	TotalWarnings int                `json:"total_warnings"` // Sum of all warnings
+	Results       []ValidationResult `json:"results"`        // Individual results
+	ExecutionTime time.Duration      `json:"execution_time"` // Total time
+	Timestamp     time.Time          `json:"timestamp"`      // When validation occurred
 }
 
 // StructurizrValidator validates workspaces using Structurizr CLI via Docker

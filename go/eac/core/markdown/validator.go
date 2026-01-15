@@ -33,14 +33,14 @@ type Section struct {
 
 // ValidationResult holds validation results for a markdown file
 type ValidationResult struct {
-	FilePath         string
-	Valid            bool
-	Errors           []ValidationError
-	Warnings         []ValidationWarning
-	CodeBlocks       []CodeBlock
-	Sections         []Section
-	LineCount        int
-	ByteCount        int
+	FilePath   string
+	Valid      bool
+	Errors     []ValidationError
+	Warnings   []ValidationWarning
+	CodeBlocks []CodeBlock
+	Sections   []Section
+	LineCount  int
+	ByteCount  int
 }
 
 // ValidationError represents a validation error
@@ -79,8 +79,8 @@ func DefaultValidatorOptions() ValidatorOptions {
 		ValidateCodeBlocks:    true,
 		RequiredSections:      []string{},
 		CheckHeadingHierarchy: true,
-		ExcludeDirs:          []string{"node_modules", ".git", "out", ".vscode"},
-		AllowEmptyFiles:      false,
+		ExcludeDirs:           []string{"node_modules", ".git", "out", ".vscode"},
+		AllowEmptyFiles:       false,
 	}
 }
 

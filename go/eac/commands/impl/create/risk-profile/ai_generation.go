@@ -10,11 +10,10 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/oscal"
 	aimock "github.com/ready-to-release/eac/go/eac/core/ai"
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
-	"go.uber.org/zap"
+	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
-// defaultProfilePrompt is the fallback prompt when .r2r/eac/ai/risk-profile/profile.md is not found.
+// defaultProfilePrompt is the fallback prompt when .r2r/eac/aimock.TypeRiskProfile/profile.md is not found.
 const defaultProfilePrompt = `# Risk Assessment to NIST 800-53 Controls Mapper
 
 You are a security controls analyst. Analyze the risk assessment document and identify NIST 800-53 controls.
@@ -37,30 +36,21 @@ func generateProfile(config *Config, assessmentContent string, catalog *oscalTyp
 		return nil, fmt.Errorf("failed to extract control IDs from catalog: %w", err)
 	}
 
-	if config.Logger != nil {
-		config.Logger.Debug("Extracted controls from catalog",
-			zap.Int("control_count", len(availableControls)))
-	}
+	log.Debugf("Extracted controls from catalog: count=%d", len(availableControls))
 
 	// Build AI prompt with available controls
 	prompt := buildProfilePrompt(config.WorkspaceRoot, assessmentContent, config.CatalogURL, availableControls)
 
-	if config.Logger != nil {
-		config.Logger.Debug("AI prompt built",
-			zap.Int("prompt_length", len(prompt)))
-	}
+	log.Debugf("AI prompt built: length=%d", len(prompt))
 
-	// Call AI
+	// Call AI using two-phase generation
 	ctx := context.Background()
-	response, err := callAI(ctx, prompt, config)
+	response, err := callAIWithRetry(ctx, prompt, config)
 	if err != nil {
 		return nil, fmt.Errorf("AI generation failed: %w", err)
 	}
 
-	if config.Logger != nil {
-		config.Logger.Debug("AI response received",
-			zap.Int("response_length", len(response)))
-	}
+	log.Debugf("AI response received: length=%d", len(response))
 
 	profile, err := parseProfileFromAI(response, config, catalog)
 	if err != nil {
@@ -81,10 +71,10 @@ func generateProfile(config *Config, assessmentContent string, catalog *oscalTyp
 func buildProfilePrompt(workspaceRoot, assessmentContent, catalogURL string, availableControls []string) string {
 	// Load prompt template with three-tier priority:
 	// 1. Command flag (not applicable - internal function)
-	// 2. Team override (.r2r/eac/templates/ai/risk-profile/risk-profile.md)
-	// 3. System default (templates/ai/risk-profile/risk-profile.md)
+	// 2. Team override (.r2r/eac/templates/aimock.TypeRiskProfile/risk-profile.md)
+	// 3. System default (templates/aimock.TypeRiskProfile/risk-profile.md)
 	// Convention: Empty string uses type name (risk-profile.md)
-	loader := contracts.NewContractLoader(workspaceRoot, "ai/risk-profile", "")
+	loader := aimock.NewContractLoader(workspaceRoot, aimock.TypeRiskProfile, "")
 	promptTemplate, _, err := loader.LoadPrompt("", defaultProfilePrompt)
 	if err != nil {
 		promptTemplate = defaultProfilePrompt
@@ -98,10 +88,9 @@ func buildProfilePrompt(workspaceRoot, assessmentContent, catalogURL string, ava
 	}
 
 	// Build prompt with template replacements
-	renderedPrompt, err := contracts.BuildPromptWithTemplate(
+	renderedPrompt, err := aimock.BuildPromptWithTemplate(
 		promptTemplate,
 		nil, // No contract needed
-		nil, // No anti-corruption rules needed
 		customData,
 	)
 	if err != nil {
@@ -119,69 +108,89 @@ func buildProfilePrompt(workspaceRoot, assessmentContent, catalogURL string, ava
 	return builder.String()
 }
 
-// callAI calls the AI provider.
-func callAI(ctx context.Context, prompt string, config *Config) (string, error) {
+// callAIWithRetry calls the AI provider using two-phase generation with retry.
+func callAIWithRetry(ctx context.Context, prompt string, config *Config) (string, error) {
+	// Show progress message (AI calls can take time)
+	log.Info("  → Waiting for AI response...")
+
 	// Create executor
 	executor := ai.NewExecutor(config.WorkspaceRoot)
 	providers.RegisterBuiltIn(executor)
 
-	// Configure options
-	opts := []ai.Option{}
-	if config.Debug {
-		opts = append(opts, ai.WithDebug(true))
-	}
+	// Wrap executor to match contracts.AIExecutor interface
+	executorAdapter := ai.NewExecutorAdapter(executor)
 
-	// Show progress message (AI calls can take time)
-	log.Info("  → Waiting for AI response...")
-
-	// Execute
-	response, err := executor.Execute(ctx, prompt, opts...)
-
-	// Log provider information after execution
-	provider := executor.GetLastUsedProvider()
-	if provider != nil {
-		if config.Logger != nil {
-			config.Logger.Debug("AI call completed",
-				zap.String("provider", provider.Name()),
-				zap.Int("response_length", len(response)),
-				zap.Error(err))
-		}
-		if config.Debug {
-			log.Infof("  → AI provider used: %s", provider.Name())
-		}
-	}
-
+	// Load AI config for anti-corruption rules and retry strategy
+	aiConfig, err := aimock.LoadAIConfig(config.WorkspaceRoot)
 	if err != nil {
-		if config.Logger != nil {
-			config.Logger.Error("AI execution failed",
-				zap.Error(err),
-				zap.String("provider", provider.Name()))
-		}
-		return "", fmt.Errorf("AI execution failed: %w", err)
+		log.Warnf("Could not load AI config, using defaults: %v", err)
+		aiConfig = nil
 	}
 
-	// Check if response is empty or very short
-	if len(response) == 0 {
-		if config.Logger != nil {
-			config.Logger.Warn("AI returned empty response",
-				zap.String("provider", provider.Name()),
-				zap.Int("prompt_length", len(prompt)))
+	// Create validator
+	validator := NewRiskProfileValidator()
+
+	// Load retry strategy
+	maxAttempts := 3
+	var strategy aimock.RetryStrategy
+	if aiConfig != nil {
+		if typeConfig, ok := aiConfig.Types[aimock.TypeRiskProfile]; ok {
+			if typeConfig.RetryStrategy != nil && typeConfig.RetryStrategy.MaxAttempts > 0 {
+				maxAttempts = typeConfig.RetryStrategy.MaxAttempts
+			}
+			if typeConfig.RetryStrategy != nil {
+				var focusCategories []string
+				if typeConfig.RetryStrategy.FocusCategories != nil {
+					focusCategories = typeConfig.RetryStrategy.FocusCategories
+				}
+				strategy, err = aimock.GetRetryStrategy(typeConfig.RetryStrategy.Type, focusCategories)
+				if err != nil {
+					log.Warnf("Failed to create retry strategy: %v, using default", err)
+					strategy = &aimock.StandardStrategy{}
+				}
+			}
 		}
-		log.Warn("  ⚠ AI returned empty response (this may be an API issue, retrying...)")
-		return "", fmt.Errorf("AI provider returned empty response")
+	}
+	if strategy == nil {
+		strategy = &aimock.StandardStrategy{}
 	}
 
-	if len(response) < 10 {
-		if config.Logger != nil {
-			config.Logger.Warn("AI returned very short response",
-				zap.String("provider", provider.Name()),
-				zap.Int("response_length", len(response)),
-				zap.String("response_preview", response))
+	// Configure retry for JSON generation
+	retryConfig := &aimock.RetryConfig{
+		TypeName:     aimock.TypeRiskProfile,
+		OutputFormat: aimock.FormatJSON, // Generate control mapping JSON (commands format to OSCAL)
+		Executor:     executorAdapter,
+		Validator:    validator, // Validate JSON output
+		TemplateRoot: config.WorkspaceRoot,
+		MaxAttempts:  maxAttempts,
+		Debug:        config.Debug,
+		Strategy:     strategy,
+		Logger:       logging.C().Zap(), // ✅ Pass logger for retry observability
+	}
+
+	// Generate with retry
+	result, err := aimock.GenerateWithRetry(ctx, retryConfig, prompt)
+	if err != nil {
+		return "", fmt.Errorf("AI generation failed: %w", err)
+	}
+
+	// Log provider information
+	log.Debugf("AI call completed: provider=%s, response_length=%d, attempts=%d",
+		result.ProviderName, len(result.Output), result.Attempts)
+	if config.Debug {
+		log.Infof("  → AI provider used: %s", result.ProviderName)
+	}
+
+	// Check validation errors
+	if len(result.ValidationErrors) > 0 {
+		log.Warnf("  ⚠ Generated output has %d validation issues", len(result.ValidationErrors))
+		for _, verr := range result.ValidationErrors {
+			log.Warnf("Validation error: code=%s, message=%s", verr.GetCode(), verr.Message)
 		}
 	}
 
-	log.Infof("  → Received response (%d chars)", len(response))
-	return response, nil
+	log.Infof("  → Received response (%d chars, %d attempts)", len(result.Output), result.Attempts)
+	return result.Output, nil
 }
 
 // parseProfileFromAI parses AI response into an OSCAL profile.
@@ -259,11 +268,7 @@ func filterInvalidControls(profile *oscalTypes.Profile, catalog *oscalTypes.Cata
 	// Warn about removed controls
 	if len(removedIDs) > 0 {
 		log.Warnf("  ⚠ Filtered out %d control(s) not in catalog: %s", len(removedIDs), strings.Join(removedIDs, ", "))
-		if config.Logger != nil {
-			config.Logger.Warn("Controls filtered out (not in catalog)",
-				zap.Strings("removed", removedIDs),
-				zap.Strings("kept", filteredIDs))
-		}
+		log.Warnf("Controls filtered out (not in catalog): removed=%v, kept=%v", removedIDs, filteredIDs)
 	}
 
 	// If no valid controls remain, return error

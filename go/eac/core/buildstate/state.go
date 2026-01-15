@@ -113,9 +113,9 @@ func (s *State) Save(workspaceRoot string) error {
 // moduleFiles maps moniker -> list of source file paths (relative to workspaceRoot)
 //
 // Detection strategy:
-// 1. Fast path: If git commit + uncommitted state matches previous build exactly,
-//    AND all modules were in the previous build, trust the stored hashes
-// 2. Slow path: Hash source files and compare to stored hashes
+//  1. Fast path: If git commit + uncommitted state matches previous build exactly,
+//     AND all modules were in the previous build, trust the stored hashes
+//  2. Slow path: Hash source files and compare to stored hashes
 //
 // The module source hash is always the source of truth - git state is only used
 // as an optimization to skip hashing when we know nothing could have changed.
@@ -454,4 +454,3 @@ func ComputeModuleInputHash(workspaceRoot string, module ModuleFileGetter) (stri
 	}
 	return hashModuleFiles(workspaceRoot, files)
 }
-

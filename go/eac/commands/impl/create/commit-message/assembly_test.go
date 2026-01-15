@@ -10,12 +10,12 @@ import (
 
 func TestCombineCommitSections_Deduplication(t *testing.T) {
 	tests := []struct {
-		name            string
-		topLevel        string
-		moduleSections  []string
-		wantModules     []string
-		wantNotContain  []string
-		wantSeparators  int
+		name           string
+		topLevel       string
+		moduleSections []string
+		wantModules    []string
+		wantNotContain []string
+		wantSeparators int
 	}{
 		{
 			name:     "deduplicates identical module names",
@@ -65,8 +65,8 @@ func TestCombineCommitSections_Deduplication(t *testing.T) {
 			wantSeparators: 1,
 		},
 		{
-			name:           "handles empty sections",
-			topLevel:       "chore(multi-module): cleanup",
+			name:     "handles empty sections",
+			topLevel: "chore(multi-module): cleanup",
 			moduleSections: []string{
 				"",
 				"eac-core\n--------\neac-core: chore: cleanup",

@@ -49,6 +49,63 @@
 🔴 **Poor** - Compliance rate below 50%, immediate action required
 {{ end }}
 
+{{ if .Summary.HasAISummary -}}
+
+### 🤖 AI-Powered Risk Analysis
+
+{{ if .Summary.OverallRiskPosture -}}
+**Overall Risk Posture:** {{ .Summary.OverallRiskPosture | upper }}
+{{ end }}
+
+{{ if .Summary.SummaryNarrative -}}
+
+#### Summary
+
+{{ .Summary.SummaryNarrative }}
+{{ end }}
+
+{{ if gt (len .Summary.KeyFindings) 0 -}}
+
+#### Key Findings
+
+{{ range .Summary.KeyFindings -}}
+- {{ . }}
+{{ end }}
+{{ end }}
+
+{{ if gt (len .Summary.CriticalModules) 0 -}}
+
+#### Critical Modules Requiring Immediate Attention
+
+{{ range .Summary.CriticalModules -}}
+- **{{ .Module }}**: {{ .Reason }}
+{{ end }}
+{{ end }}
+
+{{ if gt (len .Summary.Trends) 0 -}}
+
+#### Trends Across Modules
+
+{{ range .Summary.Trends -}}
+- {{ . }}
+{{ end }}
+{{ end }}
+
+{{ if gt (len .Summary.StrategicRecommendations) 0 -}}
+
+#### Strategic Recommendations
+
+{{ range .Summary.StrategicRecommendations -}}
+- {{ . }}
+{{ end }}
+{{ end }}
+
+{{ if .Summary.AIConfidence -}}
+*AI Analysis Confidence: {{ printf "%.0f" (mulf .Summary.AIConfidence 100.0) }}%*
+{{ end }}
+
+{{ end -}}
+
 ---
 
 ## Assessment Overview

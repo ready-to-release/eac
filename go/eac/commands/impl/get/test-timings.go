@@ -1,8 +1,9 @@
 // Command: get test-timings
-// Description: Get test timing information from test logs
-//   --as-yaml: Output as YAML (default)
-//   --as-json: Output as JSON
-//   --as-toml: Output as TOML
+//
+//	--as-yaml: Output as YAML (default)
+//	--as-json: Output as JSON
+//	--as-toml: Output as TOML
+//
 // Long:
 // Long: Expected Output:
 // Long: YAML with test timing metrics parsed from out/test/ logs, including:
@@ -21,9 +22,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/internal/testdata"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
@@ -45,25 +46,25 @@ type TestTiming struct {
 
 // ModuleSummary represents aggregated timing data for a module
 type ModuleSummary struct {
-	Module        string        `json:"module" yaml:"module"`
-	TotalTests    int           `json:"total_tests" yaml:"total_tests"`
-	PassedTests   int           `json:"passed_tests" yaml:"passed_tests"`
-	FailedTests   int           `json:"failed_tests" yaml:"failed_tests"`
-	TotalDuration float64       `json:"total_duration_seconds" yaml:"total_duration_seconds"`
-	AvgDuration   float64       `json:"avg_duration_seconds" yaml:"avg_duration_seconds"`
-	Scenarios     []TestTiming  `json:"scenarios" yaml:"scenarios"`
+	Module        string       `json:"module" yaml:"module"`
+	TotalTests    int          `json:"total_tests" yaml:"total_tests"`
+	PassedTests   int          `json:"passed_tests" yaml:"passed_tests"`
+	FailedTests   int          `json:"failed_tests" yaml:"failed_tests"`
+	TotalDuration float64      `json:"total_duration_seconds" yaml:"total_duration_seconds"`
+	AvgDuration   float64      `json:"avg_duration_seconds" yaml:"avg_duration_seconds"`
+	Scenarios     []TestTiming `json:"scenarios" yaml:"scenarios"`
 }
 
 // TestTimingSummary represents complete timing analysis
 type TestTimingSummary struct {
-	TotalTests     int                       `json:"total_tests" yaml:"total_tests"`
-	PassedTests    int                       `json:"passed_tests" yaml:"passed_tests"`
-	FailedTests    int                       `json:"failed_tests" yaml:"failed_tests"`
-	TotalDuration  float64                   `json:"total_duration_seconds" yaml:"total_duration_seconds"`
-	AvgDuration    float64                   `json:"avg_duration_seconds" yaml:"avg_duration_seconds"`
-	TestOutputDir  string                    `json:"test_output_dir" yaml:"test_output_dir"`
-	Timings        []TestTiming              `json:"timings" yaml:"timings"`
-	ByModule       map[string]ModuleSummary  `json:"by_module" yaml:"by_module"`
+	TotalTests    int                      `json:"total_tests" yaml:"total_tests"`
+	PassedTests   int                      `json:"passed_tests" yaml:"passed_tests"`
+	FailedTests   int                      `json:"failed_tests" yaml:"failed_tests"`
+	TotalDuration float64                  `json:"total_duration_seconds" yaml:"total_duration_seconds"`
+	AvgDuration   float64                  `json:"avg_duration_seconds" yaml:"avg_duration_seconds"`
+	TestOutputDir string                   `json:"test_output_dir" yaml:"test_output_dir"`
+	Timings       []TestTiming             `json:"timings" yaml:"timings"`
+	ByModule      map[string]ModuleSummary `json:"by_module" yaml:"by_module"`
 }
 
 func GetTestTimings() int {

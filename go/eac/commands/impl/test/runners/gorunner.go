@@ -193,7 +193,7 @@ func (r *GoRunner) Execute(pkgPath string, tests []testing.TestReference, tuiWri
 		// BDD format: featureName:testRoot:featurePath
 		// Display as "featureName:testRoot" (without full feature path)
 		displayName = parts[0] + ":" + parts[1]
-		relPkgPath = parts[1]    // testRoot
+		relPkgPath = parts[1]     // testRoot
 		relFeatureFile = parts[2] // full feature path
 	} else if len(parts) == 1 {
 		// Unit test format: just the package path

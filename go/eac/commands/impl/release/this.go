@@ -51,6 +51,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	"github.com/ready-to-release/eac/go/eac/core/git"
 	"github.com/ready-to-release/eac/go/eac/core/releasenotes"
+	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
 func init() {
@@ -72,7 +73,6 @@ type ReleaseResult struct {
 	AlreadyPending  bool   `json:"already_pending,omitempty"`
 	Error           string `json:"error,omitempty"`
 }
-
 
 func ReleaseThis() int {
 	// Validate flags before parsing
@@ -250,7 +250,9 @@ func performRelease(module string, dryRun bool, overrideDate string) ReleaseResu
 	}
 
 	// Open git repository
-	repo, err := git.Open("")
+	// Open git repository
+	gitMgr := git.NewManager(logging.C().Zap())
+	repo, err := gitMgr.Open("")
 	if err != nil {
 		result.Error = fmt.Sprintf("failed to open git repository: %v", err)
 		return result

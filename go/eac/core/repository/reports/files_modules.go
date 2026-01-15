@@ -2,12 +2,10 @@ package reports
 
 import (
 	"github.com/ready-to-release/eac/go/eac/core/git"
-	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
 // log is the package-level logger for reports
-var log = logging.C()
 
 // FilesModulesReport contains statistics about file-module relationships
 type FilesModulesReport struct {
@@ -28,28 +26,23 @@ type FilesModulesReport struct {
 //   - includeIgnored: if true, include files ignored by .gitignore
 //   - stagedOnly: if true, only return files currently staged in Git index
 //   - rootPath: repository root (if empty, will be detected automatically)
-//   (no version - repository config is unversioned)
+//     (no version - repository config is unversioned)
 //
 // Returns:
 //   - FilesModulesReport containing all statistics and data
 //   - Error if repository operations or module loading fails
 func GetFilesModulesReport(trackedOnly bool, includeIgnored bool, stagedOnly bool, rootPath string) (*FilesModulesReport, error) {
-	log.Debug("GetFilesModulesReport: start")
 	// Open git repository
-	log.Debug("GetFilesModulesReport: calling git.Open")
-	repo, err := git.Open(rootPath)
+	repo, err := git.Open(rootPath, nil)
 	if err != nil {
 		return nil, err
 	}
-	log.Debug("GetFilesModulesReport: git.Open complete")
 
 	// Get all files with module ownership
-	log.Debug("GetFilesModulesReport: calling GetRepositoryFilesWithModules")
 	files, err := repository.GetRepositoryFilesWithModules(repo, trackedOnly, includeIgnored, stagedOnly)
 	if err != nil {
 		return nil, err
 	}
-	log.Debug("GetFilesModulesReport: GetRepositoryFilesWithModules complete")
 
 	// Calculate statistics
 	report := &FilesModulesReport{

@@ -184,7 +184,7 @@ func TestParseModuleList(t *testing.T) {
 		{"mod1", []string{"mod1"}},
 		{"mod1 mod2", []string{"mod1", "mod2"}},
 		{"mod1  mod2   mod3", []string{"mod1", "mod2", "mod3"}}, // Extra spaces
-		{"  mod1  ", []string{"mod1"}},                           // Leading/trailing spaces
+		{"  mod1  ", []string{"mod1"}},                          // Leading/trailing spaces
 	}
 
 	for _, tt := range tests {
@@ -443,8 +443,8 @@ func TestParseModuleList_EdgeCases(t *testing.T) {
 		expected []string
 	}{
 		{"", []string{}},
-		{"   ", []string{}},                       // Only whitespace
-		{"\t\n", []string{}},                      // Tabs and newlines
+		{"   ", []string{}},  // Only whitespace
+		{"\t\n", []string{}}, // Tabs and newlines
 		{"mod1", []string{"mod1"}},
 		{"mod1 mod2 mod3", []string{"mod1", "mod2", "mod3"}},
 		{"  mod1  mod2  ", []string{"mod1", "mod2"}},
@@ -624,9 +624,9 @@ func TestCheckModuleCIValidityWithAPI_MultipleModules(t *testing.T) {
 		headSHA   string
 		wantValid bool
 	}{
-		{"mod1", "head123", true},   // CI at HEAD
-		{"mod2", "head123", false},  // CI at different SHA
-		{"mod3", "head123", false},  // No CI
+		{"mod1", "head123", true},  // CI at HEAD
+		{"mod2", "head123", false}, // CI at different SHA
+		{"mod3", "head123", false}, // No CI
 	}
 
 	for _, tt := range tests {

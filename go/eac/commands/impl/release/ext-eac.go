@@ -1,5 +1,4 @@
 // Command: release ext-eac
-// Description: Create a release tag for ext-eac module
 // Short: Create a git tag for releasing ext-eac using semver format
 // Long: Creates a git tag in the format 'ext-eac/x.y.z' to trigger the release workflow.
 // Long: The tag follows semantic versioning (semver) and will automatically trigger
@@ -27,7 +26,6 @@ import (
 func init() {
 	registry.Register(ReleaseExtEac)
 }
-
 
 func ReleaseExtEac() int {
 	// Validate flags before parsing

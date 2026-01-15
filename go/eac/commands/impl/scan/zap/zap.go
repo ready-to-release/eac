@@ -40,7 +40,6 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/manifest"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
-	"go.uber.org/zap"
 )
 
 var log = logging.C()
@@ -148,37 +147,26 @@ func ZAP() int {
 		return 1
 	}
 
-	var logger *logging.Logger
-	if debug {
-		logger, err = logging.NewWithDebug("security", workspaceRoot)
-	} else {
-		logger, err = logging.NewDefault("security", workspaceRoot)
+	if err := logging.ConfigureLoggingSimple(workspaceRoot, "commands", nil, debug); err != nil {
+		log.Warnf("Failed to configure logging: %v", err)
 	}
-	if err != nil {
-		log.Errorf("Error: failed to initialize logger: %v\n", err)
-		return 1
-	}
-	defer logger.Sync()
+	defer logging.CloseLogging()
 
 	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
-		logger.Error("Failed to load configuration", zap.Error(err))
+		log.Debugf("Failed to load configuration: error=%v", err)
 		log.Errorf(" failed to load configuration: %v\n", err)
 		return 1
 	}
 
 	zapImage := cfg.SecurityTools.DockerImages.ZAP.FullImage()
-	logger.Debug("Using ZAP image", zap.String("image", zapImage))
+	log.Debugf("Using ZAP image: image=%s", zapImage)
 
-	logger.Info("Starting ZAP DAST scanner",
-		zap.String("module", moniker),
-		zap.String("target", targetURL),
-		zap.String("scanType", scanType),
-		zap.Bool("debug", debug))
+	log.Debugf("Starting ZAP DAST scanner: module=%s, target=%s, scanType=%s, debug=%v", moniker, targetURL, scanType, debug)
 
 	moduleReport, err := reports.GetModuleContracts(workspaceRoot)
 	if err != nil {
-		logger.Error("Failed to load module contracts", zap.Error(err))
+		log.Debugf("Failed to load module contracts: error=%v", err)
 		log.Errorf("Error: failed to load module contracts: %v\n", err)
 		return 1
 	}
@@ -188,12 +176,12 @@ func ZAP() int {
 	// Verify module exists
 	module, exists := moduleReport.Registry.Get(moniker)
 	if !exists {
-		logger.Error("Module not found", zap.String("moniker", moniker))
+		log.Debugf("Module not found: moniker=%s", moniker)
 		log.Errorf("Error: module not found: %s\n", moniker)
 		return 1
 	}
 
-	logger.Info("Scanning target", zap.String("moniker", moniker), zap.String("target", targetURL))
+	log.Debugf("Scanning target: moniker=%s, target=%s", moniker, targetURL)
 	log.Infof("🕷️  Scanning %s at %s...\n", moniker, targetURL)
 
 	scanStart := time.Now()
@@ -202,48 +190,48 @@ func ZAP() int {
 	// Run OWASP ZAP scan
 	findings, err := internal.RunZAPScan(targetURL, scanType, workspaceRoot, zapImage)
 	if err != nil {
-		logger.Error("ZAP scan failed", zap.String("moniker", moniker), zap.Error(err))
+		log.Debugf("ZAP scan failed: moniker=%s, error=%v", moniker, err)
 		log.Errorf("  ❌ Failed: %v\n", err)
 
 		// Write error evidence
 		outputPath, writeErr := internal.WriteErrorEvidence(workspaceRoot, moniker, internal.ScannerDAST, err.Error())
 		if writeErr != nil {
-			logger.Error("Failed to write error evidence", zap.Error(writeErr))
+			log.Debugf("Failed to write error evidence: error=%v", writeErr)
 		} else {
-			logger.Info("Error evidence written", zap.String("path", outputPath))
+			log.Debugf("Error evidence written: path=%s", outputPath)
 			log.Infof("  📄 Error evidence: %s\n", outputPath)
 		}
 
 		// Update scan manifest with failure
-		updateScanManifest(moduleScanDir, moniker, module.Type, gitCommit, manifest.ScanStatusFailed, time.Since(scanStart), outputPath, err.Error(), logger)
+		updateScanManifest(moduleScanDir, moniker, module.Type, gitCommit, manifest.ScanStatusFailed, time.Since(scanStart), outputPath, err.Error())
 		return 1
 	}
 
 	// Write evidence file
 	outputPath, err := internal.WriteEvidence(workspaceRoot, moniker, internal.ScannerDAST, findings)
 	if err != nil {
-		logger.Error("Failed to write evidence", zap.String("moniker", moniker), zap.Error(err))
+		log.Debugf("Failed to write evidence: moniker=%s, error=%v", moniker, err)
 		log.Errorf("  ❌ Failed to write evidence: %v\n", err)
 
 		// Update scan manifest with failure
-		updateScanManifest(moduleScanDir, moniker, module.Type, gitCommit, manifest.ScanStatusFailed, time.Since(scanStart), "", err.Error(), logger)
+		updateScanManifest(moduleScanDir, moniker, module.Type, gitCommit, manifest.ScanStatusFailed, time.Since(scanStart), "", err.Error())
 		return 1
 	}
 
 	// Update scan manifest with success
-	updateScanManifest(moduleScanDir, moniker, module.Type, gitCommit, manifest.ScanStatusPassed, time.Since(scanStart), outputPath, "", logger)
+	updateScanManifest(moduleScanDir, moniker, module.Type, gitCommit, manifest.ScanStatusPassed, time.Since(scanStart), outputPath, "")
 
-	logger.Info("ZAP scan completed", zap.String("moniker", moniker), zap.String("evidence", outputPath))
+	log.Debugf("ZAP scan completed: moniker=%s, evidence=%s", moniker, outputPath)
 	log.Infof("  ✅ Success: %s\n", outputPath)
 
 	return 0
 }
 
 // updateScanManifest loads or creates the scan manifest, adds the scanner result, and saves it.
-func updateScanManifest(moduleScanDir, moniker, moduleType, gitCommit, status string, duration time.Duration, evidencePath, errorMsg string, logger *logging.Logger) {
+func updateScanManifest(moduleScanDir, moniker, moduleType, gitCommit, status string, duration time.Duration, evidencePath, errorMsg string) {
 	mf, err := manifest.LoadOrCreateScanManifest(moduleScanDir, moniker, moduleType, gitCommit)
 	if err != nil {
-		logger.Warn("Failed to load/create scan manifest", zap.Error(err))
+		log.Debugf("Failed to load/create scan manifest: error=%v", err)
 		return
 	}
 
@@ -257,11 +245,11 @@ func updateScanManifest(moduleScanDir, moniker, moduleType, gitCommit, status st
 	mf.AddScannerResult(string(internal.ScannerDAST), result)
 
 	if err := mf.Save(moduleScanDir); err != nil {
-		logger.Warn("Failed to save scan manifest", zap.Error(err))
+		log.Debugf("Failed to save scan manifest: error=%v", err)
 		return
 	}
 
-	logger.Debug("Scan manifest updated", zap.String("path", manifest.GetScanManifestPath(moduleScanDir)))
+	log.Debugf("Scan manifest updated: path=%s", manifest.GetScanManifestPath(moduleScanDir))
 }
 
 func printZAPUsage() {

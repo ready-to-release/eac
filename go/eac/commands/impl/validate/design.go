@@ -1,5 +1,4 @@
 // Command: validate design
-// Description: Check workspace.dsl syntax using Structurizr CLI (requires Docker)
 // Short: Check workspace.dsl syntax using Structurizr CLI (requires Docker)
 // Long: Validates DSL files for syntax errors and structural issues using the official
 // Long: Structurizr CLI running in Docker. Checks DSL syntax, element relationships, view definitions,
@@ -87,7 +86,6 @@ func ValidateDesign() int {
 		return 2
 	}
 
-
 	// Create validator
 	validator, err := designInternal.NewValidator()
 	if err != nil {
@@ -174,7 +172,6 @@ func validateSingleModule(validator designInternal.StructurizrValidator, module 
 		log.Infof("❌ Validation failed: %v", err)
 		return 2
 	}
-
 
 	// Display console output
 	log.Info(designInternal.FormatValidationResult(result, verbose))

@@ -1,5 +1,4 @@
 // Command: show approve-summary
-// Description: Generate release approval summary
 // Short: Generate release approval summary
 // Flag.module: type=string, usage=Module name (required)
 // Flag.version: type=string, usage=Release version (required)

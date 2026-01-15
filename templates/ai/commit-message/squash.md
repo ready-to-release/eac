@@ -5,6 +5,8 @@ You are an expert in writing clear, professional commit messages for squash merg
 Generate a commit message that synthesizes ALL commits in this branch into a
 single, cohesive message suitable for merging into the base branch.
 
+Your task is to generate structured JSON data. The command will automatically format it into a conventional commit message.
+
 ## Context
 
 You are provided with:
@@ -19,48 +21,58 @@ Synthesize these commits into ONE commit message that describes the overall
 feature, fix, or change. Do NOT list commits one by one. Instead, tell the
 story of what this branch accomplishes as a whole.
 
-## Structure
+## JSON Output Structure
 
-```text
-<type>(<scope>): <summary>
+Generate a JSON object matching this schema:
 
-Auditor-Summary: <one sentence describing the overall change>
-
-<body: 2-4 sentences explaining what this branch does and why>
-
-Changes: N files, +X insertions, -Y deletions
+```json
+{
+  "type": "feat",
+  "scope": "multi-module",
+  "subject": "overall feature or change description",
+  "auditorSummary": "One sentence describing the overall change across all commits",
+  "body": "2-4 sentences explaining what this branch does and why",
+  "changes": "N files, +X insertions, -Y deletions",
+  "breaking": false
+}
 ```
 
-## Requirements
+### JSON Field Requirements
 
-**Header** (line 1): `<type>(<scope>): <summary>`
+**type** (required): One of: `feat`, `fix`, `refactor`, `docs`, `chore`, `test`, `perf`, `style`, `ci`, `build`
+- Choose based on the overall theme across all commits
+- If commits have mixed types, choose the most significant
 
-- Types: feat, fix, refactor, docs, chore, test, perf, style
-- Scope: `multi-module` or specific module name
-- Summary: Describe the overall feature/change (not individual commits)
-- Max 72 chars, no trailing period
+**scope** (required): `multi-module` or specific module name
+- Pattern: lowercase with hyphens
+- Length: 1-20 characters
+- Use `multi-module` if changes span multiple modules
 
-**Auditor-Summary** (line 3): One clear sentence
+**subject** (required): Describe the overall feature/change (not individual commits)
+- Max 72 characters total when combined with `type(scope): `
+- No trailing period
+- Lowercase first letter
+- Synthesize from all commits into cohesive description
 
-- Summarize the essential change across all commits
+**auditorSummary** (required): One clear sentence summarizing the essential change
+- Summarize across ALL commits, not just one
 - Focus on business value or technical outcome
 - Not "Made several commits" but "Implemented X to achieve Y"
 
-**Body** (line 5+): 2-4 sentences, wrapped at 72 chars
-
+**body** (required): 2-4 sentences explaining what and why
+- Each line wrapped at 72 characters
 - Explain WHAT this branch accomplishes overall
 - Explain WHY the changes were needed (if clear from commits)
 - Synthesize information from multiple commits into coherent narrative
 - Mention key architectural decisions or approaches if relevant
 
-**Changes** (last line): Git statistics summary
+**changes** (required): Git statistics from the provided diff stats
 
-- Use the provided diff stats
+**breaking** (optional): Set to `true` if any commit indicates breaking changes
 
-## Synthesis Guidelines
+### Synthesis Guidelines
 
 **DO**:
-
 - Identify the main theme/purpose across all commits
 - Combine related changes into cohesive description
 - Elevate to feature-level or change-level perspective
@@ -68,30 +80,65 @@ Changes: N files, +X insertions, -Y deletions
 - Focus on the end state, not the journey
 
 **DON'T**:
-
 - List commits individually ("First commit did X, second commit did Y")
 - Say "this PR" or "this branch" (it's a commit message)
 - Include commit hashes or commit counts
 - Describe intermediate states or WIP commits
 - Use phrases like "various changes" or "multiple updates"
 
-## Examples
+### JSON Generation Rules
 
-### Bad (lists commits)
+- Generate ONLY valid JSON
+- No markdown code fences (no ```json)
+- No explanations or commentary before/after the JSON
+- Just pure JSON starting with `{` and ending with `}`
+- All string fields must use double quotes
+- Use proper JSON escaping for special characters (especially newlines: `\n`)
 
+### Example JSON Output
+
+**Bad** (lists commits):
+```json
+{
+  "type": "feat",
+  "scope": "multi-module",
+  "subject": "multiple authentication changes",
+  "auditorSummary": "Made several commits to add authentication.",
+  "body": "First added user model, then implemented JWT tokens, then added\nmiddleware, and finally integrated with API. Fixed some bugs along\nthe way and updated tests.",
+  "changes": "23 files, +1,247 insertions, -89 deletions",
+  "breaking": false
+}
 ```
-feat(multi-module): multiple authentication changes
 
-Auditor-Summary: Made several commits to add authentication.
-
-First added user model, then implemented JWT tokens, then added
-middleware, and finally integrated with API. Fixed some bugs along
-the way and updated tests.
+**Good** (synthesizes theme):
+```json
+{
+  "type": "feat",
+  "scope": "multi-module",
+  "subject": "implement JWT-based authentication system",
+  "auditorSummary": "Added complete authentication with secure token handling and route protection across user and API modules.",
+  "body": "Implemented JWT token generation and validation with bcrypt password\nhashing for secure credential storage. Added authentication middleware\nfor route protection and integrated with existing user management.\nThe system follows security best practices for token handling.",
+  "changes": "23 files, +1,247 insertions, -89 deletions",
+  "breaking": false
+}
 ```
 
-### Good (synthesizes theme)
+## Output Format (for your reference)
 
+The JSON will be automatically converted to conventional commit format:
+
+```text
+type(scope): subject
+
+Auditor-Summary: auditorSummary
+
+body
+
+Changes: changes
 ```
+
+Example final output:
+```text
 feat(multi-module): implement JWT-based authentication system
 
 Auditor-Summary: Added complete authentication with secure token
@@ -105,22 +152,16 @@ The system follows security best practices for token handling.
 Changes: 23 files, +1,247 insertions, -89 deletions
 ```
 
-## Output Rules
-
-- Start with header (not "Auditor-Summary")
-- No markdown fences or explanations
-- Return only the commit message
-- STOP after the "Changes:" line
-- Do not add module sections (they will be generated separately)
-
 ## CRITICAL: What NOT to include
 
-The following are FORBIDDEN:
+The following are FORBIDDEN in your JSON output:
 
-- NO markdown headers (## or ###)
-- NO "Module Changes" sections
-- NO bullet point lists of commits
-- NO per-commit breakdowns
+- NO "modules" array or per-module breakdowns
+- NO per-commit breakdowns or commit lists
+- NO markdown formatting within strings
+- NO nested objects beyond the schema shown
 - NO "first commit, second commit" narratives
 
-Generate the top-level commit message now based on the context below:
+Module-specific details will be generated separately if needed.
+
+Generate JSON now based on the context below:

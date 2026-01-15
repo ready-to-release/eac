@@ -5,9 +5,7 @@ package srccommands
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/cucumber/godog"
 	"github.com/ready-to-release/eac/go/eac/specs/internal"
@@ -15,8 +13,7 @@ import (
 
 // specsTestState holds state for specs tests.
 type specsTestState struct {
-	specContent     string
-	longDescription string
+	specContent string
 }
 
 // registerSpecsSteps registers step definitions for specs command features.
@@ -29,17 +26,6 @@ func registerSpecsSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	})
 	sc.Step(`^I run "validate specs" without arguments$`, func() error {
 		return ctx.RunCommand("validate specs")
-	})
-	sc.Step(`^I run the create spec command$`, func() error {
-		// Use long description if set (for truncation test), otherwise use default
-		if state.longDescription != "" {
-			return ctx.RunCommand("create spec \"" + state.longDescription + "\"")
-		}
-		return ctx.RunCommand("create spec \"test specification\"")
-	})
-	sc.Step(`^the output is processed$`, func() error {
-		// Output is already captured by RunCommand
-		return nil
 	})
 
 	// Given steps - file setup (loading content from assets)
@@ -156,20 +142,6 @@ func registerSpecsSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	})
 
 	// Custom prompt/template (loading from assets)
-	sc.Step(`^a custom prompt file exists at "([^"]*)"$`, func(path string) error {
-		content, err := internal.LoadAsset(ctx, "specs/custom-prompt.txt")
-		if err != nil {
-			return err
-		}
-		return internal.CreateFile(ctx, path, content)
-	})
-	sc.Step(`^a custom template file exists at "([^"]*)"$`, func(path string) error {
-		content, err := internal.LoadAsset(ctx, "specs/custom-template.txt")
-		if err != nil {
-			return err
-		}
-		return internal.CreateFile(ctx, path, content)
-	})
 	sc.Step(`^specification contracts are available$`, func() error {
 		// Contracts exist in repo structure
 		return nil
@@ -185,67 +157,14 @@ func registerSpecsSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 		}
 		return internal.CreateFile(ctx, ".r2r/test/ai-mock.txt", mockContent)
 	})
-	sc.Step(`^the AI generates a feature named "([^"]*)"$`, func(name string) error {
-		// Use the user-auth mock response that generates to specs/eac-commands/user-auth/
-		mockContent, err := internal.LoadAsset(ctx, "specs/mock-response-user-auth.txt")
-		if err != nil {
-			return err
-		}
-		return internal.CreateFile(ctx, ".r2r/test/ai-mock.txt", mockContent)
-	})
 	sc.Step(`^the mock AI generates a feature that would create the same path$`, func() error {
-		mockContent, err := internal.LoadAsset(ctx, "specs/mock-response-conflict.txt")
-		if err != nil {
-			return err
-		}
-		return internal.CreateFile(ctx, ".r2r/test/ai-mock.txt", mockContent)
-	})
-	sc.Step(`^the AI provider fails to generate content$`, func() error {
-		// Don't create mock file - test provider will fail
-		return nil
-	})
-	sc.Step(`^the AI provider returns output with initialization messages$`, func() error {
-		mockContent, err := internal.LoadAsset(ctx, "specs/mock-response-with-noise.txt")
-		if err != nil {
-			return err
-		}
-		return internal.CreateFile(ctx, ".r2r/test/ai-mock.txt", mockContent)
-	})
-	sc.Step(`^a description longer than (\d+) characters$`, func(limit int) error {
-		// Generate a description longer than the limit
-		state.longDescription = strings.Repeat("This is a long description for testing truncation. ", limit/50+1)
+		// Use subprocess mock system with command-specific override
+		// This sets R2R_MOCK_AI_SPECS=mock-response-conflict.txt
+		ctx.SetMockOverride("R2R_MOCK_AI_SPECS", "mock-response-conflict.txt")
 		return nil
 	})
 
 	// Then steps - file verification
-	sc.Step(`^a specification file is created$`, func() error {
-		// Check for any .feature file creation
-		return nil
-	})
-	sc.Step(`^no specification file is created$`, func() error {
-		// Verify no new .feature files
-		return nil
-	})
-	sc.Step(`^the file is saved at "([^"]*)"$`, func(path string) error {
-		return internal.FileExists(ctx, path)
-	})
-	sc.Step(`^the parent directories are created if they don't exist$`, func() error {
-		// Implicit in file creation
-		return nil
-	})
-	sc.Step(`^the existing file is overwritten$`, func() error {
-		// Verify file was modified
-		return nil
-	})
-	sc.Step(`^intermediate files are saved to "([^"]*)" directory$`, func(dir string) error {
-		return internal.DirectoryHasFiles(ctx, dir)
-	})
-	sc.Step(`^"([^"]*)" contains the full AI prompt$`, func(path string) error {
-		// The implementation saves to out/logs/specs/debug-full-prompt.md
-		// but spec says "out/debug-full-prompt.md" - check the actual location
-		actualPath := "out/logs/specs/debug-full-prompt.md"
-		return internal.FileExists(ctx, actualPath)
-	})
 
 	// Then steps - output/content verification
 	// Note: "stdout contains" and "stderr contains" are registered in internal/steps.go
@@ -255,47 +174,8 @@ func registerSpecsSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 		// Quiet mode output verification
 		return nil
 	})
-	sc.Step(`^the content is validated$`, func() error {
-		// Implicit in successful creation
-		return nil
-	})
-	sc.Step(`^only valid Gherkin content should remain$`, func() error {
-		// Noise filtering verification
-		return nil
-	})
-	sc.Step(`^initialization noise should be removed$`, func() error {
-		// Verify AI output cleanup
-		return nil
-	})
-	sc.Step(`^the custom prompt is used$`, func() error {
-		// Verify command completed successfully - this implies the custom prompt was loaded
-		// The command would fail if the custom prompt file didn't exist or couldn't be loaded
-		if ctx.ExitCode != 0 {
-			return fmt.Errorf("command failed with exit code %d, custom prompt may not have been used", ctx.ExitCode)
-		}
-		// Check that the output mentions using the custom prompt (implementation logs it)
-		if strings.Contains(ctx.CommandOutput, "custom prompt") || strings.Contains(ctx.CommandOutput, "Using custom prompt") {
-			return nil
-		}
-		// If we can't verify via output, just pass if command succeeded
-		return nil
-	})
-	sc.Step(`^the custom template is used$`, func() error {
-		// Template usage verification
-		return nil
-	})
 
 	// Gherkin structure validation - check the generated file content
-	sc.Step(`^it must contain a "Feature:" declaration$`, func() error {
-		// Find the generated spec file in the specs directory
-		return verifyGeneratedSpecContains(ctx, "Feature:")
-	})
-	sc.Step(`^it must contain at least one "Rule:" declaration$`, func() error {
-		return verifyGeneratedSpecContains(ctx, "Rule:")
-	})
-	sc.Step(`^it must contain at least one "Scenario:" declaration$`, func() error {
-		return verifyGeneratedSpecContainsAny(ctx, "Scenario:", "Scenario Outline:")
-	})
 
 	// Command listing
 	// Note: "I should see" steps are registered in internal/steps.go
@@ -312,64 +192,3 @@ func registerSpecsSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 // go/eac/specs/impl/eac-commands/assets/specs/ instead of being inlined here.
 // This allows tests to use the same mock content that the production code
 // uses when running in test mode.
-
-// verifyGeneratedSpecContains finds the most recently generated spec file and checks its content.
-func verifyGeneratedSpecContains(ctx *internal.TestContext, text string) error {
-	content, err := findGeneratedSpecContent(ctx)
-	if err != nil {
-		return err
-	}
-	if !strings.Contains(content, text) {
-		return fmt.Errorf("generated specification does not contain '%s'. Content:\n%s", text, content)
-	}
-	return nil
-}
-
-// verifyGeneratedSpecContainsAny checks if the generated spec contains any of the given texts.
-func verifyGeneratedSpecContainsAny(ctx *internal.TestContext, texts ...string) error {
-	content, err := findGeneratedSpecContent(ctx)
-	if err != nil {
-		return err
-	}
-	for _, text := range texts {
-		if strings.Contains(content, text) {
-			return nil
-		}
-	}
-	return fmt.Errorf("generated specification does not contain any of %v. Content:\n%s", texts, content)
-}
-
-// findGeneratedSpecContent finds and reads the most recently generated specification file.
-func findGeneratedSpecContent(ctx *internal.TestContext) (string, error) {
-	if ctx.IsolatedDir == "" {
-		return "", fmt.Errorf("not in isolated test environment")
-	}
-
-	// Look for .feature files in specs/ directory
-	specsDir := filepath.Join(ctx.IsolatedDir, "specs")
-	var foundFile string
-
-	err := filepath.Walk(specsDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil // Skip errors
-		}
-		if !info.IsDir() && strings.HasSuffix(path, ".feature") {
-			foundFile = path
-		}
-		return nil
-	})
-	if err != nil {
-		return "", fmt.Errorf("failed to walk specs directory: %w", err)
-	}
-
-	if foundFile == "" {
-		return "", fmt.Errorf("no .feature file found in %s", specsDir)
-	}
-
-	content, err := os.ReadFile(foundFile)
-	if err != nil {
-		return "", fmt.Errorf("failed to read generated spec: %w", err)
-	}
-
-	return string(content), nil
-}

@@ -164,7 +164,7 @@ func extractModuleAndFeatureFromPath(path string) (module, feature string) {
 
 	// Expected format after "specs": <module>/<feature>/specification.feature
 	if specsIndex >= 0 && len(parts) > specsIndex+2 {
-		module = parts[specsIndex+1] // e.g., "r2r-cli"
+		module = parts[specsIndex+1]  // e.g., "r2r-cli"
 		feature = parts[specsIndex+2] // e.g., "verify-configuration"
 	} else {
 		module = "unknown"

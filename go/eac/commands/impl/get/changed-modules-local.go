@@ -1,8 +1,10 @@
 // Command: get changed-modules-local
 // Short: Get modules requiring rebuild based on local build state
-//   --as-yaml: Output as YAML (default)
-//   --as-json: Output as JSON
-//   --as-toml: Output as TOML
+//
+//	--as-yaml: Output as YAML (default)
+//	--as-json: Output as JSON
+//	--as-toml: Output as TOML
+//
 // Long:
 // Long: Expected Output:
 // Long: YAML list of modules needing rebuild based on local state, including:
@@ -18,8 +20,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/buildstate"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"

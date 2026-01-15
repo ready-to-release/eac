@@ -13,7 +13,7 @@
 // Flag.catalog: type=string, usage=Catalog URL for control selection and validation (default: NIST 800-53 Rev5)
 // Flag.output: type=string, shorthand=o, usage=Custom output path for the profile file
 // Flag.force: type=bool, shorthand=f, default=false, usage=Overwrite existing profile file
-// Flag.debug: type=bool, shorthand=d, default=false, usage=Save intermediate outputs to out/logs/risk/
+// Flag.debug: type=bool, shorthand=d, default=false, usage=Save intermediate outputs to out/commands.log
 // Flag.max-retries: type=int, default=3, usage=Maximum AI generation retries on validation failure
 // Args: file
 package riskprofile
@@ -23,8 +23,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"go.uber.org/zap"
 
 	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
@@ -62,40 +60,23 @@ type Config struct {
 	Debug          bool
 	MaxRetries     int
 	WorkspaceRoot  string
-	Logger         *logging.Logger
 }
 
 // CreateRiskProfile is the entry point for the create risk-profile command.
 func CreateRiskProfile() int {
 	config, err := parseConfig()
 	if err != nil {
-		if err.Error() == "help requested" {
-			showHelp()
-			return 0
-		}
 		log.Errorf("Error: %v", err)
 		return 1
 	}
 
-	// Initialize logger
-	var logger *logging.Logger
-	if config.Debug {
-		logger, err = logging.NewWithDebug("risk", config.WorkspaceRoot)
-	} else {
-		logger, err = logging.NewDefault("risk", config.WorkspaceRoot)
+	// Configure logging system (component loggers + file logging)
+	if err := logging.ConfigureLoggingSimple(config.WorkspaceRoot, "commands", nil, config.Debug); err != nil {
+		log.Warnf("Failed to configure logging: %v", err)
 	}
-	if err != nil {
-		log.Errorf("Warning: Failed to initialize logger: %v", err)
-	} else {
-		config.Logger = logger
-		defer logger.Sync()
-	}
+	defer logging.CloseLogging()
 
-	if config.Logger != nil {
-		config.Logger.Info("Starting create risk-profile",
-			zap.String("assessment", config.AssessmentPath),
-			zap.Bool("debug", config.Debug))
-	}
+	log.Infof("Starting create risk-profile: assessment=%s, debug=%v", config.AssessmentPath, config.Debug)
 
 	// Read assessment file
 	log.Infof("Reading assessment file: %s", config.AssessmentPath)
@@ -154,11 +135,7 @@ func CreateRiskProfile() int {
 		if err != nil {
 			lastErr = err
 			log.Warnf("  ✗ AI generation failed: %v", err)
-			if config.Logger != nil {
-				config.Logger.Warn("Profile generation failed",
-					zap.Int("attempt", attempt),
-					zap.Error(err))
-			}
+			log.Warnf("Profile generation failed: attempt=%d, error=%v", attempt, err)
 			continue
 		}
 		log.Infof("  ✓ AI returned %d controls", len(oscal.GetProfileControlIDs(profile)))
@@ -167,11 +144,7 @@ func CreateRiskProfile() int {
 		if err := validateProfile(profile); err != nil {
 			lastErr = err
 			log.Warnf("  ✗ Validation failed: %v", err)
-			if config.Logger != nil {
-				config.Logger.Warn("Profile validation failed",
-					zap.Int("attempt", attempt),
-					zap.Error(err))
-			}
+			log.Warnf("Profile validation failed: attempt=%d, error=%v", attempt, err)
 			continue
 		}
 		log.Info("  ✓ Profile structure valid")
@@ -180,11 +153,7 @@ func CreateRiskProfile() int {
 		if err := oscal.ValidateControlIDsAgainstCatalog(oscal.GetProfileControlIDs(profile), catalog); err != nil {
 			lastErr = err
 			log.Warnf("  ✗ Catalog validation failed: %v", err)
-			if config.Logger != nil {
-				config.Logger.Warn("Catalog validation failed",
-					zap.Int("attempt", attempt),
-					zap.Error(err))
-			}
+			log.Warnf("Catalog validation failed: attempt=%d, error=%v", attempt, err)
 			continue
 		}
 		log.Info("  ✓ All controls validated against catalog")
@@ -218,15 +187,10 @@ func CreateRiskProfile() int {
 	log.Infof("  1. Add @control(%s) tags to your .feature files", controlIDs[0])
 	log.Infof("  2. Run: create risk-assess --profile %s", outputPath)
 
-	if config.Logger != nil {
-		config.Logger.Info("Profile created successfully",
-			zap.String("path", outputPath),
-			zap.Int("controls", len(controlIDs)))
-	}
+	log.Infof("Profile created successfully: path=%s, controls=%d", outputPath, len(controlIDs))
 
 	return 0
 }
-
 
 // parseConfig parses command line configuration.
 func parseConfig() (*Config, error) {
@@ -258,9 +222,6 @@ func parseConfig() (*Config, error) {
 		arg := args[i]
 
 		switch {
-		case arg == "--help" || arg == "-h":
-			return nil, fmt.Errorf("help requested")
-
 		case arg == "--catalog":
 			if i+1 >= len(args) {
 				return nil, fmt.Errorf("--catalog requires a value")
@@ -387,11 +348,8 @@ func validateProfile(profile *oscalTypes.Profile) error {
 
 // validateProfileWithCatalog validates that all control IDs in the profile
 // exist in the specified catalog.
-func validateProfileWithCatalog(profile *oscalTypes.Profile, catalogURL string, logger *logging.Logger) error {
-	if logger != nil {
-		logger.Debug("Loading catalog for validation",
-			zap.String("catalog", catalogURL))
-	}
+func validateProfileWithCatalog(profile *oscalTypes.Profile, catalogURL string) error {
+	log.Debugf("Loading catalog for validation: catalog=%s", catalogURL)
 
 	// Load catalog
 	catalog, err := oscal.LoadCatalog(catalogURL)
@@ -399,10 +357,7 @@ func validateProfileWithCatalog(profile *oscalTypes.Profile, catalogURL string, 
 		return fmt.Errorf("failed to load catalog: %w", err)
 	}
 
-	if logger != nil {
-		logger.Debug("Catalog loaded successfully",
-			zap.String("uuid", catalog.UUID))
-	}
+	log.Debugf("Catalog loaded successfully: uuid=%s", catalog.UUID)
 
 	// Extract control IDs from profile
 	profileControlIDs := oscal.GetProfileControlIDs(profile)
@@ -412,47 +367,7 @@ func validateProfileWithCatalog(profile *oscalTypes.Profile, catalogURL string, 
 		return fmt.Errorf("control validation failed: %w", err)
 	}
 
-	if logger != nil {
-		logger.Debug("All control IDs validated against catalog",
-			zap.Int("count", len(profileControlIDs)))
-	}
+	log.Debugf("All control IDs validated against catalog: count=%d", len(profileControlIDs))
 
 	return nil
-}
-
-
-// showHelp displays help information.
-func showHelp() {
-	help := `Usage: create risk-profile <assessment-file> [flags]
-
-Create OSCAL profile from risk assessment using AI for the entire solution
-
-Arguments:
-  assessment-file    Path to the risk assessment document (markdown, text, etc.)
-
-Optional Flags:
-      --catalog <url>      Catalog URL for control selection and validation (default: NIST 800-53 Rev 5)
-  -o, --output <path>      Custom output path for the profile file
-      --force              Overwrite existing profile file
-  -d, --debug              Save intermediate outputs to out/logs/risk/
-      --max-retries <n>    Maximum AI generation retries (default: 3)
-  -h, --help               Show this help message
-
-Output:
-  Profile is saved to: specs/.risk-controls/risk-profile.json
-
-Examples:
-  # Create profile from assessment document
-  create risk-profile docs/security-assessment.md
-
-  # Use local catalog for validation
-  create risk-profile assessment.md --catalog catalogs/nist-800-53.json
-
-  # Force overwrite existing profile
-  create risk-profile assessment.md --force
-
-  # Use debug mode to inspect AI reasoning
-  create risk-profile assessment.md --debug
-`
-	log.Info(help)
 }

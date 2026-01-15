@@ -1,5 +1,4 @@
 // Command: validate module-files
-// Description: Validate module file ownership
 // Short: Validate module file ownership
 // Long: Validates that all files have proper module ownership and no files are unordered.
 // Long:
@@ -16,6 +15,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/git"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
+	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
 func init() {
@@ -46,7 +46,8 @@ func ValidateModuleFiles() int {
 	}
 
 	// Open git repository
-	repo, err := git.Open(repoRoot)
+	gitMgr := git.NewManager(logging.C().Zap())
+	repo, err := gitMgr.Open(repoRoot)
 	if err != nil {
 		log.Errorf("Error: failed to open git repository: %v", err)
 		return 1

@@ -51,13 +51,21 @@ var log = logging.C()
 // gitRepo holds the git repository instance for git operations.
 // In production, this is initialized lazily. For tests, it can be injected via SetGitRepo.
 var gitRepo git.GitRepository
+var gitMgr *git.RepositoryManager
+
+// initGitManager initializes the git repository manager if needed.
+func initGitManager() {
+	if gitMgr == nil {
+		gitMgr = git.NewManager(logging.C().Zap())
+	}
+}
 
 // getGitRepo returns the git repository, initializing it if needed.
 func getGitRepo(workspaceRoot string) (git.GitRepository, error) {
 	if gitRepo != nil {
 		return gitRepo, nil
 	}
-	repo, err := git.Open(workspaceRoot)
+	repo, err := gitMgr.Open(workspaceRoot)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open git repository: %w", err)
 	}
@@ -72,6 +80,7 @@ func SetGitRepo(repo git.GitRepository) {
 // ResetGitRepo clears the repository for test cleanup.
 func ResetGitRepo() {
 	gitRepo = nil
+	gitMgr = nil
 }
 
 // Init initializes EAC project configuration
@@ -124,73 +133,66 @@ func Init() int {
 		return 1
 	}
 
-	// Initialize logger early so all code paths can use it
-	var logger *logging.Logger
-	if debug {
-		logger, err = logging.NewWithDebug("init", workspaceRoot)
-	} else {
-		logger, err = logging.NewDefault("init", workspaceRoot)
+	// Configure logging system (component loggers + file logging)
+	if err := logging.ConfigureLoggingSimple(workspaceRoot, "commands", nil, debug); err != nil {
+		log.Warnf("Failed to configure logging: %v", err)
 	}
-	if err != nil {
-		log.Errorf("Error initializing logger: %v", err)
-		return 1
-	}
-	defer logger.Sync()
+	defer logging.CloseLogging()
 
 	// Create .r2r/eac directory structure (always)
-	logger.Info("📁 Initializing EAC project...")
-	logger.Info(fmt.Sprintf("   Repository root: %s", workspaceRoot))
-	logger.Info("")
-	if err := createDirectoryStructure(workspaceRoot, logger); err != nil {
-		logger.Error(fmt.Sprintf("Error creating directory structure: %v", err))
+	log.Info("📁 Initializing EAC project...")
+	log.Info(fmt.Sprintf("   Repository root: %s", workspaceRoot))
+	log.Info("")
+	if err := createDirectoryStructure(workspaceRoot); err != nil {
+		log.Error(fmt.Sprintf("Error creating directory structure: %v", err))
 		return 1
 	}
-	logger.Info("✅ Directory structure created")
+	log.Info("✅ Directory structure created")
 
 	// Copy system templates if requested
 	if copyTemplates {
-		logger.Info("")
-		logger.Info("📄 Copying system template files...")
-		if err := copySystemTemplates(workspaceRoot, force, logger); err != nil {
-			logger.Error(fmt.Sprintf("Error copying templates: %v", err))
+		log.Info("")
+		log.Info("📄 Copying system template files...")
+		if err := copySystemTemplates(workspaceRoot, force); err != nil {
+			log.Error(fmt.Sprintf("Error copying templates: %v", err))
 			return 1
 		}
-		logger.Info("✅ System templates copied")
+		log.Info("✅ System templates copied")
 	}
 
 	// If no AI provider specified, just initialize directory structure
 	if aiProvider == "" {
-		logger.Info("")
-		logger.Info("✅ EAC project initialized")
-		logger.Info("")
-		logger.Info("ℹ️  Next steps:")
-		logger.Info("   To configure AI provider (optional):")
-		logger.Info("     eac init --ai-provider claude-api")
-		logger.Info("     eac init --ai-provider openai")
-		logger.Info("     eac init --ai-provider gemini")
-		logger.Info("")
+		log.Info("")
+		log.Info("✅ EAC project initialized")
+		log.Info("")
+		log.Info("ℹ️  Next steps:")
+		log.Info("   To configure AI provider (optional):")
+		log.Info("     eac init --ai-provider claude-api")
+		log.Info("     eac init --ai-provider openai")
+		log.Info("     eac init --ai-provider gemini")
+		log.Info("")
 		return 0
 	}
 
 	// AI provider specified - configure it
-	logger.Info("")
-	logger.Info("🤖 Configuring AI Provider")
-	logger.Info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	log.Info("")
+	log.Info("🤖 Configuring AI Provider")
+	log.Info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
 	// Define paths
 	teamConfigPath := paths.EACConfigFilePath(workspaceRoot)
 	personalConfigPath := paths.EACConfigPersonalFilePath(workspaceRoot)
 
 	// Check if config already exists (only when configuring AI)
-	if err := checkExistingConfig(teamConfigPath, personalConfigPath, force, logger); err != nil {
-		logger.Error(fmt.Sprintf("%v", err))
+	if err := checkExistingConfig(teamConfigPath, personalConfigPath, force); err != nil {
+		log.Error(fmt.Sprintf("%v", err))
 		return 1
 	}
 
 	// Configure agent using --ai-provider flag
-	config, err := configureAgent(aiProvider, logger)
+	config, err := configureAgent(aiProvider)
 	if err != nil {
-		logger.Error(fmt.Sprintf("Error during configuration: %v", err))
+		log.Errorf("Error during configuration: %v", err)
 		return 1
 	}
 
@@ -201,34 +203,34 @@ func Init() int {
 	}
 
 	// Write configuration (team or personal based on token presence)
-	configPath, err := writeConfig(workspaceRoot, config, tokens, logger)
+	configPath, err := writeConfig(workspaceRoot, config, tokens)
 	if err != nil {
-		logger.Error(fmt.Sprintf("Error writing configuration: %v", err))
+		log.Error(fmt.Sprintf("Error writing configuration: %v", err))
 		return 1
 	}
 
 	// Success message
-	logger.Info("")
-	logger.Info("✅ AI provider configured")
-	logger.Info(fmt.Sprintf("   File: %s", configPath))
-	logger.Info("")
+	log.Info("")
+	log.Info("✅ AI provider configured")
+	log.Info(fmt.Sprintf("   File: %s", configPath))
+	log.Info("")
 
 	// Provide appropriate next steps based on config type
 	if aiToken != "" {
 		// Personal config with tokens
-		logger.Info("ℹ️  Next steps:")
-		logger.Info("   1. Do NOT commit this file (contains actual tokens)")
-		logger.Info("   2. Run AI-powered commands (e.g., specs create, commit)")
+		log.Info("ℹ️  Next steps:")
+		log.Info("   1. Do NOT commit this file (contains actual tokens)")
+		log.Info("   2. Run AI-powered commands (e.g., specs create, commit)")
 	} else {
 		// Team config with placeholders
-		logger.Info("ℹ️  Next steps:")
-		logger.Info("   1. Commit the config file (safe - contains no secrets)")
+		log.Info("ℹ️  Next steps:")
+		log.Info("   1. Commit the config file (safe - contains no secrets)")
 		if config.envVarName != "" {
-			logger.Info(fmt.Sprintf("   2. Set environment variable: %s", config.envVarName))
+			log.Info(fmt.Sprintf("   2. Set environment variable: %s", config.envVarName))
 		}
-		logger.Info("   3. Run AI-powered commands (e.g., specs create, commit)")
+		log.Info("   3. Run AI-powered commands (e.g., specs create, commit)")
 	}
-	logger.Info("")
+	log.Info("")
 
 	return 0
 }
@@ -248,7 +250,7 @@ type tokenConfig struct {
 }
 
 // checkExistingConfig checks if config files exist and validates force flag
-func checkExistingConfig(teamPath, personalPath string, force bool, logger *logging.Logger) error {
+func checkExistingConfig(teamPath, personalPath string, force bool) error {
 	teamExists := fileExists(teamPath)
 	personalExists := fileExists(personalPath)
 
@@ -259,28 +261,28 @@ func checkExistingConfig(teamPath, personalPath string, force bool, logger *logg
 
 	// Config exists
 	if !force {
-		logger.Warn("Configuration already exists")
-		logger.Info("")
+		log.Warn("Configuration already exists")
+		log.Info("")
 		if teamExists {
-			logger.Info(fmt.Sprintf("  Team config: %s", teamPath))
+			log.Info(fmt.Sprintf("  Team config: %s", teamPath))
 		}
 		if personalExists {
-			logger.Info(fmt.Sprintf("  Personal config: %s", personalPath))
+			log.Info(fmt.Sprintf("  Personal config: %s", personalPath))
 		}
-		logger.Info("")
-		logger.Info("Use --force to overwrite existing config")
+		log.Info("")
+		log.Info("Use --force to overwrite existing config")
 		return fmt.Errorf("config already exists (use --force to overwrite)")
 	}
 
 	// Force flag provided, log that we're overwriting
-	logger.Info("⚠️  Overwriting existing configuration (--force)")
+	log.Info("⚠️  Overwriting existing configuration (--force)")
 	if teamExists {
-		logger.Info(fmt.Sprintf("  Will replace: %s", teamPath))
+		log.Info(fmt.Sprintf("  Will replace: %s", teamPath))
 	}
 	if personalExists {
-		logger.Info(fmt.Sprintf("  Will replace: %s", personalPath))
+		log.Info(fmt.Sprintf("  Will replace: %s", personalPath))
 	}
-	logger.Info("")
+	log.Info("")
 
 	return nil
 }
@@ -292,7 +294,7 @@ func fileExists(path string) bool {
 }
 
 // configureAgent configures the AI provider based on user input
-func configureAgent(aiProvider string, logger *logging.Logger) (*agentConfig, error) {
+func configureAgent(aiProvider string) (*agentConfig, error) {
 	config := &agentConfig{}
 
 	// Configure provider based on --ai flag
@@ -300,7 +302,7 @@ func configureAgent(aiProvider string, logger *logging.Logger) (*agentConfig, er
 		return nil, err
 	}
 
-	displayProviderInfo(config, logger)
+	displayProviderInfo(config)
 	return config, nil
 }
 
@@ -333,38 +335,38 @@ func configureProvider(config *agentConfig, provider string) error {
 }
 
 // displayProviderInfo shows information about the selected provider
-func displayProviderInfo(config *agentConfig, logger *logging.Logger) {
-	logger.Info("")
-	logger.Info(fmt.Sprintf("✓ %s selected", config.providerName))
+func displayProviderInfo(config *agentConfig) {
+	log.Info("")
+	log.Info(fmt.Sprintf("✓ %s selected", config.providerName))
 	if config.envVarName != "" {
-		logger.Info(fmt.Sprintf("  Environment variable: %s", config.envVarName))
+		log.Info(fmt.Sprintf("  Environment variable: %s", config.envVarName))
 	}
 
 	// Provider-specific API key instructions
 	switch config.providerName {
 	case "claude-api":
-		logger.Info("  Get your API key at: https://claude.ai/settings/api")
-		logger.Info("  Note: Personal or workspace-owned API keys both work")
-		logger.Info("  Requires: ANTHROPIC_API_KEY environment variable")
+		log.Info("  Get your API key at: https://claude.ai/settings/api")
+		log.Info("  Note: Personal or workspace-owned API keys both work")
+		log.Info("  Requires: ANTHROPIC_API_KEY environment variable")
 	case "claude-cli":
-		logger.Info("  Uses Claude Code CLI (no API key needed)")
-		logger.Info("  Note: Requires Claude Code to be installed and authenticated")
+		log.Info("  Uses Claude Code CLI (no API key needed)")
+		log.Info("  Note: Requires Claude Code to be installed and authenticated")
 	case "openai":
-		logger.Info("  Get your API key at: https://platform.openai.com/api-keys")
+		log.Info("  Get your API key at: https://platform.openai.com/api-keys")
 	case "gemini":
-		logger.Info("  Get your API key at: https://makersuite.google.com/app/apikey")
+		log.Info("  Get your API key at: https://makersuite.google.com/app/apikey")
 	}
 
-	logger.Info("")
-	logger.Info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	logger.Info("")
+	log.Info("")
+	log.Info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	log.Info("")
 }
 
 // createDirectoryStructure creates the .r2r/eac directory structure
-func createDirectoryStructure(workspaceRoot string, logger *logging.Logger) error {
+func createDirectoryStructure(workspaceRoot string) error {
 	// Create .r2r/eac directory
 	eacDir := paths.EACConfigPath(workspaceRoot)
-	logger.Info(fmt.Sprintf("   Creating directory: %s", eacDir))
+	log.Info(fmt.Sprintf("   Creating directory: %s", eacDir))
 
 	if err := os.MkdirAll(eacDir, 0755); err != nil {
 		return fmt.Errorf("failed to create .r2r/eac directory: %w", err)
@@ -379,7 +381,7 @@ func createDirectoryStructure(workspaceRoot string, logger *logging.Logger) erro
 }
 
 // writeConfig writes the EAC configuration (team or personal based on tokens)
-func writeConfig(workspaceRoot string, config *agentConfig, tokens *tokenConfig, logger *logging.Logger) (string, error) {
+func writeConfig(workspaceRoot string, config *agentConfig, tokens *tokenConfig) (string, error) {
 	// Determine which file to write and whether to use env vars or direct tokens
 	var configPath string
 	var useEnvVars bool
@@ -388,16 +390,12 @@ func writeConfig(workspaceRoot string, config *agentConfig, tokens *tokenConfig,
 		// User provided AI token - write personal config with direct values
 		configPath = paths.EACConfigPersonalFilePath(workspaceRoot)
 		useEnvVars = false
-		if logger != nil {
-			logger.Info("📝 Creating personal configuration with actual tokens...")
-		}
+		log.Info("📝 Creating personal configuration with actual tokens...")
 	} else {
 		// No tokens provided - write team config with env var placeholders
 		configPath = paths.EACConfigFilePath(workspaceRoot)
 		useEnvVars = true
-		if logger != nil {
-			logger.Info("📝 Creating team configuration with environment variable placeholders...")
-		}
+		log.Info("📝 Creating team configuration with environment variable placeholders...")
 	}
 
 	// Build config content
@@ -470,7 +468,7 @@ func buildConfigContent(config *agentConfig, tokens *tokenConfig, useEnvVars boo
 }
 
 // copySystemTemplates copies system default configuration files to user repository
-func copySystemTemplates(workspaceRoot string, force bool, logger *logging.Logger) error {
+func copySystemTemplates(workspaceRoot string, force bool) error {
 	// Get system root (Docker container or local dev)
 	systemRoot := os.Getenv("R2R_CONTAINER_ROOT")
 	if systemRoot == "" {
@@ -501,14 +499,14 @@ func copySystemTemplates(workspaceRoot string, force bool, logger *logging.Logge
 
 		// Check if destination exists
 		if fileExists(dstPath) && !force {
-			logger.Info(fmt.Sprintf("   ⏭️  Skipping %s (already exists, use --force to overwrite)", filename))
+			log.Info(fmt.Sprintf("   ⏭️  Skipping %s (already exists, use --force to overwrite)", filename))
 			skippedCount++
 			continue
 		}
 
 		// Check if source exists
 		if !fileExists(srcPath) {
-			logger.Warn(fmt.Sprintf("   ⚠️  System template not found: %s", filename))
+			log.Warn(fmt.Sprintf("   ⚠️  System template not found: %s", filename))
 			continue
 		}
 
@@ -523,12 +521,12 @@ func copySystemTemplates(workspaceRoot string, force bool, logger *logging.Logge
 			return fmt.Errorf("failed to write %s: %w", dstPath, err)
 		}
 
-		logger.Info(fmt.Sprintf("   ✓ Copied %s", filename))
+		log.Info(fmt.Sprintf("   ✓ Copied %s", filename))
 		copiedCount++
 	}
 
-	logger.Info("")
-	logger.Info(fmt.Sprintf("   📊 Summary: %d copied, %d skipped", copiedCount, skippedCount))
+	log.Info("")
+	log.Info(fmt.Sprintf("   📊 Summary: %d copied, %d skipped", copiedCount, skippedCount))
 
 	return nil
 }

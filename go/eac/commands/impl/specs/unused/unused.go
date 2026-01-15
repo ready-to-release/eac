@@ -1,5 +1,4 @@
 // Command: get specs unused-steps
-// Description: Find step definitions not used by any feature file
 // Short: Detect unused godog step definitions
 // Long: The get specs unused-steps command scans step definition files in go/eac/specs/impl/
 // Long: and compares them against feature files in specs/ to find step definitions
@@ -52,9 +51,6 @@ func SpecsUnusedSteps() int {
 			moduleFilter = strings.TrimPrefix(arg, "--module=")
 		case strings.HasPrefix(arg, "-m="):
 			moduleFilter = strings.TrimPrefix(arg, "-m=")
-		case arg == "-h" || arg == "--help":
-			printUsage()
-			return 0
 		}
 	}
 
@@ -171,22 +167,6 @@ func printResults(result *AnalysisResult, repoRoot string, verbose bool) {
 	} else {
 		log.Info("No unused step definitions found.")
 	}
-}
-
-func printUsage() {
-	log.Info("Find step definitions not used by any feature file")
-	log.Info("")
-	log.Info("Usage: r2r specs unused-steps [--verbose] [--module=<name>]")
-	log.Info("")
-	log.Info("Flags:")
-	log.Info("  -v, --verbose        Show detailed output including all scanned files")
-	log.Info("  -m, --module=<name>  Only analyze a specific module (e.g., eac-commands)")
-	log.Info("  -h, --help           Show this help message")
-	log.Info("")
-	log.Info("Examples:")
-	log.Info("  r2r specs unused-steps")
-	log.Info("  r2r specs unused-steps --verbose")
-	log.Info("  r2r specs unused-steps --module=eac-commands")
 }
 
 func relativePath(base, target string) string {

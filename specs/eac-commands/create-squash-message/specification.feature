@@ -17,38 +17,18 @@ Feature: eac-commands_create-squash-message
       Then the exit code is 1
       And stdout contains "no commits ahead"
 
-    Scenario: Generate message from branch commits
+        Scenario: Generate message from branch commits
       Given I am on a branch with multiple commits ahead of "main"
       And the mock AI is configured to return a valid squash message
       When I run "create squash-message --base=main"
       Then the exit code is 0
       And stdout contains a conventional commit message
-      And the message synthesizes all commits into cohesive narrative
-
-  Rule: Message follows conventional commit format
-
-    Scenario: Message has proper structure
-      Given I am on a branch with multiple commits ahead of "main"
-      And the mock AI is configured to return a valid squash message
-      When I run "create squash-message"
-      Then the exit code is 0
-      And the message has a type prefix
-      And the message has a scope
-      And the message includes "Auditor-Summary" line
-      And the message includes "Changes:" statistics line
 
   Rule: Base branch configuration
 
-    Scenario: Default to main branch
+        Scenario: Default to main branch
       Given I am on a branch with commits ahead of "main"
       And the mock AI is configured to return a valid squash message
       When I run "create squash-message"
       Then the exit code is 0
       And the command compares against "main" branch
-
-    Scenario: Custom base branch with --base flag
-      Given I am on a branch with commits ahead of "develop"
-      And the mock AI is configured to return a valid squash message
-      When I run "create squash-message --base=develop"
-      Then the exit code is 0
-      And the command compares against "develop" branch

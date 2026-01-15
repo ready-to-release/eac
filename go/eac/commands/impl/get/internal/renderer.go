@@ -33,10 +33,10 @@ func getCallerCommandName() string {
 
 // OutputFormat represents the desired output format
 type OutputFormat struct {
-	AsYAML           bool
-	AsJSON           bool
-	AsTOML           bool
-	CustomRenderer   string
+	AsYAML         bool
+	AsJSON         bool
+	AsTOML         bool
+	CustomRenderer string
 }
 
 // ParseOutputFlags parses output format flags from command arguments

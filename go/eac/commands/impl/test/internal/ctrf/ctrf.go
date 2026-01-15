@@ -16,9 +16,9 @@ type Report struct {
 
 // Results contains the test results
 type Results struct {
-	Tool        Tool       `json:"tool"`
-	Summary     Summary    `json:"summary"`
-	Tests       []Test     `json:"tests"`
+	Tool        Tool         `json:"tool"`
+	Summary     Summary      `json:"summary"`
+	Tests       []Test       `json:"tests"`
 	Environment *Environment `json:"environment,omitempty"`
 }
 
@@ -36,20 +36,20 @@ type Summary struct {
 	Pending int   `json:"pending"`
 	Skipped int   `json:"skipped"`
 	Other   int   `json:"other"`
-	Start   int64 `json:"start"`   // Unix milliseconds
-	Stop    int64 `json:"stop"`    // Unix milliseconds
+	Start   int64 `json:"start"` // Unix milliseconds
+	Stop    int64 `json:"stop"`  // Unix milliseconds
 }
 
 // Test represents a single test result
 type Test struct {
-	Name       string  `json:"name"`
-	Status     Status  `json:"status"`
-	Duration   int64   `json:"duration"` // Milliseconds
-	Message    string  `json:"message,omitempty"`
-	Trace      string  `json:"trace,omitempty"`
-	RawStatus  string  `json:"rawStatus,omitempty"`
-	Suite      string  `json:"suite,omitempty"`
-	FilePath   string  `json:"filePath,omitempty"`
+	Name      string `json:"name"`
+	Status    Status `json:"status"`
+	Duration  int64  `json:"duration"` // Milliseconds
+	Message   string `json:"message,omitempty"`
+	Trace     string `json:"trace,omitempty"`
+	RawStatus string `json:"rawStatus,omitempty"`
+	Suite     string `json:"suite,omitempty"`
+	FilePath  string `json:"filePath,omitempty"`
 }
 
 // Status represents the test result status

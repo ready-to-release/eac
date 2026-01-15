@@ -551,13 +551,13 @@ type LinkTranslation struct {
 
 // LinkTranslator manages translations for all files
 type LinkTranslator struct {
-	sourceRoot    string                         // Source root directory (docs/)
-	stagingRoot   string                         // Staging root directory (out/staging/book/)
-	fileMap       map[string]string              // staging_path → source_path (absolute)
-	docsRelPath   map[string]string              // source_path (absolute) → docs-relative path
-	translations  map[string]*LinkTranslation    // staging_path → translation
-	logWriter     io.Writer                      // Logger for debug output
-	pdfMode       bool                           // True if building PDF (strips external links)
+	sourceRoot   string                      // Source root directory (docs/)
+	stagingRoot  string                      // Staging root directory (out/staging/book/)
+	fileMap      map[string]string           // staging_path → source_path (absolute)
+	docsRelPath  map[string]string           // source_path (absolute) → docs-relative path
+	translations map[string]*LinkTranslation // staging_path → translation
+	logWriter    io.Writer                   // Logger for debug output
+	pdfMode      bool                        // True if building PDF (strips external links)
 }
 
 // NewLinkTranslator creates a new link translator
@@ -595,10 +595,10 @@ func (t *LinkTranslator) logDebug(format string, args ...any) {
 // relativeLinkPattern matches markdown images, links, and HTML img/anchor tags
 // Captures relative paths (not http://, https://, /, or #)
 var (
-	mdImagePattern  = regexp.MustCompile(`!\[.*?\]\(([^)]+)\)`)       // ![alt](path)
-	mdLinkPattern   = regexp.MustCompile(`\[.*?\]\(([^)]+)\)`)        // [text](path)
-	htmlImgPattern  = regexp.MustCompile(`<img[^>]+src="([^"]+)"`)    // <img src="path">
-	htmlLinkPattern = regexp.MustCompile(`<a[^>]+href="([^"]+)"`)     // <a href="path">
+	mdImagePattern  = regexp.MustCompile(`!\[.*?\]\(([^)]+)\)`)    // ![alt](path)
+	mdLinkPattern   = regexp.MustCompile(`\[.*?\]\(([^)]+)\)`)     // [text](path)
+	htmlImgPattern  = regexp.MustCompile(`<img[^>]+src="([^"]+)"`) // <img src="path">
+	htmlLinkPattern = regexp.MustCompile(`<a[^>]+href="([^"]+)"`)  // <a href="path">
 )
 
 // stripCodeBlocks removes both fenced and indented code blocks from markdown content
@@ -623,7 +623,6 @@ func stripCodeBlocks(content string) string {
 
 	return strings.Join(cleaned, "\n")
 }
-
 
 // extractRelativeLinks extracts all relative link references from markdown content
 func extractRelativeLinks(content string) []string {
@@ -983,8 +982,8 @@ func replaceLinkPaths(content, old, new string) string {
 		if len(parts) < 4 {
 			return match
 		}
-		bang := parts[1]   // "!" for images, "" for links
-		text := parts[2]   // link text or alt text
+		bang := parts[1] // "!" for images, "" for links
+		text := parts[2] // link text or alt text
 		anchor := ""
 		if len(parts) > 4 && parts[4] != "" {
 			anchor = parts[4] // anchor like #section

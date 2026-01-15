@@ -1,8 +1,9 @@
 // Command: get config
-// Description: Get all EAC configuration in structured format
-//   --as-yaml: Output as YAML (default)
-//   --as-json: Output as JSON
-//   --as-toml: Output as TOML
+//
+//	--as-yaml: Output as YAML (default)
+//	--as-json: Output as JSON
+//	--as-toml: Output as TOML
+//
 // Long:
 // Long: Expected Output:
 // Long: YAML with all loaded configuration including:
@@ -17,8 +18,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	getInternal "github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 )
@@ -78,34 +79,4 @@ func GetConfig() int {
 
 		return output, nil
 	})
-}
-
-// printConfigUsage prints help for the get config command
-func printConfigUsage() {
-	fmt.Println("Get all EAC configuration in structured format")
-	fmt.Println("")
-	fmt.Println("Usage: r2r get config [flags]")
-	fmt.Println("")
-	fmt.Println("Flags:")
-	fmt.Println("  --as-yaml    Output as YAML (default)")
-	fmt.Println("  --as-json    Output as JSON")
-	fmt.Println("  --as-toml    Output as TOML")
-	fmt.Println("  -h, --help   Show this help message")
-	fmt.Println("")
-	fmt.Println("Output includes all loaded configurations with defaults applied:")
-	fmt.Println("  - modules: Module contracts")
-	fmt.Println("  - module_types: Module type definitions")
-	fmt.Println("  - environments: Environment contracts")
-	fmt.Println("  - testing_tags: Testing tag definitions")
-	fmt.Println("  - test_suites: Test suite configurations")
-}
-
-func checkConfigHelp() bool {
-	for _, arg := range os.Args[2:] {
-		if arg == "--help" || arg == "-h" {
-			printConfigUsage()
-			return true
-		}
-	}
-	return false
 }

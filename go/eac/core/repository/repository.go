@@ -7,17 +7,15 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/core/git"
-	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
+	"go.uber.org/zap"
 )
-
-// log is the package-level logger for repository operations
-var log = logging.C()
 
 // Repository represents a Git repository
 type Repository struct {
 	root    string
 	gitRepo git.GitRepository
+	logger  *zap.Logger // Optional logger for observability (nil = no logging)
 }
 
 // RepositoryError represents a repository-related error
@@ -140,18 +138,15 @@ type RepositoryFileWithModule struct {
 //	repo, _ := git.Open("/path/to/repo")
 //	files, err := repository.GetRepositoryFiles(repo, true, false, false, false)
 func GetRepositoryFiles(repo git.GitRepository, trackedOnly, includeIgnored, includeGitInternalFiles, stagedOnly bool) ([]FileInfo, error) {
-	log.Debug("GetRepositoryFiles: start")
 	rootPath := repo.RootPath()
 	var files []FileInfo
 
 	// If stagedOnly is true, get only staged files
 	if stagedOnly {
-		log.Debug("GetRepositoryFiles: calling repo.StagedFiles()")
 		stagedFiles, err := repo.StagedFiles()
 		if err != nil {
 			return nil, NewRepositoryError("staged files", rootPath, err, "failed to list staged files")
 		}
-		log.Debug("GetRepositoryFiles: repo.StagedFiles() complete")
 
 		for _, line := range stagedFiles {
 			line = strings.TrimSpace(line)
@@ -269,20 +264,30 @@ func isGitInternalFile(relPath string) bool {
 
 // New creates a Repository instance from a given path
 // If path is empty, uses current directory
-func New(path string) (*Repository, error) {
+// Pass logger for observability (nil = no logging).
+func New(path string, logger *zap.Logger) (*Repository, error) {
+	if logger != nil {
+		logger.Debug("Creating repository instance", zap.String("path", path))
+	}
+
 	root, err := GetRepositoryRoot(path)
 	if err != nil {
 		return nil, err
 	}
 
-	gitRepo, err := git.Open(root)
+	gitRepo, err := git.Open(root, logger)
 	if err != nil {
 		return nil, NewRepositoryError("open", root, err, "failed to open git repository")
+	}
+
+	if logger != nil {
+		logger.Debug("Repository instance created", zap.String("root", root))
 	}
 
 	return &Repository{
 		root:    root,
 		gitRepo: gitRepo,
+		logger:  logger, // ✅ Store logger
 	}, nil
 }
 

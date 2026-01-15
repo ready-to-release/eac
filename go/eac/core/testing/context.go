@@ -40,9 +40,9 @@ type SharedTestContext struct {
 	ResetTestFile string
 
 	// Specs-specific fields
-	TestDescription string
-	CreatedFiles    []string
-	TestDir         string
+	TestDescription  string
+	CreatedFiles     []string
+	TestDir          string
 	RemovedContracts bool
 
 	// AI test doubles

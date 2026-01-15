@@ -26,8 +26,8 @@ type TagDefinition struct {
 	Name        string `yaml:"name"`
 	Description string `yaml:"description"`
 	Type        string `yaml:"type"`
-	Level       string `yaml:"level,omitempty"`      // feature-or-scenario, scenario
-	Pattern     string `yaml:"pattern,omitempty"`    // Regex pattern for parameterized tags
+	Level       string `yaml:"level,omitempty"`   // feature-or-scenario, scenario
+	Pattern     string `yaml:"pattern,omitempty"` // Regex pattern for parameterized tags
 	Example     string `yaml:"example,omitempty"`
 	Note        string `yaml:"note,omitempty"`
 	Constraint  string `yaml:"constraint,omitempty"` // e.g., "mutually_exclusive_with_taxonomy_levels"

@@ -1,5 +1,4 @@
 // Command: get evidence-ci-runs
-// Description: Get CI run IDs for a module and its dependencies (for evidence building)
 // Short: Get CI run IDs for a module and its dependencies (for evidence building)
 // Args: module (required) - Module moniker to get evidence CI runs for
 // Flag.format: type=string, usage=Output format (json outputs JSON array for shell parsing; otherwise uses standard get command formats)

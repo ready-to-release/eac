@@ -47,15 +47,21 @@ func registerDesignSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	sc.Step(`^source code exists at "([^"]*)"$`, func(path string) error {
 		return internal.CreateDirectory(ctx, path)
 	})
-	sc.Step(`^module "([^"]*)" exists in "([^"]*)"$`, func(name, path string) error {
-		return internal.CreateDirectory(ctx, path)
-	})
 	sc.Step(`^module "([^"]*)" has a workspace$`, func(module string) error {
 		// Create a minimal workspace.dsl
 		wsPath := fmt.Sprintf("specs/%s/.design/workspace.dsl", module)
 		return internal.CreateFile(ctx, wsPath, minimalWorkspaceDSL(module))
 	})
 	sc.Step(`^module "([^"]*)" has a workspace at "([^"]*)"$`, func(module, path string) error {
+		// Extract source path from workspace path (e.g., "specs/test-module/.design/workspace.dsl" → "specs/test-module")
+		sourcePath := filepath.Dir(filepath.Dir(path))
+
+		// Create module contract in repository.yml
+		if err := createModuleContract(ctx, module, sourcePath); err != nil {
+			return err
+		}
+
+		// Create workspace file
 		return internal.CreateFile(ctx, path, minimalWorkspaceDSL(module))
 	})
 	sc.Step(`^module "([^"]*)" has a valid workspace$`, func(module string) error {
@@ -69,8 +75,14 @@ func registerDesignSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 		return internal.CreateFile(ctx, path, "invalid { dsl content")
 	})
 	sc.Step(`^no workspace exists for "([^"]*)"$`, func(module string) error {
-		// Just ensure the directory structure exists without workspace
-		return internal.CreateDirectory(ctx, fmt.Sprintf("specs/%s", module))
+		// Create module contract in repository.yml
+		sourcePath := fmt.Sprintf("specs/%s", module)
+		if err := createModuleContract(ctx, module, sourcePath); err != nil {
+			return err
+		}
+
+		// Ensure directory structure exists without workspace
+		return internal.CreateDirectory(ctx, sourcePath)
 	})
 	sc.Step(`^multiple modules have workspace files$`, func() error {
 		for _, mod := range []string{"module-a", "module-b", "module-c"} {
@@ -83,19 +95,6 @@ func registerDesignSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	})
 
 	// Mock AI configuration - creates mock file in isolated directory for subprocess
-	sc.Step(`^the mock AI is configured to return a valid workspace$`, func() error {
-		// Load mock from assets
-		mockContent, err := internal.LoadAsset(ctx, "design/mock-response.txt")
-		if err != nil {
-			return err
-		}
-		// Create mock file in isolated directory that AI executor will find
-		return internal.CreateFile(ctx, ".r2r/test/ai-mock.txt", mockContent)
-	})
-	sc.Step(`^the mock AI is configured to return an updated workspace$`, func() error {
-		mockWorkspace := minimalWorkspaceDSL("test-module") + "\n// Updated"
-		return internal.CreateFile(ctx, ".r2r/test/ai-mock.txt", mockWorkspace)
-	})
 
 	// Then steps - file verification
 	// Note: "the file ... should exist" is registered in internal/steps.go
@@ -119,18 +118,6 @@ func registerDesignSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	})
 	sc.Step(`^documentation should be accessible at the URL$`, func() error {
 		// Placeholder - would need HTTP check
-		return nil
-	})
-	sc.Step(`^the workspace should be updated$`, func() error {
-		// Placeholder - verify workspace content changed
-		return nil
-	})
-	sc.Step(`^the workspace should pass Structurizr validation$`, func() error {
-		// Placeholder - requires Docker
-		return nil
-	})
-	sc.Step(`^no confirmation prompt should appear$`, func() error {
-		// With --force flag, no prompt
 		return nil
 	})
 

@@ -1,9 +1,10 @@
 // Command: get suite
-// Description: Get test suite information as structured data
 // Usage: get suite <suite-moniker>
-//   --as-yaml: Output as YAML (default)
-//   --as-json: Output as JSON
-//   --as-toml: Output as TOML
+//
+//	--as-yaml: Output as YAML (default)
+//	--as-json: Output as JSON
+//	--as-toml: Output as TOML
+//
 // Long:
 // Long: Expected Output:
 // Long: YAML test suite definition and configuration, including:
@@ -17,9 +18,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/internal/testdata"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	contractsreports "github.com/ready-to-release/eac/go/eac/core/contracts/reports"

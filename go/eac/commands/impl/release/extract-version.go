@@ -1,5 +1,4 @@
 // Command: release extract-version
-// Description: Extract and validate release version from tag or input
 // Short: Extract and validate release version from tag or input
 // Flag.module: type=string, usage=Module prefix (e.g., r2r-cli, docs)
 // Flag.type: type=string, default=semver, usage=Version type (semver or calver)

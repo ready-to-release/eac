@@ -10,15 +10,11 @@ import (
 	"reflect"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/ready-to-release/eac/go/eac/core/contracts/schema"
-	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"gopkg.in/yaml.v3"
 )
-
-var log = logging.C()
 
 // Global process-level cache for EAC configuration
 // This prevents repeated file I/O and schema validation across parallel test packages
@@ -52,7 +48,6 @@ func ClearCache() {
 		globalConfigCache.mu.Lock()
 		globalConfigCache.cache = make(map[string]map[bool]*EACConfig)
 		globalConfigCache.mu.Unlock()
-		log.Debug("Global config cache cleared")
 	}
 }
 
@@ -63,7 +58,6 @@ func (c *ConfigCache) Get(repoRoot string, validateSchemas bool) (*EACConfig, bo
 
 	if repoConfigs, ok := c.cache[repoRoot]; ok {
 		if cfg, ok := repoConfigs[validateSchemas]; ok {
-			log.Debugf("Config cache hit (repoRoot=%s, validateSchemas=%v)", repoRoot, validateSchemas)
 			return cfg, true
 		}
 	}
@@ -79,7 +73,6 @@ func (c *ConfigCache) Set(repoRoot string, validateSchemas bool, cfg *EACConfig)
 		c.cache[repoRoot] = make(map[bool]*EACConfig)
 	}
 	c.cache[repoRoot][validateSchemas] = cfg
-	log.Debugf("Config cached (repoRoot=%s, validateSchemas=%v)", repoRoot, validateSchemas)
 }
 
 // EACConfigRelPath is re-exported for backwards compatibility
@@ -199,7 +192,6 @@ func Load(opts LoadOptions) (*EACConfig, error) {
 
 	// Initialize global cache once per process
 	globalConfigCacheOnce.Do(func() {
-		log.Debug("Initializing global EAC config cache")
 		globalConfigCache = NewConfigCache()
 	})
 
@@ -209,8 +201,6 @@ func Load(opts LoadOptions) (*EACConfig, error) {
 	}
 
 	// Cache miss - load and validate
-	log.Debugf("Config cache miss, loading from disk (repoRoot=%s, validateSchemas=%v)", repoRoot, opts.ValidateSchemas)
-	start := time.Now()
 
 	configRoot := paths.EACConfigPath(repoRoot)
 
@@ -224,8 +214,6 @@ func Load(opts LoadOptions) (*EACConfig, error) {
 		return nil, err
 	}
 
-	duration := time.Since(start)
-	log.Debugf("Config loaded and validated: %v, files=%d", duration, countConfigFiles(cfg))
 
 	// Cache the validated config
 	globalConfigCache.Set(repoRoot, opts.ValidateSchemas, cfg)
@@ -369,12 +357,12 @@ func (c *EACConfig) LoadRepository(validateSchema bool) error {
 				Paths: PathsConfig{
 					SpecsRoot: "specs",
 					Out: OutConfig{
-						Root:     "out",
-						Build:    "out/build",
-						Test:     "out/test",
-						Logs:     "out/logs",
-						Scan:     "out/scan",
-						Tools:    "out/tools",
+						Root:  "out",
+						Build: "out/build",
+						Test:  "out/test",
+						Logs:  "out/logs",
+						Scan:  "out/scan",
+						Tools: "out/tools",
 					},
 				},
 			}

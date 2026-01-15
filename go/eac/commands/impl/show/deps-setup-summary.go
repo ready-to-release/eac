@@ -1,5 +1,4 @@
 // Command: show deps-setup-summary
-// Description: Generate dependencies setup summary
 // Short: Generate dependencies setup summary
 // Flag.module: type=string, usage=Module name (required)
 // Flag.deps: type=string, usage=Comma-separated list of dependencies (go,node,docker,buildx,upx)

@@ -1,11 +1,12 @@
 // Command: get execution-order
-// Description: Get execution order for specific modules based on dependencies
 // Usage: get execution-order <moniker1> <moniker2> ...
-//   --as-yaml: Output as YAML (default)
-//   --as-json: Output as JSON
-//   --as-toml: Output as TOML
-//   --format: Output format (list = one per line, space = space-separated)
-//   --skip-depm: Don't expand to include transitive module dependencies (only order the specified modules)
+//
+//	--as-yaml: Output as YAML (default)
+//	--as-json: Output as JSON
+//	--as-toml: Output as TOML
+//	--format: Output format (list = one per line, space = space-separated)
+//	--skip-depm: Don't expand to include transitive module dependencies (only order the specified modules)
+//
 // Long:
 // Long: Expected Output:
 // Long: YAML ordered list of modules for execution, topologically sorted based on dependencies.
@@ -23,8 +24,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )

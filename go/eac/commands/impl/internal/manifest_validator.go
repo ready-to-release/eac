@@ -210,9 +210,9 @@ func (m *ModuleManifest) ValidateAndSaveWithRoot(moduleBuildDir string, workspac
 
 // ArtifactExistenceError represents a missing artifact error
 type ArtifactExistenceError struct {
-	Moniker  string
-	Missing  []string
-	Details  map[string]string // artifact ID -> specific error
+	Moniker string
+	Missing []string
+	Details map[string]string // artifact ID -> specific error
 }
 
 func (e *ArtifactExistenceError) Error() string {

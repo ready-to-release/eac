@@ -1,5 +1,4 @@
 // Command: validate module-hierarchy
-// Description: Validate module dependency graph structure
 // Short: Validate module dependency graph structure
 // Long: Validates the module dependency graph for structural integrity.
 // Long:

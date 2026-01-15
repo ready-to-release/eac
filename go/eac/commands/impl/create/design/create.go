@@ -1,5 +1,4 @@
 // Command: create design
-// Description: Generate workspace.dsl for a module using AI
 // Short: Generate workspace.dsl for a module using AI
 // Long: Generates Structurizr DSL workspace files for a module by analyzing its source code using AI.
 // Long: The AI analyzes the source code in go/eac/<module>/ and creates comprehensive architecture
@@ -13,8 +12,8 @@
 // Long: - Structurizr DSL workspace file at output path
 // Long: - System context, container, and component views
 // Long: - Validation results if Docker available
-// Long: - Debug logs in out/logs/design/ if --debug enabled
-// Flag.debug: type=bool, shorthand=d, default=false, usage=Save intermediate outputs (prompts, raw AI responses, validation results) to out/logs/design/ for debugging
+// Long: - Debug logs in out/commands.log if --debug enabled
+// Flag.debug: type=bool, shorthand=d, default=false, usage=Save intermediate outputs (prompts, raw AI responses, validation results) to out/commands.log for debugging
 // Flag.force: type=bool, shorthand=f, default=false, usage=Overwrite existing workspace.dsl file if it exists
 // Flag.output: type=string, shorthand=o, default=, usage=Custom output path for workspace.dsl (default: specs/<module>/.design/workspace.dsl)
 // Flag.prompt: type=string, shorthand=, default=, usage=Custom AI prompt file path
@@ -30,19 +29,20 @@ import (
 	"path/filepath"
 	"strings"
 
-	"go.uber.org/zap"
-
 	design "github.com/ready-to-release/eac/go/eac/commands/impl/design"
 	designInternal "github.com/ready-to-release/eac/go/eac/commands/impl/design/helper"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
-	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
+	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	coreai "github.com/ready-to-release/eac/go/eac/core/ai"
 	eacConfig "github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
+	"github.com/ready-to-release/eac/go/eac/core/validation/formats/structurizr"
 )
 
 func init() {
@@ -70,20 +70,14 @@ func CreateDesign() int {
 		return 1
 	}
 
-	// Initialize logger
-	var logger *logging.Logger
-	if config.Debug {
-		logger, err = logging.NewWithDebug("design", config.TemplateRoot)
-	} else {
-		logger, err = logging.NewDefault("design", config.TemplateRoot)
+	// Configure logging system (component loggers + file logging)
+	if err := logging.ConfigureLoggingSimple(config.TemplateRoot, "commands", nil, config.Debug); err != nil {
+		log.Warnf("Failed to configure logging: %v", err)
 	}
-	if err != nil {
-		log.Warnf("Warning: failed to initialize logger: %v", err)
-		// Continue without logger - output will still work
-	}
+	defer logging.CloseLogging()
 
 	// Create output handler
-	out := design.NewOutput(logger)
+	out := design.NewOutput()
 
 	// Validate module exists
 	if err := validateModuleExists(config, out); err != nil {
@@ -123,14 +117,14 @@ func CreateDesign() int {
 	}
 
 	// Load contract and build prompt
-	fullPrompt, err := loadAndBuildPrompt(config, out, logger)
+	fullPrompt, err := loadAndBuildPrompt(config, out)
 	if err != nil {
 		out.Errorf("Error: %v", err)
 		return 1
 	}
 
 	// Generate and validate with retry
-	cleanedOutput, err := generateAndValidate(config, fullPrompt, out, logger)
+	cleanedOutput, err := generateAndValidate(config, fullPrompt, out)
 	if err != nil {
 		out.Errorf("\n❌ Error: %v", err)
 		return 1
@@ -309,7 +303,7 @@ func checkDockerAvailability(config *DesignConfig, out *design.Output) error {
 	out.Progress("🐳 Checking Docker availability...")
 
 	// Create a temporary validator to check Docker
-	validator, err := NewCompositeValidator("", "", true)
+	validator, err := structurizr.NewCompositeValidator("", "", true)
 	if err != nil {
 		return fmt.Errorf("failed to create validator: %w", err)
 	}
@@ -325,7 +319,7 @@ func checkDockerAvailability(config *DesignConfig, out *design.Output) error {
 }
 
 // loadAndBuildPrompt loads the contract and builds the AI prompt
-func loadAndBuildPrompt(config *DesignConfig, out *design.Output, logger *logging.Logger) (string, error) {
+func loadAndBuildPrompt(config *DesignConfig, out *design.Output) (string, error) {
 	out.Progress("📋 Loading design contract...")
 
 	fullPrompt, err := buildContractBasedPrompt(config)
@@ -333,8 +327,8 @@ func loadAndBuildPrompt(config *DesignConfig, out *design.Output, logger *loggin
 		return "", err
 	}
 
-	if config.Debug && logger != nil {
-		logger.Debug("Full AI prompt built", zap.Int("promptLength", len(fullPrompt)))
+	if config.Debug {
+		log.Debugf("Full AI prompt built: promptLength=%d", len(fullPrompt))
 	}
 
 	return fullPrompt, nil
@@ -343,16 +337,11 @@ func loadAndBuildPrompt(config *DesignConfig, out *design.Output, logger *loggin
 // buildContractBasedPrompt builds the AI prompt with contract context
 func buildContractBasedPrompt(config *DesignConfig) (string, error) {
 	// Load contract using generalized loader
-	loader := contracts.NewContractLoader(config.TemplateRoot, "ai/design", "0.1.0")
+	loader := coreai.NewContractLoader(config.TemplateRoot, coreai.TypeDesign, paths.DefaultsVersion)
 
 	contractData, err := loader.LoadContract()
 	if err != nil {
 		return "", fmt.Errorf("failed to load contract: %w", err)
-	}
-
-	antiCorruption, err := loader.LoadAntiCorruptionRules()
-	if err != nil {
-		return "", fmt.Errorf("failed to load anti-corruption rules: %w", err)
 	}
 
 	// Load prompt (default or custom)
@@ -362,10 +351,9 @@ func buildContractBasedPrompt(config *DesignConfig) (string, error) {
 	}
 
 	// Build prompt template
-	promptTemplate, err := contracts.BuildPromptWithTemplate(
+	promptTemplate, err := coreai.BuildPromptWithTemplate(
 		promptContent,
 		contractData,
-		antiCorruption,
 		nil,
 	)
 	if err != nil {
@@ -416,12 +404,12 @@ func buildContractBasedPrompt(config *DesignConfig) (string, error) {
 
 // loadPrompt loads the AI prompt for design generation with three-tier priority:
 // 1. Command flag (--prompt)
-// 2. Team override (.r2r/eac/templates/ai/design/design.md)
-// 3. System default (templates/ai/design/design.md)
+// 2. Team override (.r2r/eac/templates/coreai.TypeDesign/design.md)
+// 3. System default (templates/coreai.TypeDesign/design.md)
 // Convention: Empty string uses type name (design.md)
 func loadPrompt(config *DesignConfig) (string, error) {
 	// Load prompt with three-tier priority system
-	loader := contracts.NewContractLoader(config.TemplateRoot, "ai/design", "")
+	loader := coreai.NewContractLoader(config.TemplateRoot, coreai.TypeDesign, "")
 	prompt, source, err := loader.LoadPromptWithPriority("", config.PromptPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to load prompt: %w", err)
@@ -436,15 +424,7 @@ func loadPrompt(config *DesignConfig) (string, error) {
 }
 
 // generateAndValidate generates AI output with retry and validates with Structurizr CLI
-func generateAndValidate(config *DesignConfig, prompt string, out *design.Output, logger *logging.Logger) (string, error) {
-	// Load contract and anti-corruption rules for validator
-	loader := contracts.NewContractLoader(config.TemplateRoot, "ai/design", "0.1.0")
-
-	antiCorruptionRules, err := loader.LoadAntiCorruptionRules()
-	if err != nil {
-		return "", fmt.Errorf("failed to load anti-corruption rules: %w", err)
-	}
-
+func generateAndValidate(config *DesignConfig, prompt string, out *design.Output) (string, error) {
 	// Create executor
 	executor := ai.NewExecutor(config.TemplateRoot)
 	providers.RegisterBuiltIn(executor)
@@ -454,26 +434,30 @@ func generateAndValidate(config *DesignConfig, prompt string, out *design.Output
 
 	// Create composite validator (quick + full validation)
 	// Skip expensive Docker validation if quick validation finds errors or if --skip-validation
-	validator, err := NewCompositeValidator(config.Module, config.TemplateRoot, !config.SkipValidation)
+	validator, err := structurizr.NewCompositeValidator(config.Module, config.TemplateRoot, !config.SkipValidation)
 	if err != nil {
 		return "", fmt.Errorf("failed to create validator: %w", err)
 	}
 	defer validator.Cleanup()
 
+	// Load AI config to get retry strategy
+	var aiConfig *coreai.AIConfig
+	aiConfig, err = coreai.LoadAIConfig(config.TemplateRoot)
+	if err != nil {
+		log.Warnf("Could not load AI config, using default retry strategy: %v", err)
+		aiConfig = nil
+	}
+
+	// Build retry configuration with strategy
+	retryConfig, err := buildRetryConfig(executorAdapter, validator, config, aiConfig)
+	if err != nil {
+		return "", fmt.Errorf("failed to build retry config: %w", err)
+	}
+
 	// Generate with retry and validation
 	out.Progress("🤖 Generating architecture design with AI...")
 
-	retryConfig := &contracts.RetryConfig{
-		Executor:       executorAdapter,
-		Validator:      validator,
-		AntiCorruption: antiCorruptionRules,
-		ContentMarker:  "workspace",
-		MaxAttempts:    3,
-		Debug:          config.Debug,
-		DebugOutputDir: "", // No longer writing debug files to disk
-	}
-
-	result, err := contracts.GenerateWithRetry(
+	result, err := coreai.GenerateWithRetry(
 		context.Background(),
 		retryConfig,
 		prompt,
@@ -484,6 +468,57 @@ func generateAndValidate(config *DesignConfig, prompt string, out *design.Output
 	}
 
 	return result.Output, nil
+}
+
+// buildRetryConfig creates RetryConfig with strategy from AI config
+func buildRetryConfig(
+	executor contracts.AIExecutor,
+	validator contracts.Validator,
+	config *DesignConfig,
+	aiConfig *coreai.AIConfig,
+) (*coreai.RetryConfig, error) {
+	maxAttempts := 3
+	var strategy coreai.RetryStrategy
+
+	// Load retry strategy from config if available
+	if aiConfig != nil {
+		if typeConfig, ok := aiConfig.Types[coreai.TypeDesign]; ok {
+			if typeConfig.RetryStrategy != nil && typeConfig.RetryStrategy.MaxAttempts > 0 {
+				maxAttempts = typeConfig.RetryStrategy.MaxAttempts
+			}
+
+			if typeConfig.RetryStrategy != nil {
+				var focusCategories []string
+				if typeConfig.RetryStrategy.FocusCategories != nil {
+					focusCategories = typeConfig.RetryStrategy.FocusCategories
+				}
+
+				var err error
+				strategy, err = coreai.GetRetryStrategy(typeConfig.RetryStrategy.Type, focusCategories)
+				if err != nil {
+					return nil, fmt.Errorf("failed to create retry strategy: %w", err)
+				}
+				log.Infof("Using retry strategy: strategy=%s, maxAttempts=%d", strategy.Name(), maxAttempts)
+			}
+		}
+	}
+
+	// Default to StandardStrategy if not configured
+	if strategy == nil {
+		strategy = &coreai.StandardStrategy{}
+	}
+
+	return &coreai.RetryConfig{
+		TypeName:     coreai.TypeDesign,
+		OutputFormat: coreai.FormatStructurizr, // Generate Structurizr DSL directly
+		Validator:    validator,                // Validate DSL output
+		Executor:     executor,
+		TemplateRoot: config.TemplateRoot,
+		MaxAttempts:  maxAttempts,
+		Debug:        config.Debug,
+		Strategy:     strategy,
+		Logger:       logging.C().Zap(), // ✅ Pass logger for retry observability
+	}, nil
 }
 
 // writeOutputAndReportSuccess writes the workspace file and reports success
@@ -521,4 +556,3 @@ func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
 }
-

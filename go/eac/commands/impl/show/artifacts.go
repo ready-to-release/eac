@@ -1,5 +1,4 @@
 // Command: show artifacts
-// Description: Show resolved artifacts for a module in human-readable format
 // Short: Display artifacts for a module with status
 // Long: The show artifacts command displays all build artifacts for a module in a formatted table.
 // Long: Shows resolved names with metadata overrides applied, existence status, and file paths.
