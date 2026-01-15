@@ -82,7 +82,6 @@ func GetDocumentedCommands() int {
 
 			occurrences, err := scanMarkdownFile(path, workspaceRoot)
 			if err != nil {
-				log.Debugf("Error scanning file %s: %v", path, err)
 				return nil // Continue scanning other files
 			}
 
