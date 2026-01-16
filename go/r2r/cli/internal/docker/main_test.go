@@ -1,3 +1,6 @@
+//go:build L0
+// +build L0
+
 package docker
 
 import (
