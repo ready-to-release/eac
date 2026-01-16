@@ -8,7 +8,9 @@ Specifications are living documents that evolve as your understanding deepens th
 
 ## Specifications Are Not Static
 
-Specifications are not static artifacts written once and frozen. They are **living documents** that evolve as your understanding deepens through implementation, usage, and feedback.
+Specifications are not static artifacts written once and frozen.
+
+They are **living documents** that evolve as your understanding deepens through implementation, usage, and feedback.
 
 ---
 

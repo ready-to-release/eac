@@ -2,7 +2,9 @@
 
 ## Overview
 
-Specifications are living documents that evolve with understanding. This article explains how to continuously refine specifications after Example Mapping.
+Specifications are living documents that evolve with understanding.
+
+This article explains how to continuously refine specifications after Example Mapping.
 
 **Goal**: Maintain specifications that reflect both **intended behavior** and **actual behavior** as understanding deepens through implementation, usage, and feedback.
 
@@ -154,7 +156,9 @@ Specifications evolve through continuous cycles of review and refinement.
 4. Delete old monolithic file
 5. Update step definitions if needed
 
-**Example**: Split `validation.feature` (40 scenarios) → `format-validation.feature`, `completeness-validation.feature`, `business-rule-validation.feature`, `edge-case-validation.feature` (10 each)
+**Example**:
+
+Split `validation.feature` (40 scenarios) → `format-validation.feature`, `completeness-validation.feature`, `business-rule-validation.feature`, `edge-case-validation.feature` (10 each)
 
 ---
 
@@ -259,11 +263,23 @@ For each issue found:
 
 ## Integration with Other Practices
 
-**Ubiquitous Language Evolution**: Event Storming identifies terms → Update glossary → Refactor specs → Update step definitions → Rename code. See: [Ubiquitous Language](../concepts/ubiquitous-language.md)
+**Ubiquitous Language Evolution**:
 
-**Event Storming Updates**: Quarterly workshops reveal new domain understanding → Identify changed events → Find affected specs → Update scenarios → Refactor code. See: [Event Storming](../discovery/event-storming-overview.md)
+Event Storming identifies terms → Update glossary → Refactor specs → Update step definitions → Rename code.
 
-**Risk Control Reviews**: Risk changes → Update `specs/risk-controls/` → Update user scenarios with `@risk-control:<name>-<id>` → Verify implementation → Generate evidence. See: [Risk Controls](../compliance/risk-controls.md)
+See: [Ubiquitous Language](../concepts/ubiquitous-language.md)
+
+**Event Storming Updates**:
+
+Quarterly workshops reveal new domain understanding → Identify changed events → Find affected specs → Update scenarios → Refactor code.
+
+See: [Event Storming](../discovery/event-storming-overview.md)
+
+**Risk Control Reviews**:
+
+Risk changes → Update `specs/risk-controls/` → Update user scenarios with `@risk-control:<name>-<id>` → Verify implementation → Generate evidence.
+
+See: [Risk Controls](../compliance/risk-controls.md)
 
 ---
 
@@ -317,7 +333,11 @@ grep -r "Scenario:" specs/ | cut -d: -f1 | uniq -c | sort -rn
 4. **Whole team maintains health** - Product Owner, Developers, QA, Security all contribute
 5. **Refactor aggressively** - Split large files, consolidate duplicates, remove outdated, improve clarity
 
-**Remember**: The goal is **executable, maintainable specifications** that guide development - not bureaucratic overhead. Specifications that evolve with understanding are more valuable than perfect specs written once.
+**Remember**:
+
+The goal is **executable, maintainable specifications** that guide development - not bureaucratic overhead.
+
+Specifications that evolve with understanding are more valuable than perfect specs written once.
 
 ---
 

@@ -23,10 +23,10 @@ But "Everything as Code" extends much further:
 
 ### The Core Principle
 
-**If it can be represented as text, it can be versioned.**
-**If it can be versioned, it can be reviewed.**
-**If it can be reviewed, it can be tested.**
-**If it can be tested, it can be automated.**
+- **If it can be represented as text, it can be versioned.**
+- **If it can be versioned, it can be reviewed.**
+- **If it can be reviewed, it can be tested.**
+- -**If it can be tested, it can be automated.**
 
 ## The Three Fundamental Changes
 
@@ -73,7 +73,7 @@ flowchart LR
 
 ### Building Shared Language: Domain-Driven Design
 
-Before teams can collaborate through executable specifications, they need a **shared language**—a common vocabulary that both business stakeholders and developers understand.
+Before teams can collaborate through executable specifications, they need a **shared language** — a common vocabulary that both business stakeholders and developers understand.
 
 **The challenge**: Business and technical teams often speak different languages:
 
@@ -86,7 +86,7 @@ This misalignment causes:
 - Rework when teams discover they meant different things
 - Tests that pass but don't validate actual business rules
 
-**The solution**: **Domain-Driven Design (DDD)** provides techniques for building a **Ubiquitous Language**—a rigorous, shared vocabulary based on the domain model.
+**The solution**: **Domain-Driven Design (DDD)** provides techniques for building a **Ubiquitous Language** — a rigorous, shared vocabulary based on the domain model.
 
 **How it works**:
 

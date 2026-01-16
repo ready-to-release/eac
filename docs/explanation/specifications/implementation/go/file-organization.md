@@ -141,7 +141,7 @@ func TestCreateConfig_WhenFileExists_ShouldFail(t *testing.T) {
 
 ## Directory Structure
 
-```
+```text
 project/
 ├── specs/
 │   └── <module>/

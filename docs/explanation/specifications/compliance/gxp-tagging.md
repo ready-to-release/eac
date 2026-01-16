@@ -6,14 +6,23 @@
 
 ## Overview
 
-When developing software for GxP-regulated environments (Good Manufacturing Practice, Good Clinical Practice, Good Laboratory Practice), additional tagging is required to ensure traceability, compliance, and proper risk management.
+When developing software for GxP-regulated environments:
+
+- Good Manufacturing Practices (GmP)
+- Good Clinical Practices (GCP)
+
+and
+
+- Good Laboratory Practices (GLP)
+
+Here additional tagging is required to ensure traceability, compliance, and proper risk management.
 
 This document describes the **regulatory tagging taxonomy** used alongside the standard testing taxonomy to support:
 
 - Pharmaceutical manufacturing (GMP)
 - Clinical trials (GCP)
 - Laboratory operations (GLP)
-- Medical device software (ISO 13485, FDA 21 CFR Part 11)
+- Medical device software (ISO 13485, FDA 21 CFR Part 11, SAMD)
 
 **Regulatory Tags**:
 
@@ -213,7 +222,9 @@ Feature: batch_release-quality-control
       And the batch cannot be modified after approval
 ```
 
-**Validation Deviation**: If a test tagged with `@gmp-critical-aspect` fails after production deployment, it must be managed as a validation deviation per regulatory requirements.
+**Validation Deviation**:
+
+- If a test tagged with `@gmp-critical-aspect` fails after production deployment, it must be managed as a validation deviation per regulatory requirements.
 
 **Requirements**:
 

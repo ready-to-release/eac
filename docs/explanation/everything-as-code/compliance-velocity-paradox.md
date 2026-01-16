@@ -4,7 +4,16 @@
 
 ## The Challenge
 
-Organizations in regulated industries—pharmaceuticals, medical devices, financial services, aviation, healthcare, SaaS providers face a fundamental contradiction:
+Organizations in regulated industries:
+
+- Pharmaceuticals
+- Medical devices
+- Financial services
+- Aviation
+- Healthcare
+- Data Centers
+
+SaaS providers face a fundamental contradiction:
 
 **Regulatory pressure is increasing:**
 
@@ -20,11 +29,16 @@ Organizations must now navigate an increasingly complex web of regulations:
 
 **Life Sciences & Pharmaceuticals:**
 
-- **EU EudraLex Volume 4, Annex 11** - Computerized Systems (data integrity, validation, audit trails)
-- **US 21 CFR Part 11** - Electronic Records and Electronic Signatures
-- **FDA Guidances** - Data Integrity and Compliance (ALCOA+ principles), Computer Software Assurance
-- **GAMP 5** - Risk-based approach to compliant GxP computerized systems
-- **ISO 13485** - Medical devices quality management
+- **EU EudraLex Volume 4, Annex 11**
+  Computerized Systems (data integrity, validation, audit trails)
+- **US 21 CFR Part 11**
+  Electronic Records and Electronic Signatures
+- **FDA Guidances**
+  Data Integrity and Compliance (ALCOA+ principles), Computer Software Assurance
+- **GAMP 5**
+  Risk-based approach to compliant GxP computerized systems
+- **ISO 13485**
+  Medical devices quality management
 
 **Information Security:**
 
@@ -96,12 +110,18 @@ flowchart LR
 
 This creates:
 
-- **Traceability Gaps** – Requirements in one system, tests in another, code in a third, and deployment records elsewhere. Manual correlation is error-prone and time-consuming.
-- **Documentation Drift** – Specifications created before implementation are never updated to match reality, causing the gap between documented and actual behavior to grow over time.
-- **Validation Theater** – Checking boxes without improving quality. Manual review processes that can be skipped under pressure don't provide real assurance.
-- **Audit Burden** – Teams spend months preparing evidence that should already exist. Instead of building value, resources are spent extracting and compiling scattered information.
-- **Delayed Value** – Features ready for production wait in validation purgatory. Business value sits on shelves while paperwork catches up.
-- **Risk Accumulation** – Large, infrequent releases create high-risk deployments. When changes are batched together, failures become harder to diagnose and roll back.
+- **Traceability Gaps**
+  Requirements in one system, tests in another, code in a third, and deployment records elsewhere. Manual correlation is error-prone and time-consuming.
+- **Documentation Drift**
+  Specifications created before implementation are never updated to match reality, causing the gap between documented and actual behavior to grow over time.
+- **Validation Theater**
+  Checking boxes without improving quality. Manual review processes that can be skipped under pressure don't provide real assurance.
+- **Audit Burden**
+  Teams spend months preparing evidence that should already exist. Instead of building value, resources are spent extracting and compiling scattered information.
+- **Delayed Value**
+  Features ready for production wait in validation purgatory. Business value sits on shelves while paperwork catches up.
+- **Risk Accumulation**
+  Large, infrequent releases create high-risk deployments. When changes are batched together, failures become harder to diagnose and roll back.
 
 ---
 
@@ -139,13 +159,17 @@ The research shows that high performers in **all industries**, including regulat
 
 ### The Critical Insights
 
-- **DORA metrics work for regulated industries too** – The research proves that high-performance practices apply universally. Regulated industries can and do achieve the same performance levels as tech companies—when they adopt modern practices.
-- **The challenge is adoption, not regulations** – Regulations don't prevent high performance. The real barriers are:
+- **DORA metrics work for regulated industries too**
+  The research proves that high-performance practices apply universally.
+  Regulated industries can and do achieve the same performance levels as tech companies—when they adopt modern practices.
+- **The challenge is adoption, not regulations**
+  Regulations don't prevent high performance. The real barriers are:
   - Cultural assumptions ("compliance requires manual processes")
   - Organizational inertia ("we've always done it this way")
   - Lack of tooling and guidance for regulated environments
   - Fear of regulatory pushback (unfounded—automation provides better evidence)
-- **High performers automate compliance** – Organizations achieving high performance in regulated industries don't ignore compliance—they automate it.
+- **High performers automate compliance**
+  Organizations achieving high performance in regulated industries don't ignore compliance—they automate it.
 
 They recognize that:
 
@@ -156,7 +180,9 @@ They recognize that:
 
 ### How High Performers Achieve These Results
 
-High performers didn't achieve these metrics overnight. They used **DORA metrics** and **Value Stream Mapping** to systematically identify bottlenecks, then improved their delivery flow through automation and process optimization.
+High performers didn't achieve these metrics overnight.
+
+They used **DORA Practices**, **metrics** and **Value Stream Mapping** to systematically identify bottlenecks, then improved their delivery flow through automation and process optimization.
 
 **The continuous improvement cycle:**
 
@@ -245,17 +271,15 @@ Each iteration makes the problem worse:
 
 Breaking this cycle requires a fundamentally different approach:
 
-**Instead of reconstructing traceability**, capture it automatically as changes happen.
+| Traditional Approach        | Everything as Code                          |
+| --------------------------- | ------------------------------------------- |
+| Reconstructing traceability | Capture it automatically as changes happen  |
+| Manual validation           | Encode requirements as executable tests     |
+| Documentation that drifts   | Generate it from the system itself          |
+| Large risky batches         | Deploy small validated changes continuously |
+| Human bottlenecks           | Automate compliance checks in the pipeline  |
 
-**Instead of manual validation**, encode requirements as executable tests.
-
-**Instead of documentation that drifts**, generate it from the system itself.
-
-**Instead of large risky batches**, deploy small validated changes continuously.
-
-**Instead of human bottlenecks**, automate compliance checks in the pipeline.
-
-This is the promise of [Everything as Code](paradigm.md).
+This is the promise of the [Everything as Code paradigm](paradigm.md).
 
 ---
 

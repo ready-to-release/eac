@@ -6,10 +6,10 @@ Testing is integrated throughout every stage of the Continuous Delivery Model, n
 
 ## Core Concepts
 
-| Concept | Description |
-|---------|-------------|
-| [Test Levels](./test-levels.md) | L0-L4 taxonomy based on execution environment and scope |
-| [Verification Types](./verification-types.md) | IV/OV/PV classification for acceptance testing |
+| Concept                                       | Description                                             |
+| --------------------------------------------- | ------------------------------------------------------- |
+| [Test Levels](./test-levels.md)               | L0-L4 taxonomy based on execution environment and scope |
+| [Verification Types](./verification-types.md) | IV/OV/PV classification for acceptance testing          |
 
 ---
 
@@ -17,20 +17,21 @@ Testing is integrated throughout every stage of the Continuous Delivery Model, n
 
 ### Test Levels (L0-L4)
 
-| Level | Name | Environment | Scope | Dependencies |
-|-------|------|-------------|-------|--------------|
-| L0-L1 | Unit Tests | DevBox/Agent | Source/Binary | All test doubles |
-| L2 | Emulated System | DevBox/Agent | Deployable artifacts | All test doubles |
-| L3 | In-Situ Vertical | PLTE | Deployed system (vertical) | All test doubles |
-| L4 | Production Testing | Production | Deployed system (horizontal) | Real services |
+| Level | Name               | Environment  | Scope                        | Dependencies                 |
+| ----- | ------------------ | ------------ | ---------------------------- | ---------------------------- |
+| L0-L1 | Unit Tests         | DevBox/Agent | Source/Binary                | All test doubles/contracts   |
+| L2    | Emulated System    | DevBox/Agent | Deployable artifacts         | All test doubles/contracts   |
+| L3    | In-Situ Vertical   | PLTE         | Deployed system (vertical)   | All test doubles/contracts   |
+| HE2E  | In-Situ Vertical   | PLTE         | Deployed system (vertical)   | Staged external services     |
+| L4    | Production Testing | Production   | Deployed system (horizontal) | Production external services |
 
 ### Verification Types (Stage 5)
 
-| Type | Question | Focus |
-|------|----------|-------|
-| IV (Installation) | Can we deploy it? | Infrastructure, configuration |
-| OV (Operational) | Does it work? | Functional requirements |
-| PV (Performance) | Is it fast enough? | Response times, throughput |
+| Type              | Question           | Focus                         |
+| ----------------- | ------------------ | ----------------------------- |
+| IV (Installation) | Can we deploy it?  | Infrastructure, configuration |
+| OV (Operational)  | Does it work?      | Functional requirements       |
+| PV (Performance)  | Is it fast enough? | Response times, throughput    |
 
 ### Shift-Left and Shift-Right
 
@@ -42,11 +43,11 @@ Testing is integrated throughout every stage of the Continuous Delivery Model, n
 
 ## Stage Mapping
 
-| Stage | Test Levels | Time Budget |
-|-------|-------------|-------------|
-| 2-4 (Development) | L0-L2 | 5-30 min |
-| 5-6 (Acceptance) | L3 | 1-8 hours |
-| 11-12 (Live) | L4 | Continuous |
+| Stage             | Test Levels | Time Budget |
+| ----------------- | ----------- | ----------- |
+| 2-4 (Development) | L0-L2       | 5-30 min    |
+| 5-6 (Acceptance)  | L3          | 1-8 hours   |
+| 11-12 (Live)      | L4          | Continuous  |
 
 ---
 

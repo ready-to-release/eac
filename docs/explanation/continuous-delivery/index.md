@@ -1,6 +1,7 @@
 # Continuous Delivery
 
-Understanding the Continuous Delivery Model, a comprehensive framework for delivering software from development through production with quality, traceability, and compliance built in.
+Understanding the Continuous Delivery Model, a comprehensive framework for delivering software;
+from development through production with quality, traceability, and compliance built in.
 
 ## In This Section
 

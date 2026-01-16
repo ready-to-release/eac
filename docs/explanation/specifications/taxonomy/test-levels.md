@@ -217,7 +217,8 @@ _Dependencies_ — network-accessible from PLTE; two approaches (can mix):
 | External APIs  | WireMock/MockServer | Control responses, simulate failures |
 | Legacy systems | Custom test doubles | Not accessible from PLTE network     |
 
-> **Choosing PaaS vs Test Double**: Use full PaaS when you need production-like behavior validation. Use deployed test doubles when you need test isolation, cost control, or the real service isn't available as PaaS.
+> **Choosing PaaS vs Test Double**: Use full PaaS when you need production-like behavior validation.
+> Use deployed test doubles when you need test isolation, cost control, or the real service isn't available as PaaS.
 
 **Example**:
 
@@ -325,7 +326,11 @@ What contracts can't cover should shift RIGHT into L4, not stay in HE2E:
 | Security boundaries         | Test IdP ≠ production IdP           | Canary with real auth flows           |
 | Regulatory evidence         | Auditors want production proof      | Production audit logs + observability |
 
-> **Goal**: Eliminate HE2E entirely. Shift LEFT to contract testing (L2/L3) for integration guarantees. Shift RIGHT to L4 for real-world validation. HE2E is a coordination tax—avoid it.
+> **Goal**: Eliminate HE2E entirely. Shift LEFT to contract testing (L2/L3) for integration guarantees.
+
+Shift RIGHT to L4 for real-world validation.
+
+HE2E is a coordination tax — avoid it.
 
 ---
 

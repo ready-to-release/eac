@@ -146,13 +146,14 @@ flowchart LR
     B3 -.-> C3[lower change fail rate]
 ```
 
-Don't just measure DORA metrics and hope they improve. **Measure the underlying flow and process metrics that you can actually improve**, then validate that those improvements lead to better DORA outcomes.
+Don't just measure DORA metrics and hope they improve. **Measure the underlying flow and process metrics that you can actually improve**,
+then validate that those improvements lead to better DORA metrics and outcomes (think SLI/SLO/SLA for delivery).
 
 ---
 
 ## The Continuous Improvement Cycle
 
-High performers don't optimize once—they optimize continuously.
+High performers don't optimize once—they optimize continuously - and focuses on removing global delays, not creating local optimizations.
 
 ### Step 1: Measure Current State
 

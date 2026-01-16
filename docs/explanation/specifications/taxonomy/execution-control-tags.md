@@ -30,7 +30,11 @@ Feature: stable-feature_authentication
   Scenario: Session expiry     # ✅ RUNS
 ```
 
-**Behavior**: `@ignore` is evaluated before other selectors. Ignored tests are excluded from all test suites regardless of other tags.
+**Behavior**:
+
+`@ignore` is evaluated before other selectors.
+
+Ignored tests are excluded from all test suites regardless of other tags.
 
 ---
 
@@ -110,7 +114,9 @@ When a test suite encounters scenarios tagged with `@Manual`, the pipeline must 
 
 ### Critical Requirement
 
-Evidence **cannot** be stored in separate systems (Excel spreadsheets, SharePoint, paper logbooks only). All evidence must live in the git repository to maintain:
+Evidence **cannot** be stored in separate systems (Excel spreadsheets, SharePoint, paper logbooks only).
+
+All evidence must live in the git repository to maintain:
 
 - Full traceability from requirement → test → evidence
 - Version control of test results

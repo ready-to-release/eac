@@ -6,18 +6,18 @@ The CD Model uses a taxonomy of test levels (L0-L4) based on execution environme
 
 ## Taxonomy Overview
 
-| Level | Name | Environment | Scope | Dependencies | Determinism |
-|-------|------|-------------|-------|--------------|-------------|
-| L0-L1 | Unit Tests | DevBox/Agent | Source/Binary | All test doubles | Highest |
-| L2 | Emulated System | DevBox/Agent | Deployable artifacts | All test doubles | High |
-| L3 | In-Situ Vertical | PLTE | Deployed system | All test doubles | Moderate |
-| L4 | Production Testing | Production | Deployed system | Real services | High |
+| Level | Name               | Environment  | Scope                | Dependencies     | Determinism |
+| ----- | ------------------ | ------------ | -------------------- | ---------------- | ----------- |
+| L0-L1 | Unit Tests         | DevBox/Agent | Source/Binary        | All test doubles | Highest     |
+| L2    | Emulated System    | DevBox/Agent | Deployable artifacts | All test doubles | High        |
+| L3    | In-Situ Vertical   | PLTE         | Deployed system      | All test doubles | Moderate    |
+| L4    | Production Testing | Production   | Deployed system      | Real services    | High        |
 
 **Anti-Pattern (Out-of-Category):**
 
-| Level | Name | Environment | Dependencies | Determinism |
-|-------|------|-------------|--------------|-------------|
-| - | Horizontal E2E | Shared test env | Other teams' deployments | Lowest |
+| Level | Name           | Environment     | Dependencies             | Determinism |
+| ----- | -------------- | --------------- | ------------------------ | ----------- |
+| HE2E  | Horizontal E2E | Shared test env | Other teams' deployments | Lowest      |
 
 ---
 
@@ -25,12 +25,12 @@ The CD Model uses a taxonomy of test levels (L0-L4) based on execution environme
 
 **Purpose:** Validate individual functions, methods, and component interactions in isolation.
 
-| Characteristic | Description |
-|----------------|-------------|
-| Speed | Milliseconds per test |
-| Isolation | No external dependencies, all mocked |
-| Scope | Single function/method (L0) or component interactions (L1) |
-| Execution | In-process, no network calls |
+| Characteristic | Description                                                |
+| -------------- | ---------------------------------------------------------- |
+| Speed          | Milliseconds per test                                      |
+| Isolation      | No external dependencies, all mocked                       |
+| Scope          | Single function/method (L0) or component interactions (L1) |
+| Execution      | In-process, no network calls                               |
 
 **CD Stages:** 2 (Pre-commit), 3 (MR), 4 (Commit)
 
@@ -40,12 +40,12 @@ The CD Model uses a taxonomy of test levels (L0-L4) based on execution environme
 
 **Purpose:** Validate deployable artifacts in an emulated environment with test doubles.
 
-| Characteristic | Description |
-|----------------|-------------|
-| Speed | Seconds per test |
-| Isolation | Cross-process, but all external deps are test doubles |
-| Scope | Deployable artifacts, component-to-component communication |
-| Execution | Multiple processes, network calls to test doubles only |
+| Characteristic | Description                                                |
+| -------------- | ---------------------------------------------------------- |
+| Speed          | Seconds per test                                           |
+| Isolation      | Cross-process, but all external deps are test doubles      |
+| Scope          | Deployable artifacts, component-to-component communication |
+| Execution      | Multiple processes, network calls to test doubles only     |
 
 **Test doubles:** In-memory databases, mock message queues, stubbed external APIs.
 
@@ -57,12 +57,12 @@ The CD Model uses a taxonomy of test levels (L0-L4) based on execution environme
 
 **Purpose:** Validate a deployed module in PLTE with vertical testing boundaries.
 
-| Characteristic | Description |
-|----------------|-------------|
-| Speed | Minutes per test |
-| Isolation | Single deployable module only (vertical) |
-| Scope | Deployed system in production-like infrastructure |
-| Execution | Cloud environment, test doubles for ALL external services |
+| Characteristic | Description                                               |
+| -------------- | --------------------------------------------------------- |
+| Speed          | Minutes per test                                          |
+| Isolation      | Single deployable module only (vertical)                  |
+| Scope          | Deployed system in production-like infrastructure         |
+| Execution      | Cloud environment, test doubles for ALL external services |
 
 **Validates:**
 
@@ -80,12 +80,12 @@ The CD Model uses a taxonomy of test levels (L0-L4) based on execution environme
 
 **Purpose:** Validate real cross-service interactions in production.
 
-| Characteristic | Description |
-|----------------|-------------|
-| Speed | Seconds to minutes |
-| Isolation | None - real production environment |
-| Scope | Cross-service workflows (horizontal) |
-| Execution | Production, may use live test doubles for specific cases |
+| Characteristic | Description                                              |
+| -------------- | -------------------------------------------------------- |
+| Speed          | Seconds to minutes                                       |
+| Isolation      | None - real production environment                       |
+| Scope          | Cross-service workflows (horizontal)                     |
+| Execution      | Production, may use live test doubles for specific cases |
 
 **Validates:**
 
@@ -103,12 +103,12 @@ The CD Model uses a taxonomy of test levels (L0-L4) based on execution environme
 
 Shared pre-production environments where multiple teams deploy pre-prod services linked together.
 
-| Problem | Impact |
-|---------|--------|
-| Any team's broken deployment breaks everyone | Blocking |
-| Version mismatches common | Non-deterministic results |
-| Hard to isolate failures | Difficult debugging |
-| Can't test until all deps deployed | Slow feedback |
+| Problem                                      | Impact                    |
+| -------------------------------------------- | ------------------------- |
+| Any team's broken deployment breaks everyone | Blocking                  |
+| Version mismatches common                    | Non-deterministic results |
+| Hard to isolate failures                     | Difficult debugging       |
+| Can't test until all deps deployed           | Slow feedback             |
 
 **Solution:** Shift LEFT (L0-L3 with test doubles) and RIGHT (L4 in production).
 
@@ -116,7 +116,12 @@ Shared pre-production environments where multiple teams deploy pre-prod services
 
 ## Shift-Left and Shift-Right Strategy
 
-```
+```text
+
+                              ╳
+                     AVOID: Horizontal E2E
+                     (shared pre-prod envs)
+                        ─────────────── 
          SHIFT LEFT                      SHIFT RIGHT
     ←─────────────────                ─────────────────→
 
@@ -125,29 +130,25 @@ Shared pre-production environments where multiple teams deploy pre-prod services
 
     Fast, deterministic              Real validation
     Test doubles                     Real services
-
-                    ╳
-            AVOID: Horizontal E2E
-            (shared pre-prod envs)
 ```
 
 **Why this works:**
 
-| Strategy | Benefit |
-|----------|---------|
-| Shift LEFT | Fast feedback, high determinism, no cross-team dependencies |
-| Shift RIGHT | Real production validation without pre-prod fragility |
+| Strategy     | Benefit                                                          |
+| ------------ | ---------------------------------------------------------------- |
+| Shift LEFT   | Fast feedback, high determinism, no cross-team dependencies      |
+| Shift RIGHT  | Real production validation without pre-prod fragility            |
 | Avoid middle | Skip the worst of both worlds (slow, fragile, non-deterministic) |
 
 ---
 
 ## Test Distribution
 
-| Level | Volume | Purpose |
-|-------|--------|---------|
+| Level | Volume                   | Purpose                        |
+| ----- | ------------------------ | ------------------------------ |
 | L0-L2 | 95% (hundreds-thousands) | Fast, deterministic validation |
-| L3 | 5% (5-20 scenarios) | Infrastructure validation |
-| L4 | Continuous | Production monitoring |
+| L3    | 5% (5-20 scenarios)      | Infrastructure validation      |
+| L4    | Continuous               | Production monitoring          |
 
 ---
 

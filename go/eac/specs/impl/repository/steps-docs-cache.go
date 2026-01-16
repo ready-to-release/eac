@@ -319,7 +319,12 @@ func (c *repositoryContext) scanSpecsForWorkspaceDSLFiles() error {
 // hashDSLContent returns the first 8 characters of SHA256 hash of DSL content
 // Must match the algorithm in design/helper/export.go
 func hashDSLContent(content string) string {
-	h := sha256.Sum256([]byte(content))
+	// Normalize line endings to LF for consistent hashing across platforms
+	// This ensures the same DSL content produces the same hash regardless of
+	// whether it was checked out with CRLF (Windows) or LF (Linux/Mac)
+	normalized := strings.ReplaceAll(content, "\r\n", "\n")
+	normalized = strings.ReplaceAll(normalized, "\r", "\n")
+	h := sha256.Sum256([]byte(normalized))
 	return fmt.Sprintf("%x", h)[:8]
 }
 

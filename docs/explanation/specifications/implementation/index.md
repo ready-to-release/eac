@@ -8,7 +8,8 @@ Learn how to implement executable specifications using your programming language
 
 ## Overview
 
-This section provides implementation-specific guidance for writing step definitions, organizing test code, and integrating BDD specifications with your test runner.
+This section provides implementation-specific guidance for writing step definitions,
+organizing test code, and integrating BDD specifications with your test runner.
 
 Each implementation guide covers:
 
@@ -264,7 +265,7 @@ func (s *StepContext) theCommandShouldSucceed() error {
 
 Different files for different test levels:
 
-```
+```text
 src/mymodule/tests/
 ├── unit_test.go           # //go:build L0
 ├── integration_test.go    # //go:build L2

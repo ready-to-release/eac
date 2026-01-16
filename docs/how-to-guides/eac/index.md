@@ -4,10 +4,10 @@ Guides for the Everything as Code (EAC) system. Learn how to use CLI commands, w
 
 ## In This Section
 
-| Guide | Description |
-|-------|-------------|
+| Guide                   | Description                                               |
+| ----------------------- | --------------------------------------------------------- |
 | [Commands](./commands/) | CLI commands for build, test, validate, release, and more |
-| [Modules](./modules/) | Creating modules and module types |
+| [Modules](./modules/)   | Creating modules and module types                         |
 
 ## Language Support
 

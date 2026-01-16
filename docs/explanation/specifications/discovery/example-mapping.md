@@ -39,12 +39,16 @@ Workshop technique for discovering requirements through collaborative conversati
 
 ## The Four Card Colors
 
+<!-- markdownlint-disable MD033 MD045 -->
+
 | Card Color                                                                                                                                            | Represents                              | Maps To             | Location          |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- | ------------------- | ----------------- |
 | <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="2" fill="#F7E55A" stroke="#D6C645"/></svg> **Yellow** | User Story: WHO, WHAT, WHY              | Feature description | 1 per feature     |
 | <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="2" fill="#5BA3F7" stroke="#4A89D6"/></svg> **Blue**   | Acceptance Criteria: Success conditions | `Rule:` blocks      | < 4 per story     |
 | <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="2" fill="#7EDC7A" stroke="#68B666"/></svg> **Green**  | Concrete Examples: Specific scenarios   | `Scenario:` blocks  | < 4 per criterion |
 | <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="2" fill="#FF7EBF" stroke="#D66A9F"/></svg> **Pink**   | Questions/Unknowns: Blockers            | issues.md           | See below         |
+
+<!-- markdownlint-enable MD033 MD045 -->
 
 ### Card Guidelines
 
@@ -421,7 +425,9 @@ Rule: Creates project directory structure
 2. **Refactor for clarity** - Consolidate duplicates, simplify verbose scenarios
 3. **Document lessons learned** - Improve next workshop
 
-**Remember**: Specifications are **living documents**. They evolve through discovery, feedback, refinement, and iteration. See: [Review and Iterate](../quality/review-and-iterate.md)
+**Remember**: Specifications are **living documents**. They evolve through discovery, feedback, refinement, and iteration.
+
+See: [Review and Iterate](../quality/review-and-iterate.md)
 
 ---
 
