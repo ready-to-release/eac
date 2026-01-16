@@ -72,11 +72,8 @@ ENTRYPOINT ["/extension-meta"]`
 	}
 
 	// Build test image using Docker CLI (simpler for testing)
-	testImageName := fmt.Sprintf("r2r-cli-test-metadata-%d:latest", time.Now().Unix())
-	buildCmd := fmt.Sprintf("cd %s && docker build -t %s .", tmpDir, testImageName)
-
-	// Note: In CI/CD, we'd use proper Docker API or exec.Command
-	t.Logf("To run this test manually, execute: %s", buildCmd)
+	// To run manually: cd <tmpDir> && docker build -t r2r-cli-test-metadata:latest .
+	_ = fmt.Sprintf("r2r-cli-test-metadata-%d:latest", time.Now().Unix())
 
 	// For automated testing, we'll create a mock scenario
 	t.Run("metadata_retrieval_simulation", func(t *testing.T) {
@@ -119,11 +116,9 @@ metadata:
 		if len(lines) < 10 {
 			t.Error("Output should have multiple lines of YAML")
 		}
-
-		t.Log("Metadata structure validation passed")
 	})
 
-	// Test error scenarios
+	// Test error scenarios - verify expected error message formats
 	t.Run("error_scenarios", func(t *testing.T) {
 		scenarios := []struct {
 			name          string
@@ -149,13 +144,18 @@ metadata:
 
 		for _, sc := range scenarios {
 			t.Run(sc.name, func(t *testing.T) {
-				// Verify error message format
-				expectedError := fmt.Sprintf("extension-meta %s", sc.errorContains)
+				// Verify error message format is constructable
+				var expectedError string
 				if sc.exitCode >= 0 {
 					expectedError = fmt.Sprintf("extension-meta command failed with exit code %d", sc.exitCode)
+				} else {
+					expectedError = fmt.Sprintf("extension-meta %s", sc.errorContains)
 				}
 
-				t.Logf("Error scenario '%s' would produce: %s", sc.name, expectedError)
+				// Verify the expected error contains the scenario's error substring
+				if !strings.Contains(expectedError, sc.errorContains) {
+					t.Errorf("Expected error %q should contain %q", expectedError, sc.errorContains)
+				}
 			})
 		}
 	})
@@ -235,10 +235,8 @@ extensions:
 	if ext.ImagePullPolicy != "IfNotPresent" {
 		t.Errorf("Expected pull policy 'IfNotPresent', got %s", ext.ImagePullPolicy)
 	}
-
 	// Note: Actual execution would fail since alpine doesn't have extension-meta
 	// This test verifies the configuration and setup works correctly
-	t.Log("Configuration and extension lookup successful")
 }
 
 // TestMetadataCommand_L2_Performance tests performance characteristics
