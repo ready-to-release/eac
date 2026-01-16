@@ -1,5 +1,5 @@
 # Best Practices
->
+
 > **Testing patterns and conventions for Go/Godog**
 
 Follow these best practices to write clear, maintainable, and reliable tests.
@@ -126,7 +126,7 @@ func TestDatabaseOperation(t *testing.T) {
 
 ### Group Related Tests in Same File
 
-```
+```text
 config_test.go          # All config-related tests
 config_parse_test.go    # Config parsing tests specifically
 config_validate_test.go # Config validation tests

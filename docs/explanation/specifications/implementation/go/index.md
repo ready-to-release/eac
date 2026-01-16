@@ -1,18 +1,18 @@
 # Go Implementation Guide
->
+
 > **Implementation-specific guide for Go/Godog BDD and testing**
 
 Complete guide for implementing BDD specifications with Go and Godog.
 
 ## In This Section
 
-| Topic | Description |
-|-------|-------------|
-| [Overview](./overview.md) | Introduction to Go/Godog BDD testing |
-| [File Organization](./file-organization.md) | Directory structure and file naming |
-| [Test Levels](./test-levels.md) | Build tags and test isolation (L0-L4) |
-| [Step Definitions](./step-definitions.md) | Writing and organizing step definitions |
-| [Best Practices](./best-practices.md) | Testing patterns and conventions |
+| Topic                                       | Description                             |
+| ------------------------------------------- | --------------------------------------- |
+| [Overview](./overview.md)                   | Introduction to Go/Godog BDD testing    |
+| [File Organization](./file-organization.md) | Directory structure and file naming     |
+| [Test Levels](./test-levels.md)             | Build tags and test isolation (L0-L4)   |
+| [Step Definitions](./step-definitions.md)   | Writing and organizing step definitions |
+| [Best Practices](./best-practices.md)       | Testing patterns and conventions        |
 
 ## Quick Reference
 

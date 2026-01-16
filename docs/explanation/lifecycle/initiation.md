@@ -1,6 +1,7 @@
 # Initiation
 
-The initiation process evaluates whether good ideas are truly great ideas using **Design Thinking**, where user researchers and designers collaborate iteratively to assess three key criteria:
+The initiation process evaluates whether good ideas are truly great ideas using **Design Thinking**,
+where user researchers and designers collaborate iteratively to assess three key criteria:
 
 - **Feasibility:** Can it be developed with available technology, skills, and resources?
 - **Desirability:** Do users genuinely need and want this solution?
@@ -38,7 +39,9 @@ Document in markdown format:
 
 ## Decision Records
 
-Document significant architectural and design choices that impact the system. Decision records capture the context, options considered, and rationale behind key design decisions, ensuring knowledge is preserved and can be revisited as the system evolves.
+Document significant architectural and design choices that impact the system.
+
+Decision records capture the context, options considered, and rationale behind key design decisions, ensuring knowledge is preserved and can be revisited as the system evolves.
 
 Templates: [Decision Record](https://github.com/ready-to-release/eac/blob/main/templates/docs/reference/design/dr.md)
 
@@ -66,7 +69,9 @@ Threat modeling identifies security risks early in the design phase, enabling te
 
 **For regulatory environments only** (medical devices, pharmaceuticals, finance, etc.)
 
-The **intended use** is a regulatory requirement that formally defines the purpose, target users, and operational context of the software. It establishes the scope for validation, risk management, and regulatory submissions.
+The **intended use** is a regulatory requirement that formally defines the purpose, target users, and operational context of the software.
+
+It establishes the scope for validation, risk management, and regulatory submissions.
 
 **Why it matters:**
 

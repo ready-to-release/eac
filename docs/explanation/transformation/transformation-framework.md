@@ -6,10 +6,7 @@ Compliance transformation is a journey, not a destination. Organizations that su
 
 This document describes a four-phase framework that guides compliance transformation from initial assessment through organization-wide adoption. The framework has been validated across multiple organizations and regulatory contexts.
 
-!!! info "Transformation Overview"
-    - **Timeline**: 12-18 months from start to organization-wide adoption
-    - **Investment**: 2-3 FTE dedicated resources plus team participation
-    - **Expected ROI**: 3-10 month payback period, $1.8M - $6.4M annual benefit for typical mid-size organization
+!!! info "Transformation Overview" - **Timeline**: 12-18 months from start to organization-wide adoption - **Investment**: 2-3 FTE dedicated resources plus team participation - **Expected ROI**: 3-10 month payback period, $1.8M - $6.4M annual benefit for typical mid-size organization
 
 ## The Journey Overview
 
@@ -64,9 +61,7 @@ Inventory all compliance obligations:
 - Identify overlapping controls across standards
 - Document current evidence collection methods
 
-!!! tip "Where to Start"
-    - **If you have existing SOPs**: Use these documented procedures as your starting point. They provide organization-specific context for how requirements are currently interpreted.
-    - **If you don't have SOPs**: Look directly at the regulations applicable to your domain. For GxP organizations, consult ICH guidelines. For security, reference ISO 27001 control requirements.
+!!! tip "Where to Start" - **If you have existing SOPs**: Use these documented procedures as your starting point. They provide organization-specific context for how requirements are currently interpreted. - **If you don't have SOPs**: Look directly at the regulations applicable to your domain. For GxP organizations, consult ICH guidelines. For security, reference ISO 27001 control requirements.
 
 **Deliverable**: Compliance Requirements Inventory (spreadsheet or database)
 
@@ -79,8 +74,11 @@ Evaluate current practices:
 - Technical capability assessment (CI/CD maturity, testing practices)
 - Compliance office capacity and constraints
 
+**Measure these metrics before starting transformation:**
+
+<!-- markdownlint-disable MD046 -->
+
 !!! note "Baseline Metrics"
-    Measure these metrics before starting transformation:
 
     - Manual compliance work: hours per team per week
     - Audit preparation time: person-hours per audit cycle
@@ -88,7 +86,9 @@ Evaluate current practices:
     - Compliance validation time: days to approve release
     - Audit findings: number per audit cycle
 
-    Track these throughout transformation to demonstrate ROI. Typical improvements: 70-80% reduction in manual work, 95%+ evidence automation, release approval time from days to hours.
+<!-- markdownlint-enable MD046 -->
+
+Track these throughout transformation to demonstrate ROI. Typical improvements: 70-80% reduction in manual work, 95%+ evidence automation, release approval time from days to hours.
 
 **Deliverable**: Current State Assessment Report
 
@@ -208,7 +208,7 @@ Build evidence collection capability:
 - Create evidence package generator
 
 !!! tip "Evidence Collection Automation"
-    This step requires an automation layer. The Ready-to-Release (r2r) CLI provides evidence collection and packaging capabilities to accelerate this phase.
+This step requires an automation layer. The Ready-to-Release (r2r) CLI provides evidence collection and packaging capabilities to accelerate this phase.
 
 **Deliverable**: Evidence collection system
 
@@ -410,71 +410,69 @@ After transformation completes, maintain and improve:
 
 ## Common Pitfalls
 
+<!-- markdownlint-disable MD046 -->
+
 !!! warning "Learn from Others' Mistakes"
+
     These seven pitfalls have derailed numerous transformation efforts. Read all of them before starting.
 
 ### 1. Skipping Assessment
 
 !!! warning "Pitfall: Skipping Assessment"
+
     **Mistake**: Jumping to implementation without understanding current state
-
     **Impact**: Build wrong solution, miss key requirements
-
     **Avoidance**: Invest full 4-6 weeks in Phase 1
 
 ### 2. Boiling the Ocean
 
 !!! warning "Pitfall: Boiling the Ocean"
+
     **Mistake**: Trying to transform everything at once
-
     **Impact**: Overwhelm teams, project fails
-
     **Avoidance**: Start with pilot, scale systematically
 
 ### 3. Building Without User Input
 
 !!! warning "Pitfall: Building Without User Input"
+
     **Mistake**: Automation team builds tools in isolation
-
     **Impact**: Tools don't match needs, low adoption
-
     **Avoidance**: Deeply involve pilot team in design
 
 ### 4. Inadequate Training
 
 !!! warning "Pitfall: Inadequate Training"
+
     **Mistake**: Assuming teams will figure it out
-
     **Impact**: Slow adoption, frustration, workarounds
-
     **Avoidance**: Invest in comprehensive training
 
 ### 5. Losing Compliance Buy-In
 
 !!! warning "Pitfall: Losing Compliance Buy-In"
+
     **Mistake**: Proceeding without compliance office endorsement
-
     **Impact**: Auditors reject approach, transformation fails
-
     **Avoidance**: Compliance officer as co-sponsor, test audits early
 
 ### 6. No Operations Plan
 
 !!! warning "Pitfall: No Operations Plan"
+
     **Mistake**: Treating transformation as project with end date
-
     **Impact**: Tools degrade, support vanishes, teams revert
-
     **Avoidance**: Plan for ongoing operations from start
 
 ### 7. Ignoring Change Management
 
 !!! warning "Pitfall: Ignoring Change Management"
+
     **Mistake**: Focusing only on technology, ignoring people
-
     **Impact**: Resistance, slow adoption, partial implementation
-
     **Avoidance**: Communication, training, recognition throughout
+
+<!-- markdownlint-enable MD046 -->
 
 ---
 

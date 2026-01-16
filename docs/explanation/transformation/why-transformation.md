@@ -2,9 +2,15 @@
 
 ## Introduction
 
-Most software development organizations treat compliance as a necessary burden - a series of manual checklists, periodic audits, and late-stage validations that slow delivery without delivering proportional value. Teams experience compliance as friction: weeks spent preparing for audits, days waiting for approvals, and hours documenting activities that could be automated.
+Most software development organizations treat compliance as a necessary burden - a series of manual checklists, periodic audits, and late-stage validations that slow delivery without delivering proportional value.
 
-This doesn't have to be the reality. Organizations that transform their compliance practices significantly reduce overhead while improving compliance quality and achieving continuous audit readiness. This document explains why traditional compliance fails and helps you assess whether transformation is right for your organization.
+Teams experience compliance as friction: weeks spent preparing for audits, days waiting for approvals, and hours documenting activities that could be automated.
+
+This doesn't have to be the reality.
+
+Organizations that transform their compliance practices significantly reduce overhead while improving compliance quality and achieving continuous audit readiness.
+
+This document explains why traditional compliance fails and helps you assess whether transformation is right for your organization.
 
 ---
 
@@ -55,27 +61,47 @@ This approach creates predictable problems:
 
 #### Slow
 
-Manual processes create bottlenecks at every stage. Documentation updates, compliance approvals, and audit preparation consume substantial time. Teams lose velocity waiting for compliance approvals, and releases queue behind compliance reviews.
+Manual processes create bottlenecks at every stage. Documentation updates, compliance approvals, and audit preparation consume substantial time.
+
+Teams lose velocity waiting for compliance approvals, and releases queue behind compliance reviews.
 
 #### Error-Prone
 
-Human processes miss requirements. Manual checklists skip items, teams interpret requirements inconsistently, documentation lags behind actual practices, and auditors discover evidence gaps during reviews. Organizations frequently discover compliance violations in production because manual checks failed to catch them.
+Human processes miss requirements. Manual checklists skip items, teams interpret requirements inconsistently, documentation lags behind actual practices, and auditors discover evidence gaps during reviews.
+
+Organizations frequently discover compliance violations in production because manual checks failed to catch them.
 
 #### Non-Scalable
 
-Overhead grows with team count. Each new team and each new requirement adds compliance work across the organization. Manual review capacity becomes an organizational constraint, and what worked at small scale becomes impossible at large scale.
+Overhead grows with team count.
+
+Each new team and each new requirement adds compliance work across the organization.
+
+Manual review capacity becomes an organizational constraint, and what worked at small scale becomes impossible at large scale.
 
 #### Late Feedback
 
-Issues discovered late are expensive to fix. Problems found in pre-production require significant rework, while production discoveries trigger incident response, remediation, and potential fines. Audit findings require retroactive fixes of completed features.
+Issues discovered late are expensive to fix.
+
+Problems found in pre-production require significant rework, while production discoveries trigger incident response, remediation, and potential fines.
+
+Audit findings require retroactive fixes of completed features.
 
 #### Poor Audit Experience
 
-Traditional audits create stress and waste. External auditors bill time while teams search for evidence, engineers are pulled from features to support audits, and auditors discover missing evidence mid-audit. The scramble to prepare evidence reveals organizational dysfunction rather than providing assurance.
+Traditional audits create stress and waste.
+
+External auditors bill time while teams search for evidence, engineers are pulled from features to support audits, and auditors discover missing evidence mid-audit.
+
+The scramble to prepare evidence reveals organizational dysfunction rather than providing assurance.
 
 #### False Sense of Security
 
-Periodic assessment provides limited assurance. Passing an audit at one point doesn't guarantee ongoing compliance. Auditors test small samples, not comprehensive coverage. Organizations can pass audits yet still experience compliance violations in production because audits examine past state, not current continuous compliance.
+Periodic assessment provides limited assurance. Passing an audit at one point doesn't guarantee ongoing compliance.
+
+Auditors test small samples, not comprehensive coverage.
+
+Organizations can pass audits yet still experience compliance violations in production because audits examine past state, not current continuous compliance.
 
 ---
 
@@ -93,7 +119,9 @@ This overhead represents significant direct labor costs, excluding the opportuni
 
 ### Cycle Time Impact
 
-Compliance activities slow delivery. Approval delays mean features that could reach customers quickly instead take much longer. Organizations capable of rapid deployment find themselves constrained by compliance bottlenecks.
+Compliance activities slow delivery. Approval delays mean features that could reach customers quickly instead take much longer.
+
+Organizations capable of rapid deployment find themselves constrained by compliance bottlenecks.
 
 ### Risk Exposure
 
@@ -234,7 +262,7 @@ Organizations that transform compliance practices achieve:
 #### Reduced Overhead
 
 !!! info "Typical Improvements"
-    Substantial reduction in manual compliance work:
+Substantial reduction in manual compliance work:
 
       - Less time spent per team on weekly compliance activities
       - Dramatically reduced audit preparation time
@@ -355,7 +383,7 @@ Before starting transformation:
 ### Essential Prerequisites
 
 !!! warning "Essential Prerequisites"
-    These MUST exist before starting transformation:
+These MUST exist before starting transformation:
 
     1. **Executive Sponsorship**: VP-level or C-level champion who can remove blockers
     2. **Compliance Office Buy-In**: Compliance officer must co-sponsor transformation
@@ -410,7 +438,9 @@ If you believe transformation is right for your organization:
 4. **Engage stakeholders** - Present opportunity to executives and compliance office
 5. **Plan Phase 1** - Begin Assessment phase as described in [Transformation Framework](transformation-framework.md)
 
-If prerequisites are missing, focus on building foundational capabilities first. Attempting transformation without essential prerequisites often leads to failure and organizational skepticism about modern compliance practices.
+If prerequisites are missing, focus on building foundational capabilities first.
+
+Attempting transformation without essential prerequisites often leads to failure and organizational skepticism about modern compliance practices.
 
 ## Related Documentation
 

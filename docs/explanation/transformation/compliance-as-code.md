@@ -2,7 +2,9 @@
 
 ## Introduction
 
-"Compliance as Code" applies software engineering best practices to regulatory compliance. Instead of manual documentation and periodic reviews, organizations encode requirements as executable specifications, automate validation, and generate evidence as a delivery pipeline byproduct.
+"Compliance as Code" applies software engineering best practices to regulatory compliance.
+
+Instead of manual documentation and periodic reviews, organizations encode requirements as executable specifications, automate validation, and generate evidence as a delivery pipeline byproduct.
 
 **Core insight**: Compliance requirements are specifications that can be tested, just like functional requirements.
 
@@ -26,7 +28,9 @@ These principles work as a system - implementing only one or two provides limite
 
 ### What It Means
 
-All compliance artifacts stored as version-controlled text files in Git. Instead of Word documents in SharePoint, everything lives in version control.
+All compliance artifacts stored as version-controlled text files in Git.
+
+Instead of Word documents in SharePoint, everything lives in version control.
 
 **In practice**:
 
@@ -149,7 +153,9 @@ Feature: cli_user-login
       Then I should be authenticated
 ```
 
-**Traceability Chain**: Regulatory requirement → Risk control specification (`@control:ia-2(1)`) → User scenarios (`@control:ia-2(1)` tag) → Step implementations → Production code
+**Traceability Chain**:
+
+Regulatory requirement → Risk control specification (`@control:ia-2(1)`) → User scenarios (`@control:ia-2(1)` tag) → Step implementations → Production code
 
 **See**:
 

@@ -1,5 +1,5 @@
 # Test Levels with Go Build Tags
->
+
 > **Build tags and test isolation (L0-L4)**
 
 Go build tags control which tests run based on isolation level.
@@ -207,13 +207,13 @@ Scenario: Production health check
 
 ## Build Tag to Gherkin Tag Mapping
 
-| Go Build Tag | Gherkin Tag | Auto-inferred from | Execution |
-|--------------|-------------|-------------------|-----------|
-| `//go:build L0` | `@L0` | N/A | `go test -tags=L0` |
-| (none) | `@L1` | `@ov` (default) | `go test` |
-| `//go:build L2` | `@L2` | (explicit only) | `go test -tags=L2` |
-| N/A (Godog) | `@L3` | `@iv`, `@pv` | `godog --tags=@L3` |
-| N/A (Godog) | `@L4` | `@piv`, `@ppv` | `godog --tags=@L4` |
+| Go Build Tag    | Gherkin Tag | Auto-inferred from | Execution          |
+| --------------- | ----------- | ------------------ | ------------------ |
+| `//go:build L0` | `@L0`       | N/A                | `go test -tags=L0` |
+| (none)          | `@L1`       | `@ov` (default)    | `go test`          |
+| `//go:build L2` | `@L2`       | (explicit only)    | `go test -tags=L2` |
+| N/A (Godog)     | `@L3`       | `@iv`, `@pv`       | `godog --tags=@L3` |
+| N/A (Godog)     | `@L4`       | `@piv`, `@ppv`     | `godog --tags=@L4` |
 
 **Note**: Godog scenarios don't use Go build tags. Test level is determined by Gherkin tags.
 

@@ -6,9 +6,13 @@
 
 ## What is Event Storming?
 
-> Event Storming is a group of collaborative modeling techniques that help teams understand complex domains by visually mapping out key events. It is designed to help people from different parts of an organization create a shared understanding of the problem space they are going to work with.
+> Event Storming is a group of collaborative modeling techniques that help teams understand complex domains by visually mapping out key events.
 
-Event Storming uses a game-like format with rules, a "board" (brown packing paper), and grammar (colored sticky notes). This collaborative approach surfaces the domain vocabulary through structured conversation.
+It is designed to help people from different parts of an organization create a shared understanding of the problem space they are going to work with.
+
+Event Storming uses a game-like format with rules, a "board" (brown packing paper), and grammar (colored sticky notes).
+
+This collaborative approach surfaces the domain vocabulary through structured conversation.
 
 ---
 
@@ -28,9 +32,12 @@ Event Storming creates the foundation for all specifications work:
 
 ### Discovers Domain Vocabulary
 
-Ubiquitous Language doesn't emerge spontaneously—it's **discovered** through collaborative domain exploration. Event Storming is a powerful technique for this discovery.
+Ubiquitous Language doesn't emerge spontaneously—it's **discovered** through collaborative domain exploration.
+Event Storming is a powerful technique for this discovery.
 
-When domain experts explain processes, they use their natural vocabulary. When developers ask clarifying questions, misunderstandings emerge and get resolved.
+When domain experts explain processes, they use their natural vocabulary.
+
+When developers ask clarifying questions, misunderstandings emerge and get resolved.
 
 ### Surfaces Critical Information
 

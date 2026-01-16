@@ -36,39 +36,39 @@ claude-code
 
 ### Slash Commands (Quick Access)
 
-| Command | Purpose | When to Use |
-|---------|---------|-------------|
-| `/boot` | Initialize session | **Start of every session** |
-| `/go:plan` | Plan feature/change | Before implementing |
-| `/go:implement` | Implement with TDD | After planning |
-| `/go:test` | Write/debug tests | Testing phase |
-| `/go:review` | Review code + run code-simplifier | Before committing |
-| `/go:cli-docs` | Update CLI docs | When CLI changes |
-| `/go:release` | Check release readiness | Before tagging release |
-| `/go:debug` | Debug failures | When things break |
-| `/go:session-end` | **End session cleanup** | **End of every session (MANDATORY)** |
+| Command           | Purpose                           | When to Use                          |
+| ----------------- | --------------------------------- | ------------------------------------ |
+| `/boot`           | Initialize session                | **Start of every session**           |
+| `/go:plan`        | Plan feature/change               | Before implementing                  |
+| `/go:implement`   | Implement with TDD                | After planning                       |
+| `/go:test`        | Write/debug tests                 | Testing phase                        |
+| `/go:review`      | Review code + run code-simplifier | Before committing                    |
+| `/go:cli-docs`    | Update CLI docs                   | When CLI changes                     |
+| `/go:release`     | Check release readiness           | Before tagging release               |
+| `/go:debug`       | Debug failures                    | When things break                    |
+| `/go:session-end` | **End session cleanup**           | **End of every session (MANDATORY)** |
 
 ### Sub-Agents (Specialized Tasks)
 
 Invoke via: "Use the go-architect agent to design..."
 
-| Agent | Purpose | Example Use |
-|-------|---------|-------------|
-| **go-architect** | Architecture & design | "Design a caching layer for the API" |
-| **go-cli-ux** | CLI command design | "Design flags for the new command" |
-| **go-test-engineer** | Testing | "Write tests for config validation" |
-| **go-debugger** | Debug issues | "Debug why TestParse is failing" |
-| **go-security-release** | Security & release | "Run pre-release checks" |
+| Agent                   | Purpose               | Example Use                          |
+| ----------------------- | --------------------- | ------------------------------------ |
+| **go-architect**        | Architecture & design | "Design a caching layer for the API" |
+| **go-cli-ux**           | CLI command design    | "Design flags for the new command"   |
+| **go-test-engineer**    | Testing               | "Write tests for config validation"  |
+| **go-debugger**         | Debug issues          | "Debug why TestParse is failing"     |
+| **go-security-release** | Security & release    | "Run pre-release checks"             |
 
 ### Skills (Complete Workflows)
 
 Invoke via: "Run the go-cli-feature skill for..."
 
-| Skill | Purpose | Steps |
-|-------|---------|-------|
-| **go-cli-feature** | End-to-end feature development | Plan → Specify → Design → Test → Implement → Verify → Simplify → Document |
-| **go-cli-release-check** | Pre-release validation | CI → Security → Build → Changelog → Dependencies → Tests → Docs |
-| **go-cli-refactor-safe** | Safe refactoring | Baseline → Plan → Refactor incrementally → Test each step → Simplify |
+| Skill                    | Purpose                        | Steps                                                                     |
+| ------------------------ | ------------------------------ | ------------------------------------------------------------------------- |
+| **go-cli-feature**       | End-to-end feature development | Plan → Specify → Design → Test → Implement → Verify → Simplify → Document |
+| **go-cli-release-check** | Pre-release validation         | CI → Security → Build → Changelog → Dependencies → Tests → Docs           |
+| **go-cli-refactor-safe** | Safe refactoring               | Baseline → Plan → Refactor incrementally → Test each step → Simplify      |
 
 ## Common Workflows
 
@@ -77,7 +77,8 @@ Invoke via: "Run the go-cli-feature skill for..."
 **Goal**: Add a `validate config` command
 
 **Workflow**:
-```
+
+```text
 /boot
   ↓
 /go:plan add a 'validate config' command that checks configuration files
@@ -115,7 +116,8 @@ Claude:
 **Goal**: Fix failing test
 
 **Workflow**:
-```
+
+```text
 /boot
   ↓
 /go:debug [paste test failure output]
@@ -143,7 +145,8 @@ Claude implements fix, all tests now pass
 **Goal**: Simplify a 300-line function
 
 **Workflow**:
-```
+
+```text
 /boot
   ↓
 Use the go-cli-refactor-safe skill to refactor the config parser
@@ -169,7 +172,8 @@ Claude:
 **Goal**: Release commands module v1.5.0
 
 **Workflow**:
-```
+
+```text
 /boot
   ↓
 /go:release check if commands module is ready for v1.5.0
@@ -195,42 +199,49 @@ Claude: ✅ APPROVED FOR RELEASE v1.5.0
 The repository has an MCP server providing commands like:
 
 **Module Operations**:
+
 - `show-modules`: List all modules
 - `get-dependencies`: Show dependency graph
 - `build`, `test`: Build and test modules
 
 **Specifications**:
+
 - `create-spec`: Generate Gherkin from description
 - `validate-specs`: Validate specifications
 
 **Release Management**:
+
 - `release-check-ci`: Verify CI status
 - `get-changelog`: View changelog
 
 **See full list**: Use MCP `show-valid-commands`
 
 **Fallback**: If MCP not connected, all commands work via CLI:
+
 ```bash
 go run ./go/eac/commands <command> [args]
 ```
 
 ### Code-Simplifier Plugin
 
-**MANDATORY at end of every session**
+> **MANDATORY at end of every session**
 
 **What it does**:
+
 - Simplifies code for clarity
 - Removes unnecessary complexity
 - Improves naming
 - Preserves all functionality
 
 **How it runs**:
+
 1. Automatically via `/go:review`
 2. Automatically via `/go:session-end`
 3. Within skills at appropriate steps
 
 **Expected output**:
-```
+
+```text
 Running code-simplifier...
 Files analyzed: 5
 Files simplified: 3
@@ -265,6 +276,7 @@ Tests: ✅ All still pass
 ### Three Rules of Vibe Coding
 
 All code must be:
+
 1. **Easy to understand**: Clear, simple, explicit
 2. **Easy to change**: Small functions, stable boundaries
 3. **Hard to break**: Tests, validation, clear errors
@@ -274,21 +286,25 @@ All code must be:
 Before marking work complete:
 
 **Tests**:
+
 - ✅ All tests pass (`go test ./...`)
 - ✅ No race conditions (`go test -race`)
 - ✅ Coverage maintained/improved
 
 **Code Quality**:
+
 - ✅ Follows Go conventions (`gofmt`, `go vet`)
 - ✅ Lint passing (`golangci-lint run`)
 - ✅ Functions small (< 40 lines ideal)
 - ✅ Clear naming
 
 **Documentation**:
+
 - ✅ CLI help text updated
 - ✅ How-to guides current
 
 **Process**:
+
 - ✅ Code-simplifier ran
 - ✅ Ready for commit/PR
 
@@ -299,6 +315,7 @@ Before marking work complete:
 **Symptoms**: Commands like `show-modules` not available
 
 **Solution**:
+
 1. Verify config: Check `.mcp.json`
 2. Test server: `go run ./go/eac/mcp/commands/main.go < /dev/null`
 3. Check Claude Code MCP logs
@@ -309,6 +326,7 @@ Before marking work complete:
 **Symptoms**: `/go:session-end` doesn't simplify code
 
 **Solution**:
+
 1. Verify plugin installed
 2. Manually invoke: Use Task tool with subagent_type="code-simplifier"
 3. Check Claude Code plugin list
@@ -318,6 +336,7 @@ Before marking work complete:
 **Symptoms**: Tests pass at start, fail after changes
 
 **Solution**:
+
 1. **Revert last change**: `git revert HEAD` or undo edits
 2. Make smaller incremental changes
 3. Run tests after EACH change
@@ -329,7 +348,7 @@ Before marking work complete:
 
 For complex features, use multiple agents in parallel:
 
-```
+```text
 User: "Work on authentication feature using parallel agents"
 
 Claude spawns in parallel:
@@ -346,12 +365,14 @@ Then synthesizes results into unified plan
 Combine commands for custom workflows:
 
 **Example: Quick bug fix**:
-```
+
+```text
 /boot → /go:debug → /go:test → /go:review → /go:session-end
 ```
 
 **Example: Documentation update**:
-```
+
+```text
 /boot → /go:cli-docs → /go:review → /go:session-end
 ```
 
@@ -366,16 +387,19 @@ Combine commands for custom workflows:
 ## Summary
 
 **Every session**:
+
 1. Start: `/boot`
 2. Work: Use appropriate commands/agents
 3. End: `/go:session-end` (MANDATORY)
 
 **Every feature**:
+
 1. Plan: `/go:plan`
 2. Implement: `/go:implement` (TDD)
 3. Review: `/go:review` (runs code-simplifier)
 
 **Every commit**:
+
 - ✅ Tests pass
 - ✅ Code simplified
 - ✅ Documentation updated

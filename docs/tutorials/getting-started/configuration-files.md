@@ -20,10 +20,10 @@ By the end of this tutorial, you'll understand:
 
 R2R uses two layers of configuration:
 
-| Layer | File/Directory | Purpose | Created By |
-|-------|---------------|---------|------------|
-| **Framework** | `.r2r/r2r-cli.yml` | Extension management | `r2r init` |
-| **Extension** | `.r2r/eac/` | EAC-specific settings | `r2r eac init` |
+| Layer         | File/Directory     | Purpose               | Created By     |
+| ------------- | ------------------ | --------------------- | -------------- |
+| **Framework** | `.r2r/r2r-cli.yml` | Extension management  | `r2r init`     |
+| **Extension** | `.r2r/eac/`        | EAC-specific settings | `r2r eac init` |
 
 ### R2R CLI vs EAC Configuration
 
@@ -88,10 +88,10 @@ EAC configuration files fall into three categories:
 
 These files are created when you run `r2r eac init` and contain your team or personal settings:
 
-| File | Purpose | Commit? |
-|------|---------|---------|
-| `ai-provider.yml` | AI provider configuration (API keys, models) | Optional (team config) |
-| `ai-provider.personal.yml` | Personal AI overrides | ❌ Never (personal secrets) |
+| File                       | Purpose                                      | Commit?                     |
+| -------------------------- | -------------------------------------------- | --------------------------- |
+| `ai-provider.yml`          | AI provider configuration (API keys, models) | Optional (team config)      |
+| `ai-provider.personal.yml` | Personal AI overrides                        | ❌ Never (personal secrets) |
 
 **Example: `ai-provider.yml`**
 
@@ -118,16 +118,16 @@ git:
 
 These files ship with EAC and provide default configurations. You **don't need to create them** - EAC automatically uses them.
 
-| File | Purpose | Need to Copy? |
-|------|---------|---------------|
-| `ai-config.yml` | AI type definitions (specs, commit-message) | ❌ No (uses system default) |
-| `module-types.yml` | Module type definitions | ❌ No (uses system default) |
-| `system-dependencies.yml` | System dependency definitions | ❌ No (uses system default) |
-| `security-tools.yml` | Security tool configurations | ❌ No (uses system default) |
-| `logging.yml` | Logging configuration | ❌ No (uses system default) |
-| `environments.yml` | Test environment definitions | ❌ No (uses system default) |
-| `test-suites.yml` | Test suite definitions (unit, integration, acceptance, production-verification) | ❌ No (uses system default) |
-| `testing-tags.yml` | Test tag definitions | ❌ No (uses system default) |
+| File                      | Purpose                                                                         | Need to Copy?               |
+| ------------------------- | ------------------------------------------------------------------------------- | --------------------------- |
+| `ai-config.yml`           | AI type definitions (specs, commit-message)                                     | ❌ No (uses system default) |
+| `module-types.yml`        | Module type definitions                                                         | ❌ No (uses system default) |
+| `system-dependencies.yml` | System dependency definitions                                                   | ❌ No (uses system default) |
+| `security-tools.yml`      | Security tool configurations                                                    | ❌ No (uses system default) |
+| `logging.yml`             | Logging configuration                                                           | ❌ No (uses system default) |
+| `environments.yml`        | Test environment definitions                                                    | ❌ No (uses system default) |
+| `test-suites.yml`         | Test suite definitions (unit, integration, acceptance, production-verification) | ❌ No (uses system default) |
+| `testing-tags.yml`        | Test tag definitions                                                            | ❌ No (uses system default) |
 
 **How it works:**
 
@@ -137,7 +137,7 @@ EAC uses a **layered fallback system** (similar to Git config):
 2. **System default** (built into EAC) - fallback if not found
 3. **Hardcoded default** (in code) - last resort
 
-**Example: Using system defaults**
+> **Example: Using system defaults**
 
 ```bash
 # This command works automatically - no ai-config.yml needed!
@@ -154,7 +154,7 @@ r2r eac create spec my-module
 Most users never need to customize these files. The system defaults work for typical use cases.
 
 !!! info "Advanced Customization"
-    If you need to customize these configurations (rare), you can create your own versions in `.r2r/eac/`. Your versions will take precedence over system defaults. See advanced documentation for details.
+If you need to customize these configurations (rare), you can create your own versions in `.r2r/eac/`. Your versions will take precedence over system defaults. See advanced documentation for details.
 
 ---
 
@@ -162,15 +162,15 @@ Most users never need to customize these files. The system defaults work for typ
 
 These files are created by EAC commands and stored in your repository:
 
-| File | Created By | Purpose | Commit? |
-|------|-----------|---------|---------|
-| `repository.yml` | `r2r eac analyze modules` | Repository metadata and discovered modules | ✅ Yes |
-| `books.yml` | `r2r eac analyze books` | Architecture patterns found in code | ✅ Yes |
+| File             | Created By                | Purpose                                    | Commit? |
+| ---------------- | ------------------------- | ------------------------------------------ | ------- |
+| `repository.yml` | `r2r eac analyze modules` | Repository metadata and discovered modules | ✅ Yes  |
+| `books.yml`      | `r2r eac analyze books`   | Architecture patterns found in code        | ✅ Yes  |
 
 **Note on `test-suites.yml`**: This file has **system defaults** (see Section 2 above) providing standard test suites (unit, integration, acceptance, production-verification). You can optionally generate a customized version:
 
-| File | Created By | Purpose | Commit? |
-|------|-----------|---------|---------|
+| File              | Created By                         | Purpose                          | Commit?                |
+| ----------------- | ---------------------------------- | -------------------------------- | ---------------------- |
 | `test-suites.yml` | `r2r eac analyze tests` (optional) | Custom test suite configurations | ✅ Yes (if customized) |
 
 **Example: `repository.yml` (generated)**
@@ -236,7 +236,7 @@ r2r eac create spec my-module
 
 **Files created:**
 
-```
+```text
 .r2r/eac/
 ├── ai-provider.yml          (your provider config)
 └── (all other files use built-in system defaults)
@@ -246,8 +246,13 @@ r2r eac create spec my-module
 
 ### Advanced Customization (Optional)
 
+<!-- markdownlint-disable MD046 -->
+
 !!! note "Most Users Don't Need This"
+
     The minimal setup covers 99% of use cases. Only proceed if you have specific customization requirements.
+
+<!-- markdownlint-disable MD046 -->
 
 If you need custom AI type definitions or other advanced configurations, you can copy the system defaults:
 
@@ -352,7 +357,7 @@ r2r eac create spec my-module
 ### Scenario 3: "I want to customize AI types"
 
 !!! tip "Rare Use Case"
-    Most users don't need custom AI types. The defaults support all standard workflows.
+Most users don't need custom AI types. The defaults support all standard workflows.
 
 If you have specific requirements, copy the system defaults first:
 
@@ -390,7 +395,7 @@ r2r eac create spec my-module
 
 When EAC loads configuration files, it checks locations in order:
 
-```
+```text
 Priority 1: Your repository (.r2r/eac/ai-config.yml)
          ↓ not found
 Priority 2: Built-in system defaults
@@ -432,11 +437,11 @@ If you've created custom configuration files:
 
 ## Summary
 
-| File Type | When Created | Customizable | Commit |
-|-----------|-------------|--------------|--------|
-| User-Specific | By `init` | Yes | Optional |
-| System Defaults | Built into EAC | Via override | If overridden |
-| Generated | By commands | Yes (careful) | Yes |
+| File Type       | When Created   | Customizable  | Commit        |
+| --------------- | -------------- | ------------- | ------------- |
+| User-Specific   | By `init`      | Yes           | Optional      |
+| System Defaults | Built into EAC | Via override  | If overridden |
+| Generated       | By commands    | Yes (careful) | Yes           |
 
 **Key Takeaway:** You only need to run `r2r eac init`. Everything else works automatically!
 

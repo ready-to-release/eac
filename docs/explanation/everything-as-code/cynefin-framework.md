@@ -4,7 +4,9 @@
 
 ## The Cynefin Framework
 
-The Cynefin framework, developed by Dave Snowden, helps us understand different types of problems and choose appropriate responses. From this perspective, it suggests why traditional approaches to compliance often fail and why automation can succeed.
+The Cynefin framework, developed by Dave Snowden, helps us understand different types of problems and choose appropriate responses.
+
+From this perspective, it suggests why traditional approaches to compliance often fail and why automation can succeed.
 
 ### The Four Domains
 

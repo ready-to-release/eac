@@ -1,5 +1,5 @@
 # Discovery Techniques
->
+
 > **Workshop methods for discovering requirements and building shared understanding**
 
 Learn collaborative techniques for discovering business rules, acceptance criteria, and domain language before development begins.
@@ -14,7 +14,9 @@ This section covers:
 - **Example Mapping** - Time-boxed technique for discovering acceptance criteria with colored cards
 - **Card Reference** - Color meanings and quantities for Example Mapping workshops
 
-Discovery happens BEFORE implementation. These workshops build shared understanding across business, development, and testing perspectives.
+Discovery happens BEFORE implementation.
+
+These workshops build shared understanding across business, development, and testing perspectives.
 
 ---
 

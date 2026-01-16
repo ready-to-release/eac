@@ -8,7 +8,9 @@ Learn the foundations of BDD and how it enables shared understanding through exe
 
 ## What is BDD?
 
-**Behavior-Driven Development (BDD)** is a specification technique that describes user-facing behavior through concrete examples. BDD focuses on **observable behavior** - what users can see and interact with, not internal implementation details.
+**Behavior-Driven Development (BDD)** is a specification technique that describes user-facing behavior through concrete examples.
+
+BDD focuses on **observable behavior** - what users can see and interact with, not internal implementation details.
 
 ### Core Purpose
 
