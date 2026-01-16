@@ -244,39 +244,26 @@ extensions:
 // TestMetadataCommand_L2_Performance tests performance characteristics
 func TestMetadataCommand_L2_Performance(t *testing.T) {
 	t.Run("execution_time", func(t *testing.T) {
-		// Measure expected execution time for metadata retrieval
-		// Should complete within reasonable time (excluding image pull)
+		// Define expected execution time budget for metadata retrieval steps
+		// (excluding image pull time which varies by network)
+		//
+		// Expected step durations:
+		//   image_check:       50ms
+		//   container_create: 100ms
+		//   container_attach:  50ms
+		//   container_start:  100ms
+		//   command_execution: 200ms
+		//   output_capture:    50ms
+		//   cleanup:          100ms
+		//   -------------------------
+		//   Total:            650ms
 
-		start := time.Now()
-
-		// Simulate metadata command execution steps
-		steps := []struct {
-			name     string
-			duration time.Duration
-		}{
-			{"image_check", 50 * time.Millisecond},
-			{"container_create", 100 * time.Millisecond},
-			{"container_attach", 50 * time.Millisecond},
-			{"container_start", 100 * time.Millisecond},
-			{"command_execution", 200 * time.Millisecond},
-			{"output_capture", 50 * time.Millisecond},
-			{"cleanup", 100 * time.Millisecond},
-		}
-
-		totalExpected := time.Duration(0)
-		for _, step := range steps {
-			totalExpected += step.duration
-			t.Logf("Step '%s' expected duration: %v", step.name, step.duration)
-		}
-
-		elapsed := time.Since(start)
+		totalExpected := 650 * time.Millisecond
 
 		// Metadata retrieval should complete quickly (< 2 seconds excluding pull)
 		maxDuration := 2 * time.Second
 		if totalExpected > maxDuration {
 			t.Errorf("Expected total duration %v exceeds maximum %v", totalExpected, maxDuration)
 		}
-
-		t.Logf("Performance check completed in %v, expected total: %v", elapsed, totalExpected)
 	})
 }
