@@ -431,3 +431,81 @@ func TestInstallCommand_ConfigInitialization(t *testing.T) {
 		t.Errorf("Expected non-empty image string, got %v", ext["image"])
 	}
 }
+
+func TestInstallCommand_UnauthenticatedPublicRegistry(t *testing.T) {
+	// Test that public extensions can be discovered without GitHub credentials
+	// This is a regression test for the bug where GITHUB_TOKEN was incorrectly required for all extensions
+	tempDir := t.TempDir()
+
+	// Change to temp directory
+	originalDir, _ := os.Getwd()
+	defer os.Chdir(originalDir)
+	os.Chdir(tempDir)
+
+	// Initialize git repo
+	if err := os.Mkdir(".git", 0755); err != nil {
+		t.Fatalf("Failed to create .git directory: %v", err)
+	}
+
+	// Clear GitHub credentials to simulate unauthenticated access
+	originalToken := os.Getenv("GITHUB_TOKEN")
+	originalUsername := os.Getenv("GITHUB_USERNAME")
+	defer func() {
+		if originalToken != "" {
+			os.Setenv("GITHUB_TOKEN", originalToken)
+		}
+		if originalUsername != "" {
+			os.Setenv("GITHUB_USERNAME", originalUsername)
+		}
+	}()
+	os.Unsetenv("GITHUB_TOKEN")
+	os.Unsetenv("GITHUB_USERNAME")
+
+	// Try to add a public extension without credentials
+	// This should work for public extensions like "eac"
+	err := addExtensionToConfig("eac")
+
+	// The operation should succeed or fail gracefully
+	// We accept both outcomes because the test environment may not have network access
+	if err != nil {
+		// If it fails, verify it's not the old "credentials required" error
+		errorMsg := err.Error()
+		if strings.Contains(errorMsg, "GITHUB_TOKEN and GITHUB_USERNAME required to discover") {
+			t.Fatalf("Bug regression: premature credential check detected. Extensions should attempt unauthenticated access for public packages. Error: %v", err)
+		}
+
+		// Other errors are acceptable (network issues, registry unavailable, etc.)
+		t.Logf("Extension discovery failed (acceptable for isolated test environment): %v", err)
+		return
+	}
+
+	// If it succeeded, verify the config was created correctly
+	configPath := filepath.Join(tempDir, ".r2r", "r2r-cli.yml")
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		t.Fatal("Config file should have been created")
+	}
+
+	configData, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("Failed to read config: %v", err)
+	}
+
+	var config map[string]interface{}
+	if err := yaml.Unmarshal(configData, &config); err != nil {
+		t.Fatalf("Failed to parse config: %v", err)
+	}
+
+	extensions, ok := config["extensions"].([]interface{})
+	if !ok || len(extensions) != 1 {
+		t.Fatalf("Expected 1 extension in config, got %d", len(extensions))
+	}
+
+	ext, ok := extensions[0].(map[string]interface{})
+	if !ok {
+		t.Fatal("Extension should be a map")
+	}
+
+	if ext["name"] != "eac" {
+		t.Errorf("Expected extension name 'eac', got %v", ext["name"])
+	}
+}
