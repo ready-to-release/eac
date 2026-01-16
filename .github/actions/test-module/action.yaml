@@ -123,6 +123,14 @@ runs:
         name: ${{ steps.vars.outputs.build-artifact-name }}
         path: ${{ steps.vars.outputs.build-artifact-path }}
 
+    - name: Log in to GitHub Container Registry
+      # Login to GHCR for L2/integration tests that need to pull container images
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
+
     - name: Run Test Suites
       id: test
       shell: bash

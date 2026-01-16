@@ -61,93 +61,35 @@ commands:
 		}
 	})
 
-	t.Run("extension without metadata command", func(t *testing.T) {
-		// Test behavior when extension doesn't support extension-meta command
-		// Expected: error with exit code 127 (command not found) or similar
-		t.Log("Test case: Extension without metadata command should return error")
-	})
-
-	t.Run("metadata command timeout", func(t *testing.T) {
-		// Test behavior when metadata command times out
-		// Expected: error indicating timeout after 60 seconds
-		t.Log("Test case: Metadata command timeout should return timeout error")
-	})
-
-	t.Run("invalid YAML output", func(t *testing.T) {
-		// Test behavior when metadata command returns invalid output
-		// Note: ExecuteMetadataCommand returns raw output, validation happens elsewhere
-		t.Log("Test case: Invalid YAML output should be returned as-is for caller to handle")
-	})
+	// TODO: Add tests for these scenarios with proper mocks:
+	// - extension without metadata command (expect exit code 127)
+	// - metadata command timeout (expect timeout error after 60s)
+	// - invalid YAML output (should return raw output for caller to handle)
 }
 
 func TestExecuteMetadataCommand_ErrorScenarios(t *testing.T) {
+	// Define expected error scenarios for documentation
+	// TODO: Implement with proper mocks
 	testCases := []struct {
 		name          string
 		expectedError string
 	}{
-		{
-			name:          "image pull failure",
-			expectedError: "error ensuring image exists",
-		},
-		{
-			name:          "container creation failure",
-			expectedError: "error creating container",
-		},
-		{
-			name:          "container start failure",
-			expectedError: "error starting container",
-		},
-		{
-			name:          "non-zero exit code",
-			expectedError: "extension-meta command failed with exit code",
-		},
+		{"image pull failure", "error ensuring image exists"},
+		{"container creation failure", "error creating container"},
+		{"container start failure", "error starting container"},
+		{"non-zero exit code", "extension-meta command failed with exit code"},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// In a real implementation, we would:
-			// 1. Create mock client and set up expectations
-			// 2. Execute the method
-			// 3. Verify error contains expected message
+			// Verify test case is properly defined
 			if tc.expectedError == "" {
 				t.Error("Expected error message should not be empty")
 			}
-			t.Logf("Test case: %s should return error containing '%s'", tc.name, tc.expectedError)
 		})
 	}
 }
 
-func TestExecuteMetadataCommand_Integration(t *testing.T) {
-	// Integration test placeholder
-	// This would test against a real Docker daemon in CI/CD
-	t.Skip("Integration test requires Docker daemon")
-
-	// Test with a real extension that supports metadata
-	ext := &ExtensionConfig{
-		Name:            "eac",
-		Image:           "ghcr.io/ready-to-release/ext-eac:latest",
-		ImagePullPolicy: "IfNotPresent",
-	}
-
-	host, err := NewContainerHost()
-	if err != nil {
-		t.Fatalf("Failed to create container host: %v", err)
-	}
-	defer host.Close()
-
-	output, err := host.ExecuteMetadataCommand(ext)
-	if err != nil {
-		// This is expected for extensions that don't support metadata yet
-		t.Logf("Metadata command failed (expected): %v", err)
-		return
-	}
-
-	// Verify output is valid YAML
-	if output == "" {
-		t.Error("Output should not be empty")
-	}
-	t.Log("Metadata retrieved successfully")
-}
 
 // Test helper to create a mock ContainerHost for testing
 func createMockContainerHost() *ContainerHost {

@@ -6,6 +6,7 @@ package docker
 import (
 	"context"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/docker/docker/client"
@@ -60,12 +61,15 @@ func TestContainerHost_L2_Integration(t *testing.T) {
 			ImagePullPolicy: "IfNotPresent",
 		}
 
-		// Test metadata command
-		_, err = host.ExecuteMetadataCommand(ext)
-		if err == nil {
-			t.Log("Extension unexpectedly supports metadata command")
-		} else {
-			t.Logf("Extension correctly does not support metadata command: %v", err)
+		// Test metadata command - ext-eac supports this
+		output, err := host.ExecuteMetadataCommand(ext)
+		if err != nil {
+			t.Fatalf("Extension metadata command failed: %v", err)
+		}
+
+		// Verify we got valid metadata output
+		if output == "" {
+			t.Error("Metadata output should not be empty")
 		}
 	})
 }
