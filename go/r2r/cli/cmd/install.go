@@ -256,12 +256,8 @@ func addExtensionToConfig(extensionName string) error {
 	}
 
 	if !found {
-		// Need to discover from registry
-		if os.Getenv("GITHUB_TOKEN") == "" || os.Getenv("GITHUB_USERNAME") == "" {
-			return fmt.Errorf("GITHUB_TOKEN and GITHUB_USERNAME required to discover extension: %s", extensionName)
-		}
-
 		// Query registry to verify extension exists
+		// The registry client supports both authenticated (private packages) and unauthenticated (public packages) access
 		client, err := github.NewRegistryClient()
 		if err != nil {
 			return fmt.Errorf("failed to create registry client: %w", err)
@@ -271,6 +267,10 @@ func addExtensionToConfig(extensionName string) error {
 		imagePath := fmt.Sprintf("ready-to-release/ext-%s", extensionName)
 		tags, err := client.ListTags(imagePath)
 		if err != nil || len(tags) == 0 {
+			// Provide helpful error message based on whether credentials are available
+			if os.Getenv("GITHUB_TOKEN") == "" {
+				return fmt.Errorf("extension not found in registry: %s\nNote: Set GITHUB_TOKEN and GITHUB_USERNAME environment variables to access private extensions", extensionName)
+			}
 			return fmt.Errorf("extension not found in registry: %s", extensionName)
 		}
 
