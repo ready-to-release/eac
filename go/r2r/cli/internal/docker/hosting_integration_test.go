@@ -6,7 +6,6 @@ package docker
 import (
 	"context"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/docker/docker/client"
