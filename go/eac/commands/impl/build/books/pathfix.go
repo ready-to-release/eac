@@ -161,7 +161,10 @@ func extractSourcePrefix(pattern string) string {
 
 // countPathDepth counts the number of directory components in a path
 func countPathDepth(path string) int {
+	// Normalize path separators: convert both OS-native separators and backslashes to forward slashes
+	// This ensures consistent behavior across platforms (Windows paths work on Linux and vice versa)
 	path = filepath.ToSlash(path)
+	path = strings.ReplaceAll(path, "\\", "/")
 	path = strings.Trim(path, "/")
 	// Handle "." which represents root directory (depth 0)
 	if path == "" || path == "." {

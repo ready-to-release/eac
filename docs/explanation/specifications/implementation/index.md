@@ -24,9 +24,9 @@ Each implementation guide covers:
 
 ## Available Guides
 
-| Language | Framework | Status | Link |
-|----------|-----------|--------|------|
-| **Go** | Godog | ✅ Complete | [Go Implementation Guide](./go/) |
+| Language   | Framework   | Status       | Link                             |
+| ---------- | ----------- | ------------ | -------------------------------- |
+| **Go**     | Godog       | ✅ Complete  | [Go Implementation Guide](./go/) |
 
 ---
 

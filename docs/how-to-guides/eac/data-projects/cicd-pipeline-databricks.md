@@ -601,7 +601,7 @@ if __name__ == "__main__":
 
 ## Repository Structure
 
-```
+```text
 .
 ├── .github/
 │   └── workflows/

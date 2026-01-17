@@ -92,14 +92,14 @@ types:
 
 Available system dependencies:
 
-| Dependency | Description |
-|------------|-------------|
-| `go` | Go toolchain (1.21+) |
-| `docker` | Docker runtime |
-| `npm` | Node.js / npm |
-| `git` | Git CLI |
-| `gh-cli` | GitHub CLI |
-| `az-cli` | Azure CLI |
+| Dependency   | Description          |
+| ------------ | -------------------- |
+| `go`         | Go toolchain (1.21+) |
+| `docker`     | Docker runtime       |
+| `npm`        | Node.js / npm        |
+| `git`        | Git CLI              |
+| `gh-cli`     | GitHub CLI           |
+| `az-cli`     | Azure CLI            |
 
 ```yaml
 build_deps:
@@ -113,15 +113,15 @@ Modules of this type will only build if these dependencies are available.
 
 Capabilities describe what a module can do:
 
-| Capability | Description |
-|------------|-------------|
-| `go_module` | Go module with go.mod |
-| `executable` | Produces a binary |
+| Capability      | Description                      |
+| --------------- | -------------------------------- |
+| `go_module`     | Go module with go.mod            |
+| `executable`    | Produces a binary                |
 | `cross_compile` | Can build for multiple platforms |
-| `container` | Produces a Docker image |
-| `documentation` | Documentation site |
-| `serveable` | Can be served locally |
-| `api_service` | Exposes an API |
+| `container`     | Produces a Docker image          |
+| `documentation` | Documentation site               |
+| `serveable`     | Can be served locally            |
+| `api_service`   | Exposes an API                   |
 
 ```yaml
 capabilities:
@@ -259,12 +259,12 @@ r2r eac get modules --format=json | jq '.modules[].type' | sort -u
 
 ## Troubleshooting
 
-| Problem | Solution |
-|---------|----------|
-| Type not found | Check spelling in module-types.yml |
-| Build fails | Verify build_deps are installed |
+| Problem             | Solution                               |
+| ------------------- | -------------------------------------- |
+| Type not found      | Check spelling in module-types.yml     |
+| Build fails         | Verify build_deps are installed        |
 | Wrong files matched | Adjust file patterns in type or module |
-| Missing capability | Add to type's capabilities list |
+| Missing capability  | Add to type's capabilities list        |
 
 ## See Also
 

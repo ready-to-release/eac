@@ -94,25 +94,25 @@ Non-used positions default to zero (`1.2` = `1.2.0.0`).
 
 ### Schemes by Module Type
 
-| Scheme | Use For | Format | Example |
-|--------|---------|--------|---------|
-| **Implicit** | Internal monorepo modules | Commit SHA | - |
-| **CalVer** | SaaS runtime systems | `YYYY.MMDD.HHMM.Patch` | `2024.1115.2030.0` |
-| **Manual SemVer** | SaaS with fixed major/minor | `Fixed.Fixed.Revision.Patch` | `1.5.1234.0` |
-| **Auto SemVer** | Libraries, multi-release | `Major.Minor.Revision.Patch` | `2.3.12.0` |
-| **API Version** | Runtime APIs | Service: CalVer, Interface: v1/v2 | `2024.1115.0` + v1,v2 |
+| Scheme            | Use For                     | Format                            | Example               |
+| ----------------- | --------------------------- | --------------------------------- | --------------------- |
+| **Implicit**      | Internal monorepo modules   | Commit SHA                        | -                     |
+| **CalVer**        | SaaS runtime systems        | `YYYY.MMDD.HHMM.Patch`            | `2024.1115.2030.0`    |
+| **Manual SemVer** | SaaS with fixed major/minor | `Fixed.Fixed.Revision.Patch`      | `1.5.1234.0`          |
+| **Auto SemVer**   | Libraries, multi-release    | `Major.Minor.Revision.Patch`      | `2.3.12.0`            |
+| **API Version**   | Runtime APIs                | Service: CalVer, Interface: v1/v2 | `2024.1115.0` + v1,v2 |
 
 ### Choosing a Strategy
 
-| Module Type | Distribution Model | Strategy |
-|-------------|-------------------|----------|
-| Microservice | SaaS (single version) | CalVer or SemVer |
-| Web application | SaaS (single version) | CalVer or SemVer |
-| CLI tool | Multi-release | SemVer |
-| npm/NuGet package | Multi-release | SemVer |
-| Container image | Multi-release | SemVer |
-| Internal monorepo module | Not distributed | Implicit |
-| REST API (interface) | Multi-version support | API (v1, v2) |
+| Module Type              | Distribution Model    | Strategy         |
+| ------------------------ | --------------------- | ---------------- |
+| Microservice             | SaaS (single version) | CalVer or SemVer |
+| Web application          | SaaS (single version) | CalVer or SemVer |
+| CLI tool                 | Multi-release         | SemVer           |
+| npm/NuGet package        | Multi-release         | SemVer           |
+| Container image          | Multi-release         | SemVer           |
+| Internal monorepo module | Not distributed       | Implicit         |
+| REST API (interface)     | Multi-version support | API (v1, v2)     |
 
 ### Patch Number
 

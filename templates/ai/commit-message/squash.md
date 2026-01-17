@@ -43,26 +43,31 @@ Generate a JSON object matching this schema:
 ### JSON Field Requirements
 
 **type** (required): One of: `feat`, `fix`, `refactor`, `docs`, `chore`, `test`, `perf`, `style`, `ci`, `build`
+
 - Choose based on the overall theme across all commits
 - If commits have mixed types, choose the most significant
 
 **scope** (required): `multi-module` or specific module name
+
 - Pattern: lowercase with hyphens
 - Length: 1-20 characters
 - Use `multi-module` if changes span multiple modules
 
 **subject** (required): Describe the overall feature/change (not individual commits)
-- Max 72 characters total when combined with `type(scope): `
+
+- Max 72 characters total when combined with `type(scope):`
 - No trailing period
 - Lowercase first letter
 - Synthesize from all commits into cohesive description
 
 **auditorSummary** (required): One clear sentence summarizing the essential change
+
 - Summarize across ALL commits, not just one
 - Focus on business value or technical outcome
 - Not "Made several commits" but "Implemented X to achieve Y"
 
 **body** (required): 2-4 sentences explaining what and why
+
 - Each line wrapped at 72 characters
 - Explain WHAT this branch accomplishes overall
 - Explain WHY the changes were needed (if clear from commits)
@@ -70,6 +75,7 @@ Generate a JSON object matching this schema:
 - Mention key architectural decisions or approaches if relevant
 
 **changes** (required): Array of individual changes included in the PR
+
 - Each change must have `type` and `description`
 - Optional `scope` field for module/component
 - Group related commits into logical change items (3-10 items typical)
@@ -81,6 +87,7 @@ Generate a JSON object matching this schema:
 ### Synthesis Guidelines
 
 **DO**:
+
 - Identify the main theme/purpose across all commits
 - Combine related changes into cohesive description
 - Elevate to feature-level or change-level perspective
@@ -88,6 +95,7 @@ Generate a JSON object matching this schema:
 - Focus on the end state, not the journey
 
 **DON'T**:
+
 - List commits individually ("First commit did X, second commit did Y")
 - Say "this PR" or "this branch" (it's a commit message)
 - Include commit hashes or commit counts
@@ -106,6 +114,7 @@ Generate a JSON object matching this schema:
 ### Example JSON Output
 
 **Bad** (lists commits):
+
 ```json
 {
   "type": "feat",
@@ -124,6 +133,7 @@ Generate a JSON object matching this schema:
 ```
 
 **Good** (synthesizes theme):
+
 ```json
 {
   "type": "feat",
@@ -158,6 +168,7 @@ Changes:
 ```
 
 Example final output:
+
 ```text
 feat(multi-module): implement JWT-based authentication system
 

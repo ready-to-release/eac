@@ -69,6 +69,7 @@
 #### Key Findings
 
 {{ range .Summary.KeyFindings -}}
+
 - {{ . }}
 {{ end }}
 {{ end }}
@@ -78,6 +79,7 @@
 #### Critical Modules Requiring Immediate Attention
 
 {{ range .Summary.CriticalModules -}}
+
 - **{{ .Module }}**: {{ .Reason }}
 {{ end }}
 {{ end }}
@@ -87,6 +89,7 @@
 #### Trends Across Modules
 
 {{ range .Summary.Trends -}}
+
 - {{ . }}
 {{ end }}
 {{ end }}
@@ -96,6 +99,7 @@
 #### Strategic Recommendations
 
 {{ range .Summary.StrategicRecommendations -}}
+
 - {{ . }}
 {{ end }}
 {{ end }}

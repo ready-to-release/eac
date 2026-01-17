@@ -71,10 +71,10 @@ r2r eac get modules | jq '.modules[] | select(.moniker == "src-auth")'
 
 ## Common Issues
 
-| Problem | Solution |
-|---------|----------|
-| Empty output | Ensure you're in repository root with module contracts |
-| Module not shown | Check module.yml file exists and is valid |
+| Problem          | Solution                                               |
+| ---------------- | ------------------------------------------------------ |
+| Empty output     | Ensure you're in repository root with module contracts |
+| Module not shown | Check module.yml file exists and is valid              |
 
 ## Next Steps
 

@@ -96,7 +96,7 @@ func registerRiskSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 		state.profilePath = profilePath
 
 		// Create go.mod file at repository root (needed for `go run` commands)
-		goMod := fmt.Sprintf("module github.com/ready-to-release/eac\n\ngo 1.24\n")
+		goMod := "module github.com/ready-to-release/eac\n\ngo 1.24\n"
 		if err := internal.CreateFile(ctx, "go.mod", goMod); err != nil {
 			return err
 		}
@@ -106,7 +106,7 @@ func registerRiskSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 		if err := os.RemoveAll(contractsDir); err != nil && !os.IsNotExist(err) {
 			return fmt.Errorf("failed to clear contracts directory: %w", err)
 		}
-		if err := os.MkdirAll(contractsDir, 0755); err != nil {
+		if err := os.MkdirAll(contractsDir, 0o755); err != nil {
 			return fmt.Errorf("failed to create contracts directory: %w", err)
 		}
 
@@ -148,7 +148,7 @@ paths:
 		state.profilePath = profilePath
 
 		// Create go.mod file at repository root (needed for `go run` commands)
-		goMod := fmt.Sprintf("module github.com/ready-to-release/eac\n\ngo 1.24\n")
+		goMod := "module github.com/ready-to-release/eac\n\ngo 1.24\n"
 		if err := internal.CreateFile(ctx, "go.mod", goMod); err != nil {
 			return err
 		}
@@ -158,7 +158,7 @@ paths:
 		if err := os.RemoveAll(contractsDir); err != nil && !os.IsNotExist(err) {
 			return fmt.Errorf("failed to clear contracts directory: %w", err)
 		}
-		if err := os.MkdirAll(contractsDir, 0755); err != nil {
+		if err := os.MkdirAll(contractsDir, 0o755); err != nil {
 			return fmt.Errorf("failed to create contracts directory: %w", err)
 		}
 
@@ -220,7 +220,7 @@ paths:
 		modules := []string{m1, m2, m3}
 
 		// Create go.mod file at repository root (needed for `go run` commands)
-		goMod := fmt.Sprintf("module github.com/ready-to-release/eac\n\ngo 1.24\n")
+		goMod := "module github.com/ready-to-release/eac\n\ngo 1.24\n"
 		if err := internal.CreateFile(ctx, "go.mod", goMod); err != nil {
 			return err
 		}
@@ -230,7 +230,7 @@ paths:
 		if err := os.RemoveAll(contractsDir); err != nil && !os.IsNotExist(err) {
 			return fmt.Errorf("failed to clear contracts directory: %w", err)
 		}
-		if err := os.MkdirAll(contractsDir, 0755); err != nil {
+		if err := os.MkdirAll(contractsDir, 0o755); err != nil {
 			return fmt.Errorf("failed to create contracts directory: %w", err)
 		}
 
@@ -274,7 +274,7 @@ paths:
 		modules := []string{m1, m2}
 
 		// Create go.mod file at repository root (needed for `go run` commands)
-		goMod := fmt.Sprintf("module github.com/ready-to-release/eac\n\ngo 1.24\n")
+		goMod := "module github.com/ready-to-release/eac\n\ngo 1.24\n"
 		if err := internal.CreateFile(ctx, "go.mod", goMod); err != nil {
 			return err
 		}
@@ -284,7 +284,7 @@ paths:
 		if err := os.RemoveAll(contractsDir); err != nil && !os.IsNotExist(err) {
 			return fmt.Errorf("failed to clear contracts directory: %w", err)
 		}
-		if err := os.MkdirAll(contractsDir, 0755); err != nil {
+		if err := os.MkdirAll(contractsDir, 0o755); err != nil {
 			return fmt.Errorf("failed to create contracts directory: %w", err)
 		}
 
@@ -443,13 +443,8 @@ paths:
 
 	// ========== Additional Risk-Assess Steps ==========
 
-
-
-
-
 	// NOTE: Additional validate-risk steps are already defined above (lines ~147-194)
 	// Do NOT add duplicate registrations here - godog will report "ambiguous step" errors
-
 
 	// Catalog validation steps - for validate risk-catalog command
 	sc.Step(`^a file "([^"]*)" with content:$`, func(filePath string, content *godog.DocString) error {

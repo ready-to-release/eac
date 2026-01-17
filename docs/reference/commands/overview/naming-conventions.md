@@ -26,21 +26,21 @@ scan --scanner vuln  # verb: scan, scanner type: vuln
 
 Commands use semantically meaningful verbs that clearly indicate their purpose:
 
-| Verb        | Meaning                       | Output         | Examples                               |
-| ----------- | ----------------------------- | -------------- | -------------------------------------- |
-| `get`       | Retrieve structured data      | JSON           | `get modules`, `get dependencies`      |
-| `show`      | Display formatted information | Human-readable | `show modules`, `show dependencies`    |
-| `create`    | Generate new content          | Varies         | `create spec`, `create pr`             |
-| `validate`  | Check correctness             | Pass/fail      | `validate contracts`, `validate specs` |
-| `scan`      | Analyze for issues            | Report         | `scan --scanner vuln`, `scan zap`      |
-| `test`      | Execute tests                 | Test results   | `test`, `test suite`                   |
-| `build`     | Compile/build                 | Artifacts      | `build`                                |
-| `release`   | Manage releases               | Varies         | `release changelog`, `release this`    |
-| `work`      | Manage workspaces             | Varies         | `work create`, `work commit`           |
-| `pipeline`  | CI/CD orchestration           | Varies         | `pipeline run`, `pipeline status`      |
-| `serve`     | Start servers                 | Server process | `serve docs`, `serve design`           |
+| Verb        | Meaning                       | Output         | Examples                                         |
+| ----------- | ----------------------------- | -------------- | ------------------------------------------------ |
+| `get`       | Retrieve structured data      | JSON           | `get modules`, `get dependencies`                |
+| `show`      | Display formatted information | Human-readable | `show modules`, `show dependencies`              |
+| `create`    | Generate new content          | Varies         | `create spec`, `create pr`                       |
+| `validate`  | Check correctness             | Pass/fail      | `validate contracts`, `validate specs`           |
+| `scan`      | Analyze for issues            | Report         | `scan --scanner vuln`, `scan zap`                |
+| `test`      | Execute tests                 | Test results   | `test`, `test suite`                             |
+| `build`     | Compile/build                 | Artifacts      | `build`                                          |
+| `release`   | Manage releases               | Varies         | `release changelog`, `release this`              |
+| `work`      | Manage workspaces             | Varies         | `work create`, `work commit`                     |
+| `pipeline`  | CI/CD orchestration           | Varies         | `pipeline run`, `pipeline status`                |
+| `serve`     | Start servers                 | Server process | `serve docs`, `serve design`                     |
 | `templates` | Install templates             | Varies         | `templates install docs`, `templates install ai` |
-| `update`    | Modify existing               | Varies         | `update design`                        |
+| `update`    | Modify existing               | Varies         | `update design`                                  |
 
 ### 3. Consistent Naming Within Categories
 

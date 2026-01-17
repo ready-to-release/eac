@@ -22,7 +22,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// commandDocsContext holds state for command docs coverage validation
+// commandDocsContext holds state for command docs coverage validation.
 type commandDocsContext struct {
 	repoRoot         string
 	cfg              *config.EACConfig
@@ -33,7 +33,7 @@ type commandDocsContext struct {
 
 var cmdDocsCtx *commandDocsContext
 
-// registerCommandDocsSteps registers command documentation coverage step definitions
+// registerCommandDocsSteps registers command documentation coverage step definitions.
 func registerCommandDocsSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	// Given steps
 	sc.Step(`^I load all valid commands from the CLI$`, loadAllValidCommandsFromCLI)
@@ -47,7 +47,7 @@ func registerCommandDocsSteps(sc *godog.ScenarioContext, ctx *internal.TestConte
 	sc.Step(`^if any commands are missing documentation, I should see their names$`, ifMissingShowCommandNames)
 }
 
-// commandInfo matches the YAML structure from 'get valid-commands'
+// commandInfo matches the YAML structure from 'get valid-commands'.
 type commandInfo struct {
 	Command     string `yaml:"command"`
 	Description string `yaml:"description"`
@@ -78,17 +78,31 @@ func loadAllValidCommandsFromCLI() error {
 	// Run the CLI to get valid commands
 	// Check multiple locations in order of preference:
 	// 1. COMMANDS_PATH environment variable (set by CI)
-	// 2. out/tools/commands (CI artifact location)
-	// 3. go/eac/commands/build/commands (local dev build location)
+	// 2. Container built-in binary (when running inside Docker via r2r)
+	// 3. out/tools/commands (CI artifact location - Linux first to avoid .exe on Linux)
+	// 4. go/eac/commands/build/commands (local dev build location)
 	cmdBinary := os.Getenv("COMMANDS_PATH")
 	if cmdBinary == "" {
-		// Check CI artifact location first
-		candidates := []string{
-			filepath.Join(repoRoot, "out", "tools", "commands.exe"),
-			filepath.Join(repoRoot, "out", "tools", "commands"),
-			filepath.Join(repoRoot, "go", "eac", "commands", "build", "commands.exe"),
-			filepath.Join(repoRoot, "go", "eac", "commands", "build", "commands"),
+		var candidates []string
+
+		// When running inside a container (R2R_DOCKER_MODE=true), prefer the container's built-in binary
+		// This avoids trying to run Windows .exe files on Linux
+		if os.Getenv("R2R_DOCKER_MODE") == "true" {
+			containerRoot := os.Getenv("R2R_CONTAINER_ROOT")
+			if containerRoot == "" {
+				containerRoot = "/app"
+			}
+			candidates = append(candidates, filepath.Join(containerRoot, "out", "tools", "commands"))
 		}
+
+		// Add standard locations - Linux binaries first to avoid .exe on Linux
+		candidates = append(candidates,
+			filepath.Join(repoRoot, "out", "tools", "commands"),
+			filepath.Join(repoRoot, "out", "tools", "commands.exe"),
+			filepath.Join(repoRoot, "go", "eac", "commands", "build", "commands"),
+			filepath.Join(repoRoot, "go", "eac", "commands", "build", "commands.exe"),
+		)
+
 		for _, candidate := range candidates {
 			if _, err := os.Stat(candidate); err == nil {
 				cmdBinary = candidate
@@ -107,13 +121,13 @@ func loadAllValidCommandsFromCLI() error {
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to run 'get valid-commands': %v\nstderr: %s", err, stderr.String())
+		return fmt.Errorf("failed to run 'get valid-commands': %w\nstderr: %s", err, stderr.String())
 	}
 
 	// Parse YAML output
 	var commands []commandInfo
 	if err := yaml.Unmarshal(stdout.Bytes(), &commands); err != nil {
-		return fmt.Errorf("failed to parse valid-commands output: %v\noutput: %s", err, stdout.String())
+		return fmt.Errorf("failed to parse valid-commands output: %w\noutput: %s", err, stdout.String())
 	}
 
 	// Get commands config (guaranteed non-nil after Load)

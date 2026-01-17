@@ -37,6 +37,7 @@ modules:
         - .gitattributes
         - .golangci.yml
         - .markdownlint.yml
+        - .markdownlint-cli2.yaml
         - cspell.config.yml
         - go.work
         - go.work.sum

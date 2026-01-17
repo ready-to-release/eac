@@ -23,6 +23,7 @@ const (
 	CommandTypeBuild CommandType = "build"
 	CommandTypeTest  CommandType = "test"
 	CommandTypeScan  CommandType = "scan"
+	CommandTypeLint  CommandType = "lint"
 )
 
 // CommandConfig holds all configuration for a command execution.

@@ -4,8 +4,8 @@ Display help information for commands.
 
 ## Commands in this Category
 
-| Command | Purpose |
-|---------|---------|
+| Command           | Purpose                  |
+| ----------------- | ------------------------ |
 | [help](./help.md) | Display help information |
 
 ## Quick Examples

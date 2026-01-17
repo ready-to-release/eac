@@ -4,9 +4,9 @@ Security scanning and evidence collection for audit compliance.
 
 ## Commands in this Category
 
-| Command | Purpose |
-|---------|---------|
-| [scan](./scan.md) | Run security scans with --scanner flag |
+| Command              | Purpose                                     |
+| -------------------- | ------------------------------------------- |
+| [scan](./scan.md)    | Run security scans with --scanner flag      |
 | [scan zap](./zap.md) | Dynamic Application Security Testing (DAST) |
 
 ## Scanner Types

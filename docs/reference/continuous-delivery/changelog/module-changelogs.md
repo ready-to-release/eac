@@ -165,7 +165,7 @@ Changes to CI/CD, build system, or multi-module refactoring:
 - refactor(multi-module): reorganize module structure
 ```
 
-**Not in module changelog**
+> **Note:** This does NOT belong in the module changelog.
 
 ### Other Module Changes
 
@@ -180,7 +180,7 @@ Changes to other modules:
 - feat(core): add new validation function
 ```
 
-**Not in eac-commands changelog**
+> **Note:** This does NOT belong in eac-commands changelog.
 
 ### Dependency Changes
 
@@ -239,7 +239,7 @@ Each module versions independently:
 
 **Example:**
 
-```
+```text
 Repository: 0.0.2
 r2r-cli: 1.2.0
 eac-commands: (not versioned - library)

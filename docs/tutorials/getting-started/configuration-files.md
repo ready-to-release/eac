@@ -88,10 +88,10 @@ EAC configuration files fall into three categories:
 
 These files are created when you run `r2r eac init` and contain your team or personal settings:
 
-| File                       | Purpose                                      | Commit?                     |
-| -------------------------- | -------------------------------------------- | --------------------------- |
-| `ai-provider.yml`          | AI provider configuration (API keys, models) | Optional (team config)      |
-| `ai-provider.personal.yml` | Personal AI overrides                        | ❌ Never (personal secrets) |
+| File                       | Purpose                                      | Commit?                      |
+| -------------------------- | -------------------------------------------- | ---------------------------- |
+| `ai-provider.yml`          | AI provider configuration (API keys, models) | Optional (team config)       |
+| `ai-provider.personal.yml` | Personal AI overrides                        | ❌ Never (personal secrets)  |
 
 **Example: `ai-provider.yml`**
 
@@ -118,16 +118,16 @@ git:
 
 These files ship with EAC and provide default configurations. You **don't need to create them** - EAC automatically uses them.
 
-| File                      | Purpose                                                                         | Need to Copy?               |
-| ------------------------- | ------------------------------------------------------------------------------- | --------------------------- |
-| `ai-config.yml`           | AI type definitions (specs, commit-message)                                     | ❌ No (uses system default) |
-| `module-types.yml`        | Module type definitions                                                         | ❌ No (uses system default) |
-| `system-dependencies.yml` | System dependency definitions                                                   | ❌ No (uses system default) |
-| `security-tools.yml`      | Security tool configurations                                                    | ❌ No (uses system default) |
-| `logging.yml`             | Logging configuration                                                           | ❌ No (uses system default) |
-| `environments.yml`        | Test environment definitions                                                    | ❌ No (uses system default) |
-| `test-suites.yml`         | Test suite definitions (unit, integration, acceptance, production-verification) | ❌ No (uses system default) |
-| `testing-tags.yml`        | Test tag definitions                                                            | ❌ No (uses system default) |
+| File                      | Purpose                                                                         | Need to Copy?                |
+| ------------------------- | ------------------------------------------------------------------------------- | ---------------------------- |
+| `ai-config.yml`           | AI type definitions (specs, commit-message)                                     | ❌ No (uses system default)  |
+| `module-types.yml`        | Module type definitions                                                         | ❌ No (uses system default)  |
+| `system-dependencies.yml` | System dependency definitions                                                   | ❌ No (uses system default)  |
+| `security-tools.yml`      | Security tool configurations                                                    | ❌ No (uses system default)  |
+| `logging.yml`             | Logging configuration                                                           | ❌ No (uses system default)  |
+| `environments.yml`        | Test environment definitions                                                    | ❌ No (uses system default)  |
+| `test-suites.yml`         | Test suite definitions (unit, integration, acceptance, production-verification) | ❌ No (uses system default)  |
+| `testing-tags.yml`        | Test tag definitions                                                            | ❌ No (uses system default)  |
 
 **How it works:**
 
@@ -169,9 +169,9 @@ These files are created by EAC commands and stored in your repository:
 
 **Note on `test-suites.yml`**: This file has **system defaults** (see Section 2 above) providing standard test suites (unit, integration, acceptance, production-verification). You can optionally generate a customized version:
 
-| File              | Created By                         | Purpose                          | Commit?                |
-| ----------------- | ---------------------------------- | -------------------------------- | ---------------------- |
-| `test-suites.yml` | `r2r eac analyze tests` (optional) | Custom test suite configurations | ✅ Yes (if customized) |
+| File              | Created By                         | Purpose                          | Commit?                 |
+| ----------------- | ---------------------------------- | -------------------------------- | ----------------------- |
+| `test-suites.yml` | `r2r eac analyze tests` (optional) | Custom test suite configurations | ✅ Yes (if customized)  |
 
 **Example: `repository.yml` (generated)**
 
@@ -269,7 +269,7 @@ This copies configuration files like `ai-config.yml`, `module-types.yml`, etc. t
 
 **Example file structure after copying:**
 
-```
+```text
 .r2r/eac/
 ├── ai-provider.yml          (created by init)
 ├── ai-config.yml            (copied with --copy-templates)

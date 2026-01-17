@@ -4,6 +4,10 @@
 # Base types (go, container, typescript, static) are loaded from contract defaults
 #
 types:
+  # Static - add markdown linting capability
+  - name: static
+    capabilities: [markdown]
+
   # TypeScript - add project-specific build behavior
   - name: typescript
     test_framework: mocha

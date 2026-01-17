@@ -29,7 +29,7 @@ r2r interactive eac
 
 Opens a shell inside the EAC extension container:
 
-```
+```text
 root@container:/workspace#
 ```
 

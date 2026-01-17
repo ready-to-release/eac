@@ -26,11 +26,11 @@ extensions: []
 
 ## Flags
 
-| Flag | Description |
-|------|-------------|
-| `--delete-configs` | Delete all configuration files including overrides |
+| Flag                | Description                                                       |
+| ------------------- | ----------------------------------------------------------------- |
+| `--delete-configs`  | Delete all configuration files including overrides                |
 | `--use-pwd-as-root` | Use current directory as repository root (creates .git if needed) |
-| `-h, --help` | Display help information |
+| `-h, --help`        | Display help information                                          |
 
 ## Examples
 
@@ -66,7 +66,7 @@ r2r eac init --ai-provider claude-api
 
 After `r2r init`:
 
-```
+```text
 your-project/
 ├── .r2r/
 │   └── r2r-cli.yml      # Extension registry (empty)
@@ -75,7 +75,7 @@ your-project/
 
 After `r2r install eac`:
 
-```
+```text
 your-project/
 ├── .r2r/
 │   └── r2r-cli.yml      # Contains eac extension
@@ -84,7 +84,7 @@ your-project/
 
 After `r2r eac init`:
 
-```
+```text
 your-project/
 ├── .r2r/
 │   ├── r2r-cli.yml          # Extension registry

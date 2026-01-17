@@ -31,9 +31,12 @@
   // Markdown Preview Enhanced settings
   "markdown-preview-enhanced.previewTheme": "one-dark.css",
   "markdown-preview-enhanced.codeBlockTheme": "one-dark.css",
-  "markdownlint.config": {
-    "extends": ".markdownlint.yml"
-  },
+
+  // Markdownlint extension (DavidAnson.vscode-markdownlint)
+  // Uses markdownlint-cli2 engine - auto-discovers config files:
+  // - .markdownlint-cli2.yaml (ignores + extends rules)
+  // - .markdownlint.yml (lint rules)
+  // No explicit config needed - cli2 auto-discovery handles it
   "[markdown]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.quickSuggestions": {

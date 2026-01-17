@@ -48,6 +48,7 @@ The go-architect agent uses **extended thinking mode** because:
 - **Cost-effective**: More time thinking during planning saves significant time during implementation and debugging
 
 **When extended thinking adds most value**:
+
 - ✅ Cross-module changes with complex dependencies
 - ✅ New abstractions or interface design
 - ✅ Significant refactoring with potential breaking changes
@@ -55,6 +56,7 @@ The go-architect agent uses **extended thinking mode** because:
 - ✅ Security-sensitive design patterns
 
 **When quick planning is sufficient**:
+
 - Small, localized bug fixes
 - Minor utility function additions
 - Documentation-only changes

@@ -81,3 +81,13 @@ func ScanConfig(moniker, baseDir string) Config {
 		ActionVerb:   "already being scanned",
 	}
 }
+
+// LintConfig returns a Config for module lint locking.
+func LintConfig(moniker, baseDir string) Config {
+	return Config{
+		BaseDir:      baseDir,
+		Identifier:   moniker,
+		ResourceType: "module",
+		ActionVerb:   "already being linted",
+	}
+}

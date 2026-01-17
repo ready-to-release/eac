@@ -210,15 +210,17 @@ See [Module Types Reference](../r2r-eac/module-types-reference.md#adding-custom-
 
 ## Language Support Summary
 
-| Language       | Native Support | Build     | Test                  | Notes                                |
-| -------------- | -------------- | --------- | --------------------- | ------------------------------------ |
-| **Go**         | ✅ Yes         | ✅ Full   | ✅ gotest, godog      | Complete toolchain integration       |
-| **TypeScript** | ✅ Yes         | ✅ Full   | ✅ mocha, cucumber-js | npm and tsc support                  |
-| **JavaScript** | ✅ Yes         | ✅ npm    | ✅ mocha, cucumber-js | Via TypeScript module type           |
-| **Docker**     | ✅ Yes         | ✅ buildx | -                     | Language-agnostic containerization   |
-| **Python**     | ⚠️ Container   | ⚠️ Custom | ⚠️ Custom             | Use `container` type with Dockerfile |
-| **Rust**       | ⚠️ Container   | ⚠️ Custom | ⚠️ Custom             | Use `container` type with Dockerfile |
-| **Java**       | ⚠️ Container   | ⚠️ Custom | ⚠️ Custom             | Use `container` type with Dockerfile |
+<!-- markdownlint-disable MD060 -->
+| Language       | Native Support   | Build         | Test                   | Notes                                |
+| -------------- | ---------------- | ------------- | ---------------------- | ------------------------------------ |
+| **Go**         | ✅ Yes           | ✅ Full       | ✅ gotest, godog       | Complete toolchain integration       |
+| **TypeScript** | ✅ Yes           | ✅ Full       | ✅ mocha, cucumber-js  | npm and tsc support                  |
+| **JavaScript** | ✅ Yes           | ✅ npm        | ✅ mocha, cucumber-js  | Via TypeScript module type           |
+| **Docker**     | ✅ Yes           | ✅ buildx     | -                      | Language-agnostic containerization   |
+| **Python**     | ⚠️ Container      | ⚠️ Custom      | ⚠️ Custom               | Use `container` type with Dockerfile |
+| **Rust**       | ⚠️ Container      | ⚠️ Custom      | ⚠️ Custom               | Use `container` type with Dockerfile |
+| **Java**       | ⚠️ Container      | ⚠️ Custom      | ⚠️ Custom               | Use `container` type with Dockerfile |
+<!-- markdownlint-enable MD060 -->
 
 **Legend:**
 

@@ -23,7 +23,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/specs/internal"
 )
 
-// evidenceFile represents the structure of a security evidence file
+// evidenceFile represents the structure of a security evidence file.
 type evidenceFile struct {
 	Module    string          `json:"module"`
 	Scanner   string          `json:"scanner"`
@@ -32,7 +32,7 @@ type evidenceFile struct {
 	Findings  json.RawMessage `json:"findings"`
 }
 
-// readEvidenceFile reads and parses an evidence file
+// readEvidenceFile reads and parses an evidence file.
 func readEvidenceFile(filepath string) (*evidenceFile, error) {
 	data, err := os.ReadFile(filepath)
 	if err != nil {
@@ -83,7 +83,7 @@ func registerSecuritySteps(sc *godog.ScenarioContext, ctx *internal.TestContext)
 // Evidence File Verification Steps
 // ============================================================================
 
-// evidenceFilesExistInDirectory checks that evidence files exist in the specified directory
+// evidenceFilesExistInDirectory checks that evidence files exist in the specified directory.
 func evidenceFilesExistInDirectory(directory string, ctx *internal.TestContext, state *securityTestState) error {
 	// Save the directory for use in subsequent steps
 	state.lastCheckedDirectory = directory
@@ -118,7 +118,7 @@ func evidenceFilesExistInDirectory(directory string, ctx *internal.TestContext, 
 	return nil
 }
 
-// getLatestEvidenceFile finds the most recent evidence file in a directory
+// getLatestEvidenceFile finds the most recent evidence file in a directory.
 func getLatestEvidenceFile(directory string, ctx *internal.TestContext) (string, error) {
 	// Use isolated test directory if available, otherwise use repository root
 	workspaceRoot := ctx.IsolatedDir
@@ -159,7 +159,7 @@ func getLatestEvidenceFile(directory string, ctx *internal.TestContext) (string,
 	return latestFile, nil
 }
 
-// theLatestEvidenceFileHasJSONField checks that the latest evidence file has a specific JSON field with value
+// theLatestEvidenceFileHasJSONField checks that the latest evidence file has a specific JSON field with value.
 func theLatestEvidenceFileHasJSONField(field, value string, ctx *internal.TestContext, state *securityTestState) error {
 	latestFile, err := getLatestEvidenceFile(state.lastCheckedDirectory, ctx)
 	if err != nil {
@@ -189,7 +189,7 @@ func theLatestEvidenceFileHasJSONField(field, value string, ctx *internal.TestCo
 	return nil
 }
 
-// theLatestEvidenceFileHasJSONFieldMatchingFormat checks field matches a format
+// theLatestEvidenceFileHasJSONFieldMatchingFormat checks field matches a format.
 func theLatestEvidenceFileHasJSONFieldMatchingFormat(field, format string, ctx *internal.TestContext, state *securityTestState) error {
 	latestFile, err := getLatestEvidenceFile(state.lastCheckedDirectory, ctx)
 	if err != nil {
@@ -216,7 +216,7 @@ func theLatestEvidenceFileHasJSONFieldMatchingFormat(field, format string, ctx *
 	return nil
 }
 
-// theLatestEvidenceFileHasJSONFieldWithCharacterHash checks hash field length
+// theLatestEvidenceFileHasJSONFieldWithCharacterHash checks hash field length.
 func theLatestEvidenceFileHasJSONFieldWithCharacterHash(field string, length int, hashType string, ctx *internal.TestContext, state *securityTestState) error {
 	latestFile, err := getLatestEvidenceFile(state.lastCheckedDirectory, ctx)
 	if err != nil {
@@ -246,7 +246,7 @@ func theLatestEvidenceFileHasJSONFieldWithCharacterHash(field string, length int
 	return nil
 }
 
-// theLatestEvidenceFileHasJSONFieldWithNonEmptyData checks findings is not empty
+// theLatestEvidenceFileHasJSONFieldWithNonEmptyData checks findings is not empty.
 func theLatestEvidenceFileHasJSONFieldWithNonEmptyData(field string, ctx *internal.TestContext, state *securityTestState) error {
 	latestFile, err := getLatestEvidenceFile(state.lastCheckedDirectory, ctx)
 	if err != nil {
@@ -279,7 +279,7 @@ func theLatestEvidenceFileHasJSONFieldWithNonEmptyData(field string, ctx *intern
 // Log File Verification Steps
 // ============================================================================
 
-// aLogFileExistsInDirectory checks that a log file exists in the specified directory
+// aLogFileExistsInDirectory checks that a log file exists in the specified directory.
 func aLogFileExistsInDirectory(directory string, ctx *internal.TestContext) error {
 	// Use isolated test directory if available, otherwise use repository root
 	workspaceRoot := ctx.IsolatedDir

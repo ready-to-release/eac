@@ -368,4 +368,3 @@ func (c *repositoryContext) ifBuildTagsFoundShowDetails() error {
 	// Passive assertion - errors from noFilesShouldHaveDirective provide details
 	return nil
 }
-

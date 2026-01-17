@@ -10,6 +10,7 @@
 package srccli
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -20,7 +21,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/specs/internal"
 )
 
-// cliContext holds state between steps for CLI tests
+// cliContext holds state between steps for CLI tests.
 type cliContext struct {
 	sharedCtx      *internal.TestContext
 	executablePath string
@@ -53,7 +54,6 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	sc.Step(`^I create a test config file "([^"]*)" with valid settings$`, iCreateATestConfigFileWithValidSettings)
 	sc.Step(`^I create a test config file "([^"]*)" with invalid settings$`, iCreateATestConfigFileWithInvalidSettings)
 	sc.Step(`^I run the built CLI with "([^"]*)"$`, iRunTheBuiltCLIWith)
-
 }
 
 func initializeExecutablePath() {
@@ -145,7 +145,7 @@ func iCreateATestFolder(folderName string) error {
 
 	os.RemoveAll(testPath)
 
-	if err := os.MkdirAll(testPath, 0755); err != nil {
+	if err := os.MkdirAll(testPath, 0o755); err != nil {
 		return fmt.Errorf("failed to create test folder: %w", err)
 	}
 
@@ -159,7 +159,7 @@ func iCreateAFolderInTheTestFolder(folderName string) error {
 	}
 
 	folderPath := filepath.Join(cliCtx.testFolderPath, folderName)
-	if err := os.MkdirAll(folderPath, 0755); err != nil {
+	if err := os.MkdirAll(folderPath, 0o755); err != nil {
 		return fmt.Errorf("failed to create folder: %w", err)
 	}
 
@@ -233,12 +233,12 @@ extensions: []
 
 	// Ensure .r2r directory exists
 	r2rDir := filepath.Join(cliCtx.testFolderPath, ".r2r")
-	if err := os.MkdirAll(r2rDir, 0755); err != nil {
+	if err := os.MkdirAll(r2rDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create .r2r directory: %w", err)
 	}
 
 	configPath := filepath.Join(r2rDir, "r2r-cli.yml")
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(configContent), 0o644); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 
@@ -258,12 +258,12 @@ project:
 
 	// Ensure .r2r directory exists
 	r2rDir := filepath.Join(cliCtx.testFolderPath, ".r2r")
-	if err := os.MkdirAll(r2rDir, 0755); err != nil {
+	if err := os.MkdirAll(r2rDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create .r2r directory: %w", err)
 	}
 
 	configPath := filepath.Join(r2rDir, "r2r-cli.yml")
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(configContent), 0o644); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 
@@ -292,7 +292,8 @@ func runCommandWithArgs(args ...string) error {
 	cliCtx.sharedCtx.CommandOutput = string(output)
 
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		exitErr := &exec.ExitError{}
+		if errors.As(err, &exitErr) {
 			cliCtx.sharedCtx.ExitCode = exitErr.ExitCode()
 		} else {
 			cliCtx.sharedCtx.ExitCode = 1
@@ -304,7 +305,7 @@ func runCommandWithArgs(args ...string) error {
 	return nil
 }
 
-// Cleanup function to restore directory after tests
+// Cleanup function to restore directory after tests.
 func cleanupCliContext() {
 	if cliCtx != nil && cliCtx.currentDir != "" {
 		os.Chdir(cliCtx.currentDir)

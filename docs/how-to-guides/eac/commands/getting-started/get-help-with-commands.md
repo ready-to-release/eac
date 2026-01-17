@@ -67,10 +67,10 @@ r2r eac help release changelog
 
 ## Common Issues
 
-| Problem | Solution |
-|---------|----------|
-| "Command not found" | Ensure EAC is installed and in PATH |
-| Too much output | Use `r2r eac help <command>` for specific command |
+| Problem             | Solution                                          |
+| ------------------- | ------------------------------------------------- |
+| "Command not found" | Ensure EAC is installed and in PATH               |
+| Too much output     | Use `r2r eac help <command>` for specific command |
 
 ## Next Steps
 

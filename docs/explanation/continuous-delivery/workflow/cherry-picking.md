@@ -101,12 +101,12 @@ No shortcuts. No direct commits. Same stages, expedited if needed.
 
 ## Key Principles
 
-| Principle | Rationale |
-|-----------|-----------|
-| Always fix trunk first | Prevents regressions in future releases |
-| Cherry-pick via PR | Maintains audit trail and triggers validation |
-| Never skip cherry-pick to trunk | Ensures fix doesn't reappear in next release |
-| Same fix, both branches | Divergent fixes cause confusion |
+| Principle                       | Rationale                                     |
+| ------------------------------- | --------------------------------------------- |
+| Always fix trunk first          | Prevents regressions in future releases       |
+| Cherry-pick via PR              | Maintains audit trail and triggers validation |
+| Never skip cherry-pick to trunk | Ensures fix doesn't reappear in next release  |
+| Same fix, both branches         | Divergent fixes cause confusion               |
 
 ---
 

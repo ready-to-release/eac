@@ -13,13 +13,13 @@ Set up and manage environments for Databricks data projects using Unity Catalog 
 
 ## Environment Strategy
 
-| Environment | CD Stages | Purpose | Characteristics |
-|------------|-----------|---------|-----------------|
-| **DevBox** | Stage 1-2 | Local development | Databricks Connect, local Spark, small data samples |
-| **Build Agents** | Stage 2-4 | CI validation | GitHub Actions runners, unit/component tests |
-| **PLTE (Staging)** | Stage 5-6 | Acceptance testing | Production-like config, cloned data, ephemeral or persistent |
-| **Demo** | Stage 7 | Stakeholder validation | Trunk-HEAD or release-HEAD, stable test data |
-| **Production** | Stage 10-12 | Live operation | Real data, monitored, strict access controls |
+| Environment        | CD Stages   | Purpose                | Characteristics                                              |
+| ------------------ | ----------- | ---------------------- | ------------------------------------------------------------ |
+| **DevBox**         | Stage 1-2   | Local development      | Databricks Connect, local Spark, small data samples          |
+| **Build Agents**   | Stage 2-4   | CI validation          | GitHub Actions runners, unit/component tests                 |
+| **PLTE (Staging)** | Stage 5-6   | Acceptance testing     | Production-like config, cloned data, ephemeral or persistent |
+| **Demo**           | Stage 7     | Stakeholder validation | Trunk-HEAD or release-HEAD, stable test data                 |
+| **Production**     | Stage 10-12 | Live operation         | Real data, monitored, strict access controls                 |
 
 ## Unity Catalog Structure
 
@@ -215,7 +215,6 @@ def cleanup_ephemeral_plte(pr_number: int):
 
 **GitHub Actions Integration:**
 
-
 ```yaml
 - name: Create ephemeral PLTE
   id: plte
@@ -233,7 +232,6 @@ def cleanup_ephemeral_plte(pr_number: int):
   run: |
     python scripts/cleanup_ephemeral_plte.py $<< github.event.number >>
 ```
-
 
 ### Strategy 2: Persistent Staging Environment
 

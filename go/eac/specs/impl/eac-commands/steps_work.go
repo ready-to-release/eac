@@ -138,7 +138,7 @@ func setupWorkspace(ctx *internal.TestContext, branch string) error {
 
 	// Create worktree directory
 	worktreePath := filepath.Join(ctx.IsolatedDir, "worktrees", branch)
-	if err := os.MkdirAll(filepath.Dir(worktreePath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(worktreePath), 0o755); err != nil {
 		return fmt.Errorf("failed to create worktree directory: %w", err)
 	}
 
@@ -218,7 +218,7 @@ func createUncommittedChanges(ctx *internal.TestContext) error {
 		workDir = ctx.IsolatedDir
 	}
 	testFile := filepath.Join(workDir, "test-change.txt")
-	return os.WriteFile(testFile, []byte("uncommitted change\n"), 0644)
+	return os.WriteFile(testFile, []byte("uncommitted change\n"), 0o644)
 }
 
 // verifyWorkspaceRemoved verifies that the worktree was removed.

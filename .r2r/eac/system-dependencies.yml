@@ -29,3 +29,38 @@ dependencies:
     verify:
       command: "upx --version"
       pattern: "UPX (\\d+\\.\\d+)"
+
+  # Project-specific: golangci-lint for Go linting
+  - moniker: golangci-lint
+    name: "golangci-lint"
+    description: "Fast Go linters runner"
+    version: "2.0"
+    verify:
+      command: "golangci-lint version --short"
+      pattern: "^(\\d+\\.\\d+)"
+
+  # Project-specific: markdownlint-cli2 for markdown linting
+  # Same engine as VSCode markdownlint extension for consistency
+  # Config: .markdownlint.yml (rules), .markdownlint-cli2.yaml (ignores)
+  - moniker: markdownlint-cli2
+    name: "markdownlint-cli2"
+    description: "Markdown linter CLI2 (same engine as VSCode extension)"
+    version: "any"
+    verify:
+      command: "npm list -g markdownlint-cli2 --depth=0"
+      pattern: "markdownlint-cli2@(\\d+\\.\\d+)"
+
+  # Project-specific: prettier for markdown table formatting
+  # Formats tables to aligned style (MD060 compliance)
+  # Config: .prettierrc
+  - moniker: prettier
+    name: "Prettier"
+    description: "Code formatter for markdown table alignment"
+    version: "any"
+    verify:
+      command: "npm list -g prettier --depth=0"
+      pattern: "prettier@(\\d+\\.\\d+)"
+
+# Capability to system dependency mappings (project overrides)
+capability_requirements:
+  markdown: [markdownlint-cli2]

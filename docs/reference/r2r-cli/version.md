@@ -25,7 +25,7 @@ r2r version
 
 **Example output:**
 
-```
+```text
 r2r-cli version 1.2.3
 ```
 
@@ -41,7 +41,7 @@ r2r version
 
 The version number follows semantic versioning (semver):
 
-```
+```text
 MAJOR.MINOR.PATCH
 ```
 

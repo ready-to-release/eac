@@ -4,12 +4,12 @@ Testing and test suite management for BDD specifications and unit tests.
 
 ## Commands in this Category
 
-| Command | Purpose |
-|---------|---------|
-| [test](./test.md) | Test one or more modules |
-| [test debug](./debug.md) | Parse test results and list failures |
-| [test list-suites](./list-suites.md) | List all available test suites |
-| [test suite](./suite.md) | Run tests for a specific test suite |
+| Command                              | Purpose                              |
+| ------------------------------------ | ------------------------------------ |
+| [test](./test.md)                    | Test one or more modules             |
+| [test debug](./debug.md)             | Parse test results and list failures |
+| [test list-suites](./list-suites.md) | List all available test suites       |
+| [test suite](./suite.md)             | Run tests for a specific test suite  |
 
 ## Quick Examples
 

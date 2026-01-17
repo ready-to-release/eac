@@ -20,7 +20,7 @@ import (
 // log is shared across the internal package (declared in cache.go)
 
 // Global process-level cache shared across ALL test packages
-// This prevents 14+ concurrent git ls-files calls when running tests in parallel
+// This prevents 14+ concurrent git ls-files calls when running tests in parallel.
 var (
 	globalRepoCache     *TestCache
 	globalRepoCacheOnce sync.Once
@@ -65,7 +65,7 @@ func BuildTagFilter() string {
 // buildPlatformTagFilter returns a tag filter that excludes platform-incompatible scenarios.
 // On Windows, excludes @deps:linux and @deps:darwin
 // On Linux, excludes @deps:windows and @deps:darwin
-// On Darwin, excludes @deps:windows and @deps:linux
+// On Darwin, excludes @deps:windows and @deps:linux.
 func buildPlatformTagFilter() string {
 	switch runtime.GOOS {
 	case "windows":
@@ -123,7 +123,7 @@ func GetRepoRoot() (string, error) {
 	return repository.GetRepositoryRoot("")
 }
 
-// suiteInitOnce ensures diagnostics are logged only once per test run
+// suiteInitOnce ensures diagnostics are logged only once per test run.
 var suiteInitOnce sync.Once
 
 // logSuiteInitDiagnostics logs diagnostic information at suite initialization.
