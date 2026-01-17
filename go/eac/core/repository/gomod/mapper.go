@@ -7,7 +7,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 )
 
-// Mapper handles mapping between go.mod module paths and module contract monikers
+// Mapper handles mapping between go.mod module paths and module contract monikers.
 type Mapper struct {
 	registry       *modules.Registry
 	baseModulePath string // e.g., "github.com/ready-to-release/eac"
@@ -15,7 +15,7 @@ type Mapper struct {
 	monikerToPath  map[string]string
 }
 
-// NewMapper creates a new mapper with the given registry and base module path
+// NewMapper creates a new mapper with the given registry and base module path.
 func NewMapper(registry *modules.Registry, baseModulePath string) *Mapper {
 	mapper := &Mapper{
 		registry:       registry,
@@ -28,7 +28,7 @@ func NewMapper(registry *modules.Registry, baseModulePath string) *Mapper {
 	return mapper
 }
 
-// buildMappings builds bidirectional lookup maps between module paths and monikers
+// buildMappings builds bidirectional lookup maps between module paths and monikers.
 func (m *Mapper) buildMappings() {
 	for _, module := range m.registry.All() {
 		// Build expected module path from files root
@@ -42,7 +42,7 @@ func (m *Mapper) buildMappings() {
 }
 
 // GetMonikerFromPath converts a go.mod module path to a module moniker
-// Example: "github.com/ready-to-release/eac/go/r2r/cli" -> "r2r-cli"
+// Example: "github.com/ready-to-release/eac/go/r2r/cli" -> "r2r-cli".
 func (m *Mapper) GetMonikerFromPath(modulePath string) (string, error) {
 	if moniker, ok := m.pathToMoniker[modulePath]; ok {
 		return moniker, nil
@@ -83,7 +83,7 @@ func (m *Mapper) GetMonikerFromPath(modulePath string) (string, error) {
 }
 
 // GetPathFromMoniker converts a module moniker to a go.mod module path
-// Example: "r2r-cli" -> "github.com/ready-to-release/eac/go/r2r/cli"
+// Example: "r2r-cli" -> "github.com/ready-to-release/eac/go/r2r/cli".
 func (m *Mapper) GetPathFromMoniker(moniker string) (string, error) {
 	if path, ok := m.monikerToPath[moniker]; ok {
 		return path, nil
@@ -100,7 +100,7 @@ func (m *Mapper) GetPathFromMoniker(moniker string) (string, error) {
 
 // GetMonikerFromModuleDir converts a module directory to a moniker
 // Example: "go/r2r/cli" -> "r2r-cli"
-// Also handles subdirectories: "go/eac/core/ai" -> "eac-core"
+// Also handles subdirectories: "go/eac/core/ai" -> "eac-core".
 func (m *Mapper) GetMonikerFromModuleDir(moduleDir string) (string, error) {
 	// Normalize path separators
 	normalizedDir := strings.ReplaceAll(moduleDir, "\\", "/")
@@ -139,7 +139,7 @@ func (m *Mapper) GetMonikerFromModuleDir(moduleDir string) (string, error) {
 }
 
 // MapInternalDependenciesToMonikers converts a list of internal module paths to monikers
-// Example: ["github.com/ready-to-release/eac/go/eac/core"] -> ["eac-core"]
+// Example: ["github.com/ready-to-release/eac/go/eac/core"] -> ["eac-core"].
 func (m *Mapper) MapInternalDependenciesToMonikers(modulePaths []string) ([]string, []error) {
 	var monikers []string
 	var errors []error
@@ -156,17 +156,17 @@ func (m *Mapper) MapInternalDependenciesToMonikers(modulePaths []string) ([]stri
 	return monikers, errors
 }
 
-// IsInternalModulePath checks if a module path belongs to this repository
+// IsInternalModulePath checks if a module path belongs to this repository.
 func (m *Mapper) IsInternalModulePath(modulePath string) bool {
 	return IsInternalModule(modulePath, m.baseModulePath)
 }
 
-// GetBaseModulePath returns the base module path for this repository
+// GetBaseModulePath returns the base module path for this repository.
 func (m *Mapper) GetBaseModulePath() string {
 	return m.baseModulePath
 }
 
-// GetAllMappings returns all path-to-moniker mappings
+// GetAllMappings returns all path-to-moniker mappings.
 func (m *Mapper) GetAllMappings() map[string]string {
 	// Return a copy to prevent external modification
 	result := make(map[string]string, len(m.pathToMoniker))

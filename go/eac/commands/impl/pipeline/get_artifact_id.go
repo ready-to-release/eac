@@ -35,7 +35,7 @@ func init() {
 	registry.Register(PipelineGetArtifactID)
 }
 
-// ArtifactInfo from GitHub API
+// ArtifactInfo from GitHub API.
 type ArtifactInfo struct {
 	ID   int64  `json:"id"`
 	Name string `json:"name"`

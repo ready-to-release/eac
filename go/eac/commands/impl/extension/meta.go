@@ -19,14 +19,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// commandFlags defines valid flags for the extension-meta command
+// commandFlags defines valid flags for the extension-meta command.
 func init() {
 	registry.Register(ExtensionMeta)
 }
 
 var log = logging.C()
 
-// Metadata defines the extension metadata structure for r2r CLI
+// Metadata defines the extension metadata structure for r2r CLI.
 type Metadata struct {
 	Name               string             `yaml:"name"`
 	Version            string             `yaml:"version"`
@@ -41,27 +41,27 @@ type Metadata struct {
 	Metadata           ExtensionMetadata  `yaml:"metadata"`
 }
 
-// EnvVar defines an environment variable request from the extension
+// EnvVar defines an environment variable request from the extension.
 type EnvVar struct {
 	Name     string `yaml:"name"`
 	Value    string `yaml:"value,omitempty"`
 	Required bool   `yaml:"required,omitempty"`
 }
 
-// Volume defines a volume mount request from the extension
+// Volume defines a volume mount request from the extension.
 type Volume struct {
 	Name   string `yaml:"name"`
 	Target string `yaml:"target"`
 	Type   string `yaml:"type"`
 }
 
-// Command defines a single command structure
+// Command defines a single command structure.
 type Command struct {
 	Description string   `yaml:"description"`
 	Parameters  []string `yaml:"parameters,omitempty"`
 }
 
-// Requirements defines extension requirements
+// Requirements defines extension requirements.
 type Requirements struct {
 	R2RCLIVersion    string `yaml:"r2r-version"`
 	ContainerRuntime string `yaml:"container-runtime"`
@@ -69,7 +69,7 @@ type Requirements struct {
 	MinimumCPU       string `yaml:"minimum-cpu"`
 }
 
-// ExtensionMetadata defines extension metadata
+// ExtensionMetadata defines extension metadata.
 type ExtensionMetadata struct {
 	Author        string   `yaml:"author"`
 	Repository    string   `yaml:"repository"`
@@ -78,7 +78,7 @@ type ExtensionMetadata struct {
 	Tags          []string `yaml:"tags"`
 }
 
-// ExtensionMeta outputs extension metadata in YAML format for r2r CLI
+// ExtensionMeta outputs extension metadata in YAML format for r2r CLI.
 func ExtensionMeta() int {
 	// Validate flags
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
@@ -186,7 +186,7 @@ func ExtensionMeta() int {
 	return 0
 }
 
-// PrintAvailableCommands prints a user-friendly list of available commands
+// PrintAvailableCommands prints a user-friendly list of available commands.
 func PrintAvailableCommands() {
 	fmt.Println("EAC - Everything as Code")
 	fmt.Println("Repository management tooling for R2R CLI")

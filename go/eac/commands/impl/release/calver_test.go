@@ -178,7 +178,6 @@ func TestGenerateAndParse_Roundtrip(t *testing.T) {
 		for _, tm := range testTimes {
 			tag := GenerateCalverTag(prefix, tm)
 			parsedPrefix, parsedTime, err := ParseCalverTag(tag)
-
 			if err != nil {
 				t.Errorf("Roundtrip failed for %s/%v: parse error %v", prefix, tm, err)
 				continue

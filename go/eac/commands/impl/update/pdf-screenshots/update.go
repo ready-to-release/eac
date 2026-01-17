@@ -45,14 +45,14 @@ import (
 var log = logging.C()
 
 const (
-	// pdfToolsImage is the Docker image for PDF operations
+	// pdfToolsImage is the Docker image for PDF operations.
 	pdfToolsImage = "pdf-tools:latest"
 
-	// defaultDPI is the default resolution for extracted images
+	// defaultDPI is the default resolution for extracted images.
 	defaultDPI = 150
 )
 
-// PDFInfo holds information about a found PDF file
+// PDFInfo holds information about a found PDF file.
 type PDFInfo struct {
 	Path     string // Absolute path to PDF
 	RelPath  string // Relative path from out/build
@@ -66,7 +66,7 @@ func init() {
 	registry.Register(UpdatePDFScreenshots)
 }
 
-// UpdatePDFScreenshots scans out/build for PDFs and extracts pages as images
+// UpdatePDFScreenshots scans out/build for PDFs and extracts pages as images.
 func UpdatePDFScreenshots() int {
 	// Validate flags
 	args := os.Args[2:]
@@ -203,7 +203,7 @@ func UpdatePDFScreenshots() int {
 	}
 
 	// Ensure cache root exists
-	if err := os.MkdirAll(cacheRoot, 0755); err != nil {
+	if err := os.MkdirAll(cacheRoot, 0o755); err != nil {
 		log.Errorf("Error creating cache directory: %v", err)
 		return 1
 	}
@@ -223,11 +223,11 @@ func UpdatePDFScreenshots() int {
 			if verbose {
 				fmt.Printf("  Clearing stale cache for %s\n", pdf.BookName)
 			}
-			os.RemoveAll(pdf.CacheDir)
+			_ = os.RemoveAll(pdf.CacheDir)
 		}
 
 		// Create cache directory for this PDF
-		if err := os.MkdirAll(pdf.CacheDir, 0755); err != nil {
+		if err := os.MkdirAll(pdf.CacheDir, 0o755); err != nil {
 			log.Errorf("  ❌ Failed to create cache dir for %s: %v", pdf.RelPath, err)
 			failed++
 			continue
@@ -237,14 +237,14 @@ func UpdatePDFScreenshots() int {
 		if err := extractPages(dockerClient, pdf.Path, pdf.CacheDir, dpi); err != nil {
 			log.Errorf("  ❌ Failed to extract %s: %v", pdf.RelPath, err)
 			// Clean up partial cache
-			os.RemoveAll(pdf.CacheDir)
+			_ = os.RemoveAll(pdf.CacheDir)
 			failed++
 			continue
 		}
 
 		// Write hash marker file
 		hashMarker := filepath.Join(pdf.CacheDir, pdf.Hash+".cache")
-		if err := os.WriteFile(hashMarker, []byte(pdf.Hash), 0644); err != nil {
+		if err := os.WriteFile(hashMarker, []byte(pdf.Hash), 0o644); err != nil {
 			log.Errorf("  ⚠️  Failed to write cache marker for %s: %v", pdf.RelPath, err)
 		}
 
@@ -272,8 +272,8 @@ func UpdatePDFScreenshots() int {
 	return 0
 }
 
-// scanForPDFs finds all PDF files in the build directory
-func scanForPDFs(buildDir string, moduleFilter string) ([]PDFInfo, error) {
+// scanForPDFs finds all PDF files in the build directory.
+func scanForPDFs(buildDir, moduleFilter string) ([]PDFInfo, error) {
 	var pdfs []PDFInfo
 
 	if _, err := os.Stat(buildDir); os.IsNotExist(err) {
@@ -288,7 +288,10 @@ func scanForPDFs(buildDir string, moduleFilter string) ([]PDFInfo, error) {
 			return nil
 		}
 
-		relPath, _ := filepath.Rel(buildDir, path)
+		relPath, relErr := filepath.Rel(buildDir, path)
+		if relErr != nil {
+			relPath = path // Fallback to absolute path
+		}
 		parts := strings.Split(filepath.ToSlash(relPath), "/")
 		module := ""
 		if len(parts) > 0 {
@@ -317,7 +320,7 @@ func scanForPDFs(buildDir string, moduleFilter string) ([]PDFInfo, error) {
 	return pdfs, err
 }
 
-// hashFile returns the SHA256 hash of a file (first 12 characters)
+// hashFile returns the SHA256 hash of a file (first 12 characters).
 func hashFile(path string) string {
 	f, err := os.Open(path)
 	if err != nil {
@@ -333,7 +336,7 @@ func hashFile(path string) string {
 	return fmt.Sprintf("%x", h.Sum(nil))[:12]
 }
 
-// cacheValidWithHash checks if cache dir exists with correct hash marker
+// cacheValidWithHash checks if cache dir exists with correct hash marker.
 func cacheValidWithHash(cacheDir, hash string) bool {
 	// Check for hash marker file: <hash>.cache
 	hashMarker := filepath.Join(cacheDir, hash+".cache")
@@ -355,7 +358,7 @@ func cacheValidWithHash(cacheDir, hash string) bool {
 	return false
 }
 
-// countPages counts the number of PNG files in a directory
+// countPages counts the number of PNG files in a directory.
 func countPages(dir string) int {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -371,7 +374,7 @@ func countPages(dir string) int {
 	return count
 }
 
-// ensurePDFToolsImage builds the pdf-tools Docker image if needed
+// ensurePDFToolsImage builds the pdf-tools Docker image if needed.
 func ensurePDFToolsImage(repoRoot string) error {
 	// Check if image exists
 	cmd := exec.Command("docker", "image", "inspect", pdfToolsImage)
@@ -393,7 +396,7 @@ func ensurePDFToolsImage(repoRoot string) error {
 	return cmd.Run()
 }
 
-// extractPages uses pdftoppm to extract PDF pages as PNG images
+// extractPages uses pdftoppm to extract PDF pages as PNG images.
 func extractPages(client serve.DockerClient, pdfPath, outputDir string, dpi int) error {
 	pdfDir := filepath.Dir(pdfPath)
 	pdfName := filepath.Base(pdfPath)
@@ -436,7 +439,7 @@ func extractPages(client serve.DockerClient, pdfPath, outputDir string, dpi int)
 	defer func() {
 		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cleanupCancel()
-		client.ContainerRemove(cleanupCtx, containerID, container.RemoveOptions{Force: true})
+		_ = client.ContainerRemove(cleanupCtx, containerID, container.RemoveOptions{Force: true}) //nolint:errcheck // best-effort cleanup
 	}()
 
 	// Start container
@@ -454,8 +457,8 @@ func extractPages(client serve.DockerClient, pdfPath, outputDir string, dpi int)
 		}
 	case waitResp := <-waitChan:
 		if waitResp.StatusCode != 0 {
-			// Get logs for debugging
-			logs, _ := getContainerLogs(ctx, client, containerID)
+			// Get logs for debugging (best-effort, ignore error)
+			logs, _ := getContainerLogs(ctx, client, containerID) //nolint:errcheck // best-effort log retrieval for error message
 			return fmt.Errorf("container exited with code %d: %s", waitResp.StatusCode, logs)
 		}
 	case <-ctx.Done():
@@ -467,7 +470,7 @@ func extractPages(client serve.DockerClient, pdfPath, outputDir string, dpi int)
 	return renameToZeroPadded(outputDir)
 }
 
-// getContainerLogs retrieves container logs for debugging
+// getContainerLogs retrieves container logs for debugging.
 func getContainerLogs(ctx context.Context, client serve.DockerClient, containerID string) (string, error) {
 	logsReader, err := client.ContainerLogs(ctx, containerID, container.LogsOptions{
 		ShowStdout: true,
@@ -479,7 +482,7 @@ func getContainerLogs(ctx context.Context, client serve.DockerClient, containerI
 	defer logsReader.Close()
 
 	var stdout, stderr bytes.Buffer
-	stdcopy.StdCopy(&stdout, &stderr, logsReader)
+	_, _ = stdcopy.StdCopy(&stdout, &stderr, logsReader) //nolint:errcheck // best-effort log copy
 
 	if stderr.Len() > 0 {
 		return stderr.String(), nil
@@ -487,7 +490,7 @@ func getContainerLogs(ctx context.Context, client serve.DockerClient, containerI
 	return stdout.String(), nil
 }
 
-// renameToZeroPadded renames page-1.png to page-01.png etc for proper sorting
+// renameToZeroPadded renames page-1.png to page-01.png etc for proper sorting.
 func renameToZeroPadded(dir string) error {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -520,7 +523,10 @@ func renameToZeroPadded(dir string) error {
 	for _, entry := range entries {
 		matches := pagePattern.FindStringSubmatch(entry.Name())
 		if matches != nil {
-			num, _ := strconv.Atoi(matches[1])
+			num, convErr := strconv.Atoi(matches[1])
+			if convErr != nil {
+				continue
+			}
 			newName := fmt.Sprintf("page-%0*d.png", padWidth, num)
 			if entry.Name() != newName {
 				oldPath := filepath.Join(dir, entry.Name())

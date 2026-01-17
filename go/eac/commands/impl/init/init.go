@@ -59,8 +59,10 @@ var log = logging.C()
 
 // gitRepo holds the git repository instance for git operations.
 // In production, this is initialized lazily. For tests, it can be injected via SetGitRepo.
-var gitRepo git.GitRepository
-var gitMgr *git.RepositoryManager
+var (
+	gitRepo git.GitRepository
+	gitMgr  *git.RepositoryManager
+)
 
 // initGitManager initializes the git repository manager if needed.
 func initGitManager() {
@@ -92,7 +94,7 @@ func ResetGitRepo() {
 	gitMgr = nil
 }
 
-// Init initializes EAC project configuration
+// Init initializes EAC project configuration.
 func Init() int {
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
@@ -309,7 +311,7 @@ func Init() int {
 	return 0
 }
 
-// agentConfig holds configuration for an AI provider
+// agentConfig holds configuration for an AI provider.
 type agentConfig struct {
 	providerName string // "claude-api", "claude-cli", "openai", "gemini"
 	envVarName   string // "ANTHROPIC_API_KEY", etc. (empty for claude-cli)
@@ -317,13 +319,13 @@ type agentConfig struct {
 	endpoint     string // API endpoint URL (empty for claude-cli)
 }
 
-// tokenConfig holds actual token values (for personal config)
+// tokenConfig holds actual token values (for personal config).
 type tokenConfig struct {
 	aiToken  string // Actual AI API token
 	gitToken string // Actual Git API token
 }
 
-// checkExistingConfig checks if config files exist and validates force flag
+// checkExistingConfig checks if config files exist and validates force flag.
 func checkExistingConfig(teamPath, personalPath string, force bool) error {
 	teamExists := fileExists(teamPath)
 	personalExists := fileExists(personalPath)
@@ -361,13 +363,13 @@ func checkExistingConfig(teamPath, personalPath string, force bool) error {
 	return nil
 }
 
-// fileExists checks if a file exists
+// fileExists checks if a file exists.
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
 }
 
-// configureAgent configures the AI provider based on user input
+// configureAgent configures the AI provider based on user input.
 func configureAgent(aiProvider string) (*agentConfig, error) {
 	config := &agentConfig{}
 
@@ -380,7 +382,7 @@ func configureAgent(aiProvider string) (*agentConfig, error) {
 	return config, nil
 }
 
-// configureProvider sets up the config based on the provider key
+// configureProvider sets up the config based on the provider key.
 func configureProvider(config *agentConfig, provider string) error {
 	switch strings.ToLower(provider) {
 	case "claude-api":
@@ -408,7 +410,7 @@ func configureProvider(config *agentConfig, provider string) error {
 	return nil
 }
 
-// displayProviderInfo shows information about the selected provider
+// displayProviderInfo shows information about the selected provider.
 func displayProviderInfo(config *agentConfig) {
 	log.Info("")
 	log.Info(fmt.Sprintf("✓ %s selected", config.providerName))
@@ -436,13 +438,13 @@ func displayProviderInfo(config *agentConfig) {
 	log.Info("")
 }
 
-// createDirectoryStructure creates the .r2r/eac directory structure
+// createDirectoryStructure creates the .r2r/eac directory structure.
 func createDirectoryStructure(workspaceRoot string) error {
 	// Create .r2r/eac directory
 	eacDir := paths.EACConfigPath(workspaceRoot)
 	log.Info(fmt.Sprintf("   Creating directory: %s", eacDir))
 
-	if err := os.MkdirAll(eacDir, 0755); err != nil {
+	if err := os.MkdirAll(eacDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create .r2r/eac directory: %w", err)
 	}
 
@@ -454,7 +456,7 @@ func createDirectoryStructure(workspaceRoot string) error {
 	return nil
 }
 
-// writeConfig writes the EAC configuration (team or personal based on tokens)
+// writeConfig writes the EAC configuration (team or personal based on tokens).
 func writeConfig(workspaceRoot string, config *agentConfig, tokens *tokenConfig) (string, error) {
 	// Determine which file to write and whether to use env vars or direct tokens
 	var configPath string
@@ -476,14 +478,14 @@ func writeConfig(workspaceRoot string, config *agentConfig, tokens *tokenConfig)
 	content := buildConfigContent(config, tokens, useEnvVars)
 
 	// Write to file
-	if err := os.WriteFile(configPath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(content), 0o644); err != nil {
 		return "", fmt.Errorf("failed to write config file: %w", err)
 	}
 
 	return configPath, nil
 }
 
-// buildConfigContent builds the YAML config content
+// buildConfigContent builds the YAML config content.
 func buildConfigContent(config *agentConfig, tokens *tokenConfig, useEnvVars bool) string {
 	var content strings.Builder
 
@@ -541,7 +543,7 @@ func buildConfigContent(config *agentConfig, tokens *tokenConfig, useEnvVars boo
 	return content.String()
 }
 
-// copySystemTemplates copies system default configuration files to user repository
+// copySystemTemplates copies system default configuration files to user repository.
 func copySystemTemplates(workspaceRoot string, force bool) error {
 	// Get system root (Docker container or local dev)
 	systemRoot := os.Getenv("R2R_CONTAINER_ROOT")
@@ -590,7 +592,7 @@ func copySystemTemplates(workspaceRoot string, force bool) error {
 		}
 
 		// Write to destination
-		if err := os.WriteFile(dstPath, data, 0644); err != nil {
+		if err := os.WriteFile(dstPath, data, 0o644); err != nil {
 			return fmt.Errorf("failed to write %s: %w", dstPath, err)
 		}
 
@@ -604,7 +606,7 @@ func copySystemTemplates(workspaceRoot string, force bool) error {
 	return nil
 }
 
-// generateRepositoryYML generates repository.yml with calculated defaults
+// generateRepositoryYML generates repository.yml with calculated defaults.
 func generateRepositoryYML(workspaceRoot, eacDir string) error {
 	// Load calculated config (merges all defaults)
 	cfg, err := config.Load(config.LoadOptions{
@@ -633,7 +635,7 @@ func generateRepositoryYML(workspaceRoot, eacDir string) error {
 `
 
 	path := filepath.Join(eacDir, "repository.yml")
-	if err := os.WriteFile(path, []byte(header+string(yamlBytes)), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(header+string(yamlBytes)), 0o644); err != nil {
 		return fmt.Errorf("failed to write repository.yml: %w", err)
 	}
 
@@ -641,7 +643,7 @@ func generateRepositoryYML(workspaceRoot, eacDir string) error {
 	return nil
 }
 
-// generateBooksYML generates books.yml with empty template
+// generateBooksYML generates books.yml with empty template.
 func generateBooksYML(eacDir string) error {
 	content := `# Documentation Books Configuration
 # Generated by: r2r eac init
@@ -664,7 +666,7 @@ books: []
 `
 
 	path := filepath.Join(eacDir, "books.yml")
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		return fmt.Errorf("failed to write books.yml: %w", err)
 	}
 
@@ -672,7 +674,7 @@ books: []
 	return nil
 }
 
-// generateEnvironmentsYML generates environments.yml with empty template
+// generateEnvironmentsYML generates environments.yml with empty template.
 func generateEnvironmentsYML(eacDir string) error {
 	content := `# Test Environments Configuration
 # Generated by: r2r eac init
@@ -705,7 +707,7 @@ environments: []
 `
 
 	path := filepath.Join(eacDir, "environments.yml")
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		return fmt.Errorf("failed to write environments.yml: %w", err)
 	}
 

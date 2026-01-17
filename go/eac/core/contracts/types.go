@@ -1,11 +1,11 @@
 package contracts
 
-// RepositoryContract represents repository-level configuration
+// RepositoryContract represents repository-level configuration.
 type RepositoryContract struct {
 	Repository RepositoryConfig `yaml:"repository"`
 }
 
-// RepositoryConfig contains repository-level settings
+// RepositoryConfig contains repository-level settings.
 type RepositoryConfig struct {
 	Type             string           `yaml:"type"`                // mono | poly | adjunct
 	Schemes          []string         `yaml:"schemes"`             // Valid versioning schemes (SemVer, CalVer)
@@ -15,30 +15,30 @@ type RepositoryConfig struct {
 	Versioning       VersioningConfig `yaml:"versioning"`          // Versioning constraints
 }
 
-// PRConfig contains pull request workflow configuration
+// PRConfig contains pull request workflow configuration.
 type PRConfig struct {
 	DeleteBranchOnMerge bool   `yaml:"delete_branch_on_merge"` // Auto-delete branch after merge
 	MergeStrategy       string `yaml:"merge_strategy"`         // squash | merge | rebase
 }
 
-// VersioningConfig contains repository-wide versioning constraints
+// VersioningConfig contains repository-wide versioning constraints.
 type VersioningConfig struct {
 	Constraint string `yaml:"constraint"` // unrestricted | patch-only | calver-only
 }
 
-// ModulesContract represents the modules configuration file
+// ModulesContract represents the modules configuration file.
 type ModulesContract struct {
 	Defaults *ModuleDefaults `yaml:"defaults,omitempty"` // Module-level defaults
 	Modules  []BaseContract  `yaml:"modules"`            // Module definitions
 }
 
-// ModuleDefaults contains default values inherited by all modules
+// ModuleDefaults contains default values inherited by all modules.
 type ModuleDefaults struct {
 	Paths       DefaultPaths       `yaml:"paths"`
 	Conventions DefaultConventions `yaml:"conventions"`
 }
 
-// DefaultPaths contains default path configuration
+// DefaultPaths contains default path configuration.
 type DefaultPaths struct {
 	TestImplRoot string   `yaml:"test_impl_root"` // Default test implementation root
 	SpecsRoot    string   `yaml:"specs_root"`     // Default specs root
@@ -46,7 +46,7 @@ type DefaultPaths struct {
 	Out          OutPaths `yaml:"out"`            // Output directory structure
 }
 
-// OutPaths contains output directory structure
+// OutPaths contains output directory structure.
 type OutPaths struct {
 	Root     string `yaml:"root"`     // Root output directory
 	Build    string `yaml:"build"`    // Build output directory
@@ -56,20 +56,20 @@ type OutPaths struct {
 	Tools    string `yaml:"tools"`    // Tools output directory
 }
 
-// DefaultConventions contains default filename conventions
+// DefaultConventions contains default filename conventions.
 type DefaultConventions struct {
 	GodogTest   string `yaml:"godog_test"`   // Godog test file name
 	PackageJSON string `yaml:"package_json"` // Node.js package file name
 	Changelog   string `yaml:"changelog"`    // Changelog file name
 }
 
-// ModuleVersioning contains module versioning configuration
+// ModuleVersioning contains module versioning configuration.
 type ModuleVersioning struct {
 	Scheme  string `yaml:"scheme"`            // SemVer | CalVer
 	Current string `yaml:"current,omitempty"` // Current version (optional)
 }
 
-// BaseContract represents the base structure for module contracts
+// BaseContract represents the base structure for module contracts.
 type BaseContract struct {
 	Moniker       string                 `yaml:"moniker"`
 	Name          string                 `yaml:"name"`
@@ -86,14 +86,14 @@ type BaseContract struct {
 	Metadata      map[string]string      `yaml:"metadata,omitempty"` // Generic key-value store for module-specific data
 }
 
-// ReleaseBundle configures how the release module creates GitHub releases
+// ReleaseBundle configures how the release module creates GitHub releases.
 type ReleaseBundle struct {
 	TitleFormat string                  `yaml:"title_format" json:"title_format"` // Title template, e.g., "{r2r} ({r2r_version}) + {eac} ({eac_version})"
 	Headline    map[string]string       `yaml:"headline" json:"headline"`         // Map of label -> moniker for title modules
 	Categories  []ReleaseBundleCategory `yaml:"categories" json:"categories"`     // Grouped modules for release notes
 }
 
-// ReleaseBundleCategory groups modules in release notes
+// ReleaseBundleCategory groups modules in release notes.
 type ReleaseBundleCategory struct {
 	Name        string   `yaml:"name" json:"name"`               // Category name, e.g., "Core Tools"
 	Description string   `yaml:"description" json:"description"` // Category description
@@ -101,14 +101,14 @@ type ReleaseBundleCategory struct {
 }
 
 // ModuleBuild contains per-module build configuration
-// This allows modules to define their own artifacts instead of relying on type-level defaults
+// This allows modules to define their own artifacts instead of relying on type-level defaults.
 type ModuleBuild struct {
 	Handler   string           `yaml:"handler,omitempty"`   // Explicit build handler override (e.g., "mkdocs", "docker")
 	Artifacts []ModuleArtifact `yaml:"artifacts,omitempty"` // Artifacts to produce
 	Options   *BuildOptions    `yaml:"options,omitempty"`   // Build behavior options
 }
 
-// ModuleArtifact defines an artifact to be produced by a module build
+// ModuleArtifact defines an artifact to be produced by a module build.
 type ModuleArtifact struct {
 	ID          string `yaml:"id"`                    // Unique artifact identifier
 	Type        string `yaml:"type"`                  // executable, file, directory, test
@@ -117,12 +117,12 @@ type ModuleArtifact struct {
 	DeriveFrom  string `yaml:"derive_from,omitempty"` // Source artifact to derive from (for compressed variants)
 }
 
-// BuildOptions contains optional build behavior flags
+// BuildOptions contains optional build behavior flags.
 type BuildOptions struct {
 	// Reserved for future build options
 }
 
-// Files represents all file ownership patterns for a module
+// Files represents all file ownership patterns for a module.
 type Files struct {
 	Root string `yaml:"root"` // Base directory for this module
 
@@ -143,13 +143,13 @@ type Files struct {
 	Repo RepoPatterns `yaml:"repo"`
 }
 
-// Workflows defines GitHub Actions workflow file ownership
+// Workflows defines GitHub Actions workflow file ownership.
 type Workflows struct {
 	CI      string `yaml:"ci"`      // CI workflow file path
 	Release string `yaml:"release"` // Release workflow file path
 }
 
-// Flags defines module behavior flags
+// Flags defines module behavior flags.
 type Flags struct {
 	// ExplicitOwnership disables the default "all files under root" ownership.
 	// When true, the module only owns files that explicitly match its patterns
@@ -159,7 +159,7 @@ type Flags struct {
 	ExplicitOwnership bool `yaml:"explicit_ownership,omitempty"`
 }
 
-// RepoPatterns represents patterns relative to repository root
+// RepoPatterns represents patterns relative to repository root.
 type RepoPatterns struct {
 	Specs    []string `yaml:"specs"`     // Specification files
 	TestImpl string   `yaml:"test_impl"` // Test implementation directory path
@@ -190,12 +190,12 @@ func (b *BaseContract) GetRoot() string {
 	return b.Files.Root
 }
 
-// HasBuildArtifacts returns true if the module has per-module build artifacts defined
+// HasBuildArtifacts returns true if the module has per-module build artifacts defined.
 func (b *BaseContract) HasBuildArtifacts() bool {
 	return b.Build != nil && len(b.Build.Artifacts) > 0
 }
 
-// GetBuildArtifacts returns the per-module build artifacts, or nil if none defined
+// GetBuildArtifacts returns the per-module build artifacts, or nil if none defined.
 func (b *BaseContract) GetBuildArtifacts() []ModuleArtifact {
 	if b.Build == nil {
 		return nil
@@ -203,7 +203,7 @@ func (b *BaseContract) GetBuildArtifacts() []ModuleArtifact {
 	return b.Build.Artifacts
 }
 
-// HasExecutableArtifacts returns true if any artifacts are of type executable
+// HasExecutableArtifacts returns true if any artifacts are of type executable.
 func (b *BaseContract) HasExecutableArtifacts() bool {
 	if b.Build == nil {
 		return false
@@ -216,7 +216,7 @@ func (b *BaseContract) HasExecutableArtifacts() bool {
 	return false
 }
 
-// HasTestArtifacts returns true if any artifacts are of type test
+// HasTestArtifacts returns true if any artifacts are of type test.
 func (b *BaseContract) HasTestArtifacts() bool {
 	if b.Build == nil {
 		return false
@@ -229,7 +229,7 @@ func (b *BaseContract) HasTestArtifacts() bool {
 	return false
 }
 
-// GetBuildHandler returns the explicit build handler for this module, or empty string if not set
+// GetBuildHandler returns the explicit build handler for this module, or empty string if not set.
 func (b *BaseContract) GetBuildHandler() string {
 	if b.Build == nil {
 		return ""
@@ -237,7 +237,7 @@ func (b *BaseContract) GetBuildHandler() string {
 	return b.Build.Handler
 }
 
-// GetArtifactsByType returns all artifacts of the specified type
+// GetArtifactsByType returns all artifacts of the specified type.
 func (b *BaseContract) GetArtifactsByType(artifactType string) []ModuleArtifact {
 	if b.Build == nil {
 		return nil
@@ -251,12 +251,12 @@ func (b *BaseContract) GetArtifactsByType(artifactType string) []ModuleArtifact 
 	return result
 }
 
-// HasBooks returns true if the module has books defined
+// HasBooks returns true if the module has books defined.
 func (b *BaseContract) HasBooks() bool {
 	return len(b.Books) > 0
 }
 
-// GetBooks returns the list of book names for this module
+// GetBooks returns the list of book names for this module.
 func (b *BaseContract) GetBooks() []string {
 	return b.Books
 }

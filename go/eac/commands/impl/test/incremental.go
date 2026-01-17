@@ -106,7 +106,7 @@ func buildModuleTestInfo(
 	return moduleInfo, moduleList
 }
 
-// isTestFile returns true if the file path looks like a test file
+// isTestFile returns true if the file path looks like a test file.
 func isTestFile(path string) bool {
 	return strings.HasSuffix(path, "_test.go") ||
 		strings.HasSuffix(path, ".feature") ||

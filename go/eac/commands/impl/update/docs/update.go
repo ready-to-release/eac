@@ -38,7 +38,7 @@ func init() {
 	registry.Register(UpdateDocs)
 }
 
-// UpdateDocs scans docs/ for mermaid diagrams and drawio images, updates the cache
+// UpdateDocs scans docs/ for mermaid diagrams and drawio images, updates the cache.
 func UpdateDocs() int {
 	// Validate flags
 	args := os.Args[2:]
@@ -107,14 +107,16 @@ func UpdateDocs() int {
 			allBlocks = append(allBlocks, blocks...)
 
 			if verbose {
-				relPath, _ := filepath.Rel(docsDir, path)
+				relPath, relErr := filepath.Rel(docsDir, path)
+				if relErr != nil {
+					relPath = path // Fallback to absolute
+				}
 				fmt.Printf("  Found %d diagram(s) in %s\n", len(blocks), relPath)
 			}
 		}
 
 		return nil
 	})
-
 	if err != nil {
 		log.Errorf("Error scanning docs: %v", err)
 		return 1
@@ -132,7 +134,7 @@ func UpdateDocs() int {
 	mermaidCacheDir := filepath.Join(cacheDir, "mermaid")
 
 	// Ensure cache directory exists
-	if err := os.MkdirAll(mermaidCacheDir, 0755); err != nil {
+	if err := os.MkdirAll(mermaidCacheDir, 0o755); err != nil {
 		log.Errorf("Error creating cache directory: %v", err)
 		return 1
 	}
@@ -180,7 +182,10 @@ func UpdateDocs() int {
 			fmt.Println("\n[DRY RUN] Would render the following mermaid diagrams:")
 			for _, status := range statuses {
 				if !status.Cached {
-					relPath, _ := filepath.Rel(docsDir, status.Block.SourceFile)
+					relPath, relErr := filepath.Rel(docsDir, status.Block.SourceFile)
+					if relErr != nil {
+						relPath = status.Block.SourceFile // Fallback to absolute
+					}
 					firstLine := strings.Split(status.Block.Content, "\n")[0]
 					if len(firstLine) > 50 {
 						firstLine = firstLine[:50] + "..."
@@ -211,7 +216,10 @@ func UpdateDocs() int {
 						}
 
 						block := status.Block
-						relPath, _ := filepath.Rel(docsDir, block.SourceFile)
+						relPath, relErr := filepath.Rel(docsDir, block.SourceFile)
+						if relErr != nil {
+							relPath = block.SourceFile // Fallback to absolute
+						}
 
 						if verbose {
 							fmt.Printf("  Rendering %s [%d]...\n", relPath, block.BlockIndex)
@@ -280,7 +288,7 @@ func UpdateDocs() int {
 
 	// Ensure drawio cache directory exists
 	drawioCacheDir := filepath.Join(cacheDir, "drawio")
-	if err := os.MkdirAll(drawioCacheDir, 0755); err != nil {
+	if err := os.MkdirAll(drawioCacheDir, 0o755); err != nil {
 		log.Errorf("Error creating drawio cache directory: %v", err)
 		return 1
 	}

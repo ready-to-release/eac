@@ -6,7 +6,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/validation"
 )
 
-// DocumentType represents the type of OSCAL document
+// DocumentType represents the type of OSCAL document.
 type DocumentType string
 
 const (
@@ -14,13 +14,13 @@ const (
 	TypeProfile DocumentType = "profile"
 )
 
-// Validator is a generic OSCAL validator that delegates to specific validators
+// Validator is a generic OSCAL validator that delegates to specific validators.
 type Validator struct {
 	docType   DocumentType
 	validator validation.Validator
 }
 
-// NewValidator creates a validator for the specified OSCAL document type
+// NewValidator creates a validator for the specified OSCAL document type.
 func NewValidator(docType DocumentType) (*Validator, error) {
 	v := &Validator{docType: docType}
 
@@ -36,7 +36,7 @@ func NewValidator(docType DocumentType) (*Validator, error) {
 	return v, nil
 }
 
-// Validate validates OSCAL output by delegating to the appropriate validator
+// Validate validates OSCAL output by delegating to the appropriate validator.
 func (v *Validator) Validate(output string, context map[string]interface{}) []validation.ValidationError {
 	if v.validator == nil {
 		return []validation.ValidationError{
@@ -50,7 +50,7 @@ func (v *Validator) Validate(output string, context map[string]interface{}) []va
 	return v.validator.Validate(output, context)
 }
 
-// VerifyImplementation checks if the validator is properly configured
+// VerifyImplementation checks if the validator is properly configured.
 func (v *Validator) VerifyImplementation() []validation.ValidationError {
 	if v.validator == nil {
 		return []validation.ValidationError{

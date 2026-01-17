@@ -50,7 +50,7 @@ func init() {
 	registry.Register(ReleasePending)
 }
 
-// PendingRelease contains release decision data for CI/CD
+// PendingRelease contains release decision data for CI/CD.
 type PendingRelease struct {
 	Module         string        `json:"module"`
 	HasChanges     bool          `json:"has_changes"`
@@ -64,7 +64,7 @@ type PendingRelease struct {
 	ChangeSummary  ChangeSummary `json:"change_summary"`
 }
 
-// ChangeSummary breaks down changes by type
+// ChangeSummary breaks down changes by type.
 type ChangeSummary struct {
 	Added      int `json:"added"`
 	Changed    int `json:"changed"`
@@ -74,7 +74,7 @@ type ChangeSummary struct {
 	Security   int `json:"security"`
 }
 
-// PendingResult is the overall result for one or more modules
+// PendingResult is the overall result for one or more modules.
 type PendingResult struct {
 	Modules      []PendingRelease `json:"modules"`
 	HasAnyChange bool             `json:"has_any_change"`
@@ -96,10 +96,10 @@ func ReleasePending() int {
 
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
-		switch {
-		case arg == "--quiet" || arg == "-q":
+		switch arg {
+		case "--quiet", "-q":
 			quiet = true
-		case arg == "--all":
+		case "--all":
 			checkAll = true
 		default:
 			if !strings.HasPrefix(arg, "--") && module == "" {

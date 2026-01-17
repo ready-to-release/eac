@@ -22,12 +22,12 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/testing"
 )
 
-// commandFlags defines valid flags for the test list-suites command
+// commandFlags defines valid flags for the test list-suites command.
 func init() {
 	registry.Register(ListSuites)
 }
 
-// ListSuites lists all available test suites
+// ListSuites lists all available test suites.
 func ListSuites() int {
 	// Validate flags
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {

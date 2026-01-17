@@ -10,22 +10,17 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-// logsPath returns the path to the logs output directory
-func logsPath(repoRoot string) string {
-	return paths.LogsPath(repoRoot)
-}
-
-// configLevelEnabler implements zapcore.LevelEnabler based on config
+// configLevelEnabler implements zapcore.LevelEnabler based on config.
 type configLevelEnabler struct {
 	levels map[zapcore.Level]bool
 }
 
-// Enabled returns true if the level is in the configured levels
+// Enabled returns true if the level is in the configured levels.
 func (e *configLevelEnabler) Enabled(lvl zapcore.Level) bool {
 	return e.levels[lvl]
 }
 
-// newConfigLevelEnabler creates a level enabler from config level strings
+// newConfigLevelEnabler creates a level enabler from config level strings.
 func newConfigLevelEnabler(levels []string) zapcore.LevelEnabler {
 	enabler := &configLevelEnabler{
 		levels: make(map[zapcore.Level]bool),
@@ -63,7 +58,7 @@ func buildConsoleCore(cfg Config, logCfg LoggingConfig) zapcore.Core {
 // Returns the core and the writer that needs to be closed.
 func buildFileCore(cfg Config, logCfg LoggingConfig) (zapcore.Core, io.Closer, error) {
 	// Ensure out/ directory exists
-	if err := os.MkdirAll(filepath.Join(cfg.WorkspaceRoot, paths.OutDir), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(cfg.WorkspaceRoot, paths.OutDir), 0o755); err != nil { //nolint:gosec // G301: Log directory should be world-readable
 		return nil, nil, err
 	}
 
@@ -95,11 +90,11 @@ func buildTargetFileCore(cfg Config, logCfg LoggingConfig) (zapcore.Core, io.Clo
 
 	// Resolve path pattern with module
 	targetPath := target.ResolveTargetPath(cfg.WorkspaceRoot, cfg.Module)
-	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(targetPath), 0o755); err != nil { //nolint:gosec // G301: Log directory should be world-readable
 		return nil, nil, err
 	}
 
-	file, err := os.OpenFile(targetPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(targetPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644) //nolint:gosec // G302: Log files should be world-readable
 	if err != nil {
 		return nil, nil, err
 	}

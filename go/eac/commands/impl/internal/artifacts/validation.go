@@ -18,7 +18,7 @@ var log = logging.C()
 // 1. Manifest schema validation against the build-manifest contract
 // 2. Artifact existence validation (files actually exist on disk)
 // 3. Staleness check (source files unchanged since build)
-// Returns ArtifactValidationInfo with details about missing/stale artifacts
+// Returns ArtifactValidationInfo with details about missing/stale artifacts.
 func ValidateBuildArtifacts(
 	moduleList []string,
 	cfg *config.EACConfig,

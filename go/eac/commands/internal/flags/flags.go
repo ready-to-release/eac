@@ -3,8 +3,6 @@
 // which validates against registry metadata instead of hardcoded definitions.
 package flags
 
-import ()
-
 // ParseDebugFlag checks if the debug flag is present in the arguments.
 // It accepts both --debug and -d shorthand.
 //
@@ -27,7 +25,7 @@ func ParseDebugFlag(args []string) bool {
 // Example:
 //
 //	hasAll := flags.HasFlag(args, "--all", "-a")
-func HasFlag(args []string, flag string, shorthand string) bool {
+func HasFlag(args []string, flag, shorthand string) bool {
 	for _, arg := range args {
 		if arg == flag {
 			return true
@@ -63,7 +61,7 @@ func GetFlagValue(args []string, prefix string) string {
 func GetPositionalArgs(args []string) []string {
 	var positional []string
 	for _, arg := range args {
-		if len(arg) == 0 {
+		if arg == "" {
 			continue
 		}
 		// Skip flags

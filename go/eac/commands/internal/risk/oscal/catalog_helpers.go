@@ -62,10 +62,11 @@ func LoadCatalog(catalogPath string) (*oscalTypes.Catalog, error) {
 	if catalog.UUID == "" {
 		// Try to extract UUID from raw JSON to debug the issue
 		var rawData map[string]interface{}
-		json.Unmarshal(data, &rawData)
-		if catalogData, ok := rawData["catalog"].(map[string]interface{}); ok {
-			if rawUUID, ok := catalogData["uuid"].(string); ok {
-				return nil, fmt.Errorf("catalog UUID exists in JSON (%s) but not parsed into struct - possible go-oscal version mismatch", rawUUID)
+		if err := json.Unmarshal(data, &rawData); err == nil {
+			if catalogData, ok := rawData["catalog"].(map[string]interface{}); ok {
+				if rawUUID, ok := catalogData["uuid"].(string); ok {
+					return nil, fmt.Errorf("catalog UUID exists in JSON (%s) but not parsed into struct - possible go-oscal version mismatch", rawUUID)
+				}
 			}
 		}
 		return nil, fmt.Errorf("catalog missing required UUID field")
@@ -86,7 +87,7 @@ func fetchCatalogFromURL(url string) ([]byte, error) {
 	defer cancel()
 
 	// Create request with context
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, http.NoBody)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
 	}
@@ -298,7 +299,7 @@ func addControlsFromGroup(group *oscalTypes.Group, controlMap map[string]*oscalT
 	}
 }
 
-// GetControl retrieves a single control by ID from the catalog
+// GetControl retrieves a single control by ID from the catalog.
 func GetControl(catalog *oscalTypes.Catalog, controlID string) *oscalTypes.Control {
 	if catalog == nil {
 		return nil
@@ -329,7 +330,7 @@ func GetControl(catalog *oscalTypes.Catalog, controlID string) *oscalTypes.Contr
 	return controlMap[normalizedID]
 }
 
-// GetControlStatement extracts the statement prose from a control
+// GetControlStatement extracts the statement prose from a control.
 func GetControlStatement(control *oscalTypes.Control) string {
 	if control == nil || control.Parts == nil {
 		return ""
@@ -344,7 +345,7 @@ func GetControlStatement(control *oscalTypes.Control) string {
 	return ""
 }
 
-// CatalogHasControl checks if a control ID exists in the catalog
+// CatalogHasControl checks if a control ID exists in the catalog.
 func CatalogHasControl(catalog *oscalTypes.Catalog, controlID string) bool {
 	return GetControl(catalog, controlID) != nil
 }

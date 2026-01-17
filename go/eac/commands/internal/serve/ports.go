@@ -12,20 +12,20 @@ import (
 )
 
 const (
-	// DefaultPortRangeStart is the default first port in the allocation range
+	// DefaultPortRangeStart is the default first port in the allocation range.
 	DefaultPortRangeStart = 9000
-	// DefaultPortRangeEnd is the default last port in the allocation range (inclusive)
+	// DefaultPortRangeEnd is the default last port in the allocation range (inclusive).
 	DefaultPortRangeEnd = 9999
 )
 
 var (
-	// PortRangeStart is the first port in the allocation range (configurable via EAC_PORT_RANGE_START)
+	// PortRangeStart is the first port in the allocation range (configurable via EAC_PORT_RANGE_START).
 	PortRangeStart = getPortRangeStart()
-	// PortRangeEnd is the last port in the allocation range (configurable via EAC_PORT_RANGE_END)
+	// PortRangeEnd is the last port in the allocation range (configurable via EAC_PORT_RANGE_END).
 	PortRangeEnd = getPortRangeEnd()
 )
 
-// getPortRangeStart returns the configured port range start or the default
+// getPortRangeStart returns the configured port range start or the default.
 func getPortRangeStart() int {
 	if val := os.Getenv("EAC_PORT_RANGE_START"); val != "" {
 		if port, err := strconv.Atoi(val); err == nil && port > 0 && port < 65536 {
@@ -35,7 +35,7 @@ func getPortRangeStart() int {
 	return DefaultPortRangeStart
 }
 
-// getPortRangeEnd returns the configured port range end or the default
+// getPortRangeEnd returns the configured port range end or the default.
 func getPortRangeEnd() int {
 	if val := os.Getenv("EAC_PORT_RANGE_END"); val != "" {
 		if port, err := strconv.Atoi(val); err == nil && port > 0 && port < 65536 {
@@ -45,7 +45,7 @@ func getPortRangeEnd() int {
 	return DefaultPortRangeEnd
 }
 
-// SetPortRange allows programmatic configuration of the port range (useful for testing)
+// SetPortRange allows programmatic configuration of the port range (useful for testing).
 func SetPortRange(start, end int) {
 	if start > 0 && end >= start && end < 65536 {
 		PortRangeStart = start
@@ -53,7 +53,7 @@ func SetPortRange(start, end int) {
 	}
 }
 
-// ResetPortRange resets the port range to defaults
+// ResetPortRange resets the port range to defaults.
 func ResetPortRange() {
 	PortRangeStart = getPortRangeStart()
 	PortRangeEnd = getPortRangeEnd()

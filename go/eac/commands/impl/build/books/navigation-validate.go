@@ -10,7 +10,7 @@ import (
 )
 
 // validateNavEntry validates a single nav entry recursively
-// Returns (validatedEntry, referencedFiles) or (nil, empty) if invalid
+// Returns (validatedEntry, referencedFiles) or (nil, empty) if invalid.
 func (p *Preprocessor) validateNavEntry(entry any, dirPath string, actualFiles, actualDirs map[string]bool) (any, map[string]bool) {
 	referenced := make(map[string]bool)
 
@@ -138,13 +138,16 @@ func (p *Preprocessor) validateNavEntry(entry any, dirPath string, actualFiles, 
 	return entry, referenced // Unknown type, keep as-is
 }
 
-// validateAndCleanNav validates existing .nav.yml, removes broken refs, adds new files
+// validateAndCleanNav validates existing .nav.yml, removes broken refs, adds new files.
 func (p *Preprocessor) validateAndCleanNav(navPath, dirPath string) error {
 	// 1. Parse existing .nav.yml
 	navFile, err := p.parseNavFile(navPath)
 	if err != nil {
 		// If parse fails, regenerate from scratch
-		relPath, _ := filepath.Rel(p.stagingDir, navPath)
+		relPath, relErr := filepath.Rel(p.stagingDir, navPath)
+		if relErr != nil {
+			relPath = navPath
+		}
 		p.log("    ⚠️  Failed to parse %s, regenerating", relPath)
 		return p.generateNavForDir(dirPath)
 	}
@@ -183,8 +186,8 @@ func (p *Preprocessor) validateAndCleanNav(navPath, dirPath string) error {
 			validatedNav = append(validatedNav, file)
 		}
 
-		relDir, _ := filepath.Rel(p.stagingDir, dirPath)
-		if relDir == "." {
+		relDir, relErr := filepath.Rel(p.stagingDir, dirPath)
+		if relErr != nil || relDir == "." {
 			relDir = "(root)"
 		}
 		p.log("    Added %d new files to %s/.nav.yml", len(newFiles), relDir)
@@ -198,5 +201,5 @@ func (p *Preprocessor) validateAndCleanNav(navPath, dirPath string) error {
 		return fmt.Errorf("marshaling nav file: %w", err)
 	}
 
-	return os.WriteFile(navPath, data, 0644)
+	return os.WriteFile(navPath, data, 0o644)
 }

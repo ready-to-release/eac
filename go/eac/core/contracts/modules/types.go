@@ -8,7 +8,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
 )
 
-// ModuleContract represents a deployable module contract
+// ModuleContract represents a deployable module contract.
 type ModuleContract struct {
 	contracts.BaseContract `yaml:",inline"`
 
@@ -16,7 +16,7 @@ type ModuleContract struct {
 	workspaceRoot string
 }
 
-// NewModuleContract creates a new module contract with workspace context
+// NewModuleContract creates a new module contract with workspace context.
 func NewModuleContract(base contracts.BaseContract, workspaceRoot string) *ModuleContract {
 	return &ModuleContract{
 		BaseContract:  base,
@@ -24,7 +24,7 @@ func NewModuleContract(base contracts.BaseContract, workspaceRoot string) *Modul
 	}
 }
 
-// getRelativePatterns returns all patterns relative to files.root
+// getRelativePatterns returns all patterns relative to files.root.
 func (m *ModuleContract) getRelativePatterns() []string {
 	var patterns []string
 	patterns = append(patterns, m.Files.Source...)
@@ -51,7 +51,7 @@ func (m *ModuleContract) hasExplicitPatterns() bool {
 }
 
 // getRepoPatterns returns all patterns relative to repo root
-// Includes specs, other, workflows, and converts test_impl/design paths to glob patterns
+// Includes specs, other, workflows, and converts test_impl/design paths to glob patterns.
 func (m *ModuleContract) getRepoPatterns() []string {
 	var patterns []string
 	patterns = append(patterns, m.Files.Repo.Specs...)
@@ -79,7 +79,7 @@ func (m *ModuleContract) getRepoPatterns() []string {
 }
 
 // GetGlobPatterns returns GitHub Actions compatible glob patterns for this module
-// These patterns can be used in workflow path filters
+// These patterns can be used in workflow path filters.
 func (m *ModuleContract) GetGlobPatterns() []string {
 	var patterns []string
 
@@ -102,7 +102,7 @@ func (m *ModuleContract) GetGlobPatterns() []string {
 	return patterns
 }
 
-// GetAbsolutePaths returns absolute file system paths for this module's sources
+// GetAbsolutePaths returns absolute file system paths for this module's sources.
 func (m *ModuleContract) GetAbsolutePaths() []string {
 	if m.workspaceRoot == "" {
 		return []string{}
@@ -120,7 +120,7 @@ func (m *ModuleContract) GetAbsolutePaths() []string {
 	return paths
 }
 
-// MatchesFile returns true if the given file path matches this module's patterns
+// MatchesFile returns true if the given file path matches this module's patterns.
 func (m *ModuleContract) MatchesFile(filePath string) bool {
 	path := normalizePathSeparators(filePath)
 	root := normalizePathSeparators(m.Files.Root)
@@ -166,7 +166,7 @@ func (m *ModuleContract) MatchesFile(filePath string) bool {
 	return false
 }
 
-// isExcluded checks if a path matches any exclude pattern
+// isExcluded checks if a path matches any exclude pattern.
 func (m *ModuleContract) isExcluded(path string) bool {
 	root := normalizePathSeparators(m.Files.Root)
 
@@ -194,7 +194,7 @@ func (m *ModuleContract) isExcluded(path string) bool {
 	return false
 }
 
-// matchWithFallback handles glob matching with fallback for ** patterns
+// matchWithFallback handles glob matching with fallback for ** patterns.
 func matchWithFallback(path, pattern string) bool {
 	if matchGlobPattern(path, pattern) {
 		return true
@@ -229,18 +229,18 @@ func matchWithFallback(path, pattern string) bool {
 	return false
 }
 
-// GetDependencies returns the list of module dependencies
+// GetDependencies returns the list of module dependencies.
 func (m *ModuleContract) GetDependencies() []string {
 	return m.DependsOn
 }
 
-// IsDefinitionsFile returns true if this contract represents a definitions file
+// IsDefinitionsFile returns true if this contract represents a definitions file.
 func (m *ModuleContract) IsDefinitionsFile() bool {
 	return m.Moniker == "definitions" || m.Type == "definitions-type"
 }
 
 // GetSpecsRoot returns the specs root directory for this module
-// Uses the first pattern from Files.Repo.Specs, stripping the /** suffix
+// Uses the first pattern from Files.Repo.Specs, stripping the /** suffix.
 func (m *ModuleContract) GetSpecsRoot() string {
 	if len(m.Files.Repo.Specs) > 0 {
 		// Strip /** or /* suffix if present
@@ -253,7 +253,7 @@ func (m *ModuleContract) GetSpecsRoot() string {
 	return filepath.Join("specs", m.Moniker)
 }
 
-// GetChangelogPath returns the changelog file path
+// GetChangelogPath returns the changelog file path.
 func (m *ModuleContract) GetChangelogPath() string {
 	if m.Files.Changelog != "" {
 		if m.Files.Root != "" && m.Files.Root != "/" {
@@ -269,7 +269,7 @@ func (m *ModuleContract) GetChangelogPath() string {
 }
 
 // GetReleaseNotesPath returns the path to RELEASE-NOTES.md for this module
-// Defaults to release/{moniker}/RELEASE-NOTES.md if not explicitly set
+// Defaults to release/{moniker}/RELEASE-NOTES.md if not explicitly set.
 func (m *ModuleContract) GetReleaseNotesPath() string {
 	if m.Files.ReleaseNotes != "" {
 		if m.Files.Root != "" && m.Files.Root != "/" {
@@ -300,7 +300,7 @@ func (m *ModuleContract) GetDesignPath() string {
 }
 
 // normalizePathSeparators converts Windows backslashes to forward slashes
-// GitHub Actions and glob patterns use forward slashes
+// GitHub Actions and glob patterns use forward slashes.
 func normalizePathSeparators(path string) string {
 	return strings.ReplaceAll(path, "\\", "/")
 }
@@ -311,13 +311,16 @@ func normalizePathSeparators(path string) string {
 // - * (any characters within a segment)
 // - ? (single character)
 // - [abc] (character classes)
-// - {a,b,c} (alternation/brace expansion)
+// - {a,b,c} (alternation/brace expansion).
 func matchGlobPattern(path, pattern string) bool {
 	// Normalize both paths to use forward slashes
 	path = normalizePathSeparators(path)
 	pattern = normalizePathSeparators(pattern)
 
 	// Match the path against the pattern
-	matched, _ := doublestar.Match(pattern, path)
+	matched, err := doublestar.Match(pattern, path)
+	if err != nil {
+		return false // Invalid pattern
+	}
 	return matched
 }

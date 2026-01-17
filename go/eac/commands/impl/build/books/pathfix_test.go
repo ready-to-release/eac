@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestExtractSourcePrefix verifies source prefix extraction from glob patterns
+// TestExtractSourcePrefix verifies source prefix extraction from glob patterns.
 func TestExtractSourcePrefix(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -73,7 +73,7 @@ func TestExtractSourcePrefix(t *testing.T) {
 	}
 }
 
-// TestCountPathDepth verifies directory depth counting
+// TestCountPathDepth verifies directory depth counting.
 func TestCountPathDepth(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -140,7 +140,7 @@ func TestCountPathDepth(t *testing.T) {
 	}
 }
 
-// TestAdjustRelativePaths verifies relative path adjustment in markdown content
+// TestAdjustRelativePaths verifies relative path adjustment in markdown content.
 func TestAdjustRelativePaths(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -264,7 +264,7 @@ func TestAdjustRelativePaths(t *testing.T) {
 	}
 }
 
-// TestAdjustRelativePaths_ComplexMarkdown verifies handling of complex markdown
+// TestAdjustRelativePaths_ComplexMarkdown verifies handling of complex markdown.
 func TestAdjustRelativePaths_ComplexMarkdown(t *testing.T) {
 	content := `# Documentation
 

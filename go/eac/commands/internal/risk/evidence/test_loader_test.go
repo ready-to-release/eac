@@ -6,11 +6,11 @@ import (
 
 func TestGetControlTestEvidenceFromManifest(t *testing.T) {
 	tests := []struct {
-		name          string
-		tests         []TestEntryData
-		testSuite     string
-		wantControls  int
-		wantEvidence  map[string]int // controlID -> test count
+		name         string
+		tests        []TestEntryData
+		testSuite    string
+		wantControls int
+		wantEvidence map[string]int // controlID -> test count
 	}{
 		{
 			name: "extract control tags from manifest tests",
@@ -293,9 +293,9 @@ func TestGetControlTestEvidenceFromManifest_Aggregation(t *testing.T) {
 
 func TestExtractControlIDsFromTag(t *testing.T) {
 	tests := []struct {
-		name     string
-		tag      string
-		wantIDs  []string
+		name    string
+		tag     string
+		wantIDs []string
 	}{
 		{
 			name:    "single control",

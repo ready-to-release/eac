@@ -48,14 +48,14 @@ import (
 
 var log = logging.C()
 
-// ValidScannerTypes lists all valid scanner type strings
+// ValidScannerTypes lists all valid scanner type strings.
 var ValidScannerTypes = []string{"sbom", "vuln", "secrets", "iac", "compliance", "sast", "zap"}
 
 func init() {
 	registry.Register(Scan)
 }
 
-// scanArgs holds parsed arguments for the scan command
+// scanArgs holds parsed arguments for the scan command.
 type scanArgs struct {
 	Monikers         []string
 	Scanners         []internal.ScannerType
@@ -71,7 +71,7 @@ type scanArgs struct {
 	ComplianceStandard string              // Compliance standard
 }
 
-// Scan command entry point
+// Scan command entry point.
 func Scan() int {
 	args := os.Args[2:] // Skip program name and "scan"
 
@@ -122,7 +122,7 @@ func Scan() int {
 	return RunMultiScan(cmdCfg, multiCfg)
 }
 
-// parseArgs parses command line arguments
+// parseArgs parses command line arguments.
 func parseArgs(args []string) (*scanArgs, error) {
 	env := environment.Detect()
 	parsed := &scanArgs{
@@ -233,7 +233,7 @@ func parseArgs(args []string) (*scanArgs, error) {
 	return parsed, nil
 }
 
-// parseScannerList parses a comma-separated list of scanner types
+// parseScannerList parses a comma-separated list of scanner types.
 func parseScannerList(input string) ([]internal.ScannerType, error) {
 	var scanners []internal.ScannerType
 	for _, s := range strings.Split(input, ",") {
@@ -253,7 +253,7 @@ func parseScannerList(input string) ([]internal.ScannerType, error) {
 	return scanners, nil
 }
 
-// parseSeverityList parses a comma-separated list of severity levels
+// parseSeverityList parses a comma-separated list of severity levels.
 func parseSeverityList(input string) ([]internal.Severity, error) {
 	var severities []internal.Severity
 	for _, s := range strings.Split(input, ",") {

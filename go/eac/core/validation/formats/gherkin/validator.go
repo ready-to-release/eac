@@ -11,7 +11,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/validation"
 )
 
-// Validator validates Gherkin specifications against structure and tag contracts
+// Validator validates Gherkin specifications against structure and tag contracts.
 type Validator struct {
 	contract   *contracts.Contract
 	tagsConfig *config.TestingTagsConfig
@@ -61,7 +61,7 @@ func NewValidatorWithTags(contract *contracts.Contract, tagsConfig *config.Testi
 // - GxP tag requirements
 // - Unknown tag warnings (validates against testing-tags.yml)
 //
-// Returns a list of validation errors (empty if valid)
+// Returns a list of validation errors (empty if valid).
 func (v *Validator) Validate(output string, context map[string]interface{}) []validation.ValidationError {
 	var errors []validation.ValidationError
 	formatter := validation.NewErrorFormatter()
@@ -301,7 +301,7 @@ func (v *Validator) Validate(output string, context map[string]interface{}) []va
 // validateFeatureNaming checks if feature name follows the naming convention
 //
 // Expected format: <module>_<feature-name>
-// Pattern is read from contract.feature_naming_pattern
+// Pattern is read from contract.feature_naming_pattern.
 func (v *Validator) validateFeatureNaming(featureName string, lineNum int) validation.ValidationError {
 	// Get naming pattern from contract
 	pattern := `^[a-z][a-z0-9-]*_[a-z][a-z0-9-]*$` // Default fallback
@@ -346,7 +346,7 @@ Invalid examples:
 //
 // Tag inheritance follows Gherkin semantics:
 // - Feature tags are inherited by all Rules and Scenarios
-// - Rule tags are inherited by all Scenarios within that Rule
+// - Rule tags are inherited by all Scenarios within that Rule.
 func (v *Validator) validateScenarioTags(lines []string) []validation.ValidationError {
 	var errors []validation.ValidationError
 
@@ -419,7 +419,7 @@ func (v *Validator) validateScenarioTags(lines []string) []validation.Validation
 }
 
 // combineInheritedTags merges tags from Feature, Rule, and Scenario levels
-// Returns a deduplicated list of all applicable tags
+// Returns a deduplicated list of all applicable tags.
 func (v *Validator) combineInheritedTags(featureTags, ruleTags, scenarioTags []string) []string {
 	seen := make(map[string]bool)
 	var result []string
@@ -447,7 +447,7 @@ func (v *Validator) combineInheritedTags(featureTags, ruleTags, scenarioTags []s
 	return result
 }
 
-// validateTagAgainstSchema validates a single tag against the schema definition
+// validateTagAgainstSchema validates a single tag against the schema definition.
 func (v *Validator) validateTagAgainstSchema(tag string, lineNum int, isFeature bool) []validation.ValidationError {
 	var errors []validation.ValidationError
 
@@ -477,7 +477,7 @@ func (v *Validator) validateTagAgainstSchema(tag string, lineNum int, isFeature 
 	return errors
 }
 
-// validateSchemaConstraints validates constraint rules defined in the schema
+// validateSchemaConstraints validates constraint rules defined in the schema.
 func (v *Validator) validateSchemaConstraints(tags []string, lineNum int) []validation.ValidationError {
 	var errors []validation.ValidationError
 
@@ -508,7 +508,7 @@ func (v *Validator) validateSchemaConstraints(tags []string, lineNum int) []vali
 	return errors
 }
 
-// validateGxPTagsFromSchema validates GxP-related tags using schema definitions
+// validateGxPTagsFromSchema validates GxP-related tags using schema definitions.
 func (v *Validator) validateGxPTagsFromSchema(tags []string, lineNum int) []validation.ValidationError {
 	var errors []validation.ValidationError
 
@@ -551,7 +551,7 @@ func (v *Validator) validateGxPTagsFromSchema(tags []string, lineNum int) []vali
 	return errors
 }
 
-// validateTagsForScenario validates all tags for a single scenario
+// validateTagsForScenario validates all tags for a single scenario.
 func (v *Validator) validateTagsForScenario(tags []string, tagLines []int, scenarioLine int) []validation.ValidationError {
 	var errors []validation.ValidationError
 
@@ -613,7 +613,7 @@ Example:
 	return errors
 }
 
-// hasVerificationTag checks if tag list contains at least one verification tag
+// hasVerificationTag checks if tag list contains at least one verification tag.
 func (v *Validator) hasVerificationTag(tags []string) bool {
 	// Tags config must be available
 	if v.tagsConfig == nil {
@@ -634,17 +634,17 @@ func (v *Validator) hasVerificationTag(tags []string) bool {
 	return false
 }
 
-
-// getIndentLevel returns the indentation level (number of leading spaces/tabs) of a line
+// getIndentLevel returns the indentation level (number of leading spaces/tabs) of a line.
 func getIndentLevel(line string) int {
 	count := 0
 	for _, ch := range line {
-		if ch == ' ' {
+		switch ch {
+		case ' ':
 			count++
-		} else if ch == '\t' {
+		case '\t':
 			count += 4 // Count tabs as 4 spaces
-		} else {
-			break
+		default:
+			return count // Found non-whitespace, return current count
 		}
 	}
 	return count
@@ -652,7 +652,7 @@ func getIndentLevel(line string) int {
 
 // VerifyImplementation verifies that the validator implements all contract rules
 //
-// This is a self-check to ensure the validator stays in sync with the contract
+// This is a self-check to ensure the validator stays in sync with the contract.
 func (v *Validator) VerifyImplementation() []validation.ValidationError {
 	var errors []validation.ValidationError
 
@@ -680,7 +680,7 @@ func (v *Validator) VerifyImplementation() []validation.ValidationError {
 	return errors
 }
 
-// gherkinValidationState tracks Gherkin structure during validation
+// gherkinValidationState tracks Gherkin structure during validation.
 type gherkinValidationState struct {
 	seenFeature          bool
 	seenRule             bool
@@ -694,7 +694,7 @@ type gherkinValidationState struct {
 	lastRuleLine         int            // Line number of last Rule seen
 }
 
-// RuleInfo holds metadata about a Rule
+// RuleInfo holds metadata about a Rule.
 type RuleInfo struct {
 	Line          int
 	Description   string
@@ -702,7 +702,7 @@ type RuleInfo struct {
 	IndentLevel   int
 }
 
-// ScenarioInfo holds metadata about a Scenario
+// ScenarioInfo holds metadata about a Scenario.
 type ScenarioInfo struct {
 	Line        int
 	Description string

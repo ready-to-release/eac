@@ -29,7 +29,7 @@ func init() {
 	registry.Register(ShowReleaseSummary)
 }
 
-// ReleaseModule represents a module in a release layer
+// ReleaseModule represents a module in a release layer.
 type ReleaseModule struct {
 	Module  string `json:"module"`
 	Version string `json:"version"`

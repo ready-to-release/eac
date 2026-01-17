@@ -29,13 +29,13 @@ func init() {
 	registry.Register(GetDocumentedCommands)
 }
 
-// DocumentedCommand represents a command found in documentation
+// DocumentedCommand represents a command found in documentation.
 type DocumentedCommand struct {
-	Command     string               `yaml:"command" json:"command"`
-	Occurrences []CommandOccurrence  `yaml:"occurrences" json:"occurrences"`
+	Command     string              `yaml:"command" json:"command"`
+	Occurrences []CommandOccurrence `yaml:"occurrences" json:"occurrences"`
 }
 
-// CommandOccurrence represents where a command appears in documentation
+// CommandOccurrence represents where a command appears in documentation.
 type CommandOccurrence struct {
 	File     string `yaml:"file" json:"file"`
 	Line     int    `yaml:"line" json:"line"`
@@ -43,20 +43,20 @@ type CommandOccurrence struct {
 	Snippet  string `yaml:"snippet" json:"snippet"`
 }
 
-// DocumentedCommandsReport is the output structure
+// DocumentedCommandsReport is the output structure.
 type DocumentedCommandsReport struct {
 	Commands []DocumentedCommand `yaml:"commands" json:"commands"`
 	Summary  CommandsSummary     `yaml:"summary" json:"summary"`
 }
 
-// CommandsSummary provides aggregate statistics
+// CommandsSummary provides aggregate statistics.
 type CommandsSummary struct {
 	TotalCommands    int `yaml:"total_commands" json:"total_commands"`
 	TotalOccurrences int `yaml:"total_occurrences" json:"total_occurrences"`
 	TotalFiles       int `yaml:"total_files" json:"total_files"`
 }
 
-// GetDocumentedCommands scans docs for EAC commands in code blocks
+// GetDocumentedCommands scans docs for EAC commands in code blocks.
 func GetDocumentedCommands() int {
 	return internal.ExecuteGetCommand(func() (interface{}, error) {
 		workspaceRoot, err := registry.GetWorkspaceRoot()
@@ -92,7 +92,6 @@ func GetDocumentedCommands() int {
 
 			return nil
 		})
-
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan docs: %w", err)
 		}
@@ -130,13 +129,13 @@ func GetDocumentedCommands() int {
 	})
 }
 
-// commandMatch holds a parsed command and its location
+// commandMatch holds a parsed command and its location.
 type commandMatch struct {
 	command    string
 	occurrence CommandOccurrence
 }
 
-// scanMarkdownFile scans a markdown file for EAC commands in code blocks
+// scanMarkdownFile scans a markdown file for EAC commands in code blocks.
 func scanMarkdownFile(filePath, workspaceRoot string) ([]commandMatch, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -230,7 +229,7 @@ func scanMarkdownFile(filePath, workspaceRoot string) ([]commandMatch, error) {
 // extractCommand extracts the command name from a command line
 // e.g., "build src-auth --version v1.2.0" -> "build"
 // e.g., "get modules --as-yaml" -> "get modules"
-// e.g., "show artifacts src-auth" -> "show artifacts"
+// e.g., "show artifacts src-auth" -> "show artifacts".
 func extractCommand(cmdLine string) string {
 	// Split by whitespace
 	parts := strings.Fields(cmdLine)
@@ -283,7 +282,7 @@ func extractCommand(cmdLine string) string {
 	return strings.Join(cmdParts, " ")
 }
 
-// looksLikeArgument checks if a string looks like a command argument rather than a subcommand
+// looksLikeArgument checks if a string looks like a command argument rather than a subcommand.
 func looksLikeArgument(s string) bool {
 	// Module names often contain hyphens but so do subcommands
 	// File paths contain slashes or dots

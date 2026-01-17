@@ -16,7 +16,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
-// CommandType defines the type of command for configuration defaults
+// CommandType defines the type of command for configuration defaults.
 type CommandType string
 
 const (

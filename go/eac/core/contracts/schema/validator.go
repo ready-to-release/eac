@@ -3,6 +3,7 @@ package schema
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,7 +13,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// SchemaType represents the type of schema to validate against
+// SchemaType represents the type of schema to validate against.
 type SchemaType string
 
 const (
@@ -28,7 +29,7 @@ const (
 	SchemaCommands           SchemaType = "commands"
 )
 
-// schemaFileNames maps schema types to their file names (without path)
+// schemaFileNames maps schema types to their file names (without path).
 var schemaFileNames = map[SchemaType]string{
 	SchemaModuleTypes:        "module-types.schema.json",
 	SchemaEnvironments:       "environments.schema.json",
@@ -42,17 +43,17 @@ var schemaFileNames = map[SchemaType]string{
 	SchemaCommands:           "commands.schema.json",
 }
 
-// ContractVersion is the schema contract version
+// ContractVersion is the schema contract version.
 const ContractVersion = "0.1.0"
 
-// Validator provides JSON Schema validation for repository configs
+// Validator provides JSON Schema validation for repository configs.
 type Validator struct {
 	compiler      *jsonschema.Compiler
 	schemas       map[SchemaType]*jsonschema.Schema
 	workspaceRoot string
 }
 
-// ValidationError represents a schema validation error
+// ValidationError represents a schema validation error.
 type ValidationError struct {
 	SchemaType SchemaType
 	Path       string
@@ -68,7 +69,7 @@ func (e *ValidationError) Error() string {
 }
 
 // NewValidator creates a new schema validator with all schemas loaded from the repository
-// workspaceRoot should be the repository root directory
+// workspaceRoot should be the repository root directory.
 func NewValidator(workspaceRoot string) (*Validator, error) {
 	c := jsonschema.NewCompiler()
 
@@ -121,7 +122,7 @@ func NewValidator(workspaceRoot string) (*Validator, error) {
 	return v, nil
 }
 
-// ValidateYAML validates YAML data against the specified schema
+// ValidateYAML validates YAML data against the specified schema.
 func (v *Validator) ValidateYAML(schemaType SchemaType, yamlData []byte) error {
 	schema, ok := v.schemas[schemaType]
 	if !ok {
@@ -150,7 +151,7 @@ func (v *Validator) ValidateYAML(schemaType SchemaType, yamlData []byte) error {
 	return nil
 }
 
-// ValidateJSON validates JSON data against the specified schema
+// ValidateJSON validates JSON data against the specified schema.
 func (v *Validator) ValidateJSON(schemaType SchemaType, jsonData []byte) error {
 	schema, ok := v.schemas[schemaType]
 	if !ok {
@@ -177,7 +178,7 @@ func (v *Validator) ValidateJSON(schemaType SchemaType, jsonData []byte) error {
 }
 
 // convertYAMLToJSON converts YAML-parsed data to JSON-compatible format
-// YAML uses map[string]any but sometimes map[any]any, JSON needs map[string]any
+// YAML uses map[string]any but sometimes map[any]any, JSON needs map[string]any.
 func convertYAMLToJSON(data any) any {
 	switch v := data.(type) {
 	case map[string]any:
@@ -204,12 +205,13 @@ func convertYAMLToJSON(data any) any {
 	}
 }
 
-// extractValidationDetails extracts detailed error messages from validation errors
+// extractValidationDetails extracts detailed error messages from validation errors.
 func extractValidationDetails(err error) []string {
 	var details []string
 
 	// The jsonschema library provides detailed error info
-	if validErr, ok := err.(*jsonschema.ValidationError); ok {
+	validErr := &jsonschema.ValidationError{}
+	if errors.As(err, &validErr) {
 		details = append(details, validErr.Error())
 		for _, cause := range validErr.Causes {
 			details = append(details, extractValidationDetails(cause)...)
@@ -219,7 +221,7 @@ func extractValidationDetails(err error) []string {
 	return details
 }
 
-// GetSchemaTypes returns all available schema types
+// GetSchemaTypes returns all available schema types.
 func GetSchemaTypes() []SchemaType {
 	return []SchemaType{
 		SchemaModuleTypes,
@@ -234,7 +236,7 @@ func GetSchemaTypes() []SchemaType {
 	}
 }
 
-// GetSchemaPath returns the path to the schema directory
+// GetSchemaPath returns the path to the schema directory.
 func (v *Validator) GetSchemaPath() string {
 	return filepath.Join(v.workspaceRoot, "contracts", "eac-core", ContractVersion)
 }

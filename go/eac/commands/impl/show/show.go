@@ -15,7 +15,7 @@ func init() {
 	registry.Register(Show)
 }
 
-// Show command entry point
+// Show command entry point.
 func Show() int {
 	args := os.Args[2:] // Skip program name and "show"
 

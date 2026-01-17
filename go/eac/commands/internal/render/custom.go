@@ -14,7 +14,7 @@ import (
 // Example:
 //
 //	output, err := RenderAsCustom(myStruct, "table", "get-files")
-func RenderAsCustom(v interface{}, rendererName string, commandName string) (string, error) {
+func RenderAsCustom(v interface{}, rendererName, commandName string) (string, error) {
 	// First marshal to YAML (single source of truth)
 	yamlBytes, err := yaml.Marshal(v)
 	if err != nil {
@@ -38,7 +38,7 @@ func RenderAsCustom(v interface{}, rendererName string, commandName string) (str
 
 // ListCustomRenderers returns custom renderer names that support the given command
 // commandName should be in kebab-case format (e.g., "get-files")
-// If commandName is empty, returns all renderers
+// If commandName is empty, returns all renderers.
 func ListCustomRenderers(commandName string) []string {
 	return custom.List(commandName)
 }

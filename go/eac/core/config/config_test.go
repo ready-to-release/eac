@@ -3,6 +3,7 @@
 package config
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -441,15 +442,15 @@ func TestLoadRepositoryTypeDefaults(t *testing.T) {
 		assert.Equal(t, "merge", cfg.Repository.PR.MergeStrategy)
 	})
 
-	t.Run("returns nil for unknown type", func(t *testing.T) {
+	t.Run("returns ErrNoDefaults for unknown type", func(t *testing.T) {
 		cfg, err := LoadRepositoryTypeDefaults(repoRoot, "unknown")
-		require.NoError(t, err)
+		require.True(t, errors.Is(err, ErrNoDefaults))
 		assert.Nil(t, cfg)
 	})
 
-	t.Run("returns nil for empty type", func(t *testing.T) {
+	t.Run("returns ErrNoDefaults for empty type", func(t *testing.T) {
 		cfg, err := LoadRepositoryTypeDefaults(repoRoot, "")
-		require.NoError(t, err)
+		require.True(t, errors.Is(err, ErrNoDefaults))
 		assert.Nil(t, cfg)
 	})
 }

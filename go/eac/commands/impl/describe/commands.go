@@ -14,14 +14,14 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
-// commandFlags defines valid flags for the describe commands command
+// commandFlags defines valid flags for the describe commands command.
 var log = logging.C()
 
 func init() {
 	registry.Register(GetCommands)
 }
 
-// CommandInfo represents structured information about a command
+// CommandInfo represents structured information about a command.
 type CommandInfo struct {
 	Name        string   `json:"name"`           // Full command name: "show modules"
 	Parts       []string `json:"parts"`          // Command parts: ["show", "modules"]
@@ -31,7 +31,7 @@ type CommandInfo struct {
 	Args        string   `json:"args,omitempty"` // Argument completion type: "modules", "files", etc.
 }
 
-// CommandTree represents the hierarchical structure
+// CommandTree represents the hierarchical structure.
 type CommandTree struct {
 	Commands []CommandInfo       `json:"commands"` // All commands
 	Tree     map[string][]string `json:"tree"`     // Parent -> children mapping
@@ -107,7 +107,7 @@ func buildCommandTree() CommandTree {
 	}
 }
 
-// loadModuleMonikers loads all module monikers from the contracts
+// loadModuleMonikers loads all module monikers from the contracts.
 func loadModuleMonikers() []string {
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {

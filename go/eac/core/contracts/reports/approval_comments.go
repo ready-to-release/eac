@@ -2,6 +2,7 @@ package reports
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os/exec"
 	"path/filepath"
@@ -15,7 +16,10 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/git"
 )
 
-// ApprovalComment represents a single PR approval review
+// ErrPRNotFound is returned when a PR cannot be found.
+var ErrPRNotFound = errors.New("PR not found")
+
+// ApprovalComment represents a single PR approval review.
 type ApprovalComment struct {
 	PRNumber     int       `json:"pr_number" yaml:"pr_number" toml:"pr_number"`
 	PRTitle      string    `json:"pr_title" yaml:"pr_title" toml:"pr_title"`
@@ -29,7 +33,7 @@ type ApprovalComment struct {
 	MergedAt     time.Time `json:"merged_at" yaml:"merged_at" toml:"merged_at"`
 }
 
-// ApprovalCommentsReport represents all PR approvals for a module and version
+// ApprovalCommentsReport represents all PR approvals for a module and version.
 type ApprovalCommentsReport struct {
 	Module         string            `json:"module" yaml:"module" toml:"module"`
 	Version        string            `json:"version" yaml:"version" toml:"version"`
@@ -39,7 +43,7 @@ type ApprovalCommentsReport struct {
 	TotalApprovals int               `json:"total_approvals" yaml:"total_approvals" toml:"total_approvals"`
 }
 
-// PRData represents GitHub PR information
+// PRData represents GitHub PR information.
 type PRData struct {
 	Number             int
 	Title              string
@@ -51,22 +55,22 @@ type PRData struct {
 	Reviews            []ReviewData
 }
 
-// ReviewData represents a single review on a PR
+// ReviewData represents a single review on a PR.
 type ReviewData struct {
 	Author      string
 	State       string // APPROVED, CHANGES_REQUESTED, COMMENTED
 	SubmittedAt time.Time
 }
 
-// GitHubCLI interface for fetching PR data (allows mock injection for testing)
+// GitHubCLI interface for fetching PR data (allows mock injection for testing).
 type GitHubCLI interface {
 	GetPR(workspaceRoot string, prNumber int) (*PRData, error)
 }
 
-// ghCLI holds the GitHub CLI executor for testing (allows mock injection)
+// ghCLI holds the GitHub CLI executor for testing (allows mock injection).
 var ghCLI GitHubCLI
 
-// getGitHubCLI returns the GitHub CLI executor
+// getGitHubCLI returns the GitHub CLI executor.
 func getGitHubCLI() GitHubCLI {
 	if ghCLI != nil {
 		return ghCLI
@@ -74,17 +78,17 @@ func getGitHubCLI() GitHubCLI {
 	return &realGitHubCLI{}
 }
 
-// SetGitHubCLI allows tests to inject a mock GitHub CLI
+// SetGitHubCLI allows tests to inject a mock GitHub CLI.
 func SetGitHubCLI(cli GitHubCLI) {
 	ghCLI = cli
 }
 
-// realGitHubCLI implements GitHubCLI using actual gh command
+// realGitHubCLI implements GitHubCLI using actual gh command.
 type realGitHubCLI struct{}
 
 func (r *realGitHubCLI) GetPR(workspaceRoot string, prNumber int) (*PRData, error) {
 	// Execute: gh pr view <number> --json number,title,author,body,mergedAt,mergeCommit,files,reviews
-	cmd := exec.Command("gh", "pr", "view", strconv.Itoa(prNumber),
+	cmd := exec.Command("gh", "pr", "view", strconv.Itoa(prNumber), //nolint:gosec // G204: prNumber is an int, safe from injection
 		"--json", "number,title,author,body,mergedAt,mergeCommit,files,reviews")
 	cmd.Dir = workspaceRoot
 
@@ -220,8 +224,8 @@ func GetApprovalComments(workspaceRoot, module, version string, includeAllReview
 	// Determine which modules to query (bundle support)
 	var modulesToQuery []string
 	if len(modContract.DependsOn) > 0 {
-		modulesToQuery = make([]string, len(modContract.DependsOn))
-		copy(modulesToQuery, modContract.DependsOn)
+		modulesToQuery = make([]string, 0, len(modContract.DependsOn)+1)
+		modulesToQuery = append(modulesToQuery, modContract.DependsOn...)
 		modulesToQuery = append(modulesToQuery, module)
 	} else {
 		modulesToQuery = []string{module}
@@ -285,7 +289,7 @@ func GetApprovalComments(workspaceRoot, module, version string, includeAllReview
 }
 
 // extractPRNumbers extracts PR numbers from commit messages
-// Matches patterns like "(#123)" or "Merge pull request #123"
+// Matches patterns like "(#123)" or "Merge pull request #123".
 func extractPRNumbers(commits []git.CommitInfo) []int {
 	prMap := make(map[int]bool)
 	prRegex := regexp.MustCompile(`(?:Merge pull request #(\d+)|#(\d+)\))`)
@@ -312,8 +316,8 @@ func extractPRNumbers(commits []git.CommitInfo) []int {
 	return prNumbers
 }
 
-// filterSpecFiles returns spec files that belong to any of the queried modules
-func filterSpecFiles(files []string, modules []string) []string {
+// filterSpecFiles returns spec files that belong to any of the queried modules.
+func filterSpecFiles(files, modules []string) []string {
 	var specFiles []string
 	for _, file := range files {
 		normalizedFile := filepath.ToSlash(file)

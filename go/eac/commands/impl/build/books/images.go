@@ -16,14 +16,14 @@ import (
 )
 
 // MaxImageWidthPDF is the maximum width for images in PDF output
-// A4 at 150 DPI is about 1240px wide, so 1200px leaves some margin
+// A4 at 150 DPI is about 1240px wide, so 1200px leaves some margin.
 const MaxImageWidthPDF = 1200
 
 // drawioCacheDir is the cache directory for optimized drawio images (relative to assets)
-// Uses the same cache directory as the persistent cache (docs/assets/cache/drawio)
+// Uses the same cache directory as the persistent cache (docs/assets/cache/drawio).
 const drawioCacheDir = "cache/drawio"
 
-// DrawioImage represents a discovered drawio.png image in the docs
+// DrawioImage represents a discovered drawio.png image in the docs.
 type DrawioImage struct {
 	// SourceFile is the absolute path to the drawio.png file
 	SourceFile string
@@ -41,7 +41,7 @@ type DrawioImage struct {
 // 2. Checks cache for each image (by content hash)
 // 3. Uses cached version if available, otherwise optimizes and caches
 // 4. Stages optimized images in assets/rendered/drawio/
-// 5. Updates markdown references to point to optimized versions
+// 5. Updates markdown references to point to optimized versions.
 func (p *Preprocessor) optimizeDrawioImages() error {
 	p.log("    Optimizing drawio images for PDF...")
 
@@ -133,7 +133,7 @@ func (p *Preprocessor) optimizeDrawioImages() error {
 		cacheMisses++
 
 		// Ensure cache directory exists for new renders
-		if err := os.MkdirAll(cacheDir, 0755); err != nil {
+		if err := os.MkdirAll(cacheDir, 0o755); err != nil {
 			return fmt.Errorf("creating cache directory: %w", err)
 		}
 
@@ -173,7 +173,7 @@ func (p *Preprocessor) optimizeDrawioImages() error {
 		modified := p.rewriteDrawioReferences(original, path, cachePathBySource)
 
 		if modified != original {
-			if err := os.WriteFile(path, []byte(modified), 0644); err != nil {
+			if err := os.WriteFile(path, []byte(modified), 0o644); err != nil {
 				return err
 			}
 			updated++
@@ -210,10 +210,10 @@ func (p *Preprocessor) optimizeDrawioImages() error {
 }
 
 // drawioPattern matches references to *.drawio.png files in markdown and HTML
-// Handles: ![](path.drawio.png), [](path.drawio.png), and <img src="path.drawio.png">
+// Handles: ![](path.drawio.png), [](path.drawio.png), and <img src="path.drawio.png">.
 var drawioPattern = regexp.MustCompile(`(?:\]\(|src=")([^)"]*\.drawio\.png)`)
 
-// findDrawioReferences extracts all drawio.png paths from markdown content
+// findDrawioReferences extracts all drawio.png paths from markdown content.
 func findDrawioReferences(content string) []string {
 	matches := drawioPattern.FindAllStringSubmatch(content, -1)
 	refs := make([]string, 0, len(matches))
@@ -232,16 +232,16 @@ func findDrawioReferences(content string) []string {
 }
 
 // fullDrawioImagePattern matches full markdown images with optional attr_list:
-// ![alt](path.drawio.png) or ![alt](path.drawio.png){ width="100%" }
+// ![alt](path.drawio.png) or ![alt](path.drawio.png){ width="100%" }.
 var fullDrawioImagePattern = regexp.MustCompile(`!\[([^\]]*)\]\(([^)]*\.drawio\.png)\)(\s*\{[^}]*\})?`)
 
-// htmlDrawioSrcPattern matches HTML img src: src="path.drawio.png"
+// htmlDrawioSrcPattern matches HTML img src: src="path.drawio.png".
 var htmlDrawioSrcPattern = regexp.MustCompile(`src="([^"]*\.drawio\.png)"`)
 
 // rewriteDrawioReferences updates drawio.png paths to point to cached images
 // For site mode (non-PDF), converts markdown images to HTML <img> tags with path adjustment
-// For PDF mode, preserves the original format
-func (p *Preprocessor) rewriteDrawioReferences(content string, mdPath string, cachePathBySource map[string]string) string {
+// For PDF mode, preserves the original format.
+func (p *Preprocessor) rewriteDrawioReferences(content, mdPath string, cachePathBySource map[string]string) string {
 	mdDir := filepath.Dir(mdPath)
 
 	// Helper to calculate new path from old path
@@ -320,7 +320,7 @@ func (p *Preprocessor) rewriteDrawioReferences(content string, mdPath string, ca
 	return content
 }
 
-// optimizeImage resizes a PNG image to maxWidth while preserving aspect ratio
+// optimizeImage resizes a PNG image to maxWidth while preserving aspect ratio.
 func optimizeImage(srcPath, dstPath string, maxWidth uint) error {
 	// Open source file
 	srcFile, err := os.Open(srcPath)
@@ -350,7 +350,7 @@ func optimizeImage(srcPath, dstPath string, maxWidth uint) error {
 	}
 
 	// Create output directory
-	if err := os.MkdirAll(filepath.Dir(dstPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(dstPath), 0o755); err != nil {
 		return fmt.Errorf("creating output directory: %w", err)
 	}
 
@@ -383,7 +383,7 @@ func optimizeImage(srcPath, dstPath string, maxWidth uint) error {
 // ============================================================================
 
 // FindDrawioImages scans the docs directory for all .drawio.png files
-// Returns a list of DrawioImage with source path, relative path, and content hash
+// Returns a list of DrawioImage with source path, relative path, and content hash.
 func FindDrawioImages(docsDir string) ([]DrawioImage, error) {
 	var images []DrawioImage
 	seen := make(map[string]bool)
@@ -431,7 +431,7 @@ func FindDrawioImages(docsDir string) ([]DrawioImage, error) {
 	return images, err
 }
 
-// HashFileContent returns the SHA256 hash of a file's content
+// HashFileContent returns the SHA256 hash of a file's content.
 func HashFileContent(path string) (string, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -448,12 +448,12 @@ func HashFileContent(path string) (string, error) {
 }
 
 // OptimizeSingleImage optimizes a single drawio.png image to the output path
-// Returns an error if optimization fails
+// Returns an error if optimization fails.
 func OptimizeSingleImage(srcPath, dstPath string, maxWidth int) error {
 	return optimizeImage(srcPath, dstPath, uint(maxWidth))
 }
 
-// DrawioCacheStatus tracks whether a drawio image is cached
+// DrawioCacheStatus tracks whether a drawio image is cached.
 type DrawioCacheStatus struct {
 	Image     DrawioImage
 	Cached    bool

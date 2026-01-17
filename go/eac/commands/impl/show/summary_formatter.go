@@ -9,14 +9,14 @@ import (
 	"time"
 )
 
-// SummaryFormatter provides utilities for pretty-printing summaries
+// SummaryFormatter provides utilities for pretty-printing summaries.
 type SummaryFormatter struct {
 	module    string
 	status    string
 	startTime time.Time
 }
 
-// NewSummaryFormatter creates a new formatter
+// NewSummaryFormatter creates a new formatter.
 func NewSummaryFormatter(module, status string) *SummaryFormatter {
 	return &SummaryFormatter{
 		module:    module,
@@ -25,7 +25,7 @@ func NewSummaryFormatter(module, status string) *SummaryFormatter {
 	}
 }
 
-// Header generates a summary header
+// Header generates a summary header.
 func (f *SummaryFormatter) Header(summaryType string) string {
 	var emoji string
 	switch summaryType {
@@ -39,7 +39,7 @@ func (f *SummaryFormatter) Header(summaryType string) string {
 	return fmt.Sprintf("## %s %s: %s\n\n", emoji, strings.Title(summaryType), f.module)
 }
 
-// StatusSection generates a status section
+// StatusSection generates a status section.
 func (f *SummaryFormatter) StatusSection(message string) string {
 	emoji := "✅"
 	if f.status != "success" {
@@ -48,7 +48,7 @@ func (f *SummaryFormatter) StatusSection(message string) string {
 	return fmt.Sprintf("### %s Status\n%s\n\n", emoji, message)
 }
 
-// Table generates a markdown table
+// Table generates a markdown table.
 func (f *SummaryFormatter) Table(headers []string, rows [][]string) string {
 	var sb strings.Builder
 
@@ -78,27 +78,27 @@ func (f *SummaryFormatter) Table(headers []string, rows [][]string) string {
 	return sb.String()
 }
 
-// Section generates a section with title
+// Section generates a section with title.
 func (f *SummaryFormatter) Section(title, content string) string {
 	return fmt.Sprintf("### %s\n%s\n\n", title, content)
 }
 
-// CollapsibleSection generates a collapsible details section
+// CollapsibleSection generates a collapsible details section.
 func (f *SummaryFormatter) CollapsibleSection(summary, content string) string {
 	return fmt.Sprintf("<details>\n<summary>%s</summary>\n\n%s\n</details>\n\n", summary, content)
 }
 
-// CodeBlock generates a code block
+// CodeBlock generates a code block.
 func (f *SummaryFormatter) CodeBlock(language, code string) string {
 	return fmt.Sprintf("```%s\n%s\n```\n\n", language, code)
 }
 
-// Divider generates a horizontal rule
+// Divider generates a horizontal rule.
 func (f *SummaryFormatter) Divider() string {
 	return "---\n\n"
 }
 
-// Footer generates a summary footer
+// Footer generates a summary footer.
 func (f *SummaryFormatter) Footer(duration time.Duration) string {
 	var icon string
 	if f.status == "success" {
@@ -109,7 +109,7 @@ func (f *SummaryFormatter) Footer(duration time.Duration) string {
 	return fmt.Sprintf("---\n*%s Completed in %.1fs*\n", icon, duration.Seconds())
 }
 
-// GetFileCount returns the count of files in a directory matching a pattern
+// GetFileCount returns the count of files in a directory matching a pattern.
 func GetFileCount(dir, pattern string) (int, error) {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		return 0, nil
@@ -122,7 +122,7 @@ func GetFileCount(dir, pattern string) (int, error) {
 	return len(matches), nil
 }
 
-// GetDirectorySize returns the size of a directory in human-readable format
+// GetDirectorySize returns the size of a directory in human-readable format.
 func GetDirectorySize(dir string) (string, error) {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		return "0 B", nil
@@ -145,7 +145,7 @@ func GetDirectorySize(dir string) (string, error) {
 	return formatBytes(size), nil
 }
 
-// formatBytes converts bytes to human-readable format
+// formatBytes converts bytes to human-readable format.
 func formatBytes(bytes int64) string {
 	const unit = 1024
 	if bytes < unit {
@@ -159,7 +159,7 @@ func formatBytes(bytes int64) string {
 	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
 }
 
-// BulletList generates a bullet list
+// BulletList generates a bullet list.
 func (f *SummaryFormatter) BulletList(items []string) string {
 	var sb strings.Builder
 	for _, item := range items {
@@ -169,22 +169,22 @@ func (f *SummaryFormatter) BulletList(items []string) string {
 	return sb.String()
 }
 
-// Link generates a markdown link
+// Link generates a markdown link.
 func Link(text, url string) string {
 	return fmt.Sprintf("[%s](%s)", text, url)
 }
 
-// Bold generates bold text
+// Bold generates bold text.
 func Bold(text string) string {
 	return fmt.Sprintf("**%s**", text)
 }
 
-// Code generates inline code
+// Code generates inline code.
 func Code(text string) string {
 	return fmt.Sprintf("`%s`", text)
 }
 
-// Emoji returns an emoji for a given status or type
+// Emoji returns an emoji for a given status or type.
 func Emoji(name string) string {
 	emojis := map[string]string{
 		"success":     "✅",
@@ -207,7 +207,7 @@ func Emoji(name string) string {
 	return ""
 }
 
-// readLogTail reads the last N lines from a log file
+// readLogTail reads the last N lines from a log file.
 func readLogTail(path string, lines int) string {
 	data, err := os.ReadFile(path)
 	if err != nil {

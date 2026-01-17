@@ -13,8 +13,8 @@ func TestValidateArtifactsExist(t *testing.T) {
 
 	// Create a test artifact file (executable)
 	artifactPath := filepath.Join(tmpDir, "out", "build", "test-cli", "test-cli.exe")
-	os.MkdirAll(filepath.Dir(artifactPath), 0755)
-	os.WriteFile(artifactPath, []byte("test"), 0644)
+	os.MkdirAll(filepath.Dir(artifactPath), 0o755)
+	os.WriteFile(artifactPath, []byte("test"), 0o644)
 
 	manifest := &ModuleManifest{
 		Moniker: "test-cli",
@@ -49,8 +49,8 @@ func TestValidateArtifactsExist_AllPresent(t *testing.T) {
 
 	// Create artifact
 	artifactPath := filepath.Join(tmpDir, "out", "build", "test-module", "test-module.exe")
-	os.MkdirAll(filepath.Dir(artifactPath), 0755)
-	os.WriteFile(artifactPath, []byte("executable"), 0644)
+	os.MkdirAll(filepath.Dir(artifactPath), 0o755)
+	os.WriteFile(artifactPath, []byte("executable"), 0o644)
 
 	manifest := &ModuleManifest{
 		Moniker: "test-module",
@@ -113,7 +113,7 @@ func TestManifestWithVerifiedUnchangedAt(t *testing.T) {
 
 	// Create manifest directory
 	manifestDir := filepath.Join(tmpDir, "out", "build", "test-module")
-	os.MkdirAll(manifestDir, 0755)
+	os.MkdirAll(manifestDir, 0o755)
 
 	// Create a valid manifest
 	manifest := &ModuleManifest{

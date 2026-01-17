@@ -17,26 +17,26 @@ import (
 	"time"
 )
 
-// ExecutionContext identifies where the CLI is running
+// ExecutionContext identifies where the CLI is running.
 type ExecutionContext string
 
 const (
-	// ContextImplicitCLI indicates running locally outside Docker
+	// ContextImplicitCLI indicates running locally outside Docker.
 	ContextImplicitCLI ExecutionContext = "implicit-cli"
-	// ContextR2RCLI indicates running inside Docker via r2r CLI
+	// ContextR2RCLI indicates running inside Docker via r2r CLI.
 	ContextR2RCLI ExecutionContext = "r2r-cli"
 )
 
-// executionContext holds the detected execution context
+// executionContext holds the detected execution context.
 var executionContext ExecutionContext
 
-// originalCommand holds the original command line captured at init time
+// originalCommand holds the original command line captured at init time.
 var originalCommand string
 
-// contextOnce ensures context is detected only once
+// contextOnce ensures context is detected only once.
 var contextOnce sync.Once
 
-// contextLogged tracks if we've already logged the execution context
+// contextLogged tracks if we've already logged the execution context.
 var contextLogged uint32
 
 func init() {
@@ -46,7 +46,7 @@ func init() {
 
 // debugEnabled is the global debug state.
 // Using atomic for thread-safe reads without locks.
-// 0 = disabled, 1 = enabled
+// 0 = disabled, 1 = enabled.
 var debugEnabled uint32
 
 // stdOutput is where Info messages are written (stdout by default).
@@ -57,11 +57,7 @@ var stdOutput io.Writer = os.Stdout
 // Can be changed for testing.
 var debugOutput io.Writer = os.Stderr
 
-// warnErrorOutput is where Warn/Error messages are written (stderr by default, always).
-// Can be changed for testing.
-var warnErrorOutput io.Writer = os.Stderr
-
-// detectExecutionContext determines the execution context based on environment
+// detectExecutionContext determines the execution context based on environment.
 func detectExecutionContext() {
 	contextOnce.Do(func() {
 		// Check explicit environment variable first
@@ -83,7 +79,7 @@ func detectExecutionContext() {
 	})
 }
 
-// GetExecutionContext returns the detected execution context
+// GetExecutionContext returns the detected execution context.
 func GetExecutionContext() ExecutionContext {
 	detectExecutionContext()
 	return executionContext
@@ -134,14 +130,14 @@ func InitFromEnv() {
 }
 
 // debugTime returns the current time formatted for debug output.
-// Format: "HH:MM:SS.mmm" (15:04:05.000)
+// Format: "HH:MM:SS.mmm" (15:04:05.000).
 func debugTime() string {
 	return time.Now().Format("15:04:05.000")
 }
 
 // DebugDirect writes a debug message directly to stderr.
 // This is the lowest-level debug function - use ComponentLogger for normal usage.
-// Format: "HH:MM:SS.mmm  DEBUG  module:message"
+// Format: "HH:MM:SS.mmm  DEBUG  module:message".
 func DebugDirect(module, msg string) {
 	if atomic.LoadUint32(&debugEnabled) == 0 {
 		return

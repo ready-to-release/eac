@@ -8,7 +8,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/validation"
 )
 
-// CatalogValidator validates OSCAL catalog documents
+// CatalogValidator validates OSCAL catalog documents.
 type CatalogValidator struct {
 	expectedVersion string
 }
@@ -184,7 +184,7 @@ OR with groups:
 	return errors
 }
 
-// VerifyImplementation checks if the validator is properly configured
+// VerifyImplementation checks if the validator is properly configured.
 func (v *CatalogValidator) VerifyImplementation() []validation.ValidationError {
 	// No external dependencies to verify for catalog validator
 	return nil

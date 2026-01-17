@@ -10,7 +10,7 @@ import (
 
 var log = logging.C()
 
-// WhimsicalStatusLines are fun status messages shown during generation
+// WhimsicalStatusLines are fun status messages shown during generation.
 var WhimsicalStatusLines = []string{
 	"Discombobulating the git diffs...",
 	"Reticulating splines...",
@@ -33,7 +33,7 @@ var WhimsicalStatusLines = []string{
 }
 
 // startProgressWithLines begins showing progress updates with custom status lines
-// Returns a cancel function to stop the progress ticker
+// Returns a cancel function to stop the progress ticker.
 func startProgressWithLines(initialMessage string, statusLines []string) context.CancelFunc {
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -61,7 +61,7 @@ func startProgressWithLines(initialMessage string, statusLines []string) context
 	return cancel
 }
 
-// AngryStatusLines are slightly frustrated messages for auto-fix phase
+// AngryStatusLines are slightly frustrated messages for auto-fix phase.
 var AngryStatusLines = []string{
 	"Ugh, fixing validation errors...",
 	"*Sigh* Correcting the mistakes...",
@@ -77,7 +77,7 @@ var AngryStatusLines = []string{
 	"Second time's the charm...",
 }
 
-// WithProgress wraps a function with progress updates
+// WithProgress wraps a function with progress updates.
 func WithProgress(stage string, fn func() error) error {
 	// Create local copy to avoid mutating global state
 	statusLines := make([]string, len(WhimsicalStatusLines))
@@ -95,7 +95,7 @@ func WithProgress(stage string, fn func() error) error {
 	return fn()
 }
 
-// WithAngryProgress wraps a function with "angry" progress updates (for auto-fix)
+// WithAngryProgress wraps a function with "angry" progress updates (for auto-fix).
 func WithAngryProgress(stage string, fn func() error) error {
 	// Create local copy to avoid mutating global state
 	statusLines := make([]string, len(AngryStatusLines))

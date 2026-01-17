@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// Precompiled regular expressions for performance
+// Precompiled regular expressions for performance.
 var (
 	conventionalHeaderRegex = regexp.MustCompile(`^(feat|fix|refactor|docs|chore|test|perf|style)\([^)]+\):\s*(.+)`)
 	subjectLineRegex        = regexp.MustCompile(`^([a-z0-9\-]+):\s*(feat|fix|refactor|docs|chore|test|perf|style):\s*(.+)`)
@@ -13,7 +13,7 @@ var (
 )
 
 // AutoCleanup performs automatic fixes on commit message before validation
-// This catches common issues that can be fixed programmatically without AI
+// This catches common issues that can be fixed programmatically without AI.
 func AutoCleanup(commitMessage string) string {
 	// PHASE 1: Normalize all spacing and blank lines first
 	// This creates a stable foundation for content fixes
@@ -43,7 +43,7 @@ func AutoCleanup(commitMessage string) string {
 	return result
 }
 
-// normalizeSpacing removes duplicate blank lines and ensures proper spacing around sections
+// normalizeSpacing removes duplicate blank lines and ensures proper spacing around sections.
 func normalizeSpacing(commitMessage string) []string {
 	lines := strings.Split(commitMessage, "\n")
 	normalized := make([]string, 0, len(lines))
@@ -67,7 +67,7 @@ func normalizeSpacing(commitMessage string) []string {
 }
 
 // fixContent handles title truncation, subject line joining/truncation, and body wrapping
-// Refactored into smaller, focused functions for better maintainability
+// Refactored into smaller, focused functions for better maintainability.
 func fixContent(lines []string) []string {
 	// Create processing context
 	ctx := &contentFixContext{
@@ -125,7 +125,7 @@ func fixContent(lines []string) []string {
 	return ctx.cleaned
 }
 
-// contentFixContext holds state for content fixing
+// contentFixContext holds state for content fixing.
 type contentFixContext struct {
 	lines                       []string
 	cleaned                     []string
@@ -140,7 +140,7 @@ type contentFixContext struct {
 	inMultiLineSpecialField     bool
 }
 
-// handleCodeBlock handles code block state and spacing
+// handleCodeBlock handles code block state and spacing.
 func (ctx *contentFixContext) handleCodeBlock() bool {
 	trimmed := ctx.currentTrimmed
 	line := ctx.currentLine
@@ -186,7 +186,7 @@ func (ctx *contentFixContext) handleCodeBlock() bool {
 	return false
 }
 
-// handleHeader handles header cleanup
+// handleHeader handles header cleanup.
 func (ctx *contentFixContext) handleHeader() bool {
 	if ctx.currentIndex == 0 && conventionalHeaderRegex.MatchString(ctx.currentTrimmed) {
 		// Only remove trailing period (validation will warn if too long)
@@ -198,7 +198,7 @@ func (ctx *contentFixContext) handleHeader() bool {
 	return false
 }
 
-// handleModuleSection handles module headers
+// handleModuleSection handles module headers.
 func (ctx *contentFixContext) handleModuleSection() bool {
 	if ctx.currentIndex >= len(ctx.lines)-1 {
 		return false
@@ -217,7 +217,7 @@ func (ctx *contentFixContext) handleModuleSection() bool {
 	return false
 }
 
-// handleSeparator handles horizontal rule separators
+// handleSeparator handles horizontal rule separators.
 func (ctx *contentFixContext) handleSeparator() bool {
 	if ctx.currentTrimmed == "---" {
 		// Flush buffered body text
@@ -238,7 +238,7 @@ func (ctx *contentFixContext) handleSeparator() bool {
 	return false
 }
 
-// handleDashes handles dashes lines (module header underlines)
+// handleDashes handles dashes lines (module header underlines).
 func (ctx *contentFixContext) handleDashes() bool {
 	if isDashesLine(ctx.currentTrimmed) {
 		ctx.cleaned = append(ctx.cleaned, ctx.currentLine)
@@ -248,7 +248,7 @@ func (ctx *contentFixContext) handleDashes() bool {
 	return false
 }
 
-// handleSubjectLine handles subject line wrapping
+// handleSubjectLine handles subject line wrapping.
 func (ctx *contentFixContext) handleSubjectLine() bool {
 	if subjectLineRegex.MatchString(ctx.currentTrimmed) {
 		// Remove trailing period
@@ -303,7 +303,7 @@ func (ctx *contentFixContext) handleSpecialField() bool {
 	return false
 }
 
-// handleBodyText handles body text buffering and wrapping
+// handleBodyText handles body text buffering and wrapping.
 func (ctx *contentFixContext) handleBodyText() bool {
 	trimmed := ctx.currentTrimmed
 
@@ -322,7 +322,7 @@ func (ctx *contentFixContext) handleBodyText() bool {
 	return false
 }
 
-// passThrough passes line through with duplicate blank line removal
+// passThrough passes line through with duplicate blank line removal.
 func (ctx *contentFixContext) passThrough() {
 	trimmed := ctx.currentTrimmed
 
@@ -339,7 +339,7 @@ func (ctx *contentFixContext) passThrough() {
 }
 
 // wrapSemanticCommitLine wraps a semantic commit line at MaxSubjectLength characters
-// Preserves the format: <module>: <type>: <description>
+// Preserves the format: <module>: <type>: <description>.
 func wrapSemanticCommitLine(line string) []string {
 	if len(line) <= MaxSubjectLength {
 		return []string{line}
@@ -376,7 +376,7 @@ func wrapSemanticCommitLine(line string) []string {
 	return wrapped
 }
 
-// wrapBodyText joins buffered lines and reflows at MaxLineLength characters
+// wrapBodyText joins buffered lines and reflows at MaxLineLength characters.
 func wrapBodyText(lines []string) []string {
 	// Join all lines into one paragraph
 	paragraph := strings.Join(lines, " ")
@@ -412,7 +412,7 @@ func wrapBodyText(lines []string) []string {
 	return wrapped
 }
 
-// ensureCodeBlocksClosed adds missing closing fences
+// ensureCodeBlocksClosed adds missing closing fences.
 func ensureCodeBlocksClosed(content string) string {
 	lines := strings.Split(content, "\n")
 	openFences := 0
@@ -444,7 +444,7 @@ func ensureCodeBlocksClosed(content string) string {
 	return content
 }
 
-// GetCleanupStats returns what was cleaned
+// GetCleanupStats returns what was cleaned.
 func GetCleanupStats(original, cleaned string) []string {
 	stats := []string{}
 

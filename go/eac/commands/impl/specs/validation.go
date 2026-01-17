@@ -11,7 +11,7 @@ import (
 // - Checks keyword order (Feature before Rule before Scenario)
 // - Ignores keywords in comments
 // - Detects duplicate Feature declarations
-// - Validates basic Gherkin structure
+// - Validates basic Gherkin structure.
 func ValidateGherkinContent(content string) error {
 	if strings.TrimSpace(content) == "" {
 		return fmt.Errorf("content is empty")
@@ -53,14 +53,14 @@ func ValidateGherkinContent(content string) error {
 	return nil
 }
 
-// gherkinValidationState tracks Gherkin structure during validation
+// gherkinValidationState tracks Gherkin structure during validation.
 type gherkinValidationState struct {
 	seenFeature  bool
 	seenRule     bool
 	seenScenario bool
 }
 
-// ValidateGherkinLine validates a single line of Gherkin and updates state
+// ValidateGherkinLine validates a single line of Gherkin and updates state.
 func ValidateGherkinLine(line string, state *gherkinValidationState, lineNum int) error {
 	switch {
 	case strings.HasPrefix(line, "Feature:"):

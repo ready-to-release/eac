@@ -45,8 +45,10 @@ func init() {
 
 // gitRepo holds the git repository instance for git operations.
 // In production, this is initialized lazily. For tests, it can be injected via SetGitRepo.
-var gitRepo git.GitRepository
-var gitMgr *git.RepositoryManager
+var (
+	gitRepo git.GitRepository
+	gitMgr  *git.RepositoryManager
+)
 
 // initGitManager initializes the git repository manager if needed.
 func initGitManager() {
@@ -55,7 +57,7 @@ func initGitManager() {
 	}
 }
 
-// getGitRepo returns the git repository, creating one if needed
+// getGitRepo returns the git repository, creating one if needed.
 func getGitRepo(workspaceRoot string) (git.GitRepository, error) {
 	if gitRepo != nil {
 		return gitRepo, nil
@@ -76,7 +78,7 @@ func ResetGitRepo() {
 
 // ============================================================================
 
-// ValidateSpecs validates existing Gherkin specification files
+// ValidateSpecs validates existing Gherkin specification files.
 func ValidateSpecs() int {
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
@@ -194,7 +196,7 @@ func ValidateSpecs() int {
 	return 0
 }
 
-// ValidateConfig holds configuration for specs validate command
+// ValidateConfig holds configuration for specs validate command.
 type ValidateConfig struct {
 	Path           string
 	Quiet          bool   // -q, --quiet: Show only errors
@@ -205,14 +207,14 @@ type ValidateConfig struct {
 	RepositoryRoot string
 }
 
-// ValidationResult holds the validation result for a single file
+// ValidationResult holds the validation result for a single file.
 type ValidationResult struct {
 	Path   string                      `json:"path"`
 	Valid  bool                        `json:"valid"`
 	Errors []contracts.ValidationError `json:"errors"`
 }
 
-// parseValidateConfig parses command line arguments into configuration
+// parseValidateConfig parses command line arguments into configuration.
 func parseValidateConfig() (*ValidateConfig, error) {
 	config := &ValidateConfig{
 		Format:    "text", // Default format
@@ -300,8 +302,8 @@ func parseValidateConfig() (*ValidateConfig, error) {
 	return config, nil
 }
 
-// validatePath ensures the path is within the repository (prevents path traversal attacks)
-func validatePath(path string, repoRoot string) error {
+// validatePath ensures the path is within the repository (prevents path traversal attacks).
+func validatePath(path, repoRoot string) error {
 	// Clean paths
 	cleanPath := filepath.Clean(path)
 	cleanRoot := filepath.Clean(repoRoot)
@@ -336,8 +338,8 @@ func validatePath(path string, repoRoot string) error {
 	return nil
 }
 
-// validateGherkinFile validates a single Gherkin specification file
-func validateGherkinFile(filePath string, repoRoot string, checkTags bool) ([]contracts.ValidationError, error) {
+// validateGherkinFile validates a single Gherkin specification file.
+func validateGherkinFile(filePath, repoRoot string, checkTags bool) ([]contracts.ValidationError, error) {
 	// Read file content
 	content, err := os.ReadFile(filePath)
 	if err != nil {
@@ -371,8 +373,8 @@ func validateGherkinFile(filePath string, repoRoot string, checkTags bool) ([]co
 	return errors, nil
 }
 
-// validateDirectory validates all .feature files in a directory (recursive)
-func validateDirectory(dirPath string, repoRoot string, quiet bool, checkTags bool, format string) ([]*ValidationResult, error) {
+// validateDirectory validates all .feature files in a directory (recursive).
+func validateDirectory(dirPath, repoRoot string, quiet, checkTags bool, format string) ([]*ValidationResult, error) {
 	var results []*ValidationResult
 
 	log.Debugf("Walking directory for .feature files: dir=%s", dirPath)
@@ -430,7 +432,6 @@ func validateDirectory(dirPath string, repoRoot string, quiet bool, checkTags bo
 
 		return nil
 	})
-
 	if err != nil {
 		log.Debugf("Directory walk failed: error=%v", err)
 		return nil, fmt.Errorf("error walking directory: %w", err)
@@ -441,8 +442,8 @@ func validateDirectory(dirPath string, repoRoot string, quiet bool, checkTags bo
 	return results, nil
 }
 
-// outputText displays validation results in text format
-func outputText(results []*ValidationResult, quiet bool, verbose bool) {
+// outputText displays validation results in text format.
+func outputText(results []*ValidationResult, quiet, verbose bool) {
 	if len(results) == 0 {
 		log.Info("No specification files found")
 		return
@@ -470,7 +471,7 @@ func outputText(results []*ValidationResult, quiet bool, verbose bool) {
 	}
 }
 
-// outputJSON displays validation results in JSON format
+// outputJSON displays validation results in JSON format.
 func outputJSON(results []*ValidationResult) {
 	output := map[string]interface{}{
 		"results": results,
@@ -488,7 +489,7 @@ func outputJSON(results []*ValidationResult) {
 	}
 }
 
-// formatValidationResult formats a single validation result for display
+// formatValidationResult formats a single validation result for display.
 func formatValidationResult(result *ValidationResult) string {
 	var output strings.Builder
 
@@ -532,7 +533,7 @@ func formatValidationResult(result *ValidationResult) string {
 	return output.String()
 }
 
-// formatValidationSummary formats a summary of multiple validation results
+// formatValidationSummary formats a summary of multiple validation results.
 func formatValidationSummary(results []*ValidationResult) string {
 	if len(results) == 0 {
 		return "No specification files found"
@@ -552,7 +553,7 @@ func formatValidationSummary(results []*ValidationResult) string {
 	return output.String()
 }
 
-// countPassed counts the number of passed validations
+// countPassed counts the number of passed validations.
 func countPassed(results []*ValidationResult) int {
 	count := 0
 	for _, r := range results {
@@ -563,7 +564,7 @@ func countPassed(results []*ValidationResult) int {
 	return count
 }
 
-// countFailed counts the number of failed validations
+// countFailed counts the number of failed validations.
 func countFailed(results []*ValidationResult) int {
 	count := 0
 	for _, r := range results {
@@ -574,8 +575,8 @@ func countFailed(results []*ValidationResult) int {
 	return count
 }
 
-// relativePath returns a path relative to the repository root for display
-func relativePath(path string, repoRoot string) string {
+// relativePath returns a path relative to the repository root for display.
+func relativePath(path, repoRoot string) string {
 	rel, err := filepath.Rel(repoRoot, path)
 	if err != nil {
 		return path
@@ -583,7 +584,7 @@ func relativePath(path string, repoRoot string) string {
 	return rel
 }
 
-// normalizePath converts a path to Unix-style relative path from repository root
+// normalizePath converts a path to Unix-style relative path from repository root.
 func normalizePath(path string) string {
 	// Get repository root
 	repoRoot, err := repository.GetRepositoryRoot("")
@@ -607,21 +608,21 @@ func normalizePath(path string) string {
 // Fix functionality for --fix flag
 // ============================================================================
 
-// FixResult holds the result of fixing a single file
+// FixResult holds the result of fixing a single file.
 type FixResult struct {
 	Path  string
 	Fixes []FixedIssue
 	Error error
 }
 
-// FixedIssue represents a single fix applied
+// FixedIssue represents a single fix applied.
 type FixedIssue struct {
 	Line        int
 	Code        string
 	Description string
 }
 
-// FixCount returns the number of fixes applied
+// FixCount returns the number of fixes applied.
 func (r *FixResult) FixCount() int {
 	return len(r.Fixes)
 }
@@ -629,7 +630,7 @@ func (r *FixResult) FixCount() int {
 // fixGherkinFile attempts to fix issues in a feature file
 // Supports fixing:
 // - MISSING_VERIFICATION_TAG: adds @ov tag before scenario
-// - INVALID_FEATURE_NAMING: renames feature to <module>_<kebab-name> format
+// - INVALID_FEATURE_NAMING: renames feature to <module>_<kebab-name> format.
 func fixGherkinFile(filePath string, errors []contracts.ValidationError) (*FixResult, error) {
 	result := &FixResult{
 		Path:  filePath,
@@ -699,7 +700,7 @@ func fixGherkinFile(filePath string, errors []contracts.ValidationError) (*FixRe
 
 	// Write back if modified
 	if modified {
-		err = os.WriteFile(filePath, []byte(strings.Join(lines, "\n")), 0644)
+		err = os.WriteFile(filePath, []byte(strings.Join(lines, "\n")), 0o644)
 		if err != nil {
 			result.Error = fmt.Errorf("failed to write file: %w", err)
 			return result, result.Error
@@ -710,8 +711,8 @@ func fixGherkinFile(filePath string, errors []contracts.ValidationError) (*FixRe
 }
 
 // generateFeatureName creates a valid feature name from file path and current feature line
-// Format: <module>_<kebab-case-description>
-func generateFeatureName(filePath string, featureLine string) string {
+// Format: <module>_<kebab-case-description>.
+func generateFeatureName(filePath, featureLine string) string {
 	// Extract module from file path (e.g., specs/eac-core/logging/spec.feature -> eac-core)
 	module := extractModuleFromPath(filePath)
 	if module == "" {
@@ -733,7 +734,7 @@ func generateFeatureName(filePath string, featureLine string) string {
 
 // extractModuleFromPath extracts the module name from a spec file path
 // e.g., specs/eac-core/logging/specification.feature -> eac-core
-// e.g., specs/eac-commands/commit/specification.feature -> eac-commands
+// e.g., specs/eac-commands/commit/specification.feature -> eac-commands.
 func extractModuleFromPath(filePath string) string {
 	// Normalize path separators
 	normalized := filepath.ToSlash(filePath)
@@ -757,7 +758,7 @@ func extractModuleFromPath(filePath string) string {
 }
 
 // toKebabCase converts a string to kebab-case
-// e.g., "Dual-output logging with configurable routing" -> "dual-output-logging-with-configurable-routing"
+// e.g., "Dual-output logging with configurable routing" -> "dual-output-logging-with-configurable-routing".
 func toKebabCase(s string) string {
 	// Convert to lowercase
 	s = strings.ToLower(s)
@@ -786,13 +787,13 @@ func toKebabCase(s string) string {
 	return resultStr
 }
 
-// getIndentation returns the leading whitespace from a line
+// getIndentation returns the leading whitespace from a line.
 func getIndentation(line string) string {
 	trimmed := strings.TrimLeft(line, " \t")
 	return line[:len(line)-len(trimmed)]
 }
 
-// insertLine inserts a new line at the given index
+// insertLine inserts a new line at the given index.
 func insertLine(lines []string, idx int, newLine string) []string {
 	lines = append(lines, "")
 	copy(lines[idx+1:], lines[idx:])
@@ -800,7 +801,7 @@ func insertLine(lines []string, idx int, newLine string) []string {
 	return lines
 }
 
-// formatFixResult formats a fix result for display
+// formatFixResult formats a fix result for display.
 func formatFixResult(result *FixResult, repoRoot string) string {
 	if result.FixCount() == 0 {
 		return ""

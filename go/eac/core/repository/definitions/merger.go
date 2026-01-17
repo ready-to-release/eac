@@ -10,7 +10,7 @@ import (
 )
 
 // isTemplateSkeletonPath checks if a directory path is part of a template skeleton structure
-// that should be excluded from definitions processing
+// that should be excluded from definitions processing.
 func isTemplateSkeletonPath(path, rootDir string) bool {
 	// Normalize paths first to handle cross-platform paths
 	normalizedPath := strings.ReplaceAll(path, "\\", "/")
@@ -37,14 +37,14 @@ func isTemplateSkeletonPath(path, rootDir string) bool {
 	return false
 }
 
-// DefinitionFile represents a single definitions.yml file
+// DefinitionFile represents a single definitions.yml file.
 type DefinitionFile struct {
 	Path     string
 	Content  *yaml.Node
 	YAMLPath string
 }
 
-// EnumerateDefinitionFiles walks a directory tree and finds all definitions.yml files
+// EnumerateDefinitionFiles walks a directory tree and finds all definitions.yml files.
 func EnumerateDefinitionFiles(rootDir string) ([]DefinitionFile, error) {
 	var definitions []DefinitionFile
 
@@ -98,7 +98,7 @@ func EnumerateDefinitionFiles(rootDir string) ([]DefinitionFile, error) {
 	return definitions, err
 }
 
-// generateYAMLPath converts a file path to a YAML path (e.g., "foo/bar/definitions.yml" -> "foo.bar")
+// generateYAMLPath converts a file path to a YAML path (e.g., "foo/bar/definitions.yml" -> "foo.bar").
 func generateYAMLPath(filePath string) string {
 	// Normalize path separators first to handle cross-platform paths
 	normalizedPath := strings.ReplaceAll(filePath, "\\", "/")
@@ -115,7 +115,7 @@ func generateYAMLPath(filePath string) string {
 	return strings.Join(parts, ".")
 }
 
-// MergeDefinitions merges multiple definition files into a single YAML structure
+// MergeDefinitions merges multiple definition files into a single YAML structure.
 func MergeDefinitions(definitions []DefinitionFile) (*yaml.Node, error) {
 	result := &yaml.Node{
 		Kind:    yaml.DocumentNode,
@@ -141,7 +141,7 @@ func MergeDefinitions(definitions []DefinitionFile) (*yaml.Node, error) {
 	return result, nil
 }
 
-// setNestedValue sets a nested value in a YAML mapping
+// setNestedValue sets a nested value in a YAML mapping.
 func setNestedValue(rootMap *yaml.Node, path string, value *yaml.Node) {
 	parts := strings.Split(path, ".")
 	current := rootMap
@@ -157,7 +157,7 @@ func setNestedValue(rootMap *yaml.Node, path string, value *yaml.Node) {
 	}
 }
 
-// addToMapping adds a key-value pair to a YAML mapping
+// addToMapping adds a key-value pair to a YAML mapping.
 func addToMapping(mapping *yaml.Node, key string, value *yaml.Node) {
 	keyNode := &yaml.Node{Kind: yaml.ScalarNode, Value: key}
 
@@ -171,7 +171,7 @@ func addToMapping(mapping *yaml.Node, key string, value *yaml.Node) {
 	mapping.Content = append(mapping.Content, keyNode, valueNode)
 }
 
-// getOrCreateMapping gets or creates a nested mapping in a YAML structure
+// getOrCreateMapping gets or creates a nested mapping in a YAML structure.
 func getOrCreateMapping(mapping *yaml.Node, key string) *yaml.Node {
 	// Look for existing key
 	for i := 0; i < len(mapping.Content); i += 2 {
@@ -187,7 +187,7 @@ func getOrCreateMapping(mapping *yaml.Node, key string) *yaml.Node {
 	return valueNode
 }
 
-// ProcessDirectory is a convenience function that enumerates and merges all definitions in a directory
+// ProcessDirectory is a convenience function that enumerates and merges all definitions in a directory.
 func ProcessDirectory(rootDir string) (*yaml.Node, error) {
 	definitions, err := EnumerateDefinitionFiles(rootDir)
 	if err != nil {

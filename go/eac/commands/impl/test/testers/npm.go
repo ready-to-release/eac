@@ -21,7 +21,7 @@ func init() {
 // TestNpmModule is the test handler for npm-based modules.
 // It runs Mocha tests with tag filtering based on the test suite configuration.
 // Tags are embedded in describe() names: describe('@L0 ComponentName', ...)
-func TestNpmModule(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
+func TestNpmModule(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, reportFormat, suiteName string) int {
 	Writeln(logWriter, "\n=== Testing %s: %s ===", module.Type, module.Moniker)
 	Writeln(logWriter, "Suite: %s", suiteName)
 

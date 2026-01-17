@@ -11,13 +11,13 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 )
 
-// JSONSchemaValidator validates JSON against a schema
+// JSONSchemaValidator validates JSON against a schema.
 type JSONSchemaValidator struct {
 	SchemaPath string
 	Schema     *gojsonschema.Schema
 }
 
-// arrayErrorPattern represents a detected pattern in array validation errors
+// arrayErrorPattern represents a detected pattern in array validation errors.
 type arrayErrorPattern struct {
 	arrayPath     string
 	affectedItems []int
@@ -26,7 +26,7 @@ type arrayErrorPattern struct {
 	actualFields  map[string]bool
 }
 
-// NewJSONSchemaValidator creates a JSON schema validator
+// NewJSONSchemaValidator creates a JSON schema validator.
 func NewJSONSchemaValidator(schemaPath string) (*JSONSchemaValidator, error) {
 	// Convert file path to proper file:// URL
 	fileURL := pathToFileURL(schemaPath)
@@ -42,7 +42,7 @@ func NewJSONSchemaValidator(schemaPath string) (*JSONSchemaValidator, error) {
 	}, nil
 }
 
-// Validate validates JSON content against schema (implements Validator interface)
+// Validate validates JSON content against schema (implements Validator interface).
 func (v *JSONSchemaValidator) Validate(output string, context map[string]interface{}) []ValidationError {
 	var errors []ValidationError
 
@@ -71,7 +71,7 @@ func (v *JSONSchemaValidator) Validate(output string, context map[string]interfa
 	return errors
 }
 
-// processSchemaErrors converts schema errors to contextual validation errors
+// processSchemaErrors converts schema errors to contextual validation errors.
 func (v *JSONSchemaValidator) processSchemaErrors(schemaErrors []gojsonschema.ResultError, jsonData interface{}) []ValidationError {
 	// Detect array error patterns
 	patterns := v.detectArrayPatterns(schemaErrors, jsonData)
@@ -89,7 +89,7 @@ func (v *JSONSchemaValidator) processSchemaErrors(schemaErrors []gojsonschema.Re
 	return errors
 }
 
-// detectArrayPatterns finds repetitive error patterns in arrays
+// detectArrayPatterns finds repetitive error patterns in arrays.
 func (v *JSONSchemaValidator) detectArrayPatterns(schemaErrors []gojsonschema.ResultError, jsonData interface{}) map[string]*arrayErrorPattern {
 	patterns := make(map[string]*arrayErrorPattern)
 
@@ -141,7 +141,7 @@ func (v *JSONSchemaValidator) detectArrayPatterns(schemaErrors []gojsonschema.Re
 	return filteredPatterns
 }
 
-// parseArrayPath extracts array path and index from field like "module_analyses.0.field"
+// parseArrayPath extracts array path and index from field like "module_analyses.0.field".
 func (v *JSONSchemaValidator) parseArrayPath(field string) (arrayPath string, itemIndex int, ok bool) {
 	// Match pattern: path.number or path.number.field
 	re := regexp.MustCompile(`^([a-z_]+)\.(\d+)`)
@@ -151,11 +151,13 @@ func (v *JSONSchemaValidator) parseArrayPath(field string) (arrayPath string, it
 	}
 
 	arrayPath = matches[1]
-	fmt.Sscanf(matches[2], "%d", &itemIndex)
+	if _, err := fmt.Sscanf(matches[2], "%d", &itemIndex); err != nil {
+		return "", 0, false // Invalid index format
+	}
 	return arrayPath, itemIndex, true
 }
 
-// extractActualFields finds what fields were actually present in the JSON
+// extractActualFields finds what fields were actually present in the JSON.
 func (v *JSONSchemaValidator) extractActualFields(jsonData interface{}, arrayPath string, itemIndex int, pattern *arrayErrorPattern) {
 	dataMap, ok := jsonData.(map[string]interface{})
 	if !ok {
@@ -183,7 +185,7 @@ func (v *JSONSchemaValidator) extractActualFields(jsonData interface{}, arrayPat
 	}
 }
 
-// createPatternBasedErrors generates contextual errors based on detected patterns
+// createPatternBasedErrors generates contextual errors based on detected patterns.
 func (v *JSONSchemaValidator) createPatternBasedErrors(patterns map[string]*arrayErrorPattern, schemaErrors []gojsonschema.ResultError, jsonData interface{}) []ValidationError {
 	var errors []ValidationError
 	processedFields := make(map[string]bool)
@@ -217,14 +219,14 @@ func (v *JSONSchemaValidator) createPatternBasedErrors(patterns map[string]*arra
 	return errors
 }
 
-// formatArrayPatternError creates a detailed error message for array patterns
+// formatArrayPatternError creates a detailed error message for array patterns.
 func (v *JSONSchemaValidator) formatArrayPatternError(pattern *arrayErrorPattern, jsonData interface{}) string {
 	var sb strings.Builder
 
 	// Header
-	sb.WriteString(fmt.Sprintf("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"))
+	sb.WriteString("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
 	sb.WriteString(fmt.Sprintf("ARRAY STRUCTURE ERROR: '%s'\n", pattern.arrayPath))
-	sb.WriteString(fmt.Sprintf("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"))
+	sb.WriteString("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n")
 
 	// Summary
 	sb.WriteString(fmt.Sprintf("Problem: %d items in array have schema validation errors\n", len(pattern.affectedItems)))
@@ -258,7 +260,7 @@ func (v *JSONSchemaValidator) formatArrayPatternError(pattern *arrayErrorPattern
 	return sb.String()
 }
 
-// enhanceError adds context to individual errors
+// enhanceError adds context to individual errors.
 func (v *JSONSchemaValidator) enhanceError(schemaErr gojsonschema.ResultError, jsonData interface{}) *ValidationError {
 	field := schemaErr.Field()
 	desc := schemaErr.Description()
@@ -304,7 +306,7 @@ func formatItemList(items []int) string {
 	return fmt.Sprintf("[0-%d] (%d total)", items[len(items)-1], len(items))
 }
 
-// VerifyImplementation verifies the validator is ready (implements Validator interface)
+// VerifyImplementation verifies the validator is ready (implements Validator interface).
 func (v *JSONSchemaValidator) VerifyImplementation() []ValidationError {
 	// No special verification needed for JSON schema validator
 	return []ValidationError{}
@@ -312,7 +314,7 @@ func (v *JSONSchemaValidator) VerifyImplementation() []ValidationError {
 
 // pathToFileURL converts a file path to a proper file:// URL
 // This handles Windows paths correctly by converting backslashes to forward slashes
-// and ensuring the proper URL format
+// and ensuring the proper URL format.
 func pathToFileURL(path string) string {
 	// Convert to absolute path
 	absPath, err := filepath.Abs(path)

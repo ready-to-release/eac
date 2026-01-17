@@ -7,7 +7,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/git"
 )
 
-// GitContext contains Git repository context information
+// GitContext contains Git repository context information.
 type GitContext struct {
 	RepositoryURL string // GitHub repository URL (e.g., "https://github.com/owner/repo")
 	BaseCommit    string // Closest server-known commit SHA
@@ -74,7 +74,7 @@ func (ctx *GitContext) BuildGitHubFileURL(filePath string) string {
 	return fmt.Sprintf("%s/blob/%s/%s", ctx.RepositoryURL, ctx.BaseCommit, filePath)
 }
 
-// BuildGitHubBlobURL is an alias for BuildGitHubFileURL
+// BuildGitHubBlobURL is an alias for BuildGitHubFileURL.
 func (ctx *GitContext) BuildGitHubBlobURL(filePath string) string {
 	return ctx.BuildGitHubFileURL(filePath)
 }

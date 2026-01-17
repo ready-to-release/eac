@@ -32,7 +32,7 @@ func init() {
 
 // artifactsFlags defines valid flags for the get artifacts command
 
-// GetArtifacts returns resolved artifacts for a module
+// GetArtifacts returns resolved artifacts for a module.
 func GetArtifacts() int {
 	// Validate flags before parsing
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
@@ -207,7 +207,7 @@ func getArtifactsForModule(moduleName, targetOS, targetArch string, allPlatforms
 	return 0
 }
 
-// ArtifactBuildModes shows which artifacts are built in each mode
+// ArtifactBuildModes shows which artifacts are built in each mode.
 type ArtifactBuildModes struct {
 	Default []string `json:"default" yaml:"default"` // Artifacts built in default mode (current platform)
 	All     []string `json:"all" yaml:"all"`         // Artifacts built in --all mode (all platforms)

@@ -26,13 +26,13 @@ func TestLoadProfile(t *testing.T) {
 		}
 	}`
 	validPath := filepath.Join(tmpDir, "valid.profile.json")
-	if err := os.WriteFile(validPath, []byte(validProfile), 0644); err != nil {
+	if err := os.WriteFile(validPath, []byte(validProfile), 0o644); err != nil {
 		t.Fatalf("Failed to write test file: %v", err)
 	}
 
 	// Create an invalid JSON file
 	invalidPath := filepath.Join(tmpDir, "invalid.json")
-	if err := os.WriteFile(invalidPath, []byte("not json"), 0644); err != nil {
+	if err := os.WriteFile(invalidPath, []byte("not json"), 0o644); err != nil {
 		t.Fatalf("Failed to write test file: %v", err)
 	}
 
@@ -108,7 +108,7 @@ func TestLoadAssessmentResults(t *testing.T) {
 		}
 	}`
 	validPath := filepath.Join(tmpDir, "assessment-results.json")
-	if err := os.WriteFile(validPath, []byte(validAR), 0644); err != nil {
+	if err := os.WriteFile(validPath, []byte(validAR), 0o644); err != nil {
 		t.Fatalf("Failed to write test file: %v", err)
 	}
 
@@ -163,17 +163,17 @@ func TestDetectOSCALDocumentType(t *testing.T) {
 	// Create profile file
 	profileContent := `{"profile": {"uuid": "test"}}`
 	profilePath := filepath.Join(tmpDir, "profile.json")
-	os.WriteFile(profilePath, []byte(profileContent), 0644)
+	os.WriteFile(profilePath, []byte(profileContent), 0o644)
 
 	// Create assessment-results file
 	arContent := `{"assessment-results": {"uuid": "test"}}`
 	arPath := filepath.Join(tmpDir, "assessment.json")
-	os.WriteFile(arPath, []byte(arContent), 0644)
+	os.WriteFile(arPath, []byte(arContent), 0o644)
 
 	// Create unknown file
 	unknownContent := `{"other": {"data": "test"}}`
 	unknownPath := filepath.Join(tmpDir, "unknown.json")
-	os.WriteFile(unknownPath, []byte(unknownContent), 0644)
+	os.WriteFile(unknownPath, []byte(unknownContent), 0o644)
 
 	tests := []struct {
 		name     string
@@ -235,13 +235,13 @@ func TestDiscoverProfiles(t *testing.T) {
 
 	// Create specs/.risk-controls directory
 	riskDir := filepath.Join(tmpDir, "specs", ".risk-controls")
-	os.MkdirAll(riskDir, 0755)
+	os.MkdirAll(riskDir, 0o755)
 
 	// Create profile files
 	profile1 := `{"profile": {"uuid": "p1", "metadata": {"title": "Profile 1"}}}`
 	profile2 := `{"profile": {"uuid": "p2", "metadata": {"title": "Profile 2"}}}`
-	os.WriteFile(filepath.Join(riskDir, "billing.profile.json"), []byte(profile1), 0644)
-	os.WriteFile(filepath.Join(riskDir, "auth.profile.json"), []byte(profile2), 0644)
+	os.WriteFile(filepath.Join(riskDir, "billing.profile.json"), []byte(profile1), 0o644)
+	os.WriteFile(filepath.Join(riskDir, "auth.profile.json"), []byte(profile2), 0o644)
 
 	profiles, err := DiscoverProfiles(tmpDir)
 	if err != nil {
@@ -267,14 +267,14 @@ func TestDiscoverAssessmentResults(t *testing.T) {
 	// Create out/risk directories
 	billingDir := filepath.Join(tmpDir, "out", "risk", "billing")
 	authDir := filepath.Join(tmpDir, "out", "risk", "auth")
-	os.MkdirAll(billingDir, 0755)
-	os.MkdirAll(authDir, 0755)
+	os.MkdirAll(billingDir, 0o755)
+	os.MkdirAll(authDir, 0o755)
 
 	// Create assessment-results files (timestamped format)
 	ar1 := `{"assessment-results": {"uuid": "ar1"}}`
 	ar2 := `{"assessment-results": {"uuid": "ar2"}}`
-	os.WriteFile(filepath.Join(billingDir, "assessment-results-20250101-120000.json"), []byte(ar1), 0644)
-	os.WriteFile(filepath.Join(authDir, "assessment-results-20250101-120000.json"), []byte(ar2), 0644)
+	os.WriteFile(filepath.Join(billingDir, "assessment-results-20250101-120000.json"), []byte(ar1), 0o644)
+	os.WriteFile(filepath.Join(authDir, "assessment-results-20250101-120000.json"), []byte(ar2), 0o644)
 
 	results, err := DiscoverAssessmentResults(tmpDir)
 	if err != nil {

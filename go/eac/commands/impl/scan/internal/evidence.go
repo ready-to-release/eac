@@ -49,7 +49,7 @@ func WriteEvidence(workspaceRoot, module string, scanner ScannerType, findings i
 		// If Scan is relative, join with workspaceRoot
 		outputDir = filepath.Join(workspaceRoot, cfg.Repository.Paths.Out.Scan, module)
 	}
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		return "", fmt.Errorf("failed to create output directory: %w", err)
 	}
 
@@ -86,7 +86,7 @@ func WriteEvidence(workspaceRoot, module string, scanner ScannerType, findings i
 	outputPath := filepath.Join(outputDir, filename)
 
 	// Write evidence file
-	if err := os.WriteFile(outputPath, evidenceJSON, 0644); err != nil {
+	if err := os.WriteFile(outputPath, evidenceJSON, 0o644); err != nil {
 		return "", fmt.Errorf("failed to write evidence file: %w", err)
 	}
 

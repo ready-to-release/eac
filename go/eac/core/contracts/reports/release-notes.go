@@ -8,14 +8,14 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/releasenotes"
 )
 
-// ReleaseNotesReport represents parsed release notes with module context
+// ReleaseNotesReport represents parsed release notes with module context.
 type ReleaseNotesReport struct {
 	Module       string
 	Path         string
 	ReleaseNotes *releasenotes.ReleaseNotes
 }
 
-// GetReleaseNotes loads and parses a module's RELEASE-NOTES.md file
+// GetReleaseNotes loads and parses a module's RELEASE-NOTES.md file.
 func GetReleaseNotes(workspaceRoot, module string) (*ReleaseNotesReport, error) {
 	// Load config
 	cfg, err := config.Load(config.DefaultLoadOptions())

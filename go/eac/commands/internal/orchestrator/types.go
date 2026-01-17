@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// WorkItem represents a single unit of work to be processed
+// WorkItem represents a single unit of work to be processed.
 type WorkItem struct {
 	// Moniker is the unique identifier for this work item
 	Moniker string
@@ -13,7 +13,7 @@ type WorkItem struct {
 	Index int
 }
 
-// WorkResult represents the outcome of processing a work item
+// WorkResult represents the outcome of processing a work item.
 type WorkResult struct {
 	// Moniker is the unique identifier for this work item
 	Moniker string
@@ -35,10 +35,10 @@ type WorkResult struct {
 
 // WorkerFunc is a function that processes a single work item
 // It receives the moniker and should return an exit code (0 for success)
-// All output should go to the provided logWriter (not stdout/stderr)
+// All output should go to the provided logWriter (not stdout/stderr).
 type WorkerFunc func(moniker string, logWriter io.Writer) int
 
-// Config holds orchestrator configuration options
+// Config holds orchestrator configuration options.
 type Config struct {
 	// WorkspaceRoot is the root directory of the repository
 	WorkspaceRoot string

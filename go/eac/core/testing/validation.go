@@ -14,7 +14,7 @@ import (
 
 // ValidTestTypes defines the valid test types.
 // Unit tests: gotest (Go), mocha (npm)
-// Spec tests: godog (Go), tscucumber (npm)
+// Spec tests: godog (Go), tscucumber (npm).
 var ValidTestTypes = []string{"gotest", "godog", "mocha", "tscucumber"}
 
 // GetLevelTags returns taxonomy level tags from config.
@@ -53,7 +53,7 @@ func GetVerificationTagsFromConfig(cfg *config.EACConfig) []string {
 	return cfg.TestingTags.GetVerificationTags()
 }
 
-// ValidateTags checks if tags are valid and don't conflict
+// ValidateTags checks if tags are valid and don't conflict.
 func ValidateTags(tags []string) []string {
 	errors := []string{}
 
@@ -99,7 +99,7 @@ func ValidateTags(tags []string) []string {
 }
 
 // ValidatePostInference validates test tags after inference has been applied
-// This enforces strict rules that must be true after tag enrichment
+// This enforces strict rules that must be true after tag enrichment.
 func ValidatePostInference(test TestReference, validSkipReasons map[string]config.SkipReason) []string {
 	errors := []string{}
 	warnings := []string{}
@@ -219,7 +219,7 @@ func ValidatePostInference(test TestReference, validSkipReasons map[string]confi
 }
 
 // ShouldSkipValidation determines if a test should be excluded from validation
-// Returns true for test framework's own tests that may intentionally have invalid tags
+// Returns true for test framework's own tests that may intentionally have invalid tags.
 func ShouldSkipValidation(test TestReference) bool {
 	// All meta tests (testing framework tests) have been moved to .go.txt files
 	// and are tested via specs/eac-core/testing-framework/specification.feature
@@ -229,7 +229,7 @@ func ShouldSkipValidation(test TestReference) bool {
 
 // ValidateAllPostInference validates all tests after inference
 // Returns map of test name to validation errors
-// Skips test framework's own tests which may have intentionally invalid tags
+// Skips test framework's own tests which may have intentionally invalid tags.
 func ValidateAllPostInference(tests []TestReference, repoRoot string) map[string][]string {
 	validationErrors := make(map[string][]string)
 
@@ -259,7 +259,7 @@ func ValidateAllPostInference(tests []TestReference, repoRoot string) map[string
 	return validationErrors
 }
 
-// ValidateTestReference validates a complete test reference
+// ValidateTestReference validates a complete test reference.
 func ValidateTestReference(test TestReference) []string {
 	errors := []string{}
 
@@ -277,7 +277,7 @@ func ValidateTestReference(test TestReference) []string {
 
 // IsValidTag checks if a tag is valid according to contracts.
 // Returns false if config cannot be loaded (fail-closed behavior).
-// Note: This does lightweight validation - for full validation use validate test-tags command
+// Note: This does lightweight validation - for full validation use validate test-tags command.
 func IsValidTag(tag string) bool {
 	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
@@ -299,7 +299,7 @@ func IsValidTagWithConfig(tag string, cfg *config.EACConfig) bool {
 	return cfg.TestingTags.IsKnownTag(tag)
 }
 
-// validateRiskControlTag validates @risk-control:<name>-<id> format
+// validateRiskControlTag validates @risk-control:<name>-<id> format.
 func validateRiskControlTag(tag string) bool {
 	// Format: @risk-control:<name>-<id>
 	// Example: @risk-control:auth-mfa-01
@@ -338,7 +338,7 @@ func validateRiskControlTag(tag string) bool {
 	return len(controlName) > 0
 }
 
-// GetKnownTags returns all known tags from the config
+// GetKnownTags returns all known tags from the config.
 func GetKnownTags() []string {
 	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
@@ -352,7 +352,7 @@ func GetKnownTags() []string {
 	return tags
 }
 
-// ValidateGxPRequirements validates GxP-specific requirements
+// ValidateGxPRequirements validates GxP-specific requirements.
 func ValidateGxPRequirements(test TestReference) []string {
 	errors := []string{}
 
@@ -379,7 +379,7 @@ func ValidateGxPRequirements(test TestReference) []string {
 	return errors
 }
 
-// ValidateRiskControls validates risk control tags
+// ValidateRiskControls validates risk control tags.
 func ValidateRiskControls(test TestReference) []string {
 	errors := []string{}
 
@@ -392,7 +392,7 @@ func ValidateRiskControls(test TestReference) []string {
 	return errors
 }
 
-// ParseRiskControlTag parses a risk control tag into components
+// ParseRiskControlTag parses a risk control tag into components.
 func ParseRiskControlTag(tag string) (*RiskControlRef, error) {
 	if !strings.HasPrefix(tag, "@risk-control:") {
 		return nil, fmt.Errorf("not a risk control tag: %s", tag)

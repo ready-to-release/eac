@@ -28,7 +28,7 @@ type ScanManifest struct {
 	Version         string                   `json:"version"`                    // Manifest format version
 }
 
-// ScanSummary holds aggregated scan counts
+// ScanSummary holds aggregated scan counts.
 type ScanSummary struct {
 	Total   int `json:"total"`
 	Passed  int `json:"passed"`
@@ -36,7 +36,7 @@ type ScanSummary struct {
 	Skipped int `json:"skipped,omitempty"`
 }
 
-// ScannerResult tracks results for a specific scanner run
+// ScannerResult tracks results for a specific scanner run.
 type ScannerResult struct {
 	Status          string    `json:"status"`                     // passed, failed, skipped
 	RunTime         time.Time `json:"run_time"`                   // When this scanner was run
@@ -46,7 +46,7 @@ type ScannerResult struct {
 	FindingsCount   int       `json:"findings_count,omitempty"`   // Number of findings
 }
 
-// ScanArtifactInfo describes a scan artifact
+// ScanArtifactInfo describes a scan artifact.
 type ScanArtifactInfo struct {
 	Type    string `json:"type"`             // evidence, report, log
 	ID      string `json:"id"`               // Artifact identifier
@@ -57,27 +57,29 @@ type ScanArtifactInfo struct {
 	SHA256  string `json:"sha256,omitempty"` // SHA-256 hash
 }
 
-// Scanner status constants
+// Scanner status constants.
 const (
 	ScanStatusPassed  = "passed"
 	ScanStatusFailed  = "failed"
 	ScanStatusSkipped = "skipped"
 )
 
-// Scan artifact type constants
+// Scan artifact type constants.
 const (
 	ScanArtifactTypeEvidence = "evidence"
 	ScanArtifactTypeReport   = "report"
 	ScanArtifactTypeLog      = "log"
 )
 
-const scanManifestVersion = "1.0"
-const scanManifestFileName = "scan.manifest.json"
+const (
+	scanManifestVersion  = "1.0"
+	scanManifestFileName = "scan.manifest.json"
+)
 
-// ScanAgentCI is the scan agent value for CI runs (GitHub Actions)
+// ScanAgentCI is the scan agent value for CI runs (GitHub Actions).
 const ScanAgentCI = "ci"
 
-// ScanAgentDevbox is the scan agent value for local developer runs
+// ScanAgentDevbox is the scan agent value for local developer runs.
 const ScanAgentDevbox = "devbox"
 
 // NewScanManifest creates a new scan manifest for a module.
@@ -108,12 +110,12 @@ func NewScanManifest(moniker, moduleType, gitCommit string) *ScanManifest {
 }
 
 // Save writes the manifest to the module's security output directory.
-// The manifest is stored at <moduleSecurityDir>/scan.manifest.json
+// The manifest is stored at <moduleSecurityDir>/scan.manifest.json.
 func (m *ScanManifest) Save(moduleSecurityDir string) error {
 	manifestPath := filepath.Join(moduleSecurityDir, scanManifestFileName)
 
 	// Create directory if needed
-	if err := os.MkdirAll(moduleSecurityDir, 0755); err != nil {
+	if err := os.MkdirAll(moduleSecurityDir, 0o755); err != nil { //nolint:gosec // G301: Scan output should be world-readable
 		return fmt.Errorf("failed to create manifest directory: %w", err)
 	}
 
@@ -124,14 +126,14 @@ func (m *ScanManifest) Save(moduleSecurityDir string) error {
 	}
 
 	// Write to file
-	if err := os.WriteFile(manifestPath, data, 0644); err != nil {
+	if err := os.WriteFile(manifestPath, data, 0o644); err != nil {
 		return fmt.Errorf("failed to write scan manifest: %w", err)
 	}
 
 	return nil
 }
 
-// LoadScanManifest loads a module's scan manifest from its security output directory
+// LoadScanManifest loads a module's scan manifest from its security output directory.
 func LoadScanManifest(moduleSecurityDir string) (*ScanManifest, error) {
 	manifestPath := filepath.Join(moduleSecurityDir, scanManifestFileName)
 
@@ -194,7 +196,7 @@ func (m *ScanManifest) AddArtifact(artifact ScanArtifactInfo) {
 	m.Artifacts = append(m.Artifacts, artifact)
 }
 
-// recalculateSummary updates the summary counts from scanner results
+// recalculateSummary updates the summary counts from scanner results.
 func (m *ScanManifest) recalculateSummary() {
 	m.Summary = ScanSummary{}
 	for _, scan := range m.Scans {
@@ -210,17 +212,17 @@ func (m *ScanManifest) recalculateSummary() {
 	}
 }
 
-// AllPassed returns true if all scans passed (no failures)
+// AllPassed returns true if all scans passed (no failures).
 func (m *ScanManifest) AllPassed() bool {
 	return m.Summary.Failed == 0
 }
 
-// GetScanManifestPath returns the path to a module's scan manifest
+// GetScanManifestPath returns the path to a module's scan manifest.
 func GetScanManifestPath(moduleSecurityDir string) string {
 	return filepath.Join(moduleSecurityDir, scanManifestFileName)
 }
 
-// ScanManifestExists checks if a scan manifest exists for a module
+// ScanManifestExists checks if a scan manifest exists for a module.
 func ScanManifestExists(moduleSecurityDir string) bool {
 	_, err := os.Stat(GetScanManifestPath(moduleSecurityDir))
 	return err == nil
@@ -279,12 +281,12 @@ func (m *ScanManifest) ClearScanner(scannerType string) {
 	m.recalculateSummary()
 }
 
-// SetDuration sets the total scan duration
+// SetDuration sets the total scan duration.
 func (m *ScanManifest) SetDuration(duration time.Duration) {
 	m.DurationSeconds = duration.Seconds()
 }
 
-// GetFailedScanners returns the list of scanners that failed
+// GetFailedScanners returns the list of scanners that failed.
 func (m *ScanManifest) GetFailedScanners() []string {
 	var failed []string
 	for name, result := range m.Scans {
@@ -295,7 +297,7 @@ func (m *ScanManifest) GetFailedScanners() []string {
 	return failed
 }
 
-// GetPassedScanners returns the list of scanners that passed
+// GetPassedScanners returns the list of scanners that passed.
 func (m *ScanManifest) GetPassedScanners() []string {
 	var passed []string
 	for name, result := range m.Scans {

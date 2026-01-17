@@ -26,7 +26,7 @@ func init() {
 	registry.Register(ShowBooks)
 }
 
-// ShowBooks displays all configured books in a table format
+// ShowBooks displays all configured books in a table format.
 func ShowBooks() int {
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {

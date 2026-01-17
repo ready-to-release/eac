@@ -111,13 +111,13 @@ func ReleaseCalver() int {
 	return 0
 }
 
-// GenerateCalverTag generates a calendar-versioned tag in format prefix/YYYY.MMDD.HHMM
+// GenerateCalverTag generates a calendar-versioned tag in format prefix/YYYY.MMDD.HHMM.
 func GenerateCalverTag(prefix string, t time.Time) string {
 	return fmt.Sprintf("%s/%s.%s", prefix, t.Format("2006.0102"), t.Format("1504"))
 }
 
 // ParseCalverTag parses a calver tag and returns the prefix and timestamp
-// Returns prefix, time, and error if parsing fails
+// Returns prefix, time, and error if parsing fails.
 func ParseCalverTag(tag string) (string, time.Time, error) {
 	parts := strings.SplitN(tag, "/", 2)
 	if len(parts) != 2 {
@@ -151,7 +151,7 @@ func ParseCalverTag(tag string) (string, time.Time, error) {
 	return prefix, t.UTC(), nil
 }
 
-// IsValidCalverVersion checks if a version string matches calver format YYYY.MMDD.HHMM
+// IsValidCalverVersion checks if a version string matches calver format YYYY.MMDD.HHMM.
 func IsValidCalverVersion(version string) bool {
 	parts := strings.Split(version, ".")
 	if len(parts) != 3 {

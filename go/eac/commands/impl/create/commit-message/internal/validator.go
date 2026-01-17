@@ -4,7 +4,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
 )
 
-// CommitMessageValidator implements contracts.Validator for commit message validation
+// CommitMessageValidator implements contracts.Validator for commit message validation.
 type CommitMessageValidator struct {
 	contract        *CommitMessageContract
 	affectedModules []string
@@ -34,7 +34,7 @@ func NewCommitMessageValidator(
 // The context parameter can contain:
 //   - "affectedModules": []string - list of modules with changes (overrides constructor value)
 //
-// Returns validation errors (empty slice if valid)
+// Returns validation errors (empty slice if valid).
 func (v *CommitMessageValidator) Validate(output string, context map[string]interface{}) []contracts.ValidationError {
 	// Use affected modules from context if provided, otherwise use constructor value
 	modules := v.affectedModules
@@ -46,7 +46,7 @@ func (v *CommitMessageValidator) Validate(output string, context map[string]inte
 	return VerifyCommitMessageContract(output, modules)
 }
 
-// VerifyImplementation verifies that the validator implements all contract rules
+// VerifyImplementation verifies that the validator implements all contract rules.
 func (v *CommitMessageValidator) VerifyImplementation() []contracts.ValidationError {
 	// Verify contract can be loaded from unified config
 	_, err := LoadContractFromConfig(v.workspaceRoot)

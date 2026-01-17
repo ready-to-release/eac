@@ -16,6 +16,7 @@ package serve
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -41,7 +42,7 @@ func init() {
 	registry.Register(Serve)
 }
 
-// Serve starts the server for a module
+// Serve starts the server for a module.
 func Serve() int {
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
@@ -59,7 +60,7 @@ func Serve() int {
 
 	var moduleMoniker string
 	var noBrowser bool
-	var port int = 0
+	port := 0
 	var stop bool
 	var reload bool
 	var debug bool
@@ -164,7 +165,10 @@ func Serve() int {
 
 	if running && info != nil {
 		// Check if image is stale - auto-reload if so
-		imageStale, staleReason, _ := dockerClient.IsImageStale(workspaceRoot)
+		imageStale, staleReason, staleErr := dockerClient.IsImageStale(workspaceRoot)
+		if staleErr != nil {
+			imageStale = false // Assume not stale on error
+		}
 		needsRestart := reload || rebuild || imageStale
 
 		if needsRestart {
@@ -193,7 +197,7 @@ func Serve() int {
 			log.Infof("%s server is already running", moduleMoniker)
 			log.Infof("URL: %s", info.URL)
 			if !noBrowser {
-				dockerClient.OpenBrowserWithFallback(info.URL)
+				_, _ = dockerClient.OpenBrowserWithFallback(info.URL) //nolint:errcheck // best-effort browser open
 			}
 			return 0
 		}
@@ -231,7 +235,7 @@ func Serve() int {
 	log.Infof("URL: %s", info.URL)
 
 	if !noBrowser {
-		dockerClient.OpenBrowserWithFallback(info.URL)
+		_, _ = dockerClient.OpenBrowserWithFallback(info.URL) //nolint:errcheck // best-effort browser open
 	}
 
 	if !debug {
@@ -242,22 +246,22 @@ func Serve() int {
 	if debug {
 		log.Info("")
 		log.Info("Debug mode: Streaming container logs (Press Ctrl+C to exit)")
-		dockerClient.StreamLogs()
+		_ = dockerClient.StreamLogs() //nolint:errcheck // best-effort log streaming
 	}
 
 	log.Debugf("Serve completed: module=%s, url=%s", moduleMoniker, info.URL)
 	return 0
 }
 
-// ModuleServeConfig holds configuration for serving a module
+// ModuleServeConfig holds configuration for serving a module.
 type ModuleServeConfig struct {
 	ModuleMoniker string
 	ContentPath   string
 	IsSite        bool
 }
 
-// resolveModuleConfig resolves serve configuration for a module
-func resolveModuleConfig(workspaceRoot string, moduleMoniker string, namedBook string) (*ModuleServeConfig, error) {
+// resolveModuleConfig resolves serve configuration for a module.
+func resolveModuleConfig(workspaceRoot, moduleMoniker, namedBook string) (*ModuleServeConfig, error) {
 	cfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot, LazyLoad: true})
 	if err != nil {
 		return nil, fmt.Errorf("failed to load config: %w", err)
@@ -327,7 +331,7 @@ func resolveModuleConfig(workspaceRoot string, moduleMoniker string, namedBook s
 	}, nil
 }
 
-// listServableModules returns modules that can be served
+// listServableModules returns modules that can be served.
 func listServableModules(workspaceRoot string) []string {
 	cfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot, LazyLoad: true})
 	if err != nil {
@@ -347,7 +351,7 @@ func listServableModules(workspaceRoot string) []string {
 	return modules
 }
 
-// checkStaleness checks if the module build is stale
+// checkStaleness checks if the module build is stale.
 func checkStaleness(workspaceRoot string, moduleConfig *ModuleServeConfig) (bool, string) {
 	// Check if content directory exists
 	if _, err := os.Stat(moduleConfig.ContentPath); os.IsNotExist(err) {
@@ -362,16 +366,19 @@ func checkStaleness(workspaceRoot string, moduleConfig *ModuleServeConfig) (bool
 		}
 	} else {
 		// For PDF directories, check if any PDF files exist
-		pdfs, _ := filepath.Glob(filepath.Join(moduleConfig.ContentPath, "*.pdf"))
-		if len(pdfs) == 0 {
+		pdfs, globErr := filepath.Glob(filepath.Join(moduleConfig.ContentPath, "*.pdf"))
+		if globErr != nil || len(pdfs) == 0 {
 			return true, "no PDF files found"
 		}
 	}
 
 	// Check build state
 	state, err := buildstate.Load(workspaceRoot)
-	if err != nil || state == nil {
-		return true, "no build state found"
+	if err != nil {
+		if errors.Is(err, buildstate.ErrNoState) {
+			return true, "no build state found"
+		}
+		return true, "failed to load build state"
 	}
 
 	if _, exists := state.Modules[moduleConfig.ModuleMoniker]; !exists {
@@ -381,8 +388,8 @@ func checkStaleness(workspaceRoot string, moduleConfig *ModuleServeConfig) (bool
 	return false, ""
 }
 
-// runBuild executes the build command for a module
-func runBuild(workspaceRoot string, moduleMoniker string) error {
+// runBuild executes the build command for a module.
+func runBuild(workspaceRoot, moduleMoniker string) error {
 	binaryPath := paths.CommandsBinaryPath(workspaceRoot)
 
 	log.Debugf("Running build command: binary=%s, module=%s", binaryPath, moduleMoniker)
@@ -395,8 +402,8 @@ func runBuild(workspaceRoot string, moduleMoniker string) error {
 	return cmd.Run()
 }
 
-// handleStop stops the running server
-func handleStop(workspaceRoot string, containerName string, moduleMoniker string) int {
+// handleStop stops the running server.
+func handleStop(workspaceRoot, containerName, moduleMoniker string) int {
 	dockerClient, err := NewDockerClient(containerName)
 	if err != nil {
 		log.Errorf("Failed to initialize Docker: %v", err)
@@ -417,13 +424,13 @@ func handleStop(workspaceRoot string, containerName string, moduleMoniker string
 	return 0
 }
 
-// DockerClient wraps the internal serve package for module serving
+// DockerClient wraps the internal serve package for module serving.
 type DockerClient struct {
 	containerName string
 	ctx           context.Context
 }
 
-// NewDockerClient creates a new Docker client
+// NewDockerClient creates a new Docker client.
 func NewDockerClient(containerName string) (*DockerClient, error) {
 	return &DockerClient{
 		containerName: containerName,
@@ -431,17 +438,17 @@ func NewDockerClient(containerName string) (*DockerClient, error) {
 	}, nil
 }
 
-// Close closes the client (no-op for this wrapper)
+// Close closes the client (no-op for this wrapper).
 func (c *DockerClient) Close() {}
 
-// IsRunning checks if the container is running
+// IsRunning checks if the container is running.
 func (c *DockerClient) IsRunning() (bool, *serve.ServeResult, error) {
 	result, running, err := serve.IsServing(c.ctx, c.containerName)
 	return running, result, err
 }
 
-// StartContainer starts the serve container
-func (c *DockerClient) StartContainer(workspaceRoot string, contentPath string, port int) (*serve.ServeResult, error) {
+// StartContainer starts the serve container.
+func (c *DockerClient) StartContainer(workspaceRoot, contentPath string, port int) (*serve.ServeResult, error) {
 	dockerfile := filepath.Join(workspaceRoot, "containers/static-site/Dockerfile")
 	contextPath := filepath.Dir(dockerfile)
 
@@ -462,12 +469,12 @@ func (c *DockerClient) StartContainer(workspaceRoot string, contentPath string, 
 	return serve.StartServe(c.ctx, serveConfig)
 }
 
-// StopContainer stops the container
+// StopContainer stops the container.
 func (c *DockerClient) StopContainer() error {
 	return serve.StopServe(c.ctx, c.containerName)
 }
 
-// IsImageStale checks if the container image is stale
+// IsImageStale checks if the container image is stale.
 func (c *DockerClient) IsImageStale(workspaceRoot string) (bool, string, error) {
 	dockerfile := filepath.Join(workspaceRoot, "containers/static-site/Dockerfile")
 	contextPath := filepath.Dir(dockerfile)
@@ -483,12 +490,12 @@ func (c *DockerClient) IsImageStale(workspaceRoot string) (bool, string, error) 
 	return serve.CheckImageStale(c.ctx, serveConfig)
 }
 
-// OpenBrowserWithFallback opens the browser
+// OpenBrowserWithFallback opens the browser.
 func (c *DockerClient) OpenBrowserWithFallback(url string) (bool, error) {
 	return serve.OpenBrowserWithFallback(url)
 }
 
-// StreamLogs streams container logs
+// StreamLogs streams container logs.
 func (c *DockerClient) StreamLogs() error {
 	// Not implemented in simplified version
 	return nil

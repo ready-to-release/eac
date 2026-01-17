@@ -11,7 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Schema validator (lazy initialized)
+// Schema validator (lazy initialized).
 var (
 	schemaValidator     *schema.Validator
 	schemaValidatorOnce sync.Once
@@ -92,13 +92,13 @@ type PersonalConfig struct {
 	Git *GitConfig `yaml:"git"`
 }
 
-// loadConfigFile loads and parses a config file without env var substitution
+// loadConfigFile loads and parses a config file without env var substitution.
 func loadConfigFile(path string) (*Config, error) {
 	return loadConfigFileWithValidation(path, "")
 }
 
-// loadConfigFileWithValidation loads, validates, and parses a config file
-func loadConfigFileWithValidation(path string, workspaceRoot string) (*Config, error) {
+// loadConfigFileWithValidation loads, validates, and parses a config file.
+func loadConfigFileWithValidation(path, workspaceRoot string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -126,7 +126,7 @@ func loadConfigFileWithValidation(path string, workspaceRoot string) (*Config, e
 	return &config, nil
 }
 
-// validateAgentConfigSchema validates config data against the ai-provider schema
+// validateAgentConfigSchema validates config data against the ai-provider schema.
 func validateAgentConfigSchema(workspaceRoot string, data []byte) error {
 	schemaValidatorOnce.Do(func() {
 		schemaValidator, schemaValidatorErr = schema.NewValidator(workspaceRoot)
@@ -140,13 +140,13 @@ func validateAgentConfigSchema(workspaceRoot string, data []byte) error {
 	return schemaValidator.ValidateYAML(schema.SchemaEACConfig, data)
 }
 
-// loadPersonalConfig loads the personal override file
+// loadPersonalConfig loads the personal override file.
 func loadPersonalConfig(path string) (*PersonalConfig, error) {
 	return loadPersonalConfigWithValidation(path, "")
 }
 
-// loadPersonalConfigWithValidation loads and validates the personal override file
-func loadPersonalConfigWithValidation(path string, workspaceRoot string) (*PersonalConfig, error) {
+// loadPersonalConfigWithValidation loads and validates the personal override file.
+func loadPersonalConfigWithValidation(path, workspaceRoot string) (*PersonalConfig, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -171,7 +171,7 @@ func loadPersonalConfigWithValidation(path string, workspaceRoot string) (*Perso
 	return &personal, nil
 }
 
-// mergePersonalConfig applies personal overrides to the base config
+// mergePersonalConfig applies personal overrides to the base config.
 func mergePersonalConfig(base *Config, personal *PersonalConfig) {
 	// Merge AI config
 	if personal.AI != nil {
@@ -197,7 +197,7 @@ func mergePersonalConfig(base *Config, personal *PersonalConfig) {
 	}
 }
 
-// applyEnvVarSubstitution substitutes environment variables in config values
+// applyEnvVarSubstitution substitutes environment variables in config values.
 func applyEnvVarSubstitution(config *Config) error {
 	var missingVars []string
 

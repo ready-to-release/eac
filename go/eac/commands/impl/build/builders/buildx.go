@@ -151,7 +151,7 @@ func (h *BuildxHandler) Build(module *modules.ModuleContract, workspaceRoot, out
 	return 0
 }
 
-// buildDockerBuildArgs constructs the docker buildx build command arguments
+// buildDockerBuildArgs constructs the docker buildx build command arguments.
 func buildDockerBuildArgs(dockerBuild *config.DockerBuildConfig, context, dockerfilePath string, tags []string, moniker string) []string {
 	args := []string{"buildx", "build"}
 
@@ -198,7 +198,7 @@ func buildDockerBuildArgs(dockerBuild *config.DockerBuildConfig, context, docker
 	return args
 }
 
-// buildCacheArgs constructs cache arguments for docker buildx
+// buildCacheArgs constructs cache arguments for docker buildx.
 func buildCacheArgs(cache *config.DockerCacheConfig, moniker string) []string {
 	var args []string
 
@@ -236,7 +236,7 @@ func buildCacheArgs(cache *config.DockerCacheConfig, moniker string) []string {
 	return args
 }
 
-// authenticateRegistry authenticates to a Docker registry
+// authenticateRegistry authenticates to a Docker registry.
 func authenticateRegistry(registry string, logWriter io.Writer) int {
 	token := os.Getenv("GITHUB_TOKEN")
 	if token == "" {
@@ -282,7 +282,7 @@ func detectLocalPlatform() string {
 }
 
 // expandTemplate expands template variables in a string
-// Supported variables: {moniker}, {container}, {short_sha}
+// Supported variables: {moniker}, {container}, {short_sha}.
 func expandTemplate(template, moniker string) string {
 	result := template
 	result = strings.ReplaceAll(result, "{moniker}", moniker)
@@ -296,7 +296,7 @@ func expandTemplate(template, moniker string) string {
 	return result
 }
 
-// getDockerBuildConfig gets docker_build config from module first, then falls back to module type
+// getDockerBuildConfig gets docker_build config from module first, then falls back to module type.
 func getDockerBuildConfig(module *modules.ModuleContract, logWriter io.Writer) *config.DockerBuildConfig {
 	// First, check if module has docker_build config
 	if module.DockerBuild != nil && len(module.DockerBuild) > 0 {
@@ -318,7 +318,7 @@ func getDockerBuildConfig(module *modules.ModuleContract, logWriter io.Writer) *
 	return cfg.ModuleTypes.GetDockerBuildConfig(module.Type)
 }
 
-// convertDockerBuildConfig converts map[string]interface{} to DockerBuildConfig via YAML
+// convertDockerBuildConfig converts map[string]interface{} to DockerBuildConfig via YAML.
 func convertDockerBuildConfig(m map[string]interface{}) (*config.DockerBuildConfig, error) {
 	// Marshal to YAML, then unmarshal to typed struct
 	data, err := yaml.Marshal(m)

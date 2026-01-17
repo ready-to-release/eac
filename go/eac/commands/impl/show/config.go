@@ -230,7 +230,7 @@ func printShowConfigUsage() {
 	fmt.Println("For full structured output, use 'r2r get config'.")
 }
 
-// valueOrDefault returns the value if non-empty, otherwise the default
+// valueOrDefault returns the value if non-empty, otherwise the default.
 func valueOrDefault(value, defaultVal string) string {
 	if value == "" {
 		return defaultVal

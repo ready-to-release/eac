@@ -7,10 +7,10 @@ import (
 	"os"
 )
 
-// TemplateValues represents the key-value pairs for template substitution
+// TemplateValues represents the key-value pairs for template substitution.
 type TemplateValues map[string]interface{}
 
-// LoadValuesFromJSON reads and parses a JSON file into template values
+// LoadValuesFromJSON reads and parses a JSON file into template values.
 func LoadValuesFromJSON(filePath string) (TemplateValues, error) {
 	// Read file
 	data, err := os.ReadFile(filePath)
@@ -32,7 +32,7 @@ func LoadValuesFromJSON(filePath string) (TemplateValues, error) {
 	return values, nil
 }
 
-// ValidateValues checks that all required values are present
+// ValidateValues checks that all required values are present.
 func ValidateValues(values TemplateValues, required []string) error {
 	for _, key := range required {
 		if _, exists := values[key]; !exists {

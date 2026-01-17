@@ -8,7 +8,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/config"
 )
 
-// EffectiveModule represents a module with all type defaults merged and paths resolved
+// EffectiveModule represents a module with all type defaults merged and paths resolved.
 type EffectiveModule struct {
 	// Core fields from Module
 	Moniker     string            `json:"moniker" yaml:"moniker"`
@@ -31,10 +31,10 @@ type EffectiveModule struct {
 	ResolvedPaths map[string]string `json:"resolved_paths,omitempty" yaml:"resolved_paths,omitempty"`
 }
 
-// PathVariables represents repository-wide path variables available for substitution
+// PathVariables represents repository-wide path variables available for substitution.
 type PathVariables map[string]string
 
-// GetEffectiveModuleConfig merges module configuration with type defaults and resolves paths
+// GetEffectiveModuleConfig merges module configuration with type defaults and resolves paths.
 func GetEffectiveModuleConfig(
 	module *config.Module,
 	moduleType *config.ModuleTypeDef,
@@ -85,7 +85,7 @@ func GetEffectiveModuleConfig(
 	return effective, nil
 }
 
-// mergeFileDefaults merges type defaults into module files (only if module didn't override)
+// mergeFileDefaults merges type defaults into module files (only if module didn't override).
 func mergeFileDefaults(files *config.Files, defaults *config.FilesDefaults) {
 	if len(files.Source) == 0 && len(defaults.Source) > 0 {
 		files.Source = defaults.Source
@@ -112,7 +112,7 @@ func mergeFileDefaults(files *config.Files, defaults *config.FilesDefaults) {
 	}
 }
 
-// mergeRepoDefaults merges type repo defaults into module repo files
+// mergeRepoDefaults merges type repo defaults into module repo files.
 func mergeRepoDefaults(
 	repo *config.RepoFiles,
 	defaults *config.RepoDefaults,
@@ -135,7 +135,7 @@ func mergeRepoDefaults(
 	}
 }
 
-// resolveRepoPaths resolves all path patterns in repo files to actual paths
+// resolveRepoPaths resolves all path patterns in repo files to actual paths.
 func resolveRepoPaths(repo config.RepoFiles, moniker string, pathVars PathVariables) map[string]string {
 	resolved := make(map[string]string)
 
@@ -157,7 +157,7 @@ func resolveRepoPaths(repo config.RepoFiles, moniker string, pathVars PathVariab
 	return resolved
 }
 
-// resolvePatterns resolves multiple patterns with variable substitution
+// resolvePatterns resolves multiple patterns with variable substitution.
 func resolvePatterns(patterns []string, moniker string, pathVars PathVariables) []string {
 	resolved := make([]string, len(patterns))
 	for i, pattern := range patterns {
@@ -166,8 +166,8 @@ func resolvePatterns(patterns []string, moniker string, pathVars PathVariables) 
 	return resolved
 }
 
-// resolvePattern resolves a single pattern with variable substitution
-func resolvePattern(pattern string, moniker string, pathVars PathVariables) string {
+// resolvePattern resolves a single pattern with variable substitution.
+func resolvePattern(pattern, moniker string, pathVars PathVariables) string {
 	result := pattern
 	result = strings.ReplaceAll(result, "{moniker}", moniker)
 
@@ -179,7 +179,7 @@ func resolvePattern(pattern string, moniker string, pathVars PathVariables) stri
 	return result
 }
 
-// GetPathVariables extracts path variables from repository configuration
+// GetPathVariables extracts path variables from repository configuration.
 func GetPathVariables(repoConfig *config.RepositoryConfig) PathVariables {
 	vars := make(PathVariables)
 

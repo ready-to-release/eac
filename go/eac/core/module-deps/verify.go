@@ -13,7 +13,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
-// Verify checks if a module dependency is available
+// Verify checks if a module dependency is available.
 func Verify(dependency string) Result {
 	result := Result{
 		Dependency: dependency,
@@ -42,7 +42,7 @@ func Verify(dependency string) Result {
 	return result
 }
 
-// VerifyAll checks multiple module dependencies
+// VerifyAll checks multiple module dependencies.
 func VerifyAll(dependencies []string) []Result {
 	results := make([]Result, len(dependencies))
 	for i, dep := range dependencies {
@@ -51,13 +51,13 @@ func VerifyAll(dependencies []string) []Result {
 	return results
 }
 
-// IsAvailable quickly checks if a module dependency is available
+// IsAvailable quickly checks if a module dependency is available.
 func IsAvailable(dependency string) bool {
 	result := Verify(dependency)
 	return result.Available
 }
 
-// GetMissingDependencies returns list of unavailable module dependencies
+// GetMissingDependencies returns list of unavailable module dependencies.
 func GetMissingDependencies(dependencies []string) []string {
 	missing := []string{}
 	for _, dep := range dependencies {
@@ -68,7 +68,7 @@ func GetMissingDependencies(dependencies []string) []string {
 	return missing
 }
 
-// ModuleChecker checks if an internal module has been built
+// ModuleChecker checks if an internal module has been built.
 type ModuleChecker struct {
 	moniker   string
 	repoRoot  string
@@ -79,7 +79,7 @@ func (c *ModuleChecker) GetName() string {
 	return fmt.Sprintf("Module: %s", c.moniker)
 }
 
-// init initializes the checker with repo root and EAC config
+// init initializes the checker with repo root and EAC config.
 func (c *ModuleChecker) init() error {
 	if c.repoRoot != "" {
 		return nil // Already initialized
@@ -158,7 +158,7 @@ func (c *ModuleChecker) IsAvailable() bool {
 }
 
 // checkAnyPlatformExists checks if ANY platform's artifacts exist for an executable
-// This is used for dependency checking to allow cross-platform builds
+// This is used for dependency checking to allow cross-platform builds.
 func (c *ModuleChecker) checkAnyPlatformExists(artifact config.Artifact, buildDir string, metadata map[string]string) bool {
 	// Get platforms to check
 	platforms := artifact.Platforms
@@ -186,7 +186,7 @@ func (c *ModuleChecker) checkAnyPlatformExists(artifact config.Artifact, buildDi
 	return false
 }
 
-// checkSourceRootExists verifies the module's source directory exists
+// checkSourceRootExists verifies the module's source directory exists.
 func (c *ModuleChecker) checkSourceRootExists(module *modules.ModuleContract) bool {
 	// For modules without build artifacts, check source exists
 	sourcePath := filepath.Join(c.repoRoot, module.Files.Root)
@@ -244,7 +244,10 @@ func (c *ModuleChecker) GetVersion() (string, error) {
 					resolver := config.NewArtifactResolverFull(c.moniker, buildDir, platform, arch, module.Metadata)
 					result := resolver.VerifyArtifact(artifact)
 					if result.Exists {
-						absPath, _ := filepath.Abs(result.Path)
+						absPath, err := filepath.Abs(result.Path)
+						if err != nil {
+							absPath = result.Path // Fallback to relative path
+						}
 						return fmt.Sprintf("Built: %s", absPath), nil
 					}
 				}
@@ -254,7 +257,10 @@ func (c *ModuleChecker) GetVersion() (string, error) {
 			resolver := config.NewArtifactResolverWithMetadata(c.moniker, buildDir, module.Metadata)
 			result := resolver.VerifyArtifact(artifact)
 			if result.Exists {
-				absPath, _ := filepath.Abs(result.Path)
+				absPath, err := filepath.Abs(result.Path)
+				if err != nil {
+					absPath = result.Path // Fallback to relative path
+				}
 				return fmt.Sprintf("Built: %s", absPath), nil
 			}
 		}
@@ -264,7 +270,7 @@ func (c *ModuleChecker) GetVersion() (string, error) {
 	return "", fmt.Errorf("no build artifacts found in: %s", buildDir)
 }
 
-// loadModuleContract loads the module contract from the registry
+// loadModuleContract loads the module contract from the registry.
 func (c *ModuleChecker) loadModuleContract() (*modules.ModuleContract, error) {
 	repoRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {

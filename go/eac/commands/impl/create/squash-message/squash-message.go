@@ -50,15 +50,17 @@ var log = logging.C()
 
 // logDebugArtifact logs debug content with labeled sections to the log file.
 // This replaces writeDebugFile - content goes to out/commands.log instead of separate files.
-func logDebugArtifact(label string, content string) {
+func logDebugArtifact(label, content string) {
 	log.Debugf("=== %s START ===", label)
 	log.Debug(content)
 	log.Debugf("=== %s END ===", label)
 }
 
-// gitRepo holds the git repository instance for testing
-var gitRepo git.GitRepository
-var gitMgr *git.RepositoryManager
+// gitRepo holds the git repository instance for testing.
+var (
+	gitRepo git.GitRepository
+	gitMgr  *git.RepositoryManager
+)
 
 // initGitManager initializes the git repository manager if needed.
 func initGitManager() {
@@ -177,12 +179,12 @@ func CreateSquashMessage() int {
 	log.Debugf("Affected modules: modules=%v", affectedModules)
 
 	// Phase 9: Build prompt context
-	context := buildSquashContext(currentBranch, config.baseBranch, commits, filesWithModules, diff, diffStats, affectedModules)
-	logDebugArtifact("SQUASH-CONTEXT", context)
+	promptCtx := buildSquashContext(currentBranch, config.baseBranch, commits, filesWithModules, diff, diffStats, affectedModules)
+	logDebugArtifact("SQUASH-CONTEXT", promptCtx)
 
 	// Phase 10: Generate top-level message using AI
 	log.Info("Generating squash commit message using AI...")
-	topLevelMessage, err := generateTopLevelMessage(workspaceRoot, context)
+	topLevelMessage, err := generateTopLevelMessage(workspaceRoot, promptCtx)
 	if err != nil {
 		log.Errorf("Failed to generate top-level message: %v", err)
 		return 1
@@ -207,13 +209,13 @@ func CreateSquashMessage() int {
 	return 0
 }
 
-// squashConfig holds the parsed command configuration
+// squashConfig holds the parsed command configuration.
 type squashConfig struct {
 	baseBranch string
 	debug      bool
 }
 
-// parseConfig parses command line arguments
+// parseConfig parses command line arguments.
 func parseConfig() (*squashConfig, error) {
 	args := os.Args[3:] // Skip "r2r", "create", "squash-message"
 
@@ -248,7 +250,7 @@ func parseConfig() (*squashConfig, error) {
 	return cfg, nil
 }
 
-// extractAffectedModules extracts unique module names from file list
+// extractAffectedModules extracts unique module names from file list.
 func extractAffectedModules(files []repository.RepositoryFileWithModule) []string {
 	moduleSet := make(map[string]bool)
 	for _, f := range files {
@@ -264,7 +266,7 @@ func extractAffectedModules(files []repository.RepositoryFileWithModule) []strin
 	return modules
 }
 
-// buildSquashContext builds the context string for AI generation
+// buildSquashContext builds the context string for AI generation.
 func buildSquashContext(currentBranch, baseBranch string, commits []git.CommitInfo, files []repository.RepositoryFileWithModule, diff, diffStats string, affectedModules []string) string {
 	var buf strings.Builder
 
@@ -336,7 +338,7 @@ func buildSquashContext(currentBranch, baseBranch string, commits []git.CommitIn
 	return buf.String()
 }
 
-// buildFilesTable builds a markdown table of changed files
+// buildFilesTable builds a markdown table of changed files.
 func buildFilesTable(files []repository.RepositoryFileWithModule) string {
 	var buf strings.Builder
 	buf.WriteString("| File | Modules |\n")
@@ -351,8 +353,8 @@ func buildFilesTable(files []repository.RepositoryFileWithModule) string {
 	return buf.String()
 }
 
-// generateTopLevelMessage generates the top-level commit message using AI
-func generateTopLevelMessage(workspaceRoot string, promptContext string) (string, error) {
+// generateTopLevelMessage generates the top-level commit message using AI.
+func generateTopLevelMessage(workspaceRoot, promptContext string) (string, error) {
 	// Check for mock response from file-based mock system (subprocess testing)
 	if mock, ok := coreai.GetMockResponse("squash-message"); ok {
 		return mock, nil
@@ -426,14 +428,14 @@ func generateTopLevelMessage(workspaceRoot string, promptContext string) (string
 	return strings.TrimSpace(formattedResult), nil
 }
 
-// generateModuleSections generates per-module sections (reuse commit-message logic)
+// generateModuleSections generates per-module sections (reuse commit-message logic).
 func generateModuleSections(workspaceRoot string, affectedModules []string, files []repository.RepositoryFileWithModule, diff string) (map[string]string, error) {
 	// For now, return empty map - module sections can be added later if needed
 	// This keeps the implementation simple
 	return make(map[string]string), nil
 }
 
-// assembleMessage assembles the final message from parts
+// assembleMessage assembles the final message from parts.
 func assembleMessage(topLevel string, moduleSections map[string]string) string {
 	var buf strings.Builder
 	buf.WriteString(topLevel)

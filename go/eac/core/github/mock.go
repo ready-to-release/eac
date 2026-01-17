@@ -22,7 +22,7 @@ type MockAPI struct {
 	Calls []MockCall
 }
 
-// MockCall records a method call for verification
+// MockCall records a method call for verification.
 type MockCall struct {
 	Method string
 	Args   []interface{}
@@ -91,7 +91,7 @@ func (m *MockAPI) FindRunBySHA(workflow, sha string, limit int) (*WorkflowRun, e
 
 	runs, ok := m.WorkflowRuns[workflow]
 	if !ok {
-		return nil, nil
+		return nil, ErrRunNotFound
 	}
 
 	for _, run := range runs {
@@ -100,7 +100,7 @@ func (m *MockAPI) FindRunBySHA(workflow, sha string, limit int) (*WorkflowRun, e
 		}
 	}
 
-	return nil, nil
+	return nil, ErrRunNotFound
 }
 
 // HasRecentSuccess checks for recent successful run.

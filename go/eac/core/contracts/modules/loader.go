@@ -165,7 +165,7 @@ func LoadFromWorkspaceLatest(workspaceRoot string) (*Registry, error) {
 	return LoadFromWorkspace(workspaceRoot)
 }
 
-// ValidateModuleContract validates a module contract for correctness
+// ValidateModuleContract validates a module contract for correctness.
 func ValidateModuleContract(module *ModuleContract) error {
 	if module.Moniker == "" {
 		return fmt.Errorf("moniker is required")
@@ -184,7 +184,7 @@ func ValidateModuleContract(module *ModuleContract) error {
 	return nil
 }
 
-// ValidateRegistry validates all module contracts in a registry
+// ValidateRegistry validates all module contracts in a registry.
 func ValidateRegistry(registry *Registry) []error {
 	var errors []error
 

@@ -5,7 +5,7 @@ import (
 	"sync"
 )
 
-// ValidatorRegistry manages registered validators by name
+// ValidatorRegistry manages registered validators by name.
 type ValidatorRegistry struct {
 	mu         sync.RWMutex
 	validators map[string]Validator
@@ -16,7 +16,7 @@ var globalRegistry = &ValidatorRegistry{
 }
 
 // Register registers a validator with the given name
-// This should be called from init() functions in validator implementations
+// This should be called from init() functions in validator implementations.
 func Register(name string, validator Validator) error {
 	globalRegistry.mu.Lock()
 	defer globalRegistry.mu.Unlock()
@@ -29,7 +29,7 @@ func Register(name string, validator Validator) error {
 	return nil
 }
 
-// Get retrieves a validator by name
+// Get retrieves a validator by name.
 func Get(name string) (Validator, error) {
 	globalRegistry.mu.RLock()
 	defer globalRegistry.mu.RUnlock()
@@ -42,7 +42,7 @@ func Get(name string) (Validator, error) {
 	return validator, nil
 }
 
-// Has checks if a validator is registered
+// Has checks if a validator is registered.
 func Has(name string) bool {
 	globalRegistry.mu.RLock()
 	defer globalRegistry.mu.RUnlock()
@@ -51,7 +51,7 @@ func Has(name string) bool {
 	return exists
 }
 
-// List returns all registered validator names
+// List returns all registered validator names.
 func List() []string {
 	globalRegistry.mu.RLock()
 	defer globalRegistry.mu.RUnlock()
@@ -63,7 +63,7 @@ func List() []string {
 	return names
 }
 
-// Clear removes all registered validators (mainly for testing)
+// Clear removes all registered validators (mainly for testing).
 func Clear() {
 	globalRegistry.mu.Lock()
 	defer globalRegistry.mu.Unlock()

@@ -13,14 +13,14 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/testing"
 )
 
-// writeln writes a formatted string with platform-specific line ending to the writer
+// writeln writes a formatted string with platform-specific line ending to the writer.
 func writeln(w io.Writer, format string, args ...interface{}) {
 	output.Writeln(w, format, args...)
 }
 
 // extractModuleFromPath extracts the module moniker from a test file path
 // Handles go/eac/<module>/..., go/r2r/<module>/..., and specs/<module>/... formats
-// Supports both absolute and relative paths
+// Supports both absolute and relative paths.
 func extractModuleFromPath(filePath string) string {
 	// Normalize path separators to forward slashes
 	normalizedPath := filepath.ToSlash(filePath)
@@ -97,7 +97,7 @@ func extractModuleFromPath(filePath string) string {
 	return ""
 }
 
-// mapGOOSToDepTag maps runtime.GOOS values to dependency tag names
+// mapGOOSToDepTag maps runtime.GOOS values to dependency tag names.
 func mapGOOSToDepTag(goos string) string {
 	switch goos {
 	case "linux":
@@ -114,7 +114,7 @@ func mapGOOSToDepTag(goos string) string {
 // filterByOSCompatibility filters tests based on OS-specific dependencies
 // Tests with deps:linux only run on Linux, deps:macos only on macOS, deps:windows only on Windows
 // Tests without any OS-specific deps run everywhere (OS-agnostic by default)
-// Tests with multiple OS deps (e.g., deps:linux AND deps:macos) run on any of those OSes
+// Tests with multiple OS deps (e.g., deps:linux AND deps:macos) run on any of those OSes.
 func filterByOSCompatibility(tests []testing.TestReference, _ io.Writer) []testing.TestReference {
 	currentOS := mapGOOSToDepTag(runtime.GOOS)
 	compatible := []testing.TestReference{}
@@ -145,13 +145,13 @@ func filterByOSCompatibility(tests []testing.TestReference, _ io.Writer) []testi
 	return compatible
 }
 
-// fileExists checks if a file exists at the given path
+// fileExists checks if a file exists at the given path.
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
 }
 
-// readLastLines reads the last N lines from a file, parsing JSON test output
+// readLastLines reads the last N lines from a file, parsing JSON test output.
 func readLastLines(filePath string, n int) []string {
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -200,7 +200,7 @@ func readLastLines(filePath string, n int) []string {
 	return outputLines[len(outputLines)-n:]
 }
 
-// stripANSI removes ANSI color codes from a string
+// stripANSI removes ANSI color codes from a string.
 func stripANSI(str string) string {
 	// Remove ANSI escape sequences like [33m, [0m, etc.
 	result := ""
@@ -241,7 +241,7 @@ func getPackageTestType(tests []testing.TestReference) string {
 }
 
 // convertToCucumberTagExpr converts godog tag format to cucumber-js tag expression.
-// Godog: "@L0,@L1 && ~@skip:wip" → Cucumber: "(@L0 or @L1) and not @skip:wip"
+// Godog: "@L0,@L1 && ~@skip:wip" → Cucumber: "(@L0 or @L1) and not @skip:wip".
 func convertToCucumberTagExpr(godogTags string) string {
 	if godogTags == "" {
 		return ""

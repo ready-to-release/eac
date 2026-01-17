@@ -32,7 +32,7 @@ func (p *Preprocessor) cleanupLinksForPDF() error {
 		modified, count := addImageWidthConstraints(original)
 
 		if count > 0 {
-			if err := os.WriteFile(path, []byte(modified), 0644); err != nil {
+			if err := os.WriteFile(path, []byte(modified), 0o644); err != nil {
 				return err
 			}
 			imagesFixed += count
@@ -40,7 +40,6 @@ func (p *Preprocessor) cleanupLinksForPDF() error {
 		processed++
 		return nil
 	})
-
 	if err != nil {
 		return err
 	}
@@ -52,11 +51,11 @@ func (p *Preprocessor) cleanupLinksForPDF() error {
 // imagePattern matches markdown images: ![alt](path)
 // Captures: [1]=alt text, [2]=path, [3]=optional existing attributes
 // Note: Only matches single-brace attr_list { }, NOT Jinja2 macros {{ }}
-// The negative character class [^{}] ensures we don't match nested/double braces
+// The negative character class [^{}] ensures we don't match nested/double braces.
 var imagePattern = regexp.MustCompile(`!\[([^\]]*)\]\(([^)]+)\)(\s*\{[^{}\n]*\})?`)
 
 // imageWithAttrsPattern matches markdown images with attr_list: ![alt](path){attrs}
-// Supports: {width=100}, {width="100"}, {width="100px"}, {: width="100" }
+// Supports: {width=100}, {width="100"}, {width="100px"}, {: width="100" }.
 var imageWithAttrsPattern = regexp.MustCompile(`!\[([^\]]*)\]\(([^)]+)\)\s*\{:?\s*([^}]+)\}`)
 
 // convertAttrListImagesToHTML converts markdown images with attr_list syntax to HTML img tags
@@ -66,7 +65,7 @@ var imageWithAttrsPattern = regexp.MustCompile(`!\[([^\]]*)\]\(([^)]+)\)\s*\{:?\
 // This ensures compatibility with:
 // - GitHub Pages (doesn't support attr_list)
 // - MkDocs HTML rendering
-// - PDF generation via Playwright
+// - PDF generation via Playwright.
 func (p *Preprocessor) convertAttrListImagesToHTML() error {
 	p.log("    Converting attr_list images to HTML...")
 
@@ -91,7 +90,7 @@ func (p *Preprocessor) convertAttrListImagesToHTML() error {
 		modified, count := convertAttrListImages(original, false) // Don't adjust paths - link translator handles it
 
 		if count > 0 {
-			if err := os.WriteFile(path, []byte(modified), 0644); err != nil {
+			if err := os.WriteFile(path, []byte(modified), 0o644); err != nil {
 				return err
 			}
 			converted += count
@@ -99,7 +98,6 @@ func (p *Preprocessor) convertAttrListImagesToHTML() error {
 		processed++
 		return nil
 	})
-
 	if err != nil {
 		return err
 	}
@@ -113,7 +111,7 @@ func (p *Preprocessor) convertAttrListImagesToHTML() error {
 // (MkDocs converts file.md to file/index.html, changing relative path depth)
 // NOTE: When using LinkTranslator for path management, set adjustPaths=false
 // as the translator handles all path adjustments based on source→staging mapping
-// NOTE: Raw .drawio files are NOT converted - they need markdown syntax for the drawio plugin
+// NOTE: Raw .drawio files are NOT converted - they need markdown syntax for the drawio plugin.
 func convertAttrListImages(content string, adjustPaths bool) (string, int) {
 	count := 0
 
@@ -153,7 +151,7 @@ func convertAttrListImages(content string, adjustPaths bool) (string, int) {
 }
 
 // parseAttrListToHTML converts attr_list attributes to HTML attributes
-// Handles: width=100, width="100", width="100px", height=50, style="..."
+// Handles: width=100, width="100", width="100px", height=50, style="...".
 func parseAttrListToHTML(attrs string) string {
 	var htmlParts []string
 
@@ -178,7 +176,7 @@ func parseAttrListToHTML(attrs string) string {
 }
 
 // addImageWidthConstraints adds width="100%" to images that don't have explicit dimensions
-// This ensures large diagrams (especially drawio exports) scale properly in PDFs
+// This ensures large diagrams (especially drawio exports) scale properly in PDFs.
 func addImageWidthConstraints(content string) (string, int) {
 	count := 0
 

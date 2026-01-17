@@ -57,7 +57,7 @@ func TestLoadLoggingConfig_ValidYAML(t *testing.T) {
 	// Create temp directory with config file
 	tmpDir := t.TempDir()
 	configDir := filepath.Join(tmpDir, ".r2r", "eac")
-	if err := os.MkdirAll(configDir, 0755); err != nil {
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -75,7 +75,7 @@ file:
   enabled: false
 `
 	configPath := filepath.Join(configDir, "logging.yml")
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(configContent), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -114,13 +114,13 @@ func TestLoadLoggingConfig_InvalidYAML(t *testing.T) {
 	// Create temp directory with invalid config file
 	tmpDir := t.TempDir()
 	configDir := filepath.Join(tmpDir, ".r2r", "eac")
-	if err := os.MkdirAll(configDir, 0755); err != nil {
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 
 	configContent := `not valid yaml: {{{`
 	configPath := filepath.Join(configDir, "logging.yml")
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(configContent), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -136,7 +136,7 @@ func TestLoadLoggingConfig_PartialConfig(t *testing.T) {
 	// Create temp directory with partial config file
 	tmpDir := t.TempDir()
 	configDir := filepath.Join(tmpDir, ".r2r", "eac")
-	if err := os.MkdirAll(configDir, 0755); err != nil {
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -146,7 +146,7 @@ console:
   formatter: json
 `
 	configPath := filepath.Join(configDir, "logging.yml")
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(configContent), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

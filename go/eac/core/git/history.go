@@ -1,6 +1,7 @@
 package git
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -12,7 +13,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/storer"
 )
 
-// CommitInfo represents minimal commit information for changelog generation
+// CommitInfo represents minimal commit information for changelog generation.
 type CommitInfo struct {
 	// SHA is the full commit hash
 	SHA string
@@ -96,7 +97,7 @@ func (r *Repository) CommitsBetween(fromRef, toRef string) ([]CommitInfo, error)
 		return nil
 	})
 
-	if err != nil && err != storer.ErrStop {
+	if err != nil && !errors.Is(err, storer.ErrStop) {
 		return nil, fmt.Errorf("failed to iterate commits: %w", err)
 	}
 
@@ -109,7 +110,7 @@ func (r *Repository) CommitsSince(ref string) ([]CommitInfo, error) {
 	return r.CommitsBetween(ref, "HEAD")
 }
 
-// getCommitFiles returns the list of files changed in a commit
+// getCommitFiles returns the list of files changed in a commit.
 func (r *Repository) getCommitFiles(c *object.Commit) ([]string, error) {
 	var files []string
 
@@ -124,7 +125,9 @@ func (r *Repository) getCommitFiles(c *object.Commit) ([]string, error) {
 	if c.NumParents() > 0 {
 		parent, err := c.Parent(0)
 		if err == nil {
-			parentTree, _ = parent.Tree()
+			if pt, ptErr := parent.Tree(); ptErr == nil {
+				parentTree = pt
+			}
 		}
 	}
 
@@ -178,7 +181,6 @@ func (r *Repository) TagsMatching(pattern string) ([]string, error) {
 
 		return nil
 	})
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to iterate tags: %w", err)
 	}
@@ -259,7 +261,7 @@ func (r *Repository) TagDate(tagName string) (time.Time, error) {
 func (r *Repository) TagExists(tagName string) (bool, error) {
 	_, err := r.repo.Reference(plumbing.NewTagReferenceName(tagName), true)
 	if err != nil {
-		if err == plumbing.ErrReferenceNotFound {
+		if errors.Is(err, plumbing.ErrReferenceNotFound) {
 			return false, nil
 		}
 		return false, err

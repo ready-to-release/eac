@@ -8,13 +8,13 @@ import (
 )
 
 // GitContext provides Git repository context for generating GitHub links
-// This is a lightweight interface to avoid circular dependencies
+// This is a lightweight interface to avoid circular dependencies.
 type GitContext interface {
 	BuildGitHubFileURL(filePath string) string
 }
 
 // RenderTestSummary renders test results in the format shown in implementation-report.md
-// This renders a single feature with its rules and scenarios organized by acceptance criteria
+// This renders a single feature with its rules and scenarios organized by acceptance criteria.
 func RenderTestSummary(feature *Feature, gitCtx GitContext) string {
 	var buf strings.Builder
 
@@ -72,7 +72,7 @@ func RenderTestSummary(feature *Feature, gitCtx GitContext) string {
 	return buf.String()
 }
 
-// RenderAllFeatures renders all features in test summary format
+// RenderAllFeatures renders all features in test summary format.
 func RenderAllFeatures(report CucumberReport, gitCtx GitContext) string {
 	var buf strings.Builder
 
@@ -89,7 +89,7 @@ func RenderAllFeatures(report CucumberReport, gitCtx GitContext) string {
 }
 
 // RenderByVerificationType renders scenarios filtered by verification type (IV/OV/PV)
-// and grouped by feature
+// and grouped by feature.
 func RenderByVerificationType(report CucumberReport, verificationType string) string {
 	var buf strings.Builder
 
@@ -178,7 +178,7 @@ type featureScenarios struct {
 	Scenarios []Scenario
 }
 
-// groupScenariosByAC groups scenarios by acceptance criteria tag
+// groupScenariosByAC groups scenarios by acceptance criteria tag.
 func groupScenariosByAC(scenarios []Scenario) map[string][]Scenario {
 	result := make(map[string][]Scenario)
 
@@ -194,7 +194,7 @@ func groupScenariosByAC(scenarios []Scenario) map[string][]Scenario {
 }
 
 // extractUserStory extracts the user story from feature description
-// Expected format: "As a [role]\n  I want [capability]\n  So that [benefit]"
+// Expected format: "As a [role]\n  I want [capability]\n  So that [benefit]".
 func extractUserStory(description string) string {
 	// Remove leading/trailing whitespace
 	description = strings.TrimSpace(description)
@@ -216,7 +216,7 @@ func extractUserStory(description string) string {
 	return strings.Join(parts, ", ")
 }
 
-// getStatusIcon returns the appropriate emoji for a test status
+// getStatusIcon returns the appropriate emoji for a test status.
 func getStatusIcon(status string) string {
 	switch status {
 	case "passed":
@@ -235,7 +235,7 @@ func getStatusIcon(status string) string {
 }
 
 // normalizeFeaturePath normalizes a feature file path from cucumber.json
-// Handles relative paths (e.g., "../../../specs/..." -> "specs/...")
+// Handles relative paths (e.g., "../../../specs/..." -> "specs/...").
 func normalizeFeaturePath(filePath string) string {
 	// Remove relative path prefixes (../../../ -> "")
 	// Cucumber outputs paths relative to the test directory

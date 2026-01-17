@@ -16,7 +16,7 @@ import (
 
 var log = logging.C()
 
-// PackageResult holds test results for a single package
+// PackageResult holds test results for a single package.
 type PackageResult struct {
 	ModuleMoniker string // Module this package belongs to (for aggregation)
 	PackageName   string
@@ -252,7 +252,7 @@ func GenerateTestManifests(
 	}
 }
 
-// CollectTestArtifacts walks the module test directory and adds artifacts to the manifest
+// CollectTestArtifacts walks the module test directory and adds artifacts to the manifest.
 func CollectTestArtifacts(manifest *implinternal.TestManifest, moduleTestDir string) {
 	// Walk packages directory to find test artifacts
 	packagesDir := filepath.Join(moduleTestDir, "packages")
@@ -260,7 +260,7 @@ func CollectTestArtifacts(manifest *implinternal.TestManifest, moduleTestDir str
 		return
 	}
 
-	_ = filepath.Walk(packagesDir, func(path string, info os.FileInfo, err error) error {
+	if err := filepath.Walk(packagesDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() {
 			return nil
 		}
@@ -289,7 +289,10 @@ func CollectTestArtifacts(manifest *implinternal.TestManifest, moduleTestDir str
 		}
 
 		// Get file size and hash
-		size, sha256, _ := implinternal.HashArtifactFile(path)
+		size, sha256, hashErr := implinternal.HashArtifactFile(path)
+		if hashErr != nil {
+			return nil // Skip files that can't be hashed
+		}
 
 		manifest.AddArtifact(implinternal.TestArtifactInfo{
 			Type:   artifactType,
@@ -301,7 +304,9 @@ func CollectTestArtifacts(manifest *implinternal.TestManifest, moduleTestDir str
 		})
 
 		return nil
-	})
+	}); err != nil {
+		return // Walk error - nothing we can do, manifest may be incomplete
+	}
 }
 
 // GetSuitesIncluded parses composite suite syntax.

@@ -21,7 +21,7 @@ func init() {
 	registry.Register(ValidateMarkdown)
 }
 
-// ValidateMarkdown validates all markdown files in the repository
+// ValidateMarkdown validates all markdown files in the repository.
 func ValidateMarkdown() int {
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {

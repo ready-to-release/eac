@@ -58,7 +58,7 @@ func ReleasePrune() int {
 		switch arg {
 		case "--keep":
 			if i+1 < len(args) {
-				fmt.Sscanf(args[i+1], "%d", &keepCount)
+				_, _ = fmt.Sscanf(args[i+1], "%d", &keepCount) //nolint:errcheck // default value on parse error
 				i++
 			}
 		case "--dry-run":

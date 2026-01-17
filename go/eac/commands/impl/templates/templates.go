@@ -17,7 +17,7 @@ func init() {
 
 // commandFlags defines valid flags for the templates command
 
-// Templates command entry point
+// Templates command entry point.
 func Templates() int {
 	args := os.Args[2:] // Skip program name and "templates"
 

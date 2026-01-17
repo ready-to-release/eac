@@ -6,7 +6,7 @@ import (
 	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
 )
 
-// ControlSummary represents a summary of tests tagged with a specific control ID
+// ControlSummary represents a summary of tests tagged with a specific control ID.
 type ControlSummary struct {
 	ControlID    string   `json:"control_id" yaml:"controlid"`
 	TestCount    int      `json:"test_count" yaml:"testcount"`

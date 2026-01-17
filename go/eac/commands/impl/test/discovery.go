@@ -14,7 +14,7 @@ import (
 // Different test types have different grouping strategies:
 // - godog/tscucumber: Uses runner to find test root and build package path
 // - mocha: Groups by test directory
-// - gotest: Groups by directory
+// - gotest: Groups by directory.
 func groupTestsByPackage(tests []testing.TestReference, workspaceRoot string, cfg *config.EACConfig) map[string][]testing.TestReference {
 	testsByPackage := make(map[string][]testing.TestReference)
 
@@ -62,7 +62,7 @@ func groupTestsByPackage(tests []testing.TestReference, workspaceRoot string, cf
 	return testsByPackage
 }
 
-// sanitizePathForLog converts a package path to a safe directory name
+// sanitizePathForLog converts a package path to a safe directory name.
 func sanitizePathForLog(pkgPath string) string {
 	// Replace colons and other special chars
 	safe := strings.ReplaceAll(pkgPath, ":", "_")

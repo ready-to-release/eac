@@ -28,7 +28,7 @@ func init() {
 	registry.Register(ShowArtifacts)
 }
 
-// ShowArtifacts displays resolved artifacts for a module
+// ShowArtifacts displays resolved artifacts for a module.
 func ShowArtifacts() int {
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
@@ -202,7 +202,7 @@ func showArtifactsForModule(moduleName, targetOS, targetArch string, allPlatform
 	return 0
 }
 
-// formatArtifactModeBreakdown shows which artifacts are built in default vs --all mode
+// formatArtifactModeBreakdown shows which artifacts are built in default vs --all mode.
 func formatArtifactModeBreakdown(module *config.Module, moduleType *config.ModuleTypeDef, cfg *config.EACConfig) string {
 	// Get default and all artifact IDs
 	defaultArtifacts := implinternal.DetermineRequestedArtifacts(module, moduleType, false, cfg)
@@ -216,7 +216,7 @@ func formatArtifactModeBreakdown(module *config.Module, moduleType *config.Modul
 	return output
 }
 
-// countArtifactMetadata counts how many metadata entries are artifact-related
+// countArtifactMetadata counts how many metadata entries are artifact-related.
 func countArtifactMetadata(metadata map[string]string) int {
 	count := 0
 	artifactPrefixes := []string{"executable-", "file-", "directory-", "image-", "marker-"}
@@ -238,7 +238,7 @@ type platformInfo struct {
 	Arch string
 }
 
-// getPlatformsForModule returns all platform combinations for a module type
+// getPlatformsForModule returns all platform combinations for a module type.
 func getPlatformsForModule(moduleType *config.ModuleTypeDef) []platformInfo {
 	platformSet := make(map[string]bool)
 	var platforms []platformInfo

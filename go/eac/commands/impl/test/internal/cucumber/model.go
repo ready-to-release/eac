@@ -1,10 +1,10 @@
 // Package cucumber provides types for parsing Cucumber JSON test reports
 package cucumber
 
-// CucumberReport represents the root structure of a Cucumber JSON report
+// CucumberReport represents the root structure of a Cucumber JSON report.
 type CucumberReport []Feature
 
-// Feature represents a Gherkin feature with scenarios
+// Feature represents a Gherkin feature with scenarios.
 type Feature struct {
 	URI         string     `json:"uri"`
 	ID          string     `json:"id"`
@@ -17,19 +17,19 @@ type Feature struct {
 	Elements    []Scenario `json:"elements"`
 }
 
-// Comment represents a comment line in the feature file
+// Comment represents a comment line in the feature file.
 type Comment struct {
 	Value string `json:"value"`
 	Line  int    `json:"line"`
 }
 
-// Tag represents a Gherkin tag
+// Tag represents a Gherkin tag.
 type Tag struct {
 	Name string `json:"name"`
 	Line int    `json:"line"`
 }
 
-// Scenario represents a test scenario
+// Scenario represents a test scenario.
 type Scenario struct {
 	ID          string `json:"id"`
 	Keyword     string `json:"keyword"`
@@ -41,7 +41,7 @@ type Scenario struct {
 	Steps       []Step `json:"steps"`
 }
 
-// Step represents a test step with its execution result
+// Step represents a test step with its execution result.
 type Step struct {
 	Keyword string     `json:"keyword"`
 	Name    string     `json:"name"`
@@ -50,12 +50,12 @@ type Step struct {
 	Result  StepResult `json:"result"`
 }
 
-// StepMatch contains information about the step definition
+// StepMatch contains information about the step definition.
 type StepMatch struct {
 	Location string `json:"location"`
 }
 
-// StepResult contains the execution result of a step
+// StepResult contains the execution result of a step.
 type StepResult struct {
 	Status   string `json:"status"` // "passed", "failed", "skipped", "undefined", "pending"
 	Duration int64  `json:"duration,omitempty"`
@@ -63,7 +63,7 @@ type StepResult struct {
 }
 
 // GetFeatureID extracts the Feature ID from comments
-// Expected format: "# Feature ID: module_feature-name"
+// Expected format: "# Feature ID: module_feature-name".
 func (f *Feature) GetFeatureID() string {
 	for _, comment := range f.Comments {
 		if len(comment.Value) > 14 && comment.Value[:14] == "# Feature ID: " {
@@ -74,7 +74,7 @@ func (f *Feature) GetFeatureID() string {
 }
 
 // GetModule extracts the module name from comments
-// Expected format: "# Module: module-name"
+// Expected format: "# Module: module-name".
 func (f *Feature) GetModule() string {
 	for _, comment := range f.Comments {
 		if len(comment.Value) > 10 && comment.Value[:10] == "# Module: " {
@@ -84,7 +84,7 @@ func (f *Feature) GetModule() string {
 	return ""
 }
 
-// HasTag checks if a scenario has a specific tag
+// HasTag checks if a scenario has a specific tag.
 func (s *Scenario) HasTag(tagName string) bool {
 	for _, tag := range s.Tags {
 		if tag.Name == tagName {
@@ -95,7 +95,7 @@ func (s *Scenario) HasTag(tagName string) bool {
 }
 
 // GetStatus returns the overall status of the scenario
-// A scenario passes only if all steps pass
+// A scenario passes only if all steps pass.
 func (s *Scenario) GetStatus() string {
 	for _, step := range s.Steps {
 		if step.Result.Status != "passed" {
@@ -105,7 +105,7 @@ func (s *Scenario) GetStatus() string {
 	return "passed"
 }
 
-// GetTagString returns a space-separated string of all tags
+// GetTagString returns a space-separated string of all tags.
 func (s *Scenario) GetTagString() string {
 	if len(s.Tags) == 0 {
 		return ""
@@ -121,7 +121,7 @@ func (s *Scenario) GetTagString() string {
 // GetVerificationType returns the verification type based on tags
 // @IV = Installation Verification
 // @PV = Performance Verification
-// Default = Operational Verification (OV)
+// Default = Operational Verification (OV).
 func (s *Scenario) GetVerificationType() string {
 	if s.HasTag("@IV") {
 		return "IV"
@@ -132,7 +132,7 @@ func (s *Scenario) GetVerificationType() string {
 	return "OV"
 }
 
-// GetAcceptanceCriteria extracts the AC tag (e.g., "@ac1" -> "AC1")
+// GetAcceptanceCriteria extracts the AC tag (e.g., "@ac1" -> "AC1").
 func (s *Scenario) GetAcceptanceCriteria() string {
 	for _, tag := range s.Tags {
 		if len(tag.Name) >= 4 && tag.Name[:3] == "@ac" {

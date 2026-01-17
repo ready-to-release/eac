@@ -42,7 +42,7 @@ func RenderAsTOML(v interface{}) (string, error) {
 }
 
 // RenderAsTOMLOrPanic is a convenience wrapper that panics on error
-// Useful for cases where marshaling is guaranteed to succeed
+// Useful for cases where marshaling is guaranteed to succeed.
 func RenderAsTOMLOrPanic(v interface{}) string {
 	result, err := RenderAsTOML(v)
 	if err != nil {

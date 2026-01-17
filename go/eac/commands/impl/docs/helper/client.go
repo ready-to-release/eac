@@ -11,13 +11,13 @@ import (
 
 var log = logging.C()
 
-// Client manages MkDocs container operations
+// Client manages MkDocs container operations.
 type Client struct {
 	docker *client.Client
 	ctx    context.Context
 }
 
-// NewClient creates a new docs client
+// NewClient creates a new docs client.
 func NewClient() (*Client, error) {
 	log.Debugf("Initializing Docker client")
 
@@ -43,7 +43,7 @@ func NewClient() (*Client, error) {
 	}, nil
 }
 
-// Close closes the Docker client connection
+// Close closes the Docker client connection.
 func (c *Client) Close() {
 	if c.docker != nil {
 		log.Debugf("Closing Docker client")
@@ -51,19 +51,19 @@ func (c *Client) Close() {
 	}
 }
 
-// IsRunning checks if the MkDocs container is already running
+// IsRunning checks if the MkDocs container is already running.
 func (c *Client) IsRunning() (bool, *ContainerInfo, error) {
 	log.Debugf("Checking if MkDocs container is running")
 	return isContainerRunning(c.docker, c.ctx)
 }
 
-// StartContainer starts the MkDocs container
+// StartContainer starts the MkDocs container.
 func (c *Client) StartContainer(port int) (*ContainerInfo, error) {
 	log.Debugf("Starting MkDocs container: port=%d", port)
 	return startMkDocsContainer(c.docker, c.ctx, port)
 }
 
-// StopContainer stops the MkDocs container
+// StopContainer stops the MkDocs container.
 func (c *Client) StopContainer() error {
 	log.Debugf("Stopping MkDocs container")
 	return stopMkDocsContainer(c.docker, c.ctx)
@@ -91,7 +91,7 @@ func (c *Client) OpenBrowserWithFallback(url string) (opened bool, err error) {
 	return opened, err
 }
 
-// StreamLogs streams container logs to stdout
+// StreamLogs streams container logs to stdout.
 func (c *Client) StreamLogs() error {
 	log.Debugf("Streaming container logs")
 	return streamContainerLogs(c.docker, c.ctx)

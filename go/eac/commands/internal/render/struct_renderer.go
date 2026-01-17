@@ -35,7 +35,7 @@ func RenderStructAsMarkdown(v interface{}) (string, error) {
 }
 
 // RenderStructAsMarkdownOrPanic is a convenience wrapper that panics on error
-// Useful for cases where marshaling is guaranteed to succeed
+// Useful for cases where marshaling is guaranteed to succeed.
 func RenderStructAsMarkdownOrPanic(v interface{}) string {
 	result, err := RenderStructAsMarkdown(v)
 	if err != nil {

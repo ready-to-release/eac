@@ -14,7 +14,7 @@ func init() {
 	registry.Register(Work)
 }
 
-// Work command entry point
+// Work command entry point.
 func Work() int {
 	args := os.Args[2:] // Skip program name and "work"
 

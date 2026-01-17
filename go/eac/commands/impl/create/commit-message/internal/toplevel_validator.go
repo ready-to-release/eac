@@ -25,14 +25,14 @@ type TopLevelValidator struct {
 	affectedModules []string
 }
 
-// NewTopLevelValidator creates a validator for top-level commit output
+// NewTopLevelValidator creates a validator for top-level commit output.
 func NewTopLevelValidator(affectedModules []string) *TopLevelValidator {
 	return &TopLevelValidator{
 		affectedModules: affectedModules,
 	}
 }
 
-// Validate validates a top-level commit message against the expected format
+// Validate validates a top-level commit message against the expected format.
 func (v *TopLevelValidator) Validate(output string, context map[string]interface{}) []contracts.ValidationError {
 	var errors []contracts.ValidationError
 
@@ -205,7 +205,7 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 	return errors
 }
 
-// VerifyImplementation is a no-op for top-level validators
+// VerifyImplementation is a no-op for top-level validators.
 func (v *TopLevelValidator) VerifyImplementation() []contracts.ValidationError {
 	return nil
 }

@@ -25,7 +25,7 @@ func init() {
 	registry.Register(ValidateGoTidy)
 }
 
-// ValidateGoTidy validates that all Go modules have tidy dependencies
+// ValidateGoTidy validates that all Go modules have tidy dependencies.
 func ValidateGoTidy() int {
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
@@ -146,7 +146,10 @@ func printGoTidyReport(report *goTidyReport) {
 	if len(report.untidyModules) > 0 {
 		log.Info("❌ Modules with untidy dependencies:")
 		for modulePath, diff := range report.untidyModules {
-			relPath, _ := filepath.Rel(report.repoRoot, modulePath)
+			relPath, relErr := filepath.Rel(report.repoRoot, modulePath)
+			if relErr != nil {
+				relPath = modulePath
+			}
 			log.Infof("\n  • %s", relPath)
 			if strings.TrimSpace(diff) != "" {
 				log.Infof("    Diff:\n%s", indentLines(diff, "    "))
@@ -161,7 +164,7 @@ func printGoTidyReport(report *goTidyReport) {
 	}
 }
 
-func indentLines(text string, prefix string) string {
+func indentLines(text, prefix string) string {
 	lines := strings.Split(text, "\n")
 	for i, line := range lines {
 		if line != "" {

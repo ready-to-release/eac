@@ -42,7 +42,7 @@ type ModuleTestState struct {
 	Dependencies []string `json:"dependencies,omitempty"`
 }
 
-// TestChangeResult represents the result of test change detection
+// TestChangeResult represents the result of test change detection.
 type TestChangeResult struct {
 	// Modules that need retesting (directly changed or affected by dependency changes)
 	ModulesNeedingTest []string
@@ -60,7 +60,7 @@ type TestChangeResult struct {
 	DetectionTime time.Duration
 }
 
-// ModuleTestFiles contains the file information for a module's tests
+// ModuleTestFiles contains the file information for a module's tests.
 type ModuleTestFiles struct {
 	// Source files (the code being tested)
 	SourceFiles []string
@@ -76,7 +76,7 @@ type ModuleTestFiles struct {
 	BuildID string
 }
 
-// testManifestFileName is the name of the per-module test manifest file
+// testManifestFileName is the name of the per-module test manifest file.
 const testManifestFileName = "test.manifest.json"
 
 // testManifest is a minimal struct for loading test manifest files.
@@ -89,7 +89,7 @@ type testManifest struct {
 	Suites       map[string]suiteRunResult `json:"suites"` // Track which suites have been run
 }
 
-// suiteRunResult tracks when a suite was run
+// suiteRunResult tracks when a suite was run.
 type suiteRunResult struct {
 	RunTime string      `json:"run_time"`
 	Tests   testSummary `json:"tests"`
@@ -101,12 +101,7 @@ type testSummary struct {
 	Pending   int `json:"pending"`
 }
 
-// allPassed returns true if all tests passed (no failures, undefined, or pending)
-func (m *testManifest) allPassed() bool {
-	return m.Summary.Failed == 0 && m.Summary.Undefined == 0 && m.Summary.Pending == 0
-}
-
-// hasSuite returns true if the specified suite has been run
+// hasSuite returns true if the specified suite has been run.
 func (m *testManifest) hasSuite(suiteName string) bool {
 	if m.Suites == nil {
 		return false
@@ -115,7 +110,7 @@ func (m *testManifest) hasSuite(suiteName string) bool {
 	return exists
 }
 
-// suitePassed returns true if the specified suite passed (no failures)
+// suitePassed returns true if the specified suite passed (no failures).
 func (m *testManifest) suitePassed(suiteName string) bool {
 	if m.Suites == nil {
 		return false
@@ -162,7 +157,7 @@ type DependencyBuildIDLoader func(moniker string) string
 // 3. Any of the specified suites hasn't been run before
 // 4. Any suite's previous run failed
 // 5. It's a new module (not in previous state)
-// 6. Any dependency was rebuilt (BuildID changed) - even if not in current test run
+// 6. Any dependency was rebuilt (BuildID changed) - even if not in current test run.
 func DetectChanges(workspaceRoot string, moduleInfo map[string]ModuleTestFiles, suiteNames []string) (*TestChangeResult, error) {
 	return DetectChangesWithLoader(workspaceRoot, moduleInfo, suiteNames, nil)
 }
@@ -395,7 +390,10 @@ func DetectChangesWithLoader(workspaceRoot string, moduleInfo map[string]ModuleT
 // This should be called after tests complete to record state for change detection.
 // It updates the SourceHash, TestHash, BuildID, and Dependencies fields in each manifest.
 func UpdateModuleState(workspaceRoot string, testedModules map[string]bool, moduleInfo map[string]ModuleTestFiles) error {
-	gitCommit, _ := getGitCommit(workspaceRoot)
+	gitCommit, err := getGitCommit(workspaceRoot)
+	if err != nil {
+		gitCommit = "" // Use empty if git is unavailable
+	}
 
 	// Update each tested module's manifest
 	for moniker := range testedModules {
@@ -421,8 +419,14 @@ func UpdateModuleState(workspaceRoot string, testedModules map[string]bool, modu
 		}
 
 		// Calculate and update incremental state fields
-		sourceHash, _ := hashFiles(workspaceRoot, info.SourceFiles)
-		testHash, _ := hashFiles(workspaceRoot, info.TestFiles)
+		sourceHash, hashErr := hashFiles(workspaceRoot, info.SourceFiles)
+		if hashErr != nil {
+			sourceHash = "" // Skip incremental detection if hashing fails
+		}
+		testHash, hashErr := hashFiles(workspaceRoot, info.TestFiles)
+		if hashErr != nil {
+			testHash = "" // Skip incremental detection if hashing fails
+		}
 
 		manifest["source_hash"] = sourceHash
 		manifest["test_hash"] = testHash
@@ -436,7 +440,7 @@ func UpdateModuleState(workspaceRoot string, testedModules map[string]bool, modu
 			continue
 		}
 
-		if err := os.WriteFile(manifestPath, updatedData, 0644); err != nil {
+		if err := os.WriteFile(manifestPath, updatedData, 0o644); err != nil {
 			return fmt.Errorf("failed to update manifest for %s: %w", moniker, err)
 		}
 	}
@@ -466,7 +470,7 @@ func ClearState(workspaceRoot string) error {
 	return err
 }
 
-// getGitCommit returns the current HEAD commit SHA
+// getGitCommit returns the current HEAD commit SHA.
 func getGitCommit(workspaceRoot string) (string, error) {
 	cmd := exec.Command("git", "rev-parse", "HEAD")
 	cmd.Dir = workspaceRoot
@@ -477,7 +481,7 @@ func getGitCommit(workspaceRoot string) (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
-// hashFiles computes a hash of all files
+// hashFiles computes a hash of all files.
 func hashFiles(workspaceRoot string, files []string) (string, error) {
 	if len(files) == 0 {
 		return "", nil
@@ -497,7 +501,10 @@ func hashFiles(workspaceRoot string, files []string) (string, error) {
 		}
 
 		h.Write([]byte(file + "\n"))
-		io.Copy(h, f)
+		if _, err := io.Copy(h, f); err != nil {
+			f.Close()
+			return "", fmt.Errorf("failed to read %s: %w", file, err)
+		}
 		f.Close()
 	}
 
@@ -505,7 +512,7 @@ func hashFiles(workspaceRoot string, files []string) (string, error) {
 }
 
 // ExpandGlobPatterns expands glob patterns to actual file paths
-// Returns files relative to workspaceRoot
+// Returns files relative to workspaceRoot.
 func ExpandGlobPatterns(workspaceRoot string, patterns []string) ([]string, error) {
 	var result []string
 	seen := make(map[string]bool)

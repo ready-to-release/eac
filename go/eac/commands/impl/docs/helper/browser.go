@@ -6,7 +6,7 @@ import (
 	"runtime"
 )
 
-// openBrowser opens the default web browser to the given URL
+// openBrowser opens the default web browser to the given URL.
 func openBrowser(url string) error {
 	log.Debugf("Attempting to open browser: url=%s, platform=%s", url, runtime.GOOS)
 
@@ -41,7 +41,7 @@ func openBrowser(url string) error {
 	return nil
 }
 
-// detectBrowser returns the command to open a URL in the default browser
+// detectBrowser returns the command to open a URL in the default browser.
 func detectBrowser() string {
 	switch runtime.GOOS {
 	case "windows":
@@ -53,7 +53,7 @@ func detectBrowser() string {
 	}
 }
 
-// DetectBrowser is exported for testing
+// DetectBrowser is exported for testing.
 func DetectBrowser() string {
 	return detectBrowser()
 }

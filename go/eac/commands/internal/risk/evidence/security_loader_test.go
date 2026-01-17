@@ -14,11 +14,11 @@ func TestFindLatestSecurityScan(t *testing.T) {
 	// Create out/scan/billing directory structure
 	// (using default scan path from contract defaults)
 	scanDir := filepath.Join(tmpDir, "out", "scan", "billing")
-	os.MkdirAll(scanDir, 0755)
+	os.MkdirAll(scanDir, 0o755)
 
 	// Create security scan file (single file per scanner type)
 	vulnFile := filepath.Join(scanDir, "vuln.json")
-	os.WriteFile(vulnFile, []byte(`{"Results":[]}`), 0644)
+	os.WriteFile(vulnFile, []byte(`{"Results":[]}`), 0o644)
 
 	tests := []struct {
 		name        string
@@ -83,12 +83,12 @@ func TestFindSecurityResultsForModule(t *testing.T) {
 	// Create security scan files for billing module
 	// (using default scan path from contract defaults)
 	scanDir := filepath.Join(tmpDir, "out", "scan", "billing")
-	os.MkdirAll(scanDir, 0755)
+	os.MkdirAll(scanDir, 0o755)
 
 	vulnFile := filepath.Join(scanDir, "vuln.json")
 	sbomFile := filepath.Join(scanDir, "sbom.json")
-	os.WriteFile(vulnFile, []byte(`{"Results":[]}`), 0644)
-	os.WriteFile(sbomFile, []byte(`{"Results":[]}`), 0644)
+	os.WriteFile(vulnFile, []byte(`{"Results":[]}`), 0o644)
+	os.WriteFile(sbomFile, []byte(`{"Results":[]}`), 0o644)
 
 	tests := []struct {
 		name       string
@@ -161,11 +161,11 @@ func TestLoadSecurityEvidence(t *testing.T) {
 		"findings": {"Results": []}
 	}`
 	validFile := filepath.Join(tmpDir, "valid.json")
-	os.WriteFile(validFile, []byte(validEvidence), 0644)
+	os.WriteFile(validFile, []byte(validEvidence), 0o644)
 
 	// Create invalid file
 	invalidFile := filepath.Join(tmpDir, "invalid.json")
-	os.WriteFile(invalidFile, []byte(`not json`), 0644)
+	os.WriteFile(invalidFile, []byte(`not json`), 0o644)
 
 	tests := []struct {
 		name     string
@@ -316,7 +316,7 @@ func TestIsEvidenceFresh(t *testing.T) {
 
 	// Create a file and modify its timestamp
 	file := filepath.Join(tmpDir, "test.json")
-	os.WriteFile(file, []byte(`{}`), 0644)
+	os.WriteFile(file, []byte(`{}`), 0o644)
 
 	// Wait a bit to ensure file is not brand new
 	time.Sleep(2 * time.Millisecond)
@@ -362,7 +362,7 @@ func TestGetEvidenceAge(t *testing.T) {
 
 	// Create a file
 	file := filepath.Join(tmpDir, "test.json")
-	os.WriteFile(file, []byte(`{}`), 0644)
+	os.WriteFile(file, []byte(`{}`), 0o644)
 
 	// Get age
 	age, err := GetEvidenceAge(file)

@@ -62,7 +62,7 @@ func (m Model) ViewFinal() string {
 	return b.String()
 }
 
-// viewPanes renders the 3-pane layout with panes appearing progressively
+// viewPanes renders the 3-pane layout with panes appearing progressively.
 func (m Model) viewPanes() string {
 	var b strings.Builder
 
@@ -111,7 +111,7 @@ func (m Model) viewPanes() string {
 	return b.String()
 }
 
-// renderTabBar renders the horizontal tab bar for module switching
+// renderTabBar renders the horizontal tab bar for module switching.
 func (m Model) renderTabBar(tabs []*ModuleState) string {
 	var b strings.Builder
 
@@ -184,7 +184,7 @@ func (m Model) renderTabBar(tabs []*ModuleState) string {
 	return b.String()
 }
 
-// renderPaneHeader renders a pane's header line
+// renderPaneHeader renders a pane's header line.
 func (m Model) renderPaneHeader(phase Phase) string {
 	pane := m.panes[phase]
 
@@ -255,7 +255,7 @@ func (m Model) renderPaneHeader(phase Phase) string {
 	return "┌" + left + " " + border + "┐"
 }
 
-// renderPaneContent renders the content lines for a pane
+// renderPaneContent renders the content lines for a pane.
 func (m Model) renderPaneContent(phase Phase, height int) string {
 	var b strings.Builder
 	pane := m.panes[phase]
@@ -306,7 +306,7 @@ func (m Model) renderPaneContent(phase Phase, height int) string {
 	return b.String()
 }
 
-// renderPaneFooter renders the bottom border for a pane
+// renderPaneFooter renders the bottom border for a pane.
 func (m Model) renderPaneFooter(phase Phase, height int) string {
 	pane := m.panes[phase]
 
@@ -350,7 +350,7 @@ func (m Model) renderPaneFooter(phase Phase, height int) string {
 	return "└" + Styles.Dim.Render(indicator) + strings.Repeat("─", borderLen) + "┘"
 }
 
-// renderResults renders the results section (rolling output after Run pane)
+// renderResults renders the results section (rolling output after Run pane).
 func (m Model) renderResults() string {
 	lines := m.resultsBuffer.Last(20) // Show last 20 result lines
 	if len(lines) == 0 {
@@ -406,7 +406,7 @@ func formatElapsed(d time.Duration) string {
 	return fmt.Sprintf("%dm%ds", minutes, seconds)
 }
 
-// renderSummaryContent renders the Summary pane's structured content
+// renderSummaryContent renders the Summary pane's structured content.
 func (m Model) renderSummaryContent(height int) string {
 	var b strings.Builder
 	data := m.summaryData
@@ -422,8 +422,7 @@ func (m Model) renderSummaryContent(height int) string {
 		statusText = "Failed"
 	}
 	primaryStatus := fmt.Sprintf("%s %s (%s)", icon, statusText, formatElapsed(data.TotalTime))
-	contentLines = append(contentLines, primaryStatus)
-	contentLines = append(contentLines, "") // Blank line
+	contentLines = append(contentLines, primaryStatus, "") // Primary status + blank line
 
 	// Lines 3-4: Phase summaries
 	if data.InitSummary != "" {
@@ -485,7 +484,8 @@ func (m Model) renderSummaryContent(height int) string {
 
 	return b.String()
 }
-// renderPaneHeaderPlain renders a pane's header line in plain text (no ANSI styling)
+
+// renderPaneHeaderPlain renders a pane's header line in plain text (no ANSI styling).
 func (m Model) renderPaneHeaderPlain(phase Phase) string {
 	pane := m.panes[phase]
 
@@ -536,7 +536,7 @@ func (m Model) renderPaneHeaderPlain(phase Phase) string {
 	return "┌" + left + " " + border + "┐"
 }
 
-// renderPaneContentPlain renders the content lines for a pane in plain text (no ANSI styling)
+// renderPaneContentPlain renders the content lines for a pane in plain text (no ANSI styling).
 func (m Model) renderPaneContentPlain(phase Phase, height int) string {
 	var b strings.Builder
 	pane := m.panes[phase]
@@ -573,7 +573,7 @@ func (m Model) renderPaneContentPlain(phase Phase, height int) string {
 	return b.String()
 }
 
-// renderPaneFooterPlain renders the bottom border for a pane in plain text (no ANSI styling)
+// renderPaneFooterPlain renders the bottom border for a pane in plain text (no ANSI styling).
 func (m Model) renderPaneFooterPlain(phase Phase) string {
 	borderLen := m.width - 2
 	if borderLen < 3 {
@@ -582,7 +582,7 @@ func (m Model) renderPaneFooterPlain(phase Phase) string {
 	return "└" + strings.Repeat("─", borderLen) + "┘"
 }
 
-// renderSummaryContentPlain renders the Summary pane's structured content in plain text
+// renderSummaryContentPlain renders the Summary pane's structured content in plain text.
 func (m Model) renderSummaryContentPlain(height int) string {
 	var b strings.Builder
 	data := m.summaryData
@@ -598,8 +598,7 @@ func (m Model) renderSummaryContentPlain(height int) string {
 		statusText = "Failed"
 	}
 	primaryStatus := fmt.Sprintf("%s %s (%s)", icon, statusText, formatElapsed(data.TotalTime))
-	contentLines = append(contentLines, primaryStatus)
-	contentLines = append(contentLines, "") // Blank line
+	contentLines = append(contentLines, primaryStatus, "") // Primary status + blank line
 
 	// Lines 3-4: Phase summaries
 	if data.InitSummary != "" {
@@ -712,8 +711,7 @@ func (m Model) renderSummaryContentPlainExpanded() string {
 		statusText = "Failed"
 	}
 	primaryStatus := fmt.Sprintf("%s %s (%s)", icon, statusText, formatElapsed(data.TotalTime))
-	contentLines = append(contentLines, primaryStatus)
-	contentLines = append(contentLines, "") // Blank line
+	contentLines = append(contentLines, primaryStatus, "") // Primary status + blank line
 
 	// Lines 3-4: Phase summaries
 	if data.InitSummary != "" {

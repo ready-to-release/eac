@@ -37,7 +37,7 @@ func init() {
 	registry.Register(ValidateContracts)
 }
 
-// ValidateContracts validates all repository contracts against JSON schemas
+// ValidateContracts validates all repository contracts against JSON schemas.
 func ValidateContracts() int {
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {

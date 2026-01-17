@@ -31,7 +31,7 @@ func init() {
 	registry.Register(ShowSpecs)
 }
 
-// ShowSpecs displays specifications in human-readable markdown format
+// ShowSpecs displays specifications in human-readable markdown format.
 func ShowSpecs() int {
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {

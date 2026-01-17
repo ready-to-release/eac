@@ -50,7 +50,7 @@ func init() {
 
 // Intent: Create a Structurizr DSL workspace from natural language description using AI
 //
-// CreateDesign orchestrates the architecture design generation workflow
+// CreateDesign orchestrates the architecture design generation workflow.
 var log = logging.C()
 
 // commandFlags defines valid flags for the create design command
@@ -138,7 +138,7 @@ func CreateDesign() int {
 	return 0
 }
 
-// DesignConfig holds configuration for design create command
+// DesignConfig holds configuration for design create command.
 type DesignConfig struct {
 	Module         string // Module name (e.g., "r2r-cli", "commands")
 	SourcePath     string // Path to source code (e.g., "go/eac/commands")
@@ -150,7 +150,7 @@ type DesignConfig struct {
 	TemplateRoot   string
 }
 
-// parseConfig parses command line arguments into DesignConfig
+// parseConfig parses command line arguments into DesignConfig.
 func parseConfig() (*DesignConfig, error) {
 	// Get repository root
 	repoRoot, err := repository.GetRepositoryRoot("")
@@ -201,7 +201,7 @@ func parseConfig() (*DesignConfig, error) {
 	return config, nil
 }
 
-// createFlags holds parsed command-line flags
+// createFlags holds parsed command-line flags.
 type createFlags struct {
 	debug          bool
 	force          bool
@@ -211,7 +211,7 @@ type createFlags struct {
 }
 
 // parseCreateCommandArgs parses args for the create subcommand
-// Returns: module path, flags, error
+// Returns: module path, flags, error.
 func parseCreateCommandArgs(args []string) (string, *createFlags, error) {
 	// Find command position
 	cmdPos := -1
@@ -274,7 +274,7 @@ func parseCreateCommandArgs(args []string) (string, *createFlags, error) {
 	return positionalArgs[0], cmdFlags, nil
 }
 
-// formatModuleList returns a formatted list of available modules
+// formatModuleList returns a formatted list of available modules.
 func formatModuleList(moduleReport *reports.ModuleContractReport) string {
 	var sb strings.Builder
 	for _, mod := range moduleReport.Registry.All() {
@@ -283,7 +283,7 @@ func formatModuleList(moduleReport *reports.ModuleContractReport) string {
 	return sb.String()
 }
 
-// validateModuleExists checks if the source code exists for the specified module
+// validateModuleExists checks if the source code exists for the specified module.
 func validateModuleExists(config *DesignConfig, out *design.Output) error {
 	out.Progressf("🔍 Validating source code for module '%s'...", config.Module)
 
@@ -297,7 +297,7 @@ func validateModuleExists(config *DesignConfig, out *design.Output) error {
 	return nil
 }
 
-// checkDockerAvailability checks if Docker is running before starting expensive operations
+// checkDockerAvailability checks if Docker is running before starting expensive operations.
 func checkDockerAvailability(config *DesignConfig, out *design.Output) error {
 	out.Progress("🐳 Checking Docker availability...")
 
@@ -317,7 +317,7 @@ func checkDockerAvailability(config *DesignConfig, out *design.Output) error {
 	return nil
 }
 
-// loadAndBuildPrompt loads the contract and builds the AI prompt
+// loadAndBuildPrompt loads the contract and builds the AI prompt.
 func loadAndBuildPrompt(config *DesignConfig, out *design.Output) (string, error) {
 	out.Progress("📋 Loading design contract...")
 
@@ -333,7 +333,7 @@ func loadAndBuildPrompt(config *DesignConfig, out *design.Output) (string, error
 	return fullPrompt, nil
 }
 
-// buildContractBasedPrompt builds the AI prompt with contract context
+// buildContractBasedPrompt builds the AI prompt with contract context.
 func buildContractBasedPrompt(config *DesignConfig) (string, error) {
 	// Load contract using generalized loader
 	loader := coreai.NewContractLoader(config.TemplateRoot, coreai.TypeDesign, paths.DefaultsVersion)
@@ -405,7 +405,7 @@ func buildContractBasedPrompt(config *DesignConfig) (string, error) {
 // 1. Command flag (--prompt)
 // 2. Team override (.r2r/eac/templates/coreai.TypeDesign/design.md)
 // 3. System default (templates/coreai.TypeDesign/design.md)
-// Convention: Empty string uses type name (design.md)
+// Convention: Empty string uses type name (design.md).
 func loadPrompt(config *DesignConfig) (string, error) {
 	// Load prompt with three-tier priority system
 	loader := coreai.NewContractLoader(config.TemplateRoot, coreai.TypeDesign, "")
@@ -422,7 +422,7 @@ func loadPrompt(config *DesignConfig) (string, error) {
 	return prompt, nil
 }
 
-// generateAndValidate generates AI output with retry and validates with Structurizr CLI
+// generateAndValidate generates AI output with retry and validates with Structurizr CLI.
 func generateAndValidate(config *DesignConfig, prompt string, out *design.Output) (string, error) {
 	// Create executor
 	executor := ai.NewExecutor(config.TemplateRoot)
@@ -471,7 +471,6 @@ func generateAndValidate(config *DesignConfig, prompt string, out *design.Output
 		retryConfig,
 		prompt,
 	)
-
 	if err != nil {
 		return "", fmt.Errorf("generation failed: %w", err)
 	}
@@ -479,16 +478,16 @@ func generateAndValidate(config *DesignConfig, prompt string, out *design.Output
 	return result.Output, nil
 }
 
-// writeOutputAndReportSuccess writes the workspace file and reports success
+// writeOutputAndReportSuccess writes the workspace file and reports success.
 func writeOutputAndReportSuccess(config *DesignConfig, outputPath, content string, out *design.Output) error {
 	// Ensure directory exists
 	dir := filepath.Dir(outputPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("failed to create directory %s: %w", dir, err)
 	}
 
 	// Write file
-	if err := os.WriteFile(outputPath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(outputPath, []byte(content), 0o644); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -509,7 +508,7 @@ func writeOutputAndReportSuccess(config *DesignConfig, outputPath, content strin
 	return nil
 }
 
-// fileExists checks if a file exists
+// fileExists checks if a file exists.
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil

@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// LogEvent represents a structured log event (compatible with go test -json)
+// LogEvent represents a structured log event (compatible with go test -json).
 type LogEvent struct {
 	Time    string  `json:"Time,omitempty"`
 	Action  string  `json:"Action"`
@@ -18,18 +18,18 @@ type LogEvent struct {
 	Elapsed float64 `json:"Elapsed,omitempty"`
 }
 
-// testState tracks output for a single test
+// testState tracks output for a single test.
 type testState struct {
 	output []string
 	failed bool
 }
 
-// maxTailLines is the number of output lines to show for failures
+// maxTailLines is the number of output lines to show for failures.
 const maxTailLines = 10
 
 // parseLogForIssues extracts error output from failed tests.
 // Uses JSON Action field as source of truth. Non-JSON logs return empty.
-func parseLogForIssues(logPath string) (warnings []string, errors []string) {
+func parseLogForIssues(logPath string) (warnings, errors []string) {
 	file, err := os.Open(logPath)
 	if err != nil {
 		return nil, nil
@@ -39,8 +39,8 @@ func parseLogForIssues(logPath string) (warnings []string, errors []string) {
 	return parseJSONLog(file)
 }
 
-// parseJSONLog parses JSON log output using Action field as source of truth
-func parseJSONLog(r io.Reader) (warnings []string, errors []string) {
+// parseJSONLog parses JSON log output using Action field as source of truth.
+func parseJSONLog(r io.Reader) (warnings, errors []string) {
 	tests := make(map[string]*testState)
 	var packageOutput []string
 	packageFailed := false
@@ -132,7 +132,7 @@ type JSONLogWriter struct {
 	enc *json.Encoder
 }
 
-// NewJSONLogWriter creates a writer that outputs JSON log events
+// NewJSONLogWriter creates a writer that outputs JSON log events.
 func NewJSONLogWriter(w io.Writer, pkg string) *JSONLogWriter {
 	return &JSONLogWriter{
 		w:   w,
@@ -141,7 +141,7 @@ func NewJSONLogWriter(w io.Writer, pkg string) *JSONLogWriter {
 	}
 }
 
-// Write implements io.Writer, treating each write as an output event
+// Write implements io.Writer, treating each write as an output event.
 func (j *JSONLogWriter) Write(p []byte) (n int, err error) {
 	event := LogEvent{
 		Action:  "output",
@@ -154,22 +154,22 @@ func (j *JSONLogWriter) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-// Info writes an info-level output event
+// Info writes an info-level output event.
 func (j *JSONLogWriter) Info(msg string) {
-	j.enc.Encode(LogEvent{Action: "output", Package: j.pkg, Output: msg + "\n"})
+	_ = j.enc.Encode(LogEvent{Action: "output", Package: j.pkg, Output: msg + "\n"}) //nolint:errcheck // best-effort logging
 }
 
-// Error writes an error event
+// Error writes an error event.
 func (j *JSONLogWriter) Error(msg string) {
-	j.enc.Encode(LogEvent{Action: "error", Package: j.pkg, Output: msg + "\n"})
+	_ = j.enc.Encode(LogEvent{Action: "error", Package: j.pkg, Output: msg + "\n"}) //nolint:errcheck // best-effort logging
 }
 
-// Warning writes a warning event
+// Warning writes a warning event.
 func (j *JSONLogWriter) Warning(msg string) {
-	j.enc.Encode(LogEvent{Action: "warning", Package: j.pkg, Output: msg + "\n"})
+	_ = j.enc.Encode(LogEvent{Action: "warning", Package: j.pkg, Output: msg + "\n"}) //nolint:errcheck // best-effort logging
 }
 
-// Fail marks the package as failed
+// Fail marks the package as failed.
 func (j *JSONLogWriter) Fail() {
-	j.enc.Encode(LogEvent{Action: "fail", Package: j.pkg})
+	_ = j.enc.Encode(LogEvent{Action: "fail", Package: j.pkg}) //nolint:errcheck // best-effort logging
 }

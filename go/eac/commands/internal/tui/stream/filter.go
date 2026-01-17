@@ -35,15 +35,15 @@ func NewFilter() *Filter {
 			regexp.MustCompile(`^FAIL\s`),
 		},
 		noisePatterns: []*regexp.Regexp{
-			regexp.MustCompile(`^\s*$`),            // Empty lines
-			regexp.MustCompile(`^go: downloading`), // Download messages
-			regexp.MustCompile(`^=== RUN`),         // Test run markers
-			regexp.MustCompile(`^=== PAUSE`),       // Test pause markers
-			regexp.MustCompile(`^=== CONT`),        // Test continue markers
-			regexp.MustCompile(`^--- PASS:`),       // Passing test markers
-			regexp.MustCompile(`^PASS$`),           // Final pass marker
-			regexp.MustCompile(`^ok\s+\S+\s+\d`),   // Package OK line
-			regexp.MustCompile(`^coverage:`),       // Coverage line
+			regexp.MustCompile(`^\s*$`),                         // Empty lines
+			regexp.MustCompile(`^go: downloading`),              // Download messages
+			regexp.MustCompile(`^=== RUN`),                      // Test run markers
+			regexp.MustCompile(`^=== PAUSE`),                    // Test pause markers
+			regexp.MustCompile(`^=== CONT`),                     // Test continue markers
+			regexp.MustCompile(`^--- PASS:`),                    // Passing test markers
+			regexp.MustCompile(`^PASS$`),                        // Final pass marker
+			regexp.MustCompile(`^ok\s+\S+\s+\d`),                // Package OK line
+			regexp.MustCompile(`^coverage:`),                    // Coverage line
 			regexp.MustCompile(`^\?\s+\S+\s+\[no test files\]`), // No test files
 		},
 		recentLines: make(map[string]int),

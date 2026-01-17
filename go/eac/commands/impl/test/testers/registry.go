@@ -14,7 +14,7 @@ var log = logging.C()
 
 // TestFunc is the signature for module test functions.
 // Parameters: module contract, workspace root, output directory, log writer, report format, suite name
-// Returns: exit code
+// Returns: exit code.
 type TestFunc func(*modules.ModuleContract, string, string, io.Writer, string, string) int
 
 var (
@@ -31,7 +31,7 @@ func RegisterSystem(buildDep string, fn TestFunc) {
 	systemHandlers[buildDep] = fn
 }
 
-// Capability to test handler mapping
+// Capability to test handler mapping.
 var capabilityTestHandlers = map[string]string{
 	"go_module":   "go",
 	"npm_package": "npm",

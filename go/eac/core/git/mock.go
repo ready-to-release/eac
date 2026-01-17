@@ -56,7 +56,7 @@ type MockRepository struct {
 	GetBranchFilesError     error
 }
 
-// MockTag represents a mock tag for testing
+// MockTag represents a mock tag for testing.
 type MockTag struct {
 	CommitSHA string
 	Date      time.Time
@@ -455,5 +455,5 @@ func (m *MockRepository) WithBranchFiles(files []string) *MockRepository {
 	return m
 }
 
-// Ensure MockRepository implements GitRepository
+// Ensure MockRepository implements GitRepository.
 var _ GitRepository = (*MockRepository)(nil)

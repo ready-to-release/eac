@@ -32,8 +32,10 @@ func GetMockAIResponse() string {
 
 // gitRepo holds the git repository instance for git operations.
 // In production, this is initialized lazily. For tests, it can be injected via SetGitRepo.
-var gitRepo git.GitRepository
-var gitMgr *git.RepositoryManager
+var (
+	gitRepo git.GitRepository
+	gitMgr  *git.RepositoryManager
+)
 
 // initGitManager initializes the git repository manager if needed.
 func initGitManager() {

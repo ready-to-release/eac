@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// SquashJSON matches contracts/eac-core/0.1.0/squash-message.schema.json
+// SquashJSON matches contracts/eac-core/0.1.0/squash-message.schema.json.
 type SquashJSON struct {
 	Type                string       `json:"type"`
 	Scope               string       `json:"scope"`
@@ -20,7 +20,7 @@ type SquashJSON struct {
 	AuditorSummary      string       `json:"auditor_summary,omitempty"`
 }
 
-// ChangeItem represents an individual change in the PR
+// ChangeItem represents an individual change in the PR.
 type ChangeItem struct {
 	Type        string `json:"type"`
 	Scope       string `json:"scope,omitempty"`
@@ -105,7 +105,7 @@ func FormatSquashMessage(jsonOutput string) (string, error) {
 	return strings.TrimRight(result.String(), "\n") + "\n", nil
 }
 
-// extractFirstSentence extracts the first sentence from text for auditor summary
+// extractFirstSentence extracts the first sentence from text for auditor summary.
 func extractFirstSentence(text string) string {
 	text = strings.TrimSpace(text)
 

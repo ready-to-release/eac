@@ -6,7 +6,7 @@ import (
 	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
 )
 
-// SpecCoverage represents test coverage for a single feature file
+// SpecCoverage represents test coverage for a single feature file.
 type SpecCoverage struct {
 	FeatureName   string   `json:"feature_name" yaml:"featurename"`
 	FeaturePath   string   `json:"feature_path" yaml:"featurepath"`
@@ -99,7 +99,7 @@ func BuildSpecCoverage(manifests []*implinternal.TestManifest) []SpecCoverage {
 	return result
 }
 
-// contains checks if a string slice contains a value
+// contains checks if a string slice contains a value.
 func contains(slice []string, value string) bool {
 	for _, item := range slice {
 		if item == value {

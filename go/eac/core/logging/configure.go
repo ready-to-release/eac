@@ -17,7 +17,7 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-// loggingState holds the current logging configuration state
+// loggingState holds the current logging configuration state.
 var (
 	loggingClosers []io.Closer
 	loggingMu      sync.Mutex
@@ -101,7 +101,7 @@ func ConfigureLogging(workspaceRoot, command string, pathSegments []string, debu
 
 	if workspaceRoot != "" && command != "" {
 		// Ensure out/ directory exists
-		if err := os.MkdirAll(filepath.Join(workspaceRoot, paths.OutDir), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Join(workspaceRoot, paths.OutDir), 0o755); err != nil { //nolint:gosec // G301: Log directory should be world-readable
 			return fmt.Errorf("failed to create log directory: %w", err)
 		}
 
@@ -133,8 +133,8 @@ func ConfigureLogging(workspaceRoot, command string, pathSegments []string, debu
 		if target, ok := logCfg.GetTarget(command); ok && len(pathSegments) > 0 {
 			module := pathSegments[0] // First path segment is the module
 			targetPath := target.ResolveTargetPath(workspaceRoot, module)
-			if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err == nil {
-				targetFile, err := os.OpenFile(targetPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			if err := os.MkdirAll(filepath.Dir(targetPath), 0o755); err == nil { //nolint:gosec // G301: Log directory should be world-readable
+				targetFile, err := os.OpenFile(targetPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644) //nolint:gosec // G302: Log files should be world-readable
 				if err == nil {
 					closers = append(closers, targetFile)
 
@@ -205,11 +205,14 @@ func CloseLogging() {
 	closeLoggingLocked()
 }
 
-// closeLoggingLocked closes logging resources (must hold loggingMu)
+// closeLoggingLocked closes logging resources (must hold loggingMu).
 func closeLoggingLocked() {
 	// Sync the zap logger to flush any buffered logs
+	// Error is intentionally ignored as this is best-effort cleanup during shutdown
 	if componentGlobalLogger != nil {
-		componentGlobalLogger.Logger.Sync()
+		if err := componentGlobalLogger.Logger.Sync(); err != nil {
+			// Best-effort cleanup - nothing meaningful to do with error during shutdown
+		}
 	}
 
 	for _, closer := range loggingClosers {
@@ -219,7 +222,7 @@ func closeLoggingLocked() {
 }
 
 // ConfigureLoggingSimple is a convenience wrapper for non-TUI commands.
-// Equivalent to ConfigureLogging(workspaceRoot, command, pathSegments, debugToConsole, nil)
+// Equivalent to ConfigureLogging(workspaceRoot, command, pathSegments, debugToConsole, nil).
 func ConfigureLoggingSimple(workspaceRoot, command string, pathSegments []string, debugToConsole bool) error {
 	return ConfigureLogging(workspaceRoot, command, pathSegments, debugToConsole, nil)
 }

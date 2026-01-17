@@ -9,7 +9,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/config"
 )
 
-// ManifestLoadResult represents the result of loading and validating a module's manifest
+// ManifestLoadResult represents the result of loading and validating a module's manifest.
 type ManifestLoadResult struct {
 	Moniker          string
 	Manifest         *ModuleManifest
@@ -19,7 +19,7 @@ type ManifestLoadResult struct {
 	Error            string
 }
 
-// ManifestValidationSummary summarizes validation across all modules
+// ManifestValidationSummary summarizes validation across all modules.
 type ManifestValidationSummary struct {
 	Results        []ManifestLoadResult
 	TotalModules   int
@@ -32,7 +32,7 @@ type ManifestValidationSummary struct {
 // LoadAndValidateManifests loads and validates build manifests for a list of modules.
 // It performs:
 // 1. Schema validation against the build-manifest contract
-// 2. Artifact existence validation (files actually exist on disk)
+// 2. Artifact existence validation (files actually exist on disk).
 func LoadAndValidateManifests(workspaceRoot string, monikers []string, cfg *config.EACConfig) (*ManifestValidationSummary, error) {
 	validator, err := GetManifestValidatorWithRoot(workspaceRoot)
 	if err != nil {
@@ -61,7 +61,7 @@ func LoadAndValidateManifests(workspaceRoot string, monikers []string, cfg *conf
 	return summary, nil
 }
 
-// loadAndValidateModule loads and validates a single module's manifest
+// loadAndValidateModule loads and validates a single module's manifest.
 func loadAndValidateModule(workspaceRoot, moniker string, cfg *config.EACConfig, validator *ManifestValidator) ManifestLoadResult {
 	result := ManifestLoadResult{
 		Moniker: moniker,
@@ -122,7 +122,7 @@ func loadAndValidateModule(workspaceRoot, moniker string, cfg *config.EACConfig,
 	return result
 }
 
-// validateArtifactsExist checks that all artifacts in the manifest exist on disk
+// validateArtifactsExist checks that all artifacts in the manifest exist on disk.
 func validateArtifactsExist(buildDir string, manifest *ModuleManifest) []string {
 	var missing []string
 
@@ -141,7 +141,7 @@ func validateArtifactsExist(buildDir string, manifest *ModuleManifest) []string 
 	return missing
 }
 
-// GetModuleManifests loads manifests for multiple modules, returning a map
+// GetModuleManifests loads manifests for multiple modules, returning a map.
 func GetModuleManifests(workspaceRoot string, monikers []string, cfg *config.EACConfig) (map[string]*ModuleManifest, error) {
 	manifests := make(map[string]*ModuleManifest)
 
@@ -162,8 +162,8 @@ func GetModuleManifests(workspaceRoot string, monikers []string, cfg *config.EAC
 // Returns true if:
 // 1. Manifest exists and is schema-valid
 // 2. All artifacts exist on disk
-// 3. The git commit in manifest matches current commit OR verified_unchanged_at matches
-func IsManifestUpToDate(workspaceRoot string, moniker string, cfg *config.EACConfig, currentGitCommit string) (bool, string) {
+// 3. The git commit in manifest matches current commit OR verified_unchanged_at matches.
+func IsManifestUpToDate(workspaceRoot, moniker string, cfg *config.EACConfig, currentGitCommit string) (bool, string) {
 	moduleBuildDir := cfg.Repository.BuildOutputPathAbs(workspaceRoot, moniker)
 
 	// Load manifest

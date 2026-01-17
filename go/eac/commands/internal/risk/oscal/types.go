@@ -7,22 +7,22 @@ package oscal
 
 import oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
 
-// Type aliases for go-oscal types to maintain compatibility
+// Type aliases for go-oscal types to maintain compatibility.
 type (
-	AssessmentResults = oscalTypes.AssessmentResults
-	Result            = oscalTypes.Result
-	Observation       = oscalTypes.Observation
-	Finding           = oscalTypes.Finding
-	Prop              = oscalTypes.Property
-	RelevantEvidence  = oscalTypes.RelevantEvidence
-	ReviewedControls  = oscalTypes.ReviewedControls
-	ControlSelection  = oscalTypes.AssessedControls
-	ControlRef        = oscalTypes.AssessedControlsSelectControlById
-	Target            = oscalTypes.FindingTarget
+	AssessmentResults  = oscalTypes.AssessmentResults
+	Result             = oscalTypes.Result
+	Observation        = oscalTypes.Observation
+	Finding            = oscalTypes.Finding
+	Prop               = oscalTypes.Property
+	RelevantEvidence   = oscalTypes.RelevantEvidence
+	ReviewedControls   = oscalTypes.ReviewedControls
+	ControlSelection   = oscalTypes.AssessedControls
+	ControlRef         = oscalTypes.AssessedControlsSelectControlById
+	Target             = oscalTypes.FindingTarget
 	RelatedObservation = oscalTypes.RelatedObservation
 )
 
-// Type constants for FindingTarget
+// Type constants for FindingTarget.
 const (
 	TargetTypeControlID = "objective-id"
 )

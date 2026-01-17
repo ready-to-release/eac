@@ -10,7 +10,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/config"
 )
 
-// Preprocessor handles book preprocessing before MkDocs build
+// Preprocessor handles book preprocessing before MkDocs build.
 type Preprocessor struct {
 	book           *config.Book
 	workspaceRoot  string
@@ -22,7 +22,7 @@ type Preprocessor struct {
 }
 
 // NewPreprocessor creates a new book preprocessor
-// pdfMode enables PDF-specific processing like link normalization
+// pdfMode enables PDF-specific processing like link normalization.
 func NewPreprocessor(book *config.Book, workspaceRoot, stagingDir string, logWriter io.Writer, pdfMode bool) *Preprocessor {
 	return &Preprocessor{
 		book:           book,
@@ -35,7 +35,7 @@ func NewPreprocessor(book *config.Book, workspaceRoot, stagingDir string, logWri
 	}
 }
 
-// Preprocess runs the preprocessing pipeline
+// Preprocess runs the preprocessing pipeline.
 func (p *Preprocessor) Preprocess() error {
 	p.log("📚 Book preprocessing: %s", p.book.Name)
 
@@ -206,7 +206,7 @@ func (p *Preprocessor) Preprocess() error {
 	return nil
 }
 
-// log writes a formatted message to the log writer
+// log writes a formatted message to the log writer.
 func (p *Preprocessor) log(format string, args ...any) {
 	fmt.Fprintf(p.logWriter, format+"\n", args...)
 }

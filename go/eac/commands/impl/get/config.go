@@ -30,7 +30,7 @@ func init() {
 
 // configFlags defines valid flags for the get config command
 
-// ConfigOutput represents the structured output of all configs
+// ConfigOutput represents the structured output of all configs.
 type ConfigOutput struct {
 	Modules      interface{} `yaml:"modules" json:"modules"`
 	ModuleTypes  interface{} `yaml:"module_types" json:"module_types"`

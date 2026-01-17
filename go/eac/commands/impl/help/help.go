@@ -29,7 +29,7 @@ func init() {
 	registry.Register(Help)
 }
 
-// Help displays help information for commands
+// Help displays help information for commands.
 func Help() int {
 	args := os.Args[2:] // Skip program name and "help"
 
@@ -64,7 +64,7 @@ func Help() int {
 	return showAllCommands(verbose)
 }
 
-// showAllCommands lists all available commands grouped by category
+// showAllCommands lists all available commands grouped by category.
 func showAllCommands(verbose bool) int {
 	commands := registry.GetCommands()
 	commandRegistry := registry.GetCommandRegistry()
@@ -155,7 +155,7 @@ func showAllCommands(verbose bool) int {
 	return 0
 }
 
-// showCommandHelp displays detailed help for a specific command
+// showCommandHelp displays detailed help for a specific command.
 func showCommandHelp(commandName string, verbose bool) int {
 	commandRegistry := registry.GetCommandRegistry()
 
@@ -265,7 +265,7 @@ func showCommandHelp(commandName string, verbose bool) int {
 	return 0
 }
 
-// buildSynopsis builds a synopsis line for a command
+// buildSynopsis builds a synopsis line for a command.
 func buildSynopsis(reg *registry.CommandRegistration) string {
 	parts := []string{reg.ActualCommand}
 
@@ -282,7 +282,7 @@ func buildSynopsis(reg *registry.CommandRegistration) string {
 	return strings.Join(parts, " ")
 }
 
-// displayFlag formats and displays a single flag
+// displayFlag formats and displays a single flag.
 func displayFlag(flag registry.FlagMetadata) {
 	// Build flag name with shorthand
 	flagName := "--" + flag.Name
@@ -329,7 +329,7 @@ func displayFlag(flag registry.FlagMetadata) {
 	log.Info("")
 }
 
-// wrapText wraps text to specified width preserving words
+// wrapText wraps text to specified width preserving words.
 func wrapText(text string, width int) []string {
 	words := strings.Fields(text)
 	if len(words) == 0 {
@@ -355,7 +355,7 @@ func wrapText(text string, width int) []string {
 	return lines
 }
 
-// getSubcommands returns all subcommands for a given parent command
+// getSubcommands returns all subcommands for a given parent command.
 func getSubcommands(parentCommand string) []string {
 	commands := registry.GetCommands()
 	var subcommands []string
@@ -378,7 +378,7 @@ func getSubcommands(parentCommand string) []string {
 	return subcommands
 }
 
-// max returns the maximum of two integers
+// max returns the maximum of two integers.
 func max(a, b int) int {
 	if a > b {
 		return a

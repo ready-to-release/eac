@@ -41,11 +41,11 @@ func TestRenderToString(t *testing.T) {
 	templatePath := filepath.Join(tmpDir, "test.md")
 
 	tests := []struct {
-		name         string
-		template     string
-		data         interface{}
-		expected     string
-		expectError  bool
+		name        string
+		template    string
+		data        interface{}
+		expected    string
+		expectError bool
 	}{
 		{
 			name:     "simple template",
@@ -135,7 +135,7 @@ func TestRenderToString(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Write template
-			err := os.WriteFile(templatePath, []byte(tt.template), 0644)
+			err := os.WriteFile(templatePath, []byte(tt.template), 0o644)
 			require.NoError(t, err)
 
 			// Render
@@ -160,7 +160,7 @@ func TestRenderToFile(t *testing.T) {
 
 	// Create template
 	template := "# Report\n\nName: {{ .Name }}\nCount: {{ .Count }}"
-	err := os.WriteFile(templatePath, []byte(template), 0644)
+	err := os.WriteFile(templatePath, []byte(template), 0o644)
 	require.NoError(t, err)
 
 	// Render to file
@@ -188,7 +188,7 @@ func TestRenderToFileCreatesDirectory(t *testing.T) {
 	outputPath := filepath.Join(tmpDir, "nested", "deep", "output.md")
 
 	// Create template
-	err := os.WriteFile(templatePath, []byte("Test"), 0644)
+	err := os.WriteFile(templatePath, []byte("Test"), 0o644)
 	require.NoError(t, err)
 
 	// Render - should create nested directories
@@ -211,7 +211,7 @@ func TestRenderInvalidTemplate(t *testing.T) {
 	templatePath := filepath.Join(tmpDir, "invalid.md")
 
 	// Create invalid template (unclosed tag)
-	err := os.WriteFile(templatePath, []byte("{{ .Name"), 0644)
+	err := os.WriteFile(templatePath, []byte("{{ .Name"), 0o644)
 	require.NoError(t, err)
 
 	renderer := NewRenderer(templatePath)

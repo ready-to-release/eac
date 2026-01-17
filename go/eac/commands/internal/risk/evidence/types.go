@@ -14,15 +14,15 @@ import (
 type EvidenceType string
 
 const (
-	EvidenceTypeUnitTest       EvidenceType = "unit-test"
-	EvidenceTypeAcceptanceTest EvidenceType = "acceptance-test"
+	EvidenceTypeUnitTest          EvidenceType = "unit-test"
+	EvidenceTypeAcceptanceTest    EvidenceType = "acceptance-test"
 	EvidenceTypeVulnerabilityScan EvidenceType = "vulnerability-scan"
-	EvidenceTypeSBOM           EvidenceType = "sbom"
-	EvidenceTypeSecretsScan    EvidenceType = "secrets-scan"
-	EvidenceTypeSASTScan       EvidenceType = "sast-scan"
-	EvidenceTypeComplianceScan EvidenceType = "compliance-scan"
-	EvidenceTypeIaCScan        EvidenceType = "iac-scan"
-	EvidenceTypeDAST           EvidenceType = "dast-scan"
+	EvidenceTypeSBOM              EvidenceType = "sbom"
+	EvidenceTypeSecretsScan       EvidenceType = "secrets-scan"
+	EvidenceTypeSASTScan          EvidenceType = "sast-scan"
+	EvidenceTypeComplianceScan    EvidenceType = "compliance-scan"
+	EvidenceTypeIaCScan           EvidenceType = "iac-scan"
+	EvidenceTypeDAST              EvidenceType = "dast-scan"
 )
 
 // Evidence represents a piece of evidence for risk assessment.
@@ -45,14 +45,14 @@ type TestResults struct {
 
 // SecurityResults contains paths to security evidence files for a module.
 type SecurityResults struct {
-	ModuleName     string `json:"module_name"`
-	SBOMFile       string `json:"sbom_file,omitempty"`
-	VulnFile       string `json:"vuln_file,omitempty"`
-	SecretsFile    string `json:"secrets_file,omitempty"`
-	SASTFile       string `json:"sast_file,omitempty"`
-	ComplianceFile string `json:"compliance_file,omitempty"`
-	IaCFile        string `json:"iac_file,omitempty"`
-	ZAPFile        string `json:"zap_file,omitempty"`
+	ModuleName     string    `json:"module_name"`
+	SBOMFile       string    `json:"sbom_file,omitempty"`
+	VulnFile       string    `json:"vuln_file,omitempty"`
+	SecretsFile    string    `json:"secrets_file,omitempty"`
+	SASTFile       string    `json:"sast_file,omitempty"`
+	ComplianceFile string    `json:"compliance_file,omitempty"`
+	IaCFile        string    `json:"iac_file,omitempty"`
+	ZAPFile        string    `json:"zap_file,omitempty"`
 	LastModified   time.Time `json:"last_modified"`
 }
 
@@ -77,10 +77,10 @@ type TestCase struct {
 
 // TestSummary provides aggregate test result information.
 type TestSummary struct {
-	Total    int `json:"total"`
-	Passed   int `json:"passed"`
-	Failed   int `json:"failed"`
-	Skipped  int `json:"skipped"`
+	Total   int `json:"total"`
+	Passed  int `json:"passed"`
+	Failed  int `json:"failed"`
+	Skipped int `json:"skipped"`
 }
 
 // VulnerabilitySummary provides aggregate vulnerability information.
@@ -112,27 +112,27 @@ type EvidenceCollection struct {
 // TestManifestData holds simplified test manifest information for evidence collection.
 // This avoids import cycle issues with impl/internal package.
 type TestManifestData struct {
-	TestID       string                      `json:"test_id"`
-	TestAgent    string                      `json:"test_agent"`
-	GitCommit    string                      `json:"git_commit,omitempty"`
-	BuildID      string                      `json:"build_id,omitempty"`
-	TestTime     time.Time                   `json:"test_time"`
-	Tests        []TestEntryData             `json:"tests"`
-	Suites       map[string]SuiteResultData  `json:"suites,omitempty"`
-	Artifacts    []TestArtifactData          `json:"artifacts"`
+	TestID    string                     `json:"test_id"`
+	TestAgent string                     `json:"test_agent"`
+	GitCommit string                     `json:"git_commit,omitempty"`
+	BuildID   string                     `json:"build_id,omitempty"`
+	TestTime  time.Time                  `json:"test_time"`
+	Tests     []TestEntryData            `json:"tests"`
+	Suites    map[string]SuiteResultData `json:"suites,omitempty"`
+	Artifacts []TestArtifactData         `json:"artifacts"`
 }
 
-// SuiteResultData holds per-suite test result information
+// SuiteResultData holds per-suite test result information.
 type SuiteResultData struct {
-	RunTime         time.Time   `json:"run_time"`
-	DurationSeconds float64     `json:"duration_seconds"`
-	Total           int         `json:"total"`
-	Passed          int         `json:"passed"`
-	Failed          int         `json:"failed"`
-	Skipped         int         `json:"skipped"`
+	RunTime         time.Time `json:"run_time"`
+	DurationSeconds float64   `json:"duration_seconds"`
+	Total           int       `json:"total"`
+	Passed          int       `json:"passed"`
+	Failed          int       `json:"failed"`
+	Skipped         int       `json:"skipped"`
 }
 
-// TestArtifactData holds test artifact information
+// TestArtifactData holds test artifact information.
 type TestArtifactData struct {
 	Type string `json:"type"`
 	Name string `json:"name"`
@@ -188,13 +188,13 @@ func (ec *EvidenceCollection) LatestModTime() time.Time {
 
 // ControlTestEvidence represents evidence for a specific control from tests.
 type ControlTestEvidence struct {
-	ControlID     string         `json:"control_id"`
-	Tests         []TestEvidence `json:"tests"`
-	TotalTests    int            `json:"total_tests"`
-	PassedTests   int            `json:"passed_tests"`
-	FailedTests   int            `json:"failed_tests"`
-	SkippedTests  int            `json:"skipped_tests"`
-	HasEvidence   bool           `json:"has_evidence"`
+	ControlID    string         `json:"control_id"`
+	Tests        []TestEvidence `json:"tests"`
+	TotalTests   int            `json:"total_tests"`
+	PassedTests  int            `json:"passed_tests"`
+	FailedTests  int            `json:"failed_tests"`
+	SkippedTests int            `json:"skipped_tests"`
+	HasEvidence  bool           `json:"has_evidence"`
 }
 
 // TestEvidence represents a single test covering a control.
@@ -202,6 +202,6 @@ type TestEvidence struct {
 	FeaturePath  string `json:"feature_path"`
 	FeatureName  string `json:"feature_name"`
 	ScenarioName string `json:"scenario_name"`
-	Status       string `json:"status"` // "passed", "failed", "skipped", "not-run"
+	Status       string `json:"status"`   // "passed", "failed", "skipped", "not-run"
 	Location     string `json:"location"` // file:line or file:scenario
 }

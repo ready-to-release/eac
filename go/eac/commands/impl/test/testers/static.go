@@ -20,7 +20,7 @@ func init() {
 
 // TestStaticModule is a passthrough for modules without runtime tests.
 // These modules are validated by the build process.
-func TestStaticModule(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
+func TestStaticModule(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, reportFormat, suiteName string) int {
 	Writeln(logWriter, "\n=== Testing %s: %s ===", module.Type, module.Moniker)
 	Writeln(logWriter, "Suite: %s", suiteName)
 	Writeln(logWriter, "Module type '%s' has no runtime tests", module.Type)
@@ -29,7 +29,7 @@ func TestStaticModule(module *modules.ModuleContract, workspaceRoot string, outp
 }
 
 // TestMkDocsModule tests MkDocs sites by verifying the build output exists.
-func TestMkDocsModule(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
+func TestMkDocsModule(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, reportFormat, suiteName string) int {
 	Writeln(logWriter, "\n=== Testing %s: %s ===", module.Type, module.Moniker)
 	Writeln(logWriter, "Suite: %s", suiteName)
 

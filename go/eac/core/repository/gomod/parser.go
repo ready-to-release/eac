@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-// ParseGoMod parses a go.mod file and extracts module information
+// ParseGoMod parses a go.mod file and extracts module information.
 func ParseGoMod(filePath, rootPath string) (*GoModInfo, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -31,7 +31,9 @@ func ParseGoMod(filePath, rootPath string) (*GoModInfo, error) {
 	info.ModulePath = modulePath
 
 	// Reset file pointer
-	file.Seek(0, 0)
+	if _, err := file.Seek(0, 0); err != nil {
+		return nil, fmt.Errorf("failed to reset file position: %w", err)
+	}
 
 	// Extract requires
 	requires, err := extractRequires(file)
@@ -41,7 +43,9 @@ func ParseGoMod(filePath, rootPath string) (*GoModInfo, error) {
 	info.Requires = requires
 
 	// Reset file pointer
-	file.Seek(0, 0)
+	if _, err := file.Seek(0, 0); err != nil {
+		return nil, fmt.Errorf("failed to reset file position: %w", err)
+	}
 
 	// Extract replaces
 	replaces, err := extractReplaces(file)
@@ -61,7 +65,7 @@ func ParseGoMod(filePath, rootPath string) (*GoModInfo, error) {
 }
 
 // extractModulePath extracts the module declaration from go.mod
-// Example: "module github.com/ready-to-release/eac/go/r2r/cli"
+// Example: "module github.com/ready-to-release/eac/go/r2r/cli".
 func extractModulePath(file *os.File) (string, error) {
 	scanner := bufio.NewScanner(file)
 	moduleRegex := regexp.MustCompile(`^module\s+(.+)$`)
@@ -81,7 +85,7 @@ func extractModulePath(file *os.File) (string, error) {
 }
 
 // extractRequires extracts require statements from go.mod
-// Only includes direct dependencies (not marked with // indirect)
+// Only includes direct dependencies (not marked with // indirect).
 func extractRequires(file *os.File) ([]Require, error) {
 	scanner := bufio.NewScanner(file)
 	var requires []Require
@@ -147,7 +151,7 @@ func extractRequires(file *os.File) ([]Require, error) {
 }
 
 // extractReplaces extracts replace directives from go.mod
-// Example: "replace github.com/ready-to-release/eac/go/eac/core => ../internal"
+// Example: "replace github.com/ready-to-release/eac/go/eac/core => ../internal".
 func extractReplaces(file *os.File) ([]Replace, error) {
 	scanner := bufio.NewScanner(file)
 	var replaces []Replace
@@ -180,7 +184,7 @@ func extractReplaces(file *os.File) ([]Replace, error) {
 }
 
 // FilterInternalDependencies filters requires to only include internal modules
-// Internal modules are those that start with the base module path
+// Internal modules are those that start with the base module path.
 func FilterInternalDependencies(requires []Require, baseModulePath string) []string {
 	var internal []string
 
@@ -199,7 +203,7 @@ func FilterInternalDependencies(requires []Require, baseModulePath string) []str
 	return internal
 }
 
-// ParseAllGoMods finds and parses all go.mod files in the repository
+// ParseAllGoMods finds and parses all go.mod files in the repository.
 func ParseAllGoMods(rootPath string, excludeDirs []string) ([]*GoModInfo, error) {
 	// Find all go.mod files
 	goModFiles, err := FindGoModFiles(rootPath, excludeDirs)
@@ -222,7 +226,7 @@ func ParseAllGoMods(rootPath string, excludeDirs []string) ([]*GoModInfo, error)
 
 // GetModuleNameFromPath extracts a simple module name from the module directory
 // Example: "go/r2r/cli" -> "cli"
-// Example: "go/eac/mcp/commands" -> "mcp-commands"
+// Example: "go/eac/mcp/commands" -> "mcp-commands".
 func GetModuleNameFromPath(moduleDir string) string {
 	// Convert to forward slashes for consistency
 	moduleDir = filepath.ToSlash(moduleDir)

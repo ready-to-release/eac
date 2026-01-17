@@ -50,15 +50,15 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	"github.com/ready-to-release/eac/go/eac/core/git"
-	"github.com/ready-to-release/eac/go/eac/core/releasenotes"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"github.com/ready-to-release/eac/go/eac/core/releasenotes"
 )
 
 func init() {
 	registry.Register(ReleaseThis)
 }
 
-// ReleaseResult contains the result of a release operation
+// ReleaseResult contains the result of a release operation.
 type ReleaseResult struct {
 	Module          string `json:"module"`
 	Success         bool   `json:"success"`
@@ -303,8 +303,8 @@ func performRelease(module string, dryRun bool, overrideDate string) ReleaseResu
 	// that version is already pending release - don't bump again
 	if result.PreviousVersion != "0.0.0" {
 		expectedTag := fmt.Sprintf("%s/%s", module, result.PreviousVersion)
-		tagExists, _ := repo.TagExists(expectedTag)
-		if !tagExists {
+		tagExists, tagErr := repo.TagExists(expectedTag)
+		if tagErr == nil && !tagExists {
 			// Changelog has a version that hasn't been tagged yet - already pending
 			result.NewVersion = result.PreviousVersion
 			result.Tag = expectedTag
@@ -439,7 +439,7 @@ func performRelease(module string, dryRun bool, overrideDate string) ReleaseResu
 
 	// Create release directory if needed
 	releaseDir := filepath.Dir(fullChangelogPath)
-	if err := os.MkdirAll(releaseDir, 0755); err != nil {
+	if err := os.MkdirAll(releaseDir, 0o755); err != nil {
 		result.Error = fmt.Sprintf("failed to create release directory: %v", err)
 		return result
 	}

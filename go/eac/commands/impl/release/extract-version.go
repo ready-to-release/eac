@@ -40,7 +40,7 @@ func init() {
 	registry.Register(ExtractVersion)
 }
 
-// ExtractVersionOutput contains the extracted version information
+// ExtractVersionOutput contains the extracted version information.
 type ExtractVersionOutput struct {
 	Version string `json:"version" yaml:"version"`
 	TagName string `json:"tag_name" yaml:"tag_name"`
@@ -48,7 +48,7 @@ type ExtractVersionOutput struct {
 	Message string `json:"message,omitempty" yaml:"message,omitempty"`
 }
 
-// ExtractVersion extracts and validates a release version
+// ExtractVersion extracts and validates a release version.
 func ExtractVersion() int {
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
@@ -98,10 +98,18 @@ func ExtractVersion() int {
 			fmt.Printf("MESSAGE=%q\n", output.Message)
 		}
 	case "json":
-		data, _ := json.MarshalIndent(output, "", "  ")
+		data, err := json.MarshalIndent(output, "", "  ")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to marshal JSON: %v\n", err)
+			return 1
+		}
 		fmt.Println(string(data))
 	case "yaml":
-		data, _ := yaml.Marshal(output)
+		data, err := yaml.Marshal(output)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to marshal YAML: %v\n", err)
+			return 1
+		}
 		fmt.Print(string(data))
 	default:
 		// Simple output for direct use
@@ -152,7 +160,7 @@ func extractVersionLogic(module, versionType, ref, explicitVersion string) Extra
 	return output
 }
 
-// generateCalver generates a calver timestamp in YYYY.MMDD.HHMM format
+// generateCalver generates a calver timestamp in YYYY.MMDD.HHMM format.
 func generateCalver() string {
 	now := time.Now().UTC()
 	return fmt.Sprintf("%d.%02d%02d.%02d%02d",
@@ -163,13 +171,13 @@ func generateCalver() string {
 		now.Minute())
 }
 
-// isValidCalver validates a calver string (YYYY.MMDD.HHMM)
+// isValidCalver validates a calver string (YYYY.MMDD.HHMM).
 func isValidCalver(version string) bool {
 	calverRegex := regexp.MustCompile(`^\d{4}\.\d{4}\.\d{4}$`)
 	return calverRegex.MatchString(version)
 }
 
-// isValidSemver validates a semver string (x.y.z without v prefix)
+// isValidSemver validates a semver string (x.y.z without v prefix).
 func isValidSemver(version string) bool {
 	// No v prefix allowed
 	if strings.HasPrefix(version, "v") || strings.HasPrefix(version, "V") {

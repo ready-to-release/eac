@@ -110,7 +110,7 @@ func (c *RegistryClient) listTagsViaGitHubAPI(imagePath string) ([]string, error
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body) //nolint:errcheck // best-effort error body read for logging
 		logging.Debugf("GitHub API request failed: url=%s status=%d body=%s", url, resp.StatusCode, string(body))
 		return nil, fmt.Errorf("GitHub API returned status %d", resp.StatusCode)
 	}
@@ -166,7 +166,7 @@ func (c *RegistryClient) listTagsViaOCIRegistry(imagePath string) ([]string, err
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body) //nolint:errcheck // best-effort error body read for logging
 		logging.Debugf("OCI Registry API request failed: url=%s status=%d body=%s", url, resp.StatusCode, string(body))
 		return nil, fmt.Errorf("OCI Registry API returned status %d", resp.StatusCode)
 	}
@@ -227,7 +227,7 @@ func (c *RegistryClient) listTagsWithAnonymousToken(imagePath string) ([]string,
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body) //nolint:errcheck // best-effort error body read for logging
 		logging.Debugf("OCI Registry API request with token failed: url=%s status=%d body=%s", url, resp.StatusCode, string(body))
 		return nil, fmt.Errorf("OCI Registry API returned status %d", resp.StatusCode)
 	}
@@ -274,7 +274,7 @@ func (c *RegistryClient) GetLatestStableTag(imagePath string) (string, error) {
 		if runTagPattern.MatchString(tag) {
 			// Extract the number
 			var num int
-			fmt.Sscanf(tag, "run-%d", &num)
+			_, _ = fmt.Sscanf(tag, "run-%d", &num) //nolint:errcheck // regex already matched, parse will succeed
 			runTags = append(runTags, struct {
 				tag string
 				num int
@@ -377,7 +377,7 @@ func (c *RegistryClient) ListExtensions() ([]ExtensionInfo, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body) //nolint:errcheck // best-effort error body read for logging
 		logging.Debugf("GitHub API request failed: url=%s status=%d body=%s", url, resp.StatusCode, string(body))
 		return nil, fmt.Errorf("GitHub API returned status %d", resp.StatusCode)
 	}

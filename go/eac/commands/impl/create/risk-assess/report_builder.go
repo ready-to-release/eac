@@ -15,7 +15,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/scoring"
 )
 
-// buildReportData converts assessment results into template data structure
+// buildReportData converts assessment results into template data structure.
 func buildReportData(
 	config *AssessConfig,
 	results []*ModuleAssessmentResult,
@@ -59,7 +59,7 @@ func buildReportData(
 	return data
 }
 
-// buildBasicExecutiveSummary calculates basic summary statistics
+// buildBasicExecutiveSummary calculates basic summary statistics.
 func buildBasicExecutiveSummary(results []*ModuleAssessmentResult) ExecutiveSummary {
 	summary := ExecutiveSummary{
 		ModulesAssessed: len(results),
@@ -80,7 +80,7 @@ func buildBasicExecutiveSummary(results []*ModuleAssessmentResult) ExecutiveSumm
 	return summary
 }
 
-// buildModuleReportData builds report data for a single module
+// buildModuleReportData builds report data for a single module.
 func buildModuleReportData(config *AssessConfig, result *ModuleAssessmentResult) ModuleReportData {
 	data := ModuleReportData{
 		Module:       result.Module,
@@ -119,18 +119,18 @@ func buildModuleReportData(config *AssessConfig, result *ModuleAssessmentResult)
 	return data
 }
 
-// extractEvidenceFormatted extracts formatted test and security evidence strings
+// extractEvidenceFormatted extracts formatted test and security evidence strings.
 func extractEvidenceFormatted(result *ModuleAssessmentResult) (testEvidence, secEvidence string) {
 	testEvidence = "N/A"
 	secEvidence = "N/A"
 
 	if result.AssessmentResults == nil || len(result.AssessmentResults.Results) == 0 {
-		return
+		return testEvidence, secEvidence
 	}
 
 	moduleResult := result.AssessmentResults.Results[0]
 	if moduleResult.Observations == nil {
-		return
+		return testEvidence, secEvidence
 	}
 
 	for _, obs := range *moduleResult.Observations {
@@ -147,10 +147,19 @@ func extractEvidenceFormatted(result *ModuleAssessmentResult) (testEvidence, sec
 				}
 			}
 			if totalTests != "" {
-				// Calculate skipped tests
-				total, _ := strconv.Atoi(totalTests)
-				passed, _ := strconv.Atoi(passedTests)
-				failed, _ := strconv.Atoi(failedTests)
+				// Calculate skipped tests (use 0 on parse errors)
+				total, totalErr := strconv.Atoi(totalTests)
+				if totalErr != nil {
+					total = 0
+				}
+				passed, passedErr := strconv.Atoi(passedTests)
+				if passedErr != nil {
+					passed = 0
+				}
+				failed, failedErr := strconv.Atoi(failedTests)
+				if failedErr != nil {
+					failed = 0
+				}
 				skipped := total - passed - failed
 
 				if failed > 0 {
@@ -186,18 +195,18 @@ func extractEvidenceFormatted(result *ModuleAssessmentResult) (testEvidence, sec
 		}
 	}
 
-	return
+	return testEvidence, secEvidence
 }
 
-// extractControlsAndFindings extracts control IDs and findings from assessment results
+// extractControlsAndFindings extracts control IDs and findings from assessment results.
 func extractControlsAndFindings(result *ModuleAssessmentResult) (satisfied, notSatisfied []string, findings []FindingData) {
 	if result.AssessmentResults == nil || len(result.AssessmentResults.Results) == 0 {
-		return
+		return satisfied, notSatisfied, findings
 	}
 
 	moduleResult := result.AssessmentResults.Results[0]
 	if moduleResult.Findings == nil {
-		return
+		return satisfied, notSatisfied, findings
 	}
 
 	for _, finding := range *moduleResult.Findings {
@@ -213,17 +222,17 @@ func extractControlsAndFindings(result *ModuleAssessmentResult) (satisfied, notS
 		}
 	}
 
-	return
+	return satisfied, notSatisfied, findings
 }
 
-// extractManifestDetails extracts test type breakdown and suite summaries from manifest metadata
+// extractManifestDetails extracts test type breakdown and suite summaries from manifest metadata.
 func extractManifestDetails(result *ModuleAssessmentResult) (testTypeBreakdown, suiteSummary string) {
 	testTypeBreakdown = "N/A"
 	suiteSummary = "N/A"
 
 	// Check if we have test manifest in evidence collection
 	if result.Evidence == nil || result.Evidence.TestManifestData == nil {
-		return
+		return testTypeBreakdown, suiteSummary
 	}
 
 	manifest := result.Evidence.TestManifestData
@@ -256,10 +265,10 @@ func extractManifestDetails(result *ModuleAssessmentResult) (testTypeBreakdown, 
 		suiteSummary = strings.Join(suiteLines, "\n")
 	}
 
-	return
+	return testTypeBreakdown, suiteSummary
 }
 
-// formatPercentage formats a percentage value with one decimal place
+// formatPercentage formats a percentage value with one decimal place.
 func formatPercentage(value, total int) string {
 	if total == 0 {
 		return "0.0"

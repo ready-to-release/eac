@@ -68,8 +68,10 @@ func ResetMockAIResponse() {
 
 // gitRepo holds the git repository instance for git operations.
 // In production, this is initialized lazily. For tests, it can be injected via SetGitRepo.
-var gitRepo git.GitRepository
-var gitMgr *git.RepositoryManager
+var (
+	gitRepo git.GitRepository
+	gitMgr  *git.RepositoryManager
+)
 
 // initGitManager initializes the git repository manager if needed.
 func initGitManager() {
@@ -78,7 +80,7 @@ func initGitManager() {
 	}
 }
 
-// getGitRepo returns the git repository, creating one if needed
+// getGitRepo returns the git repository, creating one if needed.
 func getGitRepo(workspaceRoot string) (git.GitRepository, error) {
 	if gitRepo != nil {
 		return gitRepo, nil
@@ -101,7 +103,7 @@ func ResetGitRepo() {
 
 // Intent: Create a Gherkin specification from natural language description using AI
 //
-// CreateSpec orchestrates the specification generation workflow
+// CreateSpec orchestrates the specification generation workflow.
 func CreateSpec() int {
 	// Parse configuration
 	specsConfig, err := parseConfig()
@@ -180,7 +182,7 @@ func CreateSpec() int {
 	return 0
 }
 
-// truncateForLog truncates a string for logging purposes
+// truncateForLog truncates a string for logging purposes.
 func truncateForLog(s string, maxLen int) string {
 	if len(s) <= maxLen {
 		return s
@@ -188,7 +190,7 @@ func truncateForLog(s string, maxLen int) string {
 	return s[:maxLen] + "..."
 }
 
-// SpecsConfig holds configuration for specs create command
+// SpecsConfig holds configuration for specs create command.
 type SpecsConfig struct {
 	Description  string
 	Debug        bool   // -d, --debug: Save intermediate outputs
@@ -205,7 +207,7 @@ type SpecsConfig struct {
 // This function:
 // - Loads specification contract from YAML files
 // - Builds the full AI prompt with contract context
-// - Optionally saves debug output
+// - Optionally saves debug output.
 func loadAndBuildPrompt(config *SpecsConfig) (string, error) {
 	log.Debug("Loading specification contract")
 	log.Info("📋 Loading specification contract...")
@@ -235,7 +237,7 @@ func loadAndBuildPrompt(config *SpecsConfig) (string, error) {
 // - Uses the generic retry framework for AI generation
 // - Applies anti-corruption layer to remove noise
 // - Validates Gherkin structure with automatic retry on errors
-// - Optionally saves debug outputs
+// - Optionally saves debug outputs.
 func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 	// Check for subprocess mock response (used in acceptance tests)
 	if mock, ok := aimock.GetMockResponse("specs"); ok {
@@ -345,7 +347,7 @@ func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 // This function:
 // - Uses user-specified path or extracts from feature name
 // - Validates path is within repository (prevents path traversal)
-// - Returns absolute path to output file
+// - Returns absolute path to output file.
 func determineAndValidateOutputPath(config *SpecsConfig, content string) (string, error) {
 	var finalOutputPath string
 
@@ -386,10 +388,10 @@ func determineAndValidateOutputPath(config *SpecsConfig, content string) (string
 // This function:
 // - Creates necessary directories
 // - Writes specification content to file
-// - Displays success message with next steps
-func writeOutputAndReportSuccess(outputPath string, content string, config *SpecsConfig) error {
+// - Displays success message with next steps.
+func writeOutputAndReportSuccess(outputPath, content string, config *SpecsConfig) error {
 	// Create directories
-	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0o755); err != nil {
 		return fmt.Errorf("failed to create directories: %w", err)
 	}
 
@@ -397,7 +399,7 @@ func writeOutputAndReportSuccess(outputPath string, content string, config *Spec
 	log.Debugf("Writing specification file: path=%s, size=%d", outputPath, len(content))
 
 	// Write file
-	if err := os.WriteFile(outputPath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(outputPath, []byte(content), 0o644); err != nil {
 		return fmt.Errorf("failed to write specification: %w", err)
 	}
 
@@ -510,7 +512,7 @@ func parseConfig() (*SpecsConfig, error) {
 	return config, nil
 }
 
-// formatModuleList returns a formatted list of available modules
+// formatModuleList returns a formatted list of available modules.
 func formatModuleList(moduleReport *reports.ModuleContractReport) string {
 	var sb strings.Builder
 	for _, mod := range moduleReport.Registry.All() {
@@ -522,8 +524,8 @@ func formatModuleList(moduleReport *reports.ModuleContractReport) string {
 // loadPromptWithFallback implements prompt loading:
 // 1. Custom path (if specified via --prompt flag)
 // 2. AI config: .r2r/eac/aimock.TypeSpecs/specification.md
-// 3. Built-in: embedded prompts/specification.md
-func loadPromptWithFallback(templateRoot string, customPath string) (string, error) {
+// 3. Built-in: embedded prompts/specification.md.
+func loadPromptWithFallback(templateRoot, customPath string) (string, error) {
 	// Tier 1: Check for custom path (from --prompt flag)
 	if customPath != "" {
 		// Make path absolute if relative
@@ -558,7 +560,7 @@ func loadPromptWithFallback(templateRoot string, customPath string) (string, err
 	return prompt, nil
 }
 
-// buildContractBasedPrompt loads contract files and builds comprehensive AI prompt
+// buildContractBasedPrompt loads contract files and builds comprehensive AI prompt.
 func buildContractBasedPrompt(config *SpecsConfig) (string, error) {
 	// Load prompt templates (contract, anti-corruption, referenced files)
 	promptTemplate, err := loadPromptTemplates(config)
@@ -575,7 +577,7 @@ func buildContractBasedPrompt(config *SpecsConfig) (string, error) {
 	return fullPrompt, nil
 }
 
-// loadPromptTemplates loads all template files and builds the prompt template
+// loadPromptTemplates loads all template files and builds the prompt template.
 func loadPromptTemplates(config *SpecsConfig) (string, error) {
 	// Load custom or default prompt
 	promptContent, err := loadPromptWithFallback(config.TemplateRoot, config.PromptPath)
@@ -620,7 +622,7 @@ func loadPromptTemplates(config *SpecsConfig) (string, error) {
 	return promptTemplate, nil
 }
 
-// buildUserInputSection builds the user input section of the prompt
+// buildUserInputSection builds the user input section of the prompt.
 func buildUserInputSection(config *SpecsConfig) string {
 	var prompt strings.Builder
 
@@ -652,8 +654,8 @@ func buildUserInputSection(config *SpecsConfig) string {
 	return prompt.String()
 }
 
-// loadModuleControlsContext loads OSCAL profile and formats controls for AI prompt
-func loadModuleControlsContext(workspaceRoot string, moduleName string, cfg *configpkg.EACConfig) string {
+// loadModuleControlsContext loads OSCAL profile and formats controls for AI prompt.
+func loadModuleControlsContext(workspaceRoot, moduleName string, cfg *configpkg.EACConfig) string {
 	// Only load if module is specified
 	if moduleName == "" {
 		return "(No module specified - control tags optional)"

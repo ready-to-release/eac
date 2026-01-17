@@ -16,26 +16,26 @@ import (
 // Docker image versions are loaded from .r2r/eac/security-tools.yml configuration
 
 const (
-	// ZAP scan types
+	// ZAP scan types.
 	ZAPBaseline = "baseline"
 	ZAPFull     = "full"
 	ZAPAPI      = "api"
 )
 
-// Mock support for testing
+// Mock support for testing.
 var mockZAPOutput interface{}
 
-// SetMockZAPOutput sets a mock ZAP response for testing
+// SetMockZAPOutput sets a mock ZAP response for testing.
 func SetMockZAPOutput(output interface{}) {
 	mockZAPOutput = output
 }
 
-// ResetMockZAPOutput clears the mock ZAP response
+// ResetMockZAPOutput clears the mock ZAP response.
 func ResetMockZAPOutput() {
 	mockZAPOutput = nil
 }
 
-// getDefaultMockZAPOutput returns default mock data for ZAP
+// getDefaultMockZAPOutput returns default mock data for ZAP.
 func getDefaultMockZAPOutput() map[string]interface{} {
 	return map[string]interface{}{
 		"site": []map[string]interface{}{
@@ -47,8 +47,8 @@ func getDefaultMockZAPOutput() map[string]interface{} {
 	}
 }
 
-// RunZAPScan executes OWASP ZAP dynamic security scan via Docker
-func RunZAPScan(targetURL, scanType, workspaceRoot string, zapImage string) (interface{}, error) {
+// RunZAPScan executes OWASP ZAP dynamic security scan via Docker.
+func RunZAPScan(targetURL, scanType, workspaceRoot, zapImage string) (interface{}, error) {
 	// Check for mock output (testing only)
 	// Priority: in-process mock > environment variable mock
 	if mockZAPOutput != nil {
@@ -85,7 +85,7 @@ func RunZAPScan(targetURL, scanType, workspaceRoot string, zapImage string) (int
 	// Create temporary output directory for ZAP report
 	// Scan path already includes "out" prefix (e.g., "out/scan")
 	outputDir := filepath.Join(workspaceRoot, cfg.Repository.Paths.Out.Scan, "zap-temp")
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create ZAP output directory: %w", err)
 	}
 	defer os.RemoveAll(outputDir) // Clean up temp files

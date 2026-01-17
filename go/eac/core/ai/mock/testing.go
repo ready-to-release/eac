@@ -2,7 +2,7 @@ package mock
 
 import "github.com/ready-to-release/eac/go/eac/core/validation"
 
-// MockAIExecutor implements validation.AIExecutor for testing
+// MockAIExecutor implements validation.AIExecutor for testing.
 type MockAIExecutor struct {
 	Responses      []string // Queue of responses to return
 	ResponseIndex  int      // Current response index
@@ -19,7 +19,7 @@ func (m *MockAIExecutor) Execute(ctx interface{}, prompt string, opts ...interfa
 	return response, nil
 }
 
-// MockValidator implements validation.Validator for testing
+// MockValidator implements validation.Validator for testing.
 type MockValidator struct {
 	ValidationResults [][]validation.ValidationError // Queue of validation results
 	ValidationIndex   int                            // Current validation index

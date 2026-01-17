@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// GenerateTraceabilityMatrix generates risk traceability matrix
+// GenerateTraceabilityMatrix generates risk traceability matrix.
 func GenerateTraceabilityMatrix(tests []TestReference) string {
 	var report strings.Builder
 
@@ -31,7 +31,7 @@ func GenerateTraceabilityMatrix(tests []TestReference) string {
 	return report.String()
 }
 
-// GenerateGxPReport generates GxP implementation report
+// GenerateGxPReport generates GxP implementation report.
 func GenerateGxPReport(tests []TestReference) string {
 	var report strings.Builder
 
@@ -59,7 +59,7 @@ func GenerateGxPReport(tests []TestReference) string {
 	return report.String()
 }
 
-// getUniqueFeatures extracts unique feature file paths
+// getUniqueFeatures extracts unique feature file paths.
 func getUniqueFeatures(tests []TestReference) []string {
 	featuresMap := make(map[string]bool)
 	for _, test := range tests {
@@ -73,7 +73,7 @@ func getUniqueFeatures(tests []TestReference) []string {
 	return features
 }
 
-// countCriticalAspects counts tests with @gmp-critical-aspect
+// countCriticalAspects counts tests with @gmp-critical-aspect.
 func countCriticalAspects(tests []TestReference) int {
 	count := 0
 	for _, test := range tests {
@@ -84,7 +84,7 @@ func countCriticalAspects(tests []TestReference) int {
 	return count
 }
 
-// countManualTests counts tests with @Manual
+// countManualTests counts tests with @Manual.
 func countManualTests(tests []TestReference) int {
 	count := 0
 	for _, test := range tests {

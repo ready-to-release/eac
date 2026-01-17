@@ -9,9 +9,8 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 )
 
-
 // Global process-level cache for module contracts
-// This prevents repeated parsing of module.contract.yaml files across parallel test packages
+// This prevents repeated parsing of module.contract.yaml files across parallel test packages.
 var (
 	globalModuleContractCache     *ModuleContractCache
 	globalModuleContractCacheOnce sync.Once
@@ -104,7 +103,7 @@ func (c *ModuleContractCache) GetReport() *ModuleContractReport {
 	return c.report
 }
 
-// ModuleContractReport contains information about loaded module contracts
+// ModuleContractReport contains information about loaded module contracts.
 type ModuleContractReport struct {
 	TotalModules int
 	Modules      []*modules.ModuleContract
@@ -167,7 +166,7 @@ func buildModuleContractReport(registry *modules.Registry) (*ModuleContractRepor
 	return report, nil
 }
 
-// FormatReport returns a formatted string representation of the module contracts
+// FormatReport returns a formatted string representation of the module contracts.
 func (r *ModuleContractReport) FormatReport() string {
 	var sb strings.Builder
 
@@ -208,7 +207,7 @@ func (r *ModuleContractReport) FormatReport() string {
 	return sb.String()
 }
 
-// FormatCompact returns a compact one-line-per-module format
+// FormatCompact returns a compact one-line-per-module format.
 func (r *ModuleContractReport) FormatCompact() string {
 	var sb strings.Builder
 
@@ -221,17 +220,17 @@ func (r *ModuleContractReport) FormatCompact() string {
 	return sb.String()
 }
 
-// GetModuleByMoniker returns a specific module contract by moniker
+// GetModuleByMoniker returns a specific module contract by moniker.
 func (r *ModuleContractReport) GetModuleByMoniker(moniker string) (*modules.ModuleContract, bool) {
 	return r.Registry.Get(moniker)
 }
 
-// GetModulesByType returns all modules of a specific type
+// GetModulesByType returns all modules of a specific type.
 func (r *ModuleContractReport) GetModulesByType(moduleType string) []*modules.ModuleContract {
 	return r.Registry.FilterByType(moduleType)
 }
 
-// GetModulesByRoot returns modules with a specific root path
+// GetModulesByRoot returns modules with a specific root path.
 func (r *ModuleContractReport) GetModulesByRoot(root string) []*modules.ModuleContract {
 	var result []*modules.ModuleContract
 	for _, module := range r.Modules {
@@ -242,17 +241,17 @@ func (r *ModuleContractReport) GetModulesByRoot(root string) []*modules.ModuleCo
 	return result
 }
 
-// GetDependencyGraph returns the dependency relationships
+// GetDependencyGraph returns the dependency relationships.
 func (r *ModuleContractReport) GetDependencyGraph() map[string][]string {
 	return r.Registry.GetDependencyGraph()
 }
 
-// GetReverseDependencyGraph returns the reverse dependency relationships
+// GetReverseDependencyGraph returns the reverse dependency relationships.
 func (r *ModuleContractReport) GetReverseDependencyGraph() map[string][]string {
 	return r.Registry.GetReverseDependencyGraph()
 }
 
-// GetModulesWithPattern returns modules that use a specific glob pattern
+// GetModulesWithPattern returns modules that use a specific glob pattern.
 func (r *ModuleContractReport) GetModulesWithPattern(pattern string) []*modules.ModuleContract {
 	var result []*modules.ModuleContract
 	for _, module := range r.Modules {
@@ -270,9 +269,8 @@ func (r *ModuleContractReport) GetModulesWithPattern(pattern string) []*modules.
 	return result
 }
 
-// PrintSummary prints a concise summary of the loaded contracts
+// PrintSummary prints a concise summary of the loaded contracts.
 func (r *ModuleContractReport) PrintSummary() {
-
 	// Count by type
 	typeCount := make(map[string]int)
 	for _, module := range r.Modules {

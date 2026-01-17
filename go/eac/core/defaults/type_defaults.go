@@ -90,7 +90,7 @@ type ModuleDefaults struct {
 //
 // Priority order (highest to lowest):
 // 1. Explicit value in module config
-// 2. Type-specific default (with variable substitution from repository.yml)
+// 2. Type-specific default (with variable substitution from repository.yml).
 func ResolveDefaults(
 	typeDef *TypeDefaults,
 	moniker, root, moduleType string,

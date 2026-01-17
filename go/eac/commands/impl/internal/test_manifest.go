@@ -36,7 +36,7 @@ type TestManifest struct {
 	Dependencies []string `json:"dependencies,omitempty"` // Module dependencies at time of test
 }
 
-// TestSummary holds aggregated test counts
+// TestSummary holds aggregated test counts.
 type TestSummary struct {
 	Total     int `json:"total"`
 	Passed    int `json:"passed"`
@@ -46,14 +46,14 @@ type TestSummary struct {
 	Undefined int `json:"undefined,omitempty"`
 }
 
-// SuiteResult tracks results for a specific test suite run
+// SuiteResult tracks results for a specific test suite run.
 type SuiteResult struct {
 	RunTime         time.Time   `json:"run_time"`         // When this suite was last run
 	DurationSeconds float64     `json:"duration_seconds"` // Suite execution duration
 	Tests           TestSummary `json:"tests"`            // Test counts for this suite
 }
 
-// TestEntry represents a single test with its result
+// TestEntry represents a single test with its result.
 type TestEntry struct {
 	Name       string   `json:"name"`                  // Test name or scenario name
 	Package    string   `json:"package"`               // Package path
@@ -66,7 +66,7 @@ type TestEntry struct {
 	FilePath   string   `json:"file_path,omitempty"`   // Source file path
 }
 
-// TestArtifactInfo describes a test artifact
+// TestArtifactInfo describes a test artifact.
 type TestArtifactInfo struct {
 	Type   string `json:"type"`             // log, report, coverage, file
 	ID     string `json:"id"`               // Artifact identifier
@@ -76,7 +76,7 @@ type TestArtifactInfo struct {
 	SHA256 string `json:"sha256,omitempty"` // SHA-256 hash
 }
 
-// Test status constants
+// Test status constants.
 const (
 	TestStatusPassed    = "passed"
 	TestStatusFailed    = "failed"
@@ -85,7 +85,7 @@ const (
 	TestStatusPending   = "pending"
 )
 
-// Test artifact type constants
+// Test artifact type constants.
 const (
 	TestArtifactTypeLog      = "log"
 	TestArtifactTypeReport   = "report"
@@ -93,13 +93,15 @@ const (
 	TestArtifactTypeFile     = "file"
 )
 
-const testManifestVersion = "1.0"
-const testManifestFileName = "test.manifest.json"
+const (
+	testManifestVersion  = "1.0"
+	testManifestFileName = "test.manifest.json"
+)
 
-// TestAgentCI is the test agent value for CI runs (GitHub Actions)
+// TestAgentCI is the test agent value for CI runs (GitHub Actions).
 const TestAgentCI = "ci"
 
-// TestAgentDevbox is the test agent value for local developer runs
+// TestAgentDevbox is the test agent value for local developer runs.
 const TestAgentDevbox = "devbox"
 
 // NewTestManifest creates a new test manifest for a module.
@@ -131,12 +133,12 @@ func NewTestManifest(moniker, moduleType, gitCommit string) *TestManifest {
 }
 
 // Save writes the manifest to the module's test output directory.
-// The manifest is stored at <moduleTestDir>/test.manifest.json
+// The manifest is stored at <moduleTestDir>/test.manifest.json.
 func (m *TestManifest) Save(moduleTestDir string) error {
 	manifestPath := filepath.Join(moduleTestDir, testManifestFileName)
 
 	// Create directory if needed
-	if err := os.MkdirAll(moduleTestDir, 0755); err != nil {
+	if err := os.MkdirAll(moduleTestDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create manifest directory: %w", err)
 	}
 
@@ -147,14 +149,14 @@ func (m *TestManifest) Save(moduleTestDir string) error {
 	}
 
 	// Write to file
-	if err := os.WriteFile(manifestPath, data, 0644); err != nil {
+	if err := os.WriteFile(manifestPath, data, 0o644); err != nil {
 		return fmt.Errorf("failed to write test manifest: %w", err)
 	}
 
 	return nil
 }
 
-// LoadTestManifest loads a module's test manifest from its test output directory
+// LoadTestManifest loads a module's test manifest from its test output directory.
 func LoadTestManifest(moduleTestDir string) (*TestManifest, error) {
 	manifestPath := filepath.Join(moduleTestDir, testManifestFileName)
 
@@ -245,7 +247,7 @@ func (m *TestManifest) AddArtifact(artifact TestArtifactInfo) {
 	m.Artifacts = append(m.Artifacts, artifact)
 }
 
-// recalculateSummary updates the summary counts from individual test entries
+// recalculateSummary updates the summary counts from individual test entries.
 func (m *TestManifest) recalculateSummary() {
 	m.Summary = TestSummary{}
 	for _, t := range m.Tests {
@@ -265,7 +267,7 @@ func (m *TestManifest) recalculateSummary() {
 	}
 }
 
-// AllPassed returns true if all tests passed (no failures, undefined, or pending)
+// AllPassed returns true if all tests passed (no failures, undefined, or pending).
 func (m *TestManifest) AllPassed() bool {
 	return m.Summary.Failed == 0 && m.Summary.Undefined == 0 && m.Summary.Pending == 0
 }
@@ -277,12 +279,12 @@ func (m *TestManifest) UpdateVerifiedUnchangedAt(moduleTestDir, gitCommit string
 	return m.Save(moduleTestDir)
 }
 
-// GetTestManifestPath returns the path to a module's test manifest
+// GetTestManifestPath returns the path to a module's test manifest.
 func GetTestManifestPath(moduleTestDir string) string {
 	return filepath.Join(moduleTestDir, testManifestFileName)
 }
 
-// TestManifestExists checks if a test manifest exists for a module
+// TestManifestExists checks if a test manifest exists for a module.
 func TestManifestExists(moduleTestDir string) bool {
 	_, err := os.Stat(GetTestManifestPath(moduleTestDir))
 	return err == nil
@@ -304,7 +306,7 @@ func (m *TestManifest) SetIncrementalState(sourceHash, testHash, buildID string,
 // 2. Test files changed (TestHash differs)
 // 3. Build changed (BuildID differs)
 // 4. Previous tests failed
-// 5. No previous test state exists
+// 5. No previous test state exists.
 func (m *TestManifest) NeedsRetest(currentSourceHash, currentTestHash, currentBuildID string) (bool, string) {
 	// No source hash stored = no prior test state
 	if m.SourceHash == "" {

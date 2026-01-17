@@ -27,7 +27,7 @@ func init() {
 	registry.Register(ShowBuildSummary)
 }
 
-// ShowBuildSummary generates a pretty build summary
+// ShowBuildSummary generates a pretty build summary.
 func ShowBuildSummary() int {
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
@@ -147,7 +147,7 @@ func buildMetricsSection(f *SummaryFormatter, module *config.Module, cfg *config
 	return formatArtifactMetrics(f, results, module.Type)
 }
 
-// formatArtifactMetrics formats artifact verification results intelligently based on types
+// formatArtifactMetrics formats artifact verification results intelligently based on types.
 func formatArtifactMetrics(f *SummaryFormatter, results []config.ArtifactVerificationResult, moduleType string) string {
 	if len(results) == 0 {
 		return f.Section(Emoji("metrics")+" Build Output", "No artifacts defined")
@@ -186,7 +186,7 @@ func formatArtifactMetrics(f *SummaryFormatter, results []config.ArtifactVerific
 	return f.Section(Emoji("metrics")+" Build Output", f.Table(headers, rows))
 }
 
-// formatArtifactDetails returns size/count info for an artifact
+// formatArtifactDetails returns size/count info for an artifact.
 func formatArtifactDetails(r config.ArtifactVerificationResult) string {
 	info, err := os.Stat(r.Path)
 	if err != nil {
@@ -196,8 +196,14 @@ func formatArtifactDetails(r config.ArtifactVerificationResult) string {
 	switch r.Artifact.Type {
 	case config.ArtifactTypeDirectory:
 		// Show file count and total size for directories
-		fileCount, _ := GetFileCount(r.Path, "**/*")
-		dirSize, _ := GetDirectorySize(r.Path)
+		fileCount, fcErr := GetFileCount(r.Path, "**/*")
+		if fcErr != nil {
+			fileCount = 0
+		}
+		dirSize, dsErr := GetDirectorySize(r.Path)
+		if dsErr != nil {
+			dirSize = "-"
+		}
 		if fileCount > 0 {
 			return fmt.Sprintf("%d files, %s", fileCount, dirSize)
 		}
@@ -283,7 +289,7 @@ func formatSlice(items []string) string {
 // deriveBuildStatus determines build status from manifest.
 // Status is derived as:
 // - "success" if manifest exists and has artifacts
-// - "failure" if manifest is missing or has no artifacts
+// - "failure" if manifest is missing or has no artifacts.
 func deriveBuildStatus(cfg *config.EACConfig, moduleName string) string {
 	// Get workspace root for absolute path
 	workspaceRoot, err := repository.GetRepositoryRoot("")
