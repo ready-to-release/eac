@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/cucumber/godog"
@@ -79,29 +80,33 @@ func loadAllValidCommandsFromCLI() error {
 	// Check multiple locations in order of preference:
 	// 1. COMMANDS_PATH environment variable (set by CI)
 	// 2. Container built-in binary (when running inside Docker via r2r)
-	// 3. out/tools/commands (CI artifact location - Linux first to avoid .exe on Linux)
+	// 3. out/tools/commands (CI artifact location)
 	// 4. go/eac/commands/build/commands (local dev build location)
 	cmdBinary := os.Getenv("COMMANDS_PATH")
 	if cmdBinary == "" {
 		var candidates []string
 
-		// When running inside a container (R2R_DOCKER_MODE=true), prefer the container's built-in binary
-		// This avoids trying to run Windows .exe files on Linux
-		if os.Getenv("R2R_DOCKER_MODE") == "true" {
-			containerRoot := os.Getenv("R2R_CONTAINER_ROOT")
-			if containerRoot == "" {
-				containerRoot = "/app"
-			}
+		// When running inside a container, prefer the container's built-in binary
+		// R2R_CONTAINER_ROOT is always set by the container image (ENV in Dockerfile)
+		containerRoot := os.Getenv("R2R_CONTAINER_ROOT")
+		if containerRoot != "" {
 			candidates = append(candidates, filepath.Join(containerRoot, "out", "tools", "commands"))
 		}
 
-		// Add standard locations - Linux binaries first to avoid .exe on Linux
+		// Add standard locations from the repo
 		candidates = append(candidates,
 			filepath.Join(repoRoot, "out", "tools", "commands"),
-			filepath.Join(repoRoot, "out", "tools", "commands.exe"),
 			filepath.Join(repoRoot, "go", "eac", "commands", "build", "commands"),
-			filepath.Join(repoRoot, "go", "eac", "commands", "build", "commands.exe"),
 		)
+
+		// Only add .exe candidates on Windows
+		// On Linux, .exe files from a mounted Windows host cannot be executed
+		if runtime.GOOS == "windows" {
+			candidates = append(candidates,
+				filepath.Join(repoRoot, "out", "tools", "commands.exe"),
+				filepath.Join(repoRoot, "go", "eac", "commands", "build", "commands.exe"),
+			)
+		}
 
 		for _, candidate := range candidates {
 			if _, err := os.Stat(candidate); err == nil {

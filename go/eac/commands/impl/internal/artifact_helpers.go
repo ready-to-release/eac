@@ -11,7 +11,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 )
 
-// ResolvedArtifact represents an artifact with metadata overrides applied and existence checked
+// ResolvedArtifact represents an artifact with metadata overrides applied and existence checked.
 type ResolvedArtifact struct {
 	// From artifact definition
 	Type       string   `json:"type" yaml:"type"`
@@ -29,7 +29,7 @@ type ResolvedArtifact struct {
 	Error            string `json:"error,omitempty" yaml:"error,omitempty"`
 }
 
-// ArtifactResolutionSummary provides summary statistics for artifact resolution
+// ArtifactResolutionSummary provides summary statistics for artifact resolution.
 type ArtifactResolutionSummary struct {
 	Total     int `json:"total" yaml:"total"`
 	Exists    int `json:"exists" yaml:"exists"`
@@ -37,7 +37,7 @@ type ArtifactResolutionSummary struct {
 	Overrides int `json:"overrides" yaml:"overrides"`
 }
 
-// ResolveArtifactsForModule resolves all artifacts for a module with metadata applied
+// ResolveArtifactsForModule resolves all artifacts for a module with metadata applied.
 func ResolveArtifactsForModule(
 	module *config.Module,
 	moduleType *config.ModuleTypeDef,
@@ -130,7 +130,7 @@ func ResolveArtifactsForModuleWithConfig(
 	return resolved, summary, nil
 }
 
-// deriveArtifactID derives an ID for an artifact based on its type and context
+// deriveArtifactID derives an ID for an artifact based on its type and context.
 func deriveArtifactID(artifact config.Artifact, targetOS, targetArch string) string {
 	// If artifact has explicit ID, use it
 	if artifact.ID != "" {
@@ -142,9 +142,10 @@ func deriveArtifactID(artifact config.Artifact, targetOS, targetArch string) str
 		baseID := fmt.Sprintf("%s-%s", targetOS, targetArch)
 
 		// Append compression suffix for compressed variants
-		if artifact.Compression == config.CompressionUPX {
+		switch artifact.Compression {
+		case config.CompressionUPX:
 			return baseID + "-upx"
-		} else if artifact.Compression == config.CompressionStrip {
+		case config.CompressionStrip:
 			return baseID + "-strip"
 		}
 
@@ -167,7 +168,7 @@ func deriveArtifactID(artifact config.Artifact, targetOS, targetArch string) str
 	return id
 }
 
-// FormatArtifactStatus returns a human-readable status string for an artifact
+// FormatArtifactStatus returns a human-readable status string for an artifact.
 func FormatArtifactStatus(artifact ResolvedArtifact) string {
 	if artifact.Exists {
 		if artifact.MetadataOverride != "" {
@@ -183,7 +184,7 @@ func FormatArtifactStatus(artifact ResolvedArtifact) string {
 	return "✗"
 }
 
-// FormatArtifactSize returns a human-readable size string for an artifact
+// FormatArtifactSize returns a human-readable size string for an artifact.
 func FormatArtifactSize(sizeBytes int64) string {
 	const (
 		KB = 1024
@@ -203,7 +204,7 @@ func FormatArtifactSize(sizeBytes int64) string {
 	}
 }
 
-// isBookModule checks if a module type is a book module (uses mkdocs handler)
+// isBookModule checks if a module type is a book module (uses mkdocs handler).
 func isBookModule(moduleType string) bool {
 	// Check by type name - container modules with mkdocs handler
 	return moduleType == "container" || strings.Contains(moduleType, "mkdocs")
@@ -289,7 +290,7 @@ func expandBookArtifacts(module *config.Module, artifacts []config.Artifact, cfg
 	return expanded
 }
 
-// ModuleValidationResult represents validation results for a single module
+// ModuleValidationResult represents validation results for a single module.
 type ModuleValidationResult struct {
 	Moniker           string                     `json:"moniker" yaml:"moniker"`
 	Type              string                     `json:"type" yaml:"type"`
@@ -300,7 +301,7 @@ type ModuleValidationResult struct {
 	Error             string                     `json:"error,omitempty" yaml:"error,omitempty"`
 }
 
-// ValidationResults represents validation results for a module and all dependencies
+// ValidationResults represents validation results for a module and all dependencies.
 type ValidationResults struct {
 	TargetModule string                   `json:"target_module" yaml:"target_module"`
 	Modules      []ModuleValidationResult `json:"modules" yaml:"modules"`
@@ -348,7 +349,7 @@ func ValidateArtifactsTargetOnly(
 	return results, nil
 }
 
-// ValidateArtifactsWithDependencies validates artifacts for a module and all transitive dependencies
+// ValidateArtifactsWithDependencies validates artifacts for a module and all transitive dependencies.
 func ValidateArtifactsWithDependencies(
 	targetModule string,
 	cfg *config.EACConfig,
@@ -427,7 +428,7 @@ func ValidateArtifactsWithDependencies(
 	return results, nil
 }
 
-// validateSingleModule validates artifacts for a single module
+// validateSingleModule validates artifacts for a single module.
 func validateSingleModule(
 	moniker string,
 	targetModule string,
@@ -445,7 +446,7 @@ func validateSingleModule(
 	// Get module contract
 	moduleContract, exists := registry.Get(moniker)
 	if !exists {
-		result.Error = fmt.Sprintf("module contract not found")
+		result.Error = "module contract not found"
 		return result
 	}
 	result.Type = moduleContract.Type
@@ -453,7 +454,7 @@ func validateSingleModule(
 	// Get module from config
 	module, ok := cfg.Repository.GetModule(moniker)
 	if !ok {
-		result.Error = fmt.Sprintf("module not found in config")
+		result.Error = "module not found in config"
 		return result
 	}
 
@@ -560,7 +561,7 @@ func validateSingleModule(
 	return result
 }
 
-// addDependenciesRecursive recursively adds all dependencies of a module
+// addDependenciesRecursive recursively adds all dependencies of a module.
 func addDependenciesRecursive(moniker string, registry *modules.Registry, result map[string]bool) error {
 	module, exists := registry.Get(moniker)
 	if !exists {

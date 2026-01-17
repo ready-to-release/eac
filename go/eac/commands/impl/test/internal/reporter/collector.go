@@ -13,7 +13,7 @@ import (
 )
 
 // CollectModuleReports finds and parses all cucumber.json and .log files in the test run directory
-// and organizes them by module
+// and organizes them by module.
 func CollectModuleReports(testRunDir string) ([]ModuleReportData, error) {
 	moduleMap := make(map[string]*ModuleReportData)
 
@@ -39,7 +39,6 @@ func CollectModuleReports(testRunDir string) ([]ModuleReportData, error) {
 
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +69,7 @@ func CollectModuleReports(testRunDir string) ([]ModuleReportData, error) {
 	return modules, nil
 }
 
-// processeCucumberReport processes a single cucumber.json report file
+// processeCucumberReport processes a single cucumber.json report file.
 func processeCucumberReport(path, testRunDir string, moduleMap map[string]*ModuleReportData) error {
 	// Parse the cucumber report
 	data, err := os.ReadFile(path)
@@ -97,7 +96,10 @@ func processeCucumberReport(path, testRunDir string, moduleMap map[string]*Modul
 		// Initialize module data if not exists
 		if _, exists := moduleMap[moduleName]; !exists {
 			// Get the directory containing this cucumber report for linking
-			reportDir, _ := filepath.Rel(testRunDir, filepath.Dir(path))
+			reportDir, err := filepath.Rel(testRunDir, filepath.Dir(path))
+			if err != nil {
+				reportDir = filepath.Dir(path) // Fallback to absolute path
+			}
 			moduleMap[moduleName] = &ModuleReportData{
 				ModuleName:    moduleName,
 				Features:      []FeatureReportData{},
@@ -146,11 +148,14 @@ func processeCucumberReport(path, testRunDir string, moduleMap map[string]*Modul
 	return nil
 }
 
-// processGoTestLog processes a single Go test log file
+// processGoTestLog processes a single Go test log file.
 func processGoTestLog(path, testRunDir string, moduleMap map[string]*ModuleReportData) error {
 	// Extract module and package from file path
 	// Path format: testRunDir/module-name/package-name.log
-	relPath, _ := filepath.Rel(testRunDir, path)
+	relPath, err := filepath.Rel(testRunDir, path)
+	if err != nil {
+		return nil // Can't determine module from path
+	}
 	pathParts := strings.Split(filepath.ToSlash(relPath), "/")
 
 	if len(pathParts) < 2 {
@@ -194,7 +199,7 @@ func processGoTestLog(path, testRunDir string, moduleMap map[string]*ModuleRepor
 	return nil
 }
 
-// parseGoTestLog parses a Go test log file to extract test count and status
+// parseGoTestLog parses a Go test log file to extract test count and status.
 func parseGoTestLog(logPath string) (int, string, error) {
 	data, err := os.ReadFile(logPath)
 	if err != nil {
@@ -229,7 +234,7 @@ func parseGoTestLog(logPath string) (int, string, error) {
 }
 
 // extractModuleFromFeaturePath extracts module name from feature file path
-// Example: "specs/eac-commands/templates/specification.feature" -> "eac-commands"
+// Example: "specs/eac-commands/templates/specification.feature" -> "eac-commands".
 func extractModuleFromFeaturePath(featurePath string) string {
 	// Normalize to forward slashes
 	normalized := filepath.ToSlash(featurePath)

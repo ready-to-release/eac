@@ -10,19 +10,19 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/validation"
 )
 
-// RetryStrategy determines retry behavior based on validation results
+// RetryStrategy determines retry behavior based on validation results.
 type RetryStrategy interface {
 	// ShouldRetry decides if retry should happen based on validation result
-	ShouldRetry(ctx context.Context, errors []validation.ValidationError, attempt int, maxAttempts int) bool
+	ShouldRetry(ctx context.Context, errors []validation.ValidationError, attempt, maxAttempts int) bool
 
 	// BuildRetryPrompt constructs retry prompt based on strategy and errors
-	BuildRetryPrompt(ctx context.Context, originalPrompt string, lastOutput string, errors []validation.ValidationError, attempt int) string
+	BuildRetryPrompt(ctx context.Context, originalPrompt, lastOutput string, errors []validation.ValidationError, attempt int) string
 
 	// Name returns the strategy name for logging
 	Name() string
 }
 
-// hasRetriableErrors checks if errors contain any retriable (non-critical, non-warning) errors
+// hasRetriableErrors checks if errors contain any retriable (non-critical, non-warning) errors.
 func hasRetriableErrors(errors []validation.ValidationError) bool {
 	for _, err := range errors {
 		if !err.IsCritical() && !err.IsWarning() {
@@ -32,7 +32,7 @@ func hasRetriableErrors(errors []validation.ValidationError) bool {
 	return false
 }
 
-// countCriticalErrors returns the number of non-warning errors
+// countCriticalErrors returns the number of non-warning errors.
 func countCriticalErrors(errors []validation.ValidationError) int {
 	count := 0
 	for _, err := range errors {
@@ -43,7 +43,7 @@ func countCriticalErrors(errors []validation.ValidationError) int {
 	return count
 }
 
-// filterErrorsByCategories returns errors matching any of the given categories
+// filterErrorsByCategories returns errors matching any of the given categories.
 func filterErrorsByCategories(errors []validation.ValidationError, categories []validation.ErrorCategory) []validation.ValidationError {
 	if len(categories) == 0 {
 		return errors
@@ -67,7 +67,7 @@ func filterErrorsByCategories(errors []validation.ValidationError, categories []
 	return filtered
 }
 
-// groupErrorsByCategory organizes errors by their category
+// groupErrorsByCategory organizes errors by their category.
 func groupErrorsByCategory(errors []validation.ValidationError) map[validation.ErrorCategory][]validation.ValidationError {
 	grouped := make(map[validation.ErrorCategory][]validation.ValidationError)
 	for _, err := range errors {
@@ -77,7 +77,7 @@ func groupErrorsByCategory(errors []validation.ValidationError) map[validation.E
 	return grouped
 }
 
-// formatCategories converts category list to comma-separated string
+// formatCategories converts category list to comma-separated string.
 func formatCategories(categories []validation.ErrorCategory) string {
 	if len(categories) == 0 {
 		return "all"
@@ -89,13 +89,13 @@ func formatCategories(categories []validation.ErrorCategory) string {
 	return strings.Join(parts, ", ")
 }
 
-// Retry prompt section headers
+// Retry prompt section headers.
 const (
 	headerStandardCorrection = "INSTRUCTIONS FOR CORRECTION"
 	headerFocusedCorrection  = "CORRECTION INSTRUCTIONS"
 )
 
-// Retry prompt instructions
+// Retry prompt instructions.
 const (
 	standardInstructions = `Please regenerate the output, carefully correcting ALL of the above issues.
 
@@ -110,7 +110,7 @@ IMPORTANT:
 Return ONLY the corrected output without explanations.`
 )
 
-// buildRetryPrompt constructs a retry prompt with consistent structure
+// buildRetryPrompt constructs a retry prompt with consistent structure.
 func buildRetryPrompt(originalPrompt, header, summary, errorsText, sectionTitle, instructions string) string {
 	var sb strings.Builder
 
@@ -148,11 +148,11 @@ func buildRetryPrompt(originalPrompt, header, summary, errorsText, sectionTitle,
 // StandardStrategy retries on any retriable error.
 type StandardStrategy struct{}
 
-func (s *StandardStrategy) ShouldRetry(ctx context.Context, errors []validation.ValidationError, attempt int, maxAttempts int) bool {
+func (s *StandardStrategy) ShouldRetry(ctx context.Context, errors []validation.ValidationError, attempt, maxAttempts int) bool {
 	return attempt < maxAttempts && hasRetriableErrors(errors)
 }
 
-func (s *StandardStrategy) BuildRetryPrompt(ctx context.Context, originalPrompt string, lastOutput string, errors []validation.ValidationError, attempt int) string {
+func (s *StandardStrategy) BuildRetryPrompt(ctx context.Context, originalPrompt, lastOutput string, errors []validation.ValidationError, attempt int) string {
 	header := RetryPromptWarning + " FROM PREVIOUS ATTEMPT"
 	summary := fmt.Sprintf("The previous generation had %d validation error(s) (%d critical):",
 		len(errors), countCriticalErrors(errors))
@@ -176,7 +176,7 @@ type FocusedStrategy struct {
 	FocusCategories []validation.ErrorCategory
 }
 
-func (s *FocusedStrategy) ShouldRetry(ctx context.Context, errors []validation.ValidationError, attempt int, maxAttempts int) bool {
+func (s *FocusedStrategy) ShouldRetry(ctx context.Context, errors []validation.ValidationError, attempt, maxAttempts int) bool {
 	if attempt >= maxAttempts {
 		return false
 	}
@@ -204,7 +204,7 @@ func (s *FocusedStrategy) matchesFocus(cat validation.ErrorCategory) bool {
 	return false
 }
 
-func (s *FocusedStrategy) BuildRetryPrompt(ctx context.Context, originalPrompt string, lastOutput string, errors []validation.ValidationError, attempt int) string {
+func (s *FocusedStrategy) BuildRetryPrompt(ctx context.Context, originalPrompt, lastOutput string, errors []validation.ValidationError, attempt int) string {
 	focusedErrors := filterErrorsByCategories(errors, s.FocusCategories)
 	header := RetryPromptFocus + " CORRECTION REQUIRED"
 	summary := fmt.Sprintf("Focus on fixing these specific issues (%d error(s) in categories: %s):",
@@ -229,11 +229,11 @@ type EscalatingStrategy struct {
 	BaseStrategy RetryStrategy
 }
 
-func (s *EscalatingStrategy) ShouldRetry(ctx context.Context, errors []validation.ValidationError, attempt int, maxAttempts int) bool {
+func (s *EscalatingStrategy) ShouldRetry(ctx context.Context, errors []validation.ValidationError, attempt, maxAttempts int) bool {
 	return s.BaseStrategy.ShouldRetry(ctx, errors, attempt, maxAttempts)
 }
 
-func (s *EscalatingStrategy) BuildRetryPrompt(ctx context.Context, originalPrompt string, lastOutput string, errors []validation.ValidationError, attempt int) string {
+func (s *EscalatingStrategy) BuildRetryPrompt(ctx context.Context, originalPrompt, lastOutput string, errors []validation.ValidationError, attempt int) string {
 	prompt := s.BaseStrategy.BuildRetryPrompt(ctx, originalPrompt, lastOutput, errors, attempt)
 
 	if attempt >= 2 {
@@ -285,7 +285,7 @@ func (s *EscalatingStrategy) Name() string {
 	return config.StrategyEscalating
 }
 
-// GetRetryStrategy creates a retry strategy from configuration
+// GetRetryStrategy creates a retry strategy from configuration.
 func GetRetryStrategy(strategyName string, focusCategories []string) (RetryStrategy, error) {
 	categories := toErrorCategories(focusCategories)
 
@@ -308,7 +308,7 @@ func GetRetryStrategy(strategyName string, focusCategories []string) (RetryStrat
 	}
 }
 
-// toErrorCategories converts string slice to ErrorCategory slice
+// toErrorCategories converts string slice to ErrorCategory slice.
 func toErrorCategories(categories []string) []validation.ErrorCategory {
 	result := make([]validation.ErrorCategory, len(categories))
 	for i, cat := range categories {

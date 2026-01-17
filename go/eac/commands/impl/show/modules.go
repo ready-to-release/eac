@@ -96,14 +96,14 @@ func ShowModules() int {
 	return 0
 }
 
-// artifactStats holds summary statistics for a module's artifacts
+// artifactStats holds summary statistics for a module's artifacts.
 type artifactStats struct {
 	Total     int
 	Missing   int
 	Overrides int
 }
 
-// getArtifactStats calculates artifact statistics for a module
+// getArtifactStats calculates artifact statistics for a module.
 func getArtifactStats(mod *modules.ModuleContract, cfg *config.EACConfig, workspaceRoot string) artifactStats {
 	stats := artifactStats{}
 

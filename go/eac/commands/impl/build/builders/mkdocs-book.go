@@ -18,8 +18,8 @@ import (
 
 // buildModuleBooks builds all books for a module in parallel.
 // Preprocessing runs in parallel; PDF exports are serialized via semaphore.
-// Final PDFs are moved to the module output root with naming: {book-name}-{theme}.pdf
-func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book, workspaceRoot string, outputDir string, logWriter io.Writer) int {
+// Final PDFs are moved to the module output root with naming: {book-name}-{theme}.pdf.
+func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book, workspaceRoot, outputDir string, logWriter io.Writer) int {
 	if len(moduleBooks) > 1 {
 		Logln(logWriter, "\n=== Building %s: %s (%d books) ===", module.Type, module.Moniker, len(moduleBooks))
 		for _, book := range moduleBooks {
@@ -57,7 +57,7 @@ func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book
 				bookOutputDir = filepath.Join(outputDir, b.Name)
 			}
 
-			if err := os.MkdirAll(bookOutputDir, 0755); err != nil {
+			if err := os.MkdirAll(bookOutputDir, 0o755); err != nil {
 				Logln(logWriter, "❌ Failed to create output directory for book '%s': %v", b.Name, err)
 				results <- 1
 				return
@@ -76,7 +76,7 @@ func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book
 
 			if exitCode != 0 {
 				if len(moduleBooks) > 1 {
-					logWriter.Write(bookLog.Bytes())
+					_, _ = logWriter.Write(bookLog.Bytes()) //nolint:errcheck // best-effort log aggregation
 				}
 				results <- exitCode
 				return
@@ -113,7 +113,7 @@ func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book
 
 			// Write complete log atomically for parallel builds
 			if len(moduleBooks) > 1 {
-				logWriter.Write(bookLog.Bytes())
+				_, _ = logWriter.Write(bookLog.Bytes()) //nolint:errcheck // best-effort log aggregation
 			}
 			results <- 0
 		}(book)
@@ -138,7 +138,7 @@ func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book
 // moduleOutputDir is the module's base output directory (used for staging).
 // bookOutputDir is where this book's final output goes.
 // Exported for use by the evidence builder and other book-building commands.
-func BuildSingleBook(module *modules.ModuleContract, book *config.Book, workspaceRoot string, moduleOutputDir string, bookOutputDir string, logWriter io.Writer) int {
+func BuildSingleBook(module *modules.ModuleContract, book *config.Book, workspaceRoot, moduleOutputDir, bookOutputDir string, logWriter io.Writer) int {
 	bookOutput := book.GetOutput()
 
 	// Check Docker availability first - fail fast if unavailable
@@ -198,7 +198,7 @@ func BuildSingleBook(module *modules.ModuleContract, book *config.Book, workspac
 // This enables parallel builds with isolated preprocessing for each book.
 // The staging directory is placed at moduleOutputDir/staging/<bookname> to ensure
 // all books share the same base level, regardless of their individual output paths.
-func preprocessBook(book *config.Book, workspaceRoot string, moduleOutputDir string, logWriter io.Writer, pdfMode bool) (string, bool) {
+func preprocessBook(book *config.Book, workspaceRoot, moduleOutputDir string, logWriter io.Writer, pdfMode bool) (string, bool) {
 	// Use book-specific staging directory for isolation during parallel builds
 	// Always relative to module output root for consistent isolation
 	// Example: out/build/docs/staging/site/ or out/build/docs/staging/pdf/
@@ -213,7 +213,7 @@ func preprocessBook(book *config.Book, workspaceRoot string, moduleOutputDir str
 	}
 
 	// Create fresh staging directory
-	if err := os.MkdirAll(stagingDir, 0755); err != nil {
+	if err := os.MkdirAll(stagingDir, 0o755); err != nil {
 		Logln(logWriter, "❌ Failed to create staging directory: %v", err)
 		return "", false
 	}
@@ -231,8 +231,8 @@ func preprocessBook(book *config.Book, workspaceRoot string, moduleOutputDir str
 }
 
 // buildBookWithTheme builds a book as PDF with a specific theme
-// moduleOutputDir is used for staging, bookOutputDir is for final output
-func buildBookWithTheme(module *modules.ModuleContract, book *config.Book, workspaceRoot string, moduleOutputDir string, bookOutputDir string, logWriter io.Writer, theme string) int {
+// moduleOutputDir is used for staging, bookOutputDir is for final output.
+func buildBookWithTheme(module *modules.ModuleContract, book *config.Book, workspaceRoot, moduleOutputDir, bookOutputDir string, logWriter io.Writer, theme string) int {
 	stagingDir, ok := preprocessBook(book, workspaceRoot, moduleOutputDir, logWriter, true)
 	if !ok {
 		return 1 // Preprocessing failed
@@ -240,15 +240,15 @@ func buildBookWithTheme(module *modules.ModuleContract, book *config.Book, works
 	return buildBookWithThemeAndStaging(module, book, workspaceRoot, bookOutputDir, logWriter, theme, true, stagingDir)
 }
 
-// buildBookWithThemeAndStaging builds a book as PDF using a pre-computed staging directory
-func buildBookWithThemeAndStaging(module *modules.ModuleContract, book *config.Book, workspaceRoot string, bookOutputDir string, logWriter io.Writer, theme string, cleanBuild bool, stagingDir string) int {
+// buildBookWithThemeAndStaging builds a book as PDF using a pre-computed staging directory.
+func buildBookWithThemeAndStaging(module *modules.ModuleContract, book *config.Book, workspaceRoot, bookOutputDir string, logWriter io.Writer, theme string, cleanBuild bool, stagingDir string) int {
 	// Delegate to existing PDF build logic, passing book metadata for PDF generation
 	return buildMkDocsWithThemeAndStaging(module, book.Name, book.Title, book.Description, workspaceRoot, bookOutputDir, logWriter, theme, cleanBuild, stagingDir)
 }
 
 // buildBookHTML builds a book as HTML site
-// moduleOutputDir is used for staging, bookOutputDir is for final output
-func buildBookHTML(module *modules.ModuleContract, book *config.Book, workspaceRoot string, moduleOutputDir string, bookOutputDir string, logWriter io.Writer) int {
+// moduleOutputDir is used for staging, bookOutputDir is for final output.
+func buildBookHTML(module *modules.ModuleContract, book *config.Book, workspaceRoot, moduleOutputDir, bookOutputDir string, logWriter io.Writer) int {
 	// Preprocess the book - staging is always at module output root for isolation
 	stagingDir, ok := preprocessBook(book, workspaceRoot, moduleOutputDir, logWriter, false)
 	if !ok {
@@ -259,8 +259,8 @@ func buildBookHTML(module *modules.ModuleContract, book *config.Book, workspaceR
 	return buildHTMLWithStaging(module, workspaceRoot, bookOutputDir, logWriter, stagingDir)
 }
 
-// buildHTMLWithStaging builds HTML site using a staging directory
-func buildHTMLWithStaging(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, stagingDir string) int {
+// buildHTMLWithStaging builds HTML site using a staging directory.
+func buildHTMLWithStaging(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, stagingDir string) int {
 	Logln(logWriter, "📚 Building MkDocs site using Docker")
 
 	// Generate mkdocs.yml from site template
@@ -268,7 +268,11 @@ func buildHTMLWithStaging(module *modules.ModuleContract, workspaceRoot string, 
 	configPath := filepath.Join(outputDir, "mkdocs.yml")
 	relStagingDir := ""
 	if stagingDir != "" {
-		relStagingDir, _ = filepath.Rel(outputDir, stagingDir)
+		var relErr error
+		relStagingDir, relErr = filepath.Rel(outputDir, stagingDir)
+		if relErr != nil {
+			relStagingDir = stagingDir // Fallback to absolute
+		}
 		relStagingDir = filepath.ToSlash(relStagingDir)
 		Logln(logWriter, "   Using staging: %s (relative to config)", relStagingDir)
 	}
@@ -287,7 +291,7 @@ func buildHTMLWithStaging(module *modules.ModuleContract, workspaceRoot string, 
 	macrosSource := filepath.Join(workspaceRoot, "containers", "mkdocs-site", "mkdocs_macros.py")
 	macrosTarget := filepath.Join(outputDir, "main.py")
 	if macrosData, err := os.ReadFile(macrosSource); err == nil {
-		if err := os.WriteFile(macrosTarget, macrosData, 0644); err != nil {
+		if err := os.WriteFile(macrosTarget, macrosData, 0o644); err != nil {
 			Logln(logWriter, "   ⚠️  Failed to copy mkdocs macros script: %v", err)
 		} else {
 			Logln(logWriter, "   Macros: %s", macrosTarget)
@@ -319,14 +323,17 @@ func buildHTMLWithStaging(module *modules.ModuleContract, workspaceRoot string, 
 	}
 
 	siteDir := filepath.Join(outputDir, "site")
-	if err := os.MkdirAll(siteDir, 0755); err != nil {
+	if err := os.MkdirAll(siteDir, 0o755); err != nil {
 		Logln(logWriter, "❌ Failed to create output directory: %v", err)
 		return 1
 	}
 
 	// MkDocs resolves --site-dir relative to the config file directory when using -f
 	// Since both config and site are in outputDir, site-dir is just "site"
-	relConfigPath, _ := filepath.Rel(workspaceRoot, configPath)
+	relConfigPath, relErr := filepath.Rel(workspaceRoot, configPath)
+	if relErr != nil {
+		relConfigPath = configPath // Fallback to absolute
+	}
 	dockerVolume := FormatDockerVolumePath(hostRepoRoot)
 	dockerSiteDir := "site"
 	dockerConfigPath := strings.ReplaceAll(relConfigPath, "\\", "/")
@@ -367,7 +374,7 @@ func buildHTMLWithStaging(module *modules.ModuleContract, workspaceRoot string, 
 
 // checkAndPreprocessBook checks for books.yml and runs preprocessing if a book matches
 // Returns (stagingDir, bookUsed) - stagingDir is empty on error, bookUsed indicates if preprocessing was attempted
-// pdfMode enables PDF-specific processing like link normalization
+// pdfMode enables PDF-specific processing like link normalization.
 func checkAndPreprocessBook(moniker, workspaceRoot, outputDir string, logWriter io.Writer, pdfMode bool) (string, bool) {
 	// Load config with books
 	cfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot, LazyLoad: true})
@@ -402,7 +409,7 @@ func checkAndPreprocessBook(moniker, workspaceRoot, outputDir string, logWriter 
 	// For a clean rebuild, delete out/staging/ manually.
 	stagingDir := paths.StagingPath(workspaceRoot, book.Name)
 
-	if err := os.MkdirAll(stagingDir, 0755); err != nil {
+	if err := os.MkdirAll(stagingDir, 0o755); err != nil {
 		Logln(logWriter, "❌ Failed to create staging directory: %v", err)
 		return "", true
 	}
@@ -417,7 +424,7 @@ func checkAndPreprocessBook(moniker, workspaceRoot, outputDir string, logWriter 
 	return stagingDir, true
 }
 
-// copyFile copies a file from src to dst
+// copyFile copies a file from src to dst.
 func copyFile(src, dst string) error {
 	srcFile, err := os.Open(src)
 	if err != nil {
@@ -425,7 +432,7 @@ func copyFile(src, dst string) error {
 	}
 	defer srcFile.Close()
 
-	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return err
 	}
 

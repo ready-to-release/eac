@@ -3,6 +3,7 @@
 package git
 
 import (
+	"errors"
 	"fmt"
 	"os/exec"
 	"path/filepath"
@@ -23,7 +24,8 @@ func (r *Repository) runGitCommand(args ...string) (string, error) {
 
 	output, err := cmd.Output()
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		exitErr := &exec.ExitError{}
+		if errors.As(err, &exitErr) {
 			return "", fmt.Errorf("git %s failed: %s", args[0], string(exitErr.Stderr))
 		}
 		return "", err
@@ -277,7 +279,7 @@ func (r *Repository) Add(path string) error {
 }
 
 // Commit creates a new commit with the staged changes.
-func (r *Repository) Commit(message string, authorName, authorEmail string) (string, error) {
+func (r *Repository) Commit(message, authorName, authorEmail string) (string, error) {
 	wt, err := r.repo.Worktree()
 	if err != nil {
 		return "", fmt.Errorf("failed to get worktree: %w", err)
@@ -339,59 +341,6 @@ func (r *Repository) StagedDiffStats() (string, error) {
 
 	r.logger.Debug("Staged diff stats retrieved")
 	return output, nil
-}
-
-// generateUnifiedDiff creates a unified diff format for a single file
-func generateUnifiedDiff(path, original, staged string, status gogit.StatusCode) string {
-	var diff strings.Builder
-
-	diff.WriteString(fmt.Sprintf("diff --git a/%s b/%s\n", path, path))
-
-	switch status {
-	case gogit.Added:
-		diff.WriteString("new file mode 100644\n")
-		diff.WriteString("--- /dev/null\n")
-		diff.WriteString(fmt.Sprintf("+++ b/%s\n", path))
-
-		lines := strings.Split(staged, "\n")
-		if len(lines) > 0 {
-			diff.WriteString(fmt.Sprintf("@@ -0,0 +1,%d @@\n", len(lines)))
-			for _, line := range lines {
-				diff.WriteString("+" + line + "\n")
-			}
-		}
-
-	case gogit.Deleted:
-		diff.WriteString("deleted file mode 100644\n")
-		diff.WriteString(fmt.Sprintf("--- a/%s\n", path))
-		diff.WriteString("+++ /dev/null\n")
-
-		lines := strings.Split(original, "\n")
-		if len(lines) > 0 {
-			diff.WriteString(fmt.Sprintf("@@ -1,%d +0,0 @@\n", len(lines)))
-			for _, line := range lines {
-				diff.WriteString("-" + line + "\n")
-			}
-		}
-
-	default: // Modified, Renamed, Copied
-		diff.WriteString(fmt.Sprintf("--- a/%s\n", path))
-		diff.WriteString(fmt.Sprintf("+++ b/%s\n", path))
-
-		// Simple diff: show all lines changed
-		origLines := strings.Split(original, "\n")
-		newLines := strings.Split(staged, "\n")
-
-		diff.WriteString(fmt.Sprintf("@@ -1,%d +1,%d @@\n", len(origLines), len(newLines)))
-		for _, line := range origLines {
-			diff.WriteString("-" + line + "\n")
-		}
-		for _, line := range newLines {
-			diff.WriteString("+" + line + "\n")
-		}
-	}
-
-	return diff.String()
 }
 
 // GetBranchCommits returns all commits from baseBranch..HEAD.

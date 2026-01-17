@@ -10,13 +10,13 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 )
 
-// ModuleMapper provides file-to-module mapping functionality
+// ModuleMapper provides file-to-module mapping functionality.
 type ModuleMapper struct {
 	registry      *modules.Registry
 	workspaceRoot string
 }
 
-// NewModuleMapper creates a mapper from EAC config
+// NewModuleMapper creates a mapper from EAC config.
 func NewModuleMapper(eacCfg *config.EACConfig, workspaceRoot string) *ModuleMapper {
 	registry := modules.NewRegistry("0.1.0", workspaceRoot)
 
@@ -46,7 +46,7 @@ func NewModuleMapper(eacCfg *config.EACConfig, workspaceRoot string) *ModuleMapp
 			},
 		}
 		contract := modules.NewModuleContract(base, workspaceRoot)
-		_ = registry.Add(contract)
+		_ = registry.Add(contract) //nolint:errcheck // registry.Add only fails on duplicate which won't happen here
 	}
 
 	return &ModuleMapper{
@@ -122,7 +122,7 @@ func (m *ModuleMapper) GetModuleForPackagePath(pkgPath string) string {
 
 // BuildModuleOutputPath constructs the output path for a module's test results.
 // Returns a path like "<module-moniker>/packages/<package-suffix>" or "<module-moniker>/packages/<feature-name>" for godog
-// The new structure is: out/test/<module>/packages/<package>/
+// The new structure is: out/test/<module>/packages/<package>/.
 func (m *ModuleMapper) BuildModuleOutputPath(pkgPath, moduleMoniker string) string {
 	if moduleMoniker == "" {
 		// No module found, use sanitized package path under "unknown" module
@@ -166,7 +166,7 @@ func (m *ModuleMapper) BuildModuleOutputPath(pkgPath, moduleMoniker string) stri
 	return filepath.ToSlash(result)
 }
 
-// extractPathSuffix extracts the path suffix after the module identifier
+// extractPathSuffix extracts the path suffix after the module identifier.
 func extractPathSuffix(pkgPath, moduleMoniker string) string {
 	// Map module monikers to their typical path patterns
 	// eac-core -> go/eac/core

@@ -6,15 +6,14 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 )
 
-
-// GraphBuilder builds dependency graphs from go.mod files
+// GraphBuilder builds dependency graphs from go.mod files.
 type GraphBuilder struct {
 	mapper   *Mapper
 	infos    []*GoModInfo
 	rootPath string
 }
 
-// NewGraphBuilder creates a new graph builder
+// NewGraphBuilder creates a new graph builder.
 func NewGraphBuilder(mapper *Mapper, rootPath string) *GraphBuilder {
 	return &GraphBuilder{
 		mapper:   mapper,
@@ -23,12 +22,12 @@ func NewGraphBuilder(mapper *Mapper, rootPath string) *GraphBuilder {
 	}
 }
 
-// AddGoModInfo adds a parsed go.mod info to the builder
+// AddGoModInfo adds a parsed go.mod info to the builder.
 func (gb *GraphBuilder) AddGoModInfo(info *GoModInfo) {
 	gb.infos = append(gb.infos, info)
 }
 
-// Build constructs the dependency graph from all added go.mod files
+// Build constructs the dependency graph from all added go.mod files.
 func (gb *GraphBuilder) Build() (*DependencyGraph, error) {
 	graph := &DependencyGraph{
 		Modules:      make(map[string]*ModuleNode),
@@ -90,7 +89,7 @@ func (gb *GraphBuilder) Build() (*DependencyGraph, error) {
 	return graph, nil
 }
 
-// calculateReverseDependencies populates the UsedBy field for each node
+// calculateReverseDependencies populates the UsedBy field for each node.
 func (gb *GraphBuilder) calculateReverseDependencies(graph *DependencyGraph) {
 	// Clear existing UsedBy lists
 	for _, node := range graph.Modules {
@@ -107,7 +106,7 @@ func (gb *GraphBuilder) calculateReverseDependencies(graph *DependencyGraph) {
 	}
 }
 
-// BuildFromDirectory scans a directory for go.mod files and builds the graph
+// BuildFromDirectory scans a directory for go.mod files and builds the graph.
 func BuildFromDirectory(rootPath string, registry *modules.Registry, baseModulePath string, excludeDirs []string) (*DependencyGraph, error) {
 	// Parse all go.mod files
 	infos, err := ParseAllGoMods(rootPath, excludeDirs)
@@ -130,13 +129,13 @@ func BuildFromDirectory(rootPath string, registry *modules.Registry, baseModuleP
 	return builder.Build()
 }
 
-// GetModuleByMoniker retrieves a module node by its moniker
+// GetModuleByMoniker retrieves a module node by its moniker.
 func (g *DependencyGraph) GetModuleByMoniker(moniker string) (*ModuleNode, bool) {
 	node, exists := g.Modules[moniker]
 	return node, exists
 }
 
-// GetDependencies returns the dependencies for a given moniker
+// GetDependencies returns the dependencies for a given moniker.
 func (g *DependencyGraph) GetDependencies(moniker string) []string {
 	if deps, ok := g.Dependencies[moniker]; ok {
 		return deps
@@ -144,7 +143,7 @@ func (g *DependencyGraph) GetDependencies(moniker string) []string {
 	return []string{}
 }
 
-// AllMonikers returns all module monikers in the graph
+// AllMonikers returns all module monikers in the graph.
 func (g *DependencyGraph) AllMonikers() []string {
 	monikers := make([]string, 0, len(g.Modules))
 	for moniker := range g.Modules {
@@ -153,7 +152,7 @@ func (g *DependencyGraph) AllMonikers() []string {
 	return monikers
 }
 
-// ModuleCount returns the total number of modules in the graph
+// ModuleCount returns the total number of modules in the graph.
 func (g *DependencyGraph) ModuleCount() int {
 	return len(g.Modules)
 }

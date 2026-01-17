@@ -17,7 +17,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
 )
 
-// Orchestrator manages parallel execution of work items
+// Orchestrator manages parallel execution of work items.
 type Orchestrator struct {
 	config          Config
 	worker          WorkerFunc
@@ -39,7 +39,7 @@ type Orchestrator struct {
 	tuiTotalLayers int // Total layers (0 = not using layers)
 }
 
-// New creates a new Orchestrator with the given configuration and worker function
+// New creates a new Orchestrator with the given configuration and worker function.
 func New(config Config, worker WorkerFunc) *Orchestrator {
 	// Set default max concurrency to number of CPUs
 	if config.MaxConcurrency <= 0 {
@@ -69,7 +69,7 @@ func New(config Config, worker WorkerFunc) *Orchestrator {
 	return o
 }
 
-// RunLayered executes modules in dependency layers - layers run sequentially, modules within a layer run in parallel
+// RunLayered executes modules in dependency layers - layers run sequentially, modules within a layer run in parallel.
 func (o *Orchestrator) RunLayered(layers [][]string) ([]WorkResult, error) {
 	// Flatten layers to get total count
 	var allMonikers []string
@@ -177,7 +177,7 @@ func (o *Orchestrator) RunLayered(layers [][]string) ([]WorkResult, error) {
 	return allResults, nil
 }
 
-// formatMonikerList formats a list of monikers for display
+// formatMonikerList formats a list of monikers for display.
 func formatMonikerList(monikers []string) string {
 	if len(monikers) <= 5 {
 		return fmt.Sprintf("%v", monikers)
@@ -185,7 +185,7 @@ func formatMonikerList(monikers []string) string {
 	return fmt.Sprintf("%v... (%d total)", monikers[:5], len(monikers))
 }
 
-// Run executes all work items in parallel and returns the results
+// Run executes all work items in parallel and returns the results.
 func (o *Orchestrator) Run(monikers []string) ([]WorkResult, error) {
 	// Initialize if not already done
 	if err := o.Init(); err != nil {
@@ -249,7 +249,7 @@ func (o *Orchestrator) Run(monikers []string) ([]WorkResult, error) {
 	return results, nil
 }
 
-// executeParallel runs work items in parallel with controlled concurrency
+// executeParallel runs work items in parallel with controlled concurrency.
 func (o *Orchestrator) executeParallel(workItems []WorkItem) []WorkResult {
 	results := make([]WorkResult, len(workItems))
 	var wg sync.WaitGroup
@@ -276,7 +276,7 @@ func (o *Orchestrator) executeParallel(workItems []WorkItem) []WorkResult {
 	return results
 }
 
-// processWorkItem processes a single work item
+// processWorkItem processes a single work item.
 func (o *Orchestrator) processWorkItem(item WorkItem) WorkResult {
 	startTime := time.Now()
 
@@ -299,7 +299,7 @@ func (o *Orchestrator) processWorkItem(item WorkItem) WorkResult {
 	moduleOutputDir := filepath.Join(o.config.WorkspaceRoot, o.config.OutputBaseDir, sanitizedMoniker)
 	parentDir := filepath.Dir(moduleOutputDir)
 
-	if err := os.MkdirAll(parentDir, 0755); err != nil {
+	if err := os.MkdirAll(parentDir, 0o755); err != nil {
 		result.ExitCode = 1
 		result.Errors = []string{fmt.Sprintf("Failed to create parent directory %s: %v", parentDir, err)}
 		result.LogPath = filepath.Join(o.config.OutputBaseDir, sanitizedMoniker, o.config.LogFileName)
@@ -317,7 +317,7 @@ func (o *Orchestrator) processWorkItem(item WorkItem) WorkResult {
 		_ = os.RemoveAll(moduleOutputDir)
 	}
 
-	if err := os.MkdirAll(moduleOutputDir, 0755); err != nil {
+	if err := os.MkdirAll(moduleOutputDir, 0o755); err != nil {
 		result.ExitCode = 1
 		result.Errors = []string{fmt.Sprintf("Failed to create directory %s: %v", moduleOutputDir, err)}
 		result.LogPath = filepath.Join(o.config.OutputBaseDir, sanitizedMoniker, o.config.LogFileName)
@@ -382,7 +382,7 @@ func (o *Orchestrator) processWorkItem(item WorkItem) WorkResult {
 	return result
 }
 
-// PrintSummary prints a summary of all results to the orchestrator output
+// PrintSummary prints a summary of all results to the orchestrator output.
 func (o *Orchestrator) PrintSummary(results []WorkResult) {
 	totalFailed := 0
 	totalWarnings := 0
@@ -474,13 +474,13 @@ func (o *Orchestrator) StopTUI() {
 	o.logger = log.New(o.orchestratorOut, "", 0)
 }
 
-// Close releases resources held by the orchestrator
+// Close releases resources held by the orchestrator.
 func (o *Orchestrator) Close() {
 	// Stop TUI if not already stopped
 	o.StopTUI()
 }
 
-// tuiMarkRunning adds a module to the running list and updates TUI status
+// tuiMarkRunning adds a module to the running list and updates TUI status.
 func (o *Orchestrator) tuiMarkRunning(moniker string) {
 	if o.tuiConsole == nil {
 		return
@@ -505,7 +505,7 @@ func (o *Orchestrator) tuiMarkRunning(moniker string) {
 	})
 }
 
-// tuiMarkCompleted removes a module from running and increments completed count
+// tuiMarkCompleted removes a module from running and increments completed count.
 func (o *Orchestrator) tuiMarkCompleted(moniker string) {
 	if o.tuiConsole == nil {
 		return
@@ -537,58 +537,58 @@ func (o *Orchestrator) tuiMarkCompleted(moniker string) {
 	})
 }
 
-// SetPhase switches the TUI to a specific phase (Init, Run, End)
+// SetPhase switches the TUI to a specific phase (Init, Run, End).
 func (o *Orchestrator) SetPhase(phase tui.Phase) {
 	if o.tuiConsole != nil {
 		o.tuiConsole.SetPhase(phase)
 	}
 }
 
-// SetPhaseSummary sets the summary text for a phase (shown when collapsed)
+// SetPhaseSummary sets the summary text for a phase (shown when collapsed).
 func (o *Orchestrator) SetPhaseSummary(phase tui.Phase, summary string) {
 	if o.tuiConsole != nil {
 		o.tuiConsole.SetPhaseSummary(phase, summary)
 	}
 }
 
-// CompletePhase marks a phase as complete
+// CompletePhase marks a phase as complete.
 func (o *Orchestrator) CompletePhase(phase tui.Phase, success bool, summary string) {
 	if o.tuiConsole != nil {
 		o.tuiConsole.CompletePhase(phase, success, summary)
 	}
 }
 
-// WriteToPhase writes a line to a specific phase's buffer
+// WriteToPhase writes a line to a specific phase's buffer.
 func (o *Orchestrator) WriteToPhase(phase tui.Phase, text string) {
 	if o.tuiConsole != nil {
 		o.tuiConsole.WriteToPhase(phase, text)
 	}
 }
 
-// SendInitLine sends a line to the Init phase buffer
+// SendInitLine sends a line to the Init phase buffer.
 func (o *Orchestrator) SendInitLine(text string) {
 	o.WriteToPhase(tui.PhaseInit, text)
 }
 
-// SendEndLine sends a line to the results buffer (appears below Run pane)
+// SendEndLine sends a line to the results buffer (appears below Run pane).
 func (o *Orchestrator) SendEndLine(text string) {
 	if o.tuiConsole != nil {
 		o.tuiConsole.WriteResult(text)
 	}
 }
 
-// IsTUIEnabled returns whether TUI is enabled
+// IsTUIEnabled returns whether TUI is enabled.
 func (o *Orchestrator) IsTUIEnabled() bool {
 	return o.tuiConsole != nil
 }
 
-// tuiWriter implements io.Writer and forwards all writes to the TUI Init phase
+// tuiWriter implements io.Writer and forwards all writes to the TUI Init phase.
 type tuiWriter struct {
 	orch  *Orchestrator
 	phase tui.Phase
 }
 
-// Write implements io.Writer by forwarding to the appropriate TUI pane
+// Write implements io.Writer by forwarding to the appropriate TUI pane.
 func (w *tuiWriter) Write(p []byte) (n int, err error) {
 	if w.orch.tuiConsole != nil {
 		// Convert bytes to string, trim trailing newline (TUI adds its own)
@@ -682,7 +682,7 @@ func (o *Orchestrator) SetMaxConcurrency(maxConcurrency int) {
 }
 
 // GetExitCode returns the appropriate exit code based on results
-// Returns 1 if any module failed, 0 otherwise
+// Returns 1 if any module failed, 0 otherwise.
 func GetExitCode(results []WorkResult) int {
 	for _, result := range results {
 		if result.ExitCode != 0 {
@@ -692,9 +692,9 @@ func GetExitCode(results []WorkResult) int {
 	return 0
 }
 
-// capitalize capitalizes the first letter of a string
+// capitalize capitalizes the first letter of a string.
 func capitalize(s string) string {
-	if len(s) == 0 {
+	if s == "" {
 		return s
 	}
 	// Simple ASCII capitalization
@@ -707,7 +707,7 @@ func capitalize(s string) string {
 
 // sanitizePathForFS converts a moniker to a filesystem-safe path
 // Replaces : with _ (Windows doesn't allow : in paths)
-// Normalizes path separators to forward slashes
+// Normalizes path separators to forward slashes.
 func sanitizePathForFS(path string) string {
 	safe := strings.ReplaceAll(path, ":", "_")
 	safe = strings.ReplaceAll(safe, "\\", "/")

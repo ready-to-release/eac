@@ -104,5 +104,5 @@ type GitRepository interface {
 	GetBranchFiles(baseBranch string) ([]string, error)
 }
 
-// Ensure Repository implements GitRepository
+// Ensure Repository implements GitRepository.
 var _ GitRepository = (*Repository)(nil)

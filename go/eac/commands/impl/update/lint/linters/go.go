@@ -3,6 +3,7 @@ package linters
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -48,13 +49,13 @@ func (h *GoHandler) Lint(moduleRoot, workspaceRoot, outputDir string, logWriter 
 	jsonOutputPath := filepath.Join(outputDir, "lint.json")
 
 	// Build golangci-lint arguments
-	args := []string{"run"}
-
-	// Add JSON output to file (v2 syntax)
-	args = append(args, "--output.json.path", jsonOutputPath)
-
-	// Disable text output to stdout (we only want JSON)
-	args = append(args, "--output.text.path", "")
+	args := []string{
+		"run",
+		// Add JSON output to file (v2 syntax)
+		"--output.json.path", jsonOutputPath,
+		// Disable text output to stdout (we only want JSON)
+		"--output.text.path", "",
+	}
 
 	// Add fix flag if requested
 	if opts.Fix {
@@ -93,7 +94,8 @@ func (h *GoHandler) Lint(moduleRoot, workspaceRoot, outputDir string, logWriter 
 
 	exitCode := 0
 	if err := cmd.Run(); err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		exitErr := &exec.ExitError{}
+		if errors.As(err, &exitErr) {
 			exitCode = exitErr.ExitCode()
 		} else {
 			Logln(logWriter, "Error running golangci-lint: %v", err)
@@ -115,7 +117,7 @@ func (h *GoHandler) Lint(moduleRoot, workspaceRoot, outputDir string, logWriter 
 	return exitCode
 }
 
-// golangciLintOutput represents the JSON output from golangci-lint
+// golangciLintOutput represents the JSON output from golangci-lint.
 type golangciLintOutput struct {
 	Issues []golangciLintIssue `json:"Issues"`
 }
@@ -180,7 +182,7 @@ func (h *GoHandler) summarizeResults(jsonPath string, logWriter io.Writer) error
 	return nil
 }
 
-// Emoji constants for output
+// Emoji constants for output.
 const (
 	emojiCheck = "\u2705" // check mark
 	emojiX     = "\u274C" // X mark

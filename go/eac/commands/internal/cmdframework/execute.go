@@ -10,7 +10,7 @@ import (
 // phaseExecute handles the execution phase:
 // - Set up worker function
 // - Run orchestrator (layered or parallel)
-// - Collect results
+// - Collect results.
 func phaseExecute(ctx *ExecutionContext, worker WorkerFunc) error {
 	if worker == nil {
 		return fmt.Errorf("worker function is required")
@@ -56,12 +56,12 @@ func phaseExecute(ctx *ExecutionContext, worker WorkerFunc) error {
 	return nil
 }
 
-// GetExitCode returns the overall exit code from results (0 if all succeeded)
+// GetExitCode returns the overall exit code from results (0 if all succeeded).
 func (ctx *ExecutionContext) GetExitCode() int {
 	return orchestrator.GetExitCode(ctx.Results)
 }
 
-// GetSuccessCount returns the number of successful results
+// GetSuccessCount returns the number of successful results.
 func (ctx *ExecutionContext) GetSuccessCount() int {
 	count := 0
 	for _, r := range ctx.Results {
@@ -72,7 +72,7 @@ func (ctx *ExecutionContext) GetSuccessCount() int {
 	return count
 }
 
-// GetFailureCount returns the number of failed results
+// GetFailureCount returns the number of failed results.
 func (ctx *ExecutionContext) GetFailureCount() int {
 	count := 0
 	for _, r := range ctx.Results {
@@ -83,7 +83,7 @@ func (ctx *ExecutionContext) GetFailureCount() int {
 	return count
 }
 
-// GetResultByMoniker finds a result by moniker
+// GetResultByMoniker finds a result by moniker.
 func (ctx *ExecutionContext) GetResultByMoniker(moniker string) *orchestrator.WorkResult {
 	for i := range ctx.Results {
 		if ctx.Results[i].Moniker == moniker {
@@ -93,7 +93,7 @@ func (ctx *ExecutionContext) GetResultByMoniker(moniker string) *orchestrator.Wo
 	return nil
 }
 
-// GetFailedMonikers returns the monikers of failed modules
+// GetFailedMonikers returns the monikers of failed modules.
 func (ctx *ExecutionContext) GetFailedMonikers() []string {
 	var failed []string
 	for _, r := range ctx.Results {

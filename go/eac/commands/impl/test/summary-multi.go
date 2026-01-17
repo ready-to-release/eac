@@ -12,7 +12,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
-// generateSummaryMulti generates a multi-module summary.md from test-run-id directory
+// generateSummaryMulti generates a multi-module summary.md from test-run-id directory.
 func generateSummaryMulti(testRunID string) error {
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
@@ -96,7 +96,7 @@ func generateSummaryMulti(testRunID string) error {
 	}
 
 	// Write summary.md
-	if err := os.WriteFile(summaryPath, []byte(summary), 0644); err != nil {
+	if err := os.WriteFile(summaryPath, []byte(summary), 0o644); err != nil {
 		return fmt.Errorf("failed to write summary.md: %w", err)
 	}
 

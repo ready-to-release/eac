@@ -8,21 +8,21 @@ import (
 	"time"
 )
 
-// BumpType indicates the type of version bump
+// BumpType indicates the type of version bump.
 type BumpType int
 
 const (
-	// BumpNone indicates no version bump needed
+	// BumpNone indicates no version bump needed.
 	BumpNone BumpType = iota
-	// BumpPatch indicates a patch version bump (x.y.Z)
+	// BumpPatch indicates a patch version bump (x.y.Z).
 	BumpPatch
-	// BumpMinor indicates a minor version bump (x.Y.0)
+	// BumpMinor indicates a minor version bump (x.Y.0).
 	BumpMinor
-	// BumpMajor indicates a major version bump (X.0.0)
+	// BumpMajor indicates a major version bump (X.0.0).
 	BumpMajor
 )
 
-// String returns the string representation of BumpType
+// String returns the string representation of BumpType.
 func (b BumpType) String() string {
 	switch b {
 	case BumpNone:
@@ -38,27 +38,34 @@ func (b BumpType) String() string {
 	}
 }
 
-// semverRegex matches semantic version format
+// semverRegex matches semantic version format.
 var semverRegex = regexp.MustCompile(`^(\d+)\.(\d+)\.(\d+)$`)
 
-// calverRegex matches calendar version format
-var calverRegex = regexp.MustCompile(`^(\d{4})\.(\d{2})\.(\d{2})(?:\.(\d+))?$`)
-
-// ParseSemver parses a semantic version string into major, minor, patch
+// ParseSemver parses a semantic version string into major, minor, patch.
 func ParseSemver(version string) (major, minor, patch int, err error) {
 	matches := semverRegex.FindStringSubmatch(version)
 	if matches == nil {
 		return 0, 0, 0, fmt.Errorf("invalid semver format: %s", version)
 	}
 
-	major, _ = strconv.Atoi(matches[1])
-	minor, _ = strconv.Atoi(matches[2])
-	patch, _ = strconv.Atoi(matches[3])
+	// Regex only captures digits, so Atoi errors indicate overflow
+	major, err = strconv.Atoi(matches[1])
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("invalid major version: %w", err)
+	}
+	minor, err = strconv.Atoi(matches[2])
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("invalid minor version: %w", err)
+	}
+	patch, err = strconv.Atoi(matches[3])
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("invalid patch version: %w", err)
+	}
 
 	return major, minor, patch, nil
 }
 
-// BumpSemver applies a bump to a semantic version
+// BumpSemver applies a bump to a semantic version.
 func BumpSemver(version string, bump BumpType) (string, error) {
 	major, minor, patch, err := ParseSemver(version)
 	if err != nil {
@@ -107,7 +114,7 @@ func NextCalver(date time.Time, existingVersions []string) string {
 	return baseVersion
 }
 
-// CommitTypeToBump maps conventional commit types to version bumps
+// CommitTypeToBump maps conventional commit types to version bumps.
 func CommitTypeToBump(commitType string, breaking bool) BumpType {
 	if breaking {
 		return BumpMajor
@@ -125,7 +132,7 @@ func CommitTypeToBump(commitType string, breaking bool) BumpType {
 	}
 }
 
-// MaxBump returns the higher of two bump types
+// MaxBump returns the higher of two bump types.
 func MaxBump(a, b BumpType) BumpType {
 	if a > b {
 		return a
@@ -133,7 +140,7 @@ func MaxBump(a, b BumpType) BumpType {
 	return b
 }
 
-// CalculateBump determines the appropriate version bump from entries
+// CalculateBump determines the appropriate version bump from entries.
 func CalculateBump(entries []Entry) BumpType {
 	maxBump := BumpNone
 
@@ -150,7 +157,7 @@ func CalculateBump(entries []Entry) BumpType {
 	return maxBump
 }
 
-// CalculateNextVersion determines the next version based on current and entries
+// CalculateNextVersion determines the next version based on current and entries.
 func CalculateNextVersion(current string, versionType VersionType, entries []Entry, now time.Time, existingVersions []string) (string, error) {
 	// Legacy function - assumes file changes if entries exist
 	hasFileChanges := len(entries) > 0
@@ -159,7 +166,7 @@ func CalculateNextVersion(current string, versionType VersionType, entries []Ent
 
 // CalculateNextVersionConstrained determines the next version with a maximum bump constraint
 // maxBump limits the highest bump type allowed (e.g., BumpPatch means only patch bumps are allowed)
-// hasFileChanges indicates if module files changed (determined by file ownership, not commit message)
+// hasFileChanges indicates if module files changed (determined by file ownership, not commit message).
 func CalculateNextVersionConstrained(current string, versionType VersionType, entries []Entry, now time.Time, existingVersions []string, maxBump BumpType, hasFileChanges bool) (string, error) {
 	if versionType == Calver {
 		// Calver always generates new version if there are file changes
@@ -195,7 +202,7 @@ func CalculateNextVersionConstrained(current string, versionType VersionType, en
 	return BumpSemver(current, bump)
 }
 
-// CommitTypeToChangeType maps conventional commit types to changelog categories
+// CommitTypeToChangeType maps conventional commit types to changelog categories.
 func CommitTypeToChangeType(commitType string) ChangeType {
 	switch commitType {
 	case "feat":

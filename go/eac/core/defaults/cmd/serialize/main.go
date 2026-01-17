@@ -93,7 +93,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := os.WriteFile(outputFile, data, 0644); err != nil {
+	if err := os.WriteFile(outputFile, data, 0o644); err != nil {
 		fmt.Fprintf(os.Stderr, "Error writing file: %v\n", err)
 		os.Exit(1)
 	}
@@ -102,7 +102,10 @@ func main() {
 }
 
 func findRepoRoot() string {
-	dir, _ := os.Getwd()
+	dir, err := os.Getwd()
+	if err != nil {
+		return "." // Fallback to current directory
+	}
 	for {
 		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
 			return dir

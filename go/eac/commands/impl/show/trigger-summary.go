@@ -33,7 +33,7 @@ func init() {
 	registry.Register(ShowTriggerSummary)
 }
 
-// ShowTriggerSummary generates a release trigger summary
+// ShowTriggerSummary generates a release trigger summary.
 func ShowTriggerSummary() int {
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {

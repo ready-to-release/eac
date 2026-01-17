@@ -49,7 +49,7 @@ func init() {
 	registry.Register(Remove)
 }
 
-// Remove removes a workspace and optionally deletes branches
+// Remove removes a workspace and optionally deletes branches.
 func Remove() int {
 	startTime := time.Now()
 
@@ -66,7 +66,7 @@ func Remove() int {
 		log.Errorf("Error: %v", err)
 		return 1
 	}
-	defer config.base.Logger.Sync()
+	defer func() { _ = config.base.Logger.Sync() }() //nolint:errcheck // best-effort logger sync
 
 	config.base.Logger.Debug("Phase 1: Starting parse configuration", zap.String("phase", "phase1"))
 
@@ -120,9 +120,9 @@ func Remove() int {
 			zap.String("phase", "phase3"),
 			zap.Duration("duration", time.Since(phaseStart)))
 	} else {
-		// Warn about force flag
-		clean, _ := config.base.GitOps.IsWorktreeClean(config.worktreePath)
-		if !clean {
+		// Warn about force flag (ignore error - just checking)
+		clean, cleanErr := config.base.GitOps.IsWorktreeClean(config.worktreePath)
+		if cleanErr == nil && !clean {
 			config.base.Logger.Warn("⚠️  Warning: Uncommitted changes will be lost")
 			config.base.Logger.Debug("Phase 3: Completed - force mode with uncommitted changes",
 				zap.String("phase", "phase3"),
@@ -292,7 +292,7 @@ func Remove() int {
 	return 0
 }
 
-// removeConfig holds configuration for the remove command
+// removeConfig holds configuration for the remove command.
 type removeConfig struct {
 	base         *internal.BaseConfig
 	branchName   string // Branch to remove (from args or current branch)
@@ -302,7 +302,7 @@ type removeConfig struct {
 	worktreePath string
 }
 
-// parseRemoveConfig parses command line arguments
+// parseRemoveConfig parses command line arguments.
 func parseRemoveConfig() (*removeConfig, error) {
 	args := os.Args[3:] // Skip program name, "work", "remove"
 
@@ -365,7 +365,7 @@ func parseRemoveConfig() (*removeConfig, error) {
 	return config, nil
 }
 
-// validateRemoveEnvironment validates the environment before removing
+// validateRemoveEnvironment validates the environment before removing.
 func validateRemoveEnvironment(config *removeConfig) error {
 	// Check we're in a git repository
 	if err := internal.EnsureInGitRepo(); err != nil {
@@ -380,7 +380,7 @@ func validateRemoveEnvironment(config *removeConfig) error {
 	return nil
 }
 
-// isInWorkspace checks if the current directory is in the workspace being removed
+// isInWorkspace checks if the current directory is in the workspace being removed.
 func isInWorkspace(worktreePath, repoRoot string) bool {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -391,7 +391,7 @@ func isInWorkspace(worktreePath, repoRoot string) bool {
 	return strings.EqualFold(cwd, worktreePath) || strings.HasPrefix(cwd, worktreePath)
 }
 
-// switchToMain switches to the main branch in the main workspace
+// switchToMain switches to the main branch in the main workspace.
 func switchToMain(repoRoot string) error {
 	// First verify which branch exists
 	// Try "main" first (preferred for modern git repositories)
@@ -430,7 +430,7 @@ func switchToMain(repoRoot string) error {
 	return fmt.Errorf("neither 'main' nor 'master' branch found in repository at %s", repoRoot)
 }
 
-// getDefaultBranch detects the default/trunk branch name (main or master)
+// getDefaultBranch detects the default/trunk branch name (main or master).
 func getDefaultBranch(repoRoot string) string {
 	// Try to get the default branch from git config
 	cmd := exec.Command("git", "config", "--get", "init.defaultBranch")
@@ -462,7 +462,7 @@ func getDefaultBranch(repoRoot string) string {
 	return "main"
 }
 
-// deleteRemoteBranch deletes the remote branch
+// deleteRemoteBranch deletes the remote branch.
 func deleteRemoteBranch(repoRoot, branch string) error {
 	cmd := exec.Command("git", "push", "origin", "--delete", branch)
 	cmd.Dir = repoRoot
@@ -473,7 +473,7 @@ func deleteRemoteBranch(repoRoot, branch string) error {
 	return nil
 }
 
-// remoteExists checks if a branch exists on the remote
+// remoteExists checks if a branch exists on the remote.
 func remoteExists(repoRoot, branch string) bool {
 	cmd := exec.Command("git", "ls-remote", "--heads", "origin", branch)
 	cmd.Dir = repoRoot

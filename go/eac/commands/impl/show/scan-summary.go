@@ -35,7 +35,7 @@ func init() {
 	registry.Register(ShowScanSummary)
 }
 
-// ShowScanSummary generates a pretty scan summary
+// ShowScanSummary generates a pretty scan summary.
 func ShowScanSummary() int {
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
@@ -84,7 +84,7 @@ func ShowScanSummary() int {
 	return generateScanSummaryFromManifest(module, mf, artifactName)
 }
 
-// generateScanSummaryFromManifest generates a scan summary from the scan manifest
+// generateScanSummaryFromManifest generates a scan summary from the scan manifest.
 func generateScanSummaryFromManifest(module string, mf *manifest.ScanManifest, artifactName string) int {
 	var sb strings.Builder
 
@@ -149,7 +149,7 @@ func generateScanSummaryFromManifest(module string, mf *manifest.ScanManifest, a
 	return 0
 }
 
-// truncate shortens a string to maxLen characters with "..." if needed
+// truncate shortens a string to maxLen characters with "..." if needed.
 func truncate(s string, maxLen int) string {
 	if len(s) <= maxLen {
 		return s

@@ -193,7 +193,7 @@ func classifyErrorIndicator(lowerText string) console.Level {
 }
 
 // isSummaryLine detects summary/statistics lines that should not be colored as errors.
-// Examples: "Tests: 10 passed, 0 failed", "0 errors", "Build completed"
+// Examples: "Tests: 10 passed, 0 failed", "0 errors", "Build completed".
 func isSummaryLine(lowerText string) bool {
 	summaryPatterns := []string{
 		"passed", "completed", "succeeded",
@@ -232,11 +232,11 @@ func (mw *MultiWriter) Write(p []byte) (n int, err error) {
 	for _, w := range mw.writers {
 		n, err = w.Write(p)
 		if err != nil {
-			return
+			return n, err
 		}
 		if n != len(p) {
 			err = io.ErrShortWrite
-			return
+			return n, err
 		}
 	}
 	return len(p), nil

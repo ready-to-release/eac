@@ -4,6 +4,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,7 +12,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// DefaultsVersion is the contract version for defaults
+// ErrNoDefaults is returned when a defaults file doesn't exist.
+// This is not an error condition - it just means defaults should be skipped.
+var ErrNoDefaults = errors.New("defaults file not found")
+
+// DefaultsVersion is the contract version for defaults.
 const DefaultsVersion = "0.1.0"
 
 // peekRepositoryType reads only the repository.type field from user config.
@@ -42,11 +47,11 @@ func peekRepositoryType(configRoot string) (string, error) {
 }
 
 // LoadRepositoryTypeDefaults loads type-specific repository defaults.
-// Returns nil if the type-specific defaults file doesn't exist (not an error).
+// Returns ErrNoDefaults if the type-specific defaults file doesn't exist (not an error condition).
 // Type-specific defaults are merged BETWEEN base defaults and user config.
 func LoadRepositoryTypeDefaults(repoRoot, repoType string) (*RepositoryConfig, error) {
 	if repoType == "" {
-		return nil, nil
+		return nil, ErrNoDefaults
 	}
 
 	filename := fmt.Sprintf("repository-%s.yml", repoType)
@@ -54,7 +59,7 @@ func LoadRepositoryTypeDefaults(repoRoot, repoType string) (*RepositoryConfig, e
 	if err != nil {
 		// Type-specific defaults are optional
 		if os.IsNotExist(err) {
-			return nil, nil
+			return nil, ErrNoDefaults
 		}
 		return nil, fmt.Errorf("loading repository type defaults (%s): %w", repoType, err)
 	}
@@ -69,13 +74,13 @@ func LoadRepositoryTypeDefaults(repoRoot, repoType string) (*RepositoryConfig, e
 
 // LoadRepositoryDefaults loads default repository config from contract defaults.
 // This now includes modules (unified config).
-// Returns nil (not error) when defaults don't exist - allows tests to work without contracts folder.
+// Returns ErrNoDefaults when defaults don't exist - allows tests to work without contracts folder.
 func LoadRepositoryDefaults(repoRoot string) (*RepositoryConfig, error) {
 	data, err := loadDefaultFile(repoRoot, "repository.yml")
 	if err != nil {
-		// Defaults are optional - return nil if they don't exist
+		// Defaults are optional - return ErrNoDefaults if they don't exist
 		if os.IsNotExist(err) {
-			return nil, nil
+			return nil, ErrNoDefaults
 		}
 		return nil, fmt.Errorf("loading repository defaults: %w", err)
 	}
@@ -93,13 +98,13 @@ func LoadRepositoryDefaults(repoRoot string) (*RepositoryConfig, error) {
 
 // LoadModuleTypesDefaults loads default module types from contract defaults.
 // These are merged with user-defined types (user types override defaults).
-// Returns nil (not error) when defaults don't exist - allows tests to use their own types.
+// Returns ErrNoDefaults when defaults don't exist - allows tests to use their own types.
 func LoadModuleTypesDefaults(repoRoot string) (*ModuleTypesConfig, error) {
 	data, err := loadDefaultFile(repoRoot, "module-types.yml")
 	if err != nil {
-		// Defaults are optional - return nil if they don't exist
+		// Defaults are optional - return ErrNoDefaults if they don't exist
 		if os.IsNotExist(err) {
-			return nil, nil
+			return nil, ErrNoDefaults
 		}
 		return nil, fmt.Errorf("loading module-types defaults: %w", err)
 	}
@@ -114,13 +119,13 @@ func LoadModuleTypesDefaults(repoRoot string) (*ModuleTypesConfig, error) {
 }
 
 // LoadSystemDependenciesDefaults loads default system dependencies from contract defaults.
-// Returns nil (not error) when defaults don't exist - allows tests to work without contracts folder.
+// Returns ErrNoDefaults when defaults don't exist - allows tests to work without contracts folder.
 func LoadSystemDependenciesDefaults(repoRoot string) (*SystemDependenciesConfig, error) {
 	data, err := loadDefaultFile(repoRoot, "system-dependencies.yml")
 	if err != nil {
-		// Defaults are optional - return nil if they don't exist
+		// Defaults are optional - return ErrNoDefaults if they don't exist
 		if os.IsNotExist(err) {
-			return nil, nil
+			return nil, ErrNoDefaults
 		}
 		return nil, fmt.Errorf("loading system-dependencies defaults: %w", err)
 	}
@@ -472,13 +477,13 @@ func MergeRepository(defaults, user *RepositoryConfig) *RepositoryConfig {
 }
 
 // LoadTestSuitesDefaults loads default test suites from contract defaults.
-// Returns nil (not error) when defaults don't exist - allows tests to work without contracts folder.
+// Returns ErrNoDefaults when defaults don't exist - allows tests to work without contracts folder.
 func LoadTestSuitesDefaults(repoRoot string) (*TestSuitesConfig, error) {
 	data, err := loadDefaultFile(repoRoot, "test-suites.yml")
 	if err != nil {
-		// Defaults are optional - return nil if they don't exist
+		// Defaults are optional - return ErrNoDefaults if they don't exist
 		if os.IsNotExist(err) {
-			return nil, nil
+			return nil, ErrNoDefaults
 		}
 		return nil, fmt.Errorf("loading test-suites defaults: %w", err)
 	}

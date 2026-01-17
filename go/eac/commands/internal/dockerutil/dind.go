@@ -14,18 +14,18 @@ import (
 
 const (
 	// EnvHostRepoRoot is the environment variable that contains the host repository root
-	// when running inside a Docker container (DinD mode)
+	// when running inside a Docker container (DinD mode).
 	EnvHostRepoRoot = "R2R_HOST_REPOROOT"
 
 	// EnvContainerRepoRoot is the environment variable that contains the container's
-	// view of the repository root (typically /var/task)
+	// view of the repository root (typically /var/task).
 	EnvContainerRepoRoot = "R2R_CONTAINER_REPOROOT"
 
-	// EnvDockerMode is explicitly set by r2r CLI when launching containers
+	// EnvDockerMode is explicitly set by r2r CLI when launching containers.
 	EnvDockerMode = "R2R_DOCKER_MODE"
 
 	// DefaultContainerRepoRoot is the default path where the repository is mounted
-	// inside the r2r CLI container
+	// inside the r2r CLI container.
 	DefaultContainerRepoRoot = "/var/task"
 )
 
@@ -34,7 +34,7 @@ const (
 // 1. R2R_HOST_REPOROOT environment variable (primary indicator)
 // 2. R2R_DOCKER_MODE explicit flag
 // 3. Windows host path while running on Linux
-// 4. /.dockerenv file exists
+// 4. /.dockerenv file exists.
 func IsDinD() bool {
 	// Primary check: R2R_HOST_REPOROOT is set
 	if os.Getenv(EnvHostRepoRoot) != "" {

@@ -11,13 +11,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestEnsureRootIndex_ExistingFile verifies that existing index.md is preserved
+// TestEnsureRootIndex_ExistingFile verifies that existing index.md is preserved.
 func TestEnsureRootIndex_ExistingFile(t *testing.T) {
 	// Arrange
 	stagingDir := t.TempDir()
 	indexPath := filepath.Join(stagingDir, "index.md")
 	existingContent := "# Existing Index\nThis should be preserved."
-	require.NoError(t, os.WriteFile(indexPath, []byte(existingContent), 0644))
+	require.NoError(t, os.WriteFile(indexPath, []byte(existingContent), 0o644))
 
 	p := &Preprocessor{
 		stagingDir: stagingDir,
@@ -35,7 +35,7 @@ func TestEnsureRootIndex_ExistingFile(t *testing.T) {
 	assert.Equal(t, existingContent, string(content), "Existing index.md should be preserved")
 }
 
-// TestEnsureRootIndex_GenerateNew verifies that index.md is generated when missing
+// TestEnsureRootIndex_GenerateNew verifies that index.md is generated when missing.
 func TestEnsureRootIndex_GenerateNew(t *testing.T) {
 	// Arrange
 	stagingDir := t.TempDir()
@@ -64,7 +64,7 @@ func TestEnsureRootIndex_GenerateNew(t *testing.T) {
 	assert.Contains(t, contentStr, "# Test Book Title")
 }
 
-// TestGenerateTOC_Empty verifies TOC generation with no files
+// TestGenerateTOC_Empty verifies TOC generation with no files.
 func TestGenerateTOC_Empty(t *testing.T) {
 	// Arrange
 	stagingDir := t.TempDir()
@@ -81,7 +81,7 @@ func TestGenerateTOC_Empty(t *testing.T) {
 	assert.Empty(t, toc, "TOC should be empty when no files exist")
 }
 
-// TestGenerateTOC_WithFiles verifies TOC generation with markdown files
+// TestGenerateTOC_WithFiles verifies TOC generation with markdown files.
 func TestGenerateTOC_WithFiles(t *testing.T) {
 	// Arrange
 	stagingDir := t.TempDir()
@@ -90,8 +90,8 @@ func TestGenerateTOC_WithFiles(t *testing.T) {
 	file1 := filepath.Join(stagingDir, "intro.md")
 	file2 := filepath.Join(stagingDir, "guide.md")
 
-	require.NoError(t, os.WriteFile(file1, []byte("# Introduction\nIntro content"), 0644))
-	require.NoError(t, os.WriteFile(file2, []byte("# User Guide\nGuide content"), 0644))
+	require.NoError(t, os.WriteFile(file1, []byte("# Introduction\nIntro content"), 0o644))
+	require.NoError(t, os.WriteFile(file2, []byte("# User Guide\nGuide content"), 0o644))
 
 	p := &Preprocessor{
 		stagingDir: stagingDir,
@@ -108,7 +108,7 @@ func TestGenerateTOC_WithFiles(t *testing.T) {
 	assert.Contains(t, toc, "User Guide")
 }
 
-// TestGetTitleFromFile_Frontmatter verifies title extraction from frontmatter
+// TestGetTitleFromFile_Frontmatter verifies title extraction from frontmatter.
 func TestGetTitleFromFile_Frontmatter(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
@@ -118,7 +118,7 @@ title: "Frontmatter Title"
 ---
 # Heading Title
 Content here.`
-	require.NoError(t, os.WriteFile(filePath, []byte(content), 0644))
+	require.NoError(t, os.WriteFile(filePath, []byte(content), 0o644))
 
 	p := &Preprocessor{}
 
@@ -129,14 +129,14 @@ Content here.`
 	assert.Equal(t, "Frontmatter Title", title, "Should extract title from frontmatter")
 }
 
-// TestGetTitleFromFile_Heading verifies title extraction from H1 heading
+// TestGetTitleFromFile_Heading verifies title extraction from H1 heading.
 func TestGetTitleFromFile_Heading(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
 	filePath := filepath.Join(dir, "test.md")
 	content := `# Heading Title
 Content here.`
-	require.NoError(t, os.WriteFile(filePath, []byte(content), 0644))
+	require.NoError(t, os.WriteFile(filePath, []byte(content), 0o644))
 
 	p := &Preprocessor{}
 
@@ -147,13 +147,13 @@ Content here.`
 	assert.Equal(t, "Heading Title", title, "Should extract title from H1 heading")
 }
 
-// TestGetTitleFromFile_Filename verifies title extraction from filename fallback
+// TestGetTitleFromFile_Filename verifies title extraction from filename fallback.
 func TestGetTitleFromFile_Filename(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
 	filePath := filepath.Join(dir, "user-guide.md")
 	content := `No title here.`
-	require.NoError(t, os.WriteFile(filePath, []byte(content), 0644))
+	require.NoError(t, os.WriteFile(filePath, []byte(content), 0o644))
 
 	p := &Preprocessor{}
 
@@ -164,7 +164,7 @@ func TestGetTitleFromFile_Filename(t *testing.T) {
 	assert.Equal(t, "User Guide", title, "Should generate title from filename")
 }
 
-// TestFilenameToTitle verifies filename to title conversion
+// TestFilenameToTitle verifies filename to title conversion.
 func TestFilenameToTitle(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -201,7 +201,7 @@ func TestFilenameToTitle(t *testing.T) {
 	}
 }
 
-// TestGetOrderForFile verifies command source ordering
+// TestGetOrderForFile verifies command source ordering.
 func TestGetOrderForFile(t *testing.T) {
 	// Arrange
 	p := &Preprocessor{
@@ -252,7 +252,7 @@ func TestGetOrderForFile(t *testing.T) {
 	}
 }
 
-// TestCollectTOCFromFilesystem verifies filesystem-based TOC collection
+// TestCollectTOCFromFilesystem verifies filesystem-based TOC collection.
 func TestCollectTOCFromFilesystem(t *testing.T) {
 	// Arrange
 	stagingDir := t.TempDir()
@@ -261,12 +261,12 @@ func TestCollectTOCFromFilesystem(t *testing.T) {
 	file1 := filepath.Join(stagingDir, "a-first.md")
 	file2 := filepath.Join(stagingDir, "z-last.md")
 	subdir := filepath.Join(stagingDir, "subdir")
-	require.NoError(t, os.Mkdir(subdir, 0755))
+	require.NoError(t, os.Mkdir(subdir, 0o755))
 	file3 := filepath.Join(subdir, "index.md")
 
-	require.NoError(t, os.WriteFile(file1, []byte("# First\nContent"), 0644))
-	require.NoError(t, os.WriteFile(file2, []byte("# Last\nContent"), 0644))
-	require.NoError(t, os.WriteFile(file3, []byte("# Subdir Index\nContent"), 0644))
+	require.NoError(t, os.WriteFile(file1, []byte("# First\nContent"), 0o644))
+	require.NoError(t, os.WriteFile(file2, []byte("# Last\nContent"), 0o644))
+	require.NoError(t, os.WriteFile(file3, []byte("# Subdir Index\nContent"), 0o644))
 
 	p := &Preprocessor{
 		stagingDir: stagingDir,
@@ -293,7 +293,7 @@ func TestCollectTOCFromFilesystem(t *testing.T) {
 	assert.Contains(t, fileTitles, "Last")
 }
 
-// TestToTitleCase verifies title case conversion
+// TestToTitleCase verifies title case conversion.
 func TestToTitleCase(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -330,7 +330,7 @@ func TestToTitleCase(t *testing.T) {
 	}
 }
 
-// TestValidateNavEntry_ValidFile verifies validation of valid markdown file
+// TestValidateNavEntry_ValidFile verifies validation of valid markdown file.
 func TestValidateNavEntry_ValidFile(t *testing.T) {
 	// Arrange
 	p := &Preprocessor{
@@ -349,7 +349,7 @@ func TestValidateNavEntry_ValidFile(t *testing.T) {
 	assert.True(t, referenced["test.md"])
 }
 
-// TestValidateNavEntry_MissingFile verifies validation rejects missing files
+// TestValidateNavEntry_MissingFile verifies validation rejects missing files.
 func TestValidateNavEntry_MissingFile(t *testing.T) {
 	// Arrange
 	p := &Preprocessor{
@@ -366,7 +366,7 @@ func TestValidateNavEntry_MissingFile(t *testing.T) {
 	assert.Nil(t, result, "Missing file should return nil")
 }
 
-// TestValidateNavEntry_ValidDirectory verifies validation of valid directory
+// TestValidateNavEntry_ValidDirectory verifies validation of valid directory.
 func TestValidateNavEntry_ValidDirectory(t *testing.T) {
 	// Arrange
 	p := &Preprocessor{
@@ -385,7 +385,7 @@ func TestValidateNavEntry_ValidDirectory(t *testing.T) {
 	assert.True(t, referenced["subdir/"])
 }
 
-// TestValidateNavEntry_TitledEntry verifies validation of titled entries
+// TestValidateNavEntry_TitledEntry verifies validation of titled entries.
 func TestValidateNavEntry_TitledEntry(t *testing.T) {
 	// Arrange
 	p := &Preprocessor{
@@ -410,12 +410,12 @@ func TestValidateNavEntry_TitledEntry(t *testing.T) {
 	assert.True(t, referenced["intro.md"])
 }
 
-// TestGenerateNavForDir_EmptyDir verifies nav generation for empty directory
+// TestGenerateNavForDir_EmptyDir verifies nav generation for empty directory.
 func TestGenerateNavForDir_EmptyDir(t *testing.T) {
 	// Arrange
 	stagingDir := t.TempDir()
 	emptyDir := filepath.Join(stagingDir, "empty")
-	require.NoError(t, os.Mkdir(emptyDir, 0755))
+	require.NoError(t, os.Mkdir(emptyDir, 0o755))
 
 	p := &Preprocessor{
 		stagingDir: stagingDir,
@@ -434,16 +434,16 @@ func TestGenerateNavForDir_EmptyDir(t *testing.T) {
 	assert.True(t, os.IsNotExist(err), ".nav.yml should not exist for empty directory")
 }
 
-// TestGenerateNavForDir_WithFiles verifies nav generation with files
+// TestGenerateNavForDir_WithFiles verifies nav generation with files.
 func TestGenerateNavForDir_WithFiles(t *testing.T) {
 	// Arrange
 	stagingDir := t.TempDir()
 	dir := filepath.Join(stagingDir, "docs")
-	require.NoError(t, os.Mkdir(dir, 0755))
+	require.NoError(t, os.Mkdir(dir, 0o755))
 
 	// Create test files
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "index.md"), []byte("# Index"), 0644))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "guide.md"), []byte("# Guide"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "index.md"), []byte("# Index"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "guide.md"), []byte("# Guide"), 0o644))
 
 	p := &Preprocessor{
 		stagingDir: stagingDir,
@@ -468,13 +468,13 @@ func TestGenerateNavForDir_WithFiles(t *testing.T) {
 	assert.Contains(t, contentStr, "guide.md")
 }
 
-// TestScanMarkdownFiles verifies markdown file scanning
+// TestScanMarkdownFiles verifies markdown file scanning.
 func TestScanMarkdownFiles(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "test.md"), []byte("# Test"), 0644))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "other.md"), []byte("# Other"), 0644))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "readme.txt"), []byte("Text"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "test.md"), []byte("# Test"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "other.md"), []byte("# Other"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "readme.txt"), []byte("Text"), 0o644))
 
 	p := &Preprocessor{logWriter: &bytes.Buffer{}}
 
@@ -488,7 +488,7 @@ func TestScanMarkdownFiles(t *testing.T) {
 	assert.False(t, files["readme.txt"], "Non-markdown files should not be included")
 }
 
-// TestScanSubdirectories verifies subdirectory scanning
+// TestScanSubdirectories verifies subdirectory scanning.
 func TestScanSubdirectories(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
@@ -496,13 +496,13 @@ func TestScanSubdirectories(t *testing.T) {
 	subdir2 := filepath.Join(dir, "guides")
 	emptyDir := filepath.Join(dir, "empty")
 
-	require.NoError(t, os.Mkdir(subdir1, 0755))
-	require.NoError(t, os.Mkdir(subdir2, 0755))
-	require.NoError(t, os.Mkdir(emptyDir, 0755))
+	require.NoError(t, os.Mkdir(subdir1, 0o755))
+	require.NoError(t, os.Mkdir(subdir2, 0o755))
+	require.NoError(t, os.Mkdir(emptyDir, 0o755))
 
 	// Add markdown file to make subdirs non-empty
-	require.NoError(t, os.WriteFile(filepath.Join(subdir1, "test.md"), []byte("# Test"), 0644))
-	require.NoError(t, os.WriteFile(filepath.Join(subdir2, "guide.md"), []byte("# Guide"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(subdir1, "test.md"), []byte("# Test"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(subdir2, "guide.md"), []byte("# Guide"), 0o644))
 
 	p := &Preprocessor{logWriter: &bytes.Buffer{}}
 

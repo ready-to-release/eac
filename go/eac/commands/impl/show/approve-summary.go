@@ -33,7 +33,7 @@ func init() {
 	registry.Register(ShowApproveSummary)
 }
 
-// ShowApproveSummary generates a release approval summary
+// ShowApproveSummary generates a release approval summary.
 func ShowApproveSummary() int {
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {

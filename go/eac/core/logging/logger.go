@@ -40,7 +40,7 @@ func New(cfg Config) (*Logger, error) {
 }
 
 // NewDefault creates a logger with file logging enabled.
-// Logs go to: out/commands.log
+// Logs go to: out/commands.log.
 func NewDefault(command, workspaceRoot string) (*Logger, error) {
 	cfg := DefaultConfig(command, workspaceRoot).WithFileLogging(true)
 	return New(cfg)
@@ -49,7 +49,7 @@ func NewDefault(command, workspaceRoot string) (*Logger, error) {
 // NewForModule creates a logger for build/test with module-based logging.
 // Logs go to: out/commands.log + target from logging.yml (if configured)
 // Example for build: out/commands.log + out/build/eac-core/build.log
-// Example for test: out/commands.log + out/test/eac-core/test.log
+// Example for test: out/commands.log + out/test/eac-core/test.log.
 func NewForModule(command, workspaceRoot, module string) (*Logger, error) {
 	cfg := DefaultConfig(command, workspaceRoot).
 		WithModule(module).
@@ -75,28 +75,28 @@ func NewWithFileLogging(command, workspaceRoot string) (*Logger, error) {
 
 // Debug logs a debug message.
 // Console: only shown when debug mode is enabled
-// File: written when file logging is enabled
+// File: written when file logging is enabled.
 func (l *Logger) Debug(msg string, fields ...zap.Field) {
 	l.Logger.Debug(msg, fields...)
 }
 
 // Info logs an info message.
 // Console: always shown
-// File: written when file logging is enabled
+// File: written when file logging is enabled.
 func (l *Logger) Info(msg string, fields ...zap.Field) {
 	l.Logger.Info(msg, fields...)
 }
 
 // Warn logs a warning message.
 // Console: always shown
-// File: written when file logging is enabled
+// File: written when file logging is enabled.
 func (l *Logger) Warn(msg string, fields ...zap.Field) {
 	l.Logger.Warn(msg, fields...)
 }
 
 // Error logs an error message.
 // Console: always shown
-// File: written when file logging is enabled
+// File: written when file logging is enabled.
 func (l *Logger) Error(msg string, fields ...zap.Field) {
 	l.Logger.Error(msg, fields...)
 }

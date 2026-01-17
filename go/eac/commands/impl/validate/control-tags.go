@@ -49,14 +49,14 @@ var (
 	controlsTagPattern = regexp.MustCompile(`@controls:((?:[a-z]{2,4}-[0-9]+(?:\([0-9]+\))?,)*[a-z]{2,4}-[0-9]+(?:\([0-9]+\))?)`)
 )
 
-// ControlTagUsage tracks where a control tag is used
+// ControlTagUsage tracks where a control tag is used.
 type ControlTagUsage struct {
 	ControlID string
 	FilePath  string
 	LineNum   int
 }
 
-// ControlTags validates @control and @controls tags against OSCAL catalog
+// ControlTags validates @control and @controls tags against OSCAL catalog.
 func ControlTags() int {
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
@@ -120,7 +120,6 @@ func ControlTags() int {
 		}
 		return nil
 	})
-
 	if err != nil {
 		ctlog.Errorf("Error: failed to discover feature files: %v", err)
 		return 1
@@ -183,7 +182,10 @@ func ControlTags() int {
 		usages := byControlID[controlID]
 		ctlog.Errorf("  Control '%s' not found in catalog:", controlID)
 		for _, usage := range usages {
-			relPath, _ := filepath.Rel(workspaceRoot, usage.FilePath)
+			relPath, relErr := filepath.Rel(workspaceRoot, usage.FilePath)
+			if relErr != nil {
+				relPath = usage.FilePath
+			}
 			ctlog.Errorf("    - %s:%d", relPath, usage.LineNum)
 		}
 	}
@@ -198,8 +200,8 @@ func ControlTags() int {
 	return 1
 }
 
-// extractControlTags extracts all control tags from a feature file
-func extractControlTags(featurePath string, workspaceRoot string) ([]ControlTagUsage, error) {
+// extractControlTags extracts all control tags from a feature file.
+func extractControlTags(featurePath, workspaceRoot string) ([]ControlTagUsage, error) {
 	content, err := os.ReadFile(featurePath)
 	if err != nil {
 		return nil, err

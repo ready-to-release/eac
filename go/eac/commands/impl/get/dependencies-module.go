@@ -31,7 +31,7 @@ func init() {
 	registry.Register(GetDependenciesModule)
 }
 
-// DependenciesOutput represents the output structure
+// DependenciesOutput represents the output structure.
 type DependenciesOutput struct {
 	Module       string   `json:"module" yaml:"module"`
 	Dependencies []string `json:"dependencies" yaml:"dependencies"`

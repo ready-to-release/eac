@@ -14,7 +14,7 @@ func init() {
 
 // RenderSummary produces a human-readable summary of module contracts
 // Input: YAML bytes representing module contracts
-// Output: Text summary with counts and statistics
+// Output: Text summary with counts and statistics.
 func RenderSummary(yamlBytes []byte) (string, error) {
 	// Parse YAML to extract module information
 	var modules []map[string]interface{}
@@ -58,17 +58,19 @@ func RenderSummary(yamlBytes []byte) (string, error) {
 	// List all module monikers
 	sb.WriteString("\n--- Module Monikers ---\n")
 	for _, module := range modules {
-		if moniker, ok := module["moniker"].(string); ok {
-			name := ""
-			if n, ok := module["name"].(string); ok {
-				name = n
-			}
-			sb.WriteString(fmt.Sprintf("  • %s", moniker))
-			if name != "" && name != moniker {
-				sb.WriteString(fmt.Sprintf(" (%s)", name))
-			}
-			sb.WriteString("\n")
+		moniker, ok := module["moniker"].(string)
+		if !ok {
+			continue
 		}
+		name := ""
+		if n, ok := module["name"].(string); ok {
+			name = n
+		}
+		sb.WriteString(fmt.Sprintf("  • %s", moniker))
+		if name != "" && name != moniker {
+			sb.WriteString(fmt.Sprintf(" (%s)", name))
+		}
+		sb.WriteString("\n")
 	}
 
 	return sb.String(), nil

@@ -35,7 +35,7 @@ func init() {
 	registry.Register(PipelineDownloadEvidenceArtifacts)
 }
 
-// DownloadResult tracks what was downloaded
+// DownloadResult tracks what was downloaded.
 type DownloadResult struct {
 	Module        string   `json:"module" yaml:"module"`
 	RunID         int      `json:"run_id" yaml:"run_id"`
@@ -86,11 +86,11 @@ func PipelineDownloadEvidenceArtifacts() int {
 	testDir := filepath.Join(outputDir, "test")
 	scanDir := filepath.Join(outputDir, "scan")
 
-	if err := os.MkdirAll(testDir, 0755); err != nil {
+	if err := os.MkdirAll(testDir, 0o755); err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating test directory: %v\n", err)
 		return 1
 	}
-	if err := os.MkdirAll(scanDir, 0755); err != nil {
+	if err := os.MkdirAll(scanDir, 0o755); err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating scan directory: %v\n", err)
 		return 1
 	}
@@ -165,7 +165,7 @@ func PipelineDownloadEvidenceArtifacts() int {
 }
 
 // getEvidenceCIRunsInternal gets CI runs for a module and its dependencies
-// Returns (ciRuns, skippedModules, error)
+// Returns (ciRuns, skippedModules, error).
 func getEvidenceCIRunsInternal(moniker, workspaceRoot string) ([]get.EvidenceCIRun, []string, error) {
 	// Load module registry
 	moduleRegistry, err := modules.LoadFromWorkspace(workspaceRoot)
@@ -227,7 +227,7 @@ func getEvidenceCIRunsInternal(moniker, workspaceRoot string) ([]get.EvidenceCIR
 	return ciRuns, skipped, nil
 }
 
-// getTransitiveDeps returns a module and all its transitive dependencies
+// getTransitiveDeps returns a module and all its transitive dependencies.
 func getTransitiveDeps(moniker string, reg *modules.Registry) []string {
 	seen := make(map[string]bool)
 	var result []string
@@ -256,7 +256,7 @@ func getTransitiveDeps(moniker string, reg *modules.Registry) []string {
 }
 
 // downloadArtifacts downloads artifacts matching a pattern from a workflow run
-// Returns the list of downloaded artifact names
+// Returns the list of downloaded artifact names.
 func downloadArtifacts(runID int, pattern, destDir, workspaceRoot string) ([]string, error) {
 	// Use gh run download with pattern matching
 	cmd := exec.Command("gh", "run", "download",
@@ -292,10 +292,12 @@ func downloadArtifacts(runID int, pattern, destDir, workspaceRoot string) ([]str
 	// If we got no output but no error, assume success
 	if len(downloaded) == 0 && err == nil {
 		// Try to detect what was downloaded by listing the directory
-		entries, _ := os.ReadDir(destDir)
-		for _, e := range entries {
-			if e.IsDir() && strings.Contains(e.Name(), strings.TrimSuffix(strings.TrimSuffix(pattern, "*"), "-")) {
-				downloaded = append(downloaded, e.Name())
+		entries, readErr := os.ReadDir(destDir)
+		if readErr == nil {
+			for _, e := range entries {
+				if e.IsDir() && strings.Contains(e.Name(), strings.TrimSuffix(strings.TrimSuffix(pattern, "*"), "-")) {
+					downloaded = append(downloaded, e.Name())
+				}
 			}
 		}
 	}
@@ -311,7 +313,7 @@ func downloadArtifacts(runID int, pattern, destDir, workspaceRoot string) ([]str
 
 // flattenArtifactDirs flattens the artifact directory structure.
 // gh run download creates: destDir/artifact-name/module/files
-// We need: destDir/module/files
+// We need: destDir/module/files.
 func flattenArtifactDirs(destDir string) error {
 	entries, err := os.ReadDir(destDir)
 	if err != nil {
@@ -366,7 +368,7 @@ func flattenArtifactDirs(destDir string) error {
 	return nil
 }
 
-// mergeDirectories recursively merges src into dst
+// mergeDirectories recursively merges src into dst.
 func mergeDirectories(src, dst string) error {
 	entries, err := os.ReadDir(src)
 	if err != nil {
@@ -379,7 +381,7 @@ func mergeDirectories(src, dst string) error {
 
 		if entry.IsDir() {
 			// Create destination dir if needed
-			if err := os.MkdirAll(dstPath, 0755); err != nil {
+			if err := os.MkdirAll(dstPath, 0o755); err != nil {
 				return err
 			}
 			// Recurse

@@ -9,25 +9,25 @@ import (
 	"time"
 )
 
-// Parser regular expressions
+// Parser regular expressions.
 var (
-	// Matches version headers like "## [1.2.0] - 2025-12-01" or "## [Unreleased]"
+	// Matches version headers like "## [1.2.0] - 2025-12-01" or "## [Unreleased]".
 	versionHeaderRegex = regexp.MustCompile(`^##\s+\[([^\]]+)\](?:\s*-\s*(\d{4}-\d{2}-\d{2}))?(?:\s+\[YANKED\])?`)
 
-	// Matches section headers like "### Added"
+	// Matches section headers like "### Added".
 	sectionHeaderRegex = regexp.MustCompile(`^###\s+(.+)$`)
 
-	// Matches list items like "- description"
+	// Matches list items like "- description".
 	listItemRegex = regexp.MustCompile(`^-\s+(.+)$`)
 
 	// Matches link definitions like "[1.0.0]: https://..."
 	linkDefRegex = regexp.MustCompile(`^\[([^\]]+)\]:\s+(.+)$`)
 
-	// Matches conventional commit format in entry: "feat(scope): description"
+	// Matches conventional commit format in entry: "feat(scope): description".
 	conventionalEntryRegex = regexp.MustCompile(`^(feat|fix|refactor|docs|chore|test|perf|style)(\([^)]+\))?(!)?:\s*(.+)$`)
 )
 
-// Parse reads and parses a CHANGELOG.md file
+// Parse reads and parses a CHANGELOG.md file.
 func Parse(path string) (*Changelog, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -38,13 +38,13 @@ func Parse(path string) (*Changelog, error) {
 	return ParseReader(bufio.NewScanner(file))
 }
 
-// ParseString parses changelog content from a string
+// ParseString parses changelog content from a string.
 func ParseString(content string) (*Changelog, error) {
 	scanner := bufio.NewScanner(strings.NewReader(content))
 	return ParseReader(scanner)
 }
 
-// ParseReader parses changelog content from a scanner
+// ParseReader parses changelog content from a scanner.
 func ParseReader(scanner *bufio.Scanner) (*Changelog, error) {
 	changelog := &Changelog{
 		Title:       "Changelog",
@@ -156,7 +156,7 @@ func ParseReader(scanner *bufio.Scanner) (*Changelog, error) {
 	return changelog, nil
 }
 
-// parseEntry parses a list item into an Entry
+// parseEntry parses a list item into an Entry.
 func parseEntry(text string) Entry {
 	entry := Entry{
 		Description: text,
@@ -176,7 +176,7 @@ func parseEntry(text string) Entry {
 	return entry
 }
 
-// addEntryToVersion adds an entry to the appropriate section
+// addEntryToVersion adds an entry to the appropriate section.
 func addEntryToVersion(v *Version, section ChangeType, entry Entry) {
 	switch section {
 	case Added:
@@ -194,7 +194,7 @@ func addEntryToVersion(v *Version, section ChangeType, entry Entry) {
 	}
 }
 
-// isCalverVersion checks if a version string looks like calendar versioning
+// isCalverVersion checks if a version string looks like calendar versioning.
 func isCalverVersion(version string) bool {
 	// Calver format: YYYY.MM.DD or YYYY.MM.DD.N
 	calverRegex := regexp.MustCompile(`^\d{4}\.\d{2}\.\d{2}(\.\d+)?$`)

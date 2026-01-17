@@ -50,14 +50,14 @@ func ValidatePinnedExtensions(cfg *Config, isCI bool) ([]string, error) {
 	// Get repository root for cache operations
 	repoRoot := RootDir
 	if repoRoot == "" {
-		repoRoot, _ = FindRepositoryRoot()
+		repoRoot, _ = FindRepositoryRoot() //nolint:errcheck // fall through with empty repoRoot
 	}
 
-	// Load or create cache
-	registryCache, _ := cache.LoadRegistryCache(repoRoot)
+	// Load or create cache (errors are non-fatal - we'll use empty cache)
+	registryCache, _ := cache.LoadRegistryCache(repoRoot) //nolint:errcheck // empty cache on error
 	if registryCache == nil {
 		// Create new empty cache if none exists
-		registryCache, _ = cache.LoadRegistryCache(repoRoot) // This returns an empty cache when file doesn't exist
+		registryCache, _ = cache.LoadRegistryCache(repoRoot) //nolint:errcheck // empty cache on error
 	}
 
 	// Determine cache TTL

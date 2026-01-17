@@ -83,8 +83,8 @@ func (rb *RingBuffer) Last(n int) []Line {
 // GetRange returns count lines starting from offset from the end.
 // offset=0 means most recent lines (same as Last())
 // offset=10 means skip the 10 most recent lines, then return count lines
-// This is used for scrolling: higher offset = older content
-func (rb *RingBuffer) GetRange(offset int, count int) []Line {
+// This is used for scrolling: higher offset = older content.
+func (rb *RingBuffer) GetRange(offset, count int) []Line {
 	rb.mu.RLock()
 	defer rb.mu.RUnlock()
 

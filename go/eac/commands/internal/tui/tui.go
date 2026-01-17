@@ -17,9 +17,9 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/tui/stream"
 )
 
-// Default TUI configuration values
+// Default TUI configuration values.
 const (
-	// DefaultHeight is the default TUI console height in rows (3-20)
+	// DefaultHeight is the default TUI console height in rows (3-20).
 	DefaultHeight = 15
 )
 
@@ -92,10 +92,10 @@ func (c *Console) Start(ctx context.Context) error {
 	// Disable signal handler so our custom handler can catch Ctrl-C
 	// Start with mouse mode enabled for scrolling
 	c.program = tea.NewProgram(model,
-		tea.WithAltScreen(),           // Take over screen, restore on exit
+		tea.WithAltScreen(), // Take over screen, restore on exit
 		tea.WithoutBracketedPaste(),
-		tea.WithoutSignalHandler(),    // Let our custom signal handler catch Ctrl-C
-		tea.WithMouseCellMotion(),     // Enable mouse for scrolling
+		tea.WithoutSignalHandler(), // Let our custom signal handler catch Ctrl-C
+		tea.WithMouseCellMotion(),  // Enable mouse for scrolling
 	)
 
 	// Signal that TUI is ready
@@ -168,6 +168,7 @@ func (c *Console) Start(ctx context.Context) error {
 // Waits for TUI to be ready before returning. Call Stop to stop the program.
 func (c *Console) StartAsync(ctx context.Context) {
 	go func() {
+		//nolint:errcheck // TUI errors are non-fatal in async mode
 		_ = c.Start(ctx)
 	}()
 
@@ -301,7 +302,7 @@ func (c *Console) SendError(source, text string) {
 	})
 }
 
-// SetPhase switches to a new phase (Init, Run, End)
+// SetPhase switches to a new phase (Init, Run, End).
 func (c *Console) SetPhase(phase Phase) {
 	c.mu.Lock()
 	stopped := c.stopped
@@ -319,7 +320,7 @@ func (c *Console) SetPhase(phase Phase) {
 	})
 }
 
-// SetPhaseSummary sets the summary text for a collapsed phase
+// SetPhaseSummary sets the summary text for a collapsed phase.
 func (c *Console) SetPhaseSummary(phase Phase, summary string) {
 	c.mu.Lock()
 	stopped := c.stopped
@@ -336,7 +337,7 @@ func (c *Console) SetPhaseSummary(phase Phase, summary string) {
 	})
 }
 
-// CompletePhase marks a phase as complete with a summary
+// CompletePhase marks a phase as complete with a summary.
 func (c *Console) CompletePhase(phase Phase, success bool, summary string) {
 	c.mu.Lock()
 	stopped := c.stopped
@@ -359,7 +360,7 @@ func (c *Console) CompletePhase(phase Phase, success bool, summary string) {
 	})
 }
 
-// WriteToPhase writes a line to a specific phase's buffer
+// WriteToPhase writes a line to a specific phase's buffer.
 func (c *Console) WriteToPhase(phase Phase, text string) {
 	c.mu.Lock()
 	stopped := c.stopped
@@ -381,7 +382,7 @@ func (c *Console) WriteToPhase(phase Phase, text string) {
 	})
 }
 
-// WriteResult writes a line to the results buffer (appears below Run pane)
+// WriteResult writes a line to the results buffer (appears below Run pane).
 func (c *Console) WriteResult(text string) {
 	c.mu.Lock()
 	stopped := c.stopped
@@ -402,7 +403,7 @@ func (c *Console) WriteResult(text string) {
 	})
 }
 
-// SendSummary sends summary data and activates the Summary pane
+// SendSummary sends summary data and activates the Summary pane.
 func (c *Console) SendSummary(data *SummaryData) {
 	c.mu.Lock()
 	stopped := c.stopped
@@ -458,7 +459,7 @@ const (
 	PhaseFailed   = console.PhaseFailed
 )
 
-// printSummary prints a plain-text summary after the TUI exits
+// printSummary prints a plain-text summary after the TUI exits.
 func (c *Console) printSummary(m *console.Model) {
 	// Use the console package's ViewFinal method to generate plain-text output
 	summary := m.ViewFinal()

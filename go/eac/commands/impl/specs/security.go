@@ -12,7 +12,7 @@ import (
 // ExtractFeatureName extracts module and feature name from Gherkin content
 // Expected format: "Feature: module_feature-name" or "Feature: feature-name"
 //
-// Security: Validates feature line for path traversal, path separators, and control characters
+// Security: Validates feature line for path traversal, path separators, and control characters.
 func ExtractFeatureName(gherkin string) (string, string, error) {
 	// Find Feature: line
 	re := regexp.MustCompile(`(?m)^Feature:\s+(.+?)$`)
@@ -62,7 +62,7 @@ func ExtractFeatureName(gherkin string) (string, string, error) {
 // This function prevents:
 // - Path traversal attacks (../)
 // - Path separators (/ and \)
-// - Control characters (except tab which is trimmed)
+// - Control characters (except tab which is trimmed).
 func ValidateFeatureLineSecurity(featureLine string) error {
 	// Reject path traversal attempts first (before checking separators)
 	if strings.Contains(featureLine, "..") {
@@ -87,7 +87,7 @@ func ValidateFeatureLineSecurity(featureLine string) error {
 // ValidateWindowsReservedName checks if a name is a Windows reserved device name
 //
 // Windows reserved names: CON, PRN, AUX, NUL, COM1-9, LPT1-9
-// These names are reserved even with extensions (e.g., CON.txt)
+// These names are reserved even with extensions (e.g., CON.txt).
 func ValidateWindowsReservedName(name string) error {
 	reservedNames := []string{
 		"CON", "PRN", "AUX", "NUL",
@@ -111,8 +111,8 @@ func ValidateWindowsReservedName(name string) error {
 	return nil
 }
 
-// ValidateOutputPath ensures the output path is within the repository (prevents path traversal attacks)
-func ValidateOutputPath(outputPath string, templateRoot string) error {
+// ValidateOutputPath ensures the output path is within the repository (prevents path traversal attacks).
+func ValidateOutputPath(outputPath, templateRoot string) error {
 	// Clean both paths to resolve any .. or . components
 	cleanOutput := filepath.Clean(outputPath)
 	cleanRoot := filepath.Clean(templateRoot)
@@ -148,7 +148,7 @@ func ValidateOutputPath(outputPath string, templateRoot string) error {
 	return nil
 }
 
-// DetermineOutputPath constructs the output file path in specs directory
-func DetermineOutputPath(templateRoot string, moduleName string, featureName string, cfg *config.EACConfig) string {
+// DetermineOutputPath constructs the output file path in specs directory.
+func DetermineOutputPath(templateRoot, moduleName, featureName string, cfg *config.EACConfig) string {
 	return cfg.Repository.SpecsFeaturePathAbs(templateRoot, moduleName, featureName)
 }

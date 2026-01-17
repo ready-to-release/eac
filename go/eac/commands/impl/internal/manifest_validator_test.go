@@ -1,13 +1,14 @@
 package internal
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 )
 
-// getTestWorkspaceRoot finds the workspace root for tests
+// getTestWorkspaceRoot finds the workspace root for tests.
 func getTestWorkspaceRoot(t *testing.T) string {
 	t.Helper()
 	// Walk up from current directory to find .r2r
@@ -357,7 +358,7 @@ func TestIsRegistryTag(t *testing.T) {
 	}
 }
 
-// mockExecCmd implements execCommandInterface for testing
+// mockExecCmd implements execCommandInterface for testing.
 type mockExecCmd struct {
 	outputFn func() ([]byte, error)
 	runFn    func() error
@@ -375,7 +376,7 @@ func (m *mockExecCmd) Run() error {
 // - buildx pushes image to ghcr.io (push=true, load=false)
 // - local image doesn't exist
 // - artifact has registry tags from docker_build config
-// - validation should pass because image was pushed to registry
+// - validation should pass because image was pushed to registry.
 func TestVerifyArtifactsExist_CIPushedImage(t *testing.T) {
 	// Create a manifest exactly like CI would produce for ext-eac
 	manifest := &ModuleManifest{
@@ -428,7 +429,7 @@ func TestVerifyArtifactsExist_CIPushedImage(t *testing.T) {
 // TestVerifyArtifactsExist_LocalBuildImage simulates local dev scenario:
 // - buildx builds with load=true
 // - local image exists
-// - no registry tags (local build)
+// - no registry tags (local build).
 func TestVerifyArtifactsExist_LocalBuildImage(t *testing.T) {
 	manifest := &ModuleManifest{
 		BuildID:    "550e8400-e29b-41d4-a716-446655440000",
@@ -474,7 +475,7 @@ func TestVerifyArtifactsExist_LocalBuildImage(t *testing.T) {
 }
 
 // TestVerifyArtifactsExist_MissingLocalImage tests that a local build without
-// registry tags fails when the image doesn't exist locally
+// registry tags fails when the image doesn't exist locally.
 func TestVerifyArtifactsExist_MissingLocalImage(t *testing.T) {
 	manifest := &ModuleManifest{
 		BuildID:    "550e8400-e29b-41d4-a716-446655440000",
@@ -519,7 +520,8 @@ func TestVerifyArtifactsExist_MissingLocalImage(t *testing.T) {
 	}
 
 	// Verify it's the right error type
-	if _, ok := err.(*ArtifactExistenceError); !ok {
+	artifactExistenceError := &ArtifactExistenceError{}
+	if !errors.As(err, &artifactExistenceError) {
 		t.Errorf("expected ArtifactExistenceError, got %T", err)
 	}
 }

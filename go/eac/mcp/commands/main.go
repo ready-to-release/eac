@@ -261,7 +261,7 @@ func sendResponse(encoder *json.Encoder, id interface{}, result interface{}) {
 		ID:      id,
 		Result:  result,
 	}
-	encoder.Encode(resp)
+	_ = encoder.Encode(resp) //nolint:errcheck // best-effort JSON-RPC response
 }
 
 func sendError(encoder *json.Encoder, id interface{}, code int, message string) {
@@ -273,5 +273,5 @@ func sendError(encoder *json.Encoder, id interface{}, code int, message string) 
 			Message: message,
 		},
 	}
-	encoder.Encode(resp)
+	_ = encoder.Encode(resp) //nolint:errcheck // best-effort JSON-RPC error
 }

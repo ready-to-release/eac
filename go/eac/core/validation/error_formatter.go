@@ -6,16 +6,16 @@ import (
 	"strings"
 )
 
-// ErrorFormatter provides utilities for creating AI-friendly error messages
+// ErrorFormatter provides utilities for creating AI-friendly error messages.
 type ErrorFormatter struct{}
 
-// NewErrorFormatter creates a new error formatter
+// NewErrorFormatter creates a new error formatter.
 func NewErrorFormatter() *ErrorFormatter {
 	return &ErrorFormatter{}
 }
 
 // FormatEnhancedError creates a comprehensive error message for AI generation
-// following the template: What's Wrong | What AI Generated | Expected | Example | How to Fix
+// following the template: What's Wrong | What AI Generated | Expected | Example | How to Fix.
 func (f *ErrorFormatter) FormatEnhancedError(
 	code ErrorCode,
 	summary string,
@@ -61,7 +61,7 @@ func (f *ErrorFormatter) FormatEnhancedError(
 	return NewValidationError(code, strings.TrimSpace(sb.String()), lineNum)
 }
 
-// FormatWithExample creates an error showing correct vs actual output
+// FormatWithExample creates an error showing correct vs actual output.
 func (f *ErrorFormatter) FormatWithExample(
 	code ErrorCode,
 	summary string,
@@ -88,7 +88,7 @@ func (f *ErrorFormatter) FormatWithExample(
 	return NewValidationError(code, strings.TrimSpace(sb.String()), lineNum)
 }
 
-// FormatStructuredError creates an error showing expected structure
+// FormatStructuredError creates an error showing expected structure.
 func (f *ErrorFormatter) FormatStructuredError(
 	code ErrorCode,
 	summary string,
@@ -115,7 +115,7 @@ func (f *ErrorFormatter) FormatStructuredError(
 	return NewValidationError(code, strings.TrimSpace(sb.String()), lineNum)
 }
 
-// FormatMissingFieldError creates an error for missing required fields
+// FormatMissingFieldError creates an error for missing required fields.
 func (f *ErrorFormatter) FormatMissingFieldError(
 	code ErrorCode,
 	fieldName string,
@@ -150,8 +150,8 @@ func (f *ErrorFormatter) FormatMissingFieldError(
 	return NewValidationError(code, strings.TrimSpace(sb.String()), lineNum)
 }
 
-// indent adds indentation to each line
-func (f *ErrorFormatter) indent(text string, prefix string) string {
+// indent adds indentation to each line.
+func (f *ErrorFormatter) indent(text, prefix string) string {
 	lines := strings.Split(text, "\n")
 	var sb strings.Builder
 	for i, line := range lines {
@@ -164,7 +164,7 @@ func (f *ErrorFormatter) indent(text string, prefix string) string {
 	return sb.String()
 }
 
-// truncate limits text to maxLines
+// truncate limits text to maxLines.
 func (f *ErrorFormatter) truncate(text string, maxLines int) string {
 	lines := strings.Split(text, "\n")
 	if len(lines) <= maxLines {
@@ -182,7 +182,7 @@ func (f *ErrorFormatter) truncate(text string, maxLines int) string {
 	return sb.String()
 }
 
-// TruncateJSON truncates JSON to show relevant parts
+// TruncateJSON truncates JSON to show relevant parts.
 func (f *ErrorFormatter) TruncateJSON(jsonStr string, maxLines int) string {
 	// Try to pretty-print first
 	var prettyJSON interface{}
@@ -195,7 +195,7 @@ func (f *ErrorFormatter) TruncateJSON(jsonStr string, maxLines int) string {
 	return f.truncate(jsonStr, maxLines)
 }
 
-// ExtractJSONFields extracts top-level field names from JSON
+// ExtractJSONFields extracts top-level field names from JSON.
 func (f *ErrorFormatter) ExtractJSONFields(jsonStr string) []string {
 	var data map[string]interface{}
 	if err := json.Unmarshal([]byte(jsonStr), &data); err != nil {
@@ -209,7 +209,7 @@ func (f *ErrorFormatter) ExtractJSONFields(jsonStr string) []string {
 	return fields
 }
 
-// HighlightDifference shows what's different between expected and actual
+// HighlightDifference shows what's different between expected and actual.
 func (f *ErrorFormatter) HighlightDifference(expected, actual string) string {
 	var sb strings.Builder
 

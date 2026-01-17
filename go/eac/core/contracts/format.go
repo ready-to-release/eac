@@ -2,7 +2,7 @@ package contracts
 
 import "fmt"
 
-// FormatValidationErrors formats validation errors for display
+// FormatValidationErrors formats validation errors for display.
 func FormatValidationErrors(errors []ValidationError) string {
 	if len(errors) == 0 {
 		return ""
@@ -38,7 +38,7 @@ func FormatValidationErrors(errors []ValidationError) string {
 	return result
 }
 
-// CountCriticalErrors returns the number of errors with severity == "error"
+// CountCriticalErrors returns the number of errors with severity == "error".
 func CountCriticalErrors(errors []ValidationError) int {
 	count := 0
 	for _, err := range errors {

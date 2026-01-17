@@ -7,7 +7,7 @@ import (
 
 // log is the package-level logger for reports
 
-// FilesModulesReport contains statistics about file-module relationships
+// FilesModulesReport contains statistics about file-module relationships.
 type FilesModulesReport struct {
 	TotalFiles     int
 	SingleOwner    int
@@ -31,9 +31,9 @@ type FilesModulesReport struct {
 // Returns:
 //   - FilesModulesReport containing all statistics and data
 //   - Error if repository operations or module loading fails
-func GetFilesModulesReport(trackedOnly bool, includeIgnored bool, stagedOnly bool, rootPath string) (*FilesModulesReport, error) {
+func GetFilesModulesReport(trackedOnly, includeIgnored, stagedOnly bool, rootPath string) (*FilesModulesReport, error) {
 	// Open git repository
-	repo, err := git.Open(rootPath, nil)
+	repo, err := git.NewManager(nil).Open(rootPath)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,7 @@ func GetFilesModulesReport(trackedOnly bool, includeIgnored bool, stagedOnly boo
 	return report, nil
 }
 
-// GetCoveragePercentage returns the percentage of files covered by at least one module
+// GetCoveragePercentage returns the percentage of files covered by at least one module.
 func (r *FilesModulesReport) GetCoveragePercentage() float64 {
 	if r.TotalFiles == 0 {
 		return 0
@@ -80,7 +80,7 @@ func (r *FilesModulesReport) GetCoveragePercentage() float64 {
 	return (float64(covered) / float64(r.TotalFiles)) * 100
 }
 
-// GetFileModules returns the modules that own a specific file
+// GetFileModules returns the modules that own a specific file.
 func (r *FilesModulesReport) GetFileModules(filePath string) []string {
 	for _, file := range r.AllFiles {
 		if file.Name == filePath {
@@ -90,7 +90,7 @@ func (r *FilesModulesReport) GetFileModules(filePath string) []string {
 	return nil
 }
 
-// GetModuleStats returns statistics for a specific module
+// GetModuleStats returns statistics for a specific module.
 func (r *FilesModulesReport) GetModuleStats(moniker string) (fileCount int, files []string) {
 	files, exists := r.FilesByModule[moniker]
 	if !exists {

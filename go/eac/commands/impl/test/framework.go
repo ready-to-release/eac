@@ -27,7 +27,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/teststate"
 )
 
-// TestFrameworkConfig holds test-specific configuration for the framework
+// TestFrameworkConfig holds test-specific configuration for the framework.
 type TestFrameworkConfig struct {
 	// Input configuration
 	SuiteName   string
@@ -60,7 +60,7 @@ type TestFrameworkConfig struct {
 	Lock          *flock.Flock
 }
 
-// testSelectionStats tracks test selection statistics
+// testSelectionStats tracks test selection statistics.
 type testSelectionStats struct {
 	TotalDiscovered  int
 	Skipped          int
@@ -96,9 +96,12 @@ func RunTestWithFramework(cmdCfg *cmdframework.CommandConfig, testCfg *TestFrame
 	return cmdframework.Run(cmdCfg, testWorker, hooks)
 }
 
-// testAfterInit handles suite resolution and lock acquisition
+// testAfterInit handles suite resolution and lock acquisition.
 func testAfterInit(ctx *cmdframework.ExecutionContext) error {
-	testCfg := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
+	testCfg, ok := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
+	if !ok {
+		return fmt.Errorf("testConfig not found or wrong type")
+	}
 
 	// Resolve suite from config if not specified
 	if testCfg.SuiteName == "" {
@@ -134,16 +137,19 @@ func testAfterInit(ctx *cmdframework.ExecutionContext) error {
 
 	// Create test output directory
 	testCfg.TestRunDir = filepath.Join(ctx.WorkspaceRoot, repoCfg.TestOutputDir())
-	if err := os.MkdirAll(testCfg.TestRunDir, 0755); err != nil {
+	if err := os.MkdirAll(testCfg.TestRunDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create test directory: %w", err)
 	}
 
 	return nil
 }
 
-// testAfterResolve handles test discovery, filtering, and execution plan setup
+// testAfterResolve handles test discovery, filtering, and execution plan setup.
 func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
-	testCfg := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
+	testCfg, ok := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
+	if !ok {
+		return fmt.Errorf("testConfig not found or wrong type")
+	}
 	suite := testCfg.Suite
 	stats := testCfg.Stats
 
@@ -336,9 +342,12 @@ func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 	return nil
 }
 
-// testBeforeExecute initializes the test execution context
+// testBeforeExecute initializes the test execution context.
 func testBeforeExecute(ctx *cmdframework.ExecutionContext) error {
-	testCfg := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
+	testCfg, ok := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
+	if !ok {
+		return fmt.Errorf("testConfig not found or wrong type")
+	}
 
 	if len(ctx.ExecutionPlan.ExecutionOrder) == 0 {
 		return nil // Nothing to execute
@@ -368,9 +377,12 @@ func testBeforeExecute(ctx *cmdframework.ExecutionContext) error {
 	return nil
 }
 
-// testAfterExecute handles manifest generation and state updates
+// testAfterExecute handles manifest generation and state updates.
 func testAfterExecute(ctx *cmdframework.ExecutionContext) error {
-	testCfg := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
+	testCfg, ok := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
+	if !ok {
+		return fmt.Errorf("testConfig not found or wrong type")
+	}
 
 	if testCfg.ExecCtx == nil || ctx.Config.DryRun {
 		return nil
@@ -439,9 +451,13 @@ func testAfterExecute(ctx *cmdframework.ExecutionContext) error {
 	return nil
 }
 
-// testWorker runs tests for a module path
+// testWorker runs tests for a module path.
 func testWorker(ctx *cmdframework.ExecutionContext, modulePath string, logWriter io.Writer) int {
-	testCfg := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
+	testCfg, ok := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
+	if !ok || testCfg == nil {
+		fmt.Fprintf(logWriter, "Error: testConfig not found or wrong type\n")
+		return 1
+	}
 
 	if testCfg.ExecCtx == nil {
 		return 1

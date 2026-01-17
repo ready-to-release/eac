@@ -12,7 +12,7 @@ import (
 // Godog scenarios MUST have explicit L-tags (no inference for godog).
 // Verification tags (@ov) ARE inferred: if no verification tag is present, @ov is added.
 // Tracks which tags were inferred in TestReference.InferredTags
-// Captures SourceTags (pre-inference tags) if not already set
+// Captures SourceTags (pre-inference tags) if not already set.
 func ApplyInferences(tests []TestReference, inferences []Inference) []TestReference {
 	enriched := make([]TestReference, len(tests))
 
@@ -94,7 +94,7 @@ func DeriveOperationalVerification(tags []string) []string {
 }
 
 // hasAnyLevelTag checks if tags contain any level tag (@L0-@L4)
-// Returns true if config unavailable (fail-closed: assume level tags may be present)
+// Returns true if config unavailable (fail-closed: assume level tags may be present).
 func hasAnyLevelTag(tags []string) bool {
 	levelTags := GetLevelTags()
 	if levelTags == nil {
@@ -111,7 +111,7 @@ func hasAnyLevelTag(tags []string) bool {
 }
 
 // isLevelInference checks if inference adds level tags
-// Returns true if config unavailable (fail-closed: skip inference if we can't verify)
+// Returns true if config unavailable (fail-closed: skip inference if we can't verify).
 func isLevelInference(inference Inference) bool {
 	levelTags := GetLevelTags()
 	if levelTags == nil {
@@ -127,8 +127,8 @@ func isLevelInference(inference Inference) bool {
 	return false
 }
 
-// matchesConditions checks if tags match inference conditions
-func matchesConditions(tags []string, conditions []string, thenAddTags []string) bool {
+// matchesConditions checks if tags match inference conditions.
+func matchesConditions(tags, conditions, thenAddTags []string) bool {
 	// Special case: dependency inferences always apply (regardless of level tags)
 	if len(conditions) == 0 && isDependencyInference(thenAddTags) {
 		return true
@@ -148,7 +148,7 @@ func matchesConditions(tags []string, conditions []string, thenAddTags []string)
 	return true
 }
 
-// isDependencyInference checks if inference adds dependency tags
+// isDependencyInference checks if inference adds dependency tags.
 func isDependencyInference(tags []string) bool {
 	for _, tag := range tags {
 		if strings.HasPrefix(tag, "@deps:") || strings.HasPrefix(tag, "@depm:") {
@@ -185,47 +185,10 @@ func GetGlobalInferences() []Inference {
 	}
 }
 
-// unique removes duplicate strings from slice
-func unique(slice []string) []string {
-	seen := make(map[string]bool)
-	result := []string{}
-
-	for _, item := range slice {
-		if !seen[item] {
-			seen[item] = true
-			result = append(result, item)
-		}
-	}
-
-	return result
-}
-
-// remove removes all occurrences of item from slice
-func remove(slice []string, item string) []string {
-	result := []string{}
-	for _, s := range slice {
-		if s != item {
-			result = append(result, s)
-		}
-	}
-	return result
-}
-
-// filterTags returns tags matching a pattern
-func filterTags(tags []string, pattern string) []string {
-	result := []string{}
-	for _, tag := range tags {
-		if strings.Contains(tag, pattern) {
-			result = append(result, tag)
-		}
-	}
-	return result
-}
-
 // InferSystemDepsFromModuleDeps infers system dependencies based on module dependencies
 // For example, if a test has @depm:eac-commands and eac-commands is a go-* module,
 // then @deps:go should be inferred
-// Tracks inferred deps in TestReference.InferredDeps
+// Tracks inferred deps in TestReference.InferredDeps.
 func InferSystemDepsFromModuleDeps(tests []TestReference, registry *modules.Registry) []TestReference {
 	if registry == nil {
 		return tests // No registry available, return unchanged

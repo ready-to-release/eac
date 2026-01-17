@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	// File and directory names - use repository package for canonical paths
+	// File and directory names - use repository package for canonical paths.
 	WorkspaceFileName = paths.WorkspaceDSL
 	WorkspaceJSONFile = "workspace.json"
 	SpecsDirectory    = paths.SpecsDir
@@ -16,19 +16,19 @@ const (
 	SourceDirectory   = paths.SrcDir
 	OutputDirectory   = paths.OutDir
 
-	// Docker configuration
+	// Docker configuration.
 	DockerWorkspaceMount = "/workspace"
 	StructurizrCLIImage  = "structurizr/cli:latest"
 	StructurizrLiteImage = "structurizr/lite:latest"
-	// Note: StructurizrLitePort removed - ports are now dynamically allocated in 9000-9999 range
+	// Note: StructurizrLitePort removed - ports are now dynamically allocated in 9000-9999 range.
 
-	// Timeouts
+	// Timeouts.
 	DockerValidationTimeout = 30 * time.Second
 	DockerStartTimeout      = 60 * time.Second
 
-	// Buffer limits
+	// Buffer limits.
 	MaxDockerOutputSize = 10 * 1024 * 1024 // 10MB
 
-	// Validation
+	// Validation.
 	ValidationResultsFile = "design-validation-results.json"
 )

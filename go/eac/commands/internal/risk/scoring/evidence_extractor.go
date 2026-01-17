@@ -41,7 +41,7 @@ func ExtractVulnerabilityFindings(evidenceCollection *evidence.EvidenceCollectio
 	return findings
 }
 
-// extractFromVulnScan extracts vulnerability findings from Trivy scan results
+// extractFromVulnScan extracts vulnerability findings from Trivy scan results.
 func extractFromVulnScan(vulnFile string) []VulnerabilityInput {
 	var findings []VulnerabilityInput
 
@@ -65,11 +65,11 @@ func extractFromVulnScan(vulnFile string) []VulnerabilityInput {
 					for _, vuln := range vulns {
 						if v, ok := vuln.(map[string]interface{}); ok {
 							finding := VulnerabilityInput{
-								Scanner:      evidenceFile.Scanner,
-								Severity:     getString(v, "Severity"),
+								Scanner:       evidenceFile.Scanner,
+								Severity:      getString(v, "Severity"),
 								Vulnerability: getString(v, "VulnerabilityID"),
-								Description:  getString(v, "Description"),
-								Package:      getString(v, "PkgName"),
+								Description:   getString(v, "Description"),
+								Package:       getString(v, "PkgName"),
 							}
 
 							// Extract CVSS score if available
@@ -90,7 +90,7 @@ func extractFromVulnScan(vulnFile string) []VulnerabilityInput {
 	return findings
 }
 
-// extractFromSASTScan extracts findings from GoSec SAST scan results
+// extractFromSASTScan extracts findings from GoSec SAST scan results.
 func extractFromSASTScan(sastFile string) []VulnerabilityInput {
 	var findings []VulnerabilityInput
 
@@ -113,10 +113,10 @@ func extractFromSASTScan(sastFile string) []VulnerabilityInput {
 				severity := mapGoSecSeverity(getString(i, "severity"))
 
 				finding := VulnerabilityInput{
-					Scanner:      evidenceFile.Scanner,
-					Severity:     severity,
+					Scanner:       evidenceFile.Scanner,
+					Severity:      severity,
 					Vulnerability: getString(i, "rule_id"),
-					Description:  getString(i, "details"),
+					Description:   getString(i, "details"),
 				}
 
 				findings = append(findings, finding)
@@ -127,7 +127,7 @@ func extractFromSASTScan(sastFile string) []VulnerabilityInput {
 	return findings
 }
 
-// extractFromZAPScan extracts findings from OWASP ZAP DAST scan results
+// extractFromZAPScan extracts findings from OWASP ZAP DAST scan results.
 func extractFromZAPScan(zapFile string) []VulnerabilityInput {
 	var findings []VulnerabilityInput
 
@@ -153,10 +153,10 @@ func extractFromZAPScan(zapFile string) []VulnerabilityInput {
 							severity := mapZAPRisk(getString(a, "risk"))
 
 							finding := VulnerabilityInput{
-								Scanner:      evidenceFile.Scanner,
-								Severity:     severity,
+								Scanner:       evidenceFile.Scanner,
+								Severity:      severity,
 								Vulnerability: getString(a, "name"),
-								Description:  getString(a, "desc"),
+								Description:   getString(a, "desc"),
 							}
 
 							findings = append(findings, finding)
@@ -170,7 +170,7 @@ func extractFromZAPScan(zapFile string) []VulnerabilityInput {
 	return findings
 }
 
-// BuildModuleContext builds context about the module for AI analysis
+// BuildModuleContext builds context about the module for AI analysis.
 func BuildModuleContext(moduleName string, registry *modules.Registry, satisfiedControls []string) ModuleContext {
 	if registry == nil {
 		// Return default context if registry not available
@@ -207,7 +207,7 @@ func BuildModuleContext(moduleName string, registry *modules.Registry, satisfied
 	}
 }
 
-// determineCriticality maps module type to criticality level
+// determineCriticality maps module type to criticality level.
 func determineCriticality(moduleType string) string {
 	switch moduleType {
 	case "api", "gateway", "service":

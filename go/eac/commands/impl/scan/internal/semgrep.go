@@ -14,20 +14,20 @@ import (
 // NOTE: SemgrepImage constant removed - now configured via security-tools.yml
 // Docker image versions are loaded from .r2r/eac/security-tools.yml configuration
 
-// Mock support for testing
+// Mock support for testing.
 var mockSemgrepOutput interface{}
 
-// SetMockSemgrepOutput sets a mock Semgrep response for testing
+// SetMockSemgrepOutput sets a mock Semgrep response for testing.
 func SetMockSemgrepOutput(output interface{}) {
 	mockSemgrepOutput = output
 }
 
-// ResetMockSemgrepOutput clears the mock Semgrep response
+// ResetMockSemgrepOutput clears the mock Semgrep response.
 func ResetMockSemgrepOutput() {
 	mockSemgrepOutput = nil
 }
 
-// getDefaultMockSemgrepOutput returns default mock data for Semgrep
+// getDefaultMockSemgrepOutput returns default mock data for Semgrep.
 func getDefaultMockSemgrepOutput() map[string]interface{} {
 	return map[string]interface{}{
 		"results": []map[string]interface{}{
@@ -39,8 +39,8 @@ func getDefaultMockSemgrepOutput() map[string]interface{} {
 	}
 }
 
-// RunSemgrepSAST executes Semgrep static analysis via Docker
-func RunSemgrepSAST(workspaceRoot, moduleRoot string, config string, semgrepImage string) (interface{}, error) {
+// RunSemgrepSAST executes Semgrep static analysis via Docker.
+func RunSemgrepSAST(workspaceRoot, moduleRoot, config, semgrepImage string) (interface{}, error) {
 	// Check for mock output (testing only)
 	// Priority: in-process mock > environment variable mock
 	if mockSemgrepOutput != nil {

@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// CommitJSON matches contracts/eac-core/0.1.0/commit-message.schema.json
+// CommitJSON matches contracts/eac-core/0.1.0/commit-message.schema.json.
 type CommitJSON struct {
 	Type     string         `json:"type"`
 	Scope    string         `json:"scope"`
@@ -16,13 +16,13 @@ type CommitJSON struct {
 	Modules  []ModuleChange `json:"modules,omitempty"`
 }
 
-// ModuleChange represents module-specific changes in multi-module commits
+// ModuleChange represents module-specific changes in multi-module commits.
 type ModuleChange struct {
 	Name    string `json:"name"`
 	Changes string `json:"changes"`
 }
 
-// ModuleSectionJSON matches contracts/eac-core/0.1.0/commit-message-module.schema.json
+// ModuleSectionJSON matches contracts/eac-core/0.1.0/commit-message-module.schema.json.
 type ModuleSectionJSON struct {
 	Module      string `json:"module"`
 	Type        string `json:"type"`
@@ -103,7 +103,7 @@ func FormatCommitMessage(jsonOutput string) (string, error) {
 }
 
 // extractAuditorSummary extracts a one-sentence summary for Auditor-Summary field
-// Uses the first sentence of the body if available, otherwise falls back to subject
+// Uses the first sentence of the body if available, otherwise falls back to subject.
 func extractAuditorSummary(body, subject string) string {
 	if body == "" {
 		return subject + "."
@@ -140,7 +140,7 @@ func extractAuditorSummary(body, subject string) string {
 }
 
 // extractModuleSubject extracts a concise subject line from module changes
-// Takes the first sentence or first line as the subject
+// Takes the first sentence or first line as the subject.
 func extractModuleSubject(changes string) string {
 	changes = strings.TrimSpace(changes)
 

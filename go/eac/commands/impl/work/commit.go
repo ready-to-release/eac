@@ -20,6 +20,7 @@
 package work
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -37,7 +38,7 @@ func init() {
 	registry.Register(Commit)
 }
 
-// Commit commits changes with AI-generated or custom message
+// Commit commits changes with AI-generated or custom message.
 func Commit() int {
 	startTime := time.Now()
 
@@ -53,7 +54,7 @@ func Commit() int {
 		log.Errorf("Error: %v", err)
 		return 1
 	}
-	defer config.base.Logger.Sync()
+	defer func() { _ = config.base.Logger.Sync() }() //nolint:errcheck // best-effort sync
 
 	logger := config.base.Logger
 	logger.Debug("Phase 1: Starting parse configuration",
@@ -148,14 +149,14 @@ func Commit() int {
 	return 0
 }
 
-// commitConfig holds configuration for the commit command
+// commitConfig holds configuration for the commit command.
 type commitConfig struct {
 	base          *internal.BaseConfig
 	stageAll      bool
 	customMessage string
 }
 
-// parseCommitConfig parses command line arguments
+// parseCommitConfig parses command line arguments.
 func parseCommitConfig() (*commitConfig, error) {
 	args := os.Args[3:] // Skip program name, "work", "commit"
 
@@ -188,7 +189,7 @@ func parseCommitConfig() (*commitConfig, error) {
 	return config, nil
 }
 
-// stageAllChanges stages all changes in the working directory
+// stageAllChanges stages all changes in the working directory.
 func stageAllChanges() error {
 	cmd := exec.Command("git", "add", ".")
 	output, err := cmd.CombinedOutput()
@@ -199,12 +200,13 @@ func stageAllChanges() error {
 	return nil
 }
 
-// checkStagedChanges checks if there are any staged changes
+// checkStagedChanges checks if there are any staged changes.
 func checkStagedChanges() (bool, error) {
 	cmd := exec.Command("git", "diff", "--cached", "--quiet")
 	err := cmd.Run()
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		exitErr := &exec.ExitError{}
+		if errors.As(err, &exitErr) {
 			// Exit code 1 means there are differences (staged changes exist)
 			if exitErr.ExitCode() == 1 {
 				return true, nil
@@ -216,7 +218,7 @@ func checkStagedChanges() (bool, error) {
 	return false, nil
 }
 
-// commitWithMessage creates a commit with a custom message
+// commitWithMessage creates a commit with a custom message.
 func commitWithMessage(message string) int {
 	cmd := exec.Command("git", "commit", "-m", message)
 	cmd.Stdout = os.Stdout
@@ -230,7 +232,7 @@ func commitWithMessage(message string) int {
 	return 0
 }
 
-// commitWithAI calls commit message to generate commit message
+// commitWithAI calls commit message to generate commit message.
 func commitWithAI(debug bool) int {
 	// Prepare args for commit message
 	oldArgs := os.Args

@@ -6,7 +6,7 @@ import (
 	"github.com/mattn/go-runewidth"
 )
 
-// FormatMarkdownTable takes raw markdown table output and reformats it with proper spacing
+// FormatMarkdownTable takes raw markdown table output and reformats it with proper spacing.
 func FormatMarkdownTable(rawMarkdown string) string {
 	lines := strings.Split(rawMarkdown, "\n")
 	if len(lines) < 2 {
@@ -103,7 +103,7 @@ func FormatMarkdownTable(rawMarkdown string) string {
 	return result.String()
 }
 
-// isSeparatorRow checks if a row is a separator row (contains dashes)
+// isSeparatorRow checks if a row is a separator row (contains dashes).
 func isSeparatorRow(row []string) bool {
 	if len(row) == 0 {
 		return false
@@ -123,7 +123,7 @@ func isSeparatorRow(row []string) bool {
 	return true
 }
 
-// formatSeparatorCell formats a separator cell with proper dashes and alignment markers
+// formatSeparatorCell formats a separator cell with proper dashes and alignment markers.
 func formatSeparatorCell(cell string, width int) string {
 	cell = strings.TrimSpace(cell)
 
@@ -165,7 +165,7 @@ func formatSeparatorCell(cell string, width int) string {
 	return dashes
 }
 
-// padCell pads a cell to the specified width using display width
+// padCell pads a cell to the specified width using display width.
 func padCell(cell string, width int) string {
 	cell = strings.TrimSpace(cell)
 	cellWidth := runewidth.StringWidth(cell)

@@ -4,12 +4,12 @@ import (
 	"fmt"
 )
 
-// EnvironmentsConfig represents the environments.yml configuration
+// EnvironmentsConfig represents the environments.yml configuration.
 type EnvironmentsConfig struct {
 	Environments []Environment `yaml:"environments"`
 }
 
-// Environment represents a test execution environment
+// Environment represents a test execution environment.
 type Environment struct {
 	Moniker     string   `yaml:"moniker"`
 	Name        string   `yaml:"name"`
@@ -19,12 +19,12 @@ type Environment struct {
 	SystemDeps  []string `yaml:"system_deps"` // Required system dependencies (docker, go, etc.)
 }
 
-// GetTestTag returns the test tag for this environment (@env:<moniker>)
+// GetTestTag returns the test tag for this environment (@env:<moniker>).
 func (e *Environment) GetTestTag() string {
 	return fmt.Sprintf("@env:%s", e.Moniker)
 }
 
-// GetEnvironment returns an environment by moniker
+// GetEnvironment returns an environment by moniker.
 func (c *EnvironmentsConfig) GetEnvironment(moniker string) (*Environment, bool) {
 	for i := range c.Environments {
 		if c.Environments[i].Moniker == moniker {
@@ -34,7 +34,7 @@ func (c *EnvironmentsConfig) GetEnvironment(moniker string) (*Environment, bool)
 	return nil, false
 }
 
-// GetEnvironmentsByLevel returns all environments for a specific level
+// GetEnvironmentsByLevel returns all environments for a specific level.
 func (c *EnvironmentsConfig) GetEnvironmentsByLevel(level string) []Environment {
 	var result []Environment
 	for _, env := range c.Environments {
@@ -45,7 +45,7 @@ func (c *EnvironmentsConfig) GetEnvironmentsByLevel(level string) []Environment 
 	return result
 }
 
-// GetEnvironmentsByType returns all environments of a specific type
+// GetEnvironmentsByType returns all environments of a specific type.
 func (c *EnvironmentsConfig) GetEnvironmentsByType(envType string) []Environment {
 	var result []Environment
 	for _, env := range c.Environments {
@@ -56,7 +56,7 @@ func (c *EnvironmentsConfig) GetEnvironmentsByType(envType string) []Environment
 	return result
 }
 
-// AllMonikers returns a list of all environment monikers
+// AllMonikers returns a list of all environment monikers.
 func (c *EnvironmentsConfig) AllMonikers() []string {
 	monikers := make([]string, len(c.Environments))
 	for i, env := range c.Environments {
@@ -65,7 +65,7 @@ func (c *EnvironmentsConfig) AllMonikers() []string {
 	return monikers
 }
 
-// Validate validates the environment configuration
+// Validate validates the environment configuration.
 func (c *EnvironmentsConfig) Validate() error {
 	if len(c.Environments) == 0 {
 		return fmt.Errorf("no environments defined")

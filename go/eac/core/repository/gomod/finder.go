@@ -7,7 +7,7 @@ import (
 )
 
 // FindGoModFiles finds all go.mod files in the repository
-// Excludes: vendor/, .git/, and specified exclude directories
+// Excludes: vendor/, .git/, and specified exclude directories.
 func FindGoModFiles(rootPath string, excludeDirs []string) ([]string, error) {
 	var goModFiles []string
 
@@ -45,7 +45,6 @@ func FindGoModFiles(rootPath string, excludeDirs []string) ([]string, error) {
 
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +53,7 @@ func FindGoModFiles(rootPath string, excludeDirs []string) ([]string, error) {
 }
 
 // ExtractModuleDir extracts the relative directory from a go.mod file path
-// Example: /c/projects/eac/go/r2r/cli/go.mod -> go/r2r/cli
+// Example: /c/projects/eac/go/r2r/cli/go.mod -> go/r2r/cli.
 func ExtractModuleDir(goModPath, rootPath string) (string, error) {
 	absGoMod, err := filepath.Abs(goModPath)
 	if err != nil {
@@ -81,7 +80,7 @@ func ExtractModuleDir(goModPath, rootPath string) (string, error) {
 	return relPath, nil
 }
 
-// IsInternalModule checks if a module path belongs to this repository
+// IsInternalModule checks if a module path belongs to this repository.
 func IsInternalModule(modulePath, baseModulePath string) bool {
 	return strings.HasPrefix(modulePath, baseModulePath)
 }

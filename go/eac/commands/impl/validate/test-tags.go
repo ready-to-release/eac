@@ -35,10 +35,10 @@ func init() {
 	registry.Register(TestTags)
 }
 
-// package-level config for use by helper functions
+// package-level config for use by helper functions.
 var eacConfig *config.EACConfig
 
-// TestTags validates that all test tags are defined in the tag contract
+// TestTags validates that all test tags are defined in the tag contract.
 func TestTags() int {
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
@@ -76,7 +76,6 @@ func TestTags() int {
 		}
 		return nil
 	})
-
 	if err != nil {
 		log.Errorf("Error: failed to discover feature files: %v", err)
 		return 1
@@ -112,7 +111,10 @@ func TestTags() int {
 			}
 
 			// Tag is undefined
-			relPath, _ := filepath.Rel(repoRoot, featurePath)
+			relPath, relErr := filepath.Rel(repoRoot, featurePath)
+			if relErr != nil {
+				relPath = featurePath
+			}
 			if !seenUndefined[tagInfo.Tag] {
 				undefinedTags = append(undefinedTags, TagUsage{
 					Tag:      tagInfo.Tag,
@@ -167,13 +169,13 @@ func TestTags() int {
 	return 1
 }
 
-// TagInfo holds information about a tag found in a feature file
+// TagInfo holds information about a tag found in a feature file.
 type TagInfo struct {
 	Tag     string
 	LineNum int
 }
 
-// extractTagsFromFeature extracts all tags from a Gherkin feature file
+// extractTagsFromFeature extracts all tags from a Gherkin feature file.
 func extractTagsFromFeature(filePath string) ([]TagInfo, error) {
 	content, err := os.ReadFile(filePath)
 	if err != nil {
@@ -209,7 +211,7 @@ func extractTagsFromFeature(filePath string) ([]TagInfo, error) {
 	return tags, nil
 }
 
-// isValidPatternTag checks if a tag matches any pattern in the contract
+// isValidPatternTag checks if a tag matches any pattern in the contract.
 func isValidPatternTag(tag string, tagsConfig *config.TestingTagsConfig) bool {
 	// Only check tags with colons (pattern tags have format @prefix:suffix)
 	if !strings.Contains(tag, ":") {
@@ -269,7 +271,7 @@ func isValidPatternTag(tag string, tagsConfig *config.TestingTagsConfig) bool {
 	return false
 }
 
-// isValidSkipReason checks if a skip reason is defined in the contract
+// isValidSkipReason checks if a skip reason is defined in the contract.
 func isValidSkipReason(reason string, tagsConfig *config.TestingTagsConfig) bool {
 	for _, skipReason := range tagsConfig.SkipReasons {
 		if skipReason.Code == reason {
@@ -279,7 +281,7 @@ func isValidSkipReason(reason string, tagsConfig *config.TestingTagsConfig) bool
 	return false
 }
 
-// isValidDepsName checks if a deps name is valid (system dep from system-dependencies.yml or OS platform)
+// isValidDepsName checks if a deps name is valid (system dep from system-dependencies.yml or OS platform).
 func isValidDepsName(name string, tagsConfig *config.TestingTagsConfig) bool {
 	// Check system dependencies from system-dependencies.yml
 	if eacConfig != nil && eacConfig.SystemDependencies != nil {
@@ -297,7 +299,7 @@ func isValidDepsName(name string, tagsConfig *config.TestingTagsConfig) bool {
 	return false
 }
 
-// isValidEnvMoniker checks if an environment moniker is defined in environment contracts
+// isValidEnvMoniker checks if an environment moniker is defined in environment contracts.
 func isValidEnvMoniker(moniker string) bool {
 	// Use the already-loaded config
 	if eacConfig == nil || eacConfig.Environments == nil {
@@ -315,7 +317,7 @@ func isValidEnvMoniker(moniker string) bool {
 	return false
 }
 
-// isValidModuleName checks if a module name is defined in module contracts
+// isValidModuleName checks if a module name is defined in module contracts.
 func isValidModuleName(moduleName string) bool {
 	// Use the already-loaded config
 	if eacConfig == nil || eacConfig.Repository == nil {

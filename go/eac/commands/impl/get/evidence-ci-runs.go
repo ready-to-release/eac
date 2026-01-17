@@ -41,14 +41,14 @@ func init() {
 	registry.Register(GetEvidenceCIRuns)
 }
 
-// EvidenceCIRun represents a CI run to download artifacts from
+// EvidenceCIRun represents a CI run to download artifacts from.
 type EvidenceCIRun struct {
 	Module   string `json:"module" yaml:"module"`
 	Workflow string `json:"workflow" yaml:"workflow"`
 	RunID    int    `json:"run_id" yaml:"run_id"`
 }
 
-// EvidenceCIRunsResult contains the CI runs needed for evidence building
+// EvidenceCIRunsResult contains the CI runs needed for evidence building.
 type EvidenceCIRunsResult struct {
 	Module  string          `json:"module" yaml:"module"`
 	CIRuns  []EvidenceCIRun `json:"ci_runs" yaml:"ci_runs"`
@@ -115,7 +115,7 @@ func GetEvidenceCIRuns() int {
 	})
 }
 
-// getEvidenceCIRuns gets the CI runs needed for evidence building for a module
+// getEvidenceCIRuns gets the CI runs needed for evidence building for a module.
 func getEvidenceCIRuns(moniker, workspaceRoot string) (*EvidenceCIRunsResult, error) {
 	// Load module registry
 	moduleRegistry, err := modules.LoadFromWorkspace(workspaceRoot)
@@ -182,7 +182,7 @@ func getEvidenceCIRuns(moniker, workspaceRoot string) (*EvidenceCIRunsResult, er
 	return result, nil
 }
 
-// getTransitiveDependencies returns a module and all its transitive dependencies
+// getTransitiveDependencies returns a module and all its transitive dependencies.
 func getTransitiveDependencies(moniker string, reg *modules.Registry) []string {
 	seen := make(map[string]bool)
 	result := []string{}

@@ -33,7 +33,7 @@ func init() {
 	registry.Register(UpdateStructurizr)
 }
 
-// UpdateStructurizr exports Structurizr workspace views to SVG cache
+// UpdateStructurizr exports Structurizr workspace views to SVG cache.
 func UpdateStructurizr() int {
 	// Validate flags
 	args := os.Args[2:]
@@ -111,7 +111,7 @@ func UpdateStructurizr() int {
 
 	// Ensure cache directory exists
 	cacheDir := paths.StructurizrCachePath(repoRoot)
-	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
 		log.Errorf("Error creating cache directory: %v", err)
 		return 1
 	}
@@ -245,7 +245,7 @@ func UpdateStructurizr() int {
 	return 0
 }
 
-// findCachedSVGs returns all cached SVG files for a module with matching hash
+// findCachedSVGs returns all cached SVG files for a module with matching hash.
 func findCachedSVGs(cacheDir, moduleName, dslHash string) []string {
 	var matches []string
 
@@ -271,7 +271,7 @@ func findCachedSVGs(cacheDir, moduleName, dslHash string) []string {
 	return matches
 }
 
-// removeOldCachedSVGs removes cached SVGs for a module that have a different hash
+// removeOldCachedSVGs removes cached SVGs for a module that have a different hash.
 func removeOldCachedSVGs(cacheDir, moduleName, currentHash string) {
 	entries, err := os.ReadDir(cacheDir)
 	if err != nil {

@@ -22,7 +22,7 @@ const (
 // WriteProfile writes an OSCAL profile to a file using go-oscal types.
 func WriteProfile(path string, profile *oscalTypes.Profile) error {
 	// Ensure directory exists
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
@@ -41,7 +41,7 @@ func WriteProfile(path string, profile *oscalTypes.Profile) error {
 	}
 
 	// Write file
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := os.WriteFile(path, data, 0o644); err != nil {
 		return fmt.Errorf("failed to write profile file: %w", err)
 	}
 
@@ -52,7 +52,7 @@ func WriteProfile(path string, profile *oscalTypes.Profile) error {
 // Uses exclusive file locking to prevent concurrent write corruption.
 func WriteAssessmentResults(path string, ar *oscalTypes.AssessmentResults) error {
 	// Ensure directory exists
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
@@ -72,8 +72,9 @@ func WriteAssessmentResults(path string, ar *oscalTypes.AssessmentResults) error
 		return fmt.Errorf("assessment-results.json is locked by another process (timeout after %s)", LockTimeout)
 	}
 	defer func() {
+		//nolint:errcheck // best-effort cleanup
 		lock.Unlock()
-		os.Remove(lockPath) // Clean up lock file
+		os.Remove(lockPath) // best-effort cleanup
 	}()
 
 	// Update last-modified timestamp
@@ -107,14 +108,14 @@ func writeAssessmentResultsJSON(path string, ar *oscalTypes.AssessmentResults) e
 		return fmt.Errorf("failed to marshal assessment-results: %w", err)
 	}
 
-	return os.WriteFile(path, data, 0644)
+	return os.WriteFile(path, data, 0o644)
 }
 
 // WriteAssessmentResultsWithoutLock writes without file locking using go-oscal types.
 // Use only when you know concurrent access is not possible.
 func WriteAssessmentResultsWithoutLock(path string, ar *oscalTypes.AssessmentResults) error {
 	// Ensure directory exists
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
@@ -145,7 +146,7 @@ func CleanStaleLocksIfNeeded(lockPath string) error {
 // EnsureRiskOutputDir ensures the risk output directory exists for a module.
 func EnsureRiskOutputDir(workspaceRoot, moduleName string) (string, error) {
 	outputDir := paths.RiskOutputPath(workspaceRoot, moduleName)
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		return "", fmt.Errorf("failed to create risk output directory: %w", err)
 	}
 	return outputDir, nil
@@ -154,20 +155,20 @@ func EnsureRiskOutputDir(workspaceRoot, moduleName string) (string, error) {
 // EnsureProfilesDir ensures the profiles directory exists.
 func EnsureProfilesDir(workspaceRoot string) (string, error) {
 	profileDir := filepath.Join(workspaceRoot, paths.SpecsDir, paths.RiskControlsDir)
-	if err := os.MkdirAll(profileDir, 0755); err != nil {
+	if err := os.MkdirAll(profileDir, 0o755); err != nil {
 		return "", fmt.Errorf("failed to create profiles directory: %w", err)
 	}
 	return profileDir, nil
 }
 
 // WriteRiskReport writes a human-readable risk report in markdown format.
-func WriteRiskReport(path string, content string) error {
+func WriteRiskReport(path, content string) error {
 	// Ensure directory exists
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		return fmt.Errorf("failed to write risk report: %w", err)
 	}
 

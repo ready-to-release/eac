@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-// ArtifactResolver resolves artifact patterns to concrete file paths
+// ArtifactResolver resolves artifact patterns to concrete file paths.
 type ArtifactResolver struct {
 	Moniker  string            // Module moniker
 	BuildDir string            // Build output directory (e.g., out/build/<module>)
@@ -18,7 +18,7 @@ type ArtifactResolver struct {
 	Metadata map[string]string // Module metadata for custom artifact names
 }
 
-// NewArtifactResolver creates a new resolver for a module
+// NewArtifactResolver creates a new resolver for a module.
 func NewArtifactResolver(moniker, buildDir string) *ArtifactResolver {
 	return &ArtifactResolver{
 		Moniker:  moniker,
@@ -28,7 +28,7 @@ func NewArtifactResolver(moniker, buildDir string) *ArtifactResolver {
 	}
 }
 
-// NewArtifactResolverWithMetadata creates a resolver with module metadata
+// NewArtifactResolverWithMetadata creates a resolver with module metadata.
 func NewArtifactResolverWithMetadata(moniker, buildDir string, metadata map[string]string) *ArtifactResolver {
 	return &ArtifactResolver{
 		Moniker:  moniker,
@@ -39,7 +39,7 @@ func NewArtifactResolverWithMetadata(moniker, buildDir string, metadata map[stri
 	}
 }
 
-// NewArtifactResolverWithPlatform creates a resolver for a specific platform
+// NewArtifactResolverWithPlatform creates a resolver for a specific platform.
 func NewArtifactResolverWithPlatform(moniker, buildDir, os, arch string) *ArtifactResolver {
 	return &ArtifactResolver{
 		Moniker:  moniker,
@@ -49,7 +49,7 @@ func NewArtifactResolverWithPlatform(moniker, buildDir, os, arch string) *Artifa
 	}
 }
 
-// NewArtifactResolverFull creates a resolver with all options
+// NewArtifactResolverFull creates a resolver with all options.
 func NewArtifactResolverFull(moniker, buildDir, os, arch string, metadata map[string]string) *ArtifactResolver {
 	return &ArtifactResolver{
 		Moniker:  moniker,
@@ -60,7 +60,7 @@ func NewArtifactResolverFull(moniker, buildDir, os, arch string, metadata map[st
 	}
 }
 
-// ResolvePattern resolves an artifact pattern to a concrete path
+// ResolvePattern resolves an artifact pattern to a concrete path.
 func (r *ArtifactResolver) ResolvePattern(pattern string) string {
 	result := pattern
 	result = strings.ReplaceAll(result, "{moniker}", r.Moniker)
@@ -97,7 +97,7 @@ func (r *ArtifactResolver) ResolvePatternWithMetadata(pattern string, artifact A
 
 // deriveVariantID derives a variant ID from the pattern and artifact.
 // For executables: {os}-{arch} (e.g., linux-amd64), with optional compression suffix
-// For files/directories: base filename/dirname from pattern
+// For files/directories: base filename/dirname from pattern.
 func (r *ArtifactResolver) deriveVariantID(pattern string, artifact Artifact) string {
 	switch artifact.Type {
 	case ArtifactTypeExecutable:
@@ -128,13 +128,13 @@ func (r *ArtifactResolver) deriveVariantID(pattern string, artifact Artifact) st
 	}
 }
 
-// ResolvePath resolves an artifact pattern to a full file path
+// ResolvePath resolves an artifact pattern to a full file path.
 func (r *ArtifactResolver) ResolvePath(pattern string) string {
 	resolved := r.ResolvePattern(pattern)
 	return filepath.Join(r.BuildDir, resolved)
 }
 
-// getExtension returns the executable extension for the current OS
+// getExtension returns the executable extension for the current OS.
 func (r *ArtifactResolver) getExtension() string {
 	if r.OS == "windows" {
 		return ".exe"
@@ -142,7 +142,7 @@ func (r *ArtifactResolver) getExtension() string {
 	return ""
 }
 
-// ArtifactVerificationResult contains the result of verifying an artifact
+// ArtifactVerificationResult contains the result of verifying an artifact.
 type ArtifactVerificationResult struct {
 	Artifact    Artifact
 	Pattern     string // Resolved pattern
@@ -152,7 +152,7 @@ type ArtifactVerificationResult struct {
 	Error       error
 }
 
-// VerifyArtifact checks if an artifact exists
+// VerifyArtifact checks if an artifact exists.
 func (r *ArtifactResolver) VerifyArtifact(artifact Artifact) ArtifactVerificationResult {
 	result := ArtifactVerificationResult{
 		Artifact: artifact,
@@ -183,7 +183,7 @@ func (r *ArtifactResolver) VerifyArtifact(artifact Artifact) ArtifactVerificatio
 	return result
 }
 
-// VerifyArtifacts verifies all artifacts for a module type
+// VerifyArtifacts verifies all artifacts for a module type.
 func (r *ArtifactResolver) VerifyArtifacts(artifacts []Artifact) []ArtifactVerificationResult {
 	var results []ArtifactVerificationResult
 
@@ -207,7 +207,7 @@ func (r *ArtifactResolver) VerifyArtifacts(artifacts []Artifact) []ArtifactVerif
 	return results
 }
 
-// verifyExecutableArtifact handles executable artifacts with platform considerations
+// verifyExecutableArtifact handles executable artifacts with platform considerations.
 func (r *ArtifactResolver) verifyExecutableArtifact(artifact Artifact) []ArtifactVerificationResult {
 	var results []ArtifactVerificationResult
 	verifyMode := artifact.GetVerifyMode()
@@ -263,7 +263,7 @@ func (r *ArtifactResolver) verifyExecutableArtifact(artifact Artifact) []Artifac
 	return results
 }
 
-// verifyGlobArtifact handles glob pattern artifacts
+// verifyGlobArtifact handles glob pattern artifacts.
 func (r *ArtifactResolver) verifyGlobArtifact(artifact Artifact) ArtifactVerificationResult {
 	result := ArtifactVerificationResult{
 		Artifact: artifact,
@@ -285,7 +285,7 @@ func (r *ArtifactResolver) verifyGlobArtifact(artifact Artifact) ArtifactVerific
 	return result
 }
 
-// verifyImageArtifact handles Docker image artifacts by checking if the image exists locally
+// verifyImageArtifact handles Docker image artifacts by checking if the image exists locally.
 func (r *ArtifactResolver) verifyImageArtifact(artifact Artifact) ArtifactVerificationResult {
 	imageRef := r.ResolvePattern(artifact.Pattern)
 
@@ -332,13 +332,13 @@ func (r *ArtifactResolver) verifyImageArtifact(artifact Artifact) ArtifactVerifi
 	return result
 }
 
-// isDockerAvailable checks if Docker CLI is available
+// isDockerAvailable checks if Docker CLI is available.
 func isDockerAvailable() bool {
 	cmd := exec.Command("docker", "version", "--format", "{{.Server.Version}}")
 	return cmd.Run() == nil
 }
 
-// AllSuccessful returns true if all verification results are successful
+// AllSuccessful returns true if all verification results are successful.
 func AllSuccessful(results []ArtifactVerificationResult) bool {
 	for _, r := range results {
 		if !r.Exists || r.Error != nil {
@@ -348,7 +348,7 @@ func AllSuccessful(results []ArtifactVerificationResult) bool {
 	return true
 }
 
-// GetFailures returns only the failed verification results
+// GetFailures returns only the failed verification results.
 func GetFailures(results []ArtifactVerificationResult) []ArtifactVerificationResult {
 	var failures []ArtifactVerificationResult
 	for _, r := range results {
@@ -359,7 +359,7 @@ func GetFailures(results []ArtifactVerificationResult) []ArtifactVerificationRes
 	return failures
 }
 
-// FormatVerificationResults formats verification results for display
+// FormatVerificationResults formats verification results for display.
 func FormatVerificationResults(results []ArtifactVerificationResult) string {
 	var sb strings.Builder
 	for _, r := range results {

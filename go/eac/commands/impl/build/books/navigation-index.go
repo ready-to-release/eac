@@ -10,7 +10,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
-// tocEntry represents a TOC item
+// tocEntry represents a TOC item.
 type tocEntry struct {
 	title string
 	path  string
@@ -20,7 +20,7 @@ type tocEntry struct {
 
 // ensureRootIndex ensures an index.md exists at staging root
 // If no index.md exists, generates one with book metadata and TOC
-// If index.md exists (from copy source), keeps it as-is
+// If index.md exists (from copy source), keeps it as-is.
 func (p *Preprocessor) ensureRootIndex() error {
 	indexPath := paths.IndexMarkdownPath(p.stagingDir)
 
@@ -32,7 +32,7 @@ func (p *Preprocessor) ensureRootIndex() error {
 
 	// Generate index.md with book metadata and TOC
 	content := p.generateRootIndex()
-	if err := os.WriteFile(indexPath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(indexPath, []byte(content), 0o644); err != nil {
 		return fmt.Errorf("writing index.md: %w", err)
 	}
 
@@ -40,7 +40,7 @@ func (p *Preprocessor) ensureRootIndex() error {
 	return nil
 }
 
-// generateRootIndex creates index.md content with book metadata and TOC
+// generateRootIndex creates index.md content with book metadata and TOC.
 func (p *Preprocessor) generateRootIndex() string {
 	var sb strings.Builder
 
@@ -77,7 +77,7 @@ func (p *Preprocessor) generateRootIndex() string {
 	return sb.String()
 }
 
-// generateTOC creates a markdown TOC from the staging directory
+// generateTOC creates a markdown TOC from the staging directory.
 func (p *Preprocessor) generateTOC() string {
 	var sb strings.Builder
 
@@ -94,13 +94,13 @@ func (p *Preprocessor) generateTOC() string {
 }
 
 // collectTOCEntries recursively collects markdown files for TOC
-// Uses .nav.yml order when available to preserve source navigation structure
+// Uses .nav.yml order when available to preserve source navigation structure.
 func (p *Preprocessor) collectTOCEntries(dir string, depth int) []tocEntry {
 	var entries []tocEntry
 
 	// DEBUG: Log directory scanning
-	relDir, _ := filepath.Rel(p.stagingDir, dir)
-	if relDir == "." {
+	relDir, relErr := filepath.Rel(p.stagingDir, dir)
+	if relErr != nil || relDir == "." {
 		relDir = "(root)"
 	}
 	navLog.Debugf("[TOC] Scanning directory: %s", relDir)
@@ -120,7 +120,7 @@ func (p *Preprocessor) collectTOCEntries(dir string, depth int) []tocEntry {
 	return entries
 }
 
-// collectTOCFromNav collects TOC entries using .nav.yml order
+// collectTOCFromNav collects TOC entries using .nav.yml order.
 func (p *Preprocessor) collectTOCFromNav(dir string, depth int, nav []any) []tocEntry {
 	var entries []tocEntry
 
@@ -139,7 +139,10 @@ func (p *Preprocessor) collectTOCFromNav(dir string, depth int, nav []any) []toc
 				indexPath := paths.IndexMarkdownPath(subdir)
 				if _, err := os.Stat(indexPath); err == nil {
 					title := p.getTitleFromFile(indexPath)
-					relPath, _ := filepath.Rel(p.stagingDir, subdir)
+					relPath, relErr := filepath.Rel(p.stagingDir, subdir)
+					if relErr != nil {
+						relPath = subdir
+					}
 					relPath = filepath.ToSlash(relPath)
 					entries = append(entries, tocEntry{
 						title: title,
@@ -155,7 +158,10 @@ func (p *Preprocessor) collectTOCFromNav(dir string, depth int, nav []any) []toc
 				filePath := filepath.Join(dir, name)
 				if _, err := os.Stat(filePath); err == nil {
 					title := p.getTitleFromFile(filePath)
-					relPath, _ := filepath.Rel(p.stagingDir, filePath)
+					relPath, relErr := filepath.Rel(p.stagingDir, filePath)
+					if relErr != nil {
+						relPath = filePath
+					}
 					relPath = filepath.ToSlash(relPath)
 					entries = append(entries, tocEntry{
 						title: title,
@@ -177,7 +183,10 @@ func (p *Preprocessor) collectTOCFromNav(dir string, depth int, nav []any) []toc
 
 				if info, err := os.Stat(subdir); err == nil && info.IsDir() {
 					// Directory with custom title
-					relPath, _ := filepath.Rel(p.stagingDir, subdir)
+					relPath, relErr := filepath.Rel(p.stagingDir, subdir)
+					if relErr != nil {
+						relPath = subdir
+					}
 					relPath = filepath.ToSlash(relPath)
 					entries = append(entries, tocEntry{
 						title: title,
@@ -191,7 +200,10 @@ func (p *Preprocessor) collectTOCFromNav(dir string, depth int, nav []any) []toc
 					// File with custom title
 					filePath := filepath.Join(dir, targetStr)
 					if _, err := os.Stat(filePath); err == nil {
-						relPath, _ := filepath.Rel(p.stagingDir, filePath)
+						relPath, relErr := filepath.Rel(p.stagingDir, filePath)
+						if relErr != nil {
+							relPath = filePath
+						}
 						relPath = filepath.ToSlash(relPath)
 						entries = append(entries, tocEntry{
 							title: title,
@@ -207,7 +219,7 @@ func (p *Preprocessor) collectTOCFromNav(dir string, depth int, nav []any) []toc
 	return entries
 }
 
-// collectTOCFromFilesystem collects TOC entries from filesystem (fallback)
+// collectTOCFromFilesystem collects TOC entries from filesystem (fallback).
 func (p *Preprocessor) collectTOCFromFilesystem(dir string, depth int) []tocEntry {
 	var entries []tocEntry
 
@@ -238,7 +250,10 @@ func (p *Preprocessor) collectTOCFromFilesystem(dir string, depth int) []tocEntr
 	for _, f := range files {
 		name := f.Name()
 		filePath := filepath.Join(dir, name)
-		relPath, _ := filepath.Rel(p.stagingDir, filePath)
+		relPath, relErr := filepath.Rel(p.stagingDir, filePath)
+		if relErr != nil {
+			relPath = filePath
+		}
 		relPath = filepath.ToSlash(relPath)
 
 		title := p.getTitleFromFile(filePath)
@@ -265,7 +280,10 @@ func (p *Preprocessor) collectTOCFromFilesystem(dir string, depth int) []tocEntr
 	// Process directories
 	for _, d := range dirs {
 		subdir := filepath.Join(dir, d.Name())
-		relPath, _ := filepath.Rel(p.stagingDir, subdir)
+		relPath, relErr := filepath.Rel(p.stagingDir, subdir)
+		if relErr != nil {
+			relPath = subdir
+		}
 		relPath = filepath.ToSlash(relPath)
 
 		// Check for index.md in subdirectory

@@ -211,7 +211,7 @@ func TestCommand() int {
 	return 0
 }
 `
-	if err := os.WriteFile(testFile, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte(content), 0o644); err != nil {
 		t.Fatalf("failed to create test file: %v", err)
 	}
 
@@ -238,7 +238,7 @@ func TestCommand() int {
 	return 0
 }
 `
-	if err := os.WriteFile(testFile, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte(content), 0o644); err != nil {
 		t.Fatalf("failed to create test file: %v", err)
 	}
 
@@ -257,7 +257,7 @@ func TestTranslateCrossCompilePath(t *testing.T) {
 	tmpDir := t.TempDir()
 	testFile := filepath.Join(tmpDir, "test.go")
 
-	if err := os.WriteFile(testFile, []byte("package test"), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte("package test"), 0o644); err != nil {
 		t.Fatalf("failed to create test file: %v", err)
 	}
 
@@ -274,7 +274,7 @@ func TestTranslateCrossCompilePath(t *testing.T) {
 }
 
 // TestValidateFlagsFromRegistry_Integration tests the full validation flow
-// Note: This requires actual registry initialization, so we'll mock it
+// Note: This requires actual registry initialization, so we'll mock it.
 func TestValidateFlagsFromRegistry_MockScenario(t *testing.T) {
 	// This test demonstrates the expected behavior but requires:
 	// 1. Registry to be initialized with command

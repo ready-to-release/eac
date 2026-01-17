@@ -9,19 +9,19 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// FormatterType defines the output format for log messages
+// FormatterType defines the output format for log messages.
 type FormatterType string
 
 const (
-	// FormatterRaw outputs only the message (clean CLI output)
+	// FormatterRaw outputs only the message (clean CLI output).
 	FormatterRaw FormatterType = "raw"
-	// FormatterTimestamped outputs "HH:MM:SS.mmm  LEVEL  module:message"
+	// FormatterTimestamped outputs "HH:MM:SS.mmm  LEVEL  module:message".
 	FormatterTimestamped FormatterType = "timestamped"
-	// FormatterJSON outputs structured JSON
+	// FormatterJSON outputs structured JSON.
 	FormatterJSON FormatterType = "json"
 )
 
-// SinkConfig holds configuration for a single logging sink (console or file)
+// SinkConfig holds configuration for a single logging sink (console or file).
 type SinkConfig struct {
 	// Levels to output: debug, info, warn, error
 	Levels []string `yaml:"levels"`
@@ -36,7 +36,7 @@ type SinkConfig struct {
 	Compress   *bool `yaml:"compress,omitempty"`     // Compress rotated files (default: false)
 }
 
-// TargetConfig holds configuration for an extra log target (build/test specific logs)
+// TargetConfig holds configuration for an extra log target (build/test specific logs).
 type TargetConfig struct {
 	// Path pattern with {module} placeholder, e.g., "out/build/{module}/build.log"
 	Path string `yaml:"path"`
@@ -46,26 +46,26 @@ type TargetConfig struct {
 	Formatter FormatterType `yaml:"formatter"`
 }
 
-// ResolveTargetPath replaces {module} placeholder with actual module name
+// ResolveTargetPath replaces {module} placeholder with actual module name.
 func (t TargetConfig) ResolveTargetPath(repoRoot, module string) string {
-	path := strings.Replace(t.Path, "{module}", module, -1)
+	path := strings.ReplaceAll(t.Path, "{module}", module)
 	return filepath.Join(repoRoot, path)
 }
 
-// LoggingConfig holds the complete logging configuration
+// LoggingConfig holds the complete logging configuration.
 type LoggingConfig struct {
 	Console SinkConfig              `yaml:"console"`
 	File    SinkConfig              `yaml:"file"`
 	Targets map[string]TargetConfig `yaml:"targets"` // command -> target config
 }
 
-// GetTarget returns target config for a command, if configured
+// GetTarget returns target config for a command, if configured.
 func (c LoggingConfig) GetTarget(command string) (TargetConfig, bool) {
 	target, ok := c.Targets[command]
 	return target, ok
 }
 
-// DefaultLoggingConfig returns the default logging configuration
+// DefaultLoggingConfig returns the default logging configuration.
 func DefaultLoggingConfig() LoggingConfig {
 	enabled := true
 	return LoggingConfig{
@@ -109,7 +109,7 @@ func LoadLoggingConfig(workspaceRoot string) LoggingConfig {
 	return mergeLoggingConfig(defaults, userCfg)
 }
 
-// loadLoggingDefaults loads logging defaults from contracts/eac-core/0.1.0/defaults/logging.yml
+// loadLoggingDefaults loads logging defaults from contracts/eac-core/0.1.0/defaults/logging.yml.
 func loadLoggingDefaults(workspaceRoot string) LoggingConfig {
 	defaultsPath := paths.LoggingDefaultsPath(workspaceRoot)
 	data, err := os.ReadFile(defaultsPath)
@@ -128,7 +128,7 @@ func loadLoggingDefaults(workspaceRoot string) LoggingConfig {
 	return applyDefaults(cfg)
 }
 
-// mergeLoggingConfig merges user config on top of defaults
+// mergeLoggingConfig merges user config on top of defaults.
 func mergeLoggingConfig(defaults, user LoggingConfig) LoggingConfig {
 	result := defaults
 
@@ -164,7 +164,7 @@ func mergeLoggingConfig(defaults, user LoggingConfig) LoggingConfig {
 	return result
 }
 
-// applyDefaults fills in missing configuration with defaults
+// applyDefaults fills in missing configuration with defaults.
 func applyDefaults(cfg LoggingConfig) LoggingConfig {
 	defaults := DefaultLoggingConfig()
 
@@ -200,7 +200,7 @@ func applyDefaults(cfg LoggingConfig) LoggingConfig {
 	return cfg
 }
 
-// HasLevel checks if a sink config includes a specific level
+// HasLevel checks if a sink config includes a specific level.
 func (s *SinkConfig) HasLevel(level string) bool {
 	for _, l := range s.Levels {
 		if l == level {
@@ -210,7 +210,7 @@ func (s *SinkConfig) HasLevel(level string) bool {
 	return false
 }
 
-// IsEnabled returns whether the sink is enabled (defaults to true)
+// IsEnabled returns whether the sink is enabled (defaults to true).
 func (s *SinkConfig) IsEnabled() bool {
 	if s.Enabled == nil {
 		return true

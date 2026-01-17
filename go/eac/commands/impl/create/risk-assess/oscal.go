@@ -39,7 +39,10 @@ func buildAssessmentResultsForModule(config *AssessConfig, moduleName string, pr
 	// Create assessment-results
 	arUUID := uuid.New().String()
 	profilePath := oscal.GetProfilePath(config.WorkspaceRoot, moduleName)
-	relativeProfilePath, _ := filepath.Rel(config.WorkspaceRoot, profilePath)
+	relativeProfilePath, relErr := filepath.Rel(config.WorkspaceRoot, profilePath)
+	if relErr != nil {
+		relativeProfilePath = profilePath // Fallback to absolute path
+	}
 
 	ar := oscal.NewAssessmentResults(
 		arUUID,
@@ -170,7 +173,10 @@ func createObservationsForModule(config *AssessConfig, moduleName string, ec *ev
 		var relevantEvidence []oscalTypes.RelevantEvidence
 
 		if ec.SecurityResults.VulnFile != "" {
-			relPath, _ := filepath.Rel(config.WorkspaceRoot, ec.SecurityResults.VulnFile)
+			relPath, relErr := filepath.Rel(config.WorkspaceRoot, ec.SecurityResults.VulnFile)
+			if relErr != nil {
+				relPath = ec.SecurityResults.VulnFile // Fallback to absolute path
+			}
 			relevantEvidence = append(relevantEvidence, oscalTypes.RelevantEvidence{
 				Href:        relPath,
 				Description: "Vulnerability scan results",
@@ -178,7 +184,10 @@ func createObservationsForModule(config *AssessConfig, moduleName string, ec *ev
 		}
 
 		if ec.SecurityResults.SBOMFile != "" {
-			relPath, _ := filepath.Rel(config.WorkspaceRoot, ec.SecurityResults.SBOMFile)
+			relPath, relErr := filepath.Rel(config.WorkspaceRoot, ec.SecurityResults.SBOMFile)
+			if relErr != nil {
+				relPath = ec.SecurityResults.SBOMFile // Fallback to absolute path
+			}
 			relevantEvidence = append(relevantEvidence, oscalTypes.RelevantEvidence{
 				Href:        relPath,
 				Description: "Software Bill of Materials (SBOM)",

@@ -11,17 +11,17 @@ import (
 )
 
 // DefaultGeminiModel is the default model for Gemini provider
-// Change this constant when upgrading to a newer model version
+// Change this constant when upgrading to a newer model version.
 const DefaultGeminiModel = "gemini-1.5-pro"
 
-// Gemini provider uses Google Gemini API with API key authentication
+// Gemini provider uses Google Gemini API with API key authentication.
 type Gemini struct {
 	apiKey string
 	model  string
 }
 
 // NewGemini creates a Gemini provider
-// Returns error if API key or model is empty (fail fast)
+// Returns error if API key or model is empty (fail fast).
 func NewGemini(apiKey, model string) (*Gemini, error) {
 	// Validate required fields
 	if apiKey == "" {
@@ -37,12 +37,12 @@ func NewGemini(apiKey, model string) (*Gemini, error) {
 	}, nil
 }
 
-// Name returns the provider name
+// Name returns the provider name.
 func (p *Gemini) Name() string {
 	return "gemini"
 }
 
-// Execute runs a prompt through Gemini API
+// Execute runs a prompt through Gemini API.
 func (p *Gemini) Execute(ctx context.Context, input string, opts ...ai.Option) (string, error) {
 	// Apply options
 	options := &ai.ExecuteOptions{

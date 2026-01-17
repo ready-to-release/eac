@@ -2,6 +2,7 @@
 package testers
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -14,7 +15,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/platform"
 )
 
-// Writeln writes a formatted string with platform-specific line ending to the writer
+// Writeln writes a formatted string with platform-specific line ending to the writer.
 func Writeln(w io.Writer, format string, args ...interface{}) {
 	fmt.Fprintf(w, format+platform.LineEnding, args...)
 }
@@ -46,7 +47,8 @@ func RunTestCommandWithCapture(dir string, logWriter io.Writer, name string, arg
 
 	exitCode := 0
 	if err := cmd.Run(); err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		exitErr := &exec.ExitError{}
+		if errors.As(err, &exitErr) {
 			exitCode = exitErr.ExitCode()
 			Writeln(logWriter, "\n❌ Tests exited with code %d (error: %v)", exitCode, err)
 		} else {
@@ -83,7 +85,8 @@ func RunTestCommandWithEnv(dir string, logWriter io.Writer, env map[string]strin
 	cmd.Stderr = stderrWriter
 
 	if err := cmd.Run(); err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		exitErr := &exec.ExitError{}
+		if errors.As(err, &exitErr) {
 			return exitErr.ExitCode()
 		}
 		Writeln(stderrWriter, "\nError: failed to execute test command: %v", err)
@@ -94,8 +97,8 @@ func RunTestCommandWithEnv(dir string, logWriter io.Writer, env map[string]strin
 	return 0
 }
 
-// GenerateGherkinSummaryMarkdown generates summary_acceptance.md from cucumber.json
-func GenerateGherkinSummaryMarkdown(moniker string, workspaceRoot string, outputDir string, logWriter io.Writer) {
+// GenerateGherkinSummaryMarkdown generates summary_acceptance.md from cucumber.json.
+func GenerateGherkinSummaryMarkdown(moniker, workspaceRoot, outputDir string, logWriter io.Writer) {
 	cucumberPath := filepath.Join(outputDir, "cucumber.json")
 	summaryPath := filepath.Join(outputDir, "summary_acceptance.md")
 	appendixPath := filepath.Join(outputDir, "appendix_a.md")
@@ -115,7 +118,7 @@ func GenerateGherkinSummaryMarkdown(moniker string, workspaceRoot string, output
 	summary += cucumber.RenderAllFeatures(report, nil)
 
 	// Write summary_acceptance.md
-	if err := os.WriteFile(summaryPath, []byte(summary), 0644); err != nil {
+	if err := os.WriteFile(summaryPath, []byte(summary), 0o644); err != nil {
 		Writeln(logWriter, "Warning: failed to write summary_acceptance.md: %v", err)
 		return
 	}
@@ -128,7 +131,7 @@ func GenerateGherkinSummaryMarkdown(moniker string, workspaceRoot string, output
 	appendix += cucumber.RenderAppendixA(report, workspaceRoot)
 
 	// Write appendix_a.md
-	if err := os.WriteFile(appendixPath, []byte(appendix), 0644); err != nil {
+	if err := os.WriteFile(appendixPath, []byte(appendix), 0o644); err != nil {
 		Writeln(logWriter, "Warning: failed to write appendix_a.md: %v", err)
 		return
 	}
@@ -136,8 +139,8 @@ func GenerateGherkinSummaryMarkdown(moniker string, workspaceRoot string, output
 	Writeln(logWriter, "✅ Generated: %s", appendixPath)
 }
 
-// GenerateUnitTestSummaryMarkdown generates summary_unit.md from go test output
-func GenerateUnitTestSummaryMarkdown(moniker string, moduleType string, outputDir string, logWriter io.Writer, testOutput string, exitCode int) {
+// GenerateUnitTestSummaryMarkdown generates summary_unit.md from go test output.
+func GenerateUnitTestSummaryMarkdown(moniker, moduleType, outputDir string, logWriter io.Writer, testOutput string, exitCode int) {
 	summaryPath := filepath.Join(outputDir, "summary_unit.md")
 
 	var summary string
@@ -146,9 +149,9 @@ func GenerateUnitTestSummaryMarkdown(moniker string, moduleType string, outputDi
 	summary += fmt.Sprintf("**Type**: %s\n", moduleType)
 
 	if exitCode == 0 {
-		summary += fmt.Sprintf("**Status**: ✅ Passed\n\n")
+		summary += "**Status**: ✅ Passed\n\n"
 	} else {
-		summary += fmt.Sprintf("**Status**: ❌ Failed\n\n")
+		summary += "**Status**: ❌ Failed\n\n"
 	}
 
 	summary += "### Test Output\n\n"
@@ -157,7 +160,7 @@ func GenerateUnitTestSummaryMarkdown(moniker string, moduleType string, outputDi
 	summary += "\n```\n"
 
 	// Write summary_unit.md
-	if err := os.WriteFile(summaryPath, []byte(summary), 0644); err != nil {
+	if err := os.WriteFile(summaryPath, []byte(summary), 0o644); err != nil {
 		Writeln(logWriter, "Warning: failed to write summary_unit.md: %v", err)
 		return
 	}
@@ -165,7 +168,7 @@ func GenerateUnitTestSummaryMarkdown(moniker string, moduleType string, outputDi
 	Writeln(logWriter, "✅ Generated: %s", summaryPath)
 }
 
-// FindModulesWithResults finds all subdirectories containing cucumber.json
+// FindModulesWithResults finds all subdirectories containing cucumber.json.
 func FindModulesWithResults(testRunDir string) ([]string, error) {
 	entries, err := os.ReadDir(testRunDir)
 	if err != nil {
@@ -188,7 +191,7 @@ func FindModulesWithResults(testRunDir string) ([]string, error) {
 	return foundModules, nil
 }
 
-// FormatDuration formats a duration as "1m 23s" or "45s"
+// FormatDuration formats a duration as "1m 23s" or "45s".
 func FormatDuration(d time.Duration) string {
 	d = d.Round(time.Second)
 	minutes := int(d.Minutes())

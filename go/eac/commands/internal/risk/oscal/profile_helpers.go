@@ -6,7 +6,7 @@ import (
 	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
 )
 
-// GetControlIDsFromProfile extracts all control IDs referenced in a profile's imports
+// GetControlIDsFromProfile extracts all control IDs referenced in a profile's imports.
 func GetControlIDsFromProfile(profile *oscalTypes.Profile) []string {
 	if profile == nil || len(profile.Imports) == 0 {
 		return []string{}
@@ -35,13 +35,13 @@ func GetControlIDsFromProfile(profile *oscalTypes.Profile) []string {
 	return controlIDs
 }
 
-// ProfileHasControl checks if a profile includes a specific control ID
+// ProfileHasControl checks if a profile includes a specific control ID.
 func ProfileHasControl(profile *oscalTypes.Profile, controlID string) bool {
 	controlIDs := GetControlIDsFromProfile(profile)
 	normalizedTarget := strings.ToLower(controlID)
 
 	for _, id := range controlIDs {
-		if strings.ToLower(id) == normalizedTarget {
+		if strings.EqualFold(id, normalizedTarget) {
 			return true
 		}
 	}
@@ -49,7 +49,7 @@ func ProfileHasControl(profile *oscalTypes.Profile, controlID string) bool {
 	return false
 }
 
-// GetProfileTitle returns the profile's title from metadata
+// GetProfileTitle returns the profile's title from metadata.
 func GetProfileTitle(profile *oscalTypes.Profile) string {
 	if profile == nil {
 		return ""
@@ -57,7 +57,7 @@ func GetProfileTitle(profile *oscalTypes.Profile) string {
 	return profile.Metadata.Title
 }
 
-// GetProfileVersion returns the profile's version from metadata
+// GetProfileVersion returns the profile's version from metadata.
 func GetProfileVersion(profile *oscalTypes.Profile) string {
 	if profile == nil {
 		return ""

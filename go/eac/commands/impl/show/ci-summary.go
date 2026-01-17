@@ -38,7 +38,7 @@ func init() {
 	registry.Register(ShowCISummary)
 }
 
-// ShowCISummary generates a CI workflow summary
+// ShowCISummary generates a CI workflow summary.
 func ShowCISummary() int {
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
@@ -104,8 +104,8 @@ func ShowCISummary() int {
 
 func generateCISummary(buildResult string, isContainer bool, containerTestResult string, containerTestEnabled bool,
 	testLinuxResult, testWindowsResult, testMacOSResult string, testOnWindows, testOnMacOS bool, scanResult string, scansEnabled bool,
-	evidenceResult string, evidenceEnabled bool) int {
-
+	evidenceResult string, evidenceEnabled bool,
+) int {
 	var sb strings.Builder
 
 	// Determine overall status
@@ -184,7 +184,7 @@ func generateCISummary(buildResult string, isContainer bool, containerTestResult
 	return 0
 }
 
-// formatJobResult formats a job result with appropriate emoji
+// formatJobResult formats a job result with appropriate emoji.
 func formatJobResult(result string) string {
 	switch result {
 	case "success":
@@ -199,7 +199,7 @@ func formatJobResult(result string) string {
 	}
 }
 
-// formatScanResult formats a scan result (warnings instead of failures)
+// formatScanResult formats a scan result (warnings instead of failures).
 func formatScanResult(result string) string {
 	switch result {
 	case "success":

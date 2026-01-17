@@ -117,7 +117,10 @@ func (l *Logger) formatMessage(level, msg string) string {
 			"message": msg,
 			"time":    time.Now().Format(time.RFC3339),
 		}
-		b, _ := json.Marshal(data)
+		b, err := json.Marshal(data)
+		if err != nil {
+			return msg // Fallback to raw message on marshal error
+		}
 		return string(b)
 	case FormatterTimestamped:
 		fallthrough

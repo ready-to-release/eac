@@ -13,7 +13,7 @@ func TestLoadAllTestManifests_SingleModule(t *testing.T) {
 	// Arrange: Create temp directory with one manifest
 	tmpDir := t.TempDir()
 	testDir := filepath.Join(tmpDir, "out", "test", "eac-core")
-	if err := os.MkdirAll(testDir, 0755); err != nil {
+	if err := os.MkdirAll(testDir, 0o755); err != nil {
 		t.Fatalf("Failed to create test dir: %v", err)
 	}
 
@@ -30,7 +30,6 @@ func TestLoadAllTestManifests_SingleModule(t *testing.T) {
 
 	// Act
 	manifests, err := LoadAllTestManifests(tmpDir)
-
 	// Assert
 	if err != nil {
 		t.Errorf("Expected no error, got: %v", err)
@@ -50,7 +49,7 @@ func TestLoadAllTestManifests_MultipleModules(t *testing.T) {
 	modules := []string{"eac-core", "eac-commands", "vscode-ext-commit"}
 	for _, mod := range modules {
 		testDir := filepath.Join(tmpDir, "out", "test", mod)
-		if err := os.MkdirAll(testDir, 0755); err != nil {
+		if err := os.MkdirAll(testDir, 0o755); err != nil {
 			t.Fatalf("Failed to create test dir for %s: %v", mod, err)
 		}
 
@@ -68,7 +67,6 @@ func TestLoadAllTestManifests_MultipleModules(t *testing.T) {
 
 	// Act
 	manifests, err := LoadAllTestManifests(tmpDir)
-
 	// Assert
 	if err != nil {
 		t.Errorf("Expected no error, got: %v", err)
@@ -95,7 +93,6 @@ func TestLoadAllTestManifests_NoManifests(t *testing.T) {
 
 	// Act
 	manifests, err := LoadAllTestManifests(tmpDir)
-
 	// Assert
 	if err != nil {
 		t.Errorf("Expected no error for empty directory, got: %v", err)
@@ -111,7 +108,7 @@ func TestLoadAllTestManifests_SkipsInvalidManifests(t *testing.T) {
 
 	// Valid manifest
 	validDir := filepath.Join(tmpDir, "out", "test", "eac-core")
-	if err := os.MkdirAll(validDir, 0755); err != nil {
+	if err := os.MkdirAll(validDir, 0o755); err != nil {
 		t.Fatalf("Failed to create test dir: %v", err)
 	}
 	manifest := implinternal.NewTestManifest("eac-core", "go", "abc123")
@@ -121,17 +118,16 @@ func TestLoadAllTestManifests_SkipsInvalidManifests(t *testing.T) {
 
 	// Invalid manifest (corrupted JSON)
 	invalidDir := filepath.Join(tmpDir, "out", "test", "eac-commands")
-	if err := os.MkdirAll(invalidDir, 0755); err != nil {
+	if err := os.MkdirAll(invalidDir, 0o755); err != nil {
 		t.Fatalf("Failed to create invalid test dir: %v", err)
 	}
 	invalidPath := filepath.Join(invalidDir, "test.manifest.json")
-	if err := os.WriteFile(invalidPath, []byte("{invalid json"), 0644); err != nil {
+	if err := os.WriteFile(invalidPath, []byte("{invalid json"), 0o644); err != nil {
 		t.Fatalf("Failed to write invalid manifest: %v", err)
 	}
 
 	// Act
 	manifests, err := LoadAllTestManifests(tmpDir)
-
 	// Assert
 	if err != nil {
 		t.Errorf("Expected no error (should skip invalid), got: %v", err)
@@ -150,7 +146,7 @@ func TestLoadAllTestManifests_SortsNewestFirst(t *testing.T) {
 
 	// Oldest
 	oldDir := filepath.Join(tmpDir, "out", "test", "module-old")
-	if err := os.MkdirAll(oldDir, 0755); err != nil {
+	if err := os.MkdirAll(oldDir, 0o755); err != nil {
 		t.Fatalf("Failed to create test dir: %v", err)
 	}
 	oldManifest := implinternal.NewTestManifest("module-old", "go", "abc123")
@@ -161,7 +157,7 @@ func TestLoadAllTestManifests_SortsNewestFirst(t *testing.T) {
 
 	// Newest
 	newDir := filepath.Join(tmpDir, "out", "test", "module-new")
-	if err := os.MkdirAll(newDir, 0755); err != nil {
+	if err := os.MkdirAll(newDir, 0o755); err != nil {
 		t.Fatalf("Failed to create test dir: %v", err)
 	}
 	newManifest := implinternal.NewTestManifest("module-new", "go", "abc123")
@@ -172,7 +168,6 @@ func TestLoadAllTestManifests_SortsNewestFirst(t *testing.T) {
 
 	// Act
 	manifests, err := LoadAllTestManifests(tmpDir)
-
 	// Assert
 	if err != nil {
 		t.Errorf("Expected no error, got: %v", err)

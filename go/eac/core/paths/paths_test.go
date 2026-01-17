@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// TestNewPathHelpers tests the newly added path helper functions
+// TestNewPathHelpers tests the newly added path helper functions.
 func TestNewPathHelpers(t *testing.T) {
 	repoRoot := "/repo"
 	moniker := "test-module"
@@ -87,7 +87,7 @@ func TestNewPathHelpers(t *testing.T) {
 	}
 }
 
-// TestPathConstants validates that path constants haven't changed
+// TestPathConstants validates that path constants haven't changed.
 func TestPathConstants(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -114,7 +114,7 @@ func TestPathConstants(t *testing.T) {
 	}
 }
 
-// TestTemplatePathVariadic tests the variadic template path functions
+// TestTemplatePathVariadic tests the variadic template path functions.
 func TestTemplatePathVariadic(t *testing.T) {
 	repoRoot := "/repo"
 

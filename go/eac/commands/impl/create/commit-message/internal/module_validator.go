@@ -23,14 +23,14 @@ type ModuleSectionValidator struct {
 	moduleName string
 }
 
-// NewModuleSectionValidator creates a validator for a specific module's section
+// NewModuleSectionValidator creates a validator for a specific module's section.
 func NewModuleSectionValidator(moduleName string) *ModuleSectionValidator {
 	return &ModuleSectionValidator{
 		moduleName: moduleName,
 	}
 }
 
-// Validate validates a module section against the expected format
+// Validate validates a module section against the expected format.
 func (v *ModuleSectionValidator) Validate(output string, context map[string]interface{}) []contracts.ValidationError {
 	var errors []contracts.ValidationError
 
@@ -184,7 +184,7 @@ func (v *ModuleSectionValidator) Validate(output string, context map[string]inte
 	return errors
 }
 
-// VerifyImplementation is a no-op for module validators (no contract to verify against)
+// VerifyImplementation is a no-op for module validators (no contract to verify against).
 func (v *ModuleSectionValidator) VerifyImplementation() []contracts.ValidationError {
 	return nil
 }

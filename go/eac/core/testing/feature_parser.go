@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// FeatureFile represents parsed metadata from a .feature file
+// FeatureFile represents parsed metadata from a .feature file.
 type FeatureFile struct {
 	FilePath    string
 	Module      string
@@ -18,13 +18,13 @@ type FeatureFile struct {
 	Scenarios   []string
 }
 
-// FeatureRule represents a Gherkin Rule block
+// FeatureRule represents a Gherkin Rule block.
 type FeatureRule struct {
 	Name        string
 	Description string
 }
 
-// ParseFeatureFile extracts metadata from a .feature file
+// ParseFeatureFile extracts metadata from a .feature file.
 func ParseFeatureFile(path string) (*FeatureFile, error) {
 	// Extract module and feature from path
 	// Example: specs/r2r-cli/verify-configuration/specification.feature
@@ -130,7 +130,7 @@ func ParseFeatureFile(path string) (*FeatureFile, error) {
 	return feature, nil
 }
 
-// isStepKeyword checks if a line starts with a Gherkin step keyword
+// isStepKeyword checks if a line starts with a Gherkin step keyword.
 func isStepKeyword(line string) bool {
 	keywords := []string{"Given", "When", "Then", "And", "But"}
 	for _, kw := range keywords {
@@ -145,7 +145,7 @@ func isStepKeyword(line string) bool {
 // Expected format: specs/<module>/<feature>/specification.feature
 // Example: specs/r2r-cli/verify-configuration/specification.feature
 // OR absolute path: C:\projects\eac\specs\r2r-cli\verify-configuration\specification.feature
-// Returns: "r2r-cli", "verify-configuration"
+// Returns: "r2r-cli", "verify-configuration".
 func extractModuleAndFeatureFromPath(path string) (module, feature string) {
 	// Normalize to forward slashes
 	path = filepath.ToSlash(path)
@@ -174,7 +174,7 @@ func extractModuleAndFeatureFromPath(path string) (module, feature string) {
 	return module, feature
 }
 
-// FindFeatureFiles recursively finds all .feature files in a directory
+// FindFeatureFiles recursively finds all .feature files in a directory.
 func FindFeatureFiles(rootPath string) ([]string, error) {
 	var featureFiles []string
 

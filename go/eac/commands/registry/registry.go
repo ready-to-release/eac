@@ -4,14 +4,15 @@ package registry
 import (
 	"bufio"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 )
 
-// InitialWorkingDir stores the working directory when the program started
+// InitialWorkingDir stores the working directory when the program started.
 var InitialWorkingDir string
 
-// WorkspaceRoot stores the repository root (cached after first call)
+// WorkspaceRoot stores the repository root (cached after first call).
 var WorkspaceRoot string
 
 func init() {
@@ -26,7 +27,7 @@ func init() {
 	}
 }
 
-// GetWorkspaceRoot returns the repository root directory, using cached value if available
+// GetWorkspaceRoot returns the repository root directory, using cached value if available.
 func GetWorkspaceRoot() (string, error) {
 	// IMPORTANT: Check for test isolation override FIRST, before using cached value
 	// This ensures isolated tests use their temporary directory instead of the cached real repo root
@@ -44,7 +45,7 @@ func GetWorkspaceRoot() (string, error) {
 	return findRepositoryRoot()
 }
 
-// findRepositoryRoot finds the git repository root by walking up directories
+// findRepositoryRoot finds the git repository root by walking up directories.
 func findRepositoryRoot() (string, error) {
 	startPath, err := os.Getwd()
 	if err != nil {
@@ -53,7 +54,7 @@ func findRepositoryRoot() (string, error) {
 
 	currentPath := startPath
 	for {
-		gitPath := currentPath + string(os.PathSeparator) + ".git"
+		gitPath := filepath.Join(currentPath, ".git")
 		if _, err := os.Stat(gitPath); err == nil {
 			WorkspaceRoot = currentPath
 			return currentPath, nil
@@ -67,10 +68,10 @@ func findRepositoryRoot() (string, error) {
 	}
 }
 
-// CommandFunc is the signature for all command functions
+// CommandFunc is the signature for all command functions.
 type CommandFunc func() int
 
-// FlagMetadata holds structured metadata for a command flag
+// FlagMetadata holds structured metadata for a command flag.
 type FlagMetadata struct {
 	Name         string   // e.g., "debug", "module"
 	Shorthand    string   // e.g., "d", "m" (optional single letter)
@@ -81,7 +82,7 @@ type FlagMetadata struct {
 	Completion   []string // static completion values (optional)
 }
 
-// CommandRegistration holds command metadata
+// CommandRegistration holds command metadata.
 type CommandRegistration struct {
 	Func          CommandFunc
 	ActualCommand string         // "get files" - the actual command users type
@@ -92,14 +93,14 @@ type CommandRegistration struct {
 	Args          string         // Argument completion type: "modules", "files", etc.
 }
 
-// commandRegistry maps command names (space-separated, e.g., "get files") to registrations
+// commandRegistry maps command names (space-separated, e.g., "get files") to registrations.
 var commandRegistry = map[string]*CommandRegistration{}
 
 // Register allows command files to register themselves by extracting metadata from source comments
 // The function automatically parses the calling file to extract:
 // - Command name from "// Command: <name>"
 // - Description from "// Description: <text>"
-// - Usage from "// Usage: <text>"
+// - Usage from "// Usage: <text>".
 func Register(fn CommandFunc) {
 	// Get the caller's file location
 	_, file, _, ok := runtime.Caller(1)
@@ -157,7 +158,7 @@ func Register(fn CommandFunc) {
 	}
 }
 
-// commandMetadata holds extracted comment data
+// commandMetadata holds extracted comment data.
 type commandMetadata struct {
 	CommandName string
 	Description string   // Parsed from "// Description:" (used as fallback for Short)
@@ -167,10 +168,10 @@ type commandMetadata struct {
 	Args        string // Argument completion type: "modules", "files", etc.
 }
 
-// flagDefinition holds parsed flag definition from comments
+// flagDefinition holds parsed flag definition from comments.
 type flagDefinition struct {
-	Name         string
-	Attributes   map[string]string // type, default, shorthand, usage, required, completion
+	Name       string
+	Attributes map[string]string // type, default, shorthand, usage, required, completion
 }
 
 // translateCrossCompilePath converts a compile-time file path to a runtime path
@@ -209,7 +210,7 @@ func translateCrossCompilePath(compilePath string) string {
 	return compilePath
 }
 
-// extractCommandMetadata parses a Go source file to extract command metadata from header comments
+// extractCommandMetadata parses a Go source file to extract command metadata from header comments.
 func extractCommandMetadata(filePath string) commandMetadata {
 	var metadata commandMetadata
 
@@ -271,7 +272,7 @@ func extractCommandMetadata(filePath string) commandMetadata {
 }
 
 // parseFlagDefinition parses a flag definition comment line
-// Format: // Flag.<name>: type=string, default=value, shorthand=s, usage=description, required=true, completion=val1,val2
+// Format: // Flag.<name>: type=string, default=value, shorthand=s, usage=description, required=true, completion=val1,val2.
 func parseFlagDefinition(line string) flagDefinition {
 	def := flagDefinition{
 		Attributes: make(map[string]string),
@@ -302,7 +303,7 @@ func parseFlagDefinition(line string) flagDefinition {
 }
 
 // parseAttributes parses key=value pairs from attribute string
-// Handles special case where usage field may contain commas
+// Handles special case where usage field may contain commas.
 func parseAttributes(attrStr string) map[string]string {
 	result := make(map[string]string)
 
@@ -375,7 +376,7 @@ func parseAttributes(attrStr string) map[string]string {
 	return result
 }
 
-// isValidAttributeKey checks if a string is a valid attribute key
+// isValidAttributeKey checks if a string is a valid attribute key.
 func isValidAttributeKey(s string) bool {
 	validKeys := []string{"type", "default", "shorthand", "required", "completion"}
 	for _, key := range validKeys {
@@ -386,7 +387,7 @@ func isValidAttributeKey(s string) bool {
 	return false
 }
 
-// GetCommands returns a map of command names to their functions (for dispatch)
+// GetCommands returns a map of command names to their functions (for dispatch).
 func GetCommands() map[string]CommandFunc {
 	result := make(map[string]CommandFunc, len(commandRegistry))
 	for name, reg := range commandRegistry {
@@ -395,22 +396,22 @@ func GetCommands() map[string]CommandFunc {
 	return result
 }
 
-// GetCommandRegistry returns the command registry
+// GetCommandRegistry returns the command registry.
 func GetCommandRegistry() map[string]*CommandRegistration {
 	return commandRegistry
 }
 
-// GetCanonicalName returns the kebab-case canonical name for a command
+// GetCanonicalName returns the kebab-case canonical name for a command.
 func GetCanonicalName(commandName string) string {
 	return strings.ReplaceAll(commandName, " ", "-")
 }
 
-// GetCommand retrieves a command registration by its command name (space-separated)
+// GetCommand retrieves a command registration by its command name (space-separated).
 func GetCommand(commandName string) *CommandRegistration {
 	return commandRegistry[commandName]
 }
 
-// GetCommandByCanonical retrieves a command registration by its canonical name (kebab-case)
+// GetCommandByCanonical retrieves a command registration by its canonical name (kebab-case).
 func GetCommandByCanonical(canonicalName string) *CommandRegistration {
 	// Convert kebab-case to space-separated for lookup
 	actualName := strings.ReplaceAll(canonicalName, "-", " ")

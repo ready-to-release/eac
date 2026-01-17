@@ -48,7 +48,7 @@ func (h *ScriptsHandler) Build(module *modules.ModuleContract, workspaceRoot, ou
 		return 0
 	}
 
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		Logln(logWriter, "❌ Failed to create output directory: %v", err)
 		return 1
 	}
@@ -74,7 +74,7 @@ func (h *ScriptsHandler) Build(module *modules.ModuleContract, workspaceRoot, ou
 
 			dstPath := filepath.Join(outputDir, match)
 			dstDir := filepath.Dir(dstPath)
-			if err := os.MkdirAll(dstDir, 0755); err != nil {
+			if err := os.MkdirAll(dstDir, 0o755); err != nil {
 				Logln(logWriter, "   ❌ Failed to create directory %s: %v", dstDir, err)
 				return 1
 			}

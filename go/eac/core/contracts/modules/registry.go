@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// Registry provides fast access to module contracts
+// Registry provides fast access to module contracts.
 type Registry struct {
 	modules            map[string]*ModuleContract // Keyed by moniker
 	version            string
@@ -15,7 +15,7 @@ type Registry struct {
 	modulesWithRepoPat []*ModuleContract            // Modules that have repo patterns (need checking for all files)
 }
 
-// NewRegistry creates a new module registry
+// NewRegistry creates a new module registry.
 func NewRegistry(version, workspaceRoot string) *Registry {
 	return &Registry{
 		modules:            make(map[string]*ModuleContract),
@@ -26,7 +26,7 @@ func NewRegistry(version, workspaceRoot string) *Registry {
 	}
 }
 
-// Add adds a module contract to the registry
+// Add adds a module contract to the registry.
 func (r *Registry) Add(module *ModuleContract) error {
 	if module.Moniker == "" {
 		return fmt.Errorf("cannot add module with empty moniker")
@@ -50,7 +50,7 @@ func (r *Registry) Add(module *ModuleContract) error {
 	return nil
 }
 
-// normalizeRoot normalizes a root path for indexing
+// normalizeRoot normalizes a root path for indexing.
 func normalizeRoot(root string) string {
 	if root == "" || root == "/" {
 		return ""
@@ -59,19 +59,19 @@ func normalizeRoot(root string) string {
 	return normalizePathSeparators(root)
 }
 
-// Get retrieves a module contract by moniker
+// Get retrieves a module contract by moniker.
 func (r *Registry) Get(moniker string) (*ModuleContract, bool) {
 	module, exists := r.modules[moniker]
 	return module, exists
 }
 
-// Has checks if a module exists in the registry
+// Has checks if a module exists in the registry.
 func (r *Registry) Has(moniker string) bool {
 	_, exists := r.modules[moniker]
 	return exists
 }
 
-// All returns all module contracts in the registry
+// All returns all module contracts in the registry.
 func (r *Registry) All() []*ModuleContract {
 	modules := make([]*ModuleContract, 0, len(r.modules))
 	for _, module := range r.modules {
@@ -80,7 +80,7 @@ func (r *Registry) All() []*ModuleContract {
 	return modules
 }
 
-// AllMonikers returns all module monikers sorted alphabetically
+// AllMonikers returns all module monikers sorted alphabetically.
 func (r *Registry) AllMonikers() []string {
 	monikers := make([]string, 0, len(r.modules))
 	for moniker := range r.modules {
@@ -90,22 +90,22 @@ func (r *Registry) AllMonikers() []string {
 	return monikers
 }
 
-// Count returns the number of modules in the registry
+// Count returns the number of modules in the registry.
 func (r *Registry) Count() int {
 	return len(r.modules)
 }
 
-// Version returns the contract version
+// Version returns the contract version.
 func (r *Registry) Version() string {
 	return r.version
 }
 
-// WorkspaceRoot returns the workspace root path
+// WorkspaceRoot returns the workspace root path.
 func (r *Registry) WorkspaceRoot() string {
 	return r.workspaceRoot
 }
 
-// FilterByType returns all modules of a specific type
+// FilterByType returns all modules of a specific type.
 func (r *Registry) FilterByType(contractType string) []*ModuleContract {
 	var filtered []*ModuleContract
 	for _, module := range r.modules {
@@ -116,7 +116,7 @@ func (r *Registry) FilterByType(contractType string) []*ModuleContract {
 	return filtered
 }
 
-// FindByRoot returns modules that match the given root path
+// FindByRoot returns modules that match the given root path.
 func (r *Registry) FindByRoot(rootPath string) []*ModuleContract {
 	var matches []*ModuleContract
 	for _, module := range r.modules {
@@ -128,7 +128,7 @@ func (r *Registry) FindByRoot(rootPath string) []*ModuleContract {
 }
 
 // GetDependencyGraph returns a map of module dependencies
-// Key: module moniker, Value: list of dependency monikers
+// Key: module moniker, Value: list of dependency monikers.
 func (r *Registry) GetDependencyGraph() map[string][]string {
 	graph := make(map[string][]string)
 	for moniker, module := range r.modules {
@@ -138,7 +138,7 @@ func (r *Registry) GetDependencyGraph() map[string][]string {
 }
 
 // GetReverseDependencyGraph returns a map of reverse dependencies
-// Key: module moniker, Value: list of modules that depend on it
+// Key: module moniker, Value: list of modules that depend on it.
 func (r *Registry) GetReverseDependencyGraph() map[string][]string {
 	graph := make(map[string][]string)
 
@@ -158,7 +158,7 @@ func (r *Registry) GetReverseDependencyGraph() map[string][]string {
 }
 
 // GetUsedBy returns all modules that depend on the given module
-// This is computed from depends_on relationships (no longer stored in config)
+// This is computed from depends_on relationships (no longer stored in config).
 func (r *Registry) GetUsedBy(moniker string) []string {
 	reverseGraph := r.GetReverseDependencyGraph()
 	return reverseGraph[moniker]
@@ -214,7 +214,7 @@ func (r *Registry) FindModulesForFile(filePath string) []*ModuleContract {
 	return matches
 }
 
-// splitPath splits a path into components
+// splitPath splits a path into components.
 func splitPath(path string) []string {
 	if path == "" {
 		return nil
@@ -228,7 +228,7 @@ func splitPath(path string) []string {
 	return parts
 }
 
-// joinPath joins path components
+// joinPath joins path components.
 func joinPath(parts []string) string {
 	return strings.Join(parts, "/")
 }

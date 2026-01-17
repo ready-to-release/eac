@@ -10,8 +10,8 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
-// buildTopLevelContext creates context for the top-level commit message agent
-func buildTopLevelContext(stagedFilesTable string, gitDiff string, diffStats string, affectedModules []string) string {
+// buildTopLevelContext creates context for the top-level commit message agent.
+func buildTopLevelContext(stagedFilesTable, gitDiff, diffStats string, affectedModules []string) string {
 	var context bytes.Buffer
 
 	// Module Count and List
@@ -65,7 +65,7 @@ func buildTopLevelContext(stagedFilesTable string, gitDiff string, diffStats str
 	return context.String()
 }
 
-// buildModuleContext creates context for a single module section agent
+// buildModuleContext creates context for a single module section agent.
 func buildModuleContext(moduleName string, moduleFiles []repository.RepositoryFileWithModule, fullDiff string) string {
 	var context bytes.Buffer
 
@@ -110,7 +110,7 @@ func buildModuleContext(moduleName string, moduleFiles []repository.RepositoryFi
 	return context.String()
 }
 
-// filterDiffForModule extracts only the diff chunks for files belonging to a specific module
+// filterDiffForModule extracts only the diff chunks for files belonging to a specific module.
 func filterDiffForModule(fullDiff string, moduleFiles []repository.RepositoryFileWithModule) string {
 	// Create a set of file names for quick lookup
 	fileSet := make(map[string]bool)

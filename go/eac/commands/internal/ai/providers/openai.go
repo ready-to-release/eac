@@ -10,17 +10,17 @@ import (
 )
 
 // DefaultOpenAIModel is the default model for OpenAI provider
-// Change this constant when upgrading to a newer model version
+// Change this constant when upgrading to a newer model version.
 const DefaultOpenAIModel = "gpt-4-turbo"
 
-// OpenAI provider uses OpenAI API with API key authentication
+// OpenAI provider uses OpenAI API with API key authentication.
 type OpenAI struct {
 	client *openai.Client
 	model  string
 }
 
 // NewOpenAI creates an OpenAI provider
-// Returns error if API key or model is empty (fail fast)
+// Returns error if API key or model is empty (fail fast).
 func NewOpenAI(apiKey, model string) (*OpenAI, error) {
 	// Validate required fields
 	if apiKey == "" {
@@ -39,12 +39,12 @@ func NewOpenAI(apiKey, model string) (*OpenAI, error) {
 	}, nil
 }
 
-// Name returns the provider name
+// Name returns the provider name.
 func (p *OpenAI) Name() string {
 	return "openai"
 }
 
-// Execute runs a prompt through OpenAI API
+// Execute runs a prompt through OpenAI API.
 func (p *OpenAI) Execute(ctx context.Context, input string, opts ...ai.Option) (string, error) {
 	// Apply options
 	options := &ai.ExecuteOptions{

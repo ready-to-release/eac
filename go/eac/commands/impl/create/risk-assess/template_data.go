@@ -5,7 +5,7 @@ package riskassess
 
 import "github.com/ready-to-release/eac/go/eac/commands/internal/risk/scoring"
 
-// RiskAssessmentReportData holds all data for rendering the risk assessment template
+// RiskAssessmentReportData holds all data for rendering the risk assessment template.
 type RiskAssessmentReportData struct {
 	// Header metadata
 	GeneratedAt      string
@@ -23,7 +23,7 @@ type RiskAssessmentReportData struct {
 	AggregatedReportPath string
 }
 
-// ExecutiveSummary holds summary statistics and AI-generated content
+// ExecutiveSummary holds summary statistics and AI-generated content.
 type ExecutiveSummary struct {
 	// Basic stats (existing)
 	TotalControls    int
@@ -44,13 +44,13 @@ type ExecutiveSummary struct {
 	HasAISummary             bool                 `json:"has_ai_summary"`            // Whether AI summary was generated
 }
 
-// CriticalModuleInfo holds critical module information from AI analysis
+// CriticalModuleInfo holds critical module information from AI analysis.
 type CriticalModuleInfo struct {
 	Module string `json:"module"`
 	Reason string `json:"reason"`
 }
 
-// ModuleReportData holds per-module report data
+// ModuleReportData holds per-module report data.
 type ModuleReportData struct {
 	Module                    string
 	Satisfied                 int
@@ -68,7 +68,7 @@ type ModuleReportData struct {
 	Warnings                  []string // Evidence collection warnings
 }
 
-// FindingData holds simplified finding information
+// FindingData holds simplified finding information.
 type FindingData struct {
 	ControlID string
 	Title     string

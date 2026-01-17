@@ -12,26 +12,26 @@ import (
 )
 
 // displayManager handles all console output in a single goroutine
-// This prevents interleaved output from multiple goroutines
+// This prevents interleaved output from multiple goroutines.
 type displayManager struct {
-	mu              sync.Mutex
-	logger          *log.Logger // goroutine-safe logger
-	actionVerb      string
-	startTime       time.Time
-	running         map[string]bool // monikers currently running
-	completed       int
-	failed          int  // count of failures
-	total           int
-	updateInterval  time.Duration
-	completionChan  chan *WorkResult
-	statusTicker    *time.Ticker
-	done            chan bool
+	mu               sync.Mutex
+	logger           *log.Logger // goroutine-safe logger
+	actionVerb       string
+	startTime        time.Time
+	running          map[string]bool // monikers currently running
+	completed        int
+	failed           int // count of failures
+	total            int
+	updateInterval   time.Duration
+	completionChan   chan *WorkResult
+	statusTicker     *time.Ticker
+	done             chan bool
 	completedResults []*WorkResult // collected results for summary generation
-	tuiMode         bool     // when true, skip running list (TUI tabs show it)
+	tuiMode          bool          // when true, skip running list (TUI tabs show it)
 }
 
-// newDisplayManager creates a new display manager
-func newDisplayManager(logger *log.Logger, actionVerb string, total int, updateIntervalMs int, tuiMode bool) *displayManager {
+// newDisplayManager creates a new display manager.
+func newDisplayManager(logger *log.Logger, actionVerb string, total, updateIntervalMs int, tuiMode bool) *displayManager {
 	if updateIntervalMs <= 0 {
 		updateIntervalMs = 500 // default to 500ms for responsive feedback
 	}
@@ -50,13 +50,13 @@ func newDisplayManager(logger *log.Logger, actionVerb string, total int, updateI
 	}
 }
 
-// start begins the display loop in a separate goroutine
+// start begins the display loop in a separate goroutine.
 func (dm *displayManager) start() {
 	dm.statusTicker = time.NewTicker(dm.updateInterval)
 	go dm.displayLoop()
 }
 
-// stop terminates the display loop
+// stop terminates the display loop.
 func (dm *displayManager) stop() {
 	if dm.statusTicker != nil {
 		dm.statusTicker.Stop()
@@ -66,17 +66,17 @@ func (dm *displayManager) stop() {
 	close(dm.completionChan)
 }
 
-// typeSummary holds aggregated stats for a test type
+// typeSummary holds aggregated stats for a test type.
 type typeSummary struct {
-	Type      string
-	Packages  int
-	Passed    int
-	Failed    int
-	Warnings  int
+	Type     string
+	Packages int
+	Passed   int
+	Failed   int
+	Warnings int
 }
 
 // flushCompletedLines prints summary table for successes and individual lines for failures/warnings
-// Should be called after stop() to ensure all completions are processed
+// Should be called after stop() to ensure all completions are processed.
 func (dm *displayManager) flushCompletedLines() {
 	dm.mu.Lock()
 	defer dm.mu.Unlock()
@@ -119,7 +119,7 @@ func (dm *displayManager) flushCompletedLines() {
 	}
 }
 
-// printSummaryTable prints a markdown-style table grouped by test type
+// printSummaryTable prints a markdown-style table grouped by test type.
 func (dm *displayManager) printSummaryTable(summaryByType map[string]*typeSummary) {
 	// Collect and sort types for consistent output
 	types := make([]string, 0, len(summaryByType))
@@ -140,7 +140,7 @@ func (dm *displayManager) printSummaryTable(summaryByType map[string]*typeSummar
 	dm.logger.Printf("%s", LineEndingPrefix)
 }
 
-// printResultWithErrors prints a failed/warning result with its error lines
+// printResultWithErrors prints a failed/warning result with its error lines.
 func (dm *displayManager) printResultWithErrors(result *WorkResult) {
 	displayName := output.PackageDisplayName(result.Moniker)
 	displayName = strings.ReplaceAll(displayName, "\\", "/")
@@ -185,19 +185,19 @@ func (dm *displayManager) printResultWithErrors(result *WorkResult) {
 	}
 }
 
-// markRunning marks a moniker as currently running
+// markRunning marks a moniker as currently running.
 func (dm *displayManager) markRunning(moniker string) {
 	dm.mu.Lock()
 	defer dm.mu.Unlock()
 	dm.running[moniker] = true
 }
 
-// markCompleted marks a moniker as completed and queues it for display
+// markCompleted marks a moniker as completed and queues it for display.
 func (dm *displayManager) markCompleted(result *WorkResult) {
 	dm.completionChan <- result
 }
 
-// displayLoop is the main display goroutine - only this goroutine writes to output
+// displayLoop is the main display goroutine - only this goroutine writes to output.
 func (dm *displayManager) displayLoop() {
 	for {
 		select {
@@ -211,7 +211,7 @@ func (dm *displayManager) displayLoop() {
 	}
 }
 
-// handleCompletion processes a completed work item and stores it for summary
+// handleCompletion processes a completed work item and stores it for summary.
 func (dm *displayManager) handleCompletion(result *WorkResult) {
 	dm.mu.Lock()
 	defer dm.mu.Unlock()
@@ -227,7 +227,7 @@ func (dm *displayManager) handleCompletion(result *WorkResult) {
 	dm.completedResults = append(dm.completedResults, result)
 }
 
-// displayStatus shows periodic status updates
+// displayStatus shows periodic status updates.
 func (dm *displayManager) displayStatus() {
 	dm.mu.Lock()
 	defer dm.mu.Unlock()
@@ -273,7 +273,7 @@ func (dm *displayManager) displayStatus() {
 		formatDuration(elapsed), dm.completed, dm.total, failedStr, runningCount, nameList, LineEndingPrefix)
 }
 
-// formatDuration formats a duration as "1m 23s" or "45s"
+// formatDuration formats a duration as "1m 23s" or "45s".
 func formatDuration(d time.Duration) string {
 	d = d.Round(time.Second)
 	minutes := int(d.Minutes())

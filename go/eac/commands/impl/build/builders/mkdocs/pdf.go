@@ -12,7 +12,7 @@ import (
 // mergePDFs merges multiple PDF files with cover page, TOC, and page numbers.
 // This function contains an embedded Python script that uses pypdf and reportlab
 // to generate a professional PDF with navigation, bookmarks, and consistent styling.
-func MergePDFs(siteDir, outputPath, hostRepoRoot, workspaceRoot, stagingDir, imageName string, bookTitle string, bookDescription string, logWriter io.Writer, isDinD bool) error {
+func MergePDFs(siteDir, outputPath, hostRepoRoot, workspaceRoot, stagingDir, imageName, bookTitle, bookDescription string, logWriter io.Writer, isDinD bool) error {
 	// Get relative paths for Docker
 	relSiteDir, err := filepath.Rel(workspaceRoot, siteDir)
 	if err != nil {

@@ -51,7 +51,7 @@ func RenderAppendixA(report CucumberReport, workspaceRoot string) string {
 }
 
 // extractFeatureName extracts the feature name from a Feature ID
-// Example: "eac-commands_ai-commit-generation" -> "ai-commit-generation"
+// Example: "eac-commands_ai-commit-generation" -> "ai-commit-generation".
 func extractFeatureName(featureID string) string {
 	// Split on underscore and take the last part
 	parts := strings.Split(featureID, "_")
@@ -62,8 +62,8 @@ func extractFeatureName(featureID string) string {
 }
 
 // readFeatureFile reads the content of a feature file
-// Handles relative paths from cucumber.json (e.g., "../../../specs/...")
-func readFeatureFile(uri string, workspaceRoot string) string {
+// Handles relative paths from cucumber.json (e.g., "../../../specs/...").
+func readFeatureFile(uri, workspaceRoot string) string {
 	// Normalize the path
 	filePath := uri
 

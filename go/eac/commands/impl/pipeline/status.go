@@ -34,7 +34,7 @@ func init() {
 	registry.Register(PipelineStatus)
 }
 
-// StatusWorkflowRunInfo represents workflow run information from GitHub
+// StatusWorkflowRunInfo represents workflow run information from GitHub.
 type StatusWorkflowRunInfo struct {
 	DatabaseID  int    `json:"databaseId"`
 	Name        string `json:"name"`
@@ -48,7 +48,7 @@ type StatusWorkflowRunInfo struct {
 	Event       string `json:"event"`
 }
 
-// StatusCommitInfo represents commit information
+// StatusCommitInfo represents commit information.
 type StatusCommitInfo struct {
 	SHA     string `json:"sha"`
 	Message string `json:"message"`
@@ -179,7 +179,7 @@ func PipelineStatus() int {
 	return 0
 }
 
-// getStatusHeadCommit gets the HEAD commit SHA for a ref
+// getStatusHeadCommit gets the HEAD commit SHA for a ref.
 func getStatusHeadCommit(ref string) (string, error) {
 	cmd := exec.Command("gh", "api", fmt.Sprintf("repos/{owner}/{repo}/commits/%s", ref), "--jq", ".sha")
 	output, err := cmd.Output()
@@ -194,7 +194,7 @@ func getStatusHeadCommit(ref string) (string, error) {
 	return strings.TrimSpace(string(output)), nil
 }
 
-// getStatusCommitInfo gets commit information
+// getStatusCommitInfo gets commit information.
 func getStatusCommitInfo(sha string) (*StatusCommitInfo, error) {
 	cmd := exec.Command("gh", "api", fmt.Sprintf("repos/{owner}/{repo}/commits/%s", sha),
 		"--jq", `{sha: .sha, message: .commit.message, author: .commit.author.name}`)
@@ -211,7 +211,7 @@ func getStatusCommitInfo(sha string) (*StatusCommitInfo, error) {
 	return &info, nil
 }
 
-// getStatusWorkflowRunsForCommit gets all workflow runs for a specific commit
+// getStatusWorkflowRunsForCommit gets all workflow runs for a specific commit.
 func getStatusWorkflowRunsForCommit(sha string) ([]StatusWorkflowRunInfo, error) {
 	cmd := exec.Command("gh", "run", "list",
 		"--commit", sha,
@@ -231,7 +231,7 @@ func getStatusWorkflowRunsForCommit(sha string) ([]StatusWorkflowRunInfo, error)
 	return runs, nil
 }
 
-// getStatusWorkflowIcon returns an icon for the workflow status
+// getStatusWorkflowIcon returns an icon for the workflow status.
 func getStatusWorkflowIcon(status, conclusion string) string {
 	if status == "completed" {
 		switch conclusion {
@@ -239,7 +239,7 @@ func getStatusWorkflowIcon(status, conclusion string) string {
 			return "✓"
 		case "failure":
 			return "✗"
-		case "cancelled":
+		case "canceled":
 			return "⊘"
 		case "skipped":
 			return "⊘"
@@ -260,7 +260,7 @@ func getStatusWorkflowIcon(status, conclusion string) string {
 	}
 }
 
-// truncateStatus truncates a string to maxLen characters
+// truncateStatus truncates a string to maxLen characters.
 func truncateStatus(s string, maxLen int) string {
 	if len(s) <= maxLen {
 		return s

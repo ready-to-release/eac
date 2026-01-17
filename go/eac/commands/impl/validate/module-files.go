@@ -14,15 +14,15 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/git"
-	"github.com/ready-to-release/eac/go/eac/core/repository"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
 func init() {
 	registry.Register(ValidateModuleFiles)
 }
 
-// ValidateModuleFiles validates file ownership in modules
+// ValidateModuleFiles validates file ownership in modules.
 func ValidateModuleFiles() int {
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {

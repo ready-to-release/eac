@@ -14,11 +14,11 @@ import (
 var log = logging.C()
 
 // containerNamePrefix is the base name for structurizr-lite containers
-// Actual containers will have module name and port suffix, e.g., structurizr-lite-mymodule-9001
+// Actual containers will have module name and port suffix, e.g., structurizr-lite-mymodule-9001.
 const containerNamePrefix = "structurizr-lite"
 
 // StartStructurizrLite starts the Structurizr Lite Docker container and opens the browser
-// The autoStop parameter is kept for backward compatibility but is less relevant with dynamic ports
+// The autoStop parameter is kept for backward compatibility but is less relevant with dynamic ports.
 func StartStructurizrLite(moduleName string, autoStop bool) error {
 	// Get repository root
 	repoRoot, err := repository.GetRepositoryRoot("")
@@ -81,14 +81,14 @@ func StartStructurizrLite(moduleName string, autoStop bool) error {
 	return nil
 }
 
-// StopStructurizrLite stops any running Structurizr Lite container for the given module
+// StopStructurizrLite stops any running Structurizr Lite container for the given module.
 func StopStructurizrLite(moduleName string) error {
 	containerName := fmt.Sprintf("%s-%s", containerNamePrefix, moduleName)
 	ctx := context.Background()
 	return serve.StopServe(ctx, containerName)
 }
 
-// IsStructurizrLiteRunning checks if Structurizr Lite is running for a module
+// IsStructurizrLiteRunning checks if Structurizr Lite is running for a module.
 func IsStructurizrLiteRunning(moduleName string) (*serve.ServeResult, bool, error) {
 	containerName := fmt.Sprintf("%s-%s", containerNamePrefix, moduleName)
 	ctx := context.Background()

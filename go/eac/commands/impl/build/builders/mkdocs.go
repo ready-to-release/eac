@@ -79,7 +79,7 @@ func (h *MkDocsHandler) Build(module *modules.ModuleContract, workspaceRoot, out
 	return buildMkDocsModule(module, workspaceRoot, outputDir, logWriter, opts)
 }
 
-// mkdocsDockerConfig holds resolved docker configuration for mkdocs builds
+// mkdocsDockerConfig holds resolved docker configuration for mkdocs builds.
 type mkdocsDockerConfig struct {
 	ImageName      string
 	ContainerDir   string
@@ -166,12 +166,12 @@ func getMkDocsDockerConfig(module *modules.ModuleContract, workspaceRoot string,
 //   - pdf-all: Both dark and light PDFs
 //
 // Multiple books for the same module are built in parallel.
-func buildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func buildMkDocsModule(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	// Load config to check for book configuration
-	cfg, _ := config.Load(config.LoadOptions{RepoRoot: workspaceRoot, LazyLoad: true})
-	if cfg != nil {
-		cfg.LoadBooks(false)
-		cfg.LoadRepository(false) // Need modules to look up books by module's books list
+	cfg, loadErr := config.Load(config.LoadOptions{RepoRoot: workspaceRoot, LazyLoad: true})
+	if loadErr == nil && cfg != nil {
+		_ = cfg.LoadBooks(false)      //nolint:errcheck // best-effort config load
+		_ = cfg.LoadRepository(false) //nolint:errcheck // best-effort config load for books by module
 		// Check if module has ANY books defined
 		allBooks := cfg.GetBooksByModule(module.Moniker)
 		if len(allBooks) > 0 {
@@ -282,7 +282,11 @@ func buildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 	configPath := filepath.Join(outputDir, "mkdocs.yml")
 	relStagingDir := ""
 	if stagingDir != "" {
-		relStagingDir, _ = filepath.Rel(outputDir, stagingDir)
+		var relErr error
+		relStagingDir, relErr = filepath.Rel(outputDir, stagingDir)
+		if relErr != nil {
+			relStagingDir = stagingDir // Fallback to absolute
+		}
 		relStagingDir = filepath.ToSlash(relStagingDir)
 		Logln(logWriter, "   Using staging: %s (relative to config)", relStagingDir)
 	}
@@ -301,7 +305,7 @@ func buildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 	macrosSource := filepath.Join(workspaceRoot, "containers", "mkdocs-site", "mkdocs_macros.py")
 	macrosTarget := filepath.Join(outputDir, "main.py")
 	if macrosData, err := os.ReadFile(macrosSource); err == nil {
-		if err := os.WriteFile(macrosTarget, macrosData, 0644); err != nil {
+		if err := os.WriteFile(macrosTarget, macrosData, 0o644); err != nil {
 			Logln(logWriter, "   ⚠️  Failed to copy mkdocs macros script: %v", err)
 		} else {
 			Logln(logWriter, "   Macros: %s", macrosTarget)
@@ -338,7 +342,7 @@ func buildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 	// Calculate the site output directory (local path within container)
 	siteDir := filepath.Join(outputDir, "site")
 
-	if err := os.MkdirAll(siteDir, 0755); err != nil {
+	if err := os.MkdirAll(siteDir, 0o755); err != nil {
 		Logln(logWriter, "❌ Failed to create output directory: %v", err)
 		return 1
 	}
@@ -360,7 +364,10 @@ func buildMkDocsModule(module *modules.ModuleContract, workspaceRoot string, out
 	}
 
 	// Get relative config path for Docker (config is already in mounted volume)
-	relConfigPath, _ := filepath.Rel(workspaceRoot, configPath)
+	relConfigPath, relErr := filepath.Rel(workspaceRoot, configPath)
+	if relErr != nil {
+		relConfigPath = configPath // Fallback to absolute
+	}
 	dockerConfigPath := strings.ReplaceAll(relConfigPath, "\\", "/")
 
 	buildArgs := []string{
@@ -458,7 +465,7 @@ func ensureMkDocsImage(imageName, dockerfilePath, contextPath string, logWriter 
 	return nil
 }
 
-// imageExists checks if a Docker image exists locally
+// imageExists checks if a Docker image exists locally.
 func imageExists(imageName string) bool {
 	cmd := exec.Command("docker", "images", "-q", imageName)
 	output, err := cmd.Output()
@@ -467,10 +474,11 @@ func imageExists(imageName string) bool {
 	}
 	return len(strings.TrimSpace(string(output))) > 0
 }
+
 // buildMkDocsWithTheme builds a PDF with a specific theme (dark or light)
 // cleanBuild controls whether to use --clean flag; set false when building multiple themes
-// to preserve PDFs from previous theme builds
-func buildMkDocsWithTheme(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, theme string, cleanBuild bool) int {
+// to preserve PDFs from previous theme builds.
+func buildMkDocsWithTheme(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, theme string, cleanBuild bool) int {
 	// Check for book configuration and run preprocessing if found
 	// pdfMode=true enables link normalization for PDF compatibility
 	stagingDir, bookUsed := checkAndPreprocessBook(module.Moniker, workspaceRoot, outputDir, logWriter, true)
@@ -487,8 +495,8 @@ func buildMkDocsWithTheme(module *modules.ModuleContract, workspaceRoot string, 
 // buildMkDocsWithThemeAndStaging builds a PDF with a specific theme using a pre-computed staging directory
 // This allows multiple theme builds to share preprocessing work
 // bookName is used for the final PDF naming: {bookName}-{theme}.pdf
-// bookTitle and bookDescription are used for the PDF cover page
-func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName string, bookTitle string, bookDescription string, workspaceRoot string, outputDir string, logWriter io.Writer, theme string, cleanBuild bool, stagingDir string) int {
+// bookTitle and bookDescription are used for the PDF cover page.
+func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName, bookTitle, bookDescription, workspaceRoot, outputDir string, logWriter io.Writer, theme string, cleanBuild bool, stagingDir string) int {
 	if theme == "" {
 		theme = "dark"
 	}
@@ -505,7 +513,11 @@ func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName str
 	configPath := filepath.Join(outputDir, "mkdocs.yml")
 	relStagingDir := ""
 	if stagingDir != "" {
-		relStagingDir, _ = filepath.Rel(outputDir, stagingDir)
+		var relErr error
+		relStagingDir, relErr = filepath.Rel(outputDir, stagingDir)
+		if relErr != nil {
+			relStagingDir = stagingDir // Fallback to absolute
+		}
 		relStagingDir = filepath.ToSlash(relStagingDir)
 		Logln(logWriter, "   Using staging: %s (relative to config)", relStagingDir)
 	}
@@ -561,14 +573,17 @@ func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName str
 
 	// Calculate the site output directory
 	siteDir := filepath.Join(outputDir, "site")
-	if err := os.MkdirAll(siteDir, 0755); err != nil {
+	if err := os.MkdirAll(siteDir, 0o755); err != nil {
 		Logln(logWriter, "❌ Failed to create output directory: %v", err)
 		return 1
 	}
 
 	// MkDocs resolves --site-dir relative to the config file directory when using -f
 	// Since both config and site are in outputDir, site-dir is just "site"
-	relConfigPath, _ := filepath.Rel(workspaceRoot, configPath)
+	relConfigPath, relErr := filepath.Rel(workspaceRoot, configPath)
+	if relErr != nil {
+		relConfigPath = configPath // Fallback to absolute
+	}
 	dockerVolume := FormatDockerVolumePath(hostRepoRoot)
 	dockerSiteDir := "site"
 	dockerConfigPath := strings.ReplaceAll(relConfigPath, "\\", "/")

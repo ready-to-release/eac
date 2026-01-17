@@ -98,7 +98,7 @@ func GetHandlerForModule(moduleType string) Handler {
 	return nil
 }
 
-// matchesCapabilities returns true if the module has any capability the handler supports
+// matchesCapabilities returns true if the module has any capability the handler supports.
 func matchesCapabilities(moduleCapabilities, handlerCapabilities []string) bool {
 	for _, mc := range moduleCapabilities {
 		for _, hc := range handlerCapabilities {
@@ -110,7 +110,7 @@ func matchesCapabilities(moduleCapabilities, handlerCapabilities []string) bool 
 	return false
 }
 
-// IsGoModuleType returns true if the module type uses Go tooling (has go_module capability)
+// IsGoModuleType returns true if the module type uses Go tooling (has go_module capability).
 func IsGoModuleType(moduleType string) bool {
 	cfg := config.Global()
 	if cfg != nil && cfg.ModuleTypes != nil {

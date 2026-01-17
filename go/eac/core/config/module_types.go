@@ -1,6 +1,6 @@
 package config
 
-// ModuleTypesConfig represents the module-types.yml configuration
+// ModuleTypesConfig represents the module-types.yml configuration.
 type ModuleTypesConfig struct {
 	Types []ModuleTypeDef `yaml:"types"`
 
@@ -8,7 +8,7 @@ type ModuleTypesConfig struct {
 	typeMap map[string]*ModuleTypeDef
 }
 
-// ModuleTypeDef defines a module type
+// ModuleTypeDef defines a module type.
 type ModuleTypeDef struct {
 	Name          string             `yaml:"name"`
 	Description   string             `yaml:"description"`
@@ -21,13 +21,13 @@ type ModuleTypeDef struct {
 	Defaults      *TypeDefaults      `yaml:"defaults,omitempty"`
 }
 
-// BuildConfig contains build output configuration for a module type
+// BuildConfig contains build output configuration for a module type.
 type BuildConfig struct {
 	Artifacts []Artifact      `yaml:"artifacts"`
 	PostBuild []PostBuildStep `yaml:"post_build,omitempty"`
 }
 
-// PostBuildStep defines a post-build action to execute after successful build
+// PostBuildStep defines a post-build action to execute after successful build.
 type PostBuildStep struct {
 	Action  string   `yaml:"action"`            // copy, script
 	Target  string   `yaml:"target,omitempty"`  // Target path for copy action
@@ -36,13 +36,13 @@ type PostBuildStep struct {
 	Script  string   `yaml:"script,omitempty"`  // Script command to run (for script action)
 }
 
-// PostBuildAction constants
+// PostBuildAction constants.
 const (
 	PostBuildActionCopy   = "copy"
 	PostBuildActionScript = "script"
 )
 
-// Artifact defines an expected build artifact
+// Artifact defines an expected build artifact.
 type Artifact struct {
 	Type        string   `yaml:"type"`                  // executable, file, directory, marker, image, glob
 	Pattern     string   `yaml:"pattern"`               // Path pattern with variables: {moniker}, {os}, {arch}, {ext}
@@ -53,7 +53,7 @@ type Artifact struct {
 	DeriveFrom  string   `yaml:"derive_from,omitempty"` // Source artifact pattern to derive from (for compressed variants)
 }
 
-// ArtifactType constants
+// ArtifactType constants.
 const (
 	ArtifactTypeExecutable = "executable"
 	ArtifactTypeFile       = "file"
@@ -63,21 +63,21 @@ const (
 	ArtifactTypeTest       = "test"
 )
 
-// VerifyMode constants
+// VerifyMode constants.
 const (
 	VerifyCurrentPlatform = "current_platform"
 	VerifyAll             = "all"
 	VerifyAny             = "any"
 )
 
-// CompressionType constants
+// CompressionType constants.
 const (
 	CompressionNone  = ""      // No compression (default)
 	CompressionStrip = "strip" // Strip debug symbols only
 	CompressionUPX   = "upx"   // UPX compression (implies strip)
 )
 
-// DockerBuildConfig contains Docker image build configuration
+// DockerBuildConfig contains Docker image build configuration.
 type DockerBuildConfig struct {
 	Container  string             `yaml:"container"`            // Container name (references containers/{container}/)
 	Context    string             `yaml:"context"`              // Build context path
@@ -92,7 +92,7 @@ type DockerBuildConfig struct {
 	Provenance bool               `yaml:"provenance,omitempty"` // Generate provenance attestation
 }
 
-// DockerCacheConfig contains Docker build cache configuration
+// DockerCacheConfig contains Docker build cache configuration.
 type DockerCacheConfig struct {
 	Type  string `yaml:"type"`            // "gha" or "registry"
 	Scope string `yaml:"scope,omitempty"` // Cache scope (for GHA cache)
@@ -102,13 +102,13 @@ type DockerCacheConfig struct {
 }
 
 // TypeDefaults contains default values for modules of this type.
-// Supports variable substitution: {moniker}, {root}, {type}
+// Supports variable substitution: {moniker}, {root}, {type}.
 type TypeDefaults struct {
 	Files *FilesDefaults `yaml:"files,omitempty"`
 	Repo  *RepoDefaults  `yaml:"repo,omitempty"`
 }
 
-// FilesDefaults contains default file patterns for a module type
+// FilesDefaults contains default file patterns for a module type.
 type FilesDefaults struct {
 	Source    []string          `yaml:"source,omitempty"`
 	Config    []string          `yaml:"config,omitempty"`
@@ -118,20 +118,20 @@ type FilesDefaults struct {
 	Workflows *WorkflowDefaults `yaml:"workflows,omitempty"`
 }
 
-// WorkflowDefaults contains default workflow file paths
+// WorkflowDefaults contains default workflow file paths.
 type WorkflowDefaults struct {
 	CI      string `yaml:"ci,omitempty"`
 	Release string `yaml:"release,omitempty"`
 }
 
-// RepoDefaults contains default repo-level configurations
+// RepoDefaults contains default repo-level configurations.
 type RepoDefaults struct {
 	Specs    []string `yaml:"specs,omitempty"`
 	TestImpl string   `yaml:"test_impl,omitempty"`
 	Design   string   `yaml:"design,omitempty"`
 }
 
-// buildTypeMap builds the internal lookup map
+// buildTypeMap builds the internal lookup map.
 func (c *ModuleTypesConfig) buildTypeMap() {
 	c.typeMap = make(map[string]*ModuleTypeDef, len(c.Types))
 	for i := range c.Types {
@@ -139,7 +139,7 @@ func (c *ModuleTypesConfig) buildTypeMap() {
 	}
 }
 
-// Get returns a module type definition by name
+// Get returns a module type definition by name.
 func (c *ModuleTypesConfig) Get(typeName string) *ModuleTypeDef {
 	if c.typeMap == nil {
 		c.buildTypeMap()
@@ -147,7 +147,7 @@ func (c *ModuleTypesConfig) Get(typeName string) *ModuleTypeDef {
 	return c.typeMap[typeName]
 }
 
-// HasCapability checks if a module type has a specific capability
+// HasCapability checks if a module type has a specific capability.
 func (c *ModuleTypesConfig) HasCapability(typeName, capability string) bool {
 	typeDef := c.Get(typeName)
 	if typeDef == nil {
@@ -161,7 +161,7 @@ func (c *ModuleTypesConfig) HasCapability(typeName, capability string) bool {
 	return false
 }
 
-// GetCapabilities returns all capabilities for a module type
+// GetCapabilities returns all capabilities for a module type.
 func (c *ModuleTypesConfig) GetCapabilities(typeName string) []string {
 	typeDef := c.Get(typeName)
 	if typeDef == nil {
@@ -201,7 +201,7 @@ func (c *ModuleTypesConfig) GetBuildDepsFromCapabilities(typeName string, sysDep
 	return nil
 }
 
-// GetPrimaryBuildDep returns the first build dependency (used for build dispatch)
+// GetPrimaryBuildDep returns the first build dependency (used for build dispatch).
 func (c *ModuleTypesConfig) GetPrimaryBuildDep(typeName string) string {
 	deps := c.GetBuildDeps(typeName)
 	if len(deps) == 0 {
@@ -210,7 +210,7 @@ func (c *ModuleTypesConfig) GetPrimaryBuildDep(typeName string) string {
 	return deps[0]
 }
 
-// GetDockerBuildConfig returns the docker_build configuration for a module type
+// GetDockerBuildConfig returns the docker_build configuration for a module type.
 func (c *ModuleTypesConfig) GetDockerBuildConfig(typeName string) *DockerBuildConfig {
 	typeDef := c.Get(typeName)
 	if typeDef == nil {
@@ -259,7 +259,7 @@ func (c *ModuleTypesConfig) GetBDDFramework(typeName string) string {
 	return typeDef.BDDFramework
 }
 
-// GetTypesWithCapability returns all type names that have the given capability
+// GetTypesWithCapability returns all type names that have the given capability.
 func (c *ModuleTypesConfig) GetTypesWithCapability(capability string) []string {
 	var result []string
 	for _, t := range c.Types {
@@ -273,7 +273,7 @@ func (c *ModuleTypesConfig) GetTypesWithCapability(capability string) []string {
 	return result
 }
 
-// GetTypesWithBuildDep returns all type names that require the given build dependency
+// GetTypesWithBuildDep returns all type names that require the given build dependency.
 func (c *ModuleTypesConfig) GetTypesWithBuildDep(dep string) []string {
 	var result []string
 	for _, t := range c.Types {
@@ -287,7 +287,7 @@ func (c *ModuleTypesConfig) GetTypesWithBuildDep(dep string) []string {
 	return result
 }
 
-// GetPostBuildSteps returns the post-build steps for a module type
+// GetPostBuildSteps returns the post-build steps for a module type.
 func (c *ModuleTypesConfig) GetPostBuildSteps(typeName string) []PostBuildStep {
 	typeDef := c.Get(typeName)
 	if typeDef == nil {
@@ -296,7 +296,7 @@ func (c *ModuleTypesConfig) GetPostBuildSteps(typeName string) []PostBuildStep {
 	return typeDef.GetPostBuildSteps()
 }
 
-// HasCapability checks if this type definition has a specific capability
+// HasCapability checks if this type definition has a specific capability.
 func (t *ModuleTypeDef) HasCapability(capability string) bool {
 	for _, cap := range t.Capabilities {
 		if cap == capability {
@@ -306,7 +306,7 @@ func (t *ModuleTypeDef) HasCapability(capability string) bool {
 	return false
 }
 
-// GetArtifacts returns the build artifacts for this module type
+// GetArtifacts returns the build artifacts for this module type.
 func (t *ModuleTypeDef) GetArtifacts() []Artifact {
 	if t.Build == nil {
 		return nil
@@ -314,12 +314,12 @@ func (t *ModuleTypeDef) GetArtifacts() []Artifact {
 	return t.Build.Artifacts
 }
 
-// HasArtifacts returns true if this module type defines build artifacts
+// HasArtifacts returns true if this module type defines build artifacts.
 func (t *ModuleTypeDef) HasArtifacts() bool {
 	return t.Build != nil && len(t.Build.Artifacts) > 0
 }
 
-// GetArtifactsByType returns artifacts of a specific type
+// GetArtifactsByType returns artifacts of a specific type.
 func (t *ModuleTypeDef) GetArtifactsByType(artifactType string) []Artifact {
 	if t.Build == nil {
 		return nil
@@ -333,7 +333,7 @@ func (t *ModuleTypeDef) GetArtifactsByType(artifactType string) []Artifact {
 	return result
 }
 
-// GetVerifyMode returns the verification mode, defaulting to current_platform
+// GetVerifyMode returns the verification mode, defaulting to current_platform.
 func (a *Artifact) GetVerifyMode() string {
 	if a.Verify == "" {
 		return VerifyCurrentPlatform
@@ -341,12 +341,12 @@ func (a *Artifact) GetVerifyMode() string {
 	return a.Verify
 }
 
-// IsExecutable returns true if this is an executable artifact
+// IsExecutable returns true if this is an executable artifact.
 func (a *Artifact) IsExecutable() bool {
 	return a.Type == ArtifactTypeExecutable
 }
 
-// GetCompression returns the compression type, defaulting to none
+// GetCompression returns the compression type, defaulting to none.
 func (a *Artifact) GetCompression() string {
 	if a.Compression == "" {
 		return CompressionNone
@@ -354,17 +354,17 @@ func (a *Artifact) GetCompression() string {
 	return a.Compression
 }
 
-// IsDerived returns true if this artifact is derived from another
+// IsDerived returns true if this artifact is derived from another.
 func (a *Artifact) IsDerived() bool {
 	return a.DeriveFrom != ""
 }
 
-// RequiresCompression returns true if this artifact needs compression
+// RequiresCompression returns true if this artifact needs compression.
 func (a *Artifact) RequiresCompression() bool {
 	return a.Compression == CompressionStrip || a.Compression == CompressionUPX
 }
 
-// GetPostBuildSteps returns the post-build steps for this module type
+// GetPostBuildSteps returns the post-build steps for this module type.
 func (t *ModuleTypeDef) GetPostBuildSteps() []PostBuildStep {
 	if t.Build == nil {
 		return nil
@@ -372,17 +372,17 @@ func (t *ModuleTypeDef) GetPostBuildSteps() []PostBuildStep {
 	return t.Build.PostBuild
 }
 
-// HasPostBuild returns true if this module type defines post-build steps
+// HasPostBuild returns true if this module type defines post-build steps.
 func (t *ModuleTypeDef) HasPostBuild() bool {
 	return t.Build != nil && len(t.Build.PostBuild) > 0
 }
 
-// IsCopyAction returns true if this is a copy action
+// IsCopyAction returns true if this is a copy action.
 func (p *PostBuildStep) IsCopyAction() bool {
 	return p.Action == PostBuildActionCopy
 }
 
-// IsScriptAction returns true if this is a script action
+// IsScriptAction returns true if this is a script action.
 func (p *PostBuildStep) IsScriptAction() bool {
 	return p.Action == PostBuildActionScript
 }

@@ -30,7 +30,7 @@ func init() {
 	registry.Register(ShowDependencyCISummary)
 }
 
-// ShowDependencyCISummary generates a dependency CI check summary
+// ShowDependencyCISummary generates a dependency CI check summary.
 func ShowDependencyCISummary() int {
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
@@ -52,9 +52,13 @@ func ShowDependencyCISummary() int {
 		case strings.HasPrefix(arg, "--module="):
 			module = strings.TrimPrefix(arg, "--module=")
 		case strings.HasPrefix(arg, "--passed="):
-			passed, _ = strconv.Atoi(strings.TrimPrefix(arg, "--passed="))
+			if p, err := strconv.Atoi(strings.TrimPrefix(arg, "--passed=")); err == nil {
+				passed = p
+			}
 		case strings.HasPrefix(arg, "--skipped="):
-			skipped, _ = strconv.Atoi(strings.TrimPrefix(arg, "--skipped="))
+			if s, err := strconv.Atoi(strings.TrimPrefix(arg, "--skipped=")); err == nil {
+				skipped = s
+			}
 		case strings.HasPrefix(arg, "--status="):
 			status = strings.TrimPrefix(arg, "--status=")
 		}

@@ -10,7 +10,7 @@ import (
 )
 
 // getCallerCommandName extracts the canonical command name from the calling file
-// Returns kebab-case format (e.g., "get-files")
+// Returns kebab-case format (e.g., "get-files").
 func getCallerCommandName() string {
 	// Try to derive from os.Args (the executed command)
 	// Format: "go run . get files" -> join args[2:] and kebab-case
@@ -31,7 +31,7 @@ func getCallerCommandName() string {
 	return ""
 }
 
-// OutputFormat represents the desired output format
+// OutputFormat represents the desired output format.
 type OutputFormat struct {
 	AsYAML         bool
 	AsJSON         bool
@@ -41,7 +41,7 @@ type OutputFormat struct {
 
 // ParseOutputFlags parses output format flags from command arguments
 // commandName should be in kebab-case format (e.g., "get-files")
-// Returns the OutputFormat and any error encountered
+// Returns the OutputFormat and any error encountered.
 func ParseOutputFlags(args []string, commandName string) (*OutputFormat, error) {
 	format := &OutputFormat{}
 
@@ -82,7 +82,7 @@ func ParseOutputFlags(args []string, commandName string) (*OutputFormat, error) 
 
 // RenderAndOutput takes data, converts to YAML, then renders in the requested format
 // commandName should be in kebab-case format (e.g., "get-files")
-// This ensures YAML is always the single source of truth
+// This ensures YAML is always the single source of truth.
 func RenderAndOutput(data interface{}, format *OutputFormat, commandName string) error {
 	// First, always marshal to YAML (single source of truth)
 	yamlBytes, err := yaml.Marshal(data)
@@ -124,7 +124,7 @@ func RenderAndOutput(data interface{}, format *OutputFormat, commandName string)
 // ExecuteGetCommand is a helper that wraps the common pattern for get commands:
 // 1. Parse output format flags
 // 2. Execute data fetching function
-// 3. Render and output the result
+// 3. Render and output the result.
 func ExecuteGetCommand(dataFetcher func() (interface{}, error)) int {
 	// Get the canonical command name from executed command
 	commandName := getCallerCommandName()

@@ -9,13 +9,13 @@ import (
 	"go.uber.org/zap"
 )
 
-// Component global logger (separate from the main global logger in logger.go)
+// Component global logger (separate from the main global logger in logger.go).
 var (
 	componentGlobalLogger *Logger
 	componentOnce         sync.Once
 )
 
-// initComponentGlobalLogger lazy-initializes the component global Zap logger
+// initComponentGlobalLogger lazy-initializes the component global Zap logger.
 func initComponentGlobalLogger() {
 	componentOnce.Do(func() {
 		// Create default logger (console only, no file logging)
@@ -27,7 +27,12 @@ func initComponentGlobalLogger() {
 		logger, err := New(cfg)
 		if err != nil {
 			// Fallback to basic logger (console only)
-			logger, _ = NewDefault("eac", ".")
+			fallback, fallbackErr := NewDefault("eac", ".")
+			if fallbackErr != nil {
+				// Last resort: use nil logger (no-op)
+				return
+			}
+			logger = fallback
 		}
 		componentGlobalLogger = logger
 	})
@@ -39,7 +44,6 @@ func initComponentGlobalLogger() {
 // FOR TESTING ONLY - do not use in production code.
 func SetTestLogger(zapLogger *zap.Logger) func() {
 	oldLogger := componentGlobalLogger
-	oldOnce := componentOnce
 
 	// Reset the once so the test logger takes effect
 	componentOnce = sync.Once{}
@@ -50,7 +54,8 @@ func SetTestLogger(zapLogger *zap.Logger) func() {
 
 	return func() {
 		componentGlobalLogger = oldLogger
-		componentOnce = oldOnce
+		// Reset Once to allow re-initialization if needed
+		componentOnce = sync.Once{}
 	}
 }
 
@@ -132,7 +137,7 @@ func Component(component ...string) *ComponentLogger {
 // Uses runtime reflection to get the full package path, then extracts
 // the relative path from go/eac/ or go/r2r/ for unambiguous identification.
 //
-// Call stack: runtime.Caller(0)=inferComponent, (1)=C/Component, (2)=caller
+// Call stack: runtime.Caller(0)=inferComponent, (1)=C/Component, (2)=caller.
 func inferComponent() string {
 	// skip=2: skip inferComponent itself and C()/Component()
 	pc, file, _, ok := runtime.Caller(2)

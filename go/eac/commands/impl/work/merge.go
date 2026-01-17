@@ -44,7 +44,7 @@ func init() {
 	registry.Register(Merge)
 }
 
-// Merge merges the current workspace into the target branch
+// Merge merges the current workspace into the target branch.
 func Merge() int {
 	startTime := time.Now()
 
@@ -60,7 +60,7 @@ func Merge() int {
 		log.Errorf("Error: %v", err)
 		return 1
 	}
-	defer config.base.Logger.Sync()
+	defer func() { _ = config.base.Logger.Sync() }() //nolint:errcheck // best-effort logger sync
 
 	config.base.Logger.Debug("Phase 1: Starting parse configuration", zap.String("phase", "phase1"))
 
@@ -182,7 +182,7 @@ func Merge() int {
 	return 0
 }
 
-// mergeConfig holds configuration for the merge command
+// mergeConfig holds configuration for the merge command.
 type mergeConfig struct {
 	base          *internal.BaseConfig
 	targetBranch  string
@@ -192,7 +192,7 @@ type mergeConfig struct {
 	worktreePath  string
 }
 
-// parseMergeConfig parses command line arguments
+// parseMergeConfig parses command line arguments.
 func parseMergeConfig() (*mergeConfig, error) {
 	args := os.Args[3:] // Skip program name, "work", "merge"
 
@@ -244,7 +244,7 @@ func parseMergeConfig() (*mergeConfig, error) {
 	return config, nil
 }
 
-// validateMergeEnvironment validates the environment before merging
+// validateMergeEnvironment validates the environment before merging.
 func validateMergeEnvironment(config *mergeConfig) error {
 	// Check we're in a git repository
 	if err := internal.EnsureInGitRepo(); err != nil {
@@ -278,7 +278,7 @@ func validateMergeEnvironment(config *mergeConfig) error {
 	return nil
 }
 
-// checkBranchUpToDate checks if the current branch is up to date with target
+// checkBranchUpToDate checks if the current branch is up to date with target.
 func checkBranchUpToDate(config *mergeConfig) error {
 	// Fetch target branch to ensure we have latest
 	if err := config.base.GitOps.FetchBranch(config.targetBranch); err != nil {
@@ -299,7 +299,7 @@ func checkBranchUpToDate(config *mergeConfig) error {
 }
 
 // switchToTargetBranch switches to the target branch
-// In multi-worktree setups, it finds and switches to the worktree where the target branch is checked out
+// In multi-worktree setups, it finds and switches to the worktree where the target branch is checked out.
 func switchToTargetBranch(targetBranch, repoRoot string) error {
 	// First, find where the target branch is checked out
 	targetWorktree, err := findWorktreeForBranch(targetBranch)
@@ -324,7 +324,7 @@ func switchToTargetBranch(targetBranch, repoRoot string) error {
 }
 
 // findWorktreeForBranch finds the worktree path where a branch is checked out
-// Returns empty string and error if branch is not checked out in any worktree
+// Returns empty string and error if branch is not checked out in any worktree.
 func findWorktreeForBranch(branch string) (string, error) {
 	cmd := exec.Command("git", "worktree", "list", "--porcelain")
 	output, err := cmd.Output()
@@ -332,7 +332,7 @@ func findWorktreeForBranch(branch string) (string, error) {
 		return "", fmt.Errorf("failed to list worktrees: %w", err)
 	}
 
-	lines := fmt.Sprintf("%s", output)
+	lines := string(output)
 	var currentPath string
 	for _, line := range strings.Split(lines, "\n") {
 		if strings.HasPrefix(line, "worktree ") {
@@ -348,7 +348,7 @@ func findWorktreeForBranch(branch string) (string, error) {
 	return "", fmt.Errorf("branch %s not checked out in any worktree", branch)
 }
 
-// updateTargetBranch updates the target branch from remote
+// updateTargetBranch updates the target branch from remote.
 func updateTargetBranch(targetBranch string) error {
 	cmd := exec.Command("git", "pull", "origin", targetBranch)
 	output, err := cmd.CombinedOutput()
@@ -358,7 +358,7 @@ func updateTargetBranch(targetBranch string) error {
 	return nil
 }
 
-// performSquashMerge performs a squash merge and uses commit message for the message
+// performSquashMerge performs a squash merge and uses commit message for the message.
 func performSquashMerge(config *mergeConfig) error {
 	// Perform squash merge (stages changes but doesn't commit)
 	if err := config.base.GitOps.Merge(config.currentBranch, true); err != nil {
@@ -384,7 +384,7 @@ func performSquashMerge(config *mergeConfig) error {
 	return nil
 }
 
-// removeWorkspace removes the workspace and deletes the branch
+// removeWorkspace removes the workspace and deletes the branch.
 func removeWorkspace(config *mergeConfig) error {
 	// Remove worktree
 	if err := config.base.GitOps.RemoveWorktree(config.worktreePath); err != nil {
@@ -401,7 +401,7 @@ func removeWorkspace(config *mergeConfig) error {
 	return nil
 }
 
-// getWorktreePath returns the path of the current worktree
+// getWorktreePath returns the path of the current worktree.
 func getWorktreePath(base *internal.BaseConfig) (string, error) {
 	// Get list of all worktrees
 	worktrees, err := base.GitOps.ListWorktrees()
@@ -413,7 +413,11 @@ func getWorktreePath(base *internal.BaseConfig) (string, error) {
 	// Check R2R_PWD first (for test isolation)
 	cwd := os.Getenv("R2R_PWD")
 	if cwd == "" {
-		cwd, _ = os.Getwd()
+		var wdErr error
+		cwd, wdErr = os.Getwd()
+		if wdErr != nil {
+			return "", fmt.Errorf("failed to get current working directory: %w", wdErr)
+		}
 	}
 	for _, wt := range worktrees {
 		// Normalize paths for comparison
@@ -425,13 +429,13 @@ func getWorktreePath(base *internal.BaseConfig) (string, error) {
 	return base.RepoRoot, nil
 }
 
-// handleMergeError handles merge errors and provides guidance
+// handleMergeError handles merge errors and provides guidance.
 func handleMergeError(config *mergeConfig, err error) {
 	config.base.Logger.Error("\n⚠️  Merge conflict detected\n")
 
 	// Get conflicting files
-	conflicts, _ := config.base.GitOps.GetConflictingFiles()
-	if len(conflicts) > 0 {
+	conflicts, conflictErr := config.base.GitOps.GetConflictingFiles()
+	if conflictErr == nil && len(conflicts) > 0 {
 		config.base.Logger.Error("Conflicting files:")
 		for _, file := range conflicts {
 			config.base.Logger.Error(fmt.Sprintf("  - %s", file))

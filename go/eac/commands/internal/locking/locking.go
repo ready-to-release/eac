@@ -24,7 +24,7 @@ func Acquire(workspaceRoot string, cfg Config) (*flock.Flock, error) {
 	lockDir := filepath.Join(workspaceRoot, cfg.BaseDir)
 
 	// Ensure directory exists with proper permissions
-	if err := os.MkdirAll(lockDir, 0755); err != nil {
+	if err := os.MkdirAll(lockDir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create lock directory %s: %w", lockDir, err)
 	}
 
@@ -48,8 +48,9 @@ func Release(lock *flock.Flock) {
 		return
 	}
 	lockPath := lock.Path()
+	//nolint:errcheck // best-effort cleanup
 	lock.Unlock()
-	os.Remove(lockPath)
+	os.Remove(lockPath) // best-effort cleanup
 }
 
 // BuildConfig returns a Config for module build locking.

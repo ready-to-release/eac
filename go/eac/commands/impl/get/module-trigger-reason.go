@@ -75,7 +75,7 @@ func GetModuleTriggerReason() int {
 	return 0
 }
 
-// formatTriggerReason converts internal reason codes to human-readable text
+// formatTriggerReason converts internal reason codes to human-readable text.
 func formatTriggerReason(reason string) string {
 	switch {
 	case strings.HasPrefix(reason, "dependency "):

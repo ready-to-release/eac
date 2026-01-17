@@ -22,7 +22,7 @@ func init() {
 	registry.Register(ValidateModuleHierarchy)
 }
 
-// ValidateModuleHierarchy validates the module dependency graph
+// ValidateModuleHierarchy validates the module dependency graph.
 func ValidateModuleHierarchy() int {
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {

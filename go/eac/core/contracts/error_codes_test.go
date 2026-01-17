@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-// TestGetErrorCode tests error code retrieval
+// TestGetErrorCode tests error code retrieval.
 func TestGetErrorCode(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -51,7 +51,7 @@ func TestGetErrorCode(t *testing.T) {
 	}
 }
 
-// TestErrorCodeMetadata tests error code metadata
+// TestErrorCodeMetadata tests error code metadata.
 func TestErrorCodeMetadata(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -110,7 +110,7 @@ func TestErrorCodeMetadata(t *testing.T) {
 	}
 }
 
-// TestGetErrorCodesByCategory tests filtering by category
+// TestGetErrorCodesByCategory tests filtering by category.
 func TestGetErrorCodesByCategory(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -161,7 +161,7 @@ func TestGetErrorCodesByCategory(t *testing.T) {
 	}
 }
 
-// TestGetErrorCodesBySeverity tests filtering by severity
+// TestGetErrorCodesBySeverity tests filtering by severity.
 func TestGetErrorCodesBySeverity(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -197,7 +197,7 @@ func TestGetErrorCodesBySeverity(t *testing.T) {
 	}
 }
 
-// TestValidationErrorWithStructuredCode tests ValidationError with structured code
+// TestValidationErrorWithStructuredCode tests ValidationError with structured code.
 func TestValidationErrorWithStructuredCode(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -251,7 +251,7 @@ func TestValidationErrorWithStructuredCode(t *testing.T) {
 	}
 }
 
-// TestLegacyValidationError tests backward compatibility
+// TestLegacyValidationError tests backward compatibility.
 func TestLegacyValidationError(t *testing.T) {
 	tests := []struct {
 		name      string

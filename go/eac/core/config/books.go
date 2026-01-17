@@ -1,15 +1,15 @@
 // Package config provides books configuration types and loading
 package config
 
-// BooksFileName is the name of the books configuration file
+// BooksFileName is the name of the books configuration file.
 const BooksFileName = "books.yml"
 
-// BooksConfig holds the books configuration
+// BooksConfig holds the books configuration.
 type BooksConfig struct {
 	Books []Book `yaml:"books"`
 }
 
-// Book represents a single book configuration
+// Book represents a single book configuration.
 type Book struct {
 	Name         string         `yaml:"name"`
 	Title        string         `yaml:"title,omitempty"` // Book-specific title for cover page (optional, defaults to Name)
@@ -20,7 +20,7 @@ type Book struct {
 	GeneratedNav []GeneratedNav `yaml:"generated_nav"`
 }
 
-// OutputMode constants for book default output
+// OutputMode constants for book default output.
 const (
 	OutputSite     = "site"
 	OutputPDFDark  = "pdf-dark"
@@ -28,7 +28,7 @@ const (
 	OutputPDFAll   = "pdf-all"
 )
 
-// GetOutput returns the book's output mode, defaulting to "pdf-dark" if not specified
+// GetOutput returns the book's output mode, defaulting to "pdf-dark" if not specified.
 func (b *Book) GetOutput() string {
 	if b.Output == "" {
 		return OutputPDFDark
@@ -36,13 +36,13 @@ func (b *Book) GetOutput() string {
 	return b.Output
 }
 
-// IsPDFOutput returns true if the book's output mode is a PDF format
+// IsPDFOutput returns true if the book's output mode is a PDF format.
 func (b *Book) IsPDFOutput() bool {
 	output := b.GetOutput()
 	return output == OutputPDFDark || output == OutputPDFLight || output == OutputPDFAll
 }
 
-// GetPDFTheme extracts the theme from a PDF output mode, or empty string for site mode
+// GetPDFTheme extracts the theme from a PDF output mode, or empty string for site mode.
 func (b *Book) GetPDFTheme() string {
 	switch b.GetOutput() {
 	case OutputPDFDark:
@@ -56,7 +56,7 @@ func (b *Book) GetPDFTheme() string {
 	}
 }
 
-// Source represents a content source (copy, command, or inline)
+// Source represents a content source (copy, command, or inline).
 type Source struct {
 	// Common field
 	Type string `yaml:"type"` // "copy", "command", or "inline"
@@ -77,13 +77,13 @@ type Source struct {
 	Inserts       []InlineInsert `yaml:"inserts,omitempty"`
 }
 
-// InlineInsert maps a marker ID to an EAC command
+// InlineInsert maps a marker ID to an EAC command.
 type InlineInsert struct {
 	Marker  string `yaml:"marker"`
 	Command string `yaml:"command"`
 }
 
-// GeneratedNav configures navigation for a generated section
+// GeneratedNav configures navigation for a generated section.
 type GeneratedNav struct {
 	Section    string `yaml:"section"`
 	Title      string `yaml:"title"`
@@ -91,7 +91,7 @@ type GeneratedNav struct {
 	Position   string `yaml:"position"`
 }
 
-// GetCopySources returns only copy-type sources
+// GetCopySources returns only copy-type sources.
 func (b *Book) GetCopySources() []Source {
 	var sources []Source
 	for _, s := range b.Sources {
@@ -102,7 +102,7 @@ func (b *Book) GetCopySources() []Source {
 	return sources
 }
 
-// GetCommandSources returns only command-type sources, sorted by order
+// GetCommandSources returns only command-type sources, sorted by order.
 func (b *Book) GetCommandSources() []Source {
 	var sources []Source
 	for _, s := range b.Sources {
@@ -113,7 +113,7 @@ func (b *Book) GetCommandSources() []Source {
 	return sources
 }
 
-// GetInlineSources returns only inline-type sources
+// GetInlineSources returns only inline-type sources.
 func (b *Book) GetInlineSources() []Source {
 	var sources []Source
 	for _, s := range b.Sources {
@@ -124,7 +124,7 @@ func (b *Book) GetInlineSources() []Source {
 	return sources
 }
 
-// GetBookByName finds a book by its name
+// GetBookByName finds a book by its name.
 func (c *BooksConfig) GetBookByName(name string) *Book {
 	for i := range c.Books {
 		if c.Books[i].Name == name {
@@ -159,22 +159,22 @@ func (c *BooksConfig) GetDefaultBooksByNames(names []string) []*Book {
 	return nil
 }
 
-// SourceCount returns the total number of sources
+// SourceCount returns the total number of sources.
 func (b *Book) SourceCount() int {
 	return len(b.Sources)
 }
 
-// IsCopy returns true if this source is a copy type
+// IsCopy returns true if this source is a copy type.
 func (s *Source) IsCopy() bool {
 	return s.Type == "copy"
 }
 
-// IsCommand returns true if this source is a command type
+// IsCommand returns true if this source is a command type.
 func (s *Source) IsCommand() bool {
 	return s.Type == "command"
 }
 
-// IsInline returns true if this source is an inline type
+// IsInline returns true if this source is an inline type.
 func (s *Source) IsInline() bool {
 	return s.Type == "inline"
 }

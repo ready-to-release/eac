@@ -58,7 +58,7 @@ func TestValidateProfile_ValidProfile(t *testing.T) {
 		}
 	}`
 
-	err := os.WriteFile(profilePath, []byte(validProfile), 0644)
+	err := os.WriteFile(profilePath, []byte(validProfile), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
@@ -95,7 +95,7 @@ func TestValidateProfile_MissingUUID(t *testing.T) {
 		}
 	}`
 
-	err := os.WriteFile(profilePath, []byte(profileWithoutUUID), 0644)
+	err := os.WriteFile(profilePath, []byte(profileWithoutUUID), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
@@ -130,7 +130,7 @@ func TestValidateProfile_InvalidJSON(t *testing.T) {
 
 	invalidJSON := `{ "profile": { invalid`
 
-	err := os.WriteFile(profilePath, []byte(invalidJSON), 0644)
+	err := os.WriteFile(profilePath, []byte(invalidJSON), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
@@ -175,7 +175,7 @@ func TestValidateProfile_NoImports(t *testing.T) {
 		}
 	}`
 
-	err := os.WriteFile(profilePath, []byte(profileWithoutImports), 0644)
+	err := os.WriteFile(profilePath, []byte(profileWithoutImports), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
@@ -226,7 +226,7 @@ func TestValidateProfile_InvalidControlIDWarning(t *testing.T) {
 		}
 	}`
 
-	err := os.WriteFile(profilePath, []byte(profileWithInvalidControl), 0644)
+	err := os.WriteFile(profilePath, []byte(profileWithInvalidControl), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
@@ -292,7 +292,7 @@ func TestValidateProfile_OscalVersionMismatch(t *testing.T) {
 		}
 	}`
 
-	err := os.WriteFile(profilePath, []byte(profileWithWrongVersion), 0644)
+	err := os.WriteFile(profilePath, []byte(profileWithWrongVersion), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}

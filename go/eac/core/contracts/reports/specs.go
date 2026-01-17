@@ -12,7 +12,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/testing"
 )
 
-// SpecFile represents a specification file with its status and metadata
+// SpecFile represents a specification file with its status and metadata.
 type SpecFile struct {
 	FilePath      string `json:"file_path" yaml:"file_path" toml:"file_path"`
 	RelativePath  string `json:"relative_path" yaml:"relative_path" toml:"relative_path"`
@@ -23,7 +23,7 @@ type SpecFile struct {
 	ScenarioCount int    `json:"scenario_count" yaml:"scenario_count" toml:"scenario_count"`
 }
 
-// SpecsReport represents specifications for a module and version
+// SpecsReport represents specifications for a module and version.
 type SpecsReport struct {
 	Module         string     `json:"module" yaml:"module" toml:"module"`
 	Version        string     `json:"version" yaml:"version" toml:"version"`
@@ -34,7 +34,7 @@ type SpecsReport struct {
 	TotalScenarios int        `json:"total_scenarios" yaml:"total_scenarios" toml:"total_scenarios"`
 }
 
-// gitRepo holds the git repository instance for testing (allows mock injection)
+// gitRepo holds the git repository instance for testing (allows mock injection).
 var gitRepo git.GitRepository
 
 // getGitRepo returns the git repository, initializing it if needed.
@@ -43,7 +43,7 @@ func getGitRepo(workspaceRoot string) (git.GitRepository, error) {
 	if gitRepo != nil {
 		return gitRepo, nil
 	}
-	repo, err := git.Open(workspaceRoot, nil)
+	repo, err := git.NewManager(nil).Open(workspaceRoot)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open git repository: %w", err)
 	}
@@ -123,8 +123,8 @@ func GetSpecs(workspaceRoot, module, version, branch string) (*SpecsReport, erro
 	var modulesToQuery []string
 	if len(modContract.DependsOn) > 0 {
 		// Bundle module - include all dependencies
-		modulesToQuery = make([]string, len(modContract.DependsOn))
-		copy(modulesToQuery, modContract.DependsOn)
+		modulesToQuery = make([]string, 0, len(modContract.DependsOn)+1)
+		modulesToQuery = append(modulesToQuery, modContract.DependsOn...)
 		// Also include the bundle's own specs if directory exists
 		modulesToQuery = append(modulesToQuery, module)
 	} else {
@@ -180,7 +180,7 @@ func GetSpecs(workspaceRoot, module, version, branch string) (*SpecsReport, erro
 }
 
 // extractSpecFiles extracts unique .feature files from commits
-// Returns a map of absolute file path -> status (Added/Modified/Deleted)
+// Returns a map of absolute file path -> status (Added/Modified/Deleted).
 func extractSpecFiles(workspaceRoot, module string, commits []git.CommitInfo) map[string]string {
 	specFiles := make(map[string]string)
 	moduleSpecsPrefix := filepath.Join(paths.SpecsDir, module)

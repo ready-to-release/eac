@@ -7,7 +7,7 @@ import (
 )
 
 // OpenBrowser opens the given URL in the default browser
-// Returns an error if the browser could not be opened
+// Returns an error if the browser could not be opened.
 func OpenBrowser(url string) error {
 	var cmd *exec.Cmd
 
@@ -34,7 +34,7 @@ func OpenBrowser(url string) error {
 	return nil
 }
 
-// DetectBrowser returns the command used to open browsers on this platform
+// DetectBrowser returns the command used to open browsers on this platform.
 func DetectBrowser() string {
 	switch runtime.GOOS {
 	case "windows":

@@ -133,7 +133,7 @@ func assessSingleModule(
 	// Build assessment-results
 	// Use timestamped directory: out/risk/<timestamp>/<module>/assessment-results.json
 	moduleOutputDir := filepath.Join(config.OutputDir, moduleName)
-	if err := os.MkdirAll(moduleOutputDir, 0755); err != nil {
+	if err := os.MkdirAll(moduleOutputDir, 0o755); err != nil {
 		result.Error = fmt.Errorf("error creating module output directory: %w", err)
 		return result
 	}

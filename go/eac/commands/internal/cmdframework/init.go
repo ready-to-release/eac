@@ -19,7 +19,7 @@ import (
 // - Load EAC configuration
 // - Configure logging
 // - Set up orchestrator
-// - Initialize TUI if enabled
+// - Initialize TUI if enabled.
 func phaseInit(ctx *ExecutionContext) error {
 	ctx.StartTime = time.Now()
 
@@ -40,7 +40,7 @@ func phaseInit(ctx *ExecutionContext) error {
 
 	// Create output directory
 	outputDir := filepath.Join(workspaceRoot, ctx.Config.OutputDir)
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
@@ -101,7 +101,7 @@ func phaseInit(ctx *ExecutionContext) error {
 	return nil
 }
 
-// getTUIHeight returns the TUI height, using default if not specified
+// getTUIHeight returns the TUI height, using default if not specified.
 func getTUIHeight(cfg *CommandConfig) int {
 	if cfg.TUIHeight > 0 {
 		return cfg.TUIHeight

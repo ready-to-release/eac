@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestCalculateRelativePath verifies relative path calculation
+// TestCalculateRelativePath verifies relative path calculation.
 func TestCalculateRelativePath(t *testing.T) {
 	workspaceRoot := filepath.FromSlash("/workspace")
 
@@ -77,7 +77,7 @@ func TestCalculateRelativePath(t *testing.T) {
 	}
 }
 
-// TestIsExcluded verifies exclusion pattern matching
+// TestIsExcluded verifies exclusion pattern matching.
 func TestIsExcluded(t *testing.T) {
 	workspaceRoot := filepath.FromSlash("/workspace")
 
@@ -145,7 +145,7 @@ func TestIsExcluded(t *testing.T) {
 	}
 }
 
-// TestCopyFile verifies file copying functionality
+// TestCopyFile verifies file copying functionality.
 func TestCopyFile(t *testing.T) {
 	// Arrange
 	tempDir := t.TempDir()
@@ -153,11 +153,11 @@ func TestCopyFile(t *testing.T) {
 	srcDir := filepath.Join(tempDir, "src")
 	dstDir := filepath.Join(tempDir, "dst")
 
-	require.NoError(t, os.Mkdir(srcDir, 0755))
+	require.NoError(t, os.Mkdir(srcDir, 0o755))
 
 	srcFile := filepath.Join(srcDir, "test.txt")
 	content := "Test file content\nLine 2\nLine 3"
-	require.NoError(t, os.WriteFile(srcFile, []byte(content), 0644))
+	require.NoError(t, os.WriteFile(srcFile, []byte(content), 0o644))
 
 	// Act
 	dstFile := filepath.Join(dstDir, "subdir", "test.txt")
@@ -176,13 +176,13 @@ func TestCopyFile(t *testing.T) {
 	assert.Equal(t, content, string(dstContent))
 }
 
-// TestCopyFile_NestedDirectories verifies directory creation
+// TestCopyFile_NestedDirectories verifies directory creation.
 func TestCopyFile_NestedDirectories(t *testing.T) {
 	// Arrange
 	tempDir := t.TempDir()
 
 	srcFile := filepath.Join(tempDir, "source.txt")
-	require.NoError(t, os.WriteFile(srcFile, []byte("content"), 0644))
+	require.NoError(t, os.WriteFile(srcFile, []byte("content"), 0o644))
 
 	// Act - Copy to deeply nested path
 	dstFile := filepath.Join(tempDir, "a", "b", "c", "d", "destination.txt")
@@ -201,16 +201,16 @@ func TestCopyFile_NestedDirectories(t *testing.T) {
 	assert.Equal(t, "content", string(content))
 }
 
-// TestCopyFile_PreservePermissions verifies file permissions are preserved
+// TestCopyFile_PreservePermissions verifies file permissions are preserved.
 func TestCopyFile_PreservePermissions(t *testing.T) {
 	// Arrange
 	tempDir := t.TempDir()
 
 	srcFile := filepath.Join(tempDir, "source.txt")
-	require.NoError(t, os.WriteFile(srcFile, []byte("content"), 0644))
+	require.NoError(t, os.WriteFile(srcFile, []byte("content"), 0o644))
 
 	// Change permissions on source file
-	require.NoError(t, os.Chmod(srcFile, 0600))
+	require.NoError(t, os.Chmod(srcFile, 0o600))
 
 	// Act
 	dstFile := filepath.Join(tempDir, "destination.txt")
@@ -228,7 +228,7 @@ func TestCopyFile_PreservePermissions(t *testing.T) {
 	assert.Equal(t, srcInfo.Mode(), dstInfo.Mode())
 }
 
-// TestCopyFile_MissingSource verifies error handling
+// TestCopyFile_MissingSource verifies error handling.
 func TestCopyFile_MissingSource(t *testing.T) {
 	// Arrange
 	tempDir := t.TempDir()
@@ -242,7 +242,7 @@ func TestCopyFile_MissingSource(t *testing.T) {
 	assert.Error(t, err)
 }
 
-// TestCopyFile_Overwrite verifies existing files are overwritten
+// TestCopyFile_Overwrite verifies existing files are overwritten.
 func TestCopyFile_Overwrite(t *testing.T) {
 	// Arrange
 	tempDir := t.TempDir()
@@ -251,8 +251,8 @@ func TestCopyFile_Overwrite(t *testing.T) {
 	dstFile := filepath.Join(tempDir, "destination.txt")
 
 	// Create source and destination with different content
-	require.NoError(t, os.WriteFile(srcFile, []byte("new content"), 0644))
-	require.NoError(t, os.WriteFile(dstFile, []byte("old content"), 0644))
+	require.NoError(t, os.WriteFile(srcFile, []byte("new content"), 0o644))
+	require.NoError(t, os.WriteFile(dstFile, []byte("old content"), 0o644))
 
 	// Act
 	err := copyFile(srcFile, dstFile)

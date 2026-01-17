@@ -36,7 +36,7 @@ func init() {
 	registry.Register(ShowWorkspaces)
 }
 
-// ShowWorkspaces displays all git worktrees in a formatted table
+// ShowWorkspaces displays all git worktrees in a formatted table.
 func ShowWorkspaces() int {
 	cmdStart := time.Now()
 
@@ -53,7 +53,7 @@ func ShowWorkspaces() int {
 		log.Errorf("Error: %v", err)
 		return 1
 	}
-	defer config.base.Logger.Sync()
+	defer func() { _ = config.base.Logger.Sync() }() //nolint:errcheck // best-effort logger sync
 
 	config.base.Logger.Debug("Phase 1: Starting configuration parsing",
 		zap.String("phase", "phase1"))
@@ -124,13 +124,13 @@ func ShowWorkspaces() int {
 	return 0
 }
 
-// listConfig holds configuration for the list command
+// listConfig holds configuration for the list command.
 type listConfig struct {
 	base    *internal.BaseConfig
 	verbose bool
 }
 
-// parseListConfig parses command line arguments
+// parseListConfig parses command line arguments.
 func parseListConfig() (*listConfig, error) {
 	args := os.Args[3:] // Skip program name, "work", "list"
 
@@ -151,7 +151,7 @@ func parseListConfig() (*listConfig, error) {
 	return config, nil
 }
 
-// displayWorktrees formats and displays worktrees in a table
+// displayWorktrees formats and displays worktrees in a table.
 func displayWorktrees(worktrees []internal.Worktree, verbose bool) {
 	if len(worktrees) == 0 {
 		log.Debugf("No worktrees to display")
@@ -184,7 +184,7 @@ func displayWorktrees(worktrees []internal.Worktree, verbose bool) {
 	log.Debugf("Phase 4.2: Completed: phase=phase4.2, duration=%v", time.Since(phase42Start))
 }
 
-// buildWorktreeTable creates a formatted table of worktrees
+// buildWorktreeTable creates a formatted table of worktrees.
 func buildWorktreeTable(worktrees []internal.Worktree, verbose bool) string {
 	// Determine headers based on verbose mode
 	var headers []string
@@ -223,7 +223,7 @@ func buildWorktreeTable(worktrees []internal.Worktree, verbose bool) string {
 	return tb.Build()
 }
 
-// FormatWorktreeStatus returns a human-readable status string
+// FormatWorktreeStatus returns a human-readable status string.
 func FormatWorktreeStatus(clean bool) string {
 	if clean {
 		return "clean"
@@ -231,7 +231,7 @@ func FormatWorktreeStatus(clean bool) string {
 	return "dirty"
 }
 
-// ShortenSHA returns the first 7 characters of a SHA
+// ShortenSHA returns the first 7 characters of a SHA.
 func ShortenSHA(sha string) string {
 	if len(sha) > 7 {
 		return sha[:7]
@@ -239,7 +239,7 @@ func ShortenSHA(sha string) string {
 	return sha
 }
 
-// FormatBranch formats branch name, handling detached HEAD
+// FormatBranch formats branch name, handling detached HEAD.
 func FormatBranch(branch string) string {
 	if branch == "" || strings.TrimSpace(branch) == "" {
 		return "(detached)"

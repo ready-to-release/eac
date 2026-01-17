@@ -203,7 +203,7 @@ git:
   token: ""
 `
 		configDir := paths.EACConfigPath(t.isolatedDir)
-		if err := os.MkdirAll(configDir, 0755); err != nil {
+		if err := os.MkdirAll(configDir, 0o755); err != nil {
 			t.Cleanup()
 			return fmt.Errorf("failed to create .r2r/eac directory: %w", err)
 		}
@@ -213,7 +213,7 @@ git:
 		os.Remove(personalConfigPath) // Ignore error - file may not exist
 
 		configPath := filepath.Join(configDir, "ai-provider.yml")
-		if err := os.WriteFile(configPath, []byte(testConfig), 0644); err != nil {
+		if err := os.WriteFile(configPath, []byte(testConfig), 0o644); err != nil {
 			t.Cleanup()
 			return fmt.Errorf("failed to create test ai-provider.yml: %w", err)
 		}
@@ -223,11 +223,11 @@ git:
 	if t.mockAIResponse != "" {
 		mockPath := paths.AITestMockPath(t.isolatedDir)
 		mockDir := filepath.Dir(mockPath)
-		if err := os.MkdirAll(mockDir, 0755); err != nil {
+		if err := os.MkdirAll(mockDir, 0o755); err != nil {
 			t.Cleanup()
 			return fmt.Errorf("failed to create .r2r/test directory: %w", err)
 		}
-		if err := os.WriteFile(mockPath, []byte(t.mockAIResponse), 0644); err != nil {
+		if err := os.WriteFile(mockPath, []byte(t.mockAIResponse), 0o644); err != nil {
 			t.Cleanup()
 			return fmt.Errorf("failed to create ai-mock.txt: %w", err)
 		}
@@ -275,7 +275,7 @@ func (t *TestIsolation) initGitRepository() error {
 		// We're on wrong branch (probably "master" from old git)
 		// Create initial commit first, then rename branch to "main"
 		readmePath := filepath.Join(t.isolatedDir, "README.md")
-		if err := os.WriteFile(readmePath, []byte("# Test Repository\n"), 0644); err != nil {
+		if err := os.WriteFile(readmePath, []byte("# Test Repository\n"), 0o644); err != nil {
 			return fmt.Errorf("failed to create README.md: %w", err)
 		}
 
@@ -301,7 +301,7 @@ func (t *TestIsolation) initGitRepository() error {
 		// Already on main, just create initial commit
 		// This allows tests to run `git reset HEAD .` and other HEAD-dependent commands
 		readmePath := filepath.Join(t.isolatedDir, "README.md")
-		if err := os.WriteFile(readmePath, []byte("# Test Repository\n"), 0644); err != nil {
+		if err := os.WriteFile(readmePath, []byte("# Test Repository\n"), 0o644); err != nil {
 			return fmt.Errorf("failed to create README.md: %w", err)
 		}
 
@@ -399,10 +399,10 @@ func (t *TestIsolation) SetMockAIResponse(response string) error {
 
 	mockPath := paths.AITestMockPath(t.isolatedDir)
 	mockDir := filepath.Dir(mockPath)
-	if err := os.MkdirAll(mockDir, 0755); err != nil {
+	if err := os.MkdirAll(mockDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create .r2r/test directory: %w", err)
 	}
-	if err := os.WriteFile(mockPath, []byte(response), 0644); err != nil {
+	if err := os.WriteFile(mockPath, []byte(response), 0o644); err != nil {
 		return fmt.Errorf("failed to write ai-mock.txt: %w", err)
 	}
 

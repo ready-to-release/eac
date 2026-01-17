@@ -5,7 +5,7 @@ package github
 
 import "time"
 
-// WorkflowRun represents a GitHub Actions workflow run
+// WorkflowRun represents a GitHub Actions workflow run.
 type WorkflowRun struct {
 	ID         int       `json:"databaseId"`
 	HeadSHA    string    `json:"headSha"`
@@ -15,14 +15,14 @@ type WorkflowRun struct {
 	Name       string    `json:"name"`
 }
 
-// Release represents a GitHub release
+// Release represents a GitHub release.
 type Release struct {
 	TagName string `json:"tagName"`
 	Name    string `json:"name"`
 	Draft   bool   `json:"isDraft"`
 }
 
-// ListRunsOpts contains options for listing workflow runs
+// ListRunsOpts contains options for listing workflow runs.
 type ListRunsOpts struct {
 	Status string // Filter by status: success, failure, in_progress, etc.
 	Branch string // Filter by branch
@@ -45,7 +45,7 @@ type API interface {
 	ReleaseExists(tag string) (bool, error)
 }
 
-// global holds the current API implementation
+// global holds the current API implementation.
 var global API
 
 // SetGlobal sets the global GitHub API implementation.

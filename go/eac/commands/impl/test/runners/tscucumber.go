@@ -97,7 +97,7 @@ func (r *TsCucumberRunner) FindTestRoot(featurePath string, cfg *config.EACConfi
 
 // BuildPackagePath constructs the package path for test grouping.
 // Returns "featureFolderName:moduleRoot:featurePath" format for cleaner display.
-func (r *TsCucumberRunner) BuildPackagePath(testRoot string, featurePath string) string {
+func (r *TsCucumberRunner) BuildPackagePath(testRoot, featurePath string) string {
 	if testRoot == "" {
 		return ""
 	}
@@ -158,7 +158,7 @@ func (r *TsCucumberRunner) Execute(pkgPath string, tests []testing.TestReference
 		outputPath = sanitizePathForLog(pkgPath)
 	}
 	logDir := filepath.Join(cfg.TestRunDir, outputPath)
-	if err := os.MkdirAll(logDir, 0755); err != nil {
+	if err := os.MkdirAll(logDir, 0o755); err != nil {
 		fmt.Fprintf(tuiWriter, "Failed to create log directory: %v\n", err)
 		result.PackageFailed = true
 		return result
@@ -242,7 +242,7 @@ func (r *TsCucumberRunner) Execute(pkgPath string, tests []testing.TestReference
 
 // convertToCucumberTagExpr converts godog tag expression to cucumber-js tag expression.
 // Godog format: "@L0,@L1 && ~@skip:broken"
-// Cucumber format: "(@L0 or @L1) and not @skip:broken"
+// Cucumber format: "(@L0 or @L1) and not @skip:broken".
 func convertToCucumberTagExpr(godogTags string) string {
 	if godogTags == "" {
 		return ""

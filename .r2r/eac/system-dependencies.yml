@@ -50,17 +50,6 @@ dependencies:
       command: "npm list -g markdownlint-cli2 --depth=0"
       pattern: "markdownlint-cli2@(\\d+\\.\\d+)"
 
-  # Project-specific: prettier for markdown table formatting
-  # Formats tables to aligned style (MD060 compliance)
-  # Config: .prettierrc
-  - moniker: prettier
-    name: "Prettier"
-    description: "Code formatter for markdown table alignment"
-    version: "any"
-    verify:
-      command: "npm list -g prettier --depth=0"
-      pattern: "prettier@(\\d+\\.\\d+)"
-
 # Capability to system dependency mappings (project overrides)
 capability_requirements:
   markdown: [markdownlint-cli2]

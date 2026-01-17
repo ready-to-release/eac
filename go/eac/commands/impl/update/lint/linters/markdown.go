@@ -5,6 +5,7 @@ package linters
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -89,16 +90,25 @@ func (h *MarkdownHandler) Lint(moduleRoot, workspaceRoot, outputDir string, logW
 	// Create output file for JSON results
 	jsonOutputPath := filepath.Join(outputDir, "lint.json")
 
-	// markdownlint-cli2 auto-discovers config files (.markdownlint-cli2.yaml, .markdownlint.yml)
-	// from the current directory and parent directories. We run from moduleRoot, and the
-	// workspace root config files will be found automatically via directory traversal.
-	//
-	// Only pass --config if explicitly specified via opts.Config
+	// Determine config file path
+	// Priority: explicit opts.Config > module-local config > workspace root config
+	// We must explicitly pass --config because markdownlint-cli2's auto-discovery
+	// doesn't reliably find configs in parent directories on Windows.
 	args := []string{}
 
 	if opts.Config != "" {
 		args = append(args, "--config", opts.Config)
 		Logln(logWriter, "Using explicit config: %s", opts.Config)
+	} else {
+		// Check for module-local config first (allows per-module overrides)
+		moduleConfig := filepath.Join(moduleRoot, ".markdownlint-cli2.yaml")
+		workspaceConfig := filepath.Join(workspaceRoot, ".markdownlint-cli2.yaml")
+
+		if _, err := os.Stat(moduleConfig); err == nil {
+			args = append(args, "--config", moduleConfig)
+		} else if _, err := os.Stat(workspaceConfig); err == nil {
+			args = append(args, "--config", workspaceConfig)
+		}
 	}
 
 	// Add fix flag if requested
@@ -119,7 +129,8 @@ func (h *MarkdownHandler) Lint(moduleRoot, workspaceRoot, outputDir string, logW
 
 	exitCode := 0
 	if err := cmd.Run(); err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		exitErr := &exec.ExitError{}
+		if errors.As(err, &exitErr) {
 			exitCode = exitErr.ExitCode()
 		} else {
 			Logln(logWriter, "Error running markdownlint-cli2: %v", err)
@@ -139,9 +150,9 @@ func (h *MarkdownHandler) Lint(moduleRoot, workspaceRoot, outputDir string, logW
 	return exitCode
 }
 
-// MarkdownLintOutput represents the structured JSON output for markdown linting
+// MarkdownLintOutput represents the structured JSON output for markdown linting.
 type MarkdownLintOutput struct {
-	Success bool `json:"success"`
+	Success bool   `json:"success"`
 	Tool    string `json:"tool"`
 }
 
@@ -157,7 +168,7 @@ func (h *MarkdownHandler) writeResultsJSON(jsonPath string, exitCode int, logWri
 		return
 	}
 
-	if err := os.WriteFile(jsonPath, data, 0644); err != nil {
+	if err := os.WriteFile(jsonPath, data, 0o644); err != nil {
 		Logln(logWriter, "Warning: could not write lint.json: %v", err)
 	}
 }
@@ -194,7 +205,10 @@ func (h *MarkdownHandler) formatTables(moduleRoot, workspaceRoot string, logWrit
 		}
 
 		// Check if file matches ignore patterns
-		relPath, _ := filepath.Rel(workspaceRoot, path)
+		relPath, relErr := filepath.Rel(workspaceRoot, path)
+		if relErr != nil {
+			relPath = path // Use absolute path as fallback
+		}
 		relPath = filepath.ToSlash(relPath) // Normalize path separators
 		for _, pattern := range ignorePatterns {
 			if matchGlob(pattern, relPath) {
@@ -217,7 +231,7 @@ func (h *MarkdownHandler) formatTables(moduleRoot, workspaceRoot string, logWrit
 	return filesFormatted, err
 }
 
-// loadIgnorePatterns reads ignore patterns from .markdownlint-cli2.yaml
+// loadIgnorePatterns reads ignore patterns from .markdownlint-cli2.yaml.
 func (h *MarkdownHandler) loadIgnorePatterns(workspaceRoot string) []string {
 	configPath := filepath.Join(workspaceRoot, ".markdownlint-cli2.yaml")
 	content, err := os.ReadFile(configPath)
@@ -259,7 +273,7 @@ func (h *MarkdownHandler) loadIgnorePatterns(workspaceRoot string) []string {
 	return patterns
 }
 
-// matchGlob performs simple glob matching (supports * and **)
+// matchGlob performs simple glob matching (supports * and **).
 func matchGlob(pattern, path string) bool {
 	// Convert glob to regex
 	regexPattern := "^"
@@ -285,11 +299,14 @@ func matchGlob(pattern, path string) bool {
 	}
 	regexPattern += "$"
 
-	matched, _ := regexp.MatchString(regexPattern, path)
+	matched, err := regexp.MatchString(regexPattern, path)
+	if err != nil {
+		return false // Invalid regex pattern
+	}
 	return matched
 }
 
-// formatTablesInFile formats all tables in a single markdown file
+// formatTablesInFile formats all tables in a single markdown file.
 func (h *MarkdownHandler) formatTablesInFile(filePath string) (bool, error) {
 	content, err := os.ReadFile(filePath)
 	if err != nil {
@@ -301,13 +318,13 @@ func (h *MarkdownHandler) formatTablesInFile(filePath string) (bool, error) {
 
 	// Only write if changed
 	if formatted != original {
-		return true, os.WriteFile(filePath, []byte(formatted), 0644)
+		return true, os.WriteFile(filePath, []byte(formatted), 0o644)
 	}
 
 	return false, nil
 }
 
-// formatMarkdownTables finds and formats all tables in markdown content
+// formatMarkdownTables finds and formats all tables in markdown content.
 func formatMarkdownTables(content string) string {
 	var result strings.Builder
 	scanner := bufio.NewScanner(strings.NewReader(content))
@@ -370,7 +387,7 @@ func formatMarkdownTables(content string) string {
 	return output
 }
 
-// formatTable formats a slice of table lines using go-pretty's aligned output
+// formatTable formats a slice of table lines using go-pretty's aligned output.
 func formatTable(lines []string) string {
 	if len(lines) < 2 {
 		// Not a valid table (need at least header + separator)

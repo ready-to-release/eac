@@ -15,13 +15,13 @@ const (
 	maxLineLength  = 100
 )
 
-// SummaryGenerator is a function that generates custom summary data
+// SummaryGenerator is a function that generates custom summary data.
 type SummaryGenerator func(ctx *ExecutionContext) *initsummary.Summary
 
 // phaseSummary handles the summary phase:
 // - Generate summary data
 // - Display TUI summary or print to console
-// - Return exit code
+// - Return exit code.
 func phaseSummary(ctx *ExecutionContext, customSummary SummaryGenerator) int {
 	totalTime := time.Since(ctx.StartTime)
 	exitCode := ctx.GetExitCode()
@@ -42,7 +42,7 @@ func phaseSummary(ctx *ExecutionContext, customSummary SummaryGenerator) int {
 	return exitCode
 }
 
-// generateTUISummary creates TUI summary data from execution results
+// generateTUISummary creates TUI summary data from execution results.
 func generateTUISummary(ctx *ExecutionContext, totalTime time.Duration) *tui.SummaryData {
 	results := ctx.Results
 	successCount := ctx.GetSuccessCount()
@@ -124,8 +124,9 @@ func generateTUISummary(ctx *ExecutionContext, totalTime time.Duration) *tui.Sum
 	}
 
 	// Add summary table
-	details = append(details, fmt.Sprintf("%-12s %8s %6s %6s %8s", "Type", "Packages", "Passed", "Failed", "Warnings"))
-	details = append(details, strings.Repeat("-", 44))
+	details = append(details,
+		fmt.Sprintf("%-12s %8s %6s %6s %8s", "Type", "Packages", "Passed", "Failed", "Warnings"),
+		strings.Repeat("-", 44))
 	for _, t := range types {
 		s := summaryByType[t]
 		details = append(details, fmt.Sprintf("%-12s %8d %6d %6d %8d", t, s.Packages, s.Passed, s.Failed, s.Warnings))
@@ -158,7 +159,7 @@ func generateTUISummary(ctx *ExecutionContext, totalTime time.Duration) *tui.Sum
 	return data
 }
 
-// printConsoleSummary prints a summary to the console for non-TUI mode
+// printConsoleSummary prints a summary to the console for non-TUI mode.
 func printConsoleSummary(ctx *ExecutionContext, totalTime time.Duration) {
 	results := ctx.Results
 	successCount := ctx.GetSuccessCount()
@@ -190,7 +191,7 @@ func printConsoleSummary(ctx *ExecutionContext, totalTime time.Duration) {
 	}
 }
 
-// formatDuration formats a duration for display
+// formatDuration formats a duration for display.
 func formatDuration(d time.Duration) string {
 	if d < time.Second {
 		return fmt.Sprintf("%dms", d.Milliseconds())

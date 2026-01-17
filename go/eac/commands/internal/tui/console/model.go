@@ -32,11 +32,11 @@ type Model struct {
 	lastError   *Line     // Most recent error (sticky display)
 
 	// Per-module tab tracking for Run phase
-	moduleStates   map[string]*ModuleState // Per-module state (running, completed, failed)
-	moduleOrder    []string                // Order in which modules started (for tab ordering)
-	nextModuleIdx  int                     // Counter for assigning unique indices to modules
-	activeTab      string                  // Currently selected tab ("" = aggregate view)
-	maxTabs        int                     // Maximum visible tabs before scrolling/hiding
+	moduleStates  map[string]*ModuleState // Per-module state (running, completed, failed)
+	moduleOrder   []string                // Order in which modules started (for tab ordering)
+	nextModuleIdx int                     // Counter for assigning unique indices to modules
+	activeTab     string                  // Currently selected tab ("" = aggregate view)
+	maxTabs       int                     // Maximum visible tabs before scrolling/hiding
 
 	// Channels for async updates
 	lineChan   <-chan Line   // Incoming output lines
@@ -55,19 +55,19 @@ type Model struct {
 	quitting bool
 }
 
-// ModuleState tracks per-module execution state for tab display
+// ModuleState tracks per-module execution state for tab display.
 type ModuleState struct {
-	Moniker   string        // Module identifier
-	Index     int           // 1-based index in execution order (for tab display)
-	Buffer    *RingBuffer   // Module-specific output buffer
-	Status    ModuleStatus  // Running, Complete, Failed
-	StartTime time.Time     // When module started
-	EndTime   time.Time     // When module finished (zero if running)
-	ExitCode  int           // Exit code (only valid when complete/failed)
-	DecayTime time.Time     // When tab should disappear (zero = don't decay)
+	Moniker   string       // Module identifier
+	Index     int          // 1-based index in execution order (for tab display)
+	Buffer    *RingBuffer  // Module-specific output buffer
+	Status    ModuleStatus // Running, Complete, Failed
+	StartTime time.Time    // When module started
+	EndTime   time.Time    // When module finished (zero if running)
+	ExitCode  int          // Exit code (only valid when complete/failed)
+	DecayTime time.Time    // When tab should disappear (zero = don't decay)
 }
 
-// ModuleStatus represents the execution state of a module
+// ModuleStatus represents the execution state of a module.
 type ModuleStatus int
 
 const (
@@ -76,7 +76,7 @@ const (
 	ModuleFailed
 )
 
-// Icon returns the icon for a module status
+// Icon returns the icon for a module status.
 func (s ModuleStatus) Icon() string {
 	switch s {
 	case ModuleRunning:
@@ -176,7 +176,7 @@ func (m *Model) SetTotal(total int) {
 	m.total = total
 }
 
-// SetActivePhase switches to a new phase
+// SetActivePhase switches to a new phase.
 func (m *Model) SetActivePhase(phase Phase) {
 	// Mark previous phase as complete if it was active
 	if m.panes[m.activePhase].Status == PhaseActive {
@@ -190,26 +190,26 @@ func (m *Model) SetActivePhase(phase Phase) {
 	m.panes[phase].StartTime = time.Now()
 }
 
-// GetActivePane returns the currently active pane
+// GetActivePane returns the currently active pane.
 func (m *Model) GetActivePane() *Pane {
 	return m.panes[m.activePhase]
 }
 
-// WriteToPhase writes a line to a specific phase's buffer
+// WriteToPhase writes a line to a specific phase's buffer.
 func (m *Model) WriteToPhase(phase Phase, line Line) {
 	if m.panes[phase] != nil {
 		m.panes[phase].Buffer.Push(line)
 	}
 }
 
-// SetPhaseSummary sets the summary text for a phase (shown when collapsed)
+// SetPhaseSummary sets the summary text for a phase (shown when collapsed).
 func (m *Model) SetPhaseSummary(phase Phase, summary string) {
 	if m.panes[phase] != nil {
 		m.panes[phase].Summary = summary
 	}
 }
 
-// CompletePhase marks a phase as complete with success/failure status
+// CompletePhase marks a phase as complete with success/failure status.
 func (m *Model) CompletePhase(phase Phase, success bool, summary string) {
 	if m.panes[phase] != nil {
 		if success {
@@ -223,7 +223,7 @@ func (m *Model) CompletePhase(phase Phase, success bool, summary string) {
 }
 
 // calculatePaneHeights determines how many lines each pane gets
-// Dynamic heights: Init and Summary are fixed, Run fills remaining space
+// Dynamic heights: Init and Summary are fixed, Run fills remaining space.
 func (m Model) calculatePaneHeights() (initH, runH, summaryH int) {
 	// Total lines needed for headers and footers (3 headers + 3 footers)
 	const headerFooterLines = 6
@@ -248,15 +248,15 @@ func (m Model) calculatePaneHeights() (initH, runH, summaryH int) {
 		runH = minRunHeight
 	}
 
-	return
+	return initH, runH, summaryH
 }
 
-// WriteResult writes a line to the results buffer
+// WriteResult writes a line to the results buffer.
 func (m *Model) WriteResult(line Line) {
 	m.resultsBuffer.Push(line)
 }
 
-// SummaryData holds structured information for the Summary pane
+// SummaryData holds structured information for the Summary pane.
 type SummaryData struct {
 	Success     bool          // Overall success/failure
 	TotalTime   time.Duration // Total execution time
@@ -266,12 +266,12 @@ type SummaryData struct {
 	NextSteps   string        // Suggested next action
 }
 
-// SetSummaryData updates the summary data for the Summary pane
+// SetSummaryData updates the summary data for the Summary pane.
 func (m *Model) SetSummaryData(data *SummaryData) {
 	m.summaryData = data
 }
 
-// GetOrCreateModuleState gets or creates a module state for the given moniker
+// GetOrCreateModuleState gets or creates a module state for the given moniker.
 func (m *Model) GetOrCreateModuleState(moniker string) *ModuleState {
 	if state, exists := m.moduleStates[moniker]; exists {
 		return state
@@ -295,7 +295,7 @@ func (m *Model) GetOrCreateModuleState(moniker string) *ModuleState {
 }
 
 // MarkModuleComplete marks a module as completed
-// If the tab is currently selected, it stays visible until user switches away
+// If the tab is currently selected, it stays visible until user switches away.
 func (m *Model) MarkModuleComplete(moniker string, exitCode int) {
 	state, exists := m.moduleStates[moniker]
 	if !exists {
@@ -317,7 +317,7 @@ func (m *Model) MarkModuleComplete(moniker string, exitCode int) {
 	}
 }
 
-// removeModuleFromTabs removes a module from the tab display
+// removeModuleFromTabs removes a module from the tab display.
 func (m *Model) removeModuleFromTabs(moniker string) {
 	// Remove from order
 	var newOrder []string
@@ -333,7 +333,7 @@ func (m *Model) removeModuleFromTabs(moniker string) {
 }
 
 // GetVisibleTabs returns the tabs that should be displayed
-// Shows running modules + the active tab (even if completed)
+// Shows running modules + the active tab (even if completed).
 func (m *Model) GetVisibleTabs() []*ModuleState {
 	var tabs []*ModuleState
 
@@ -358,7 +358,7 @@ func (m *Model) GetVisibleTabs() []*ModuleState {
 }
 
 // SetActiveTab sets the currently active tab
-// When switching away from a completed tab, it will be removed
+// When switching away from a completed tab, it will be removed.
 func (m *Model) SetActiveTab(moniker string) {
 	oldTab := m.activeTab
 
@@ -388,7 +388,7 @@ func (m *Model) SetActiveTab(moniker string) {
 	}
 }
 
-// GetActiveModuleBuffer returns the buffer for the active tab, or nil for aggregate view
+// GetActiveModuleBuffer returns the buffer for the active tab, or nil for aggregate view.
 func (m *Model) GetActiveModuleBuffer() *RingBuffer {
 	if m.activeTab == "" {
 		return nil // Aggregate view - use Run pane buffer
@@ -399,7 +399,7 @@ func (m *Model) GetActiveModuleBuffer() *RingBuffer {
 	return nil
 }
 
-// CleanupDecayedTabs is a no-op now (tabs removed instantly on completion)
+// CleanupDecayedTabs is a no-op now (tabs removed instantly on completion).
 func (m *Model) CleanupDecayedTabs() {
 	// Tabs are now removed instantly when modules complete
 	// This function is kept for compatibility but does nothing

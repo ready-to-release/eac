@@ -20,11 +20,11 @@ var assetExtensions = map[string]bool{
 }
 
 // assetReferencePattern matches asset references in markdown and HTML
-// Captures paths from: ![](path), [](path), src="path", href="path"
+// Captures paths from: ![](path), [](path), src="path", href="path".
 var assetReferencePattern = regexp.MustCompile(`(?:\]\(|src="|href=")([^)"]+)`)
 
 // cleanupUnreferencedAssets removes asset files from staging that are not referenced by any markdown
-// This runs after all preprocessing to ensure only necessary files are included in the final output
+// This runs after all preprocessing to ensure only necessary files are included in the final output.
 func (p *Preprocessor) cleanupUnreferencedAssets() error {
 	// Step 1: Collect all asset references from markdown files
 	// We track both absolute paths and basenames for robust matching
@@ -50,27 +50,28 @@ func (p *Preprocessor) cleanupUnreferencedAssets() error {
 		// Find all asset references
 		refs := assetReferencePattern.FindAllStringSubmatch(string(content), -1)
 		for _, match := range refs {
-			if len(match) > 1 {
-				ref := match[1]
-				// Skip external URLs and anchors
-				if strings.HasPrefix(ref, "http://") || strings.HasPrefix(ref, "https://") ||
-					strings.HasPrefix(ref, "#") || strings.HasPrefix(ref, "mailto:") {
-					continue
-				}
-
-				// Normalize path separators (markdown uses forward slashes)
-				ref = filepath.FromSlash(ref)
-
-				// Resolve to absolute path from markdown file location
-				mdDir := filepath.Dir(path)
-				absPath := filepath.Clean(filepath.Join(mdDir, ref))
-
-				// Store normalized lowercase path for case-insensitive matching on Windows
-				referencedPaths[strings.ToLower(absPath)] = true
-
-				// Also store basename for fallback matching
-				referencedNames[strings.ToLower(filepath.Base(ref))] = true
+			if len(match) <= 1 {
+				continue
 			}
+			ref := match[1]
+			// Skip external URLs and anchors
+			if strings.HasPrefix(ref, "http://") || strings.HasPrefix(ref, "https://") ||
+				strings.HasPrefix(ref, "#") || strings.HasPrefix(ref, "mailto:") {
+				continue
+			}
+
+			// Normalize path separators (markdown uses forward slashes)
+			ref = filepath.FromSlash(ref)
+
+			// Resolve to absolute path from markdown file location
+			mdDir := filepath.Dir(path)
+			absPath := filepath.Clean(filepath.Join(mdDir, ref))
+
+			// Store normalized lowercase path for case-insensitive matching on Windows
+			referencedPaths[strings.ToLower(absPath)] = true
+
+			// Also store basename for fallback matching
+			referencedNames[strings.ToLower(filepath.Base(ref))] = true
 		}
 		return nil
 	})

@@ -82,7 +82,7 @@ func init() {
 	registry.Register(Build)
 }
 
-// BuildResult captures the outcome of a module build
+// BuildResult captures the outcome of a module build.
 type BuildResult struct {
 	Moniker  string
 	ExitCode int
@@ -104,7 +104,7 @@ func ensureCommandsBinary(workspaceRoot string) error {
 
 	// Create tools directory
 	toolsDir := filepath.Join(workspaceRoot, paths.OutDir, paths.ToolsDir)
-	if err := os.MkdirAll(toolsDir, 0755); err != nil {
+	if err := os.MkdirAll(toolsDir, 0o755); err != nil {
 		return fmt.Errorf("create tools dir: %w", err)
 	}
 
@@ -128,7 +128,7 @@ func ensureCommandsBinary(workspaceRoot string) error {
 
 // buildFlags defines valid flags for the build command
 
-// Build command entry point - builds one or more modules
+// Build command entry point - builds one or more modules.
 func Build() int {
 	args := os.Args[2:] // Skip program name and "build"
 
@@ -323,12 +323,12 @@ func Build() int {
 	return RunBuildWithFramework(cmdCfg, buildCfg)
 }
 
-// parseIntArg parses a string argument as an integer
+// parseIntArg parses a string argument as an integer.
 func parseIntArg(s string) (int, error) {
 	return strconv.Atoi(s)
 }
 
-// listModuleArtifacts lists the artifacts that would be produced by building the specified modules
+// listModuleArtifacts lists the artifacts that would be produced by building the specified modules.
 func listModuleArtifacts(monikers []string, workspaceRoot string, moduleReport *reports.ModuleContractReport) int {
 	// Sort monikers for consistent output
 	sort.Strings(monikers)
@@ -363,8 +363,8 @@ func listModuleArtifacts(monikers []string, workspaceRoot string, moduleReport *
 	return 0
 }
 
-// runModuleBuild runs build for a single module
-func runModuleBuild(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, tidyFirst bool, version string, dryRun bool, buildAll bool) int {
+// runModuleBuild runs build for a single module.
+func runModuleBuild(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, tidyFirst bool, version string, dryRun, buildAll bool) int {
 	// Get handler for module (checks per-module handler first, then type)
 	handler := builders.GetHandlerForModule(module, module.Type)
 	if handler == nil {
@@ -422,7 +422,7 @@ func runModuleBuild(module *modules.ModuleContract, workspaceRoot string, output
 }
 
 // verifyBuildDependenciesQuiet checks build dependencies silently and returns status for summary
-// No output is written - the caller is responsible for displaying the results via InitSummary
+// No output is written - the caller is responsible for displaying the results via InitSummary.
 func verifyBuildDependenciesQuiet(monikers []string, moduleReport *reports.ModuleContractReport) (int, initsummary.DepsStatus) {
 	status := initsummary.DepsStatus{Verified: true}
 
@@ -529,7 +529,7 @@ func printBuildUsage() {
 // hasExistingArtifacts checks if a module's build artifacts already exist AND
 // were built from the same source inputs.
 // Used by --use-existing-depm to skip building modules whose artifacts are present
-// (typically downloaded from previous CI runs)
+// (typically downloaded from previous CI runs).
 func hasExistingArtifacts(moniker, moduleType, workspaceRoot string, buildAll bool) bool {
 	// Load config
 	cfg, err := config.Load(config.DefaultLoadOptions())
@@ -613,7 +613,7 @@ func hasExistingArtifacts(moniker, moduleType, workspaceRoot string, buildAll bo
 }
 
 // generateBuildManifest creates per-module manifest files tracking what was built.
-// Each module gets its own immutable manifest at out/build/<module>/build.manifest.json
+// Each module gets its own immutable manifest at out/build/<module>/build.manifest.json.
 func generateBuildManifest(workspaceRoot string, results []orchestrator.WorkResult, moduleTypes map[string]string, executionOrder []string, buildAll bool) error {
 	// Get git commit SHA
 	gitCommit := git.GetCommitSHA(workspaceRoot)
@@ -781,7 +781,7 @@ func generateBuildManifest(workspaceRoot string, results []orchestrator.WorkResu
 }
 
 // updateSkippedModuleManifests updates the VerifiedUnchangedAt field for modules
-// that were skipped because they were already up-to-date
+// that were skipped because they were already up-to-date.
 func updateSkippedModuleManifests(workspaceRoot string, skippedModules []string, gitCommit string) {
 	cfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
@@ -806,7 +806,7 @@ func updateSkippedModuleManifests(workspaceRoot string, skippedModules []string,
 	}
 }
 
-// validateModuleBuildOutputs validates that a module's build produced the expected artifacts
+// validateModuleBuildOutputs validates that a module's build produced the expected artifacts.
 func validateModuleBuildOutputs(moniker, moduleType, workspaceRoot string, logWriter io.Writer, buildAll bool) error {
 	// Load config
 	cfg, err := config.Load(config.DefaultLoadOptions())
@@ -908,7 +908,7 @@ func validateModuleBuildOutputs(moniker, moduleType, workspaceRoot string, logWr
 	return nil
 }
 
-// determineRequestedArtifactsForBuild determines which artifact IDs should be built for a module
+// determineRequestedArtifactsForBuild determines which artifact IDs should be built for a module.
 func determineRequestedArtifactsForBuild(moduleContract *modules.ModuleContract, buildAll bool, workspaceRoot string) []string {
 	// When --all is specified, return "*" to signal builders to include all artifacts
 	// This handles cases where module type has no artifacts defined (like container type)
@@ -971,7 +971,7 @@ func enrichImageArtifact(artifactInfo *implinternal.ArtifactInfo, module *config
 	artifactInfo.Registry = dockerConfig.Registry
 }
 
-// expandImageTag expands template variables in an image tag
+// expandImageTag expands template variables in an image tag.
 func expandImageTag(tag, moniker string) string {
 	result := tag
 	result = strings.ReplaceAll(result, "{moniker}", moniker)

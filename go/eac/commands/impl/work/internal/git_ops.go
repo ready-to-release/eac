@@ -2,6 +2,7 @@
 package internal
 
 import (
+	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -173,7 +174,8 @@ func (g *defaultGitOps) BranchExists(branch string) (bool, error) {
 	log.Debugf("Git operation completed: branchExists | duration=%v exists=%v err=%v", time.Since(start), err == nil, err)
 
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 128 {
+		exitErr := &exec.ExitError{}
+		if errors.As(err, &exitErr) {
 			return false, nil
 		}
 		return false, fmt.Errorf("failed to check branch: %w", err)
@@ -240,7 +242,7 @@ func (g *defaultGitOps) IsWorktreeClean(path string) (bool, error) {
 	log.Debugf("Executing git command: %s (dir=%s)", cmd.String(), cmd.Dir)
 
 	output, err := cmd.Output()
-	isClean := len(strings.TrimSpace(string(output))) == 0
+	isClean := strings.TrimSpace(string(output)) == ""
 
 	log.Debugf("Git operation completed: isWorktreeClean | duration=%v isClean=%v output=%q err=%v", time.Since(start), isClean, string(output), err)
 

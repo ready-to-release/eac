@@ -52,27 +52,27 @@ var Styles = struct {
 
 	// Tab styles - clickable horizontal tabs for parallel processes
 	TabActive: lipgloss.NewStyle().
-			Bold(true).
-			Foreground(lipgloss.Color("15")).   // White text
-			Background(lipgloss.Color("33")).   // Blue background
-			Padding(0, 1),
+		Bold(true).
+		Foreground(lipgloss.Color("15")). // White text
+		Background(lipgloss.Color("33")). // Blue background
+		Padding(0, 1),
 	TabRunning: lipgloss.NewStyle().
-			Foreground(lipgloss.Color("214")).  // Orange text
-			Background(lipgloss.Color("236")).  // Dark gray background
-			Padding(0, 1),
+		Foreground(lipgloss.Color("214")). // Orange text
+		Background(lipgloss.Color("236")). // Dark gray background
+		Padding(0, 1),
 	TabComplete: lipgloss.NewStyle().
-			Foreground(lipgloss.Color("42")).   // Green text
-			Background(lipgloss.Color("236")).  // Dark gray background
-			Padding(0, 1),
+		Foreground(lipgloss.Color("42")).  // Green text
+		Background(lipgloss.Color("236")). // Dark gray background
+		Padding(0, 1),
 	TabFailed: lipgloss.NewStyle().
-			Foreground(lipgloss.Color("196")).  // Red text
-			Background(lipgloss.Color("236")).  // Dark gray background
-			Bold(true).
-			Padding(0, 1),
+		Foreground(lipgloss.Color("196")). // Red text
+		Background(lipgloss.Color("236")). // Dark gray background
+		Bold(true).
+		Padding(0, 1),
 	TabBar: lipgloss.NewStyle().
 		Foreground(lipgloss.Color("240")),
 	TabSeparator: lipgloss.NewStyle().
-			Foreground(lipgloss.Color("238")),
+		Foreground(lipgloss.Color("238")),
 }
 
 // Icons for different states.

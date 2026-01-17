@@ -93,7 +93,7 @@ func CreateRiskAssess() int {
 	if err := os.RemoveAll(config.OutputDir); err != nil {
 		assessLog.Warnf("Failed to clear output directory: %v", err)
 	}
-	if err := os.MkdirAll(config.OutputDir, 0755); err != nil {
+	if err := os.MkdirAll(config.OutputDir, 0o755); err != nil {
 		assessLog.Errorf("Failed to create output directory: %v", err)
 		return 1
 	}
@@ -407,7 +407,7 @@ func writeAggregatedReport(config *AssessConfig, results []*ModuleAssessmentResu
 	}
 
 	// Write to file
-	if err := os.WriteFile(outputPath, []byte(report), 0644); err != nil {
+	if err := os.WriteFile(outputPath, []byte(report), 0o644); err != nil {
 		return fmt.Errorf("failed to write report: %w", err)
 	}
 
@@ -433,7 +433,7 @@ func generateMarkdownReport(config *AssessConfig, results []*ModuleAssessmentRes
 // loadRiskAssessmentTemplate loads the risk assessment template with fallback logic.
 // Priority 1: Team override (.r2r/eac/templates/reports/risk/risk-assess.md)
 // Priority 2: System default (templates/reports/risk/risk-assess.md)
-// This follows the same pattern as AI prompt loading (see contracts/ai_loader.go:LoadPrompt)
+// This follows the same pattern as AI prompt loading (see contracts/ai_loader.go:LoadPrompt).
 func loadRiskAssessmentTemplate(workspaceRoot string) (string, error) {
 	// Load EAC config for template directory paths and filenames
 	cfg, err := eacConfig.Load(eacConfig.LoadOptions{RepoRoot: workspaceRoot})
@@ -564,12 +564,7 @@ func writeAggregatedOSCALReport(config *AssessConfig, results []*ModuleAssessmen
 
 					// Collect observation references
 					if finding.RelatedObservations != nil {
-						for _, relObs := range *finding.RelatedObservations {
-							*controlFindings[controlID].RelatedObservations = append(
-								*controlFindings[controlID].RelatedObservations,
-								relObs,
-							)
-						}
+						*controlFindings[controlID].RelatedObservations = append(*controlFindings[controlID].RelatedObservations, *finding.RelatedObservations...)
 					}
 				}
 			}
@@ -588,7 +583,7 @@ func writeAggregatedOSCALReport(config *AssessConfig, results []*ModuleAssessmen
 
 	// Write to file
 	outputPath := filepath.Join(paths.RiskOutputPath(config.WorkspaceRoot, ""), "assessment-results-aggregate.json")
-	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0o755); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 

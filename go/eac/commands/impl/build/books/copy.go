@@ -13,7 +13,7 @@ import (
 
 var log = logging.C()
 
-// copyStaticFiles copies all copy-type sources to staging (Step 1)
+// copyStaticFiles copies all copy-type sources to staging (Step 1).
 func (p *Preprocessor) copyStaticFiles() error {
 	copySources := p.book.GetCopySources()
 	if len(copySources) == 0 {
@@ -32,7 +32,7 @@ func (p *Preprocessor) copyStaticFiles() error {
 	return nil
 }
 
-// copySingleSource copies files matching a single copy source
+// copySingleSource copies files matching a single copy source.
 func (p *Preprocessor) copySingleSource(src config.Source) (int, error) {
 	from := src.From
 	to := src.To
@@ -102,7 +102,7 @@ func (p *Preprocessor) copySingleSource(src config.Source) (int, error) {
 	return copied, nil
 }
 
-// calculateRelativePath calculates the relative path for a matched file
+// calculateRelativePath calculates the relative path for a matched file.
 func calculateRelativePath(matchPath, pattern, workspaceRoot string) (string, error) {
 	// Build full pattern path with forward slashes for doublestar
 	fullPattern := filepath.ToSlash(filepath.Join(workspaceRoot, pattern))
@@ -126,7 +126,7 @@ func calculateRelativePath(matchPath, pattern, workspaceRoot string) (string, er
 	return rel, nil
 }
 
-// isExcluded checks if a file matches any exclusion pattern
+// isExcluded checks if a file matches any exclusion pattern.
 func isExcluded(path, workspaceRoot string, excludePatterns []string) bool {
 	// Normalize path to forward slashes for cross-platform matching
 	normalizedPath := filepath.ToSlash(path)
@@ -142,24 +142,26 @@ func isExcluded(path, workspaceRoot string, excludePatterns []string) bool {
 		fullPattern := filepath.ToSlash(filepath.Join(workspaceRoot, pattern))
 
 		// Use doublestar for glob matching
-		if matched, _ := doublestar.Match(fullPattern, normalizedPath); matched {
+		if matched, matchErr := doublestar.Match(fullPattern, normalizedPath); matchErr == nil && matched {
 			return true
 		}
 
 		// Also try matching just the relative path
-		relPath, _ := filepath.Rel(workspaceRoot, path)
-		normalizedRelPath := filepath.ToSlash(relPath)
-		if matched, _ := doublestar.Match(pattern, normalizedRelPath); matched {
-			return true
+		relPath, relErr := filepath.Rel(workspaceRoot, path)
+		if relErr == nil {
+			normalizedRelPath := filepath.ToSlash(relPath)
+			if matched, matchErr := doublestar.Match(pattern, normalizedRelPath); matchErr == nil && matched {
+				return true
+			}
 		}
 	}
 	return false
 }
 
-// copyFile copies a file from src to dst, creating directories as needed
+// copyFile copies a file from src to dst, creating directories as needed.
 func copyFile(src, dst string) error {
 	// Create destination directory
-	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return err
 	}
 

@@ -3,6 +3,7 @@ package lint
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -20,13 +21,13 @@ import (
 	systemdeps "github.com/ready-to-release/eac/go/eac/core/system-deps"
 )
 
-// LintConfig holds lint-specific configuration
+// LintConfig holds lint-specific configuration.
 type LintConfig struct {
 	Fix    bool   // Auto-fix issues where possible
 	Config string // Override config file path
 }
 
-// LintModuleResult holds lint results for a single module
+// LintModuleResult holds lint results for a single module.
 type LintModuleResult struct {
 	Moniker      string
 	Success      bool
@@ -35,7 +36,7 @@ type LintModuleResult struct {
 	Duration     time.Duration
 }
 
-// lintContext holds lint-specific state during execution
+// lintContext holds lint-specific state during execution.
 type lintContext struct {
 	cfg     *LintConfig
 	results map[string]*LintModuleResult
@@ -69,17 +70,20 @@ func RunLintWithFramework(cmdCfg *cmdframework.CommandConfig, lintCfg *LintConfi
 	return cmdframework.Run(cmdCfg, lintWorker, hooks)
 }
 
-// lintAfterInit handles lint-specific initialization
+// lintAfterInit handles lint-specific initialization.
 func lintAfterInit(ctx *cmdframework.ExecutionContext) error {
 	// Build init summary
 	buildLintInitSummary(ctx)
 	return nil
 }
 
-// lintAfterExecute handles post-lint tasks
+// lintAfterExecute handles post-lint tasks.
 func lintAfterExecute(ctx *cmdframework.ExecutionContext) error {
 	// Generate lint manifest for each module
-	lctx := ctx.Config.Extra["lintContext"].(*lintContext)
+	lctx, ok := ctx.Config.Extra["lintContext"].(*lintContext)
+	if !ok {
+		return fmt.Errorf("lintContext not found or wrong type")
+	}
 
 	for moniker, result := range lctx.results {
 		if err := generateLintManifest(ctx, moniker, result); err != nil {
@@ -90,10 +94,18 @@ func lintAfterExecute(ctx *cmdframework.ExecutionContext) error {
 	return nil
 }
 
-// lintWorker is the worker function that lints a single module
+// lintWorker is the worker function that lints a single module.
 func lintWorker(ctx *cmdframework.ExecutionContext, moniker string, logWriter io.Writer) int {
-	lintCfg := ctx.Config.Extra["lintConfig"].(*LintConfig)
-	lctx := ctx.Config.Extra["lintContext"].(*lintContext)
+	lintCfg, ok := ctx.Config.Extra["lintConfig"].(*LintConfig)
+	if !ok {
+		output.Writeln(logWriter, "Error: lintConfig not found or wrong type")
+		return 1
+	}
+	lctx, ok := ctx.Config.Extra["lintContext"].(*lintContext)
+	if !ok {
+		output.Writeln(logWriter, "Error: lintContext not found or wrong type")
+		return 1
+	}
 
 	module, exists := ctx.ModuleRegistry.Get(moniker)
 	if !exists {
@@ -121,7 +133,7 @@ func lintWorker(ctx *cmdframework.ExecutionContext, moniker string, logWriter io
 
 	// Create output directory
 	outputDir := paths.LintOutputPath(ctx.WorkspaceRoot, moniker)
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		output.Writeln(logWriter, "Error creating output directory: %v", err)
 		return 1
 	}
@@ -165,7 +177,7 @@ func lintWorker(ctx *cmdframework.ExecutionContext, moniker string, logWriter io
 	return exitCode
 }
 
-// lintDepsVerifier verifies system dependencies for linting
+// lintDepsVerifier verifies system dependencies for linting.
 func lintDepsVerifier(ctx *cmdframework.ExecutionContext) *initsummary.DepsStatus {
 	status := &initsummary.DepsStatus{Verified: true}
 
@@ -211,7 +223,7 @@ func lintDepsVerifier(ctx *cmdframework.ExecutionContext) *initsummary.DepsStatu
 	return status
 }
 
-// buildLintInitSummary creates the init summary for lint commands
+// buildLintInitSummary creates the init summary for lint commands.
 func buildLintInitSummary(ctx *cmdframework.ExecutionContext) {
 	summary := initsummary.New("update lint").
 		SetRequest(ctx.Config.Monikers, ctx.GetExecutionMonikers()).
@@ -226,7 +238,7 @@ func buildLintInitSummary(ctx *cmdframework.ExecutionContext) {
 	ctx.InitSummary = summary
 }
 
-// countLintIssues counts the number of issues from a golangci-lint JSON output
+// countLintIssues counts the number of issues from a golangci-lint JSON output.
 func countLintIssues(jsonPath string) (int, error) {
 	data, err := os.ReadFile(jsonPath)
 	if err != nil {
@@ -247,7 +259,7 @@ func countLintIssues(jsonPath string) (int, error) {
 	return len(output.Issues), nil
 }
 
-// generateLintManifest generates the lint manifest for a module
+// generateLintManifest generates the lint manifest for a module.
 func generateLintManifest(ctx *cmdframework.ExecutionContext, moniker string, result *LintModuleResult) error {
 	outputDir := paths.LintOutputPath(ctx.WorkspaceRoot, moniker)
 	manifestPath := filepath.Join(outputDir, "lint.manifest.json")
@@ -267,10 +279,10 @@ func generateLintManifest(ctx *cmdframework.ExecutionContext, moniker string, re
 		return err
 	}
 
-	return os.WriteFile(manifestPath, data, 0644)
+	return os.WriteFile(manifestPath, data, 0o644)
 }
 
-// LintManifest represents the lint manifest structure
+// LintManifest represents the lint manifest structure.
 type LintManifest struct {
 	Moniker         string    `json:"moniker"`
 	ModuleType      string    `json:"module_type"`

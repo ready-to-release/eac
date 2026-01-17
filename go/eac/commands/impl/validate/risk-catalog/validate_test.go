@@ -37,7 +37,7 @@ func TestValidateCatalog_ValidMinimalCatalog(t *testing.T) {
 		}
 	}`
 
-	err := os.WriteFile(catalogPath, []byte(validCatalog), 0644)
+	err := os.WriteFile(catalogPath, []byte(validCatalog), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
@@ -76,7 +76,7 @@ func TestValidateCatalog_MissingUUID(t *testing.T) {
 		}
 	}`
 
-	err := os.WriteFile(catalogPath, []byte(catalogWithoutUUID), 0644)
+	err := os.WriteFile(catalogPath, []byte(catalogWithoutUUID), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
@@ -111,7 +111,7 @@ func TestValidateCatalog_InvalidJSON(t *testing.T) {
 
 	invalidJSON := `{ invalid json`
 
-	err := os.WriteFile(catalogPath, []byte(invalidJSON), 0644)
+	err := os.WriteFile(catalogPath, []byte(invalidJSON), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
@@ -153,7 +153,7 @@ func TestValidateCatalog_NotACatalogDocument(t *testing.T) {
 		}
 	}`
 
-	err := os.WriteFile(catalogPath, []byte(notCatalog), 0644)
+	err := os.WriteFile(catalogPath, []byte(notCatalog), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
@@ -202,7 +202,7 @@ func TestValidateCatalog_MissingTitleAndLastModified(t *testing.T) {
 		}
 	}`
 
-	err := os.WriteFile(catalogPath, []byte(incompleteCatalog), 0644)
+	err := os.WriteFile(catalogPath, []byte(incompleteCatalog), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
@@ -240,7 +240,7 @@ func TestValidateCatalog_NoControlsOrGroups(t *testing.T) {
 		}
 	}`
 
-	err := os.WriteFile(catalogPath, []byte(emptyCatalog), 0644)
+	err := os.WriteFile(catalogPath, []byte(emptyCatalog), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}

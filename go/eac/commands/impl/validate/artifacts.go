@@ -144,7 +144,7 @@ func validateArtifactsForModule(moduleName, targetOS, targetArch string, noDeps 
 	return 0
 }
 
-// formatValidationResults formats validation results as a detailed table
+// formatValidationResults formats validation results as a detailed table.
 func formatValidationResults(results *implinternal.ValidationResults, targetOS, targetArch string) string {
 	var output strings.Builder
 

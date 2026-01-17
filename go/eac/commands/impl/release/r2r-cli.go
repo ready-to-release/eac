@@ -145,7 +145,7 @@ func ReleaseSrcCli() int {
 	return 0
 }
 
-// validateModule checks if a module exists in the repository
+// validateModule checks if a module exists in the repository.
 func validateModule(moduleName string) error {
 	// Try to load the module contracts
 	registry, err := modules.LoadFromWorkspace("")
@@ -167,7 +167,7 @@ func validateModule(moduleName string) error {
 	return nil
 }
 
-// validateSemver validates that a version string follows semantic versioning (x.y.z)
+// validateSemver validates that a version string follows semantic versioning (x.y.z).
 func validateSemver(version string) error {
 	// Remove leading 'v' if present - we don't want it
 	if strings.HasPrefix(version, "v") {
@@ -198,12 +198,12 @@ func validateSemver(version string) error {
 	return nil
 }
 
-// buildTagName constructs a tag name in the format "module/version"
+// buildTagName constructs a tag name in the format "module/version".
 func buildTagName(moduleName, version string) string {
 	return fmt.Sprintf("%s/%s", moduleName, version)
 }
 
-// tagExists checks if a git tag already exists
+// tagExists checks if a git tag already exists.
 func tagExists(tagName string) bool {
 	cmd := exec.Command("git", "tag", "-l", tagName)
 	output, err := cmd.Output()
@@ -215,7 +215,7 @@ func tagExists(tagName string) bool {
 	return strings.TrimSpace(string(output)) != ""
 }
 
-// createGitTag creates a git tag with the given name
+// createGitTag creates a git tag with the given name.
 func createGitTag(tagName string) error {
 	cmd := exec.Command("git", "tag", "-a", tagName, "-m", fmt.Sprintf("Release %s", tagName))
 	cmd.Stdout = os.Stdout
@@ -223,7 +223,7 @@ func createGitTag(tagName string) error {
 	return cmd.Run()
 }
 
-// pushGitTag pushes a git tag to the remote repository
+// pushGitTag pushes a git tag to the remote repository.
 func pushGitTag(tagName string) error {
 	cmd := exec.Command("git", "push", "origin", tagName)
 	cmd.Stdout = os.Stdout

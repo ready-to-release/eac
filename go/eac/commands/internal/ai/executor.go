@@ -9,17 +9,17 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
-// Executor orchestrates AI provider execution
+// Executor orchestrates AI provider execution.
 type Executor struct {
 	workspaceRoot     string
 	lastUsedProvider  Provider
 	providerFactories map[string]ProviderFactory
 }
 
-// ProviderFactory creates a provider from configuration
+// ProviderFactory creates a provider from configuration.
 type ProviderFactory func(config *Config) (Provider, error)
 
-// NewExecutor creates a new executor for the given workspace
+// NewExecutor creates a new executor for the given workspace.
 func NewExecutor(workspaceRoot string) *Executor {
 	executor := &Executor{
 		workspaceRoot:     workspaceRoot,
@@ -32,12 +32,12 @@ func NewExecutor(workspaceRoot string) *Executor {
 	return executor
 }
 
-// RegisterProvider registers a provider factory
+// RegisterProvider registers a provider factory.
 func (e *Executor) RegisterProvider(name string, factory ProviderFactory) {
 	e.providerFactories[name] = factory
 }
 
-// Execute runs an AI prompt through the configured provider
+// Execute runs an AI prompt through the configured provider.
 func (e *Executor) Execute(ctx context.Context, input string, opts ...Option) (string, error) {
 	startTime := time.Now()
 	options := ApplyOptions(opts...)
@@ -72,7 +72,7 @@ func (e *Executor) Execute(ctx context.Context, input string, opts ...Option) (s
 	return response, err
 }
 
-// GetLastUsedProvider returns the last provider used (for testing)
+// GetLastUsedProvider returns the last provider used (for testing).
 func (e *Executor) GetLastUsedProvider() Provider {
 	return e.lastUsedProvider
 }
@@ -90,7 +90,7 @@ func (e *Executor) loadConfig() (*Config, error) {
 }
 
 // LoadProvider loads the configured provider without fallback
-// Returns error if provider is unknown or cannot be created
+// Returns error if provider is unknown or cannot be created.
 func (e *Executor) LoadProvider(config *Config) (Provider, error) {
 	// Config is required
 	if config == nil {
@@ -112,7 +112,7 @@ func (e *Executor) LoadProvider(config *Config) (Provider, error) {
 	return provider, nil
 }
 
-// formatDebugInfo formats debug information for inclusion in output
+// formatDebugInfo formats debug information for inclusion in output.
 func (e *Executor) formatDebugInfo(provider, input, response string, err error, duration time.Duration) string {
 	var status string
 	if err != nil {

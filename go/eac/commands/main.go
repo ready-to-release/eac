@@ -4,7 +4,8 @@
 //
 // Commands auto-discovered via file scanning.
 // Convention:
-//   File: show-modules.go → Command: "show modules" → Function: ShowModules()
+//
+//	File: show-modules.go → Command: "show modules" → Function: ShowModules()
 package main
 
 import (
@@ -16,17 +17,16 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 )
 
-// InitialWorkingDir stores the working directory when the program started
+// InitialWorkingDir stores the working directory when the program started.
 var InitialWorkingDir string
 
-// nl returns the platform-appropriate line ending
+// nl returns the platform-appropriate line ending.
 func nl() string {
 	if runtime.GOOS == "windows" {
 		return "\r\n"
 	}
 	return "\n"
 }
-
 
 func main() {
 	// Global panic handler with full stack trace
@@ -113,13 +113,14 @@ func main() {
 
 		if len(subcommands) > 0 {
 			// Handle default behaviors for specific verbs
-			if prefix == "build" {
+			switch prefix {
+			case "build":
 				// Default: build (all modules)
 				if fn, found := commands["build"]; found {
 					exitCode := fn()
 					os.Exit(exitCode)
 				}
-			} else if prefix == "test" {
+			case "test":
 				// Default: test (all modules)
 				if fn, found := commands["test"]; found {
 					exitCode := fn()
@@ -140,7 +141,7 @@ func main() {
 	os.Exit(exitCode)
 }
 
-// getSubcommands returns all commands that start with the given prefix
+// getSubcommands returns all commands that start with the given prefix.
 func getSubcommands(prefix string) []string {
 	var subcommands []string
 	searchPrefix := prefix
@@ -183,7 +184,7 @@ func getSubcommands(prefix string) []string {
 	return subcommands
 }
 
-// printSubcommandHelp prints help for a parent command
+// printSubcommandHelp prints help for a parent command.
 func printSubcommandHelp(prefix string, subcommands []string) {
 	if prefix == "" {
 		fmt.Println("Usage: go run . <command> [subcommand] [args...]")
@@ -225,7 +226,7 @@ func printUsage() {
 	}
 }
 
-// printCommandHelp prints help information for a command using its registration metadata
+// printCommandHelp prints help information for a command using its registration metadata.
 func printCommandHelp(_ registry.CommandFunc) {
 	// Find command by reconstructing the command name from args
 	cmdRegistry := registry.GetCommandRegistry()

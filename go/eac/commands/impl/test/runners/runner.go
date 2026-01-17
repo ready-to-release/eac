@@ -33,7 +33,7 @@ type TestInfo struct {
 	TestRoot string
 }
 
-// RunResult holds the results from running a package's tests
+// RunResult holds the results from running a package's tests.
 type RunResult struct {
 	// ModuleMoniker is the module this package belongs to (for aggregation)
 	ModuleMoniker string
@@ -47,7 +47,7 @@ type RunResult struct {
 	Duration      time.Duration
 }
 
-// RunConfig holds configuration for test execution
+// RunConfig holds configuration for test execution.
 type RunConfig struct {
 	WorkspaceRoot  string
 	TestRunDir     string
@@ -96,7 +96,7 @@ type TestTypeRunner interface {
 	//   - testRoot: the result from FindTestRoot (or directory for unit tests)
 	//   - featurePath: relative path to the feature file (empty for unit tests)
 	// Returns the package path used as a key for test grouping.
-	BuildPackagePath(testRoot string, featurePath string) string
+	BuildPackagePath(testRoot, featurePath string) string
 
 	// Execute runs tests for a package and returns results.
 	// Parameters:

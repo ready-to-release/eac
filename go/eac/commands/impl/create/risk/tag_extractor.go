@@ -12,13 +12,13 @@ import (
 
 var log = logging.C()
 
-// ControlEvidence represents a control with its evidence scenarios
+// ControlEvidence represents a control with its evidence scenarios.
 type ControlEvidence struct {
 	ControlID string
 	Scenarios []ScenarioEvidence
 }
 
-// ScenarioEvidence represents evidence from a single scenario
+// ScenarioEvidence represents evidence from a single scenario.
 type ScenarioEvidence struct {
 	FeaturePath  string   // Relative path to .feature file
 	FeatureName  string   // Feature name from Feature: line
@@ -33,8 +33,8 @@ var (
 	controlsTagPattern = regexp.MustCompile(`@controls:((?:[a-z]{2,4}-[0-9]+(?:\([0-9]+\))?,)*[a-z]{2,4}-[0-9]+(?:\([0-9]+\))?)`)
 )
 
-// ExtractControlEvidence scans feature files and extracts control tag evidence
-func ExtractControlEvidence(workspaceRoot string, moduleName string) (map[string]*ControlEvidence, error) {
+// ExtractControlEvidence scans feature files and extracts control tag evidence.
+func ExtractControlEvidence(workspaceRoot, moduleName string) (map[string]*ControlEvidence, error) {
 	evidence := make(map[string]*ControlEvidence)
 
 	// Find all .feature files for module
@@ -66,8 +66,8 @@ func ExtractControlEvidence(workspaceRoot string, moduleName string) (map[string
 	return evidence, nil
 }
 
-// extractFromFile extracts control evidence from a single feature file
-func extractFromFile(featurePath string, workspaceRoot string) (map[string][]ScenarioEvidence, error) {
+// extractFromFile extracts control evidence from a single feature file.
+func extractFromFile(featurePath, workspaceRoot string) (map[string][]ScenarioEvidence, error) {
 	content, err := os.ReadFile(featurePath)
 	if err != nil {
 		return nil, err
@@ -107,7 +107,10 @@ func extractFromFile(featurePath string, workspaceRoot string) (map[string][]Sce
 
 			if len(controlIDs) > 0 {
 				// Create scenario evidence
-				relPath, _ := filepath.Rel(workspaceRoot, featurePath)
+				relPath, err := filepath.Rel(workspaceRoot, featurePath)
+				if err != nil {
+					relPath = featurePath // Fallback to absolute path
+				}
 				for _, controlID := range controlIDs {
 					scenario := ScenarioEvidence{
 						FeaturePath:  relPath,
@@ -136,7 +139,7 @@ func extractFromFile(featurePath string, workspaceRoot string) (map[string][]Sce
 	return evidence, nil
 }
 
-// extractTags extracts all tags from a line
+// extractTags extracts all tags from a line.
 func extractTags(line string) []string {
 	var tags []string
 	parts := strings.Fields(line)
@@ -148,7 +151,7 @@ func extractTags(line string) []string {
 	return tags
 }
 
-// extractControlIDsFromTags extracts control IDs from tag list
+// extractControlIDsFromTags extracts control IDs from tag list.
 func extractControlIDsFromTags(tags []string) []string {
 	var ids []string
 
@@ -168,7 +171,7 @@ func extractControlIDsFromTags(tags []string) []string {
 	return ids
 }
 
-// isStep checks if line is a Gherkin step
+// isStep checks if line is a Gherkin step.
 func isStep(line string) bool {
 	return strings.HasPrefix(line, "Given ") ||
 		strings.HasPrefix(line, "When ") ||
@@ -177,7 +180,7 @@ func isStep(line string) bool {
 		strings.HasPrefix(line, "But ")
 }
 
-// findModuleFeatureFiles finds all .feature files for a module
+// findModuleFeatureFiles finds all .feature files for a module.
 func findModuleFeatureFiles(workspaceRoot, moduleName string) ([]string, error) {
 	// Use module contract to determine module's spec files
 	// For now, assume specs/<module>/**/*.feature pattern

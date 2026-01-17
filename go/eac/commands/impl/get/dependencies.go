@@ -49,11 +49,12 @@ func GetDependencies() int {
 
 	// Check for special diagram formats
 	for _, arg := range os.Args {
-		if arg == "--as-plantuml" {
+		switch arg {
+		case "--as-plantuml":
 			return outputPlantUML(workspaceRoot)
-		} else if arg == "--as-mermaid" {
+		case "--as-mermaid":
 			return outputMermaid(workspaceRoot)
-		} else if arg == "--as-execution-order" {
+		case "--as-execution-order":
 			return outputExecutionOrder(workspaceRoot)
 		}
 	}
@@ -68,7 +69,7 @@ func GetDependencies() int {
 	})
 }
 
-// outputPlantUML generates PlantUML diagram format
+// outputPlantUML generates PlantUML diagram format.
 func outputPlantUML(workspaceRoot string) int {
 	graph, err := repository.GetModuleDependencyGraph(workspaceRoot)
 	if err != nil {
@@ -81,7 +82,7 @@ func outputPlantUML(workspaceRoot string) int {
 	return 0
 }
 
-// outputMermaid generates Mermaid diagram format
+// outputMermaid generates Mermaid diagram format.
 func outputMermaid(workspaceRoot string) int {
 	graph, err := repository.GetModuleDependencyGraph(workspaceRoot)
 	if err != nil {
@@ -94,7 +95,7 @@ func outputMermaid(workspaceRoot string) int {
 	return 0
 }
 
-// outputExecutionOrder generates execution order only
+// outputExecutionOrder generates execution order only.
 func outputExecutionOrder(workspaceRoot string) int {
 	plan, err := repository.CalculateExecutionOrder(nil, workspaceRoot)
 	if err != nil {
@@ -106,9 +107,10 @@ func outputExecutionOrder(workspaceRoot string) int {
 	hasYAML := false
 	hasJSON := false
 	for _, arg := range os.Args {
-		if arg == "--as-yaml" {
+		switch arg {
+		case "--as-yaml":
 			hasYAML = true
-		} else if arg == "--as-json" {
+		case "--as-json":
 			hasJSON = true
 		}
 	}
@@ -128,7 +130,7 @@ func outputExecutionOrder(workspaceRoot string) int {
 	return 0
 }
 
-// Helper to check if a string slice contains a value
+// Helper to check if a string slice contains a value.
 func contains(slice []string, val string) bool {
 	for _, item := range slice {
 		if item == val || strings.Contains(item, val) {

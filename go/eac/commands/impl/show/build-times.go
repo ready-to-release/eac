@@ -124,7 +124,7 @@ func ShowBuildTimesForModules(modules []string, topN int, buildOutputDir string)
 	return 0
 }
 
-// filterBuildTimingsByModules filters timings to only include specified modules
+// filterBuildTimingsByModules filters timings to only include specified modules.
 func filterBuildTimingsByModules(timings []get.BuildTiming, modules []string) []get.BuildTiming {
 	// Create a set of modules for O(1) lookup
 	moduleSet := make(map[string]bool)
@@ -142,7 +142,7 @@ func filterBuildTimingsByModules(timings []get.BuildTiming, modules []string) []
 	return filtered
 }
 
-// displayBuildOverallSummary shows high-level statistics
+// displayBuildOverallSummary shows high-level statistics.
 func displayBuildOverallSummary(summary *get.BuildTimingSummary) {
 	fmt.Println("# Build Timing Analysis")
 	fmt.Println("")
@@ -163,7 +163,7 @@ func displayBuildOverallSummary(summary *get.BuildTimingSummary) {
 	fmt.Println("")
 }
 
-// displayBuildTypeSummary shows timing breakdown by module type
+// displayBuildTypeSummary shows timing breakdown by module type.
 func displayBuildTypeSummary(summary *get.BuildTimingSummary) {
 	fmt.Println("## Summary by Type")
 	fmt.Println("")
@@ -214,7 +214,7 @@ func displayBuildTypeSummary(summary *get.BuildTimingSummary) {
 	fmt.Println("")
 }
 
-// displaySlowestBuilds shows the top N slowest individual module builds
+// displaySlowestBuilds shows the top N slowest individual module builds.
 func displaySlowestBuilds(summary *get.BuildTimingSummary, topN int) {
 	fmt.Printf("## Top %d Slowest Builds\n", topN)
 	fmt.Println("")

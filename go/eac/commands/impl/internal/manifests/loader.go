@@ -142,7 +142,7 @@ func expandMonikersWithDependencies(repoRoot string, monikers []string) ([]strin
 	return result, nil
 }
 
-// addDependenciesRecursive recursively adds all dependencies of a module
+// addDependenciesRecursive recursively adds all dependencies of a module.
 func addDependenciesRecursive(moniker string, registry *modules.Registry, result map[string]bool) error {
 	module, exists := registry.Get(moniker)
 	if !exists {

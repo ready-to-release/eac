@@ -33,7 +33,7 @@ func init() {
 	registry.Register(GetCIDispatchLayers)
 }
 
-// CIDispatchLayersResult represents the output of the get ci-dispatch-layers command
+// CIDispatchLayersResult represents the output of the get ci-dispatch-layers command.
 type CIDispatchLayersResult struct {
 	// Layers of modules to dispatch, in order
 	Layers [][]string `json:"layers" yaml:"layers" toml:"layers"`
@@ -105,8 +105,9 @@ func GetCIDispatchLayers() int {
 			fmt.Printf("LAYER_%d=\"%s\"\n", i, strings.Join(layer, " "))
 		}
 		// Also output as JSON for complex processing
-		layersJSON, _ := json.Marshal(result.Layers)
-		fmt.Printf("LAYERS_JSON='%s'\n", string(layersJSON))
+		if layersJSON, err := json.Marshal(result.Layers); err == nil {
+			fmt.Printf("LAYERS_JSON='%s'\n", string(layersJSON))
+		}
 		return 0
 	}
 
@@ -115,7 +116,7 @@ func GetCIDispatchLayers() int {
 	})
 }
 
-// buildCIArtifactDeps builds a map of module -> CI artifact dependencies from config
+// buildCIArtifactDeps builds a map of module -> CI artifact dependencies from config.
 func buildCIArtifactDeps(cfg *config.RepositoryConfig) map[string][]string {
 	deps := make(map[string][]string)
 	for _, module := range cfg.Modules {
@@ -126,7 +127,7 @@ func buildCIArtifactDeps(cfg *config.RepositoryConfig) map[string][]string {
 	return deps
 }
 
-// computeCIDispatchLayers computes which layer each module belongs to
+// computeCIDispatchLayers computes which layer each module belongs to.
 func computeCIDispatchLayers(modules []string, ciArtifactDeps map[string][]string) *CIDispatchLayersResult {
 	result := &CIDispatchLayersResult{
 		Layers:       [][]string{},

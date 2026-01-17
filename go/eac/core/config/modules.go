@@ -8,7 +8,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/defaults"
 )
 
-// Module represents a single module definition
+// Module represents a single module definition.
 type Module struct {
 	Moniker       string                 `yaml:"moniker"`
 	Name          string                 `yaml:"name"`
@@ -28,34 +28,34 @@ type Module struct {
 	Versioning    *ModuleVersioning      `yaml:"versioning,omitempty"`
 }
 
-// ReleaseBundle configures how the release module creates GitHub releases
+// ReleaseBundle configures how the release module creates GitHub releases.
 type ReleaseBundle struct {
 	TitleFormat string                  `yaml:"title_format"` // Title template, e.g., "{r2r} ({r2r_version}) + {eac} ({eac_version})"
 	Headline    map[string]string       `yaml:"headline"`     // Map of label -> moniker for title, e.g., {"r2r": "r2r-cli", "eac": "ext-eac"}
 	Categories  []ReleaseBundleCategory `yaml:"categories"`   // Grouped modules for release notes
 }
 
-// ReleaseBundleCategory groups modules in release notes
+// ReleaseBundleCategory groups modules in release notes.
 type ReleaseBundleCategory struct {
 	Name        string   `yaml:"name"`        // Category name, e.g., "Core Tools"
 	Description string   `yaml:"description"` // Category description
 	Modules     []string `yaml:"modules"`     // Module monikers in this category
 }
 
-// ModuleVersioning holds module versioning configuration
+// ModuleVersioning holds module versioning configuration.
 type ModuleVersioning struct {
 	Scheme  string `yaml:"scheme"`  // SemVer, CalVer
 	Current string `yaml:"current"` // Current version (optional)
 }
 
-// ModuleBuild contains per-module build configuration
+// ModuleBuild contains per-module build configuration.
 type ModuleBuild struct {
 	Handler   string           `yaml:"handler,omitempty"`   // Explicit build handler override
 	Artifacts []ModuleArtifact `yaml:"artifacts,omitempty"` // Artifacts to produce
 	Options   *BuildOptions    `yaml:"options,omitempty"`   // Build behavior options
 }
 
-// ModuleArtifact defines an artifact to be produced by a module build
+// ModuleArtifact defines an artifact to be produced by a module build.
 type ModuleArtifact struct {
 	ID          string `yaml:"id"`                    // Unique artifact identifier
 	Type        string `yaml:"type"`                  // executable, file, directory, test
@@ -64,12 +64,12 @@ type ModuleArtifact struct {
 	DeriveFrom  string `yaml:"derive_from,omitempty"` // Source artifact to derive from
 }
 
-// BuildOptions contains optional build behavior flags
+// BuildOptions contains optional build behavior flags.
 type BuildOptions struct {
 	// Reserved for future build options
 }
 
-// GetBuildHandler returns the explicit build handler for this module
+// GetBuildHandler returns the explicit build handler for this module.
 func (m *Module) GetBuildHandler() string {
 	if m.Build == nil {
 		return ""
@@ -81,7 +81,7 @@ func (m *Module) GetBuildHandler() string {
 // Returns nil if no docker_build is defined at module level.
 // This allows modules to override or extend type-level docker_build config.
 func (m *Module) GetDockerBuildConfig() *DockerBuildConfig {
-	if m.DockerBuild == nil || len(m.DockerBuild) == 0 {
+	if len(m.DockerBuild) == 0 {
 		return nil
 	}
 
@@ -150,7 +150,7 @@ func (m *Module) GetDockerBuildConfig() *DockerBuildConfig {
 	return cfg
 }
 
-// Files defines file ownership patterns for a module
+// Files defines file ownership patterns for a module.
 type Files struct {
 	Root      string    `yaml:"root"`
 	Source    []string  `yaml:"source"`
@@ -163,13 +163,13 @@ type Files struct {
 	Repo      RepoFiles `yaml:"repo"`
 }
 
-// Workflows defines GitHub Actions workflow file ownership
+// Workflows defines GitHub Actions workflow file ownership.
 type Workflows struct {
 	CI      string `yaml:"ci"`      // CI workflow file path
 	Release string `yaml:"release"` // Release workflow file path
 }
 
-// RepoFiles defines repository-level file ownership
+// RepoFiles defines repository-level file ownership.
 type RepoFiles struct {
 	Specs    []string `yaml:"specs"`
 	TestImpl string   `yaml:"test_impl"` // Test implementation directory path
@@ -178,7 +178,7 @@ type RepoFiles struct {
 	Exclude  []string `yaml:"exclude"`
 }
 
-// Flags defines module behavior flags
+// Flags defines module behavior flags.
 type Flags struct {
 	// ExplicitOwnership disables the default "all files under root" ownership.
 	// When true, the module only owns files that explicitly match its patterns.
@@ -287,7 +287,7 @@ func (c *RepositoryConfig) ApplyTypeDefaults(types *ModuleTypesConfig) {
 	}
 }
 
-// convertTypeDefaults converts config.TypeDefaults to defaults.TypeDefaults
+// convertTypeDefaults converts config.TypeDefaults to defaults.TypeDefaults.
 func convertTypeDefaults(td *TypeDefaults) *defaults.TypeDefaults {
 	if td == nil {
 		return nil
@@ -372,7 +372,7 @@ func (c *RepositoryConfig) ValidateAndDiscoverWorkflows(repoRoot string) error {
 	return nil
 }
 
-// MultiWorkflowError holds multiple workflow validation errors
+// MultiWorkflowError holds multiple workflow validation errors.
 type MultiWorkflowError struct {
 	Errors []error
 }

@@ -40,14 +40,14 @@ func init() {
 	registry.Register(TemplatesInstallDocs)
 }
 
-// Config holds configuration for the docs install command
+// Config holds configuration for the docs install command.
 type Config struct {
 	Destination   string
 	WorkspaceRoot string
 	Debug         bool
 }
 
-// TemplatesInstallDocs installs documentation templates
+// TemplatesInstallDocs installs documentation templates.
 func TemplatesInstallDocs() int {
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
@@ -92,7 +92,7 @@ func TemplatesInstallDocs() int {
 	return 0
 }
 
-// resolveTemplateDirectory determines the template directory (always local)
+// resolveTemplateDirectory determines the template directory (always local).
 func resolveTemplateDirectory(config *Config) (string, func(), error) {
 	// Always use local templates from appropriate root
 	var root string
@@ -119,7 +119,7 @@ func resolveTemplateDirectory(config *Config) (string, func(), error) {
 	return templateDir, func() {}, nil
 }
 
-// installTemplates copies templates to destination
+// installTemplates copies templates to destination.
 func installTemplates(config *Config, templateDir string) error {
 	log.Debugf("Installing templates: source=%s, destination=%s", templateDir, config.Destination)
 	log.Infof("Installing templates to %s...", config.Destination)
@@ -142,8 +142,8 @@ func installTemplates(config *Config, templateDir string) error {
 	return nil
 }
 
-// writeDebugFile writes debug content to file
-func writeDebugFile(c *Config, filename string, content string) {
+// writeDebugFile writes debug content to file.
+func writeDebugFile(c *Config, filename, content string) {
 	if !c.Debug {
 		return
 	}
@@ -151,20 +151,20 @@ func writeDebugFile(c *Config, filename string, content string) {
 	// Use helper function for clean fallback to defaults in test environments
 	debugDir := filepath.Join(config.GetLogsPath(c.WorkspaceRoot, "templates"), "install")
 
-	if err := os.MkdirAll(debugDir, 0755); err != nil {
+	if err := os.MkdirAll(debugDir, 0o755); err != nil {
 		log.Debugf("Failed to create debug directory: error=%v", err)
 		return
 	}
 
 	debugFile := filepath.Join(debugDir, filename)
-	if err := os.WriteFile(debugFile, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(debugFile, []byte(content), 0o644); err != nil {
 		log.Debugf("Failed to write debug file: file=%s, error=%v", debugFile, err)
 	} else {
 		log.Debugf("Saved debug file: file=%s", debugFile)
 	}
 }
 
-// parseConfig parses command-line arguments
+// parseConfig parses command-line arguments.
 func parseConfig() (*Config, error) {
 	args := []string{}
 	if len(os.Args) > 4 {

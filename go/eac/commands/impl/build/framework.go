@@ -16,7 +16,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
-// BuildConfig holds build-specific configuration
+// BuildConfig holds build-specific configuration.
 type BuildConfig struct {
 	TidyFirst       bool
 	Version         string
@@ -31,7 +31,7 @@ type BuildConfig struct {
 	SkippedModules []string
 }
 
-// buildContext holds build-specific state during execution
+// buildContext holds build-specific state during execution.
 type buildContext struct {
 	cfg            *BuildConfig
 	skippedModules []string
@@ -68,16 +68,22 @@ func RunBuildWithFramework(cmdCfg *cmdframework.CommandConfig, buildCfg *BuildCo
 	return cmdframework.Run(cmdCfg, buildWorker, hooks)
 }
 
-// buildAfterInit handles build-specific initialization after framework init
+// buildAfterInit handles build-specific initialization after framework init.
 func buildAfterInit(ctx *cmdframework.ExecutionContext) error {
 	// Nothing special needed for now
 	return nil
 }
 
-// buildAfterResolve handles --use-existing-depm filtering and incremental detection
+// buildAfterResolve handles --use-existing-depm filtering and incremental detection.
 func buildAfterResolve(ctx *cmdframework.ExecutionContext) error {
-	buildCfg := ctx.Config.Extra["buildConfig"].(*BuildConfig)
-	bctx := ctx.Config.Extra["buildContext"].(*buildContext)
+	buildCfg, ok := ctx.Config.Extra["buildConfig"].(*BuildConfig)
+	if !ok {
+		return fmt.Errorf("buildConfig not found or wrong type")
+	}
+	bctx, ok := ctx.Config.Extra["buildContext"].(*buildContext)
+	if !ok {
+		return fmt.Errorf("buildContext not found or wrong type")
+	}
 
 	// Handle --use-existing-depm: filter out deps that already have artifacts
 	if buildCfg.UseExistingDepm && !ctx.Config.DryRun && ctx.ExecutionPlan != nil {
@@ -119,7 +125,7 @@ func buildAfterResolve(ctx *cmdframework.ExecutionContext) error {
 	return nil
 }
 
-// detectIncrementalChanges performs incremental build detection
+// detectIncrementalChanges performs incremental build detection.
 func detectIncrementalChanges(ctx *cmdframework.ExecutionContext, bctx *buildContext) {
 	startTime := time.Now()
 
@@ -202,10 +208,16 @@ func detectIncrementalChanges(ctx *cmdframework.ExecutionContext, bctx *buildCon
 		len(filteredOrder), len(bctx.skippedModules))
 }
 
-// buildAfterExecute handles post-build tasks: manifest generation, state updates
+// buildAfterExecute handles post-build tasks: manifest generation, state updates.
 func buildAfterExecute(ctx *cmdframework.ExecutionContext) error {
-	buildCfg := ctx.Config.Extra["buildConfig"].(*BuildConfig)
-	bctx := ctx.Config.Extra["buildContext"].(*buildContext)
+	buildCfg, ok := ctx.Config.Extra["buildConfig"].(*BuildConfig)
+	if !ok {
+		return fmt.Errorf("buildConfig not found or wrong type")
+	}
+	bctx, ok := ctx.Config.Extra["buildContext"].(*buildContext)
+	if !ok {
+		return fmt.Errorf("buildContext not found or wrong type")
+	}
 
 	// Generate build manifest
 	if err := generateBuildManifest(ctx.WorkspaceRoot, ctx.Results, ctx.ModuleTypes,
@@ -227,7 +239,7 @@ func buildAfterExecute(ctx *cmdframework.ExecutionContext) error {
 	return nil
 }
 
-// updateIncrementalState updates the build state for incremental detection
+// updateIncrementalState updates the build state for incremental detection.
 func updateIncrementalState(ctx *cmdframework.ExecutionContext, bctx *buildContext) {
 	// Collect successfully built modules
 	var successfulModules []string
@@ -259,9 +271,13 @@ func updateIncrementalState(ctx *cmdframework.ExecutionContext, bctx *buildConte
 	}
 }
 
-// buildWorker is the worker function that builds a single module
+// buildWorker is the worker function that builds a single module.
 func buildWorker(ctx *cmdframework.ExecutionContext, moniker string, logWriter io.Writer) int {
-	buildCfg := ctx.Config.Extra["buildConfig"].(*BuildConfig)
+	buildCfg, ok := ctx.Config.Extra["buildConfig"].(*BuildConfig)
+	if !ok {
+		output.Writeln(logWriter, "Error: buildConfig not found or wrong type")
+		return 1
+	}
 
 	module, exists := ctx.ModuleRegistry.Get(moniker)
 	if !exists {
@@ -305,7 +321,7 @@ func buildWorker(ctx *cmdframework.ExecutionContext, moniker string, logWriter i
 	return exitCode
 }
 
-// buildArtifactValidator validates build artifacts for dependencies
+// buildArtifactValidator validates build artifacts for dependencies.
 func buildArtifactValidator(ctx *cmdframework.ExecutionContext) *initsummary.ArtifactValidationInfo {
 	return artifacts.ValidateBuildArtifacts(
 		ctx.GetExecutionMonikers(),
@@ -315,7 +331,7 @@ func buildArtifactValidator(ctx *cmdframework.ExecutionContext) *initsummary.Art
 	)
 }
 
-// buildDepsVerifier verifies system dependencies for build
+// buildDepsVerifier verifies system dependencies for build.
 func buildDepsVerifier(ctx *cmdframework.ExecutionContext) *initsummary.DepsStatus {
 	// Get unique module types
 	moduleTypes := make(map[string]bool)
@@ -335,7 +351,7 @@ func buildDepsVerifier(ctx *cmdframework.ExecutionContext) *initsummary.DepsStat
 	return &status
 }
 
-// getGitCommit retrieves git commit SHA
+// getGitCommit retrieves git commit SHA.
 func getGitCommit(workspaceRoot string) string {
 	return git.GetCommitSHA(workspaceRoot)
 }

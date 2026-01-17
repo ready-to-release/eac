@@ -26,7 +26,7 @@ func init() {
 	registry.Register(GetBuildDeps)
 }
 
-// BuildDepsResult contains the build dependencies for a module
+// BuildDepsResult contains the build dependencies for a module.
 type BuildDepsResult struct {
 	Module    string   `json:"module" yaml:"module"`
 	Type      string   `json:"type" yaml:"type"`
@@ -110,7 +110,7 @@ func GetBuildDeps() int {
 	})
 }
 
-// aggregateBuildDeps collects build dependencies from a module and all its dependencies
+// aggregateBuildDeps collects build dependencies from a module and all its dependencies.
 func aggregateBuildDeps(moniker string, registry *modules.Registry, moduleTypes *config.ModuleTypesConfig, sysDeps *config.SystemDependenciesConfig) []string {
 	seen := make(map[string]bool)
 	depsSet := make(map[string]bool)
@@ -171,7 +171,7 @@ func aggregateBuildDeps(moniker string, registry *modules.Registry, moduleTypes 
 	return result
 }
 
-// GetBuildDepsPlain returns build deps as comma-separated string (for shell scripts)
+// GetBuildDepsPlain returns build deps as comma-separated string (for shell scripts).
 func GetBuildDepsPlain(moniker string) (string, error) {
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {

@@ -306,6 +306,7 @@ modules:
         - "**/*.md"
         - "**/*.feature"
         - "**/*.yml"
+        - "**/*.yaml"
         - "**/*.go"
       repo:
         other:

@@ -1,6 +1,6 @@
 package config
 
-// Retry strategy types (from ai-config.schema.json)
+// Retry strategy types (from ai-config.schema.json).
 const (
 	StrategyStandard          = "standard"
 	StrategyFocused           = "focused"
@@ -8,7 +8,7 @@ const (
 	StrategyEscalatingFocused = "escalating-focused"
 )
 
-// AIConfig represents the unified AI configuration from ai-config.yml
+// AIConfig represents the unified AI configuration from ai-config.yml.
 type AIConfig struct {
 	Version     string                  `yaml:"version"`
 	Name        string                  `yaml:"name"`
@@ -18,11 +18,11 @@ type AIConfig struct {
 }
 
 // AIDefaults contains default settings inherited by all AI types
-// Currently unused but reserved for future use
+// Currently unused but reserved for future use.
 type AIDefaults struct{}
 
 // AITypeConfig represents configuration for a specific AI generation type
-// AI generates structured output in OutputFormat, then commands handle formatting
+// AI generates structured output in OutputFormat, then commands handle formatting.
 type AITypeConfig struct {
 	Name          string               `yaml:"name"`
 	Description   string               `yaml:"description"`
@@ -31,7 +31,7 @@ type AITypeConfig struct {
 	RetryStrategy *RetryStrategyConfig `yaml:"retry_strategy"` // Optional: retry strategy
 }
 
-// RetryStrategyConfig represents retry strategy configuration from ai-config.yml
+// RetryStrategyConfig represents retry strategy configuration from ai-config.yml.
 type RetryStrategyConfig struct {
 	Type            string   `yaml:"type"`             // standard, focused, escalating, escalating-focused
 	FocusCategories []string `yaml:"focus_categories"` // For focused/escalating-focused strategies

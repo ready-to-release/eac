@@ -36,7 +36,7 @@ import (
 	"strconv"
 	"strings"
 
-	// Import linters package to trigger handler registration via init()
+	// Import linters package to trigger handler registration via init().
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/update/lint/linters"
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/cmdframework"
@@ -53,7 +53,7 @@ func init() {
 	registry.Register(UpdateLint)
 }
 
-// UpdateLint command entry point - lints one or more modules
+// UpdateLint command entry point - lints one or more modules.
 func UpdateLint() int {
 	args := os.Args[3:] // Skip program name, "update", and "lint"
 

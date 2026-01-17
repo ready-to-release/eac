@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -18,7 +19,10 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
-// State represents the build state for incremental builds
+// ErrNoState is returned when no build state file exists (fresh build).
+var ErrNoState = errors.New("no build state file")
+
+// State represents the build state for incremental builds.
 type State struct {
 	// Git commit SHA at time of last build
 	Commit string `json:"commit"`
@@ -33,7 +37,7 @@ type State struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-// ModuleState represents build state for a single module
+// ModuleState represents build state for a single module.
 type ModuleState struct {
 	// Hash of all source files in the module
 	SourceHash string `json:"source_hash"`
@@ -45,7 +49,7 @@ type ModuleState struct {
 	Files []string `json:"files,omitempty"`
 }
 
-// ChangeResult represents the result of change detection
+// ChangeResult represents the result of change detection.
 type ChangeResult struct {
 	// Modules that need rebuilding (changed or new)
 	ChangedModules []string
@@ -67,14 +71,15 @@ const (
 	stateFileName = ".build-state.json"
 )
 
-// Load loads build state from the build output directory
+// Load loads build state from the build output directory.
+// Returns ErrNoState if no state file exists (fresh build).
 func Load(workspaceRoot string) (*State, error) {
 	statePath := paths.BuildStatePath(workspaceRoot, stateFileName)
 
 	data, err := os.ReadFile(statePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, nil // No state file = fresh build
+			return nil, ErrNoState
 		}
 		return nil, fmt.Errorf("failed to read build state: %w", err)
 	}
@@ -87,10 +92,10 @@ func Load(workspaceRoot string) (*State, error) {
 	return &state, nil
 }
 
-// Save saves build state to the build output directory
+// Save saves build state to the build output directory.
 func (s *State) Save(workspaceRoot string) error {
 	buildDir := filepath.Join(workspaceRoot, paths.OutBuildRelPath)
-	if err := os.MkdirAll(buildDir, 0755); err != nil {
+	if err := os.MkdirAll(buildDir, 0o755); err != nil { //nolint:gosec // G301: Build output should be world-readable
 		return fmt.Errorf("failed to create build directory: %w", err)
 	}
 
@@ -102,7 +107,7 @@ func (s *State) Save(workspaceRoot string) error {
 	}
 
 	statePath := filepath.Join(buildDir, stateFileName)
-	if err := os.WriteFile(statePath, data, 0644); err != nil {
+	if err := os.WriteFile(statePath, data, 0o644); err != nil {
 		return fmt.Errorf("failed to write build state: %w", err)
 	}
 
@@ -129,24 +134,30 @@ func DetectChanges(workspaceRoot string, moduleFiles map[string][]string) (*Chan
 	// Load previous state
 	prevState, err := Load(workspaceRoot)
 	if err != nil {
+		if errors.Is(err, ErrNoState) {
+			// Fresh build - all modules need building
+			result.FreshBuild = true
+			for moniker := range moduleFiles {
+				result.ChangedModules = append(result.ChangedModules, moniker)
+				result.ChangeReasons[moniker] = "fresh build (no prior state)"
+			}
+			sort.Strings(result.ChangedModules)
+			result.DetectionTime = time.Since(start)
+			return result, nil
+		}
 		return nil, fmt.Errorf("failed to load build state: %w", err)
 	}
 
-	if prevState == nil {
-		// Fresh build - all modules need building
-		result.FreshBuild = true
-		for moniker := range moduleFiles {
-			result.ChangedModules = append(result.ChangedModules, moniker)
-			result.ChangeReasons[moniker] = "fresh build (no prior state)"
-		}
-		sort.Strings(result.ChangedModules)
-		result.DetectionTime = time.Since(start)
-		return result, nil
-	}
-
 	// Get current git state for fast-path optimization
-	currentCommit, _ := getGitCommit(workspaceRoot)
-	uncommittedFiles, _ := getUncommittedFiles(workspaceRoot)
+	// Git state is just an optimization - errors result in empty values which trigger slow path
+	currentCommit, gitErr := getGitCommit(workspaceRoot)
+	if gitErr != nil {
+		currentCommit = ""
+	}
+	uncommittedFiles, gitErr := getUncommittedFiles(workspaceRoot)
+	if gitErr != nil {
+		uncommittedFiles = nil
+	}
 
 	// Calculate current uncommitted hash
 	currentUncommittedHash := ""
@@ -216,22 +227,28 @@ func DetectChanges(workspaceRoot string, moduleFiles map[string][]string) (*Chan
 	return result, nil
 }
 
-// UpdateModuleState updates the build state for successfully built modules
+// UpdateModuleState updates the build state for successfully built modules.
 func UpdateModuleState(workspaceRoot string, builtModules []string, moduleFiles map[string][]string) error {
 	// Load or create state
 	state, err := Load(workspaceRoot)
 	if err != nil {
-		return err
-	}
-	if state == nil {
+		if !errors.Is(err, ErrNoState) {
+			return err
+		}
 		state = &State{
 			Modules: make(map[string]ModuleState),
 		}
 	}
 
-	// Update git state
-	state.Commit, _ = getGitCommit(workspaceRoot)
-	uncommittedFiles, _ := getUncommittedFiles(workspaceRoot)
+	// Update git state - errors are non-fatal, just use empty values
+	commit, gitErr := getGitCommit(workspaceRoot)
+	if gitErr == nil {
+		state.Commit = commit
+	}
+	uncommittedFiles, gitErr := getUncommittedFiles(workspaceRoot)
+	if gitErr != nil {
+		uncommittedFiles = nil
+	}
 	if len(uncommittedFiles) > 0 {
 		state.UncommittedHash = hashUncommittedFiles(workspaceRoot, uncommittedFiles)
 	} else {
@@ -260,7 +277,7 @@ func UpdateModuleState(workspaceRoot string, builtModules []string, moduleFiles 
 	return state.Save(workspaceRoot)
 }
 
-// ClearState removes the build state file (for --rebuild)
+// ClearState removes the build state file (for --rebuild).
 func ClearState(workspaceRoot string) error {
 	statePath := paths.BuildStatePath(workspaceRoot, stateFileName)
 	err := os.Remove(statePath)
@@ -270,7 +287,7 @@ func ClearState(workspaceRoot string) error {
 	return err
 }
 
-// getGitCommit returns the current HEAD commit SHA
+// getGitCommit returns the current HEAD commit SHA.
 func getGitCommit(workspaceRoot string) (string, error) {
 	cmd := exec.Command("git", "rev-parse", "HEAD")
 	cmd.Dir = workspaceRoot
@@ -281,7 +298,7 @@ func getGitCommit(workspaceRoot string) (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
-// getUncommittedFiles returns list of uncommitted file paths (relative to repo root)
+// getUncommittedFiles returns list of uncommitted file paths (relative to repo root).
 func getUncommittedFiles(workspaceRoot string) ([]string, error) {
 	cmd := exec.Command("git", "status", "--porcelain")
 	cmd.Dir = workspaceRoot
@@ -305,7 +322,7 @@ func getUncommittedFiles(workspaceRoot string) ([]string, error) {
 	return files, nil
 }
 
-// hashUncommittedFiles creates a hash representing the uncommitted state
+// hashUncommittedFiles creates a hash representing the uncommitted state.
 func hashUncommittedFiles(workspaceRoot string, files []string) string {
 	h := sha256.New()
 
@@ -322,14 +339,17 @@ func hashUncommittedFiles(workspaceRoot string, files []string) string {
 			h.Write([]byte(file + ":deleted\n"))
 			continue
 		}
-		io.Copy(h, f)
+		if _, err := io.Copy(h, f); err != nil {
+			// Hash partial content on error - still produces unique result
+			h.Write([]byte(file + ":error\n"))
+		}
 		f.Close()
 	}
 
 	return hex.EncodeToString(h.Sum(nil))[:16] // Short hash is sufficient
 }
 
-// hashModuleFiles computes a hash of all source files for a module
+// hashModuleFiles computes a hash of all source files for a module.
 func hashModuleFiles(workspaceRoot string, files []string) (string, error) {
 	h := sha256.New()
 
@@ -347,7 +367,10 @@ func hashModuleFiles(workspaceRoot string, files []string) (string, error) {
 
 		// Include filename in hash (so renames are detected)
 		h.Write([]byte(file + "\n"))
-		io.Copy(h, f)
+		if _, err := io.Copy(h, f); err != nil {
+			f.Close()
+			return "", fmt.Errorf("failed to read %s: %w", file, err)
+		}
 		f.Close()
 	}
 
@@ -355,7 +378,7 @@ func hashModuleFiles(workspaceRoot string, files []string) (string, error) {
 }
 
 // ExpandGlobPatterns expands glob patterns to actual file paths
-// Returns files relative to workspaceRoot
+// Returns files relative to workspaceRoot.
 func ExpandGlobPatterns(workspaceRoot string, patterns []string) ([]string, error) {
 	var result []string
 	seen := make(map[string]bool)
@@ -398,7 +421,7 @@ func ExpandGlobPatterns(workspaceRoot string, patterns []string) ([]string, erro
 	return result, nil
 }
 
-// ModuleFileGetter is an interface for getting module glob patterns
+// ModuleFileGetter is an interface for getting module glob patterns.
 type ModuleFileGetter interface {
 	GetGlobPatterns() []string
 }
@@ -422,7 +445,7 @@ func GetModuleSourceFiles(workspaceRoot string, modules map[string]ModuleFileGet
 
 // DetectChangesForModules is the high-level API for detecting which modules need rebuilding.
 // It combines GetModuleSourceFiles and DetectChanges into a single call.
-// Returns (changedModules, upToDateModules, changeReasons, isFreshBuild, detectionTime, error)
+// Returns (changedModules, upToDateModules, changeReasons, isFreshBuild, detectionTime, error).
 func DetectChangesForModules(workspaceRoot string, modules map[string]ModuleFileGetter) ([]string, []string, map[string]string, bool, time.Duration, error) {
 	moduleFiles, err := GetModuleSourceFiles(workspaceRoot, modules)
 	if err != nil {

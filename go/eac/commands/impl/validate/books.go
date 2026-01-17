@@ -27,7 +27,7 @@ func init() {
 	registry.Register(ValidateBooks)
 }
 
-// ValidateBooks validates the books.yml configuration
+// ValidateBooks validates the books.yml configuration.
 func ValidateBooks() int {
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
@@ -164,7 +164,7 @@ func ValidateBooks() int {
 	return 0
 }
 
-// validateCommands checks that all commands in sources are valid EAC commands
+// validateCommands checks that all commands in sources are valid EAC commands.
 func validateCommands(book config.Book) []string {
 	var errors []string
 
@@ -187,7 +187,7 @@ func validateCommands(book config.Book) []string {
 	return errors
 }
 
-// validateGeneratedNav checks that generated nav configurations are valid
+// validateGeneratedNav checks that generated nav configurations are valid.
 func validateGeneratedNav(book config.Book) []string {
 	var errors []string
 
@@ -206,7 +206,7 @@ func validateGeneratedNav(book config.Book) []string {
 	return errors
 }
 
-// isValidCommand checks if a command is a valid EAC show command
+// isValidCommand checks if a command is a valid EAC show command.
 func isValidCommand(cmd string) bool {
 	// Known valid show commands that produce markdown output
 	validCommands := []string{
@@ -234,7 +234,7 @@ func isValidCommand(cmd string) bool {
 	return false
 }
 
-// isValidPosition checks if a position string is valid
+// isValidPosition checks if a position string is valid.
 func isValidPosition(pos string) bool {
 	if pos == "first" || pos == "last" {
 		return true

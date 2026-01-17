@@ -42,13 +42,16 @@ func (p *Preprocessor) fixBrokenInternalLinks() error {
 
 		// Get the directory of the current file for relative path resolution
 		fileDir := filepath.Dir(path)
-		relFileDir, _ := filepath.Rel(p.stagingDir, fileDir)
+		relFileDir, relErr := filepath.Rel(p.stagingDir, fileDir)
+		if relErr != nil {
+			relFileDir = fileDir // fallback to absolute
+		}
 
 		original := string(content)
 		modified, count := fixLinksInContent(original, relFileDir, p.stagingDir, siteURL)
 
 		if count > 0 {
-			if err := os.WriteFile(path, []byte(modified), 0644); err != nil {
+			if err := os.WriteFile(path, []byte(modified), 0o644); err != nil {
 				return err
 			}
 			linksFixed += count
@@ -56,7 +59,6 @@ func (p *Preprocessor) fixBrokenInternalLinks() error {
 		processed++
 		return nil
 	})
-
 	if err != nil {
 		return err
 	}
@@ -67,10 +69,10 @@ func (p *Preprocessor) fixBrokenInternalLinks() error {
 
 // linkWithContextPattern matches markdown links with optional preceding character
 // This allows us to detect and skip image links (preceded by !)
-// Captures: [1]=preceding char or empty, [2]=link text, [3]=path
+// Captures: [1]=preceding char or empty, [2]=link text, [3]=path.
 var linkWithContextPattern = regexp.MustCompile(`(^|[^!])\[([^\]]+)\]\(([^)]+)\)`)
 
-// fixLinksInContent processes a single file's content and fixes broken links
+// fixLinksInContent processes a single file's content and fixes broken links.
 func fixLinksInContent(content, relFileDir, stagingDir, siteURL string) (string, int) {
 	count := 0
 

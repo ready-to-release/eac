@@ -35,7 +35,7 @@ func init() {
 	registry.Register(ServeDesign)
 }
 
-// ServeDesign starts Structurizr Lite viewer for a module
+// ServeDesign starts Structurizr Lite viewer for a module.
 func ServeDesign() int {
 	args := os.Args[3:] // Skip program, "serve", and "design"
 
@@ -131,7 +131,7 @@ func ServeDesign() int {
 	return 0
 }
 
-// formatModuleList returns a formatted list of available modules
+// formatModuleList returns a formatted list of available modules.
 func formatModuleList(moduleReport *reports.ModuleContractReport) string {
 	var sb strings.Builder
 	for _, mod := range moduleReport.Registry.All() {

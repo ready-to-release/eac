@@ -38,7 +38,7 @@ func init() {
 
 // ciDispatchFlags defines valid flags for the get ci-dispatch command
 
-// CIDispatchResult represents the output of the get ci-dispatch command
+// CIDispatchResult represents the output of the get ci-dispatch command.
 type CIDispatchResult struct {
 	// Modules to dispatch CI for
 	Dispatch []string `json:"dispatch" yaml:"dispatch" toml:"dispatch"`
@@ -227,14 +227,14 @@ func parseModuleList(input string) []string {
 }
 
 // checkModuleCIValidity checks if a module has valid CI at the given HEAD SHA
-// Returns (hasValidCI, reason, error)
+// Returns (hasValidCI, reason, error).
 func checkModuleCIValidity(module, headSHA string, mockStatus map[string]bool, workspaceRoot string) (bool, string, error) {
 	return checkModuleCIValidityWithAPI(module, headSHA, mockStatus, workspaceRoot, nil)
 }
 
 // checkModuleCIValidityWithAPI checks if a module has valid CI at the given HEAD SHA
 // Accepts an optional github.API for testing. If nil, creates a new GHClient.
-// Returns (hasValidCI, reason, error)
+// Returns (hasValidCI, reason, error).
 func checkModuleCIValidityWithAPI(module, headSHA string, mockStatus map[string]bool, workspaceRoot string, api github.API) (bool, string, error) {
 	// Use mock status if provided (for backward compatibility with --mock flag)
 	if mockStatus != nil {
@@ -271,7 +271,7 @@ func checkModuleCIValidityWithAPI(module, headSHA string, mockStatus map[string]
 	return false, fmt.Sprintf("ci_at_different_sha:%s", lastSuccessSHA[:min(7, len(lastSuccessSHA))]), nil
 }
 
-// getLastSuccessfulWorkflowSHAWithAPI queries GitHub for the last successful run of a workflow using the API interface
+// getLastSuccessfulWorkflowSHAWithAPI queries GitHub for the last successful run of a workflow using the API interface.
 func getLastSuccessfulWorkflowSHAWithAPI(workflowName string, api github.API) (string, error) {
 	runs, err := api.ListRuns(workflowName, github.ListRunsOpts{
 		Status: "success",
@@ -326,7 +326,7 @@ func min(a, b int) int {
 	return b
 }
 
-// getValidCIModules returns a set of valid CI workflow module names
+// getValidCIModules returns a set of valid CI workflow module names.
 func getValidCIModules(workspaceRoot string) (map[string]bool, error) {
 	workflowsDir := workspaceRoot + "/.github/workflows"
 	pattern := workflowsDir + "/ci-*.yaml"

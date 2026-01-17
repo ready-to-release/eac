@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 )
 
-// containsAny checks if s contains any of the substrings
+// containsAny checks if s contains any of the substrings.
 func containsAny(s string, substrs ...string) bool {
 	for _, sub := range substrs {
 		if len(s) >= len(sub) {
@@ -92,7 +92,7 @@ func LoadOrNil(repoRoot string) *EACConfig {
 // GetLogsPath returns the logs path with graceful fallback to defaults.
 // If config loading fails, returns "out/logs/<subsystem>" relative to repoRoot.
 // This allows commands to write debug logs even when running in incomplete test environments.
-func GetLogsPath(repoRoot string, subsystem string) string {
+func GetLogsPath(repoRoot, subsystem string) string {
 	cfg := LoadOrNil(repoRoot)
 	if cfg == nil {
 		return filepath.Join(repoRoot, "out", "logs", subsystem)
@@ -102,7 +102,7 @@ func GetLogsPath(repoRoot string, subsystem string) string {
 
 // GetSpecsPath returns the specs path with graceful fallback to defaults.
 // If config loading fails, returns "specs/<moduleName>" relative to repoRoot.
-func GetSpecsPath(repoRoot string, moduleName string) string {
+func GetSpecsPath(repoRoot, moduleName string) string {
 	cfg := LoadOrNil(repoRoot)
 	if cfg == nil {
 		return filepath.Join(repoRoot, "specs", moduleName)
@@ -122,7 +122,7 @@ func GetTestOutputPath(repoRoot string) string {
 
 // GetTestModuleOutputPath returns the test module output path with graceful fallback to defaults.
 // If config loading fails, returns "out/test/<moniker>" relative to repoRoot.
-func GetTestModuleOutputPath(repoRoot string, moniker string) string {
+func GetTestModuleOutputPath(repoRoot, moniker string) string {
 	cfg := LoadOrNil(repoRoot)
 	if cfg == nil {
 		return filepath.Join(repoRoot, "out", "test", moniker)
