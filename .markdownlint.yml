@@ -164,8 +164,9 @@ MD042: true
 # MD045 - Images should have alternate text (alt text)
 
 # MD046 - Code block style (consistent, fenced, indented)
-MD046:
-  style: "consistent"
+# Disabled: MkDocs admonitions require 4-space indentation which triggers false positives
+# (markdownlint sees admonition content as "indented code blocks")
+MD046: false
 
 # MD047 - Files should end with a single newline character
 MD047: true
@@ -220,6 +221,8 @@ MD059:
     - "link"
     - "more"
 
-# MD060 - Table column style (consistent, padded, compact)
+# MD060 - Table column style (any, aligned, compact, tight)
+# Using "aligned" - pipes vertically aligned for readability
+# Tables with emoji get <!-- markdownlint-disable MD060 --> wrappers (emoji width calculation differs)
 MD060:
-  style: "padded"
+  style: "aligned"

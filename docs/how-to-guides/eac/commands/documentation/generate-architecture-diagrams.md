@@ -109,11 +109,11 @@ workspace "src-auth" {
 
 ## Common Issues
 
-| Problem | Solution |
-|---------|----------|
+| Problem              | Solution                              |
+| -------------------- | ------------------------------------- |
 | "AI analysis failed" | Ensure code is readable, has comments |
-| Diagram incomplete | Use `update design` to enhance |
-| Docker not found | Install Docker for Structurizr Lite |
+| Diagram incomplete   | Use `update design` to enhance        |
+| Docker not found     | Install Docker for Structurizr Lite   |
 
 ## Next Steps
 

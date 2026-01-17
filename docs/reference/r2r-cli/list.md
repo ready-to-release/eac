@@ -22,7 +22,7 @@ r2r list
 
 **Example output:**
 
-```
+```text
 Available Extensions:
 
 eac                Everything-as-Code automation framework

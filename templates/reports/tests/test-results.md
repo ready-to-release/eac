@@ -18,6 +18,7 @@
 ---
 
 {{ if gt (len .SpecCoverage) 0 -}}
+
 ### Specification Coverage
 
 | Feature | Scenarios | Status | Controls |
@@ -36,6 +37,7 @@
 ### Test Results by Module
 
 {{ range .ModuleStats -}}
+
 #### {{ .Module }}
 
 **Total:** {{ .Total }} tests ({{ .Passed }} passed, {{ .Failed }} failed{{ if gt .Skipped 0 }}, {{ .Skipped }} skipped{{ end }}) - {{ formatDurationSec .DurationSeconds }}
@@ -54,19 +56,23 @@
 #### By Type
 
 {{ range .SummaryByType -}}
+
 - **{{ .Type }}**: {{ .Count }} tests ({{ .Passed }} passed, {{ .Failed }} failed)
 {{ end }}
 
 #### By Suite
 
 {{ range .SummaryBySuite -}}
+
 - **{{ .Suite }}**: {{ .Count }} tests ({{ .Passed }} passed, {{ .Failed }} failed)
 {{ end }}
 
 {{ if gt (len .ControlSummary) 0 -}}
+
 #### By Control
 
 {{ range .ControlSummary -}}
+
 - **{{ .ControlID }}**: {{ .TestCount }} tests across {{ .ModuleCount }} modules ({{ .PassedCount }} passed, {{ .FailedCount }} failed)
 {{ end }}
 

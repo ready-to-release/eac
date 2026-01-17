@@ -200,40 +200,40 @@ This repository has a complete Claude Code setup with specialized agents, skills
 
 Specialized agents for specific tasks (invoke via Task tool):
 
-| Agent | Purpose | When to Use |
-|-------|---------|-------------|
-| **go-architect** | Design architecture and plan modules | Planning features, designing interfaces, evaluating trade-offs |
-| **go-cli-ux** | Design CLI commands, flags, and output | Adding commands, improving output, designing UX |
-| **go-test-engineer** | Write comprehensive tests | Writing tests (TDD), debugging test failures, improving coverage |
-| **go-debugger** | Debug failures and investigate issues | Test failures, runtime panics, performance issues |
-| **go-security-release** | Security scanning and release checks | Pre-release validation, security audits, release readiness |
-| **go-workflow-engineer** | Analyze GitHub workflows and CI/CD | Debugging workflows, optimizing pipelines, validating CD model compliance |
+| Agent                    | Purpose                                | When to Use                                                               |
+| ------------------------ | -------------------------------------- | ------------------------------------------------------------------------- |
+| **go-architect**         | Design architecture and plan modules   | Planning features, designing interfaces, evaluating trade-offs            |
+| **go-cli-ux**            | Design CLI commands, flags, and output | Adding commands, improving output, designing UX                           |
+| **go-test-engineer**     | Write comprehensive tests              | Writing tests (TDD), debugging test failures, improving coverage          |
+| **go-debugger**          | Debug failures and investigate issues  | Test failures, runtime panics, performance issues                         |
+| **go-security-release**  | Security scanning and release checks   | Pre-release validation, security audits, release readiness                |
+| **go-workflow-engineer** | Analyze GitHub workflows and CI/CD     | Debugging workflows, optimizing pipelines, validating CD model compliance |
 
 ### Available Skills
 
 Orchestrated workflows that combine multiple agents (invoke via Task tool or directly):
 
-| Skill | Purpose | Workflow |
-|-------|---------|----------|
-| **go-cli-feature** | End-to-end feature development | Plan → Specify → Design UX → Test → Implement → Verify → Simplify → Document |
-| **go-cli-release-check** | Pre-release validation checklist | CI checks → Security scans → Build validation → Changelog review → Tests |
-| **go-cli-refactor-safe** | Safe refactoring with validation | Baseline → Plan → Refactor incrementally → Test after each step → Simplify |
+| Skill                    | Purpose                          | Workflow                                                                                   |
+| ------------------------ | -------------------------------- | ------------------------------------------------------------------------------------------ |
+| **go-cli-feature**       | End-to-end feature development   | Plan → Specify → Design UX → Test → Implement → Verify → Simplify → Document               |
+| **go-cli-release-check** | Pre-release validation checklist | CI checks → Security scans → Build validation → Changelog review → Tests                   |
+| **go-cli-refactor-safe** | Safe refactoring with validation | Baseline → Plan → Refactor incrementally → Test after each step → Simplify                 |
 
 ### Available Slash Commands
 
 Quick-access commands for common workflows:
 
-| Command | Purpose | Use Case |
-|---------|---------|----------|
-| `/boot` | Initialize session | Start every session |
-| `/go:plan` | Plan feature or change | Before implementing |
-| `/go:implement` | Implement using TDD | After planning |
-| `/go:test` | Write or debug tests | Testing phase |
-| `/go:review` | Review code (runs code-simplifier) | Before committing |
-| `/go:cli-docs` | Update CLI documentation | When CLI surface changes |
-| `/go:release` | Prepare for release | Release readiness check |
-| `/go:debug` | Debug issues | When things break |
-| **`/go:session-end`** | **End session cleanup** | **MANDATORY at end of every session** |
+| Command               | Purpose                            | Use Case                              |
+| --------------------- | ---------------------------------- | ------------------------------------- |
+| `/boot`               | Initialize session                 | Start every session                   |
+| `/go:plan`            | Plan feature or change             | Before implementing                   |
+| `/go:implement`       | Implement using TDD                | After planning                        |
+| `/go:test`            | Write or debug tests               | Testing phase                         |
+| `/go:review`          | Review code (runs code-simplifier) | Before committing                     |
+| `/go:cli-docs`        | Update CLI documentation           | When CLI surface changes              |
+| `/go:release`         | Prepare for release                | Release readiness check               |
+| `/go:debug`           | Debug issues                       | When things break                     |
+| **`/go:session-end`** | **End session cleanup**            | **MANDATORY at end of every session** |
 
 ### Recommended Workflows
 

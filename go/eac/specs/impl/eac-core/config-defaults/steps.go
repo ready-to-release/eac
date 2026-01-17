@@ -18,10 +18,10 @@ import (
 
 // testState holds state for config defaults test scenarios.
 type testState struct {
-	cfg              *config.EACConfig
-	loadError        error
-	repoRoot         string
-	origRepoRoot     string // Original R2R_REPO_ROOT value
+	cfg               *config.EACConfig
+	loadError         error
+	repoRoot          string
+	origRepoRoot      string // Original R2R_REPO_ROOT value
 	origContainerRoot string // Original R2R_CONTAINER_ROOT value
 }
 
@@ -193,14 +193,14 @@ func iAmInAnIsolatedTestRepository(ctx *internal.TestContext) error {
 
 	// Create minimal .git directory so config loader can find repo root
 	gitDir := filepath.Join(tempDir, ".git")
-	if err := os.MkdirAll(gitDir, 0755); err != nil {
+	if err := os.MkdirAll(gitDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create .git: %w", err)
 	}
 	// Create minimal git config
-	if err := os.WriteFile(filepath.Join(gitDir, "config"), []byte("[core]\n\tbare = false\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(gitDir, "config"), []byte("[core]\n\tbare = false\n"), 0o644); err != nil {
 		return fmt.Errorf("failed to create .git/config: %w", err)
 	}
-	if err := os.WriteFile(filepath.Join(gitDir, "HEAD"), []byte("ref: refs/heads/main\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(gitDir, "HEAD"), []byte("ref: refs/heads/main\n"), 0o644); err != nil {
 		return fmt.Errorf("failed to create .git/HEAD: %w", err)
 	}
 
@@ -231,7 +231,7 @@ func iAmInAnIsolatedTestRepository(ctx *internal.TestContext) error {
 	return nil
 }
 
-// findRepoRoot walks up directories to find the repo root (containing go.work or .git)
+// findRepoRoot walks up directories to find the repo root (containing go.work or .git).
 func findRepoRoot(start string) string {
 	dir := start
 	for {
@@ -262,7 +262,7 @@ func theRepositoryHasNoDirectory(ctx *internal.TestContext, path string) error {
 
 func theRepositoryHasDirectory(ctx *internal.TestContext, path string) error {
 	fullPath := filepath.Join(ctx.IsolatedDir, path)
-	if err := os.MkdirAll(fullPath, 0755); err != nil {
+	if err := os.MkdirAll(fullPath, 0o755); err != nil {
 		return fmt.Errorf("failed to create directory %s: %w", path, err)
 	}
 	return nil
@@ -271,10 +271,10 @@ func theRepositoryHasDirectory(ctx *internal.TestContext, path string) error {
 func theRepositoryHasFileWith(ctx *internal.TestContext, path, content string) error {
 	fullPath := filepath.Join(ctx.IsolatedDir, path)
 	// Ensure parent directory exists
-	if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
 		return fmt.Errorf("failed to create parent directory: %w", err)
 	}
-	if err := os.WriteFile(fullPath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(fullPath, []byte(content), 0o644); err != nil {
 		return fmt.Errorf("failed to write file %s: %w", path, err)
 	}
 	return nil

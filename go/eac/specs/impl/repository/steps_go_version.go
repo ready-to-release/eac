@@ -11,7 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// registerGoVersionSteps registers steps for Go version consistency validation
+// registerGoVersionSteps registers steps for Go version consistency validation.
 func registerGoVersionSteps(sc *godog.ScenarioContext, ctx *goVersionContext, nodeCtx *nodeVersionContext, repoCtx *repositoryContext) {
 	// Given steps
 	sc.Step(`^I load the system dependencies configuration$`, func() error {
@@ -68,7 +68,7 @@ func registerGoVersionSteps(sc *godog.ScenarioContext, ctx *goVersionContext, no
 	})
 }
 
-// goVersionContext holds state for Go version consistency validation
+// goVersionContext holds state for Go version consistency validation.
 type goVersionContext struct {
 	repoRoot string
 
@@ -81,9 +81,9 @@ type goVersionContext struct {
 	goWorkVersion string
 
 	// GitHub Actions
-	actionFiles        []string
-	actionVersions     map[string]string // file -> go-version default
-	mismatchedActions  []string
+	actionFiles       []string
+	actionVersions    map[string]string // file -> go-version default
+	mismatchedActions []string
 }
 
 func (c *goVersionContext) ensureRepoRoot(repoCtx *repositoryContext) error {
@@ -259,7 +259,7 @@ func (c *goVersionContext) githubActionsShouldMatchSystemDeps() error {
 	return nil
 }
 
-// validateSpecificActionGoVersion validates a specific GitHub Action has the correct go-version default
+// validateSpecificActionGoVersion validates a specific GitHub Action has the correct go-version default.
 func (c *goVersionContext) validateSpecificActionGoVersion(repoCtx *repositoryContext, actionName string) error {
 	if err := c.ensureRepoRoot(repoCtx); err != nil {
 		return err

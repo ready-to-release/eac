@@ -9,6 +9,7 @@ package implicitr2rcli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -20,7 +21,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/specs/internal"
 )
 
-// importerContext holds state between steps for importer tests
+// importerContext holds state between steps for importer tests.
 type importerContext struct {
 	sharedCtx    *internal.TestContext
 	repoRoot     string
@@ -131,7 +132,7 @@ func theGoInvokerModuleDoesNotExist() error {
 		if err != nil {
 			return fmt.Errorf("failed to read importer.ps1: %w", err)
 		}
-		if err := os.WriteFile(dstScript, content, 0644); err != nil {
+		if err := os.WriteFile(dstScript, content, 0o644); err != nil {
 			return fmt.Errorf("failed to write importer.ps1: %w", err)
 		}
 	} else {
@@ -141,7 +142,7 @@ func theGoInvokerModuleDoesNotExist() error {
 		if err != nil {
 			return fmt.Errorf("failed to read importer.sh: %w", err)
 		}
-		if err := os.WriteFile(dstScript, content, 0755); err != nil {
+		if err := os.WriteFile(dstScript, content, 0o755); err != nil {
 			return fmt.Errorf("failed to write importer.sh: %w", err)
 		}
 	}
@@ -184,7 +185,8 @@ func iRunScript(scriptWithArgs string) error {
 	impCtx.sharedCtx.CommandOutput = string(output)
 
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		exitErr := &exec.ExitError{}
+		if errors.As(err, &exitErr) {
 			impCtx.sharedCtx.ExitCode = exitErr.ExitCode()
 		} else {
 			impCtx.sharedCtx.ExitCode = 1
@@ -228,7 +230,8 @@ func iSourceScript(script string) error {
 	impCtx.sharedCtx.CommandOutput = string(output)
 
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		exitErr := &exec.ExitError{}
+		if errors.As(err, &exitErr) {
 			impCtx.sharedCtx.ExitCode = exitErr.ExitCode()
 		} else {
 			impCtx.sharedCtx.ExitCode = 1

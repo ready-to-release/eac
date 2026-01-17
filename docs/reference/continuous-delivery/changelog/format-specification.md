@@ -238,7 +238,7 @@ Changes are derived from commit messages using conventional commit format:
 
 ### Conventional Commit Format
 
-```
+```text
 <type>(<scope>): <description>
 
 [optional body]

@@ -59,7 +59,7 @@ r2r metadata eac | jq '.version'
 
 **Output:**
 
-```
+```json
 "1.2.3"
 ```
 
@@ -72,7 +72,7 @@ r2r metadata eac | jq '.commands[]'
 
 **Output:**
 
-```
+```json
 "build"
 "test"
 "validate"
@@ -84,24 +84,24 @@ r2r metadata eac | jq '.commands[]'
 
 ### Standard Fields
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `name` | string | Extension name |
-| `version` | string | Version number or SHA |
-| `description` | string | Extension purpose |
-| `commands` | array | Available commands |
+| Field         | Type   | Description           |
+| ------------- | ------ | --------------------- |
+| `name`        | string | Extension name        |
+| `version`     | string | Version number or SHA |
+| `description` | string | Extension purpose     |
+| `commands`    | array  | Available commands    |
 
 ### Optional Fields
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `author` | string | Maintainer name/org |
-| `homepage` | string | Documentation URL |
-| `license` | string | Software license |
-| `build_date` | string | ISO 8601 timestamp |
-| `commit_sha` | string | Git commit SHA |
-| `dependencies` | array | Required tools |
-| `config_schema` | string | Configuration path |
+| Field           | Type   | Description         |
+| --------------- | ------ | ------------------- |
+| `author`        | string | Maintainer name/org |
+| `homepage`      | string | Documentation URL   |
+| `license`       | string | Software license    |
+| `build_date`    | string | ISO 8601 timestamp  |
+| `commit_sha`    | string | Git commit SHA      |
+| `dependencies`  | array  | Required tools      |
+| `config_schema` | string | Configuration path  |
 
 ## See Also
 

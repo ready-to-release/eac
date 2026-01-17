@@ -29,13 +29,13 @@ r2r validate
 
 **Output when valid:**
 
-```
+```text
 ✓ Configuration is valid
 ```
 
 **Output when invalid:**
 
-```
+```text
 ✗ Configuration validation failed:
   - Line 3: Missing required field 'image' for extension 'eac'
   - Line 7: Invalid image name format 'invalid@image'

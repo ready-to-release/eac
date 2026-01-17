@@ -12,12 +12,20 @@ import (
 
 // BuildEnvironmentVars creates the environment variable list for a container
 func (ch *ContainerHost) BuildEnvironmentVars(ext *ExtensionConfig) []string {
+	// In Docker-in-Docker mode, propagate the ORIGINAL host path to child containers
+	// so they can correctly mount volumes for further nested containers.
+	hostRepoRoot := ch.rootDir
+	if existingHostRoot := os.Getenv("R2R_HOST_REPOROOT"); existingHostRoot != "" {
+		hostRepoRoot = existingHostRoot
+		logging.Debugf("Docker-in-Docker: propagating original host path to child: host_root=%s", hostRepoRoot)
+	}
+
 	envVars := []string{
 		"R2R_DOCKER_MODE=true",
 		"R2R_HOST_GOOS=" + runtime.GOOS,
 		"R2R_HOST_GOARCH=" + runtime.GOARCH,
 		"R2R_CONTAINER_REPOROOT=" + "/var/task",
-		"R2R_HOST_REPOROOT=" + ch.rootDir,
+		"R2R_HOST_REPOROOT=" + hostRepoRoot,
 	}
 
 	// Add terminal dimensions

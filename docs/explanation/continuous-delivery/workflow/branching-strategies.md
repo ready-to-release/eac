@@ -176,15 +176,15 @@ The CDe pattern eliminates release branches entirely:
 
 ### Fixing Bugs in Production
 
-**Approach 1: Fix-Forward (Preferred)**
+#### Approach 1: Fix-Forward (Preferred)
 
 Create topic branch, implement fix, fast-track through stages, deploy.
 
-**Approach 2: Rollback**
+#### Approach 2: Rollback
 
 Roll back to previous version while implementing proper fix.
 
-**Approach 3: Feature Flag Kill Switch**
+#### Approach 3: Feature Flag Kill Switch
 
 Disable problematic feature via flag, fix at normal pace, re-enable.
 
@@ -262,11 +262,11 @@ flowchart LR
 
 ### Branch Type Usage
 
-| Branch Type | RA Pattern | CDe Pattern |
-|-------------|-----------|-------------|
-| Trunk (main) | Always | Always |
-| Topic branches | Hours to 2 days | Hours to 1 day |
-| Release branches | Required | Not used |
+| Branch Type      | RA Pattern      | CDe Pattern    |
+| ---------------- | --------------- | -------------- |
+| Trunk (main)     | Always          | Always         |
+| Topic branches   | Hours to 2 days | Hours to 1 day |
+| Release branches | Required        | Not used       |
 
 ### When to Use Each Pattern
 

@@ -733,6 +733,9 @@ func TestBuildEnvironmentVars(t *testing.T) {
 			cleanup := clearEnvVars(t, allEnvVars)
 			defer cleanup()
 
+			// Set R2R_HOST_REPOROOT to test context - isolates from host environment
+			t.Setenv("R2R_HOST_REPOROOT", "/test/root")
+
 			// Set CI environment variables
 			for key, value := range tc.ciEnvVars {
 				os.Setenv(key, value)

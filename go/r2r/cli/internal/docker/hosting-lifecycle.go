@@ -3,11 +3,12 @@ package docker
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/image"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/cache"
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/logging"
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/terminal"
@@ -63,10 +64,18 @@ func (ch *ContainerHost) CreateContainerConfig(ext *ExtensionConfig, mode Contai
 // CreateHostConfig creates the host configuration with volume mounts
 // volumeRequests are optional cache volumes requested by the extension via metadata
 func (ch *ContainerHost) CreateHostConfig(ext *ExtensionConfig, volumeRequests []cache.VolumeRequest) *container.HostConfig {
+	// In Docker-in-Docker mode, we need to use the HOST path for mounts, not the container path.
+	// R2R_HOST_REPOROOT is set by the parent r2r CLI and contains the original host path.
+	mountSource := ch.rootDir
+	if hostRoot := os.Getenv("R2R_HOST_REPOROOT"); hostRoot != "" {
+		logging.Debugf("Docker-in-Docker detected, using host path for mount: host_root=%s container_root=%s", hostRoot, ch.rootDir)
+		mountSource = hostRoot
+	}
+
 	mounts := []mount.Mount{
 		{
 			Type:   mount.TypeBind,
-			Source: ch.rootDir,
+			Source: mountSource,
 			Target: "/var/task",
 		},
 	}

@@ -46,7 +46,7 @@ r2r eac serve-design --module eac-commands
 
 All architecture definitions are stored in Structurizr DSL format:
 
-```
+```text
 specs/[module-name]/.design/workspace.dsl
 ```
 

@@ -19,14 +19,14 @@ The server starts a Docker container running Structurizr Lite, which renders all
 
 Each module maintains its architecture diagrams in `specs/[module]/.design/workspace.dsl`:
 
-| Module | Design Location | Description |
-|--------|----------------|-------------|
-| eac-commands | [specs/eac-commands/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac-commands/.design/) | Command implementations with AI integration |
-| eac-core | [specs/eac-core/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac-core/.design/) | Core domain libraries (contracts, repository, git) |
-| eac-mcp-commands | [specs/eac-mcp-commands/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac-mcp-commands/.design/) | MCP server for LLM tool integration |
-| r2r-cli | [specs/r2r-cli/.design/](https://github.com/ready-to-release/eac/tree/main/specs/r2r-cli/.design/) | CLI application structure |
-| ext-eac | [specs/ext-eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/ext-eac/.design/) | Docker extension container |
-| docs | [specs/docs/.design/](https://github.com/ready-to-release/eac/tree/main/specs/docs/.design/) | Documentation site architecture |
+| Module           | Design Location                                                                                                      | Description                                        |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| eac-commands     | [specs/eac-commands/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac-commands/.design/)         | Command implementations with AI integration        |
+| eac-core         | [specs/eac-core/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac-core/.design/)                 | Core domain libraries (contracts, repository, git) |
+| eac-mcp-commands | [specs/eac-mcp-commands/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac-mcp-commands/.design/) | MCP server for LLM tool integration                |
+| r2r-cli          | [specs/r2r-cli/.design/](https://github.com/ready-to-release/eac/tree/main/specs/r2r-cli/.design/)                   | CLI application structure                          |
+| ext-eac          | [specs/ext-eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/ext-eac/.design/)                   | Docker extension container                         |
+| docs             | [specs/docs/.design/](https://github.com/ready-to-release/eac/tree/main/specs/docs/.design/)                         | Documentation site architecture                    |
 
 **Full list:** Check `specs/*/​.design/` directories in the repository.
 

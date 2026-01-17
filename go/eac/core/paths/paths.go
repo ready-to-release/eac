@@ -37,6 +37,9 @@ const (
 	// SecurityDir is the subdirectory under OutDir for scan outputs
 	SecurityDir = "scan"
 
+	// LintDir is the subdirectory under OutDir for lint outputs
+	LintDir = "lint"
+
 	// RiskDir is the subdirectory under OutDir for risk assessment outputs
 	RiskDir = "risk"
 
@@ -127,6 +130,9 @@ const (
 	// OutSecurityRelPath is the relative path from repo root to scan output
 	OutSecurityRelPath = OutDir + "/" + SecurityDir
 
+	// OutLintRelPath is the relative path from repo root to lint output
+	OutLintRelPath = OutDir + "/" + LintDir
+
 	// OutStagingRelPath is the relative path from repo root to staging area
 	OutStagingRelPath = OutDir + "/" + StagingDir
 
@@ -147,6 +153,11 @@ func BuildOutputPath(repoRoot, moniker string) string {
 // TestOutputPath returns the path to a module's test output directory
 func TestOutputPath(repoRoot, moniker string) string {
 	return filepath.Join(repoRoot, OutDir, TestDir, moniker)
+}
+
+// LintOutputPath returns the path to a module's lint output directory
+func LintOutputPath(repoRoot, moniker string) string {
+	return filepath.Join(repoRoot, OutDir, LintDir, moniker)
 }
 
 // TestOutputDir returns the root test output directory

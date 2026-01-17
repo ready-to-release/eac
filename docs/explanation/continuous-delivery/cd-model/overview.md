@@ -51,11 +51,15 @@ flowchart LR
 
 **Release Stages (8-12):**
 
+<!-- markdownlint-disable MD029 -->
+
 8. **Start Release** - Create release candidate and documentation
 9. **Release Approval** - Obtain formal approval for production deployment
 10. **Production Deployment** - Deploy to production environment
 11. **Live** - Monitor and validate production behavior
 12. **Release Toggling** - Control feature exposure with feature flags
+
+<!-- markdownlint-enable MD029 -->
 
 For detailed stage explanations, see [The 12 Stages](stages.md).
 

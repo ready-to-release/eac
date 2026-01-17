@@ -4,9 +4,9 @@ Start development servers for documentation and architecture visualization.
 
 ## Commands in this Category
 
-| Command | Purpose |
-|---------|---------|
-| [serve docs](./docs.md) | Start or stop MkDocs server |
+| Command                     | Purpose                               |
+| --------------------------- | ------------------------------------- |
+| [serve docs](./docs.md)     | Start or stop MkDocs server           |
 | [serve design](./design.md) | View architecture diagrams in browser |
 
 ## Quick Examples

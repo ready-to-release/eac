@@ -115,10 +115,10 @@ The CD Model includes formal signoff points where human or automated approval is
 
 **Purpose:** Validate production readiness before deployment.
 
-| Pattern                     | Approver                          | Mechanism                     |
-| --------------------------- | --------------------------------- | ----------------------------- |
-| RA (Release Approval)       | Release manager or approval board | Manual review and sign-off    |
-| CDe (Continuous Deployment) | Automated quality gates           | All gates pass → auto-approve |
+| Pattern                     | Approver                          | Mechanism                       |
+| --------------------------- | --------------------------------- | ------------------------------- |
+| RA (Release Approval)       | Release manager or approval board | Manual review and sign-off      |
+| CDe (Continuous Deployment) | Automated quality gates           | All gates pass → auto-approve   |
 
 **What's validated:**
 

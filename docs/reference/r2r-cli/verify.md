@@ -32,7 +32,7 @@ r2r verify
 
 **Output when healthy:**
 
-```
+```text
 ✓ Docker is installed (version 24.0.5)
 ✓ Docker daemon is running
 ✓ Docker permissions are correct
@@ -45,7 +45,7 @@ All prerequisites met. R2R CLI is ready to use.
 
 **Output when issues found:**
 
-```
+```text
 ✓ Docker is installed (version 20.10.8)
 ✗ Docker daemon is not running
 ✗ Cannot reach registry (ghcr.io)

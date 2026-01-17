@@ -16,7 +16,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/specs/internal"
 )
 
-// testCounter ensures unique temp directories for each scenario
+// testCounter ensures unique temp directories for each scenario.
 var testCounter int64
 
 // loggingContext holds test state for logging scenarios.
@@ -92,7 +92,7 @@ func aLoggingModuleConfiguredFor(module string) error {
 	// Create a unique temp directory for this scenario
 	count := atomic.AddInt64(&testCounter, 1)
 	logCtx.workspaceRoot = filepath.Join(os.TempDir(), fmt.Sprintf("logging-test-%d", count))
-	os.MkdirAll(logCtx.workspaceRoot, 0755)
+	os.MkdirAll(logCtx.workspaceRoot, 0o755)
 
 	logCtx.module = module
 	logCtx.debugMode = false

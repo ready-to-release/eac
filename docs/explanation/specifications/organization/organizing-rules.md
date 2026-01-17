@@ -57,12 +57,14 @@ Rule: Missing configuration file displays error with path and suggestion
 
 ## How Many Rules Per Feature?
 
-| Rule Count | Assessment    | Action             |
-| ---------- | ------------- | ------------------ |
-| **2-4**    | ✅ Ideal      | Good feature scope |
-| **5-6**    | ✅ Acceptable | Monitor complexity |
-| **7-10**   | ⚠️ Large      | Consider splitting |
-| **>10**    | ❌ Too large  | Must split feature |
+<!-- markdownlint-disable MD060 -->
+| Rule Count | Assessment     | Action             |
+| ---------- | -------------- | ------------------ |
+| **2-4**    | ✅ Ideal       | Good feature scope |
+| **5-6**    | ✅ Acceptable  | Monitor complexity |
+| **7-10**   | ⚠️ Large        | Consider splitting |
+| **>10**    | ❌ Too large   | Must split feature |
+<!-- markdownlint-enable MD060 -->
 
 ---
 

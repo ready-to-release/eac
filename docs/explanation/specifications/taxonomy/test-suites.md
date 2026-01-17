@@ -232,12 +232,12 @@ Benefits:
 
 ## CD Model Stage Mapping
 
-| CD Stage | Test Suite | Tags Selected | Environment |
-|----------|-----------|---------------|-------------|
-| **Pre-commit/MR/Commit** | unit | `@L0`, `@L1` | DevBox/Agent |
-| **Integration** | integration | `@L2` | Agent + Docker |
-| **Acceptance** | acceptance | `@L3` | PLTE |
-| **Production** | production-verification | `@L4` + `@piv` | Production |
+| CD Stage                 | Test Suite              | Tags Selected   | Environment    |
+| ------------------------ | ----------------------- | --------------- | -------------- |
+| **Pre-commit/MR/Commit** | unit                    | `@L0`, `@L1`    | DevBox/Agent   |
+| **Integration**          | integration             | `@L2`           | Agent + Docker |
+| **Acceptance**           | acceptance              | `@L3`           | PLTE           |
+| **Production**           | production-verification | `@L4` + `@piv`  | Production     |
 
 ---
 

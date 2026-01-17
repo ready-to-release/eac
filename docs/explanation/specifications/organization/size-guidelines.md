@@ -8,12 +8,14 @@ Guidelines for maintaining readable and maintainable feature files.
 
 ## Rule Count Per Feature
 
-| Rule Count | Assessment    | Action             |
-| ---------- | ------------- | ------------------ |
-| **2-4**    | ✅ Ideal      | Good feature scope |
-| **5-6**    | ✅ Acceptable | Monitor complexity |
-| **7-10**   | ⚠️ Large      | Consider splitting |
-| **>10**    | ❌ Too large  | Must split feature |
+<!-- markdownlint-disable MD060 -->
+| Rule Count | Assessment     | Action             |
+| ---------- | -------------- | ------------------ |
+| **2-4**    | ✅ Ideal       | Good feature scope |
+| **5-6**    | ✅ Acceptable  | Monitor complexity |
+| **7-10**   | ⚠️ Large        | Consider splitting |
+| **>10**    | ❌ Too large   | Must split feature |
+<!-- markdownlint-enable MD060 -->
 
 ### Why Limit Rules?
 
@@ -29,12 +31,14 @@ Guidelines for maintaining readable and maintainable feature files.
 
 ## Scenario Count Per Feature
 
-| Scenario Count | Assessment    | Action              |
-| -------------- | ------------- | ------------------- |
-| **10-15**      | ✅ Ideal      | Optimal readability |
-| **15-20**      | ✅ Acceptable | Still manageable    |
-| **20-30**      | ⚠️ Large      | Should split        |
-| **>30**        | ❌ Too large  | Must split          |
+<!-- markdownlint-disable MD060 -->
+| Scenario Count | Assessment     | Action              |
+| -------------- | -------------- | ------------------- |
+| **10-15**      | ✅ Ideal       | Optimal readability |
+| **15-20**      | ✅ Acceptable  | Still manageable    |
+| **20-30**      | ⚠️ Large        | Should split        |
+| **>30**        | ❌ Too large   | Must split          |
+<!-- markdownlint-enable MD060 -->
 
 ### Why Limit Scenarios?
 

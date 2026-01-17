@@ -1,0 +1,25 @@
+# markdownlint-cli2 configuration
+# This file configures both CLI and VSCode extension (same engine)
+#
+# Sources of truth:
+# - .markdownlint.yml: Lint rules
+# - .markdownlint-cli2.yaml: This file (ignores + extends rules)
+
+# Extend the rules from .markdownlint.yml
+config:
+  extends: .markdownlint.yml
+
+# Ignore patterns (glob expressions)
+# Note: Patterns are relative to where markdownlint-cli2 is run
+ignores:
+  - "node_modules/**"
+  - "**/node_modules/**"
+  - "out/**"
+  - ".git/**"
+  - ".vscode/**"
+  - ".idea/**"
+  - ".cache/**"
+  - ".claude/**"
+  - "docs/assets/cache/**"
+  - "templates/**"
+  - "test.md"

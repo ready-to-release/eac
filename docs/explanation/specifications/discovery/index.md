@@ -163,12 +163,12 @@ See: [Example Mapping](./example-mapping.md)
 
 Quick reference:
 
-| Color     | Represents          | Maps To             | Quantity Limit                |
-| --------- | ------------------- | ------------------- | ----------------------------- |
-| 🟡 Yellow | User Story          | Feature description | 1 per feature                 |
-| 🔵 Blue   | Acceptance Criteria | `Rule:` blocks      | ≤ 4 per story                 |
-| 🟢 Green  | Concrete Examples   | `Scenario:` blocks  | ≤ 4 per criterion             |
-| 🟣 Pink   | Questions/Unknowns  | issues.md           | Resolve before implementation |
+| Color       | Represents          | Maps To             | Quantity Limit                |
+| ----------- | ------------------- | ------------------- | ----------------------------- |
+| 🟡 Yellow   | User Story          | Feature description | 1 per feature                 |
+| 🔵 Blue     | Acceptance Criteria | `Rule:` blocks      | ≤ 4 per story                 |
+| 🟢 Green    | Concrete Examples   | `Scenario:` blocks  | ≤ 4 per criterion             |
+| 🟣 Pink     | Questions/Unknowns  | issues.md           | Resolve before implementation |
 
 See: [Card Reference](./card-reference.md) for detailed usage.
 

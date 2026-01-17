@@ -238,9 +238,10 @@ func (v *Validator) extractCodeBlocks(source []byte, doc ast.Node) []CodeBlock {
 		if codeBlock, ok := n.(*ast.FencedCodeBlock); ok {
 			lang := string(codeBlock.Language(source))
 			content := extractNodeContent(source, codeBlock)
-			line := 0
+			line := 1 // Default to line 1
 			if codeBlock.Lines().Len() > 0 {
-				line = codeBlock.Lines().At(0).Start
+				byteOffset := codeBlock.Lines().At(0).Start
+				line = byteOffsetToLineNumber(source, byteOffset)
 			}
 
 			blocks = append(blocks, CodeBlock{
@@ -267,9 +268,10 @@ func (v *Validator) extractSections(source []byte, doc ast.Node) []Section {
 
 		if heading, ok := n.(*ast.Heading); ok {
 			headingText := extractHeadingText(source, heading)
-			line := 0
+			line := 1 // Default to line 1
 			if heading.Lines().Len() > 0 {
-				line = heading.Lines().At(0).Start
+				byteOffset := heading.Lines().At(0).Start
+				line = byteOffsetToLineNumber(source, byteOffset)
 			}
 
 			sections = append(sections, Section{
@@ -336,15 +338,17 @@ func (v *Validator) PrintResults(results []ValidationResult, moduleRoot string) 
 		relPath, _ := filepath.Rel(moduleRoot, result.FilePath)
 		fmt.Fprintf(v.writer, "\n   %s\n", relPath)
 
-		// Print errors
+		// Print errors (sanitize multi-line messages)
 		for _, err := range result.Errors {
-			fmt.Fprintf(v.writer, "      ❌ Line %d: %s\n", err.Line, err.Message)
+			msg := sanitizeMessage(err.Message)
+			fmt.Fprintf(v.writer, "      ❌ Line %d: %s\n", err.Line, msg)
 			totalErrors++
 		}
 
-		// Print warnings
+		// Print warnings (sanitize multi-line messages)
 		for _, warn := range result.Warnings {
-			fmt.Fprintf(v.writer, "      ⚠️  Line %d: %s\n", warn.Line, warn.Message)
+			msg := sanitizeMessage(warn.Message)
+			fmt.Fprintf(v.writer, "      ⚠️  Line %d: %s\n", warn.Line, msg)
 			totalWarnings++
 		}
 
@@ -393,4 +397,27 @@ func extractHeadingText(source []byte, heading *ast.Heading) string {
 		}
 	}
 	return strings.TrimSpace(buf.String())
+}
+
+// byteOffsetToLineNumber converts a byte offset to a 1-based line number
+func byteOffsetToLineNumber(source []byte, offset int) int {
+	if offset <= 0 || len(source) == 0 {
+		return 1
+	}
+	if offset > len(source) {
+		offset = len(source)
+	}
+	return bytes.Count(source[:offset], []byte("\n")) + 1
+}
+
+// sanitizeMessage cleans up error/warning messages for single-line output
+func sanitizeMessage(msg string) string {
+	// Replace newlines with " | " to keep output on one line
+	msg = strings.ReplaceAll(msg, "\n  ", " | ")
+	msg = strings.ReplaceAll(msg, "\n", " | ")
+	// Collapse multiple spaces
+	for strings.Contains(msg, "  ") {
+		msg = strings.ReplaceAll(msg, "  ", " ")
+	}
+	return strings.TrimSpace(msg)
 }
