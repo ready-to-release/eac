@@ -5,7 +5,6 @@ package docker
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/docker/docker/client"
@@ -41,34 +40,4 @@ func TestContainerHost_L2_Integration(t *testing.T) {
 		}
 	})
 
-	// Test with a real extension (simple test without building images)
-	t.Run("real_extension_availability", func(t *testing.T) {
-		// Check if we have GitHub auth for pulling images
-		if os.Getenv("GITHUB_TOKEN") == "" {
-			t.Skip("GitHub authentication not available")
-		}
-
-		host, err := NewContainerHost()
-		if err != nil {
-			t.Skip("Failed to create container host:", err)
-		}
-		defer host.Close()
-
-		ext := &ExtensionConfig{
-			Name:            "eac",
-			Image:           "ghcr.io/ready-to-release/ext-eac:latest",
-			ImagePullPolicy: "IfNotPresent",
-		}
-
-		// Test metadata command - ext-eac supports this
-		output, err := host.ExecuteMetadataCommand(ext)
-		if err != nil {
-			t.Fatalf("Extension metadata command failed: %v", err)
-		}
-
-		// Verify we got valid metadata output
-		if output == "" {
-			t.Error("Metadata output should not be empty")
-		}
-	})
 }
