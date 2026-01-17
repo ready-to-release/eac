@@ -137,18 +137,20 @@ func TestOrchestrator_LogParsing(t *testing.T) {
 	// Create temp directory for test
 	tmpDir := t.TempDir()
 
-	// Create a test log file
+	// Create a test log file with JSON events (go test -json format)
 	logDir := filepath.Join(tmpDir, "test")
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		t.Fatal(err)
 	}
 
 	logPath := filepath.Join(logDir, "test.log")
-	logContent := `This is a normal line
-Warning: something might be wrong
-Error: something is definitely wrong
-This is another normal line
-Fatal: critical failure
+	// Simulate go test -json output with a failing test
+	logContent := `{"Action":"run","Package":"example/pkg","Test":"TestFoo"}
+{"Action":"output","Package":"example/pkg","Test":"TestFoo","Output":"=== RUN   TestFoo\n"}
+{"Action":"output","Package":"example/pkg","Test":"TestFoo","Output":"    foo_test.go:10: expected 1, got 2\n"}
+{"Action":"fail","Package":"example/pkg","Test":"TestFoo","Elapsed":0.5}
+{"Action":"output","Package":"example/pkg","Output":"FAIL\n"}
+{"Action":"fail","Package":"example/pkg","Elapsed":1.0}
 `
 	if err := os.WriteFile(logPath, []byte(logContent), 0644); err != nil {
 		t.Fatal(err)
@@ -157,72 +159,77 @@ Fatal: critical failure
 	// Parse log
 	warnings, errors := parseLogForIssues(logPath)
 
+	// Verify no warnings (go test -json doesn't use warning action)
+	if len(warnings) != 0 {
+		t.Errorf("Expected 0 warnings, got %d", len(warnings))
+	}
+
+	// Verify errors captured from failed test
+	if len(errors) < 1 {
+		t.Errorf("Expected at least 1 error, got %d", len(errors))
+	}
+
+	// Should contain the assertion failure message
+	found := false
+	for _, e := range errors {
+		if strings.Contains(e, "expected 1, got 2") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("Expected to find assertion error in: %v", errors)
+	}
+}
+
+func TestOrchestrator_LogParsing_JSONLogWriter(t *testing.T) {
+	// Test that JSONLogWriter output is correctly parsed
+	tmpDir := t.TempDir()
+	logPath := filepath.Join(tmpDir, "build.log")
+
+	// Create log file using JSONLogWriter (simulates non-test tools)
+	file, err := os.Create(logPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	jw := NewJSONLogWriter(file, "docs-build")
+	jw.Info("Building documentation...")
+	jw.Warning("Doc file 'intro.md' contains a broken link")
+	jw.Warning("Doc file 'guide.md' has unrecognized extension")
+	jw.Error("Aborted with 2 warnings in strict mode")
+	jw.Error("Build failed")
+	jw.Fail()
+	file.Close()
+
+	warnings, errors := parseLogForIssues(logPath)
+
 	// Verify warnings
-	if len(warnings) != 1 {
-		t.Errorf("Expected 1 warning, got %d", len(warnings))
-	} else if !strings.Contains(warnings[0], "Warning:") {
-		t.Errorf("Expected warning to contain 'Warning:', got %s", warnings[0])
+	if len(warnings) != 2 {
+		t.Errorf("Expected 2 warnings, got %d: %v", len(warnings), warnings)
 	}
 
 	// Verify errors
 	if len(errors) != 2 {
-		t.Errorf("Expected 2 errors, got %d", len(errors))
-	}
-}
-
-func TestOrchestrator_LogParsing_MkDocs(t *testing.T) {
-	// Test that MkDocs-style warnings are captured as errors
-	tmpDir := t.TempDir()
-	logPath := filepath.Join(tmpDir, "mkdocs.log")
-
-	// Simulate MkDocs strict mode output
-	logContent := `📚 Building MkDocs site using Docker
-INFO - Building documentation...
-WARNING -  Doc file 'intro.md' contains a link 'nonexistent.md', but target not found
-WARNING -  Doc file 'guide.md' contains unrecognized extension
-INFO -  Documentation built in 1.23 seconds
-Aborted with 2 warnings in strict mode!
-❌ MkDocs build failed
-`
-	if err := os.WriteFile(logPath, []byte(logContent), 0644); err != nil {
-		t.Fatal(err)
+		t.Errorf("Expected 2 errors, got %d: %v", len(errors), errors)
 	}
 
-	warnings, errors := parseLogForIssues(logPath)
-
-	// MkDocs "WARNING -" lines should be treated as errors, not warnings
-	if len(warnings) != 0 {
-		t.Errorf("Expected 0 warnings (MkDocs WARNING - should be errors), got %d: %v", len(warnings), warnings)
-	}
-
-	// Should capture: 2 WARNING - lines + 1 Aborted + 1 ❌ line = 4 errors
-	if len(errors) != 4 {
-		t.Errorf("Expected 4 errors, got %d: %v", len(errors), errors)
-	}
-
-	// Verify specific error messages are captured
-	hasWarning := false
+	// Verify specific messages
 	hasAborted := false
-	hasEmoji := false
+	hasBuildFailed := false
 	for _, e := range errors {
-		if strings.HasPrefix(e, "WARNING -") {
-			hasWarning = true
-		}
-		if strings.Contains(e, "Aborted with") {
+		if strings.Contains(e, "Aborted") {
 			hasAborted = true
 		}
-		if strings.Contains(e, "❌") {
-			hasEmoji = true
+		if strings.Contains(e, "Build failed") {
+			hasBuildFailed = true
 		}
 	}
-	if !hasWarning {
-		t.Error("Expected to capture MkDocs 'WARNING -' lines as errors")
-	}
 	if !hasAborted {
-		t.Error("Expected to capture 'Aborted with' message as error")
+		t.Error("Expected to capture 'Aborted' message as error")
 	}
-	if !hasEmoji {
-		t.Error("Expected to capture ❌ emoji as error")
+	if !hasBuildFailed {
+		t.Error("Expected to capture 'Build failed' message as error")
 	}
 }
 
