@@ -379,9 +379,22 @@ func extractGoBuildTags(suiteTagFilter string) string {
 	var tags []string
 
 	// Look for L-level tags (@L0, @L1, @L2, @L3, @L4)
+	// Only include tags that are NOT negated (preceded by ~)
 	for _, level := range []string{"L0", "L1", "L2", "L3", "L4"} {
-		if strings.Contains(suiteTagFilter, "@"+level) {
-			tags = append(tags, level)
+		tag := "@" + level
+		idx := 0
+		for {
+			pos := strings.Index(suiteTagFilter[idx:], tag)
+			if pos == -1 {
+				break
+			}
+			absPos := idx + pos
+			// Check if this occurrence is negated (preceded by ~)
+			if absPos == 0 || suiteTagFilter[absPos-1] != '~' {
+				tags = append(tags, level)
+				break
+			}
+			idx = absPos + len(tag)
 		}
 	}
 
