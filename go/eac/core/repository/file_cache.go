@@ -127,7 +127,8 @@ func (c *FileCache) populateFromGit() ([]string, error) {
 		return c.testGitRepo.TrackedFiles()
 	}
 
-	repo, err := git.Open(c.repoRoot, nil)
+	mgr := git.NewManager(nil)
+	repo, err := mgr.Open(c.repoRoot)
 	if err != nil {
 		return nil, err
 	}

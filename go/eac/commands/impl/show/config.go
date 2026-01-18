@@ -61,11 +61,11 @@ func ShowConfig() int {
 		summaryTb.AddRow("modules", "✗ not loaded", "-")
 	}
 
-	// Package Types
+	// Component Types
 	if cfg.ComponentTypes != nil {
-		summaryTb.AddRow("package_types", "✓ loaded", len(cfg.ComponentTypes.ComponentTypes))
+		summaryTb.AddRow("component_types", "✓ loaded", len(cfg.ComponentTypes.ComponentTypes))
 	} else {
-		summaryTb.AddRow("package_types", "✗ not loaded", "-")
+		summaryTb.AddRow("component_types", "✗ not loaded", "-")
 	}
 
 	// Environments

@@ -27,7 +27,7 @@ func buildModuleTestInfo(
 	uniqueModules := make(map[string]bool)
 
 	// Create a module mapper to find which module owns each package
-	moduleMapper := NewModuleMapper(eacCfg, workspaceRoot)
+	moduleMapper := NewModuleMapper(moduleRegistry, workspaceRoot)
 
 	// Collect all test package paths per module
 	testPackagesByModule := make(map[string][]string)

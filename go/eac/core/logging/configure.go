@@ -7,6 +7,7 @@ package logging
 import (
 	"fmt"
 	"io"
+	stdlog "log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -16,6 +17,34 @@ import (
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
+
+// silentLumberjackWriter wraps lumberjack.Logger to suppress rotation error messages.
+// Lumberjack uses the standard log package to print errors when it can't rotate files,
+// which happens during concurrent builds when multiple processes access the same log file.
+// This wrapper temporarily silences the standard logger during writes.
+type silentLumberjackWriter struct {
+	*lumberjack.Logger
+	mu sync.Mutex
+}
+
+// Write implements io.Writer, suppressing lumberjack's rotation error messages.
+func (s *silentLumberjackWriter) Write(p []byte) (n int, err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Temporarily discard standard log output to suppress lumberjack's error messages
+	// about failed log rotation (e.g., "can't rename log file: file in use")
+	originalOutput := stdlog.Writer()
+	stdlog.SetOutput(io.Discard)
+	defer stdlog.SetOutput(originalOutput)
+
+	return s.Logger.Write(p)
+}
+
+// Close implements io.Closer.
+func (s *silentLumberjackWriter) Close() error {
+	return s.Logger.Close()
+}
 
 // loggingState holds the current logging configuration state.
 var (
@@ -111,12 +140,14 @@ func ConfigureLogging(workspaceRoot, command string, pathSegments []string, debu
 		// 2a. Unified log: out/commands.log (disabled when test logging active)
 		if !testLoggingActive {
 			logPath := paths.CommandsLogPath(workspaceRoot)
-			writer := &lumberjack.Logger{
-				Filename:   logPath,
-				MaxSize:    logCfg.File.MaxSizeMB,
-				MaxBackups: logCfg.File.MaxBackups,
-				MaxAge:     logCfg.File.MaxAgeDays,
-				Compress:   logCfg.File.Compress != nil && *logCfg.File.Compress,
+			writer := &silentLumberjackWriter{
+				Logger: &lumberjack.Logger{
+					Filename:   logPath,
+					MaxSize:    logCfg.File.MaxSizeMB,
+					MaxBackups: logCfg.File.MaxBackups,
+					MaxAge:     logCfg.File.MaxAgeDays,
+					Compress:   logCfg.File.Compress != nil && *logCfg.File.Compress,
+				},
 			}
 			closers = append(closers, writer)
 
@@ -168,6 +199,8 @@ func ConfigureLogging(workspaceRoot, command string, pathSegments []string, debu
 	opts := []zap.Option{
 		zap.AddCaller(),
 		zap.AddCallerSkip(1), // Skip the ComponentLogger wrapper
+		// Suppress zap's internal error output (e.g., write failures during log rotation)
+		zap.ErrorOutput(zapcore.AddSync(io.Discard)),
 	}
 
 	newZapLogger := zap.New(combinedCore, opts...)

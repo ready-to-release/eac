@@ -46,7 +46,7 @@ r2r eac show files
 ### 4. Check Module Types
 
 ```bash
-r2r eac show moduletypes
+r2r eac show component-types
 ```
 
 **What happens**: Groups modules by type (go-cli, go-library, mkdocs-site, etc.)

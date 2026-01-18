@@ -511,7 +511,7 @@ func formatValidationResult(result *ValidationResult) string {
 	errorCount := 0
 	warningCount := 0
 	for _, e := range result.Errors {
-		if e.Severity == "error" {
+		if !e.IsWarning() {
 			errorCount++
 		} else {
 			warningCount++

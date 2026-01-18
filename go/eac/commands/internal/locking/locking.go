@@ -63,6 +63,17 @@ func BuildConfig(moniker, baseDir string) Config {
 	}
 }
 
+// ComponentBuildConfig returns a Config for component-level build locking.
+// Use this when building components within a module in parallel.
+func ComponentBuildConfig(module, component, baseDir string) Config {
+	return Config{
+		BaseDir:      baseDir,
+		Identifier:   module + ":" + component,
+		ResourceType: "component",
+		ActionVerb:   "already being built",
+	}
+}
+
 // TestConfig returns a Config for test suite locking.
 func TestConfig(suiteName, baseDir string) Config {
 	return Config{

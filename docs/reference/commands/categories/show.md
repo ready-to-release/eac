@@ -160,7 +160,7 @@ r2r eac help <command>
 r2r eac show modules
 
 # Module types
-r2r eac show moduletypes
+r2r eac show component-types
 
 # Dependency graph
 r2r eac show dependencies
@@ -253,7 +253,7 @@ r2r eac show test-summary src-auth acceptance >> test-report.log
 These commands execute quickly (< 1s):
 
 - `show modules`
-- `show moduletypes`
+- `show component-types`
 - `show dependencies`
 - `show config`
 - `show workspaces`

@@ -30,15 +30,15 @@ func RegisterSystem(buildDep string, fn TestFunc) {
 	systemHandlers[buildDep] = fn
 }
 
-// Package type to test handler mapping.
-var packageTestHandlers = map[string]string{
+// Component type to test handler mapping.
+var componentTestHandlers = map[string]string{
 	"go":         "go",
 	"npm":        "npm",
 	"typescript": "npm",
 }
 
 // GetTestFunc returns the appropriate test function for a module.
-// It matches module package types to test handlers.
+// It matches module component types to test handlers.
 func GetTestFunc(module *modules.ModuleContract) TestFunc {
 	mu.RLock()
 	defer mu.RUnlock()
@@ -52,9 +52,9 @@ func GetTestFunc(module *modules.ModuleContract) TestFunc {
 		}
 	}
 
-	// Check module package types and find matching handler
-	for pkgType, handlerName := range packageTestHandlers {
-		if module.HasComponent(pkgType) {
+	// Check module component types and find matching handler
+	for compType, handlerName := range componentTestHandlers {
+		if module.HasComponent(compType) {
 			if fn, ok := systemHandlers[handlerName]; ok {
 				return fn
 			}

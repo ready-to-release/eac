@@ -82,7 +82,7 @@ type ExecutionContext struct {
 	ModuleReport   *reports.ModuleContractReport
 	ModuleRegistry *modules.Registry
 	ExecutionPlan  *repository.ExecutionPlan
-	ModuleTypes    map[string]string // moniker -> type
+	ModuleTypes    map[string]string // moniker -> component types (comma-separated)
 
 	// Verification State (populated by phaseVerify)
 	InitSummary *initsummary.Summary
@@ -100,6 +100,11 @@ type ExecutionContext struct {
 // It receives the execution context, moniker, and a log writer for output.
 // Return 0 for success, non-zero for failure.
 type WorkerFunc func(ctx *ExecutionContext, moniker string, logWriter io.Writer) int
+
+// ComponentWorkerFunc processes a single component and returns an exit code.
+// It receives the execution context, module moniker, component name, and a log writer.
+// Return 0 for success, non-zero for failure.
+type ComponentWorkerFunc func(ctx *ExecutionContext, module, component string, logWriter io.Writer) int
 
 // PhaseHook is called at specific points during command execution.
 // Return an error to abort execution.

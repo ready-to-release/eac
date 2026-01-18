@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ready-to-release.org/schemas/eac-core/component-types/0.1.0",
   "title": "Component Types Schema",
-  "description": "Schema for component type definitions that define how to process files for linting and building",
+  "description": "Schema for component type definitions that define how to process files for building. Linting is configured separately in lint-providers.yml.",
   "type": "object",
   "properties": {
     "component-types": {
@@ -28,25 +28,28 @@
           },
           "default": []
         },
-        "linter": {
-          "type": "string",
-          "description": "The linter tool to use for this component type (e.g., \"golangci-lint\", \"markdownlint-cli2\")",
-          "pattern": "^[a-z][a-z0-9-]*$"
-        },
-        "lint_input": {
-          "type": "string",
-          "description": "How files are passed to the linter: 'packages' for directory-based (Go), 'files' for file-based",
-          "enum": ["packages", "files"],
-          "default": "files"
-        },
         "builder": {
           "type": "string",
           "description": "The build handler to use for this component type (e.g., \"go\", \"mkdocs\", \"buildx\")",
           "pattern": "^[a-z][a-z0-9-]*$"
         },
+        "build_weight": {
+          "type": "integer",
+          "description": "Resource weight for parallel build scheduling. Higher = more resource pressure. Default is 1.",
+          "minimum": 1,
+          "default": 1
+        },
+        "build_after": {
+          "type": "array",
+          "description": "Component types that must complete before this one within the same module",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          }
+        },
         "requirements": {
           "type": "array",
-          "description": "System dependencies required for building/linting this component type (e.g., [\"go\"], [\"docker\"])",
+          "description": "System dependencies required for building this component type (e.g., [\"go\"], [\"docker\"])",
           "items": {
             "type": "string",
             "pattern": "^[a-z][a-z0-9-]*$"

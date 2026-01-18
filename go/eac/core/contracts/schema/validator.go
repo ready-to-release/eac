@@ -17,7 +17,7 @@ import (
 type SchemaType string
 
 const (
-	SchemaPackageTypes       SchemaType = "package-types"
+	SchemaComponentTypes     SchemaType = "component-types"
 	SchemaEnvironments       SchemaType = "environments"
 	SchemaTestingTags        SchemaType = "testing-tags"
 	SchemaTestSuites         SchemaType = "test-suites"
@@ -29,12 +29,9 @@ const (
 	SchemaCommands           SchemaType = "commands"
 )
 
-// Deprecated: Use SchemaPackageTypes instead.
-const SchemaModuleTypes = SchemaPackageTypes
-
 // schemaFileNames maps schema types to their file names (without path).
 var schemaFileNames = map[SchemaType]string{
-	SchemaPackageTypes:       "package-types.schema.json",
+	SchemaComponentTypes:     "component-types.schema.json",
 	SchemaEnvironments:       "environments.schema.json",
 	SchemaTestingTags:        "testing-tags.schema.json",
 	SchemaTestSuites:         "test-suites.schema.json",
@@ -227,7 +224,7 @@ func extractValidationDetails(err error) []string {
 // GetSchemaTypes returns all available schema types.
 func GetSchemaTypes() []SchemaType {
 	return []SchemaType{
-		SchemaPackageTypes,
+		SchemaComponentTypes,
 		SchemaEnvironments,
 		SchemaTestingTags,
 		SchemaTestSuites,

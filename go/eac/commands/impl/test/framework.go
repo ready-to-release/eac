@@ -18,6 +18,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/initsummary"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/locking"
 	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/environments"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	moduledeps "github.com/ready-to-release/eac/go/eac/core/module-deps"
@@ -141,6 +142,14 @@ func testAfterInit(ctx *cmdframework.ExecutionContext) error {
 		return fmt.Errorf("failed to create test directory: %w", err)
 	}
 
+	// Load module contracts and registry (test command uses SkipResolve, so we load it here)
+	moduleReport, err := reports.GetModuleContracts(ctx.WorkspaceRoot)
+	if err != nil {
+		return fmt.Errorf("failed to load module contracts: %w", err)
+	}
+	ctx.ModuleReport = moduleReport
+	ctx.ModuleRegistry = moduleReport.Registry
+
 	return nil
 }
 
@@ -154,7 +163,7 @@ func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 	stats := testCfg.Stats
 
 	// Build module mapper early - used for test filtering and module ownership
-	testCfg.ModuleMapper = NewModuleMapper(ctx.EACConfig, ctx.WorkspaceRoot)
+	testCfg.ModuleMapper = NewModuleMapper(ctx.ModuleRegistry, ctx.WorkspaceRoot)
 
 	// Test Discovery with suite-specific inferences
 	allTests, err := testing.DiscoverAndEnrich(ctx.WorkspaceRoot, testing.DiscoveryOptions{

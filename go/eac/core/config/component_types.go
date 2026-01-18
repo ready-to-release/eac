@@ -16,24 +16,27 @@ type ComponentTypesConfig struct {
 	ComponentTypes map[string]*ComponentType `yaml:"component-types"`
 }
 
-// ComponentType defines how to process files of a certain type for linting and building.
+// ComponentType defines how to process files of a certain type for building.
+// Linting configuration is separate - see LintProvider in lint_providers.go.
 type ComponentType struct {
 	// Extensions are the file extensions belonging to this component type (e.g., [".go"], [".md", ".markdown"])
 	// Empty for non-file-based components like "book"
 	Extensions []string `yaml:"extensions" json:"extensions"`
 
-	// Linter is the linter tool to use (e.g., "golangci-lint", "markdownlint-cli2")
-	Linter string `yaml:"linter,omitempty" json:"linter,omitempty"`
-
-	// LintInput specifies how files are passed to the linter:
-	// - "packages": Lint by directory/package (e.g., Go modules use ./...)
-	// - "files": Lint individual files (e.g., markdown files)
-	LintInput string `yaml:"lint_input,omitempty" json:"lint_input,omitempty"`
-
 	// Builder is the build handler to use (e.g., "go", "mkdocs", "buildx")
 	Builder string `yaml:"builder,omitempty" json:"builder,omitempty"`
 
-	// Requirements are system dependencies needed for building/linting (e.g., ["go"], ["docker"])
+	// BuildWeight is the resource weight for parallel build scheduling.
+	// Higher weight = more resource pressure. Default is 1.
+	// Examples: go=1, npm=1, mkdocs=4 (uses Docker), buildx=4
+	BuildWeight int `yaml:"build_weight,omitempty" json:"build_weight,omitempty"`
+
+	// BuildAfter specifies component types that must complete before this one
+	// within the same module. Used for intra-module dependency ordering.
+	// Example: ["go"] means this component waits for the "go" component to finish.
+	BuildAfter []string `yaml:"build_after,omitempty" json:"build_after,omitempty"`
+
+	// Requirements are system dependencies needed for building (e.g., ["go"], ["docker"])
 	Requirements []string `yaml:"requirements,omitempty" json:"requirements,omitempty"`
 
 	// DefaultRoot is the default root path pattern for this component type.
@@ -51,13 +54,6 @@ type ComponentTypeFiles struct {
 	Config []string `yaml:"config,omitempty" json:"config,omitempty"`
 }
 
-// GetLintInput returns the lint input mode, defaulting to "files" if not specified.
-func (c *ComponentType) GetLintInput() string {
-	if c.LintInput == "" {
-		return "files"
-	}
-	return c.LintInput
-}
 
 // GetRoot returns the root path for this component type, using the provided explicit root
 // if set, otherwise falling back to DefaultRoot with {moniker} substitution.
@@ -72,14 +68,25 @@ func (c *ComponentType) GetRoot(moniker, explicitRoot string) string {
 	return ""
 }
 
-// HasLinter returns true if this component type has a linter configured.
-func (c *ComponentType) HasLinter() bool {
-	return c.Linter != ""
-}
 
 // HasBuilder returns true if this component type has a builder configured.
 func (c *ComponentType) HasBuilder() bool {
 	return c.Builder != ""
+}
+
+// GetBuildWeight returns the build weight for parallel scheduling.
+// Returns 1 as default if not specified.
+func (c *ComponentType) GetBuildWeight() int {
+	if c.BuildWeight <= 0 {
+		return 1
+	}
+	return c.BuildWeight
+}
+
+// GetBuildAfter returns the list of component types that must complete
+// before this one within the same module.
+func (c *ComponentType) GetBuildAfter() []string {
+	return c.BuildAfter
 }
 
 // GetRequirements returns the system dependencies needed for this component type.

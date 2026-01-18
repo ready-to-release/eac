@@ -9,7 +9,6 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
-	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -41,6 +40,7 @@ type Console struct {
 	started bool
 	stopped bool
 	ready   chan struct{} // Signals when TUI is ready
+	done    chan struct{} // Signals when Start() has fully completed (including printSummary)
 
 	// Track multi-writers for cleanup
 	writers []*stream.MultiWriter
@@ -63,6 +63,7 @@ func New(config Config) *Console {
 		lineChan:   make(chan console.Line, 100),
 		statusChan: make(chan console.Status, 10),
 		ready:      make(chan struct{}),
+		done:       make(chan struct{}),
 	}
 }
 
@@ -76,6 +77,9 @@ func (c *Console) Start(ctx context.Context) error {
 	}
 	c.started = true
 	c.mu.Unlock()
+
+	// Signal completion when Start() returns (after all cleanup including printSummary)
+	defer close(c.done)
 
 	model := console.NewModel(
 		c.config.Height,
@@ -172,25 +176,23 @@ func (c *Console) StartAsync(ctx context.Context) {
 		_ = c.Start(ctx)
 	}()
 
-	// Wait for TUI to be ready (or timeout after 1 second)
-	select {
-	case <-c.ready:
-	case <-time.After(1 * time.Second):
-	}
+	// Wait for TUI to be ready
+	<-c.ready
 }
 
-// Wait waits for the TUI program to exit naturally (e.g., user presses a key).
+// Wait waits for the TUI program to fully complete, including printSummary().
 // Does not force the program to quit. Use Stop() to force quit.
 func (c *Console) Wait() {
 	c.mu.Lock()
-	program := c.program
+	started := c.started
 	c.mu.Unlock()
 
-	if program != nil {
-		program.Wait()
+	// Wait for Start() to fully complete (including printSummary)
+	// The done channel is closed by Start() after all cleanup
+	if started {
+		<-c.done
 	}
 
-	// Mark as stopped after waiting
 	c.mu.Lock()
 	c.stopped = true
 	c.mu.Unlock()
@@ -204,6 +206,7 @@ func (c *Console) Stop() {
 		return
 	}
 	c.stopped = true
+	started := c.started
 	c.mu.Unlock()
 
 	// Close all multi-writers first
@@ -222,6 +225,12 @@ func (c *Console) Stop() {
 	if c.program != nil {
 		c.program.Quit()
 		c.program.Wait()
+	}
+
+	// Wait for Start() to fully complete (including printSummary)
+	// This ensures the final output is printed before we reset the terminal
+	if started {
+		<-c.done
 	}
 
 	// Reset terminal state - clear any lingering escape sequences

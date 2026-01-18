@@ -128,7 +128,7 @@ The unified type system uses four base types. Behavior is determined by per-modu
 See available types:
 
 ```bash
-r2r eac show moduletypes
+r2r eac show component-types
 ```
 
 ## Dependencies

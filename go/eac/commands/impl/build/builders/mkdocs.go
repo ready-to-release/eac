@@ -155,7 +155,8 @@ func getMkDocsDockerConfig(module *modules.ModuleContract, workspaceRoot string,
 //   - pdf-light: PDF with light theme
 //   - pdf-all: Both dark and light PDFs
 //
-// Multiple books for the same module are built in parallel.
+// When opts.Component is set, only that specific book is built (component-level parallelism).
+// When opts.Component is empty, all books for the module are built in parallel.
 func buildMkDocsModule(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	// Load config to check for book configuration
 	cfg, loadErr := config.Load(config.LoadOptions{RepoRoot: workspaceRoot, LazyLoad: true})
@@ -165,6 +166,20 @@ func buildMkDocsModule(module *modules.ModuleContract, workspaceRoot, outputDir 
 		// Check if module has ANY books defined
 		allBooks := cfg.GetBooksByModule(module.Moniker)
 		if len(allBooks) > 0 {
+			// Component-level parallelism: if a specific component is requested, build only that book
+			if opts.Component != "" {
+				// Find the book matching this component name
+				for _, book := range allBooks {
+					if book.Name == opts.Component {
+						Logln(logWriter, "📚 Building component book: %s (module: %s)", book.Name, module.Moniker)
+						return buildModuleBooks(module, []*config.Book{book}, workspaceRoot, outputDir, logWriter)
+					}
+				}
+				// Component name doesn't match any book - this shouldn't happen if GetHandlersForModule is correct
+				Logln(logWriter, "⚠️  Book not found for component: %s (module: %s)", opts.Component, module.Moniker)
+				return 1
+			}
+
 			// Module has books - filter based on requested artifacts
 			var moduleBooks []*config.Book
 

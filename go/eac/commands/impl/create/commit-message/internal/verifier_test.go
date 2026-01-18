@@ -221,7 +221,7 @@ Changes: 1 file, +10 insertions, -0 deletions
 
 	foundError := false
 	for _, err := range errors {
-		if err.Code == "LINE_TOO_LONG" && err.Severity == "warning" {
+		if err.GetCode() == "LINE_TOO_LONG" && err.IsWarning() {
 			foundError = true
 			break
 		}

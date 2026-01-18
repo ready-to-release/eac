@@ -153,6 +153,7 @@ type ArtifactVerificationResult struct {
 }
 
 // VerifyArtifact checks if an artifact exists.
+// It first checks at the module level, then searches component subdirectories.
 func (r *ArtifactResolver) VerifyArtifact(artifact Artifact) ArtifactVerificationResult {
 	result := ArtifactVerificationResult{
 		Artifact: artifact,
@@ -163,6 +164,20 @@ func (r *ArtifactResolver) VerifyArtifact(artifact Artifact) ArtifactVerificatio
 	info, err := os.Stat(result.Path)
 	if err != nil {
 		if os.IsNotExist(err) {
+			// Not found at module level - check component subdirectories
+			if foundPath, foundInfo := r.findInComponentSubdirs(result.Pattern); foundPath != "" {
+				result.Path = foundPath
+				result.Exists = true
+				result.IsDirectory = foundInfo.IsDir()
+
+				// Verify type matches expectation
+				if artifact.Type == ArtifactTypeDirectory && !result.IsDirectory {
+					result.Error = fmt.Errorf("expected directory but found file")
+				} else if artifact.Type != ArtifactTypeDirectory && result.IsDirectory {
+					result.Error = fmt.Errorf("expected file but found directory")
+				}
+				return result
+			}
 			result.Exists = false
 		} else {
 			result.Error = err
@@ -181,6 +196,29 @@ func (r *ArtifactResolver) VerifyArtifact(artifact Artifact) ArtifactVerificatio
 	}
 
 	return result
+}
+
+// findInComponentSubdirs searches for an artifact in component subdirectories.
+// Returns the found path and file info, or empty string if not found.
+func (r *ArtifactResolver) findInComponentSubdirs(pattern string) (string, os.FileInfo) {
+	entries, err := os.ReadDir(r.BuildDir)
+	if err != nil {
+		return "", nil
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		// Check if artifact exists in this component subdirectory
+		componentPath := filepath.Join(r.BuildDir, entry.Name(), pattern)
+		if info, err := os.Stat(componentPath); err == nil {
+			return componentPath, info
+		}
+	}
+
+	return "", nil
 }
 
 // VerifyArtifacts verifies all artifacts for a module type.

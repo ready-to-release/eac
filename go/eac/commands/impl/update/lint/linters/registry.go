@@ -5,6 +5,7 @@ import (
 	"io"
 	"sync"
 
+	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
@@ -13,13 +14,13 @@ type LintOptions struct {
 	Fix       bool     // Auto-fix issues where possible
 	Config    string   // Override config file path
 	Files     []string // Specific files to lint (for file-based linting)
-	LintInput string   // How files are passed: "packages" or "files"
+	InputMode string   // How files are passed: "packages", "files", or "directory"
 }
 
 // Handler is the interface for lint handlers.
-// Each handler is responsible for linting files of a specific package type.
+// Each handler is responsible for linting files of a specific type.
 type Handler interface {
-	// Name returns the handler identifier (e.g., "go", "typescript")
+	// Name returns the handler identifier (e.g., "go", "markdown")
 	Name() string
 
 	// Lint executes linting for a module.
@@ -42,7 +43,7 @@ var (
 )
 
 // RegisterHandler registers a handler for linting.
-// Call this from init() in your builder file.
+// Call this from init() in your linter file.
 func RegisterHandler(h Handler) {
 	mu.Lock()
 	defer mu.Unlock()
@@ -67,25 +68,59 @@ func GetAllHandlers() map[string]Handler {
 	return result
 }
 
-// GetHandlerByLinter returns the handler for a specific linter tool name.
-// This is the primary dispatch mechanism for package-based linting.
-func GetHandlerByLinter(linterName string) Handler {
+// GetHandlerForProvider returns the handler for a lint provider.
+// Provider names map to handler names via the providerHandlers mapping.
+func GetHandlerForProvider(providerName string) Handler {
 	mu.RLock()
 	defer mu.RUnlock()
 
-	// Map linter names to handler names
-	// Some linters have specific handler implementations
-	linterToHandler := map[string]string{
+	// Provider-to-handler mapping
+	// Provider names (from lint-providers.yml) map to handler names (from Go code)
+	providerHandlers := map[string]string{
 		"golangci-lint":     "go",
 		"markdownlint-cli2": "markdown",
-		"eslint":            "typescript", // or javascript
+		"eslint":            "typescript",
 	}
 
-	handlerName, ok := linterToHandler[linterName]
+	handlerName, ok := providerHandlers[providerName]
 	if !ok {
-		// Try direct mapping (handler name == linter name)
-		handlerName = linterName
+		// Direct mapping: provider name == handler name
+		handlerName = providerName
 	}
 
 	return handlers[handlerName]
+}
+
+// GetProvidersForModule returns all applicable lint providers for a module's components.
+// Uses the lint-providers configuration to determine which providers apply.
+func GetProvidersForModule(module interface{ GetEnabledComponents() []string }, lintProviders *config.LintProvidersConfig, componentTypes *config.ComponentTypesConfig) []string {
+	if module == nil || lintProviders == nil {
+		return nil
+	}
+
+	providerSet := make(map[string]bool)
+	for _, compName := range module.GetEnabledComponents() {
+		// Get component type (may differ from name)
+		compType := compName
+		if componentTypes != nil {
+			// For modules with explicit type mapping, use that
+			// Otherwise component name is the type
+		}
+
+		// Find providers that apply to this component type
+		for name, provider := range lintProviders.LintProviders {
+			for _, applies := range provider.AppliesTo {
+				if applies == compType {
+					providerSet[name] = true
+					break
+				}
+			}
+		}
+	}
+
+	result := make([]string, 0, len(providerSet))
+	for name := range providerSet {
+		result = append(result, name)
+	}
+	return result
 }

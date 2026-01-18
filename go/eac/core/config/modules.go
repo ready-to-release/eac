@@ -6,30 +6,32 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"gopkg.in/yaml.v3"
 )
 
 // Module represents a single module definition.
 type Module struct {
-	Moniker       string                `yaml:"moniker"`
-	Name          string                `yaml:"name"`
-	Description   string                `yaml:"description"`
-	DependsOn     []string              `yaml:"depends_on"`
-	DependsOnCI   []string              `yaml:"depends_on_ci"`            // CI artifact dependencies (merged into DependsOn)
-	CIDeps        []string              `yaml:"-"`                        // Computed: CI artifact deps for dispatch layering
-	EvidenceBooks []string              `yaml:"evidence_books,omitempty"` // Evidence book names, built via 'update evidence' command
-	ReleaseBundle *ReleaseBundle        `yaml:"release_bundle,omitempty"` // Release bundle configuration (for release modules)
-	Metadata      map[string]string     `yaml:"metadata,omitempty"`       // Generic key-value store for module-specific data
-	Versioning    *ModuleVersioning     `yaml:"versioning,omitempty"`
-	Components    ModuleComponents      `yaml:"components"` // Component types for this module (required)
+	Moniker       string                   `yaml:"moniker"`
+	Name          string                   `yaml:"name"`
+	Description   string                   `yaml:"description"`
+	DependsOn     []string                 `yaml:"depends_on"`
+	DependsOnCI   []string                 `yaml:"depends_on_ci"`            // CI artifact dependencies (merged into DependsOn)
+	CIDeps        []string                 `yaml:"-"`                        // Computed: CI artifact deps for dispatch layering
+	EvidenceBooks []string                 `yaml:"evidence_books,omitempty"` // Evidence book names, built via 'update evidence' command
+	ReleaseBundle *ReleaseBundle           `yaml:"release_bundle,omitempty"` // Release bundle configuration (for release modules)
+	Metadata      map[string]string        `yaml:"metadata,omitempty"`       // Generic key-value store for module-specific data
+	Versioning    *ModuleVersioning        `yaml:"versioning,omitempty"`
+	Components    ModuleComponents         `yaml:"components"`               // Component types for this module (required)
+	Linting       *contracts.ModuleLinting `yaml:"linting,omitempty"`        // Linting configuration overrides
 }
 
-// HasComponent returns true if the given component type is enabled for this module.
-func (m *Module) HasComponent(compType string) bool {
-	return m.Components.HasComponent(compType)
+// HasComponent returns true if a component with the given name exists for this module.
+func (m *Module) HasComponent(name string) bool {
+	return m.Components.HasComponent(name)
 }
 
-// GetEnabledComponents returns all enabled component types for this module.
+// GetEnabledComponents returns all component names for this module.
 func (m *Module) GetEnabledComponents() []string {
 	return m.Components.GetEnabled()
 }
@@ -234,16 +236,16 @@ func (mc ModuleComponents) Clone() ModuleComponents {
 	return clone
 }
 
-// HasComponent returns true if the given component type is enabled.
-func (mc ModuleComponents) HasComponent(compType string) bool {
+// HasComponent returns true if a component with the given name exists.
+func (mc ModuleComponents) HasComponent(name string) bool {
 	if mc == nil {
 		return false
 	}
-	_, ok := mc[compType]
+	_, ok := mc[name]
 	return ok
 }
 
-// GetDefault returns the default component type (first in map), or empty string if not set.
+// GetDefault returns the default component name (first in map), or empty string if not set.
 // Note: Go maps don't preserve order, so this returns the first encountered.
 // For deterministic behavior, use GetDefaultComponent which checks for common defaults.
 func (mc ModuleComponents) GetDefault() string {
@@ -257,7 +259,7 @@ func (mc ModuleComponents) GetDefault() string {
 	return ""
 }
 
-// GetEnabled returns a list of all enabled component types.
+// GetEnabled returns a list of all component names.
 func (mc ModuleComponents) GetEnabled() []string {
 	if mc == nil {
 		return nil

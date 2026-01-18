@@ -239,12 +239,22 @@ func (m *ModuleManifest) VerifyArtifactsExist(moduleBuildDir string) error {
 			// Pass the full artifact info so we can check registry tags if local image not found
 			exists, errMsg = verifyDockerImageExists(art)
 		case "directory":
-			// Directories should exist
+			// Directories should exist - check module level first, then component subdirs
 			dirPath := filepath.Join(moduleBuildDir, art.Path)
 			info, err := os.Stat(dirPath)
 			if err != nil {
-				exists = false
-				errMsg = fmt.Sprintf("directory not found: %s", dirPath)
+				// Not found at module level - check component subdirectories
+				if foundPath := findInComponentSubdirs(moduleBuildDir, art.Path); foundPath != "" {
+					if info, err := os.Stat(foundPath); err == nil && info.IsDir() {
+						exists = true
+					} else {
+						exists = false
+						errMsg = fmt.Sprintf("expected directory but found file: %s", foundPath)
+					}
+				} else {
+					exists = false
+					errMsg = fmt.Sprintf("directory not found: %s", dirPath)
+				}
 			} else if !info.IsDir() {
 				exists = false
 				errMsg = fmt.Sprintf("expected directory but found file: %s", dirPath)
@@ -252,12 +262,27 @@ func (m *ModuleManifest) VerifyArtifactsExist(moduleBuildDir string) error {
 				exists = true
 			}
 		default:
-			// File-based artifacts (executable, file)
+			// File-based artifacts (executable, file) - check module level first, then component subdirs
 			filePath := filepath.Join(moduleBuildDir, art.Path)
 			info, err := os.Stat(filePath)
 			if err != nil {
-				exists = false
-				errMsg = fmt.Sprintf("file not found: %s", filePath)
+				// Not found at module level - check component subdirectories
+				if foundPath := findInComponentSubdirs(moduleBuildDir, art.Path); foundPath != "" {
+					if info, err := os.Stat(foundPath); err == nil {
+						if info.IsDir() {
+							exists = false
+							errMsg = fmt.Sprintf("expected file but found directory: %s", foundPath)
+						} else if info.Size() == 0 {
+							exists = false
+							errMsg = fmt.Sprintf("file is empty: %s", foundPath)
+						} else {
+							exists = true
+						}
+					}
+				} else {
+					exists = false
+					errMsg = fmt.Sprintf("file not found: %s", filePath)
+				}
 			} else if info.IsDir() {
 				exists = false
 				errMsg = fmt.Sprintf("expected file but found directory: %s", filePath)
@@ -284,6 +309,29 @@ func (m *ModuleManifest) VerifyArtifactsExist(moduleBuildDir string) error {
 	}
 
 	return nil
+}
+
+// findInComponentSubdirs searches for an artifact in component subdirectories.
+// Returns the found path or empty string if not found.
+func findInComponentSubdirs(moduleBuildDir, artifactPath string) string {
+	entries, err := os.ReadDir(moduleBuildDir)
+	if err != nil {
+		return ""
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		// Check if artifact exists in this component subdirectory
+		componentPath := filepath.Join(moduleBuildDir, entry.Name(), artifactPath)
+		if _, err := os.Stat(componentPath); err == nil {
+			return componentPath
+		}
+	}
+
+	return ""
 }
 
 // verifyDockerImageExists checks if a Docker image exists locally or in registry (for pushed images).
