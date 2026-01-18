@@ -98,13 +98,6 @@ func getArtifactsForModule(moduleName, targetOS, targetArch string, allPlatforms
 		return 1
 	}
 
-	// Get module type
-	moduleType := cfg.ModuleTypes.Get(module.Type)
-	if moduleType == nil {
-		fmt.Fprintf(os.Stderr, "Error: module type not found: %s\n", module.Type)
-		return 1
-	}
-
 	// Build directory
 	buildDir := cfg.Repository.BuildOutputPathAbs(workspaceRoot, moduleName)
 
@@ -114,7 +107,7 @@ func getArtifactsForModule(moduleName, targetOS, targetArch string, allPlatforms
 
 	if allPlatforms {
 		// Get all platform combinations
-		platforms := getAllPlatforms(moduleType)
+		platforms := getAllPlatformsFromModule(module)
 		totalSummary = &implinternal.ArtifactResolutionSummary{}
 
 		// Use a map to deduplicate by resolved path
@@ -122,7 +115,7 @@ func getArtifactsForModule(moduleName, targetOS, targetArch string, allPlatforms
 
 		for _, plat := range platforms {
 			results, _, err := implinternal.ResolveArtifactsForModuleWithConfig(
-				module, moduleType, buildDir, plat.OS, plat.Arch, cfg,
+				module, nil, buildDir, plat.OS, plat.Arch, cfg,
 			)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error: failed to resolve artifacts for %s/%s: %v\n", plat.OS, plat.Arch, err)
@@ -130,10 +123,11 @@ func getArtifactsForModule(moduleName, targetOS, targetArch string, allPlatforms
 			}
 
 			// Deduplicate by resolved path
-			for _, art := range results {
+			for i := range results {
+				art := &results[i]
 				if !seenPaths[art.ResolvedPath] {
 					seenPaths[art.ResolvedPath] = true
-					allResults = append(allResults, art)
+					allResults = append(allResults, *art)
 					totalSummary.Total++
 					if art.Exists {
 						totalSummary.Exists++
@@ -149,7 +143,7 @@ func getArtifactsForModule(moduleName, targetOS, targetArch string, allPlatforms
 	} else {
 		// Single platform
 		results, summary, err := implinternal.ResolveArtifactsForModuleWithConfig(
-			module, moduleType, buildDir, targetOS, targetArch, cfg,
+			module, nil, buildDir, targetOS, targetArch, cfg,
 		)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: failed to resolve artifacts: %v\n", err)
@@ -160,8 +154,8 @@ func getArtifactsForModule(moduleName, targetOS, targetArch string, allPlatforms
 	}
 
 	// Get build mode breakdown
-	defaultArtifacts := implinternal.DetermineRequestedArtifacts(module, moduleType, false, cfg)
-	allArtifactsList := implinternal.DetermineRequestedArtifacts(module, moduleType, true, cfg)
+	defaultArtifacts := implinternal.DetermineRequestedArtifacts(module, nil, false, cfg)
+	allArtifactsList := implinternal.DetermineRequestedArtifacts(module, nil, true, cfg)
 
 	// Output
 	output := struct {
@@ -176,7 +170,7 @@ func getArtifactsForModule(moduleName, targetOS, targetArch string, allPlatforms
 		Summary    *implinternal.ArtifactResolutionSummary `json:"summary" yaml:"summary"`
 	}{
 		Module:   moduleName,
-		Type:     module.Type,
+		Type:     module.GetComponentTypesDisplay(),
 		BuildDir: buildDir,
 		BuildModes: &ArtifactBuildModes{
 			Default: defaultArtifacts,
@@ -218,36 +212,41 @@ type platform struct {
 	Arch string
 }
 
-func getAllPlatforms(moduleType *config.ModuleTypeDef) []platform {
+func getAllPlatformsFromModule(module *config.Module) []platform {
 	platformSet := make(map[string]bool)
 	var platforms []platform
 
-	if moduleType.Build == nil {
-		return platforms
+	// Check if module has executable artifacts (infer platforms from artifact patterns)
+	hasExecutables := false
+	for _, pkg := range module.Components {
+		if pkg != nil && pkg.Build != nil {
+			for _, artifact := range pkg.Build.Artifacts {
+				if artifact.Type == config.ArtifactTypeExecutable {
+					hasExecutables = true
+					break
+				}
+			}
+		}
+		if hasExecutables {
+			break
+		}
 	}
 
-	// Extract unique platform combinations from artifacts
-	for _, artifact := range moduleType.Build.Artifacts {
-		if artifact.Type == config.ArtifactTypeExecutable && len(artifact.Platforms) > 0 {
-			// Executables specify platforms
-			for _, os := range artifact.Platforms {
-				// Add both amd64 and arm64 for each OS
-				if os == "windows" {
-					key := fmt.Sprintf("%s-amd64", os)
-					if !platformSet[key] {
-						platformSet[key] = true
-						platforms = append(platforms, platform{OS: os, Arch: "amd64"})
-					}
-				} else {
-					// linux and darwin support both amd64 and arm64
-					for _, arch := range []string{"amd64", "arm64"} {
-						key := fmt.Sprintf("%s-%s", os, arch)
-						if !platformSet[key] {
-							platformSet[key] = true
-							platforms = append(platforms, platform{OS: os, Arch: arch})
-						}
-					}
-				}
+	if hasExecutables {
+		// For executables, use common cross-platform targets
+		// Windows only supports amd64, linux and darwin support both amd64 and arm64
+		commonPlatforms := []platform{
+			{OS: "linux", Arch: "amd64"},
+			{OS: "linux", Arch: "arm64"},
+			{OS: "darwin", Arch: "amd64"},
+			{OS: "darwin", Arch: "arm64"},
+			{OS: "windows", Arch: "amd64"},
+		}
+		for _, plat := range commonPlatforms {
+			key := fmt.Sprintf("%s-%s", plat.OS, plat.Arch)
+			if !platformSet[key] {
+				platformSet[key] = true
+				platforms = append(platforms, plat)
 			}
 		}
 	}

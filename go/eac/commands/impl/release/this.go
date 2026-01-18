@@ -135,7 +135,8 @@ func ReleaseThis() int {
 			log.Info("")
 		}
 
-		for i, result := range results {
+		for i := range results {
+			result := &results[i]
 			if i > 0 {
 				log.Info("---")
 				log.Info("")
@@ -167,7 +168,8 @@ func ReleaseThis() int {
 			// Collect modules that were actually modified (not already pending)
 			var modifiedModules []string
 			var changelogPaths []string
-			for _, r := range results {
+			for i := range results {
+				r := &results[i]
 				if r.Success && !r.AlreadyPending {
 					modifiedModules = append(modifiedModules, r.Module)
 					changelogPaths = append(changelogPaths, r.ChangelogPath)
@@ -181,7 +183,8 @@ func ReleaseThis() int {
 				if len(modifiedModules) == 1 {
 					// Find the version for this module
 					var version string
-					for _, r := range results {
+					for i := range results {
+						r := &results[i]
 						if r.Module == modifiedModules[0] {
 							version = r.NewVersion
 							break
@@ -198,7 +201,8 @@ func ReleaseThis() int {
 	}
 
 	// Return failure if any module failed
-	for _, result := range results {
+	for i := range results {
+		result := &results[i]
 		if !result.Success {
 			return 1
 		}
@@ -329,7 +333,8 @@ func performRelease(module string, dryRun bool, overrideDate string) ReleaseResu
 	// Filter commits by module file patterns
 	modulePatterns := moduleContract.GetGlobPatterns()
 	var filteredCommits []*changelog.Commit
-	for _, c := range commits {
+	for i := range commits {
+		c := &commits[i]
 		parsed := changelog.ParseCommitMessage(c.Message)
 		parsed.SHA = c.ShortSHA
 		parsed.Date = c.Date
@@ -365,7 +370,8 @@ func performRelease(module string, dryRun bool, overrideDate string) ReleaseResu
 
 	// Get existing version numbers for calver collision detection
 	var existingVersions []string
-	for _, v := range existingChangelog.Versions {
+	for i := range existingChangelog.Versions {
+		v := &existingChangelog.Versions[i]
 		existingVersions = append(existingVersions, v.Number)
 	}
 

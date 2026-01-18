@@ -33,10 +33,6 @@ type Handler interface {
 	// Paths are relative to the module's output directory.
 	ListArtifacts(module *modules.ModuleContract, workspaceRoot string) []string
 
-	// Capabilities returns module capabilities this handler supports.
-	// Used for dispatch matching (e.g., ["go_module", "cross_compile"]).
-	Capabilities() []string
-
 	// Requirements returns system dependencies required by this handler.
 	// Used for early validation (e.g., ["go", "docker"]).
 	Requirements() []string
@@ -79,77 +75,105 @@ func GetAllHandlers() map[string]Handler {
 	return result
 }
 
-// GetHandlerForModule returns the appropriate handler for a module.
-// It first checks for a per-module handler override, then checks if module
-// has books (which routes to mkdocs handler), then finds a handler
-// whose capabilities match the module's capabilities from module-types.yml.
-func GetHandlerForModule(module *modules.ModuleContract, moduleType string) Handler {
+// PackageHandler pairs a package name with its build handler.
+type PackageHandler struct {
+	Package string
+	Handler Handler
+}
+
+// GetHandlersForModule returns all handlers for a module's buildable packages.
+// Returns a slice of PackageHandler pairs, one for each package that has a builder.
+// Handler selection follows this priority:
+//  1. Module-level handler override (build.handler in module config) - applies to primary package only
+//  2. Package-type builders (from package-types.yml for each enabled package)
+//
+// Returns empty slice if module has no buildable packages.
+func GetHandlersForModule(module *modules.ModuleContract) []PackageHandler {
 	mu.RLock()
 	defer mu.RUnlock()
 
-	// Check for per-module handler override first
-	if module != nil && module.GetBuildHandler() != "" {
-		handlerName := module.GetBuildHandler()
-		if h, ok := handlers[handlerName]; ok {
-			return h
-		}
-	}
-
-	// Get module capabilities from config
-	cfg := config.Global()
-	if cfg == nil || cfg.ModuleTypes == nil {
-		if h, ok := handlers[""]; ok {
-			return h
-		}
+	if module == nil {
 		return nil
 	}
 
-	// Check if module has books - route to mkdocs handler
-	// This allows any module type to build documentation by adding books
-	if module != nil && len(module.Books) > 0 {
-		if h, ok := handlers["mkdocs"]; ok {
-			return h
+	var result []PackageHandler
+
+	// Priority 1: Check for per-module handler override (applies to primary package)
+	if module.GetBuildHandler() != "" {
+		handlerName := module.GetBuildHandler()
+		if h, ok := handlers[handlerName]; ok {
+			log.Debugf("Using per-module handler override: %s -> %s", module.Moniker, handlerName)
+			result = append(result, PackageHandler{
+				Package: "override",
+				Handler: h,
+			})
+			return result // Override takes precedence, skip package-based handlers
 		}
+		log.Warnf("Module %s specifies unknown handler %q, falling back to package-based selection",
+			module.Moniker, handlerName)
 	}
 
-	moduleCapabilities := cfg.ModuleTypes.GetCapabilities(moduleType)
-
-	// Find handler whose capabilities match module capabilities
-	for _, h := range handlers {
-		if h.Name() == "" {
-			continue // Skip no-op handler for now
-		}
-		handlerCaps := h.Capabilities()
-		if matchesCapabilities(moduleCapabilities, handlerCaps) {
-			return h
-		}
+	cfg := config.Global()
+	if cfg == nil || cfg.ComponentTypes == nil {
+		return nil
 	}
 
-	// Fallback: no-op handler (for types with no matching capabilities)
-	if h, ok := handlers[""]; ok {
-		return h
-	}
+	// Priority 2: Find builders from all component types
+	// Track which builder names we've already added to avoid duplicates
+	seenBuilders := make(map[string]bool)
 
-	return nil
-}
-
-// matchesCapabilities returns true if the module has any capability the handler supports.
-func matchesCapabilities(moduleCapabilities, handlerCapabilities []string) bool {
-	for _, mc := range moduleCapabilities {
-		for _, hc := range handlerCapabilities {
-			if mc == hc {
-				return true
+	for _, compName := range module.GetEnabledComponents() {
+		// Get the component type (may differ from name for named components)
+		compTypeName := module.Components.GetComponentType(compName)
+		compType := cfg.ComponentTypes.Get(compTypeName)
+		if compType != nil && compType.HasBuilder() {
+			builderName := compType.Builder
+			// Skip if we've already added this builder (e.g., typescript and javascript both use npm)
+			if seenBuilders[builderName] {
+				continue
+			}
+			if h, ok := handlers[builderName]; ok {
+				log.Debugf("Adding component-based handler: %s (component: %s, type: %s) -> %s",
+					module.Moniker, compName, compTypeName, builderName)
+				result = append(result, PackageHandler{
+					Package: compName,
+					Handler: h,
+				})
+				seenBuilders[builderName] = true
 			}
 		}
 	}
-	return false
+
+	if len(result) == 0 {
+		log.Debugf("No build handlers for module %s (no buildable packages)", module.Moniker)
+	}
+
+	return result
 }
 
-// IsGoModuleType returns true if the module type uses Go tooling (has go_module capability).
-func IsGoModuleType(moduleType string) bool {
-	cfg := config.Global()
-	if cfg != nil && cfg.ModuleTypes != nil {
-		return cfg.ModuleTypes.HasCapability(moduleType, "go_module")
+// GetHandlerForModule returns the primary handler for a module.
+// This is a convenience function that returns the first handler from GetHandlersForModule.
+// Use GetHandlersForModule to get all handlers for multi-package modules.
+//
+// Handler selection follows this priority:
+//  1. Module-level handler override (build.handler in module config)
+//  2. Package-type builder (from package-types.yml based on first buildable package)
+//  3. No-op handler (module has no buildable packages)
+//
+// The moduleType parameter is deprecated and ignored.
+func GetHandlerForModule(module *modules.ModuleContract, moduleType string) Handler {
+	pkgHandlers := GetHandlersForModule(module)
+	if len(pkgHandlers) == 0 {
+		mu.RLock()
+		defer mu.RUnlock()
+		return handlers[""] // no-op handler
 	}
-	return false
+	return pkgHandlers[0].Handler
+}
+
+// GetHandlerByBuilder returns the handler for a specific builder name.
+func GetHandlerByBuilder(builderName string) Handler {
+	mu.RLock()
+	defer mu.RUnlock()
+	return handlers[builderName]
 }

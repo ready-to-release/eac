@@ -24,7 +24,8 @@ func FormatArtifactTable(
 	tb := render.NewTableBuilder().
 		WithHeaders("Type", "ID", "Pattern", "Resolved", "Path", "Exists", "Override")
 
-	for _, art := range artifacts {
+	for i := range artifacts {
+		art := &artifacts[i]
 		exists := "✗"
 		if art.Exists {
 			exists = "✓"
@@ -106,7 +107,8 @@ func FormatMetadataOverrides(
 	for key, value := range artifactMeta {
 		// Check if this override is actually used
 		status := "not used"
-		for _, art := range artifacts {
+		for i := range artifacts {
+			art := &artifacts[i]
 			if art.MetadataOverride == key {
 				status = "✓ applied"
 				break

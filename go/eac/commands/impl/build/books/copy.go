@@ -21,8 +21,9 @@ func (p *Preprocessor) copyStaticFiles() error {
 		return nil
 	}
 
-	for _, src := range copySources {
-		count, err := p.copySingleSource(src)
+	for i := range copySources {
+		src := &copySources[i]
+		count, err := p.copySingleSource(*src)
 		if err != nil {
 			return err
 		}

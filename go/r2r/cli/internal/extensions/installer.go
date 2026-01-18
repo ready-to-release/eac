@@ -8,12 +8,12 @@ import (
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/logging"
 )
 
-// Installer handles extension installation operations
+// Installer handles extension installation operations.
 type Installer struct {
 	host *docker.ContainerHost
 }
 
-// NewInstaller creates a new extension installer
+// NewInstaller creates a new extension installer.
 func NewInstaller() (*Installer, error) {
 	host, err := docker.NewContainerHost()
 	if err != nil {
@@ -25,7 +25,7 @@ func NewInstaller() (*Installer, error) {
 	}, nil
 }
 
-// Close cleans up the installer resources
+// Close cleans up the installer resources.
 func (i *Installer) Close() error {
 	if i.host != nil {
 		return i.host.Close()
@@ -34,7 +34,7 @@ func (i *Installer) Close() error {
 }
 
 // EnsureExtensionImage ensures an extension's Docker image is available locally
-// It returns true if the image was actually updated, false if it was already up-to-date
+// It returns true if the image was actually updated, false if it was already up-to-date.
 func (i *Installer) EnsureExtensionImage(extensionName string) (bool, error) {
 	// Find extension configuration
 	extConfig, err := i.host.FindExtension(extensionName)
@@ -43,7 +43,7 @@ func (i *Installer) EnsureExtensionImage(extensionName string) (bool, error) {
 	}
 
 	// Check if image exists before pulling
-	beforePull, _ := i.host.InspectImage(extConfig.Image)
+	beforePull, _ := i.host.InspectImage(extConfig.Image) //nolint:errcheck // nil is handled below
 	imageExistedBefore := beforePull != nil
 	var beforeID string
 	var beforeDigest string
@@ -61,7 +61,7 @@ func (i *Installer) EnsureExtensionImage(extensionName string) (bool, error) {
 	}
 
 	// Check if image was actually updated
-	afterPull, _ := i.host.InspectImage(extConfig.Image)
+	afterPull, _ := i.host.InspectImage(extConfig.Image) //nolint:errcheck // nil is handled below
 	imageExistsAfter := afterPull != nil
 
 	// Image was updated if:
@@ -84,7 +84,7 @@ func (i *Installer) EnsureExtensionImage(extensionName string) (bool, error) {
 	return wasUpdated, nil
 }
 
-// InstallExtension installs a single extension by name
+// InstallExtension installs a single extension by name.
 func (i *Installer) InstallExtension(ext conf.Extension) error {
 	logging.Debugf("Installing extension: extension=%s", ext.Name)
 
@@ -102,7 +102,7 @@ func (i *Installer) InstallExtension(ext conf.Extension) error {
 	return nil
 }
 
-// InstallAllExtensions installs all configured extensions
+// InstallAllExtensions installs all configured extensions.
 func (i *Installer) InstallAllExtensions() error {
 	// Validate extensions exist
 	if err := i.host.ValidateExtensions(); err != nil {
@@ -130,7 +130,7 @@ func (i *Installer) InstallAllExtensions() error {
 	return nil
 }
 
-// GetContainerHost returns the underlying container host for advanced operations
+// GetContainerHost returns the underlying container host for advanced operations.
 func (i *Installer) GetContainerHost() *docker.ContainerHost {
 	return i.host
 }

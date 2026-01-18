@@ -318,9 +318,11 @@ func findLastChangedCommit(mod *modules.ModuleContract, workspaceRoot string) (s
 	// Get file patterns for this module
 	patterns := mod.GetGlobPatterns()
 	if len(patterns) == 0 {
-		// Fallback to root directory
-		if mod.Files.Root != "" && mod.Files.Root != "/" {
-			patterns = []string{mod.Files.Root + "/**"}
+		// Fallback to package roots
+		for _, root := range mod.GetComponentRoots() {
+			if root != "" && root != "/" {
+				patterns = append(patterns, root+"/**")
+			}
 		}
 	}
 

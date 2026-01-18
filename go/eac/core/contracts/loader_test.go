@@ -27,13 +27,14 @@ func TestLoader_LoadYAML(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	// Create test YAML file
+	// Create test YAML file with new package-based format
 	testYAML := `
 moniker: "test-module"
 name: "Test Module"
-type: "test-type"
 description: "Test description"
-root: "test/root"
+packages:
+  test-type:
+    root: "test/root"
 `
 	testFile := filepath.Join(tmpDir, "test.yml")
 	if err := ioutil.WriteFile(testFile, []byte(testYAML), 0644); err != nil {
@@ -57,8 +58,8 @@ root: "test/root"
 	if result.Name != "Test Module" {
 		t.Errorf("Expected name 'Test Module', got '%s'", result.Name)
 	}
-	if result.Type != "test-type" {
-		t.Errorf("Expected type 'test-type', got '%s'", result.Type)
+	if result.GetComponentRoot("test-type") != "test/root" {
+		t.Errorf("Expected package root 'test/root', got '%s'", result.GetComponentRoot("test-type"))
 	}
 }
 

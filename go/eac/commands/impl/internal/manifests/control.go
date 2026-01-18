@@ -27,7 +27,8 @@ func BuildControlSummary(manifests []*implinternal.TestManifest) []ControlSummar
 	modulesByControl := make(map[string]map[string]bool)
 
 	for _, manifest := range manifests {
-		for _, test := range manifest.Tests {
+		for i := range manifest.Tests {
+			test := &manifest.Tests[i]
 			// Extract control tags from this test
 			controlTags := ExtractControlTags(test.Tags)
 

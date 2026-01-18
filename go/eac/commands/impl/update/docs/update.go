@@ -180,7 +180,8 @@ func UpdateDocs() int {
 			fmt.Println("All mermaid diagrams are cached. Nothing to render.")
 		} else if dryRun {
 			fmt.Println("\n[DRY RUN] Would render the following mermaid diagrams:")
-			for _, status := range statuses {
+			for i := range statuses {
+				status := &statuses[i]
 				if !status.Cached {
 					relPath, relErr := filepath.Rel(docsDir, status.Block.SourceFile)
 					if relErr != nil {
@@ -210,7 +211,8 @@ func UpdateDocs() int {
 					fmt.Printf("Rendering %d diagram(s)...\n", cacheMisses)
 					failed := 0
 
-					for _, status := range statuses {
+					for i := range statuses {
+						status := &statuses[i]
 						if status.Cached {
 							continue
 						}

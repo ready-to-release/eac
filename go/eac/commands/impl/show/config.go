@@ -61,11 +61,11 @@ func ShowConfig() int {
 		summaryTb.AddRow("modules", "✗ not loaded", "-")
 	}
 
-	// Module Types
-	if cfg.ModuleTypes != nil {
-		summaryTb.AddRow("module_types", "✓ loaded", len(cfg.ModuleTypes.Types))
+	// Package Types
+	if cfg.ComponentTypes != nil {
+		summaryTb.AddRow("package_types", "✓ loaded", len(cfg.ComponentTypes.ComponentTypes))
 	} else {
-		summaryTb.AddRow("module_types", "✗ not loaded", "-")
+		summaryTb.AddRow("package_types", "✗ not loaded", "-")
 	}
 
 	// Environments
@@ -119,28 +119,33 @@ func ShowConfig() int {
 		modTb := render.NewTableBuilder().
 			WithHeaders("Moniker", "Type", "Root")
 		for _, mod := range cfg.Repository.Modules {
-			modTb.AddRow(mod.Moniker, mod.Type, mod.Files.Root)
+			// Get first package root for display
+			var displayRoot string
+			for _, pkgName := range mod.GetEnabledComponents() {
+				root := mod.Components.GetComponentRoot(pkgName)
+				if root != "" {
+					displayRoot = root
+					break
+				}
+			}
+			modTb.AddRow(mod.Moniker, mod.GetComponentTypesDisplay(), displayRoot)
 		}
 		fmt.Println(modTb.Build())
 		fmt.Println("")
 	}
 
-	// Module Types
-	if cfg.ModuleTypes != nil && len(cfg.ModuleTypes.Types) > 0 {
-		fmt.Println("## Module Types")
+	// Package Types
+	if cfg.ComponentTypes != nil && len(cfg.ComponentTypes.ComponentTypes) > 0 {
+		fmt.Println("## Package Types")
 		fmt.Println("")
 		typeTb := render.NewTableBuilder().
-			WithHeaders("Type", "Build Deps", "Capabilities")
-		for _, t := range cfg.ModuleTypes.Types {
-			deps := "-"
-			if len(t.BuildDeps) > 0 {
-				deps = fmt.Sprintf("%v", t.BuildDeps)
+			WithHeaders("Type", "Requirements")
+		for name, t := range cfg.ComponentTypes.ComponentTypes {
+			reqs := "-"
+			if len(t.Requirements) > 0 {
+				reqs = fmt.Sprintf("%v", t.Requirements)
 			}
-			caps := "-"
-			if len(t.Capabilities) > 0 {
-				caps = fmt.Sprintf("%v", t.Capabilities)
-			}
-			typeTb.AddRow(t.Name, deps, caps)
+			typeTb.AddRow(name, reqs)
 		}
 		fmt.Println(typeTb.Build())
 		fmt.Println("")

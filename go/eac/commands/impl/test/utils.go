@@ -119,7 +119,8 @@ func filterByOSCompatibility(tests []testing.TestReference, _ io.Writer) []testi
 	currentOS := mapGOOSToDepTag(runtime.GOOS)
 	compatible := []testing.TestReference{}
 
-	for _, test := range tests {
+	for i := range tests {
+		test := &tests[i]
 		// Check if test has any OS-specific dependencies
 		hasOSDep := false
 		matchesCurrentOS := false
@@ -138,7 +139,7 @@ func filterByOSCompatibility(tests []testing.TestReference, _ io.Writer) []testi
 		// 1. It has no OS-specific deps (runs on any OS), OR
 		// 2. It has an OS dep that matches the current OS
 		if !hasOSDep || matchesCurrentOS {
-			compatible = append(compatible, test)
+			compatible = append(compatible, *test)
 		}
 	}
 
@@ -231,8 +232,8 @@ func getPackageTestType(tests []testing.TestReference) string {
 	}
 
 	firstType := tests[0].Type
-	for _, test := range tests[1:] {
-		if test.Type != firstType {
+	for i := 1; i < len(tests); i++ {
+		if tests[i].Type != firstType {
 			return "" // Mixed types, use default
 		}
 	}

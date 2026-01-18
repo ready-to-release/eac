@@ -31,9 +31,13 @@ func NewMapper(registry *modules.Registry, baseModulePath string) *Mapper {
 // buildMappings builds bidirectional lookup maps between module paths and monikers.
 func (m *Mapper) buildMappings() {
 	for _, module := range m.registry.All() {
-		// Build expected module path from files root
-		// Example: files.root = "go/r2r/cli" -> module path = "github.com/ready-to-release/eac/go/r2r/cli"
-		modulePath := m.baseModulePath + "/" + module.Files.Root
+		// Build expected module path from go package root
+		// Example: go package root = "go/r2r/cli" -> module path = "github.com/ready-to-release/eac/go/r2r/cli"
+		goRoot := module.GetComponentRoot("go")
+		if goRoot == "" {
+			continue // Skip modules without go package
+		}
+		modulePath := m.baseModulePath + "/" + goRoot
 
 		// Store mappings
 		m.pathToMoniker[modulePath] = module.Moniker
@@ -51,19 +55,20 @@ func (m *Mapper) GetMonikerFromPath(modulePath string) (string, error) {
 	// Try to find by extracting relative path
 	relPath := strings.TrimPrefix(modulePath, m.baseModulePath+"/")
 
-	// Look for module with matching files root (exact match first)
+	// Look for module with matching go package root (exact match first)
 	for _, module := range m.registry.All() {
-		if module.Files.Root == relPath {
+		goRoot := module.GetComponentRoot("go")
+		if goRoot == relPath {
 			return module.Moniker, nil
 		}
 	}
 
-	// Check if path is under a module's files root (for nested go.mod files)
+	// Check if path is under a module's go package root (for nested go.mod files)
 	var bestMatch *modules.ModuleContract
 	bestMatchLen := 0
 
 	for _, module := range m.registry.All() {
-		root := module.Files.Root
+		root := module.GetComponentRoot("go")
 		if root == "" || root == "." {
 			continue
 		}
@@ -95,7 +100,12 @@ func (m *Mapper) GetPathFromMoniker(moniker string) (string, error) {
 		return "", fmt.Errorf("module not found: %s", moniker)
 	}
 
-	return m.baseModulePath + "/" + module.Files.Root, nil
+	goRoot := module.GetComponentRoot("go")
+	if goRoot == "" {
+		return "", fmt.Errorf("module %s has no go package", moniker)
+	}
+
+	return m.baseModulePath + "/" + goRoot, nil
 }
 
 // GetMonikerFromModuleDir converts a module directory to a moniker
@@ -105,20 +115,21 @@ func (m *Mapper) GetMonikerFromModuleDir(moduleDir string) (string, error) {
 	// Normalize path separators
 	normalizedDir := strings.ReplaceAll(moduleDir, "\\", "/")
 
-	// First, look for exact match on files root
+	// First, look for exact match on go package root
 	for _, module := range m.registry.All() {
-		if module.Files.Root == normalizedDir {
+		goRoot := module.GetComponentRoot("go")
+		if goRoot == normalizedDir {
 			return module.Moniker, nil
 		}
 	}
 
-	// Check if directory is under a module's files root (for nested go.mod files)
+	// Check if directory is under a module's go package root (for nested go.mod files)
 	// Find the most specific (deepest) matching module
 	var bestMatch *modules.ModuleContract
 	bestMatchLen := 0
 
 	for _, module := range m.registry.All() {
-		root := module.Files.Root
+		root := module.GetComponentRoot("go")
 		if root == "" || root == "." {
 			continue
 		}

@@ -83,7 +83,8 @@ func processeCucumberReport(path, testRunDir string, moduleMap map[string]*Modul
 	}
 
 	// Process each feature in the report
-	for _, feature := range report {
+	for i := range report {
+		feature := &report[i]
 		moduleName := feature.GetModule()
 		if moduleName == "" {
 			// Try to extract module from the file path
@@ -111,7 +112,8 @@ func processeCucumberReport(path, testRunDir string, moduleMap map[string]*Modul
 		// Count scenarios and their status
 		testCount := len(feature.Elements)
 		passedCount := 0
-		for _, scenario := range feature.Elements {
+		for j := range feature.Elements {
+			scenario := &feature.Elements[j]
 			if scenario.GetStatus() == "passed" {
 				passedCount++
 			}

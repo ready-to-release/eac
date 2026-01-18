@@ -92,7 +92,7 @@ func ProcessArtifactDerivations(
 // extractPlatformFromID extracts OS and architecture from an artifact ID.
 // Expected formats: "{os}-{arch}" or "{os}-{arch}-upx"
 // Examples: "linux-amd64" -> ("linux", "amd64"), "linux-amd64-upx" -> ("linux", "amd64").
-func extractPlatformFromID(id string) (os, arch string) {
+func extractPlatformFromID(id string) (osName, arch string) {
 	// Known OS values
 	knownOS := []string{"linux", "darwin", "windows"}
 

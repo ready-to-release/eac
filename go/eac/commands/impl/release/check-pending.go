@@ -278,7 +278,7 @@ func checkCalverWithCI(moduleRegistry *modules.Registry, dispatched map[string]b
 		if mod.Versioning == nil || !strings.EqualFold(mod.Versioning.Scheme, "calver") {
 			continue
 		}
-		if mod.Files.Workflows.CI == "" {
+		if mod.GetCIWorkflowPath() == "" {
 			continue
 		}
 
@@ -312,10 +312,10 @@ func checkCalverBundles(moduleRegistry *modules.Registry, dispatched map[string]
 		if mod.Versioning == nil || !strings.EqualFold(mod.Versioning.Scheme, "calver") {
 			continue
 		}
-		if mod.Files.Workflows.CI != "" {
+		if mod.GetCIWorkflowPath() != "" {
 			continue // Has CI, not a bundle
 		}
-		if mod.Files.Workflows.Release == "" {
+		if mod.GetReleaseWorkflowPath() == "" {
 			continue // No release workflow
 		}
 

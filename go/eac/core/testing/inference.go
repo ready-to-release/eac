@@ -216,11 +216,9 @@ func InferSystemDepsFromModuleDeps(tests []TestReference, registry *modules.Regi
 				continue // Module not found, skip
 			}
 
-			// Check module type and infer system dependencies
-			moduleType := module.Type
-
-			// If module type starts with "go-", infer @deps:go
-			if strings.HasPrefix(moduleType, "go-") {
+			// Infer system dependencies from module's package types
+			// Modules with go package -> @deps:go
+			if module.HasComponent("go") {
 				depTag := "@deps:go"
 				if !contains(enriched[i].Tags, depTag) {
 					enriched[i].Tags = append(enriched[i].Tags, depTag)
@@ -228,8 +226,8 @@ func InferSystemDepsFromModuleDeps(tests []TestReference, registry *modules.Regi
 				}
 			}
 
-			// npm-* modules -> @deps:npm
-			if strings.HasPrefix(moduleType, "npm-") {
+			// Modules with typescript/npm packages -> @deps:npm
+			if module.HasComponent("typescript") || module.HasComponent("npm") {
 				depTag := "@deps:npm"
 				if !contains(enriched[i].Tags, depTag) {
 					enriched[i].Tags = append(enriched[i].Tags, depTag)

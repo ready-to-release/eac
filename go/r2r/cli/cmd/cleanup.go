@@ -149,8 +149,8 @@ func cleanExtensionImages() {
 				cmd := exec.Command("docker", "rmi", imageRef)
 				if err := cmd.Run(); err != nil {
 					// Try removing by ID if tag removal fails
-					cmd = exec.Command("docker", "rmi", img.id)
-					cmd.Run() // Best effort
+					cmd = exec.Command("docker", "rmi", img.id) //nolint:gosec // G204: img.id is from docker inspect output, not user input
+					_ = cmd.Run()                               //nolint:errcheck // best effort removal
 				}
 			}
 		}

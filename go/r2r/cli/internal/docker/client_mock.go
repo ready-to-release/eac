@@ -1,3 +1,4 @@
+//nolint:errcheck // mock type assertions are intentional - panic on incorrect test setup is expected
 package docker
 
 import (
@@ -13,7 +14,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// MockDockerClient is a mock implementation of DockerClient for testing
+// MockDockerClient is a mock implementation of DockerClient for testing.
 type MockDockerClient struct {
 	mock.Mock
 }
@@ -62,12 +63,12 @@ func (m *MockDockerClient) ContainerStart(ctx context.Context, containerID strin
 	return args.Error(0)
 }
 
-func (m *MockDockerClient) ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error) {
+func (m *MockDockerClient) ContainerInspect(ctx context.Context, containerID string) (container.InspectResponse, error) {
 	args := m.Called(ctx, containerID)
 	if inspect := args.Get(0); inspect != nil {
-		return inspect.(types.ContainerJSON), args.Error(1)
+		return inspect.(container.InspectResponse), args.Error(1)
 	}
-	return types.ContainerJSON{}, args.Error(1)
+	return container.InspectResponse{}, args.Error(1)
 }
 
 func (m *MockDockerClient) ContainerResize(ctx context.Context, containerID string, options container.ResizeOptions) error {
@@ -98,10 +99,10 @@ func (m *MockDockerClient) ContainerRemove(ctx context.Context, containerID stri
 	return args.Error(0)
 }
 
-func (m *MockDockerClient) ContainerList(ctx context.Context, options container.ListOptions) ([]types.Container, error) {
+func (m *MockDockerClient) ContainerList(ctx context.Context, options container.ListOptions) ([]container.Summary, error) {
 	args := m.Called(ctx, options)
 	if containers := args.Get(0); containers != nil {
-		return containers.([]types.Container), args.Error(1)
+		return containers.([]container.Summary), args.Error(1)
 	}
 	return nil, args.Error(1)
 }
@@ -111,5 +112,5 @@ func (m *MockDockerClient) Close() error {
 	return args.Error(0)
 }
 
-// Ensure MockDockerClient implements DockerClient
+// Ensure MockDockerClient implements DockerClient.
 var _ DockerClient = (*MockDockerClient)(nil)

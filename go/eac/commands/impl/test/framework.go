@@ -175,7 +175,8 @@ func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 
 	var selectedTests []testing.TestReference
 	var unmappedTests []string
-	for _, test := range allTests {
+	for i := range allTests {
+		test := &allTests[i]
 		// Check for @skip tags
 		isSkipped := false
 		for _, tag := range test.Tags {
@@ -195,7 +196,7 @@ func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 		}
 
 		// Check if test matches suite
-		if !suite.Matches(test) {
+		if !suite.Matches(*test) {
 			stats.NotMatchingSuite++
 			continue
 		}
@@ -213,7 +214,7 @@ func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 			continue
 		}
 
-		selectedTests = append(selectedTests, test)
+		selectedTests = append(selectedTests, *test)
 	}
 
 	// Fail fast if tests couldn't be mapped to modules
@@ -258,7 +259,8 @@ func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 	// Handle list-only mode
 	if testCfg.ListOnly {
 		ctx.WriteInit("=== Selected Tests ===")
-		for i, test := range selectedTests {
+		for i := range selectedTests {
+			test := &selectedTests[i]
 			ctx.WriteInit("%d. %s (%s)", i+1, test.TestName, test.Type)
 			ctx.WriteInit("   File: %s", test.FilePath)
 			ctx.WriteInit("   Tags: %s", strings.Join(test.Tags, ", "))
@@ -306,7 +308,8 @@ func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 
 	for modulePath, tests := range testsByModulePath {
 		hasSequential := false
-		for _, test := range tests {
+		for i := range tests {
+			test := &tests[i]
 			if test.IsSequential {
 				hasSequential = true
 				break
@@ -614,18 +617,25 @@ func convertPkgPathToModulePath(pkgPath, workspaceRoot string, cfg *config.EACCo
 		// BDD format: featureName:moduleRoot:featurePath
 		featureName := colonParts[0]
 		moduleRoot := colonParts[1]
-		// Find the module moniker for this root - check both Files.Root and Files.Repo.TestImpl
-		for _, module := range cfg.Repository.Modules {
-			// Check Files.Root (for modules where tests live in the module root)
-			moduleRootPath := filepath.ToSlash(module.Files.Root)
-			if moduleRoot == moduleRootPath || strings.HasPrefix(moduleRoot, moduleRootPath+"/") {
-				return module.Moniker + "/" + featureName
+		// Find the module moniker for this root - check all package roots and test-impl package
+		for i := range cfg.Repository.Modules {
+			module := &cfg.Repository.Modules[i]
+			// Check all package roots
+			for _, entry := range module.Components {
+				if entry == nil || entry.Root == "" {
+					continue
+				}
+				pkgRootPath := filepath.ToSlash(entry.Root)
+				if moduleRoot == pkgRootPath || strings.HasPrefix(moduleRoot, pkgRootPath+"/") {
+					return module.Moniker + "/" + featureName
+				}
 			}
-			// Check Files.Repo.TestImpl (for modules like "repository" where test_impl is separate)
-			// Use HasPrefix to match subdirectories of test_impl (e.g., go/eac/specs/impl/eac-core/config-defaults)
-			testImplPath := filepath.ToSlash(module.Files.Repo.TestImpl)
-			if testImplPath != "" && (moduleRoot == testImplPath || strings.HasPrefix(moduleRoot, testImplPath+"/")) {
-				return module.Moniker + "/" + featureName
+			// Check test-impl package if it exists
+			if testImplEntry, ok := module.Components["test-impl"]; ok && testImplEntry != nil {
+				testImplPath := filepath.ToSlash(testImplEntry.Root)
+				if testImplPath != "" && (moduleRoot == testImplPath || strings.HasPrefix(moduleRoot, testImplPath+"/")) {
+					return module.Moniker + "/" + featureName
+				}
 			}
 		}
 		// Module not found - use sanitized path
@@ -638,16 +648,22 @@ func convertPkgPathToModulePath(pkgPath, workspaceRoot string, cfg *config.EACCo
 		return pkgPath
 	}
 
-	// Check if first part matches a module root
-	for _, module := range cfg.Repository.Modules {
-		moduleRoot := filepath.ToSlash(module.Files.Root)
-		if strings.HasPrefix(pkgPath, moduleRoot+"/") || pkgPath == moduleRoot {
-			subPath := strings.TrimPrefix(pkgPath, moduleRoot)
-			subPath = strings.TrimPrefix(subPath, "/")
-			if subPath == "" {
-				return module.Moniker
+	// Check if path matches any module's package root
+	for i := range cfg.Repository.Modules {
+		module := &cfg.Repository.Modules[i]
+		for _, entry := range module.Components {
+			if entry == nil || entry.Root == "" {
+				continue
 			}
-			return module.Moniker + "/" + subPath
+			moduleRoot := filepath.ToSlash(entry.Root)
+			if strings.HasPrefix(pkgPath, moduleRoot+"/") || pkgPath == moduleRoot {
+				subPath := strings.TrimPrefix(pkgPath, moduleRoot)
+				subPath = strings.TrimPrefix(subPath, "/")
+				if subPath == "" {
+					return module.Moniker
+				}
+				return module.Moniker + "/" + subPath
+			}
 		}
 	}
 

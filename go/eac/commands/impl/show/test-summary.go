@@ -49,7 +49,7 @@ func ShowTestSummary() int {
 	// Filter out flags to get positional args
 	var positionalArgs []string
 	for _, arg := range args {
-		if len(arg) > 0 && arg[0] != '-' {
+		if arg != "" && arg[0] != '-' {
 			positionalArgs = append(positionalArgs, arg)
 		}
 	}
@@ -633,14 +633,14 @@ func testConfigSection(f *SummaryFormatter, module *config.Module, suite string,
 	// Suite info
 	configDetails += fmt.Sprintf("- %s: %s\n", Bold("Suite"), suite)
 
-	// Test framework (from module type)
-	if cfg.ModuleTypes != nil {
-		testFramework := cfg.ModuleTypes.GetTestFramework(module.Type)
-		if testFramework == "" {
-			testFramework = "default"
-		}
-		configDetails += fmt.Sprintf("- %s: %s\n", Bold("Framework"), testFramework)
+	// Test framework - derive from enabled packages
+	testFramework := "default"
+	if module.Components.HasComponent("go") {
+		testFramework = "go test"
+	} else if module.Components.HasComponent("node") {
+		testFramework = "mocha"
 	}
+	configDetails += fmt.Sprintf("- %s: %s\n", Bold("Framework"), testFramework)
 
 	// Output directory
 	configDetails += fmt.Sprintf("- %s: %s\n", Bold("Output"), Code(cfg.Repository.TestModuleDir(module.Moniker)))

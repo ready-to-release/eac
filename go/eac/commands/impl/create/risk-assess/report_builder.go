@@ -133,7 +133,8 @@ func extractEvidenceFormatted(result *ModuleAssessmentResult) (testEvidence, sec
 		return testEvidence, secEvidence
 	}
 
-	for _, obs := range *moduleResult.Observations {
+	for i := range *moduleResult.Observations {
+		obs := &(*moduleResult.Observations)[i]
 		if obs.Title == "Test Results" && obs.Props != nil {
 			var totalTests, passedTests, failedTests string
 			for _, prop := range *obs.Props {
@@ -209,7 +210,8 @@ func extractControlsAndFindings(result *ModuleAssessmentResult) (satisfied, notS
 		return satisfied, notSatisfied, findings
 	}
 
-	for _, finding := range *moduleResult.Findings {
+	for i := range *moduleResult.Findings {
+		finding := &(*moduleResult.Findings)[i]
 		controlID := finding.Target.TargetId
 		if finding.Target.Status.State == oscal.StateSatisfied {
 			satisfied = append(satisfied, controlID)

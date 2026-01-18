@@ -45,33 +45,6 @@ func createTestRepo(t *testing.T, modulesContent string) string {
 	return tmpDir
 }
 
-// TestModuleDefaults_Type tests that type defaults to "no-module-type" when not specified
-func TestModuleDefaults_Type(t *testing.T) {
-	content := `
-modules:
-  - moniker: test-module
-    name: Test Module
-    files:
-      root: src/test
-`
-	repoRoot := createTestRepo(t, content)
-
-	registry, err := loadTestModules(repoRoot)
-	if err != nil {
-		t.Fatalf("failed to load modules: %v", err)
-	}
-
-	module, found := registry.Get("test-module")
-	if !found {
-		t.Fatal("module not found")
-	}
-
-	expected := "no-module-type"
-	if module.Type != expected {
-		t.Errorf("Type default: expected %q, got %q", expected, module.Type)
-	}
-}
-
 // TestModuleDefaults_Description tests that description defaults to name when not specified
 func TestModuleDefaults_Description(t *testing.T) {
 	content := `
@@ -413,7 +386,6 @@ modules:
 	}{
 		{"Moniker", module.Moniker, "minimal-module"},
 		{"Name", module.Name, "Minimal Module"},
-		{"Type", module.Type, "no-module-type"},
 		{"Description", module.Description, "Minimal Module"},
 		{"Files.Root", module.Files.Root, "src/minimal"},
 		{"Files.Changelog", module.Files.Changelog, "CHANGELOG.md"},
@@ -534,10 +506,6 @@ modules:
 		t.Fatal("module not found")
 	}
 
-	// Omitted type should get default
-	if module.Type != "no-module-type" {
-		t.Errorf("Type should default when omitted, got %q", module.Type)
-	}
 	// Empty description should default to name
 	if module.Description != "Omitted Fields Module" {
 		t.Errorf("Description should default to name when empty, got %q", module.Description)

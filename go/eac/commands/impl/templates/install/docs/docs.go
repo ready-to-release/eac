@@ -56,22 +56,22 @@ func TemplatesInstallDocs() int {
 	}
 
 	// Parse configuration
-	config, err := parseConfig()
+	cfg, err := parseConfig()
 	if err != nil {
 		log.Errorf("%v", err)
 		return 1
 	}
 
 	// Configure logging system (logs to out/commands.log)
-	if err := logging.ConfigureLoggingSimple(config.WorkspaceRoot, "commands", nil, config.Debug); err != nil {
+	if err := logging.ConfigureLoggingSimple(cfg.WorkspaceRoot, "commands", nil, cfg.Debug); err != nil {
 		log.Warnf("Failed to configure logging: %v", err)
 	}
 	defer logging.CloseLogging()
 
-	log.Debugf("Starting templates install docs command: destination=%s, debug=%v", config.Destination, config.Debug)
+	log.Debugf("Starting templates install docs command: destination=%s, debug=%v", cfg.Destination, cfg.Debug)
 
 	// Resolve template directory
-	templateDir, cleanup, err := resolveTemplateDirectory(config)
+	templateDir, cleanup, err := resolveTemplateDirectory(cfg)
 	if err != nil {
 		log.Debugf("Failed to resolve template directory: error=%v", err)
 		log.Errorf("%v", err)
@@ -80,20 +80,20 @@ func TemplatesInstallDocs() int {
 	defer cleanup()
 
 	// Install templates (copy without value replacement)
-	if err := installTemplates(config, templateDir); err != nil {
+	if err := installTemplates(cfg, templateDir); err != nil {
 		log.Debugf("Failed to install templates: error=%v", err)
 		log.Errorf("%v", err)
 		return 1
 	}
 
-	log.Debugf("Documentation templates installed successfully: destination=%s", config.Destination)
-	log.Infof("✓ Documentation templates installed successfully to %s", config.Destination)
+	log.Debugf("Documentation templates installed successfully: destination=%s", cfg.Destination)
+	log.Infof("✓ Documentation templates installed successfully to %s", cfg.Destination)
 
 	return 0
 }
 
 // resolveTemplateDirectory determines the template directory (always local).
-func resolveTemplateDirectory(config *Config) (string, func(), error) {
+func resolveTemplateDirectory(cfg *Config) (string, func(), error) {
 	// Always use local templates from appropriate root
 	var root string
 	if containerRoot := repository.GetContainerRoot(); containerRoot != "" {
@@ -102,7 +102,7 @@ func resolveTemplateDirectory(config *Config) (string, func(), error) {
 		log.Debugf("Running in container, using local templates: containerRoot=%s", containerRoot)
 	} else {
 		// Not in container - use workspace root
-		root = config.WorkspaceRoot
+		root = cfg.WorkspaceRoot
 		log.Debugf("Using local templates from repository: workspaceRoot=%s", root)
 	}
 
@@ -120,12 +120,12 @@ func resolveTemplateDirectory(config *Config) (string, func(), error) {
 }
 
 // installTemplates copies templates to destination.
-func installTemplates(config *Config, templateDir string) error {
-	log.Debugf("Installing templates: source=%s, destination=%s", templateDir, config.Destination)
-	log.Infof("Installing templates to %s...", config.Destination)
+func installTemplates(cfg *Config, templateDir string) error {
+	log.Debugf("Installing templates: source=%s, destination=%s", templateDir, cfg.Destination)
+	log.Infof("Installing templates to %s...", cfg.Destination)
 
 	// Create renderer with no values (will just copy files)
-	renderer := internal.NewRenderer(templateDir, config.Destination, nil)
+	renderer := internal.NewRenderer(templateDir, cfg.Destination, nil)
 	if err := renderer.RenderTemplates(); err != nil {
 		return fmt.Errorf("failed to install templates: %w", err)
 	}
@@ -133,10 +133,10 @@ func installTemplates(config *Config, templateDir string) error {
 	log.Debugf("Templates installed successfully")
 
 	// Save debug info if enabled
-	if config.Debug {
-		writeDebugFile(config, "install-summary.txt", fmt.Sprintf(
+	if cfg.Debug {
+		writeDebugFile(cfg, "install-summary.txt", fmt.Sprintf(
 			"Template source: %s\nDestination: %s\nMode: copy (no value replacement)\nSuccess: true\n",
-			templateDir, config.Destination))
+			templateDir, cfg.Destination))
 	}
 
 	return nil
@@ -199,11 +199,11 @@ func parseConfig() (*Config, error) {
 		destination = filepath.Join(workspaceRoot, destination)
 	}
 
-	config := &Config{
+	cfg := &Config{
 		Destination:   destination,
 		WorkspaceRoot: workspaceRoot,
 		Debug:         debug,
 	}
 
-	return config, nil
+	return cfg, nil
 }

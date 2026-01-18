@@ -93,10 +93,10 @@ func extractControlIDsFromTag(tag string) []string {
 	var controlIDs []string
 
 	// Pattern for single control: @control:ac-2 or @control:ac-2(1)
-	controlTagPattern := regexp.MustCompile(`@control:([a-z]{2,4}-[0-9]+(?:\([0-9]+\))?)`)
+	controlTagPattern := regexp.MustCompile(`@control:([a-z]{2,4}-\d+(?:\(\d+\))?)`)
 
 	// Pattern for multiple controls: @controls:ac-2,au-3 or @controls:ac-2(1),au-3(2)
-	controlsTagPattern := regexp.MustCompile(`@controls:((?:[a-z]{2,4}-[0-9]+(?:\([0-9]+\))?,)*[a-z]{2,4}-[0-9]+(?:\([0-9]+\))?)`)
+	controlsTagPattern := regexp.MustCompile(`@controls:((?:[a-z]{2,4}-\d+(?:\(\d+\))?,)*[a-z]{2,4}-\d+(?:\(\d+\))?)`)
 
 	// Check @control:<id>
 	if matches := controlTagPattern.FindStringSubmatch(tag); len(matches) > 1 {

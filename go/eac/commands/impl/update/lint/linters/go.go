@@ -51,6 +51,8 @@ func (h *GoHandler) Lint(moduleRoot, workspaceRoot, outputDir string, logWriter 
 	// Build golangci-lint arguments
 	args := []string{
 		"run",
+		// Allow parallel execution (we lint different modules in parallel)
+		"--allow-parallel-runners",
 		// Add JSON output to file (v2 syntax)
 		"--output.json.path", jsonOutputPath,
 		// Disable text output to stdout (we only want JSON)

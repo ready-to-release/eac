@@ -32,11 +32,11 @@ func ConvertToEntries(
 			module = extractModuleFromPath(test.FilePath, fileModuleMap, repoRoot)
 		}
 
-		// Look up the owning module's type
+		// Look up the owning module's package types
 		moduleType := ""
 		if module != "" && moduleRegistry != nil {
 			if mod, exists := moduleRegistry.Get(module); exists {
-				moduleType = mod.Type
+				moduleType = mod.GetComponentTypesDisplay()
 			}
 		}
 

@@ -97,18 +97,18 @@ func (c *Config) GetExtensions() []Extension {
 
 var Global Config
 
-// RootDir stores the repository root directory path (set during InitConfig)
+// RootDir stores the repository root directory path (set during InitConfig).
 var RootDir string
 
-// configLoaded tracks whether the configuration has been loaded
+// configLoaded tracks whether the configuration has been loaded.
 var configLoaded bool
 
-// ResetConfigLoaded resets the configLoaded flag (for testing)
+// ResetConfigLoaded resets the configLoaded flag (for testing).
 func ResetConfigLoaded() {
 	configLoaded = false
 }
 
-// ValidationError aggregates multiple validation errors
+// ValidationError aggregates multiple validation errors.
 type ValidationError struct {
 	Errors []string
 }
@@ -125,7 +125,7 @@ func (ve *ValidationError) HasErrors() bool {
 	return len(ve.Errors) > 0
 }
 
-// validateConfig performs comprehensive validation of configuration
+// validateConfig performs comprehensive validation of configuration.
 func LoadConfig(configFile string) error {
 	viper.SetConfigFile(configFile)
 	if err := viper.ReadInConfig(); err != nil {
@@ -149,7 +149,7 @@ func LoadConfig(configFile string) error {
 	return nil
 }
 
-// MergeConfigFile merges an override configuration file into the existing Global config
+// MergeConfigFile merges an override configuration file into the existing Global config.
 func MergeConfigFile(configFile string) error {
 	// Create a new viper instance for the override file
 	overrideViper := viper.New()
@@ -186,8 +186,8 @@ func MergeConfigFile(configFile string) error {
 }
 
 // mergeConfigs merges the override config into the base config
-// Override config values take precedence over base config values
-func mergeConfigs(base *Config, override *Config) {
+// Override config values take precedence over base config values.
+func mergeConfigs(base, override *Config) {
 	// Merge Registry settings
 	if override.Registry != nil {
 		if base.Registry == nil {
@@ -276,8 +276,8 @@ func mergeConfigs(base *Config, override *Config) {
 }
 
 // mergeExtension merges override extension fields into the base extension
-// Only non-empty/non-zero override fields replace base fields
-func mergeExtension(base *Extension, override *Extension) {
+// Only non-empty/non-zero override fields replace base fields.
+func mergeExtension(base, override *Extension) {
 	logging.Debugf("Merging extension details: base_name=%s base_image=%s override_name=%s override_image=%s override_load_local=%v",
 		base.Name, base.Image, override.Name, override.Image, override.LoadLocal)
 
@@ -342,8 +342,8 @@ func mergeExtension(base *Extension, override *Extension) {
 	}
 }
 
-// mergeEnvVars merges environment variables, with override taking precedence
-func mergeEnvVars(base []EnvVar, override []EnvVar) []EnvVar {
+// mergeEnvVars merges environment variables, with override taking precedence.
+func mergeEnvVars(base, override []EnvVar) []EnvVar {
 	envMap := make(map[string]string)
 
 	// Add base environment variables
@@ -365,8 +365,8 @@ func mergeEnvVars(base []EnvVar, override []EnvVar) []EnvVar {
 	return result
 }
 
-// mergeSecretVars merges secret variables, with override taking precedence
-func mergeSecretVars(base []SecretVar, override []SecretVar) []SecretVar {
+// mergeSecretVars merges secret variables, with override taking precedence.
+func mergeSecretVars(base, override []SecretVar) []SecretVar {
 	secretMap := make(map[string]string)
 
 	// Add base secret variables

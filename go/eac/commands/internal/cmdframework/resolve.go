@@ -54,14 +54,14 @@ func phaseResolve(ctx *ExecutionContext) error {
 	}
 	ctx.ExecutionPlan = executionPlan
 
-	// Build module type lookup for all modules in execution plan
+	// Build module package types lookup for all modules in execution plan
 	for _, moniker := range executionPlan.ExecutionOrder {
 		if module, exists := moduleReport.Registry.Get(moniker); exists {
-			ctx.ModuleTypes[moniker] = module.Type
+			ctx.ModuleTypes[moniker] = module.GetComponentTypesDisplay()
 		}
 	}
 
-	// Update orchestrator with module types
+	// Update orchestrator with module package types
 	ctx.Orchestrator.SetModuleTypes(ctx.ModuleTypes)
 
 	log.Debugf("Resolved %d modules, execution order: %v",

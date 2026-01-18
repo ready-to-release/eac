@@ -111,7 +111,13 @@ func Run(cfg *ScanConfig, worker ScanWorkerFunc) int {
 			ScanStart:     time.Now(),
 		}
 
-		ctx.Logger.Info("Scanning module", zap.String("moniker", moniker), zap.String("root", module.Files.Root))
+		// Get first package root for display
+		var displayRoot string
+		for _, root := range module.GetComponentRoots() {
+			displayRoot = root
+			break
+		}
+		ctx.Logger.Info("Scanning module", zap.String("moniker", moniker), zap.String("root", displayRoot))
 		log.Infof("%s Scanning %s...", cfg.ScannerEmoji, moniker)
 
 		findings, err := worker(moduleCtx)
@@ -252,7 +258,7 @@ func GetGitCommit(workspaceRoot string) string {
 func UpdateScanManifest(ctx *ModuleScanContext, status, evidencePath, errorMsg string) {
 	duration := time.Since(ctx.ScanStart)
 
-	mf, err := manifest.LoadOrCreateScanManifest(ctx.ModuleScanDir, ctx.Moniker, ctx.Module.Type, ctx.GitCommit)
+	mf, err := manifest.LoadOrCreateScanManifest(ctx.ModuleScanDir, ctx.Moniker, ctx.Module.GetComponentTypesDisplay(), ctx.GitCommit)
 	if err != nil {
 		ctx.Logger.Warn("Failed to load/create scan manifest", zap.Error(err))
 		return

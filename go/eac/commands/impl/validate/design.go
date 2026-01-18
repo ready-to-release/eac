@@ -276,7 +276,13 @@ func getValidationOutputPath(repoRoot string) (string, error) {
 func formatDesignModuleList(moduleReport *reports.ModuleContractReport) string {
 	var sb strings.Builder
 	for _, mod := range moduleReport.Registry.All() {
-		sb.WriteString(fmt.Sprintf("  - %s (source: %s)\n", mod.Moniker, mod.Files.Root))
+		// Get first package root for display
+		var displayRoot string
+		for _, root := range mod.GetComponentRoots() {
+			displayRoot = root
+			break
+		}
+		sb.WriteString(fmt.Sprintf("  - %s (source: %s)\n", mod.Moniker, displayRoot))
 	}
 	return sb.String()
 }

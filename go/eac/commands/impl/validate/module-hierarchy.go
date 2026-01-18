@@ -46,7 +46,7 @@ func ValidateModuleHierarchy() int {
 	}
 
 	// Load module registry
-	moduleRegistry, err := modules.LoadFromWorkspaceLatest(repoRoot)
+	moduleRegistry, err := modules.LoadFromWorkspace(repoRoot)
 	if err != nil {
 		log.Errorf("Error: failed to load module registry: %v", err)
 		return 1

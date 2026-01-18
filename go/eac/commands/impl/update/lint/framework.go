@@ -16,6 +16,8 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/initsummary"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/locking"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/output"
+	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	systemdeps "github.com/ready-to-release/eac/go/eac/core/system-deps"
@@ -95,6 +97,7 @@ func lintAfterExecute(ctx *cmdframework.ExecutionContext) error {
 }
 
 // lintWorker is the worker function that lints a single module.
+// It iterates over the module's enabled package types and runs the appropriate linter for each.
 func lintWorker(ctx *cmdframework.ExecutionContext, moniker string, logWriter io.Writer) int {
 	lintCfg, ok := ctx.Config.Extra["lintConfig"].(*LintConfig)
 	if !ok {
@@ -113,15 +116,6 @@ func lintWorker(ctx *cmdframework.ExecutionContext, moniker string, logWriter io
 		return 1
 	}
 
-	// Get handler for this module type
-	moduleType := ctx.ModuleTypes[moniker]
-	handler := linters.GetHandlerForModule(moduleType)
-	if handler == nil {
-		output.Writeln(logWriter, "⚠️  No linter available for module type: %s", moduleType)
-		// Not an error - just skip modules without linters
-		return 0
-	}
-
 	// Acquire lock for this module
 	lockCfg := locking.LintConfig(moniker, paths.OutLintRelPath)
 	lockFile, err := locking.Acquire(ctx.WorkspaceRoot, lockCfg)
@@ -138,26 +132,33 @@ func lintWorker(ctx *cmdframework.ExecutionContext, moniker string, logWriter io
 		return 1
 	}
 
-	// Get module root
-	moduleRoot := filepath.Join(ctx.WorkspaceRoot, module.Files.Root)
-
-	// Validate module
-	if err := handler.ValidateModule(moduleRoot, ctx.WorkspaceRoot); err != nil {
-		output.Writeln(logWriter, "❌ Module validation failed: %v", err)
-		return 1
+	// Get module root from first available package
+	var moduleRoot string
+	for _, pkgRoot := range module.GetComponentRoots() {
+		moduleRoot = filepath.Join(ctx.WorkspaceRoot, pkgRoot)
+		break
+	}
+	if moduleRoot == "" {
+		output.Writeln(logWriter, "Warning: no package roots found for module %s", moniker)
+		return 0
 	}
 
-	output.Writeln(logWriter, "🔍 Linting %s with %s handler...", moniker, handler.Name())
 	lintStart := time.Now()
+	exitCode := 0
+	lintersRun := 0
 
-	// Run the linter
-	opts := linters.LintOptions{
-		Fix:    lintCfg.Fix,
-		Config: lintCfg.Config,
+	// Use package-based linting: iterate over enabled packages
+	if module.Components != nil && len(module.Components.GetEnabled()) > 0 {
+		exitCode = lintByPackages(ctx, module, moduleRoot, outputDir, logWriter, lintCfg, &lintersRun)
 	}
+	// No packages = nothing to lint
 
-	exitCode := handler.Lint(moduleRoot, ctx.WorkspaceRoot, outputDir, logWriter, opts)
 	duration := time.Since(lintStart)
+
+	if lintersRun == 0 {
+		output.Writeln(logWriter, "⚠️  No linters available for module: %s", moniker)
+		return 0
+	}
 
 	// Record result
 	result := &LintModuleResult{
@@ -177,18 +178,81 @@ func lintWorker(ctx *cmdframework.ExecutionContext, moniker string, logWriter io
 	return exitCode
 }
 
+// lintByPackages lints a module by iterating over its enabled package types.
+func lintByPackages(ctx *cmdframework.ExecutionContext, module *modules.ModuleContract,
+	moduleRoot, outputDir string, logWriter io.Writer, lintCfg *LintConfig, lintersRun *int,
+) int {
+	cfg := config.Global()
+	if cfg == nil || cfg.ComponentTypes == nil {
+		output.Writeln(logWriter, "Warning: package types config not loaded")
+		return 0
+	}
+
+	overallExitCode := 0
+
+	for _, pkgName := range module.Components.GetEnabled() {
+		pkgType := cfg.ComponentTypes.Get(pkgName)
+		if pkgType == nil || !pkgType.HasLinter() {
+			continue // No linter configured for this package type
+		}
+
+		handler := linters.GetHandlerByLinter(pkgType.Linter)
+		if handler == nil {
+			log.Debugf("No handler registered for linter: %s (package type: %s)", pkgType.Linter, pkgName)
+			continue
+		}
+
+		// Validate module for this handler
+		if err := handler.ValidateModule(moduleRoot, ctx.WorkspaceRoot); err != nil {
+			log.Debugf("Module validation failed for %s handler: %v", handler.Name(), err)
+			continue
+		}
+
+		output.Writeln(logWriter, "🔍 Linting %s package with %s handler...", pkgName, handler.Name())
+		*lintersRun++
+
+		opts := linters.LintOptions{
+			Fix:       lintCfg.Fix,
+			Config:    lintCfg.Config,
+			LintInput: pkgType.GetLintInput(),
+		}
+
+		exitCode := handler.Lint(moduleRoot, ctx.WorkspaceRoot, outputDir, logWriter, opts)
+		if exitCode != 0 {
+			overallExitCode = exitCode
+		}
+	}
+
+	return overallExitCode
+}
+
 // lintDepsVerifier verifies system dependencies for linting.
 func lintDepsVerifier(ctx *cmdframework.ExecutionContext) *initsummary.DepsStatus {
 	status := &initsummary.DepsStatus{Verified: true}
 
 	// Collect unique requirements from all handlers that will be used
 	depsMap := make(map[string]bool)
+	cfg := config.Global()
+
 	for _, moniker := range ctx.GetExecutionMonikers() {
-		moduleType := ctx.ModuleTypes[moniker]
-		handler := linters.GetHandlerForModule(moduleType)
-		if handler != nil {
-			for _, req := range handler.Requirements() {
-				depsMap[req] = true
+		module, exists := ctx.ModuleRegistry.Get(moniker)
+		if !exists {
+			continue
+		}
+
+		// Get requirements from package-based handlers
+		if module.Components != nil && len(module.Components.GetEnabled()) > 0 && cfg != nil && cfg.ComponentTypes != nil {
+			for _, pkgName := range module.Components.GetEnabled() {
+				pkgType := cfg.ComponentTypes.Get(pkgName)
+				if pkgType == nil || !pkgType.HasLinter() {
+					continue
+				}
+				handler := linters.GetHandlerByLinter(pkgType.Linter)
+				if handler != nil {
+					for _, req := range handler.Requirements() {
+						depsMap[req] = true
+					}
+				}
 			}
 		}
 	}
@@ -249,14 +313,14 @@ func countLintIssues(jsonPath string) (int, error) {
 		return 0, nil
 	}
 
-	var output struct {
+	var jsonOutput struct {
 		Issues []interface{} `json:"Issues"`
 	}
-	if err := json.Unmarshal(data, &output); err != nil {
+	if err := json.Unmarshal(data, &jsonOutput); err != nil {
 		return 0, err
 	}
 
-	return len(output.Issues), nil
+	return len(jsonOutput.Issues), nil
 }
 
 // generateLintManifest generates the lint manifest for a module.

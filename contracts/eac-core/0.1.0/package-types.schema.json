@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ready-to-release.org/schemas/eac-core/package-types/0.1.0",
+  "title": "Package Types Schema",
+  "description": "Schema for package type definitions that define how to process files for linting and building",
+  "type": "object",
+  "properties": {
+    "package-types": {
+      "type": "object",
+      "description": "Map of package type name to configuration",
+      "additionalProperties": {
+        "$ref": "#/definitions/package_type"
+      }
+    }
+  },
+  "required": ["package-types"],
+  "definitions": {
+    "package_type": {
+      "type": "object",
+      "description": "A package type definition that describes how to process files of a specific type",
+      "properties": {
+        "extensions": {
+          "type": "array",
+          "description": "File extensions that belong to this package type (e.g., [\".go\"], [\".md\"]). Empty for non-file-based packages.",
+          "items": {
+            "type": "string",
+            "pattern": "^\\.[a-zA-Z0-9]+$"
+          },
+          "default": []
+        },
+        "linter": {
+          "type": "string",
+          "description": "The linter tool to use for this package type (e.g., \"golangci-lint\", \"markdownlint-cli2\")",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "lint_input": {
+          "type": "string",
+          "description": "How files are passed to the linter: 'packages' for directory-based (Go), 'files' for file-based",
+          "enum": ["packages", "files"],
+          "default": "files"
+        },
+        "builder": {
+          "type": "string",
+          "description": "The build handler to use for this package type (e.g., \"go\", \"mkdocs\", \"buildx\")",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "requirements": {
+          "type": "array",
+          "description": "System dependencies required for building/linting this package type (e.g., [\"go\"], [\"docker\"])",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "default": []
+        },
+        "default_root": {
+          "type": "string",
+          "description": "Default root path pattern for this package type. Supports {moniker} variable for module-specific paths (e.g., 'specs/{moniker}' for specs package)."
+        },
+        "files": {
+          "type": "object",
+          "description": "Default file patterns for this package type",
+          "properties": {
+            "source": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "tests": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "config": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

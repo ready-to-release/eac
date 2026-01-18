@@ -120,7 +120,7 @@ var updateSelfCmd = &cobra.Command{
 
 		apiDownloadURL := fmt.Sprintf("https://api.github.com/repos/ready-to-release/r2r-cli/releases/assets/%d", selectedAsset.ID)
 
-		req, err := http.NewRequestWithContext(context.Background(), "GET", apiDownloadURL, nil)
+		req, err := http.NewRequestWithContext(context.Background(), "GET", apiDownloadURL, http.NoBody)
 		if err != nil {
 			logging.Errorf("Failed to create download request: %v", err)
 			os.Exit(1)
@@ -230,7 +230,7 @@ var updateSelfCmd = &cobra.Command{
 
 		// Make binary executable (for Unix systems)
 		if runtime.GOOS != "windows" {
-			if err := os.Chmod(binaryPath, 0755); err != nil {
+			if err := os.Chmod(binaryPath, 0o755); err != nil { //nolint:gosec // G302: executable binaries require 0755
 				logging.Errorf("Failed to make binary executable: %v", err)
 				os.Exit(1)
 			}
@@ -276,12 +276,7 @@ func getLatestRelease() (*Release, error) {
 
 	// Query all releases and filter by r2r-cli/ tag prefix
 	// This is necessary because we use --latest=false in a monorepo
-	req, err := http.NewRequestWithContext(
-		context.Background(),
-		"GET",
-		"https://api.github.com/repos/ready-to-release/r2r-cli/releases?per_page=50",
-		nil,
-	)
+	req, err := http.NewRequestWithContext(context.Background(), "GET", "https://api.github.com/repos/ready-to-release/r2r-cli/releases?per_page=50", http.NoBody)
 	if err != nil {
 		return nil, err
 	}
@@ -335,7 +330,7 @@ func getLatestRelease() (*Release, error) {
 
 		var ver [3]int
 		for j := 0; j < 3 && j < len(parts); j++ {
-			fmt.Sscanf(parts[j], "%d", &ver[j])
+			_, _ = fmt.Sscanf(parts[j], "%d", &ver[j]) //nolint:errcheck // invalid parts default to 0
 		}
 
 		// Compare versions (major.minor.patch)
@@ -355,7 +350,7 @@ func getLatestRelease() (*Release, error) {
 	return latestRelease, nil
 }
 
-// copyFile copies a file from src to dst (helper function)
+// copyFile copies a file from src to dst (helper function).
 func copyFile(src, dst string) error {
 	sourceFile, err := os.Open(src)
 	if err != nil {

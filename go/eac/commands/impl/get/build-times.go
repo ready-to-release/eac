@@ -213,10 +213,10 @@ func populateModuleTypes(timings []BuildTiming, repoRoot string) ([]BuildTiming,
 		return timings, fmt.Errorf("failed to load module contracts: %w", err)
 	}
 
-	// Populate types
+	// Populate package types
 	for i := range timings {
 		if module, exists := moduleReport.Registry.Get(timings[i].Module); exists {
-			timings[i].Type = module.Type
+			timings[i].Type = module.GetComponentTypesDisplay()
 		} else {
 			// Module not found in contracts, use a placeholder
 			timings[i].Type = "unknown"

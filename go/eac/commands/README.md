@@ -263,7 +263,6 @@ SHOW MODULETYPES
 | markdown         | 1     |
 | mkdocs-site      | 1     |
 | mkdocs-subsite   | 1     |
-| no-module-type   | 1     |
 | repository-root  | 1     |
 | scripts-pwsh     | 1     |
 | scripts-sh       | 1     |
@@ -271,7 +270,7 @@ SHOW MODULETYPES
 | templates        | 1     |
 | vscode-config    | 1     |
 | vscode-ext       | 1     |
-| Total Types      | 23    |
+| Total Types      | 22    |
 <!-- OUTPUT END -->
 
 

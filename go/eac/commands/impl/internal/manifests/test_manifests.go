@@ -90,7 +90,7 @@ func GenerateTestManifests(
 		module := eacCfg.Repository.GetByMoniker(moniker)
 		moduleType := ""
 		if module != nil {
-			moduleType = module.Type
+			moduleType = module.GetComponentTypesDisplay()
 		}
 
 		manifest, err := implinternal.LoadOrCreateTestManifest(moduleTestDir, moniker, moduleType, gitCommit)
@@ -115,9 +115,10 @@ func GenerateTestManifests(
 			for _, result := range moduleResults {
 				// Determine effective suite from test L-levels
 				var pkgTests []testing.TestReference
-				for _, t := range moduleTests {
+				for i := range moduleTests {
+					t := &moduleTests[i]
 					if strings.Contains(result.PackageName, filepath.Base(filepath.Dir(t.FilePath))) {
-						pkgTests = append(pkgTests, t)
+						pkgTests = append(pkgTests, *t)
 						break // Just need one to determine L-level
 					}
 				}
@@ -207,7 +208,8 @@ func GenerateTestManifests(
 				addedScenarios[r.ScenarioName] = true
 			}
 
-			for _, test := range tests {
+			for i := range tests {
+				test := &tests[i]
 				// Skip if already added from cucumber results
 				if addedScenarios[test.TestName] {
 					continue

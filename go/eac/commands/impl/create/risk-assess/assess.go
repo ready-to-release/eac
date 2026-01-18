@@ -516,10 +516,11 @@ func writeAggregatedOSCALReport(config *AssessConfig, results []*ModuleAssessmen
 		if result.AssessmentResults != nil && len(result.AssessmentResults.Results) > 0 {
 			moduleResult := result.AssessmentResults.Results[0]
 			if moduleResult.Observations != nil {
-				for _, obs := range *moduleResult.Observations {
+				for i := range *moduleResult.Observations {
+					obs := &(*moduleResult.Observations)[i]
 					// Add module name to observation description
 					obs.Description = fmt.Sprintf("[%s] %s", result.Module, obs.Description)
-					allObservations = append(allObservations, obs)
+					allObservations = append(allObservations, *obs)
 				}
 			}
 		}
@@ -533,7 +534,8 @@ func writeAggregatedOSCALReport(config *AssessConfig, results []*ModuleAssessmen
 		if result.AssessmentResults != nil && len(result.AssessmentResults.Results) > 0 {
 			moduleResult := result.AssessmentResults.Results[0]
 			if moduleResult.Findings != nil {
-				for _, finding := range *moduleResult.Findings {
+				for i := range *moduleResult.Findings {
+					finding := &(*moduleResult.Findings)[i]
 					controlID := finding.Target.TargetId
 
 					// If we don't have a finding for this control yet, create one
@@ -681,9 +683,11 @@ func extractSatisfiedControlIDs(result *ModuleAssessmentResult) []string {
 		return controlIDs
 	}
 
-	for _, assessmentResult := range result.AssessmentResults.Results {
+	for i := range result.AssessmentResults.Results {
+		assessmentResult := &result.AssessmentResults.Results[i]
 		if assessmentResult.Findings != nil {
-			for _, finding := range *assessmentResult.Findings {
+			for j := range *assessmentResult.Findings {
+				finding := &(*assessmentResult.Findings)[j]
 				// Check if finding is satisfied
 				if finding.Target.Status.State == oscal.StateSatisfied {
 					controlID := finding.Target.TargetId

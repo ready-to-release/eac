@@ -29,8 +29,8 @@ type ScenarioEvidence struct {
 }
 
 var (
-	controlTagPattern  = regexp.MustCompile(`@control:([a-z]{2,4}-[0-9]+(?:\([0-9]+\))?)`)
-	controlsTagPattern = regexp.MustCompile(`@controls:((?:[a-z]{2,4}-[0-9]+(?:\([0-9]+\))?,)*[a-z]{2,4}-[0-9]+(?:\([0-9]+\))?)`)
+	controlTagPattern  = regexp.MustCompile(`@control:([a-z]{2,4}-\d+(?:\(\d+\))?)`)
+	controlsTagPattern = regexp.MustCompile(`@controls:((?:[a-z]{2,4}-\d+(?:\(\d+\))?,)*[a-z]{2,4}-\d+(?:\(\d+\))?)`)
 )
 
 // ExtractControlEvidence scans feature files and extracts control tag evidence.

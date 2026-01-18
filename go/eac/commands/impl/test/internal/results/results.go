@@ -56,10 +56,12 @@ func ParseCucumberResults(moduleTestDir string) []CucumberTestResult {
 		}
 
 		// Extract results from each feature and scenario
-		for _, feature := range report {
+		for i := range report {
+			feature := &report[i]
 			featurePath := feature.URI
 
-			for _, scenario := range feature.Elements {
+			for j := range feature.Elements {
+				scenario := &feature.Elements[j]
 				// Skip background elements
 				if scenario.Type == "background" {
 					continue

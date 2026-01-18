@@ -159,18 +159,18 @@ func parseConfig() (*DesignConfig, error) {
 	}
 
 	// Find and parse arguments
-	modulePath, flags, err := parseCreateCommandArgs(os.Args)
+	modulePath, cmdFlags, err := parseCreateCommandArgs(os.Args)
 	if err != nil {
 		return nil, err
 	}
 
 	// Create config with parsed flags
 	config := &DesignConfig{
-		Debug:          flags.debug,
-		Force:          flags.force,
-		OutputPath:     flags.outputPath,
-		PromptPath:     flags.promptPath,
-		SkipValidation: flags.skipValidation,
+		Debug:          cmdFlags.debug,
+		Force:          cmdFlags.force,
+		OutputPath:     cmdFlags.outputPath,
+		PromptPath:     cmdFlags.promptPath,
+		SkipValidation: cmdFlags.skipValidation,
 		TemplateRoot:   repoRoot,
 	}
 
@@ -196,7 +196,16 @@ func parseConfig() (*DesignConfig, error) {
 
 	// Store validated moniker and source path from contract
 	config.Module = module.Moniker
-	config.SourcePath = filepath.Join(repoRoot, module.Files.Root)
+	// Get the buildable package root (go or typescript) for source analysis
+	buildableRoot := module.Components.GetBuildableRoot()
+	if buildableRoot == "" {
+		// Fallback to first available package root
+		for _, root := range module.GetComponentRoots() {
+			buildableRoot = root
+			break
+		}
+	}
+	config.SourcePath = filepath.Join(repoRoot, buildableRoot)
 
 	return config, nil
 }
@@ -278,7 +287,13 @@ func parseCreateCommandArgs(args []string) (string, *createFlags, error) {
 func formatModuleList(moduleReport *reports.ModuleContractReport) string {
 	var sb strings.Builder
 	for _, mod := range moduleReport.Registry.All() {
-		sb.WriteString(fmt.Sprintf("  - %s (source: %s)\n", mod.Moniker, mod.Files.Root))
+		// Get first package root for display
+		var displayRoot string
+		for _, root := range mod.GetComponentRoots() {
+			displayRoot = root
+			break
+		}
+		sb.WriteString(fmt.Sprintf("  - %s (source: %s)\n", mod.Moniker, displayRoot))
 	}
 	return sb.String()
 }

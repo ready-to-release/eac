@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 )
 
@@ -50,7 +49,7 @@ func (h *DockerHandler) ListArtifacts(module *modules.ModuleContract, workspaceR
 }
 
 func (h *DockerHandler) Build(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	Logln(logWriter, "\n=== Building %s: %s ===", module.Type, module.Moniker)
+	Logln(logWriter, "\n=== Building dockerfile: %s ===", module.Moniker)
 
 	// Check if Docker is available before attempting to build
 	if !IsDockerAvailable() {
@@ -64,18 +63,20 @@ func (h *DockerHandler) Build(module *modules.ModuleContract, workspaceRoot, out
 		return 1
 	}
 
-	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
+	// Get relevant package roots
+	dockerRoot := module.GetComponentRoot("dockerfile")
+	goRoot := module.GetComponentRoot("go")
 
-	// Get capabilities from contract
-	cfg := config.Global()
-	hasGoModule := cfg != nil && cfg.ModuleTypes != nil && cfg.ModuleTypes.HasCapability(module.Type, "go_module")
+	// Check if module has go package type
+	hasGoModule := module.HasComponent("go")
 
 	// Step 1: go mod tidy (if Go module and enabled)
-	if hasGoModule && opts.TidyFirst {
-		goModPath := filepath.Join(moduleRoot, "go.mod")
+	if hasGoModule && opts.TidyFirst && goRoot != "" {
+		goModulePath := filepath.Join(workspaceRoot, goRoot)
+		goModPath := filepath.Join(goModulePath, "go.mod")
 		if _, err := os.Stat(goModPath); err == nil {
 			Logln(logWriter, "Running: go mod tidy")
-			if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "mod", "tidy"); exitCode != 0 {
+			if exitCode := RunCommandWithLog(goModulePath, logWriter, "go", "mod", "tidy"); exitCode != 0 {
 				Logln(logWriter, "❌ go mod tidy failed")
 				return exitCode
 			}
@@ -87,7 +88,7 @@ func (h *DockerHandler) Build(module *modules.ModuleContract, workspaceRoot, out
 	searchPaths := []string{"containers/{moniker}/Dockerfile", "{root}/Dockerfile"}
 
 	for _, pathTemplate := range searchPaths {
-		resolvedPath := resolveDockerfilePath(pathTemplate, module.Moniker, module.Files.Root)
+		resolvedPath := resolveDockerfilePath(pathTemplate, module.Moniker, dockerRoot)
 		fullPath := filepath.Join(workspaceRoot, resolvedPath)
 		if _, err := os.Stat(fullPath); err == nil {
 			dockerfilePath = fullPath

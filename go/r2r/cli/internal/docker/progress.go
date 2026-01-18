@@ -10,7 +10,7 @@ import (
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/logging"
 )
 
-// DockerProgress represents a Docker progress update
+// DockerProgress represents a Docker progress update.
 type DockerProgress struct {
 	Status         string `json:"status"`
 	Progress       string `json:"progress"`
@@ -21,19 +21,19 @@ type DockerProgress struct {
 	ID string `json:"id"`
 }
 
-// DockerError represents a Docker error response
+// DockerError represents a Docker error response.
 type DockerError struct {
 	Error string `json:"error"`
 }
 
-// DisplayDockerProgress reads Docker JSON progress and displays it to the user
+// DisplayDockerProgress reads Docker JSON progress and displays it to the user.
 func DisplayDockerProgress(reader io.Reader) error {
 	scanner := bufio.NewScanner(reader)
 	layerProgress := make(map[string]string)
 	lastStatus := ""
-	hasActualDownload := false // Track if we're actually downloading anything
+	hasActualDownload := false    // Track if we're actually downloading anything
 	showedPullingMessage := false // Track if we've shown the initial pulling message
-	dotCount := 0 // Track number of progress dots shown
+	dotCount := 0                 // Track number of progress dots shown
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -151,7 +151,7 @@ func DisplayDockerProgress(reader io.Reader) error {
 	return nil
 }
 
-// showProgressDot displays a single dot to show progress, limiting to reasonable length
+// showProgressDot displays a single dot to show progress, limiting to reasonable length.
 func showProgressDot(dotCount *int) {
 	// Limit dots to avoid overly long lines (max ~50 dots)
 	if *dotCount < 50 {

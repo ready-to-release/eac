@@ -156,9 +156,9 @@ func (c *RepositoryConfig) TestImplPath(moniker string) string {
 		panic("TestImplPath: unknown module " + moniker)
 	}
 
-	// Use custom test_impl if defined in module contract
-	if module.Files.Repo.TestImpl != "" {
-		return module.Files.Repo.TestImpl
+	// Use test-impl component root if defined
+	if comp, ok := module.Components["test-impl"]; ok && comp != nil && comp.Root != "" {
+		return comp.Root
 	}
 
 	// Default convention: {test_impl_root}/{moniker}
@@ -446,16 +446,6 @@ func (c *RepositoryConfig) GetByMoniker(moniker string) *Module {
 	return m
 }
 
-// GetModulesByType returns all modules of a specific type.
-func (c *RepositoryConfig) GetModulesByType(moduleType string) []Module {
-	var result []Module
-	for _, m := range c.Modules {
-		if m.Type == moduleType {
-			result = append(result, m)
-		}
-	}
-	return result
-}
 
 // AllMonikers returns a list of all module monikers.
 func (c *RepositoryConfig) AllMonikers() []string {

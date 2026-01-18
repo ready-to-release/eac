@@ -150,7 +150,8 @@ func convertToManifestData(manifest *internal.TestManifest) *evidence.TestManife
 
 	// Convert test entries
 	tests := make([]evidence.TestEntryData, len(manifest.Tests))
-	for i, test := range manifest.Tests {
+	for i := range manifest.Tests {
+		test := &manifest.Tests[i]
 		tests[i] = evidence.TestEntryData{
 			Name:     test.Name,
 			Package:  test.Package,

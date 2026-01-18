@@ -250,7 +250,8 @@ func createFindingsForModule(config *AssessConfig, moduleName string, controlIDs
 		var relatedObs []oscalTypes.RelatedObservation
 		// Link to observations
 		if observations != nil {
-			for _, obs := range *observations {
+			for i := range *observations {
+				obs := &(*observations)[i]
 				relatedObs = append(relatedObs, oscalTypes.RelatedObservation{
 					ObservationUuid: obs.UUID,
 				})

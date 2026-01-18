@@ -79,7 +79,8 @@ func (p *ClaudeAPI) Execute(ctx context.Context, input string, opts ...ai.Option
 
 	// Extract text from content blocks using AsText()
 	var result string
-	for _, block := range message.Content {
+	for i := range message.Content {
+		block := &message.Content[i]
 		textBlock := block.AsText()
 		if textBlock.Text != "" {
 			result += textBlock.Text

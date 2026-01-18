@@ -191,13 +191,18 @@ func BuildModuleContext(moduleName string, registry *modules.Registry, satisfied
 		}
 	}
 
-	// Extract module type
-	moduleType := module.Type
-	if moduleType == "" {
-		moduleType = "service"
+	// Extract primary package type for risk assessment
+	// Use first buildable package type for criticality determination
+	moduleType := "service" // default
+	if module.HasComponent("go") {
+		moduleType = "go"
+	} else if module.HasComponent("typescript") {
+		moduleType = "typescript"
+	} else if module.HasComponent("dockerfile") {
+		moduleType = "dockerfile"
 	}
 
-	// Determine criticality based on module type
+	// Determine criticality based on package type
 	criticality := determineCriticality(moduleType)
 
 	return ModuleContext{

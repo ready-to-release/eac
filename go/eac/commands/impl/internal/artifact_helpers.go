@@ -212,23 +212,10 @@ func isBookModule(moduleType string) bool {
 
 // isContainerModule checks if a module produces container images that are pushed to registry.
 // For such modules, we don't download build artifacts - we pull from registry instead.
-func isContainerModule(moduleType string, module *config.Module, cfg *config.EACConfig) bool {
-	// Check module-level docker config
+func isContainerModule(module *config.Module) bool {
+	// Check if module has docker_build with push enabled
 	dockerConfig := module.GetDockerBuildConfig()
-	if dockerConfig != nil && dockerConfig.Push {
-		return true
-	}
-
-	// Check type-level docker config
-	if cfg != nil && cfg.ModuleTypes != nil {
-		if typeDef := cfg.ModuleTypes.Get(moduleType); typeDef != nil {
-			if typeDef.DockerBuild != nil && typeDef.DockerBuild.Push {
-				return true
-			}
-		}
-	}
-
-	return false
+	return dockerConfig != nil && dockerConfig.Push
 }
 
 // expandBookArtifacts expands wildcard PDF patterns to specific book PDFs
@@ -449,7 +436,7 @@ func validateSingleModule(
 		result.Error = "module contract not found"
 		return result
 	}
-	result.Type = moduleContract.Type
+	result.Type = moduleContract.GetComponentTypesDisplay()
 
 	// Get module from config
 	module, ok := cfg.Repository.GetModule(moniker)
@@ -461,7 +448,7 @@ func validateSingleModule(
 	// For container-type DEPENDENCIES, skip local artifact validation.
 	// Container deps are pulled from registry at runtime, not downloaded as build artifacts.
 	// We only download the build manifest (to know the image tag), not the full build output.
-	if result.IsDependency && isContainerModule(moduleContract.Type, module, cfg) {
+	if result.IsDependency && isContainerModule(module) {
 		result.HasBuildArtifacts = false
 		result.Summary = &ArtifactResolutionSummary{}
 		return result
@@ -494,14 +481,6 @@ func validateSingleModule(
 	// Check if this module has docker_build with push=true
 	// If so, image artifacts are pushed to registry and may not exist locally
 	dockerConfig := module.GetDockerBuildConfig()
-	if dockerConfig == nil {
-		// Check type-level docker config
-		if cfg != nil && cfg.ModuleTypes != nil {
-			if typeDef := cfg.ModuleTypes.Get(moduleContract.Type); typeDef != nil {
-				dockerConfig = typeDef.DockerBuild
-			}
-		}
-	}
 	imagesPushedToRegistry := dockerConfig != nil && dockerConfig.Push
 
 	// Filter artifacts to only requested ones if requestedArtifacts is specified

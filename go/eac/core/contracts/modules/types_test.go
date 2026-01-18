@@ -14,7 +14,9 @@ func TestNewModuleContract(t *testing.T) {
 	base := contracts.BaseContract{
 		Moniker: "test-module",
 		Name:    "Test Module",
-		Type:    "test-type",
+		Packages: contracts.ModulePackages{
+			"test-type": &contracts.PackageEntry{Root: "test/root"},
+		},
 		Files: contracts.Files{
 			Root:   "test/root",
 			Source: []string{"**/*.go"},
@@ -330,7 +332,7 @@ func TestModuleContract_IsDefinitionsFile(t *testing.T) {
 	tests := []struct {
 		name     string
 		moniker  string
-		typ      string
+		pkgType  string
 		expected bool
 	}{
 		{"definitions moniker", "definitions", "test", true},
@@ -342,7 +344,9 @@ func TestModuleContract_IsDefinitionsFile(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			base := contracts.BaseContract{
 				Moniker: tt.moniker,
-				Type:    tt.typ,
+				Packages: contracts.ModulePackages{
+					tt.pkgType: &contracts.PackageEntry{Root: "test"},
+				},
 			}
 			module := NewModuleContract(base, "")
 

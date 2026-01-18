@@ -134,7 +134,8 @@ func FormatValidationSummary(summary *ValidationSummary, verbose bool) string {
 
 	// Count total files across all modules
 	totalFiles := 0
-	for _, result := range summary.Results {
+	for i := range summary.Results {
+		result := &summary.Results[i]
 		if result.TotalFiles > 0 {
 			totalFiles += result.TotalFiles
 		} else {
@@ -143,7 +144,8 @@ func FormatValidationSummary(summary *ValidationSummary, verbose bool) string {
 	}
 
 	// Show individual results
-	for _, result := range summary.Results {
+	for i := range summary.Results {
+		result := &summary.Results[i]
 		if result.Valid {
 			output += fmt.Sprintf("Module: %s", result.Module)
 			if result.TotalFiles > 1 {

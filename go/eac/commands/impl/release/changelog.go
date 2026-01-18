@@ -176,7 +176,8 @@ func ReleaseChangelog() int {
 	// Filter commits by module file patterns
 	modulePatterns := moduleContract.GetGlobPatterns()
 	var filteredCommits []*changelog.Commit
-	for _, c := range commits {
+	for i := range commits {
+		c := &commits[i]
 		parsed := changelog.ParseCommitMessage(c.Message)
 		parsed.SHA = c.ShortSHA
 		parsed.Date = c.Date
@@ -217,7 +218,8 @@ func ReleaseChangelog() int {
 
 	// Get existing version numbers for calver collision detection
 	var existingVersions []string
-	for _, v := range existingChangelog.Versions {
+	for i := range existingChangelog.Versions {
+		v := &existingChangelog.Versions[i]
 		existingVersions = append(existingVersions, v.Number)
 	}
 

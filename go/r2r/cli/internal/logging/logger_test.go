@@ -385,7 +385,7 @@ func TestFormatterJSON(t *testing.T) {
 	}
 }
 
-func TestResetOutput(t *testing.T) {
+func TestResetOutput(_ *testing.T) {
 	ResetForTesting()
 	defer ResetForTesting()
 

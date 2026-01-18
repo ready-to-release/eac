@@ -89,7 +89,7 @@ func ShowBuildTimesForModules(modules []string, topN int, buildOutputDir string)
 
 	for i := range timings {
 		if module, exists := moduleReport.Registry.Get(timings[i].Module); exists {
-			timings[i].Type = module.Type
+			timings[i].Type = module.GetComponentTypesDisplay()
 		} else {
 			timings[i].Type = "unknown"
 		}

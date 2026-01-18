@@ -83,19 +83,19 @@ func GetBuildDeps() int {
 		return 1
 	}
 
-	// Get build deps from module types config
+	// Get build deps from package types config
 	cfg := config.Global()
-	if cfg == nil || cfg.ModuleTypes == nil {
-		fmt.Fprintf(os.Stderr, "Error: module types configuration not loaded\n")
+	if cfg == nil || cfg.ComponentTypes == nil {
+		fmt.Fprintf(os.Stderr, "Error: package types configuration not loaded\n")
 		return 1
 	}
 
 	// Aggregate build deps from module and all its dependencies
-	buildDeps := aggregateBuildDeps(moniker, moduleReport.Registry, cfg.ModuleTypes, cfg.SystemDependencies)
+	buildDeps := aggregateBuildDeps(moniker, moduleReport.Registry, cfg.ComponentTypes)
 
 	// Handle shell format output
 	if format == "shell" {
-		fmt.Printf("MODULE_TYPE=\"%s\"\n", module.Type)
+		fmt.Printf("MODULE_PACKAGES=\"%s\"\n", module.GetComponentTypesDisplay())
 		fmt.Printf("BUILD_DEPS=\"%s\"\n", strings.Join(buildDeps, ","))
 		return 0
 	}
@@ -104,14 +104,14 @@ func GetBuildDeps() int {
 	return internal.ExecuteGetCommand(func() (interface{}, error) {
 		return BuildDepsResult{
 			Module:    moniker,
-			Type:      module.Type,
+			Type:      module.GetComponentTypesDisplay(),
 			BuildDeps: buildDeps,
 		}, nil
 	})
 }
 
 // aggregateBuildDeps collects build dependencies from a module and all its dependencies.
-func aggregateBuildDeps(moniker string, registry *modules.Registry, moduleTypes *config.ModuleTypesConfig, sysDeps *config.SystemDependenciesConfig) []string {
+func aggregateBuildDeps(moniker string, registry *modules.Registry, pkgTypes *config.ComponentTypesConfig) []string {
 	seen := make(map[string]bool)
 	depsSet := make(map[string]bool)
 
@@ -127,14 +127,15 @@ func aggregateBuildDeps(moniker string, registry *modules.Registry, moduleTypes 
 			return
 		}
 
-		// Add this module's build deps (resolved from capabilities)
-		deps := moduleTypes.GetBuildDepsFromCapabilities(module.Type, sysDeps)
+		// Add this module's build deps (resolved from package types)
+		enabledPackages := module.GetEnabledComponents()
+		deps := pkgTypes.GetBuildRequirements(enabledPackages)
 		for _, dep := range deps {
 			depsSet[dep] = true
 		}
 
 		// Modules with books require docker for mkdocs builds
-		if len(module.Books) > 0 {
+		if len(module.GetBooks()) > 0 {
 			depsSet["docker"] = true
 		}
 
@@ -189,12 +190,12 @@ func GetBuildDepsPlain(moniker string) (string, error) {
 	}
 
 	cfg := config.Global()
-	if cfg == nil || cfg.ModuleTypes == nil {
-		return "", fmt.Errorf("module types configuration not loaded")
+	if cfg == nil || cfg.ComponentTypes == nil {
+		return "", fmt.Errorf("package types configuration not loaded")
 	}
 
 	// Aggregate build deps from module and all its dependencies
-	buildDeps := aggregateBuildDeps(moniker, moduleReport.Registry, cfg.ModuleTypes, cfg.SystemDependencies)
+	buildDeps := aggregateBuildDeps(moniker, moduleReport.Registry, cfg.ComponentTypes)
 	if len(buildDeps) == 0 {
 		return "", nil
 	}

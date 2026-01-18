@@ -30,7 +30,7 @@ func (h *NoneHandler) ListArtifacts(module *modules.ModuleContract, workspaceRoo
 }
 
 func (h *NoneHandler) Build(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	Logln(logWriter, "\n=== %s: %s ===", module.Type, module.Moniker)
-	Logln(logWriter, "ℹ️  No build step required for %s", module.Type)
+	Logln(logWriter, "\n=== No-op build: %s ===", module.Moniker)
+	Logln(logWriter, "ℹ️  No build step required")
 	return 0
 }

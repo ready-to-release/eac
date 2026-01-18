@@ -29,7 +29,7 @@ var InitCmd = &cobra.Command{
 
 func createConfigFile(cmd *cobra.Command) {
 	// Check if --use-pwd-as-root flag is set
-	usePwdAsRoot, _ := cmd.Flags().GetBool("use-pwd-as-root")
+	usePwdAsRoot, _ := cmd.Flags().GetBool("use-pwd-as-root") //nolint:errcheck // flag registered in init
 
 	if usePwdAsRoot {
 		// Create .git folder in current directory if it doesn't exist
@@ -41,7 +41,7 @@ func createConfigFile(cmd *cobra.Command) {
 
 		gitPath := filepath.Join(pwd, ".git")
 		if _, err := os.Stat(gitPath); os.IsNotExist(err) {
-			if err := os.Mkdir(gitPath, 0755); err != nil {
+			if err := os.Mkdir(gitPath, 0o755); err != nil { //nolint:gosec // G301: .git dirs need 0755 for git compatibility
 				logging.Errorf("Error: Failed to create .git directory: %v", err)
 				os.Exit(1)
 			}
@@ -57,7 +57,7 @@ func createConfigFile(cmd *cobra.Command) {
 	}
 
 	// Check if --delete-configs flag is set
-	deleteConfigs, _ := cmd.Flags().GetBool("delete-configs")
+	deleteConfigs, _ := cmd.Flags().GetBool("delete-configs") //nolint:errcheck // flag registered in init
 	if deleteConfigs {
 		deleteConfigFiles(cmd, repoRoot)
 		return
@@ -65,7 +65,7 @@ func createConfigFile(cmd *cobra.Command) {
 
 	// Ensure .r2r directory exists
 	r2rDir := filepath.Join(repoRoot, ".r2r")
-	if err := os.MkdirAll(r2rDir, 0755); err != nil {
+	if err := os.MkdirAll(r2rDir, 0o755); err != nil { //nolint:gosec // G301: config dir needs to be accessible
 		logging.Errorf("Error: Failed to create .r2r directory: %v", err)
 		os.Exit(1)
 	}
@@ -82,7 +82,7 @@ func createConfigFile(cmd *cobra.Command) {
     image: 'ghcr.io/ready-to-release/ext-eac:latest'
 `
 
-	err = os.WriteFile(configFile, []byte(minimalConfig), 0644)
+	err = os.WriteFile(configFile, []byte(minimalConfig), 0o644)
 	if err != nil {
 		logging.Errorf("Error: Failed to create .r2r/r2r-cli.yml: %v", err)
 		os.Exit(1)

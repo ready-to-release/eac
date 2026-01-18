@@ -1,3 +1,4 @@
+// Package conf provides configuration handling for the r2r CLI.
 package conf
 
 import (
@@ -45,7 +46,7 @@ func detectCIEnvironment() bool {
 }
 
 // ValidatePinnedExtensions validates that extensions use pinned tags in CI environments
-// Returns an error if running in CI and extensions have unpinned tags
+// Returns an error if running in CI and extensions have unpinned tags.
 func ValidatePinnedExtensions(cfg *Config, isCI bool) ([]string, error) {
 	// Get repository root for cache operations
 	repoRoot := RootDir
@@ -148,7 +149,7 @@ func ValidatePinnedExtensions(cfg *Config, isCI bool) ([]string, error) {
 	return unpinnedExtensions, nil
 }
 
-// checkLatestTags checks for usage of "latest" Docker image tags and logs warnings
+// checkLatestTags checks for usage of "latest" Docker image tags and logs warnings.
 func checkLatestTags(cfg *Config) {
 	// Check if running in CI environment
 	isCI := detectCIEnvironment()
@@ -180,7 +181,6 @@ func checkLatestTags(cfg *Config) {
 
 	// Validate pinned extensions
 	unpinnedExtensions, err := ValidatePinnedExtensions(cfg, isCI)
-
 	// Handle validation result
 	if err != nil {
 		// In CI with unpinned extensions - fatal error (unless in test)
@@ -211,7 +211,7 @@ func checkLatestTags(cfg *Config) {
 	}
 }
 
-// fetchAndCacheExtensionTags fetches tags from GHCR and updates cache
+// fetchAndCacheExtensionTags fetches tags from GHCR and updates cache.
 func fetchAndCacheExtensionTags(baseImage, extensionName string, registryCache *cache.RegistryCache) string {
 	logging.Debugf("fetchAndCacheExtensionTags called: baseImage=%s extensionName=%s", baseImage, extensionName)
 	client, err := github.NewRegistryClient()
@@ -234,7 +234,7 @@ func fetchAndCacheExtensionTags(baseImage, extensionName string, registryCache *
 	logging.Debugf("Got latest tag: latestTag=%s", latestTag)
 
 	// Get all tags for caching
-	allTags, _ := client.ListTags(baseImage)
+	allTags, _ := client.ListTags(baseImage) //nolint:errcheck // best-effort tag retrieval
 
 	// Update cache
 	registryCache.SetExtension(extensionName, latestTag, allTags)
@@ -244,7 +244,7 @@ func fetchAndCacheExtensionTags(baseImage, extensionName string, registryCache *
 	return latestTag
 }
 
-// getActualImageVersion tries to suggest a proper version tag
+// getActualImageVersion tries to suggest a proper version tag.
 func getActualImageVersion(image string) string {
 	// Extract base image name without tag
 	baseImage := image
@@ -272,11 +272,11 @@ func getActualImageVersion(image string) string {
 	// Get repository root for cache operations
 	repoRoot := RootDir
 	if repoRoot == "" {
-		repoRoot, _ = FindRepositoryRoot()
+		repoRoot, _ = FindRepositoryRoot() //nolint:errcheck // empty string is valid fallback
 	}
 
 	// Try to use cached data first
-	registryCache, _ := cache.LoadRegistryCache(repoRoot)
+	registryCache, _ := cache.LoadRegistryCache(repoRoot) //nolint:errcheck // nil is handled below
 	if registryCache != nil && extensionName != "" {
 		if !registryCache.IsExpired(cacheTTL) {
 			if latestSHA, ok := registryCache.GetLatestSHA(extensionName); ok {
@@ -299,9 +299,9 @@ func getActualImageVersion(image string) string {
 			// Update cache if we have an extension name
 			if extensionName != "" && registryCache != nil {
 				// Also get all tags for caching
-				allTags, _ := client.ListTags(baseImage)
+				allTags, _ := client.ListTags(baseImage) //nolint:errcheck // best-effort tag retrieval
 				registryCache.SetExtension(extensionName, latestTag, allTags)
-				registryCache.SaveRegistryCache(repoRoot)
+				_ = registryCache.SaveRegistryCache(repoRoot) //nolint:errcheck // best-effort cache save
 			}
 
 			logging.Debugf("Found latest stable tag from GitHub registry: image=%s latest_tag=%s", baseImage, latestTag)
@@ -313,9 +313,9 @@ func getActualImageVersion(image string) string {
 		if err == nil && anyTag != "" {
 			// Update cache if we have an extension name
 			if extensionName != "" && registryCache != nil {
-				allTags, _ := client.ListTags(baseImage)
+				allTags, _ := client.ListTags(baseImage) //nolint:errcheck // best-effort tag retrieval
 				registryCache.SetExtension(extensionName, anyTag, allTags)
-				registryCache.SaveRegistryCache(repoRoot)
+				_ = registryCache.SaveRegistryCache(repoRoot) //nolint:errcheck // best-effort cache save
 			}
 
 			logging.Debugf("Found available tag from GitHub registry: image=%s tag=%s", baseImage, anyTag)
@@ -338,7 +338,7 @@ func getActualImageVersion(image string) string {
 			tag := strings.TrimSpace(line)
 			if runTagPattern.MatchString(tag) {
 				var num int
-				fmt.Sscanf(tag, "run-%d", &num)
+				_, _ = fmt.Sscanf(tag, "run-%d", &num) //nolint:errcheck // invalid format defaults to 0
 				if num > bestRunNum {
 					bestRunNum = num
 					bestRunTag = tag
@@ -376,7 +376,7 @@ func getActualImageVersion(image string) string {
 	return "run-XXX  # Check your registry for available stable version tags"
 }
 
-// hasLatestTag checks if a Docker image reference uses an unpinned tag (latest, main, master)
+// hasLatestTag checks if a Docker image reference uses an unpinned tag (latest, main, master).
 func hasLatestTag(image string) bool {
 	if image == "" {
 		return false

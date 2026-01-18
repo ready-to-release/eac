@@ -28,14 +28,15 @@ func (p *Preprocessor) executeCommands() (map[string]string, error) {
 			return cmdSources[i].Order < cmdSources[j].Order
 		})
 
-		for _, src := range cmdSources {
+		for i := range cmdSources {
+			src := &cmdSources[i]
 			output, err := p.runCommand(src.Command)
 			if err != nil {
 				return nil, fmt.Errorf("command '%s' failed: %w", src.Command, err)
 			}
 
 			// Write to target file with frontmatter
-			content := p.formatCommandOutput(src, output)
+			content := p.formatCommandOutput(*src, output)
 			destPath := filepath.Join(p.stagingDir, src.Target)
 
 			if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
@@ -51,7 +52,8 @@ func (p *Preprocessor) executeCommands() (map[string]string, error) {
 
 	// Execute inline sources (store in memory for Step 5)
 	inlineSources := p.book.GetInlineSources()
-	for _, src := range inlineSources {
+	for i := range inlineSources {
+		src := &inlineSources[i]
 		for _, insert := range src.Inserts {
 			output, err := p.runCommand(insert.Command)
 			if err != nil {

@@ -79,14 +79,36 @@ func GetModuleCIWorkflow() int {
 		return 1
 	}
 
-	// Get CI workflow path
+	// Derive CI workflow path from convention
+	// Check if workflows package is configured with explicit patterns
 	ciWorkflow := ""
-	if module.Files.Workflows.CI != "" {
-		ciWorkflow = module.Files.Workflows.CI
+	if pkg, ok := module.Components["workflows"]; ok && pkg != nil {
+		root := pkg.Root
+		if root == "" {
+			root = ".github/workflows"
+		}
+		// Check if patterns specify CI workflow
+		if pkg.Patterns != nil {
+			for _, pattern := range pkg.Patterns.Source {
+				if strings.Contains(pattern, "ci-") {
+					ciWorkflow = filepath.Join(root, strings.TrimPrefix(pattern, "**"))
+					break
+				}
+			}
+		}
+		// Use convention if no explicit pattern
+		if ciWorkflow == "" {
+			ciWorkflow = filepath.Join(root, "ci-"+moniker+".yaml")
+		}
+	} else {
+		// Default convention - check if file exists
+		ciWorkflow = filepath.Join(".github", "workflows", "ci-"+moniker+".yaml")
 	}
 
-	if ciWorkflow == "" {
-		// No output, exit 1 (no CI workflow configured)
+	// Check if the workflow file actually exists
+	workflowPath := filepath.Join(workspaceRoot, ciWorkflow)
+	if _, err := os.Stat(workflowPath); os.IsNotExist(err) {
+		// No CI workflow file exists, exit 1
 		return 1
 	}
 
