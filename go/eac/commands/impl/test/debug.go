@@ -239,9 +239,12 @@ func collectFailuresFromCucumberJSON(jsonPath string) ([]Failure, error) {
 
 	var failures []Failure
 
-	for _, feature := range report {
-		for _, scenario := range feature.Elements {
-			for _, step := range scenario.Steps {
+	for i := range report {
+		feature := &report[i]
+		for j := range feature.Elements {
+			scenario := &feature.Elements[j]
+			for k := range scenario.Steps {
+				step := &scenario.Steps[k]
 				if step.Result.Status == "failed" {
 					failure := Failure{
 						TestName:    scenario.Name,

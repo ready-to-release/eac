@@ -5,7 +5,6 @@ import (
 	"io"
 	"sync"
 
-	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
@@ -31,20 +30,20 @@ func RegisterSystem(buildDep string, fn TestFunc) {
 	systemHandlers[buildDep] = fn
 }
 
-// Capability to test handler mapping.
-var capabilityTestHandlers = map[string]string{
-	"go_module":   "go",
-	"npm_package": "npm",
+// Package type to test handler mapping.
+var packageTestHandlers = map[string]string{
+	"go":         "go",
+	"npm":        "npm",
+	"typescript": "npm",
 }
 
-// GetTestFunc returns the appropriate test function for a module type.
-// It matches module capabilities to test handlers.
-func GetTestFunc(moduleType string) TestFunc {
+// GetTestFunc returns the appropriate test function for a module.
+// It matches module package types to test handlers.
+func GetTestFunc(module *modules.ModuleContract) TestFunc {
 	mu.RLock()
 	defer mu.RUnlock()
 
-	cfg := config.Global()
-	if cfg == nil || cfg.ModuleTypes == nil {
+	if module == nil {
 		if fn, ok := systemHandlers[""]; ok {
 			return fn
 		}
@@ -53,10 +52,9 @@ func GetTestFunc(moduleType string) TestFunc {
 		}
 	}
 
-	// Get module capabilities and find matching handler
-	capabilities := cfg.ModuleTypes.GetCapabilities(moduleType)
-	for _, cap := range capabilities {
-		if handlerName, ok := capabilityTestHandlers[cap]; ok {
+	// Check module package types and find matching handler
+	for pkgType, handlerName := range packageTestHandlers {
+		if module.HasComponent(pkgType) {
 			if fn, ok := systemHandlers[handlerName]; ok {
 				return fn
 			}

@@ -25,10 +25,13 @@ func (h *ScriptsHandler) Capabilities() []string { return []string{"scripts_pack
 func (h *ScriptsHandler) Requirements() []string { return nil }
 
 func (h *ScriptsHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot string) error {
-	if len(module.Files.Source) == 0 {
-		return fmt.Errorf("no source patterns defined in files.source")
+	// Check if any package has source patterns
+	for _, pkg := range module.Components {
+		if pkg != nil && pkg.Patterns != nil && len(pkg.Patterns.Source) > 0 {
+			return nil
+		}
 	}
-	return nil
+	return fmt.Errorf("no source patterns defined in any package")
 }
 
 func (h *ScriptsHandler) ListArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {
@@ -36,13 +39,29 @@ func (h *ScriptsHandler) ListArtifacts(module *modules.ModuleContract, workspace
 }
 
 func (h *ScriptsHandler) Build(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	Logln(logWriter, "\n=== %s: %s ===", module.Type, module.Moniker)
+	Logln(logWriter, "\n=== scripts: %s ===", module.Moniker)
 
-	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
+	// Get static package root (scripts handler is for static content)
+	staticRoot := module.GetComponentRoot("static")
+	if staticRoot == "" {
+		// Try to find any package with a root
+		for _, root := range module.GetComponentRoots() {
+			staticRoot = root
+			break
+		}
+	}
+
+	moduleRoot := filepath.Join(workspaceRoot, staticRoot)
 	Logln(logWriter, "Source: %s", moduleRoot)
 	Logln(logWriter, "Output: %s", outputDir)
 
-	sourcePatterns := module.Files.Source
+	// Collect source patterns from all packages
+	var sourcePatterns []string
+	for _, pkg := range module.Components {
+		if pkg != nil && pkg.Patterns != nil {
+			sourcePatterns = append(sourcePatterns, pkg.Patterns.Source...)
+		}
+	}
 	if len(sourcePatterns) == 0 {
 		Logln(logWriter, "ℹ️  No source patterns defined, nothing to copy")
 		return 0

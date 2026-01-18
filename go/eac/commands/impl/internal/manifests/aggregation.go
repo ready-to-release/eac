@@ -70,9 +70,10 @@ func BuildModuleStats(manifestList []*implinternal.TestManifest, allTests []Test
 	for _, m := range manifestList {
 		// Filter tests for this module
 		moduleTests := make([]TestResult, 0)
-		for _, test := range allTests {
+		for i := range allTests {
+			test := &allTests[i]
 			if test.Module == m.Moniker {
-				moduleTests = append(moduleTests, test)
+				moduleTests = append(moduleTests, *test)
 			}
 		}
 
@@ -95,7 +96,8 @@ func BuildModuleStats(manifestList []*implinternal.TestManifest, allTests []Test
 
 		// Collect unique control tags
 		controlSet := make(map[string]bool)
-		for _, test := range m.Tests {
+		for i := range m.Tests {
+			test := &m.Tests[i]
 			for _, tag := range ExtractControlTags(test.Tags) {
 				controlSet[tag] = true
 			}
@@ -120,7 +122,8 @@ func BuildModuleStats(manifestList []*implinternal.TestManifest, allTests []Test
 func BuildTypeSummary(tests []TestResult) []TypeSummary {
 	typeCounts := make(map[string]*TypeSummary)
 
-	for _, test := range tests {
+	for i := range tests {
+		test := &tests[i]
 		summary, exists := typeCounts[test.Type]
 		if !exists {
 			summary = &TypeSummary{Type: test.Type}
@@ -153,7 +156,8 @@ func BuildTypeSummary(tests []TestResult) []TypeSummary {
 func BuildSuiteSummary(tests []TestResult) []SuiteSummary {
 	suiteCounts := make(map[string]*SuiteSummary)
 
-	for _, test := range tests {
+	for i := range tests {
+		test := &tests[i]
 		summary, exists := suiteCounts[test.Suite]
 		if !exists {
 			summary = &SuiteSummary{Suite: test.Suite}
@@ -196,7 +200,8 @@ func GetLatestRunTime(manifestList []*implinternal.TestManifest) time.Time {
 // CalculateTotalCounts aggregates pass/fail counts from test results.
 func CalculateTotalCounts(tests []TestResult) TotalCounts {
 	counts := TotalCounts{}
-	for _, test := range tests {
+	for i := range tests {
+		test := &tests[i]
 		switch test.Status {
 		case StatusPassed:
 			counts.TotalPassed++

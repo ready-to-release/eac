@@ -217,7 +217,8 @@ func validateChangelog(module string, moduleContract *modules.ModuleContract, wo
 
 	// Check for duplicate versions
 	versionSet := make(map[string]bool)
-	for _, v := range cl.Versions {
+	for i := range cl.Versions {
+		v := &cl.Versions[i]
 		if versionSet[v.Number] {
 			result.Valid = false
 			result.Errors = append(result.Errors, fmt.Sprintf("duplicate version: %s", v.Number))
@@ -229,7 +230,8 @@ func validateChangelog(module string, moduleContract *modules.ModuleContract, wo
 	semverRegex := regexp.MustCompile(`^\d+\.\d+\.\d+$`)
 	calverRegex := regexp.MustCompile(`^\d{4}\.\d{2}\.\d{2}(\.\d+)?$`)
 
-	for _, v := range cl.Versions {
+	for i := range cl.Versions {
+		v := &cl.Versions[i]
 		if v.Number == "" {
 			result.Valid = false
 			result.Errors = append(result.Errors, "found version with empty number")

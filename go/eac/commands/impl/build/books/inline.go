@@ -20,7 +20,8 @@ func (p *Preprocessor) insertInlineContent(outputs map[string]string) error {
 		return nil
 	}
 
-	for _, src := range inlineSources {
+	for i := range inlineSources {
+		src := &inlineSources[i]
 		targetPath := filepath.Join(p.stagingDir, src.Target)
 
 		// Read target file

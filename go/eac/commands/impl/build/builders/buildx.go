@@ -296,26 +296,24 @@ func expandTemplate(template, moniker string) string {
 	return result
 }
 
-// getDockerBuildConfig gets docker_build config from module first, then falls back to module type.
+// getDockerBuildConfig gets docker_build config from the dockerfile package.
 func getDockerBuildConfig(module *modules.ModuleContract, logWriter io.Writer) *config.DockerBuildConfig {
-	// First, check if module has docker_build config
-	if module.DockerBuild != nil && len(module.DockerBuild) > 0 {
-		// Convert map[string]interface{} to DockerBuildConfig via YAML round-trip
-		dockerCfg, err := convertDockerBuildConfig(module.DockerBuild)
-		if err != nil {
-			Logln(logWriter, "⚠️  Failed to parse module docker_build config: %v", err)
-		} else {
-			return dockerCfg
-		}
+	// Get docker_build config from the dockerfile package
+	dockerfilePackage := module.Components["dockerfile"]
+	if dockerfilePackage == nil {
+		return nil
 	}
-
-	// Fall back to module type config
-	cfg := config.Global()
-	if cfg == nil || cfg.ModuleTypes == nil {
+	if dockerfilePackage.DockerBuild == nil || len(dockerfilePackage.DockerBuild) == 0 {
 		return nil
 	}
 
-	return cfg.ModuleTypes.GetDockerBuildConfig(module.Type)
+	// Convert map[string]interface{} to DockerBuildConfig via YAML round-trip
+	dockerCfg, err := convertDockerBuildConfig(dockerfilePackage.DockerBuild)
+	if err != nil {
+		Logln(logWriter, "⚠️  Failed to parse dockerfile package docker_build config: %v", err)
+		return nil
+	}
+	return dockerCfg
 }
 
 // convertDockerBuildConfig converts map[string]interface{} to DockerBuildConfig via YAML.

@@ -39,15 +39,6 @@ func (c *EACConfig) ValidateAll() error {
 		}
 	}
 
-	if c.ModuleTypes != nil {
-		data, err := c.readConfigFile(ModuleTypesFileName)
-		if err != nil {
-			errs = append(errs, fmt.Errorf("module-types: failed to read: %w", err))
-		} else if err := c.validateSchema(schema.SchemaModuleTypes, data); err != nil {
-			errs = append(errs, fmt.Errorf("module-types: %w", err))
-		}
-	}
-
 	if c.Environments != nil {
 		data, err := c.readConfigFile(EnvironmentsFileName)
 		if err != nil {

@@ -1,3 +1,4 @@
+// Package session provides shell session identification utilities.
 package session
 
 import (
@@ -7,7 +8,7 @@ import (
 )
 
 // GetIdentifier returns a unique identifier for the current shell session
-// This works across different platforms and shells
+// This works across different platforms and shells.
 func GetIdentifier() string {
 	// Try to get parent process ID (works on all platforms)
 	ppid := os.Getppid()

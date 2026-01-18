@@ -95,10 +95,17 @@ func (r *GoRunner) GetTestInfo(test testing.TestReference, workspaceRoot string,
 // findModuleForPath finds the module moniker for a given relative path.
 func findModuleForPath(relPath string, cfg *config.EACConfig) string {
 	// Iterate through modules to find the one that owns this path
-	for _, module := range cfg.Repository.Modules {
-		moduleRoot := filepath.ToSlash(module.Files.Root)
-		if strings.HasPrefix(relPath, moduleRoot+"/") || relPath == moduleRoot {
-			return module.Moniker
+	for i := range cfg.Repository.Modules {
+		module := &cfg.Repository.Modules[i]
+		// Check all package roots
+		for _, entry := range module.Components {
+			if entry == nil || entry.Root == "" {
+				continue
+			}
+			pkgRoot := filepath.ToSlash(entry.Root)
+			if strings.HasPrefix(relPath, pkgRoot+"/") || relPath == pkgRoot {
+				return module.Moniker
+			}
 		}
 	}
 	return ""

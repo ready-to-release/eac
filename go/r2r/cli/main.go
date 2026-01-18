@@ -37,7 +37,7 @@ func argsToString(args []string) string {
 
 // filterSpuriousArguments removes the spurious "2" that appears when
 // commands are executed with bash-style stderr redirection (2>&1).
-// This prevents the "2" from being passed to ex. PowerShell scripts
+// This prevents the "2" from being passed to ex. PowerShell scripts.
 func filterSpuriousArguments(args []string) []string {
 	if len(args) == 0 {
 		return args

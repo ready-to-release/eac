@@ -18,7 +18,7 @@ var (
 	validateShowSchema bool
 )
 
-// validateCmd represents the validate command
+// validateCmd represents the validate command.
 var validateCmd = &cobra.Command{
 	Use:   "validate [config-file]",
 	Short: "Validate r2r-cli.yml configuration file",
@@ -153,7 +153,7 @@ func init() {
 		"Display the embedded schema information")
 }
 
-// showEmbeddedSchema displays information about the embedded schema
+// showEmbeddedSchema displays information about the embedded schema.
 func showEmbeddedSchema() error {
 	logging.Info("Embedded Schema Information:")
 	logging.Infof("  Version: %s", validator.GetEmbeddedSchemaVersion())
@@ -193,7 +193,7 @@ func showEmbeddedSchema() error {
 	return nil
 }
 
-// getKeys returns the keys from a map as a slice
+// getKeys returns the keys from a map as a slice.
 func getKeys(m map[string]interface{}) []string {
 	keys := make([]string, 0, len(m))
 	for k := range m {

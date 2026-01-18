@@ -32,7 +32,7 @@ import (
 
 // Semver regex: matches MAJOR.MINOR.PATCH where each is a non-negative integer
 // without leading zeros (except for 0 itself).
-var semverRegex = regexp.MustCompile(`^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`)
+var semverRegex = regexp.MustCompile(`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$`)
 
 func init() {
 	registry.Register(ValidateReleaseVersion)

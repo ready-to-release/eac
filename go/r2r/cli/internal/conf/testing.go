@@ -6,13 +6,13 @@ import (
 	"testing"
 )
 
-// TestConfig provides an isolated configuration for tests
+// TestConfig provides an isolated configuration for tests.
 type TestConfig struct {
 	*Config
 	tempDir string
 }
 
-// NewTestConfig creates a new isolated test configuration
+// NewTestConfig creates a new isolated test configuration.
 func NewTestConfig(t *testing.T) *TestConfig {
 	t.Helper()
 
@@ -34,7 +34,7 @@ func NewTestConfig(t *testing.T) *TestConfig {
 	}
 }
 
-// NewTestConfigWithExtensions creates a test config with custom extensions
+// NewTestConfigWithExtensions creates a test config with custom extensions.
 func NewTestConfigWithExtensions(t *testing.T, extensions []Extension) *TestConfig {
 	t.Helper()
 
@@ -48,7 +48,7 @@ func NewTestConfigWithExtensions(t *testing.T, extensions []Extension) *TestConf
 	}
 }
 
-// WithTempDir creates a temporary directory with a test config file
+// WithTempDir creates a temporary directory with a test config file.
 func (tc *TestConfig) WithTempDir(t *testing.T) string {
 	t.Helper()
 
@@ -57,14 +57,14 @@ func (tc *TestConfig) WithTempDir(t *testing.T) string {
 
 	// Create .git directory to simulate repository
 	gitDir := filepath.Join(tempDir, ".git")
-	if err := os.Mkdir(gitDir, 0755); err != nil {
+	if err := os.Mkdir(gitDir, 0o755); err != nil { //nolint:gosec // G301: test .git dirs match real git behavior
 		t.Fatalf("Failed to create .git directory: %v", err)
 	}
 
 	return tempDir
 }
 
-// WriteConfigFile writes the test config to a file in the temp directory
+// WriteConfigFile writes the test config to a file in the temp directory.
 func (tc *TestConfig) WriteConfigFile(t *testing.T, filename string) string {
 	t.Helper()
 
@@ -78,7 +78,7 @@ func (tc *TestConfig) WriteConfigFile(t *testing.T, filename string) string {
 	content := `version: "1.0"
 extensions:`
 
-	for _, ext := range tc.Config.Extensions {
+	for _, ext := range tc.Extensions {
 		content += "\n  - name: \"" + ext.Name + "\""
 		content += "\n    image: \"" + ext.Image + "\""
 		if ext.ImagePullPolicy != "" {
@@ -86,15 +86,15 @@ extensions:`
 		}
 	}
 
-	if err := os.WriteFile(configPath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(content), 0o644); err != nil {
 		t.Fatalf("Failed to write test config: %v", err)
 	}
 
 	return configPath
 }
 
-// LoadTestConfig loads a configuration from a test file without using InitConfig
-func LoadTestConfig(t *testing.T, configPath string) (*Config, error) {
+// LoadTestConfig loads a configuration from a test file without using InitConfig.
+func LoadTestConfig(t *testing.T, _ string) (*Config, error) {
 	t.Helper()
 
 	// Ensure test environment
@@ -110,7 +110,7 @@ func LoadTestConfig(t *testing.T, configPath string) (*Config, error) {
 }
 
 // ResetGlobalConfig resets the global config for test isolation
-// This should be called in test cleanup to ensure no state leakage
+// This should be called in test cleanup to ensure no state leakage.
 func ResetGlobalConfig() {
 	Global = Config{}
 }

@@ -70,25 +70,27 @@ func ShowModules() int {
 	// Build markdown table
 	tb := render.NewTableBuilder()
 	if withArtifacts {
-		tb.WithHeaders("Moniker", "Type", "Root Path", "Artifacts", "Missing", "Overrides")
+		tb.WithHeaders("Moniker", "Packages", "Artifacts", "Missing", "Overrides")
 	} else {
-		tb.WithHeaders("Moniker", "Type", "Root Path")
+		tb.WithHeaders("Moniker", "Packages")
 	}
 
 	for _, mod := range report.Modules {
+		// Format packages list
+		pkgDisplay := mod.GetComponentTypesDisplay()
+
 		if withArtifacts {
 			// Get artifact statistics for this module
 			artifactStats := getArtifactStats(mod, cfg, workspaceRoot)
 			tb.AddRow(
 				mod.Moniker,
-				mod.Type,
-				mod.Files.Root,
+				pkgDisplay,
 				fmt.Sprintf("%d", artifactStats.Total),
 				fmt.Sprintf("%d", artifactStats.Missing),
 				fmt.Sprintf("%d", artifactStats.Overrides),
 			)
 		} else {
-			tb.AddRow(mod.Moniker, mod.Type, mod.Files.Root)
+			tb.AddRow(mod.Moniker, pkgDisplay)
 		}
 	}
 
@@ -117,9 +119,15 @@ func getArtifactStats(mod *modules.ModuleContract, cfg *config.EACConfig, worksp
 		return stats
 	}
 
-	// Get module type
-	moduleType := cfg.ModuleTypes.Get(mod.Type)
-	if moduleType == nil || moduleType.Build == nil {
+	// Check if module has build artifacts defined in any package
+	hasArtifacts := false
+	for _, pkg := range module.Components {
+		if pkg != nil && pkg.Build != nil && len(pkg.Build.Artifacts) > 0 {
+			hasArtifacts = true
+			break
+		}
+	}
+	if !hasArtifacts {
 		return stats
 	}
 
@@ -131,7 +139,7 @@ func getArtifactStats(mod *modules.ModuleContract, cfg *config.EACConfig, worksp
 	targetArch := runtime.GOARCH
 
 	_, summary, err := implinternal.ResolveArtifactsForModuleWithConfig(
-		module, moduleType, buildDir, targetOS, targetArch, cfg,
+		module, nil, buildDir, targetOS, targetArch, cfg,
 	)
 	if err != nil {
 		return stats

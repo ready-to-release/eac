@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 package terminal
@@ -10,7 +11,7 @@ import (
 )
 
 // GetConsoleSizeViaMode tries to get console size using the 'mode con' command
-// This works even when stdout is redirected
+// This works even when stdout is redirected.
 func GetConsoleSizeViaMode() (width, height int, err error) {
 	cmd := exec.Command("cmd", "/c", "mode", "con")
 	cmd.Stdin = os.Stdin

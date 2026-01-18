@@ -310,12 +310,6 @@
           "description": "Human-readable module name",
           "minLength": 1
         },
-        "type": {
-          "type": "string",
-          "description": "Module type classification (defaults to 'no-module-type')",
-          "pattern": "^[a-z][a-z0-9-]*$",
-          "default": "no-module-type"
-        },
         "description": {
           "type": "string",
           "description": "Module description (defaults to name if not specified)"
@@ -355,14 +349,6 @@
           "$ref": "#/definitions/module_versioning",
           "description": "Module versioning configuration"
         },
-        "books": {
-          "type": "array",
-          "description": "List of book names from books.yml that this module builds. First book is default; others require --all flag.",
-          "items": {
-            "type": "string",
-            "pattern": "^[a-z0-9-]+$"
-          }
-        },
         "evidence_books": {
           "type": "array",
           "description": "Book names for evidence documentation, built via 'update evidence' command. Unlike regular books, these are built independently of the build command.",
@@ -383,9 +369,69 @@
         "release_bundle": {
           "$ref": "#/definitions/release_bundle",
           "description": "Release bundle configuration for modules that create aggregated releases"
+        },
+        "components": {
+          "$ref": "#/definitions/module_components",
+          "description": "Component types for this module (required - defines what the module contains)"
         }
       },
-      "required": ["moniker", "name"]
+      "required": ["moniker", "name", "components"]
+    },
+    "module_components": {
+      "type": "object",
+      "description": "Component types for a module. Maps component type name to its root path or configuration. The first component listed becomes the default for build operations.",
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "string",
+            "description": "Root path for this component type (relative to repo root)"
+          },
+          {
+            "type": "null",
+            "description": "Use the default_root from component-types.yml (with {moniker} substitution)"
+          },
+          {
+            "$ref": "#/definitions/component_entry",
+            "description": "Full component configuration with root and optional pattern overrides"
+          }
+        ]
+      },
+      "minProperties": 1
+    },
+    "component_entry": {
+      "type": "object",
+      "description": "Full component configuration for a module",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Component type (e.g., 'go', 'book'). If omitted, the map key (component name) is used as the type. This allows multiple components of the same type with different names."
+        },
+        "root": {
+          "type": "string",
+          "description": "Root path for this component (relative to repo root)"
+        },
+        "patterns": {
+          "type": "object",
+          "description": "Override default file patterns from component-types",
+          "properties": {
+            "source": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Source file patterns (overrides component-type defaults)"
+            },
+            "tests": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Test file patterns (overrides component-type defaults)"
+            },
+            "config": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Config file patterns (overrides component-type defaults)"
+            }
+          }
+        }
+      }
     },
     "release_bundle": {
       "type": "object",
@@ -637,6 +683,10 @@
         "current": {
           "type": "string",
           "description": "Current version (optional, can be tracked in changelog instead)"
+        },
+        "changelog": {
+          "type": "string",
+          "description": "Path to changelog file (defaults to release/<moniker>/CHANGELOG.md)"
         }
       },
       "required": ["scheme"]
@@ -654,11 +704,19 @@
         {
           "moniker": "eac-core",
           "name": "Core Domain Libraries",
-          "type": "go",
           "description": "Core library containing contracts and repository operations",
-          "files": {
-            "root": "go/eac/core",
-            "config": ["go.mod", "go.sum"]
+          "components": {
+            "go": "go/eac/core",
+            "specs": null,
+            "design": null
+          }
+        },
+        {
+          "moniker": "vscode-ext",
+          "name": "VSCode Extension",
+          "components": {
+            "typescript": "typescript/vscode-ext",
+            "specs": null
           }
         }
       ]

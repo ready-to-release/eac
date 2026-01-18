@@ -150,14 +150,14 @@ func (r *StreamingRunner) processJSONOutput(reader io.Reader) {
 			// Not valid JSON, write raw line to both outputs
 			// Write errors are intentionally ignored - streaming is best-effort
 			if r.tuiWriter != nil {
-				_, _ = r.tuiWriter.Write(line)            //nolint:errcheck // best-effort streaming
-				_, _ = r.tuiWriter.Write([]byte("\n"))   //nolint:errcheck // best-effort streaming
+				_, _ = r.tuiWriter.Write(line)         //nolint:errcheck // best-effort streaming
+				_, _ = r.tuiWriter.Write([]byte("\n")) //nolint:errcheck // best-effort streaming
 			}
 			if r.logWriter != nil {
 				// Strip ANSI codes for log file readability
 				stripped := ansiEscapeRegex.ReplaceAll(line, []byte{})
-				_, _ = r.logWriter.Write(stripped)       //nolint:errcheck // best-effort streaming
-				_, _ = r.logWriter.Write([]byte("\n"))   //nolint:errcheck // best-effort streaming
+				_, _ = r.logWriter.Write(stripped)     //nolint:errcheck // best-effort streaming
+				_, _ = r.logWriter.Write([]byte("\n")) //nolint:errcheck // best-effort streaming
 			}
 			continue
 		}
@@ -201,15 +201,15 @@ func (r *StreamingRunner) processStderr(reader io.Reader) {
 		// Write errors are intentionally ignored - streaming is best-effort
 		// Write to TUI (with ANSI codes)
 		if r.tuiWriter != nil {
-			_, _ = r.tuiWriter.Write(line)          //nolint:errcheck // best-effort streaming
+			_, _ = r.tuiWriter.Write(line)         //nolint:errcheck // best-effort streaming
 			_, _ = r.tuiWriter.Write([]byte("\n")) //nolint:errcheck // best-effort streaming
 		}
 
 		// Write to log (strip ANSI codes for readability)
 		if r.logWriter != nil {
 			stripped := ansiEscapeRegex.ReplaceAll(line, []byte{})
-			_, _ = r.logWriter.Write(stripped)       //nolint:errcheck // best-effort streaming
-			_, _ = r.logWriter.Write([]byte("\n"))   //nolint:errcheck // best-effort streaming
+			_, _ = r.logWriter.Write(stripped)     //nolint:errcheck // best-effort streaming
+			_, _ = r.logWriter.Write([]byte("\n")) //nolint:errcheck // best-effort streaming
 		}
 	}
 }

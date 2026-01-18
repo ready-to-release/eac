@@ -5,7 +5,6 @@ import (
 	"os"
 	"strings"
 	"text/tabwriter"
-	"time"
 
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/cache"
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/conf"
@@ -49,7 +48,7 @@ Can optionally show all available tags for each extension.`,
 
 		// Handle clear cache flag - just clear cache and exit
 		if listClearCache {
-			registryCache, _ := cache.LoadRegistryCache(repoRoot)
+			registryCache, _ := cache.LoadRegistryCache(repoRoot) //nolint:errcheck // nil is handled below
 			if registryCache != nil {
 				registryCache.Clear()
 				err := registryCache.SaveRegistryCache(repoRoot)
@@ -68,7 +67,7 @@ Can optionally show all available tags for each extension.`,
 		logging.Debug("Discovering available extensions from registry...")
 
 		// Try to get extensions from cache first
-		registryCache, _ := cache.LoadRegistryCache(repoRoot)
+		registryCache, _ := cache.LoadRegistryCache(repoRoot) //nolint:errcheck // nil is handled below
 		var knownExtensions map[string]string
 
 		// Check if we need to discover extensions
@@ -112,7 +111,7 @@ Can optionally show all available tags for each extension.`,
 			// Clear cache to force refresh
 			if registryCache != nil {
 				registryCache.Clear()
-				registryCache.SaveRegistryCache(repoRoot)
+				_ = registryCache.SaveRegistryCache(repoRoot) //nolint:errcheck // best-effort cache save
 			}
 			logging.Info("ℹ️  Cache cleared, fetching fresh data from registry...")
 		}
@@ -142,7 +141,7 @@ Can optionally show all available tags for each extension.`,
 
 			// Use ValidatePinnedExtensions to populate cache with latest versions
 			// This will fetch from registry if needed
-			unpinnedMessages, _ := conf.ValidatePinnedExtensions(tempConfig, false)
+			unpinnedMessages, _ := conf.ValidatePinnedExtensions(tempConfig, false) //nolint:errcheck // best-effort version lookup
 
 			// Parse the messages to extract the SHA tags
 			for _, msg := range unpinnedMessages {
@@ -163,7 +162,7 @@ Can optionally show all available tags for each extension.`,
 		}
 
 		// Reload cache to get all tags
-		registryCache, _ = cache.LoadRegistryCache(repoRoot)
+		registryCache, _ = cache.LoadRegistryCache(repoRoot) //nolint:errcheck // nil is handled below
 
 		// Create a tabwriter for aligned output
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
@@ -273,7 +272,7 @@ func init() {
 	listCmd.Flags().BoolVar(&listClearCache, "clear-cache", false, "Clear the registry cache and exit")
 }
 
-// limitTags returns at most n tags, with ellipsis if there are more
+// limitTags returns at most n tags, with ellipsis if there are more.
 func limitTags(tags []string, n int) []string {
 	if len(tags) <= n {
 		return tags
@@ -281,32 +280,4 @@ func limitTags(tags []string, n int) []string {
 	result := tags[:n]
 	result = append(result, fmt.Sprintf("... (%d more)", len(tags)-n))
 	return result
-}
-
-// formatDuration formats a time as a human-readable duration
-func formatDuration(t time.Time) string {
-	d := time.Since(t)
-	if d < time.Minute {
-		return fmt.Sprintf("%d seconds", int(d.Seconds()))
-	} else if d < time.Hour {
-		return fmt.Sprintf("%d minutes", int(d.Minutes()))
-	} else if d < 24*time.Hour {
-		return fmt.Sprintf("%d hours", int(d.Hours()))
-	}
-	return fmt.Sprintf("%d days", int(d.Hours()/24))
-}
-
-// formatRemainingTime formats a duration as human-readable remaining time
-func formatRemainingTime(d time.Duration) string {
-	if d < 0 {
-		return "expired"
-	}
-	if d < time.Minute {
-		return fmt.Sprintf("%d seconds", int(d.Seconds()))
-	} else if d < time.Hour {
-		return fmt.Sprintf("%d minutes", int(d.Minutes()))
-	} else if d < 24*time.Hour {
-		return fmt.Sprintf("%d hours", int(d.Hours()))
-	}
-	return fmt.Sprintf("%d days", int(d.Hours()/24))
 }

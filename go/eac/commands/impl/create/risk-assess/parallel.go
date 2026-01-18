@@ -158,7 +158,8 @@ func assessSingleModule(
 	if len(ar.Results) > 0 {
 		resultData := ar.Results[0]
 		if resultData.Findings != nil {
-			for _, finding := range *resultData.Findings {
+			for i := range *resultData.Findings {
+				finding := &(*resultData.Findings)[i]
 				if finding.Target.Status.State == oscal.StateSatisfied {
 					result.Satisfied++
 				} else {

@@ -91,8 +91,12 @@ func (r *TsCucumberRunner) FindTestRoot(featurePath string, cfg *config.EACConfi
 		return ""
 	}
 
-	// Return the module's root directory where cucumber-js should be
-	return filepath.ToSlash(module.Files.Root)
+	// Return the module's typescript package root where cucumber-js should be
+	tsRoot := module.Components.GetComponentRoot("typescript")
+	if tsRoot == "" {
+		return ""
+	}
+	return filepath.ToSlash(tsRoot)
 }
 
 // BuildPackagePath constructs the package path for test grouping.

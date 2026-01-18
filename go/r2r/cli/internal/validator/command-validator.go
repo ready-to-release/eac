@@ -9,12 +9,12 @@ import (
 	parser "github.com/ready-to-release/eac/go/r2r/cli/internal/command-parser"
 )
 
-// CommandValidator validates parsed commands against business rules
+// CommandValidator validates parsed commands against business rules.
 type CommandValidator struct {
 	parser *parser.Parser
 }
 
-// CommandValidationResult contains validation results
+// CommandValidationResult contains validation results.
 type CommandValidationResult struct {
 	Valid    bool
 	Errors   []string
@@ -24,14 +24,14 @@ type CommandValidationResult struct {
 	ParsedCommand *parser.ParsedCommand
 }
 
-// NewCommandValidator creates a new command validator
+// NewCommandValidator creates a new command validator.
 func NewCommandValidator() *CommandValidator {
 	return &CommandValidator{
 		parser: parser.NewParser(),
 	}
 }
 
-// ValidateCommand validates a command-line against schema and business rules
+// ValidateCommand validates a command-line against schema and business rules.
 func (cv *CommandValidator) ValidateCommand(args []string) *CommandValidationResult {
 	result := &CommandValidationResult{
 		Valid:    true,
@@ -97,8 +97,8 @@ func (cv *CommandValidator) ValidateCommand(args []string) *CommandValidationRes
 	return result
 }
 
-// addWarnings adds non-fatal warnings to the validation result
-func (cv *CommandValidator) addWarnings(result *CommandValidationResult, parsed *parser.ParsedCommand, args []string) {
+// addWarnings adds non-fatal warnings to the validation result.
+func (cv *CommandValidator) addWarnings(result *CommandValidationResult, parsed *parser.ParsedCommand, _ []string) {
 	// Warn if global flags appear in container args (might be unintentional)
 	for _, arg := range parsed.ContainerArgs {
 		if cv.parser.IsGlobalFlag(arg) {
@@ -118,25 +118,25 @@ func (cv *CommandValidator) addWarnings(result *CommandValidationResult, parsed 
 	}
 }
 
-// GetViperArguments returns arguments that should be processed by Viper
+// GetViperArguments returns arguments that should be processed by Viper.
 func (cv *CommandValidator) GetViperArguments(args []string) []string {
 	parsed := cv.parser.Parse(args)
 	return parsed.ViperArgs
 }
 
-// GetContainerArguments returns arguments that should be passed to container
+// GetContainerArguments returns arguments that should be passed to container.
 func (cv *CommandValidator) GetContainerArguments(args []string) []string {
 	parsed := cv.parser.Parse(args)
 	return parsed.ContainerArgs
 }
 
-// GetArgumentBoundary returns the index where container args start
+// GetArgumentBoundary returns the index where container args start.
 func (cv *CommandValidator) GetArgumentBoundary(args []string) int {
 	parsed := cv.parser.Parse(args)
 	return parsed.ArgumentBoundary
 }
 
-// IsViperArgument checks if an argument at position should be processed by Viper
+// IsViperArgument checks if an argument at position should be processed by Viper.
 func (cv *CommandValidator) IsViperArgument(args []string, position int) bool {
 	boundary := cv.GetArgumentBoundary(args)
 	if boundary == -1 {
@@ -146,7 +146,7 @@ func (cv *CommandValidator) IsViperArgument(args []string, position int) bool {
 	return position < boundary
 }
 
-// ValidateExtensionName validates an extension name format
+// ValidateExtensionName validates an extension name format.
 func (cv *CommandValidator) ValidateExtensionName(name string) error {
 	if !cv.parser.IsValidExtensionName(name) {
 		return fmt.Errorf("invalid extension name format: %s", name)
@@ -154,7 +154,7 @@ func (cv *CommandValidator) ValidateExtensionName(name string) error {
 	return nil
 }
 
-// ValidateForRun performs specific validation for run command
+// ValidateForRun performs specific validation for run command.
 func (cv *CommandValidator) ValidateForRun(args []string) *CommandValidationResult {
 	result := cv.ValidateCommand(args)
 
@@ -173,7 +173,7 @@ func (cv *CommandValidator) ValidateForRun(args []string) *CommandValidationResu
 	return result
 }
 
-// ValidateForMetadata performs specific validation for metadata command
+// ValidateForMetadata performs specific validation for metadata command.
 func (cv *CommandValidator) ValidateForMetadata(args []string) *CommandValidationResult {
 	result := cv.ValidateCommand(args)
 
@@ -189,7 +189,7 @@ func (cv *CommandValidator) ValidateForMetadata(args []string) *CommandValidatio
 	return result
 }
 
-// Summary returns a human-readable summary of validation
+// Summary returns a human-readable summary of validation.
 func (result *CommandValidationResult) Summary() string {
 	if result.Valid {
 		if len(result.Warnings) > 0 {

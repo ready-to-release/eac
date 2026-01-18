@@ -31,7 +31,7 @@ func (h *GoHandler) Capabilities() []string { return []string{"go_module", "cros
 func (h *GoHandler) Requirements() []string { return []string{"go"} }
 
 func (h *GoHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot string) error {
-	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
+	moduleRoot := filepath.Join(workspaceRoot, module.GetComponentRoot("go"))
 	goMod := filepath.Join(moduleRoot, "go.mod")
 	if _, err := os.Stat(goMod); os.IsNotExist(err) {
 		return fmt.Errorf("go.mod not found at %s", goMod)
@@ -49,8 +49,7 @@ func (h *GoHandler) Build(module *modules.ModuleContract, workspaceRoot, outputD
 
 // listGoModuleArtifacts returns the artifacts that would be produced by building this Go module.
 func listGoModuleArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {
-	cfg := config.Global()
-	hasGoModule := cfg != nil && cfg.ModuleTypes != nil && cfg.ModuleTypes.HasCapability(module.Type, "go_module")
+	hasGoModule := module.HasComponent("go")
 
 	if !hasGoModule {
 		return nil
@@ -108,17 +107,16 @@ func listModuleArtifacts(module *modules.ModuleContract) []string {
 //   - Multiple executables: cross-compiled binaries
 //   - Test artifacts: runs tests and captures results
 func buildGoModule(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
+	moduleRoot := filepath.Join(workspaceRoot, module.GetComponentRoot("go"))
 
-	Logln(logWriter, "\n=== Building %s: %s ===", module.Type, module.Moniker)
+	Logln(logWriter, "\n=== Building go: %s ===", module.Moniker)
 
-	// Get capabilities from contract
-	cfg := config.Global()
-	hasGoModule := cfg != nil && cfg.ModuleTypes != nil && cfg.ModuleTypes.HasCapability(module.Type, "go_module")
+	// Check if module has go package type
+	hasGoModule := module.HasComponent("go")
 
-	// Skip if not a go_module (shouldn't happen if build_deps is correct, but defensive)
+	// Skip if not a go module (shouldn't happen if packages is correct, but defensive)
 	if !hasGoModule {
-		Logln(logWriter, "⚠️  Module type '%s' doesn't have go_module capability", module.Type)
+		Logln(logWriter, "⚠️  Module '%s' doesn't have go package", module.Moniker)
 		return 0
 	}
 

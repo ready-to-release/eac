@@ -9,16 +9,41 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
 )
 
-func createTestModule(moniker, typ string) *ModuleContract {
+func createTestModule(moniker, pkgType string) *ModuleContract {
 	base := contracts.BaseContract{
 		Moniker: moniker,
 		Name:    "Test " + moniker,
-		Type:    typ,
+		Packages: contracts.ModulePackages{
+			pkgType: &contracts.PackageEntry{Root: "test/" + moniker},
+		},
 		Files: contracts.Files{
 			Root: "test/" + moniker,
 		},
 	}
 	return NewModuleContract(base, "/workspace")
+}
+
+func createTestModuleWithPackages(moniker string, packages map[string]string) *ModuleContract {
+	pkgs := make(contracts.ModulePackages)
+	for name, root := range packages {
+		pkgs[name] = &contracts.PackageEntry{Root: root}
+	}
+	base := contracts.BaseContract{
+		Moniker:  moniker,
+		Name:     "Test " + moniker,
+		Packages: pkgs,
+		Files: contracts.Files{
+			Root: packages[getFirstKey(packages)],
+		},
+	}
+	return NewModuleContract(base, "/workspace")
+}
+
+func getFirstKey(m map[string]string) string {
+	for k := range m {
+		return k
+	}
+	return ""
 }
 
 func TestNewRegistry(t *testing.T) {
@@ -156,24 +181,44 @@ func TestRegistry_AllMonikers(t *testing.T) {
 	}
 }
 
-func TestRegistry_FilterByType(t *testing.T) {
+func TestRegistry_FilterByPackage(t *testing.T) {
 	registry := NewRegistry("0.1.0", "/workspace")
 
-	_ = registry.Add(createTestModule("module1", "mcp-server"))
-	_ = registry.Add(createTestModule("module2", "cli"))
-	_ = registry.Add(createTestModule("module3", "mcp-server"))
-	_ = registry.Add(createTestModule("module4", "docs"))
+	// Create modules with various package combinations
+	_ = registry.Add(createTestModuleWithPackages("module1", map[string]string{"go": "go/mod1", "specs": "specs/mod1"}))
+	_ = registry.Add(createTestModuleWithPackages("module2", map[string]string{"typescript": "ts/mod2"}))
+	_ = registry.Add(createTestModuleWithPackages("module3", map[string]string{"go": "go/mod3", "design": "specs/mod3/.design"}))
+	_ = registry.Add(createTestModuleWithPackages("module4", map[string]string{"book": "docs"}))
 
-	mcpServers := registry.FilterByType("mcp-server")
-
-	if len(mcpServers) != 2 {
-		t.Errorf("Expected 2 mcp-server modules, got %d", len(mcpServers))
+	// Filter by 'go' package
+	goModules := registry.FilterByPackage("go")
+	if len(goModules) != 2 {
+		t.Errorf("Expected 2 modules with 'go' package, got %d", len(goModules))
+	}
+	for _, m := range goModules {
+		if !m.HasComponent("go") {
+			t.Errorf("Module %s should have 'go' package", m.Moniker)
+		}
 	}
 
-	for _, m := range mcpServers {
-		if m.GetType() != "mcp-server" {
-			t.Errorf("Expected type 'mcp-server', got '%s'", m.GetType())
-		}
+	// Filter by 'specs' package
+	specsModules := registry.FilterByPackage("specs")
+	if len(specsModules) != 1 {
+		t.Errorf("Expected 1 module with 'specs' package, got %d", len(specsModules))
+	}
+}
+
+func TestRegistry_FilterByAnyPackage(t *testing.T) {
+	registry := NewRegistry("0.1.0", "/workspace")
+
+	_ = registry.Add(createTestModuleWithPackages("module1", map[string]string{"go": "go/mod1"}))
+	_ = registry.Add(createTestModuleWithPackages("module2", map[string]string{"typescript": "ts/mod2"}))
+	_ = registry.Add(createTestModuleWithPackages("module3", map[string]string{"book": "docs"}))
+
+	// Filter by any of 'go' or 'typescript'
+	codeModules := registry.FilterByAnyPackage("go", "typescript")
+	if len(codeModules) != 2 {
+		t.Errorf("Expected 2 modules with 'go' or 'typescript' package, got %d", len(codeModules))
 	}
 }
 

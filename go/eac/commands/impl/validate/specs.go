@@ -87,8 +87,8 @@ func ValidateSpecs() int {
 	}
 
 	// Parse configuration
-	config, err := parseValidateConfig()
-	if config == nil && err == nil {
+	cfg, err := parseValidateConfig()
+	if cfg == nil && err == nil {
 		// --help was requested, framework handles it
 		return 0
 	}
@@ -99,35 +99,35 @@ func ValidateSpecs() int {
 
 	// Initialize logger (logs to out/commands.log)
 	// File logging is separate from stdout, so JSON output is not corrupted
-	if err := logging.ConfigureLoggingSimple(config.RepositoryRoot, "commands", nil, config.Verbose); err != nil {
+	if err := logging.ConfigureLoggingSimple(cfg.RepositoryRoot, "commands", nil, cfg.Verbose); err != nil {
 		log.Warnf("Failed to configure logging: %v", err)
 	}
 	defer logging.CloseLogging()
 
 	// Log command start
-	log.Debugf("Starting specs validate: path=%s, format=%s, quiet=%v, verbose=%v", config.Path, config.Format, config.Quiet, config.Verbose)
+	log.Debugf("Starting specs validate: path=%s, format=%s, quiet=%v, verbose=%v", cfg.Path, cfg.Format, cfg.Quiet, cfg.Verbose)
 
 	// Validate path security
-	if err := validatePath(config.Path, config.RepositoryRoot); err != nil {
-		log.Debugf("Path security validation failed: path=%s, error=%v", config.Path, err)
+	if err := validatePath(cfg.Path, cfg.RepositoryRoot); err != nil {
+		log.Debugf("Path security validation failed: path=%s, error=%v", cfg.Path, err)
 		log.Errorf("Error: %v", err)
 		return 1
 	}
 
 	// Determine if path is file or directory
-	info, err := os.Stat(config.Path)
+	info, err := os.Stat(cfg.Path)
 	if err != nil {
-		log.Debugf("File or directory not found: path=%s, error=%v", config.Path, err)
-		log.Errorf("Error: file or directory not found: %s", config.Path)
+		log.Debugf("File or directory not found: path=%s, error=%v", cfg.Path, err)
+		log.Errorf("Error: file or directory not found: %s", cfg.Path)
 		return 1
 	}
 
-	log.Debugf("Starting validation: path=%s, isDir=%v", config.Path, info.IsDir())
+	log.Debugf("Starting validation: path=%s, isDir=%v", cfg.Path, info.IsDir())
 
 	var results []*ValidationResult
 	if info.IsDir() {
 		// Validate directory (recursive)
-		results, err = validateDirectory(config.Path, config.RepositoryRoot, config.Quiet, config.CheckTags, config.Format)
+		results, err = validateDirectory(cfg.Path, cfg.RepositoryRoot, cfg.Quiet, cfg.CheckTags, cfg.Format)
 		if err != nil {
 			log.Debugf("Directory validation failed: error=%v", err)
 			log.Errorf("Error: %v", err)
@@ -135,29 +135,29 @@ func ValidateSpecs() int {
 		}
 	} else {
 		// Validate single file
-		errors, err := validateGherkinFile(config.Path, config.RepositoryRoot, config.CheckTags)
+		errors, err := validateGherkinFile(cfg.Path, cfg.RepositoryRoot, cfg.CheckTags)
 		if err != nil {
-			log.Debugf("File validation failed: path=%s, error=%v", config.Path, err)
+			log.Debugf("File validation failed: path=%s, error=%v", cfg.Path, err)
 			log.Errorf("Error: %v", err)
 			return 1
 		}
 
 		// Apply fixes if --fix flag is set
-		if config.Fix && len(errors) > 0 {
-			fixResult, fixErr := fixGherkinFile(config.Path, errors)
+		if cfg.Fix && len(errors) > 0 {
+			fixResult, fixErr := fixGherkinFile(cfg.Path, errors)
 			if fixErr != nil {
-				log.Debugf("Failed to fix file: path=%s, error=%v", config.Path, fixErr)
+				log.Debugf("Failed to fix file: path=%s, error=%v", cfg.Path, fixErr)
 				log.Errorf("Error fixing file: %v", fixErr)
 			} else if fixResult.FixCount() > 0 {
 				// Display fix results
-				log.Info(formatFixResult(fixResult, config.RepositoryRoot))
+				log.Info(formatFixResult(fixResult, cfg.RepositoryRoot))
 
-				log.Debugf("Applied fixes: path=%s, fixCount=%d", config.Path, fixResult.FixCount())
+				log.Debugf("Applied fixes: path=%s, fixCount=%d", cfg.Path, fixResult.FixCount())
 
 				// Re-validate after fixes
-				errors, err = validateGherkinFile(config.Path, config.RepositoryRoot, config.CheckTags)
+				errors, err = validateGherkinFile(cfg.Path, cfg.RepositoryRoot, cfg.CheckTags)
 				if err != nil {
-					log.Debugf("Re-validation failed after fixes: path=%s, error=%v", config.Path, err)
+					log.Debugf("Re-validation failed after fixes: path=%s, error=%v", cfg.Path, err)
 					log.Errorf("Error re-validating after fixes: %v", err)
 					return 1
 				}
@@ -167,13 +167,13 @@ func ValidateSpecs() int {
 		criticalCount := contracts.CountCriticalErrors(errors)
 		results = []*ValidationResult{
 			{
-				Path:   config.Path,
+				Path:   cfg.Path,
 				Valid:  criticalCount == 0,
 				Errors: errors,
 			},
 		}
 
-		log.Debugf("Single file validation complete: path=%s, valid=%v, errorCount=%d", config.Path, criticalCount == 0, len(errors))
+		log.Debugf("Single file validation complete: path=%s, valid=%v, errorCount=%d", cfg.Path, criticalCount == 0, len(errors))
 	}
 
 	passed := countPassed(results)
@@ -182,10 +182,10 @@ func ValidateSpecs() int {
 	log.Debugf("Validation complete: total=%d, passed=%d, failed=%d", len(results), passed, failed)
 
 	// Format and display output
-	if config.Format == "json" {
+	if cfg.Format == "json" {
 		outputJSON(results)
 	} else {
-		outputText(results, config.Quiet, config.Verbose)
+		outputText(results, cfg.Quiet, cfg.Verbose)
 	}
 
 	// Return exit code based on validation results
@@ -216,7 +216,7 @@ type ValidationResult struct {
 
 // parseValidateConfig parses command line arguments into configuration.
 func parseValidateConfig() (*ValidateConfig, error) {
-	config := &ValidateConfig{
+	cfg := &ValidateConfig{
 		Format:    "text", // Default format
 		CheckTags: true,   // Default: tag validation enabled
 	}
@@ -231,22 +231,22 @@ func parseValidateConfig() (*ValidateConfig, error) {
 			// Help is handled by the framework via command comments
 			return nil, nil
 		case "-q", "--quiet":
-			config.Quiet = true
+			cfg.Quiet = true
 		case "-v", "--verbose":
-			config.Verbose = true
+			cfg.Verbose = true
 		case "-f", "--format":
 			if i+1 < len(args) {
-				config.Format = args[i+1]
+				cfg.Format = args[i+1]
 				i++
 			} else {
 				return nil, fmt.Errorf("--format requires an argument (text|json)")
 			}
 		case "--check-tags":
-			config.CheckTags = true
+			cfg.CheckTags = true
 		case "--no-check-tags":
-			config.CheckTags = false
+			cfg.CheckTags = false
 		case "--fix":
-			config.Fix = true
+			cfg.Fix = true
 		default:
 			if !strings.HasPrefix(arg, "-") {
 				if path == "" {
@@ -263,7 +263,7 @@ func parseValidateConfig() (*ValidateConfig, error) {
 		return nil, fmt.Errorf("file path or directory is required\n\nUsage: specs validate <path> [--quiet] [--verbose] [--format json]\nExample: specs validate specs/eac-commands/specs/create/specification.feature")
 	}
 
-	config.Path = path
+	cfg.Path = path
 
 	// Get repository root
 	repoRoot, err := repository.GetRepositoryRoot("")
@@ -271,12 +271,12 @@ func parseValidateConfig() (*ValidateConfig, error) {
 		return nil, fmt.Errorf("failed to find repository root: %w\n\nPlease run this command from within a git repository", err)
 	}
 
-	config.RepositoryRoot = repoRoot
+	cfg.RepositoryRoot = repoRoot
 
 	// Make path absolute if relative
 	// Relative paths are interpreted relative to the current working directory,
 	// not the repository root
-	if !filepath.IsAbs(config.Path) {
+	if !filepath.IsAbs(cfg.Path) {
 		// First, check for R2R_PWD environment variable (used in isolated tests)
 		// This allows tests to run from a different directory than the command invocation
 		cwd := os.Getenv("R2R_PWD")
@@ -288,18 +288,18 @@ func parseValidateConfig() (*ValidateConfig, error) {
 				return nil, fmt.Errorf("failed to get current working directory: %w", err)
 			}
 		}
-		config.Path = filepath.Clean(filepath.Join(cwd, config.Path))
+		cfg.Path = filepath.Clean(filepath.Join(cwd, cfg.Path))
 	} else {
 		// Even if path is absolute, clean it
-		config.Path = filepath.Clean(config.Path)
+		cfg.Path = filepath.Clean(cfg.Path)
 	}
 
 	// Validate format
-	if config.Format != "text" && config.Format != "json" {
-		return nil, fmt.Errorf("invalid format: %s (must be 'text' or 'json')", config.Format)
+	if cfg.Format != "text" && cfg.Format != "json" {
+		return nil, fmt.Errorf("invalid format: %s (must be 'text' or 'json')", cfg.Format)
 	}
 
-	return config, nil
+	return cfg, nil
 }
 
 // validatePath ensures the path is within the repository (prevents path traversal attacks).

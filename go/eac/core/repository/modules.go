@@ -94,24 +94,24 @@ func filterClosestModules(matchingModules []*modules.ModuleContract, registry *m
 		return matchingModules
 	}
 
-	// Special handling for "repository-root" type modules
-	// Repository-root modules should only own files that no other module claims
+	// Special handling for the "repository" root module
+	// Repository module should only own files that no other module claims
 	hasRepositoryRoot := false
 	hasOtherModules := false
 
 	for _, module := range matchingModules {
-		if module.Type == "repository-root" {
+		if module.Moniker == "repository" {
 			hasRepositoryRoot = true
 		} else {
 			hasOtherModules = true
 		}
 	}
 
-	// If repository-root is present with other modules, exclude it
+	// If repository root is present with other modules, exclude it
 	if hasRepositoryRoot && hasOtherModules {
 		filteredModules := make([]*modules.ModuleContract, 0, len(matchingModules)-1)
 		for _, module := range matchingModules {
-			if module.Type != "repository-root" {
+			if module.Moniker != "repository" {
 				filteredModules = append(filteredModules, module)
 			}
 		}

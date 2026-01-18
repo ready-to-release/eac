@@ -7,6 +7,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/initsummary"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/output"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
 )
 
@@ -54,96 +55,91 @@ func generateTUISummary(ctx *ExecutionContext, totalTime time.Duration) *tui.Sum
 		runSummary += fmt.Sprintf(", %d failed", failureCount)
 	}
 
-	// Aggregate results by type
-	type typeSummary struct {
-		Packages int
-		Passed   int
-		Failed   int
-		Warnings int
+	// Build per-module results
+	type moduleResult struct {
+		moniker     string
+		pkgTypes    string
+		status      string // "passed", "failed", "warning"
+		duration    time.Duration
+		errors      []string
+		logPath     string
 	}
-	summaryByType := make(map[string]*typeSummary)
-
-	type failedResult struct {
-		moniker    string
-		duration   time.Duration
-		moduleType string
-		errors     []string
-		logPath    string
-	}
-	var failedResults []failedResult
+	var moduleResults []moduleResult
 
 	for _, result := range results {
-		moduleType := ctx.ModuleTypes[result.Moniker]
-		if moduleType == "" {
-			moduleType = "unknown"
+		pkgTypes := ctx.ModuleTypes[result.Moniker]
+		if pkgTypes == "" {
+			pkgTypes = "unknown"
 		}
 
-		if _, ok := summaryByType[moduleType]; !ok {
-			summaryByType[moduleType] = &typeSummary{}
+		mr := moduleResult{
+			moniker:  result.Moniker,
+			pkgTypes: pkgTypes,
+			duration: result.Duration,
+			logPath:  result.LogPath,
 		}
-		summaryByType[moduleType].Packages++
 
 		if result.ExitCode != 0 {
-			summaryByType[moduleType].Failed++
-			failedResults = append(failedResults, failedResult{
-				moniker:    result.Moniker,
-				duration:   result.Duration,
-				moduleType: moduleType,
-				errors:     result.Errors,
-				logPath:    result.LogPath,
-			})
+			mr.status = "failed"
+			mr.errors = result.Errors
 		} else if len(result.Warnings) > 0 {
-			summaryByType[moduleType].Warnings++
-			failedResults = append(failedResults, failedResult{
-				moniker:    result.Moniker,
-				duration:   result.Duration,
-				moduleType: moduleType,
-				errors:     result.Warnings,
-				logPath:    result.LogPath,
-			})
+			mr.status = "warning"
+			mr.errors = result.Warnings
 		} else {
-			summaryByType[moduleType].Passed++
+			mr.status = "passed"
 		}
+		moduleResults = append(moduleResults, mr)
 	}
 
-	// Build details with summary table
-	var details []string
-
-	// Collect and sort types
-	types := make([]string, 0, len(summaryByType))
-	for t := range summaryByType {
-		types = append(types, t)
-	}
-	// Sort types alphabetically
-	for i := 0; i < len(types)-1; i++ {
-		for j := i + 1; j < len(types); j++ {
-			if types[i] > types[j] {
-				types[i], types[j] = types[j], types[i]
+	// Sort by moniker
+	for i := 0; i < len(moduleResults)-1; i++ {
+		for j := i + 1; j < len(moduleResults); j++ {
+			if moduleResults[i].moniker > moduleResults[j].moniker {
+				moduleResults[i], moduleResults[j] = moduleResults[j], moduleResults[i]
 			}
 		}
 	}
 
-	// Add summary table
-	details = append(details,
-		fmt.Sprintf("%-12s %8s %6s %6s %8s", "Type", "Packages", "Passed", "Failed", "Warnings"),
-		strings.Repeat("-", 44))
-	for _, t := range types {
-		s := summaryByType[t]
-		details = append(details, fmt.Sprintf("%-12s %8d %6d %6d %8d", t, s.Packages, s.Passed, s.Failed, s.Warnings))
+	// Build details with summary table - one row per module
+	var details []string
+	tb := render.NewTableBuilder().
+		WithHeaders("Module", "Packages", "Status")
+	for _, mr := range moduleResults {
+		statusIcon := "✓"
+		if mr.status == "failed" {
+			statusIcon = "✗"
+		} else if mr.status == "warning" {
+			statusIcon = "⚠"
+		}
+		tb.AddRow(mr.moniker, mr.pkgTypes, statusIcon)
 	}
+	details = append(details, tb.Build())
 
 	// Add failed/warning results with error details
-	if len(failedResults) > 0 {
+	hasErrors := false
+	for _, mr := range moduleResults {
+		if mr.status != "passed" {
+			hasErrors = true
+			break
+		}
+	}
+	if hasErrors {
 		details = append(details, "")
-		for _, fr := range failedResults {
-			status := "✗"
-			details = append(details, fmt.Sprintf("%s %s (%s) - %s",
-				status, output.PackageDisplayName(fr.moniker), fr.moduleType, formatDuration(fr.duration)))
-			for _, err := range fr.errors {
+		for _, mr := range moduleResults {
+			if mr.status == "passed" {
+				continue
+			}
+			statusIcon := "✗"
+			if mr.status == "warning" {
+				statusIcon = "⚠"
+			}
+			details = append(details, fmt.Sprintf("%s %s - %s",
+				statusIcon, output.PackageDisplayName(mr.moniker), formatDuration(mr.duration)))
+			for _, err := range mr.errors {
 				details = append(details, formatErrorLines("  Error: ", err)...)
 			}
-			if fr.logPath != "" {
-				details = append(details, fmt.Sprintf("  Log: %s", fr.logPath))
+			if mr.logPath != "" {
+				details = append(details, fmt.Sprintf("  Log: %s", mr.logPath))
 			}
 		}
 	}

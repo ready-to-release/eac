@@ -25,7 +25,8 @@ func BuildSpecCoverage(manifests []*implinternal.TestManifest) []SpecCoverage {
 	coverageMap := make(map[string]*SpecCoverage)
 
 	for _, manifest := range manifests {
-		for _, test := range manifest.Tests {
+		for i := range manifest.Tests {
+			test := &manifest.Tests[i]
 			// Only process godog tests
 			if test.Type != "godog" {
 				continue

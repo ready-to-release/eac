@@ -40,12 +40,14 @@ func (report CucumberReport) GroupByFeature() map[string]*Feature {
 func (report CucumberReport) FilterByVerificationType(verificationType string) []ScenarioWithFeature {
 	var results []ScenarioWithFeature
 
-	for _, feature := range report {
-		for _, scenario := range feature.Elements {
+	for i := range report {
+		feature := &report[i]
+		for j := range feature.Elements {
+			scenario := &feature.Elements[j]
 			if scenario.GetVerificationType() == verificationType {
 				results = append(results, ScenarioWithFeature{
-					Feature:  &feature,
-					Scenario: &scenario,
+					Feature:  feature,
+					Scenario: scenario,
 				})
 			}
 		}

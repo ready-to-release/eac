@@ -273,7 +273,8 @@ func checkModulePending(module string, moduleRegistry *modules.Registry, repo gi
 	// Filter commits by module file patterns
 	modulePatterns := moduleContract.GetGlobPatterns()
 	var filteredCommits []*changelog.Commit
-	for _, c := range commits {
+	for i := range commits {
+		c := &commits[i]
 		parsed := changelog.ParseCommitMessage(c.Message)
 		parsed.SHA = c.ShortSHA
 		parsed.Date = c.Date
@@ -328,7 +329,8 @@ func checkModulePending(module string, moduleRegistry *modules.Registry, repo gi
 
 	// Calculate next version
 	var existingVersions []string
-	for _, v := range existingChangelog.Versions {
+	for i := range existingChangelog.Versions {
+		v := &existingChangelog.Versions[i]
 		existingVersions = append(existingVersions, v.Number)
 	}
 

@@ -457,10 +457,13 @@ func (c *repositoryContext) discoverAllGoModulesUsingContracts() error {
 	}
 
 	for _, module := range moduleReport.Registry.All() {
-		// In the unified type system, "go" is the only Go module type
-		if module.Type == "go" {
-			modulePath := filepath.Join(c.repoRoot, module.Files.Root)
-			c.discoveredModules = append(c.discoveredModules, modulePath)
+		// In the unified type system, check if module has "go" package type
+		if module.Components.HasComponent("go") {
+			goRoot := module.GetComponentRoot("go")
+			if goRoot != "" {
+				modulePath := filepath.Join(c.repoRoot, goRoot)
+				c.discoveredModules = append(c.discoveredModules, modulePath)
+			}
 		}
 	}
 

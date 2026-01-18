@@ -14,7 +14,7 @@ import (
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/terminal"
 )
 
-// CreateContainerConfig creates a container configuration based on mode and extension
+// CreateContainerConfig creates a container configuration based on mode and extension.
 func (ch *ContainerHost) CreateContainerConfig(ext *ExtensionConfig, mode ContainerMode, args []string, imageInspect *image.InspectResponse) *container.Config {
 	envVars := ch.BuildEnvironmentVars(ext)
 
@@ -62,7 +62,7 @@ func (ch *ContainerHost) CreateContainerConfig(ext *ExtensionConfig, mode Contai
 }
 
 // CreateHostConfig creates the host configuration with volume mounts
-// volumeRequests are optional cache volumes requested by the extension via metadata
+// volumeRequests are optional cache volumes requested by the extension via metadata.
 func (ch *ContainerHost) CreateHostConfig(ext *ExtensionConfig, volumeRequests []cache.VolumeRequest) *container.HostConfig {
 	// In Docker-in-Docker mode, we need to use the HOST path for mounts, not the container path.
 	// R2R_HOST_REPOROOT is set by the parent r2r CLI and contains the original host path.
@@ -107,7 +107,7 @@ func (ch *ContainerHost) CreateHostConfig(ext *ExtensionConfig, volumeRequests [
 	}
 }
 
-// getDockerServiceMount returns the appropriate Docker service mount for the current platform
+// getDockerServiceMount returns the appropriate Docker service mount for the current platform.
 func (ch *ContainerHost) getDockerServiceMount() *mount.Mount {
 	// For all platforms (including WSL2/Windows), use the Unix socket path
 	// Docker Desktop on Windows exposes the socket at this path in WSL2
@@ -118,7 +118,7 @@ func (ch *ContainerHost) getDockerServiceMount() *mount.Mount {
 	}
 }
 
-// CreateContainer creates a new Docker container with the specified configuration
+// CreateContainer creates a new Docker container with the specified configuration.
 func (ch *ContainerHost) CreateContainer(containerConfig *container.Config, hostConfig *container.HostConfig) (string, error) {
 	resp, err := ch.client.ContainerCreate(ch.ctx, containerConfig, hostConfig, nil, nil, "")
 	if err != nil {
@@ -130,7 +130,7 @@ func (ch *ContainerHost) CreateContainer(containerConfig *container.Config, host
 	return resp.ID, nil
 }
 
-// StartContainer starts a Docker container by ID
+// StartContainer starts a Docker container by ID.
 func (ch *ContainerHost) StartContainer(containerID string) error {
 	if err := ch.client.ContainerStart(ch.ctx, containerID, container.StartOptions{}); err != nil {
 		return fmt.Errorf("error starting container: %w", err)
@@ -143,8 +143,8 @@ func (ch *ContainerHost) StartContainer(containerID string) error {
 		if width, height, err := terminal.GetSize(); err == nil && width > 0 && height > 0 {
 			logging.Debugf("Resizing container TTY after start: terminal_width=%d terminal_height=%d", width, height)
 			resizeOptions := container.ResizeOptions{
-				Height: uint(height),
-				Width:  uint(width),
+				Height: uint(height), //nolint:gosec // G115: height > 0 checked above, no overflow
+				Width:  uint(width),  //nolint:gosec // G115: width > 0 checked above, no overflow
 			}
 			if err := ch.client.ContainerResize(ch.ctx, containerID, resizeOptions); err != nil {
 				logging.Debugf("Failed to resize container TTY after start: %v", err)
@@ -157,7 +157,7 @@ func (ch *ContainerHost) StartContainer(containerID string) error {
 	return nil
 }
 
-// AttachToContainer attaches to a container for I/O operations
+// AttachToContainer attaches to a container for I/O operations.
 func (ch *ContainerHost) AttachToContainer(containerID string) (types.HijackedResponse, error) {
 	// Inspect container to determine if stdin should be attached
 	inspect, err := ch.client.ContainerInspect(ch.ctx, containerID)
@@ -182,27 +182,28 @@ func (ch *ContainerHost) AttachToContainer(containerID string) (types.HijackedRe
 	return attachResp, nil
 }
 
-// WaitForContainer waits for a container to finish execution
+// WaitForContainer waits for a container to finish execution.
 func (ch *ContainerHost) WaitForContainer(containerID string) (<-chan container.WaitResponse, <-chan error) {
 	return ch.client.ContainerWait(ch.ctx, containerID, container.WaitConditionNotRunning)
 }
 
-// StopContainer stops a running container
+// StopContainer stops a running container.
 func (ch *ContainerHost) StopContainer(containerID string) error {
 	return ch.client.ContainerStop(ch.ctx, containerID, container.StopOptions{})
 }
 
-// StopContainerWithContext stops a running container with a specific context for timeout control
+// StopContainerWithContext stops a running container with a specific context for timeout control.
 func (ch *ContainerHost) StopContainerWithContext(ctx context.Context, containerID string) error {
 	// Docker will send SIGTERM first, then SIGKILL after the timeout
 	// The default timeout is 10 seconds, but we're using the context to control it
 	return ch.client.ContainerStop(ctx, containerID, container.StopOptions{})
 }
 
-// GetRootDir returns the root directory path
+// GetRootDir returns the root directory path.
 func (ch *ContainerHost) GetRootDir() string {
 	return ch.rootDir
 }
+
 func (ch *ContainerHost) GetContainerSnapshot() (map[string]string, error) {
 	containers, err := ch.client.ContainerList(ch.ctx, container.ListOptions{
 		All: false, // Only running containers
@@ -222,7 +223,7 @@ func (ch *ContainerHost) GetContainerSnapshot() (map[string]string, error) {
 
 // WarnAboutNewContainers compares before/after snapshots and warns about new containers
 // If autoRemove is true, it will stop and remove the containers instead of just warning
-// expectedHostImages is a list of images that are expected to be created by the extension (e.g., serve commands)
+// expectedHostImages is a list of images that are expected to be created by the extension (e.g., serve commands).
 func (ch *ContainerHost) WarnAboutNewContainers(beforeSnapshot, afterSnapshot map[string]string, extensionImage string, autoRemove bool, expectedHostImages []string) {
 	for containerID, image := range afterSnapshot {
 		if _, existed := beforeSnapshot[containerID]; !existed {
@@ -261,7 +262,7 @@ func (ch *ContainerHost) Close() error {
 	return ch.client.Close()
 }
 
-// isExpectedHostImage checks if an image is in the list of expected host images
+// isExpectedHostImage checks if an image is in the list of expected host images.
 func isExpectedHostImage(image string, expectedImages []string) bool {
 	for _, expected := range expectedImages {
 		if image == expected {

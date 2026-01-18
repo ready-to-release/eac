@@ -71,7 +71,13 @@ func loadAndValidateModule(workspaceRoot, moniker string, cfg *config.EACConfig,
 	// Modules without artifacts don't produce manifests - they pass validation automatically
 	if cfg != nil && cfg.Repository != nil {
 		if module, ok := cfg.Repository.GetModule(moniker); ok {
-			hasArtifacts := module.Build != nil && len(module.Build.Artifacts) > 0
+			hasArtifacts := false
+			for _, pkg := range module.Components {
+				if pkg != nil && pkg.Build != nil && len(pkg.Build.Artifacts) > 0 {
+					hasArtifacts = true
+					break
+				}
+			}
 			if !hasArtifacts {
 				// Module doesn't declare artifacts - no manifest expected
 				result.SchemaValid = true

@@ -13,9 +13,6 @@ package defaults
 
 // Module field defaults.
 const (
-	// ModuleType is the default type when not specified in module contract.
-	ModuleType = "no-module-type"
-
 	// Changelog is the default changelog filename.
 	Changelog = "CHANGELOG.md"
 )

@@ -12,7 +12,6 @@ import (
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/dockerutil"
-	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/platform"
 )
 
@@ -108,56 +107,11 @@ func IsDockerAvailable() bool {
 	return dockerutil.IsDockerAvailable()
 }
 
-// ExecutePostBuildSteps runs any post-build steps defined for the module type.
+// ExecutePostBuildSteps runs any post-build steps defined for the module.
 // Returns non-zero exit code if any step fails.
-func ExecutePostBuildSteps(moduleType, moniker, workspaceRoot, outputDir string, logWriter io.Writer) int {
-	cfg := config.Global()
-	if cfg == nil || cfg.ModuleTypes == nil {
-		return 0
-	}
-
-	steps := cfg.ModuleTypes.GetPostBuildSteps(moduleType)
-	if len(steps) == 0 {
-		return 0
-	}
-
-	Logln(logWriter, "")
-	Logln(logWriter, "📋 Running post-build steps...")
-
-	for i, step := range steps {
-		// Substitute variables in target/script
-		vars := map[string]string{
-			"{moniker}":    moniker,
-			"{root}":       workspaceRoot,
-			"{output_dir}": outputDir,
-		}
-
-		switch step.Action {
-		case config.PostBuildActionCopy:
-			target := substituteVars(step.Target, vars)
-			targetPath := filepath.Join(workspaceRoot, target)
-
-			Logln(logWriter, "   [%d] Copy to %s", i+1, target)
-
-			if err := CopyBuildOutput(outputDir, targetPath, step.Include, step.Exclude, logWriter); err != nil {
-				Logln(logWriter, "   ❌ Copy failed: %v", err)
-				return 1
-			}
-
-		case config.PostBuildActionScript:
-			script := substituteVars(step.Script, vars)
-			Logln(logWriter, "   [%d] Running: %s", i+1, script)
-
-			// Run script in workspace root
-			exitCode := RunCommandWithLog(workspaceRoot, logWriter, "sh", "-c", script)
-			if exitCode != 0 {
-				Logln(logWriter, "   ❌ Script failed with exit code %d", exitCode)
-				return exitCode
-			}
-		}
-	}
-
-	Logln(logWriter, "   ✅ Post-build steps completed")
+func ExecutePostBuildSteps(moniker, workspaceRoot, outputDir string, logWriter io.Writer) int {
+	// Post-build steps are expected to be defined at the module level
+	// This function is a placeholder for future implementation
 	return 0
 }
 

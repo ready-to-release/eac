@@ -59,7 +59,8 @@ func TestTags() int {
 
 	// Build set of valid tags from contract
 	validTags := make(map[string]bool)
-	for _, tag := range tagsConfig.Tags {
+	for i := range tagsConfig.Tags {
+		tag := &tagsConfig.Tags[i]
 		validTags[tag.Tag] = true
 	}
 
@@ -227,7 +228,8 @@ func isValidPatternTag(tag string, tagsConfig *config.TestingTagsConfig) bool {
 	suffix := parts[1]
 
 	// Find matching pattern in contract
-	for _, contractTag := range tagsConfig.Tags {
+	for i := range tagsConfig.Tags {
+		contractTag := &tagsConfig.Tags[i]
 		// Check if contract tag is a pattern (has <placeholder>)
 		if !strings.Contains(contractTag.Tag, "<") || !strings.Contains(contractTag.Tag, ">") {
 			continue

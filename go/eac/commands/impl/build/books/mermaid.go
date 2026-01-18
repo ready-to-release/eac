@@ -405,9 +405,10 @@ func (p *Preprocessor) renderMermaidDiagrams(statuses []CacheStatus) (int, error
 
 	// Filter for cache misses
 	toRender := []CacheStatus{}
-	for _, status := range statuses {
+	for i := range statuses {
+		status := &statuses[i]
 		if !status.Cached {
-			toRender = append(toRender, status)
+			toRender = append(toRender, *status)
 		}
 	}
 
@@ -445,8 +446,8 @@ func (p *Preprocessor) renderMermaidDiagrams(statuses []CacheStatus) (int, error
 	}
 
 	// Send jobs to workers
-	for _, status := range toRender {
-		jobs <- status
+	for i := range toRender {
+		jobs <- toRender[i]
 	}
 	close(jobs)
 
@@ -531,7 +532,8 @@ func (p *Preprocessor) checkMermaidCache(blocks []MermaidBlock) ([]CacheStatus, 
 func (p *Preprocessor) replaceMermaidBlocksWithImages(blocksByFile map[string][]MermaidBlock, statuses []CacheStatus) error {
 	// Build a map from block filename to cache path for quick lookup
 	cachePathByBlock := make(map[string]string)
-	for _, status := range statuses {
+	for i := range statuses {
+		status := &statuses[i]
 		cachePathByBlock[status.Block.Filename] = status.CachePath
 	}
 
@@ -666,7 +668,8 @@ func (p *Preprocessor) scanForMermaidDiagrams() (map[string][]MermaidBlock, []Ca
 	// Step 3: Analyze cache statistics
 	cacheHits := 0
 	cacheMisses := 0
-	for _, status := range statuses {
+	for i := range statuses {
+		status := &statuses[i]
 		if status.Cached {
 			cacheHits++
 		} else {
@@ -705,7 +708,8 @@ func (p *Preprocessor) scanForMermaidDiagrams() (map[string][]MermaidBlock, []Ca
 
 		for _, block := range blocks {
 			// Find this block's cache status
-			for _, status := range statuses {
+			for j := range statuses {
+				status := &statuses[j]
 				if status.Block.Filename == block.Filename {
 					if status.Cached {
 						fileHits++

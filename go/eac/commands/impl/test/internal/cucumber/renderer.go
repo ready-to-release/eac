@@ -57,7 +57,8 @@ func RenderTestSummary(feature *Feature, gitCtx GitContext) string {
 		buf.WriteString("| Scenario | Tags | Result |\n")
 		buf.WriteString("|----------|------|--------|\n")
 
-		for _, scenario := range scenarios {
+		for i := range scenarios {
+			scenario := &scenarios[i]
 			name := scenario.Name
 			tags := scenario.GetTagString()
 			status := scenario.GetStatus()
@@ -76,8 +77,9 @@ func RenderTestSummary(feature *Feature, gitCtx GitContext) string {
 func RenderAllFeatures(report CucumberReport, gitCtx GitContext) string {
 	var buf strings.Builder
 
-	for i, feature := range report {
-		buf.WriteString(RenderTestSummary(&feature, gitCtx))
+	for i := range report {
+		feature := &report[i]
+		buf.WriteString(RenderTestSummary(feature, gitCtx))
 
 		// Add separator between features (but not after the last one)
 		if i < len(report)-1 {
@@ -96,20 +98,22 @@ func RenderByVerificationType(report CucumberReport, verificationType string) st
 	// Group by feature ID
 	featureMap := make(map[string]*featureScenarios)
 
-	for _, feature := range report {
+	for i := range report {
+		feature := &report[i]
 		featureID := feature.GetFeatureID()
 
 		// Filter scenarios for this verification type
 		var filteredScenarios []Scenario
-		for _, scenario := range feature.Elements {
+		for j := range feature.Elements {
+			scenario := &feature.Elements[j]
 			if scenario.GetVerificationType() == verificationType {
-				filteredScenarios = append(filteredScenarios, scenario)
+				filteredScenarios = append(filteredScenarios, *scenario)
 			}
 		}
 
 		if len(filteredScenarios) > 0 {
 			featureMap[featureID] = &featureScenarios{
-				Feature:   &feature,
+				Feature:   feature,
 				Scenarios: filteredScenarios,
 			}
 		}
@@ -152,7 +156,8 @@ func RenderByVerificationType(report CucumberReport, verificationType string) st
 			buf.WriteString("| Scenario | Tags | Result |\n")
 			buf.WriteString("|----------|------|--------|\n")
 
-			for _, scenario := range scenarios {
+			for k := range scenarios {
+				scenario := &scenarios[k]
 				buf.WriteString(fmt.Sprintf("| %s | %s | %s |\n",
 					scenario.Name,
 					scenario.GetTagString(),
@@ -182,12 +187,13 @@ type featureScenarios struct {
 func groupScenariosByAC(scenarios []Scenario) map[string][]Scenario {
 	result := make(map[string][]Scenario)
 
-	for _, scenario := range scenarios {
+	for i := range scenarios {
+		scenario := &scenarios[i]
 		ac := scenario.GetAcceptanceCriteria()
 		if ac == "" {
 			ac = "NO_AC"
 		}
-		result[ac] = append(result[ac], scenario)
+		result[ac] = append(result[ac], *scenario)
 	}
 
 	return result

@@ -5,18 +5,19 @@ import (
 	"io"
 	"sync"
 
-	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
 // LintOptions contains flags for controlling the lint process.
 type LintOptions struct {
-	Fix    bool   // Auto-fix issues where possible
-	Config string // Override config file path
+	Fix       bool     // Auto-fix issues where possible
+	Config    string   // Override config file path
+	Files     []string // Specific files to lint (for file-based linting)
+	LintInput string   // How files are passed: "packages" or "files"
 }
 
 // Handler is the interface for lint handlers.
-// Each handler is responsible for linting modules of specific types.
+// Each handler is responsible for linting files of a specific package type.
 type Handler interface {
 	// Name returns the handler identifier (e.g., "go", "typescript")
 	Name() string
@@ -24,10 +25,6 @@ type Handler interface {
 	// Lint executes linting for a module.
 	// Returns exit code (0 = success/no issues, non-zero = issues found or error).
 	Lint(moduleRoot, workspaceRoot, outputDir string, logWriter io.Writer, opts LintOptions) int
-
-	// Capabilities returns module capabilities this handler supports.
-	// Used for dispatch matching (e.g., ["go_module"]).
-	Capabilities() []string
 
 	// Requirements returns system dependencies required by this handler.
 	// Used for early validation (e.g., ["golangci-lint"]).
@@ -45,7 +42,7 @@ var (
 )
 
 // RegisterHandler registers a handler for linting.
-// Call this from init() in your handler file.
+// Call this from init() in your builder file.
 func RegisterHandler(h Handler) {
 	mu.Lock()
 	defer mu.Unlock()
@@ -70,51 +67,25 @@ func GetAllHandlers() map[string]Handler {
 	return result
 }
 
-// GetHandlerForModule returns the appropriate lint handler for a module.
-// It finds a handler whose capabilities match the module's capabilities from module-types.yml.
-func GetHandlerForModule(moduleType string) Handler {
+// GetHandlerByLinter returns the handler for a specific linter tool name.
+// This is the primary dispatch mechanism for package-based linting.
+func GetHandlerByLinter(linterName string) Handler {
 	mu.RLock()
 	defer mu.RUnlock()
 
-	// Get module capabilities from config
-	cfg := config.Global()
-	if cfg == nil || cfg.ModuleTypes == nil {
-		return nil
+	// Map linter names to handler names
+	// Some linters have specific handler implementations
+	linterToHandler := map[string]string{
+		"golangci-lint":     "go",
+		"markdownlint-cli2": "markdown",
+		"eslint":            "typescript", // or javascript
 	}
 
-	moduleCapabilities := cfg.ModuleTypes.GetCapabilities(moduleType)
-
-	// Find handler whose capabilities match module capabilities
-	for _, h := range handlers {
-		if h.Name() == "" {
-			continue // Skip no-op handler
-		}
-		handlerCaps := h.Capabilities()
-		if matchesCapabilities(moduleCapabilities, handlerCaps) {
-			return h
-		}
+	handlerName, ok := linterToHandler[linterName]
+	if !ok {
+		// Try direct mapping (handler name == linter name)
+		handlerName = linterName
 	}
 
-	return nil
-}
-
-// matchesCapabilities returns true if the module has any capability the handler supports.
-func matchesCapabilities(moduleCapabilities, handlerCapabilities []string) bool {
-	for _, mc := range moduleCapabilities {
-		for _, hc := range handlerCapabilities {
-			if mc == hc {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-// IsGoModuleType returns true if the module type uses Go tooling (has go_module capability).
-func IsGoModuleType(moduleType string) bool {
-	cfg := config.Global()
-	if cfg != nil && cfg.ModuleTypes != nil {
-		return cfg.ModuleTypes.HasCapability(moduleType, "go_module")
-	}
-	return false
+	return handlers[handlerName]
 }

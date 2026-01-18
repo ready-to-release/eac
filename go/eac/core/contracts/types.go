@@ -1,5 +1,7 @@
 package contracts
 
+import "sort"
+
 // RepositoryContract represents repository-level configuration.
 type RepositoryContract struct {
 	Repository RepositoryConfig `yaml:"repository"`
@@ -65,25 +67,22 @@ type DefaultConventions struct {
 
 // ModuleVersioning contains module versioning configuration.
 type ModuleVersioning struct {
-	Scheme  string `yaml:"scheme"`            // SemVer | CalVer
-	Current string `yaml:"current,omitempty"` // Current version (optional)
+	Scheme    string `yaml:"scheme"`              // SemVer | CalVer
+	Current   string `yaml:"current,omitempty"`   // Current version (optional)
+	Changelog string `yaml:"changelog,omitempty"` // Path to changelog (defaults to release/<moniker>/CHANGELOG.md)
 }
 
 // BaseContract represents the base structure for module contracts.
 type BaseContract struct {
-	Moniker       string                 `yaml:"moniker"`
-	Name          string                 `yaml:"name"`
-	Type          string                 `yaml:"type"`
-	Description   string                 `yaml:"description"`
-	DependsOn     []string               `yaml:"depends_on"`
-	Versioning    *ModuleVersioning      `yaml:"versioning,omitempty"`     // Module versioning configuration
-	Build         *ModuleBuild           `yaml:"build,omitempty"`          // Per-module build configuration (artifacts, options)
-	DockerBuild   map[string]interface{} `yaml:"docker_build,omitempty"`   // Per-module Docker build configuration
-	Books         []string               `yaml:"books,omitempty"`          // Book names to build for this module (references books.yml)
-	ReleaseBundle *ReleaseBundle         `yaml:"release_bundle,omitempty"` // Release bundle configuration (for release modules)
-	Files         Files                  `yaml:"files"`
-	Flags         Flags                  `yaml:"flags"`
-	Metadata      map[string]string      `yaml:"metadata,omitempty"` // Generic key-value store for module-specific data
+	Moniker       string            `yaml:"moniker"`
+	Name          string            `yaml:"name"`
+	Description   string            `yaml:"description"`
+	DependsOn     []string          `yaml:"depends_on"`
+	Versioning    *ModuleVersioning `yaml:"versioning,omitempty"`
+	EvidenceBooks []string          `yaml:"evidence_books,omitempty"` // Evidence book names
+	ReleaseBundle *ReleaseBundle    `yaml:"release_bundle,omitempty"`
+	Metadata      map[string]string `yaml:"metadata,omitempty"`
+	Components    ModuleComponents  `yaml:"components"` // Component types mapped to their roots
 }
 
 // ReleaseBundle configures how the release module creates GitHub releases.
@@ -122,51 +121,8 @@ type BuildOptions struct {
 	// Reserved for future build options
 }
 
-// Files represents all file ownership patterns for a module.
-type Files struct {
-	Root string `yaml:"root"` // Base directory for this module
-
-	// Patterns relative to Root
-	Source       []string `yaml:"source"`        // Primary source code files
-	Config       []string `yaml:"config"`        // Configuration/build files
-	Assets       []string `yaml:"assets"`        // Static assets, templates, docs
-	Tests        []string `yaml:"tests"`         // Test files
-	Exclude      []string `yaml:"exclude"`       // Patterns to exclude
-	Ignore       []string `yaml:"ignore"`        // Patterns owned but not triggering change detection
-	Changelog    string   `yaml:"changelog"`     // Changelog file path
-	ReleaseNotes string   `yaml:"release_notes"` // Release notes file path
-
-	// Workflow file ownership (paths relative to repo root)
-	Workflows Workflows `yaml:"workflows"`
-
-	// Patterns relative to repo root
-	Repo RepoPatterns `yaml:"repo"`
-}
-
-// Workflows defines GitHub Actions workflow file ownership.
-type Workflows struct {
-	CI      string `yaml:"ci"`      // CI workflow file path
-	Release string `yaml:"release"` // Release workflow file path
-}
-
-// Flags defines module behavior flags.
-type Flags struct {
-	// ExplicitOwnership disables the default "all files under root" ownership.
-	// When true, the module only owns files that explicitly match its patterns
-	// (source, config, assets, tests). When false (default), if no patterns are
-	// defined, all files under files.root are implicitly owned.
-	// Use this for catch-all modules that should only own specific files.
-	ExplicitOwnership bool `yaml:"explicit_ownership,omitempty"`
-}
-
-// RepoPatterns represents patterns relative to repository root.
-type RepoPatterns struct {
-	Specs    []string `yaml:"specs"`     // Specification files
-	TestImpl string   `yaml:"test_impl"` // Test implementation directory path
-	Design   string   `yaml:"design"`    // Design workspace directory path
-	Other    []string `yaml:"other"`     // Other files outside module root
-	Exclude  []string `yaml:"exclude"`   // Exclusions relative to repo root
-}
+// NOTE: Files, Workflows, Flags, RepoPatterns structs removed.
+// File ownership is now determined by components.
 
 // Getter methods for BaseContract
 
@@ -178,85 +134,144 @@ func (b *BaseContract) GetName() string {
 	return b.Name
 }
 
-func (b *BaseContract) GetType() string {
-	return b.Type
-}
-
 func (b *BaseContract) GetDescription() string {
 	return b.Description
 }
 
-func (b *BaseContract) GetRoot() string {
-	return b.Files.Root
+// GetComponentRoot returns the root for a specific component type.
+func (b *BaseContract) GetComponentRoot(compType string) string {
+	return b.Components.GetComponentRoot(compType)
 }
 
-// HasBuildArtifacts returns true if the module has per-module build artifacts defined.
+// HasBuildArtifacts returns true if any component has build artifacts defined.
 func (b *BaseContract) HasBuildArtifacts() bool {
-	return b.Build != nil && len(b.Build.Artifacts) > 0
+	for _, comp := range b.Components {
+		if comp != nil && comp.Build != nil && len(comp.Build.Artifacts) > 0 {
+			return true
+		}
+	}
+	return false
 }
 
-// GetBuildArtifacts returns the per-module build artifacts, or nil if none defined.
+// GetBuildArtifacts returns all build artifacts from all components.
 func (b *BaseContract) GetBuildArtifacts() []ModuleArtifact {
-	if b.Build == nil {
-		return nil
-	}
-	return b.Build.Artifacts
-}
-
-// HasExecutableArtifacts returns true if any artifacts are of type executable.
-func (b *BaseContract) HasExecutableArtifacts() bool {
-	if b.Build == nil {
-		return false
-	}
-	for _, a := range b.Build.Artifacts {
-		if a.Type == "executable" {
-			return true
-		}
-	}
-	return false
-}
-
-// HasTestArtifacts returns true if any artifacts are of type test.
-func (b *BaseContract) HasTestArtifacts() bool {
-	if b.Build == nil {
-		return false
-	}
-	for _, a := range b.Build.Artifacts {
-		if a.Type == "test" {
-			return true
-		}
-	}
-	return false
-}
-
-// GetBuildHandler returns the explicit build handler for this module, or empty string if not set.
-func (b *BaseContract) GetBuildHandler() string {
-	if b.Build == nil {
-		return ""
-	}
-	return b.Build.Handler
-}
-
-// GetArtifactsByType returns all artifacts of the specified type.
-func (b *BaseContract) GetArtifactsByType(artifactType string) []ModuleArtifact {
-	if b.Build == nil {
-		return nil
-	}
 	var result []ModuleArtifact
-	for _, a := range b.Build.Artifacts {
-		if a.Type == artifactType {
-			result = append(result, a)
+	for _, comp := range b.Components {
+		if comp != nil && comp.Build != nil {
+			for _, a := range comp.Build.Artifacts {
+				result = append(result, ModuleArtifact{
+					ID:          a.ID,
+					Type:        a.Type,
+					Pattern:     a.Pattern,
+					Compression: a.Compression,
+					DeriveFrom:  a.DeriveFrom,
+				})
+			}
 		}
 	}
 	return result
 }
 
-// HasBooks returns true if the module has books defined.
-func (b *BaseContract) HasBooks() bool {
-	return len(b.Books) > 0
+// GetComponentBuildArtifacts returns build artifacts for a specific component.
+func (b *BaseContract) GetComponentBuildArtifacts(compName string) []ComponentArtifact {
+	if comp, ok := b.Components[compName]; ok && comp != nil && comp.Build != nil {
+		return comp.Build.Artifacts
+	}
+	return nil
 }
 
-// GetBooks returns the list of book names for this module.
+// HasExecutableArtifacts returns true if any component has executable artifacts.
+func (b *BaseContract) HasExecutableArtifacts() bool {
+	for _, comp := range b.Components {
+		if comp != nil && comp.Build != nil {
+			for _, a := range comp.Build.Artifacts {
+				if a.Type == "executable" {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+// HasTestArtifacts returns true if any component has test artifacts.
+func (b *BaseContract) HasTestArtifacts() bool {
+	for _, comp := range b.Components {
+		if comp != nil && comp.Build != nil {
+			for _, a := range comp.Build.Artifacts {
+				if a.Type == "test" {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+// GetBuildHandler returns the build handler from the first component that has one.
+// This is used for module-level handler override detection.
+func (b *BaseContract) GetBuildHandler() string {
+	for _, comp := range b.Components {
+		if comp != nil && comp.Build != nil && comp.Build.Handler != "" {
+			return comp.Build.Handler
+		}
+	}
+	return ""
+}
+
+// GetComponentBuildHandler returns the build handler for a specific component.
+func (b *BaseContract) GetComponentBuildHandler(compName string) string {
+	if comp, ok := b.Components[compName]; ok && comp != nil && comp.Build != nil {
+		return comp.Build.Handler
+	}
+	return ""
+}
+
+// GetArtifactsByType returns all artifacts of the specified type from all components.
+func (b *BaseContract) GetArtifactsByType(artifactType string) []ModuleArtifact {
+	var result []ModuleArtifact
+	for _, comp := range b.Components {
+		if comp != nil && comp.Build != nil {
+			for _, a := range comp.Build.Artifacts {
+				if a.Type == artifactType {
+					result = append(result, ModuleArtifact{
+						ID:          a.ID,
+						Type:        a.Type,
+						Pattern:     a.Pattern,
+						Compression: a.Compression,
+						DeriveFrom:  a.DeriveFrom,
+					})
+				}
+			}
+		}
+	}
+	return result
+}
+
+// HasBooks returns true if the module has any components of type 'book'.
+func (b *BaseContract) HasBooks() bool {
+	return b.Components.HasComponentType("book")
+}
+
+// GetBooks returns the list of book component names (components with type 'book').
+// Names are sorted for consistent ordering.
 func (b *BaseContract) GetBooks() []string {
-	return b.Books
+	books := b.Components.GetComponentsByType("book")
+	if len(books) == 0 {
+		return nil
+	}
+	names := make([]string, 0, len(books))
+	for name := range books {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// GetChangelog returns the changelog path, defaulting to release/<moniker>/CHANGELOG.md.
+func (b *BaseContract) GetChangelog() string {
+	if b.Versioning != nil && b.Versioning.Changelog != "" {
+		return b.Versioning.Changelog
+	}
+	return "release/" + b.Moniker + "/CHANGELOG.md"
 }

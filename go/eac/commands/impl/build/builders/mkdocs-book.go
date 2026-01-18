@@ -21,7 +21,7 @@ import (
 // Final PDFs are moved to the module output root with naming: {book-name}-{theme}.pdf.
 func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book, workspaceRoot, outputDir string, logWriter io.Writer) int {
 	if len(moduleBooks) > 1 {
-		Logln(logWriter, "\n=== Building %s: %s (%d books) ===", module.Type, module.Moniker, len(moduleBooks))
+		Logln(logWriter, "\n=== Building book: %s (%d books) ===", module.Moniker, len(moduleBooks))
 		for _, book := range moduleBooks {
 			Logln(logWriter, "   - %s (%s)", book.Name, book.GetOutput())
 		}

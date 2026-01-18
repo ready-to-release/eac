@@ -111,7 +111,7 @@ var InteractiveCmd = &cobra.Command{
 			if err := host.StopContainerWithContext(stopCtx, containerID); err != nil {
 				logging.Warnf("Failed to stop container gracefully: %v, forcing termination", err)
 				// Force stop if graceful stop failed
-				host.StopContainer(containerID)
+				_ = host.StopContainer(containerID) //nolint:errcheck // best-effort cleanup before exit
 			} else {
 				logging.Debug("Container stopped gracefully")
 			}

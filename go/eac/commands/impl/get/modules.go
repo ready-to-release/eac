@@ -88,9 +88,9 @@ func filterModules(mods []*modules.ModuleContract, filters moduleFilters) []*mod
 		isCalVer := scheme == "calver"
 		isSemVer := scheme == "semver"
 
-		// Check workflow presence (Files and Workflows are struct types, not pointers)
-		hasCI := mod.Files.Workflows.CI != ""
-		hasRelease := mod.Files.Workflows.Release != ""
+		// Check workflow presence using helper methods
+		hasCI := mod.GetCIWorkflowPath() != ""
+		hasRelease := mod.GetReleaseWorkflowPath() != ""
 
 		// Bundle mode: CalVer + has release + no CI
 		isBundle := isCalVer && hasRelease && !hasCI

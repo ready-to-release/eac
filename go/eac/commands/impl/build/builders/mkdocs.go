@@ -114,35 +114,25 @@ func getMkDocsDockerConfig(module *modules.ModuleContract, workspaceRoot string,
 		return cfg
 	}
 
-	// For site builds: module's own docker_build config takes priority
-	if module.DockerBuild != nil && len(module.DockerBuild) > 0 {
-		if tags, ok := module.DockerBuild["tags"].([]interface{}); ok && len(tags) > 0 {
+	// For site builds: check if module has a dockerfile package with docker_build config
+	// (This is rare - book modules typically use shared containers like mkdocs-site)
+	dockerfilePkg := module.Components["dockerfile"]
+	if dockerfilePkg != nil && dockerfilePkg.DockerBuild != nil && len(dockerfilePkg.DockerBuild) > 0 {
+		if tags, ok := dockerfilePkg.DockerBuild["tags"].([]interface{}); ok && len(tags) > 0 {
 			if tag, ok := tags[0].(string); ok {
 				cfg.ImageName = tag
 			}
-		} else if container, ok := module.DockerBuild["container"].(string); ok {
+		} else if container, ok := dockerfilePkg.DockerBuild["container"].(string); ok {
 			cfg.ImageName = container + ":latest"
 		}
 
-		if context, ok := module.DockerBuild["context"].(string); ok {
+		if context, ok := dockerfilePkg.DockerBuild["context"].(string); ok {
 			cfg.ContainerDir = filepath.Base(context)
 			cfg.ContextPath = filepath.Join(workspaceRoot, context)
 		}
 
-		if dockerfile, ok := module.DockerBuild["dockerfile"].(string); ok {
+		if dockerfile, ok := dockerfilePkg.DockerBuild["dockerfile"].(string); ok {
 			cfg.DockerfilePath = filepath.Join(workspaceRoot, dockerfile)
-		}
-	}
-
-	// Second priority: module type config (for backwards compatibility)
-	if cfg.ContextPath == "" {
-		if globalCfg := config.Global(); globalCfg != nil && globalCfg.ModuleTypes != nil {
-			if img := globalCfg.ModuleTypes.GetDockerImageName(module.Type); img != "" {
-				cfg.ImageName = img
-			}
-			if dir := globalCfg.ModuleTypes.GetDockerContainerDir(module.Type); dir != "" {
-				cfg.ContainerDir = filepath.Base(dir)
-			}
 		}
 	}
 
@@ -243,7 +233,7 @@ func buildMkDocsModule(module *modules.ModuleContract, workspaceRoot, outputDir 
 				return buildModuleBooks(module, moduleBooks, workspaceRoot, outputDir, logWriter)
 			}
 			// Module has books but all are non-default - skip with success
-			Logln(logWriter, "\n=== Building %s: %s ===", module.Type, module.Moniker)
+			Logln(logWriter, "\n=== Building book: %s ===", module.Moniker)
 			Logln(logWriter, "📚 All %d book(s) have default: false - skipping (use --all to build)", len(allBooks))
 			Logln(logWriter, "✅ Build skipped (no default books)")
 			return 0
@@ -251,7 +241,7 @@ func buildMkDocsModule(module *modules.ModuleContract, workspaceRoot, outputDir 
 	}
 
 	// No books configured - standard HTML-only build
-	Logln(logWriter, "\n=== Building %s: %s ===", module.Type, module.Moniker)
+	Logln(logWriter, "\n=== Building book: %s ===", module.Moniker)
 
 	// Check for book configuration and run preprocessing if found
 	// pdfMode=false for standard HTML builds
@@ -472,7 +462,7 @@ func imageExists(imageName string) bool {
 	if err != nil {
 		return false
 	}
-	return len(strings.TrimSpace(string(output))) > 0
+	return strings.TrimSpace(string(output)) != ""
 }
 
 // buildMkDocsWithTheme builds a PDF with a specific theme (dark or light)
@@ -506,7 +496,7 @@ func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName, bo
 		bookTitle = bookName
 	}
 
-	Logln(logWriter, "\n=== Building %s: %s (PDF %s) ===", module.Type, module.Moniker, theme)
+	Logln(logWriter, "\n=== Building book: %s (PDF %s) ===", module.Moniker, theme)
 
 	// Generate mkdocs.yml from PDF template
 	// docs_dir must be relative to the config file location (outputDir), not workspaceRoot

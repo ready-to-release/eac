@@ -8,9 +8,7 @@ import (
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/conf"
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/docker"
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/logging"
-	"github.com/ready-to-release/eac/go/r2r/cli/internal/validator"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 func init() {
@@ -32,12 +30,9 @@ func verifySystem(cmd *cobra.Command) {
 	// Initialize configuration - will exit with detailed error if it fails
 	conf.InitConfig()
 
-	allChecksPass := true
+	allChecksPass := checkConfigFile(cmd)
 
 	// Check config file (just reports it's verified since InitConfig succeeded)
-	if !checkConfigFile(cmd) {
-		allChecksPass = false
-	}
 
 	// Check GitHub environment variables
 	if !checkGitHubAuth(cmd) {
@@ -116,18 +111,18 @@ func checkDockerService(cmd *cobra.Command) bool {
 
 func checkConfigFile(cmd *cobra.Command) bool {
 	cmd.Println("📋 Checking r2r-cli configuration...")
-	
+
 	// Configuration is already loaded and verified at startup
 	// If we got here, the config file exists and was parsed
 	cmd.Println("✅ Configuration file loaded")
-	
+
 	// The configuration has already been validated during loading in conf.InitConfig()
 	// Check if we have at least one extension configured
 	if len(conf.Global.Extensions) == 0 {
 		cmd.Println("⚠️  No extensions configured")
 		return false
 	}
-	
+
 	// Verify each extension has required fields
 	for i, ext := range conf.Global.Extensions {
 		if ext.Name == "" {
@@ -139,63 +134,8 @@ func checkConfigFile(cmd *cobra.Command) bool {
 			return false
 		}
 	}
-	
+
 	// If we got here, config is valid (it was already validated during load)
 	cmd.Printf("✅ Configuration valid with %d extension(s)\n", len(conf.Global.Extensions))
-	return true
-}
-
-// Original validator-based function kept for reference but not used
-func checkConfigFileWithValidator(cmd *cobra.Command) bool {
-	cmd.Println("📋 Checking r2r-cli configuration...")
-	cmd.Println("✅ Configuration file loaded")
-	
-	configMap := viper.AllSettings()
-	
-	v, err := validator.NewEmbeddedValidator()
-	if err != nil {
-		cmd.PrintErrf("⚠️  Could not initialize validator: %v\n", err)
-		cmd.Println("✅ Configuration appears valid (basic validation only)")
-		return true
-	}
-	
-	result, err := v.ValidateInterface(configMap)
-	if err != nil {
-		cmd.PrintErrf("⚠️  Validation error: %v\n", err)
-		cmd.Println("✅ Configuration appears valid (basic validation only)")
-		return true // Don't fail the check if validation fails
-	}
-	
-	// Check validation results
-	if !result.IsValid() {
-		cmd.Println("❌ Configuration validation failed:")
-		for _, e := range result.Errors {
-			if e.Field != "" {
-				cmd.Printf("   - %s: %s\n", e.Field, e.Message)
-			} else {
-				cmd.Printf("   - %s\n", e.Message)
-			}
-		}
-		return false
-	}
-	
-	if len(result.Warnings) > 0 {
-		cmd.Println("⚠️  Configuration has warnings:")
-		for _, w := range result.Warnings {
-			if w.Field != "" {
-				cmd.Printf("   - %s: %s\n", w.Field, w.Message)
-			} else {
-				cmd.Printf("   - %s\n", w.Message)
-			}
-		}
-	}
-	
-	cmd.Printf("✅ Configuration is valid (schema version: %s)\n", validator.GetEmbeddedSchemaVersion())
-	
-	// Show summary of what's configured
-	if len(conf.Global.Extensions) > 0 {
-		cmd.Printf("   Extensions configured: %d\n", len(conf.Global.Extensions))
-	}
-	
 	return true
 }

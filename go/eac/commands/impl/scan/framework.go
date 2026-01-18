@@ -232,7 +232,7 @@ func updateScanManifest(ctx *cmdframework.ExecutionContext, scanCfg *ScanFramewo
 	duration := time.Since(scanStart)
 	moduleScanDir := ctx.EACConfig.Repository.ScanModuleOutputPathAbs(ctx.WorkspaceRoot, moniker)
 
-	mf, err := manifest.LoadOrCreateScanManifest(moduleScanDir, moniker, module.Type, scanCfg.GitCommit)
+	mf, err := manifest.LoadOrCreateScanManifest(moduleScanDir, moniker, module.GetComponentTypesDisplay(), scanCfg.GitCommit)
 	if err != nil {
 		log.Warnf("Failed to load/create scan manifest: %v", err)
 		return
@@ -381,17 +381,23 @@ func multiScanWorker(ctx *cmdframework.ExecutionContext, moniker string, logWrit
 	if len(multiCfg.Scanners) > 0 {
 		scanners = multiCfg.Scanners
 	} else {
-		// Get default scanners for this module's type
-		defaultScanners := ctx.EACConfig.SecurityTools.GetDefaultScanners(module.Type)
-		for _, s := range defaultScanners {
-			if scannerType, valid := internal.ParseScannerType(s); valid {
-				scanners = append(scanners, scannerType)
+		// Get default scanners for each of the module's package types
+		seenScanners := make(map[string]bool)
+		for _, pkgType := range module.GetEnabledComponents() {
+			defaultScanners := ctx.EACConfig.SecurityTools.GetDefaultScanners(pkgType)
+			for _, s := range defaultScanners {
+				if !seenScanners[s] {
+					if scannerType, valid := internal.ParseScannerType(s); valid {
+						scanners = append(scanners, scannerType)
+						seenScanners[s] = true
+					}
+				}
 			}
 		}
 	}
 
 	if len(scanners) == 0 {
-		output.Writeln(logWriter, "⚠️  No scanners configured for module type: %s", module.Type)
+		output.Writeln(logWriter, "⚠️  No scanners configured for module packages: %s", module.GetComponentTypesDisplay())
 		return 0
 	}
 
@@ -451,12 +457,24 @@ func runSingleScanner(ctx *cmdframework.ExecutionContext, module *modules.Module
 
 // runScanner dispatches to the appropriate scanner implementation.
 func runScanner(ctx *cmdframework.ExecutionContext, module *modules.ModuleContract, scannerType internal.ScannerType, multiCfg *MultiScanConfig, logWriter io.Writer) (interface{}, error) {
+	// Get the module's scannable root (buildable package root or first available)
+	moduleRoot := module.Components.GetBuildableRoot()
+	if moduleRoot == "" {
+		for _, root := range module.GetComponentRoots() {
+			moduleRoot = root
+			break
+		}
+	}
+	if moduleRoot == "" {
+		return nil, fmt.Errorf("no package root found for module %s", module.Moniker)
+	}
+
 	switch scannerType {
 	case internal.ScannerSBOM:
 		trivyImage := ctx.EACConfig.SecurityTools.DockerImages.Trivy.FullImage()
 		output.Writeln(logWriter, "  Using Trivy image: %s", trivyImage)
 		output.Writeln(logWriter, "  Format: %s", multiCfg.SBOMFormat)
-		return internal.RunTrivySBOM(ctx.WorkspaceRoot, module.Files.Root, multiCfg.SBOMFormat, trivyImage)
+		return internal.RunTrivySBOM(ctx.WorkspaceRoot, moduleRoot, multiCfg.SBOMFormat, trivyImage)
 
 	case internal.ScannerVuln:
 		trivyImage := ctx.EACConfig.SecurityTools.DockerImages.Trivy.FullImage()
@@ -464,29 +482,29 @@ func runScanner(ctx *cmdframework.ExecutionContext, module *modules.ModuleContra
 		if len(multiCfg.VulnSeverities) > 0 {
 			output.Writeln(logWriter, "  Severity filter: %v", multiCfg.VulnSeverities)
 		}
-		return internal.RunTrivyVuln(module.Files.Root, multiCfg.VulnSeverities, trivyImage)
+		return internal.RunTrivyVuln(moduleRoot, multiCfg.VulnSeverities, trivyImage)
 
 	case internal.ScannerSecrets:
 		trivyImage := ctx.EACConfig.SecurityTools.DockerImages.Trivy.FullImage()
 		output.Writeln(logWriter, "  Using Trivy image: %s", trivyImage)
-		return internal.RunTrivySecrets(module.Files.Root, trivyImage)
+		return internal.RunTrivySecrets(moduleRoot, trivyImage)
 
 	case internal.ScannerIaC:
 		trivyImage := ctx.EACConfig.SecurityTools.DockerImages.Trivy.FullImage()
 		output.Writeln(logWriter, "  Using Trivy image: %s", trivyImage)
-		return internal.RunTrivyIaC(module.Files.Root, trivyImage)
+		return internal.RunTrivyIaC(moduleRoot, trivyImage)
 
 	case internal.ScannerCompliance:
 		trivyImage := ctx.EACConfig.SecurityTools.DockerImages.Trivy.FullImage()
 		output.Writeln(logWriter, "  Using Trivy image: %s", trivyImage)
 		output.Writeln(logWriter, "  Compliance standard: %s", multiCfg.ComplianceStandard)
-		return internal.RunTrivyCompliance(module.Files.Root, multiCfg.ComplianceStandard, trivyImage)
+		return internal.RunTrivyCompliance(moduleRoot, multiCfg.ComplianceStandard, trivyImage)
 
 	case internal.ScannerSAST:
 		semgrepImage := ctx.EACConfig.SecurityTools.DockerImages.Semgrep.FullImage()
 		output.Writeln(logWriter, "  Using Semgrep image: %s", semgrepImage)
 		output.Writeln(logWriter, "  Config: %s", multiCfg.SemgrepConfig)
-		return internal.RunSemgrepSAST(ctx.WorkspaceRoot, module.Files.Root, multiCfg.SemgrepConfig, semgrepImage)
+		return internal.RunSemgrepSAST(ctx.WorkspaceRoot, moduleRoot, multiCfg.SemgrepConfig, semgrepImage)
 
 	case internal.ScannerDAST:
 		return nil, fmt.Errorf("ZAP scanner requires --target URL flag")

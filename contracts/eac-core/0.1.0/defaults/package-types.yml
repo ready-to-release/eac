@@ -1,0 +1,117 @@
+# Package Types Configuration
+# Defines how to process files of different types for linting and building.
+#
+# Each package type specifies:
+#   - extensions: File extensions that belong to this package type (empty for non-file-based)
+#   - linter: The linter tool to use (if available)
+#   - lint_input: How files are passed to the linter ("packages" or "files")
+#   - builder: The build handler to use (if buildable)
+#   - requirements: System dependencies needed for building/linting
+#   - files: Default file patterns (source, tests, config)
+
+package-types:
+  # Go package - compiles Go modules
+  go:
+    extensions: [".go"]
+    linter: golangci-lint
+    lint_input: packages
+    builder: go
+    requirements: [go]
+    files:
+      source: ["**/*.go", "**/*.go.txt"]
+      tests: ["**/*_test.go"]
+      config: ["go.mod", "go.sum"]
+
+  # TypeScript/JavaScript package - npm-based builds
+  typescript:
+    extensions: [".ts", ".tsx"]
+    linter: eslint
+    lint_input: files
+    builder: npm
+    requirements: [node, npm]
+    files:
+      source: ["src/**/*.ts", "features/**/*.ts"]
+      tests: ["**/*.test.ts"]
+      config: ["package.json", "tsconfig.json", "*.config.js"]
+
+  javascript:
+    extensions: [".js", ".jsx", ".mjs", ".cjs"]
+    linter: eslint
+    lint_input: files
+    builder: npm
+    requirements: [node, npm]
+
+  # Container package - Docker/Buildx builds
+  dockerfile:
+    extensions: []  # Dockerfile has no standard extension
+    builder: buildx
+    requirements: [docker]
+    files:
+      source: ["Dockerfile"]
+
+  # Book package - MkDocs documentation builds
+  book:
+    extensions: []  # Not file-based, uses books.yml
+    builder: mkdocs
+    requirements: [mkdocs]
+
+  # Markdown package - linting only, no build
+  markdown:
+    extensions: [".md", ".markdown"]
+    linter: markdownlint-cli2
+    lint_input: files
+
+  # YAML package - linting only (future)
+  yaml:
+    extensions: [".yml", ".yaml"]
+    # linter: yamllint  # Future: YAML linting
+    lint_input: files
+
+  # JSON package - linting only (future)
+  json:
+    extensions: [".json"]
+    # linter: jsonlint  # Future: JSON linting
+    lint_input: files
+
+  # Gherkin specs - linting only (future)
+  gherkin:
+    extensions: [".feature"]
+    # linter: gherkin-lint  # Future: Gherkin spec linting
+    lint_input: files
+    files:
+      source: ["**/*.feature"]
+
+  # Specs package - Gherkin specifications for a module
+  # This is a semantic package type for module specs with default root
+  specs:
+    extensions: [".feature"]
+    default_root: "specs/{moniker}"
+    files:
+      source: ["**/*.feature"]
+
+  # Design package - Structurizr DSL architecture diagrams
+  design:
+    extensions: [".dsl"]
+    default_root: "specs/{moniker}/.design"
+    files:
+      source: ["workspace.dsl", "**/*.dsl"]
+
+  # Test implementation package - godog step definitions
+  test-impl:
+    extensions: [".go"]
+    default_root: "go/eac/specs/impl/{moniker}"
+    files:
+      source: ["**/*.go"]
+
+  # Workflows package - GitHub Actions workflow files
+  workflows:
+    extensions: [".yaml", ".yml"]
+    default_root: ".github/workflows"
+    files:
+      source: ["ci-{moniker}.yaml", "release-{moniker}.yaml"]
+
+  # Static package - no build, just content files (markdown, yaml, config)
+  # Used as default for modules that contain static assets without a build step
+  static:
+    extensions: []  # No specific extensions - module defines its patterns
+    # No builder - static modules don't build

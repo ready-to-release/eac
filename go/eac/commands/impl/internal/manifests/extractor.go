@@ -29,7 +29,8 @@ func ExtractTestResults(manifests []*implinternal.TestManifest) []TestResult {
 	var results []TestResult
 
 	for _, manifest := range manifests {
-		for _, test := range manifest.Tests {
+		for i := range manifest.Tests {
+			test := &manifest.Tests[i]
 			result := TestResult{
 				Name:        test.Name,
 				Module:      manifest.Moniker,
@@ -61,7 +62,7 @@ func ExtractTestResults(manifests []*implinternal.TestManifest) []TestResult {
 func StripTagPrefixes(tags []string) []string {
 	result := make([]string, len(tags))
 	for i, tag := range tags {
-		if len(tag) > 0 && tag[0] == '@' {
+		if tag != "" && tag[0] == '@' {
 			result[i] = tag[1:]
 		} else {
 			result[i] = tag

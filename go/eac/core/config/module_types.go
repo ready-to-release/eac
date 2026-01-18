@@ -19,6 +19,7 @@ type ModuleTypeDef struct {
 	DockerBuild   *DockerBuildConfig `yaml:"docker_build,omitempty"`   // Docker image build configuration (for docker-build dependency)
 	Build         *BuildConfig       `yaml:"build,omitempty"`
 	Defaults      *TypeDefaults      `yaml:"defaults,omitempty"`
+	Components    *ModuleComponents   `yaml:"components,omitempty"` // Component types for modules of this type
 }
 
 // BuildConfig contains build output configuration for a module type.
@@ -99,6 +100,100 @@ type DockerCacheConfig struct {
 	From  string `yaml:"from,omitempty"`  // Cache source image (for registry cache)
 	To    string `yaml:"to,omitempty"`    // Cache destination image (for registry cache)
 	Mode  string `yaml:"mode,omitempty"`  // Cache mode: "min" or "max"
+}
+
+// Clone creates a deep copy of DockerBuildConfig.
+func (d *DockerBuildConfig) Clone() *DockerBuildConfig {
+	if d == nil {
+		return nil
+	}
+	clone := &DockerBuildConfig{
+		Container:  d.Container,
+		Context:    d.Context,
+		Dockerfile: d.Dockerfile,
+		Load:       d.Load,
+		Push:       d.Push,
+		Registry:   d.Registry,
+		SBOM:       d.SBOM,
+		Provenance: d.Provenance,
+	}
+	if d.Platforms != nil {
+		clone.Platforms = make([]string, len(d.Platforms))
+		copy(clone.Platforms, d.Platforms)
+	}
+	if d.Tags != nil {
+		clone.Tags = make([]string, len(d.Tags))
+		copy(clone.Tags, d.Tags)
+	}
+	if d.Cache != nil {
+		clone.Cache = &DockerCacheConfig{
+			Type:  d.Cache.Type,
+			Scope: d.Cache.Scope,
+			From:  d.Cache.From,
+			To:    d.Cache.To,
+			Mode:  d.Cache.Mode,
+		}
+	}
+	return clone
+}
+
+// DockerBuildConfigToMap converts DockerBuildConfig to map[string]interface{}.
+// This is used when converting between typed config and contract types.
+func DockerBuildConfigToMap(d *DockerBuildConfig) map[string]interface{} {
+	if d == nil {
+		return nil
+	}
+	result := make(map[string]interface{})
+	if d.Container != "" {
+		result["container"] = d.Container
+	}
+	if d.Context != "" {
+		result["context"] = d.Context
+	}
+	if d.Dockerfile != "" {
+		result["dockerfile"] = d.Dockerfile
+	}
+	if len(d.Platforms) > 0 {
+		result["platforms"] = d.Platforms
+	}
+	if len(d.Tags) > 0 {
+		result["tags"] = d.Tags
+	}
+	if d.Load {
+		result["load"] = d.Load
+	}
+	if d.Push {
+		result["push"] = d.Push
+	}
+	if d.Registry != "" {
+		result["registry"] = d.Registry
+	}
+	if d.SBOM {
+		result["sbom"] = d.SBOM
+	}
+	if d.Provenance {
+		result["provenance"] = d.Provenance
+	}
+	if d.Cache != nil {
+		cache := make(map[string]interface{})
+		if d.Cache.Type != "" {
+			cache["type"] = d.Cache.Type
+		}
+		if d.Cache.Scope != "" {
+			cache["scope"] = d.Cache.Scope
+		}
+		if d.Cache.From != "" {
+			cache["from"] = d.Cache.From
+		}
+		if d.Cache.To != "" {
+			cache["to"] = d.Cache.To
+		}
+		if d.Cache.Mode != "" {
+			cache["mode"] = d.Cache.Mode
+		}
+		result["cache"] = cache
+	}
+	return result
 }
 
 // TypeDefaults contains default values for modules of this type.
@@ -385,4 +480,23 @@ func (p *PostBuildStep) IsCopyAction() bool {
 // IsScriptAction returns true if this is a script action.
 func (p *PostBuildStep) IsScriptAction() bool {
 	return p.Action == PostBuildActionScript
+}
+
+// GetComponents returns the components configuration for a module type.
+func (c *ModuleTypesConfig) GetComponents(typeName string) *ModuleComponents {
+	typeDef := c.Get(typeName)
+	if typeDef == nil {
+		return nil
+	}
+	return typeDef.Components
+}
+
+// GetComponents returns the components configuration for this module type.
+func (t *ModuleTypeDef) GetComponents() *ModuleComponents {
+	return t.Components
+}
+
+// HasComponents returns true if this module type defines components.
+func (t *ModuleTypeDef) HasComponents() bool {
+	return t.Components != nil && len(*t.Components) > 0
 }

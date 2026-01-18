@@ -28,7 +28,7 @@ func loadModules(workspaceRoot string, noValidation bool) (*Registry, error) {
 	opts := config.LoadOptions{
 		RepoRoot:        workspaceRoot,
 		ValidateSchemas: validate,
-		LazyLoad:        true, // We only need modules and module-types
+		LazyLoad:        true, // We only need modules and component-types
 	}
 
 	cfg, err := config.Load(opts)
@@ -36,20 +36,19 @@ func loadModules(workspaceRoot string, noValidation bool) (*Registry, error) {
 		return nil, contracts.NewContractError("load", "config", err, "failed to initialize config loader")
 	}
 
-	// Load repository config (now includes modules)
+	// Load repository config (includes modules)
 	if err := cfg.LoadRepository(validate); err != nil {
 		repoPath := filepath.Join(config.EACConfigRelPath, config.RepositoryFileName)
 		return nil, contracts.NewContractError("load", repoPath, err, "failed to load repository.yml")
 	}
 
-	// Load module types for type-specific defaults
-	if err := cfg.LoadModuleTypes(validate); err != nil {
-		// Module types are optional - log warning but continue
-		// This allows backward compatibility when module-types.yml doesn't exist
+	// Load component types for component-specific defaults
+	if err := cfg.LoadComponentTypes(validate); err != nil {
+		// Component types are optional - continue with defaults
 	}
 
-	// Apply type-specific defaults with repository path variables
-	cfg.Repository.ApplyTypeDefaults(cfg.ModuleTypes)
+	// Apply component-specific defaults with repository path variables
+	cfg.Repository.ApplyComponentDefaults(cfg.ComponentTypes)
 
 	// Create registry (version kept for internal compatibility)
 	registry := NewRegistry("0.1.0", workspaceRoot)
@@ -58,63 +57,62 @@ func loadModules(workspaceRoot string, noValidation bool) (*Registry, error) {
 	for _, m := range cfg.Repository.Modules {
 		// Convert to BaseContract for ModuleContract creation
 		base := contracts.BaseContract{
-			Moniker:     m.Moniker,
-			Name:        m.Name,
-			Type:        m.Type,
-			Description: m.Description,
-			DependsOn:   m.DependsOn,
-			Files: contracts.Files{
-				Root:      m.Files.Root,
-				Source:    m.Files.Source,
-				Config:    m.Files.Config,
-				Assets:    m.Files.Assets,
-				Tests:     m.Files.Tests,
-				Exclude:   m.Files.Exclude,
-				Changelog: m.Files.Changelog,
-				Workflows: contracts.Workflows{
-					CI:      m.Files.Workflows.CI,
-					Release: m.Files.Workflows.Release,
-				},
-				Repo: contracts.RepoPatterns{
-					Specs:    m.Files.Repo.Specs,
-					TestImpl: m.Files.Repo.TestImpl,
-					Design:   m.Files.Repo.Design,
-					Other:    m.Files.Repo.Other,
-					Exclude:  m.Files.Repo.Exclude,
-				},
-			},
-			Flags: contracts.Flags{
-				ExplicitOwnership: m.Flags.ExplicitOwnership,
-			},
-			Metadata:    m.Metadata,
-			DockerBuild: m.DockerBuild,
-			Books:       m.Books,
+			Moniker:       m.Moniker,
+			Name:          m.Name,
+			Description:   m.Description,
+			DependsOn:     m.DependsOn,
+			Metadata:      m.Metadata,
+			EvidenceBooks: m.EvidenceBooks,
 		}
 
-		// Convert Build config if present
-		if m.Build != nil {
-			base.Build = &contracts.ModuleBuild{
-				Handler: m.Build.Handler,
-			}
-			if m.Build.Options != nil {
-				base.Build.Options = &contracts.BuildOptions{}
-			}
-			for _, a := range m.Build.Artifacts {
-				base.Build.Artifacts = append(base.Build.Artifacts, contracts.ModuleArtifact{
-					ID:          a.ID,
-					Type:        a.Type,
-					Pattern:     a.Pattern,
-					Compression: a.Compression,
-					DeriveFrom:  a.DeriveFrom,
-				})
+		// Convert Components config
+		if m.Components != nil {
+			base.Components = make(contracts.ModuleComponents)
+			for compName, entry := range m.Components {
+				if entry != nil {
+					base.Components[compName] = &contracts.ComponentEntry{
+						Type:     entry.Type,
+						Root:     entry.Root,
+						Resolved: entry.Resolved,
+					}
+					if entry.Patterns != nil {
+						base.Components[compName].Patterns = &contracts.ComponentPatterns{
+							Source: entry.Patterns.Source,
+							Tests:  entry.Patterns.Tests,
+							Config: entry.Patterns.Config,
+						}
+					}
+					// Convert Build config
+					if entry.Build != nil {
+						base.Components[compName].Build = &contracts.ComponentBuild{
+							Handler: entry.Build.Handler,
+						}
+						for _, a := range entry.Build.Artifacts {
+							base.Components[compName].Build.Artifacts = append(base.Components[compName].Build.Artifacts, contracts.ComponentArtifact{
+								ID:          a.ID,
+								Type:        a.Type,
+								Pattern:     a.Pattern,
+								Compression: a.Compression,
+								DeriveFrom:  a.DeriveFrom,
+							})
+						}
+					}
+					// Convert DockerBuild from typed struct to map
+					if entry.DockerBuild != nil {
+						base.Components[compName].DockerBuild = config.DockerBuildConfigToMap(entry.DockerBuild)
+					}
+				} else {
+					base.Components[compName] = nil
+				}
 			}
 		}
 
 		// Convert Versioning config if present
 		if m.Versioning != nil {
 			base.Versioning = &contracts.ModuleVersioning{
-				Scheme:  m.Versioning.Scheme,
-				Current: m.Versioning.Current,
+				Scheme:    m.Versioning.Scheme,
+				Current:   m.Versioning.Current,
+				Changelog: m.Versioning.Changelog,
 			}
 		}
 
@@ -133,7 +131,7 @@ func loadModules(workspaceRoot string, noValidation bool) (*Registry, error) {
 			}
 		}
 
-		// Note: Defaults are already applied by config.RepositoryConfig.applyModuleDefaults() and ApplyTypeDefaults()
+		// Note: Defaults are already applied by config.RepositoryConfig.applyModuleDefaults() and ApplyComponentDefaults()
 
 		// Validate required fields
 		if base.Moniker == "" {
@@ -159,12 +157,6 @@ func loadModules(workspaceRoot string, noValidation bool) (*Registry, error) {
 	return registry, nil
 }
 
-// LoadFromWorkspaceLatest loads module contracts
-// Deprecated: Use LoadFromWorkspace instead. Kept for backward compatibility.
-func LoadFromWorkspaceLatest(workspaceRoot string) (*Registry, error) {
-	return LoadFromWorkspace(workspaceRoot)
-}
-
 // ValidateModuleContract validates a module contract for correctness.
 func ValidateModuleContract(module *ModuleContract) error {
 	if module.Moniker == "" {
@@ -175,10 +167,9 @@ func ValidateModuleContract(module *ModuleContract) error {
 		return fmt.Errorf("name is required for module '%s'", module.Moniker)
 	}
 
-	// Note: type now has a default, so no need to validate it
-
-	if module.Files.Root == "" {
-		return fmt.Errorf("files.root is required for module '%s'", module.Moniker)
+	// At least one component is required
+	if len(module.Components) == 0 {
+		return fmt.Errorf("components is required for module '%s'", module.Moniker)
 	}
 
 	return nil

@@ -8,21 +8,19 @@ import (
 
 // Registry provides fast access to module contracts.
 type Registry struct {
-	modules            map[string]*ModuleContract // Keyed by moniker
-	version            string
-	workspaceRoot      string
-	modulesByRoot      map[string][]*ModuleContract // Index: root -> modules with that root
-	modulesWithRepoPat []*ModuleContract            // Modules that have repo patterns (need checking for all files)
+	modules       map[string]*ModuleContract   // Keyed by moniker
+	version       string
+	workspaceRoot string
+	modulesByRoot map[string][]*ModuleContract // Index: package root -> modules with packages at that root
 }
 
 // NewRegistry creates a new module registry.
 func NewRegistry(version, workspaceRoot string) *Registry {
 	return &Registry{
-		modules:            make(map[string]*ModuleContract),
-		version:            version,
-		workspaceRoot:      workspaceRoot,
-		modulesByRoot:      make(map[string][]*ModuleContract),
-		modulesWithRepoPat: make([]*ModuleContract, 0),
+		modules:       make(map[string]*ModuleContract),
+		version:       version,
+		workspaceRoot: workspaceRoot,
+		modulesByRoot: make(map[string][]*ModuleContract),
 	}
 }
 
@@ -38,13 +36,10 @@ func (r *Registry) Add(module *ModuleContract) error {
 
 	r.modules[module.Moniker] = module
 
-	// Build index by root
-	root := normalizeRoot(module.Files.Root)
-	r.modulesByRoot[root] = append(r.modulesByRoot[root], module)
-
-	// Track modules with repo patterns
-	if len(module.getRepoPatterns()) > 0 {
-		r.modulesWithRepoPat = append(r.modulesWithRepoPat, module)
+	// Build index by each component root
+	for _, root := range module.GetComponentRoots() {
+		normalizedRoot := normalizeRoot(root)
+		r.modulesByRoot[normalizedRoot] = append(r.modulesByRoot[normalizedRoot], module)
 	}
 
 	return nil
@@ -105,26 +100,57 @@ func (r *Registry) WorkspaceRoot() string {
 	return r.workspaceRoot
 }
 
-// FilterByType returns all modules of a specific type.
-func (r *Registry) FilterByType(contractType string) []*ModuleContract {
+// FilterByComponent returns all modules that have the specified component type enabled.
+// This is the preferred way to filter modules in the multi-component architecture.
+func (r *Registry) FilterByComponent(componentType string) []*ModuleContract {
 	var filtered []*ModuleContract
 	for _, module := range r.modules {
-		if module.Type == contractType {
+		if module.HasComponent(componentType) {
 			filtered = append(filtered, module)
 		}
 	}
 	return filtered
 }
 
-// FindByRoot returns modules that match the given root path.
-func (r *Registry) FindByRoot(rootPath string) []*ModuleContract {
-	var matches []*ModuleContract
+// FilterByComponents returns all modules that have ALL of the specified component types enabled.
+func (r *Registry) FilterByComponents(componentTypes ...string) []*ModuleContract {
+	var filtered []*ModuleContract
 	for _, module := range r.modules {
-		if module.Files.Root == rootPath {
-			matches = append(matches, module)
+		hasAll := true
+		for _, compType := range componentTypes {
+			if !module.HasComponent(compType) {
+				hasAll = false
+				break
+			}
+		}
+		if hasAll {
+			filtered = append(filtered, module)
 		}
 	}
-	return matches
+	return filtered
+}
+
+// FilterByAnyComponent returns all modules that have ANY of the specified component types enabled.
+func (r *Registry) FilterByAnyComponent(componentTypes ...string) []*ModuleContract {
+	var filtered []*ModuleContract
+	for _, module := range r.modules {
+		for _, compType := range componentTypes {
+			if module.HasComponent(compType) {
+				filtered = append(filtered, module)
+				break
+			}
+		}
+	}
+	return filtered
+}
+
+// FindByRoot returns modules that have a component at the given root path.
+func (r *Registry) FindByRoot(rootPath string) []*ModuleContract {
+	normalizedPath := normalizeRoot(rootPath)
+	if modules, ok := r.modulesByRoot[normalizedPath]; ok {
+		return modules
+	}
+	return nil
 }
 
 // GetDependencyGraph returns a map of module dependencies
@@ -189,7 +215,7 @@ func (r *Registry) FindModulesForFile(filePath string) []*ModuleContract {
 		}
 	}
 
-	// 2. Check modules with root="" (repository-wide modules)
+	// 2. Check modules with root="" (repository-wide packages)
 	if modules, ok := r.modulesByRoot[""]; ok {
 		for _, module := range modules {
 			if !checked[module.Moniker] {
@@ -197,16 +223,6 @@ func (r *Registry) FindModulesForFile(filePath string) []*ModuleContract {
 				if module.MatchesFile(filePath) {
 					matches = append(matches, module)
 				}
-			}
-		}
-	}
-
-	// 3. Check modules with repo patterns (they can match files anywhere)
-	for _, module := range r.modulesWithRepoPat {
-		if !checked[module.Moniker] {
-			checked[module.Moniker] = true
-			if module.MatchesFile(filePath) {
-				matches = append(matches, module)
 			}
 		}
 	}

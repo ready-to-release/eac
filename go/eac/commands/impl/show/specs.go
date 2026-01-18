@@ -58,7 +58,7 @@ func ShowSpecs() int {
 	var positional []string
 	if cmdIdx != -1 && cmdIdx < len(args) {
 		for i := cmdIdx; i < len(args); i++ {
-			if len(args[i]) > 0 && args[i][0] != '-' {
+			if args[i] != "" && args[i][0] != '-' {
 				positional = append(positional, args[i])
 			}
 		}

@@ -64,7 +64,7 @@ type Content struct {
 	Text string `json:"text"`
 }
 
-// CommandInfo from go/eac/commands/describe-commands.go
+// CommandInfo from go/eac/commands/describe-commands.go.
 type CommandInfo struct {
 	Name        string   `json:"name"`
 	Parts       []string `json:"parts"`
@@ -74,7 +74,7 @@ type CommandInfo struct {
 }
 
 type CommandTree struct {
-	Commands []CommandInfo      `json:"commands"`
+	Commands []CommandInfo       `json:"commands"`
 	Tree     map[string][]string `json:"tree"`
 }
 
@@ -133,7 +133,7 @@ func handleRequest(encoder *json.Encoder, req *MCPRequest) {
 	}
 }
 
-// getCommandTools discovers commands by calling "get commands"
+// getCommandTools discovers commands by calling "get commands".
 func getCommandTools() []Tool {
 	tree := getCommands()
 	var tools []Tool
@@ -170,7 +170,7 @@ func getCommandTools() []Tool {
 	return tools
 }
 
-// getCommands calls the pre-built commands binary to get command info
+// getCommands calls the pre-built commands binary to get command info.
 func getCommands() CommandTree {
 	repoRoot := findRepoRoot()
 	if repoRoot == "" {
@@ -211,8 +211,8 @@ func callTool(params *CallToolParams) ToolResult {
 	return textResult(output)
 }
 
-// execCommand executes a command via the pre-built commands binary
-func execCommand(commandName string, additionalArgs string) string {
+// execCommand executes a command via the pre-built commands binary.
+func execCommand(commandName, additionalArgs string) string {
 	repoRoot := findRepoRoot()
 	if repoRoot == "" {
 		return "Error: Could not find repository root"
@@ -237,7 +237,7 @@ func execCommand(commandName string, additionalArgs string) string {
 	return strings.TrimSpace(string(output))
 }
 
-// findRepoRoot walks up directory tree to find repository root
+// findRepoRoot walks up directory tree to find repository root.
 func findRepoRoot() string {
 	root, err := repository.GetRepositoryRoot("")
 	if err != nil {
@@ -255,7 +255,7 @@ func textResult(text string) ToolResult {
 	}
 }
 
-func sendResponse(encoder *json.Encoder, id interface{}, result interface{}) {
+func sendResponse(encoder *json.Encoder, id, result interface{}) {
 	resp := MCPResponse{
 		JSONRPC: "2.0",
 		ID:      id,

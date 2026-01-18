@@ -139,17 +139,17 @@ func parseConfig() (*UpdateConfig, error) {
 	}
 
 	// Find and parse arguments
-	modulePath, flags, err := parseUpdateCommandArgs(os.Args)
+	modulePath, cmdFlags, err := parseUpdateCommandArgs(os.Args)
 	if err != nil {
 		return nil, err
 	}
 
 	// Create config with parsed flags
 	config := &UpdateConfig{
-		Debug:        flags.debug,
-		Force:        flags.force,
-		OutputPath:   flags.outputPath,
-		PromptPath:   flags.promptPath,
+		Debug:        cmdFlags.debug,
+		Force:        cmdFlags.force,
+		OutputPath:   cmdFlags.outputPath,
+		PromptPath:   cmdFlags.promptPath,
 		TemplateRoot: repoRoot,
 	}
 
@@ -175,7 +175,16 @@ func parseConfig() (*UpdateConfig, error) {
 
 	// Store validated moniker and source path from contract
 	config.Module = module.Moniker
-	config.SourcePath = filepath.Join(repoRoot, module.Files.Root)
+	// Get the buildable package root (go or typescript) for source analysis
+	buildableRoot := module.Components.GetBuildableRoot()
+	if buildableRoot == "" {
+		// Fallback to first available package root
+		for _, root := range module.GetComponentRoots() {
+			buildableRoot = root
+			break
+		}
+	}
+	config.SourcePath = filepath.Join(repoRoot, buildableRoot)
 
 	return config, nil
 }
@@ -254,7 +263,13 @@ func parseUpdateCommandArgs(args []string) (string, *updateFlags, error) {
 func formatModuleList(moduleReport *reports.ModuleContractReport) string {
 	var sb strings.Builder
 	for _, mod := range moduleReport.Registry.All() {
-		sb.WriteString(fmt.Sprintf("  - %s (source: %s)\n", mod.Moniker, mod.Files.Root))
+		// Get first package root for display
+		var displayRoot string
+		for _, root := range mod.GetComponentRoots() {
+			displayRoot = root
+			break
+		}
+		sb.WriteString(fmt.Sprintf("  - %s (source: %s)\n", mod.Moniker, displayRoot))
 	}
 	return sb.String()
 }

@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// RootCmd is the base command for the r2r CLI when called without any subcommands
+// RootCmd is the base command for the r2r CLI when called without any subcommands.
 var RootCmd = &cobra.Command{
 	Use:   "r2r",
 	Short: "Ready to Release - Enterprise-grade automation framework",
@@ -118,21 +118,20 @@ func init() {
 }
 
 func buildErrorContext(err error) string {
-	var parts []string
-	parts = append(parts, fmt.Sprintf("error=%v", err))
-	parts = append(parts, fmt.Sprintf("command=%s", RootCmd.Name()))
-	parts = append(parts, fmt.Sprintf("args=%v", os.Args[1:]))
-	parts = append(parts, fmt.Sprintf("version=%s", version.Version))
-	parts = append(parts, fmt.Sprintf("os=%s", runtime.GOOS))
-	parts = append(parts, fmt.Sprintf("arch=%s", runtime.GOARCH))
+	parts := []string{
+		fmt.Sprintf("error=%v", err),
+		fmt.Sprintf("command=%s", RootCmd.Name()),
+		fmt.Sprintf("args=%v", os.Args[1:]),
+		fmt.Sprintf("version=%s", version.Version),
+		fmt.Sprintf("os=%s", runtime.GOOS),
+		fmt.Sprintf("arch=%s", runtime.GOARCH),
+	}
 
 	cmd, _, e := RootCmd.Find(os.Args[1:])
 	if e != nil {
-		parts = append(parts, "error_type=invalid_command")
-		parts = append(parts, fmt.Sprintf("attempted_command=%s", strings.Join(os.Args[1:], " ")))
+		parts = append(parts, "error_type=invalid_command", fmt.Sprintf("attempted_command=%s", strings.Join(os.Args[1:], " ")))
 	} else if cmd != nil {
-		parts = append(parts, fmt.Sprintf("subcommand=%s", cmd.Name()))
-		parts = append(parts, fmt.Sprintf("path=%s", cmd.CommandPath()))
+		parts = append(parts, fmt.Sprintf("subcommand=%s", cmd.Name()), fmt.Sprintf("path=%s", cmd.CommandPath()))
 	}
 
 	for _, name := range []string{"r2r-debug", "r2r-quiet"} {

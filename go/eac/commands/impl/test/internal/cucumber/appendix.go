@@ -25,7 +25,8 @@ import (
 func RenderAppendixA(report CucumberReport, workspaceRoot string) string {
 	var buf strings.Builder
 
-	for _, feature := range report {
+	for i := range report {
+		feature := &report[i]
 		featureID := feature.GetFeatureID()
 
 		// Extract feature name from Feature ID (e.g., "eac-commands_ai-commit-generation" -> "ai-commit-generation")

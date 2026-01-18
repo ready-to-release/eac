@@ -21,29 +21,27 @@ func NewModuleMapper(eacCfg *config.EACConfig, workspaceRoot string) *ModuleMapp
 	registry := modules.NewRegistry("0.1.0", workspaceRoot)
 
 	// Convert config modules to contract modules
-	for _, m := range eacCfg.Repository.Modules {
+	for i := range eacCfg.Repository.Modules {
+		m := &eacCfg.Repository.Modules[i]
+
+		// Convert config.ModuleComponents to contracts.ModuleComponents
+		packages := make(contracts.ModuleComponents)
+		for pkgName, entry := range m.Components {
+			if entry == nil {
+				packages[pkgName] = nil
+			} else {
+				packages[pkgName] = &contracts.ComponentEntry{
+					Root: entry.Root,
+				}
+			}
+		}
+
 		base := contracts.BaseContract{
 			Moniker:     m.Moniker,
 			Name:        m.Name,
-			Type:        m.Type,
+			Components:  packages,
 			Description: m.Description,
 			DependsOn:   m.DependsOn,
-			Files: contracts.Files{
-				Root:      m.Files.Root,
-				Source:    m.Files.Source,
-				Config:    m.Files.Config,
-				Assets:    m.Files.Assets,
-				Tests:     m.Files.Tests,
-				Exclude:   m.Files.Exclude,
-				Changelog: m.Files.Changelog,
-				Repo: contracts.RepoPatterns{
-					Specs:    m.Files.Repo.Specs,
-					TestImpl: m.Files.Repo.TestImpl,
-					Design:   m.Files.Repo.Design,
-					Other:    m.Files.Repo.Other,
-					Exclude:  m.Files.Repo.Exclude,
-				},
-			},
 		}
 		contract := modules.NewModuleContract(base, workspaceRoot)
 		_ = registry.Add(contract) //nolint:errcheck // registry.Add only fails on duplicate which won't happen here

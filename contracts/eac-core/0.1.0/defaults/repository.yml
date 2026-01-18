@@ -92,7 +92,6 @@ conventions:
 modules:
   - moniker: default
     name: Default Module
-    type: go
     description: Auto-generated module for unconfigured repositories
-    files:
-      root: "."
+    components:
+      go: "."

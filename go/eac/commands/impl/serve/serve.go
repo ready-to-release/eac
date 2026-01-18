@@ -276,14 +276,10 @@ func resolveModuleConfig(workspaceRoot, moduleMoniker, namedBook string) (*Modul
 		return nil, fmt.Errorf("module not found: %s", moduleMoniker)
 	}
 
-	// Check if module is servable (container type)
-	if module.Type != "container" {
-		return nil, fmt.Errorf("module '%s' is not servable (type: %s, expected: container)", moduleMoniker, module.Type)
-	}
-
-	// Check module has books
-	if len(module.Books) == 0 {
-		return nil, fmt.Errorf("module '%s' has no books to serve", moduleMoniker)
+	// Check if module is servable (has books configured)
+	books := module.GetBooks()
+	if len(books) == 0 {
+		return nil, fmt.Errorf("module '%s' is not servable (no books configured)", moduleMoniker)
 	}
 
 	// Determine which book to serve
@@ -291,26 +287,26 @@ func resolveModuleConfig(workspaceRoot, moduleMoniker, namedBook string) (*Modul
 	if namedBook != "" {
 		// User specified a book - validate it exists
 		found := false
-		for _, bookName := range module.Books {
+		for _, bookName := range books {
 			if bookName == namedBook {
 				found = true
 				break
 			}
 		}
 		if !found {
-			return nil, fmt.Errorf("book '%s' not found in module '%s' (available: %v)", namedBook, moduleMoniker, module.Books)
+			return nil, fmt.Errorf("book '%s' not found in module '%s' (available: %v)", namedBook, moduleMoniker, books)
 		}
 		targetBook = namedBook
 	} else {
 		// Default: first "site" book, or first book if no site
-		for _, bookName := range module.Books {
+		for _, bookName := range books {
 			if bookName == "site" {
 				targetBook = "site"
 				break
 			}
 		}
 		if targetBook == "" {
-			targetBook = module.Books[0]
+			targetBook = books[0]
 		}
 	}
 
@@ -344,7 +340,8 @@ func listServableModules(workspaceRoot string) []string {
 
 	var modules []string
 	for _, module := range cfg.Repository.Modules {
-		if module.Type == "container" && len(module.Books) > 0 {
+		// A module is servable if it has books configured
+		if len(module.GetBooks()) > 0 {
 			modules = append(modules, module.Moniker)
 		}
 	}

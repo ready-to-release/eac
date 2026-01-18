@@ -16,7 +16,6 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
-	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
@@ -58,9 +57,12 @@ func ValidateGoTidy() int {
 	// Discover Go modules
 	var goModules []string
 	for _, module := range moduleReport.Registry.All() {
-		if isGoModuleType(module.Type) {
-			modulePath := filepath.Join(repoRoot, module.Files.Root)
-			goModules = append(goModules, modulePath)
+		if module.HasComponent("go") {
+			goRoot := module.GetComponentRoot("go")
+			if goRoot != "" {
+				modulePath := filepath.Join(repoRoot, goRoot)
+				goModules = append(goModules, modulePath)
+			}
 		}
 	}
 
@@ -91,17 +93,6 @@ type goTidyReport struct {
 
 func (r *goTidyReport) HasErrors() bool {
 	return len(r.untidyModules) > 0
-}
-
-// isGoModuleType checks if a module type has the go_module capability
-// by looking it up in the module types registry.
-func isGoModuleType(moduleType string) bool {
-	cfg := config.Global()
-	if cfg != nil && cfg.ModuleTypes != nil {
-		return cfg.ModuleTypes.HasCapability(moduleType, "go_module")
-	}
-	// Fallback: use naming convention if config unavailable
-	return strings.HasPrefix(moduleType, "go-")
 }
 
 func validateGoModuleTidy(goModules []string, repoRoot string) *goTidyReport {

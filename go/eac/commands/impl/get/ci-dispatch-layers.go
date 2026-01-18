@@ -119,7 +119,8 @@ func GetCIDispatchLayers() int {
 // buildCIArtifactDeps builds a map of module -> CI artifact dependencies from config.
 func buildCIArtifactDeps(cfg *config.RepositoryConfig) map[string][]string {
 	deps := make(map[string][]string)
-	for _, module := range cfg.Modules {
+	for i := range cfg.Modules {
+		module := &cfg.Modules[i]
 		if len(module.CIDeps) > 0 {
 			deps[module.Moniker] = module.CIDeps
 		}
