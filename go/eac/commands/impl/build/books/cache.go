@@ -52,7 +52,7 @@ func NewAssetCache(workspaceRoot string) *AssetCache {
 // Returns: (cachePath, cacheHit)
 func (c *AssetCache) GetMermaid(key MermaidCacheKey) (string, bool) {
 	hash := c.hashMermaid(key)
-	cachePath := paths.MermaidCachePath(c.cacheRoot, hash)
+	cachePath := filepath.Join(c.cacheRoot, "mermaid", hash+".svg")
 
 	if _, err := os.Stat(cachePath); err == nil {
 		c.stats.MermaidHits++
@@ -66,7 +66,7 @@ func (c *AssetCache) GetMermaid(key MermaidCacheKey) (string, bool) {
 // PutMermaid stores a rendered SVG in the cache for future reuse
 func (c *AssetCache) PutMermaid(svgPath string, key MermaidCacheKey) error {
 	hash := c.hashMermaid(key)
-	cachePath := paths.MermaidCachePath(c.cacheRoot, hash)
+	cachePath := filepath.Join(c.cacheRoot, "mermaid", hash+".svg")
 
 	// Ensure cache directory exists
 	if err := os.MkdirAll(filepath.Dir(cachePath), 0755); err != nil {

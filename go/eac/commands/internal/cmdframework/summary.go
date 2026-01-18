@@ -27,6 +27,14 @@ func phaseSummary(ctx *ExecutionContext, customSummary SummaryGenerator) int {
 	totalTime := time.Since(ctx.StartTime)
 	exitCode := ctx.GetExitCode()
 
+	// Debug: Log results and exit code to help diagnose mismatch
+	log.Debugf("phaseSummary: %d results, exit code: %d", len(ctx.Results), exitCode)
+	for i, r := range ctx.Results {
+		if r.ExitCode != 0 {
+			log.Debugf("  Result[%d]: moniker=%s, exitCode=%d, errors=%v", i, r.Moniker, r.ExitCode, r.Errors)
+		}
+	}
+
 	if ctx.Config.UseTUI {
 		// Generate TUI summary
 		summaryData := generateTUISummary(ctx, totalTime)
@@ -57,24 +65,24 @@ func generateTUISummary(ctx *ExecutionContext, totalTime time.Duration) *tui.Sum
 
 	// Build per-module results
 	type moduleResult struct {
-		moniker     string
-		pkgTypes    string
-		status      string // "passed", "failed", "warning"
-		duration    time.Duration
-		errors      []string
-		logPath     string
+		moniker    string
+		components string
+		status     string // "passed", "failed", "warning"
+		duration   time.Duration
+		errors     []string
+		logPath    string
 	}
 	var moduleResults []moduleResult
 
 	for _, result := range results {
-		pkgTypes := ctx.ModuleTypes[result.Moniker]
-		if pkgTypes == "" {
-			pkgTypes = "unknown"
+		components := ctx.ModuleTypes[result.Moniker]
+		if components == "" {
+			components = "unknown"
 		}
 
 		mr := moduleResult{
-			moniker:  result.Moniker,
-			pkgTypes: pkgTypes,
+			moniker:    result.Moniker,
+			components: components,
 			duration: result.Duration,
 			logPath:  result.LogPath,
 		}
@@ -103,7 +111,7 @@ func generateTUISummary(ctx *ExecutionContext, totalTime time.Duration) *tui.Sum
 	// Build details with summary table - one row per module
 	var details []string
 	tb := render.NewTableBuilder().
-		WithHeaders("Module", "Packages", "Status")
+		WithHeaders("Module", "Components", "Status")
 	for _, mr := range moduleResults {
 		statusIcon := "✓"
 		if mr.status == "failed" {
@@ -111,9 +119,15 @@ func generateTUISummary(ctx *ExecutionContext, totalTime time.Duration) *tui.Sum
 		} else if mr.status == "warning" {
 			statusIcon = "⚠"
 		}
-		tb.AddRow(mr.moniker, mr.pkgTypes, statusIcon)
+		tb.AddRow(mr.moniker, mr.components, statusIcon)
 	}
-	details = append(details, tb.Build())
+	// Split table into individual lines for TUI rendering
+	tableStr := tb.Build()
+	for _, line := range strings.Split(tableStr, "\n") {
+		if line != "" {
+			details = append(details, line)
+		}
+	}
 
 	// Add failed/warning results with error details
 	hasErrors := false

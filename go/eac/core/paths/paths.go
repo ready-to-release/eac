@@ -150,6 +150,12 @@ func BuildOutputPath(repoRoot, moniker string) string {
 	return filepath.Join(repoRoot, OutDir, BuildDir, moniker)
 }
 
+// ComponentBuildOutputPath returns the path to a component's build output directory.
+// Structure: out/build/<module>/<component>
+func ComponentBuildOutputPath(repoRoot, module, component string) string {
+	return filepath.Join(repoRoot, OutDir, BuildDir, module, component)
+}
+
 // TestOutputPath returns the path to a module's test output directory.
 func TestOutputPath(repoRoot, moniker string) string {
 	return filepath.Join(repoRoot, OutDir, TestDir, moniker)
@@ -335,12 +341,6 @@ func defaultsRoot(repoRoot string) string {
 		return containerRoot
 	}
 	return repoRoot
-}
-
-// LogsPath returns the path to the out directory
-// Deprecated: Use CommandLogsPath with command and path segments instead.
-func LogsPath(repoRoot string) string {
-	return filepath.Join(repoRoot, OutDir)
 }
 
 // SecurityOutputPath returns the path to security scan output.
@@ -564,12 +564,6 @@ func RenderedAssetsPath(stagingDir, renderer string) string {
 	return filepath.Join(stagingDir, "assets", "rendered", renderer)
 }
 
-// MermaidCachePath returns the path to a cached mermaid SVG
-// Deprecated: Use MermaidDocsCachePath for the git-tracked cache location.
-func MermaidCachePath(cacheRoot, hash string) string {
-	return filepath.Join(cacheRoot, "mermaid", hash+".svg")
-}
-
 // DocsCachePath returns the path to the docs cache directory (git-tracked)
 // This is used for assets that should be committed to the repository
 // for CI optimization (e.g., pre-rendered mermaid diagrams).
@@ -670,9 +664,21 @@ func BuildLogPath(repoRoot, moniker string) string {
 	return filepath.Join(repoRoot, OutDir, BuildDir, moniker, "build.log")
 }
 
+// ComponentBuildLogPath returns the path to a component's build.log file.
+// Structure: out/build/<module>/<component>/build.log
+func ComponentBuildLogPath(repoRoot, module, component string) string {
+	return filepath.Join(repoRoot, OutDir, BuildDir, module, component, "build.log")
+}
+
 // BuildTimingPath returns the path to a module's build-timing.txt file.
 func BuildTimingPath(repoRoot, moniker string) string {
 	return filepath.Join(repoRoot, OutDir, BuildDir, moniker, "build-timing.txt")
+}
+
+// ComponentBuildTimingPath returns the path to a component's build-timing.txt file.
+// Structure: out/build/<module>/<component>/build-timing.txt
+func ComponentBuildTimingPath(repoRoot, module, component string) string {
+	return filepath.Join(repoRoot, OutDir, BuildDir, module, component, "build-timing.txt")
 }
 
 // TestModuleDir returns the path to a module's test output directory

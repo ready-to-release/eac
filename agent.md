@@ -87,7 +87,7 @@ This project uses **MCP (Model Context Protocol) servers** to provide specialize
 
 **Available Commands** (100+):
 
-- **Module Discovery**: `get-modules`, `show-modules`, `show-moduletypes`, `get-files`, `show-files`
+- **Module Discovery**: `get-modules`, `show-modules`, `show-components`, `get-files`, `show-files`
 - **Dependency Management**: `get-dependencies`, `show-dependencies`, `validate-dependencies`, `get-execution-order`
 - **Architecture**: `create-design`, `update-design`, `validate-design`, `serve-design`
 - **Build and Test**: `build`, `test`, `pipeline-run`, `get-test-results`, `show-test-summary`

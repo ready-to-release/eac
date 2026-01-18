@@ -162,8 +162,12 @@ func (l *AIConfigLoader) GetWorkspaceRoot() string {
 	return l.workspaceRoot
 }
 
-// ContractLoader provides backward-compatible API for loading AI configs
-// Deprecated: Use AIConfigLoader directly for new code.
+// ContractLoader provides type-specific API for loading AI configs.
+// It wraps AIConfigLoader with convenient methods for prompt loading,
+// contract conversion, and type-specific operations.
+//
+// For simple AI config access without type-specific features,
+// use AIConfigLoader directly.
 type ContractLoader struct {
 	loader   *AIConfigLoader
 	typeName string

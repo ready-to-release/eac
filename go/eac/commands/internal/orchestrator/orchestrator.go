@@ -681,6 +681,214 @@ func (o *Orchestrator) SetMaxConcurrency(maxConcurrency int) {
 	o.config.MaxConcurrency = maxConcurrency
 }
 
+// RunComponentsLayered executes component builds in dependency layers.
+// Within each layer, components run in parallel with weighted scheduling.
+// Components respect intra-module dependencies (BuildAfter) and inter-module
+// dependencies (layers).
+//
+// Returns WorkResult aggregated at module level for compatibility with existing code.
+func (o *Orchestrator) RunComponentsLayered(layers [][]ComponentWork, worker ComponentWorkerFunc) ([]WorkResult, error) {
+	// Flatten to get total count
+	var allWork []ComponentWork
+	for _, layer := range layers {
+		allWork = append(allWork, layer...)
+	}
+
+	if len(allWork) == 0 {
+		return []WorkResult{}, nil
+	}
+
+	// Initialize if not already done
+	if err := o.Init(); err != nil {
+		return nil, err
+	}
+
+	// Create component scheduler
+	scheduler := NewComponentScheduler(o.config, o.tuiConsole)
+
+	// Start TUI console if enabled
+	if o.tuiConsole != nil {
+		o.tuiTotal = len(allWork)
+		o.tuiCompleted = 0
+		o.tuiRunning = nil
+		o.tuiLayer = 0
+		o.tuiTotalLayers = len(layers)
+
+		o.tuiConsole.StartAsync(o.tuiCtx)
+		o.tuiConsole.UpdateStatus(tui.Status{
+			Phase:       capitalize(o.config.ActionVerb),
+			Running:     nil,
+			Completed:   0,
+			Total:       len(allWork),
+			Layer:       0,
+			TotalLayers: len(layers),
+		})
+	}
+
+	// Print header
+	uniqueModules := countUniqueModules(allWork)
+	fmt.Fprintf(o.orchestratorOut, "%s %d components across %d modules in %d layer(s)%s%s",
+		capitalize(o.config.ActionVerb), len(allWork), uniqueModules, len(layers), LineEnding, LineEnding)
+
+	// Create and start display manager (only when TUI is not enabled)
+	if !o.config.TUI {
+		o.display = newDisplayManager(o.logger, o.config.ActionVerb, len(allWork), o.config.StatusUpdateInterval, false)
+		o.display.start()
+	}
+
+	// Set phase to Run
+	o.SetPhase(tui.PhaseRun)
+
+	// Execute layers sequentially
+	var allResults []ComponentResult
+
+	for layerIdx, layerWork := range layers {
+		if len(layerWork) == 0 {
+			continue
+		}
+
+		// Update TUI layer tracking
+		if o.tuiConsole != nil {
+			o.tuiMu.Lock()
+			o.tuiLayer = layerIdx + 1
+			o.tuiMu.Unlock()
+		}
+
+		// Format layer info
+		layerModules := getLayerModules(layerWork)
+		fmt.Fprintf(o.orchestratorOut, "Layer %d: %s (%d components)%s",
+			layerIdx+1, formatMonikerList(layerModules), len(layerWork), LineEnding)
+
+		// Initialize work items with correct indices
+		for i := range layerWork {
+			layerWork[i].Index = len(allResults) + i
+		}
+
+		// Initialize scheduler for this layer
+		scheduler.InitializeWork(layerWork)
+
+		// Execute layer with parallel component scheduling
+		layerResults := scheduler.RunComponents(layerWork, worker)
+
+		// Collect results
+		allResults = append(allResults, layerResults...)
+
+		// Check if any component failed - stop if so
+		for _, result := range layerResults {
+			if result.ExitCode != 0 {
+				// Aggregate to module results before returning
+				if o.display != nil {
+					o.display.stop()
+					o.display.flushCompletedLines()
+				}
+				return AggregateToWorkResults(allResults, allWork), nil
+			}
+		}
+	}
+
+	// Stop display manager
+	if o.display != nil {
+		o.display.stop()
+		o.display.flushCompletedLines()
+	}
+
+	// Aggregate component results to module results
+	return AggregateToWorkResults(allResults, allWork), nil
+}
+
+// RunComponentsParallel executes all components in parallel with weighted scheduling.
+// Components respect intra-module dependencies (BuildAfter).
+//
+// Returns WorkResult aggregated at module level for compatibility with existing code.
+func (o *Orchestrator) RunComponentsParallel(work []ComponentWork, worker ComponentWorkerFunc) ([]WorkResult, error) {
+	if len(work) == 0 {
+		return []WorkResult{}, nil
+	}
+
+	// Initialize if not already done
+	if err := o.Init(); err != nil {
+		return nil, err
+	}
+
+	// Create component scheduler
+	scheduler := NewComponentScheduler(o.config, o.tuiConsole)
+
+	// Start TUI console if enabled
+	if o.tuiConsole != nil {
+		o.tuiTotal = len(work)
+		o.tuiCompleted = 0
+		o.tuiRunning = nil
+		o.tuiLayer = 0
+		o.tuiTotalLayers = 0
+
+		o.tuiConsole.StartAsync(o.tuiCtx)
+		o.tuiConsole.UpdateStatus(tui.Status{
+			Phase:       capitalize(o.config.ActionVerb),
+			Running:     nil,
+			Completed:   0,
+			Total:       len(work),
+			Layer:       0,
+			TotalLayers: 0,
+		})
+	}
+
+	// Print header
+	uniqueModules := countUniqueModules(work)
+	fmt.Fprintf(o.orchestratorOut, "%s %d components across %d modules in parallel%s%s",
+		capitalize(o.config.ActionVerb), len(work), uniqueModules, LineEnding, LineEnding)
+
+	// Create and start display manager (only when TUI is not enabled)
+	if !o.config.TUI {
+		o.display = newDisplayManager(o.logger, o.config.ActionVerb, len(work), o.config.StatusUpdateInterval, false)
+		o.display.start()
+	}
+
+	// Set phase to Run
+	o.SetPhase(tui.PhaseRun)
+
+	// Set indices
+	for i := range work {
+		work[i].Index = i
+	}
+
+	// Initialize scheduler
+	scheduler.InitializeWork(work)
+
+	// Execute all components
+	results := scheduler.RunComponents(work, worker)
+
+	// Stop display manager
+	if o.display != nil {
+		o.display.stop()
+		o.display.flushCompletedLines()
+	}
+
+	// Aggregate component results to module results
+	return AggregateToWorkResults(results, work), nil
+}
+
+// countUniqueModules counts unique modules in component work items.
+func countUniqueModules(work []ComponentWork) int {
+	seen := make(map[string]bool)
+	for _, w := range work {
+		seen[w.Module] = true
+	}
+	return len(seen)
+}
+
+// getLayerModules returns unique module names from component work items.
+func getLayerModules(work []ComponentWork) []string {
+	seen := make(map[string]bool)
+	var modules []string
+	for _, w := range work {
+		if !seen[w.Module] {
+			seen[w.Module] = true
+			modules = append(modules, w.Module)
+		}
+	}
+	return modules
+}
+
 // GetExitCode returns the appropriate exit code based on results
 // Returns 1 if any module failed, 0 otherwise.
 func GetExitCode(results []WorkResult) int {

@@ -40,19 +40,17 @@ type ArtifactResolutionSummary struct {
 // ResolveArtifactsForModule resolves all artifacts for a module with metadata applied.
 func ResolveArtifactsForModule(
 	module *config.Module,
-	moduleType *config.ModuleTypeDef,
 	buildDir string,
 	targetOS, targetArch string,
 ) ([]ResolvedArtifact, *ArtifactResolutionSummary, error) {
-	return ResolveArtifactsForModuleWithConfig(module, moduleType, buildDir, targetOS, targetArch, nil)
+	return ResolveArtifactsForModuleWithConfig(module, buildDir, targetOS, targetArch, nil)
 }
 
 // ResolveArtifactsForModuleWithConfig resolves all artifacts for a module with optional books config.
-// The moduleType parameter is deprecated and ignored - artifact resolution uses cfg.GetBuildArtifacts()
-// which properly merges module-level and type-level artifacts (module-level takes priority).
+// Artifact resolution uses cfg.GetBuildArtifacts() which properly merges module-level and
+// type-level artifacts (module-level takes priority).
 func ResolveArtifactsForModuleWithConfig(
 	module *config.Module,
-	moduleType *config.ModuleTypeDef, // Deprecated: unused, kept for API compatibility
 	buildDir string,
 	targetOS, targetArch string,
 	cfg *config.EACConfig,
@@ -469,9 +467,9 @@ func validateSingleModule(
 	buildDirRel := cfg.Repository.BuildOutputPath(moniker)
 	buildDir := filepath.Join(workspaceRoot, buildDirRel)
 
-	// Resolve artifacts (moduleType parameter is deprecated, passing nil)
+	// Resolve artifacts
 	artifacts, summary, err := ResolveArtifactsForModuleWithConfig(
-		module, nil, buildDir, targetOS, targetArch, cfg,
+		module, buildDir, targetOS, targetArch, cfg,
 	)
 	if err != nil {
 		result.Error = err.Error()
@@ -576,11 +574,8 @@ func addDependenciesRecursive(moniker string, registry *modules.Registry, result
 //
 // This delegates to config.EACConfig.GetBuildArtifactIDs which encapsulates all
 // artifact merging and filtering logic (module vs type-level, UPX filtering, etc.)
-//
-// The moduleType parameter is deprecated and ignored - kept for API compatibility.
 func DetermineRequestedArtifacts(
 	module *config.Module,
-	moduleType *config.ModuleTypeDef, // Deprecated: unused, kept for API compatibility
 	buildAll bool,
 	cfg *config.EACConfig,
 ) []string {

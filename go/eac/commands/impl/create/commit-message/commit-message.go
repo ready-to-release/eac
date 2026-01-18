@@ -475,7 +475,7 @@ func validateAndOutput(cfg *executionConfig, message string) (int, bool) {
 
 	errorCount, warningCount := 0, 0
 	for _, verr := range validationErrors {
-		if verr.Severity == "error" {
+		if !verr.IsWarning() {
 			errorCount++
 		} else {
 			warningCount++

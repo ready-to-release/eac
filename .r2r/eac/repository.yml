@@ -29,45 +29,58 @@ modules:
     name: Repository Root Module
     description: Repository root module including configuration files, build tools, and git settings
     components:
-      static:
+      # Text/config files without typed extensions
+      repo-config:
+        type: static
         root: /
         patterns:
           config:
             - LICENSE
             - .gitignore
             - .gitattributes
+            - go.work
+            - go.work.sum
+      markdown: /
+      yaml:
+        root: /
+        patterns:
+          source:
+            - .r2r/**/*.yml
+            - .r2r/**/*.yaml
             - .golangci.yml
             - .markdownlint.yml
             - .markdownlint-cli2.yaml
             - cspell.config.yml
-            - go.work
-            - go.work.sum
-            - test-repository-validations.sh
-            - CHANGELOG.md
-            - SECURITY.md
-            - .r2r/**
-            - .vscode/**
-            - .claude/**
+            - .claude/**/*.yml
+            - .claude/**/*.yaml
+      json:
+        root: /
+        patterns:
+          source:
             - .mcp.json
-            - agent.md
-            - "**/agent.md"
-            - scripts/pwsh/claude/*.*
-            - scripts/sh/claude/*.*
-            - scripts/sh/vscode/*.*
-            - .github/workflows/_module-ci.yaml
-            - .github/workflows/change-trigger.yaml
-            - .github/workflows/release-trigger.yaml
-            - .github/workflows/cron-full-trigger.yaml
-            - .github/workflows/codeql.yaml
-            - scripts/pwsh/claude/env-setup.ps1
-            - scripts/pwsh/local-dev/**
-            - scripts/sh/claude/env-setup.sh
-            - scripts/sh/vscode/**
-            - go/eac/core/testing/testdata/meta-tests/**
-      markdown: /
-      yaml: .r2r
+            - .vscode/**/*.json
+      bash:
+        root: /
+        patterns:
+          source:
+            - test-repository-validations.sh
+            - scripts/sh/claude/**/*.sh
+            - scripts/sh/vscode/**/*.sh
+      pwsh:
+        root: /
+        patterns:
+          source:
+            - scripts/pwsh/claude/**/*.ps1
+            - scripts/pwsh/local-dev/**/*.ps1
       test-impl:
+        type: go
+        root: go/eac/specs/impl/repository
+      testdata:
+        type: static
+        root: go/eac/core/testing/testdata/meta-tests
       workflows:
+        type: yaml
+        root: .github/workflows
 
   - moniker: eac-core
     name: Core Domain Libraries
@@ -85,6 +98,8 @@ modules:
       markdown: go/eac/core
       json: contracts/eac-core
       workflows:
+        type: yaml
+        root: .github/workflows
 
   - moniker: release-docs
     name: Release Documentation
@@ -92,7 +107,6 @@ modules:
     versioning:
       scheme: CalVer
     components:
-      static: release
       markdown: release
 
   - moniker: mkdocs-pdf
@@ -116,6 +130,8 @@ modules:
             type: gha
       markdown: containers/mkdocs-pdf
       workflows:
+        type: yaml
+        root: .github/workflows
 
   - moniker: mkdocs-site
     name: MkDocs Site Container
@@ -138,6 +154,8 @@ modules:
             type: gha
       markdown: containers/mkdocs-site
       workflows:
+        type: yaml
+        root: .github/workflows
 
   # ============================================================================
   # LAYER 1 - Depends on Layer 0
@@ -157,17 +175,18 @@ modules:
         type: book
         root: docs
       markdown: docs
-      static:
+      yaml:
         root: docs
         patterns:
           source:
             - "**/.nav.yml"
-            - assets/**
-            - LICENSE
-            - reference/**
             - mkdocs.yml
-            - containers/static-site/**
+      assets:
+        type: static
+        root: docs/assets
       workflows:
+        type: yaml
+        root: .github/workflows
 
   - moniker: eac-commands
     name: Go Commands Library
@@ -186,6 +205,8 @@ modules:
               pattern: "commands{ext}"
       markdown: go/eac/commands
       workflows:
+        type: yaml
+        root: .github/workflows
 
   - moniker: eac-specs
     name: Test Infrastructure
@@ -243,6 +264,8 @@ modules:
       markdown: go/r2r/cli
       json: contracts/r2r-cli
       workflows:
+        type: yaml
+        root: .github/workflows
 
   - moniker: templates
     name: Project Templates
@@ -250,11 +273,6 @@ modules:
     depends_on:
       - repository
     components:
-      static:
-        root: templates
-        patterns:
-          source:
-            - specs/.risk-controls/**
       markdown: templates
       yaml: templates
       gherkin: templates
@@ -272,7 +290,11 @@ modules:
       markdown: typescript/vscode-ext-commit
       json: contracts/vscode-commit
       specs:
+        type: gherkin
+        root: specs/vscode-ext-commit
       workflows:
+        type: yaml
+        root: .github/workflows
 
   # ============================================================================
   # LAYER 2 - Depends on Layer 1
@@ -301,6 +323,8 @@ modules:
         type: book
       markdown:
       workflows:
+        type: yaml
+        root: .github/workflows
 
   - moniker: eac-mcp-commands
     name: Go Commands MCP Server
@@ -319,6 +343,8 @@ modules:
               pattern: "{moniker}{ext}"
       markdown: go/eac/mcp/commands
       workflows:
+        type: yaml
+        root: .github/workflows
 
   - moniker: ext-eac
     name: EAC Extension for R2R CLI
@@ -361,6 +387,8 @@ modules:
           provenance: true
       markdown: containers/ext-eac
       workflows:
+        type: yaml
+        root: .github/workflows
 
   - moniker: github
     name: GitHub Configuration
@@ -368,7 +396,6 @@ modules:
     depends_on:
       - eac-commands
     components:
-      static: .github
       yaml: .github
       markdown: .github
 
@@ -380,15 +407,16 @@ modules:
     depends_on_ci:
       - r2r-cli
     components:
-      static:
-        root: scripts
-        patterns:
-          source:
-            - "*/cli/**"
-        build:
-          handler: scripts
+      pwsh:
+        root: scripts/pwsh/cli
+      bash:
+        root: scripts/sh/cli
       test-impl:
+        type: go
+        root: go/eac/specs/impl/r2r-installer
       workflows:
+        type: yaml
+        root: .github/workflows
 
   - moniker: implicit-r2r-cli
     name: Go Command Invoker Scripts
@@ -400,16 +428,22 @@ modules:
     depends_on_ci:
       - r2r-cli
     components:
-      static:
-        root: scripts
+      pwsh:
+        root: scripts/pwsh/go-invoker
         patterns:
           source:
-            - "*/go-invoker/**"
-            - importer.ps1
-            - importer.sh
-        build:
-          handler: scripts
+            - "**/*.ps1"
+            - "**/*.psm1"
+            - "../../../importer.ps1"
+      bash:
+        root: scripts/sh/go-invoker
+        patterns:
+          source:
+            - "**/*.sh"
+            - "../../../importer.sh"
       workflows:
+        type: yaml
+        root: .github/workflows
 
   # ============================================================================
   # LAYER 3 - Depends on Layer 2
@@ -444,6 +478,7 @@ modules:
             - docs
             - books
     components:
-      static: release/r2r-eac-bundle
       markdown: release/r2r-eac-bundle
       workflows:
+        type: yaml
+        root: .github/workflows

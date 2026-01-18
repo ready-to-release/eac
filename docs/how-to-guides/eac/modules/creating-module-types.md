@@ -243,7 +243,7 @@ The unified type system uses four base types:
 
 ```bash
 # List all types
-r2r eac show moduletypes
+r2r eac show component-types
 
 # Get type details as JSON
 r2r eac get modules --format=json | jq '.modules[].type' | sort -u

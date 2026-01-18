@@ -42,42 +42,6 @@ type Repository struct {
 	logger   *zap.Logger // Logger for observability (guaranteed non-nil when created via manager)
 }
 
-// Open opens an existing Git repository at the given path.
-// If path is empty, uses the current working directory.
-// It searches upward through parent directories to find the repository root.
-// Pass logger for observability (nil = no logging).
-//
-// Deprecated: Use RepositoryManager.Open() instead for proper dependency injection.
-// This function will be removed in a future version.
-//
-// Migration example:
-//
-//	// Old: repo, _ := git.Open(path, logging.C().Zap())
-//	// New: mgr := git.NewManager(logging.C().Zap())
-//	//      repo, _ := mgr.Open(path)
-func Open(path string, logger *zap.Logger) (*Repository, error) {
-	// Delegate to manager for consistency
-	mgr := NewManager(logger)
-	return mgr.Open(path)
-}
-
-// Init initializes a new Git repository at the given path.
-// Pass logger for observability (nil = no logging).
-//
-// Deprecated: Use RepositoryManager.Init() instead for proper dependency injection.
-// This function will be removed in a future version.
-//
-// Migration example:
-//
-//	// Old: repo, _ := git.Init(path, logging.C().Zap())
-//	// New: mgr := git.NewManager(logging.C().Zap())
-//	//      repo, _ := mgr.Init(path)
-func Init(path string, logger *zap.Logger) (*Repository, error) {
-	// Delegate to manager for consistency
-	mgr := NewManager(logger)
-	return mgr.Init(path)
-}
-
 // RootPath returns the repository root directory path.
 func (r *Repository) RootPath() string {
 	return r.rootPath

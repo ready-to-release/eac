@@ -13,7 +13,7 @@ func FormatValidationErrors(errors []ValidationError) string {
 	warningCount := 0
 
 	for _, verr := range errors {
-		if verr.Severity == "error" {
+		if !verr.IsWarning() {
 			errorCount++
 		} else {
 			warningCount++
@@ -29,7 +29,7 @@ func FormatValidationErrors(errors []ValidationError) string {
 
 	for _, verr := range errors {
 		icon := "❌"
-		if verr.Severity == "warning" {
+		if verr.IsWarning() {
 			icon = "⚠️ "
 		}
 		result += fmt.Sprintf("%s %s\n", icon, verr.Error())
@@ -38,11 +38,11 @@ func FormatValidationErrors(errors []ValidationError) string {
 	return result
 }
 
-// CountCriticalErrors returns the number of errors with severity == "error".
+// CountCriticalErrors returns the number of errors that are not warnings.
 func CountCriticalErrors(errors []ValidationError) int {
 	count := 0
 	for _, err := range errors {
-		if err.Severity == "error" {
+		if !err.IsWarning() {
 			count++
 		}
 	}

@@ -139,7 +139,7 @@ func getArtifactStats(mod *modules.ModuleContract, cfg *config.EACConfig, worksp
 	targetArch := runtime.GOARCH
 
 	_, summary, err := implinternal.ResolveArtifactsForModuleWithConfig(
-		module, nil, buildDir, targetOS, targetArch, cfg,
+		module, buildDir, targetOS, targetArch, cfg,
 	)
 	if err != nil {
 		return stats

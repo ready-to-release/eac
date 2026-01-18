@@ -17,6 +17,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/locking"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/output"
 	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
@@ -178,59 +179,108 @@ func lintWorker(ctx *cmdframework.ExecutionContext, moniker string, logWriter io
 	return exitCode
 }
 
-// lintByPackages lints a module by iterating over its enabled package types.
+// lintByPackages lints a module by finding applicable lint providers for its components.
 func lintByPackages(ctx *cmdframework.ExecutionContext, module *modules.ModuleContract,
 	moduleRoot, outputDir string, logWriter io.Writer, lintCfg *LintConfig, lintersRun *int,
 ) int {
 	cfg := config.Global()
-	if cfg == nil || cfg.ComponentTypes == nil {
-		output.Writeln(logWriter, "Warning: package types config not loaded")
+	if cfg == nil || cfg.LintProviders == nil {
+		output.Writeln(logWriter, "Warning: lint providers config not loaded")
+		return 0
+	}
+
+	// Check if linting is disabled for this module
+	if module.Linting != nil && containsString(module.Linting.Disabled, "all") {
+		output.Writeln(logWriter, "Linting disabled for module: %s", module.Moniker)
 		return 0
 	}
 
 	overallExitCode := 0
 
-	for _, pkgName := range module.Components.GetEnabled() {
-		pkgType := cfg.ComponentTypes.Get(pkgName)
-		if pkgType == nil || !pkgType.HasLinter() {
-			continue // No linter configured for this package type
-		}
+	// Find which lint providers apply to this module's component types
+	for _, compName := range module.Components.GetEnabled() {
+		// Get the actual component type (may differ from name for named components)
+		compType := module.Components.GetComponentType(compName)
 
-		handler := linters.GetHandlerByLinter(pkgType.Linter)
-		if handler == nil {
-			log.Debugf("No handler registered for linter: %s (package type: %s)", pkgType.Linter, pkgName)
-			continue
-		}
+		// Find providers that apply to this component type
+		providerNames := cfg.LintProviders.GetProvidersForComponentType(compType)
+		for _, providerName := range providerNames {
+			// Check module-level linting overrides
+			if !isProviderEnabledForModule(providerName, module.Linting) {
+				log.Debugf("Provider %s disabled for module %s", providerName, module.Moniker)
+				continue
+			}
 
-		// Validate module for this handler
-		if err := handler.ValidateModule(moduleRoot, ctx.WorkspaceRoot); err != nil {
-			log.Debugf("Module validation failed for %s handler: %v", handler.Name(), err)
-			continue
-		}
+			provider := cfg.LintProviders.Get(providerName)
+			if provider == nil {
+				continue
+			}
 
-		output.Writeln(logWriter, "🔍 Linting %s package with %s handler...", pkgName, handler.Name())
-		*lintersRun++
+			handler := linters.GetHandlerForProvider(providerName)
+			if handler == nil {
+				log.Debugf("No handler registered for provider: %s (component type: %s)", providerName, compType)
+				continue
+			}
 
-		opts := linters.LintOptions{
-			Fix:       lintCfg.Fix,
-			Config:    lintCfg.Config,
-			LintInput: pkgType.GetLintInput(),
-		}
+			// Validate module for this handler
+			if err := handler.ValidateModule(moduleRoot, ctx.WorkspaceRoot); err != nil {
+				log.Debugf("Module validation failed for %s handler: %v", handler.Name(), err)
+				continue
+			}
 
-		exitCode := handler.Lint(moduleRoot, ctx.WorkspaceRoot, outputDir, logWriter, opts)
-		if exitCode != 0 {
-			overallExitCode = exitCode
+			output.Writeln(logWriter, "🔍 Linting %s with %s...", compType, providerName)
+			*lintersRun++
+
+			opts := linters.LintOptions{
+				Fix:       lintCfg.Fix,
+				Config:    lintCfg.Config,
+				InputMode: provider.GetInputMode(),
+			}
+
+			exitCode := handler.Lint(moduleRoot, ctx.WorkspaceRoot, outputDir, logWriter, opts)
+			if exitCode != 0 {
+				overallExitCode = exitCode
+			}
 		}
 	}
 
 	return overallExitCode
 }
 
+// isProviderEnabledForModule checks if a lint provider should run for a module.
+func isProviderEnabledForModule(providerName string, linting *contracts.ModuleLinting) bool {
+	if linting == nil {
+		return true // No overrides, use default behavior
+	}
+
+	// Check if provider is explicitly disabled
+	if containsString(linting.Disabled, providerName) {
+		return false
+	}
+
+	// If enabled list is specified, provider must be in it
+	if len(linting.Enabled) > 0 {
+		return containsString(linting.Enabled, providerName)
+	}
+
+	return true
+}
+
+// containsString checks if a slice contains a string.
+func containsString(slice []string, s string) bool {
+	for _, item := range slice {
+		if item == s {
+			return true
+		}
+	}
+	return false
+}
+
 // lintDepsVerifier verifies system dependencies for linting.
 func lintDepsVerifier(ctx *cmdframework.ExecutionContext) *initsummary.DepsStatus {
 	status := &initsummary.DepsStatus{Verified: true}
 
-	// Collect unique requirements from all handlers that will be used
+	// Collect unique requirements from all lint providers that will be used
 	depsMap := make(map[string]bool)
 	cfg := config.Global()
 
@@ -240,17 +290,15 @@ func lintDepsVerifier(ctx *cmdframework.ExecutionContext) *initsummary.DepsStatu
 			continue
 		}
 
-		// Get requirements from package-based handlers
-		if module.Components != nil && len(module.Components.GetEnabled()) > 0 && cfg != nil && cfg.ComponentTypes != nil {
-			for _, pkgName := range module.Components.GetEnabled() {
-				pkgType := cfg.ComponentTypes.Get(pkgName)
-				if pkgType == nil || !pkgType.HasLinter() {
-					continue
-				}
-				handler := linters.GetHandlerByLinter(pkgType.Linter)
-				if handler != nil {
-					for _, req := range handler.Requirements() {
-						depsMap[req] = true
+		// Get requirements from lint providers for each component type
+		if module.Components != nil && len(module.Components.GetEnabled()) > 0 && cfg != nil && cfg.LintProviders != nil {
+			for _, compName := range module.Components.GetEnabled() {
+				compType := module.Components.GetComponentType(compName)
+				providerNames := cfg.LintProviders.GetProvidersForComponentType(compType)
+				for _, providerName := range providerNames {
+					provider := cfg.LintProviders.Get(providerName)
+					if provider != nil && provider.SystemDependency != "" {
+						depsMap[provider.SystemDependency] = true
 					}
 				}
 			}

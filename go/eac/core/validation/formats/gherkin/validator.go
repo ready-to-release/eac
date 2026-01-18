@@ -33,14 +33,6 @@ func NewValidator(contract *contracts.Contract, tagsConfig *config.TestingTagsCo
 	}
 }
 
-// NewValidatorWithTags is deprecated. Use NewValidator instead.
-// Kept for backwards compatibility.
-//
-// Deprecated: Use NewValidator(contract, tagsConfig) directly.
-func NewValidatorWithTags(contract *contracts.Contract, tagsConfig *config.TestingTagsConfig) *Validator {
-	return NewValidator(contract, tagsConfig)
-}
-
 // Validate validates Gherkin content against the specification contract
 //
 // This implements the Validator interface and checks:

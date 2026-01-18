@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 // Logger wraps zap.Logger with dual-output support.
@@ -24,6 +25,8 @@ func New(cfg Config) (*Logger, error) {
 	opts := []zap.Option{
 		zap.AddCaller(),
 		zap.AddCallerSkip(1),
+		// Suppress zap's internal error output (e.g., write failures during log rotation)
+		zap.ErrorOutput(zapcore.AddSync(io.Discard)),
 	}
 
 	if cfg.Development {

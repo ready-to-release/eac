@@ -5,8 +5,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/core/config"
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 )
 
@@ -16,37 +14,9 @@ type ModuleMapper struct {
 	workspaceRoot string
 }
 
-// NewModuleMapper creates a mapper from EAC config.
-func NewModuleMapper(eacCfg *config.EACConfig, workspaceRoot string) *ModuleMapper {
-	registry := modules.NewRegistry("0.1.0", workspaceRoot)
-
-	// Convert config modules to contract modules
-	for i := range eacCfg.Repository.Modules {
-		m := &eacCfg.Repository.Modules[i]
-
-		// Convert config.ModuleComponents to contracts.ModuleComponents
-		packages := make(contracts.ModuleComponents)
-		for pkgName, entry := range m.Components {
-			if entry == nil {
-				packages[pkgName] = nil
-			} else {
-				packages[pkgName] = &contracts.ComponentEntry{
-					Root: entry.Root,
-				}
-			}
-		}
-
-		base := contracts.BaseContract{
-			Moniker:     m.Moniker,
-			Name:        m.Name,
-			Components:  packages,
-			Description: m.Description,
-			DependsOn:   m.DependsOn,
-		}
-		contract := modules.NewModuleContract(base, workspaceRoot)
-		_ = registry.Add(contract) //nolint:errcheck // registry.Add only fails on duplicate which won't happen here
-	}
-
+// NewModuleMapper creates a mapper from an existing module registry.
+// The registry should have all component type defaults applied.
+func NewModuleMapper(registry *modules.Registry, workspaceRoot string) *ModuleMapper {
 	return &ModuleMapper{
 		registry:      registry,
 		workspaceRoot: workspaceRoot,
@@ -79,6 +49,20 @@ func (m *ModuleMapper) GetModuleForFile(filePath string) string {
 		matches = m.registry.FindModulesForFile(syntheticFile)
 		if len(matches) > 0 {
 			return matches[0].Moniker
+		}
+	}
+
+	// Fallback: handle specs/ directory by convention (specs/<moniker>/**)
+	// This maps spec files to their module even if the module doesn't have a specs: component
+	if strings.HasPrefix(relPath, "specs/") {
+		// Extract the moniker from specs/<moniker>/...
+		afterSpecs := strings.TrimPrefix(relPath, "specs/")
+		if idx := strings.Index(afterSpecs, "/"); idx > 0 {
+			potentialMoniker := afterSpecs[:idx]
+			// Verify this moniker exists in the registry
+			if _, exists := m.registry.Get(potentialMoniker); exists {
+				return potentialMoniker
+			}
 		}
 	}
 

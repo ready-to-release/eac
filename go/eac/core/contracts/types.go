@@ -82,7 +82,17 @@ type BaseContract struct {
 	EvidenceBooks []string          `yaml:"evidence_books,omitempty"` // Evidence book names
 	ReleaseBundle *ReleaseBundle    `yaml:"release_bundle,omitempty"`
 	Metadata      map[string]string `yaml:"metadata,omitempty"`
-	Components    ModuleComponents  `yaml:"components"` // Component types mapped to their roots
+	Components    ModuleComponents  `yaml:"components"`         // Component types mapped to their roots
+	Linting       *ModuleLinting    `yaml:"linting,omitempty"`  // Linting configuration overrides
+}
+
+// ModuleLinting configures linting behavior for a module.
+type ModuleLinting struct {
+	// Enabled lists specific lint providers to use (empty = use all applicable from lint-providers.yml)
+	Enabled []string `yaml:"enabled,omitempty"`
+
+	// Disabled lists lint providers to skip, or "all" to disable linting entirely
+	Disabled []string `yaml:"disabled,omitempty"`
 }
 
 // ReleaseBundle configures how the release module creates GitHub releases.

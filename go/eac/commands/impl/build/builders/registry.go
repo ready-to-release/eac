@@ -16,6 +16,7 @@ type BuildOptions struct {
 	Version            string   // Version to inject via ldflags
 	DryRun             bool     // Simulate build without actually running it
 	RequestedArtifacts []string // Specific artifact IDs to build (empty = default artifacts, "*" = all)
+	Component          string   // Specific component to build (empty = all components, for component-level parallelism)
 }
 
 // Handler is the interface for build handlers.
@@ -75,20 +76,20 @@ func GetAllHandlers() map[string]Handler {
 	return result
 }
 
-// PackageHandler pairs a package name with its build handler.
-type PackageHandler struct {
-	Package string
-	Handler Handler
+// ComponentHandler pairs a component name with its build handler.
+type ComponentHandler struct {
+	Component string
+	Handler   Handler
 }
 
-// GetHandlersForModule returns all handlers for a module's buildable packages.
-// Returns a slice of PackageHandler pairs, one for each package that has a builder.
+// GetHandlersForModule returns all handlers for a module's buildable components.
+// Returns a slice of ComponentHandler pairs, one for each component that has a builder.
 // Handler selection follows this priority:
-//  1. Module-level handler override (build.handler in module config) - applies to primary package only
-//  2. Package-type builders (from package-types.yml for each enabled package)
+//  1. Module-level handler override (build.handler in module config) - applies to primary component only
+//  2. Component-type builders (from component-types.yml for each enabled component)
 //
-// Returns empty slice if module has no buildable packages.
-func GetHandlersForModule(module *modules.ModuleContract) []PackageHandler {
+// Returns empty slice if module has no buildable components.
+func GetHandlersForModule(module *modules.ModuleContract) []ComponentHandler {
 	mu.RLock()
 	defer mu.RUnlock()
 
@@ -96,20 +97,20 @@ func GetHandlersForModule(module *modules.ModuleContract) []PackageHandler {
 		return nil
 	}
 
-	var result []PackageHandler
+	var result []ComponentHandler
 
-	// Priority 1: Check for per-module handler override (applies to primary package)
+	// Priority 1: Check for per-module handler override (applies to primary component)
 	if module.GetBuildHandler() != "" {
 		handlerName := module.GetBuildHandler()
 		if h, ok := handlers[handlerName]; ok {
 			log.Debugf("Using per-module handler override: %s -> %s", module.Moniker, handlerName)
-			result = append(result, PackageHandler{
-				Package: "override",
-				Handler: h,
+			result = append(result, ComponentHandler{
+				Component: "override",
+				Handler:   h,
 			})
-			return result // Override takes precedence, skip package-based handlers
+			return result // Override takes precedence, skip component-based handlers
 		}
-		log.Warnf("Module %s specifies unknown handler %q, falling back to package-based selection",
+		log.Warnf("Module %s specifies unknown handler %q, falling back to component-based selection",
 			module.Moniker, handlerName)
 	}
 
@@ -119,56 +120,29 @@ func GetHandlersForModule(module *modules.ModuleContract) []PackageHandler {
 	}
 
 	// Priority 2: Find builders from all component types
-	// Track which builder names we've already added to avoid duplicates
-	seenBuilders := make(map[string]bool)
-
+	// Each component gets its own handler entry for component-level parallelism
 	for _, compName := range module.GetEnabledComponents() {
 		// Get the component type (may differ from name for named components)
 		compTypeName := module.Components.GetComponentType(compName)
 		compType := cfg.ComponentTypes.Get(compTypeName)
 		if compType != nil && compType.HasBuilder() {
 			builderName := compType.Builder
-			// Skip if we've already added this builder (e.g., typescript and javascript both use npm)
-			if seenBuilders[builderName] {
-				continue
-			}
 			if h, ok := handlers[builderName]; ok {
-				log.Debugf("Adding component-based handler: %s (component: %s, type: %s) -> %s",
+				log.Debugf("Adding component handler: %s (component: %s, type: %s) -> %s",
 					module.Moniker, compName, compTypeName, builderName)
-				result = append(result, PackageHandler{
-					Package: compName,
-					Handler: h,
+				result = append(result, ComponentHandler{
+					Component: compName,
+					Handler:   h,
 				})
-				seenBuilders[builderName] = true
 			}
 		}
 	}
 
 	if len(result) == 0 {
-		log.Debugf("No build handlers for module %s (no buildable packages)", module.Moniker)
+		log.Debugf("No build handlers for module %s (no buildable components)", module.Moniker)
 	}
 
 	return result
-}
-
-// GetHandlerForModule returns the primary handler for a module.
-// This is a convenience function that returns the first handler from GetHandlersForModule.
-// Use GetHandlersForModule to get all handlers for multi-package modules.
-//
-// Handler selection follows this priority:
-//  1. Module-level handler override (build.handler in module config)
-//  2. Package-type builder (from package-types.yml based on first buildable package)
-//  3. No-op handler (module has no buildable packages)
-//
-// The moduleType parameter is deprecated and ignored.
-func GetHandlerForModule(module *modules.ModuleContract, moduleType string) Handler {
-	pkgHandlers := GetHandlersForModule(module)
-	if len(pkgHandlers) == 0 {
-		mu.RLock()
-		defer mu.RUnlock()
-		return handlers[""] // no-op handler
-	}
-	return pkgHandlers[0].Handler
 }
 
 // GetHandlerByBuilder returns the handler for a specific builder name.

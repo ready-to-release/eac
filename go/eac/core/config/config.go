@@ -74,6 +74,7 @@ type EACConfig struct {
 	SecurityTools      *SecurityToolsConfig
 	Commands           *CommandsConfig
 	ComponentTypes     *ComponentTypesConfig
+	LintProviders      *LintProvidersConfig
 
 	// Schema validator (lazy initialized)
 	validator     *schema.Validator
@@ -162,7 +163,7 @@ func Load(opts LoadOptions) (*EACConfig, error) {
 }
 
 // LoadAll loads all configuration files.
-// Core configs (Repository, PackageTypes) must load successfully - fails immediately on error.
+// Core configs (Repository, ComponentTypes) must load successfully - fails immediately on error.
 // Optional configs (Environments, TestingTags, etc.) collect errors but continue loading.
 func (c *EACConfig) LoadAll(opts LoadOptions) error {
 	validateSchemas := opts.ValidateSchemas
@@ -214,6 +215,10 @@ func (c *EACConfig) LoadAll(opts LoadOptions) error {
 
 	if err := c.LoadCommands(validateSchemas); err != nil {
 		errs = append(errs, fmt.Errorf("commands: %w", err))
+	}
+
+	if err := c.LoadLintProviders(validateSchemas); err != nil {
+		errs = append(errs, fmt.Errorf("lint-providers: %w", err))
 	}
 
 	// Note: ComponentTypes is loaded in core configs section above

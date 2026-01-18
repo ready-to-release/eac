@@ -302,7 +302,7 @@ func Build() int {
 		SkipDeps:     skipDeps,
 		SkipDepm:     skipDepm,
 		ForceRebuild: forceRebuild,
-		Layered:      true, // Build always uses layered execution
+		Layered:      layeredBuild,
 		DryRun:       dryRun,
 		UseTUI:       useTUI,
 		TUIHeight:    tuiHeight,
@@ -341,18 +341,18 @@ func listModuleArtifacts(monikers []string, workspaceRoot string, moduleReport *
 			continue
 		}
 
-		// Get all handlers for module's buildable packages
-		pkgHandlers := builders.GetHandlersForModule(module)
-		if len(pkgHandlers) == 0 {
-			// No buildable packages for this module
+		// Get all handlers for module's buildable components
+		compHandlers := builders.GetHandlersForModule(module)
+		if len(compHandlers) == 0 {
+			// No buildable components for this module
 			continue
 		}
 
 		outputDir := paths.BuildOutputPath(workspaceRoot, moniker)
 
 		// Collect artifacts from all handlers
-		for _, ph := range pkgHandlers {
-			artifacts := ph.Handler.ListArtifacts(module, workspaceRoot)
+		for _, ch := range compHandlers {
+			artifacts := ch.Handler.ListArtifacts(module, workspaceRoot)
 			for _, artifact := range artifacts {
 				// Output full path relative to workspace root
 				fullPath := filepath.Join(outputDir, artifact)
@@ -369,13 +369,13 @@ func listModuleArtifacts(monikers []string, workspaceRoot string, moduleReport *
 }
 
 // runModuleBuild runs build for a single module.
-// Executes all handlers for the module's buildable packages in sequence.
+// Executes all handlers for the module's buildable components in sequence.
 func runModuleBuild(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, tidyFirst bool, version string, dryRun, buildAll bool) int {
-	// Get all handlers for module's buildable packages
-	pkgHandlers := builders.GetHandlersForModule(module)
-	if len(pkgHandlers) == 0 {
-		output.Writeln(logWriter, "ℹ️  No buildable packages for module: %s", module.Moniker)
-		return 0 // Not an error - module just doesn't have buildable packages
+	// Get all handlers for module's buildable components
+	compHandlers := builders.GetHandlersForModule(module)
+	if len(compHandlers) == 0 {
+		output.Writeln(logWriter, "ℹ️  No buildable components for module: %s", module.Moniker)
+		return 0 // Not an error - module just doesn't have buildable components
 	}
 
 	// Determine which artifacts to build
@@ -391,14 +391,14 @@ func runModuleBuild(module *modules.ModuleContract, workspaceRoot, outputDir str
 	// In dry-run mode, simulate a successful build
 	if dryRun {
 		output.Writeln(logWriter, "Build: %s (dry-run)", module.Moniker)
-		output.Writeln(logWriter, "Packages: %v", module.GetEnabledComponents())
-		output.Writeln(logWriter, "Handlers: %d", len(pkgHandlers))
-		for _, ph := range pkgHandlers {
-			output.Writeln(logWriter, "  - %s: %s", ph.Package, ph.Handler.Name())
+		output.Writeln(logWriter, "Components: %v", module.GetEnabledComponents())
+		output.Writeln(logWriter, "Handlers: %d", len(compHandlers))
+		for _, ch := range compHandlers {
+			output.Writeln(logWriter, "  - %s: %s", ch.Component, ch.Handler.Name())
 		}
-		// Show package roots
-		for pkgType, root := range module.GetComponentRoots() {
-			output.Writeln(logWriter, "Root[%s]: %s", pkgType, root)
+		// Show component roots
+		for compType, root := range module.GetComponentRoots() {
+			output.Writeln(logWriter, "Root[%s]: %s", compType, root)
 		}
 		output.Writeln(logWriter, "")
 		output.Writeln(logWriter, "Dry-run mode: skipping actual build")
@@ -406,24 +406,24 @@ func runModuleBuild(module *modules.ModuleContract, workspaceRoot, outputDir str
 	}
 
 	// Run each handler in sequence
-	for _, ph := range pkgHandlers {
-		handler := ph.Handler
+	for _, ch := range compHandlers {
+		handler := ch.Handler
 
-		// Log which package/handler we're building
-		if len(pkgHandlers) > 1 {
+		// Log which component/handler we're building
+		if len(compHandlers) > 1 {
 			output.Writeln(logWriter, "")
-			output.Writeln(logWriter, "━━━ Building package: %s (handler: %s) ━━━", ph.Package, handler.Name())
+			output.Writeln(logWriter, "━━━ Building component: %s (handler: %s) ━━━", ch.Component, handler.Name())
 		}
 
 		// Validate module before building
 		if err := handler.ValidateModule(module, workspaceRoot); err != nil {
-			output.Writeln(logWriter, "❌ Module validation failed for %s: %v", ph.Package, err)
+			output.Writeln(logWriter, "❌ Module validation failed for %s: %v", ch.Component, err)
 			return 1
 		}
 
 		exitCode := handler.Build(module, workspaceRoot, outputDir, logWriter, opts)
 		if exitCode != 0 {
-			output.Writeln(logWriter, "❌ Build failed for package: %s", ph.Package)
+			output.Writeln(logWriter, "❌ Build failed for component: %s", ch.Component)
 			return exitCode
 		}
 	}
@@ -584,7 +584,7 @@ func hasExistingArtifacts(moniker, moduleType, workspaceRoot string, buildAll bo
 	}
 
 	// Determine which artifacts are requested
-	requestedArtifacts := implinternal.DetermineRequestedArtifacts(module, nil, buildAll, cfg)
+	requestedArtifacts := implinternal.DetermineRequestedArtifacts(module, buildAll, cfg)
 	if len(requestedArtifacts) == 0 {
 		return true
 	}
@@ -612,7 +612,7 @@ func hasExistingArtifacts(moniker, moduleType, workspaceRoot string, buildAll bo
 	}
 
 	artifacts, _, err := implinternal.ResolveArtifactsForModuleWithConfig(
-		module, nil, buildDir, runtime.GOOS, runtime.GOARCH, cfg,
+		module, buildDir, runtime.GOOS, runtime.GOARCH, cfg,
 	)
 	if err != nil {
 		return false
@@ -669,12 +669,14 @@ func generateBuildManifest(workspaceRoot string, results []orchestrator.WorkResu
 	for _, result := range results {
 		// Skip failed builds
 		if result.ExitCode != 0 {
+			log.Debugf("Skipping %s: build failed (exit code %d)", result.Moniker, result.ExitCode)
 			continue
 		}
 
 		moniker := result.Moniker
 		moduleType, ok := moduleTypes[moniker]
 		if !ok {
+			log.Debugf("Skipping %s: not found in moduleTypes map", moniker)
 			continue
 		}
 
@@ -689,7 +691,7 @@ func generateBuildManifest(workspaceRoot string, results []orchestrator.WorkResu
 
 		// Resolve artifacts for current platform
 		artifacts, _, err := implinternal.ResolveArtifactsForModuleWithConfig(
-			module, nil, moduleBuildDir, currentPlatform.OS, currentPlatform.Arch, cfg,
+			module, moduleBuildDir, currentPlatform.OS, currentPlatform.Arch, cfg,
 		)
 		if err != nil {
 			log.Warnf("Failed to resolve artifacts for %s: %v", moniker, err)
@@ -697,7 +699,7 @@ func generateBuildManifest(workspaceRoot string, results []orchestrator.WorkResu
 		}
 
 		// Determine which artifacts were requested (filters out UPX in non-CI, etc.)
-		requestedArtifactIDs := implinternal.DetermineRequestedArtifacts(module, nil, buildAll, cfg)
+		requestedArtifactIDs := implinternal.DetermineRequestedArtifacts(module, buildAll, cfg)
 
 		// Build set of requested IDs for fast lookup
 		requestedSet := make(map[string]bool, len(requestedArtifactIDs))
@@ -843,7 +845,7 @@ func validateModuleBuildOutputs(moniker, moduleType, workspaceRoot string, logWr
 
 	// Determine which artifacts were requested for this build
 	// This uses cfg.GetBuildArtifactIDs which correctly handles module-level artifacts
-	requestedArtifacts := implinternal.DetermineRequestedArtifacts(module, nil, buildAll, cfg)
+	requestedArtifacts := implinternal.DetermineRequestedArtifacts(module, buildAll, cfg)
 
 	// If no artifacts to validate, nothing to do
 	if len(requestedArtifacts) == 0 {
@@ -856,7 +858,7 @@ func validateModuleBuildOutputs(moniker, moduleType, workspaceRoot string, logWr
 	buildDirRel := cfg.Repository.BuildOutputPath(moniker)
 	buildDir := filepath.Join(workspaceRoot, buildDirRel)
 	artifacts, _, err := implinternal.ResolveArtifactsForModuleWithConfig(
-		module, nil, buildDir, runtime.GOOS, runtime.GOARCH, cfg,
+		module, buildDir, runtime.GOOS, runtime.GOARCH, cfg,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to resolve artifacts: %w", err)
@@ -945,7 +947,7 @@ func determineRequestedArtifactsForBuild(moduleContract *modules.ModuleContract,
 	}
 
 	// Use the DetermineRequestedArtifacts function
-	return implinternal.DetermineRequestedArtifacts(module, nil, false, cfg)
+	return implinternal.DetermineRequestedArtifacts(module, false, cfg)
 }
 
 // enrichImageArtifact populates image-specific fields (Tags, Registry) from docker_build config.

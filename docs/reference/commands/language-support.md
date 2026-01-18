@@ -106,7 +106,7 @@ Security tools detect languages automatically.
 **Introspection and discovery commands work with all module types:**
 
 - [`show-modules`](./show/modules.md) - Lists all modules
-- [`show-moduletypes`](./show/moduletypes.md) - Lists module types
+- [`show-component-types`](./show/component-types.md) - Lists module types
 - [`show-dependencies`](./show/dependencies.md) - Shows dependency graph
 - [`show-files`](./show/files.md) - Shows file ownership
 - [`get-modules`](./get/modules.md) - Returns module data as JSON

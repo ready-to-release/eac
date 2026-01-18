@@ -114,7 +114,7 @@ func showArtifactsForModule(moduleName, targetOS, targetArch string, allPlatform
 
 		for _, plat := range platforms {
 			platformResults, _, err := implinternal.ResolveArtifactsForModuleWithConfig(
-				module, nil, buildDir, plat.OS, plat.Arch, cfg,
+				module, buildDir, plat.OS, plat.Arch, cfg,
 			)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error: failed to resolve artifacts for %s/%s: %v\n", plat.OS, plat.Arch, err)
@@ -144,7 +144,7 @@ func showArtifactsForModule(moduleName, targetOS, targetArch string, allPlatform
 		// Single platform
 		var err error
 		results, summary, err = implinternal.ResolveArtifactsForModuleWithConfig(
-			module, nil, buildDir, targetOS, targetArch, cfg,
+			module, buildDir, targetOS, targetArch, cfg,
 		)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: failed to resolve artifacts: %v\n", err)
@@ -209,8 +209,8 @@ func showArtifactsForModule(moduleName, targetOS, targetArch string, allPlatform
 // formatArtifactModeBreakdown shows which artifacts are built in default vs --all mode.
 func formatArtifactModeBreakdown(module *config.Module, cfg *config.EACConfig) string {
 	// Get default and all artifact IDs
-	defaultArtifacts := implinternal.DetermineRequestedArtifacts(module, nil, false, cfg)
-	allArtifacts := implinternal.DetermineRequestedArtifacts(module, nil, true, cfg)
+	defaultArtifacts := implinternal.DetermineRequestedArtifacts(module, false, cfg)
+	allArtifacts := implinternal.DetermineRequestedArtifacts(module, true, cfg)
 
 	var output string
 	output += "Build Modes:\n"

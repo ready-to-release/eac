@@ -115,7 +115,7 @@ func getArtifactsForModule(moduleName, targetOS, targetArch string, allPlatforms
 
 		for _, plat := range platforms {
 			results, _, err := implinternal.ResolveArtifactsForModuleWithConfig(
-				module, nil, buildDir, plat.OS, plat.Arch, cfg,
+				module, buildDir, plat.OS, plat.Arch, cfg,
 			)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error: failed to resolve artifacts for %s/%s: %v\n", plat.OS, plat.Arch, err)
@@ -143,7 +143,7 @@ func getArtifactsForModule(moduleName, targetOS, targetArch string, allPlatforms
 	} else {
 		// Single platform
 		results, summary, err := implinternal.ResolveArtifactsForModuleWithConfig(
-			module, nil, buildDir, targetOS, targetArch, cfg,
+			module, buildDir, targetOS, targetArch, cfg,
 		)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: failed to resolve artifacts: %v\n", err)
@@ -154,8 +154,8 @@ func getArtifactsForModule(moduleName, targetOS, targetArch string, allPlatforms
 	}
 
 	// Get build mode breakdown
-	defaultArtifacts := implinternal.DetermineRequestedArtifacts(module, nil, false, cfg)
-	allArtifactsList := implinternal.DetermineRequestedArtifacts(module, nil, true, cfg)
+	defaultArtifacts := implinternal.DetermineRequestedArtifacts(module, false, cfg)
+	allArtifactsList := implinternal.DetermineRequestedArtifacts(module, true, cfg)
 
 	// Output
 	output := struct {

@@ -298,7 +298,7 @@ This is a very long line with Unicode characters: café naïve résumé fiancé 
 			errors := VerifyCommitMessageContract(tt.message, []string{"cli"})
 			hasErrors := false
 			for _, err := range errors {
-				if err.Severity == "error" {
+				if !err.IsWarning() {
 					hasErrors = true
 					break
 				}

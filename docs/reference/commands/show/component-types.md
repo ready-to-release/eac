@@ -1,6 +1,6 @@
-# Show moduletypes
+# Show component-types
 
-<!-- book:cmd show moduletypes -->
+<!-- book:cmd show component-types -->
 
 ## See Also
 

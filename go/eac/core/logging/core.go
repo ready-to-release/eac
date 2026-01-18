@@ -2,13 +2,36 @@ package logging
 
 import (
 	"io"
+	stdlog "log"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
+
+// silentLumberjack wraps lumberjack.Logger to suppress rotation error messages.
+// This is needed because lumberjack uses the standard log package to print errors
+// when it can't rotate files, which happens during concurrent builds.
+type silentLumberjack struct {
+	*lumberjack.Logger
+	mu sync.Mutex
+}
+
+func (s *silentLumberjack) Write(p []byte) (n int, err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	originalOutput := stdlog.Writer()
+	stdlog.SetOutput(io.Discard)
+	defer stdlog.SetOutput(originalOutput)
+	return s.Logger.Write(p)
+}
+
+func (s *silentLumberjack) Close() error {
+	return s.Logger.Close()
+}
 
 // configLevelEnabler implements zapcore.LevelEnabler based on config.
 type configLevelEnabler struct {
@@ -64,12 +87,14 @@ func buildFileCore(cfg Config, logCfg LoggingConfig) (zapcore.Core, io.Closer, e
 
 	// Unified log: out/commands.log with rolling
 	logPath := paths.CommandsLogPath(cfg.WorkspaceRoot)
-	writer := &lumberjack.Logger{
-		Filename:   logPath,
-		MaxSize:    logCfg.File.MaxSizeMB, // MB
-		MaxBackups: logCfg.File.MaxBackups,
-		MaxAge:     logCfg.File.MaxAgeDays, // days
-		Compress:   logCfg.File.Compress != nil && *logCfg.File.Compress,
+	writer := &silentLumberjack{
+		Logger: &lumberjack.Logger{
+			Filename:   logPath,
+			MaxSize:    logCfg.File.MaxSizeMB, // MB
+			MaxBackups: logCfg.File.MaxBackups,
+			MaxAge:     logCfg.File.MaxAgeDays, // days
+			Compress:   logCfg.File.Compress != nil && *logCfg.File.Compress,
+		},
 	}
 
 	encoder := CreateEncoder(logCfg.File.Formatter, cfg.Command)
