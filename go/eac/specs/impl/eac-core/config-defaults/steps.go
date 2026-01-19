@@ -104,9 +104,6 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	sc.Step(`^the module "([^"]*)" specs pattern resolves with "([^"]*)"$`, func(moniker, expected string) error {
 		return theModuleSpecsPatternResolvesWith(moniker, expected)
 	})
-	sc.Step(`^the module "([^"]*)" test_impl path contains "([^"]*)"$`, func(moniker, expected string) error {
-		return theModuleTestImplPathContains(moniker, expected)
-	})
 
 	// Then steps - component types assertions
 	sc.Step(`^the component types config contains type "([^"]*)"$`, func(typeName string) error {
@@ -125,9 +122,6 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	// Then steps - repository paths assertions
 	sc.Step(`^the repository paths\.specs_root is "([^"]*)"$`, func(expected string) error {
 		return theRepositoryPathsFieldIs("specs_root", expected)
-	})
-	sc.Step(`^the repository paths\.test_impl_root is "([^"]*)"$`, func(expected string) error {
-		return theRepositoryPathsFieldIs("test_impl_root", expected)
 	})
 	sc.Step(`^the repository paths\.out\.root is "([^"]*)"$`, func(expected string) error {
 		return theRepositoryPathsFieldIs("out.root", expected)
@@ -478,24 +472,6 @@ func theModuleSpecsPatternResolvesWith(moniker, expected string) error {
 	return fmt.Errorf("module %q specs package does not contain %q", moniker, expected)
 }
 
-func theModuleTestImplPathContains(moniker, expected string) error {
-	if state.cfg == nil || state.cfg.Repository == nil {
-		return fmt.Errorf("modules config not loaded")
-	}
-	m, found := state.cfg.Repository.GetModule(moniker)
-	if !found {
-		return fmt.Errorf("module %q not found", moniker)
-	}
-	// Check if test-impl package exists and its root contains expected
-	if testImplEntry, ok := m.Components["test-impl"]; ok && testImplEntry != nil {
-		if strings.Contains(testImplEntry.Root, expected) {
-			return nil
-		}
-		return fmt.Errorf("module %q test-impl root %q does not contain %q", moniker, testImplEntry.Root, expected)
-	}
-	return fmt.Errorf("module %q has no test-impl package", moniker)
-}
-
 // ============================================================================
 // Component Types Assertions
 // ============================================================================
@@ -575,8 +551,6 @@ func theRepositoryPathsFieldIs(field, expected string) error {
 	switch field {
 	case "specs_root":
 		actual = state.cfg.Repository.Paths.SpecsRoot
-	case "test_impl_root":
-		actual = state.cfg.Repository.Paths.TestImplRoot
 	case "out.root":
 		actual = state.cfg.Repository.Paths.Out.Root
 	case "out.build":

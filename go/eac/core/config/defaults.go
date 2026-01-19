@@ -215,9 +215,6 @@ func MergeRepository(defaults, user *RepositoryConfig) *RepositoryConfig {
 	if user.Paths.SpecsRoot != "" {
 		result.Paths.SpecsRoot = user.Paths.SpecsRoot
 	}
-	if user.Paths.TestImplRoot != "" {
-		result.Paths.TestImplRoot = user.Paths.TestImplRoot
-	}
 	if user.Paths.Templates != "" {
 		result.Paths.Templates = user.Paths.Templates
 	}

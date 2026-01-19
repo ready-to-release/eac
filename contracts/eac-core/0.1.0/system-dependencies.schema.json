@@ -47,6 +47,15 @@
           "type": "string",
           "description": "Minimum required version (e.g., '1.21') or 'any' for no version check"
         },
+        "phases": {
+          "type": "array",
+          "description": "Phases where this dependency is required. If omitted, dependency is phase-agnostic (e.g., OS platforms).",
+          "items": {
+            "type": "string",
+            "enum": ["command", "build", "test", "scan", "lint"]
+          },
+          "minItems": 1
+        },
         "verify": {
           "$ref": "#/definitions/verify"
         }

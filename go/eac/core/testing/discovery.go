@@ -19,8 +19,6 @@ import (
 type DiscoveryConfig struct {
 	// SpecsRoot is the root directory for specifications (from repository.yml paths.specs_root)
 	SpecsRoot string
-	// TestImplRoot is the root directory for test implementations (from repository.yml paths.test_impl_root)
-	TestImplRoot string
 	// GodogTestFile is the conventional filename for godog test files (from repository.yml conventions.godog_test)
 	GodogTestFile string
 }
@@ -35,7 +33,6 @@ func NewDiscoveryConfig() *DiscoveryConfig {
 
 	return &DiscoveryConfig{
 		SpecsRoot:     cfg.Repository.Paths.SpecsRoot,
-		TestImplRoot:  cfg.Repository.Paths.TestImplRoot,
 		GodogTestFile: cfg.Repository.Conventions.GodogTest,
 	}
 }
@@ -376,13 +373,13 @@ func discoverModuleAllTests(rootPath string, module *modules.ModuleContract, dc 
 }
 
 // expandModuleVars expands variables in a path pattern.
-// Supported: {moniker}, {specs_root}, {test_impl_root}.
+// Supported: {moniker}, {specs_root}.
 // Note: {type} is no longer supported - use package-specific patterns instead.
+// Note: {test_impl_root} removed - use explicit test-impl component root instead.
 func expandModuleVars(pattern string, module *modules.ModuleContract, rootPath string, dc *DiscoveryConfig) string {
 	result := pattern
 	result = strings.ReplaceAll(result, "{moniker}", module.Moniker)
 	result = strings.ReplaceAll(result, "{specs_root}", dc.SpecsRoot)
-	result = strings.ReplaceAll(result, "{test_impl_root}", dc.TestImplRoot)
 	return result
 }
 

@@ -15,7 +15,22 @@ type SystemDependency struct {
 	Name        string                 `yaml:"name"`
 	Description string                 `yaml:"description,omitempty"`
 	Version     string                 `yaml:"version"`
+	Phases      []string               `yaml:"phases,omitempty"` // command, build, test, scan, lint
 	Verify      SystemDependencyVerify `yaml:"verify"`
+}
+
+// AppliesToPhase returns true if this dependency is needed for the given phase.
+// If no phases are specified, the dependency is phase-agnostic (e.g., OS platforms).
+func (d *SystemDependency) AppliesToPhase(phase string) bool {
+	if len(d.Phases) == 0 {
+		return true // Phase-agnostic deps always apply
+	}
+	for _, p := range d.Phases {
+		if p == phase {
+			return true
+		}
+	}
+	return false
 }
 
 // SystemDependencyVerify defines how to verify a dependency is available.

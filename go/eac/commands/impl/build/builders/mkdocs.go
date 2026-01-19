@@ -61,7 +61,7 @@ func (h *MkDocsHandler) Capabilities() []string { return []string{"documentation
 
 func (h *MkDocsHandler) Requirements() []string { return []string{"docker"} }
 
-func (h *MkDocsHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot string) error {
+func (h *MkDocsHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot, component string) error {
 	if !IsDockerAvailable() {
 		if IsDockerInDocker() {
 			return fmt.Errorf("Docker socket not mounted")

@@ -21,7 +21,7 @@ func (h *NoneHandler) Capabilities() []string { return nil }
 
 func (h *NoneHandler) Requirements() []string { return nil }
 
-func (h *NoneHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot string) error {
+func (h *NoneHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot, component string) error {
 	return nil
 }
 

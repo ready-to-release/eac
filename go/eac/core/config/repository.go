@@ -89,10 +89,9 @@ func (v VersioningConfig) IsUnrestricted() bool {
 
 // PathsConfig defines repository-specific directory structures.
 type PathsConfig struct {
-	TestImplRoot string    `yaml:"test_impl_root"`
-	SpecsRoot    string    `yaml:"specs_root"`
-	Templates    string    `yaml:"templates"`
-	Out          OutConfig `yaml:"out"`
+	SpecsRoot string    `yaml:"specs_root"`
+	Templates string    `yaml:"templates"`
+	Out       OutConfig `yaml:"out"`
 }
 
 // OutConfig defines output directory structure.
@@ -148,21 +147,20 @@ func loadRepositoryConfigUnmerged(repoRoot string) (*RepositoryConfig, error) {
 }
 
 // TestImplPath returns the full path to a module's test implementation.
-// Panics if module not found - invalid moniker is a programming error.
-// Checks module contract for custom test_impl path before using default convention.
+// Returns empty string if module not found or has no test-impl component.
+// Modules must explicitly define a test-impl component - there is no fallback.
 func (c *RepositoryConfig) TestImplPath(moniker string) string {
 	module, found := c.GetModule(moniker)
 	if !found {
-		panic("TestImplPath: unknown module " + moniker)
+		return ""
 	}
 
-	// Use test-impl component root if defined
+	// Require explicit test-impl component - no fallback
 	if comp, ok := module.Components["test-impl"]; ok && comp != nil && comp.Root != "" {
 		return comp.Root
 	}
 
-	// Default convention: {test_impl_root}/{moniker}
-	return c.Paths.TestImplRoot + "/" + moniker
+	return ""
 }
 
 // SpecsPath returns the full path to a module's specs directory.
@@ -251,15 +249,14 @@ func (c *RepositoryConfig) IsGodogTestFile(filename string) bool {
 // GetPathVariables returns a map of path variables for template substitution.
 func (c *RepositoryConfig) GetPathVariables() map[string]string {
 	return map[string]string{
-		"test_impl_root": c.Paths.TestImplRoot,
-		"specs_root":     c.Paths.SpecsRoot,
-		"templates":      c.Paths.Templates,
-		"out_root":       c.Paths.Out.Root,
-		"out_build":      c.Paths.Out.Build,
-		"out_test":       c.Paths.Out.Test,
-		"out_logs":       c.Paths.Out.Logs,
-		"out_scan":       c.Paths.Out.Scan,
-		"out_tools":      c.Paths.Out.Tools,
+		"specs_root": c.Paths.SpecsRoot,
+		"templates":  c.Paths.Templates,
+		"out_root":   c.Paths.Out.Root,
+		"out_build":  c.Paths.Out.Build,
+		"out_test":   c.Paths.Out.Test,
+		"out_logs":   c.Paths.Out.Logs,
+		"out_scan":   c.Paths.Out.Scan,
+		"out_tools":  c.Paths.Out.Tools,
 	}
 }
 

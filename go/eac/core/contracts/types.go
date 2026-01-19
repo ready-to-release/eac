@@ -42,10 +42,9 @@ type ModuleDefaults struct {
 
 // DefaultPaths contains default path configuration.
 type DefaultPaths struct {
-	TestImplRoot string   `yaml:"test_impl_root"` // Default test implementation root
-	SpecsRoot    string   `yaml:"specs_root"`     // Default specs root
-	Templates    string   `yaml:"templates"`      // Default templates directory
-	Out          OutPaths `yaml:"out"`            // Output directory structure
+	SpecsRoot string   `yaml:"specs_root"` // Default specs root
+	Templates string   `yaml:"templates"`  // Default templates directory
+	Out       OutPaths `yaml:"out"`        // Output directory structure
 }
 
 // OutPaths contains output directory structure.

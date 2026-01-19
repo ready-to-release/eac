@@ -456,7 +456,7 @@ func buildComponentWorker(ctx *cmdframework.ExecutionContext, module, component 
 	output.Writeln(logWriter, "━━━ Building component: %s (handler: %s) ━━━", component, handler.Name())
 
 	// Validate module before building
-	if err := handler.ValidateModule(moduleContract, ctx.WorkspaceRoot); err != nil {
+	if err := handler.ValidateModule(moduleContract, ctx.WorkspaceRoot, component); err != nil {
 		output.Writeln(logWriter, "❌ Module validation failed for %s: %v", component, err)
 		return 1
 	}

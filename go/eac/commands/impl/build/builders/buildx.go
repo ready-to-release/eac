@@ -28,7 +28,7 @@ func (h *BuildxHandler) Capabilities() []string { return []string{"buildx"} }
 
 func (h *BuildxHandler) Requirements() []string { return []string{"docker"} }
 
-func (h *BuildxHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot string) error {
+func (h *BuildxHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot, component string) error {
 	if !IsDockerAvailable() {
 		if IsDockerInDocker() {
 			return fmt.Errorf("Docker socket not mounted")

@@ -318,8 +318,8 @@ func lintDepsVerifier(ctx *cmdframework.ExecutionContext) *initsummary.DepsStatu
 	sort.Strings(deps)
 	status.Required = deps
 
-	// Verify all dependencies
-	results := systemdeps.VerifyAll(deps)
+	// Verify only lint-phase dependencies
+	results := systemdeps.VerifyAllForPhase(deps, "lint")
 
 	for _, result := range results {
 		status.Available = append(status.Available, initsummary.DepsResult{

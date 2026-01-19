@@ -41,10 +41,10 @@
           "type": "array",
           "items": {
             "type": "string",
-            "enum": ["SemVer", "CalVer"]
+            "enum": ["Implicit", "SemVer", "CalVer"]
           },
-          "description": "Valid versioning schemes that modules can declare",
-          "default": ["SemVer", "CalVer"],
+          "description": "Valid versioning schemes that modules can declare. Implicit is always available as the default.",
+          "default": ["Implicit", "SemVer", "CalVer"],
           "minItems": 1
         },
         "trunk_branch": {
@@ -142,11 +142,6 @@
           "type": "string",
           "description": "Root directory for feature specifications",
           "default": "specs"
-        },
-        "test_impl_root": {
-          "type": "string",
-          "description": "Root directory for test implementations (godog steps, etc.)",
-          "default": "tests"
         },
         "templates": {
           "type": "string",
@@ -677,8 +672,9 @@
       "properties": {
         "scheme": {
           "type": "string",
-          "enum": ["SemVer", "CalVer"],
-          "description": "Versioning scheme for this module (must be in repository.schemes)"
+          "enum": ["Implicit", "SemVer", "CalVer"],
+          "description": "Versioning scheme for this module. Implicit (default): module is only released through non-implicit modules. SemVer: semantic versioning. CalVer: calendar versioning.",
+          "default": "Implicit"
         },
         "current": {
           "type": "string",
@@ -688,17 +684,13 @@
           "type": "string",
           "description": "Path to changelog file (defaults to release/<moniker>/CHANGELOG.md)"
         }
-      },
-      "required": ["scheme"]
+      }
     }
   },
   "examples": [
     {
       "repository": {
         "type": "mono"
-      },
-      "paths": {
-        "test_impl_root": "go/eac/specs/impl"
       },
       "modules": [
         {

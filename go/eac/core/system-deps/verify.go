@@ -210,6 +210,35 @@ func VerifyAll(dependencies []string) []Result {
 	return NewVerifier(cfg).VerifyAll(dependencies)
 }
 
+// VerifyAllForPhase checks only dependencies that apply to the given phase.
+// Phase can be: "command", "build", "test", "scan", "lint".
+// Dependencies without phases are considered phase-agnostic and always included.
+func VerifyAllForPhase(dependencies []string, phase string) []Result {
+	cfg, err := loadConfig()
+	if err != nil {
+		results := make([]Result, len(dependencies))
+		for i, dep := range dependencies {
+			results[i] = Result{
+				Dependency: dep,
+				Available:  false,
+				Error:      fmt.Errorf("failed to load config: %w", err),
+			}
+		}
+		return results
+	}
+
+	// Filter dependencies by phase
+	var filtered []string
+	for _, depName := range dependencies {
+		dep := cfg.Get(depName)
+		if dep == nil || dep.AppliesToPhase(phase) {
+			filtered = append(filtered, depName)
+		}
+	}
+
+	return NewVerifier(cfg).VerifyAll(filtered)
+}
+
 // IsAvailable quickly checks if a dependency is available (convenience function).
 func IsAvailable(dependency string) bool {
 	return Verify(dependency).Available
