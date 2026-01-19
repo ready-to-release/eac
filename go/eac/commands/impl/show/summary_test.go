@@ -12,7 +12,7 @@ func TestFormatJobResult(t *testing.T) {
 		{"success", ":white_check_mark:"},
 		{"skipped", ":grey_question: skipped"},
 		{"failure", ":x: failure"},
-		{"cancelled", ":x: cancelled"},
+		{"canceled", ":x: canceled"},
 		{"", ":grey_question: unknown"},
 	}
 

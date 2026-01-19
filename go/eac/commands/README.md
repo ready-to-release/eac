@@ -18,7 +18,7 @@ This module provides a command dispatcher that automatically discovers and route
 
 # Use commands with tab completion
 run <TAB>              # Shows: commit, describe, list, show
-run show <TAB>         # Shows: files, modules, moduletypes
+run show <TAB>         # Shows: files, modules, component-types
 run show files <TAB>   # Shows: changed, staged
 run show files         # Executes: show all tracked files (markdown table)
 run show modules       # Executes: show modules (markdown table)
@@ -64,7 +64,7 @@ Current commands include:
 - **`show files-staged`** - Show only staged files with module ownership
 - **`show files-changed`** - Show only modified/unstaged files with module ownership
 - **`show modules`** - Show all module contracts in the repository (markdown table)
-- **`show moduletypes`** - Show module types grouped by count (markdown table)
+- **`show component-types`** - Show module types grouped by count (markdown table)
 - **`show release-notes`** - Display release notes in human-readable markdown format
 
 ### Parent Commands (Implicit Help)
@@ -72,7 +72,7 @@ Current commands include:
 Running a parent command without a subcommand shows available subcommands:
 
 ```bash
-go run . show          # Shows: files, modules, moduletypes
+go run . show          # Shows: files, modules, component-types
 go run . show files    # Shows: changed, staged (plus executes show files)
 go run . get           # Shows: commands, modules, etc.
 ```
@@ -197,7 +197,7 @@ Completion data comes from `go run . get commands` which outputs:
   ],
   "tree": {
     "": ["describe", "list", "show"],
-    "show": ["files", "modules", "moduletypes"],
+    "show": ["files", "modules", "component-types"],
     "show files": ["changed", "staged"],
     "list": ["commands"],
     "describe": ["commands"]
@@ -247,7 +247,7 @@ git add .
 
 
 <!-- CODE -->
-SHOW MODULETYPES
+SHOW COMPONENT-TYPES
 <!-- CODE END-->
 | Module Type      | Count |
 | ---------------- | ----: |
@@ -263,7 +263,6 @@ SHOW MODULETYPES
 | markdown         | 1     |
 | mkdocs-site      | 1     |
 | mkdocs-subsite   | 1     |
-| no-module-type   | 1     |
 | repository-root  | 1     |
 | scripts-pwsh     | 1     |
 | scripts-sh       | 1     |
@@ -271,7 +270,7 @@ SHOW MODULETYPES
 | templates        | 1     |
 | vscode-config    | 1     |
 | vscode-ext       | 1     |
-| Total Types      | 23    |
+| Total Types      | 22    |
 <!-- OUTPUT END -->
 
 
@@ -321,7 +320,7 @@ All commands use the `render` package to output clean markdown tables:
 **Module commands:**
 
 - `show modules` - Table with Moniker, Type, Root Path columns
-- `show moduletypes` - Table with Module Type, Count columns (includes footer with total)
+- `show component-types` - Table with Module Type, Count columns (includes footer with total)
 
 **Special commands:**
 

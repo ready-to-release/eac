@@ -16,7 +16,7 @@ import (
 )
 
 // executeCommands runs all command and inline sources (Step 2)
-// Returns a map of "target:marker" -> output for inline insertion in Step 5
+// Returns a map of "target:marker" -> output for inline insertion in Step 5.
 func (p *Preprocessor) executeCommands() (map[string]string, error) {
 	outputs := make(map[string]string)
 
@@ -28,20 +28,21 @@ func (p *Preprocessor) executeCommands() (map[string]string, error) {
 			return cmdSources[i].Order < cmdSources[j].Order
 		})
 
-		for _, src := range cmdSources {
+		for i := range cmdSources {
+			src := &cmdSources[i]
 			output, err := p.runCommand(src.Command)
 			if err != nil {
 				return nil, fmt.Errorf("command '%s' failed: %w", src.Command, err)
 			}
 
 			// Write to target file with frontmatter
-			content := p.formatCommandOutput(src, output)
+			content := p.formatCommandOutput(*src, output)
 			destPath := filepath.Join(p.stagingDir, src.Target)
 
-			if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
+			if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
 				return nil, err
 			}
-			if err := os.WriteFile(destPath, []byte(content), 0644); err != nil {
+			if err := os.WriteFile(destPath, []byte(content), 0o644); err != nil {
 				return nil, err
 			}
 
@@ -51,7 +52,8 @@ func (p *Preprocessor) executeCommands() (map[string]string, error) {
 
 	// Execute inline sources (store in memory for Step 5)
 	inlineSources := p.book.GetInlineSources()
-	for _, src := range inlineSources {
+	for i := range inlineSources {
+		src := &inlineSources[i]
 		for _, insert := range src.Inserts {
 			output, err := p.runCommand(insert.Command)
 			if err != nil {
@@ -69,7 +71,7 @@ func (p *Preprocessor) executeCommands() (map[string]string, error) {
 	return outputs, nil
 }
 
-// runCommand executes an EAC command and captures output
+// runCommand executes an EAC command and captures output.
 func (p *Preprocessor) runCommand(command string) (string, error) {
 	// Parse command (e.g., "show modules" -> ["show", "modules"])
 	parts := strings.Fields(command)
@@ -91,13 +93,13 @@ func (p *Preprocessor) runCommand(command string) (string, error) {
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("%s: %s", err, stderr.String())
+		return "", fmt.Errorf("%w: %s", err, stderr.String())
 	}
 
 	return stdout.String(), nil
 }
 
-// formatCommandOutput adds frontmatter and generation metadata to command output
+// formatCommandOutput adds frontmatter and generation metadata to command output.
 func (p *Preprocessor) formatCommandOutput(src config.Source, output string) string {
 	var buf bytes.Buffer
 

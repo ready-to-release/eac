@@ -10,6 +10,7 @@ package r2rinstaller
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -24,7 +25,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/specs/internal"
 )
 
-// installerContext holds state between steps for installer tests
+// installerContext holds state between steps for installer tests.
 type installerContext struct {
 	sharedCtx      *internal.TestContext
 	scriptsRoot    string
@@ -149,8 +150,10 @@ func theGitHubRepositoryHasReleasesAvailable(repo string) error {
 
 // binaryAvailable tracks whether the release has the expected binary.
 // Set by checkLatestReleaseHasBinary, used to skip assertions gracefully.
-var binaryAvailable = true
-var binaryCheckDone = false
+var (
+	binaryAvailable = true
+	binaryCheckDone = false
+)
 
 // checkLatestReleaseHasBinary checks if the latest r2r-cli release has the expected binary.
 // Sets binaryAvailable flag - if false, subsequent steps should pass without doing real work.
@@ -255,7 +258,7 @@ func iRunThePowerShellInstaller() error {
 		return nil
 	}
 
-	scriptPath := filepath.Join(instCtx.scriptsRoot, "pwsh", "cli", "install.ps1")
+	scriptPath := filepath.Join(instCtx.scriptsRoot, "pwsh", "install.ps1")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
@@ -277,7 +280,8 @@ func iRunThePowerShellInstaller() error {
 	}
 
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		exitErr := &exec.ExitError{}
+		if errors.As(err, &exitErr) {
 			instCtx.sharedCtx.ExitCode = exitErr.ExitCode()
 		} else {
 			instCtx.sharedCtx.ExitCode = 1
@@ -297,7 +301,7 @@ func iRunThePowerShellInstallerWithArgs(args string) error {
 		return nil
 	}
 
-	scriptPath := filepath.Join(instCtx.scriptsRoot, "pwsh", "cli", "install.ps1")
+	scriptPath := filepath.Join(instCtx.scriptsRoot, "pwsh", "install.ps1")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
@@ -320,7 +324,8 @@ func iRunThePowerShellInstallerWithArgs(args string) error {
 	}
 
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		exitErr := &exec.ExitError{}
+		if errors.As(err, &exitErr) {
 			instCtx.sharedCtx.ExitCode = exitErr.ExitCode()
 		} else {
 			instCtx.sharedCtx.ExitCode = 1
@@ -340,7 +345,7 @@ func iRunTheBashInstaller() error {
 		return nil
 	}
 
-	scriptPath := filepath.Join(instCtx.scriptsRoot, "sh", "cli", "install.sh")
+	scriptPath := filepath.Join(instCtx.scriptsRoot, "bash", "install.sh")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
@@ -361,7 +366,8 @@ func iRunTheBashInstaller() error {
 	}
 
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		exitErr := &exec.ExitError{}
+		if errors.As(err, &exitErr) {
 			instCtx.sharedCtx.ExitCode = exitErr.ExitCode()
 		} else {
 			instCtx.sharedCtx.ExitCode = 1
@@ -381,7 +387,7 @@ func iRunTheBashInstallerWithArgs(args string) error {
 		return nil
 	}
 
-	scriptPath := filepath.Join(instCtx.scriptsRoot, "sh", "cli", "install.sh")
+	scriptPath := filepath.Join(instCtx.scriptsRoot, "bash", "install.sh")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
@@ -404,7 +410,8 @@ func iRunTheBashInstallerWithArgs(args string) error {
 	}
 
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		exitErr := &exec.ExitError{}
+		if errors.As(err, &exitErr) {
 			instCtx.sharedCtx.ExitCode = exitErr.ExitCode()
 		} else {
 			instCtx.sharedCtx.ExitCode = 1

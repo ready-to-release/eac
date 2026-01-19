@@ -1,8 +1,11 @@
 package contracts
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
-// ContractError represents a contract-related error
+// ContractError represents a contract-related error.
 type ContractError struct {
 	Op      string // Operation that failed (e.g., "load", "parse", "validate")
 	Path    string // File path related to the error
@@ -21,7 +24,7 @@ func (e *ContractError) Unwrap() error {
 	return e.Err
 }
 
-// NewContractError creates a new ContractError
+// NewContractError creates a new ContractError.
 func NewContractError(op, path string, err error, message string) *ContractError {
 	return &ContractError{
 		Op:      op,
@@ -31,9 +34,10 @@ func NewContractError(op, path string, err error, message string) *ContractError
 	}
 }
 
-// IsNotFound returns true if the error is a "not found" error
+// IsNotFound returns true if the error is a "not found" error.
 func IsNotFound(err error) bool {
-	if ce, ok := err.(*ContractError); ok {
+	ce := &ContractError{}
+	if errors.As(err, &ce) {
 		return ce.Op == "load" && ce.Message == "contract not found"
 	}
 	return false

@@ -40,13 +40,16 @@ func (p *Preprocessor) convertDrawioToLinks() error {
 		}
 
 		fileDir := filepath.Dir(path)
-		relFileDir, _ := filepath.Rel(p.stagingDir, fileDir)
+		relFileDir, relErr := filepath.Rel(p.stagingDir, fileDir)
+		if relErr != nil {
+			relFileDir = fileDir // fallback to absolute
+		}
 
 		original := string(content)
 		modified, count := convertDrawioImages(original, relFileDir, siteURL)
 
 		if count > 0 {
-			if err := os.WriteFile(path, []byte(modified), 0644); err != nil {
+			if err := os.WriteFile(path, []byte(modified), 0o644); err != nil {
 				return err
 			}
 			converted += count
@@ -54,7 +57,6 @@ func (p *Preprocessor) convertDrawioToLinks() error {
 		processed++
 		return nil
 	})
-
 	if err != nil {
 		return err
 	}
@@ -63,10 +65,10 @@ func (p *Preprocessor) convertDrawioToLinks() error {
 	return nil
 }
 
-// drawioImagePattern matches markdown images pointing to .drawio files
+// drawioImagePattern matches markdown images pointing to .drawio files.
 var drawioImagePattern = regexp.MustCompile(`!\[([^\]]*)\]\(([^)]*\.drawio)\)`)
 
-// convertDrawioImages converts ![alt](path.drawio) to [View interactive diagram](url)
+// convertDrawioImages converts ![alt](path.drawio) to [View interactive diagram](url).
 func convertDrawioImages(content, relFileDir, siteURL string) (string, int) {
 	count := 0
 

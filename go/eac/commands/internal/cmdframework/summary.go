@@ -7,6 +7,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/initsummary"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/output"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
 )
 
@@ -15,16 +16,24 @@ const (
 	maxLineLength  = 100
 )
 
-// SummaryGenerator is a function that generates custom summary data
+// SummaryGenerator is a function that generates custom summary data.
 type SummaryGenerator func(ctx *ExecutionContext) *initsummary.Summary
 
 // phaseSummary handles the summary phase:
 // - Generate summary data
 // - Display TUI summary or print to console
-// - Return exit code
+// - Return exit code.
 func phaseSummary(ctx *ExecutionContext, customSummary SummaryGenerator) int {
 	totalTime := time.Since(ctx.StartTime)
 	exitCode := ctx.GetExitCode()
+
+	// Debug: Log results and exit code to help diagnose mismatch
+	log.Debugf("phaseSummary: %d results, exit code: %d", len(ctx.Results), exitCode)
+	for i, r := range ctx.Results {
+		if r.ExitCode != 0 {
+			log.Debugf("  Result[%d]: moniker=%s, exitCode=%d, errors=%v", i, r.Moniker, r.ExitCode, r.Errors)
+		}
+	}
 
 	if ctx.Config.UseTUI {
 		// Generate TUI summary
@@ -42,7 +51,7 @@ func phaseSummary(ctx *ExecutionContext, customSummary SummaryGenerator) int {
 	return exitCode
 }
 
-// generateTUISummary creates TUI summary data from execution results
+// generateTUISummary creates TUI summary data from execution results.
 func generateTUISummary(ctx *ExecutionContext, totalTime time.Duration) *tui.SummaryData {
 	results := ctx.Results
 	successCount := ctx.GetSuccessCount()
@@ -54,95 +63,97 @@ func generateTUISummary(ctx *ExecutionContext, totalTime time.Duration) *tui.Sum
 		runSummary += fmt.Sprintf(", %d failed", failureCount)
 	}
 
-	// Aggregate results by type
-	type typeSummary struct {
-		Packages int
-		Passed   int
-		Failed   int
-		Warnings int
-	}
-	summaryByType := make(map[string]*typeSummary)
-
-	type failedResult struct {
+	// Build per-module results
+	type moduleResult struct {
 		moniker    string
+		components string
+		status     string // "passed", "failed", "warning"
 		duration   time.Duration
-		moduleType string
 		errors     []string
 		logPath    string
 	}
-	var failedResults []failedResult
+	var moduleResults []moduleResult
 
 	for _, result := range results {
-		moduleType := ctx.ModuleTypes[result.Moniker]
-		if moduleType == "" {
-			moduleType = "unknown"
+		components := ctx.ModuleTypes[result.Moniker]
+		if components == "" {
+			components = "unknown"
 		}
 
-		if _, ok := summaryByType[moduleType]; !ok {
-			summaryByType[moduleType] = &typeSummary{}
+		mr := moduleResult{
+			moniker:    result.Moniker,
+			components: components,
+			duration: result.Duration,
+			logPath:  result.LogPath,
 		}
-		summaryByType[moduleType].Packages++
 
 		if result.ExitCode != 0 {
-			summaryByType[moduleType].Failed++
-			failedResults = append(failedResults, failedResult{
-				moniker:    result.Moniker,
-				duration:   result.Duration,
-				moduleType: moduleType,
-				errors:     result.Errors,
-				logPath:    result.LogPath,
-			})
+			mr.status = "failed"
+			mr.errors = result.Errors
 		} else if len(result.Warnings) > 0 {
-			summaryByType[moduleType].Warnings++
-			failedResults = append(failedResults, failedResult{
-				moniker:    result.Moniker,
-				duration:   result.Duration,
-				moduleType: moduleType,
-				errors:     result.Warnings,
-				logPath:    result.LogPath,
-			})
+			mr.status = "warning"
+			mr.errors = result.Warnings
 		} else {
-			summaryByType[moduleType].Passed++
+			mr.status = "passed"
 		}
+		moduleResults = append(moduleResults, mr)
 	}
 
-	// Build details with summary table
-	var details []string
-
-	// Collect and sort types
-	types := make([]string, 0, len(summaryByType))
-	for t := range summaryByType {
-		types = append(types, t)
-	}
-	// Sort types alphabetically
-	for i := 0; i < len(types)-1; i++ {
-		for j := i + 1; j < len(types); j++ {
-			if types[i] > types[j] {
-				types[i], types[j] = types[j], types[i]
+	// Sort by moniker
+	for i := 0; i < len(moduleResults)-1; i++ {
+		for j := i + 1; j < len(moduleResults); j++ {
+			if moduleResults[i].moniker > moduleResults[j].moniker {
+				moduleResults[i], moduleResults[j] = moduleResults[j], moduleResults[i]
 			}
 		}
 	}
 
-	// Add summary table
-	details = append(details, fmt.Sprintf("%-12s %8s %6s %6s %8s", "Type", "Packages", "Passed", "Failed", "Warnings"))
-	details = append(details, strings.Repeat("-", 44))
-	for _, t := range types {
-		s := summaryByType[t]
-		details = append(details, fmt.Sprintf("%-12s %8d %6d %6d %8d", t, s.Packages, s.Passed, s.Failed, s.Warnings))
+	// Build details with summary table - one row per module
+	var details []string
+	tb := render.NewTableBuilder().
+		WithHeaders("Module", "Components", "Status")
+	for _, mr := range moduleResults {
+		statusIcon := "✓"
+		if mr.status == "failed" {
+			statusIcon = "✗"
+		} else if mr.status == "warning" {
+			statusIcon = "⚠"
+		}
+		tb.AddRow(mr.moniker, mr.components, statusIcon)
+	}
+	// Split table into individual lines for TUI rendering
+	tableStr := tb.Build()
+	for _, line := range strings.Split(tableStr, "\n") {
+		if line != "" {
+			details = append(details, line)
+		}
 	}
 
 	// Add failed/warning results with error details
-	if len(failedResults) > 0 {
+	hasErrors := false
+	for _, mr := range moduleResults {
+		if mr.status != "passed" {
+			hasErrors = true
+			break
+		}
+	}
+	if hasErrors {
 		details = append(details, "")
-		for _, fr := range failedResults {
-			status := "✗"
-			details = append(details, fmt.Sprintf("%s %s (%s) - %s",
-				status, output.PackageDisplayName(fr.moniker), fr.moduleType, formatDuration(fr.duration)))
-			for _, err := range fr.errors {
+		for _, mr := range moduleResults {
+			if mr.status == "passed" {
+				continue
+			}
+			statusIcon := "✗"
+			if mr.status == "warning" {
+				statusIcon = "⚠"
+			}
+			details = append(details, fmt.Sprintf("%s %s - %s",
+				statusIcon, output.PackageDisplayName(mr.moniker), formatDuration(mr.duration)))
+			for _, err := range mr.errors {
 				details = append(details, formatErrorLines("  Error: ", err)...)
 			}
-			if fr.logPath != "" {
-				details = append(details, fmt.Sprintf("  Log: %s", fr.logPath))
+			if mr.logPath != "" {
+				details = append(details, fmt.Sprintf("  Log: %s", mr.logPath))
 			}
 		}
 	}
@@ -158,7 +169,7 @@ func generateTUISummary(ctx *ExecutionContext, totalTime time.Duration) *tui.Sum
 	return data
 }
 
-// printConsoleSummary prints a summary to the console for non-TUI mode
+// printConsoleSummary prints a summary to the console for non-TUI mode.
 func printConsoleSummary(ctx *ExecutionContext, totalTime time.Duration) {
 	results := ctx.Results
 	successCount := ctx.GetSuccessCount()
@@ -190,7 +201,7 @@ func printConsoleSummary(ctx *ExecutionContext, totalTime time.Duration) {
 	}
 }
 
-// formatDuration formats a duration for display
+// formatDuration formats a duration for display.
 func formatDuration(d time.Duration) string {
 	if d < time.Second {
 		return fmt.Sprintf("%dms", d.Milliseconds())

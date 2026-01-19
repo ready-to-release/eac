@@ -13,10 +13,10 @@ import (
 	"time"
 )
 
-// ansiEscapeRegex matches all ANSI escape sequences for stripping from log files
+// ansiEscapeRegex matches all ANSI escape sequences for stripping from log files.
 var ansiEscapeRegex = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
 
-// TestEvent represents a single event from `go test -json` output
+// TestEvent represents a single event from `go test -json` output.
 type TestEvent struct {
 	Time    string  `json:"Time"`
 	Action  string  `json:"Action"`  // "run", "output", "pass", "fail", "skip", "pause", "cont"
@@ -26,7 +26,7 @@ type TestEvent struct {
 	Elapsed float64 `json:"Elapsed,omitempty"`
 }
 
-// TestResult holds the results of a test execution
+// TestResult holds the results of a test execution.
 type TestResult struct {
 	Package       string
 	TestsPassed   int
@@ -52,7 +52,7 @@ type StreamingRunner struct {
 
 // NewStreamingRunner creates a new streaming test runner.
 // tuiWriter: receives parsed human-readable output (for TUI display)
-// logWriter: receives full JSON lines (for log files and reporting)
+// logWriter: receives full JSON lines (for log files and reporting).
 func NewStreamingRunner(tuiWriter, logWriter io.Writer) *StreamingRunner {
 	return &StreamingRunner{
 		tuiWriter: tuiWriter,
@@ -134,7 +134,7 @@ func (r *StreamingRunner) Run(cmd *exec.Cmd) (TestResult, error) {
 	return result, nil
 }
 
-// processJSONOutput parses JSON lines from go test and streams human-readable output
+// processJSONOutput parses JSON lines from go test and streams human-readable output.
 func (r *StreamingRunner) processJSONOutput(reader io.Reader) {
 	scanner := bufio.NewScanner(reader)
 	// Increase buffer size for long lines
@@ -148,15 +148,16 @@ func (r *StreamingRunner) processJSONOutput(reader io.Reader) {
 		var event TestEvent
 		if err := json.Unmarshal(line, &event); err != nil {
 			// Not valid JSON, write raw line to both outputs
+			// Write errors are intentionally ignored - streaming is best-effort
 			if r.tuiWriter != nil {
-				r.tuiWriter.Write(line)
-				r.tuiWriter.Write([]byte("\n"))
+				_, _ = r.tuiWriter.Write(line)         //nolint:errcheck // best-effort streaming
+				_, _ = r.tuiWriter.Write([]byte("\n")) //nolint:errcheck // best-effort streaming
 			}
 			if r.logWriter != nil {
 				// Strip ANSI codes for log file readability
 				stripped := ansiEscapeRegex.ReplaceAll(line, []byte{})
-				r.logWriter.Write(stripped)
-				r.logWriter.Write([]byte("\n"))
+				_, _ = r.logWriter.Write(stripped)     //nolint:errcheck // best-effort streaming
+				_, _ = r.logWriter.Write([]byte("\n")) //nolint:errcheck // best-effort streaming
 			}
 			continue
 		}
@@ -177,41 +178,43 @@ func (r *StreamingRunner) processJSONOutput(reader io.Reader) {
 			}
 
 			// Write to TUI (with ANSI codes for color)
+			// Write errors are intentionally ignored - streaming is best-effort
 			if r.tuiWriter != nil {
-				r.tuiWriter.Write([]byte(output))
+				_, _ = r.tuiWriter.Write([]byte(output)) //nolint:errcheck // best-effort streaming
 			}
 
 			// Write to log file (strip ANSI codes for readability)
 			if r.logWriter != nil {
 				stripped := ansiEscapeRegex.ReplaceAllString(output, "")
-				r.logWriter.Write([]byte(stripped))
+				_, _ = r.logWriter.Write([]byte(stripped)) //nolint:errcheck // best-effort streaming
 			}
 		}
 	}
 }
 
-// processStderr handles stderr output (usually build errors)
+// processStderr handles stderr output (usually build errors).
 func (r *StreamingRunner) processStderr(reader io.Reader) {
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
 		line := scanner.Bytes()
 
+		// Write errors are intentionally ignored - streaming is best-effort
 		// Write to TUI (with ANSI codes)
 		if r.tuiWriter != nil {
-			r.tuiWriter.Write(line)
-			r.tuiWriter.Write([]byte("\n"))
+			_, _ = r.tuiWriter.Write(line)         //nolint:errcheck // best-effort streaming
+			_, _ = r.tuiWriter.Write([]byte("\n")) //nolint:errcheck // best-effort streaming
 		}
 
 		// Write to log (strip ANSI codes for readability)
 		if r.logWriter != nil {
 			stripped := ansiEscapeRegex.ReplaceAll(line, []byte{})
-			r.logWriter.Write(stripped)
-			r.logWriter.Write([]byte("\n"))
+			_, _ = r.logWriter.Write(stripped)     //nolint:errcheck // best-effort streaming
+			_, _ = r.logWriter.Write([]byte("\n")) //nolint:errcheck // best-effort streaming
 		}
 	}
 }
 
-// CountResults returns pass/fail/skip counts from collected events
+// CountResults returns pass/fail/skip counts from collected events.
 func (r *StreamingRunner) CountResults() (passed, failed, skipped int) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -228,10 +231,10 @@ func (r *StreamingRunner) CountResults() (passed, failed, skipped int) {
 			}
 		}
 	}
-	return
+	return passed, failed, skipped
 }
 
-// GetEvents returns all collected test events
+// GetEvents returns all collected test events.
 func (r *StreamingRunner) GetEvents() []TestEvent {
 	r.mu.Lock()
 	defer r.mu.Unlock()

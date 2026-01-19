@@ -20,17 +20,20 @@ Generate a JSON object matching this schema:
 ### JSON Field Requirements
 
 **module** (required): Module name (e.g., `eac-commands`, `contracts`)
+
 - Lowercase with hyphens
 - Length: 1-30 characters
 
 **type** (required): One of: `feat`, `fix`, `refactor`, `docs`, `chore`, `test`, `perf`, `style`, `ci`, `build`
 
 **description** (required): Brief description of changes in this module
-- Max 72 characters when combined with `module: type: `
+
+- Max 72 characters when combined with `module: type:`
 - No trailing period
 - Lowercase first letter
 
 **body** (required): 2-4 sentences explaining what changed
+
 - Each line wrapped at 72 characters
 - Provide specific details about this module's changes
 
@@ -67,6 +70,7 @@ body
 ```
 
 Example final output:
+
 ```text
 eac-commands
 ------------

@@ -113,7 +113,7 @@ func PipelineAwaitCI() int {
 	return awaitWorkflows(workspaceRoot, pattern, exclude, sha, timeout, interval, "CI")
 }
 
-// awaitWorkflows waits for all matching workflows to complete for a specific SHA
+// awaitWorkflows waits for all matching workflows to complete for a specific SHA.
 func awaitWorkflows(workspaceRoot, pattern, exclude, sha string, timeout, interval int, workflowType string) int {
 	log.Infof("Waiting for %s workflows to complete...", workflowType)
 
@@ -193,7 +193,7 @@ func awaitWorkflows(workspaceRoot, pattern, exclude, sha string, timeout, interv
 	}
 }
 
-// runInfo holds workflow run status from GitHub
+// runInfo holds workflow run status from GitHub.
 type runInfo struct {
 	HeadSHA    string `json:"headSha"`
 	Status     string `json:"status"`
@@ -261,7 +261,7 @@ func getRunStatusForSHA(workflowName, sha string) (string, int) {
 	return "none", 0
 }
 
-// runByIDInfo holds workflow run info for a specific run ID
+// runByIDInfo holds workflow run info for a specific run ID.
 type runByIDInfo struct {
 	DatabaseID   int64  `json:"databaseId"`
 	Status       string `json:"status"`
@@ -269,7 +269,7 @@ type runByIDInfo struct {
 	WorkflowName string `json:"workflowName"`
 }
 
-// awaitRunByID waits for a specific workflow run to complete
+// awaitRunByID waits for a specific workflow run to complete.
 func awaitRunByID(runID string, timeout, interval int) int {
 	log.Infof("Waiting for workflow run %s to complete...", runID)
 	log.Info("")

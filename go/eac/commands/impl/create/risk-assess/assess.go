@@ -93,7 +93,7 @@ func CreateRiskAssess() int {
 	if err := os.RemoveAll(config.OutputDir); err != nil {
 		assessLog.Warnf("Failed to clear output directory: %v", err)
 	}
-	if err := os.MkdirAll(config.OutputDir, 0755); err != nil {
+	if err := os.MkdirAll(config.OutputDir, 0o755); err != nil {
 		assessLog.Errorf("Failed to create output directory: %v", err)
 		return 1
 	}
@@ -407,7 +407,7 @@ func writeAggregatedReport(config *AssessConfig, results []*ModuleAssessmentResu
 	}
 
 	// Write to file
-	if err := os.WriteFile(outputPath, []byte(report), 0644); err != nil {
+	if err := os.WriteFile(outputPath, []byte(report), 0o644); err != nil {
 		return fmt.Errorf("failed to write report: %w", err)
 	}
 
@@ -433,7 +433,7 @@ func generateMarkdownReport(config *AssessConfig, results []*ModuleAssessmentRes
 // loadRiskAssessmentTemplate loads the risk assessment template with fallback logic.
 // Priority 1: Team override (.r2r/eac/templates/reports/risk/risk-assess.md)
 // Priority 2: System default (templates/reports/risk/risk-assess.md)
-// This follows the same pattern as AI prompt loading (see contracts/ai_loader.go:LoadPrompt)
+// This follows the same pattern as AI prompt loading (see contracts/ai_loader.go:LoadPrompt).
 func loadRiskAssessmentTemplate(workspaceRoot string) (string, error) {
 	// Load EAC config for template directory paths and filenames
 	cfg, err := eacConfig.Load(eacConfig.LoadOptions{RepoRoot: workspaceRoot})
@@ -516,10 +516,11 @@ func writeAggregatedOSCALReport(config *AssessConfig, results []*ModuleAssessmen
 		if result.AssessmentResults != nil && len(result.AssessmentResults.Results) > 0 {
 			moduleResult := result.AssessmentResults.Results[0]
 			if moduleResult.Observations != nil {
-				for _, obs := range *moduleResult.Observations {
+				for i := range *moduleResult.Observations {
+					obs := &(*moduleResult.Observations)[i]
 					// Add module name to observation description
 					obs.Description = fmt.Sprintf("[%s] %s", result.Module, obs.Description)
-					allObservations = append(allObservations, obs)
+					allObservations = append(allObservations, *obs)
 				}
 			}
 		}
@@ -533,7 +534,8 @@ func writeAggregatedOSCALReport(config *AssessConfig, results []*ModuleAssessmen
 		if result.AssessmentResults != nil && len(result.AssessmentResults.Results) > 0 {
 			moduleResult := result.AssessmentResults.Results[0]
 			if moduleResult.Findings != nil {
-				for _, finding := range *moduleResult.Findings {
+				for i := range *moduleResult.Findings {
+					finding := &(*moduleResult.Findings)[i]
 					controlID := finding.Target.TargetId
 
 					// If we don't have a finding for this control yet, create one
@@ -564,12 +566,7 @@ func writeAggregatedOSCALReport(config *AssessConfig, results []*ModuleAssessmen
 
 					// Collect observation references
 					if finding.RelatedObservations != nil {
-						for _, relObs := range *finding.RelatedObservations {
-							*controlFindings[controlID].RelatedObservations = append(
-								*controlFindings[controlID].RelatedObservations,
-								relObs,
-							)
-						}
+						*controlFindings[controlID].RelatedObservations = append(*controlFindings[controlID].RelatedObservations, *finding.RelatedObservations...)
 					}
 				}
 			}
@@ -588,7 +585,7 @@ func writeAggregatedOSCALReport(config *AssessConfig, results []*ModuleAssessmen
 
 	// Write to file
 	outputPath := filepath.Join(paths.RiskOutputPath(config.WorkspaceRoot, ""), "assessment-results-aggregate.json")
-	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0o755); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
@@ -686,9 +683,11 @@ func extractSatisfiedControlIDs(result *ModuleAssessmentResult) []string {
 		return controlIDs
 	}
 
-	for _, assessmentResult := range result.AssessmentResults.Results {
+	for i := range result.AssessmentResults.Results {
+		assessmentResult := &result.AssessmentResults.Results[i]
 		if assessmentResult.Findings != nil {
-			for _, finding := range *assessmentResult.Findings {
+			for j := range *assessmentResult.Findings {
+				finding := &(*assessmentResult.Findings)[j]
 				// Check if finding is satisfied
 				if finding.Target.Status.State == oscal.StateSatisfied {
 					controlID := finding.Target.TargetId

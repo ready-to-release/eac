@@ -80,9 +80,6 @@ func RegisterCommonSteps(sc *godog.ScenarioContext, ctx *TestContext) {
 	sc.Step(`^no \.r2r directory exists$`, func() error {
 		return RemoveAll(ctx, ".r2r")
 	})
-	sc.Step(`^a \.r2r directory already exists$`, func() error {
-		return CreateDirectory(ctx, ".r2r/eac")
-	})
 
 	// NOTE: Feature-specific steps (work, risks, specs, etc.) are registered
 	// in their respective step files in impl/eac-commands/

@@ -10,14 +10,14 @@ import (
 	"text/template"
 )
 
-// Renderer handles template rendering for reports
+// Renderer handles template rendering for reports.
 type Renderer struct {
 	templatePath   string
 	customFuncs    template.FuncMap
 	missingKeyMode string
 }
 
-// NewRenderer creates a new template renderer
+// NewRenderer creates a new template renderer.
 func NewRenderer(templatePath string) *Renderer {
 	return &Renderer{
 		templatePath:   templatePath,
@@ -26,7 +26,7 @@ func NewRenderer(templatePath string) *Renderer {
 	}
 }
 
-// WithFuncs adds custom template functions
+// WithFuncs adds custom template functions.
 func (r *Renderer) WithFuncs(funcs template.FuncMap) *Renderer {
 	for name, fn := range funcs {
 		r.customFuncs[name] = fn
@@ -34,13 +34,13 @@ func (r *Renderer) WithFuncs(funcs template.FuncMap) *Renderer {
 	return r
 }
 
-// WithMissingKeyMode sets the missingkey option (zero, invalid, error)
+// WithMissingKeyMode sets the missingkey option (zero, invalid, error).
 func (r *Renderer) WithMissingKeyMode(mode string) *Renderer {
 	r.missingKeyMode = mode
 	return r
 }
 
-// RenderToString renders the template to a string
+// RenderToString renders the template to a string.
 func (r *Renderer) RenderToString(data interface{}) (string, error) {
 	var buf strings.Builder
 	if err := r.renderToWriter(&buf, data); err != nil {
@@ -49,11 +49,11 @@ func (r *Renderer) RenderToString(data interface{}) (string, error) {
 	return buf.String(), nil
 }
 
-// RenderToFile renders the template to a file
+// RenderToFile renders the template to a file.
 func (r *Renderer) RenderToFile(outputPath string, data interface{}) error {
 	// Ensure output directory exists
 	outputDir := filepath.Dir(outputPath)
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
@@ -67,7 +67,7 @@ func (r *Renderer) RenderToFile(outputPath string, data interface{}) error {
 	return r.renderToWriter(outFile, data)
 }
 
-// renderToWriter is the core rendering function that writes to any io.Writer
+// renderToWriter is the core rendering function that writes to any io.Writer.
 func (r *Renderer) renderToWriter(w io.Writer, data interface{}) error {
 	// Verify template file exists
 	if _, err := os.Stat(r.templatePath); err != nil {
@@ -97,7 +97,7 @@ func (r *Renderer) renderToWriter(w io.Writer, data interface{}) error {
 	return nil
 }
 
-// defaultFuncMap returns the default template functions available to all templates
+// defaultFuncMap returns the default template functions available to all templates.
 func defaultFuncMap() template.FuncMap {
 	return template.FuncMap{
 		// String functions
@@ -142,7 +142,7 @@ func defaultFuncMap() template.FuncMap {
 		},
 
 		// Format percentage with precision
-		"percentf": func(value, total int, precision int) string {
+		"percentf": func(value, total, precision int) string {
 			if total == 0 {
 				return "0.0"
 			}
@@ -196,7 +196,7 @@ func defaultFuncMap() template.FuncMap {
 }
 
 // NormalizeSpecPath normalizes a feature URI to a clean spec path
-// Removes relative path prefixes and ensures it starts with "specs/"
+// Removes relative path prefixes and ensures it starts with "specs/".
 func NormalizeSpecPath(uri string) string {
 	// Convert to forward slashes
 	normalized := filepath.ToSlash(uri)

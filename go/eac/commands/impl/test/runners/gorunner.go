@@ -95,10 +95,17 @@ func (r *GoRunner) GetTestInfo(test testing.TestReference, workspaceRoot string,
 // findModuleForPath finds the module moniker for a given relative path.
 func findModuleForPath(relPath string, cfg *config.EACConfig) string {
 	// Iterate through modules to find the one that owns this path
-	for _, module := range cfg.Repository.Modules {
-		moduleRoot := filepath.ToSlash(module.Files.Root)
-		if strings.HasPrefix(relPath, moduleRoot+"/") || relPath == moduleRoot {
-			return module.Moniker
+	for i := range cfg.Repository.Modules {
+		module := &cfg.Repository.Modules[i]
+		// Check all package roots
+		for _, entry := range module.Components {
+			if entry == nil || entry.Root == "" {
+				continue
+			}
+			pkgRoot := filepath.ToSlash(entry.Root)
+			if strings.HasPrefix(relPath, pkgRoot+"/") || relPath == pkgRoot {
+				return module.Moniker
+			}
 		}
 	}
 	return ""
@@ -159,7 +166,7 @@ func (r *GoRunner) FindTestRoot(featurePath string, cfg *config.EACConfig) strin
 // BuildPackagePath constructs the package path for test grouping.
 // For godog BDD tests, returns "featureFolderName:testRoot" for cleaner display.
 // For gotest, returns the directory path.
-func (r *GoRunner) BuildPackagePath(testRoot string, featurePath string) string {
+func (r *GoRunner) BuildPackagePath(testRoot, featurePath string) string {
 	if featurePath != "" && testRoot != "" {
 		// Extract feature folder name from path like:
 		// "specs/repository/no-build-tags-in-steps/specification.feature"
@@ -173,7 +180,7 @@ func (r *GoRunner) BuildPackagePath(testRoot string, featurePath string) string 
 
 // extractFeatureFolderName extracts the feature folder name from a feature path.
 // Input: "specs/repository/no-build-tags-in-steps/specification.feature"
-// Output: "no-build-tags-in-steps"
+// Output: "no-build-tags-in-steps".
 func extractFeatureFolderName(featurePath string) string {
 	featurePath = filepath.ToSlash(featurePath)
 	// Remove the filename (specification.feature)
@@ -219,7 +226,7 @@ func (r *GoRunner) Execute(pkgPath string, tests []testing.TestReference, tuiWri
 		outputPath = pkgPath
 	}
 	logDir := filepath.Join(cfg.TestRunDir, sanitizePathForLog(outputPath))
-	if err := os.MkdirAll(logDir, 0755); err != nil {
+	if err := os.MkdirAll(logDir, 0o755); err != nil {
 		fmt.Fprintf(tuiWriter, "Failed to create log directory: %v\n", err)
 		result.PackageFailed = true
 		return result
@@ -287,9 +294,11 @@ func (r *GoRunner) Execute(pkgPath string, tests []testing.TestReference, tuiWri
 		cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_OUTPUT_DIR=%s", logDir))
 
 		if relFeatureFile != "" {
-			relFeaturePath, _ := filepath.Rel(actualPkgDir, filepath.Join(cfg.WorkspaceRoot, relFeatureFile))
-			relFeaturePath = filepath.ToSlash(relFeaturePath)
-			cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_PATHS=%s", relFeaturePath))
+			relFeaturePath, relErr := filepath.Rel(actualPkgDir, filepath.Join(cfg.WorkspaceRoot, relFeatureFile))
+			if relErr == nil {
+				relFeaturePath = filepath.ToSlash(relFeaturePath)
+				cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_PATHS=%s", relFeaturePath))
+			}
 		}
 	}
 
@@ -304,7 +313,7 @@ func (r *GoRunner) Execute(pkgPath string, tests []testing.TestReference, tuiWri
 			report := convertGoTestEventsToCTRF(events)
 			if ctrfData, err := report.ToJSON(); err == nil {
 				jsonPath := filepath.Join(logDir, "unit.json")
-				os.WriteFile(jsonPath, ctrfData, 0644)
+				_ = os.WriteFile(jsonPath, ctrfData, 0o644) //nolint:errcheck // best-effort artifact save
 			}
 		}
 	}
@@ -319,7 +328,7 @@ func (r *GoRunner) Execute(pkgPath string, tests []testing.TestReference, tuiWri
 	return result
 }
 
-// fileExists checks if a file exists
+// fileExists checks if a file exists.
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
@@ -346,7 +355,7 @@ func runGoGenerate(pkgDir string, logWriter io.Writer) error {
 	return err
 }
 
-// findModuleRoot walks up from dir to find the directory containing go.mod
+// findModuleRoot walks up from dir to find the directory containing go.mod.
 func findModuleRoot(dir string) string {
 	for {
 		if fileExists(filepath.Join(dir, "go.mod")) {
@@ -360,7 +369,7 @@ func findModuleRoot(dir string) string {
 	}
 }
 
-// sanitizePathForLog converts a package path to a safe directory name
+// sanitizePathForLog converts a package path to a safe directory name.
 func sanitizePathForLog(pkgPath string) string {
 	safe := strings.ReplaceAll(pkgPath, ":", "_")
 	safe = strings.ReplaceAll(safe, "\\", "/")
@@ -370,7 +379,7 @@ func sanitizePathForLog(pkgPath string) string {
 // extractGoBuildTags extracts Go build tags from a suite tag filter.
 // Input: "@L0,@L1 && ~@skip:wip" or "@L0,@L1,@L2" or "@deps:gh-token"
 // Output: "L0,L1" or "L0,L1,L2" or "L0,L1,deps_gh_token" (comma-separated Go build tags)
-// Note: @deps:<name> tags are translated to deps_<name> (colon->underscore, hyphen->underscore)
+// Note: @deps:<name> tags are translated to deps_<name> (colon->underscore, hyphen->underscore).
 func extractGoBuildTags(suiteTagFilter string) string {
 	if suiteTagFilter == "" {
 		return ""
@@ -379,9 +388,22 @@ func extractGoBuildTags(suiteTagFilter string) string {
 	var tags []string
 
 	// Look for L-level tags (@L0, @L1, @L2, @L3, @L4)
+	// Only include tags that are NOT negated (preceded by ~)
 	for _, level := range []string{"L0", "L1", "L2", "L3", "L4"} {
-		if strings.Contains(suiteTagFilter, "@"+level) {
-			tags = append(tags, level)
+		tag := "@" + level
+		idx := 0
+		for {
+			pos := strings.Index(suiteTagFilter[idx:], tag)
+			if pos == -1 {
+				break
+			}
+			absPos := idx + pos
+			// Check if this occurrence is negated (preceded by ~)
+			if absPos == 0 || suiteTagFilter[absPos-1] != '~' {
+				tags = append(tags, level)
+				break
+			}
+			idx = absPos + len(tag)
 		}
 	}
 
@@ -420,7 +442,7 @@ func extractGoBuildTags(suiteTagFilter string) string {
 	return strings.Join(tags, ",")
 }
 
-// durationMs converts seconds to milliseconds, ensuring minimum 1ms for non-zero durations
+// durationMs converts seconds to milliseconds, ensuring minimum 1ms for non-zero durations.
 func durationMs(seconds float64) int64 {
 	if seconds <= 0 {
 		return 0
@@ -432,7 +454,7 @@ func durationMs(seconds float64) int64 {
 	return ms
 }
 
-// convertGoTestEventsToCTRF converts go test -json events to CTRF format
+// convertGoTestEventsToCTRF converts go test -json events to CTRF format.
 func convertGoTestEventsToCTRF(events []runner.TestEvent) *ctrf.Report {
 	report := ctrf.NewReport("go-test")
 

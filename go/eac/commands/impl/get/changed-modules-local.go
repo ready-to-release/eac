@@ -34,7 +34,7 @@ func init() {
 
 // changedModulesLocalFlags defines valid flags for the get changed-modules-local command
 
-// LocalChangedModulesResult represents the output of the get changed-modules-local command
+// LocalChangedModulesResult represents the output of the get changed-modules-local command.
 type LocalChangedModulesResult struct {
 	Modules       []string          `json:"modules" yaml:"modules" toml:"modules"`
 	UpToDate      []string          `json:"up_to_date" yaml:"up_to_date" toml:"up_to_date"`

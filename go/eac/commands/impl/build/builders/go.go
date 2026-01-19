@@ -30,13 +30,29 @@ func (h *GoHandler) Capabilities() []string { return []string{"go_module", "cros
 
 func (h *GoHandler) Requirements() []string { return []string{"go"} }
 
-func (h *GoHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot string) error {
-	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
-	goMod := filepath.Join(moduleRoot, "go.mod")
-	if _, err := os.Stat(goMod); os.IsNotExist(err) {
-		return fmt.Errorf("go.mod not found at %s", goMod)
+func (h *GoHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot, component string) error {
+	componentRoot := filepath.Join(workspaceRoot, module.GetComponentRoot(component))
+	// Walk up from component root to find go.mod (may be in parent directory)
+	goMod := findGoMod(componentRoot, workspaceRoot)
+	if goMod == "" {
+		return fmt.Errorf("go.mod not found for component %s (searched from %s)", component, componentRoot)
 	}
 	return nil
+}
+
+// findGoMod walks up from dir to find go.mod, stopping at workspaceRoot.
+func findGoMod(dir, workspaceRoot string) string {
+	for {
+		goMod := filepath.Join(dir, "go.mod")
+		if _, err := os.Stat(goMod); err == nil {
+			return goMod
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir || len(dir) < len(workspaceRoot) {
+			return ""
+		}
+		dir = parent
+	}
 }
 
 func (h *GoHandler) ListArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {
@@ -47,10 +63,9 @@ func (h *GoHandler) Build(module *modules.ModuleContract, workspaceRoot, outputD
 	return buildGoModule(module, workspaceRoot, outputDir, logWriter, opts)
 }
 
-// listGoModuleArtifacts returns the artifacts that would be produced by building this Go module
+// listGoModuleArtifacts returns the artifacts that would be produced by building this Go module.
 func listGoModuleArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {
-	cfg := config.Global()
-	hasGoModule := cfg != nil && cfg.ModuleTypes != nil && cfg.ModuleTypes.HasCapability(module.Type, "go_module")
+	hasGoModule := module.HasComponent("go")
 
 	if !hasGoModule {
 		return nil
@@ -65,7 +80,7 @@ func listGoModuleArtifacts(module *modules.ModuleContract, workspaceRoot string)
 	return []string{".build-complete"}
 }
 
-// listModuleArtifacts returns artifacts based on per-module definitions
+// listModuleArtifacts returns artifacts based on per-module definitions.
 func listModuleArtifacts(module *modules.ModuleContract) []string {
 	var artifacts []string
 
@@ -107,18 +122,17 @@ func listModuleArtifacts(module *modules.ModuleContract) []string {
 //   - Single executable: builds binary for current platform
 //   - Multiple executables: cross-compiled binaries
 //   - Test artifacts: runs tests and captures results
-func buildGoModule(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
+func buildGoModule(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+	moduleRoot := filepath.Join(workspaceRoot, module.GetComponentRoot("go"))
 
-	Logln(logWriter, "\n=== Building %s: %s ===", module.Type, module.Moniker)
+	Logln(logWriter, "\n=== Building go: %s ===", module.Moniker)
 
-	// Get capabilities from contract
-	cfg := config.Global()
-	hasGoModule := cfg != nil && cfg.ModuleTypes != nil && cfg.ModuleTypes.HasCapability(module.Type, "go_module")
+	// Check if module has go package type
+	hasGoModule := module.HasComponent("go")
 
-	// Skip if not a go_module (shouldn't happen if build_deps is correct, but defensive)
+	// Skip if not a go module (shouldn't happen if packages is correct, but defensive)
 	if !hasGoModule {
-		Logln(logWriter, "⚠️  Module type '%s' doesn't have go_module capability", module.Type)
+		Logln(logWriter, "⚠️  Module '%s' doesn't have go package", module.Moniker)
 		return 0
 	}
 
@@ -167,8 +181,8 @@ func buildGoModule(module *modules.ModuleContract, workspaceRoot string, outputD
 	return buildLibrary(module, moduleRoot, outputDir, logWriter)
 }
 
-// buildLibrary builds a library module (compile-only verification)
-func buildLibrary(module *modules.ModuleContract, moduleRoot string, outputDir string, logWriter io.Writer) int {
+// buildLibrary builds a library module (compile-only verification).
+func buildLibrary(module *modules.ModuleContract, moduleRoot, outputDir string, logWriter io.Writer) int {
 	Logln(logWriter, "Running: go build ./...")
 	if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "build", "./..."); exitCode != 0 {
 		Logln(logWriter, "❌ go build failed")
@@ -179,8 +193,8 @@ func buildLibrary(module *modules.ModuleContract, moduleRoot string, outputDir s
 	return 0
 }
 
-// buildTestModule runs tests and captures results
-func buildTestModule(module *modules.ModuleContract, moduleRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+// buildTestModule runs tests and captures results.
+func buildTestModule(module *modules.ModuleContract, moduleRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	Logln(logWriter, "Running: go test ./... -json")
 
 	// First verify it compiles
@@ -212,8 +226,8 @@ func buildTestModule(module *modules.ModuleContract, moduleRoot string, outputDi
 	return 0
 }
 
-// buildSingleBinaryFromArtifact builds a single binary from a per-module artifact definition
-func buildSingleBinaryFromArtifact(module *modules.ModuleContract, moduleRoot string, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions, artifact contracts.ModuleArtifact) int {
+// buildSingleBinaryFromArtifact builds a single binary from a per-module artifact definition.
+func buildSingleBinaryFromArtifact(module *modules.ModuleContract, moduleRoot, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions, artifact contracts.ModuleArtifact) int {
 	// Resolve artifact pattern to binary name
 	resolver := config.NewArtifactResolverWithPlatform(module.Moniker, "", runtime.GOOS, runtime.GOARCH)
 	binaryName := resolver.ResolvePattern(artifact.Pattern)
@@ -227,8 +241,8 @@ func buildSingleBinaryFromArtifact(module *modules.ModuleContract, moduleRoot st
 	return exitCode
 }
 
-// buildCrossCompiledFromArtifacts builds binaries for multiple platforms from per-module artifact definitions
-func buildCrossCompiledFromArtifacts(module *modules.ModuleContract, moduleRoot string, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions, artifacts []contracts.ModuleArtifact) int {
+// buildCrossCompiledFromArtifacts builds binaries for multiple platforms from per-module artifact definitions.
+func buildCrossCompiledFromArtifacts(module *modules.ModuleContract, moduleRoot, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions, artifacts []contracts.ModuleArtifact) int {
 	// Extract platform targets from artifact IDs
 	type buildTarget struct {
 		goos        string
@@ -314,8 +328,8 @@ func buildCrossCompiledFromArtifacts(module *modules.ModuleContract, moduleRoot 
 	return 0
 }
 
-// buildLdflags builds ldflags for version injection
-func buildLdflags(module *modules.ModuleContract, moduleRoot string, workspaceRoot string, explicitVersion string, logWriter io.Writer) string {
+// buildLdflags builds ldflags for version injection.
+func buildLdflags(module *modules.ModuleContract, moduleRoot, workspaceRoot, explicitVersion string, logWriter io.Writer) string {
 	ldflags := ""
 
 	// Detect if running in CI (for version detection)
@@ -348,8 +362,8 @@ func buildLdflags(module *modules.ModuleContract, moduleRoot string, workspaceRo
 	return ldflags
 }
 
-// buildSingleBinary builds a single binary for the current platform
-func buildSingleBinary(module *modules.ModuleContract, moduleRoot string, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+// buildSingleBinary builds a single binary for the current platform.
+func buildSingleBinary(module *modules.ModuleContract, moduleRoot, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	binaryName := module.Moniker
 
 	// Add platform-specific extension
@@ -374,14 +388,14 @@ func getHostPlatform() (goos, goarch string) {
 	return os.Getenv("R2R_HOST_GOOS"), os.Getenv("R2R_HOST_GOARCH")
 }
 
-// CrossCompileTarget represents a cross-compilation target platform
+// CrossCompileTarget represents a cross-compilation target platform.
 type CrossCompileTarget struct {
 	OS     string
 	Arch   string
 	Suffix string
 }
 
-// Default cross-compile targets for Go executables
+// Default cross-compile targets for Go executables.
 var defaultCrossCompileTargets = []CrossCompileTarget{
 	{"linux", "amd64", ""},
 	{"linux", "arm64", ""},
@@ -392,7 +406,7 @@ var defaultCrossCompileTargets = []CrossCompileTarget{
 
 // buildCrossCompiled builds binaries for multiple platforms
 // With --all flag, builds all configured targets. In default mode, builds only current platform.
-func buildCrossCompiled(module *modules.ModuleContract, moduleRoot string, workspaceRoot string, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func buildCrossCompiled(module *modules.ModuleContract, moduleRoot, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	binaryName := module.Moniker
 
 	// Use default cross-compile targets
@@ -527,7 +541,7 @@ func buildCrossCompiled(module *modules.ModuleContract, moduleRoot string, works
 	return 0
 }
 
-// getGoModulePath reads the module path from go.mod file
+// getGoModulePath reads the module path from go.mod file.
 func getGoModulePath(moduleRoot string) string {
 	goModPath := filepath.Join(moduleRoot, "go.mod")
 	f, err := os.Open(goModPath)
@@ -547,7 +561,7 @@ func getGoModulePath(moduleRoot string) string {
 }
 
 // getVersionFromChangelog attempts to extract version from CHANGELOG.md
-// Checks both module root and release/{moniker}/ directories
+// Checks both module root and release/{moniker}/ directories.
 func getVersionFromChangelog(moduleRoot, workspaceRoot, moniker string) string {
 	// Try multiple locations for changelog
 	// TODO(path-migration): Add cfg.Repository.ReleasePathAbs() method to config
@@ -565,7 +579,7 @@ func getVersionFromChangelog(moduleRoot, workspaceRoot, moniker string) string {
 	return ""
 }
 
-// extractVersionFromFile extracts the first version from a changelog file
+// extractVersionFromFile extracts the first version from a changelog file.
 func extractVersionFromFile(changelogPath string) string {
 	f, err := os.Open(changelogPath)
 	if err != nil {
@@ -593,8 +607,8 @@ func extractVersionFromFile(changelogPath string) string {
 
 // generateChecksums creates SHA256 checksums for all built binaries
 // It checksums all files that look like executables (no extension or .exe)
-// excluding known non-binary files like .txt and .log
-func generateChecksums(outputDir string, binaryName string, logWriter io.Writer) {
+// excluding known non-binary files like .txt and .log.
+func generateChecksums(outputDir, binaryName string, logWriter io.Writer) {
 	entries, err := os.ReadDir(outputDir)
 	if err != nil {
 		return
@@ -635,7 +649,7 @@ func generateChecksums(outputDir string, binaryName string, logWriter io.Writer)
 	Logln(logWriter, "✅ Generated checksums.txt")
 }
 
-// computeSHA256 computes the SHA256 hash of a file
+// computeSHA256 computes the SHA256 hash of a file.
 func computeSHA256(filePath string) (string, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {

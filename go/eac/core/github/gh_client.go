@@ -2,11 +2,15 @@ package github
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
 	"time"
 )
+
+// ErrRunNotFound is returned when a workflow run is not found for the given SHA.
+var ErrRunNotFound = errors.New("workflow run not found")
 
 // GHClient implements API using the gh CLI tool.
 type GHClient struct {
@@ -23,7 +27,7 @@ func NewGHClient(workDir string) *GHClient {
 // Uses the GitHub Trees API for fast file listing.
 func (c *GHClient) GetTreeFiles(sha string) ([]string, error) {
 	// gh api repos/{owner}/{repo}/git/trees/{sha}?recursive=1
-	cmd := exec.Command("gh", "api",
+	cmd := exec.Command("gh", "api", //nolint:gosec // G204: sha is a git commit hash from controlled source
 		fmt.Sprintf("repos/{owner}/{repo}/git/trees/%s", sha),
 		"-q", ".tree[] | select(.type==\"blob\") | .path",
 		"--paginate",
@@ -98,7 +102,7 @@ func (c *GHClient) FindRunBySHA(workflow, sha string, limit int) (*WorkflowRun, 
 		}
 	}
 
-	return nil, nil
+	return nil, ErrRunNotFound
 }
 
 // HasRecentSuccess checks if a successful run exists for the given SHA
@@ -128,7 +132,7 @@ func (c *GHClient) ListReleases(limit int) ([]Release, error) {
 		limit = 100
 	}
 
-	cmd := exec.Command("gh", "release", "list",
+	cmd := exec.Command("gh", "release", "list", //nolint:gosec // G204: limit is an int, safe from injection
 		"--limit", fmt.Sprintf("%d", limit),
 		"--json", "tagName,name,isDraft",
 	)

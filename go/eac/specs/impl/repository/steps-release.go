@@ -136,8 +136,8 @@ func (c *repositoryContext) noUnexpectedFilesInReleaseSubdirs() error {
 	return nil
 }
 
-// Helper functions
-func indent(text string, prefix string) string {
+// Helper functions.
+func indent(text, prefix string) string {
 	lines := strings.Split(text, "\n")
 	for i, line := range lines {
 		if line != "" {

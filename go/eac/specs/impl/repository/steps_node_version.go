@@ -11,7 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// registerNodeVersionSteps registers steps for Node.js version consistency validation
+// registerNodeVersionSteps registers steps for Node.js version consistency validation.
 func registerNodeVersionSteps(sc *godog.ScenarioContext, ctx *nodeVersionContext, repoCtx *repositoryContext) {
 	// Given steps
 	// Note: "I load the system dependencies configuration" and "I discover all GitHub Action workflow files"
@@ -38,7 +38,7 @@ func registerNodeVersionSteps(sc *godog.ScenarioContext, ctx *nodeVersionContext
 	})
 }
 
-// nodeVersionContext holds state for Node.js version consistency validation
+// nodeVersionContext holds state for Node.js version consistency validation.
 type nodeVersionContext struct {
 	repoRoot string
 
@@ -192,7 +192,7 @@ func (c *nodeVersionContext) githubActionsShouldMatchSystemDeps() error {
 	return nil
 }
 
-// validateActionNodeVersion validates a specific action file has the correct node-version default
+// validateActionNodeVersion validates a specific action file has the correct node-version default.
 func (c *nodeVersionContext) validateActionNodeVersion(relPath string) error {
 	actionPath := filepath.Join(c.repoRoot, relPath)
 

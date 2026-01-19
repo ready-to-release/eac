@@ -37,7 +37,7 @@ func init() {
 	registry.Register(GetBinarySizes)
 }
 
-// BinarySize represents a single binary file's size
+// BinarySize represents a single binary file's size.
 type BinarySize struct {
 	Name      string  `json:"name" yaml:"name"`
 	Path      string  `json:"path" yaml:"path"`
@@ -46,13 +46,13 @@ type BinarySize struct {
 	Exists    bool    `json:"exists" yaml:"exists"`
 }
 
-// BinarySizesOutput contains all binary sizes
+// BinarySizesOutput contains all binary sizes.
 type BinarySizesOutput struct {
 	Module   string                `json:"module" yaml:"module"`
 	Binaries map[string]BinarySize `json:"binaries" yaml:"binaries"`
 }
 
-// Standard binary variants for CLI builds
+// Standard binary variants for CLI builds.
 var standardBinaryVariants = []struct {
 	Name   string
 	Suffix string
@@ -157,10 +157,18 @@ func GetBinarySizes() int {
 			}
 		}
 	case "json":
-		data, _ := json.MarshalIndent(output, "", "  ")
+		data, err := json.MarshalIndent(output, "", "  ")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to marshal JSON: %v\n", err)
+			return 1
+		}
 		fmt.Println(string(data))
 	case "yaml":
-		data, _ := yaml.Marshal(output)
+		data, err := yaml.Marshal(output)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to marshal YAML: %v\n", err)
+			return 1
+		}
 		fmt.Print(string(data))
 	case "markdown":
 		fmt.Println(formatBinarySizesMarkdown(output, binaryPrefix))

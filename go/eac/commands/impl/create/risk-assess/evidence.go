@@ -27,8 +27,8 @@ func collectEvidenceForModule(config *AssessConfig, moduleName string) (*evidenc
 	}
 
 	// Collect test evidence from test manifest (read-only)
-	cfg, _ := coreconfig.Load(coreconfig.LoadOptions{RepoRoot: config.WorkspaceRoot})
-	if cfg != nil {
+	cfg, cfgErr := coreconfig.Load(coreconfig.LoadOptions{RepoRoot: config.WorkspaceRoot})
+	if cfgErr == nil && cfg != nil {
 		testDir := cfg.Repository.TestModuleDirAbs(config.WorkspaceRoot, moduleName)
 		manifest, err := internal.LoadTestManifest(testDir)
 
@@ -105,16 +105,20 @@ func collectEvidenceForModule(config *AssessConfig, moduleName string) (*evidenc
 
 		// Calculate vulnerability summary
 		if securityResults.VulnFile != "" {
-			vulnEvidence, _ := evidence.LoadSecurityEvidence(securityResults.VulnFile)
-			vulnSummary, _ := evidence.ParseVulnerabilitySummary(vulnEvidence)
-			collection.VulnSummary = vulnSummary
+			if vulnEvidence, err := evidence.LoadSecurityEvidence(securityResults.VulnFile); err == nil {
+				if vulnSummary, err := evidence.ParseVulnerabilitySummary(vulnEvidence); err == nil {
+					collection.VulnSummary = vulnSummary
+				}
+			}
 		}
 
 		// Calculate SBOM summary
 		if securityResults.SBOMFile != "" {
-			sbomEvidence, _ := evidence.LoadSecurityEvidence(securityResults.SBOMFile)
-			sbomSummary, _ := evidence.ParseSBOMSummary(sbomEvidence)
-			collection.SBOMSummary = sbomSummary
+			if sbomEvidence, err := evidence.LoadSecurityEvidence(securityResults.SBOMFile); err == nil {
+				if sbomSummary, err := evidence.ParseSBOMSummary(sbomEvidence); err == nil {
+					collection.SBOMSummary = sbomSummary
+				}
+			}
 		}
 	} else {
 		// No security results found - add warning using config-based paths
@@ -138,7 +142,7 @@ func collectEvidenceForModule(config *AssessConfig, moduleName string) (*evidenc
 	return collection, nil
 }
 
-// convertToManifestData converts internal.TestManifest to simplified evidence.TestManifestData
+// convertToManifestData converts internal.TestManifest to simplified evidence.TestManifestData.
 func convertToManifestData(manifest *internal.TestManifest) *evidence.TestManifestData {
 	if manifest == nil {
 		return nil
@@ -146,7 +150,8 @@ func convertToManifestData(manifest *internal.TestManifest) *evidence.TestManife
 
 	// Convert test entries
 	tests := make([]evidence.TestEntryData, len(manifest.Tests))
-	for i, test := range manifest.Tests {
+	for i := range manifest.Tests {
+		test := &manifest.Tests[i]
 		tests[i] = evidence.TestEntryData{
 			Name:     test.Name,
 			Package:  test.Package,

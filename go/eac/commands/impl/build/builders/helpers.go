@@ -2,6 +2,7 @@
 package builders
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -11,18 +12,17 @@ import (
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/dockerutil"
-	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/platform"
 )
 
-// Logln writes a formatted string with platform-specific line ending to the writer
+// Logln writes a formatted string with platform-specific line ending to the writer.
 func Logln(w io.Writer, format string, args ...interface{}) {
 	fmt.Fprintf(w, format+platform.LineEnding, args...)
 }
 
 // RunCommandWithLog executes a command in the specified directory
 // Output is written to the provided writer
-// Returns exit code (0 = success, non-zero = failure)
+// Returns exit code (0 = success, non-zero = failure).
 func RunCommandWithLog(dir string, logWriter io.Writer, name string, args ...string) int {
 	// Use platform-aware command wrapper (handles .cmd files on Windows)
 	wrappedName, wrappedArgs := platform.WrapCommand(name, args...)
@@ -32,7 +32,8 @@ func RunCommandWithLog(dir string, logWriter io.Writer, name string, args ...str
 	cmd.Stderr = logWriter
 
 	if err := cmd.Run(); err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		exitErr := &exec.ExitError{}
+		if errors.As(err, &exitErr) {
 			return exitErr.ExitCode()
 		}
 		Logln(logWriter, "\nError: failed to execute command: %v", err)
@@ -42,7 +43,7 @@ func RunCommandWithLog(dir string, logWriter io.Writer, name string, args ...str
 	return 0
 }
 
-// RunCommandWithEnv executes a command with custom environment variables
+// RunCommandWithEnv executes a command with custom environment variables.
 func RunCommandWithEnv(dir string, logWriter io.Writer, env []string, name string, args ...string) int {
 	// Use platform-aware command wrapper (handles .cmd files on Windows)
 	wrappedName, wrappedArgs := platform.WrapCommand(name, args...)
@@ -53,7 +54,8 @@ func RunCommandWithEnv(dir string, logWriter io.Writer, env []string, name strin
 	cmd.Env = append(os.Environ(), env...)
 
 	if err := cmd.Run(); err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		exitErr := &exec.ExitError{}
+		if errors.As(err, &exitErr) {
 			return exitErr.ExitCode()
 		}
 		Logln(logWriter, "\nError: failed to execute command: %v", err)
@@ -63,7 +65,7 @@ func RunCommandWithEnv(dir string, logWriter io.Writer, env []string, name strin
 	return 0
 }
 
-// CopyFile copies a file from src to dst, preserving permissions
+// CopyFile copies a file from src to dst, preserving permissions.
 func CopyFile(src, dst string) error {
 	sourceFile, err := os.Open(src)
 	if err != nil {
@@ -90,75 +92,30 @@ func CopyFile(src, dst string) error {
 }
 
 // FormatDockerVolumePath formats a path for use as a Docker volume mount source
-// On Windows, converts C:\path to /c/path for Docker compatibility
+// On Windows, converts C:\path to /c/path for Docker compatibility.
 func FormatDockerVolumePath(path string) string {
 	return dockerutil.FormatDockerVolume(path)
 }
 
-// IsDockerInDocker detects if we're running inside a Docker container
+// IsDockerInDocker detects if we're running inside a Docker container.
 func IsDockerInDocker() bool {
 	return dockerutil.IsDinD()
 }
 
-// IsDockerAvailable checks if Docker daemon is accessible
+// IsDockerAvailable checks if Docker daemon is accessible.
 func IsDockerAvailable() bool {
 	return dockerutil.IsDockerAvailable()
 }
 
-// ExecutePostBuildSteps runs any post-build steps defined for the module type.
+// ExecutePostBuildSteps runs any post-build steps defined for the module.
 // Returns non-zero exit code if any step fails.
-func ExecutePostBuildSteps(moduleType, moniker, workspaceRoot, outputDir string, logWriter io.Writer) int {
-	cfg := config.Global()
-	if cfg == nil || cfg.ModuleTypes == nil {
-		return 0
-	}
-
-	steps := cfg.ModuleTypes.GetPostBuildSteps(moduleType)
-	if len(steps) == 0 {
-		return 0
-	}
-
-	Logln(logWriter, "")
-	Logln(logWriter, "📋 Running post-build steps...")
-
-	for i, step := range steps {
-		// Substitute variables in target/script
-		vars := map[string]string{
-			"{moniker}":    moniker,
-			"{root}":       workspaceRoot,
-			"{output_dir}": outputDir,
-		}
-
-		switch step.Action {
-		case config.PostBuildActionCopy:
-			target := substituteVars(step.Target, vars)
-			targetPath := filepath.Join(workspaceRoot, target)
-
-			Logln(logWriter, "   [%d] Copy to %s", i+1, target)
-
-			if err := CopyBuildOutput(outputDir, targetPath, step.Include, step.Exclude, logWriter); err != nil {
-				Logln(logWriter, "   ❌ Copy failed: %v", err)
-				return 1
-			}
-
-		case config.PostBuildActionScript:
-			script := substituteVars(step.Script, vars)
-			Logln(logWriter, "   [%d] Running: %s", i+1, script)
-
-			// Run script in workspace root
-			exitCode := RunCommandWithLog(workspaceRoot, logWriter, "sh", "-c", script)
-			if exitCode != 0 {
-				Logln(logWriter, "   ❌ Script failed with exit code %d", exitCode)
-				return exitCode
-			}
-		}
-	}
-
-	Logln(logWriter, "   ✅ Post-build steps completed")
+func ExecutePostBuildSteps(moniker, workspaceRoot, outputDir string, logWriter io.Writer) int {
+	// Post-build steps are expected to be defined at the module level
+	// This function is a placeholder for future implementation
 	return 0
 }
 
-// substituteVars replaces variable placeholders in a string
+// substituteVars replaces variable placeholders in a string.
 func substituteVars(s string, vars map[string]string) string {
 	result := s
 	for k, v := range vars {
@@ -172,7 +129,7 @@ func substituteVars(s string, vars map[string]string) string {
 // Exclude patterns filter out files from the copy.
 func CopyBuildOutput(srcDir, dstDir string, include, exclude []string, logWriter io.Writer) error {
 	// Ensure destination directory exists
-	if err := os.MkdirAll(dstDir, 0755); err != nil {
+	if err := os.MkdirAll(dstDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create target directory: %w", err)
 	}
 
@@ -200,7 +157,7 @@ func CopyBuildOutput(srcDir, dstDir string, include, exclude []string, logWriter
 		if len(include) > 0 {
 			matched := false
 			for _, pattern := range include {
-				if m, _ := doublestar.Match(pattern, matchPath); m {
+				if m, matchErr := doublestar.Match(pattern, matchPath); matchErr == nil && m {
 					matched = true
 					break
 				}
@@ -215,7 +172,7 @@ func CopyBuildOutput(srcDir, dstDir string, include, exclude []string, logWriter
 
 		// Check exclude patterns
 		for _, pattern := range exclude {
-			if m, _ := doublestar.Match(pattern, matchPath); m {
+			if m, matchErr := doublestar.Match(pattern, matchPath); matchErr == nil && m {
 				if info.IsDir() {
 					return filepath.SkipDir
 				}

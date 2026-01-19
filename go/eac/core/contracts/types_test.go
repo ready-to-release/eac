@@ -9,11 +9,9 @@ func TestBaseContract_Getters(t *testing.T) {
 	contract := BaseContract{
 		Moniker:     "test-moniker",
 		Name:        "Test Name",
-		Type:        "test-type",
 		Description: "Test description",
-		Files: Files{
-			Root:      "test/root",
-			Changelog: "CHANGELOG.md",
+		Packages: ModulePackages{
+			"go": &PackageEntry{Root: "test/root"},
 		},
 	}
 
@@ -24,9 +22,8 @@ func TestBaseContract_Getters(t *testing.T) {
 	}{
 		{"GetMoniker", contract.GetMoniker(), "test-moniker"},
 		{"GetName", contract.GetName(), "Test Name"},
-		{"GetType", contract.GetType(), "test-type"},
 		{"GetDescription", contract.GetDescription(), "Test description"},
-		{"GetRoot", contract.GetRoot(), "test/root"},
+		{"GetComponentRoot", contract.GetComponentRoot("go"), "test/root"},
 	}
 
 	for _, tt := range tests {

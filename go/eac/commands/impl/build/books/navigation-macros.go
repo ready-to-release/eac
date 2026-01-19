@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// diátaxisSections are the four documentation sections that should have navigation macros
+// diátaxisSections are the four documentation sections that should have navigation macros.
 var diataxisSections = map[string]bool{
 	"tutorials":     true,
 	"how-to-guides": true,
@@ -17,7 +17,7 @@ var diataxisSections = map[string]bool{
 
 // stripMacros removes Jinja2 macro calls from markdown files (PDF only)
 // The macros plugin is only enabled for site builds, not PDF builds
-// Common macros: {{ diataxis_footer() }}, {{ page_breadcrumb() }}
+// Common macros: {{ diataxis_footer() }}, {{ page_breadcrumb() }}.
 func (p *Preprocessor) stripMacros() error {
 	p.log("    Stripping macros from markdown files...")
 
@@ -50,14 +50,13 @@ func (p *Preprocessor) stripMacros() error {
 			stripped += len(matches)
 			filesModified++
 
-			if err := os.WriteFile(path, []byte(modified), 0644); err != nil {
+			if err := os.WriteFile(path, []byte(modified), 0o644); err != nil {
 				return err
 			}
 		}
 
 		return nil
 	})
-
 	if err != nil {
 		return err
 	}
@@ -67,7 +66,7 @@ func (p *Preprocessor) stripMacros() error {
 }
 
 // stripNavTitles removes the 'title' field from .nav.yml files
-// The awesome-nav plugin warns that title has no effect at top level
+// The awesome-nav plugin warns that title has no effect at top level.
 func (p *Preprocessor) stripNavTitles() error {
 	p.log("    Stripping titles from .nav.yml files...")
 
@@ -92,7 +91,7 @@ func (p *Preprocessor) stripNavTitles() error {
 		modified := titlePattern.ReplaceAllString(string(content), "")
 
 		if modified != string(content) {
-			if err := os.WriteFile(path, []byte(modified), 0644); err != nil {
+			if err := os.WriteFile(path, []byte(modified), 0o644); err != nil {
 				return err
 			}
 			stripped++
@@ -100,7 +99,6 @@ func (p *Preprocessor) stripNavTitles() error {
 
 		return nil
 	})
-
 	if err != nil {
 		return err
 	}
@@ -111,7 +109,7 @@ func (p *Preprocessor) stripNavTitles() error {
 
 // injectMacros adds Jinja2 navigation macros to markdown files (site builds only)
 // Injects {{ page_breadcrumb() }} after the title and {{ diataxis_footer() }} at the end
-// Only processes files in Diátaxis sections (tutorials, how-to-guides, explanation, reference)
+// Only processes files in Diátaxis sections (tutorials, how-to-guides, explanation, reference).
 func (p *Preprocessor) injectMacros() error {
 	p.log("    Injecting navigation macros into markdown files...")
 
@@ -185,14 +183,13 @@ func (p *Preprocessor) injectMacros() error {
 			injected += macrosAdded
 			filesModified++
 
-			if err := os.WriteFile(path, []byte(modified), 0644); err != nil {
+			if err := os.WriteFile(path, []byte(modified), 0o644); err != nil {
 				return err
 			}
 		}
 
 		return nil
 	})
-
 	if err != nil {
 		return err
 	}

@@ -31,7 +31,7 @@ func init() {
 	registry.Register(ShowDepsSetupSummary)
 }
 
-// ShowDepsSetupSummary generates a dependencies setup summary
+// ShowDepsSetupSummary generates a dependencies setup summary.
 func ShowDepsSetupSummary() int {
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {

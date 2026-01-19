@@ -5,50 +5,18 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/core/config"
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 )
 
-// ModuleMapper provides file-to-module mapping functionality
+// ModuleMapper provides file-to-module mapping functionality.
 type ModuleMapper struct {
 	registry      *modules.Registry
 	workspaceRoot string
 }
 
-// NewModuleMapper creates a mapper from EAC config
-func NewModuleMapper(eacCfg *config.EACConfig, workspaceRoot string) *ModuleMapper {
-	registry := modules.NewRegistry("0.1.0", workspaceRoot)
-
-	// Convert config modules to contract modules
-	for _, m := range eacCfg.Repository.Modules {
-		base := contracts.BaseContract{
-			Moniker:     m.Moniker,
-			Name:        m.Name,
-			Type:        m.Type,
-			Description: m.Description,
-			DependsOn:   m.DependsOn,
-			Files: contracts.Files{
-				Root:      m.Files.Root,
-				Source:    m.Files.Source,
-				Config:    m.Files.Config,
-				Assets:    m.Files.Assets,
-				Tests:     m.Files.Tests,
-				Exclude:   m.Files.Exclude,
-				Changelog: m.Files.Changelog,
-				Repo: contracts.RepoPatterns{
-					Specs:    m.Files.Repo.Specs,
-					TestImpl: m.Files.Repo.TestImpl,
-					Design:   m.Files.Repo.Design,
-					Other:    m.Files.Repo.Other,
-					Exclude:  m.Files.Repo.Exclude,
-				},
-			},
-		}
-		contract := modules.NewModuleContract(base, workspaceRoot)
-		_ = registry.Add(contract)
-	}
-
+// NewModuleMapper creates a mapper from an existing module registry.
+// The registry should have all component type defaults applied.
+func NewModuleMapper(registry *modules.Registry, workspaceRoot string) *ModuleMapper {
 	return &ModuleMapper{
 		registry:      registry,
 		workspaceRoot: workspaceRoot,
@@ -81,6 +49,20 @@ func (m *ModuleMapper) GetModuleForFile(filePath string) string {
 		matches = m.registry.FindModulesForFile(syntheticFile)
 		if len(matches) > 0 {
 			return matches[0].Moniker
+		}
+	}
+
+	// Fallback: handle specs/ directory by convention (specs/<moniker>/**)
+	// This maps spec files to their module even if the module doesn't have a specs: component
+	if strings.HasPrefix(relPath, "specs/") {
+		// Extract the moniker from specs/<moniker>/...
+		afterSpecs := strings.TrimPrefix(relPath, "specs/")
+		if idx := strings.Index(afterSpecs, "/"); idx > 0 {
+			potentialMoniker := afterSpecs[:idx]
+			// Verify this moniker exists in the registry
+			if _, exists := m.registry.Get(potentialMoniker); exists {
+				return potentialMoniker
+			}
 		}
 	}
 
@@ -122,7 +104,7 @@ func (m *ModuleMapper) GetModuleForPackagePath(pkgPath string) string {
 
 // BuildModuleOutputPath constructs the output path for a module's test results.
 // Returns a path like "<module-moniker>/packages/<package-suffix>" or "<module-moniker>/packages/<feature-name>" for godog
-// The new structure is: out/test/<module>/packages/<package>/
+// The new structure is: out/test/<module>/packages/<package>/.
 func (m *ModuleMapper) BuildModuleOutputPath(pkgPath, moduleMoniker string) string {
 	if moduleMoniker == "" {
 		// No module found, use sanitized package path under "unknown" module
@@ -166,7 +148,7 @@ func (m *ModuleMapper) BuildModuleOutputPath(pkgPath, moduleMoniker string) stri
 	return filepath.ToSlash(result)
 }
 
-// extractPathSuffix extracts the path suffix after the module identifier
+// extractPathSuffix extracts the path suffix after the module identifier.
 func extractPathSuffix(pkgPath, moduleMoniker string) string {
 	// Map module monikers to their typical path patterns
 	// eac-core -> go/eac/core

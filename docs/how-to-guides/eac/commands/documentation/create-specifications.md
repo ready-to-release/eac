@@ -120,11 +120,11 @@ Generated specifications include:
 
 ## Common Issues
 
-| Problem | Solution |
-|---------|----------|
-| Spec too generic | Provide more detailed requirements |
-| Missing scenarios | Add edge cases manually |
-| Undefined steps | Implement step definitions |
+| Problem           | Solution                           |
+| ----------------- | ---------------------------------- |
+| Spec too generic  | Provide more detailed requirements |
+| Missing scenarios | Add edge cases manually            |
+| Undefined steps   | Implement step definitions         |
 
 ## Next Steps
 

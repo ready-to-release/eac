@@ -8,25 +8,25 @@ Learn how to prepare and publish releases using the **changelog-driven release s
 
 ### Core Workflow Guides
 
-| Guide | What You'll Accomplish |
-|-------|------------------------|
-| [Prepare Module Release](./prepare-module-release.md) | Complete end-to-end release workflow with manual and automated phases |
-| [Generate Changelog](./generate-changelog.md) | Create changelog from Git commits with automatic version detection |
-| [Check CI Before Release](./check-ci-before-release.md) | Verify CI passes before merging release PR |
+| Guide                                                   | What You'll Accomplish                                                |
+| ------------------------------------------------------- | --------------------------------------------------------------------- |
+| [Prepare Module Release](./prepare-module-release.md)   | Complete end-to-end release workflow with manual and automated phases |
+| [Generate Changelog](./generate-changelog.md)           | Create changelog from Git commits with automatic version detection    |
+| [Check CI Before Release](./check-ci-before-release.md) | Verify CI passes before merging release PR                            |
 
 ### Tag Creation
 
-| Guide | What You'll Accomplish |
-|-------|------------------------|
+| Guide                                                 | What You'll Accomplish                                                    |
+| ----------------------------------------------------- | ------------------------------------------------------------------------- |
 | [Understanding Tag Creation](./create-release-tag.md) | Learn how tags are created automatically by CI (manual is emergency only) |
 
 ### Release Artifacts
 
-| Guide | What You'll Accomplish |
-|-------|------------------------|
-| [View Changelog and Release Notes](./view-changelog-release-notes.md) | Display changelog and release notes for modules |
-| [View PR Approval Comments](./view-approval-comments.md) | View and analyze PR approval comments for release evidence |
-| [View Release Specifications](./view-specifications.md) | View and analyze Gherkin specifications included in releases |
+| Guide                                                                 | What You'll Accomplish                                       |
+| --------------------------------------------------------------------- | ------------------------------------------------------------ |
+| [View Changelog and Release Notes](./view-changelog-release-notes.md) | Display changelog and release notes for modules              |
+| [View PR Approval Comments](./view-approval-comments.md)              | View and analyze PR approval comments for release evidence   |
+| [View Release Specifications](./view-specifications.md)               | View and analyze Gherkin specifications included in releases |
 
 ---
 

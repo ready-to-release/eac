@@ -7,13 +7,13 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 )
 
-// Validator validates go.mod dependencies against module contracts
+// Validator validates go.mod dependencies against module contracts.
 type Validator struct {
 	graph    *DependencyGraph
 	registry *modules.Registry
 }
 
-// NewValidator creates a new validator
+// NewValidator creates a new validator.
 func NewValidator(graph *DependencyGraph, registry *modules.Registry) *Validator {
 	return &Validator{
 		graph:    graph,
@@ -21,7 +21,7 @@ func NewValidator(graph *DependencyGraph, registry *modules.Registry) *Validator
 	}
 }
 
-// Validate compares the dependency graph against module contracts
+// Validate compares the dependency graph against module contracts.
 func (v *Validator) Validate() *ValidationReport {
 	report := &ValidationReport{
 		Discrepancies: []Discrepancy{},
@@ -99,49 +99,14 @@ func (v *Validator) Validate() *ValidationReport {
 	return report
 }
 
-// compareDependencies compares two sorted dependency lists
-// Returns: (missing from actual, extra in actual)
-func compareDependencies(contract, actual []string) ([]string, []string) {
-	contractSet := make(map[string]bool)
-	actualSet := make(map[string]bool)
-
-	for _, dep := range contract {
-		contractSet[dep] = true
-	}
-
-	for _, dep := range actual {
-		actualSet[dep] = true
-	}
-
-	// Find missing: in contract but not in actual
-	var missing []string
-	for dep := range contractSet {
-		if !actualSet[dep] {
-			missing = append(missing, dep)
-		}
-	}
-	sort.Strings(missing)
-
-	// Find extra: in actual but not in contract
-	var extra []string
-	for dep := range actualSet {
-		if !contractSet[dep] {
-			extra = append(extra, dep)
-		}
-	}
-	sort.Strings(extra)
-
-	return missing, extra
-}
-
-// FormatReport formats the validation report as a human-readable string
+// FormatReport formats the validation report as a human-readable string.
 func (v *Validator) FormatReport(report *ValidationReport) string {
 	var output string
 
 	output += "=== Module Dependency Validation Report ===\n\n"
 
 	// Summary
-	output += fmt.Sprintf("Summary:\n")
+	output += "Summary:\n"
 	output += fmt.Sprintf("  Total Modules with go.mod: %d\n", report.Summary.TotalModules)
 	output += fmt.Sprintf("  Matching: %d\n", report.Summary.Matching)
 	output += fmt.Sprintf("  With Discrepancies: %d\n", report.Summary.WithDiscrepancies)
@@ -182,7 +147,7 @@ func (v *Validator) FormatReport(report *ValidationReport) string {
 	return output
 }
 
-// ValidateAndReport performs validation and returns a formatted report
+// ValidateAndReport performs validation and returns a formatted report.
 func ValidateAndReport(rootPath string, registry *modules.Registry, baseModulePath string, excludeDirs []string) (string, error) {
 	// Build dependency graph from go.mod files
 	graph, err := BuildFromDirectory(rootPath, registry, baseModulePath, excludeDirs)
@@ -200,7 +165,7 @@ func ValidateAndReport(rootPath string, registry *modules.Registry, baseModulePa
 	return validator.FormatReport(report), nil
 }
 
-// GetDiscrepanciesByStatus returns discrepancies filtered by status
+// GetDiscrepanciesByStatus returns discrepancies filtered by status.
 func (r *ValidationReport) GetDiscrepanciesByStatus(status string) []Discrepancy {
 	var filtered []Discrepancy
 	for _, disc := range r.Discrepancies {
@@ -211,12 +176,12 @@ func (r *ValidationReport) GetDiscrepanciesByStatus(status string) []Discrepancy
 	return filtered
 }
 
-// HasDiscrepancies returns true if any discrepancies were found
+// HasDiscrepancies returns true if any discrepancies were found.
 func (r *ValidationReport) HasDiscrepancies() bool {
 	return r.Summary.WithDiscrepancies > 0
 }
 
-// AllMatch returns true if all modules match their contracts
+// AllMatch returns true if all modules match their contracts.
 func (r *ValidationReport) AllMatch() bool {
 	return r.Summary.WithDiscrepancies == 0 && r.Summary.TotalModules > 0
 }

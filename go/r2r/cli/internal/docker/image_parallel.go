@@ -6,15 +6,15 @@ import (
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/logging"
 )
 
-// ImagePullRequest represents a single image pull operation
+// ImagePullRequest represents a single image pull operation.
 type ImagePullRequest struct {
-	ImageName   string
-	PullPolicy  string
-	LoadLocal   bool
-	Index       int // Original index for result mapping
+	ImageName  string
+	PullPolicy string
+	LoadLocal  bool
+	Index      int // Original index for result mapping
 }
 
-// ImagePullResult represents the result of an image pull operation
+// ImagePullResult represents the result of an image pull operation.
 type ImagePullResult struct {
 	ImageName string
 	Index     int
@@ -22,13 +22,13 @@ type ImagePullResult struct {
 	Success   bool
 }
 
-// ParallelImagePullOptions configures parallel image pull behavior
+// ParallelImagePullOptions configures parallel image pull behavior.
 type ParallelImagePullOptions struct {
 	MaxConcurrency int // Maximum number of concurrent pulls (default: 3)
 }
 
 // ParallelEnsureImages pulls multiple images in parallel
-// This is useful when starting multiple extensions that may need image pulls
+// This is useful when starting multiple extensions that may need image pulls.
 func (ch *ContainerHost) ParallelEnsureImages(requests []ImagePullRequest, opts *ParallelImagePullOptions) []ImagePullResult {
 	if len(requests) == 0 {
 		return []ImagePullResult{}
@@ -99,7 +99,7 @@ func (ch *ContainerHost) ParallelEnsureImages(requests []ImagePullRequest, opts 
 	return results
 }
 
-// EnsureMultipleImages is a convenience wrapper for pulling multiple images with the same policy
+// EnsureMultipleImages is a convenience wrapper for pulling multiple images with the same policy.
 func (ch *ContainerHost) EnsureMultipleImages(imageNames []string, pullPolicy string, loadLocal bool) []ImagePullResult {
 	requests := make([]ImagePullRequest, len(imageNames))
 	for i, imageName := range imageNames {

@@ -8,14 +8,14 @@ import (
 )
 
 var (
-	// reservedPorts tracks ports currently reserved with their reservation time
+	// reservedPorts tracks ports currently reserved with their reservation time.
 	reservedPorts = make(map[int]time.Time)
-	// portMutex protects the reservedPorts map
+	// portMutex protects the reservedPorts map.
 	portMutex sync.Mutex
 )
 
 const (
-	// reservationTTL is how long a port reservation lasts before automatic cleanup
+	// reservationTTL is how long a port reservation lasts before automatic cleanup.
 	reservationTTL = 30 * time.Second
 )
 

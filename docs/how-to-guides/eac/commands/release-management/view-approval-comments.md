@@ -165,7 +165,7 @@ r2r eac get approval-comments my-module --as-json | jq '.total_approvals'
 
 **Example Output:**
 
-```
+```text
 5
 ```
 
@@ -177,7 +177,7 @@ r2r eac get approval-comments my-module --as-json | jq -r '.approvals[].reviewer
 
 **Example Output:**
 
-```
+```text
 reviewer1
 reviewer2
 reviewer3

@@ -209,16 +209,18 @@ EAC supports different module types, each optimized for specific languages and b
 
 ## Language Support Matrix
 
-| Language | Module Type | Build | Test | Cross-Compile | Notes |
-|----------|-------------|-------|------|---------------|-------|
-| **Go** | `go` | ✅ Full | ✅ gotest, godog | ✅ Yes | Native support with cross-platform builds |
-| **TypeScript** | `typescript` | ✅ Full | ✅ mocha, cucumber-js | ❌ No | npm and tsc integration |
-| **JavaScript** | `typescript` | ✅ npm | ✅ mocha, cucumber-js | ❌ No | Use typescript type, skip tsc if no TS |
-| **Python** | `container` | ⚠️ Custom | ⚠️ Custom | ❌ No | Use Dockerfile with Python base image |
-| **Rust** | `container` | ⚠️ Custom | ⚠️ Custom | ❌ No | Use Dockerfile with Rust toolchain |
-| **Java** | `container` | ⚠️ Custom | ⚠️ Custom | ❌ No | Use Dockerfile with Maven/Gradle |
-| **Markdown** | `docs` | ✅ MkDocs | ❌ No | ❌ No | Documentation generation only |
-| **Any** | `static` | ❌ No | ❌ No | ❌ No | File ownership only |
+<!-- markdownlint-disable MD060 -->
+| Language       | Module Type   | Build         | Test                   | Cross-Compile   | Notes                                     |
+| -------------- | ------------- | ------------- | ---------------------- | --------------- | ----------------------------------------- |
+| **Go**         | `go`          | ✅ Full       | ✅ gotest, godog       | ✅ Yes          | Native support with cross-platform builds |
+| **TypeScript** | `typescript`  | ✅ Full       | ✅ mocha, cucumber-js  | ❌ No           | npm and tsc integration                   |
+| **JavaScript** | `typescript`  | ✅ npm        | ✅ mocha, cucumber-js  | ❌ No           | Use typescript type, skip tsc if no TS    |
+| **Python**     | `container`   | ⚠️ Custom      | ⚠️ Custom               | ❌ No           | Use Dockerfile with Python base image     |
+| **Rust**       | `container`   | ⚠️ Custom      | ⚠️ Custom               | ❌ No           | Use Dockerfile with Rust toolchain        |
+| **Java**       | `container`   | ⚠️ Custom      | ⚠️ Custom               | ❌ No           | Use Dockerfile with Maven/Gradle          |
+| **Markdown**   | `docs`        | ✅ MkDocs     | ❌ No                  | ❌ No           | Documentation generation only             |
+| **Any**        | `static`      | ❌ No         | ❌ No                  | ❌ No           | File ownership only                       |
+<!-- markdownlint-enable MD060 -->
 
 **Legend:**
 
@@ -321,14 +323,14 @@ Implement a runner in `go/eac/commands/impl/test/runners/` if needed.
 
 ### Choosing Module Types
 
-| Scenario | Recommended Type | Rationale |
-|----------|------------------|-----------|
-| Go library/service | `go` | Native build/test support, cross-compilation |
-| TypeScript library/app | `typescript` | npm and tsc integration |
-| Python service | `container` | No native handler yet, use Docker |
-| Multi-language app | `container` | Bundle all dependencies in image |
-| Static config | `static` | No build needed |
-| Documentation | `docs` | MkDocs integration |
+| Scenario               | Recommended Type   | Rationale                                    |
+| ---------------------- | ------------------ | -------------------------------------------- |
+| Go library/service     | `go`               | Native build/test support, cross-compilation |
+| TypeScript library/app | `typescript`       | npm and tsc integration                      |
+| Python service         | `container`        | No native handler yet, use Docker            |
+| Multi-language app     | `container`        | Bundle all dependencies in image             |
+| Static config          | `static`           | No build needed                              |
+| Documentation          | `docs`             | MkDocs integration                           |
 
 ### File Ownership
 

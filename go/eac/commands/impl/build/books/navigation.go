@@ -11,13 +11,13 @@ import (
 
 var navLog = logging.C()
 
-// NavFile represents a .nav.yml file structure
+// NavFile represents a .nav.yml file structure.
 type NavFile struct {
 	Title string `yaml:"title,omitempty"`
 	Nav   []any  `yaml:"nav"`
 }
 
-// getTitleFromFile extracts title from markdown frontmatter or first heading
+// getTitleFromFile extracts title from markdown frontmatter or first heading.
 func (p *Preprocessor) getTitleFromFile(path string) string {
 	content, err := os.ReadFile(path)
 	if err != nil {
@@ -47,7 +47,7 @@ func (p *Preprocessor) getTitleFromFile(path string) string {
 	return filenameToTitle(filepath.Base(path))
 }
 
-// getOrderForFile returns the order for a file from command sources
+// getOrderForFile returns the order for a file from command sources.
 func (p *Preprocessor) getOrderForFile(relPath string) int {
 	for _, src := range p.book.Sources {
 		if src.Type == "command" && filepath.ToSlash(src.Target) == relPath {
@@ -59,7 +59,7 @@ func (p *Preprocessor) getOrderForFile(relPath string) int {
 	return 500 // Default order for non-command files
 }
 
-// filenameToTitle converts a filename to a readable title
+// filenameToTitle converts a filename to a readable title.
 func filenameToTitle(filename string) string {
 	// Remove extension
 	name := strings.TrimSuffix(filename, filepath.Ext(filename))
@@ -69,11 +69,11 @@ func filenameToTitle(filename string) string {
 	return toTitleCase(name)
 }
 
-// toTitleCase converts a string to title case
+// toTitleCase converts a string to title case.
 func toTitleCase(s string) string {
 	words := strings.Fields(s)
 	for i, word := range words {
-		if len(word) > 0 {
+		if word != "" {
 			words[i] = strings.ToUpper(string(word[0])) + strings.ToLower(word[1:])
 		}
 	}

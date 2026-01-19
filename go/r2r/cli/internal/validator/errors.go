@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// ValidationError represents a single validation error
+// ValidationError represents a single validation error.
 type ValidationError struct {
 	Field    string      // Field path (e.g., "extensions[0].name")
 	Rule     string      // Rule violated (e.g., "required", "pattern", "enum")
@@ -14,7 +14,7 @@ type ValidationError struct {
 	Expected string      // Expected format/value description
 }
 
-// Error implements the error interface
+// Error implements the error interface.
 func (e ValidationError) Error() string {
 	if e.Field != "" {
 		return fmt.Sprintf("%s: %s", e.Field, e.Message)
@@ -22,18 +22,18 @@ func (e ValidationError) Error() string {
 	return e.Message
 }
 
-// ValidationResult contains all validation errors
+// ValidationResult contains all validation errors.
 type ValidationResult struct {
 	Errors   []ValidationError
 	Warnings []ValidationError // For lenient mode
 }
 
-// IsValid returns true if there are no errors
+// IsValid returns true if there are no errors.
 func (r *ValidationResult) IsValid() bool {
 	return len(r.Errors) == 0
 }
 
-// AddError adds a validation error to the result
+// AddError adds a validation error to the result.
 func (r *ValidationResult) AddError(field, rule, message string, value interface{}, expected string) {
 	r.Errors = append(r.Errors, ValidationError{
 		Field:    field,
@@ -44,7 +44,7 @@ func (r *ValidationResult) AddError(field, rule, message string, value interface
 	})
 }
 
-// AddWarning adds a validation warning (for lenient mode)
+// AddWarning adds a validation warning (for lenient mode).
 func (r *ValidationResult) AddWarning(field, rule, message string, value interface{}, expected string) {
 	r.Warnings = append(r.Warnings, ValidationError{
 		Field:    field,
@@ -55,7 +55,7 @@ func (r *ValidationResult) AddWarning(field, rule, message string, value interfa
 	})
 }
 
-// Error returns a combined error message
+// Error returns a combined error message.
 func (r *ValidationResult) Error() string {
 	if r.IsValid() {
 		return ""
@@ -69,7 +69,7 @@ func (r *ValidationResult) Error() string {
 		len(r.Errors), strings.Join(messages, "\n"))
 }
 
-// Summary returns a summary of validation results
+// Summary returns a summary of validation results.
 func (r *ValidationResult) Summary() string {
 	if r.IsValid() {
 		if len(r.Warnings) > 0 {
@@ -81,7 +81,7 @@ func (r *ValidationResult) Summary() string {
 		len(r.Errors), len(r.Warnings))
 }
 
-// Validation rule constants
+// Validation rule constants.
 const (
 	RuleRequired       = "required"
 	RulePattern        = "pattern"
@@ -97,7 +97,7 @@ const (
 	RuleNotImplemented = "not_implemented"
 )
 
-// Severity levels for validation
+// Severity levels for validation.
 type Severity int
 
 const (

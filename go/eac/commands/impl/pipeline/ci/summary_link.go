@@ -131,7 +131,7 @@ func PipelineCISummaryLink() int {
 		}
 		sb.WriteString("# Check if release/tag already exists\n")
 		sb.WriteString(fmt.Sprintf("gh release list --repo %s --limit 5\n", repo))
-		sb.WriteString(fmt.Sprintf("git ls-remote --tags origin\n"))
+		sb.WriteString("git ls-remote --tags origin\n")
 
 	case "docs":
 		sb.WriteString("# View failed step logs\n")
@@ -173,7 +173,7 @@ func PipelineCISummaryLink() int {
 	return 0
 }
 
-// getRepoFromGit tries to get the repository from git remote
+// getRepoFromGit tries to get the repository from git remote.
 func getRepoFromGit() string {
 	// Try common environment variables first
 	if repo := os.Getenv("GH_REPO"); repo != "" {

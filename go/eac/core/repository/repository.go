@@ -11,14 +11,14 @@ import (
 	"go.uber.org/zap"
 )
 
-// Repository represents a Git repository
+// Repository represents a Git repository.
 type Repository struct {
 	root    string
 	gitRepo git.GitRepository
 	logger  *zap.Logger // Optional logger for observability (nil = no logging)
 }
 
-// RepositoryError represents a repository-related error
+// RepositoryError represents a repository-related error.
 type RepositoryError struct {
 	Op      string // Operation that failed
 	Path    string // Path related to the error
@@ -37,7 +37,7 @@ func (e *RepositoryError) Unwrap() error {
 	return e.Err
 }
 
-// NewRepositoryError creates a new RepositoryError
+// NewRepositoryError creates a new RepositoryError.
 func NewRepositoryError(op, path string, err error, message string) *RepositoryError {
 	return &RepositoryError{
 		Op:      op,
@@ -110,7 +110,7 @@ func GetRepositoryRoot(startPath string) (string, error) {
 	return "", NewRepositoryError("find", absPath, nil, "not a git repository (or any parent up to mount point)")
 }
 
-// FileInfo represents information about a repository file
+// FileInfo represents information about a repository file.
 type FileInfo struct {
 	Path         string // Relative path from repository root
 	AbsolutePath string // Absolute filesystem path
@@ -118,7 +118,7 @@ type FileInfo struct {
 	IsIgnored    bool   // Whether the file is ignored by .gitignore
 }
 
-// RepositoryFileWithModule represents a file with its owning module(s)
+// RepositoryFileWithModule represents a file with its owning module(s).
 type RepositoryFileWithModule struct {
 	Name    string   // File path relative to repo root with forward slashes
 	Modules []string // Module monikers that own this file (can be multiple)
@@ -246,7 +246,6 @@ func GetRepositoryFiles(repo git.GitRepository, trackedOnly, includeIgnored, inc
 
 			return nil
 		})
-
 		if err != nil {
 			return nil, NewRepositoryError("walk", rootPath, err, "failed to walk repository files")
 		}
@@ -256,7 +255,7 @@ func GetRepositoryFiles(repo git.GitRepository, trackedOnly, includeIgnored, inc
 }
 
 // isGitInternalFile checks if a file is a Git internal file (.gitignore, .gitkeep)
-// that should be filtered out from repository operations
+// that should be filtered out from repository operations.
 func isGitInternalFile(relPath string) bool {
 	basename := filepath.Base(relPath)
 	return basename == ".gitignore" || basename == ".gitkeep"
@@ -275,7 +274,7 @@ func New(path string, logger *zap.Logger) (*Repository, error) {
 		return nil, err
 	}
 
-	gitRepo, err := git.Open(root, logger)
+	gitRepo, err := git.NewManager(logger).Open(root)
 	if err != nil {
 		return nil, NewRepositoryError("open", root, err, "failed to open git repository")
 	}
@@ -291,22 +290,22 @@ func New(path string, logger *zap.Logger) (*Repository, error) {
 	}, nil
 }
 
-// Root returns the repository root path
+// Root returns the repository root path.
 func (r *Repository) Root() string {
 	return r.root
 }
 
-// GitRepo returns the underlying GitRepository interface
+// GitRepo returns the underlying GitRepository interface.
 func (r *Repository) GitRepo() git.GitRepository {
 	return r.gitRepo
 }
 
-// Files returns all files in the repository with the given options
-func (r *Repository) Files(trackedOnly bool, includeIgnored bool) ([]FileInfo, error) {
+// Files returns all files in the repository with the given options.
+func (r *Repository) Files(trackedOnly, includeIgnored bool) ([]FileInfo, error) {
 	return GetRepositoryFiles(r.gitRepo, trackedOnly, includeIgnored, false, false)
 }
 
-// IsGitRepository checks if the given path is within a git repository
+// IsGitRepository checks if the given path is within a git repository.
 func IsGitRepository(path string) bool {
 	_, err := GetRepositoryRoot(path)
 	return err == nil

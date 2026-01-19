@@ -161,7 +161,7 @@ func parseAIResponse(response string) (*AIRiskAnalysis, error) {
 
 	// Fall back to creating analysis from response text
 	return &AIRiskAnalysis{
-		ComputedLikelihood: 3,  // Default to medium
+		ComputedLikelihood: 3, // Default to medium
 		Reasoning:          response,
 		RiskSummary:        truncateString(response, 200),
 		Confidence:         0.5, // Lower confidence for non-JSON response
@@ -232,7 +232,7 @@ func (s *AIScorer) ComputeRiskWithAI(ctx context.Context, module string, finding
 func countBySeverity(findings []VulnerabilityInput, severity string) int {
 	count := 0
 	for _, f := range findings {
-		if strings.ToUpper(f.Severity) == severity {
+		if strings.EqualFold(f.Severity, severity) {
 			count++
 		}
 	}

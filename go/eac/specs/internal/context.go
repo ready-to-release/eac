@@ -5,6 +5,7 @@
 package internal
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -17,7 +18,7 @@ import (
 	coretesting "github.com/ready-to-release/eac/go/eac/core/testing"
 )
 
-// Environment variable names used in test contexts
+// Environment variable names used in test contexts.
 const (
 	EnvR2RTestLoggingActive = "R2R_TEST_LOGGING_ACTIVE"
 	EnvR2RPWD               = "R2R_PWD"
@@ -70,7 +71,7 @@ func NewTestContext() *TestContext {
 // Reset clears all fields for a new scenario.
 func (c *TestContext) Reset() {
 	c.SharedTestContext.Reset()
-	c.MockOverrides = nil // Clear per-scenario mock overrides
+	c.MockOverrides = nil            // Clear per-scenario mock overrides
 	c.CurrentWorkDir = c.IsolatedDir // Reset to main isolated directory
 	// Don't reset OriginalRepoRoot, IsolatedDir, or Cache - they're set once at init
 }
@@ -119,12 +120,12 @@ func (c *TestContext) SetupIsolation() error {
 	c.Isolation = isolation
 	c.IsolatedDir = isolation.IsolatedDir()
 	c.CurrentWorkDir = c.IsolatedDir
-	c.SharedTestContext.SetIsolation(c.OriginalRepoRoot, c.IsolatedDir)
+	c.SetIsolation(c.OriginalRepoRoot, c.IsolatedDir)
 	c.SharedTestContext.Isolation = c.Isolation
 
 	// Create specs/ directory for design output
 	specsDir := filepath.Join(c.IsolatedDir, "specs")
-	if err := os.MkdirAll(specsDir, 0755); err != nil {
+	if err := os.MkdirAll(specsDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create specs directory in isolation: %w", err)
 	}
 
@@ -138,7 +139,7 @@ func (c *TestContext) CleanupIsolation() {
 		c.Isolation = nil
 		c.IsolatedDir = ""
 	}
-	c.SharedTestContext.ClearIsolation()
+	c.ClearIsolation()
 }
 
 // getEffectiveWorkDir returns the working directory for command execution.
@@ -244,7 +245,8 @@ func (c *TestContext) RunCommand(cmdLine string) error {
 	c.CommandError = err
 
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		exitErr := &exec.ExitError{}
+		if errors.As(err, &exitErr) {
 			c.ExitCode = exitErr.ExitCode()
 		} else {
 			// Non-exit error (e.g., binary not found, permission denied)
@@ -303,11 +305,12 @@ func (c *TestContext) CommandFailed() bool {
 // Use this in step definitions that expect command success.
 //
 // Example:
-//   err := ctx.RunCommand("build eac-core")
-//   if err != nil {
-//       return err
-//   }
-//   return ctx.MustSucceed() // Fail test if build failed
+//
+//	err := ctx.RunCommand("build eac-core")
+//	if err != nil {
+//	    return err
+//	}
+//	return ctx.MustSucceed() // Fail test if build failed
 func (c *TestContext) MustSucceed() error {
 	if c.CommandFailed() {
 		return fmt.Errorf("command failed with exit code %d: %s", c.ExitCode, c.CommandOutput)
@@ -333,11 +336,11 @@ func (c *TestContext) formatCommandExecutionError(cmd *exec.Cmd, cmdLine string,
 
 	// Check if binary exists and its permissions
 	if info, statErr := os.Stat(cmd.Path); statErr == nil {
-		sb.WriteString(fmt.Sprintf("Binary exists: yes\n"))
+		sb.WriteString("Binary exists: yes\n")
 		sb.WriteString(fmt.Sprintf("Binary size:   %d bytes\n", info.Size()))
 		sb.WriteString(fmt.Sprintf("Binary mode:   %s\n", info.Mode()))
 	} else if os.IsNotExist(statErr) {
-		sb.WriteString(fmt.Sprintf("Binary exists: NO - file not found\n"))
+		sb.WriteString("Binary exists: NO - file not found\n")
 	} else {
 		sb.WriteString(fmt.Sprintf("Binary check:  error - %v\n", statErr))
 	}

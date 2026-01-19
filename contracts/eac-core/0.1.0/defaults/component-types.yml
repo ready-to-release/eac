@@ -1,0 +1,127 @@
+# Component Types Configuration
+# Defines component types for building and file organization.
+#
+# Each component type specifies:
+#   - extensions: File extensions that belong to this component type (empty for non-file-based)
+#   - builder: The build handler to use (if buildable)
+#   - requirements: System dependencies needed for building
+#   - default_root: Default root path pattern (supports {moniker} placeholder)
+#   - files: Default file patterns (source, tests, config)
+#
+# Note: Linting is configured separately in lint-providers.yml
+
+component-types:
+  # Go component - compiles Go modules
+  go:
+    extensions: [".go"]
+    builder: go
+    requirements: [go]
+    files:
+      source: ["**/*.go", "**/*.go.txt"]
+      tests: ["**/*_test.go"]
+      config: ["go.mod", "go.sum"]
+
+  # TypeScript/JavaScript component - npm-based builds
+  typescript:
+    extensions: [".ts", ".tsx"]
+    builder: npm
+    requirements: [npm]
+    files:
+      source: ["src/**/*.ts", "features/**/*.ts"]
+      tests: ["**/*.test.ts"]
+      config: ["package.json", "tsconfig.json", "*.config.js"]
+
+  javascript:
+    extensions: [".js", ".jsx", ".mjs", ".cjs"]
+    builder: npm
+    requirements: [npm]
+
+  # Container component - Docker/Buildx builds
+  dockerfile:
+    extensions: []  # Dockerfile has no standard extension
+    builder: buildx
+    requirements: [docker]
+    files:
+      source: ["Dockerfile"]
+
+  # Book component - MkDocs documentation builds
+  book:
+    extensions: []  # Not file-based, uses books.yml
+    builder: mkdocs
+    requirements: [mkdocs]
+
+  # Markdown component - documentation files
+  markdown:
+    extensions: [".md", ".markdown"]
+    files:
+      source: ["**/*.md", "**/*.markdown"]
+
+  # YAML component - configuration files
+  yaml:
+    extensions: [".yml", ".yaml"]
+    files:
+      source: ["**/*.yml", "**/*.yaml"]
+
+  # GitHub Workflows component - GitHub Actions workflows and reusable actions
+  workflows:
+    extensions: []  # Uses .yml/.yaml but in specific paths
+    default_root: .github/workflows
+    requirements: [actionlint]
+    files:
+      source: ["**/*.yml", "**/*.yaml"]
+      config: []
+
+  # JSON component - data and configuration files
+  json:
+    extensions: [".json"]
+    files:
+      source: ["**/*.json"]
+
+  # Gherkin - BDD specification files (.feature)
+  gherkin:
+    extensions: [".feature"]
+    files:
+      source: ["**/*.feature"]
+
+  # Structurizr - Architecture diagrams in Structurizr DSL (.dsl)
+  structurizr:
+    extensions: [".dsl"]
+    files:
+      source: ["workspace.dsl", "**/*.dsl"]
+
+  # Documentation assets - images, diagrams, and other binary assets
+  docs-assets:
+    extensions: [".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".ico"]
+    files:
+      source: ["**/*.png", "**/*.jpg", "**/*.svg"]
+
+  # Repository configuration - root-level config files without extensions
+  repository:
+    extensions: []
+    files:
+      config: ["LICENSE", ".gitignore", ".gitattributes", "go.work", "go.work.sum"]
+
+  # Test data/fixtures - sample files used by tests
+  testdata:
+    extensions: [".txt", ".go.txt"]
+    files:
+      source: ["**/*.txt", "**/*.go.txt"]
+
+  # PowerShell component - PowerShell 7.4+ scripts (.ps1, .psm1, .psd1)
+  # Requires: PowerShell 7.4 or later (cross-platform)
+  pwsh:
+    extensions: [".ps1", ".psm1", ".psd1"]
+    builder: scripts
+    requirements: [pwsh]
+    files:
+      source: ["**/*.ps1", "**/*.psm1"]
+      tests: ["**/*.Tests.ps1"]
+      config: ["**/*.psd1"]
+
+  # Bash component - POSIX-compatible shell scripts (.sh)
+  bash:
+    extensions: [".sh", ".bash"]
+    builder: scripts
+    requirements: [bash]
+    files:
+      source: ["**/*.sh", "**/*.bash"]

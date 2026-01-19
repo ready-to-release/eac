@@ -2,19 +2,19 @@ package console
 
 import "time"
 
-// Phase represents the three execution phases
+// Phase represents the three execution phases.
 type Phase int
 
 const (
-	// PhaseInit is the initialization phase (discovery, setup, dependency verification)
+	// PhaseInit is the initialization phase (discovery, setup, dependency verification).
 	PhaseInit Phase = iota
-	// PhaseRun is the execution phase (parallel workers running)
+	// PhaseRun is the execution phase (parallel workers running).
 	PhaseRun
-	// PhaseSummary is the summary phase (final results, statistics, next steps)
+	// PhaseSummary is the summary phase (final results, statistics, next steps).
 	PhaseSummary
 )
 
-// Phase display names
+// Phase display names.
 const (
 	PhaseNameInitialization = "Initialization"
 	PhaseNameRun            = "Run"
@@ -22,7 +22,7 @@ const (
 	PhaseNameUnknown        = "Unknown"
 )
 
-// String returns the display name for a phase
+// String returns the display name for a phase.
 func (p Phase) String() string {
 	switch p {
 	case PhaseInit:
@@ -36,21 +36,21 @@ func (p Phase) String() string {
 	}
 }
 
-// PhaseStatus represents the status of a phase
+// PhaseStatus represents the status of a phase.
 type PhaseStatus int
 
 const (
-	// PhasePending means the phase has not started
+	// PhasePending means the phase has not started.
 	PhasePending PhaseStatus = iota
-	// PhaseActive means the phase is currently running
+	// PhaseActive means the phase is currently running.
 	PhaseActive
-	// PhaseComplete means the phase finished successfully
+	// PhaseComplete means the phase finished successfully.
 	PhaseComplete
-	// PhaseFailed means the phase finished with errors
+	// PhaseFailed means the phase finished with errors.
 	PhaseFailed
 )
 
-// Icon returns the icon for a phase status
+// Icon returns the icon for a phase status.
 func (s PhaseStatus) Icon() string {
 	switch s {
 	case PhasePending:
@@ -66,7 +66,7 @@ func (s PhaseStatus) Icon() string {
 	}
 }
 
-// Pane represents a single pane in the 2-pane layout
+// Pane represents a single pane in the 2-pane layout.
 type Pane struct {
 	Phase     Phase
 	Status    PhaseStatus
@@ -81,7 +81,7 @@ type Pane struct {
 	autoScroll   bool // Whether to auto-scroll to bottom on new content
 }
 
-// NewPane creates a new pane for the given phase
+// NewPane creates a new pane for the given phase.
 func NewPane(phase Phase, bufferSize int) *Pane {
 	return &Pane{
 		Phase:      phase,
@@ -91,7 +91,7 @@ func NewPane(phase Phase, bufferSize int) *Pane {
 	}
 }
 
-// Duration returns how long this phase has been running or took to complete
+// Duration returns how long this phase has been running or took to complete.
 func (p *Pane) Duration() time.Duration {
 	if p.StartTime.IsZero() {
 		return 0
@@ -102,12 +102,12 @@ func (p *Pane) Duration() time.Duration {
 	return time.Since(p.StartTime)
 }
 
-// IsExpanded returns true if the pane should be expanded (active or recently completed)
+// IsExpanded returns true if the pane should be expanded (active or recently completed).
 func (p *Pane) IsExpanded() bool {
 	return p.Status == PhaseActive
 }
 
-// HeaderText returns the header text for the pane
+// HeaderText returns the header text for the pane.
 func (p *Pane) HeaderText() string {
 	icon := p.Status.Icon()
 	name := p.Phase.String()
@@ -125,7 +125,7 @@ func (p *Pane) HeaderText() string {
 	return icon + " " + name
 }
 
-// ScrollUp moves the viewport up (shows older content)
+// ScrollUp moves the viewport up (shows older content).
 func (p *Pane) ScrollUp(lines int) {
 	p.scrollOffset += lines
 	if p.scrollOffset > p.maxScroll {
@@ -134,7 +134,7 @@ func (p *Pane) ScrollUp(lines int) {
 	p.autoScroll = false // Disable auto-scroll when user manually scrolls
 }
 
-// ScrollDown moves the viewport down (shows newer content)
+// ScrollDown moves the viewport down (shows newer content).
 func (p *Pane) ScrollDown(lines int) {
 	p.scrollOffset -= lines
 	if p.scrollOffset <= 0 {
@@ -143,12 +143,12 @@ func (p *Pane) ScrollDown(lines int) {
 	}
 }
 
-// UpdateMaxScroll recalculates maximum scroll based on buffer size and pane height
+// UpdateMaxScroll recalculates maximum scroll based on buffer size and pane height.
 func (p *Pane) UpdateMaxScroll(paneHeight int) {
 	p.UpdateMaxScrollForBuffer(p.Buffer, paneHeight)
 }
 
-// UpdateMaxScrollForBuffer recalculates maximum scroll for a specific buffer
+// UpdateMaxScrollForBuffer recalculates maximum scroll for a specific buffer.
 func (p *Pane) UpdateMaxScrollForBuffer(buffer *RingBuffer, paneHeight int) {
 	totalLines := buffer.Count()
 	p.maxScroll = totalLines - paneHeight

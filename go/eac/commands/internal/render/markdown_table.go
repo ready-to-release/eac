@@ -6,7 +6,7 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 )
 
-// MarkdownTableConfig holds configuration for rendering markdown tables
+// MarkdownTableConfig holds configuration for rendering markdown tables.
 type MarkdownTableConfig struct {
 	// Headers for the table columns
 	Headers []string
@@ -89,12 +89,12 @@ func SimpleMarkdownTable(headers []string, rows [][]interface{}) string {
 	})
 }
 
-// TableBuilder provides a fluent interface for building markdown tables
+// TableBuilder provides a fluent interface for building markdown tables.
 type TableBuilder struct {
 	config MarkdownTableConfig
 }
 
-// NewTableBuilder creates a new table builder
+// NewTableBuilder creates a new table builder.
 func NewTableBuilder() *TableBuilder {
 	return &TableBuilder{
 		config: MarkdownTableConfig{
@@ -104,37 +104,37 @@ func NewTableBuilder() *TableBuilder {
 	}
 }
 
-// WithHeaders sets the table headers
+// WithHeaders sets the table headers.
 func (tb *TableBuilder) WithHeaders(headers ...string) *TableBuilder {
 	tb.config.Headers = headers
 	return tb
 }
 
-// WithAutoIndex enables automatic row numbering
+// WithAutoIndex enables automatic row numbering.
 func (tb *TableBuilder) WithAutoIndex() *TableBuilder {
 	tb.config.AutoIndex = true
 	return tb
 }
 
-// AddRow adds a data row to the table
+// AddRow adds a data row to the table.
 func (tb *TableBuilder) AddRow(cells ...interface{}) *TableBuilder {
 	tb.config.Rows = append(tb.config.Rows, cells)
 	return tb
 }
 
-// AddRows adds multiple data rows
+// AddRows adds multiple data rows.
 func (tb *TableBuilder) AddRows(rows [][]interface{}) *TableBuilder {
 	tb.config.Rows = append(tb.config.Rows, rows...)
 	return tb
 }
 
-// WithFooter sets the footer row
+// WithFooter sets the footer row.
 func (tb *TableBuilder) WithFooter(cells ...interface{}) *TableBuilder {
 	tb.config.Footer = cells
 	return tb
 }
 
-// Build renders the table as markdown
+// Build renders the table as markdown.
 func (tb *TableBuilder) Build() string {
 	return RenderMarkdownTable(&tb.config)
 }
@@ -184,35 +184,35 @@ func RenderCompactList(header string, items []string) string {
 	return tb.Build()
 }
 
-// AlignedTable supports column alignment (left, center, right)
+// AlignedTable supports column alignment (left, center, right).
 type AlignedTable struct {
 	writer table.Writer
 }
 
 // NewAlignedTable creates a table with custom alignment options
-// Note: go-pretty supports alignment through the Style system
+// Note: go-pretty supports alignment through the Style system.
 func NewAlignedTable() *AlignedTable {
 	return &AlignedTable{
 		writer: table.NewWriter(),
 	}
 }
 
-// SetHeaders sets the table headers
+// SetHeaders sets the table headers.
 func (at *AlignedTable) SetHeaders(headers ...interface{}) {
 	at.writer.AppendHeader(table.Row(headers))
 }
 
-// AddRow adds a data row
+// AddRow adds a data row.
 func (at *AlignedTable) AddRow(cells ...interface{}) {
 	at.writer.AppendRow(table.Row(cells))
 }
 
-// RenderMarkdown outputs the table in markdown format
+// RenderMarkdown outputs the table in markdown format.
 func (at *AlignedTable) RenderMarkdown() string {
 	return FormatMarkdownTable(at.writer.RenderMarkdown())
 }
 
-// TrimMarkdownTable removes leading/trailing whitespace from a markdown table string
+// TrimMarkdownTable removes leading/trailing whitespace from a markdown table string.
 func TrimMarkdownTable(markdown string) string {
 	return strings.TrimSpace(markdown)
 }

@@ -66,7 +66,7 @@ func init() {
 	registry.Register(Test)
 }
 
-// TestConfig holds test execution configuration
+// TestConfig holds test execution configuration.
 type TestConfig struct {
 	Monikers    []string
 	SuiteName   string
@@ -82,7 +82,7 @@ type TestConfig struct {
 	ForceRetest bool // --retest flag to bypass incremental testing
 }
 
-// TestExecutionContext holds shared state for parallel test execution
+// TestExecutionContext holds shared state for parallel test execution.
 type TestExecutionContext struct {
 	testsByPackage  map[string][]testing.TestReference // Keyed by module path (e.g., eac-core/config)
 	modulePathToPkg map[string]string                  // Maps module path -> original package path (e.g., go/eac/core/config)
@@ -102,10 +102,10 @@ type TestExecutionContext struct {
 	results map[string]PackageResult
 }
 
-// PackageResult is an alias for manifests.PackageResult
+// PackageResult is an alias for manifests.PackageResult.
 type PackageResult = manifests.PackageResult
 
-// Test is the unified entry point for testing modules
+// Test is the unified entry point for testing modules.
 func Test() int {
 	args := os.Args[2:] // Skip program name and "test"
 
@@ -159,7 +159,7 @@ func Test() int {
 
 // testFlags defines valid flags for the test command
 
-// parseTestArgs parses command line arguments into TestConfig
+// parseTestArgs parses command line arguments into TestConfig.
 func parseTestArgs(args []string) *TestConfig {
 	// Validate flags before parsing
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
@@ -249,7 +249,7 @@ func parseTestArgs(args []string) *TestConfig {
 	return cfg
 }
 
-// createWorker returns an orchestrator worker function for test execution
+// createWorker returns an orchestrator worker function for test execution.
 func (ctx *TestExecutionContext) createWorker() orchestrator.WorkerFunc {
 	return func(pkgPath string, tuiWriter io.Writer) int {
 		tests := ctx.testsByPackage[pkgPath]
@@ -276,7 +276,7 @@ func (ctx *TestExecutionContext) getEffectiveTestRunDir(tests []testing.TestRefe
 }
 
 // runPackageTests executes tests for a single package with streaming output
-// modulePath is the module-based path (e.g., eac-core/config) used for output organization
+// modulePath is the module-based path (e.g., eac-core/config) used for output organization.
 func (ctx *TestExecutionContext) runPackageTests(modulePath string, tests []testing.TestReference, tuiWriter io.Writer) PackageResult {
 	// Look up original package path for test execution
 	// modulePath is what the orchestrator uses for output directories
@@ -324,7 +324,7 @@ func (ctx *TestExecutionContext) runPackageTests(modulePath string, tests []test
 	}
 }
 
-// runTscucumberPackageTests executes TypeScript cucumber-js tests
+// runTscucumberPackageTests executes TypeScript cucumber-js tests.
 func (ctx *TestExecutionContext) runTscucumberPackageTests(pkgPath string, tests []testing.TestReference, tuiWriter io.Writer, relPkgPath, relFeatureFile string) PackageResult {
 	start := time.Now()
 	result := PackageResult{PackageName: pkgPath}
@@ -334,7 +334,7 @@ func (ctx *TestExecutionContext) runTscucumberPackageTests(pkgPath string, tests
 
 	// Create log file for this package
 	logDir := filepath.Join(ctx.testRunDir, sanitizePathForLog(pkgPath))
-	if err := os.MkdirAll(logDir, 0755); err != nil {
+	if err := os.MkdirAll(logDir, 0o755); err != nil {
 		fmt.Fprintf(tuiWriter, "❌ Failed to create log directory: %v\n", err)
 		result.PackageFailed = true
 		return result
@@ -413,7 +413,7 @@ func (ctx *TestExecutionContext) runTscucumberPackageTests(pkgPath string, tests
 	return result
 }
 
-// runMochaPackageTests executes TypeScript mocha unit tests
+// runMochaPackageTests executes TypeScript mocha unit tests.
 func (ctx *TestExecutionContext) runMochaPackageTests(pkgPath string, tests []testing.TestReference, tuiWriter io.Writer, relPkgPath string) PackageResult {
 	start := time.Now()
 	result := PackageResult{PackageName: pkgPath}
@@ -424,7 +424,7 @@ func (ctx *TestExecutionContext) runMochaPackageTests(pkgPath string, tests []te
 
 	// Create log file for this package
 	logDir := filepath.Join(ctx.testRunDir, sanitizePathForLog(pkgPath))
-	if err := os.MkdirAll(logDir, 0755); err != nil {
+	if err := os.MkdirAll(logDir, 0o755); err != nil {
 		fmt.Fprintf(tuiWriter, "❌ Failed to create log directory: %v\n", err)
 		result.PackageFailed = true
 		return result
@@ -484,7 +484,7 @@ func (ctx *TestExecutionContext) runMochaPackageTests(pkgPath string, tests []te
 	return result
 }
 
-// collectResults returns all collected test results
+// collectResults returns all collected test results.
 func (ctx *TestExecutionContext) collectResults() []PackageResult {
 	ctx.mu.Lock()
 	defer ctx.mu.Unlock()
@@ -495,7 +495,7 @@ func (ctx *TestExecutionContext) collectResults() []PackageResult {
 	return results
 }
 
-// newCommand creates a new exec.Cmd (abstraction for testing)
+// newCommand creates a new exec.Cmd (abstraction for testing).
 var newCommand = func(name string, args ...string) *exec.Cmd {
 	return exec.Command(name, args...)
 }
@@ -536,7 +536,7 @@ func printTestUsage() {
 }
 
 // printTestSummary prints unified test summary to a writer (for non-TUI mode)
-// Note: suiteName/suiteMoniker kept for API compatibility but suite info is shown during init
+// Note: suiteName/suiteMoniker kept for API compatibility but suite info is shown during init.
 func printTestSummary(w io.Writer, results []PackageResult, suiteName, suiteMoniker string,
 	selectedCount, osFilteredCount,
 	totalPackages, packagesPassed, packagesFailed,
@@ -598,7 +598,7 @@ func printTestSummary(w io.Writer, results []PackageResult, suiteName, suiteMoni
 	fmt.Fprintf(w, "Results: %s\n", testRunDir)
 }
 
-// testTUISummary creates summary data for the TUI Summary pane
+// testTUISummary creates summary data for the TUI Summary pane.
 func testTUISummary(
 	results []PackageResult, totalTime time.Duration, suiteName, suiteMoniker string,
 	osFilteredCount, selectedCount,
@@ -690,7 +690,7 @@ func testTUISummary(
 	}
 }
 
-// moduleTestStats holds aggregated test statistics for a module
+// moduleTestStats holds aggregated test statistics for a module.
 type moduleTestStats struct {
 	Module     string
 	Packages   int
@@ -700,7 +700,7 @@ type moduleTestStats struct {
 	Assertions int
 }
 
-// aggregateResultsByModule groups test results by module moniker
+// aggregateResultsByModule groups test results by module moniker.
 func aggregateResultsByModule(results []PackageResult) []moduleTestStats {
 	moduleMap := make(map[string]*moduleTestStats)
 
@@ -740,7 +740,7 @@ func aggregateResultsByModule(results []PackageResult) []moduleTestStats {
 	return moduleList
 }
 
-// truncateString truncates a string to maxLen, adding "..." if truncated
+// truncateString truncates a string to maxLen, adding "..." if truncated.
 func truncateString(s string, maxLen int) string {
 	if len(s) <= maxLen {
 		return s
@@ -765,10 +765,11 @@ func truncateString(s string, maxLen int) string {
 // - "Assertions" = actual test executions reported by runner (includes subtests)
 
 // getUniqueModulesFromTests extracts unique module monikers from test references
-// Uses ModuleMapper for accurate module ownership lookup from registry
+// Uses ModuleMapper for accurate module ownership lookup from registry.
 func getUniqueModulesFromTests(tests []testing.TestReference, mapper *ModuleMapper) []string {
 	moduleSet := make(map[string]bool)
-	for _, test := range tests {
+	for i := range tests {
+		test := &tests[i]
 		module := mapper.GetModuleForFile(test.FilePath)
 		if module != "" {
 			moduleSet[module] = true
@@ -785,7 +786,7 @@ func getUniqueModulesFromTests(tests []testing.TestReference, mapper *ModuleMapp
 	return modules
 }
 
-// incrementalTestInfo holds information about incremental test detection results
+// incrementalTestInfo holds information about incremental test detection results.
 type incrementalTestInfo struct {
 	detectionTime   time.Duration
 	modulesNeedTest []string

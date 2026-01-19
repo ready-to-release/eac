@@ -35,7 +35,7 @@ type ModuleManifest struct {
 	Version             string         `json:"version"`                         // Manifest format version
 }
 
-// ArtifactInfo describes a single built artifact
+// ArtifactInfo describes a single built artifact.
 type ArtifactInfo struct {
 	Type     string   `json:"type"`               // Artifact type (executable, file, directory, image)
 	ID       string   `json:"id"`                 // Artifact identifier
@@ -49,14 +49,16 @@ type ArtifactInfo struct {
 	Registry string   `json:"registry,omitempty"` // Container registry (for type=image, e.g., "ghcr.io")
 }
 
-// PlatformInfo describes a platform that was built
+// PlatformInfo describes a platform that was built.
 type PlatformInfo struct {
 	OS   string `json:"os"`   // Operating system (windows, linux, darwin)
 	Arch string `json:"arch"` // Architecture (amd64, arm64)
 }
 
-const manifestVersion = "2.0"
-const manifestFileName = "build.manifest.json"
+const (
+	manifestVersion  = "2.0"
+	manifestFileName = "build.manifest.json"
+)
 
 // CollectBuildFiles walks the build directory and returns all file paths relative to the directory.
 // It excludes the manifest file itself, build logs, and intermediate build artifacts like staging directories.
@@ -97,10 +99,10 @@ func CollectBuildFiles(buildDir string) ([]string, error) {
 	return files, err
 }
 
-// BuildAgentCI is the build agent value for CI builds (GitHub Actions)
+// BuildAgentCI is the build agent value for CI builds (GitHub Actions).
 const BuildAgentCI = "ci"
 
-// BuildAgentDevbox is the build agent value for local developer builds
+// BuildAgentDevbox is the build agent value for local developer builds.
 const BuildAgentDevbox = "devbox"
 
 // NewModuleManifest creates a new module manifest.
@@ -128,12 +130,12 @@ func NewModuleManifest(moniker, moduleType, gitCommit string) *ModuleManifest {
 }
 
 // Save writes the manifest to the module's build output directory.
-// The manifest is stored at <moduleBuildDir>/build.manifest.json
+// The manifest is stored at <moduleBuildDir>/build.manifest.json.
 func (m *ModuleManifest) Save(moduleBuildDir string) error {
 	manifestPath := filepath.Join(moduleBuildDir, manifestFileName)
 
 	// Create directory if it doesn't exist
-	if err := os.MkdirAll(moduleBuildDir, 0755); err != nil {
+	if err := os.MkdirAll(moduleBuildDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create manifest directory: %w", err)
 	}
 
@@ -144,14 +146,14 @@ func (m *ModuleManifest) Save(moduleBuildDir string) error {
 	}
 
 	// Write to file
-	if err := os.WriteFile(manifestPath, data, 0644); err != nil {
+	if err := os.WriteFile(manifestPath, data, 0o644); err != nil {
 		return fmt.Errorf("failed to write manifest: %w", err)
 	}
 
 	return nil
 }
 
-// LoadModuleManifest loads a module's manifest from its build output directory
+// LoadModuleManifest loads a module's manifest from its build output directory.
 func LoadModuleManifest(moduleBuildDir string) (*ModuleManifest, error) {
 	manifestPath := filepath.Join(moduleBuildDir, manifestFileName)
 
@@ -175,12 +177,12 @@ func LoadModuleManifest(moduleBuildDir string) (*ModuleManifest, error) {
 	return &manifest, nil
 }
 
-// GetRequestedArtifacts returns the list of artifact IDs that were requested to be built
+// GetRequestedArtifacts returns the list of artifact IDs that were requested to be built.
 func (m *ModuleManifest) GetRequestedArtifacts() []string {
 	return m.RequestedArtifacts
 }
 
-// GetPlatforms returns the platforms this module was built for
+// GetPlatforms returns the platforms this module was built for.
 func (m *ModuleManifest) GetPlatforms() []PlatformInfo {
 	return m.Platforms
 }

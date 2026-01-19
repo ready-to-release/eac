@@ -14,7 +14,7 @@ import (
 
 var log = logging.C()
 
-// CucumberTestResult holds parsed test result data from a cucumber.json file
+// CucumberTestResult holds parsed test result data from a cucumber.json file.
 type CucumberTestResult struct {
 	ScenarioName string
 	FeaturePath  string
@@ -33,8 +33,9 @@ func ParseCucumberResults(moduleTestDir string) []CucumberTestResult {
 		return results
 	}
 
-	_ = filepath.Walk(packagesDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() {
+	//nolint:errcheck // Walk errors are non-fatal; we collect what we can find
+	_ = filepath.Walk(packagesDir, func(path string, info os.FileInfo, walkErr error) error {
+		if walkErr != nil || info.IsDir() {
 			return nil
 		}
 
@@ -43,22 +44,24 @@ func ParseCucumberResults(moduleTestDir string) []CucumberTestResult {
 		fileName := info.Name()
 		if !strings.HasSuffix(fileName, ".cucumber.json") &&
 			fileName != "cucumber.json" &&
-			!(strings.HasPrefix(fileName, "cucumber-") && strings.HasSuffix(fileName, ".json")) {
+			(!strings.HasPrefix(fileName, "cucumber-") || !strings.HasSuffix(fileName, ".json")) {
 			return nil
 		}
 
 		// Parse the cucumber report
-		report, err := cucumber.ParseFile(path)
-		if err != nil {
-			log.Debugf("Failed to parse cucumber file %s: %v", path, err)
+		report, parseErr := cucumber.ParseFile(path)
+		if parseErr != nil {
+			log.Debugf("Failed to parse cucumber file %s: %v", path, parseErr)
 			return nil
 		}
 
 		// Extract results from each feature and scenario
-		for _, feature := range report {
+		for i := range report {
+			feature := &report[i]
 			featurePath := feature.URI
 
-			for _, scenario := range feature.Elements {
+			for j := range feature.Elements {
+				scenario := &feature.Elements[j]
 				// Skip background elements
 				if scenario.Type == "background" {
 					continue
@@ -117,8 +120,9 @@ func AggregateCucumberReports(testRunDir string) string {
 		}
 
 		// Walk through packages directory to find cucumber files
-		_ = filepath.Walk(packagesDir, func(path string, info os.FileInfo, err error) error {
-			if err != nil || info.IsDir() {
+		//nolint:errcheck // Walk errors are non-fatal; we collect what we can find
+		_ = filepath.Walk(packagesDir, func(path string, info os.FileInfo, walkErr error) error {
+			if walkErr != nil || info.IsDir() {
 				return nil
 			}
 
@@ -126,14 +130,14 @@ func AggregateCucumberReports(testRunDir string) string {
 			fileName := info.Name()
 			if !strings.HasSuffix(fileName, ".cucumber.json") &&
 				fileName != "cucumber.json" &&
-				!(strings.HasPrefix(fileName, "cucumber-") && strings.HasSuffix(fileName, ".json")) {
+				(!strings.HasPrefix(fileName, "cucumber-") || !strings.HasSuffix(fileName, ".json")) {
 				return nil
 			}
 
 			// Parse and aggregate
-			report, err := cucumber.ParseFile(path)
-			if err != nil {
-				log.Debugf("Failed to parse cucumber file %s: %v", path, err)
+			report, parseErr := cucumber.ParseFile(path)
+			if parseErr != nil {
+				log.Debugf("Failed to parse cucumber file %s: %v", path, parseErr)
 				return nil
 			}
 
@@ -154,7 +158,7 @@ func AggregateCucumberReports(testRunDir string) string {
 		return ""
 	}
 
-	if err := os.WriteFile(aggregatedPath, data, 0644); err != nil {
+	if err := os.WriteFile(aggregatedPath, data, 0o644); err != nil {
 		log.Warnf("Failed to write aggregated cucumber report: %v", err)
 		return ""
 	}
@@ -195,8 +199,9 @@ func AggregateCTRFReports(testRunDir string) string {
 		}
 
 		// Walk through packages directory to find unit.json files
-		_ = filepath.Walk(packagesDir, func(path string, info os.FileInfo, err error) error {
-			if err != nil || info.IsDir() {
+		//nolint:errcheck // Walk errors are non-fatal; we collect what we can find
+		_ = filepath.Walk(packagesDir, func(path string, info os.FileInfo, walkErr error) error {
+			if walkErr != nil || info.IsDir() {
 				return nil
 			}
 
@@ -206,9 +211,9 @@ func AggregateCTRFReports(testRunDir string) string {
 			}
 
 			// Parse and aggregate
-			report, err := ctrf.ParseFile(path)
-			if err != nil {
-				log.Debugf("Failed to parse CTRF file %s: %v", path, err)
+			report, parseErr := ctrf.ParseFile(path)
+			if parseErr != nil {
+				log.Debugf("Failed to parse CTRF file %s: %v", path, parseErr)
 				return nil
 			}
 
@@ -230,7 +235,7 @@ func AggregateCTRFReports(testRunDir string) string {
 		return ""
 	}
 
-	if err := os.WriteFile(aggregatedPath, data, 0644); err != nil {
+	if err := os.WriteFile(aggregatedPath, data, 0o644); err != nil {
 		log.Warnf("Failed to write aggregated CTRF report: %v", err)
 		return ""
 	}

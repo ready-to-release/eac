@@ -3,6 +3,7 @@
 package config
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -200,198 +201,6 @@ func TestValidateAll(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-// TestLoad_ModuleTypesLoaded verifies ModuleTypes is populated after Load
-func TestLoad_ModuleTypesLoaded(t *testing.T) {
-	cfg, err := Load(DefaultLoadOptions())
-	require.NoError(t, err)
-
-	// ModuleTypes should be loaded
-	assert.NotNil(t, cfg.ModuleTypes, "ModuleTypes should be loaded")
-	assert.NotEmpty(t, cfg.ModuleTypes.Types, "ModuleTypes should have types")
-
-	// Type lookup should work
-	goType := cfg.ModuleTypes.Get("go")
-	assert.NotNil(t, goType, "should find go type")
-	assert.Contains(t, goType.Capabilities, "go_module")
-}
-
-// TestLoad_TypeDefaultsApplied verifies type defaults are applied after Load
-func TestLoad_TypeDefaultsApplied(t *testing.T) {
-	cfg, err := Load(DefaultLoadOptions())
-	require.NoError(t, err)
-
-	// Find a go module (eac-core)
-	srcCore, ok := cfg.Repository.GetModule("eac-core")
-	require.True(t, ok, "eac-core module should exist")
-	assert.Equal(t, "go", srcCore.Type)
-
-	// Go type defaults should be applied
-	goType := cfg.ModuleTypes.Get("go")
-	require.NotNil(t, goType)
-
-	if goType.Defaults != nil && goType.Defaults.Files != nil {
-		// If type has source defaults, they should be applied (unless explicit in repository.yml)
-		if goType.Defaults.Files.Source != nil {
-			// eac-core has explicit source in repository.yml, so check that format
-			assert.NotEmpty(t, srcCore.Files.Source)
-		}
-	}
-}
-
-// TestRepositoryConfig_ApplyTypeDefaults tests direct ApplyTypeDefaults call
-func TestRepositoryConfig_ApplyTypeDefaults(t *testing.T) {
-	t.Run("applies type defaults", func(t *testing.T) {
-		repo := &RepositoryConfig{
-			Modules: []Module{
-				{
-					Moniker: "test-mod",
-					Name:    "Test Module",
-					Type:    "go",
-					Files: Files{
-						Root: "src/test",
-					},
-				},
-			},
-		}
-
-		types := &ModuleTypesConfig{
-			Types: []ModuleTypeDef{
-				{
-					Name:      "go",
-					BuildDeps: []string{"go"},
-					Defaults: &TypeDefaults{
-						Files: &FilesDefaults{
-							Source: []string{"**/*.go"},
-							Config: []string{"go.mod"},
-						},
-						Repo: &RepoDefaults{
-							Specs:    []string{"specs/{moniker}/**"},
-							TestImpl: "{root}/tests",
-						},
-					},
-				},
-			},
-		}
-
-		repo.ApplyTypeDefaults(types)
-
-		m := repo.Modules[0]
-		assert.Equal(t, []string{"**/*.go"}, m.Files.Source)
-		assert.Equal(t, []string{"go.mod"}, m.Files.Config)
-		assert.Equal(t, []string{"specs/test-mod/**"}, m.Files.Repo.Specs)
-		assert.Equal(t, "src/test/tests", m.Files.Repo.TestImpl)
-	})
-
-	t.Run("preserves explicit values", func(t *testing.T) {
-		repo := &RepositoryConfig{
-			Modules: []Module{
-				{
-					Moniker: "explicit-mod",
-					Name:    "Explicit Module",
-					Type:    "go",
-					Files: Files{
-						Root:   "src/explicit",
-						Source: []string{"custom/*.go"},
-						Config: []string{"custom.mod"},
-						Repo: RepoFiles{
-							Specs:    []string{"my/specs/**"},
-							TestImpl: "my/tests",
-						},
-					},
-				},
-			},
-		}
-
-		types := &ModuleTypesConfig{
-			Types: []ModuleTypeDef{
-				{
-					Name: "go",
-					Defaults: &TypeDefaults{
-						Files: &FilesDefaults{
-							Source: []string{"**/*.go"},
-							Config: []string{"go.mod"},
-						},
-						Repo: &RepoDefaults{
-							Specs:    []string{"specs/{moniker}/**"},
-							TestImpl: "{root}/tests",
-						},
-					},
-				},
-			},
-		}
-
-		repo.ApplyTypeDefaults(types)
-
-		m := repo.Modules[0]
-		// Explicit values should be preserved
-		assert.Equal(t, []string{"custom/*.go"}, m.Files.Source)
-		assert.Equal(t, []string{"custom.mod"}, m.Files.Config)
-		assert.Equal(t, []string{"my/specs/**"}, m.Files.Repo.Specs)
-		assert.Equal(t, "my/tests", m.Files.Repo.TestImpl)
-	})
-
-	t.Run("handles nil types", func(t *testing.T) {
-		repo := &RepositoryConfig{
-			Modules: []Module{
-				{
-					Moniker: "test-mod",
-					Name:    "Test Module",
-					Type:    "go",
-					Files: Files{
-						Root: "src/test",
-					},
-				},
-			},
-		}
-
-		// Should not panic with nil types
-		repo.ApplyTypeDefaults(nil)
-
-		m := repo.Modules[0]
-		// Generic defaults should be applied
-		assert.Equal(t, "CHANGELOG.md", m.Files.Changelog)
-		assert.Equal(t, []string{"specs/test-mod/**"}, m.Files.Repo.Specs)
-	})
-
-	t.Run("preserves explicit empty specs", func(t *testing.T) {
-		repo := &RepositoryConfig{
-			Modules: []Module{
-				{
-					Moniker: "no-specs-mod",
-					Name:    "No Specs Module",
-					Type:    "go",
-					Files: Files{
-						Root: "src/nospecs",
-						Repo: RepoFiles{
-							Specs: []string{}, // Explicit empty
-						},
-					},
-				},
-			},
-		}
-
-		types := &ModuleTypesConfig{
-			Types: []ModuleTypeDef{
-				{
-					Name: "go",
-					Defaults: &TypeDefaults{
-						Repo: &RepoDefaults{
-							Specs: []string{"specs/{moniker}/**"},
-						},
-					},
-				},
-			},
-		}
-
-		repo.ApplyTypeDefaults(types)
-
-		m := repo.Modules[0]
-		// Explicit empty should be preserved
-		assert.NotNil(t, m.Files.Repo.Specs)
-		assert.Empty(t, m.Files.Repo.Specs)
-	})
-}
-
 // TestPeekRepositoryType tests the type detection function
 func TestPeekRepositoryType(t *testing.T) {
 	t.Run("detects mono type", func(t *testing.T) {
@@ -441,15 +250,15 @@ func TestLoadRepositoryTypeDefaults(t *testing.T) {
 		assert.Equal(t, "merge", cfg.Repository.PR.MergeStrategy)
 	})
 
-	t.Run("returns nil for unknown type", func(t *testing.T) {
+	t.Run("returns ErrNoDefaults for unknown type", func(t *testing.T) {
 		cfg, err := LoadRepositoryTypeDefaults(repoRoot, "unknown")
-		require.NoError(t, err)
+		require.True(t, errors.Is(err, ErrNoDefaults))
 		assert.Nil(t, cfg)
 	})
 
-	t.Run("returns nil for empty type", func(t *testing.T) {
+	t.Run("returns ErrNoDefaults for empty type", func(t *testing.T) {
 		cfg, err := LoadRepositoryTypeDefaults(repoRoot, "")
-		require.NoError(t, err)
+		require.True(t, errors.Is(err, ErrNoDefaults))
 		assert.Nil(t, cfg)
 	})
 }
@@ -476,31 +285,3 @@ func TestLoadRepository_TypeSpecificMerge(t *testing.T) {
 	})
 }
 
-// TestModuleTypesConfig_Integration tests type config methods with real data
-func TestModuleTypesConfig_Integration(t *testing.T) {
-	cfg, err := Load(DefaultLoadOptions())
-	require.NoError(t, err)
-	require.NotNil(t, cfg.ModuleTypes)
-
-	t.Run("Get returns type definition", func(t *testing.T) {
-		goType := cfg.ModuleTypes.Get("go")
-		require.NotNil(t, goType)
-		assert.Contains(t, goType.Capabilities, "go_module")
-	})
-
-	t.Run("Get returns nil for unknown type", func(t *testing.T) {
-		unknown := cfg.ModuleTypes.Get("unknown-xyz")
-		assert.Nil(t, unknown)
-	})
-
-	t.Run("HasCapability returns true for go_module", func(t *testing.T) {
-		hasCapability := cfg.ModuleTypes.HasCapability("go", "go_module")
-		assert.True(t, hasCapability)
-	})
-
-	t.Run("GetTypesWithCapability finds go types", func(t *testing.T) {
-		goTypes := cfg.ModuleTypes.GetTypesWithCapability("go_module")
-		assert.NotEmpty(t, goTypes)
-		assert.Contains(t, goTypes, "go")
-	})
-}

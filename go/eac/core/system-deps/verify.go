@@ -13,18 +13,18 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/config"
 )
 
-// Verifier checks system dependencies using configuration
+// Verifier checks system dependencies using configuration.
 type Verifier struct {
 	config *config.SystemDependenciesConfig
 }
 
-// NewVerifier creates a new verifier with the given config
+// NewVerifier creates a new verifier with the given config.
 func NewVerifier(cfg *config.SystemDependenciesConfig) *Verifier {
 	return &Verifier{config: cfg}
 }
 
 // Verify checks if a system dependency is available and meets version requirements
-// The dependency can be specified as either "go" or "@deps:go"
+// The dependency can be specified as either "go" or "@deps:go".
 func (v *Verifier) Verify(dependency string) Result {
 	// Normalize: strip @deps: prefix if present
 	moniker := strings.TrimPrefix(dependency, "@deps:")
@@ -59,7 +59,7 @@ func (v *Verifier) Verify(dependency string) Result {
 	return result
 }
 
-// verifyCommand runs a command and extracts version using pattern
+// verifyCommand runs a command and extracts version using pattern.
 func (v *Verifier) verifyCommand(result Result, dep *config.SystemDependency) Result {
 	// Parse command into parts
 	parts := strings.Fields(dep.Verify.Command)
@@ -68,7 +68,7 @@ func (v *Verifier) verifyCommand(result Result, dep *config.SystemDependency) Re
 		return result
 	}
 
-	cmd := exec.Command(parts[0], parts[1:]...)
+	cmd := exec.Command(parts[0], parts[1:]...) //nolint:gosec // G204: command from system-dependencies.yml config
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		result.Error = fmt.Errorf("command failed: %w", err)
@@ -108,7 +108,7 @@ func (v *Verifier) verifyCommand(result Result, dep *config.SystemDependency) Re
 	return result
 }
 
-// verifyOSPlatform checks if the current OS matches the required platform
+// verifyOSPlatform checks if the current OS matches the required platform.
 func (v *Verifier) verifyOSPlatform(result Result, dep *config.SystemDependency) Result {
 	requiredOS := dep.Verify.OSPlatform
 	currentOS := runtime.GOOS
@@ -123,7 +123,7 @@ func (v *Verifier) verifyOSPlatform(result Result, dep *config.SystemDependency)
 	return result
 }
 
-// verifyEnvVars checks if required environment variables are set
+// verifyEnvVars checks if required environment variables are set.
 func (v *Verifier) verifyEnvVars(result Result, dep *config.SystemDependency) Result {
 	requireMode := dep.Verify.Require
 	if requireMode == "" {
@@ -151,7 +151,7 @@ func (v *Verifier) verifyEnvVars(result Result, dep *config.SystemDependency) Re
 	return result
 }
 
-// VerifyAll checks multiple dependencies
+// VerifyAll checks multiple dependencies.
 func (v *Verifier) VerifyAll(dependencies []string) []Result {
 	results := make([]Result, len(dependencies))
 	for i, dep := range dependencies {
@@ -160,13 +160,13 @@ func (v *Verifier) VerifyAll(dependencies []string) []Result {
 	return results
 }
 
-// IsAvailable quickly checks if a dependency is available
+// IsAvailable quickly checks if a dependency is available.
 func (v *Verifier) IsAvailable(dependency string) bool {
 	result := v.Verify(dependency)
 	return result.Available
 }
 
-// GetMissingDependencies returns list of unavailable dependencies
+// GetMissingDependencies returns list of unavailable dependencies.
 func (v *Verifier) GetMissingDependencies(dependencies []string) []string {
 	missing := []string{}
 	for _, dep := range dependencies {
@@ -193,7 +193,7 @@ func Verify(dependency string) Result {
 	return NewVerifier(cfg).Verify(dependency)
 }
 
-// VerifyAll checks multiple dependencies (convenience function)
+// VerifyAll checks multiple dependencies (convenience function).
 func VerifyAll(dependencies []string) []Result {
 	cfg, err := loadConfig()
 	if err != nil {
@@ -210,12 +210,41 @@ func VerifyAll(dependencies []string) []Result {
 	return NewVerifier(cfg).VerifyAll(dependencies)
 }
 
-// IsAvailable quickly checks if a dependency is available (convenience function)
+// VerifyAllForPhase checks only dependencies that apply to the given phase.
+// Phase can be: "command", "build", "test", "scan", "lint".
+// Dependencies without phases are considered phase-agnostic and always included.
+func VerifyAllForPhase(dependencies []string, phase string) []Result {
+	cfg, err := loadConfig()
+	if err != nil {
+		results := make([]Result, len(dependencies))
+		for i, dep := range dependencies {
+			results[i] = Result{
+				Dependency: dep,
+				Available:  false,
+				Error:      fmt.Errorf("failed to load config: %w", err),
+			}
+		}
+		return results
+	}
+
+	// Filter dependencies by phase
+	var filtered []string
+	for _, depName := range dependencies {
+		dep := cfg.Get(depName)
+		if dep == nil || dep.AppliesToPhase(phase) {
+			filtered = append(filtered, depName)
+		}
+	}
+
+	return NewVerifier(cfg).VerifyAll(filtered)
+}
+
+// IsAvailable quickly checks if a dependency is available (convenience function).
 func IsAvailable(dependency string) bool {
 	return Verify(dependency).Available
 }
 
-// GetMissingDependencies returns list of unavailable dependencies (convenience function)
+// GetMissingDependencies returns list of unavailable dependencies (convenience function).
 func GetMissingDependencies(dependencies []string) []string {
 	cfg, err := loadConfig()
 	if err != nil {
@@ -224,7 +253,7 @@ func GetMissingDependencies(dependencies []string) []string {
 	return NewVerifier(cfg).GetMissingDependencies(dependencies)
 }
 
-// loadConfig loads the system dependencies config
+// loadConfig loads the system dependencies config.
 func loadConfig() (*config.SystemDependenciesConfig, error) {
 	eacCfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
@@ -236,7 +265,7 @@ func loadConfig() (*config.SystemDependenciesConfig, error) {
 	return eacCfg.SystemDependencies, nil
 }
 
-// compareVersions checks if actual >= required (both in major.minor format)
+// compareVersions checks if actual >= required (both in major.minor format).
 func compareVersions(actual, required string) (bool, error) {
 	actualParts := strings.Split(actual, ".")
 	requiredParts := strings.Split(required, ".")

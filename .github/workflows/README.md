@@ -276,10 +276,10 @@ The workflow detects pending releases from two sources and processes them in dep
 
 ### Release Types
 
-| Type     | Detection                                    | Versioning     | Examples          |
-| -------- | -------------------------------------------- | -------------- | ----------------- |
-| **Semver** | CHANGELOG version without corresponding tag | Developer sets | r2r-cli, ext-eac  |
-| **Calver** | Module had CI dispatched (auto-release)     | YYYY.MMDD.HHMM | docs, books       |
+| Type       | Detection                                    | Versioning     | Examples          |
+| ---------- | -------------------------------------------- | -------------- | ----------------- |
+| **Semver** | CHANGELOG version without corresponding tag  | Developer sets | r2r-cli, ext-eac  |
+| **Calver** | Module had CI dispatched (auto-release)      | YYYY.MMDD.HHMM | docs, books       |
 
 ### Unified Release Flow
 

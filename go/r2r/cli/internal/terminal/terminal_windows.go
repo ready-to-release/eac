@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 package terminal
@@ -7,7 +8,7 @@ import (
 	"unsafe"
 )
 
-// getTerminalSize implements terminal size detection for Windows
+// getTerminalSize implements terminal size detection for Windows.
 func getTerminalSize() (width, height int, err error) {
 	// First try the standard Windows API
 	kernel32 := syscall.NewLazyDLL("kernel32.dll")

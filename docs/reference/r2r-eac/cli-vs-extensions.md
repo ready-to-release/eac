@@ -114,7 +114,7 @@ Example: `.r2r/eac/` contains EAC-specific config like `ai-provider.yml`.
 
 ### Command Execution Flow
 
-```
+```text
 User runs: r2r eac build
 
    ↓
@@ -151,7 +151,7 @@ User runs: r2r eac build
 
 ### Two-Level Configuration
 
-```
+```text
 Project Root/
 ├── .r2r/
 │   ├── r2r-cli.yml              ← Tier 1: Framework config

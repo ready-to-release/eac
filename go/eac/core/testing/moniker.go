@@ -8,7 +8,7 @@ import (
 
 // GenerateTestMoniker generates a unique moniker for a test based on its type
 // For godog: module_feature-name_scenario-name (kebab-case)
-// For gotest: module_test-file_TestName (kebab-case)
+// For gotest: module_test-file_TestName (kebab-case).
 func GenerateTestMoniker(testRef TestReference, module string) string {
 	if testRef.Type == "godog" {
 		return generateGodogMoniker(testRef, module)
@@ -18,7 +18,7 @@ func GenerateTestMoniker(testRef TestReference, module string) string {
 
 // generateGodogMoniker creates moniker for Gherkin/Godog tests
 // Format: module_feature-name_scenario-name
-// Example: r2r-cli_cli-invocation_version-flag-displays-version
+// Example: r2r-cli_cli-invocation_version-flag-displays-version.
 func generateGodogMoniker(testRef TestReference, module string) string {
 	// Extract feature name from file path
 	// Path: specs/r2r-cli/cli-invocation/specification.feature
@@ -38,7 +38,7 @@ func generateGodogMoniker(testRef TestReference, module string) string {
 
 // generateGoTestMoniker creates moniker for Go unit tests
 // Format: module_test-file_TestName
-// Example: r2r-cli_install-test_TestInstallCommand-CreateConfigFile
+// Example: r2r-cli_install-test_TestInstallCommand-CreateConfigFile.
 func generateGoTestMoniker(testRef TestReference, module string) string {
 	// Extract test file name without extension
 	// Path: C:\projects\eac\go\r2r\cli\cmd\install_test.go
@@ -57,7 +57,7 @@ func generateGoTestMoniker(testRef TestReference, module string) string {
 }
 
 // extractFeatureName extracts the feature directory name from a feature file path
-// specs/r2r-cli/cli-invocation/specification.feature -> cli-invocation
+// specs/r2r-cli/cli-invocation/specification.feature -> cli-invocation.
 func extractFeatureName(filePath string) string {
 	normalized := filepath.ToSlash(filePath)
 	parts := strings.Split(normalized, "/")
@@ -79,7 +79,7 @@ func extractFeatureName(filePath string) string {
 }
 
 // extractTestFileName extracts the test file name without _test.go suffix
-// C:\projects\eac\go\r2r\cli\cmd\install_test.go -> install-test
+// C:\projects\eac\go\r2r\cli\cmd\install_test.go -> install-test.
 func extractTestFileName(filePath string) string {
 	base := filepath.Base(filePath)
 

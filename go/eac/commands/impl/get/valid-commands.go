@@ -22,7 +22,7 @@ func init() {
 
 // validCommandsFlags defines valid flags for the get valid-commands command
 
-// CommandInfo represents a command with its description
+// CommandInfo represents a command with its description.
 type CommandInfo struct {
 	Command     string `json:"command" yaml:"command"`
 	Description string `json:"description" yaml:"description"`

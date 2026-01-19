@@ -334,11 +334,11 @@ type repositoryContext struct {
 	tagConflicts []string
 
 	// Module hierarchy validation
-	moduleReport          *contractsreports.ModuleContractReport
-	dependencyErrors      []string
-	circularDependencies  []string
-	missingModules        []string
-	bidirectionalErrors   []string
+	moduleReport         *contractsreports.ModuleContractReport
+	dependencyErrors     []string
+	circularDependencies []string
+	missingModules       []string
+	bidirectionalErrors  []string
 
 	// File ownership validation
 	moduleFiles       []string
@@ -346,14 +346,14 @@ type repositoryContext struct {
 	multiOwnershipMap map[string][]string                   // file -> list of owning modules
 
 	// Build tags validation
-	godogTestFiles   []string
+	godogTestFiles     []string
 	filesWithBuildTags map[string]string // file -> build tag found
 
 	// Script location validation
-	scriptExtensions     []string
-	discoveredScripts    []string
-	disallowedScripts    []string
-	looseScriptsInType   []string
+	scriptExtensions   []string
+	discoveredScripts  []string
+	disallowedScripts  []string
+	looseScriptsInType []string
 
 	// Docs mermaid cache validation
 	mermaidBlocks         []mermaidBlockInfo
@@ -368,14 +368,14 @@ type repositoryContext struct {
 	uncachedStructurizrViews []structurizrViewInfo
 
 	// Release folder validation
-	releaseSubdirs       []string
-	orphanReleaseDirs    []string
-	releaseChangelogErrs map[string][]string
+	releaseSubdirs         []string
+	orphanReleaseDirs      []string
+	releaseChangelogErrs   map[string][]string
 	unexpectedReleaseFiles []string
 }
 
 // mermaidBlockInfo is a local struct for mermaid block tracking
-// (to avoid importing books package which violates module isolation)
+// (to avoid importing books package which violates module isolation).
 type mermaidBlockInfo struct {
 	content    string
 	hash       string
@@ -384,7 +384,7 @@ type mermaidBlockInfo struct {
 }
 
 // drawioImageInfo is a local struct for drawio image tracking
-// (to avoid importing books package which violates module isolation)
+// (to avoid importing books package which violates module isolation).
 type drawioImageInfo struct {
 	sourceFile string
 	relPath    string
@@ -392,12 +392,12 @@ type drawioImageInfo struct {
 }
 
 // structurizrViewInfo is a local struct for structurizr view tracking
-// (to avoid importing design package which violates module isolation)
+// (to avoid importing design package which violates module isolation).
 type structurizrViewInfo struct {
-	module   string // Module name (e.g., "eac-commands")
-	viewKey  string // View key (e.g., "SystemContext")
-	dslHash  string // Hash of workspace.dsl content
-	dslPath  string // Path to workspace.dsl file
+	module  string // Module name (e.g., "eac-commands")
+	viewKey string // View key (e.g., "SystemContext")
+	dslHash string // Hash of workspace.dsl content
+	dslPath string // Path to workspace.dsl file
 }
 
 func (c *repositoryContext) ensureRepoRoot() error {
@@ -457,10 +457,13 @@ func (c *repositoryContext) discoverAllGoModulesUsingContracts() error {
 	}
 
 	for _, module := range moduleReport.Registry.All() {
-		// In the unified type system, "go" is the only Go module type
-		if module.Type == "go" {
-			modulePath := filepath.Join(c.repoRoot, module.Files.Root)
-			c.discoveredModules = append(c.discoveredModules, modulePath)
+		// In the unified type system, check if module has "go" package type
+		if module.Components.HasComponent("go") {
+			goRoot := module.GetComponentRoot("go")
+			if goRoot != "" {
+				modulePath := filepath.Join(c.repoRoot, goRoot)
+				c.discoveredModules = append(c.discoveredModules, modulePath)
+			}
 		}
 	}
 
@@ -585,7 +588,6 @@ func (c *repositoryContext) validateFeatureFilesForConflictingLLevelTags() error
 	return nil
 }
 
-
 // ============================================================================
 // Then Steps
 // ============================================================================
@@ -684,4 +686,3 @@ func (c *repositoryContext) shouldNotSeeBuildErrors() error {
 	}
 	return nil
 }
-

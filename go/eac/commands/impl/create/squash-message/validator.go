@@ -7,15 +7,15 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
 )
 
-// SquashMessageValidator validates squash message output
+// SquashMessageValidator validates squash message output.
 type SquashMessageValidator struct{}
 
-// NewSquashMessageValidator creates a new validator
+// NewSquashMessageValidator creates a new validator.
 func NewSquashMessageValidator() *SquashMessageValidator {
 	return &SquashMessageValidator{}
 }
 
-// Validate validates the squash message output (formatted text)
+// Validate validates the squash message output (formatted text).
 func (v *SquashMessageValidator) Validate(output string, context map[string]interface{}) []contracts.ValidationError {
 	var errors []contracts.ValidationError
 
@@ -52,7 +52,7 @@ func (v *SquashMessageValidator) Validate(output string, context map[string]inte
 	return errors
 }
 
-// VerifyImplementation checks validator implementation
+// VerifyImplementation checks validator implementation.
 func (v *SquashMessageValidator) VerifyImplementation() []contracts.ValidationError {
 	return nil
 }

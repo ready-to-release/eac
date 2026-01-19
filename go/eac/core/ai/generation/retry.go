@@ -57,7 +57,7 @@ type RetryConfig struct {
 	TagsConfig *configpkg.TestingTagsConfig
 }
 
-// RetryResult holds the result of generation with retry
+// RetryResult holds the result of generation with retry.
 type RetryResult struct {
 	Output            string                       // Final formatted output
 	ValidationErrors  []validation.ValidationError // Validation errors (empty if valid)
@@ -181,10 +181,10 @@ func BuildRetryConfig(
 	}, nil
 }
 
-// RetryConfigOption configures optional RetryConfig fields using functional options pattern
+// RetryConfigOption configures optional RetryConfig fields using functional options pattern.
 type RetryConfigOption func(*retryConfigBuilder)
 
-// retryConfigBuilder holds optional configuration during RetryConfig construction
+// retryConfigBuilder holds optional configuration during RetryConfig construction.
 type retryConfigBuilder struct {
 	defaultMaxAttempts int
 	debug              bool
@@ -192,7 +192,7 @@ type retryConfigBuilder struct {
 	tagsConfig         *configpkg.TestingTagsConfig
 }
 
-// WithDebug enables debug mode for intermediate output logging
+// WithDebug enables debug mode for intermediate output logging.
 func WithDebug(debug bool) RetryConfigOption {
 	return func(cfg *retryConfigBuilder) {
 		cfg.debug = debug
@@ -278,7 +278,7 @@ func GenerateWithRetry(ctx context.Context, cfg *RetryConfig, prompt string) (*R
 	return result, nil
 }
 
-// validate checks that all required config fields are set
+// validate checks that all required config fields are set.
 func (cfg *RetryConfig) validate() error {
 	if cfg == nil {
 		return fmt.Errorf("config is nil")
@@ -298,7 +298,7 @@ func (cfg *RetryConfig) validate() error {
 	return nil
 }
 
-// getMaxAttempts returns configured max attempts or default
+// getMaxAttempts returns configured max attempts or default.
 func (cfg *RetryConfig) getMaxAttempts() int {
 	if cfg.MaxAttempts > 0 {
 		return cfg.MaxAttempts
@@ -306,7 +306,7 @@ func (cfg *RetryConfig) getMaxAttempts() int {
 	return defaultMaxAttempts
 }
 
-// getStrategy returns configured strategy or default StandardStrategy
+// getStrategy returns configured strategy or default StandardStrategy.
 func (cfg *RetryConfig) getStrategy() RetryStrategy {
 	if cfg.Strategy != nil {
 		return cfg.Strategy
@@ -315,7 +315,7 @@ func (cfg *RetryConfig) getStrategy() RetryStrategy {
 }
 
 // getLogger returns configured logger or no-op logger
-// NEVER returns component logger (logging.C()) to prevent writing to command log files
+// NEVER returns component logger (logging.C()) to prevent writing to command log files.
 func (cfg *RetryConfig) getLogger() *zap.Logger {
 	if cfg.Logger != nil {
 		return cfg.Logger
@@ -324,7 +324,7 @@ func (cfg *RetryConfig) getLogger() *zap.Logger {
 	return zap.NewNop()
 }
 
-// getProviderName extracts provider name from executor if available
+// getProviderName extracts provider name from executor if available.
 func (cfg *RetryConfig) getProviderName() string {
 	if provider, ok := cfg.Executor.(validation.AIExecutorWithProviderInfo); ok {
 		return provider.GetProviderName()
@@ -332,7 +332,7 @@ func (cfg *RetryConfig) getProviderName() string {
 	return "unknown"
 }
 
-// buildGenerator creates a StructuredGenerator from config
+// buildGenerator creates a StructuredGenerator from config.
 func (cfg *RetryConfig) buildGenerator(validator validation.Validator) *StructuredGenerator {
 	return &StructuredGenerator{
 		OutputFormat: cfg.OutputFormat,
@@ -345,7 +345,7 @@ func (cfg *RetryConfig) buildGenerator(validator validation.Validator) *Structur
 	}
 }
 
-// buildResult converts GenerationResult to RetryResult
+// buildResult converts GenerationResult to RetryResult.
 func (cfg *RetryConfig) buildResult(gr *GenerationResult) *RetryResult {
 	return &RetryResult{
 		Output:            gr.FormattedContent,
@@ -357,7 +357,7 @@ func (cfg *RetryConfig) buildResult(gr *GenerationResult) *RetryResult {
 	}
 }
 
-// logResult logs generation outcome
+// logResult logs generation outcome.
 func (cfg *RetryConfig) logResult(logger *zap.Logger, result *RetryResult, gr *GenerationResult) {
 	if len(gr.Errors) == 0 {
 		logger.Info("Generation successful",
@@ -369,7 +369,7 @@ func (cfg *RetryConfig) logResult(logger *zap.Logger, result *RetryResult, gr *G
 	}
 }
 
-// loadValidatorForFormat loads the appropriate validator for a given format
+// loadValidatorForFormat loads the appropriate validator for a given format.
 func loadValidatorForFormat(templateRoot, typeName string, format StructuredFormat, tagsConfig *configpkg.TestingTagsConfig) (validation.Validator, error) {
 	switch format {
 	case FormatJSON:

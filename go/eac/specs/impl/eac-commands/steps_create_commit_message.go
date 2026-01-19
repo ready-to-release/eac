@@ -48,7 +48,6 @@ func registerCreateCommitMessageSteps(sc *godog.ScenarioContext, ctx *internal.T
 		return nil
 	})
 
-
 	// Mock AI configuration
 	sc.Step(`^the mock AI is configured to return a valid commit message$`, func() error {
 		return internal.SetupMockAIFromAsset(ctx, "commit-message/mock-response.txt")
@@ -75,7 +74,6 @@ func registerCreateCommitMessageSteps(sc *godog.ScenarioContext, ctx *internal.T
 		state.commitMessage = output
 		return nil
 	})
-
 
 	// Module reference verification
 	sc.Step(`^the message references "([^"]*)"$`, func(module string) error {

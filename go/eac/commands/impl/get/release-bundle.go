@@ -56,14 +56,14 @@ func init() {
 	registry.Register(GetReleaseBundle)
 }
 
-// ReleaseBundleOutput is the structured output for get release-bundle
+// ReleaseBundleOutput is the structured output for get release-bundle.
 type ReleaseBundleOutput struct {
 	TitleFormat string                        `yaml:"title_format" json:"title_format"`
 	Headline    map[string]HeadlineModule     `yaml:"headline" json:"headline"`
 	Categories  []ReleaseBundleCategoryOutput `yaml:"categories" json:"categories"`
 }
 
-// HeadlineModule contains info about a headline module
+// HeadlineModule contains info about a headline module.
 type HeadlineModule struct {
 	Moniker    string `yaml:"moniker" json:"moniker"`
 	Name       string `yaml:"name" json:"name"`
@@ -73,14 +73,14 @@ type HeadlineModule struct {
 	ReleaseURL string `yaml:"release_url,omitempty" json:"release_url,omitempty"`
 }
 
-// ReleaseBundleCategoryOutput contains category info with enriched module details
+// ReleaseBundleCategoryOutput contains category info with enriched module details.
 type ReleaseBundleCategoryOutput struct {
 	Name        string                `yaml:"name" json:"name"`
 	Description string                `yaml:"description,omitempty" json:"description,omitempty"`
 	Modules     []ReleaseBundleModule `yaml:"modules" json:"modules"`
 }
 
-// ReleaseBundleModule contains module info for release bundle
+// ReleaseBundleModule contains module info for release bundle.
 type ReleaseBundleModule struct {
 	Moniker    string `yaml:"moniker" json:"moniker"`
 	Name       string `yaml:"name" json:"name"`
@@ -191,7 +191,7 @@ func GetReleaseBundle() int {
 }
 
 // formatAsFlat generates flat output for simple bash iteration.
-// Format: moniker|version|tag|category (one per line)
+// Format: moniker|version|tag|category (one per line).
 func formatAsFlat(data *ReleaseBundleOutput) string {
 	var sb strings.Builder
 
@@ -261,7 +261,7 @@ func formatAsTable(data *ReleaseBundleOutput) string {
 	return tb.Build()
 }
 
-// formatAsMarkdown generates release notes markdown from bundle data
+// formatAsMarkdown generates release notes markdown from bundle data.
 func formatAsMarkdown(data *ReleaseBundleOutput) string {
 	var sb strings.Builder
 
@@ -295,7 +295,7 @@ func formatAsMarkdown(data *ReleaseBundleOutput) string {
 	return sb.String()
 }
 
-// getGitHubReleases fetches release tags from GitHub using gh CLI
+// getGitHubReleases fetches release tags from GitHub using gh CLI.
 func getGitHubReleases() (map[string]string, error) {
 	// Run: gh release list --limit 100 --json tagName -q '.[].tagName'
 	cmd := exec.Command("gh", "release", "list", "--limit", "100", "--json", "tagName", "-q", ".[].tagName")
@@ -325,7 +325,7 @@ func getGitHubReleases() (map[string]string, error) {
 	return releases, nil
 }
 
-// getGitHubRepoURL returns the GitHub repository URL
+// getGitHubRepoURL returns the GitHub repository URL.
 func getGitHubRepoURL() string {
 	// Try to get from GITHUB_REPOSITORY env var
 	if repo := os.Getenv("GITHUB_REPOSITORY"); repo != "" {

@@ -6,6 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/conf"
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/extensions"
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/github"
@@ -91,7 +94,7 @@ Examples:
 		conf.InitConfig()
 
 		// Check for --load-local flag and temporarily override global setting
-		loadLocal, _ := cmd.Flags().GetBool("load-local")
+		loadLocal, _ := cmd.Flags().GetBool("load-local") //nolint:errcheck // flag registered in init
 		var originalLoadLocal bool
 		if loadLocal {
 			originalLoadLocal = conf.Global.LoadLocal
@@ -176,7 +179,7 @@ Examples:
 	},
 }
 
-// addExtensionToConfig adds an extension to the config file with the latest SHA version
+// addExtensionToConfig adds an extension to the config file with the latest SHA version.
 func addExtensionToConfig(extensionName string) error {
 	if extensionName == "" {
 		return fmt.Errorf("extension name is required")
@@ -211,7 +214,7 @@ func addExtensionToConfig(extensionName string) error {
 
 		// Ensure .r2r directory exists
 		r2rDir := filepath.Join(repoRoot, ".r2r")
-		if err := os.MkdirAll(r2rDir, 0755); err != nil {
+		if err := os.MkdirAll(r2rDir, 0o755); err != nil { //nolint:gosec // G301: config dir needs to be accessible
 			return fmt.Errorf("failed to create .r2r directory: %w", err)
 		}
 
@@ -277,7 +280,7 @@ func addExtensionToConfig(extensionName string) error {
 		// Extension exists, add it
 		extensions = append(extensions, map[string]interface{}{
 			"name":        extensionName,
-			"description": fmt.Sprintf("%s development environment", strings.Title(extensionName)),
+			"description": fmt.Sprintf("%s development environment", cases.Title(language.English).String(extensionName)),
 			"image":       fmt.Sprintf("ghcr.io/%s:latest", imagePath), // Will be replaced with SHA
 		})
 	}
@@ -297,8 +300,8 @@ func addExtensionToConfig(extensionName string) error {
 			continue
 		}
 
-		name, _ := extMap["name"].(string)
-		image, _ := extMap["image"].(string)
+		name, _ := extMap["name"].(string)   //nolint:errcheck // type assertion with fallback to empty string
+		image, _ := extMap["image"].(string) //nolint:errcheck // type assertion with fallback to empty string
 
 		if name != "" && image != "" {
 			tempConfig.Extensions = append(tempConfig.Extensions, conf.Extension{
@@ -310,7 +313,7 @@ func addExtensionToConfig(extensionName string) error {
 
 	// Use validatePinnedExtensions to get the latest SHA tags
 	// This function handles cache loading and registry fetching internally
-	unpinnedMessages, _ := conf.ValidatePinnedExtensions(tempConfig, false)
+	unpinnedMessages, _ := conf.ValidatePinnedExtensions(tempConfig, false) //nolint:errcheck // best-effort SHA resolution
 
 	// Parse the messages to extract the SHA tags
 	shaMap := make(map[string]string)
@@ -333,8 +336,8 @@ func addExtensionToConfig(extensionName string) error {
 			continue
 		}
 
-		name, _ := extMap["name"].(string)
-		image, _ := extMap["image"].(string)
+		name, _ := extMap["name"].(string)   //nolint:errcheck // type assertion with fallback to empty string
+		image, _ := extMap["image"].(string) //nolint:errcheck // type assertion with fallback to empty string
 
 		// Only update the extension we're adding
 		if name != extensionName {
@@ -385,7 +388,7 @@ func addExtensionToConfig(extensionName string) error {
 	}
 
 	orderedConfig := OrderedConfig{
-		Version:    configMap["version"].(string),
+		Version:    configMap["version"].(string), //nolint:errcheck // version field always present in valid config
 		Extensions: extensions,
 	}
 
@@ -396,7 +399,7 @@ func addExtensionToConfig(extensionName string) error {
 	}
 
 	// Write back to file
-	if err := os.WriteFile(configPath, updatedConfig, 0644); err != nil {
+	if err := os.WriteFile(configPath, updatedConfig, 0o644); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 

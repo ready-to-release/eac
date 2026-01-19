@@ -9,26 +9,26 @@ import (
 	"time"
 )
 
-// GitHubCLI defines operations for interacting with GitHub workflows
+// GitHubCLI defines operations for interacting with GitHub workflows.
 type GitHubCLI interface {
-	TriggerWorkflow(workflowFile string, ref string) (runID string, err error)
+	TriggerWorkflow(workflowFile, ref string) (runID string, err error)
 	WatchRun(runID string) error
 }
 
-// GitHubCLIImpl implements GitHubCLI using the gh CLI tool
+// GitHubCLIImpl implements GitHubCLI using the gh CLI tool.
 type GitHubCLIImpl struct {
 	repoPath string
 }
 
-// NewGitHubCLI creates a new GitHub CLI wrapper
+// NewGitHubCLI creates a new GitHub CLI wrapper.
 func NewGitHubCLI(repoPath string) GitHubCLI {
 	return &GitHubCLIImpl{
 		repoPath: repoPath,
 	}
 }
 
-// TriggerWorkflow triggers a GitHub workflow and returns the run ID
-func (g *GitHubCLIImpl) TriggerWorkflow(workflowFile string, ref string) (string, error) {
+// TriggerWorkflow triggers a GitHub workflow and returns the run ID.
+func (g *GitHubCLIImpl) TriggerWorkflow(workflowFile, ref string) (string, error) {
 	// Trigger the workflow
 	cmd := exec.Command("gh", "workflow", "run", workflowFile, "--ref", ref)
 	cmd.Dir = g.repoPath
@@ -58,7 +58,7 @@ func (g *GitHubCLIImpl) TriggerWorkflow(workflowFile string, ref string) (string
 	return runID, nil
 }
 
-// WatchRun watches a workflow run until completion and returns error if it fails
+// WatchRun watches a workflow run until completion and returns error if it fails.
 func (g *GitHubCLIImpl) WatchRun(runID string) error {
 	cmd := exec.Command("gh", "run", "watch", runID, "--exit-status")
 	cmd.Dir = g.repoPath

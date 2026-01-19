@@ -15,8 +15,6 @@ import (
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/logging"
 )
 
-type errMsg error
-
 type dockerPullMsg struct {
 	err error
 }

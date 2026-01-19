@@ -175,7 +175,7 @@ files:
 
 - `**` - Recursive match
 - `*` - Single-level match
-- `{specs_root}`, `{test_impl_root}` - Template variables
+- `{specs_root}`, `{moniker}`, `{root}`, `{type}` - Template variables
 
 ### Validation
 
@@ -565,7 +565,7 @@ r2r eac update-design <module>
 r2r eac show-modules               # Module table
 r2r eac show-dependencies          # Dependency graph
 r2r eac show-files                 # File ownership
-r2r eac show-moduletypes           # Module type table
+r2r eac show-component-types        # Component type table
 r2r eac get-modules                # Modules JSON
 r2r eac get-dependencies           # Dependencies JSON
 ```

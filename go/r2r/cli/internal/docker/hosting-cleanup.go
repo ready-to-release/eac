@@ -9,7 +9,7 @@ import (
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/logging"
 )
 
-// ContainerCleanupOptions configures container cleanup behavior
+// ContainerCleanupOptions configures container cleanup behavior.
 type ContainerCleanupOptions struct {
 	OnlyExtensions bool          // Only clean extension containers
 	IncludeRunning bool          // Also remove running containers (default: false)
@@ -17,14 +17,14 @@ type ContainerCleanupOptions struct {
 	DryRun         bool          // Show what would be removed without removing
 }
 
-// CleanupResult represents the result of a cleanup operation
+// CleanupResult represents the result of a cleanup operation.
 type CleanupResult struct {
 	ContainersRemoved int
 	SpaceReclaimed    int64
 	Errors            []error
 }
 
-// CleanupContainers removes containers based on the provided options
+// CleanupContainers removes containers based on the provided options.
 func (ch *ContainerHost) CleanupContainers(opts ContainerCleanupOptions) (*CleanupResult, error) {
 	result := &CleanupResult{}
 
@@ -68,7 +68,7 @@ func (ch *ContainerHost) CleanupContainers(opts ContainerCleanupOptions) (*Clean
 
 		// Container matches criteria, remove it
 		containerName := ctr.Names[0]
-		if len(containerName) > 0 && containerName[0] == '/' {
+		if containerName != "" && containerName[0] == '/' {
 			containerName = containerName[1:] // Remove leading slash
 		}
 
@@ -106,7 +106,7 @@ func (ch *ContainerHost) CleanupContainers(opts ContainerCleanupOptions) (*Clean
 	return result, nil
 }
 
-// CleanupStoppedContainers is a convenience wrapper for cleaning up all stopped containers
+// CleanupStoppedContainers is a convenience wrapper for cleaning up all stopped containers.
 func (ch *ContainerHost) CleanupStoppedContainers(dryRun bool) (*CleanupResult, error) {
 	return ch.CleanupContainers(ContainerCleanupOptions{
 		OnlyExtensions: false,
@@ -115,7 +115,7 @@ func (ch *ContainerHost) CleanupStoppedContainers(dryRun bool) (*CleanupResult, 
 	})
 }
 
-// CleanupExtensionContainers is a convenience wrapper for cleaning up extension containers
+// CleanupExtensionContainers is a convenience wrapper for cleaning up extension containers.
 func (ch *ContainerHost) CleanupExtensionContainers(includeRunning, dryRun bool) (*CleanupResult, error) {
 	return ch.CleanupContainers(ContainerCleanupOptions{
 		OnlyExtensions: true,
@@ -124,7 +124,7 @@ func (ch *ContainerHost) CleanupExtensionContainers(includeRunning, dryRun bool)
 	})
 }
 
-// CleanupOldContainers removes containers older than the specified duration
+// CleanupOldContainers removes containers older than the specified duration.
 func (ch *ContainerHost) CleanupOldContainers(olderThan time.Duration, dryRun bool) (*CleanupResult, error) {
 	return ch.CleanupContainers(ContainerCleanupOptions{
 		OnlyExtensions: false,

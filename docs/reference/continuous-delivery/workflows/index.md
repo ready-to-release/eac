@@ -13,14 +13,14 @@ The repository uses GitHub Actions workflows organized into four categories:
 
 ## In This Section
 
-| Reference                                           | Description                                           |
-| --------------------------------------------------- | ----------------------------------------------------- |
-| [Overview](./overview.md)                           | Workflow architecture and design principles           |
+| Reference                                           | Description                                               |
+| --------------------------------------------------- | --------------------------------------------------------- |
+| [Overview](./overview.md)                           | Workflow architecture and design principles               |
 | [Trigger Orchestration](./trigger-orchestration.md) | Change trigger orchestration system (change-trigger.yaml) |
-| [CI Workflows](./ci-workflows.md)                   | Module CI workflows (ci-\*.yaml)                      |
-| [Release Workflows](./release-workflows.md)         | Release workflows (release-\*.yaml)                   |
-| [Security Workflows](./security-workflows.md)       | Security scanning workflows (codeql.yaml)             |
-| [Scheduled Workflows](./scheduled-workflows.md)     | Scheduled workflows (cron-\*.yaml)                    |
+| [CI Workflows](./ci-workflows.md)                   | Module CI workflows (ci-\*.yaml)                          |
+| [Release Workflows](./release-workflows.md)         | Release workflows (release-\*.yaml)                       |
+| [Security Workflows](./security-workflows.md)       | Security scanning workflows (codeql.yaml)                 |
+| [Scheduled Workflows](./scheduled-workflows.md)     | Scheduled workflows (cron-\*.yaml)                        |
 
 ## Workflow Categories
 

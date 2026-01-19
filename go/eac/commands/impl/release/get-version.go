@@ -38,7 +38,7 @@ func init() {
 	registry.Register(ReleaseGetVersion)
 }
 
-// VersionInfo contains version information for JSON output
+// VersionInfo contains version information for JSON output.
 type VersionInfo struct {
 	Module      string `json:"module"`
 	Version     string `json:"version"`

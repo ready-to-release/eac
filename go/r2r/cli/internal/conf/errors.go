@@ -1,12 +1,13 @@
 package conf
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
 )
 
-// ConfigErrorType represents different types of configuration errors
+// ConfigErrorType represents different types of configuration errors.
 type ConfigErrorType int
 
 const (
@@ -18,7 +19,7 @@ const (
 	ErrorTypeValidationError
 )
 
-// ConfigError provides structured error information for configuration operations
+// ConfigError provides structured error information for configuration operations.
 type ConfigError struct {
 	Type       ConfigErrorType
 	Message    string
@@ -52,7 +53,7 @@ func (ce *ConfigError) Error() string {
 	return strings.Join(parts, "\n")
 }
 
-// NewRepositoryNotFoundError creates an error for when repository root cannot be found
+// NewRepositoryNotFoundError creates an error for when repository root cannot be found.
 func NewRepositoryNotFoundError(currentDir string) *ConfigError {
 	return &ConfigError{
 		Type:       ErrorTypeRepositoryNotFound,
@@ -61,7 +62,7 @@ func NewRepositoryNotFoundError(currentDir string) *ConfigError {
 	}
 }
 
-// NewConfigFileNotFoundError creates an error for missing configuration files
+// NewConfigFileNotFoundError creates an error for missing configuration files.
 func NewConfigFileNotFoundError(fileName, repoRoot string) *ConfigError {
 	configPath := filepath.Join(repoRoot, fileName)
 	return &ConfigError{
@@ -72,7 +73,7 @@ func NewConfigFileNotFoundError(fileName, repoRoot string) *ConfigError {
 	}
 }
 
-// NewConfigFilePermissionError creates an error for permission issues with config files
+// NewConfigFilePermissionError creates an error for permission issues with config files.
 func NewConfigFilePermissionError(filePath string, underlying error) *ConfigError {
 	return &ConfigError{
 		Type:       ErrorTypeConfigFilePermission,
@@ -83,7 +84,7 @@ func NewConfigFilePermissionError(filePath string, underlying error) *ConfigErro
 	}
 }
 
-// NewYAMLParseError creates an error for YAML parsing failures
+// NewYAMLParseError creates an error for YAML parsing failures.
 func NewYAMLParseError(filePath string, underlying error) *ConfigError {
 	suggestion := "Check YAML syntax - common issues include incorrect indentation, missing colons, or invalid characters"
 
@@ -108,7 +109,7 @@ func NewYAMLParseError(filePath string, underlying error) *ConfigError {
 	}
 }
 
-// NewYAMLUnmarshalError creates an error for YAML unmarshaling failures
+// NewYAMLUnmarshalError creates an error for YAML unmarshaling failures.
 func NewYAMLUnmarshalError(filePath string, underlying error) *ConfigError {
 	return &ConfigError{
 		Type:       ErrorTypeYAMLUnmarshalError,
@@ -119,12 +120,13 @@ func NewYAMLUnmarshalError(filePath string, underlying error) *ConfigError {
 	}
 }
 
-// NewValidationError creates an error for configuration validation failures
+// NewValidationError creates an error for configuration validation failures.
 func NewValidationError(filePath string, underlying error) *ConfigError {
 	suggestion := "Fix the validation errors listed above and ensure all required fields are present"
 
 	// If it's our custom ValidationError, provide more specific guidance
-	if validationErr, ok := underlying.(*ValidationError); ok {
+	validationErr := &ValidationError{}
+	if errors.As(underlying, &validationErr) {
 		if len(validationErr.Errors) == 1 {
 			suggestion = "Fix the validation error above"
 		} else {
@@ -141,15 +143,17 @@ func NewValidationError(filePath string, underlying error) *ConfigError {
 	}
 }
 
-// WrapConfigError wraps a generic error with configuration context
+// WrapConfigError wraps a generic error with configuration context.
 func WrapConfigError(err error, filePath string) error {
 	// If it's already a ConfigError, return as-is
-	if _, ok := err.(*ConfigError); ok {
+	configError := &ConfigError{}
+	if errors.As(err, &configError) {
 		return err
 	}
 
 	// If it's our ValidationError, wrap it appropriately
-	if _, ok := err.(*ValidationError); ok {
+	validationError := &ValidationError{}
+	if errors.As(err, &validationError) {
 		return NewValidationError(filePath, err)
 	}
 

@@ -56,10 +56,17 @@ func (r *MochaRunner) GetTestInfo(test testing.TestReference, workspaceRoot stri
 
 // findTsModuleForPath finds the module moniker for a given TypeScript path.
 func findTsModuleForPath(relPath string, cfg *config.EACConfig) string {
-	for _, module := range cfg.Repository.Modules {
-		moduleRoot := filepath.ToSlash(module.Files.Root)
-		if strings.HasPrefix(relPath, moduleRoot+"/") || relPath == moduleRoot {
-			return module.Moniker
+	for i := range cfg.Repository.Modules {
+		module := &cfg.Repository.Modules[i]
+		// Check all package roots for a match
+		for _, entry := range module.Components {
+			if entry == nil || entry.Root == "" {
+				continue
+			}
+			pkgRoot := filepath.ToSlash(entry.Root)
+			if strings.HasPrefix(relPath, pkgRoot+"/") || relPath == pkgRoot {
+				return module.Moniker
+			}
 		}
 	}
 	return ""
@@ -76,7 +83,7 @@ func (r *MochaRunner) FindTestRoot(testPath string, cfg *config.EACConfig) strin
 
 // BuildPackagePath constructs the package path for test grouping.
 // For mocha tests, we group by the test directory.
-func (r *MochaRunner) BuildPackagePath(testRoot string, testPath string) string {
+func (r *MochaRunner) BuildPackagePath(testRoot, testPath string) string {
 	// For mocha tests, the testRoot is the test directory path itself
 	return testRoot
 }
@@ -99,7 +106,7 @@ func (r *MochaRunner) Execute(pkgPath string, tests []testing.TestReference, tui
 		outputPath = sanitizePathForLog(pkgPath)
 	}
 	logDir := filepath.Join(cfg.TestRunDir, outputPath)
-	if err := os.MkdirAll(logDir, 0755); err != nil {
+	if err := os.MkdirAll(logDir, 0o755); err != nil {
 		fmt.Fprintf(tuiWriter, "Failed to create log directory: %v\n", err)
 		result.PackageFailed = true
 		return result
@@ -171,8 +178,18 @@ func (r *MochaRunner) Execute(pkgPath string, tests []testing.TestReference, tui
 	cmd.Env = append(cmd.Env, "R2R_TEST_LOGGING_ACTIVE=true")
 
 	// Capture stdout (JSON) and stderr separately
-	stdout, _ := cmd.StdoutPipe()
-	stderr, _ := cmd.StderrPipe()
+	stdout, pipeErr := cmd.StdoutPipe()
+	if pipeErr != nil {
+		fmt.Fprintf(tuiWriter, "Failed to create stdout pipe: %v\n", pipeErr)
+		result.PackageFailed = true
+		return result
+	}
+	stderr, pipeErr := cmd.StderrPipe()
+	if pipeErr != nil {
+		fmt.Fprintf(tuiWriter, "Failed to create stderr pipe: %v\n", pipeErr)
+		result.PackageFailed = true
+		return result
+	}
 
 	runErr := cmd.Start()
 	if runErr != nil {
@@ -182,10 +199,10 @@ func (r *MochaRunner) Execute(pkgPath string, tests []testing.TestReference, tui
 		return result
 	}
 
-	// Read stdout (JSON output)
-	jsonOutput, _ := io.ReadAll(stdout)
+	// Read stdout (JSON output) - ignore errors as partial data may be useful
+	jsonOutput, _ := io.ReadAll(stdout) //nolint:errcheck // partial data still useful
 	// Read stderr (error messages)
-	stderrOutput, _ := io.ReadAll(stderr)
+	stderrOutput, _ := io.ReadAll(stderr) //nolint:errcheck // partial data still useful
 
 	runErr = cmd.Wait()
 
@@ -199,7 +216,7 @@ func (r *MochaRunner) Execute(pkgPath string, tests []testing.TestReference, tui
 		if ctrfReport := convertMochaJSONToCTRF(jsonOutput); ctrfReport != nil {
 			if ctrfData, err := ctrfReport.ToJSON(); err == nil {
 				jsonPath := filepath.Join(logDir, "unit.json")
-				os.WriteFile(jsonPath, ctrfData, 0644)
+				_ = os.WriteFile(jsonPath, ctrfData, 0o644) //nolint:errcheck // best-effort artifact save
 				fmt.Fprintf(logFile, "CTRF JSON saved to unit.json (%d bytes)\n", len(ctrfData))
 			}
 		}
@@ -221,7 +238,7 @@ func (r *MochaRunner) Execute(pkgPath string, tests []testing.TestReference, tui
 	return result
 }
 
-// mochaReport represents mocha's native JSON output format
+// mochaReport represents mocha's native JSON output format.
 type mochaReport struct {
 	Stats struct {
 		Suites   int    `json:"suites"`
@@ -252,7 +269,7 @@ type mochaErr struct {
 	Stack   string `json:"stack"`
 }
 
-// mochaDurationMs converts mocha duration (already in ms) ensuring minimum 1ms for non-zero
+// mochaDurationMs converts mocha duration (already in ms) ensuring minimum 1ms for non-zero.
 func mochaDurationMs(ms float64) int64 {
 	if ms <= 0 {
 		return 0
@@ -264,7 +281,7 @@ func mochaDurationMs(ms float64) int64 {
 	return result
 }
 
-// convertMochaJSONToCTRF converts mocha's native JSON output to CTRF format
+// convertMochaJSONToCTRF converts mocha's native JSON output to CTRF format.
 func convertMochaJSONToCTRF(jsonData []byte) *ctrf.Report {
 	var mocha mochaReport
 	if err := json.Unmarshal(jsonData, &mocha); err != nil {

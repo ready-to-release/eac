@@ -1,6 +1,6 @@
 package config
 
-// TestSuitesConfig represents the test-suites.yml configuration
+// TestSuitesConfig represents the test-suites.yml configuration.
 type TestSuitesConfig struct {
 	Suites []TestSuiteDef `yaml:"suites"`
 
@@ -8,7 +8,7 @@ type TestSuitesConfig struct {
 	suiteMap map[string]*TestSuiteDef
 }
 
-// TestSuiteDef defines a single test suite
+// TestSuiteDef defines a single test suite.
 type TestSuiteDef struct {
 	Moniker       string        `yaml:"moniker"`
 	Name          string        `yaml:"name"`
@@ -17,14 +17,14 @@ type TestSuiteDef struct {
 	ExtendedSuite bool          `yaml:"extended_suite"` // If true, requires explicit selection (not in default runs)
 }
 
-// SelectorDef specifies criteria for selecting tests based on tags
+// SelectorDef specifies criteria for selecting tests based on tags.
 type SelectorDef struct {
 	RequireTags []string `yaml:"require_tags"`
 	AnyOfTags   []string `yaml:"any_of_tags"`
 	ExcludeTags []string `yaml:"exclude_tags"`
 }
 
-// buildSuiteMap constructs the internal lookup map
+// buildSuiteMap constructs the internal lookup map.
 func (c *TestSuitesConfig) buildSuiteMap() {
 	c.suiteMap = make(map[string]*TestSuiteDef, len(c.Suites))
 	for i := range c.Suites {
@@ -32,7 +32,7 @@ func (c *TestSuitesConfig) buildSuiteMap() {
 	}
 }
 
-// Get retrieves a suite definition by its moniker
+// Get retrieves a suite definition by its moniker.
 func (c *TestSuitesConfig) Get(moniker string) *TestSuiteDef {
 	if c.suiteMap == nil {
 		c.buildSuiteMap()
@@ -40,7 +40,7 @@ func (c *TestSuitesConfig) Get(moniker string) *TestSuiteDef {
 	return c.suiteMap[moniker]
 }
 
-// List returns all available suite monikers
+// List returns all available suite monikers.
 func (c *TestSuitesConfig) List() []string {
 	monikers := make([]string, len(c.Suites))
 	for i, suite := range c.Suites {
@@ -49,13 +49,13 @@ func (c *TestSuitesConfig) List() []string {
 	return monikers
 }
 
-// GetAll returns all suite definitions
+// GetAll returns all suite definitions.
 func (c *TestSuitesConfig) GetAll() []TestSuiteDef {
 	return c.Suites
 }
 
 // ListDefault returns monikers of suites that are included in default test runs
-// (those without extended_suite: true)
+// (those without extended_suite: true).
 func (c *TestSuitesConfig) ListDefault() []string {
 	var defaults []string
 	for _, suite := range c.Suites {

@@ -60,7 +60,7 @@ func ShowHelp() int {
 	return showAllCommands(verbose)
 }
 
-// showAllCommands lists all available commands
+// showAllCommands lists all available commands.
 func showAllCommands(verbose bool) int {
 	// Get sorted command names
 	var names []string
@@ -79,7 +79,7 @@ func showAllCommands(verbose bool) int {
 	return 0
 }
 
-// showParentHelp displays help for a command prefix that has subcommands but no direct registration
+// showParentHelp displays help for a command prefix that has subcommands but no direct registration.
 func showParentHelp(parentName string, subcommands []string, verbose bool) int {
 	commandRegistry := registry.GetCommandRegistry()
 
@@ -119,7 +119,7 @@ func showParentHelp(parentName string, subcommands []string, verbose bool) int {
 	return 0
 }
 
-// showCommandHelp displays detailed help for a specific command
+// showCommandHelp displays detailed help for a specific command.
 func showCommandHelp(commandName string, verbose bool) int {
 	commandRegistry := registry.GetCommandRegistry()
 
@@ -215,7 +215,7 @@ func showCommandHelp(commandName string, verbose bool) int {
 	return 0
 }
 
-// buildSynopsis builds a synopsis line for a command
+// buildSynopsis builds a synopsis line for a command.
 func buildSynopsis(reg *registry.CommandRegistration) string {
 	parts := []string{"eac", reg.ActualCommand}
 
@@ -230,7 +230,7 @@ func buildSynopsis(reg *registry.CommandRegistration) string {
 	return strings.Join(parts, " ")
 }
 
-// displayFlag formats and displays a single flag
+// displayFlag formats and displays a single flag.
 func displayFlag(flag registry.FlagMetadata) {
 	// Build flag name with shorthand
 	flagName := "--" + flag.Name
@@ -273,7 +273,7 @@ func displayFlag(flag registry.FlagMetadata) {
 	log.Info("")
 }
 
-// getSubcommands returns all subcommands for a given parent command
+// getSubcommands returns all subcommands for a given parent command.
 func getSubcommands(parentCommand string) []string {
 	commands := registry.GetCommands()
 	var subcommands []string
@@ -296,7 +296,7 @@ func getSubcommands(parentCommand string) []string {
 	return subcommands
 }
 
-// max returns the maximum of two integers
+// max returns the maximum of two integers.
 func max(a, b int) int {
 	if a > b {
 		return a

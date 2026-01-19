@@ -34,7 +34,7 @@ func init() {
 	registry.Register(ValidateDesign)
 }
 
-// ValidateDesign validates workspace files using Structurizr CLI
+// ValidateDesign validates workspace files using Structurizr CLI.
 func ValidateDesign() int {
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
@@ -128,7 +128,7 @@ func ValidateDesign() int {
 	}
 }
 
-func validateSingleModule(validator designInternal.StructurizrValidator, module string, file string, outputPath string, verbose bool) int {
+func validateSingleModule(validator designInternal.StructurizrValidator, module, file, outputPath string, verbose bool) int {
 	// Get repository root
 	repoRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
@@ -259,24 +259,30 @@ func printDesignValidateUsage() {
 	log.Info("  File:    out/logs/design/validation-results.json")
 }
 
-// getValidationOutputPath returns the absolute path to the validation output JSON file
+// getValidationOutputPath returns the absolute path to the validation output JSON file.
 func getValidationOutputPath(repoRoot string) (string, error) {
-	// Use out/logs/design directory
-	outDir := filepath.Join(paths.LogsPath(repoRoot), "design")
+	// Use out/design directory
+	outDir := paths.CommandLogsPath(repoRoot, "design")
 
 	// Create directory if it doesn't exist
-	if err := os.MkdirAll(outDir, 0755); err != nil {
+	if err := os.MkdirAll(outDir, 0o755); err != nil {
 		return "", fmt.Errorf("failed to create output directory: %w", err)
 	}
 
 	return filepath.Join(outDir, "validation-results.json"), nil
 }
 
-// formatDesignModuleList returns a formatted list of available modules
+// formatDesignModuleList returns a formatted list of available modules.
 func formatDesignModuleList(moduleReport *reports.ModuleContractReport) string {
 	var sb strings.Builder
 	for _, mod := range moduleReport.Registry.All() {
-		sb.WriteString(fmt.Sprintf("  - %s (source: %s)\n", mod.Moniker, mod.Files.Root))
+		// Get first package root for display
+		var displayRoot string
+		for _, root := range mod.GetComponentRoots() {
+			displayRoot = root
+			break
+		}
+		sb.WriteString(fmt.Sprintf("  - %s (source: %s)\n", mod.Moniker, displayRoot))
 	}
 	return sb.String()
 }

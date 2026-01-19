@@ -91,7 +91,7 @@ runs:
 
     - name: Check if Node.js is already available
       id: node-check
-      if: contains(steps.resolve.outputs.deps, 'node') || contains(steps.resolve.outputs.deps, 'npm')
+      if: contains(steps.resolve.outputs.deps, 'node') || contains(steps.resolve.outputs.deps, 'npm') || contains(steps.resolve.outputs.deps, 'markdownlint-cli2')
       shell: bash
       run: |
         if command -v node &> /dev/null; then
@@ -103,10 +103,31 @@ runs:
         fi
 
     - name: Setup Node.js
-      if: (contains(steps.resolve.outputs.deps, 'node') || contains(steps.resolve.outputs.deps, 'npm')) && steps.node-check.outputs.available != 'true'
+      if: (contains(steps.resolve.outputs.deps, 'node') || contains(steps.resolve.outputs.deps, 'npm') || contains(steps.resolve.outputs.deps, 'markdownlint-cli2')) && steps.node-check.outputs.available != 'true'
       uses: actions/setup-node@v4
       with:
         node-version: ${{ inputs.node-version }}
+
+    - name: Check if markdownlint-cli2 is available
+      id: markdownlint-check
+      if: contains(steps.resolve.outputs.deps, 'markdownlint-cli2')
+      shell: bash
+      run: |
+        if command -v markdownlint-cli2 &> /dev/null; then
+          echo "available=true" >> $GITHUB_OUTPUT
+          echo "✓ markdownlint-cli2 already installed"
+        else
+          echo "available=false" >> $GITHUB_OUTPUT
+          echo "markdownlint-cli2 not found - will install"
+        fi
+
+    - name: Install markdownlint-cli2
+      if: contains(steps.resolve.outputs.deps, 'markdownlint-cli2') && steps.markdownlint-check.outputs.available != 'true'
+      shell: bash
+      run: |
+        echo "Installing markdownlint-cli2..."
+        npm install -g markdownlint-cli2
+        echo "✓ markdownlint-cli2 installed"
 
     - name: Check if Docker Buildx builder supports cache export
       id: buildx-check
@@ -288,6 +309,7 @@ runs:
         BUILDX_AVAILABLE: ${{ steps.buildx-check.outputs.available }}
         QEMU_AVAILABLE: ${{ steps.qemu-check.outputs.available }}
         UPX_AVAILABLE: ${{ steps.upx-check.outputs.available }}
+        MARKDOWNLINT_AVAILABLE: ${{ steps.markdownlint-check.outputs.available }}
       run: |
         # Build flags for Go command
         FLAGS="--module=$MODULE --deps=$DEPS"
@@ -297,6 +319,7 @@ runs:
         [ "$BUILDX_AVAILABLE" = "true" ] && FLAGS="$FLAGS --buildx-available"
         [ "$QEMU_AVAILABLE" = "true" ] && FLAGS="$FLAGS --qemu-available"
         [ "$UPX_AVAILABLE" = "true" ] && FLAGS="$FLAGS --upx-available"
+        [ "$MARKDOWNLINT_AVAILABLE" = "true" ] && FLAGS="$FLAGS --markdownlint-available"
 
         # Generate summary using Go command
         ${COMMANDS:?COMMANDS not set} show deps-setup-summary $FLAGS >> $GITHUB_STEP_SUMMARY

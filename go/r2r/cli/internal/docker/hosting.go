@@ -11,7 +11,7 @@ import (
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/logging"
 )
 
-// ContainerMode defines how the container should be configured
+// ContainerMode defines how the container should be configured.
 type ContainerMode int
 
 const (
@@ -19,7 +19,7 @@ const (
 	ModeInteractive
 )
 
-// ExtensionConfig holds the configuration for an extension
+// ExtensionConfig holds the configuration for an extension.
 type ExtensionConfig struct {
 	Name               string
 	Image              string
@@ -29,14 +29,14 @@ type ExtensionConfig struct {
 	Env                []conf.EnvVar
 }
 
-// ContainerHost manages Docker container operations for extensions
+// ContainerHost manages Docker container operations for extensions.
 type ContainerHost struct {
 	client  DockerClient
 	ctx     context.Context
 	rootDir string
 }
 
-// NewContainerHost creates a new ContainerHost instance
+// NewContainerHost creates a new ContainerHost instance.
 func NewContainerHost() (*ContainerHost, error) {
 	ctx := context.Background()
 
@@ -68,7 +68,7 @@ func NewContainerHost() (*ContainerHost, error) {
 			strings.Contains(errStr, "cannot connect to the Docker daemon") ||
 			strings.Contains(errStr, "Is the docker daemon running") ||
 			strings.Contains(errStr, "system cannot find the file specified") {
-			return nil, fmt.Errorf("Docker service is not running. Please start Docker Desktop or the Docker daemon and try again")
+			return nil, fmt.Errorf("docker service is not running: please start Docker Desktop or the Docker daemon and try again")
 		}
 		return nil, fmt.Errorf("cannot connect to Docker daemon: %w", pingErr)
 	}
@@ -85,7 +85,7 @@ func NewContainerHost() (*ContainerHost, error) {
 	}, nil
 }
 
-// ValidateExtensions checks if extensions are configured
+// ValidateExtensions checks if extensions are configured.
 func (ch *ContainerHost) ValidateExtensions() error {
 	if len(conf.Global.Extensions) == 0 {
 		return fmt.Errorf("config file does not contain any extensions. Please run 'r2r init' to initialize the configuration")
@@ -93,7 +93,7 @@ func (ch *ContainerHost) ValidateExtensions() error {
 	return nil
 }
 
-// FindExtension locates an extension by name in the configuration
+// FindExtension locates an extension by name in the configuration.
 func (ch *ContainerHost) FindExtension(name string) (*ExtensionConfig, error) {
 	for _, ext := range conf.Global.Extensions {
 		if ext.Name == name {

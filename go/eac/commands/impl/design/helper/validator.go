@@ -20,7 +20,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
-// FileValidationResult represents the outcome of validating a single DSL file
+// FileValidationResult represents the outcome of validating a single DSL file.
 type FileValidationResult struct {
 	FileName      string              `json:"file_name"`      // File name (e.g., "workspace.dsl")
 	FilePath      string              `json:"file_path"`      // Full path to file
@@ -31,7 +31,7 @@ type FileValidationResult struct {
 	ExecutionTime time.Duration       `json:"execution_time"` // Time taken to validate
 }
 
-// ValidationResult represents the outcome of validating a module's workspace(s)
+// ValidationResult represents the outcome of validating a module's workspace(s).
 type ValidationResult struct {
 	Module        string                 `json:"module"`          // Module name (e.g., "r2r-cli")
 	WorkspacePath string                 `json:"workspace_path"`  // Path to workspace.dsl file (backward compat)
@@ -45,7 +45,7 @@ type ValidationResult struct {
 	TotalFiles    int                    `json:"total_files"`     // Number of files validated
 }
 
-// ValidationMessage represents a single error or warning
+// ValidationMessage represents a single error or warning.
 type ValidationMessage struct {
 	Severity string `json:"severity"` // "error" or "warning"
 	Message  string `json:"message"`  // The validation message
@@ -53,7 +53,7 @@ type ValidationMessage struct {
 	Column   int    `json:"column"`   // Column number (if available)
 }
 
-// ValidationSummary aggregates results for multiple modules
+// ValidationSummary aggregates results for multiple modules.
 type ValidationSummary struct {
 	TotalModules  int                `json:"total_modules"`  // Number of modules validated
 	PassedModules int                `json:"passed_modules"` // Number that passed
@@ -65,7 +65,7 @@ type ValidationSummary struct {
 	Timestamp     time.Time          `json:"timestamp"`      // When validation occurred
 }
 
-// StructurizrValidator validates workspaces using Structurizr CLI via Docker
+// StructurizrValidator validates workspaces using Structurizr CLI via Docker.
 type StructurizrValidator interface {
 	// ValidateModule validates a single module's workspace(s)
 	// Validates all DSL files in the module's .design folder (except _*.dsl fragments)
@@ -81,16 +81,15 @@ type StructurizrValidator interface {
 	IsDockerRunning() bool
 }
 
-// StructurizrValidatorImpl is the concrete implementation
-type StructurizrValidatorImpl struct {
-}
+// StructurizrValidatorImpl is the concrete implementation.
+type StructurizrValidatorImpl struct{}
 
-// NewValidator creates a new Structurizr validator
+// NewValidator creates a new Structurizr validator.
 func NewValidator() (StructurizrValidator, error) {
 	return &StructurizrValidatorImpl{}, nil
 }
 
-// moduleInfo represents a module with workspace file(s)
+// moduleInfo represents a module with workspace file(s).
 type moduleInfo struct {
 	Name  string   // Module name/moniker
 	Path  string   // Path to .design directory
@@ -98,7 +97,7 @@ type moduleInfo struct {
 }
 
 // listAvailableModules returns all modules that have DSL files in their .design folder
-// Uses the new multi-file discovery (excludes _*.dsl fragments)
+// Uses the new multi-file discovery (excludes _*.dsl fragments).
 func listAvailableModules() ([]moduleInfo, error) {
 	// Get repository root
 	repoRoot, err := repository.GetRepositoryRoot("")
@@ -151,7 +150,7 @@ func listAvailableModules() ([]moduleInfo, error) {
 	return modules, nil
 }
 
-// IsDockerRunning checks if Docker daemon is available
+// IsDockerRunning checks if Docker daemon is available.
 func (v *StructurizrValidatorImpl) IsDockerRunning() bool {
 	cmd := exec.Command("docker", "ps")
 	err := cmd.Run()
@@ -159,7 +158,7 @@ func (v *StructurizrValidatorImpl) IsDockerRunning() bool {
 }
 
 // ValidateModule validates all DSL files in a module's .design folder
-// Files starting with "_" are skipped (they are fragments for !include)
+// Files starting with "_" are skipped (they are fragments for !include).
 func (v *StructurizrValidatorImpl) ValidateModule(moduleName string) (*ValidationResult, error) {
 	// Check Docker first
 	if !v.IsDockerRunning() {
@@ -248,7 +247,7 @@ func (v *StructurizrValidatorImpl) ValidateModule(moduleName string) (*Validatio
 	return result, nil
 }
 
-// ValidateModuleFile validates a specific DSL file within a module
+// ValidateModuleFile validates a specific DSL file within a module.
 func (v *StructurizrValidatorImpl) ValidateModuleFile(moduleName, fileName string) (*ValidationResult, error) {
 	// Check Docker first
 	if !v.IsDockerRunning() {
@@ -299,7 +298,7 @@ func (v *StructurizrValidatorImpl) ValidateModuleFile(moduleName, fileName strin
 }
 
 // ValidateWorkspacePath validates a workspace file at an absolute path
-// This method allows validation without requiring specific directory structure
+// This method allows validation without requiring specific directory structure.
 func (v *StructurizrValidatorImpl) ValidateWorkspacePath(workspacePath string) (*ValidationResult, error) {
 	// Check Docker first
 	if !v.IsDockerRunning() {
@@ -330,7 +329,7 @@ func (v *StructurizrValidatorImpl) ValidateWorkspacePath(workspacePath string) (
 	return result, nil
 }
 
-// ValidateAll validates all modules with workspaces
+// ValidateAll validates all modules with workspaces.
 func (v *StructurizrValidatorImpl) ValidateAll() (*ValidationSummary, error) {
 	// Check Docker first
 	if !v.IsDockerRunning() {
@@ -396,7 +395,7 @@ func (v *StructurizrValidatorImpl) ValidateAll() (*ValidationSummary, error) {
 }
 
 // executeDockerValidation runs Structurizr Lite validation in Docker container
-// Uses Lite instead of CLI to ensure same validation rules as serve command
+// Uses Lite instead of CLI to ensure same validation rules as serve command.
 func (v *StructurizrValidatorImpl) executeDockerValidation(workspacePath string) (string, error) {
 	// Get absolute path for volume mount
 	absWorkspacePath, err := filepath.Abs(workspacePath)
@@ -465,14 +464,14 @@ func (v *StructurizrValidatorImpl) executeDockerValidation(workspacePath string)
 	return output, nil
 }
 
-// limitedBuffer is a buffer that limits the amount of data it can hold
+// limitedBuffer is a buffer that limits the amount of data it can hold.
 type limitedBuffer struct {
 	buf   bytes.Buffer
 	limit int64
 	total int64
 }
 
-// Write implements io.Writer with size limit
+// Write implements io.Writer with size limit.
 func (lb *limitedBuffer) Write(p []byte) (n int, err error) {
 	// Check if we're already over the limit
 	if lb.total >= lb.limit {
@@ -500,13 +499,13 @@ func (lb *limitedBuffer) Write(p []byte) (n int, err error) {
 	return n, err
 }
 
-// String returns the buffer contents as a string
+// String returns the buffer contents as a string.
 func (lb *limitedBuffer) String() string {
 	return lb.buf.String()
 }
 
 // formatDockerVolume formats a file path for Docker volume mounting
-// On Windows, converts C:\path\to\dir to /c/path/to/dir for Docker compatibility
+// On Windows, converts C:\path\to\dir to /c/path/to/dir for Docker compatibility.
 func formatDockerVolume(path string) string {
 	// On Windows, Docker volume mounts need Unix-style paths
 	// Convert C:\path\to\dir to /c/path/to/dir
@@ -521,7 +520,7 @@ func formatDockerVolume(path string) string {
 	return path
 }
 
-// parseValidationOutput parses Structurizr CLI output from Docker container
+// parseValidationOutput parses Structurizr CLI output from Docker container.
 func (v *StructurizrValidatorImpl) parseValidationOutput(raw string) *ValidationResult {
 	result := &ValidationResult{
 		RawOutput: raw,
@@ -555,11 +554,12 @@ func (v *StructurizrValidatorImpl) parseValidationOutput(raw string) *Validation
 			result.Valid = false
 
 			// Extract line number from patterns like "at line 62", "line 62", or "Line 15:"
+			// Parse errors default to line 0 (file-level error)
 			lineNum := 0
 			if matches := regexp.MustCompile(`(?i)at line (\d+)`).FindStringSubmatch(line); len(matches) > 1 {
-				lineNum, _ = strconv.Atoi(matches[1])
+				lineNum, _ = strconv.Atoi(matches[1]) //nolint:errcheck // default 0 on parse error
 			} else if matches := regexp.MustCompile(`(?i)line (\d+)`).FindStringSubmatch(line); len(matches) > 1 {
-				lineNum, _ = strconv.Atoi(matches[1])
+				lineNum, _ = strconv.Atoi(matches[1]) //nolint:errcheck // default 0 on parse error
 			}
 
 			result.Errors = append(result.Errors, ValidationMessage{
@@ -571,10 +571,10 @@ func (v *StructurizrValidatorImpl) parseValidationOutput(raw string) *Validation
 
 		// Check for warning patterns
 		if strings.Contains(line, "WARNING") || strings.Contains(line, "warning") {
-			// Extract line number from warnings too
+			// Extract line number from warnings too (default 0 on parse error)
 			lineNum := 0
 			if matches := regexp.MustCompile(`(?i)line (\d+)`).FindStringSubmatch(line); len(matches) > 1 {
-				lineNum, _ = strconv.Atoi(matches[1])
+				lineNum, _ = strconv.Atoi(matches[1]) //nolint:errcheck // default 0 on parse error
 			}
 
 			result.Warnings = append(result.Warnings, ValidationMessage{
@@ -588,7 +588,7 @@ func (v *StructurizrValidatorImpl) parseValidationOutput(raw string) *Validation
 	return result
 }
 
-// MarshalJSON customizes JSON encoding for time.Duration
+// MarshalJSON customizes JSON encoding for time.Duration.
 func (r ValidationResult) MarshalJSON() ([]byte, error) {
 	type Alias ValidationResult
 	return json.Marshal(&struct {
@@ -600,7 +600,7 @@ func (r ValidationResult) MarshalJSON() ([]byte, error) {
 	})
 }
 
-// MarshalJSON customizes JSON encoding for time.Duration in summary
+// MarshalJSON customizes JSON encoding for time.Duration in summary.
 func (s ValidationSummary) MarshalJSON() ([]byte, error) {
 	type Alias ValidationSummary
 	return json.Marshal(&struct {
@@ -612,7 +612,7 @@ func (s ValidationSummary) MarshalJSON() ([]byte, error) {
 	})
 }
 
-// MarshalJSON customizes JSON encoding for time.Duration in file results
+// MarshalJSON customizes JSON encoding for time.Duration in file results.
 func (f FileValidationResult) MarshalJSON() ([]byte, error) {
 	type Alias FileValidationResult
 	return json.Marshal(&struct {

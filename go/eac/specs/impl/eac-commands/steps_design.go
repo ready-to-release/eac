@@ -220,9 +220,9 @@ func createModuleContract(ctx *internal.TestContext, module, sourcePath string) 
 
 	// Append our test module
 	testModule := map[string]interface{}{
-		"moniker": module,
-		"name":    fmt.Sprintf("Test Module %s", module),
-		"type":    "go-module",
+		"moniker":     module,
+		"name":        fmt.Sprintf("Test Module %s", module),
+		"type":        "go-module",
 		"description": "Test module for BDD tests",
 		"files": map[string]interface{}{
 			"root": sourcePath,
@@ -238,7 +238,7 @@ func createModuleContract(ctx *internal.TestContext, module, sourcePath string) 
 	}
 
 	// Write back to file
-	if err := os.WriteFile(repoYmlPath, updatedData, 0644); err != nil {
+	if err := os.WriteFile(repoYmlPath, updatedData, 0o644); err != nil {
 		return fmt.Errorf("failed to write updated repository.yml: %w", err)
 	}
 
@@ -305,4 +305,3 @@ agent_signatures: []
 `
 	return internal.CreateFile(ctx, antiCorruptionYml, antiCorruptionContent)
 }
-

@@ -7,13 +7,13 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 )
 
-// ModuleDependency represents a single dependency relationship
+// ModuleDependency represents a single dependency relationship.
 type ModuleDependency struct {
 	From string `json:"from" yaml:"from"` // Module that depends on another
 	To   string `json:"to" yaml:"to"`     // Module that is depended upon
 }
 
-// ModuleDependencyGraph represents the full dependency graph
+// ModuleDependencyGraph represents the full dependency graph.
 type ModuleDependencyGraph struct {
 	Modules      []string             `json:"modules" yaml:"modules"`           // All module monikers
 	Dependencies map[string][]string  `json:"dependencies" yaml:"dependencies"` // Module -> its dependencies
@@ -22,7 +22,7 @@ type ModuleDependencyGraph struct {
 	Stats        DependencyGraphStats `json:"stats" yaml:"stats"`               // Graph statistics
 }
 
-// DependencyGraphStats provides statistics about the dependency graph
+// DependencyGraphStats provides statistics about the dependency graph.
 type DependencyGraphStats struct {
 	TotalModules      int `json:"total_modules" yaml:"total_modules"`
 	TotalDependencies int `json:"total_dependencies" yaml:"total_dependencies"`
@@ -32,14 +32,14 @@ type DependencyGraphStats struct {
 	MaxDependents     int `json:"max_dependents" yaml:"max_dependents"`     // Maximum dependents for any module
 }
 
-// ExecutionPlan represents a layered execution plan for modules
+// ExecutionPlan represents a layered execution plan for modules.
 type ExecutionPlan struct {
 	Layers         [][]string `json:"layers" yaml:"layers"`                   // Modules grouped by dependency layer
 	ExecutionOrder []string   `json:"execution_order" yaml:"execution_order"` // Flattened order of all modules
 	LayerCount     int        `json:"layer_count" yaml:"layer_count"`         // Number of layers
 }
 
-// GetModuleDependencyGraph builds a complete dependency graph for all modules
+// GetModuleDependencyGraph builds a complete dependency graph for all modules.
 func GetModuleDependencyGraph(rootPath string) (*ModuleDependencyGraph, error) {
 	if rootPath == "" {
 		var err error
@@ -83,7 +83,7 @@ func GetModuleDependencyGraph(rootPath string) (*ModuleDependencyGraph, error) {
 	}, nil
 }
 
-// calculateGraphStats computes statistics about the dependency graph
+// calculateGraphStats computes statistics about the dependency graph.
 func calculateGraphStats(monikers []string, dependencies, dependents map[string][]string) DependencyGraphStats {
 	stats := DependencyGraphStats{
 		TotalModules: len(monikers),
@@ -134,7 +134,7 @@ func calculateGraphStats(monikers []string, dependencies, dependents map[string]
 //
 // Optional includeDependencies parameter (default true):
 // - true: expands monikers to include all transitive dependencies
-// - false: only builds exactly the specified modules
+// - false: only builds exactly the specified modules.
 func CalculateExecutionOrder(monikers []string, rootPath string, includeDependencies ...bool) (*ExecutionPlan, error) {
 	// Default to including dependencies
 	includeDeps := true
@@ -257,7 +257,7 @@ func CalculateExecutionOrder(monikers []string, rootPath string, includeDependen
 }
 
 // addDependenciesRecursive recursively adds all dependencies of a module
-// Returns error listing all missing dependencies found
+// Returns error listing all missing dependencies found.
 func addDependenciesRecursive(moniker string, registry *modules.Registry, result map[string]bool) error {
 	module, exists := registry.Get(moniker)
 	if !exists {
@@ -288,7 +288,7 @@ func addDependenciesRecursive(moniker string, registry *modules.Registry, result
 	return nil
 }
 
-// GetChangedModules returns modules that own the given changed files
+// GetChangedModules returns modules that own the given changed files.
 func GetChangedModules(changedFiles []string, rootPath string) ([]string, error) {
 	if rootPath == "" {
 		var err error
@@ -393,7 +393,7 @@ func addTransitiveDependents(module string, dependentsGraph map[string][]string,
 	}
 }
 
-// GetPlantUMLDiagram generates a PlantUML diagram from the dependency graph
+// GetPlantUMLDiagram generates a PlantUML diagram from the dependency graph.
 func GetPlantUMLDiagram(graph *ModuleDependencyGraph) string {
 	output := "@startuml\n"
 	output += "!theme plain\n"
@@ -416,7 +416,7 @@ func GetPlantUMLDiagram(graph *ModuleDependencyGraph) string {
 	return output
 }
 
-// GetMermaidDiagram generates a Mermaid diagram from the dependency graph
+// GetMermaidDiagram generates a Mermaid diagram from the dependency graph.
 func GetMermaidDiagram(graph *ModuleDependencyGraph) string {
 	output := "```mermaid\n"
 	output += "graph TD\n"
@@ -433,7 +433,7 @@ func GetMermaidDiagram(graph *ModuleDependencyGraph) string {
 	return output
 }
 
-// sanitizeMermaidID converts a module moniker to a valid Mermaid node ID
+// sanitizeMermaidID converts a module moniker to a valid Mermaid node ID.
 func sanitizeMermaidID(moniker string) string {
 	// Replace hyphens and other special characters with underscores
 	result := ""

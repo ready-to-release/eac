@@ -9,9 +9,8 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 )
 
-
 // Global process-level cache for module contracts
-// This prevents repeated parsing of module.contract.yaml files across parallel test packages
+// This prevents repeated parsing of module.contract.yaml files across parallel test packages.
 var (
 	globalModuleContractCache     *ModuleContractCache
 	globalModuleContractCacheOnce sync.Once
@@ -104,7 +103,7 @@ func (c *ModuleContractCache) GetReport() *ModuleContractReport {
 	return c.report
 }
 
-// ModuleContractReport contains information about loaded module contracts
+// ModuleContractReport contains information about loaded module contracts.
 type ModuleContractReport struct {
 	TotalModules int
 	Modules      []*modules.ModuleContract
@@ -167,7 +166,7 @@ func buildModuleContractReport(registry *modules.Registry) (*ModuleContractRepor
 	return report, nil
 }
 
-// FormatReport returns a formatted string representation of the module contracts
+// FormatReport returns a formatted string representation of the module contracts.
 func (r *ModuleContractReport) FormatReport() string {
 	var sb strings.Builder
 
@@ -179,15 +178,15 @@ func (r *ModuleContractReport) FormatReport() string {
 	for i, module := range r.Modules {
 		sb.WriteString(fmt.Sprintf("%d. %s\n", i+1, module.Moniker))
 		sb.WriteString(fmt.Sprintf("   Name: %s\n", module.Name))
-		sb.WriteString(fmt.Sprintf("   Type: %s\n", module.Type))
-		sb.WriteString(fmt.Sprintf("   Root: %s\n", module.Files.Root))
+		sb.WriteString(fmt.Sprintf("   Packages: %s\n", module.GetComponentTypesDisplay()))
 		sb.WriteString(fmt.Sprintf("   Description: %s\n", module.Description))
 
-		// Source patterns
-		if len(module.Files.Source) > 0 {
-			sb.WriteString("   Source patterns:\n")
-			for _, pattern := range module.Files.Source {
-				sb.WriteString(fmt.Sprintf("     - %s\n", pattern))
+		// Packages
+		roots := module.GetComponentRoots()
+		if len(roots) > 0 {
+			sb.WriteString("   Packages:\n")
+			for pkgName, root := range roots {
+				sb.WriteString(fmt.Sprintf("     - %s: %s\n", pkgName, root))
 			}
 		}
 
@@ -208,74 +207,74 @@ func (r *ModuleContractReport) FormatReport() string {
 	return sb.String()
 }
 
-// FormatCompact returns a compact one-line-per-module format
+// FormatCompact returns a compact one-line-per-module format.
 func (r *ModuleContractReport) FormatCompact() string {
 	var sb strings.Builder
 
 	sb.WriteString(fmt.Sprintf("=== Module Contracts (%d modules) ===\n\n", r.TotalModules))
 
 	for _, module := range r.Modules {
-		sb.WriteString(fmt.Sprintf("%-30s %-20s %s\n", module.Moniker, module.Type, module.Files.Root))
+		pkgList := module.GetComponentTypesDisplay()
+		sb.WriteString(fmt.Sprintf("%-30s %s\n", module.Moniker, pkgList))
 	}
 
 	return sb.String()
 }
 
-// GetModuleByMoniker returns a specific module contract by moniker
+// GetModuleByMoniker returns a specific module contract by moniker.
 func (r *ModuleContractReport) GetModuleByMoniker(moniker string) (*modules.ModuleContract, bool) {
 	return r.Registry.Get(moniker)
 }
 
-// GetModulesByType returns all modules of a specific type
-func (r *ModuleContractReport) GetModulesByType(moduleType string) []*modules.ModuleContract {
-	return r.Registry.FilterByType(moduleType)
+// GetModulesByComponent returns all modules that have a specific component type.
+func (r *ModuleContractReport) GetModulesByComponent(compType string) []*modules.ModuleContract {
+	return r.Registry.FilterByComponent(compType)
 }
 
-// GetModulesByRoot returns modules with a specific root path
+// GetModulesByRoot returns modules that have a component at the given root path.
 func (r *ModuleContractReport) GetModulesByRoot(root string) []*modules.ModuleContract {
-	var result []*modules.ModuleContract
-	for _, module := range r.Modules {
-		if module.Files.Root == root {
-			result = append(result, module)
-		}
-	}
-	return result
+	return r.Registry.FindByRoot(root)
 }
 
-// GetDependencyGraph returns the dependency relationships
+// GetDependencyGraph returns the dependency relationships.
 func (r *ModuleContractReport) GetDependencyGraph() map[string][]string {
 	return r.Registry.GetDependencyGraph()
 }
 
-// GetReverseDependencyGraph returns the reverse dependency relationships
+// GetReverseDependencyGraph returns the reverse dependency relationships.
 func (r *ModuleContractReport) GetReverseDependencyGraph() map[string][]string {
 	return r.Registry.GetReverseDependencyGraph()
 }
 
-// GetModulesWithPattern returns modules that use a specific glob pattern
+// GetModulesWithPattern returns modules that use a specific glob pattern.
 func (r *ModuleContractReport) GetModulesWithPattern(pattern string) []*modules.ModuleContract {
 	var result []*modules.ModuleContract
 	for _, module := range r.Modules {
-		// Check all pattern categories
-		allPatterns := append(module.Files.Source, module.Files.Config...)
-		allPatterns = append(allPatterns, module.Files.Assets...)
-		allPatterns = append(allPatterns, module.Files.Tests...)
-		for _, p := range allPatterns {
-			if p == pattern {
-				result = append(result, module)
-				break
+		// Check patterns in all components
+		for _, pkg := range module.Components {
+			if pkg == nil || pkg.Patterns == nil {
+				continue
+			}
+			allPatterns := append(pkg.Patterns.Source, pkg.Patterns.Config...)
+			allPatterns = append(allPatterns, pkg.Patterns.Tests...)
+			for _, p := range allPatterns {
+				if p == pattern {
+					result = append(result, module)
+					break
+				}
 			}
 		}
 	}
 	return result
 }
 
-// PrintSummary prints a concise summary of the loaded contracts
+// PrintSummary prints a concise summary of the loaded contracts.
 func (r *ModuleContractReport) PrintSummary() {
-
-	// Count by type
-	typeCount := make(map[string]int)
+	// Count modules by package type
+	pkgCount := make(map[string]int)
 	for _, module := range r.Modules {
-		typeCount[module.Type]++
+		for _, pkg := range module.GetEnabledComponents() {
+			pkgCount[pkg]++
+		}
 	}
 }

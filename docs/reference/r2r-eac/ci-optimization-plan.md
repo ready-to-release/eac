@@ -84,14 +84,14 @@ jobs:
 
 **Current flow**:
 
-```
+```text
 build-tooling → uploads commands-binary artifact
 detect-changes → downloads commands-binary artifact
 ```
 
 **Proposed flow**:
 
-```
+```text
 build-tooling → build + upload artifact
 detect-changes → download artifact (only if not local)
 ```
@@ -203,15 +203,15 @@ trigger-release:  # Auto-triggers on main
 
 ## Implementation Priority
 
-| Priority | Optimization                   | Est. Savings     | Complexity |
-| -------- | ------------------------------ | ---------------- | ---------- |
-| 1        | Remove verbose diagnostics     | 1-2 min/workflow | Low        |
-| 2        | Merge build+test jobs          | 30-60s/workflow  | Medium     |
-| 3        | Fix change-trigger double build    | 30-60s           | Low        |
-| 4        | Remove "(stage 1-7)" names     | Cosmetic         | Trivial    |
-| 5        | Remove r2r-cli dead code       | Cosmetic         | Trivial    |
-| 6        | Remove auto-release triggers   | Behavior change  | Low        |
-| 7        | Simplify test-module downloads | 10-20s/workflow  | Medium     |
+| Priority | Optimization                    | Est. Savings     | Complexity |
+| -------- | ------------------------------- | ---------------- | ---------- |
+| 1        | Remove verbose diagnostics      | 1-2 min/workflow | Low        |
+| 2        | Merge build+test jobs           | 30-60s/workflow  | Medium     |
+| 3        | Fix change-trigger double build | 30-60s           | Low        |
+| 4        | Remove "(stage 1-7)" names      | Cosmetic         | Trivial    |
+| 5        | Remove r2r-cli dead code        | Cosmetic         | Trivial    |
+| 6        | Remove auto-release triggers    | Behavior change  | Low        |
+| 7        | Simplify test-module downloads  | 10-20s/workflow  | Medium     |
 
 ---
 
@@ -229,4 +229,4 @@ trigger-release:  # Auto-triggers on main
 - build-and-test (merged): 150s
 - **Total: ~2.5 minutes**
 
-**Savings: ~45% per simple module workflow**
+> **Savings:** ~45% per simple module workflow

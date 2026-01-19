@@ -279,4 +279,13 @@ func TestDependencyGraphStats_Struct(t *testing.T) {
 	if stats.RootModules != 3 {
 		t.Errorf("RootModules = %d, want 3", stats.RootModules)
 	}
+	if stats.LeafModules != 2 {
+		t.Errorf("LeafModules = %d, want 2", stats.LeafModules)
+	}
+	if stats.MaxDependencies != 4 {
+		t.Errorf("MaxDependencies = %d, want 4", stats.MaxDependencies)
+	}
+	if stats.MaxDependents != 5 {
+		t.Errorf("MaxDependents = %d, want 5", stats.MaxDependents)
+	}
 }

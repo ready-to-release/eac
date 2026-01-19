@@ -7,12 +7,12 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
 )
 
-// ExecutorRegistry defines the interface for registering providers
+// ExecutorRegistry defines the interface for registering providers.
 type ExecutorRegistry interface {
 	RegisterProvider(name string, factory ai.ProviderFactory)
 }
 
-// RegisterBuiltIn registers all built-in providers with an executor
+// RegisterBuiltIn registers all built-in providers with an executor.
 func RegisterBuiltIn(executor ExecutorRegistry) {
 	// Register claude-cli provider
 	executor.RegisterProvider("claude-cli", func(config *ai.Config) (ai.Provider, error) {

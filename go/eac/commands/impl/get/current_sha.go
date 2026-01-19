@@ -34,7 +34,7 @@ func init() {
 	registry.Register(GetCurrentSHA)
 }
 
-// SHASource indicates where the SHA was detected from
+// SHASource indicates where the SHA was detected from.
 type SHASource string
 
 const (
@@ -43,13 +43,13 @@ const (
 	SHASourceDevbox   SHASource = "devbox"
 )
 
-// SHAResult holds the detected SHA and its source
+// SHAResult holds the detected SHA and its source.
 type SHAResult struct {
 	SHA    string
 	Source SHASource
 }
 
-// DetectCurrentSHA finds the current SHA using smart detection
+// DetectCurrentSHA finds the current SHA using smart detection.
 func DetectCurrentSHA(workspaceRoot, explicitSHA string) (*SHAResult, error) {
 	log := logging.C()
 
@@ -72,7 +72,7 @@ func DetectCurrentSHA(workspaceRoot, explicitSHA string) (*SHAResult, error) {
 	// Fetch latest from origin
 	fetchCmd := exec.Command("git", "fetch", "origin", "main", "--quiet")
 	fetchCmd.Dir = workspaceRoot
-	_ = fetchCmd.Run() // Ignore errors, ref might already exist
+	_ = fetchCmd.Run() //nolint:errcheck // best-effort fetch, ref might already exist
 
 	// Get origin/main SHA
 	cmd := exec.Command("git", "rev-parse", "origin/main")

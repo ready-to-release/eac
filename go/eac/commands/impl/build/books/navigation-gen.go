@@ -11,7 +11,7 @@ import (
 )
 
 // ensureNavigationStructure ensures .nav.yml exists and is valid in all staging directories
-// This function now validates existing .nav.yml files and cleans up broken references
+// This function now validates existing .nav.yml files and cleans up broken references.
 func (p *Preprocessor) ensureNavigationStructure() error {
 	validated := 0
 	generated := 0
@@ -53,7 +53,6 @@ func (p *Preprocessor) ensureNavigationStructure() error {
 
 		return nil
 	})
-
 	if err != nil {
 		return err
 	}
@@ -64,10 +63,10 @@ func (p *Preprocessor) ensureNavigationStructure() error {
 	return nil
 }
 
-// generateNavForDir creates .nav.yml for a directory
+// generateNavForDir creates .nav.yml for a directory.
 func (p *Preprocessor) generateNavForDir(dir string) error {
-	relDir, _ := filepath.Rel(p.stagingDir, dir)
-	if relDir == "." {
+	relDir, relErr := filepath.Rel(p.stagingDir, dir)
+	if relErr != nil || relDir == "." {
 		relDir = "(root)"
 	}
 
@@ -109,7 +108,10 @@ func (p *Preprocessor) generateNavForDir(dir string) error {
 			}
 		} else if strings.HasSuffix(name, ".md") {
 			filePath := filepath.Join(dir, name)
-			relPath, _ := filepath.Rel(p.stagingDir, filePath)
+			relPath, relErr := filepath.Rel(p.stagingDir, filePath)
+			if relErr != nil {
+				relPath = filePath // fallback
+			}
 			relPath = filepath.ToSlash(relPath)
 
 			order := p.getOrderForFile(relPath)
@@ -170,20 +172,20 @@ func (p *Preprocessor) generateNavForDir(dir string) error {
 	}
 
 	navPath := paths.NavigationConfigPath(dir)
-	if err := os.WriteFile(navPath, data, 0644); err != nil {
+	if err := os.WriteFile(navPath, data, 0o644); err != nil {
 		return err
 	}
 
-	relPath, _ := filepath.Rel(p.stagingDir, dir)
-	if relPath == "." {
-		relPath = "(root)"
+	genRelPath, genRelErr := filepath.Rel(p.stagingDir, dir)
+	if genRelErr != nil || genRelPath == "." {
+		genRelPath = "(root)"
 	}
-	p.log("    Generated: %s/.nav.yml", relPath)
+	p.log("    Generated: %s/.nav.yml", genRelPath)
 
 	return nil
 }
 
-// hasMarkdownContent checks if a directory has any markdown files
+// hasMarkdownContent checks if a directory has any markdown files.
 func hasMarkdownContent(dir string) bool {
 	items, err := os.ReadDir(dir)
 	if err != nil {
@@ -203,7 +205,7 @@ func hasMarkdownContent(dir string) bool {
 	return false
 }
 
-// parseNavFile parses a .nav.yml file into structured format
+// parseNavFile parses a .nav.yml file into structured format.
 func (p *Preprocessor) parseNavFile(navPath string) (*NavFile, error) {
 	data, err := os.ReadFile(navPath)
 	if err != nil {
@@ -218,7 +220,7 @@ func (p *Preprocessor) parseNavFile(navPath string) (*NavFile, error) {
 	return &navFile, nil
 }
 
-// scanMarkdownFiles returns a map of markdown files in a directory (filename -> true)
+// scanMarkdownFiles returns a map of markdown files in a directory (filename -> true).
 func (p *Preprocessor) scanMarkdownFiles(dir string) map[string]bool {
 	files := make(map[string]bool)
 
@@ -236,7 +238,7 @@ func (p *Preprocessor) scanMarkdownFiles(dir string) map[string]bool {
 	return files
 }
 
-// scanSubdirectories returns a map of subdirectories with markdown content (dirname -> true)
+// scanSubdirectories returns a map of subdirectories with markdown content (dirname -> true).
 func (p *Preprocessor) scanSubdirectories(dir string) map[string]bool {
 	dirs := make(map[string]bool)
 
@@ -258,7 +260,7 @@ func (p *Preprocessor) scanSubdirectories(dir string) map[string]bool {
 	return dirs
 }
 
-// sortNewFiles sorts new files intelligently using order from command sources, then alphabetically
+// sortNewFiles sorts new files intelligently using order from command sources, then alphabetically.
 func (p *Preprocessor) sortNewFiles(files []string, dirPath string) []string {
 	type fileWithOrder struct {
 		name  string
@@ -269,7 +271,10 @@ func (p *Preprocessor) sortNewFiles(files []string, dirPath string) []string {
 
 	for _, file := range files {
 		filePath := filepath.Join(dirPath, file)
-		relPath, _ := filepath.Rel(p.stagingDir, filePath)
+		relPath, relErr := filepath.Rel(p.stagingDir, filePath)
+		if relErr != nil {
+			relPath = filePath // fallback
+		}
 		relPath = filepath.ToSlash(relPath)
 
 		order := p.getOrderForFile(relPath)

@@ -12,7 +12,7 @@ import (
 // - Resolve monikers (all modules if none specified)
 // - Apply skip filters (from CLI flags or config)
 // - Calculate execution order (with or without dependencies)
-// - Build module type lookup
+// - Build module type lookup.
 func phaseResolve(ctx *ExecutionContext) error {
 	// Load module contracts
 	moduleReport, err := reports.GetModuleContracts(ctx.WorkspaceRoot)
@@ -54,14 +54,14 @@ func phaseResolve(ctx *ExecutionContext) error {
 	}
 	ctx.ExecutionPlan = executionPlan
 
-	// Build module type lookup for all modules in execution plan
+	// Build module component types lookup for all modules in execution plan
 	for _, moniker := range executionPlan.ExecutionOrder {
 		if module, exists := moduleReport.Registry.Get(moniker); exists {
-			ctx.ModuleTypes[moniker] = module.Type
+			ctx.ModuleTypes[moniker] = module.GetComponentTypesDisplay()
 		}
 	}
 
-	// Update orchestrator with module types
+	// Update orchestrator with module component types
 	ctx.Orchestrator.SetModuleTypes(ctx.ModuleTypes)
 
 	log.Debugf("Resolved %d modules, execution order: %v",
@@ -70,12 +70,12 @@ func phaseResolve(ctx *ExecutionContext) error {
 	return nil
 }
 
-// GetRequestedMonikers returns just the originally requested monikers (not deps)
+// GetRequestedMonikers returns just the originally requested monikers (not deps).
 func (ctx *ExecutionContext) GetRequestedMonikers() []string {
 	return ctx.Config.Monikers
 }
 
-// GetExecutionMonikers returns all monikers to be executed (including deps)
+// GetExecutionMonikers returns all monikers to be executed (including deps).
 func (ctx *ExecutionContext) GetExecutionMonikers() []string {
 	if ctx.ExecutionPlan != nil {
 		return ctx.ExecutionPlan.ExecutionOrder
@@ -83,7 +83,7 @@ func (ctx *ExecutionContext) GetExecutionMonikers() []string {
 	return ctx.Config.Monikers
 }
 
-// GetAddedDependencies returns monikers added as dependencies (not originally requested)
+// GetAddedDependencies returns monikers added as dependencies (not originally requested).
 func (ctx *ExecutionContext) GetAddedDependencies() []string {
 	if ctx.ExecutionPlan == nil {
 		return nil
@@ -103,7 +103,7 @@ func (ctx *ExecutionContext) GetAddedDependencies() []string {
 	return added
 }
 
-// GetLayers returns the dependency layers for layered execution
+// GetLayers returns the dependency layers for layered execution.
 func (ctx *ExecutionContext) GetLayers() [][]string {
 	if ctx.ExecutionPlan != nil {
 		return ctx.ExecutionPlan.Layers

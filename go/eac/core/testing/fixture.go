@@ -36,7 +36,6 @@ package testing
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"sync"
 )
 
@@ -184,16 +183,6 @@ func (p *FixturePool) TrackTempDir(dir string) {
 	p.tempDirs = append(p.tempDirs, dir)
 }
 
-// copyDirFast performs a fast directory copy optimized for fixture templates.
-// This is the same as copyDir but could be optimized with hard links or copy-on-write
-// in the future for even better performance.
-func copyDirFast(src, dst string) error {
-	// For now, use the standard copyDir
-	// Future optimization: use os.Link() for hard links where supported
-	// or ioctl FICLONE for copy-on-write on Linux/macOS
-	return copyDir(src, dst)
-}
-
 // FixtureStats returns statistics about the fixture pool.
 type FixtureStats struct {
 	TemplateCount int
@@ -228,20 +217,5 @@ func EstimatePerformanceGain(scenarioCount int) (withoutFixtures, withFixtures, 
 	withFixtures = templateCreation + (copyTime * float64(scenarioCount))
 
 	savings = withoutFixtures - withFixtures
-	return
-}
-
-// Helper function to calculate size of a directory (for diagnostics)
-func calculateDirSize(path string) (int64, error) {
-	var size int64
-	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() {
-			size += info.Size()
-		}
-		return nil
-	})
-	return size, err
+	return withoutFixtures, withFixtures, savings
 }

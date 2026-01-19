@@ -139,7 +139,7 @@ func ShowChangelog() int {
 	return 0
 }
 
-// printChangelogVersion formats and prints a single changelog version
+// printChangelogVersion formats and prints a single changelog version.
 func printChangelogVersion(ver *changelog.Version) {
 	// Print version header
 	if ver.Number == "Unreleased" {
@@ -167,7 +167,7 @@ func printChangelogVersion(ver *changelog.Version) {
 	fmt.Println()
 }
 
-// printChangelogCategory prints entries for a specific change category
+// printChangelogCategory prints entries for a specific change category.
 func printChangelogCategory(category string, entries []changelog.Entry) {
 	if len(entries) == 0 {
 		return

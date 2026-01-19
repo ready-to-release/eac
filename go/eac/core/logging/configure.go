@@ -7,6 +7,7 @@ package logging
 import (
 	"fmt"
 	"io"
+	stdlog "log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -17,7 +18,35 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-// loggingState holds the current logging configuration state
+// silentLumberjackWriter wraps lumberjack.Logger to suppress rotation error messages.
+// Lumberjack uses the standard log package to print errors when it can't rotate files,
+// which happens during concurrent builds when multiple processes access the same log file.
+// This wrapper temporarily silences the standard logger during writes.
+type silentLumberjackWriter struct {
+	*lumberjack.Logger
+	mu sync.Mutex
+}
+
+// Write implements io.Writer, suppressing lumberjack's rotation error messages.
+func (s *silentLumberjackWriter) Write(p []byte) (n int, err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Temporarily discard standard log output to suppress lumberjack's error messages
+	// about failed log rotation (e.g., "can't rename log file: file in use")
+	originalOutput := stdlog.Writer()
+	stdlog.SetOutput(io.Discard)
+	defer stdlog.SetOutput(originalOutput)
+
+	return s.Logger.Write(p)
+}
+
+// Close implements io.Closer.
+func (s *silentLumberjackWriter) Close() error {
+	return s.Logger.Close()
+}
+
+// loggingState holds the current logging configuration state.
 var (
 	loggingClosers []io.Closer
 	loggingMu      sync.Mutex
@@ -101,7 +130,7 @@ func ConfigureLogging(workspaceRoot, command string, pathSegments []string, debu
 
 	if workspaceRoot != "" && command != "" {
 		// Ensure out/ directory exists
-		if err := os.MkdirAll(filepath.Join(workspaceRoot, paths.OutDir), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Join(workspaceRoot, paths.OutDir), 0o755); err != nil { //nolint:gosec // G301: Log directory should be world-readable
 			return fmt.Errorf("failed to create log directory: %w", err)
 		}
 
@@ -111,12 +140,14 @@ func ConfigureLogging(workspaceRoot, command string, pathSegments []string, debu
 		// 2a. Unified log: out/commands.log (disabled when test logging active)
 		if !testLoggingActive {
 			logPath := paths.CommandsLogPath(workspaceRoot)
-			writer := &lumberjack.Logger{
-				Filename:   logPath,
-				MaxSize:    logCfg.File.MaxSizeMB,
-				MaxBackups: logCfg.File.MaxBackups,
-				MaxAge:     logCfg.File.MaxAgeDays,
-				Compress:   logCfg.File.Compress != nil && *logCfg.File.Compress,
+			writer := &silentLumberjackWriter{
+				Logger: &lumberjack.Logger{
+					Filename:   logPath,
+					MaxSize:    logCfg.File.MaxSizeMB,
+					MaxBackups: logCfg.File.MaxBackups,
+					MaxAge:     logCfg.File.MaxAgeDays,
+					Compress:   logCfg.File.Compress != nil && *logCfg.File.Compress,
+				},
 			}
 			closers = append(closers, writer)
 
@@ -133,8 +164,8 @@ func ConfigureLogging(workspaceRoot, command string, pathSegments []string, debu
 		if target, ok := logCfg.GetTarget(command); ok && len(pathSegments) > 0 {
 			module := pathSegments[0] // First path segment is the module
 			targetPath := target.ResolveTargetPath(workspaceRoot, module)
-			if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err == nil {
-				targetFile, err := os.OpenFile(targetPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			if err := os.MkdirAll(filepath.Dir(targetPath), 0o755); err == nil { //nolint:gosec // G301: Log directory should be world-readable
+				targetFile, err := os.OpenFile(targetPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644) //nolint:gosec // G302: Log files should be world-readable
 				if err == nil {
 					closers = append(closers, targetFile)
 
@@ -168,6 +199,8 @@ func ConfigureLogging(workspaceRoot, command string, pathSegments []string, debu
 	opts := []zap.Option{
 		zap.AddCaller(),
 		zap.AddCallerSkip(1), // Skip the ComponentLogger wrapper
+		// Suppress zap's internal error output (e.g., write failures during log rotation)
+		zap.ErrorOutput(zapcore.AddSync(io.Discard)),
 	}
 
 	newZapLogger := zap.New(combinedCore, opts...)
@@ -205,11 +238,14 @@ func CloseLogging() {
 	closeLoggingLocked()
 }
 
-// closeLoggingLocked closes logging resources (must hold loggingMu)
+// closeLoggingLocked closes logging resources (must hold loggingMu).
 func closeLoggingLocked() {
 	// Sync the zap logger to flush any buffered logs
+	// Error is intentionally ignored as this is best-effort cleanup during shutdown
 	if componentGlobalLogger != nil {
-		componentGlobalLogger.Logger.Sync()
+		if err := componentGlobalLogger.Logger.Sync(); err != nil {
+			// Best-effort cleanup - nothing meaningful to do with error during shutdown
+		}
 	}
 
 	for _, closer := range loggingClosers {
@@ -219,7 +255,7 @@ func closeLoggingLocked() {
 }
 
 // ConfigureLoggingSimple is a convenience wrapper for non-TUI commands.
-// Equivalent to ConfigureLogging(workspaceRoot, command, pathSegments, debugToConsole, nil)
+// Equivalent to ConfigureLogging(workspaceRoot, command, pathSegments, debugToConsole, nil).
 func ConfigureLoggingSimple(workspaceRoot, command string, pathSegments []string, debugToConsole bool) error {
 	return ConfigureLogging(workspaceRoot, command, pathSegments, debugToConsole, nil)
 }

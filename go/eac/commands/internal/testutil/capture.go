@@ -29,12 +29,20 @@ func Capture(fn func() int) CaptureOutput {
 
 	// Capture stdout
 	oldStdout := os.Stdout
-	rOut, wOut, _ := os.Pipe()
+	rOut, wOut, pipeErr := os.Pipe()
+	if pipeErr != nil {
+		return CaptureOutput{ExitCode: fn()} // Fall through if pipe fails
+	}
 	os.Stdout = wOut
 
 	// Capture stderr
 	oldStderr := os.Stderr
-	rErr, wErr, _ := os.Pipe()
+	rErr, wErr, pipeErr := os.Pipe()
+	if pipeErr != nil {
+		wOut.Close()
+		os.Stdout = oldStdout
+		return CaptureOutput{ExitCode: fn()} // Fall through if pipe fails
+	}
 	os.Stderr = wErr
 
 	// Run the function
@@ -46,10 +54,10 @@ func Capture(fn func() int) CaptureOutput {
 	os.Stdout = oldStdout
 	os.Stderr = oldStderr
 
-	// Read captured output
+	// Read captured output (errors are non-fatal)
 	var bufOut, bufErr bytes.Buffer
-	io.Copy(&bufOut, rOut)
-	io.Copy(&bufErr, rErr)
+	_, _ = io.Copy(&bufOut, rOut) //nolint:errcheck // best-effort capture
+	_, _ = io.Copy(&bufErr, rErr) //nolint:errcheck // best-effort capture
 
 	return CaptureOutput{
 		Stdout:   bufOut.String(),

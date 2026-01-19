@@ -12,7 +12,7 @@ func init() {
 	registry.Register(Validate)
 }
 
-// Validate command entry point
+// Validate command entry point.
 func Validate() int {
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {

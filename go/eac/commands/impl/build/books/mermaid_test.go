@@ -169,7 +169,7 @@ Some more content.
 	// Create temp directory and file
 	tmpDir := t.TempDir()
 	testFile := filepath.Join(tmpDir, "real-test.md")
-	if err := os.WriteFile(testFile, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte(content), 0o644); err != nil {
 		t.Fatalf("Failed to write test file: %v", err)
 	}
 
@@ -260,7 +260,7 @@ func TestCheckMermaidCache(t *testing.T) {
 	t.Logf("✓ First check: All 3 diagrams are cache misses")
 
 	// Create cache directory
-	if err := os.MkdirAll(stagingCacheDir, 0755); err != nil {
+	if err := os.MkdirAll(stagingCacheDir, 0o755); err != nil {
 		t.Fatalf("Failed to create cache dir: %v", err)
 	}
 
@@ -269,7 +269,7 @@ func TestCheckMermaidCache(t *testing.T) {
 	for i := 0; i < 2; i++ {
 		// Use the cache path that checkMermaidCache computed (extract from previous status)
 		svgPath := statuses[i].CachePath
-		if err := os.WriteFile(svgPath, []byte("<svg></svg>"), 0644); err != nil {
+		if err := os.WriteFile(svgPath, []byte("<svg></svg>"), 0o644); err != nil {
 			t.Fatalf("Failed to create cached SVG: %v", err)
 		}
 	}
@@ -421,7 +421,7 @@ Text after.
 
 	// Write test file
 	testFile := filepath.Join(tmpDir, "test.md")
-	if err := os.WriteFile(testFile, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte(content), 0o644); err != nil {
 		t.Fatalf("Failed to write test file: %v", err)
 	}
 
@@ -446,7 +446,7 @@ Text after.
 
 	// Create cache statuses with mock cache paths
 	cacheDir := filepath.Join(tmpDir, "assets", "rendered", "mermaid")
-	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
 		t.Fatalf("Failed to create cache dir: %v", err)
 	}
 
@@ -454,7 +454,7 @@ Text after.
 	for _, block := range blocks {
 		cachePath := filepath.Join(cacheDir, block.Filename)
 		// Create empty SVG file
-		if err := os.WriteFile(cachePath, []byte("<svg></svg>"), 0644); err != nil {
+		if err := os.WriteFile(cachePath, []byte("<svg></svg>"), 0o644); err != nil {
 			t.Fatalf("Failed to write mock SVG: %v", err)
 		}
 		statuses = append(statuses, CacheStatus{
@@ -515,7 +515,7 @@ func TestReplaceMermaidBlocksWithImagesNestedPath(t *testing.T) {
 	// Create temp directory for testing with nested structure
 	tmpDir := t.TempDir()
 	nestedDir := filepath.Join(tmpDir, "docs", "subfolder")
-	if err := os.MkdirAll(nestedDir, 0755); err != nil {
+	if err := os.MkdirAll(nestedDir, 0o755); err != nil {
 		t.Fatalf("Failed to create nested dir: %v", err)
 	}
 
@@ -530,7 +530,7 @@ graph TD
 
 	// Write test file in nested directory
 	testFile := filepath.Join(nestedDir, "nested.md")
-	if err := os.WriteFile(testFile, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte(content), 0o644); err != nil {
 		t.Fatalf("Failed to write test file: %v", err)
 	}
 
@@ -555,7 +555,7 @@ graph TD
 
 	// Create cache statuses with mock cache paths in assets/rendered/mermaid/
 	cacheDir := filepath.Join(tmpDir, "assets", "rendered", "mermaid")
-	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
 		t.Fatalf("Failed to create cache dir: %v", err)
 	}
 
@@ -563,7 +563,7 @@ graph TD
 	for _, block := range blocks {
 		cachePath := filepath.Join(cacheDir, block.Filename)
 		// Create empty SVG file
-		if err := os.WriteFile(cachePath, []byte("<svg></svg>"), 0644); err != nil {
+		if err := os.WriteFile(cachePath, []byte("<svg></svg>"), 0o644); err != nil {
 			t.Fatalf("Failed to write mock SVG: %v", err)
 		}
 		statuses = append(statuses, CacheStatus{
@@ -612,7 +612,7 @@ func TestReplaceMermaidBlocksWithImagesPDFMode(t *testing.T) {
 	// Create temp directory for testing with nested structure
 	tmpDir := t.TempDir()
 	nestedDir := filepath.Join(tmpDir, "docs", "subfolder")
-	if err := os.MkdirAll(nestedDir, 0755); err != nil {
+	if err := os.MkdirAll(nestedDir, 0o755); err != nil {
 		t.Fatalf("Failed to create nested dir: %v", err)
 	}
 
@@ -627,7 +627,7 @@ graph TD
 
 	// Write test file in nested directory
 	testFile := filepath.Join(nestedDir, "nested.md")
-	if err := os.WriteFile(testFile, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte(content), 0o644); err != nil {
 		t.Fatalf("Failed to write test file: %v", err)
 	}
 
@@ -653,7 +653,7 @@ graph TD
 
 	// Create cache statuses with mock cache paths in assets/rendered/mermaid/
 	cacheDir := filepath.Join(tmpDir, "assets", "rendered", "mermaid")
-	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
 		t.Fatalf("Failed to create cache dir: %v", err)
 	}
 
@@ -661,7 +661,7 @@ graph TD
 	for _, block := range blocks {
 		cachePath := filepath.Join(cacheDir, block.Filename)
 		// Create empty SVG file
-		if err := os.WriteFile(cachePath, []byte("<svg></svg>"), 0644); err != nil {
+		if err := os.WriteFile(cachePath, []byte("<svg></svg>"), 0o644); err != nil {
 			t.Fatalf("Failed to write mock SVG: %v", err)
 		}
 		statuses = append(statuses, CacheStatus{
@@ -709,7 +709,7 @@ graph TD
 	t.Logf("  Path: ../../assets/rendered/mermaid/%s", blocks[0].Filename)
 }
 
-// Helper function
+// Helper function.
 func contains(s, substr string) bool {
 	return len(s) > 0 && len(substr) > 0 &&
 		(s == substr || len(s) > len(substr) &&

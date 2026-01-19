@@ -50,7 +50,8 @@ func reportAggregateResults(config *AssessConfig, results []*ModuleAssessmentRes
 		if result.AssessmentResults != nil && len(result.AssessmentResults.Results) > 0 {
 			moduleResult := result.AssessmentResults.Results[0]
 			if moduleResult.Observations != nil && len(*moduleResult.Observations) > 0 {
-				for _, obs := range *moduleResult.Observations {
+				for i := range *moduleResult.Observations {
+					obs := &(*moduleResult.Observations)[i]
 					if obs.Title == "Test Results" && obs.Props != nil {
 						for _, prop := range *obs.Props {
 							if prop.Name == "total-tests" || prop.Name == "passed-tests" || prop.Name == "failed-tests" {
@@ -100,7 +101,8 @@ func reportResults(config *AssessConfig, ar *oscalTypes.AssessmentResults, arPat
 		satisfied := 0
 		notSatisfied := 0
 		if result.Findings != nil {
-			for _, finding := range *result.Findings {
+			for i := range *result.Findings {
+				finding := &(*result.Findings)[i]
 				if finding.Target.Status.State == oscal.StateSatisfied {
 					satisfied++
 				} else {
@@ -120,7 +122,8 @@ func reportResults(config *AssessConfig, ar *oscalTypes.AssessmentResults, arPat
 		if notSatisfied > 0 && result.Findings != nil {
 			assessLog.Info("")
 			assessLog.Info("  Controls needing attention:")
-			for _, finding := range *result.Findings {
+			for i := range *result.Findings {
+				finding := &(*result.Findings)[i]
 				if finding.Target.Status.State == oscal.StateNotSatisfied {
 					assessLog.Infof("    - %s", finding.Target.TargetId)
 				}

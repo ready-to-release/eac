@@ -120,7 +120,7 @@ func ShowTests() int {
 	return 0
 }
 
-// buildModuleOverview creates a summary table with one row per module
+// buildModuleOverview creates a summary table with one row per module.
 func buildModuleOverview(tests []testing.SuiteTestEntry, osFilteredCount int, currentOS string) string {
 	// Aggregate by module
 	type moduleStats struct {
@@ -235,7 +235,7 @@ func buildModuleOverview(tests []testing.SuiteTestEntry, osFilteredCount int, cu
 	return tb.Build()
 }
 
-// formatCount returns count as string, or "-" if zero
+// formatCount returns count as string, or "-" if zero.
 func formatCount(count int) string {
 	if count == 0 {
 		return "-"
@@ -243,7 +243,7 @@ func formatCount(count int) string {
 	return fmt.Sprintf("%d", count)
 }
 
-// formatCountBold returns count as bold string, or "-" if zero
+// formatCountBold returns count as bold string, or "-" if zero.
 func formatCountBold(count int) string {
 	if count == 0 {
 		return "-"
@@ -251,8 +251,8 @@ func formatCountBold(count int) string {
 	return fmt.Sprintf("**%d**", count)
 }
 
-// formatTagsWithInferred formats tags with * suffix for inferred ones
-func formatTagsWithInferred(tags []string, inferred []string) string {
+// formatTagsWithInferred formats tags with * suffix for inferred ones.
+func formatTagsWithInferred(tags, inferred []string) string {
 	inferredSet := make(map[string]bool)
 	for _, t := range inferred {
 		inferredSet[t] = true
@@ -269,8 +269,8 @@ func formatTagsWithInferred(tags []string, inferred []string) string {
 	return strings.Join(parts, " ")
 }
 
-// formatDepsWithInferred formats deps with ~ suffix for inferred from module type
-func formatDepsWithInferred(deps []string, inferredDeps []string) string {
+// formatDepsWithInferred formats deps with ~ suffix for inferred from module type.
+func formatDepsWithInferred(deps, inferredDeps []string) string {
 	inferredSet := make(map[string]bool)
 	for _, d := range inferredDeps {
 		inferredSet[d] = true

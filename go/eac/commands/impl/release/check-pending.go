@@ -37,7 +37,7 @@ func init() {
 	registry.Register(ReleaseCheckPending)
 }
 
-// PendingModule represents a module needing release
+// PendingModule represents a module needing release.
 type PendingModule struct {
 	Module   string `json:"module"`
 	Version  string `json:"version"`
@@ -46,7 +46,7 @@ type PendingModule struct {
 	NeedsTag bool   `json:"needs_tag"`
 }
 
-// CheckPendingResult is the comprehensive output
+// CheckPendingResult is the comprehensive output.
 type CheckPendingResult struct {
 	HasPending  bool              `json:"has_pending"`
 	ModulesJSON []PendingModule   `json:"modules_json"`
@@ -275,10 +275,10 @@ func checkCalverWithCI(moduleRegistry *modules.Registry, dispatched map[string]b
 
 	for _, mod := range moduleRegistry.All() {
 		// Check if CalVer with CI workflow
-		if mod.Versioning == nil || strings.ToLower(mod.Versioning.Scheme) != "calver" {
+		if mod.Versioning == nil || !strings.EqualFold(mod.Versioning.Scheme, "calver") {
 			continue
 		}
-		if mod.Files.Workflows.CI == "" {
+		if mod.GetCIWorkflowPath() == "" {
 			continue
 		}
 
@@ -309,13 +309,13 @@ func checkCalverBundles(moduleRegistry *modules.Registry, dispatched map[string]
 
 	for _, mod := range moduleRegistry.All() {
 		// Check if CalVer bundle (has release but no CI)
-		if mod.Versioning == nil || strings.ToLower(mod.Versioning.Scheme) != "calver" {
+		if mod.Versioning == nil || !strings.EqualFold(mod.Versioning.Scheme, "calver") {
 			continue
 		}
-		if mod.Files.Workflows.CI != "" {
+		if mod.GetCIWorkflowPath() != "" {
 			continue // Has CI, not a bundle
 		}
-		if mod.Files.Workflows.Release == "" {
+		if mod.GetReleaseWorkflowPath() == "" {
 			continue // No release workflow
 		}
 

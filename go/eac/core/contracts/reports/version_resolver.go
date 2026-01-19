@@ -9,7 +9,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
-// VersionInfo represents resolved version information for a module
+// VersionInfo represents resolved version information for a module.
 type VersionInfo struct {
 	Module         string // Module moniker
 	VersionNumber  string // Actual version number or "Unreleased"
@@ -109,7 +109,7 @@ func ResolveVersion(workspaceRoot, module, versionStr string) (*VersionInfo, err
 	return info, nil
 }
 
-// versionResolverRepo holds the git repository instance for testing (allows mock injection)
+// versionResolverRepo holds the git repository instance for testing (allows mock injection).
 var versionResolverRepo git.GitRepository
 
 // SetVersionResolverRepo allows tests to inject a mock repository.
@@ -122,7 +122,7 @@ func getVersionResolverRepo(workspaceRoot string) (git.GitRepository, error) {
 	if versionResolverRepo != nil {
 		return versionResolverRepo, nil
 	}
-	repo, err := git.Open(workspaceRoot, nil)
+	repo, err := git.NewManager(nil).Open(workspaceRoot)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open git repository: %w", err)
 	}
@@ -155,8 +155,11 @@ func ResolveVersionWithValidation(workspaceRoot, module, versionStr string) (*Ve
 		}
 		if !exists {
 			// List available tags to help diagnose
-			tags, _ := repo.TagsMatching(module + "/*")
+			tags, tagErr := repo.TagsMatching(module + "/*")
 			tagList := "none found"
+			if tagErr != nil {
+				tagList = "error listing tags"
+			}
 			if len(tags) > 0 {
 				if len(tags) > 5 {
 					tags = tags[:5]

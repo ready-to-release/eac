@@ -14,7 +14,7 @@ nav:
   - files-staged.md
   - help.md
   - modules.md
-  - moduletypes.md
+  - component-types.md
   - suite.md
   - test-summary.md
   - test-timings.md

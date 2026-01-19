@@ -8,12 +8,12 @@ import (
 )
 
 // rawEncoder outputs only the message - no timestamp, level, or fields
-// Perfect for clean CLI output
+// Perfect for clean CLI output.
 type rawEncoder struct {
 	zapcore.Encoder
 }
 
-// newRawEncoder creates an encoder that outputs only the log message
+// newRawEncoder creates an encoder that outputs only the log message.
 func newRawEncoder() zapcore.Encoder {
 	return &rawEncoder{
 		Encoder: zapcore.NewConsoleEncoder(zapcore.EncoderConfig{
@@ -22,7 +22,7 @@ func newRawEncoder() zapcore.Encoder {
 	}
 }
 
-// EncodeEntry outputs just the message followed by newline
+// EncodeEntry outputs just the message followed by newline.
 func (e *rawEncoder) EncodeEntry(entry zapcore.Entry, fields []zapcore.Field) (*buffer.Buffer, error) {
 	buf := buffer.NewPool().Get()
 	buf.AppendString(entry.Message)
@@ -30,18 +30,18 @@ func (e *rawEncoder) EncodeEntry(entry zapcore.Entry, fields []zapcore.Field) (*
 	return buf, nil
 }
 
-// Clone creates a copy of the encoder
+// Clone creates a copy of the encoder.
 func (e *rawEncoder) Clone() zapcore.Encoder {
 	return &rawEncoder{Encoder: e.Encoder.Clone()}
 }
 
-// timestampedEncoder outputs "HH:MM:SS.mmm  LEVEL  module:message"
+// timestampedEncoder outputs "HH:MM:SS.mmm  LEVEL  module:message".
 type timestampedEncoder struct {
 	zapcore.Encoder
 	module string
 }
 
-// newTimestampedEncoder creates an encoder with timestamp, level, and module prefix
+// newTimestampedEncoder creates an encoder with timestamp, level, and module prefix.
 func newTimestampedEncoder(module string) zapcore.Encoder {
 	cfg := zapcore.EncoderConfig{
 		TimeKey:        "time",
@@ -58,7 +58,7 @@ func newTimestampedEncoder(module string) zapcore.Encoder {
 	}
 }
 
-// EncodeEntry outputs timestamped format: "HH:MM:SS.mmm  LEVEL  module:message {fields}"
+// EncodeEntry outputs timestamped format: "HH:MM:SS.mmm  LEVEL  module:message {fields}".
 func (e *timestampedEncoder) EncodeEntry(entry zapcore.Entry, fields []zapcore.Field) (*buffer.Buffer, error) {
 	buf := buffer.NewPool().Get()
 
@@ -115,7 +115,7 @@ func (e *timestampedEncoder) EncodeEntry(entry zapcore.Entry, fields []zapcore.F
 	return buf, nil
 }
 
-// Clone creates a copy of the encoder
+// Clone creates a copy of the encoder.
 func (e *timestampedEncoder) Clone() zapcore.Encoder {
 	return &timestampedEncoder{
 		Encoder: e.Encoder.Clone(),
@@ -123,7 +123,7 @@ func (e *timestampedEncoder) Clone() zapcore.Encoder {
 	}
 }
 
-// newJSONEncoder creates a standard JSON encoder for file logging
+// newJSONEncoder creates a standard JSON encoder for file logging.
 func newJSONEncoder() zapcore.Encoder {
 	cfg := zapcore.EncoderConfig{
 		TimeKey:        "timestamp",
@@ -141,7 +141,7 @@ func newJSONEncoder() zapcore.Encoder {
 	return zapcore.NewJSONEncoder(cfg)
 }
 
-// CreateEncoder creates an encoder based on the formatter type
+// CreateEncoder creates an encoder based on the formatter type.
 func CreateEncoder(formatter FormatterType, module string) zapcore.Encoder {
 	switch formatter {
 	case FormatterRaw:

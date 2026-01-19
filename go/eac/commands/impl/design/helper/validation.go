@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// ValidateModuleName validates that a module name is safe and doesn't contain path traversal
+// ValidateModuleName validates that a module name is safe and doesn't contain path traversal.
 func ValidateModuleName(module string) error {
 	if module == "" {
 		return fmt.Errorf("module name cannot be empty")
@@ -48,7 +48,7 @@ func ValidateModuleName(module string) error {
 	return nil
 }
 
-// CleanModuleName removes common prefixes and suffixes from module names
+// CleanModuleName removes common prefixes and suffixes from module names.
 func CleanModuleName(module string) string {
 	// Normalize path separators to forward slashes for consistent processing
 	module = strings.ReplaceAll(module, "\\", "/")
@@ -68,10 +68,10 @@ func CleanModuleName(module string) string {
 	return module
 }
 
-// ValidIdentifierPattern matches valid DSL identifiers
+// ValidIdentifierPattern matches valid DSL identifiers.
 var ValidIdentifierPattern = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_-]*$`)
 
-// ValidateIdentifier checks if a string is a valid DSL identifier
+// ValidateIdentifier checks if a string is a valid DSL identifier.
 func ValidateIdentifier(identifier string) error {
 	if identifier == "" {
 		return fmt.Errorf("identifier cannot be empty")

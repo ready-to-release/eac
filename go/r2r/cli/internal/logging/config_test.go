@@ -150,7 +150,7 @@ func TestLoadConfigWithValidFile(t *testing.T) {
 
 	// Create .r2r directory
 	r2rDir := filepath.Join(tmpDir, ".r2r")
-	if err := os.MkdirAll(r2rDir, 0755); err != nil {
+	if err := os.MkdirAll(r2rDir, 0o755); err != nil {
 		t.Fatalf("Failed to create .r2r dir: %v", err)
 	}
 
@@ -170,7 +170,7 @@ file:
   formatter: json
 `
 	configPath := filepath.Join(r2rDir, "r2r-cli-logging.yml")
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(configContent), 0o644); err != nil {
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
@@ -200,13 +200,13 @@ func TestLoadConfigWithInvalidYAML(t *testing.T) {
 
 	// Create .r2r directory
 	r2rDir := filepath.Join(tmpDir, ".r2r")
-	if err := os.MkdirAll(r2rDir, 0755); err != nil {
+	if err := os.MkdirAll(r2rDir, 0o755); err != nil {
 		t.Fatalf("Failed to create .r2r dir: %v", err)
 	}
 
 	// Write invalid config file
 	configPath := filepath.Join(r2rDir, "r2r-cli-logging.yml")
-	if err := os.WriteFile(configPath, []byte("invalid: yaml: content: [[["), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte("invalid: yaml: content: [[["), 0o644); err != nil {
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 

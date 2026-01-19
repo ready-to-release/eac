@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// TestingTagsConfig represents the testing-tags.yml configuration
+// TestingTagsConfig represents the testing-tags.yml configuration.
 type TestingTagsConfig struct {
 	Tags        []TagDefinition `yaml:"tags"`
 	Types       []TagType       `yaml:"types"`
@@ -20,7 +20,7 @@ type TestingTagsConfig struct {
 	tagsByType map[string][]*TagDefinition
 }
 
-// TagDefinition represents a single tag definition
+// TagDefinition represents a single tag definition.
 type TagDefinition struct {
 	Tag         string `yaml:"tag"`
 	Name        string `yaml:"name"`
@@ -33,20 +33,20 @@ type TagDefinition struct {
 	Constraint  string `yaml:"constraint,omitempty"` // e.g., "mutually_exclusive_with_taxonomy_levels"
 }
 
-// TagType represents a tag type category
+// TagType represents a tag type category.
 type TagType struct {
 	Type        string `yaml:"type"`
 	Description string `yaml:"description"`
 }
 
-// SkipReason represents a valid skip reason code
+// SkipReason represents a valid skip reason code.
 type SkipReason struct {
 	Code        string `yaml:"code"`
 	Name        string `yaml:"name"`
 	Description string `yaml:"description"`
 }
 
-// Initialize compiles patterns and builds lookup maps
+// Initialize compiles patterns and builds lookup maps.
 func (c *TestingTagsConfig) Initialize() error {
 	c.compiledPatterns = make(map[string]*regexp.Regexp)
 	c.tagLookup = make(map[string]*TagDefinition)
@@ -76,12 +76,12 @@ func (c *TestingTagsConfig) Initialize() error {
 	return nil
 }
 
-// GetTagsByType returns all tags of a specific type
+// GetTagsByType returns all tags of a specific type.
 func (c *TestingTagsConfig) GetTagsByType(tagType string) []*TagDefinition {
 	return c.tagsByType[tagType]
 }
 
-// GetTag returns a tag definition by exact match or pattern match
+// GetTag returns a tag definition by exact match or pattern match.
 func (c *TestingTagsConfig) GetTag(tag string) (*TagDefinition, bool) {
 	// Check exact match
 	if def, ok := c.tagLookup[tag]; ok {
@@ -102,31 +102,31 @@ func (c *TestingTagsConfig) GetTag(tag string) (*TagDefinition, bool) {
 	return nil, false
 }
 
-// IsKnownTag checks if a tag is known (exact match or pattern match)
+// IsKnownTag checks if a tag is known (exact match or pattern match).
 func (c *TestingTagsConfig) IsKnownTag(tag string) bool {
 	_, ok := c.GetTag(tag)
 	return ok
 }
 
-// GetTaxonomyLevelTags returns all taxonomy-level tags (@L0-@L4, @HE2E)
+// GetTaxonomyLevelTags returns all taxonomy-level tags (@L0-@L4, @HE2E).
 func (c *TestingTagsConfig) GetTaxonomyLevelTags() []string {
-	var tags []string
+	tags := make([]string, 0, len(c.tagsByType["taxonomy-level"]))
 	for _, tag := range c.tagsByType["taxonomy-level"] {
 		tags = append(tags, tag.Tag)
 	}
 	return tags
 }
 
-// GetVerificationTags returns all verification type tags
+// GetVerificationTags returns all verification type tags.
 func (c *TestingTagsConfig) GetVerificationTags() []string {
-	var tags []string
+	tags := make([]string, 0, len(c.tagsByType["verification"]))
 	for _, tag := range c.tagsByType["verification"] {
 		tags = append(tags, tag.Tag)
 	}
 	return tags
 }
 
-// GetValidSkipReasons returns all valid skip reason codes
+// GetValidSkipReasons returns all valid skip reason codes.
 func (c *TestingTagsConfig) GetValidSkipReasons() []string {
 	reasons := make([]string, len(c.SkipReasons))
 	for i, sr := range c.SkipReasons {
@@ -135,7 +135,7 @@ func (c *TestingTagsConfig) GetValidSkipReasons() []string {
 	return reasons
 }
 
-// GetSkipReasons returns a map of skip reason code to SkipReason
+// GetSkipReasons returns a map of skip reason code to SkipReason.
 func (c *TestingTagsConfig) GetSkipReasons() map[string]SkipReason {
 	reasons := make(map[string]SkipReason)
 	for _, sr := range c.SkipReasons {
@@ -144,7 +144,7 @@ func (c *TestingTagsConfig) GetSkipReasons() map[string]SkipReason {
 	return reasons
 }
 
-// ValidateSkipReason checks if a skip reason code is valid
+// ValidateSkipReason checks if a skip reason code is valid.
 func (c *TestingTagsConfig) ValidateSkipReason(code string) (*SkipReason, bool) {
 	for i := range c.SkipReasons {
 		if c.SkipReasons[i].Code == code {
@@ -154,7 +154,7 @@ func (c *TestingTagsConfig) ValidateSkipReason(code string) (*SkipReason, bool) 
 	return nil, false
 }
 
-// BuildGodogSkipTagFilter builds a Godog tag filter expression that excludes all @skip:<reason> tags
+// BuildGodogSkipTagFilter builds a Godog tag filter expression that excludes all @skip:<reason> tags.
 func (c *TestingTagsConfig) BuildGodogSkipTagFilter() string {
 	if len(c.SkipReasons) == 0 {
 		return ""
@@ -167,7 +167,7 @@ func (c *TestingTagsConfig) BuildGodogSkipTagFilter() string {
 	return strings.Join(parts, " && ")
 }
 
-// GetSkipTagsForSuite returns skip tags as a slice suitable for test suite selectors
+// GetSkipTagsForSuite returns skip tags as a slice suitable for test suite selectors.
 func (c *TestingTagsConfig) GetSkipTagsForSuite() []string {
 	tags := make([]string, 0, len(c.SkipReasons)+1)
 	for _, reason := range c.SkipReasons {
@@ -177,7 +177,7 @@ func (c *TestingTagsConfig) GetSkipTagsForSuite() []string {
 	return tags
 }
 
-// HasConstraint checks if a tag has a specific constraint
+// HasConstraint checks if a tag has a specific constraint.
 func (c *TestingTagsConfig) HasConstraint(tag, constraint string) bool {
 	def, ok := c.GetTag(tag)
 	if !ok {
@@ -186,7 +186,7 @@ func (c *TestingTagsConfig) HasConstraint(tag, constraint string) bool {
 	return def.Constraint == constraint
 }
 
-// ValidateTag validates a tag and returns an error message if invalid
+// ValidateTag validates a tag and returns an error message if invalid.
 func (c *TestingTagsConfig) ValidateTag(tag string) error {
 	// Check exact match
 	if _, ok := c.tagLookup[tag]; ok {

@@ -36,7 +36,7 @@ func init() {
 	registry.Register(ReleaseTagPending)
 }
 
-// TagPendingResult contains info about a version needing a tag
+// TagPendingResult contains info about a version needing a tag.
 type TagPendingResult struct {
 	Module   string `json:"module"`
 	Version  string `json:"version"`
@@ -44,7 +44,7 @@ type TagPendingResult struct {
 	NeedsTag bool   `json:"needs_tag"`
 }
 
-// TagPendingReport contains results for multiple modules
+// TagPendingReport contains results for multiple modules.
 type TagPendingReport struct {
 	Results    []TagPendingResult `json:"results"`
 	HasPending bool               `json:"has_pending"`
@@ -65,8 +65,8 @@ func ReleaseTagPending() int {
 
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
-		switch {
-		case arg == "--all":
+		switch arg {
+		case "--all":
 			checkAll = true
 		default:
 			if !strings.HasPrefix(arg, "--") && module == "" {

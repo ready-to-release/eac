@@ -84,7 +84,7 @@ const ModuleTypesComplete = `types:
 // ============================================================================
 
 // ModulesSingleGo is the modules section for repository.yml with a single Go module.
-// Parameters: {{MODULE_NAME}}, {{MODULE_PATH}}
+// Parameters: {{MODULE_NAME}}, {{MODULE_PATH}}.
 const ModulesSingleGo = `modules:
   - moniker: {{MODULE_NAME}}
     name: {{MODULE_NAME}} Module
@@ -94,7 +94,7 @@ const ModulesSingleGo = `modules:
 `
 
 // ModulesTwoGo is the modules section for repository.yml with two Go modules.
-// Parameters: {{MODULE1_NAME}}, {{MODULE1_PATH}}, {{MODULE2_NAME}}, {{MODULE2_PATH}}
+// Parameters: {{MODULE1_NAME}}, {{MODULE1_PATH}}, {{MODULE2_NAME}}, {{MODULE2_PATH}}.
 const ModulesTwoGo = `modules:
   - moniker: {{MODULE1_NAME}}
     name: {{MODULE1_NAME}} Module

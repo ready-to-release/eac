@@ -278,4 +278,3 @@ func (c *repositoryContext) scriptsTypeDirShouldContainOnlyDirectories(typeDir s
 func (c *repositoryContext) scriptsCmdDirShouldContainOnlyDirectoriesIfExists() error {
 	return c.scriptsTypeDirShouldContainOnlyDirectories("scripts/cmd")
 }
-

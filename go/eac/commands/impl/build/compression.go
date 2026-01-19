@@ -91,8 +91,8 @@ func ProcessArtifactDerivations(
 
 // extractPlatformFromID extracts OS and architecture from an artifact ID.
 // Expected formats: "{os}-{arch}" or "{os}-{arch}-upx"
-// Examples: "linux-amd64" -> ("linux", "amd64"), "linux-amd64-upx" -> ("linux", "amd64")
-func extractPlatformFromID(id string) (os, arch string) {
+// Examples: "linux-amd64" -> ("linux", "amd64"), "linux-amd64-upx" -> ("linux", "amd64").
+func extractPlatformFromID(id string) (osName, arch string) {
 	// Known OS values
 	knownOS := []string{"linux", "darwin", "windows"}
 
@@ -113,7 +113,7 @@ func extractPlatformFromID(id string) (os, arch string) {
 	return "", ""
 }
 
-// processDerivedArtifact derives a single artifact from its source
+// processDerivedArtifact derives a single artifact from its source.
 func processDerivedArtifact(moniker string, art config.Artifact, targetOS, targetArch, buildDir string, metadata map[string]string, logWriter io.Writer) error {
 	// Resolve source and target paths with platform-specific resolver including metadata
 	var resolver *config.ArtifactResolver
@@ -152,7 +152,7 @@ func processDerivedArtifact(moniker string, art config.Artifact, targetOS, targe
 
 	// Make executable if needed
 	if art.IsExecutable() {
-		if err := os.Chmod(targetPath, 0755); err != nil {
+		if err := os.Chmod(targetPath, 0o755); err != nil {
 			return fmt.Errorf("failed to set executable permissions: %w", err)
 		}
 	}
@@ -167,7 +167,7 @@ func processDerivedArtifact(moniker string, art config.Artifact, targetOS, targe
 	return nil
 }
 
-// compressArtifact applies compression to an artifact
+// compressArtifact applies compression to an artifact.
 func compressArtifact(art config.Artifact, targetPath string, logWriter io.Writer) error {
 	compression := art.GetCompression()
 
@@ -187,7 +187,7 @@ func compressArtifact(art config.Artifact, targetPath string, logWriter io.Write
 	}
 }
 
-// stripArtifact strips debug symbols from a binary
+// stripArtifact strips debug symbols from a binary.
 func stripArtifact(targetPath string, logWriter io.Writer) error {
 	stripPath, err := exec.LookPath("strip")
 	if err != nil {
@@ -207,7 +207,7 @@ func stripArtifact(targetPath string, logWriter io.Writer) error {
 	return nil
 }
 
-// upxCompressArtifact compresses a binary with UPX
+// upxCompressArtifact compresses a binary with UPX.
 func upxCompressArtifact(targetPath string, logWriter io.Writer) error {
 	upxPath, err := exec.LookPath("upx")
 	if err != nil {
@@ -227,7 +227,7 @@ func upxCompressArtifact(targetPath string, logWriter io.Writer) error {
 	return nil
 }
 
-// copyFile copies a file from src to dst
+// copyFile copies a file from src to dst.
 func copyFile(src, dst string) error {
 	srcFile, err := os.Open(src)
 	if err != nil {

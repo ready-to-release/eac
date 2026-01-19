@@ -122,7 +122,7 @@ func ShowReleaseNotes() int {
 	return 0
 }
 
-// printReleaseNotesVersion formats and prints a single release notes version
+// printReleaseNotesVersion formats and prints a single release notes version.
 func printReleaseNotesVersion(ver *releasenotes.ReleaseNotesVersion) {
 	// Print header
 	dateStr := ""

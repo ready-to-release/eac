@@ -29,7 +29,7 @@ func init() {
 	registry.Register(GetBuildTimes)
 }
 
-// BuildTiming represents timing data for a single module build
+// BuildTiming represents timing data for a single module build.
 type BuildTiming struct {
 	Module   string  `json:"module" yaml:"module"`
 	Duration float64 `json:"duration_seconds" yaml:"duration_seconds"`
@@ -37,7 +37,7 @@ type BuildTiming struct {
 	Type     string  `json:"type" yaml:"type"`     // Module type (e.g., go, container, typescript, static)
 }
 
-// BuildTimingSummary represents complete build timing analysis
+// BuildTimingSummary represents complete build timing analysis.
 type BuildTimingSummary struct {
 	TotalBuilds    int                    `json:"total_builds" yaml:"total_builds"`
 	PassedBuilds   int                    `json:"passed_builds" yaml:"passed_builds"`
@@ -49,7 +49,7 @@ type BuildTimingSummary struct {
 	ByType         map[string]TypeSummary `json:"by_type" yaml:"by_type"`
 }
 
-// TypeSummary represents aggregated timing data by module type
+// TypeSummary represents aggregated timing data by module type.
 type TypeSummary struct {
 	Type          string        `json:"type" yaml:"type"`
 	TotalBuilds   int           `json:"total_builds" yaml:"total_builds"`
@@ -65,7 +65,7 @@ func GetBuildTimes() int {
 }
 
 // GetBuildTimesFiltered gets build timings with optional module filtering
-// If buildOutputDir is empty, defaults to out/build
+// If buildOutputDir is empty, defaults to out/build.
 func GetBuildTimesFiltered(moduleFilter []string, buildOutputDir string) int {
 	return internal.ExecuteGetCommand(func() (interface{}, error) {
 		// Get repository root if needed
@@ -187,7 +187,7 @@ func ParseBuildLog(buildDir string) ([]BuildTiming, error) {
 	return timings, nil
 }
 
-// filterBuildTimingsByModules filters timings to only include specified modules
+// filterBuildTimingsByModules filters timings to only include specified modules.
 func filterBuildTimingsByModules(timings []BuildTiming, modules []string) []BuildTiming {
 	// Create a set of modules for O(1) lookup
 	moduleSet := make(map[string]bool)
@@ -205,7 +205,7 @@ func filterBuildTimingsByModules(timings []BuildTiming, modules []string) []Buil
 	return filtered
 }
 
-// populateModuleTypes loads module contracts and populates the Type field for each timing
+// populateModuleTypes loads module contracts and populates the Type field for each timing.
 func populateModuleTypes(timings []BuildTiming, repoRoot string) ([]BuildTiming, error) {
 	// Load module contracts
 	moduleReport, err := reports.GetModuleContracts(repoRoot)
@@ -213,10 +213,10 @@ func populateModuleTypes(timings []BuildTiming, repoRoot string) ([]BuildTiming,
 		return timings, fmt.Errorf("failed to load module contracts: %w", err)
 	}
 
-	// Populate types
+	// Populate package types
 	for i := range timings {
 		if module, exists := moduleReport.Registry.Get(timings[i].Module); exists {
-			timings[i].Type = module.Type
+			timings[i].Type = module.GetComponentTypesDisplay()
 		} else {
 			// Module not found in contracts, use a placeholder
 			timings[i].Type = "unknown"
@@ -226,7 +226,7 @@ func populateModuleTypes(timings []BuildTiming, repoRoot string) ([]BuildTiming,
 	return timings, nil
 }
 
-// BuildBuildSummary aggregates timing data and builds summary
+// BuildBuildSummary aggregates timing data and builds summary.
 func BuildBuildSummary(timings []BuildTiming, buildOutputDir string) *BuildTimingSummary {
 	summary := &BuildTimingSummary{
 		BuildOutputDir: buildOutputDir,

@@ -13,25 +13,25 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/config"
 )
 
-// ReleaseNotes represents the structure of a RELEASE-NOTES.md file
+// ReleaseNotes represents the structure of a RELEASE-NOTES.md file.
 type ReleaseNotes struct {
 	Versions []ReleaseNotesVersion
 }
 
-// ReleaseNotesVersion represents a single version entry in RELEASE-NOTES.md
+// ReleaseNotesVersion represents a single version entry in RELEASE-NOTES.md.
 type ReleaseNotesVersion struct {
 	Number   string
 	Date     time.Time
 	Sections []ReleaseNotesSection
 }
 
-// ReleaseNotesSection represents a section within a version entry
+// ReleaseNotesSection represents a section within a version entry.
 type ReleaseNotesSection struct {
 	Header  string
 	Content string
 }
 
-// Parse reads and parses a RELEASE-NOTES.md file
+// Parse reads and parses a RELEASE-NOTES.md file.
 func Parse(path string) (*ReleaseNotes, error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
@@ -41,7 +41,7 @@ func Parse(path string) (*ReleaseNotes, error) {
 	return ParseContent(string(content))
 }
 
-// ParseContent parses RELEASE-NOTES.md content
+// ParseContent parses RELEASE-NOTES.md content.
 func ParseContent(content string) (*ReleaseNotes, error) {
 	rn := &ReleaseNotes{
 		Versions: []ReleaseNotesVersion{},
@@ -125,7 +125,7 @@ func ParseContent(content string) (*ReleaseNotes, error) {
 	return rn, nil
 }
 
-// ValidateVersion checks if a version exists in the release notes and has content
+// ValidateVersion checks if a version exists in the release notes and has content.
 func (r *ReleaseNotes) ValidateVersion(version string) error {
 	for _, v := range r.Versions {
 		if v.Number == version {
@@ -153,7 +153,7 @@ func (r *ReleaseNotes) ValidateVersion(version string) error {
 	return fmt.Errorf("version [%s] not found", version)
 }
 
-// GetVersion returns the ReleaseNotesVersion for a specific version number
+// GetVersion returns the ReleaseNotesVersion for a specific version number.
 func (r *ReleaseNotes) GetVersion(version string) (*ReleaseNotesVersion, error) {
 	for _, v := range r.Versions {
 		if v.Number == version {
@@ -168,7 +168,7 @@ func (r *ReleaseNotes) GetVersion(version string) (*ReleaseNotesVersion, error) 
 func GenerateTemplate(workspaceRoot string, cfg *config.RepositoryConfig, path, module, version string, date time.Time) error {
 	// Ensure directory exists
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil { //nolint:gosec // G301: Release notes directory should be world-readable
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
@@ -200,7 +200,7 @@ func GenerateTemplate(workspaceRoot string, cfg *config.RepositoryConfig, path, 
 	}
 
 	// Write generated content
-	if err := os.WriteFile(path, buf.Bytes(), 0644); err != nil {
+	if err := os.WriteFile(path, buf.Bytes(), 0o644); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 

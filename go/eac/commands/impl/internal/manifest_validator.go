@@ -3,21 +3,23 @@ package internal
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
 
-// ManifestValidator validates build manifests against the contract schema
+// ManifestValidator validates build manifests against the contract schema.
 type ManifestValidator struct {
 	schema *jsonschema.Schema
 }
 
-// ManifestValidationError represents a manifest validation error
+// ManifestValidationError represents a manifest validation error.
 type ManifestValidationError struct {
 	Moniker string
 	Message string
@@ -31,10 +33,10 @@ func (e *ManifestValidationError) Error() string {
 	return fmt.Sprintf("manifest validation failed for %s: %s", e.Moniker, e.Message)
 }
 
-// Contract version for build manifest schema
+// Contract version for build manifest schema.
 const manifestContractVersion = "0.1.0"
 
-// NewManifestValidator creates a new manifest validator that loads schema from contracts
+// NewManifestValidator creates a new manifest validator that loads schema from contracts.
 func NewManifestValidator(workspaceRoot string) (*ManifestValidator, error) {
 	c := jsonschema.NewCompiler()
 
@@ -78,7 +80,7 @@ func NewManifestValidator(workspaceRoot string) (*ManifestValidator, error) {
 	return &ManifestValidator{schema: schema}, nil
 }
 
-// ValidateManifest validates a ModuleManifest against the contract schema
+// ValidateManifest validates a ModuleManifest against the contract schema.
 func (v *ManifestValidator) ValidateManifest(manifest *ModuleManifest) error {
 	// Convert manifest to JSON for validation
 	jsonData, err := json.Marshal(manifest)
@@ -89,7 +91,7 @@ func (v *ManifestValidator) ValidateManifest(manifest *ModuleManifest) error {
 	return v.ValidateJSON(jsonData, manifest.Moniker)
 }
 
-// ValidateJSON validates raw JSON data against the manifest schema
+// ValidateJSON validates raw JSON data against the manifest schema.
 func (v *ManifestValidator) ValidateJSON(jsonData []byte, moniker string) error {
 	// Parse JSON to generic interface
 	var data any
@@ -109,11 +111,12 @@ func (v *ManifestValidator) ValidateJSON(jsonData []byte, moniker string) error 
 	return nil
 }
 
-// extractManifestValidationDetails extracts detailed error messages from validation errors
+// extractManifestValidationDetails extracts detailed error messages from validation errors.
 func extractManifestValidationDetails(err error) []string {
 	var details []string
 
-	if validErr, ok := err.(*jsonschema.ValidationError); ok {
+	validErr := &jsonschema.ValidationError{}
+	if errors.As(err, &validErr) {
 		details = append(details, validErr.Error())
 		for _, cause := range validErr.Causes {
 			details = append(details, extractManifestValidationDetails(cause)...)
@@ -123,9 +126,11 @@ func extractManifestValidationDetails(err error) []string {
 	return details
 }
 
-// Global validator instance (lazy initialized)
-var globalManifestValidator *ManifestValidator
-var globalManifestValidatorRoot string
+// Global validator instance (lazy initialized).
+var (
+	globalManifestValidator     *ManifestValidator
+	globalManifestValidatorRoot string
+)
 
 // GetManifestValidator returns the global manifest validator instance.
 // Uses repository.GetRepositoryRoot() to find workspace root.
@@ -169,7 +174,7 @@ func GetManifestValidatorWithRoot(workspaceRoot string) (*ManifestValidator, err
 	return globalManifestValidator, nil
 }
 
-// findWorkspaceRoot walks up the directory tree looking for .r2r directory
+// findWorkspaceRoot walks up the directory tree looking for .r2r directory.
 func findWorkspaceRoot(startDir string) string {
 	dir := startDir
 	for {
@@ -184,13 +189,13 @@ func findWorkspaceRoot(startDir string) string {
 	}
 }
 
-// ValidateAndSave validates the manifest against the schema, verifies artifacts exist, and saves if valid
+// ValidateAndSave validates the manifest against the schema, verifies artifacts exist, and saves if valid.
 func (m *ModuleManifest) ValidateAndSave(moduleBuildDir string) error {
 	return m.ValidateAndSaveWithRoot(moduleBuildDir, "")
 }
 
-// ValidateAndSaveWithRoot validates the manifest against the schema with explicit workspace root
-func (m *ModuleManifest) ValidateAndSaveWithRoot(moduleBuildDir string, workspaceRoot string) error {
+// ValidateAndSaveWithRoot validates the manifest against the schema with explicit workspace root.
+func (m *ModuleManifest) ValidateAndSaveWithRoot(moduleBuildDir, workspaceRoot string) error {
 	validator, err := GetManifestValidatorWithRoot(workspaceRoot)
 	if err != nil {
 		return fmt.Errorf("failed to get manifest validator: %w", err)
@@ -208,7 +213,7 @@ func (m *ModuleManifest) ValidateAndSaveWithRoot(moduleBuildDir string, workspac
 	return m.Save(moduleBuildDir)
 }
 
-// ArtifactExistenceError represents a missing artifact error
+// ArtifactExistenceError represents a missing artifact error.
 type ArtifactExistenceError struct {
 	Moniker string
 	Missing []string
@@ -219,7 +224,7 @@ func (e *ArtifactExistenceError) Error() string {
 	return fmt.Sprintf("build for %s produced manifest but artifacts are missing: %v", e.Moniker, e.Missing)
 }
 
-// VerifyArtifactsExist checks that all artifacts declared in the manifest actually exist
+// VerifyArtifactsExist checks that all artifacts declared in the manifest actually exist.
 func (m *ModuleManifest) VerifyArtifactsExist(moduleBuildDir string) error {
 	var missing []string
 	details := make(map[string]string)
@@ -234,12 +239,22 @@ func (m *ModuleManifest) VerifyArtifactsExist(moduleBuildDir string) error {
 			// Pass the full artifact info so we can check registry tags if local image not found
 			exists, errMsg = verifyDockerImageExists(art)
 		case "directory":
-			// Directories should exist
+			// Directories should exist - check module level first, then component subdirs
 			dirPath := filepath.Join(moduleBuildDir, art.Path)
 			info, err := os.Stat(dirPath)
 			if err != nil {
-				exists = false
-				errMsg = fmt.Sprintf("directory not found: %s", dirPath)
+				// Not found at module level - check component subdirectories
+				if foundPath := findInComponentSubdirs(moduleBuildDir, art.Path); foundPath != "" {
+					if info, err := os.Stat(foundPath); err == nil && info.IsDir() {
+						exists = true
+					} else {
+						exists = false
+						errMsg = fmt.Sprintf("expected directory but found file: %s", foundPath)
+					}
+				} else {
+					exists = false
+					errMsg = fmt.Sprintf("directory not found: %s", dirPath)
+				}
 			} else if !info.IsDir() {
 				exists = false
 				errMsg = fmt.Sprintf("expected directory but found file: %s", dirPath)
@@ -247,12 +262,27 @@ func (m *ModuleManifest) VerifyArtifactsExist(moduleBuildDir string) error {
 				exists = true
 			}
 		default:
-			// File-based artifacts (executable, file)
+			// File-based artifacts (executable, file) - check module level first, then component subdirs
 			filePath := filepath.Join(moduleBuildDir, art.Path)
 			info, err := os.Stat(filePath)
 			if err != nil {
-				exists = false
-				errMsg = fmt.Sprintf("file not found: %s", filePath)
+				// Not found at module level - check component subdirectories
+				if foundPath := findInComponentSubdirs(moduleBuildDir, art.Path); foundPath != "" {
+					if info, err := os.Stat(foundPath); err == nil {
+						if info.IsDir() {
+							exists = false
+							errMsg = fmt.Sprintf("expected file but found directory: %s", foundPath)
+						} else if info.Size() == 0 {
+							exists = false
+							errMsg = fmt.Sprintf("file is empty: %s", foundPath)
+						} else {
+							exists = true
+						}
+					}
+				} else {
+					exists = false
+					errMsg = fmt.Sprintf("file not found: %s", filePath)
+				}
 			} else if info.IsDir() {
 				exists = false
 				errMsg = fmt.Sprintf("expected file but found directory: %s", filePath)
@@ -281,7 +311,30 @@ func (m *ModuleManifest) VerifyArtifactsExist(moduleBuildDir string) error {
 	return nil
 }
 
-// verifyDockerImageExists checks if a Docker image exists locally or in registry (for pushed images)
+// findInComponentSubdirs searches for an artifact in component subdirectories.
+// Returns the found path or empty string if not found.
+func findInComponentSubdirs(moduleBuildDir, artifactPath string) string {
+	entries, err := os.ReadDir(moduleBuildDir)
+	if err != nil {
+		return ""
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		// Check if artifact exists in this component subdirectory
+		componentPath := filepath.Join(moduleBuildDir, entry.Name(), artifactPath)
+		if _, err := os.Stat(componentPath); err == nil {
+			return componentPath
+		}
+	}
+
+	return ""
+}
+
+// verifyDockerImageExists checks if a Docker image exists locally or in registry (for pushed images).
 func verifyDockerImageExists(art ArtifactInfo) (bool, string) {
 	// Check if docker is available first
 	if !isDockerAvailable() {
@@ -317,7 +370,7 @@ func verifyDockerImageExists(art ArtifactInfo) (bool, string) {
 	return false, fmt.Sprintf("docker image not found: %s (checked local and registry tags)", art.Path)
 }
 
-// checkDockerImageLocal checks if an image exists in local Docker daemon
+// checkDockerImageLocal checks if an image exists in local Docker daemon.
 func checkDockerImageLocal(imageRef string) bool {
 	cmd := execCommand("docker", "images", "-q", imageRef)
 	output, err := cmd.Output()
@@ -326,17 +379,11 @@ func checkDockerImageLocal(imageRef string) bool {
 	}
 
 	// If output is non-empty, image exists locally
-	if len(output) > 0 {
-		trimmed := string(output)
-		for len(trimmed) > 0 && (trimmed[len(trimmed)-1] == '\n' || trimmed[len(trimmed)-1] == '\r') {
-			trimmed = trimmed[:len(trimmed)-1]
-		}
-		return trimmed != ""
-	}
-	return false
+	trimmed := strings.TrimSpace(string(output))
+	return trimmed != ""
 }
 
-// isRegistryTag checks if a tag is a registry image (contains registry prefix)
+// isRegistryTag checks if a tag is a registry image (contains registry prefix).
 func isRegistryTag(tag, registry string) bool {
 	// Registry must be non-empty and tag must start with registry prefix
 	if registry == "" {
@@ -346,13 +393,13 @@ func isRegistryTag(tag, registry string) bool {
 	return len(tag) > len(registry) && tag[:len(registry)] == registry
 }
 
-// isDockerAvailable checks if Docker CLI is available
+// isDockerAvailable checks if Docker CLI is available.
 func isDockerAvailable() bool {
 	cmd := execCommand("docker", "version", "--format", "{{.Server.Version}}")
 	return cmd.Run() == nil
 }
 
-// execCommand is a variable to allow testing
+// execCommand is a variable to allow testing.
 var execCommand = defaultExecCommand
 
 func defaultExecCommand(name string, args ...string) execCommandInterface {

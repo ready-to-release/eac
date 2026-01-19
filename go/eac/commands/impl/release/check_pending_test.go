@@ -163,7 +163,7 @@ func TestOutputCheckPendingResult_ShellFormat(t *testing.T) {
 	}
 }
 
-// TestCalverVersionFormat verifies the CalVer version format
+// TestCalverVersionFormat verifies the CalVer version format.
 func TestCalverVersionFormat(t *testing.T) {
 	// The format should be: 2006.0102.1504 (YYYY.MMDD.HHMM)
 	// We can't test the exact output without mocking time, but we can verify the pattern
@@ -188,7 +188,7 @@ func TestCalverVersionFormat(t *testing.T) {
 	}
 }
 
-// TestSemverVersionFormat verifies the SemVer tag format
+// TestSemverVersionFormat verifies the SemVer tag format.
 func TestSemverVersionFormat(t *testing.T) {
 	pm := PendingModule{
 		Module:   "r2r-cli",
@@ -210,7 +210,7 @@ func TestSemverVersionFormat(t *testing.T) {
 	}
 }
 
-// TestLayerOrdering verifies that layers are structured correctly
+// TestLayerOrdering verifies that layers are structured correctly.
 func TestLayerOrdering(t *testing.T) {
 	// Layer 0: modules with no dependencies
 	// Layer 1: modules depending on layer 0

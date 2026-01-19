@@ -89,11 +89,11 @@ func (g *GoldenFile) update(t *testing.T, actual string) {
 	path := g.Path()
 	dir := filepath.Dir(path)
 
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatalf("failed to create golden file directory %s: %v", dir, err)
 	}
 
-	if err := os.WriteFile(path, []byte(actual), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(actual), 0o644); err != nil {
 		t.Fatalf("failed to write golden file %s: %v", path, err)
 	}
 

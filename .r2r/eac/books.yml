@@ -66,13 +66,13 @@ books:
           description: "Dependency relationships between modules"
         order: 2
 
-      - type: command
-        command: "show moduletypes"
-        target: "module-types.md"
-        frontmatter:
-          title: "Module Types"
-          description: "Available module type definitions"
-        order: 3
+      # - type: command
+      #   command: "show component-types"
+      #   target: "module-types.md"
+      #   frontmatter:
+      #     title: "Module Types"
+      #     description: "Available module type definitions"
+      #   order: 3
 
       - type: command
         command: "show files"

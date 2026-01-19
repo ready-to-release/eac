@@ -15,7 +15,7 @@ func init() {
 	registry.Register(Show)
 }
 
-// Show command entry point
+// Show command entry point.
 func Show() int {
 	args := os.Args[2:] // Skip program name and "show"
 
@@ -26,7 +26,7 @@ func Show() int {
 
 	// Check for subcommands
 	switch args[0] {
-	case "books", "build-summary", "build-times", "config", "dependencies", "environments", "files", "files-changed", "files-staged", "modules", "moduletypes", "suite", "test-results", "test-summary", "tests", "test-timings", "valid-commands", "workspaces":
+	case "books", "build-summary", "build-times", "config", "dependencies", "environments", "files", "files-changed", "files-staged", "modules", "suite", "test-results", "test-summary", "tests", "test-timings", "valid-commands", "workspaces":
 		// Handled by separate registrations in respective files
 		return 0
 	default:
@@ -49,7 +49,6 @@ func printShowUsage() {
 	fmt.Println("")
 	fmt.Println("Repository Structure:")
 	fmt.Println("  modules                   Show all module contracts")
-	fmt.Println("  moduletypes               Show module types grouped by count")
 	fmt.Println("  dependencies              Show module dependencies")
 	fmt.Println("")
 	fmt.Println("Files and Changes:")

@@ -35,8 +35,8 @@ func init() {
 	registry.Register(ValidateVersion)
 }
 
-// CalVer: YYYY.MMDD.HHMM
-var calverRegex = regexp.MustCompile(`^[0-9]{4}\.[0-9]{4}\.[0-9]{4}$`)
+// CalVer: YYYY.MMDD.HHMM.
+var calverRegex = regexp.MustCompile(`^\d{4}\.\d{4}\.\d{4}$`)
 
 func ValidateVersion() int {
 	// Parse arguments

@@ -9,7 +9,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
-// combineCommitSections combines top-level section and module sections into final commit message
+// combineCommitSections combines top-level section and module sections into final commit message.
 func combineCommitSections(topLevel string, moduleSections []string) string {
 	var result bytes.Buffer
 
@@ -66,7 +66,7 @@ func combineCommitSections(topLevel string, moduleSections []string) string {
 	return result.String()
 }
 
-// extractModuleName extracts the module name from a module section (first line)
+// extractModuleName extracts the module name from a module section (first line).
 func extractModuleName(section string) string {
 	lines := strings.Split(section, "\n")
 	if len(lines) == 0 {
@@ -83,7 +83,7 @@ func extractModuleName(section string) string {
 	return ""
 }
 
-// addMissingModules adds stub sections for any modules that are missing from the commit message
+// addMissingModules adds stub sections for any modules that are missing from the commit message.
 func addMissingModules(commitMessage string, affectedModules []string, allFiles []repository.RepositoryFileWithModule, gitDiff string) string {
 	// Parse existing commit message to find which modules already have sections
 	foundModules := make(map[string]bool)
@@ -168,7 +168,7 @@ func addMissingModules(commitMessage string, affectedModules []string, allFiles 
 	return result.String()
 }
 
-// isModuleNameLine checks if a line looks like a module name
+// isModuleNameLine checks if a line looks like a module name.
 func isModuleNameLine(s string) bool {
 	if s == "" || len(s) > commitmessageinternal.MaxModuleNameLength {
 		return false
@@ -183,7 +183,7 @@ func isModuleNameLine(s string) bool {
 	return true
 }
 
-// isDashesLine checks if a line consists only of dashes
+// isDashesLine checks if a line consists only of dashes.
 func isDashesLine(s string) bool {
 	if len(s) < commitmessageinternal.MinDashesLength {
 		return false

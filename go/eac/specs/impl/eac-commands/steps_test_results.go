@@ -468,7 +468,7 @@ func registerTestResultsSteps(sc *godog.ScenarioContext, ctx *internal.TestConte
 		}
 
 		// Create go.mod file at repository root (needed for repository detection)
-		goMod := fmt.Sprintf("module github.com/ready-to-release/eac\n\ngo 1.24\n")
+		goMod := "module github.com/ready-to-release/eac\n\ngo 1.24\n"
 		if err := internal.CreateFile(ctx, "go.mod", goMod); err != nil {
 			return err
 		}

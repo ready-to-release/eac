@@ -11,7 +11,7 @@ import (
 )
 
 // findConfigFile finds the config file by first locating the repository root
-// and then looking for configuration files in priority order
+// and then looking for configuration files in priority order.
 func findConfigFile(fileName string) (string, error) {
 	// First find the repository root
 	repoRoot, err := FindRepositoryRoot()
@@ -52,7 +52,7 @@ func findConfigFile(fileName string) (string, error) {
 
 // getConfigFileCandidates returns configuration file paths in priority order
 // Priority: R2R_CONFIG_PATH env var first, then user-specific files, then repository default
-// All config files are located in .r2r directory
+// All config files are located in .r2r directory.
 func getConfigFileCandidates(repoRoot string) []string {
 	candidates := []string{}
 	r2rDir := filepath.Join(repoRoot, ".r2r")
@@ -91,7 +91,7 @@ func getConfigFileCandidates(repoRoot string) []string {
 }
 
 // FindRepositoryRoot searches up the directory tree from the current working directory
-// until it finds a .git folder or reaches the root of the filesystem
+// until it finds a .git folder or reaches the root of the filesystem.
 func FindRepositoryRoot() (string, error) {
 	// Get the current working directory
 	currentDir, err := os.Getwd()
@@ -120,7 +120,7 @@ func FindRepositoryRoot() (string, error) {
 	return "", NewRepositoryNotFoundError(startDir)
 }
 
-// InitConfig initializes the configuration by finding and loading the config file
+// InitConfig initializes the configuration by finding and loading the config file.
 func InitConfig() {
 	// CRITICAL: Block configuration access in test environment
 	if os.Getenv("R2R_TESTING") == "true" {
@@ -145,7 +145,7 @@ func InitConfig() {
 	// Check for and merge local override configurations
 	// Priority order (highest to lowest): r2r-cli.local.yml, r2r-cli.personal.yml, r2r-cli.dev.yml
 	// All override files are in .r2r directory
-	repoRoot, _ := FindRepositoryRoot()
+	repoRoot, _ := FindRepositoryRoot() //nolint:errcheck // empty string is valid fallback
 	RootDir = repoRoot // Store root directory for cache operations
 	if repoRoot != "" {
 		r2rDir := filepath.Join(repoRoot, ".r2r")

@@ -11,7 +11,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
-// TemplateType represents the type of mkdocs template to use
+// TemplateType represents the type of mkdocs template to use.
 type TemplateType string
 
 const (
@@ -19,7 +19,7 @@ const (
 	TemplatePDF  TemplateType = "pdf"
 )
 
-// GetTemplateType returns the template type for a given output format
+// GetTemplateType returns the template type for a given output format.
 func GetTemplateType(outputFormat string) TemplateType {
 	if outputFormat == "site" {
 		return TemplateSite
@@ -27,7 +27,7 @@ func GetTemplateType(outputFormat string) TemplateType {
 	return TemplatePDF
 }
 
-// GetTemplatePath returns the path to the mkdocs.yml template for the given type
+// GetTemplatePath returns the path to the mkdocs.yml template for the given type.
 func GetTemplatePath(workspaceRoot string, templateType TemplateType) string {
 	switch templateType {
 	case TemplateSite:
@@ -39,8 +39,8 @@ func GetTemplatePath(workspaceRoot string, templateType TemplateType) string {
 	}
 }
 
-// LoadMkDocsTemplate loads the mkdocs.yml template for the given output type
-func LoadMkDocsTemplate(workspaceRoot string, outputFormat string) ([]byte, error) {
+// LoadMkDocsTemplate loads the mkdocs.yml template for the given output type.
+func LoadMkDocsTemplate(workspaceRoot, outputFormat string) ([]byte, error) {
 	templateType := GetTemplateType(outputFormat)
 	templatePath := GetTemplatePath(workspaceRoot, templateType)
 
@@ -52,7 +52,7 @@ func LoadMkDocsTemplate(workspaceRoot string, outputFormat string) ([]byte, erro
 	return data, nil
 }
 
-// ConfigOptions contains the options for generating a mkdocs.yml config
+// ConfigOptions contains the options for generating a mkdocs.yml config.
 type ConfigOptions struct {
 	SiteName        string // Book/site name
 	SiteDescription string // Site description
@@ -105,7 +105,7 @@ func GenerateMkDocsConfig(workspaceRoot string, opts ConfigOptions) ([]byte, err
 	return []byte(content), nil
 }
 
-// replaceYAMLValue replaces a top-level YAML value using regex
+// replaceYAMLValue replaces a top-level YAML value using regex.
 func replaceYAMLValue(content, key, value string) string {
 	// Match key at start of line followed by colon and value
 	pattern := fmt.Sprintf(`(?m)^(%s:\s*).*$`, key)
@@ -115,7 +115,7 @@ func replaceYAMLValue(content, key, value string) string {
 
 // updatePDFThemeString updates theme-specific CSS paths in the config string
 // docsDir is the relative path from the config file to the docs directory
-// This is needed because the exporter plugin resolves stylesheet paths relative to the config file
+// This is needed because the exporter plugin resolves stylesheet paths relative to the config file.
 func updatePDFThemeString(content, theme, docsDir string) string {
 	// Build the new path with theme and docsDir prefix for exporter plugin
 	// The exporter plugin's stylesheets option resolves paths relative to config file,
@@ -147,15 +147,15 @@ func updatePDFThemeString(content, theme, docsDir string) string {
 }
 
 // replacePDFConcurrency updates the PDF exporter concurrency setting
-// Matches "concurrency: N" within the exporter plugin's pdf formats section
+// Matches "concurrency: N" within the exporter plugin's pdf formats section.
 func replacePDFConcurrency(content string, concurrency int) string {
 	// Match "concurrency: <number>" with proper indentation (10 spaces in pdf formats section)
 	pattern := regexp.MustCompile(`(?m)^(\s+concurrency:\s*)\d+\s*$`)
 	return pattern.ReplaceAllString(content, fmt.Sprintf("${1}%d", concurrency))
 }
 
-// WriteMkDocsConfig writes a generated mkdocs.yml to the specified path
-func WriteMkDocsConfig(workspaceRoot string, outputPath string, opts ConfigOptions) error {
+// WriteMkDocsConfig writes a generated mkdocs.yml to the specified path.
+func WriteMkDocsConfig(workspaceRoot, outputPath string, opts ConfigOptions) error {
 	data, err := GenerateMkDocsConfig(workspaceRoot, opts)
 	if err != nil {
 		return err
@@ -163,11 +163,11 @@ func WriteMkDocsConfig(workspaceRoot string, outputPath string, opts ConfigOptio
 
 	// Ensure directory exists
 	dir := filepath.Dir(outputPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
-	if err := os.WriteFile(outputPath, data, 0644); err != nil {
+	if err := os.WriteFile(outputPath, data, 0o644); err != nil {
 		return fmt.Errorf("failed to write mkdocs config: %w", err)
 	}
 
@@ -175,7 +175,7 @@ func WriteMkDocsConfig(workspaceRoot string, outputPath string, opts ConfigOptio
 }
 
 // GetThemeFromOutput extracts the theme name from an output format
-// e.g., "pdf-dark" -> "dark", "pdf-light" -> "light"
+// e.g., "pdf-dark" -> "dark", "pdf-light" -> "light".
 func GetThemeFromOutput(outputFormat string) string {
 	if strings.HasPrefix(outputFormat, "pdf-") {
 		return strings.TrimPrefix(outputFormat, "pdf-")

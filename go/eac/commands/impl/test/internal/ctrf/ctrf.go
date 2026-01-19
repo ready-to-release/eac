@@ -9,12 +9,12 @@ import (
 	"time"
 )
 
-// Report represents a CTRF test report
+// Report represents a CTRF test report.
 type Report struct {
 	Results Results `json:"results"`
 }
 
-// Results contains the test results
+// Results contains the test results.
 type Results struct {
 	Tool        Tool         `json:"tool"`
 	Summary     Summary      `json:"summary"`
@@ -22,13 +22,13 @@ type Results struct {
 	Environment *Environment `json:"environment,omitempty"`
 }
 
-// Tool identifies the test framework
+// Tool identifies the test framework.
 type Tool struct {
 	Name    string `json:"name"`
 	Version string `json:"version,omitempty"`
 }
 
-// Summary provides aggregate test counts
+// Summary provides aggregate test counts.
 type Summary struct {
 	Tests   int   `json:"tests"`
 	Passed  int   `json:"passed"`
@@ -40,7 +40,7 @@ type Summary struct {
 	Stop    int64 `json:"stop"`  // Unix milliseconds
 }
 
-// Test represents a single test result
+// Test represents a single test result.
 type Test struct {
 	Name      string `json:"name"`
 	Status    Status `json:"status"`
@@ -52,7 +52,7 @@ type Test struct {
 	FilePath  string `json:"filePath,omitempty"`
 }
 
-// Status represents the test result status
+// Status represents the test result status.
 type Status string
 
 const (
@@ -63,14 +63,14 @@ const (
 	StatusOther   Status = "other"
 )
 
-// Environment provides optional environment metadata
+// Environment provides optional environment metadata.
 type Environment struct {
 	OS       string `json:"os,omitempty"`
 	Arch     string `json:"arch,omitempty"`
 	Language string `json:"language,omitempty"`
 }
 
-// NewReport creates a new CTRF report with current time as start
+// NewReport creates a new CTRF report with current time as start.
 func NewReport(toolName string) *Report {
 	return &Report{
 		Results: Results{
@@ -83,7 +83,7 @@ func NewReport(toolName string) *Report {
 	}
 }
 
-// NewEmptyReport creates a new CTRF report for aggregation (no preset times)
+// NewEmptyReport creates a new CTRF report for aggregation (no preset times).
 func NewEmptyReport(toolName string) *Report {
 	return &Report{
 		Results: Results{
@@ -97,13 +97,13 @@ func NewEmptyReport(toolName string) *Report {
 	}
 }
 
-// SetTimes sets the start and stop times explicitly
+// SetTimes sets the start and stop times explicitly.
 func (r *Report) SetTimes(start, stop int64) {
 	r.Results.Summary.Start = start
 	r.Results.Summary.Stop = stop
 }
 
-// AddTest adds a test result to the report
+// AddTest adds a test result to the report.
 func (r *Report) AddTest(test Test) {
 	r.Results.Tests = append(r.Results.Tests, test)
 
@@ -123,17 +123,17 @@ func (r *Report) AddTest(test Test) {
 	r.Results.Summary.Tests++
 }
 
-// Finalize sets the stop time
+// Finalize sets the stop time.
 func (r *Report) Finalize() {
 	r.Results.Summary.Stop = time.Now().UnixMilli()
 }
 
-// ToJSON serializes the report to JSON
+// ToJSON serializes the report to JSON.
 func (r *Report) ToJSON() ([]byte, error) {
 	return json.MarshalIndent(r, "", "  ")
 }
 
-// Merge combines another report into this one
+// Merge combines another report into this one.
 func (r *Report) Merge(other *Report) {
 	for _, test := range other.Results.Tests {
 		r.AddTest(test)
@@ -148,7 +148,7 @@ func (r *Report) Merge(other *Report) {
 	}
 }
 
-// ParseFile reads and parses a CTRF JSON file
+// ParseFile reads and parses a CTRF JSON file.
 func ParseFile(path string) (*Report, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -157,7 +157,7 @@ func ParseFile(path string) (*Report, error) {
 	return Parse(data)
 }
 
-// Parse parses CTRF JSON data
+// Parse parses CTRF JSON data.
 func Parse(data []byte) (*Report, error) {
 	var report Report
 	if err := json.Unmarshal(data, &report); err != nil {

@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 )
 
@@ -24,9 +23,9 @@ func (h *NpmHandler) Capabilities() []string { return []string{"npm_package", "t
 
 func (h *NpmHandler) Requirements() []string { return []string{"npm"} }
 
-func (h *NpmHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot string) error {
-	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
-	packageJSON := filepath.Join(moduleRoot, "package.json")
+func (h *NpmHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot, component string) error {
+	componentRoot := filepath.Join(workspaceRoot, module.GetComponentRoot(component))
+	packageJSON := filepath.Join(componentRoot, "package.json")
 	if _, err := os.Stat(packageJSON); os.IsNotExist(err) {
 		return fmt.Errorf("package.json not found at %s", packageJSON)
 	}
@@ -38,9 +37,9 @@ func (h *NpmHandler) ListArtifacts(module *modules.ModuleContract, workspaceRoot
 }
 
 func (h *NpmHandler) Build(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
+	moduleRoot := filepath.Join(workspaceRoot, module.GetComponentRoot("typescript"))
 
-	Logln(logWriter, "\n=== Building %s: %s ===", module.Type, module.Moniker)
+	Logln(logWriter, "\n=== Building typescript: %s ===", module.Moniker)
 
 	packageJSON := filepath.Join(moduleRoot, "package.json")
 	if _, err := os.Stat(packageJSON); os.IsNotExist(err) {
@@ -57,8 +56,7 @@ func (h *NpmHandler) Build(module *modules.ModuleContract, workspaceRoot, output
 		return exitCode
 	}
 
-	cfg := config.Global()
-	hasTypeScript := cfg != nil && cfg.ModuleTypes != nil && cfg.ModuleTypes.HasCapability(module.Type, "typescript")
+	hasTypeScript := module.HasComponent("typescript")
 
 	if hasTypeScript {
 		Logln(logWriter, "🔨 Compiling TypeScript")

@@ -275,7 +275,7 @@ func TestConvertAttrListImages(t *testing.T) {
 	}
 }
 
-// TestConvertDrawioImages verifies Drawio image to link conversion
+// TestConvertDrawioImages verifies Drawio image to link conversion.
 func TestConvertDrawioImages(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -336,11 +336,11 @@ func TestConvertDrawioImages(t *testing.T) {
 	}
 }
 
-// TestFixLinksInContent verifies broken link fixing logic
+// TestFixLinksInContent verifies broken link fixing logic.
 func TestFixLinksInContent(t *testing.T) {
 	// Create a temporary staging directory
 	stagingDir := t.TempDir()
-	require.NoError(t, os.WriteFile(filepath.Join(stagingDir, "existing.md"), []byte("# Exists"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(stagingDir, "existing.md"), []byte("# Exists"), 0o644))
 
 	tests := []struct {
 		name        string
@@ -416,7 +416,7 @@ func TestFixLinksInContent(t *testing.T) {
 	}
 }
 
-// TestParseAttrListToHTML verifies attr_list parsing
+// TestParseAttrListToHTML verifies attr_list parsing.
 func TestParseAttrListToHTML(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -468,7 +468,7 @@ func TestParseAttrListToHTML(t *testing.T) {
 	}
 }
 
-// TestCleanupLinksForPDF_Integration verifies PDF image cleanup on files
+// TestCleanupLinksForPDF_Integration verifies PDF image cleanup on files.
 func TestCleanupLinksForPDF_Integration(t *testing.T) {
 	// Arrange
 	stagingDir := t.TempDir()
@@ -482,7 +482,7 @@ func TestCleanupLinksForPDF_Integration(t *testing.T) {
 ![Badge](badge.svg)
 ![Architecture](architecture.drawio.png){ width="100%" }
 `
-	require.NoError(t, os.WriteFile(testFile, []byte(content), 0644))
+	require.NoError(t, os.WriteFile(testFile, []byte(content), 0o644))
 
 	p := &Preprocessor{
 		stagingDir: stagingDir,
@@ -514,7 +514,7 @@ func TestCleanupLinksForPDF_Integration(t *testing.T) {
 	assert.Contains(t, resultStr, `![Architecture](architecture.drawio.png){ width="100%" }`)
 }
 
-// TestConvertAttrListImagesToHTML_Integration verifies attr_list conversion on files
+// TestConvertAttrListImagesToHTML_Integration verifies attr_list conversion on files.
 func TestConvertAttrListImagesToHTML_Integration(t *testing.T) {
 	// Arrange
 	stagingDir := t.TempDir()
@@ -528,7 +528,7 @@ func TestConvertAttrListImagesToHTML_Integration(t *testing.T) {
 ![Regular](image.png)
 ![Drawio](diagram.drawio){width=100}
 `
-	require.NoError(t, os.WriteFile(testFile, []byte(content), 0644))
+	require.NoError(t, os.WriteFile(testFile, []byte(content), 0o644))
 
 	p := &Preprocessor{
 		stagingDir: stagingDir,
@@ -559,7 +559,7 @@ func TestConvertAttrListImagesToHTML_Integration(t *testing.T) {
 	assert.Contains(t, resultStr, `![Drawio](diagram.drawio){width=100}`)
 }
 
-// TestCleanupLinksForPDF_EmptyDirectory verifies handling of empty directories
+// TestCleanupLinksForPDF_EmptyDirectory verifies handling of empty directories.
 func TestCleanupLinksForPDF_EmptyDirectory(t *testing.T) {
 	// Arrange
 	stagingDir := t.TempDir()
@@ -577,7 +577,7 @@ func TestCleanupLinksForPDF_EmptyDirectory(t *testing.T) {
 	require.NoError(t, err) // Should not error on empty directory
 }
 
-// TestConvertAttrListImagesToHTML_MultipleFiles verifies processing multiple files
+// TestConvertAttrListImagesToHTML_MultipleFiles verifies processing multiple files.
 func TestConvertAttrListImagesToHTML_MultipleFiles(t *testing.T) {
 	// Arrange
 	stagingDir := t.TempDir()
@@ -589,8 +589,8 @@ func TestConvertAttrListImagesToHTML_MultipleFiles(t *testing.T) {
 	content1 := `![Image1](img1.png){width=100}`
 	content2 := `![Image2](img2.png){width=200}`
 
-	require.NoError(t, os.WriteFile(file1, []byte(content1), 0644))
-	require.NoError(t, os.WriteFile(file2, []byte(content2), 0644))
+	require.NoError(t, os.WriteFile(file1, []byte(content1), 0o644))
+	require.NoError(t, os.WriteFile(file2, []byte(content2), 0o644))
 
 	p := &Preprocessor{
 		stagingDir: stagingDir,

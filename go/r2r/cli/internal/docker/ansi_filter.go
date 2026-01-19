@@ -1,3 +1,4 @@
+// Package docker provides Docker container management functionality.
 package docker
 
 import (
@@ -24,53 +25,53 @@ import (
 // - Alternate screen buffer switches
 // - Terminal title changes
 // - Bracketed paste mode
-// - Cursor visibility changes
+// - Cursor visibility changes.
 type AnsiFilter struct {
 	writer io.Writer
 	buffer bytes.Buffer
 }
 
-// NewAnsiFilter creates a new ANSI filter that wraps the given writer
+// NewAnsiFilter creates a new ANSI filter that wraps the given writer.
 func NewAnsiFilter(w io.Writer) *AnsiFilter {
 	return &AnsiFilter{writer: w}
 }
 
 var (
-	// Sequences to filter out completely
+	// Sequences to filter out completely.
 
-	// Cursor position reports (CPR) like ESC[61;1R - this is the main issue on macOS
-	cursorPositionReportRegex = regexp.MustCompile(`\x1b\[[0-9]+;[0-9]+R`)
+	// Cursor position reports (CPR) like ESC[61;1R - this is the main issue on macOS.
+	cursorPositionReportRegex = regexp.MustCompile(`\x1b\[\d+;\d+R`)
 
-	// Device status report requests/responses that trigger CPR
+	// Device status report requests/responses that trigger CPR.
 	deviceStatusRegex = regexp.MustCompile(`\x1b\[[56]n`)
 
-	// Cursor position queries that trigger CPR responses
-	cursorQueryRegex = regexp.MustCompile(`\x1b\[[0-9]*;?[0-9]*[Hf]`)
+	// Cursor position queries that trigger CPR responses.
+	cursorQueryRegex = regexp.MustCompile(`\x1b\[\d*;?\d*[Hf]`)
 
-	// Terminal title sequences (OSC sequences)
-	titleSequenceRegex = regexp.MustCompile(`\x1b\][0-9]+;[^\x07]*\x07`)
+	// Terminal title sequences (OSC sequences).
+	titleSequenceRegex = regexp.MustCompile(`\x1b\]\d+;[^\x07]*\x07`)
 
-	// Alternate screen buffer switches
+	// Alternate screen buffer switches.
 	altScreenRegex = regexp.MustCompile(`\x1b\[\?(?:1049|47|1047)[hl]`)
 
-	// Mouse tracking sequences
+	// Mouse tracking sequences.
 	mouseTrackingRegex = regexp.MustCompile(`\x1b\[\?100[0-6][hl]`)
 
-	// Bracketed paste mode
+	// Bracketed paste mode.
 	bracketedPasteRegex = regexp.MustCompile(`\x1b\[\?2004[hl]`)
 
-	// Cursor visibility changes
+	// Cursor visibility changes.
 	cursorVisibilityRegex = regexp.MustCompile(`\x1b\[\?25[hl]`)
 
-	// Cursor save/restore
+	// Cursor save/restore.
 	cursorSaveRestoreRegex = regexp.MustCompile(`\x1b[78]|\x1b\[[su]`)
 
 	// DEC private modes that are problematic
 	// This now catches ALL DEC private mode sequences like [?1h, [?1l, etc.
-	decPrivateModeRegex = regexp.MustCompile(`\x1b\[\?[0-9]+[hl]`)
+	decPrivateModeRegex = regexp.MustCompile(`\x1b\[\?\d+[hl]`)
 )
 
-// Write filters ANSI escape sequences from the input
+// Write filters ANSI escape sequences from the input.
 func (f *AnsiFilter) Write(p []byte) (n int, err error) {
 	// Add new data to buffer
 	f.buffer.Write(p)

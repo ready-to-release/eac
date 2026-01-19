@@ -11,11 +11,8 @@
 // Config files require forward slashes for cross-platform compatibility.
 package defaults
 
-// Module field defaults
+// Module field defaults.
 const (
-	// ModuleType is the default type when not specified in module contract.
-	ModuleType = "no-module-type"
-
 	// Changelog is the default changelog filename.
 	Changelog = "CHANGELOG.md"
 )
@@ -25,43 +22,43 @@ const (
 // Note: TestImplPath is not provided here - it must come from repository.yml configuration.
 
 // DesignPath returns the default design workspace path for a moniker.
-// Pattern: specs/{moniker}/.design
+// Pattern: specs/{moniker}/.design.
 func DesignPath(moniker string) string {
 	return "specs/" + moniker + "/.design"
 }
 
 // SpecsPath returns the default specs directory for a moniker.
-// Pattern: specs/{moniker}
+// Pattern: specs/{moniker}.
 func SpecsPath(moniker string) string {
 	return "specs/" + moniker
 }
 
 // SpecsPattern returns the default specs glob pattern for a moniker.
-// Pattern: specs/{moniker}/**
+// Pattern: specs/{moniker}/**.
 func SpecsPattern(moniker string) string {
 	return "specs/" + moniker + "/**"
 }
 
 // FeaturePath returns the default feature file path for a moniker and feature name.
-// Pattern: specs/{moniker}/{feature}/{feature}.feature
+// Pattern: specs/{moniker}/{feature}/{feature}.feature.
 func FeaturePath(moniker, feature string) string {
 	return "specs/" + moniker + "/" + feature + "/" + feature + ".feature"
 }
 
 // FeatureDir returns the default feature directory for a moniker and feature name.
-// Pattern: specs/{moniker}/{feature}
+// Pattern: specs/{moniker}/{feature}.
 func FeatureDir(moniker, feature string) string {
 	return "specs/" + moniker + "/" + feature
 }
 
 // WorkflowCIPath returns the default CI workflow path for a moniker.
-// Pattern: .github/workflows/ci-{moniker}.yaml
+// Pattern: .github/workflows/ci-{moniker}.yaml.
 func WorkflowCIPath(moniker string) string {
 	return ".github/workflows/ci-" + moniker + ".yaml"
 }
 
 // WorkflowReleasePath returns the default release workflow path for a moniker.
-// Pattern: .github/workflows/release-{moniker}.yaml
+// Pattern: .github/workflows/release-{moniker}.yaml.
 func WorkflowReleasePath(moniker string) string {
 	return ".github/workflows/release-" + moniker + ".yaml"
 }

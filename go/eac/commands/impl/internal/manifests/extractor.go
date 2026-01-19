@@ -6,7 +6,7 @@ import (
 	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
 )
 
-// TestResult represents a test result extracted from manifests
+// TestResult represents a test result extracted from manifests.
 type TestResult struct {
 	Name        string   `json:"name" yaml:"name"`
 	Module      string   `json:"module" yaml:"module"`
@@ -24,12 +24,13 @@ type TestResult struct {
 	FeaturePath string `json:"feature_path,omitempty" yaml:"featurepath,omitempty"`
 }
 
-// ExtractTestResults extracts all test results from manifests
+// ExtractTestResults extracts all test results from manifests.
 func ExtractTestResults(manifests []*implinternal.TestManifest) []TestResult {
 	var results []TestResult
 
 	for _, manifest := range manifests {
-		for _, test := range manifest.Tests {
+		for i := range manifest.Tests {
+			test := &manifest.Tests[i]
 			result := TestResult{
 				Name:        test.Name,
 				Module:      manifest.Moniker,
@@ -57,11 +58,11 @@ func ExtractTestResults(manifests []*implinternal.TestManifest) []TestResult {
 }
 
 // StripTagPrefixes removes @ prefix from tags for display
-// Tags like "@L0", "@control:ai-2" become "L0", "control:ai-2"
+// Tags like "@L0", "@control:ai-2" become "L0", "control:ai-2".
 func StripTagPrefixes(tags []string) []string {
 	result := make([]string, len(tags))
 	for i, tag := range tags {
-		if len(tag) > 0 && tag[0] == '@' {
+		if tag != "" && tag[0] == '@' {
 			result[i] = tag[1:]
 		} else {
 			result[i] = tag
@@ -71,7 +72,7 @@ func StripTagPrefixes(tags []string) []string {
 }
 
 // ExtractControlTags extracts control IDs from tags array.
-// Tags like "@control:ai-2" return ["ai-2"]
+// Tags like "@control:ai-2" return ["ai-2"].
 func ExtractControlTags(tags []string) []string {
 	var controls []string
 

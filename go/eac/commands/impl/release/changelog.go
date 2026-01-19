@@ -38,7 +38,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
-// log is the package-level logger for release commands
+// log is the package-level logger for release commands.
 var log = logging.C()
 
 func init() {
@@ -176,7 +176,8 @@ func ReleaseChangelog() int {
 	// Filter commits by module file patterns
 	modulePatterns := moduleContract.GetGlobPatterns()
 	var filteredCommits []*changelog.Commit
-	for _, c := range commits {
+	for i := range commits {
+		c := &commits[i]
 		parsed := changelog.ParseCommitMessage(c.Message)
 		parsed.SHA = c.ShortSHA
 		parsed.Date = c.Date
@@ -217,7 +218,8 @@ func ReleaseChangelog() int {
 
 	// Get existing version numbers for calver collision detection
 	var existingVersions []string
-	for _, v := range existingChangelog.Versions {
+	for i := range existingChangelog.Versions {
+		v := &existingChangelog.Versions[i]
 		existingVersions = append(existingVersions, v.Number)
 	}
 
@@ -328,8 +330,8 @@ func ReleaseChangelog() int {
 	return 0
 }
 
-// commitMatchesModule checks if any of the commit's files match module patterns
-func commitMatchesModule(files []string, patterns []string) bool {
+// commitMatchesModule checks if any of the commit's files match module patterns.
+func commitMatchesModule(files, patterns []string) bool {
 	for _, file := range files {
 		for _, pattern := range patterns {
 			if matchChangelogPattern(file, pattern) {
@@ -340,7 +342,7 @@ func commitMatchesModule(files []string, patterns []string) bool {
 	return false
 }
 
-// matchChangelogPattern provides simple glob matching for changelog filtering
+// matchChangelogPattern provides simple glob matching for changelog filtering.
 func matchChangelogPattern(path, pattern string) bool {
 	// Normalize separators
 	path = strings.ReplaceAll(path, "\\", "/")
@@ -369,7 +371,7 @@ func matchChangelogPattern(path, pattern string) bool {
 	return strings.HasPrefix(path, pattern) || path == pattern
 }
 
-// normalizeGitHubURL converts git remote URLs to HTTPS format
+// normalizeGitHubURL converts git remote URLs to HTTPS format.
 func normalizeGitHubURL(remoteURL string) string {
 	// Handle SSH format: git@github.com:org/repo.git
 	if strings.HasPrefix(remoteURL, "git@github.com:") {

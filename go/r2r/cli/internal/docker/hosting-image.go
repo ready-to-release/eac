@@ -15,7 +15,7 @@ import (
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/logging"
 )
 
-// InspectImage inspects a Docker image and returns the inspection result
+// InspectImage inspects a Docker image and returns the inspection result.
 func (ch *ContainerHost) InspectImage(image string) (*image.InspectResponse, error) {
 	imageInspect, err := ch.client.ImageInspect(ch.ctx, image)
 	if err != nil {
@@ -25,7 +25,7 @@ func (ch *ContainerHost) InspectImage(image string) (*image.InspectResponse, err
 }
 
 // GetImageDigest returns the digest of a Docker image for cache invalidation
-// Returns the image ID if no repo digests are available (local images)
+// Returns the image ID if no repo digests are available (local images).
 func (ch *ContainerHost) GetImageDigest(imageName string) (string, error) {
 	inspect, err := ch.InspectImage(imageName)
 	if err != nil {
@@ -42,7 +42,7 @@ func (ch *ContainerHost) GetImageDigest(imageName string) (string, error) {
 }
 
 // CreateGitHubAuthConfig creates authentication configuration for GitHub Container Registry
-// Returns both the registry.AuthConfig and base64-encoded auth string for Docker API calls
+// Returns both the registry.AuthConfig and base64-encoded auth string for Docker API calls.
 func CreateGitHubAuthConfig() (*registry.AuthConfig, string, error) {
 	// Try multiple authentication sources in order of preference
 
@@ -91,8 +91,8 @@ func CreateGitHubAuthConfig() (*registry.AuthConfig, string, error) {
 	return authConfig, authStr, nil
 }
 
-// EnsureImageExists checks if an image exists locally and pulls it based on the pull policy
-func (ch *ContainerHost) EnsureImageExists(imageName string, pullPolicy string, loadLocal bool) error {
+// EnsureImageExists checks if an image exists locally and pulls it based on the pull policy.
+func (ch *ContainerHost) EnsureImageExists(imageName, pullPolicy string, loadLocal bool) error {
 	// Apply default if not specified
 	if pullPolicy == "" {
 		pullPolicy = "AutoDetect"
@@ -127,7 +127,7 @@ func (ch *ContainerHost) EnsureImageExists(imageName string, pullPolicy string, 
 		} else if hasLocalImage && (tag == "latest" || tag == "main" || tag == "master") {
 			// For dynamic tags with local image (not loadLocal mode), check cache TTL
 			// This prevents hitting the registry on every command
-			registryCache, _ := cache.LoadRegistryCache(ch.rootDir)
+			registryCache, _ := cache.LoadRegistryCache(ch.rootDir) //nolint:errcheck // nil is handled below
 			cacheTTL := 300 // default 5 minutes
 			if conf.Global.Registry != nil && conf.Global.Registry.CacheTTL > 0 {
 				cacheTTL = conf.Global.Registry.CacheTTL
@@ -205,7 +205,7 @@ func (ch *ContainerHost) EnsureImageExists(imageName string, pullPolicy string, 
 			strings.Contains(errStr, "cannot connect to the Docker daemon") ||
 			strings.Contains(errStr, "Is the docker daemon running") ||
 			strings.Contains(errStr, "system cannot find the file specified") {
-			return fmt.Errorf("Docker service is not running. Please start Docker Desktop or the Docker daemon and try again")
+			return fmt.Errorf("docker service is not running: please start Docker Desktop or the Docker daemon and try again")
 		}
 		return fmt.Errorf("cannot connect to Docker: %w", pingErr)
 	}
@@ -218,7 +218,7 @@ func (ch *ContainerHost) EnsureImageExists(imageName string, pullPolicy string, 
 		if strings.Contains(errStr, "docker_engine") ||
 			strings.Contains(errStr, "cannot connect to the Docker daemon") ||
 			strings.Contains(errStr, "system cannot find the file specified") {
-			return fmt.Errorf("Docker service is not running. Please start Docker Desktop or the Docker daemon and try again")
+			return fmt.Errorf("docker service is not running: please start Docker Desktop or the Docker daemon and try again")
 		}
 		return fmt.Errorf("error logging in to registry: %w", err)
 	}
@@ -250,7 +250,7 @@ func (ch *ContainerHost) EnsureImageExists(imageName string, pullPolicy string, 
 	return nil
 }
 
-// extractTag extracts the tag from an image name (format: registry/repo:tag)
+// extractTag extracts the tag from an image name (format: registry/repo:tag).
 func (ch *ContainerHost) extractTag(imageName string) string {
 	tagIndex := strings.LastIndex(imageName, ":")
 	if tagIndex > 0 && tagIndex < len(imageName)-1 {
@@ -260,7 +260,7 @@ func (ch *ContainerHost) extractTag(imageName string) string {
 }
 
 // extractExtensionName extracts the extension name from an image name
-// For ghcr.io/ready-to-release/ext-eac:0.0.2 -> "eac"
+// For ghcr.io/ready-to-release/ext-eac:0.0.2 -> "eac".
 func (ch *ContainerHost) extractExtensionName(imageName string) string {
 	// Remove tag first
 	imageWithoutTag := imageName
@@ -276,7 +276,7 @@ func (ch *ContainerHost) extractExtensionName(imageName string) string {
 	return "unknown"
 }
 
-// cacheImageDigest saves the image digest to the registry cache for future lookups
+// cacheImageDigest saves the image digest to the registry cache for future lookups.
 func (ch *ContainerHost) cacheImageDigest(imageName, tag string, imageInfo image.InspectResponse) {
 	// Get or create the digest to cache
 	var digest string

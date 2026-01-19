@@ -41,7 +41,7 @@ func init() {
 	registry.Register(GetModules)
 }
 
-// moduleFilters holds the parsed filter flags
+// moduleFilters holds the parsed filter flags.
 type moduleFilters struct {
 	CalVer      bool
 	SemVer      bool
@@ -50,7 +50,7 @@ type moduleFilters struct {
 	Bundle      bool
 }
 
-// parseModuleFilters extracts filter flags from command arguments
+// parseModuleFilters extracts filter flags from command arguments.
 func parseModuleFilters(args []string) moduleFilters {
 	filters := moduleFilters{}
 	for _, arg := range args {
@@ -70,7 +70,7 @@ func parseModuleFilters(args []string) moduleFilters {
 	return filters
 }
 
-// filterModules applies the filters to the module list
+// filterModules applies the filters to the module list.
 func filterModules(mods []*modules.ModuleContract, filters moduleFilters) []*modules.ModuleContract {
 	// If no filters are set, return all modules
 	if !filters.CalVer && !filters.SemVer && !filters.WithCI && !filters.WithRelease && !filters.Bundle {
@@ -88,9 +88,9 @@ func filterModules(mods []*modules.ModuleContract, filters moduleFilters) []*mod
 		isCalVer := scheme == "calver"
 		isSemVer := scheme == "semver"
 
-		// Check workflow presence (Files and Workflows are struct types, not pointers)
-		hasCI := mod.Files.Workflows.CI != ""
-		hasRelease := mod.Files.Workflows.Release != ""
+		// Check workflow presence using helper methods
+		hasCI := mod.GetCIWorkflowPath() != ""
+		hasRelease := mod.GetReleaseWorkflowPath() != ""
 
 		// Bundle mode: CalVer + has release + no CI
 		isBundle := isCalVer && hasRelease && !hasCI

@@ -16,14 +16,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// CodeBlock represents an extracted code block from markdown
+// CodeBlock represents an extracted code block from markdown.
 type CodeBlock struct {
 	Language string
 	Content  string
 	Line     int
 }
 
-// Section represents a markdown section with heading and content
+// Section represents a markdown section with heading and content.
 type Section struct {
 	Heading string
 	Level   int
@@ -31,7 +31,7 @@ type Section struct {
 	Line    int
 }
 
-// ValidationResult holds validation results for a markdown file
+// ValidationResult holds validation results for a markdown file.
 type ValidationResult struct {
 	FilePath   string
 	Valid      bool
@@ -43,19 +43,19 @@ type ValidationResult struct {
 	ByteCount  int
 }
 
-// ValidationError represents a validation error
+// ValidationError represents a validation error.
 type ValidationError struct {
 	Line    int
 	Message string
 }
 
-// ValidationWarning represents a validation warning
+// ValidationWarning represents a validation warning.
 type ValidationWarning struct {
 	Line    int
 	Message string
 }
 
-// ValidatorOptions configures markdown validation
+// ValidatorOptions configures markdown validation.
 type ValidatorOptions struct {
 	// ValidateCodeBlocks enables code block syntax validation
 	ValidateCodeBlocks bool
@@ -73,7 +73,7 @@ type ValidatorOptions struct {
 	AllowEmptyFiles bool
 }
 
-// DefaultValidatorOptions returns sensible defaults
+// DefaultValidatorOptions returns sensible defaults.
 func DefaultValidatorOptions() ValidatorOptions {
 	return ValidatorOptions{
 		ValidateCodeBlocks:    true,
@@ -84,14 +84,14 @@ func DefaultValidatorOptions() ValidatorOptions {
 	}
 }
 
-// Validator validates markdown files
+// Validator validates markdown files.
 type Validator struct {
 	opts   ValidatorOptions
 	md     goldmark.Markdown
 	writer io.Writer
 }
 
-// NewValidator creates a new markdown validator
+// NewValidator creates a new markdown validator.
 func NewValidator(opts ValidatorOptions, writer io.Writer) *Validator {
 	return &Validator{
 		opts: opts,
@@ -104,7 +104,7 @@ func NewValidator(opts ValidatorOptions, writer io.Writer) *Validator {
 	}
 }
 
-// ValidateFile validates a single markdown file
+// ValidateFile validates a single markdown file.
 func (v *Validator) ValidateFile(filePath string) ValidationResult {
 	result := ValidationResult{
 		FilePath: filePath,
@@ -184,7 +184,7 @@ func (v *Validator) ValidateFile(filePath string) ValidationResult {
 	return result
 }
 
-// ValidateDirectory validates all markdown files in a directory
+// ValidateDirectory validates all markdown files in a directory.
 func (v *Validator) ValidateDirectory(rootDir string) ([]ValidationResult, error) {
 	var results []ValidationResult
 	var markdownFiles []string
@@ -212,7 +212,6 @@ func (v *Validator) ValidateDirectory(rootDir string) ([]ValidationResult, error
 		}
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -226,11 +225,11 @@ func (v *Validator) ValidateDirectory(rootDir string) ([]ValidationResult, error
 	return results, nil
 }
 
-// extractCodeBlocks extracts all code blocks from the AST
+// extractCodeBlocks extracts all code blocks from the AST.
 func (v *Validator) extractCodeBlocks(source []byte, doc ast.Node) []CodeBlock {
 	var blocks []CodeBlock
 
-	ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+	if err := ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
 		if !entering {
 			return ast.WalkContinue, nil
 		}
@@ -238,9 +237,10 @@ func (v *Validator) extractCodeBlocks(source []byte, doc ast.Node) []CodeBlock {
 		if codeBlock, ok := n.(*ast.FencedCodeBlock); ok {
 			lang := string(codeBlock.Language(source))
 			content := extractNodeContent(source, codeBlock)
-			line := 0
+			line := 1 // Default to line 1
 			if codeBlock.Lines().Len() > 0 {
-				line = codeBlock.Lines().At(0).Start
+				byteOffset := codeBlock.Lines().At(0).Start
+				line = byteOffsetToLineNumber(source, byteOffset)
 			}
 
 			blocks = append(blocks, CodeBlock{
@@ -251,25 +251,28 @@ func (v *Validator) extractCodeBlocks(source []byte, doc ast.Node) []CodeBlock {
 		}
 
 		return ast.WalkContinue, nil
-	})
+	}); err != nil {
+		return blocks // Walk callback never returns error
+	}
 
 	return blocks
 }
 
-// extractSections extracts all sections with their headings
+// extractSections extracts all sections with their headings.
 func (v *Validator) extractSections(source []byte, doc ast.Node) []Section {
 	var sections []Section
 
-	ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+	if err := ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
 		if !entering {
 			return ast.WalkContinue, nil
 		}
 
 		if heading, ok := n.(*ast.Heading); ok {
 			headingText := extractHeadingText(source, heading)
-			line := 0
+			line := 1 // Default to line 1
 			if heading.Lines().Len() > 0 {
-				line = heading.Lines().At(0).Start
+				byteOffset := heading.Lines().At(0).Start
+				line = byteOffsetToLineNumber(source, byteOffset)
 			}
 
 			sections = append(sections, Section{
@@ -280,12 +283,14 @@ func (v *Validator) extractSections(source []byte, doc ast.Node) []Section {
 		}
 
 		return ast.WalkContinue, nil
-	})
+	}); err != nil {
+		return sections // Walk callback never returns error
+	}
 
 	return sections
 }
 
-// validateCodeBlock validates a code block based on its language
+// validateCodeBlock validates a code block based on its language.
 func (v *Validator) validateCodeBlock(block CodeBlock) error {
 	switch strings.ToLower(block.Language) {
 	case "json":
@@ -306,7 +311,7 @@ func (v *Validator) validateCodeBlock(block CodeBlock) error {
 	}
 }
 
-// checkHeadingHierarchy validates proper heading level progression
+// checkHeadingHierarchy validates proper heading level progression.
 func (v *Validator) checkHeadingHierarchy(result *ValidationResult) {
 	if len(result.Sections) == 0 {
 		return
@@ -324,7 +329,7 @@ func (v *Validator) checkHeadingHierarchy(result *ValidationResult) {
 	}
 }
 
-// PrintResults prints validation results to the configured writer
+// PrintResults prints validation results to the configured writer.
 func (v *Validator) PrintResults(results []ValidationResult, moduleRoot string) int {
 	totalErrors := 0
 	totalWarnings := 0
@@ -333,18 +338,23 @@ func (v *Validator) PrintResults(results []ValidationResult, moduleRoot string) 
 	fmt.Fprintf(v.writer, "\n📝 Validated %d markdown file(s)\n", len(results))
 
 	for _, result := range results {
-		relPath, _ := filepath.Rel(moduleRoot, result.FilePath)
+		relPath, err := filepath.Rel(moduleRoot, result.FilePath)
+		if err != nil {
+			relPath = result.FilePath // Fallback to absolute path
+		}
 		fmt.Fprintf(v.writer, "\n   %s\n", relPath)
 
-		// Print errors
+		// Print errors (sanitize multi-line messages)
 		for _, err := range result.Errors {
-			fmt.Fprintf(v.writer, "      ❌ Line %d: %s\n", err.Line, err.Message)
+			msg := sanitizeMessage(err.Message)
+			fmt.Fprintf(v.writer, "      ❌ Line %d: %s\n", err.Line, msg)
 			totalErrors++
 		}
 
-		// Print warnings
+		// Print warnings (sanitize multi-line messages)
 		for _, warn := range result.Warnings {
-			fmt.Fprintf(v.writer, "      ⚠️  Line %d: %s\n", warn.Line, warn.Message)
+			msg := sanitizeMessage(warn.Message)
+			fmt.Fprintf(v.writer, "      ⚠️  Line %d: %s\n", warn.Line, msg)
 			totalWarnings++
 		}
 
@@ -393,4 +403,27 @@ func extractHeadingText(source []byte, heading *ast.Heading) string {
 		}
 	}
 	return strings.TrimSpace(buf.String())
+}
+
+// byteOffsetToLineNumber converts a byte offset to a 1-based line number.
+func byteOffsetToLineNumber(source []byte, offset int) int {
+	if offset <= 0 || len(source) == 0 {
+		return 1
+	}
+	if offset > len(source) {
+		offset = len(source)
+	}
+	return bytes.Count(source[:offset], []byte("\n")) + 1
+}
+
+// sanitizeMessage cleans up error/warning messages for single-line output.
+func sanitizeMessage(msg string) string {
+	// Replace newlines with " | " to keep output on one line
+	msg = strings.ReplaceAll(msg, "\n  ", " | ")
+	msg = strings.ReplaceAll(msg, "\n", " | ")
+	// Collapse multiple spaces
+	for strings.Contains(msg, "  ") {
+		msg = strings.ReplaceAll(msg, "  ", " ")
+	}
+	return strings.TrimSpace(msg)
 }

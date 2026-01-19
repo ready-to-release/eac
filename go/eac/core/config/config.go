@@ -4,10 +4,10 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"sync"
 
@@ -16,16 +16,16 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// EACConfigRelPath is re-exported for backwards compatibility
+// EACConfigRelPath is re-exported for backwards compatibility.
 const EACConfigRelPath = paths.EACConfigRelPath
 
-// Config file names
+// Config file names.
 const (
-	ModuleTypesFileName        = "module-types.yml"
 	EnvironmentsFileName       = "environments.yml"
 	TestingTagsFileName        = "testing-tags.yml"
 	TestSuitesFileName         = "test-suites.yml"
 	SystemDependenciesFileName = "system-dependencies.yml"
+	ComponentTypesFileName     = "component-types.yml"
 )
 
 // EACConfig holds all loaded EAC repository configuration.
@@ -37,7 +37,7 @@ const (
 // The loader uses fail-fast for core configs and empty defaults for optional configs:
 //
 //   - Repository:         GUARANTEED non-nil (fails if cannot load defaults)
-//   - ModuleTypes:        GUARANTEED non-nil (fails if cannot load defaults)
+//   - ComponentTypes:     GUARANTEED non-nil (loads defaults if file missing)
 //   - SystemDependencies: GUARANTEED non-nil (loads defaults if file missing)
 //   - SecurityTools:      GUARANTEED non-nil (uses defaults if file missing)
 //   - Environments:       GUARANTEED non-nil (empty if file missing)
@@ -63,8 +63,7 @@ type EACConfig struct {
 
 	// Core configs - fail-fast if loading fails (non-nil guaranteed)
 	// Repository now includes modules (unified config from repository.yml)
-	Repository  *RepositoryConfig
-	ModuleTypes *ModuleTypesConfig
+	Repository *RepositoryConfig
 
 	// Optional configs - empty defaults if file missing (non-nil guaranteed)
 	Environments       *EnvironmentsConfig
@@ -74,6 +73,8 @@ type EACConfig struct {
 	Books              *BooksConfig
 	SecurityTools      *SecurityToolsConfig
 	Commands           *CommandsConfig
+	ComponentTypes     *ComponentTypesConfig
+	LintProviders      *LintProvidersConfig
 
 	// Schema validator (lazy initialized)
 	validator     *schema.Validator
@@ -81,7 +82,7 @@ type EACConfig struct {
 	validatorErr  error
 }
 
-// LoadOptions configures the loading behavior
+// LoadOptions configures the loading behavior.
 type LoadOptions struct {
 	// RepoRoot overrides automatic repo root detection
 	RepoRoot string
@@ -94,7 +95,7 @@ type LoadOptions struct {
 	SkipWorkflowValidation bool
 }
 
-// DefaultLoadOptions returns the default load options
+// DefaultLoadOptions returns the default load options.
 func DefaultLoadOptions() LoadOptions {
 	return LoadOptions{
 		ValidateSchemas: true,
@@ -155,39 +156,14 @@ func Load(opts LoadOptions) (*EACConfig, error) {
 		return nil, err
 	}
 
-
 	// Cache the validated config
 	globalConfigCache.Set(repoRoot, opts.ValidateSchemas, cfg)
 
 	return cfg, nil
 }
 
-// countConfigFiles returns the number of loaded config files (for logging).
-// Uses reflection to count non-nil pointer fields - automatically handles new configs.
-func countConfigFiles(cfg *EACConfig) int {
-	count := 0
-	v := reflect.ValueOf(cfg).Elem()
-	t := v.Type()
-
-	for i := 0; i < v.NumField(); i++ {
-		field := v.Field(i)
-		fieldType := t.Field(i)
-
-		// Skip non-config fields (strings, sync.Once, etc.)
-		// Only count pointer fields (all config fields are pointers)
-		if field.Kind() == reflect.Ptr && !field.IsNil() {
-			// Skip internal fields (validator, validatorOnce, validatorErr)
-			if fieldType.Name == "validator" || fieldType.Name == "validatorOnce" || fieldType.Name == "validatorErr" {
-				continue
-			}
-			count++
-		}
-	}
-	return count
-}
-
 // LoadAll loads all configuration files.
-// Core configs (Repository, ModuleTypes) must load successfully - fails immediately on error.
+// Core configs (Repository, ComponentTypes) must load successfully - fails immediately on error.
 // Optional configs (Environments, TestingTags, etc.) collect errors but continue loading.
 func (c *EACConfig) LoadAll(opts LoadOptions) error {
 	validateSchemas := opts.ValidateSchemas
@@ -199,22 +175,15 @@ func (c *EACConfig) LoadAll(opts LoadOptions) error {
 		return fmt.Errorf("core config failed - repository: %w", err)
 	}
 
-	if err := c.LoadModuleTypes(validateSchemas); err != nil {
-		return fmt.Errorf("core config failed - module-types: %w", err)
+	// Load component types for component-specific defaults
+	if err := c.LoadComponentTypes(validateSchemas); err != nil {
+		return fmt.Errorf("core config failed - component-types: %w", err)
 	}
 
-	// Apply type-specific defaults after both modules and types are loaded
+	// Apply component-specific defaults after both modules and component types are loaded
 	// Skip if Repository is nil (can happen in test environments without contract files)
 	if c.Repository != nil {
-		c.Repository.ApplyTypeDefaults(c.ModuleTypes)
-
-		// Validate defined workflow paths and auto-discover missing ones
-		// Skip if explicitly disabled (useful for test environments)
-		if !opts.SkipWorkflowValidation {
-			if err := c.Repository.ValidateAndDiscoverWorkflows(c.RepoRoot); err != nil {
-				return fmt.Errorf("workflow validation failed: %w", err)
-			}
-		}
+		c.Repository.ApplyComponentDefaults(c.ComponentTypes)
 	}
 
 	// === OPTIONAL CONFIGS: Continue on error, collect for reporting ===
@@ -248,6 +217,12 @@ func (c *EACConfig) LoadAll(opts LoadOptions) error {
 		errs = append(errs, fmt.Errorf("commands: %w", err))
 	}
 
+	if err := c.LoadLintProviders(validateSchemas); err != nil {
+		errs = append(errs, fmt.Errorf("lint-providers: %w", err))
+	}
+
+	// Note: ComponentTypes is loaded in core configs section above
+
 	if len(errs) > 0 {
 		return &MultiError{Errors: errs}
 	}
@@ -263,7 +238,7 @@ func (c *EACConfig) LoadAll(opts LoadOptions) error {
 func (c *EACConfig) LoadRepository(validateSchema bool) error {
 	// Step 1: Load base defaults from contract
 	defaults, err := LoadRepositoryDefaults(c.RepoRoot)
-	if err != nil {
+	if err != nil && !errors.Is(err, ErrNoDefaults) {
 		return fmt.Errorf("loading repository defaults: %w", err)
 	}
 
@@ -281,7 +256,7 @@ func (c *EACConfig) LoadRepository(validateSchema bool) error {
 
 	// Step 3: Load type-specific defaults (if they exist)
 	typeDefaults, err := LoadRepositoryTypeDefaults(c.RepoRoot, repoType)
-	if err != nil {
+	if err != nil && !errors.Is(err, ErrNoDefaults) {
 		return fmt.Errorf("loading repository type defaults: %w", err)
 	}
 
@@ -331,48 +306,6 @@ func (c *EACConfig) LoadRepository(validateSchema bool) error {
 
 	// Step 8: Final merge: (base + type-specific) + user
 	c.Repository = MergeRepository(mergedDefaults, userCfg)
-	return nil
-}
-
-// LoadModuleTypes loads the module-types configuration.
-// Merges contract defaults with user-defined types.
-func (c *EACConfig) LoadModuleTypes(validateSchema bool) error {
-	// Load defaults from contract
-	defaults, err := LoadModuleTypesDefaults(c.RepoRoot)
-	if err != nil {
-		return fmt.Errorf("loading module-types defaults: %w", err)
-	}
-
-	// Check if user config exists
-	typesPath := filepath.Join(c.ConfigRoot, ModuleTypesFileName)
-	if _, err := os.Stat(typesPath); os.IsNotExist(err) {
-		// Use defaults only (may be nil in test environments without contract files)
-		if defaults == nil {
-			// Create empty config to guarantee non-nil
-			defaults = &ModuleTypesConfig{}
-		}
-		c.ModuleTypes = defaults
-		return nil
-	}
-
-	data, err := c.readConfigFile(ModuleTypesFileName)
-	if err != nil {
-		return err
-	}
-
-	if validateSchema {
-		if err := c.validateSchema(schema.SchemaModuleTypes, data); err != nil {
-			return err
-		}
-	}
-
-	var userCfg ModuleTypesConfig
-	if err := yaml.Unmarshal(data, &userCfg); err != nil {
-		return fmt.Errorf("failed to parse %s: %w", ModuleTypesFileName, err)
-	}
-
-	// Merge defaults with user config
-	c.ModuleTypes = MergeModuleTypes(defaults, &userCfg)
 	return nil
 }
 
@@ -441,7 +374,7 @@ func (c *EACConfig) LoadTestingTags(validateSchema bool) error {
 func (c *EACConfig) LoadTestSuites(validateSchema bool) error {
 	// Load defaults from contract
 	defaults, err := LoadTestSuitesDefaults(c.RepoRoot)
-	if err != nil {
+	if err != nil && !errors.Is(err, ErrNoDefaults) {
 		return fmt.Errorf("loading test-suites defaults: %w", err)
 	}
 
@@ -484,7 +417,7 @@ func (c *EACConfig) LoadTestSuites(validateSchema bool) error {
 func (c *EACConfig) LoadSystemDependencies(validateSchema bool) error {
 	// Load defaults from contract
 	defaults, err := LoadSystemDependenciesDefaults(c.RepoRoot)
-	if err != nil {
+	if err != nil && !errors.Is(err, ErrNoDefaults) {
 		return fmt.Errorf("loading system-dependencies defaults: %w", err)
 	}
 
@@ -522,7 +455,7 @@ func (c *EACConfig) LoadSystemDependencies(validateSchema bool) error {
 	return nil
 }
 
-// LoadBooks loads the books configuration (optional - only if file exists)
+// LoadBooks loads the books configuration (optional - only if file exists).
 func (c *EACConfig) LoadBooks(validateSchema bool) error {
 	// Check if books file exists - it's optional
 	booksPath := filepath.Join(c.ConfigRoot, BooksFileName)
@@ -581,7 +514,7 @@ func (c *EACConfig) LoadSecurityTools(validateSchema bool) error {
 	return nil
 }
 
-// LoadCommands loads the commands configuration (optional - uses defaults if file missing)
+// LoadCommands loads the commands configuration (optional - uses defaults if file missing).
 func (c *EACConfig) LoadCommands(validateSchema bool) error {
 	// Check if commands file exists - it's optional
 	commandsPath := filepath.Join(c.ConfigRoot, CommandsFileName)
@@ -619,7 +552,7 @@ func (c *EACConfig) LoadCommands(validateSchema bool) error {
 	return nil
 }
 
-// GetBookByName finds a book by its name
+// GetBookByName finds a book by its name.
 func (c *EACConfig) GetBookByName(name string) *Book {
 	if c.Books == nil {
 		return nil
@@ -638,7 +571,7 @@ func (c *EACConfig) GetBooksByModule(moniker string) []*Book {
 	if module == nil {
 		return nil
 	}
-	return c.Books.GetBooksByNames(module.Books)
+	return c.Books.GetBooksByNames(module.GetBooks())
 }
 
 // GetDefaultBooksByModule returns only default books for a module.
@@ -652,7 +585,7 @@ func (c *EACConfig) GetDefaultBooksByModule(moniker string) []*Book {
 	if module == nil {
 		return nil
 	}
-	return c.Books.GetDefaultBooksByNames(module.Books)
+	return c.Books.GetDefaultBooksByNames(module.GetBooks())
 }
 
 // GetModuleForBook finds which module owns a book by name.
@@ -662,7 +595,7 @@ func (c *EACConfig) GetModuleForBook(bookName string) string {
 		return ""
 	}
 	for _, module := range c.Repository.Modules {
-		for _, b := range module.Books {
+		for _, b := range module.GetBooks() {
 			if b == bookName {
 				return module.Moniker
 			}
@@ -698,7 +631,7 @@ func (c *EACConfig) GetModulesWithEvidenceBooks() []string {
 	return modules
 }
 
-// readConfigFile reads a config file from the config root
+// readConfigFile reads a config file from the config root.
 func (c *EACConfig) readConfigFile(filename string) ([]byte, error) {
 	path := filepath.Join(c.ConfigRoot, filename)
 	data, err := os.ReadFile(path)
@@ -760,29 +693,28 @@ func (c *EACConfig) GetBuildArtifacts(moniker string, buildAll bool) []Artifact 
 		return nil
 	}
 
-	moduleType := c.ModuleTypes.Get(module.Type)
-
-	// Determine source artifacts: module-level takes priority over type-level
+	// Collect artifacts from all components
 	var artifacts []Artifact
-	if module.Build != nil && len(module.Build.Artifacts) > 0 {
-		// Use module-level artifacts
-		for _, ma := range module.Build.Artifacts {
-			artifacts = append(artifacts, Artifact{
-				ID:          ma.ID,
-				Type:        ma.Type,
-				Pattern:     ma.Pattern,
-				Compression: ma.Compression,
-				DeriveFrom:  ma.DeriveFrom,
-			})
+	for _, comp := range module.Components {
+		if comp != nil && comp.Build != nil {
+			for _, ma := range comp.Build.Artifacts {
+				artifacts = append(artifacts, Artifact{
+					ID:          ma.ID,
+					Type:        ma.Type,
+					Pattern:     ma.Pattern,
+					Compression: ma.Compression,
+					DeriveFrom:  ma.DeriveFrom,
+				})
+			}
 		}
-	} else if moduleType != nil && moduleType.Build != nil && len(moduleType.Build.Artifacts) > 0 {
-		// Use type-level artifacts
-		artifacts = moduleType.Build.Artifacts
 	}
 
 	// Add book-derived artifacts if module has books
-	if len(module.Books) > 0 {
-		c.LoadBooks(false) // Ensure books are loaded
+	if len(module.GetBooks()) > 0 {
+		if err := c.LoadBooks(false); err != nil {
+			// Books loading is non-critical for artifact resolution
+			// Continue with module-defined artifacts only
+		}
 		bookArtifacts := c.generateBookArtifacts(module, buildAll)
 
 		// Deduplicate by ID
@@ -813,7 +745,7 @@ func (c *EACConfig) GetBuildArtifactIDs(moniker string, buildAll bool) []string 
 	return ids
 }
 
-// filterArtifacts filters and expands artifacts based on the buildAll flag
+// filterArtifacts filters and expands artifacts based on the buildAll flag.
 func (c *EACConfig) filterArtifacts(artifacts []Artifact, buildAll bool) []Artifact {
 	var result []Artifact
 	seenIDs := make(map[string]bool)
@@ -864,7 +796,7 @@ func (c *EACConfig) filterArtifacts(artifacts []Artifact, buildAll bool) []Artif
 	return result
 }
 
-// getArchitecturesForPlatform determines supported architectures based on OS and pattern
+// getArchitecturesForPlatform determines supported architectures based on OS and pattern.
 func (c *EACConfig) getArchitecturesForPlatform(os, pattern string) []string {
 	// Check for architecture-specific patterns
 	if containsAny(pattern, "-amd64", "{os}-amd64") {
@@ -881,7 +813,7 @@ func (c *EACConfig) getArchitecturesForPlatform(os, pattern string) []string {
 	return []string{"amd64", "arm64"}
 }
 
-// deriveArtifactID creates an artifact ID based on OS, arch, and compression
+// deriveArtifactID creates an artifact ID based on OS, arch, and compression.
 func (c *EACConfig) deriveArtifactID(artifact Artifact, os, arch string) string {
 	baseID := os + "-" + arch
 	if artifact.Compression == CompressionUPX {
@@ -890,11 +822,11 @@ func (c *EACConfig) deriveArtifactID(artifact Artifact, os, arch string) string 
 	return baseID
 }
 
-// generateBookArtifacts creates artifact definitions from books for a module
+// generateBookArtifacts creates artifact definitions from books for a module.
 func (c *EACConfig) generateBookArtifacts(module *Module, buildAll bool) []Artifact {
 	var artifacts []Artifact
 
-	books := c.Books.GetBooksByNames(module.Books)
+	books := c.Books.GetBooksByNames(module.GetBooks())
 	for i, book := range books {
 		// Skip non-default books (not first) unless --all flag is used
 		isDefault := i == 0
@@ -932,4 +864,3 @@ func (c *EACConfig) generateBookArtifacts(module *Module, buildAll bool) []Artif
 
 	return artifacts
 }
-

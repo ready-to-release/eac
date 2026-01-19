@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// GetCommitSHA returns the current git commit SHA for the workspace
+// GetCommitSHA returns the current git commit SHA for the workspace.
 func GetCommitSHA(workspaceRoot string) string {
 	cmd := exec.Command("git", "rev-parse", "HEAD")
 	cmd.Dir = workspaceRoot

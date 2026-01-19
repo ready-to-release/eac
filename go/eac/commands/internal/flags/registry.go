@@ -241,10 +241,10 @@ func suggestSimilarFlags(unknownFlag string, validFlags []registry.FlagMetadata)
 
 // levenshteinDistance calculates the Levenshtein distance between two strings.
 func levenshteinDistance(a, b string) int {
-	if len(a) == 0 {
+	if a == "" {
 		return len(b)
 	}
-	if len(b) == 0 {
+	if b == "" {
 		return len(a)
 	}
 

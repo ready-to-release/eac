@@ -271,7 +271,7 @@ func validateConfig(cfg *Config) error {
 	return nil
 }
 
-// LoadConfig takes a named config file and loads it using viper
+// LoadConfig takes a named config file and loads it using viper.
 func validateMemoryLimit(limit string) error {
 	if limit == "" {
 		return nil // Optional field
@@ -296,7 +296,7 @@ func validateMemoryLimit(limit string) error {
 	return nil
 }
 
-// validateCPULimit validates Docker CPU limit format (e.g., "0.5", "2")
+// validateCPULimit validates Docker CPU limit format (e.g., "0.5", "2").
 func validateCPULimit(limit string) error {
 	if limit == "" {
 		return nil // Optional field

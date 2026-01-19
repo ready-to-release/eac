@@ -2,7 +2,7 @@ package validation
 
 import "fmt"
 
-// ErrorCode represents a structured validation error code with metadata
+// ErrorCode represents a structured validation error code with metadata.
 type ErrorCode struct {
 	Code        string
 	Category    ErrorCategory
@@ -11,7 +11,7 @@ type ErrorCode struct {
 	Description string
 }
 
-// ErrorCategory represents the category of a validation error
+// ErrorCategory represents the category of a validation error.
 type ErrorCategory string
 
 const (
@@ -22,7 +22,7 @@ const (
 	CategoryCorruption ErrorCategory = "corruption" // AI noise corruption (forbidden content)
 )
 
-// ErrorSeverity represents the severity level of an error
+// ErrorSeverity represents the severity level of an error.
 type ErrorSeverity string
 
 const (
@@ -30,7 +30,7 @@ const (
 	SeverityWarning ErrorSeverity = "warning"
 )
 
-// String returns the error code string
+// String returns the error code string.
 func (e ErrorCode) String() string {
 	return e.Code
 }
@@ -40,7 +40,7 @@ func (e ErrorCode) String() string {
 // ===============================================
 
 var (
-	// ErrEmptyOutput indicates AI generated empty output
+	// ErrEmptyOutput indicates AI generated empty output.
 	ErrEmptyOutput = ErrorCode{
 		Code:        "EMPTY_OUTPUT",
 		Category:    CategoryStructure,
@@ -49,7 +49,7 @@ var (
 		Description: "AI generated empty output",
 	}
 
-	// ErrMissingTagsConfig indicates testing tags configuration not loaded
+	// ErrMissingTagsConfig indicates testing tags configuration not loaded.
 	ErrMissingTagsConfig = ErrorCode{
 		Code:        "MISSING_TAGS_CONFIG",
 		Category:    CategoryStructure,
@@ -58,7 +58,7 @@ var (
 		Description: "Testing tags configuration not loaded",
 	}
 
-	// ErrNoContract indicates validation contract not loaded
+	// ErrNoContract indicates validation contract not loaded.
 	ErrNoContract = ErrorCode{
 		Code:        "NO_CONTRACT",
 		Category:    CategoryStructure,
@@ -67,7 +67,7 @@ var (
 		Description: "Validation contract not loaded",
 	}
 
-	// ErrUnsupportedFormat indicates unsupported output format specified
+	// ErrUnsupportedFormat indicates unsupported output format specified.
 	ErrUnsupportedFormat = ErrorCode{
 		Code:        "UNSUPPORTED_FORMAT",
 		Category:    CategoryStructure,
@@ -76,7 +76,7 @@ var (
 		Description: "Unsupported output format specified",
 	}
 
-	// ErrInvalidJSON indicates invalid JSON syntax
+	// ErrInvalidJSON indicates invalid JSON syntax.
 	ErrInvalidJSON = ErrorCode{
 		Code:        "INVALID_JSON",
 		Category:    CategoryStructure,
@@ -85,7 +85,7 @@ var (
 		Description: "Invalid JSON syntax",
 	}
 
-	// ErrJSONSchemaViolation indicates JSON schema validation failure
+	// ErrJSONSchemaViolation indicates JSON schema validation failure.
 	ErrJSONSchemaViolation = ErrorCode{
 		Code:        "JSON_SCHEMA_VIOLATION",
 		Category:    CategoryStructure,
@@ -100,7 +100,7 @@ var (
 // ===============================================
 
 var (
-	// ErrMissingFeature indicates missing Feature declaration
+	// ErrMissingFeature indicates missing Feature declaration.
 	ErrMissingFeature = ErrorCode{
 		Code:        "MISSING_FEATURE",
 		Category:    CategorySemantic,
@@ -109,7 +109,7 @@ var (
 		Description: "Missing Feature declaration",
 	}
 
-	// ErrMissingRule indicates missing Rule declaration
+	// ErrMissingRule indicates missing Rule declaration.
 	ErrMissingRule = ErrorCode{
 		Code:        "MISSING_RULE",
 		Category:    CategorySemantic,
@@ -118,7 +118,7 @@ var (
 		Description: "Missing Rule declaration",
 	}
 
-	// ErrMissingScenario indicates missing Scenario declaration
+	// ErrMissingScenario indicates missing Scenario declaration.
 	ErrMissingScenario = ErrorCode{
 		Code:        "MISSING_SCENARIO",
 		Category:    CategorySemantic,
@@ -127,7 +127,7 @@ var (
 		Description: "Missing Scenario declaration",
 	}
 
-	// ErrMultipleFeatures indicates multiple Feature declarations
+	// ErrMultipleFeatures indicates multiple Feature declarations.
 	ErrMultipleFeatures = ErrorCode{
 		Code:        "MULTIPLE_FEATURES",
 		Category:    CategorySemantic,
@@ -136,7 +136,7 @@ var (
 		Description: "Multiple Feature declarations found",
 	}
 
-	// ErrRuleBeforeFeature indicates Rule declared before Feature
+	// ErrRuleBeforeFeature indicates Rule declared before Feature.
 	ErrRuleBeforeFeature = ErrorCode{
 		Code:        "RULE_BEFORE_FEATURE",
 		Category:    CategorySemantic,
@@ -145,7 +145,7 @@ var (
 		Description: "Rule must come after Feature declaration",
 	}
 
-	// ErrScenarioBeforeFeature indicates Scenario declared before Feature
+	// ErrScenarioBeforeFeature indicates Scenario declared before Feature.
 	ErrScenarioBeforeFeature = ErrorCode{
 		Code:        "SCENARIO_BEFORE_FEATURE",
 		Category:    CategorySemantic,
@@ -154,7 +154,7 @@ var (
 		Description: "Scenario must come after Feature declaration",
 	}
 
-	// ErrBackgroundBeforeFeature indicates Background declared before Feature
+	// ErrBackgroundBeforeFeature indicates Background declared before Feature.
 	ErrBackgroundBeforeFeature = ErrorCode{
 		Code:        "BACKGROUND_BEFORE_FEATURE",
 		Category:    CategorySemantic,
@@ -163,7 +163,7 @@ var (
 		Description: "Background must come after Feature declaration",
 	}
 
-	// ErrExamplesWithoutScenario indicates Examples without Scenario Outline
+	// ErrExamplesWithoutScenario indicates Examples without Scenario Outline.
 	ErrExamplesWithoutScenario = ErrorCode{
 		Code:        "EXAMPLES_WITHOUT_SCENARIO",
 		Category:    CategorySemantic,
@@ -172,7 +172,7 @@ var (
 		Description: "Examples must come after Scenario Outline",
 	}
 
-	// ErrRuleWithoutScenarios indicates Rule has no scenarios
+	// ErrRuleWithoutScenarios indicates Rule has no scenarios.
 	ErrRuleWithoutScenarios = ErrorCode{
 		Code:        "RULE_WITHOUT_SCENARIOS",
 		Category:    CategorySemantic,
@@ -181,7 +181,7 @@ var (
 		Description: "Rule has no scenarios nested under it",
 	}
 
-	// ErrScenariosOutsideRule indicates scenarios not nested under Rule
+	// ErrScenariosOutsideRule indicates scenarios not nested under Rule.
 	ErrScenariosOutsideRule = ErrorCode{
 		Code:        "SCENARIOS_OUTSIDE_RULE",
 		Category:    CategorySemantic,
@@ -190,7 +190,7 @@ var (
 		Description: "Scenarios must be nested under Rule blocks",
 	}
 
-	// ErrMissingVerificationTag indicates scenario missing verification tag
+	// ErrMissingVerificationTag indicates scenario missing verification tag.
 	ErrMissingVerificationTag = ErrorCode{
 		Code:        "MISSING_VERIFICATION_TAG",
 		Category:    CategorySemantic,
@@ -199,7 +199,7 @@ var (
 		Description: "Scenario missing required verification tag",
 	}
 
-	// ErrMissingRequiredElement indicates required element not found
+	// ErrMissingRequiredElement indicates required element not found.
 	ErrMissingRequiredElement = ErrorCode{
 		Code:        "MISSING_REQUIRED_ELEMENT",
 		Category:    CategorySemantic,
@@ -224,7 +224,7 @@ var (
 // ===============================================
 
 var (
-	// ErrInvalidFeatureNaming indicates feature name doesn't follow convention
+	// ErrInvalidFeatureNaming indicates feature name doesn't follow convention.
 	ErrInvalidFeatureNaming = ErrorCode{
 		Code:        "INVALID_FEATURE_NAMING",
 		Category:    CategoryFormat,
@@ -233,7 +233,7 @@ var (
 		Description: "Feature name doesn't follow naming convention",
 	}
 
-	// ErrIncorrectIndentation indicates incorrect indentation
+	// ErrIncorrectIndentation indicates incorrect indentation.
 	ErrIncorrectIndentation = ErrorCode{
 		Code:        "INCORRECT_INDENTATION",
 		Category:    CategoryFormat,
@@ -242,7 +242,7 @@ var (
 		Description: "Incorrect indentation",
 	}
 
-	// ErrInvalidTagFormat indicates invalid tag format
+	// ErrInvalidTagFormat indicates invalid tag format.
 	ErrInvalidTagFormat = ErrorCode{
 		Code:        "INVALID_TAG_FORMAT",
 		Category:    CategoryFormat,
@@ -251,7 +251,7 @@ var (
 		Description: "Invalid tag format",
 	}
 
-	// ErrInvalidTagLevel indicates tag used at wrong level
+	// ErrInvalidTagLevel indicates tag used at wrong level.
 	ErrInvalidTagLevel = ErrorCode{
 		Code:        "INVALID_TAG_LEVEL",
 		Category:    CategoryFormat,
@@ -260,7 +260,7 @@ var (
 		Description: "Tag used at wrong level (feature vs scenario)",
 	}
 
-	// ErrLineTooLong indicates line exceeds maximum length
+	// ErrLineTooLong indicates line exceeds maximum length.
 	ErrLineTooLong = ErrorCode{
 		Code:        "LINE_TOO_LONG",
 		Category:    CategoryFormat,
@@ -269,7 +269,7 @@ var (
 		Description: "Line exceeds maximum length",
 	}
 
-	// ErrInvalidPattern indicates content doesn't match required pattern
+	// ErrInvalidPattern indicates content doesn't match required pattern.
 	ErrInvalidPattern = ErrorCode{
 		Code:        "INVALID_PATTERN",
 		Category:    CategoryFormat,
@@ -284,7 +284,7 @@ var (
 // ===============================================
 
 var (
-	// ErrTooManyRules indicates too many rules (>10)
+	// ErrTooManyRules indicates too many rules (>10).
 	ErrTooManyRules = ErrorCode{
 		Code:        "TOO_MANY_RULES",
 		Category:    CategoryConstraint,
@@ -293,7 +293,7 @@ var (
 		Description: "Too many Rules (must split feature)",
 	}
 
-	// ErrLargeRuleCount indicates large number of rules (>6)
+	// ErrLargeRuleCount indicates large number of rules (>6).
 	ErrLargeRuleCount = ErrorCode{
 		Code:        "LARGE_RULE_COUNT",
 		Category:    CategoryConstraint,
@@ -302,7 +302,7 @@ var (
 		Description: "Large number of Rules (consider splitting)",
 	}
 
-	// ErrTooFewRules indicates too few rules (<2)
+	// ErrTooFewRules indicates too few rules (<2).
 	ErrTooFewRules = ErrorCode{
 		Code:        "TOO_FEW_RULES",
 		Category:    CategoryConstraint,
@@ -311,7 +311,7 @@ var (
 		Description: "Too few Rules (2-6 recommended)",
 	}
 
-	// ErrTooManyScenarios indicates too many scenarios (>30)
+	// ErrTooManyScenarios indicates too many scenarios (>30).
 	ErrTooManyScenarios = ErrorCode{
 		Code:        "TOO_MANY_SCENARIOS",
 		Category:    CategoryConstraint,
@@ -320,7 +320,7 @@ var (
 		Description: "Too many Scenarios (must split feature)",
 	}
 
-	// ErrLargeScenarioCount indicates large number of scenarios (>20)
+	// ErrLargeScenarioCount indicates large number of scenarios (>20).
 	ErrLargeScenarioCount = ErrorCode{
 		Code:        "LARGE_SCENARIO_COUNT",
 		Category:    CategoryConstraint,
@@ -329,7 +329,7 @@ var (
 		Description: "Large number of Scenarios (consider splitting)",
 	}
 
-	// ErrMutualExclusionViolation indicates mutually exclusive tags used together
+	// ErrMutualExclusionViolation indicates mutually exclusive tags used together.
 	ErrMutualExclusionViolation = ErrorCode{
 		Code:        "MUTUAL_EXCLUSION_VIOLATION",
 		Category:    CategoryConstraint,
@@ -338,7 +338,7 @@ var (
 		Description: "Mutually exclusive tags used together",
 	}
 
-	// ErrCriticalAspectRequiresGxP indicates @gmp-critical-aspect requires @gxp
+	// ErrCriticalAspectRequiresGxP indicates @gmp-critical-aspect requires @gxp.
 	ErrCriticalAspectRequiresGxP = ErrorCode{
 		Code:        "CRITICAL_ASPECT_REQUIRES_GXP",
 		Category:    CategoryConstraint,
@@ -355,7 +355,7 @@ var (
 
 var (
 	// ErrForbiddenPrefix indicates output contains forbidden prefix
-	// RESERVED: Planned for AI safety filtering to detect harmful output patterns
+	// RESERVED: Planned for AI safety filtering to detect harmful output patterns.
 	ErrForbiddenPrefix = ErrorCode{
 		Code:        "FORBIDDEN_PREFIX",
 		Category:    CategoryCorruption,
@@ -365,7 +365,7 @@ var (
 	}
 
 	// ErrForbiddenContent indicates output contains forbidden content
-	// RESERVED: Planned for AI safety filtering to detect harmful content
+	// RESERVED: Planned for AI safety filtering to detect harmful content.
 	ErrForbiddenContent = ErrorCode{
 		Code:        "FORBIDDEN_CONTENT",
 		Category:    CategoryCorruption,
@@ -380,7 +380,7 @@ var (
 // ===============================================
 
 var (
-	// ErrMissingWorkspace indicates DSL missing workspace keyword
+	// ErrMissingWorkspace indicates DSL missing workspace keyword.
 	ErrMissingWorkspace = ErrorCode{
 		Code:        "MISSING_WORKSPACE",
 		Category:    CategoryStructure,
@@ -389,7 +389,7 @@ var (
 		Description: "DSL must start with 'workspace' keyword",
 	}
 
-	// ErrUnmatchedBrace indicates unmatched closing brace
+	// ErrUnmatchedBrace indicates unmatched closing brace.
 	ErrUnmatchedBrace = ErrorCode{
 		Code:        "UNMATCHED_BRACE",
 		Category:    CategoryStructure,
@@ -398,7 +398,7 @@ var (
 		Description: "Unmatched closing brace",
 	}
 
-	// ErrUnclosedBrace indicates unclosed opening brace
+	// ErrUnclosedBrace indicates unclosed opening brace.
 	ErrUnclosedBrace = ErrorCode{
 		Code:        "UNCLOSED_BRACE",
 		Category:    CategoryStructure,
@@ -407,7 +407,7 @@ var (
 		Description: "Unclosed opening brace",
 	}
 
-	// ErrInvalidIdentifier indicates invalid identifier name
+	// ErrInvalidIdentifier indicates invalid identifier name.
 	ErrInvalidIdentifier = ErrorCode{
 		Code:        "INVALID_IDENTIFIER",
 		Category:    CategoryFormat,
@@ -416,7 +416,7 @@ var (
 		Description: "Invalid identifier name",
 	}
 
-	// ErrParentChildRelationship indicates parent-child relationship error
+	// ErrParentChildRelationship indicates parent-child relationship error.
 	ErrParentChildRelationship = ErrorCode{
 		Code:        "PARENT_CHILD_RELATIONSHIP",
 		Category:    CategorySemantic,
@@ -425,7 +425,7 @@ var (
 		Description: "Relationships cannot be added between parents and children",
 	}
 
-	// ErrDSLValidation indicates general DSL validation error
+	// ErrDSLValidation indicates general DSL validation error.
 	ErrDSLValidation = ErrorCode{
 		Code:        "DSL_VALIDATION",
 		Category:    CategoryStructure,
@@ -434,7 +434,7 @@ var (
 		Description: "DSL validation error",
 	}
 
-	// ErrSetupError indicates setup/initialization error
+	// ErrSetupError indicates setup/initialization error.
 	ErrSetupError = ErrorCode{
 		Code:        "SETUP_ERROR",
 		Category:    CategoryStructure,
@@ -443,7 +443,7 @@ var (
 		Description: "Setup or initialization error",
 	}
 
-	// ErrValidationError indicates validation execution error
+	// ErrValidationError indicates validation execution error.
 	ErrValidationError = ErrorCode{
 		Code:        "VALIDATION_ERROR",
 		Category:    CategoryStructure,
@@ -452,7 +452,7 @@ var (
 		Description: "Validation execution error",
 	}
 
-	// ErrQuickValidationFailed indicates quick validation skipped full validation
+	// ErrQuickValidationFailed indicates quick validation skipped full validation.
 	ErrQuickValidationFailed = ErrorCode{
 		Code:        "QUICK_VALIDATION_FAILED",
 		Category:    CategoryStructure,
@@ -467,7 +467,7 @@ var (
 // ===============================================
 
 var (
-	// ErrOSCALInvalidDocument indicates document is not an OSCAL document type
+	// ErrOSCALInvalidDocument indicates document is not an OSCAL document type.
 	ErrOSCALInvalidDocument = ErrorCode{
 		Code:        "OSCAL_INVALID_DOCUMENT",
 		Category:    CategoryStructure,
@@ -476,7 +476,7 @@ var (
 		Description: "Document is not a valid OSCAL document type",
 	}
 
-	// ErrOSCALMissingUUID indicates missing required UUID field
+	// ErrOSCALMissingUUID indicates missing required UUID field.
 	ErrOSCALMissingUUID = ErrorCode{
 		Code:        "OSCAL_MISSING_UUID",
 		Category:    CategorySemantic,
@@ -485,7 +485,7 @@ var (
 		Description: "Missing required UUID field",
 	}
 
-	// ErrOSCALMissingTitle indicates missing required metadata title
+	// ErrOSCALMissingTitle indicates missing required metadata title.
 	ErrOSCALMissingTitle = ErrorCode{
 		Code:        "OSCAL_MISSING_TITLE",
 		Category:    CategorySemantic,
@@ -494,7 +494,7 @@ var (
 		Description: "Missing required metadata title",
 	}
 
-	// ErrOSCALMissingLastModified indicates missing required last-modified timestamp
+	// ErrOSCALMissingLastModified indicates missing required last-modified timestamp.
 	ErrOSCALMissingLastModified = ErrorCode{
 		Code:        "OSCAL_MISSING_LAST_MODIFIED",
 		Category:    CategorySemantic,
@@ -503,7 +503,7 @@ var (
 		Description: "Missing required metadata last-modified timestamp",
 	}
 
-	// ErrOSCALEmptyCatalog indicates catalog has no controls or groups
+	// ErrOSCALEmptyCatalog indicates catalog has no controls or groups.
 	ErrOSCALEmptyCatalog = ErrorCode{
 		Code:        "OSCAL_EMPTY_CATALOG",
 		Category:    CategorySemantic,
@@ -512,7 +512,7 @@ var (
 		Description: "Catalog must have at least one control or group",
 	}
 
-	// ErrOSCALMissingImports indicates profile has no imports
+	// ErrOSCALMissingImports indicates profile has no imports.
 	ErrOSCALMissingImports = ErrorCode{
 		Code:        "OSCAL_MISSING_IMPORTS",
 		Category:    CategorySemantic,
@@ -521,7 +521,7 @@ var (
 		Description: "Profile must have at least one import",
 	}
 
-	// ErrOSCALMissingImportHref indicates import missing href field
+	// ErrOSCALMissingImportHref indicates import missing href field.
 	ErrOSCALMissingImportHref = ErrorCode{
 		Code:        "OSCAL_MISSING_IMPORT_HREF",
 		Category:    CategorySemantic,
@@ -530,7 +530,7 @@ var (
 		Description: "Import missing required href field",
 	}
 
-	// ErrOSCALInvalidControlID indicates control ID may not be valid format
+	// ErrOSCALInvalidControlID indicates control ID may not be valid format.
 	ErrOSCALInvalidControlID = ErrorCode{
 		Code:        "OSCAL_INVALID_CONTROL_ID",
 		Category:    CategoryFormat,
@@ -539,7 +539,7 @@ var (
 		Description: "Control ID may not be valid NIST 800-53 format",
 	}
 
-	// ErrOSCALEmptyImport indicates import has no control selections
+	// ErrOSCALEmptyImport indicates import has no control selections.
 	ErrOSCALEmptyImport = ErrorCode{
 		Code:        "OSCAL_EMPTY_IMPORT",
 		Category:    CategorySemantic,
@@ -548,7 +548,7 @@ var (
 		Description: "Import has no control selections",
 	}
 
-	// ErrOSCALVersionMismatch indicates OSCAL version differs from expected
+	// ErrOSCALVersionMismatch indicates OSCAL version differs from expected.
 	ErrOSCALVersionMismatch = ErrorCode{
 		Code:        "OSCAL_VERSION_MISMATCH",
 		Category:    CategoryStructure,
@@ -557,7 +557,7 @@ var (
 		Description: "OSCAL version differs from expected version",
 	}
 
-	// ErrOSCALFileRead indicates failed to read file
+	// ErrOSCALFileRead indicates failed to read file.
 	ErrOSCALFileRead = ErrorCode{
 		Code:        "OSCAL_FILE_READ",
 		Category:    CategoryStructure,
@@ -572,7 +572,7 @@ var (
 // ===============================================
 
 var (
-	// ErrUnknownTag indicates unknown tag not in testing-tags.yml (warning)
+	// ErrUnknownTag indicates unknown tag not in testing-tags.yml (warning).
 	ErrUnknownTag = ErrorCode{
 		Code:        "UNKNOWN_TAG",
 		Category:    CategoryFormat,
@@ -581,7 +581,7 @@ var (
 		Description: "Unknown tag not defined in testing-tags.yml",
 	}
 
-	// ErrGxPMissingControl indicates @gxp without control tag (warning)
+	// ErrGxPMissingControl indicates @gxp without control tag (warning).
 	ErrGxPMissingControl = ErrorCode{
 		Code:        "GXP_MISSING_CONTROL",
 		Category:    CategoryConstraint,
@@ -590,7 +590,7 @@ var (
 		Description: "@gxp tag should link to OSCAL controls",
 	}
 
-	// ErrContractNameMismatch indicates contract name mismatch (warning)
+	// ErrContractNameMismatch indicates contract name mismatch (warning).
 	ErrContractNameMismatch = ErrorCode{
 		Code:        "CONTRACT_NAME_MISMATCH",
 		Category:    CategoryStructure,
@@ -599,7 +599,7 @@ var (
 		Description: "Contract name doesn't match expected value",
 	}
 
-	// ErrNoTagContract indicates tag contract not loaded (warning)
+	// ErrNoTagContract indicates tag contract not loaded (warning).
 	ErrNoTagContract = ErrorCode{
 		Code:        "NO_TAG_CONTRACT",
 		Category:    CategoryStructure,
@@ -608,7 +608,7 @@ var (
 		Description: "Tag contract not loaded",
 	}
 
-	// ErrContractVersionMismatch indicates contract version mismatch (warning)
+	// ErrContractVersionMismatch indicates contract version mismatch (warning).
 	ErrContractVersionMismatch = ErrorCode{
 		Code:        "CONTRACT_VERSION_MISMATCH",
 		Category:    CategoryStructure,
@@ -707,7 +707,7 @@ func GetErrorCode(code string) (*ErrorCode, bool) {
 }
 
 // MustGetErrorCode retrieves error code metadata by string code
-// Panics if the code is not found (for cases where code should always exist)
+// Panics if the code is not found (for cases where code should always exist).
 func MustGetErrorCode(code string) *ErrorCode {
 	ec, ok := errorCodeRegistry[code]
 	if !ok {
@@ -716,7 +716,7 @@ func MustGetErrorCode(code string) *ErrorCode {
 	return ec
 }
 
-// GetAllErrorCodes returns all registered error codes
+// GetAllErrorCodes returns all registered error codes.
 func GetAllErrorCodes() map[string]*ErrorCode {
 	// Return a copy to prevent external modification
 	result := make(map[string]*ErrorCode, len(errorCodeRegistry))
@@ -726,7 +726,7 @@ func GetAllErrorCodes() map[string]*ErrorCode {
 	return result
 }
 
-// GetErrorCodesByCategory returns all error codes in a category
+// GetErrorCodesByCategory returns all error codes in a category.
 func GetErrorCodesByCategory(category ErrorCategory) []*ErrorCode {
 	var result []*ErrorCode
 	for _, ec := range errorCodeRegistry {
@@ -737,7 +737,7 @@ func GetErrorCodesByCategory(category ErrorCategory) []*ErrorCode {
 	return result
 }
 
-// GetErrorCodesBySeverity returns all error codes with a severity level
+// GetErrorCodesBySeverity returns all error codes with a severity level.
 func GetErrorCodesBySeverity(severity ErrorSeverity) []*ErrorCode {
 	var result []*ErrorCode
 	for _, ec := range errorCodeRegistry {

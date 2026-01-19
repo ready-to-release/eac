@@ -55,12 +55,11 @@ func TestBuildModuleContext_ModuleNotFound(t *testing.T) {
 func TestBuildModuleContext_WithModule(t *testing.T) {
 	registry := modules.NewRegistry("0.1.0", "/test")
 
-	// Create a module contract with type "api"
+	// Create a module contract with "api" component
 	module := modules.NewModuleContract(contracts.BaseContract{
 		Moniker: "api-gateway",
-		Type:    "api",
-		Files: contracts.Files{
-			Root: "go/test",
+		Components: contracts.ModuleComponents{
+			"api": &contracts.ComponentEntry{Root: "go/test"},
 		},
 	}, "/test")
 

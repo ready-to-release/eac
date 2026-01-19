@@ -8,13 +8,13 @@ import (
 )
 
 // GitContext provides Git repository context for generating GitHub links
-// This is a lightweight interface to avoid circular dependencies
+// This is a lightweight interface to avoid circular dependencies.
 type GitContext interface {
 	BuildGitHubFileURL(filePath string) string
 }
 
 // RenderTestSummary renders test results in the format shown in implementation-report.md
-// This renders a single feature with its rules and scenarios organized by acceptance criteria
+// This renders a single feature with its rules and scenarios organized by acceptance criteria.
 func RenderTestSummary(feature *Feature, gitCtx GitContext) string {
 	var buf strings.Builder
 
@@ -57,7 +57,8 @@ func RenderTestSummary(feature *Feature, gitCtx GitContext) string {
 		buf.WriteString("| Scenario | Tags | Result |\n")
 		buf.WriteString("|----------|------|--------|\n")
 
-		for _, scenario := range scenarios {
+		for i := range scenarios {
+			scenario := &scenarios[i]
 			name := scenario.Name
 			tags := scenario.GetTagString()
 			status := scenario.GetStatus()
@@ -72,12 +73,13 @@ func RenderTestSummary(feature *Feature, gitCtx GitContext) string {
 	return buf.String()
 }
 
-// RenderAllFeatures renders all features in test summary format
+// RenderAllFeatures renders all features in test summary format.
 func RenderAllFeatures(report CucumberReport, gitCtx GitContext) string {
 	var buf strings.Builder
 
-	for i, feature := range report {
-		buf.WriteString(RenderTestSummary(&feature, gitCtx))
+	for i := range report {
+		feature := &report[i]
+		buf.WriteString(RenderTestSummary(feature, gitCtx))
 
 		// Add separator between features (but not after the last one)
 		if i < len(report)-1 {
@@ -89,27 +91,29 @@ func RenderAllFeatures(report CucumberReport, gitCtx GitContext) string {
 }
 
 // RenderByVerificationType renders scenarios filtered by verification type (IV/OV/PV)
-// and grouped by feature
+// and grouped by feature.
 func RenderByVerificationType(report CucumberReport, verificationType string) string {
 	var buf strings.Builder
 
 	// Group by feature ID
 	featureMap := make(map[string]*featureScenarios)
 
-	for _, feature := range report {
+	for i := range report {
+		feature := &report[i]
 		featureID := feature.GetFeatureID()
 
 		// Filter scenarios for this verification type
 		var filteredScenarios []Scenario
-		for _, scenario := range feature.Elements {
+		for j := range feature.Elements {
+			scenario := &feature.Elements[j]
 			if scenario.GetVerificationType() == verificationType {
-				filteredScenarios = append(filteredScenarios, scenario)
+				filteredScenarios = append(filteredScenarios, *scenario)
 			}
 		}
 
 		if len(filteredScenarios) > 0 {
 			featureMap[featureID] = &featureScenarios{
-				Feature:   &feature,
+				Feature:   feature,
 				Scenarios: filteredScenarios,
 			}
 		}
@@ -152,7 +156,8 @@ func RenderByVerificationType(report CucumberReport, verificationType string) st
 			buf.WriteString("| Scenario | Tags | Result |\n")
 			buf.WriteString("|----------|------|--------|\n")
 
-			for _, scenario := range scenarios {
+			for k := range scenarios {
+				scenario := &scenarios[k]
 				buf.WriteString(fmt.Sprintf("| %s | %s | %s |\n",
 					scenario.Name,
 					scenario.GetTagString(),
@@ -178,23 +183,24 @@ type featureScenarios struct {
 	Scenarios []Scenario
 }
 
-// groupScenariosByAC groups scenarios by acceptance criteria tag
+// groupScenariosByAC groups scenarios by acceptance criteria tag.
 func groupScenariosByAC(scenarios []Scenario) map[string][]Scenario {
 	result := make(map[string][]Scenario)
 
-	for _, scenario := range scenarios {
+	for i := range scenarios {
+		scenario := &scenarios[i]
 		ac := scenario.GetAcceptanceCriteria()
 		if ac == "" {
 			ac = "NO_AC"
 		}
-		result[ac] = append(result[ac], scenario)
+		result[ac] = append(result[ac], *scenario)
 	}
 
 	return result
 }
 
 // extractUserStory extracts the user story from feature description
-// Expected format: "As a [role]\n  I want [capability]\n  So that [benefit]"
+// Expected format: "As a [role]\n  I want [capability]\n  So that [benefit]".
 func extractUserStory(description string) string {
 	// Remove leading/trailing whitespace
 	description = strings.TrimSpace(description)
@@ -216,7 +222,7 @@ func extractUserStory(description string) string {
 	return strings.Join(parts, ", ")
 }
 
-// getStatusIcon returns the appropriate emoji for a test status
+// getStatusIcon returns the appropriate emoji for a test status.
 func getStatusIcon(status string) string {
 	switch status {
 	case "passed":
@@ -235,7 +241,7 @@ func getStatusIcon(status string) string {
 }
 
 // normalizeFeaturePath normalizes a feature file path from cucumber.json
-// Handles relative paths (e.g., "../../../specs/..." -> "specs/...")
+// Handles relative paths (e.g., "../../../specs/..." -> "specs/...").
 func normalizeFeaturePath(filePath string) string {
 	// Remove relative path prefixes (../../../ -> "")
 	// Cucumber outputs paths relative to the test directory

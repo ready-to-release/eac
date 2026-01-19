@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ready-to-release.org/schemas/eac-core/component-types/0.1.0",
+  "title": "Component Types Schema",
+  "description": "Schema for component type definitions that define how to process files for building. Linting is configured separately in lint-providers.yml.",
+  "type": "object",
+  "properties": {
+    "component-types": {
+      "type": "object",
+      "description": "Map of component type name to configuration",
+      "additionalProperties": {
+        "$ref": "#/definitions/component_type"
+      }
+    }
+  },
+  "required": ["component-types"],
+  "definitions": {
+    "component_type": {
+      "type": "object",
+      "description": "A component type definition that describes how to process files of a specific type",
+      "properties": {
+        "extensions": {
+          "type": "array",
+          "description": "File extensions that belong to this component type (e.g., [\".go\"], [\".md\"]). Empty for non-file-based components.",
+          "items": {
+            "type": "string",
+            "pattern": "^\\.[a-zA-Z0-9]+$"
+          },
+          "default": []
+        },
+        "builder": {
+          "type": "string",
+          "description": "The build handler to use for this component type (e.g., \"go\", \"mkdocs\", \"buildx\")",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "build_weight": {
+          "type": "integer",
+          "description": "Resource weight for parallel build scheduling. Higher = more resource pressure. Default is 1.",
+          "minimum": 1,
+          "default": 1
+        },
+        "build_after": {
+          "type": "array",
+          "description": "Component types that must complete before this one within the same module",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          }
+        },
+        "requirements": {
+          "type": "array",
+          "description": "System dependencies required for building this component type (e.g., [\"go\"], [\"docker\"])",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "default": []
+        },
+        "default_root": {
+          "type": "string",
+          "description": "Default root path pattern for this component type. Supports {moniker} variable for module-specific paths (e.g., 'specs/{moniker}' for specs component)."
+        },
+        "files": {
+          "type": "object",
+          "description": "Default file patterns for this component type",
+          "properties": {
+            "source": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "tests": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "config": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

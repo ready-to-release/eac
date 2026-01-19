@@ -13,7 +13,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
-// defaultRiskAssessPrompt is the fallback prompt when template is not found
+// defaultRiskAssessPrompt is the fallback prompt when template is not found.
 const defaultRiskAssessPrompt = `# Risk Assessment - Executive Summary
 
 Generate an executive summary analyzing overall risk posture. Output ONLY valid JSON with 2 fields: executive_summary and confidence.
@@ -32,7 +32,7 @@ Generate an executive summary analyzing overall risk posture. Output ONLY valid 
 
 Assessment data:`
 
-// AIRiskAssessmentInput holds input for unified AI analysis
+// AIRiskAssessmentInput holds input for unified AI analysis.
 type AIRiskAssessmentInput struct {
 	Modules              []ModuleAnalysisInput
 	ProfileName          string
@@ -41,7 +41,7 @@ type AIRiskAssessmentInput struct {
 	NotSatisfiedControls int
 }
 
-// ModuleAnalysisInput holds per-module input data
+// ModuleAnalysisInput holds per-module input data.
 type ModuleAnalysisInput struct {
 	Module                string
 	VulnerabilityFindings []scoring.VulnerabilityInput
@@ -51,14 +51,14 @@ type ModuleAnalysisInput struct {
 	Impact                int
 }
 
-// AIRiskAssessmentOutput holds complete AI analysis result
+// AIRiskAssessmentOutput holds complete AI analysis result.
 type AIRiskAssessmentOutput struct {
 	ExecutiveSummary ExecutiveSummaryData `json:"executive_summary"`
 	ModuleAnalyses   []ModuleAnalysisData `json:"module_analyses,omitempty"`
 	Confidence       float64              `json:"confidence"`
 }
 
-// ExecutiveSummaryData holds executive summary from AI
+// ExecutiveSummaryData holds executive summary from AI.
 type ExecutiveSummaryData struct {
 	OverallRiskPosture       string               `json:"overall_risk_posture"`
 	SummaryNarrative         string               `json:"summary_narrative"`
@@ -68,7 +68,7 @@ type ExecutiveSummaryData struct {
 	StrategicRecommendations []string             `json:"strategic_recommendations"`
 }
 
-// ModuleAnalysisData holds per-module analysis from AI
+// ModuleAnalysisData holds per-module analysis from AI.
 type ModuleAnalysisData struct {
 	Module              string   `json:"module"`
 	ComputedLikelihood  int      `json:"computed_likelihood"`
@@ -77,7 +77,7 @@ type ModuleAnalysisData struct {
 	RecommendedControls []string `json:"recommended_controls"`
 }
 
-// GenerateRiskAssessment performs unified AI risk assessment
+// GenerateRiskAssessment performs unified AI risk assessment.
 func GenerateRiskAssessment(ctx context.Context, config *AssessConfig, input *AIRiskAssessmentInput) (*AIRiskAssessmentOutput, error) {
 	// Build comprehensive prompt with template
 	prompt, err := buildRiskAssessmentPrompt(config.WorkspaceRoot, input)
@@ -129,7 +129,7 @@ func GenerateRiskAssessment(ctx context.Context, config *AssessConfig, input *AI
 	return &output, nil
 }
 
-// buildRiskAssessmentPrompt loads template and appends aggregate statistics
+// buildRiskAssessmentPrompt loads template and appends aggregate statistics.
 func buildRiskAssessmentPrompt(workspaceRoot string, input *AIRiskAssessmentInput) (string, error) {
 	// Load prompt template with three-tier priority:
 	// 1. Team override (.r2r/eac/templates/ai/risk-assess/risk-assess.md)
@@ -178,7 +178,7 @@ func buildRiskAssessmentPrompt(workspaceRoot string, input *AIRiskAssessmentInpu
 	return sb.String(), nil
 }
 
-// ApplyAIRiskAssessment applies AI-generated results to module assessment results
+// ApplyAIRiskAssessment applies AI-generated results to module assessment results.
 func ApplyAIRiskAssessment(results []*ModuleAssessmentResult, aiOutput *AIRiskAssessmentOutput, log *logging.ComponentLogger) {
 	// Check if per-module analysis was generated
 	if len(aiOutput.ModuleAnalyses) == 0 {
@@ -212,7 +212,7 @@ func ApplyAIRiskAssessment(results []*ModuleAssessmentResult, aiOutput *AIRiskAs
 	}
 }
 
-// BuildExecutiveSummary builds executive summary data from AI output
+// BuildExecutiveSummary builds executive summary data from AI output.
 func BuildExecutiveSummary(
 	aiOutput *AIRiskAssessmentOutput,
 	basicStats ExecutiveSummary,

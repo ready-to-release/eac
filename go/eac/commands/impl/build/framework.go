@@ -6,6 +6,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/ready-to-release/eac/go/eac/commands/impl/build/builders"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/internal/artifacts"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/cmdframework"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/git"
@@ -13,10 +14,18 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/locking"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/output"
 	"github.com/ready-to-release/eac/go/eac/core/buildstate"
+	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
-// BuildConfig holds build-specific configuration
+func init() {
+	// Register component-level execution support
+	cmdframework.SetComponentWorkProvider(FlattenModulesToComponentWork)
+	cmdframework.SetComponentWorker(buildComponentWorker)
+}
+
+// BuildConfig holds build-specific configuration.
 type BuildConfig struct {
 	TidyFirst       bool
 	Version         string
@@ -31,7 +40,7 @@ type BuildConfig struct {
 	SkippedModules []string
 }
 
-// buildContext holds build-specific state during execution
+// buildContext holds build-specific state during execution.
 type buildContext struct {
 	cfg            *BuildConfig
 	skippedModules []string
@@ -68,16 +77,22 @@ func RunBuildWithFramework(cmdCfg *cmdframework.CommandConfig, buildCfg *BuildCo
 	return cmdframework.Run(cmdCfg, buildWorker, hooks)
 }
 
-// buildAfterInit handles build-specific initialization after framework init
+// buildAfterInit handles build-specific initialization after framework init.
 func buildAfterInit(ctx *cmdframework.ExecutionContext) error {
 	// Nothing special needed for now
 	return nil
 }
 
-// buildAfterResolve handles --use-existing-depm filtering and incremental detection
+// buildAfterResolve handles --use-existing-depm filtering and incremental detection.
 func buildAfterResolve(ctx *cmdframework.ExecutionContext) error {
-	buildCfg := ctx.Config.Extra["buildConfig"].(*BuildConfig)
-	bctx := ctx.Config.Extra["buildContext"].(*buildContext)
+	buildCfg, ok := ctx.Config.Extra["buildConfig"].(*BuildConfig)
+	if !ok {
+		return fmt.Errorf("buildConfig not found or wrong type")
+	}
+	bctx, ok := ctx.Config.Extra["buildContext"].(*buildContext)
+	if !ok {
+		return fmt.Errorf("buildContext not found or wrong type")
+	}
 
 	// Handle --use-existing-depm: filter out deps that already have artifacts
 	if buildCfg.UseExistingDepm && !ctx.Config.DryRun && ctx.ExecutionPlan != nil {
@@ -119,7 +134,7 @@ func buildAfterResolve(ctx *cmdframework.ExecutionContext) error {
 	return nil
 }
 
-// detectIncrementalChanges performs incremental build detection
+// detectIncrementalChanges performs incremental build detection.
 func detectIncrementalChanges(ctx *cmdframework.ExecutionContext, bctx *buildContext) {
 	startTime := time.Now()
 
@@ -202,10 +217,24 @@ func detectIncrementalChanges(ctx *cmdframework.ExecutionContext, bctx *buildCon
 		len(filteredOrder), len(bctx.skippedModules))
 }
 
-// buildAfterExecute handles post-build tasks: manifest generation, state updates
+// buildAfterExecute handles post-build tasks: artifact derivations, manifest generation, state updates.
 func buildAfterExecute(ctx *cmdframework.ExecutionContext) error {
-	buildCfg := ctx.Config.Extra["buildConfig"].(*BuildConfig)
-	bctx := ctx.Config.Extra["buildContext"].(*buildContext)
+	buildCfg, ok := ctx.Config.Extra["buildConfig"].(*BuildConfig)
+	if !ok {
+		return fmt.Errorf("buildConfig not found or wrong type")
+	}
+	bctx, ok := ctx.Config.Extra["buildContext"].(*buildContext)
+	if !ok {
+		return fmt.Errorf("buildContext not found or wrong type")
+	}
+
+	// Process artifact derivations for all successfully built modules
+	// This includes compression, UPX, and other post-processing
+	if !ctx.Config.DryRun {
+		if err := processAllArtifactDerivations(ctx, buildCfg); err != nil {
+			return fmt.Errorf("artifact derivation failed: %w", err)
+		}
+	}
 
 	// Generate build manifest
 	if err := generateBuildManifest(ctx.WorkspaceRoot, ctx.Results, ctx.ModuleTypes,
@@ -227,7 +256,53 @@ func buildAfterExecute(ctx *cmdframework.ExecutionContext) error {
 	return nil
 }
 
-// updateIncrementalState updates the build state for incremental detection
+// processAllArtifactDerivations runs artifact derivations for all successfully built modules.
+func processAllArtifactDerivations(ctx *cmdframework.ExecutionContext, buildCfg *BuildConfig) error {
+	cfg := config.Global()
+	if cfg == nil {
+		return nil
+	}
+
+	for _, result := range ctx.Results {
+		if result.ExitCode != 0 {
+			continue // Skip failed modules
+		}
+
+		moniker := result.Moniker
+		module, exists := ctx.ModuleRegistry.Get(moniker)
+		if !exists {
+			continue
+		}
+
+		// Get merged artifacts (module-level takes priority over type-level)
+		mergedArtifacts := cfg.GetBuildArtifacts(moniker, buildCfg.BuildAll)
+		if len(mergedArtifacts) == 0 {
+			continue
+		}
+
+		// Determine which artifacts were requested
+		requestedArtifacts := determineRequestedArtifactsForBuild(module, buildCfg.BuildAll, ctx.WorkspaceRoot)
+
+		// Build output directory
+		moduleOutputDir := paths.BuildOutputPath(ctx.WorkspaceRoot, moniker)
+
+		// Process derivations (compression, UPX, etc.)
+		if err := ProcessArtifactDerivations(moniker, mergedArtifacts, moduleOutputDir, requestedArtifacts, module.Metadata, nil); err != nil {
+			log.Warnf("Artifact derivation warning for %s: %v", moniker, err)
+			// Continue with other modules - derivation failure is not fatal
+		}
+
+		// Execute post-build steps
+		if exitCode := builders.ExecutePostBuildSteps(moniker, ctx.WorkspaceRoot, moduleOutputDir, nil); exitCode != 0 {
+			log.Warnf("Post-build steps warning for %s: exit code %d", moniker, exitCode)
+			// Continue with other modules
+		}
+	}
+
+	return nil
+}
+
+// updateIncrementalState updates the build state for incremental detection.
 func updateIncrementalState(ctx *cmdframework.ExecutionContext, bctx *buildContext) {
 	// Collect successfully built modules
 	var successfulModules []string
@@ -259,9 +334,13 @@ func updateIncrementalState(ctx *cmdframework.ExecutionContext, bctx *buildConte
 	}
 }
 
-// buildWorker is the worker function that builds a single module
+// buildWorker is the worker function that builds a single module.
 func buildWorker(ctx *cmdframework.ExecutionContext, moniker string, logWriter io.Writer) int {
-	buildCfg := ctx.Config.Extra["buildConfig"].(*BuildConfig)
+	buildCfg, ok := ctx.Config.Extra["buildConfig"].(*BuildConfig)
+	if !ok {
+		output.Writeln(logWriter, "Error: buildConfig not found or wrong type")
+		return 1
+	}
 
 	module, exists := ctx.ModuleRegistry.Get(moniker)
 	if !exists {
@@ -305,7 +384,108 @@ func buildWorker(ctx *cmdframework.ExecutionContext, moniker string, logWriter i
 	return exitCode
 }
 
-// buildArtifactValidator validates build artifacts for dependencies
+// buildComponentWorker builds a single component within a module.
+// This is called by the ComponentScheduler for parallel component execution.
+func buildComponentWorker(ctx *cmdframework.ExecutionContext, module, component string, logWriter io.Writer) int {
+	buildCfg, ok := ctx.Config.Extra["buildConfig"].(*BuildConfig)
+	if !ok {
+		output.Writeln(logWriter, "Error: buildConfig not found or wrong type")
+		return 1
+	}
+
+	// Get module contract
+	moduleContract, exists := ctx.ModuleRegistry.Get(module)
+	if !exists {
+		output.Writeln(logWriter, "Error: module not found: %s", module)
+		return 1
+	}
+
+	// Handle placeholder "none" component (modules with no buildable components)
+	if component == "none" {
+		output.Writeln(logWriter, "ℹ️  No buildable components for module: %s", module)
+		return 0
+	}
+
+	// Skip if dependency and artifacts exist (--use-existing-depm)
+	if buildCfg.UseExistingDepm && !ctx.Config.DryRun && !buildCfg.RequestedSet[module] {
+		if hasExistingArtifacts(module, ctx.ModuleTypes[module], ctx.WorkspaceRoot, buildCfg.BuildAll) {
+			output.Writeln(logWriter, "⏭️  Skipping %s:%s (module dependency artifacts exist)", module, component)
+			return 0
+		}
+	}
+
+	// Acquire component-level lock (skip in dry-run)
+	// Use component-level locking to allow parallel builds of different components within the same module
+	if !ctx.Config.DryRun {
+		lockCfg := locking.ComponentBuildConfig(module, component, paths.OutBuildRelPath)
+		lockFile, err := locking.Acquire(ctx.WorkspaceRoot, lockCfg)
+		if err != nil {
+			output.Writeln(logWriter, "Error: %v", err)
+			return 1
+		}
+		defer locking.Release(lockFile)
+	}
+
+	// Get the handler for this component
+	handler := getHandlerForComponent(moduleContract, component)
+	if handler == nil {
+		output.Writeln(logWriter, "Error: no handler found for component %s in module %s", component, module)
+		return 1
+	}
+
+	// Determine which artifacts to build
+	requestedArtifacts := determineRequestedArtifactsForBuild(moduleContract, buildCfg.BuildAll, ctx.WorkspaceRoot)
+
+	opts := builders.BuildOptions{
+		TidyFirst:          buildCfg.TidyFirst,
+		Version:            buildCfg.Version,
+		DryRun:             ctx.Config.DryRun,
+		RequestedArtifacts: requestedArtifacts,
+		Component:          component, // Pass component name for component-level parallelism
+	}
+
+	// In dry-run mode, simulate a successful build
+	if ctx.Config.DryRun {
+		output.Writeln(logWriter, "Build: %s:%s (dry-run)", module, component)
+		output.Writeln(logWriter, "Handler: %s", handler.Name())
+		output.Writeln(logWriter, "Dry-run mode: skipping actual build")
+		return 0
+	}
+
+	// Log which component we're building
+	output.Writeln(logWriter, "━━━ Building component: %s (handler: %s) ━━━", component, handler.Name())
+
+	// Validate module before building
+	if err := handler.ValidateModule(moduleContract, ctx.WorkspaceRoot, component); err != nil {
+		output.Writeln(logWriter, "❌ Module validation failed for %s: %v", component, err)
+		return 1
+	}
+
+	// Build the component
+	// Use component-level output directory: out/build/<module>/<component>
+	componentOutputDir := paths.ComponentBuildOutputPath(ctx.WorkspaceRoot, module, component)
+	exitCode := handler.Build(moduleContract, ctx.WorkspaceRoot, componentOutputDir, logWriter, opts)
+	if exitCode != 0 {
+		output.Writeln(logWriter, "❌ Build failed for component: %s", component)
+		return exitCode
+	}
+
+	output.Writeln(logWriter, "✅ Component %s built successfully", component)
+	return 0
+}
+
+// getHandlerForComponent finds the build handler for a specific component.
+func getHandlerForComponent(module *modules.ModuleContract, component string) builders.Handler {
+	compHandlers := builders.GetHandlersForModule(module)
+	for _, ch := range compHandlers {
+		if ch.Component == component {
+			return ch.Handler
+		}
+	}
+	return nil
+}
+
+// buildArtifactValidator validates build artifacts for dependencies.
 func buildArtifactValidator(ctx *cmdframework.ExecutionContext) *initsummary.ArtifactValidationInfo {
 	return artifacts.ValidateBuildArtifacts(
 		ctx.GetExecutionMonikers(),
@@ -315,7 +495,7 @@ func buildArtifactValidator(ctx *cmdframework.ExecutionContext) *initsummary.Art
 	)
 }
 
-// buildDepsVerifier verifies system dependencies for build
+// buildDepsVerifier verifies system dependencies for build.
 func buildDepsVerifier(ctx *cmdframework.ExecutionContext) *initsummary.DepsStatus {
 	// Get unique module types
 	moduleTypes := make(map[string]bool)
@@ -335,7 +515,7 @@ func buildDepsVerifier(ctx *cmdframework.ExecutionContext) *initsummary.DepsStat
 	return &status
 }
 
-// getGitCommit retrieves git commit SHA
+// getGitCommit retrieves git commit SHA.
 func getGitCommit(workspaceRoot string) string {
 	return git.GetCommitSHA(workspaceRoot)
 }

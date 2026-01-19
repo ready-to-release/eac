@@ -44,7 +44,7 @@ func getScannerSemaphore(scannerType internal.ScannerType) chan struct{} {
 
 // log is declared in scan.go
 
-// ScanFrameworkConfig holds scan-specific configuration for the framework
+// ScanFrameworkConfig holds scan-specific configuration for the framework.
 type ScanFrameworkConfig struct {
 	// Scanner identity
 	ScannerType  internal.ScannerType
@@ -60,7 +60,7 @@ type ScanFrameworkConfig struct {
 	ScanResults map[string]*ScanModuleResult
 }
 
-// ScanModuleResult holds scan results for a single module
+// ScanModuleResult holds scan results for a single module.
 type ScanModuleResult struct {
 	Moniker      string
 	Success      bool
@@ -93,9 +93,12 @@ func RunScanWithFramework(cmdCfg *cmdframework.CommandConfig, scanCfg *ScanFrame
 	return cmdframework.Run(cmdCfg, scanWorkerWrapper, hooks)
 }
 
-// scanAfterInit handles scan-specific initialization
+// scanAfterInit handles scan-specific initialization.
 func scanAfterInit(ctx *cmdframework.ExecutionContext) error {
-	scanCfg := ctx.Config.Extra["scanConfig"].(*ScanFrameworkConfig)
+	scanCfg, ok := ctx.Config.Extra["scanConfig"].(*ScanFrameworkConfig)
+	if !ok {
+		return fmt.Errorf("scanConfig not found or wrong type")
+	}
 
 	// Set security output directory from config
 	scanCfg.ScanOutDir = ctx.EACConfig.Repository.Paths.Out.Scan
@@ -109,17 +112,25 @@ func scanAfterInit(ctx *cmdframework.ExecutionContext) error {
 	return nil
 }
 
-// scanAfterExecute handles scan manifest updates
+// scanAfterExecute handles scan manifest updates.
 func scanAfterExecute(ctx *cmdframework.ExecutionContext) error {
 	// Manifests are updated per-module in the worker
 	// This hook is available for aggregate operations if needed
 	return nil
 }
 
-// scanWorkerWrapper wraps the scanner-specific worker for cmdframework
+// scanWorkerWrapper wraps the scanner-specific worker for cmdframework.
 func scanWorkerWrapper(ctx *cmdframework.ExecutionContext, moniker string, logWriter io.Writer) int {
-	scanCfg := ctx.Config.Extra["scanConfig"].(*ScanFrameworkConfig)
-	worker := ctx.Config.Extra["scanWorker"].(ScanWorker)
+	scanCfg, ok := ctx.Config.Extra["scanConfig"].(*ScanFrameworkConfig)
+	if !ok {
+		output.Writeln(logWriter, "Error: scanConfig not found or wrong type")
+		return 1
+	}
+	worker, ok := ctx.Config.Extra["scanWorker"].(ScanWorker)
+	if !ok {
+		output.Writeln(logWriter, "Error: scanWorker not found or wrong type")
+		return 1
+	}
 
 	// Get module contract
 	module, exists := ctx.ModuleRegistry.Get(moniker)
@@ -183,7 +194,7 @@ func scanWorkerWrapper(ctx *cmdframework.ExecutionContext, moniker string, logWr
 	return 0
 }
 
-// handleScanFailure handles a failed scan
+// handleScanFailure handles a failed scan.
 func handleScanFailure(ctx *cmdframework.ExecutionContext, scanCfg *ScanFrameworkConfig, module *modules.ModuleContract, moniker string, scanStart time.Time, scanErr error, logWriter io.Writer) {
 	output.Writeln(logWriter, "  ❌ Failed: %v", scanErr)
 
@@ -199,7 +210,7 @@ func handleScanFailure(ctx *cmdframework.ExecutionContext, scanCfg *ScanFramewor
 	updateScanManifest(ctx, scanCfg, module, moniker, scanStart, manifest.ScanStatusFailed, outputPath, scanErr.Error())
 }
 
-// handleScanSuccess handles a successful scan
+// handleScanSuccess handles a successful scan.
 func handleScanSuccess(ctx *cmdframework.ExecutionContext, scanCfg *ScanFrameworkConfig, module *modules.ModuleContract, moniker string, scanStart time.Time, findings interface{}, logWriter io.Writer) (string, error) {
 	// Write evidence file
 	outputPath, err := internal.WriteEvidence(ctx.WorkspaceRoot, moniker, scanCfg.ScannerType, findings)
@@ -216,12 +227,12 @@ func handleScanSuccess(ctx *cmdframework.ExecutionContext, scanCfg *ScanFramewor
 	return outputPath, nil
 }
 
-// updateScanManifest updates the scan manifest for a module
+// updateScanManifest updates the scan manifest for a module.
 func updateScanManifest(ctx *cmdframework.ExecutionContext, scanCfg *ScanFrameworkConfig, module *modules.ModuleContract, moniker string, scanStart time.Time, status, evidencePath, errorMsg string) {
 	duration := time.Since(scanStart)
 	moduleScanDir := ctx.EACConfig.Repository.ScanModuleOutputPathAbs(ctx.WorkspaceRoot, moniker)
 
-	mf, err := manifest.LoadOrCreateScanManifest(moduleScanDir, moniker, module.Type, scanCfg.GitCommit)
+	mf, err := manifest.LoadOrCreateScanManifest(moduleScanDir, moniker, module.GetComponentTypesDisplay(), scanCfg.GitCommit)
 	if err != nil {
 		log.Warnf("Failed to load/create scan manifest: %v", err)
 		return
@@ -241,7 +252,7 @@ func updateScanManifest(ctx *cmdframework.ExecutionContext, scanCfg *ScanFramewo
 	}
 }
 
-// buildScanInitSummary creates the init summary for scan commands
+// buildScanInitSummary creates the init summary for scan commands.
 func buildScanInitSummary(ctx *cmdframework.ExecutionContext, scanCfg *ScanFrameworkConfig) {
 	// Use scanner name in command field for display
 	summary := initsummary.New(fmt.Sprintf("scan-%s", scanCfg.ScannerType)).
@@ -257,7 +268,7 @@ func buildScanInitSummary(ctx *cmdframework.ExecutionContext, scanCfg *ScanFrame
 	ctx.InitSummary = summary
 }
 
-// GetDockerImage returns the appropriate Docker image for a scanner type
+// GetDockerImage returns the appropriate Docker image for a scanner type.
 func GetDockerImage(ctx *cmdframework.ExecutionContext, scannerType internal.ScannerType) string {
 	switch scannerType {
 	case internal.ScannerSBOM, internal.ScannerVuln, internal.ScannerSecrets, internal.ScannerIaC, internal.ScannerCompliance:
@@ -271,8 +282,8 @@ func GetDockerImage(ctx *cmdframework.ExecutionContext, scannerType internal.Sca
 	}
 }
 
-// CreateCommandConfig creates a standard command config for scan commands
-func CreateCommandConfig(scannerType internal.ScannerType, scannerName string, monikers []string, debug bool, useTUI bool, tuiHeight int) *cmdframework.CommandConfig {
+// CreateCommandConfig creates a standard command config for scan commands.
+func CreateCommandConfig(scannerType internal.ScannerType, scannerName string, monikers []string, debug, useTUI bool, tuiHeight int) *cmdframework.CommandConfig {
 	return &cmdframework.CommandConfig{
 		Type:        cmdframework.CommandTypeScan,
 		ActionVerb:  fmt.Sprintf("Scanning (%s)", scannerName),
@@ -286,7 +297,7 @@ func CreateCommandConfig(scannerType internal.ScannerType, scannerName string, m
 	}
 }
 
-// MultiScanConfig holds configuration for running multiple scanners
+// MultiScanConfig holds configuration for running multiple scanners.
 type MultiScanConfig struct {
 	Scanners           []internal.ScannerType // Scanners to run (empty = use defaults)
 	SBOMFormat         string                 // SBOM format
@@ -312,9 +323,12 @@ func RunMultiScan(cmdCfg *cmdframework.CommandConfig, multiCfg *MultiScanConfig)
 	return cmdframework.Run(cmdCfg, multiScanWorker, hooks)
 }
 
-// multiScanAfterInit resolves scanners to run based on module types and sets up skip list
+// multiScanAfterInit resolves scanners to run based on module types and sets up skip list.
 func multiScanAfterInit(ctx *cmdframework.ExecutionContext) error {
-	multiCfg := ctx.Config.Extra["multiScanConfig"].(*MultiScanConfig)
+	multiCfg, ok := ctx.Config.Extra["multiScanConfig"].(*MultiScanConfig)
+	if !ok {
+		return fmt.Errorf("multiScanConfig not found or wrong type")
+	}
 
 	// Read skip_modules from security-tools.yml and populate Extra["skipMonikers"]
 	// The framework's applySkipFilter will use this list during module resolution
@@ -338,9 +352,13 @@ func multiScanAfterInit(ctx *cmdframework.ExecutionContext) error {
 	return nil
 }
 
-// multiScanWorker runs all configured scanners for a single module
+// multiScanWorker runs all configured scanners for a single module.
 func multiScanWorker(ctx *cmdframework.ExecutionContext, moniker string, logWriter io.Writer) int {
-	multiCfg := ctx.Config.Extra["multiScanConfig"].(*MultiScanConfig)
+	multiCfg, ok := ctx.Config.Extra["multiScanConfig"].(*MultiScanConfig)
+	if !ok {
+		output.Writeln(logWriter, "Error: multiScanConfig not found or wrong type")
+		return 1
+	}
 
 	// Get module to determine its type
 	module, exists := ctx.ModuleRegistry.Get(moniker)
@@ -363,17 +381,23 @@ func multiScanWorker(ctx *cmdframework.ExecutionContext, moniker string, logWrit
 	if len(multiCfg.Scanners) > 0 {
 		scanners = multiCfg.Scanners
 	} else {
-		// Get default scanners for this module's type
-		defaultScanners := ctx.EACConfig.SecurityTools.GetDefaultScanners(module.Type)
-		for _, s := range defaultScanners {
-			if scannerType, valid := internal.ParseScannerType(s); valid {
-				scanners = append(scanners, scannerType)
+		// Get default scanners for each of the module's package types
+		seenScanners := make(map[string]bool)
+		for _, pkgType := range module.GetEnabledComponents() {
+			defaultScanners := ctx.EACConfig.SecurityTools.GetDefaultScanners(pkgType)
+			for _, s := range defaultScanners {
+				if !seenScanners[s] {
+					if scannerType, valid := internal.ParseScannerType(s); valid {
+						scanners = append(scanners, scannerType)
+						seenScanners[s] = true
+					}
+				}
 			}
 		}
 	}
 
 	if len(scanners) == 0 {
-		output.Writeln(logWriter, "⚠️  No scanners configured for module type: %s", module.Type)
+		output.Writeln(logWriter, "⚠️  No scanners configured for module packages: %s", module.GetComponentTypesDisplay())
 		return 0
 	}
 
@@ -389,7 +413,7 @@ func multiScanWorker(ctx *cmdframework.ExecutionContext, moniker string, logWrit
 	return exitCode
 }
 
-// runSingleScanner runs a single scanner for a module
+// runSingleScanner runs a single scanner for a module.
 func runSingleScanner(ctx *cmdframework.ExecutionContext, module *modules.ModuleContract, scannerType internal.ScannerType, multiCfg *MultiScanConfig, logWriter io.Writer) int {
 	emoji := getScannerEmoji(scannerType)
 
@@ -431,14 +455,26 @@ func runSingleScanner(ctx *cmdframework.ExecutionContext, module *modules.Module
 	return 0
 }
 
-// runScanner dispatches to the appropriate scanner implementation
+// runScanner dispatches to the appropriate scanner implementation.
 func runScanner(ctx *cmdframework.ExecutionContext, module *modules.ModuleContract, scannerType internal.ScannerType, multiCfg *MultiScanConfig, logWriter io.Writer) (interface{}, error) {
+	// Get the module's scannable root (buildable package root or first available)
+	moduleRoot := module.Components.GetBuildableRoot()
+	if moduleRoot == "" {
+		for _, root := range module.GetComponentRoots() {
+			moduleRoot = root
+			break
+		}
+	}
+	if moduleRoot == "" {
+		return nil, fmt.Errorf("no package root found for module %s", module.Moniker)
+	}
+
 	switch scannerType {
 	case internal.ScannerSBOM:
 		trivyImage := ctx.EACConfig.SecurityTools.DockerImages.Trivy.FullImage()
 		output.Writeln(logWriter, "  Using Trivy image: %s", trivyImage)
 		output.Writeln(logWriter, "  Format: %s", multiCfg.SBOMFormat)
-		return internal.RunTrivySBOM(ctx.WorkspaceRoot, module.Files.Root, multiCfg.SBOMFormat, trivyImage)
+		return internal.RunTrivySBOM(ctx.WorkspaceRoot, moduleRoot, multiCfg.SBOMFormat, trivyImage)
 
 	case internal.ScannerVuln:
 		trivyImage := ctx.EACConfig.SecurityTools.DockerImages.Trivy.FullImage()
@@ -446,29 +482,29 @@ func runScanner(ctx *cmdframework.ExecutionContext, module *modules.ModuleContra
 		if len(multiCfg.VulnSeverities) > 0 {
 			output.Writeln(logWriter, "  Severity filter: %v", multiCfg.VulnSeverities)
 		}
-		return internal.RunTrivyVuln(module.Files.Root, multiCfg.VulnSeverities, trivyImage)
+		return internal.RunTrivyVuln(moduleRoot, multiCfg.VulnSeverities, trivyImage)
 
 	case internal.ScannerSecrets:
 		trivyImage := ctx.EACConfig.SecurityTools.DockerImages.Trivy.FullImage()
 		output.Writeln(logWriter, "  Using Trivy image: %s", trivyImage)
-		return internal.RunTrivySecrets(module.Files.Root, trivyImage)
+		return internal.RunTrivySecrets(moduleRoot, trivyImage)
 
 	case internal.ScannerIaC:
 		trivyImage := ctx.EACConfig.SecurityTools.DockerImages.Trivy.FullImage()
 		output.Writeln(logWriter, "  Using Trivy image: %s", trivyImage)
-		return internal.RunTrivyIaC(module.Files.Root, trivyImage)
+		return internal.RunTrivyIaC(moduleRoot, trivyImage)
 
 	case internal.ScannerCompliance:
 		trivyImage := ctx.EACConfig.SecurityTools.DockerImages.Trivy.FullImage()
 		output.Writeln(logWriter, "  Using Trivy image: %s", trivyImage)
 		output.Writeln(logWriter, "  Compliance standard: %s", multiCfg.ComplianceStandard)
-		return internal.RunTrivyCompliance(module.Files.Root, multiCfg.ComplianceStandard, trivyImage)
+		return internal.RunTrivyCompliance(moduleRoot, multiCfg.ComplianceStandard, trivyImage)
 
 	case internal.ScannerSAST:
 		semgrepImage := ctx.EACConfig.SecurityTools.DockerImages.Semgrep.FullImage()
 		output.Writeln(logWriter, "  Using Semgrep image: %s", semgrepImage)
 		output.Writeln(logWriter, "  Config: %s", multiCfg.SemgrepConfig)
-		return internal.RunSemgrepSAST(ctx.WorkspaceRoot, module.Files.Root, multiCfg.SemgrepConfig, semgrepImage)
+		return internal.RunSemgrepSAST(ctx.WorkspaceRoot, moduleRoot, multiCfg.SemgrepConfig, semgrepImage)
 
 	case internal.ScannerDAST:
 		return nil, fmt.Errorf("ZAP scanner requires --target URL flag")
@@ -478,7 +514,7 @@ func runScanner(ctx *cmdframework.ExecutionContext, module *modules.ModuleContra
 	}
 }
 
-// getScannerEmoji returns the emoji for a scanner type
+// getScannerEmoji returns the emoji for a scanner type.
 func getScannerEmoji(scannerType internal.ScannerType) string {
 	switch scannerType {
 	case internal.ScannerSBOM:
@@ -500,7 +536,7 @@ func getScannerEmoji(scannerType internal.ScannerType) string {
 	}
 }
 
-// buildMultiScanInitSummary creates the init summary for multi-scan
+// buildMultiScanInitSummary creates the init summary for multi-scan.
 func buildMultiScanInitSummary(ctx *cmdframework.ExecutionContext, scanners []internal.ScannerType) {
 	// Format command name with scanner info
 	command := "scan"

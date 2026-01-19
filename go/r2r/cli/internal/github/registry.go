@@ -11,10 +11,13 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/logging"
 )
 
-// RegistryClient handles GitHub Container Registry operations
+// RegistryClient handles GitHub Container Registry operations.
 type RegistryClient struct {
 	token         string
 	username      string
@@ -23,7 +26,7 @@ type RegistryClient struct {
 }
 
 // NewRegistryClient creates a new GitHub registry client
-// Supports both authenticated (private packages) and unauthenticated (public packages) access
+// Supports both authenticated (private packages) and unauthenticated (public packages) access.
 func NewRegistryClient() (*RegistryClient, error) {
 	token := os.Getenv("GITHUB_TOKEN")
 	username := os.Getenv("GITHUB_USERNAME")
@@ -48,20 +51,20 @@ func NewRegistryClient() (*RegistryClient, error) {
 	return client, nil
 }
 
-// Tag represents a container image tag
+// Tag represents a container image tag.
 type Tag struct {
 	Name      string    `json:"name"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-// TagListResponse represents the GitHub API response for tags
+// TagListResponse represents the GitHub API response for tags.
 type TagListResponse struct {
 	Tags []Tag `json:"tags"`
 }
 
 // ListTags lists all available tags for a given image
 // For authenticated clients, uses GitHub API (works with private packages)
-// For unauthenticated clients, uses OCI Registry API (public packages only)
+// For unauthenticated clients, uses OCI Registry API (public packages only).
 func (c *RegistryClient) ListTags(imagePath string) ([]string, error) {
 	// Try authenticated GitHub API first if we have credentials
 	if c.authenticated {
@@ -76,7 +79,7 @@ func (c *RegistryClient) ListTags(imagePath string) ([]string, error) {
 	return c.listTagsViaOCIRegistry(imagePath)
 }
 
-// listTagsViaGitHubAPI uses the GitHub API to list tags (requires authentication, works with private packages)
+// listTagsViaGitHubAPI uses the GitHub API to list tags (requires authentication, works with private packages).
 func (c *RegistryClient) listTagsViaGitHubAPI(imagePath string) ([]string, error) {
 	// Parse image path to get org/package
 	// Example: ghcr.io/ready-to-release/ext-eac -> ready-to-release/ext-eac
@@ -94,7 +97,7 @@ func (c *RegistryClient) listTagsViaGitHubAPI(imagePath string) ([]string, error
 	// GitHub API endpoint for package versions
 	url := fmt.Sprintf("https://api.github.com/orgs/%s/packages/container/%s/versions", org, packageName)
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", url, http.NoBody)
 	if err != nil {
 		return nil, fmt.Errorf("creating request: %w", err)
 	}
@@ -110,7 +113,7 @@ func (c *RegistryClient) listTagsViaGitHubAPI(imagePath string) ([]string, error
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body) //nolint:errcheck // best-effort error body read for logging
 		logging.Debugf("GitHub API request failed: url=%s status=%d body=%s", url, resp.StatusCode, string(body))
 		return nil, fmt.Errorf("GitHub API returned status %d", resp.StatusCode)
 	}
@@ -136,7 +139,7 @@ func (c *RegistryClient) listTagsViaGitHubAPI(imagePath string) ([]string, error
 	return tags, nil
 }
 
-// listTagsViaOCIRegistry uses the OCI Registry API to list tags (works for public packages without auth)
+// listTagsViaOCIRegistry uses the OCI Registry API to list tags (works for public packages without auth).
 func (c *RegistryClient) listTagsViaOCIRegistry(imagePath string) ([]string, error) {
 	// Parse image path: ghcr.io/ready-to-release/ext-eac -> ready-to-release/ext-eac
 	cleanPath := strings.TrimPrefix(imagePath, "ghcr.io/")
@@ -144,7 +147,7 @@ func (c *RegistryClient) listTagsViaOCIRegistry(imagePath string) ([]string, err
 	// OCI Registry API endpoint for tags
 	url := fmt.Sprintf("https://ghcr.io/v2/%s/tags/list", cleanPath)
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", url, http.NoBody)
 	if err != nil {
 		return nil, fmt.Errorf("creating request: %w", err)
 	}
@@ -166,7 +169,7 @@ func (c *RegistryClient) listTagsViaOCIRegistry(imagePath string) ([]string, err
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body) //nolint:errcheck // best-effort error body read for logging
 		logging.Debugf("OCI Registry API request failed: url=%s status=%d body=%s", url, resp.StatusCode, string(body))
 		return nil, fmt.Errorf("OCI Registry API returned status %d", resp.StatusCode)
 	}
@@ -183,12 +186,12 @@ func (c *RegistryClient) listTagsViaOCIRegistry(imagePath string) ([]string, err
 	return tagList.Tags, nil
 }
 
-// listTagsWithAnonymousToken gets an anonymous token and retries the tag list request
+// listTagsWithAnonymousToken gets an anonymous token and retries the tag list request.
 func (c *RegistryClient) listTagsWithAnonymousToken(imagePath string) ([]string, error) {
 	// Get anonymous token from ghcr.io
 	tokenURL := fmt.Sprintf("https://ghcr.io/token?scope=repository:%s:pull", imagePath)
 
-	tokenReq, err := http.NewRequest("GET", tokenURL, nil)
+	tokenReq, err := http.NewRequest("GET", tokenURL, http.NoBody)
 	if err != nil {
 		return nil, fmt.Errorf("creating token request: %w", err)
 	}
@@ -213,7 +216,7 @@ func (c *RegistryClient) listTagsWithAnonymousToken(imagePath string) ([]string,
 
 	// Retry with the anonymous token
 	url := fmt.Sprintf("https://ghcr.io/v2/%s/tags/list", imagePath)
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", url, http.NoBody)
 	if err != nil {
 		return nil, fmt.Errorf("creating request: %w", err)
 	}
@@ -227,7 +230,7 @@ func (c *RegistryClient) listTagsWithAnonymousToken(imagePath string) ([]string,
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body) //nolint:errcheck // best-effort error body read for logging
 		logging.Debugf("OCI Registry API request with token failed: url=%s status=%d body=%s", url, resp.StatusCode, string(body))
 		return nil, fmt.Errorf("OCI Registry API returned status %d", resp.StatusCode)
 	}
@@ -244,7 +247,7 @@ func (c *RegistryClient) listTagsWithAnonymousToken(imagePath string) ([]string,
 	return tagList.Tags, nil
 }
 
-// GetLatestStableTag finds the latest stable tag (prioritizes SHA for extensions)
+// GetLatestStableTag finds the latest stable tag (prioritizes SHA for extensions).
 func (c *RegistryClient) GetLatestStableTag(imagePath string) (string, error) {
 	tags, err := c.ListTags(imagePath)
 	if err != nil {
@@ -274,7 +277,7 @@ func (c *RegistryClient) GetLatestStableTag(imagePath string) (string, error) {
 		if runTagPattern.MatchString(tag) {
 			// Extract the number
 			var num int
-			fmt.Sscanf(tag, "run-%d", &num)
+			_, _ = fmt.Sscanf(tag, "run-%d", &num) //nolint:errcheck // regex already matched, parse will succeed
 			runTags = append(runTags, struct {
 				tag string
 				num int
@@ -311,7 +314,7 @@ func (c *RegistryClient) GetLatestStableTag(imagePath string) (string, error) {
 	return runTags[0].tag, nil
 }
 
-// GetLatestTag gets the most recent tag regardless of pattern
+// GetLatestTag gets the most recent tag regardless of pattern.
 func (c *RegistryClient) GetLatestTag(imagePath string) (string, error) {
 	// First try to get a stable tag
 	tag, err := c.GetLatestStableTag(imagePath)
@@ -348,7 +351,7 @@ func (c *RegistryClient) GetLatestTag(imagePath string) (string, error) {
 	return candidateTags[0], nil
 }
 
-// ExtensionInfo represents information about an available extension
+// ExtensionInfo represents information about an available extension.
 type ExtensionInfo struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
@@ -356,12 +359,12 @@ type ExtensionInfo struct {
 }
 
 // ListExtensions discovers available extensions by querying the registry
-// Extensions are packages with ext-* naming convention
+// Extensions are packages with ext-* naming convention.
 func (c *RegistryClient) ListExtensions() ([]ExtensionInfo, error) {
 	// Query GitHub API for all container packages in the organization
 	url := "https://api.github.com/orgs/ready-to-release/packages?package_type=container&per_page=100"
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", url, http.NoBody)
 	if err != nil {
 		return nil, fmt.Errorf("creating request: %w", err)
 	}
@@ -377,7 +380,7 @@ func (c *RegistryClient) ListExtensions() ([]ExtensionInfo, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body) //nolint:errcheck // best-effort error body read for logging
 		logging.Debugf("GitHub API request failed: url=%s status=%d body=%s", url, resp.StatusCode, string(body))
 		return nil, fmt.Errorf("GitHub API returned status %d", resp.StatusCode)
 	}
@@ -408,7 +411,7 @@ func (c *RegistryClient) ListExtensions() ([]ExtensionInfo, error) {
 
 			extensions = append(extensions, ExtensionInfo{
 				Name:        extName,
-				Description: fmt.Sprintf("%s development environment", strings.Title(extName)),
+				Description: fmt.Sprintf("%s development environment", cases.Title(language.English).String(extName)),
 				ImagePath:   fmt.Sprintf("ghcr.io/ready-to-release/%s", pkg.Name),
 			})
 			logging.Debugf("Found extension: extension=%s package=%s", extName, pkg.Name)

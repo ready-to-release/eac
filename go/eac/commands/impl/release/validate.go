@@ -40,7 +40,7 @@ func init() {
 	registry.Register(ReleaseValidate)
 }
 
-// ValidationResult contains the result of changelog validation
+// ValidationResult contains the result of changelog validation.
 type ValidationResult struct {
 	Module   string   `json:"module"`
 	Valid    bool     `json:"valid"`
@@ -49,7 +49,7 @@ type ValidationResult struct {
 	Warnings []string `json:"warnings,omitempty"`
 }
 
-// ValidationReport contains results for multiple modules
+// ValidationReport contains results for multiple modules.
 type ValidationReport struct {
 	Results  []ValidationResult `json:"results"`
 	AllValid bool               `json:"all_valid"`
@@ -71,13 +71,13 @@ func ReleaseValidate() int {
 
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
-		switch {
-		case arg == "--help" || arg == "-h":
+		switch arg {
+		case "--help", "-h":
 			// Help is handled by the framework via command comments
 			return 0
-		case arg == "--all":
+		case "--all":
 			checkAll = true
-		case arg == "--json":
+		case "--json":
 			asJSON = true
 		default:
 			if !strings.HasPrefix(arg, "--") && module == "" {
@@ -217,7 +217,8 @@ func validateChangelog(module string, moduleContract *modules.ModuleContract, wo
 
 	// Check for duplicate versions
 	versionSet := make(map[string]bool)
-	for _, v := range cl.Versions {
+	for i := range cl.Versions {
+		v := &cl.Versions[i]
 		if versionSet[v.Number] {
 			result.Valid = false
 			result.Errors = append(result.Errors, fmt.Sprintf("duplicate version: %s", v.Number))
@@ -229,7 +230,8 @@ func validateChangelog(module string, moduleContract *modules.ModuleContract, wo
 	semverRegex := regexp.MustCompile(`^\d+\.\d+\.\d+$`)
 	calverRegex := regexp.MustCompile(`^\d{4}\.\d{2}\.\d{2}(\.\d+)?$`)
 
-	for _, v := range cl.Versions {
+	for i := range cl.Versions {
+		v := &cl.Versions[i]
 		if v.Number == "" {
 			result.Valid = false
 			result.Errors = append(result.Errors, "found version with empty number")

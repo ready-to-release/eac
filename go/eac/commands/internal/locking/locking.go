@@ -24,7 +24,7 @@ func Acquire(workspaceRoot string, cfg Config) (*flock.Flock, error) {
 	lockDir := filepath.Join(workspaceRoot, cfg.BaseDir)
 
 	// Ensure directory exists with proper permissions
-	if err := os.MkdirAll(lockDir, 0755); err != nil {
+	if err := os.MkdirAll(lockDir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create lock directory %s: %w", lockDir, err)
 	}
 
@@ -48,8 +48,9 @@ func Release(lock *flock.Flock) {
 		return
 	}
 	lockPath := lock.Path()
+	//nolint:errcheck // best-effort cleanup
 	lock.Unlock()
-	os.Remove(lockPath)
+	os.Remove(lockPath) // best-effort cleanup
 }
 
 // BuildConfig returns a Config for module build locking.
@@ -58,6 +59,17 @@ func BuildConfig(moniker, baseDir string) Config {
 		BaseDir:      baseDir,
 		Identifier:   moniker,
 		ResourceType: "module",
+		ActionVerb:   "already being built",
+	}
+}
+
+// ComponentBuildConfig returns a Config for component-level build locking.
+// Use this when building components within a module in parallel.
+func ComponentBuildConfig(module, component, baseDir string) Config {
+	return Config{
+		BaseDir:      baseDir,
+		Identifier:   module + ":" + component,
+		ResourceType: "component",
 		ActionVerb:   "already being built",
 	}
 }
@@ -79,5 +91,15 @@ func ScanConfig(moniker, baseDir string) Config {
 		Identifier:   moniker,
 		ResourceType: "module",
 		ActionVerb:   "already being scanned",
+	}
+}
+
+// LintConfig returns a Config for module lint locking.
+func LintConfig(moniker, baseDir string) Config {
+	return Config{
+		BaseDir:      baseDir,
+		Identifier:   moniker,
+		ResourceType: "module",
+		ActionVerb:   "already being linted",
 	}
 }

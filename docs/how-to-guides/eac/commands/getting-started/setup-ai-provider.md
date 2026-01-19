@@ -19,8 +19,8 @@ Configure AI provider (Anthropic Claude, OpenAI, or Google Gemini) to enable AI-
 
 You need an Anthropic API key:
 
-| Provider | API Key Required | Best For |
-|----------|-----------------|----------|
+| Provider       | API Key Required    | Best For                                               |
+| -------------- | ------------------- | ------------------------------------------------------ |
 | **claude-api** | `ANTHROPIC_API_KEY` | AI-powered commit messages, specs, and PR descriptions |
 
 **Note**: Currently only Anthropic Claude is supported via the `claude-api` provider.
@@ -72,7 +72,7 @@ r2r eac init --ai claude-api --ai-token sk-ant-api03-...
 
 ### Option A: Using Environment Variables
 
-**1. Set Environment Variable**
+#### 1. Set Environment Variable
 
 ```bash
 # Windows PowerShell
@@ -82,7 +82,7 @@ $env:ANTHROPIC_API_KEY = "sk-ant-api03-..."
 export ANTHROPIC_API_KEY="sk-ant-api03-..."
 ```
 
-**2. Run Init Command**
+#### 2. Run Init Command
 
 ```bash
 # Anthropic Claude API
@@ -207,14 +207,14 @@ r2r eac create commit-message
 
 ## Common Issues
 
-| Problem | Solution |
-|---------|----------|
-| "API key not found" (env vars) | Set `ANTHROPIC_API_KEY` environment variable before running init |
-| "API key not found" (personal) | Check `.r2r/eac/ai-provider.personal.yml` exists and contains `api_key` field |
-| "Invalid provider" | Only `claude-api` is currently supported |
-| "Permission denied" | Check directory permissions for `.r2r/eac/` |
-| AI features not working (env vars) | Verify `ANTHROPIC_API_KEY` is still set in current session |
-| Personal config committed to git | Add `.r2r/eac/ai-provider.personal.yml` to `.gitignore` immediately |
+| Problem                            | Solution                                                                      |
+| ---------------------------------- | ----------------------------------------------------------------------------- |
+| "API key not found" (env vars)     | Set `ANTHROPIC_API_KEY` environment variable before running init              |
+| "API key not found" (personal)     | Check `.r2r/eac/ai-provider.personal.yml` exists and contains `api_key` field |
+| "Invalid provider"                 | Only `claude-api` is currently supported                                      |
+| "Permission denied"                | Check directory permissions for `.r2r/eac/`                                   |
+| AI features not working (env vars) | Verify `ANTHROPIC_API_KEY` is still set in current session                    |
+| Personal config committed to git   | Add `.r2r/eac/ai-provider.personal.yml` to `.gitignore` immediately           |
 
 ## Making Environment Variables Permanent (Option A Only)
 

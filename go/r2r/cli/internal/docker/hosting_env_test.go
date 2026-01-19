@@ -14,6 +14,9 @@ import (
 
 // TestBuildEnvironmentVars_BaseVars verifies base environment variables
 func TestBuildEnvironmentVars_BaseVars(t *testing.T) {
+	// Set R2R_HOST_REPOROOT to test context - this isolates the test from host environment
+	t.Setenv("R2R_HOST_REPOROOT", "/test/root")
+
 	// Arrange
 	ch := &ContainerHost{
 		rootDir: "/test/root",
@@ -117,17 +120,19 @@ func TestBuildEnvironmentVars_CIDetection(t *testing.T) {
 
 // TestBuildEnvironmentVars_NonCIShellColors verifies shell color inheritance
 func TestBuildEnvironmentVars_NonCIShellColors(t *testing.T) {
-	// Save original env
-	originalCI := os.Getenv("CI")
-	originalTERM := os.Getenv("TERM")
-	defer func() {
-		os.Setenv("CI", originalCI)
-		os.Setenv("TERM", originalTERM)
-	}()
+	// Clear all CI indicator environment variables to simulate a non-CI environment
+	// t.Setenv automatically restores the original value after the test
+	ciIndicators := []string{
+		"CI", "CONTINUOUS_INTEGRATION", "GITHUB_ACTIONS", "AZUREDEVOPS_URL", "GITLAB_CI",
+		"AZURE_HTTP_USER_AGENT", "TF_BUILD", "BUILDKITE", "CIRCLECI", "TRAVIS",
+		"DRONE", "SEMAPHORE", "APPVEYOR", "CODEBUILD_BUILD_ID", "TEAMCITY_VERSION",
+	}
+	for _, key := range ciIndicators {
+		t.Setenv(key, "") // Setting to empty string effectively disables CI detection
+	}
 
 	// Arrange
-	os.Setenv("CI", "")
-	os.Setenv("TERM", "xterm-256color")
+	t.Setenv("TERM", "xterm-256color")
 	ch := &ContainerHost{
 		rootDir: "/test/root",
 	}

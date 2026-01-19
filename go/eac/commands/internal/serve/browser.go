@@ -35,7 +35,7 @@ func OpenBrowserWithFallback(url string) (opened bool, err error) {
 	return true, nil
 }
 
-// openBrowserNative opens the browser using platform-specific commands
+// openBrowserNative opens the browser using platform-specific commands.
 func openBrowserNative(url string) error {
 	var cmd *exec.Cmd
 

@@ -14,7 +14,7 @@ import (
 //go:embed command.ebnf
 var embeddedEBNFSchema string
 
-// ParsedCommand represents a parsed command structure
+// ParsedCommand represents a parsed command structure.
 type ParsedCommand struct {
 	// Core components from parsing
 	BinaryName    string
@@ -30,7 +30,7 @@ type ParsedCommand struct {
 	ArgumentBoundary int // Index where container args start (-1 if none)
 }
 
-// Parser handles command-line parsing according to EBNF schema
+// Parser handles command-line parsing according to EBNF schema.
 type Parser struct {
 	// Grammar elements from EBNF schema
 	// TODO: These should be parsed from EBNF dynamically
@@ -42,7 +42,7 @@ type Parser struct {
 	requiresExtension map[string]bool
 }
 
-// NewParser creates a new command parser
+// NewParser creates a new command parser.
 func NewParser() *Parser {
 	return &Parser{
 		// From BinaryName production in schema.ebnf
@@ -85,7 +85,7 @@ func NewParser() *Parser {
 	}
 }
 
-// Parse parses command-line arguments into structured components
+// Parse parses command-line arguments into structured components.
 func (p *Parser) Parse(args []string) *ParsedCommand {
 	cmd := &ParsedCommand{
 		GlobalFlags:      []string{},
@@ -119,17 +119,10 @@ func (p *Parser) Parse(args []string) *ParsedCommand {
 
 	// Check if next arg looks like a subcommand (not a flag)
 	if !strings.HasPrefix(args[pos], "-") {
-		// If it's not a flag, it should be a subcommand
-		if p.IsValidSubcommand(args[pos]) {
-			cmd.Subcommand = args[pos]
-			cmd.ViperArgs = append(cmd.ViperArgs, args[pos])
-			pos++
-		} else {
-			// Invalid subcommand - still add to ViperArgs for validation
-			cmd.Subcommand = args[pos]
-			cmd.ViperArgs = append(cmd.ViperArgs, args[pos])
-			pos++
-		}
+		// Accept any non-flag as subcommand (valid or not - validation happens later)
+		cmd.Subcommand = args[pos]
+		cmd.ViperArgs = append(cmd.ViperArgs, args[pos])
+		pos++
 	}
 
 	// 4. Parse ExtensionName if required
@@ -187,34 +180,34 @@ func (p *Parser) Parse(args []string) *ParsedCommand {
 	return cmd
 }
 
-// ParseArgumentBoundary finds where Viper args end and container args begin
+// ParseArgumentBoundary finds where Viper args end and container args begin.
 func (p *Parser) ParseArgumentBoundary(args []string) int {
 	cmd := p.Parse(args)
 	return cmd.ArgumentBoundary
 }
 
-// SplitArguments separates Viper and container arguments
-func (p *Parser) SplitArguments(args []string) (viperArgs []string, containerArgs []string) {
+// SplitArguments separates Viper and container arguments.
+func (p *Parser) SplitArguments(args []string) (viperArgs, containerArgs []string) {
 	cmd := p.Parse(args)
 	return cmd.ViperArgs, cmd.ContainerArgs
 }
 
-// IsGlobalFlag checks if a string is a valid global flag
+// IsGlobalFlag checks if a string is a valid global flag.
 func (p *Parser) IsGlobalFlag(arg string) bool {
 	return p.validGlobalFlags[arg]
 }
 
-// IsValidBinaryName checks if a string is a valid binary name
+// IsValidBinaryName checks if a string is a valid binary name.
 func (p *Parser) IsValidBinaryName(name string) bool {
 	return p.validBinaryNames[name]
 }
 
-// IsValidSubcommand checks if a string is a valid subcommand
+// IsValidSubcommand checks if a string is a valid subcommand.
 func (p *Parser) IsValidSubcommand(cmd string) bool {
 	return p.validSubcommands[cmd]
 }
 
-// IsR2RFlag checks if an argument is an r2r flag that should be processed by Viper
+// IsR2RFlag checks if an argument is an r2r flag that should be processed by Viper.
 func (p *Parser) IsR2RFlag(arg string) bool {
 	// Check global flags
 	if p.IsGlobalFlag(arg) {
@@ -224,20 +217,20 @@ func (p *Parser) IsR2RFlag(arg string) bool {
 	return false
 }
 
-// FlagTakesValue checks if a flag expects a value argument
-func (p *Parser) FlagTakesValue(flag string) bool {
+// FlagTakesValue checks if a flag expects a value argument.
+func (p *Parser) FlagTakesValue(_ string) bool {
 	// Currently, none of r2r's flags take values (they're all boolean)
 	// This method is here for future extensibility
 	return false
 }
 
-// RequiresExtension checks if a subcommand requires an extension name
+// RequiresExtension checks if a subcommand requires an extension name.
 func (p *Parser) RequiresExtension(subcommand string) bool {
 	return p.requiresExtension[subcommand]
 }
 
 // IsValidExtensionName validates extension name format
-// TODO: Implement according to Identifier production from EBNF
+// TODO: Implement according to Identifier production from EBNF.
 func (p *Parser) IsValidExtensionName(name string) bool {
 	if name == "" {
 		return false
@@ -262,7 +255,7 @@ func (p *Parser) IsValidExtensionName(name string) bool {
 	return true
 }
 
-// HasConflictingGlobalFlags checks for mutually exclusive global flags
+// HasConflictingGlobalFlags checks for mutually exclusive global flags.
 func (p *Parser) HasConflictingGlobalFlags(flags []string) bool {
 	hasDebug := false
 	hasQuiet := false
@@ -279,7 +272,7 @@ func (p *Parser) HasConflictingGlobalFlags(flags []string) bool {
 	return hasDebug && hasQuiet
 }
 
-// GetEmbeddedSchema returns the embedded EBNF schema
+// GetEmbeddedSchema returns the embedded EBNF schema.
 func GetEmbeddedSchema() string {
 	return embeddedEBNFSchema
 }

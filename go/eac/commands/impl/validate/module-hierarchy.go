@@ -22,7 +22,7 @@ func init() {
 	registry.Register(ValidateModuleHierarchy)
 }
 
-// ValidateModuleHierarchy validates the module dependency graph
+// ValidateModuleHierarchy validates the module dependency graph.
 func ValidateModuleHierarchy() int {
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
@@ -46,7 +46,7 @@ func ValidateModuleHierarchy() int {
 	}
 
 	// Load module registry
-	moduleRegistry, err := modules.LoadFromWorkspaceLatest(repoRoot)
+	moduleRegistry, err := modules.LoadFromWorkspace(repoRoot)
 	if err != nil {
 		log.Errorf("Error: failed to load module registry: %v", err)
 		return 1

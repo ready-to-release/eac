@@ -10,11 +10,11 @@ import (
 // Environment variable names for mock configuration.
 const (
 	// EnvMockAIDir is the base directory containing mock response files.
-	// Structure: $R2R_MOCK_AI_DIR/<command>/mock-response.txt
+	// Structure: $R2R_MOCK_AI_DIR/<command>/mock-response.txt.
 	EnvMockAIDir = "R2R_MOCK_AI_DIR"
 
 	// EnvMockAIPrefix is the prefix for command-specific mock file overrides.
-	// Example: R2R_MOCK_AI_SPECS=mock-response-conflict.txt
+	// Example: R2R_MOCK_AI_SPECS=mock-response-conflict.txt.
 	EnvMockAIPrefix = "R2R_MOCK_AI_"
 )
 
@@ -74,7 +74,7 @@ func GetMockResponse(command string) (string, bool) {
 // 3. Falls back to GetMockResponse(command) for general command mock
 //
 // Example: GetMockResponseWithSubcommand("risks", "assessment")
-// checks R2R_MOCK_AI_RISKS_ASSESSMENT, then risks/mock-assessment-response.*
+// checks R2R_MOCK_AI_RISKS_ASSESSMENT, then risks/mock-assessment-response.*.
 func GetMockResponseWithSubcommand(command, subcommand string) (string, bool) {
 	mockDir := os.Getenv(EnvMockAIDir)
 	if mockDir == "" {

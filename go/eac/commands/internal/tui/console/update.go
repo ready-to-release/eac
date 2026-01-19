@@ -9,7 +9,6 @@ import (
 // Update handles all messages and updates the model.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-
 	case tea.KeyMsg:
 		return m.handleKey(msg)
 
@@ -25,9 +24,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// If user was scrolled up, try to maintain position, but cap at new max
 				initH, runH, summaryH := m.calculatePaneHeights()
 				paneHeight := initH
-				if pane.Phase == PhaseRun {
+				switch pane.Phase {
+				case PhaseRun:
 					paneHeight = runH
-				} else if pane.Phase == PhaseSummary {
+				case PhaseSummary:
 					paneHeight = summaryH
 				}
 				pane.UpdateMaxScroll(paneHeight)
@@ -127,7 +127,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 			// Track timing and active phase
-			if msg.Status == PhaseActive {
+			switch msg.Status {
+			case PhaseActive:
 				// Mark previous phase as complete if it was active
 				if m.activePhase != msg.Phase && m.activePhase < Phase(len(m.panes)) && m.panes[m.activePhase].Status == PhaseActive {
 					m.panes[m.activePhase].Status = PhaseComplete
@@ -135,7 +136,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				m.panes[msg.Phase].StartTime = time.Now()
 				m.activePhase = msg.Phase
-			} else if msg.Status == PhaseComplete || msg.Status == PhaseFailed {
+			case PhaseComplete, PhaseFailed:
 				m.panes[msg.Phase].EndTime = time.Now()
 			}
 		}
@@ -309,7 +310,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// cycleTab cycles through tabs in the given direction (+1 = next, -1 = prev)
+// cycleTab cycles through tabs in the given direction (+1 = next, -1 = prev).
 func (m *Model) cycleTab(direction int) {
 	tabs := m.GetVisibleTabs()
 	if len(tabs) == 0 {
@@ -366,9 +367,10 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		// Calculate pane height for this specific pane
 		initH, runH, summaryH := m.calculatePaneHeights()
 		paneHeight := initH
-		if paneIdx == 1 { // Run pane
+		switch paneIdx {
+		case 1: // Run pane
 			paneHeight = runH
-		} else if paneIdx == 2 { // Summary pane
+		case 2: // Summary pane
 			paneHeight = summaryH
 		}
 
@@ -385,9 +387,10 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 
 		// Scroll the pane - use Button to determine direction
 		scrollAmount := 3 // Lines to scroll per wheel tick
-		if msg.Button == tea.MouseButtonWheelUp {
+		switch msg.Button {
+		case tea.MouseButtonWheelUp:
 			pane.ScrollUp(scrollAmount)
-		} else if msg.Button == tea.MouseButtonWheelDown {
+		case tea.MouseButtonWheelDown:
 			pane.ScrollDown(scrollAmount)
 		}
 
@@ -416,7 +419,7 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// getTabBarY returns the Y coordinate of the tab bar (line after Run pane header)
+// getTabBarY returns the Y coordinate of the tab bar (line after Run pane header).
 func (m Model) getTabBarY() int {
 	// Layout (0-indexed Y coordinates):
 	// 0: Init header
@@ -428,7 +431,7 @@ func (m Model) getTabBarY() int {
 	return initH + 3
 }
 
-// getTabAtPosition determines which tab was clicked based on X coordinate
+// getTabAtPosition determines which tab was clicked based on X coordinate.
 func (m Model) getTabAtPosition(x int) string {
 	tabs := m.GetVisibleTabs()
 

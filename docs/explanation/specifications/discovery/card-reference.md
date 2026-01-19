@@ -103,11 +103,11 @@ G1a G1b    G2a G2b    G3a G3b
 
 ## Workshop Readiness Signals
 
-| Signal        | Cards                                    | Action             |
-| ------------- | ---------------------------------------- | ------------------ |
-| Ready         | ≤4 Blue, ≤4 Green each, no blocking Pink | Proceed to Gherkin |
-| Too Large     | >4 Blue cards or >25 min                 | Split feature      |
-| Too Uncertain | Blocking Pink cards                      | Research spike     |
+| Signal        | Cards                                        | Action             |
+| ------------- | -------------------------------------------- | ------------------ |
+| Ready         | ≤4 Blue, ≤4 Green each, no blocking Pink     | Proceed to Gherkin |
+| Too Large     | >4 Blue cards or >25 min                     | Split feature      |
+| Too Uncertain | Blocking Pink cards                          | Research spike     |
 
 ## Related
 

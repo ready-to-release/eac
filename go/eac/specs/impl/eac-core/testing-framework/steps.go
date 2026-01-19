@@ -5,6 +5,7 @@
 package testingframework
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -15,7 +16,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/specs/internal"
 )
 
-// testContext holds state for testing framework scenarios
+// testContext holds state for testing framework scenarios.
 type testContext struct {
 	tempDir      string
 	testOutput   string
@@ -68,7 +69,7 @@ func iRunTheMetaTestsInIsolation(testName string) error {
 	tfCtx.tempDir = tempRoot
 
 	testingDir := filepath.Join(tempRoot, "testing")
-	if err := os.MkdirAll(testingDir, 0755); err != nil {
+	if err := os.MkdirAll(testingDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create testing dir: %w", err)
 	}
 
@@ -115,7 +116,7 @@ func iRunAllMetaTestsInIsolation() error {
 	tfCtx.tempDir = tempRoot
 
 	testingDir := filepath.Join(tempRoot, "testing")
-	if err := os.MkdirAll(testingDir, 0755); err != nil {
+	if err := os.MkdirAll(testingDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create testing dir: %w", err)
 	}
 
@@ -165,7 +166,7 @@ func getRepoRoot() string {
 	}
 }
 
-func copyMetaTest(testFile string, destDir string) error {
+func copyMetaTest(testFile, destDir string) error {
 	srcPath := filepath.Join(getRepoRoot(), "go", "eac", "core", "testing", "testdata", "meta-tests", testFile)
 	destPath := filepath.Join(destDir, strings.TrimSuffix(testFile, ".txt"))
 
@@ -174,7 +175,7 @@ func copyMetaTest(testFile string, destDir string) error {
 		return fmt.Errorf("failed to read %s: %w", testFile, err)
 	}
 
-	if err := os.WriteFile(destPath, content, 0644); err != nil {
+	if err := os.WriteFile(destPath, content, 0o644); err != nil {
 		return fmt.Errorf("failed to write %s: %w", destPath, err)
 	}
 
@@ -250,7 +251,7 @@ func copyFile(src, dest string) error {
 		return fmt.Errorf("failed to read %s: %w", src, err)
 	}
 
-	if err := os.WriteFile(dest, content, 0644); err != nil {
+	if err := os.WriteFile(dest, content, 0o644); err != nil {
 		return fmt.Errorf("failed to write %s: %w", dest, err)
 	}
 
@@ -269,7 +270,7 @@ func copyDependentPackages(coreDir, tempRoot string) error {
 		}
 
 		destPkgDir := filepath.Join(tempRoot, pkg)
-		if err := os.MkdirAll(destPkgDir, 0755); err != nil {
+		if err := os.MkdirAll(destPkgDir, 0o755); err != nil {
 			return fmt.Errorf("failed to create %s: %w", destPkgDir, err)
 		}
 
@@ -305,7 +306,7 @@ func copyPackageRecursive(src, dest string) error {
 		destPath := filepath.Join(dest, relPath)
 
 		if info.IsDir() {
-			return os.MkdirAll(destPath, 0755)
+			return os.MkdirAll(destPath, 0o755)
 		}
 
 		// Only copy .go, .yml/.yaml, and .json files (json needed for embedded schemas)
@@ -326,13 +327,13 @@ func copyConfigFiles(repoRoot, tempRoot string) error {
 	configSrcDir := filepath.Join(repoRoot, ".r2r", "eac")
 	configDestDir := filepath.Join(tempRoot, ".r2r", "eac")
 
-	if err := os.MkdirAll(configDestDir, 0755); err != nil {
+	if err := os.MkdirAll(configDestDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create config dir: %w", err)
 	}
 
 	// Create a fake .git directory so the config loader can find the repo root
 	gitDir := filepath.Join(tempRoot, ".git")
-	if err := os.MkdirAll(gitDir, 0755); err != nil {
+	if err := os.MkdirAll(gitDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create .git dir: %w", err)
 	}
 
@@ -371,7 +372,8 @@ func runGoTest(dir string) error {
 	tfCtx.testOutput = string(output)
 
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		exitErr := &exec.ExitError{}
+		if errors.As(err, &exitErr) {
 			tfCtx.testExitCode = exitErr.ExitCode()
 		}
 		return fmt.Errorf("go test failed: %w\nOutput:\n%s", err, tfCtx.testOutput)

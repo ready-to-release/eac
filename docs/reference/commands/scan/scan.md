@@ -6,20 +6,20 @@
 
 The scan command supports multiple scanner types via the `--scanner` flag:
 
-| Type | Description | Tool |
-|------|-------------|------|
-| `sbom` | Software Bill of Materials | Trivy |
-| `vuln` | Vulnerability scanning | Trivy |
-| `secrets` | Secret detection | Trivy |
-| `iac` | Infrastructure as Code scanning | Trivy |
-| `compliance` | Compliance checking | Trivy |
-| `sast` | Static Application Security Testing | Semgrep |
-| `zap` | Dynamic Application Security Testing | OWASP ZAP (see subcommand below) |
+| Type         | Description                          | Tool                             |
+| ------------ | ------------------------------------ | -------------------------------- |
+| `sbom`       | Software Bill of Materials           | Trivy                            |
+| `vuln`       | Vulnerability scanning               | Trivy                            |
+| `secrets`    | Secret detection                     | Trivy                            |
+| `iac`        | Infrastructure as Code scanning      | Trivy                            |
+| `compliance` | Compliance checking                  | Trivy                            |
+| `sast`       | Static Application Security Testing  | Semgrep                          |
+| `zap`        | Dynamic Application Security Testing | OWASP ZAP (see subcommand below) |
 
 ## Subcommands
 
-| Command | Purpose |
-|---------|---------|
+| Command              | Purpose                                      |
+| -------------------- | -------------------------------------------- |
 | [scan zap](./zap.md) | Dynamic testing (DAST) - requires URL target |
 
 ## Usage Examples

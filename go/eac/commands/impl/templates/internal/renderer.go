@@ -9,14 +9,14 @@ import (
 	"text/template"
 )
 
-// Renderer handles template rendering with value substitution
+// Renderer handles template rendering with value substitution.
 type Renderer struct {
 	templateDir string
 	outputDir   string
 	values      TemplateValues
 }
 
-// NewRenderer creates a new template renderer
+// NewRenderer creates a new template renderer.
 func NewRenderer(templateDir, outputDir string, values TemplateValues) *Renderer {
 	return &Renderer{
 		templateDir: templateDir,
@@ -26,16 +26,16 @@ func NewRenderer(templateDir, outputDir string, values TemplateValues) *Renderer
 }
 
 // shouldRender returns true if templates should be rendered with value substitution
-// Returns false if no values are provided (templates should be copied as-is)
+// Returns false if no values are provided (templates should be copied as-is).
 func (r *Renderer) shouldRender() bool {
 	return r.values != nil && len(r.values) > 0
 }
 
 // RenderTemplates walks the template directory and renders all templates
-// If no values are provided, files are copied as-is without template processing
+// If no values are provided, files are copied as-is without template processing.
 func (r *Renderer) RenderTemplates() error {
 	// Create output directory if it doesn't exist
-	if err := os.MkdirAll(r.outputDir, 0755); err != nil {
+	if err := os.MkdirAll(r.outputDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
@@ -85,7 +85,7 @@ func (r *Renderer) RenderTemplates() error {
 
 		if d.IsDir() {
 			// Create directory
-			return os.MkdirAll(outputPath, 0755)
+			return os.MkdirAll(outputPath, 0o755)
 		}
 
 		// Process file: render with values or copy as-is
@@ -97,7 +97,7 @@ func (r *Renderer) RenderTemplates() error {
 	})
 }
 
-// renderFile renders a single template file
+// renderFile renders a single template file.
 func (r *Renderer) renderFile(inputPath, outputPath string) error {
 	// Read template file
 	tmplContent, err := os.ReadFile(inputPath)
@@ -114,7 +114,7 @@ func (r *Renderer) renderFile(inputPath, outputPath string) error {
 
 	// Ensure output directory exists
 	outputDir := filepath.Dir(outputPath)
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
@@ -130,16 +130,15 @@ func (r *Renderer) renderFile(inputPath, outputPath string) error {
 		return fmt.Errorf("failed to execute template %s: %w", inputPath, err)
 	}
 
-	// Copy file permissions
-	info, err := os.Stat(inputPath)
-	if err == nil {
-		os.Chmod(outputPath, info.Mode())
+	// Copy file permissions (best effort - ignore errors as file is already written)
+	if info, statErr := os.Stat(inputPath); statErr == nil {
+		_ = os.Chmod(outputPath, info.Mode()) //nolint:errcheck // best-effort permission copy
 	}
 
 	return nil
 }
 
-// renderString renders a string template (used for file/directory names)
+// renderString renders a string template (used for file/directory names).
 func (r *Renderer) renderString(input string) (string, error) {
 	// Use missingkey=zero to allow optional variables in paths
 	tmpl, err := template.New("string").Option("missingkey=zero").Parse(input)
@@ -155,7 +154,7 @@ func (r *Renderer) renderString(input string) (string, error) {
 	return buf.String(), nil
 }
 
-// copyFile copies a file without template processing, preserving all placeholders
+// copyFile copies a file without template processing, preserving all placeholders.
 func (r *Renderer) copyFile(inputPath, outputPath string) error {
 	// Read source file
 	content, err := os.ReadFile(inputPath)
@@ -165,19 +164,18 @@ func (r *Renderer) copyFile(inputPath, outputPath string) error {
 
 	// Ensure output directory exists
 	outputDir := filepath.Dir(outputPath)
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
 	// Write to destination without any modifications
-	if err := os.WriteFile(outputPath, content, 0644); err != nil {
+	if err := os.WriteFile(outputPath, content, 0o644); err != nil {
 		return fmt.Errorf("failed to write file %s: %w", outputPath, err)
 	}
 
-	// Copy file permissions
-	info, err := os.Stat(inputPath)
-	if err == nil {
-		os.Chmod(outputPath, info.Mode())
+	// Copy file permissions (best effort - ignore errors as file is already written)
+	if info, statErr := os.Stat(inputPath); statErr == nil {
+		_ = os.Chmod(outputPath, info.Mode()) //nolint:errcheck // best-effort permission copy
 	}
 
 	return nil

@@ -50,15 +50,15 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	"github.com/ready-to-release/eac/go/eac/core/git"
-	"github.com/ready-to-release/eac/go/eac/core/releasenotes"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"github.com/ready-to-release/eac/go/eac/core/releasenotes"
 )
 
 func init() {
 	registry.Register(ReleaseThis)
 }
 
-// ReleaseResult contains the result of a release operation
+// ReleaseResult contains the result of a release operation.
 type ReleaseResult struct {
 	Module          string `json:"module"`
 	Success         bool   `json:"success"`
@@ -135,7 +135,8 @@ func ReleaseThis() int {
 			log.Info("")
 		}
 
-		for i, result := range results {
+		for i := range results {
+			result := &results[i]
 			if i > 0 {
 				log.Info("---")
 				log.Info("")
@@ -167,7 +168,8 @@ func ReleaseThis() int {
 			// Collect modules that were actually modified (not already pending)
 			var modifiedModules []string
 			var changelogPaths []string
-			for _, r := range results {
+			for i := range results {
+				r := &results[i]
 				if r.Success && !r.AlreadyPending {
 					modifiedModules = append(modifiedModules, r.Module)
 					changelogPaths = append(changelogPaths, r.ChangelogPath)
@@ -181,7 +183,8 @@ func ReleaseThis() int {
 				if len(modifiedModules) == 1 {
 					// Find the version for this module
 					var version string
-					for _, r := range results {
+					for i := range results {
+						r := &results[i]
 						if r.Module == modifiedModules[0] {
 							version = r.NewVersion
 							break
@@ -198,7 +201,8 @@ func ReleaseThis() int {
 	}
 
 	// Return failure if any module failed
-	for _, result := range results {
+	for i := range results {
+		result := &results[i]
 		if !result.Success {
 			return 1
 		}
@@ -303,8 +307,8 @@ func performRelease(module string, dryRun bool, overrideDate string) ReleaseResu
 	// that version is already pending release - don't bump again
 	if result.PreviousVersion != "0.0.0" {
 		expectedTag := fmt.Sprintf("%s/%s", module, result.PreviousVersion)
-		tagExists, _ := repo.TagExists(expectedTag)
-		if !tagExists {
+		tagExists, tagErr := repo.TagExists(expectedTag)
+		if tagErr == nil && !tagExists {
 			// Changelog has a version that hasn't been tagged yet - already pending
 			result.NewVersion = result.PreviousVersion
 			result.Tag = expectedTag
@@ -329,7 +333,8 @@ func performRelease(module string, dryRun bool, overrideDate string) ReleaseResu
 	// Filter commits by module file patterns
 	modulePatterns := moduleContract.GetGlobPatterns()
 	var filteredCommits []*changelog.Commit
-	for _, c := range commits {
+	for i := range commits {
+		c := &commits[i]
 		parsed := changelog.ParseCommitMessage(c.Message)
 		parsed.SHA = c.ShortSHA
 		parsed.Date = c.Date
@@ -365,7 +370,8 @@ func performRelease(module string, dryRun bool, overrideDate string) ReleaseResu
 
 	// Get existing version numbers for calver collision detection
 	var existingVersions []string
-	for _, v := range existingChangelog.Versions {
+	for i := range existingChangelog.Versions {
+		v := &existingChangelog.Versions[i]
 		existingVersions = append(existingVersions, v.Number)
 	}
 
@@ -439,7 +445,7 @@ func performRelease(module string, dryRun bool, overrideDate string) ReleaseResu
 
 	// Create release directory if needed
 	releaseDir := filepath.Dir(fullChangelogPath)
-	if err := os.MkdirAll(releaseDir, 0755); err != nil {
+	if err := os.MkdirAll(releaseDir, 0o755); err != nil {
 		result.Error = fmt.Sprintf("failed to create release directory: %v", err)
 		return result
 	}

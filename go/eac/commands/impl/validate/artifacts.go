@@ -144,7 +144,7 @@ func validateArtifactsForModule(moduleName, targetOS, targetArch string, noDeps 
 	return 0
 }
 
-// formatValidationResults formats validation results as a detailed table
+// formatValidationResults formats validation results as a detailed table.
 func formatValidationResults(results *implinternal.ValidationResults, targetOS, targetArch string) string {
 	var output strings.Builder
 
@@ -210,7 +210,8 @@ func formatValidationResults(results *implinternal.ValidationResults, targetOS, 
 
 			output.WriteString(fmt.Sprintf("### %s\n\n", modResult.Moniker))
 
-			for _, art := range modResult.Artifacts {
+			for i := range modResult.Artifacts {
+				art := &modResult.Artifacts[i]
 				if !art.Exists {
 					output.WriteString(fmt.Sprintf("- ❌ %s: %s\n",
 						art.ID, art.ResolvedPath))

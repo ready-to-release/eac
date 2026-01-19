@@ -5,14 +5,14 @@ import (
 )
 
 // CompositeValidator runs quick validation followed by full validation
-// Used for create command to provide fast feedback with comprehensive validation
+// Used for create command to provide fast feedback with comprehensive validation.
 type CompositeValidator struct {
 	quickValidator        *QuickValidator
 	fullValidator         *DockerValidator
 	skipFullOnQuickErrors bool // Skip Docker validation if quick validation fails
 }
 
-// NewCompositeValidator creates a validator that combines quick and full validation
+// NewCompositeValidator creates a validator that combines quick and full validation.
 func NewCompositeValidator(module, templateRoot string, skipFullOnQuickErrors bool) (*CompositeValidator, error) {
 	// Use default quick validator
 	quickValidator := NewQuickValidator()
@@ -29,7 +29,7 @@ func NewCompositeValidator(module, templateRoot string, skipFullOnQuickErrors bo
 	}, nil
 }
 
-// Validate runs quick validation first, then full validation if needed
+// Validate runs quick validation first, then full validation if needed.
 func (v *CompositeValidator) Validate(output string, context map[string]interface{}) []validation.ValidationError {
 	var allErrors []validation.ValidationError
 
@@ -63,25 +63,24 @@ func (v *CompositeValidator) Validate(output string, context map[string]interfac
 	return allErrors
 }
 
-// VerifyImplementation verifies both validators are ready
+// VerifyImplementation verifies both validators are ready.
 func (v *CompositeValidator) VerifyImplementation() []validation.ValidationError {
-	var errors []validation.ValidationError
-
 	quickErrors := v.quickValidator.VerifyImplementation()
-	errors = append(errors, quickErrors...)
-
 	fullErrors := v.fullValidator.VerifyImplementation()
+
+	errors := make([]validation.ValidationError, 0, len(quickErrors)+len(fullErrors))
+	errors = append(errors, quickErrors...)
 	errors = append(errors, fullErrors...)
 
 	return errors
 }
 
-// IsDockerRunning checks if Docker is available for full validation
+// IsDockerRunning checks if Docker is available for full validation.
 func (v *CompositeValidator) IsDockerRunning() bool {
 	return v.fullValidator.IsDockerRunning()
 }
 
-// Cleanup cleans up resources from the full validator
+// Cleanup cleans up resources from the full validator.
 func (v *CompositeValidator) Cleanup() {
 	v.fullValidator.Cleanup()
 }
