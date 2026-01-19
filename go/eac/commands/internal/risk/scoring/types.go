@@ -3,17 +3,19 @@
 // Risk Score = Likelihood × Impact
 //
 // Likelihood and Impact are both rated 1-5:
-//   1 = Very Low / Rare
-//   2 = Low / Unlikely
-//   3 = Medium / Possible
-//   4 = High / Likely
-//   5 = Very High / Almost Certain
+//
+//	1 = Very Low / Rare
+//	2 = Low / Unlikely
+//	3 = Medium / Possible
+//	4 = High / Likely
+//	5 = Very High / Almost Certain
 //
 // Risk Score ranges:
-//   20-25: Critical (Red)
-//   12-19: High (Orange)
-//   6-11:  Medium (Yellow)
-//   1-5:   Low (Green)
+//
+//	20-25: Critical (Red)
+//	12-19: High (Orange)
+//	6-11:  Medium (Yellow)
+//	1-5:   Low (Green)
 package scoring
 
 import "fmt"
@@ -30,33 +32,33 @@ const (
 
 // RiskScore holds computed risk information.
 type RiskScore struct {
-	Module      string   `json:"module"`
-	Likelihood  int      `json:"likelihood"`   // 1-5
-	Impact      int      `json:"impact"`       // 1-5
-	Score       int      `json:"score"`        // Likelihood × Impact
-	Band        RiskBand `json:"band"`         // Critical/High/Medium/Low
-	Reasoning   string   `json:"reasoning,omitempty"`
-	Confidence  float64  `json:"confidence,omitempty"` // 0.0-1.0
+	Module     string   `json:"module"`
+	Likelihood int      `json:"likelihood"` // 1-5
+	Impact     int      `json:"impact"`     // 1-5
+	Score      int      `json:"score"`      // Likelihood × Impact
+	Band       RiskBand `json:"band"`       // Critical/High/Medium/Low
+	Reasoning  string   `json:"reasoning,omitempty"`
+	Confidence float64  `json:"confidence,omitempty"` // 0.0-1.0
 }
 
 // AIRiskAnalysis represents the AI-generated risk analysis.
 type AIRiskAnalysis struct {
-	ComputedLikelihood   int      `json:"computed_likelihood"`
-	Reasoning            string   `json:"reasoning"`
-	RiskSummary          string   `json:"risk_summary"`
-	RecommendedControls  []string `json:"recommended_controls,omitempty"`
-	Confidence           float64  `json:"confidence"` // 0.0-1.0
+	ComputedLikelihood  int      `json:"computed_likelihood"`
+	Reasoning           string   `json:"reasoning"`
+	RiskSummary         string   `json:"risk_summary"`
+	RecommendedControls []string `json:"recommended_controls,omitempty"`
+	Confidence          float64  `json:"confidence"` // 0.0-1.0
 }
 
 // VulnerabilityInput represents vulnerability data sent to AI for analysis.
 type VulnerabilityInput struct {
-	Scanner       string `json:"scanner"`
-	Severity      string `json:"severity"`
-	Vulnerability string `json:"vulnerability"`
-	Description   string `json:"description,omitempty"`
-	CVSSScore     float64 `json:"cvss_score,omitempty"`
-	Exploitability string `json:"exploitability,omitempty"`
-	Package       string `json:"package,omitempty"`
+	Scanner        string  `json:"scanner"`
+	Severity       string  `json:"severity"`
+	Vulnerability  string  `json:"vulnerability"`
+	Description    string  `json:"description,omitempty"`
+	CVSSScore      float64 `json:"cvss_score,omitempty"`
+	Exploitability string  `json:"exploitability,omitempty"`
+	Package        string  `json:"package,omitempty"`
 }
 
 // ModuleContext provides context about the module for AI analysis.
@@ -68,9 +70,9 @@ type ModuleContext struct {
 
 // AIAnalysisInput is the complete input structure sent to AI.
 type AIAnalysisInput struct {
-	Module   string              `json:"module"`
+	Module   string               `json:"module"`
 	Findings []VulnerabilityInput `json:"findings"`
-	Context  ModuleContext       `json:"context"`
+	Context  ModuleContext        `json:"context"`
 }
 
 // ControlFinding holds finding information for a specific control.

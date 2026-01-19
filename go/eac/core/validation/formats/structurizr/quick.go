@@ -10,14 +10,14 @@ import (
 )
 
 // QuickValidator performs fast syntax validation without Docker
-// Used for AI generation to provide rapid feedback (< 100ms, no Docker dependency)
+// Used for AI generation to provide rapid feedback (< 100ms, no Docker dependency).
 type QuickValidator struct {
 	identifierPattern   *regexp.Regexp
 	relationshipPattern *regexp.Regexp
 	contract            *contracts.Contract
 }
 
-// NewQuickValidator creates a new quick validator
+// NewQuickValidator creates a new quick validator.
 func NewQuickValidator() *QuickValidator {
 	return &QuickValidator{
 		// Valid identifier: alphanumeric, underscore, dash (not just numbers)
@@ -28,7 +28,7 @@ func NewQuickValidator() *QuickValidator {
 	}
 }
 
-// NewQuickValidatorWithContract creates a new quick validator with contract
+// NewQuickValidatorWithContract creates a new quick validator with contract.
 func NewQuickValidatorWithContract(contract *contracts.Contract) *QuickValidator {
 	v := NewQuickValidator()
 	v.contract = contract
@@ -45,7 +45,7 @@ func NewQuickValidatorWithContract(contract *contracts.Contract) *QuickValidator
 	return v
 }
 
-// Validate performs quick syntax validation
+// Validate performs quick syntax validation.
 func (v *QuickValidator) Validate(output string, context map[string]interface{}) []validation.ValidationError {
 	var errors []validation.ValidationError
 	formatter := validation.NewErrorFormatter()
@@ -75,7 +75,7 @@ func (v *QuickValidator) Validate(output string, context map[string]interface{})
 	return errors
 }
 
-// validateWorkspaceStart checks if the DSL starts with "workspace"
+// validateWorkspaceStart checks if the DSL starts with "workspace".
 func (v *QuickValidator) validateWorkspaceStart(output string, formatter *validation.ErrorFormatter) *validation.ValidationError {
 	trimmed := strings.TrimSpace(output)
 	if !strings.HasPrefix(trimmed, "workspace") {
@@ -109,7 +109,7 @@ func (v *QuickValidator) validateWorkspaceStart(output string, formatter *valida
 	return nil
 }
 
-// validateBalancedBraces checks if braces are balanced
+// validateBalancedBraces checks if braces are balanced.
 func (v *QuickValidator) validateBalancedBraces(lines []string, formatter *validation.ErrorFormatter) []validation.ValidationError {
 	var errors []validation.ValidationError
 	braceCount := 0
@@ -118,10 +118,11 @@ func (v *QuickValidator) validateBalancedBraces(lines []string, formatter *valid
 	for i, line := range lines {
 		lineNum := i + 1
 		for _, char := range line {
-			if char == '{' {
+			switch char {
+			case '{':
 				braceCount++
 				braceStack = append(braceStack, lineNum)
-			} else if char == '}' {
+			case '}':
 				braceCount--
 				if braceCount < 0 {
 					errors = append(errors, *formatter.FormatEnhancedError(
@@ -171,7 +172,7 @@ func (v *QuickValidator) validateBalancedBraces(lines []string, formatter *valid
 	return errors
 }
 
-// validateIdentifiers checks for invalid identifier names
+// validateIdentifiers checks for invalid identifier names.
 func (v *QuickValidator) validateIdentifiers(lines []string, formatter *validation.ErrorFormatter) []validation.ValidationError {
 	var errors []validation.ValidationError
 
@@ -233,7 +234,7 @@ Invalid examples:
 	return errors
 }
 
-// validateRelationships checks for invalid relationships (e.g., parent-child)
+// validateRelationships checks for invalid relationships (e.g., parent-child).
 func (v *QuickValidator) validateRelationships(lines []string) []validation.ValidationError {
 	var errors []validation.ValidationError
 
@@ -314,7 +315,7 @@ func (v *QuickValidator) validateRelationships(lines []string) []validation.Vali
 	return errors
 }
 
-// VerifyImplementation verifies the validator is ready
+// VerifyImplementation verifies the validator is ready.
 func (v *QuickValidator) VerifyImplementation() []validation.ValidationError {
 	return []validation.ValidationError{}
 }

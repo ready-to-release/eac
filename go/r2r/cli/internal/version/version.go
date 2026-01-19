@@ -1,3 +1,4 @@
+// Package version provides version information and update checking.
 package version
 
 import (
@@ -19,7 +20,7 @@ var (
 	maxVersion     = "v99.99.99"
 )
 
-// Info holds version information for the application
+// Info holds version information for the application.
 type Info struct {
 	Version   string
 	Timestamp string
@@ -28,7 +29,7 @@ type Info struct {
 	Modified  string
 }
 
-// Default version info (can be set via build flags)
+// Default version info (can be set via build flags).
 var (
 	Version   = "undefined"
 	Timestamp = time.Now().Format(time.RFC3339)
@@ -37,7 +38,7 @@ var (
 	Modified  = "no information about modification"
 )
 
-// GetInfo returns the current version information
+// GetInfo returns the current version information.
 func GetInfo() Info {
 	versionMutex.RLock()
 	defer versionMutex.RUnlock()
@@ -51,7 +52,7 @@ func GetInfo() Info {
 	}
 }
 
-// SetVersion sets the version information (thread-safe)
+// SetVersion sets the version information (thread-safe).
 func SetVersion(v, ts, c, bt, m string) {
 	versionMutex.Lock()
 	defer versionMutex.Unlock()
@@ -73,7 +74,7 @@ func SetVersion(v, ts, c, bt, m string) {
 	}
 }
 
-// ResetToDefaults resets all version information to default values (useful for testing)
+// ResetToDefaults resets all version information to default values (useful for testing).
 func ResetToDefaults() {
 	versionMutex.Lock()
 	defer versionMutex.Unlock()
@@ -85,7 +86,7 @@ func ResetToDefaults() {
 	Modified = "no information about modification"
 }
 
-// EnsurePrefix ensures a version string has the specified prefix
+// EnsurePrefix ensures a version string has the specified prefix.
 func EnsurePrefix(version, prefix string) string {
 	if version == "" {
 		return prefix
@@ -96,7 +97,7 @@ func EnsurePrefix(version, prefix string) string {
 	return version
 }
 
-// SplitVersion splits a version string into main version and prerelease parts
+// SplitVersion splits a version string into main version and prerelease parts.
 func SplitVersion(version string) (main, prerelease string) {
 	// First, remove build metadata (e.g., "1.2.3+build" or "1.2.3-alpha+build")
 	buildIdx := strings.Index(version, "+")
@@ -113,7 +114,7 @@ func SplitVersion(version string) (main, prerelease string) {
 }
 
 // CompareVersions compares two semantic version strings
-// Returns -1 if v1 < v2, 0 if v1 == v2, 1 if v1 > v2
+// Returns -1 if v1 < v2, 0 if v1 == v2, 1 if v1 > v2.
 func CompareVersions(v1, v2 string) int {
 	// Remove v prefix if present
 	v1Clean := strings.TrimPrefix(v1, "v")
@@ -159,7 +160,7 @@ func CompareVersions(v1, v2 string) int {
 	return 0
 }
 
-// Validate validates the current version against format and range constraints
+// Validate validates the current version against format and range constraints.
 func Validate(forceUpdate bool) error {
 	versionMutex.RLock()
 	defer versionMutex.RUnlock()
@@ -200,25 +201,25 @@ func Validate(forceUpdate bool) error {
 	return nil
 }
 
-// IsValid checks if a version string is valid without validating against constraints
+// IsValid checks if a version string is valid without validating against constraints.
 func IsValid(v string) bool {
 	return versionPattern.MatchString(strings.TrimPrefix(v, "v"))
 }
 
-// GetRange returns the allowed version range
-func GetRange() (min, max string) {
+// GetRange returns the allowed version range.
+func GetRange() (minVer, maxVer string) {
 	return minVersion, maxVersion
 }
 
-// SetRange sets the allowed version range (for testing purposes)
-func SetRange(min, max string) {
+// SetRange sets the allowed version range (for testing purposes).
+func SetRange(minVer, maxVer string) {
 	versionMutex.Lock()
 	defer versionMutex.Unlock()
 
-	if min != "" {
-		minVersion = min
+	if minVer != "" {
+		minVersion = minVer
 	}
-	if max != "" {
-		maxVersion = max
+	if maxVer != "" {
+		maxVersion = maxVer
 	}
 }

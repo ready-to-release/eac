@@ -2,7 +2,7 @@ package reporter
 
 import "time"
 
-// TestSuiteReportData contains all data needed for test suite report generation
+// TestSuiteReportData contains all data needed for test suite report generation.
 type TestSuiteReportData struct {
 	// Suite information
 	SuiteName    string
@@ -36,7 +36,7 @@ type TestSuiteReportData struct {
 	ResultsDirectory string
 }
 
-// ModuleReportData contains test results for a single module
+// ModuleReportData contains test results for a single module.
 type ModuleReportData struct {
 	ModuleName     string
 	TestResultDir  string
@@ -46,7 +46,7 @@ type ModuleReportData struct {
 	TotalUnitTests int
 }
 
-// FeatureReportData contains information about a BDD feature
+// FeatureReportData contains information about a BDD feature.
 type FeatureReportData struct {
 	Name          string
 	URI           string
@@ -57,14 +57,14 @@ type FeatureReportData struct {
 	Status        string
 }
 
-// UnitTestReportData contains information about Go unit test packages
+// UnitTestReportData contains information about Go unit test packages.
 type UnitTestReportData struct {
 	Package   string
 	TestCount int
 	Status    string
 }
 
-// BuildReportData creates a TestSuiteReportData from raw test results
+// BuildReportData creates a TestSuiteReportData from raw test results.
 func BuildReportData(
 	suiteName, suiteMoniker string,
 	startTime, endTime time.Time,

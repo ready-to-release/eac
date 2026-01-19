@@ -1,3 +1,4 @@
+// Package github provides GitHub authentication and registry operations.
 package github
 
 import (
@@ -6,7 +7,7 @@ import (
 	"strings"
 )
 
-// CLIAuth contains authentication credentials obtained from the GitHub CLI
+// CLIAuth contains authentication credentials obtained from the GitHub CLI.
 type CLIAuth struct {
 	Token    string
 	Username string

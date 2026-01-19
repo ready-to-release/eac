@@ -52,12 +52,12 @@ type DockerClient interface {
 	Close() error
 }
 
-// RealDockerClient wraps the official Docker client to implement DockerClient interface
+// RealDockerClient wraps the official Docker client to implement DockerClient interface.
 type RealDockerClient struct {
 	*client.Client
 }
 
-// NewDockerClient creates a new Docker client with default options
+// NewDockerClient creates a new Docker client with default options.
 func NewDockerClient() (DockerClient, error) {
 	cli, err := client.NewClientWithOpts(
 		client.FromEnv,
@@ -70,5 +70,5 @@ func NewDockerClient() (DockerClient, error) {
 	return &RealDockerClient{Client: cli}, nil
 }
 
-// Ensure RealDockerClient implements DockerClient interface
+// Ensure RealDockerClient implements DockerClient interface.
 var _ DockerClient = (*RealDockerClient)(nil)

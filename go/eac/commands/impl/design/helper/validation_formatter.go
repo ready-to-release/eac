@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// FormatValidationResult formats a single validation result for console output
+// FormatValidationResult formats a single validation result for console output.
 func FormatValidationResult(result *ValidationResult, verbose bool) string {
 	output := ""
 
@@ -102,9 +102,9 @@ func FormatValidationResult(result *ValidationResult, verbose bool) string {
 			}
 		}
 
-		output += fmt.Sprintf("    docker run --rm \\\n")
+		output += "    docker run --rm \\\n"
 		output += fmt.Sprintf("      -v \"%s:/workspace\" \\\n", workspaceDir)
-		output += fmt.Sprintf("      structurizr/cli:latest \\\n")
+		output += "      structurizr/cli:latest \\\n"
 		output += fmt.Sprintf("      validate -workspace /workspace/%s\n", workspaceFile)
 
 		output += "\n  Raw Structurizr CLI Output:\n"
@@ -118,7 +118,7 @@ func FormatValidationResult(result *ValidationResult, verbose bool) string {
 	return output
 }
 
-// FormatValidationSummary formats a validation summary for console output
+// FormatValidationSummary formats a validation summary for console output.
 func FormatValidationSummary(summary *ValidationSummary, verbose bool) string {
 	output := ""
 
@@ -134,7 +134,8 @@ func FormatValidationSummary(summary *ValidationSummary, verbose bool) string {
 
 	// Count total files across all modules
 	totalFiles := 0
-	for _, result := range summary.Results {
+	for i := range summary.Results {
+		result := &summary.Results[i]
 		if result.TotalFiles > 0 {
 			totalFiles += result.TotalFiles
 		} else {
@@ -143,7 +144,8 @@ func FormatValidationSummary(summary *ValidationSummary, verbose bool) string {
 	}
 
 	// Show individual results
-	for _, result := range summary.Results {
+	for i := range summary.Results {
+		result := &summary.Results[i]
 		if result.Valid {
 			output += fmt.Sprintf("Module: %s", result.Module)
 			if result.TotalFiles > 1 {
@@ -216,12 +218,12 @@ func FormatValidationSummary(summary *ValidationSummary, verbose bool) string {
 	return output
 }
 
-// WriteValidationResultJSON writes a validation result to JSON file
+// WriteValidationResultJSON writes a validation result to JSON file.
 func WriteValidationResultJSON(result *ValidationResult, outputPath string) error {
 	// Create output directory if it doesn't exist
 	dir := "out"
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		if err := os.Mkdir(dir, 0755); err != nil {
+		if err := os.Mkdir(dir, 0o755); err != nil {
 			return fmt.Errorf("failed to create output directory: %w", err)
 		}
 	}
@@ -233,19 +235,19 @@ func WriteValidationResultJSON(result *ValidationResult, outputPath string) erro
 	}
 
 	// Write to file
-	if err := os.WriteFile(outputPath, data, 0644); err != nil {
+	if err := os.WriteFile(outputPath, data, 0o644); err != nil {
 		return fmt.Errorf("failed to write JSON file: %w", err)
 	}
 
 	return nil
 }
 
-// WriteValidationSummaryJSON writes a validation summary to JSON file
+// WriteValidationSummaryJSON writes a validation summary to JSON file.
 func WriteValidationSummaryJSON(summary *ValidationSummary, outputPath string) error {
 	// Create output directory if it doesn't exist
 	dir := "out"
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		if err := os.Mkdir(dir, 0755); err != nil {
+		if err := os.Mkdir(dir, 0o755); err != nil {
 			return fmt.Errorf("failed to create output directory: %w", err)
 		}
 	}
@@ -257,7 +259,7 @@ func WriteValidationSummaryJSON(summary *ValidationSummary, outputPath string) e
 	}
 
 	// Write to file
-	if err := os.WriteFile(outputPath, data, 0644); err != nil {
+	if err := os.WriteFile(outputPath, data, 0o644); err != nil {
 		return fmt.Errorf("failed to write JSON file: %w", err)
 	}
 

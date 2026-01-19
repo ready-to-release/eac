@@ -27,7 +27,6 @@ func TestCommandsRegistered(t *testing.T) {
 		"show files",
 		"show files-changed",
 		"show files-staged",
-		"show moduletypes",
 		"commit",
 		"commit message",
 	}
@@ -48,7 +47,7 @@ func TestGetSubcommands(t *testing.T) {
 	}
 
 	// Check for expected subcommands
-	expectedSubs := []string{"files", "modules", "moduletypes", "dependencies"}
+	expectedSubs := []string{"files", "modules", "dependencies"}
 	for _, expected := range expectedSubs {
 		found := false
 		for _, sub := range subcommands {

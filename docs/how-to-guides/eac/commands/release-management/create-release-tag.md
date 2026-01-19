@@ -71,10 +71,10 @@ gh pr create
 
 ### Tag Format Examples
 
-| Module Type | Versioning | Tag Format | Example |
-|-------------|------------|------------|---------|
-| **Standard Module** | SemVer | `{moniker}/{MAJOR.MINOR.PATCH}` | `my-module/1.2.4` |
-| **CalVer Module** | CalVer | `{moniker}/{YYYY.MMDD}` | `my-calver-module/2026.0109` |
+| Module Type         | Versioning   | Tag Format                      | Example                      |
+| ------------------- | ------------ | ------------------------------- | ---------------------------- |
+| **Standard Module** | SemVer       | `{moniker}/{MAJOR.MINOR.PATCH}` | `my-module/1.2.4`            |
+| **CalVer Module**   | CalVer       | `{moniker}/{YYYY.MMDD}`         | `my-calver-module/2026.0109` |
 
 ### Verification
 

@@ -27,7 +27,7 @@ func init() {
 	registry.Register(ShowBuildSummary)
 }
 
-// ShowBuildSummary generates a pretty build summary
+// ShowBuildSummary generates a pretty build summary.
 func ShowBuildSummary() int {
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
@@ -92,9 +92,9 @@ func buildSummaryContent(f *SummaryFormatter, module *config.Module, status stri
 
 	// Status section
 	if status == "success" {
-		summary += f.StatusSection(fmt.Sprintf("%s built successfully", getModuleTypeDescription(module.Type, cfg)))
+		summary += f.StatusSection(fmt.Sprintf("%s built successfully", getModuleTypeDescription(module.GetComponentTypesDisplay(), cfg)))
 	} else {
-		summary += f.StatusSection(fmt.Sprintf("%s build failed", getModuleTypeDescription(module.Type, cfg)))
+		summary += f.StatusSection(fmt.Sprintf("%s build failed", getModuleTypeDescription(module.GetComponentTypesDisplay(), cfg)))
 	}
 
 	// Build output metrics (module-type specific)
@@ -114,40 +114,47 @@ func buildSummaryContent(f *SummaryFormatter, module *config.Module, status stri
 }
 
 func getModuleTypeDescription(moduleType string, cfg *config.EACConfig) string {
-	if cfg.ModuleTypes != nil {
-		typeDef := cfg.ModuleTypes.Get(moduleType)
-		if typeDef != nil {
-			return typeDef.Description
-		}
-	}
+	// Module type descriptions are now derived from package types
+	// Return the module type name as-is
 	return moduleType
 }
 
 func buildMetricsSection(f *SummaryFormatter, module *config.Module, cfg *config.EACConfig) string {
 	outputDir := cfg.Repository.BuildOutputPath(module.Moniker)
 
-	// Get artifact definitions from module type contract
-	if cfg.ModuleTypes == nil {
-		return f.Section(Emoji("metrics")+" Build Output", "Module types not loaded")
-	}
-	moduleType := cfg.ModuleTypes.Get(module.Type)
-	if moduleType == nil || moduleType.Build == nil || len(moduleType.Build.Artifacts) == 0 {
-		return f.Section(Emoji("metrics")+" Build Output", "No artifacts defined in contract")
+	// Collect artifact definitions from all packages
+	var artifacts []config.Artifact
+	for _, pkg := range module.Components {
+		if pkg != nil && pkg.Build != nil {
+			for _, ma := range pkg.Build.Artifacts {
+				artifacts = append(artifacts, config.Artifact{
+					ID:          ma.ID,
+					Type:        ma.Type,
+					Pattern:     ma.Pattern,
+					Compression: ma.Compression,
+					DeriveFrom:  ma.DeriveFrom,
+				})
+			}
+		}
 	}
 
-	// Verify artifacts using contract
+	if len(artifacts) == 0 {
+		return f.Section(Emoji("metrics")+" Build Output", "No artifacts defined for module")
+	}
+
+	// Verify artifacts using module config
 	resolver := config.NewArtifactResolverWithMetadata(
 		module.Moniker,
 		outputDir,
 		module.Metadata,
 	)
-	results := resolver.VerifyArtifacts(moduleType.Build.Artifacts)
+	results := resolver.VerifyArtifacts(artifacts)
 
 	// Show what actually exists
-	return formatArtifactMetrics(f, results, module.Type)
+	return formatArtifactMetrics(f, results, module.GetComponentTypesDisplay())
 }
 
-// formatArtifactMetrics formats artifact verification results intelligently based on types
+// formatArtifactMetrics formats artifact verification results intelligently based on types.
 func formatArtifactMetrics(f *SummaryFormatter, results []config.ArtifactVerificationResult, moduleType string) string {
 	if len(results) == 0 {
 		return f.Section(Emoji("metrics")+" Build Output", "No artifacts defined")
@@ -186,7 +193,7 @@ func formatArtifactMetrics(f *SummaryFormatter, results []config.ArtifactVerific
 	return f.Section(Emoji("metrics")+" Build Output", f.Table(headers, rows))
 }
 
-// formatArtifactDetails returns size/count info for an artifact
+// formatArtifactDetails returns size/count info for an artifact.
 func formatArtifactDetails(r config.ArtifactVerificationResult) string {
 	info, err := os.Stat(r.Path)
 	if err != nil {
@@ -196,8 +203,14 @@ func formatArtifactDetails(r config.ArtifactVerificationResult) string {
 	switch r.Artifact.Type {
 	case config.ArtifactTypeDirectory:
 		// Show file count and total size for directories
-		fileCount, _ := GetFileCount(r.Path, "**/*")
-		dirSize, _ := GetDirectorySize(r.Path)
+		fileCount, fcErr := GetFileCount(r.Path, "**/*")
+		if fcErr != nil {
+			fileCount = 0
+		}
+		dirSize, dsErr := GetDirectorySize(r.Path)
+		if dsErr != nil {
+			dirSize = "-"
+		}
 		if fileCount > 0 {
 			return fmt.Sprintf("%d files, %s", fileCount, dirSize)
 		}
@@ -246,12 +259,13 @@ func artifactsSection(f *SummaryFormatter, module *config.Module) string {
 func buildConfigSection(f *SummaryFormatter, module *config.Module, cfg *config.EACConfig) string {
 	var configDetails string
 
-	// Module type
-	configDetails += fmt.Sprintf("- %s: %s\n", Bold("Module Type"), module.Type)
+	// Package types
+	configDetails += fmt.Sprintf("- %s: %s\n", Bold("Package Types"), module.GetComponentTypesDisplay())
 
-	// Build dependencies
-	if cfg.ModuleTypes != nil {
-		buildDeps := cfg.ModuleTypes.GetBuildDeps(module.Type)
+	// Build dependencies from package types
+	if cfg.ComponentTypes != nil {
+		enabledPackages := module.Components.GetEnabled()
+		buildDeps := cfg.ComponentTypes.GetBuildRequirements(enabledPackages)
 		if len(buildDeps) > 0 {
 			configDetails += fmt.Sprintf("- %s: %s\n", Bold("Dependencies"), formatSlice(buildDeps))
 		}
@@ -283,7 +297,7 @@ func formatSlice(items []string) string {
 // deriveBuildStatus determines build status from manifest.
 // Status is derived as:
 // - "success" if manifest exists and has artifacts
-// - "failure" if manifest is missing or has no artifacts
+// - "failure" if manifest is missing or has no artifacts.
 func deriveBuildStatus(cfg *config.EACConfig, moduleName string) string {
 	// Get workspace root for absolute path
 	workspaceRoot, err := repository.GetRepositoryRoot("")

@@ -47,7 +47,7 @@ func init() {
 	registry.Register(ReleaseExecuteLayers)
 }
 
-// LayerModule represents a module in a release layer
+// LayerModule represents a module in a release layer.
 type LayerModule struct {
 	Module  string `json:"module"`
 	Version string `json:"version"`
@@ -55,7 +55,7 @@ type LayerModule struct {
 	Type    string `json:"type"`
 }
 
-// LayerRun tracks a dispatched workflow run
+// LayerRun tracks a dispatched workflow run.
 type LayerRun struct {
 	Module string
 	RunID  string
@@ -206,7 +206,7 @@ func ReleaseExecuteLayers() int {
 	return 0
 }
 
-// dispatchAndGetRunID dispatches a workflow and returns the run ID
+// dispatchAndGetRunID dispatches a workflow and returns the run ID.
 func dispatchAndGetRunID(workspaceRoot, workflow, version, versionType string) (string, error) {
 	// Dispatch the workflow
 	// Semver releases (r2r-cli, ext-eac) require version input
@@ -253,7 +253,7 @@ func dispatchAndGetRunID(workspaceRoot, workflow, version, versionType string) (
 	return "", fmt.Errorf("could not find workflow run after dispatch")
 }
 
-// awaitWorkflowRun waits for a workflow run to complete
+// awaitWorkflowRun waits for a workflow run to complete.
 func awaitWorkflowRun(runID string, timeout int) (success bool, err error) {
 	startTime := time.Now()
 

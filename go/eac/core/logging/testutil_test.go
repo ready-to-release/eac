@@ -5,7 +5,7 @@ import (
 	"sync"
 )
 
-// syncBuffer is a thread-safe buffer for testing concurrent writes
+// syncBuffer is a thread-safe buffer for testing concurrent writes.
 type syncBuffer struct {
 	buf bytes.Buffer
 	mu  sync.Mutex

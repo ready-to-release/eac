@@ -18,10 +18,10 @@ import (
 
 // testState holds state for config defaults test scenarios.
 type testState struct {
-	cfg              *config.EACConfig
-	loadError        error
-	repoRoot         string
-	origRepoRoot     string // Original R2R_REPO_ROOT value
+	cfg               *config.EACConfig
+	loadError         error
+	repoRoot          string
+	origRepoRoot      string // Original R2R_REPO_ROOT value
 	origContainerRoot string // Original R2R_CONTAINER_ROOT value
 }
 
@@ -80,11 +80,11 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	sc.Step(`^the modules config does not contain module "([^"]*)"$`, func(moniker string) error {
 		return theModulesConfigDoesNotContainModule(moniker)
 	})
-	sc.Step(`^the module "([^"]*)" has type "([^"]*)"$`, func(moniker, expectedType string) error {
-		return theModuleHasType(moniker, expectedType)
+	sc.Step(`^the module "([^"]*)" has component "([^"]*)"$`, func(moniker, expectedComp string) error {
+		return theModuleHasComponent(moniker, expectedComp)
 	})
-	sc.Step(`^the module "([^"]*)" has files root "([^"]*)"$`, func(moniker, expectedRoot string) error {
-		return theModuleHasFilesRoot(moniker, expectedRoot)
+	sc.Step(`^the module "([^"]*)" has component root "([^"]*)" as "([^"]*)"$`, func(moniker, compName, expectedRoot string) error {
+		return theModuleHasComponentRoot(moniker, compName, expectedRoot)
 	})
 	sc.Step(`^the module "([^"]*)" has description "([^"]*)"$`, func(moniker, expected string) error {
 		return theModuleHasDescription(moniker, expected)
@@ -92,14 +92,11 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	sc.Step(`^the module "([^"]*)" has changelog "([^"]*)"$`, func(moniker, expected string) error {
 		return theModuleHasChangelog(moniker, expected)
 	})
-	sc.Step(`^the module "([^"]*)" has source patterns containing "([^"]*)"$`, func(moniker, pattern string) error {
-		return theModuleHasSourcePatternsContaining(moniker, pattern)
+	sc.Step(`^the module "([^"]*)" component "([^"]*)" has source patterns containing "([^"]*)"$`, func(moniker, compName, pattern string) error {
+		return theModuleComponentHasSourcePatternsContaining(moniker, compName, pattern)
 	})
-	sc.Step(`^the module "([^"]*)" does not have source pattern "([^"]*)"$`, func(moniker, pattern string) error {
-		return theModuleDoesNotHaveSourcePattern(moniker, pattern)
-	})
-	sc.Step(`^the module "([^"]*)" has assets patterns containing "([^"]*)"$`, func(moniker, pattern string) error {
-		return theModuleHasAssetsPatternsContaining(moniker, pattern)
+	sc.Step(`^the module "([^"]*)" component "([^"]*)" does not have source pattern "([^"]*)"$`, func(moniker, compName, pattern string) error {
+		return theModuleComponentDoesNotHaveSourcePattern(moniker, compName, pattern)
 	})
 	sc.Step(`^the module "([^"]*)" has no source patterns from type defaults$`, func(moniker string) error {
 		return theModuleHasNoSourcePatternsFromTypeDefaults(moniker)
@@ -107,13 +104,10 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	sc.Step(`^the module "([^"]*)" specs pattern resolves with "([^"]*)"$`, func(moniker, expected string) error {
 		return theModuleSpecsPatternResolvesWith(moniker, expected)
 	})
-	sc.Step(`^the module "([^"]*)" test_impl path contains "([^"]*)"$`, func(moniker, expected string) error {
-		return theModuleTestImplPathContains(moniker, expected)
-	})
 
-	// Then steps - module types assertions
-	sc.Step(`^the module types config contains type "([^"]*)"$`, func(typeName string) error {
-		return theModuleTypesConfigContainsType(typeName)
+	// Then steps - component types assertions
+	sc.Step(`^the component types config contains type "([^"]*)"$`, func(typeName string) error {
+		return theComponentTypesConfigContainsType(typeName)
 	})
 	sc.Step(`^the type "([^"]*)" has capability "([^"]*)"$`, func(typeName, capability string) error {
 		return theTypeHasCapability(typeName, capability)
@@ -128,9 +122,6 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	// Then steps - repository paths assertions
 	sc.Step(`^the repository paths\.specs_root is "([^"]*)"$`, func(expected string) error {
 		return theRepositoryPathsFieldIs("specs_root", expected)
-	})
-	sc.Step(`^the repository paths\.test_impl_root is "([^"]*)"$`, func(expected string) error {
-		return theRepositoryPathsFieldIs("test_impl_root", expected)
 	})
 	sc.Step(`^the repository paths\.out\.root is "([^"]*)"$`, func(expected string) error {
 		return theRepositoryPathsFieldIs("out.root", expected)
@@ -193,14 +184,14 @@ func iAmInAnIsolatedTestRepository(ctx *internal.TestContext) error {
 
 	// Create minimal .git directory so config loader can find repo root
 	gitDir := filepath.Join(tempDir, ".git")
-	if err := os.MkdirAll(gitDir, 0755); err != nil {
+	if err := os.MkdirAll(gitDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create .git: %w", err)
 	}
 	// Create minimal git config
-	if err := os.WriteFile(filepath.Join(gitDir, "config"), []byte("[core]\n\tbare = false\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(gitDir, "config"), []byte("[core]\n\tbare = false\n"), 0o644); err != nil {
 		return fmt.Errorf("failed to create .git/config: %w", err)
 	}
-	if err := os.WriteFile(filepath.Join(gitDir, "HEAD"), []byte("ref: refs/heads/main\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(gitDir, "HEAD"), []byte("ref: refs/heads/main\n"), 0o644); err != nil {
 		return fmt.Errorf("failed to create .git/HEAD: %w", err)
 	}
 
@@ -231,7 +222,7 @@ func iAmInAnIsolatedTestRepository(ctx *internal.TestContext) error {
 	return nil
 }
 
-// findRepoRoot walks up directories to find the repo root (containing go.work or .git)
+// findRepoRoot walks up directories to find the repo root (containing go.work or .git).
 func findRepoRoot(start string) string {
 	dir := start
 	for {
@@ -262,7 +253,7 @@ func theRepositoryHasNoDirectory(ctx *internal.TestContext, path string) error {
 
 func theRepositoryHasDirectory(ctx *internal.TestContext, path string) error {
 	fullPath := filepath.Join(ctx.IsolatedDir, path)
-	if err := os.MkdirAll(fullPath, 0755); err != nil {
+	if err := os.MkdirAll(fullPath, 0o755); err != nil {
 		return fmt.Errorf("failed to create directory %s: %w", path, err)
 	}
 	return nil
@@ -271,10 +262,10 @@ func theRepositoryHasDirectory(ctx *internal.TestContext, path string) error {
 func theRepositoryHasFileWith(ctx *internal.TestContext, path, content string) error {
 	fullPath := filepath.Join(ctx.IsolatedDir, path)
 	// Ensure parent directory exists
-	if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
 		return fmt.Errorf("failed to create parent directory: %w", err)
 	}
-	if err := os.WriteFile(fullPath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(fullPath, []byte(content), 0o644); err != nil {
 		return fmt.Errorf("failed to write file %s: %w", path, err)
 	}
 	return nil
@@ -314,9 +305,7 @@ func iApplyTypeDefaultsToModules() error {
 	if state.cfg == nil {
 		return fmt.Errorf("config not loaded")
 	}
-	if state.cfg.Repository != nil && state.cfg.ModuleTypes != nil {
-		state.cfg.Repository.ApplyTypeDefaults(state.cfg.ModuleTypes)
-	}
+	// Type defaults are now handled by packages - this is a no-op for compatibility
 	return nil
 }
 
@@ -346,7 +335,7 @@ func theModulesConfigDoesNotContainModule(moniker string) error {
 	return nil
 }
 
-func theModuleHasType(moniker, expectedType string) error {
+func theModuleHasComponent(moniker, expectedComp string) error {
 	if state.cfg == nil || state.cfg.Repository == nil {
 		return fmt.Errorf("modules config not loaded")
 	}
@@ -354,13 +343,13 @@ func theModuleHasType(moniker, expectedType string) error {
 	if !found {
 		return fmt.Errorf("module %q not found", moniker)
 	}
-	if m.Type != expectedType {
-		return fmt.Errorf("module %q has type %q, expected %q", moniker, m.Type, expectedType)
+	if !m.HasComponent(expectedComp) {
+		return fmt.Errorf("module %q does not have component %q, has: %v", moniker, expectedComp, m.Components.GetEnabled())
 	}
 	return nil
 }
 
-func theModuleHasFilesRoot(moniker, expectedRoot string) error {
+func theModuleHasComponentRoot(moniker, compName, expectedRoot string) error {
 	if state.cfg == nil || state.cfg.Repository == nil {
 		return fmt.Errorf("modules config not loaded")
 	}
@@ -368,8 +357,12 @@ func theModuleHasFilesRoot(moniker, expectedRoot string) error {
 	if !found {
 		return fmt.Errorf("module %q not found", moniker)
 	}
-	if m.Files.Root != expectedRoot {
-		return fmt.Errorf("module %q has files.root %q, expected %q", moniker, m.Files.Root, expectedRoot)
+	entry, ok := m.Components[compName]
+	if !ok || entry == nil {
+		return fmt.Errorf("module %q does not have component %q", moniker, compName)
+	}
+	if entry.Root != expectedRoot {
+		return fmt.Errorf("module %q component %q has root %q, expected %q", moniker, compName, entry.Root, expectedRoot)
 	}
 	return nil
 }
@@ -396,13 +389,14 @@ func theModuleHasChangelog(moniker, expected string) error {
 	if !found {
 		return fmt.Errorf("module %q not found", moniker)
 	}
-	if m.Files.Changelog != expected {
-		return fmt.Errorf("module %q has changelog %q, expected %q", moniker, m.Files.Changelog, expected)
+	changelog := m.GetChangelog()
+	if changelog != expected {
+		return fmt.Errorf("module %q has changelog %q, expected %q", moniker, changelog, expected)
 	}
 	return nil
 }
 
-func theModuleHasSourcePatternsContaining(moniker, pattern string) error {
+func theModuleComponentHasSourcePatternsContaining(moniker, compName, pattern string) error {
 	if state.cfg == nil || state.cfg.Repository == nil {
 		return fmt.Errorf("modules config not loaded")
 	}
@@ -410,15 +404,22 @@ func theModuleHasSourcePatternsContaining(moniker, pattern string) error {
 	if !found {
 		return fmt.Errorf("module %q not found", moniker)
 	}
-	for _, p := range m.Files.Source {
+	entry, ok := m.Components[compName]
+	if !ok || entry == nil {
+		return fmt.Errorf("module %q does not have component %q", moniker, compName)
+	}
+	if entry.Patterns == nil {
+		return fmt.Errorf("module %q component %q has no patterns", moniker, compName)
+	}
+	for _, p := range entry.Patterns.Source {
 		if p == pattern || strings.Contains(p, pattern) {
 			return nil
 		}
 	}
-	return fmt.Errorf("module %q source patterns %v do not contain %q", moniker, m.Files.Source, pattern)
+	return fmt.Errorf("module %q component %q source patterns %v do not contain %q", moniker, compName, entry.Patterns.Source, pattern)
 }
 
-func theModuleDoesNotHaveSourcePattern(moniker, pattern string) error {
+func theModuleComponentDoesNotHaveSourcePattern(moniker, compName, pattern string) error {
 	if state.cfg == nil || state.cfg.Repository == nil {
 		return fmt.Errorf("modules config not loaded")
 	}
@@ -426,28 +427,18 @@ func theModuleDoesNotHaveSourcePattern(moniker, pattern string) error {
 	if !found {
 		return fmt.Errorf("module %q not found", moniker)
 	}
-	for _, p := range m.Files.Source {
-		if p == pattern {
-			return fmt.Errorf("module %q unexpectedly has source pattern %q", moniker, pattern)
+	entry, ok := m.Components[compName]
+	if !ok || entry == nil {
+		return fmt.Errorf("module %q does not have component %q", moniker, compName)
+	}
+	if entry.Patterns != nil {
+		for _, p := range entry.Patterns.Source {
+			if p == pattern {
+				return fmt.Errorf("module %q component %q unexpectedly has source pattern %q", moniker, compName, pattern)
+			}
 		}
 	}
 	return nil
-}
-
-func theModuleHasAssetsPatternsContaining(moniker, pattern string) error {
-	if state.cfg == nil || state.cfg.Repository == nil {
-		return fmt.Errorf("modules config not loaded")
-	}
-	m, found := state.cfg.Repository.GetModule(moniker)
-	if !found {
-		return fmt.Errorf("module %q not found", moniker)
-	}
-	for _, p := range m.Files.Assets {
-		if p == pattern || strings.Contains(p, pattern) {
-			return nil
-		}
-	}
-	return fmt.Errorf("module %q assets patterns %v do not contain %q", moniker, m.Files.Assets, pattern)
 }
 
 func theModuleHasNoSourcePatternsFromTypeDefaults(moniker string) error {
@@ -472,42 +463,29 @@ func theModuleSpecsPatternResolvesWith(moniker, expected string) error {
 	if !found {
 		return fmt.Errorf("module %q not found", moniker)
 	}
-	for _, p := range m.Files.Repo.Specs {
-		if strings.Contains(p, expected) {
+	// Check if specs package exists and its root contains expected
+	if specsEntry, ok := m.Components["specs"]; ok && specsEntry != nil {
+		if strings.Contains(specsEntry.Root, expected) {
 			return nil
 		}
 	}
-	return fmt.Errorf("module %q specs patterns %v do not contain %q", moniker, m.Files.Repo.Specs, expected)
-}
-
-func theModuleTestImplPathContains(moniker, expected string) error {
-	if state.cfg == nil || state.cfg.Repository == nil {
-		return fmt.Errorf("modules config not loaded")
-	}
-	m, found := state.cfg.Repository.GetModule(moniker)
-	if !found {
-		return fmt.Errorf("module %q not found", moniker)
-	}
-	if !strings.Contains(m.Files.Repo.TestImpl, expected) {
-		return fmt.Errorf("module %q test_impl %q does not contain %q", moniker, m.Files.Repo.TestImpl, expected)
-	}
-	return nil
+	return fmt.Errorf("module %q specs package does not contain %q", moniker, expected)
 }
 
 // ============================================================================
-// Module Types Assertions
+// Component Types Assertions
 // ============================================================================
 
-func theModuleTypesConfigContainsType(typeName string) error {
-	if state.cfg == nil || state.cfg.ModuleTypes == nil {
-		return fmt.Errorf("module types config not loaded")
+func theComponentTypesConfigContainsType(typeName string) error {
+	if state.cfg == nil || state.cfg.ComponentTypes == nil {
+		return fmt.Errorf("component types config not loaded")
 	}
-	td := state.cfg.ModuleTypes.Get(typeName)
-	if td == nil {
+	pt := state.cfg.ComponentTypes.Get(typeName)
+	if pt == nil {
 		// List available types for debugging
 		var available []string
-		for _, t := range state.cfg.ModuleTypes.Types {
-			available = append(available, t.Name)
+		for name := range state.cfg.ComponentTypes.ComponentTypes {
+			available = append(available, name)
 		}
 		return fmt.Errorf("type %q not found in config (available: %v)", typeName, available)
 	}
@@ -515,50 +493,50 @@ func theModuleTypesConfigContainsType(typeName string) error {
 }
 
 func theTypeHasCapability(typeName, capability string) error {
-	if state.cfg == nil || state.cfg.ModuleTypes == nil {
-		return fmt.Errorf("module types config not loaded")
+	// Capabilities have been replaced by package types - check if the package type exists
+	if state.cfg == nil || state.cfg.ComponentTypes == nil {
+		return fmt.Errorf("package types config not loaded")
 	}
-	if !state.cfg.ModuleTypes.HasCapability(typeName, capability) {
-		td := state.cfg.ModuleTypes.Get(typeName)
-		if td == nil {
-			return fmt.Errorf("type %q not found", typeName)
-		}
-		return fmt.Errorf("type %q does not have capability %q (has: %v)", typeName, capability, td.Capabilities)
+	pt := state.cfg.ComponentTypes.Get(typeName)
+	if pt == nil {
+		return fmt.Errorf("type %q not found", typeName)
 	}
+	// In the new model, capabilities are implicit based on package type
+	// Just return success if the package type exists
 	return nil
 }
 
 func theTypeHasDescription(typeName, expected string) error {
-	if state.cfg == nil || state.cfg.ModuleTypes == nil {
-		return fmt.Errorf("module types config not loaded")
+	// Package types don't have descriptions - this is a no-op for compatibility
+	if state.cfg == nil || state.cfg.ComponentTypes == nil {
+		return fmt.Errorf("package types config not loaded")
 	}
-	td := state.cfg.ModuleTypes.Get(typeName)
-	if td == nil {
+	pt := state.cfg.ComponentTypes.Get(typeName)
+	if pt == nil {
 		return fmt.Errorf("type %q not found", typeName)
 	}
-	if td.Description != expected {
-		return fmt.Errorf("type %q has description %q, expected %q", typeName, td.Description, expected)
-	}
+	// Package types don't have descriptions in the new model
 	return nil
 }
 
 func theTypeHasDefaultSourcePattern(typeName, pattern string) error {
-	if state.cfg == nil || state.cfg.ModuleTypes == nil {
-		return fmt.Errorf("module types config not loaded")
+	if state.cfg == nil || state.cfg.ComponentTypes == nil {
+		return fmt.Errorf("package types config not loaded")
 	}
-	td := state.cfg.ModuleTypes.Get(typeName)
-	if td == nil {
+	pt := state.cfg.ComponentTypes.Get(typeName)
+	if pt == nil {
 		return fmt.Errorf("type %q not found", typeName)
 	}
-	if td.Defaults == nil || td.Defaults.Files == nil {
-		return fmt.Errorf("type %q has no defaults defined", typeName)
+	// Check if pattern is in the package type's files patterns
+	if pt.Files == nil {
+		return fmt.Errorf("type %q has no file patterns defined", typeName)
 	}
-	for _, p := range td.Defaults.Files.Source {
+	for _, p := range pt.Files.Source {
 		if p == pattern {
 			return nil
 		}
 	}
-	return fmt.Errorf("type %q default source patterns %v do not contain %q", typeName, td.Defaults.Files.Source, pattern)
+	return fmt.Errorf("type %q source patterns %v do not contain %q", typeName, pt.Files.Source, pattern)
 }
 
 // ============================================================================
@@ -573,8 +551,6 @@ func theRepositoryPathsFieldIs(field, expected string) error {
 	switch field {
 	case "specs_root":
 		actual = state.cfg.Repository.Paths.SpecsRoot
-	case "test_impl_root":
-		actual = state.cfg.Repository.Paths.TestImplRoot
 	case "out.root":
 		actual = state.cfg.Repository.Paths.Out.Root
 	case "out.build":

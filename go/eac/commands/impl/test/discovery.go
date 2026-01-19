@@ -14,11 +14,12 @@ import (
 // Different test types have different grouping strategies:
 // - godog/tscucumber: Uses runner to find test root and build package path
 // - mocha: Groups by test directory
-// - gotest: Groups by directory
+// - gotest: Groups by directory.
 func groupTestsByPackage(tests []testing.TestReference, workspaceRoot string, cfg *config.EACConfig) map[string][]testing.TestReference {
 	testsByPackage := make(map[string][]testing.TestReference)
 
-	for _, test := range tests {
+	for i := range tests {
+		test := &tests[i]
 		var pkgPath string
 
 		// Get the runner for this test type
@@ -56,13 +57,13 @@ func groupTestsByPackage(tests []testing.TestReference, workspaceRoot string, cf
 			}
 			pkgPath = filepath.ToSlash(relDir)
 		}
-		testsByPackage[pkgPath] = append(testsByPackage[pkgPath], test)
+		testsByPackage[pkgPath] = append(testsByPackage[pkgPath], *test)
 	}
 
 	return testsByPackage
 }
 
-// sanitizePathForLog converts a package path to a safe directory name
+// sanitizePathForLog converts a package path to a safe directory name.
 func sanitizePathForLog(pkgPath string) string {
 	// Replace colons and other special chars
 	safe := strings.ReplaceAll(pkgPath, ":", "_")
@@ -96,6 +97,10 @@ func findTscucumberTestRunner(featurePath string, cfg *config.EACConfig) string 
 		return ""
 	}
 
-	// Return the module's root directory where cucumber.js should be
-	return filepath.ToSlash(module.Files.Root)
+	// Return the module's typescript package root where cucumber.js should be
+	tsRoot := module.Components.GetComponentRoot("typescript")
+	if tsRoot == "" {
+		return ""
+	}
+	return filepath.ToSlash(tsRoot)
 }

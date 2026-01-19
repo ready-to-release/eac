@@ -14,24 +14,24 @@ import (
 // The canonical definition is in repository.EACConfigRelPath.
 const EACConfigRelPath = ".r2r/eac"
 
-// Loader handles loading contract YAML files
+// Loader handles loading contract YAML files.
 type Loader struct {
 	workspaceRoot string
 }
 
-// NewLoader creates a new contract loader
+// NewLoader creates a new contract loader.
 func NewLoader(workspaceRoot string) *Loader {
 	return &Loader{
 		workspaceRoot: workspaceRoot,
 	}
 }
 
-// GetWorkspaceRoot returns the workspace root directory
+// GetWorkspaceRoot returns the workspace root directory.
 func (l *Loader) GetWorkspaceRoot() string {
 	return l.workspaceRoot
 }
 
-// LoadYAML loads a YAML file into the target struct
+// LoadYAML loads a YAML file into the target struct.
 func (l *Loader) LoadYAML(relativePath string, target interface{}) error {
 	fullPath := filepath.Join(l.workspaceRoot, relativePath)
 	data, err := os.ReadFile(fullPath)
@@ -50,7 +50,7 @@ func (l *Loader) LoadYAML(relativePath string, target interface{}) error {
 }
 
 // LoadYAMLPattern loads all YAML files matching a glob pattern
-// The callback function is called for each matching file with its relative path
+// The callback function is called for each matching file with its relative path.
 func (l *Loader) LoadYAMLPattern(pattern string, callback func(relPath string) error) error {
 	// Construct full pattern path
 	fullPattern := filepath.Join(l.workspaceRoot, pattern)
@@ -78,7 +78,7 @@ func (l *Loader) LoadYAMLPattern(pattern string, callback func(relPath string) e
 	return nil
 }
 
-// FileExists checks if a file exists at the given relative path
+// FileExists checks if a file exists at the given relative path.
 func (l *Loader) FileExists(relativePath string) bool {
 	fullPath := filepath.Join(l.workspaceRoot, relativePath)
 	_, err := os.Stat(fullPath)

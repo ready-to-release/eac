@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	// Docker configuration
+	// Docker configuration.
 	DockerWorkspaceMount    = "/workspace"
 	StructurizrCLIImage     = "structurizr/cli:latest"
 	DockerValidationTimeout = 30 * time.Second
@@ -24,14 +24,14 @@ const (
 )
 
 // DockerValidator validates Structurizr DSL using Docker
-// Used for full validation in validate command (6-7 seconds)
+// Used for full validation in validate command (6-7 seconds).
 type DockerValidator struct {
 	module       string
 	tempDir      string
 	templateRoot string
 }
 
-// NewDockerValidator creates a new Docker-based validator
+// NewDockerValidator creates a new Docker-based validator.
 func NewDockerValidator(module, templateRoot string) (*DockerValidator, error) {
 	tempDir, err := os.MkdirTemp("", "design-validation-*")
 	if err != nil {
@@ -45,7 +45,7 @@ func NewDockerValidator(module, templateRoot string) (*DockerValidator, error) {
 	}, nil
 }
 
-// Validate validates the Structurizr DSL output using Docker
+// Validate validates the Structurizr DSL output using Docker.
 func (v *DockerValidator) Validate(output string, context map[string]interface{}) []validation.ValidationError {
 	var errors []validation.ValidationError
 
@@ -54,7 +54,7 @@ func (v *DockerValidator) Validate(output string, context map[string]interface{}
 
 	// Create module design directory in temp
 	moduleDesignDir := filepath.Join(v.tempDir, specsRoot, v.module, ".design")
-	if err := os.MkdirAll(moduleDesignDir, 0755); err != nil {
+	if err := os.MkdirAll(moduleDesignDir, 0o755); err != nil { //nolint:gosec // G301: Temp directory for validation
 		errors = append(errors, *validation.NewValidationError(
 			validation.ErrSetupError,
 			fmt.Sprintf("Failed to create temp design directory: %v", err),
@@ -65,7 +65,7 @@ func (v *DockerValidator) Validate(output string, context map[string]interface{}
 
 	// Write DSL to temp workspace file
 	tempWorkspace := filepath.Join(moduleDesignDir, "workspace.dsl")
-	if err := os.WriteFile(tempWorkspace, []byte(output), 0644); err != nil {
+	if err := os.WriteFile(tempWorkspace, []byte(output), 0o644); err != nil {
 		errors = append(errors, *validation.NewValidationError(
 			validation.ErrSetupError,
 			fmt.Sprintf("Failed to write temp workspace: %v", err),
@@ -98,25 +98,25 @@ func (v *DockerValidator) Validate(output string, context map[string]interface{}
 	return errors
 }
 
-// VerifyImplementation verifies that the validator is properly configured
+// VerifyImplementation verifies that the validator is properly configured.
 func (v *DockerValidator) VerifyImplementation() []validation.ValidationError {
 	return []validation.ValidationError{}
 }
 
-// IsDockerRunning checks if Docker daemon is available
+// IsDockerRunning checks if Docker daemon is available.
 func (v *DockerValidator) IsDockerRunning() bool {
 	cmd := exec.Command("docker", "ps")
 	err := cmd.Run()
 	return err == nil
 }
 
-// Cleanup removes temporary files
+// Cleanup removes temporary files.
 func (v *DockerValidator) Cleanup() {
 	os.RemoveAll(v.tempDir)
 }
 
-// executeDockerValidation runs Structurizr CLI validation in Docker container
-func (v *DockerValidator) executeDockerValidation(workspacePath string, specsRoot string) (string, error) {
+// executeDockerValidation runs Structurizr CLI validation in Docker container.
+func (v *DockerValidator) executeDockerValidation(workspacePath, specsRoot string) (string, error) {
 	// Get absolute path for volume mount
 	absWorkspacePath, err := filepath.Abs(workspacePath)
 	if err != nil {
@@ -144,7 +144,7 @@ func (v *DockerValidator) executeDockerValidation(workspacePath string, specsRoo
 
 	// Use Structurizr CLI for validation
 	// Mount entire specs directory so relative !include paths work
-	cmd := exec.CommandContext(ctx, "docker", "run",
+	cmd := exec.CommandContext(ctx, "docker", "run", //nolint:gosec // G204: Docker command with controlled args
 		"--rm",
 		"-v", dockerVolume+":"+DockerWorkspaceMount,
 		StructurizrCLIImage,
@@ -160,12 +160,14 @@ func (v *DockerValidator) executeDockerValidation(workspacePath string, specsRoo
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	// Run command (don't check error - validation failures return non-zero exit)
-	err = cmd.Run()
+	// Run command (validation failures return non-zero exit, errors communicated via stderr)
+	if err := cmd.Run(); err != nil {
+		// Non-zero exit is expected for validation failures, not a Go error condition
+	}
 
 	// Check if timeout occurred
 	if ctx.Err() == context.DeadlineExceeded {
-		return "", fmt.Errorf("Docker validation timed out after %v", DockerValidationTimeout)
+		return "", fmt.Errorf("docker validation timed out after %v", DockerValidationTimeout)
 	}
 
 	// Combine all output
@@ -174,14 +176,14 @@ func (v *DockerValidator) executeDockerValidation(workspacePath string, specsRoo
 	return output, nil
 }
 
-// limitedBuffer is a buffer that limits the amount of data it can hold
+// limitedBuffer is a buffer that limits the amount of data it can hold.
 type limitedBuffer struct {
 	buf   bytes.Buffer
 	limit int64
 	total int64
 }
 
-// Write implements io.Writer with size limit
+// Write implements io.Writer with size limit.
 func (lb *limitedBuffer) Write(p []byte) (n int, err error) {
 	// Check if we're already over the limit
 	if lb.total >= lb.limit {
@@ -209,13 +211,13 @@ func (lb *limitedBuffer) Write(p []byte) (n int, err error) {
 	return n, err
 }
 
-// String returns the buffer contents as a string
+// String returns the buffer contents as a string.
 func (lb *limitedBuffer) String() string {
 	return lb.buf.String()
 }
 
 // formatDockerVolume formats a file path for Docker volume mounting
-// On Windows, converts C:\path\to\dir to /c/path/to/dir for Docker compatibility
+// On Windows, converts C:\path\to\dir to /c/path/to/dir for Docker compatibility.
 func formatDockerVolume(path string) string {
 	// On Windows, Docker volume mounts need Unix-style paths
 	// Convert C:\path\to\dir to /c/path/to/dir
@@ -230,7 +232,7 @@ func formatDockerVolume(path string) string {
 	return path
 }
 
-// ValidationMessage represents a single error or warning
+// ValidationMessage represents a single error or warning.
 type ValidationMessage struct {
 	Severity string `json:"severity"` // "error" or "warning"
 	Message  string `json:"message"`  // The validation message
@@ -238,13 +240,13 @@ type ValidationMessage struct {
 	Column   int    `json:"column"`   // Column number (if available)
 }
 
-// ValidationResult represents the outcome of parsing validation output
+// ValidationResult represents the outcome of parsing validation output.
 type ValidationResult struct {
 	Errors   []ValidationMessage
 	Warnings []ValidationMessage
 }
 
-// parseValidationOutput parses Structurizr CLI output from Docker container
+// parseValidationOutput parses Structurizr CLI output from Docker container.
 func (v *DockerValidator) parseValidationOutput(raw string) *ValidationResult {
 	result := &ValidationResult{
 		Errors:   []ValidationMessage{},
@@ -276,9 +278,13 @@ func (v *DockerValidator) parseValidationOutput(raw string) *ValidationResult {
 			// Extract line number from patterns like "at line 62", "line 62", or "Line 15:"
 			lineNum := 0
 			if matches := regexp.MustCompile(`(?i)at line (\d+)`).FindStringSubmatch(line); len(matches) > 1 {
-				lineNum, _ = strconv.Atoi(matches[1])
+				if n, err := strconv.Atoi(matches[1]); err == nil {
+					lineNum = n
+				}
 			} else if matches := regexp.MustCompile(`(?i)line (\d+)`).FindStringSubmatch(line); len(matches) > 1 {
-				lineNum, _ = strconv.Atoi(matches[1])
+				if n, err := strconv.Atoi(matches[1]); err == nil {
+					lineNum = n
+				}
 			}
 
 			result.Errors = append(result.Errors, ValidationMessage{
@@ -293,7 +299,9 @@ func (v *DockerValidator) parseValidationOutput(raw string) *ValidationResult {
 			// Extract line number from warnings too
 			lineNum := 0
 			if matches := regexp.MustCompile(`(?i)line (\d+)`).FindStringSubmatch(line); len(matches) > 1 {
-				lineNum, _ = strconv.Atoi(matches[1])
+				if n, err := strconv.Atoi(matches[1]); err == nil {
+					lineNum = n
+				}
 			}
 
 			result.Warnings = append(result.Warnings, ValidationMessage{

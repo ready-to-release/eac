@@ -27,15 +27,15 @@ func ResetMockAIResponse() {
 	mockAIResponse = ""
 }
 
-// GenerationResult holds the result of AI generation including metadata
+// GenerationResult holds the result of AI generation including metadata.
 type GenerationResult struct {
 	Output       string // The generated output
 	ProviderName string // The AI provider used (e.g., "claude-cli", "openai")
 }
 
 // generateWithPrompt generates output using the three-tier prompt loading system with validation and retry
-// If testExecutor is provided (non-nil), it will be used instead of creating a new executor (for testing)
-func generateWithPrompt(promptName string, userPrompt string, workspaceRoot string, affectedModules []string, debugEnabled bool, testExecutor *ai.Executor) (string, error) {
+// If testExecutor is provided (non-nil), it will be used instead of creating a new executor (for testing).
+func generateWithPrompt(promptName, userPrompt, workspaceRoot string, affectedModules []string, debugEnabled bool, testExecutor *ai.Executor) (string, error) {
 	result, err := generateWithPromptResult(promptName, userPrompt, workspaceRoot, affectedModules, debugEnabled, testExecutor)
 	if err != nil {
 		return "", err
@@ -43,8 +43,8 @@ func generateWithPrompt(promptName string, userPrompt string, workspaceRoot stri
 	return result.Output, nil
 }
 
-// generateWithPromptResult generates output and returns full metadata including provider info
-func generateWithPromptResult(promptName string, userPrompt string, workspaceRoot string, affectedModules []string, debugEnabled bool, testExecutor *ai.Executor) (*GenerationResult, error) {
+// generateWithPromptResult generates output and returns full metadata including provider info.
+func generateWithPromptResult(promptName, userPrompt, workspaceRoot string, affectedModules []string, debugEnabled bool, testExecutor *ai.Executor) (*GenerationResult, error) {
 	// Check for mock response from file-based mock system (subprocess testing)
 	if mock, ok := aimock.GetMockResponse("commit-message"); ok {
 		return &GenerationResult{Output: mock, ProviderName: "mock-file"}, nil
@@ -152,7 +152,7 @@ func generateWithPromptResult(promptName string, userPrompt string, workspaceRoo
 	}, nil
 }
 
-// extractModelFromAgent parses agent frontmatter and extracts the model field
+// extractModelFromAgent parses agent frontmatter and extracts the model field.
 func extractModelFromAgent(agentContent string) string {
 	lines := strings.Split(agentContent, "\n")
 	inFrontmatter := false

@@ -44,7 +44,7 @@ func init() {
 	registry.Register(CreatePR)
 }
 
-// CreatePR creates a pull request for the current workspace
+// CreatePR creates a pull request for the current workspace.
 func CreatePR() int {
 	cmdStart := time.Now()
 
@@ -61,7 +61,7 @@ func CreatePR() int {
 		log.Errorf("Error: %v", err)
 		return 1
 	}
-	defer config.base.Logger.Sync()
+	defer func() { _ = config.base.Logger.Sync() }() //nolint:errcheck // best-effort logger sync
 
 	config.base.Logger.Debug("Phase 1: Starting configuration parsing",
 		zap.String("phase", "phase1"))
@@ -220,7 +220,7 @@ func CreatePR() int {
 	return 0
 }
 
-// prConfig holds configuration for the pr command
+// prConfig holds configuration for the pr command.
 type prConfig struct {
 	base          *internal.BaseConfig
 	targetBranch  string
@@ -228,7 +228,7 @@ type prConfig struct {
 	currentBranch string
 }
 
-// parsePRConfig parses command line arguments
+// parsePRConfig parses command line arguments.
 func parsePRConfig() (*prConfig, error) {
 	args := os.Args[3:] // Skip program name, "work", "pr"
 
@@ -284,7 +284,7 @@ func parsePRConfig() (*prConfig, error) {
 	return config, nil
 }
 
-// validatePREnvironment validates the environment before creating PR
+// validatePREnvironment validates the environment before creating PR.
 func validatePREnvironment(config *prConfig) error {
 	// Check we're in a git repository
 	config.base.Logger.Debug("Checking git repository status")
@@ -305,7 +305,11 @@ func validatePREnvironment(config *prConfig) error {
 	config.base.Logger.Debug("Checking for uncommitted changes")
 	cwd := os.Getenv("R2R_PWD")
 	if cwd == "" {
-		cwd, _ = os.Getwd()
+		var wdErr error
+		cwd, wdErr = os.Getwd()
+		if wdErr != nil {
+			return fmt.Errorf("failed to get current working directory: %w", wdErr)
+		}
 	}
 	clean, err := config.base.GitOps.IsWorktreeClean(cwd)
 	if err != nil {
@@ -329,7 +333,7 @@ func validatePREnvironment(config *prConfig) error {
 	return nil
 }
 
-// checkGHCLI checks if GitHub CLI is installed and available
+// checkGHCLI checks if GitHub CLI is installed and available.
 func checkGHCLI() error {
 	cmd := exec.Command("gh", "--version")
 	if err := cmd.Run(); err != nil {
@@ -338,7 +342,7 @@ func checkGHCLI() error {
 	return nil
 }
 
-// getCommitCount returns the number of commits ahead of target branch
+// getCommitCount returns the number of commits ahead of target branch.
 func getCommitCount(config *prConfig) (int, error) {
 	config.base.Logger.Debug("Getting commit count",
 		zap.String("targetBranch", config.targetBranch))
@@ -354,7 +358,7 @@ func getCommitCount(config *prConfig) (int, error) {
 	return count, nil
 }
 
-// pushBranch pushes the current branch to origin
+// pushBranch pushes the current branch to origin.
 func pushBranch(config *prConfig) error {
 	config.base.Logger.Debug("Pushing branch to origin",
 		zap.String("branch", config.currentBranch))
@@ -369,7 +373,7 @@ func pushBranch(config *prConfig) error {
 	return nil
 }
 
-// generatePRContent generates the PR title and description using AI
+// generatePRContent generates the PR title and description using AI.
 func generatePRContent(config *prConfig) (string, string, error) {
 	// Get all commits from the branch
 	config.base.Logger.Debug("Getting commit messages",
@@ -418,7 +422,7 @@ func generatePRContent(config *prConfig) (string, string, error) {
 	return title, description, nil
 }
 
-// generatePRTitle generates a PR title from commits or branch name
+// generatePRTitle generates a PR title from commits or branch name.
 func generatePRTitle(commits []string, branchName string) string {
 	if len(commits) > 0 && commits[0] != "" {
 		// Use first commit message as title
@@ -437,7 +441,7 @@ func generatePRTitle(commits []string, branchName string) string {
 	return fmt.Sprintf("Changes from %s", branchName)
 }
 
-// generatePRDescription generates a PR description from commits and diff
+// generatePRDescription generates a PR description from commits and diff.
 func generatePRDescription(commits []string, diffStat string) string {
 	var sb strings.Builder
 
@@ -468,7 +472,7 @@ func generatePRDescription(commits []string, diffStat string) string {
 	return sb.String()
 }
 
-// createPullRequest creates a pull request using gh CLI
+// createPullRequest creates a pull request using gh CLI.
 func createPullRequest(title, description, head, base string) (string, error) {
 	log.Debugf("Executing gh pr create command: title=%s, head=%s, base=%s, descriptionLength=%d", title, head, base, len(description))
 

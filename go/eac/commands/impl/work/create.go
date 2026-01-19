@@ -39,7 +39,7 @@ func init() {
 	registry.Register(Create)
 }
 
-// Create creates a new workspace (git worktree) for parallel development
+// Create creates a new workspace (git worktree) for parallel development.
 func Create() int {
 	commandStart := time.Now()
 
@@ -56,7 +56,7 @@ func Create() int {
 		log.Errorf("Error: %v", err)
 		return 1
 	}
-	defer config.base.Logger.Sync()
+	defer func() { _ = config.base.Logger.Sync() }() //nolint:errcheck // best-effort logger sync
 
 	config.base.Logger.Debug("Phase 1: Starting configuration parsing",
 		zap.String("phase", "phase1"),
@@ -132,7 +132,7 @@ func Create() int {
 	return 0
 }
 
-// createConfig holds configuration for the create command
+// createConfig holds configuration for the create command.
 type createConfig struct {
 	base         *internal.BaseConfig
 	branchName   string
@@ -142,7 +142,7 @@ type createConfig struct {
 	worktreePath string
 }
 
-// parseCreateConfig parses command line arguments
+// parseCreateConfig parses command line arguments.
 func parseCreateConfig() (*createConfig, error) {
 	args := os.Args[3:] // Skip program name, "work", "create"
 
@@ -188,7 +188,7 @@ func parseCreateConfig() (*createConfig, error) {
 	return config, nil
 }
 
-// validateCreateEnvironment validates the environment before creating worktree
+// validateCreateEnvironment validates the environment before creating worktree.
 func validateCreateEnvironment(config *createConfig) error {
 	logger := config.base.Logger
 
@@ -297,7 +297,7 @@ func validateCreateEnvironment(config *createConfig) error {
 	return nil
 }
 
-// createWorktree creates the actual git worktree
+// createWorktree creates the actual git worktree.
 func createWorktree(config *createConfig) (string, error) {
 	logger := config.base.Logger
 
@@ -348,7 +348,7 @@ func createWorktree(config *createConfig) (string, error) {
 	return absWorktreePath, nil
 }
 
-// outputCreateSuccess outputs success message with next steps
+// outputCreateSuccess outputs success message with next steps.
 func outputCreateSuccess(worktreePath, branchName string) {
 	log.Infof("✓ Created worktree at: %s", worktreePath)
 	log.Infof("  Branch: %s", branchName)

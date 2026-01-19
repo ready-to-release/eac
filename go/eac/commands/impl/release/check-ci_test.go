@@ -128,7 +128,7 @@ func TestCIRunStatus_AllConclusions(t *testing.T) {
 	validConclusions := []string{
 		"success",
 		"failure",
-		"cancelled",
+		"canceled",
 		"skipped",
 		"timed_out",
 		"action_required",

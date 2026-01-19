@@ -522,7 +522,7 @@ contracts/
 r2r eac show-modules            # Module table
 r2r eac show-dependencies       # Dependency graph
 r2r eac show-environments       # Environment table
-r2r eac show-moduletypes        # Module type table
+r2r eac show-component-types    # Component type table
 r2r eac show-config             # All configuration
 ```
 

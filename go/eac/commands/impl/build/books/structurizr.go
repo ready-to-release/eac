@@ -12,7 +12,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
-// StructurizrMarker represents a Structurizr diagram marker found in markdown
+// StructurizrMarker represents a Structurizr diagram marker found in markdown.
 type StructurizrMarker struct {
 	Module    string // Module name (e.g., "eac-commands")
 	ViewKey   string // View key (e.g., "SystemContext")
@@ -28,7 +28,7 @@ type StructurizrMarker struct {
 var structurizrMarkerPattern = regexp.MustCompile(`<!--\s*structurizr:([^:]+):([^>\s]+)\s*-->`)
 
 // processStructurizrDiagrams scans staging markdown for Structurizr markers
-// and replaces them with img tags pointing to cached SVGs
+// and replaces them with img tags pointing to cached SVGs.
 func (p *Preprocessor) processStructurizrDiagrams() error {
 	// Build cache of DSL hashes for each module
 	dslHashes := make(map[string]string)
@@ -161,7 +161,7 @@ func (p *Preprocessor) processStructurizrDiagrams() error {
 		}
 
 		// Write back modified content
-		if err := os.WriteFile(filePath, []byte(modified), 0644); err != nil {
+		if err := os.WriteFile(filePath, []byte(modified), 0o644); err != nil {
 			return fmt.Errorf("writing %s: %w", filePath, err)
 		}
 	}
@@ -175,7 +175,7 @@ func (p *Preprocessor) processStructurizrDiagrams() error {
 	return nil
 }
 
-// extractStructurizrMarkers finds all Structurizr markers in content
+// extractStructurizrMarkers finds all Structurizr markers in content.
 func extractStructurizrMarkers(content string) []StructurizrMarker {
 	var markers []StructurizrMarker
 

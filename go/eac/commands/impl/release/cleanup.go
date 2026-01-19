@@ -93,7 +93,7 @@ func ReleaseCleanup() int {
 	return 0
 }
 
-// releaseExists checks if a GitHub release exists for the given tag
+// releaseExists checks if a GitHub release exists for the given tag.
 func releaseExists(tagName string) bool {
 	cmd := exec.Command("gh", "release", "view", tagName)
 	cmd.Stdout = nil
@@ -102,7 +102,7 @@ func releaseExists(tagName string) bool {
 	return err == nil
 }
 
-// deleteRelease deletes a GitHub release
+// deleteRelease deletes a GitHub release.
 func deleteRelease(tagName string) error {
 	cmd := exec.Command("gh", "release", "delete", tagName, "--yes")
 	output, err := cmd.CombinedOutput()
@@ -112,7 +112,7 @@ func deleteRelease(tagName string) error {
 	return nil
 }
 
-// deleteTag deletes a tag from the remote repository using gh api
+// deleteTag deletes a tag from the remote repository using gh api.
 func deleteTag(tagName string) error {
 	// Get repository from gh
 	repoCmd := exec.Command("gh", "repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner")

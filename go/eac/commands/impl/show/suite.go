@@ -37,7 +37,7 @@ func init() {
 // Output format:
 // - Suite header with metadata
 // - Markdown table with one row per test
-// - Columns: Test Name, Type, Module, Tags
+// - Columns: Test Name, Type, Module, Tags.
 func ShowSuite() int {
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {

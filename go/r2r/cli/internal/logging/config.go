@@ -9,19 +9,19 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// FormatterType defines the output format for log messages
+// FormatterType defines the output format for log messages.
 type FormatterType string
 
 const (
-	// FormatterRaw outputs only the message (clean CLI output)
+	// FormatterRaw outputs only the message (clean CLI output).
 	FormatterRaw FormatterType = "raw"
-	// FormatterTimestamped outputs "HH:MM:SS.mmm  LEVEL  message"
+	// FormatterTimestamped outputs "HH:MM:SS.mmm  LEVEL  message".
 	FormatterTimestamped FormatterType = "timestamped"
-	// FormatterJSON outputs structured JSON
+	// FormatterJSON outputs structured JSON.
 	FormatterJSON FormatterType = "json"
 )
 
-// SinkConfig holds configuration for a single logging sink (console or file)
+// SinkConfig holds configuration for a single logging sink (console or file).
 type SinkConfig struct {
 	// Levels to output: debug, info, warn, error
 	Levels []string `yaml:"levels"`
@@ -31,7 +31,7 @@ type SinkConfig struct {
 	Enabled *bool `yaml:"enabled,omitempty"`
 }
 
-// LoggingConfig holds the complete logging configuration
+// LoggingConfig holds the complete logging configuration.
 type LoggingConfig struct {
 	Console SinkConfig `yaml:"console"`
 	File    SinkConfig `yaml:"file"`
@@ -74,7 +74,7 @@ func LoadConfig(workspaceRoot string) LoggingConfig {
 	return DefaultConfig()
 }
 
-// applyDefaults fills in missing configuration with defaults
+// applyDefaults fills in missing configuration with defaults.
 func applyDefaults(cfg LoggingConfig) LoggingConfig {
 	defaults := DefaultConfig()
 
@@ -100,7 +100,7 @@ func applyDefaults(cfg LoggingConfig) LoggingConfig {
 	return cfg
 }
 
-// HasLevel checks if a sink config includes a specific level
+// HasLevel checks if a sink config includes a specific level.
 func (s *SinkConfig) HasLevel(level string) bool {
 	for _, l := range s.Levels {
 		if l == level {
@@ -110,7 +110,7 @@ func (s *SinkConfig) HasLevel(level string) bool {
 	return false
 }
 
-// IsEnabled returns whether the sink is enabled (defaults to true for console)
+// IsEnabled returns whether the sink is enabled (defaults to true for console).
 func (s *SinkConfig) IsEnabled() bool {
 	if s.Enabled == nil {
 		return true

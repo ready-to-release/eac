@@ -2,6 +2,7 @@
   "recommendations": [
     "local.vscode-ext-commit",
     "CucumberOpen.cucumber-official",
-    "redhat.vscode-yaml"
+    "redhat.vscode-yaml",
+    "DavidAnson.vscode-markdownlint"
   ]
 }

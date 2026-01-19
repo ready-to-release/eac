@@ -26,10 +26,10 @@ The `install` command manages extension installation. It pulls Docker images fro
 
 ## Flags
 
-| Flag | Description |
-|------|-------------|
+| Flag           | Description                                                   |
+| -------------- | ------------------------------------------------------------- |
 | `--load-local` | Use local development images instead of pulling from registry |
-| `-h, --help` | Display help information |
+| `-h, --help`   | Display help information                                      |
 
 ## Examples
 

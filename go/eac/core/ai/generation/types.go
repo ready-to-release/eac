@@ -7,7 +7,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
-// AI type names used for template and schema resolution
+// AI type names used for template and schema resolution.
 const (
 	TypeCommitMessage = "commit-message"
 	TypeDesign        = "design"
@@ -18,9 +18,9 @@ const (
 	TypeUpdateDesign  = "update-design"
 )
 
-// Path constants for template and contract resolution
+// Path constants for template and contract resolution.
 const (
-	// AITemplatesPath is the base path for AI templates
+	// AITemplatesPath is the base path for AI templates.
 	AITemplatesPath = "templates/ai"
 )
 
@@ -30,21 +30,21 @@ func ContractSchemaPath() string {
 	return filepath.Join(paths.ContractsDir, paths.EACCoreModule, paths.DefaultsVersion)
 }
 
-// Retry prompt constants for consistent formatting
+// Retry prompt constants for consistent formatting.
 const (
-	// RetryPromptSeparator is the visual separator for retry sections
+	// RetryPromptSeparator is the visual separator for retry sections.
 	RetryPromptSeparator = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-	// RetryPromptWarning is the warning header for validation errors
+	// RetryPromptWarning is the warning header for validation errors.
 	RetryPromptWarning = "⚠️  VALIDATION ERRORS"
 
-	// RetryPromptFocus is the focus header for key areas
+	// RetryPromptFocus is the focus header for key areas.
 	RetryPromptFocus = "🎯 FOCUS AREAS"
 )
 
 // Phase 1 instructions by format type
 
-// JSONPhaseInstruction is the standard instruction for Phase 1 JSON generation
+// JSONPhaseInstruction is the standard instruction for Phase 1 JSON generation.
 const JSONPhaseInstruction = `
 IMPORTANT: Generate ONLY valid JSON matching the schema.
 - No markdown fences (no ` + "```json" + `)
@@ -54,7 +54,7 @@ IMPORTANT: Generate ONLY valid JSON matching the schema.
 - Use proper JSON escaping for special characters
 `
 
-// GherkinPhaseInstruction is the instruction for direct Gherkin generation
+// GherkinPhaseInstruction is the instruction for direct Gherkin generation.
 const GherkinPhaseInstruction = `
 IMPORTANT: Generate ONLY valid Gherkin matching the specification format.
 - Use proper Gherkin syntax (Feature, Rule, Scenario)
@@ -64,7 +64,7 @@ IMPORTANT: Generate ONLY valid Gherkin matching the specification format.
 - Follow proper indentation (2 spaces per level)
 `
 
-// OSCALPhaseInstruction is the instruction for OSCAL JSON generation
+// OSCALPhaseInstruction is the instruction for OSCAL JSON generation.
 const OSCALPhaseInstruction = `
 IMPORTANT: Generate ONLY valid OSCAL JSON matching the OSCAL 1.1.2+ specification.
 - No markdown fences (no ` + "```json" + `)
@@ -74,7 +74,7 @@ IMPORTANT: Generate ONLY valid OSCAL JSON matching the OSCAL 1.1.2+ specificatio
 - Follow OSCAL schema requirements
 `
 
-// StructurizrPhaseInstruction is the instruction for Structurizr DSL generation
+// StructurizrPhaseInstruction is the instruction for Structurizr DSL generation.
 const StructurizrPhaseInstruction = `
 IMPORTANT: Generate ONLY valid Structurizr DSL syntax.
 - No markdown fences or code blocks
@@ -84,7 +84,7 @@ IMPORTANT: Generate ONLY valid Structurizr DSL syntax.
 - Follow Structurizr DSL syntax requirements
 `
 
-// PlainTextPhaseInstruction is the instruction for plain text generation
+// PlainTextPhaseInstruction is the instruction for plain text generation.
 const PlainTextPhaseInstruction = `
 IMPORTANT: Generate the final output directly.
 - No markdown fences or formatting

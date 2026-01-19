@@ -39,7 +39,10 @@ func buildAssessmentResultsForModule(config *AssessConfig, moduleName string, pr
 	// Create assessment-results
 	arUUID := uuid.New().String()
 	profilePath := oscal.GetProfilePath(config.WorkspaceRoot, moduleName)
-	relativeProfilePath, _ := filepath.Rel(config.WorkspaceRoot, profilePath)
+	relativeProfilePath, relErr := filepath.Rel(config.WorkspaceRoot, profilePath)
+	if relErr != nil {
+		relativeProfilePath = profilePath // Fallback to absolute path
+	}
 
 	ar := oscal.NewAssessmentResults(
 		arUUID,
@@ -170,7 +173,10 @@ func createObservationsForModule(config *AssessConfig, moduleName string, ec *ev
 		var relevantEvidence []oscalTypes.RelevantEvidence
 
 		if ec.SecurityResults.VulnFile != "" {
-			relPath, _ := filepath.Rel(config.WorkspaceRoot, ec.SecurityResults.VulnFile)
+			relPath, relErr := filepath.Rel(config.WorkspaceRoot, ec.SecurityResults.VulnFile)
+			if relErr != nil {
+				relPath = ec.SecurityResults.VulnFile // Fallback to absolute path
+			}
 			relevantEvidence = append(relevantEvidence, oscalTypes.RelevantEvidence{
 				Href:        relPath,
 				Description: "Vulnerability scan results",
@@ -178,7 +184,10 @@ func createObservationsForModule(config *AssessConfig, moduleName string, ec *ev
 		}
 
 		if ec.SecurityResults.SBOMFile != "" {
-			relPath, _ := filepath.Rel(config.WorkspaceRoot, ec.SecurityResults.SBOMFile)
+			relPath, relErr := filepath.Rel(config.WorkspaceRoot, ec.SecurityResults.SBOMFile)
+			if relErr != nil {
+				relPath = ec.SecurityResults.SBOMFile // Fallback to absolute path
+			}
 			relevantEvidence = append(relevantEvidence, oscalTypes.RelevantEvidence{
 				Href:        relPath,
 				Description: "Software Bill of Materials (SBOM)",
@@ -241,7 +250,8 @@ func createFindingsForModule(config *AssessConfig, moduleName string, controlIDs
 		var relatedObs []oscalTypes.RelatedObservation
 		// Link to observations
 		if observations != nil {
-			for _, obs := range *observations {
+			for i := range *observations {
+				obs := &(*observations)[i]
 				relatedObs = append(relatedObs, oscalTypes.RelatedObservation{
 					ObservationUuid: obs.UUID,
 				})
@@ -354,42 +364,4 @@ func buildRemarksFromEvidence(controlID string, testEv *evidence.ControlTestEvid
 	}
 
 	return remarks.String()
-}
-
-// determineControlStatus determines the satisfied/not-satisfied status for a control.
-// Deprecated: Use determineControlStatusFromEvidence instead.
-func determineControlStatus(controlID string, controlTestMap map[string][]string, ec *evidence.EvidenceCollection) string {
-	// Check if we have tests for this control
-	tests, hasTests := controlTestMap[controlID]
-
-	// If no tests and no security evidence, status is not-satisfied
-	if !hasTests && (ec.VulnSummary == nil || ec.VulnSummary.Total == 0) {
-		return oscal.StateNotSatisfied
-	}
-
-	// If tests exist, check if they pass
-	if hasTests && len(tests) > 0 {
-		// If all tests pass and no critical/high vulnerabilities, satisfied
-		if ec.TestSummary != nil && ec.TestSummary.Failed == 0 {
-			if ec.VulnSummary == nil || (ec.VulnSummary.Critical == 0 && ec.VulnSummary.High == 0) {
-				return oscal.StateSatisfied
-			}
-		}
-	}
-
-	// Default to not-satisfied if any concerns
-	if ec.TestSummary != nil && ec.TestSummary.Failed > 0 {
-		return oscal.StateNotSatisfied
-	}
-
-	if ec.VulnSummary != nil && (ec.VulnSummary.Critical > 0 || ec.VulnSummary.High > 0) {
-		return oscal.StateNotSatisfied
-	}
-
-	// If we have passing tests, satisfied
-	if ec.TestSummary != nil && ec.TestSummary.Passed > 0 {
-		return oscal.StateSatisfied
-	}
-
-	return oscal.StateNotSatisfied
 }

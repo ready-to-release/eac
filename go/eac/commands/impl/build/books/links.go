@@ -33,14 +33,14 @@ import (
 // - HTML img tags: <img src="../image.png">
 // - Mermaid SVG paths: dynamically calculated during rendering
 
-// LinkTranslation holds path translations for a single file
+// LinkTranslation holds path translations for a single file.
 type LinkTranslation struct {
 	sourceFile   string            // Original source file path (absolute)
 	stagingFile  string            // Staging file path (absolute)
 	translations map[string]string // old_path → new_path
 }
 
-// LinkTranslator manages translations for all files
+// LinkTranslator manages translations for all files.
 type LinkTranslator struct {
 	sourceRoot   string                      // Source root directory (docs/)
 	stagingRoot  string                      // Staging root directory (out/staging/book/)
@@ -51,7 +51,7 @@ type LinkTranslator struct {
 	pdfMode      bool                        // True if building PDF (strips external links)
 }
 
-// NewLinkTranslator creates a new link translator
+// NewLinkTranslator creates a new link translator.
 func NewLinkTranslator(sourceRoot, stagingRoot string, logWriter io.Writer, pdfMode bool) *LinkTranslator {
 	return &LinkTranslator{
 		sourceRoot:   filepath.Clean(sourceRoot),
@@ -64,7 +64,7 @@ func NewLinkTranslator(sourceRoot, stagingRoot string, logWriter io.Writer, pdfM
 	}
 }
 
-// AddFileMapping tracks a source → staging file mapping
+// AddFileMapping tracks a source → staging file mapping.
 func (t *LinkTranslator) AddFileMapping(stagingPath, sourcePath string) {
 	t.fileMap[stagingPath] = sourcePath
 
@@ -76,7 +76,7 @@ func (t *LinkTranslator) AddFileMapping(stagingPath, sourcePath string) {
 	}
 }
 
-// logDebug writes a debug message if logger is available
+// logDebug writes a debug message if logger is available.
 func (t *LinkTranslator) logDebug(format string, args ...any) {
 	if t.logWriter != nil {
 		fmt.Fprintf(t.logWriter, "    [LinkTranslator] "+format+"\n", args...)
@@ -84,7 +84,7 @@ func (t *LinkTranslator) logDebug(format string, args ...any) {
 }
 
 // relativeLinkPattern matches markdown images, links, and HTML img/anchor tags
-// Captures relative paths (not http://, https://, /, or #)
+// Captures relative paths (not http://, https://, /, or #).
 var (
 	mdImagePattern  = regexp.MustCompile(`!\[.*?\]\(([^)]+)\)`)    // ![alt](path)
 	mdLinkPattern   = regexp.MustCompile(`\[.*?\]\(([^)]+)\)`)     // [text](path)
@@ -93,7 +93,7 @@ var (
 )
 
 // stripCodeBlocks removes both fenced and indented code blocks from markdown content
-// to prevent extracting links from code examples
+// to prevent extracting links from code examples.
 func stripCodeBlocks(content string) string {
 	// Remove fenced code blocks (```...```)
 	// Use (?s) flag to make . match newlines
@@ -106,7 +106,7 @@ func stripCodeBlocks(content string) string {
 
 	for _, line := range lines {
 		// Skip lines that start with 4+ spaces or tab (indented code blocks)
-		if len(line) > 0 && (line[0] == '\t' || strings.HasPrefix(line, "    ")) {
+		if line != "" && (line[0] == '\t' || strings.HasPrefix(line, "    ")) {
 			continue
 		}
 		cleaned = append(cleaned, line)
@@ -115,7 +115,7 @@ func stripCodeBlocks(content string) string {
 	return strings.Join(cleaned, "\n")
 }
 
-// extractRelativeLinks extracts all relative link references from markdown content
+// extractRelativeLinks extracts all relative link references from markdown content.
 func extractRelativeLinks(content string) []string {
 	seen := make(map[string]bool)
 	var links []string
@@ -170,7 +170,7 @@ func extractRelativeLinks(content string) []string {
 	return links
 }
 
-// isRelativePathRef checks if a path is a relative reference (not external or absolute)
+// isRelativePathRef checks if a path is a relative reference (not external or absolute).
 func isRelativePathRef(path string) bool {
 	// Skip external URLs
 	if strings.HasPrefix(path, "http://") ||
@@ -204,7 +204,7 @@ func isRelativePathRef(path string) bool {
 	return true
 }
 
-// BuildTranslations analyzes all source files and builds translation maps
+// BuildTranslations analyzes all source files and builds translation maps.
 func (t *LinkTranslator) BuildTranslations(siteURL string) error {
 	// Build reverse map: source file → staging file
 	sourceToStaging := make(map[string]string)
@@ -361,7 +361,7 @@ func (t *LinkTranslator) BuildTranslations(siteURL string) error {
 	return nil
 }
 
-// ApplyAllTranslations applies path translations to all staging files
+// ApplyAllTranslations applies path translations to all staging files.
 func (t *LinkTranslator) ApplyAllTranslations() error {
 	for stagingFile, trans := range t.translations {
 		if err := t.applyTranslation(stagingFile, trans); err != nil {
@@ -371,7 +371,7 @@ func (t *LinkTranslator) ApplyAllTranslations() error {
 	return nil
 }
 
-// applyTranslation applies translations to a single staging file
+// applyTranslation applies translations to a single staging file.
 func (t *LinkTranslator) applyTranslation(stagingFile string, trans *LinkTranslation) error {
 	// Read staging file
 	content, err := os.ReadFile(stagingFile)
@@ -419,7 +419,7 @@ func (t *LinkTranslator) applyTranslation(stagingFile string, trans *LinkTransla
 
 	// Write back if changed
 	if modified != string(content) {
-		if err := os.WriteFile(stagingFile, []byte(modified), 0644); err != nil {
+		if err := os.WriteFile(stagingFile, []byte(modified), 0o644); err != nil {
 			return fmt.Errorf("writing staging file: %w", err)
 		}
 	}
@@ -494,7 +494,7 @@ func replaceLinkPaths(content, old, new string) string {
 }
 
 // replaceMarkdownLinks finds markdown links with the specified path and either
-// strips them (keeps text only) or replaces the path
+// strips them (keeps text only) or replaces the path.
 func replaceMarkdownLinks(content, linkPath string, stripLink bool) string {
 	// Escape special regex characters in the path
 	escapedPath := regexp.QuoteMeta(linkPath)

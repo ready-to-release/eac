@@ -20,7 +20,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
-// ExportedView represents a single exported view from a workspace
+// ExportedView represents a single exported view from a workspace.
 type ExportedView struct {
 	ViewKey string // View key from DSL (e.g., "SystemContext", "Containers")
 	SVGPath string // Path to exported SVG file
@@ -28,7 +28,7 @@ type ExportedView struct {
 	DSLHash string // First 8 chars of SHA256 hash of workspace.dsl content
 }
 
-// ExportResult represents the result of exporting a module's workspace
+// ExportResult represents the result of exporting a module's workspace.
 type ExportResult struct {
 	Module        string         // Module name
 	WorkspacePath string         // Path to workspace.dsl
@@ -39,7 +39,7 @@ type ExportResult struct {
 	Error         error          // Any error that occurred
 }
 
-// ExportSummary aggregates export results for multiple modules
+// ExportSummary aggregates export results for multiple modules.
 type ExportSummary struct {
 	TotalModules   int            // Number of modules processed
 	SuccessModules int            // Number of modules successfully exported
@@ -49,7 +49,7 @@ type ExportSummary struct {
 	ExecutionTime  time.Duration  // Total time
 }
 
-// StructurizrExporter exports workspace views to SVG
+// StructurizrExporter exports workspace views to SVG.
 type StructurizrExporter interface {
 	// ExportModule exports all views from a module's workspace.dsl to SVG
 	ExportModule(moduleName string) (*ExportResult, error)
@@ -61,27 +61,27 @@ type StructurizrExporter interface {
 	IsDockerRunning() bool
 }
 
-// StructurizrExporterImpl is the concrete implementation
+// StructurizrExporterImpl is the concrete implementation.
 type StructurizrExporterImpl struct {
 	OutputDir string // Output directory for exported SVGs (defaults to docs/assets/cache/structurizr)
 }
 
-// NewExporter creates a new Structurizr exporter
+// NewExporter creates a new Structurizr exporter.
 func NewExporter() (StructurizrExporter, error) {
 	return &StructurizrExporterImpl{}, nil
 }
 
-// NewExporterWithOutput creates a new Structurizr exporter with custom output directory
+// NewExporterWithOutput creates a new Structurizr exporter with custom output directory.
 func NewExporterWithOutput(outputDir string) (StructurizrExporter, error) {
 	return &StructurizrExporterImpl{OutputDir: outputDir}, nil
 }
 
-// IsDockerRunning checks if Docker daemon is available
+// IsDockerRunning checks if Docker daemon is available.
 func (e *StructurizrExporterImpl) IsDockerRunning() bool {
 	return dockerutil.IsDockerAvailable()
 }
 
-// ExportModule exports all views from a module's workspace.dsl to SVG
+// ExportModule exports all views from a module's workspace.dsl to SVG.
 func (e *StructurizrExporterImpl) ExportModule(moduleName string) (*ExportResult, error) {
 	startTime := time.Now()
 
@@ -116,7 +116,7 @@ func (e *StructurizrExporterImpl) ExportModule(moduleName string) (*ExportResult
 	}
 
 	// Ensure output directory exists
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create output directory: %w", err)
 	}
 
@@ -162,7 +162,7 @@ func (e *StructurizrExporterImpl) ExportModule(moduleName string) (*ExportResult
 	}, nil
 }
 
-// ExportAll exports all modules with workspaces
+// ExportAll exports all modules with workspaces.
 func (e *StructurizrExporterImpl) ExportAll() (*ExportSummary, error) {
 	startTime := time.Now()
 
@@ -202,12 +202,12 @@ func (e *StructurizrExporterImpl) ExportAll() (*ExportSummary, error) {
 	return summary, nil
 }
 
-// PlantUMLImage is the Docker image for rendering PlantUML to SVG
+// PlantUMLImage is the Docker image for rendering PlantUML to SVG.
 const PlantUMLImage = "plantuml/plantuml:latest"
 
 // executeDockerExport runs a two-step export process:
 // 1. Structurizr CLI exports to PlantUML format
-// 2. PlantUML renders the .puml files to SVG
+// 2. PlantUML renders the .puml files to SVG.
 func (e *StructurizrExporterImpl) executeDockerExport(workspacePath, outputDir, repoRoot string) error {
 	// Get absolute paths
 	absWorkspacePath, err := filepath.Abs(workspacePath)
@@ -317,7 +317,7 @@ func (e *StructurizrExporterImpl) executeDockerExport(workspacePath, outputDir, 
 	return nil
 }
 
-// collectExportedViews finds exported SVG files and copies them to final location
+// collectExportedViews finds exported SVG files and copies them to final location.
 func (e *StructurizrExporterImpl) collectExportedViews(tempDir, outputDir, moduleName, dslHash string) ([]ExportedView, error) {
 	var views []ExportedView
 
@@ -350,7 +350,7 @@ func (e *StructurizrExporterImpl) collectExportedViews(tempDir, outputDir, modul
 		finalPath := filepath.Join(outputDir, finalName)
 
 		// Write to final location
-		if err := os.WriteFile(finalPath, content, 0644); err != nil {
+		if err := os.WriteFile(finalPath, content, 0o644); err != nil {
 			return nil, fmt.Errorf("failed to write SVG to %s: %w", finalPath, err)
 		}
 
@@ -366,7 +366,7 @@ func (e *StructurizrExporterImpl) collectExportedViews(tempDir, outputDir, modul
 }
 
 // extractViewKey extracts the view key from Structurizr CLI export filename
-// Structurizr CLI exports files as "structurizr-<key>.svg" or "structurizr-<key>-<number>.svg"
+// Structurizr CLI exports files as "structurizr-<key>.svg" or "structurizr-<key>-<number>.svg".
 var viewKeyPattern = regexp.MustCompile(`^structurizr-(.+?)(?:-\d+)?\.svg$`)
 
 func extractViewKey(filename string) string {
@@ -381,7 +381,7 @@ func extractViewKey(filename string) string {
 }
 
 // HashDSLContent returns the first 8 characters of SHA256 hash of DSL content
-// This is used for cache invalidation - all views from the same DSL share the same hash
+// This is used for cache invalidation - all views from the same DSL share the same hash.
 func HashDSLContent(content string) string {
 	// Normalize line endings to LF for consistent hashing across platforms
 	// This ensures the same DSL content produces the same hash regardless of
@@ -393,7 +393,7 @@ func HashDSLContent(content string) string {
 }
 
 // GetModuleDSLHash returns the DSL hash for a module's workspace.dsl
-// Useful for checking cache validity without a full export
+// Useful for checking cache validity without a full export.
 func GetModuleDSLHash(moduleName string) (string, error) {
 	repoRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
@@ -409,7 +409,7 @@ func GetModuleDSLHash(moduleName string) (string, error) {
 	return HashDSLContent(string(content)), nil
 }
 
-// ListModulesWithWorkspaces returns all module names that have workspace.dsl files
+// ListModulesWithWorkspaces returns all module names that have workspace.dsl files.
 func ListModulesWithWorkspaces() ([]string, error) {
 	modules, err := listAvailableModules()
 	if err != nil {
@@ -424,7 +424,7 @@ func ListModulesWithWorkspaces() ([]string, error) {
 }
 
 // ParseViewKeysFromDSL extracts view keys from workspace.dsl content
-// This is a lightweight parser that finds view definitions without running Structurizr
+// This is a lightweight parser that finds view definitions without running Structurizr.
 var viewDefinitionPattern = regexp.MustCompile(`(?m)^\s*(systemContext|container|component|dynamic|deployment|custom|filtered)\s+\S+\s+"([^"]+)"`)
 
 func ParseViewKeysFromDSL(content string) []string {

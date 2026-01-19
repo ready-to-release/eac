@@ -1,6 +1,7 @@
 package github
 
 import (
+	"errors"
 	"testing"
 	"time"
 )
@@ -71,8 +72,8 @@ func TestMockAPI_FindRunBySHA_NotFound(t *testing.T) {
 	mock.AddSuccessRun("ci-test.yaml", "abc123")
 
 	run, err := mock.FindRunBySHA("ci-test.yaml", "nonexistent", 10)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	if !errors.Is(err, ErrRunNotFound) {
+		t.Fatalf("expected ErrRunNotFound, got: %v", err)
 	}
 
 	if run != nil {
@@ -257,7 +258,7 @@ func TestMockAPI_Reset(t *testing.T) {
 	}
 }
 
-// errTest is a test error
+// errTest is a test error.
 var errTest = &testError{"test error"}
 
 type testError struct {

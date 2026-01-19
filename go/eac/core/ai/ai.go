@@ -16,14 +16,16 @@ import (
 // Config types (from ai/config)
 // ============================================================================
 
-type AIConfig = config.AIConfig
-type AIDefaults = config.AIDefaults
-type AITypeConfig = config.AITypeConfig
-type RetryStrategyConfig = config.RetryStrategyConfig
-type AIConfigLoader = config.AIConfigLoader
-type ContractLoader = config.ContractLoader
+type (
+	AIConfig            = config.AIConfig
+	AIDefaults          = config.AIDefaults
+	AITypeConfig        = config.AITypeConfig
+	RetryStrategyConfig = config.RetryStrategyConfig
+	AIConfigLoader      = config.AIConfigLoader
+	ContractLoader      = config.ContractLoader
+)
 
-// Retry strategy constants (from ai-config.schema.json)
+// Retry strategy constants (from ai-config.schema.json).
 const (
 	StrategyStandard          = config.StrategyStandard
 	StrategyFocused           = config.StrategyFocused
@@ -35,7 +37,7 @@ func NewAIConfigLoader(workspaceRoot string) *AIConfigLoader {
 	return config.NewAIConfigLoader(workspaceRoot)
 }
 
-func NewContractLoader(workspaceRoot string, contractPath string, version string) *ContractLoader {
+func NewContractLoader(workspaceRoot, contractPath, version string) *ContractLoader {
 	return config.NewContractLoader(workspaceRoot, contractPath, version)
 }
 
@@ -86,14 +88,16 @@ const (
 	FormatPlainText    = generation.FormatPlainText
 )
 
-type StructuredGenerator = generation.StructuredGenerator
-type GenerationResult = generation.GenerationResult
-type RetryConfig = generation.RetryConfig
-type RetryResult = generation.RetryResult
-type RetryStrategy = generation.RetryStrategy
-type StandardStrategy = generation.StandardStrategy
-type FocusedStrategy = generation.FocusedStrategy
-type EscalatingStrategy = generation.EscalatingStrategy
+type (
+	StructuredGenerator = generation.StructuredGenerator
+	GenerationResult    = generation.GenerationResult
+	RetryConfig         = generation.RetryConfig
+	RetryResult         = generation.RetryResult
+	RetryStrategy       = generation.RetryStrategy
+	StandardStrategy    = generation.StandardStrategy
+	FocusedStrategy     = generation.FocusedStrategy
+	EscalatingStrategy  = generation.EscalatingStrategy
+)
 
 const (
 	TypeCommitMessage = generation.TypeCommitMessage
@@ -143,27 +147,27 @@ func BuildRetryConfig(
 	return generation.BuildRetryConfig(typeName, outputFormat, executor, validator, templateRoot, aiConfig, options...)
 }
 
-// RetryConfigOption configures optional RetryConfig fields using functional options pattern
+// RetryConfigOption configures optional RetryConfig fields using functional options pattern.
 type RetryConfigOption = generation.RetryConfigOption
 
-// WithDebug enables debug mode for intermediate output logging
+// WithDebug enables debug mode for intermediate output logging.
 func WithDebug(debug bool) RetryConfigOption {
 	return generation.WithDebug(debug)
 }
 
-// WithLogger sets a custom logger (defaults to zap.NewNop() if not provided)
+// WithLogger sets a custom logger (defaults to zap.NewNop() if not provided).
 func WithLogger(logger interface{}) RetryConfigOption {
 	// Accept interface{} to allow passing *zap.Logger without importing zap in this file
 	return generation.WithLogger(logger)
 }
 
-// WithTagsConfig sets the testing tags config (required for Gherkin validation)
+// WithTagsConfig sets the testing tags config (required for Gherkin validation).
 func WithTagsConfig(tags interface{}) RetryConfigOption {
 	// Accept interface{} to avoid circular imports
 	return generation.WithTagsConfig(tags)
 }
 
-// WithDefaultMaxAttempts sets the default max attempts (used if not in aiConfig)
+// WithDefaultMaxAttempts sets the default max attempts (used if not in aiConfig).
 func WithDefaultMaxAttempts(max int) RetryConfigOption {
 	return generation.WithDefaultMaxAttempts(max)
 }
@@ -189,13 +193,17 @@ func IsMockEnabled() bool {
 	return mock.IsMockEnabled()
 }
 
-type MockAIExecutor = mock.MockAIExecutor
-type MockValidator = mock.MockValidator
+type (
+	MockAIExecutor = mock.MockAIExecutor
+	MockValidator  = mock.MockValidator
+)
 
 // ============================================================================
 // Validation types (from validation package - for convenience)
 // ============================================================================
 
-type AIExecutor = validation.AIExecutor
-type Validator = validation.Validator
-type ValidationError = validation.ValidationError
+type (
+	AIExecutor      = validation.AIExecutor
+	Validator       = validation.Validator
+	ValidationError = validation.ValidationError
+)

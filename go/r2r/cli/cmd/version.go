@@ -11,10 +11,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Version is set at build time via ldflags
+// Version is set at build time via ldflags.
 var Version string
 
-// init runs before the root command
+// init runs before the root command.
 func init() {
 	RootCmd.AddCommand(versionCmd)
 
@@ -40,7 +40,7 @@ func init() {
 	version.SetVersion(Version, timestamp, commit, buildTime, modified)
 }
 
-// versionCmd represents the version command
+// versionCmd represents the version command.
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print the version number of r2r CLI",

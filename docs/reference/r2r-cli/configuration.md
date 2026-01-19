@@ -15,7 +15,7 @@ The R2R CLI uses `.r2r/r2r-cli.yml` to define the EAC extension, registry settin
 
 ## Configuration File Location
 
-```
+```text
 <repository-root>/.r2r/r2r-cli.yml
 ```
 
@@ -50,16 +50,16 @@ r2r eac [command] [args...]
 
 Values resolved in priority order (highest to lowest):
 
-| Priority | Source | Description |
-|----------|--------|-------------|
-| 1 | Environment Variables | Runtime overrides via `R2R_*` variables |
-| 2 | User-Specific Config | `.r2r/r2r-cli.local.yml` (gitignored) |
-| 3 | Repository Config | `.r2r/r2r-cli.yml` (committed) |
-| 4 | Built-in Defaults | Programmed into CLI |
+| Priority   | Source                | Description                             |
+| ---------- | --------------------- | --------------------------------------- |
+| 1          | Environment Variables | Runtime overrides via `R2R_*` variables |
+| 2          | User-Specific Config  | `.r2r/r2r-cli.local.yml` (gitignored)   |
+| 3          | Repository Config     | `.r2r/r2r-cli.yml` (committed)          |
+| 4          | Built-in Defaults     | Programmed into CLI                     |
 
 ### Configuration Layering
 
-```
+```text
 .r2r/
 ├── r2r-cli.yml           # Team configuration (committed)
 └── r2r-cli.local.yml     # Personal overrides (gitignored)
@@ -102,24 +102,24 @@ extensions:
 
 #### Required Fields
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `name` | string | Extension name (alphanumeric + hyphens) |
-| `image` | string | Docker image reference |
+| Field   | Type   | Description                             |
+| ------- | ------ | --------------------------------------- |
+| `name`  | string | Extension name (alphanumeric + hyphens) |
+| `image` | string | Docker image reference                  |
 
 #### Optional Fields
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `description` | string | - | Human-readable description |
-| `pull_policy` | enum | From defaults | When to pull image |
-| `remove_after` | boolean | From defaults | Remove container after run |
-| `timeout` | integer | From defaults | Execution timeout (seconds) |
-| `memory_limit` | string | From defaults | Memory limit |
-| `cpu_limit` | string | From defaults | CPU limit |
-| `environment` | array | `[]` | Extension-specific env vars |
-| `volumes` | array | `[]` | Additional volume mounts |
-| `working_dir` | string | `/workspace` | Container working directory |
+| Field          | Type    | Default       | Description                 |
+| -------------- | ------- | ------------- | --------------------------- |
+| `description`  | string  | -             | Human-readable description  |
+| `pull_policy`  | enum    | From defaults | When to pull image          |
+| `remove_after` | boolean | From defaults | Remove container after run  |
+| `timeout`      | integer | From defaults | Execution timeout (seconds) |
+| `memory_limit` | string  | From defaults | Memory limit                |
+| `cpu_limit`    | string  | From defaults | CPU limit                   |
+| `environment`  | array   | `[]`          | Extension-specific env vars |
+| `volumes`      | array   | `[]`          | Additional volume mounts    |
+| `working_dir`  | string  | `/workspace`  | Container working directory |
 
 #### Image Reference Format
 

@@ -1,4 +1,4 @@
-// Serialize loaded module configs to compare before/after default removal
+// Serialize loaded module configs to compare before/after defaults changes
 package main
 
 import (
@@ -32,31 +32,19 @@ func main() {
 		return allModules[i].Moniker < allModules[j].Moniker
 	})
 
-	// Full serialization of all fields
-	type RepoFiles struct {
-		Specs    []string `yaml:"specs"`
-		TestImpl string   `yaml:"test_impl,omitempty"`
-		Design   string   `yaml:"design,omitempty"`
-		Other    []string `yaml:"other"`
-		Exclude  []string `yaml:"exclude"`
-	}
-	type Files struct {
-		Root      string    `yaml:"root"`
-		Source    []string  `yaml:"source"`
-		Config    []string  `yaml:"config"`
-		Assets    []string  `yaml:"assets"`
-		Tests     []string  `yaml:"tests"`
-		Exclude   []string  `yaml:"exclude"`
-		Changelog string    `yaml:"changelog"`
-		Repo      RepoFiles `yaml:"repo"`
+	// Output structure using components instead of files
+	type ComponentOutput struct {
+		Root     string   `yaml:"root,omitempty"`
+		Patterns []string `yaml:"patterns,omitempty"`
 	}
 	type ModuleOutput struct {
-		Moniker     string   `yaml:"moniker"`
-		Name        string   `yaml:"name"`
-		Type        string   `yaml:"type"`
-		Description string   `yaml:"description"`
-		DependsOn   []string `yaml:"depends_on"`
-		Files       Files    `yaml:"files"`
+		Moniker     string                     `yaml:"moniker"`
+		Name        string                     `yaml:"name"`
+		Type        string                     `yaml:"type"`
+		Description string                     `yaml:"description"`
+		DependsOn   []string                   `yaml:"depends_on"`
+		Changelog   string                     `yaml:"changelog,omitempty"`
+		Components  map[string]ComponentOutput `yaml:"components"`
 	}
 
 	output := make([]ModuleOutput, 0, len(allModules))
@@ -64,26 +52,26 @@ func main() {
 		out := ModuleOutput{
 			Moniker:     m.Moniker,
 			Name:        m.Name,
-			Type:        m.Type,
+			Type:        m.GetComponentTypesDisplay(),
 			Description: m.Description,
 			DependsOn:   m.DependsOn,
-			Files: Files{
-				Root:      m.Files.Root,
-				Source:    m.Files.Source,
-				Config:    m.Files.Config,
-				Assets:    m.Files.Assets,
-				Tests:     m.Files.Tests,
-				Exclude:   m.Files.Exclude,
-				Changelog: m.Files.Changelog,
-				Repo: RepoFiles{
-					Specs:    m.Files.Repo.Specs,
-					TestImpl: m.Files.Repo.TestImpl,
-					Design:   m.Files.Repo.Design,
-					Other:    m.Files.Repo.Other,
-					Exclude:  m.Files.Repo.Exclude,
-				},
-			},
+			Changelog:   m.GetChangelogPath(),
+			Components:  make(map[string]ComponentOutput),
 		}
+
+		// Serialize component roots
+		for pkgName, root := range m.GetComponentRoots() {
+			pkg := ComponentOutput{Root: root}
+			// Get patterns from component if available
+			if m.Components[pkgName] != nil && m.Components[pkgName].Patterns != nil {
+				patterns := m.Components[pkgName].Patterns
+				pkg.Patterns = append(pkg.Patterns, patterns.Source...)
+				pkg.Patterns = append(pkg.Patterns, patterns.Tests...)
+				pkg.Patterns = append(pkg.Patterns, patterns.Config...)
+			}
+			out.Components[pkgName] = pkg
+		}
+
 		output = append(output, out)
 	}
 
@@ -93,7 +81,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := os.WriteFile(outputFile, data, 0644); err != nil {
+	if err := os.WriteFile(outputFile, data, 0o644); err != nil {
 		fmt.Fprintf(os.Stderr, "Error writing file: %v\n", err)
 		os.Exit(1)
 	}
@@ -102,7 +90,10 @@ func main() {
 }
 
 func findRepoRoot() string {
-	dir, _ := os.Getwd()
+	dir, err := os.Getwd()
+	if err != nil {
+		return "." // Fallback to current directory
+	}
 	for {
 		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
 			return dir

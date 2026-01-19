@@ -1,6 +1,6 @@
 package gomod
 
-// GoModInfo contains parsed information from a go.mod file
+// GoModInfo contains parsed information from a go.mod file.
 type GoModInfo struct {
 	FilePath   string    // Absolute path to go.mod file
 	ModulePath string    // Module path from "module" declaration
@@ -9,26 +9,26 @@ type GoModInfo struct {
 	Replaces   []Replace // Replace directives
 }
 
-// Require represents a require statement in go.mod
+// Require represents a require statement in go.mod.
 type Require struct {
 	Path     string // Module path (e.g., "github.com/ready-to-release/eac/go/eac/core")
 	Version  string // Version string (e.g., "v0.0.0")
 	Indirect bool   // True if marked with // indirect
 }
 
-// Replace represents a replace directive in go.mod
+// Replace represents a replace directive in go.mod.
 type Replace struct {
 	OldPath string // Original module path
 	NewPath string // Replacement path (can be local or remote)
 }
 
-// DependencyGraph represents the module dependency structure
+// DependencyGraph represents the module dependency structure.
 type DependencyGraph struct {
 	Modules      map[string]*ModuleNode // moniker -> node
 	Dependencies map[string][]string    // moniker -> []dependent_monikers
 }
 
-// ModuleNode represents a single module in the dependency graph
+// ModuleNode represents a single module in the dependency graph.
 type ModuleNode struct {
 	Moniker    string   // Module moniker (e.g., "r2r-cli")
 	ModulePath string   // Full module path
@@ -38,13 +38,13 @@ type ModuleNode struct {
 	UsedBy     []string // Monikers of dependents (reverse)
 }
 
-// ValidationReport contains results of dependency validation
+// ValidationReport contains results of dependency validation.
 type ValidationReport struct {
 	Discrepancies []Discrepancy
 	Summary       ValidationSummary
 }
 
-// Discrepancy represents invalid dependencies for a module
+// Discrepancy represents invalid dependencies for a module.
 type Discrepancy struct {
 	Moniker              string
 	ContractDependencies []string
@@ -53,7 +53,7 @@ type Discrepancy struct {
 	Status               string
 }
 
-// ValidationSummary provides high-level validation statistics
+// ValidationSummary provides high-level validation statistics.
 type ValidationSummary struct {
 	TotalModules        int
 	Matching            int

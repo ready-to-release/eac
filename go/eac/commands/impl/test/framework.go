@@ -18,6 +18,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/initsummary"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/locking"
 	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/environments"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	moduledeps "github.com/ready-to-release/eac/go/eac/core/module-deps"
@@ -27,7 +28,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/teststate"
 )
 
-// TestFrameworkConfig holds test-specific configuration for the framework
+// TestFrameworkConfig holds test-specific configuration for the framework.
 type TestFrameworkConfig struct {
 	// Input configuration
 	SuiteName   string
@@ -60,7 +61,7 @@ type TestFrameworkConfig struct {
 	Lock          *flock.Flock
 }
 
-// testSelectionStats tracks test selection statistics
+// testSelectionStats tracks test selection statistics.
 type testSelectionStats struct {
 	TotalDiscovered  int
 	Skipped          int
@@ -96,9 +97,12 @@ func RunTestWithFramework(cmdCfg *cmdframework.CommandConfig, testCfg *TestFrame
 	return cmdframework.Run(cmdCfg, testWorker, hooks)
 }
 
-// testAfterInit handles suite resolution and lock acquisition
+// testAfterInit handles suite resolution and lock acquisition.
 func testAfterInit(ctx *cmdframework.ExecutionContext) error {
-	testCfg := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
+	testCfg, ok := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
+	if !ok {
+		return fmt.Errorf("testConfig not found or wrong type")
+	}
 
 	// Resolve suite from config if not specified
 	if testCfg.SuiteName == "" {
@@ -134,21 +138,32 @@ func testAfterInit(ctx *cmdframework.ExecutionContext) error {
 
 	// Create test output directory
 	testCfg.TestRunDir = filepath.Join(ctx.WorkspaceRoot, repoCfg.TestOutputDir())
-	if err := os.MkdirAll(testCfg.TestRunDir, 0755); err != nil {
+	if err := os.MkdirAll(testCfg.TestRunDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create test directory: %w", err)
 	}
+
+	// Load module contracts and registry (test command uses SkipResolve, so we load it here)
+	moduleReport, err := reports.GetModuleContracts(ctx.WorkspaceRoot)
+	if err != nil {
+		return fmt.Errorf("failed to load module contracts: %w", err)
+	}
+	ctx.ModuleReport = moduleReport
+	ctx.ModuleRegistry = moduleReport.Registry
 
 	return nil
 }
 
-// testAfterResolve handles test discovery, filtering, and execution plan setup
+// testAfterResolve handles test discovery, filtering, and execution plan setup.
 func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
-	testCfg := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
+	testCfg, ok := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
+	if !ok {
+		return fmt.Errorf("testConfig not found or wrong type")
+	}
 	suite := testCfg.Suite
 	stats := testCfg.Stats
 
 	// Build module mapper early - used for test filtering and module ownership
-	testCfg.ModuleMapper = NewModuleMapper(ctx.EACConfig, ctx.WorkspaceRoot)
+	testCfg.ModuleMapper = NewModuleMapper(ctx.ModuleRegistry, ctx.WorkspaceRoot)
 
 	// Test Discovery with suite-specific inferences
 	allTests, err := testing.DiscoverAndEnrich(ctx.WorkspaceRoot, testing.DiscoveryOptions{
@@ -169,7 +184,8 @@ func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 
 	var selectedTests []testing.TestReference
 	var unmappedTests []string
-	for _, test := range allTests {
+	for i := range allTests {
+		test := &allTests[i]
 		// Check for @skip tags
 		isSkipped := false
 		for _, tag := range test.Tags {
@@ -189,7 +205,7 @@ func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 		}
 
 		// Check if test matches suite
-		if !suite.Matches(test) {
+		if !suite.Matches(*test) {
 			stats.NotMatchingSuite++
 			continue
 		}
@@ -207,7 +223,7 @@ func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 			continue
 		}
 
-		selectedTests = append(selectedTests, test)
+		selectedTests = append(selectedTests, *test)
 	}
 
 	// Fail fast if tests couldn't be mapped to modules
@@ -252,7 +268,8 @@ func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 	// Handle list-only mode
 	if testCfg.ListOnly {
 		ctx.WriteInit("=== Selected Tests ===")
-		for i, test := range selectedTests {
+		for i := range selectedTests {
+			test := &selectedTests[i]
 			ctx.WriteInit("%d. %s (%s)", i+1, test.TestName, test.Type)
 			ctx.WriteInit("   File: %s", test.FilePath)
 			ctx.WriteInit("   Tags: %s", strings.Join(test.Tags, ", "))
@@ -300,7 +317,8 @@ func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 
 	for modulePath, tests := range testsByModulePath {
 		hasSequential := false
-		for _, test := range tests {
+		for i := range tests {
+			test := &tests[i]
 			if test.IsSequential {
 				hasSequential = true
 				break
@@ -336,9 +354,12 @@ func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 	return nil
 }
 
-// testBeforeExecute initializes the test execution context
+// testBeforeExecute initializes the test execution context.
 func testBeforeExecute(ctx *cmdframework.ExecutionContext) error {
-	testCfg := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
+	testCfg, ok := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
+	if !ok {
+		return fmt.Errorf("testConfig not found or wrong type")
+	}
 
 	if len(ctx.ExecutionPlan.ExecutionOrder) == 0 {
 		return nil // Nothing to execute
@@ -368,9 +389,12 @@ func testBeforeExecute(ctx *cmdframework.ExecutionContext) error {
 	return nil
 }
 
-// testAfterExecute handles manifest generation and state updates
+// testAfterExecute handles manifest generation and state updates.
 func testAfterExecute(ctx *cmdframework.ExecutionContext) error {
-	testCfg := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
+	testCfg, ok := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
+	if !ok {
+		return fmt.Errorf("testConfig not found or wrong type")
+	}
 
 	if testCfg.ExecCtx == nil || ctx.Config.DryRun {
 		return nil
@@ -439,9 +463,13 @@ func testAfterExecute(ctx *cmdframework.ExecutionContext) error {
 	return nil
 }
 
-// testWorker runs tests for a module path
+// testWorker runs tests for a module path.
 func testWorker(ctx *cmdframework.ExecutionContext, modulePath string, logWriter io.Writer) int {
-	testCfg := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
+	testCfg, ok := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
+	if !ok || testCfg == nil {
+		fmt.Fprintf(logWriter, "Error: testConfig not found or wrong type\n")
+		return 1
+	}
 
 	if testCfg.ExecCtx == nil {
 		return 1
@@ -474,8 +502,8 @@ func verifyTestDependencies(ctx *cmdframework.ExecutionContext, testCfg *TestFra
 		return nil
 	}
 
-	// Verify system dependencies
-	sysResults := systemdeps.VerifyAll(systemDeps)
+	// Verify only test-phase system dependencies
+	sysResults := systemdeps.VerifyAllForPhase(systemDeps, "test")
 	var missing []string
 	for _, result := range sysResults {
 		if !result.Available {
@@ -598,18 +626,25 @@ func convertPkgPathToModulePath(pkgPath, workspaceRoot string, cfg *config.EACCo
 		// BDD format: featureName:moduleRoot:featurePath
 		featureName := colonParts[0]
 		moduleRoot := colonParts[1]
-		// Find the module moniker for this root - check both Files.Root and Files.Repo.TestImpl
-		for _, module := range cfg.Repository.Modules {
-			// Check Files.Root (for modules where tests live in the module root)
-			moduleRootPath := filepath.ToSlash(module.Files.Root)
-			if moduleRoot == moduleRootPath || strings.HasPrefix(moduleRoot, moduleRootPath+"/") {
-				return module.Moniker + "/" + featureName
+		// Find the module moniker for this root - check all package roots and test-impl package
+		for i := range cfg.Repository.Modules {
+			module := &cfg.Repository.Modules[i]
+			// Check all package roots
+			for _, entry := range module.Components {
+				if entry == nil || entry.Root == "" {
+					continue
+				}
+				pkgRootPath := filepath.ToSlash(entry.Root)
+				if moduleRoot == pkgRootPath || strings.HasPrefix(moduleRoot, pkgRootPath+"/") {
+					return module.Moniker + "/" + featureName
+				}
 			}
-			// Check Files.Repo.TestImpl (for modules like "repository" where test_impl is separate)
-			// Use HasPrefix to match subdirectories of test_impl (e.g., go/eac/specs/impl/eac-core/config-defaults)
-			testImplPath := filepath.ToSlash(module.Files.Repo.TestImpl)
-			if testImplPath != "" && (moduleRoot == testImplPath || strings.HasPrefix(moduleRoot, testImplPath+"/")) {
-				return module.Moniker + "/" + featureName
+			// Check test-impl package if it exists
+			if testImplEntry, ok := module.Components["test-impl"]; ok && testImplEntry != nil {
+				testImplPath := filepath.ToSlash(testImplEntry.Root)
+				if testImplPath != "" && (moduleRoot == testImplPath || strings.HasPrefix(moduleRoot, testImplPath+"/")) {
+					return module.Moniker + "/" + featureName
+				}
 			}
 		}
 		// Module not found - use sanitized path
@@ -622,16 +657,22 @@ func convertPkgPathToModulePath(pkgPath, workspaceRoot string, cfg *config.EACCo
 		return pkgPath
 	}
 
-	// Check if first part matches a module root
-	for _, module := range cfg.Repository.Modules {
-		moduleRoot := filepath.ToSlash(module.Files.Root)
-		if strings.HasPrefix(pkgPath, moduleRoot+"/") || pkgPath == moduleRoot {
-			subPath := strings.TrimPrefix(pkgPath, moduleRoot)
-			subPath = strings.TrimPrefix(subPath, "/")
-			if subPath == "" {
-				return module.Moniker
+	// Check if path matches any module's package root
+	for i := range cfg.Repository.Modules {
+		module := &cfg.Repository.Modules[i]
+		for _, entry := range module.Components {
+			if entry == nil || entry.Root == "" {
+				continue
 			}
-			return module.Moniker + "/" + subPath
+			moduleRoot := filepath.ToSlash(entry.Root)
+			if strings.HasPrefix(pkgPath, moduleRoot+"/") || pkgPath == moduleRoot {
+				subPath := strings.TrimPrefix(pkgPath, moduleRoot)
+				subPath = strings.TrimPrefix(subPath, "/")
+				if subPath == "" {
+					return module.Moniker
+				}
+				return module.Moniker + "/" + subPath
+			}
 		}
 	}
 

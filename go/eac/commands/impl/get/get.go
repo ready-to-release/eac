@@ -15,7 +15,7 @@ func init() {
 	registry.Register(Get)
 }
 
-// Get command entry point
+// Get command entry point.
 func Get() int {
 	args := os.Args[2:] // Skip program name and "get"
 

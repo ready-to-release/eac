@@ -11,7 +11,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
 )
 
-// Lazy-loaded regular expressions for performance (compiled only when needed)
+// Lazy-loaded regular expressions for performance (compiled only when needed).
 var (
 	conventionalCommitRegex     *regexp.Regexp
 	moduleSubjectLineRegex      *regexp.Regexp
@@ -19,7 +19,7 @@ var (
 	moduleSubjectLineRegexOnce  sync.Once
 )
 
-// getConventionalCommitRegex returns the conventional commit regex, compiling it only once
+// getConventionalCommitRegex returns the conventional commit regex, compiling it only once.
 func getConventionalCommitRegex() *regexp.Regexp {
 	conventionalCommitRegexOnce.Do(func() {
 		conventionalCommitRegex = regexp.MustCompile(`^(feat|fix|refactor|docs|chore|test|perf|style)\(([a-z0-9\-]+|multi-module)\):\s*(.+)$`)
@@ -27,7 +27,7 @@ func getConventionalCommitRegex() *regexp.Regexp {
 	return conventionalCommitRegex
 }
 
-// getModuleSubjectLineRegex returns the module subject line regex, compiling it only once
+// getModuleSubjectLineRegex returns the module subject line regex, compiling it only once.
 func getModuleSubjectLineRegex() *regexp.Regexp {
 	moduleSubjectLineRegexOnce.Do(func() {
 		moduleSubjectLineRegex = regexp.MustCompile(`^([a-z0-9\-]+):\s*(feat|fix|refactor|docs|chore|test|perf|style):\s*(.+)$`)
@@ -35,10 +35,10 @@ func getModuleSubjectLineRegex() *regexp.Regexp {
 	return moduleSubjectLineRegex
 }
 
-// ValidationError is an alias to the core contract ValidationError
+// ValidationError is an alias to the core contract ValidationError.
 type ValidationError = contracts.ValidationError
 
-// CommitMessageContract represents the structure.yml contract
+// CommitMessageContract represents the structure.yml contract.
 type CommitMessageContract struct {
 	Version     string `yaml:"version"`
 	Name        string `yaml:"name"`
@@ -94,7 +94,7 @@ func LoadContractFromConfig(workspaceRoot string) (*CommitMessageContract, error
 }
 
 // VerifyCommitMessageContract validates a commit message against contracts/commit-message/0.1.0/structure.yml
-// affectedModules is the list of modules that had staged changes
+// affectedModules is the list of modules that had staged changes.
 func VerifyCommitMessageContract(commitMessage string, affectedModules []string) []ValidationError {
 	var errors []ValidationError
 
@@ -121,7 +121,7 @@ func VerifyCommitMessageContract(commitMessage string, affectedModules []string)
 	return errors
 }
 
-// validateHeader validates the commit message header (first line)
+// validateHeader validates the commit message header (first line).
 func validateHeader(lines []string) []ValidationError {
 	var errors []ValidationError
 
@@ -159,7 +159,7 @@ func validateHeader(lines []string) []ValidationError {
 	return errors
 }
 
-// validateTopLevelBody validates the presence of Auditor-Summary and top-level body text
+// validateTopLevelBody validates the presence of Auditor-Summary and top-level body text.
 func validateTopLevelBody(lines []string) []ValidationError {
 	var errors []ValidationError
 
@@ -216,8 +216,8 @@ func validateTopLevelBody(lines []string) []ValidationError {
 	return errors
 }
 
-// validateModuleSections validates that multi-module commits have module sections
-func validateModuleSections(lines []string, affectedModules []string) []ValidationError {
+// validateModuleSections validates that multi-module commits have module sections.
+func validateModuleSections(lines, affectedModules []string) []ValidationError {
 	var errors []ValidationError
 
 	// Single-module commits don't require module sections
@@ -272,7 +272,7 @@ func validateModuleSections(lines []string, affectedModules []string) []Validati
 	return errors
 }
 
-// validateLineLength validates that body text lines don't exceed max length
+// validateLineLength validates that body text lines don't exceed max length.
 func validateLineLength(lines []string) []ValidationError {
 	var errors []ValidationError
 
@@ -309,7 +309,7 @@ func validateLineLength(lines []string) []ValidationError {
 	return errors
 }
 
-// validateModuleSubjectLines checks that module sections have proper subject lines
+// validateModuleSubjectLines checks that module sections have proper subject lines.
 func validateModuleSubjectLines(lines []string) []ValidationError {
 	var errors []ValidationError
 
@@ -408,7 +408,7 @@ func validateModuleSubjectLines(lines []string) []ValidationError {
 	return errors
 }
 
-// validateCodeBlocks ensures all code blocks are properly closed
+// validateCodeBlocks ensures all code blocks are properly closed.
 func validateCodeBlocks(lines []string) []ValidationError {
 	var errors []ValidationError
 
@@ -444,7 +444,7 @@ func validateCodeBlocks(lines []string) []ValidationError {
 }
 
 // validateModuleSectionStructure validates that module sections have proper structure
-// Format: <module-name>\n<dashes>\n<module>: <type>: <description>\n<body>
+// Format: <module-name>\n<dashes>\n<module>: <type>: <description>\n<body>.
 func validateModuleSectionStructure(lines []string) []ValidationError {
 	var errors []ValidationError
 
@@ -531,7 +531,7 @@ func validateModuleSectionStructure(lines []string) []ValidationError {
 }
 
 // isModuleName checks if a string looks like a module name
-// Module names are lowercase alphanumeric with dashes or underscores
+// Module names are lowercase alphanumeric with dashes or underscores.
 func isModuleName(s string) bool {
 	if s == "" || len(s) > MaxModuleNameLength {
 		return false
@@ -546,7 +546,7 @@ func isModuleName(s string) bool {
 	return true
 }
 
-// isDashesLine checks if a line consists only of dashes
+// isDashesLine checks if a line consists only of dashes.
 func isDashesLine(s string) bool {
 	if len(s) < MinDashesLength {
 		return false
@@ -563,7 +563,7 @@ func isDashesLine(s string) bool {
 
 // isSectionSeparator checks if a line is exactly a section separator (---)
 // Section separators are used to divide module sections and should not be
-// validated as module header underlines
+// validated as module header underlines.
 func isSectionSeparator(s string) bool {
 	return s == "---"
 }

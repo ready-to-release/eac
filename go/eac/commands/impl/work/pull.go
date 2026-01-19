@@ -42,7 +42,7 @@ func init() {
 	registry.Register(Pull)
 }
 
-// Pull syncs the current branch with target branch via rebase
+// Pull syncs the current branch with target branch via rebase.
 func Pull() int {
 	startTime := time.Now()
 
@@ -58,7 +58,7 @@ func Pull() int {
 		log.Errorf("Error: %v", err)
 		return 1
 	}
-	defer config.base.Logger.Sync()
+	defer func() { _ = config.base.Logger.Sync() }() //nolint:errcheck // best-effort logger sync
 
 	logger := config.base.Logger
 	logger.Debug("Phase 1: Completed",
@@ -197,7 +197,7 @@ func Pull() int {
 	return 0
 }
 
-// pullConfig holds configuration for the pull command
+// pullConfig holds configuration for the pull command.
 type pullConfig struct {
 	base          *internal.BaseConfig
 	targetBranch  string
@@ -206,14 +206,14 @@ type pullConfig struct {
 	currentBranch string
 }
 
-// rebaseInfo holds information about the rebase operation
+// rebaseInfo holds information about the rebase operation.
 type rebaseInfo struct {
 	currentCommits int
 	newCommits     int
 	upToDate       bool
 }
 
-// parsePullConfig parses command line arguments
+// parsePullConfig parses command line arguments.
 func parsePullConfig() (*pullConfig, error) {
 	args := os.Args[3:] // Skip program name, "work", "pull"
 
@@ -258,7 +258,7 @@ func parsePullConfig() (*pullConfig, error) {
 	return config, nil
 }
 
-// validatePullEnvironment validates the environment before pulling
+// validatePullEnvironment validates the environment before pulling.
 func validatePullEnvironment(config *pullConfig) error {
 	// Check we're in a git repository
 	if err := internal.EnsureInGitRepo(); err != nil {
@@ -294,7 +294,7 @@ func validatePullEnvironment(config *pullConfig) error {
 	return nil
 }
 
-// getRebaseInfo gets information about the rebase operation
+// getRebaseInfo gets information about the rebase operation.
 func getRebaseInfo(config *pullConfig) (*rebaseInfo, error) {
 	info := &rebaseInfo{}
 
@@ -318,7 +318,7 @@ func getRebaseInfo(config *pullConfig) (*rebaseInfo, error) {
 	return info, nil
 }
 
-// showRebasePreview shows what will be rebased
+// showRebasePreview shows what will be rebased.
 func showRebasePreview(currentBranch, targetBranch string, info *rebaseInfo) {
 	log.Infof("\nRebasing %s onto origin/%s", currentBranch, targetBranch)
 	log.Infof("  Current branch: %d commits ahead of %s", info.currentCommits, targetBranch)
@@ -328,13 +328,13 @@ func showRebasePreview(currentBranch, targetBranch string, info *rebaseInfo) {
 	}
 }
 
-// handleRebaseError handles rebase errors and provides guidance
+// handleRebaseError handles rebase errors and provides guidance.
 func handleRebaseError(config *pullConfig, err error) {
 	config.base.Logger.Error("\n⚠️  Rebase conflict detected\n")
 
 	// Get conflicting files
-	conflicts, _ := config.base.GitOps.GetConflictingFiles()
-	if len(conflicts) > 0 {
+	conflicts, conflictErr := config.base.GitOps.GetConflictingFiles()
+	if conflictErr == nil && len(conflicts) > 0 {
 		config.base.Logger.Error("Conflicting files:")
 		for _, file := range conflicts {
 			config.base.Logger.Error(fmt.Sprintf("  - %s", file))

@@ -81,7 +81,7 @@ func UpdateEvidence() int {
 		log.Errorf("Error loading config: %v", err)
 		return 1
 	}
-	cfg.LoadBooks(false)
+	_ = cfg.LoadBooks(false) //nolint:errcheck // best-effort config load
 
 	// Determine which modules to build
 	var modulesToBuild []string
@@ -135,7 +135,7 @@ func UpdateEvidence() int {
 			failedModules = append(failedModules, moniker)
 			continue
 		}
-		if err := os.MkdirAll(moduleOutputDir, 0755); err != nil {
+		if err := os.MkdirAll(moduleOutputDir, 0o755); err != nil {
 			log.Errorf("Failed to create output directory: %v", err)
 			failedModules = append(failedModules, moniker)
 			continue
@@ -144,8 +144,8 @@ func UpdateEvidence() int {
 		// Create a minimal module contract for the builder
 		// The builder only uses this for logging and Docker config (which defaults for PDF)
 		minimalModule := modules.NewModuleContract(contracts.BaseContract{
-			Moniker: moniker,
-			Type:    "evidence",
+			Moniker:    moniker,
+			Components: contracts.ModuleComponents{"evidence": nil},
 		}, repoRoot)
 
 		// Build each evidence book
@@ -161,7 +161,7 @@ func UpdateEvidence() int {
 				bookOutputDir = filepath.Join(moduleOutputDir, book.Name)
 			}
 
-			if err := os.MkdirAll(bookOutputDir, 0755); err != nil {
+			if err := os.MkdirAll(bookOutputDir, 0o755); err != nil {
 				log.Errorf("Failed to create book output directory: %v", err)
 				failedModules = append(failedModules, moniker)
 				continue
@@ -224,11 +224,11 @@ func UpdateEvidence() int {
 	return 0
 }
 
-// copyFile copies a file from src to dst
+// copyFile copies a file from src to dst.
 func copyFile(src, dst string) error {
 	data, err := os.ReadFile(src)
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(dst, data, 0644)
+	return os.WriteFile(dst, data, 0o644)
 }

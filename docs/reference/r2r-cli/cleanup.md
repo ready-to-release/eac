@@ -35,7 +35,7 @@ r2r cleanup
 
 **Output:**
 
-```
+```text
 Cleaning up R2R resources...
 
 Removed:

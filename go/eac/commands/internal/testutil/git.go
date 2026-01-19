@@ -69,11 +69,11 @@ func (r *GitRepo) WriteFile(relPath, content string) {
 	fullPath := filepath.Join(r.root, relPath)
 	dir := filepath.Dir(fullPath)
 
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		r.t.Fatalf("failed to create directory %s: %v", dir, err)
 	}
 
-	if err := os.WriteFile(fullPath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(fullPath, []byte(content), 0o644); err != nil {
 		r.t.Fatalf("failed to write file %s: %v", fullPath, err)
 	}
 }
@@ -149,7 +149,7 @@ func (r *GitRepo) CurrentBranch() string {
 	r.t.Helper()
 	out := r.Git("rev-parse", "--abbrev-ref", "HEAD")
 	// Trim trailing newline
-	if len(out) > 0 && out[len(out)-1] == '\n' {
+	if out != "" && out[len(out)-1] == '\n' {
 		out = out[:len(out)-1]
 	}
 	return out
@@ -160,7 +160,7 @@ func (r *GitRepo) CurrentCommit() string {
 	r.t.Helper()
 	out := r.Git("rev-parse", "HEAD")
 	// Trim trailing newline
-	if len(out) > 0 && out[len(out)-1] == '\n' {
+	if out != "" && out[len(out)-1] == '\n' {
 		out = out[:len(out)-1]
 	}
 	return out

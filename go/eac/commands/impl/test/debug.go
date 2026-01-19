@@ -33,14 +33,14 @@ import (
 )
 
 // commandFlags defines valid flags for the test debug command
-// ansiRegex matches ANSI escape sequences for color/formatting
+// ansiRegex matches ANSI escape sequences for color/formatting.
 var ansiRegex = regexp.MustCompile(`\x1b\[[0-9;]*m`)
 
 func init() {
 	registry.Register(TestDebug)
 }
 
-// Failure represents a test failure found in test results
+// Failure represents a test failure found in test results.
 type Failure struct {
 	TestName    string // Name of the failed test
 	Package     string // Package name
@@ -50,7 +50,7 @@ type Failure struct {
 	Source      string // "go-test" or "cucumber"
 }
 
-// TestDebug parses test results and lists all failures
+// TestDebug parses test results and lists all failures.
 func TestDebug() int {
 	// Validate flags
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
@@ -124,7 +124,7 @@ func TestDebug() int {
 
 // findGoTestJSONFiles finds all Go test JSON files
 // Looks for test-results.json (from test module) and *.json (from test suite)
-// Excludes .cucumber.json files
+// Excludes .cucumber.json files.
 func findGoTestJSONFiles(dir string) ([]string, error) {
 	var jsonFiles []string
 
@@ -148,7 +148,7 @@ func findGoTestJSONFiles(dir string) ([]string, error) {
 	return jsonFiles, err
 }
 
-// findCucumberJSONFiles finds all .cucumber.json files
+// findCucumberJSONFiles finds all .cucumber.json files.
 func findCucumberJSONFiles(dir string) ([]string, error) {
 	var jsonFiles []string
 
@@ -169,7 +169,7 @@ func findCucumberJSONFiles(dir string) ([]string, error) {
 	return jsonFiles, err
 }
 
-// collectFailuresFromGoTestJSON parses a Go test JSON file
+// collectFailuresFromGoTestJSON parses a Go test JSON file.
 func collectFailuresFromGoTestJSON(jsonPath string) ([]Failure, error) {
 	events, err := testjson.ParseJSONFile(jsonPath)
 	if err != nil {
@@ -225,7 +225,7 @@ func collectFailuresFromGoTestJSON(jsonPath string) ([]Failure, error) {
 	return failures, nil
 }
 
-// collectFailuresFromCucumberJSON parses a Cucumber JSON file
+// collectFailuresFromCucumberJSON parses a Cucumber JSON file.
 func collectFailuresFromCucumberJSON(jsonPath string) ([]Failure, error) {
 	data, err := os.ReadFile(jsonPath)
 	if err != nil {
@@ -239,9 +239,12 @@ func collectFailuresFromCucumberJSON(jsonPath string) ([]Failure, error) {
 
 	var failures []Failure
 
-	for _, feature := range report {
-		for _, scenario := range feature.Elements {
-			for _, step := range scenario.Steps {
+	for i := range report {
+		feature := &report[i]
+		for j := range feature.Elements {
+			scenario := &feature.Elements[j]
+			for k := range scenario.Steps {
+				step := &scenario.Steps[k]
 				if step.Result.Status == "failed" {
 					failure := Failure{
 						TestName:    scenario.Name,
@@ -263,7 +266,7 @@ func collectFailuresFromCucumberJSON(jsonPath string) ([]Failure, error) {
 	return failures, nil
 }
 
-// printFailureTable prints test failures in a readable format
+// printFailureTable prints test failures in a readable format.
 func printFailureTable(failures []Failure) {
 	log.Info("")
 	log.Info("=== Test Failures Found ===")

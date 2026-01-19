@@ -187,7 +187,7 @@ func CreateModulesYml(ctx *TestContext, moduleName, modulePath, moduleType strin
 }
 
 // CreateModuleTypesYml creates module-types.yml with the specified types.
-// Common type names: "go", "container", "typescript", "static"
+// Common type names: "go", "container", "typescript", "static".
 func CreateModuleTypesYml(ctx *TestContext, types ...string) error {
 	// Map of type definitions
 	typeDefinitions := map[string]string{
@@ -377,7 +377,7 @@ func copyDir(src, dst string) error {
 // copyFile copies a single file from src to dst.
 func copyFile(src, dst string) error {
 	// Ensure parent directory exists
-	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return err
 	}
 

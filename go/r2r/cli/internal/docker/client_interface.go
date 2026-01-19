@@ -37,7 +37,7 @@ type DockerClient interface {
 	ContainerStart(ctx context.Context, containerID string, options container.StartOptions) error
 
 	// ContainerInspect inspects a container and returns detailed information
-	ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error)
+	ContainerInspect(ctx context.Context, containerID string) (container.InspectResponse, error)
 
 	// ContainerResize resizes the TTY of a container
 	ContainerResize(ctx context.Context, containerID string, options container.ResizeOptions) error
@@ -55,7 +55,7 @@ type DockerClient interface {
 	ContainerRemove(ctx context.Context, containerID string, options container.RemoveOptions) error
 
 	// ContainerList lists containers
-	ContainerList(ctx context.Context, options container.ListOptions) ([]types.Container, error)
+	ContainerList(ctx context.Context, options container.ListOptions) ([]container.Summary, error)
 
 	// Close closes the Docker client connection
 	Close() error

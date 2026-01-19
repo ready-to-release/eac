@@ -34,9 +34,13 @@ The release process is split into two phases:
 
 ### 🤖 Automated Phase (CI Performs)
 
+<!-- markdownlint-disable MD029 -->
+
 7. Detect changelog changes
-2. Create git tag
-3. Build and publish release
+8. Create git tag
+9. Build and publish release
+
+<!-- markdownlint-enable MD029 -->
 
 ---
 

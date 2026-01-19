@@ -1,30 +1,30 @@
 package config
 
-// SecurityToolsFileName is the config file for security tools
+// SecurityToolsFileName is the config file for security tools.
 const SecurityToolsFileName = "security-tools.yml"
 
-// SecurityToolsConfig holds security tool configuration
+// SecurityToolsConfig holds security tool configuration.
 type SecurityToolsConfig struct {
 	DockerImages    DockerImagesConfig  `yaml:"docker_images"`
 	DefaultScanners map[string][]string `yaml:"default_scanners,omitempty"`
 	SkipModules     []string            `yaml:"skip_modules,omitempty"`
 }
 
-// DockerImagesConfig holds Docker image specifications
+// DockerImagesConfig holds Docker image specifications.
 type DockerImagesConfig struct {
 	Trivy   DockerImage `yaml:"trivy"`
 	Semgrep DockerImage `yaml:"semgrep"`
 	ZAP     DockerImage `yaml:"zap"`
 }
 
-// DockerImage represents a versioned Docker image
+// DockerImage represents a versioned Docker image.
 type DockerImage struct {
 	Image       string `yaml:"image"`
 	Tag         string `yaml:"tag"`
 	Description string `yaml:"description,omitempty"`
 }
 
-// FullImage returns the complete Docker image reference (image:tag)
+// FullImage returns the complete Docker image reference (image:tag).
 func (d *DockerImage) FullImage() string {
 	return d.Image + ":" + d.Tag
 }
@@ -50,7 +50,7 @@ func (c *SecurityToolsConfig) GetDefaultScanners(moduleType string) []string {
 	return defaultScannerList()
 }
 
-// defaultScannerList returns the built-in default scanner list
+// defaultScannerList returns the built-in default scanner list.
 func defaultScannerList() []string {
 	return []string{"sbom", "vuln", "secrets"}
 }
@@ -74,7 +74,7 @@ func (c *SecurityToolsConfig) ShouldSkipModule(moniker string) bool {
 	return false
 }
 
-// DefaultSecurityToolsConfig returns default configuration
+// DefaultSecurityToolsConfig returns default configuration.
 func DefaultSecurityToolsConfig() SecurityToolsConfig {
 	return SecurityToolsConfig{
 		DockerImages: DockerImagesConfig{

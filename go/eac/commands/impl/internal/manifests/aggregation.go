@@ -8,18 +8,18 @@ import (
 )
 
 const (
-	// Test status constants from manifest specification
+	// Test status constants from manifest specification.
 	StatusPassed = "passed"
 	StatusFailed = "failed"
 )
 
-// TotalCounts holds aggregated pass/fail counts across all tests
+// TotalCounts holds aggregated pass/fail counts across all tests.
 type TotalCounts struct {
 	TotalPassed int `json:"total_passed" yaml:"total_passed"`
 	TotalFailed int `json:"total_failed" yaml:"total_failed"`
 }
 
-// CompleteTestData holds all test data prepared for display or serialization
+// CompleteTestData holds all test data prepared for display or serialization.
 type CompleteTestData struct {
 	ModulesTested  int              `json:"modules_tested" yaml:"modules_tested"`
 	LastRun        time.Time        `json:"last_run" yaml:"last_run"`
@@ -34,7 +34,7 @@ type CompleteTestData struct {
 	SummaryBySuite []SuiteSummary   `json:"summary_by_suite" yaml:"summary_by_suite"`
 }
 
-// ModuleStats represents test statistics for a module
+// ModuleStats represents test statistics for a module.
 type ModuleStats struct {
 	Module          string         `json:"module" yaml:"module"`
 	Total           int            `json:"total" yaml:"total"`
@@ -47,7 +47,7 @@ type ModuleStats struct {
 	Tests           []TestResult   `json:"tests" yaml:"tests"`
 }
 
-// TypeSummary represents test counts by type
+// TypeSummary represents test counts by type.
 type TypeSummary struct {
 	Type   string `json:"type" yaml:"type"`
 	Count  int    `json:"count" yaml:"count"`
@@ -55,7 +55,7 @@ type TypeSummary struct {
 	Failed int    `json:"failed" yaml:"failed"`
 }
 
-// SuiteSummary represents test counts by suite
+// SuiteSummary represents test counts by suite.
 type SuiteSummary struct {
 	Suite  string `json:"suite" yaml:"suite"`
 	Count  int    `json:"count" yaml:"count"`
@@ -63,16 +63,17 @@ type SuiteSummary struct {
 	Failed int    `json:"failed" yaml:"failed"`
 }
 
-// BuildModuleStats aggregates test data by module
+// BuildModuleStats aggregates test data by module.
 func BuildModuleStats(manifestList []*implinternal.TestManifest, allTests []TestResult) []ModuleStats {
 	stats := make([]ModuleStats, 0, len(manifestList))
 
 	for _, m := range manifestList {
 		// Filter tests for this module
 		moduleTests := make([]TestResult, 0)
-		for _, test := range allTests {
+		for i := range allTests {
+			test := &allTests[i]
 			if test.Module == m.Moniker {
-				moduleTests = append(moduleTests, test)
+				moduleTests = append(moduleTests, *test)
 			}
 		}
 
@@ -95,7 +96,8 @@ func BuildModuleStats(manifestList []*implinternal.TestManifest, allTests []Test
 
 		// Collect unique control tags
 		controlSet := make(map[string]bool)
-		for _, test := range m.Tests {
+		for i := range m.Tests {
+			test := &m.Tests[i]
 			for _, tag := range ExtractControlTags(test.Tags) {
 				controlSet[tag] = true
 			}
@@ -116,11 +118,12 @@ func BuildModuleStats(manifestList []*implinternal.TestManifest, allTests []Test
 	return stats
 }
 
-// BuildTypeSummary aggregates test counts by type
+// BuildTypeSummary aggregates test counts by type.
 func BuildTypeSummary(tests []TestResult) []TypeSummary {
 	typeCounts := make(map[string]*TypeSummary)
 
-	for _, test := range tests {
+	for i := range tests {
+		test := &tests[i]
 		summary, exists := typeCounts[test.Type]
 		if !exists {
 			summary = &TypeSummary{Type: test.Type}
@@ -128,9 +131,10 @@ func BuildTypeSummary(tests []TestResult) []TypeSummary {
 		}
 
 		summary.Count++
-		if test.Status == StatusPassed {
+		switch test.Status {
+		case StatusPassed:
 			summary.Passed++
-		} else if test.Status == StatusFailed {
+		case StatusFailed:
 			summary.Failed++
 		}
 	}
@@ -148,11 +152,12 @@ func BuildTypeSummary(tests []TestResult) []TypeSummary {
 	return result
 }
 
-// BuildSuiteSummary aggregates test counts by suite
+// BuildSuiteSummary aggregates test counts by suite.
 func BuildSuiteSummary(tests []TestResult) []SuiteSummary {
 	suiteCounts := make(map[string]*SuiteSummary)
 
-	for _, test := range tests {
+	for i := range tests {
+		test := &tests[i]
 		summary, exists := suiteCounts[test.Suite]
 		if !exists {
 			summary = &SuiteSummary{Suite: test.Suite}
@@ -160,9 +165,10 @@ func BuildSuiteSummary(tests []TestResult) []SuiteSummary {
 		}
 
 		summary.Count++
-		if test.Status == StatusPassed {
+		switch test.Status {
+		case StatusPassed:
 			summary.Passed++
-		} else if test.Status == StatusFailed {
+		case StatusFailed:
 			summary.Failed++
 		}
 	}
@@ -180,7 +186,7 @@ func BuildSuiteSummary(tests []TestResult) []SuiteSummary {
 	return result
 }
 
-// GetLatestRunTime returns the most recent test time across all manifests
+// GetLatestRunTime returns the most recent test time across all manifests.
 func GetLatestRunTime(manifestList []*implinternal.TestManifest) time.Time {
 	var latest time.Time
 	for _, m := range manifestList {
@@ -191,13 +197,15 @@ func GetLatestRunTime(manifestList []*implinternal.TestManifest) time.Time {
 	return latest
 }
 
-// CalculateTotalCounts aggregates pass/fail counts from test results
+// CalculateTotalCounts aggregates pass/fail counts from test results.
 func CalculateTotalCounts(tests []TestResult) TotalCounts {
 	counts := TotalCounts{}
-	for _, test := range tests {
-		if test.Status == StatusPassed {
+	for i := range tests {
+		test := &tests[i]
+		switch test.Status {
+		case StatusPassed:
 			counts.TotalPassed++
-		} else if test.Status == StatusFailed {
+		case StatusFailed:
 			counts.TotalFailed++
 		}
 	}
@@ -205,7 +213,7 @@ func CalculateTotalCounts(tests []TestResult) TotalCounts {
 }
 
 // BuildCompleteTestData aggregates all test data from manifests
-// This is the single source of truth for test data preparation used by both get and show commands
+// This is the single source of truth for test data preparation used by both get and show commands.
 func BuildCompleteTestData(manifestList []*implinternal.TestManifest) *CompleteTestData {
 	// Extract base test results
 	tests := ExtractTestResults(manifestList)

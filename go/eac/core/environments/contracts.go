@@ -10,14 +10,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Metadata holds contract version and scope information
+// Metadata holds contract version and scope information.
 type Metadata struct {
 	Version     string `yaml:"version"`
 	Description string `yaml:"description"`
 	Scope       string `yaml:"scope"`
 }
 
-// Environment represents a test execution environment
+// Environment represents a test execution environment.
 type Environment struct {
 	Moniker     string   `yaml:"moniker"`
 	Name        string   `yaml:"name"`
@@ -28,19 +28,19 @@ type Environment struct {
 	SystemDeps  []string `yaml:"system_deps"` // Required system dependencies (@deps:docker, @deps:kubectl, etc.)
 }
 
-// GetTestTag returns the test tag for this environment (@env:<moniker>)
+// GetTestTag returns the test tag for this environment (@env:<moniker>).
 func (e *Environment) GetTestTag() string {
 	return fmt.Sprintf("@env:%s", e.Moniker)
 }
 
-// EnvironmentContract represents the complete environment system contract
+// EnvironmentContract represents the complete environment system contract.
 type EnvironmentContract struct {
 	Metadata     Metadata      `yaml:"metadata"`
 	Environments []Environment `yaml:"environments"`
 }
 
 // LoadEnvironmentContract reads and parses the environment contract from the repository.
-// It reads directly from .r2r/eac/environments.yml
+// It reads directly from .r2r/eac/environments.yml.
 func LoadEnvironmentContract() (*EnvironmentContract, error) {
 	eacRoot, err := repository.GetRepoEACConfigRoot("")
 	if err != nil {
@@ -61,7 +61,7 @@ func LoadEnvironmentContract() (*EnvironmentContract, error) {
 	return &contract, nil
 }
 
-// GetEnvironment returns a specific environment by moniker
+// GetEnvironment returns a specific environment by moniker.
 func (c *EnvironmentContract) GetEnvironment(moniker string) (*Environment, error) {
 	for _, env := range c.Environments {
 		if env.Moniker == moniker {
@@ -71,7 +71,7 @@ func (c *EnvironmentContract) GetEnvironment(moniker string) (*Environment, erro
 	return nil, fmt.Errorf("environment not found: %s", moniker)
 }
 
-// GetEnvironmentsByLevel returns all environments for a specific level
+// GetEnvironmentsByLevel returns all environments for a specific level.
 func (c *EnvironmentContract) GetEnvironmentsByLevel(level string) []Environment {
 	var envs []Environment
 	for _, env := range c.Environments {
@@ -82,7 +82,7 @@ func (c *EnvironmentContract) GetEnvironmentsByLevel(level string) []Environment
 	return envs
 }
 
-// GetEnvironmentsByType returns all environments of a specific type
+// GetEnvironmentsByType returns all environments of a specific type.
 func (c *EnvironmentContract) GetEnvironmentsByType(envType string) []Environment {
 	var envs []Environment
 	for _, env := range c.Environments {
@@ -93,7 +93,7 @@ func (c *EnvironmentContract) GetEnvironmentsByType(envType string) []Environmen
 	return envs
 }
 
-// ValidateContract validates the environment contract structure and data
+// ValidateContract validates the environment contract structure and data.
 func (c *EnvironmentContract) ValidateContract() error {
 	if c.Metadata.Version == "" {
 		return fmt.Errorf("contract metadata missing version")
@@ -135,7 +135,7 @@ func (c *EnvironmentContract) ValidateContract() error {
 	return nil
 }
 
-// GetAllMonikers returns a list of all environment monikers
+// GetAllMonikers returns a list of all environment monikers.
 func (c *EnvironmentContract) GetAllMonikers() []string {
 	monikers := make([]string, len(c.Environments))
 	for i, env := range c.Environments {

@@ -10,7 +10,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/config"
 )
 
-// pathMapping tracks how a file was remapped from source to staging
+// pathMapping tracks how a file was remapped from source to staging.
 type pathMapping struct {
 	stagedPath   string // Path in staging
 	sourcePrefix string // Prefix stripped from source (e.g., "docs/explanation/")
@@ -19,7 +19,7 @@ type pathMapping struct {
 }
 
 // fixRelativePaths corrects relative links in markdown files after copy
-// This runs after step 1 (copy) to adjust links based on path remapping
+// This runs after step 1 (copy) to adjust links based on path remapping.
 func (p *Preprocessor) fixRelativePaths() error {
 	p.log("    Fixing relative paths based on source mappings...")
 
@@ -54,7 +54,7 @@ func (p *Preprocessor) fixRelativePaths() error {
 	return nil
 }
 
-// buildPathMappings analyzes copy sources to build path remapping info
+// buildPathMappings analyzes copy sources to build path remapping info.
 func (p *Preprocessor) buildPathMappings() ([]pathMapping, error) {
 	var mappings []pathMapping
 
@@ -80,7 +80,7 @@ func (p *Preprocessor) buildPathMappings() ([]pathMapping, error) {
 	return mappings, nil
 }
 
-// buildMappingsForSource builds mappings for a single copy source
+// buildMappingsForSource builds mappings for a single copy source.
 func (p *Preprocessor) buildMappingsForSource(src config.Source) ([]pathMapping, error) {
 	var mappings []pathMapping
 
@@ -135,7 +135,7 @@ func (p *Preprocessor) buildMappingsForSource(src config.Source) ([]pathMapping,
 }
 
 // extractSourcePrefix extracts the fixed directory prefix from a glob pattern
-// e.g., "docs/explanation/**/*.md" -> "docs/explanation/"
+// e.g., "docs/explanation/**/*.md" -> "docs/explanation/".
 func extractSourcePrefix(pattern string) string {
 	// Normalize to forward slashes
 	pattern = filepath.ToSlash(pattern)
@@ -159,9 +159,12 @@ func extractSourcePrefix(pattern string) string {
 	return prefix[:lastSlash+1]
 }
 
-// countPathDepth counts the number of directory components in a path
+// countPathDepth counts the number of directory components in a path.
 func countPathDepth(path string) int {
+	// Normalize path separators: convert both OS-native separators and backslashes to forward slashes
+	// This ensures consistent behavior across platforms (Windows paths work on Linux and vice versa)
 	path = filepath.ToSlash(path)
+	path = strings.ReplaceAll(path, "\\", "/")
 	path = strings.Trim(path, "/")
 	// Handle "." which represents root directory (depth 0)
 	if path == "" || path == "." {
@@ -170,14 +173,14 @@ func countPathDepth(path string) int {
 	return strings.Count(path, "/") + 1
 }
 
-// linkPattern matches markdown links and image references
+// linkPattern matches markdown links and image references.
 var linkPattern = regexp.MustCompile(`(\[.+?\]\()(\.\./)+([^)]+\))|(!\[.*?\]\()(\.\./)+([^)]+\))`)
 
-// relativePathPattern matches sequences of "../"
+// relativePathPattern matches sequences of "../".
 var relativePathPattern = regexp.MustCompile(`^((?:\.\./)+)(.*)$`)
 
 // fixFileRelativePaths adjusts relative paths in a single file
-// fileDepth is the depth of the file within the content tree (for threshold)
+// fileDepth is the depth of the file within the content tree (for threshold).
 func fixFileRelativePaths(filePath string, depthChange, fileDepth int) (bool, error) {
 	content, err := os.ReadFile(filePath)
 	if err != nil {
@@ -191,12 +194,12 @@ func fixFileRelativePaths(filePath string, depthChange, fileDepth int) (bool, er
 		return false, nil
 	}
 
-	err = os.WriteFile(filePath, []byte(modified), 0644)
+	err = os.WriteFile(filePath, []byte(modified), 0o644)
 	return err == nil, err
 }
 
 // adjustRelativePaths adjusts all relative paths in content
-// Only adjusts links that go OUTSIDE the content tree (more ../ than fileDepth)
+// Only adjusts links that go OUTSIDE the content tree (more ../ than fileDepth).
 func adjustRelativePaths(content string, depthChange, fileDepth int) string {
 	// Match markdown links: [text](../path) and ![alt](../path)
 	// Also match links with attributes: [text](../path){attrs} or [text](../path) { attrs }

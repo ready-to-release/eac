@@ -355,7 +355,7 @@ func isContainerRunning(ctx context.Context, cli DockerClient, containerName str
 	return false, nil, nil
 }
 
-// createBuildContext creates a tar archive of the build context
+// createBuildContext creates a tar archive of the build context.
 func createBuildContext(contextPath, dockerfilePath string) (io.ReadCloser, error) {
 	// Create a pipe for the tar stream
 	pr, pw := io.Pipe()
@@ -410,7 +410,6 @@ func createBuildContext(contextPath, dockerfilePath string) (io.ReadCloser, erro
 
 			return nil
 		})
-
 		if err != nil {
 			pw.CloseWithError(err)
 		}
@@ -541,14 +540,13 @@ func isImageStale(contextPath string, imageCreated time.Time) (bool, string) {
 		}
 		return nil
 	})
-
 	if err != nil {
 		return false, ""
 	}
 
 	if newestTime.After(imageCreated) {
-		relPath, _ := filepath.Rel(contextPath, newestFile)
-		if relPath == "" {
+		relPath, relErr := filepath.Rel(contextPath, newestFile)
+		if relErr != nil || relPath == "" {
 			relPath = filepath.Base(newestFile)
 		}
 		return true, fmt.Sprintf("%s modified", relPath)
@@ -567,7 +565,7 @@ func removeExistingContainer(ctx context.Context, cli DockerClient, containerNam
 	for _, c := range containers {
 		for _, name := range c.Names {
 			if strings.TrimPrefix(name, "/") == containerName {
-				cli.ContainerRemove(ctx, c.ID, container.RemoveOptions{Force: true})
+				_ = cli.ContainerRemove(ctx, c.ID, container.RemoveOptions{Force: true}) //nolint:errcheck // best-effort cleanup
 				return
 			}
 		}

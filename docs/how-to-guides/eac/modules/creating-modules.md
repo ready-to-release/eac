@@ -17,13 +17,13 @@ A module is a logical unit of code with:
 
 Select the appropriate type based on your module's language:
 
-| Language | Module Type | Build Support | Test Support |
-|----------|-------------|---------------|--------------|
-| Go | `go` | ✅ Full (cross-compile, version inject) | ✅ gotest, godog |
-| TypeScript/JavaScript | `typescript` | ✅ npm, tsc | ✅ mocha, cucumber-js |
-| Any (containerized) | `container` | ✅ Docker buildx | Depends on container |
-| Documentation | `docs` | ✅ MkDocs | ❌ No tests |
-| None (static files) | `static` | ❌ No build | ❌ No tests |
+| Language              | Module Type   | Build Support                            | Test Support           |
+| --------------------- | ------------- | ---------------------------------------- | ---------------------- |
+| Go                    | `go`          | ✅ Full (cross-compile, version inject)  | ✅ gotest, godog       |
+| TypeScript/JavaScript | `typescript`  | ✅ npm, tsc                              | ✅ mocha, cucumber-js  |
+| Any (containerized)   | `container`   | ✅ Docker buildx                         | Depends on container   |
+| Documentation         | `docs`        | ✅ MkDocs                                | ❌ No tests            |
+| None (static files)   | `static`      | ❌ No build                              | ❌ No tests            |
 
 **For other languages** (Python, Rust, Java): Use `container` type with a Dockerfile that builds your code.
 
@@ -118,17 +118,17 @@ modules:
 
 The unified type system uses four base types. Behavior is determined by per-module artifact definitions:
 
-| Type | Description | Capabilities |
-|------|-------------|--------------|
-| `go` | Go module (library, executable, or test) | go_module |
-| `container` | Docker container module | buildx |
-| `typescript` | TypeScript/npm module | npm_package, typescript |
-| `static` | Static files (no build) | none |
+| Type         | Description                              | Capabilities            |
+| ------------ | ---------------------------------------- | ----------------------- |
+| `go`         | Go module (library, executable, or test) | go_module               |
+| `container`  | Docker container module                  | buildx                  |
+| `typescript` | TypeScript/npm module                    | npm_package, typescript |
+| `static`     | Static files (no build)                  | none                    |
 
 See available types:
 
 ```bash
-r2r eac show moduletypes
+r2r eac show component-types
 ```
 
 ## Dependencies
@@ -228,12 +228,12 @@ r2r eac validate contracts
 
 ## Troubleshooting
 
-| Problem | Solution |
-|---------|----------|
-| Overlapping files | Use `exclude` patterns or adjust ownership |
-| Missing type | Add type to `module-types.yml` or use existing |
-| Build fails | Check `build_deps` match available system dependencies |
-| Wrong files listed | Verify glob patterns and root directory |
+| Problem            | Solution                                               |
+| ------------------ | ------------------------------------------------------ |
+| Overlapping files  | Use `exclude` patterns or adjust ownership             |
+| Missing type       | Add type to `module-types.yml` or use existing         |
+| Build fails        | Check `build_deps` match available system dependencies |
+| Wrong files listed | Verify glob patterns and root directory                |
 
 ## See Also
 

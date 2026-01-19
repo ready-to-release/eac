@@ -26,7 +26,7 @@ func init() {
 	registry.Register(ShowBooks)
 }
 
-// ShowBooks displays all configured books in a table format
+// ShowBooks displays all configured books in a table format.
 func ShowBooks() int {
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
@@ -75,7 +75,7 @@ func ShowBooks() int {
 	bookToModules := make(map[string][]string)
 	if cfg.Repository != nil {
 		for _, mod := range cfg.Repository.Modules {
-			for _, bookName := range mod.Books {
+			for _, bookName := range mod.GetBooks() {
 				bookToModules[bookName] = append(bookToModules[bookName], mod.Moniker)
 			}
 		}

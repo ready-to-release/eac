@@ -92,7 +92,7 @@ func ListSuites() []string {
 	return monikers
 }
 
-// convertSuiteDef converts a config definition to a runtime TestSuite
+// convertSuiteDef converts a config definition to a runtime TestSuite.
 func convertSuiteDef(def *config.TestSuiteDef) *TestSuite {
 	selectors := make([]TagSelector, len(def.Selectors))
 	for i, sel := range def.Selectors {
@@ -171,9 +171,7 @@ func (suite *TestSuite) BuildGodogTagFilter() string {
 		// RequireTags: each tag becomes an AND condition
 		// Example: ["@smoke", "@critical"] → added as separate "&& @smoke && @critical"
 		// NOTE: RequireTags are added FIRST to ensure they come before AnyOfTags
-		for _, tag := range selector.RequireTags {
-			selectorParts = append(selectorParts, tag)
-		}
+		selectorParts = append(selectorParts, selector.RequireTags...)
 
 		// ExcludeTags: each tag becomes a NOT condition with tilde prefix
 		// Example: ["@L0", "@L1"] → "&& ~@L0 && ~@L1"
@@ -205,7 +203,7 @@ func (suite *TestSuite) BuildGodogTagFilter() string {
 	return ""
 }
 
-// SelectionStats contains statistics about test selection
+// SelectionStats contains statistics about test selection.
 type SelectionStats struct {
 	TotalDiscovered  int // Total tests discovered
 	Skipped          int // Tests tagged with @skip:<reason>
@@ -213,7 +211,7 @@ type SelectionStats struct {
 	Selected         int // Tests selected for the suite
 }
 
-// SelectTestsWithStats applies suite selectors to filter tests and returns statistics
+// SelectTestsWithStats applies suite selectors to filter tests and returns statistics.
 func (suite *TestSuite) SelectTestsWithStats(allTests []TestReference) ([]TestReference, SelectionStats) {
 	selected := []TestReference{}
 	stats := SelectionStats{
@@ -250,7 +248,7 @@ func (suite *TestSuite) SelectTests(allTests []TestReference) []TestReference {
 	return selected
 }
 
-// Matches checks if a test matches the suite's selectors
+// Matches checks if a test matches the suite's selectors.
 func (suite *TestSuite) Matches(test TestReference) bool {
 	// Test must match at least one selector
 	for _, selector := range suite.Selectors {
@@ -261,7 +259,7 @@ func (suite *TestSuite) Matches(test TestReference) bool {
 	return false
 }
 
-// matchesSelector checks if tags match a selector
+// matchesSelector checks if tags match a selector.
 func matchesSelector(tags []string, selector TagSelector) bool {
 	// Check required tags (AND)
 	for _, required := range selector.RequireTags {
@@ -294,7 +292,7 @@ func matchesSelector(tags []string, selector TagSelector) bool {
 	return true
 }
 
-// GetSystemDependencies extracts all @deps:* tags from tests (excludes @depm:* and OS platform tags)
+// GetSystemDependencies extracts all @deps:* tags from tests (excludes @depm:* and OS platform tags).
 func GetSystemDependencies(tests []TestReference) []string {
 	depsMap := make(map[string]bool)
 	osPlatformTagsFull := GetOSPlatformTagsFull()
@@ -319,7 +317,7 @@ func GetSystemDependencies(tests []TestReference) []string {
 	return deps
 }
 
-// GetModuleDependencies extracts all @depm:* tags from tests
+// GetModuleDependencies extracts all @depm:* tags from tests.
 func GetModuleDependencies(tests []TestReference) []string {
 	depsMap := make(map[string]bool)
 
@@ -341,7 +339,7 @@ func GetModuleDependencies(tests []TestReference) []string {
 	return deps
 }
 
-// GetManualTests returns only manual tests from a list
+// GetManualTests returns only manual tests from a list.
 func GetManualTests(tests []TestReference) []TestReference {
 	manual := []TestReference{}
 	for _, test := range tests {
@@ -352,7 +350,7 @@ func GetManualTests(tests []TestReference) []TestReference {
 	return manual
 }
 
-// GetGxPTests returns only GxP tests from a list
+// GetGxPTests returns only GxP tests from a list.
 func GetGxPTests(tests []TestReference) []TestReference {
 	gxp := []TestReference{}
 	for _, test := range tests {

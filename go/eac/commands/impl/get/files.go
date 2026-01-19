@@ -115,7 +115,7 @@ func GetFiles() int {
 	})
 }
 
-// filterOptions holds parsed filter flags
+// filterOptions holds parsed filter flags.
 type filterOptions struct {
 	ChangedOnly bool
 	StagedOnly  bool
@@ -123,7 +123,7 @@ type filterOptions struct {
 	Pattern     string
 }
 
-// parseFilterFlags extracts filter flags from command arguments
+// parseFilterFlags extracts filter flags from command arguments.
 func parseFilterFlags(args []string) (*filterOptions, error) {
 	opts := &filterOptions{}
 
@@ -158,7 +158,7 @@ func parseFilterFlags(args []string) (*filterOptions, error) {
 	return opts, nil
 }
 
-// applyFilters applies all active filters to the file list
+// applyFilters applies all active filters to the file list.
 func applyFilters(files []repository.RepositoryFileWithModule, opts *filterOptions, workspaceRoot string) ([]repository.RepositoryFileWithModule, error) {
 	result := files
 
@@ -220,7 +220,7 @@ func applyFilters(files []repository.RepositoryFileWithModule, opts *filterOptio
 	return result, nil
 }
 
-// getChangedFiles returns list of modified/unstaged files from git
+// getChangedFiles returns list of modified/unstaged files from git.
 func getChangedFiles(workspaceRoot string) ([]string, error) {
 	cmd := exec.Command("git", "diff", "--name-only", "HEAD")
 	cmd.Dir = workspaceRoot

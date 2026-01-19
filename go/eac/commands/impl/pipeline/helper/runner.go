@@ -16,13 +16,13 @@ import (
 
 var log = logging.C()
 
-// PipelineRunner orchestrates execution of module pipelines
+// PipelineRunner orchestrates execution of module pipelines.
 type PipelineRunner struct {
 	repoPath string
 	ghCLI    GitHubCLI
 }
 
-// New creates a new PipelineRunner
+// New creates a new PipelineRunner.
 func New(repoPath string) *PipelineRunner {
 	return &PipelineRunner{
 		repoPath: repoPath,
@@ -30,8 +30,8 @@ func New(repoPath string) *PipelineRunner {
 	}
 }
 
-// RunPipeline executes a single pipeline
-func (r *PipelineRunner) RunPipeline(moniker string, ref string) error {
+// RunPipeline executes a single pipeline.
+func (r *PipelineRunner) RunPipeline(moniker, ref string) error {
 	workflowFile := moniker + ".yaml"
 
 	// Check if workflow file exists
@@ -58,7 +58,7 @@ func (r *PipelineRunner) RunPipeline(moniker string, ref string) error {
 	return nil
 }
 
-// RunPipelines executes multiple pipelines respecting dependencies
+// RunPipelines executes multiple pipelines respecting dependencies.
 func (r *PipelineRunner) RunPipelines(monikers []string, ref string) error {
 	if len(monikers) == 0 {
 		log.Info("No modules specified")
@@ -95,7 +95,7 @@ func (r *PipelineRunner) RunPipelines(monikers []string, ref string) error {
 	return r.executeLayers(filteredPlan, ref)
 }
 
-// RunAllPipelines runs all modules in the repository
+// RunAllPipelines runs all modules in the repository.
 func (r *PipelineRunner) RunAllPipelines(ref string) error {
 	log.Info("Running all modules in dependency order...")
 
@@ -127,7 +127,7 @@ func (r *PipelineRunner) RunAllPipelines(ref string) error {
 	return r.executeLayers(filteredPlan, ref)
 }
 
-// RunAllChangedPipelines detects changed modules and runs their pipelines
+// RunAllChangedPipelines detects changed modules and runs their pipelines.
 func (r *PipelineRunner) RunAllChangedPipelines(ref string) error {
 	log.Info("Detecting changed modules...")
 
@@ -169,7 +169,7 @@ func (r *PipelineRunner) RunAllChangedPipelines(ref string) error {
 	return r.RunPipelines(modules, ref)
 }
 
-// executeLayers executes pipeline layers sequentially, with parallel execution within each layer
+// executeLayers executes pipeline layers sequentially, with parallel execution within each layer.
 func (r *PipelineRunner) executeLayers(plan *repository.ExecutionPlan, ref string) error {
 	for layerIdx, layer := range plan.Layers {
 		log.Info("================================================")
@@ -218,7 +218,7 @@ func (r *PipelineRunner) executeLayers(plan *repository.ExecutionPlan, ref strin
 	return nil
 }
 
-// filterModulesWithWorkflows filters the execution plan to only include modules with workflow files
+// filterModulesWithWorkflows filters the execution plan to only include modules with workflow files.
 func (r *PipelineRunner) filterModulesWithWorkflows(plan *repository.ExecutionPlan) (*repository.ExecutionPlan, error) {
 	workflowsDir := filepath.Join(r.repoPath, paths.GitHubDir, paths.WorkflowsDir)
 

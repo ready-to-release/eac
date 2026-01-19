@@ -4,12 +4,12 @@ Learn how to create and maintain documentation with templates, specifications, a
 
 ## In This Section
 
-| Guide | What You'll Accomplish |
-|-------|------------------------|
-| [Generate Architecture Diagrams](./generate-architecture-diagrams.md) | Create C4 model diagrams with AI |
-| [Create Specifications](./create-specifications.md) | Generate Gherkin specs from requirements |
-| [Use Documentation Templates](./use-documentation-templates.md) | Apply templates for consistency |
-| [Build Documentation Site](./build-documentation-site.md) | Generate and preview documentation |
+| Guide                                                                 | What You'll Accomplish                   |
+| --------------------------------------------------------------------- | ---------------------------------------- |
+| [Generate Architecture Diagrams](./generate-architecture-diagrams.md) | Create C4 model diagrams with AI         |
+| [Create Specifications](./create-specifications.md)                   | Generate Gherkin specs from requirements |
+| [Use Documentation Templates](./use-documentation-templates.md)       | Apply templates for consistency          |
+| [Build Documentation Site](./build-documentation-site.md)             | Generate and preview documentation       |
 
 ## Documentation Types
 

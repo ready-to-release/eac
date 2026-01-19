@@ -16,10 +16,10 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
-// containerCounter ensures unique container names even with parallel execution
+// containerCounter ensures unique container names even with parallel execution.
 var containerCounter uint64
 
-// Package-level logger for internal scanner operations
+// Package-level logger for internal scanner operations.
 var log = logging.C()
 
 // OneOffDockerRunner wraps serve.DockerClient for running one-off container executions.
@@ -29,7 +29,7 @@ type OneOffDockerRunner struct {
 	client serve.DockerClient
 }
 
-// NewOneOffDockerRunner creates a new one-off Docker runner
+// NewOneOffDockerRunner creates a new one-off Docker runner.
 func NewOneOffDockerRunner() (*OneOffDockerRunner, error) {
 	client, err := serve.NewDockerClient()
 	if err != nil {
@@ -42,14 +42,14 @@ func NewOneOffDockerRunner() (*OneOffDockerRunner, error) {
 	}, nil
 }
 
-// NewOneOffDockerRunnerWithClient creates a runner with a custom Docker client (for testing)
+// NewOneOffDockerRunnerWithClient creates a runner with a custom Docker client (for testing).
 func NewOneOffDockerRunnerWithClient(client serve.DockerClient) *OneOffDockerRunner {
 	return &OneOffDockerRunner{
 		client: client,
 	}
 }
 
-// CheckAndPullImage checks if an image exists and pulls it if not
+// CheckAndPullImage checks if an image exists and pulls it if not.
 func (r *OneOffDockerRunner) CheckAndPullImage(imageName string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
@@ -89,7 +89,7 @@ func (r *OneOffDockerRunner) CheckAndPullImage(imageName string) error {
 	return nil
 }
 
-// RunContainer runs a one-off container, captures output, and ensures cleanup
+// RunContainer runs a one-off container, captures output, and ensures cleanup.
 func (r *OneOffDockerRunner) RunContainer(containerConfig *container.Config, hostConfig *container.HostConfig) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
@@ -181,7 +181,7 @@ func (r *OneOffDockerRunner) RunContainer(containerConfig *container.Config, hos
 	return stripDockerLogHeaders(output), nil
 }
 
-// Close closes the Docker client connection
+// Close closes the Docker client connection.
 func (r *OneOffDockerRunner) Close() error {
 	if r.client != nil {
 		return r.client.Close()
@@ -237,7 +237,7 @@ func stripDockerLogHeaders(output []byte) []byte {
 }
 
 // isBalancedJSON checks if JSON braces/brackets are properly balanced
-// This is a simple validation - not as thorough as json.Valid but faster
+// This is a simple validation - not as thorough as json.Valid but faster.
 func isBalancedJSON(data []byte) bool {
 	depth := 0
 	inString := false
@@ -264,9 +264,10 @@ func isBalancedJSON(data []byte) bool {
 			continue
 		}
 
-		if b == '{' || b == '[' {
+		switch b {
+		case '{', '[':
 			depth++
-		} else if b == '}' || b == ']' {
+		case '}', ']':
 			depth--
 			if depth == 0 {
 				// Found complete JSON

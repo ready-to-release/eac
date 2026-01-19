@@ -6,15 +6,15 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/impl/scan/internal"
 )
 
-// Evidence represents a security scan evidence file
+// Evidence represents a security scan evidence file.
 type Evidence = internal.EvidenceFile
 
-// ReadEvidence reads and parses an evidence file
+// ReadEvidence reads and parses an evidence file.
 func ReadEvidence(filepath string) (*Evidence, error) {
 	return internal.ReadEvidence(filepath)
 }
 
-// SetupMocks configures mock outputs for all security tools
+// SetupMocks configures mock outputs for all security tools.
 func SetupMocks() {
 	// Set mock output for all Trivy-based scanners
 	mockTrivyData := map[string]interface{}{
@@ -53,7 +53,7 @@ func SetupMocks() {
 	internal.SetMockZAPOutput(mockZAPData)
 }
 
-// ResetMocks clears all mock outputs
+// ResetMocks clears all mock outputs.
 func ResetMocks() {
 	internal.ResetMockTrivyOutput()
 	internal.ResetMockSemgrepOutput()

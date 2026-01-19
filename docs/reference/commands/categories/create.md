@@ -12,15 +12,15 @@ All create commands use structured AI generation with format-specific validation
 
 Each command generates content in a specific structured format:
 
-| Command | Output Format | Validation |
-|---------|--------------|------------|
-| `commit-message` | Plaintext (conventional commits) | Format validation and retry |
-| `spec` | Gherkin (.feature files) | Syntax, step definitions, and quality standards |
-| `design` | Structurizr DSL (workspace.dsl) | DSL syntax validation via Structurizr CLI |
-| `pr` | Markdown (GitHub PR format) | Format validation and retry |
-| `risk-profile` | OSCAL Profile JSON | JSON schema validation |
-| `risk-assess` | OSCAL Assessment Results JSON | JSON schema validation |
-| `squash-message` | Plaintext (commit messages) | Format validation and retry |
+| Command          | Output Format                    | Validation                                      |
+| ---------------- | -------------------------------- | ----------------------------------------------- |
+| `commit-message` | Plaintext (conventional commits) | Format validation and retry                     |
+| `spec`           | Gherkin (.feature files)         | Syntax, step definitions, and quality standards |
+| `design`         | Structurizr DSL (workspace.dsl)  | DSL syntax validation via Structurizr CLI       |
+| `pr`             | Markdown (GitHub PR format)      | Format validation and retry                     |
+| `risk-profile`   | OSCAL Profile JSON               | JSON schema validation                          |
+| `risk-assess`    | OSCAL Assessment Results JSON    | JSON schema validation                          |
+| `squash-message` | Plaintext (commit messages)      | Format validation and retry                     |
 
 ### Generation Process
 

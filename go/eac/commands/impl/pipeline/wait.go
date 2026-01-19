@@ -39,7 +39,7 @@ func init() {
 	registry.Register(PipelineWait)
 }
 
-// WorkflowRun represents the status of a GitHub Actions workflow run
+// WorkflowRun represents the status of a GitHub Actions workflow run.
 type WorkflowRun struct {
 	DatabaseID int    `json:"databaseId"`
 	Name       string `json:"name"`
@@ -183,7 +183,7 @@ func PipelineWait() int {
 	}
 }
 
-// getWorkflowRunStatus fetches the status of a workflow run from GitHub
+// getWorkflowRunStatus fetches the status of a workflow run from GitHub.
 func getWorkflowRunStatus(runID string) (*WorkflowRun, error) {
 	cmd := exec.Command("gh", "run", "view", runID, "--json", "databaseId,name,status,conclusion,url")
 	output, err := cmd.Output()
@@ -199,7 +199,7 @@ func getWorkflowRunStatus(runID string) (*WorkflowRun, error) {
 	return &run, nil
 }
 
-// formatDuration formats a duration as MM:SS or HH:MM:SS
+// formatDuration formats a duration as MM:SS or HH:MM:SS.
 func formatDuration(d time.Duration) string {
 	d = d.Round(time.Second)
 	h := d / time.Hour

@@ -35,7 +35,7 @@ func init() {
 
 // testTimingsFlags defines valid flags for the get test-timings command
 
-// TestTiming represents timing data for a single test scenario
+// TestTiming represents timing data for a single test scenario.
 type TestTiming struct {
 	Module   string  `json:"module" yaml:"module"`
 	Package  string  `json:"package" yaml:"package"`
@@ -44,7 +44,7 @@ type TestTiming struct {
 	Status   string  `json:"status" yaml:"status"` // PASS or FAIL
 }
 
-// ModuleSummary represents aggregated timing data for a module
+// ModuleSummary represents aggregated timing data for a module.
 type ModuleSummary struct {
 	Module        string       `json:"module" yaml:"module"`
 	TotalTests    int          `json:"total_tests" yaml:"total_tests"`
@@ -55,7 +55,7 @@ type ModuleSummary struct {
 	Scenarios     []TestTiming `json:"scenarios" yaml:"scenarios"`
 }
 
-// TestTimingSummary represents complete timing analysis
+// TestTimingSummary represents complete timing analysis.
 type TestTimingSummary struct {
 	TotalTests    int                      `json:"total_tests" yaml:"total_tests"`
 	PassedTests   int                      `json:"passed_tests" yaml:"passed_tests"`
@@ -77,7 +77,7 @@ func GetTestTimings() int {
 	return GetTestTimingsFiltered(nil)
 }
 
-// GetTestTimingsFiltered gets test timings with optional module filtering
+// GetTestTimingsFiltered gets test timings with optional module filtering.
 func GetTestTimingsFiltered(moduleFilter []string) int {
 	return internal.ExecuteGetCommand(func() (interface{}, error) {
 		// Get repository root
@@ -119,7 +119,7 @@ func GetTestTimingsFiltered(moduleFilter []string) int {
 	})
 }
 
-// ParseTestLogs recursively finds and parses all test.log files
+// ParseTestLogs recursively finds and parses all test.log files.
 func ParseTestLogs(testDir string) ([]TestTiming, error) {
 	var allTimings []TestTiming
 
@@ -141,7 +141,6 @@ func ParseTestLogs(testDir string) ([]TestTiming, error) {
 
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +148,7 @@ func ParseTestLogs(testDir string) ([]TestTiming, error) {
 	return allTimings, nil
 }
 
-// TestEvent represents a JSON test event from go test
+// TestEvent represents a JSON test event from go test.
 type TestEvent struct {
 	Action  string  `json:"Action"`
 	Package string  `json:"Package"`
@@ -157,7 +156,7 @@ type TestEvent struct {
 	Elapsed float64 `json:"Elapsed"`
 }
 
-// parseTestLog parses a single test.log file using JSON test events
+// parseTestLog parses a single test.log file using JSON test events.
 func parseTestLog(logPath string) ([]TestTiming, error) {
 	file, err := os.Open(logPath)
 	if err != nil {
@@ -183,7 +182,7 @@ func parseTestLog(logPath string) ([]TestTiming, error) {
 	decoder := json.NewDecoder(file)
 
 	// Try JSON parsing first
-	file.Seek(0, 0) // Reset to beginning
+	_, _ = file.Seek(0, 0) //nolint:errcheck // reset position, error doesn't affect parsing
 	for {
 		var event TestEvent
 		if err := decoder.Decode(&event); err != nil {
@@ -219,7 +218,7 @@ func parseTestLog(logPath string) ([]TestTiming, error) {
 	}
 
 	// Fallback to regex parsing for non-JSON logs
-	file.Seek(0, 0) // Reset to beginning
+	_, _ = file.Seek(0, 0) //nolint:errcheck // reset position, error doesn't affect parsing
 	scanner = bufio.NewScanner(file)
 	scenarioRe := regexp.MustCompile(`^\s+---\s+(PASS|FAIL):\s+\S+/(.+?)\s+\(([0-9.]+)s\)`)
 
@@ -253,7 +252,7 @@ func parseTestLog(logPath string) ([]TestTiming, error) {
 	return timings, nil
 }
 
-// filterTimingsByModules filters timings to only include specified modules
+// filterTimingsByModules filters timings to only include specified modules.
 func filterTimingsByModules(timings []TestTiming, modules []string) []TestTiming {
 	// Create a set of modules for O(1) lookup
 	moduleSet := make(map[string]bool)
@@ -271,7 +270,7 @@ func filterTimingsByModules(timings []TestTiming, modules []string) []TestTiming
 	return filtered
 }
 
-// BuildSummary aggregates timing data and builds summary
+// BuildSummary aggregates timing data and builds summary.
 func BuildSummary(timings []TestTiming, testOutputDir string) *TestTimingSummary {
 	summary := &TestTimingSummary{
 		TestOutputDir: testOutputDir,

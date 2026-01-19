@@ -96,7 +96,7 @@ func PipelineRun() int {
 	return 0
 }
 
-// getCurrentBranch gets the current git branch name
+// getCurrentBranch gets the current git branch name.
 func getCurrentBranch() string {
 	cmd := exec.Command("git", "branch", "--show-current")
 	output, err := cmd.Output()

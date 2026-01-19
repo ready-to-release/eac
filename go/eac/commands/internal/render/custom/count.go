@@ -14,7 +14,7 @@ func init() {
 // RenderCount produces a simple count of modules
 // This renderer is ONLY available for the "get modules" command
 // Input: YAML bytes representing module contracts
-// Output: Simple count message
+// Output: Simple count message.
 func RenderCount(yamlBytes []byte) (string, error) {
 	// Parse YAML to count modules
 	var modules []map[string]interface{}

@@ -6,35 +6,35 @@ import (
 	"strings"
 )
 
-// CommandsFileName is the name of the commands configuration file
+// CommandsFileName is the name of the commands configuration file.
 const CommandsFileName = "commands.yml"
 
 // CommandsConfig holds CLI command documentation mapping configuration.
-// Loaded from .r2r/eac/commands.yml
+// Loaded from .r2r/eac/commands.yml.
 type CommandsConfig struct {
 	Defaults   CommandsDefaults           `yaml:"defaults"`
 	Categories map[string]CategoryConfig  `yaml:"categories"`
 	Overrides  map[string]CommandOverride `yaml:"overrides"`
 }
 
-// CommandsDefaults holds default settings for command documentation
+// CommandsDefaults holds default settings for command documentation.
 type CommandsDefaults struct {
 	DocsBase            string `yaml:"docs_base"`
 	UncategorizedFolder string `yaml:"uncategorized_folder"`
 }
 
-// CategoryConfig defines a command category
+// CategoryConfig defines a command category.
 type CategoryConfig struct {
 	Description string `yaml:"description"`
 }
 
-// CommandOverride defines per-command overrides
+// CommandOverride defines per-command overrides.
 type CommandOverride struct {
 	Path     string `yaml:"path"`
 	SkipDocs bool   `yaml:"skip_docs"`
 }
 
-// DefaultCommandsConfig returns sensible defaults when no config file exists
+// DefaultCommandsConfig returns sensible defaults when no config file exists.
 func DefaultCommandsConfig() *CommandsConfig {
 	return &CommandsConfig{
 		Defaults: CommandsDefaults{
@@ -60,12 +60,12 @@ func DefaultCommandsConfig() *CommandsConfig {
 	}
 }
 
-// Initialize is a no-op but kept for interface consistency
+// Initialize is a no-op but kept for interface consistency.
 func (c *CommandsConfig) Initialize() error {
 	return nil
 }
 
-// ShouldSkipDocs returns true if a command should not require documentation
+// ShouldSkipDocs returns true if a command should not require documentation.
 func (c *CommandsConfig) ShouldSkipDocs(command string) bool {
 	if override, ok := c.Overrides[command]; ok {
 		return override.SkipDocs
@@ -75,7 +75,7 @@ func (c *CommandsConfig) ShouldSkipDocs(command string) bool {
 
 // GetDocPath returns the expected documentation path for a command.
 // The repoRoot is needed to check if category directories exist.
-func (c *CommandsConfig) GetDocPath(command string, sourcePath string, repoRoot string) string {
+func (c *CommandsConfig) GetDocPath(command, sourcePath, repoRoot string) string {
 	// Check explicit path override first
 	if override, ok := c.Overrides[command]; ok && override.Path != "" {
 		return override.Path
@@ -118,7 +118,7 @@ func (c *CommandsConfig) GetDocPath(command string, sourcePath string, repoRoot 
 	return filepath.Join(docsBase, category, subcommand+".md")
 }
 
-// GetCategories returns the list of valid category names
+// GetCategories returns the list of valid category names.
 func (c *CommandsConfig) GetCategories() []string {
 	categories := make([]string, 0, len(c.Categories))
 	for name := range c.Categories {
@@ -127,7 +127,7 @@ func (c *CommandsConfig) GetCategories() []string {
 	return categories
 }
 
-// IsValidCategory checks if a category name is valid
+// IsValidCategory checks if a category name is valid.
 func (c *CommandsConfig) IsValidCategory(name string) bool {
 	_, ok := c.Categories[name]
 	return ok

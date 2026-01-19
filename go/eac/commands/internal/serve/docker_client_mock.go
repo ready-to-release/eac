@@ -1,3 +1,4 @@
+//nolint:errcheck // Mock implementations use type assertions that are controlled in tests
 package serve
 
 import (
@@ -12,7 +13,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// MockDockerClient is a mock implementation of DockerClient for testing
+// MockDockerClient is a mock implementation of DockerClient for testing.
 type MockDockerClient struct {
 	mock.Mock
 }
@@ -92,5 +93,5 @@ func (m *MockDockerClient) Close() error {
 	return args.Error(0)
 }
 
-// Ensure MockDockerClient implements DockerClient
+// Ensure MockDockerClient implements DockerClient.
 var _ DockerClient = (*MockDockerClient)(nil)

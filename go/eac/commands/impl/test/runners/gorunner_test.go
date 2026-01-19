@@ -61,6 +61,16 @@ func TestExtractGoBuildTags(t *testing.T) {
 			input:    "@deps:az-cli-tools",
 			expected: "deps_az_cli_tools",
 		},
+		{
+			name:     "negated L-level tags should be excluded",
+			input:    "~@L2 && ~@L3 && ~@L4 && @L0,@L1",
+			expected: "L0,L1",
+		},
+		{
+			name:     "all negated L-level tags",
+			input:    "~@L0 && ~@L1 && ~@L2",
+			expected: "",
+		},
 	}
 
 	for _, tt := range tests {

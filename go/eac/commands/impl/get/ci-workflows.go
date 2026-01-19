@@ -82,8 +82,9 @@ func GetCIWorkflows() int {
 			fmt.Println(m)
 		}
 	case "json":
-		output, _ := json.Marshal(modules)
-		fmt.Println(string(output))
+		if output, err := json.Marshal(modules); err == nil {
+			fmt.Println(string(output))
+		}
 	default: // "space"
 		fmt.Println(strings.Join(modules, " "))
 	}

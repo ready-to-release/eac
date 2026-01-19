@@ -11,7 +11,7 @@ import (
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/logging"
 )
 
-// IsRunningInContainer detects if we're running inside a Docker container
+// IsRunningInContainer detects if we're running inside a Docker container.
 func IsRunningInContainer() bool {
 	// Check for .dockerenv file (standard Docker indicator)
 	if _, err := os.Stat("/.dockerenv"); err == nil {
@@ -38,7 +38,7 @@ func IsRunningInContainer() bool {
 }
 
 // CleanupChildContainers stops all containers that were started from within this container
-// This is useful for Docker-in-Docker scenarios where the parent container starts child containers
+// This is useful for Docker-in-Docker scenarios where the parent container starts child containers.
 func (ch *ContainerHost) CleanupChildContainers() error {
 	ctx := context.Background()
 
@@ -129,7 +129,7 @@ func (ch *ContainerHost) CleanupChildContainers() error {
 	return nil
 }
 
-// CleanupOrphanedContainers removes containers that match r2r-cli patterns but are no longer needed
+// CleanupOrphanedContainers removes containers that match r2r-cli patterns but are no longer needed.
 func (ch *ContainerHost) CleanupOrphanedContainers() error {
 	ctx := context.Background()
 
@@ -163,9 +163,9 @@ func (ch *ContainerHost) CleanupOrphanedContainers() error {
 	return nil
 }
 
-// Helper function to check if a string contains a substring
+// Helper function to check if a string contains a substring.
 func contains(s, substr string) bool {
-	return len(s) > 0 && len(substr) > 0 && (s == substr || len(s) > len(substr) && containsSubstring(s, substr))
+	return s != "" && substr != "" && (s == substr || len(s) > len(substr) && containsSubstring(s, substr))
 }
 
 func containsSubstring(s, substr string) bool {
@@ -186,7 +186,7 @@ func containsString(slice []string, item string) bool {
 	return false
 }
 
-// extractContainerID attempts to extract container ID from cgroup content
+// extractContainerID attempts to extract container ID from cgroup content.
 func extractContainerID(cgroupContent string) string {
 	// Look for patterns like: /docker/<container-id> or /containerd/<container-id>
 	lines := splitLines(cgroupContent)
@@ -223,7 +223,7 @@ func splitLines(s string) []string {
 }
 
 func lastIndex(s, substr string) int {
-	if len(substr) == 0 || len(substr) > len(s) {
+	if substr == "" || len(substr) > len(s) {
 		return -1
 	}
 	for i := len(s) - len(substr); i >= 0; i-- {

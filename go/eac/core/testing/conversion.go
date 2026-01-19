@@ -32,11 +32,11 @@ func ConvertToEntries(
 			module = extractModuleFromPath(test.FilePath, fileModuleMap, repoRoot)
 		}
 
-		// Look up the owning module's type
+		// Look up the owning module's package types
 		moduleType := ""
 		if module != "" && moduleRegistry != nil {
 			if mod, exists := moduleRegistry.Get(module); exists {
-				moduleType = mod.Type
+				moduleType = mod.GetComponentTypesDisplay()
 			}
 		}
 
@@ -83,8 +83,8 @@ func ConvertToEntries(
 
 // extractPackageFromPath extracts the package/feature name from a file path.
 // For specs: specs/MODULE/PACKAGE/... -> PACKAGE
-// For go tests: go/eac/MODULE/PACKAGE/..._test.go -> PACKAGE
-func extractPackageFromPath(filePath string, repoRoot string) string {
+// For go tests: go/eac/MODULE/PACKAGE/..._test.go -> PACKAGE.
+func extractPackageFromPath(filePath, repoRoot string) string {
 	normalized := normalizePathSeparators(filePath)
 	repoRootNorm := normalizePathSeparators(repoRoot)
 
@@ -189,7 +189,7 @@ func filterTagsByPrefix(tags []string, prefix string) []string {
 }
 
 // filterTagsByPatterns returns tags that exactly match any of the given patterns.
-func filterTagsByPatterns(tags []string, patterns []string) []string {
+func filterTagsByPatterns(tags, patterns []string) []string {
 	result := []string{}
 	for _, tag := range tags {
 		for _, pattern := range patterns {

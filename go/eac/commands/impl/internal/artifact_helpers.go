@@ -11,7 +11,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 )
 
-// ResolvedArtifact represents an artifact with metadata overrides applied and existence checked
+// ResolvedArtifact represents an artifact with metadata overrides applied and existence checked.
 type ResolvedArtifact struct {
 	// From artifact definition
 	Type       string   `json:"type" yaml:"type"`
@@ -29,7 +29,7 @@ type ResolvedArtifact struct {
 	Error            string `json:"error,omitempty" yaml:"error,omitempty"`
 }
 
-// ArtifactResolutionSummary provides summary statistics for artifact resolution
+// ArtifactResolutionSummary provides summary statistics for artifact resolution.
 type ArtifactResolutionSummary struct {
 	Total     int `json:"total" yaml:"total"`
 	Exists    int `json:"exists" yaml:"exists"`
@@ -37,22 +37,20 @@ type ArtifactResolutionSummary struct {
 	Overrides int `json:"overrides" yaml:"overrides"`
 }
 
-// ResolveArtifactsForModule resolves all artifacts for a module with metadata applied
+// ResolveArtifactsForModule resolves all artifacts for a module with metadata applied.
 func ResolveArtifactsForModule(
 	module *config.Module,
-	moduleType *config.ModuleTypeDef,
 	buildDir string,
 	targetOS, targetArch string,
 ) ([]ResolvedArtifact, *ArtifactResolutionSummary, error) {
-	return ResolveArtifactsForModuleWithConfig(module, moduleType, buildDir, targetOS, targetArch, nil)
+	return ResolveArtifactsForModuleWithConfig(module, buildDir, targetOS, targetArch, nil)
 }
 
 // ResolveArtifactsForModuleWithConfig resolves all artifacts for a module with optional books config.
-// The moduleType parameter is deprecated and ignored - artifact resolution uses cfg.GetBuildArtifacts()
-// which properly merges module-level and type-level artifacts (module-level takes priority).
+// Artifact resolution uses cfg.GetBuildArtifacts() which properly merges module-level and
+// type-level artifacts (module-level takes priority).
 func ResolveArtifactsForModuleWithConfig(
 	module *config.Module,
-	moduleType *config.ModuleTypeDef, // Deprecated: unused, kept for API compatibility
 	buildDir string,
 	targetOS, targetArch string,
 	cfg *config.EACConfig,
@@ -130,7 +128,7 @@ func ResolveArtifactsForModuleWithConfig(
 	return resolved, summary, nil
 }
 
-// deriveArtifactID derives an ID for an artifact based on its type and context
+// deriveArtifactID derives an ID for an artifact based on its type and context.
 func deriveArtifactID(artifact config.Artifact, targetOS, targetArch string) string {
 	// If artifact has explicit ID, use it
 	if artifact.ID != "" {
@@ -142,9 +140,10 @@ func deriveArtifactID(artifact config.Artifact, targetOS, targetArch string) str
 		baseID := fmt.Sprintf("%s-%s", targetOS, targetArch)
 
 		// Append compression suffix for compressed variants
-		if artifact.Compression == config.CompressionUPX {
+		switch artifact.Compression {
+		case config.CompressionUPX:
 			return baseID + "-upx"
-		} else if artifact.Compression == config.CompressionStrip {
+		case config.CompressionStrip:
 			return baseID + "-strip"
 		}
 
@@ -167,7 +166,7 @@ func deriveArtifactID(artifact config.Artifact, targetOS, targetArch string) str
 	return id
 }
 
-// FormatArtifactStatus returns a human-readable status string for an artifact
+// FormatArtifactStatus returns a human-readable status string for an artifact.
 func FormatArtifactStatus(artifact ResolvedArtifact) string {
 	if artifact.Exists {
 		if artifact.MetadataOverride != "" {
@@ -183,7 +182,7 @@ func FormatArtifactStatus(artifact ResolvedArtifact) string {
 	return "✗"
 }
 
-// FormatArtifactSize returns a human-readable size string for an artifact
+// FormatArtifactSize returns a human-readable size string for an artifact.
 func FormatArtifactSize(sizeBytes int64) string {
 	const (
 		KB = 1024
@@ -203,7 +202,7 @@ func FormatArtifactSize(sizeBytes int64) string {
 	}
 }
 
-// isBookModule checks if a module type is a book module (uses mkdocs handler)
+// isBookModule checks if a module type is a book module (uses mkdocs handler).
 func isBookModule(moduleType string) bool {
 	// Check by type name - container modules with mkdocs handler
 	return moduleType == "container" || strings.Contains(moduleType, "mkdocs")
@@ -211,23 +210,10 @@ func isBookModule(moduleType string) bool {
 
 // isContainerModule checks if a module produces container images that are pushed to registry.
 // For such modules, we don't download build artifacts - we pull from registry instead.
-func isContainerModule(moduleType string, module *config.Module, cfg *config.EACConfig) bool {
-	// Check module-level docker config
+func isContainerModule(module *config.Module) bool {
+	// Check if module has docker_build with push enabled
 	dockerConfig := module.GetDockerBuildConfig()
-	if dockerConfig != nil && dockerConfig.Push {
-		return true
-	}
-
-	// Check type-level docker config
-	if cfg != nil && cfg.ModuleTypes != nil {
-		if typeDef := cfg.ModuleTypes.Get(moduleType); typeDef != nil {
-			if typeDef.DockerBuild != nil && typeDef.DockerBuild.Push {
-				return true
-			}
-		}
-	}
-
-	return false
+	return dockerConfig != nil && dockerConfig.Push
 }
 
 // expandBookArtifacts expands wildcard PDF patterns to specific book PDFs
@@ -289,7 +275,7 @@ func expandBookArtifacts(module *config.Module, artifacts []config.Artifact, cfg
 	return expanded
 }
 
-// ModuleValidationResult represents validation results for a single module
+// ModuleValidationResult represents validation results for a single module.
 type ModuleValidationResult struct {
 	Moniker           string                     `json:"moniker" yaml:"moniker"`
 	Type              string                     `json:"type" yaml:"type"`
@@ -300,7 +286,7 @@ type ModuleValidationResult struct {
 	Error             string                     `json:"error,omitempty" yaml:"error,omitempty"`
 }
 
-// ValidationResults represents validation results for a module and all dependencies
+// ValidationResults represents validation results for a module and all dependencies.
 type ValidationResults struct {
 	TargetModule string                   `json:"target_module" yaml:"target_module"`
 	Modules      []ModuleValidationResult `json:"modules" yaml:"modules"`
@@ -348,7 +334,7 @@ func ValidateArtifactsTargetOnly(
 	return results, nil
 }
 
-// ValidateArtifactsWithDependencies validates artifacts for a module and all transitive dependencies
+// ValidateArtifactsWithDependencies validates artifacts for a module and all transitive dependencies.
 func ValidateArtifactsWithDependencies(
 	targetModule string,
 	cfg *config.EACConfig,
@@ -427,7 +413,7 @@ func ValidateArtifactsWithDependencies(
 	return results, nil
 }
 
-// validateSingleModule validates artifacts for a single module
+// validateSingleModule validates artifacts for a single module.
 func validateSingleModule(
 	moniker string,
 	targetModule string,
@@ -445,22 +431,22 @@ func validateSingleModule(
 	// Get module contract
 	moduleContract, exists := registry.Get(moniker)
 	if !exists {
-		result.Error = fmt.Sprintf("module contract not found")
+		result.Error = "module contract not found"
 		return result
 	}
-	result.Type = moduleContract.Type
+	result.Type = moduleContract.GetComponentTypesDisplay()
 
 	// Get module from config
 	module, ok := cfg.Repository.GetModule(moniker)
 	if !ok {
-		result.Error = fmt.Sprintf("module not found in config")
+		result.Error = "module not found in config"
 		return result
 	}
 
 	// For container-type DEPENDENCIES, skip local artifact validation.
 	// Container deps are pulled from registry at runtime, not downloaded as build artifacts.
 	// We only download the build manifest (to know the image tag), not the full build output.
-	if result.IsDependency && isContainerModule(moduleContract.Type, module, cfg) {
+	if result.IsDependency && isContainerModule(module) {
 		result.HasBuildArtifacts = false
 		result.Summary = &ArtifactResolutionSummary{}
 		return result
@@ -481,9 +467,9 @@ func validateSingleModule(
 	buildDirRel := cfg.Repository.BuildOutputPath(moniker)
 	buildDir := filepath.Join(workspaceRoot, buildDirRel)
 
-	// Resolve artifacts (moduleType parameter is deprecated, passing nil)
+	// Resolve artifacts
 	artifacts, summary, err := ResolveArtifactsForModuleWithConfig(
-		module, nil, buildDir, targetOS, targetArch, cfg,
+		module, buildDir, targetOS, targetArch, cfg,
 	)
 	if err != nil {
 		result.Error = err.Error()
@@ -493,14 +479,6 @@ func validateSingleModule(
 	// Check if this module has docker_build with push=true
 	// If so, image artifacts are pushed to registry and may not exist locally
 	dockerConfig := module.GetDockerBuildConfig()
-	if dockerConfig == nil {
-		// Check type-level docker config
-		if cfg != nil && cfg.ModuleTypes != nil {
-			if typeDef := cfg.ModuleTypes.Get(moduleContract.Type); typeDef != nil {
-				dockerConfig = typeDef.DockerBuild
-			}
-		}
-	}
 	imagesPushedToRegistry := dockerConfig != nil && dockerConfig.Push
 
 	// Filter artifacts to only requested ones if requestedArtifacts is specified
@@ -560,7 +538,7 @@ func validateSingleModule(
 	return result
 }
 
-// addDependenciesRecursive recursively adds all dependencies of a module
+// addDependenciesRecursive recursively adds all dependencies of a module.
 func addDependenciesRecursive(moniker string, registry *modules.Registry, result map[string]bool) error {
 	module, exists := registry.Get(moniker)
 	if !exists {
@@ -596,11 +574,8 @@ func addDependenciesRecursive(moniker string, registry *modules.Registry, result
 //
 // This delegates to config.EACConfig.GetBuildArtifactIDs which encapsulates all
 // artifact merging and filtering logic (module vs type-level, UPX filtering, etc.)
-//
-// The moduleType parameter is deprecated and ignored - kept for API compatibility.
 func DetermineRequestedArtifacts(
 	module *config.Module,
-	moduleType *config.ModuleTypeDef, // Deprecated: unused, kept for API compatibility
 	buildAll bool,
 	cfg *config.EACConfig,
 ) []string {

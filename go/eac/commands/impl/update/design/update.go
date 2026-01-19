@@ -51,7 +51,7 @@ func init() {
 
 // Intent: Update an existing Structurizr DSL workspace by re-analyzing source code
 //
-// UpdateDesign orchestrates the architecture design update workflow
+// UpdateDesign orchestrates the architecture design update workflow.
 func UpdateDesign() int {
 	// Validate flags
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
@@ -119,7 +119,7 @@ func UpdateDesign() int {
 	return 0
 }
 
-// UpdateConfig holds configuration for design update command
+// UpdateConfig holds configuration for design update command.
 type UpdateConfig struct {
 	Module       string // Module name (e.g., "r2r-cli", "commands")
 	SourcePath   string // Path to source code (e.g., "go/eac/commands")
@@ -130,7 +130,7 @@ type UpdateConfig struct {
 	TemplateRoot string
 }
 
-// parseConfig parses command line arguments into UpdateConfig
+// parseConfig parses command line arguments into UpdateConfig.
 func parseConfig() (*UpdateConfig, error) {
 	// Get repository root
 	repoRoot, err := repository.GetRepositoryRoot("")
@@ -139,17 +139,17 @@ func parseConfig() (*UpdateConfig, error) {
 	}
 
 	// Find and parse arguments
-	modulePath, flags, err := parseUpdateCommandArgs(os.Args)
+	modulePath, cmdFlags, err := parseUpdateCommandArgs(os.Args)
 	if err != nil {
 		return nil, err
 	}
 
 	// Create config with parsed flags
 	config := &UpdateConfig{
-		Debug:        flags.debug,
-		Force:        flags.force,
-		OutputPath:   flags.outputPath,
-		PromptPath:   flags.promptPath,
+		Debug:        cmdFlags.debug,
+		Force:        cmdFlags.force,
+		OutputPath:   cmdFlags.outputPath,
+		PromptPath:   cmdFlags.promptPath,
 		TemplateRoot: repoRoot,
 	}
 
@@ -175,12 +175,21 @@ func parseConfig() (*UpdateConfig, error) {
 
 	// Store validated moniker and source path from contract
 	config.Module = module.Moniker
-	config.SourcePath = filepath.Join(repoRoot, module.Files.Root)
+	// Get the buildable package root (go or typescript) for source analysis
+	buildableRoot := module.Components.GetBuildableRoot()
+	if buildableRoot == "" {
+		// Fallback to first available package root
+		for _, root := range module.GetComponentRoots() {
+			buildableRoot = root
+			break
+		}
+	}
+	config.SourcePath = filepath.Join(repoRoot, buildableRoot)
 
 	return config, nil
 }
 
-// updateFlags holds parsed command-line flags
+// updateFlags holds parsed command-line flags.
 type updateFlags struct {
 	debug      bool
 	force      bool
@@ -189,7 +198,7 @@ type updateFlags struct {
 }
 
 // parseUpdateCommandArgs parses args for the update subcommand
-// Returns: module path, flags, error
+// Returns: module path, flags, error.
 func parseUpdateCommandArgs(args []string) (string, *updateFlags, error) {
 	// Find command position (looking for "update" followed by "design")
 	cmdPos := -1
@@ -250,16 +259,22 @@ func parseUpdateCommandArgs(args []string) (string, *updateFlags, error) {
 	return positionalArgs[0], updateFlags, nil
 }
 
-// formatModuleList returns a formatted list of available modules
+// formatModuleList returns a formatted list of available modules.
 func formatModuleList(moduleReport *reports.ModuleContractReport) string {
 	var sb strings.Builder
 	for _, mod := range moduleReport.Registry.All() {
-		sb.WriteString(fmt.Sprintf("  - %s (source: %s)\n", mod.Moniker, mod.Files.Root))
+		// Get first package root for display
+		var displayRoot string
+		for _, root := range mod.GetComponentRoots() {
+			displayRoot = root
+			break
+		}
+		sb.WriteString(fmt.Sprintf("  - %s (source: %s)\n", mod.Moniker, displayRoot))
 	}
 	return sb.String()
 }
 
-// validateModuleAndWorkspace checks if the source code and existing workspace exist
+// validateModuleAndWorkspace checks if the source code and existing workspace exist.
 func validateModuleAndWorkspace(config *UpdateConfig, out *designHelper.Output) error {
 	out.Progressf("🔍 Validating module '%s'...", config.Module)
 
@@ -285,7 +300,7 @@ func validateModuleAndWorkspace(config *UpdateConfig, out *designHelper.Output) 
 	return nil
 }
 
-// loadExistingWorkspace loads the current workspace content
+// loadExistingWorkspace loads the current workspace content.
 func loadExistingWorkspace(config *UpdateConfig, out *designHelper.Output, workspacePath string) (string, error) {
 	out.Progress("📄 Loading existing workspace...")
 
@@ -297,7 +312,7 @@ func loadExistingWorkspace(config *UpdateConfig, out *designHelper.Output, works
 	return string(content), nil
 }
 
-// buildUpdatePrompt builds the AI prompt for updating the workspace
+// buildUpdatePrompt builds the AI prompt for updating the workspace.
 func buildUpdatePrompt(config *UpdateConfig, out *designHelper.Output, existingWorkspace string) (string, error) {
 	out.Progress("📋 Building update prompt...")
 
@@ -379,7 +394,7 @@ func buildUpdatePrompt(config *UpdateConfig, out *designHelper.Output, existingW
 // 1. Command flag (--prompt)
 // 2. Team override (.r2r/eac/templates/coreai.TypeDesign/design.md)
 // 3. System default (templates/coreai.TypeDesign/design.md)
-// Convention: Empty string uses type name (design.md)
+// Convention: Empty string uses type name (design.md).
 func loadPrompt(config *UpdateConfig) (string, error) {
 	// Load prompt with three-tier priority system
 	loader := coreai.NewContractLoader(config.TemplateRoot, coreai.TypeDesign, "")
@@ -396,7 +411,7 @@ func loadPrompt(config *UpdateConfig) (string, error) {
 	return prompt, nil
 }
 
-// generateUpdatedWorkspace generates the updated workspace using AI
+// generateUpdatedWorkspace generates the updated workspace using AI.
 func generateUpdatedWorkspace(config *UpdateConfig, out *designHelper.Output, prompt string) (string, error) {
 	// Check for mock AI response (for testing)
 	if mockResponse := createDesign.GetMockAIResponse(); mockResponse != "" {
@@ -448,7 +463,6 @@ func generateUpdatedWorkspace(config *UpdateConfig, out *designHelper.Output, pr
 		retryConfig,
 		prompt,
 	)
-
 	if err != nil {
 		return "", fmt.Errorf("generation failed: %w", err)
 	}
@@ -456,16 +470,16 @@ func generateUpdatedWorkspace(config *UpdateConfig, out *designHelper.Output, pr
 	return result.Output, nil
 }
 
-// writeUpdatedWorkspace writes the updated workspace file
+// writeUpdatedWorkspace writes the updated workspace file.
 func writeUpdatedWorkspace(config *UpdateConfig, out *designHelper.Output, workspacePath, content string) error {
 	// Ensure directory exists
 	dir := filepath.Dir(workspacePath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("failed to create directory %s: %w", dir, err)
 	}
 
 	// Write file
-	if err := os.WriteFile(workspacePath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(workspacePath, []byte(content), 0o644); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 

@@ -9,7 +9,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// PromptData holds data for prompt template execution
+// PromptData holds data for prompt template execution.
 type PromptData struct {
 	Contract    string              // Contract structure as YAML
 	ContractRaw *contracts.Contract // Raw contract object for advanced templates

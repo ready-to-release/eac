@@ -1,175 +1,175 @@
 package orchestrator
 
 import (
+	"bufio"
 	"encoding/json"
+	"io"
 	"os"
 	"strings"
 )
 
-// goTestEvent represents a single event from go test -json output
-type goTestEvent struct {
-	Action  string `json:"Action"`
-	Package string `json:"Package"`
-	Test    string `json:"Test"`
-	Output  string `json:"Output"`
+// LogEvent represents a structured log event (compatible with go test -json).
+type LogEvent struct {
+	Time    string  `json:"Time,omitempty"`
+	Action  string  `json:"Action"`
+	Package string  `json:"Package,omitempty"`
+	Test    string  `json:"Test,omitempty"`
+	Output  string  `json:"Output,omitempty"`
+	Elapsed float64 `json:"Elapsed,omitempty"`
 }
 
-// maxTailLines is the number of test output lines to show
-const maxTailLines = 5
+// testState tracks output for a single test.
+type testState struct {
+	output []string
+	failed bool
+}
 
-// parseLogForIssues scans a log file for warnings and errors
-// Handles both plain text logs and Go test JSON output
-// Returns actual test assertion output, filtering out framework summary lines
-func parseLogForIssues(logPath string) (warnings []string, errors []string) {
-	data, err := os.ReadFile(logPath)
+// maxTailLines is the number of output lines to show for failures.
+const maxTailLines = 10
+
+// parseLogForIssues extracts error output from failed tests.
+// Uses JSON Action field as source of truth. Non-JSON logs return empty.
+func parseLogForIssues(logPath string) (warnings, errors []string) {
+	file, err := os.Open(logPath)
 	if err != nil {
 		return nil, nil
 	}
+	defer file.Close()
 
-	// Extract all content lines from JSON or plain text
-	rawLines := strings.Split(string(data), "\n")
-	var testOutputLines []string
-	for _, line := range rawLines {
-		line = strings.TrimSpace(line)
-		if line == "" {
+	return parseJSONLog(file)
+}
+
+// parseJSONLog parses JSON log output using Action field as source of truth.
+func parseJSONLog(r io.Reader) (warnings, errors []string) {
+	tests := make(map[string]*testState)
+	var packageOutput []string
+	packageFailed := false
+
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		// Skip non-JSON lines (go: downloading, etc.)
+		if !strings.HasPrefix(line, "{") {
 			continue
 		}
 
-		// Try to parse as JSON (go test -json output)
-		var content string
-		if strings.HasPrefix(line, "{") {
-			var event goTestEvent
-			if err := json.Unmarshal([]byte(line), &event); err == nil {
-				content = strings.TrimSpace(event.Output)
-				if content == "" {
-					continue
-				}
-			} else {
-				content = line
-			}
-		} else {
-			content = line
+		var event LogEvent
+		if err := json.Unmarshal([]byte(line), &event); err != nil {
+			continue
 		}
 
-		// Only include actual test output, not framework lines
-		if isTestOutput(content) {
-			testOutputLines = append(testOutputLines, content)
+		key := event.Package
+		if event.Test != "" {
+			key = event.Package + "/" + event.Test
+		}
+
+		switch event.Action {
+		case "run":
+			tests[key] = &testState{}
+
+		case "output":
+			output := strings.TrimRight(event.Output, "\n")
+			if output == "" {
+				continue
+			}
+			if event.Test != "" {
+				if t, ok := tests[key]; ok {
+					t.output = append(t.output, output)
+				}
+			} else {
+				packageOutput = append(packageOutput, output)
+			}
+
+		case "fail":
+			if event.Test != "" {
+				if t, ok := tests[key]; ok {
+					t.failed = true
+				}
+			} else {
+				packageFailed = true
+			}
+
+		case "error":
+			// Direct error event (for non-test tools using JSONLogWriter)
+			if event.Output != "" {
+				errors = append(errors, strings.TrimRight(event.Output, "\n"))
+			}
+
+		case "warning":
+			// Direct warning event
+			if event.Output != "" {
+				warnings = append(warnings, strings.TrimRight(event.Output, "\n"))
+			}
 		}
 	}
 
-	// Return the last N test output lines
-	if len(testOutputLines) > maxTailLines {
-		errors = testOutputLines[len(testOutputLines)-maxTailLines:]
-	} else {
-		errors = testOutputLines
+	// Collect output only from failed tests
+	for _, t := range tests {
+		if t.failed {
+			errors = append(errors, t.output...)
+		}
+	}
+
+	// If package failed but no specific test failures, use package output
+	if packageFailed && len(errors) == 0 {
+		errors = packageOutput
+	}
+
+	// Limit output size
+	if len(errors) > maxTailLines {
+		errors = errors[len(errors)-maxTailLines:]
 	}
 
 	return warnings, errors
 }
 
-// isTestOutput returns true if the line is actual test output (assertions, errors)
-// rather than framework summary lines
-func isTestOutput(content string) bool {
-	// Skip empty or whitespace-only
-	if strings.TrimSpace(content) == "" {
-		return false
-	}
-
-	// Skip test run markers
-	if strings.HasPrefix(content, "=== RUN") ||
-		strings.HasPrefix(content, "--- PASS") ||
-		strings.HasPrefix(content, "--- FAIL") ||
-		strings.HasPrefix(content, "PASS") ||
-		strings.HasPrefix(content, "FAIL") ||
-		strings.HasPrefix(content, "ok ") ||
-		strings.HasPrefix(content, "?") {
-		return false
-	}
-
-	// Skip godog/cucumber summary lines
-	if strings.Contains(content, " scenarios (") ||
-		strings.Contains(content, " steps (") ||
-		strings.HasPrefix(content, "Feature:") ||
-		strings.HasPrefix(content, "Scenario:") {
-		return false
-	}
-
-	// Skip godog step definition references (Given/When/Then ... # path)
-	if (strings.HasPrefix(content, "Given ") ||
-		strings.HasPrefix(content, "When ") ||
-		strings.HasPrefix(content, "Then ") ||
-		strings.HasPrefix(content, "And ")) &&
-		strings.Contains(content, " # ") {
-		return false
-	}
-
-	// Skip feature file line references (e.g., "feature:17", "specification.feature:17")
-	if strings.Contains(content, "feature:") && !strings.Contains(content, "Error") {
-		return false
-	}
-
-	// Skip test function name lines (e.g., "TestRepositoryFeatures/No_files...")
-	if strings.HasPrefix(content, "Test") && strings.Contains(content, "/") {
-		return false
-	}
-
-	// Skip lines ending with test timing (e.g., "(0.08s)")
-	if strings.HasSuffix(content, "s)") && strings.Contains(content, "(0.") {
-		return false
-	}
-
-	// Skip pure timing lines (e.g., "86.741ms", "1.234s")
-	if isTimingLine(content) {
-		return false
-	}
-
-	// Skip pure number lines (e.g., " 5" from godog summary counts)
-	if isPureNumber(content) {
-		return false
-	}
-
-	// Skip "Failed steps:" header
-	if content == "Failed steps:" {
-		return false
-	}
-
-	// Include lines that look like test assertions (file.go:123: message)
-	// Include lines with "Error:" or "error:"
-	// Include indented continuation lines (start with spaces or tabs)
-	// Include everything else that's not filtered above
-	return true
+// JSONLogWriter wraps an io.Writer to output JSON log events.
+// Use this for non-test workers to produce parseable output.
+type JSONLogWriter struct {
+	w   io.Writer
+	pkg string
+	enc *json.Encoder
 }
 
-// isTimingLine checks if a line is just a timing value
-func isTimingLine(content string) bool {
-	content = strings.TrimSpace(content)
-	// Match patterns like "86.741ms", "1.234s", "2m30s"
-	if len(content) < 20 && !strings.Contains(content, " ") {
-		if strings.HasSuffix(content, "ms") ||
-			strings.HasSuffix(content, "s") ||
-			strings.HasSuffix(content, "m") {
-			// Check if rest is numeric/timing
-			for _, r := range content[:len(content)-1] {
-				if r != '.' && r != 'm' && r != 's' && (r < '0' || r > '9') {
-					return false
-				}
-			}
-			return true
-		}
+// NewJSONLogWriter creates a writer that outputs JSON log events.
+func NewJSONLogWriter(w io.Writer, pkg string) *JSONLogWriter {
+	return &JSONLogWriter{
+		w:   w,
+		pkg: pkg,
+		enc: json.NewEncoder(w),
 	}
-	return false
 }
 
-// isPureNumber checks if a line is just a number (e.g., step counts from godog)
-func isPureNumber(content string) bool {
-	content = strings.TrimSpace(content)
-	if content == "" {
-		return false
+// Write implements io.Writer, treating each write as an output event.
+func (j *JSONLogWriter) Write(p []byte) (n int, err error) {
+	event := LogEvent{
+		Action:  "output",
+		Package: j.pkg,
+		Output:  string(p),
 	}
-	for _, r := range content {
-		if r < '0' || r > '9' {
-			return false
-		}
+	if err := j.enc.Encode(event); err != nil {
+		return 0, err
 	}
-	return true
+	return len(p), nil
+}
+
+// Info writes an info-level output event.
+func (j *JSONLogWriter) Info(msg string) {
+	_ = j.enc.Encode(LogEvent{Action: "output", Package: j.pkg, Output: msg + "\n"}) //nolint:errcheck // best-effort logging
+}
+
+// Error writes an error event.
+func (j *JSONLogWriter) Error(msg string) {
+	_ = j.enc.Encode(LogEvent{Action: "error", Package: j.pkg, Output: msg + "\n"}) //nolint:errcheck // best-effort logging
+}
+
+// Warning writes a warning event.
+func (j *JSONLogWriter) Warning(msg string) {
+	_ = j.enc.Encode(LogEvent{Action: "warning", Package: j.pkg, Output: msg + "\n"}) //nolint:errcheck // best-effort logging
+}
+
+// Fail marks the package as failed.
+func (j *JSONLogWriter) Fail() {
+	_ = j.enc.Encode(LogEvent{Action: "fail", Package: j.pkg}) //nolint:errcheck // best-effort logging
 }

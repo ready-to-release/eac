@@ -16,7 +16,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/specs/internal"
 )
 
-// moduleIsolationContext holds state for module isolation validation
+// moduleIsolationContext holds state for module isolation validation.
 type moduleIsolationContext struct {
 	repoRoot        string
 	currentModule   string
@@ -29,7 +29,7 @@ type moduleIsolationContext struct {
 
 var modIsoCtx *moduleIsolationContext
 
-// registerModuleIsolationSteps registers module isolation step definitions
+// registerModuleIsolationSteps registers module isolation step definitions.
 func registerModuleIsolationSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	// Background
 	sc.Step(`^the repository contains the following Go modules:$`, theRepositoryContainsGoModules)

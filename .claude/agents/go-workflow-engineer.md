@@ -220,27 +220,27 @@ I validate workflows against 12 stages:
 
 ### Time-Critical Stages (Fast Feedback)
 
-| Stage | Time Budget | Key Checks |
-|-------|-------------|------------|
-| 2 (Pre-commit) | 5-10 min | Format, lint, unit tests |
-| 4 (Commit) | 5-10 min | Build, integration tests |
+| Stage          | Time Budget   | Key Checks               |
+| -------------- | ------------- | ------------------------ |
+| 2 (Pre-commit) | 5-10 min      | Format, lint, unit tests |
+| 4 (Commit)     | 5-10 min      | Build, integration tests |
 
 These stages MUST be fast to encourage frequent commits.
 
 ### Quality Stages
 
-| Stage | Time Budget | Key Checks |
-|-------|-------------|------------|
-| 5 (Acceptance) | < 1 hour | PLTE deploy, IV/OV tests |
-| 6 (Extended) | Hours | Performance, security scans |
+| Stage          | Time Budget   | Key Checks                  |
+| -------------- | ------------- | --------------------------- |
+| 5 (Acceptance) | < 1 hour      | PLTE deploy, IV/OV tests    |
+| 6 (Extended)   | Hours         | Performance, security scans |
 
 ### Release Stages
 
-| Stage | Time Budget | Key Checks |
-|-------|-------------|------------|
-| 8 (Start Release) | Minutes | Tag creation, branch |
-| 9 (Release Approval) | Hours-Days | Approval gate |
-| 10 (Prod Deploy) | Minutes | Deploy to production |
+| Stage                | Time Budget   | Key Checks           |
+| -------------------- | ------------- | -------------------- |
+| 8 (Start Release)    | Minutes       | Tag creation, branch |
+| 9 (Release Approval) | Hours-Days    | Approval gate        |
+| 10 (Prod Deploy)     | Minutes       | Deploy to production |
 
 [Full stage reference in docs/explanation/continuous-delivery/cd-model/stages.md]
 

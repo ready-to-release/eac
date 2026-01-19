@@ -24,14 +24,14 @@ The 12-stage CD model applies to data projects with specific considerations for 
 
 **Data Activities:**
 
-| Artifact Type | Activities |
-|--------------|------------|
-| **Notebooks** | Develop transformation logic locally using Databricks Connect or web IDE |
+| Artifact Type      | Activities                                                                    |
+| ------------------ | ----------------------------------------------------------------------------- |
+| **Notebooks**      | Develop transformation logic locally using Databricks Connect or web IDE      |
 | **Specifications** | Write Gherkin specs defining data transformations, schemas, and quality rules |
-| **Schemas** | Define Delta table schemas, partitioning strategies |
-| **Jobs** | Design workflow orchestration, dependencies, scheduling |
-| **Business Rules** | Define segmentation logic, categorization rules, calculations |
-| **Dashboards** | Create visualizations, define metrics |
+| **Schemas**        | Define Delta table schemas, partitioning strategies                           |
+| **Jobs**           | Design workflow orchestration, dependencies, scheduling                       |
+| **Business Rules** | Define segmentation logic, categorization rules, calculations                 |
+| **Dashboards**     | Create visualizations, define metrics                                         |
 
 **Tools:**
 
@@ -75,13 +75,13 @@ Feature: customer-segmentation_pipeline
 
 **Data Activities:**
 
-| Validation | Implementation |
-|------------|----------------|
-| **Notebook linting** | `pylint`, `black`, `mypy` for Python notebooks |
-| **Unit tests** | Test transformation functions with small DataFrames |
-| **Schema validation** | Verify Delta table schemas match specifications |
-| **Bundle validation** | `databricks bundle validate` checks configuration |
-| **Secrets scan** | Detect hardcoded credentials or API keys |
+| Validation            | Implementation                                      |
+| --------------------- | --------------------------------------------------- |
+| **Notebook linting**  | `pylint`, `black`, `mypy` for Python notebooks      |
+| **Unit tests**        | Test transformation functions with small DataFrames |
+| **Schema validation** | Verify Delta table schemas match specifications     |
+| **Bundle validation** | `databricks bundle validate` checks configuration   |
+| **Secrets scan**      | Detect hardcoded credentials or API keys            |
 
 **Tools:**
 
@@ -118,12 +118,12 @@ def test_aggregate_features():
 
 **Data Activities:**
 
-| Activity | Implementation |
-|----------|----------------|
-| **Code review** | Review notebook logic, SQL queries, data transformations |
-| **CI pipeline** | Run unit tests, linting, bundle validation |
-| **Documentation review** | Check specifications, schema docs, DAG diagrams |
-| **Security review** | Verify access controls, data masking, encryption |
+| Activity                 | Implementation                                           |
+| ------------------------ | -------------------------------------------------------- |
+| **Code review**          | Review notebook logic, SQL queries, data transformations |
+| **CI pipeline**          | Run unit tests, linting, bundle validation               |
+| **Documentation review** | Check specifications, schema docs, DAG diagrams          |
+| **Security review**      | Verify access controls, data masking, encryption         |
 
 **Quality Gates:**
 
@@ -149,12 +149,12 @@ def test_aggregate_features():
 
 **Data Activities:**
 
-| Activity | Implementation |
-|----------|----------------|
-| **Merge to main** | Squash merge approved changes |
-| **Build artifacts** | Package notebooks as wheels/JARs if using separate repos |
-| **Trigger CI** | Run full test suite (L0, L1, L2) |
-| **Version tracking** | Tag commit SHA, link to work items |
+| Activity             | Implementation                                           |
+| -------------------- | -------------------------------------------------------- |
+| **Merge to main**    | Squash merge approved changes                            |
+| **Build artifacts**  | Package notebooks as wheels/JARs if using separate repos |
+| **Trigger CI**       | Run full test suite (L0, L1, L2)                         |
+| **Version tracking** | Tag commit SHA, link to work items                       |
 
 **Automated Testing:**
 
@@ -175,13 +175,13 @@ def test_aggregate_features():
 
 **Data Activities:**
 
-| Activity | Implementation |
-|----------|----------------|
-| **Deploy to PLTE** | Create ephemeral workspace or use dedicated test workspace |
-| **Clone test data** | Use Delta Lake `CLONE` for production-like data |
-| **Run pipeline** | Execute full workflow with realistic data volumes |
-| **Verify outputs** | Check Delta table contents, row counts, schemas |
-| **Data quality checks** | Validate completeness, accuracy, consistency |
+| Activity                | Implementation                                             |
+| ----------------------- | ---------------------------------------------------------- |
+| **Deploy to PLTE**      | Create ephemeral workspace or use dedicated test workspace |
+| **Clone test data**     | Use Delta Lake `CLONE` for production-like data            |
+| **Run pipeline**        | Execute full workflow with realistic data volumes          |
+| **Verify outputs**      | Check Delta table contents, row counts, schemas            |
+| **Data quality checks** | Validate completeness, accuracy, consistency               |
 
 **PLTE Characteristics for Data:**
 
@@ -218,13 +218,13 @@ ORDER BY segment;
 
 **Data Activities:**
 
-| Test Type | Implementation |
-|-----------|----------------|
-| **Performance testing** | Load test with production-scale data volumes |
-| **Security scanning** | DAST with OWASP ZAP, Unity Catalog permission audits |
-| **Data quality validation** | pytest assertions, schema drift detection |
-| **Cross-system integration** | External API connections, event streaming |
-| **Cost analysis** | Cluster utilization, compute costs, storage growth |
+| Test Type                    | Implementation                                       |
+| ---------------------------- | ---------------------------------------------------- |
+| **Performance testing**      | Load test with production-scale data volumes         |
+| **Security scanning**        | DAST with OWASP ZAP, Unity Catalog permission audits |
+| **Data quality validation**  | pytest assertions, schema drift detection            |
+| **Cross-system integration** | External API connections, event streaming            |
+| **Cost analysis**            | Cluster utilization, compute costs, storage growth   |
 
 **Trigger**: Periodic (e.g., nightly) or on-demand, not every commit
 
@@ -252,13 +252,13 @@ ORDER BY segment;
 
 **Data Activities:**
 
-| Activity | Implementation |
-|----------|----------------|
-| **Demo pipelines** | Show data flows, transformations, lineage |
-| **Dashboard validation** | Stakeholders review metrics, visualizations |
-| **Data quality review** | Business users validate accuracy, completeness |
-| **UAT** | Business users test with real scenarios |
-| **Documentation** | Review data dictionaries, runbooks |
+| Activity                 | Implementation                                 |
+| ------------------------ | ---------------------------------------------- |
+| **Demo pipelines**       | Show data flows, transformations, lineage      |
+| **Dashboard validation** | Stakeholders review metrics, visualizations    |
+| **Data quality review**  | Business users validate accuracy, completeness |
+| **UAT**                  | Business users test with real scenarios        |
+| **Documentation**        | Review data dictionaries, runbooks             |
 
 **What Exploration Catches:**
 
@@ -279,12 +279,12 @@ ORDER BY segment;
 
 **Data Activities:**
 
-| Activity | Implementation |
-|----------|----------------|
-| **Create release branch** | Branch from main (e.g., `release/v2024.01.15`) |
-| **Tag version** | Semantic versioning or CalVer: `YYYY.MM.DD` |
+| Activity                   | Implementation                                           |
+| -------------------------- | -------------------------------------------------------- |
+| **Create release branch**  | Branch from main (e.g., `release/v2024.01.15`)           |
+| **Tag version**            | Semantic versioning or CalVer: `YYYY.MM.DD`              |
 | **Generate release notes** | Document schema changes, new pipelines, breaking changes |
-| **Freeze features** | Only critical fixes allowed after this point |
+| **Freeze features**        | Only critical fixes allowed after this point             |
 
 **Release Notes Include:**
 
@@ -320,18 +320,18 @@ ORDER BY segment;
 
 **Approval Criteria:**
 
-| Category | Requirements |
-|----------|--------------|
-| **Quality** | All tests passing, data quality checks pass, performance acceptable |
-| **Security** | Scans pass, Unity Catalog permissions reviewed, no data leakage |
-| **Compliance** | Documentation complete, change review board approval (if required) |
-| **Business** | Stakeholder sign-off, rollback plan documented, support trained |
+| Category       | Requirements                                                        |
+| -------------- | ------------------------------------------------------------------- |
+| **Quality**    | All tests passing, data quality checks pass, performance acceptable |
+| **Security**   | Scans pass, Unity Catalog permissions reviewed, no data leakage     |
+| **Compliance** | Documentation complete, change review board approval (if required)  |
+| **Business**   | Stakeholder sign-off, rollback plan documented, support trained     |
 
 **Variants:**
 
-| Pattern | When to Use |
-|---------|-------------|
-| **RA (Release Approval)** | Financial data, regulated industries, high-risk schema changes |
+| Pattern                         | When to Use                                                       |
+| ------------------------------- | ----------------------------------------------------------------- |
+| **RA (Release Approval)**       | Financial data, regulated industries, high-risk schema changes    |
 | **CDe (Continuous Deployment)** | Internal analytics, low-risk transformations, experimental models |
 
 **RA Example**: Change review board approves production schema changes
@@ -347,21 +347,21 @@ ORDER BY segment;
 
 **Data Activities:**
 
-| Activity | Implementation |
-|----------|----------------|
-| **Deploy Asset Bundle** | `databricks bundle deploy --target prod` |
-| **Schema migration** | Apply Delta table schema evolution if needed |
-| **Update jobs** | Swap to new notebook versions, adjust schedules |
-| **Backfill data** | Re-process historical data if transformation changed |
+| Activity                | Implementation                                       |
+| ----------------------- | ---------------------------------------------------- |
+| **Deploy Asset Bundle** | `databricks bundle deploy --target prod`             |
+| **Schema migration**    | Apply Delta table schema evolution if needed         |
+| **Update jobs**         | Swap to new notebook versions, adjust schedules      |
+| **Backfill data**       | Re-process historical data if transformation changed |
 
 **Deployment Strategies:**
 
-| Strategy | Use Case |
-|----------|----------|
-| **Blue-Green** | Parallel pipelines, switch at completion (double cost) |
-| **Canary** | Process subset of data first (10% of customers) |
-| **Rolling** | Gradual migration by partition (process 2024 data, then 2023...) |
-| **Feature Flag** | Deploy code with transformation disabled, enable gradually |
+| Strategy         | Use Case                                                         |
+| ---------------- | ---------------------------------------------------------------- |
+| **Blue-Green**   | Parallel pipelines, switch at completion (double cost)           |
+| **Canary**       | Process subset of data first (10% of customers)                  |
+| **Rolling**      | Gradual migration by partition (process 2024 data, then 2023...) |
+| **Feature Flag** | Deploy code with transformation disabled, enable gradually       |
 
 **Rollback Planning:**
 
@@ -393,22 +393,22 @@ databricks jobs run-now --job-id 12345
 
 **Data Activities:**
 
-| Monitoring Category | Metrics |
-|--------------------|---------|
-| **Infrastructure** | Cluster utilization, memory, disk, network |
-| **Pipeline health** | Job success rate, duration, SLA compliance |
-| **Data quality** | Freshness, completeness, accuracy, consistency |
+| Monitoring Category  | Metrics                                             |
+| -------------------- | --------------------------------------------------- |
+| **Infrastructure**   | Cluster utilization, memory, disk, network          |
+| **Pipeline health**  | Job success rate, duration, SLA compliance          |
+| **Data quality**     | Freshness, completeness, accuracy, consistency      |
 | **Business metrics** | Record counts, aggregated values, anomaly detection |
-| **Cost** | DBU consumption, storage growth, compute costs |
+| **Cost**             | DBU consumption, storage growth, compute costs      |
 
 **Alert Thresholds:**
 
-| Metric | Threshold | Action |
-|--------|-----------|--------|
-| Job failure rate | < 1% | Alert on-call engineer |
-| Pipeline duration | < SLA + 20% | Investigate performance |
-| Data freshness | < 2 hours lag | Alert data team |
-| Row count anomaly | > 2 std dev | Alert data owner |
+| Metric            | Threshold     | Action                  |
+| ----------------- | ------------- | ----------------------- |
+| Job failure rate  | < 1%          | Alert on-call engineer  |
+| Pipeline duration | < SLA + 20%   | Investigate performance |
+| Data freshness    | < 2 hours lag | Alert data team         |
+| Row count anomaly | > 2 std dev   | Alert data owner        |
 
 **Incident Response:**
 
@@ -435,26 +435,26 @@ databricks jobs run-now --job-id 12345
 
 **Data Activities:**
 
-| Use Case | Implementation |
-|----------|----------------|
-| **Transformation toggle** | Conditionally apply new aggregation logic |
-| **Schema evolution** | Gradually add columns, migrate data |
-| **A/B testing** | Run two transformation versions, compare results |
-| **Canary analysis** | Process subset of data with new logic |
-| **Dark launch** | Deploy pipeline but don't update downstream tables |
+| Use Case                  | Implementation                                     |
+| ------------------------- | -------------------------------------------------- |
+| **Transformation toggle** | Conditionally apply new aggregation logic          |
+| **Schema evolution**      | Gradually add columns, migrate data                |
+| **A/B testing**           | Run two transformation versions, compare results   |
+| **Canary analysis**       | Process subset of data with new logic              |
+| **Dark launch**           | Deploy pipeline but don't update downstream tables |
 
 **Flag Types:**
 
-| Type | Example |
-|------|---------|
-| **Boolean** | `use_new_segmentation_algo: true` |
-| **Percentage** | `new_pipeline_rollout_pct: 25` (25% of customers) |
-| **Cohort-based** | `enabled_for_regions: ["us-west", "eu-central"]` |
-| **Time-based** | `enable_after: "2024-02-01T00:00:00Z"` |
+| Type             | Example                                           |
+| ---------------- | ------------------------------------------------- |
+| **Boolean**      | `use_new_segmentation_algo: true`                 |
+| **Percentage**   | `new_pipeline_rollout_pct: 25` (25% of customers) |
+| **Cohort-based** | `enabled_for_regions: ["us-west", "eu-central"]`  |
+| **Time-based**   | `enable_after: "2024-02-01T00:00:00Z"`            |
 
 **Implementation Patterns:**
 
-**Pattern 1: Conditional transformation**
+Pattern 1 - Conditional transformation:
 
 ```python
 # Read feature flag
@@ -466,7 +466,7 @@ else:
     segments = apply_old_segmentation(customers_df)
 ```
 
-**Pattern 2: Parallel pipelines**
+Pattern 2 - Parallel pipelines:
 
 ```yaml
 # Asset Bundle with feature flag
@@ -492,20 +492,20 @@ resources:
 
 ## Summary: Quick Reference
 
-| Stage | Data Artifact | Key Activities | Duration |
-|-------|--------------|----------------|----------|
-| 1. Authoring | All | Write specs, develop locally | hours-days |
-| 2. Pre-commit | All | Unit tests, linting, validation | 5-10 min |
-| 3. Merge Request | All | Code review, CI checks | hours |
-| 4. Commit | All | Build artifacts, trigger tests | 5-10 min |
-| 5. Acceptance | Pipelines, Models | PLTE deployment, integration tests | 15-60 min |
-| 6. Extended | Pipelines, Models | Performance, security, quality tests | hours |
-| 7. Exploration | Dashboards, Models | Stakeholder validation, UAT | ongoing |
-| 8. Start Release | All | Version, release notes | minutes |
-| 9. Approval | All | RA: manual approval, CDe: auto | mins-days |
-| 10. Deployment | All | Production deployment | 5-30 min |
-| 11. Live | All | Monitor quality, performance, cost | ongoing |
-| 12. Toggling | Transformations | Feature flags, gradual rollout | as needed |
+| Stage            | Data Artifact      | Key Activities                       | Duration   |
+| ---------------- | ------------------ | ------------------------------------ | ---------- |
+| 1. Authoring     | All                | Write specs, develop locally         | hours-days |
+| 2. Pre-commit    | All                | Unit tests, linting, validation      | 5-10 min   |
+| 3. Merge Request | All                | Code review, CI checks               | hours      |
+| 4. Commit        | All                | Build artifacts, trigger tests       | 5-10 min   |
+| 5. Acceptance    | Pipelines, Models  | PLTE deployment, integration tests   | 15-60 min  |
+| 6. Extended      | Pipelines, Models  | Performance, security, quality tests | hours      |
+| 7. Exploration   | Dashboards, Models | Stakeholder validation, UAT          | ongoing    |
+| 8. Start Release | All                | Version, release notes               | minutes    |
+| 9. Approval      | All                | RA: manual approval, CDe: auto       | mins-days  |
+| 10. Deployment   | All                | Production deployment                | 5-30 min   |
+| 11. Live         | All                | Monitor quality, performance, cost   | ongoing    |
+| 12. Toggling     | Transformations    | Feature flags, gradual rollout       | as needed  |
 
 ## Variant Selection: RA vs CDe
 

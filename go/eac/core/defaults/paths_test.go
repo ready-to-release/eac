@@ -115,9 +115,6 @@ func TestFeatureDir(t *testing.T) {
 
 // TestConstants verifies the default constant values are as expected
 func TestConstants(t *testing.T) {
-	if ModuleType != "no-module-type" {
-		t.Errorf("ModuleType = %q, want %q", ModuleType, "no-module-type")
-	}
 	if Changelog != "CHANGELOG.md" {
 		t.Errorf("Changelog = %q, want %q", Changelog, "CHANGELOG.md")
 	}

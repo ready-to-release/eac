@@ -13,14 +13,14 @@ type ExecutorAdapter struct {
 	model    string // Optional model override
 }
 
-// NewExecutorAdapter creates a new adapter for an AI executor
+// NewExecutorAdapter creates a new adapter for an AI executor.
 func NewExecutorAdapter(executor *Executor) *ExecutorAdapter {
 	return &ExecutorAdapter{
 		executor: executor,
 	}
 }
 
-// NewExecutorAdapterWithModel creates an adapter with a specific model override
+// NewExecutorAdapterWithModel creates an adapter with a specific model override.
 func NewExecutorAdapterWithModel(executor *Executor, model string) *ExecutorAdapter {
 	return &ExecutorAdapter{
 		executor: executor,

@@ -4,12 +4,12 @@ Install project templates for documentation, AI prompts, reports, and specificat
 
 ## Commands in this Category
 
-| Command | Purpose |
-|---------|---------|
-| [templates install-docs](./install-docs.md) | Install documentation templates |
-| [templates install-ai](./install-ai.md) | Install AI prompt templates |
-| [templates install-reports](./install-reports.md) | Install report templates |
-| [templates install-specs](./install-specs.md) | Install specification templates |
+| Command                                           | Purpose                         |
+| ------------------------------------------------- | ------------------------------- |
+| [templates install-docs](./install-docs.md)       | Install documentation templates |
+| [templates install-ai](./install-ai.md)           | Install AI prompt templates     |
+| [templates install-reports](./install-reports.md) | Install report templates        |
+| [templates install-specs](./install-specs.md)     | Install specification templates |
 
 ## Quick Examples
 

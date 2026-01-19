@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ready-to-release.org/schemas/eac-core/lint-providers/0.1.0",
+  "title": "Lint Providers Schema",
+  "description": "Schema for lint provider definitions that define how linting tools operate",
+  "type": "object",
+  "properties": {
+    "lint-providers": {
+      "type": "object",
+      "description": "Map of lint provider name to configuration",
+      "additionalProperties": {
+        "$ref": "#/definitions/lint_provider"
+      }
+    }
+  },
+  "required": ["lint-providers"],
+  "definitions": {
+    "lint_provider": {
+      "type": "object",
+      "description": "A lint provider definition that describes how to run a linting tool",
+      "required": ["command", "input_mode", "applies_to", "system_dependency"],
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of the lint provider"
+        },
+        "command": {
+          "type": "string",
+          "description": "The executable command to run (e.g., \"golangci-lint\", \"eslint\")",
+          "pattern": "^[a-zA-Z][a-zA-Z0-9._-]*$"
+        },
+        "input_mode": {
+          "type": "string",
+          "description": "How files are passed to the linter",
+          "enum": ["packages", "files", "directory"]
+        },
+        "config_files": {
+          "type": "array",
+          "description": "Standard config file names for auto-discovery (e.g., [\".golangci.yml\"])",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "system_dependency": {
+          "type": "string",
+          "description": "Reference to system-dependencies.yml moniker (must exist)",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "applies_to": {
+          "type": "array",
+          "description": "Component types this linter can process (e.g., [\"go\"], [\"typescript\", \"javascript\"])",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "minItems": 1
+        },
+        "options": {
+          "type": "object",
+          "description": "Optional behavior flags for the lint provider",
+          "properties": {
+            "allow_parallel": {
+              "type": "boolean",
+              "description": "Whether multiple instances can run simultaneously",
+              "default": false
+            },
+            "auto_fix": {
+              "type": "boolean",
+              "description": "Whether the linter supports --fix or equivalent",
+              "default": false
+            }
+          }
+        }
+      }
+    }
+  }
+}

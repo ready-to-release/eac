@@ -9,7 +9,6 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
-	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -17,9 +16,9 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/tui/stream"
 )
 
-// Default TUI configuration values
+// Default TUI configuration values.
 const (
-	// DefaultHeight is the default TUI console height in rows (3-20)
+	// DefaultHeight is the default TUI console height in rows (3-20).
 	DefaultHeight = 15
 )
 
@@ -41,6 +40,7 @@ type Console struct {
 	started bool
 	stopped bool
 	ready   chan struct{} // Signals when TUI is ready
+	done    chan struct{} // Signals when Start() has fully completed (including printSummary)
 
 	// Track multi-writers for cleanup
 	writers []*stream.MultiWriter
@@ -63,6 +63,7 @@ func New(config Config) *Console {
 		lineChan:   make(chan console.Line, 100),
 		statusChan: make(chan console.Status, 10),
 		ready:      make(chan struct{}),
+		done:       make(chan struct{}),
 	}
 }
 
@@ -76,6 +77,9 @@ func (c *Console) Start(ctx context.Context) error {
 	}
 	c.started = true
 	c.mu.Unlock()
+
+	// Signal completion when Start() returns (after all cleanup including printSummary)
+	defer close(c.done)
 
 	model := console.NewModel(
 		c.config.Height,
@@ -92,10 +96,10 @@ func (c *Console) Start(ctx context.Context) error {
 	// Disable signal handler so our custom handler can catch Ctrl-C
 	// Start with mouse mode enabled for scrolling
 	c.program = tea.NewProgram(model,
-		tea.WithAltScreen(),           // Take over screen, restore on exit
+		tea.WithAltScreen(), // Take over screen, restore on exit
 		tea.WithoutBracketedPaste(),
-		tea.WithoutSignalHandler(),    // Let our custom signal handler catch Ctrl-C
-		tea.WithMouseCellMotion(),     // Enable mouse for scrolling
+		tea.WithoutSignalHandler(), // Let our custom signal handler catch Ctrl-C
+		tea.WithMouseCellMotion(),  // Enable mouse for scrolling
 	)
 
 	// Signal that TUI is ready
@@ -168,28 +172,27 @@ func (c *Console) Start(ctx context.Context) error {
 // Waits for TUI to be ready before returning. Call Stop to stop the program.
 func (c *Console) StartAsync(ctx context.Context) {
 	go func() {
+		//nolint:errcheck // TUI errors are non-fatal in async mode
 		_ = c.Start(ctx)
 	}()
 
-	// Wait for TUI to be ready (or timeout after 1 second)
-	select {
-	case <-c.ready:
-	case <-time.After(1 * time.Second):
-	}
+	// Wait for TUI to be ready
+	<-c.ready
 }
 
-// Wait waits for the TUI program to exit naturally (e.g., user presses a key).
+// Wait waits for the TUI program to fully complete, including printSummary().
 // Does not force the program to quit. Use Stop() to force quit.
 func (c *Console) Wait() {
 	c.mu.Lock()
-	program := c.program
+	started := c.started
 	c.mu.Unlock()
 
-	if program != nil {
-		program.Wait()
+	// Wait for Start() to fully complete (including printSummary)
+	// The done channel is closed by Start() after all cleanup
+	if started {
+		<-c.done
 	}
 
-	// Mark as stopped after waiting
 	c.mu.Lock()
 	c.stopped = true
 	c.mu.Unlock()
@@ -203,6 +206,7 @@ func (c *Console) Stop() {
 		return
 	}
 	c.stopped = true
+	started := c.started
 	c.mu.Unlock()
 
 	// Close all multi-writers first
@@ -221,6 +225,12 @@ func (c *Console) Stop() {
 	if c.program != nil {
 		c.program.Quit()
 		c.program.Wait()
+	}
+
+	// Wait for Start() to fully complete (including printSummary)
+	// This ensures the final output is printed before we reset the terminal
+	if started {
+		<-c.done
 	}
 
 	// Reset terminal state - clear any lingering escape sequences
@@ -301,7 +311,7 @@ func (c *Console) SendError(source, text string) {
 	})
 }
 
-// SetPhase switches to a new phase (Init, Run, End)
+// SetPhase switches to a new phase (Init, Run, End).
 func (c *Console) SetPhase(phase Phase) {
 	c.mu.Lock()
 	stopped := c.stopped
@@ -319,7 +329,7 @@ func (c *Console) SetPhase(phase Phase) {
 	})
 }
 
-// SetPhaseSummary sets the summary text for a collapsed phase
+// SetPhaseSummary sets the summary text for a collapsed phase.
 func (c *Console) SetPhaseSummary(phase Phase, summary string) {
 	c.mu.Lock()
 	stopped := c.stopped
@@ -336,7 +346,7 @@ func (c *Console) SetPhaseSummary(phase Phase, summary string) {
 	})
 }
 
-// CompletePhase marks a phase as complete with a summary
+// CompletePhase marks a phase as complete with a summary.
 func (c *Console) CompletePhase(phase Phase, success bool, summary string) {
 	c.mu.Lock()
 	stopped := c.stopped
@@ -359,7 +369,7 @@ func (c *Console) CompletePhase(phase Phase, success bool, summary string) {
 	})
 }
 
-// WriteToPhase writes a line to a specific phase's buffer
+// WriteToPhase writes a line to a specific phase's buffer.
 func (c *Console) WriteToPhase(phase Phase, text string) {
 	c.mu.Lock()
 	stopped := c.stopped
@@ -381,7 +391,7 @@ func (c *Console) WriteToPhase(phase Phase, text string) {
 	})
 }
 
-// WriteResult writes a line to the results buffer (appears below Run pane)
+// WriteResult writes a line to the results buffer (appears below Run pane).
 func (c *Console) WriteResult(text string) {
 	c.mu.Lock()
 	stopped := c.stopped
@@ -402,7 +412,7 @@ func (c *Console) WriteResult(text string) {
 	})
 }
 
-// SendSummary sends summary data and activates the Summary pane
+// SendSummary sends summary data and activates the Summary pane.
 func (c *Console) SendSummary(data *SummaryData) {
 	c.mu.Lock()
 	stopped := c.stopped
@@ -458,7 +468,7 @@ const (
 	PhaseFailed   = console.PhaseFailed
 )
 
-// printSummary prints a plain-text summary after the TUI exits
+// printSummary prints a plain-text summary after the TUI exits.
 func (c *Console) printSummary(m *console.Model) {
 	// Use the console package's ViewFinal method to generate plain-text output
 	summary := m.ViewFinal()

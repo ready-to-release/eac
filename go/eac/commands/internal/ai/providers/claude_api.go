@@ -11,17 +11,17 @@ import (
 )
 
 // DefaultClaudeAPIModel is the default model for Claude API provider
-// Change this constant when upgrading to a newer model version
+// Change this constant when upgrading to a newer model version.
 const DefaultClaudeAPIModel = "claude-3-haiku-20240307"
 
-// ClaudeAPI provider uses Anthropic API with API key authentication
+// ClaudeAPI provider uses Anthropic API with API key authentication.
 type ClaudeAPI struct {
 	client anthropic.Client
 	model  string
 }
 
 // NewClaudeAPI creates a Claude API provider
-// Returns error if API key or model is empty (fail fast)
+// Returns error if API key or model is empty (fail fast).
 func NewClaudeAPI(apiKey, model string) (*ClaudeAPI, error) {
 	// Validate required fields
 	if apiKey == "" {
@@ -42,12 +42,12 @@ func NewClaudeAPI(apiKey, model string) (*ClaudeAPI, error) {
 	}, nil
 }
 
-// Name returns "claude-api" for provider identification
+// Name returns "claude-api" for provider identification.
 func (p *ClaudeAPI) Name() string {
 	return "claude-api"
 }
 
-// Execute sends input to Claude API and returns the response
+// Execute sends input to Claude API and returns the response.
 func (p *ClaudeAPI) Execute(ctx context.Context, input string, opts ...ai.Option) (string, error) {
 	// Apply options with defaults
 	options := &ai.ExecuteOptions{
@@ -68,7 +68,6 @@ func (p *ClaudeAPI) Execute(ctx context.Context, input string, opts ...ai.Option
 		MaxTokens:   int64(options.MaxTokens),
 		Temperature: anthropic.Float(options.Temperature),
 	})
-
 	if err != nil {
 		return "", fmt.Errorf("claude API call failed: %w", err)
 	}
@@ -80,7 +79,8 @@ func (p *ClaudeAPI) Execute(ctx context.Context, input string, opts ...ai.Option
 
 	// Extract text from content blocks using AsText()
 	var result string
-	for _, block := range message.Content {
+	for i := range message.Content {
+		block := &message.Content[i]
 		textBlock := block.AsText()
 		if textBlock.Text != "" {
 			result += textBlock.Text

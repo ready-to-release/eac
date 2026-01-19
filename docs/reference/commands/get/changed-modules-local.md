@@ -21,11 +21,11 @@ echo "Modules needing rebuild: $(echo "$RESULT" | jq -r '.modules | length')"
 
 ## Comparison
 
-| Command | Purpose | Use When |
-|---------|---------|----------|
-| `get changed-modules-local` | Modules needing rebuild based on build state | Local development |
-| `get changed-modules` | Modules affected by git changes | Working with uncommitted changes |
-| `get changed-modules-ci` | Modules needing rebuild in CI | CI/CD pipelines |
+| Command                     | Purpose                                      | Use When                         |
+| --------------------------- | -------------------------------------------- | -------------------------------- |
+| `get changed-modules-local` | Modules needing rebuild based on build state | Local development                |
+| `get changed-modules`       | Modules affected by git changes              | Working with uncommitted changes |
+| `get changed-modules-ci`    | Modules needing rebuild in CI                | CI/CD pipelines                  |
 
 ## See Also
 

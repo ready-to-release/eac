@@ -46,9 +46,6 @@ paths:
   # Specs root directory - where feature specifications live
   specs_root: specs
 
-  # Test implementation root directory
-  test_impl_root: tests
-
   # Templates directory
   templates: templates
 
@@ -92,7 +89,6 @@ conventions:
 modules:
   - moniker: default
     name: Default Module
-    type: go
     description: Auto-generated module for unconfigured repositories
-    files:
-      root: "."
+    components:
+      go: "."

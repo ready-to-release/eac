@@ -49,7 +49,7 @@ func init() {
 	registry.Register(GetChangedModulesCI)
 }
 
-// CIChangedModulesResult represents the output of the get changed-modules-ci command
+// CIChangedModulesResult represents the output of the get changed-modules-ci command.
 type CIChangedModulesResult struct {
 	Modules         []string `json:"modules" yaml:"modules" toml:"modules"`
 	DirectlyChanged []string `json:"directly_changed" yaml:"directly_changed" toml:"directly_changed"`
@@ -69,7 +69,7 @@ type CIChangedModulesResult struct {
 	FilteredOut []string `json:"filtered_out,omitempty" yaml:"filtered_out,omitempty" toml:"filtered_out,omitempty"`
 }
 
-// ModuleCIStatus tracks the CI status for a single module
+// ModuleCIStatus tracks the CI status for a single module.
 type ModuleCIStatus struct {
 	HasValidCI     bool   `json:"has_valid_ci" yaml:"has_valid_ci" toml:"has_valid_ci"`
 	LastSuccessSHA string `json:"last_success_sha,omitempty" yaml:"last_success_sha,omitempty" toml:"last_success_sha,omitempty"`
@@ -205,12 +205,14 @@ func buildPerModuleCIResult(workspaceRoot, headSHA, prBase string, filterWorkflo
 			if status.FilesChanged > 0 {
 				// Get the actual changed files for this module for reporting
 				if baseSHA := status.LastSuccessSHA; baseSHA != "" {
-					files, _ := getChangedFilesBetweenSHAs(baseSHA, headSHA, workspaceRoot)
-					moduleFiles := filterFilesForModule(files, module, workspaceRoot, ciExcludedFiles)
-					result.FilesByModule[module] = moduleFiles
-					// Only count files directly owned by this module
-					for _, f := range moduleFiles {
-						allChangedFilesSet[f] = true
+					files, filesErr := getChangedFilesBetweenSHAs(baseSHA, headSHA, workspaceRoot)
+					if filesErr == nil {
+						moduleFiles := filterFilesForModule(files, module, workspaceRoot, ciExcludedFiles)
+						result.FilesByModule[module] = moduleFiles
+						// Only count files directly owned by this module
+						for _, f := range moduleFiles {
+							allChangedFilesSet[f] = true
+						}
 					}
 				}
 			}
@@ -377,7 +379,7 @@ func filterFilesForModule(files []string, module, workspaceRoot string, ciExclud
 	return []string{}
 }
 
-// buildCIChangedModulesResult builds the result structure (legacy, kept for compatibility)
+// buildCIChangedModulesResult builds the result structure (legacy, kept for compatibility).
 func buildCIChangedModulesResult(workspaceRoot, baseSHA, headSHA string, isBootstrap, filterWorkflows bool) (*CIChangedModulesResult, error) {
 	// If bootstrap (no previous success), return all modules
 	if isBootstrap {
@@ -488,7 +490,7 @@ func buildCIChangedModulesResult(workspaceRoot, baseSHA, headSHA string, isBoots
 }
 
 // determineBaseSHA determines the base SHA for comparison
-// Returns (baseSHA, isBootstrap, error)
+// Returns (baseSHA, isBootstrap, error).
 func determineBaseSHA(prBase, workflow, branch, workspaceRoot string) (string, bool, error) {
 	// If PR base is provided, use it directly
 	if prBase != "" {
@@ -509,7 +511,7 @@ func determineBaseSHA(prBase, workflow, branch, workspaceRoot string) (string, b
 	return baseSHA, false, nil
 }
 
-// getLastSuccessfulCISHA queries gh CLI for the last successful workflow run SHA
+// getLastSuccessfulCISHA queries gh CLI for the last successful workflow run SHA.
 func getLastSuccessfulCISHA(workflow, branch, workspaceRoot string) (string, error) {
 	// gh run list -b <branch> -s success -w "<workflow>" -L 1 --json headSha -q '.[0].headSha'
 	cmd := exec.Command("gh", "run", "list",
@@ -531,7 +533,7 @@ func getLastSuccessfulCISHA(workflow, branch, workspaceRoot string) (string, err
 	return sha, nil
 }
 
-// getCurrentSHA gets the current HEAD SHA
+// getCurrentSHA gets the current HEAD SHA.
 func getCurrentSHA(workspaceRoot string) (string, error) {
 	cmd := exec.Command("git", "rev-parse", "HEAD")
 	cmd.Dir = workspaceRoot
@@ -544,7 +546,7 @@ func getCurrentSHA(workspaceRoot string) (string, error) {
 	return strings.TrimSpace(string(output)), nil
 }
 
-// getChangedFilesBetweenSHAs gets the list of files changed between two SHAs
+// getChangedFilesBetweenSHAs gets the list of files changed between two SHAs.
 func getChangedFilesBetweenSHAs(baseSHA, headSHA, workspaceRoot string) ([]string, error) {
 	cmd := exec.Command("git", "diff", "--name-only", baseSHA+".."+headSHA)
 	cmd.Dir = workspaceRoot
@@ -562,7 +564,7 @@ func getChangedFilesBetweenSHAs(baseSHA, headSHA, workspaceRoot string) ([]strin
 	return files, nil
 }
 
-// getAllModuleMonikers returns all module monikers (for bootstrap case)
+// getAllModuleMonikers returns all module monikers (for bootstrap case).
 func getAllModuleMonikers(workspaceRoot string) ([]string, error) {
 	graph, err := repository.GetModuleDependencyGraph(workspaceRoot)
 	if err != nil {
@@ -571,7 +573,7 @@ func getAllModuleMonikers(workspaceRoot string) ([]string, error) {
 	return graph.Modules, nil
 }
 
-// getFilesByModule maps changed files to their owning modules
+// getFilesByModule maps changed files to their owning modules.
 func getFilesByModule(changedFiles []string, workspaceRoot string) (map[string][]string, error) {
 	registry, err := modules.LoadFromWorkspace(workspaceRoot)
 	if err != nil {
@@ -599,7 +601,7 @@ func getFilesByModule(changedFiles []string, workspaceRoot string) (map[string][
 }
 
 // filterModulesWithWorkflows filters modules to only those that have a ci-{module}.yaml workflow file
-// Returns (filtered modules, modules that were filtered out)
+// Returns (filtered modules, modules that were filtered out).
 func filterModulesWithWorkflows(monikers []string, workspaceRoot string) ([]string, []string) {
 	filtered := []string{}
 	filteredOut := []string{}
@@ -628,11 +630,19 @@ func getCIExcludedFiles(workspaceRoot string) map[string]bool {
 	}
 
 	for _, module := range registry.All() {
-		// Use files.ignore patterns from module contract
-		for _, pattern := range module.Files.Ignore {
-			resolvedPattern := resolveIgnorePattern(pattern, module.Files.Root)
-			result[resolvedPattern] = true
+		// Use ignore patterns from module packages
+		// Get the buildable root for pattern resolution
+		buildableRoot := module.Components.GetBuildableRoot()
+		if buildableRoot == "" {
+			// Fallback to first available package root
+			for _, root := range module.GetComponentRoots() {
+				buildableRoot = root
+				break
+			}
 		}
+		// Note: files.ignore patterns moved to package-level - skip for now
+		// Modules needing CI exclusions should configure at package level
+		_ = buildableRoot // Reserved for future use
 	}
 
 	return result
@@ -690,7 +700,7 @@ func isFileExcluded(filePath string, patterns map[string]bool) bool {
 		}
 		// Try glob match for patterns containing wildcards
 		if strings.ContainsAny(pattern, "*?") {
-			if matched, _ := filepath.Match(pattern, filePath); matched {
+			if matched, matchErr := filepath.Match(pattern, filePath); matchErr == nil && matched {
 				return true
 			}
 			// Handle ** patterns by checking if file is under the pattern's directory

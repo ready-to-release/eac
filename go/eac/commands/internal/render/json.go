@@ -8,7 +8,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// OrderedMap represents a map that preserves insertion order when marshaled to JSON
+// OrderedMap represents a map that preserves insertion order when marshaled to JSON.
 type OrderedMap struct {
 	keys   []string
 	values map[string]interface{}
@@ -28,7 +28,7 @@ func (om *OrderedMap) Set(key string, value interface{}) {
 	om.values[key] = value
 }
 
-// MarshalJSON implements json.Marshaler to preserve key order
+// MarshalJSON implements json.Marshaler to preserve key order.
 func (om *OrderedMap) MarshalJSON() ([]byte, error) {
 	var buf strings.Builder
 	buf.WriteString("{")
@@ -91,7 +91,7 @@ func RenderAsJSON(v interface{}) (string, error) {
 	return string(jsonBytes), nil
 }
 
-// marshalIndentOrdered marshals with proper indentation, handling OrderedMap
+// marshalIndentOrdered marshals with proper indentation, handling OrderedMap.
 func marshalIndentOrdered(v interface{}, prefix, indent string) ([]byte, error) {
 	// For OrderedMap, we need custom indentation
 	if om, ok := v.(*OrderedMap); ok {
@@ -101,7 +101,7 @@ func marshalIndentOrdered(v interface{}, prefix, indent string) ([]byte, error) 
 	return json.MarshalIndent(v, prefix, indent)
 }
 
-// marshalOrderedMapIndent recursively marshals OrderedMap with indentation
+// marshalOrderedMapIndent recursively marshals OrderedMap with indentation.
 func marshalOrderedMapIndent(om *OrderedMap, prefix, indent string, depth int) ([]byte, error) {
 	if len(om.keys) == 0 {
 		return []byte("{}"), nil
@@ -146,7 +146,7 @@ func marshalOrderedMapIndent(om *OrderedMap, prefix, indent string, depth int) (
 	return []byte(buf.String()), nil
 }
 
-// marshalSliceIndent marshals a slice with proper indentation
+// marshalSliceIndent marshals a slice with proper indentation.
 func marshalSliceIndent(slice []interface{}, prefix, indent string, depth int) ([]byte, error) {
 	if len(slice) == 0 {
 		return []byte("[]"), nil
@@ -183,7 +183,7 @@ func marshalSliceIndent(slice []interface{}, prefix, indent string, depth int) (
 	return []byte(buf.String()), nil
 }
 
-// yamlNodeToOrderedInterface converts yaml.Node to interface{} while preserving order
+// yamlNodeToOrderedInterface converts yaml.Node to interface{} while preserving order.
 func yamlNodeToOrderedInterface(node *yaml.Node) interface{} {
 	switch node.Kind {
 	case yaml.DocumentNode:
@@ -215,7 +215,7 @@ func yamlNodeToOrderedInterface(node *yaml.Node) interface{} {
 	}
 }
 
-// decodeScalar converts YAML scalar values to appropriate Go types
+// decodeScalar converts YAML scalar values to appropriate Go types.
 func decodeScalar(node *yaml.Node) interface{} {
 	var result interface{}
 	// Let yaml unmarshal handle type detection
@@ -226,7 +226,7 @@ func decodeScalar(node *yaml.Node) interface{} {
 }
 
 // RenderAsJSONOrPanic is a convenience wrapper that panics on error
-// Useful for cases where marshaling is guaranteed to succeed
+// Useful for cases where marshaling is guaranteed to succeed.
 func RenderAsJSONOrPanic(v interface{}) string {
 	result, err := RenderAsJSON(v)
 	if err != nil {

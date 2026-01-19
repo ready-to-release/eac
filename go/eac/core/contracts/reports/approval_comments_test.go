@@ -9,7 +9,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/git"
 )
 
-// mockGitHubCLI implements GitHubCLI for testing
+// mockGitHubCLI implements GitHubCLI for testing.
 type mockGitHubCLI struct {
 	prs map[int]*PRData
 }
@@ -17,7 +17,7 @@ type mockGitHubCLI struct {
 func (m *mockGitHubCLI) GetPR(workspaceRoot string, prNumber int) (*PRData, error) {
 	pr, ok := m.prs[prNumber]
 	if !ok {
-		return nil, nil // PR not found
+		return nil, ErrPRNotFound
 	}
 	return pr, nil
 }
@@ -134,7 +134,7 @@ func TestGetApprovalComments(t *testing.T) {
 }
 
 // TestGetApprovalComments_BundleModuleAggregation verifies that bundle modules
-// aggregate approvals from all their dependencies
+// aggregate approvals from all their dependencies.
 func TestGetApprovalComments_BundleModuleAggregation(t *testing.T) {
 	// Get repository root
 	workspaceRoot := os.Getenv("WORKSPACE_ROOT")

@@ -10,14 +10,22 @@ import (
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/terminal"
 )
 
-// BuildEnvironmentVars creates the environment variable list for a container
+// BuildEnvironmentVars creates the environment variable list for a container.
 func (ch *ContainerHost) BuildEnvironmentVars(ext *ExtensionConfig) []string {
+	// In Docker-in-Docker mode, propagate the ORIGINAL host path to child containers
+	// so they can correctly mount volumes for further nested containers.
+	hostRepoRoot := ch.rootDir
+	if existingHostRoot := os.Getenv("R2R_HOST_REPOROOT"); existingHostRoot != "" {
+		hostRepoRoot = existingHostRoot
+		logging.Debugf("Docker-in-Docker: propagating original host path to child: host_root=%s", hostRepoRoot)
+	}
+
 	envVars := []string{
 		"R2R_DOCKER_MODE=true",
 		"R2R_HOST_GOOS=" + runtime.GOOS,
 		"R2R_HOST_GOARCH=" + runtime.GOARCH,
 		"R2R_CONTAINER_REPOROOT=" + "/var/task",
-		"R2R_HOST_REPOROOT=" + ch.rootDir,
+		"R2R_HOST_REPOROOT=" + hostRepoRoot,
 	}
 
 	// Add terminal dimensions
@@ -94,7 +102,7 @@ func (ch *ContainerHost) BuildEnvironmentVars(ext *ExtensionConfig) []string {
 	return envVars
 }
 
-// detectCIEnvironment checks multiple CI indicators beyond just CI=true
+// detectCIEnvironment checks multiple CI indicators beyond just CI=true.
 func (ch *ContainerHost) detectCIEnvironment() bool {
 	ciIndicators := []string{
 		"CI", "CONTINUOUS_INTEGRATION",
@@ -112,7 +120,7 @@ func (ch *ContainerHost) detectCIEnvironment() bool {
 	return false
 }
 
-// getCIDefaults returns CI-appropriate environment settings
+// getCIDefaults returns CI-appropriate environment settings.
 func (ch *ContainerHost) getCIDefaults() []string {
 	return []string{
 		"NO_COLOR=1",    // Disable colors in CI
@@ -122,7 +130,7 @@ func (ch *ContainerHost) getCIDefaults() []string {
 	}
 }
 
-// getShellColorSettings inherits current shell color capabilities
+// getShellColorSettings inherits current shell color capabilities.
 func (ch *ContainerHost) getShellColorSettings() []string {
 	envVars := []string{}
 
@@ -146,7 +154,7 @@ func (ch *ContainerHost) getShellColorSettings() []string {
 	return envVars
 }
 
-// getDefaultColorSettings provides fallback color settings for environments without explicit settings
+// getDefaultColorSettings provides fallback color settings for environments without explicit settings.
 func (ch *ContainerHost) getDefaultColorSettings() []string {
 	// Detect terminal capabilities
 	term := os.Getenv("TERM")

@@ -247,9 +247,7 @@ Stage 3 approval has profoundly different meanings in the two CD Model patterns:
 
 ### Release Approval (RA) Pattern
 
-**Stage 3 = First-Level Approval Only**
-
-When a peer reviewer approves in RA pattern, they're saying:
+In RA pattern, Stage 3 = First-Level Approval Only. When a peer reviewer approves, they're saying:
 
 - ✅ "This code is well-designed and correct"
 - ✅ "Tests adequately cover the changes"
@@ -276,9 +274,7 @@ When a peer reviewer approves in RA pattern, they're saying:
 
 ### Continuous Deployment (CDe) Pattern
 
-**Stage 3 = Combined First and Second-Level Approval**
-
-When a peer reviewer approves in CDe pattern, they're saying:
+In CDe pattern, Stage 3 = Combined First and Second-Level Approval. When a peer reviewer approves, they're saying:
 
 - ✅ "This code is well-designed and correct"
 - ✅ "Tests adequately cover the changes"

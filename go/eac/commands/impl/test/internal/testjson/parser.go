@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// GoTestEvent represents a single event from `go test -json` output
+// GoTestEvent represents a single event from `go test -json` output.
 type GoTestEvent struct {
 	Time    string  `json:"Time"`
 	Action  string  `json:"Action"`  // "run", "output", "pass", "fail", "skip"
@@ -18,7 +18,7 @@ type GoTestEvent struct {
 	Elapsed float64 `json:"Elapsed,omitempty"`
 }
 
-// ParseJSONFile parses a Go test JSON file and returns all events
+// ParseJSONFile parses a Go test JSON file and returns all events.
 func ParseJSONFile(jsonPath string) ([]GoTestEvent, error) {
 	content, err := os.ReadFile(jsonPath)
 	if err != nil {
@@ -43,7 +43,7 @@ func ParseJSONFile(jsonPath string) ([]GoTestEvent, error) {
 	return events, nil
 }
 
-// CountTestResults counts passed, failed, and skipped tests from events
+// CountTestResults counts passed, failed, and skipped tests from events.
 func CountTestResults(events []GoTestEvent) (passed, failed, skipped int) {
 	for _, event := range events {
 		// Only count test-level events (not package-level)
@@ -58,7 +58,7 @@ func CountTestResults(events []GoTestEvent) (passed, failed, skipped int) {
 			}
 		}
 	}
-	return
+	return passed, failed, skipped
 }
 
 // ExtractFailedTests returns a map of failed tests with their output.

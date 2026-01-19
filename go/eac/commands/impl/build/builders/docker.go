@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 )
 
@@ -18,8 +17,8 @@ func init() {
 	RegisterHandler(&DockerHandler{})
 }
 
-// resolveDockerfilePath resolves a dockerfile path template
-func resolveDockerfilePath(pathTemplate string, moniker string, root string) string {
+// resolveDockerfilePath resolves a dockerfile path template.
+func resolveDockerfilePath(pathTemplate, moniker, root string) string {
 	result := pathTemplate
 	result = strings.ReplaceAll(result, "{moniker}", moniker)
 	result = strings.ReplaceAll(result, "{root}", root)
@@ -35,7 +34,7 @@ func (h *DockerHandler) Capabilities() []string { return []string{"container"} }
 
 func (h *DockerHandler) Requirements() []string { return []string{"docker"} }
 
-func (h *DockerHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot string) error {
+func (h *DockerHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot, component string) error {
 	if !IsDockerAvailable() {
 		if IsDockerInDocker() {
 			return fmt.Errorf("Docker socket not mounted (-v /var/run/docker.sock:/var/run/docker.sock)")
@@ -50,7 +49,7 @@ func (h *DockerHandler) ListArtifacts(module *modules.ModuleContract, workspaceR
 }
 
 func (h *DockerHandler) Build(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	Logln(logWriter, "\n=== Building %s: %s ===", module.Type, module.Moniker)
+	Logln(logWriter, "\n=== Building dockerfile: %s ===", module.Moniker)
 
 	// Check if Docker is available before attempting to build
 	if !IsDockerAvailable() {
@@ -64,18 +63,20 @@ func (h *DockerHandler) Build(module *modules.ModuleContract, workspaceRoot, out
 		return 1
 	}
 
-	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
+	// Get relevant package roots
+	dockerRoot := module.GetComponentRoot("dockerfile")
+	goRoot := module.GetComponentRoot("go")
 
-	// Get capabilities from contract
-	cfg := config.Global()
-	hasGoModule := cfg != nil && cfg.ModuleTypes != nil && cfg.ModuleTypes.HasCapability(module.Type, "go_module")
+	// Check if module has go package type
+	hasGoModule := module.HasComponent("go")
 
 	// Step 1: go mod tidy (if Go module and enabled)
-	if hasGoModule && opts.TidyFirst {
-		goModPath := filepath.Join(moduleRoot, "go.mod")
+	if hasGoModule && opts.TidyFirst && goRoot != "" {
+		goModulePath := filepath.Join(workspaceRoot, goRoot)
+		goModPath := filepath.Join(goModulePath, "go.mod")
 		if _, err := os.Stat(goModPath); err == nil {
 			Logln(logWriter, "Running: go mod tidy")
-			if exitCode := RunCommandWithLog(moduleRoot, logWriter, "go", "mod", "tidy"); exitCode != 0 {
+			if exitCode := RunCommandWithLog(goModulePath, logWriter, "go", "mod", "tidy"); exitCode != 0 {
 				Logln(logWriter, "❌ go mod tidy failed")
 				return exitCode
 			}
@@ -87,7 +88,7 @@ func (h *DockerHandler) Build(module *modules.ModuleContract, workspaceRoot, out
 	searchPaths := []string{"containers/{moniker}/Dockerfile", "{root}/Dockerfile"}
 
 	for _, pathTemplate := range searchPaths {
-		resolvedPath := resolveDockerfilePath(pathTemplate, module.Moniker, module.Files.Root)
+		resolvedPath := resolveDockerfilePath(pathTemplate, module.Moniker, dockerRoot)
 		fullPath := filepath.Join(workspaceRoot, resolvedPath)
 		if _, err := os.Stat(fullPath); err == nil {
 			dockerfilePath = fullPath
@@ -123,7 +124,7 @@ func (h *DockerHandler) Build(module *modules.ModuleContract, workspaceRoot, out
 //   - {moniker}:local-{sha} - if in a git repo, includes short commit SHA
 //
 // For CI builds, tags are handled differently in the CI workflow.
-func buildDockerTags(moniker string, workspaceRoot string) []string {
+func buildDockerTags(moniker, workspaceRoot string) []string {
 	tags := []string{
 		fmt.Sprintf("%s:latest", moniker),
 		fmt.Sprintf("%s:local", moniker),
@@ -137,7 +138,7 @@ func buildDockerTags(moniker string, workspaceRoot string) []string {
 	return tags
 }
 
-// getGitShortSHA returns the short git commit SHA, or empty string if not in a git repo
+// getGitShortSHA returns the short git commit SHA, or empty string if not in a git repo.
 func getGitShortSHA(workspaceRoot string) string {
 	cmd := exec.Command("git", "rev-parse", "--short", "HEAD")
 	cmd.Dir = workspaceRoot
@@ -148,8 +149,8 @@ func getGitShortSHA(workspaceRoot string) string {
 	return strings.TrimSpace(string(output))
 }
 
-// buildDockerLocal builds a Docker image locally using BuildKit for cache support
-func buildDockerLocal(workspaceRoot string, outputDir string, dockerfilePath string, tags []string, logWriter io.Writer) int {
+// buildDockerLocal builds a Docker image locally using BuildKit for cache support.
+func buildDockerLocal(workspaceRoot, outputDir, dockerfilePath string, tags []string, logWriter io.Writer) int {
 	// Check for Docker-in-Docker mode
 	isDinD := IsDockerInDocker()
 	var contextPath, dockerfileArg string
@@ -206,15 +207,15 @@ func buildDockerLocal(workspaceRoot string, outputDir string, dockerfilePath str
 	imageInfo := fmt.Sprintf("Tags: %v\nDockerfile: %s\nBuild Date: %s\n",
 		tags, dockerfilePath, time.Now().Format(time.RFC3339))
 
-	if err := os.WriteFile(imageInfoPath, []byte(imageInfo), 0644); err != nil {
+	if err := os.WriteFile(imageInfoPath, []byte(imageInfo), 0o644); err != nil {
 		Logln(logWriter, "⚠️  Warning: could not save image info: %v", err)
 	}
 
 	return 0
 }
 
-// buildDockerCI builds a Docker image in CI with multi-platform support
-func buildDockerCI(module *modules.ModuleContract, workspaceRoot string, outputDir string, dockerfilePath string, tags []string, logWriter io.Writer) int {
+// buildDockerCI builds a Docker image in CI with multi-platform support.
+func buildDockerCI(module *modules.ModuleContract, workspaceRoot, outputDir, dockerfilePath string, tags []string, logWriter io.Writer) int {
 	// Default CI platforms
 	ciPlatforms := "linux/amd64,linux/arm64"
 
@@ -283,7 +284,7 @@ func buildDockerCI(module *modules.ModuleContract, workspaceRoot string, outputD
 	imageInfo := fmt.Sprintf("Tags: %v\nDockerfile: %s\nBuild Date: %s\nPlatforms: %s\nOCI Archive: %s.gz\n",
 		tags, dockerfilePath, time.Now().Format(time.RFC3339), ciPlatforms, ociArchivePath)
 
-	if err := os.WriteFile(imageInfoPath, []byte(imageInfo), 0644); err != nil {
+	if err := os.WriteFile(imageInfoPath, []byte(imageInfo), 0o644); err != nil {
 		Logln(logWriter, "⚠️  Warning: could not save image info: %v", err)
 	}
 

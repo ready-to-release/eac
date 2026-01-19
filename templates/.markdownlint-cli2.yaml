@@ -1,0 +1,5 @@
+# Disable markdown linting for templates module
+# Templates contain AI prompt content with placeholders and special syntax
+# that should not be validated as regular markdown
+ignores:
+  - "**/*.md"

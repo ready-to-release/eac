@@ -27,7 +27,7 @@ func init() {
 	registry.Register(ValidateBooks)
 }
 
-// ValidateBooks validates the books.yml configuration
+// ValidateBooks validates the books.yml configuration.
 func ValidateBooks() int {
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
@@ -77,18 +77,13 @@ func ValidateBooks() int {
 		return 1
 	}
 
-	// Load module types for capability checking
-	if err := cfg.LoadModuleTypes(false); err != nil {
-		log.Errorf("failed to load module types: %v", err)
-		return 1
-	}
-
 	var hasErrors bool
 	var validBooks int
 
 	// Check for duplicate book names
 	bookNames := make(map[string]bool)
-	for _, book := range cfg.Books.Books {
+	for i := range cfg.Books.Books {
+		book := &cfg.Books.Books[i]
 		if bookNames[book.Name] {
 			log.Errorf("Duplicate book name: '%s'", book.Name)
 			hasErrors = true
@@ -101,13 +96,14 @@ func ValidateBooks() int {
 	if cfg.Repository != nil {
 		for i := range cfg.Repository.Modules {
 			mod := &cfg.Repository.Modules[i]
-			for _, bookName := range mod.Books {
+			for _, bookName := range mod.GetBooks() {
 				bookToModules[bookName] = append(bookToModules[bookName], mod)
 			}
 		}
 	}
 
-	for _, book := range cfg.Books.Books {
+	for i := range cfg.Books.Books {
+		book := &cfg.Books.Books[i]
 		log.Infof("Book '%s':", book.Name)
 
 		// Check if any module references this book
@@ -118,7 +114,7 @@ func ValidateBooks() int {
 			// Show all referencing modules
 			// In the new design, modules with books are implicitly documentation modules
 			for _, module := range modules {
-				log.Infof("  Module: %s (%s)", module.Moniker, module.Type)
+				log.Infof("  Module: %s (%s)", module.Moniker, module.GetComponentTypesDisplay())
 			}
 		}
 
@@ -130,7 +126,7 @@ func ValidateBooks() int {
 		log.Infof("  Sources: %d copy, %d command, %d inline", copyCount, cmdCount, inlineCount)
 
 		// Validate commands exist
-		commandErrors := validateCommands(book)
+		commandErrors := validateCommands(*book)
 		if len(commandErrors) > 0 {
 			for _, cmdErr := range commandErrors {
 				log.Errorf("  %s", cmdErr)
@@ -139,7 +135,7 @@ func ValidateBooks() int {
 		}
 
 		// Validate generated nav references
-		navErrors := validateGeneratedNav(book)
+		navErrors := validateGeneratedNav(*book)
 		if len(navErrors) > 0 {
 			for _, navErr := range navErrors {
 				log.Errorf("  %s", navErr)
@@ -164,7 +160,7 @@ func ValidateBooks() int {
 	return 0
 }
 
-// validateCommands checks that all commands in sources are valid EAC commands
+// validateCommands checks that all commands in sources are valid EAC commands.
 func validateCommands(book config.Book) []string {
 	var errors []string
 
@@ -187,7 +183,7 @@ func validateCommands(book config.Book) []string {
 	return errors
 }
 
-// validateGeneratedNav checks that generated nav configurations are valid
+// validateGeneratedNav checks that generated nav configurations are valid.
 func validateGeneratedNav(book config.Book) []string {
 	var errors []string
 
@@ -206,14 +202,14 @@ func validateGeneratedNav(book config.Book) []string {
 	return errors
 }
 
-// isValidCommand checks if a command is a valid EAC show command
+// isValidCommand checks if a command is a valid EAC show command.
 func isValidCommand(cmd string) bool {
 	// Known valid show commands that produce markdown output
 	validCommands := []string{
 		"show files",
 		"show modules",
 		"show dependencies",
-		"show moduletypes",
+		"show component-types",
 		"show environments",
 		"show tests",
 		"show test-results",
@@ -234,7 +230,7 @@ func isValidCommand(cmd string) bool {
 	return false
 }
 
-// isValidPosition checks if a position string is valid
+// isValidPosition checks if a position string is valid.
 func isValidPosition(pos string) bool {
 	if pos == "first" || pos == "last" {
 		return true

@@ -5,16 +5,16 @@ import (
 	"strings"
 )
 
-// CustomRenderer is a function that takes YAML bytes and returns a formatted string
+// CustomRenderer is a function that takes YAML bytes and returns a formatted string.
 type CustomRenderer func(yamlBytes []byte) (string, error)
 
-// RendererRegistration holds a renderer and its command filters
+// RendererRegistration holds a renderer and its command filters.
 type RendererRegistration struct {
 	Renderer CustomRenderer
 	Commands []string // Empty means "*" (all commands)
 }
 
-// registry holds all registered custom renderers with their command filters
+// registry holds all registered custom renderers with their command filters.
 var registry = make(map[string]*RendererRegistration)
 
 // Register adds a custom renderer to the registry
@@ -23,7 +23,7 @@ var registry = make(map[string]*RendererRegistration)
 //   - []string{"get-modules"} - only for get modules command
 //   - []string{"get-modules", "get-files"} - for multiple commands
 //
-// This is typically called from init() functions in custom renderer files
+// This is typically called from init() functions in custom renderer files.
 func Register(name string, renderer CustomRenderer, commands []string) {
 	if _, exists := registry[name]; exists {
 		panic(fmt.Sprintf("custom renderer %q already registered", name))
@@ -41,8 +41,8 @@ func Register(name string, renderer CustomRenderer, commands []string) {
 }
 
 // Get retrieves a custom renderer by name, checking if it supports the given command
-// commandName format: kebab-case (e.g., "get-modules")
-func Get(name string, commandName string) (CustomRenderer, error) {
+// commandName format: kebab-case (e.g., "get-modules").
+func Get(name, commandName string) (CustomRenderer, error) {
 	reg, exists := registry[name]
 	if !exists {
 		return nil, fmt.Errorf("custom renderer %q not found", name)
@@ -59,7 +59,7 @@ func Get(name string, commandName string) (CustomRenderer, error) {
 
 // List returns custom renderer names that support the given command
 // commandName format: kebab-case (e.g., "get-modules")
-// If commandName is empty, returns all renderers
+// If commandName is empty, returns all renderers.
 func List(commandName string) []string {
 	names := make([]string, 0, len(registry))
 
@@ -74,7 +74,7 @@ func List(commandName string) []string {
 }
 
 // SupportsCommand checks if this renderer supports the given command
-// commandName should be in kebab-case (e.g., "get-modules")
+// commandName should be in kebab-case (e.g., "get-modules").
 func (r *RendererRegistration) SupportsCommand(commandName string) bool {
 	// Check for wildcard
 	for _, cmd := range r.Commands {

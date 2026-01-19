@@ -17,13 +17,13 @@ type Logger struct {
 	mu     sync.RWMutex
 }
 
-// Global state
+// Global state.
 var (
-	globalLogger  *Logger
-	loggerOnce    sync.Once
-	debugEnabled  uint32 // atomic: 0 = disabled, 1 = enabled
-	stdOutput     io.Writer = os.Stdout
-	errOutput     io.Writer = os.Stderr
+	globalLogger *Logger
+	loggerOnce   sync.Once
+	debugEnabled uint32    // atomic: 0 = disabled, 1 = enabled
+	stdOutput    io.Writer = os.Stdout
+	errOutput    io.Writer = os.Stderr
 )
 
 // Initialize creates the global logger with the given configuration.
@@ -48,7 +48,7 @@ func InitFromEnv() {
 	}
 }
 
-// get returns the global logger, initializing with defaults if needed
+// get returns the global logger, initializing with defaults if needed.
 func get() *Logger {
 	if globalLogger == nil {
 		loggerOnce.Do(func() {
@@ -58,7 +58,7 @@ func get() *Logger {
 	return globalLogger
 }
 
-// EnableDebug turns on debug logging globally
+// EnableDebug turns on debug logging globally.
 func EnableDebug() {
 	atomic.StoreUint32(&debugEnabled, 1)
 	// Also enable debug level in console config
@@ -71,17 +71,17 @@ func EnableDebug() {
 	}
 }
 
-// DisableDebug turns off debug logging globally
+// DisableDebug turns off debug logging globally.
 func DisableDebug() {
 	atomic.StoreUint32(&debugEnabled, 0)
 }
 
-// IsDebugEnabled returns true if debug logging is enabled
+// IsDebugEnabled returns true if debug logging is enabled.
 func IsDebugEnabled() bool {
 	return atomic.LoadUint32(&debugEnabled) == 1
 }
 
-// SetLevel sets the minimum log level
+// SetLevel sets the minimum log level.
 func SetLevel(level string) error {
 	switch level {
 	case "debug":
@@ -94,7 +94,7 @@ func SetLevel(level string) error {
 	return nil
 }
 
-// GetLevel returns the current log level as a string
+// GetLevel returns the current log level as a string.
 func GetLevel() string {
 	if IsDebugEnabled() {
 		return "debug"
@@ -102,7 +102,7 @@ func GetLevel() string {
 	return "info"
 }
 
-// formatMessage formats a log message based on console config
+// formatMessage formats a log message based on console config.
 func (l *Logger) formatMessage(level, msg string) string {
 	l.mu.RLock()
 	formatter := l.config.Console.Formatter
@@ -117,16 +117,17 @@ func (l *Logger) formatMessage(level, msg string) string {
 			"message": msg,
 			"time":    time.Now().Format(time.RFC3339),
 		}
-		b, _ := json.Marshal(data)
+		b, err := json.Marshal(data)
+		if err != nil {
+			return msg // Fallback to raw message on marshal error
+		}
 		return string(b)
-	case FormatterTimestamped:
-		fallthrough
-	default:
+	default: // FormatterTimestamped or any other formatter
 		return fmt.Sprintf("%s  %-5s  %s", time.Now().Format("15:04:05.000"), level, msg)
 	}
 }
 
-// shouldLog checks if a message at the given level should be logged
+// shouldLog checks if a message at the given level should be logged.
 func (l *Logger) shouldLog(level string) bool {
 	l.mu.RLock()
 	defer l.mu.RUnlock()

@@ -19,7 +19,7 @@ import (
 
 // log is declared in docker.go
 
-// ScanConfig holds the configuration for a scan command
+// ScanConfig holds the configuration for a scan command.
 type ScanConfig struct {
 	// ScannerType identifies the scanner (sbom, vuln, secrets, etc.)
 	ScannerType ScannerType
@@ -44,7 +44,7 @@ type ScanConfig struct {
 	CustomArgs interface{}
 }
 
-// ScanContext holds the runtime context for a scan operation
+// ScanContext holds the runtime context for a scan operation.
 type ScanContext struct {
 	Config        *ScanConfig
 	WorkspaceRoot string
@@ -55,7 +55,7 @@ type ScanContext struct {
 	ScanOutDir    string
 }
 
-// ModuleScanContext provides context for scanning a specific module
+// ModuleScanContext provides context for scanning a specific module.
 type ModuleScanContext struct {
 	*ScanContext
 	Moniker       string
@@ -66,17 +66,17 @@ type ModuleScanContext struct {
 
 // ScanWorkerFunc is the function signature for module scan workers
 // Returns: (findings interface{} or nil, error)
-// If findings is nil and error is nil, the scan is skipped
+// If findings is nil and error is nil, the scan is skipped.
 type ScanWorkerFunc func(ctx *ModuleScanContext) (interface{}, error)
 
-// Run executes the scan framework with the given configuration and worker
+// Run executes the scan framework with the given configuration and worker.
 func Run(cfg *ScanConfig, worker ScanWorkerFunc) int {
 	ctx, err := initialize(cfg)
 	if err != nil {
 		log.Errorf("Initialization failed: %v", err)
 		return 1
 	}
-	defer ctx.Logger.Sync()
+	defer func() { _ = ctx.Logger.Sync() }() //nolint:errcheck // best-effort sync
 
 	// If no monikers provided, default to all modules
 	if len(cfg.Monikers) == 0 {
@@ -111,7 +111,13 @@ func Run(cfg *ScanConfig, worker ScanWorkerFunc) int {
 			ScanStart:     time.Now(),
 		}
 
-		ctx.Logger.Info("Scanning module", zap.String("moniker", moniker), zap.String("root", module.Files.Root))
+		// Get first package root for display
+		var displayRoot string
+		for _, root := range module.GetComponentRoots() {
+			displayRoot = root
+			break
+		}
+		ctx.Logger.Info("Scanning module", zap.String("moniker", moniker), zap.String("root", displayRoot))
 		log.Infof("%s Scanning %s...", cfg.ScannerEmoji, moniker)
 
 		findings, err := worker(moduleCtx)
@@ -143,7 +149,7 @@ func Run(cfg *ScanConfig, worker ScanWorkerFunc) int {
 	return exitCode
 }
 
-// initialize sets up the scan context with workspace, logger, config, and modules
+// initialize sets up the scan context with workspace, logger, config, and modules.
 func initialize(cfg *ScanConfig) (*ScanContext, error) {
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
@@ -187,7 +193,7 @@ func initialize(cfg *ScanConfig) (*ScanContext, error) {
 	}, nil
 }
 
-// handleScanFailure handles a failed scan by writing error evidence and updating manifest
+// handleScanFailure handles a failed scan by writing error evidence and updating manifest.
 func handleScanFailure(ctx *ModuleScanContext, scanErr error) {
 	ctx.Logger.Error(ctx.Config.ScannerName+" scan failed",
 		zap.String("moniker", ctx.Moniker),
@@ -207,7 +213,7 @@ func handleScanFailure(ctx *ModuleScanContext, scanErr error) {
 	UpdateScanManifest(ctx, manifest.ScanStatusFailed, outputPath, scanErr.Error())
 }
 
-// handleScanSuccess handles a successful scan by writing evidence and updating manifest
+// handleScanSuccess handles a successful scan by writing evidence and updating manifest.
 func handleScanSuccess(ctx *ModuleScanContext, findings interface{}) error {
 	// Write evidence file
 	outputPath, err := WriteEvidence(ctx.WorkspaceRoot, ctx.Moniker, ctx.Config.ScannerType, findings)
@@ -252,7 +258,7 @@ func GetGitCommit(workspaceRoot string) string {
 func UpdateScanManifest(ctx *ModuleScanContext, status, evidencePath, errorMsg string) {
 	duration := time.Since(ctx.ScanStart)
 
-	mf, err := manifest.LoadOrCreateScanManifest(ctx.ModuleScanDir, ctx.Moniker, ctx.Module.Type, ctx.GitCommit)
+	mf, err := manifest.LoadOrCreateScanManifest(ctx.ModuleScanDir, ctx.Moniker, ctx.Module.GetComponentTypesDisplay(), ctx.GitCommit)
 	if err != nil {
 		ctx.Logger.Warn("Failed to load/create scan manifest", zap.Error(err))
 		return
@@ -275,22 +281,22 @@ func UpdateScanManifest(ctx *ModuleScanContext, status, evidencePath, errorMsg s
 	ctx.Logger.Debug("Scan manifest updated", zap.String("path", manifest.GetScanManifestPath(ctx.ModuleScanDir)))
 }
 
-// TrivyImage returns the configured Trivy Docker image
+// TrivyImage returns the configured Trivy Docker image.
 func (ctx *ScanContext) TrivyImage() string {
 	return ctx.EACConfig.SecurityTools.DockerImages.Trivy.FullImage()
 }
 
-// SemgrepImage returns the configured Semgrep Docker image
+// SemgrepImage returns the configured Semgrep Docker image.
 func (ctx *ScanContext) SemgrepImage() string {
 	return ctx.EACConfig.SecurityTools.DockerImages.Semgrep.FullImage()
 }
 
-// ZapImage returns the configured ZAP Docker image
+// ZapImage returns the configured ZAP Docker image.
 func (ctx *ScanContext) ZapImage() string {
 	return ctx.EACConfig.SecurityTools.DockerImages.ZAP.FullImage()
 }
 
-// displayInitSummary outputs the initialization summary for scan commands
+// displayInitSummary outputs the initialization summary for scan commands.
 func displayInitSummary(ctx *ScanContext) {
 	cfg := ctx.Config
 
@@ -323,7 +329,7 @@ func displayInitSummary(ctx *ScanContext) {
 	log.Info("")
 }
 
-// detectExecutionContext returns a human-readable execution context string
+// detectExecutionContext returns a human-readable execution context string.
 func detectExecutionContext() string {
 	env := "devbox"
 	if os.Getenv("CI") != "" || os.Getenv("GITHUB_ACTIONS") != "" {

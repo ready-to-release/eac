@@ -10,7 +10,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 )
 
-// FormatArtifactTable creates a formatted table of artifacts with status
+// FormatArtifactTable creates a formatted table of artifacts with status.
 func FormatArtifactTable(
 	artifacts []implinternal.ResolvedArtifact,
 	summary *implinternal.ArtifactResolutionSummary,
@@ -24,7 +24,8 @@ func FormatArtifactTable(
 	tb := render.NewTableBuilder().
 		WithHeaders("Type", "ID", "Pattern", "Resolved", "Path", "Exists", "Override")
 
-	for _, art := range artifacts {
+	for i := range artifacts {
+		art := &artifacts[i]
 		exists := "✗"
 		if art.Exists {
 			exists = "✓"
@@ -74,7 +75,7 @@ func FormatArtifactTable(
 	return output.String()
 }
 
-// FormatMetadataOverrides creates a formatted display of metadata overrides
+// FormatMetadataOverrides creates a formatted display of metadata overrides.
 func FormatMetadataOverrides(
 	metadata map[string]string,
 	artifacts []implinternal.ResolvedArtifact,
@@ -106,7 +107,8 @@ func FormatMetadataOverrides(
 	for key, value := range artifactMeta {
 		// Check if this override is actually used
 		status := "not used"
-		for _, art := range artifacts {
+		for i := range artifacts {
+			art := &artifacts[i]
 			if art.MetadataOverride == key {
 				status = "✓ applied"
 				break
@@ -120,7 +122,7 @@ func FormatMetadataOverrides(
 	return output.String()
 }
 
-// isArtifactMetadata checks if a metadata key is an artifact override
+// isArtifactMetadata checks if a metadata key is an artifact override.
 func isArtifactMetadata(key string) bool {
 	// Artifact metadata keys follow pattern: {type}-{variant}
 	// Types: executable, file, directory, image, marker
@@ -135,7 +137,7 @@ func isArtifactMetadata(key string) bool {
 	return false
 }
 
-// FormatArtifactDetails formats detailed information about a single artifact
+// FormatArtifactDetails formats detailed information about a single artifact.
 func FormatArtifactDetails(artifact implinternal.ResolvedArtifact) string {
 	var output strings.Builder
 
@@ -176,7 +178,7 @@ func FormatArtifactDetails(artifact implinternal.ResolvedArtifact) string {
 	return output.String()
 }
 
-// FormatArtifactSummaryHeader creates a formatted header for artifact display
+// FormatArtifactSummaryHeader creates a formatted header for artifact display.
 func FormatArtifactSummaryHeader(
 	moduleName, moduleType string,
 	buildDir string,

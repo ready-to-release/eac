@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-// ParseFile reads and parses a Cucumber JSON file
+// ParseFile reads and parses a Cucumber JSON file.
 func ParseFile(filePath string) (CucumberReport, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
@@ -23,7 +23,7 @@ func ParseFile(filePath string) (CucumberReport, error) {
 }
 
 // GroupByFeature organizes scenarios by feature
-// Returns a map of Feature ID -> Feature with its scenarios
+// Returns a map of Feature ID -> Feature with its scenarios.
 func (report CucumberReport) GroupByFeature() map[string]*Feature {
 	result := make(map[string]*Feature)
 
@@ -36,16 +36,18 @@ func (report CucumberReport) GroupByFeature() map[string]*Feature {
 	return result
 }
 
-// FilterByVerificationType filters scenarios by verification type (IV/OV/PV)
+// FilterByVerificationType filters scenarios by verification type (IV/OV/PV).
 func (report CucumberReport) FilterByVerificationType(verificationType string) []ScenarioWithFeature {
 	var results []ScenarioWithFeature
 
-	for _, feature := range report {
-		for _, scenario := range feature.Elements {
+	for i := range report {
+		feature := &report[i]
+		for j := range feature.Elements {
+			scenario := &feature.Elements[j]
 			if scenario.GetVerificationType() == verificationType {
 				results = append(results, ScenarioWithFeature{
-					Feature:  &feature,
-					Scenario: &scenario,
+					Feature:  feature,
+					Scenario: scenario,
 				})
 			}
 		}
@@ -54,14 +56,14 @@ func (report CucumberReport) FilterByVerificationType(verificationType string) [
 	return results
 }
 
-// ScenarioWithFeature pairs a scenario with its parent feature
+// ScenarioWithFeature pairs a scenario with its parent feature.
 type ScenarioWithFeature struct {
 	Feature  *Feature
 	Scenario *Scenario
 }
 
 // GroupScenariosByRule groups scenarios by their acceptance criteria (Rule)
-// Returns a map of AC tag (e.g., "AC1") -> scenarios
+// Returns a map of AC tag (e.g., "AC1") -> scenarios.
 func GroupScenariosByRule(scenarios []ScenarioWithFeature) map[string][]ScenarioWithFeature {
 	result := make(map[string][]ScenarioWithFeature)
 

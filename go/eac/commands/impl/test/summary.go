@@ -12,9 +12,8 @@ import (
 )
 
 // generateSummary generates a summary.md file from cucumber.json test results for a single module
-// Uses legacy path: out/<moniker>/cucumber.json (for --generate-only flag)
+// Uses legacy path: out/<moniker>/cucumber.json (for --generate-only flag).
 func generateSummary(moniker string) error {
-
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
@@ -26,7 +25,7 @@ func generateSummary(moniker string) error {
 	return generateSummaryForOutputDir(outputDir)
 }
 
-// generateSummaryForOutputDir generates a summary.md file from cucumber.json in the given output directory
+// generateSummaryForOutputDir generates a summary.md file from cucumber.json in the given output directory.
 func generateSummaryForOutputDir(outputDir string) error {
 	// Get repository root for Appendix A file path rendering
 	workspaceRoot, err := repository.GetRepositoryRoot("")
@@ -60,7 +59,7 @@ func generateSummaryForOutputDir(outputDir string) error {
 	summary += cucumber.RenderAppendixA(report, workspaceRoot)
 
 	// Write summary.md
-	if err := os.WriteFile(summaryPath, []byte(summary), 0644); err != nil {
+	if err := os.WriteFile(summaryPath, []byte(summary), 0o644); err != nil {
 		return fmt.Errorf("failed to write summary.md: %w", err)
 	}
 

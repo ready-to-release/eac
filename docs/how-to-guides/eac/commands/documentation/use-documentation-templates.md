@@ -99,20 +99,20 @@ r2r templates install specs
 
 ## Template Destinations
 
-| Template Type | Default Destination | Custom Path Support |
-|---------------|---------------------|---------------------|
-| docs | `docs/reference/` | Yes (`--destination`) |
-| ai | `.r2r/eac/templates/ai/` | No |
-| reports | `.r2r/templates/reports/` | No |
-| specs | `specs/risk-controls/` | No |
+| Template Type   | Default Destination       | Custom Path Support   |
+| --------------- | ------------------------- | --------------------- |
+| docs            | `docs/reference/`         | Yes (`--destination`) |
+| ai              | `.r2r/eac/templates/ai/`  | No                    |
+| reports         | `.r2r/templates/reports/` | No                    |
+| specs           | `specs/risk-controls/`    | No                    |
 
 ## Common Issues
 
-| Problem | Solution |
-|---------|----------|
-| Template directory not found | Ensure `templates/` directory exists in repository |
-| Permission denied | Check write permissions for destination directory |
-| Files already exist | Templates won't overwrite; delete or move existing files |
+| Problem                      | Solution                                                 |
+| ---------------------------- | -------------------------------------------------------- |
+| Template directory not found | Ensure `templates/` directory exists in repository       |
+| Permission denied            | Check write permissions for destination directory        |
+| Files already exist          | Templates won't overwrite; delete or move existing files |
 
 ## Next Steps
 

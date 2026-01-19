@@ -25,17 +25,20 @@ Generate a JSON object matching this schema:
 **type** (required): One of: `feat`, `fix`, `refactor`, `docs`, `chore`, `test`, `perf`, `style`, `ci`, `build`
 
 **scope** (required): For single-module: the module name. For multi-module: use `multi-module`
+
 - Pattern: lowercase with hyphens (e.g., `eac-commands`, `eac-core`)
 - Length: 1-20 characters
 - Must match actual module names from the context
 
 **subject** (required): Brief description of the change
-- Max 72 characters total when combined with `type(scope): `
+
+- Max 72 characters total when combined with `type(scope):`
 - No trailing period
 - Lowercase first letter
 - Imperative mood (e.g., "add feature" not "adds feature")
 
 **body** (optional but recommended): Detailed explanation
+
 - First sentence becomes the Auditor-Summary (auto-extracted)
 - 2-4 sentences explaining what changed and why
 - Provide context and rationale
@@ -79,6 +82,7 @@ Changes: [From git diff stats]
 ```
 
 Example final output:
+
 ```text
 feat(api): add user authentication endpoint
 

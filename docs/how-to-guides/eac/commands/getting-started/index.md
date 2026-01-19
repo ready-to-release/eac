@@ -4,11 +4,11 @@ Learn the basics of using EAC commands to explore and interact with your reposit
 
 ## In This Section
 
-| Guide | What You'll Learn |
-|-------|-------------------|
-| [Setup AI Provider](./setup-ai-provider.md) | Configure AI provider for commit messages and PR descriptions |
-| [Get Help with Commands](./get-help-with-commands.md) | Discover available commands and get usage help |
-| [Explore Your Repository](./explore-your-repository.md) | View modules, dependencies, and files |
+| Guide                                                   | What You'll Learn                                             |
+| ------------------------------------------------------- | ------------------------------------------------------------- |
+| [Setup AI Provider](./setup-ai-provider.md)             | Configure AI provider for commit messages and PR descriptions |
+| [Get Help with Commands](./get-help-with-commands.md)   | Discover available commands and get usage help                |
+| [Explore Your Repository](./explore-your-repository.md) | View modules, dependencies, and files                         |
 
 ## Quick Start
 

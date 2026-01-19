@@ -17,7 +17,7 @@ type EvidenceFile struct {
 	Findings  json.RawMessage `json:"findings"`  // Scanner-specific JSON output
 }
 
-// ScannerType represents the type of security scanner
+// ScannerType represents the type of security scanner.
 type ScannerType string
 
 const (
@@ -30,7 +30,7 @@ const (
 	ScannerDAST       ScannerType = "zap"
 )
 
-// ParseScannerType converts a string to ScannerType
+// ParseScannerType converts a string to ScannerType.
 func ParseScannerType(s string) (ScannerType, bool) {
 	switch s {
 	case "sbom":
@@ -52,7 +52,7 @@ func ParseScannerType(s string) (ScannerType, bool) {
 	}
 }
 
-// ScanResult holds the outcome of a security scan
+// ScanResult holds the outcome of a security scan.
 type ScanResult struct {
 	Success      bool
 	OutputPath   string // Path to evidence file
@@ -60,7 +60,7 @@ type ScanResult struct {
 	ExitCode     int
 }
 
-// Severity levels for vulnerability scanning
+// Severity levels for vulnerability scanning.
 type Severity string
 
 const (
@@ -70,7 +70,7 @@ const (
 	SeverityCritical Severity = "CRITICAL"
 )
 
-// ParseSeverity converts a string to Severity type
+// ParseSeverity converts a string to Severity type.
 func ParseSeverity(s string) (Severity, bool) {
 	switch s {
 	case "LOW":
@@ -86,12 +86,12 @@ func ParseSeverity(s string) (Severity, bool) {
 	}
 }
 
-// GetTimestamp returns an RFC3339-formatted timestamp
+// GetTimestamp returns an RFC3339-formatted timestamp.
 func GetTimestamp() string {
 	return time.Now().UTC().Format(time.RFC3339)
 }
 
-// GetFilenameTimestamp returns a filesystem-safe timestamp for filenames
+// GetFilenameTimestamp returns a filesystem-safe timestamp for filenames.
 func GetFilenameTimestamp() string {
 	return time.Now().UTC().Format("2006-01-02T15-04-05Z")
 }

@@ -36,7 +36,7 @@ func init() {
 	registry.Register(ShowTestSummary)
 }
 
-// ShowTestSummary generates a pretty test summary
+// ShowTestSummary generates a pretty test summary.
 func ShowTestSummary() int {
 	// Validate flags against registry metadata
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
@@ -49,7 +49,7 @@ func ShowTestSummary() int {
 	// Filter out flags to get positional args
 	var positionalArgs []string
 	for _, arg := range args {
-		if len(arg) > 0 && arg[0] != '-' {
+		if arg != "" && arg[0] != '-' {
 			positionalArgs = append(positionalArgs, arg)
 		}
 	}
@@ -70,7 +70,7 @@ func ShowTestSummary() int {
 	return generateTestSummary(positionalArgs[0], positionalArgs[1], runID)
 }
 
-// generateAllModulesSummary shows test summary for all modules with test manifests
+// generateAllModulesSummary shows test summary for all modules with test manifests.
 func generateAllModulesSummary(runID string) int {
 	startTime := time.Now()
 
@@ -132,7 +132,7 @@ func generateAllModulesSummary(runID string) int {
 	return 0
 }
 
-// testStats holds aggregated test statistics
+// testStats holds aggregated test statistics.
 type testStats struct {
 	Total    int
 	Passed   int
@@ -172,7 +172,7 @@ func (s *testStats) durationStr() string {
 	return fmt.Sprintf("%.1fs", secs)
 }
 
-// generateCombinedSummary creates a summary with one table per module showing individual tests
+// generateCombinedSummary creates a summary with one table per module showing individual tests.
 func generateCombinedSummary(manifests []*implinternal.TestManifest, cfg *config.EACConfig) string {
 	var summary string
 
@@ -265,9 +265,10 @@ func generateCombinedSummary(manifests []*implinternal.TestManifest, cfg *config
 				// Count passed/failed for this feature
 				passed, failed := 0, 0
 				for _, t := range tests {
-					if t.Status == implinternal.TestStatusPassed {
+					switch t.Status {
+					case implinternal.TestStatusPassed:
 						passed++
-					} else if t.Status == implinternal.TestStatusFailed {
+					case implinternal.TestStatusFailed:
 						failed++
 					}
 				}
@@ -296,7 +297,7 @@ func generateCombinedSummary(manifests []*implinternal.TestManifest, cfg *config
 	return summary
 }
 
-// extractFeatureName extracts a human-readable feature name from package or file path
+// extractFeatureName extracts a human-readable feature name from package or file path.
 func extractFeatureName(pkg, filePath string) string {
 	// Try to extract from package path first (e.g., "specs/eac-commands/work-create")
 	// The last path component is usually the feature name
@@ -330,7 +331,7 @@ func extractFeatureName(pkg, filePath string) string {
 }
 
 // buildTestTable creates a test table from a list of test entries
-// isScenario controls whether the first column is "Test" or "Scenario"
+// isScenario controls whether the first column is "Test" or "Scenario".
 func buildTestTable(tests []implinternal.TestEntry, moduleName string, isScenario bool) string {
 	firstCol := "Test"
 	if isScenario {
@@ -491,7 +492,7 @@ func testMetricsSection(f *SummaryFormatter, module *config.Module, suite string
 	return f.Section(Emoji("success")+" Test Results", fmt.Sprintf("Tests completed successfully\n\nOutput: %s", Code(outputDir)))
 }
 
-// TestResults represents parsed test results
+// TestResults represents parsed test results.
 type TestResults struct {
 	Packages int                  `json:"packages"`
 	Total    int                  `json:"total"`
@@ -502,7 +503,7 @@ type TestResults struct {
 	Details  []PackageTestResults `json:"details,omitempty"`
 }
 
-// PackageTestResults represents test results for a single package
+// PackageTestResults represents test results for a single package.
 type PackageTestResults struct {
 	Package  string  `json:"package"`
 	Tests    int     `json:"tests"`
@@ -593,7 +594,7 @@ func testDiagnosticsSection(f *SummaryFormatter, module *config.Module, suite st
 	return diagnostics
 }
 
-// findAndReadSubpackageLogs searches for test.log files in subdirectories and combines their content
+// findAndReadSubpackageLogs searches for test.log files in subdirectories and combines their content.
 func findAndReadSubpackageLogs(moduleDir string, maxLines int) string {
 	var logs []string
 
@@ -604,7 +605,10 @@ func findAndReadSubpackageLogs(moduleDir string, maxLines int) string {
 		if !info.IsDir() && info.Name() == "test.log" {
 			content := readLogTail(path, 50) // Fewer lines per subpackage
 			if content != "" {
-				relPath, _ := filepath.Rel(moduleDir, path)
+				relPath, relErr := filepath.Rel(moduleDir, path)
+				if relErr != nil {
+					relPath = path // Fallback to absolute path
+				}
 				logs = append(logs, fmt.Sprintf("=== %s ===\n%s", relPath, content))
 			}
 		}
@@ -629,14 +633,14 @@ func testConfigSection(f *SummaryFormatter, module *config.Module, suite string,
 	// Suite info
 	configDetails += fmt.Sprintf("- %s: %s\n", Bold("Suite"), suite)
 
-	// Test framework (from module type)
-	if cfg.ModuleTypes != nil {
-		testFramework := cfg.ModuleTypes.GetTestFramework(module.Type)
-		if testFramework == "" {
-			testFramework = "default"
-		}
-		configDetails += fmt.Sprintf("- %s: %s\n", Bold("Framework"), testFramework)
+	// Test framework - derive from enabled packages
+	testFramework := "default"
+	if module.Components.HasComponent("go") {
+		testFramework = "go test"
+	} else if module.Components.HasComponent("node") {
+		testFramework = "mocha"
 	}
+	configDetails += fmt.Sprintf("- %s: %s\n", Bold("Framework"), testFramework)
 
 	// Output directory
 	configDetails += fmt.Sprintf("- %s: %s\n", Bold("Output"), Code(cfg.Repository.TestModuleDir(module.Moniker)))
@@ -647,7 +651,7 @@ func testConfigSection(f *SummaryFormatter, module *config.Module, suite string,
 // deriveTestStatus determines test status from manifest.
 // Status is derived as:
 // - "success" if manifest exists and AllPassed() returns true
-// - "failure" if manifest is missing or has failures
+// - "failure" if manifest is missing or has failures.
 func deriveTestStatus(cfg *config.EACConfig, moduleName string) string {
 	// Get workspace root for absolute path
 	workspaceRoot, err := repository.GetRepositoryRoot("")

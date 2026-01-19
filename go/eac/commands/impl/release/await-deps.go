@@ -42,7 +42,7 @@ func init() {
 	registry.Register(ReleaseAwaitDeps)
 }
 
-// DepCIStatus represents the CI status for a dependency
+// DepCIStatus represents the CI status for a dependency.
 type DepCIStatus struct {
 	Moniker       string
 	LastCommit    string
@@ -216,9 +216,10 @@ func ReleaseAwaitDeps() int {
 	passedCount := 0
 	skippedCount := 0
 	for _, r := range results {
-		if r.Status == "success" {
+		switch r.Status {
+		case "success":
 			passedCount++
-		} else if r.Status == "skipped" {
+		case "skipped":
 			skippedCount++
 		}
 	}
@@ -244,12 +245,13 @@ func ReleaseAwaitDeps() int {
 		log.Infof("✗ Dependency CI check failed")
 		log.Infof("")
 		for _, r := range results {
-			if r.Status == "failed" {
+			switch r.Status {
+			case "failed":
 				log.Infof("  %s: CI failed", r.Moniker)
 				if r.RunURL != "" {
 					log.Infof("  Run: %s", r.RunURL)
 				}
-			} else if r.Status == "not_found" {
+			case "not_found":
 				log.Infof("  %s: No CI found for commit %s", r.Moniker, r.LastCommit[:7])
 				log.Infof("  Trigger: gh workflow run %s", r.CIWorkflow)
 			}
@@ -265,7 +267,7 @@ func ReleaseAwaitDeps() int {
 	return 0
 }
 
-// getTransitiveDeps returns all transitive dependencies of a module (sorted)
+// getTransitiveDeps returns all transitive dependencies of a module (sorted).
 func getTransitiveDeps(module string, reg *modules.Registry) []string {
 	visited := make(map[string]bool)
 	var collect func(m string)
@@ -292,7 +294,7 @@ func getTransitiveDeps(module string, reg *modules.Registry) []string {
 	return deps
 }
 
-// shouldSkipModule returns true if this module should be skipped for CI checks
+// shouldSkipModule returns true if this module should be skipped for CI checks.
 func shouldSkipModule(mod *modules.ModuleContract, workspaceRoot string) bool {
 	// Skip if no CI workflow exists
 	workflowPath := filepath.Join(workspaceRoot, ".github", "workflows", fmt.Sprintf("ci-%s.yaml", mod.Moniker))
@@ -302,7 +304,7 @@ func shouldSkipModule(mod *modules.ModuleContract, workspaceRoot string) bool {
 	return false
 }
 
-// getSkipReason returns the reason why a module is skipped
+// getSkipReason returns the reason why a module is skipped.
 func getSkipReason(mod *modules.ModuleContract, workspaceRoot string) string {
 	workflowPath := filepath.Join(workspaceRoot, ".github", "workflows", fmt.Sprintf("ci-%s.yaml", mod.Moniker))
 	if _, err := os.Stat(workflowPath); os.IsNotExist(err) {
@@ -311,14 +313,16 @@ func getSkipReason(mod *modules.ModuleContract, workspaceRoot string) string {
 	return "unknown"
 }
 
-// findLastChangedCommit finds the most recent commit that changed files owned by this module
+// findLastChangedCommit finds the most recent commit that changed files owned by this module.
 func findLastChangedCommit(mod *modules.ModuleContract, workspaceRoot string) (string, string, error) {
 	// Get file patterns for this module
 	patterns := mod.GetGlobPatterns()
 	if len(patterns) == 0 {
-		// Fallback to root directory
-		if mod.Files.Root != "" && mod.Files.Root != "/" {
-			patterns = []string{mod.Files.Root + "/**"}
+		// Fallback to package roots
+		for _, root := range mod.GetComponentRoots() {
+			if root != "" && root != "/" {
+				patterns = append(patterns, root+"/**")
+			}
 		}
 	}
 
@@ -364,7 +368,7 @@ func findLastChangedCommit(mod *modules.ModuleContract, workspaceRoot string) (s
 	return commitSHA, commitMsg, nil
 }
 
-// waitForDepCI waits for CI to pass for a dependency at a specific commit
+// waitForDepCI waits for CI to pass for a dependency at a specific commit.
 func waitForDepCI(dep, workflow, commitSHA string, timeout, interval int, targetModule, workspaceRoot string) DepCIStatus {
 	startTime := time.Now()
 	var lastStatus DepCIStatus
@@ -415,7 +419,7 @@ func waitForDepCI(dep, workflow, commitSHA string, timeout, interval int, target
 // checkDepCIStatus checks the CI status for a workflow at a specific commit
 // It checks:
 // 1. Exact commit match - CI ran on this exact commit
-// 2. Descendant match - CI ran on a newer commit that includes this commit's changes
+// 2. Descendant match - CI ran on a newer commit that includes this commit's changes.
 func checkDepCIStatus(workflow, commitSHA, workspaceRoot string) (DepCIStatus, error) {
 	// First try exact commit match
 	cmd := exec.Command("gh", "run", "list",
@@ -500,14 +504,15 @@ func checkDepCIStatus(workflow, commitSHA, workspaceRoot string) (DepCIStatus, e
 	return DepCIStatus{Status: "not_found"}, nil
 }
 
-// getRecentSuccessfulRuns gets recent successful CI runs for a workflow
+// getRecentSuccessfulRuns gets recent successful CI runs for a workflow.
 func getRecentSuccessfulRuns(workflow, workspaceRoot string) ([]struct {
 	Status     string `json:"status"`
 	Conclusion string `json:"conclusion"`
 	DatabaseID int64  `json:"databaseId"`
 	URL        string `json:"url"`
 	HeadSHA    string `json:"headSha"`
-}, error) {
+}, error,
+) {
 	cmd := exec.Command("gh", "run", "list",
 		"--workflow", workflow,
 		"--branch", "main",
@@ -537,7 +542,7 @@ func getRecentSuccessfulRuns(workflow, workspaceRoot string) ([]struct {
 }
 
 // canInheritCIForDep checks if we can inherit CI from a previous successful run
-// Similar to canInheritCIFromPrevious but for dependencies
+// Similar to canInheritCIFromPrevious but for dependencies.
 func canInheritCIForDep(dep, workflow, releaseCommit, workspaceRoot string) (bool, CIRunInfo, string) {
 	// Get last successful CI for this dep
 	lastCI, err := getLastSuccessfulModuleCIInfo(workflow, "main", workspaceRoot)

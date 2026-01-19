@@ -12,7 +12,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
 )
 
-// Claude CLI model names (using full model IDs for consistency across providers)
+// Claude CLI model names (using full model IDs for consistency across providers).
 const (
 	ClaudeCLIModelHaiku  = "claude-3-haiku-20240307"
 	ClaudeCLIModelSonnet = "claude-3-5-sonnet-20240620"
@@ -20,23 +20,23 @@ const (
 )
 
 // DefaultClaudeCLIModel is the default model for Claude CLI provider
-// Change this constant when upgrading to a newer model version
+// Change this constant when upgrading to a newer model version.
 const DefaultClaudeCLIModel = ClaudeCLIModelHaiku
 
-// ClaudeCLI provider uses Claude CLI tool with subscription authentication
+// ClaudeCLI provider uses Claude CLI tool with subscription authentication.
 type ClaudeCLI struct {
 	defaultModel string
 }
 
 // NewClaudeCLI creates a Claude CLI provider
-// Uses Claude Pro subscription for authentication (removes API key from environment)
+// Uses Claude Pro subscription for authentication (removes API key from environment).
 func NewClaudeCLI() *ClaudeCLI {
 	return &ClaudeCLI{
 		defaultModel: DefaultClaudeCLIModel,
 	}
 }
 
-// Name returns "claude-cli" for provider identification
+// Name returns "claude-cli" for provider identification.
 func (p *ClaudeCLI) Name() string {
 	return "claude-cli"
 }
@@ -97,7 +97,7 @@ func (p *ClaudeCLI) Execute(ctx context.Context, input string, opts ...ai.Option
 
 // mapModelToCLIName converts full model IDs to CLI short names
 // The Claude CLI tool expects short names like "haiku", "sonnet", "opus"
-// This function maps full model IDs (e.g., "claude-3-haiku-20240307") to short names
+// This function maps full model IDs (e.g., "claude-3-haiku-20240307") to short names.
 func mapModelToCLIName(model string) string {
 	// Map full model IDs to short names
 	switch model {
@@ -116,7 +116,7 @@ func mapModelToCLIName(model string) string {
 // removeAPIKeyFromEnv removes ANTHROPIC_API_KEY from environment variables
 // This forces Claude CLI to use subscription auth instead of API key
 //
-// This is a pure function - it doesn't modify the input, just returns a filtered copy
+// This is a pure function - it doesn't modify the input, just returns a filtered copy.
 func removeAPIKeyFromEnv(environ []string) []string {
 	var filtered []string
 	for _, env := range environ {

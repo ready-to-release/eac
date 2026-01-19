@@ -34,7 +34,7 @@ func init() {
 
 // suiteFlags defines valid flags for the get suite command
 
-// GetSuite returns test suite information as structured data (YAML/JSON/TOML)
+// GetSuite returns test suite information as structured data (YAML/JSON/TOML).
 func GetSuite() int {
 	// Validate flags before parsing
 	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {

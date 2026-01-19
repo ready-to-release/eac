@@ -21,11 +21,17 @@ func init() {
 // TestNpmModule is the test handler for npm-based modules.
 // It runs Mocha tests with tag filtering based on the test suite configuration.
 // Tags are embedded in describe() names: describe('@L0 ComponentName', ...)
-func TestNpmModule(module *modules.ModuleContract, workspaceRoot string, outputDir string, logWriter io.Writer, reportFormat string, suiteName string) int {
-	Writeln(logWriter, "\n=== Testing %s: %s ===", module.Type, module.Moniker)
+func TestNpmModule(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, reportFormat, suiteName string) int {
+	Writeln(logWriter, "\n=== Testing typescript: %s ===", module.Moniker)
 	Writeln(logWriter, "Suite: %s", suiteName)
 
-	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
+	// Get the typescript package root
+	tsRoot := module.GetComponentRoot("typescript")
+	if tsRoot == "" {
+		Writeln(logWriter, "⚠️  No typescript package found, skipping npm tests")
+		return 0
+	}
+	moduleRoot := filepath.Join(workspaceRoot, tsRoot)
 
 	// Check for package.json
 	packageJSON := filepath.Join(moduleRoot, "package.json")

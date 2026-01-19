@@ -5,30 +5,30 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/validation"
 )
 
-// StructuredFormat defines supported Phase 1 output formats
+// StructuredFormat defines supported Phase 1 output formats.
 type StructuredFormat string
 
 const (
-	// FormatJSON indicates JSON with schema validation
+	// FormatJSON indicates JSON with schema validation.
 	FormatJSON StructuredFormat = "json"
 
-	// FormatGherkin indicates Gherkin .feature syntax
+	// FormatGherkin indicates Gherkin .feature syntax.
 	FormatGherkin StructuredFormat = "gherkin"
 
-	// FormatOSCALCatalog indicates OSCAL catalog JSON format
+	// FormatOSCALCatalog indicates OSCAL catalog JSON format.
 	FormatOSCALCatalog StructuredFormat = "oscal-catalog"
 
-	// FormatOSCALProfile indicates OSCAL profile JSON format
+	// FormatOSCALProfile indicates OSCAL profile JSON format.
 	FormatOSCALProfile StructuredFormat = "oscal-profile"
 
-	// FormatStructurizr indicates Structurizr DSL format
+	// FormatStructurizr indicates Structurizr DSL format.
 	FormatStructurizr StructuredFormat = "structurizr"
 
-	// FormatPlainText indicates plain text (for simple outputs)
+	// FormatPlainText indicates plain text (for simple outputs).
 	FormatPlainText StructuredFormat = "plaintext"
 )
 
-// PhaseConfig defines generation behavior for a specific phase
+// PhaseConfig defines generation behavior for a specific phase.
 type PhaseConfig struct {
 	// Format is the expected output format
 	Format StructuredFormat

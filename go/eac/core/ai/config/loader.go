@@ -13,25 +13,25 @@ import (
 )
 
 const (
-	// Local AI configuration constants
+	// Local AI configuration constants.
 	promptExtension = ".md"
 	promptsSubdir   = "prompts"
 )
 
-// AIConfigLoader loads the unified AI configuration
+// AIConfigLoader loads the unified AI configuration.
 type AIConfigLoader struct {
 	workspaceRoot string
 	config        *AIConfig
 }
 
-// NewAIConfigLoader creates a new AI config loader
+// NewAIConfigLoader creates a new AI config loader.
 func NewAIConfigLoader(workspaceRoot string) *AIConfigLoader {
 	return &AIConfigLoader{
 		workspaceRoot: workspaceRoot,
 	}
 }
 
-// Load loads the unified ai-config.yml file with fallback to system defaults and contracts defaults
+// Load loads the unified ai-config.yml file with fallback to system defaults and contracts defaults.
 func (l *AIConfigLoader) Load() (*AIConfig, error) {
 	if l.config != nil {
 		return l.config, nil
@@ -78,7 +78,7 @@ func (l *AIConfigLoader) Load() (*AIConfig, error) {
 	return &config, nil
 }
 
-// GetType returns the configuration for a specific AI type
+// GetType returns the configuration for a specific AI type.
 func (l *AIConfigLoader) GetType(typeName string) (*AITypeConfig, error) {
 	config, err := l.Load()
 	if err != nil {
@@ -93,7 +93,7 @@ func (l *AIConfigLoader) GetType(typeName string) (*AITypeConfig, error) {
 	return &typeConfig, nil
 }
 
-// LoadPrompt loads a prompt file from ai/prompts/<name>.md
+// LoadPrompt loads a prompt file from ai/prompts/<name>.md.
 func (l *AIConfigLoader) LoadPrompt(promptName string) (string, error) {
 	promptPath := filepath.Join(l.workspaceRoot, paths.R2RDir, paths.EACDir, paths.AIDir, promptsSubdir, promptName)
 	data, err := os.ReadFile(promptPath)
@@ -103,8 +103,8 @@ func (l *AIConfigLoader) LoadPrompt(promptName string) (string, error) {
 	return string(data), nil
 }
 
-// LoadData loads a data file referenced by a type
-func (l *AIConfigLoader) LoadData(typeName string, dataKey string) ([]byte, error) {
+// LoadData loads a data file referenced by a type.
+func (l *AIConfigLoader) LoadData(typeName, dataKey string) ([]byte, error) {
 	typeConfig, err := l.GetType(typeName)
 	if err != nil {
 		return nil, err
@@ -157,13 +157,17 @@ func (l *AIConfigLoader) LoadReferencedFile(relativePath string) ([]byte, error)
 	return nil, fmt.Errorf("failed to read file %s: %w", fullPath, err)
 }
 
-// GetWorkspaceRoot returns the workspace root
+// GetWorkspaceRoot returns the workspace root.
 func (l *AIConfigLoader) GetWorkspaceRoot() string {
 	return l.workspaceRoot
 }
 
-// ContractLoader provides backward-compatible API for loading AI configs
-// Deprecated: Use AIConfigLoader directly for new code
+// ContractLoader provides type-specific API for loading AI configs.
+// It wraps AIConfigLoader with convenient methods for prompt loading,
+// contract conversion, and type-specific operations.
+//
+// For simple AI config access without type-specific features,
+// use AIConfigLoader directly.
 type ContractLoader struct {
 	loader   *AIConfigLoader
 	typeName string
@@ -171,8 +175,8 @@ type ContractLoader struct {
 
 // NewContractLoader creates a backward-compatible loader
 // contractPath format: "ai/<type>" (e.g., "ai/specs", "ai/commit-message")
-// version is ignored (unified config is unversioned)
-func NewContractLoader(workspaceRoot string, contractPath string, version string) *ContractLoader {
+// version is ignored (unified config is unversioned).
+func NewContractLoader(workspaceRoot, contractPath, version string) *ContractLoader {
 	// Extract type name from path (e.g., "ai/specs" -> "specs")
 	typeName := contractPath
 	aiPrefix := paths.AIDir + "/"
@@ -215,8 +219,8 @@ func (cl *ContractLoader) LoadContract() (*contracts.Contract, error) {
 //
 // Convention: If promptName is empty, uses type name as file name.
 // Example: type "ai/specs" with promptName "" → "specs.md"
-// Extension: Automatically adds ".md" if not present
-func (cl *ContractLoader) LoadPrompt(promptName string, fallback string) (string, string, error) {
+// Extension: Automatically adds ".md" if not present.
+func (cl *ContractLoader) LoadPrompt(promptName, fallback string) (string, string, error) {
 	// Convention: Use type name if no prompt name provided
 	if promptName == "" {
 		promptName = cl.getDefaultPromptName()
@@ -266,7 +270,7 @@ func (cl *ContractLoader) LoadPrompt(promptName string, fallback string) (string
 }
 
 // getDefaultPromptName derives the default prompt file name from the AI type name.
-// Convention: "ai/specs" → "specs.md", "ai/commit-message" → "commit-message.md"
+// Convention: "ai/specs" → "specs.md", "ai/commit-message" → "commit-message.md".
 func (cl *ContractLoader) getDefaultPromptName() string {
 	// Extract base name from type path
 	// "ai/specs" → "specs"
@@ -277,8 +281,8 @@ func (cl *ContractLoader) getDefaultPromptName() string {
 }
 
 // LoadPromptWithPriority loads a prompt with explicit priority handling
-// This method provides explicit control over custom path vs prompt name
-func (cl *ContractLoader) LoadPromptWithPriority(promptName string, customPath string) (string, string, error) {
+// This method provides explicit control over custom path vs prompt name.
+func (cl *ContractLoader) LoadPromptWithPriority(promptName, customPath string) (string, string, error) {
 	// Priority 1: Custom path from --prompt flag
 	if customPath != "" {
 		if !filepath.IsAbs(customPath) {
@@ -295,24 +299,24 @@ func (cl *ContractLoader) LoadPromptWithPriority(promptName string, customPath s
 	return cl.LoadPrompt(promptName, "")
 }
 
-// LoadReferencedFile loads a file by path
+// LoadReferencedFile loads a file by path.
 func (cl *ContractLoader) LoadReferencedFile(relativePath string) ([]byte, error) {
 	return cl.loader.LoadReferencedFile(relativePath)
 }
 
-// GetContractPath returns the path to the AI config directory
+// GetContractPath returns the path to the AI config directory.
 func (cl *ContractLoader) GetContractPath() string {
 	return filepath.Join(cl.loader.workspaceRoot, paths.R2RDir, paths.EACDir, paths.AIDir, cl.typeName)
 }
 
-// IsAI returns true (all ContractLoader instances are for AI configs)
+// IsAI returns true (all ContractLoader instances are for AI configs).
 func (cl *ContractLoader) IsAI() bool {
 	return true
 }
 
 // Helper functions for extracting typed values from validation maps
 
-// ExtractStringList extracts a string array from a map
+// ExtractStringList extracts a string array from a map.
 func ExtractStringList(data map[string]interface{}, key string) []string {
 	if val, ok := data[key]; ok {
 		if list, ok := val.([]interface{}); ok {
@@ -328,7 +332,7 @@ func ExtractStringList(data map[string]interface{}, key string) []string {
 	return []string{}
 }
 
-// ExtractString extracts a string value from a map
+// ExtractString extracts a string value from a map.
 func ExtractString(data map[string]interface{}, key string) string {
 	if val, ok := data[key]; ok {
 		if str, ok := val.(string); ok {
@@ -338,7 +342,7 @@ func ExtractString(data map[string]interface{}, key string) string {
 	return ""
 }
 
-// ExtractInt extracts an int value from a map
+// ExtractInt extracts an int value from a map.
 func ExtractInt(data map[string]interface{}, key string) int {
 	if val, ok := data[key]; ok {
 		switch v := val.(type) {
@@ -353,7 +357,7 @@ func ExtractInt(data map[string]interface{}, key string) int {
 	return 0
 }
 
-// ExtractBool extracts a bool value from a map
+// ExtractBool extracts a bool value from a map.
 func ExtractBool(data map[string]interface{}, key string) bool {
 	if val, ok := data[key]; ok {
 		if b, ok := val.(bool); ok {
@@ -363,7 +367,7 @@ func ExtractBool(data map[string]interface{}, key string) bool {
 	return false
 }
 
-// ExtractMap extracts a nested map from a map
+// ExtractMap extracts a nested map from a map.
 func ExtractMap(data map[string]interface{}, key string) map[string]interface{} {
 	if val, ok := data[key]; ok {
 		if m, ok := val.(map[string]interface{}); ok {
@@ -373,7 +377,7 @@ func ExtractMap(data map[string]interface{}, key string) map[string]interface{} 
 	return nil
 }
 
-// LoadAIConfig is a convenience function to load AI configuration
+// LoadAIConfig is a convenience function to load AI configuration.
 func LoadAIConfig(workspaceRoot string) (*AIConfig, error) {
 	loader := NewAIConfigLoader(workspaceRoot)
 	return loader.Load()

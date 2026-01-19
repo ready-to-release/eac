@@ -9,11 +9,12 @@
     "contracts/eac-core/0.1.0/modules.schema.json": ".r2r/**/modules.yml",
     "contracts/eac-core/0.1.0/environments.schema.json": ".r2r/**/environments.yml",
     "contracts/eac-core/0.1.0/handlers.schema.json": ".r2r/**/handlers.yml",
-    "contracts/eac-core/0.1.0/module-types.schema.json": ".r2r/**/module-types.yml",
     "contracts/eac-core/0.1.0/system-dependencies.schema.json": ".r2r/**/system-dependencies.yml",
     "contracts/eac-core/0.1.0/test-suites.schema.json": ".r2r/**/test-suites.yml",
     "contracts/eac-core/0.1.0/testing-tags.schema.json": ".r2r/**/testing-tags.yml",
     "contracts/eac-core/0.1.0/repository.schema.json": ".r2r/**/repository.yml",
+    "contracts/eac-core/0.1.0/package-types.schema.json": "contracts/**/defaults/package-types.yml",
+    "contracts/eac-core/0.1.0/component-types.schema.json": "contracts/**/defaults/component-types.yml",
     "contracts/r2r-cli/0.1.0/r2r-cli.schema.json": ".r2r/r2r-cli.yml"
   },
 
@@ -31,9 +32,12 @@
   // Markdown Preview Enhanced settings
   "markdown-preview-enhanced.previewTheme": "one-dark.css",
   "markdown-preview-enhanced.codeBlockTheme": "one-dark.css",
-  "markdownlint.config": {
-    "extends": ".markdownlint.yml"
-  },
+
+  // Markdownlint extension (DavidAnson.vscode-markdownlint)
+  // Uses markdownlint-cli2 engine - auto-discovers config files:
+  // - .markdownlint-cli2.yaml (ignores + extends rules)
+  // - .markdownlint.yml (lint rules)
+  // No explicit config needed - cli2 auto-discovery handles it
   "[markdown]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.quickSuggestions": {

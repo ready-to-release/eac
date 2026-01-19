@@ -16,6 +16,7 @@
 package ci
 
 import (
+	"errors"
 	"os"
 	"os/exec"
 	"strings"
@@ -95,7 +96,8 @@ func findRunIDByWorkflowAndSHA(workflow, sha, workspaceRoot string) (string, err
 	output, err := cmd.Output()
 	if err != nil {
 		// Try to get more info about the error
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		exitErr := &exec.ExitError{}
+		if errors.As(err, &exitErr) {
 			return "", newError("failed to query GitHub: %s", string(exitErr.Stderr))
 		}
 		return "", newError("failed to query GitHub: %v", err)
@@ -124,7 +126,7 @@ func printGetRunIDUsage() {
 	log.Info("  RUN_ID=$(r2r eac pipeline ci get-run-id --workflow ci-books.yaml --sha $SHA)")
 }
 
-// newError is a helper to create formatted errors
+// newError is a helper to create formatted errors.
 func newError(format string, args ...interface{}) error {
 	return &simpleError{msg: sprintf(format, args...)}
 }

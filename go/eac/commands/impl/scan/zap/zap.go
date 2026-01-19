@@ -203,7 +203,7 @@ func ZAP() int {
 		}
 
 		// Update scan manifest with failure
-		updateScanManifest(moduleScanDir, moniker, module.Type, gitCommit, manifest.ScanStatusFailed, time.Since(scanStart), outputPath, err.Error())
+		updateScanManifest(moduleScanDir, moniker, module.GetComponentTypesDisplay(), gitCommit, manifest.ScanStatusFailed, time.Since(scanStart), outputPath, err.Error())
 		return 1
 	}
 
@@ -214,12 +214,12 @@ func ZAP() int {
 		log.Errorf("  ❌ Failed to write evidence: %v\n", err)
 
 		// Update scan manifest with failure
-		updateScanManifest(moduleScanDir, moniker, module.Type, gitCommit, manifest.ScanStatusFailed, time.Since(scanStart), "", err.Error())
+		updateScanManifest(moduleScanDir, moniker, module.GetComponentTypesDisplay(), gitCommit, manifest.ScanStatusFailed, time.Since(scanStart), "", err.Error())
 		return 1
 	}
 
 	// Update scan manifest with success
-	updateScanManifest(moduleScanDir, moniker, module.Type, gitCommit, manifest.ScanStatusPassed, time.Since(scanStart), outputPath, "")
+	updateScanManifest(moduleScanDir, moniker, module.GetComponentTypesDisplay(), gitCommit, manifest.ScanStatusPassed, time.Since(scanStart), outputPath, "")
 
 	log.Debugf("ZAP scan completed: moniker=%s, evidence=%s", moniker, outputPath)
 	log.Infof("  ✅ Success: %s\n", outputPath)

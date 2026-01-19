@@ -15,12 +15,12 @@ Monitor data pipelines, data quality, and pipeline health in production (Stage 1
 
 ### Four Pillars of Data Monitoring
 
-| Category | What to Monitor | Tools |
-|----------|----------------|-------|
-| **Pipeline Health** | Job success/failure, duration, SLA compliance | Databricks Jobs, Workflow monitoring |
-| **Data Quality** | Freshness, completeness, accuracy, consistency | Delta Live Tables expectations, custom checks |
-| **Business Metrics** | Row counts, aggregate values, anomalies | Custom dashboards, SQL queries |
-| **Infrastructure** | Cluster utilization, costs, performance | Databricks system tables, billing API |
+| Category             | What to Monitor                                | Tools                                         |
+| -------------------- | ---------------------------------------------- | --------------------------------------------- |
+| **Pipeline Health**  | Job success/failure, duration, SLA compliance  | Databricks Jobs, Workflow monitoring          |
+| **Data Quality**     | Freshness, completeness, accuracy, consistency | Delta Live Tables expectations, custom checks |
+| **Business Metrics** | Row counts, aggregate values, anomalies        | Custom dashboards, SQL queries                |
+| **Infrastructure**   | Cluster utilization, costs, performance        | Databricks system tables, billing API         |
 
 ## Pipeline Health Monitoring
 

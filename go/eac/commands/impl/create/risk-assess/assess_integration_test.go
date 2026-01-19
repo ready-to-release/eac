@@ -143,8 +143,8 @@ func TestApplyBasicRiskScoring_EmptyResults(t *testing.T) {
 	applyBasicRiskScoring(results)
 }
 
-// Helper function to create mock assessment results
-func createMockAssessmentResults(moduleName string, satisfiedControls []string, notSatisfiedControls []string) *oscalTypes.AssessmentResults {
+// Helper function to create mock assessment results.
+func createMockAssessmentResults(moduleName string, satisfiedControls, notSatisfiedControls []string) *oscalTypes.AssessmentResults {
 	arUUID := uuid.New().String()
 	ar := oscal.NewAssessmentResults(arUUID, "Test Assessment", "test-profile.json")
 

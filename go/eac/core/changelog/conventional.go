@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// Commit represents a parsed conventional commit
+// Commit represents a parsed conventional commit.
 type Commit struct {
 	// SHA is the commit hash (short or full)
 	SHA string
@@ -34,14 +34,14 @@ type Commit struct {
 }
 
 // conventionalCommitRegex matches conventional commit format
-// Supports: type(scope)!: description OR type!: description OR type(scope): description
+// Supports: type(scope)!: description OR type!: description OR type(scope): description.
 var conventionalCommitRegex = regexp.MustCompile(
 	`^(feat|fix|refactor|docs|chore|test|perf|style|ci|build|revert)` + // type
 		`(?:\(([^)]+)\))?` + // optional scope in parens
 		`(!)?` + // optional breaking indicator
 		`:\s*(.+)$`) // colon and description
 
-// ParseCommitMessage parses a commit message into a Commit struct
+// ParseCommitMessage parses a commit message into a Commit struct.
 func ParseCommitMessage(message string) *Commit {
 	lines := strings.SplitN(message, "\n", 2)
 	subject := strings.TrimSpace(lines[0])
@@ -73,12 +73,12 @@ func ParseCommitMessage(message string) *Commit {
 	return commit
 }
 
-// IsConventionalCommit returns true if the commit follows conventional commit format
+// IsConventionalCommit returns true if the commit follows conventional commit format.
 func (c *Commit) IsConventionalCommit() bool {
 	return c.Type != ""
 }
 
-// ToEntry converts a Commit to a changelog Entry
+// ToEntry converts a Commit to a changelog Entry.
 func (c *Commit) ToEntry() Entry {
 	return Entry{
 		Description: c.Description,
@@ -90,7 +90,7 @@ func (c *Commit) ToEntry() Entry {
 }
 
 // CommitsToEntries converts a slice of commits to changelog entries
-// grouped by change type
+// grouped by change type.
 func CommitsToEntries(commits []*Commit) map[ChangeType][]Entry {
 	result := make(map[ChangeType][]Entry)
 
@@ -107,7 +107,7 @@ func CommitsToEntries(commits []*Commit) map[ChangeType][]Entry {
 	return result
 }
 
-// CommitsToVersion creates a Version from commits
+// CommitsToVersion creates a Version from commits.
 func CommitsToVersion(commits []*Commit, versionNumber string, date time.Time) Version {
 	entriesByType := CommitsToEntries(commits)
 
@@ -123,7 +123,7 @@ func CommitsToVersion(commits []*Commit, versionNumber string, date time.Time) V
 	}
 }
 
-// FilterCommitsByModule filters commits that affect files matching module patterns
+// FilterCommitsByModule filters commits that affect files matching module patterns.
 func FilterCommitsByModule(commits []*Commit, patterns []string) []*Commit {
 	if len(patterns) == 0 {
 		return commits
@@ -139,7 +139,7 @@ func FilterCommitsByModule(commits []*Commit, patterns []string) []*Commit {
 	return filtered
 }
 
-// commitMatchesPatterns checks if any of the commit's files match the patterns
+// commitMatchesPatterns checks if any of the commit's files match the patterns.
 func commitMatchesPatterns(c *Commit, patterns []string) bool {
 	for _, file := range c.Files {
 		for _, pattern := range patterns {
@@ -152,7 +152,7 @@ func commitMatchesPatterns(c *Commit, patterns []string) bool {
 }
 
 // matchGlobPattern is a simple glob matcher for common patterns
-// Supports: *, **, and literal matches
+// Supports: *, **, and literal matches.
 func matchGlobPattern(path, pattern string) bool {
 	// Normalize separators
 	path = strings.ReplaceAll(path, "\\", "/")
@@ -183,7 +183,7 @@ func matchGlobPattern(path, pattern string) bool {
 	return matchSimpleGlob(path, pattern)
 }
 
-// matchSimpleGlob matches a path against a pattern with * wildcards
+// matchSimpleGlob matches a path against a pattern with * wildcards.
 func matchSimpleGlob(path, pattern string) bool {
 	// Simple case: no wildcards
 	if !strings.Contains(pattern, "*") {

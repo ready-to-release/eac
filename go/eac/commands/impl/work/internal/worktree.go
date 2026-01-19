@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-// Worktree represents a git worktree
+// Worktree represents a git worktree.
 type Worktree struct {
 	Path   string
 	Branch string
@@ -17,12 +17,12 @@ type Worktree struct {
 	Clean  bool
 }
 
-// GetWorktrees returns all worktrees in the repository
+// GetWorktrees returns all worktrees in the repository.
 func GetWorktrees(repoRoot string) ([]Worktree, error) {
 	return GetGitOps(repoRoot).ListWorktrees()
 }
 
-// parseWorktreeList parses the output of `git worktree list --porcelain`
+// parseWorktreeList parses the output of `git worktree list --porcelain`.
 func parseWorktreeList(output string) ([]Worktree, error) {
 	var worktrees []Worktree
 	lines := strings.Split(strings.TrimSpace(output), "\n")
@@ -70,8 +70,8 @@ func parseWorktreeList(output string) ([]Worktree, error) {
 	return worktrees, nil
 }
 
-// FindWorktreeByBranch finds a worktree by branch name
-func FindWorktreeByBranch(branch string, repoRoot string) (*Worktree, error) {
+// FindWorktreeByBranch finds a worktree by branch name.
+func FindWorktreeByBranch(branch, repoRoot string) (*Worktree, error) {
 	worktrees, err := GetWorktrees(repoRoot)
 	if err != nil {
 		return nil, err
@@ -86,7 +86,7 @@ func FindWorktreeByBranch(branch string, repoRoot string) (*Worktree, error) {
 	return nil, fmt.Errorf("worktree not found for branch: %s", branch)
 }
 
-// GetMainWorktree returns the main worktree (usually on main branch)
+// GetMainWorktree returns the main worktree (usually on main branch).
 func GetMainWorktree(repoRoot string) (*Worktree, error) {
 	worktrees, err := GetWorktrees(repoRoot)
 	if err != nil {
@@ -108,27 +108,27 @@ func GetMainWorktree(repoRoot string) (*Worktree, error) {
 	return nil, fmt.Errorf("no worktrees found")
 }
 
-// GenerateWorktreePath creates a standard worktree path from repo name and branch
+// GenerateWorktreePath creates a standard worktree path from repo name and branch.
 func GenerateWorktreePath(repoName, branchName string) string {
 	// Sanitize branch name for path (replace / with -)
 	safeBranch := strings.ReplaceAll(branchName, "/", "-")
 	return filepath.Join("..", fmt.Sprintf("%s-%s", repoName, safeBranch))
 }
 
-// IsWorktreeClean checks if a worktree has uncommitted changes
+// IsWorktreeClean checks if a worktree has uncommitted changes.
 func IsWorktreeClean(path string) (bool, error) {
 	// Note: GetGitOps requires repoRoot, but IsWorktreeClean in GitOps
 	// uses the path parameter as the directory, so we pass path as repoRoot
 	return GetGitOps(path).IsWorktreeClean(path)
 }
 
-// GetRepoName extracts the repository name from the repo root path
+// GetRepoName extracts the repository name from the repo root path.
 func GetRepoName(repoRoot string) string {
 	return filepath.Base(repoRoot)
 }
 
-// WorktreeExists checks if a worktree already exists for a branch
-func WorktreeExists(branch string, repoRoot string) (bool, error) {
+// WorktreeExists checks if a worktree already exists for a branch.
+func WorktreeExists(branch, repoRoot string) (bool, error) {
 	_, err := FindWorktreeByBranch(branch, repoRoot)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
@@ -139,17 +139,17 @@ func WorktreeExists(branch string, repoRoot string) (bool, error) {
 	return true, nil
 }
 
-// BranchExists checks if a branch exists in the repository
-func BranchExists(branch string, repoRoot string) (bool, error) {
+// BranchExists checks if a branch exists in the repository.
+func BranchExists(branch, repoRoot string) (bool, error) {
 	return GetGitOps(repoRoot).BranchExists(branch)
 }
 
-// GetCurrentBranch returns the current branch name
+// GetCurrentBranch returns the current branch name.
 func GetCurrentBranch(path string) (string, error) {
 	return GetGitOps(path).GetCurrentBranch(path)
 }
 
-// EnsureInGitRepo checks if we're in a git repository
+// EnsureInGitRepo checks if we're in a git repository.
 func EnsureInGitRepo() error {
 	cmd := exec.Command("git", "rev-parse", "--git-dir")
 	if err := cmd.Run(); err != nil {
@@ -158,7 +158,7 @@ func EnsureInGitRepo() error {
 	return nil
 }
 
-// GetAbsolutePath converts a relative path to absolute
+// GetAbsolutePath converts a relative path to absolute.
 func GetAbsolutePath(path string) (string, error) {
 	if filepath.IsAbs(path) {
 		return path, nil

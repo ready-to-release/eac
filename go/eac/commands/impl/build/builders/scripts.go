@@ -24,11 +24,14 @@ func (h *ScriptsHandler) Capabilities() []string { return []string{"scripts_pack
 
 func (h *ScriptsHandler) Requirements() []string { return nil }
 
-func (h *ScriptsHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot string) error {
-	if len(module.Files.Source) == 0 {
-		return fmt.Errorf("no source patterns defined in files.source")
+func (h *ScriptsHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot, component string) error {
+	// Check if any package has source patterns
+	for _, pkg := range module.Components {
+		if pkg != nil && pkg.Patterns != nil && len(pkg.Patterns.Source) > 0 {
+			return nil
+		}
 	}
-	return nil
+	return fmt.Errorf("no source patterns defined in any package")
 }
 
 func (h *ScriptsHandler) ListArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {
@@ -36,19 +39,30 @@ func (h *ScriptsHandler) ListArtifacts(module *modules.ModuleContract, workspace
 }
 
 func (h *ScriptsHandler) Build(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	Logln(logWriter, "\n=== %s: %s ===", module.Type, module.Moniker)
+	Logln(logWriter, "\n=== scripts: %s ===", module.Moniker)
 
-	moduleRoot := filepath.Join(workspaceRoot, module.Files.Root)
+	// Get the specific component being built
+	comp := module.Components[opts.Component]
+	if comp == nil {
+		Logln(logWriter, "❌ Component %s not found in module %s", opts.Component, module.Moniker)
+		return 1
+	}
+
+	moduleRoot := filepath.Join(workspaceRoot, comp.Root)
 	Logln(logWriter, "Source: %s", moduleRoot)
 	Logln(logWriter, "Output: %s", outputDir)
 
-	sourcePatterns := module.Files.Source
+	// Get source patterns from the specific component
+	var sourcePatterns []string
+	if comp.Patterns != nil {
+		sourcePatterns = comp.Patterns.Source
+	}
 	if len(sourcePatterns) == 0 {
-		Logln(logWriter, "ℹ️  No source patterns defined, nothing to copy")
+		Logln(logWriter, "ℹ️  No source patterns defined for component %s, nothing to copy", opts.Component)
 		return 0
 	}
 
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		Logln(logWriter, "❌ Failed to create output directory: %v", err)
 		return 1
 	}
@@ -74,7 +88,7 @@ func (h *ScriptsHandler) Build(module *modules.ModuleContract, workspaceRoot, ou
 
 			dstPath := filepath.Join(outputDir, match)
 			dstDir := filepath.Dir(dstPath)
-			if err := os.MkdirAll(dstDir, 0755); err != nil {
+			if err := os.MkdirAll(dstDir, 0o755); err != nil {
 				Logln(logWriter, "   ❌ Failed to create directory %s: %v", dstDir, err)
 				return 1
 			}

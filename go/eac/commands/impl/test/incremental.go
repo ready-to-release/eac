@@ -27,7 +27,7 @@ func buildModuleTestInfo(
 	uniqueModules := make(map[string]bool)
 
 	// Create a module mapper to find which module owns each package
-	moduleMapper := NewModuleMapper(eacCfg, workspaceRoot)
+	moduleMapper := NewModuleMapper(moduleRegistry, workspaceRoot)
 
 	// Collect all test package paths per module
 	testPackagesByModule := make(map[string][]string)
@@ -106,7 +106,7 @@ func buildModuleTestInfo(
 	return moduleInfo, moduleList
 }
 
-// isTestFile returns true if the file path looks like a test file
+// isTestFile returns true if the file path looks like a test file.
 func isTestFile(path string) bool {
 	return strings.HasSuffix(path, "_test.go") ||
 		strings.HasSuffix(path, ".feature") ||

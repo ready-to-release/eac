@@ -118,7 +118,7 @@ func TestGetSpecs(t *testing.T) {
 }
 
 // TestGetSpecs_BundleModuleAggregation verifies that bundle modules
-// aggregate specs from all their dependencies
+// aggregate specs from all their dependencies.
 func TestGetSpecs_BundleModuleAggregation(t *testing.T) {
 	// Get repository root
 	workspaceRoot := os.Getenv("WORKSPACE_ROOT")

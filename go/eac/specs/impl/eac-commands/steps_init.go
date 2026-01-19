@@ -27,6 +27,15 @@ func registerInitSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	sc.Step(`^a \.r2r/eac/ai-provider\.yml file is created$`, func() error {
 		return initFileExists(ctx, ".r2r/eac/ai-provider.yml")
 	})
+	sc.Step(`^a \.r2r/eac/repository\.yml file is created$`, func() error {
+		return initFileExists(ctx, ".r2r/eac/repository.yml")
+	})
+	sc.Step(`^a \.r2r/eac/books\.yml file is created$`, func() error {
+		return initFileExists(ctx, ".r2r/eac/books.yml")
+	})
+	sc.Step(`^a \.r2r/eac/environments\.yml file is created$`, func() error {
+		return initFileExists(ctx, ".r2r/eac/environments.yml")
+	})
 	sc.Step(`^the \.r2r/eac/ai-provider\.yml file contains "([^"]*)"$`, func(content string) error {
 		return initFileContains(ctx, ".r2r/eac/ai-provider.yml", content)
 	})
@@ -45,8 +54,14 @@ func registerInitSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 		content := fmt.Sprintf("provider: %s\n", provider)
 		return internal.CreateFile(ctx, ".r2r/eac/ai-provider.yml", content)
 	})
-	sc.Step(`^no \.r2r/eac/ai-provider\.yml file exists$`, func() error {
-		return internal.RemoveFile(ctx, ".r2r/eac/ai-provider.yml")
+	sc.Step(`^a \.r2r/eac/repository\.yml file exists$`, func() error {
+		return internal.CreateFile(ctx, ".r2r/eac/repository.yml", "# existing repository config\n")
+	})
+	sc.Step(`^a \.r2r/eac/books\.yml file exists$`, func() error {
+		return internal.CreateFile(ctx, ".r2r/eac/books.yml", "# existing books config\n")
+	})
+	sc.Step(`^a \.r2r/eac/environments\.yml file exists$`, func() error {
+		return internal.CreateFile(ctx, ".r2r/eac/environments.yml", "# existing environments config\n")
 	})
 }
 

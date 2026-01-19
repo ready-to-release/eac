@@ -12,47 +12,32 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/books"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/serve"
-	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
 const (
-	// defaultContainerNameBase is the fallback base name for mkdocs containers
+	// defaultContainerNameBase is the fallback base name for mkdocs containers.
 	defaultContainerNameBase = "cli-mkdocs-site"
-	// defaultImageName is the fallback Docker image name
+	// defaultImageName is the fallback Docker image name.
 	defaultImageName = "cli-mkdocs-site:latest"
-	// defaultDockerfile is the fallback Dockerfile path
+	// defaultDockerfile is the fallback Dockerfile path.
 	defaultDockerfile = "containers/mkdocs-site/Dockerfile"
 
-	// containerInternalPort is the port MkDocs listens on inside the container
+	// containerInternalPort is the port MkDocs listens on inside the container.
 	containerInternalPort = 8000
 )
 
 // getDockerImageConfig returns the Docker image configuration for mkdocs-site type.
-// Falls back to defaults if config is not available.
+// Uses hardcoded defaults since module types no longer define docker image config.
 func getDockerImageConfig() (containerNameBase, imageName, dockerfile string) {
 	containerNameBase = defaultContainerNameBase
 	imageName = defaultImageName
 	dockerfile = defaultDockerfile
-
-	cfg := config.Global()
-	if cfg != nil && cfg.ModuleTypes != nil {
-		if img := cfg.ModuleTypes.GetDockerImageName("mkdocs-site"); img != "" {
-			imageName = img
-			// Derive container name from image (e.g., "cli-mkdocs-site:latest" -> "cli-mkdocs-site")
-			if idx := strings.Index(img, ":"); idx > 0 {
-				containerNameBase = img[:idx]
-			}
-		}
-		if dir := cfg.ModuleTypes.GetDockerContainerDir("mkdocs-site"); dir != "" {
-			dockerfile = filepath.Join(dir, "Dockerfile")
-		}
-	}
-	return
+	return containerNameBase, imageName, dockerfile
 }
 
-// getRepoRoot returns the repository root directory
+// getRepoRoot returns the repository root directory.
 func getRepoRoot() (string, error) {
 	log.Debugf("Getting repository root")
 	root, err := repository.GetRepositoryRoot("")
@@ -64,7 +49,7 @@ func getRepoRoot() (string, error) {
 	return root, nil
 }
 
-// isContainerRunning checks if any MkDocs container is running
+// isContainerRunning checks if any MkDocs container is running.
 func isContainerRunning(cli *client.Client, ctx context.Context) (bool, *ContainerInfo, error) {
 	containerNameBase, _, _ := getDockerImageConfig()
 	log.Debugf("Checking if container is running: containerName=%s", containerNameBase)
@@ -89,7 +74,7 @@ func isContainerRunning(cli *client.Client, ctx context.Context) (bool, *Contain
 	}, nil
 }
 
-// startMkDocsContainer starts the MkDocs container
+// startMkDocsContainer starts the MkDocs container.
 func startMkDocsContainer(cli *client.Client, ctx context.Context, port int) (*ContainerInfo, error) {
 	log.Debugf("Starting MkDocs container: requestedPort=%d", port)
 
@@ -111,7 +96,7 @@ func startMkDocsContainer(cli *client.Client, ctx context.Context, port int) (*C
 
 	// Generate mkdocs.yml from site template
 	configDir := paths.ServeOutputPath(repoRoot)
-	if err := os.MkdirAll(configDir, 0755); err != nil {
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		log.Errorf("Failed to create serve config directory: error=%v", err)
 		return nil, fmt.Errorf("failed to create config directory: %w", err)
 	}
@@ -136,7 +121,7 @@ func startMkDocsContainer(cli *client.Client, ctx context.Context, port int) (*C
 	macrosTarget := filepath.Join(configDir, "main.py")
 	macrosData, err := os.ReadFile(macrosSource)
 	if err == nil {
-		if err := os.WriteFile(macrosTarget, macrosData, 0644); err != nil {
+		if err := os.WriteFile(macrosTarget, macrosData, 0o644); err != nil {
 			log.Warnf("Failed to copy mkdocs macros script: error=%v", err)
 		} else {
 			log.Debugf("Copied mkdocs macros to main.py: target=%s", macrosTarget)
@@ -146,7 +131,10 @@ func startMkDocsContainer(cli *client.Client, ctx context.Context, port int) (*C
 	}
 
 	// Calculate relative config path for Docker
-	relConfigPath, _ := filepath.Rel(repoRoot, configPath)
+	relConfigPath, relErr := filepath.Rel(repoRoot, configPath)
+	if relErr != nil {
+		relConfigPath = configPath // Fallback to absolute path
+	}
 	dockerConfigPath := strings.ReplaceAll(relConfigPath, "\\", "/")
 
 	// Get Docker configuration from module types
@@ -190,7 +178,7 @@ func startMkDocsContainer(cli *client.Client, ctx context.Context, port int) (*C
 	}, nil
 }
 
-// stopMkDocsContainer stops the MkDocs container
+// stopMkDocsContainer stops the MkDocs container.
 func stopMkDocsContainer(cli *client.Client, ctx context.Context) error {
 	containerNameBase, _, _ := getDockerImageConfig()
 	log.Debugf("Stopping MkDocs container: containerName=%s", containerNameBase)
@@ -205,7 +193,7 @@ func stopMkDocsContainer(cli *client.Client, ctx context.Context) error {
 	return nil
 }
 
-// streamContainerLogs streams container logs to stdout
+// streamContainerLogs streams container logs to stdout.
 func streamContainerLogs(cli *client.Client, ctx context.Context) error {
 	containerNameBase, _, _ := getDockerImageConfig()
 	log.Debugf("Searching for container to stream logs")
@@ -220,7 +208,8 @@ func streamContainerLogs(cli *client.Client, ctx context.Context) error {
 	log.Debugf("Found containers: count=%d", len(containers))
 
 	var containerID string
-	for _, c := range containers {
+	for i := range containers {
+		c := &containers[i]
 		for _, name := range c.Names {
 			cleanName := strings.TrimPrefix(name, "/")
 			if cleanName == containerNameBase || strings.HasPrefix(cleanName, containerNameBase+"-") {

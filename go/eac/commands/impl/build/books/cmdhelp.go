@@ -17,10 +17,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// ErrCommandNotFound indicates a command marker references a non-existent command
+// ErrCommandNotFound indicates a command marker references a non-existent command.
 var ErrCommandNotFound = errors.New("command not found")
 
-// CommandHelp represents parsed help output for a command
+// CommandHelp represents parsed help output for a command.
 type CommandHelp struct {
 	Name        string
 	Description string
@@ -31,13 +31,13 @@ type CommandHelp struct {
 	Examples    string
 }
 
-// FlagArg represents a flag or argument with description
+// FlagArg represents a flag or argument with description.
 type FlagArg struct {
 	Name        string
 	Description string
 }
 
-// CommandInfo represents a command from get valid-commands
+// CommandInfo represents a command from get valid-commands.
 type CommandInfo struct {
 	Command     string `yaml:"command"`
 	Description string `yaml:"description"`
@@ -63,7 +63,7 @@ var cmdMarkerPatterns = map[string]*regexp.Regexp{
 	"categories-index":  regexp.MustCompile(`<!--\s*book:categories-index\s*-->`),
 }
 
-// processCommandMarkers finds and replaces command help markers in staging markdown files
+// processCommandMarkers finds and replaces command help markers in staging markdown files.
 func (p *Preprocessor) processCommandMarkers() error {
 	p.log("    Processing command help markers...")
 
@@ -139,7 +139,10 @@ func (p *Preprocessor) processCommandMarkers() error {
 				if err != nil {
 					// Fail build on missing commands - docs must reference valid commands
 					if errors.Is(err, ErrCommandNotFound) {
-						relPath, _ := filepath.Rel(p.stagingDir, path)
+						relPath, relErr := filepath.Rel(p.stagingDir, path)
+						if relErr != nil {
+							relPath = path // Fallback to absolute path
+						}
 						return fmt.Errorf("command marker in %s references non-existent command: %w", relPath, err)
 					}
 					p.log("    Warning: failed to process %s marker '%s': %v", markerType, match[0], err)
@@ -154,7 +157,7 @@ func (p *Preprocessor) processCommandMarkers() error {
 		}
 
 		if fileReplacements > 0 {
-			if err := os.WriteFile(path, []byte(modified), 0644); err != nil {
+			if err := os.WriteFile(path, []byte(modified), 0o644); err != nil {
 				return err
 			}
 			replacements += fileReplacements
@@ -163,7 +166,6 @@ func (p *Preprocessor) processCommandMarkers() error {
 
 		return nil
 	})
-
 	if err != nil {
 		return err
 	}
@@ -173,7 +175,7 @@ func (p *Preprocessor) processCommandMarkers() error {
 }
 
 // formatSingleCommand generates markdown documentation for a single command
-// The document is expected to already have a title, so we don't include one
+// The document is expected to already have a title, so we don't include one.
 func (p *Preprocessor) formatSingleCommand(cmdBinary, cmdName string) (string, error) {
 	help, err := p.getCommandHelp(cmdBinary, cmdName)
 	if err != nil {
@@ -184,7 +186,7 @@ func (p *Preprocessor) formatSingleCommand(cmdBinary, cmdName string) (string, e
 	return p.formatCommandHelp(help, 2, false), nil
 }
 
-// formatCommandGroup generates markdown for all subcommands of a group
+// formatCommandGroup generates markdown for all subcommands of a group.
 func (p *Preprocessor) formatCommandGroup(cmdBinary, groupName string) (string, error) {
 	commands, err := p.getValidCommands(cmdBinary)
 	if err != nil {
@@ -229,7 +231,7 @@ func (p *Preprocessor) formatCommandGroup(cmdBinary, groupName string) (string, 
 	return sb.String(), nil
 }
 
-// formatAllCommands generates markdown for all commands
+// formatAllCommands generates markdown for all commands.
 func (p *Preprocessor) formatAllCommands(cmdBinary string) (string, error) {
 	commands, err := p.getValidCommands(cmdBinary)
 	if err != nil {
@@ -277,7 +279,7 @@ func (p *Preprocessor) formatAllCommands(cmdBinary string) (string, error) {
 	return sb.String(), nil
 }
 
-// formatCommandTOC generates a table of contents for all commands
+// formatCommandTOC generates a table of contents for all commands.
 func (p *Preprocessor) formatCommandTOC(cmdBinary string) (string, error) {
 	commands, err := p.getValidCommands(cmdBinary)
 	if err != nil {
@@ -298,14 +300,14 @@ func (p *Preprocessor) formatCommandTOC(cmdBinary string) (string, error) {
 	return sb.String(), nil
 }
 
-// CategoryStats holds category information for documentation
+// CategoryStats holds category information for documentation.
 type CategoryStats struct {
 	Name         string
 	Description  string
 	CommandCount int
 }
 
-// formatCategoriesTable generates a category quick reference table
+// formatCategoriesTable generates a category quick reference table.
 func (p *Preprocessor) formatCategoriesTable(cmdBinary string) (string, error) {
 	categories, err := p.getCategoryStats(cmdBinary)
 	if err != nil {
@@ -323,7 +325,7 @@ func (p *Preprocessor) formatCategoriesTable(cmdBinary string) (string, error) {
 	return sb.String(), nil
 }
 
-// formatCategoriesList generates a category list with descriptions
+// formatCategoriesList generates a category list with descriptions.
 func (p *Preprocessor) formatCategoriesList(cmdBinary string) (string, error) {
 	categories, err := p.getCategoryStats(cmdBinary)
 	if err != nil {
@@ -338,7 +340,7 @@ func (p *Preprocessor) formatCategoriesList(cmdBinary string) (string, error) {
 	return sb.String(), nil
 }
 
-// formatCategorySection generates a single category section with description and link
+// formatCategorySection generates a single category section with description and link.
 func (p *Preprocessor) formatCategorySection(cmdBinary, categoryName string) (string, error) {
 	categories, err := p.getCategoryStats(cmdBinary)
 	if err != nil {
@@ -366,7 +368,7 @@ func (p *Preprocessor) formatCategorySection(cmdBinary, categoryName string) (st
 	return sb.String(), nil
 }
 
-// formatCategoryCommands generates a table of commands for a specific category
+// formatCategoryCommands generates a table of commands for a specific category.
 func (p *Preprocessor) formatCategoryCommands(cmdBinary, categoryName string) (string, error) {
 	commands, err := p.getValidCommands(cmdBinary)
 	if err != nil {
@@ -426,7 +428,7 @@ func (p *Preprocessor) formatCategoryCommands(cmdBinary, categoryName string) (s
 	return sb.String(), nil
 }
 
-// formatCategoriesIndex generates the entire categories index page
+// formatCategoriesIndex generates the entire categories index page.
 func (p *Preprocessor) formatCategoriesIndex(cmdBinary string) (string, error) {
 	categories, err := p.getCategoryStats(cmdBinary)
 	if err != nil {
@@ -460,7 +462,7 @@ func (p *Preprocessor) formatCategoriesIndex(cmdBinary string) (string, error) {
 	return sb.String(), nil
 }
 
-// loadCommandsConfig loads the commands configuration from commands.yml
+// loadCommandsConfig loads the commands configuration from commands.yml.
 func (p *Preprocessor) loadCommandsConfig() (*config.CommandsConfig, error) {
 	configPath := filepath.Join(p.workspaceRoot, ".r2r", "eac", config.CommandsFileName)
 	data, err := os.ReadFile(configPath)
@@ -479,7 +481,7 @@ func (p *Preprocessor) loadCommandsConfig() (*config.CommandsConfig, error) {
 	return &cfg, nil
 }
 
-// getCategoryStats returns category statistics from valid commands
+// getCategoryStats returns category statistics from valid commands.
 func (p *Preprocessor) getCategoryStats(cmdBinary string) ([]CategoryStats, error) {
 	commands, err := p.getValidCommands(cmdBinary)
 	if err != nil {
@@ -550,7 +552,7 @@ func (p *Preprocessor) getCategoryStats(cmdBinary string) ([]CategoryStats, erro
 	return categories, nil
 }
 
-// getCommandHelp runs --help for a command and parses the output
+// getCommandHelp runs --help for a command and parses the output.
 func (p *Preprocessor) getCommandHelp(cmdBinary, cmdName string) (*CommandHelp, error) {
 	// Run command with --help
 	args := append(strings.Fields(cmdName), "--help")
@@ -578,7 +580,7 @@ func (p *Preprocessor) getCommandHelp(cmdBinary, cmdName string) (*CommandHelp, 
 	return parseHelpOutput(cmdName, stdout.String())
 }
 
-// parseHelpOutput parses the --help output into a CommandHelp struct
+// parseHelpOutput parses the --help output into a CommandHelp struct.
 func parseHelpOutput(cmdName, output string) (*CommandHelp, error) {
 	help := &CommandHelp{
 		Name: cmdName,
@@ -713,7 +715,7 @@ func parseHelpOutput(cmdName, output string) (*CommandHelp, error) {
 	return help, nil
 }
 
-// formatDescription joins description lines, preserving paragraph breaks
+// formatDescription joins description lines, preserving paragraph breaks.
 func formatDescription(lines []string) string {
 	if len(lines) == 0 {
 		return ""
@@ -741,7 +743,7 @@ func formatDescription(lines []string) string {
 	return strings.TrimSpace(strings.Join(paragraphs, "\n\n"))
 }
 
-// parseFlagLine parses a flag/argument line like "  --dry-run    Description here"
+// parseFlagLine parses a flag/argument line like "  --dry-run    Description here".
 func parseFlagLine(line string) *FlagArg {
 	if !strings.HasPrefix(line, "  ") {
 		return nil
@@ -778,7 +780,7 @@ func parseFlagLine(line string) *FlagArg {
 // formatCommandHelp formats a CommandHelp as markdown
 // headingLevel controls the base heading level for the command name
 // includeTitle controls whether to include the command name as a heading
-// (set to false when the document already has a title)
+// (set to false when the document already has a title).
 func (p *Preprocessor) formatCommandHelp(help *CommandHelp, headingLevel int, includeTitle bool) string {
 	var sb strings.Builder
 	heading := strings.Repeat("#", headingLevel)
@@ -841,7 +843,7 @@ func (p *Preprocessor) formatCommandHelp(help *CommandHelp, headingLevel int, in
 	return sb.String()
 }
 
-// getValidCommands retrieves the list of all valid commands
+// getValidCommands retrieves the list of all valid commands.
 func (p *Preprocessor) getValidCommands(cmdBinary string) ([]CommandInfo, error) {
 	cmd := exec.Command(cmdBinary, "get", "valid-commands")
 	cmd.Dir = p.workspaceRoot
@@ -863,7 +865,7 @@ func (p *Preprocessor) getValidCommands(cmdBinary string) ([]CommandInfo, error)
 	return commands, nil
 }
 
-// escapeTableCell escapes pipe characters and newlines for markdown tables
+// escapeTableCell escapes pipe characters and newlines for markdown tables.
 func escapeTableCell(s string) string {
 	s = strings.ReplaceAll(s, "|", "\\|")
 	s = strings.ReplaceAll(s, "\n", " ")
@@ -871,7 +873,7 @@ func escapeTableCell(s string) string {
 }
 
 // escapeJinja2 escapes Jinja2 template syntax to prevent MkDocs macros from processing
-// command help output as template expressions
+// command help output as template expressions.
 func escapeJinja2(s string) string {
 	// Escape {{ and }} which Jinja2 interprets as expression delimiters
 	// Use Jinja2's raw block alternative: wrap in {% raw %}...{% endraw %}
@@ -884,7 +886,7 @@ func escapeJinja2(s string) string {
 	return s
 }
 
-// dedentExamples removes common leading whitespace from example lines
+// dedentExamples removes common leading whitespace from example lines.
 func dedentExamples(examples string) string {
 	lines := strings.Split(strings.TrimSpace(examples), "\n")
 	if len(lines) == 0 {

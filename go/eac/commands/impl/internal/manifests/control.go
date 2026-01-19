@@ -6,7 +6,7 @@ import (
 	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
 )
 
-// ControlSummary represents a summary of tests tagged with a specific control ID
+// ControlSummary represents a summary of tests tagged with a specific control ID.
 type ControlSummary struct {
 	ControlID    string   `json:"control_id" yaml:"controlid"`
 	TestCount    int      `json:"test_count" yaml:"testcount"`
@@ -27,7 +27,8 @@ func BuildControlSummary(manifests []*implinternal.TestManifest) []ControlSummar
 	modulesByControl := make(map[string]map[string]bool)
 
 	for _, manifest := range manifests {
-		for _, test := range manifest.Tests {
+		for i := range manifest.Tests {
+			test := &manifest.Tests[i]
 			// Extract control tags from this test
 			controlTags := ExtractControlTags(test.Tags)
 

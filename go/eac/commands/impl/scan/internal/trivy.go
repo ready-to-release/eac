@@ -14,20 +14,20 @@ import (
 // NOTE: trivyImage constant removed - now configured via security-tools.yml
 // Docker image versions are loaded from .r2r/eac/security-tools.yml configuration
 
-// Mock support for testing
+// Mock support for testing.
 var mockTrivyOutput interface{}
 
-// SetMockTrivyOutput sets a mock Trivy response for testing
+// SetMockTrivyOutput sets a mock Trivy response for testing.
 func SetMockTrivyOutput(output interface{}) {
 	mockTrivyOutput = output
 }
 
-// ResetMockTrivyOutput clears the mock Trivy response
+// ResetMockTrivyOutput clears the mock Trivy response.
 func ResetMockTrivyOutput() {
 	mockTrivyOutput = nil
 }
 
-// getDefaultMockTrivyOutput returns default mock data for Trivy
+// getDefaultMockTrivyOutput returns default mock data for Trivy.
 func getDefaultMockTrivyOutput() map[string]interface{} {
 	return map[string]interface{}{
 		"SchemaVersion": 2,
@@ -42,8 +42,8 @@ func getDefaultMockTrivyOutput() map[string]interface{} {
 	}
 }
 
-// RunTrivySBOM executes Trivy SBOM scanner via Docker
-func RunTrivySBOM(workspaceRoot, moduleRoot, format string, trivyImage string) (interface{}, error) {
+// RunTrivySBOM executes Trivy SBOM scanner via Docker.
+func RunTrivySBOM(workspaceRoot, moduleRoot, format, trivyImage string) (interface{}, error) {
 	// Check for mock output (testing only)
 	// Priority: in-process mock > environment variable mock
 	if mockTrivyOutput != nil {
@@ -136,7 +136,7 @@ func RunTrivySBOM(workspaceRoot, moduleRoot, format string, trivyImage string) (
 	return findings, nil
 }
 
-// RunTrivyVuln executes Trivy vulnerability scanner via Docker
+// RunTrivyVuln executes Trivy vulnerability scanner via Docker.
 func RunTrivyVuln(moduleRoot string, severityFilter []Severity, trivyImage string) (interface{}, error) {
 	// Check for mock output (testing only)
 	// Priority: in-process mock > environment variable mock
@@ -244,8 +244,8 @@ func RunTrivyVuln(moduleRoot string, severityFilter []Severity, trivyImage strin
 	return findings, nil
 }
 
-// RunTrivySecrets executes Trivy secrets scanner via Docker
-func RunTrivySecrets(moduleRoot string, trivyImage string) (interface{}, error) {
+// RunTrivySecrets executes Trivy secrets scanner via Docker.
+func RunTrivySecrets(moduleRoot, trivyImage string) (interface{}, error) {
 	// Check for mock output (testing only)
 	// Priority: in-process mock > environment variable mock
 	if mockTrivyOutput != nil {
@@ -332,8 +332,8 @@ func RunTrivySecrets(moduleRoot string, trivyImage string) (interface{}, error) 
 	return findings, nil
 }
 
-// RunTrivyCompliance executes Trivy compliance scanner via Docker
-func RunTrivyCompliance(moduleRoot, compliance string, trivyImage string) (interface{}, error) {
+// RunTrivyCompliance executes Trivy compliance scanner via Docker.
+func RunTrivyCompliance(moduleRoot, compliance, trivyImage string) (interface{}, error) {
 	// Check for mock output (testing only)
 	// Priority: in-process mock > environment variable mock
 	if mockTrivyOutput != nil {
@@ -420,8 +420,8 @@ func RunTrivyCompliance(moduleRoot, compliance string, trivyImage string) (inter
 	return findings, nil
 }
 
-// RunTrivyIaC executes Trivy Infrastructure as Code scanner via Docker
-func RunTrivyIaC(moduleRoot string, trivyImage string) (interface{}, error) {
+// RunTrivyIaC executes Trivy Infrastructure as Code scanner via Docker.
+func RunTrivyIaC(moduleRoot, trivyImage string) (interface{}, error) {
 	// Check for mock output (testing only)
 	// Priority: in-process mock > environment variable mock
 	if mockTrivyOutput != nil {
@@ -507,7 +507,7 @@ func RunTrivyIaC(moduleRoot string, trivyImage string) (interface{}, error) {
 	return findings, nil
 }
 
-// joinSeverities joins severity strings with commas
+// joinSeverities joins severity strings with commas.
 func joinSeverities(severities []string) string {
 	result := ""
 	for i, sev := range severities {

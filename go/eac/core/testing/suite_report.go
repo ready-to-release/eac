@@ -5,7 +5,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 )
 
-// SuiteTestEntry represents a single test (assertion) in a suite report
+// SuiteTestEntry represents a single test (assertion) in a suite report.
 type SuiteTestEntry struct {
 	Moniker      string   `yaml:"moniker" json:"moniker" toml:"moniker"`
 	TestName     string   `yaml:"test_name" json:"test_name" toml:"test_name"`
@@ -34,7 +34,7 @@ type SuiteTestEntry struct {
 	IsCriticalAspect bool     `yaml:"is_critical_aspect" json:"is_critical_aspect" toml:"is_critical_aspect"`
 }
 
-// SuiteReport represents a complete test suite report
+// SuiteReport represents a complete test suite report.
 type SuiteReport struct {
 	SuiteMoniker     string              `yaml:"suite_moniker" json:"suite_moniker" toml:"suite_moniker"`
 	SuiteName        string              `yaml:"suite_name" json:"suite_name" toml:"suite_name"`
@@ -47,7 +47,7 @@ type SuiteReport struct {
 }
 
 // GenerateSuiteReport generates a complete test suite report with all metadata
-// This is the canonical data generator used by both `get suite` and `show suite` commands
+// This is the canonical data generator used by both `get suite` and `show suite` commands.
 func GenerateSuiteReport(
 	suite *TestSuite,
 	repoRoot string,

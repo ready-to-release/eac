@@ -9,10 +9,10 @@ import (
 )
 
 // DefaultMarkerPattern is the default regex for finding markers in markdown files.
-// Matches: <!-- book:insert marker-id -->
+// Matches: <!-- book:insert marker-id -->.
 const DefaultMarkerPattern = `<!--\s*book:insert\s+([a-zA-Z0-9_-]+)\s*-->`
 
-// insertInlineContent replaces markers with command outputs (Step 5)
+// insertInlineContent replaces markers with command outputs (Step 5).
 func (p *Preprocessor) insertInlineContent(outputs map[string]string) error {
 	inlineSources := p.book.GetInlineSources()
 	if len(inlineSources) == 0 {
@@ -20,7 +20,8 @@ func (p *Preprocessor) insertInlineContent(outputs map[string]string) error {
 		return nil
 	}
 
-	for _, src := range inlineSources {
+	for i := range inlineSources {
+		src := &inlineSources[i]
 		targetPath := filepath.Join(p.stagingDir, src.Target)
 
 		// Read target file
@@ -74,7 +75,7 @@ func (p *Preprocessor) insertInlineContent(outputs map[string]string) error {
 
 		// Only write if we made changes
 		if replacements > 0 {
-			if err := os.WriteFile(targetPath, []byte(modified), 0644); err != nil {
+			if err := os.WriteFile(targetPath, []byte(modified), 0o644); err != nil {
 				return err
 			}
 			p.log("    Modified: %s (%d markers replaced)", src.Target, replacements)
@@ -87,7 +88,7 @@ func (p *Preprocessor) insertInlineContent(outputs map[string]string) error {
 	return nil
 }
 
-// formatInlineReplacement wraps command output with generation markers
+// formatInlineReplacement wraps command output with generation markers.
 func formatInlineReplacement(marker, output string) string {
 	var sb strings.Builder
 

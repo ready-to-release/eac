@@ -106,7 +106,7 @@ func ShowTestTimingsForModules(modules []string, topN int, testOutputDir string,
 	return 0
 }
 
-// filterTimingsByModules filters timings to only include specified modules
+// filterTimingsByModules filters timings to only include specified modules.
 func filterTimingsByModules(timings []get.TestTiming, modules []string) []get.TestTiming {
 	// Create a set of modules for O(1) lookup
 	moduleSet := make(map[string]bool)
@@ -124,7 +124,7 @@ func filterTimingsByModules(timings []get.TestTiming, modules []string) []get.Te
 	return filtered
 }
 
-// displayOverallSummary shows high-level statistics
+// displayOverallSummary shows high-level statistics.
 func displayOverallSummary(summary *get.TestTimingSummary, wallClockSeconds float64) {
 	log.Info("# Test Timing Analysis\n")
 	log.Infof("**Test Output Directory**: `%s`\n", summary.TestOutputDir)
@@ -155,7 +155,7 @@ func displayOverallSummary(summary *get.TestTimingSummary, wallClockSeconds floa
 	log.Info("")
 }
 
-// displayModuleSummary shows timing breakdown by module
+// displayModuleSummary shows timing breakdown by module.
 func displayModuleSummary(summary *get.TestTimingSummary) {
 	log.Info("## Summary by Module\n")
 
@@ -205,7 +205,7 @@ func displayModuleSummary(summary *get.TestTimingSummary) {
 	log.Info("")
 }
 
-// displaySlowestTests shows the top N slowest individual test scenarios
+// displaySlowestTests shows the top N slowest individual test scenarios.
 func displaySlowestTests(summary *get.TestTimingSummary, topN int) {
 	log.Infof("## Top %d Slowest Tests\n", topN)
 

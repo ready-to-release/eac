@@ -132,6 +132,8 @@ func EnableTUIForComponentLogger(writer io.Writer, minLevel zapcore.Level) error
 	opts := []zap.Option{
 		zap.AddCaller(),
 		zap.AddCallerSkip(1),
+		// Suppress zap's internal error output (e.g., write failures during log rotation)
+		zap.ErrorOutput(zapcore.AddSync(io.Discard)),
 	}
 	if cfg.Development {
 		opts = append(opts, zap.Development())

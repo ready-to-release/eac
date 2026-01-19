@@ -34,44 +34,44 @@ type Status struct {
 	TotalLayers int // Total number of layers (0 = not using layers)
 }
 
-// PhaseUpdateMsg is sent when a phase changes state (exported for tui package)
+// PhaseUpdateMsg is sent when a phase changes state (exported for tui package).
 type PhaseUpdateMsg struct {
 	Phase   Phase       // Which phase this update is for
 	Status  PhaseStatus // New status (active, complete, failed)
 	Summary string      // Summary text for collapsed view
 }
 
-// PhaseLineMsg is sent when a line should go to a specific phase's buffer (exported for tui package)
+// PhaseLineMsg is sent when a line should go to a specific phase's buffer (exported for tui package).
 type PhaseLineMsg struct {
 	Phase Phase
 	Line  Line
 }
 
-// ResultLineMsg is sent when a line should go to the results buffer (exported for tui package)
+// ResultLineMsg is sent when a line should go to the results buffer (exported for tui package).
 type ResultLineMsg struct {
 	Line Line
 }
 
-// SummaryDataMsg is sent to populate and activate the Summary pane (exported for tui package)
+// SummaryDataMsg is sent to populate and activate the Summary pane (exported for tui package).
 type SummaryDataMsg struct {
 	Data *SummaryData
 }
 
-// ModuleStartMsg is sent when a module starts execution (for tab tracking)
+// ModuleStartMsg is sent when a module starts execution (for tab tracking).
 type ModuleStartMsg struct {
 	Moniker string
 }
 
-// ModuleCompleteMsg is sent when a module completes execution
+// ModuleCompleteMsg is sent when a module completes execution.
 type ModuleCompleteMsg struct {
 	Moniker  string
 	ExitCode int
 }
 
-// TabSelectMsg is sent when user clicks on a tab
+// TabSelectMsg is sent when user clicks on a tab.
 type TabSelectMsg struct {
 	Moniker string // Empty string = aggregate view
 }
 
-// TabDecayMsg is sent periodically to clean up decayed tabs
+// TabDecayMsg is sent periodically to clean up decayed tabs.
 type TabDecayMsg struct{}

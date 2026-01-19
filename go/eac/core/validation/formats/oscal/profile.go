@@ -9,7 +9,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/validation"
 )
 
-// ProfileValidator validates OSCAL profile documents
+// ProfileValidator validates OSCAL profile documents.
 type ProfileValidator struct {
 	expectedVersion string
 }
@@ -258,7 +258,7 @@ Format: <family>-<number>
 	return errors
 }
 
-// VerifyImplementation checks if the validator is properly configured
+// VerifyImplementation checks if the validator is properly configured.
 func (v *ProfileValidator) VerifyImplementation() []validation.ValidationError {
 	// No external dependencies to verify for profile validator
 	return nil

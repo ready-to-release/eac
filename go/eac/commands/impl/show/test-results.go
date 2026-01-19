@@ -34,7 +34,7 @@ func init() {
 	registry.Register(ShowTestResults)
 }
 
-// TestResultsData holds data for the template with formatted time strings
+// TestResultsData holds data for the template with formatted time strings.
 type TestResultsData struct {
 	GeneratedAt   string
 	LastRun       string
@@ -51,7 +51,7 @@ type TestResultsData struct {
 	SummaryBySuite []manifests.SuiteSummary
 }
 
-// buildTemplateData converts CompleteTestData to template-ready data with formatted times
+// buildTemplateData converts CompleteTestData to template-ready data with formatted times.
 func buildTemplateData(data *manifests.CompleteTestData) *TestResultsData {
 	return &TestResultsData{
 		GeneratedAt:    time.Now().Format(time.RFC3339),
@@ -173,7 +173,7 @@ func ShowTestResults() int {
 
 // loadTestResultsTemplate loads the test results template with fallback logic.
 // Priority 1: Team override (.r2r/eac/templates/reports/<category>/<template>)
-// Priority 2: System default (templates/reports/<category>/<template>)
+// Priority 2: System default (templates/reports/<category>/<template>).
 func loadTestResultsTemplate(workspaceRoot string) (string, error) {
 	// Load EAC config for template directory paths and filenames
 	// Skip workflow validation for test environments where workflow files may not exist
@@ -214,7 +214,7 @@ func loadTestResultsTemplate(workspaceRoot string) (string, error) {
 }
 
 // testResultsTemplateFuncs returns test-specific template functions
-// Common functions like truncate, join, add, sub are already in defaultFuncMap
+// Common functions like truncate, join, add, sub are already in defaultFuncMap.
 func testResultsTemplateFuncs() template.FuncMap {
 	return template.FuncMap{
 		"formatStatus": func(passed, failed, skipped int) string {

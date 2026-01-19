@@ -7,10 +7,32 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
 )
 
+// ComponentWorkProvider is a function that converts execution context to component work items.
+// This is provided by the build package to avoid import cycles.
+type ComponentWorkProvider func(ctx *ExecutionContext) [][]orchestrator.ComponentWork
+
+// componentWorkProvider is set by the build package to provide component flattening.
+var componentWorkProvider ComponentWorkProvider
+
+// SetComponentWorkProvider registers the function to flatten modules to components.
+// Called by the build package during init.
+func SetComponentWorkProvider(provider ComponentWorkProvider) {
+	componentWorkProvider = provider
+}
+
+// componentWorkerFunc is the registered component worker (set by build package).
+var componentWorkerFunc ComponentWorkerFunc
+
+// SetComponentWorker registers the component worker function.
+// Called by the build package during init.
+func SetComponentWorker(worker ComponentWorkerFunc) {
+	componentWorkerFunc = worker
+}
+
 // phaseExecute handles the execution phase:
 // - Set up worker function
 // - Run orchestrator (layered or parallel)
-// - Collect results
+// - Collect results.
 func phaseExecute(ctx *ExecutionContext, worker WorkerFunc) error {
 	if worker == nil {
 		return fmt.Errorf("worker function is required")
@@ -23,6 +45,55 @@ func phaseExecute(ctx *ExecutionContext, worker WorkerFunc) error {
 		return nil
 	}
 
+	// Check if this is a build command with component-level execution enabled
+	// Component-level execution uses weighted parallelism and intra-module dependencies
+	if ctx.Config.Type == CommandTypeBuild && componentWorkProvider != nil && componentWorkerFunc != nil {
+		return phaseExecuteComponents(ctx)
+	}
+
+	// Fall back to module-level execution (test, scan, or legacy build)
+	return phaseExecuteModules(ctx, worker)
+}
+
+// phaseExecuteComponents runs component-level parallel execution for builds.
+// This is the new execution path that provides weighted parallelism.
+func phaseExecuteComponents(ctx *ExecutionContext) error {
+	// Get component work items from the provider
+	componentLayers := componentWorkProvider(ctx)
+	if len(componentLayers) == 0 {
+		ctx.Results = []orchestrator.WorkResult{}
+		return nil
+	}
+
+	// Wrap the component worker to match orchestrator signature
+	orchCompWorker := func(module, component string, logWriter io.Writer) int {
+		return componentWorkerFunc(ctx, module, component, logWriter)
+	}
+
+	var results []orchestrator.WorkResult
+	var err error
+
+	if ctx.Config.Layered {
+		// Layered execution: inter-module dependency order preserved
+		log.Debugf("Executing %d component layers with weighted parallelism", len(componentLayers))
+		results, err = ctx.Orchestrator.RunComponentsLayered(componentLayers, orchCompWorker)
+	} else {
+		// Parallel execution: all components at once (with intra-module deps)
+		allWork := flattenComponentLayers(componentLayers)
+		log.Debugf("Executing %d components in parallel with weighted scheduling", len(allWork))
+		results, err = ctx.Orchestrator.RunComponentsParallel(allWork, orchCompWorker)
+	}
+
+	if err != nil {
+		return fmt.Errorf("component execution failed: %w", err)
+	}
+
+	ctx.Results = results
+	return nil
+}
+
+// phaseExecuteModules runs module-level execution (test, scan, legacy build).
+func phaseExecuteModules(ctx *ExecutionContext, worker WorkerFunc) error {
 	// Wrap the user's worker to match orchestrator signature
 	orchWorker := func(moniker string, logWriter io.Writer) int {
 		return worker(ctx, moniker, logWriter)
@@ -56,12 +127,21 @@ func phaseExecute(ctx *ExecutionContext, worker WorkerFunc) error {
 	return nil
 }
 
-// GetExitCode returns the overall exit code from results (0 if all succeeded)
+// flattenComponentLayers flattens component work layers to a single slice.
+func flattenComponentLayers(layers [][]orchestrator.ComponentWork) []orchestrator.ComponentWork {
+	var all []orchestrator.ComponentWork
+	for _, layer := range layers {
+		all = append(all, layer...)
+	}
+	return all
+}
+
+// GetExitCode returns the overall exit code from results (0 if all succeeded).
 func (ctx *ExecutionContext) GetExitCode() int {
 	return orchestrator.GetExitCode(ctx.Results)
 }
 
-// GetSuccessCount returns the number of successful results
+// GetSuccessCount returns the number of successful results.
 func (ctx *ExecutionContext) GetSuccessCount() int {
 	count := 0
 	for _, r := range ctx.Results {
@@ -72,7 +152,7 @@ func (ctx *ExecutionContext) GetSuccessCount() int {
 	return count
 }
 
-// GetFailureCount returns the number of failed results
+// GetFailureCount returns the number of failed results.
 func (ctx *ExecutionContext) GetFailureCount() int {
 	count := 0
 	for _, r := range ctx.Results {
@@ -83,7 +163,7 @@ func (ctx *ExecutionContext) GetFailureCount() int {
 	return count
 }
 
-// GetResultByMoniker finds a result by moniker
+// GetResultByMoniker finds a result by moniker.
 func (ctx *ExecutionContext) GetResultByMoniker(moniker string) *orchestrator.WorkResult {
 	for i := range ctx.Results {
 		if ctx.Results[i].Moniker == moniker {
@@ -93,7 +173,7 @@ func (ctx *ExecutionContext) GetResultByMoniker(moniker string) *orchestrator.Wo
 	return nil
 }
 
-// GetFailedMonikers returns the monikers of failed modules
+// GetFailedMonikers returns the monikers of failed modules.
 func (ctx *ExecutionContext) GetFailedMonikers() []string {
 	var failed []string
 	for _, r := range ctx.Results {

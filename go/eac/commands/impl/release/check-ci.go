@@ -44,7 +44,7 @@ func init() {
 	registry.Register(ReleaseCheckCI)
 }
 
-// CIRunStatus represents the status of a GitHub Actions workflow run
+// CIRunStatus represents the status of a GitHub Actions workflow run.
 type CIRunStatus struct {
 	Status     string `json:"status"`
 	Conclusion string `json:"conclusion"`
@@ -184,7 +184,7 @@ func ReleaseCheckCI() int {
 					log.Infof("✓ %s", inheritMsg)
 					// Export CI run info to GitHub Actions environment
 					if ghEnv := os.Getenv("GITHUB_ENV"); ghEnv != "" {
-						if f, err := os.OpenFile(ghEnv, os.O_APPEND|os.O_WRONLY, 0644); err == nil {
+						if f, err := os.OpenFile(ghEnv, os.O_APPEND|os.O_WRONLY, 0o644); err == nil {
 							fmt.Fprintf(f, "INHERITED_CI_SHA=%s\n", inheritedCI.SHA)
 							f.Close()
 						}
@@ -254,7 +254,7 @@ func ReleaseCheckCI() int {
 	}
 }
 
-// ModuleCIStatus represents the status of the target module's CI
+// ModuleCIStatus represents the status of the target module's CI.
 type ModuleCIStatus struct {
 	success bool
 	failed  bool
@@ -264,7 +264,7 @@ type ModuleCIStatus struct {
 }
 
 // getModuleCIStatus checks if the specific module CI has run for the commit
-// If strict is true, only exact commit matches are accepted (no ancestor check)
+// If strict is true, only exact commit matches are accepted (no ancestor check).
 func getModuleCIStatus(workflow, commitSHA string, strict bool) (ModuleCIStatus, error) {
 	runs, err := getWorkflowRuns(workflow, commitSHA, strict)
 	if err != nil {
@@ -291,13 +291,13 @@ func getModuleCIStatus(workflow, commitSHA string, strict bool) (ModuleCIStatus,
 	return status, nil
 }
 
-// CIChainStatus represents the status of the overall CI chain
+// CIChainStatus represents the status of the overall CI chain.
 type CIChainStatus struct {
 	running   bool
 	completed bool
 }
 
-// getCIChainStatus checks if any CI workflow is running/completed that covers our commit
+// getCIChainStatus checks if any CI workflow is running/completed that covers our commit.
 func getCIChainStatus(commitSHA string) (CIChainStatus, error) {
 	var status CIChainStatus
 
@@ -334,7 +334,7 @@ func getCIChainStatus(commitSHA string) (CIChainStatus, error) {
 
 // getWorkflowRuns queries GitHub for workflow runs on a specific commit
 // If strict is true, only exact commit matches are accepted
-// If strict is false, falls back to checking if commit is ancestor of recent runs
+// If strict is false, falls back to checking if commit is ancestor of recent runs.
 func getWorkflowRuns(workflow, commitSHA string, strict bool) ([]CIRunStatus, error) {
 	// First try exact commit match (fast path)
 	runs, err := queryRunsByCommit(workflow, commitSHA)
@@ -355,7 +355,7 @@ func getWorkflowRuns(workflow, commitSHA string, strict bool) ([]CIRunStatus, er
 	return queryRecentRunsForCommit(workflow, commitSHA)
 }
 
-// queryRunsByCommit queries runs filtered by exact commit SHA
+// queryRunsByCommit queries runs filtered by exact commit SHA.
 func queryRunsByCommit(workflow, commitSHA string) ([]CIRunStatus, error) {
 	cmd := exec.Command("gh", "run", "list",
 		"--commit", commitSHA,
@@ -377,7 +377,7 @@ func queryRunsByCommit(workflow, commitSHA string) ([]CIRunStatus, error) {
 	return runs, nil
 }
 
-// queryRecentRunsForCommit checks if targetCommit is an ancestor of any recent CI run
+// queryRecentRunsForCommit checks if targetCommit is an ancestor of any recent CI run.
 func queryRecentRunsForCommit(workflow, targetCommit string) ([]CIRunStatus, error) {
 	// Get recent runs without commit filter
 	cmd := exec.Command("gh", "run", "list",
@@ -414,7 +414,7 @@ func queryRecentRunsForCommit(workflow, targetCommit string) ([]CIRunStatus, err
 	return matchingRuns, nil
 }
 
-// isAncestor checks if potentialAncestor is an ancestor of commit
+// isAncestor checks if potentialAncestor is an ancestor of commit.
 func isAncestor(potentialAncestor, commit string) bool {
 	cmd := exec.Command("git", "merge-base", "--is-ancestor", potentialAncestor, commit)
 	err := cmd.Run()
@@ -424,7 +424,7 @@ func isAncestor(potentialAncestor, commit string) bool {
 // ciRunCoversCommit returns true if a CI run with the given headSHA covers targetCommit
 // This is true when:
 // - headSHA == targetCommit (exact match)
-// - targetCommit is ancestor of headSHA (CI is testing newer code that includes targetCommit)
+// - targetCommit is ancestor of headSHA (CI is testing newer code that includes targetCommit).
 func ciRunCoversCommit(headSHA, targetCommit string) bool {
 	if headSHA == targetCommit {
 		return true
@@ -434,7 +434,7 @@ func ciRunCoversCommit(headSHA, targetCommit string) bool {
 	return isAncestor(targetCommit, headSHA)
 }
 
-// CIRunWithWorkflow includes workflow name for chain detection
+// CIRunWithWorkflow includes workflow name for chain detection.
 type CIRunWithWorkflow struct {
 	Status       string `json:"status"`
 	Conclusion   string `json:"conclusion"`
@@ -442,7 +442,7 @@ type CIRunWithWorkflow struct {
 	WorkflowName string `json:"workflowName"`
 }
 
-// queryAllRecentRuns queries recent runs across all workflows on a branch
+// queryAllRecentRuns queries recent runs across all workflows on a branch.
 func queryAllRecentRuns(branch string, limit int) ([]CIRunWithWorkflow, error) {
 	cmd := exec.Command("gh", "run", "list",
 		"--branch", branch,
@@ -463,7 +463,7 @@ func queryAllRecentRuns(branch string, limit int) ([]CIRunWithWorkflow, error) {
 	return runs, nil
 }
 
-// formatElapsed formats elapsed time as M:SS
+// formatElapsed formats elapsed time as M:SS.
 func formatElapsed(d time.Duration) string {
 	d = d.Round(time.Second)
 	m := int(d.Minutes())
@@ -478,7 +478,7 @@ func formatElapsed(d time.Duration) string {
 // Returns (canInherit bool, inheritedInfo CIRunInfo, message string)
 // - canInherit=true, inheritedInfo with SHA and RunID, message=success message: Safe to inherit
 // - canInherit=false, empty inheritedInfo, message="": No previous CI or error
-// - canInherit=false, empty inheritedInfo, message=reason: Specific reason we can't inherit
+// - canInherit=false, empty inheritedInfo, message=reason: Specific reason we can't inherit.
 func canInheritCIFromPrevious(moduleName, workflow, releaseCommit, workspaceRoot string) (bool, CIRunInfo, string) {
 	// 1. Get the last successful CI info for this module's workflow
 	lastCI, err := getLastSuccessfulModuleCIInfo(workflow, "main", workspaceRoot)
@@ -547,13 +547,13 @@ func canInheritCIFromPrevious(moduleName, workflow, releaseCommit, workspaceRoot
 	return true, lastCI, fmt.Sprintf("CI inherited from %s (only changelog changed)", lastCI.SHA[:7])
 }
 
-// CIRunInfo contains information about a CI run
+// CIRunInfo contains information about a CI run.
 type CIRunInfo struct {
 	SHA   string
 	RunID int64
 }
 
-// getLastSuccessfulModuleCIInfo queries gh CLI for the last successful workflow run info
+// getLastSuccessfulModuleCIInfo queries gh CLI for the last successful workflow run info.
 func getLastSuccessfulModuleCIInfo(workflow, branch, workspaceRoot string) (CIRunInfo, error) {
 	cmd := exec.Command("gh", "run", "list",
 		"-b", branch,
@@ -587,7 +587,7 @@ func getLastSuccessfulModuleCIInfo(workflow, branch, workspaceRoot string) (CIRu
 	}, nil
 }
 
-// getChangedFilesBetweenCommits gets the list of files changed between two commits
+// getChangedFilesBetweenCommits gets the list of files changed between two commits.
 func getChangedFilesBetweenCommits(baseSHA, headSHA, workspaceRoot string) ([]string, error) {
 	cmd := exec.Command("git", "diff", "--name-only", baseSHA+".."+headSHA)
 	cmd.Dir = workspaceRoot
@@ -605,20 +605,20 @@ func getChangedFilesBetweenCommits(baseSHA, headSHA, workspaceRoot string) ([]st
 	return files, nil
 }
 
-// normalizeSlashes converts backslashes to forward slashes for consistent path comparison
+// normalizeSlashes converts backslashes to forward slashes for consistent path comparison.
 func normalizeSlashes(path string) string {
 	return strings.ReplaceAll(path, "\\", "/")
 }
 
 // exportCIRunInfo exports CI run information to GitHub Actions environment
-// This allows workflows to access the run ID for artifact download
+// This allows workflows to access the run ID for artifact download.
 func exportCIRunInfo(runID int64, ciSHA string) {
 	ghEnv := os.Getenv("GITHUB_ENV")
 	if ghEnv == "" {
 		return // Not running in GitHub Actions
 	}
 
-	f, err := os.OpenFile(ghEnv, os.O_APPEND|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(ghEnv, os.O_APPEND|os.O_WRONLY, 0o644)
 	if err != nil {
 		return
 	}

@@ -4,8 +4,8 @@ Initialize EAC project configuration.
 
 ## Commands in this Category
 
-| Command | Purpose |
-|---------|---------|
+| Command           | Purpose                              |
+| ----------------- | ------------------------------------ |
 | [init](./init.md) | Initialize EAC project configuration |
 
 ## Quick Examples

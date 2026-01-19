@@ -36,14 +36,14 @@ func init() {
 	registry.Register(GetReleaseStatus)
 }
 
-// ModuleReleaseStatus represents the release status of a module
+// ModuleReleaseStatus represents the release status of a module.
 type ModuleReleaseStatus struct {
 	Tag      string `json:"tag"`
 	Version  string `json:"version"`
 	Released bool   `json:"released"`
 }
 
-// ReleaseStatusOutput is the output structure
+// ReleaseStatusOutput is the output structure.
 type ReleaseStatusOutput struct {
 	Modules  map[string]ModuleReleaseStatus `json:"modules"`
 	Released []string                       `json:"released"`
@@ -103,14 +103,15 @@ func GetReleaseStatus() int {
 		fmt.Printf("MISSING=\"%s\"\n", strings.Join(result.Missing, " "))
 		fmt.Printf("ALL_RELEASED=\"%t\"\n", len(result.Missing) == 0)
 	default:
-		output, _ := json.MarshalIndent(result, "", "  ")
-		fmt.Println(string(output))
+		if output, err := json.MarshalIndent(result, "", "  "); err == nil {
+			fmt.Println(string(output))
+		}
 	}
 
 	return 0
 }
 
-// checkModuleRelease queries GitHub for the latest release of a module
+// checkModuleRelease queries GitHub for the latest release of a module.
 func checkModuleRelease(module, workspaceRoot string) ModuleReleaseStatus {
 	// Query GitHub releases for this module's tag pattern
 	// Tags are formatted as: module/version (e.g., r2r-cli/1.0.0)

@@ -10,7 +10,7 @@ import (
 )
 
 // CreateExtensionAliases creates direct command aliases for configured extensions
-// This allows users to run "r2r pwsh" instead of "r2r run pwsh"
+// This allows users to run "r2r pwsh" instead of "r2r run pwsh".
 func CreateExtensionAliases() {
 	// Only create aliases if config is loaded successfully
 	if len(conf.Global.Extensions) == 0 {
@@ -60,7 +60,7 @@ Examples:
 	}
 }
 
-// InitializeExtensionAliases should be called after config is loaded but before command execution
+// InitializeExtensionAliases should be called after config is loaded but before command execution.
 func InitializeExtensionAliases() {
 	// Try to load config early for alias creation
 	// This is best-effort - if it fails, we just won't have aliases

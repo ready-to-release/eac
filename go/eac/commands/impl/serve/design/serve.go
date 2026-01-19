@@ -35,7 +35,7 @@ func init() {
 	registry.Register(ServeDesign)
 }
 
-// ServeDesign starts Structurizr Lite viewer for a module
+// ServeDesign starts Structurizr Lite viewer for a module.
 func ServeDesign() int {
 	args := os.Args[3:] // Skip program, "serve", and "design"
 
@@ -131,11 +131,17 @@ func ServeDesign() int {
 	return 0
 }
 
-// formatModuleList returns a formatted list of available modules
+// formatModuleList returns a formatted list of available modules.
 func formatModuleList(moduleReport *reports.ModuleContractReport) string {
 	var sb strings.Builder
 	for _, mod := range moduleReport.Registry.All() {
-		sb.WriteString(fmt.Sprintf("  - %s (source: %s)\n", mod.Moniker, mod.Files.Root))
+		// Get first package root for display
+		var displayRoot string
+		for _, root := range mod.GetComponentRoots() {
+			displayRoot = root
+			break
+		}
+		sb.WriteString(fmt.Sprintf("  - %s (source: %s)\n", mod.Moniker, displayRoot))
 	}
 	return sb.String()
 }

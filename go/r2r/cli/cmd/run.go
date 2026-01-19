@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"context"
+	"errors"
 	"io"
 	"os"
 	"os/signal"
@@ -13,7 +15,6 @@ import (
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/conf"
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/docker"
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/extensions"
-	"context"
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/logging"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -40,8 +41,8 @@ func init() {
 
 		// Temporarily suppress logger output during help to avoid warning pollution
 		originalLevel := logging.GetLevel()
-		logging.SetLevel("error") // Only show errors, suppress warnings
-		defer logging.SetLevel(originalLevel)
+		_ = logging.SetLevel("error") //nolint:errcheck // error level always valid
+		defer func() { _ = logging.SetLevel(originalLevel) }()
 
 		// Try to load config
 		conf.InitConfig()
@@ -94,7 +95,7 @@ func init() {
 	RootCmd.AddCommand(RunCmd)
 }
 
-// getExtensionDescription attempts to extract description from extension metadata
+// getExtensionDescription attempts to extract description from extension metadata.
 func getExtensionDescription(host *docker.ContainerHost, extensionName string) string {
 	// Find the extension config
 	ext, err := host.FindExtension(extensionName)
@@ -124,7 +125,7 @@ func getExtensionDescription(host *docker.ContainerHost, extensionName string) s
 	return ""
 }
 
-// getExtensionIcon returns an appropriate icon for the extension based on its name/type
+// getExtensionIcon returns an appropriate icon for the extension based on its name/type.
 func getExtensionIcon(extensionName string) string {
 	iconMap := map[string]string{
 		"pwsh":       "💙", // PowerShell blue
@@ -151,11 +152,11 @@ func getExtensionIcon(extensionName string) string {
 		"ts":         "🔷",
 		"bash":       "🐚", // Bash shell
 		"sh":         "🐚",
-		"sql":        "🗄️",  // SQL database
+		"sql":        "🗄️", // SQL database
 		"database":   "🗄️",
-		"terraform":  "🟦", // Terraform blue
-		"ansible":    "🔴", // Ansible red
-		"kubernetes": "⚙️",  // Kubernetes gear
+		"terraform":  "🟦",  // Terraform blue
+		"ansible":    "🔴",  // Ansible red
+		"kubernetes": "⚙️", // Kubernetes gear
 		"k8s":        "⚙️",
 	}
 
@@ -176,7 +177,7 @@ func getExtensionIcon(extensionName string) string {
 	return "📦"
 }
 
-// getExtensionNameColor returns ANSI color codes for extension names based on their type
+// getExtensionNameColor returns ANSI color codes for extension names based on their type.
 func getExtensionNameColor(extensionName string) string {
 	colorMap := map[string]string{
 		"pwsh":       "\033[1;34m", // Bright blue for PowerShell
@@ -236,20 +237,18 @@ var RunCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		// Handle help flag manually since DisableFlagParsing is true
 		if len(args) > 0 && (args[0] == "--help" || args[0] == "-h") {
-			cmd.Help()
+			_ = cmd.Help() //nolint:errcheck // output error is not actionable
 			return
 		}
 
 		// If no arguments provided, show help with available extensions
 		if len(args) == 0 {
-			cmd.Help()
+			_ = cmd.Help() //nolint:errcheck // output error is not actionable
 			return
 		}
 
-
-
 		// Get parsed command for proper argument boundary detection
-		parsedCmd, _ := GetParsedCommand()
+		parsedCmd, _ := GetParsedCommand() //nolint:errcheck // nil is handled below
 
 		// Use parsed command data if available, fallback to args
 		extensionName := args[0]
@@ -463,13 +462,13 @@ var RunCmd = &cobra.Command{
 					if conn, ok := attachResp.Conn.(interface {
 						CloseWrite() error
 					}); ok {
-						conn.CloseWrite()
+						_ = conn.CloseWrite() //nolint:errcheck // cleanup operation
 					}
 				}()
 
 				// Copy stdin to the connection
 				_, err := io.Copy(attachResp.Conn, os.Stdin)
-				if err != nil && err != io.EOF {
+				if err != nil && !errors.Is(err, io.EOF) {
 					logging.Debugf("stdin copy error: %v", err)
 				}
 			}()
@@ -503,7 +502,7 @@ var RunCmd = &cobra.Command{
 		// Container has exited - now wait for I/O to complete
 		// The I/O goroutine will receive EOF when Docker closes the stream
 		ioErr := <-done
-		if ioErr != nil && ioErr != io.EOF {
+		if ioErr != nil && !errors.Is(ioErr, io.EOF) {
 			logging.Debugf("I/O error: error=%v", ioErr)
 		}
 		logging.Debug("I/O copy completed")
@@ -533,6 +532,5 @@ var RunCmd = &cobra.Command{
 		if !shuttingDown && containerExitCode != 0 {
 			os.Exit(int(containerExitCode))
 		}
-
 	},
 }

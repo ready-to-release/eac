@@ -100,11 +100,11 @@ func WriteFixtureFile(t *testing.T, baseDir, relPath, content string) {
 	fullPath := filepath.Join(baseDir, relPath)
 	dir := filepath.Dir(fullPath)
 
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatalf("failed to create directory %s: %v", dir, err)
 	}
 
-	if err := os.WriteFile(fullPath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(fullPath, []byte(content), 0o644); err != nil {
 		t.Fatalf("failed to write file %s: %v", fullPath, err)
 	}
 }

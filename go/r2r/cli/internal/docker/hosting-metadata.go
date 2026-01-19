@@ -16,8 +16,12 @@ import (
 
 // ExecuteMetadataCommand executes the "extension-meta" command in an extension container
 // and returns the raw YAML output string or an error.
-// Note: Callers must ensure the image exists before calling this function.
 func (ch *ContainerHost) ExecuteMetadataCommand(ext *ExtensionConfig) (string, error) {
+	// Ensure image exists (pull if needed based on ImagePullPolicy)
+	if err := ch.EnsureImageExists(ext.Image, ext.ImagePullPolicy, false); err != nil {
+		return "", fmt.Errorf("error ensuring image exists: %w", err)
+	}
+
 	// Inspect image to get configuration
 	imageInspect, err := ch.InspectImage(ext.Image)
 	if err != nil {
@@ -115,7 +119,7 @@ func (ch *ContainerHost) ExecuteMetadataCommand(ext *ExtensionConfig) (string, e
 }
 
 // GetExtensionMetadata fetches and caches extension metadata
-// Returns cached metadata if valid, otherwise fetches fresh metadata
+// Returns cached metadata if valid, otherwise fetches fresh metadata.
 func (ch *ContainerHost) GetExtensionMetadata(ext *ExtensionConfig) (*cache.ExtensionMeta, error) {
 	// Get current image digest for cache validation
 	imageDigest, err := ch.GetImageDigest(ext.Image)
@@ -159,7 +163,7 @@ func (ch *ContainerHost) GetExtensionMetadata(ext *ExtensionConfig) (*cache.Exte
 	return meta, nil
 }
 
-// parseExtensionMetadata parses YAML extension metadata into ExtensionMeta struct
+// parseExtensionMetadata parses YAML extension metadata into ExtensionMeta struct.
 func parseExtensionMetadata(yamlData string) (*cache.ExtensionMeta, error) {
 	// Import yaml package is needed - using json as intermediate for simplicity
 	// since the YAML structure matches our JSON struct tags
@@ -174,7 +178,7 @@ func parseExtensionMetadata(yamlData string) (*cache.ExtensionMeta, error) {
 }
 
 // MergeMetadataEnv merges environment variables from extension metadata into config
-// Metadata env vars are added first, then config env vars override them
+// Metadata env vars are added first, then config env vars override them.
 func MergeMetadataEnv(ext *ExtensionConfig, meta *cache.ExtensionMeta) {
 	if meta == nil || len(meta.Env) == 0 {
 		return

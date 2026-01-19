@@ -46,7 +46,7 @@ r2r eac show files
 ### 4. Check Module Types
 
 ```bash
-r2r eac show moduletypes
+r2r eac show component-types
 ```
 
 **What happens**: Groups modules by type (go-cli, go-library, mkdocs-site, etc.)
@@ -71,10 +71,10 @@ r2r eac get modules | jq '.modules[] | select(.moniker == "src-auth")'
 
 ## Common Issues
 
-| Problem | Solution |
-|---------|----------|
-| Empty output | Ensure you're in repository root with module contracts |
-| Module not shown | Check module.yml file exists and is valid |
+| Problem          | Solution                                               |
+| ---------------- | ------------------------------------------------------ |
+| Empty output     | Ensure you're in repository root with module contracts |
+| Module not shown | Check module.yml file exists and is valid              |
 
 ## Next Steps
 

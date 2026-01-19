@@ -4,7 +4,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/validation"
 )
 
-// ValidatorMode defines the validation mode
+// ValidatorMode defines the validation mode.
 type ValidatorMode int
 
 const (
@@ -13,7 +13,7 @@ const (
 	ModeComposite                      // Quick then full (create command)
 )
 
-// Validator is the base interface for Structurizr validators
+// Validator is the base interface for Structurizr validators.
 type Validator interface {
 	validation.Validator
 }

@@ -13,7 +13,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
-// Verify checks if a module dependency is available
+// Verify checks if a module dependency is available.
 func Verify(dependency string) Result {
 	result := Result{
 		Dependency: dependency,
@@ -42,7 +42,7 @@ func Verify(dependency string) Result {
 	return result
 }
 
-// VerifyAll checks multiple module dependencies
+// VerifyAll checks multiple module dependencies.
 func VerifyAll(dependencies []string) []Result {
 	results := make([]Result, len(dependencies))
 	for i, dep := range dependencies {
@@ -51,13 +51,13 @@ func VerifyAll(dependencies []string) []Result {
 	return results
 }
 
-// IsAvailable quickly checks if a module dependency is available
+// IsAvailable quickly checks if a module dependency is available.
 func IsAvailable(dependency string) bool {
 	result := Verify(dependency)
 	return result.Available
 }
 
-// GetMissingDependencies returns list of unavailable module dependencies
+// GetMissingDependencies returns list of unavailable module dependencies.
 func GetMissingDependencies(dependencies []string) []string {
 	missing := []string{}
 	for _, dep := range dependencies {
@@ -68,7 +68,7 @@ func GetMissingDependencies(dependencies []string) []string {
 	return missing
 }
 
-// ModuleChecker checks if an internal module has been built
+// ModuleChecker checks if an internal module has been built.
 type ModuleChecker struct {
 	moniker   string
 	repoRoot  string
@@ -79,7 +79,7 @@ func (c *ModuleChecker) GetName() string {
 	return fmt.Sprintf("Module: %s", c.moniker)
 }
 
-// init initializes the checker with repo root and EAC config
+// init initializes the checker with repo root and EAC config.
 func (c *ModuleChecker) init() error {
 	if c.repoRoot != "" {
 		return nil // Already initialized
@@ -116,18 +116,10 @@ func (c *ModuleChecker) IsAvailable() bool {
 		return false
 	}
 
-	// Get module type definition (with nil safety)
-	var typeDef *config.ModuleTypeDef
-	if c.eacConfig.ModuleTypes != nil {
-		typeDef = c.eacConfig.ModuleTypes.Get(module.Type)
-	}
-	if typeDef == nil {
-		// Fallback for unknown types or missing config: check if source root exists
-		return c.checkSourceRootExists(module)
-	}
-
-	// If module type has no build artifacts, check source root exists
-	if !typeDef.HasArtifacts() {
+	// Get build artifacts from module-level config
+	artifacts := c.eacConfig.GetBuildArtifacts(c.moniker, true)
+	if len(artifacts) == 0 {
+		// No build artifacts defined: check if source root exists
 		return c.checkSourceRootExists(module)
 	}
 
@@ -137,7 +129,6 @@ func (c *ModuleChecker) IsAvailable() bool {
 	// For dependency checking, we accept any platform's artifacts
 	// (unlike build validation which checks specific platforms)
 	// This allows Docker containers to recognize modules built on different platforms
-	artifacts := typeDef.GetArtifacts()
 	for _, artifact := range artifacts {
 		if artifact.Type == config.ArtifactTypeExecutable {
 			// Check if ANY platform's artifacts exist for executables
@@ -158,7 +149,7 @@ func (c *ModuleChecker) IsAvailable() bool {
 }
 
 // checkAnyPlatformExists checks if ANY platform's artifacts exist for an executable
-// This is used for dependency checking to allow cross-platform builds
+// This is used for dependency checking to allow cross-platform builds.
 func (c *ModuleChecker) checkAnyPlatformExists(artifact config.Artifact, buildDir string, metadata map[string]string) bool {
 	// Get platforms to check
 	platforms := artifact.Platforms
@@ -186,12 +177,16 @@ func (c *ModuleChecker) checkAnyPlatformExists(artifact config.Artifact, buildDi
 	return false
 }
 
-// checkSourceRootExists verifies the module's source directory exists
+// checkSourceRootExists verifies that at least one of the module's package directories exists.
 func (c *ModuleChecker) checkSourceRootExists(module *modules.ModuleContract) bool {
-	// For modules without build artifacts, check source exists
-	sourcePath := filepath.Join(c.repoRoot, module.Files.Root)
-	_, err := os.Stat(sourcePath)
-	return err == nil
+	// Check if any package root exists
+	for _, root := range module.GetComponentRoots() {
+		sourcePath := filepath.Join(c.repoRoot, root)
+		if _, err := os.Stat(sourcePath); err == nil {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *ModuleChecker) GetVersion() (string, error) {
@@ -205,27 +200,23 @@ func (c *ModuleChecker) GetVersion() (string, error) {
 		return "", fmt.Errorf("failed to load module contract: %w", err)
 	}
 
-	// Get module type definition (with nil safety)
-	var typeDef *config.ModuleTypeDef
-	if c.eacConfig.ModuleTypes != nil {
-		typeDef = c.eacConfig.ModuleTypes.Get(module.Type)
-	}
-	if typeDef == nil {
-		sourcePath := filepath.Join(c.repoRoot, module.Files.Root)
-		return fmt.Sprintf("Module source: %s", sourcePath), nil
-	}
-
-	// If no build artifacts, return source path
-	if !typeDef.HasArtifacts() {
-		sourcePath := filepath.Join(c.repoRoot, module.Files.Root)
-		return fmt.Sprintf("%s: %s", typeDef.Description, sourcePath), nil
+	// Get build artifacts from module-level config
+	artifacts := c.eacConfig.GetBuildArtifacts(c.moniker, true)
+	if len(artifacts) == 0 {
+		// No build artifacts: return first package root
+		roots := module.GetComponentRoots()
+		if len(roots) > 0 {
+			for _, root := range roots {
+				return fmt.Sprintf("Module source: %s", filepath.Join(c.repoRoot, root)), nil
+			}
+		}
+		return fmt.Sprintf("Module: %s (no packages)", c.moniker), nil
 	}
 
 	// Return info about build artifacts
 	buildDir := paths.BuildOutputPath(c.repoRoot, c.moniker)
 
 	// For dependency checking, find any available artifact across platforms
-	artifacts := typeDef.GetArtifacts()
 	for _, artifact := range artifacts {
 		if artifact.Type == config.ArtifactTypeExecutable {
 			// Check all platforms
@@ -244,7 +235,10 @@ func (c *ModuleChecker) GetVersion() (string, error) {
 					resolver := config.NewArtifactResolverFull(c.moniker, buildDir, platform, arch, module.Metadata)
 					result := resolver.VerifyArtifact(artifact)
 					if result.Exists {
-						absPath, _ := filepath.Abs(result.Path)
+						absPath, err := filepath.Abs(result.Path)
+						if err != nil {
+							absPath = result.Path // Fallback to relative path
+						}
 						return fmt.Sprintf("Built: %s", absPath), nil
 					}
 				}
@@ -254,7 +248,10 @@ func (c *ModuleChecker) GetVersion() (string, error) {
 			resolver := config.NewArtifactResolverWithMetadata(c.moniker, buildDir, module.Metadata)
 			result := resolver.VerifyArtifact(artifact)
 			if result.Exists {
-				absPath, _ := filepath.Abs(result.Path)
+				absPath, err := filepath.Abs(result.Path)
+				if err != nil {
+					absPath = result.Path // Fallback to relative path
+				}
 				return fmt.Sprintf("Built: %s", absPath), nil
 			}
 		}
@@ -264,7 +261,7 @@ func (c *ModuleChecker) GetVersion() (string, error) {
 	return "", fmt.Errorf("no build artifacts found in: %s", buildDir)
 }
 
-// loadModuleContract loads the module contract from the registry
+// loadModuleContract loads the module contract from the registry.
 func (c *ModuleChecker) loadModuleContract() (*modules.ModuleContract, error) {
 	repoRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
@@ -272,7 +269,7 @@ func (c *ModuleChecker) loadModuleContract() (*modules.ModuleContract, error) {
 	}
 
 	// Load module registry
-	registry, err := modules.LoadFromWorkspaceLatest(repoRoot)
+	registry, err := modules.LoadFromWorkspace(repoRoot)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load module registry: %w", err)
 	}
