@@ -30,13 +30,29 @@ func (h *GoHandler) Capabilities() []string { return []string{"go_module", "cros
 
 func (h *GoHandler) Requirements() []string { return []string{"go"} }
 
-func (h *GoHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot string) error {
-	moduleRoot := filepath.Join(workspaceRoot, module.GetComponentRoot("go"))
-	goMod := filepath.Join(moduleRoot, "go.mod")
-	if _, err := os.Stat(goMod); os.IsNotExist(err) {
-		return fmt.Errorf("go.mod not found at %s", goMod)
+func (h *GoHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot, component string) error {
+	componentRoot := filepath.Join(workspaceRoot, module.GetComponentRoot(component))
+	// Walk up from component root to find go.mod (may be in parent directory)
+	goMod := findGoMod(componentRoot, workspaceRoot)
+	if goMod == "" {
+		return fmt.Errorf("go.mod not found for component %s (searched from %s)", component, componentRoot)
 	}
 	return nil
+}
+
+// findGoMod walks up from dir to find go.mod, stopping at workspaceRoot.
+func findGoMod(dir, workspaceRoot string) string {
+	for {
+		goMod := filepath.Join(dir, "go.mod")
+		if _, err := os.Stat(goMod); err == nil {
+			return goMod
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir || len(dir) < len(workspaceRoot) {
+			return ""
+		}
+		dir = parent
+	}
 }
 
 func (h *GoHandler) ListArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {

@@ -38,10 +38,10 @@ type Handler interface {
 	// Used for early validation (e.g., ["go", "docker"]).
 	Requirements() []string
 
-	// ValidateModule checks if a module's configuration is valid.
+	// ValidateModule checks if a module's configuration is valid for a specific component.
 	// Returns nil if valid, or an error describing the problem.
 	// Called before build starts for early failure.
-	ValidateModule(module *modules.ModuleContract, workspaceRoot string) error
+	ValidateModule(module *modules.ModuleContract, workspaceRoot, component string) error
 }
 
 var (

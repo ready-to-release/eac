@@ -30,7 +30,6 @@ Feature: Configuration Defaults System
       And the component types config contains type "typescript"
       And the component types config contains type "static"
       And the repository paths.specs_root is "specs"
-      And the repository paths.test_impl_root is "tests"
       And the repository paths.out.build is "out/build"
       And the system dependencies config contains "go"
       And the system dependencies config contains "docker"
@@ -128,7 +127,6 @@ Feature: Configuration Defaults System
           type: poly
         paths:
           specs_root: features
-          test_impl_root: impl
           out:
             root: dist
             build: dist/build
@@ -238,25 +236,9 @@ Feature: Configuration Defaults System
         """
       When I load the EAC configuration
       Then the repository paths.specs_root is "features"
-      And the repository paths.test_impl_root is "tests"
       And the repository paths.out.build is "out/build"
 
-    Scenario: D2 - Override test_impl_root only
-      Given the repository has file ".r2r/eac/repository.yml" with:
-        """
-        paths:
-          test_impl_root: test-implementations
-        modules:
-          - moniker: myapp
-            name: My App
-            components:
-              go: app
-        """
-      When I load the EAC configuration
-      Then the repository paths.specs_root is "specs"
-      And the repository paths.test_impl_root is "test-implementations"
-
-    Scenario: D3 - Override out.build only
+    Scenario: D2 - Override out.build only
       Given the repository has file ".r2r/eac/repository.yml" with:
         """
         paths:
@@ -272,7 +254,7 @@ Feature: Configuration Defaults System
       Then the repository paths.out.build is "build/output"
       And the repository paths.out.test is "out/test"
 
-    Scenario: D4 - Override all out paths
+    Scenario: D3 - Override all out paths
       Given the repository has file ".r2r/eac/repository.yml" with:
         """
         paths:
@@ -375,7 +357,7 @@ Feature: Configuration Defaults System
       And I apply type defaults to modules
       Then the module "mylib" specs pattern resolves with "features"
 
-    Scenario: E6 - Type defaults resolve {moniker} variable
+    Scenario: E6 - Type defaults resolve {moniker} variable in specs
       Given the repository has file ".r2r/eac/repository.yml" with:
         """
         modules:
@@ -386,7 +368,7 @@ Feature: Configuration Defaults System
         """
       When I load the EAC configuration
       And I apply type defaults to modules
-      Then the module "mylib" test_impl path contains "mylib"
+      Then the module "mylib" specs pattern resolves with "mylib"
 
   # ===========================================================================
   # Category F: System Dependencies Merging

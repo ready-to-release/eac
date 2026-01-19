@@ -23,9 +23,9 @@ func (h *NpmHandler) Capabilities() []string { return []string{"npm_package", "t
 
 func (h *NpmHandler) Requirements() []string { return []string{"npm"} }
 
-func (h *NpmHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot string) error {
-	moduleRoot := filepath.Join(workspaceRoot, module.GetComponentRoot("typescript"))
-	packageJSON := filepath.Join(moduleRoot, "package.json")
+func (h *NpmHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot, component string) error {
+	componentRoot := filepath.Join(workspaceRoot, module.GetComponentRoot(component))
+	packageJSON := filepath.Join(componentRoot, "package.json")
 	if _, err := os.Stat(packageJSON); os.IsNotExist(err) {
 		return fmt.Errorf("package.json not found at %s", packageJSON)
 	}

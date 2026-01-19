@@ -87,8 +87,7 @@ func TestSubstituteVariables(t *testing.T) {
 // TestSubstituteVariables_WithPathVars tests path variable substitution
 func TestSubstituteVariables_WithPathVars(t *testing.T) {
 	pathVars := map[string]string{
-		"test_impl_root": "go/eac/specs/impl",
-		"specs_root":     "specs",
+		"specs_root": "specs",
 	}
 
 	tests := []struct {
@@ -97,19 +96,14 @@ func TestSubstituteVariables_WithPathVars(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "test_impl_root substitution",
-			pattern:  "{test_impl_root}/{moniker}",
-			expected: "go/eac/specs/impl/test-mod",
-		},
-		{
 			name:     "specs_root substitution",
 			pattern:  "{specs_root}/{moniker}/**",
 			expected: "specs/test-mod/**",
 		},
 		{
 			name:     "combined with standard vars",
-			pattern:  "{test_impl_root}/{moniker}/{type}",
-			expected: "go/eac/specs/impl/test-mod/go",
+			pattern:  "{specs_root}/{moniker}/{type}",
+			expected: "specs/test-mod/go",
 		},
 	}
 
@@ -191,15 +185,13 @@ func TestResolveDefaults_WithTypeDefaults(t *testing.T) {
 			Changelog: "HISTORY.md",
 		},
 		Repo: &RepoDefaults{
-			Specs:    []string{"{specs_root}/{moniker}/**"},
-			TestImpl: "{test_impl_root}/{moniker}",
-			Design:   "{specs_root}/{moniker}/.design",
+			Specs:  []string{"{specs_root}/{moniker}/**"},
+			Design: "{specs_root}/{moniker}/.design",
 		},
 	}
 
 	pathVars := map[string]string{
-		"test_impl_root": "go/eac/specs/impl",
-		"specs_root":     "specs",
+		"specs_root": "specs",
 	}
 
 	result := ResolveDefaults(
@@ -219,7 +211,7 @@ func TestResolveDefaults_WithTypeDefaults(t *testing.T) {
 	assert.Equal(t, []string{"README.md"}, result.Assets)
 	assert.Equal(t, "HISTORY.md", result.Changelog)
 	assert.Equal(t, []string{"specs/my-lib/**"}, result.Specs)
-	assert.Equal(t, "go/eac/specs/impl/my-lib", result.TestImpl)
+	assert.Empty(t, result.TestImpl) // TestImpl requires explicit component config
 	assert.Equal(t, "specs/my-lib/.design", result.Design)
 }
 
@@ -232,14 +224,12 @@ func TestResolveDefaults_ExplicitOverridesType(t *testing.T) {
 			Changelog: "HISTORY.md",
 		},
 		Repo: &RepoDefaults{
-			Specs:    []string{"{specs_root}/{moniker}/**"},
-			TestImpl: "{test_impl_root}/{moniker}",
+			Specs: []string{"{specs_root}/{moniker}/**"},
 		},
 	}
 
 	pathVars := map[string]string{
-		"test_impl_root": "go/eac/specs/impl",
-		"specs_root":     "specs",
+		"specs_root": "specs",
 	}
 
 	// Explicit values

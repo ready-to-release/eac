@@ -24,7 +24,7 @@ func (h *ScriptsHandler) Capabilities() []string { return []string{"scripts_pack
 
 func (h *ScriptsHandler) Requirements() []string { return nil }
 
-func (h *ScriptsHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot string) error {
+func (h *ScriptsHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot, component string) error {
 	// Check if any package has source patterns
 	for _, pkg := range module.Components {
 		if pkg != nil && pkg.Patterns != nil && len(pkg.Patterns.Source) > 0 {
@@ -41,29 +41,24 @@ func (h *ScriptsHandler) ListArtifacts(module *modules.ModuleContract, workspace
 func (h *ScriptsHandler) Build(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	Logln(logWriter, "\n=== scripts: %s ===", module.Moniker)
 
-	// Get static package root (scripts handler is for static content)
-	staticRoot := module.GetComponentRoot("static")
-	if staticRoot == "" {
-		// Try to find any package with a root
-		for _, root := range module.GetComponentRoots() {
-			staticRoot = root
-			break
-		}
+	// Get the specific component being built
+	comp := module.Components[opts.Component]
+	if comp == nil {
+		Logln(logWriter, "❌ Component %s not found in module %s", opts.Component, module.Moniker)
+		return 1
 	}
 
-	moduleRoot := filepath.Join(workspaceRoot, staticRoot)
+	moduleRoot := filepath.Join(workspaceRoot, comp.Root)
 	Logln(logWriter, "Source: %s", moduleRoot)
 	Logln(logWriter, "Output: %s", outputDir)
 
-	// Collect source patterns from all packages
+	// Get source patterns from the specific component
 	var sourcePatterns []string
-	for _, pkg := range module.Components {
-		if pkg != nil && pkg.Patterns != nil {
-			sourcePatterns = append(sourcePatterns, pkg.Patterns.Source...)
-		}
+	if comp.Patterns != nil {
+		sourcePatterns = comp.Patterns.Source
 	}
 	if len(sourcePatterns) == 0 {
-		Logln(logWriter, "ℹ️  No source patterns defined, nothing to copy")
+		Logln(logWriter, "ℹ️  No source patterns defined for component %s, nothing to copy", opts.Component)
 		return 0
 	}
 

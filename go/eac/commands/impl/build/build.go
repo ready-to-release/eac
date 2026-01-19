@@ -416,7 +416,7 @@ func runModuleBuild(module *modules.ModuleContract, workspaceRoot, outputDir str
 		}
 
 		// Validate module before building
-		if err := handler.ValidateModule(module, workspaceRoot); err != nil {
+		if err := handler.ValidateModule(module, workspaceRoot, ch.Component); err != nil {
 			output.Writeln(logWriter, "❌ Module validation failed for %s: %v", ch.Component, err)
 			return 1
 		}
@@ -487,8 +487,8 @@ func verifyBuildDependenciesQuiet(monikers []string, moduleReport *reports.Modul
 	sort.Strings(deps)
 	status.Required = deps
 
-	// Verify all dependencies
-	results := systemdeps.VerifyAll(deps)
+	// Verify only build-phase dependencies
+	results := systemdeps.VerifyAllForPhase(deps, "build")
 
 	for _, result := range results {
 		status.Available = append(status.Available, initsummary.DepsResult{

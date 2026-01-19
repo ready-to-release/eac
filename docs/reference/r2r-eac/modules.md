@@ -175,7 +175,7 @@ files:
 
 - `**` - Recursive match
 - `*` - Single-level match
-- `{specs_root}`, `{test_impl_root}` - Template variables
+- `{specs_root}`, `{moniker}`, `{root}`, `{type}` - Template variables
 
 ### Validation
 

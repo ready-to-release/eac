@@ -53,14 +53,29 @@ component-types:
   # Markdown component - documentation files
   markdown:
     extensions: [".md", ".markdown"]
+    files:
+      source: ["**/*.md", "**/*.markdown"]
 
   # YAML component - configuration files
   yaml:
     extensions: [".yml", ".yaml"]
+    files:
+      source: ["**/*.yml", "**/*.yaml"]
+
+  # GitHub Workflows component - GitHub Actions workflows and reusable actions
+  workflows:
+    extensions: []  # Uses .yml/.yaml but in specific paths
+    default_root: .github/workflows
+    requirements: [actionlint]
+    files:
+      source: ["**/*.yml", "**/*.yaml"]
+      config: []
 
   # JSON component - data and configuration files
   json:
     extensions: [".json"]
+    files:
+      source: ["**/*.json"]
 
   # Gherkin - BDD specification files (.feature)
   gherkin:
@@ -74,15 +89,29 @@ component-types:
     files:
       source: ["workspace.dsl", "**/*.dsl"]
 
-  # Static component - catch-all for modules without specific types
-  # TODO: Split into actual types per module
-  static:
+  # Documentation assets - images, diagrams, and other binary assets
+  docs-assets:
+    extensions: [".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".ico"]
+    files:
+      source: ["**/*.png", "**/*.jpg", "**/*.svg"]
+
+  # Repository configuration - root-level config files without extensions
+  repository:
     extensions: []
+    files:
+      config: ["LICENSE", ".gitignore", ".gitattributes", "go.work", "go.work.sum"]
+
+  # Test data/fixtures - sample files used by tests
+  testdata:
+    extensions: [".txt", ".go.txt"]
+    files:
+      source: ["**/*.txt", "**/*.go.txt"]
 
   # PowerShell component - PowerShell 7.4+ scripts (.ps1, .psm1, .psd1)
   # Requires: PowerShell 7.4 or later (cross-platform)
   pwsh:
     extensions: [".ps1", ".psm1", ".psd1"]
+    builder: scripts
     requirements: [pwsh]
     files:
       source: ["**/*.ps1", "**/*.psm1"]
@@ -92,6 +121,7 @@ component-types:
   # Bash component - POSIX-compatible shell scripts (.sh)
   bash:
     extensions: [".sh", ".bash"]
+    builder: scripts
     requirements: [bash]
     files:
       source: ["**/*.sh", "**/*.bash"]

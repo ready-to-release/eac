@@ -502,8 +502,8 @@ func verifyTestDependencies(ctx *cmdframework.ExecutionContext, testCfg *TestFra
 		return nil
 	}
 
-	// Verify system dependencies
-	sysResults := systemdeps.VerifyAll(systemDeps)
+	// Verify only test-phase system dependencies
+	sysResults := systemdeps.VerifyAllForPhase(systemDeps, "test")
 	var missing []string
 	for _, result := range sysResults {
 		if !result.Available {

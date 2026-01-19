@@ -34,7 +34,7 @@ func (h *DockerHandler) Capabilities() []string { return []string{"container"} }
 
 func (h *DockerHandler) Requirements() []string { return []string{"docker"} }
 
-func (h *DockerHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot string) error {
+func (h *DockerHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot, component string) error {
 	if !IsDockerAvailable() {
 		if IsDockerInDocker() {
 			return fmt.Errorf("Docker socket not mounted (-v /var/run/docker.sock:/var/run/docker.sock)")

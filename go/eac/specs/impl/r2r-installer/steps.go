@@ -258,7 +258,7 @@ func iRunThePowerShellInstaller() error {
 		return nil
 	}
 
-	scriptPath := filepath.Join(instCtx.scriptsRoot, "pwsh", "cli", "install.ps1")
+	scriptPath := filepath.Join(instCtx.scriptsRoot, "pwsh", "install.ps1")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
@@ -301,7 +301,7 @@ func iRunThePowerShellInstallerWithArgs(args string) error {
 		return nil
 	}
 
-	scriptPath := filepath.Join(instCtx.scriptsRoot, "pwsh", "cli", "install.ps1")
+	scriptPath := filepath.Join(instCtx.scriptsRoot, "pwsh", "install.ps1")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
@@ -345,7 +345,7 @@ func iRunTheBashInstaller() error {
 		return nil
 	}
 
-	scriptPath := filepath.Join(instCtx.scriptsRoot, "sh", "cli", "install.sh")
+	scriptPath := filepath.Join(instCtx.scriptsRoot, "bash", "install.sh")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
@@ -387,7 +387,7 @@ func iRunTheBashInstallerWithArgs(args string) error {
 		return nil
 	}
 
-	scriptPath := filepath.Join(instCtx.scriptsRoot, "sh", "cli", "install.sh")
+	scriptPath := filepath.Join(instCtx.scriptsRoot, "bash", "install.sh")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()

@@ -46,9 +46,6 @@ paths:
   # Specs root directory - where feature specifications live
   specs_root: specs
 
-  # Test implementation root directory
-  test_impl_root: tests
-
   # Templates directory
   templates: templates
 
