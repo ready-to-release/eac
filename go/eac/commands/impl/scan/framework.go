@@ -645,6 +645,7 @@ func RunMultiScan(cmdCfg *cmdframework.CommandConfig, multiCfg *MultiScanConfig)
 	hooks := &cmdframework.Hooks{
 		AfterInit:    multiScanAfterInit,
 		AfterResolve: multiScanAfterResolve,
+		AfterExecute: scanAfterExecute,
 	}
 
 	return cmdframework.Run(cmdCfg, multiScanWorker, hooks)
