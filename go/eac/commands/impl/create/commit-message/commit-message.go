@@ -131,7 +131,7 @@ func CreateCommitMessage() int {
 	}
 	defer logging.CloseLogging()
 
-	log.Debug("Logging configured")
+	log.Debugf("Logging configured (debug=%v)", debug)
 
 	// Retry loop for regenerating commit message if validation fails
 	// Limited to prevent infinite loops
@@ -188,7 +188,7 @@ func commitAIAttemptWithMessage(workspaceRoot string, debug bool) (int, bool, st
 	}
 
 	// Phase 2: Build Execution Context
-	cfg, stagedFilesTable, diffStats, err := buildExecutionContext(workspaceRoot)
+	cfg, stagedFilesTable, diffStats, err := buildExecutionContext(workspaceRoot, debug)
 	if err != nil {
 		log.Errorf("ERROR: Build context failed: %v", err)
 		return 1, false, ""
@@ -264,7 +264,7 @@ func verifyContractImplementation(workspaceRoot string) error {
 }
 
 // Phase 3: Build Execution Context.
-func buildExecutionContext(workspaceRoot string) (*executionConfig, string, string, error) {
+func buildExecutionContext(workspaceRoot string, debug bool) (*executionConfig, string, string, error) {
 	log.Debug("buildExecutionContext: start")
 	// Validate inputs
 	if workspaceRoot == "" {
@@ -302,20 +302,9 @@ func buildExecutionContext(workspaceRoot string) (*executionConfig, string, stri
 		log.Debugf("  %d. %s", i+1, mod)
 	}
 
-	// Get debug flag from parent scope
-	var debugFlag bool
-	if len(os.Args) > 3 {
-		for _, arg := range os.Args[3:] {
-			if arg == "--debug" || arg == "-d" {
-				debugFlag = true
-				break
-			}
-		}
-	}
-
 	cfg := &executionConfig{
 		workspaceRoot:   workspaceRoot,
-		debug:           debugFlag,
+		debug:           debug,
 		stagedFiles:     report.AllFiles,
 		affectedModules: affectedModules,
 		gitDiff:         gitDiff,

@@ -286,26 +286,48 @@ api_key_env: ANTHROPIC_API_KEY
 
 ### Configuration
 
-**File**: `.mcp.json` or LLM-specific config (e.g., `.claude/settings.json` for Claude Code)
+**Production Configuration** (`.mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "commands": {
+      "command": "eac-mcp-commands"
+    }
+  }
+}
+```
+
+Uses `r2r eac <command>` (Docker-based, default).
+
+**Development Configuration** (`.mcp.json`):
 
 ```json
 {
   "mcpServers": {
     "commands": {
       "command": "go",
-      "args": ["run", "./go/eac/mcp/commands/main.go"]
+      "args": ["run", "./go/eac/mcp/commands/main.go"],
+      "env": {
+        "EAC_USE_DIRECT_BINARY": "true"
+      }
     }
   }
 }
 ```
 
+Uses direct binary execution (faster, ~100ms vs ~2s Docker).
+
 **Benefits**:
 
-- Fast execution (~100ms vs ~2s Docker overhead)
+- Fast execution in development mode (~100ms)
+- Consistent Docker environment in production
 - Structured JSON I/O for AI tools
 - AI-optimized metadata and descriptions
 - Real-time validation feedback
 - Works with any MCP-compatible LLM tool
+
+See [MCP Server Architecture](../architecture/eac-mcp-commands.md) for details.
 
 ---
 
