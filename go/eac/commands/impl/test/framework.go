@@ -524,7 +524,7 @@ func testWorker(ctx *cmdframework.ExecutionContext, modulePath string, logWriter
 
 // testComponentWorker runs tests for a module path using component-level execution.
 // This is called by the ComponentScheduler for parallel test component execution.
-// The component parameter is the modulePath (e.g., "eac-core/config").
+// The component parameter is the subpath (e.g., "config" for "eac-core/config").
 func testComponentWorker(ctx *cmdframework.ExecutionContext, module, component string, logWriter io.Writer) int {
 	testCfg, ok := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
 	if !ok || testCfg == nil {
@@ -537,8 +537,16 @@ func testComponentWorker(ctx *cmdframework.ExecutionContext, module, component s
 		return 1
 	}
 
-	// component is the modulePath (e.g., "eac-core/config")
-	modulePath := component
+	// Reconstruct the full modulePath from module + component for test lookup
+	// component is now just the subpath (e.g., "config"), so we need module/component
+	var modulePath string
+	if component == module {
+		// No subpath case: component equals module name
+		modulePath = module
+	} else {
+		modulePath = module + "/" + component
+	}
+
 	tests := testCfg.ExecCtx.testsByPackage[modulePath]
 	if len(tests) == 0 {
 		fmt.Fprintf(logWriter, "No tests found for component: %s\n", modulePath)
@@ -546,7 +554,8 @@ func testComponentWorker(ctx *cmdframework.ExecutionContext, module, component s
 	}
 
 	// Build output directory using component-level path
-	outputDir := paths.ComponentTestOutputPath(ctx.WorkspaceRoot, module, extractSubpathFromModulePath(modulePath))
+	// component is already just the subpath, so use it directly
+	outputDir := paths.ComponentTestOutputPath(ctx.WorkspaceRoot, module, component)
 
 	// Run tests with OutputDir set
 	result := testCfg.ExecCtx.runPackageTestsWithOutputDir(modulePath, tests, logWriter, outputDir)

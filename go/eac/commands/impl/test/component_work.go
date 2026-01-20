@@ -48,9 +48,16 @@ func FlattenModulesToTestComponentWork(ctx *cmdframework.ExecutionContext) [][]o
 		// Determine weight from test type -> component type mapping
 		weight := getTestComponentWeight(tests, cfg)
 
+		// Extract module and subpath from modulePath (e.g., "eac-specs/cli-installation")
+		moduleMoniker := extractMonikerFromModulePath(modulePath)
+		componentSubpath := extractSubpathFromModulePath(modulePath)
+		if componentSubpath == "" {
+			componentSubpath = moduleMoniker // Use module name if no subpath
+		}
+
 		work := orchestrator.ComponentWork{
-			Module:        extractMonikerFromModulePath(modulePath),
-			Component:     modulePath, // Use full path as component identifier
+			Module:        moduleMoniker,
+			Component:     componentSubpath, // Just the subpath, not full modulePath
 			ComponentType: getTestType(tests),
 			Handler:       "test",
 			Weight:        weight,
