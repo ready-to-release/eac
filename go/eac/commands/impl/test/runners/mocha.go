@@ -100,12 +100,17 @@ func (r *MochaRunner) Execute(pkgPath string, tests []testing.TestReference, tui
 	// We need to find the module root (parent of test directory)
 	moduleRoot := filepath.Dir(filepath.Join(cfg.WorkspaceRoot, pkgPath))
 
-	// Create log directory using module-based output path if available
-	outputPath := cfg.ModuleOutputPath
-	if outputPath == "" {
-		outputPath = sanitizePathForLog(pkgPath)
+	// Use pre-created OutputDir if set, otherwise create based on module path
+	var logDir string
+	if cfg.OutputDir != "" {
+		logDir = cfg.OutputDir
+	} else {
+		outputPath := cfg.ModuleOutputPath
+		if outputPath == "" {
+			outputPath = sanitizePathForLog(pkgPath)
+		}
+		logDir = filepath.Join(cfg.TestRunDir, outputPath)
 	}
-	logDir := filepath.Join(cfg.TestRunDir, outputPath)
 	if err := os.MkdirAll(logDir, 0o755); err != nil {
 		fmt.Fprintf(tuiWriter, "Failed to create log directory: %v\n", err)
 		result.PackageFailed = true

@@ -88,9 +88,8 @@ const ModuleTypesComplete = `types:
 const ModulesSingleGo = `modules:
   - moniker: {{MODULE_NAME}}
     name: {{MODULE_NAME}} Module
-    type: go
-    files:
-      root: {{MODULE_PATH}}
+    components:
+      go: {{MODULE_PATH}}
 `
 
 // ModulesTwoGo is the modules section for repository.yml with two Go modules.
@@ -98,15 +97,13 @@ const ModulesSingleGo = `modules:
 const ModulesTwoGo = `modules:
   - moniker: {{MODULE1_NAME}}
     name: {{MODULE1_NAME}} Module
-    type: go
-    files:
-      root: {{MODULE1_PATH}}
+    components:
+      go: {{MODULE1_PATH}}
 
   - moniker: {{MODULE2_NAME}}
     name: {{MODULE2_NAME}} Module
-    type: go
-    files:
-      root: {{MODULE2_PATH}}
+    components:
+      go: {{MODULE2_PATH}}
 `
 
 // ============================================================================

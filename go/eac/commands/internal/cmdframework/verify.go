@@ -48,6 +48,19 @@ func phaseVerify(ctx *ExecutionContext) error {
 	}
 	summary.FlatExecution = !ctx.Config.Layered
 
+	// Calculate component count using the registered provider (if available)
+	// Only use provider if component count wasn't already set by a hook (e.g., test framework)
+	// This allows us to show the actual component count, not just module count
+	if summary.ComponentCount == 0 && componentCountProvider != nil {
+		count := componentCountProvider(ctx)
+		log.Debugf("Component count from provider: %d", count)
+		summary.ComponentCount = count
+	} else if summary.ComponentCount > 0 {
+		log.Debugf("Component count already set by hook: %d", summary.ComponentCount)
+	} else {
+		log.Debugf("No component count provider registered")
+	}
+
 	// Set flags (merge with any existing flags from hooks)
 	summary.Flags.DryRun = ctx.Config.DryRun
 	summary.Flags.SkipDeps = ctx.Config.SkipDeps
@@ -87,9 +100,14 @@ type DepsVerifier func(ctx *ExecutionContext) *initsummary.DepsStatus
 // is internal to impl/.
 type ArtifactValidator func(ctx *ExecutionContext) *initsummary.ArtifactValidationInfo
 
+// ComponentCountProvider is a function that returns the total component count.
+// Commands provide their own implementation based on their work items.
+type ComponentCountProvider func(ctx *ExecutionContext) int
+
 var (
-	depsVerifier      DepsVerifier
-	artifactValidator ArtifactValidator
+	depsVerifier           DepsVerifier
+	artifactValidator      ArtifactValidator
+	componentCountProvider ComponentCountProvider
 )
 
 // SetDepsVerifier sets the global system dependency verifier function.
@@ -100,6 +118,11 @@ func SetDepsVerifier(v DepsVerifier) {
 // SetArtifactValidator sets the global artifact validator function.
 func SetArtifactValidator(v ArtifactValidator) {
 	artifactValidator = v
+}
+
+// SetComponentCountProvider sets the global component count provider function.
+func SetComponentCountProvider(p ComponentCountProvider) {
+	componentCountProvider = p
 }
 
 // displayInitSummary outputs the initialization summary.

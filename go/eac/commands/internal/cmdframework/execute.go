@@ -29,6 +29,42 @@ func SetComponentWorker(worker ComponentWorkerFunc) {
 	componentWorkerFunc = worker
 }
 
+// testComponentWorkProvider is set by the test package to provide test component flattening.
+var testComponentWorkProvider ComponentWorkProvider
+
+// SetTestComponentWorkProvider registers the function to flatten tests to components.
+// Called by the test package during init.
+func SetTestComponentWorkProvider(provider ComponentWorkProvider) {
+	testComponentWorkProvider = provider
+}
+
+// testComponentWorkerFunc is the registered test component worker (set by test package).
+var testComponentWorkerFunc ComponentWorkerFunc
+
+// SetTestComponentWorker registers the test component worker function.
+// Called by the test package during init.
+func SetTestComponentWorker(worker ComponentWorkerFunc) {
+	testComponentWorkerFunc = worker
+}
+
+// scanComponentWorkProvider is set by the scan package to provide scan component flattening.
+var scanComponentWorkProvider ComponentWorkProvider
+
+// SetScanComponentWorkProvider registers the function to flatten modules to scan components.
+// Called by the scan package during init.
+func SetScanComponentWorkProvider(provider ComponentWorkProvider) {
+	scanComponentWorkProvider = provider
+}
+
+// scanComponentWorkerFunc is the registered scan component worker (set by scan package).
+var scanComponentWorkerFunc ComponentWorkerFunc
+
+// SetScanComponentWorker registers the scan component worker function.
+// Called by the scan package during init.
+func SetScanComponentWorker(worker ComponentWorkerFunc) {
+	scanComponentWorkerFunc = worker
+}
+
 // phaseExecute handles the execution phase:
 // - Set up worker function
 // - Run orchestrator (layered or parallel)
@@ -51,7 +87,17 @@ func phaseExecute(ctx *ExecutionContext, worker WorkerFunc) error {
 		return phaseExecuteComponents(ctx)
 	}
 
-	// Fall back to module-level execution (test, scan, or legacy build)
+	// Check if this is a test command with component-level execution enabled
+	if ctx.Config.Type == CommandTypeTest && testComponentWorkProvider != nil && testComponentWorkerFunc != nil {
+		return phaseExecuteTestComponents(ctx)
+	}
+
+	// Check if this is a scan command with component-level execution enabled
+	if ctx.Config.Type == CommandTypeScan && scanComponentWorkProvider != nil && scanComponentWorkerFunc != nil {
+		return phaseExecuteScanComponents(ctx)
+	}
+
+	// Fall back to module-level execution (legacy)
 	return phaseExecuteModules(ctx, worker)
 }
 
@@ -92,7 +138,65 @@ func phaseExecuteComponents(ctx *ExecutionContext) error {
 	return nil
 }
 
-// phaseExecuteModules runs module-level execution (test, scan, legacy build).
+// phaseExecuteTestComponents runs component-level parallel execution for tests.
+// This uses weighted parallelism and separates parallel/sequential tests into layers.
+func phaseExecuteTestComponents(ctx *ExecutionContext) error {
+	// Get test component work items from the provider
+	componentLayers := testComponentWorkProvider(ctx)
+	if len(componentLayers) == 0 {
+		ctx.Results = []orchestrator.WorkResult{}
+		return nil
+	}
+
+	// Wrap the test component worker to match orchestrator signature
+	orchCompWorker := func(module, component string, logWriter io.Writer) int {
+		return testComponentWorkerFunc(ctx, module, component, logWriter)
+	}
+
+	var results []orchestrator.WorkResult
+	var err error
+
+	// Test execution always uses layered mode (parallel tests first, sequential second)
+	log.Debugf("Executing %d test component layers with weighted parallelism", len(componentLayers))
+	results, err = ctx.Orchestrator.RunComponentsLayered(componentLayers, orchCompWorker)
+
+	if err != nil {
+		return fmt.Errorf("test component execution failed: %w", err)
+	}
+
+	ctx.Results = results
+	return nil
+}
+
+// phaseExecuteScanComponents runs component-level parallel execution for scans.
+// This uses weighted parallelism for scanning different components in parallel.
+func phaseExecuteScanComponents(ctx *ExecutionContext) error {
+	// Get scan component work items from the provider
+	componentLayers := scanComponentWorkProvider(ctx)
+	if len(componentLayers) == 0 {
+		ctx.Results = []orchestrator.WorkResult{}
+		return nil
+	}
+
+	// Wrap the scan component worker to match orchestrator signature
+	orchCompWorker := func(module, component string, logWriter io.Writer) int {
+		return scanComponentWorkerFunc(ctx, module, component, logWriter)
+	}
+
+	// Flatten all layers - scans run in parallel (no dependency order needed)
+	allWork := flattenComponentLayers(componentLayers)
+	log.Debugf("Executing %d scan components in parallel with weighted scheduling", len(allWork))
+	results, err := ctx.Orchestrator.RunComponentsParallel(allWork, orchCompWorker)
+
+	if err != nil {
+		return fmt.Errorf("scan component execution failed: %w", err)
+	}
+
+	ctx.Results = results
+	return nil
+}
+
+// phaseExecuteModules runs module-level execution (legacy).
 func phaseExecuteModules(ctx *ExecutionContext, worker WorkerFunc) error {
 	// Wrap the user's worker to match orchestrator signature
 	orchWorker := func(moniker string, logWriter io.Writer) int {

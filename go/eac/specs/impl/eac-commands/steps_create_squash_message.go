@@ -55,9 +55,8 @@ func registerCreateSquashMessageSteps(sc *godog.ScenarioContext, ctx *internal.T
 		repositoryYml := `modules:
   - moniker: test-module
     name: Test Module
-    type: go
-    files:
-      root: go/test-module
+    components:
+      go: go/test-module
 `
 		if err := internal.CreateFile(ctx, ".r2r/eac/repository.yml", repositoryYml); err != nil {
 			return err
@@ -143,9 +142,8 @@ func registerCreateSquashMessageSteps(sc *godog.ScenarioContext, ctx *internal.T
 		repositoryYml := `modules:
   - moniker: test-module
     name: Test Module
-    type: go
-    files:
-      root: go/test-module
+    components:
+      go: go/test-module
 `
 		if err := internal.CreateFile(ctx, ".r2r/eac/repository.yml", repositoryYml); err != nil {
 			return err

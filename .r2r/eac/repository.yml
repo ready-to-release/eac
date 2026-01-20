@@ -339,6 +339,22 @@ modules:
             - "**/*.txt"
             - "**/*.json"
             - "**/*.md"
+      dockerfile:
+        root: containers/drawio-cli
+        docker_build:
+          container: "drawio-cli"
+          context: "containers/drawio-cli"
+          dockerfile: "containers/drawio-cli/Dockerfile"
+          platforms:
+            - linux/amd64
+          push: false
+      drawio-scripts:
+        type: testdata
+        root: containers/drawio-cli
+        patterns:
+          source:
+            - "**/*.py"
+            - "requirements.txt"
 
   - moniker: eac-specs
     name: Test Infrastructure
@@ -440,6 +456,8 @@ modules:
             - "**/*.ts"
             - "**/*.tsx"
             - "**/*.js"
+          tests:
+            - "test/**/*.test.ts"
           config:
             - "*.json"
             - ".mocharc.json"

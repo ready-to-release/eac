@@ -22,11 +22,18 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/environments"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	moduledeps "github.com/ready-to-release/eac/go/eac/core/module-deps"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 	systemdeps "github.com/ready-to-release/eac/go/eac/core/system-deps"
 	"github.com/ready-to-release/eac/go/eac/core/testing"
 	"github.com/ready-to-release/eac/go/eac/core/teststate"
 )
+
+func init() {
+	// Register test component-level execution support
+	cmdframework.SetTestComponentWorkProvider(FlattenModulesToTestComponentWork)
+	cmdframework.SetTestComponentWorker(testComponentWorker)
+}
 
 // TestFrameworkConfig holds test-specific configuration for the framework.
 type TestFrameworkConfig struct {
@@ -314,6 +321,7 @@ func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 	// Separate parallel vs sequential paths
 	var parallelPaths, sequentialPaths []string
 	moduleTypes := make(map[string]string)
+	moduleTypeSet := make(map[string]map[string]bool) // Track unique test types per moniker
 
 	for modulePath, tests := range testsByModulePath {
 		hasSequential := false
@@ -331,9 +339,35 @@ func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 			parallelPaths = append(parallelPaths, modulePath)
 		}
 
+		// Aggregate test types by moniker (e.g., "eac-core" from "eac-core/config")
+		// A module may have multiple components with different test types
 		if len(tests) > 0 {
-			moduleTypes[modulePath] = tests[0].Type
+			moniker := extractMonikerFromModulePath(modulePath)
+			if moduleTypeSet[moniker] == nil {
+				moduleTypeSet[moniker] = make(map[string]bool)
+			}
+			// Capture ALL test types from this component, not just the first
+			for i := range tests {
+				moduleTypeSet[moniker][tests[i].Type] = true
+			}
 		}
+	}
+
+	// Build moduleTypes map with aggregated types (e.g., "gotest, godog")
+	for moniker, types := range moduleTypeSet {
+		var typeList []string
+		for t := range types {
+			typeList = append(typeList, t)
+		}
+		// Sort for consistent output
+		for i := 0; i < len(typeList)-1; i++ {
+			for j := i + 1; j < len(typeList); j++ {
+				if typeList[i] > typeList[j] {
+					typeList[i], typeList[j] = typeList[j], typeList[i]
+				}
+			}
+		}
+		moduleTypes[moniker] = strings.Join(typeList, ", ")
 	}
 
 	testCfg.ParallelPaths = parallelPaths
@@ -486,6 +520,55 @@ func testWorker(ctx *cmdframework.ExecutionContext, modulePath string, logWriter
 		return 1
 	}
 	return 0
+}
+
+// testComponentWorker runs tests for a module path using component-level execution.
+// This is called by the ComponentScheduler for parallel test component execution.
+// The component parameter is the modulePath (e.g., "eac-core/config").
+func testComponentWorker(ctx *cmdframework.ExecutionContext, module, component string, logWriter io.Writer) int {
+	testCfg, ok := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
+	if !ok || testCfg == nil {
+		fmt.Fprintf(logWriter, "Error: testConfig not found or wrong type\n")
+		return 1
+	}
+
+	if testCfg.ExecCtx == nil {
+		fmt.Fprintf(logWriter, "Error: test execution context not initialized\n")
+		return 1
+	}
+
+	// component is the modulePath (e.g., "eac-core/config")
+	modulePath := component
+	tests := testCfg.ExecCtx.testsByPackage[modulePath]
+	if len(tests) == 0 {
+		fmt.Fprintf(logWriter, "No tests found for component: %s\n", modulePath)
+		return 0
+	}
+
+	// Build output directory using component-level path
+	outputDir := paths.ComponentTestOutputPath(ctx.WorkspaceRoot, module, extractSubpathFromModulePath(modulePath))
+
+	// Run tests with OutputDir set
+	result := testCfg.ExecCtx.runPackageTestsWithOutputDir(modulePath, tests, logWriter, outputDir)
+
+	testCfg.ExecCtx.mu.Lock()
+	testCfg.ExecCtx.results[modulePath] = result
+	testCfg.ExecCtx.mu.Unlock()
+
+	if result.PackageFailed || result.TestsFailed > 0 {
+		return 1
+	}
+	return 0
+}
+
+// extractSubpathFromModulePath extracts the subpath from a module path.
+// Input: "eac-core/config" or "eac-commands"
+// Output: "config" or ""
+func extractSubpathFromModulePath(modulePath string) string {
+	if idx := strings.Index(modulePath, "/"); idx >= 0 {
+		return modulePath[idx+1:]
+	}
+	return ""
 }
 
 // Helper functions
@@ -710,6 +793,7 @@ func buildTestInitSummary(ctx *cmdframework.ExecutionContext, testCfg *TestFrame
 			ModulesNoTests:        stats.ModulesNoTests,
 			InferenceRulesApplied: len(suite.Inferences),
 		}).
+		SetComponentCount(len(testCfg.TestsByModulePath)).
 		SetOutputDir(testCfg.TestRunDir)
 
 	ctx.InitSummary = summary

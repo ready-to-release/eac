@@ -28,7 +28,7 @@ Feature: Configuration Defaults System
       And the component types config contains type "go"
       And the component types config contains type "dockerfile"
       And the component types config contains type "typescript"
-      And the component types config contains type "static"
+      And the component types config contains type "markdown"
       And the repository paths.specs_root is "specs"
       And the repository paths.out.build is "out/build"
       And the system dependencies config contains "go"
@@ -44,10 +44,9 @@ Feature: Configuration Defaults System
     Scenario: A3 - Missing modules in repository.yml uses default module
       Given the repository has file ".r2r/eac/component-types.yml" with:
         """
-        types:
-          - name: custom-type
-            description: Custom type
-            capabilities: [custom]
+        component-types:
+          custom-type:
+            extensions: [".custom"]
         """
       When I load the EAC configuration
       Then the modules config contains module "default"
@@ -138,10 +137,9 @@ Feature: Configuration Defaults System
         """
       And the repository has file ".r2r/eac/component-types.yml" with:
         """
-        types:
-          - name: custom
-            description: Custom type
-            capabilities: [custom_cap]
+        component-types:
+          custom:
+            extensions: [".custom"]
         """
       And the repository has file ".r2r/eac/system-dependencies.yml" with:
         """
@@ -168,41 +166,38 @@ Feature: Configuration Defaults System
     Scenario: C1 - User adds new type alongside defaults
       Given the repository has file ".r2r/eac/component-types.yml" with:
         """
-        types:
-          - name: custom-go-lib
-            description: Custom Go Library
-            capabilities: [go_module, testable]
+        component-types:
+          custom-go-lib:
+            extensions: [".go"]
+            builder: go
         """
       When I load the EAC configuration
       Then the component types config contains type "go"
       And the component types config contains type "custom-go-lib"
-      And the type "go" has capability "go_module"
-      And the type "custom-go-lib" has capability "testable"
+      And the type "custom-go-lib" has builder "go"
 
     Scenario: C2 - User overrides default type definition
       Given the repository has file ".r2r/eac/component-types.yml" with:
         """
-        types:
-          - name: go
-            description: Overridden Go type
-            capabilities: [go_module, custom_cap]
+        component-types:
+          go:
+            extensions: [".go", ".go2"]
+            builder: go
         """
       When I load the EAC configuration
       Then the component types config contains type "go"
-      And the type "go" has description "Overridden Go type"
-      And the type "go" has capability "custom_cap"
+      And the type "go" has extension ".go2"
 
-    Scenario: C3 - User type with defaults block
+    Scenario: C3 - User type with default file patterns
       Given the repository has file ".r2r/eac/component-types.yml" with:
         """
-        types:
-          - name: my-go-lib
-            description: My Go Library
-            capabilities: [go_module]
-            defaults:
-              files:
-                source: ["lib/**/*.go"]
-                tests: ["lib/**/*_test.go"]
+        component-types:
+          my-go-lib:
+            extensions: [".go"]
+            builder: go
+            files:
+              source: ["lib/**/*.go"]
+              tests: ["lib/**/*_test.go"]
         """
       When I load the EAC configuration
       Then the component types config contains type "my-go-lib"
@@ -211,7 +206,7 @@ Feature: Configuration Defaults System
     Scenario: C4 - Empty user types list preserves defaults
       Given the repository has file ".r2r/eac/component-types.yml" with:
         """
-        types: []
+        component-types: {}
         """
       When I load the EAC configuration
       Then the component types config contains type "go"
@@ -340,7 +335,7 @@ Feature: Configuration Defaults System
       And I apply type defaults to modules
       Then the module "mylib" has changelog "HISTORY.md"
 
-    Scenario: E5 - Type defaults resolve {specs_root} variable
+    Scenario: E5 - Gherkin component uses specs_root path
       Given the repository has file ".r2r/eac/repository.yml" with:
         """
         repository:
@@ -352,12 +347,13 @@ Feature: Configuration Defaults System
             name: My Library
             components:
               go: go/mylib
+              gherkin: features/mylib
         """
       When I load the EAC configuration
       And I apply type defaults to modules
-      Then the module "mylib" specs pattern resolves with "features"
+      Then the module "mylib" component "gherkin" has root "features/mylib"
 
-    Scenario: E6 - Type defaults resolve {moniker} variable in specs
+    Scenario: E6 - Gherkin component default uses moniker in path
       Given the repository has file ".r2r/eac/repository.yml" with:
         """
         modules:
@@ -365,10 +361,11 @@ Feature: Configuration Defaults System
             name: My Library
             components:
               go: go/mylib
+              gherkin: specs/mylib
         """
       When I load the EAC configuration
       And I apply type defaults to modules
-      Then the module "mylib" specs pattern resolves with "mylib"
+      Then the module "mylib" component "gherkin" has root "specs/mylib"
 
   # ===========================================================================
   # Category F: System Dependencies Merging

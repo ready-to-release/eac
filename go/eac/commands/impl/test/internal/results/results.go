@@ -25,26 +25,25 @@ type CucumberTestResult struct {
 
 // ParseCucumberResults walks the module test directory and parses all cucumber.json files
 // to extract actual test results with durations.
+// Walks component subdirectories (out/test/<module>/<component>/) to find cucumber files.
 func ParseCucumberResults(moduleTestDir string) []CucumberTestResult {
 	var results []CucumberTestResult
 
-	packagesDir := filepath.Join(moduleTestDir, "packages")
-	if _, err := os.Stat(packagesDir); os.IsNotExist(err) {
-		return results
-	}
-
 	//nolint:errcheck // Walk errors are non-fatal; we collect what we can find
-	_ = filepath.Walk(packagesDir, func(path string, info os.FileInfo, walkErr error) error {
+	_ = filepath.Walk(moduleTestDir, func(path string, info os.FileInfo, walkErr error) error {
 		if walkErr != nil || info.IsDir() {
+			return nil
+		}
+
+		// Skip manifest file
+		if strings.HasSuffix(path, "test.manifest.json") {
 			return nil
 		}
 
 		// Only process cucumber JSON files (various naming patterns)
 		// Patterns: *.cucumber.json, cucumber.json, cucumber-*.json
 		fileName := info.Name()
-		if !strings.HasSuffix(fileName, ".cucumber.json") &&
-			fileName != "cucumber.json" &&
-			(!strings.HasPrefix(fileName, "cucumber-") || !strings.HasSuffix(fileName, ".json")) {
+		if !isCucumberFile(fileName) {
 			return nil
 		}
 
@@ -89,8 +88,17 @@ func ParseCucumberResults(moduleTestDir string) []CucumberTestResult {
 	return results
 }
 
+// isCucumberFile checks if a filename matches cucumber JSON file patterns.
+// Patterns: *.cucumber.json, cucumber.json, cucumber-*.json
+func isCucumberFile(fileName string) bool {
+	return strings.HasSuffix(fileName, ".cucumber.json") ||
+		fileName == "cucumber.json" ||
+		(strings.HasPrefix(fileName, "cucumber-") && strings.HasSuffix(fileName, ".json"))
+}
+
 // AggregateCucumberReports collects all cucumber.json files from module test directories
 // and aggregates them into a single cucumber.json file at testRunDir.
+// Walks component subdirectories (out/test/<module>/<component>/) to find cucumber files.
 // Returns the path to the aggregated file, or empty string if no cucumber files found.
 func AggregateCucumberReports(testRunDir string) string {
 	var allFeatures cucumber.CucumberReport
@@ -113,24 +121,21 @@ func AggregateCucumberReports(testRunDir string) string {
 		}
 
 		moduleDir := filepath.Join(testRunDir, entry.Name())
-		packagesDir := filepath.Join(moduleDir, "packages")
 
-		if _, err := os.Stat(packagesDir); os.IsNotExist(err) {
-			continue
-		}
-
-		// Walk through packages directory to find cucumber files
+		// Walk through module directory (component subdirectories) to find cucumber files
 		//nolint:errcheck // Walk errors are non-fatal; we collect what we can find
-		_ = filepath.Walk(packagesDir, func(path string, info os.FileInfo, walkErr error) error {
+		_ = filepath.Walk(moduleDir, func(path string, info os.FileInfo, walkErr error) error {
 			if walkErr != nil || info.IsDir() {
 				return nil
 			}
 
+			// Skip manifest file
+			if strings.HasSuffix(path, "test.manifest.json") {
+				return nil
+			}
+
 			// Match cucumber JSON files (various naming patterns)
-			fileName := info.Name()
-			if !strings.HasSuffix(fileName, ".cucumber.json") &&
-				fileName != "cucumber.json" &&
-				(!strings.HasPrefix(fileName, "cucumber-") || !strings.HasSuffix(fileName, ".json")) {
+			if !isCucumberFile(info.Name()) {
 				return nil
 			}
 
@@ -169,6 +174,7 @@ func AggregateCucumberReports(testRunDir string) string {
 
 // AggregateCTRFReports collects all unit.json (CTRF) files from module test directories
 // and aggregates them into a single unit.json file at testRunDir.
+// Walks component subdirectories (out/test/<module>/<component>/) to find unit.json files.
 // Returns the path to the aggregated file, or empty string if no CTRF files found.
 func AggregateCTRFReports(testRunDir string) string {
 	aggregatedReport := ctrf.NewEmptyReport("aggregated")
@@ -192,16 +198,16 @@ func AggregateCTRFReports(testRunDir string) string {
 		}
 
 		moduleDir := filepath.Join(testRunDir, entry.Name())
-		packagesDir := filepath.Join(moduleDir, "packages")
 
-		if _, err := os.Stat(packagesDir); os.IsNotExist(err) {
-			continue
-		}
-
-		// Walk through packages directory to find unit.json files
+		// Walk through module directory (component subdirectories) to find unit.json files
 		//nolint:errcheck // Walk errors are non-fatal; we collect what we can find
-		_ = filepath.Walk(packagesDir, func(path string, info os.FileInfo, walkErr error) error {
+		_ = filepath.Walk(moduleDir, func(path string, info os.FileInfo, walkErr error) error {
 			if walkErr != nil || info.IsDir() {
+				return nil
+			}
+
+			// Skip manifest file
+			if strings.HasSuffix(path, "test.manifest.json") {
 				return nil
 			}
 

@@ -1,0 +1,5 @@
+# PNG chunk extraction
+pypng>=0.20220715.0
+
+# XML processing
+lxml>=5.0.0

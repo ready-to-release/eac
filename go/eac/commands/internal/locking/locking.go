@@ -94,6 +94,16 @@ func ScanConfig(moniker, baseDir string) Config {
 	}
 }
 
+// ComponentScanConfig returns a Config for component-level scan locking.
+func ComponentScanConfig(module, component, baseDir string) Config {
+	return Config{
+		BaseDir:      baseDir,
+		Identifier:   module + "-" + component, // Use dash to avoid path issues
+		ResourceType: "component",
+		ActionVerb:   "already being scanned",
+	}
+}
+
 // LintConfig returns a Config for module lint locking.
 func LintConfig(moniker, baseDir string) Config {
 	return Config{

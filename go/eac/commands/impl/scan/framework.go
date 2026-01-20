@@ -18,6 +18,12 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
+func init() {
+	// Register scan component-level execution support
+	cmdframework.SetScanComponentWorkProvider(FlattenModulesToScanComponentWork)
+	cmdframework.SetScanComponentWorker(scanComponentWorker)
+}
+
 // scannerSemaphores limits concurrent executions per scanner type.
 // Each scanner type (trivy, semgrep, zap) gets its own semaphore with capacity 2.
 // This allows some parallelism while preventing resource contention.
@@ -194,6 +200,214 @@ func scanWorkerWrapper(ctx *cmdframework.ExecutionContext, moniker string, logWr
 	return 0
 }
 
+// scanComponentWorker runs scans for a single component using component-level execution.
+// This is called by the ComponentScheduler for parallel scan component execution.
+func scanComponentWorker(ctx *cmdframework.ExecutionContext, moniker, component string, logWriter io.Writer) int {
+	// Get multi-scan config if available (contains scanner settings)
+	multiCfg, _ := ctx.Config.Extra["multiScanConfig"].(*MultiScanConfig)
+	if multiCfg == nil {
+		multiCfg = &MultiScanConfig{
+			SBOMFormat:     "cyclonedx-json",
+			SemgrepConfig:  "auto",
+			VulnSeverities: nil,
+		}
+	}
+
+	// Get module contract
+	module, exists := ctx.ModuleRegistry.Get(moniker)
+	if !exists {
+		output.Writeln(logWriter, "Error: module not found: %s", moniker)
+		return 1
+	}
+
+	// Get component type for this component
+	compTypeName := module.Components.GetComponentType(component)
+
+	// Acquire lock for this component
+	lockCfg := locking.ComponentScanConfig(moniker, component, paths.OutSecurityRelPath)
+	lockFile, err := locking.Acquire(ctx.WorkspaceRoot, lockCfg)
+	if err != nil {
+		output.Writeln(logWriter, "Error: %v", err)
+		return 1
+	}
+	defer locking.Release(lockFile)
+
+	// Get default scanners for this component type
+	var scanners []internal.ScannerType
+	seenScanners := make(map[string]bool)
+	defaultScanners := ctx.EACConfig.SecurityTools.GetDefaultScanners(compTypeName)
+	for _, s := range defaultScanners {
+		if !seenScanners[s] {
+			if scannerType, valid := internal.ParseScannerType(s); valid {
+				scanners = append(scanners, scannerType)
+				seenScanners[s] = true
+			}
+		}
+	}
+
+	if len(scanners) == 0 {
+		output.Writeln(logWriter, "⚠️  No scanners configured for component type: %s", compTypeName)
+		return 0
+	}
+
+	// Get component root path
+	componentRoot := module.Components.GetComponentRoot(component)
+	if componentRoot == "" {
+		output.Writeln(logWriter, "Error: no root found for component %s", component)
+		return 1
+	}
+
+	// Run each scanner
+	exitCode := 0
+	for _, scannerType := range scanners {
+		result := runComponentScanner(ctx, module, moniker, component, componentRoot, scannerType, multiCfg, logWriter)
+		if result != 0 {
+			exitCode = 1 // Mark as failed but continue with other scanners
+		}
+	}
+
+	return exitCode
+}
+
+// runComponentScanner runs a single scanner for a component.
+func runComponentScanner(ctx *cmdframework.ExecutionContext, module *modules.ModuleContract, moniker, component, componentRoot string, scannerType internal.ScannerType, multiCfg *MultiScanConfig, logWriter io.Writer) int {
+	emoji := getScannerEmoji(scannerType)
+
+	// Acquire scanner semaphore
+	sem := getScannerSemaphore(scannerType)
+	output.Writeln(logWriter, "%s Waiting for %s scanner slot...", emoji, scannerType)
+	sem <- struct{}{}
+	output.Writeln(logWriter, "%s Acquired %s scanner slot", emoji, scannerType)
+	defer func() {
+		<-sem
+		output.Writeln(logWriter, "%s Released %s scanner slot", emoji, scannerType)
+	}()
+
+	output.Writeln(logWriter, "%s Running %s scanner on %s/%s...", emoji, scannerType, moniker, component)
+	scanStart := time.Now()
+
+	// Create scan config for this scanner
+	scanCfg := &ScanFrameworkConfig{
+		ScannerType:  scannerType,
+		ScannerName:  string(scannerType),
+		ScannerEmoji: emoji,
+		ScanOutDir:   ctx.EACConfig.Repository.Paths.Out.Scan,
+		GitCommit:    internal.GetGitCommit(ctx.WorkspaceRoot),
+	}
+
+	// Run the appropriate scanner on the component root
+	findings, err := runScannerOnPath(ctx, componentRoot, scannerType, multiCfg, logWriter)
+	if err != nil {
+		handleComponentScanFailure(ctx, scanCfg, module, moniker, component, scanStart, err, logWriter)
+		return 1
+	}
+
+	// Write evidence and update manifest
+	_, writeErr := handleComponentScanSuccess(ctx, scanCfg, module, moniker, component, scanStart, findings, logWriter)
+	if writeErr != nil {
+		return 1
+	}
+
+	return 0
+}
+
+// runScannerOnPath runs a scanner on a specific path.
+func runScannerOnPath(ctx *cmdframework.ExecutionContext, targetPath string, scannerType internal.ScannerType, multiCfg *MultiScanConfig, logWriter io.Writer) (interface{}, error) {
+	switch scannerType {
+	case internal.ScannerSBOM:
+		trivyImage := ctx.EACConfig.SecurityTools.DockerImages.Trivy.FullImage()
+		output.Writeln(logWriter, "  Using Trivy image: %s", trivyImage)
+		output.Writeln(logWriter, "  Format: %s", multiCfg.SBOMFormat)
+		return internal.RunTrivySBOM(ctx.WorkspaceRoot, targetPath, multiCfg.SBOMFormat, trivyImage)
+
+	case internal.ScannerVuln:
+		trivyImage := ctx.EACConfig.SecurityTools.DockerImages.Trivy.FullImage()
+		output.Writeln(logWriter, "  Using Trivy image: %s", trivyImage)
+		return internal.RunTrivyVuln(targetPath, multiCfg.VulnSeverities, trivyImage)
+
+	case internal.ScannerSecrets:
+		trivyImage := ctx.EACConfig.SecurityTools.DockerImages.Trivy.FullImage()
+		output.Writeln(logWriter, "  Using Trivy image: %s", trivyImage)
+		return internal.RunTrivySecrets(targetPath, trivyImage)
+
+	case internal.ScannerIaC:
+		trivyImage := ctx.EACConfig.SecurityTools.DockerImages.Trivy.FullImage()
+		output.Writeln(logWriter, "  Using Trivy image: %s", trivyImage)
+		return internal.RunTrivyIaC(targetPath, trivyImage)
+
+	case internal.ScannerSAST:
+		semgrepImage := ctx.EACConfig.SecurityTools.DockerImages.Semgrep.FullImage()
+		output.Writeln(logWriter, "  Using Semgrep image: %s", semgrepImage)
+		output.Writeln(logWriter, "  Config: %s", multiCfg.SemgrepConfig)
+		return internal.RunSemgrepSAST(ctx.WorkspaceRoot, targetPath, multiCfg.SemgrepConfig, semgrepImage)
+
+	case internal.ScannerDAST:
+		return nil, fmt.Errorf("ZAP scanner requires --target URL flag")
+
+	default:
+		return nil, fmt.Errorf("unknown scanner type: %s", scannerType)
+	}
+}
+
+// handleComponentScanFailure handles a failed component scan.
+func handleComponentScanFailure(ctx *cmdframework.ExecutionContext, scanCfg *ScanFrameworkConfig, module *modules.ModuleContract, moniker, component string, scanStart time.Time, scanErr error, logWriter io.Writer) {
+	output.Writeln(logWriter, "  ❌ Failed: %v", scanErr)
+
+	// Write error evidence to component directory
+	outputPath, writeErr := internal.WriteComponentErrorEvidence(ctx.WorkspaceRoot, moniker, component, scanCfg.ScannerType, scanErr.Error())
+	if writeErr != nil {
+		output.Writeln(logWriter, "  Failed to write error evidence: %v", writeErr)
+	} else {
+		output.Writeln(logWriter, "  📄 Error evidence: %s", outputPath)
+	}
+
+	// Update scan manifest
+	updateComponentScanManifest(ctx, scanCfg, module, moniker, component, scanStart, manifest.ScanStatusFailed, outputPath, scanErr.Error())
+}
+
+// handleComponentScanSuccess handles a successful component scan.
+func handleComponentScanSuccess(ctx *cmdframework.ExecutionContext, scanCfg *ScanFrameworkConfig, module *modules.ModuleContract, moniker, component string, scanStart time.Time, findings interface{}, logWriter io.Writer) (string, error) {
+	// Write evidence file to component directory
+	outputPath, err := internal.WriteComponentEvidence(ctx.WorkspaceRoot, moniker, component, scanCfg.ScannerType, findings)
+	if err != nil {
+		output.Writeln(logWriter, "  ❌ Failed to write evidence: %v", err)
+		updateComponentScanManifest(ctx, scanCfg, module, moniker, component, scanStart, manifest.ScanStatusFailed, "", err.Error())
+		return "", err
+	}
+
+	// Update scan manifest
+	updateComponentScanManifest(ctx, scanCfg, module, moniker, component, scanStart, manifest.ScanStatusPassed, outputPath, "")
+
+	output.Writeln(logWriter, "  ✅ Success: %s", outputPath)
+	return outputPath, nil
+}
+
+// updateComponentScanManifest updates the scan manifest for a component.
+func updateComponentScanManifest(ctx *cmdframework.ExecutionContext, scanCfg *ScanFrameworkConfig, module *modules.ModuleContract, moniker, component string, scanStart time.Time, status, evidencePath, errorMsg string) {
+	duration := time.Since(scanStart)
+	// Use component-level scan output directory
+	componentScanDir := paths.ComponentScanOutputPath(ctx.WorkspaceRoot, moniker, component)
+
+	mf, err := manifest.LoadOrCreateScanManifest(componentScanDir, moniker+"/"+component, module.Components.GetComponentType(component), scanCfg.GitCommit)
+	if err != nil {
+		log.Warnf("Failed to load/create scan manifest: %v", err)
+		return
+	}
+
+	result := manifest.ScannerResult{
+		Status:          status,
+		RunTime:         time.Now(),
+		DurationSeconds: duration.Seconds(),
+		EvidencePath:    evidencePath,
+		Error:           errorMsg,
+	}
+	mf.AddScannerResult(string(scanCfg.ScannerType), result)
+
+	if err := mf.Save(componentScanDir); err != nil {
+		log.Warnf("Failed to save scan manifest: %v", err)
+	}
+}
+
 // handleScanFailure handles a failed scan.
 func handleScanFailure(ctx *cmdframework.ExecutionContext, scanCfg *ScanFrameworkConfig, module *modules.ModuleContract, moniker string, scanStart time.Time, scanErr error, logWriter io.Writer) {
 	output.Writeln(logWriter, "  ❌ Failed: %v", scanErr)
@@ -317,7 +531,8 @@ func RunMultiScan(cmdCfg *cmdframework.CommandConfig, multiCfg *MultiScanConfig)
 
 	// Set up hooks for multi-scan
 	hooks := &cmdframework.Hooks{
-		AfterInit: multiScanAfterInit,
+		AfterInit:    multiScanAfterInit,
+		AfterResolve: multiScanAfterResolve,
 	}
 
 	return cmdframework.Run(cmdCfg, multiScanWorker, hooks)
@@ -349,6 +564,16 @@ func multiScanAfterInit(ctx *cmdframework.ExecutionContext) error {
 	// Otherwise, we'll determine scanners per-module based on type
 	// For init summary, show "default" as the scanner mode
 	buildMultiScanInitSummary(ctx, nil)
+	return nil
+}
+
+// multiScanAfterResolve sets the component count after ModuleRegistry is available.
+func multiScanAfterResolve(ctx *cmdframework.ExecutionContext) error {
+	// Now that ModuleRegistry is available, calculate and set component count
+	if ctx.InitSummary != nil && ctx.ModuleRegistry != nil {
+		componentCount := getScanComponentCount(ctx)
+		ctx.InitSummary.SetComponentCount(componentCount)
+	}
 	return nil
 }
 
@@ -560,6 +785,7 @@ func buildMultiScanInitSummary(ctx *cmdframework.ExecutionContext, scanners []in
 		}).
 		SetOutputDir(ctx.EACConfig.Repository.Paths.Out.Scan).
 		SetFlatExecution(true)
+	// Component count is set in multiScanAfterResolve after ModuleRegistry is available
 
 	ctx.InitSummary = summary
 }

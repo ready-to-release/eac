@@ -114,10 +114,9 @@ func registerRiskSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 		repositoryYml := fmt.Sprintf(`modules:
   - moniker: %s
     name: Test Module %s
-    type: go
     description: Test module
-    files:
-      root: .
+    components:
+      go: .
 `, module, module)
 		repositoryYmlPath := filepath.Join(".r2r", "eac", "repository.yml")
 		if err := internal.CreateFile(ctx, repositoryYmlPath, repositoryYml); err != nil {
@@ -166,10 +165,9 @@ paths:
 		repositoryYml := fmt.Sprintf(`modules:
   - moniker: %s
     name: Test Module %s
-    type: go
     description: Test module
-    files:
-      root: .
+    components:
+      go: .
 `, module, module)
 		repositoryYmlPath := filepath.Join(".r2r", "eac", "repository.yml")
 		if err := internal.CreateFile(ctx, repositoryYmlPath, repositoryYml); err != nil {

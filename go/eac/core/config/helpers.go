@@ -89,15 +89,12 @@ func LoadOrNil(repoRoot string) *EACConfig {
 	return cfg
 }
 
-// GetLogsPath returns the logs path with graceful fallback to defaults.
-// If config loading fails, returns "out/logs/<subsystem>" relative to repoRoot.
-// This allows commands to write debug logs even when running in incomplete test environments.
+// GetLogsPath returns the logs path for a subsystem.
+// Always returns "out/logs/<subsystem>" relative to repoRoot for consistency.
+// This is used for debug logs and command diagnostic output.
+// Note: LogsPathAbs returns command output paths (out/<command>), not logs.
 func GetLogsPath(repoRoot, subsystem string) string {
-	cfg := LoadOrNil(repoRoot)
-	if cfg == nil {
-		return filepath.Join(repoRoot, "out", "logs", subsystem)
-	}
-	return cfg.Repository.LogsPathAbs(repoRoot, subsystem)
+	return filepath.Join(repoRoot, "out", "logs", subsystem)
 }
 
 // GetSpecsPath returns the specs path with graceful fallback to defaults.

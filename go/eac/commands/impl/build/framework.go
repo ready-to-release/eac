@@ -23,6 +23,13 @@ func init() {
 	// Register component-level execution support
 	cmdframework.SetComponentWorkProvider(FlattenModulesToComponentWork)
 	cmdframework.SetComponentWorker(buildComponentWorker)
+	cmdframework.SetComponentCountProvider(getBuildComponentCount)
+}
+
+// getBuildComponentCount returns the total number of buildable components.
+func getBuildComponentCount(ctx *cmdframework.ExecutionContext) int {
+	layers := FlattenModulesToComponentWork(ctx)
+	return CountComponents(layers)
 }
 
 // BuildConfig holds build-specific configuration.
