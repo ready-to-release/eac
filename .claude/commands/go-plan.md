@@ -38,6 +38,11 @@ You are helping plan a Go CLI feature or change in this repository.
    - The `out/` folder is for intermediate and planning documents
    - Never save plans to module directories or repository root
 
+6. **Suggest clearing context**:
+   - After completing the plan, explicitly suggest the user clear context
+   - Prompt: "The plan is complete and saved to `out/<filename>.md`. I recommend clearing context now using `/clear` so you can start implementation with a fresh context window while keeping the plan. This helps maintain focus during implementation."
+   - This is a best practice: Research/Plan → Clear → Implement
+
 ## Why Extended Thinking for Planning
 
 The go-architect agent uses **extended thinking mode** because:

@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ready-to-release.org/schemas/eac-core/manual-test-export/0.1.0",
+  "title": "Manual Test Export Schema",
+  "description": "Format for exporting manual test scenarios for human execution",
+  "type": "object",
+  "properties": {
+    "export_metadata": {
+      "$ref": "#/definitions/export_metadata"
+    },
+    "scenarios": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/exported_scenario"
+      },
+      "minItems": 1
+    }
+  },
+  "required": ["export_metadata", "scenarios"],
+  "definitions": {
+    "export_metadata": {
+      "type": "object",
+      "properties": {
+        "export_time": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when scenarios were exported"
+        },
+        "module": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Module moniker (validated against repository.yml)"
+        },
+        "release_version": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Release version being tested (e.g., v1.2.0)"
+        },
+        "git_commit": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$",
+          "description": "Git commit SHA at export time"
+        },
+        "schema_version": {
+          "type": "string",
+          "const": "1.0"
+        }
+      },
+      "required": ["export_time", "module", "release_version", "git_commit", "schema_version"]
+    },
+    "exported_scenario": {
+      "type": "object",
+      "properties": {
+        "scenario_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$",
+          "description": "Stable name-based ID: feature-name:scenario-name"
+        },
+        "feature_name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Gherkin Feature name for context"
+        },
+        "scenario_name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Gherkin Scenario name"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^@[a-zA-Z0-9-:_]+$"
+          },
+          "description": "All tags from scenario (must include @Manual)"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Gherkin steps (Given/When/Then)"
+        },
+        "description": {
+          "type": "string",
+          "description": "Feature or scenario description for context"
+        },
+        "file_path": {
+          "type": "string",
+          "description": "Source feature file path (for reference)"
+        }
+      },
+      "required": ["scenario_id", "feature_name", "scenario_name", "tags", "steps"]
+    }
+  }
+}

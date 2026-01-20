@@ -57,3 +57,20 @@ suites:
       - require_tags:
           - "@L4"
           - "@piv"
+
+  # ============================================================================
+  # Manual Suite - Human-executed tests with evidence collection
+  # ============================================================================
+  - moniker: manual
+    name: Manual Tests
+    description: "Human-executed tests requiring manual verification and evidence collection"
+    extended_suite: true
+    selectors:
+      - require_tags:
+          - "@Manual"
+        exclude_tags:
+          - "@L0"
+          - "@L1"
+          - "@L2"
+          - "@L3"
+          - "@L4"
