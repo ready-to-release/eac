@@ -7,6 +7,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/image"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -204,6 +205,7 @@ func TestCreateGitHubAuthConfig_NoCredentials(t *testing.T) {
 func TestInspectImage(t *testing.T) {
 	// Arrange
 	mockClient := new(MockDockerClient)
+	mockClient.On("Ping", mock.Anything).Return(types.Ping{}, nil)
 	mockClient.On("ImageInspect", mock.Anything, "test-image:latest").Return(
 		image.InspectResponse{ID: "sha256:abc123"},
 		nil,
@@ -227,6 +229,7 @@ func TestInspectImage(t *testing.T) {
 func TestGetImageDigest_WithRepoDigests(t *testing.T) {
 	// Arrange
 	mockClient := new(MockDockerClient)
+	mockClient.On("Ping", mock.Anything).Return(types.Ping{}, nil)
 	mockClient.On("ImageInspect", mock.Anything, "test-image:v1.0.0").Return(
 		image.InspectResponse{
 			ID:          "sha256:image123",
@@ -252,6 +255,7 @@ func TestGetImageDigest_WithRepoDigests(t *testing.T) {
 func TestGetImageDigest_WithoutRepoDigests(t *testing.T) {
 	// Arrange
 	mockClient := new(MockDockerClient)
+	mockClient.On("Ping", mock.Anything).Return(types.Ping{}, nil)
 	mockClient.On("ImageInspect", mock.Anything, "local-build:dev").Return(
 		image.InspectResponse{
 			ID:          "sha256:local123",
@@ -277,6 +281,7 @@ func TestGetImageDigest_WithoutRepoDigests(t *testing.T) {
 func TestGetImageDigest_Error(t *testing.T) {
 	// Arrange
 	mockClient := new(MockDockerClient)
+	mockClient.On("Ping", mock.Anything).Return(types.Ping{}, nil)
 	mockClient.On("ImageInspect", mock.Anything, "nonexistent:latest").Return(
 		image.InspectResponse{},
 		assert.AnError,

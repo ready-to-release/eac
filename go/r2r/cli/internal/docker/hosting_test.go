@@ -779,6 +779,8 @@ func TestBuildEnvironmentVars(t *testing.T) {
 
 func setupTestHostWithMock(t *testing.T) (*ContainerHost, *MockDockerClient) {
 	mockClient := new(MockDockerClient)
+	// Set up Ping mock for EnsureConnected - called by InspectImage and other methods
+	mockClient.On("Ping", mock.Anything).Return(types.Ping{}, nil).Maybe()
 	host := &ContainerHost{
 		client:  mockClient,
 		ctx:     context.Background(),
@@ -937,8 +939,9 @@ func TestCreateContainerConfig_Unit(t *testing.T) {
 	assert.Empty(t, config.Cmd)
 
 	// Test ModeRun with args (command mode)
+	// When args are present, TTY is disabled for performance (avoids ~5s terminal handshake delay)
 	config = host.CreateContainerConfig(ext, ModeRun, []string{"echo", "hello"}, imageInspect)
-	assert.True(t, config.Tty)
+	assert.False(t, config.Tty, "ModeRun with args should disable TTY for performance")
 	assert.False(t, config.OpenStdin)
 	assert.Len(t, config.Cmd, 2)
 	assert.Equal(t, "echo", config.Cmd[0])
