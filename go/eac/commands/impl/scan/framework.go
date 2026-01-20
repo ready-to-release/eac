@@ -4,6 +4,9 @@ package scan
 import (
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -118,11 +121,14 @@ func scanAfterInit(ctx *cmdframework.ExecutionContext) error {
 	return nil
 }
 
-// scanAfterExecute handles scan manifest updates.
+// scanAfterExecute handles scan manifest aggregation after component-level execution.
+// When scans run at component level, this aggregates component manifests into module-level manifests.
 func scanAfterExecute(ctx *cmdframework.ExecutionContext) error {
-	// Manifests are updated per-module in the worker
-	// This hook is available for aggregate operations if needed
-	return nil
+	// Aggregate component manifests into module-level manifests
+	// This is needed because component-level execution creates manifests at
+	// out/scan/<module>/<component>/scan.manifest.json, but show scan-summary
+	// expects them at out/scan/<module>/scan.manifest.json
+	return aggregateComponentScanManifests(ctx)
 }
 
 // scanWorkerWrapper wraps the scanner-specific worker for cmdframework.
@@ -470,6 +476,106 @@ func updateScanManifest(ctx *cmdframework.ExecutionContext, scanCfg *ScanFramewo
 	if err := mf.Save(moduleScanDir); err != nil {
 		log.Warnf("Failed to save scan manifest: %v", err)
 	}
+}
+
+// aggregateComponentScanManifests aggregates component-level scan manifests into module-level manifests.
+// This is called after component-level scan execution to create the module-level manifest that
+// show scan-summary expects at out/scan/<module>/scan.manifest.json.
+func aggregateComponentScanManifests(ctx *cmdframework.ExecutionContext) error {
+	// Get unique modules from results
+	moduleSet := make(map[string]bool)
+	for _, result := range ctx.Results {
+		// Component results have format "module/component", extract module
+		moniker := result.Moniker
+		if idx := strings.Index(moniker, "/"); idx > 0 {
+			moniker = moniker[:idx]
+		}
+		moduleSet[moniker] = true
+	}
+
+	// For each module, aggregate component manifests
+	for moniker := range moduleSet {
+		if err := aggregateModuleScanManifest(ctx, moniker); err != nil {
+			log.Warnf("Failed to aggregate scan manifest for %s: %v", moniker, err)
+			// Continue with other modules
+		}
+	}
+
+	return nil
+}
+
+// aggregateModuleScanManifest aggregates all component scan manifests for a module into a single module-level manifest.
+func aggregateModuleScanManifest(ctx *cmdframework.ExecutionContext, moniker string) error {
+	moduleScanDir := ctx.EACConfig.Repository.ScanModuleOutputPathAbs(ctx.WorkspaceRoot, moniker)
+
+	// Read directory to find component subdirectories
+	entries, err := os.ReadDir(moduleScanDir)
+	if err != nil {
+		// No scan directory yet - nothing to aggregate
+		return nil
+	}
+
+	// Get module for type info
+	module, exists := ctx.ModuleRegistry.Get(moniker)
+	moduleType := ""
+	if exists {
+		moduleType = module.GetComponentTypesDisplay()
+	}
+
+	// Get git commit
+	gitCommit := internal.GetGitCommit(ctx.WorkspaceRoot)
+
+	// Create or load the module-level manifest
+	moduleMf := manifest.NewScanManifest(moniker, moduleType, gitCommit)
+
+	// Track total duration
+	var totalDuration float64
+
+	// Scan component subdirectories for manifests
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		componentDir := filepath.Join(moduleScanDir, entry.Name())
+		componentMf, loadErr := manifest.LoadScanManifest(componentDir)
+		if loadErr != nil {
+			// No manifest in this directory - skip
+			continue
+		}
+
+		// Merge scanner results from component manifest
+		for scannerType, result := range componentMf.Scans {
+			// Prefix scanner with component name for uniqueness
+			key := fmt.Sprintf("%s/%s", entry.Name(), scannerType)
+			moduleMf.AddScannerResult(key, result)
+			totalDuration += result.DurationSeconds
+		}
+
+		// Merge artifacts with component prefix
+		for _, artifact := range componentMf.Artifacts {
+			artifact.Path = filepath.Join(entry.Name(), artifact.Path)
+			artifact.ID = fmt.Sprintf("%s-%s", entry.Name(), artifact.ID)
+			moduleMf.AddArtifact(artifact)
+		}
+	}
+
+	// Only save if we found any scan results
+	if len(moduleMf.Scans) == 0 {
+		return nil
+	}
+
+	moduleMf.DurationSeconds = totalDuration
+
+	// Save module-level manifest
+	if err := moduleMf.Save(moduleScanDir); err != nil {
+		return fmt.Errorf("failed to save aggregated manifest: %w", err)
+	}
+
+	log.Debugf("Aggregated scan manifest for %s: %d scanners, %d artifacts",
+		moniker, len(moduleMf.Scans), len(moduleMf.Artifacts))
+
+	return nil
 }
 
 // buildScanInitSummary creates the init summary for scan commands.
