@@ -222,6 +222,53 @@ The repository has an MCP server providing commands like:
 go run ./go/eac/commands <command> [args]
 ```
 
+### MCP Server Execution Modes
+
+The MCP server supports two execution modes:
+
+#### Production Mode (Default)
+
+**Configuration** (`.mcp.json`):
+```json
+{
+  "mcpServers": {
+    "commands": {
+      "command": "eac-mcp-commands"
+    }
+  }
+}
+```
+
+**Execution**: `r2r eac <command>` (Docker container)
+**Startup**: ~2s (Docker overhead)
+**Use Case**: CI/CD, production, consistent environments
+
+#### Development Mode (Local Override)
+
+**Configuration** (`.mcp.json`):
+```json
+{
+  "mcpServers": {
+    "commands": {
+      "command": "go",
+      "args": ["run", "./go/eac/mcp/commands/main.go"],
+      "env": {
+        "EAC_USE_DIRECT_BINARY": "true"
+      }
+    }
+  }
+}
+```
+
+**Execution**: Direct binary via `paths.CommandsBinaryPath()`
+**Startup**: ~100ms (no Docker)
+**Use Case**: Local development, fast iteration
+
+#### Choosing a Configuration
+
+**For Local Development**: Use `go run` with `EAC_USE_DIRECT_BINARY=true`
+**For Production**: Use `eac-mcp-commands` (default)
+
 ### Code-Simplifier Plugin
 
 > **MANDATORY at end of every session**

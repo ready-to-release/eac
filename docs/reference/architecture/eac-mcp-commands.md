@@ -50,15 +50,54 @@ The MCP server enables AI assistants to:
 
 ## Configuration
 
-MCP server is configured in Claude Code settings:
+### Production Configuration (Default)
+
+MCP server is configured in Claude Code settings (`.mcp.json`):
 
 ```json
 {
   "mcpServers": {
     "commands": {
-      "command": "r2r",
-      "args": ["eac", "mcp", "commands"]
+      "command": "eac-mcp-commands"
     }
   }
 }
+```
+
+Uses `r2r eac <command>` by default (Docker-based execution).
+
+### Development Configuration (Local Override)
+
+For local development with faster startup (`.mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "commands": {
+      "command": "go",
+      "args": ["run", "./go/eac/mcp/commands/main.go"],
+      "env": {
+        "EAC_USE_DIRECT_BINARY": "true"
+      }
+    }
+  }
+}
+```
+
+Uses direct binary execution (faster, ~100ms startup vs ~2s Docker).
+
+### Environment Variable
+
+**`EAC_USE_DIRECT_BINARY`**:
+- `true`: Forces direct binary execution (development)
+- Not set or `false`: Uses `r2r eac` (production, default)
+
+### Verification
+
+```bash
+# Test production mode
+echo '{"jsonrpc":"2.0","id":1,"method":"initialize"}' | r2r eac mcp commands
+
+# Test development mode
+EAC_USE_DIRECT_BINARY=true go run ./go/eac/mcp/commands/main.go < input.json
 ```
