@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ready-to-release.org/schemas/eac-core/manual-test-results/0.1.0",
+  "title": "Manual Test Results Schema",
+  "description": "Format for manual test execution results",
+  "type": "object",
+  "properties": {
+    "import_metadata": {
+      "$ref": "#/definitions/import_metadata"
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/manual_test_result"
+      },
+      "minItems": 1
+    }
+  },
+  "required": ["import_metadata", "results"],
+  "definitions": {
+    "import_metadata": {
+      "type": "object",
+      "properties": {
+        "test_time": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when tests were executed"
+        },
+        "tester": {
+          "type": "string",
+          "format": "email",
+          "description": "Email of person who executed tests"
+        },
+        "module": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Module moniker being tested"
+        },
+        "release_version": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Release version tested (must match export)"
+        },
+        "duration_seconds": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Total time spent executing manual tests"
+        },
+        "schema_version": {
+          "type": "string",
+          "const": "1.0"
+        }
+      },
+      "required": ["test_time", "tester", "module", "release_version", "schema_version"]
+    },
+    "manual_test_result": {
+      "type": "object",
+      "properties": {
+        "scenario_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*/[^/]+/[^/]+$",
+          "description": "Must match exported scenario ID"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["passed", "failed", "skipped"],
+          "description": "Test execution status (no 'pending' or 'undefined' for manual tests)"
+        },
+        "duration_seconds": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Time spent executing this scenario"
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 5000,
+          "description": "Tester observations, failure reasons, or skip rationale"
+        },
+        "error": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Error message if status is 'failed'"
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/evidence_reference"
+          },
+          "maxItems": 10,
+          "description": "Evidence artifacts (screenshots, logs, etc.)"
+        }
+      },
+      "required": ["scenario_id", "status"],
+      "if": {
+        "properties": { "status": { "const": "failed" } }
+      },
+      "then": {
+        "required": ["error"]
+      }
+    },
+    "evidence_reference": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https?://",
+          "description": "HTTP(S) URL to evidence (GitHub Issues, screenshots, etc.)"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["screenshot", "log", "recording", "document", "issue"],
+          "description": "Type of evidence"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Brief description of evidence"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$",
+          "description": "Optional SHA-256 hash for integrity verification"
+        }
+      },
+      "required": ["url", "type"]
+    }
+  }
+}
