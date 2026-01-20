@@ -10,7 +10,7 @@ Feature: security_sast
     Scenario: Perform SAST scan with mocked tool
       When I run the command "scan sast eac-core"
       Then the exit code is 0
-      And evidence files should exist in directory "out/scan/eac-core/sast/"
+      And evidence files should exist in directory "out/scan/eac-core/go/"
       And the latest evidence file should have JSON field "module" with value "eac-core"
       And the latest evidence file should have JSON field "scanner" with value "sast"
       And the latest evidence file should have JSON field "timestamp" matching RFC3339 format
@@ -20,7 +20,7 @@ Feature: security_sast
     Scenario: SAST scan with specific ruleset
       When I run the command "scan sast eac-core --config p/security-audit"
       Then the exit code is 0
-      And evidence files should exist in directory "out/scan/eac-core/sast/"
+      And evidence files should exist in directory "out/scan/eac-core/go/"
 
     Scenario: SAST scan with debug logging
       When I run the command "scan sast eac-core --debug"

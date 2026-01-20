@@ -153,7 +153,7 @@ func ExtensionMeta() int {
 			},
 		},
 		ExpectedHostImages: []string{
-			"cli-mkdocs-site:latest",
+			"mkdocs-site:local",
 			"structurizr/lite:latest",
 		},
 		Env: []EnvVar{

@@ -222,6 +222,13 @@ func scanComponentWorker(ctx *cmdframework.ExecutionContext, moniker, component 
 
 	// Get component type for this component
 	compTypeName := module.Components.GetComponentType(component)
+	compType := ctx.EACConfig.ComponentTypes.Get(compTypeName)
+
+	// Skip non-scannable component types
+	if compType == nil || !compType.IsScannable() {
+		output.Writeln(logWriter, "⚠️  Component type %s is not scannable, skipping", compTypeName)
+		return 0
+	}
 
 	// Acquire lock for this component
 	lockCfg := locking.ComponentScanConfig(moniker, component, paths.OutSecurityRelPath)
@@ -232,11 +239,10 @@ func scanComponentWorker(ctx *cmdframework.ExecutionContext, moniker, component 
 	}
 	defer locking.Release(lockFile)
 
-	// Get default scanners for this component type
+	// Get scanners from component type configuration
 	var scanners []internal.ScannerType
 	seenScanners := make(map[string]bool)
-	defaultScanners := ctx.EACConfig.SecurityTools.GetDefaultScanners(compTypeName)
-	for _, s := range defaultScanners {
+	for _, s := range compType.GetScanners() {
 		if !seenScanners[s] {
 			if scannerType, valid := internal.ParseScannerType(s); valid {
 				scanners = append(scanners, scannerType)
@@ -606,11 +612,15 @@ func multiScanWorker(ctx *cmdframework.ExecutionContext, moniker string, logWrit
 	if len(multiCfg.Scanners) > 0 {
 		scanners = multiCfg.Scanners
 	} else {
-		// Get default scanners for each of the module's package types
+		// Get scanners from component types for each of the module's components
 		seenScanners := make(map[string]bool)
-		for _, pkgType := range module.GetEnabledComponents() {
-			defaultScanners := ctx.EACConfig.SecurityTools.GetDefaultScanners(pkgType)
-			for _, s := range defaultScanners {
+		for _, componentName := range module.GetEnabledComponents() {
+			compTypeName := module.Components.GetComponentType(componentName)
+			compType := ctx.EACConfig.ComponentTypes.Get(compTypeName)
+			if compType == nil || !compType.IsScannable() {
+				continue // Skip non-scannable component types
+			}
+			for _, s := range compType.GetScanners() {
 				if !seenScanners[s] {
 					if scannerType, valid := internal.ParseScannerType(s); valid {
 						scanners = append(scanners, scannerType)
@@ -622,7 +632,7 @@ func multiScanWorker(ctx *cmdframework.ExecutionContext, moniker string, logWrit
 	}
 
 	if len(scanners) == 0 {
-		output.Writeln(logWriter, "⚠️  No scanners configured for module packages: %s", module.GetComponentTypesDisplay())
+		output.Writeln(logWriter, "⚠️  No scannable components in module: %s", module.GetComponentTypesDisplay())
 		return 0
 	}
 

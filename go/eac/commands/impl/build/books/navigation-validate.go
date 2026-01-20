@@ -54,9 +54,24 @@ func (p *Preprocessor) validateNavEntry(entry any, dirPath string, actualFiles, 
 			}
 			// File missing, skip
 			return nil, referenced
+		} else {
+			// Directory reference without trailing slash (e.g., "specifications")
+			// awesome-nav allows this format
+			if actualDirs[v] {
+				referenced[v+"/"] = true
+				return v, referenced // Valid directory
+			}
+			// For relative paths (containing /), check filesystem
+			if strings.Contains(v, "/") {
+				fullPath := filepath.Join(dirPath, v)
+				if info, err := os.Stat(fullPath); err == nil && info.IsDir() {
+					referenced[v+"/"] = true
+					return v, referenced // Valid directory
+				}
+			}
+			// Directory missing, skip
+			return nil, referenced
 		}
-		// Unknown format, keep as-is
-		return v, referenced
 
 	case map[string]any:
 		// Titled section: {"Section Name": [...]} or {"Title": "file.md"}

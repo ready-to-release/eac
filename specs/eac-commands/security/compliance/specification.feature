@@ -10,7 +10,7 @@ Feature: security_compliance
     Scenario: Check module compliance with mocked tool
       When I run the command "scan compliance eac-core --compliance k8s-cis"
       Then the exit code is 0 or 1
-      And evidence files should exist in directory "out/scan/eac-core/compliance/"
+      And evidence files should exist in directory "out/scan/eac-core/go/"
       And the latest evidence file should have JSON field "module" with value "eac-core"
       And the latest evidence file should have JSON field "scanner" with value "compliance"
       And the latest evidence file should have JSON field "timestamp" matching RFC3339 format

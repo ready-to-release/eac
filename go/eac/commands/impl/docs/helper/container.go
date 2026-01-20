@@ -18,9 +18,9 @@ import (
 
 const (
 	// defaultContainerNameBase is the fallback base name for mkdocs containers.
-	defaultContainerNameBase = "cli-mkdocs-site"
-	// defaultImageName is the fallback Docker image name.
-	defaultImageName = "cli-mkdocs-site:latest"
+	defaultContainerNameBase = "mkdocs-site"
+	// defaultImageName is the fallback Docker image name (uses :local tag for local builds).
+	defaultImageName = "mkdocs-site:local"
 	// defaultDockerfile is the fallback Dockerfile path.
 	defaultDockerfile = "containers/mkdocs-site/Dockerfile"
 

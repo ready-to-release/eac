@@ -150,7 +150,7 @@ func WriteComponentEvidence(workspaceRoot, module, component string, scanner Sca
 
 	// Create evidence file structure
 	evidence := EvidenceFile{
-		Module:    module + "/" + component,
+		Module:    module,
 		Scanner:   string(scanner),
 		Timestamp: timestamp,
 		SHA256:    hashHex,
