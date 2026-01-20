@@ -14,6 +14,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// setupImageTestHost creates a ContainerHost with a MockDockerClient for image-related tests.
+// The Ping mock is pre-configured since InspectImage calls EnsureConnected.
+func setupImageTestHost() (*ContainerHost, *MockDockerClient) {
+	mockClient := new(MockDockerClient)
+	mockClient.On("Ping", mock.Anything).Return(types.Ping{}, nil)
+	return &ContainerHost{client: mockClient}, mockClient
+}
+
 // TestExtractTag verifies tag extraction from image names
 func TestExtractTag(t *testing.T) {
 	tests := []struct {
@@ -204,16 +212,11 @@ func TestCreateGitHubAuthConfig_NoCredentials(t *testing.T) {
 // TestInspectImage verifies image inspection
 func TestInspectImage(t *testing.T) {
 	// Arrange
-	mockClient := new(MockDockerClient)
-	mockClient.On("Ping", mock.Anything).Return(types.Ping{}, nil)
+	ch, mockClient := setupImageTestHost()
 	mockClient.On("ImageInspect", mock.Anything, "test-image:latest").Return(
 		image.InspectResponse{ID: "sha256:abc123"},
 		nil,
 	)
-
-	ch := &ContainerHost{
-		client: mockClient,
-	}
 
 	// Act
 	result, err := ch.InspectImage("test-image:latest")
@@ -228,8 +231,7 @@ func TestInspectImage(t *testing.T) {
 // TestGetImageDigest_WithRepoDigests verifies digest retrieval with RepoDigests
 func TestGetImageDigest_WithRepoDigests(t *testing.T) {
 	// Arrange
-	mockClient := new(MockDockerClient)
-	mockClient.On("Ping", mock.Anything).Return(types.Ping{}, nil)
+	ch, mockClient := setupImageTestHost()
 	mockClient.On("ImageInspect", mock.Anything, "test-image:v1.0.0").Return(
 		image.InspectResponse{
 			ID:          "sha256:image123",
@@ -237,10 +239,6 @@ func TestGetImageDigest_WithRepoDigests(t *testing.T) {
 		},
 		nil,
 	)
-
-	ch := &ContainerHost{
-		client: mockClient,
-	}
 
 	// Act
 	digest, err := ch.GetImageDigest("test-image:v1.0.0")
@@ -254,8 +252,7 @@ func TestGetImageDigest_WithRepoDigests(t *testing.T) {
 // TestGetImageDigest_WithoutRepoDigests verifies digest fallback to image ID
 func TestGetImageDigest_WithoutRepoDigests(t *testing.T) {
 	// Arrange
-	mockClient := new(MockDockerClient)
-	mockClient.On("Ping", mock.Anything).Return(types.Ping{}, nil)
+	ch, mockClient := setupImageTestHost()
 	mockClient.On("ImageInspect", mock.Anything, "local-build:dev").Return(
 		image.InspectResponse{
 			ID:          "sha256:local123",
@@ -263,10 +260,6 @@ func TestGetImageDigest_WithoutRepoDigests(t *testing.T) {
 		},
 		nil,
 	)
-
-	ch := &ContainerHost{
-		client: mockClient,
-	}
 
 	// Act
 	digest, err := ch.GetImageDigest("local-build:dev")
@@ -280,16 +273,11 @@ func TestGetImageDigest_WithoutRepoDigests(t *testing.T) {
 // TestGetImageDigest_Error verifies error handling
 func TestGetImageDigest_Error(t *testing.T) {
 	// Arrange
-	mockClient := new(MockDockerClient)
-	mockClient.On("Ping", mock.Anything).Return(types.Ping{}, nil)
+	ch, mockClient := setupImageTestHost()
 	mockClient.On("ImageInspect", mock.Anything, "nonexistent:latest").Return(
 		image.InspectResponse{},
 		assert.AnError,
 	)
-
-	ch := &ContainerHost{
-		client: mockClient,
-	}
 
 	// Act
 	digest, err := ch.GetImageDigest("nonexistent:latest")
