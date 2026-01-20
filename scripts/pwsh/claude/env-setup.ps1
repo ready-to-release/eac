@@ -47,9 +47,9 @@ else {
 # Configure GitHub Token for the GitHub MCP server
 # IMPORTANT: Replace with your actual GitHub token
 # Generate a token at: https://github.com/settings/tokens
-if (-not $env:GITHUB_TOKEN) {
-    Write-Warning "GITHUB_TOKEN not set. GitHub MCP server will not function."
-    Write-Warning "Set it in your profile: `$env:GITHUB_TOKEN = 'your-token-here'"
+if (-not $env:GITHUB_PERSONAL_ACCESS_TOKEN) {
+    Write-Warning "GITHUB_PERSONAL_ACCESS_TOKEN not set. GitHub MCP server will not function."
+    Write-Warning "Set it in your profile: `$env:GITHUB_PERSONAL_ACCESS_TOKEN = 'your-token-here'"
 }
 
 # Configure Anthropic API Key (if needed for other tools)

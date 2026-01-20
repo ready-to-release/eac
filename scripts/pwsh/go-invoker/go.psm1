@@ -425,28 +425,23 @@ function New-TopLevelAliases {
         }
 
         # Create a script block that calls Invoke-GoSrcCommand with first arg pre-filled
+        # Use $args to capture all arguments without PowerShell parameter binding interfering with flags
         $scriptBlock = [scriptblock]::Create(@"
-            param(`$Second, `$Third, `$Fourth, [Parameter(ValueFromRemainingArguments=`$true)]`$RemainingArgs)
-            Invoke-GoSrcCommand -First '$cmdName' -Second `$Second -Third `$Third -Fourth `$Fourth -RemainingArgs `$RemainingArgs
+            # Extract Second, Third, Fourth from args
+            `$Second = if (`$args.Count -gt 0) { `$args[0] } else { `$null }
+            `$Third = if (`$args.Count -gt 1) { `$args[1] } else { `$null }
+            `$Fourth = if (`$args.Count -gt 2) { `$args[2] } else { `$null }
+            `$Rest = if (`$args.Count -gt 3) { `$args[3..(`$args.Count-1)] } else { @() }
+            Invoke-GoSrcCommand -First '$cmdName' -Second `$Second -Third `$Third -Fourth `$Fourth -RemainingArgs `$Rest
 "@)
 
         # Create the function
         Set-Item -Path "function:Global:$cmdName" -Value $scriptBlock -Force
 
-        # Register tab completion for this function
+        # Register tab completion for this function (only for Second parameter now)
         Register-ArgumentCompleter -CommandName $cmdName -ParameterName Second -ScriptBlock {
             param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
             Get-GoSrcCommandPart -First $commandName
-        }
-
-        Register-ArgumentCompleter -CommandName $cmdName -ParameterName Third -ScriptBlock {
-            param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
-            Get-GoSrcCommandPart -First $commandName -Second $fakeBoundParameters['Second']
-        }
-
-        Register-ArgumentCompleter -CommandName $cmdName -ParameterName Fourth -ScriptBlock {
-            param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
-            Get-GoSrcCommandPart -First $commandName -Second $fakeBoundParameters['Second'] -Third $fakeBoundParameters['Third']
         }
 
         $createdAliases += $cmdName
