@@ -60,7 +60,7 @@ Based on this status, I automatically use:
 
 ```powershell
 # Windows PowerShell
-$env:GITHUB_TOKEN = "ghp_your_personal_access_token_here"
+$env:GITHUB_PERSONAL_ACCESS_TOKEN = "ghp_your_personal_access_token_here"
 ```
 
 Then restart Claude Code to reconnect the MCP server.

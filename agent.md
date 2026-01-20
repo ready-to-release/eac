@@ -60,12 +60,12 @@ GitHub Server (mcp__github__*):
 [If GitHub Server NOT CONNECTED, include this troubleshooting section:]
 ⚠️ GitHub MCP Troubleshooting:
 - Server configured in: .mcp.json
-- GitHub server: docker run -i --rm -e GITHUB_TOKEN ghcr.io/github/github-mcp-server:v0.21.0
-- Authentication: Set GITHUB_TOKEN environment variable
-  - Windows: $env:GITHUB_TOKEN = "ghp_your_token_here"
-  - Linux/Mac: export GITHUB_TOKEN="ghp_your_token_here"
+- GitHub server: docker run -i --rm -e GITHUB_PERSONAL_ACCESS_TOKEN ghcr.io/github/github-mcp-server:v0.21.0
+- Authentication: Set GITHUB_PERSONAL_ACCESS_TOKEN environment variable
+  - Windows: $env:GITHUB_PERSONAL_ACCESS_TOKEN = "ghp_your_token_here"
+  - Linux/Mac: export GITHUB_PERSONAL_ACCESS_TOKEN="ghp_your_token_here"
 - Verify Docker: docker --version
-- Verify token: echo $env:GITHUB_TOKEN (Windows) or echo $GITHUB_TOKEN (Linux/Mac)
+- Verify token: echo $env:GITHUB_PERSONAL_ACCESS_TOKEN (Windows) or echo $GITHUB_PERSONAL_ACCESS_TOKEN (Linux/Mac)
 - Fallback: GitHub operations will use gh CLI or git commands
 
 Ready to assist with project tasks.
@@ -114,9 +114,9 @@ See full list: Use MCP `show-valid-commands` or `go run ./go/eac/commands show v
 
 ### GitHub MCP Server
 
-**Status**: ✅ Configured (requires GITHUB_TOKEN environment variable)
+**Status**: ✅ Configured (requires GITHUB_PERSONAL_ACCESS_TOKEN environment variable)
 **Type**: Docker container (GitHub official MCP server)
-**Configuration**: `.mcp.json` → `docker run -i --rm -e GITHUB_TOKEN ghcr.io/github/github-mcp-server:v0.21.0`
+**Configuration**: `.mcp.json` → `docker run -i --rm -e GITHUB_PERSONAL_ACCESS_TOKEN ghcr.io/github/github-mcp-server:v0.21.0`
 
 **Available Tools** (when connected):
 
@@ -129,10 +129,10 @@ See full list: Use MCP `show-valid-commands` or `go run ./go/eac/commands show v
 
 ```powershell
 # Windows PowerShell
-$env:GITHUB_TOKEN = "ghp_your_personal_access_token_here"
+$env:GITHUB_PERSONAL_ACCESS_TOKEN = "ghp_your_personal_access_token_here"
 
 # Or add to your PowerShell profile for persistence
-Add-Content $PROFILE '$env:GITHUB_TOKEN = "ghp_your_token_here"'
+Add-Content $PROFILE '$env:GITHUB_PERSONAL_ACCESS_TOKEN = "ghp_your_token_here"'
 ```
 
 **When CONNECTED** (GitHub MCP tools available):

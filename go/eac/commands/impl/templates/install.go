@@ -10,6 +10,7 @@
 // Long:   ai       - AI prompt templates (outputs to .r2r/eac/templates/ai/)
 // Long:   reports  - Report templates (outputs to .r2r/templates/reports/)
 // Long:   specs    - Specification templates (outputs to specs/risk-controls/)
+// Long:   claude   - Claude Code templates (outputs to .claude/)
 // Long:
 // Long: How it works:
 // Long:   1. Uses local template files from repository
@@ -28,6 +29,7 @@
 // Long:   templates install ai
 // Long:   templates install reports
 // Long:   templates install specs
+// Long:   templates install claude
 // Long:   templates install docs --destination ./custom-docs
 // Long:
 // Long: Use "help templates install <template-type>" for detailed information.
@@ -99,6 +101,7 @@ func showAvailableTemplates(category string) {
 	log.Info("  ai       - AI prompt templates")
 	log.Info("  reports  - Report templates")
 	log.Info("  specs    - Specification templates")
+	log.Info("  claude   - Claude Code workflow templates")
 }
 
 // getAvailableTemplates scans the registry for templates in a given category.

@@ -28,6 +28,7 @@ import (
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/specs/unused"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/templates"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/templates/install/ai"
+	_ "github.com/ready-to-release/eac/go/eac/commands/impl/templates/install/claude"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/templates/install/docs"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/templates/install/reports"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/templates/install/specs"

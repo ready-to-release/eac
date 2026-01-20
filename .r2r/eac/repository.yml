@@ -94,6 +94,11 @@ modules:
       go:
         root: go/eac/core
         patterns:
+          source:
+            - "**/*.go"
+            - "specs/gherkin/testdata/**/*.feature"
+          tests:
+            - "**/*_test.go"
           config:
             - go.mod
             - go.sum
@@ -160,6 +165,7 @@ modules:
         patterns:
           source:
             - "*.txt"
+            - "overrides/**/*.html"
 
   - moniker: mkdocs-site
     name: MkDocs Site Container
@@ -439,6 +445,12 @@ modules:
       yaml: templates
       gherkin: templates
       json: templates
+      testdata:
+        type: testdata
+        root: templates
+        patterns:
+          source:
+            - "**/*.template"
       structurizr: specs/templates/.design
 
   - moniker: vscode-ext-commit

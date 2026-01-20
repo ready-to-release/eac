@@ -57,6 +57,11 @@ COPY requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt \
     && rm /tmp/requirements.txt
 
+# Copy Material theme overrides for mkdocs-exporter compatibility
+# The override sets body[mkdocs-exporter="true"] to signal page ready state
+# Store in /opt so it doesn't conflict with mounted /docs volume
+COPY overrides /opt/mkdocs-overrides
+
 # Install Playwright browser (Chrome for PDF generation)
 RUN playwright install chromium --with-deps
 
