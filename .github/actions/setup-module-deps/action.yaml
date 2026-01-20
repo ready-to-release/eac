@@ -129,57 +129,25 @@ runs:
         npm install -g markdownlint-cli2
         echo "✓ markdownlint-cli2 installed"
 
-    - name: Check if Docker Buildx builder supports cache export
+    - name: Check if Docker Buildx is available
       id: buildx-check
       if: contains(steps.resolve.outputs.deps, 'docker') || contains(steps.resolve.outputs.deps, 'buildx')
       shell: bash
       run: |
-        # Check if a buildx builder exists with docker-container driver (supports cache export)
-        if docker buildx inspect 2>/dev/null | grep -q "Driver.*docker-container"; then
+        if docker buildx version &>/dev/null; then
           echo "available=true" >> $GITHUB_OUTPUT
-          echo "✓ Docker Buildx builder with cache export support already configured"
-          docker buildx inspect --bootstrap 2>&1 | head -5 || true
+          echo "✓ Docker Buildx available: $(docker buildx version)"
         else
           echo "available=false" >> $GITHUB_OUTPUT
-          echo "Docker Buildx builder needs setup (requires docker-container driver for cache export)"
+          echo "Docker Buildx not available"
         fi
 
-    - name: Setup Docker Buildx
-      if: (contains(steps.resolve.outputs.deps, 'docker') || contains(steps.resolve.outputs.deps, 'buildx')) && steps.buildx-check.outputs.available != 'true'
-      shell: bash
-      run: |
-        # Setup buildx with retry logic (Docker Hub can have transient 500 errors)
-        MAX_RETRIES=3
-        RETRY_DELAY=10
-
-        for attempt in $(seq 1 $MAX_RETRIES); do
-          echo "Setting up Docker Buildx (attempt $attempt/$MAX_RETRIES)..."
-
-          # Create and bootstrap buildx builder
-          if docker buildx create --name ci-builder --driver docker-container --use --bootstrap 2>&1; then
-            echo "✓ Docker Buildx builder created successfully"
-            docker buildx inspect
-            exit 0
-          fi
-
-          if [ $attempt -lt $MAX_RETRIES ]; then
-            echo "⚠️ Buildx setup failed, retrying in ${RETRY_DELAY}s..."
-            # Clean up failed builder if it exists
-            docker buildx rm ci-builder 2>/dev/null || true
-            sleep $RETRY_DELAY
-            RETRY_DELAY=$((RETRY_DELAY * 2))
-          fi
-        done
-
-        echo "❌ Failed to setup Docker Buildx after $MAX_RETRIES attempts"
-        exit 1
-
-    - name: Check if QEMU is already available
+    - name: Check if QEMU is available
       id: qemu-check
-      if: contains(steps.resolve.outputs.deps, 'buildx')
+      if: contains(steps.resolve.outputs.deps, 'buildx') && runner.os == 'Linux'
       shell: bash
       run: |
-        if docker run --rm --privileged multiarch/qemu-user-static --version &> /dev/null 2>&1; then
+        if docker run --rm --privileged multiarch/qemu-user-static --version &>/dev/null 2>&1; then
           echo "available=true" >> $GITHUB_OUTPUT
           echo "✓ QEMU already available"
         else
@@ -188,7 +156,7 @@ runs:
         fi
 
     - name: Setup QEMU
-      if: contains(steps.resolve.outputs.deps, 'buildx') && steps.qemu-check.outputs.available != 'true'
+      if: contains(steps.resolve.outputs.deps, 'buildx') && steps.qemu-check.outputs.available == 'false'
       shell: bash
       run: |
         # Setup QEMU with retry logic (Docker Hub can have transient 500 errors)
