@@ -13,6 +13,7 @@ use_directory_urls: false
 
 theme:
   name: material
+  custom_dir: /opt/mkdocs-overrides  # Theme override for mkdocs-exporter compatibility (absolute path in container)
   palette:
     - scheme: slate
       primary: indigo
