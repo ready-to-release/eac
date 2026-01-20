@@ -294,13 +294,13 @@ func processAllArtifactDerivations(ctx *cmdframework.ExecutionContext, buildCfg 
 		moduleOutputDir := paths.BuildOutputPath(ctx.WorkspaceRoot, moniker)
 
 		// Process derivations (compression, UPX, etc.)
-		if err := ProcessArtifactDerivations(moniker, mergedArtifacts, moduleOutputDir, requestedArtifacts, module.Metadata, nil); err != nil {
+		if err := ProcessArtifactDerivations(moniker, mergedArtifacts, moduleOutputDir, requestedArtifacts, module.Metadata, io.Discard); err != nil {
 			log.Warnf("Artifact derivation warning for %s: %v", moniker, err)
 			// Continue with other modules - derivation failure is not fatal
 		}
 
 		// Execute post-build steps
-		if exitCode := builders.ExecutePostBuildSteps(moniker, ctx.WorkspaceRoot, moduleOutputDir, nil); exitCode != 0 {
+		if exitCode := builders.ExecutePostBuildSteps(moniker, ctx.WorkspaceRoot, moduleOutputDir, io.Discard); exitCode != 0 {
 			log.Warnf("Post-build steps warning for %s: exit code %d", moniker, exitCode)
 			// Continue with other modules
 		}
