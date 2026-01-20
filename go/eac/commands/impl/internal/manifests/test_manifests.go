@@ -255,15 +255,15 @@ func GenerateTestManifests(
 }
 
 // CollectTestArtifacts walks the module test directory and adds artifacts to the manifest.
+// Walks component subdirectories (out/test/<module>/<component>/) to find test artifacts.
 func CollectTestArtifacts(manifest *implinternal.TestManifest, moduleTestDir string) {
-	// Walk packages directory to find test artifacts
-	packagesDir := filepath.Join(moduleTestDir, "packages")
-	if _, err := os.Stat(packagesDir); os.IsNotExist(err) {
-		return
-	}
-
-	if err := filepath.Walk(packagesDir, func(path string, info os.FileInfo, err error) error {
+	if err := filepath.Walk(moduleTestDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() {
+			return nil
+		}
+
+		// Skip manifest file
+		if strings.HasSuffix(path, "test.manifest.json") {
 			return nil
 		}
 
@@ -285,6 +285,9 @@ func CollectTestArtifacts(manifest *implinternal.TestManifest, moduleTestDir str
 		case strings.HasSuffix(path, "coverage.out"):
 			artifactType = implinternal.TestArtifactTypeCoverage
 			artifactID = "coverage-" + strings.ReplaceAll(filepath.Dir(relPath), "/", "-")
+		case strings.HasSuffix(path, "unit.json"):
+			artifactType = implinternal.TestArtifactTypeReport
+			artifactID = "unit-" + strings.ReplaceAll(filepath.Dir(relPath), "/", "-")
 		default:
 			// Skip other files
 			return nil

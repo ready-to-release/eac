@@ -55,11 +55,11 @@ func TestBuildModuleContext_ModuleNotFound(t *testing.T) {
 func TestBuildModuleContext_WithModule(t *testing.T) {
 	registry := modules.NewRegistry("0.1.0", "/test")
 
-	// Create a module contract with "api" component
+	// Create a module contract with "go" component
 	module := modules.NewModuleContract(contracts.BaseContract{
 		Moniker: "api-gateway",
 		Components: contracts.ModuleComponents{
-			"api": &contracts.ComponentEntry{Root: "go/test"},
+			"go": &contracts.ComponentEntry{Root: "go/test"},
 		},
 	}, "/test")
 
@@ -68,8 +68,9 @@ func TestBuildModuleContext_WithModule(t *testing.T) {
 
 	ctx := BuildModuleContext("api-gateway", registry, []string{"ia-2", "ia-5"})
 
-	assert.Equal(t, "api", ctx.ModuleType)
-	assert.Equal(t, "high", ctx.Criticality)
+	// Module type is determined by component type (go), criticality defaults to medium
+	assert.Equal(t, "go", ctx.ModuleType)
+	assert.Equal(t, "medium", ctx.Criticality)
 	assert.Equal(t, []string{"ia-2", "ia-5"}, ctx.ExistingControls)
 }
 

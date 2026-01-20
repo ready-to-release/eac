@@ -759,9 +759,10 @@ func (o *Orchestrator) RunComponentsLayered(layers [][]ComponentWork, worker Com
 		fmt.Fprintf(o.orchestratorOut, "Layer %d: %s (%d components)%s",
 			layerIdx+1, formatMonikerList(layerModules), len(layerWork), LineEnding)
 
-		// Initialize work items with correct indices
+		// Initialize work items with layer-relative indices
+		// (RunComponents creates a results array sized for this layer only)
 		for i := range layerWork {
-			layerWork[i].Index = len(allResults) + i
+			layerWork[i].Index = i
 		}
 
 		// Initialize scheduler for this layer

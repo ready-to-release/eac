@@ -161,6 +161,12 @@ func TestOutputPath(repoRoot, moniker string) string {
 	return filepath.Join(repoRoot, OutDir, TestDir, moniker)
 }
 
+// ComponentTestOutputPath returns the path to a component's test output directory.
+// Structure: out/test/<module>/<component>
+func ComponentTestOutputPath(repoRoot, module, component string) string {
+	return filepath.Join(repoRoot, OutDir, TestDir, module, component)
+}
+
 // LintOutputPath returns the path to a module's lint output directory.
 func LintOutputPath(repoRoot, moniker string) string {
 	return filepath.Join(repoRoot, OutDir, LintDir, moniker)
@@ -346,6 +352,12 @@ func defaultsRoot(repoRoot string) string {
 // SecurityOutputPath returns the path to security scan output.
 func SecurityOutputPath(repoRoot, scanner string) string {
 	return filepath.Join(repoRoot, OutDir, SecurityDir, scanner)
+}
+
+// ComponentScanOutputPath returns the path to a component's scan output directory.
+// Structure: out/scan/<module>/<component>
+func ComponentScanOutputPath(repoRoot, module, component string) string {
+	return filepath.Join(repoRoot, OutDir, SecurityDir, module, component)
 }
 
 // RiskProfilePath returns the path to a module's OSCAL profile.

@@ -41,6 +41,9 @@ type Summary struct {
 
 	// Output directory
 	OutputDir string // out/build/<module>/ or out/test/<module>/
+
+	// Component count - total components to process across all modules
+	ComponentCount int
 }
 
 // Flags captures all command-line flags that affect execution.
@@ -236,6 +239,12 @@ func (s *Summary) SetArtifactValidation(info *ArtifactValidationInfo) *Summary {
 // SetOutputDir sets the output directory path.
 func (s *Summary) SetOutputDir(dir string) *Summary {
 	s.OutputDir = dir
+	return s
+}
+
+// SetComponentCount sets the total number of components to process.
+func (s *Summary) SetComponentCount(count int) *Summary {
+	s.ComponentCount = count
 	return s
 }
 

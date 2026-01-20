@@ -118,6 +118,15 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	sc.Step(`^the type "([^"]*)" has default source pattern "([^"]*)"$`, func(typeName, pattern string) error {
 		return theTypeHasDefaultSourcePattern(typeName, pattern)
 	})
+	sc.Step(`^the type "([^"]*)" has builder "([^"]*)"$`, func(typeName, builder string) error {
+		return theTypeHasBuilder(typeName, builder)
+	})
+	sc.Step(`^the type "([^"]*)" has extension "([^"]*)"$`, func(typeName, ext string) error {
+		return theTypeHasExtension(typeName, ext)
+	})
+	sc.Step(`^the module "([^"]*)" component "([^"]*)" has root "([^"]*)"$`, func(moniker, comp, root string) error {
+		return theModuleComponentHasRoot(moniker, comp, root)
+	})
 
 	// Then steps - repository paths assertions
 	sc.Step(`^the repository paths\.specs_root is "([^"]*)"$`, func(expected string) error {
@@ -537,6 +546,54 @@ func theTypeHasDefaultSourcePattern(typeName, pattern string) error {
 		}
 	}
 	return fmt.Errorf("type %q source patterns %v do not contain %q", typeName, pt.Files.Source, pattern)
+}
+
+func theTypeHasBuilder(typeName, builder string) error {
+	if state.cfg == nil || state.cfg.ComponentTypes == nil {
+		return fmt.Errorf("component types config not loaded")
+	}
+	pt := state.cfg.ComponentTypes.Get(typeName)
+	if pt == nil {
+		return fmt.Errorf("type %q not found", typeName)
+	}
+	if pt.Builder != builder {
+		return fmt.Errorf("type %q has builder %q, expected %q", typeName, pt.Builder, builder)
+	}
+	return nil
+}
+
+func theTypeHasExtension(typeName, ext string) error {
+	if state.cfg == nil || state.cfg.ComponentTypes == nil {
+		return fmt.Errorf("component types config not loaded")
+	}
+	pt := state.cfg.ComponentTypes.Get(typeName)
+	if pt == nil {
+		return fmt.Errorf("type %q not found", typeName)
+	}
+	for _, e := range pt.Extensions {
+		if e == ext {
+			return nil
+		}
+	}
+	return fmt.Errorf("type %q extensions %v do not contain %q", typeName, pt.Extensions, ext)
+}
+
+func theModuleComponentHasRoot(moniker, comp, expectedRoot string) error {
+	if state.cfg == nil || state.cfg.Repository == nil {
+		return fmt.Errorf("config not loaded")
+	}
+	module, found := state.cfg.Repository.GetModule(moniker)
+	if !found {
+		return fmt.Errorf("module %q not found", moniker)
+	}
+	entry, ok := module.Components[comp]
+	if !ok || entry == nil {
+		return fmt.Errorf("module %q does not have component %q", moniker, comp)
+	}
+	if entry.Root != expectedRoot {
+		return fmt.Errorf("module %q component %q has root %q, expected %q", moniker, comp, entry.Root, expectedRoot)
+	}
+	return nil
 }
 
 // ============================================================================

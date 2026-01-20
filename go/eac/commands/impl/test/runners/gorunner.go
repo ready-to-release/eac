@@ -219,13 +219,17 @@ func (r *GoRunner) Execute(pkgPath string, tests []testing.TestReference, tuiWri
 
 	actualPkgDir := filepath.Join(cfg.WorkspaceRoot, relPkgPath)
 
-	// Create log directory using module-based output path if available
-	// Always sanitize to handle colons (Windows doesn't allow : in paths)
-	outputPath := cfg.ModuleOutputPath
-	if outputPath == "" {
-		outputPath = pkgPath
+	// Use pre-created OutputDir if set, otherwise create based on module path
+	var logDir string
+	if cfg.OutputDir != "" {
+		logDir = cfg.OutputDir
+	} else {
+		outputPath := cfg.ModuleOutputPath
+		if outputPath == "" {
+			outputPath = pkgPath
+		}
+		logDir = filepath.Join(cfg.TestRunDir, sanitizePathForLog(outputPath))
 	}
-	logDir := filepath.Join(cfg.TestRunDir, sanitizePathForLog(outputPath))
 	if err := os.MkdirAll(logDir, 0o755); err != nil {
 		fmt.Fprintf(tuiWriter, "Failed to create log directory: %v\n", err)
 		result.PackageFailed = true

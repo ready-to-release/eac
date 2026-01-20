@@ -62,6 +62,11 @@ type RunConfig struct {
 	// Format: "<module-moniker>/<subpath>" e.g., "eac-core/contracts"
 	// This is used instead of the raw package path for cleaner output organization.
 	ModuleOutputPath string
+
+	// OutputDir is the pre-created output directory for this test.
+	// When set, runners use this directory instead of creating their own.
+	// Structure: out/test/<module>/<component>
+	OutputDir string
 }
 
 // TestTypeRunner defines the interface for test type-specific runners.

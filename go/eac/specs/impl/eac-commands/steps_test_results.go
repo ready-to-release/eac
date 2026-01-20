@@ -477,22 +477,28 @@ func registerTestResultsSteps(sc *godog.ScenarioContext, ctx *internal.TestConte
 		repositoryYml := `modules:
   - moniker: eac-core
     name: EAC Core
-    type: go
+    components:
+      go: go/eac/core
   - moniker: eac-commands
     name: EAC Commands
-    type: go
+    components:
+      go: go/eac/commands
   - moniker: eac-test
     name: EAC Test
-    type: go
+    components:
+      go: go/eac/test
   - moniker: eac-utils
     name: EAC Utils
-    type: go
+    components:
+      go: go/eac/utils
   - moniker: eac-types
     name: EAC Types
-    type: go
+    components:
+      go: go/eac/types
   - moniker: eac-specs
     name: EAC Specs
-    type: go
+    components:
+      go: go/eac/specs
 `
 		repositoryYmlPath := filepath.Join(".r2r", "eac", "repository.yml")
 		if err := internal.CreateFile(ctx, repositoryYmlPath, repositoryYml); err != nil {

@@ -1,5 +1,0 @@
-types:
-  - name: go
-    description: Go module
-    capabilities:
-      - go_module

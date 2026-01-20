@@ -324,6 +324,53 @@ func (ctx *TestExecutionContext) runPackageTests(modulePath string, tests []test
 	}
 }
 
+// runPackageTestsWithOutputDir executes tests for a single package with a pre-specified output directory.
+// This is used by component-level execution where the orchestrator creates the output directory.
+func (ctx *TestExecutionContext) runPackageTestsWithOutputDir(modulePath string, tests []testing.TestReference, tuiWriter io.Writer, outputDir string) PackageResult {
+	// Look up original package path for test execution
+	originalPkgPath := ctx.modulePathToPkg[modulePath]
+	if originalPkgPath == "" {
+		originalPkgPath = modulePath
+	}
+
+	// Determine test type and get appropriate runner
+	testType := getPackageTestType(tests)
+	testRunner := runners.Get(testType)
+
+	// Extract module moniker from modulePath
+	moduleMoniker := modulePath
+	if idx := strings.Index(modulePath, "/"); idx > 0 {
+		moduleMoniker = modulePath[:idx]
+	}
+
+	// Get effective test run dir (routes to correct suite folder for composite suites)
+	effectiveTestRunDir := ctx.getEffectiveTestRunDir(tests)
+
+	cfg := runners.RunConfig{
+		WorkspaceRoot:    ctx.workspaceRoot,
+		TestRunDir:       effectiveTestRunDir,
+		Coverage:         ctx.coverage,
+		SuiteTagFilter:   ctx.suiteTagFilter,
+		Parallelism:      ctx.testParallelism,
+		ModuleMoniker:    moduleMoniker,
+		ModuleOutputPath: modulePath,
+		OutputDir:        outputDir, // Pre-created output directory
+	}
+
+	runResult := testRunner.Execute(originalPkgPath, tests, tuiWriter, cfg)
+	return PackageResult{
+		ModuleMoniker: runResult.ModuleMoniker,
+		PackageName:   runResult.PackageName,
+		LogFilePath:   runResult.LogFilePath,
+		TestsPassed:   runResult.TestsPassed,
+		TestsFailed:   runResult.TestsFailed,
+		TestsSkipped:  runResult.TestsSkipped,
+		TestsTotal:    runResult.TestsTotal,
+		PackageFailed: runResult.PackageFailed,
+		Duration:      runResult.Duration,
+	}
+}
+
 // runTscucumberPackageTests executes TypeScript cucumber-js tests.
 func (ctx *TestExecutionContext) runTscucumberPackageTests(pkgPath string, tests []testing.TestReference, tuiWriter io.Writer, relPkgPath, relFeatureFile string) PackageResult {
 	start := time.Now()

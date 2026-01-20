@@ -218,14 +218,13 @@ func createModuleContract(ctx *internal.TestContext, module, sourcePath string) 
 		return fmt.Errorf("modules field is not an array")
 	}
 
-	// Append our test module
+	// Append our test module using new component-based format
 	testModule := map[string]interface{}{
 		"moniker":     module,
 		"name":        fmt.Sprintf("Test Module %s", module),
-		"type":        "go-module",
 		"description": "Test module for BDD tests",
-		"files": map[string]interface{}{
-			"root": sourcePath,
+		"components": map[string]interface{}{
+			"go": sourcePath,
 		},
 	}
 	modules = append(modules, testModule)

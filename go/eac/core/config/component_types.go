@@ -31,6 +31,11 @@ type ComponentType struct {
 	// Examples: go=1, npm=1, mkdocs=4 (uses Docker), buildx=4
 	BuildWeight int `yaml:"build_weight,omitempty" json:"build_weight,omitempty"`
 
+	// TestWeight is the resource weight for parallel test scheduling.
+	// Higher weight = more resource pressure. Default is 1.
+	// Examples: go=1, typescript=2 (npm install overhead)
+	TestWeight int `yaml:"test_weight,omitempty" json:"test_weight,omitempty"`
+
 	// BuildAfter specifies component types that must complete before this one
 	// within the same module. Used for intra-module dependency ordering.
 	// Example: ["go"] means this component waits for the "go" component to finish.
@@ -81,6 +86,15 @@ func (c *ComponentType) GetBuildWeight() int {
 		return 1
 	}
 	return c.BuildWeight
+}
+
+// GetTestWeight returns the test weight for parallel scheduling.
+// Returns 1 as default if not specified.
+func (c *ComponentType) GetTestWeight() int {
+	if c.TestWeight <= 0 {
+		return 1
+	}
+	return c.TestWeight
 }
 
 // GetBuildAfter returns the list of component types that must complete

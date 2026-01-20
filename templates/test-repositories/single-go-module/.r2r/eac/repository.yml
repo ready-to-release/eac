@@ -1,6 +1,5 @@
 modules:
   - moniker: test-module
     name: Test Module
-    type: go
-    files:
-      root: go/test-module
+    components:
+      go: go/test-module
