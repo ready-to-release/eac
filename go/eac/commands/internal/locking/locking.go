@@ -103,3 +103,16 @@ func LintConfig(moniker, baseDir string) Config {
 		ActionVerb:   "already being linted",
 	}
 }
+
+// ManualTestFileConfig returns a Config for locking manual test result files.
+// Use this when importing/merging manual test results to prevent concurrent writes.
+func ManualTestFileConfig(filePath, baseDir string) Config {
+	// Use file base name as identifier
+	identifier := filepath.Base(filePath)
+	return Config{
+		BaseDir:      baseDir,
+		Identifier:   identifier,
+		ResourceType: "manual test file",
+		ActionVerb:   "already being written",
+	}
+}
