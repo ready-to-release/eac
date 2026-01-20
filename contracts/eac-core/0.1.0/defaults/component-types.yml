@@ -15,6 +15,7 @@ component-types:
   go:
     extensions: [".go"]
     builder: go
+    scanners: [sbom, vuln, secrets, sast]
     requirements: [go]
     test_weight: 1
     files:
@@ -26,6 +27,7 @@ component-types:
   typescript:
     extensions: [".ts", ".tsx"]
     builder: npm
+    scanners: [sbom, vuln, secrets, sast]
     requirements: [npm]
     test_weight: 2
     files:
@@ -36,12 +38,14 @@ component-types:
   javascript:
     extensions: [".js", ".jsx", ".mjs", ".cjs"]
     builder: npm
+    scanners: [sbom, vuln, secrets, sast]
     requirements: [npm]
 
   # Container component - Docker/Buildx builds
   dockerfile:
     extensions: []  # Dockerfile has no standard extension
     builder: buildx
+    scanners: [sbom, vuln, secrets, iac]
     requirements: [docker]
     files:
       source: ["Dockerfile"]
@@ -114,6 +118,7 @@ component-types:
   pwsh:
     extensions: [".ps1", ".psm1", ".psd1"]
     builder: scripts
+    scanners: [secrets]
     requirements: [pwsh]
     files:
       source: ["**/*.ps1", "**/*.psm1"]
@@ -124,6 +129,7 @@ component-types:
   bash:
     extensions: [".sh", ".bash"]
     builder: scripts
+    scanners: [secrets]
     requirements: [bash]
     files:
       source: ["**/*.sh", "**/*.bash"]

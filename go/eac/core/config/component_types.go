@@ -26,6 +26,10 @@ type ComponentType struct {
 	// Builder is the build handler to use (e.g., "go", "mkdocs", "buildx")
 	Builder string `yaml:"builder,omitempty" json:"builder,omitempty"`
 
+	// Scanners are the default security scanners for this component type (e.g., ["sbom", "vuln", "secrets", "sast"])
+	// Empty or omitted means the component type is not scannable.
+	Scanners []string `yaml:"scanners,omitempty" json:"scanners,omitempty"`
+
 	// BuildWeight is the resource weight for parallel build scheduling.
 	// Higher weight = more resource pressure. Default is 1.
 	// Examples: go=1, npm=1, mkdocs=4 (uses Docker), buildx=4
@@ -77,6 +81,17 @@ func (c *ComponentType) GetRoot(moniker, explicitRoot string) string {
 // HasBuilder returns true if this component type has a builder configured.
 func (c *ComponentType) HasBuilder() bool {
 	return c.Builder != ""
+}
+
+// IsScannable returns true if this component type has scanners configured.
+// Component types without scanners (or with empty scanners) are not scannable.
+func (c *ComponentType) IsScannable() bool {
+	return len(c.Scanners) > 0
+}
+
+// GetScanners returns the list of default scanners for this component type.
+func (c *ComponentType) GetScanners() []string {
+	return c.Scanners
 }
 
 // GetBuildWeight returns the build weight for parallel scheduling.

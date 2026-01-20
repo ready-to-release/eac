@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/books"
 	"github.com/ready-to-release/eac/go/eac/core/config"
@@ -92,12 +93,13 @@ type mkdocsDockerConfig struct {
 // For site builds, module docker_build config is respected.
 func getMkDocsDockerConfig(module *modules.ModuleContract, workspaceRoot string, isPDF bool) mkdocsDockerConfig {
 	// Defaults based on output type
+	// Use :local tag for local builds to match what buildx creates
 	var defaultImage, defaultContainer string
 	if isPDF {
-		defaultImage = "cli-mkdocs-pdf:latest"
+		defaultImage = "mkdocs-pdf:local"
 		defaultContainer = "mkdocs-pdf"
 	} else {
-		defaultImage = "cli-mkdocs-site:latest"
+		defaultImage = "mkdocs-site:local"
 		defaultContainer = "mkdocs-site"
 	}
 
@@ -433,19 +435,26 @@ func buildMkDocsModule(module *modules.ModuleContract, workspaceRoot, outputDir 
 	return 0
 }
 
-// ensureMkDocsImage ensures the cli-mkdocs Docker image is available.
-// First checks if image exists locally, then tries to pull from GHCR,
+// ensureMkDocsImage ensures the mkdocs Docker image is available and up-to-date.
+// First checks if image exists locally and is not stale, then tries to pull from GHCR,
 // finally builds from Dockerfile if needed.
 // In DinD mode, dockerfilePath and contextPath are host (Windows) paths.
 func ensureMkDocsImage(imageName, dockerfilePath, contextPath string, logWriter io.Writer) error {
-	// Check if image already exists locally
+	// Check if image already exists locally and is up-to-date
 	if imageExists(imageName) {
-		Logln(logWriter, "   Docker image exists: %s", imageName)
-		return nil
+		if isImageStale(imageName, contextPath, logWriter) {
+			Logln(logWriter, "   Docker image is stale, rebuilding: %s", imageName)
+		} else {
+			Logln(logWriter, "   Docker image exists: %s", imageName)
+			return nil
+		}
 	}
 
+	// Extract container name from image (e.g., "mkdocs-pdf:local" -> "mkdocs-pdf")
+	containerName := strings.Split(imageName, ":")[0]
+
 	// Try to pull from GHCR (pre-built images for CI performance)
-	ghcrImage := "ghcr.io/ready-to-release/eac/" + imageName
+	ghcrImage := "ghcr.io/ready-to-release/" + containerName + ":latest"
 	Logln(logWriter, "   Pulling Docker image: %s", ghcrImage)
 	pullExitCode := RunCommandWithLog("", logWriter, "docker", "pull", ghcrImage)
 	if pullExitCode == 0 {
@@ -478,6 +487,59 @@ func imageExists(imageName string) bool {
 		return false
 	}
 	return strings.TrimSpace(string(output)) != ""
+}
+
+// isImageStale checks if any file in the context directory was modified after the image was created.
+// Returns true if the image should be rebuilt.
+func isImageStale(imageName, contextPath string, logWriter io.Writer) bool {
+	// Get image creation time
+	cmd := exec.Command("docker", "inspect", "--format", "{{.Created}}", imageName)
+	output, err := cmd.Output()
+	if err != nil {
+		// Can't determine image creation time, assume stale
+		return true
+	}
+
+	// Parse image creation time (RFC3339 format)
+	imageTimeStr := strings.TrimSpace(string(output))
+	// Docker returns time in RFC3339Nano format
+	imageTime, err := parseDockerTime(imageTimeStr)
+	if err != nil {
+		Logln(logWriter, "   Warning: Could not parse image creation time: %v", err)
+		return true
+	}
+
+	// Check if any file in context was modified after image creation
+	var newestFileTime int64
+	err = filepath.Walk(contextPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil // Skip files we can't access
+		}
+		if info.IsDir() {
+			return nil
+		}
+		if info.ModTime().Unix() > newestFileTime {
+			newestFileTime = info.ModTime().Unix()
+		}
+		return nil
+	})
+	if err != nil {
+		return true // Can't walk context, assume stale
+	}
+
+	// Image is stale if any context file is newer
+	return newestFileTime > imageTime.Unix()
+}
+
+// parseDockerTime parses Docker's timestamp format (RFC3339Nano)
+func parseDockerTime(s string) (time.Time, error) {
+	// Docker returns time in RFC3339Nano format: 2024-01-20T10:30:00.123456789Z
+	t, err := time.Parse(time.RFC3339Nano, s)
+	if err != nil {
+		// Try RFC3339 without nanoseconds
+		t, err = time.Parse(time.RFC3339, s)
+	}
+	return t, err
 }
 
 // buildMkDocsWithTheme builds a PDF with a specific theme (dark or light)
@@ -619,7 +681,6 @@ func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName, bo
 	buildArgs = append(buildArgs,
 		imageName,
 		"mkdocs", "build",
-		"--verbose", // Show detailed output for debugging PDF rendering errors
 		"-f", dockerConfigPath,
 		"--site-dir", dockerSiteDir,
 	)

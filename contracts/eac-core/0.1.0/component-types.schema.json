@@ -21,10 +21,10 @@
       "properties": {
         "extensions": {
           "type": "array",
-          "description": "File extensions that belong to this component type (e.g., [\".go\"], [\".md\"]). Empty for non-file-based components.",
+          "description": "File extensions that belong to this component type (e.g., [\".go\"], [\".md\"], [\".go.txt\"]). Empty for non-file-based components.",
           "items": {
             "type": "string",
-            "pattern": "^\\.[a-zA-Z0-9]+$"
+            "pattern": "^\\.[a-zA-Z0-9]+(\\.[a-zA-Z0-9]+)*$"
           },
           "default": []
         },
@@ -32,6 +32,14 @@
           "type": "string",
           "description": "The build handler to use for this component type (e.g., \"go\", \"mkdocs\", \"buildx\")",
           "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "scanners": {
+          "type": "array",
+          "description": "Default scanners for this component type. Omit or empty = not scannable.",
+          "items": {
+            "type": "string",
+            "enum": ["sbom", "vuln", "secrets", "iac", "compliance", "sast"]
+          }
         },
         "build_weight": {
           "type": "integer",

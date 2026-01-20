@@ -35,8 +35,19 @@ func FlattenModulesToScanComponentWork(ctx *cmdframework.ExecutionContext) [][]o
 			continue
 		}
 
-		// Get scannable components for this module
-		scannableComponents := module.GetEnabledComponents()
+		// Get enabled components for this module
+		enabledComponents := module.GetEnabledComponents()
+
+		// Filter to only scannable components
+		var scannableComponents []string
+		for _, componentName := range enabledComponents {
+			compTypeName := module.Components.GetComponentType(componentName)
+			compType := cfg.ComponentTypes.Get(compTypeName)
+			if compType != nil && compType.IsScannable() {
+				scannableComponents = append(scannableComponents, componentName)
+			}
+		}
+
 		if len(scannableComponents) == 0 {
 			// Module has no scannable components - create a placeholder
 			allWork = append(allWork, orchestrator.ComponentWork{

@@ -10,7 +10,7 @@ Feature: security_zap
     Scenario: Perform DAST scan with mocked tool
       When I run the command "scan zap eac-core --target http://localhost:8080"
       Then the exit code is 0
-      And evidence files should exist in directory "out/scan/eac-core/zap/"
+      And evidence files should exist in directory "out/scan/eac-core/go/"
       And the latest evidence file should have JSON field "module" with value "eac-core"
       And the latest evidence file should have JSON field "scanner" with value "zap"
       And the latest evidence file should have JSON field "timestamp" matching RFC3339 format
@@ -20,7 +20,7 @@ Feature: security_zap
     Scenario: ZAP scan with full scan type
       When I run the command "scan zap eac-core --target http://localhost:8080 --scan-type full"
       Then the exit code is 0
-      And evidence files should exist in directory "out/scan/eac-core/zap/"
+      And evidence files should exist in directory "out/scan/eac-core/go/"
 
     Scenario: ZAP scan with debug logging
       When I run the command "scan zap eac-core --target http://localhost:8080 --debug"
