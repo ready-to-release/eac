@@ -14,6 +14,7 @@ package show
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
@@ -232,17 +233,40 @@ func formatArtifactDetails(r config.ArtifactVerificationResult) string {
 func buildDiagnosticsSection(f *SummaryFormatter, module *config.Module, cfg *config.EACConfig) string {
 	var diagnostics string
 
-	// Read actual build log from the correct output directory
-	logPath := cfg.Repository.BuildLogPath(module.Moniker)
-	logContent := readLogTail(logPath, 50) // Last 50 lines
+	// Search for component-level build logs in out/build/<module>/<component>/build.log
+	moduleDir := cfg.Repository.BuildOutputPath(module.Moniker)
+	var foundLogs []string
 
-	if logContent != "" {
-		diagnostics += f.Section(Emoji("diagnostics")+" Build Log (last 50 lines)", f.CodeBlock("", logContent))
-	} else {
-		diagnostics += f.Section(Emoji("diagnostics")+" Diagnostics", fmt.Sprintf("Build failed - no log file found at %s", logPath))
+	entries, err := os.ReadDir(moduleDir)
+	if err == nil {
+		for _, entry := range entries {
+			if !entry.IsDir() {
+				continue
+			}
+			logPath := filepath.Join(moduleDir, entry.Name(), "build.log")
+			if _, err := os.Stat(logPath); err == nil {
+				foundLogs = append(foundLogs, logPath)
+			}
+		}
 	}
 
-	// Show timing data if available
+	if len(foundLogs) > 0 {
+		// Show logs from all components (most relevant for diagnosing failures)
+		for _, logPath := range foundLogs {
+			component := filepath.Base(filepath.Dir(logPath))
+			logContent := readLogTail(logPath, 30) // Last 30 lines per component
+			if logContent != "" {
+				diagnostics += f.Section(
+					fmt.Sprintf("%s Build Log: %s (last 30 lines)", Emoji("diagnostics"), component),
+					f.CodeBlock("", logContent),
+				)
+			}
+		}
+	} else {
+		diagnostics += f.Section(Emoji("diagnostics")+" Diagnostics", fmt.Sprintf("Build failed - no log files found in %s", moduleDir))
+	}
+
+	// Show timing data if available (check both module and component level)
 	timingPath := cfg.Repository.BuildTimingPath(module.Moniker)
 	if timing, err := os.ReadFile(timingPath); err == nil {
 		diagnostics += f.Section(Emoji("time")+" Timing", string(timing))
