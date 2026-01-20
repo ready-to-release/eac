@@ -88,18 +88,18 @@ jobs:
         run: |
           echo "Validating downloaded PDF artifacts..."
 
-          # Check PDFs exist
-          PDF_COUNT=$(find "out/build/books" -maxdepth 1 -name "*.pdf" -type f 2>/dev/null | wc -l)
+          # Check PDFs exist in component directories (out/build/books/<book>/<book>.pdf)
+          PDF_COUNT=$(find "out/build/books" -maxdepth 2 -name "*.pdf" -type f 2>/dev/null | wc -l)
           TOTAL_SIZE=$(du -sh "out/build/books" 2>/dev/null | cut -f1 || echo "0")
 
           if [ "$PDF_COUNT" -eq 0 ]; then
-            echo "❌ No PDF files found in out/build/books/"
-            ls -la out/build/books/ 2>/dev/null || echo "Directory does not exist"
+            echo "❌ No PDF files found in out/build/books/<book>/"
+            ls -laR out/build/books/ 2>/dev/null || echo "Directory does not exist"
             exit 1
           fi
 
           echo "✅ Found $PDF_COUNT PDF files ($TOTAL_SIZE)"
-          find "out/build/books" -maxdepth 1 -name "*.pdf" -type f -exec basename {} \;
+          find "out/build/books" -maxdepth 2 -name "*.pdf" -type f -exec basename {} \;
 
           echo "pdf_count=$PDF_COUNT" >> $GITHUB_OUTPUT
           echo "total_size=$TOTAL_SIZE" >> $GITHUB_OUTPUT
@@ -121,8 +121,8 @@ jobs:
 
           HEADER
 
-          # Generate list items dynamically from actual PDFs
-          for pdf in out/build/books/*.pdf; do
+          # Generate list items dynamically from actual PDFs (in component directories)
+          for pdf in $(find out/build/books -maxdepth 2 -name "*.pdf" -type f); do
             FILENAME=$(basename "$pdf")
             SIZE=$(du -h "$pdf" | cut -f1)
 
@@ -159,10 +159,10 @@ jobs:
             exit 0
           fi
 
-          PDF_FILES=$(find out/build/books -maxdepth 1 -name "*.pdf" -type f 2>/dev/null | tr '\n' ' ')
+          PDF_FILES=$(find out/build/books -maxdepth 2 -name "*.pdf" -type f 2>/dev/null | tr '\n' ' ')
 
           if [ -z "$PDF_FILES" ]; then
-            echo "❌ No PDF files found in out/build/books/"
+            echo "❌ No PDF files found in out/build/books/<book>/"
             exit 1
           fi
 

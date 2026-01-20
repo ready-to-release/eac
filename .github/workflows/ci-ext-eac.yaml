@@ -134,7 +134,7 @@ jobs:
       - name: Setup r2r CLI
         run: |
           echo "Setting up r2r CLI from build artifacts..."
-          cp out/build/r2r-cli/r2r-linux-amd64 ./r2r
+          cp out/build/r2r-cli/go/r2r-linux-amd64 ./r2r
           chmod +x ./r2r
           echo "✓ r2r-cli ready"
 
