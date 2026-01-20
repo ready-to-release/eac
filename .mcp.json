@@ -7,7 +7,9 @@
         "run",
         "./go/eac/mcp/commands/main.go"
       ],
-      "env": {}
+      "env": {
+        "EAC_USE_DIRECT_BINARY": "true"
+      }
     },
     "github": {
       "type": "stdio",

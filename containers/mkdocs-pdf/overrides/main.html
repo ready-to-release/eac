@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{#
+  Material theme override for mkdocs-exporter compatibility
+
+  ## Problem
+  The mkdocs-exporter plugin (v6.2.0+) uses Playwright to render pages as PDFs.
+  It waits for the HTML body element to have the attribute mkdocs-exporter="true"
+  to signal that the page is fully loaded and ready for PDF rendering.
+
+  The Material theme's default templates do not include this attribute, causing
+  Playwright to timeout after 60 seconds with the error:
+    TimeoutError: Locator.wait_for: Timeout 60000ms exceeded.
+    waiting for locator("body[mkdocs-exporter=\"true\"]") to be visible
+
+  ## Solution
+  This override injects the required attribute via JavaScript immediately when
+  the DOM is ready. The attribute signals to mkdocs-exporter's Playwright
+  browser that rendering can proceed.
+
+  ## Technical Details
+  - Uses the extrahead block to inject JavaScript before page load
+  - Sets body[mkdocs-exporter="true"] on DOMContentLoaded event
+  - Logs confirmation to console for debugging
+  - Works with both dark and light theme PDF builds
+
+  ## References
+  - https://github.com/adrienbrignon/mkdocs-exporter/issues/62
+  - https://github.com/adrienbrignon/mkdocs-exporter/issues/59
+  - https://adrienbrignon.github.io/mkdocs-exporter/
+
+  ## Testing
+  To verify this fix works:
+  1. Build repository-report book: r2r build books repository-report
+  2. Check for successful PDF generation in out/build/books/repository-report/
+  3. Verify no timeout errors in build logs
+#}
+
+{% block extrahead %}
+  {{ super() }}
+  <script>
+    // Set mkdocs-exporter attribute immediately when DOM is ready
+    // This signals to the Playwright browser that the page is ready for PDF rendering
+    document.addEventListener('DOMContentLoaded', function() {
+      document.body.setAttribute('mkdocs-exporter', 'true');
+      console.log('mkdocs-exporter: body attribute set - page ready for PDF rendering');
+    });
+  </script>
+{% endblock %}

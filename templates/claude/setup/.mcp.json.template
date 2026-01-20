@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "commands": {
+      "command": "eac-mcp-commands"
+    }
+  }
+}

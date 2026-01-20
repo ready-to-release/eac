@@ -170,21 +170,32 @@ func getCommandTools() []Tool {
 	return tools
 }
 
-// getCommands calls the pre-built commands binary to get command info.
+// getCommands calls the commands system to get command info.
+// Default: Uses r2r eac (Docker-based)
+// Override: Uses direct binary if EAC_USE_DIRECT_BINARY=true
 func getCommands() CommandTree {
 	repoRoot := findRepoRoot()
 	if repoRoot == "" {
 		return CommandTree{Commands: []CommandInfo{}}
 	}
 
-	// Use the canonical binary path
-	binaryPath := paths.CommandsBinaryPath(repoRoot)
-	cmd := exec.Command(binaryPath, "get", "commands")
-	cmd.Dir = repoRoot
+	useDirectBinary := os.Getenv("EAC_USE_DIRECT_BINARY") == "true"
+
+	var cmd *exec.Cmd
+	if useDirectBinary {
+		// Development: Direct binary
+		binaryPath := paths.CommandsBinaryPath(repoRoot)
+		cmd = exec.Command(binaryPath, "get", "commands")
+		cmd.Dir = repoRoot
+	} else {
+		// Default/Production: Use r2r eac (Docker)
+		cmd = exec.Command("r2r", "eac", "get", "commands")
+		cmd.Dir = repoRoot
+	}
 
 	output, err := cmd.Output()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting commands (binary: %s): %v\n", binaryPath, err)
+		fmt.Fprintf(os.Stderr, "Error getting commands: %v\n", err)
 		return CommandTree{Commands: []CommandInfo{}}
 	}
 
@@ -211,7 +222,9 @@ func callTool(params *CallToolParams) ToolResult {
 	return textResult(output)
 }
 
-// execCommand executes a command via the pre-built commands binary.
+// execCommand executes a command via the commands system.
+// Default: Uses r2r eac (Docker-based)
+// Override: Uses direct binary if EAC_USE_DIRECT_BINARY=true
 func execCommand(commandName, additionalArgs string) string {
 	repoRoot := findRepoRoot()
 	if repoRoot == "" {
@@ -224,14 +237,25 @@ func execCommand(commandName, additionalArgs string) string {
 		cmdParts = append(cmdParts, strings.Fields(additionalArgs)...)
 	}
 
-	// Use the canonical binary path
-	binaryPath := paths.CommandsBinaryPath(repoRoot)
-	cmd := exec.Command(binaryPath, cmdParts...)
-	cmd.Dir = repoRoot
+	useDirectBinary := os.Getenv("EAC_USE_DIRECT_BINARY") == "true"
+
+	var cmd *exec.Cmd
+	if useDirectBinary {
+		// Development: Direct binary
+		binaryPath := paths.CommandsBinaryPath(repoRoot)
+		cmd = exec.Command(binaryPath, cmdParts...)
+		cmd.Dir = repoRoot
+	} else {
+		// Default/Production: Use r2r eac (Docker)
+		// Prepend "eac" to command parts: r2r eac <command> <args>
+		args := append([]string{"eac"}, cmdParts...)
+		cmd = exec.Command("r2r", args...)
+		cmd.Dir = repoRoot
+	}
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Sprintf("Error executing command '%s' (binary: %s): %v\n\nOutput:\n%s", commandName, binaryPath, err, string(output))
+		return fmt.Sprintf("Error executing command '%s': %v\n\nOutput:\n%s", commandName, err, string(output))
 	}
 
 	return strings.TrimSpace(string(output))
