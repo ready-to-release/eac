@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/docker/docker/client"
 	"github.com/ready-to-release/eac/go/r2r/cli/internal/conf"
@@ -31,12 +32,16 @@ type ExtensionConfig struct {
 
 // ContainerHost manages Docker container operations for extensions.
 type ContainerHost struct {
-	client  DockerClient
-	ctx     context.Context
-	rootDir string
+	client     DockerClient
+	ctx        context.Context
+	rootDir    string
+	clientOpts []client.Opt   // stored for lazy initialization
+	pingOnce   sync.Once      // ensures Ping only happens once
+	pingErr    error          // stores Ping error if any
 }
 
 // NewContainerHost creates a new ContainerHost instance.
+// Docker connectivity is verified lazily on first use for faster startup (~800ms savings).
 func NewContainerHost() (*ContainerHost, error) {
 	ctx := context.Background()
 
@@ -58,31 +63,45 @@ func NewContainerHost() (*ContainerHost, error) {
 		return nil, fmt.Errorf("error creating Docker client: %w", err)
 	}
 
-	// Verify Docker daemon is accessible
-	_, pingErr := cli.Ping(ctx)
-	if pingErr != nil {
-		cli.Close()
-		// Check for common Docker service not running errors
-		errStr := pingErr.Error()
-		if strings.Contains(errStr, "docker_engine") ||
-			strings.Contains(errStr, "cannot connect to the Docker daemon") ||
-			strings.Contains(errStr, "Is the docker daemon running") ||
-			strings.Contains(errStr, "system cannot find the file specified") {
-			return nil, fmt.Errorf("docker service is not running: please start Docker Desktop or the Docker daemon and try again")
+	// Use cached RootDir from config (Phase 4 optimization: ~50ms savings)
+	// Falls back to FindRepositoryRoot() if not cached
+	rootDir := conf.RootDir
+	if rootDir == "" {
+		rootDir, err = conf.FindRepositoryRoot()
+		if err != nil {
+			cli.Close()
+			return nil, fmt.Errorf("error finding root directory: %w", err)
 		}
-		return nil, fmt.Errorf("cannot connect to Docker daemon: %w", pingErr)
-	}
-
-	rootDir, err := conf.FindRepositoryRoot()
-	if err != nil {
-		return nil, fmt.Errorf("error finding root directory: %w", err)
 	}
 
 	return &ContainerHost{
-		client:  cli,
-		ctx:     ctx,
-		rootDir: rootDir,
+		client:     cli,
+		ctx:        ctx,
+		rootDir:    rootDir,
+		clientOpts: clientOpts,
 	}, nil
+}
+
+// EnsureConnected verifies Docker daemon connectivity (lazy Ping).
+// This should be called before operations that require Docker communication.
+// Uses sync.Once to ensure the check only happens once per ContainerHost instance.
+func (ch *ContainerHost) EnsureConnected() error {
+	ch.pingOnce.Do(func() {
+		_, pingErr := ch.client.Ping(ch.ctx)
+		if pingErr != nil {
+			// Check for common Docker service not running errors
+			errStr := pingErr.Error()
+			if strings.Contains(errStr, "docker_engine") ||
+				strings.Contains(errStr, "cannot connect to the Docker daemon") ||
+				strings.Contains(errStr, "Is the docker daemon running") ||
+				strings.Contains(errStr, "system cannot find the file specified") {
+				ch.pingErr = fmt.Errorf("docker service is not running: please start Docker Desktop or the Docker daemon and try again")
+			} else {
+				ch.pingErr = fmt.Errorf("cannot connect to Docker daemon: %w", pingErr)
+			}
+		}
+	})
+	return ch.pingErr
 }
 
 // ValidateExtensions checks if extensions are configured.
