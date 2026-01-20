@@ -168,7 +168,10 @@ func InitConfig() {
 		}
 	}
 
-	// Check for latest tags after all configs are merged
-	// This ensures we check extensions from override files too
-	checkLatestTags(&Global)
+	// Tag checking is now opt-in for startup performance (~2000ms savings)
+	// - Set R2R_CHECK_TAGS=true to enable tag checking on startup
+	// - CI environments still validate pinned tags via ValidatePinnedExtensions()
+	if os.Getenv("R2R_CHECK_TAGS") == "true" {
+		checkLatestTags(&Global)
+	}
 }

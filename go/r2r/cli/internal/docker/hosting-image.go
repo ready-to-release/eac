@@ -17,6 +17,11 @@ import (
 
 // InspectImage inspects a Docker image and returns the inspection result.
 func (ch *ContainerHost) InspectImage(image string) (*image.InspectResponse, error) {
+	// Ensure Docker connectivity before inspecting image (lazy Ping)
+	if err := ch.EnsureConnected(); err != nil {
+		return nil, err
+	}
+
 	imageInspect, err := ch.client.ImageInspect(ch.ctx, image)
 	if err != nil {
 		return nil, fmt.Errorf("error inspecting image: %w", err)
@@ -93,6 +98,11 @@ func CreateGitHubAuthConfig() (*registry.AuthConfig, string, error) {
 
 // EnsureImageExists checks if an image exists locally and pulls it based on the pull policy.
 func (ch *ContainerHost) EnsureImageExists(imageName, pullPolicy string, loadLocal bool) error {
+	// Ensure Docker connectivity before image operations (lazy Ping)
+	if err := ch.EnsureConnected(); err != nil {
+		return err
+	}
+
 	// Apply default if not specified
 	if pullPolicy == "" {
 		pullPolicy = "AutoDetect"

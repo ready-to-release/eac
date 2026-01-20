@@ -33,18 +33,19 @@ func (ch *ContainerHost) CreateContainerConfig(ext *ExtensionConfig, mode Contai
 		}
 	case ModeRun:
 		// Only enable TTY for truly interactive sessions
-		// When running commands, we don't want TTY to avoid cursor position queries
+		// When running commands, we don't want TTY to avoid slow terminal handshake (~5s on Windows/WSL2)
+		// Terminal dimensions are passed via COLUMNS/LINES environment variables instead
 		if len(args) == 0 {
 			// No args means interactive mode
 			logging.Debug("ModeRun: No args detected, enabling TTY for interactive session")
 			config.Tty = true
 			config.OpenStdin = true
 		} else {
-			// Args present means command mode - enable TTY for proper terminal width detection
-			// ANSI escape sequences will be filtered out by the CLI
-			logging.Debugf("ModeRun: Args present, enabling TTY for terminal width detection: args_count=%d args=%v", len(args), args)
-			config.Tty = true
-			config.OpenStdin = false // Disable stdin for command mode to avoid TTY corruption
+			// Args present means command mode - disable TTY for performance
+			// TTY causes ~5s delay due to terminal handshake/cursor position queries
+			logging.Debugf("ModeRun: Command mode, TTY disabled for performance: args_count=%d", len(args))
+			config.Tty = false
+			config.OpenStdin = false
 		}
 		config.Cmd = args
 	}
@@ -120,6 +121,11 @@ func (ch *ContainerHost) getDockerServiceMount() *mount.Mount {
 
 // CreateContainer creates a new Docker container with the specified configuration.
 func (ch *ContainerHost) CreateContainer(containerConfig *container.Config, hostConfig *container.HostConfig) (string, error) {
+	// Ensure Docker connectivity before creating container (lazy Ping)
+	if err := ch.EnsureConnected(); err != nil {
+		return "", err
+	}
+
 	resp, err := ch.client.ContainerCreate(ch.ctx, containerConfig, hostConfig, nil, nil, "")
 	if err != nil {
 		return "", fmt.Errorf("error creating container: %w", err)
