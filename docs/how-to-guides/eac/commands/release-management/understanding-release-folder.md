@@ -2,13 +2,15 @@
 
 ## What You'll Learn
 
-How the `release/` folder structure organizes release artifacts and how module contracts link to changelog files.
+How the `release/` folder structure organizes release artifacts for **published and bundle modules**, and how this differs from internal modules that store changelogs in their module roots.
+
+**Related**: See [Understanding Release Types](../../../../reference/continuous-delivery/release-types.md) for complete release type system documentation.
 
 ---
 
 ## Release Folder Structure
 
-The repository uses a centralized `release/` folder to store all release-related artifacts:
+The repository uses a centralized `release/` folder to store release artifacts for **published and bundle modules**:
 
 ```text
 release/
@@ -26,10 +28,12 @@ release/
 
 **Why centralized?**
 
-- **Easy discovery**: All release artifacts in one place
-- **Clear ownership**: One folder per module
-- **Simple automation**: CI can find all changelogs by pattern matching
+- **Easy discovery**: All public-facing releases in one place
+- **Clear ownership**: One folder per published/bundle module
+- **Simple automation**: CI can find release changelogs by pattern matching
 - **Audit trail**: Git history shows all release activities together
+
+**Important**: Only modules with `release_type: published` or `release_type: bundle` have changelogs in `release/`. Internal modules (`release_type: internal`) have changelogs in their module roots (e.g., `go/eac/commands/CHANGELOG.md`).
 
 ---
 
@@ -131,11 +135,22 @@ Analysis of how changes affect business processes, workflows, and users.
 
 ## How Modules Link to Changelogs
 
-Module contracts in `.r2r/eac/repository.yml` define where each module's changelog lives.
+Module contracts in `.r2r/eac/repository.yml` define where each module's changelog lives. The location depends on the module's **release type**.
 
-### Default Path Convention
+### Changelog Location by Release Type
 
-By default, changelogs use the pattern: `release/<moniker>/CHANGELOG.md`
+| Release Type | Changelog Location              | Example                               |
+| ------------ | ------------------------------- | ------------------------------------- |
+| `published`  | `release/<module>/CHANGELOG.md` | `release/r2r-cli/CHANGELOG.md`        |
+| `bundle`     | `release/<module>/CHANGELOG.md` | `release/r2r-eac-bundle/CHANGELOG.md` |
+| `internal`   | `<module-root>/CHANGELOG.md`    | `go/eac/commands/CHANGELOG.md`        |
+| `none`       | No changelog                    | N/A                                   |
+
+See [Understanding Release Types](../../../../reference/continuous-delivery/release-types.md) for details on each type.
+
+### Published Module Path Convention
+
+Published and bundle modules use the pattern: `release/<moniker>/CHANGELOG.md`
 
 **Example** (r2r-cli module):
 
@@ -150,9 +165,31 @@ modules:
 
 If `versioning.changelog` is omitted, the system defaults to `release/<moniker>/CHANGELOG.md`.
 
+### Internal Module Paths
+
+Internal modules store changelogs in their module roots:
+
+**Example** (eac-commands module):
+
+```yaml
+modules:
+  - moniker: eac-commands
+    versioning:
+      scheme: SemVer
+      changelog: go/eac/commands/CHANGELOG.md
+      release_type: internal
+    components:
+      gomod:
+        root: go/eac/commands
+```
+
+**Changelog location**: `go/eac/commands/CHANGELOG.md` (at module root)
+
+**Why module root?** Internal modules are implementation details, not public releases. Keeping their changelogs with their code makes it easier to track development history.
+
 ### Custom Paths (Relative)
 
-Some modules use relative paths from their component root:
+Some published modules use relative paths from their component root:
 
 **Example** (ext-eac module):
 
@@ -300,31 +337,53 @@ r2r validate release <module>
 
 ## Module Examples
 
-### SemVer Module (r2r-cli)
+### Published SemVer Module (r2r-cli)
 
 ```yaml
 moniker: r2r-cli
 versioning:
   scheme: SemVer
   changelog: release/r2r-cli/CHANGELOG.md
+  release_type: published
 ```
 
 **Changelog location**: `release/r2r-cli/CHANGELOG.md`
 
 **Version format**: `1.2.3` (MAJOR.MINOR.PATCH)
 
-### CalVer Module (docs)
+**Release**: Triggers GitHub release workflow
+
+### Published CalVer Module (docs)
 
 ```yaml
 moniker: docs
 versioning:
   scheme: CalVer
   changelog: release/docs/CHANGELOG.md
+  release_type: published
 ```
 
 **Changelog location**: `release/docs/CHANGELOG.md`
 
 **Version format**: `2026.0115` (YYYY.MMDD)
+
+**Release**: Deploys to GitHub Pages
+
+### Internal SemVer Module (eac-commands)
+
+```yaml
+moniker: eac-commands
+versioning:
+  scheme: SemVer
+  changelog: go/eac/commands/CHANGELOG.md
+  release_type: internal
+```
+
+**Changelog location**: `go/eac/commands/CHANGELOG.md` (module root)
+
+**Version format**: `1.2.3` (MAJOR.MINOR.PATCH)
+
+**Release**: Does NOT trigger release workflow (internal only)
 
 ### Container Module with Relative Path (ext-eac)
 
