@@ -8,10 +8,11 @@ Learn how to prepare and publish releases using the **changelog-driven release s
 
 ### Foundational Guides
 
-| Guide                                                                 | What You'll Accomplish                                            |
-| --------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| [Understanding the Release Folder](./understanding-release-folder.md) | Learn release folder structure and how modules link to changelogs |
-| [Release Workflow Variants](./release-workflow-variants.md)           | Choose CDe or RA pattern based on regulatory requirements         |
+| Guide                                                                                     | What You'll Accomplish                                                      |
+| ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| [Understanding Release Types](../../../../reference/continuous-delivery/release-types.md) | Learn the four release types and how they determine changelog locations     |
+| [Understanding the Release Folder](./understanding-release-folder.md)                     | Learn release folder structure and how published modules link to changelogs |
+| [Release Workflow Variants](./release-workflow-variants.md)                               | Choose CDe or RA pattern based on regulatory requirements                   |
 
 ### Core Workflow Guides
 
@@ -39,9 +40,12 @@ Learn how to prepare and publish releases using the **changelog-driven release s
 
 ## Changelog-Driven System Overview
 
-This system uses **changelog-driven releases** where updating module changelogs in the `release/` folder automatically triggers releases through CI/CD automation.
+This system uses **changelog-driven releases** where updating module changelogs automatically triggers releases through CI/CD automation.
 
-All release artifacts live in the centralized `release/<module>/` folders. See [Understanding the Release Folder](./understanding-release-folder.md) for details on folder structure and how module contracts link to changelog files.
+**Release artifacts** live in the centralized `release/<module>/` folders for **published and bundle modules**. Internal modules have changelogs in their module roots. See:
+
+- [Understanding Release Types](../../../../reference/continuous-delivery/release-types.md) - Learn the release type system
+- [Understanding the Release Folder](./understanding-release-folder.md) - Details on folder structure and changelog locations
 
 ### How It Works
 

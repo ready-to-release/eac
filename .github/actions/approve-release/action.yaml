@@ -1,10 +1,11 @@
 # Approve Release Action
 #
 # Gates release workflows by validating:
-# 1. CI has passed for the exact commit being released (strict mode)
-# 2. Version is valid format (semver or calver)
-# 3. No existing GitHub release for this version
-# 4. Changelog has version entry (semver only)
+# 1. Release type is published or bundle (not internal)
+# 2. CI has passed for the exact commit being released (strict mode)
+# 3. Version is valid format (semver or calver)
+# 4. No existing GitHub release for this version
+# 5. Changelog has version entry (semver only)
 #
 # Usage:
 #   jobs:
@@ -88,6 +89,84 @@ runs:
           exit 1
         fi
         echo "Version ${{ steps.version.outputs.version }} is valid $VERSION_TYPE"
+
+    - name: Validate release type
+      shell: bash
+      env:
+        MODULE: ${{ inputs.module }}
+      run: |
+        # Extract release_type from repository.yml
+        REPO_YML=".r2r/eac/repository.yml"
+
+        if [ ! -f "$REPO_YML" ]; then
+          echo "::error::Repository configuration not found: $REPO_YML"
+          exit 1
+        fi
+
+        # Extract release_type for this module using awk
+        # This reads the YAML and finds the module's release_type value
+        RELEASE_TYPE=$(awk '
+          /^  - moniker: '"$MODULE"'$/ { found=1; next }
+          found && /^  - moniker:/ { found=0 }
+          found && /release_type:/ {
+            sub(/.*release_type: */, "");
+            print;
+            exit
+          }
+        ' "$REPO_YML")
+
+        echo "Module: $MODULE"
+        echo "Release type: ${RELEASE_TYPE:-<not set>}"
+        echo ""
+
+        # Validate release type
+        case "$RELEASE_TYPE" in
+          published|bundle)
+            echo "✓ Release type '$RELEASE_TYPE' is valid for GitHub releases"
+            ;;
+          internal)
+            echo "::error::Cannot create GitHub release for internal module '$MODULE'"
+            echo ""
+            echo "This module has release_type: internal, which means:"
+            echo "  - Changelog tracks version changes for internal dependencies"
+            echo "  - No public GitHub release is created"
+            echo "  - No downloadable artifacts are published"
+            echo ""
+            echo "Internal modules are versioned for dependency tracking only."
+            echo "They should not trigger release workflows."
+            echo ""
+            echo "If you intended to release this module publicly:"
+            echo "  1. Update release_type to 'published' in $REPO_YML"
+            echo "  2. Move changelog to release/$MODULE/CHANGELOG.md"
+            echo "  3. Create a release workflow in .github/workflows/"
+            exit 1
+            ;;
+          none|"")
+            echo "::error::Module '$MODULE' has no release configuration"
+            echo ""
+            echo "This module has release_type: ${RELEASE_TYPE:-none}, which means:"
+            echo "  - No versioning or changelog tracking"
+            echo "  - No releases (public or internal)"
+            echo ""
+            echo "Modules with release_type: none cannot be released."
+            echo ""
+            echo "If you intended to release this module:"
+            echo "  1. Add release_type: 'published' in $REPO_YML"
+            echo "  2. Add changelog path in versioning section"
+            echo "  3. Create CHANGELOG.md in release/$MODULE/"
+            exit 1
+            ;;
+          *)
+            echo "::error::Invalid release_type '$RELEASE_TYPE' for module '$MODULE'"
+            echo ""
+            echo "Valid release types:"
+            echo "  - published: Creates public GitHub releases"
+            echo "  - bundle: Aggregates multiple module releases"
+            echo "  - internal: Version tracking only (no public release)"
+            echo "  - none: No versioning or releases"
+            exit 1
+            ;;
+        esac
 
     - name: Validate changelog has version entry
       if: inputs.version-type == 'semver'

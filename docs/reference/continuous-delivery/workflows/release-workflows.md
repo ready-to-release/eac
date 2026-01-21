@@ -8,6 +8,8 @@ Release workflows build and publish deployable artifacts to production environme
 
 **Location:** `.github/workflows/release-{moniker}.yaml`
 
+**Release Type Requirement:** Only modules with `release_type: published` or `release_type: bundle` can have release workflows. Internal modules and modules with `release_type: none` do not trigger releases. See [Understanding Release Types](../release-types.md) for details.
+
 ## Release Workflow Pattern
 
 All release workflows follow a consistent structure:
@@ -56,12 +58,15 @@ permissions:
 
 ## Release Workflows Inventory
 
-| Workflow               | Module  | Artifact Type           | Destination     | Versioning |
-| ---------------------- | ------- | ----------------------- | --------------- | ---------- |
-| `release-r2r-cli.yaml` | r2r-cli | Cross-platform binaries | GitHub Releases | SemVer     |
-| `release-ext-eac.yaml` | ext-eac | Docker extension        | Docker Hub      | SemVer     |
-| `release-docs.yaml`    | docs    | Static site             | GitHub Pages    | CalVer     |
-| `release-books.yaml`   | books   | PDF documents           | GitHub Releases | CalVer     |
+| Workflow               | Module          | Release Type | Artifact Type           | Destination     | Versioning |
+| ---------------------- | --------------- | ------------ | ----------------------- | --------------- | ---------- |
+| `release-r2r-cli.yaml` | r2r-cli         | published    | Cross-platform binaries | GitHub Releases | SemVer     |
+| `release-ext-eac.yaml` | ext-eac         | published    | Docker extension        | Docker Hub      | SemVer     |
+| `release-docs.yaml`    | docs            | published    | Static site             | GitHub Pages    | CalVer     |
+| `release-books.yaml`   | books           | published    | PDF documents           | GitHub Releases | CalVer     |
+| `release-bundle.yaml`  | r2r-eac-bundle  | bundle       | Meta-release bundle     | GitHub Releases | SemVer     |
+
+**Note**: Internal modules (eac-commands, eac-mcp-commands, r2r-installer, vscode-ext-commit) do not have release workflows because they are not released independently.
 
 ## Example: release-r2r-cli.yaml
 

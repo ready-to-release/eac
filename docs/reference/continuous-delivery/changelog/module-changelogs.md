@@ -12,53 +12,65 @@ Each deployable module maintains its own changelog to track module-specific chan
 
 ## Module Changelog Locations
 
-Module changelog locations are defined in `.r2r/eac/repository.yml` under `files.changelog`.
+Module changelog locations are defined in `.r2r/eac/repository.yml` under `versioning.changelog` and follow the **release type convention**. See [Understanding Release Types](../release-types.md) for complete details.
 
-### Common Patterns
+### Location Rules by Release Type
 
-#### Pattern 1: Module Root
+| Release Type | Changelog Location              | Example                               |
+| ------------ | ------------------------------- | ------------------------------------- |
+| `published`  | `release/<module>/CHANGELOG.md` | `release/r2r-cli/CHANGELOG.md`        |
+| `bundle`     | `release/<module>/CHANGELOG.md` | `release/r2r-eac-bundle/CHANGELOG.md` |
+| `internal`   | `<module-root>/CHANGELOG.md`    | `go/eac/commands/CHANGELOG.md`        |
+| `none`       | No changelog                    | N/A                                   |
 
-Changelog in the module's root directory:
+### Pattern 1: Release Directory (Published/Bundle)
 
-```yaml
-modules:
-  - moniker: eac-commands
-    files:
-      root: go/eac/commands
-      changelog: CHANGELOG.md  # Relative to root
-```
-
-**Full path:** `go/eac/commands/CHANGELOG.md`
-
-**Usage:** Go modules and libraries
-
-**Examples:**
-
-- `go/eac/commands/CHANGELOG.md`
-- `go/eac/core/CHANGELOG.md`
-- `go/eac/ai/CHANGELOG.md`
-
-#### Pattern 2: Release Directory
-
-Changelog in dedicated release directory:
+Changelog in dedicated release directory for public-facing releases:
 
 ```yaml
 modules:
   - moniker: r2r-cli
-    files:
-      changelog: release/r2r-cli/CHANGELOG.md  # Absolute path from repo root
+    versioning:
+      scheme: SemVer
+      changelog: release/r2r-cli/CHANGELOG.md
+      release_type: published
 ```
 
 **Full path:** `release/r2r-cli/CHANGELOG.md`
 
-**Usage:** CLI applications, Docker extensions, documentation
+**Usage:** Published modules and bundles
 
 **Examples:**
 
-- `release/r2r-cli/CHANGELOG.md`
-- `release/ext-eac/CHANGELOG.md`
-- `release/docs/CHANGELOG.md`
-- `release/books/CHANGELOG.md`
+- `release/r2r-cli/CHANGELOG.md` (published)
+- `release/ext-eac/CHANGELOG.md` (published)
+- `release/docs/CHANGELOG.md` (published)
+- `release/books/CHANGELOG.md` (published)
+- `release/r2r-eac-bundle/CHANGELOG.md` (bundle)
+
+### Pattern 2: Module Root (Internal)
+
+Changelog in the module's root directory for internal modules:
+
+```yaml
+modules:
+  - moniker: eac-commands
+    versioning:
+      scheme: SemVer
+      changelog: go/eac/commands/CHANGELOG.md
+      release_type: internal
+```
+
+**Full path:** `go/eac/commands/CHANGELOG.md`
+
+**Usage:** Internal implementation modules
+
+**Examples:**
+
+- `go/eac/commands/CHANGELOG.md` (internal)
+- `go/eac/mcp/commands/CHANGELOG.md` (internal)
+- `scripts/CHANGELOG.md` (internal - r2r-installer)
+- `typescript/vscode-ext-commit/CHANGELOG.md` (internal)
 
 ## Module Changelog Structure
 
@@ -89,12 +101,15 @@ Module versions are independent and follow their own numbering:
 ## [1.2.0] - 2025-12-01
 
 ### Added
+
 - feat(cli): add version command
 
 ### Changed
+
 - refactor(commands): improve error messages
 
 ### Fixed
+
 - fix(build): correct platform detection
 ```
 
@@ -106,14 +121,17 @@ Changes affecting only this module:
 
 ```markdown
 ### Added
+
 - feat(commands): add build command with cross-platform support
 - feat(commands): add test suite execution
 
 ### Changed
+
 - refactor(parser): simplify YAML parsing logic
 - perf(resolver): optimize dependency resolution
 
 ### Fixed
+
 - fix(cli): correct exit code on errors
 ```
 
@@ -125,13 +143,16 @@ Changes to the module's public API:
 
 ```markdown
 ### Added
+
 - feat(api): add GetModules() function
 
 ### Changed
+
 - **BREAKING:** Rename Config to Configuration
 - **BREAKING:** Change BuildModule signature
 
 ### Deprecated
+
 - Deprecated GetModule() in favor of GetModules()
 ```
 
@@ -143,6 +164,7 @@ Updates to module's direct dependencies:
 
 ```markdown
 ### Changed
+
 - chore(deps): update cobra to v1.8.0
 - chore(deps): update go-yaml to v3.0.1
 ```
@@ -161,6 +183,7 @@ Changes to CI/CD, build system, or multi-module refactoring:
 # CHANGELOG.md (repository)
 
 ### Changed
+
 - ci(multi-module): containerize CI workflows
 - refactor(multi-module): reorganize module structure
 ```
@@ -177,6 +200,7 @@ Changes to other modules:
 # go/eac/core/CHANGELOG.md
 
 ### Added
+
 - feat(core): add new validation function
 ```
 
@@ -190,6 +214,7 @@ Shared dependency updates managed at repository level:
 
 ```markdown
 ### Changed
+
 - chore(deps): update Go to 1.21 across all modules
 ```
 
@@ -293,9 +318,11 @@ Add changes to Unreleased section as you work:
 ## [Unreleased]
 
 ### Added
+
 - feat(commands): add new validate command
 
 ### Fixed
+
 - fix(parser): handle empty files correctly
 ```
 
@@ -307,9 +334,11 @@ Add changes to Unreleased section as you work:
    ## [1.3.0] - 2025-12-15
 
    ### Added
+
    - feat(commands): add new validate command
 
    ### Fixed
+
    - fix(parser): handle empty files correctly
 
    ## [Unreleased]
@@ -385,7 +414,7 @@ Tag push triggers release workflow:
 on:
   push:
     tags:
-      - 'r2r-cli/*'
+      - "r2r-cli/*"
 ```
 
 **Actions:**

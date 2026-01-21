@@ -21,11 +21,15 @@
 // Long:     - change_counts: breakdown by change type (added, fixed, changed, etc.)
 // Long:
 // Long: Examples:
-// Long:   release pending r2r-cli           # Check r2r-cli for pending changes
-// Long:   release pending r2r-cli --quiet   # Exit code only (0=changes, 1=no changes)
-// Long:   release pending --all             # Check all releasable modules
+// Long:   release pending r2r-cli            # Check r2r-cli for pending changes
+// Long:   release pending r2r-cli --quiet    # Exit code only (0=changes, 1=no changes)
+// Long:   release pending --all              # Check all releasable modules
+// Long:   release pending --published        # Check only published modules
+// Long:   release pending --internal         # Check only internal modules
 // Flag.quiet: type=bool, usage=Suppress output, use exit code only (0=has changes, 1=no changes)
 // Flag.all: type=bool, usage=Check all modules with changelogs
+// Flag.published: type=bool, usage=Check only published modules
+// Flag.internal: type=bool, usage=Check only internal modules
 // Args: modules
 package release
 
@@ -53,6 +57,7 @@ func init() {
 // PendingRelease contains release decision data for CI/CD.
 type PendingRelease struct {
 	Module         string        `json:"module"`
+	ReleaseType    string        `json:"release_type"`    // published | internal | bundle | none
 	HasChanges     bool          `json:"has_changes"`
 	CurrentVersion string        `json:"current_version"`
 	NextVersion    string        `json:"next_version"`
@@ -91,6 +96,8 @@ func ReleasePending() int {
 	module := ""
 	quiet := false
 	checkAll := false
+	filterPublished := false
+	filterInternal := false
 
 	args := os.Args[3:] // Skip binary, "release", "pending"
 
@@ -101,6 +108,12 @@ func ReleasePending() int {
 			quiet = true
 		case "--all":
 			checkAll = true
+		case "--published":
+			filterPublished = true
+			checkAll = true // Implies --all
+		case "--internal":
+			filterInternal = true
+			checkAll = true // Implies --all
 		default:
 			if !strings.HasPrefix(arg, "--") && module == "" {
 				module = arg
@@ -149,8 +162,15 @@ func ReleasePending() int {
 	// Determine which modules to check
 	var modulesToCheck []string
 	if checkAll {
-		// Find all modules with changelogs
-		modulesToCheck = findModulesWithChangelogs(workspaceRoot)
+		// Find all modules with changelogs (both published and internal)
+		modulesToCheck = findModulesWithChangelogsAll(workspaceRoot)
+
+		// Apply release type filter if specified
+		if filterPublished {
+			modulesToCheck = filterModulesByReleaseType(workspaceRoot, modulesToCheck, "published")
+		} else if filterInternal {
+			modulesToCheck = filterModulesByReleaseType(workspaceRoot, modulesToCheck, "internal")
+		}
 	} else {
 		modulesToCheck = []string{module}
 	}
@@ -201,8 +221,9 @@ func ReleasePending() int {
 
 func checkModulePending(module string, moduleRegistry *modules.Registry, repo git.GitRepository, versioning config.VersioningConfig, workspaceRoot string) (PendingRelease, error) {
 	pending := PendingRelease{
-		Module:     module,
-		HasChanges: false,
+		Module:      module,
+		HasChanges:  false,
+		ReleaseType: getModuleReleaseType(workspaceRoot, module),
 	}
 
 	// Get module contract
@@ -380,4 +401,78 @@ func findModulesWithChangelogs(workspaceRoot string) []string {
 		}
 	}
 	return modules
+}
+
+// findModulesWithChangelogsAll finds all modules that have changelogs (both published and internal).
+func findModulesWithChangelogsAll(workspaceRoot string) []string {
+	// Load module registry to get all modules with versioning
+	moduleRegistry, err := modules.LoadFromWorkspace(workspaceRoot)
+	if err != nil {
+		return nil
+	}
+
+	var modulesWithChangelogs []string
+	for _, moniker := range moduleRegistry.AllMonikers() {
+		moduleContract, exists := moduleRegistry.Get(moniker)
+		if !exists || moduleContract.Versioning == nil {
+			continue
+		}
+
+		// Check if changelog file exists
+		changelogPath := moduleContract.GetChangelogPath()
+		if changelogPath == "" {
+			continue
+		}
+
+		fullPath := filepath.Join(workspaceRoot, changelogPath)
+		if _, err := os.Stat(fullPath); err == nil {
+			modulesWithChangelogs = append(modulesWithChangelogs, moniker)
+		}
+	}
+
+	return modulesWithChangelogs
+}
+
+// filterModulesByReleaseType filters modules by their release type.
+// filterType can be "published", "internal", "bundle", "none", or "" (all).
+func filterModulesByReleaseType(workspaceRoot string, moduleMonikers []string, filterType string) []string {
+	if filterType == "" {
+		return moduleMonikers
+	}
+
+	// Load module registry
+	moduleRegistry, err := modules.LoadFromWorkspace(workspaceRoot)
+	if err != nil {
+		return nil
+	}
+
+	var filtered []string
+	for _, moniker := range moduleMonikers {
+		moduleContract, exists := moduleRegistry.Get(moniker)
+		if !exists || moduleContract.Versioning == nil {
+			continue
+		}
+
+		releaseType := moduleContract.Versioning.ReleaseType
+		if releaseType == filterType {
+			filtered = append(filtered, moniker)
+		}
+	}
+
+	return filtered
+}
+
+// getModuleReleaseType returns the release type for a module.
+func getModuleReleaseType(workspaceRoot string, module string) string {
+	moduleRegistry, err := modules.LoadFromWorkspace(workspaceRoot)
+	if err != nil {
+		return ""
+	}
+
+	moduleContract, exists := moduleRegistry.Get(module)
+	if !exists || moduleContract.Versioning == nil {
+		return ""
+	}
+
+	return moduleContract.Versioning.ReleaseType
 }
