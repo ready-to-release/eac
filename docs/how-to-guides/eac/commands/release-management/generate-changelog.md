@@ -23,8 +23,10 @@ r2r release this my-module
 **What happens**:
 
 - Analyzes commits since last release (tag `my-module/1.2.3`)
-- Determines version bump (patch/minor/major)
+- Determines version bump (patch/minor/major for SemVer, date for CalVer)
 - Generates/updates `release/my-module/CHANGELOG.md`
+
+**Path discovery**: Command finds changelog via module contract (`versioning.changelog` in `.r2r/eac/repository.yml`), defaulting to `release/<module>/CHANGELOG.md`. See [Understanding the Release Folder](./understanding-release-folder.md) for details.
 
 ### 2. Review Generated Changelog
 
@@ -123,10 +125,13 @@ Version is determined by commit types (for SemVer modules):
 
 **For CalVer modules**: Version is today's date (YYYY.MMDD)
 
+**Note**: This step is the same for both CDe (Continuous Deployment) and RA (Release Approval) patterns. See [Release Workflow Variants](./release-workflow-variants.md) to understand how workflows diverge after changelog preparation.
+
 ## Next Steps
 
-- [Prepare Module Release](./prepare-module-release.md) → Complete release
-- [Create Release Tag](./create-release-tag.md) → Tag the release
+- [Release Workflow Variants](./release-workflow-variants.md) → Choose CDe or RA pattern
+- [Prepare Module Release](./prepare-module-release.md) → Complete CDe workflow
+- [Understanding the Release Folder](./understanding-release-folder.md) → Learn folder structure
 
 ## Related Commands
 

@@ -4,6 +4,8 @@
 
 Prepare and release a new version of a deployable module following the changelog-driven release workflow. This guide shows both the manual steps you perform and the automated CI steps that happen after merge.
 
+> **Release Pattern Selection**: This guide describes the **CDe (Continuous Deployment)** pattern that auto-deploys from main after merge. For regulated environments requiring formal approval (GxP, financial, safety-critical), see [Release Workflow Variants](./release-workflow-variants.md) for the **RA (Release Approval)** pattern that uses release branches.
+
 ## Prerequisites
 
 **Before starting**:
@@ -91,8 +93,10 @@ r2r release this my-module
 
 - Analyzes commits since `my-module/1.2.3` tag
 - Generates changelog entries from conventional commits
-- Calculates version bump (patch/minor/major)
-- Updates `release/my-module/CHANGELOG.md`
+- Calculates version bump (patch/minor/major for SemVer, date for CalVer)
+- Updates `release/my-module/CHANGELOG.md` (path discovered via module contract)
+
+**Note**: Changelog preparation is the same for both CDe and RA patterns. Workflows diverge after this step.
 
 **Output**:
 
@@ -370,6 +374,8 @@ gh release view my-module/1.2.4
 
 ## Next Steps
 
+- **[Release Workflow Variants](./release-workflow-variants.md)** - Learn RA pattern for regulated environments
 - **[Generate Changelog](generate-changelog.md)** - Deep dive into changelog generation
+- **[Understanding the Release Folder](./understanding-release-folder.md)** - Learn folder structure
 - **[Check CI Before Release](check-ci-before-release.md)** - CI validation details
 - **[Understanding Tag Creation](create-release-tag.md)** - Learn about automated tag creation

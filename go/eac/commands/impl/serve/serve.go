@@ -314,7 +314,7 @@ func resolveModuleConfig(workspaceRoot, moduleMoniker, namedBook string) (*Modul
 	isSite := targetBook == "site"
 	var contentPath string
 	if isSite {
-		contentPath = filepath.Join(paths.BuildOutputPath(workspaceRoot, moduleMoniker), "site")
+		contentPath = filepath.Join(paths.BuildOutputPath(workspaceRoot, moduleMoniker), "site", "site")
 	} else {
 		// For non-site books, serve the module root (contains all PDFs)
 		contentPath = paths.BuildOutputPath(workspaceRoot, moduleMoniker)
