@@ -42,7 +42,7 @@ The 12-stage CD model applies to data projects with specific considerations for 
 **Example** (Customer Segmentation):
 
 ```gherkin
-# features/customer-segmentation_pipeline.feature
+# specs/<data-module>/customer-segmentation/specification.feature
 @L2 @ov @control:si-10
 Feature: customer-segmentation_pipeline
   Segment customers by purchase behavior for targeted campaigns

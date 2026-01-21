@@ -42,10 +42,12 @@ r2r eac create spec "User can login with email and password"
 ### 2. Review Generated Spec
 
 ```bash
-cat features/auth/login.feature
+cat specs/<module>/<feature-name>/specification.feature
 ```
 
-**What happens**: View generated Gherkin scenarios
+**What happens**: View generated Gherkin scenarios with proper tags and structure
+
+**Note**: The path depends on your project's organization (e.g., `specs/auth/user-login/specification.feature`)
 
 ### 3. Validate Spec Quality
 
@@ -60,11 +62,17 @@ r2r eac validate specs
 Create step definitions to match generated steps:
 
 ```go
-// steps/auth/login_steps.go
-func (s *AuthSteps) UserEntersEmail(email string) error {
+// steps/auth_steps.go
+func (s *AuthSteps) UserIsOnLoginPage() error {
+    // Implementation
+}
+
+func (s *AuthSteps) UserHasAccountWithEmail(email string) error {
     // Implementation
 }
 ```
+
+**Note**: Organize step definitions in a way that matches your project structure and testing framework (e.g., godog, cucumber-js)
 
 ## Example Scenario
 
@@ -76,16 +84,19 @@ r2r eac create spec "User can login with email and password to access dashboard"
 
 # Output:
 # Generating specification...
-# ✓ Created features/auth/login.feature
+# ✓ Created specs/auth/user-login/specification.feature
 
 # View generated spec
-cat features/auth/login.feature
+cat specs/auth/user-login/specification.feature
 
-# Feature: User Login
+# @deps:go
+# Feature: auth_user-login
+#
 #   As a user
 #   I want to login with email and password
 #   So that I can access my dashboard
 #
+#   @L2 @ov
 #   Scenario: Successful login with valid credentials
 #     Given user is on login page
 #     And user has account with email "user@example.com"
@@ -95,6 +106,7 @@ cat features/auth/login.feature
 #     Then user should be redirected to dashboard
 #     And user should see welcome message
 #
+#   @L2 @ov
 #   Scenario: Failed login with invalid password
 #     Given user is on login page
 #     When user enters email "user@example.com"
@@ -105,18 +117,36 @@ cat features/auth/login.feature
 
 # Validate
 r2r eac validate specs
-# ✓ features/auth/login.feature is valid
+# ✓ specs/auth/user-login/specification.feature is valid
 ```
+
+**Note**: Basic specification structure includes:
+
+- **Feature naming**: Use descriptive names (e.g., `auth_user-login`)
+- **Minimum tags**: Add `@deps:` for dependencies and test level tags like `@L2 @ov` on scenarios
+- **Organize by module**: Group related features in subdirectories (e.g., `specs/auth/`, `specs/api/`)
+- Each feature gets its own subdirectory with a `specification.feature` file
+
+For advanced tagging (environments, OSCAL controls, Rules), see your project's tagging guidelines.
+
+**Directory organization**:
+
+- `specs/<module>/` - Organize by functional area (e.g., `auth`, `api`, `database`)
+- `specs/<module>/<feature>/specification.feature` - Each feature in its own subdirectory
+- Examples: `specs/auth/user-login/`, `specs/api/rest-endpoint/`, `specs/ui/dashboard/`
 
 ## Spec Components
 
 Generated specifications include:
 
-- **Feature** - High-level capability
+- **Feature** - High-level capability description
 - **User Story** - As/I want/So that format
+- **Tags** - Metadata for test classification (e.g., `@deps:go`, `@L2`, `@ov`)
 - **Scenarios** - Specific test cases
-- **Given/When/Then** - BDD steps
-- **Examples** - Data-driven scenarios
+- **Given/When/Then** - BDD steps describing behavior
+- **Examples** - Data-driven scenarios (optional)
+
+**Tagging**: Add tags based on your project's needs. Common tags include dependencies (`@deps:`), test levels (`@L0`-`@L4`), and verification types (`@ov`, `@iv`). Check your project's documentation for specific tagging requirements
 
 ## Common Issues
 

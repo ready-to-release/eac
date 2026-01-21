@@ -15,7 +15,7 @@ Create C4 model architecture diagrams using AI to analyze your code and generate
 ### 1. Generate Diagram for Module
 
 ```bash
-r2r eac create design src-auth
+r2r eac create design eac-core
 ```
 
 **What happens**: AI analyzes module code and generates `workspace.dsl` file
@@ -23,7 +23,7 @@ r2r eac create design src-auth
 ### 2. Review Generated Diagram
 
 ```bash
-cat src/auth/workspace.dsl
+cat specs/eac-core/.design/workspace.dsl
 ```
 
 **What happens**: View Structurizr DSL definition
@@ -31,7 +31,7 @@ cat src/auth/workspace.dsl
 ### 3. Visualize Diagram
 
 ```bash
-r2r eac serve design src-auth
+r2r eac serve design eac-core
 ```
 
 **What happens**: Starts Structurizr Lite server, opens in browser
@@ -41,7 +41,7 @@ r2r eac serve design src-auth
 Edit `workspace.dsl` manually if needed, then update:
 
 ```bash
-r2r eac update design src-auth
+r2r eac update design eac-core
 ```
 
 **What happens**: AI updates existing diagram with new information
@@ -57,28 +57,28 @@ C4 model levels generated:
 
 ## Example Scenario
 
-Documenting authentication module:
+Documenting core library module:
 
 ```bash
 # Generate diagram
-r2r eac create design src-auth
+r2r eac create design eac-core
 
 # Output:
-# Analyzing src-auth module...
+# Analyzing eac-core module...
 # Generating architecture diagram...
-# ✓ Created workspace.dsl
+# ✓ Created specs/eac-core/.design/workspace.dsl
 
 # View in browser
-r2r eac serve design src-auth
+r2r eac serve design eac-core
 # Starting Structurizr Lite on http://localhost:8080
 # Open browser to view diagrams
 
 # Make code changes, update diagram
-r2r eac update design src-auth
-# ✓ Updated workspace.dsl with latest changes
+r2r eac update design eac-core
+# ✓ Updated specs/eac-core/.design/workspace.dsl with latest changes
 
 # Validate syntax
-r2r eac validate design src-auth
+r2r eac validate design eac-core
 # ✓ workspace.dsl syntax valid
 ```
 
@@ -87,22 +87,26 @@ r2r eac validate design src-auth
 Generated workspace.dsl includes:
 
 ```dsl
-workspace "src-auth" {
+workspace "EAC Core Library" "Core domain libraries..." {
   model {
-    user = person "User"
-    authSystem = softwareSystem "Authentication" {
-      api = container "Auth API" {
-        loginHandler = component "Login Handler"
-        tokenService = component "Token Service"
+    # External systems
+    filesystem = softwareSystem "File System" "Repository files..." "External"
+    git_system = softwareSystem "Git" "Version control..." "External"
+
+    # Your system
+    eac_core = softwareSystem "EAC Core Library" "Foundational Go library..." {
+      contracts = container "Contracts" "Module contract definitions..." "Go Package" {
+        contract_types = component "Contract Types" "Module, Environment types..." "Go"
+        contract_loader = component "Contract Loader" "Loads contracts from YAML..." "Go"
       }
-      database = container "Database"
+      repository = container "Repository" "Repository operations..." "Go Package"
     }
   }
 
   views {
-    systemContext authSystem
-    container authSystem
-    component api
+    systemContext eac_core
+    container eac_core
+    component contracts
   }
 }
 ```
