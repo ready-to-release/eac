@@ -1,6 +1,8 @@
 title: Release Management
 nav:
   - index.md
+  - understanding-release-folder.md
+  - release-workflow-variants.md
   - prepare-module-release.md
   - generate-changelog.md
   - create-release-tag.md

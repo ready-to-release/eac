@@ -249,18 +249,43 @@ r2r eac show changelog my-module 1.2.3 >> report.md
 
 ## File Location Requirements
 
-Commands expect files in these locations:
+Commands automatically discover files through module contracts in `.r2r/eac/repository.yml`.
 
-- **Changelog:** `<module-root>/CHANGELOG.md`
-- **Release Notes:** `<module-root>/RELEASE-NOTES.md`
+**Standard locations** (most modules):
 
-**Example:** For module `my-module` with root `src/my-module`:
+- **Changelog:** `release/<module>/CHANGELOG.md`
+- **Release Notes:** `release/<module>/RELEASE-NOTES.md`
 
-- Changelog: `src/my-module/CHANGELOG.md`
-- Release Notes: `src/my-module/RELEASE-NOTES.md`
+**Example:** For module `r2r-cli`:
+
+- Changelog: `release/r2r-cli/CHANGELOG.md`
+- Release Notes: `release/r2r-cli/RELEASE-NOTES.md`
+
+**Why centralized?** The `release/` folder keeps all release artifacts in one discoverable location. See [Understanding the Release Folder](./understanding-release-folder.md) for details on folder structure and how module contracts link to changelog files.
+
+**Path resolution**: Commands use the `versioning.changelog` property from module contracts, falling back to `release/<module>/CHANGELOG.md` if not specified.
+
+## File Types
+
+**CHANGELOG.md** contains technical changes for developers:
+
+- Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
+- Categories: Added, Changed, Fixed, etc.
+- Generated from conventional commits
+- Used by: Developers, users, CI versioning
+
+**RELEASE-NOTES.md** contains business assessment:
+
+- Format: Custom fitness assessment
+- Sections: Summary, fitness conclusion, business impact
+- Manually authored by release manager
+- Used by: Approval process, compliance, stakeholders
+
+See [Understanding the Release Folder](./understanding-release-folder.md) for complete details on file types and structure.
 
 ## See Also
 
+- [Understanding the Release Folder](./understanding-release-folder.md) - Folder structure and file types
 - [Generate Changelog](./generate-changelog.md) - Create changelog from commits
 - [Prepare Module Release](./prepare-module-release.md) - Complete release checklist
 - [show Commands Reference](../../../../reference/commands/show/index.md)
