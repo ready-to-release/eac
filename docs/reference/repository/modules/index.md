@@ -13,25 +13,25 @@ The C4 model provides four levels of abstraction:
 
 ## Core Modules
 
-| Module                                  | Description                  | Views |
-| --------------------------------------- | ---------------------------- | ----- |
+| Module                                                                 | Description                  | Views |
+| ---------------------------------------------------------------------- | ---------------------------- | ----- |
 | [eac-commands](../../eac/architecture/modules/eac-commands.md)         | CLI command implementations  | 19    |
 | [eac-core](../../eac/architecture/modules/eac-core.md)                 | Core libraries and contracts | 7     |
 | [eac-mcp-commands](../../eac/architecture/modules/eac-mcp-commands.md) | MCP server integration       | 5     |
-| [r2r-cli](../../eac/architecture/modules/supporting/supporting-modules/implicit-r2r-cli.md)                   | Ready-to-Release CLI         | 15    |
+| [r2r-cli](../../r2r/architecture/module.md)                            | Ready-to-Release CLI         | 15    |
 
 ## Infrastructure Modules
 
-| Module                      | Description                         | Views |
-| --------------------------- | ----------------------------------- | ----- |
-| [ext-eac](../../eac/architecture/modules/ext-eac.md)       | Docker extension image              | 3     |
-| [repository](repository.md) | Repository contracts and validation | 4     |
+| Module                                               | Description                         | Views |
+| ---------------------------------------------------- | ----------------------------------- | ----- |
+| [ext-eac](../../eac/architecture/modules/ext-eac.md) | Docker extension image              | 3     |
+| [repository](repository.md)                          | Repository contracts and validation | 4     |
 
 ## Supporting Modules
 
-| Module                                            | Description                          | Views |
-| ------------------------------------------------- | ------------------------------------ | ----- |
-| [Supporting Modules](../../eac/architecture/modules/supporting/supporting-modules/index.md) | docs, templates, r2r-installer, etc. | 12    |
+| Module                                                                   | Description                          | Views |
+| ------------------------------------------------------------------------ | ------------------------------------ | ----- |
+| [Supporting Modules](../../eac/architecture/modules/supporting/index.md) | docs, templates, r2r-installer, etc. | 12    |
 
 ## Viewing Diagrams Interactively
 

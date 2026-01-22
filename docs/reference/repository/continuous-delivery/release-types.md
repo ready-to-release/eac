@@ -15,6 +15,7 @@ The EAC repository uses a **release type system** to distinguish between modules
 **Purpose**: Modules that are released as standalone artifacts for external consumption.
 
 **Characteristics**:
+
 - Released to GitHub Releases with version tags
 - Have public-facing changelogs in `release/<module>/CHANGELOG.md`
 - Trigger GitHub release workflows on version changes
@@ -22,12 +23,14 @@ The EAC repository uses a **release type system** to distinguish between modules
 - Represent stable public APIs
 
 **Examples**:
+
 - `r2r-cli` - CLI binary for end users
 - `ext-eac` - VS Code extension
 - `docs` - HTML documentation site
 - `books` - PDF/EPUB documentation books
 
 **Workflow**:
+
 ```yaml
 versioning:
   scheme: SemVer
@@ -42,6 +45,7 @@ versioning:
 **Purpose**: Modules that are part of the implementation but not released independently.
 
 **Characteristics**:
+
 - Changelogs in module root (e.g., `go/eac/commands/CHANGELOG.md`)
 - Track changes for development history
 - Do NOT trigger release workflows
@@ -49,12 +53,14 @@ versioning:
 - Represent internal architecture boundaries
 
 **Examples**:
+
 - `eac-commands` - Go command implementations
 - `eac-mcp-commands` - MCP server command bindings
 - `r2r-installer` - Installation scripts
 - `vscode-ext-commit` - VS Code commit message extension
 
 **Workflow**:
+
 ```yaml
 versioning:
   scheme: SemVer
@@ -65,6 +71,7 @@ versioning:
 **Why Track Internal Changelogs?**
 
 Even though internal modules aren't released, their changelogs serve important purposes:
+
 1. **Development history**: Track why changes were made
 2. **Dependency management**: Understand when to bump bundle versions
 3. **Testing coordination**: Know what needs retesting when modules change
@@ -77,6 +84,7 @@ Even though internal modules aren't released, their changelogs serve important p
 **Purpose**: Modules that bundle multiple internal modules into a single release.
 
 **Characteristics**:
+
 - Released as a meta-artifact (e.g., combined installer, multi-platform binary)
 - Have changelogs in `release/<module>/CHANGELOG.md`
 - Version bumps when **any dependency changes**
@@ -84,9 +92,11 @@ Even though internal modules aren't released, their changelogs serve important p
 - Represent coordinated releases of multiple components
 
 **Examples**:
+
 - `r2r-eac-bundle` - Combined release of EAC CLI + extensions
 
 **Workflow**:
+
 ```yaml
 versioning:
   scheme: SemVer
@@ -101,6 +111,7 @@ dependencies:
 **Bundle Version Strategy**:
 
 When a dependency changes:
+
 - **Major change in dependency** → Bump bundle major
 - **Minor change in dependency** → Bump bundle minor
 - **Patch change in dependency** → Bump bundle patch
@@ -114,6 +125,7 @@ This ensures users can track which component versions are included in each bundl
 **Purpose**: Modules that are never released and have no version tracking.
 
 **Characteristics**:
+
 - No changelog file
 - No version numbers
 - No release workflows
@@ -121,11 +133,13 @@ This ensures users can track which component versions are included in each bundl
 - Embedded into other modules during build
 
 **Examples**:
+
 - `eac-core` - Core Go libraries used by commands
 
 **When to Use**:
 
 Use `release_type: none` when:
+
 - Module is a pure library with no standalone value
 - Changes are always accompanied by changes in dependent modules
 - Versioning would add overhead without value
@@ -138,12 +152,12 @@ Use `release_type: none` when:
 
 The release type determines changelog location:
 
-| Release Type | Changelog Location | Example |
-|--------------|-------------------|---------|
-| `published` | `release/<module>/CHANGELOG.md` | `release/r2r-cli/CHANGELOG.md` |
-| `bundle` | `release/<module>/CHANGELOG.md` | `release/r2r-eac-bundle/CHANGELOG.md` |
-| `internal` | `<module-root>/CHANGELOG.md` | `go/eac/commands/CHANGELOG.md` |
-| `none` | No changelog | N/A |
+| Release Type | Changelog Location              | Example                               |
+| ------------ | ------------------------------- | ------------------------------------- |
+| `published`  | `release/<module>/CHANGELOG.md` | `release/r2r-cli/CHANGELOG.md`        |
+| `bundle`     | `release/<module>/CHANGELOG.md` | `release/r2r-eac-bundle/CHANGELOG.md` |
+| `internal`   | `<module-root>/CHANGELOG.md`    | `go/eac/commands/CHANGELOG.md`        |
+| `none`       | No changelog                    | N/A                                   |
 
 **Rationale**:
 
@@ -176,6 +190,7 @@ jobs:
 4. ✅ Changelog location MUST match release type
 
 Tests enforce these rules:
+
 - `go/eac/core/contracts/modules/release_type_test.go`
 - `go/eac/commands/impl/release/release_type_workflow_test.go`
 
@@ -188,20 +203,23 @@ Tests enforce these rules:
 To promote an internal module to published status:
 
 1. **Update `repository.yml`**:
+
    ```yaml
    versioning:
      scheme: SemVer
-     changelog: release/my-module/CHANGELOG.md  # Move from module root
-     release_type: published                     # Change from internal
+     changelog: release/my-module/CHANGELOG.md # Move from module root
+     release_type: published # Change from internal
    ```
 
 2. **Move changelog**:
+
    ```bash
    mkdir -p release/my-module
    git mv <module-root>/CHANGELOG.md release/my-module/CHANGELOG.md
    ```
 
 3. **Create release workflow**:
+
    ```bash
    cp .github/workflows/release-r2r-cli.yaml .github/workflows/release-my-module.yaml
    # Update module references in the workflow
@@ -278,14 +296,14 @@ Is the module released to external users?
 - [DR-011: Calendar Versioning Policy](../decision-records/dr011.md) - CalVer usage for docs
 - [Module Changelogs](changelog/module-changelogs.md) - Changelog format and structure
 - [Release Workflows](workflows/release-workflows.md) - Automated release process
-- [Supporting Modules](../../eac/architecture/modules/supporting/supporting-modules/index.md) - Module catalog
+- [Supporting Modules](../../eac/architecture/modules/supporting/index.md) - Module catalog
 
 ---
 
 ## History
 
-| Date | Change |
-|------|--------|
-| 2026-01-21 | Introduced release type system (Phase 1-4 implementation) |
+| Date       | Change                                                     |
+| ---------- | ---------------------------------------------------------- |
+| 2026-01-21 | Introduced release type system (Phase 1-4 implementation)  |
 | 2026-01-21 | Moved internal module changelogs to module roots (Phase 2) |
-| 2026-01-21 | Added workflow validation by release type (Phase 3) |
+| 2026-01-21 | Added workflow validation by release type (Phase 3)        |
