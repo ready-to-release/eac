@@ -4,7 +4,7 @@
 
 How the `release/` folder structure organizes release artifacts for **published and bundle modules**, and how this differs from internal modules that store changelogs in their module roots.
 
-**Related**: See [Understanding Release Types](../../../../reference/continuous-delivery/release-types.md) for complete release type system documentation.
+**Related**: See [Understanding Release Types](../../../../reference/repository/continuous-delivery/release-types.md) for complete release type system documentation.
 
 ---
 
@@ -146,7 +146,7 @@ Module contracts in `.r2r/eac/repository.yml` define where each module's changel
 | `internal`   | `<module-root>/CHANGELOG.md`    | `go/eac/commands/CHANGELOG.md`        |
 | `none`       | No changelog                    | N/A                                   |
 
-See [Understanding Release Types](../../../../reference/continuous-delivery/release-types.md) for details on each type.
+See [Understanding Release Types](../../../../reference/repository/continuous-delivery/release-types.md) for details on each type.
 
 ### Published Module Path Convention
 
@@ -453,7 +453,7 @@ When you run `r2r release this <module>`, manual entries are preserved and merge
 
 ## Related Commands
 
-- [`show changelog`](../../../../reference/commands/show/changelog.md) - Display changelog
-- [`get changelog`](../../../../reference/commands/get/changelog.md) - Export changelog data
-- [`release this`](../../../../reference/commands/release/this.md) - Update changelog
-- [`validate release`](../../../../reference/commands/validate/release.md) - Validate format
+- [`show changelog`](../../../../reference/eac/commands/show/changelog.md) - Display changelog
+- [`get changelog`](../../../../reference/eac/commands/get/changelog.md) - Export changelog data
+- [`release this`](../../../../reference/eac/commands/release/this.md) - Update changelog
+- [`validate release`](../../../../reference/eac/commands/validate/release.md) - Validate format

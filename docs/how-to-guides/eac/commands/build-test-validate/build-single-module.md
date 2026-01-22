@@ -93,6 +93,6 @@ r2r eac show artifacts src-auth
 
 ## Related Commands
 
-- [`build`](../../../../reference/commands/build/build.md) - Full command reference
-- [`show artifacts`](../../../../reference/commands/show/artifacts.md) - View artifacts
-- [`validate artifacts`](../../../../reference/commands/validate/artifacts.md) - Verify artifacts
+- [`build`](../../../../reference/eac/commands/build/build.md) - Full command reference
+- [`show artifacts`](../../../../reference/eac/commands/show/artifacts.md) - View artifacts
+- [`validate artifacts`](../../../../reference/eac/commands/validate/artifacts.md) - Verify artifacts

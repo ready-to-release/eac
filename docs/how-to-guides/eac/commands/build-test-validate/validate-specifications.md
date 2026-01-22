@@ -116,5 +116,5 @@ r2r eac validate specs || exit 1
 
 ## Related Commands
 
-- [`validate specs`](../../../../reference/commands/validate/specs.md) - Validate Gherkin
-- [`get specs-unused-steps`](../../../../reference/commands/get/specs-unused-steps.md) - Find unused
+- [`validate specs`](../../../../reference/eac/commands/validate/specs.md) - Validate Gherkin
+- [`get specs-unused-steps`](../../../../reference/eac/commands/get/specs-unused-steps.md) - Find unused

@@ -23,8 +23,8 @@ For a complete, production-ready example, see [ext-env-check](https://github.com
 
 ## See Also
 
-- [R2R CLI Command Reference](../../reference/r2r-cli/index.md) - Complete command documentation
-- [R2R CLI Configuration](../../reference/r2r-cli/configuration.md) - Configuration file reference
-- [CLI vs Extensions Architecture](../../reference/r2r-eac/cli-vs-extensions.md) - Understanding the two-tier system
+- [R2R CLI Command Reference](../../reference/r2r/commands/index.md) - Complete command documentation
+- [R2R CLI Configuration](../../reference/r2r/commands/configuration.md) - Configuration file reference
+- [CLI vs Extensions Architecture](../../reference/eac/architecture/cli-integration.md) - Understanding the two-tier system
 
 {{ diataxis_footer() }}

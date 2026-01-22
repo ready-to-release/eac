@@ -100,6 +100,6 @@ r2r eac get changed-modules-ci | jq -r '.changed_modules[]' | xargs r2r eac buil
 
 ## Related Commands
 
-- [`get changed-modules`](../../../../reference/commands/get/changed-modules.md) - Local changes
-- [`get changed-modules-ci`](../../../../reference/commands/get/changed-modules-ci.md) - CI changes
-- [`get execution-order`](../../../../reference/commands/get/execution-order.md) - Build order
+- [`get changed-modules`](../../../../reference/eac/commands/get/changed-modules.md) - Local changes
+- [`get changed-modules-ci`](../../../../reference/eac/commands/get/changed-modules-ci.md) - CI changes
+- [`get execution-order`](../../../../reference/eac/commands/get/execution-order.md) - Build order

@@ -27,7 +27,7 @@ Select the appropriate type based on your module's language:
 
 **For other languages** (Python, Rust, Java): Use `container` type with a Dockerfile that builds your code.
 
-See [Module Types Reference](../../../reference/r2r-eac/module-types-reference.md) for detailed language support and configuration options.
+See [Module Types Reference](../../../reference/eac/architecture/module-types.md) for detailed language support and configuration options.
 
 ## Quick Start
 

@@ -135,6 +135,6 @@ Version is determined by commit types (for SemVer modules):
 
 ## Related Commands
 
-- [`release changelog`](../../../../reference/commands/release/changelog.md) - Generate changelog
-- [`release get-version`](../../../../reference/commands/release/get-version.md) - Extract version
-- [`validate release`](../../../../reference/commands/validate/release.md) - Validate format
+- [`release changelog`](../../../../reference/eac/commands/release/changelog.md) - Generate changelog
+- [`release get-version`](../../../../reference/eac/commands/release/get-version.md) - Extract version
+- [`validate release`](../../../../reference/eac/commands/validate/release.md) - Validate format

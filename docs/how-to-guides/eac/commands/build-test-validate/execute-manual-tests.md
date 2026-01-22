@@ -373,17 +373,17 @@ r2r eac show tests $MODULE
 
 ## Next Steps
 
-- [test export-manual](../../../../reference/commands/test/export-manual.md) → Detailed export options
-- [test import-manual](../../../../reference/commands/test/import-manual.md) → Validation rules
-- [test merge-results](../../../../reference/commands/test/merge-results.md) → Merge behavior
+- [test export-manual](../../../../reference/eac/commands/test/export-manual.md) → Detailed export options
+- [test import-manual](../../../../reference/eac/commands/test/import-manual.md) → Validation rules
+- [test merge-results](../../../../reference/eac/commands/test/merge-results.md) → Merge behavior
 - [Debug Test Failures](./debug-test-failures.md) → Fix failed tests
 - [Run Test Suites](./run-test-suites.md) → Execute automated tests
 
 ## Related Commands
 
-- [`test export-manual`](../../../../reference/commands/test/export-manual.md) - Export scenarios
-- [`test import-manual`](../../../../reference/commands/test/import-manual.md) - Import results
-- [`test merge-results`](../../../../reference/commands/test/merge-results.md) - Merge to manifest
-- [`show test-summary`](../../../../reference/commands/show/test-summary.md) - View results
-- [`show suite`](../../../../reference/commands/show/suite.md) - Suite details
-- [`test`](../../../../reference/commands/test/test.md) - Run automated tests
+- [`test export-manual`](../../../../reference/eac/commands/test/export-manual.md) - Export scenarios
+- [`test import-manual`](../../../../reference/eac/commands/test/import-manual.md) - Import results
+- [`test merge-results`](../../../../reference/eac/commands/test/merge-results.md) - Merge to manifest
+- [`show test-summary`](../../../../reference/eac/commands/show/test-summary.md) - View results
+- [`show suite`](../../../../reference/eac/commands/show/suite.md) - Suite details
+- [`test`](../../../../reference/eac/commands/test/test.md) - Run automated tests

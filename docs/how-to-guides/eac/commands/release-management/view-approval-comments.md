@@ -407,7 +407,7 @@ If a PR has no description or merge message, it will show "(No description provi
 
 ## See Also
 
-- [show approval-comments Reference](../../../../reference/commands/show/approval-comments.md) - Complete command reference
-- [get approval-comments Reference](../../../../reference/commands/get/approval-comments.md) - JSON/YAML output reference
+- [show approval-comments Reference](../../../../reference/eac/commands/show/approval-comments.md) - Complete command reference
+- [get approval-comments Reference](../../../../reference/eac/commands/get/approval-comments.md) - JSON/YAML output reference
 - [View Specifications](./view-specifications.md) - View spec files for a release
 - [View Changelog and Release Notes](./view-changelog-release-notes.md) - View changes and notes

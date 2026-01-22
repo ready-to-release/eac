@@ -107,6 +107,6 @@ r2r eac work remove add-jwt-auth
 
 ## Related Commands
 
-- [`work merge`](../../../../reference/commands/work/merge.md) - Merge workspace
-- [`work pull`](../../../../reference/commands/work/pull.md) - Sync with main
-- [`work remove`](../../../../reference/commands/work/remove.md) - Clean up workspace
+- [`work merge`](../../../../reference/eac/commands/work/merge.md) - Merge workspace
+- [`work pull`](../../../../reference/eac/commands/work/pull.md) - Sync with main
+- [`work remove`](../../../../reference/eac/commands/work/remove.md) - Clean up workspace
