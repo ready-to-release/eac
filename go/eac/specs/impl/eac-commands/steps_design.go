@@ -53,15 +53,7 @@ func registerDesignSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 		return internal.CreateFile(ctx, wsPath, minimalWorkspaceDSL(module))
 	})
 	sc.Step(`^module "([^"]*)" has a workspace at "([^"]*)"$`, func(module, path string) error {
-		// Extract source path from workspace path (e.g., "specs/test-module/.design/workspace.dsl" → "specs/test-module")
-		sourcePath := filepath.Dir(filepath.Dir(path))
-
-		// Create module contract in repository.yml
-		if err := createModuleContract(ctx, module, sourcePath); err != nil {
-			return err
-		}
-
-		// Create workspace file
+		// Just create the workspace file - module already exists in fixture
 		return internal.CreateFile(ctx, path, minimalWorkspaceDSL(module))
 	})
 	sc.Step(`^module "([^"]*)" has a valid workspace$`, func(module string) error {
@@ -75,17 +67,14 @@ func registerDesignSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 		return internal.CreateFile(ctx, path, "invalid { dsl content")
 	})
 	sc.Step(`^no workspace exists for "([^"]*)"$`, func(module string) error {
-		// Create module contract in repository.yml
+		// Just ensure directory structure exists without workspace
+		// Module already exists in fixture repository.yml
 		sourcePath := fmt.Sprintf("specs/%s", module)
-		if err := createModuleContract(ctx, module, sourcePath); err != nil {
-			return err
-		}
-
-		// Ensure directory structure exists without workspace
 		return internal.CreateDirectory(ctx, sourcePath)
 	})
 	sc.Step(`^multiple modules have workspace files$`, func() error {
-		for _, mod := range []string{"module-a", "module-b", "module-c"} {
+		// Use real modules that exist in fixture repository.yml
+		for _, mod := range []string{"eac-core", "docs", "r2r-cli"} {
 			wsPath := fmt.Sprintf("specs/%s/.design/workspace.dsl", mod)
 			if err := internal.CreateFile(ctx, wsPath, minimalWorkspaceDSL(mod)); err != nil {
 				return err
@@ -131,6 +120,25 @@ func registerDesignSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	})
 	sc.Step(`^each should have a unique port$`, func() error {
 		// Placeholder - verify port allocation
+		return nil
+	})
+
+	// Verbose output verification
+	sc.Step(`^the output should contain Docker command details$`, func() error {
+		output := strings.ToLower(ctx.CommandOutput)
+
+		// Check for Docker-related keywords in verbose output
+		hasDocker := strings.Contains(output, "docker")
+		hasStructurizr := strings.Contains(output, "structurizr")
+		hasContainer := strings.Contains(output, "container")
+
+		if !hasDocker && !hasStructurizr && !hasContainer {
+			return fmt.Errorf(
+				"expected Docker command details in output, but found none\n\nActual output:\n%s",
+				ctx.CommandOutput,
+			)
+		}
+
 		return nil
 	})
 }

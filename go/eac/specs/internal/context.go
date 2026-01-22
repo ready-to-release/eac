@@ -26,6 +26,7 @@ const (
 	EnvR2RContainerRoot     = "R2R_CONTAINER_ROOT"
 	EnvR2RMockAIDir         = "R2R_MOCK_AI_DIR"
 	EnvR2RMockSecurity      = "R2R_MOCK_SECURITY"
+	EnvR2RMockStructurizr   = "R2R_MOCK_STRUCTURIZR"
 )
 
 // TestContext wraps the core SharedTestContext with additional spec-specific state.
@@ -180,7 +181,7 @@ func (c *TestContext) buildIsolationEnvironment(env []string) []string {
 }
 
 // buildMockingEnvironment adds mocking environment variables for tests.
-// Sets R2R_CONTAINER_ROOT, R2R_MOCK_AI_DIR, and R2R_MOCK_SECURITY.
+// Sets R2R_CONTAINER_ROOT, R2R_MOCK_AI_DIR, R2R_MOCK_SECURITY, and R2R_MOCK_STRUCTURIZR.
 func (c *TestContext) buildMockingEnvironment(env []string) []string {
 	// Set distribution root for template loading
 	// Templates are NOT copied to isolated test directories - they live in the original repo
@@ -201,6 +202,10 @@ func (c *TestContext) buildMockingEnvironment(env []string) []string {
 	// Enable security tool mocking for subprocess commands
 	// This enables security commands to use mock responses instead of real Docker tools
 	env = append(env, fmt.Sprintf("%s=true", EnvR2RMockSecurity))
+
+	// Enable Structurizr CLI mocking for design validation tests
+	// This allows validation tests to run without Docker
+	env = append(env, fmt.Sprintf("%s=true", EnvR2RMockStructurizr))
 
 	return env
 }

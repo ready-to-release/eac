@@ -85,7 +85,12 @@ type StructurizrValidator interface {
 type StructurizrValidatorImpl struct{}
 
 // NewValidator creates a new Structurizr validator.
+// Returns a mock validator if R2R_MOCK_STRUCTURIZR is set.
 func NewValidator() (StructurizrValidator, error) {
+	// Check for mock mode
+	if os.Getenv("R2R_MOCK_STRUCTURIZR") != "" {
+		return NewMockValidator(), nil
+	}
 	return &StructurizrValidatorImpl{}, nil
 }
 

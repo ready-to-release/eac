@@ -1,4 +1,8 @@
 // Command: get commands
+// Short: Get structured command information
+// Long: Outputs structured command information in JSON or YAML format.
+// Long: Useful for building shell integrations, completion scripts, and tooling.
+// Flag.format: type=string, shorthand=f, default=json, usage=Output format (json or yaml)
 package describe
 
 import (
@@ -12,6 +16,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
+	"gopkg.in/yaml.v3"
 )
 
 // commandFlags defines valid flags for the describe commands command.
@@ -45,13 +50,42 @@ func GetCommands() int {
 		return 1
 	}
 
+	// Parse format flag
+	format := "json" // default
+	args := os.Args[3:] // Skip "get" and "commands"
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if arg == "--format" && i+1 < len(args) {
+			format = args[i+1]
+			i++
+		} else if strings.HasPrefix(arg, "--format=") {
+			format = strings.TrimPrefix(arg, "--format=")
+		} else if arg == "-f" && i+1 < len(args) {
+			format = args[i+1]
+			i++
+		}
+	}
+
 	tree := buildCommandTree()
 
-	// Output as JSON
-	encoder := json.NewEncoder(os.Stdout)
-	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(tree); err != nil {
-		log.Errorf("Error encoding JSON: %v", err)
+	// Output in requested format
+	switch format {
+	case "json":
+		encoder := json.NewEncoder(os.Stdout)
+		encoder.SetIndent("", "  ")
+		if err := encoder.Encode(tree); err != nil {
+			log.Errorf("Error encoding JSON: %v", err)
+			return 1
+		}
+	case "yaml":
+		encoder := yaml.NewEncoder(os.Stdout)
+		encoder.SetIndent(2)
+		if err := encoder.Encode(tree); err != nil {
+			log.Errorf("Error encoding YAML: %v", err)
+			return 1
+		}
+	default:
+		log.Errorf("Unknown format: %s (supported: json, yaml)", format)
 		return 1
 	}
 
