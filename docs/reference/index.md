@@ -10,15 +10,15 @@ Technical reference material for the R2R and EAC ecosystem.
 
 ## Products
 
-| Product Reference        | Description                              |
-| ------------------------ | ---------------------------------------- |
-| [R2R CLI](./r2r/)        | R2R CLI framework and commands           |
-| [EAC Extension](./eac/)  | EAC extension architecture and commands  |
+| Product Reference       | Description                             |
+| ----------------------- | --------------------------------------- |
+| [R2R CLI](./r2r/)       | R2R CLI framework and commands          |
+| [EAC Extension](./eac/) | EAC extension architecture and commands |
 
 ## Repository
 
-| Resource                                         | Description                          |
-| ------------------------------------------------ | ------------------------------------ |
+| Resource                                                 | Description                     |
+| -------------------------------------------------------- | ------------------------------- |
 | [Continuous Delivery](./repository/continuous-delivery/) | CI/CD workflows and conventions |
-| [Decision Records](./repository/decision-records/)       | Architectural decisions          |
-| [Modules](./repository/modules/)                         | Complete module reference        |
+| [Decision Records](./repository/decision-records/)       | Architectural decisions         |
+| [Modules](./repository/modules/)                         | Complete module reference       |
