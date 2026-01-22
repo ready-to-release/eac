@@ -1,19 +1,50 @@
 # Security Policy
 
-## Supported Versions
-
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
-
-TODO:
-
-| Module       | Version | Supported          |
-| ------------ | ------- | ------------------ |
-| ext-eac      | 5.1.x   | :white_check_mark: |
-| r2r-cli      | 5.0.x   | :x:                |
-| eac-commands | 4.0.x   | :white_check_mark: |
-| docs         | < 4.0   | :x:                |
-
 ## Reporting a Vulnerability
 
-Create an issue on: <https://github.com/ready-to-release/eac>
+**For security vulnerabilities, please use GitHub's private vulnerability reporting:**
+
+1. Go to the [Security tab](https://github.com/ready-to-release/eac/security)
+2. Click "Report a vulnerability"
+3. Provide detailed information about the issue
+
+**Response times:**
+
+- Initial acknowledgment: Within 48 hours
+- Severity assessment: Within 7 days
+- Fix timeline varies by severity
+
+**Alternative:** For sensitive issues that cannot be reported via GitHub, contact: security@ready-to-release.dev (TODO: establish)
+
+## Supported Versions
+
+This is a **multi-module Go workspace**. All modules are currently in active development:
+
+| Module | Path | Status | Go Version |
+|--------|------|--------|------------|
+| EaC Core | `go/eac/core` | Active Development | 1.24+ |
+| EaC Commands | `go/eac/commands` | Active Development | 1.24+ |
+| EaC MCP Commands | `go/eac/mcp/commands` | Active Development | 1.24+ |
+| EaC Specs | `go/eac/specs` | Active Development | 1.24+ |
+| R2R CLI | `go/r2r/cli` | Active Development | 1.24+ |
+
+Security patches are applied to the main branch and will be included in the next release.
+
+## Security Practices
+
+This repository implements comprehensive security measures:
+
+- **Automated scanning:** CodeQL, Trivy, Semgrep, OWASP ZAP
+- **Security commands:** `r2r eac scan` with multiple scanner types
+- **Continuous monitoring:** Security workflows run on every push and PR
+
+For detailed information, see our comprehensive documentation:
+
+- [Security Practices](docs/explanation/continuous-delivery/security/) - Shift-left security, SAST, DAST, supply chain security
+- [Security Workflows](docs/reference/repository/continuous-delivery/workflows/security-workflows.md) - Automated security scanning
+- [Scan Command](docs/how-to-guides/eac/commands/build-test-validate/scan-for-security-issues.md) - Running security scans locally
+
+## License
+
+- Code: [MIT License](LICENSE)
+- Documentation: CC-BY-SA-4.0
