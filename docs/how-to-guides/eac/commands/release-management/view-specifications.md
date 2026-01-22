@@ -223,7 +223,7 @@ r2r eac get specs my-module latest --as-json | jq -r '.spec_files[] | select(.st
 
 ## See Also
 
-- [show specs Reference](../../../../reference/commands/show/specs.md) - Complete command reference
-- [get specs Reference](../../../../reference/commands/get/specs.md) - JSON/YAML output reference
+- [show specs Reference](../../../../reference/eac/commands/show/specs.md) - Complete command reference
+- [get specs Reference](../../../../reference/eac/commands/get/specs.md) - JSON/YAML output reference
 - [View Changelog and Release Notes](./view-changelog-release-notes.md) - View changes and notes
 - [Generate Changelog](./generate-changelog.md) - Create changelog entries

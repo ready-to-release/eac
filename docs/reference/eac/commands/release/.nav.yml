@@ -1,0 +1,20 @@
+title: release Commands
+nav:
+  - index.md
+  - release.md
+  - this.md
+  - await-deps.md
+  - changelog.md
+  - check-ci.md
+  - check-exists.md
+  - check-pending.md
+  - cleanup.md
+  - execute-layers.md
+  - ext-eac.md
+  - extract-version.md
+  - generate-module-calver.md
+  - get-version.md
+  - pending.md
+  - prune.md
+  - r2r-cli.md
+  - tag-pending.md

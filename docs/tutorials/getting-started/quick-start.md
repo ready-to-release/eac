@@ -264,5 +264,5 @@ Now that you know the basics of r2r, try these common tasks:
 ### Dive Deeper
 
 - **[Everything as Code Paradigm](../../explanation/everything-as-code/paradigm.md)** - Understand the philosophy
-- **[Command Reference](../../reference/commands/)** - Complete command documentation
+- **[Command Reference](../../reference/eac/commands/)** - Complete command documentation
 - **[Creating Extensions Guide](../../how-to-guides/r2r/creating-extensions.md)** - Build custom extensions

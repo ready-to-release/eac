@@ -38,7 +38,7 @@ type CommandOverride struct {
 func DefaultCommandsConfig() *CommandsConfig {
 	return &CommandsConfig{
 		Defaults: CommandsDefaults{
-			DocsBase:            "docs/reference/commands",
+			DocsBase:            "docs/reference/eac/commands",
 			UncategorizedFolder: "core",
 		},
 		Categories: map[string]CategoryConfig{
@@ -84,7 +84,7 @@ func (c *CommandsConfig) GetDocPath(command, sourcePath, repoRoot string) string
 	parts := strings.Split(command, " ")
 	docsBase := c.Defaults.DocsBase
 	if docsBase == "" {
-		docsBase = "docs/reference/commands"
+		docsBase = "docs/reference/eac/commands"
 	}
 
 	if len(parts) == 1 {

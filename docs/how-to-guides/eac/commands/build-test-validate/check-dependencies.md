@@ -97,6 +97,6 @@ r2r eac get dependencies | jq '.dependencies["src-api"]'
 
 ## Related Commands
 
-- [`validate dependencies`](../../../../reference/commands/validate/dependencies.md) - Check contracts
-- [`show dependencies`](../../../../reference/commands/show/dependencies.md) - View graph
-- [`validate go-tidy`](../../../../reference/commands/validate/go-tidy.md) - Check tidiness
+- [`validate dependencies`](../../../../reference/eac/commands/validate/dependencies.md) - Check contracts
+- [`show dependencies`](../../../../reference/eac/commands/show/dependencies.md) - View graph
+- [`validate go-tidy`](../../../../reference/eac/commands/validate/go-tidy.md) - Check tidiness

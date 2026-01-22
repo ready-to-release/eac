@@ -288,5 +288,5 @@ See [Understanding the Release Folder](./understanding-release-folder.md) for co
 - [Understanding the Release Folder](./understanding-release-folder.md) - Folder structure and file types
 - [Generate Changelog](./generate-changelog.md) - Create changelog from commits
 - [Prepare Module Release](./prepare-module-release.md) - Complete release checklist
-- [show Commands Reference](../../../../reference/commands/show/index.md)
-- [get Commands Reference](../../../../reference/commands/get/index.md)
+- [show Commands Reference](../../../../reference/eac/commands/show/index.md)
+- [get Commands Reference](../../../../reference/eac/commands/get/index.md)

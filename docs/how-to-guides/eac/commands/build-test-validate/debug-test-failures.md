@@ -92,6 +92,6 @@ r2r eac test src-auth --fail-fast
 
 ## Related Commands
 
-- [`test debug`](../../../../reference/commands/test/debug.md) - List failures
-- [`show test-timings`](../../../../reference/commands/show/test-timings.md) - Test performance
-- [`test`](../../../../reference/commands/test/test.md) - Run tests
+- [`test debug`](../../../../reference/eac/commands/test/debug.md) - List failures
+- [`show test-timings`](../../../../reference/eac/commands/show/test-timings.md) - Test performance
+- [`test`](../../../../reference/eac/commands/test/test.md) - Run tests

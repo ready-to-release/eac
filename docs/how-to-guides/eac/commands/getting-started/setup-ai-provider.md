@@ -271,6 +271,6 @@ git status | grep ai-provider.personal
 
 ## Related Commands
 
-- [`init`](../../../../reference/commands/init/init.md) - Full init command reference
-- [`work commit`](../../../../reference/commands/work/commit.md) - Commit with AI messages
-- [`create commit-message`](../../../../reference/commands/create/commit-message.md) - Generate commit messages
+- [`init`](../../../../reference/eac/commands/init/init.md) - Full init command reference
+- [`work commit`](../../../../reference/eac/commands/work/commit.md) - Commit with AI messages
+- [`create commit-message`](../../../../reference/eac/commands/create/commit-message.md) - Generate commit messages

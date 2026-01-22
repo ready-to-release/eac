@@ -43,7 +43,7 @@ Understanding the two configuration layers:
 - Scope: Extension-specific (only affects EAC)
 - Example content: AI provider settings, module configuration
 
-See [CLI vs Extensions](../../reference/r2r-eac/cli-vs-extensions.md) for detailed architecture explanation.
+See [CLI vs Extensions](../../reference/eac/architecture/cli-integration.md) for detailed architecture explanation.
 
 ## R2R CLI Configuration
 
@@ -72,7 +72,7 @@ extensions:
 
 **Should you commit it?** ✅ Yes - team needs to know which extensions are used
 
-For complete reference, see [R2R CLI Configuration Guide](../../reference/r2r-cli/configuration.md).
+For complete reference, see [R2R CLI Configuration Guide](../../reference/r2r/commands/configuration.md).
 
 ## EAC Extension Configuration
 
@@ -277,7 +277,7 @@ This copies configuration files like `ai-config.yml`, `module-types.yml`, etc. t
 └── (other copied files...)
 ```
 
-For details on the file formats, see the [Init Command Reference](../../reference/commands/init/init.md#advanced-copying-system-templates).
+For details on the file formats, see the [Init Command Reference](../../reference/eac/commands/init/init.md#advanced-copying-system-templates).
 
 ---
 

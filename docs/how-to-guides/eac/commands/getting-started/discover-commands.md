@@ -89,7 +89,7 @@ This pattern is consistent across all information-retrieval commands, making it 
 
 For detailed command documentation, see:
 
-- **[Command Reference](../../../../reference/commands/)** - Complete alphabetical listing
+- **[Command Reference](../../../../reference/eac/commands/)** - Complete alphabetical listing
 - **[Getting Started Commands](../getting-started/)** - Beginner-friendly guides
 - **[Development Workflow Commands](../development-workflow/)** - Daily development tasks
 - **[Build, Test & Validate Commands](../build-test-validate/)** - Build and test execution

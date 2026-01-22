@@ -1,19 +1,24 @@
 # Reference
 
-Technical reference material providing information-oriented documentation for the EAC system. Includes API specifications, command references, decision records, and architectural documentation.
+Technical reference material for the R2R and EAC ecosystem.
 
 ## Quick Access
 
-| Resource                                         | Description                              |
-| ------------------------------------------------ | ---------------------------------------- |
-| [Command Cheat Sheet](./commands/cheat-sheet.md) | Quick reference for most common commands |
+| Resource                                             | Description                              |
+| ---------------------------------------------------- | ---------------------------------------- |
+| [Command Cheat Sheet](./eac/commands/cheat-sheet.md) | Quick reference for most common commands |
 
-## In This Section
+## Products
 
-| Reference                                     | Description                                                          |
-| --------------------------------------------- | -------------------------------------------------------------------- |
-| [R2R and EAC Architecture](./r2r-eac/)        | System architecture, module system, contracts, and design principles |
-| [R2R CLI Commands](./r2r-cli/)                | R2R CLI framework command reference (init, install, list, etc.)      |
-| [EAC Extension Commands](./commands/)         | EAC extension command reference (build, test, validate, etc.)        |
-| [Continuous Delivery](./continuous-delivery/) | CI/CD pipeline and deployment reference materials                    |
-| [Decision Records](./decision-records/)       | Architectural decisions and their rationale                          |
+| Product Reference        | Description                              |
+| ------------------------ | ---------------------------------------- |
+| [R2R CLI](./r2r/)        | R2R CLI framework and commands           |
+| [EAC Extension](./eac/)  | EAC extension architecture and commands  |
+
+## Repository
+
+| Resource                                         | Description                          |
+| ------------------------------------------------ | ------------------------------------ |
+| [Continuous Delivery](./repository/continuous-delivery/) | CI/CD workflows and conventions |
+| [Decision Records](./repository/decision-records/)       | Architectural decisions          |
+| [Modules](./repository/modules/)                         | Complete module reference        |

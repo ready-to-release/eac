@@ -1,0 +1,7 @@
+nav:
+  - index.md
+  - docs.md
+  - templates.md
+  - r2r-installer.md
+  - implicit-r2r-cli.md
+  - vscode-ext-commit.md

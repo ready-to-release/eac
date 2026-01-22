@@ -62,10 +62,10 @@ Documentation is organized using the [Diataxis framework](https://diataxis.fr/) 
 <p><strong>Information-oriented descriptions</strong></p>
 <p>Technical reference material for looking up details. Check here for system architecture, module contracts, command syntax, configuration options, and specifications.</p>
 <ul>
-<li><a href="reference/r2r-eac/">R2R and EAC Architecture</a> - System overview and design</li>
-<li><a href="reference/r2r-eac/repository-layout/">Repository Layout</a> - File structure</li>
-<li><a href="reference/commands/">Command Reference</a> - CLI commands</li>
-<li><a href="reference/decision-records/">Decision Records</a> - Architectural decisions</li>
+<li><a href="reference/eac/architecture/">R2R and EAC Architecture</a> - System overview and design</li>
+<li><a href="reference/eac/architecture/repository-layout/">Repository Layout</a> - File structure</li>
+<li><a href="reference/eac/commands/">Command Reference</a> - CLI commands</li>
+<li><a href="reference/repository/decision-records/">Decision Records</a> - Architectural decisions</li>
 </ul>
 </div>
 <div>
