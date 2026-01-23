@@ -14,13 +14,11 @@ Feature: eac-commands_create-risk-assess
 
   Rule: Command requires valid inputs
 
-    @skip:wip
     Scenario: Missing profile flag shows error
       When I run "create risk-assess billing"
       Then the exit code is 1
-      And stderr contains "--profile flag is required"
+      And stderr contains "required flag missing: --profile"
 
-    @skip:wip
     Scenario: Non-existent profile file shows error
       When I run "create risk-assess billing --profile nonexistent.json"
       Then the exit code is 1
@@ -28,7 +26,6 @@ Feature: eac-commands_create-risk-assess
 
   Rule: Command is read-only and errors when evidence is missing or too old
 
-    @skip:wip
     Scenario: Command errors when no test evidence exists
       Given module "billing" has no test results
       When I run "create risk-assess billing --profile specs/risk-controls/billing.profile.json"
@@ -37,7 +34,6 @@ Feature: eac-commands_create-risk-assess
       And stderr contains "out/test/"
       And stderr contains "Run tests and scans to generate evidence"
 
-    @skip:wip
     Scenario: Command errors when test evidence is too old
       Given module "billing" has test results older than 24 hours
       When I run "create risk-assess billing --profile specs/risk-controls/billing.profile.json"
@@ -46,7 +42,6 @@ Feature: eac-commands_create-risk-assess
       And stderr contains "out/test/"
       And stderr contains "Run tests to update evidence"
 
-    @skip:wip
     Scenario: Command errors when security evidence is too old
       Given module "billing" has security scan results older than 24 hours
       When I run "create risk-assess billing --profile specs/risk-controls/billing.profile.json"
@@ -57,7 +52,6 @@ Feature: eac-commands_create-risk-assess
 
   Rule: Command creates OSCAL assessment-results from fresh evidence
 
-    @skip:wip
     Scenario: Create assessment-results for single module with fresh evidence
       Given module "billing" has fresh test results with @control tags
       And module "billing" has fresh security scan results
@@ -68,7 +62,6 @@ Feature: eac-commands_create-risk-assess
 
   Rule: Command supports multi-module assessment
 
-    @skip:wip
     Scenario: Assess all modules when no module specified
       Given modules "billing", "api", and "auth" exist with profiles
       And all modules have fresh test and security evidence
@@ -79,7 +72,6 @@ Feature: eac-commands_create-risk-assess
       And files matching "out/risk/*/auth/assessment-results.json" exist
       And stdout contains "3 module(s) completed successfully"
 
-    @skip:wip
     Scenario: Assess multiple specific modules with space-separated names
       Given modules "billing" and "api" exist with profiles
       And all modules have fresh test and security evidence
@@ -91,7 +83,6 @@ Feature: eac-commands_create-risk-assess
 
   Rule: Parallel execution is default for multiple modules
 
-    @skip:wip
     Scenario: Multiple modules run in parallel by default
       Given modules "billing", "api", and "auth" exist with profiles
       And all modules have fresh test and security evidence
@@ -102,7 +93,6 @@ Feature: eac-commands_create-risk-assess
       And files matching "out/risk/*/api/assessment-results.json" exist
       And files matching "out/risk/*/auth/assessment-results.json" exist
 
-    @skip:wip
     Scenario: Sequential flag disables parallel execution
       Given modules "billing" and "api" exist with profiles
       And all modules have fresh test and security evidence
@@ -114,7 +104,6 @@ Feature: eac-commands_create-risk-assess
 
   Rule: Partial failures are handled gracefully
 
-    @skip:wip
     Scenario: One module has fresh evidence, another has no evidence
       Given module "billing" exists with a profile
       And module "api" exists with a profile
@@ -127,7 +116,6 @@ Feature: eac-commands_create-risk-assess
       And stdout contains "1 module(s) failed"
       And stdout contains "1 module(s) completed successfully"
 
-    @skip:wip
     Scenario: One module has fresh evidence, another has stale evidence
       Given module "billing" exists with a profile
       And module "api" exists with a profile

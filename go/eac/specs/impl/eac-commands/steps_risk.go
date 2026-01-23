@@ -146,45 +146,73 @@ paths:
 		profilePath := filepath.Join("specs", "risk-controls", fmt.Sprintf("%s.profile.json", module))
 		state.profilePath = profilePath
 
-		// Create go.mod file at repository root (needed for `go run` commands)
-		goMod := "module github.com/ready-to-release/eac\n\ngo 1.24\n"
-		if err := internal.CreateFile(ctx, "go.mod", goMod); err != nil {
-			return err
+		// Create go.mod file at repository root (needed for `go run` commands) - only once
+		goModPath := filepath.Join(ctx.CurrentWorkDir, "go.mod")
+		if _, err := os.Stat(goModPath); os.IsNotExist(err) {
+			goMod := "module github.com/ready-to-release/eac\n\ngo 1.24\n"
+			if err := internal.CreateFile(ctx, "go.mod", goMod); err != nil {
+				return err
+			}
 		}
 
-		// Clear contracts directory (isolation setup copies real contracts, we only want test modules)
+		// Create contracts directory if it doesn't exist (but don't clear it)
 		contractsDir := filepath.Join(ctx.CurrentWorkDir, "contracts")
-		if err := os.RemoveAll(contractsDir); err != nil && !os.IsNotExist(err) {
-			return fmt.Errorf("failed to clear contracts directory: %w", err)
-		}
 		if err := os.MkdirAll(contractsDir, 0o755); err != nil {
 			return fmt.Errorf("failed to create contracts directory: %w", err)
 		}
 
-		// Create minimal repository.yml (isolation copies real one with all modules)
-		repositoryYml := fmt.Sprintf(`modules:
+		// Read existing repository.yml or create new one
+		repositoryYmlPath := filepath.Join(ctx.CurrentWorkDir, ".r2r", "eac", "repository.yml")
+		var repositoryYml string
+		moduleExists := false
+		if existingContent, err := os.ReadFile(repositoryYmlPath); err == nil {
+			// Check if module already exists in repository.yml
+			repositoryYml = string(existingContent)
+			if strings.Contains(repositoryYml, "moniker: "+module+"\n") {
+				moduleExists = true
+			}
+
+			// Only append if module doesn't exist
+			if !moduleExists {
+				repositoryYml += fmt.Sprintf(`  - moniker: %s
+    name: Test Module %s
+    description: Test module
+    components:
+      go: .
+`, module, module)
+			}
+		} else {
+			// Create new repository.yml
+			repositoryYml = fmt.Sprintf(`modules:
   - moniker: %s
     name: Test Module %s
     description: Test module
     components:
       go: .
 `, module, module)
-		repositoryYmlPath := filepath.Join(".r2r", "eac", "repository.yml")
-		if err := internal.CreateFile(ctx, repositoryYmlPath, repositoryYml); err != nil {
-			return fmt.Errorf("failed to create repository.yml: %w", err)
 		}
 
-		// Create module contract
-		moduleContract := fmt.Sprintf(`module:
+		// Only write if we made changes
+		if !moduleExists {
+			if err := internal.CreateFile(ctx, filepath.Join(".r2r", "eac", "repository.yml"), repositoryYml); err != nil {
+				return fmt.Errorf("failed to create repository.yml: %w", err)
+			}
+		}
+
+		// Create module contract (only if it doesn't exist)
+		contractPath := filepath.Join("contracts", fmt.Sprintf("%s.yml", module))
+		contractFullPath := filepath.Join(ctx.CurrentWorkDir, contractPath)
+		if _, err := os.Stat(contractFullPath); os.IsNotExist(err) {
+			moduleContract := fmt.Sprintf(`module:
   moniker: %s
   type: go
   description: Test module
 paths:
   - .
 `, module)
-		contractPath := filepath.Join("contracts", fmt.Sprintf("%s.yml", module))
-		if err := internal.CreateFile(ctx, contractPath, moduleContract); err != nil {
-			return err
+			if err := internal.CreateFile(ctx, contractPath, moduleContract); err != nil {
+				return err
+			}
 		}
 
 		// Create module-specific profile
@@ -193,9 +221,16 @@ paths:
 			return err
 		}
 
-		// Also create shared profile for multi-module assessments
-		sharedProfile := createValidProfile("shared-profile-uuid", "Shared Profile", []string{"ac-2", "ia-2"})
-		return internal.CreateFile(ctx, "specs/.risk-controls/risk-profile.json", sharedProfile)
+		// Also create shared profile for multi-module assessments (only once)
+		sharedProfilePath := filepath.Join(ctx.CurrentWorkDir, "specs", ".risk-controls", "risk-profile.json")
+		if _, err := os.Stat(sharedProfilePath); os.IsNotExist(err) {
+			sharedProfile := createValidProfile("shared-profile-uuid", "Shared Profile", []string{"ac-2", "ia-2"})
+			if err := internal.CreateFile(ctx, "specs/.risk-controls/risk-profile.json", sharedProfile); err != nil {
+				return err
+			}
+		}
+
+		return nil
 	})
 
 	sc.Step(`^module "([^"]*)" has no evidence$`, func(module string) error {
@@ -237,10 +272,9 @@ paths:
 		for _, module := range modules {
 			repositoryYml += "  - moniker: " + module + "\n"
 			repositoryYml += "    name: Test Module " + module + "\n"
-			repositoryYml += "    type: service\n"
 			repositoryYml += "    description: Test module\n"
-			repositoryYml += "    files:\n"
-			repositoryYml += "      root: .\n"
+			repositoryYml += "    components:\n"
+			repositoryYml += "      go: .\n"
 		}
 		repositoryYmlPath := filepath.Join(".r2r", "eac", "repository.yml")
 		if err := internal.CreateFile(ctx, repositoryYmlPath, repositoryYml); err != nil {
@@ -291,10 +325,9 @@ paths:
 		for _, module := range modules {
 			repositoryYml += "  - moniker: " + module + "\n"
 			repositoryYml += "    name: Test Module " + module + "\n"
-			repositoryYml += "    type: service\n"
 			repositoryYml += "    description: Test module\n"
-			repositoryYml += "    files:\n"
-			repositoryYml += "      root: .\n"
+			repositoryYml += "    components:\n"
+			repositoryYml += "      go: .\n"
 		}
 		repositoryYmlPath := filepath.Join(".r2r", "eac", "repository.yml")
 		if err := internal.CreateFile(ctx, repositoryYmlPath, repositoryYml); err != nil {
@@ -323,9 +356,17 @@ paths:
 	})
 
 	sc.Step(`^module "([^"]*)" has fresh test results with @control tags$`, func(module string) error {
-		// Create mock cucumber results with fresh timestamp
+		// Create both cucumber results AND test manifest with fresh timestamp
+		testDir := filepath.Join("out", "test", module)
+
+		// Create test manifest
+		manifest := createMockTestManifest(module, time.Now(), []string{"ac-2"})
+		if err := internal.CreateFile(ctx, filepath.Join(testDir, "test.manifest.json"), manifest); err != nil {
+			return err
+		}
+
+		// Create cucumber results (for compatibility)
 		cucumberJSON := createMockCucumberResults([]string{"ac-2"})
-		testDir := filepath.Join("out", "test", "integration", module)
 		return internal.CreateFile(ctx, filepath.Join(testDir, "results.cucumber.json"), cucumberJSON)
 	})
 
@@ -336,34 +377,39 @@ paths:
 
 	sc.Step(`^module "([^"]*)" has test results older than 24 hours$`, func(module string) error {
 		// Create test results with old timestamp (26 hours ago to ensure it's > 24 hours)
-		cucumberJSON := createMockCucumberResults([]string{"ac-2"})
-		testDir := filepath.Join("out", "test", "integration", module)
-		filePath := filepath.Join(testDir, "results.cucumber.json")
+		oldTime := time.Now().Add(-26 * time.Hour)
+		testDir := filepath.Join("out", "test", module)
 
-		if err := internal.CreateFile(ctx, filePath, cucumberJSON); err != nil {
+		// Create test manifest with old timestamp
+		manifest := createMockTestManifest(module, oldTime, []string{"ac-2"})
+		manifestPath := filepath.Join(testDir, "test.manifest.json")
+		if err := internal.CreateFile(ctx, manifestPath, manifest); err != nil {
 			return err
 		}
 
-		// Set file modification time to 26 hours ago
-		oldTime := time.Now().Add(-26 * time.Hour)
-		fullPath := filepath.Join(ctx.CurrentWorkDir, filePath)
-		return os.Chtimes(fullPath, oldTime, oldTime)
+		// Create cucumber results (for compatibility)
+		cucumberJSON := createMockCucumberResults([]string{"ac-2"})
+		cucumberPath := filepath.Join(testDir, "results.cucumber.json")
+		if err := internal.CreateFile(ctx, cucumberPath, cucumberJSON); err != nil {
+			return err
+		}
+
+		// Note: No need to set file modification time with Chtimes - the manifest already has TestTime field
+		return nil
 	})
 
 	sc.Step(`^module "([^"]*)" has fresh security scan results$`, func(module string) error {
-		// Create mock security scan results with fresh timestamp
-		timestamp := time.Now().Format("2006-01-02T15-04-05Z")
-		securityDir := filepath.Join(paths.OutDir, paths.SecurityDir, module, "vuln")
+		// Create mock security scan results file (vuln.json) with fresh timestamp
+		securityDir := filepath.Join(paths.OutDir, paths.SecurityDir, module)
 		trivyJSON := `{"Results": [{"Vulnerabilities": [{"VulnerabilityID": "CVE-2024-0001", "Severity": "HIGH"}]}]}`
-		return internal.CreateFile(ctx, filepath.Join(securityDir, fmt.Sprintf("%s.json", timestamp)), trivyJSON)
+		return internal.CreateFile(ctx, filepath.Join(securityDir, "vuln.json"), trivyJSON)
 	})
 
 	sc.Step(`^module "([^"]*)" has security scan results older than 24 hours$`, func(module string) error {
-		// Create security results with old timestamp (26 hours ago)
-		timestamp := time.Now().Add(-26 * time.Hour).Format("2006-01-02T15-04-05Z")
-		securityDir := filepath.Join(paths.OutDir, paths.SecurityDir, module, "vuln")
+		// Create security results file (vuln.json) with old modification time
+		securityDir := filepath.Join(paths.OutDir, paths.SecurityDir, module)
 		trivyJSON := `{"Results": [{"Vulnerabilities": [{"VulnerabilityID": "CVE-2024-0001", "Severity": "HIGH"}]}]}`
-		filePath := filepath.Join(securityDir, fmt.Sprintf("%s.json", timestamp))
+		filePath := filepath.Join(securityDir, "vuln.json")
 
 		if err := internal.CreateFile(ctx, filePath, trivyJSON); err != nil {
 			return err
@@ -399,18 +445,24 @@ paths:
 
 		// Create fresh evidence for each module
 		for _, module := range modules {
-			// Create test results
+			testDir := filepath.Join("out", "test", module)
+
+			// Create test manifest
+			manifest := createMockTestManifest(module, time.Now(), []string{"ac-2"})
+			if err := internal.CreateFile(ctx, filepath.Join(testDir, "test.manifest.json"), manifest); err != nil {
+				return err
+			}
+
+			// Create cucumber results (for compatibility)
 			cucumberJSON := createMockCucumberResults([]string{"ac-2"})
-			testDir := filepath.Join("out", "test", "integration", module)
 			if err := internal.CreateFile(ctx, filepath.Join(testDir, "results.cucumber.json"), cucumberJSON); err != nil {
 				return err
 			}
 
-			// Create security results
-			timestamp := time.Now().Format("2006-01-02T15-04-05Z")
-			securityDir := filepath.Join(paths.OutDir, paths.SecurityDir, module, "vuln")
+			// Create security results (vuln.json)
+			securityDir := filepath.Join(paths.OutDir, paths.SecurityDir, module)
 			trivyJSON := `{"Results": [{"Vulnerabilities": [{"VulnerabilityID": "CVE-2024-0001", "Severity": "HIGH"}]}]}`
-			if err := internal.CreateFile(ctx, filepath.Join(securityDir, fmt.Sprintf("%s.json", timestamp)), trivyJSON); err != nil {
+			if err := internal.CreateFile(ctx, filepath.Join(securityDir, "vuln.json"), trivyJSON); err != nil {
 				return err
 			}
 		}
@@ -621,4 +673,73 @@ func createMockAssessmentResults(module string, satisfied, notSatisfied int) str
 	result := strings.ReplaceAll(assessmentWithFindingsTemplate, "{{MODULE}}", module)
 	result = strings.ReplaceAll(result, "{{FINDINGS}}", findingsJSON)
 	return result
+}
+
+// createMockTestManifest creates a mock test manifest with given timestamp and control tags.
+func createMockTestManifest(module string, testTime time.Time, controlTags []string) string {
+	// Build tags array
+	var tagsArray []string
+	for _, tag := range controlTags {
+		tagsArray = append(tagsArray, fmt.Sprintf("@control(%s)", tag))
+	}
+
+	manifest := fmt.Sprintf(`{
+  "test_id": "test-%s",
+  "test_agent": "devbox",
+  "moniker": "%s",
+  "type": "go",
+  "test_time": "%s",
+  "duration_seconds": 1.5,
+  "git_commit": "abc123",
+  "summary": {
+    "total": 5,
+    "passed": 5,
+    "failed": 0,
+    "skipped": 0
+  },
+  "suites": {
+    "integration": {
+      "run_time": "%s",
+      "duration_seconds": 1.5,
+      "tests": {
+        "total": 5,
+        "passed": 5,
+        "failed": 0,
+        "skipped": 0
+      }
+    }
+  },
+  "tests": [
+    {
+      "name": "Test with control tags",
+      "package": "test/pkg",
+      "type": "godog",
+      "suite": "integration",
+      "status": "passed",
+      "tags": %s,
+      "file_path": "test/spec.feature"
+    }
+  ],
+  "artifacts": [],
+  "version": "1.0"
+}`,
+		module,
+		module,
+		testTime.Format(time.RFC3339),
+		testTime.Format(time.RFC3339),
+		marshalJSONArray(tagsArray))
+
+	return manifest
+}
+
+// marshalJSONArray marshals a string array to JSON format.
+func marshalJSONArray(arr []string) string {
+	if len(arr) == 0 {
+		return "[]"
+	}
+	quoted := make([]string, len(arr))
+	for i, s := range arr {
+		quoted[i] = fmt.Sprintf(`"%s"`, s)
+	}
+	return "[" + strings.Join(quoted, ",") + "]"
 }
