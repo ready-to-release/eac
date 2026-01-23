@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/ready-to-release/eac/go/eac/core/environments"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
@@ -88,7 +89,7 @@ type StructurizrValidatorImpl struct{}
 // Returns a mock validator if R2R_MOCK_STRUCTURIZR is set.
 func NewValidator() (StructurizrValidator, error) {
 	// Check for mock mode
-	if os.Getenv("R2R_MOCK_STRUCTURIZR") != "" {
+	if os.Getenv(environments.EnvR2RMockStructurizr) != "" {
 		return NewMockValidator(), nil
 	}
 	return &StructurizrValidatorImpl{}, nil

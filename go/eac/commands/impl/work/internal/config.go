@@ -38,7 +38,8 @@ func ParseBaseConfig(args []string) (*BaseConfig, error) {
 	}
 
 	// Initialize logger using ConfigureLogging
-	if err := logging.ConfigureLoggingSimple(config.RepoRoot, "commands", nil, config.Debug); err != nil {
+	// Logs to unified out/commands.log
+	if err := logging.ConfigureLoggingSimple(config.RepoRoot, "work", nil, config.Debug); err != nil {
 		return nil, fmt.Errorf("failed to configure logging: %w", err)
 	}
 	config.Logger, err = logging.NewDefault("work", config.RepoRoot)

@@ -3,14 +3,17 @@ package serve
 import (
 	"context"
 	"io"
+	"os"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
+	"github.com/ready-to-release/eac/go/eac/core/environments"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
+
 
 // DockerClient defines the interface for Docker operations used by the serve package.
 // This interface allows for mocking Docker operations in unit tests.
@@ -57,8 +60,24 @@ type RealDockerClient struct {
 	*client.Client
 }
 
-// NewDockerClient creates a new Docker client with default options.
+// NewDockerClient creates a Docker client based on environment.
+// Returns a mock client if R2R_MOCK_STRUCTURIZR=true, otherwise returns a real client.
 func NewDockerClient() (DockerClient, error) {
+	if shouldUseMockDockerClient() {
+		return newMockDockerClientForTests(), nil
+	}
+	return newRealDockerClient()
+}
+
+// shouldUseMockDockerClient checks if mock client should be used.
+// Returns true when R2R_MOCK_STRUCTURIZR environment variable is set to "true".
+// This is set by the BDD test infrastructure to prevent real Docker operations.
+func shouldUseMockDockerClient() bool {
+	return os.Getenv(environments.EnvR2RMockStructurizr) == "true"
+}
+
+// newRealDockerClient creates a real Docker client (extracted from NewDockerClient).
+func newRealDockerClient() (DockerClient, error) {
 	cli, err := client.NewClientWithOpts(
 		client.FromEnv,
 		client.WithAPIVersionNegotiation(),
@@ -66,8 +85,26 @@ func NewDockerClient() (DockerClient, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return &RealDockerClient{Client: cli}, nil
+}
+
+// newMockDockerClientForTests creates a mock client that persists state to disk.
+// This allows state to persist across separate process invocations (e.g., BDD tests
+// that run commands as subprocesses), simulating how a real Docker daemon maintains state.
+func newMockDockerClientForTests() DockerClient {
+	client := &SimpleMockDockerClient{
+		images:     make(map[string]bool),
+		containers: make(map[string]*mockContainerState),
+	}
+	// Load persisted state from disk if it exists
+	client.loadState()
+	return client
+}
+
+// ResetMockDockerClient resets the mock state by deleting the persisted state file.
+// This should be called between test scenarios to prevent state leakage.
+func ResetMockDockerClient() {
+	deleteStateFile()
 }
 
 // Ensure RealDockerClient implements DockerClient interface.

@@ -6,7 +6,6 @@ Feature: eac-commands_serve-design
 
   Rule: Module workspace required
 
-    @skip:wip
     Scenario: Serve existing workspace
       Given module "test-module" has a workspace at "specs/test-module/.design/workspace.dsl"
       When I run "serve design test-module"
@@ -14,7 +13,6 @@ Feature: eac-commands_serve-design
       And I should see success message with URL
       And documentation should be accessible at the URL
 
-    @skip:wip
     Scenario: Fail when workspace missing
       Given no workspace exists for "test-module"
       When I run "serve design test-module"
@@ -24,7 +22,6 @@ Feature: eac-commands_serve-design
 
   Rule: Multi-instance support
 
-    @skip:wip
     Scenario: Each module gets unique container
       Given module "module-a" has a workspace
       And module "module-b" has a workspace
