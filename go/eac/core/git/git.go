@@ -416,3 +416,95 @@ func (r *Repository) GetBranchFiles(baseBranch string) ([]string, error) {
 func (r *Repository) GoGitRepo() *gogit.Repository {
 	return r.repo
 }
+
+// WorktreeList returns information about all worktrees.
+// Uses native git command for reliable worktree detection.
+func (r *Repository) WorktreeList() ([]WorktreeEntry, error) {
+	r.logger.Debug("Listing worktrees")
+
+	// Use git worktree list --porcelain for structured output
+	output, err := r.runGitCommand("worktree", "list", "--porcelain")
+	if err != nil {
+		return nil, fmt.Errorf("failed to list worktrees: %w", err)
+	}
+
+	// Parse porcelain output
+	// Format:
+	// worktree <path>
+	// HEAD <sha>
+	// branch refs/heads/<branch>
+	// <blank line>
+	// (repeat for each worktree)
+
+	var worktrees []WorktreeEntry
+	var current WorktreeEntry
+
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			// End of current worktree entry
+			if current.Path != "" {
+				worktrees = append(worktrees, current)
+				current = WorktreeEntry{}
+			}
+			continue
+		}
+
+		parts := strings.SplitN(line, " ", 2)
+		if len(parts) < 2 {
+			continue
+		}
+
+		switch parts[0] {
+		case "worktree":
+			current.Path = parts[1]
+		case "HEAD":
+			sha := parts[1]
+			if len(sha) > 7 {
+				current.SHA = sha[:7]
+			} else {
+				current.SHA = sha
+			}
+		case "branch":
+			// Extract branch name from refs/heads/<branch>
+			branch := strings.TrimPrefix(parts[1], "refs/heads/")
+			current.Branch = branch
+		case "detached":
+			// Detached HEAD state
+			current.Branch = "detached-" + current.SHA
+		}
+	}
+
+	// Don't forget the last entry if output doesn't end with blank line
+	if current.Path != "" {
+		worktrees = append(worktrees, current)
+	}
+
+	r.logger.Debug("Worktrees listed", zap.Int("count", len(worktrees)))
+	return worktrees, nil
+}
+
+// WorktreeIsDirty checks if a worktree has uncommitted changes.
+// Returns true if there are modified, added, or deleted files.
+func (r *Repository) WorktreeIsDirty(worktreePath string) (bool, error) {
+	r.logger.Debug("Checking worktree status", zap.String("path", worktreePath))
+
+	// Use git status --porcelain in the worktree directory
+	cmd := exec.Command("git", "status", "--porcelain")
+	cmd.Dir = worktreePath
+
+	output, err := cmd.Output()
+	if err != nil {
+		return false, fmt.Errorf("failed to check worktree status: %w", err)
+	}
+
+	// If output is empty, worktree is clean
+	isDirty := strings.TrimSpace(string(output)) != ""
+
+	r.logger.Debug("Worktree status checked",
+		zap.String("path", worktreePath),
+		zap.Bool("isDirty", isDirty))
+
+	return isDirty, nil
+}

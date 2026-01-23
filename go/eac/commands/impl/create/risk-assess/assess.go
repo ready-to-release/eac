@@ -86,13 +86,12 @@ func CreateRiskAssess() int {
 		return 1
 	}
 
-	// Initialize output directory (fixed path for testing)
-	config.OutputDir = paths.RiskOutputPath(config.WorkspaceRoot, "")
+	// Initialize output directory with timestamp for uniqueness
+	timestamp := time.Now().UTC().Format("20060102-150405")
+	baseRiskDir := paths.RiskOutputPath(config.WorkspaceRoot, "")
+	config.OutputDir = filepath.Join(baseRiskDir, timestamp)
 
-	// Clear and recreate output directory for fresh results
-	if err := os.RemoveAll(config.OutputDir); err != nil {
-		assessLog.Warnf("Failed to clear output directory: %v", err)
-	}
+	// Create timestamped output directory
 	if err := os.MkdirAll(config.OutputDir, 0o755); err != nil {
 		assessLog.Errorf("Failed to create output directory: %v", err)
 		return 1
@@ -212,6 +211,10 @@ func CreateRiskAssess() int {
 
 		assessLog.Infof("✓ %d module(s) completed successfully", len(successfulResults))
 		// Return success if at least some modules passed
+	} else if len(successfulResults) > 0 {
+		// All modules succeeded
+		assessLog.Info("")
+		assessLog.Infof("✓ %d module(s) completed successfully", len(successfulResults))
 	}
 
 	assessLog.Info("Assessment completed")

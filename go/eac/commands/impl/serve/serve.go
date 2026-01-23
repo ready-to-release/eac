@@ -497,3 +497,4 @@ func (c *DockerClient) StreamLogs() error {
 	// Not implemented in simplified version
 	return nil
 }
+

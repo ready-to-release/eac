@@ -13,20 +13,16 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/core/environments"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 	coretesting "github.com/ready-to-release/eac/go/eac/core/testing"
 )
 
-// Environment variable names used in test contexts.
-const (
-	EnvR2RTestLoggingActive = "R2R_TEST_LOGGING_ACTIVE"
-	EnvR2RPWD               = "R2R_PWD"
-	EnvR2RRepoRoot          = "R2R_REPO_ROOT"
-	EnvR2RContainerRoot     = "R2R_CONTAINER_ROOT"
-	EnvR2RMockAIDir         = "R2R_MOCK_AI_DIR"
-	EnvR2RMockSecurity      = "R2R_MOCK_SECURITY"
-)
+func init() {
+	// Import the serve package to trigger its init() which registers the mock reset function
+	// This is done via a blank import in a file that uses serve functionality
+}
 
 // TestContext wraps the core SharedTestContext with additional spec-specific state.
 type TestContext struct {
@@ -74,6 +70,10 @@ func (c *TestContext) Reset() {
 	c.MockOverrides = nil            // Clear per-scenario mock overrides
 	c.CurrentWorkDir = c.IsolatedDir // Reset to main isolated directory
 	// Don't reset OriginalRepoRoot, IsolatedDir, or Cache - they're set once at init
+
+	// Reset mock Docker client state to prevent state leakage between scenarios
+	// Delete the state file directly to avoid dependency on commands package
+	deleteMockDockerStateFile()
 }
 
 // EnsureOriginalRepoCache ensures the original repo cache is populated.
@@ -156,7 +156,7 @@ func (c *TestContext) getEffectiveWorkDir() string {
 func (c *TestContext) buildBaseEnvironment() []string {
 	env := make([]string, 0, len(os.Environ()))
 	for _, e := range os.Environ() {
-		if c.IsolatedDir != "" && strings.HasPrefix(e, EnvR2RTestLoggingActive+"=") {
+		if c.IsolatedDir != "" && strings.HasPrefix(e, environments.EnvR2RTestLoggingActive+"=") {
 			continue // Don't inherit - isolated tests need unified log to work
 		}
 		env = append(env, e)
@@ -174,18 +174,18 @@ func (c *TestContext) buildIsolationEnvironment(env []string) []string {
 	// R2R_PWD: current working directory (may be worktree)
 	// R2R_REPO_ROOT: main repository root (never changes)
 	workDir := c.getEffectiveWorkDir()
-	env = append(env, fmt.Sprintf("%s=%s", EnvR2RPWD, workDir))
-	env = append(env, fmt.Sprintf("%s=%s", EnvR2RRepoRoot, c.IsolatedDir))
+	env = append(env, fmt.Sprintf("%s=%s", environments.EnvR2RPWD, workDir))
+	env = append(env, fmt.Sprintf("%s=%s", environments.EnvR2RRepoRoot, c.IsolatedDir))
 	return env
 }
 
 // buildMockingEnvironment adds mocking environment variables for tests.
-// Sets R2R_CONTAINER_ROOT, R2R_MOCK_AI_DIR, and R2R_MOCK_SECURITY.
+// Sets R2R_CONTAINER_ROOT, R2R_MOCK_AI_DIR, R2R_MOCK_SECURITY, and R2R_MOCK_STRUCTURIZR.
 func (c *TestContext) buildMockingEnvironment(env []string) []string {
 	// Set distribution root for template loading
 	// Templates are NOT copied to isolated test directories - they live in the original repo
 	// This allows AI commands to load system default templates from templates/ai/
-	env = append(env, fmt.Sprintf("%s=%s", EnvR2RContainerRoot, c.OriginalRepoRoot))
+	env = append(env, fmt.Sprintf("%s=%s", environments.EnvR2RContainerRoot, c.OriginalRepoRoot))
 
 	// Set mock AI directory for subprocess commands
 	// This enables commands to use mock responses instead of real AI calls
@@ -194,13 +194,17 @@ func (c *TestContext) buildMockingEnvironment(env []string) []string {
 	if assetsRoot != "" {
 		assetsDir := filepath.Join(assetsRoot, "go", "eac", "specs", "impl", "eac-commands", "assets")
 		if _, err := os.Stat(assetsDir); err == nil {
-			env = append(env, fmt.Sprintf("%s=%s", EnvR2RMockAIDir, assetsDir))
+			env = append(env, fmt.Sprintf("%s=%s", environments.EnvR2RMockAIDir, assetsDir))
 		}
 	}
 
 	// Enable security tool mocking for subprocess commands
 	// This enables security commands to use mock responses instead of real Docker tools
-	env = append(env, fmt.Sprintf("%s=true", EnvR2RMockSecurity))
+	env = append(env, fmt.Sprintf("%s=true", environments.EnvR2RMockSecurity))
+
+	// Enable Structurizr CLI mocking for design validation tests
+	// This allows validation tests to run without Docker
+	env = append(env, fmt.Sprintf("%s=true", environments.EnvR2RMockStructurizr))
 
 	return env
 }
@@ -487,4 +491,12 @@ func parseCommandLine(cmdLine string) []string {
 	}
 
 	return parts
+}
+
+// deleteMockDockerStateFile removes the mock Docker state file.
+// This is called between scenarios to prevent state leakage.
+// The file path matches what the mock Docker client uses (in commands/internal/serve).
+func deleteMockDockerStateFile() {
+	stateFile := filepath.Join(os.TempDir(), "eac-mock-docker-state.json")
+	_ = os.Remove(stateFile) // Ignore errors - file may not exist
 }

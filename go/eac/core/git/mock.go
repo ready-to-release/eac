@@ -34,6 +34,10 @@ type MockRepository struct {
 	branchDiffStats string
 	branchFiles     []string
 
+	// Worktree fields
+	worktrees     []WorktreeEntry
+	dirtyWorktrees map[string]bool
+
 	// Error injection for testing failure paths
 	RemoteURLError          error
 	CurrentBranchError      error
@@ -54,6 +58,8 @@ type MockRepository struct {
 	GetBranchDiffError      error
 	GetBranchDiffStatsError error
 	GetBranchFilesError     error
+	WorktreeListError       error
+	WorktreeIsDirtyError    error
 }
 
 // MockTag represents a mock tag for testing.
@@ -73,11 +79,12 @@ type MockCommit struct {
 // NewMockRepository creates a new mock repository with the given root path.
 func NewMockRepository(rootPath string) *MockRepository {
 	return &MockRepository{
-		rootPath:     rootPath,
-		remotes:      make(map[string]string),
-		ignoredFiles: make(map[string]bool),
-		configs:      make(map[string]map[string]string),
-		tags:         make(map[string]MockTag),
+		rootPath:       rootPath,
+		remotes:        make(map[string]string),
+		ignoredFiles:   make(map[string]bool),
+		configs:        make(map[string]map[string]string),
+		tags:           make(map[string]MockTag),
+		dirtyWorktrees: make(map[string]bool),
 	}
 }
 
@@ -453,6 +460,46 @@ func (m *MockRepository) WithBranchDiffStats(stats string) *MockRepository {
 func (m *MockRepository) WithBranchFiles(files []string) *MockRepository {
 	m.branchFiles = files
 	return m
+}
+
+// --- Worktree mock implementations ---
+
+// WithWorktrees sets the mock worktrees.
+func (m *MockRepository) WithWorktrees(worktrees []WorktreeEntry) *MockRepository {
+	m.worktrees = worktrees
+	return m
+}
+
+// WithDirtyWorktree marks a worktree path as dirty (having uncommitted changes).
+func (m *MockRepository) WithDirtyWorktree(path string) *MockRepository {
+	m.dirtyWorktrees[path] = true
+	return m
+}
+
+// WorktreeList returns the mock worktrees.
+func (m *MockRepository) WorktreeList() ([]WorktreeEntry, error) {
+	if m.WorktreeListError != nil {
+		return nil, m.WorktreeListError
+	}
+	if len(m.worktrees) == 0 {
+		// Default: return main worktree only
+		return []WorktreeEntry{
+			{
+				Path:   m.rootPath,
+				Branch: m.currentBranch,
+				SHA:    m.headSHA,
+			},
+		}, nil
+	}
+	return m.worktrees, nil
+}
+
+// WorktreeIsDirty returns whether a worktree has uncommitted changes.
+func (m *MockRepository) WorktreeIsDirty(worktreePath string) (bool, error) {
+	if m.WorktreeIsDirtyError != nil {
+		return false, m.WorktreeIsDirtyError
+	}
+	return m.dirtyWorktrees[worktreePath], nil
 }
 
 // Ensure MockRepository implements GitRepository.

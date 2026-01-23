@@ -45,7 +45,6 @@ Feature: eac-commands_get-commands
 
   Rule: Module completions are included
 
-    @skip:wip
     Scenario: Modules list included for completion
       Given modules exist in the repository
       When I run "get commands"
@@ -55,7 +54,6 @@ Feature: eac-commands_get-commands
 
   Rule: Argument types are specified
 
-    @skip:wip
     Scenario: Commands with module arguments are marked
       When I run "get commands"
       Then the exit code is 0
@@ -64,7 +62,6 @@ Feature: eac-commands_get-commands
 
   Rule: Supports YAML output format
 
-    @skip:wip
     Scenario: Output as YAML with --format flag
       When I run "get commands --format yaml"
       Then the exit code is 0

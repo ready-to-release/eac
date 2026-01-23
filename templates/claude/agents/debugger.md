@@ -53,12 +53,26 @@ I'll auto-discover the affected components using MCP tools.
 
 ## How I Work
 
+### Context Loading (Performance Optimization)
+
+Before using MCP tools for project discovery:
+
+1. **Check for cached context**: Read `out/session-context.json` (if exists and age < 5 minutes)
+2. **If valid cache**: Use cached project metadata (skip expensive MCP calls)
+3. **If missing/stale**: Run MCP discovery and consider caching results
+4. **Never cache during boot**: The boot command handles initial caching
+
+**Benefit**: Reduces startup time by 5-10 seconds, ensures consistent view across agents.
+
+### Workflow
+
 1. **Reproduce**: Verify the issue using `test <module>` or `build <module>`
-2. **Discover**: Use MCP tools to map affected modules and dependencies
+2. **Discover**: Use MCP tools to map affected modules and dependencies (or cached context)
 3. **Analyze**: Trace error through dependency chain
 4. **Hypothesize**: Form theories about root cause
 5. **Fix**: Implement targeted solution
 6. **Verify**: Confirm resolution with tests
+7. **Output structured result**: Save JSON report to `out/debugger-<timestamp>.json` (see schema below)
 
 ## What You'll Get
 
@@ -68,6 +82,47 @@ A systematic investigation and fix:
 2. **Affected Components**: List of modules involved (from MCP discovery)
 3. **Fix Implementation**: Minimal code changes
 4. **Verification**: Test results confirming resolution
+
+## Structured Output Format
+
+In addition to the root cause analysis, I generate a structured JSON report:
+
+**File**: `out/debugger-<timestamp>.json`
+
+**Schema**: `schemas/agent-result.json`
+
+**Contents**:
+```json
+{
+  "agent": "debugger",
+  "task": "Brief description of the debugging task",
+  "status": "success|warning|error",
+  "timestamp": "ISO-8601 timestamp",
+  "findings": [
+    {
+      "severity": "critical|high|medium|low",
+      "category": "correctness",
+      "location": "file:line or module",
+      "message": "Description of the bug or issue",
+      "recommendation": "Proposed fix"
+    }
+  ],
+  "metrics": {
+    "duration_seconds": 12.5,
+    "items_analyzed": 8
+  },
+  "summary": "Root cause analysis summary",
+  "artifacts": [
+    {
+      "path": "out/debug-analysis-<issue>.md",
+      "type": "report",
+      "description": "Detailed debugging report"
+    }
+  ]
+}
+```
+
+**Purpose**: Track debugging efforts, measure fix effectiveness, and identify patterns in bugs.
 
 ## Debugging Principles
 
