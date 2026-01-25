@@ -12,7 +12,7 @@ Each deployable module maintains its own changelog to track module-specific chan
 
 ## Module Changelog Locations
 
-Module changelog locations are defined in `.r2r/eac/repository.yml` under `versioning.changelog` and follow the **release type convention**. See [Understanding Release Types](../release-types.md) for complete details.
+Module changelog locations are defined in `.r2r/eac/repository.yml` under `versioning.changelog` and follow the **release type convention**. See [Understanding Release Types](../../../repository/continuous-delivery/release-types.md) for complete details.
 
 ### Location Rules by Release Type
 

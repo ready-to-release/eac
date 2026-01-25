@@ -99,33 +99,6 @@ books:
         order: 6
 
   # ==============================================================================
-  # Specifications PDF
-  # ==============================================================================
-  - name: specifications
-    title: "Explanation - Specifications"
-    description: "Specifications in the EaC CD Model"
-    output: pdf-dark
-    site_url: "https://ready-to-release.github.io/eac/"
-
-    sources:
-      # content
-      - type: copy
-        from: "docs/explanation/specifications/**"
-        to: "./"
-
-      # navigation files (doublestar doesn't match hidden files unless explicit)
-      - type: copy
-        from: "docs/explanation/specifications/**/.nav.yml"
-        to: "./"
-
-      # assets
-      - type: copy
-        from: "docs/assets/**"
-        to: "assets/"
-        exclude:
-          - "docs/assets/lfs/pdf/**"
-
-  # ==============================================================================
   # Explanation PDF
   # ==============================================================================
   - name: explanation
@@ -135,27 +108,14 @@ books:
     site_url: "https://ready-to-release.github.io/eac/"
 
     sources:
-      # content (exclude specifications which has its own book)
       - type: copy
         from: "docs/explanation/**"
-        exclude:
-          - "docs/explanation/specifications/**"
         to: "./"
 
-      # navigation files (doublestar doesn't match hidden files unless explicit)
-      # root .nav.yml references specifications (excluded) but validation cleans broken refs
       - type: copy
         from: "docs/explanation/**/.nav.yml"
-        exclude:
-          - "docs/explanation/specifications/**"
         to: "./"
 
-      # root .nav.yml for proper ordering (specs reference will be cleaned by validation)
-      - type: copy
-        from: "docs/explanation/.nav.yml"
-        to: "./"
-
-      # assets
       - type: copy
         from: "docs/assets/**"
         to: "assets/"
@@ -210,6 +170,78 @@ books:
         to: "./"
 
       # assets
+      - type: copy
+        from: "docs/assets/**"
+        to: "assets/"
+        exclude:
+          - "docs/assets/lfs/pdf/**"
+
+  # ==============================================================================
+  # Reference - Full Reference Documentation
+  # ==============================================================================
+  - name: reference
+    title: "Reference"
+    description: "Complete technical reference documentation"
+    output: pdf-dark
+    site_url: "https://ready-to-release.github.io/eac/"
+
+    sources:
+      - type: copy
+        from: "docs/reference/**"
+        to: "./"
+
+      - type: copy
+        from: "docs/reference/**/.nav.yml"
+        to: "./"
+
+      - type: copy
+        from: "docs/assets/**"
+        to: "assets/"
+        exclude:
+          - "docs/assets/lfs/pdf/**"
+
+  # ==============================================================================
+  # Reference EAC - EAC Extension Reference
+  # ==============================================================================
+  - name: reference-eac
+    title: "EAC Reference"
+    description: "EAC extension technical reference"
+    output: pdf-dark
+    site_url: "https://ready-to-release.github.io/eac/"
+
+    sources:
+      - type: copy
+        from: "docs/reference/eac/**"
+        to: "./"
+
+      - type: copy
+        from: "docs/reference/eac/**/.nav.yml"
+        to: "./"
+
+      - type: copy
+        from: "docs/assets/**"
+        to: "assets/"
+        exclude:
+          - "docs/assets/lfs/pdf/**"
+
+  # ==============================================================================
+  # Reference R2R - R2R CLI Reference
+  # ==============================================================================
+  - name: reference-r2r
+    title: "R2R CLI Reference"
+    description: "R2R CLI technical reference"
+    output: pdf-dark
+    site_url: "https://ready-to-release.github.io/eac/"
+
+    sources:
+      - type: copy
+        from: "docs/reference/r2r/**"
+        to: "./"
+
+      - type: copy
+        from: "docs/reference/r2r/**/.nav.yml"
+        to: "./"
+
       - type: copy
         from: "docs/assets/**"
         to: "assets/"

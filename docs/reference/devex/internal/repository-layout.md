@@ -16,86 +16,90 @@ All modules are defined in `.r2r/eac/repository.yml`, which serves as the centra
 
 ```text
 eac/
-├── .claude/                    # Claude Code CLI configuration
-│   ├── agents/                 # Custom agent definitions
-│   ├── commands/               # Custom command definitions
-│   └── hooks/                  # Git hooks for Claude integration
+├── .claude/                          # Claude Code CLI configuration
+│   ├── agents/                       # Custom agent definitions
+│   ├── commands/                     # Custom command definitions
+│   ├── hooks/                        # Git hooks for Claude integration
+|   └── ...
 │
-├── .github/                    # GitHub Actions workflows and configuration
-│   ├── actions/                # Reusable workflow actions
-│   └── workflows/              # CI/CD pipeline definitions
+├── .github/                          # GitHub Actions workflows and configuration
+│   ├── actions/                      # Reusable workflow actions
+│   ├── workflows/                    # CI/CD pipeline definitions
+|   └── ...
 │
-├── .r2r/                       # R2R and EAC configuration (Everything as Code)
-│   ├── cache/                  # Build cache
-│   └── eac/                    # EAC configuration files
-│       ├── repository.yml         # Module contracts (central registry)
-│       ├── module-types.yml    # Module type definitions
-│       ├── environments.yml    # Environment configurations
-│       ├── test-suites.yml     # Test suite definitions
-│       ├── books.yml           # PDF book generation config
-│       ├── ai-config.yml       # AI provider configuration
-│       └── system-dependencies.yml
+├── .r2r/                             # R2R and extension configuration
+│   ├── cache/                        # Build cache
+│   └── eac/                          # extension (EAC) configuration files
+│   │   ├── repository.yml            # Module contracts (central registry)
+│   │   ├── component-types.yml       # Component type definitions
+│   │   ├── environments.yml          # Environment configurations
+│   │   ├── test-suites.yml           # Test suite definitions
+│   │   ├── books.yml                 # PDF book generation config
+│   │   ├── ai-config.yml             # AI provider configuration
+│   │   └── system-dependencies.yml
+│   └── ...
 │
-├── .vscode/                    # VSCode workspace configuration
-│   └── extensions/             # Custom VSCode extensions
+├── .vscode/                          # VSCode workspace configuration
+│   └── extensions/                   # Custom VSCode extensions
 │
-├── containers/                 # Docker container definitions
-│   ├── ext-eac/                # R2R CLI extension for EAC
-│   ├── mkdocs-site/            # Documentation site builder
-│   └── mkdocs-pdf/             # PDF documentation builder
+├── containers/                       # Docker container definitions
+│   ├── ext-eac/                      # R2R CLI extension for EAC
+│   ├── mkdocs-site/                  # Documentation site builder
+│   ├── mkdocs-pdf/                   # PDF documentation builder
+│   └── ...
 │
-├── contracts/                  # JSON schemas for configuration files
-│   ├── eac-core/0.1.0/         # Core EAC schemas
+├── contracts/                        # JSON schemas for configuration files
+│   ├── eac-core/0.1.0/               # Core EAC schemas
 │   │   ├── modules.schema.json
-│   │   ├── module-types.schema.json
+│   │   ├── component-types.schema.json
 │   │   ├── environments.schema.json
 │   │   ├── handlers.schema.json
 │   │   └── ...
-│   └── r2r-cli/0.1.0/          # CLI-specific schemas
+│   └── r2r-cli/0.1.0/                # CLI-specific schemas
 │
-├── docs/                       # MkDocs documentation site source
-│   ├── assets/                 # Images, diagrams, etc.
-│   ├── explanation/            # Conceptual documentation
-│   ├── how-to-guides/          # Task-based guides
-│   ├── reference/              # Technical reference (this file)
-│   └── tutorials/              # Learning-oriented tutorials
+├── docs/                             # MkDocs documentation site source
+│   ├── assets/                       # Images, diagrams, etc.
+│   ├── explanation/                  # Conceptual documentation
+│   ├── how-to-guides/                # Task-based guides
+│   ├── reference/                    # Technical reference (this file)
+│   └── tutorials/                    # Learning-oriented tutorials
 │
-├── go/                         # Go source code
-│   ├── eac/                    # EAC implementation
-│   │   ├── commands/           # CLI commands library (eac-commands module) with integrated AI providers
-│   │   ├── core/               # Core domain libraries (eac-core module)
-│   │   ├── mcp/                # MCP server implementations
-│   │   └── specs/              # Shared BDD test infrastructure
-│   └── r2r/                    # R2R implementation
-│       └── cli/                # R2R CLI application (r2r-cli module)
+├── go/                               # Go source code
+│   ├── eac/                          # EAC implementation
+│   │   ├── commands/                 # CLI commands library (eac-commands module) with integrated AI providers
+│   │   ├── core/                     # Core domain libraries (eac-core module)
+│   │   ├── mcp/                      # MCP server implementations
+│   │   └── specs/                    # Shared BDD test infrastructure
+│   └── r2r/                          # R2R implementation
+│       └── cli/                      # R2R CLI application (r2r-cli module)
 │
-├── release/                    # Release notes and changelogs
-│   ├── books/                  # Books module releases
-│   ├── docs/                   # Docs module releases
-│   ├── ext-eac/                # Extension releases
-│   └── r2r-cli/                # CLI releases
+├── release/                          # Release notes and changelogs
+│   ├── books/                        # Books module releases
+│   ├── docs/                         # Docs module releases
+│   ├── ext-eac/                      # Extension releases
+│   └── r2r-cli/                      # CLI releases
 │
-├── scripts/                    # Cross-platform scripts
-│   ├── pwsh/                   # PowerShell scripts (Windows)
-│   └── sh/                     # Shell scripts (Linux/macOS)
+├── scripts/                          # Cross-platform scripts
+│   ├── pwsh/                         # PowerShell scripts (Windows)
+│   └── sh/                           # Shell scripts (Linux/macOS)
 │
-├── specs/                      # Gherkin BDD specifications
-│   ├── eac-commands/           # Specs for commands module
-│   ├── eac-core/               # Specs for core module
-│   ├── r2r-cli/                # Specs for CLI module
-│   └── repository/             # Repository-level validation specs
+├── specs/                            # Gherkin BDD specifications
+│   ├── eac-commands/                 # Specs for commands module
+│   ├── eac-core/                     # Specs for core module
+│   ├── r2r-cli/                      # Specs for CLI module
+│   └── repository/                   # Repository-level validation specs
 │
-├── templates/                  # Project templates
-│   ├── design/                 # Design document templates
-│   ├── docs/                   # Documentation templates
-│   └── specs/                  # Specification templates
+├── templates/                        # Project templates
+│   ├── design/                       # Design document templates
+│   ├── docs/                         # Documentation templates
+│   └── specs/                        # Specification templates
 │
-├── typescript/                 # TypeScript source code
-│   └── vscode-ext-commit/      # VSCode Git extension
+├── typescript/                       # TypeScript source code
+│   └── vscode-ext-commit/            # VSCode Git extension
 │
-├── go.work                     # Go workspace definition
-├── mkdocs.yml                  # MkDocs site configuration
-└── CHANGELOG.md                # Repository-level changelog
+├── go.work                           # Go workspace definition
+├── mkdocs.yml                        # MkDocs site configuration
+└── CHANGELOG.md                      # Repository-level changelog
 ```
 
 ## Module Organization
