@@ -1,0 +1,6 @@
+title: Quality Gates
+nav:
+  - index.md
+  - precommit-checks.md
+  - precommit-setup.md
+  - evidence-collection.md

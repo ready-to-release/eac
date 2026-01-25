@@ -537,7 +537,11 @@ modules:
         type: book
       explanation:
         type: book
-      specifications:
+      reference:
+        type: book
+      reference-eac:
+        type: book
+      reference-r2r:
         type: book
       repository-report:
         type: book

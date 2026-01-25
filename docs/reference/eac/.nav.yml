@@ -3,4 +3,15 @@ nav:
   - index.md
   - commands
   - architecture
+  - modules
+  - contracts
+  - continuous-delivery
+  - decision-records
+  - development
   - guides
+  - compliance
+  - quality-gates
+  - security
+  - specifications
+  - testing
+  - workflow
