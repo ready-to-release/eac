@@ -18,9 +18,9 @@
 
 ```text
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃  ⚡ SYSTEM INITIALIZED ⚡                                      ┃
+┃  ⚡ SYSTEM INITIALIZED ⚡                                    ┃
 ┃  Project context loaded from agent.md                         ┃
-┃  MCP servers: [✅ CONNECTED / ⚠️ NOT CONNECTED]               ┃
+┃  MCP servers: [✅ CONNECTED / ⚠️ NOT CONNECTED]              ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 Workspace Context:
@@ -213,11 +213,11 @@ Specialized agents for specific tasks (invoke via Task tool):
 
 Orchestrated workflows that combine multiple agents (invoke via Task tool or directly):
 
-| Skill                    | Purpose                          | Workflow                                                                                   |
-| ------------------------ | -------------------------------- | ------------------------------------------------------------------------------------------ |
-| **go-cli-feature**       | End-to-end feature development   | Plan → Specify → Design UX → Test → Implement → Verify → Simplify → Document               |
-| **go-cli-release-check** | Pre-release validation checklist | CI checks → Security scans → Build validation → Changelog review → Tests                   |
-| **go-cli-refactor-safe** | Safe refactoring with validation | Baseline → Plan → Refactor incrementally → Test after each step → Simplify                 |
+| Skill                    | Purpose                          | Workflow                                                                     |
+| ------------------------ | -------------------------------- | ---------------------------------------------------------------------------- |
+| **go-cli-feature**       | End-to-end feature development   | Plan → Specify → Design UX → Test → Implement → Verify → Simplify → Document |
+| **go-cli-release-check** | Pre-release validation checklist | CI checks → Security scans → Build validation → Changelog review → Tests     |
+| **go-cli-refactor-safe** | Safe refactoring with validation | Baseline → Plan → Refactor incrementally → Test after each step → Simplify   |
 
 ### Available Slash Commands
 

@@ -89,7 +89,7 @@ This pattern is consistent across all information-retrieval commands, making it 
 
 For detailed command documentation, see:
 
-- **[Command Reference](../../../../reference/commands/)** - Complete alphabetical listing
+- **[Command Reference](../../../../reference/eac/commands/)** - Complete alphabetical listing
 - **[Getting Started Commands](../getting-started/)** - Beginner-friendly guides
 - **[Development Workflow Commands](../development-workflow/)** - Daily development tasks
 - **[Build, Test & Validate Commands](../build-test-validate/)** - Build and test execution
@@ -115,6 +115,6 @@ r2r eac help test             # Learn about testing
 
 - **[Get Help with Commands](./get-help-with-commands.md)** - Master the help system
 - **[Explore Your Repository](./explore-your-repository.md)** - Discover modules, files, and structure
-- **[Setup AI Provider](./setup-ai-provider.md)** - Configure Claude, OpenAI, or Gemini
+- **[Setup AI Provider](../../../local-setup/configure-ai.md)** - Configure Claude, OpenAI, or Gemini
 
 {{ diataxis_footer() }}

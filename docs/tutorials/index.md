@@ -22,4 +22,4 @@ Start here if you're new to r2r and Everything-as-Code:
     3. Install EAC extension (`r2r install eac`)
     4. Configure EAC (`r2r eac init`)
 
-    See [CLI vs Extensions](../reference/r2r-eac/cli-vs-extensions.md) to understand the two-tier architecture.
+    See [CLI vs Extensions](../reference/devex/internal/cli-vs-extensions.md) to understand the two-tier architecture.

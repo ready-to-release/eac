@@ -40,6 +40,14 @@ environments:
     system_deps:
       - go
 
+  - moniker: mock-github
+    name: "Mock GitHub API Environment"
+    description: "Test environment using mocked GitHub API responses (no real API calls)"
+    level: "L1"
+    type: "unit"
+    system_deps:
+      - go
+
   # L2 Environments - Local
   - moniker: mkdocs-docker
     name: "MkDocs Docker Environment"

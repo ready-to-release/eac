@@ -1,0 +1,74 @@
+<mxfile host="drawio-cli" agent="drawio-cli (Claude)" version="1.0">
+  <diagram name="Pipeline" id="eac-pipeline">
+    <mxGraphModel dx="1426" dy="758" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" background="#CFCFCF" shadow="1">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Trunk (Repository) -->
+        <mxCell id="trunk" value="Trunk"
+                style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fontFamily=Lucida Console;fontStyle=1;shadow=1"
+                vertex="1" parent="1">
+          <mxGeometry x="100" y="100" width="80" height="90" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrow: Trunk to Module -->
+        <mxCell id="arrow-trunk-module" value=""
+                style="endArrow=classic;html=1;rounded=0;fontFamily=Lucida Console;fontStyle=1;shadow=1"
+                edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="190" y="145" as="sourcePoint"/>
+            <mxPoint x="240" y="145" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Deployable Module -->
+        <mxCell id="module" value="Module"
+                style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;fontFamily=Lucida Console;fontStyle=1;fontSize=14;shadow=1"
+                vertex="1" parent="1">
+          <mxGeometry x="250" y="111" width="116" height="68" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrow: Module to Pipeline -->
+        <mxCell id="arrow-module-pipeline" value=""
+                style="endArrow=classic;html=1;rounded=0;fontFamily=Lucida Console;fontStyle=1;shadow=1"
+                edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="376" y="145" as="sourcePoint"/>
+            <mxPoint x="426" y="145" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Deployment Pipeline (horizontal cylinder) -->
+        <mxCell id="pipeline" value=""
+                style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;rotation=90;fontFamily=Lucida Console;fontStyle=1;shadow=1"
+                vertex="1" parent="1">
+          <mxGeometry x="520" y="41" width="31" height="207" as="geometry"/>
+        </mxCell>
+        <mxCell id="pipeline-label" value="Deployment Pipeline"
+                style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Lucida Console;fontStyle=1;fontSize=14;shadow=1"
+                vertex="1" parent="1">
+          <mxGeometry x="446" y="155" width="180" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrow: Pipeline to Live -->
+        <mxCell id="arrow-pipeline-live" value=""
+                style="endArrow=classic;html=1;rounded=0;fontFamily=Lucida Console;fontStyle=1;shadow=1"
+                edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="630" y="145" as="sourcePoint"/>
+            <mxPoint x="680" y="145" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- LIVE (Production) -->
+        <mxCell id="live" value="LIVE"
+                style="whiteSpace=wrap;html=1;shape=mxgraph.basic.cloud_rect;fontFamily=Lucida Console;fontStyle=1;fontSize=14;shadow=1"
+                vertex="1" parent="1">
+          <mxGeometry x="690" y="108" width="90" height="73" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

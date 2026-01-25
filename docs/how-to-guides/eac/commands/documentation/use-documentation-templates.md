@@ -117,11 +117,11 @@ r2r templates install specs
 ## Next Steps
 
 - [Build Documentation Site](./build-documentation-site.md) → Generate static site from docs
-- [create design](../../../../reference/commands/create/design.md) → Generate architecture diagrams
+- [create design](../../../../reference/eac/commands/create/design.md) → Generate architecture diagrams
 
 ## Related Commands
 
-- [`templates install`](../../../../reference/commands/templates/index.md) - Install templates overview
-- [`templates install-docs`](../../../../reference/commands/templates/install-docs.md) - Documentation templates
-- [`templates install-ai`](../../../../reference/commands/templates/install-ai.md) - AI prompt templates
-- [`templates install-reports`](../../../../reference/commands/templates/install-reports.md) - Report templates
+- [`templates install`](../../../../reference/eac/commands/templates/index.md) - Install templates overview
+- [`templates install-docs`](../../../../reference/eac/commands/templates/install-docs.md) - Documentation templates
+- [`templates install-ai`](../../../../reference/eac/commands/templates/install-ai.md) - AI prompt templates
+- [`templates install-reports`](../../../../reference/eac/commands/templates/install-reports.md) - Report templates

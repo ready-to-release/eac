@@ -1,121 +1,46 @@
 # Pre-commit Setup
 
-How to configure pre-commit hooks for Stage 2 validation.
+> **Configuration guide for pre-commit hooks**
 
-## Pre-commit Hook Script
+How to configure pre-commit hooks for Stage 2 validation, including git hooks, pre-commit framework setup, and optimization strategies.
 
-Create `.git/hooks/pre-commit` or use a pre-commit framework:
+---
 
-```bash
-#!/bin/sh
+## Overview
 
-# Format check
-go fmt ./...
-if [ $? -ne 0 ]; then
-    echo "Format check failed"
-    exit 1
-fi
+Pre-commit hooks provide the fastest feedback loop in the CD Model. When properly configured, they:
 
-# Lint
-golangci-lint run --fast
-if [ $? -ne 0 ]; then
-    echo "Lint check failed"
-    exit 1
-fi
+- Validate code before it enters version control
+- Run automatically on every commit attempt
+- Block commits that don't meet quality standards
+- Keep the feedback loop tight (5-10 minutes maximum)
 
-# Unit tests
-go test -short ./...
-if [ $? -ne 0 ]; then
-    echo "Unit tests failed"
-    exit 1
-fi
+---
 
-# Security scan
-trivy fs --severity HIGH,CRITICAL .
-if [ $? -ne 0 ]; then
-    echo "Security scan failed"
-    exit 1
-fi
+## Reference Documentation
 
-echo "All pre-commit checks passed"
-exit 0
-```
+For complete setup instructions, tool configurations, and scripts, see:
 
-## Make Hook Executable
+**[Pre-commit Setup Reference](../../../reference/eac/quality-gates/precommit-setup.md)** - Complete implementation guide including:
 
-```bash
-chmod +x .git/hooks/pre-commit
-```
+- Git hook script template
+- Pre-commit framework configuration
+- Time budget optimization strategies
+- Tool reference table
+- Emergency bypass options
 
-## Using Pre-commit Framework
+**[Pre-commit Checks Reference](../../../reference/eac/quality-gates/precommit-checks.md)** - Detailed check categories including:
 
-Install [pre-commit](https://pre-commit.com/):
+- Code formatting tools
+- Linting configuration
+- Unit test execution
+- Secret detection
+- Dependency scanning
+- CI workflow examples
 
-```bash
-pip install pre-commit
-```
+---
 
-Create `.pre-commit-config.yaml`:
+## Related Documentation
 
-```yaml
-repos:
-  - repo: https://github.com/golangci/golangci-lint
-    rev: v1.54.0
-    hooks:
-      - id: golangci-lint
-
-  - repo: local
-    hooks:
-      - id: go-test
-        name: Go Tests
-        entry: go test -short ./...
-        language: system
-        pass_filenames: false
-
-      - id: trivy-scan
-        name: Security Scan
-        entry: trivy fs --severity HIGH,CRITICAL .
-        language: system
-        pass_filenames: false
-```
-
-Install hooks:
-
-```bash
-pre-commit install
-```
-
-## Time Budget
-
-**Target**: 5-10 minutes maximum
-
-Optimization strategies:
-
-- **Incremental scanning**: Only scan changed files
-- **Local caching**: Reuse results from previous runs
-- **Fail fast**: Stop on first critical failure
-- **Parallel execution**: Run independent checks in parallel
-
-## Checks to Include
-
-| Check        | Tool                      | Purpose              |
-| ------------ | ------------------------- | -------------------- |
-| Format       | `go fmt`, `prettier`      | Code style           |
-| Lint         | `golangci-lint`, `eslint` | Code quality         |
-| Unit tests   | `go test -short`          | Fast tests only      |
-| Secrets      | `trivy`, `gitleaks`       | Credential detection |
-| Dependencies | `trivy fs`                | Vulnerability scan   |
-| Build        | `go build`                | Compilation check    |
-
-## Skipping Hooks (Emergency Only)
-
-```bash
-git commit --no-verify -m "emergency fix"
-```
-
-**Warning**: Only use for genuine emergencies. CI will still run all checks.
-
-## Related
-
-- [Pre-commit Quality Gates](./precommit-gates.md)
-- [CD Model Stages 1-7](../cd-model/stages.md#development-stages)
+- [Pre-commit Quality Gates](./precommit-gates.md) - Why pre-commit matters
+- [CD Model Stages 1-7](../cd-model/stages.md#development-stages) - See Stage 2 in context

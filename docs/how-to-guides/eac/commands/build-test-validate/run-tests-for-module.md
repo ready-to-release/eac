@@ -90,6 +90,6 @@ r2r eac show test-timings src-auth
 
 ## Related Commands
 
-- [`test`](../../../../reference/commands/test/test.md) - Full command reference
-- [`show test-summary`](../../../../reference/commands/show/test-summary.md) - View summary
-- [`test debug`](../../../../reference/commands/test/debug.md) - Debug failures
+- [`test`](../../../../reference/eac/commands/test/test.md) - Full command reference
+- [`show test-summary`](../../../../reference/eac/commands/show/test-summary.md) - View summary
+- [`test debug`](../../../../reference/eac/commands/test/debug.md) - Debug failures

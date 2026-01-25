@@ -13,12 +13,18 @@ Learn how to build modules, run tests, and validate quality before committing.
 
 ### Testing
 
-| Guide                                               | What You'll Accomplish                           |
-| --------------------------------------------------- | ------------------------------------------------ |
-| [Run Tests for Module](./run-tests-for-module.md)   | Execute tests and view results                   |
-| [Debug Test Failures](./debug-test-failures.md)     | Identify and fix failing tests                   |
-| [Execute Manual Tests](./execute-manual-tests.md)   | Run manual tests with evidence collection        |
-| [Run Test Suites](./run-test-suites.md)             | Execute specific test suites                     |
+| Guide                                             | What You'll Accomplish                    |
+| ------------------------------------------------- | ----------------------------------------- |
+| [Run Tests for Module](./run-tests-for-module.md) | Execute tests and view results            |
+| [Debug Test Failures](./debug-test-failures.md)   | Identify and fix failing tests            |
+| [Execute Manual Tests](./execute-manual-tests.md) | Run manual tests with evidence collection |
+| [Run Test Suites](./run-test-suites.md)           | Execute specific test suites              |
+
+### Troubleshooting
+
+| Guide                                                                             | What You'll Accomplish                      |
+| --------------------------------------------------------------------------------- | ------------------------------------------- |
+| [Fix Windows Defender False Positives](./fix-windows-defender-false-positives.md) | Resolve antivirus blocking Go test binaries |
 
 ### Validation and Quality
 

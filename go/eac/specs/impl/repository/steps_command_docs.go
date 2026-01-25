@@ -38,7 +38,7 @@ var cmdDocsCtx *commandDocsContext
 func registerCommandDocsSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	// Given steps
 	sc.Step(`^I load all valid commands from the CLI$`, loadAllValidCommandsFromCLI)
-	sc.Step(`^I scan docs/reference/commands/ for command documentation files$`, scanDocsForCommandDocumentation)
+	sc.Step(`^I scan docs/reference/eac/commands/ for command documentation files$`, scanDocsForCommandDocumentation)
 
 	// When steps
 	sc.Step(`^I check each command for a corresponding documentation file$`, checkEachCommandForDocumentation)

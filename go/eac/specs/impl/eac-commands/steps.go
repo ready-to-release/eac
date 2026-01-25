@@ -25,4 +25,5 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	registerSecuritySteps(sc, ctx)
 	registerBooksSteps(sc, ctx)
 	registerTestResultsSteps(sc, ctx)
+	registerDrawioSteps(sc, ctx)
 }

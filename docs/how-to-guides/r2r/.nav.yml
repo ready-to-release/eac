@@ -2,5 +2,4 @@ title: r2r
 nav:
   - index.md
   - creating-extensions.md
-  - local-development.md
   - testing-in-external-repos.md

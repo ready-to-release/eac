@@ -34,6 +34,9 @@ type RepositoryConfig struct {
 
 	// Module definitions (previously in separate repository.yml)
 	Modules []Module `yaml:"modules"`
+
+	// Container registry configurations for cleanup policies
+	Registries RegistriesConfig `yaml:"registries,omitempty"`
 }
 
 // RepositorySettings holds repository-level configuration.

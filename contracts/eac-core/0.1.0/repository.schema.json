@@ -24,6 +24,10 @@
         "$ref": "#/definitions/module"
       },
       "minItems": 1
+    },
+    "registries": {
+      "$ref": "#/definitions/registries_config",
+      "description": "Container registry configurations for cleanup policies"
     }
   },
   "required": ["modules"],
@@ -683,6 +687,95 @@
         "changelog": {
           "type": "string",
           "description": "Path to changelog file (defaults to release/<moniker>/CHANGELOG.md)"
+        }
+      }
+    },
+    "registries_config": {
+      "type": "object",
+      "description": "Container registry configurations keyed by registry hostname",
+      "additionalProperties": {
+        "$ref": "#/definitions/registry_config"
+      }
+    },
+    "registry_config": {
+      "type": "object",
+      "description": "Configuration for a container registry",
+      "properties": {
+        "org": {
+          "type": "string",
+          "description": "Organization name in the registry",
+          "minLength": 1
+        },
+        "cleanup": {
+          "$ref": "#/definitions/registry_cleanup_policy",
+          "description": "Cleanup policy for container images"
+        }
+      },
+      "required": ["org"]
+    },
+    "registry_cleanup_policy": {
+      "type": "object",
+      "description": "Cleanup policy for container images. Uses two protection mechanisms: (1) image tag patterns checked locally, (2) GitHub Release API for release correlation.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether cleanup is enabled for this registry",
+          "default": true
+        },
+        "policy": {
+          "type": "string",
+          "enum": ["keep-latest-n"],
+          "description": "Cleanup policy type. keep-latest-n: keep the newest N versions that match prune patterns",
+          "default": "keep-latest-n"
+        },
+        "keep": {
+          "type": "integer",
+          "description": "Number of versions to keep (for keep-latest-n policy)",
+          "minimum": 1,
+          "default": 10
+        },
+        "image_tags": {
+          "$ref": "#/definitions/image_tag_rules",
+          "description": "Rules based on container image tags (OCI tags visible on the image)"
+        },
+        "github_releases": {
+          "$ref": "#/definitions/github_release_rules",
+          "description": "Rules based on GitHub Release API correlation"
+        },
+        "min_age_days": {
+          "type": "integer",
+          "description": "Minimum age in days before a version can be pruned. Versions created more recently than this are protected.",
+          "minimum": 0,
+          "default": 7
+        }
+      }
+    },
+    "image_tag_rules": {
+      "type": "object",
+      "description": "Protection rules based on container image tags (OCI/Docker tags like 'v1.0.0', 'sha-abc123', 'latest')",
+      "properties": {
+        "preserve": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Image tag patterns to preserve (glob). Images with any tag matching these are never deleted. Examples: 'v*' matches 'v1.0.0', 'latest' matches exactly.",
+          "default": ["v*", "latest", "[0-9]*.[0-9]*.[0-9]*"]
+        },
+        "prune": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Image tag patterns eligible for pruning (glob). Only images with tags matching these are candidates. Examples: 'sha-*' matches CI builds, 'pr-*' matches PR builds.",
+          "default": ["sha-*", "dev-*", "pr-*", "ci"]
+        }
+      }
+    },
+    "github_release_rules": {
+      "type": "object",
+      "description": "Configuration for GitHub Release API correlation. Images matching GitHub Releases are ALWAYS protected (non-configurable safety feature).",
+      "properties": {
+        "tag_format": {
+          "type": "string",
+          "description": "Expected format of release tags on images. Use {module} and {version} placeholders. Example: '{module}/{version}' matches 'ext-eac/1.0.0'",
+          "default": "{module}/{version}"
         }
       }
     }

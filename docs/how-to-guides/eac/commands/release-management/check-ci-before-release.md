@@ -113,6 +113,6 @@ r2r eac release this
 
 ## Related Commands
 
-- [`release check-ci`](../../../../reference/commands/release/check-ci.md) - Check CI status
-- [`pipeline status`](../../../../reference/commands/pipeline/status.md) - Current status
-- [`pipeline wait`](../../../../reference/commands/pipeline/wait.md) - Wait for completion
+- [`release check-ci`](../../../../reference/eac/commands/release/check-ci.md) - Check CI status
+- [`pipeline status`](../../../../reference/eac/commands/pipeline/status.md) - Current status
+- [`pipeline wait`](../../../../reference/eac/commands/pipeline/wait.md) - Wait for completion

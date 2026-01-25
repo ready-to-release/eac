@@ -11,6 +11,7 @@ import (
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/create/squash-message"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/describe"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/design"
+	_ "github.com/ready-to-release/eac/go/eac/commands/impl/drawio"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/extension"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/get"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/help"

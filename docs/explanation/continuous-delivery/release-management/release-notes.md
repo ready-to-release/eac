@@ -151,6 +151,17 @@ Before publishing:
 
 ---
 
+## Reference Documentation
+
+For release commands, see:
+
+**[Release Commands Reference](../../../reference/eac/continuous-delivery/changelog/release-commands.md)** - Commands including:
+
+- `r2r release this <module>` - Finalize changelog and create release
+- `r2r release pending <module>` - Check for pending changes
+
+---
+
 ## Next Steps
 
 - [Changelog System](./changelog-system.md) - How to create releases

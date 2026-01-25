@@ -18,7 +18,7 @@ EAC currently provides native support for **Go** and **TypeScript** projects:
 - **Docker containers** - Multi-platform builds for any language
 - **Documentation** - MkDocs site generation
 
-Other languages can use container-based or script-based builds. See [R2R and EAC Reference](../../reference/r2r-eac/#language-support) for details.
+Other languages can use container-based or script-based builds. See [R2R and EAC Reference](../../reference/eac/architecture/component-types.md#language-support-matrix) for details.
 
 ## Getting Started
 
@@ -52,5 +52,5 @@ New to EAC? Start here:
 
 These how-to guides focus on accomplishing tasks. For comprehensive technical details:
 
-- **[Command Reference](../../reference/commands/)** - Complete command syntax and options
-- **[R2R and EAC Reference](../../reference/r2r-eac/)** - Architecture, contracts, and extending EAC
+- **[Command Reference](../../reference/eac/commands/)** - Complete command syntax and options
+- **[R2R and EAC Reference](../../reference/eac/)** - Architecture, contracts, and extending EAC

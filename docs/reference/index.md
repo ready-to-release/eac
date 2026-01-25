@@ -4,16 +4,14 @@ Technical reference material providing information-oriented documentation for th
 
 ## Quick Access
 
-| Resource                                         | Description                              |
-| ------------------------------------------------ | ---------------------------------------- |
-| [Command Cheat Sheet](./commands/cheat-sheet.md) | Quick reference for most common commands |
+| Resource                                        | Description                              |
+| ----------------------------------------------- | ---------------------------------------- |
+| [Command Cheat Sheet](./eac/commands/cheat-sheet.md) | Quick reference for most common commands |
 
 ## In This Section
 
-| Reference                                     | Description                                                          |
-| --------------------------------------------- | -------------------------------------------------------------------- |
-| [R2R and EAC Architecture](./r2r-eac/)        | System architecture, module system, contracts, and design principles |
-| [R2R CLI Commands](./r2r-cli/)                | R2R CLI framework command reference (init, install, list, etc.)      |
-| [EAC Extension Commands](./commands/)         | EAC extension command reference (build, test, validate, etc.)        |
-| [Continuous Delivery](./continuous-delivery/) | CI/CD pipeline and deployment reference materials                    |
-| [Decision Records](./decision-records/)       | Architectural decisions and their rationale                          |
+| Reference             | Description                                                   |
+| --------------------- | ------------------------------------------------------------- |
+| [Developer Experience](./devex/) | Cross-cutting R2R + EAC reference (internal & external) |
+| [R2R CLI](./r2r/)     | R2R CLI framework - init, install, list, validate, and more   |
+| [EAC](./eac/)         | EAC extension - commands, architecture, testing, and more     |

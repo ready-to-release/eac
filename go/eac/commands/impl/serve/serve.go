@@ -314,7 +314,9 @@ func resolveModuleConfig(workspaceRoot, moduleMoniker, namedBook string) (*Modul
 	isSite := targetBook == "site"
 	var contentPath string
 	if isSite {
-		contentPath = filepath.Join(paths.BuildOutputPath(workspaceRoot, moduleMoniker), "site")
+		// MkDocs outputs to site/ directory within the build staging area
+		// Build structure: out/build/<module>/site/site/ (mkdocs output inside staging)
+		contentPath = filepath.Join(paths.BuildOutputPath(workspaceRoot, moduleMoniker), "site", "site")
 	} else {
 		// For non-site books, serve the module root (contains all PDFs)
 		contentPath = paths.BuildOutputPath(workspaceRoot, moduleMoniker)

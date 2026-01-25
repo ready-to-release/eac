@@ -257,6 +257,17 @@ See [Risk Controls](./risk-controls.md) for complete reference.
 
 ---
 
+## Reference Documentation
+
+For complete command reference, see:
+
+**[Compliance Reference](../../../reference/eac/compliance/index.md)** - Full CLI commands including:
+
+- [Control Tags](../../../reference/eac/compliance/control-tags.md) - @control: tag format and validation
+- [Risk Controls](../../../reference/eac/compliance/risk-controls.md) - OSCAL commands and evidence generation
+
+---
+
 ## Related Documentation
 
 ### Core Concepts

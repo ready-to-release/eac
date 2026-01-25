@@ -1,0 +1,10 @@
+title: templates
+nav:
+  - index.md
+  - templates.md
+  - install.md
+  - install-ai.md
+  - install-docs.md
+  - install-reports.md
+  - install-specs.md
+  - template-command.md

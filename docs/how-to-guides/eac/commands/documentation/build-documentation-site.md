@@ -117,6 +117,6 @@ find docs -name ".nav.yml" -exec cat {} \;
 
 ## Related Commands
 
-- [`serve docs`](../../../../reference/commands/serve/docs.md) - Start dev server
-- [`validate markdown`](../../../../reference/commands/validate/markdown.md) - Check syntax
-- [`validate books`](../../../../reference/commands/validate/books.md) - Validate config
+- [`serve docs`](../../../../reference/eac/commands/serve/docs.md) - Start dev server
+- [`validate markdown`](../../../../reference/eac/commands/validate/markdown.md) - Check syntax
+- [`validate books`](../../../../reference/eac/commands/validate/books.md) - Validate config

@@ -318,6 +318,19 @@ r2r eac test <module> --suite pre-commit
 
 ---
 
+## Reference Documentation
+
+For validation and test commands, see:
+
+**[Specifications Reference](../../../reference/eac/specifications/index.md)** - Commands including:
+
+- `r2r eac validate specs` - Validate specification syntax
+- `r2r eac test <module> --suite pre-commit` - Run tests
+
+**[Go Testing Reference](../../../reference/eac/testing/go/index.md)** - Go-specific implementation details
+
+---
+
 ## Related Documentation
 
 - [Organizing Rules](./organizing-rules.md) - Creating acceptance criteria

@@ -1,0 +1,7 @@
+title: Internal (Monorepo)
+nav:
+  - index.md
+  - cli-vs-extensions.md
+  - repository-layout.md
+  - contracts-overview.md
+  - workflow-conventions.md

@@ -499,7 +499,7 @@ cd C:\path\to\external-repo
 
 ## Related Guides
 
-- [Local Development Workflows](./local-development.md) - Learn about importer.ps1 and Docker workflows
+- [Local Development Workflows](../local-setup/local-dev-workflows.md) - Learn about importer.ps1 and Docker workflows
 - [Creating Extensions](./creating-extensions.md) - Learn how r2r extensions work
 
 {{ diataxis_footer() }}

@@ -2,49 +2,49 @@
 
 > **Implementation-specific guide for Go/Godog BDD and testing**
 
-Complete guide for implementing BDD specifications with Go and Godog.
+This section provides an overview of implementing BDD specifications with Go and Godog.
 
-## In This Section
+## Overview
 
-| Topic                                       | Description                             |
-| ------------------------------------------- | --------------------------------------- |
-| [Overview](./overview.md)                   | Introduction to Go/Godog BDD testing    |
-| [File Organization](./file-organization.md) | Directory structure and file naming     |
-| [Test Levels](./test-levels.md)             | Build tags and test isolation (L0-L4)   |
-| [Step Definitions](./step-definitions.md)   | Writing and organizing step definitions |
-| [Best Practices](./best-practices.md)       | Testing patterns and conventions        |
+This project uses:
 
-## Quick Reference
+- **Go** for production code and unit tests
+- **Godog** for executing Gherkin specifications
+- **Go test framework** for unit and integration tests
+- **Build tags** for test level isolation (L0-L4)
 
-- Go version: ≥ 1.21
-- Framework: Godog for BDD, Go test for unit tests
-- Build tags: `//go:build L0` through `//go:build L4`
+## Why Go for BDD?
 
-## Essential Commands
+| Advantage | Description |
+|-----------|-------------|
+| Performance | Compiled nature makes tests fast and efficient |
+| Simplicity | Simple syntax and minimal abstraction |
+| Tooling | Excellent support with `go test`, coverage, profiling |
+| Concurrency | Built-in support for parallel test execution |
+| Standard Library | Rich library reduces external dependencies |
 
-```bash
-# Unit tests
-go test ./...                    # L0 + L1
-go test -tags=L0 ./...          # L0 only
-go test -tags=L2 ./...          # L2 integration
+---
 
-# BDD scenarios
-godog run                        # All scenarios
-godog run --tags=@ov            # Operational verification
-godog run --tags=@cli           # CLI features only
+## Reference Documentation
 
-# Coverage
-go test -cover ./...
-go test -coverprofile=coverage.out ./...
-go tool cover -html=coverage.out
-```
+For complete implementation details, code templates, and commands, see:
+
+**[Go Testing Reference](../../../../reference/eac/testing/go/index.md)** - Complete implementation guide including:
+
+- [Overview](../../../../reference/eac/testing/go/overview.md) - Godog setup and installation
+- [File Organization](../../../../reference/eac/testing/go/file-organization.md) - Directory structure and naming
+- [Test Levels](../../../../reference/eac/testing/go/test-levels.md) - Build tags (L0-L4)
+- [Step Definitions](../../../../reference/eac/testing/go/step-definitions.md) - Writing Godog steps
+- [Best Practices](../../../../reference/eac/testing/go/best-practices.md) - Testing patterns
+
+---
 
 ## Related Documentation
 
 ### Conceptual Understanding
 
-- [Three-Layer Testing Approach](../../concepts/three-layer-approach.md) - Conceptual overview
-- [BDD Fundamentals](../../concepts/bdd-fundamentals.md) - BDD fundamentals
+- [Three-Layer Testing Approach](../../concepts/three-layer-approach.md) - Testing philosophy
+- [BDD Fundamentals](../../concepts/bdd-fundamentals.md) - BDD principles
 - [Testing Taxonomy](../../taxonomy/) - Tag taxonomy concepts
 
 ### Organizational

@@ -2,7 +2,7 @@ $schema: ../../contracts/eac-core/0.1.0/commands.schema.json
 
 # Default settings for command documentation mapping
 defaults:
-  docs_base: docs/reference/commands
+  docs_base: docs/reference/eac/commands
 
 # Allowed command categories (verbs)
 # - Commands starting with these words map to: {category}/{subcommand}.md
@@ -12,6 +12,8 @@ categories:
     description: Build modules and their dependencies
   create:
     description: Generate new artifacts using AI or templates
+  drawio:
+    description: Edit DrawIO diagram files embedded in PNG images
   get:
     description: Retrieve data in structured format (YAML/JSON output)
   help:
@@ -43,6 +45,6 @@ categories:
 # Maps commands that don't fit the standard category pattern
 overrides:
   "extension-meta":
-    path: docs/reference/commands/extension-meta.md
+    path: docs/reference/eac/commands/extension-meta.md
   "template command":
-    path: docs/reference/commands/templates/template-command.md
+    path: docs/reference/eac/commands/templates/template-command.md

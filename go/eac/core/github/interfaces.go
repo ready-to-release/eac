@@ -20,6 +20,7 @@ type Release struct {
 	TagName string `json:"tagName"`
 	Name    string `json:"name"`
 	Draft   bool   `json:"isDraft"`
+	Body    string `json:"body"` // Release notes body (for bundle module extraction)
 }
 
 // ListRunsOpts contains options for listing workflow runs.

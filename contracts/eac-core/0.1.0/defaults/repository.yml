@@ -85,6 +85,30 @@ conventions:
   template_reports_dir: reports
   template_risk_catalog_dir: risk-catalog
 
+# Container Registry Defaults
+# Configure cleanup policies for container images (GHCR, Docker Hub, etc.)
+# Override in .r2r/eac/repository.yml by setting registries.{host}.org
+#
+# Note: Registries section is NOT included in defaults because:
+# - org field is required and must be set explicitly by users
+# - We provide sensible defaults for cleanup policy via GetCleanupPolicy()
+#
+# Example user configuration:
+#   registries:
+#     ghcr.io:
+#       org: my-org  # REQUIRED: your GitHub org or username
+#       cleanup:     # OPTIONAL: defaults applied if omitted
+#         enabled: true
+#         keep: 10
+#         min_age_days: 7
+#         image_tags:
+#           preserve: ["v*", "latest", "[0-9]*.[0-9]*.[0-9]*"]
+#           prune: ["sha-*", "dev-*", "pr-*", "ci"]
+#         github_releases:
+#           # Note: Released packages are ALWAYS protected (non-configurable safety feature).
+#           # Images matching GitHub Release tags or referenced by release bundles are never deleted.
+#           tag_format: "{module}/{version}"
+
 # Default module (used when no modules defined in repository.yml)
 modules:
   - moniker: default

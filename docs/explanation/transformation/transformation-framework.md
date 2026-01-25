@@ -2,9 +2,13 @@
 
 ## Introduction
 
-Compliance transformation is a journey, not a destination. Organizations that successfully transform compliance practices do so through a structured, phased approach that proves the concept with a pilot, builds reusable automation, and scales systematically across the organization.
+Compliance transformation is a journey, not a destination.
 
-This document describes a four-phase framework that guides compliance transformation from initial assessment through organization-wide adoption. The framework has been validated across multiple organizations and regulatory contexts.
+Organizations that successfully transform compliance practices do so through a structured, phased approach that proves the concept with a pilot, builds reusable automation, and scales systematically across the organization.
+
+This document describes a four-phase framework that guides compliance transformation from initial assessment through organization-wide adoption.
+
+The framework has been validated across multiple organizations and regulatory contexts.
 
 !!! info "Transformation Overview" - **Timeline**: 12-18 months from start to organization-wide adoption - **Investment**: 2-3 FTE dedicated resources plus team participation - **Expected ROI**: 3-10 month payback period, $1.8M - $6.4M annual benefit for typical mid-size organization
 
@@ -61,7 +65,13 @@ Inventory all compliance obligations:
 - Identify overlapping controls across standards
 - Document current evidence collection methods
 
-!!! tip "Where to Start" - **If you have existing SOPs**: Use these documented procedures as your starting point. They provide organization-specific context for how requirements are currently interpreted. - **If you don't have SOPs**: Look directly at the regulations applicable to your domain. For GxP organizations, consult ICH guidelines. For security, reference ISO 27001 control requirements.
+!!! tip
+
+    "Where to Start" - **If you have existing SOPs**: Use these documented procedures as your starting point
+    They provide organization-specific context for how requirements are currently interpreted.
+    - **If you don't have SOPs**: Look directly at the regulations applicable to your domain.
+    For GxP organizations, consult ICH guidelines.
+    For security, reference ISO 27001 control requirements.
 
 **Deliverable**: Compliance Requirements Inventory (spreadsheet or database)
 

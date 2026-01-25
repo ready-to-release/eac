@@ -1,0 +1,22 @@
+title: Commands
+nav:
+  - index.md
+  - overview/
+  - categories/
+  - build/
+  - create/
+  - drawio/
+  - get/
+  - help/
+  - init/
+  - pipeline/
+  - release/
+  - scan/
+  - serve/
+  - show/
+  - templates/
+  - test/
+  - update/
+  - validate/
+  - work/
+  - extension-meta.md

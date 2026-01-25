@@ -13,6 +13,35 @@ repository:
     ci: 4 # Max parallel workers in CI (GitHub Actions)
     devbox: 8 # Max parallel workers in local development
 
+# Container Registry Configuration
+# Cleanup policies for container images in GHCR
+registries:
+  ghcr.io:
+    org: ready-to-release
+    cleanup:
+      enabled: true
+      policy: keep-latest-n
+      keep: 10
+      min_age_days: 7
+      # Image tag rules (OCI/Docker tags on the container image)
+      image_tags:
+        # Tags that are never deleted (glob patterns)
+        preserve:
+          - "v*"           # Release tags like v1.0.0
+          - "latest"       # Latest tag
+          - "[0-9]*.[0-9]*.[0-9]*"  # Semver like 1.0.0
+        # Tags eligible for cleanup (glob patterns)
+        prune:
+          - "sha-*"        # CI builds like sha-abc1234
+          - "dev-*"        # Dev builds
+          - "pr-*"         # PR builds
+          - "ci"           # CI tag
+      # GitHub Release API correlation
+      # Note: Released packages are ALWAYS protected - this is non-configurable for safety.
+      # Images matching GitHub Release tags or referenced by release bundles are never deleted.
+      github_releases:
+        tag_format: "{module}/{version}"  # e.g., ext-eac/1.0.0
+
 # Module Contracts
 # Component defaults (files.source, files.tests, files.config) loaded from component-types
 # Ordered by dependency layer (Layer 0 first, then Layer 1, etc.)

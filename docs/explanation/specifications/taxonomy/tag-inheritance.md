@@ -279,6 +279,17 @@ r2r eac validate specs --show-effective-tags
 
 ---
 
+## Reference Documentation
+
+For validation commands, see:
+
+**[Specifications Reference](../../../reference/eac/specifications/index.md)** - Commands including:
+
+- `r2r eac validate specs` - Validate Gherkin syntax
+- `r2r eac validate specs --show-effective-tags` - Show calculated tags
+
+---
+
 ## Related Documentation
 
 - [Test Levels](./test-levels.md) - Understanding test level tags

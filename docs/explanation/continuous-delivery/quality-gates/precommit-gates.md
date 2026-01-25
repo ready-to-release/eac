@@ -11,6 +11,8 @@ The pre-commit stage operates in two environments:
 
 Both environments run the same checks to ensure consistency, but the DevBox execution provides the fastest possible feedback loop.
 
+> **Implementation Details**: For tool configurations, scripts, and setup instructions, see the [Pre-commit Reference](../../../reference/eac/quality-gates/index.md).
+
 ---
 
 ## Why Pre-commit Gates Matter
@@ -136,289 +138,40 @@ If pre-commit checks consistently take > 10 minutes:
 
 Pre-commit gates typically include these categories of checks:
 
-### 1. Code Formatting
+| Category | Purpose | Time Budget |
+|----------|---------|-------------|
+| Code Formatting | Consistent code style | < 10 seconds |
+| Linting | Code quality, potential bugs | 10-60 seconds |
+| Unit Tests | Isolated logic validation | 1-5 minutes |
+| Secret Detection | Prevent credential leaks | 5-30 seconds |
+| Dependency Scanning | Vulnerability detection | 10-60 seconds |
+| Build Verification | Compilation check | 30s - 3 minutes |
 
-**Purpose**: Enforce consistent code style
-
-**Tools**: `gofmt`, `prettier`, `black`, `clang-format`
-
-**Time**: < 10 seconds
-
-**Why at Stage 2**: Formatting is fast and deterministic. No reason to commit badly formatted code.
-
-**Auto-fix**: Most formatting tools can auto-fix issues
-
-**Example**: `gofmt -w .` (formats all Go files)
-
-### 2. Linting
-
-**Purpose**: Catch code quality issues, potential bugs, style violations
-
-**Tools**: `golangci-lint`, `eslint`, `pylint`, `rubocop`
-
-**Time**: 10-60 seconds
-
-**Why at Stage 2**: Linting catches common mistakes (unused variables, undefined references, etc.) immediately
-
-**Scope**: Focus on high-severity issues at Stage 2, defer low-severity to Stage 3
-
-**Example**: `golangci-lint run --fast` (fast mode for quick feedback)
-
-### 3. Unit Tests
-
-**Purpose**: Validate individual units of code in isolation
-
-**Characteristics**:
-
-- No external dependencies (database, network, filesystem)
-- Fast (milliseconds per test)
-- Deterministic (same input = same output)
-- Isolated (tests don't affect each other)
-
-**Time**: 1-5 minutes for full suite
-
-**Why at Stage 2**: Unit tests validate logic changes immediately, before code leaves developer's machine
-
-**Scope**: Run all unit tests, or subset affected by changes
-
-**Example**: `go test ./... -short` (run unit tests, skip integration)
-
-### 4. Secret Detection
-
-**Purpose**: Prevent committing secrets (API keys, passwords, tokens)
-
-**Tools**: `trivy`, `git-secrets`, `truffleHog`, `detect-secrets`
-
-**Time**: 5-30 seconds
-
-**Why at Stage 2**: Once committed, secrets enter version history - extremely hard to remove
-
-**Fail Behavior**: Block commit immediately, require developer to remove secret
-
-**Example**: `trivy fs --scanners secret .`
-
-### 5. Dependency Vulnerability Scanning
-
-**Purpose**: Detect known vulnerabilities in dependencies
-
-**Tools**: `trivy`, `snyk`, `dependabot`, `npm audit`
-
-**Time**: 10-60 seconds
-
-**Why at Stage 2**: Catch critical vulnerabilities before they enter codebase
-
-**Scope**: Critical and high severity only at Stage 2, defer medium/low to Stage 3
-
-**Example**: `trivy fs --severity CRITICAL,HIGH .`
-
-### 6. Build Verification
-
-**Purpose**: Ensure code compiles successfully
-
-**Time**: 30 seconds - 3 minutes
-
-**Why at Stage 2**: No point committing code that doesn't compile
-
-**Scope**: Build changed modules only, not entire project
-
-**Example**: `go build ./...` (compile all packages)
+> **Tool Details**: For specific tool configurations, commands, and examples, see the [Pre-commit Checks Reference](../../../reference/eac/quality-gates/precommit-checks.md).
 
 ---
 
 ## Execution Environments
 
-Pre-commit gates run in two distinct environments with different characteristics:
+Pre-commit gates run in two distinct environments:
 
 ### DevBox (Local Execution)
 
-**Characteristics**:
-
 - Developer-controlled environment
-- Full access to local tools and editors
 - Fast iteration (no network latency)
 - Developer-initiated (manual or git hook)
-
-**Advantages**:
-
 - Fastest feedback (no CI queue time)
-- Developer can immediately fix issues
-- Context fully in memory
-- Incremental execution during development
-
-**Implementation Options**:
-
-**1. Git Hooks**:
-
-```bash
-# .git/hooks/pre-commit
-#!/bin/bash
-set -e
-
-echo "Running pre-commit checks..."
-gofmt -w .
-golangci-lint run --fast
-go test ./... -short
-trivy fs --scanners secret .
-```
-
-**2. Make Targets**:
-
-```makefile
-.PHONY: precommit
-precommit:
-    gofmt -w .
-    golangci-lint run --fast
-    go test ./... -short
-    trivy fs --scanners secret .
-```
-
-**3. Task Runners**:
-
-- [pre-commit framework](https://pre-commit.com/)
-- [husky](https://typicode.github.io/husky/) (Node.js)
-- [lefthook](https://github.com/evilmartians/lefthook) (polyglot)
-
-**4. Watch Mode**:
-
-```bash
-# Continuous testing during development
-go test ./... -short -watch
-```
 
 ### Build Agents (CI Execution)
 
-**Characteristics**:
-
 - Automated execution on git push
 - Clean, consistent environment
-- Isolated from developer machine
-- Results tracked and reported
-
-**Advantages**:
-
-- Catches issues developers might skip locally
-- Consistent across all developers
 - Creates audit trail
 - Enforces quality even if developer bypasses local checks
 
-**Why Repeat in CI**:
-Even though DevBox runs checks, CI repeats them because:
+**Why Repeat in CI**: Even though DevBox runs checks, CI repeats them because developers might skip local checks, environments differ, and it creates a formal quality gate record.
 
-- Developers might skip local checks
-- Environment differences (OS, tool versions)
-- Ensures consistency for all code entering repository
-- Creates formal quality gate record
-
-**Implementation**:
-
-```yaml
-# .github/workflows/precommit.yml
-name: Pre-commit
-on: [push]
-jobs:
-  validate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Format check
-        run: gofmt -l .
-      - name: Lint
-        run: golangci-lint run --fast
-      - name: Unit tests
-        run: go test ./... -short -cover
-      - name: Secret detection
-        run: trivy fs --scanners secret .
-```
-
----
-
-## Implementation Strategies
-
-### Progressive Adoption
-
-Don't implement all pre-commit checks at once. Gradual rollout prevents overwhelming developers:
-
-**Week 1**: Code formatting only
-
-- Auto-fix on save in IDE
-- Git hook enforces formatting
-- Zero friction (auto-fix handles everything)
-
-**Week 2**: Add linting
-
-- Start with error-level only
-- Fix existing violations first
-- Add to git hooks
-
-**Week 3**: Add unit tests
-
-- Require tests pass before commit
-- Optimize test suite for speed
-- Add coverage reporting
-
-**Week 4**: Add security scans
-
-- Secret detection (critical)
-- Dependency vulnerabilities (high severity only)
-
-### Making it Easy
-
-**IDE Integration**:
-
-- Format on save
-- Show linting errors inline
-- Run tests in IDE with one click
-- Display test results immediately
-
-**Git Hooks with Bypass**:
-
-```bash
-# Allow bypass in emergencies
-git commit --no-verify
-```
-
-**Clear Error Messages**:
-
-```text
-❌ Pre-commit checks failed:
-
-[Formatting] 3 files need formatting:
-  - src/main.go
-  - src/handler.go
-  - src/service.go
-
-Run 'gofmt -w .' to fix automatically.
-
-[Linting] 2 issues found:
-  src/main.go:42: unused variable 'result'
-  src/handler.go:18: error return not checked
-
-[Tests] 1 test failed:
-  TestUserService_CreateUser: expected error, got nil
-
-Fix these issues and try again.
-```
-
-### Continuous Improvement
-
-**Monitor Time Budget**:
-
-```bash
-# Track how long pre-commit takes
-time make precommit
-```
-
-**Developer Feedback**:
-
-- Survey: "Do pre-commit checks help or hinder?"
-- Measure: Are developers bypassing checks?
-- Iterate: Adjust scope based on feedback
-
-**Optimize Regularly**:
-
-- Profile slow tests, optimize or move to Stage 3
-- Update tool versions (often faster)
-- Review scope (are we checking too much?)
+> **Setup Instructions**: For git hooks, Makefile targets, and CI workflow configurations, see the [Pre-commit Setup Reference](../../../reference/eac/quality-gates/precommit-setup.md).
 
 ---
 

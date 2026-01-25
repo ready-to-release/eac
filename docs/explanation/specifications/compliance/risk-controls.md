@@ -396,6 +396,20 @@ Skip for:
 
 ---
 
+## Reference Documentation
+
+For CLI commands and validation details, see:
+
+**[Risk Controls Reference](../../../reference/eac/compliance/risk-controls.md)** - Implementation commands including:
+
+- `r2r create risk-profile` - Generate OSCAL profile from assessment
+- `r2r eac create risk-assess` - Generate assessment results
+- `r2r eac validate control-tags` - Validate @control: tags
+- `r2r eac validate risk-catalog` - Validate OSCAL catalog
+- `r2r eac validate risk-profile` - Validate OSCAL profile
+
+---
+
 ## See Also
 
 - [BDD Fundamentals](../concepts/bdd-fundamentals.md) - Writing executable specs

@@ -1,8 +1,23 @@
 # Commit Messages
 
-How to write semantic commit messages that maintain traceability.
+> **Semantic commit messages for traceability**
 
-## Format
+Conventional commits provide structured messages that enable automated changelog generation and maintain clear project history.
+
+---
+
+## Why Conventional Commits?
+
+Semantic commit messages enable:
+
+- **Automated changelog generation** - Tools can extract features, fixes, and breaking changes
+- **Clear project history** - Anyone can understand what changed and why
+- **Semantic versioning** - Commit types inform version bumps (feat = minor, fix = patch)
+- **Traceability** - Link commits to issues and requirements
+
+---
+
+## Basic Format
 
 ```text
 <type>(<scope>): <description>
@@ -12,92 +27,28 @@ How to write semantic commit messages that maintain traceability.
 [optional footer]
 ```
 
-## Type Keywords
+**Key Types**: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
 
-| Type     | Purpose          | Example                                 |
-| -------- | ---------------- | --------------------------------------- |
-| feat     | New feature      | `feat(api): add user authentication`    |
-| fix      | Bug fix          | `fix(parser): handle empty input`       |
-| docs     | Documentation    | `docs(readme): update install steps`    |
-| style    | Formatting       | `style(lint): apply gofmt`              |
-| refactor | Code restructure | `refactor(auth): extract token service` |
-| test     | Add/modify tests | `test(api): add login tests`            |
-| chore    | Maintenance      | `chore(deps): update dependencies`      |
+---
 
-## Scope
+## Reference Documentation
 
-The component or module affected:
+For complete format specification, type keywords, and examples, see:
 
-- `api`, `cli`, `core`, `ui`
-- `auth`, `billing`, `users`
-- `ci`, `deps`, `config`
+**[Commit Messages Reference](../../../reference/eac/workflow/commit-messages.md)** - Complete specification including:
 
-## Description Guidelines
+- Full type keyword table
+- Scope conventions
+- Description guidelines
+- Body and footer formatting
+- Complete examples
+- Common mistakes to avoid
 
-- Use imperative mood: "add" not "added" or "adds"
-- Keep under 50 characters
-- Don't end with period
-- Capitalize first letter
+---
 
-## Body (Optional)
+## Related Documentation
 
-Use the body to explain:
-
-- **What** changed and **why**
-- Any trade-offs or decisions made
-- Context not obvious from code
-
-Wrap at 72 characters per line.
-
-## Footer (Optional)
-
-Link to issues and indicate breaking changes:
-
-```text
-Relates to #123
-Fixes #456
-BREAKING CHANGE: API endpoint renamed
-```
-
-## Complete Example
-
-```text
-feat(api): add user authentication endpoint
-
-Implements user login with JWT tokens. Uses bcrypt for password
-hashing and RS256 for token signing.
-
-- Add /auth/login POST endpoint
-- Generate and return JWT tokens
-- Store refresh tokens in Redis
-- Add rate limiting (10 req/min)
-
-Relates to #123
-Co-authored-by: Jane Doe <jane@example.com>
-```
-
-## Commit Message for Releases
-
-```text
-chore(release): prepare v1.2.0
-
-- Update CHANGELOG.md
-- Bump version in package.json
-- Generate release notes
-
-Releases: v1.2.0
-```
-
-## What to Avoid
-
-- Generic messages: "fix bug", "update code"
-- Multiple unrelated changes in one commit
-- Missing issue references for tracked work
-- Implementation details that belong in code comments
-
-## Related
-
-- [Traceability Requirements](../cd-model/stages.md#stage-4-commit)
-- [Pre-commit Setup](../quality-gates/precommit-setup.md)
-- [Trunk-Based Development](./trunk-based-development.md)
-- [Branching Strategies](./branching-strategies.md)
+- [Traceability Requirements](../cd-model/stages.md#stage-4-commit) - Stage 4 traceability
+- [Pre-commit Setup](../quality-gates/precommit-setup.md) - Pre-commit hooks
+- [Trunk-Based Development](./trunk-based-development.md) - Development workflow
+- [Branching Strategies](./branching-strategies.md) - Branch naming

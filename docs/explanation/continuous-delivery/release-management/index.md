@@ -30,12 +30,13 @@ In the CD Model, it spans **Stage 8 (Start Release)** and **Stage 9 (Release App
 
 ## In This Section
 
-| Topic                                       | Description                                     |
-| ------------------------------------------- | ----------------------------------------------- |
-| [Changelog System](./changelog-system.md)   | How to release using the changelog-based system |
-| [Approval Patterns](./approval-patterns.md) | RA vs CDe approval workflows                    |
-| [Release Evidence](./release-evidence.md)   | What evidence is required for approval          |
-| [Release Notes](./release-notes.md)         | How to write effective release notes            |
+| Topic                                         | Description                                      |
+| --------------------------------------------- | ------------------------------------------------ |
+| [Changelog System](./changelog-system.md)     | How to release using the changelog-based system  |
+| [Approval Patterns](./approval-patterns.md)   | RA vs CDe approval workflows                     |
+| [Release Evidence](./release-evidence.md)     | What evidence is required for approval           |
+| [Release Notes](./release-notes.md)           | How to write effective release notes             |
+| [Container Cleanup](./container-cleanup.md)   | Managing container registry lifecycle            |
 
 ---
 

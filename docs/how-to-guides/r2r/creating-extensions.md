@@ -918,8 +918,8 @@ git commit -m "release(my-extension): 1.2.0"
 
 ## See Also
 
-- [Local Development Workflows](./local-development.md) - Develop and test extensions locally
+- [Local Development Workflows](../local-setup/local-dev-workflows.md) - Develop and test extensions locally
 - [Testing in External Repositories](./testing-in-external-repos.md) - Test extensions in different repositories
-- [R2R CLI install command](../../reference/r2r-cli/install.md) - Installing extensions
-- [R2R CLI Configuration](../../reference/r2r-cli/configuration.md) - Extension configuration reference
-- [CLI vs Extensions Architecture](../../reference/r2r-eac/cli-vs-extensions.md) - Understanding the system
+- [R2R CLI install command](../../reference/r2r/commands/install.md) - Installing extensions
+- [R2R CLI Configuration](../../reference/r2r/configuration/) - Extension configuration reference
+- [CLI vs Extensions Architecture](../../reference/devex/internal/cli-vs-extensions.md) - Understanding the system

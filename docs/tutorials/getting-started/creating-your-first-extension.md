@@ -327,5 +327,5 @@ For production-ready extensions, see:
 
 ### Related Guides
 
-- **[Local Development Workflows](../../how-to-guides/r2r/local-development.md)** - Iterate faster
+- **[Local Development Workflows](../../how-to-guides/local-setup/local-dev-workflows.md)** - Iterate faster
 - **[Testing in External Repos](../../how-to-guides/r2r/testing-in-external-repos.md)** - Validate across projects

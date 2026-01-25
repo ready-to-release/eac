@@ -330,6 +330,18 @@ r2r eac validate test-tags
 
 ---
 
+## Reference Documentation
+
+For validation commands, see:
+
+**[Specifications Reference](../../../reference/eac/specifications/index.md)** - Commands including:
+
+- `r2r eac validate specs` - Validate Gherkin syntax
+- `r2r eac validate control-tags` - Check control tags against OSCAL catalog
+- `r2r eac validate test-tags` - Verify test tags are defined
+
+---
+
 ## Related Documentation
 
 ### Discovery

@@ -13,7 +13,7 @@ Feature: repository_command-docs-coverage
     @L1 @ov
     Scenario: All commands have reference documentation
       Given I load all valid commands from the CLI
-      And I scan docs/reference/commands/ for command documentation files
+      And I scan docs/reference/eac/commands/ for command documentation files
       When I check each command for a corresponding documentation file
       Then every command should have a documentation file
       And if any commands are missing documentation, I should see their names

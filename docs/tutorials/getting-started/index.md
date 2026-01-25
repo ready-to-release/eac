@@ -36,5 +36,5 @@ After completing these tutorials, you'll be able to:
 After completing the getting started tutorials:
 
 - **[Creating Extensions Guide](../../how-to-guides/r2r/creating-extensions.md)** - Learn production patterns for extension development
-- **[Local Development Workflows](../../how-to-guides/r2r/local-development.md)** - Optimize your development iteration speed
+- **[Local Development Workflows](../../how-to-guides/local-setup/local-dev-workflows.md)** - Optimize your development iteration speed
 - **[Testing in External Repos](../../how-to-guides/r2r/testing-in-external-repos.md)** - Validate extensions across projects

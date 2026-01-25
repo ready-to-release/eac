@@ -28,6 +28,12 @@ Learn how to prepare and publish releases using the **changelog-driven release s
 | [View PR Approval Comments](./view-approval-comments.md)              | View and analyze PR approval comments for release evidence   |
 | [View Release Specifications](./view-specifications.md)               | View and analyze Gherkin specifications included in releases |
 
+### Maintenance
+
+| Guide                                                      | What You'll Accomplish                                  |
+| ---------------------------------------------------------- | ------------------------------------------------------- |
+| [Clean Up Container Images](./cleanup-container-images.md) | Remove old CI builds while protecting released packages |
+
 ---
 
 ## Changelog-Driven System Overview

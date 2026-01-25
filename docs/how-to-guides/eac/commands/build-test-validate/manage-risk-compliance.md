@@ -157,7 +157,7 @@ The `create risk-assess` command generates reports using templates that can be c
 
 ## Related Commands
 
-- [`create risk-profile`](../../../../reference/commands/create/risk-profile.md) - Create profile
-- [`create risk-assess`](../../../../reference/commands/create/risk-assess.md) - Update assessment
-- [`scan`](../../../../reference/commands/scan/scan.md) - Check compliance with --scanner compliance
-- [`validate risk-profile`](../../../../reference/commands/validate/risk-profile.md) - Validate profile
+- [`create risk-profile`](../../../../reference/eac/commands/create/risk-profile.md) - Create profile
+- [`create risk-assess`](../../../../reference/eac/commands/create/risk-assess.md) - Update assessment
+- [`scan`](../../../../reference/eac/commands/scan/scan.md) - Check compliance with --scanner compliance
+- [`validate risk-profile`](../../../../reference/eac/commands/validate/risk-profile.md) - Validate profile

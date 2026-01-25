@@ -259,10 +259,9 @@ Now that you know the basics of r2r, try these common tasks:
 - **[Discover Available Commands](../../how-to-guides/eac/commands/getting-started/discover-commands.md)** - Explore all 147 commands organized by category
 - **[Get Help with Commands](../../how-to-guides/eac/commands/getting-started/get-help-with-commands.md)** - Find and understand any r2r command
 - **[Explore Your Repository](../../how-to-guides/eac/commands/getting-started/explore-your-repository.md)** - Discover modules, files, and structure
-- **[Setup AI Provider](../../how-to-guides/eac/commands/getting-started/setup-ai-provider.md)** - Configure Claude, OpenAI, or Gemini
 
 ### Dive Deeper
 
 - **[Everything as Code Paradigm](../../explanation/everything-as-code/paradigm.md)** - Understand the philosophy
-- **[Command Reference](../../reference/commands/)** - Complete command documentation
+- **[Command Reference](../../reference/eac/commands/)** - Complete command documentation
 - **[Creating Extensions Guide](../../how-to-guides/r2r/creating-extensions.md)** - Build custom extensions

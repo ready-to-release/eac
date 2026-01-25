@@ -1,0 +1,11 @@
+title: scan
+nav:
+  - index.md
+  - scan.md
+  - vuln.md
+  - sast.md
+  - secrets.md
+  - iac.md
+  - sbom.md
+  - compliance.md
+  - zap.md

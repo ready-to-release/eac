@@ -2,11 +2,13 @@
 
 Protecting against vulnerabilities in dependencies and container images.
 
-## Dependency Scanning
+---
 
-Identifies known vulnerabilities in third-party dependencies.
+## Overview
 
-### What It Detects
+Supply chain security focuses on managing risks from third-party code and container images that your application depends on.
+
+### Key Risks
 
 | Risk                  | Description                               |
 | --------------------- | ----------------------------------------- |
@@ -15,68 +17,31 @@ Identifies known vulnerabilities in third-party dependencies.
 | License Compliance    | Incompatible or problematic licenses      |
 | Supply Chain Attacks  | Compromised or malicious packages         |
 
-### Running Dependency Scans
+### Defense Strategy
 
-```bash
-# Vulnerability scan
-eac scan --scanner vuln
+1. **Scan dependencies** - Identify known vulnerabilities
+2. **Generate SBOM** - Track all components in your software
+3. **Check licenses** - Ensure compliance with licensing requirements
+4. **Scan containers** - Multi-layer image vulnerability analysis
 
-# Software Bill of Materials (SBOM)
-eac scan --scanner sbom
+---
 
-# Compliance checking
-eac scan --scanner compliance
+## Reference Documentation
 
-# All supply chain scanners
-eac scan --scanner sbom,vuln,compliance
-```
+For CLI commands and scanning configuration, see:
 
-Evidence is written to `out/scan/<module>/<scanner>/`.
+**[Supply Chain Security Reference](../../../reference/eac/security/supply-chain.md)** - Complete implementation guide including:
 
-## Container Security
+- `eac scan --scanner vuln/sbom/compliance` commands
+- Container scanning details
+- Evidence output locations
+- Stage-specific scanning guidance
 
-Multi-layer scanning of container images.
+---
 
-### What It Scans
+## Related Documentation
 
-| Layer               | Examples                   |
-| ------------------- | -------------------------- |
-| OS Layer            | Base image vulnerabilities |
-| Application Layer   | Application dependencies   |
-| Configuration Layer | Misconfigurations, secrets |
-
-### What It Detects
-
-- OS package vulnerabilities
-- Application dependency vulnerabilities
-- Running as root
-- Hardcoded secrets in image layers
-- Exposed ports
-
-### Running Container Scans
-
-Container scanning is included in the vulnerability scanner:
-
-```bash
-# Scan module containers
-eac scan --scanner vuln
-```
-
-## Container Best Practices
-
-- Use specific version tags (not `latest`)
-- Run containers as non-root user
-- Use multi-stage builds for minimal attack surface
-- Scan before every deployment
-- Remove unnecessary packages
-
-## When to Use
-
-| Stage             | Activity             | Scanner    |
-| ----------------- | -------------------- | ---------- |
-| Pre-commit (2)    | Scan changed deps    | vuln       |
-| Merge Request (3) | Full dependency scan | vuln, sbom |
-| Commit (4)        | Container image scan | vuln       |
-| Deployment (10)   | Final image scan     | vuln       |
-
-See [Shift-Left Security](shift-left.md) for the complete stage matrix.
+- [SAST](./sast.md) - Static Application Security Testing
+- [DAST](./dast.md) - Dynamic Application Security Testing
+- [Shift-Left Security](./shift-left.md) - Security integration principles
+- [Remediation](./remediation.md) - Handling security findings

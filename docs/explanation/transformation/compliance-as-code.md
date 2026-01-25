@@ -39,7 +39,7 @@ Instead of Word documents in SharePoint, everything lives in version control.
 - Evidence automatically referenced from version control
 
 !!! note "Requirements Storage"
-    Requirements MUST be stored as Gherkin specifications in `specs/risk-controls/*.feature`
+Requirements MUST be stored as Gherkin specifications in `specs/risk-controls/*.feature`
 
 **Why It Matters**: Version control provides traceability, collaboration via pull requests, searchability, immutability, and automation capabilities impossible with traditional document management.
 
@@ -73,7 +73,7 @@ Compliance checked on every commit, not periodically. Compliance tests run in CI
 Validate compliance as early as possible in the delivery lifecycle - ideally before code commits.
 
 !!! tip "Shift-Left Economics"
-    The earlier you catch issues, the cheaper they are to fix:
+The earlier you catch issues, the cheaper they are to fix:
 
     - **Pre-commit** (Stage 2): 5 minutes to fix
     - **CI** (Stage 4): 15 minutes to fix
@@ -95,7 +95,9 @@ Validate compliance as early as possible in the delivery lifecycle - ideally bef
 
 ### What It Means
 
-Evidence generated automatically as byproduct of pipeline execution. No manual evidence collection during audits.
+Evidence generated automatically as byproduct of pipeline execution.
+
+No manual evidence collection during audits.
 
 **In practice**:
 
@@ -104,7 +106,12 @@ Evidence generated automatically as byproduct of pipeline execution. No manual e
 - Scan results referenced by commit SHA
 - Traceability matrices generated from version control metadata
 
-**Why It Matters**: Automated evidence eliminates manual collection overhead, ensures completeness (can't forget to collect), provides tamper-evident audit trail, and enables instant audit responses.
+**Why It Matters**:
+
+- Automated evidence eliminates manual collection overhead
+- Ensures completeness (can't forget to collect)
+- Provides tamper-evident audit trail
+- - and enables instant audit responses.
 
 **Architecture**: Evidence collection integrates into CD Model at multiple stages (commit, PLTE, production).
 
@@ -184,7 +191,7 @@ Together: **70-80% reduction in compliance overhead** while **improving complian
 Organizations typically implement in this order:
 
 !!! info "Implementation Sequence"
-    **Phase 1 - Pilot** (12-16 weeks):
+**Phase 1 - Pilot** (12-16 weeks):
 
     1. Start with Everything as Code (specs in Git)
     2. Add Executable Specifications (risk controls in Gherkin)
