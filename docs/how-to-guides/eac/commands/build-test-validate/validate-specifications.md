@@ -50,9 +50,13 @@ Specifications are checked for:
 
 - **Proper Gherkin syntax**
 - **Complete scenarios** (Given/When/Then)
+- **Required tags** - Feature level (`@deps:`, `@depm:`, `@env:`) and scenario level (`@L0`-`@L4`, `@ov`, etc.)
+- **Feature naming** - Must follow `<module>_<feature-name>` convention
 - **Clear descriptions**
 - **Step definition coverage**
 - **No undefined steps**
+
+**Tagging Requirements**: All tags must comply with `.r2r/eac/testing-tags.yml`
 
 ## Example Scenario
 
@@ -63,10 +67,11 @@ After adding new authentication specs:
 r2r eac validate specs
 
 # Output:
-# ✓ features/auth/login.feature
-# ✗ features/auth/register.feature
+# ✓ specs/r2r-cli/user-login/specification.feature
+# ✗ specs/r2r-cli/user-registration/specification.feature
 #   Line 12: Undefined step "Given user has valid email"
 #   Line 15: Missing scenario description
+#   Line 8: Missing required tag @L0-@L4 on scenario
 #
 # ✓ 8 files valid, ✗ 1 file with errors
 
@@ -76,7 +81,7 @@ r2r eac get specs-unused-steps
 # Output:
 # {
 #   "unused_steps": [
-#     "steps/auth/old_login_steps.go:25: When user clicks legacy button"
+#     "go/eac/specs/impl/r2r-cli/steps_user_login.go:25: When user clicks legacy button"
 #   ]
 # }
 

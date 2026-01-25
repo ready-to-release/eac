@@ -1,6 +1,5 @@
-title: r2r
+title: R2R CLI
 nav:
   - index.md
-  - architecture
   - commands
-  - configuration
+  - architecture

@@ -4,4 +4,6 @@
 
 ## See Also
 
-- [templates](templates.md)
+- [templates install-ai](./install-ai.md)
+- [templates install-docs](./install-docs.md)
+- [templates Commands](../categories/templates.md)

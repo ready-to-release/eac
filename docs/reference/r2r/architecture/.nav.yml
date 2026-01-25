@@ -1,6 +1,4 @@
-title: Architecture
+title: R2R Architecture
 nav:
   - index.md
-  - system-context.md
-  - subsystems.md
-  - workflows.md
+  - module.md

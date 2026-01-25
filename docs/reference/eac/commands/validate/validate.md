@@ -4,4 +4,6 @@
 
 ## See Also
 
-- [validate Commands Category](../categories/validate.md)
+- [validate contracts](./contracts.md)
+- [validate dependencies](./dependencies.md)
+- [validate Commands](../categories/validate.md)

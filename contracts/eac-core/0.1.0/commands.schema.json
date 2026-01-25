@@ -17,7 +17,7 @@
         "docs_base": {
           "type": "string",
           "description": "Base path for command documentation",
-          "default": "docs/reference/commands"
+          "default": "docs/reference/eac/commands"
         },
         "uncategorized_folder": {
           "type": "string",

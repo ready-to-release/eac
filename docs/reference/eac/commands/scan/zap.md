@@ -4,5 +4,7 @@
 
 ## See Also
 
-- [scan](./scan.md) - Main scan command with --scanner flag
-- [scan Commands Category](../categories/scan.md)
+- [scan](./scan.md)
+- [update evidence](../update/evidence.md)
+- [show scan-summary](../show/scan-summary.md)
+- [scan Commands](../categories/scan.md)

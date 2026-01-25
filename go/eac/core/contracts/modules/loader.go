@@ -110,9 +110,10 @@ func loadModules(workspaceRoot string, noValidation bool) (*Registry, error) {
 		// Convert Versioning config if present
 		if m.Versioning != nil {
 			base.Versioning = &contracts.ModuleVersioning{
-				Scheme:    m.Versioning.Scheme,
-				Current:   m.Versioning.Current,
-				Changelog: m.Versioning.Changelog,
+				Scheme:      m.Versioning.Scheme,
+				Current:     m.Versioning.Current,
+				Changelog:   m.Versioning.Changelog,
+				ReleaseType: m.Versioning.ReleaseType,
 			}
 		}
 

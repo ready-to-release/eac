@@ -1,21 +1,41 @@
-title: get
+title: get Commands
 nav:
   - index.md
   - get.md
+  - approval-comments.md
   - artifacts.md
+  - binary-sizes.md
+  - book-description.md
   - build-deps.md
   - build-times.md
   - changed-modules.md
   - changed-modules-ci.md
+  - changed-modules-local.md
+  - changelog.md
+  - ci-dispatch.md
+  - ci-dispatch-layers.md
+  - ci-workflows.md
+  - cli-release-notes.md
   - commands.md
   - config.md
+  - current-sha.md
   - dependencies.md
+  - documented-commands.md
   - environments.md
+  - evidence-ci-runs.md
   - execution-order.md
   - files.md
+  - files-by-module.md
+  - module-ci-workflow.md
+  - module-trigger-reason.md
   - modules.md
+  - release-bundle.md
+  - release-notes.md
+  - release-status.md
+  - specs.md
   - specs-unused-steps.md
   - suite.md
+  - test-results.md
   - test-timings.md
   - tests.md
   - valid-commands.md

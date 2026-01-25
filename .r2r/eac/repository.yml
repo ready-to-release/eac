@@ -66,6 +66,11 @@ modules:
             - "*.markdown"
             - ".claude/**/*.md"
             - "scripts/**/*.md"
+            - "release/README.md"
+            - "release/r2r-cli/*.md"
+            - "release/ext-eac/*.md"
+            - "release/docs/*.md"
+            - "release/books/*.md"
       yaml:
         root: /
         patterns:
@@ -119,6 +124,7 @@ modules:
     description: Core library containing contracts and repository operations
     versioning:
       scheme: Implicit
+      release_type: none
     components:
       go:
         root: go/eac/core
@@ -148,23 +154,6 @@ modules:
       test-impl:
         type: go
         root: go/eac/specs/impl/eac-core
-
-  - moniker: release-docs
-    name: Release Documentation
-    description: Release notes and changelogs for published artifacts
-    versioning:
-      scheme: CalVer
-    components:
-      markdown:
-        root: release
-        patterns:
-          source:
-            - "*.md"
-            - "r2r-cli/**/*.md"
-            - "ext-eac/**/*.md"
-            - "docs/**/*.md"
-            - "books/**/*.md"
-      structurizr: specs/release-docs/.design
 
   - moniker: mkdocs-pdf
     name: MkDocs PDF Container
@@ -302,6 +291,7 @@ modules:
     versioning:
       scheme: CalVer
       changelog: release/docs/CHANGELOG.md
+      release_type: published
     depends_on:
       - repository
       - mkdocs-site
@@ -342,6 +332,8 @@ modules:
     description: Go library containing CLI command implementations
     versioning:
       scheme: SemVer
+      changelog: go/eac/commands/CHANGELOG.md
+      release_type: internal
     depends_on:
       - eac-core
     components:
@@ -353,6 +345,12 @@ modules:
               type: executable
               pattern: "commands{ext}"
       markdown: go/eac/commands
+      changelog-docs:
+        type: markdown
+        root: release/eac-commands
+        patterns:
+          source:
+            - "*.md"
       gherkin: specs/eac-commands
       structurizr: specs/eac-commands/.design
       test-impl:
@@ -414,6 +412,7 @@ modules:
     versioning:
       scheme: SemVer
       changelog: release/r2r-cli/CHANGELOG.md
+      release_type: published
     evidence_books:
       - release-evidence-r2r-cli
     depends_on:
@@ -487,6 +486,8 @@ modules:
     description: VSCode extension providing Git toolbar and Claude MCP integration UI
     versioning:
       scheme: SemVer
+      changelog: typescript/vscode-ext-commit/CHANGELOG.md
+      release_type: internal
     depends_on:
       - repository
     components:
@@ -504,6 +505,12 @@ modules:
             - ".mocharc.json"
             - ".vscodeignore"
       markdown: typescript/vscode-ext-commit
+      changelog-docs:
+        type: markdown
+        root: release/vscode-ext-commit
+        patterns:
+          source:
+            - "*.md"
       json: contracts/vscode-commit
       gherkin: specs/vscode-ext-commit
       structurizr: specs/vscode-ext-commit/.design
@@ -518,6 +525,7 @@ modules:
     versioning:
       scheme: CalVer
       changelog: release/books/CHANGELOG.md
+      release_type: published
     depends_on:
       - docs
       - eac-commands
@@ -540,6 +548,8 @@ modules:
     description: Internal MCP server for Commands
     versioning:
       scheme: SemVer
+      changelog: go/eac/mcp/commands/CHANGELOG.md
+      release_type: internal
     depends_on:
       - eac-commands
     components:
@@ -551,6 +561,12 @@ modules:
               type: executable
               pattern: "{moniker}{ext}"
       markdown: go/eac/mcp/commands
+      changelog-docs:
+        type: markdown
+        root: release/eac-mcp-commands
+        patterns:
+          source:
+            - "*.md"
       structurizr: specs/eac-mcp-commands/.design
 
   - moniker: ext-eac
@@ -558,13 +574,14 @@ modules:
     description: Docker-based extension providing EAC (Everything as Code) for R2R CLI integration
     versioning:
       scheme: SemVer
+      changelog: release/ext-eac/CHANGELOG.md
+      release_type: published
     evidence_books:
       - release-evidence-ext-eac
     depends_on:
       - eac-commands
     depends_on_ci:
       - r2r-cli
-    changelog: ../../release/ext-eac/CHANGELOG.md
     components:
       dockerfile:
         root: containers/ext-eac
@@ -612,6 +629,8 @@ modules:
     description: Cross-platform installer scripts for R2R CLI
     versioning:
       scheme: SemVer
+      changelog: scripts/CHANGELOG.md
+      release_type: internal
     depends_on_ci:
       - r2r-cli
     components:
@@ -619,6 +638,12 @@ modules:
         root: scripts/pwsh/cli
       bash:
         root: scripts/sh/cli
+      changelog-docs:
+        type: markdown
+        root: release/r2r-installer
+        patterns:
+          source:
+            - "*.md"
       test-impl:
         type: go
         root: go/eac/specs/impl/r2r-installer
@@ -628,8 +653,6 @@ modules:
   - moniker: implicit-r2r-cli
     name: Go Command Invoker Scripts
     description: Cross-shell wrappers with tab completion for Go commands
-    versioning:
-      scheme: SemVer
     depends_on:
       - eac-commands
     depends_on_ci:
@@ -670,6 +693,8 @@ modules:
     description: Aggregated release bundle with links to all module releases
     versioning:
       scheme: CalVer
+      changelog: release/r2r-eac-bundle/CHANGELOG.md
+      release_type: bundle
     depends_on:
       - r2r-cli
       - ext-eac

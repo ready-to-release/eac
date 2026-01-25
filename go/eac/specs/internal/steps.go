@@ -1,6 +1,8 @@
 package internal
 
 import (
+	"fmt"
+
 	"github.com/cucumber/godog"
 )
 
@@ -34,6 +36,12 @@ func RegisterCommonSteps(sc *godog.ScenarioContext, ctx *TestContext) {
 	})
 	sc.Step(`^the exit code should be (\d+)$`, func(expectedCode int) error {
 		return ExitCodeIs(ctx, expectedCode)
+	})
+	sc.Step(`^the exit code should be (\d+) or (\d+)$`, func(code1, code2 int) error {
+		if ctx.ExitCode != code1 && ctx.ExitCode != code2 {
+			return fmt.Errorf("expected exit code %d or %d, got %d", code1, code2, ctx.ExitCode)
+		}
+		return nil
 	})
 
 	// Output verification steps - using helpers

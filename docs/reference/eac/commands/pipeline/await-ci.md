@@ -4,5 +4,7 @@
 
 ## See Also
 
-- [pipeline](../pipeline/index.md)
-- [pipeline ci](ci.md)
+- [pipeline wait](./wait.md)
+- [pipeline status](./status.md)
+- [pipeline ci](./ci.md)
+- [pipeline Commands](../categories/pipeline.md)

@@ -29,6 +29,12 @@ All other commands work across languages via **capability-based dispatch**. Comm
 | `docs`       | MkdocsHandler                 | Documentation sites and PDFs                        |
 | `static`     | NoneHandler or ScriptsHandler | No build or custom scripts                          |
 
+## See Also
+
+- [build](./build/build.md) - Build modules by language type
+- [test](./test/test.md) - Test modules by language type
+- [Command Overview](./index.md)
+
 **Commands:**
 
 - [`build`](./build/build.md) - Builds modules using appropriate handler
@@ -204,7 +210,7 @@ To add support for a new language:
 3. **Define module type** - Create default file patterns and settings
 4. **Register handler** - Add to handler registry in `init()`
 
-See [Module Types Reference](../architecture/component-types.md#adding-custom-component-types) for detailed instructions.
+See [Module Types Reference](../architecture/module-types.md#adding-custom-module-types) for detailed instructions.
 
 ---
 
@@ -232,7 +238,7 @@ See [Module Types Reference](../architecture/component-types.md#adding-custom-co
 
 ## Related Documentation
 
-- [Module Types Reference](../architecture/component-types.md) - Detailed module type specifications
+- [Module Types Reference](../architecture/module-types.md) - Detailed module type specifications
 - [Architecture](../architecture/) - System architecture and component design
 - [Build Command](./build/build.md) - Build command reference
 - [Test Command](./test/test.md) - Test command reference

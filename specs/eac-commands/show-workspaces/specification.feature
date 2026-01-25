@@ -7,7 +7,6 @@ Feature: eac-commands_show-workspaces
 
   Rule: List displays all worktrees in formatted table
 
-    @skip:wip
     Scenario: List worktrees with default output
       Given I have multiple worktrees:
         | path                          | branch           | clean |
@@ -19,19 +18,16 @@ Feature: eac-commands_show-workspaces
       And I see a table with headers "Path", "Branch", "Status"
       And I see "3 worktrees total"
 
-    @skip:wip
     Scenario: List shows clean status
       Given I have a worktree at "../cli-feature-auth" with no uncommitted changes
       When I run "show workspaces"
       Then I see "feature/auth" with status "clean"
 
-    @skip:wip
     Scenario: List shows dirty status
       Given I have a worktree at "../cli-feature-auth" with uncommitted changes
       When I run "show workspaces"
       Then I see "feature/auth" with status "dirty"
 
-    @skip:wip
     Scenario: List single worktree
       Given I have only the main worktree
       When I run "show workspaces"
@@ -40,14 +36,12 @@ Feature: eac-commands_show-workspaces
 
   Rule: Verbose mode shows additional details
 
-    @skip:wip
     Scenario: List with verbose flag shows commit SHA
       Given I have multiple worktrees
       When I run "show workspaces --verbose"
       Then the exit code is 0
       And I see commit SHA for each worktree
 
-    @skip:wip
     Scenario: List with -v shorthand
       Given I have multiple worktrees
       When I run "show workspaces -v"
@@ -56,31 +50,27 @@ Feature: eac-commands_show-workspaces
 
   Rule: Debug mode enables detailed logging
 
-    @skip:wip
-    Scenario: Debug flag enables logging to out/logs/work/
+    Scenario: Debug flag enables logging to commands.log
       Given I am in a git repository
       When I run "show workspaces --debug"
       Then the exit code is 0
-      And debug logs are written to "out/logs/work/"
+      And debug logs are written to "out/commands.log"
       And debug logs contain worktree information
 
-    @skip:wip
     Scenario: Debug with -d shorthand
       Given I am in a git repository
       When I run "show workspaces -d"
       Then the exit code is 0
-      And debug logs are written to "out/logs/work/"
+      And debug logs are written to "out/commands.log"
 
   Rule: Handles edge cases gracefully
 
-    @skip:wip
     Scenario: No worktrees except main
       Given I am in a git repository with no additional worktrees
       When I run "show workspaces"
       Then the exit code is 0
       And I see the main worktree listed
 
-    @skip:wip
     Scenario: Fail when not in git repository
       Given I am not in a git repository
       When I run "show workspaces"

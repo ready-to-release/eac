@@ -4,5 +4,7 @@
 
 ## See Also
 
-- [release](../release/index.md)
 - [get dependencies](../get/dependencies.md)
+- [show dependencies](../show/dependencies.md)
+- [pipeline await-release](../pipeline/await-release.md)
+- [release Commands](../categories/release.md)

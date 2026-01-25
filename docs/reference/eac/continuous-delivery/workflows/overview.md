@@ -208,4 +208,4 @@ Extracts and validates version from git tag or workflow input.
 
 - [Trigger Orchestration](./trigger-orchestration.md) - Detailed change-trigger.yaml specification
 - [CI Workflows](./ci-workflows.md) - Module CI workflow patterns
-- [Repository Layout](../../../devex/internal/repository-layout.md) - Module structure and dependencies
+- [Repository Layout](../../architecture/repository-layout.md) - Module structure and dependencies

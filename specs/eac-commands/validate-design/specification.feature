@@ -1,36 +1,37 @@
 @L2 @deps:docker @ov @env:isolated-test-project
 Feature: eac-commands_validate-design
 
+  # Note: Tests use real fixture modules (eac-core, docs, r2r-cli) instead of
+  # dynamic test modules. This matches production workflow and avoids module
+  # registration complexity. The mock validator is enabled via R2R_MOCK_STRUCTURIZR
+  # environment variable, which is set automatically by the test context.
+
   Background:
     Given docker service is available
 
   Rule: Single module validation
 
-    @skip:wip
     Scenario: Validate existing workspace
-      Given module "test-module" has a valid workspace at "specs/test-module/.design/workspace.dsl"
-      When I run "validate design test-module"
+      Given module "eac-core" has a valid workspace at "specs/eac-core/.design/workspace.dsl"
+      When I run "validate design eac-core"
       Then the exit code should be 0
       And the output should contain "Validating module:"
       And the output should contain "Summary:"
-      And validation results should be written to "out/design-validation-results.json"
+      And validation results should be written to "out/design/validation-results.json"
 
-    @skip:wip
     Scenario: Validate invalid workspace
-      Given module "test-module" has an invalid workspace at "specs/test-module/.design/workspace.dsl"
-      When I run "validate design test-module"
+      Given module "eac-core" has an invalid workspace at "specs/eac-core/.design/workspace.dsl"
+      When I run "validate design eac-core"
       Then the exit code should be 1
       And the output should contain "Errors:"
 
-    @skip:wip
     Scenario: Module not found
       When I run "validate design nonexistent-module"
       Then the exit code should be 2
-      And the output should contain "workspace not found"
+      And the output should contain "Module not found"
 
   Rule: Batch validation
 
-    @skip:wip
     Scenario: Validate all modules
       Given multiple modules have workspace files
       When I run "validate design --all"
@@ -40,8 +41,7 @@ Feature: eac-commands_validate-design
 
   Rule: Debug output
 
-    @skip:wip
     Scenario: Verbose output shows Docker commands
-      Given module "test-module" has a valid workspace
-      When I run "validate design test-module --verbose"
+      Given module "eac-core" has a valid workspace
+      When I run "validate design eac-core --verbose"
       Then the output should contain Docker command details

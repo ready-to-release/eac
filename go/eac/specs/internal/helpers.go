@@ -296,52 +296,38 @@ func IsGitRepository(ctx *TestContext) error {
 }
 
 // EnsureNotGitRepository ensures we're not in a git repository.
-// SAFETY: This ONLY works in isolated test directories and only removes
-// minimal .git dirs created by IsGitRepository (with only config/HEAD).
+// SAFETY: This ONLY works in isolated test directories.
+// Isolated test directories are temporary and disposable, so it's safe to
+// remove .git directories within them, even if they were created by real
+// git operations (e.g., for worktree tests).
 func EnsureNotGitRepository(ctx *TestContext) error {
-	// CRITICAL: Only allow this in isolated test environments
 	if ctx.IsolatedDir == "" {
-		return fmt.Errorf("SAFETY: EnsureNotGitRepository can only be used in isolated test environments")
+		return fmt.Errorf("EnsureNotGitRepository requires isolated test environment")
 	}
 
-	// Double-check we're actually in the isolated directory
-	resolvedPath := ResolvePath(ctx, ".")
-	if resolvedPath != ctx.IsolatedDir {
-		return fmt.Errorf("SAFETY: resolved path %q does not match isolated dir %q", resolvedPath, ctx.IsolatedDir)
+	if !isTemporaryPath(ctx.IsolatedDir) {
+		return fmt.Errorf("isolated dir %q is not a recognized temp directory", ctx.IsolatedDir)
 	}
 
 	gitDir := filepath.Join(ctx.IsolatedDir, ".git")
 	info, err := os.Stat(gitDir)
 	if os.IsNotExist(err) {
-		return nil // Already not a git repo
+		return nil
 	}
 	if err != nil {
 		return err
 	}
 
-	// Only remove if it's a minimal test .git directory
-	if info.IsDir() {
-		entries, err := os.ReadDir(gitDir)
-		if err != nil {
-			return err
-		}
-		// Allow removal if empty OR only has config/HEAD (test-created minimal .git)
-		if len(entries) == 0 {
-			return os.Remove(gitDir)
-		}
-		// Check if only config and HEAD exist (test-created)
-		isTestGit := len(entries) <= 2
-		for _, e := range entries {
-			if e.Name() != "config" && e.Name() != "HEAD" {
-				isTestGit = false
-				break
-			}
-		}
-		if isTestGit {
-			return os.RemoveAll(gitDir) // Safe to remove test-created .git
-		}
-		return fmt.Errorf("SAFETY: .git directory has %d entries and appears to be a real git repo - refusing to remove", len(entries))
+	if !info.IsDir() {
+		return fmt.Errorf(".git exists but is not a directory")
 	}
 
-	return fmt.Errorf("SAFETY: .git is not a directory")
+	return os.RemoveAll(gitDir)
+}
+
+// isTemporaryPath checks if a path looks like a temporary test directory.
+func isTemporaryPath(path string) bool {
+	return strings.Contains(path, "isolated-test-") ||
+		strings.Contains(path, filepath.Join("Temp", "")) ||
+		strings.Contains(path, "/tmp/")
 }

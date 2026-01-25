@@ -4,5 +4,7 @@
 
 ## See Also
 
-- [release](../release/index.md)
-- [release r2r-cli](r2r-cli.md)
+- [release r2r-cli](./r2r-cli.md)
+- [release get-version](./get-version.md)
+- [get cli-release-notes](../get/cli-release-notes.md)
+- [release Commands](../categories/release.md)

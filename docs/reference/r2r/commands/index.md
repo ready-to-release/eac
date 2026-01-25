@@ -1,38 +1,59 @@
-# R2R CLI Commands
+# R2R CLI Command Reference
 
-Reference documentation for R2R CLI framework commands.
+The R2R CLI manages containerized extensions. It provides framework commands for installing and running the EAC extension.
 
 ## Command Overview
 
-| Command                           | Description                                   |
-| --------------------------------- | --------------------------------------------- |
-| [init](init.md)                   | Initialize `.r2r/r2r-cli.yml` configuration   |
-| [install](install.md)             | Install extensions                            |
-| [list](list.md)                   | List available extensions                     |
-| [validate](validate.md)           | Validate configuration syntax                 |
-| [verify](verify.md)               | Verify system prerequisites                   |
-| [cleanup](cleanup.md)             | Clean up old Docker images                    |
-| [interactive](interactive.md)     | Open interactive shell in extension container |
-| [metadata](metadata.md)           | Retrieve extension metadata                   |
-| [version](version.md)             | Display R2R CLI version                       |
-| [configuration](../configuration/) | Configuration file reference                  |
+| Command                       | Description                                   |
+| ----------------------------- | --------------------------------------------- |
+| [init](init.md)               | Initialize `.r2r/r2r-cli.yml` configuration   |
+| [install](install.md)         | Install the EAC extension                     |
+| [list](list.md)               | List available extensions                     |
+| [validate](validate.md)       | Validate configuration syntax                 |
+| [verify](verify.md)           | Verify system prerequisites                   |
+| [cleanup](cleanup.md)         | Clean up old Docker images                    |
+| [interactive](interactive.md) | Open interactive shell in extension container |
+| [metadata](metadata.md)       | Retrieve extension metadata                   |
+| [version](version.md)         | Display R2R CLI version                       |
 
 ## Quick Start
 
 ```bash
-# Initialize R2R configuration
+# 1. Initialize configuration
 r2r init
 
-# Install EAC extension
+# 2. Install EAC extension
 r2r install eac
 
-# Use EAC commands
+# 3. Use EAC commands
 r2r eac build
 r2r eac test
 ```
 
+## R2R CLI vs EAC Extension
+
+| Aspect       | R2R CLI             | EAC Extension         |
+| ------------ | ------------------- | --------------------- |
+| **Purpose**  | Extension framework | Automation tools      |
+| **Commands** | init, install, list | build, test, validate |
+| **Runs**     | Host machine        | Docker container      |
+| **Config**   | `.r2r/r2r-cli.yml`  | `.r2r/eac/`           |
+
+## Configuration File
+
+R2R CLI uses `.r2r/r2r-cli.yml`:
+
+```yaml
+extensions:
+  - name: 'eac'
+    image: 'ghcr.io/ready-to-release/ext-eac:latest'
+```
+
+See [Configuration Reference](configuration.md) for details.
+
 ## See Also
 
-- [R2R CLI Overview](../index.md) - R2R CLI reference index
-- [R2R Architecture](../architecture/) - R2R CLI system architecture
-- [EAC Commands](../../eac/commands/) - EAC extension commands
+- [Quick Start Tutorial](../../../tutorials/getting-started/quick-start.md)
+- [Configuration Guide](configuration.md)
+- [EAC Commands Reference](../../eac/commands/index.md)
+- [CLI vs Extensions](../../eac/architecture/cli-integration.md)

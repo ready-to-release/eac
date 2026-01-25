@@ -14,6 +14,7 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	registerTemplatesSteps(sc, ctx)
 	registerInitSteps(sc, ctx)
 	registerWorkSteps(sc, ctx)
+	registerWorkspacesSteps(sc, ctx)
 	registerDocsSteps(sc, ctx)
 	registerCreateCommitMessageSteps(sc, ctx)
 	registerCreateSquashMessageSteps(sc, ctx)

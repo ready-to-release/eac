@@ -1,16 +1,6 @@
-title: eac
+title: EAC Extension
 nav:
   - index.md
-  - architecture
-  - modules
-  - contracts
-  - development
   - commands
-  - testing
-  - security
-  - compliance
-  - specifications
-  - quality-gates
-  - workflow
-  - continuous-delivery
-  - decision-records
+  - architecture
+  - guides

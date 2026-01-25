@@ -24,11 +24,7 @@ The spec generation supports **three-tier prompt system** for customization:
 2. **Team Override**: `.r2r/eac/templates/ai/specs/specs.md` (team-wide customization)
 3. **System Default**: `templates/ai/specs/specs.md` (fallback)
 
-See [commit-message](./commit-message.md#custom-prompts) for detailed customization guide or:
-
-```bash
-cat .r2r/eac/templates/ai/README.md
-```
+See [commit-message](./commit-message.md#custom-prompts) for detailed customization guide.
 
 ## See Also
 

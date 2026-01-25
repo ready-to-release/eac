@@ -4,5 +4,7 @@
 
 ## See Also
 
-- [release](release.md)
-- [get-version](get-version.md)
+- [release get-version](./get-version.md)
+- [release changelog](./changelog.md)
+- [validate release-version](../validate/release-version.md)
+- [release Commands](../categories/release.md)

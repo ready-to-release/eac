@@ -40,6 +40,7 @@ func collectEvidenceForModule(config *AssessConfig, moduleName string) (*evidenc
 				if err != nil {
 					relPath = testDir
 				}
+				relPath = filepath.ToSlash(relPath) // Normalize to forward slashes
 
 				warning := fmt.Sprintf(
 					"⚠️  Test evidence is too old (Age: %s, max: %s) - Location: %s - Latest test run: %s",
@@ -65,6 +66,7 @@ func collectEvidenceForModule(config *AssessConfig, moduleName string) (*evidenc
 			if err != nil {
 				relPath = testDir
 			}
+			relPath = filepath.ToSlash(relPath) // Normalize to forward slashes
 			warning := fmt.Sprintf(
 				"⚠️  No test manifest found for module '%s' - Expected location: %s/test.manifest.json",
 				moduleName,
@@ -88,6 +90,7 @@ func collectEvidenceForModule(config *AssessConfig, moduleName string) (*evidenc
 				if err != nil {
 					relPath = scanBaseDir
 				}
+				relPath = filepath.ToSlash(relPath) // Normalize to forward slashes
 
 				warning := fmt.Sprintf(
 					"⚠️  Security evidence is too old (Age: %s, max: %s) - Location: %s - Latest modified: %s",
@@ -129,6 +132,7 @@ func collectEvidenceForModule(config *AssessConfig, moduleName string) (*evidenc
 			if err != nil {
 				scanRelPath = scanDir
 			}
+			scanRelPath = filepath.ToSlash(scanRelPath) // Normalize to forward slashes
 			warning := fmt.Sprintf(
 				"⚠️  No security scan evidence found - Expected location: %s",
 				scanRelPath,
@@ -137,8 +141,107 @@ func collectEvidenceForModule(config *AssessConfig, moduleName string) (*evidenc
 		}
 	}
 
-	// Always return the collection with whatever evidence was found
-	// The warnings field will document any issues
+	// Determine if we have valid (non-empty, fresh) evidence
+	hasTestEvidence := collection.TestManifestData != nil
+	hasSecurityEvidence := collection.SecurityResults != nil
+
+	// Track if evidence exists but is too old
+	testTooOld := false
+	securityTooOld := false
+
+	if hasTestEvidence && !collection.TestManifestData.TestTime.IsZero() {
+		age := time.Since(collection.TestManifestData.TestTime)
+		testTooOld = age >= config.MaxEvidenceAge
+	}
+
+	if hasSecurityEvidence && !collection.SecurityResults.LastModified.IsZero() {
+		age := time.Since(collection.SecurityResults.LastModified)
+		securityTooOld = age >= config.MaxEvidenceAge
+	}
+
+	// Error if NO evidence exists at all (neither test nor security)
+	if !hasTestEvidence && !hasSecurityEvidence {
+		cfg, err := coreconfig.Load(coreconfig.LoadOptions{RepoRoot: config.WorkspaceRoot})
+		if err == nil {
+			testDir := cfg.Repository.TestModuleDirAbs(config.WorkspaceRoot, moduleName)
+			testRelPath, _ := filepath.Rel(config.WorkspaceRoot, testDir)
+			testRelPath = filepath.ToSlash(testRelPath) // Normalize to forward slashes
+			scanDir := cfg.Repository.ScanModuleOutputPathAbs(config.WorkspaceRoot, moduleName)
+			scanRelPath, _ := filepath.Rel(config.WorkspaceRoot, scanDir)
+			scanRelPath = filepath.ToSlash(scanRelPath) // Normalize to forward slashes
+
+			return nil, fmt.Errorf(`no evidence found for module '%s'
+
+Expected locations:
+  - Test manifest: %s/test.manifest.json
+  - Security scans: %s/*.json
+
+Run tests and scans to generate evidence:
+  test %s
+  scan %s`, moduleName, testRelPath, scanRelPath, moduleName, moduleName)
+		}
+		return nil, fmt.Errorf("no evidence found for module '%s'", moduleName)
+	}
+
+	// Error if ALL available evidence is too old
+	// Case 1: Only test evidence exists and it's too old
+	// Case 2: Only security evidence exists and it's too old
+	// Case 3: Both exist but both are too old
+
+	// Check which evidence is too old
+	onlyTestTooOld := hasTestEvidence && testTooOld && !hasSecurityEvidence
+	onlySecurityTooOld := hasSecurityEvidence && securityTooOld && !hasTestEvidence
+	bothTooOld := hasTestEvidence && hasSecurityEvidence && testTooOld && securityTooOld
+
+	if onlyTestTooOld || onlySecurityTooOld || bothTooOld {
+		cfg, err := coreconfig.Load(coreconfig.LoadOptions{RepoRoot: config.WorkspaceRoot})
+		if err == nil {
+			testDir := cfg.Repository.TestModuleDirAbs(config.WorkspaceRoot, moduleName)
+			testRelPath, _ := filepath.Rel(config.WorkspaceRoot, testDir)
+			testRelPath = filepath.ToSlash(testRelPath) // Normalize to forward slashes
+			scanDir := cfg.Repository.ScanModuleOutputPathAbs(config.WorkspaceRoot, moduleName)
+			scanRelPath, _ := filepath.Rel(config.WorkspaceRoot, scanDir)
+			scanRelPath = filepath.ToSlash(scanRelPath) // Normalize to forward slashes
+
+			// Customize error message based on what's too old
+			if onlyTestTooOld {
+				return nil, fmt.Errorf(`test evidence for module '%s' is too old (max age: %s)
+
+Evidence location:
+  - Test results: %s/
+
+Run tests to update evidence:
+  test %s`, moduleName, formatDuration(config.MaxEvidenceAge), testRelPath, moduleName)
+			} else if onlySecurityTooOld {
+				return nil, fmt.Errorf(`security evidence for module '%s' is too old (max age: %s)
+
+Evidence location:
+  - Security scans: %s/
+
+Run security scans to update evidence:
+  scan %s`, moduleName, formatDuration(config.MaxEvidenceAge), scanRelPath, moduleName)
+			} else {
+				// Both are too old
+				return nil, fmt.Errorf(`all evidence for module '%s' is too old (max age: %s)
+
+Evidence locations:
+  - Test results: %s/
+  - Security scans: %s/
+
+Run tests or scans to update evidence:
+  test %s
+  scan %s`, moduleName, formatDuration(config.MaxEvidenceAge), testRelPath, scanRelPath, moduleName, moduleName)
+			}
+		}
+		// Fallback if config load fails
+		return nil, fmt.Errorf(`evidence for module '%s' is too old (max age: %s)
+
+Run tests or scans to update evidence:
+  test %s
+  scan %s`, moduleName, formatDuration(config.MaxEvidenceAge), moduleName, moduleName)
+	}
+
+	// Have at least some fresh evidence - return with warnings for any stale evidence
 	return collection, nil
 }
 

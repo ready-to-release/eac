@@ -4,4 +4,6 @@
 
 ## See Also
 
-- [update](../update/index.md)
+- [update docs](./docs.md)
+- [update structurizr](./structurizr.md)
+- [update Commands](../categories/update.md)

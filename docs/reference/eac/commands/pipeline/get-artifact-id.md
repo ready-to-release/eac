@@ -4,5 +4,7 @@
 
 ## See Also
 
-- [pipeline](../pipeline/index.md)
 - [get artifacts](../get/artifacts.md)
+- [pipeline download-evidence-artifacts](./download-evidence-artifacts.md)
+- [show artifacts](../show/artifacts.md)
+- [pipeline Commands](../categories/pipeline.md)

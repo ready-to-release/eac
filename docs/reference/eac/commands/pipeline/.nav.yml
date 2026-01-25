@@ -1,10 +1,18 @@
-title: pipeline
+title: pipeline Commands
 nav:
   - index.md
   - pipeline.md
+  - await-ci.md
+  - await-release.md
+  - check-recent-run.md
   - ci.md
   - ci-dispatch-and-wait.md
+  - ci-get-run-id.md
   - ci-summary-link.md
+  - download-evidence-artifacts.md
+  - find-run-id.md
+  - get-artifact-id.md
+  - get-tree-files.md
   - run.md
   - status.md
   - wait.md

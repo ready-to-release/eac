@@ -1,7 +1,10 @@
-title: Architecture
+title: EAC Architecture
 nav:
   - index.md
-  - overview.md
-  - viewing-diagrams.md
-  - dependencies.md
-  - component-types.md
+  - modules/
+  - cli-integration.md
+  - contracts.md
+  - dependency-system.md
+  - module-types.md
+  - repository-layout.md
+  - creating-commands.md

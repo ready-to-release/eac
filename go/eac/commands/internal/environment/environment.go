@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ready-to-release/eac/go/eac/core/environments"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
@@ -21,9 +22,10 @@ type Env struct {
 // It checks for common test context environment variables.
 func Detect() *Env {
 	return DetectWithTestVars(
-		"R2R_TEST_RUN_ID",
-		"GODOG_FORMAT",
-		"R2R_MOCK_SECURITY",
+		environments.EnvR2RTestRunID,
+		environments.EnvGodogFormat,
+		environments.EnvR2RMockSecurity,
+		environments.EnvR2RMockStructurizr,
 	)
 }
 

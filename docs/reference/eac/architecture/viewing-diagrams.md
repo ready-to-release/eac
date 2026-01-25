@@ -203,6 +203,6 @@ Generates a workspace.dsl file based on code analysis.
 
 ## Related Documentation
 
-- [Architecture Overview](./overview.md) - System architecture overview
+- [Architecture Overview](./index.md) - System architecture overview
 - [Modules](../modules/) - Module system and organization
 - [How-To: Generate Architecture Diagrams](../../../how-to-guides/eac/commands/documentation/generate-architecture-diagrams.md)

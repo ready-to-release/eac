@@ -8,7 +8,7 @@ Definitions of key terms and concepts used throughout the documentation.
 
 ### ADR (Architectural Decision Record)
 
-A document capturing an important architectural decision, including context, decision, and consequences. See [Decision Records](./reference/eac/decision-records/index.md).
+A document capturing an important architectural decision, including context, decision, and consequences. See [Decision Records](./reference/repository/decision-records/index.md).
 
 ### Artifact
 
@@ -32,7 +32,7 @@ An automated sequence of steps that compile, test, and package code. Commands: [
 
 ### CalVer (Calendar Versioning)
 
-A versioning scheme based on dates (e.g., `module-name/2024.01.15`). Used for module releases. See [Versioning](./reference/eac/continuous-delivery/changelog/versioning.md).
+A versioning scheme based on dates (e.g., `module-name/2024.01.15`). Used for module releases. See [Versioning](./reference/repository/continuous-delivery/changelog/versioning.md).
 
 ### Category
 
@@ -40,7 +40,7 @@ A grouping of related commands by verb (e.g., `get`, `show`, `validate`). See [C
 
 ### CI/CD (Continuous Integration/Continuous Deployment)
 
-Automated practices for integrating code changes and deploying to production. See [Continuous Delivery](./reference/eac/continuous-delivery/index.md).
+Automated practices for integrating code changes and deploying to production. See [Continuous Delivery](./reference/repository/continuous-delivery/index.md).
 
 ### Compliance-Velocity Paradox
 
@@ -48,7 +48,7 @@ The traditional trade-off where increasing compliance requirements slow down del
 
 ### Contract
 
-A YAML file defining module metadata, dependencies, and configuration. Validated against JSON schemas. See [Contracts](./reference/eac/contracts/).
+A YAML file defining module metadata, dependencies, and configuration. Validated against JSON schemas. See [Contracts](./reference/eac/architecture/contracts.md).
 
 ### Cynefin Framework
 
@@ -68,7 +68,7 @@ A representation of module dependencies showing which modules depend on others. 
 
 ### Diataxis
 
-A documentation framework organizing content into tutorials, how-to guides, technical reference, and explanation. See [DR-004](./reference/eac/decision-records/dr004.md).
+A documentation framework organizing content into tutorials, how-to guides, technical reference, and explanation. See [DR-004](./reference/repository/decision-records/dr004.md).
 
 ### DORA Metrics
 
@@ -108,7 +108,7 @@ A protocol enabling LLMs to use EAC commands as tools.
 
 ### Module
 
-A self-contained unit of code with its own contract, dependencies, and lifecycle. Can be a library, service, command-line tool, or test suite. See [Modules](./reference/eac/modules/).
+A self-contained unit of code with its own contract, dependencies, and lifecycle. Can be a library, service, command-line tool, or test suite. See [Modules](./reference/eac/architecture/modules.md).
 
 ### Module Type
 
@@ -120,7 +120,7 @@ A unique identifier for a module (e.g., `src-auth`, `eac-commands`). Used throug
 
 ### Mono-Repository
 
-A repository containing multiple related modules managed together. See [DR-001](./reference/eac/decision-records/dr001.md).
+A repository containing multiple related modules managed together. See [DR-001](./reference/repository/decision-records/dr001.md).
 
 ---
 
@@ -144,7 +144,7 @@ An orchestrated sequence of build, test, and deployment steps. See [Pipeline Com
 
 ### R2R (Ready to Release)
 
-An enterprise CLI framework for containerized workflow execution. EAC is delivered as an R2R extension. See [R2R and EAC](./reference/eac/architecture/).
+An enterprise CLI framework for containerized workflow execution. EAC is delivered as an R2R extension. See [R2R and EAC](./reference/eac/architecture/index.md).
 
 ### Release Gate
 
@@ -164,7 +164,7 @@ A complete inventory of components in a software product. Command: [scan](./refe
 
 ### SemVer (Semantic Versioning)
 
-A versioning scheme using MAJOR.MINOR.PATCH (e.g., `1.2.3`). See [Versioning](./reference/eac/continuous-delivery/changelog/versioning.md).
+A versioning scheme using MAJOR.MINOR.PATCH (e.g., `1.2.3`). See [Versioning](./reference/repository/continuous-delivery/changelog/versioning.md).
 
 ### Specification
 
@@ -188,7 +188,7 @@ A reusable document structure with placeholder variables for generating document
 
 ### Trunk-Based Development
 
-A branching strategy where developers work on short-lived branches off a single main branch. See [DR-002](./reference/eac/decision-records/dr002.md).
+A branching strategy where developers work on short-lived branches off a single main branch. See [DR-002](./reference/repository/decision-records/dr002.md).
 
 ---
 
@@ -308,6 +308,6 @@ An EAC term for a git worktree used for feature development. Enables parallel de
 
 - [Command Taxonomy](./reference/eac/commands/overview/command-taxonomy.md) - Command organization
 - [Naming Conventions](./reference/eac/commands/overview/naming-conventions.md) - Command naming patterns
-- [R2R and EAC](./reference/eac/architecture/) - System architecture
-- [Decision Records](./reference/eac/decision-records/index.md) - Architectural decisions
+- [R2R and EAC](./reference/eac/architecture/index.md) - System architecture
+- [Decision Records](./reference/repository/decision-records/index.md) - Architectural decisions
 - [Everything as Code](./explanation/everything-as-code/index.md) - Core philosophy

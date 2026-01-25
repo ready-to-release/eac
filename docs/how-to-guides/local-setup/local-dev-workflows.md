@@ -528,7 +528,7 @@ cat .r2r\r2r-cli.local.yml
 ## See Also
 
 - [R2R CLI init command](../../reference/r2r/commands/init.md) - Initialize R2R configuration
-- [R2R CLI Configuration](../../reference/r2r/configuration/) - Configuration file reference
-- [CLI vs Extensions Architecture](../../reference/devex/internal/cli-vs-extensions.md) - Understanding the two-tier system
+- [R2R CLI Configuration](../../reference/r2r/commands/configuration.md) - Configuration file reference
+- [CLI vs Extensions Architecture](../../reference/eac/architecture/cli-integration.md) - Understanding the two-tier system
 
 {{ diataxis_footer() }}

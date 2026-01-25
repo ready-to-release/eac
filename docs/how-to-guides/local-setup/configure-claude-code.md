@@ -1,4 +1,4 @@
-# Working with Claude Code in the EAC Repository
+# Working with Claude Code
 
 Learn how to use Claude Code effectively for Go CLI development with this repository's specialized agents, skills, and commands.
 

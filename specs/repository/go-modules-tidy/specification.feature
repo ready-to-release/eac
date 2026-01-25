@@ -10,7 +10,7 @@ Feature: repository_go-modules-tidy
 
   Rule: All Go modules must be tidy
 
-    @L1 @ov @skip:broken
+    @L1 @ov
     Scenario: All Go modules in repository are tidy
       Given I discover all Go modules in the repository using module contracts
       When I run "go mod tidy -diff" in each Go module directory

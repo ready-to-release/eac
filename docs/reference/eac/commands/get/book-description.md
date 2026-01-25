@@ -4,5 +4,6 @@
 
 ## See Also
 
-- [get](get.md)
 - [show books](../show/books.md)
+- [validate books](../validate/books.md)
+- [get Commands](../categories/get.md)

@@ -4,4 +4,6 @@
 
 ## See Also
 
-- [update](../update/index.md)
+- [scan](../scan/scan.md)
+- [test](../test/test.md)
+- [update Commands](../categories/update.md)

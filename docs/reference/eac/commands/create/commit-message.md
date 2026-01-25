@@ -42,8 +42,8 @@ Customize AI behavior using the **three-tier prompt system**. Prompts are loaded
 ### Creating Team Overrides
 
 ```bash
-# Copy system default
-cp templates/ai/commit-message/module.md .r2r/eac/templates/ai/commit-message/module.md
+# Install AI templates
+r2r eac templates install ai
 
 # Edit for your team's style
 nano .r2r/eac/templates/ai/commit-message/module.md

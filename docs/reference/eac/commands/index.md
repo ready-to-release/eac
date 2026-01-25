@@ -5,14 +5,14 @@ This section documents **EAC extension commands** - the automation tools provide
 !!! info "Looking for R2R CLI commands?"
     For framework commands like `r2r init`, `r2r install`, and `r2r list`, see:
 
-    **[R2R CLI Command Reference](../../r2r/index.md)**
+    **[R2R CLI Command Reference](../../r2r/commands/index.md)**
 
     R2R uses a two-tier architecture:
 
     - **R2R CLI** (framework) - Manages extensions
     - **EAC Extension** (this section) - Provides automation tools
 
-    Learn more: [CLI vs Extensions Architecture](../../devex/internal/cli-vs-extensions.md)
+    Learn more: [CLI vs Extensions Architecture](../architecture/cli-integration.md)
 
 ## EAC Extension Commands
 

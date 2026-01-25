@@ -59,7 +59,7 @@ r2r install eac
 
 **Documentation:**
 
-- [EAC Commands Reference](../commands/index.md)
+- [EAC Commands Reference](../../eac/commands/index.md)
 - [Quick Start Tutorial](../../../tutorials/getting-started/quick-start.md)
 
 ## Registry Information
@@ -78,5 +78,5 @@ Extensions are hosted in the GitHub Container Registry (GHCR):
 
 - [R2R CLI Overview](index.md) - Command overview
 - [install command](install.md) - Install extensions from the list
-- [Configuration Reference](../configuration/) - Extension configuration
+- [Configuration Reference](configuration.md) - Extension configuration
 - [Quick Start Tutorial](../../../tutorials/getting-started/quick-start.md) - Getting started guide

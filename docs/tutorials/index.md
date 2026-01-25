@@ -15,6 +15,7 @@ Start here if you're new to r2r and Everything-as-Code:
 - [Creating Your First Extension](./getting-started/creating-your-first-extension.md) - Build a custom r2r extension from scratch
 
 !!! tip "New to r2r?"
+
     The Quick Start guide walks you through the complete setup:
 
     1. Install r2r CLI binary
@@ -22,4 +23,4 @@ Start here if you're new to r2r and Everything-as-Code:
     3. Install EAC extension (`r2r install eac`)
     4. Configure EAC (`r2r eac init`)
 
-    See [CLI vs Extensions](../reference/devex/internal/cli-vs-extensions.md) to understand the two-tier architecture.
+See [CLI vs Extensions](../reference/eac/architecture/cli-integration.md) to understand the two-tier architecture.

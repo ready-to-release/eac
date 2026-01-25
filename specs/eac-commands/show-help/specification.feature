@@ -39,14 +39,12 @@ Feature: eac-commands_show-help
 
   Rule: Verbose mode shows additional details
 
-    @skip:wip
     Scenario: Verbose flag shows subcommands
       When I run "show help --verbose"
       Then the exit code is 0
       And I see all subcommands listed
       And I see advanced options
 
-    @skip:wip
     Scenario: Shorthand -v for verbose
       When I run "show help -v"
       Then the exit code is 0

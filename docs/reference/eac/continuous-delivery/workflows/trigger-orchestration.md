@@ -442,4 +442,4 @@ If no modules need rebuilding:
 - Workflow file: `.github/workflows/change-trigger.yaml`
 - [Overview](./overview.md) - Workflow architecture
 - [CI Workflows](./ci-workflows.md) - Module CI workflow patterns
-- [Repository Layout](../../../devex/internal/repository-layout.md) - Module structure
+- [Repository Layout](../../architecture/repository-layout.md) - Module structure

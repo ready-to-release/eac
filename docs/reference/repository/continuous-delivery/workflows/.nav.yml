@@ -1,0 +1,9 @@
+title: Workflows
+nav:
+  - index.md
+  - overview.md
+  - trigger-orchestration.md
+  - ci-workflows.md
+  - release-workflows.md
+  - security-workflows.md
+  - scheduled-workflows.md

@@ -6,13 +6,21 @@ Learn how to prepare and publish releases using the **changelog-driven release s
 
 ## In This Section
 
+### Foundational Guides
+
+| Guide                                                                                     | What You'll Accomplish                                                      |
+| ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| [Understanding Release Types](../../../../reference/repository/continuous-delivery/release-types.md) | Learn the four release types and how they determine changelog locations     |
+| [Understanding the Release Folder](./understanding-release-folder.md)                     | Learn release folder structure and how published modules link to changelogs |
+| [Release Workflow Variants](./release-workflow-variants.md)                               | Choose CDe or RA pattern based on regulatory requirements                   |
+
 ### Core Workflow Guides
 
-| Guide                                                   | What You'll Accomplish                                                |
-| ------------------------------------------------------- | --------------------------------------------------------------------- |
-| [Prepare Module Release](./prepare-module-release.md)   | Complete end-to-end release workflow with manual and automated phases |
-| [Generate Changelog](./generate-changelog.md)           | Create changelog from Git commits with automatic version detection    |
-| [Check CI Before Release](./check-ci-before-release.md) | Verify CI passes before merging release PR                            |
+| Guide                                                   | What You'll Accomplish                                             |
+| ------------------------------------------------------- | ------------------------------------------------------------------ |
+| [Prepare Module Release](./prepare-module-release.md)   | Complete end-to-end CDe workflow with manual and automated phases  |
+| [Generate Changelog](./generate-changelog.md)           | Create changelog from Git commits with automatic version detection |
+| [Check CI Before Release](./check-ci-before-release.md) | Verify CI passes before merging release PR                         |
 
 ### Tag Creation
 
@@ -40,9 +48,15 @@ Learn how to prepare and publish releases using the **changelog-driven release s
 
 This system uses **changelog-driven releases** where updating module changelogs automatically triggers releases through CI/CD automation.
 
+**Release artifacts** live in the centralized `release/<module>/` folders for **published and bundle modules**. Internal modules have changelogs in their module roots. See:
+
+- [Understanding Release Types](../../../../reference/repository/continuous-delivery/release-types.md) - Learn the release type system
+- [Understanding the Release Folder](./understanding-release-folder.md) - Details on folder structure and changelog locations
+
 ### How It Works
 
 ```mermaid
+%%{init: {'theme':'base', 'themeVariables': { 'fontSize':'18px'}}}%%
 graph LR
     A[1. Update CHANGELOG] --> B[2. Commit & PR]
     B --> C[3. Code Review]
@@ -52,14 +66,14 @@ graph LR
     F --> G[7. CI Builds Release]
     G --> H[8. CI Publishes]
 
-    style A fill:#e1f5ff
-    style B fill:#e1f5ff
-    style C fill:#e1f5ff
-    style D fill:#e1f5ff
-    style E fill:#fff4e1
-    style F fill:#fff4e1
-    style G fill:#fff4e1
-    style H fill:#fff4e1
+    style A fill:#e1f5ff,stroke:#0066cc,stroke-width:2px,color:#000
+    style B fill:#e1f5ff,stroke:#0066cc,stroke-width:2px,color:#000
+    style C fill:#e1f5ff,stroke:#0066cc,stroke-width:2px,color:#000
+    style D fill:#e1f5ff,stroke:#0066cc,stroke-width:2px,color:#000
+    style E fill:#fff4e1,stroke:#cc8800,stroke-width:2px,color:#000
+    style F fill:#fff4e1,stroke:#cc8800,stroke-width:2px,color:#000
+    style G fill:#fff4e1,stroke:#cc8800,stroke-width:2px,color:#000
+    style H fill:#fff4e1,stroke:#cc8800,stroke-width:2px,color:#000
 ```
 
 **Legend**:
@@ -69,9 +83,29 @@ graph LR
 
 **Key principle**: The CHANGELOG.md file is the source of truth. When you merge an updated changelog to `main`, CI automatically creates a git tag and triggers the release workflow. You don't create tags manually.
 
+**Note**: This diagram shows the **CDe (Continuous Deployment)** pattern. For regulated environments requiring formal approval, see [Release Workflow Variants](./release-workflow-variants.md) for the **RA (Release Approval)** pattern that uses release branches.
+
 ---
 
-## Release Workflow
+## Choosing Your Release Pattern
+
+The repository supports two release patterns based on the [CD Model variants](../../../../explanation/continuous-delivery/cd-model/variants.md):
+
+| Pattern | Full Name             | Best For                                      | Approval                | Goal                                            |
+| ------- | --------------------- | --------------------------------------------- | ----------------------- | ----------------------------------------------- |
+| **CDe** | Continuous Deployment | Non-regulated, low-risk                       | Automated quality gates | Minimize cycle time through automation          |
+| **RA**  | Release Approval      | Regulated, high-risk (GxP, financial, safety) | Manual release manager  | Minimize approval time while meeting compliance |
+
+Both patterns use the **same changelog preparation process** but diverge at the approval stage:
+
+- **CDe**: Merge to main → Auto-tag → Auto-deploy
+- **RA**: Commit to main → Create release branch → Manual approval → Deploy
+
+See [Release Workflow Variants](./release-workflow-variants.md) for complete workflows and selection guidance.
+
+---
+
+## Release Workflow (CDe Pattern)
 
 ### Manual Phase (You Perform)
 

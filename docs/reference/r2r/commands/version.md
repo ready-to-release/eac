@@ -51,5 +51,7 @@ MAJOR.MINOR.PATCH
 
 ## See Also
 
-- [R2R CLI Overview](index.md) - Command overview
+- [r2r init](./init.md)
+- [r2r validate](./validate.md)
+- [R2R CLI Overview](./index.md)
 - [Quick Start Tutorial](../../../tutorials/getting-started/quick-start.md) - Installation guide

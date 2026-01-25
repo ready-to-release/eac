@@ -66,9 +66,10 @@ type DefaultConventions struct {
 
 // ModuleVersioning contains module versioning configuration.
 type ModuleVersioning struct {
-	Scheme    string `yaml:"scheme"`              // SemVer | CalVer
-	Current   string `yaml:"current,omitempty"`   // Current version (optional)
-	Changelog string `yaml:"changelog,omitempty"` // Path to changelog (defaults to release/<moniker>/CHANGELOG.md)
+	Scheme      string `yaml:"scheme"`                // SemVer | CalVer | Implicit
+	Current     string `yaml:"current,omitempty"`     // Current version (optional)
+	Changelog   string `yaml:"changelog,omitempty"`   // Path to changelog (defaults to release/<moniker>/CHANGELOG.md)
+	ReleaseType string `yaml:"release_type,omitempty"` // published | internal | bundle | none
 }
 
 // BaseContract represents the base structure for module contracts.

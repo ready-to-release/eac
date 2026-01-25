@@ -7,7 +7,7 @@
 // Long:   - dirty: Has uncommitted changes
 // Long:
 // Long: Use --verbose to see additional information including commit SHA.
-// Long: Use --debug to enable detailed logging to out/logs/work/.
+// Long: Use --debug to enable detailed logging to out/commands.log.
 // Long:
 // Long: Example:
 // Long:   show workspaces

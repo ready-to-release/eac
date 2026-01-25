@@ -4,5 +4,7 @@
 
 ## See Also
 
-- [release](../release/index.md)
-- [release prune](prune.md)
+- [release prune](./prune.md)
+- [release tag-pending](./tag-pending.md)
+- [get release-status](../get/release-status.md)
+- [release Commands](../categories/release.md)

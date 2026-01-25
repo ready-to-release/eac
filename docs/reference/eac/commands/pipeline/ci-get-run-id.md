@@ -4,5 +4,7 @@
 
 ## See Also
 
-- [pipeline](../pipeline/index.md)
-- [pipeline ci](ci.md)
+- [pipeline find-run-id](./find-run-id.md)
+- [get current-sha](../get/current-sha.md)
+- [pipeline ci](./ci.md)
+- [pipeline Commands](../categories/pipeline.md)

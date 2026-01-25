@@ -3,5 +3,8 @@ nav:
   - index.md
   - test.md
   - debug.md
+  - export-manual.md
+  - import-manual.md
   - list-suites.md
+  - merge-results.md
   - suite.md
