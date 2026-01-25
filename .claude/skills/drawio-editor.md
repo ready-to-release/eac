@@ -201,6 +201,19 @@ Diamond with checkmark.
 | **L3**    | Integration | `#ffcd28` | `#d79b00` | `#ffa500` |
 | **L4**    | System/E2E  | `#FA3232` | `#ae4132` | -         |
 
+### Semantic Color Palette
+
+Use these colors for consistent semantic meaning across diagrams:
+
+| Semantic Meaning | Fill | Stroke | Use For |
+|-----------------|------|--------|---------|
+| Success/Production | `#d5e8d4` | `#82b366` | LIVE, completed states, positive outcomes |
+| Build/CI/Modules | `#dae8fc` | `#6c8ebf` | Build stages, modules, CI processes |
+| Trunk/Source | `#fff2cc` | `#d6b656` | Source code, repositories, warnings |
+| Deploy/Process | `#e1d5e7` | `#9673a6` | Deployment stages, processes, transforms |
+| Gates/Errors | `#f8cecc` | `#b85450` | Quality gates, alerts, errors, blockers |
+| Neutral | `#f5f5f5` | `#666666` | Legends, info boxes, backgrounds |
+
 ### Test Level Ellipse Example
 
 ```xml
@@ -225,6 +238,194 @@ Standard EAC flow arrow:
     <mxPoint x="100" y="150" as="sourcePoint"/>
     <mxPoint x="200" y="150" as="targetPoint"/>
   </mxGeometry>
+</mxCell>
+```
+
+### Curved Arrow (for branches)
+
+```xml
+<mxCell id="curved" style="curved=1;endArrow=classic;html=1;strokeWidth=2;strokeColor=#82b366;" edge="1" parent="1">
+  <mxGeometry relative="1" as="geometry">
+    <mxPoint x="100" y="200" as="sourcePoint"/>
+    <mxPoint x="300" y="200" as="targetPoint"/>
+    <Array as="points"><mxPoint x="200" y="150"/></Array>
+  </mxGeometry>
+</mxCell>
+```
+
+---
+
+## Advanced Components
+
+These components create professional, human-quality diagrams with proper visual hierarchy.
+
+### 1. Container Background
+
+Large rounded rectangle with low opacity for grouping related elements. Place behind content.
+
+```xml
+<mxCell id="container" value=""
+        style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;opacity=30;"
+        vertex="1" parent="1">
+  <mxGeometry x="30" y="70" width="400" height="200" as="geometry"/>
+</mxCell>
+```
+
+### 2. Pill Header
+
+Small rounded rectangle with white text for section titles. Place inside containers.
+
+```xml
+<mxCell id="header" value="SECTION"
+        style="rounded=1;whiteSpace=wrap;html=1;fillColor=#6c8ebf;strokeColor=#6c8ebf;fontColor=#ffffff;fontFamily=Lucida Console;fontStyle=1;fontSize=12;"
+        vertex="1" parent="1">
+  <mxGeometry x="60" y="80" width="150" height="30" as="geometry"/>
+</mxCell>
+```
+
+### 3. Legend Box
+
+Gray background explaining symbols used in the diagram.
+
+```xml
+<mxCell id="legend-box" value=""
+        style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;strokeWidth=1;"
+        vertex="1" parent="1">
+  <mxGeometry x="500" y="400" width="200" height="120" as="geometry"/>
+</mxCell>
+<mxCell id="legend-title" value="Legend"
+        style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontFamily=Lucida Console;fontStyle=1;fontSize=12;"
+        vertex="1" parent="1">
+  <mxGeometry x="510" y="405" width="80" height="20" as="geometry"/>
+</mxCell>
+```
+
+### 4. Key Insight Callout
+
+Highlighted box for important messages. Use deploy/process color (purple).
+
+```xml
+<mxCell id="insight" value="Key Insight: Important message here"
+        style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=2;fontFamily=Lucida Console;fontStyle=1;fontSize=11;align=center;"
+        vertex="1" parent="1">
+  <mxGeometry x="60" y="500" width="400" height="30" as="geometry"/>
+</mxCell>
+```
+
+### 5. Content Box
+
+Colored box for bullet lists or grouped text content.
+
+```xml
+<mxCell id="content-box" value="• Item 1&lt;br&gt;• Item 2&lt;br&gt;• Item 3"
+        style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=1;fontFamily=Lucida Console;fontSize=11;align=left;verticalAlign=top;spacingLeft=10;spacingTop=5;"
+        vertex="1" parent="1">
+  <mxGeometry x="70" y="120" width="180" height="80" as="geometry"/>
+</mxCell>
+```
+
+### 6. Quadrant Cell
+
+For 2x2 grid layouts (Cynefin-style). Combine with pill headers.
+
+```xml
+<mxCell id="quadrant-tl" value=""
+        style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;opacity=30;"
+        vertex="1" parent="1">
+  <mxGeometry x="30" y="70" width="300" height="200" as="geometry"/>
+</mxCell>
+```
+
+---
+
+## Layout Pattern Templates
+
+Use these templates as starting points for common diagram types.
+
+### Quadrant Layout (2x2 Grid)
+
+Best for: Cynefin framework, decision matrices, comparison diagrams.
+
+Structure:
+- Canvas divided into 4 equal quadrants
+- Optional side panel for legend/summary
+- Pill headers in each quadrant
+- Content boxes within quadrants
+
+Template: `eac-quadrant.xml`
+
+### Column Layout
+
+Best for: DORA metrics, parallel processes, category comparisons.
+
+Structure:
+- 3-5 vertical columns with headers
+- Content boxes below each header
+- Relationship section at bottom
+- Key insight callout
+
+Template: `eac-columns.xml`
+
+### Flow Layout (Pipeline Stages)
+
+Best for: CD model, pipeline stages, sequential processes.
+
+Structure:
+- Horizontal flow with DEVELOPMENT and RELEASE containers
+- Stage boxes within containers
+- Connecting arrows between stages
+- Legend box explaining symbols
+
+Template: `eac-flow-stages.xml`
+
+### Timeline Layout
+
+Best for: Branch visualization, trunk-based development, release trains.
+
+Structure:
+- Horizontal trunk line
+- Curved arrows for branches
+- Environment circles
+- Commit markers
+
+---
+
+## Composition Guidelines
+
+### Always Include
+
+1. **Title** - Top of diagram, centered, bold, larger font (18-24px)
+2. **Containers** - Group related elements with low-opacity backgrounds
+3. **Pill Headers** - Label each container/section
+4. **Legend** - Explain symbols, colors, and terminology
+5. **Key Insight** - Purple callout summarizing the main takeaway
+
+### Z-Order (Back to Front)
+
+1. Container backgrounds (lowest)
+2. Content boxes
+3. Shapes (modules, gates, etc.)
+4. Text labels
+5. Arrows/connectors
+6. Legend box (top-right, highest)
+
+### Spacing Guidelines
+
+| Element | Distance |
+|---------|----------|
+| Title to content | 60px |
+| Between sections | 40px |
+| Inside containers | 20px |
+| Shape to arrow | 10px |
+| Legend margin | 30px from edge |
+
+### Title Style
+
+```xml
+<mxCell id="title" value="Diagram Title"
+        style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontFamily=Lucida Console;fontStyle=1;fontSize=24;"
+        vertex="1" parent="1">
+  <mxGeometry x="300" y="20" width="400" height="40" as="geometry"/>
 </mxCell>
 ```
 

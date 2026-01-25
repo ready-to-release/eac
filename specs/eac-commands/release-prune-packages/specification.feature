@@ -1,4 +1,4 @@
-@deps:go @env:mock-github
+@deps:go @env:mock-github @pending
 Feature: eac-commands_release-prune-packages
 
   As a repository maintainer

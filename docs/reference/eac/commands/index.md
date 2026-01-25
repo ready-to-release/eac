@@ -5,7 +5,7 @@ This section documents **EAC extension commands** - the automation tools provide
 !!! info "Looking for R2R CLI commands?"
     For framework commands like `r2r init`, `r2r install`, and `r2r list`, see:
 
-    **[R2R CLI Command Reference](../../r2r/commands/index.md)**
+    **[R2R CLI Command Reference](https://ready-to-release.github.io/eac/reference/r2r/commands/)**
 
     R2R uses a two-tier architecture:
 

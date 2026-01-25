@@ -89,6 +89,7 @@ Uses direct binary execution (faster, ~100ms startup vs ~2s Docker).
 ### Environment Variable
 
 **`EAC_USE_DIRECT_BINARY`**:
+
 - `true`: Forces direct binary execution (development)
 - Not set or `false`: Uses `r2r eac` (production, default)
 

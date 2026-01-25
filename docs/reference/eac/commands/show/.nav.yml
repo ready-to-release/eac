@@ -19,6 +19,7 @@ nav:
   - files-changed.md
   - files-staged.md
   - help.md
+  - lint-summary.md
   - modules.md
   - release-notes.md
   - release-summary.md

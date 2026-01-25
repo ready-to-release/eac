@@ -12,19 +12,19 @@ Contracts are YAML configuration files that define how the EAC system behaves. T
 
 ## Core Contracts
 
-| Contract | File | Purpose |
-| -------- | ---- | ------- |
-| **Repository** | `repository.yml` | Module definitions, dependencies, file ownership |
-| **Module Types** | `module-types.yml` | Type templates with build/test behavior |
-| **Environments** | `environments.yml` | Test execution environments (L0-L4) |
-| **Test Suites** | `test-suites.yml` | Test suites with tag selectors |
-| **Testing Tags** | `testing-tags.yml` | Valid test tag definitions |
+| Contract         | File               | Purpose                                          |
+| ---------------- | ------------------ | ------------------------------------------------ |
+| **Repository**   | `repository.yml`   | Module definitions, dependencies, file ownership |
+| **Module Types** | `module-types.yml` | Type templates with build/test behavior          |
+| **Environments** | `environments.yml` | Test execution environments (L0-L4)              |
+| **Test Suites**  | `test-suites.yml`  | Test suites with tag selectors                   |
+| **Testing Tags** | `testing-tags.yml` | Valid test tag definitions                       |
 
 **Location**: All contracts in `.r2r/eac/`
 
 ## Contract Relationships
 
-```
+```text
 repository.yml ──references──> module-types.yml
       │                              │
       │ depends_on                   │ requires
@@ -66,12 +66,12 @@ modules:
 
 Contracts are validated at multiple levels:
 
-| Level | What It Checks | Command |
-| ----- | -------------- | ------- |
-| **Schema** | YAML structure | `validate-contracts` |
-| **References** | Dependencies exist | `validate-dependencies` |
-| **Files** | Ownership is exclusive | `validate-module-files` |
-| **Hierarchy** | No circular deps | `validate-module-hierarchy` |
+| Level          | What It Checks         | Command                     |
+| -------------- | ---------------------- | --------------------------- |
+| **Schema**     | YAML structure         | `validate-contracts`        |
+| **References** | Dependencies exist     | `validate-dependencies`     |
+| **Files**      | Ownership is exclusive | `validate-module-files`     |
+| **Hierarchy**  | No circular deps       | `validate-module-hierarchy` |
 
 Run all validations:
 
@@ -83,7 +83,7 @@ r2r eac validate
 
 JSON schemas live in `contracts/eac-core/0.1.0/`:
 
-```
+```text
 contracts/
 └── eac-core/
     └── 0.1.0/

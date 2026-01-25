@@ -114,6 +114,17 @@ func LintConfig(moniker, baseDir string) Config {
 	}
 }
 
+// ComponentLintConfig returns a Config for component-level lint locking.
+// Use this when linting components within a module in parallel.
+func ComponentLintConfig(module, component, baseDir string) Config {
+	return Config{
+		BaseDir:      baseDir,
+		Identifier:   module + "-" + component, // Use dash to avoid path issues
+		ResourceType: "component",
+		ActionVerb:   "already being linted",
+	}
+}
+
 // ManualTestFileConfig returns a Config for locking manual test result files.
 // Use this when importing/merging manual test results to prevent concurrent writes.
 func ManualTestFileConfig(filePath, baseDir string) Config {

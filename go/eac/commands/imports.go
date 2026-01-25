@@ -16,6 +16,7 @@ import (
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/get"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/help"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/init"
+	_ "github.com/ready-to-release/eac/go/eac/commands/impl/lint"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/list"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/pipeline"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/pipeline/ci"

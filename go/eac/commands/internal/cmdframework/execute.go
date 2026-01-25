@@ -65,6 +65,24 @@ func SetScanComponentWorker(worker ComponentWorkerFunc) {
 	scanComponentWorkerFunc = worker
 }
 
+// lintComponentWorkProvider is set by the lint package to provide lint component flattening.
+var lintComponentWorkProvider ComponentWorkProvider
+
+// SetLintComponentWorkProvider registers the function to flatten modules to lint components.
+// Called by the lint package during init.
+func SetLintComponentWorkProvider(provider ComponentWorkProvider) {
+	lintComponentWorkProvider = provider
+}
+
+// lintComponentWorkerFunc is the registered lint component worker (set by lint package).
+var lintComponentWorkerFunc ComponentWorkerFunc
+
+// SetLintComponentWorker registers the lint component worker function.
+// Called by the lint package during init.
+func SetLintComponentWorker(worker ComponentWorkerFunc) {
+	lintComponentWorkerFunc = worker
+}
+
 // phaseExecute handles the execution phase:
 // - Set up worker function
 // - Run orchestrator (layered or parallel)
@@ -95,6 +113,11 @@ func phaseExecute(ctx *ExecutionContext, worker WorkerFunc) error {
 	// Check if this is a scan command with component-level execution enabled
 	if ctx.Config.Type == CommandTypeScan && scanComponentWorkProvider != nil && scanComponentWorkerFunc != nil {
 		return phaseExecuteScanComponents(ctx)
+	}
+
+	// Check if this is a lint command with component-level execution enabled
+	if ctx.Config.Type == CommandTypeLint && lintComponentWorkProvider != nil && lintComponentWorkerFunc != nil {
+		return phaseExecuteLintComponents(ctx)
 	}
 
 	// Fall back to module-level execution (legacy)
@@ -190,6 +213,34 @@ func phaseExecuteScanComponents(ctx *ExecutionContext) error {
 
 	if err != nil {
 		return fmt.Errorf("scan component execution failed: %w", err)
+	}
+
+	ctx.Results = results
+	return nil
+}
+
+// phaseExecuteLintComponents runs component-level parallel execution for lints.
+// This uses weighted parallelism for linting different components in parallel.
+func phaseExecuteLintComponents(ctx *ExecutionContext) error {
+	// Get lint component work items from the provider
+	componentLayers := lintComponentWorkProvider(ctx)
+	if len(componentLayers) == 0 {
+		ctx.Results = []orchestrator.WorkResult{}
+		return nil
+	}
+
+	// Wrap the lint component worker to match orchestrator signature
+	orchCompWorker := func(module, component string, logWriter io.Writer) int {
+		return lintComponentWorkerFunc(ctx, module, component, logWriter)
+	}
+
+	// Flatten all layers - lints run in parallel (no dependency order needed)
+	allWork := flattenComponentLayers(componentLayers)
+	log.Debugf("Executing %d lint components in parallel with weighted scheduling", len(allWork))
+	results, err := ctx.Orchestrator.RunComponentsParallel(allWork, orchCompWorker)
+
+	if err != nil {
+		return fmt.Errorf("lint component execution failed: %w", err)
 	}
 
 	ctx.Results = results

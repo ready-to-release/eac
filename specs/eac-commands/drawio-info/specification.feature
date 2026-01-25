@@ -13,27 +13,27 @@ Feature: eac-commands_drawio-info
 
     Scenario: Show info for valid .drawio.png
       Given a valid .drawio.png file "diagram.drawio.png"
-      When I run the command "drawio info --input diagram.drawio.png"
+      When I run the command "drawio info diagram.drawio.png"
       Then the exit code is 0
-      And stdout contains "page" or "diagram"
+      And stdout contains "Diagrams"
 
     Scenario: Show page name in info
       Given a .drawio.png file "named.drawio.png" with page name "MyDiagram"
-      When I run the command "drawio info --input named.drawio.png"
+      When I run the command "drawio info named.drawio.png"
       Then the exit code is 0
       And stdout contains "MyDiagram"
 
   Rule: Handles error cases gracefully
 
     Scenario: Error on non-existent file
-      When I run the command "drawio info --input nonexistent.drawio.png"
+      When I run the command "drawio info nonexistent.drawio.png"
       Then the exit code is 1
-      And stderr contains "not found" or "does not exist"
+      And stderr contains "not found"
 
-    Scenario: Error on missing input flag
+    Scenario: Error on missing input file
       When I run the command "drawio info"
       Then the exit code is 1
-      And stderr contains "input" or "required"
+      And stderr contains "required"
 
   Rule: Command accessibility
 
@@ -41,4 +41,4 @@ Feature: eac-commands_drawio-info
       When I run the command "drawio info --help"
       Then the exit code is 0
       And stdout contains "info"
-      And stdout contains "input"
+      And stdout contains "drawio"

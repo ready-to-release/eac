@@ -54,8 +54,12 @@ func init() {
 }
 
 // UpdateLint command entry point - lints one or more modules.
+// DEPRECATED: Use the top-level "lint" command instead.
 func UpdateLint() int {
 	args := os.Args[3:] // Skip program name, "update", and "lint"
+
+	// Show deprecation warning (always, even for help)
+	log.Warnf("⚠️  'update lint' is deprecated. Please use 'lint' instead.")
 
 	// Check for help flag
 	if len(args) > 0 && (args[0] == "--help" || args[0] == "-h") {

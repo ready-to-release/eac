@@ -12,12 +12,12 @@ The EAC repository is a modular monorepo containing:
 
 ## In This Section
 
-| Topic | Description |
-| ----- | ----------- |
-| [CLI vs Extensions](./cli-vs-extensions.md) | Two-tier architecture explained |
-| [Repository Layout](./repository-layout.md) | Directory structure and module organization |
-| [Contracts Overview](./contracts-overview.md) | YAML contract system summary |
-| [Workflow Conventions](./workflow-conventions.md) | Git workflow for contributors |
+| Topic                                             | Description                                 |
+| ------------------------------------------------- | ------------------------------------------- |
+| [CLI vs Extensions](./cli-vs-extensions.md)       | Two-tier architecture explained             |
+| [Repository Layout](./repository-layout.md)       | Directory structure and module organization |
+| [Contracts Overview](./contracts-overview.md)     | YAML contract system summary                |
+| [Workflow Conventions](./workflow-conventions.md) | Git workflow for contributors               |
 
 ## Key Concepts
 

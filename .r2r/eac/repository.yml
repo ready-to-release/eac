@@ -388,6 +388,7 @@ modules:
           source:
             - "**/*.py"
             - "requirements.txt"
+            - "templates/*.xml"
 
   - moniker: eac-specs
     name: Test Infrastructure

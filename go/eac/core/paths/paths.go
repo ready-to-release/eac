@@ -172,6 +172,12 @@ func LintOutputPath(repoRoot, moniker string) string {
 	return filepath.Join(repoRoot, OutDir, LintDir, moniker)
 }
 
+// ComponentLintOutputPath returns the path to a component's lint output directory.
+// Structure: out/lint/<module>/<component>
+func ComponentLintOutputPath(repoRoot, module, component string) string {
+	return filepath.Join(repoRoot, OutDir, LintDir, module, component)
+}
+
 // TestOutputDir returns the root test output directory.
 func TestOutputDir(repoRoot string) string {
 	return filepath.Join(repoRoot, OutDir, TestDir)

@@ -106,13 +106,17 @@ def create_text_chunk(keyword: str, text: str) -> tuple[bytes, bytes]:
 
     Args:
         keyword: The keyword (e.g., "mxfile")
-        text: The text content
+        text: The text content (will be URL-encoded for DrawIO compatibility)
 
     Returns:
         (chunk_type, chunk_data) tuple
     """
+    import urllib.parse
+    # DrawIO expects URL-encoded XML in the mxfile tEXt chunk
+    # This is required for DrawIO to parse the content correctly
+    encoded_text = urllib.parse.quote(text, safe='')
     # tEXt format: keyword + null + text
-    data = keyword.encode("latin-1") + b"\x00" + text.encode("latin-1")
+    data = keyword.encode("latin-1") + b"\x00" + encoded_text.encode("latin-1")
     return (b"tEXt", data)
 
 
@@ -126,13 +130,18 @@ def extract_mxfile_chunk(chunks: list[tuple[bytes, bytes]]) -> Optional[str]:
     Returns:
         The mxfile XML string, or None if not found
     """
+    import urllib.parse
     for chunk_type, data in chunks:
         if chunk_type == b"tEXt":
             try:
                 null_idx = data.index(b"\x00")
                 keyword = data[:null_idx].decode("latin-1")
                 if keyword == "mxfile":
-                    return data[null_idx + 1:].decode("latin-1")
+                    text = data[null_idx + 1:].decode("latin-1")
+                    # URL-decode if needed (DrawIO stores URL-encoded XML)
+                    if text.startswith('%3C'):
+                        text = urllib.parse.unquote(text)
+                    return text
             except (ValueError, UnicodeDecodeError):
                 continue
         elif chunk_type == b"zTXt":

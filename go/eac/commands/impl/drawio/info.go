@@ -26,7 +26,7 @@ func init() {
 
 // DrawioInfo shows information about a DrawIO file.
 func DrawioInfo() int {
-	args := os.Args[2:]
+	args := os.Args[3:] // Skip program, "drawio", "info"
 	if err := flags.ValidateFlagsFromRegistry(args); err != nil {
 		log.Errorf("%v", err)
 		return 1

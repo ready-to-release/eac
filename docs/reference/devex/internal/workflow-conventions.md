@@ -12,7 +12,7 @@ The EAC repository uses **trunk-based development**:
 
 ## Branch Naming
 
-```
+```text
 <type>/<short-description>
 
 Examples:
@@ -24,20 +24,20 @@ Examples:
 
 **Types**:
 
-| Type | Purpose |
-| ---- | ------- |
-| `feat` | New feature |
-| `fix` | Bug fix |
-| `docs` | Documentation only |
-| `refactor` | Code restructuring |
-| `test` | Test additions/fixes |
-| `chore` | Maintenance tasks |
+| Type       | Purpose              |
+| ---------- | -------------------- |
+| `feat`     | New feature          |
+| `fix`      | Bug fix              |
+| `docs`     | Documentation only   |
+| `refactor` | Code restructuring   |
+| `test`     | Test additions/fixes |
+| `chore`    | Maintenance tasks    |
 
 ## Commit Messages
 
 Follow [Conventional Commits](https://www.conventionalcommits.org/):
 
-```
+```text
 <type>(<scope>): <description>
 
 [optional body]
@@ -47,7 +47,7 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 **Examples**:
 
-```
+```text
 feat(commands): add scan-zap command for DAST scanning
 
 fix(core): resolve config loading race condition

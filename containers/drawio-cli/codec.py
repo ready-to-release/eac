@@ -147,31 +147,43 @@ def encode_mxfile(decoded_xml: str) -> str:
     if root.tag != "mxfile":
         raise ValueError(f"Expected mxfile root element, got: {root.tag}")
 
-    # Update agent to show it was edited by this tool
-    root.set("agent", "drawio-cli (Claude)")
+    # Remove all attributes from mxfile for maximum DrawIO compatibility
+    # DrawIO seems to have issues with URL-encoded attributes in some cases
+    root.attrib.clear()
 
-    # Process each diagram
+    # Process each diagram - keep mxGraphModel as uncompressed XML
+    # DrawIO works better with uncompressed content when URL-encoded in PNG
     for diagram in root.findall(".//diagram"):
-        # Find mxGraphModel child
         graph_model = diagram.find("mxGraphModel")
         if graph_model is not None:
-            # Serialize the mxGraphModel to string
-            graph_xml = ET.tostring(graph_model, encoding="unicode")
+            # Keep mxGraphModel as child element (uncompressed format)
+            # This matches how DrawIO saves files after editing
+            pass  # Leave as-is
+        elif diagram.text and diagram.text.strip():
+            # Text content - check if it's encoded or raw XML
+            content = diagram.text.strip()
+            if not content.startswith("<"):
+                # Encoded content - decode it and add as child element
+                try:
+                    decoded_xml = decode_diagram_content(content)
+                    graph_model = ET.fromstring(decoded_xml)
+                    diagram.text = None
+                    diagram.append(graph_model)
+                except Exception:
+                    pass  # Leave as-is if decode fails
 
-            # Encode it
-            encoded = encode_diagram_content(graph_xml)
+    # Convert back to string with proper formatting
+    return _prettify_xml(root)
 
-            # Remove the child element and set as text
-            diagram.remove(graph_model)
-            diagram.text = encoded
-        elif diagram.text and diagram.text.strip().startswith("<"):
-            # Already has XML as text (from failed decode), encode it
-            encoded = encode_diagram_content(diagram.text.strip())
-            diagram.text = encoded
-        # If neither, leave as-is (already encoded or empty)
 
-    # Convert back to string (compact, no extra whitespace)
-    return ET.tostring(root, encoding="unicode")
+def _escape_attr(value: str) -> str:
+    """Escape special characters in XML attribute values."""
+    value = value.replace("&", "&amp;")
+    value = value.replace("<", "&lt;")
+    value = value.replace(">", "&gt;")
+    value = value.replace('"', "&quot;")
+    value = value.replace("\n", "&#xa;")
+    return value
 
 
 def _prettify_xml(elem: ET.Element, level: int = 0) -> str:
@@ -181,8 +193,8 @@ def _prettify_xml(elem: ET.Element, level: int = 0) -> str:
     indent = "  "
     result = []
 
-    # Opening tag
-    attribs = " ".join(f'{k}="{v}"' for k, v in elem.attrib.items())
+    # Opening tag - escape attribute values properly
+    attribs = " ".join(f'{k}="{_escape_attr(v)}"' for k, v in elem.attrib.items())
     if attribs:
         result.append(f"{indent * level}<{elem.tag} {attribs}")
     else:

@@ -27,10 +27,10 @@ Adopting EAC in your repository? The [External](./external/) section covers:
 
 ## Quick Navigation
 
-| Audience | Section | Key Topics |
-| -------- | ------- | ---------- |
+| Audience         | Section                 | Key Topics                              |
+| ---------------- | ----------------------- | --------------------------------------- |
 | **Contributors** | [Internal](./internal/) | Repository layout, contracts, workflows |
-| **Adopters** | [External](./external/) | Setup, configuration, structure |
+| **Adopters**     | [External](./external/) | Setup, configuration, structure         |
 
 ## Which Section Do I Need?
 

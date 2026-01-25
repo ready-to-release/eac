@@ -278,7 +278,7 @@ This hierarchy allows:
 | **Semgrep**         | Static analysis (SAST)               |
 | **OWASP ZAP**       | Dynamic analysis (DAST)              |
 
-**Container-level technologies** (Docker, Docker SDK) are provided by the [R2R CLI framework](../../r2r/architecture/).
+**Container-level technologies** (Docker, Docker SDK) are provided by the [R2R CLI framework](https://ready-to-release.github.io/eac/reference/r2r/architecture/).
 
 ---
 
@@ -299,7 +299,7 @@ This hierarchy allows:
 - **OSCAL documents**: Assessment results, catalogs, profiles
 - **Artifacts**: All evidence stored in `out/evidence/` for audit
 
-**Container-level security** (isolation, non-root execution, network restrictions) is provided by [R2R CLI](../../r2r/architecture/#security-model).
+**Container-level security** (isolation, non-root execution, network restrictions) is provided by [R2R CLI](https://ready-to-release.github.io/eac/reference/r2r/architecture/#security-model).
 
 ---
 
@@ -332,7 +332,7 @@ This reduces build times from ~45 minutes (full build) to ~2-5 minutes (incremen
 
 ## Integration with R2R CLI
 
-EAC extends the [R2R CLI framework](../../r2r/architecture/). The relationship:
+EAC extends the [R2R CLI framework](https://ready-to-release.github.io/eac/reference/r2r/architecture/). The relationship:
 
 - **R2R provides**: Container orchestration, git discovery, volume mounting, configuration loading
 - **EAC provides**: Commands, contracts, modules, AI integration, security scanning
@@ -345,7 +345,7 @@ See [CLI Integration](./cli-integration.md) for details on the R2R ↔ EAC bound
 
 ### Architecture
 
-- [R2R CLI Architecture](../../r2r/architecture/) - Framework overview and container model
+- [R2R CLI Architecture](https://ready-to-release.github.io/eac/reference/r2r/architecture/) - Framework overview and container model
 - [Module Architectures](./modules/) - Individual module C4 diagrams
 - [Contracts System](./contracts.md) - YAML contract specification
 - [Dependency System](./dependency-system.md) - Module dependency graph
