@@ -4,27 +4,39 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	
-	"gopkg.in/yaml.v3"
+
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
+	"gopkg.in/yaml.v3"
 )
 
 func TestYAML() {
-	workspaceRoot, _ := os.Getwd()
+	workspaceRoot, err := os.Getwd()
+	if err != nil {
+		fmt.Printf("Error getting working directory: %v\n", err)
+		return
+	}
 	for i := 0; i < 5; i++ {
 		workspaceRoot = filepath.Dir(workspaceRoot)
 	}
-	
-	yamlPath := filepath.Join(workspaceRoot, ".r2r/eac/repository.yml")
-	data, _ := os.ReadFile(yamlPath)
-	
+
+	yamlPath := filepath.Join(workspaceRoot, ".r2r", "eac", "repository.yml")
+	data, err := os.ReadFile(yamlPath)
+	if err != nil {
+		fmt.Printf("Error reading file: %v\n", err)
+		return
+	}
+
 	var config struct {
 		Modules []contracts.BaseContract `yaml:"modules"`
 	}
-	
-	yaml.Unmarshal(data, &config)
-	
-	for _, mod := range config.Modules {
+
+	if err := yaml.Unmarshal(data, &config); err != nil {
+		fmt.Printf("Error unmarshaling YAML: %v\n", err)
+		return
+	}
+
+	for i := range config.Modules {
+		mod := &config.Modules[i]
 		if mod.Moniker == "r2r-cli" {
 			fmt.Printf("r2r-cli: %+v\n", mod.Versioning)
 			break

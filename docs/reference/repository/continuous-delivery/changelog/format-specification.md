@@ -4,7 +4,8 @@ Detailed specification of the Keep a Changelog format used in the repository.
 
 ## Overview
 
-All changelogs in this repository follow the [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/) format, which provides a standardized structure for documenting changes.
+All changelogs in this repository follow the [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/) format,
+which provides a standardized structure for documenting changes.
 
 **Standard URL:** [https://keepachangelog.com/en/1.1.0/](https://keepachangelog.com/en/1.1.0/)
 

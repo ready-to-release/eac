@@ -2,7 +2,9 @@
 
 ## Overview
 
-Release notes communicate **what changed** to stakeholders. Good release notes help users understand new features, prepare for breaking changes, and know about security fixes.
+Release notes communicate **what changed** to stakeholders.
+
+Good release notes help users understand new features, prepare for breaking changes, and know about security fixes.
 
 ---
 
@@ -155,7 +157,9 @@ Before publishing:
 
 For release commands, see:
 
-**[Release Commands Reference](../../../reference/eac/continuous-delivery/changelog/release-commands.md)** - Commands including:
+**[Release Commands Reference](../../../reference/eac/continuous-delivery/changelog/release-commands.md)**
+
+Commands including:
 
 - `r2r release this <module>` - Finalize changelog and create release
 - `r2r release pending <module>` - Check for pending changes

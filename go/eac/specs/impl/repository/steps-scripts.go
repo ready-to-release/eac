@@ -212,7 +212,8 @@ func (c *repositoryContext) eachPackageShouldContainAtLeastOneScriptFile() error
 				hasScript := false
 
 				// Check for any script file in this package
-				filepath.Walk(packagePath, func(path string, info os.FileInfo, err error) error {
+				//nolint:errcheck // Walk error is not critical for script discovery
+				_ = filepath.Walk(packagePath, func(path string, info os.FileInfo, err error) error {
 					if err != nil || info.IsDir() {
 						return nil
 					}

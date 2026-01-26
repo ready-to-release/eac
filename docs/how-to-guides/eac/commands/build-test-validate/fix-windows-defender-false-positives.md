@@ -31,7 +31,7 @@ This is a well-documented issue in the Go community and does not indicate actual
 
 Check the affected file path. If it matches this pattern, it's your Go test binary:
 
-```
+```text
 C:\Users\<username>\AppData\Local\Temp\go-build*\**\test.test.exe
 ```
 
@@ -86,11 +86,11 @@ Add-MpPreference -ExclusionProcess "go-build*.exe"
 
 ## Common Detection Names
 
-| Detection Name | Type | Cause |
-| --- | --- | --- |
-| `Trojan:Win32/Bearfoos.B!ml` | ML heuristic | Go binary patterns |
-| `Trojan:Win32/Wacatac.B!ml` | ML heuristic | Unsigned temp executables |
-| `HackTool:Win32/AutoKMS` | False positive | Rarely, on certain Go tools |
+| Detection Name               | Type           | Cause                       |
+| ---------------------------- | -------------- | --------------------------- |
+| `Trojan:Win32/Bearfoos.B!ml` | ML heuristic   | Go binary patterns          |
+| `Trojan:Win32/Wacatac.B!ml`  | ML heuristic   | Unsigned temp executables   |
+| `HackTool:Win32/AutoKMS`     | False positive | Rarely, on certain Go tools |
 
 ## Security Considerations
 

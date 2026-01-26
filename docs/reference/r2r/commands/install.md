@@ -1,6 +1,8 @@
 # r2r install
 
-Install the EAC extension by pulling its Docker image. When no extension name is provided, installs all configured extensions.
+Install the EAC extension by pulling its Docker image.
+
+When no extension name is provided, installs all configured extensions.
 
 ## Syntax
 
@@ -10,7 +12,9 @@ r2r install [extension-name] [flags]
 
 ## Description
 
-The `install` command manages extension installation. It pulls Docker images from the container registry and registers them for use.
+The `install` command manages extension installation.
+
+It pulls Docker images from the container registry and registers them for use.
 
 **Without extension name:**
 

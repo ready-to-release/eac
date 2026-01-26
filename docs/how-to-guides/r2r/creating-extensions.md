@@ -27,7 +27,9 @@ flowchart LR
 
 ## Extension Metadata
 
-**All extensions must implement the `extension-meta` command.** This provides r2r CLI with extension information for discovery, validation, and management.
+**All extensions must implement the `extension-meta` command.**
+
+This provides r2r CLI with extension information for discovery, validation, and management.
 
 ### Why It Matters
 
@@ -883,14 +885,14 @@ git commit -m "release(my-extension): 1.2.0"
 
 ### When to Use EAC Integration
 
-| Use Case              | Standalone     | With EAC       |
-| --------------------- | -------------- | -------------- |
-| Simple extension      | ✓ Easier       | Overkill       |
-| Multiple extensions   | Manual effort  | ✓ Consistent   |
-| Semver releases       | Manual tagging | ✓ Automated    |
-| Multi-platform builds | Manual buildx  | ✓ Automated    |
-| Dependency tracking   | Manual         | ✓ Automated    |
-| Module contracts      | Not available  | ✓ Available    |
+| Use Case              | Standalone     | With EAC     |
+| --------------------- | -------------- | ------------ |
+| Simple extension      | ✓ Easier       | Overkill     |
+| Multiple extensions   | Manual effort  | ✓ Consistent |
+| Semver releases       | Manual tagging | ✓ Automated  |
+| Multi-platform builds | Manual buildx  | ✓ Automated  |
+| Dependency tracking   | Manual         | ✓ Automated  |
+| Module contracts      | Not available  | ✓ Available  |
 
 **Recommendation**: Use EAC integration if you're managing multiple extensions or want automated release workflows.
 

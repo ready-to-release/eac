@@ -109,13 +109,13 @@ Stage 9 becomes verification (did we meet criteria?) not decision (should we dep
 
 ### Decision Framework
 
-| Question                                    | RA Pattern                   | CDe Pattern             |
-| ------------------------------------------- | ---------------------------- | ----------------------- |
-| Regulated industry?                         | Yes                          | No                      |
-| Robust automated testing (≥80% coverage)?   | Optional                     | Required                |
-| Feature flags in place?                     | Optional                     | Required                |
-| Desired deployment frequency?               | Weekly/monthly               | Multiple per day        |
-| Risk tolerance?                             | Low (prefer human oversight) | High (trust automation) |
+| Question                                  | RA Pattern                   | CDe Pattern             |
+| ----------------------------------------- | ---------------------------- | ----------------------- |
+| Regulated industry?                       | Yes                          | No                      |
+| Robust automated testing (≥80% coverage)? | Optional                     | Required                |
+| Feature flags in place?                   | Optional                     | Required                |
+| Desired deployment frequency?             | Weekly/monthly               | Multiple per day        |
+| Risk tolerance?                           | Low (prefer human oversight) | High (trust automation) |
 
 ### Pattern Comparison
 

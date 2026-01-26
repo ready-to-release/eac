@@ -15,13 +15,13 @@ This project uses:
 
 ## Why Go for BDD?
 
-| Advantage | Description |
-|-----------|-------------|
-| Performance | Compiled nature makes tests fast and efficient |
-| Simplicity | Simple syntax and minimal abstraction |
-| Tooling | Excellent support with `go test`, coverage, profiling |
-| Concurrency | Built-in support for parallel test execution |
-| Standard Library | Rich library reduces external dependencies |
+| Advantage        | Description                                           |
+| ---------------- | ----------------------------------------------------- |
+| Performance      | Compiled nature makes tests fast and efficient        |
+| Simplicity       | Simple syntax and minimal abstraction                 |
+| Tooling          | Excellent support with `go test`, coverage, profiling |
+| Concurrency      | Built-in support for parallel test execution          |
+| Standard Library | Rich library reduces external dependencies            |
 
 ---
 

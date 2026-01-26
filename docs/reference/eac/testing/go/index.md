@@ -4,12 +4,12 @@ Technical reference for Go/Godog BDD implementation in EAC.
 
 ## In This Section
 
-| Reference                                   | Description                              |
-| ------------------------------------------- | ---------------------------------------- |
-| [Overview](./overview.md)                   | Go testing architecture and patterns     |
-| [File Organization](./file-organization.md) | Directory structure and file naming      |
-| [Step Definitions](./step-definitions.md)   | Writing Godog step definitions           |
-| [Test Levels](./test-levels.md)             | L0-L4 test environment implementation    |
+| Reference                                   | Description                               |
+| ------------------------------------------- | ----------------------------------------- |
+| [Overview](./overview.md)                   | Go testing architecture and patterns      |
+| [File Organization](./file-organization.md) | Directory structure and file naming       |
+| [Step Definitions](./step-definitions.md)   | Writing Godog step definitions            |
+| [Test Levels](./test-levels.md)             | L0-L4 test environment implementation     |
 | [Best Practices](./best-practices.md)       | Guidelines for writing maintainable tests |
 
 ## Quick Start

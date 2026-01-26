@@ -20,22 +20,22 @@ Then a file should exist          # → aFileShouldExist()
 
 ## Key Concepts
 
-| Concept | Description |
-|---------|-------------|
-| ScenarioContext | Registers steps and hooks |
+| Concept            | Description                  |
+| ------------------ | ---------------------------- |
+| ScenarioContext    | Registers steps and hooks    |
 | Context Management | Maintains state across steps |
-| Regex Patterns | Flexible step matching |
-| Given/When/Then | Setup, action, assertion |
+| Regex Patterns     | Flexible step matching       |
+| Given/When/Then    | Setup, action, assertion     |
 
 ---
 
 ## Step Categories
 
-| Type | Purpose | Example |
-|------|---------|---------|
-| Given | Setup preconditions | `iAmInAnEmptyFolder()` |
-| When | Execute actions | `iRun(command)` |
-| Then | Assert outcomes | `theCommandShouldSucceed()` |
+| Type  | Purpose             | Example                     |
+| ----- | ------------------- | --------------------------- |
+| Given | Setup preconditions | `iAmInAnEmptyFolder()`      |
+| When  | Execute actions     | `iRun(command)`             |
+| Then  | Assert outcomes     | `theCommandShouldSucceed()` |
 
 ---
 

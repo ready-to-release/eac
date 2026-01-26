@@ -12,8 +12,8 @@ import (
 // PackageVersion represents a container image version in GHCR.
 type PackageVersion struct {
 	ID        int       `json:"id"`
-	Name      string    `json:"name"`      // Version name (usually digest)
-	Tags      []string  `json:"tags"`      // Associated tags
+	Name      string    `json:"name"` // Version name (usually digest)
+	Tags      []string  `json:"tags"` // Associated tags
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Digest    string    `json:"digest"` // SHA256 digest
@@ -51,7 +51,7 @@ func NewGHPackagesClient(workDir string) *GHPackagesClient {
 // ListOrgPackages lists all container packages for an organization.
 func (c *GHPackagesClient) ListOrgPackages(ctx context.Context, org string) ([]Package, error) {
 	// gh api /orgs/{org}/packages?package_type=container
-	cmd := exec.CommandContext(ctx, "gh", "api",
+	cmd := exec.CommandContext(ctx, "gh", "api", //nolint:gosec // G204: org is safely escaped with url.PathEscape
 		fmt.Sprintf("/orgs/%s/packages?package_type=container&per_page=100", url.PathEscape(org)),
 	)
 	if c.workDir != "" {
@@ -74,7 +74,7 @@ func (c *GHPackagesClient) ListOrgPackages(ctx context.Context, org string) ([]P
 // ListPackageVersions lists all versions of a package.
 func (c *GHPackagesClient) ListPackageVersions(ctx context.Context, org, packageName string) ([]PackageVersion, error) {
 	// gh api /orgs/{org}/packages/container/{package}/versions
-	cmd := exec.CommandContext(ctx, "gh", "api",
+	cmd := exec.CommandContext(ctx, "gh", "api", //nolint:gosec // G204: org and packageName are safely escaped with url.PathEscape
 		fmt.Sprintf("/orgs/%s/packages/container/%s/versions?per_page=100",
 			url.PathEscape(org), url.PathEscape(packageName)),
 	)
@@ -122,7 +122,7 @@ func (c *GHPackagesClient) ListPackageVersions(ctx context.Context, org, package
 // DeletePackageVersion deletes a specific package version.
 func (c *GHPackagesClient) DeletePackageVersion(ctx context.Context, org, packageName string, versionID int) error {
 	// gh api --method DELETE /orgs/{org}/packages/container/{package}/versions/{version_id}
-	cmd := exec.CommandContext(ctx, "gh", "api",
+	cmd := exec.CommandContext(ctx, "gh", "api", //nolint:gosec // G204: org and packageName are safely escaped with url.PathEscape
 		"--method", "DELETE",
 		fmt.Sprintf("/orgs/%s/packages/container/%s/versions/%d",
 			url.PathEscape(org), url.PathEscape(packageName), versionID),

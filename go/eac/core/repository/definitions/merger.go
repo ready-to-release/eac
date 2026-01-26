@@ -1,3 +1,4 @@
+// Package definitions provides utilities for merging and managing repository definitions.
 package definitions
 
 import (

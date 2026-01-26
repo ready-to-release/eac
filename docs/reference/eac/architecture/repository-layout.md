@@ -4,13 +4,18 @@
 
 This repository is organized as a **modular monorepo** with clearly defined module boundaries using the EAC (Everything as Code) system.
 
+The following diagram illustrates the version control and artifact storage architecture, showing the Git-as-Feed pattern with internal and external artifact storage flows.
+
+![Version Control and Artifact Architecture](../../../assets/architecture/modules-version-control.drawio.png)
+
 **Quick Reference**: For complete documentation on the R2R CLI and EAC system, see:
 
 - [EAC Overview](../../eac/index.md) - System overview with repository structure
 - [Modules](../../eac/modules/) - Module system and dependency management
 - [Contracts](../../eac/contracts/) - Module contracts and configuration
 
-All modules are defined in `.r2r/eac/repository.yml`, which serves as the central contract for module ownership, dependencies, and build configuration.
+All modules are defined in `.r2r/eac/repository.yml`, which serves as the central contract for module ownership, dependencies,
+and build configuration.
 
 ## Repository Structure
 

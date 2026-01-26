@@ -205,7 +205,11 @@ Topic Branch → (Squash Merge) → Trunk → (Tag) → Production
 
 ## Pipeline Architecture
 
-Both patterns benefit from separating pipeline concerns:
+Both patterns benefit from separating pipeline concerns. The first diagram shows the problem: complexity arising from separate Orchestration (YAML), Scripts (PowerShell), and Configuration management that don't integrate well.
+
+![Pipeline Separation Problem](../../../assets/branching/pipelines-separating-problem.drawio.png)
+
+The solution is unified orchestration that bridges YAML orchestration, configuration, and modular scripting:
 
 ![Pipeline Separation Solution](../../../assets/branching/pipelines-separating-solution.drawio.png)
 

@@ -16,6 +16,7 @@ import (
 // SchemaType represents the type of schema to validate against.
 type SchemaType string
 
+// Schema type constants for different configuration file types.
 const (
 	SchemaComponentTypes     SchemaType = "component-types"
 	SchemaEnvironments       SchemaType = "environments"

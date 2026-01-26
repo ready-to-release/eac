@@ -4,15 +4,22 @@
 package commandparser
 
 import (
-	_ "embed"
+	"fmt"
 	"strings"
+
+	"github.com/ready-to-release/eac/contracts"
 )
 
-// Embed the EBNF command schema at compile time from contracts
-// Note: Path is relative to this file's location
-//
-//go:embed command.ebnf
+// embeddedEBNFSchema is loaded from the contracts module at init time
 var embeddedEBNFSchema string
+
+func init() {
+	data, err := contracts.FS.ReadFile(contracts.R2RCLIPath("command.ebnf"))
+	if err != nil {
+		panic(fmt.Sprintf("failed to load embedded EBNF schema from contracts: %v", err))
+	}
+	embeddedEBNFSchema = string(data)
+}
 
 // ParsedCommand represents a parsed command structure.
 type ParsedCommand struct {

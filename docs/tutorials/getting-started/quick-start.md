@@ -125,7 +125,10 @@ r2r eac init --ai-provider claude-api --ai-token sk-ant-your-key-here
 ```
 
 !!! tip "Configuration Files"
-    The init command only creates user-specific files (`ai-provider.yml`). Other configuration files like `ai-config.yml` and templates are automatically loaded from built-in system defaults. See [Understanding Configuration Files](./configuration-files.md) to learn more.
+
+    The init command only creates user-specific files (`ai-provider.yml`).
+    Other configuration files like `ai-config.yml` and templates are automatically loaded from built-in system defaults.
+    See [Understanding Configuration Files](./configuration-files.md) to learn more.
 
 ## Step 6: Set Your API Key
 
@@ -158,7 +161,9 @@ r2r eac help show
 ```
 
 !!! tip "Command Discovery"
-    EAC provides 147 commands organized into 10 categories (show, get, build, test, create, validate, release, pipeline, work, and more). See [Discovering Available Commands](../../how-to-guides/eac/commands/getting-started/discover-commands.md) for a complete guide to finding and using all commands.
+
+    EAC provides 147 commands organized into 10 categories (show, get, build, test, create, validate, release, pipeline, work, and more).
+    See [Discovering Available Commands](../../how-to-guides/eac/commands/getting-started/discover-commands.md) for a complete guide to finding and using all commands.
 
 ## Step 8: Analyze Your Repository
 
@@ -256,9 +261,12 @@ Congratulations! You've successfully:
 
 Now that you know the basics of r2r, try these common tasks:
 
-- **[Discover Available Commands](../../how-to-guides/eac/commands/getting-started/discover-commands.md)** - Explore all 147 commands organized by category
-- **[Get Help with Commands](../../how-to-guides/eac/commands/getting-started/get-help-with-commands.md)** - Find and understand any r2r command
-- **[Explore Your Repository](../../how-to-guides/eac/commands/getting-started/explore-your-repository.md)** - Discover modules, files, and structure
+- **[Discover Available Commands](../../how-to-guides/eac/commands/getting-started/discover-commands.md)**
+  Explore all 147 commands organized by category
+- **[Get Help with Commands](../../how-to-guides/eac/commands/getting-started/get-help-with-commands.md)**
+  Find and understand any r2r command
+- **[Explore Your Repository](../../how-to-guides/eac/commands/getting-started/explore-your-repository.md)**
+  Discover modules, files, and structure
 
 ### Dive Deeper
 

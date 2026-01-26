@@ -130,7 +130,7 @@ func (s *State) Save(workspaceRoot string) error {
 // A module needs relinting if:
 // 1. Its source files changed
 // 2. It's a new module (not in previous state)
-// 3. Its previous lint run failed (had issues)
+// 3. Its previous lint run failed (had issues).
 func DetectChanges(workspaceRoot string, moduleFiles map[string][]string) (*ChangeResult, error) {
 	start := time.Now()
 
@@ -240,7 +240,7 @@ func DetectChanges(workspaceRoot string, moduleFiles map[string][]string) (*Chan
 }
 
 // UpdateModuleState updates the lint state for linted modules.
-// lintedModules maps moniker -> whether lint passed (true = no issues)
+// lintedModules maps moniker -> whether lint passed (true = no issues).
 func UpdateModuleState(workspaceRoot string, lintedModules map[string]bool, moduleFiles map[string][]string) error {
 	// Load or create state
 	state, err := Load(workspaceRoot)

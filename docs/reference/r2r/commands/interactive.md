@@ -10,7 +10,9 @@ r2r interactive <extension-name> [flags]
 
 ## Description
 
-The `interactive` command starts an extension's Docker container with an interactive shell. Useful for debugging, exploring the container environment, or running commands manually inside the extension.
+The `interactive` command starts an extension's Docker container with an interactive shell.
+
+Useful for debugging, exploring the container environment, or running commands manually inside the extension.
 
 **Use cases:**
 

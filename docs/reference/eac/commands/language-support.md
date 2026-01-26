@@ -207,25 +207,27 @@ To add support for a new language:
 
 1. **Create a handler** - Implement the `Builder` or `Runner` interface
 2. **Register capabilities** - Define what the handler can do
-3. **Define module type** - Create default file patterns and settings
+3. **Define component type** - Create default file patterns and settings
 4. **Register handler** - Add to handler registry in `init()`
 
-See [Module Types Reference](../architecture/module-types.md#adding-custom-module-types) for detailed instructions.
+See [Component Types Reference](../architecture/component-types.md) for detailed instructions.
 
 ---
 
 ## Language Support Summary
 
 <!-- markdownlint-disable MD060 -->
-| Language       | Native Support   | Build         | Test                   | Notes                                |
-| -------------- | ---------------- | ------------- | ---------------------- | ------------------------------------ |
-| **Go**         | ✅ Yes           | ✅ Full       | ✅ gotest, godog       | Complete toolchain integration       |
-| **TypeScript** | ✅ Yes           | ✅ Full       | ✅ mocha, cucumber-js  | npm and tsc support                  |
-| **JavaScript** | ✅ Yes           | ✅ npm        | ✅ mocha, cucumber-js  | Via TypeScript module type           |
-| **Docker**     | ✅ Yes           | ✅ buildx     | -                      | Language-agnostic containerization   |
-| **Python**     | ⚠️ Container      | ⚠️ Custom      | ⚠️ Custom               | Use `container` type with Dockerfile |
-| **Rust**       | ⚠️ Container      | ⚠️ Custom      | ⚠️ Custom               | Use `container` type with Dockerfile |
-| **Java**       | ⚠️ Container      | ⚠️ Custom      | ⚠️ Custom               | Use `container` type with Dockerfile |
+
+| Language       | Native Support | Build     | Test                  | Notes                                |
+| -------------- | -------------- | --------- | --------------------- | ------------------------------------ |
+| **Go**         | ✅ Yes         | ✅ Full   | ✅ gotest, godog      | Complete toolchain integration       |
+| **TypeScript** | ✅ Yes         | ✅ Full   | ✅ mocha, cucumber-js | npm and tsc support                  |
+| **JavaScript** | ✅ Yes         | ✅ npm    | ✅ mocha, cucumber-js | Via TypeScript module type           |
+| **Docker**     | ✅ Yes         | ✅ buildx | -                     | Language-agnostic containerization   |
+| **Python**     | ⚠️ Container    | ⚠️ Custom  | ⚠️ Custom              | Use `container` type with Dockerfile |
+| **Rust**       | ⚠️ Container    | ⚠️ Custom  | ⚠️ Custom              | Use `container` type with Dockerfile |
+| **Java**       | ⚠️ Container    | ⚠️ Custom  | ⚠️ Custom              | Use `container` type with Dockerfile |
+
 <!-- markdownlint-enable MD060 -->
 
 **Legend:**
@@ -238,7 +240,7 @@ See [Module Types Reference](../architecture/module-types.md#adding-custom-modul
 
 ## Related Documentation
 
-- [Module Types Reference](../architecture/module-types.md) - Detailed module type specifications
+- [Component Types Reference](../architecture/component-types.md) - Detailed component type specifications
 - [Architecture](../architecture/) - System architecture and component design
 - [Build Command](./build/build.md) - Build command reference
 - [Test Command](./test/test.md) - Test command reference

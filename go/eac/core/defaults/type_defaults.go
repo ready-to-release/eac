@@ -69,9 +69,8 @@ type RepoDefaults struct {
 	Design   string
 }
 
-// ApplyTypeDefaults applies type-specific defaults to module fields.
-// Only applies defaults to fields that are nil/empty (doesn't override explicit values).
-// Returns the applied values.
+// ModuleDefaults holds the resolved default values for a module.
+// These values are applied to fields that are nil/empty (doesn't override explicit values).
 type ModuleDefaults struct {
 	Source          []string
 	Config          []string

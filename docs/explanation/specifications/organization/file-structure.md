@@ -226,7 +226,9 @@ The project provides a complete template at `templates/specs/specification.featu
 - Examples of all tag types
 - Comments explaining choices
 
-**Documentation examples** (like in this guide) omit the notes for brevity, but users should **copy the actual template file** to get full context.
+#### Documentation examples
+
+(like in this guide) omit the notes for brevity, but users should **copy the actual template file** to get full context.
 
 ### Starting a New Feature
 

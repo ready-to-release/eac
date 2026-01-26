@@ -93,25 +93,25 @@ pre-commit install
 
 **Target**: 5-10 minutes maximum
 
-| Strategy | Description |
-|----------|-------------|
-| Incremental scanning | Only scan changed files |
-| Local caching | Reuse results from previous runs |
-| Fail fast | Stop on first critical failure |
-| Parallel execution | Run independent checks in parallel |
+| Strategy             | Description                        |
+| -------------------- | ---------------------------------- |
+| Incremental scanning | Only scan changed files            |
+| Local caching        | Reuse results from previous runs   |
+| Fail fast            | Stop on first critical failure     |
+| Parallel execution   | Run independent checks in parallel |
 
 ---
 
 ## Tool Reference
 
-| Check | Tool | Purpose |
-|-------|------|---------|
-| Format | `go fmt`, `prettier` | Code style |
-| Lint | `golangci-lint`, `eslint` | Code quality |
-| Unit tests | `go test -short` | Fast tests only |
-| Secrets | `trivy`, `gitleaks` | Credential detection |
-| Dependencies | `trivy fs` | Vulnerability scan |
-| Build | `go build` | Compilation check |
+| Check        | Tool                      | Purpose              |
+| ------------ | ------------------------- | -------------------- |
+| Format       | `go fmt`, `prettier`      | Code style           |
+| Lint         | `golangci-lint`, `eslint` | Code quality         |
+| Unit tests   | `go test -short`          | Fast tests only      |
+| Secrets      | `trivy`, `gitleaks`       | Credential detection |
+| Dependencies | `trivy fs`                | Vulnerability scan   |
+| Build        | `go build`                | Compilation check    |
 
 ---
 

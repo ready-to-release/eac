@@ -1,6 +1,8 @@
 # r2r-cli
 
-The `r2r-cli` module is the Ready-to-Release command-line interface for executing containerized development workflows. It manages Docker-based extensions that provide isolated, reproducible development environments.
+The `r2r-cli` module is the Ready-to-Release command-line interface for executing containerized development workflows.
+
+It manages Docker-based extensions that provide isolated, reproducible development environments.
 
 ## System Context
 

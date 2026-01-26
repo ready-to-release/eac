@@ -594,10 +594,10 @@ func (c *EACConfig) GetModuleForBook(bookName string) string {
 	if c.Repository == nil {
 		return ""
 	}
-	for _, module := range c.Repository.Modules {
-		for _, b := range module.GetBooks() {
+	for i := range c.Repository.Modules {
+		for _, b := range c.Repository.Modules[i].GetBooks() {
 			if b == bookName {
-				return module.Moniker
+				return c.Repository.Modules[i].Moniker
 			}
 		}
 	}
@@ -623,9 +623,9 @@ func (c *EACConfig) GetModulesWithEvidenceBooks() []string {
 		return nil
 	}
 	var modules []string
-	for _, module := range c.Repository.Modules {
-		if len(module.EvidenceBooks) > 0 {
-			modules = append(modules, module.Moniker)
+	for i := range c.Repository.Modules {
+		if len(c.Repository.Modules[i].EvidenceBooks) > 0 {
+			modules = append(modules, c.Repository.Modules[i].Moniker)
 		}
 	}
 	return modules
@@ -797,7 +797,7 @@ func (c *EACConfig) filterArtifacts(artifacts []Artifact, buildAll bool) []Artif
 }
 
 // getArchitecturesForPlatform determines supported architectures based on OS and pattern.
-func (c *EACConfig) getArchitecturesForPlatform(os, pattern string) []string {
+func (c *EACConfig) getArchitecturesForPlatform(targetOS, pattern string) []string {
 	// Check for architecture-specific patterns
 	if containsAny(pattern, "-amd64", "{os}-amd64") {
 		return []string{"amd64"}
@@ -806,7 +806,7 @@ func (c *EACConfig) getArchitecturesForPlatform(os, pattern string) []string {
 		return []string{"arm64"}
 	}
 	// Windows only supports amd64
-	if os == "windows" {
+	if targetOS == "windows" {
 		return []string{"amd64"}
 	}
 	// Linux and Darwin support both
@@ -814,8 +814,8 @@ func (c *EACConfig) getArchitecturesForPlatform(os, pattern string) []string {
 }
 
 // deriveArtifactID creates an artifact ID based on OS, arch, and compression.
-func (c *EACConfig) deriveArtifactID(artifact Artifact, os, arch string) string {
-	baseID := os + "-" + arch
+func (c *EACConfig) deriveArtifactID(artifact Artifact, targetOS, arch string) string {
+	baseID := targetOS + "-" + arch
 	if artifact.Compression == CompressionUPX {
 		return baseID + "-upx"
 	}

@@ -4,8 +4,8 @@ Technical guides for working with the EAC extension architecture and development
 
 ## Available Guides
 
-| Guide | Description |
-|-------|-------------|
+| Guide                                           | Description                                        |
+| ----------------------------------------------- | -------------------------------------------------- |
 | [Viewing Architecture](viewing-architecture.md) | How to view and work with C4 architecture diagrams |
 
 ## What's in a Guide?

@@ -1,6 +1,8 @@
 # eac-mcp-commands
 
-The `eac-mcp-commands` module provides Model Context Protocol (MCP) server integration for AI assistants like Claude. It exposes EAC commands as MCP tools that can be discovered and invoked by AI agents.
+The `eac-mcp-commands` module provides Model Context Protocol (MCP) server integration for AI assistants like Claude.
+
+It exposes EAC commands as MCP tools that can be discovered and invoked by AI agents.
 
 ## System Context
 

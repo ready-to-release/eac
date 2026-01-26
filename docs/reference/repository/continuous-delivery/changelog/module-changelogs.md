@@ -4,7 +4,9 @@ Reference for module-level changelogs.
 
 ## Overview
 
-Each deployable module maintains its own changelog to track module-specific changes. Module changelogs are independent of the repository changelog and follow the same Keep a Changelog format.
+Each deployable module maintains its own changelog to track module-specific changes.
+
+Module changelogs are independent of the repository changelog and follow the same Keep a Changelog format.
 
 **Format:** [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/)
 
@@ -12,7 +14,9 @@ Each deployable module maintains its own changelog to track module-specific chan
 
 ## Module Changelog Locations
 
-Module changelog locations are defined in `.r2r/eac/repository.yml` under `versioning.changelog` and follow the **release type convention**. See [Understanding Release Types](../release-types.md) for complete details.
+Module changelog locations are defined in `.r2r/eac/repository.yml` under `versioning.changelog` and follow the **release type convention**.
+
+See [Understanding Release Types](../release-types.md) for complete details.
 
 ### Location Rules by Release Type
 

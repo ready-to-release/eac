@@ -2,9 +2,16 @@
 
 ## Introduction
 
-Merge request quality gates operate at **Stage 3** of the CD Model, serving as the primary approval checkpoint before code merges to the main branch. Stage 3 combines **automated validation** (repeated pre-commit checks plus integration tests) with **human judgment** (peer review).
+Merge request quality gates operate at **Stage 3** of the CD Model,
+serving as the primary approval checkpoint before code merges to the main branch.
 
-This stage is unique because it's the only stage in the CD Model that **always** requires manual human approval - the peer reviewer's sign-off. In the RA pattern, Stage 3 is the first-level approval (code quality). In the CDe pattern, Stage 3 becomes a combined first and second-level approval (code quality AND production approval).
+Stage 3 combines **automated validation** (repeated pre-commit checks plus integration tests) with **human judgment** (peer review).
+
+This stage is unique because it's the only stage in the CD Model that **always** requires manual human approval - the peer reviewer's sign-off.
+
+In the RA pattern, Stage 3 is the first-level approval (code quality).
+
+In the CDe pattern, Stage 3 becomes a combined first and second-level approval (code quality AND production approval).
 
 ---
 
@@ -32,7 +39,10 @@ Even though Stage 2 already validated these, Stage 3 repeats them because:
 - Base branch might have changed since local check
 
 **Parallel execution**:
-While the peer reviewer examines the code, automated checks run in parallel. By the time review is complete, automated validation results are available.
+
+While the peer reviewer examines the code, automated checks run in parallel.
+
+By the time review is complete, automated validation results are available.
 
 ### Human Judgment
 
@@ -58,7 +68,10 @@ Automation catches mechanical issues (syntax, style, test failures). Humans catc
 - Inappropriate abstractions
 
 **The balance**:
-Automated checks enforce minimum standards. Human review ensures code is not just correct, but maintainable, secure, and well-designed.
+
+Automated checks enforce minimum standards.
+
+Human review ensures code is not just correct, but maintainable, secure, and well-designed.
 
 ---
 
@@ -165,7 +178,10 @@ Stage 3 runs comprehensive automated validation in the CI/CD pipeline (Build Age
 - External service integration (with test doubles)
 
 **Why not at Stage 2**:
-Integration tests are too slow for pre-commit (violates 5-10 minute budget) and require infrastructure (database, services) not available on developer laptops.
+
+Integration tests are too slow for pre-commit (violates 5-10 minute budget).
+
+They require infrastructure (database, services) not available on developer laptops.
 
 ### Code Coverage Analysis
 
@@ -203,7 +219,10 @@ Coverage analysis requires full test suite execution. Results inform peer review
 - Command injection risks
 
 **Why at Stage 3**:
-SAST tools can be slow (minutes) and noisy (many false positives). Stage 3 is appropriate for comprehensive analysis.
+
+SAST tools can be slow (minutes) and noisy (many false positives).
+
+Stage 3 is appropriate for comprehensive analysis.
 
 **Handling false positives**:
 
@@ -319,7 +338,9 @@ In CDe pattern, Stage 3 = Combined First and Second-Level Approval. When a peer 
 
 ### Why Coverage Matters
 
-Code coverage indicates how much of your code is executed by tests. High coverage reduces (but doesn't eliminate) the risk of undetected bugs.
+Code coverage indicates how much of your code is executed by tests.
+
+High coverage reduces (but doesn't eliminate) the risk of undetected bugs.
 
 **Benefits**:
 

@@ -1,3 +1,4 @@
+// Package formats provides export formatters for manual test scenarios (CSV, JSON, Markdown).
 package formats
 
 import (

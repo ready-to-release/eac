@@ -32,7 +32,7 @@ func FilterScenariosByTag(scenarios []ScenarioDetail, tag string) []ScenarioDeta
 }
 
 // GenerateScenarioID generates a unique ID for a scenario based on its name and file.
-// Format: feature-name:scenario-name (slugified)
+// Format: feature-name:scenario-name (slugified).
 func GenerateScenarioID(scenario ScenarioDetail) string {
 	featureSlug := slugify(scenario.FeatureName)
 	scenarioSlug := slugify(scenario.Name)

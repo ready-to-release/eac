@@ -151,11 +151,11 @@ Project Root/
 
 **Pattern**: `@control:<family>-<number>` or `@control:<family>-<number>(<enhancement>)`
 
-| Component     | Description                            | Example      |
-| ------------- | -------------------------------------- | ------------ |
-| `family`      | 2-4 lowercase letters                  | `ac`, `ia`   |
-| `number`      | 1+ digits                              | `2`, `12`    |
-| `enhancement` | Optional number in parentheses         | `(1)`, `(10)`|
+| Component     | Description                            | Example       |
+| ------------- | -------------------------------------- | ------------- |
+| `family`      | 2-4 lowercase letters                  | `ac`, `ia`    |
+| `number`      | 1+ digits                              | `2`, `12`     |
+| `enhancement` | Optional number in parentheses         | `(1)`, `(10)` |
 
 **Examples**:
 

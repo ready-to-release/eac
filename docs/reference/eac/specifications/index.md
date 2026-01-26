@@ -4,9 +4,9 @@ Technical reference for EAC specification validation and tag system implementati
 
 ## In This Section
 
-| Reference                         | Description                                    |
-| --------------------------------- | ---------------------------------------------- |
-| [Validation](./validation.md)     | Specification validation commands and options  |
+| Reference                     | Description                                   |
+| ----------------------------- | --------------------------------------------- |
+| [Validation](./validation.md) | Specification validation commands and options |
 
 ## Quick Reference
 

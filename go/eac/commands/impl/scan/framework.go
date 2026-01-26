@@ -23,18 +23,32 @@ import (
 
 func init() {
 	// Register scan component-level execution support
-	cmdframework.SetScanComponentWorkProvider(FlattenModulesToScanComponentWork)
-	cmdframework.SetScanComponentWorker(scanComponentWorker)
+	cmdframework.RegisterComponentProvider(cmdframework.CommandTypeScan, FlattenModulesToScanComponentWork)
+	cmdframework.RegisterComponentWorker(cmdframework.CommandTypeScan, scanComponentWorker)
 }
 
 // scannerSemaphores limits concurrent executions per scanner type.
-// Each scanner type (trivy, semgrep, zap) gets its own semaphore with capacity 2.
+// Each scanner type (trivy, semgrep, zap) gets its own semaphore with capacity 3.
 // This allows some parallelism while preventing resource contention.
 var (
 	scannerSemaphores        = make(map[internal.ScannerType]chan struct{})
 	semaphoreMu              sync.Mutex
 	scannerSemaphoreCapacity = 3 // Max concurrent executions per scanner type
 )
+
+// ScannerTurboBoost is the additional capacity for scanner semaphores in turbo mode.
+const ScannerTurboBoost = 2
+
+// SetTurboScannerCapacity enables turbo mode for scanner semaphores.
+// This increases the per-scanner-type concurrency from 3 to 5 (3 + 2).
+// Must be called before scans start, as it resets existing semaphores.
+func SetTurboScannerCapacity() {
+	semaphoreMu.Lock()
+	defer semaphoreMu.Unlock()
+	scannerSemaphoreCapacity = 3 + ScannerTurboBoost // 5
+	// Reset semaphores to pick up new capacity
+	scannerSemaphores = make(map[internal.ScannerType]chan struct{})
+}
 
 // getScannerSemaphore returns the semaphore for a scanner type, creating it if needed.
 func getScannerSemaphore(scannerType internal.ScannerType) chan struct{} {
@@ -185,13 +199,13 @@ func scanWorkerWrapper(ctx *cmdframework.ExecutionContext, moniker string, logWr
 	if err != nil {
 		result.Success = false
 		result.ErrorMessage = err.Error()
-		handleScanFailure(ctx, scanCfg, module, moniker, scanStart, err, logWriter)
+		handleScanFailure(ctx, scanCfg, module, moniker, "", scanStart, err, logWriter)
 		scanCfg.ScanResults[moniker] = result
 		return 1
 	}
 
 	// Write evidence and update manifest
-	evidencePath, writeErr := handleScanSuccess(ctx, scanCfg, module, moniker, scanStart, findings, logWriter)
+	evidencePath, writeErr := handleScanSuccess(ctx, scanCfg, module, moniker, "", scanStart, findings, logWriter)
 	if writeErr != nil {
 		result.Success = false
 		result.ErrorMessage = writeErr.Error()
@@ -310,12 +324,12 @@ func runComponentScanner(ctx *cmdframework.ExecutionContext, module *modules.Mod
 	// Run the appropriate scanner on the component root
 	findings, err := runScannerOnPath(ctx, componentRoot, scannerType, multiCfg, logWriter)
 	if err != nil {
-		handleComponentScanFailure(ctx, scanCfg, module, moniker, component, scanStart, err, logWriter)
+		handleScanFailure(ctx, scanCfg, module, moniker, component, scanStart, err, logWriter)
 		return 1
 	}
 
 	// Write evidence and update manifest
-	_, writeErr := handleComponentScanSuccess(ctx, scanCfg, module, moniker, component, scanStart, findings, logWriter)
+	_, writeErr := handleScanSuccess(ctx, scanCfg, module, moniker, component, scanStart, findings, logWriter)
 	if writeErr != nil {
 		return 1
 	}
@@ -361,104 +375,82 @@ func runScannerOnPath(ctx *cmdframework.ExecutionContext, targetPath string, sca
 	}
 }
 
-// handleComponentScanFailure handles a failed component scan.
-func handleComponentScanFailure(ctx *cmdframework.ExecutionContext, scanCfg *ScanFrameworkConfig, module *modules.ModuleContract, moniker, component string, scanStart time.Time, scanErr error, logWriter io.Writer) {
-	output.Writeln(logWriter, "  ❌ Failed: %v", scanErr)
+// handleScanFailure handles a failed scan (module or component level).
+// If component is empty, treats as module-level scan.
+func handleScanFailure(ctx *cmdframework.ExecutionContext, scanCfg *ScanFrameworkConfig,
+	module *modules.ModuleContract, moniker, component string,
+	scanStart time.Time, scanErr error, logWriter io.Writer) {
 
-	// Write error evidence to component directory
-	outputPath, writeErr := internal.WriteComponentErrorEvidence(ctx.WorkspaceRoot, moniker, component, scanCfg.ScannerType, scanErr.Error())
-	if writeErr != nil {
-		output.Writeln(logWriter, "  Failed to write error evidence: %v", writeErr)
-	} else {
-		output.Writeln(logWriter, "  📄 Error evidence: %s", outputPath)
-	}
-
-	// Update scan manifest
-	updateComponentScanManifest(ctx, scanCfg, module, moniker, component, scanStart, manifest.ScanStatusFailed, outputPath, scanErr.Error())
-}
-
-// handleComponentScanSuccess handles a successful component scan.
-func handleComponentScanSuccess(ctx *cmdframework.ExecutionContext, scanCfg *ScanFrameworkConfig, module *modules.ModuleContract, moniker, component string, scanStart time.Time, findings interface{}, logWriter io.Writer) (string, error) {
-	// Write evidence file to component directory
-	outputPath, err := internal.WriteComponentEvidence(ctx.WorkspaceRoot, moniker, component, scanCfg.ScannerType, findings)
-	if err != nil {
-		output.Writeln(logWriter, "  ❌ Failed to write evidence: %v", err)
-		updateComponentScanManifest(ctx, scanCfg, module, moniker, component, scanStart, manifest.ScanStatusFailed, "", err.Error())
-		return "", err
-	}
-
-	// Update scan manifest
-	updateComponentScanManifest(ctx, scanCfg, module, moniker, component, scanStart, manifest.ScanStatusPassed, outputPath, "")
-
-	output.Writeln(logWriter, "  ✅ Success: %s", outputPath)
-	return outputPath, nil
-}
-
-// updateComponentScanManifest updates the scan manifest for a component.
-func updateComponentScanManifest(ctx *cmdframework.ExecutionContext, scanCfg *ScanFrameworkConfig, module *modules.ModuleContract, moniker, component string, scanStart time.Time, status, evidencePath, errorMsg string) {
-	duration := time.Since(scanStart)
-	// Use component-level scan output directory
-	componentScanDir := paths.ComponentScanOutputPath(ctx.WorkspaceRoot, moniker, component)
-
-	mf, err := manifest.LoadOrCreateScanManifest(componentScanDir, moniker+"/"+component, module.Components.GetComponentType(component), scanCfg.GitCommit)
-	if err != nil {
-		log.Warnf("Failed to load/create scan manifest: %v", err)
-		return
-	}
-
-	result := manifest.ScannerResult{
-		Status:          status,
-		RunTime:         time.Now(),
-		DurationSeconds: duration.Seconds(),
-		EvidencePath:    evidencePath,
-		Error:           errorMsg,
-	}
-	mf.AddScannerResult(string(scanCfg.ScannerType), result)
-
-	if err := mf.Save(componentScanDir); err != nil {
-		log.Warnf("Failed to save scan manifest: %v", err)
-	}
-}
-
-// handleScanFailure handles a failed scan.
-func handleScanFailure(ctx *cmdframework.ExecutionContext, scanCfg *ScanFrameworkConfig, module *modules.ModuleContract, moniker string, scanStart time.Time, scanErr error, logWriter io.Writer) {
 	output.Writeln(logWriter, "  ❌ Failed: %v", scanErr)
 
 	// Write error evidence
-	outputPath, writeErr := internal.WriteErrorEvidence(ctx.WorkspaceRoot, moniker, scanCfg.ScannerType, scanErr.Error())
+	var outputPath string
+	var writeErr error
+	if component != "" {
+		outputPath, writeErr = internal.WriteComponentErrorEvidence(
+			ctx.WorkspaceRoot, moniker, component, scanCfg.ScannerType, scanErr.Error())
+	} else {
+		outputPath, writeErr = internal.WriteErrorEvidence(
+			ctx.WorkspaceRoot, moniker, scanCfg.ScannerType, scanErr.Error())
+	}
+
 	if writeErr != nil {
 		output.Writeln(logWriter, "  Failed to write error evidence: %v", writeErr)
 	} else {
 		output.Writeln(logWriter, "  📄 Error evidence: %s", outputPath)
 	}
 
-	// Update scan manifest
-	updateScanManifest(ctx, scanCfg, module, moniker, scanStart, manifest.ScanStatusFailed, outputPath, scanErr.Error())
+	updateScanManifest(ctx, scanCfg, module, moniker, component, scanStart,
+		manifest.ScanStatusFailed, outputPath, scanErr.Error())
 }
 
-// handleScanSuccess handles a successful scan.
-func handleScanSuccess(ctx *cmdframework.ExecutionContext, scanCfg *ScanFrameworkConfig, module *modules.ModuleContract, moniker string, scanStart time.Time, findings interface{}, logWriter io.Writer) (string, error) {
-	// Write evidence file
-	outputPath, err := internal.WriteEvidence(ctx.WorkspaceRoot, moniker, scanCfg.ScannerType, findings)
+// handleScanSuccess handles a successful scan (module or component level).
+func handleScanSuccess(ctx *cmdframework.ExecutionContext, scanCfg *ScanFrameworkConfig,
+	module *modules.ModuleContract, moniker, component string,
+	scanStart time.Time, findings interface{}, logWriter io.Writer) (string, error) {
+
+	var outputPath string
+	var err error
+	if component != "" {
+		outputPath, err = internal.WriteComponentEvidence(
+			ctx.WorkspaceRoot, moniker, component, scanCfg.ScannerType, findings)
+	} else {
+		outputPath, err = internal.WriteEvidence(
+			ctx.WorkspaceRoot, moniker, scanCfg.ScannerType, findings)
+	}
+
 	if err != nil {
 		output.Writeln(logWriter, "  ❌ Failed to write evidence: %v", err)
-		updateScanManifest(ctx, scanCfg, module, moniker, scanStart, manifest.ScanStatusFailed, "", err.Error())
+		updateScanManifest(ctx, scanCfg, module, moniker, component, scanStart,
+			manifest.ScanStatusFailed, "", err.Error())
 		return "", err
 	}
 
-	// Update scan manifest
-	updateScanManifest(ctx, scanCfg, module, moniker, scanStart, manifest.ScanStatusPassed, outputPath, "")
-
+	updateScanManifest(ctx, scanCfg, module, moniker, component, scanStart,
+		manifest.ScanStatusPassed, outputPath, "")
 	output.Writeln(logWriter, "  ✅ Success: %s", outputPath)
 	return outputPath, nil
 }
 
-// updateScanManifest updates the scan manifest for a module.
-func updateScanManifest(ctx *cmdframework.ExecutionContext, scanCfg *ScanFrameworkConfig, module *modules.ModuleContract, moniker string, scanStart time.Time, status, evidencePath, errorMsg string) {
-	duration := time.Since(scanStart)
-	moduleScanDir := ctx.EACConfig.Repository.ScanModuleOutputPathAbs(ctx.WorkspaceRoot, moniker)
+// updateScanManifest updates the scan manifest for a module or component.
+func updateScanManifest(ctx *cmdframework.ExecutionContext, scanCfg *ScanFrameworkConfig,
+	module *modules.ModuleContract, moniker, component string,
+	scanStart time.Time, status, evidencePath, errorMsg string) {
 
-	mf, err := manifest.LoadOrCreateScanManifest(moduleScanDir, moniker, module.GetComponentTypesDisplay(), scanCfg.GitCommit)
+	duration := time.Since(scanStart)
+
+	var scanDir, identifier, moduleType string
+	if component != "" {
+		scanDir = paths.ComponentScanOutputPath(ctx.WorkspaceRoot, moniker, component)
+		identifier = moniker + "/" + component
+		moduleType = module.Components.GetComponentType(component)
+	} else {
+		scanDir = ctx.EACConfig.Repository.ScanModuleOutputPathAbs(ctx.WorkspaceRoot, moniker)
+		identifier = moniker
+		moduleType = module.GetComponentTypesDisplay()
+	}
+
+	mf, err := manifest.LoadOrCreateScanManifest(scanDir, identifier, moduleType, scanCfg.GitCommit)
 	if err != nil {
 		log.Warnf("Failed to load/create scan manifest: %v", err)
 		return
@@ -473,7 +465,7 @@ func updateScanManifest(ctx *cmdframework.ExecutionContext, scanCfg *ScanFramewo
 	}
 	mf.AddScannerResult(string(scanCfg.ScannerType), result)
 
-	if err := mf.Save(moduleScanDir); err != nil {
+	if err := mf.Save(scanDir); err != nil {
 		log.Warnf("Failed to save scan manifest: %v", err)
 	}
 }
@@ -784,12 +776,12 @@ func runSingleScanner(ctx *cmdframework.ExecutionContext, module *modules.Module
 	// Run the appropriate scanner
 	findings, err := runScanner(ctx, module, scannerType, multiCfg, logWriter)
 	if err != nil {
-		handleScanFailure(ctx, scanCfg, module, module.Moniker, scanStart, err, logWriter)
+		handleScanFailure(ctx, scanCfg, module, module.Moniker, "", scanStart, err, logWriter)
 		return 1
 	}
 
 	// Write evidence and update manifest
-	_, writeErr := handleScanSuccess(ctx, scanCfg, module, module.Moniker, scanStart, findings, logWriter)
+	_, writeErr := handleScanSuccess(ctx, scanCfg, module, module.Moniker, "", scanStart, findings, logWriter)
 	if writeErr != nil {
 		return 1
 	}

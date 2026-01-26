@@ -24,26 +24,17 @@ import (
 //go:embed assets/risk/profile-template.json
 var profileTemplate string
 
-//go:embed assets/risk/assessment-results-template.json
-var assessmentResultsTemplate string
-
 //go:embed assets/risk/risk-assessment.md
 var riskAssessmentDocument string
 
 //go:embed assets/risk/cucumber-results-template.json
 var cucumberResultsTemplate string
 
-//go:embed assets/risk/assessment-with-findings.json
-var assessmentWithFindingsTemplate string
-
 // riskTestState holds state for OSCAL-based risk tests.
 type riskTestState struct {
-	assessmentPath   string
-	moduleName       string
-	profilePath      string
-	assessmentResult string
-	controlIDs       []string
-	mockAIResponse   string
+	assessmentPath string
+	moduleName     string
+	profilePath    string
 }
 
 // registerRiskSteps registers step definitions for new OSCAL-based risk commands.
@@ -106,7 +97,7 @@ func registerRiskSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 		if err := os.RemoveAll(contractsDir); err != nil && !os.IsNotExist(err) {
 			return fmt.Errorf("failed to clear contracts directory: %w", err)
 		}
-		if err := os.MkdirAll(contractsDir, 0o755); err != nil {
+		if err := os.MkdirAll(contractsDir, 0o750); err != nil {
 			return fmt.Errorf("failed to create contracts directory: %w", err)
 		}
 
@@ -157,7 +148,7 @@ paths:
 
 		// Create contracts directory if it doesn't exist (but don't clear it)
 		contractsDir := filepath.Join(ctx.CurrentWorkDir, "contracts")
-		if err := os.MkdirAll(contractsDir, 0o755); err != nil {
+		if err := os.MkdirAll(contractsDir, 0o750); err != nil {
 			return fmt.Errorf("failed to create contracts directory: %w", err)
 		}
 
@@ -263,7 +254,7 @@ paths:
 		if err := os.RemoveAll(contractsDir); err != nil && !os.IsNotExist(err) {
 			return fmt.Errorf("failed to clear contracts directory: %w", err)
 		}
-		if err := os.MkdirAll(contractsDir, 0o755); err != nil {
+		if err := os.MkdirAll(contractsDir, 0o750); err != nil {
 			return fmt.Errorf("failed to create contracts directory: %w", err)
 		}
 
@@ -316,7 +307,7 @@ paths:
 		if err := os.RemoveAll(contractsDir); err != nil && !os.IsNotExist(err) {
 			return fmt.Errorf("failed to clear contracts directory: %w", err)
 		}
-		if err := os.MkdirAll(contractsDir, 0o755); err != nil {
+		if err := os.MkdirAll(contractsDir, 0o750); err != nil {
 			return fmt.Errorf("failed to create contracts directory: %w", err)
 		}
 
@@ -631,13 +622,6 @@ func createValidProfile(uuid, title string, controlIDs []string) string {
 	return result
 }
 
-func createValidAssessmentResults(uuid, title, profileRef string) string {
-	result := strings.ReplaceAll(assessmentResultsTemplate, "{{UUID}}", uuid)
-	result = strings.ReplaceAll(result, "{{TITLE}}", title)
-	result = strings.ReplaceAll(result, "{{PROFILE_REF}}", profileRef)
-	return result
-}
-
 func createMockCucumberResults(controlTags []string) string {
 	tags := "["
 	for i, tag := range controlTags {
@@ -651,34 +635,10 @@ func createMockCucumberResults(controlTags []string) string {
 	return strings.ReplaceAll(cucumberResultsTemplate, "{{TAGS}}", tags)
 }
 
-func createMockAssessmentResults(module string, satisfied, notSatisfied int) string {
-	findings := make([]string, 0)
-
-	// Add satisfied findings
-	for i := 0; i < satisfied; i++ {
-		finding := fmt.Sprintf(`{"uuid":"finding-%d","title":"Finding %d","description":"Test finding","target":{"target-id":"ac-%d","status":{"state":"satisfied"}}}`,
-			i, i, i+1)
-		findings = append(findings, finding)
-	}
-
-	// Add not-satisfied findings
-	for i := 0; i < notSatisfied; i++ {
-		finding := fmt.Sprintf(`{"uuid":"finding-%d","title":"Finding %d","description":"Test finding","target":{"target-id":"ia-%d","status":{"state":"not-satisfied"}}}`,
-			satisfied+i, satisfied+i, i+1)
-		findings = append(findings, finding)
-	}
-
-	findingsJSON := strings.Join(findings, ",")
-
-	result := strings.ReplaceAll(assessmentWithFindingsTemplate, "{{MODULE}}", module)
-	result = strings.ReplaceAll(result, "{{FINDINGS}}", findingsJSON)
-	return result
-}
-
 // createMockTestManifest creates a mock test manifest with given timestamp and control tags.
 func createMockTestManifest(module string, testTime time.Time, controlTags []string) string {
 	// Build tags array
-	var tagsArray []string
+	tagsArray := make([]string, 0, len(controlTags))
 	for _, tag := range controlTags {
 		tagsArray = append(tagsArray, fmt.Sprintf("@control(%s)", tag))
 	}

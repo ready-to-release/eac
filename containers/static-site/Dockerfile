@@ -2,7 +2,8 @@
 # Lightweight nginx image for serving pre-built static files
 # ~25MB image size
 
-FROM nginx:alpine
+ARG NGINX_VERSION=alpine
+FROM nginx:${NGINX_VERSION}
 
 # Remove default nginx config
 RUN rm /etc/nginx/conf.d/default.conf

@@ -204,7 +204,7 @@ func (v *ProfileValidator) Validate(output string, context map[string]interface{
 							errors = append(errors, *formatter.FormatEnhancedError(
 								validation.ErrOSCALInvalidControlID,
 								fmt.Sprintf("Import[%d].include-controls[%d].with-ids[%d]: Invalid control ID '%s'", i, j, k, id),
-								fmt.Sprintf(`"with-ids": ["%s"]`, id),
+								fmt.Sprintf(`"with-ids": [%q]`, id),
 								"Valid NIST 800-53 control ID format",
 								`Valid examples:
   "ac-1"   - Access Control Policy
@@ -285,7 +285,7 @@ func IsValidControlID(id string) bool {
 
 	// Number part should be non-empty and numeric
 	number := parts[1]
-	if len(number) == 0 {
+	if number == "" {
 		return false
 	}
 

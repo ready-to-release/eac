@@ -28,13 +28,18 @@ func FormatCompact(s *Summary) string {
 		b.WriteString(fmt.Sprintf("Components: %d\n", s.ComponentCount))
 	}
 
-	// Layers (only if multiple)
+	// Module layers (only if multiple)
 	if s.LayerCount > 1 {
-		layerInfo := fmt.Sprintf("Layers: %d (%s)", s.LayerCount, formatLayerSizes(s.LayerSizes()))
+		layerInfo := fmt.Sprintf("Module Layers: %d (%s)", s.LayerCount, formatLayerSizes(s.LayerSizes()))
 		if s.FlatExecution {
 			layerInfo += " (running all layers in parallel)"
 		}
 		b.WriteString(layerInfo + "\n")
+	}
+
+	// Component layers (only if multiple)
+	if s.ComponentLayerCount > 1 {
+		b.WriteString(fmt.Sprintf("Component Layers: %d (%s)\n", s.ComponentLayerCount, formatLayerSizes(s.ComponentLayerSizes())))
 	}
 
 	// Test suite info
@@ -79,15 +84,25 @@ func FormatCompact(s *Summary) string {
 	// Deps status
 	if s.DepsStatus.Skipped {
 		b.WriteString("Deps: ⏭️  skipped (--skip-deps)\n")
-	} else if s.DepsStatus.Verified && len(s.DepsStatus.Missing) > 0 {
-		b.WriteString(fmt.Sprintf("Deps: ❌ %d/%d available (%s missing)\n",
-			len(s.DepsStatus.Available)-len(s.DepsStatus.Missing),
-			len(s.DepsStatus.Required),
-			strings.Join(s.DepsStatus.Missing, ", ")))
 	} else if s.DepsStatus.Verified && len(s.DepsStatus.Required) > 0 {
-		b.WriteString(fmt.Sprintf("Deps: ✅ %d/%d available\n",
-			len(s.DepsStatus.Available),
-			len(s.DepsStatus.Required)))
+		available := countAvailableDeps(s.DepsStatus.Available)
+		required := len(s.DepsStatus.Required)
+		missing := len(s.DepsStatus.Missing)
+
+		// Sanity check: available + missing must equal required
+		if available+missing != required {
+			panic(fmt.Sprintf("DepsStatus invariant violated: available(%d) + missing(%d) != required(%d)",
+				available, missing, required))
+		}
+
+		if missing > 0 {
+			b.WriteString(fmt.Sprintf("Deps: ❌ %d/%d available (%s missing)\n",
+				available,
+				required,
+				strings.Join(s.DepsStatus.Missing, ", ")))
+		} else {
+			b.WriteString(fmt.Sprintf("Deps: ✅ %d/%d available\n", available, required))
+		}
 	}
 
 	// Artifact validation (test/scan only - build creates artifacts, doesn't need them)
@@ -519,4 +534,15 @@ func countTotalMissingArtifacts(details map[string][]string) int {
 		total += len(artifacts)
 	}
 	return total
+}
+
+// countAvailableDeps counts the number of available dependencies from results.
+func countAvailableDeps(results []DepsResult) int {
+	count := 0
+	for _, r := range results {
+		if r.Available {
+			count++
+		}
+	}
+	return count
 }

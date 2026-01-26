@@ -10,7 +10,8 @@ r2r metadata <extension-name> [flags]
 
 ## Description
 
-The `metadata` command retrieves metadata about an extension, including version information, available commands, configuration schema, and other details.
+The `metadata` command retrieves metadata about an extension, including version information,
+available commands, configuration schema, and other details.
 
 **What it retrieves:**
 

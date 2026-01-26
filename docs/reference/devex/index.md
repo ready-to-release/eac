@@ -1,6 +1,8 @@
 # Developer Experience
 
-Cross-cutting reference documentation for developers working with R2R and EAC. This section serves two distinct audiences:
+Cross-cutting reference documentation for developers working with R2R and EAC.
+
+This section serves two distinct audiences:
 
 ## Two Audiences
 

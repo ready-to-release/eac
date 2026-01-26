@@ -2,7 +2,8 @@
 
 How to plan and execute production rollbacks when deployments fail (Stage 10).
 
-For disabling features via flags, see [Feature Flags](../release-toggling/feature-flags.md) (Stage 12) - that's not a deployment rollback, just turning something off again.
+For disabling features via flags, see [Feature Flags](../release-toggling/feature-flags.md) (Stage 12)
+\- that's not a deployment rollback, just turning something off again.
 
 ---
 

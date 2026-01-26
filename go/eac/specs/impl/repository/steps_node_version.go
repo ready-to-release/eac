@@ -157,7 +157,10 @@ func (c *nodeVersionContext) extractNodeVersionFromGitHubActions() error {
 		matches := re.FindAllStringSubmatch(string(data), -1)
 		for _, match := range matches {
 			if len(match) >= 2 {
-				relPath, _ := filepath.Rel(c.repoRoot, actionFile)
+				relPath, err := filepath.Rel(c.repoRoot, actionFile)
+				if err != nil {
+					relPath = actionFile
+				}
 				c.actionVersions[relPath] = match[1]
 			}
 		}

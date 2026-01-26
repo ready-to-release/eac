@@ -39,6 +39,9 @@ func (p *Preprocessor) copySingleSource(src config.Source) (int, error) {
 	to := src.To
 	exclude := src.Exclude
 
+	// Check if this is an asset copy operation (enables lazy copying)
+	isAssetCopy := strings.Contains(from, "assets/") || strings.HasPrefix(from, "assets")
+
 	// Build the glob pattern (relative to workspace root)
 	pattern := filepath.Join(p.workspaceRoot, from)
 
@@ -53,7 +56,7 @@ func (p *Preprocessor) copySingleSource(src config.Source) (int, error) {
 		return 0, err
 	}
 
-	var copied int
+	var copied, skipped int
 	for _, match := range matches {
 		// Check if it's a file (skip directories)
 		info, err := os.Stat(match)
@@ -72,6 +75,15 @@ func (p *Preprocessor) copySingleSource(src config.Source) (int, error) {
 		// Skip .drawio files in PDF mode (they're interactive diagrams for web only)
 		if p.pdfMode && strings.HasSuffix(strings.ToLower(match), ".drawio") {
 			continue
+		}
+
+		// Lazy asset copying: skip assets not referenced by markdown
+		// Exception: always copy css/, js/, logo/ (required for styling)
+		if isAssetCopy && p.referencedAssets != nil && len(p.referencedAssets) > 0 {
+			if !p.isAssetNeeded(match) {
+				skipped++
+				continue
+			}
 		}
 
 		// Calculate relative path from the base of the glob pattern
@@ -100,7 +112,36 @@ func (p *Preprocessor) copySingleSource(src config.Source) (int, error) {
 		copied++
 	}
 
+	if skipped > 0 {
+		p.log("    Skipped %d unreferenced assets (lazy copy)", skipped)
+	}
+
 	return copied, nil
+}
+
+// isAssetNeeded checks if an asset file should be copied based on references.
+// Always copies: css/, js/, logo/, templates/, cache/ (required for build)
+// Conditionally copies: other assets only if referenced by markdown
+func (p *Preprocessor) isAssetNeeded(assetPath string) bool {
+	// Normalize path for comparison
+	normalized := filepath.ToSlash(assetPath)
+
+	// Always copy essential directories (required for MkDocs build)
+	// cache/ contains mermaid/structurizr/drawio preprocessed diagrams
+	essentialDirs := []string{"/css/", "/js/", "/logo/", "/templates/", "/cache/"}
+	for _, dir := range essentialDirs {
+		if strings.Contains(normalized, dir) {
+			return true
+		}
+	}
+
+	// Always copy manifest.json (for asset tracking)
+	if strings.HasSuffix(normalized, "manifest.json") {
+		return true
+	}
+
+	// Check if asset is referenced
+	return IsAssetReferenced(assetPath, p.referencedAssets)
 }
 
 // calculateRelativePath calculates the relative path for a matched file.

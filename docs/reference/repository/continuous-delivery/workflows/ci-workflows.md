@@ -4,7 +4,9 @@ Reference for individual module CI workflows.
 
 ## Overview
 
-Each module with build and test requirements has a dedicated CI workflow following a standard pattern. These workflows are invoked by the CI orchestrator (`change-trigger.yaml`) and can also be triggered manually for testing individual modules.
+Each module with build and test requirements has a dedicated CI workflow following a standard pattern.
+
+These workflows are invoked by the CI orchestrator (`change-trigger.yaml`) and can also be triggered manually for testing individual modules.
 
 **Location:** `.github/workflows/ci-{moniker}.yaml`
 

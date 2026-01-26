@@ -37,6 +37,9 @@ type Orchestrator struct {
 	tuiTotal       int
 	tuiLayer       int // Current layer (1-indexed, 0 = not using layers)
 	tuiTotalLayers int // Total layers (0 = not using layers)
+
+	// Component results from last execution (for detailed reporting)
+	lastComponentResults []ComponentResult
 }
 
 // New creates a new Orchestrator with the given configuration and worker function.
@@ -681,6 +684,13 @@ func (o *Orchestrator) SetMaxConcurrency(maxConcurrency int) {
 	o.config.MaxConcurrency = maxConcurrency
 }
 
+// GetLastComponentResults returns the component-level results from the last
+// RunComponentsLayered or RunComponentsParallel call.
+// Returns nil if no component execution has occurred.
+func (o *Orchestrator) GetLastComponentResults() []ComponentResult {
+	return o.lastComponentResults
+}
+
 // RunComponentsLayered executes component builds in dependency layers.
 // Within each layer, components run in parallel with weighted scheduling.
 // Components respect intra-module dependencies (BuildAfter) and inter-module
@@ -782,6 +792,8 @@ func (o *Orchestrator) RunComponentsLayered(layers [][]ComponentWork, worker Com
 					o.display.stop()
 					o.display.flushCompletedLines()
 				}
+				// Store component results for detailed reporting
+				o.lastComponentResults = allResults
 				return AggregateToWorkResults(allResults, allWork), nil
 			}
 		}
@@ -792,6 +804,9 @@ func (o *Orchestrator) RunComponentsLayered(layers [][]ComponentWork, worker Com
 		o.display.stop()
 		o.display.flushCompletedLines()
 	}
+
+	// Store component results for detailed reporting
+	o.lastComponentResults = allResults
 
 	// Aggregate component results to module results
 	return AggregateToWorkResults(allResults, allWork), nil
@@ -863,6 +878,9 @@ func (o *Orchestrator) RunComponentsParallel(work []ComponentWork, worker Compon
 		o.display.stop()
 		o.display.flushCompletedLines()
 	}
+
+	// Store component results for detailed reporting
+	o.lastComponentResults = results
 
 	// Aggregate component results to module results
 	return AggregateToWorkResults(results, work), nil

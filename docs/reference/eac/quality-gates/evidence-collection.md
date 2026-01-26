@@ -8,12 +8,12 @@ Test execution and security scan evidence formats for quality gate validation.
 
 ### Required Evidence (Stages 2-6)
 
-| Evidence Type | Format | Source |
-|---------------|--------|--------|
-| Unit test results | JUnit XML | `go test`, `pytest`, `jest` |
-| Integration test results | JUnit XML | CI pipeline |
-| Acceptance test results | JUnit XML + Cucumber JSON | BDD test runner |
-| Code coverage | Cobertura XML, HTML | Coverage tools |
+| Evidence Type            | Format                    | Source                      |
+| ------------------------ | ------------------------- | --------------------------- |
+| Unit test results        | JUnit XML                 | `go test`, `pytest`, `jest` |
+| Integration test results | JUnit XML                 | CI pipeline                 |
+| Acceptance test results  | JUnit XML + Cucumber JSON | BDD test runner             |
+| Code coverage            | Cobertura XML, HTML       | Coverage tools              |
 
 ### JUnit XML Format
 
@@ -48,13 +48,13 @@ jest --reporters=jest-junit
 
 ### Required Evidence (Stages 2, 3, 6)
 
-| Scan Type | Tool | Format |
-|-----------|------|--------|
-| SAST | Semgrep, Gosec | SARIF, JSON |
-| Dependency scanning | Trivy | SARIF, JSON |
-| Container scanning | Trivy | SARIF, JSON |
-| Secret detection | Trivy, Gitleaks | JSON |
-| DAST | OWASP ZAP | JSON, HTML |
+| Scan Type           | Tool            | Format      |
+| ------------------- | --------------- | ----------- |
+| SAST                | Semgrep, Gosec  | SARIF, JSON |
+| Dependency scanning | Trivy           | SARIF, JSON |
+| Container scanning  | Trivy           | SARIF, JSON |
+| Secret detection    | Trivy, Gitleaks | JSON        |
+| DAST                | OWASP ZAP       | JSON, HTML  |
 
 ### SARIF Format
 
@@ -108,12 +108,12 @@ gitleaks detect --report-format json --report-path gitleaks-results.json
 
 ### Required Evidence (Stage 6)
 
-| Metric | Tool | Format |
-|--------|------|--------|
+| Metric                        | Tool                | Format    |
+| ----------------------------- | ------------------- | --------- |
 | Response time (P50, P95, P99) | k6, JMeter, Gatling | JSON, XML |
-| Throughput (req/sec) | k6, JMeter | JSON, XML |
-| Resource utilization | Prometheus, Grafana | JSON |
-| Regression analysis | Custom | JSON |
+| Throughput (req/sec)          | k6, JMeter          | JSON, XML |
+| Resource utilization          | Prometheus, Grafana | JSON      |
+| Regression analysis           | Custom              | JSON      |
 
 ### k6 Output Format
 

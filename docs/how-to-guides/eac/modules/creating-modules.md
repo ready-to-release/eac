@@ -17,17 +17,17 @@ A module is a logical unit of code with:
 
 Select the appropriate type based on your module's language:
 
-| Language              | Module Type   | Build Support                            | Test Support           |
-| --------------------- | ------------- | ---------------------------------------- | ---------------------- |
-| Go                    | `go`          | ✅ Full (cross-compile, version inject)  | ✅ gotest, godog       |
-| TypeScript/JavaScript | `typescript`  | ✅ npm, tsc                              | ✅ mocha, cucumber-js  |
-| Any (containerized)   | `container`   | ✅ Docker buildx                         | Depends on container   |
-| Documentation         | `docs`        | ✅ MkDocs                                | ❌ No tests            |
-| None (static files)   | `static`      | ❌ No build                              | ❌ No tests            |
+| Language              | Module Type  | Build Support                           | Test Support          |
+| --------------------- | ------------ | --------------------------------------- | --------------------- |
+| Go                    | `go`         | ✅ Full (cross-compile, version inject) | ✅ gotest, godog      |
+| TypeScript/JavaScript | `typescript` | ✅ npm, tsc                             | ✅ mocha, cucumber-js |
+| Any (containerized)   | `container`  | ✅ Docker buildx                        | Depends on container  |
+| Documentation         | `docs`       | ✅ MkDocs                               | ❌ No tests           |
+| None (static files)   | `static`     | ❌ No build                             | ❌ No tests           |
 
 **For other languages** (Python, Rust, Java): Use `container` type with a Dockerfile that builds your code.
 
-See [Module Types Reference](../../../reference/eac/architecture/module-types.md) for detailed language support and configuration options.
+See [Component Types Reference](../../../reference/eac/architecture/component-types.md) for detailed language support and configuration options.
 
 ## Quick Start
 
@@ -231,10 +231,6 @@ r2r eac validate contracts
 | Problem            | Solution                                               |
 | ------------------ | ------------------------------------------------------ |
 | Overlapping files  | Use `exclude` patterns or adjust ownership             |
-| Missing type       | Add type to `module-types.yml` or use existing         |
+| Missing type       | Check component type in `component-types.yml`          |
 | Build fails        | Check `build_deps` match available system dependencies |
 | Wrong files listed | Verify glob patterns and root directory                |
-
-## See Also
-
-- [Creating Module Types](creating-module-types.md) - Define new module type templates

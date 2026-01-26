@@ -34,38 +34,47 @@ r2r templates install reports --debug
 ## Available Template Types
 
 ### docs
+
 Documentation templates for project documentation.
 
 ### ai
+
 AI prompt templates for structured AI interactions.
 
 ### reports
+
 Report templates for test results and build outputs.
 
 ### specs
+
 Specification templates for Gherkin/BDD tests.
 
 ### claude
+
 Claude Code configuration templates (agents, commands, skills).
 
 **What Gets Installed** (to `.claude/` directory):
 
 **Agents** (`.claude/agents/`):
+
 - `architect.md` - Generic architecture agent using MCP commands
 - `debugger.md` - Generic debugging agent using MCP commands
 - `test-engineer.md` - Generic testing agent using MCP commands
 
 **Commands** (`.claude/commands/`):
+
 - `plan.md` - Planning workflow with MCP discovery
 - `implement.md` - Implementation workflow with MCP verification
 - `test.md` - Testing workflow with MCP commands
 - `review.md` - Review workflow with MCP validation
 
 **Skills** (`.claude/skills/`):
+
 - `feature-workflow.md` - End-to-end feature development with MCP
 - `refactor-safe.md` - Safe refactoring workflow with MCP validation
 
 **Setup** (`.claude/setup/`):
+
 - `mcp-setup.md` - MCP server configuration guide
 - `.mcp.json.template` - MCP configuration template
 

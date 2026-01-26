@@ -2,13 +2,15 @@
 
 ## Overview
 
-**EAC (Everything-as-Code)** is a containerized R2R extension providing automation commands for build, test, validation, security scanning, and release management in modular Go repositories.
+**EAC (Everything-as-Code)** is a containerized R2R extension providing automation commands for build,
+test, validation, security scanning, and release management in modular Go repositories.
 
 **Purpose**: Command collection for everything-as-code workflows
 **Package**: `ext-eac:latest` Docker container
 **Integration**: R2R CLI extension, MCP server for AI tools
 
-The EAC extension implements a **contract-driven, module-based architecture** where all repository structure, modules, dependencies, and configurations are defined in YAML contracts validated against JSON schemas.
+The EAC extension implements a **contract-driven, module-based architecture** where all repository structure,
+modules, dependencies, and configurations are defined in YAML contracts validated against JSON schemas.
 
 ---
 
@@ -56,8 +58,10 @@ graph TB
 
 **EAC operates in two execution modes**:
 
-1. **Containerized** (via R2R CLI): Developer runs `r2r eac <command>` → R2R CLI launches ext-eac Docker container → Command executes in isolated environment
-2. **Direct** (via MCP): LLM tools connect via MCP protocol → eac-mcp-commands exposes tools → Commands execute directly (no container overhead)
+1. **Containerized**
+   (via R2R CLI): Developer runs `r2r eac <command>` → R2R CLI launches ext-eac Docker container → Command executes in isolated environment
+2. **Direct**
+   (via MCP): LLM tools connect via MCP protocol → eac-mcp-commands exposes tools → Commands execute directly (no container overhead)
 
 ---
 
@@ -138,7 +142,9 @@ See [Module System](./modules.md) for module organization patterns.
 
 ### Dependency Management
 
-Modules form a directed acyclic graph (DAG) based on declared dependencies. EAC uses this graph to:
+Modules form a directed acyclic graph (DAG) based on declared dependencies.
+
+EAC uses this graph to:
 
 - **Topological sorting**: Determine build order (dependencies before dependents)
 - **Parallel execution**: Build independent modules concurrently
@@ -278,7 +284,9 @@ This hierarchy allows:
 | **Semgrep**         | Static analysis (SAST)               |
 | **OWASP ZAP**       | Dynamic analysis (DAST)              |
 
-**Container-level technologies** (Docker, Docker SDK) are provided by the [R2R CLI framework](https://ready-to-release.github.io/eac/reference/r2r/architecture/).
+**Container-level technologies**:
+
+(Docker, Docker SDK) are provided by the [R2R CLI framework](https://ready-to-release.github.io/eac/reference/r2r/architecture/).
 
 ---
 
@@ -299,7 +307,9 @@ This hierarchy allows:
 - **OSCAL documents**: Assessment results, catalogs, profiles
 - **Artifacts**: All evidence stored in `out/evidence/` for audit
 
-**Container-level security** (isolation, non-root execution, network restrictions) is provided by [R2R CLI](https://ready-to-release.github.io/eac/reference/r2r/architecture/#security-model).
+**Container-level security**:
+
+(isolation, non-root execution, network restrictions) is provided by [R2R CLI](https://ready-to-release.github.io/eac/reference/r2r/architecture/#security-model).
 
 ---
 
@@ -349,7 +359,7 @@ See [CLI Integration](./cli-integration.md) for details on the R2R ↔ EAC bound
 - [Module Architectures](./modules/) - Individual module C4 diagrams
 - [Contracts System](./contracts.md) - YAML contract specification
 - [Dependency System](./dependency-system.md) - Module dependency graph
-- [Module Types](./module-types.md) - Module type reference
+- [Component Types](./component-types.md) - Component type reference
 - [Repository Layout](./repository-layout.md) - File organization conventions
 - [CLI Integration](./cli-integration.md) - R2R ↔ EAC integration details
 

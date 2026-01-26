@@ -2,7 +2,8 @@
 
 ## Overview
 
-The **scan** category provides security scanning with multiple scanner types via the `--scanner` flag, plus a dedicated subcommand for dynamic testing.
+The **scan** category provides security scanning with multiple scanner types via the `--scanner` flag,
+plus a dedicated subcommand for dynamic testing.
 
 ## Commands
 

@@ -1,6 +1,8 @@
 # repository
 
-The `repository` module defines the contract system and validation rules for the EAC repository structure. It ensures consistency across all modules and enforces architectural constraints.
+The `repository` module defines the contract system and validation rules for the EAC repository structure.
+
+It ensures consistency across all modules and enforces architectural constraints.
 
 ## System Context
 

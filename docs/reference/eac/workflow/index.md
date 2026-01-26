@@ -23,10 +23,10 @@ git commit -m "feat(api): add user authentication"
 
 ## In This Section
 
-| Topic | Description |
-|-------|-------------|
-| [Commit Messages](./commit-messages.md) | Conventional commit format and examples |
-| [Cherry-Picking](./cherry-picking.md) | Git commands for moving fixes between branches |
+| Topic                                   | Description                                    |
+| --------------------------------------- | ---------------------------------------------- |
+| [Commit Messages](./commit-messages.md) | Conventional commit format and examples        |
+| [Cherry-Picking](./cherry-picking.md)   | Git commands for moving fixes between branches |
 
 ---
 

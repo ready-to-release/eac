@@ -46,17 +46,23 @@ func registerWorkSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	// Verification steps
 	sc.Step(`^I am switched to main branch$`, func() error {
 		// After work remove, we need to verify from the main worktree
-		ensureMainWorkspace(ctx)
+		if err := ensureMainWorkspace(ctx); err != nil {
+			return err
+		}
 		return verifyCurrentBranch(ctx, "main")
 	})
 	sc.Step(`^the local branch "([^"]*)" is deleted$`, func(branch string) error {
 		// Ensure we're checking from the main worktree
-		ensureMainWorkspace(ctx)
+		if err := ensureMainWorkspace(ctx); err != nil {
+			return err
+		}
 		return verifyBranchDeleted(ctx, branch)
 	})
 	sc.Step(`^the local branch "([^"]*)" still exists$`, func(branch string) error {
 		// Ensure we're checking from the main worktree
-		ensureMainWorkspace(ctx)
+		if err := ensureMainWorkspace(ctx); err != nil {
+			return err
+		}
 		return verifyBranchExists(ctx, branch)
 	})
 }
@@ -138,7 +144,7 @@ func setupWorkspace(ctx *internal.TestContext, branch string) error {
 
 	// Create worktree directory
 	worktreePath := filepath.Join(ctx.IsolatedDir, "worktrees", branch)
-	if err := os.MkdirAll(filepath.Dir(worktreePath), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(worktreePath), 0o750); err != nil {
 		return fmt.Errorf("failed to create worktree directory: %w", err)
 	}
 
@@ -219,24 +225,6 @@ func createUncommittedChanges(ctx *internal.TestContext) error {
 	}
 	testFile := filepath.Join(workDir, "test-change.txt")
 	return os.WriteFile(testFile, []byte("uncommitted change\n"), 0o644)
-}
-
-// verifyWorkspaceRemoved verifies that the worktree was removed.
-func verifyWorkspaceRemoved(ctx *internal.TestContext) error {
-	// Check git worktree list to ensure the worktree is not present
-	output, err := getGitCommandOutput(ctx.IsolatedDir, "worktree", "list")
-	if err != nil {
-		return fmt.Errorf("failed to list worktrees: %w", err)
-	}
-	// If we're checking for removal, we should be back in main
-	// The output should only show the main worktree
-	lines := strings.Split(output, "\n")
-	for _, line := range lines {
-		if strings.Contains(line, "worktrees") {
-			return fmt.Errorf("worktree still exists: %s", line)
-		}
-	}
-	return nil
 }
 
 // verifyBranchDeleted verifies that a branch has been deleted.

@@ -22,33 +22,33 @@ Implement automated CI/CD pipelines for Databricks data projects using GitHub Ac
        ▼
 ┌─────────────────────────────────┐
 │ Stage 2-4: CI Pipeline          │
-│                                  │
-│ ├─ Lint & Format               │
-│ ├─ Unit Tests (L0)             │
-│ ├─ Component Tests (L1)        │
-│ ├─ Bundle Validate             │
-│ └─ Security Scan               │
+│                                 │
+│ ├─ Lint & Format                │
+│ ├─ Unit Tests (L0)              │
+│ ├─ Component Tests (L1)         │
+│ ├─ Bundle Validate              │
+│ └─ Security Scan                │
 └──────┬──────────────────────────┘
        │ (on main branch)
        ▼
 ┌─────────────────────────────────┐
 │ Stage 5-6: Deploy to Staging    │
-│                                  │
-│ ├─ Build & Package Artifacts   │
-│ ├─ Upload to Unity Catalog     │
-│ ├─ Deploy Asset Bundle         │
-│ ├─ Run Integration Tests (L2)  │
-│ └─ Generate Evidence           │
+│                                 │
+│ ├─ Build & Package Artifacts    │
+│ ├─ Upload to Unity Catalog      │
+│ ├─ Deploy Asset Bundle          │
+│ ├─ Run Integration Tests (L2)   │
+│ └─ Generate Evidence            │
 └──────┬──────────────────────────┘
        │ (on release tag)
        ▼
 ┌─────────────────────────────────┐
 │ Stage 9-10: Production Deploy   │
-│                                  │
-│ ├─ Approval Gate (RA)          │
-│ ├─ Deploy to Production        │
-│ ├─ Run Smoke Tests             │
-│ └─ Monitor Initial Run         │
+│                                 │
+│ ├─ Approval Gate (RA)           │
+│ ├─ Deploy to Production         │
+│ ├─ Run Smoke Tests              │
+│ └─ Monitor Initial Run          │
 └─────────────────────────────────┘
 ```
 

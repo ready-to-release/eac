@@ -4,8 +4,8 @@ Core commands are top-level commands that don't fit into a specific category but
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
+| Command           | Description                         |
+| ----------------- | ----------------------------------- |
 | [lint](./lint.md) | Lint one or more modules by moniker |
 
 ## Overview

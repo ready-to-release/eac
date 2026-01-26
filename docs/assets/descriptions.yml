@@ -1,0 +1,310 @@
+# Human-maintained asset descriptions and status
+# This file is git-tracked. Edit descriptions and active status here.
+# Auto-generated data (usedIn, stats) is in .manifest-cache.json (git-ignored)
+assets:
+    architecture/modules-conceptual.drawio.png:
+        active: true
+        description: Hierarchical relationship diagram showing Trunk → Module → Component nesting with expanding scale visualization using database icons
+    architecture/modules-k8s.drawio.png:
+        active: true
+        description: Kubernetes deployment patterns for Poly-k8s, Mono-k8s, and hybrid configurations with containers, packages, and templates
+    architecture/modules-ordered.drawio.png:
+        active: true
+        description: Comparison of module organization patterns showing ordered vs unordered trunk configurations with anti-pattern examples
+    architecture/modules-overview.drawio.png:
+        active: true
+        description: Complete entity-relationship model showing Organization, Trunk (Mono/Single/Poly), Module, and Component relationships with deployment variations
+    architecture/modules-version-control.drawio.png:
+        active: true
+        description: Version control and artifact storage architecture showing Git-as-Feed pattern with internal/external artifact storage flows
+    assisted/01-cd-model-12-stages.drawio.png:
+        active: true
+        description: Flowchart of 12 CD Model stages divided into Development (1-7) and Release (8-12) phases with color-coded stage types
+    assisted/02-unit-of-flow.drawio.png:
+        active: true
+        description: 'Four core CD flow concepts: Trunk (cylinder), Module (hexagon), Pipeline (rectangle), and Live (cloud) with progression visualization'
+    assisted/03-cd-variants-ra-cde.drawio.png:
+        active: true
+        description: Comparison of Release Approval (RA) with manual approval vs Continuous Deployment (CDe) with automated gates
+    assisted/04-quality-gates.drawio.png:
+        active: true
+        description: 'Four quality gates positioned in CD Model: authoring (Gate 1), commit (Gate 2), release approval (Gate 3), and release toggle (Gate 4)'
+    assisted/05-test-levels-taxonomy.drawio.png:
+        active: true
+        description: Test levels L0-L4 taxonomy with execution environments, scope, and target ratio (70% L0-L1, 20% L2, 10% L3-L4)
+    assisted/06-three-layer-testing.drawio.png:
+        active: true
+        description: Three-layer testing architecture concept diagram (minimal visual content)
+    assisted/07-trunk-based-development.drawio.png:
+        active: true
+        description: Trunk-based development workflow with short-lived branches, key principles, benefits, and anti-patterns
+    assisted/08-environment-types.drawio.png:
+        active: true
+        description: Environment progression from DevBox through Production with access patterns, data refresh rates, and test levels
+    assisted/09-deployment-strategies.drawio.png:
+        active: true
+        description: Deployment strategies diagram (minimal visual content)
+    assisted/10-feature-flags-lifecycle.drawio.png:
+        active: true
+        description: 'Six-phase feature flag lifecycle: Created → Testing → Canary → GA → Cleanup → Removed with flag types and best practices'
+    assisted/11-everything-as-code.drawio.png:
+        active: true
+        description: 'Three pillars: Version Control Everything, Make It Executable, Automate Validation with virtuous cycle benefits'
+    assisted/12-cynefin-framework.drawio.png:
+        active: true
+        description: Cynefin Framework with four domains (Complex, Complicated, Clear, Chaotic) mapped to CD Model strategies
+    assisted/13-dora-metrics-flow.drawio.png:
+        active: true
+        description: Four DORA metrics (Lead Time, Deployment Frequency, MTTR, Change Failure Rate) with virtuous cycle and improvement strategies
+    assisted/14-shift-left-security.drawio.png:
+        active: true
+        description: Security intervention timeline from IDE ($1x) through Production ($1000x+) with shift-left principles
+    assisted/15-example-mapping-discovery.drawio.png:
+        active: true
+        description: 'Example Mapping workshop with colored cards: Yellow (story), Blue (rules), Green (examples), Pink (questions)'
+    assisted/16-eac-visual-language.drawio.png:
+        active: true
+        description: Visual notation guide with standard shapes (Trunk, Module, Gate, Stage, Live), color palette, and usage guidelines
+    assisted/17-compliance-velocity-paradox.drawio.png:
+        active: true
+        description: Traditional vs Modern view of compliance/velocity trade-off with Everything as Code resolution strategies
+    assisted/18-verification-tags-taxonomy.drawio.png:
+        active: true
+        description: 'Verification tags taxonomy: @ov, @iv, @pv, @piv, @ppv with test levels, environments, and usage examples'
+    branching/branching-detailed-no-release.drawio.png:
+        active: true
+        description: Git branching workflow with trunk, topic branches (A, B, C), and spike topics without release branches
+    branching/branching-detailed.drawio.png:
+        active: true
+        description: Comprehensive Git branching with trunk, release topics, cherry-pick branches, and topic branches with release management
+    branching/branching-integration.drawio.png:
+        active: true
+        description: Virtual trunk integration pattern with main branch and integration branch as staging area with auto-cherry operations
+    branching/branching-overview.drawio.png:
+        active: true
+        description: High-level Git branching strategy showing trunk, topic branches, release branches, and cherry branches
+    branching/depen-modules.drawio.png:
+        active: true
+        description: Module dependencies in Mono-Trunk/Poly-Trunk with Pinning & Stitching pattern showing Supporting and Deployable Units
+    branching/dependency-live.drawio.png:
+        active: true
+        description: Dependency flow from Trunk through Deployable Module and Deployment Pipeline to LIVE with consumption pattern
+    branching/generalized-pipeline-cde.drawio.png:
+        active: true
+        description: Continuous Delivery & Experimentation (CDE) pipeline with authoring, triggers, commit stages, and PROD deployment
+    branching/generalized-pipeline-ra.drawio.png:
+        active: true
+        description: Release & Approval (RA) pipeline extending CDE with DEVBOX, DEMO, ACCEPTANCE environments and extended approval workflow
+    branching/legend-deployable-module.drawio.png:
+        active: true
+        description: 'Legend icon: Deployable Module as hexagon shape'
+    branching/legend-deployment-pipeline.drawio.png:
+        active: true
+        description: 'Legend icon: Deployment Pipeline as rounded rectangle with circle endpoint'
+    branching/legend-live.drawio.png:
+        active: true
+        description: 'Legend icon: LIVE production environment as dashed-border rectangle'
+    branching/legend-trunk.drawio.png:
+        active: true
+        description: 'Legend icon: Trunk as cylinder/database shape representing main source repository'
+    branching/overview-small.drawio.png:
+        active: true
+        description: 'Simplified CD flow: Trunk → Deployable Module → Deployment Pipeline → LIVE with One Trunk/One Module annotations'
+    branching/overview.drawio.png:
+        active: true
+        description: Complete CD architecture flow with Pin and Stitch pattern showing Pinned and Stitched deployment compositions
+    branching/pin-and-stitch.drawio.png:
+        active: true
+        description: Pin and Stitch technique for composing deployable modules and pipelines enabling reuse across delivery streams
+    branching/pipelines-separating-problem.drawio.png:
+        active: true
+        description: Problem diagram showing complexity from separate Orchestration (YAML), Scripts (PS), and Configuration management
+    branching/pipelines-separating-solution.drawio.png:
+        active: true
+        description: Solution diagram with unified orchestration bridging YAML orchestration, configuration, and modular scripting
+    branching/versioning-revision.drawio.png:
+        active: true
+        description: Semantic versioning (x.y.z) with revision branches showing patch releases derived from trunk commits
+    cd-model/acceptance-multi-entry.drawio.png:
+        active: true
+        description: Acceptance testing with multiple entry points into commit stream showing parallel testing with all slots in use
+    cd-model/acceptance-single-entry.drawio.png:
+        active: true
+        description: Acceptance testing with single environment entry showing sequential/isolated testing patterns
+    cd-model/branch-main.drawio.png:
+        active: true
+        description: Main branch workflow from commit through Acceptance, Exploration, Extended Testing to Deployment and Live
+    cd-model/branch-release.drawio.png:
+        active: true
+        description: Complete release branch workflow with branch initiation, squash-merge, and full release lifecycle stages
+    cd-model/branch-topic.drawio.png:
+        active: true
+        description: Topic branch workflow during authoring with flow from authoring through Pre-commit, Merge Request, and Commit
+    cd-model/canvas-cde-full.drawio.png:
+        active: true
+        description: Complete CD model canvas with all 12 stages across CI+ Development and CDe Release/Operations phases
+    cd-model/canvas-compliance-ra.drawio.png:
+        active: true
+        description: High-level CD model architecture with Initiation and Operational phases showing all 12 color-coded stages
+    cd-model/canvas-flow-cde.drawio.png:
+        active: true
+        description: Detailed CI+ and CDe flow diagram with decision trees, signal flows, and re-work feedback loops
+    cd-model/canvas-flow-ra.drawio.png:
+        active: true
+        description: Release Approval workflow with complete CI+CD pipeline, gates, and feedback mechanisms
+    cd-model/canvas-ra-full.drawio.png:
+        active: true
+        description: RA pattern matrix with development/verification/validation/production layers across all CD model stages
+    cd-model/canvas-signoffs.drawio.png:
+        active: true
+        description: Signoff workflow for RA pattern with five key stages and detailed signoff point indicators
+    cd-model/canvas-simple-cde.drawio.png:
+        active: true
+        description: Simplified CDe pattern showing CI+ and CDe phases with 9 main stages and color-coded gates/processes
+    cd-model/canvas-simple-ra.drawio.png:
+        active: true
+        description: Simplified RA pattern showing CI+ and CD phases with manual approval emphasis and formal signoff requirements
+    cd-model/ci-cd-cde.drawio.png:
+        active: true
+        description: Timeline diagram showing CI+ and Release phase timing intervals for CDe pattern with feedback loops
+    cd-model/ci-cd-ra.drawio.png:
+        active: true
+        description: Timeline diagram showing CI+ and Release phase timing for RA pattern with Polluted HEAD feedback
+    cd-model/legend-env-agent.drawio.png:
+        active: true
+        description: 'Legend icon: Execution host/agent (DevBox, Build Agents, Deploy Agents) as circular element'
+    cd-model/legend-env-plte.drawio.png:
+        active: true
+        description: 'Legend icon: Environment placeholder (PLTE) as circle with text'
+    cd-model/legend-explore.drawio.png:
+        active: true
+        description: 'Legend icon: Exploration/discovery phase as blue magnifying glass symbol'
+    cd-model/legend-gate.drawio.png:
+        active: true
+        description: 'Legend icon: Quality gate as diamond shape with checkmark/gear symbol'
+    cd-model/legend-signoff.drawio.png:
+        active: true
+        description: 'Legend icon: Approval/sign-off decision point as diamond with checkmark'
+    cd-model/legend-start.drawio.png:
+        active: true
+        description: 'Legend icon: Start/entry point as oval shape'
+    cd-model/model.drawio.png:
+        active: true
+        description: 'Linear flow diagram of 12 CD Model stages with color-coded shapes: chevrons for regular stages, diamonds for approval gates (3, 9, 11), showing Development (1-7) and Release (8-12) phases'
+    cd-model/quality-signals-cde.drawio.png:
+        active: true
+        description: Quality signals workflow for CDe showing stage progression with color-coded zones and re-work feedback
+    cd-model/quality-signals-ra.drawio.png:
+        active: true
+        description: Quality signals workflow for RA with extended exploration zones and LIVE/Deployment endpoints
+    constraints/cynefin.png:
+        active: true
+        description: Cynefin framework diagram showing the four domains (Complex, Complicated, Clear, Chaotic) for decision-making contexts
+    environment/layers.drawio.png:
+        active: true
+        description: Hub-and-spoke architecture with central HUB connected to slot groups sharing common infrastructure
+    environment/slots.drawio.png:
+        active: true
+        description: Slot configuration hierarchy showing slots organized within slot groups and shared infrastructure
+    environment/units.drawio.png:
+        active: true
+        description: 'Entity relationship diagram for infrastructure: Shared Infrastructure, Slot Group, Slot, Template, Category Instance, Deployable Module'
+    lifecycle/lifecycle.drawio:
+        active: true
+        description: DrawIO source file for system lifecycle diagram showing phases from initiation through operations to end-of-life
+    logo/eac-logo-background.png:
+        active: true
+        description: EAC logo with background fill for use on transparent surfaces
+    logo/eac-logo-compressed.png:
+        active: true
+        description: Compressed/optimized version of EAC logo for web use
+    logo/eac-logo-social.png:
+        active: true
+        description: EAC logo formatted for social media profile images and sharing
+    logo/eac-logo.png:
+        active: true
+        description: Primary Everything as Code (EAC) project logo
+    r2r/r2r-overview.drawio.png:
+        active: true
+        description: R2R CLI ecosystem architecture with Agent/DevBox, distribute CLI, binary release, container registry, and language integrations
+    references/accelerate.png:
+        active: true
+        description: "Book cover: Accelerate by Nicole Forsgren, Jez Humble, and Gene Kim - The Science of Lean Software and DevOps"
+    references/cdbook.png:
+        active: true
+        description: "Book cover: Continuous Delivery by Jez Humble and David Farley - Reliable Software Releases through Build, Test, and Deployment Automation"
+    references/correlated-practices.png:
+        active: true
+        description: Chart showing correlated DevOps practices and their impact on software delivery performance
+    references/devopshandbook.png:
+        active: true
+        description: "Book cover: The DevOps Handbook by Gene Kim, Jez Humble, Patrick Debois, and John Willis"
+    references/dora-state-of-devops-generic.png:
+        active: true
+        description: DORA State of DevOps report graphic showing key metrics and research findings
+    references/effective-bdd-development.png:
+        active: true
+        description: "Book cover: BDD in Action by John Ferguson Smart - Behavior-Driven Development for the whole software lifecycle"
+    references/flow-engineering.png:
+        active: true
+        description: "Book cover: Flow Engineering by Steve Pereira and Andrew Davis - From Value Stream Mapping to Effective Action"
+    repository/adjacent.drawio.png:
+        active: true
+        description: Adjacent repository pattern for mono-repository used for GitOps with cluster configs example
+    repository/bad.drawio.png:
+        active: true
+        description: 'Anti-pattern: Multiple disparate repositories (docs, frontend, backend, etc.) converging on single deployable module'
+    repository/poly.drawio.png:
+        active: true
+        description: 'Polyrepo comparison: Poly Repositories, Single (Team Mono), Single (Product Mono), Organizational Mono patterns'
+    repository/single.drawio.png:
+        active: true
+        description: 'Simplest monorepo: One Trunk contains One Deployable Module'
+    repository/types.drawio.png:
+        active: true
+        description: Trunk containing multiple Deployable Modules with Supporting Modules implicitly versioned
+    testing/env-he2e.drawio.png:
+        active: true
+        description: 'Horizontal E2E anti-pattern: External services connected to shared PLTE instances with dependent modules'
+    testing/env-l0-l2.drawio.png:
+        active: true
+        description: 'Isolated environments for L0-L2 tests: devbox and agent for local development and CI pipeline stages'
+    testing/env-l3.drawio.png:
+        active: true
+        description: L3 in-situ vertical testing environment with System under Test, PLTE, and Test Doubles connected to Agent
+    testing/env-l4.drawio.png:
+        active: true
+        description: L4 production testing with PaaS/CaaS hosts, production and test artifacts across hosting environments
+    testing/legend-L0-L1.drawio.png:
+        active: true
+        description: 'Legend icon: L0 and L1 test levels as overlapping blue ovals for unit/component testing'
+    testing/legend-L2.drawio.png:
+        active: true
+        description: 'Legend icon: L2 test level as yellow oval for integration-level emulated system testing'
+    testing/legend-L3.drawio.png:
+        active: true
+        description: 'Legend icon: L3 test level as orange oval for in-situ vertical testing in PLTE'
+    testing/legend-L4.drawio.png:
+        active: true
+        description: 'Legend icon: L4 test level as red oval for production testing and live verification'
+    testing/legend-he2e.drawio.png:
+        active: true
+        description: 'Legend icon: Horizontal E2E as green rounded rectangle identifying shared pre-production anti-pattern'
+    testing/process-isolation-l0l1.drawio.png:
+        active: true
+        description: 'L0-L1 process isolation: Single process with Code Artifact and Test Orchestration, no cross-process communication'
+    testing/process-isolation-l2.drawio.png:
+        active: true
+        description: 'L2 process isolation: Multi-process/container with Production Container, L2 Containers, and Test orchestration'
+    testing/process-isolation-l3.drawio.png:
+        active: true
+        description: 'L3 process isolation: Cloud environment with distributed deployment across cloud infrastructure for PLTE testing'
+    testing/shift-taxanomy.drawio.png:
+        active: true
+        description: Test level taxonomy pyramid (L0-L4) with shift-left/shift-right strategy mapping to environments
+    testing/shifting.drawio.png:
+        active: true
+        description: 'Shift-left/shift-right concept: Moving testing emphasis from HE2E middle toward fast tests (left) and production tests (right)'
+    testing/taxonomy.drawio.png:
+        active: true
+        description: 'Comprehensive taxonomy matrix: Test levels across CD stages with LEFT/RIGHT shift indicators'

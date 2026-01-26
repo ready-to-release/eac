@@ -39,7 +39,9 @@ DAST interacts with your application via APIs or UI to simulate attacker behavio
 
 For CLI commands and scanner configuration, see:
 
-**[DAST Reference](../../../reference/eac/security/dast.md)** - Complete implementation guide including:
+**[DAST Reference](../../../reference/eac/security/dast.md)**
+
+Complete implementation guide including:
 
 - `eac scan --scanner zap` commands
 - Scan modes (Baseline, Full, API)

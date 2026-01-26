@@ -2,9 +2,13 @@
 
 {{ page_breadcrumb() }}
 
-**Problem**: You want to test your r2r extension in a different repository to ensure it works correctly outside of the EAC development environment.
+**Problem**:
 
-**Solution**: Build a local Docker image in the EAC repository, then configure external repositories to use it.
+You want to test your r2r extension in a different repository to ensure it works correctly outside of the EAC development environment.
+
+**Solution**:
+
+Build a local Docker image in the EAC repository, then configure external repositories to use it.
 
 ## Overview
 
@@ -35,7 +39,9 @@ Testing in external repositories ensures your extension:
 | **ext-eac**    | EAC repository | `importer.ps1` | Docker image          |
 | **Standalone** | Own repository | Docker build   | Docker image          |
 
-**This guide focuses on ext-eac**, but the same principles apply to standalone extensions. See the [Testing Standalone Extensions](#testing-standalone-extensions-in-external-repos) section for standalone-specific guidance.
+**This guide focuses on ext-eac**, but the same principles apply to standalone extensions.
+
+See the [Testing Standalone Extensions](#testing-standalone-extensions-in-external-repos) section for standalone-specific guidance.
 
 **Workflow Summary:**
 

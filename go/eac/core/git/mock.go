@@ -35,7 +35,7 @@ type MockRepository struct {
 	branchFiles     []string
 
 	// Worktree fields
-	worktrees     []WorktreeEntry
+	worktrees      []WorktreeEntry
 	dirtyWorktrees map[string]bool
 
 	// Error injection for testing failure paths

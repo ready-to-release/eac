@@ -302,3 +302,41 @@ func PackageDisplayNames(pkgPaths []string) []string {
 	}
 	return result
 }
+
+// FormatComponentName creates the "module:component" display name.
+// This is the standard format for displaying component names in build/test/scan results.
+func FormatComponentName(module, component string) string {
+	return fmt.Sprintf("%s:%s", module, component)
+}
+
+// TruncateComponentName truncates a component name to fit display width.
+// It prefers truncating the module name while preserving the component name.
+// If maxWidth is too small, truncates the whole string.
+func TruncateComponentName(module, component string, maxWidth int) string {
+	full := FormatComponentName(module, component)
+	if len(full) <= maxWidth {
+		return full
+	}
+
+	// Reserve space for colon and at least 8 chars of component
+	minCompLen := 8
+	if len(component) < minCompLen {
+		minCompLen = len(component)
+	}
+	maxModLen := maxWidth - minCompLen - 1 // -1 for colon
+
+	if maxModLen < 3 {
+		// Just truncate the whole thing
+		if maxWidth <= 3 {
+			return full[:maxWidth]
+		}
+		return full[:maxWidth-3] + "..."
+	}
+
+	truncMod := module
+	if len(module) > maxModLen {
+		truncMod = module[:maxModLen-3] + "..."
+	}
+
+	return FormatComponentName(truncMod, component)
+}

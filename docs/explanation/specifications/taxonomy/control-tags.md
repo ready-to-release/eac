@@ -62,7 +62,9 @@ Scenario: Account creation requires approval
 
 For complete CLI commands, OSCAL integration, and validation details, see:
 
-**[Control Tags Reference](../../../reference/eac/compliance/control-tags.md)** - Complete implementation guide including:
+**[Control Tags Reference](../../../reference/eac/compliance/control-tags.md)**
+
+Complete implementation guide including:
 
 - Validation commands (`r2r eac validate control-tags`)
 - Evidence collection commands

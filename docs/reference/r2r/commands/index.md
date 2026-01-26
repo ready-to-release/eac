@@ -1,6 +1,8 @@
 # R2R CLI Command Reference
 
-The R2R CLI manages containerized extensions. It provides framework commands for installing and running the EAC extension.
+The R2R CLI manages containerized extensions.
+
+It provides framework commands for installing and running the EAC extension.
 
 ## Command Overview
 

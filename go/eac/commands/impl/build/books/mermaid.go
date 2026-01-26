@@ -470,7 +470,9 @@ func (p *Preprocessor) renderMermaidDiagrams(statuses []CacheStatus) (int, error
 			// Use stripped content for cache key to ensure consistency
 			cleanContent := StripSizeDirective(block.Content)
 			if err := p.assetCache.PutMermaid(res.status.CachePath, MermaidCacheKey{
-				Code: cleanContent,
+				SourceFile: block.SourceFile,
+				BlockIndex: block.BlockIndex,
+				Code:       cleanContent,
 			}); err != nil {
 				p.log("      ⚠️  Failed to cache %s: %v", block.Filename, err)
 				// Non-fatal - rendering succeeded even if caching failed
@@ -503,7 +505,11 @@ func (p *Preprocessor) checkMermaidCache(blocks []MermaidBlock) ([]CacheStatus, 
 	for _, block := range blocks {
 		// Use stripped content for cache key to ensure consistency
 		cleanContent := StripSizeDirective(block.Content)
-		cacheKey := MermaidCacheKey{Code: cleanContent}
+		cacheKey := MermaidCacheKey{
+			SourceFile: block.SourceFile,
+			BlockIndex: block.BlockIndex,
+			Code:       cleanContent,
+		}
 
 		// Get the hash for this diagram (assetCache computes the hash)
 		persistentPath, _ := p.assetCache.GetMermaid(cacheKey)

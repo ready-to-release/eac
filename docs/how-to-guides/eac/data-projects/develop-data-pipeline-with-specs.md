@@ -76,10 +76,10 @@ Feature: customer-segmentation_pipeline
       Given silver.customer_features table
       When I apply business rules to categorize customers
       Then gold.customer_segments contains:
-        | Column        | Type    | Description                     |
-        | customer_id   | BIGINT  | Unique customer identifier      |
+        | Column        | Type    | Description                            |
+        | customer_id   | BIGINT  | Unique customer identifier             |
         | segment       | STRING  | Segment: VIP, Active, At-Risk, Churned |
-        | assigned_date | DATE    | Date segment was assigned       |
+        | assigned_date | DATE    | Date segment was assigned              |
       And VIP customers have total_purchases > 10000
       And Active customers have days_since_last <= 30
       And At-Risk customers have days_since_last between 30 and 90

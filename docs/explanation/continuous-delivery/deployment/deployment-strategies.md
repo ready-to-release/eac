@@ -4,6 +4,10 @@ A deployment strategy determines how new code reaches production (Stage 10) and 
 
 For controlling when features reach users, see [Release Toggling](../release-toggling/index.md) (Stage 12).
 
+The following diagram compares the four primary deployment strategies, showing their processes, risk levels, and when to use each approach.
+
+![Deployment Strategies Overview](../../../assets/assisted/09-deployment-strategies.drawio.png){width=1000}
+
 ---
 
 ## Strategy Comparison

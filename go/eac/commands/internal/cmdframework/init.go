@@ -14,6 +14,30 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
+// TurboBoost is the number of additional parallel workers when turbo mode is enabled.
+const TurboBoost = 2
+
+// CalculateMaxConcurrency determines the effective max concurrency based on configuration.
+// It applies turbo boost (+2 workers) if enabled, and sequential mode overrides everything.
+func CalculateMaxConcurrency(configConcurrency, repoConcurrency int, turbo, sequential bool) int {
+	maxConcurrency := configConcurrency
+	if maxConcurrency <= 0 {
+		maxConcurrency = repoConcurrency
+	}
+
+	// Apply turbo boost (+2 parallel workers)
+	if turbo {
+		maxConcurrency += TurboBoost
+	}
+
+	// Sequential overrides everything
+	if sequential {
+		maxConcurrency = 1
+	}
+
+	return maxConcurrency
+}
+
 // phaseInit handles the initialization phase:
 // - Find workspace root
 // - Load EAC configuration
@@ -44,13 +68,13 @@ func phaseInit(ctx *ExecutionContext) error {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
-	// Determine max concurrency
-	maxConcurrency := ctx.Config.MaxConcurrency
-	if maxConcurrency <= 0 {
-		maxConcurrency = ctx.RepoConfig.EffectiveParallelism(environments.IsCI())
-	}
-	if ctx.Config.Sequential {
-		maxConcurrency = 1
+	// Determine max concurrency using shared calculation
+	repoConcurrency := ctx.RepoConfig.EffectiveParallelism(environments.IsCI())
+	maxConcurrency := CalculateMaxConcurrency(ctx.Config.MaxConcurrency, repoConcurrency, ctx.Config.Turbo, ctx.Config.Sequential)
+
+	// Log turbo mode if enabled
+	if ctx.Config.Turbo && !ctx.Config.Sequential {
+		log.Debugf("Turbo mode enabled: +%d parallel workers", TurboBoost)
 	}
 
 	// Configure orchestrator

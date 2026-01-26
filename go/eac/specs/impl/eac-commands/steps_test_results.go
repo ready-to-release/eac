@@ -80,12 +80,12 @@ func registerTestResultsSteps(sc *godog.ScenarioContext, ctx *internal.TestConte
 		timestamp := "2026-01-07T15:42:56Z"
 
 		// Build test entries from table
-		tests := []string{}
+		tests := make([]string, 0, len(table.Rows))
 		totalScenarios := 0
 		for i, row := range table.Rows[1:] { // Skip header row
 			featureName := row.Cells[0].Value
 			scenarioCount := 0
-			fmt.Sscanf(row.Cells[1].Value, "%d", &scenarioCount)
+			_, _ = fmt.Sscanf(row.Cells[1].Value, "%d", &scenarioCount) //nolint:errcheck // Parsing error means count stays 0
 			totalScenarios += scenarioCount
 
 			// Create test entries for each scenario in the feature
@@ -730,7 +730,7 @@ paths:
 	sc.Step(`^tests with different statuses:$`, func(table *godog.Table) error {
 		// Create a manifest with tests having different statuses from the table
 		timestamp := "2026-01-07T15:42:56Z"
-		tests := []string{}
+		tests := make([]string, 0, len(table.Rows))
 		passed, failed, skipped := 0, 0, 0
 
 		for i, row := range table.Rows[1:] { // Skip header

@@ -27,20 +27,20 @@ High-level view of R2R CLI's major subsystems and how they interact.
 
 **Major subsystems:**
 
-| Subsystem | Purpose |
-|-----------|---------|
-| Command Layer | Cobra-based command routing and execution |
-| Configuration System | Multi-layer configuration management |
-| Command Parser | EBNF-based argument parsing |
-| Docker Orchestration | Container lifecycle management |
-| Extension Management | Extension installation and lifecycle |
-| Validation System | Configuration and command validation |
-| Logging System | Structured logging with context |
-| Terminal System | Cross-platform terminal handling |
-| GitHub Integration | Container registry integration |
-| Cache System | Registry response caching |
-| Session System | CLI session state management |
-| TUI System | Terminal UI components |
+| Subsystem            | Purpose                                   |
+| -------------------- | ----------------------------------------- |
+| Command Layer        | Cobra-based command routing and execution |
+| Configuration System | Multi-layer configuration management      |
+| Command Parser       | EBNF-based argument parsing               |
+| Docker Orchestration | Container lifecycle management            |
+| Extension Management | Extension installation and lifecycle      |
+| Validation System    | Configuration and command validation      |
+| Logging System       | Structured logging with context           |
+| Terminal System      | Cross-platform terminal handling          |
+| GitHub Integration   | Container registry integration            |
+| Cache System         | Registry response caching                 |
+| Session System       | CLI session state management              |
+| TUI System           | Terminal UI components                    |
 
 ## See Also
 

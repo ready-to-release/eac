@@ -3,7 +3,7 @@
 package config
 
 // RegistriesConfig maps registry hostnames to their configurations.
-// Example keys: "ghcr.io", "docker.io", "gcr.io"
+// Example keys: "ghcr.io", "docker.io", "gcr.io".
 type RegistriesConfig map[string]*RegistryConfig
 
 // RegistryConfig contains configuration for a container registry.
@@ -193,4 +193,3 @@ func (p *RegistryCleanupPolicy) GetPrunePatterns() []string {
 	}
 	return []string{"sha-*", "dev-*", "pr-*", "ci"}
 }
-

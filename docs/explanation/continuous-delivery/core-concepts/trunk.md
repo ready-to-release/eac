@@ -2,7 +2,8 @@
 
 ## Introduction
 
-Repository organization is a foundational decision that affects how teams collaborate, how code is versioned, and how deployable modules are structured.
+Repository organization is a foundational decision that affects how teams collaborate,
+how code is versioned, and how deployable modules are structured.
 
 This article explains the two primary patterns - monorepo and polyrepo - and provides guidance on choosing the right approach.
 
@@ -14,7 +15,8 @@ This article explains the two primary patterns - monorepo and polyrepo - and pro
 
 A single repository containing more than one [deployable module](deployable-modules.md).
 
-Path filters (glob patterns) define module boundaries, allowing independent versioning and deployment despite sharing the same repository.
+Path filters (glob patterns) define module boundaries,
+allowing independent versioning and deployment despite sharing the same repository.
 
 ### Characteristics
 
@@ -154,7 +156,15 @@ Not all repositories are trunks. **Adjacent repositories** serve specialized pur
 
 #### Example: GitOps Repository
 
-A Kubernetes GitOps repository is a special form of IaC constrained to declarations only. It cannot easily be integrated into a trunk, nor should it be: the GitOps repository's history should be the history of the cluster it controls, one-to-one.
+A Kubernetes GitOps repository is a special form of IaC constrained to declarations only.
+
+The following diagram illustrates the relationship between trunk repositories and adjacent GitOps repositories. The GitOps repository maintains its own independent history that reflects the cluster state, while being triggered from the main trunk pipeline.
+
+![Adjacent Repository Pattern](../../../assets/repository/adjacent.drawio.png){width=800}
+
+It cannot easily be integrated into a trunk, nor should it be:
+
+- the GitOps repository's history should be the history of the cluster it controls, one-to-one.
 
 ### Summary
 
@@ -205,7 +215,8 @@ flowchart LR
 
 ![Repository Anti-Pattern](../../../assets/repository/bad.drawio.png){width=400}
 
-Splitting repositories by technical boundary (frontend/, backend/, scripts/, infrastructure/) rather than deployable module boundary creates dependency chaos.
+Splitting repositories by technical boundary (frontend/, backend/, scripts/, infrastructure/),
+rather than deployable module boundary, creates dependency chaos.
 
 **Problems:**
 

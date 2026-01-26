@@ -22,4 +22,5 @@ ignores:
   - ".claude/**"
   - "docs/assets/cache/**"
   - "templates/**"
+  - ".r2r/templates/**"
   - "test.md"

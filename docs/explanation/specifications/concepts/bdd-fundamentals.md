@@ -48,7 +48,8 @@ By writing scenarios in natural language (Given/When/Then), teams create:
 
 ## The Unified Approach
 
-This project maintains the conceptual distinction between Rules (often referred to as acceptance criteria) and Scenarios while using a single unified format: Gherkin.
+This project maintains the conceptual distinction between Rules (often referred to as acceptance criteria) and Scenarios,
+while using a single unified format: Gherkin.
 
 ### Rule Blocks
 
@@ -69,7 +70,8 @@ This project maintains the conceptual distinction between Rules (often referred 
 - **Audience**: Product Owners, Developers, QA, automation engineers
 - **Focus**: HOW the system behaves (described in specs/, implemented separately)
 
-> **Implementation**: Step definitions implement executable behavior for Gherkin steps. Location and naming conventions vary by language. See your implementation guide for details.
+> **Implementation**: Step definitions implement executable behavior for Gherkin steps.
+> Location and naming conventions vary by language. See your implementation guide for details.
 
 ---
 
@@ -111,7 +113,9 @@ flowchart LR
 
 Executable Specifications are specifications written in such a way that automated tests can be executed from them.
 
-Here we have decided to use a formal language called Gherkin. This allows us to express the specification in a natural language whilst creating a structure with keywords that will trigger tests.
+Here we have decided to use a formal language called Gherkin.
+
+This allows us to express the specification in a natural language whilst creating a structure with keywords that will trigger tests.
 
 The tests are implemented in step definitions. These provide the connection between the specification and the code.
 
@@ -119,7 +123,9 @@ The tests are implemented in step definitions. These provide the connection betw
 
 ## Gherkin and the Ubiquitous Language
 
-BDD scenarios are most effective when written using the **Ubiquitous Language** from Domain-Driven Design. The shared vocabulary that both business and technical teams understand.
+BDD scenarios are most effective when written using the **Ubiquitous Language** from Domain-Driven Design.
+
+The shared vocabulary that both business and technical teams understand.
 
 ### Why This Matters
 
@@ -153,7 +159,8 @@ See: [Ubiquitous Language](./ubiquitous-language.md) for DDD foundation and [Eve
 
 ## Requirements Discovery with Example Mapping
 
-Requirements for features are discovered through **Example Mapping**, a collaborative workshop technique that uses colored index cards to surface acceptance criteria (Blue cards → Rules) and concrete examples (Green cards → Scenarios).
+Requirements for features are discovered through **Example Mapping**,
+a collaborative workshop technique that uses colored index cards to surface acceptance criteria (Blue cards → Rules) and concrete examples (Green cards → Scenarios).
 
 ### Card to Gherkin Mapping
 

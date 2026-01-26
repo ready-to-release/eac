@@ -1,6 +1,8 @@
 # ext-eac
 
-The `ext-eac` module defines the Docker extension image that packages the EAC tooling for use with r2r-cli. It provides a containerized environment with all dependencies pre-installed.
+The `ext-eac` module defines the Docker extension image that packages the EAC tooling for use with r2r-cli.
+
+It provides a containerized environment with all dependencies pre-installed.
 
 ## System Context
 

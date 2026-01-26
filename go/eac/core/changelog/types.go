@@ -31,6 +31,7 @@ func (v VersionType) String() string {
 // ChangeType represents the category of a changelog entry.
 type ChangeType string
 
+// ChangeType constants for standard changelog categories.
 const (
 	Added      ChangeType = "Added"
 	Changed    ChangeType = "Changed"
@@ -171,8 +172,8 @@ func (c *Changelog) GetVersion(number string) *Version {
 }
 
 // AddVersion prepends a new version to the changelog.
-func (c *Changelog) AddVersion(v Version) {
-	c.Versions = append([]Version{v}, c.Versions...)
+func (c *Changelog) AddVersion(v *Version) {
+	c.Versions = append([]Version{*v}, c.Versions...)
 }
 
 // PromoteUnreleased moves unreleased entries to a new version.
@@ -192,7 +193,7 @@ func (c *Changelog) PromoteUnreleased(versionNumber string, date time.Time) *Ver
 		Security:   c.Unreleased.Security,
 	}
 
-	c.AddVersion(newVersion)
+	c.AddVersion(&newVersion)
 
 	// Reset unreleased
 	c.Unreleased = &Version{}

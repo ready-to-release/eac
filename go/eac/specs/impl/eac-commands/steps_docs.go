@@ -34,7 +34,7 @@ func registerDocsSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	sc.Step(`^serve container is not running$`, func() error {
 		// Ensure no container is running by running stop command
 		// Ignore errors since container may not exist
-		_ = ctx.RunCommand("serve docs --stop")
+		_ = ctx.RunCommand("serve docs --stop") //nolint:errcheck // Ignore error if container doesn't exist
 		return nil
 	})
 

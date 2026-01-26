@@ -4,7 +4,8 @@
 
 The CD Model can be adapted to different contexts through two primary variation points.
 
-Understanding these variants helps you configure your CD implementation for your regulatory requirements, risk profile, team size, and organizational maturity.
+Understanding these variants helps you configure your CD implementation for your regulatory requirements,
+risk profile, team size, and organizational maturity.
 
 ### The Two Variation Points
 
@@ -109,6 +110,10 @@ The Merge Request stage (Stage 3) controls how changes are integrated into the m
 
 The Release Approval stage (Stage 9) controls how changes are approved for production.
 
+The following diagram compares the two primary release approval patterns. Release Approval (RA) includes a manual approval gate, while Continuous Deployment (CDe) uses automated quality gates to approve changes.
+
+![RA vs CDe Comparison](../../../assets/assisted/03-cd-variants-ra-cde.drawio.png)
+
 ### Release Approval (RA) Pattern
 
 **Best for:** Regulated environments, high-risk applications, audit requirements.
@@ -155,7 +160,8 @@ The Release Approval stage (Stage 9) controls how changes are approved for produ
 
 **Cycle time:** Under 1 hour for small changes
 
-**Note:** CDe can work in regulated environments if features deploy disabled (flag OFF) and Stage 12 (Release Toggling) controls when features go live.
+**Note:** CDe can work in regulated environments,
+if features deploy disabled (flag OFF) and Stage 12 (Release Toggling) controls when features go live.
 
 ### Key Differences
 
@@ -166,6 +172,30 @@ The Release Approval stage (Stage 9) controls how changes are approved for produ
 | Feature flags | Optional                 | Required                    |
 | Audit trail   | Emphasized               | Available                   |
 | Cycle time    | 1-2 weeks                | < 1 hour                    |
+
+### Detailed Canvas Views
+
+For a complete view of each pattern with all 12 stages across CI+ Development and Release phases:
+
+**RA Pattern Full Canvas:**
+
+![RA Pattern Full Canvas](../../../assets/cd-model/canvas-ra-full.drawio.png){width=1000}
+
+**CDe Pattern Full Canvas:**
+
+![CDe Pattern Full Canvas](../../../assets/cd-model/canvas-cde-full.drawio.png){width=1000}
+
+### Timeline Comparison
+
+The following diagrams show the timing intervals for each pattern, illustrating feedback loops and phase transitions:
+
+**RA Pattern Timeline:**
+
+![RA Pattern Timeline](../../../assets/cd-model/ci-cd-ra.drawio.png){width=900}
+
+**CDe Pattern Timeline:**
+
+![CDe Pattern Timeline](../../../assets/cd-model/ci-cd-cde.drawio.png){width=900}
 
 ---
 

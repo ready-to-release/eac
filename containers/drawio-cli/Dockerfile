@@ -2,7 +2,8 @@
 # Extracts embedded XML from drawio.png files and converts between formats
 # Used by eac-commands for drawio diagram manipulation
 
-FROM python:3.12-slim
+ARG PYTHON_VERSION=3.12
+FROM python:${PYTHON_VERSION}-slim
 
 WORKDIR /app
 

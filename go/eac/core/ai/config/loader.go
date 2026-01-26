@@ -176,7 +176,7 @@ type ContractLoader struct {
 // NewContractLoader creates a backward-compatible loader
 // contractPath format: "ai/<type>" (e.g., "ai/specs", "ai/commit-message")
 // version is ignored (unified config is unversioned).
-func NewContractLoader(workspaceRoot, contractPath, version string) *ContractLoader {
+func NewContractLoader(workspaceRoot, contractPath, _ string) *ContractLoader {
 	// Extract type name from path (e.g., "ai/specs" -> "specs")
 	typeName := contractPath
 	aiPrefix := paths.AIDir + "/"
@@ -228,7 +228,7 @@ func (cl *ContractLoader) LoadPrompt(promptName, fallback string) (string, strin
 
 	// Normalize: Add .md extension if missing (unless absolute path)
 	if !filepath.IsAbs(promptName) && !strings.HasSuffix(promptName, promptExtension) {
-		promptName = promptName + promptExtension
+		promptName += promptExtension
 	}
 
 	// Priority 1: Custom path from --prompt flag (absolute path)

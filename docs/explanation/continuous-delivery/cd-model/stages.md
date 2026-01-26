@@ -142,6 +142,16 @@ Stages 1-7 cover code authoring through comprehensive verification, emphasizing 
 
 **Purpose:** Validate that changes meet functional requirements in a production-like environment.
 
+Acceptance testing can be organized as single-entry (one change at a time) or multi-entry (parallel testing with all slots in use):
+
+**Single-Entry Acceptance:**
+
+![Single-Entry Acceptance](../../../assets/cd-model/acceptance-single-entry.drawio.png){width=800}
+
+**Multi-Entry Acceptance:**
+
+![Multi-Entry Acceptance](../../../assets/cd-model/acceptance-multi-entry.drawio.png){width=800}
+
 **Key Activities:**
 
 - Deploy to PLTE (Production-Like Test Environment)
@@ -360,6 +370,20 @@ See [Deployment Strategies](../deployment/deployment-strategies.md) for detailed
 4. **Remove:** Delete flag after 30-90 days (treat as tech debt)
 
 **Environment:** Production (runtime control)
+
+---
+
+## Flow Visualization
+
+The following diagrams show detailed flow with decision trees, signal flows, and re-work feedback loops for each pattern:
+
+**RA Pattern Flow:**
+
+![RA Pattern Flow](../../../assets/cd-model/canvas-flow-ra.drawio.png){width=1000}
+
+**CDe Pattern Flow:**
+
+![CDe Pattern Flow](../../../assets/cd-model/canvas-flow-cde.drawio.png){width=1000}
 
 ---
 

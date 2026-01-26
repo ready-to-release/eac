@@ -131,11 +131,11 @@ func processDerivedArtifact(moniker string, art config.Artifact, targetOS, targe
 		ID:        "",
 		Platforms: art.Platforms,
 	}
-	sourceName := resolver.ResolvePatternWithMetadata(art.DeriveFrom, sourceArtifact)
+	sourceName := resolver.ResolvePatternWithMetadata(art.DeriveFrom, &sourceArtifact)
 	sourcePath := filepath.Join(buildDir, sourceName)
 
 	// Resolve target path
-	targetName := resolver.ResolvePatternWithMetadata(art.Pattern, art)
+	targetName := resolver.ResolvePatternWithMetadata(art.Pattern, &art)
 	targetPath := filepath.Join(buildDir, targetName)
 
 	// Verify source exists

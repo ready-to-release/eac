@@ -75,7 +75,7 @@ func drawioEnsureImage(ctx *internal.TestContext, dCtx *drawioContext) error {
 	// Check if Docker is available
 	cmd := exec.Command("docker", "info")
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("Docker is not available: %w", err)
+		return fmt.Errorf("docker is not available: %w", err)
 	}
 
 	// Check if image exists
@@ -103,7 +103,7 @@ func drawioCreateTestFile(ctx *internal.TestContext, filename, pageName string) 
 	outputPath := internal.ResolvePath(ctx, filename)
 
 	// Ensure directory exists
-	if err := os.MkdirAll(filepath.Dir(outputPath), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0o750); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
@@ -237,11 +237,11 @@ func buildDrawioPNG(mxfile string) []byte {
 	ihdr := []byte{
 		0x00, 0x00, 0x00, 0x01, // width: 1
 		0x00, 0x00, 0x00, 0x01, // height: 1
-		0x08,                   // bit depth: 8
-		0x06,                   // color type: RGBA
-		0x00,                   // compression: deflate
-		0x00,                   // filter: adaptive
-		0x00,                   // interlace: none
+		0x08, // bit depth: 8
+		0x06, // color type: RGBA
+		0x00, // compression: deflate
+		0x00, // filter: adaptive
+		0x00, // interlace: none
 	}
 	writeChunk(&buf, "IHDR", ihdr)
 
@@ -263,7 +263,7 @@ func buildDrawioPNG(mxfile string) []byte {
 // writeChunk writes a PNG chunk to the buffer.
 func writeChunk(buf *bytes.Buffer, chunkType string, data []byte) {
 	// Length (4 bytes, big-endian)
-	length := uint32(len(data))
+	length := uint32(len(data)) //nolint:gosec // PNG chunk data is always small
 	buf.WriteByte(byte(length >> 24))
 	buf.WriteByte(byte(length >> 16))
 	buf.WriteByte(byte(length >> 8))
@@ -289,7 +289,7 @@ func crc32Checksum(data []byte) uint32 {
 	// PNG uses CRC-32 with polynomial 0xedb88320
 	var crcTable [256]uint32
 	for i := 0; i < 256; i++ {
-		crc := uint32(i)
+		crc := uint32(i) //nolint:gosec // Loop index is always 0-255
 		for j := 0; j < 8; j++ {
 			if crc&1 != 0 {
 				crc = 0xedb88320 ^ (crc >> 1)
@@ -305,42 +305,4 @@ func crc32Checksum(data []byte) uint32 {
 		crc = crcTable[(crc^uint32(b))&0xff] ^ (crc >> 8)
 	}
 	return crc ^ 0xffffffff
-}
-
-// extractMxfileFromPNG extracts the mxfile content from a PNG tEXt chunk.
-func extractMxfileFromPNG(data []byte) string {
-	if len(data) < 8 {
-		return ""
-	}
-
-	// Skip PNG signature
-	pos := 8
-
-	for pos < len(data)-8 {
-		// Read chunk length
-		length := int(data[pos])<<24 | int(data[pos+1])<<16 | int(data[pos+2])<<8 | int(data[pos+3])
-		pos += 4
-
-		// Read chunk type
-		chunkType := string(data[pos : pos+4])
-		pos += 4
-
-		if chunkType == "tEXt" && length > 7 {
-			// Check if keyword is "mxfile"
-			chunkData := data[pos : pos+length]
-			nullIdx := bytes.IndexByte(chunkData, 0)
-			if nullIdx > 0 && string(chunkData[:nullIdx]) == "mxfile" {
-				return string(chunkData[nullIdx+1:])
-			}
-		}
-
-		// Skip data and CRC
-		pos += length + 4
-
-		if chunkType == "IEND" {
-			break
-		}
-	}
-
-	return ""
 }

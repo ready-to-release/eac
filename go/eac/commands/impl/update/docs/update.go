@@ -9,9 +9,15 @@
 // Long:   - SVG files in docs/assets/cache/ for mermaid diagrams
 // Long:   - Optimized drawio images in docs/assets/cache/
 // Long:   - Cache status summary showing hits/misses
-// Flag.dry-run: type=bool, default=false, usage=Show what would be updated without actually updating
+// Long:
+// Long: Cache Pruning:
+// Long:   Use --prune-cache to identify and remove orphaned cache files that are no
+// Long:   longer referenced by any markdown files. Use --dry-run to preview what
+// Long:   would be deleted without actually removing files.
+// Flag.dry-run: type=bool, default=false, usage=Show what would be changed without actually changing
 // Flag.force: type=bool, default=false, usage=Force re-render/re-optimize all assets even if cached
 // Flag.verbose: type=bool, shorthand=v, default=false, usage=Show detailed progress for each file
+// Flag.prune-cache: type=bool, default=false, usage=Identify and remove orphaned cache files
 package docs
 
 import (
@@ -51,6 +57,7 @@ func UpdateDocs() int {
 	dryRun := false
 	force := false
 	verbose := false
+	pruneCache := false
 
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
@@ -60,6 +67,8 @@ func UpdateDocs() int {
 			force = true
 		case "-v", "--verbose":
 			verbose = true
+		case "--prune-cache":
+			pruneCache = true
 		}
 	}
 
@@ -68,6 +77,11 @@ func UpdateDocs() int {
 	if err != nil {
 		log.Errorf("Error: %v", err)
 		return 1
+	}
+
+	// Handle --prune-cache mode
+	if pruneCache {
+		return runPruneCache(repoRoot, verbose, dryRun)
 	}
 
 	// Create output writer
@@ -151,7 +165,9 @@ func UpdateDocs() int {
 		for _, block := range allBlocks {
 			cleanContent := books.StripSizeDirective(block.Content)
 			cachePath, hit := cache.GetMermaid(books.MermaidCacheKey{
-				Code: cleanContent,
+				SourceFile: block.SourceFile,
+				BlockIndex: block.BlockIndex,
+				Code:       cleanContent,
 			})
 
 			// In force mode, treat everything as a cache miss
@@ -239,7 +255,9 @@ func UpdateDocs() int {
 						// Store in persistent cache
 						cleanContent := books.StripSizeDirective(block.Content)
 						if err := cache.PutMermaid(status.CachePath, books.MermaidCacheKey{
-							Code: cleanContent,
+							SourceFile: block.SourceFile,
+							BlockIndex: block.BlockIndex,
+							Code:       cleanContent,
 						}); err != nil {
 							log.Errorf("  ⚠️  Failed to cache %s [%d]: %v",
 								relPath, block.BlockIndex, err)
@@ -302,6 +320,7 @@ func UpdateDocs() int {
 
 	for _, img := range drawioImages {
 		cachePath, hit := cache.GetDrawio(books.DrawioCacheKey{
+			SourcePath: img.SourceFile,
 			SourceHash: img.Hash,
 			MaxWidth:   books.MaxImageWidthPDF,
 		})
@@ -375,6 +394,7 @@ func UpdateDocs() int {
 
 		// Store in persistent cache
 		if err := cache.PutDrawio(status.CachePath, books.DrawioCacheKey{
+			SourcePath: img.SourceFile,
 			SourceHash: img.Hash,
 			MaxWidth:   books.MaxImageWidthPDF,
 		}); err != nil {
@@ -403,5 +423,89 @@ func UpdateDocs() int {
 	if mermaidFailed || drawioFailed > 0 {
 		return 1
 	}
+	return 0
+}
+
+// runPruneCache handles the --prune-cache mode for the update docs command.
+// It identifies orphaned cache files and deletes them (unless --dry-run is set).
+func runPruneCache(repoRoot string, verbose, dryRun bool) int {
+	fmt.Println("Analyzing cache for orphaned files...")
+
+	result, err := PruneCache(repoRoot, verbose)
+	if err != nil {
+		log.Errorf("Error: %v", err)
+		return 1
+	}
+
+	// Print summary
+	fmt.Println()
+	fmt.Println("Mermaid cache:")
+	fmt.Printf("  Cache files: %d\n", result.MermaidCacheFiles)
+	fmt.Printf("  Active hashes: %d\n", result.MermaidActiveHashes)
+	fmt.Printf("  Orphans (V2): %d (%s)\n",
+		len(result.MermaidOrphans),
+		formatBytes(result.MermaidBytesRecovered))
+	fmt.Printf("  Legacy files: %d (%s)\n",
+		len(result.LegacyMermaidFiles),
+		formatBytes(result.LegacyMermaidBytes))
+
+	fmt.Println()
+	fmt.Println("Drawio cache:")
+	fmt.Printf("  Cache files: %d\n", result.DrawioCacheFiles)
+	fmt.Printf("  Active hashes: %d\n", result.DrawioActiveHashes)
+	fmt.Printf("  Orphans: %d (%s)\n",
+		len(result.DrawioOrphans),
+		formatBytes(result.DrawioBytesRecovered))
+
+	totalOrphans := result.TotalOrphans()
+	totalBytes := result.TotalBytesRecovered()
+
+	if totalOrphans == 0 {
+		fmt.Println()
+		fmt.Println("No orphaned files found.")
+		return 0
+	}
+
+	fmt.Println()
+	fmt.Printf("Total: %d orphaned files (%s)\n", totalOrphans, formatBytes(totalBytes))
+
+	if dryRun {
+		fmt.Println()
+		fmt.Println("[DRY RUN] Would delete the above orphaned files")
+		if verbose {
+			fmt.Println()
+			if len(result.MermaidOrphans) > 0 {
+				fmt.Println("Orphaned V2 mermaid files:")
+				for _, f := range result.MermaidOrphans {
+					fmt.Printf("  mermaid/%s\n", f)
+				}
+			}
+			if len(result.LegacyMermaidFiles) > 0 {
+				fmt.Println("Legacy mermaid files:")
+				for _, f := range result.LegacyMermaidFiles {
+					fmt.Printf("  mermaid/%s\n", f)
+				}
+			}
+			if len(result.DrawioOrphans) > 0 {
+				fmt.Println("Orphaned drawio files:")
+				for _, f := range result.DrawioOrphans {
+					fmt.Printf("  drawio/%s\n", f)
+				}
+			}
+		}
+		return 0
+	}
+
+	// Actually delete
+	cacheDir := paths.DocsCachePath(repoRoot)
+	deleted, err := DeleteOrphans(result, cacheDir)
+	if err != nil {
+		log.Errorf("Error deleting orphans: %v", err)
+		return 1
+	}
+
+	fmt.Println()
+	fmt.Printf("Deleted %d orphaned files, recovered %s\n",
+		deleted, formatBytes(totalBytes))
 	return 0
 }

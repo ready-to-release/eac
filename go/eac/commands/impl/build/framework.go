@@ -21,15 +21,30 @@ import (
 
 func init() {
 	// Register component-level execution support
-	cmdframework.SetComponentWorkProvider(FlattenModulesToComponentWork)
-	cmdframework.SetComponentWorker(buildComponentWorker)
+	cmdframework.RegisterComponentProvider(cmdframework.CommandTypeBuild, FlattenModulesToComponentWork)
+	cmdframework.RegisterComponentWorker(cmdframework.CommandTypeBuild, buildComponentWorker)
 	cmdframework.SetComponentCountProvider(getBuildComponentCount)
+	cmdframework.SetComponentLayersProvider(getBuildComponentLayers)
 }
 
 // getBuildComponentCount returns the total number of buildable components.
 func getBuildComponentCount(ctx *cmdframework.ExecutionContext) int {
 	layers := FlattenModulesToComponentWork(ctx)
 	return CountComponents(layers)
+}
+
+// getBuildComponentLayers returns the component execution layers as string slices.
+// Each layer contains component identifiers in "module:component" format.
+func getBuildComponentLayers(ctx *cmdframework.ExecutionContext) [][]string {
+	layers := FlattenModulesToComponentWork(ctx)
+	result := make([][]string, len(layers))
+	for i, layer := range layers {
+		result[i] = make([]string, len(layer))
+		for j, work := range layer {
+			result[i][j] = fmt.Sprintf("%s:%s", work.Module, work.Component)
+		}
+	}
+	return result
 }
 
 // BuildConfig holds build-specific configuration.

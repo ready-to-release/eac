@@ -30,6 +30,7 @@
 // Flag.tui: type=bool, usage=Enable TUI console (default for local console mode)
 // Flag.no-tui: type=bool, usage=Disable TUI console (use plain output)
 // Flag.sequential: type=bool, usage=Run tests sequentially instead of parallel
+// Flag.turbo: type=bool, usage=Enable turbo mode for faster testing (increases parallelism)
 // Flag.retest: type=bool, usage=Force retest, bypassing incremental test state
 // Flag.tui-height: type=int, usage=Set TUI console height (3-20, default: 6)
 package test
@@ -79,6 +80,7 @@ type TestConfig struct {
 	UseTUI      bool
 	TUIHeight   int
 	Parallel    bool
+	Turbo       bool // --turbo flag to increase parallelism
 	ForceRetest bool // --retest flag to bypass incremental testing
 }
 
@@ -136,6 +138,7 @@ func Test() int {
 		Monikers:       cfg.Monikers,
 		MaxConcurrency: 0, // Use config default
 		Sequential:     !cfg.Parallel,
+		Turbo:          cfg.Turbo,
 		SkipDeps:       cfg.SkipDeps,
 		SkipDepm:       cfg.SkipDepm,
 		ForceRebuild:   cfg.ForceRetest,
@@ -209,6 +212,8 @@ func parseTestArgs(args []string) *TestConfig {
 			tuiExplicitlySet = true
 		case arg == "--sequential":
 			cfg.Parallel = false
+		case arg == "--turbo":
+			cfg.Turbo = true
 		case arg == "--retest":
 			cfg.ForceRetest = true
 		case arg == "--tui-height":
@@ -233,7 +238,7 @@ func parseTestArgs(args []string) *TestConfig {
 			}
 		case strings.HasPrefix(arg, "--") || strings.HasPrefix(arg, "-"):
 			log.Errorf("unknown flag: %s", arg)
-			log.Errorf("Valid flags: --suite, --coverage, --skip-deps, --skip-depm, --list-only, --timings, --debug, --tui, --no-tui, --tui-height, --sequential, --retest")
+			log.Errorf("Valid flags: --suite, --coverage, --skip-deps, --skip-depm, --list-only, --timings, --debug, --tui, --no-tui, --tui-height, --sequential, --turbo, --retest")
 			return nil
 		default:
 			cfg.Monikers = append(cfg.Monikers, arg)
@@ -243,6 +248,12 @@ func parseTestArgs(args []string) *TestConfig {
 	// Validate TUI usage in CI/container environments
 	if err := env.ValidateTUI(tuiExplicitlySet, cfg.UseTUI); err != nil {
 		log.Errorf("Error: %v", err)
+		return nil
+	}
+
+	// Validate --turbo and --sequential mutual exclusivity
+	if cfg.Turbo && !cfg.Parallel {
+		log.Errorf("Error: --turbo and --sequential cannot be used together")
 		return nil
 	}
 
@@ -562,6 +573,7 @@ func printTestUsage() {
 	log.Info("  --debug                Enable debug logs to console (file logging always enabled)")
 	log.Info("  --no-tui               Disable TUI console (TUI is default for local console)")
 	log.Info(fmt.Sprintf("  --tui-height N         Set TUI console height (3-20, default: %d)", tui.DefaultHeight))
+	log.Info("  --turbo                Enable turbo mode for faster testing (increases parallelism)")
 	log.Info("  --sequential           Run tests sequentially instead of in parallel")
 	log.Info("  --retest               Force full test run, bypassing incremental detection")
 	log.Info("")

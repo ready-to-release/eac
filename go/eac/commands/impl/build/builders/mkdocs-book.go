@@ -16,6 +16,20 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
+// isForceRebuild checks if the user requested a full rebuild (--force flag).
+func isForceRebuild() bool {
+	for _, arg := range os.Args {
+		if arg == "--force" || arg == "-f" {
+			return true
+		}
+	}
+	return false
+}
+
+// exitCodeSkipped is returned by BuildSingleBook when a build is skipped due to unchanged content.
+// This is distinct from success (0) to signal that no new PDF was generated.
+const exitCodeSkipped = -1
+
 // buildModuleBooks builds all books for a module in parallel.
 // Preprocessing runs in parallel; PDF exports are serialized via semaphore.
 // Final PDFs are moved to the module output root with naming: {book-name}-{theme}.pdf.
@@ -74,6 +88,15 @@ func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book
 			// Build the book (PDF exports will be serialized via semaphore)
 			exitCode := BuildSingleBook(module, b, workspaceRoot, outputDir, bookOutputDir, bookLogWriter)
 
+			// Handle skipped builds (incremental - content unchanged)
+			if exitCode == exitCodeSkipped {
+				if len(moduleBooks) > 1 {
+					_, _ = logWriter.Write(bookLog.Bytes()) //nolint:errcheck // best-effort log aggregation
+				}
+				results <- 0 // Skipped is success from the caller's perspective
+				return
+			}
+
 			if exitCode != 0 {
 				if len(moduleBooks) > 1 {
 					_, _ = logWriter.Write(bookLog.Bytes()) //nolint:errcheck // best-effort log aggregation
@@ -83,6 +106,7 @@ func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book
 			}
 
 			// For PDF books, move PDF to module output root
+			// (only happens when build actually ran, not when skipped)
 			bookOutput := b.GetOutput()
 			if bookOutput != "site" {
 				themes := []string{}
@@ -141,18 +165,6 @@ func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book
 func BuildSingleBook(module *modules.ModuleContract, book *config.Book, workspaceRoot, moduleOutputDir, bookOutputDir string, logWriter io.Writer) int {
 	bookOutput := book.GetOutput()
 
-	// Check Docker availability first - fail fast if unavailable
-	if !IsDockerAvailable() {
-		errorMsg := "Docker is not available but required for book builds"
-		if IsDockerInDocker() {
-			errorMsg += "\nRunning in container: mount Docker socket with -v /var/run/docker.sock:/var/run/docker.sock"
-		} else {
-			errorMsg += "\nEnsure Docker is installed and the daemon is running"
-		}
-		Logln(logWriter, "❌ %s", errorMsg)
-		return 1
-	}
-
 	// Determine build mode from book config
 	pdfMode := bookOutput == "pdf-dark" || bookOutput == "pdf-light" || bookOutput == "pdf-all"
 	pdfTheme := ""
@@ -163,6 +175,18 @@ func BuildSingleBook(module *modules.ModuleContract, book *config.Book, workspac
 		pdfTheme = "light"
 	case "pdf-all":
 		pdfTheme = "all"
+	}
+
+	// Check Docker availability - fail fast if unavailable
+	if !IsDockerAvailable() {
+		errorMsg := "Docker is not available but required for book builds"
+		if IsDockerInDocker() {
+			errorMsg += "\nRunning in container: mount Docker socket with -v /var/run/docker.sock:/var/run/docker.sock"
+		} else {
+			errorMsg += "\nEnsure Docker is installed and the daemon is running"
+		}
+		Logln(logWriter, "❌ %s", errorMsg)
+		return 1
 	}
 
 	Logln(logWriter, "\n=== Building book: %s (%s) ===", book.Name, bookOutput)
@@ -177,12 +201,13 @@ func BuildSingleBook(module *modules.ModuleContract, book *config.Book, workspac
 			}
 
 			// First build dark theme (clean=true to start fresh)
-			if exitCode := buildBookWithThemeAndStaging(module, book, workspaceRoot, bookOutputDir, logWriter, "dark", true, stagingDir); exitCode != 0 {
+			// Pass moduleOutputDir as pdfOutputDir (where PDFs end up after move)
+			if exitCode := buildBookWithThemeAndStaging(module, book, workspaceRoot, moduleOutputDir, bookOutputDir, logWriter, "dark", true, stagingDir); exitCode != 0 {
 				return exitCode
 			}
 
 			// Then build light theme (clean=false to preserve dark PDF)
-			return buildBookWithThemeAndStaging(module, book, workspaceRoot, bookOutputDir, logWriter, "light", false, stagingDir)
+			return buildBookWithThemeAndStaging(module, book, workspaceRoot, moduleOutputDir, bookOutputDir, logWriter, "light", false, stagingDir)
 		}
 
 		// Single theme build
@@ -231,19 +256,43 @@ func preprocessBook(book *config.Book, workspaceRoot, moduleOutputDir string, lo
 }
 
 // buildBookWithTheme builds a book as PDF with a specific theme
-// moduleOutputDir is used for staging, bookOutputDir is for final output.
+// moduleOutputDir is used for staging and final PDF location, bookOutputDir is for MkDocs output.
 func buildBookWithTheme(module *modules.ModuleContract, book *config.Book, workspaceRoot, moduleOutputDir, bookOutputDir string, logWriter io.Writer, theme string) int {
 	stagingDir, ok := preprocessBook(book, workspaceRoot, moduleOutputDir, logWriter, true)
 	if !ok {
 		return 1 // Preprocessing failed
 	}
-	return buildBookWithThemeAndStaging(module, book, workspaceRoot, bookOutputDir, logWriter, theme, true, stagingDir)
+	return buildBookWithThemeAndStaging(module, book, workspaceRoot, moduleOutputDir, bookOutputDir, logWriter, theme, true, stagingDir)
 }
 
 // buildBookWithThemeAndStaging builds a book as PDF using a pre-computed staging directory.
-func buildBookWithThemeAndStaging(module *modules.ModuleContract, book *config.Book, workspaceRoot, bookOutputDir string, logWriter io.Writer, theme string, cleanBuild bool, stagingDir string) int {
+// Checks staging hash to skip PDF generation if content is unchanged (incremental build).
+// pdfOutputDir is where the final PDF ends up (module output dir), bookOutputDir is MkDocs working dir.
+func buildBookWithThemeAndStaging(module *modules.ModuleContract, book *config.Book, workspaceRoot, pdfOutputDir, bookOutputDir string, logWriter io.Writer, theme string, cleanBuild bool, stagingDir string) int {
+	// Check for incremental build skip after preprocessing
+	// The staging directory is now populated - compare its hash with previous build
+	// Check PDF at pdfOutputDir (module output) where it ends up after being moved
+	if !isForceRebuild() {
+		canSkip, reason := ShouldSkipPDFGeneration(book.Name, theme, stagingDir, workspaceRoot, pdfOutputDir)
+		if canSkip {
+			Logln(logWriter, "⏩ Skipping PDF generation for %s-%s: %s", book.Name, theme, reason)
+			return exitCodeSkipped
+		}
+		Logln(logWriter, "🔄 Generating PDF for %s-%s: %s", book.Name, theme, reason)
+	}
+
 	// Delegate to existing PDF build logic, passing book metadata for PDF generation
-	return buildMkDocsWithThemeAndStaging(module, book.Name, book.Title, book.Description, workspaceRoot, bookOutputDir, logWriter, theme, cleanBuild, stagingDir)
+	exitCode := buildMkDocsWithThemeAndStaging(module, book.Name, book.Title, book.Description, workspaceRoot, bookOutputDir, logWriter, theme, cleanBuild, stagingDir)
+
+	// Record build state on success for future incremental builds
+	// Record PDF location at pdfOutputDir where it will be moved to
+	if exitCode == 0 {
+		if err := RecordPDFBuildComplete(book.Name, theme, stagingDir, workspaceRoot, pdfOutputDir); err != nil {
+			Logln(logWriter, "⚠️  Failed to record build state: %v", err)
+		}
+	}
+
+	return exitCode
 }
 
 // buildBookHTML builds a book as HTML site

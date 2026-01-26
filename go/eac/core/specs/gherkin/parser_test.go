@@ -108,7 +108,7 @@ func TestParseFile_InvalidGherkin(t *testing.T) {
 	t.Skip("TODO: Add test for invalid Gherkin once we understand gherkin-go error handling")
 }
 
-// Helper function to check if a tag exists in a list
+// Helper function to check if a tag exists in a list.
 func containsTag(tags []string, tag string) bool {
 	for _, t := range tags {
 		if t == tag {

@@ -1,3 +1,6 @@
+// Package main implements an MCP (Model Context Protocol) server that exposes
+// EAC commands as tools for AI assistants. It discovers available commands
+// dynamically and executes them via either direct binary or Docker-based r2r.
 package main
 
 import (
@@ -11,8 +14,6 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
-
-// MCP Server for EAC Commands integration
 
 type MCPRequest struct {
 	JSONRPC string          `json:"jsonrpc"`
@@ -81,184 +82,202 @@ type CommandTree struct {
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
 	encoder := json.NewEncoder(os.Stdout)
+	processRequests(scanner, encoder)
+}
 
+// processRequests reads JSON-RPC requests from the scanner and dispatches them.
+func processRequests(scanner *bufio.Scanner, encoder *json.Encoder) {
 	for scanner.Scan() {
 		line := scanner.Text()
 		if line == "" {
 			continue
 		}
-
-		var req MCPRequest
-		if err := json.Unmarshal([]byte(line), &req); err != nil {
-			sendError(encoder, nil, -32700, "Parse error")
-			continue
-		}
-
-		handleRequest(encoder, &req)
+		processLine(encoder, line)
 	}
+}
+
+// processLine parses and handles a single JSON-RPC request line.
+func processLine(encoder *json.Encoder, line string) {
+	var req MCPRequest
+	if err := json.Unmarshal([]byte(line), &req); err != nil {
+		sendError(encoder, nil, -32700, "Parse error")
+		return
+	}
+	handleRequest(encoder, &req)
 }
 
 func handleRequest(encoder *json.Encoder, req *MCPRequest) {
 	switch req.Method {
 	case "initialize":
-		sendResponse(encoder, req.ID, map[string]interface{}{
-			"protocolVersion": "2024-11-05",
-			"serverInfo": map[string]string{
-				"name":    "mcp-server-commands",
-				"version": "0.1.0",
-			},
-			"capabilities": map[string]interface{}{
-				"tools": map[string]bool{},
-			},
-		})
-
+		handleInitialize(encoder, req)
 	case "tools/list":
-		tools := getCommandTools()
-		sendResponse(encoder, req.ID, map[string]interface{}{
-			"tools": tools,
-		})
-
+		handleToolsList(encoder, req)
 	case "tools/call":
-		var params CallToolParams
-		if err := json.Unmarshal(req.Params, &params); err != nil {
-			sendError(encoder, req.ID, -32602, "Invalid params")
-			return
-		}
-
-		result := callTool(&params)
-		sendResponse(encoder, req.ID, result)
-
+		handleToolCall(encoder, req)
 	default:
 		sendError(encoder, req.ID, -32601, "Method not found")
 	}
 }
 
+// handleInitialize responds to the MCP initialize request.
+func handleInitialize(encoder *json.Encoder, req *MCPRequest) {
+	sendResponse(encoder, req.ID, initializeResponse())
+}
+
+// handleToolsList responds with the list of available tools.
+func handleToolsList(encoder *json.Encoder, req *MCPRequest) {
+	sendResponse(encoder, req.ID, map[string]interface{}{"tools": getCommandTools()})
+}
+
+// initializeResponse returns the MCP protocol initialization response.
+func initializeResponse() map[string]interface{} {
+	return map[string]interface{}{
+		"protocolVersion": "2024-11-05",
+		"serverInfo":      map[string]string{"name": "mcp-server-commands", "version": "0.1.0"},
+		"capabilities":    map[string]interface{}{"tools": map[string]bool{}},
+	}
+}
+
+// handleToolCall processes a tools/call request.
+func handleToolCall(encoder *json.Encoder, req *MCPRequest) {
+	var params CallToolParams
+	if err := json.Unmarshal(req.Params, &params); err != nil {
+		sendError(encoder, req.ID, -32602, "Invalid params")
+		return
+	}
+	sendResponse(encoder, req.ID, callTool(&params))
+}
+
 // getCommandTools discovers commands by calling "get commands".
 func getCommandTools() []Tool {
 	tree := getCommands()
-	var tools []Tool
-
-	for _, cmd := range tree.Commands {
-		// Convert command name to kebab-case for tool name
-		toolName := strings.ReplaceAll(cmd.Name, " ", "-")
-
-		// Skip meta commands
-		if toolName == "get-commands" {
-			continue
+	tools := make([]Tool, 0, len(tree.Commands))
+	for i := range tree.Commands {
+		if tool, ok := commandToTool(&tree.Commands[i]); ok {
+			tools = append(tools, tool)
 		}
-
-		description := cmd.Description
-		if description == "" {
-			description = fmt.Sprintf("Execute '%s' command", cmd.Name)
-		}
-
-		tools = append(tools, Tool{
-			Name:        toolName,
-			Description: description,
-			InputSchema: InputSchema{
-				Type: "object",
-				Properties: map[string]Property{
-					"args": {
-						Type:        "string",
-						Description: "Additional arguments (optional)",
-					},
-				},
-			},
-		})
 	}
-
 	return tools
 }
 
+// commandToTool converts a CommandInfo to a Tool, returning false if skipped.
+func commandToTool(cmd *CommandInfo) (Tool, bool) {
+	toolName := strings.ReplaceAll(cmd.Name, " ", "-")
+	if toolName == "get-commands" {
+		return Tool{}, false
+	}
+	return Tool{
+		Name:        toolName,
+		Description: toolDescription(cmd),
+		InputSchema: toolInputSchema(),
+	}, true
+}
+
+// toolDescription returns a description for the tool.
+func toolDescription(cmd *CommandInfo) string {
+	if cmd.Description != "" {
+		return cmd.Description
+	}
+	return fmt.Sprintf("Execute '%s' command", cmd.Name)
+}
+
+// toolInputSchema returns the standard input schema for command tools.
+func toolInputSchema() InputSchema {
+	return InputSchema{
+		Type: "object",
+		Properties: map[string]Property{
+			"args": {Type: "string", Description: "Additional arguments (optional)"},
+		},
+	}
+}
+
 // getCommands calls the commands system to get command info.
-// Default: Uses r2r eac (Docker-based)
-// Override: Uses direct binary if EAC_USE_DIRECT_BINARY=true
 func getCommands() CommandTree {
 	repoRoot := findRepoRoot()
 	if repoRoot == "" {
-		return CommandTree{Commands: []CommandInfo{}}
+		return emptyCommandTree()
 	}
-
-	useDirectBinary := os.Getenv("EAC_USE_DIRECT_BINARY") == "true"
-
-	var cmd *exec.Cmd
-	if useDirectBinary {
-		// Development: Direct binary
-		binaryPath := paths.CommandsBinaryPath(repoRoot)
-		cmd = exec.Command(binaryPath, "get", "commands")
-		cmd.Dir = repoRoot
-	} else {
-		// Default/Production: Use r2r eac (Docker)
-		cmd = exec.Command("r2r", "eac", "get", "commands")
-		cmd.Dir = repoRoot
-	}
-
-	output, err := cmd.Output()
+	output, err := buildCommand(repoRoot, []string{"get", "commands"}).Output()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting commands: %v\n", err)
-		return CommandTree{Commands: []CommandInfo{}}
+		logError("getting commands", err)
+		return emptyCommandTree()
 	}
+	return parseCommandTree(output)
+}
 
+// emptyCommandTree returns an empty command tree.
+func emptyCommandTree() CommandTree {
+	return CommandTree{Commands: []CommandInfo{}}
+}
+
+// logError logs an error to stderr.
+func logError(context string, err error) {
+	fmt.Fprintf(os.Stderr, "Error %s: %v\n", context, err)
+}
+
+// parseCommandTree parses JSON output into a CommandTree.
+func parseCommandTree(output []byte) CommandTree {
 	var tree CommandTree
 	if err := json.Unmarshal(output, &tree); err != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing command tree: %v\n", err)
-		return CommandTree{Commands: []CommandInfo{}}
+		logError("parsing command tree", err)
+		return emptyCommandTree()
 	}
-
 	return tree
 }
 
 func callTool(params *CallToolParams) ToolResult {
-	// Convert tool name back to command name (kebab-case to space-separated)
 	commandName := strings.ReplaceAll(params.Name, "-", " ")
+	args := extractArgs(params.Arguments)
+	return textResult(execCommand(commandName, args))
+}
 
-	// Get additional args if provided
-	args := ""
-	if argsVal, ok := params.Arguments["args"].(string); ok {
-		args = argsVal
+// extractArgs extracts the "args" string from tool arguments.
+func extractArgs(arguments map[string]interface{}) string {
+	if argsVal, ok := arguments["args"].(string); ok {
+		return argsVal
 	}
-
-	output := execCommand(commandName, args)
-	return textResult(output)
+	return ""
 }
 
 // execCommand executes a command via the commands system.
-// Default: Uses r2r eac (Docker-based)
-// Override: Uses direct binary if EAC_USE_DIRECT_BINARY=true
 func execCommand(commandName, additionalArgs string) string {
 	repoRoot := findRepoRoot()
 	if repoRoot == "" {
 		return "Error: Could not find repository root"
 	}
+	cmdParts := buildCmdParts(commandName, additionalArgs)
+	output, err := buildCommand(repoRoot, cmdParts).CombinedOutput()
+	return formatCommandOutput(commandName, output, err)
+}
 
-	// Build command arguments
+// formatCommandOutput formats command output or error for the tool result.
+func formatCommandOutput(commandName string, output []byte, err error) string {
+	if err != nil {
+		return fmt.Sprintf("Error executing command '%s': %v\n\nOutput:\n%s", commandName, err, string(output))
+	}
+	return strings.TrimSpace(string(output))
+}
+
+// buildCmdParts builds command arguments from command name and additional args.
+func buildCmdParts(commandName, additionalArgs string) []string {
 	cmdParts := strings.Fields(commandName)
 	if additionalArgs != "" {
 		cmdParts = append(cmdParts, strings.Fields(additionalArgs)...)
 	}
+	return cmdParts
+}
 
-	useDirectBinary := os.Getenv("EAC_USE_DIRECT_BINARY") == "true"
-
+// buildCommand creates an exec.Cmd for running EAC commands.
+// Uses direct binary if EAC_USE_DIRECT_BINARY=true, otherwise uses r2r eac (Docker).
+func buildCommand(repoRoot string, cmdParts []string) *exec.Cmd {
 	var cmd *exec.Cmd
-	if useDirectBinary {
-		// Development: Direct binary
-		binaryPath := paths.CommandsBinaryPath(repoRoot)
-		cmd = exec.Command(binaryPath, cmdParts...)
-		cmd.Dir = repoRoot
+	if os.Getenv("EAC_USE_DIRECT_BINARY") == "true" {
+		cmd = exec.Command(paths.CommandsBinaryPath(repoRoot), cmdParts...) //nolint:gosec // MCP server executes EAC commands by design
 	} else {
-		// Default/Production: Use r2r eac (Docker)
-		// Prepend "eac" to command parts: r2r eac <command> <args>
-		args := append([]string{"eac"}, cmdParts...)
-		cmd = exec.Command("r2r", args...)
-		cmd.Dir = repoRoot
+		cmd = exec.Command("r2r", append([]string{"eac"}, cmdParts...)...) //nolint:gosec // MCP server executes EAC commands by design
 	}
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Sprintf("Error executing command '%s': %v\n\nOutput:\n%s", commandName, err, string(output))
-	}
-
-	return strings.TrimSpace(string(output))
+	cmd.Dir = repoRoot
+	return cmd
 }
 
 // findRepoRoot walks up directory tree to find repository root.

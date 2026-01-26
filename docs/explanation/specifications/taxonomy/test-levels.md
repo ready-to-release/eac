@@ -319,12 +319,12 @@ _How it works_:
 
 What contracts can't cover should shift RIGHT into L4, not stay in HE2E:
 
-| Concern                     | Why not HE2E                         | L4 solution                           |
-| --------------------------- | ------------------------------------ | ------------------------------------- |
-| Behavior edge cases         | Synthetic environment ≠ real usage   | Observe real traffic patterns         |
-| Performance under real load | HE2E can't simulate production load  | Production metrics + synthetic probes |
-| Security boundaries         | Test IdP ≠ production IdP            | Canary with real auth flows           |
-| Regulatory evidence         | Auditors want production proof       | Production audit logs + observability |
+| Concern                     | Why not HE2E                        | L4 solution                           |
+| --------------------------- | ----------------------------------- | ------------------------------------- |
+| Behavior edge cases         | Synthetic environment ≠ real usage  | Observe real traffic patterns         |
+| Performance under real load | HE2E can't simulate production load | Production metrics + synthetic probes |
+| Security boundaries         | Test IdP ≠ production IdP           | Canary with real auth flows           |
+| Regulatory evidence         | Auditors want production proof      | Production audit logs + observability |
 
 > **Goal**: Eliminate HE2E entirely. Shift LEFT to contract testing (L2/L3) for integration guarantees.
 

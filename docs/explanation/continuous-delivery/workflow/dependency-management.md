@@ -2,7 +2,9 @@
 
 ## Introduction
 
-Deployable modules depend on shared code. How these dependencies are managed fundamentally shapes your development workflow, testing strategy, and release process.
+Deployable modules depend on shared code.
+
+How these dependencies are managed fundamentally shapes your development workflow, testing strategy, and release process.
 
 Two strategies exist:
 
@@ -95,6 +97,10 @@ This is why organizations adopt monorepos despite tooling complexity.
 
 **Definition:** Explicit version locking for dependencies outside the repository.
 
+The following diagram illustrates the Pin and Stitch technique for composing deployable modules and pipelines, enabling reuse across delivery streams while maintaining version control.
+
+![Pin and Stitch Pattern](../../../assets/branching/pin-and-stitch.drawio.png)
+
 Required when:
 
 - Consuming packages from external registries
@@ -144,7 +150,9 @@ No forced updates that destabilize multiple systems.
 
 **Safe Rollbacks:**
 
-Rolling back deploys the exact previous artifact with its bundled dependencies. No risk of dependency changes affecting rollback.
+Rolling back deploys the exact previous artifact with its bundled dependencies.
+
+No risk of dependency changes affecting rollback.
 
 ### Updating Pinned Dependencies
 
@@ -177,6 +185,10 @@ The update goes through standard validation, ensuring no regressions.
 - You want immediate feedback on breaking changes
 
 **This is the monorepo model.**
+
+The following diagram shows module dependencies in Mono-Trunk and Poly-Trunk configurations, illustrating the Pinning and Stitching pattern with Supporting and Deployable Units.
+
+![Module Dependencies Pattern](../../../assets/branching/depen-modules.drawio.png)
 
 ### Use Pinned Dependencies When
 

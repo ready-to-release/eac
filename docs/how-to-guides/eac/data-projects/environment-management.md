@@ -2,7 +2,8 @@
 
 ## What You'll Learn
 
-Set up and manage environments for Databricks data projects using Unity Catalog for isolation, Delta Lake for versioning, and PLTE for production-like testing.
+Set up and manage environments for Databricks data projects using Unity Catalog for isolation,
+Delta Lake for versioning, and PLTE for production-like testing.
 
 ## Prerequisites
 

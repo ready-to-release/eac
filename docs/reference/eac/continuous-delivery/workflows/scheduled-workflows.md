@@ -4,7 +4,9 @@ Reference for scheduled (cron) workflows.
 
 ## Overview
 
-Scheduled workflows run on a time-based schedule to perform periodic validation and maintenance tasks. These workflows catch issues that incremental CI might miss and ensure the full codebase remains healthy over time.
+Scheduled workflows run on a time-based schedule to perform periodic validation and maintenance tasks.
+
+These workflows catch issues that incremental CI might miss and ensure the full codebase remains healthy over time.
 
 ## Scheduled Full CI Workflow
 

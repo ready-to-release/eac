@@ -6,7 +6,9 @@
 
 ## Overview
 
-The EAC repository uses a **release type system** to distinguish between modules that are released to users and modules that are internal implementation details. This classification drives workflow automation, changelog location, and architectural boundaries.
+The EAC repository uses a **release type system** to distinguish between modules that are released to users and modules that are internal implementation details.
+
+This classification drives workflow automation, changelog location, and architectural boundaries.
 
 ## The Four Release Types
 
@@ -242,7 +244,7 @@ To demote a published module (rare):
 
 Use this to determine the correct release type:
 
-```
+```text
 Is the module released to external users?
 ├─ YES → Is it a standalone artifact?
 │        ├─ YES → published

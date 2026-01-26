@@ -1,19 +1,24 @@
 package validator
 
 import (
-	_ "embed"
 	"encoding/json"
 	"fmt"
 	"strings"
 
+	"github.com/ready-to-release/eac/contracts"
 	"github.com/xeipuuv/gojsonschema"
 )
 
-// Embed the r2r-cli-config v0.1.0 schema at compile time
-// The schema is copied from contracts/r2r-cli/0.1.0/r2r-cli.schema.json by go generate
-//
-//go:embed config/schema.json
+// embeddedSchema is loaded from the contracts module at init time
 var embeddedSchema string
+
+func init() {
+	data, err := contracts.FS.ReadFile(contracts.R2RCLIPath("r2r-cli.schema.json"))
+	if err != nil {
+		panic(fmt.Sprintf("failed to load embedded schema from contracts: %v", err))
+	}
+	embeddedSchema = string(data)
+}
 
 // EmbeddedValidator validates configurations using the embedded JSON schema.
 type EmbeddedValidator struct {

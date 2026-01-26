@@ -1,6 +1,8 @@
 # EAC Guides
 
-Guides for the Everything as Code (EAC) system. Learn how to use CLI commands, write BDD specifications, configure integrations, and manage modules.
+Guides for the Everything as Code (EAC) system.
+
+Learn how to use CLI commands, write BDD specifications, configure integrations, and manage modules.
 
 ## In This Section
 
@@ -18,7 +20,9 @@ EAC currently provides native support for **Go** and **TypeScript** projects:
 - **Docker containers** - Multi-platform builds for any language
 - **Documentation** - MkDocs site generation
 
-Other languages can use container-based or script-based builds. See [R2R and EAC Reference](../../reference/eac/index.md#language-support) for details.
+Other languages can use container-based or script-based builds.
+
+See [R2R and EAC Reference](../../reference/eac/index.md#language-support) for details.
 
 ## Getting Started
 

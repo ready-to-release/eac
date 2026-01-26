@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/update/lint/linters"
@@ -25,6 +27,12 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	systemdeps "github.com/ready-to-release/eac/go/eac/core/system-deps"
 )
+
+func init() {
+	// Register component-level execution support for lint
+	cmdframework.RegisterComponentProvider(cmdframework.CommandTypeLint, FlattenModulesToLintComponentWork)
+	cmdframework.RegisterComponentWorker(cmdframework.CommandTypeLint, lintComponentWorker)
+}
 
 // LintConfig holds lint-specific configuration.
 type LintConfig struct {
@@ -50,6 +58,7 @@ type lintContext struct {
 	results        map[string]*LintModuleResult
 	skippedModules []string
 	moduleFiles    map[string][]string // For state update
+	mu             sync.Mutex          // Protects results map for concurrent access
 }
 
 // RunLintWithFramework executes lint using the cmdframework.
@@ -223,7 +232,8 @@ func updateLintState(ctx *cmdframework.ExecutionContext, lctx *lintContext) {
 	}
 }
 
-// lintWorker is the worker function that lints a single module.
+// lintWorker is the legacy worker function that lints a single module.
+// This is kept for backward compatibility but component-level execution is preferred.
 func lintWorker(ctx *cmdframework.ExecutionContext, moniker string, logWriter io.Writer) int {
 	lintCfg, ok := ctx.Config.Extra["lintConfig"].(*LintConfig)
 	if !ok {
@@ -301,6 +311,132 @@ func lintWorker(ctx *cmdframework.ExecutionContext, moniker string, logWriter io
 	}
 
 	lctx.results[moniker] = result
+
+	return exitCode
+}
+
+// lintComponentWorker lints a single component with a specific provider.
+// This is called by the ComponentScheduler for parallel component execution.
+// The component parameter is in "compName:providerName" format (e.g., "go:golangci-lint").
+func lintComponentWorker(ctx *cmdframework.ExecutionContext, module, component string, logWriter io.Writer) int {
+	lintCfg, ok := ctx.Config.Extra["lintConfig"].(*LintConfig)
+	if !ok {
+		output.Writeln(logWriter, "Error: lintConfig not found or wrong type")
+		return 1
+	}
+	lctx, ok := ctx.Config.Extra["lintContext"].(*lintContext)
+	if !ok {
+		output.Writeln(logWriter, "Error: lintContext not found or wrong type")
+		return 1
+	}
+
+	cfg := config.Global()
+	if cfg == nil || cfg.LintProviders == nil {
+		output.Writeln(logWriter, "Error: lint providers config not loaded")
+		return 1
+	}
+
+	moduleContract, exists := ctx.ModuleRegistry.Get(module)
+	if !exists {
+		output.Writeln(logWriter, "Error: module not found: %s", module)
+		return 1
+	}
+
+	// Parse component parameter: "compName:providerName"
+	parts := strings.SplitN(component, ":", 2)
+	if len(parts) != 2 {
+		output.Writeln(logWriter, "Error: invalid component format: %s (expected compName:providerName)", component)
+		return 1
+	}
+	compName := parts[0]
+	providerName := parts[1]
+
+	provider := cfg.LintProviders.Get(providerName)
+	if provider == nil {
+		output.Writeln(logWriter, "Error: lint provider not found: %s", providerName)
+		return 1
+	}
+
+	handler := linters.GetHandlerForProvider(providerName)
+	if handler == nil {
+		output.Writeln(logWriter, "Error: no handler for provider: %s", providerName)
+		return 1
+	}
+
+	// Acquire component-level lock (use underscore separator for Windows compatibility)
+	componentDir := compName + "_" + providerName
+	if !ctx.Config.DryRun {
+		lockCfg := locking.ComponentLintConfig(module, componentDir, paths.OutLintRelPath)
+		lockFile, err := locking.Acquire(ctx.WorkspaceRoot, lockCfg)
+		if err != nil {
+			output.Writeln(logWriter, "Error: %v", err)
+			return 1
+		}
+		defer locking.Release(lockFile)
+	}
+
+	// Create output directory for this module+component+provider
+	outputDir := paths.ComponentLintOutputPath(ctx.WorkspaceRoot, module, componentDir)
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
+		output.Writeln(logWriter, "Error creating output directory: %v", err)
+		return 1
+	}
+
+	// Get component root for the specific component
+	compRoot := moduleContract.GetComponentRoot(compName)
+	if compRoot == "" {
+		output.Writeln(logWriter, "Warning: no root found for component %s in module %s", compName, module)
+		return 0
+	}
+	moduleRoot := filepath.Join(ctx.WorkspaceRoot, compRoot)
+
+	// Validate module for this handler
+	if err := handler.ValidateModule(moduleRoot, ctx.WorkspaceRoot); err != nil {
+		output.Writeln(logWriter, "Module validation failed for %s: %v", handler.Name(), err)
+		return 1
+	}
+
+	output.Writeln(logWriter, "━━━ Linting %s with %s ━━━", compName, providerName)
+
+	lintStart := time.Now()
+
+	opts := linters.LintOptions{
+		Fix:       lintCfg.Fix,
+		Config:    lintCfg.Config,
+		InputMode: provider.GetInputMode(),
+	}
+
+	exitCode := handler.Lint(moduleRoot, ctx.WorkspaceRoot, outputDir, logWriter, opts)
+
+	duration := time.Since(lintStart)
+
+	// Record result in lintContext (keyed by module:component for aggregation)
+	resultKey := module + ":" + compName
+	lctx.mu.Lock()
+	if existing, ok := lctx.results[resultKey]; ok {
+		// Update existing result
+		existing.Providers = append(existing.Providers, providerName)
+		if exitCode != 0 {
+			existing.Success = false
+		}
+		existing.Duration += duration
+	} else {
+		// Create new result
+		result := &LintModuleResult{
+			Moniker:   resultKey,
+			Success:   exitCode == 0,
+			Duration:  duration,
+			Providers: []string{providerName},
+		}
+		lctx.results[resultKey] = result
+	}
+	lctx.mu.Unlock()
+
+	if exitCode != 0 {
+		output.Writeln(logWriter, "❌ Lint failed for %s:%s with %s", module, compName, providerName)
+	} else {
+		output.Writeln(logWriter, "✅ Lint passed for %s:%s with %s", module, compName, providerName)
+	}
 
 	return exitCode
 }

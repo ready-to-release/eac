@@ -64,11 +64,11 @@ Invoke via: "Use the go-architect agent to design..."
 
 Invoke via: "Run the go-cli-feature skill for..."
 
-| Skill                    | Purpose                        | Steps                                                                                   |
-| ------------------------ | ------------------------------ | --------------------------------------------------------------------------------------- |
-| **go-cli-feature**       | End-to-end feature development | Plan → Specify → Design → Test → Implement → Verify → Simplify → Document               |
-| **go-cli-release-check** | Pre-release validation         | CI → Security → Build → Changelog → Dependencies → Tests → Docs                         |
-| **go-cli-refactor-safe** | Safe refactoring               | Baseline → Plan → Refactor incrementally → Test each step → Simplify                    |
+| Skill                    | Purpose                        | Steps                                                                     |
+| ------------------------ | ------------------------------ | ------------------------------------------------------------------------- |
+| **go-cli-feature**       | End-to-end feature development | Plan → Specify → Design → Test → Implement → Verify → Simplify → Document |
+| **go-cli-release-check** | Pre-release validation         | CI → Security → Build → Changelog → Dependencies → Tests → Docs           |
+| **go-cli-refactor-safe** | Safe refactoring               | Baseline → Plan → Refactor incrementally → Test each step → Simplify      |
 
 ## Common Workflows
 
@@ -229,6 +229,7 @@ The MCP server supports two execution modes:
 #### Production Mode (Default)
 
 **Configuration** (`.mcp.json`):
+
 ```json
 {
   "mcpServers": {
@@ -246,6 +247,7 @@ The MCP server supports two execution modes:
 #### Development Mode (Local Override)
 
 **Configuration** (`.mcp.json`):
+
 ```json
 {
   "mcpServers": {

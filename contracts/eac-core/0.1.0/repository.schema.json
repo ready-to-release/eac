@@ -28,6 +28,10 @@
     "registries": {
       "$ref": "#/definitions/registries_config",
       "description": "Container registry configurations for cleanup policies"
+    },
+    "containers": {
+      "$ref": "#/definitions/containers_config",
+      "description": "Container tool configurations with version pinning"
     }
   },
   "required": ["modules"],
@@ -776,6 +780,64 @@
           "type": "string",
           "description": "Expected format of release tags on images. Use {module} and {version} placeholders. Example: '{module}/{version}' matches 'ext-eac/1.0.0'",
           "default": "{module}/{version}"
+        }
+      }
+    },
+    "containers_config": {
+      "type": "object",
+      "description": "Container configurations keyed by container name",
+      "properties": {
+        "base_images": {
+          "$ref": "#/definitions/base_images_config",
+          "description": "Pinned versions for Dockerfile base images"
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/container_tool_config"
+      }
+    },
+    "base_images_config": {
+      "type": "object",
+      "description": "Base image version pins (ARG values for Dockerfiles)",
+      "additionalProperties": {
+        "type": "string",
+        "description": "Pinned version tag (e.g., '3.12.1', '1.25.0-alpine')"
+      }
+    },
+    "container_tool_config": {
+      "type": "object",
+      "description": "Configuration for a container-based tool",
+      "properties": {
+        "dockerfile": {
+          "type": "string",
+          "description": "Path to Dockerfile relative to repo root"
+        },
+        "image": {
+          "type": "string",
+          "description": "GHCR image reference for container mode"
+        },
+        "tag": {
+          "type": "string",
+          "description": "Image tag for GHCR (e.g., 'v1.0.0', 'sha-abc123')",
+          "default": "latest"
+        },
+        "workdir": {
+          "type": "string",
+          "description": "Working directory inside container",
+          "default": "/workspace"
+        },
+        "command": {
+          "type": "string",
+          "description": "Default command/entrypoint"
+        },
+        "local_binding": {
+          "type": "boolean",
+          "description": "If true, prefer build mode in local development",
+          "default": true
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of this container tool"
         }
       }
     }

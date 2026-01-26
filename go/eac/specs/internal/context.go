@@ -125,7 +125,7 @@ func (c *TestContext) SetupIsolation() error {
 
 	// Create specs/ directory for design output
 	specsDir := filepath.Join(c.IsolatedDir, "specs")
-	if err := os.MkdirAll(specsDir, 0o755); err != nil {
+	if err := os.MkdirAll(specsDir, 0o750); err != nil {
 		return fmt.Errorf("failed to create specs directory in isolation: %w", err)
 	}
 
@@ -402,8 +402,8 @@ func (c *TestContext) logBinaryNotFoundDiagnostics(binaryPath string) {
 			fmt.Fprintf(os.Stderr, "  (empty directory)\n")
 		}
 		for _, entry := range entries {
-			info, _ := entry.Info()
-			if info != nil {
+			info, infoErr := entry.Info()
+			if infoErr == nil && info != nil {
 				fmt.Fprintf(os.Stderr, "  - %s (%d bytes, mode: %s)\n", entry.Name(), info.Size(), info.Mode())
 			} else {
 				fmt.Fprintf(os.Stderr, "  - %s\n", entry.Name())
@@ -423,8 +423,8 @@ func (c *TestContext) logBinaryNotFoundDiagnostics(binaryPath string) {
 			fmt.Fprintf(os.Stderr, "  (empty directory)\n")
 		}
 		for _, entry := range entries {
-			info, _ := entry.Info()
-			if info != nil {
+			info, infoErr := entry.Info()
+			if infoErr == nil && info != nil {
 				fmt.Fprintf(os.Stderr, "  - %s (%d bytes)\n", entry.Name(), info.Size())
 			} else {
 				fmt.Fprintf(os.Stderr, "  - %s\n", entry.Name())

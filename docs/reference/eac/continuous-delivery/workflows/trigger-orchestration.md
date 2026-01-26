@@ -4,7 +4,9 @@ Detailed reference for the trigger orchestration system (`change-trigger.yaml`).
 
 ## Overview
 
-The `change-trigger.yaml` workflow implements incremental CI by detecting which modules have changed and orchestrating their build and test execution. This workflow serves as the main entry point for continuous integration and handles all release triggering.
+The `change-trigger.yaml` workflow implements incremental CI by detecting which modules have changed and orchestrating their build and test execution.
+
+This workflow serves as the main entry point for continuous integration and handles all release triggering.
 
 On push to main, after CI workflows complete, the workflow checks for pending releases from two sources:
 

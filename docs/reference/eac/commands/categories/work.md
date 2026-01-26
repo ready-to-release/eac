@@ -2,7 +2,9 @@
 
 ## Overview
 
-Work commands manage parallel development workspaces using **git worktrees**. They enable multiple topic branches to be worked on simultaneously without switching contexts, providing isolated development environments for each feature.
+Work commands manage parallel development workspaces using **git worktrees**.
+
+They enable multiple topic branches to be worked on simultaneously without switching contexts, providing isolated development environments for each feature.
 
 **Key Characteristics**:
 
@@ -22,7 +24,9 @@ Work commands manage parallel development workspaces using **git worktrees**. Th
 
 ### What are Git Worktrees?
 
-Git worktrees allow you to have multiple working directories attached to the same repository. Each worktree is checked out to a different branch, enabling parallel development without switching branches.
+Git worktrees allow you to have multiple working directories attached to the same repository.
+
+Each worktree is checked out to a different branch, enabling parallel development without switching branches.
 
 ### Traditional Workflow (Branch Switching)
 

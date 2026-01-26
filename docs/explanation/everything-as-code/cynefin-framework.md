@@ -1,5 +1,5 @@
 # Understanding Compliance Through Cynefin
->
+
 > **Why compliance can and should be automated**
 
 ## The Cynefin Framework
@@ -14,6 +14,10 @@ From this perspective, it suggests why traditional approaches to compliance ofte
 
 > Cynefin Framework showing Clear, Complicated, Complex, and Chaotic domains with different response patterns
 > Source: <https://enliveningedge.org/tools-practices/tour-latest-cynefin-iteration-part-1-framework-dealing-challenges/>
+
+The following diagram maps Cynefin domains specifically to CD Model strategies, showing how different problem types call for different delivery approaches:
+
+![Cynefin Framework mapped to CD Model](../../assets/assisted/12-cynefin-framework.drawio.png)
 
 #### Clear Domain (sense-categorize-respond)
 

@@ -14,10 +14,10 @@ EAC (Everything as Code) provides automation for:
 
 ## In This Section
 
-| Topic | Description |
-| ----- | ----------- |
-| [Getting Started](./getting-started.md) | First steps adopting EAC |
-| [Configuration](./configuration.md) | Configure EAC for your project |
+| Topic                                       | Description                          |
+| ------------------------------------------- | ------------------------------------ |
+| [Getting Started](./getting-started.md)     | First steps adopting EAC             |
+| [Configuration](./configuration.md)         | Configure EAC for your project       |
 | [Project Structure](./project-structure.md) | Recommended `.r2r/` directory layout |
 
 ## Quick Start

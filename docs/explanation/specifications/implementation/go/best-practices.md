@@ -8,13 +8,13 @@ Follow these best practices to write clear, maintainable, and reliable tests.
 
 ## Key Principles
 
-| Principle | Description |
-|-----------|-------------|
-| Clear naming | `Test<Function>_<Scenario>_<ExpectedResult>` |
-| Table-driven tests | Multiple variants in one test |
-| Test isolation | Each test is independent |
-| AAA pattern | Arrange, Act, Assert |
-| Descriptive errors | Show expected vs actual |
+| Principle          | Description                                  |
+| ------------------ | -------------------------------------------- |
+| Clear naming       | `Test<Function>_<Scenario>_<ExpectedResult>` |
+| Table-driven tests | Multiple variants in one test                |
+| Test isolation     | Each test is independent                     |
+| AAA pattern        | Arrange, Act, Assert                         |
+| Descriptive errors | Show expected vs actual                      |
 
 ---
 
@@ -22,10 +22,10 @@ Follow these best practices to write clear, maintainable, and reliable tests.
 
 **Pattern**: `Test<Function>_<Scenario>_<ExpectedResult>`
 
-| Good | Bad |
-|------|-----|
-| `TestParseConfig_WithValidYAML_ShouldSucceed` | `TestParse` |
-| `TestCreateUser_WithExistingEmail_ShouldReturnError` | `Test1` |
+| Good                                                 | Bad         |
+| ---------------------------------------------------- | ----------- |
+| `TestParseConfig_WithValidYAML_ShouldSucceed`        | `TestParse` |
+| `TestCreateUser_WithExistingEmail_ShouldReturnError` | `Test1`     |
 
 ---
 

@@ -1,3 +1,4 @@
+// Package markdown provides validation utilities for Markdown files.
 package markdown
 
 import (
@@ -378,10 +379,9 @@ func (v *Validator) PrintResults(results []ValidationResult, moduleRoot string) 
 		fmt.Fprintf(v.writer, "⚠️  Validation passed with %d warning(s)\n", totalWarnings)
 		fmt.Fprintf(v.writer, "✅ %d/%d files valid\n", validFiles, len(results))
 		return 0
-	} else {
-		fmt.Fprintf(v.writer, "✅ All markdown files validated successfully\n")
-		return 0
 	}
+	fmt.Fprintf(v.writer, "✅ All markdown files validated successfully\n")
+	return 0
 }
 
 // Helper functions

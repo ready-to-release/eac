@@ -14,8 +14,7 @@ import (
 
 // createSquashMessageTestState holds state for create squash-message tests.
 type createSquashMessageTestState struct {
-	squashMessage string
-	baseBranch    string
+	baseBranch string
 }
 
 // registerCreateSquashMessageSteps registers step definitions for create squash-message command features.
@@ -32,7 +31,7 @@ func registerCreateSquashMessageSteps(sc *godog.ScenarioContext, ctx *internal.T
 		// Create the base branch if it doesn't exist
 		cmd := exec.Command("git", "checkout", "-b", baseBranch)
 		cmd.Dir = ctx.IsolatedDir
-		_ = cmd.Run() // Ignore error if branch exists
+		_ = cmd.Run() //nolint:errcheck // Ignore error if branch exists
 
 		// Create a feature branch from it
 		cmd = exec.Command("git", "checkout", "-b", "feature-branch")
@@ -65,7 +64,7 @@ func registerCreateSquashMessageSteps(sc *godog.ScenarioContext, ctx *internal.T
 		// Create and commit to base branch first
 		cmd := exec.Command("git", "checkout", "-b", baseBranch)
 		cmd.Dir = ctx.IsolatedDir
-		_ = cmd.Run() // Ignore if branch exists
+		_ = cmd.Run() //nolint:errcheck // Ignore if branch exists
 
 		// Add initial file
 		baseFile := filepath.Join("go", "test-module", "base.go")
@@ -152,7 +151,7 @@ func registerCreateSquashMessageSteps(sc *godog.ScenarioContext, ctx *internal.T
 		// Create and commit to base branch first
 		cmd := exec.Command("git", "checkout", "-b", baseBranch)
 		cmd.Dir = ctx.IsolatedDir
-		_ = cmd.Run() // Ignore if branch exists
+		_ = cmd.Run() //nolint:errcheck // Ignore if branch exists
 
 		// Add initial file
 		baseFile := filepath.Join("go", "test-module", "base.go")

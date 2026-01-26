@@ -26,12 +26,12 @@ project/
 
 ## Key Concepts
 
-| Component | Location | Purpose |
-|-----------|----------|---------|
-| Specification Files | `specs/<module>/<feature>/` | Gherkin scenarios |
-| Step Definitions | `src/<module>/tests/` | Connect Gherkin to Go |
-| Unit Tests | `src/<module>/` | Fast isolated tests |
-| Integration Tests | `src/<module>/tests/` | L2 tests with build tags |
+| Component           | Location                    | Purpose                  |
+| ------------------- | --------------------------- | ------------------------ |
+| Specification Files | `specs/<module>/<feature>/` | Gherkin scenarios        |
+| Step Definitions    | `src/<module>/tests/`       | Connect Gherkin to Go    |
+| Unit Tests          | `src/<module>/`             | Fast isolated tests      |
+| Integration Tests   | `src/<module>/tests/`       | L2 tests with build tags |
 
 ---
 

@@ -126,7 +126,10 @@ func iScanAllGoFilesForImports() error {
 		}
 
 		if len(imports) > 0 {
-			relPath, _ := filepath.Rel(modIsoCtx.repoRoot, path)
+			relPath, relErr := filepath.Rel(modIsoCtx.repoRoot, path)
+			if relErr != nil {
+				relPath = path
+			}
 			modIsoCtx.importsByFile[relPath] = imports
 		}
 
@@ -181,7 +184,10 @@ func iScanAllProductionGoFilesIn(modulePath string) error {
 		}
 
 		if len(imports) > 0 {
-			relPath, _ := filepath.Rel(modIsoCtx.repoRoot, path)
+			relPath, relErr := filepath.Rel(modIsoCtx.repoRoot, path)
+			if relErr != nil {
+				relPath = path
+			}
 			modIsoCtx.importsByFile[relPath] = imports
 		}
 

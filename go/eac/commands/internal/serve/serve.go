@@ -52,6 +52,12 @@ type ServeConfig struct {
 
 	// PreferredPort is the preferred host port (0 = auto-allocate)
 	PreferredPort int
+
+	// Memory is the memory limit in bytes (0 = no limit)
+	Memory int64
+
+	// CPUs is the number of CPUs to allocate (0 = no limit)
+	CPUs float64
 }
 
 // BuildInfo holds information for building a local Docker image.
@@ -609,6 +615,10 @@ func createContainer(ctx context.Context, cli DockerClient, config *ServeConfig,
 		},
 		RestartPolicy: container.RestartPolicy{
 			Name: container.RestartPolicyMode(restartPolicy),
+		},
+		Resources: container.Resources{
+			Memory:   config.Memory,
+			NanoCPUs: int64(config.CPUs * 1e9),
 		},
 	}
 

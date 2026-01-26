@@ -1,6 +1,8 @@
 # eac-commands
 
-The `eac-commands` module provides all CLI command implementations for the EAC (Everything-as-Code) system. It is the primary interface for developers interacting with the repository.
+The `eac-commands` module provides all CLI command implementations for the EAC (Everything-as-Code) system.
+
+It is the primary interface for developers interacting with the repository.
 
 ## System Context
 

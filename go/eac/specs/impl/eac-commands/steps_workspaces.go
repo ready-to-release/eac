@@ -65,7 +65,7 @@ func registerWorkspacesSteps(sc *godog.ScenarioContext, ctx *internal.TestContex
 }
 
 // setupMultipleWorktrees creates multiple worktrees from a table.
-// Table columns: path, branch, clean (true/false)
+// Table columns: path, branch, clean (true/false).
 func setupMultipleWorktrees(ctx *internal.TestContext, table *godog.Table) error {
 	ctx.MustBeIsolated()
 
@@ -233,10 +233,10 @@ func createWorktree(ctx *internal.TestContext, path, branch string) error {
 	// Create branch if it doesn't exist
 	cmd := exec.Command("git", "branch", branch)
 	cmd.Dir = ctx.IsolatedDir
-	cmd.Run() // Ignore error - branch might already exist
+	_ = cmd.Run() //nolint:errcheck // Ignore error - branch might already exist
 
 	// Create worktree directory
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return fmt.Errorf("failed to create worktree parent directory: %w", err)
 	}
 
@@ -252,14 +252,6 @@ func createWorktree(ctx *internal.TestContext, path, branch string) error {
 func makeDirtyWorktree(ctx *internal.TestContext, path string) error {
 	testFile := filepath.Join(path, "uncommitted.txt")
 	return os.WriteFile(testFile, []byte("uncommitted change\n"), 0o644)
-}
-
-// makeNonGitDirectory removes the .git directory to simulate non-git repo.
-func makeNonGitDirectory(ctx *internal.TestContext) error {
-	ctx.MustBeIsolated()
-
-	gitDir := filepath.Join(ctx.IsolatedDir, ".git")
-	return os.RemoveAll(gitDir)
 }
 
 // verifyTableHeaders checks that the output contains the expected table headers.

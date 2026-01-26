@@ -5,6 +5,5 @@ nav:
   - cli-integration.md
   - contracts.md
   - dependency-system.md
-  - module-types.md
   - repository-layout.md
   - creating-commands.md

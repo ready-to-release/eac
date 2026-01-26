@@ -1,3 +1,4 @@
+// Package oscal provides validators for OSCAL (Open Security Controls Assessment Language) documents.
 package oscal
 
 import (
@@ -17,7 +18,7 @@ type CatalogValidator struct {
 // The output parameter should contain the JSON content of the OSCAL catalog
 // Context can optionally include:
 //   - "file_path": path to the file being validated (for better error messages)
-func (v *CatalogValidator) Validate(output string, context map[string]interface{}) []validation.ValidationError {
+func (v *CatalogValidator) Validate(output string, _ map[string]interface{}) []validation.ValidationError {
 	var errors []validation.ValidationError
 	formatter := validation.NewErrorFormatter()
 

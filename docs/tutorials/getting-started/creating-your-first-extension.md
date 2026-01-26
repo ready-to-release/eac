@@ -16,7 +16,9 @@ By the end of this tutorial, you'll be able to:
 
 ## What is an Extension?
 
-An **r2r extension** is a Docker container that adds custom commands to the r2r CLI. Extensions run in isolation and receive arguments from the CLI.
+An **r2r extension** is a Docker container that adds custom commands to the r2r CLI.
+
+Extensions run in isolation and receive arguments from the CLI.
 
 **Key characteristics:**
 
@@ -32,8 +34,8 @@ r2r env-check HOME USER SHELL
 ```
 
 !!! tip "Complete Guide Available"
-    This tutorial provides a quick introduction. For comprehensive details, see:
 
+    This tutorial provides a quick introduction. For comprehensive details, see:
     - **[Creating Extensions Guide](../../how-to-guides/r2r/creating-extensions.md)** - Complete reference with production patterns
     - **[ext-env-check Repository](https://github.com/ready-to-release/ext-env-check)** - Working example to study
 

@@ -4,6 +4,10 @@
 
 **REQUIRED for all Gherkin scenarios**. Verification tags categorize the type of validation being performed.
 
+The following diagram provides a complete taxonomy of verification tags, showing how they map to test levels and the CD Model stages where each type of verification occurs.
+
+![Verification Tags Taxonomy](../../../assets/assisted/18-verification-tags-taxonomy.drawio.png){width=900}
+
 ---
 
 ## `@ov` - Operational Verification

@@ -61,6 +61,15 @@ func phaseVerify(ctx *ExecutionContext) error {
 		log.Debugf("No component count provider registered")
 	}
 
+	// Calculate component layers using the registered provider (if available)
+	// Only use provider if component layers wasn't already set by a hook
+	if summary.ComponentLayerCount == 0 && componentLayersProvider != nil {
+		layers := componentLayersProvider(ctx)
+		log.Debugf("Component layers from provider: %d layers", len(layers))
+		summary.ComponentExecutionLayers = layers
+		summary.ComponentLayerCount = len(layers)
+	}
+
 	// Set flags (merge with any existing flags from hooks)
 	summary.Flags.DryRun = ctx.Config.DryRun
 	summary.Flags.SkipDeps = ctx.Config.SkipDeps
@@ -104,10 +113,15 @@ type ArtifactValidator func(ctx *ExecutionContext) *initsummary.ArtifactValidati
 // Commands provide their own implementation based on their work items.
 type ComponentCountProvider func(ctx *ExecutionContext) int
 
+// ComponentLayersProvider is a function that returns the component execution layers.
+// Used to compute component layer info for the init summary display.
+type ComponentLayersProvider func(ctx *ExecutionContext) [][]string
+
 var (
-	depsVerifier           DepsVerifier
-	artifactValidator      ArtifactValidator
-	componentCountProvider ComponentCountProvider
+	depsVerifier            DepsVerifier
+	artifactValidator       ArtifactValidator
+	componentCountProvider  ComponentCountProvider
+	componentLayersProvider ComponentLayersProvider
 )
 
 // SetDepsVerifier sets the global system dependency verifier function.
@@ -123,6 +137,11 @@ func SetArtifactValidator(v ArtifactValidator) {
 // SetComponentCountProvider sets the global component count provider function.
 func SetComponentCountProvider(p ComponentCountProvider) {
 	componentCountProvider = p
+}
+
+// SetComponentLayersProvider sets the global component layers provider function.
+func SetComponentLayersProvider(p ComponentLayersProvider) {
+	componentLayersProvider = p
 }
 
 // displayInitSummary outputs the initialization summary.

@@ -66,5 +66,7 @@ Evidence is written to `out/scan/<module>/zap/`.
 
 ## Related Documentation
 
-- [Shift-Left Security (Conceptual)](../../../explanation/continuous-delivery/security/shift-left.md) - Security integration principles
-- [Scan Command Reference](../commands/scan/index.md) - Full scan command options
+- [Shift-Left Security (Conceptual)](../../../explanation/continuous-delivery/security/shift-left.md)
+  Security integration principles
+- [Scan Command Reference](../commands/scan/index.md)
+  Full scan command options

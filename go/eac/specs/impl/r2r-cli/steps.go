@@ -71,8 +71,10 @@ func initializeExecutablePath() {
 
 	for _, execPath := range possiblePaths {
 		if _, err := os.Stat(execPath); err == nil {
-			absPath, _ := filepath.Abs(execPath)
-			cliCtx.executablePath = absPath
+			absPath, err := filepath.Abs(execPath)
+			if err == nil {
+				cliCtx.executablePath = absPath
+			}
 			break
 		}
 	}
@@ -145,7 +147,7 @@ func iCreateATestFolder(folderName string) error {
 
 	os.RemoveAll(testPath)
 
-	if err := os.MkdirAll(testPath, 0o755); err != nil {
+	if err := os.MkdirAll(testPath, 0o750); err != nil {
 		return fmt.Errorf("failed to create test folder: %w", err)
 	}
 
@@ -159,7 +161,7 @@ func iCreateAFolderInTheTestFolder(folderName string) error {
 	}
 
 	folderPath := filepath.Join(cliCtx.testFolderPath, folderName)
-	if err := os.MkdirAll(folderPath, 0o755); err != nil {
+	if err := os.MkdirAll(folderPath, 0o750); err != nil {
 		return fmt.Errorf("failed to create folder: %w", err)
 	}
 
@@ -233,7 +235,7 @@ extensions: []
 
 	// Ensure .r2r directory exists
 	r2rDir := filepath.Join(cliCtx.testFolderPath, ".r2r")
-	if err := os.MkdirAll(r2rDir, 0o755); err != nil {
+	if err := os.MkdirAll(r2rDir, 0o750); err != nil {
 		return fmt.Errorf("failed to create .r2r directory: %w", err)
 	}
 
@@ -258,7 +260,7 @@ project:
 
 	// Ensure .r2r directory exists
 	r2rDir := filepath.Join(cliCtx.testFolderPath, ".r2r")
-	if err := os.MkdirAll(r2rDir, 0o755); err != nil {
+	if err := os.MkdirAll(r2rDir, 0o750); err != nil {
 		return fmt.Errorf("failed to create .r2r directory: %w", err)
 	}
 
@@ -286,7 +288,7 @@ func iRunTheBuiltCLIWith(args string) error {
 // ============================================================================
 
 func runCommandWithArgs(args ...string) error {
-	cmd := exec.Command(args[0], args[1:]...)
+	cmd := exec.Command(args[0], args[1:]...) //nolint:gosec // Args are controlled test input
 
 	output, err := cmd.CombinedOutput()
 	cliCtx.sharedCtx.CommandOutput = string(output)
@@ -303,14 +305,4 @@ func runCommandWithArgs(args ...string) error {
 	}
 
 	return nil
-}
-
-// Cleanup function to restore directory after tests.
-func cleanupCliContext() {
-	if cliCtx != nil && cliCtx.currentDir != "" {
-		os.Chdir(cliCtx.currentDir)
-	}
-	if cliCtx != nil && cliCtx.testFolderPath != "" {
-		os.RemoveAll(cliCtx.testFolderPath)
-	}
 }

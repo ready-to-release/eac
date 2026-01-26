@@ -26,6 +26,7 @@
 // Flag.no-tui: type=bool, usage=Disable TUI console
 // Flag.tui-height: type=int, usage=Set TUI console height (3-20, default: 6)
 // Flag.sequential: type=bool, usage=Run lints sequentially instead of in parallel
+// Flag.turbo: type=bool, usage=Enable turbo mode for faster linting (increases parallelism)
 // Flag.skip-deps: type=bool, usage=Skip system dependency verification
 // Flag.timings: type=bool, usage=Show detailed timing summary
 // Args: modules
@@ -73,6 +74,7 @@ func Lint() int {
 	configPath := ""
 	skipDeps := false
 	sequential := false
+	turbo := false
 	forceRelint := false
 	debugMode := false
 	showTimings := false
@@ -96,6 +98,8 @@ func Lint() int {
 			skipDeps = true
 		case "--sequential":
 			sequential = true
+		case "--turbo":
+			turbo = true
 		case "--relint":
 			forceRelint = true
 		case "--debug":
@@ -146,6 +150,12 @@ func Lint() int {
 		return 1
 	}
 
+	// Validate --turbo and --sequential mutual exclusivity
+	if turbo && sequential {
+		log.Errorf("Error: --turbo and --sequential cannot be used together")
+		return 1
+	}
+
 	// Create command config for framework
 	cmdCfg := &cmdframework.CommandConfig{
 		Type:         cmdframework.CommandTypeLint,
@@ -155,6 +165,7 @@ func Lint() int {
 		Monikers:     monikers,
 		SkipDeps:     skipDeps,
 		Sequential:   sequential,
+		Turbo:        turbo,
 		ForceRebuild: forceRelint, // Use ForceRebuild for relint flag
 		Layered:      false,       // Lint runs in parallel (no dependency ordering needed)
 		UseTUI:       useTUI,
@@ -185,6 +196,7 @@ func printLintUsage() {
 	log.Info("  --fix                     Auto-fix issues where possible")
 	log.Info("  --config PATH             Override lint config file path")
 	log.Info("  --relint                  Force full lint, ignore incremental state")
+	log.Info("  --turbo                   Enable turbo mode for faster linting (increases parallelism)")
 	log.Info("  --sequential              Run lints sequentially (default: parallel)")
 	log.Info("  --skip-deps               Skip system dependency verification")
 	log.Info("  --timings                 Show detailed timing summary")

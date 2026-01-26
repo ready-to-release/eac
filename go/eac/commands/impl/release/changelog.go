@@ -309,7 +309,7 @@ func ReleaseChangelog() int {
 	}
 
 	// Add new version to changelog
-	existingChangelog.AddVersion(newVersionEntry)
+	existingChangelog.AddVersion(&newVersionEntry)
 	existingChangelog.Module = module
 	existingChangelog.VersionType = versionType
 

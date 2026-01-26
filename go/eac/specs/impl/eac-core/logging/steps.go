@@ -35,11 +35,11 @@ var logCtx loggingContext
 
 func resetLoggingContext() {
 	if logCtx.logger != nil {
-		logCtx.logger.Sync()
+		_ = logCtx.logger.Sync() //nolint:errcheck // Sync may fail on close
 	}
 	for _, l := range logCtx.loggers {
 		if l != nil {
-			l.Sync()
+			_ = l.Sync() //nolint:errcheck // Sync may fail on close
 		}
 	}
 	// Clean up only log files created by tests (not the entire out directory)
@@ -92,7 +92,9 @@ func aLoggingModuleConfiguredFor(module string) error {
 	// Create a unique temp directory for this scenario
 	count := atomic.AddInt64(&testCounter, 1)
 	logCtx.workspaceRoot = filepath.Join(os.TempDir(), fmt.Sprintf("logging-test-%d", count))
-	os.MkdirAll(logCtx.workspaceRoot, 0o755)
+	if err := os.MkdirAll(logCtx.workspaceRoot, 0o750); err != nil {
+		return err
+	}
 
 	logCtx.module = module
 	logCtx.debugMode = false
@@ -156,28 +158,28 @@ func aLoggerConfiguredForModule(module string) error {
 func iLogADebugMessage(message string) error {
 	logCtx.lastMessage = message
 	logCtx.logger.Debug(message)
-	logCtx.logger.Sync()
+	_ = logCtx.logger.Sync() //nolint:errcheck // Sync may fail on close
 	return nil
 }
 
 func iLogAnInfoMessage(message string) error {
 	logCtx.lastMessage = message
 	logCtx.logger.Info(message)
-	logCtx.logger.Sync()
+	_ = logCtx.logger.Sync() //nolint:errcheck // Sync may fail on close
 	return nil
 }
 
 func iLogAWarnMessage(message string) error {
 	logCtx.lastMessage = message
 	logCtx.logger.Warn(message)
-	logCtx.logger.Sync()
+	_ = logCtx.logger.Sync() //nolint:errcheck // Sync may fail on close
 	return nil
 }
 
 func iLogAnErrorMessage(message string) error {
 	logCtx.lastMessage = message
 	logCtx.logger.Error(message)
-	logCtx.logger.Sync()
+	_ = logCtx.logger.Sync() //nolint:errcheck // Sync may fail on close
 	return nil
 }
 
@@ -192,14 +194,14 @@ func iLogMessagesAtAllLevels() error {
 	logCtx.logger.Info(logCtx.allMessages[1])
 	logCtx.logger.Warn(logCtx.allMessages[2])
 	logCtx.logger.Error(logCtx.allMessages[3])
-	logCtx.logger.Sync()
+	_ = logCtx.logger.Sync() //nolint:errcheck // Sync may fail on close
 	return nil
 }
 
 func iLogInfoMessagesToBothLoggers() error {
 	for name, logger := range logCtx.loggers {
 		logger.Info(fmt.Sprintf("%s info message", name))
-		logger.Sync()
+		_ = logger.Sync() //nolint:errcheck // Sync may fail on close
 	}
 	return nil
 }

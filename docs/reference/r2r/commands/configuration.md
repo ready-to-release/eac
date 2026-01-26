@@ -50,12 +50,12 @@ r2r eac [command] [args...]
 
 Values resolved in priority order (highest to lowest):
 
-| Priority   | Source                | Description                             |
-| ---------- | --------------------- | --------------------------------------- |
-| 1          | Environment Variables | Runtime overrides via `R2R_*` variables |
-| 2          | User-Specific Config  | `.r2r/r2r-cli.local.yml` (gitignored)   |
-| 3          | Repository Config     | `.r2r/r2r-cli.yml` (committed)          |
-| 4          | Built-in Defaults     | Programmed into CLI                     |
+| Priority | Source                | Description                             |
+| -------- | --------------------- | --------------------------------------- |
+| 1        | Environment Variables | Runtime overrides via `R2R_*` variables |
+| 2        | User-Specific Config  | `.r2r/r2r-cli.local.yml` (gitignored)   |
+| 3        | Repository Config     | `.r2r/r2r-cli.yml` (committed)          |
+| 4        | Built-in Defaults     | Programmed into CLI                     |
 
 ### Configuration Layering
 

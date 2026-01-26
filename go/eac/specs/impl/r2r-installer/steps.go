@@ -78,12 +78,6 @@ func initializeInstallerContext() {
 	}
 }
 
-func cleanupInstallerContext() {
-	if instCtx != nil && instCtx.tempInstallDir != "" {
-		os.RemoveAll(instCtx.tempInstallDir)
-	}
-}
-
 // isolatePathEnv returns an environment that prevents the installer from
 // modifying the persistent system/user PATH and enables mock mode to skip downloads.
 // Sets __R2R_TEST_NO_PATH_UPDATE=1 to skip PATH modification.
@@ -306,8 +300,10 @@ func iRunThePowerShellInstallerWithArgs(args string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	cmdArgs := []string{"-ExecutionPolicy", "Bypass", "-File", scriptPath, "-InstallDir", instCtx.tempInstallDir}
-	cmdArgs = append(cmdArgs, strings.Fields(args)...)
+	additionalArgs := strings.Fields(args)
+	cmdArgs := make([]string, 0, 6+len(additionalArgs))
+	cmdArgs = append(cmdArgs, "-ExecutionPolicy", "Bypass", "-File", scriptPath, "-InstallDir", instCtx.tempInstallDir)
+	cmdArgs = append(cmdArgs, additionalArgs...)
 
 	cmd := exec.CommandContext(ctx, "powershell", cmdArgs...)
 
@@ -392,8 +388,10 @@ func iRunTheBashInstallerWithArgs(args string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	cmdArgs := []string{scriptPath, "--install-dir", instCtx.tempInstallDir}
-	cmdArgs = append(cmdArgs, strings.Fields(args)...)
+	additionalBashArgs := strings.Fields(args)
+	cmdArgs := make([]string, 0, 3+len(additionalBashArgs))
+	cmdArgs = append(cmdArgs, scriptPath, "--install-dir", instCtx.tempInstallDir)
+	cmdArgs = append(cmdArgs, additionalBashArgs...)
 
 	cmd := exec.CommandContext(ctx, "bash", cmdArgs...)
 

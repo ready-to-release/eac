@@ -10,7 +10,9 @@ r2r validate [flags]
 
 ## Description
 
-The `validate` command checks your R2R configuration file for syntax errors and structural issues. Use this to catch configuration errors before running commands.
+The `validate` command checks your R2R configuration file for syntax errors and structural issues.
+
+Use this to catch configuration errors before running commands.
 
 **What it validates:**
 

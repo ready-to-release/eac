@@ -6,7 +6,9 @@ How each of the 12 CD model stages applies to Databricks data projects, includin
 
 ## Overview
 
-The 12-stage CD model applies to data projects with specific considerations for data artifacts. This guide maps each stage to data engineering activities.
+The 12-stage CD model applies to data projects with specific considerations for data artifacts.
+
+This guide maps each stage to data engineering activities.
 
 **Key Differences for Data Projects:**
 

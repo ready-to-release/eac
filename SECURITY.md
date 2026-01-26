@@ -14,19 +14,19 @@
 - Severity assessment: Within 7 days
 - Fix timeline varies by severity
 
-**Alternative:** For sensitive issues that cannot be reported via GitHub, contact: security@ready-to-release.dev (TODO: establish)
+**Alternative:** For sensitive issues that cannot be reported via GitHub, contact: <security@ready-to-release.dev> (TODO: establish)
 
 ## Supported Versions
 
 This is a **multi-module Go workspace**. All modules are currently in active development:
 
-| Module | Path | Status | Go Version |
-|--------|------|--------|------------|
-| EaC Core | `go/eac/core` | Active Development | 1.24+ |
-| EaC Commands | `go/eac/commands` | Active Development | 1.24+ |
-| EaC MCP Commands | `go/eac/mcp/commands` | Active Development | 1.24+ |
-| EaC Specs | `go/eac/specs` | Active Development | 1.24+ |
-| R2R CLI | `go/r2r/cli` | Active Development | 1.24+ |
+| Module           | Path                  | Status             | Go Version |
+|------------------|-----------------------|--------------------|------------|
+| EaC Core         | `go/eac/core`         | Active Development | 1.24+      |
+| EaC Commands     | `go/eac/commands`     | Active Development | 1.24+      |
+| EaC MCP Commands | `go/eac/mcp/commands` | Active Development | 1.24+      |
+| EaC Specs        | `go/eac/specs`        | Active Development | 1.24+      |
+| R2R CLI          | `go/r2r/cli`          | Active Development | 1.24+      |
 
 Security patches are applied to the main branch and will be included in the next release.
 

@@ -1,6 +1,8 @@
 # Command Cheat Sheet
 
-Quick reference for the most commonly used EAC commands. Commands are organized by workflow and use case for fast lookup.
+Quick reference for the most commonly used EAC commands.
+
+Commands are organized by workflow and use case for fast lookup.
 
 ## Quick Navigation
 

@@ -189,7 +189,6 @@ func registerPrunePackagesSteps(sc *godog.ScenarioContext, ctx *internal.TestCon
 	})
 }
 
-
 // packageHasVersions parses the version table and stores mock versions.
 func packageHasVersions(pkgName string, table *godog.Table, state *pruneTestState) error {
 	versions := []mockPackageVersion{}
@@ -243,4 +242,3 @@ func parseRelativeTime(s string) (time.Time, error) {
 	}
 	return time.Time{}, fmt.Errorf("unknown time format: %s", s)
 }
-

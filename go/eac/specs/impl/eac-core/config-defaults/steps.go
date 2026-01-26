@@ -193,7 +193,7 @@ func iAmInAnIsolatedTestRepository(ctx *internal.TestContext) error {
 
 	// Create minimal .git directory so config loader can find repo root
 	gitDir := filepath.Join(tempDir, ".git")
-	if err := os.MkdirAll(gitDir, 0o755); err != nil {
+	if err := os.MkdirAll(gitDir, 0o750); err != nil {
 		return fmt.Errorf("failed to create .git: %w", err)
 	}
 	// Create minimal git config
@@ -210,7 +210,10 @@ func iAmInAnIsolatedTestRepository(ctx *internal.TestContext) error {
 	// the binary. Locally, it's the eac repository root.
 	toolRoot := ctx.OriginalRepoRoot
 	if toolRoot == "" {
-		cwd, _ := os.Getwd()
+		cwd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
 		toolRoot = findRepoRoot(cwd)
 	}
 
@@ -262,7 +265,7 @@ func theRepositoryHasNoDirectory(ctx *internal.TestContext, path string) error {
 
 func theRepositoryHasDirectory(ctx *internal.TestContext, path string) error {
 	fullPath := filepath.Join(ctx.IsolatedDir, path)
-	if err := os.MkdirAll(fullPath, 0o755); err != nil {
+	if err := os.MkdirAll(fullPath, 0o750); err != nil {
 		return fmt.Errorf("failed to create directory %s: %w", path, err)
 	}
 	return nil
@@ -271,7 +274,7 @@ func theRepositoryHasDirectory(ctx *internal.TestContext, path string) error {
 func theRepositoryHasFileWith(ctx *internal.TestContext, path, content string) error {
 	fullPath := filepath.Join(ctx.IsolatedDir, path)
 	// Ensure parent directory exists
-	if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(fullPath), 0o750); err != nil {
 		return fmt.Errorf("failed to create parent directory: %w", err)
 	}
 	if err := os.WriteFile(fullPath, []byte(content), 0o644); err != nil {

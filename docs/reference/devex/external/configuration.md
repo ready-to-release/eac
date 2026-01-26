@@ -6,13 +6,13 @@ How to configure EAC for your project.
 
 EAC uses YAML configuration files in `.r2r/eac/`:
 
-| File | Purpose | Required |
-| ---- | ------- | -------- |
-| `repository.yml` | Module definitions | Yes |
-| `module-types.yml` | Custom type templates | No |
-| `environments.yml` | Test environments | No |
-| `test-suites.yml` | Test suite definitions | No |
-| `ai-provider.yml` | AI provider settings | No |
+| File               | Purpose                | Required |
+| ------------------ | ---------------------- | -------- |
+| `repository.yml`   | Module definitions     | Yes      |
+| `module-types.yml` | Custom type templates  | No       |
+| `environments.yml` | Test environments      | No       |
+| `test-suites.yml`  | Test suite definitions | No       |
+| `ai-provider.yml`  | AI provider settings   | No       |
 
 ## Module Configuration
 
@@ -45,24 +45,24 @@ modules:
 
 ### Key Fields
 
-| Field | Required | Description |
-| ----- | -------- | ----------- |
-| `moniker` | Yes | Unique identifier (kebab-case) |
-| `type` | Yes | Module type (go-cli, go-library, etc.) |
-| `name` | No | Human-readable name |
-| `depends_on` | No | Module dependencies |
-| `files` | No | File ownership patterns |
+| Field        | Required | Description                            |
+| ------------ | -------- | -------------------------------------- |
+| `moniker`    | Yes      | Unique identifier (kebab-case)         |
+| `type`       | Yes      | Module type (go-cli, go-library, etc.) |
+| `name`       | No       | Human-readable name                    |
+| `depends_on` | No       | Module dependencies                    |
+| `files`      | No       | File ownership patterns                |
 
 ## Available Module Types
 
-| Type | Purpose |
-| ---- | ------- |
-| `go-cli` | Go CLI application |
-| `go-library` | Go library |
-| `go-commands` | Go commands library |
-| `mkdocs-site` | MkDocs documentation |
+| Type            | Purpose                |
+| --------------- | ---------------------- |
+| `go-cli`        | Go CLI application     |
+| `go-library`    | Go library             |
+| `go-commands`   | Go commands library    |
+| `mkdocs-site`   | MkDocs documentation   |
 | `r2r-extension` | R2R extension (Docker) |
-| `configuration` | Configuration files |
+| `configuration` | Configuration files    |
 
 ## Dependencies
 

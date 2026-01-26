@@ -69,10 +69,10 @@ r2r eac help
 
 ## Configuration Files Created
 
-| File | Purpose |
-| ---- | ------- |
-| `.r2r/r2r-cli.yml` | Extension registry and CLI settings |
-| `.r2r/eac/` | EAC-specific configuration (created on first use) |
+| File               | Purpose                                           |
+| ------------------ | ------------------------------------------------- |
+| `.r2r/r2r-cli.yml` | Extension registry and CLI settings               |
+| `.r2r/eac/`        | EAC-specific configuration (created on first use) |
 
 ## Updating
 
@@ -92,12 +92,12 @@ r2r install eac
 
 ## Troubleshooting
 
-| Problem | Solution |
-| ------- | -------- |
-| "Docker not found" | Install Docker Desktop and ensure it's running |
+| Problem             | Solution                                                    |
+| ------------------- | ----------------------------------------------------------- |
+| "Docker not found"  | Install Docker Desktop and ensure it's running              |
 | "Permission denied" | Run terminal as administrator (Windows) or use sudo (Linux) |
-| "Image pull failed" | Check network connectivity and Docker Hub access |
-| "Command not found" | Add installation directory to PATH |
+| "Image pull failed" | Check network connectivity and Docker Hub access            |
+| "Command not found" | Add installation directory to PATH                          |
 
 ## Next Steps
 

@@ -9,7 +9,9 @@ Guides for working with the r2r (Ready to Release) command-line interface. Learn
 | [Creating Extensions](./creating-extensions.md)                    | Build production-ready extensions: project structure, metadata, testing, Dockerfile optimization, and EAC integration |
 | [Testing in External Repositories](./testing-in-external-repos.md) | Test ext-eac and standalone extensions in external repositories using Docker                                          |
 
-**See also**: [Local Development Workflows](../local-setup/local-dev-workflows.md) - Develop and test extensions locally (moved to Local Setup section)
+**See also**: [Local Development Workflows](../local-setup/local-dev-workflows.md)
+
+Develop and test extensions locally (moved to Local Setup section)
 
 ### Quick Links
 

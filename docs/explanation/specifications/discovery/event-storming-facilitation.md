@@ -382,7 +382,9 @@ Use this checklist when preparing to facilitate:
 
 ### Opening
 
-> "Welcome! Today we're using Event Storming to understand [scope]. This is a collaborative workshop—everyone's input matters. Here are the rules:
+> "Welcome! Today we're using Event Storming to understand [scope].
+> This is a collaborative workshop—everyone's input matters.
+> Here are the rules:
 >
 > 1. **Orange stickies** = things that happened (past tense)
 > 2. **Stay visual** = sticky notes only, no laptops
@@ -393,23 +395,30 @@ Use this checklist when preparing to facilitate:
 
 ### During Silent Storm
 
-> "Write every significant event you can think of. Use past tense: 'Order Placed', not 'Place Order'. Don't worry about order yet—we'll organize them next."
+> "Write every significant event you can think of.
+> Use past tense: 'Order Placed', not 'Place Order'.
+> Don't worry about order yet—we'll organize them next."
 
 ### Timeline Creation
 
-> "Let's arrange these events in rough chronological order. Who wants to start? What happens first in this process?"
+> "Let's arrange these events in rough chronological order.
+> Who wants to start?
+> What happens first in this process?"
 
 ### Discussion
 
-> "Walk me through this section. What triggers this event? Who's involved? What information do we need?"
+> "Walk me through this section. What triggers this event?
+> Who's involved? What information do we need?"
 
 ### Capturing Definitions
 
-> "I'm hearing 'approved' used in different ways. Let's clarify—what exactly do we mean by 'approved'? [Write on white sticky]"
+> "I'm hearing 'approved' used in different ways.
+> Let's clarify—what exactly do we mean by 'approved'? [Write on white sticky]"
 
 ### Closing
 
-> "Great work! We've discovered [key insights]. Red stickies show questions we need to answer. Next steps: [Example Mapping for feature X]. Thanks everyone!"
+> "Great work! We've discovered [key insights]. Red stickies show questions we need to answer.
+> Next steps: [Example Mapping for feature X]. Thanks everyone!"
 
 ---
 

@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/cucumber/godog"
-	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/ready-to-release/eac/go/eac/specs/internal"
 	"gopkg.in/yaml.v3"
@@ -20,9 +19,7 @@ import (
 
 // designContext holds Docker-related state for design tests.
 type designContext struct {
-	dockerClient    *client.Client
-	dockerAvailable bool
-	mockAIResponse  string
+	dockerClient *client.Client
 }
 
 // registerDesignSteps registers step definitions for design command features.
@@ -170,48 +167,6 @@ func registerDesignSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 
 		return nil
 	})
-}
-
-// designCheckDocker verifies Docker is available.
-func designCheckDocker(dCtx *designContext) error {
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		dCtx.dockerAvailable = false
-		return fmt.Errorf("failed to create Docker client: %w", err)
-	}
-
-	_, err = cli.Ping(context.Background())
-	if err != nil {
-		cli.Close()
-		dCtx.dockerAvailable = false
-		return fmt.Errorf("Docker is not running: %w", err)
-	}
-
-	dCtx.dockerClient = cli
-	dCtx.dockerAvailable = true
-	return nil
-}
-
-// designContainerRunning checks if a container with given name pattern is running.
-func designContainerRunning(dCtx *designContext, namePattern string) error {
-	if !dCtx.dockerAvailable || dCtx.dockerClient == nil {
-		return fmt.Errorf("Docker is not available")
-	}
-
-	containers, err := dCtx.dockerClient.ContainerList(context.Background(), container.ListOptions{All: true})
-	if err != nil {
-		return fmt.Errorf("failed to list containers: %w", err)
-	}
-
-	for _, c := range containers {
-		for _, name := range c.Names {
-			if strings.Contains(name, namePattern) && c.State == "running" {
-				return nil
-			}
-		}
-	}
-
-	return fmt.Errorf("no running container matching %q found", namePattern)
 }
 
 // minimalWorkspaceDSL returns a minimal valid Structurizr DSL workspace.

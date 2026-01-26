@@ -2,10 +2,13 @@
 
 ## Introduction
 
-Quality gates are automated and manual checkpoints throughout the software delivery pipeline that ensure code meets defined standards before progressing to the next stage.
+Quality gates are automated and manual checkpoints throughout the software delivery pipeline,
+that ensure code meets defined standards before progressing to the next stage.
 They embody a fundamental principle: **catch issues early, when they're cheapest and easiest to fix**.
 
-Every quality gate represents a deliberate decision about what quality means at that point in the pipeline, who verifies it, and what happens when standards aren't met.
+Every quality gate represents a deliberate decision about what quality means at that point in the pipeline,
+who verifies it, and what happens when standards aren't met.
+
 Well-designed gates provide fast feedback while maintaining high confidence in what reaches production.
 
 ### Why Quality Gates Matter
@@ -44,6 +47,10 @@ The key is knowing which decisions benefit from automation and which require hum
 ---
 
 ## Quality Gates in the CD Model
+
+The following diagram shows where the four primary quality gates are positioned within the CD Model stages. Each gate serves as a checkpoint that validates specific criteria before allowing progression.
+
+![Quality Gates in CD Model](../../../assets/assisted/04-quality-gates.drawio.png)
 
 Quality gates appear at specific CD Model stages, each with distinct purposes:
 
@@ -92,7 +99,9 @@ Keep the feedback loop tight so developers can fix issues immediately while the 
 - Documentation updates
 
 **Philosophy**: Stage 3 is the first-level approval gate.
-In RA pattern, it approves code quality. In CDe pattern, it approves both code quality AND production deployment (combined first and second-level approval).
+
+- In RA pattern, it approves code quality.
+- In CDe pattern, it approves both code quality AND production deployment (combined first and second-level approval).
 
 [Learn more: Merge Request Quality Gates](./merge-request-gates.md)
 
@@ -117,7 +126,9 @@ In RA pattern, it approves code quality. In CDe pattern, it approves both code q
 - Stakeholder sign-offs
 - Risk assessment completed
 
-**Philosophy**: Stage 9 is the second-level approval gate in RA pattern (release manager validates production readiness). In CDe pattern, this gate is automated - if Stages 5-6 pass, the release is automatically approved.
+**Philosophy**: Stage 9 is the second-level approval gate in RA pattern (release manager validates production readiness).
+
+In CDe pattern, this gate is automated - if Stages 5-6 pass, the release is automatically approved.
 
 [Learn more: Release Quality Gates](./release-gates.md)
 
@@ -125,7 +136,17 @@ In RA pattern, it approves code quality. In CDe pattern, it approves both code q
 
 ## Quality Gate Patterns: RA vs CDe
 
-The CD Model supports two implementation patterns with different quality gate philosophies:
+The CD Model supports two implementation patterns with different quality gate philosophies.
+
+The following diagrams show the quality signals workflow for each pattern, illustrating stage progression with color-coded zones and re-work feedback loops:
+
+**RA Pattern Quality Signals:**
+
+![RA Quality Signals](../../../assets/cd-model/quality-signals-ra.drawio.png){width=1000}
+
+**CDe Pattern Quality Signals:**
+
+![CDe Quality Signals](../../../assets/cd-model/quality-signals-cde.drawio.png){width=1000}
 
 ### Release Approval (RA) Pattern
 
@@ -173,7 +194,9 @@ Stage 9 becomes a fully automated check - if comprehensive automated tests pass 
 
 ### 1. Fail Fast
 
-Gates should fail as quickly as possible when quality standards aren't met. Don't wait 20 minutes to report a formatting error that could be caught in 10 seconds.
+Gates should fail as quickly as possible when quality standards aren't met.
+
+Don't wait 20 minutes to report a formatting error that could be caught in 10 seconds.
 
 **Implementation**:
 

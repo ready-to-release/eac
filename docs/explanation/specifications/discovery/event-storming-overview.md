@@ -8,7 +8,8 @@
 
 > Event Storming is a group of collaborative modeling techniques that help teams understand complex domains by visually mapping out key events.
 
-It is designed to help people from different parts of an organization create a shared understanding of the problem space they are going to work with.
+It is designed to help people from different parts of an organization,
+create a shared understanding of the problem space they are going to work with.
 
 Event Storming uses a game-like format with rules, a "board" (brown packing paper), and grammar (colored sticky notes).
 

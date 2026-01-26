@@ -3,6 +3,7 @@ package cmdframework
 import (
 	"fmt"
 	"io"
+	"sync"
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
 )
@@ -11,77 +12,105 @@ import (
 // This is provided by the build package to avoid import cycles.
 type ComponentWorkProvider func(ctx *ExecutionContext) [][]orchestrator.ComponentWork
 
-// componentWorkProvider is set by the build package to provide component flattening.
-var componentWorkProvider ComponentWorkProvider
+// ExecutionMode defines how components should be executed.
+type ExecutionMode int
 
-// SetComponentWorkProvider registers the function to flatten modules to components.
-// Called by the build package during init.
-func SetComponentWorkProvider(provider ComponentWorkProvider) {
-	componentWorkProvider = provider
+const (
+	// ExecutionModeConfigured uses ctx.Config.Layered to decide execution mode.
+	ExecutionModeConfigured ExecutionMode = iota
+	// ExecutionModeLayered always uses layered execution (respects inter-layer dependencies).
+	ExecutionModeLayered
+	// ExecutionModeParallel always uses parallel execution (no dependency order).
+	ExecutionModeParallel
+)
+
+// executionModeConfig holds per-command-type execution settings.
+var executionModeConfig = map[CommandType]ExecutionMode{
+	CommandTypeBuild: ExecutionModeConfigured, // Respects ctx.Config.Layered
+	CommandTypeTest:  ExecutionModeLayered,    // Always layered (parallel first, sequential second)
+	CommandTypeScan:  ExecutionModeParallel,   // No dependency order needed
+	CommandTypeLint:  ExecutionModeParallel,   // No dependency order needed
 }
 
-// componentWorkerFunc is the registered component worker (set by build package).
-var componentWorkerFunc ComponentWorkerFunc
-
-// SetComponentWorker registers the component worker function.
-// Called by the build package during init.
-func SetComponentWorker(worker ComponentWorkerFunc) {
-	componentWorkerFunc = worker
+// ComponentRegistry holds providers and workers for each command type.
+// It provides thread-safe access to component execution functions.
+type ComponentRegistry struct {
+	mu        sync.RWMutex
+	providers map[CommandType]ComponentWorkProvider
+	workers   map[CommandType]ComponentWorkerFunc
 }
 
-// testComponentWorkProvider is set by the test package to provide test component flattening.
-var testComponentWorkProvider ComponentWorkProvider
-
-// SetTestComponentWorkProvider registers the function to flatten tests to components.
-// Called by the test package during init.
-func SetTestComponentWorkProvider(provider ComponentWorkProvider) {
-	testComponentWorkProvider = provider
+// NewComponentRegistry creates a new component registry.
+func NewComponentRegistry() *ComponentRegistry {
+	return &ComponentRegistry{
+		providers: make(map[CommandType]ComponentWorkProvider),
+		workers:   make(map[CommandType]ComponentWorkerFunc),
+	}
 }
 
-// testComponentWorkerFunc is the registered test component worker (set by test package).
-var testComponentWorkerFunc ComponentWorkerFunc
-
-// SetTestComponentWorker registers the test component worker function.
-// Called by the test package during init.
-func SetTestComponentWorker(worker ComponentWorkerFunc) {
-	testComponentWorkerFunc = worker
+// RegisterProvider registers a work provider for a command type.
+func (r *ComponentRegistry) RegisterProvider(cmdType CommandType, provider ComponentWorkProvider) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.providers[cmdType] = provider
 }
 
-// scanComponentWorkProvider is set by the scan package to provide scan component flattening.
-var scanComponentWorkProvider ComponentWorkProvider
-
-// SetScanComponentWorkProvider registers the function to flatten modules to scan components.
-// Called by the scan package during init.
-func SetScanComponentWorkProvider(provider ComponentWorkProvider) {
-	scanComponentWorkProvider = provider
+// RegisterWorker registers a worker function for a command type.
+func (r *ComponentRegistry) RegisterWorker(cmdType CommandType, worker ComponentWorkerFunc) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.workers[cmdType] = worker
 }
 
-// scanComponentWorkerFunc is the registered scan component worker (set by scan package).
-var scanComponentWorkerFunc ComponentWorkerFunc
-
-// SetScanComponentWorker registers the scan component worker function.
-// Called by the scan package during init.
-func SetScanComponentWorker(worker ComponentWorkerFunc) {
-	scanComponentWorkerFunc = worker
+// GetProvider returns the registered provider for a command type.
+func (r *ComponentRegistry) GetProvider(cmdType CommandType) ComponentWorkProvider {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.providers[cmdType]
 }
 
-// lintComponentWorkProvider is set by the lint package to provide lint component flattening.
-var lintComponentWorkProvider ComponentWorkProvider
-
-// SetLintComponentWorkProvider registers the function to flatten modules to lint components.
-// Called by the lint package during init.
-func SetLintComponentWorkProvider(provider ComponentWorkProvider) {
-	lintComponentWorkProvider = provider
+// GetWorker returns the registered worker for a command type.
+func (r *ComponentRegistry) GetWorker(cmdType CommandType) ComponentWorkerFunc {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.workers[cmdType]
 }
 
-// lintComponentWorkerFunc is the registered lint component worker (set by lint package).
-var lintComponentWorkerFunc ComponentWorkerFunc
-
-// SetLintComponentWorker registers the lint component worker function.
-// Called by the lint package during init.
-func SetLintComponentWorker(worker ComponentWorkerFunc) {
-	lintComponentWorkerFunc = worker
+// HasComponents returns true if both provider and worker are registered.
+func (r *ComponentRegistry) HasComponents(cmdType CommandType) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.providers[cmdType] != nil && r.workers[cmdType] != nil
 }
+
+// registry is the global component registry.
+var registry = NewComponentRegistry()
+
+// RegisterComponentProvider registers a work provider for a command type.
+func RegisterComponentProvider(cmdType CommandType, provider ComponentWorkProvider) {
+	registry.RegisterProvider(cmdType, provider)
+}
+
+// RegisterComponentWorker registers a worker function for a command type.
+func RegisterComponentWorker(cmdType CommandType, worker ComponentWorkerFunc) {
+	registry.RegisterWorker(cmdType, worker)
+}
+
+// GetComponentProvider returns the registered provider for a command type.
+func GetComponentProvider(cmdType CommandType) ComponentWorkProvider {
+	return registry.GetProvider(cmdType)
+}
+
+// GetComponentWorker returns the registered worker for a command type.
+func GetComponentWorker(cmdType CommandType) ComponentWorkerFunc {
+	return registry.GetWorker(cmdType)
+}
+
+// HasComponentExecution returns true if component-level execution is available for a command type.
+func HasComponentExecution(cmdType CommandType) bool {
+	return registry.HasComponents(cmdType)
+}
+
 
 // phaseExecute handles the execution phase:
 // - Set up worker function
@@ -99,151 +128,72 @@ func phaseExecute(ctx *ExecutionContext, worker WorkerFunc) error {
 		return nil
 	}
 
-	// Check if this is a build command with component-level execution enabled
-	// Component-level execution uses weighted parallelism and intra-module dependencies
-	if ctx.Config.Type == CommandTypeBuild && componentWorkProvider != nil && componentWorkerFunc != nil {
-		return phaseExecuteComponents(ctx)
-	}
-
-	// Check if this is a test command with component-level execution enabled
-	if ctx.Config.Type == CommandTypeTest && testComponentWorkProvider != nil && testComponentWorkerFunc != nil {
-		return phaseExecuteTestComponents(ctx)
-	}
-
-	// Check if this is a scan command with component-level execution enabled
-	if ctx.Config.Type == CommandTypeScan && scanComponentWorkProvider != nil && scanComponentWorkerFunc != nil {
-		return phaseExecuteScanComponents(ctx)
-	}
-
-	// Check if this is a lint command with component-level execution enabled
-	if ctx.Config.Type == CommandTypeLint && lintComponentWorkProvider != nil && lintComponentWorkerFunc != nil {
-		return phaseExecuteLintComponents(ctx)
+	// Check for component-level execution (build, test, scan, lint)
+	cmdType := ctx.Config.Type
+	if HasComponentExecution(cmdType) {
+		return phaseExecuteComponentsUnified(ctx, cmdType)
 	}
 
 	// Fall back to module-level execution (legacy)
 	return phaseExecuteModules(ctx, worker)
 }
 
-// phaseExecuteComponents runs component-level parallel execution for builds.
-// This is the new execution path that provides weighted parallelism.
-func phaseExecuteComponents(ctx *ExecutionContext) error {
-	// Get component work items from the provider
-	componentLayers := componentWorkProvider(ctx)
+// phaseExecuteComponentsUnified handles component-level execution for all command types.
+// It uses the registered provider and worker for the given command type, and respects
+// the execution mode configuration (layered vs parallel).
+func phaseExecuteComponentsUnified(ctx *ExecutionContext, cmdType CommandType) error {
+	provider := GetComponentProvider(cmdType)
+	worker := GetComponentWorker(cmdType)
+
+	if provider == nil || worker == nil {
+		return fmt.Errorf("component provider or worker not registered for %s", cmdType)
+	}
+
+	// Get component work items from provider
+	componentLayers := provider(ctx)
 	if len(componentLayers) == 0 {
 		ctx.Results = []orchestrator.WorkResult{}
 		return nil
 	}
 
-	// Wrap the component worker to match orchestrator signature
-	orchCompWorker := func(module, component string, logWriter io.Writer) int {
-		return componentWorkerFunc(ctx, module, component, logWriter)
+	// Wrap worker to match orchestrator signature
+	orchWorker := func(module, component string, logWriter io.Writer) int {
+		return worker(ctx, module, component, logWriter)
 	}
 
+	// Determine execution mode from config
+	mode := executionModeConfig[cmdType]
+	useLayered := mode == ExecutionModeLayered ||
+		(mode == ExecutionModeConfigured && ctx.Config.Layered)
+
+	log.Debugf("phaseExecuteComponentsUnified: cmdType=%s, mode=%d, useLayered=%v",
+		cmdType, mode, useLayered)
+
+	// Execute components
 	var results []orchestrator.WorkResult
 	var err error
 
-	if ctx.Config.Layered {
-		// Layered execution: inter-module dependency order preserved
-		log.Debugf("Executing %d component layers with weighted parallelism", len(componentLayers))
-		results, err = ctx.Orchestrator.RunComponentsLayered(componentLayers, orchCompWorker)
+	if useLayered {
+		log.Debugf("Executing %d %s component layers with weighted parallelism",
+			len(componentLayers), cmdType)
+		results, err = ctx.Orchestrator.RunComponentsLayered(componentLayers, orchWorker)
 	} else {
-		// Parallel execution: all components at once (with intra-module deps)
 		allWork := flattenComponentLayers(componentLayers)
-		log.Debugf("Executing %d components in parallel with weighted scheduling", len(allWork))
-		results, err = ctx.Orchestrator.RunComponentsParallel(allWork, orchCompWorker)
+		log.Debugf("Executing %d %s components in parallel with weighted scheduling",
+			len(allWork), cmdType)
+		results, err = ctx.Orchestrator.RunComponentsParallel(allWork, orchWorker)
 	}
 
 	if err != nil {
-		return fmt.Errorf("component execution failed: %w", err)
+		return fmt.Errorf("%s component execution failed: %w", cmdType, err)
 	}
 
 	ctx.Results = results
-	return nil
-}
 
-// phaseExecuteTestComponents runs component-level parallel execution for tests.
-// This uses weighted parallelism and separates parallel/sequential tests into layers.
-func phaseExecuteTestComponents(ctx *ExecutionContext) error {
-	// Get test component work items from the provider
-	componentLayers := testComponentWorkProvider(ctx)
-	if len(componentLayers) == 0 {
-		ctx.Results = []orchestrator.WorkResult{}
-		return nil
-	}
+	// Populate component-level results for detailed reporting
+	ctx.ComponentResults = ctx.Orchestrator.GetLastComponentResults()
+	ctx.ComponentResultSets = orchestrator.AggregateToComponentResultSets(ctx.ComponentResults)
 
-	// Wrap the test component worker to match orchestrator signature
-	orchCompWorker := func(module, component string, logWriter io.Writer) int {
-		return testComponentWorkerFunc(ctx, module, component, logWriter)
-	}
-
-	var results []orchestrator.WorkResult
-	var err error
-
-	// Test execution always uses layered mode (parallel tests first, sequential second)
-	log.Debugf("Executing %d test component layers with weighted parallelism", len(componentLayers))
-	results, err = ctx.Orchestrator.RunComponentsLayered(componentLayers, orchCompWorker)
-
-	if err != nil {
-		return fmt.Errorf("test component execution failed: %w", err)
-	}
-
-	ctx.Results = results
-	return nil
-}
-
-// phaseExecuteScanComponents runs component-level parallel execution for scans.
-// This uses weighted parallelism for scanning different components in parallel.
-func phaseExecuteScanComponents(ctx *ExecutionContext) error {
-	// Get scan component work items from the provider
-	componentLayers := scanComponentWorkProvider(ctx)
-	if len(componentLayers) == 0 {
-		ctx.Results = []orchestrator.WorkResult{}
-		return nil
-	}
-
-	// Wrap the scan component worker to match orchestrator signature
-	orchCompWorker := func(module, component string, logWriter io.Writer) int {
-		return scanComponentWorkerFunc(ctx, module, component, logWriter)
-	}
-
-	// Flatten all layers - scans run in parallel (no dependency order needed)
-	allWork := flattenComponentLayers(componentLayers)
-	log.Debugf("Executing %d scan components in parallel with weighted scheduling", len(allWork))
-	results, err := ctx.Orchestrator.RunComponentsParallel(allWork, orchCompWorker)
-
-	if err != nil {
-		return fmt.Errorf("scan component execution failed: %w", err)
-	}
-
-	ctx.Results = results
-	return nil
-}
-
-// phaseExecuteLintComponents runs component-level parallel execution for lints.
-// This uses weighted parallelism for linting different components in parallel.
-func phaseExecuteLintComponents(ctx *ExecutionContext) error {
-	// Get lint component work items from the provider
-	componentLayers := lintComponentWorkProvider(ctx)
-	if len(componentLayers) == 0 {
-		ctx.Results = []orchestrator.WorkResult{}
-		return nil
-	}
-
-	// Wrap the lint component worker to match orchestrator signature
-	orchCompWorker := func(module, component string, logWriter io.Writer) int {
-		return lintComponentWorkerFunc(ctx, module, component, logWriter)
-	}
-
-	// Flatten all layers - lints run in parallel (no dependency order needed)
-	allWork := flattenComponentLayers(componentLayers)
-	log.Debugf("Executing %d lint components in parallel with weighted scheduling", len(allWork))
-	results, err := ctx.Orchestrator.RunComponentsParallel(allWork, orchCompWorker)
-
-	if err != nil {
-		return fmt.Errorf("lint component execution failed: %w", err)
-	}
-
-	ctx.Results = results
 	return nil
 }
 

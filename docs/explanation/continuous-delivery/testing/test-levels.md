@@ -6,6 +6,10 @@ The CD Model uses a taxonomy of test levels (L0-L4) based on execution environme
 
 ## Taxonomy Overview
 
+The following diagram provides a visual overview of the test level taxonomy, showing the L0-L4 levels with their execution environments, scope, and the recommended distribution ratio (70% L0-L1, 20% L2, 10% L3-L4).
+
+![Test Levels Taxonomy](../../../assets/assisted/05-test-levels-taxonomy.drawio.png)
+
 | Level | Name               | Environment  | Scope                | Dependencies     | Determinism |
 | ----- | ------------------ | ------------ | -------------------- | ---------------- | ----------- |
 | L0-L1 | Unit Tests         | DevBox/Agent | Source/Binary        | All test doubles | Highest     |
@@ -24,6 +28,8 @@ The CD Model uses a taxonomy of test levels (L0-L4) based on execution environme
 ## L0-L1: Unit Tests
 
 **Purpose:** Validate individual functions, methods, and component interactions in isolation.
+
+![L0-L2 Test Environments](../../../assets/testing/env-l0-l2.drawio.png)
 
 | Characteristic | Description                                                |
 | -------------- | ---------------------------------------------------------- |
@@ -57,6 +63,8 @@ The CD Model uses a taxonomy of test levels (L0-L4) based on execution environme
 
 **Purpose:** Validate a deployed module in PLTE with vertical testing boundaries.
 
+![L3 Test Environment](../../../assets/testing/env-l3.drawio.png)
+
 | Characteristic | Description                                               |
 | -------------- | --------------------------------------------------------- |
 | Speed          | Minutes per test                                          |
@@ -79,6 +87,8 @@ The CD Model uses a taxonomy of test levels (L0-L4) based on execution environme
 ## L4: Production Testing
 
 **Purpose:** Validate real cross-service interactions in production.
+
+![L4 Test Environment](../../../assets/testing/env-l4.drawio.png)
 
 | Characteristic | Description                                              |
 | -------------- | -------------------------------------------------------- |
@@ -103,6 +113,8 @@ The CD Model uses a taxonomy of test levels (L0-L4) based on execution environme
 
 Shared pre-production environments where multiple teams deploy pre-prod services linked together.
 
+![Horizontal E2E Anti-Pattern](../../../assets/testing/env-he2e.drawio.png)
+
 | Problem                                      | Impact                    |
 | -------------------------------------------- | ------------------------- |
 | Any team's broken deployment breaks everyone | Blocking                  |
@@ -116,21 +128,13 @@ Shared pre-production environments where multiple teams deploy pre-prod services
 
 ## Shift-Left and Shift-Right Strategy
 
-```text
+The shift-left/shift-right strategy moves testing emphasis away from the fragile middle (shared pre-production environments) toward fast, deterministic tests on the left and real production validation on the right.
 
-                              ╳
-                     AVOID: Horizontal E2E
-                     (shared pre-prod envs)
-                        ─────────────── 
-         SHIFT LEFT                      SHIFT RIGHT
-    ←─────────────────                ─────────────────→
+![Shift-Left and Shift-Right Strategy](../../../assets/testing/shifting.drawio.png)
 
-    L0-L1    L2       L3                    L4
-    Unit   Emulated  PLTE              Production
+The following diagram shows how this strategy maps across test levels and CD stages:
 
-    Fast, deterministic              Real validation
-    Test doubles                     Real services
-```
+![Test Level Taxonomy with Shift Strategy](../../../assets/testing/shift-taxanomy.drawio.png)
 
 **Why this works:**
 
@@ -157,6 +161,38 @@ Shared pre-production environments where multiple teams deploy pre-prod services
 - [Google Testing Blog](https://testing.googleblog.com/)
 - [Testing in Production (Charity Majors)](https://charity.wtf/tag/testing-in-production/)
 - [Shift-Left Testing (Microsoft)](https://learn.microsoft.com/en-us/devops/develop/shift-left-make-testing-fast-reliable)
+
+---
+
+## Process Isolation by Level
+
+Each test level operates within different process boundaries. Understanding these boundaries helps design appropriate test strategies.
+
+### L0-L1: Single Process
+
+Tests run in-process with the code artifact. No cross-process communication occurs.
+
+![L0-L1 Process Isolation](../../../assets/testing/process-isolation-l0l1.drawio.png){width=800}
+
+### L2: Multi-Process/Container
+
+Tests involve multiple processes or containers, including the production container and L2 test containers, with test orchestration coordinating them.
+
+![L2 Process Isolation](../../../assets/testing/process-isolation-l2.drawio.png){width=800}
+
+### L3: Cloud Environment
+
+Tests run against distributed deployments across cloud infrastructure, with test orchestration reaching into PLTE environments.
+
+![L3 Process Isolation](../../../assets/testing/process-isolation-l3.drawio.png){width=800}
+
+---
+
+## Comprehensive Taxonomy Reference
+
+The following diagram provides a complete view of the test taxonomy matrix, showing test levels across all CD stages with shift-left and shift-right indicators.
+
+![Complete Test Taxonomy Matrix](../../../assets/testing/taxonomy.drawio.png){width=1000}
 
 ---
 

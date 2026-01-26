@@ -8,13 +8,13 @@ Go build tags control which tests run based on isolation level, enabling fast fe
 
 ## Test Level Overview
 
-| Level | Build Tag | Purpose | Speed |
-|-------|-----------|---------|-------|
-| L0 | `//go:build L0` | Fully isolated, zero I/O | Microseconds |
-| L1 | (none - default) | Unit tests with minimal deps | Milliseconds |
-| L2 | `//go:build L2` | Integration with containers | Seconds |
-| L3 | Gherkin `@L3` | Pre-production (PLTE) | Minutes |
-| L4 | Gherkin `@L4` | Production verification | Minutes+ |
+| Level | Build Tag        | Purpose                      | Speed        |
+| ----- | ---------------- | ---------------------------- | ------------ |
+| L0    | `//go:build L0`  | Fully isolated, zero I/O     | Microseconds |
+| L1    | (none - default) | Unit tests with minimal deps | Milliseconds |
+| L2    | `//go:build L2`  | Integration with containers  | Seconds      |
+| L3    | Gherkin `@L3`    | Pre-production (PLTE)        | Minutes      |
+| L4    | Gherkin `@L4`    | Production verification      | Minutes+     |
 
 ---
 
@@ -31,13 +31,13 @@ Test levels enable:
 
 ## Build Tag to Gherkin Tag Mapping
 
-| Go Build Tag | Gherkin Tag | Auto-inferred from |
-|--------------|-------------|-------------------|
-| `//go:build L0` | `@L0` | N/A |
-| (none) | `@L1` | `@ov` (default) |
-| `//go:build L2` | `@L2` | (explicit only) |
-| N/A (Godog) | `@L3` | `@iv`, `@pv` |
-| N/A (Godog) | `@L4` | `@piv`, `@ppv` |
+| Go Build Tag    | Gherkin Tag | Auto-inferred from |
+| --------------- | ----------- | ------------------ |
+| `//go:build L0` | `@L0`       | N/A                |
+| (none)          | `@L1`       | `@ov` (default)    |
+| `//go:build L2` | `@L2`       | (explicit only)    |
+| N/A (Godog)     | `@L3`       | `@iv`, `@pv`       |
+| N/A (Godog)     | `@L4`       | `@piv`, `@ppv`     |
 
 ---
 

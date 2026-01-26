@@ -97,7 +97,7 @@ r2r eac init --ai claude-api
 
 After setup, your project includes:
 
-```
+```text
 your-project/
 ├── .r2r/
 │   ├── r2r-cli.yml          # R2R CLI configuration
@@ -127,12 +127,12 @@ r2r eac test my-app
 
 ## Troubleshooting
 
-| Problem | Solution |
-| ------- | -------- |
-| "Docker not running" | Start Docker Desktop |
-| "Image not found" | Run `r2r install eac` |
-| "Module not found" | Check `repository.yml` syntax |
-| "Invalid type" | Use type from `module-types.yml` |
+| Problem              | Solution                         |
+| -------------------- | -------------------------------- |
+| "Docker not running" | Start Docker Desktop             |
+| "Image not found"    | Run `r2r install eac`            |
+| "Module not found"   | Check `repository.yml` syntax    |
+| "Invalid type"       | Use type from `module-types.yml` |
 
 ## Next Steps
 

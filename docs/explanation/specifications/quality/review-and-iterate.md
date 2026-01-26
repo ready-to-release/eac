@@ -6,7 +6,10 @@ Specifications are living documents that evolve with understanding.
 
 This article explains how to continuously refine specifications after Example Mapping.
 
-**Goal**: Maintain specifications that reflect both **intended behavior** and **actual behavior** as understanding deepens through implementation, usage, and feedback.
+**Goal**:
+
+Maintain specifications that reflect both **intended behavior** and **actual behavior** as understanding deepens through implementation,
+usage, and feedback.
 
 ## The Specification Lifecycle
 
@@ -277,7 +280,11 @@ See: [Event Storming](../discovery/event-storming-overview.md)
 
 **Risk Control Reviews**:
 
-Risk changes → Update `specs/risk-controls/` → Update user scenarios with `@risk-control:<name>-<id>` → Verify implementation → Generate evidence.
+- Risk changes →
+- →Update `specs/risk-controls/` →
+- →Update user scenarios with `@risk-control:<name>-<id>` →
+- →Verify implementation →
+- →Generate evidence.
 
 See: [Risk Controls](../compliance/risk-controls.md)
 

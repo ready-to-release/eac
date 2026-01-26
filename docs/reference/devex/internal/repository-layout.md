@@ -10,7 +10,8 @@ This repository is organized as a **modular monorepo** with clearly defined modu
 - [Modules](../../eac/modules/) - Module system and dependency management
 - [Contracts](../../eac/contracts/) - Module contracts and configuration
 
-All modules are defined in `.r2r/eac/repository.yml`, which serves as the central contract for module ownership, dependencies, and build configuration.
+All modules are defined in `.r2r/eac/repository.yml`, which serves as the central contract for module ownership,
+dependencies, and build configuration.
 
 ## Repository Structure
 

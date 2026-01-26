@@ -63,7 +63,6 @@ type ComponentTypeFiles struct {
 	Config []string `yaml:"config,omitempty" json:"config,omitempty"`
 }
 
-
 // GetRoot returns the root path for this component type, using the provided explicit root
 // if set, otherwise falling back to DefaultRoot with {moniker} substitution.
 // Returns empty string if neither explicit nor default root is available.
@@ -76,7 +75,6 @@ func (c *ComponentType) GetRoot(moniker, explicitRoot string) string {
 	}
 	return ""
 }
-
 
 // HasBuilder returns true if this component type has a builder configured.
 func (c *ComponentType) HasBuilder() bool {

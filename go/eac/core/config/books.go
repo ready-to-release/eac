@@ -94,9 +94,9 @@ type GeneratedNav struct {
 // GetCopySources returns only copy-type sources.
 func (b *Book) GetCopySources() []Source {
 	var sources []Source
-	for _, s := range b.Sources {
-		if s.Type == "copy" {
-			sources = append(sources, s)
+	for i := range b.Sources {
+		if b.Sources[i].Type == "copy" {
+			sources = append(sources, b.Sources[i])
 		}
 	}
 	return sources
@@ -105,9 +105,9 @@ func (b *Book) GetCopySources() []Source {
 // GetCommandSources returns only command-type sources, sorted by order.
 func (b *Book) GetCommandSources() []Source {
 	var sources []Source
-	for _, s := range b.Sources {
-		if s.Type == "command" {
-			sources = append(sources, s)
+	for i := range b.Sources {
+		if b.Sources[i].Type == "command" {
+			sources = append(sources, b.Sources[i])
 		}
 	}
 	return sources
@@ -116,9 +116,9 @@ func (b *Book) GetCommandSources() []Source {
 // GetInlineSources returns only inline-type sources.
 func (b *Book) GetInlineSources() []Source {
 	var sources []Source
-	for _, s := range b.Sources {
-		if s.Type == "inline" {
-			sources = append(sources, s)
+	for i := range b.Sources {
+		if b.Sources[i].Type == "inline" {
+			sources = append(sources, b.Sources[i])
 		}
 	}
 	return sources

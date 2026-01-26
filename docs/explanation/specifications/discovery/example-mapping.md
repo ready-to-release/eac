@@ -6,7 +6,8 @@ Workshop technique for discovering requirements through collaborative conversati
 
 ## What is Example Mapping?
 
-**[Example Mapping](https://cucumber.io/blog/bdd/example-mapping-introduction/)** is a time-boxed collaborative workshop that uses colored index cards to discover acceptance criteria and concrete examples before development begins.
+**[Example Mapping](https://cucumber.io/blog/bdd/example-mapping-introduction/)** is a time-boxed collaborative workshop,
+that uses colored index cards to discover acceptance criteria and concrete examples before development begins.
 
 **Core purpose**: Answers three questions:
 
@@ -14,9 +15,14 @@ Workshop technique for discovering requirements through collaborative conversati
 2. What are concrete examples? (Test scenarios)
 3. What don't we know yet? (Questions and risks)
 
-**Prerequisites**: Establish **Ubiquitous Language** through **Event Storming** first. See: [Event Storming](./event-storming-overview.md) and [Ubiquitous Language](../concepts/ubiquitous-language.md)
+**Prerequisites**:
 
-**Why use it?** Discovers requirements early (less than 25 min conversation vs days/weeks of coding), produces concrete measurable criteria (not subjective), creates fast feedback loop, builds collaborative understanding.
+Establish **Ubiquitous Language** through **Event Storming** first.
+
+See: [Event Storming](./event-storming-overview.md) and [Ubiquitous Language](../concepts/ubiquitous-language.md)
+
+**Why use it?** Discovers requirements early (less than 25 min conversation vs days/weeks of coding),
+produces concrete measurable criteria (not subjective), creates fast feedback loop, builds collaborative understanding.
 
 ---
 
@@ -38,6 +44,10 @@ Workshop technique for discovering requirements through collaborative conversati
 ---
 
 ## The Four Card Colors
+
+The following diagram shows how Example Mapping cards are arranged during a workshop session. Yellow (story) at top, Blue (rules) in a row below, Green (examples) under each rule, and Pink (questions) captured to the side.
+
+![Example Mapping Workshop Layout](../../../assets/assisted/15-example-mapping-discovery.drawio.png)
 
 <!-- markdownlint-disable MD033 MD045 -->
 
@@ -122,7 +132,9 @@ flowchart TD
 
 ```
 
-**Workshop tips**: Use physical cards on table (or Miro/Mural for virtual), everyone can add cards, take photos for documentation.
+**Workshop tips**:
+
+Use physical cards on table (or Miro/Mural for virtual), everyone can add cards, take photos for documentation.
 
 ---
 

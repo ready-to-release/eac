@@ -92,7 +92,7 @@ func (c *PackageSafetyChecker) AddReleasedDigest(digest string) {
 }
 
 // AddBundleModuleVersion records a module version as being referenced by a release bundle.
-// Format: "module/version" (e.g., "ext-eac/1.0.0")
+// Format: "module/version" (e.g., "ext-eac/1.0.0").
 func (c *PackageSafetyChecker) AddBundleModuleVersion(moduleVersion string) {
 	c.bundleModules[moduleVersion] = true
 }
@@ -107,7 +107,11 @@ func (c *PackageSafetyChecker) Assess(version PackageVersion) VersionAssessment 
 	// Check 1: Does any tag match preserve patterns?
 	for _, tag := range version.Tags {
 		for _, pattern := range c.preservePatterns {
-			if matched, _ := filepath.Match(pattern, tag); matched {
+			matched, err := filepath.Match(pattern, tag)
+			if err != nil {
+				continue // Invalid pattern, skip it
+			}
+			if matched {
 				assessment.Protected = true
 				assessment.Reason = ReasonTagMatchesPreserve
 				assessment.MatchedTag = tag
@@ -157,7 +161,11 @@ func (c *PackageSafetyChecker) Assess(version PackageVersion) VersionAssessment 
 	hasPruneMatch := false
 	for _, tag := range version.Tags {
 		for _, pattern := range c.prunePatterns {
-			if matched, _ := filepath.Match(pattern, tag); matched {
+			matched, err := filepath.Match(pattern, tag)
+			if err != nil {
+				continue // Invalid pattern, skip it
+			}
+			if matched {
 				hasPruneMatch = true
 				break
 			}
@@ -195,7 +203,7 @@ func (c *PackageSafetyChecker) AssessAll(versions []PackageVersion) (protected, 
 	return protected, prunable
 }
 
-// bundleTagPattern matches release bundle tags like "r2r-eac-bundle/2025.01.15"
+// bundleTagPattern matches release bundle tags like "r2r-eac-bundle/2025.01.15".
 var bundleTagPattern = regexp.MustCompile(`^[a-z][a-z0-9-]*-bundle/`)
 
 // moduleVersionPattern matches module version references in release notes.

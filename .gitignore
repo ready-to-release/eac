@@ -77,6 +77,10 @@ docs/assets/rendered/
 # Mermaid cache IS tracked in git for CI optimization
 # (docs/assets/cache/ is NOT ignored)
 
+# Auto-generated asset manifest cache (usage data, stats)
+# The descriptions.yml file IS tracked (human-maintained descriptions)
+docs/assets/.manifest-cache.json
+
 # Structurizr (architecture diagrams)
 # Generated files when running 'design serve'
 .structurizr/
@@ -103,3 +107,4 @@ docker-compose.override.yml
 nul
 __pycache__/
 main.py
+**.mp4

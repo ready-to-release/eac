@@ -1,6 +1,7 @@
 # Compliance and Evidence
 
-This article consolidates compliance concepts used throughout the CD Model, including verification types, evidence generation, signoff gates, and audit trail requirements.
+This article consolidates compliance concepts used throughout the CD Model,
+including verification types, evidence generation, signoff gates, and audit trail requirements.
 
 ## Verification Types
 
@@ -94,6 +95,10 @@ Every piece of evidence is linked to:
 ## Signoff Gates
 
 The CD Model includes formal signoff points where human or automated approval is required.
+
+The following diagram shows the signoff workflow for the RA pattern, illustrating the five key stages and detailed signoff point indicators.
+
+![Signoff Workflow](../../../assets/cd-model/canvas-signoffs.drawio.png){width=900}
 
 ### Stage 3: Peer Review (First-Level)
 

@@ -40,21 +40,21 @@ func NewArtifactResolverWithMetadata(moniker, buildDir string, metadata map[stri
 }
 
 // NewArtifactResolverWithPlatform creates a resolver for a specific platform.
-func NewArtifactResolverWithPlatform(moniker, buildDir, os, arch string) *ArtifactResolver {
+func NewArtifactResolverWithPlatform(moniker, buildDir, targetOS, arch string) *ArtifactResolver {
 	return &ArtifactResolver{
 		Moniker:  moniker,
 		BuildDir: buildDir,
-		OS:       os,
+		OS:       targetOS,
 		Arch:     arch,
 	}
 }
 
 // NewArtifactResolverFull creates a resolver with all options.
-func NewArtifactResolverFull(moniker, buildDir, os, arch string, metadata map[string]string) *ArtifactResolver {
+func NewArtifactResolverFull(moniker, buildDir, targetOS, arch string, metadata map[string]string) *ArtifactResolver {
 	return &ArtifactResolver{
 		Moniker:  moniker,
 		BuildDir: buildDir,
-		OS:       os,
+		OS:       targetOS,
 		Arch:     arch,
 		Metadata: metadata,
 	}
@@ -72,7 +72,7 @@ func (r *ArtifactResolver) ResolvePattern(pattern string) string {
 
 // ResolvePatternWithMetadata resolves a pattern, checking metadata for custom names.
 // Supports all artifact types via {type}-{variant} metadata keys (e.g., executable-linux-amd64, directory-site, file-pdf).
-func (r *ArtifactResolver) ResolvePatternWithMetadata(pattern string, artifact Artifact) string {
+func (r *ArtifactResolver) ResolvePatternWithMetadata(pattern string, artifact *Artifact) string {
 	if r.Metadata == nil {
 		return r.ResolvePattern(pattern)
 	}
@@ -98,7 +98,7 @@ func (r *ArtifactResolver) ResolvePatternWithMetadata(pattern string, artifact A
 // deriveVariantID derives a variant ID from the pattern and artifact.
 // For executables: {os}-{arch} (e.g., linux-amd64), with optional compression suffix
 // For files/directories: base filename/dirname from pattern.
-func (r *ArtifactResolver) deriveVariantID(pattern string, artifact Artifact) string {
+func (r *ArtifactResolver) deriveVariantID(pattern string, artifact *Artifact) string {
 	switch artifact.Type {
 	case ArtifactTypeExecutable:
 		// Executables use {os}-{arch} format, with optional compression suffix
@@ -157,7 +157,7 @@ type ArtifactVerificationResult struct {
 func (r *ArtifactResolver) VerifyArtifact(artifact Artifact) ArtifactVerificationResult {
 	result := ArtifactVerificationResult{
 		Artifact: artifact,
-		Pattern:  r.ResolvePatternWithMetadata(artifact.Pattern, artifact),
+		Pattern:  r.ResolvePatternWithMetadata(artifact.Pattern, &artifact),
 	}
 	result.Path = filepath.Join(r.BuildDir, result.Pattern)
 
@@ -378,8 +378,8 @@ func isDockerAvailable() bool {
 
 // AllSuccessful returns true if all verification results are successful.
 func AllSuccessful(results []ArtifactVerificationResult) bool {
-	for _, r := range results {
-		if !r.Exists || r.Error != nil {
+	for i := range results {
+		if !results[i].Exists || results[i].Error != nil {
 			return false
 		}
 	}
@@ -389,9 +389,9 @@ func AllSuccessful(results []ArtifactVerificationResult) bool {
 // GetFailures returns only the failed verification results.
 func GetFailures(results []ArtifactVerificationResult) []ArtifactVerificationResult {
 	var failures []ArtifactVerificationResult
-	for _, r := range results {
-		if !r.Exists || r.Error != nil {
-			failures = append(failures, r)
+	for i := range results {
+		if !results[i].Exists || results[i].Error != nil {
+			failures = append(failures, results[i])
 		}
 	}
 	return failures
@@ -400,7 +400,8 @@ func GetFailures(results []ArtifactVerificationResult) []ArtifactVerificationRes
 // FormatVerificationResults formats verification results for display.
 func FormatVerificationResults(results []ArtifactVerificationResult) string {
 	var sb strings.Builder
-	for _, r := range results {
+	for i := range results {
+		r := &results[i]
 		if r.Exists && r.Error == nil {
 			sb.WriteString(fmt.Sprintf("  ✅ %s\n", r.Pattern))
 		} else if r.Error != nil {

@@ -1,15 +1,17 @@
+// Package mock provides mock implementations for testing AI and validation components.
 package mock
 
 import "github.com/ready-to-release/eac/go/eac/core/validation"
 
-// MockAIExecutor implements validation.AIExecutor for testing.
-type MockAIExecutor struct {
+// AIExecutor implements validation.AIExecutor for testing.
+type AIExecutor struct {
 	Responses      []string // Queue of responses to return
 	ResponseIndex  int      // Current response index
 	ExecutionCount int      // Number of times Execute was called
 }
 
-func (m *MockAIExecutor) Execute(ctx interface{}, prompt string, opts ...interface{}) (string, error) {
+// Execute returns the next response from the queue.
+func (m *AIExecutor) Execute(_ interface{}, _ string, _ ...interface{}) (string, error) {
 	m.ExecutionCount++
 	if m.ResponseIndex >= len(m.Responses) {
 		return m.Responses[len(m.Responses)-1], nil
@@ -19,14 +21,15 @@ func (m *MockAIExecutor) Execute(ctx interface{}, prompt string, opts ...interfa
 	return response, nil
 }
 
-// MockValidator implements validation.Validator for testing.
-type MockValidator struct {
+// Validator implements validation.Validator for testing.
+type Validator struct {
 	ValidationResults [][]validation.ValidationError // Queue of validation results
 	ValidationIndex   int                            // Current validation index
 	ValidationCount   int                            // Number of times Validate was called
 }
 
-func (m *MockValidator) Validate(output string, context map[string]interface{}) []validation.ValidationError {
+// Validate returns the next validation result from the queue.
+func (m *Validator) Validate(_ string, _ map[string]interface{}) []validation.ValidationError {
 	m.ValidationCount++
 	if m.ValidationIndex >= len(m.ValidationResults) {
 		return m.ValidationResults[len(m.ValidationResults)-1]
@@ -36,6 +39,7 @@ func (m *MockValidator) Validate(output string, context map[string]interface{}) 
 	return result
 }
 
-func (m *MockValidator) VerifyImplementation() []validation.ValidationError {
+// VerifyImplementation always returns nil for the mock.
+func (m *Validator) VerifyImplementation() []validation.ValidationError {
 	return nil
 }

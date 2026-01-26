@@ -1,5 +1,5 @@
 # Ubiquitous Language: Building Shared Vocabulary
->
+
 > **How shared domain vocabulary creates the foundation for executable specifications**
 
 ---
@@ -8,9 +8,18 @@
 
 Software teams suffer from a fundamental communication problem: **business stakeholders and technical teams speak different languages**.
 
-**Common misalignments**: Business says "customer" → Developers think "user" | Product owner says "order" → Developers think "transaction" | Domain expert says "approved" → Developers think "validated"
+**Common misalignments**:
 
-**Consequences**: Rework (teams discover they meant different things after implementation), Bugs (code implements wrong concept), Failed validation (business can't validate technical jargon), Drift (specs use one set of terms, code uses another)
+- Business says "customer" →
+- Developers think "user" | Product owner says "order" →
+- Developers think "transaction" | Domain expert says "approved" →
+- Developers think "validated"
+
+**Consequences**:
+
+- Rework (teams discover they meant different things after implementation),
+- Bugs (code implements wrong concept), Failed validation (business can't validate technical jargon),
+- Drift (specs use one set of terms, code uses another)
 
 **Root cause**: Without shared language, every handoff is a translation introducing potential misalignment.
 
@@ -18,9 +27,11 @@ Software teams suffer from a fundamental communication problem: **business stake
 
 ## The Solution: Ubiquitous Language (DDD)
 
-Domain-Driven Design (DDD) provides **Ubiquitous Language**: a common, rigorous language between developers and users, based on the domain model used in software.
+Domain-Driven Design (DDD) provides **Ubiquitous Language**: a common,
+rigorous language between developers and users, based on the domain model used in software.
 
-> Evans makes clear that using the ubiquitous language in conversations with domain experts is an important part of testing it, and hence the domain model. He also stresses that the language (and model) should evolve as the team's understanding of the domain grows.
+> Evans makes clear that using the ubiquitous language in conversations with domain experts is an important part of testing it,
+> and hence the domain model. He also stresses that the language (and model) should evolve as the team's understanding of the domain grows.
 > — Martin Fowler, [Ubiquitous Language](https://martinfowler.com/bliki/UbiquitousLanguage.html)
 
 ### Key Characteristics
@@ -138,7 +149,9 @@ Scenario: Convert sales prospect to paying customer
   And a Billing customer record is created
 ```
 
-**Why it matters**: Prevents forcing one language across incompatible domains, makes integration points explicit, allows each context its own language.
+**Why it matters**:
+
+Prevents forcing one language across incompatible domains, makes integration points explicit, allows each context its own language.
 
 ---
 
@@ -193,7 +206,9 @@ When domain language evolves:
 
 ### Prevents Drift
 
-Specifications use exact business vocabulary - no separate "business document" that drift can occur between. Business validates specifications directly.
+Specifications use exact business vocabulary - no separate "business document" that drift can occur between.
+
+Business validates specifications directly.
 
 ### All Stakeholders Can Validate
 

@@ -42,6 +42,90 @@ registries:
       github_releases:
         tag_format: "{module}/{version}"  # e.g., ext-eac/1.0.0
 
+# Container Tool Configuration
+# - local_binding: true = build from Dockerfile in local mode
+# - In r2r/eac mode (R2R_DOCKER_MODE=true): always pulls from GHCR
+containers:
+  # Pinned base image versions for reproducible builds
+  # These are passed as ARG values when building Dockerfiles
+  base_images:
+    python: "3.12"
+    python-slim: "3.14"
+    python-alpine: "3.14"
+    node: "25"
+    node-slim: "25"
+    alpine: "3.20"
+    nginx: "alpine"
+
+  # Tool Containers
+  drawio-cli:
+    dockerfile: containers/drawio-cli/Dockerfile
+    image: ghcr.io/ready-to-release/drawio-cli
+    tag: latest
+    workdir: /docs
+    command: python /app/drawio_cli.py
+    local_binding: true
+    description: "DrawIO diagram XML editor"
+
+  mermaid-cli:
+    dockerfile: containers/mermaid-cli/Dockerfile
+    image: ghcr.io/ready-to-release/mermaid-cli
+    tag: latest
+    workdir: /docs
+    command: mmdc
+    local_binding: true
+    description: "Mermaid diagram renderer"
+
+  mkdocs-site:
+    dockerfile: containers/mkdocs-site/Dockerfile
+    image: ghcr.io/ready-to-release/mkdocs-site
+    tag: latest
+    workdir: /docs
+    command: mkdocs
+    local_binding: true
+    description: "MkDocs HTML site generator"
+
+  mkdocs-pdf:
+    dockerfile: containers/mkdocs-pdf/Dockerfile
+    image: ghcr.io/ready-to-release/mkdocs-pdf
+    tag: latest
+    workdir: /docs
+    command: mkdocs
+    local_binding: true
+    description: "MkDocs PDF generator with Playwright"
+
+  pdf-tools:
+    dockerfile: containers/pdf-tools/Dockerfile
+    image: ghcr.io/ready-to-release/pdf-tools
+    tag: latest
+    workdir: /workspace
+    local_binding: true
+    description: "PDF page extraction tools"
+
+  static-site:
+    dockerfile: containers/static-site/Dockerfile
+    image: ghcr.io/ready-to-release/static-site
+    tag: latest
+    workdir: /usr/share/nginx/html
+    local_binding: false
+    description: "Static site serving"
+
+  # Third-party tools (no dockerfile, always pull)
+  structurizr-cli:
+    image: structurizr/cli
+    tag: latest
+    workdir: /workspace
+    command: /usr/local/bin/structurizr.sh
+    local_binding: false
+    description: "Structurizr DSL validator"
+
+  structurizr-lite:
+    image: structurizr/lite
+    tag: latest
+    workdir: /workspace
+    local_binding: false
+    description: "Structurizr diagram viewer"
+
 # Module Contracts
 # Component defaults (files.source, files.tests, files.config) loaded from component-types
 # Ordered by dependency layer (Layer 0 first, then Layer 1, etc.)
@@ -114,10 +198,18 @@ modules:
             - scripts/pwsh/local-dev/**/*.ps1
             - importer.ps1
       test-impl:
-        type: go
         root: go/eac/specs/impl/repository
       gherkin: specs/repository
       structurizr: specs/repository/.design
+
+  - moniker: contracts
+    name: Contract Files Module
+    description: Go module providing embedded contract files (schemas, EBNF, defaults) for consumption by other modules
+    versioning:
+      scheme: Implicit
+    components:
+      go:
+        root: contracts
 
   - moniker: eac-core
     name: Core Domain Libraries
@@ -152,7 +244,6 @@ modules:
       gherkin: specs/eac-core
       structurizr: specs/eac-core/.design
       test-impl:
-        type: go
         root: go/eac/specs/impl/eac-core
 
   - moniker: mkdocs-pdf
@@ -319,6 +410,8 @@ modules:
             - "**/*.js"
             - "**/*.pdf"
             - "**/*.drawio"
+            - "*.json"
+      json: contracts/eac-docs
       testdata:
         type: testdata
         root: docs
@@ -345,16 +438,9 @@ modules:
               type: executable
               pattern: "commands{ext}"
       markdown: go/eac/commands
-      changelog-docs:
-        type: markdown
-        root: release/eac-commands
-        patterns:
-          source:
-            - "*.md"
       gherkin: specs/eac-commands
       structurizr: specs/eac-commands/.design
       test-impl:
-        type: go
         root: go/eac/specs/impl/eac-commands
       testdata:
         type: testdata
@@ -417,7 +503,7 @@ modules:
     evidence_books:
       - release-evidence-r2r-cli
     depends_on:
-      - eac-core
+      - contracts
     components:
       go:
         root: go/r2r/cli
@@ -461,7 +547,6 @@ modules:
       gherkin: specs/r2r-cli
       structurizr: specs/r2r-cli/.design
       test-impl:
-        type: go
         root: go/eac/specs/impl/r2r-cli
 
   - moniker: templates
@@ -506,12 +591,6 @@ modules:
             - ".mocharc.json"
             - ".vscodeignore"
       markdown: typescript/vscode-ext-commit
-      changelog-docs:
-        type: markdown
-        root: release/vscode-ext-commit
-        patterns:
-          source:
-            - "*.md"
       json: contracts/vscode-commit
       gherkin: specs/vscode-ext-commit
       structurizr: specs/vscode-ext-commit/.design
@@ -566,12 +645,6 @@ modules:
               type: executable
               pattern: "{moniker}{ext}"
       markdown: go/eac/mcp/commands
-      changelog-docs:
-        type: markdown
-        root: release/eac-mcp-commands
-        patterns:
-          source:
-            - "*.md"
       structurizr: specs/eac-mcp-commands/.design
 
   - moniker: ext-eac
@@ -643,14 +716,7 @@ modules:
         root: scripts/pwsh/cli
       bash:
         root: scripts/sh/cli
-      changelog-docs:
-        type: markdown
-        root: release/r2r-installer
-        patterns:
-          source:
-            - "*.md"
       test-impl:
-        type: go
         root: go/eac/specs/impl/r2r-installer
       gherkin: specs/r2r-installer
       structurizr: specs/r2r-installer/.design
@@ -679,7 +745,6 @@ modules:
       gherkin: specs/implicit-r2r-cli
       structurizr: specs/implicit-r2r-cli/.design
       test-impl:
-        type: go
         root: go/eac/specs/impl/implicit-r2r-cli
       testdata:
         type: testdata

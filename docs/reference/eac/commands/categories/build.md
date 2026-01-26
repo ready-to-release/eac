@@ -2,7 +2,9 @@
 
 ## Overview
 
-Build commands compile and package modules in the repository. They handle dependency resolution, incremental builds, and cross-platform compilation.
+Build commands compile and package modules in the repository.
+
+They handle dependency resolution, incremental builds, and cross-platform compilation.
 
 **Key Characteristics**:
 

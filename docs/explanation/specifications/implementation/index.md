@@ -8,7 +8,8 @@ Learn how to implement executable specifications using your programming language
 
 ## Overview
 
-This section provides conceptual guidance for writing step definitions, organizing test code, and integrating BDD specifications with your test runner.
+This section provides conceptual guidance for writing step definitions,
+organizing test code, and integrating BDD specifications with your test runner.
 
 Each implementation guide covers:
 
@@ -23,9 +24,9 @@ Each implementation guide covers:
 
 ## Available Guides
 
-| Language | Framework | Status | Link |
-|----------|-----------|--------|------|
-| **Go** | Godog | Complete | [Go Implementation Guide](./go/) |
+| Language | Framework | Status   | Link                             |
+| -------- | --------- | -------- | -------------------------------- |
+| **Go**   | Godog     | Complete | [Go Implementation Guide](./go/) |
 
 ---
 
@@ -43,13 +44,13 @@ This separation allows non-technical stakeholders to understand the behavior whi
 
 Different test levels run in different environments:
 
-| Level | Purpose | Speed |
-|-------|---------|-------|
-| L0 | Fast unit tests, no I/O | Microseconds |
-| L1 | Unit tests with minimal deps | Milliseconds |
-| L2 | Integration with containers | Seconds |
-| L3 | Pre-production (PLTE) | Minutes |
-| L4 | Production verification | Minutes+ |
+| Level | Purpose                      | Speed        |
+| ----- | ---------------------------- | ------------ |
+| L0    | Fast unit tests, no I/O      | Microseconds |
+| L1    | Unit tests with minimal deps | Milliseconds |
+| L2    | Integration with containers  | Seconds      |
+| L3    | Pre-production (PLTE)        | Minutes      |
+| L4    | Production verification      | Minutes+     |
 
 ### 3. Step Definition Organization
 

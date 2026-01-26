@@ -8,11 +8,11 @@ Learn how to prepare and publish releases using the **changelog-driven release s
 
 ### Foundational Guides
 
-| Guide                                                                                     | What You'll Accomplish                                                      |
-| ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Guide                                                                                                | What You'll Accomplish                                                      |
+| ---------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
 | [Understanding Release Types](../../../../reference/repository/continuous-delivery/release-types.md) | Learn the four release types and how they determine changelog locations     |
-| [Understanding the Release Folder](./understanding-release-folder.md)                     | Learn release folder structure and how published modules link to changelogs |
-| [Release Workflow Variants](./release-workflow-variants.md)                               | Choose CDe or RA pattern based on regulatory requirements                   |
+| [Understanding the Release Folder](./understanding-release-folder.md)                                | Learn release folder structure and how published modules link to changelogs |
+| [Release Workflow Variants](./release-workflow-variants.md)                                          | Choose CDe or RA pattern based on regulatory requirements                   |
 
 ### Core Workflow Guides
 

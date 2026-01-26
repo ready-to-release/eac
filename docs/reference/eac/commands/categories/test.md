@@ -2,7 +2,9 @@
 
 ## Overview
 
-Test commands execute and manage tests across the repository. They provide parallel test execution, suite-based organization, and comprehensive failure diagnostics for quality assurance.
+Test commands execute and manage tests across the repository.
+
+They provide parallel test execution, suite-based organization, and comprehensive failure diagnostics for quality assurance.
 
 **Key Characteristics**:
 

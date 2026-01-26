@@ -2,7 +2,15 @@
 
 ## Overview
 
-The module dependency system allows modules to declare relationships to other modules via `depends_on` in repository.yml. Dependencies are used for graph visualization, validation, cache invalidation, and release gating.
+The module dependency system allows modules to declare relationships to other modules via `depends_on` in repository.yml.
+
+Dependencies are used for graph visualization, validation, cache invalidation, and release gating.
+
+## Dependency Flow
+
+The following diagram illustrates how dependencies flow from Trunk through Deployable Module and Deployment Pipeline to LIVE, showing the consumption pattern.
+
+![Dependency Flow to LIVE](../../../assets/branching/dependency-live.drawio.png)
 
 ## YAML Schema
 

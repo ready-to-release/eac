@@ -14,6 +14,10 @@ This project uses **three complementary testing methodologies**:
 
 Each layer serves a distinct purpose, uses different tools, and addresses different stakeholders' needs.
 
+The following diagram illustrates how the three layers connect, showing the relationship between business rules, scenarios that validate them, and the unit tests that implement them.
+
+![Three-Layer Testing](../../../assets/assisted/06-three-layer-testing.drawio.png){width=1000}
+
 ---
 
 ## The Three Layers
@@ -95,7 +99,9 @@ Rule: Creates project directory structure
 **Specification**: Written in specification files
 **Implementation**: Test implementation files (step definitions)
 
-> **Implementation**: Step definitions are organized in a dedicated test directory within each module. Location and naming conventions vary by language. See your implementation guide for details.
+> **Implementation**:
+> Step definitions are organized in a dedicated test directory within each module.
+> Location and naming conventions vary by language. See your implementation guide for details.
 
 <!-- markdownlint-enable MD033 -->
 
@@ -107,7 +113,10 @@ Rule: Creates project directory structure
 
 **Tool**: Test framework (language-specific)
 
-> **Implementation**: Unit tests are written using language-native test frameworks. Location and naming conventions vary by language. See your implementation guide for details.
+> **Implementation**:
+> Unit tests are written using language-native test frameworks.
+> Location and naming conventions vary by language.
+> See your implementation guide for details.
 
 #### Canon TDD Workflow
 
@@ -136,7 +145,11 @@ _Based on [Canon TDD by Kent Beck](https://tidyfirst.substack.com/p/canon-tdd), 
 4. **Refactor** - Optionally improve implementation design after test passes
 5. **Repeat** - Continue until the test list is empty
 
-**Key Principle**: Red focuses on **interface design** (how behavior is invoked), from the caller. Green focuses on **implementation design** (internal mechanics). Refactoring focuses on finding a design that allows us to continue.
+**Key Principle**: Red focuses on **interface design** (how behavior is invoked), from the caller.
+
+Green focuses on **implementation design** (internal mechanics).
+
+Refactoring focuses on finding a design that allows us to continue.
 
 **Red-Green-Refactor Cycle**:
 
@@ -182,7 +195,9 @@ Test_CreateConfig_WhenFileExists_ShouldFail:
 
 **Location**: Test files in source tree (language-specific conventions)
 
-> **Implementation**: Unit test files follow language-specific naming conventions and are placed alongside the code they test. See your implementation guide for complete code examples.
+> **Implementation**:
+> Unit test files follow language-specific naming conventions and are placed alongside the code they test.
+> See your implementation guide for complete code examples.
 
 ---
 
@@ -223,7 +238,9 @@ flowchart TD
 
 ```
 
-> **Implementation**: Specifications are stored in feature-specific directories, with step definitions and unit tests organized according to language conventions. See your implementation guide for project structure details.
+> **Implementation**:
+> Specifications are stored in feature-specific directories, with step definitions and unit tests organized according to language conventions.
+> See your implementation guide for project structure details.
 
 ---
 
@@ -253,7 +270,9 @@ flowchart TD
 4. Refactor for quality
 5. Repeat until scenarios pass
 
-> **Implementation**: Step definitions are implemented in language-specific test files. See your implementation guide for file organization and naming conventions.
+> **Implementation**:
+> Step definitions are implemented in language-specific test files.
+> See your implementation guide for file organization and naming conventions.
 
 **Definition of Done**:
 
@@ -315,7 +334,9 @@ flowchart TD
 
 ```
 
-> **Implementation**: Specifications in `specs/`, with step definitions and unit tests organized according to language-specific conventions. See your implementation guide for project structure details.
+> **Implementation**:
+> Specifications in `specs/`, with step definitions and unit tests organized according to language-specific conventions.
+> See your implementation guide for project structure details.
 
 **Why Separate?**:
 
@@ -332,7 +353,9 @@ flowchart TD
 | `When I run "r2r login"`         | `exec.Command("r2r", "login").Run()` |
 | `Then I should be authenticated` | `os.ReadFile("~/.r2r/session")`      |
 
-**Key Insight**: Specification describes user-visible behavior; implementation handles technical details (database, filesystem, process execution).
+**Key Insight**:
+
+Specification describes user-visible behavior; implementation handles technical details (database, filesystem, process execution).
 
 ---
 
@@ -407,7 +430,9 @@ The three layers use different tag types:
 - L1: Unit tests with minimal dependencies (default)
 - L2: Integration tests with emulated dependencies
 
-> **Implementation**: Uses language-specific build tags or test markers to categorize tests by isolation level. See your implementation guide for details on test level syntax and configuration.
+> **Implementation**:
+> Uses language-specific build tags or test markers to categorize tests by isolation level.
+> See your implementation guide for details on test level syntax and configuration.
 
 **Example**:
 

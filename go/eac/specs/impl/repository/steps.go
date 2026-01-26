@@ -341,7 +341,6 @@ type repositoryContext struct {
 	bidirectionalErrors  []string
 
 	// File ownership validation
-	moduleFiles       []string
 	orphanFiles       []repository.RepositoryFileWithModule // files with no owner
 	multiOwnershipMap map[string][]string                   // file -> list of owning modules
 
@@ -422,24 +421,6 @@ func (c *repositoryContext) ensureRepoRoot() error {
 // ============================================================================
 // Given Steps
 // ============================================================================
-
-func (c *repositoryContext) repositoryRootExists() error {
-	if err := c.ensureRepoRoot(); err != nil {
-		return err
-	}
-	if _, err := os.Stat(c.repoRoot); os.IsNotExist(err) {
-		return fmt.Errorf("repository root does not exist: %s", c.repoRoot)
-	}
-	// Initialize collections
-	c.discoveredModules = []string{}
-	c.tidyResults = make(map[string]string)
-	c.failedModules = []string{}
-	c.markdownFiles = []string{}
-	c.markdownErrors = make(map[string][]string)
-	c.featureFiles = []string{}
-	c.tagConflicts = []string{}
-	return nil
-}
 
 func (c *repositoryContext) discoverAllGoModulesUsingContracts() error {
 	if err := c.ensureRepoRoot(); err != nil {
@@ -597,8 +578,11 @@ func (c *repositoryContext) allModulesShouldHaveExitCode0() error {
 		var details strings.Builder
 		details.WriteString(fmt.Sprintf("Found %d module(s) with untidy dependencies:\n\n", len(c.failedModules)))
 		for _, modulePath := range c.failedModules {
-			relPath, _ := filepath.Rel(c.repoRoot, modulePath)
-			details.WriteString(fmt.Sprintf("❌ %s\n", relPath))
+			relPath, err := filepath.Rel(c.repoRoot, modulePath)
+			if err != nil {
+				relPath = modulePath
+			}
+			details.WriteString(fmt.Sprintf("X %s\n", relPath))
 			if diff := c.tidyResults[modulePath]; diff != "" {
 				details.WriteString(fmt.Sprintf("   Diff:\n%s\n\n", indent(diff, "   ")))
 			}

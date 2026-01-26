@@ -194,8 +194,8 @@ func IsMockEnabled() bool {
 }
 
 type (
-	MockAIExecutor = mock.MockAIExecutor
-	MockValidator  = mock.MockValidator
+	MockAIExecutor = mock.AIExecutor
+	MockValidator  = mock.Validator
 )
 
 // ============================================================================

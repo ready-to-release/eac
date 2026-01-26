@@ -1,3 +1,4 @@
+// Package json provides JSON schema validation utilities.
 package json
 
 import (
@@ -17,7 +18,7 @@ func NewValidator(schemaPath string) (*Validator, error) {
 }
 
 // Validate validates JSON output against schema.
-func (v *Validator) Validate(output string, context map[string]interface{}) []validation.ValidationError {
+func (v *Validator) Validate(_ string, _ map[string]interface{}) []validation.ValidationError {
 	// Implementation will be moved from contracts.JSONSchemaValidator
 	return nil
 }

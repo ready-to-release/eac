@@ -1,6 +1,8 @@
 # eac-core
 
-The `eac-core` module provides foundational libraries and contracts used across the EAC ecosystem. It defines the contract system, configuration loading, and shared utilities.
+The `eac-core` module provides foundational libraries and contracts used across the EAC ecosystem.
+
+It defines the contract system, configuration loading, and shared utilities.
 
 ## System Context
 

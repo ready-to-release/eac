@@ -6,7 +6,9 @@ The **drawio** category contains 6 commands for editing DrawIO diagram files emb
 
 ## How DrawIO Editing Works
 
-DrawIO diagrams are stored as `.drawio.png` files - PNG images with embedded XML metadata. This enables LLM-powered diagram editing through a decode-edit-embed workflow.
+DrawIO diagrams are stored as `.drawio.png` files - PNG images with embedded XML metadata.
+
+This enables LLM-powered diagram editing through a decode-edit-embed workflow.
 
 ### Architecture
 

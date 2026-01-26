@@ -162,7 +162,11 @@ Feature: cli_user-login
 
 **Traceability Chain**:
 
-Regulatory requirement → Risk control specification (`@control:ia-2(1)`) → User scenarios (`@control:ia-2(1)` tag) → Step implementations → Production code
+- Regulatory requirement →
+- →Risk control specification (`@control:ia-2(1)`) →
+- →User scenarios (`@control:ia-2(1)` tag) →
+- →Step implementations →
+- →Production code
 
 **See**:
 

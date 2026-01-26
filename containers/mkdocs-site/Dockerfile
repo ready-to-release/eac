@@ -2,7 +2,8 @@
 # Lean image for building documentation sites
 # ~150MB vs ~800MB for full PDF container
 
-FROM python:3.14-alpine
+ARG PYTHON_VERSION=3.14
+FROM python:${PYTHON_VERSION}-alpine
 
 WORKDIR /docs
 

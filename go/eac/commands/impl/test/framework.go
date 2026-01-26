@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -31,8 +32,8 @@ import (
 
 func init() {
 	// Register test component-level execution support
-	cmdframework.SetTestComponentWorkProvider(FlattenModulesToTestComponentWork)
-	cmdframework.SetTestComponentWorker(testComponentWorker)
+	cmdframework.RegisterComponentProvider(cmdframework.CommandTypeTest, FlattenModulesToTestComponentWork)
+	cmdframework.RegisterComponentWorker(cmdframework.CommandTypeTest, testComponentWorker)
 }
 
 // TestFrameworkConfig holds test-specific configuration for the framework.
@@ -359,14 +360,7 @@ func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 		for t := range types {
 			typeList = append(typeList, t)
 		}
-		// Sort for consistent output
-		for i := 0; i < len(typeList)-1; i++ {
-			for j := i + 1; j < len(typeList); j++ {
-				if typeList[i] > typeList[j] {
-					typeList[i], typeList[j] = typeList[j], typeList[i]
-				}
-			}
-		}
+		sort.Strings(typeList)
 		moduleTypes[moniker] = strings.Join(typeList, ", ")
 	}
 

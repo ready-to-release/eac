@@ -1,6 +1,7 @@
 # Component Types Reference
 
-EAC modules contain **components**, and each component has a **type** that determines its build behavior, file patterns, and tooling. Component types are defined in `component-types.yml` and provide the building blocks for modules.
+EAC modules contain **components**, and each component has a **type** that determines its build behavior,
+file patterns, and tooling. Component types are defined in `component-types.yml` and provide the building blocks for modules.
 
 ## Key Concepts
 
@@ -245,9 +246,9 @@ components:
 | **Go**         | `go`           | ✅ Full    | ✅ gotest, godog      | ✅ Yes        | Native support with cross-platform builds |
 | **TypeScript** | `typescript`   | ✅ Full    | ✅ mocha, cucumber-js | ❌ No         | npm and tsc integration                   |
 | **JavaScript** | `typescript`   | ✅ npm     | ✅ mocha, cucumber-js | ❌ No         | Use typescript type, skip tsc if no TS    |
-| **Python**     | `dockerfile`   | ⚠️ Custom  | ⚠️ Custom             | ❌ No         | Use Dockerfile with Python base image     |
-| **Rust**       | `dockerfile`   | ⚠️ Custom  | ⚠️ Custom             | ❌ No         | Use Dockerfile with Rust toolchain        |
-| **Java**       | `dockerfile`   | ⚠️ Custom  | ⚠️ Custom             | ❌ No         | Use Dockerfile with Maven/Gradle          |
+| **Python**     | `dockerfile`   | ⚠️ Custom   | ⚠️ Custom              | ❌ No         | Use Dockerfile with Python base image     |
+| **Rust**       | `dockerfile`   | ⚠️ Custom   | ⚠️ Custom              | ❌ No         | Use Dockerfile with Rust toolchain        |
+| **Java**       | `dockerfile`   | ⚠️ Custom   | ⚠️ Custom              | ❌ No         | Use Dockerfile with Maven/Gradle          |
 | **Markdown**   | `book`         | ✅ MkDocs  | ❌ No                 | ❌ No         | Documentation generation only             |
 | **PowerShell** | `pwsh`         | ✅ Scripts | ✅ Pester             | ❌ No         | Cross-platform PowerShell 7.4+            |
 | **Bash**       | `bash`         | ✅ Scripts | ❌ No                 | ❌ No         | POSIX shell scripts                       |

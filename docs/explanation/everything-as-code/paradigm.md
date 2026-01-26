@@ -4,7 +4,8 @@
 
 ## What "Everything as Code" Means
 
-"Everything as Code" is the practice of representing all aspects of your system lifecycle as version-controlled, executable, machine-readable artifacts.
+"Everything as Code" is the practice of representing all aspects of your system lifecycle as version-controlled,
+executable, machine-readable artifacts.
 
 ### Not Just Infrastructure
 
@@ -73,7 +74,8 @@ flowchart LR
 
 ### Building Shared Language: Domain-Driven Design
 
-Before teams can collaborate through executable specifications, they need a **shared language** — a common vocabulary that both business stakeholders and developers understand.
+Before teams can collaborate through executable specifications, they need a **shared language**
+\— a common vocabulary that both business stakeholders and developers understand.
 
 **The challenge**: Business and technical teams often speak different languages:
 
@@ -86,7 +88,8 @@ This misalignment causes:
 - Rework when teams discover they meant different things
 - Tests that pass but don't validate actual business rules
 
-**The solution**: **Domain-Driven Design (DDD)** provides techniques for building a **Ubiquitous Language** — a rigorous, shared vocabulary based on the domain model.
+**The solution**: **Domain-Driven Design (DDD)** provides techniques for building a **Ubiquitous Language**
+\— a rigorous, shared vocabulary based on the domain model.
 
 **How it works**:
 
@@ -210,6 +213,10 @@ flowchart LR
 ---
 
 ## Key Principles
+
+The following diagram summarizes the three pillars of Everything as Code: Version Control Everything, Make It Executable, and Automate Validation. Together, these create a virtuous cycle of continuous improvement.
+
+![Everything as Code - Three Pillars](../../assets/assisted/11-everything-as-code.drawio.png)
 
 "Everything as Code" operates on several key principles:
 

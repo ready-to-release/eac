@@ -2,7 +2,7 @@
 
 ## Overview
 
-The **serve** category contains 2 commands for starting development servers for documentation and architecture diagrams.
+The **serve** category contains commands for starting development servers for documentation, architecture diagrams, and repository visualization.
 
 ## Commands
 

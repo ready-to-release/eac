@@ -2,7 +2,9 @@
 
 ## Overview
 
-The EAC module system provides **independently buildable, testable units** with explicit contracts, dependency management, and file ownership. Modules are defined in YAML contracts, validated against schemas, and built in topological order based on their dependencies.
+The EAC module system provides **independently buildable, testable units** with explicit contracts, dependency management,
+and file ownership. Modules are defined in YAML contracts, validated against schemas,
+and built in topological order based on their dependencies.
 
 **Key concepts**:
 

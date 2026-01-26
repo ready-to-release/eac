@@ -48,32 +48,32 @@ project/
 
 ### Production Code
 
-| Pattern | Examples |
-|---------|----------|
+| Pattern     | Examples                                 |
+| ----------- | ---------------------------------------- |
 | `<name>.go` | `config.go`, `parser.go`, `validator.go` |
 
 ### Unit Tests
 
-| Pattern | Examples |
-|---------|----------|
+| Pattern          | Examples                           |
+| ---------------- | ---------------------------------- |
 | `<name>_test.go` | `config_test.go`, `parser_test.go` |
 
 ### L0 Tests (Optional)
 
-| Pattern | Purpose | Examples |
-|---------|---------|----------|
+| Pattern             | Purpose                           | Examples            |
+| ------------------- | --------------------------------- | ------------------- |
 | `<name>_l0_test.go` | Clearly identify ultra-fast tests | `parser_l0_test.go` |
 
 ### Integration Tests
 
-| Pattern | Build Tag | Examples |
-|---------|-----------|----------|
+| Pattern                      | Build Tag       | Examples                       |
+| ---------------------------- | --------------- | ------------------------------ |
 | `<name>_integration_test.go` | `//go:build L2` | `database_integration_test.go` |
 
 ### Step Definitions
 
-| Pattern | Location | Purpose |
-|---------|----------|---------|
+| Pattern         | Location              | Purpose                |
+| --------------- | --------------------- | ---------------------- |
 | `steps_test.go` | `tests/` subdirectory | Godog step definitions |
 
 ---

@@ -1,6 +1,8 @@
 # r2r init
 
-Creates a minimal `.r2r/r2r-cli.yml` configuration file in the repository root. This is the first step in setting up R2R for extension management.
+Creates a minimal `.r2r/r2r-cli.yml` configuration file in the repository root.
+
+This is the first step in setting up R2R for extension management.
 
 ## Syntax
 
@@ -10,7 +12,9 @@ r2r init [flags]
 
 ## Description
 
-The `init` command creates the `.r2r/r2r-cli.yml` file in your project. This file manages extension registration and configuration.
+The `init` command creates the `.r2r/r2r-cli.yml` file in your project.
+
+This file manages extension registration and configuration.
 
 **What it does:**
 

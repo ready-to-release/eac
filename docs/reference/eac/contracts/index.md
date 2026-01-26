@@ -2,7 +2,9 @@
 
 ## Overview
 
-The EAC contract system defines all configuration via **YAML contracts validated against JSON schemas**. Configuration, architecture, and behavior are version-controlled and validated before execution.
+The EAC contract system defines all configuration via **YAML contracts validated against JSON schemas**.
+
+Configuration, architecture, and behavior are version-controlled and validated before execution.
 
 **Principle**: Configuration over Convention - Everything is explicit, not implicit.
 
@@ -20,6 +22,8 @@ The EAC contract system defines all configuration via **YAML contracts validated
 | ------------------ | ------------------------- | ------------------------------------------------ |
 | **Modules**        | `repository.yml`          | Module definitions, dependencies, file ownership |
 | **Module Types**   | `module-types.yml`        | Type templates with build/test behavior          |
+| **Containers**     | `repository.yml`          | Container tool configurations with version pins  |
+| **Registries**     | `repository.yml`          | Container registry cleanup policies              |
 | **Environments**   | `environments.yml`        | Test execution environments (L0-L4)              |
 | **Test Suites**    | `test-suites.yml`         | Test suites with tag selectors                   |
 | **Testing Tags**   | `testing-tags.yml`        | Valid test tag definitions                       |
@@ -384,20 +388,179 @@ suites:
 
 ---
 
+## Containers Contract
+
+**File**: `.r2r/eac/repository.yml` (containers section)
+
+**Purpose**: Configure container-based tools with version pinning and execution mode control
+
+### Structure
+
+```yaml
+containers:
+  # Pinned base image versions for reproducible builds
+  base_images:
+    python: "3.12"
+    node: "25"
+    alpine: "3.20"
+
+  # Tool container configurations
+  drawio-cli:
+    dockerfile: containers/drawio-cli/Dockerfile
+    image: ghcr.io/ready-to-release/drawio-cli
+    tag: latest
+    workdir: /docs
+    command: python /app/drawio_cli.py
+    local_binding: true
+    description: "DrawIO diagram XML editor"
+```
+
+### Key Fields
+
+| Field           | Type    | Required | Description                                     |
+| --------------- | ------- | -------- | ----------------------------------------------- |
+| `base_images`   | map     | No       | Base image version pins for Dockerfile ARGs     |
+| `dockerfile`    | string  | No       | Path to Dockerfile relative to repo root        |
+| `image`         | string  | No       | GHCR image reference for container mode         |
+| `tag`           | string  | No       | Image tag (default: "latest")                   |
+| `workdir`       | string  | No       | Working directory inside container              |
+| `command`       | string  | No       | Default command/entrypoint                      |
+| `local_binding` | boolean | No       | Prefer build mode in local dev (default: true)  |
+| `description`   | string  | No       | Human-readable description                      |
+
+### Execution Modes
+
+The toolcontainer framework supports two execution modes:
+
+| Mode          | Trigger                    | Behavior                     |
+| ------------- | -------------------------- | ---------------------------- |
+| **Local**     | `R2R_DOCKER_MODE=false`    | Build from Dockerfile        |
+| **Container** | `R2R_DOCKER_MODE=true`     | Pull from GHCR registry      |
+
+**Decision Logic**:
+
+```text
+if no dockerfile configured:
+    → always pull from registry
+elif R2R_DOCKER_MODE=true:
+    → pull from registry (container mode)
+elif local_binding=true:
+    → build from Dockerfile (local mode)
+else:
+    → pull from registry
+```
+
+### Base Image Versioning
+
+Dockerfiles use ARG for base image versions:
+
+```dockerfile
+ARG PYTHON_VERSION=3.12
+FROM python:${PYTHON_VERSION}-slim
+```
+
+Build commands pass version overrides from config:
+
+```bash
+docker build --build-arg PYTHON_VERSION=3.12 -t drawio-cli:local .
+```
+
+### Examples
+
+**Local Development Container** (build from Dockerfile):
+
+```yaml
+drawio-cli:
+  dockerfile: containers/drawio-cli/Dockerfile
+  image: ghcr.io/ready-to-release/drawio-cli
+  workdir: /docs
+  local_binding: true  # Build locally in dev mode
+```
+
+**Third-Party Tool** (always pull):
+
+```yaml
+structurizr-cli:
+  image: structurizr/cli
+  tag: latest
+  workdir: /workspace
+  local_binding: false  # No dockerfile, always pull
+```
+
+**Static Server** (prefer registry even in dev):
+
+```yaml
+static-site:
+  dockerfile: containers/static-site/Dockerfile
+  image: ghcr.io/ready-to-release/static-site
+  local_binding: false  # Just nginx, no need to build
+```
+
+---
+
+## Registries Contract
+
+**File**: `.r2r/eac/repository.yml` (registries section)
+
+**Purpose**: Configure container registry cleanup policies for automated image management
+
+### Structure
+
+```yaml
+registries:
+  ghcr.io:
+    org: ready-to-release
+    cleanup:
+      enabled: true
+      policy: keep-latest-n
+      keep: 10
+      min_age_days: 7
+      image_tags:
+        preserve: ["v*", "latest", "[0-9]*.[0-9]*.[0-9]*"]
+        prune: ["sha-*", "dev-*", "pr-*", "ci"]
+      github_releases:
+        tag_format: "{module}/{version}"
+```
+
+### Key Fields
+
+| Field                 | Type    | Description                                    |
+| --------------------- | ------- | ---------------------------------------------- |
+| `org`                 | string  | Organization name in the registry              |
+| `cleanup.enabled`     | boolean | Whether cleanup is active                      |
+| `cleanup.policy`      | string  | Cleanup strategy (only `keep-latest-n`)        |
+| `cleanup.keep`        | integer | Number of versions to retain                   |
+| `min_age_days`        | integer | Minimum age before pruning eligible            |
+| `image_tags.preserve` | array   | Tag patterns to never delete (glob)            |
+| `image_tags.prune`    | array   | Tag patterns eligible for cleanup (glob)       |
+
+### Safety Features
+
+- **Release Protection**: Images matching GitHub Releases are NEVER deleted
+- **Tag Preservation**: Semver and `latest` tags are preserved by default
+- **Age Protection**: Recently created images are protected
+
+---
+
 ## Contract Relationships
 
 ```mermaid
 graph TB
     Modules[repository.yml] -->|references| Types[module-types.yml]
     Modules -->|depends_on| Modules
+    Modules -->|uses| Containers[containers]
+    Modules -->|publishes to| Registries[registries]
     Types -->|requires| SysDeps[system-dependencies.yml]
     Suites[test-suites.yml] -->|selects| Tags[testing-tags.yml]
     Suites -->|runs in| Envs[environments.yml]
     Envs -->|requires| SysDeps
+    Containers -->|pulls from| Registries
 
     style Modules fill:#e1f5ff
     style Types fill:#ffe1e1
     style Suites fill:#e1ffe1
+    style Containers fill:#fff3e1
+    style Registries fill:#e1ffe8
 ```
 
 ---

@@ -2,7 +2,9 @@
 
 ## Overview
 
-Release evidence is the **proof of quality** demonstrating a release meets production readiness criteria. This evidence is collected throughout the pipeline and reviewed at Stage 9 (Release Approval).
+Release evidence is the **proof of quality** demonstrating a release meets production readiness criteria.
+
+This evidence is collected throughout the pipeline and reviewed at Stage 9 (Release Approval).
 
 ---
 

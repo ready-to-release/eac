@@ -4,13 +4,19 @@
 
 Compliance transformation is a journey, not a destination.
 
-Organizations that successfully transform compliance practices do so through a structured, phased approach that proves the concept with a pilot, builds reusable automation, and scales systematically across the organization.
+Organizations that successfully transform compliance practices do so through a structured,
+phased approach that proves the concept with a pilot, builds reusable automation, and scales systematically across the organization.
 
 This document describes a four-phase framework that guides compliance transformation from initial assessment through organization-wide adoption.
 
 The framework has been validated across multiple organizations and regulatory contexts.
 
-!!! info "Transformation Overview" - **Timeline**: 12-18 months from start to organization-wide adoption - **Investment**: 2-3 FTE dedicated resources plus team participation - **Expected ROI**: 3-10 month payback period, $1.8M - $6.4M annual benefit for typical mid-size organization
+!!! info
+
+    - "Transformation Overview"
+    - **Timeline**: 12-18 months from start to organization-wide adoption
+    - **Investment**: 2-3 FTE dedicated resources plus team participation
+    - **Expected ROI**: 3-10 month payback period, $1.8M - $6.4M annual benefit for typical mid-size organization
 
 ## The Journey Overview
 
@@ -111,7 +117,10 @@ Map compliance activities to identify waste:
 - Design future state with automation
 - Calculate expected improvements
 
-**Reference**: See [Measuring and Improving Flow](../everything-as-code/measuring-and-improving-flow.md) for detailed guidance on Value Stream Mapping and flow engineering principles.
+**Reference**:
+
+See [Measuring and Improving Flow](../everything-as-code/measuring-and-improving-flow.md),
+for detailed guidance on Value Stream Mapping and flow engineering principles.
 
 **Deliverable**: Value Stream Maps (current + future states)
 
@@ -218,7 +227,9 @@ Build evidence collection capability:
 - Create evidence package generator
 
 !!! tip "Evidence Collection Automation"
-This step requires an automation layer. The Ready-to-Release (r2r) CLI provides evidence collection and packaging capabilities to accelerate this phase.
+
+    This step requires an automation layer.
+    The Ready-to-Release (r2r) CLI provides evidence collection and packaging capabilities to accelerate this phase.
 
 **Deliverable**: Evidence collection system
 

@@ -1,5 +1,5 @@
 # Specifications Evolution
->
+
 > **How specifications evolve with understanding**
 
 Specifications are living documents that evolve as your understanding deepens through implementation, usage, and feedback.
@@ -163,7 +163,8 @@ As specifications evolve:
 - ✅ Refactor for clarity as understanding deepens
 - ✅ Keep specifications synchronized with implementation
 - ✅ Document why changes were made (commit messages)
-- ✅ **Don't forget the code** - as we evolve the domain language we do not only change specifications, we also change the corresponding language in the code!
+- ✅ **Don't forget the code** - as we evolve the domain language we do not only change specifications,
+  we also change the corresponding language in the code!
 
 ### DON'T
 
@@ -190,7 +191,10 @@ flowchart TD
 
 ```
 
-**Remember**: Each iteration brings you closer to a specification that accurately captures both the **intended behavior** and the **actual behavior** of your system.
+**Remember**:
+
+Each iteration brings you closer to a specification that accurately captures both the **intended behavior**,
+and the **actual behavior** of your system.
 
 ---
 

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gource Visualization</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        video { max-width: 100%; max-height: 100%; }
+        .loading { color: #fff; font-family: sans-serif; }
+    </style>
+</head>
+<body>
+    <div id="loading" class="loading">Starting visualization...</div>
+    <video id="video" controls autoplay muted style="display:none;"></video>
+    <script>
+        const video = document.getElementById('video');
+        const loading = document.getElementById('loading');
+        const checkStream = setInterval(() => {
+            fetch('/hls/stream.m3u8').then(r => {
+                if (r.ok) {
+                    clearInterval(checkStream);
+                    loading.style.display = 'none';
+                    video.style.display = 'block';
+                    if (Hls.isSupported()) {
+                        const hls = new Hls({
+                            liveSyncDurationCount: 3,
+                            liveMaxLatencyDurationCount: 6,
+                            maxBufferLength: 60,
+                            maxMaxBufferLength: 120,
+                            maxBufferSize: 120 * 1000 * 1000,
+                            maxBufferHole: 0.1,
+                            lowLatencyMode: false,
+                            backBufferLength: 60,
+                            startFragPrefetch: true,
+                            progressive: true
+                        });
+                        hls.loadSource('/hls/stream.m3u8');
+                        hls.attachMedia(video);
+                        hls.on(Hls.Events.ERROR, (e, data) => {
+                            if (data.fatal) {
+                                hls.recoverMediaError();
+                            }
+                        });
+                    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                        video.src = '/hls/stream.m3u8';
+                    }
+                }
+            }).catch(() => {});
+        }, 1000);
+    </script>
+</body>
+</html>

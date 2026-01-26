@@ -4,7 +4,9 @@ Reference for security scanning workflows.
 
 ## Overview
 
-Security workflows perform automated vulnerability scanning and security analysis on the codebase. These workflows run independently of CI/CD pipelines to detect security issues early.
+Security workflows perform automated vulnerability scanning and security analysis on the codebase.
+
+These workflows run independently of CI/CD pipelines to detect security issues early.
 
 ## CodeQL Workflow
 

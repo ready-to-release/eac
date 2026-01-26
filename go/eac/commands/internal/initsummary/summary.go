@@ -18,10 +18,14 @@ type Summary struct {
 	CalculatedModules []string // Final list after dependency resolution
 	AddedDepm         []string // Module dependencies added (depm)
 
-	// Execution Plan
+	// Execution Plan (Modules)
 	ExecutionLayers [][]string // Modules grouped by dependency layer
 	LayerCount      int        // Number of layers
 	FlatExecution   bool       // True if running all layers in parallel (ignoring layer order)
+
+	// Execution Plan (Components)
+	ComponentExecutionLayers [][]string // Components grouped by dependency layer
+	ComponentLayerCount      int        // Number of component layers
 
 	// Flags & Configuration
 	Flags Flags // All active flags
@@ -181,10 +185,17 @@ func (s *Summary) SetRequest(requested, calculated []string) *Summary {
 	return s
 }
 
-// SetExecutionPlan sets the execution layers from the calculated plan.
+// SetExecutionPlan sets the module execution layers from the calculated plan.
 func (s *Summary) SetExecutionPlan(layers [][]string) *Summary {
 	s.ExecutionLayers = layers
 	s.LayerCount = len(layers)
+	return s
+}
+
+// SetComponentExecutionPlan sets the component execution layers from the calculated plan.
+func (s *Summary) SetComponentExecutionPlan(layers [][]string) *Summary {
+	s.ComponentExecutionLayers = layers
+	s.ComponentLayerCount = len(layers)
 	return s
 }
 
@@ -273,10 +284,19 @@ func (s *Summary) TotalModules() int {
 	return len(s.CalculatedModules)
 }
 
-// LayerSizes returns the size of each execution layer.
+// LayerSizes returns the size of each module execution layer.
 func (s *Summary) LayerSizes() []int {
 	sizes := make([]int, len(s.ExecutionLayers))
 	for i, layer := range s.ExecutionLayers {
+		sizes[i] = len(layer)
+	}
+	return sizes
+}
+
+// ComponentLayerSizes returns the size of each component execution layer.
+func (s *Summary) ComponentLayerSizes() []int {
+	sizes := make([]int, len(s.ComponentExecutionLayers))
+	for i, layer := range s.ComponentExecutionLayers {
 		sizes[i] = len(layer)
 	}
 	return sizes

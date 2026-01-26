@@ -4,7 +4,9 @@ Architecture documentation for the Ready-to-Release CLI framework.
 
 ## Overview
 
-R2R (Ready to Release) provides a container-based CLI framework for modular, extensible command-line tools. The architecture focuses on:
+R2R (Ready to Release) provides a container-based CLI framework for modular, extensible command-line tools.
+
+The architecture focuses on:
 
 - **Docker-based execution** - Isolated, reproducible environments
 - **Extension system** - Pluggable command collections via containers

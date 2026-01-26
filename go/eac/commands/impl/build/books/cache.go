@@ -27,15 +27,18 @@ type CacheStats struct {
 // MermaidCacheKey contains all inputs that affect mermaid rendering
 // Any change to these values will produce a different cache key
 type MermaidCacheKey struct {
-	Code   string
-	Width  int
-	Height int
-	Theme  string
+	SourceFile string // Path to .md file containing the block (for traceable naming)
+	BlockIndex int    // Index of mermaid block in file (0, 1, 2...)
+	Code       string
+	Width      int
+	Height     int
+	Theme      string
 }
 
 // DrawioCacheKey contains all inputs that affect drawio image optimization
 // Any change to these values will produce a different cache key
 type DrawioCacheKey struct {
+	SourcePath string // Path to source .drawio.png (for traceable naming)
 	SourceHash string // SHA256 of original image file content
 	MaxWidth   int    // Target max width for optimization
 }
@@ -52,7 +55,7 @@ func NewAssetCache(workspaceRoot string) *AssetCache {
 // Returns: (cachePath, cacheHit)
 func (c *AssetCache) GetMermaid(key MermaidCacheKey) (string, bool) {
 	hash := c.hashMermaid(key)
-	cachePath := filepath.Join(c.cacheRoot, "mermaid", hash+".svg")
+	cachePath := paths.MermaidCachePathV2(c.cacheRoot, key.SourceFile, key.BlockIndex, hash)
 
 	if _, err := os.Stat(cachePath); err == nil {
 		c.stats.MermaidHits++
@@ -66,7 +69,7 @@ func (c *AssetCache) GetMermaid(key MermaidCacheKey) (string, bool) {
 // PutMermaid stores a rendered SVG in the cache for future reuse
 func (c *AssetCache) PutMermaid(svgPath string, key MermaidCacheKey) error {
 	hash := c.hashMermaid(key)
-	cachePath := filepath.Join(c.cacheRoot, "mermaid", hash+".svg")
+	cachePath := paths.MermaidCachePathV2(c.cacheRoot, key.SourceFile, key.BlockIndex, hash)
 
 	// Ensure cache directory exists
 	if err := os.MkdirAll(filepath.Dir(cachePath), 0755); err != nil {
@@ -85,6 +88,12 @@ func (c *AssetCache) PutMermaid(svgPath string, key MermaidCacheKey) error {
 
 // hashMermaid creates a deterministic hash of all mermaid rendering inputs
 func (c *AssetCache) hashMermaid(key MermaidCacheKey) string {
+	return HashMermaidKey(key)
+}
+
+// HashMermaidKey computes a deterministic hash for a mermaid cache key.
+// Exported for use by cache pruning logic.
+func HashMermaidKey(key MermaidCacheKey) string {
 	h := sha256.New()
 	fmt.Fprintf(h, "code:%s\n", key.Code)
 	fmt.Fprintf(h, "width:%d\n", key.Width)
@@ -97,7 +106,7 @@ func (c *AssetCache) hashMermaid(key MermaidCacheKey) string {
 // Returns: (cachePath, cacheHit)
 func (c *AssetCache) GetDrawio(key DrawioCacheKey) (string, bool) {
 	hash := c.hashDrawio(key)
-	cachePath := paths.DrawioCachePath(c.cacheRoot, hash)
+	cachePath := paths.DrawioCachePathV2(c.cacheRoot, key.SourcePath, hash)
 
 	if _, err := os.Stat(cachePath); err == nil {
 		c.stats.DrawioHits++
@@ -111,7 +120,7 @@ func (c *AssetCache) GetDrawio(key DrawioCacheKey) (string, bool) {
 // PutDrawio stores an optimized PNG in the cache for future reuse
 func (c *AssetCache) PutDrawio(pngPath string, key DrawioCacheKey) error {
 	hash := c.hashDrawio(key)
-	cachePath := paths.DrawioCachePath(c.cacheRoot, hash)
+	cachePath := paths.DrawioCachePathV2(c.cacheRoot, key.SourcePath, hash)
 
 	// Ensure cache directory exists
 	if err := os.MkdirAll(filepath.Dir(cachePath), 0755); err != nil {
@@ -130,6 +139,12 @@ func (c *AssetCache) PutDrawio(pngPath string, key DrawioCacheKey) error {
 
 // hashDrawio creates a deterministic hash of all drawio optimization inputs
 func (c *AssetCache) hashDrawio(key DrawioCacheKey) string {
+	return HashDrawioKey(key)
+}
+
+// HashDrawioKey computes a deterministic hash for a drawio cache key.
+// Exported for use by cache pruning logic.
+func HashDrawioKey(key DrawioCacheKey) string {
 	h := sha256.New()
 	fmt.Fprintf(h, "source:%s\n", key.SourceHash)
 	fmt.Fprintf(h, "maxWidth:%d\n", key.MaxWidth)

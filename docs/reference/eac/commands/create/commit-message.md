@@ -24,7 +24,6 @@ Customize AI behavior using the **three-tier prompt system**. Prompts are loaded
    ```
 
 2. **Team Override** (version controlled)
-
    - Location: `.r2r/eac/templates/ai/commit-message/`
    - Committed to git, affects entire team
 

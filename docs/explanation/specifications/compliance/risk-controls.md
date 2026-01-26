@@ -4,7 +4,8 @@
 
 ## What Are Risk Controls?
 
-Risk controls are **standardized security and compliance requirements** from established catalogs (NIST 800-53, ISO 27001, CIS, etc.) that mitigate identified risks.
+Risk controls are **standardized security and compliance requirements** from established catalogs (NIST 800-53, ISO 27001, CIS, etc.),
+that mitigate identified risks.
 
 **How Controls Address Risks**:
 
@@ -60,13 +61,16 @@ They answer:
 
 **Control-Risk Relationship**:
 
-Controls inherently address risks. When you tag a scenario with `@control:ac-2` (Account Management), you're implicitly addressing risks like:
+Controls inherently address risks. When you tag a scenario with `@control:ac-2` (Account Management),
+you're implicitly addressing risks like:
 
 - Unauthorized access
 - Privilege escalation
 - Account misuse
 
-Risk assessments should document which risks exist and map them to applicable controls. Test scenarios then verify control implementation.
+Risk assessments should document which risks exist and map them to applicable controls.
+
+Test scenarios then verify control implementation.
 
 **Risk Assessment File Structure:**
 
@@ -87,7 +91,13 @@ Project Root/
         └── ra-2025-data-protection.md
 ```
 
-**Note**: The `docs/risk-assessments/` directory is optional and used for human-readable risk analysis. OSCAL files in `specs/.risk-controls/` are the authoritative machine-readable format. The repository uses a **single risk profile** (`risk-profile.json`) that applies to all modules.
+**Note**:
+
+The `docs/risk-assessments/` directory is optional and used for human-readable risk analysis.
+
+OSCAL files in `specs/.risk-controls/` are the authoritative machine-readable format.
+
+The repository uses a **single risk profile** (`risk-profile.json`) that applies to all modules.
 
 **Example**:
 
@@ -128,7 +138,8 @@ Scenario: Authentication prevents unauthorized access
 
 ### What is OSCAL?
 
-[OSCAL (Open Security Controls Assessment Language)](https://pages.nist.gov/OSCAL/) is a standardized, machine-readable framework developed by NIST for representing security controls, profiles, implementations, and assessment results.
+[OSCAL (Open Security Controls Assessment Language)](https://pages.nist.gov/OSCAL/) is a standardized,
+machine-readable framework developed by NIST for representing security controls, profiles, implementations, and assessment results.
 
 **Why OSCAL?**
 
@@ -147,11 +158,19 @@ Traditional security control management relies on documents (PDFs, spreadsheets,
 - **Version controlled**: Security artifacts can live alongside code in git
 - **Traceable**: Explicit links between controls, implementations, and test evidence
 
-**OSCAL Versions**: The framework is actively maintained by NIST. This project uses **OSCAL 1.1.2** for profiles and **OSCAL 1.1.3** for catalogs and assessment results. Always check schema compatibility when working with OSCAL documents.
+**OSCAL Versions**:
+
+The framework is actively maintained by NIST.
+
+This project uses **OSCAL 1.1.2** for profiles and **OSCAL 1.1.3** for catalogs and assessment results.
+
+Always check schema compatibility when working with OSCAL documents.
 
 ### How OSCAL Helps Cross-Domain Regulated Industries
 
-One of OSCAL's most powerful features is its ability to unify compliance efforts across multiple regulatory frameworks. Organizations operating in multiple regulated industries can use OSCAL to:
+One of OSCAL's most powerful features is its ability to unify compliance efforts across multiple regulatory frameworks.
+
+Organizations operating in multiple regulated industries can use OSCAL to:
 
 | Benefit                            | How It Helps                                                                      |
 | ---------------------------------- | --------------------------------------------------------------------------------- |
@@ -162,7 +181,12 @@ One of OSCAL's most powerful features is its ability to unify compliance efforts
 | **Automated reporting**            | Generate audits and regulatory submissions programmatically                       |
 | **Evidence integration**           | Link logs, tests, validation results directly into compliance artifacts           |
 
-**Example**: A healthcare technology company operating in the EU might need to comply with GDPR (data protection), MDR (medical devices), NIS2 (cybersecurity), and ISO 13485 (quality management). With OSCAL, they can:
+### Example
+
+A healthcare technology company operating in the EU might need to comply with GDPR (data protection),
+MDR (medical devices), NIS2 (cybersecurity), and ISO 13485 (quality management).
+
+With OSCAL, they can:
 
 1. Create a single catalog mapping controls across all frameworks
 2. Identify control overlaps (e.g., encryption requirements appear in all four)
@@ -239,7 +263,11 @@ r2r create risk-profile assessment.md
 }
 ```
 
-**Note**: The repository uses a **single risk profile** that applies to all modules. Individual modules reference the same controls via `@control:` tags in their specifications.
+**Note**:
+
+The repository uses a **single risk profile** that applies to all modules.
+
+Individual modules reference the same controls via `@control:` tags in their specifications.
 
 ### BDD Specifications (Your Implementation)
 
@@ -319,7 +347,9 @@ r2r eac validate control-tags
 
 ## Schema Validation
 
-All OSCAL documents must conform to official NIST schemas. Validation ensures your control definitions, profiles, and assessment results are properly structured and interoperable.
+All OSCAL documents must conform to official NIST schemas.
+
+Validation ensures your control definitions, profiles, and assessment results are properly structured and interoperable.
 
 ```bash
 r2r eac validate risk-catalog

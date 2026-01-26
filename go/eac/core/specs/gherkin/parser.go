@@ -1,3 +1,4 @@
+// Package gherkin provides parsing utilities for Gherkin feature files.
 package gherkin
 
 import (

@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ready-to-release.org/schemas/eac-docs/manifest/0.1.0",
+  "title": "Documentation Asset Manifest Schema",
+  "description": "Schema for tracking documentation assets (diagrams, images) and their usage across markdown files",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Reference to this schema file"
+    },
+    "generated": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO 8601 date when the manifest was generated"
+    },
+    "generator": {
+      "type": "string",
+      "description": "Tool and version that generated this manifest",
+      "examples": ["eac update docs-manifest v1.0.0"]
+    },
+    "stats": {
+      "$ref": "#/definitions/manifest_stats",
+      "description": "Summary statistics about the assets"
+    },
+    "assets": {
+      "type": "object",
+      "description": "Map of asset paths (relative to assets directory) to their metadata",
+      "additionalProperties": {
+        "$ref": "#/definitions/asset_entry"
+      }
+    }
+  },
+  "required": ["generated", "assets"],
+  "definitions": {
+    "manifest_stats": {
+      "type": "object",
+      "description": "Summary statistics for the manifest",
+      "properties": {
+        "total": {
+          "type": "integer",
+          "description": "Total number of assets",
+          "minimum": 0
+        },
+        "used": {
+          "type": "integer",
+          "description": "Number of assets referenced in documentation",
+          "minimum": 0
+        },
+        "unused": {
+          "type": "integer",
+          "description": "Number of assets not referenced in any documentation",
+          "minimum": 0
+        },
+        "byCategory": {
+          "type": "object",
+          "description": "Asset counts by category/subdirectory",
+          "additionalProperties": {
+            "$ref": "#/definitions/category_stats"
+          }
+        }
+      }
+    },
+    "category_stats": {
+      "type": "object",
+      "description": "Statistics for a category of assets",
+      "properties": {
+        "total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "used": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unused": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "asset_entry": {
+      "type": "object",
+      "description": "Metadata for a single documentation asset",
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "Human or LLM-authored description of what the asset depicts. Empty string for new assets awaiting description. This field is preserved during manifest updates."
+        },
+        "usedIn": {
+          "type": "array",
+          "description": "Auto-generated list of markdown files that reference this asset (paths relative to repo root). Regenerated on each 'update docs-manifest' run.",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "type": {
+          "type": "string",
+          "enum": ["drawio", "image", "svg", "other"],
+          "description": "Asset type classification",
+          "default": "image"
+        },
+        "category": {
+          "type": "string",
+          "description": "Category derived from subdirectory (e.g., 'architecture', 'testing', 'cd-model')"
+        },
+        "lastModified": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp of last modification"
+        },
+        "size": {
+          "type": "integer",
+          "description": "File size in bytes",
+          "minimum": 0
+        },
+        "hash": {
+          "type": "string",
+          "description": "Content hash for change detection (SHA-256)",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": ["description", "usedIn"]
+    }
+  },
+  "examples": [
+    {
+      "$schema": "./manifest.schema.json",
+      "generated": "2026-01-26",
+      "generator": "eac update docs-manifest v1.0.0",
+      "stats": {
+        "total": 88,
+        "used": 44,
+        "unused": 44,
+        "byCategory": {
+          "architecture": { "total": 5, "used": 1, "unused": 4 },
+          "testing": { "total": 15, "used": 0, "unused": 15 }
+        }
+      },
+      "assets": {
+        "architecture/modules-overview.drawio.png": {
+          "description": "Complete entity-relationship model showing Organization, Trunk, Module, and Component relationships",
+          "usedIn": ["docs/index.md"],
+          "type": "drawio",
+          "category": "architecture"
+        }
+      }
+    }
+  ]
+}

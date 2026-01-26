@@ -2,7 +2,8 @@
 
 ## What You'll Accomplish
 
-Configure AI provider (Anthropic Claude, OpenAI, or Google Gemini) to enable AI-powered features like commit message generation, PR descriptions, and specification creation.
+Configure AI provider (Anthropic Claude, OpenAI, or Google Gemini) to enable AI-powered features like commit message generation,
+PR descriptions, and specification creation.
 
 !!! tip "Start Here"
 
@@ -14,7 +15,9 @@ Configure AI provider (Anthropic Claude, OpenAI, or Google Gemini) to enable AI-
 
 **New to r2r?** Learn these concepts first:
 
-- [Quick Start Guide](../../tutorials/getting-started/quick-start.md) - Initialize r2r and understand AI provider configuration
+- [Quick Start Guide](../../tutorials/getting-started/quick-start.md)
+
+Initialize r2r and understand AI provider configuration
 
 ### Required Setup
 

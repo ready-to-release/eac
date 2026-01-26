@@ -10,7 +10,9 @@ r2r version
 
 ## Description
 
-The `version` command displays the current R2R CLI version. Useful for:
+The `version` command displays the current R2R CLI version.
+
+Useful for:
 
 - Verifying your installation
 - Checking if updates are available

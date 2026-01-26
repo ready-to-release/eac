@@ -4,11 +4,18 @@ Reference for release workflows that publish deployable artifacts.
 
 ## Overview
 
-Release workflows build and publish deployable artifacts to production environments. Each deployable module has a dedicated release workflow following a standard pattern with CI verification, version validation, artifact building, and release creation.
+Release workflows build and publish deployable artifacts to production environments.
+
+Each deployable module has a dedicated release workflow following a standard pattern with CI verification,
+version validation, artifact building, and release creation.
 
 **Location:** `.github/workflows/release-{moniker}.yaml`
 
-**Release Type Requirement:** Only modules with `release_type: published` or `release_type: bundle` can have release workflows. Internal modules and modules with `release_type: none` do not trigger releases. See [Understanding Release Types](../../../repository/continuous-delivery/release-types.md) for details.
+**Release Type Requirement:** Only modules with `release_type: published` or `release_type: bundle` can have release workflows.
+
+Internal modules and modules with `release_type: none` do not trigger releases.
+
+See [Understanding Release Types](../../../repository/continuous-delivery/release-types.md) for details.
 
 ## Release Workflow Pattern
 

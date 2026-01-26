@@ -20,13 +20,14 @@ Container registries use **two distinct tagging systems** that are often confuse
 
 These are the tags visible on the container image itself:
 
-```
+```text
 ghcr.io/org/package:sha-abc1234    # CI build
 ghcr.io/org/package:v1.0.0         # Release tag
 ghcr.io/org/package:latest         # Mutable pointer
 ```
 
 Image tags are:
+
 - Assigned when pushing to the registry
 - Visible in `docker images` and registry UI
 - What you specify in `docker pull`
@@ -35,13 +36,14 @@ Image tags are:
 
 These are tags created via the GitHub Releases API:
 
-```
+```text
 ext-eac/1.0.0      # Module release
 r2r-cli/2.3.4      # CLI release
 r2r-eac-bundle/2025.01.15  # Bundle release
 ```
 
 Release tags are:
+
 - Created when publishing a GitHub Release
 - Visible in the Releases section of a repository
 - Correlate with git tags
@@ -59,26 +61,26 @@ This creates a **correlation** between the GitHub Release and the container imag
 
 The cleanup system uses multiple layers of protection:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
-│                    PROTECTION LAYERS                         │
+│                    PROTECTION LAYERS                        │
 ├─────────────────────────────────────────────────────────────┤
-│  1. Image Tag Patterns (preserve)                            │
+│  1. Image Tag Patterns (preserve)                           │
 │     └─ "v*", "latest", "[0-9]*.[0-9]*.[0-9]*"               │
-│                                                              │
-│  2. GitHub Release API Correlation (ALWAYS ON)               │
+│                                                             │
+│  2. GitHub Release API Correlation (ALWAYS ON)              │
 │     └─ ext-eac/1.0.0 → protected                            │
-│                                                              │
-│  3. Release Bundle References (ALWAYS ON)                    │
-│     └─ Versions in bundle release notes → protected          │
-│                                                              │
-│  4. Digest Matching                                          │
-│     └─ Same digest as protected version → protected          │
-│                                                              │
-│  5. Minimum Age                                              │
-│     └─ Created < min_age_days ago → protected                │
-│                                                              │
-│  6. Prune Patterns (must match to be candidate)              │
+│                                                             │
+│  3. Release Bundle References (ALWAYS ON)                   │
+│     └─ Versions in bundle release notes → protected         │
+│                                                             │
+│  4. Digest Matching                                         │
+│     └─ Same digest as protected version → protected         │
+│                                                             │
+│  5. Minimum Age                                             │
+│     └─ Created < min_age_days ago → protected               │
+│                                                             │
+│  6. Prune Patterns (must match to be candidate)             │
 │     └─ "sha-*", "dev-*", "pr-*", "ci"                       │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -87,10 +89,10 @@ The cleanup system uses multiple layers of protection:
 
 Some protections cannot be disabled:
 
-| Protection | Why Non-Configurable |
-|------------|---------------------|
+| Protection                 | Why Non-Configurable                         |
+| -------------------------- | -------------------------------------------- |
 | GitHub Release correlation | Released packages must never be auto-deleted |
-| Release bundle references | Bundle contents must remain available |
+| Release bundle references  | Bundle contents must remain available        |
 
 To delete a released package, use manual methods (GitHub UI or API).
 
@@ -140,6 +142,7 @@ image_tags:
 ```
 
 **Logic:**
+
 - If ANY tag matches a preserve pattern → protected
 - If NO tag matches a prune pattern → protected
 - Only versions matching prune patterns are cleanup candidates
@@ -174,7 +177,7 @@ The default "keep-latest-n" strategy:
 3. Keep the newest N versions
 4. Delete the rest
 
-```
+```text
 Versions (sorted newest first):
   sha-abc (2 days ago)  → KEEP (within keep limit)
   sha-def (5 days ago)  → KEEP (within keep limit)
@@ -220,11 +223,11 @@ curl -X DELETE \
 
 Track cleanup effectiveness:
 
-| Metric | Target | Action if Exceeded |
-|--------|--------|-------------------|
-| Total versions | < 100 per package | Increase cleanup frequency |
-| Storage usage | < quota | Reduce keep count |
-| Protected ratio | < 50% | Review preserve patterns |
+| Metric          | Target            | Action if Exceeded         |
+| --------------- | ----------------- | -------------------------- |
+| Total versions  | < 100 per package | Increase cleanup frequency |
+| Storage usage   | < quota           | Reduce keep count          |
+| Protected ratio | < 50%             | Review preserve patterns   |
 
 ## See Also
 

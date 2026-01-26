@@ -1,6 +1,8 @@
 # eac-mcp-commands
 
-The `eac-mcp-commands` module provides Model Context Protocol (MCP) server integration for AI assistants like Claude. It exposes EAC commands as MCP tools that can be discovered and invoked by AI agents.
+The `eac-mcp-commands` module provides Model Context Protocol (MCP) server integration for AI assistants like Claude.
+
+It exposes EAC commands as MCP tools that can be discovered and invoked by AI agents.
 
 ## System Context
 
@@ -89,6 +91,7 @@ Uses direct binary execution (faster, ~100ms startup vs ~2s Docker).
 ### Environment Variable
 
 **`EAC_USE_DIRECT_BINARY`**:
+
 - `true`: Forces direct binary execution (development)
 - Not set or `false`: Uses `r2r eac` (production, default)
 

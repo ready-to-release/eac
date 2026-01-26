@@ -1,6 +1,7 @@
 go 1.24.4
 
 use (
+	./contracts
 	./go/eac/commands
 	./go/eac/core
 	./go/eac/mcp/commands

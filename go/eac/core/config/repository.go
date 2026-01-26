@@ -37,6 +37,9 @@ type RepositoryConfig struct {
 
 	// Container registry configurations for cleanup policies
 	Registries RegistriesConfig `yaml:"registries,omitempty"`
+
+	// Container tool configurations with version pinning
+	Containers ContainersConfig `yaml:"containers,omitempty"`
 }
 
 // RepositorySettings holds repository-level configuration.
@@ -446,7 +449,6 @@ func (c *RepositoryConfig) GetByMoniker(moniker string) *Module {
 	return m
 }
 
-
 // AllMonikers returns a list of all module monikers.
 func (c *RepositoryConfig) AllMonikers() []string {
 	monikers := make([]string, len(c.Modules))
@@ -472,4 +474,22 @@ func (c *RepositoryConfig) EffectiveParallelism(isCI bool) int {
 		return c.Repository.Parallelism.Devbox
 	}
 	return 8 // Default for devbox
+}
+
+// GetContainerConfig returns the configuration for a specific container tool.
+// Returns nil if the container is not configured.
+func (c *RepositoryConfig) GetContainerConfig(name string) *ContainerToolConfig {
+	if c.Containers.Tools == nil {
+		return nil
+	}
+	return c.Containers.Tools[name]
+}
+
+// GetBaseImageVersion returns the pinned version for a base image.
+// Returns empty string if not configured.
+func (c *RepositoryConfig) GetBaseImageVersion(name string) string {
+	if c.Containers.BaseImages == nil {
+		return ""
+	}
+	return c.Containers.BaseImages[name]
 }

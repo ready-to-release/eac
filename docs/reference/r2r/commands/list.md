@@ -10,7 +10,9 @@ r2r list [flags]
 
 ## Description
 
-The `list` command displays all extensions available in the R2R registry. Use this to discover extensions you can install.
+The `list` command displays all extensions available in the R2R registry.
+
+Use this to discover extensions you can install.
 
 ## Examples
 

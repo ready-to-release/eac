@@ -226,18 +226,20 @@ Benefits:
 - Useful for local development comprehensive testing
 
 !!! note "CI Pipelines"
-    CI pipelines typically run suites separately (`--suite unit`, `--suite integration`, etc.) for better failure isolation and parallel job distribution.
+
+    CI pipelines typically run suites separately (`--suite unit`, `--suite integration`, etc.),
+    for better failure isolation and parallel job distribution.
 
 ---
 
 ## CD Model Stage Mapping
 
-| CD Stage                 | Test Suite              | Tags Selected   | Environment    |
-| ------------------------ | ----------------------- | --------------- | -------------- |
-| **Pre-commit/MR/Commit** | unit                    | `@L0`, `@L1`    | DevBox/Agent   |
-| **Integration**          | integration             | `@L2`           | Agent + Docker |
-| **Acceptance**           | acceptance              | `@L3`           | PLTE           |
-| **Production**           | production-verification | `@L4` + `@piv`  | Production     |
+| CD Stage                 | Test Suite              | Tags Selected  | Environment    |
+| ------------------------ | ----------------------- | -------------- | -------------- |
+| **Pre-commit/MR/Commit** | unit                    | `@L0`, `@L1`   | DevBox/Agent   |
+| **Integration**          | integration             | `@L2`          | Agent + Docker |
+| **Acceptance**           | acceptance              | `@L3`          | PLTE           |
+| **Production**           | production-verification | `@L4` + `@piv` | Production     |
 
 ---
 

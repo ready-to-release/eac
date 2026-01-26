@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"sync"
 	"time"
 
@@ -409,6 +410,63 @@ func AggregateToWorkResults(compResults []ComponentResult, work []ComponentWork)
 	}
 
 	return results
+}
+
+// AggregateToComponentResultSets groups component results by module.
+// Results are sorted alphabetically by module name, and components within each module
+// are sorted alphabetically by component name.
+// Status and Duration are computed for each module.
+func AggregateToComponentResultSets(results []ComponentResult) []ComponentResultSet {
+	if len(results) == 0 {
+		return []ComponentResultSet{}
+	}
+
+	// Group results by module
+	moduleResults := make(map[string][]ComponentResult)
+	for _, r := range results {
+		moduleResults[r.Module] = append(moduleResults[r.Module], r)
+	}
+
+	// Get sorted module names
+	modules := make([]string, 0, len(moduleResults))
+	for m := range moduleResults {
+		modules = append(modules, m)
+	}
+	// Sort modules alphabetically
+	sort.Strings(modules)
+
+	// Build result sets
+	resultSets := make([]ComponentResultSet, 0, len(modules))
+	for _, module := range modules {
+		components := moduleResults[module]
+
+		// Sort components alphabetically by name
+		sortedComponents := make([]ComponentResult, len(components))
+		copy(sortedComponents, components)
+		sort.Slice(sortedComponents, func(i, j int) bool {
+			return sortedComponents[i].Component < sortedComponents[j].Component
+		})
+
+		// Compute max duration
+		var maxDuration time.Duration
+		for _, c := range sortedComponents {
+			if c.Duration > maxDuration {
+				maxDuration = c.Duration
+			}
+		}
+
+		// Create result set and derive status
+		rs := ComponentResultSet{
+			Module:     module,
+			Components: sortedComponents,
+			Duration:   maxDuration,
+		}
+		rs.Status = rs.DeriveStatus()
+
+		resultSets = append(resultSets, rs)
+	}
+
+	return resultSets
 }
 
 // Note: sanitizePathForFS is defined in orchestrator.go

@@ -2,7 +2,10 @@
 
 ## Introduction
 
-Pre-commit quality gates are the first line of defense in the CD Model, executing at **Stage 2** before code is committed to version control. These gates provide immediate feedback to developers while context is fresh, catching issues when they're easiest and cheapest to fix.
+Pre-commit quality gates are the first line of defense in the CD Model,
+executing at **Stage 2** before code is committed to version control.
+
+These gates provide immediate feedback to developers while context is fresh, catching issues when they're easiest and cheapest to fix.
 
 The pre-commit stage operates in two environments:
 
@@ -11,7 +14,8 @@ The pre-commit stage operates in two environments:
 
 Both environments run the same checks to ensure consistency, but the DevBox execution provides the fastest possible feedback loop.
 
-> **Implementation Details**: For tool configurations, scripts, and setup instructions, see the [Pre-commit Reference](../../../reference/eac/quality-gates/index.md).
+> **Implementation Details**:
+> For tool configurations, scripts, and setup instructions, see the [Pre-commit Reference](../../../reference/eac/quality-gates/index.md).
 
 ---
 
@@ -23,7 +27,8 @@ Consider a simple bug:
 
 - **Caught at Stage 2** (pre-commit, < 5 minutes): Developer fixes immediately, < 1 minute of work
 - **Caught at Stage 3** (merge request, hours later): Developer context switches, reviews PR feedback, fixes and re-submits, 10-15 minutes
-- **Caught at Stage 5** (acceptance testing, next day): Developer lost context, must investigate test failure, reproduce locally, fix, wait for full pipeline, 30-60 minutes
+- **Caught at Stage 5** (acceptance testing, next day):
+  Developer lost context, must investigate test failure, reproduce locally, fix, wait for full pipeline, 30-60 minutes
 - **Caught in Production** (days/weeks later): Incident response, customer impact, emergency fix, full investigation, 2-4 hours+
 
 Pre-commit gates keep issues in the "< 1 minute" category.
@@ -138,16 +143,17 @@ If pre-commit checks consistently take > 10 minutes:
 
 Pre-commit gates typically include these categories of checks:
 
-| Category | Purpose | Time Budget |
-|----------|---------|-------------|
-| Code Formatting | Consistent code style | < 10 seconds |
-| Linting | Code quality, potential bugs | 10-60 seconds |
-| Unit Tests | Isolated logic validation | 1-5 minutes |
-| Secret Detection | Prevent credential leaks | 5-30 seconds |
-| Dependency Scanning | Vulnerability detection | 10-60 seconds |
-| Build Verification | Compilation check | 30s - 3 minutes |
+| Category            | Purpose                      | Time Budget     |
+| ------------------- | ---------------------------- | --------------- |
+| Code Formatting     | Consistent code style        | < 10 seconds    |
+| Linting             | Code quality, potential bugs | 10-60 seconds   |
+| Unit Tests          | Isolated logic validation    | 1-5 minutes     |
+| Secret Detection    | Prevent credential leaks     | 5-30 seconds    |
+| Dependency Scanning | Vulnerability detection      | 10-60 seconds   |
+| Build Verification  | Compilation check            | 30s - 3 minutes |
 
-> **Tool Details**: For specific tool configurations, commands, and examples, see the [Pre-commit Checks Reference](../../../reference/eac/quality-gates/precommit-checks.md).
+> **Tool Details**:
+> For specific tool configurations, commands, and examples, see the [Pre-commit Checks Reference](../../../reference/eac/quality-gates/precommit-checks.md).
 
 ---
 
@@ -169,9 +175,13 @@ Pre-commit gates run in two distinct environments:
 - Creates audit trail
 - Enforces quality even if developer bypasses local checks
 
-**Why Repeat in CI**: Even though DevBox runs checks, CI repeats them because developers might skip local checks, environments differ, and it creates a formal quality gate record.
+**Why Repeat in CI**:
 
-> **Setup Instructions**: For git hooks, Makefile targets, and CI workflow configurations, see the [Pre-commit Setup Reference](../../../reference/eac/quality-gates/precommit-setup.md).
+Even though DevBox runs checks, CI repeats them because developers might skip local checks, environments differ,
+and it creates a formal quality gate record.
+
+> **Setup Instructions**:
+> For git hooks, Makefile targets, and CI workflow configurations, see the [Pre-commit Setup Reference](../../../reference/eac/quality-gates/precommit-setup.md).
 
 ---
 

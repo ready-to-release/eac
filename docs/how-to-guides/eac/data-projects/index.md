@@ -96,4 +96,5 @@ This provides continuity across articles and shows how pieces fit together.
 
 ## Next Steps
 
-Start with [CD Model for Data Projects](./cd-model-for-data-projects.md) to understand how the 12 stages apply to your work, then follow the development workflow guides.
+Start with [CD Model for Data Projects](./cd-model-for-data-projects.md) to understand how the 12 stages apply to your work,
+then follow the development workflow guides.

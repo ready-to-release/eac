@@ -32,7 +32,9 @@ Asset Bundles package and deploy:
 
 ## Repository Structure: Monorepo with Modules
 
-Organize data projects as **modules within a monorepo**, following the module contract pattern. Each data pipeline is a module with its own versioning, dependencies, CI workflow, and release cycle.
+Organize data projects as **modules within a monorepo**, following the module contract pattern.
+
+Each data pipeline is a module with its own versioning, dependencies, CI workflow, and release cycle.
 
 **Recommended Structure:**
 

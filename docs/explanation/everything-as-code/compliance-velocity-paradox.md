@@ -4,6 +4,10 @@
 
 ## The Challenge
 
+The following diagram contrasts the traditional view of compliance vs. velocity (as opposing forces) with the modern Everything as Code approach that resolves this apparent paradox through automation.
+
+![Compliance-Velocity Paradox](../../assets/assisted/17-compliance-velocity-paradox.drawio.png)
+
 Organizations in regulated industries:
 
 - Pharmaceuticals
@@ -65,7 +69,9 @@ Organizations must now navigate an increasingly complex web of regulations:
 - **Digital Operational Resilience Act (DORA)** - ICT risk management for financial entities
 - **Medical Device Regulation (MDR)** - EU medical device compliance
 
-**The challenge:** Each regulation demands documentation, validation, traceability, and evidence—often with overlapping but not identical requirements.
+**The challenge:**
+
+Each regulation demands documentation, validation, traceability, and evidence—often with overlapping but not identical requirements.
 
 **Market pressure is accelerating:**
 
@@ -111,23 +117,30 @@ flowchart LR
 This creates:
 
 - **Traceability Gaps**
-  Requirements in one system, tests in another, code in a third, and deployment records elsewhere. Manual correlation is error-prone and time-consuming.
+  Requirements in one system, tests in another, code in a third, and deployment records elsewhere.
+  Manual correlation is error-prone and time-consuming.
 - **Documentation Drift**
-  Specifications created before implementation are never updated to match reality, causing the gap between documented and actual behavior to grow over time.
+  Specifications created before implementation are never updated to match reality,
+  causing the gap between documented and actual behavior to grow over time.
 - **Validation Theater**
-  Checking boxes without improving quality. Manual review processes that can be skipped under pressure don't provide real assurance.
+  Checking boxes without improving quality.
+  Manual review processes that can be skipped under pressure don't provide real assurance.
 - **Audit Burden**
-  Teams spend months preparing evidence that should already exist. Instead of building value, resources are spent extracting and compiling scattered information.
+  Teams spend months preparing evidence that should already exist.
+  Instead of building value, resources are spent extracting and compiling scattered information.
 - **Delayed Value**
-  Features ready for production wait in validation purgatory. Business value sits on shelves while paperwork catches up.
+  Features ready for production wait in validation purgatory.
+  Business value sits on shelves while paperwork catches up.
 - **Risk Accumulation**
-  Large, infrequent releases create high-risk deployments. When changes are batched together, failures become harder to diagnose and roll back.
+  Large, infrequent releases create high-risk deployments.
+  When changes are batched together, failures become harder to diagnose and roll back.
 
 ---
 
 ## Evidence from Research: DORA Metrics Apply to Regulated Industries
 
-The [DevOps Research and Assessment (DORA)](https://dora.dev/research/) program has measured software delivery performance across industries since 2014.
+The [DevOps Research and Assessment (DORA)](https://dora.dev/research/) program has measured software delivery performance across industries,
+since 2014.
 
 Their research shows that **DORA metrics are applicable across all industries**, including highly regulated ones.
 
@@ -146,7 +159,10 @@ The State of DevOps Report 2025 includes respondents from regulated industries:
 
 > Source: [State of DevOps Report 2025](../references.md#state-of-devops)
 
-**Key insight:** While regulated industries are underrepresented in DevOps research, they ARE included indicating that DORA metrics and modern software engineering practices are applicable to regulated environments.
+**Key insight:**
+
+While regulated industries are underrepresented in DevOps research,
+they ARE included indicating that DORA metrics and modern software engineering practices are applicable to regulated environments.
 
 ### High Performers Exist in Regulated Industries
 
@@ -182,7 +198,8 @@ They recognize that:
 
 High performers didn't achieve these metrics overnight.
 
-They used **DORA Practices**, **metrics** and **Value Stream Mapping** to systematically identify bottlenecks, then improved their delivery flow through automation and process optimization.
+They used **DORA Practices**, **metrics** and **Value Stream Mapping** to systematically identify bottlenecks,
+then improved their delivery flow through automation and process optimization.
 
 **The continuous improvement cycle:**
 

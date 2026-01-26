@@ -2,7 +2,12 @@
 
 ## What is EAC?
 
-**EAC (Everything as Code)** is a comprehensive collection of commands designed to streamline **everything-as-code** workflows across your development lifecycle. It helps teams codify and version-control all aspects of software development—configuration, contracts, architecture, specifications, tests, security policies, and infrastructure.
+> **EAC (Everything as Code)**
+
+Is a comprehensive collection of commands designed to streamline **everything-as-code** workflows across your development lifecycle.
+
+It helps teams codify and version-control all aspects of software development—configuration, contracts, architecture,
+specifications, tests, security policies, and infrastructure.
 
 **Key principle**: If it can be defined, it should be code. If it's code, it can be validated, versioned, and automated.
 
@@ -19,13 +24,17 @@
 
 **Extensible Architecture:**
 
-EAC uses a capability-based dispatch system where commands delegate to language-specific handlers and runners. While the current implementation focuses on Go and TypeScript projects, the architecture is designed to support additional languages through custom handlers.
+EAC uses a capability-based dispatch system where commands delegate to language-specific handlers and runners.
+
+While the current implementation focuses on Go and TypeScript projects,
+the architecture is designed to support additional languages through custom handlers.
 
 **Other Languages:**
 
-Languages like Python, Rust, and Java can use the `container` or `static` module types with custom build scripts, but lack native build/test handlers.
+Languages like Python, Rust, and Java can use the `container` or `static` component types with custom build scripts,
+but lack native build/test handlers.
 
-See [Module Types Reference](./architecture/module-types.md) for detailed language support per module type.
+See [Component Types Reference](./architecture/component-types.md) for detailed language support per component type.
 
 ---
 
@@ -145,37 +154,54 @@ All modules defined in `.r2r/eac/repository.yml` with explicit dependencies and 
 
 ## In This Section
 
-| Document                                              | Description                                           |
-| ----------------------------------------------------- | ----------------------------------------------------- |
-| [Architecture](./architecture/)                     | System architecture, components, and execution models |
+| Document                                                 | Description                                           |
+| -------------------------------------------------------- | ----------------------------------------------------- |
+| [Architecture](./architecture/)                          | System architecture, components, and execution models |
 | [Viewing Architecture](./guides/viewing-architecture.md) | How to view and work with C4 architecture diagrams    |
-| [Modules](./architecture/modules.md)                               | Module system, dependencies, and build management     |
-| [Module Types Reference](./architecture/module-types.md) | Language support and module type specifications       |
-| [Contracts](./architecture/contracts.md)                           | YAML contracts, schemas, and validation system        |
-| [Repository Layout](./architecture/repository-layout.md)           | Directory structure and file organization             |
-| [Creating Commands](./architecture/creating-commands.md)           | Developer guide for extending EAC with new commands   |
+| [Modules](./architecture/modules.md)                     | Module system, dependencies, and build management     |
+| [Component Types](./architecture/component-types.md)     | Language support and component type specifications    |
+| [Contracts](./architecture/contracts.md)                 | YAML contracts, schemas, and validation system        |
+| [Repository Layout](./architecture/repository-layout.md) | Directory structure and file organization             |
+| [Creating Commands](./architecture/creating-commands.md) | Developer guide for extending EAC with new commands   |
 
 ## Detailed Documentation
 
 ### System Architecture
 
-**[Architecture](./architecture/)** - Complete system architecture including component layers, execution models (Docker CLI, MCP Server, Fallback), integration patterns, data flow, security architecture, and technology stack.
+**[Architecture](./architecture/)**
+
+Complete system architecture including component layers, execution models (Docker CLI, MCP Server, Fallback),
+integration patterns, data flow, security architecture, and technology stack.
 
 ### Module System
 
-**[Modules](./architecture/modules.md)** - Module system and dependency management including module registry, dependency graph, file ownership patterns, module lifecycle (discovery, build, test, validation, release), build system with caching, and Structurizr C4 architecture diagrams.
+**[Modules](./architecture/modules.md)**
+
+Module system and dependency management including module registry,
+dependency graph, file ownership patterns, module lifecycle (discovery, build, test, validation, release),
+build system with caching, and Structurizr C4 architecture diagrams.
 
 ### Contract System
 
-**[Contracts](./architecture/contracts.md)** - Contract-driven configuration including all 14 YAML contract files, modules contract (registry, dependencies, file ownership), module types contract (templates, capabilities, artifacts), environments contract (L0-L4 testing pyramid), validation system (schema, cross-reference), and configuration precedence.
+**[Contracts](./architecture/contracts.md)**
+
+Contract-driven configuration including all 14 YAML contract files, modules contract (registry, dependencies, file ownership),
+module types contract (templates, capabilities, artifacts), environments contract (L0-L4 testing pyramid),
+validation system (schema, cross-reference), and configuration precedence.
 
 ### Repository Organization
 
-**[Repository Layout](./architecture/repository-layout.md)** - Detailed repository structure with complete directory tree, module categories (deployable vs supporting), module configuration examples, file ownership patterns, and navigation to related documentation.
+**[Repository Layout](./architecture/repository-layout.md)**
+
+Detailed repository structure with complete directory tree, module categories (deployable vs supporting),
+module configuration examples, file ownership patterns, and navigation to related documentation.
 
 ### Extending EAC
 
-**[Creating Commands](./architecture/creating-commands.md)** - Developer guide for contributing new commands to the EAC CLI including command structure, help system integration, flag definitions, registry integration, and best practices.
+**[Creating Commands](./architecture/creating-commands.md)**
+
+Developer guide for contributing new commands to the EAC CLI including command structure, help system integration,
+flag definitions, registry integration, and best practices.
 
 ## Related Documentation
 

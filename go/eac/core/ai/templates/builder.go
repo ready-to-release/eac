@@ -1,3 +1,4 @@
+// Package templates provides utilities for building AI prompts using Go templates.
 package templates
 
 import (

@@ -4,11 +4,11 @@ Technical reference for EAC security scanning commands and configuration.
 
 ## In This Section
 
-| Reference                           | Description                                     |
-| ----------------------------------- | ----------------------------------------------- |
-| [Supply Chain](./supply-chain.md)   | Dependency and container vulnerability scanning |
-| [SAST](./sast.md)                   | Static Application Security Testing             |
-| [DAST](./dast.md)                   | Dynamic Application Security Testing            |
+| Reference                         | Description                                     |
+| --------------------------------- | ----------------------------------------------- |
+| [Supply Chain](./supply-chain.md) | Dependency and container vulnerability scanning |
+| [SAST](./sast.md)                 | Static Application Security Testing             |
+| [DAST](./dast.md)                 | Dynamic Application Security Testing            |
 
 ## Quick Reference
 

@@ -1,4 +1,7 @@
 {
+  // Go settings
+  "go.diagnostic.vulncheck": "Imports",
+
   // File associations
   "files.associations": {
     "*.feature": "cucumber"
@@ -45,7 +48,7 @@
       "strings": "on",
       "other": "on"
     },
-    "editor.wordWrap": "on"
+    "editor.wordWrap": "off"
   },
 
   // Cucumber/Gherkin settings for BDD testing

@@ -81,14 +81,14 @@ r2r release prune-packages ext-eac --verbose
 
 **Protection reasons:**
 
-| Reason | Meaning |
-|--------|---------|
-| `tag matches preserve pattern` | Tag like `v1.0.0` matches `v*` |
-| `associated with GitHub release` | Tag matches a GitHub Release |
-| `referenced by release bundle` | Included in a bundle release |
-| `digest matches released version` | Same content as a release |
-| `created less than min_age_days ago` | Too recent to delete |
-| `no tags match prune patterns` | Not a CI build image |
+| Reason                               | Meaning                        |
+| ------------------------------------ | ------------------------------ |
+| `tag matches preserve pattern`       | Tag like `v1.0.0` matches `v*` |
+| `associated with GitHub release`     | Tag matches a GitHub Release   |
+| `referenced by release bundle`       | Included in a bundle release   |
+| `digest matches released version`    | Same content as a release      |
+| `created less than min_age_days ago` | Too recent to delete           |
+| `no tags match prune patterns`       | Not a CI build image           |
 
 ---
 
@@ -134,10 +134,10 @@ r2r release prune-packages ext-eac --json
 
 ## Understanding Image Tags vs Release Tags
 
-| Type | Source | Examples |
-|------|--------|----------|
-| **Image Tags** | Container registry | `sha-abc1234`, `v1.0.0`, `latest` |
-| **Release Tags** | GitHub Releases API | `ext-eac/1.0.0`, `r2r-cli/2.0.0` |
+| Type             | Source              | Examples                          |
+| ---------------- | ------------------- | --------------------------------- |
+| **Image Tags**   | Container registry  | `sha-abc1234`, `v1.0.0`, `latest` |
+| **Release Tags** | GitHub Releases API | `ext-eac/1.0.0`, `r2r-cli/2.0.0`  |
 
 The cleanup command correlates these to protect released images.
 

@@ -173,7 +173,7 @@ func (m *ModuleContract) GetSpecsRoot() string {
 // Delegates to BaseContract.GetChangelog() which uses versioning.changelog if set,
 // otherwise defaults to release/<moniker>/CHANGELOG.md.
 func (m *ModuleContract) GetChangelogPath() string {
-	return m.BaseContract.GetChangelog()
+	return m.GetChangelog()
 }
 
 // GetReleaseNotesPath returns the path to RELEASE-NOTES.md for this module.

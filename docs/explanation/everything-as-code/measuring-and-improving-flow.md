@@ -1,10 +1,12 @@
 # Measuring and Improving Flow
->
+
 > **How to continuously optimize delivery performance using DORA metrics and Value Stream Mapping**
 
 ## The Continuous Improvement Principle
 
-High-performing teams don't achieve their results through one-time transformation. They achieve them through continuous measurement and improvement.
+High-performing teams don't achieve their results through one-time transformation.
+
+They achieve them through continuous measurement and improvement.
 
 **The cycle:**
 
@@ -15,15 +17,22 @@ High-performing teams don't achieve their results through one-time transformatio
 5. **Validate** - Measure again to confirm improvement
 6. **Repeat** - Move to the next bottleneck
 
-This is how "Everything as Code" and continuous improvement work together: automation enables fast delivery, while systematic measurement and improvement ensure that delivery gets faster over time.
+This is how "Everything as Code" and continuous improvement work together: automation enables fast delivery,
+while systematic measurement and improvement ensure that delivery gets faster over time.
 
 ---
 
 ## Why Measurement Matters
 
+The following diagram shows the four DORA metrics and how they form a virtuous cycle. Improving one metric often improves others, creating compound benefits over time.
+
+![DORA Metrics and Virtuous Cycle](../../assets/assisted/13-dora-metrics-flow.drawio.png)
+
 Measurement enables targeted improvement.
 
-DORA (DevOps Research and Assessment) has been researching high-performing software teams since 2014. Their research consistently shows that **four key metrics** predict organizational performance:
+DORA (DevOps Research and Assessment) has been researching high-performing software teams since 2014.
+
+Their research consistently shows that **four key metrics** predict organizational performance:
 
 1. **Lead Time for Changes** - How long from code commit to production
 2. **Deployment Frequency** - How often you deploy to production
@@ -65,7 +74,10 @@ The gap between high and low performers is **not luck or talent** it's systemati
 - WHAT is causing the problems (lack of automation? too many handoffs? poor tooling?)
 - HOW to fix them (automate testing? remove approvals? reduce batch size?)
 
-**Use DORA metrics to identify where you need to improve.** Then measure the underlying **flow metrics** (cycle time, wait time, WIP) and **process metrics** (test coverage, manual steps, review time) that you can actually act on.
+**Use DORA metrics to identify where you need to improve.**
+
+Then measure the underlying **flow metrics** (cycle time, wait time, WIP),
+and **process metrics** (test coverage, manual steps, review time) that you can actually act on.
 
 **Learn more:**
 
@@ -75,7 +87,9 @@ The gap between high and low performers is **not luck or talent** it's systemati
 
 ## Value Stream Mapping: Finding the Bottlenecks
 
-**Value Stream Mapping (VSM)** is a lean management practice that visualizes the entire flow of work, from idea to production, and identifies where time is wasted.
+### Value Stream Mapping (VSM)
+
+Is a lean management practice that visualizes the entire flow of work, from idea to production, and identifies where time is wasted.
 
 ### What Gets Mapped
 
@@ -94,7 +108,9 @@ A value stream map shows:
 
 ## What to Measure
 
-Different metrics serve different purposes in the improvement cycle. Understanding which metrics to track helps teams focus on actionable improvements rather than just monitoring outcomes.
+Different metrics serve different purposes in the improvement cycle.
+
+Understanding which metrics to track helps teams focus on actionable improvements rather than just monitoring outcomes.
 
 ### Outcome Metrics (DORA)
 
@@ -105,7 +121,9 @@ DORA metrics show **overall performance** and indicate **where** you need to imp
 - **High MTTR** → Focus on observability, rollback capability, and incident response
 - **High change fail rate** → Focus on automated testing, smaller batches, and validation
 
-**Use DORA metrics to identify improvement areas**, not as the only metrics to track. They tell you there's a problem, but not what's causing it.
+**Use DORA metrics to identify improvement areas**, not as the only metrics to track.
+
+They tell you there's a problem, but not what's causing it.
 
 ### Flow Metrics
 
@@ -117,7 +135,9 @@ Flow metrics reveal **where bottlenecks occur** in your value stream:
 - **Batch size** - How many changes per deployment? (Smaller is better)
 - **Rework rate** - How often does work return to previous steps?
 
-**Use flow metrics from Value Stream Mapping to find constraints.** These metrics help you understand where time is actually being spent or wasted.
+**Use flow metrics from Value Stream Mapping to find constraints.**
+
+These metrics help you understand where time is actually being spent or wasted.
 
 ### Process Metrics
 
@@ -129,7 +149,9 @@ Process metrics show **what causes bottlenecks**:
 - **Build/pipeline time** - How long does CI/CD take?
 - **Approval wait time** - How long for manual approvals?
 
-**Use process metrics to decide what to automate or improve.** These are the metrics you can directly act on.
+**Use process metrics to decide what to automate or improve.**
+
+These are the metrics you can directly act on.
 
 ### The Relationship
 
@@ -189,7 +211,11 @@ Start by measuring metrics that reveal bottlenecks in your delivery flow:
 
 **Everything as Code enables measurement** - Version control and automated pipelines provide the data automatically.
 
-**Start where it makes sense**: You don't need to measure everything immediately. Start with metrics that help you identify your biggest bottleneck.
+**Start where it makes sense**:
+
+You don't need to measure everything immediately.
+
+Start with metrics that help you identify your biggest bottleneck.
 
 ### Step 2: Map the Value Stream
 
@@ -253,7 +279,9 @@ Measure again to confirm the improvement worked:
 
 Continuous improvement is continuous. There's always a next bottleneck to address.
 
-**The compound effect:** Small improvements add up over time. Reducing lead time by 20% every quarter compounds to transformational change over a year.
+**The compound effect:**
+
+Small improvements add up over time. Reducing lead time by 20% every quarter compounds to transformational change over a year.
 
 ---
 

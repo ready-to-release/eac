@@ -4,7 +4,9 @@ Reference for individual module CI workflows.
 
 ## Overview
 
-Each module with build and test requirements has a dedicated CI workflow following a standard pattern. These workflows are invoked by the CI orchestrator (`change-trigger.yaml`) and can also be triggered manually for testing individual modules.
+Each module with build and test requirements has a dedicated CI workflow following a standard pattern.
+
+These workflows are invoked by the CI orchestrator (`change-trigger.yaml`) and can also be triggered manually for testing individual modules.
 
 **Location:** `.github/workflows/ci-{moniker}.yaml`
 
@@ -174,19 +176,19 @@ Runs both commit and acceptance test suites (full validation)
 
 ## Module CI Workflows Inventory
 
-| Workflow                        | Module                | Type              | Stages      | Test Suites        |
-| ------------------------------- | --------------------- | ----------------- | ----------- | ------------------ |
-| `ci-eac-ai.yaml`                | eac-ai                | Go library        | Build, Test | commit, acceptance |
-| `ci-eac-commands.yaml`          | eac-commands          | Go commands       | Build, Test | commit, acceptance |
-| `ci-eac-core.yaml`              | eac-core              | Go library        | Build, Test | commit, acceptance |
-| `ci-eac-mcp-commands.yaml`      | eac-mcp-commands      | Go MCP server     | Build, Test | commit, acceptance |
-| `ci-ext-eac.yaml`               | ext-eac               | Docker extension  | Build, Test | commit, acceptance |
-| `ci-r2r-cli.yaml`               | r2r-cli               | Go CLI            | Build, Test | commit, acceptance |
-| `ci-vscode-ext-commit.yaml`     | vscode-ext-commit     | VSCode extension  | Build, Test | commit, acceptance |
-| `ci-books.yaml`                 | books                 | PDF documentation | Build, Test | commit, acceptance |
-| `ci-docs.yaml`                  | docs                  | MkDocs site       | Build, Test | commit, acceptance |
-| `ci-r2r-installer.yaml`         | r2r-installer         | Shell scripts     | Build, Test | commit, acceptance |
-| `ci-implicit-r2r-cli.yaml`      | implicit-r2r-cli      | Shell scripts     | Build, Test | commit, acceptance |
+| Workflow                    | Module            | Type              | Stages      | Test Suites        |
+| --------------------------- | ----------------- | ----------------- | ----------- | ------------------ |
+| `ci-eac-ai.yaml`            | eac-ai            | Go library        | Build, Test | commit, acceptance |
+| `ci-eac-commands.yaml`      | eac-commands      | Go commands       | Build, Test | commit, acceptance |
+| `ci-eac-core.yaml`          | eac-core          | Go library        | Build, Test | commit, acceptance |
+| `ci-eac-mcp-commands.yaml`  | eac-mcp-commands  | Go MCP server     | Build, Test | commit, acceptance |
+| `ci-ext-eac.yaml`           | ext-eac           | Docker extension  | Build, Test | commit, acceptance |
+| `ci-r2r-cli.yaml`           | r2r-cli           | Go CLI            | Build, Test | commit, acceptance |
+| `ci-vscode-ext-commit.yaml` | vscode-ext-commit | VSCode extension  | Build, Test | commit, acceptance |
+| `ci-books.yaml`             | books             | PDF documentation | Build, Test | commit, acceptance |
+| `ci-docs.yaml`              | docs              | MkDocs site       | Build, Test | commit, acceptance |
+| `ci-r2r-installer.yaml`     | r2r-installer     | Shell scripts     | Build, Test | commit, acceptance |
+| `ci-implicit-r2r-cli.yaml`  | implicit-r2r-cli  | Shell scripts     | Build, Test | commit, acceptance |
 
 ## Example: ci-eac-commands.yaml
 

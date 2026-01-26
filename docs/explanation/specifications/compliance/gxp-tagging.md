@@ -1,5 +1,5 @@
 # GxP Tagging
->
+
 > **Understanding tagging for regulated software development in pharmaceutical and medical device contexts.**
 
 ---
@@ -224,7 +224,8 @@ Feature: batch_release-quality-control
 
 **Validation Deviation**:
 
-- If a test tagged with `@gmp-critical-aspect` fails after production deployment, it must be managed as a validation deviation per regulatory requirements.
+- If a test tagged with `@gmp-critical-aspect` fails after production deployment,
+  it must be managed as a validation deviation per regulatory requirements.
 
 **Requirements**:
 

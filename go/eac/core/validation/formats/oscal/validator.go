@@ -9,6 +9,7 @@ import (
 // DocumentType represents the type of OSCAL document.
 type DocumentType string
 
+// OSCAL document type constants.
 const (
 	TypeCatalog DocumentType = "catalog"
 	TypeProfile DocumentType = "profile"

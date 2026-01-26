@@ -8,7 +8,9 @@ In a DevOps model, the team that builds the system also runs and maintains it.
 
 ## Operation and Maintenance Plan
 
-Defines how systems are operated, maintained, and kept compliant and secure throughout their lifecycle. Ensures systems meet operational, regulatory, and quality standards.
+Defines how systems are operated, maintained, and kept compliant and secure throughout their lifecycle.
+
+Ensures systems meet operational, regulatory, and quality standards.
 
 **Regulatory note:** Some regulated processes require digital signature.
 
@@ -61,7 +63,8 @@ Validates that system access remains appropriate and secure.
 
 ### Defects
 
-Document all defects detected after [Production Deployment](../continuous-delivery/cd-model/stages.md#stage-10-production-deployment) by adding items to the backlog.
+Document all defects detected after [Production Deployment](../continuous-delivery/cd-model/stages.md#stage-10-production-deployment),
+by adding items to the backlog.
 
 **Requirements:**
 

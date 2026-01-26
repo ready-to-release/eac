@@ -42,6 +42,7 @@ type CommandConfig struct {
 	MaxConcurrency int  // 0 = use config default
 	Layered        bool // Use dependency layers (build) vs parallel (test/scan)
 	Sequential     bool // Force sequential execution (maxConcurrency=1)
+	Turbo          bool // Enable turbo mode (+2 parallel workers)
 	DryRun         bool // Skip actual execution
 
 	// Dependency Handling
@@ -90,6 +91,12 @@ type ExecutionContext struct {
 	// Execution State
 	StartTime time.Time
 	Results   []orchestrator.WorkResult
+
+	// Component-level results (populated by component-based execution)
+	// ComponentResults contains raw component results for detailed display
+	ComponentResults []orchestrator.ComponentResult
+	// ComponentResultSets contains component results grouped by module
+	ComponentResultSets []orchestrator.ComponentResultSet
 
 	// Internal
 	tuiWriter io.Writer

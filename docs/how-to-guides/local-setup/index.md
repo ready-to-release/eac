@@ -1,15 +1,17 @@
 # Local Setup
 
-Set up your local development environment for working with R2R and EAC. These guides cover installation, configuration, and platform-specific troubleshooting.
+Set up your local development environment for working with R2R and EAC.
+
+These guides cover installation, configuration, and platform-specific troubleshooting.
 
 ## In This Section
 
-| Guide | Description |
-| ----- | ----------- |
-| [Install Toolchain](./install-toolchain.md) | Install R2R CLI and EAC extension |
-| [Configure AI Provider](./configure-ai.md) | Set up Anthropic Claude for AI features |
-| [Configure Claude Code](./configure-claude-code.md) | Use Claude Code effectively in this repository |
-| [Local Dev Workflows](./local-dev-workflows.md) | Development and testing workflows |
+| Guide                                                     | Description                                     |
+| --------------------------------------------------------- | ----------------------------------------------- |
+| [Install Toolchain](./install-toolchain.md)               | Install R2R CLI and EAC extension               |
+| [Configure AI Provider](./configure-ai.md)                | Set up Anthropic Claude for AI features         |
+| [Configure Claude Code](./configure-claude-code.md)       | Use Claude Code effectively in this repository  |
+| [Local Dev Workflows](./local-dev-workflows.md)           | Development and testing workflows               |
 | [Platform Troubleshooting](./platform-troubleshooting.md) | Windows Defender, permissions, and other issues |
 
 ## Quick Start

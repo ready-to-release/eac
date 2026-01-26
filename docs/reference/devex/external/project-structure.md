@@ -6,7 +6,7 @@ Recommended directory layout for EAC-enabled projects.
 
 Minimal setup for any project:
 
-```
+```text
 your-project/
 ├── .r2r/
 │   ├── r2r-cli.yml              # R2R CLI configuration
@@ -20,7 +20,7 @@ your-project/
 
 Complete setup with all features:
 
-```
+```text
 your-project/
 ├── .r2r/
 │   ├── r2r-cli.yml              # R2R CLI configuration
@@ -54,22 +54,22 @@ your-project/
 
 ### Always Commit
 
-| File | Purpose |
-| ---- | ------- |
-| `.r2r/r2r-cli.yml` | Extension registry |
-| `.r2r/eac/repository.yml` | Module definitions |
-| `.r2r/eac/module-types.yml` | Type templates |
-| `.r2r/eac/environments.yml` | Test environments |
-| `.r2r/eac/test-suites.yml` | Test suites |
-| `.r2r/eac/ai-provider.yml` | AI config (no secrets) |
+| File                        | Purpose                |
+| --------------------------- | ---------------------- |
+| `.r2r/r2r-cli.yml`          | Extension registry     |
+| `.r2r/eac/repository.yml`   | Module definitions     |
+| `.r2r/eac/module-types.yml` | Type templates         |
+| `.r2r/eac/environments.yml` | Test environments      |
+| `.r2r/eac/test-suites.yml`  | Test suites            |
+| `.r2r/eac/ai-provider.yml`  | AI config (no secrets) |
 
 ### Never Commit (Add to .gitignore)
 
-| File/Directory | Purpose |
-| -------------- | ------- |
-| `.r2r/r2r-cli.local.yml` | Local CLI overrides |
+| File/Directory            | Purpose                       |
+| ------------------------- | ----------------------------- |
+| `.r2r/r2r-cli.local.yml`  | Local CLI overrides           |
 | `.r2r/eac/*.personal.yml` | Personal configs with secrets |
-| `.r2r/cache/` | Build cache |
+| `.r2r/cache/`             | Build cache                   |
 
 ### Recommended .gitignore Entries
 
@@ -84,7 +84,7 @@ your-project/
 
 ### Go Projects
 
-```
+```text
 your-project/
 ├── .r2r/eac/repository.yml
 ├── cmd/
@@ -128,7 +128,7 @@ modules:
 
 ### Single Application
 
-```
+```text
 your-project/
 ├── .r2r/eac/repository.yml
 ├── main.go
@@ -150,7 +150,7 @@ modules:
 
 ### Documentation Project
 
-```
+```text
 your-project/
 ├── .r2r/eac/repository.yml
 ├── docs/
@@ -173,7 +173,7 @@ modules:
 
 If using Gherkin specifications:
 
-```
+```text
 specs/
 ├── <module-moniker>/
 │   ├── feature-name/
@@ -189,7 +189,7 @@ Convention: Spec directories match module monikers.
 
 If using automated changelogs:
 
-```
+```text
 release/
 ├── <module-moniker>/
 │   └── CHANGELOG.md
@@ -198,7 +198,7 @@ release/
 
 Or at repository root:
 
-```
+```text
 CHANGELOG.md              # Repository-wide changelog
 ```
 

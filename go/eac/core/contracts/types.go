@@ -66,9 +66,9 @@ type DefaultConventions struct {
 
 // ModuleVersioning contains module versioning configuration.
 type ModuleVersioning struct {
-	Scheme      string `yaml:"scheme"`                // SemVer | CalVer | Implicit
-	Current     string `yaml:"current,omitempty"`     // Current version (optional)
-	Changelog   string `yaml:"changelog,omitempty"`   // Path to changelog (defaults to release/<moniker>/CHANGELOG.md)
+	Scheme      string `yaml:"scheme"`                 // SemVer | CalVer | Implicit
+	Current     string `yaml:"current,omitempty"`      // Current version (optional)
+	Changelog   string `yaml:"changelog,omitempty"`    // Path to changelog (defaults to release/<moniker>/CHANGELOG.md)
 	ReleaseType string `yaml:"release_type,omitempty"` // published | internal | bundle | none
 }
 
@@ -82,8 +82,8 @@ type BaseContract struct {
 	EvidenceBooks []string          `yaml:"evidence_books,omitempty"` // Evidence book names
 	ReleaseBundle *ReleaseBundle    `yaml:"release_bundle,omitempty"`
 	Metadata      map[string]string `yaml:"metadata,omitempty"`
-	Components    ModuleComponents  `yaml:"components"`         // Component types mapped to their roots
-	Linting       *ModuleLinting    `yaml:"linting,omitempty"`  // Linting configuration overrides
+	Components    ModuleComponents  `yaml:"components"`        // Component types mapped to their roots
+	Linting       *ModuleLinting    `yaml:"linting,omitempty"` // Linting configuration overrides
 }
 
 // ModuleLinting configures linting behavior for a module.
@@ -169,13 +169,7 @@ func (b *BaseContract) GetBuildArtifacts() []ModuleArtifact {
 	for _, comp := range b.Components {
 		if comp != nil && comp.Build != nil {
 			for _, a := range comp.Build.Artifacts {
-				result = append(result, ModuleArtifact{
-					ID:          a.ID,
-					Type:        a.Type,
-					Pattern:     a.Pattern,
-					Compression: a.Compression,
-					DeriveFrom:  a.DeriveFrom,
-				})
+				result = append(result, ModuleArtifact(a))
 			}
 		}
 	}
@@ -244,13 +238,7 @@ func (b *BaseContract) GetArtifactsByType(artifactType string) []ModuleArtifact 
 		if comp != nil && comp.Build != nil {
 			for _, a := range comp.Build.Artifacts {
 				if a.Type == artifactType {
-					result = append(result, ModuleArtifact{
-						ID:          a.ID,
-						Type:        a.Type,
-						Pattern:     a.Pattern,
-						Compression: a.Compression,
-						DeriveFrom:  a.DeriveFrom,
-					})
+					result = append(result, ModuleArtifact(a))
 				}
 			}
 		}

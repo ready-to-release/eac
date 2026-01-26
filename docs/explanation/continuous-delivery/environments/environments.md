@@ -12,6 +12,10 @@ The CD Model reimagines environments as purpose-built, often ephemeral resources
 
 ## Overview
 
+The following diagram provides a visual taxonomy of environment types used throughout the CD Model, showing how each environment relates to the development and release phases.
+
+![Environment Types Overview](../../../assets/assisted/08-environment-types.drawio.png){width=900}
+
 | Environment   | Purpose                     | CD Model Stages       | Lifespan         |
 | ------------- | --------------------------- | --------------------- | ---------------- |
 | Platform      | Ex. GitHub/GitLab/ADO       | all                   | Fixture          |
@@ -142,13 +146,17 @@ Environments are organized into **slot groups** and **slots** for infrastructure
 
 ![Layers](../../../assets/environment/layers.drawio.png){width=800}
 
-Environments are structured using categories (Production vs Dev/Test), templates (IaC), and instances. Shared infrastructure supports multiple slot groups.
+Environments are structured using categories (Production vs Dev/Test), templates (IaC), and instances.
+
+Shared infrastructure supports multiple slot groups.
 
 ### Slot Groups and Slots
 
 ![Slots](../../../assets/environment/slots.drawio.png){width=800}
 
-**Slot groups** are named horizontal groupings (d/DEVELOPMENT, t/DEMO, p/PRODUCTION). **Slots** are logical constructs within groups that map to infrastructure templates.
+**Slot groups** are named horizontal groupings (d/DEVELOPMENT, t/DEMO, p/PRODUCTION).
+
+**Slots** are logical constructs within groups that map to infrastructure templates.
 
 ### Naming Conventions
 

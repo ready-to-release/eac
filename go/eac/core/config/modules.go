@@ -22,8 +22,8 @@ type Module struct {
 	ReleaseBundle *ReleaseBundle           `yaml:"release_bundle,omitempty"` // Release bundle configuration (for release modules)
 	Metadata      map[string]string        `yaml:"metadata,omitempty"`       // Generic key-value store for module-specific data
 	Versioning    *ModuleVersioning        `yaml:"versioning,omitempty"`
-	Components    ModuleComponents         `yaml:"components"`               // Component types for this module (required)
-	Linting       *contracts.ModuleLinting `yaml:"linting,omitempty"`        // Linting configuration overrides
+	Components    ModuleComponents         `yaml:"components"`        // Component types for this module (required)
+	Linting       *contracts.ModuleLinting `yaml:"linting,omitempty"` // Linting configuration overrides
 }
 
 // HasComponent returns true if a component with the given name exists for this module.
@@ -89,9 +89,9 @@ type ReleaseBundleCategory struct {
 
 // ModuleVersioning holds module versioning configuration.
 type ModuleVersioning struct {
-	Scheme      string `yaml:"scheme"`                // SemVer, CalVer
-	Current     string `yaml:"current,omitempty"`     // Current version (optional)
-	Changelog   string `yaml:"changelog,omitempty"`   // Path to changelog (defaults to release/<moniker>/CHANGELOG.md)
+	Scheme      string `yaml:"scheme"`                 // SemVer, CalVer
+	Current     string `yaml:"current,omitempty"`      // Current version (optional)
+	Changelog   string `yaml:"changelog,omitempty"`    // Path to changelog (defaults to release/<moniker>/CHANGELOG.md)
 	ReleaseType string `yaml:"release_type,omitempty"` // published | internal | bundle | none
 }
 
@@ -367,7 +367,6 @@ func (m *Module) GetDockerBuildConfig() *DockerBuildConfig {
 	}
 	return dockerfileEntry.DockerBuild
 }
-
 
 // applyModuleDefaults applies default values to all modules (generic defaults only).
 // Call ApplyComponentDefaults after loading ComponentTypes for component-specific defaults.

@@ -2,6 +2,7 @@ package orchestrator
 
 import (
 	"io"
+	"sort"
 	"time"
 )
 
@@ -106,3 +107,91 @@ type ComponentResult struct {
 // It receives the module, component name, and log writer.
 // Returns an exit code (0 for success).
 type ComponentWorkerFunc func(module, component string, logWriter io.Writer) int
+
+// ModuleStatus represents the execution status of a module.
+type ModuleStatus int
+
+const (
+	// ModuleStatusPending indicates the module has not started processing.
+	ModuleStatusPending ModuleStatus = iota
+	// ModuleStatusRunning indicates the module is currently being processed.
+	ModuleStatusRunning
+	// ModuleStatusSuccess indicates the module completed successfully.
+	ModuleStatusSuccess
+	// ModuleStatusFailed indicates the module failed.
+	ModuleStatusFailed
+)
+
+// String returns the string representation of a ModuleStatus.
+func (s ModuleStatus) String() string {
+	switch s {
+	case ModuleStatusPending:
+		return "pending"
+	case ModuleStatusRunning:
+		return "running"
+	case ModuleStatusSuccess:
+		return "success"
+	case ModuleStatusFailed:
+		return "failed"
+	default:
+		return "unknown"
+	}
+}
+
+// ComponentResultSet aggregates component results for a single module.
+type ComponentResultSet struct {
+	// Module is the module moniker
+	Module string
+	// Components contains the results for each component in the module
+	Components []ComponentResult
+	// Status is the derived module status based on component results
+	Status ModuleStatus
+	// Duration is the total time taken to process all components
+	Duration time.Duration
+}
+
+// DeriveStatus computes the module status from component results.
+// - If any component has ExitCode > 0 -> ModuleStatusFailed
+// - If any component has ExitCode < 0 -> ModuleStatusRunning (pending/in-progress)
+// - If all components have ExitCode == 0 -> ModuleStatusSuccess
+// - If no components -> ModuleStatusPending
+func (rs *ComponentResultSet) DeriveStatus() ModuleStatus {
+	if len(rs.Components) == 0 {
+		return ModuleStatusPending
+	}
+
+	hasRunning := false
+	for _, c := range rs.Components {
+		if c.ExitCode > 0 {
+			return ModuleStatusFailed
+		}
+		if c.ExitCode < 0 {
+			hasRunning = true
+		}
+	}
+
+	if hasRunning {
+		return ModuleStatusRunning
+	}
+
+	return ModuleStatusSuccess
+}
+
+// GetSortedComponents returns a copy of the components sorted alphabetically by Component name.
+// The original slice is not modified.
+func (rs *ComponentResultSet) GetSortedComponents() []ComponentResult {
+	if len(rs.Components) == 0 {
+		return []ComponentResult{}
+	}
+
+	// Create a copy to avoid modifying the original
+	sorted := make([]ComponentResult, len(rs.Components))
+	copy(sorted, rs.Components)
+
+	// Sort alphabetically by Component name
+	sort.Slice(sorted, func(i, j int) bool {
+		return sorted[i].Component < sorted[j].Component
+	})
+
+	return sorted
+}

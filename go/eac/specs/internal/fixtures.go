@@ -299,7 +299,7 @@ func UnstageAll(ctx *TestContext) error {
 
 	cmd := exec.Command("git", "reset", "HEAD", ".")
 	cmd.Dir = ctx.IsolatedDir
-	_ = cmd.Run() // Ignore error if nothing to reset
+	_ = cmd.Run() //nolint:errcheck // Ignore error if nothing to reset
 	return nil
 }
 
@@ -377,7 +377,7 @@ func copyDir(src, dst string) error {
 // copyFile copies a single file from src to dst.
 func copyFile(src, dst string) error {
 	// Ensure parent directory exists
-	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(dst), 0o750); err != nil {
 		return err
 	}
 

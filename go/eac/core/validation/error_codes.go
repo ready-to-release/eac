@@ -1,3 +1,4 @@
+// Package validation provides validation types, error codes, and utilities for structured validation.
 package validation
 
 import "fmt"
@@ -14,6 +15,7 @@ type ErrorCode struct {
 // ErrorCategory represents the category of a validation error.
 type ErrorCategory string
 
+// Error category constants for classification of validation errors.
 const (
 	CategoryStructure  ErrorCategory = "structure"  // Critical structural issues (empty output, missing config)
 	CategorySemantic   ErrorCategory = "semantic"   // Semantic/logical issues (missing elements, wrong order)
@@ -25,6 +27,7 @@ const (
 // ErrorSeverity represents the severity level of an error.
 type ErrorSeverity string
 
+// Error severity constants.
 const (
 	SeverityError   ErrorSeverity = "error"
 	SeverityWarning ErrorSeverity = "warning"

@@ -5,6 +5,8 @@ package books
 import (
 	"fmt"
 	"io"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/ready-to-release/eac/go/eac/core/config"
@@ -12,13 +14,14 @@ import (
 
 // Preprocessor handles book preprocessing before MkDocs build.
 type Preprocessor struct {
-	book           *config.Book
-	workspaceRoot  string
-	stagingDir     string
-	logWriter      io.Writer
-	pdfMode        bool
-	linkTranslator *LinkTranslator // Handles source → staging path translations
-	assetCache     *AssetCache     // Persistent cache for expensive operations (mermaid, etc.)
+	book             *config.Book
+	workspaceRoot    string
+	stagingDir       string
+	logWriter        io.Writer
+	pdfMode          bool
+	linkTranslator   *LinkTranslator  // Handles source → staging path translations
+	assetCache       *AssetCache      // Persistent cache for expensive operations (mermaid, etc.)
+	referencedAssets map[string]bool  // Asset paths referenced by markdown (for lazy copying)
 }
 
 // NewPreprocessor creates a new book preprocessor
@@ -40,6 +43,18 @@ func (p *Preprocessor) Preprocess() error {
 	p.log("📚 Book preprocessing: %s", p.book.Name)
 
 	startTime := time.Now()
+
+	// Step 0: Scan source markdown for asset references (lazy asset copying optimization)
+	// This scans the source directories to determine which assets are actually needed,
+	// avoiding copying large asset directories that won't be used by this book.
+	p.log("  Step 0: Scanning asset references...")
+	if err := p.scanAssetReferences(); err != nil {
+		// Non-fatal: fall back to copying all assets
+		p.log("    Warning: asset scan failed, will copy all assets: %v", err)
+		p.referencedAssets = nil
+	} else if len(p.referencedAssets) > 0 {
+		p.log("    Found %d asset references", len(p.referencedAssets))
+	}
 
 	// Step 1: Copy static files to staging
 	p.log("  Step 1: Copying static files...")
@@ -209,4 +224,61 @@ func (p *Preprocessor) Preprocess() error {
 // log writes a formatted message to the log writer.
 func (p *Preprocessor) log(format string, args ...any) {
 	fmt.Fprintf(p.logWriter, format+"\n", args...)
+}
+
+// scanAssetReferences scans source markdown files to find which assets are referenced.
+// This enables lazy asset copying - only copying assets that are actually used by this book.
+func (p *Preprocessor) scanAssetReferences() error {
+	p.referencedAssets = make(map[string]bool)
+
+	// Get all markdown source directories from book config
+	copySources := p.book.GetCopySources()
+	for _, src := range copySources {
+		// Only scan markdown sources, not asset sources
+		if !isMarkdownPattern(src.From) {
+			continue
+		}
+
+		// Determine the source directory to scan
+		srcDir := getSourceDir(src.From, p.workspaceRoot)
+		if srcDir == "" {
+			continue
+		}
+
+		// Scan this directory for asset references
+		refs, err := ScanAssetReferences(srcDir)
+		if err != nil {
+			return err
+		}
+
+		// Merge into the combined set
+		for ref := range refs {
+			p.referencedAssets[ref] = true
+		}
+	}
+
+	return nil
+}
+
+// isMarkdownPattern checks if a glob pattern targets markdown files.
+func isMarkdownPattern(pattern string) bool {
+	return containsCI(pattern, ".md") || containsCI(pattern, "**/*.md") ||
+		(containsCI(pattern, "**") && !containsCI(pattern, "assets"))
+}
+
+// getSourceDir extracts the source directory from a glob pattern.
+func getSourceDir(pattern, workspaceRoot string) string {
+	// For patterns like "docs/explanation/**", extract "docs/explanation"
+	// For patterns like "docs/**/*.md", extract "docs"
+	parts := strings.Split(pattern, "**")
+	if len(parts) > 0 && parts[0] != "" {
+		dir := strings.TrimSuffix(parts[0], "/")
+		return filepath.Join(workspaceRoot, dir)
+	}
+	return ""
+}
+
+// containsCI checks if s contains substr (case-insensitive).
+func containsCI(s, substr string) bool {
+	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
 }

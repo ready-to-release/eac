@@ -2,7 +2,13 @@
 
 ## Overview
 
-The EAC module system provides **independently buildable, testable units** with explicit contracts, dependency management, and file ownership. Modules are defined in YAML contracts, validated against schemas, and built in topological order based on their dependencies.
+The EAC module system provides **independently buildable, testable units** with explicit contracts, dependency management, and file ownership.
+
+![Module Conceptual Hierarchy](../../../assets/architecture/modules-conceptual.drawio.png)
+
+The diagram above shows the hierarchical relationship between Trunk, Module, and Component. Each level expands in scale, from the repository trunk containing multiple modules, each module containing components.
+
+Modules are defined in YAML contracts, validated against schemas, and built in topological order based on their dependencies.
 
 **Key concepts**:
 
@@ -14,6 +20,10 @@ The EAC module system provides **independently buildable, testable units** with 
 ---
 
 ## Module Architectures
+
+The following diagram shows the complete entity-relationship model for the module system, including Organization, Trunk types (Mono/Single/Poly), Modules, and Components with their deployment variations.
+
+![Module Entity-Relationship Overview](../../../assets/architecture/modules-overview.drawio.png)
 
 Each module includes C4 architecture diagrams documenting its design. View them interactively:
 
@@ -105,6 +115,12 @@ Module types define:
 **Documentation**: `mkdocs-site`, `mkdocs-pdf` - MkDocs HTML/PDF generation
 
 **Infrastructure**: `configuration`, `scripts-package`, `templates` - Non-buildable modules
+
+### Kubernetes Deployment Patterns
+
+For modules deployed to Kubernetes, the following diagram shows Poly-k8s, Mono-k8s, and hybrid configurations with containers, packages, and templates.
+
+![Kubernetes Deployment Patterns](../../../assets/architecture/modules-k8s.drawio.png)
 
 ---
 
@@ -618,6 +634,12 @@ r2r eac release-this <module>      # Create release
 ```
 
 ---
+
+## Module Organization Patterns
+
+The following diagram compares ordered vs unordered module configurations within a trunk, including anti-pattern examples to avoid.
+
+![Module Organization Patterns](../../../assets/architecture/modules-ordered.drawio.png)
 
 ## Module Best Practices
 

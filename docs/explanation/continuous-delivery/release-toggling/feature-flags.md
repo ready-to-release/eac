@@ -1,12 +1,18 @@
 # Feature Flags
 
-Feature flags control when features become available to users. Code is deployed with features disabled, then enabled gradually via runtime configuration.
+Feature flags control when features become available to users.
+
+Code is deployed with features disabled, then enabled gradually via runtime configuration.
 
 This is a **Stage 12 (Release Toggling)** concern - distinct from deployment (Stage 10).
 
 ---
 
 ## Flag Lifecycle
+
+The following diagram illustrates the six-phase feature flag lifecycle, from creation through removal, along with flag types and best practices for each phase.
+
+![Feature Flag Lifecycle](../../../assets/assisted/10-feature-flags-lifecycle.drawio.png){width=900}
 
 | Phase     | Duration   | Actions                                |
 | --------- | ---------- | -------------------------------------- |
@@ -36,7 +42,8 @@ This is a **Stage 12 (Release Toggling)** concern - distinct from deployment (St
 
 ## Disabling Features
 
-When issues occur, disable instantly via API or dashboard. **This is not a rollback** - the code remains deployed, only the feature is turned off.
+When issues occur, disable instantly via API or dashboard. **This is not a rollback** - the code remains deployed,
+only the feature is turned off.
 
 | Action              | What happens                   | Time    |
 | ------------------- | ------------------------------ | ------- |

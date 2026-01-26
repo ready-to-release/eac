@@ -6,7 +6,9 @@
 
 ## What is r2r (Ready to Release)?
 
-**r2r** is an extensible CLI that enables Everything-as-Code workflows from your terminal, IDE, or CI/CD pipeline. Built by engineers, for engineers.
+**r2r** is an extensible CLI that enables Everything-as-Code workflows from your terminal, IDE, or CI/CD pipeline.
+
+Built by engineers, for engineers.
 
 The CLI is your primary interface for:
 
@@ -16,11 +18,17 @@ The CLI is your primary interface for:
 - Integrating with MCP servers and VSCode for IDE-native workflows
 - Automating delivery flows with containers and GitHub Actions
 
-**This repository is both the tool and a working example** - it demonstrates CI/CD implementation with the same principles and patterns explained in the documentation. Study the `.github/workflows/`, specs, and build processes to see Everything-as-Code in action.
+**This repository is both the tool and a working example**:
+
+It demonstrates CI/CD implementation with the same principles and patterns explained in the documentation.
+
+Study the `.github/workflows/`, specs, and build processes to see Everything-as-Code in action.
 
 ## Why Everything as Code?
 
-Traditional compliance creates friction: manual documentation, periodic audits, late validation. Development teams wait for approvals. Compliance teams scramble during audit prep. Quality suffers.
+Traditional compliance creates friction: manual documentation, periodic audits, late validation.
+
+Development teams wait for approvals. Compliance teams scramble during audit prep. Quality suffers.
 
 **The r2r CLI transforms compliance from a bottleneck into automation:**
 
@@ -108,6 +116,7 @@ docs/
 
 ## Repository Modules
 
-This repository is organized into modules - each representing a distinct deliverable with its own versioning, CI/CD pipeline, and release process.
+This repository is organized into modules - each representing a distinct deliverable with its own versioning,
+CI/CD pipeline, and release process.
 
 <!-- book:insert modules-overview -->

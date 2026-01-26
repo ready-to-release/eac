@@ -1,5 +1,6 @@
 //go:build windows
 
+// Package platform provides platform-specific utilities for command execution and path handling.
 package platform
 
 // WrapCommand returns the command unchanged on Windows.

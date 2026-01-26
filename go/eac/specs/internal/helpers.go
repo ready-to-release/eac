@@ -173,7 +173,7 @@ func DirectoryHasFiles(ctx *TestContext, dir string) error {
 // CreateFile creates a file with the given content, respecting isolation context.
 func CreateFile(ctx *TestContext, path, content string) error {
 	fullPath := ResolvePath(ctx, path)
-	if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(fullPath), 0o750); err != nil {
 		return fmt.Errorf("failed to create directory for %s: %w", path, err)
 	}
 	if err := os.WriteFile(fullPath, []byte(content), 0o644); err != nil {
@@ -185,7 +185,7 @@ func CreateFile(ctx *TestContext, path, content string) error {
 // CreateDirectory creates a directory, respecting isolation context.
 func CreateDirectory(ctx *TestContext, dir string) error {
 	fullPath := ResolvePath(ctx, dir)
-	return os.MkdirAll(fullPath, 0o755)
+	return os.MkdirAll(fullPath, 0o750)
 }
 
 // RemoveAll removes a file or directory.
@@ -270,7 +270,7 @@ func IsGitRepository(ctx *TestContext) error {
 		gitDir = filepath.Join(ctx.IsolatedDir, ".git")
 		if _, err := os.Stat(gitDir); os.IsNotExist(err) {
 			// Create minimal .git directory for isolated tests
-			if err := os.MkdirAll(gitDir, 0o755); err != nil {
+			if err := os.MkdirAll(gitDir, 0o750); err != nil {
 				return fmt.Errorf("failed to create .git directory in isolation: %w", err)
 			}
 			// Create minimal git config file

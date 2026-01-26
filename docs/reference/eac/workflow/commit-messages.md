@@ -18,15 +18,15 @@ Conventional commit format specification.
 
 ## Type Keywords
 
-| Type | Purpose | Example |
-|------|---------|---------|
-| `feat` | New feature | `feat(api): add user authentication` |
-| `fix` | Bug fix | `fix(parser): handle empty input` |
-| `docs` | Documentation | `docs(readme): update install steps` |
-| `style` | Formatting | `style(lint): apply gofmt` |
+| Type       | Purpose          | Example                                 |
+| ---------- | ---------------- | --------------------------------------- |
+| `feat`     | New feature      | `feat(api): add user authentication`    |
+| `fix`      | Bug fix          | `fix(parser): handle empty input`       |
+| `docs`     | Documentation    | `docs(readme): update install steps`    |
+| `style`    | Formatting       | `style(lint): apply gofmt`              |
 | `refactor` | Code restructure | `refactor(auth): extract token service` |
-| `test` | Add/modify tests | `test(api): add login tests` |
-| `chore` | Maintenance | `chore(deps): update dependencies` |
+| `test`     | Add/modify tests | `test(api): add login tests`            |
+| `chore`    | Maintenance      | `chore(deps): update dependencies`      |
 
 ---
 

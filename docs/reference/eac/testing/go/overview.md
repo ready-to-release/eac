@@ -19,13 +19,13 @@ This project uses:
 
 **Godog** is the Go implementation of Cucumber, enabling BDD with Gherkin syntax.
 
-| Feature | Description |
-|---------|-------------|
-| Native Go Integration | Works seamlessly with `go test` framework |
-| Gherkin Support | Full support for Feature, Rule, Scenario, Examples |
-| Table Tests | Natural mapping from Gherkin examples to Go table-driven tests |
-| Parallel Execution | Built-in support for concurrent scenario execution |
-| Output Formats | Multiple formats (pretty, progress, JSON, JUnit) |
+| Feature               | Description                                                    |
+| --------------------- | -------------------------------------------------------------- |
+| Native Go Integration | Works seamlessly with `go test` framework                      |
+| Gherkin Support       | Full support for Feature, Rule, Scenario, Examples             |
+| Table Tests           | Natural mapping from Gherkin examples to Go table-driven tests |
+| Parallel Execution    | Built-in support for concurrent scenario execution             |
+| Output Formats        | Multiple formats (pretty, progress, JSON, JUnit)               |
 
 ---
 

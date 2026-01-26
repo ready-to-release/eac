@@ -114,6 +114,7 @@ func (p *Preprocessor) optimizeDrawioImages() error {
 	for _, ref := range imageRefs {
 		// Check cache using hash
 		cacheKey := DrawioCacheKey{
+			SourcePath: ref.AbsPath,
 			SourceHash: ref.Hash,
 			MaxWidth:   MaxImageWidthPDF,
 		}
@@ -481,6 +482,7 @@ func UpdateDrawioCache(workspaceRoot string, logWriter io.Writer) (int, error) {
 	optimized := 0
 	for _, img := range images {
 		cacheKey := DrawioCacheKey{
+			SourcePath: img.SourceFile,
 			SourceHash: img.Hash,
 			MaxWidth:   MaxImageWidthPDF,
 		}

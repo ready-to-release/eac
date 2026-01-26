@@ -2,7 +2,9 @@
 
 ## Overview
 
-The module dependency system allows modules to declare relationships to other modules via `depends_on` in repository.yml. Dependencies are used for graph visualization, validation, cache invalidation, and release gating.
+The module dependency system allows modules to declare relationships to other modules via `depends_on` in repository.yml.
+
+Dependencies are used for graph visualization, validation, cache invalidation, and release gating.
 
 ## YAML Schema
 

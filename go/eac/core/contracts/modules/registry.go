@@ -8,7 +8,7 @@ import (
 
 // Registry provides fast access to module contracts.
 type Registry struct {
-	modules       map[string]*ModuleContract   // Keyed by moniker
+	modules       map[string]*ModuleContract // Keyed by moniker
 	version       string
 	workspaceRoot string
 	modulesByRoot map[string][]*ModuleContract // Index: package root -> modules with packages at that root

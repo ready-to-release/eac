@@ -119,7 +119,7 @@ type Validator interface {
 type NoOpValidator struct{}
 
 // Validate always returns no errors (everything is valid).
-func (v *NoOpValidator) Validate(output string, context map[string]interface{}) []ValidationError {
+func (v *NoOpValidator) Validate(_ string, _ map[string]interface{}) []ValidationError {
 	return nil
 }
 

@@ -59,9 +59,9 @@ func (c *Changelog) String() string {
 	sb.WriteString("\n")
 
 	// Version sections
-	for _, v := range c.Versions {
-		writeVersionHeader(&sb, &v)
-		writeVersionEntries(&sb, &v)
+	for i := range c.Versions {
+		writeVersionHeader(&sb, &c.Versions[i])
+		writeVersionEntries(&sb, &c.Versions[i])
 		sb.WriteString("\n")
 	}
 
@@ -161,7 +161,8 @@ func writeLinkDefinitions(sb *strings.Builder, c *Changelog) {
 	}
 
 	// Version links
-	for i, v := range c.Versions {
+	for i := range c.Versions {
+		v := &c.Versions[i]
 		currentTag := formatTag(c.Module, v.Number)
 		if i < len(c.Versions)-1 {
 			// Compare to previous version

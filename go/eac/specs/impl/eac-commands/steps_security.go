@@ -33,8 +33,8 @@ type evidenceFile struct {
 }
 
 // readEvidenceFile reads and parses an evidence file.
-func readEvidenceFile(filepath string) (*evidenceFile, error) {
-	data, err := os.ReadFile(filepath)
+func readEvidenceFile(filePath string) (*evidenceFile, error) {
+	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read evidence file: %w", err)
 	}

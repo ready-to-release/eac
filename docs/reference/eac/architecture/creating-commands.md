@@ -4,11 +4,16 @@ This guide is for developers contributing new commands to the EAC CLI in `go/eac
 
 ## Overview
 
-The EAC CLI uses a structured comment-based system to define command metadata, help text, and flags. This guide provides templates and best practices for creating new commands that integrate seamlessly with the CLI's help system, command registry, and shell completion.
+The EAC CLI uses a structured comment-based system to define command metadata, help text, and flags.
+
+This guide provides templates and best practices for creating new commands that integrate seamlessly with the CLI's help system,
+command registry, and shell completion.
 
 ## Command File Header Template
 
-Every command file must include structured comment headers that define help metadata. Copy this template and fill in the placeholders:
+Every command file must include structured comment headers that define help metadata.
+
+Copy this template and fill in the placeholders:
 
 ```go
 // Command: <parent> <subcommand>
@@ -34,7 +39,9 @@ The command name as users will type it, with spaces separating parent and subcom
 
 #### `Short:` (Required)
 
-A single sentence (50-80 characters) that concisely describes what the command does. This appears in command listings.
+A single sentence (50-80 characters) that concisely describes what the command does.
+
+This appears in command listings.
 
 **Best Practices:**
 
@@ -56,7 +63,9 @@ A single sentence (50-80 characters) that concisely describes what the command d
 
 #### `Long:` (Required, Multiple Lines)
 
-Detailed multi-paragraph description explaining the command thoroughly. Each `// Long:` line becomes a paragraph in the help output.
+Detailed multi-paragraph description explaining the command thoroughly.
+
+Each `// Long:` line becomes a paragraph in the help output.
 
 **Structure:**
 

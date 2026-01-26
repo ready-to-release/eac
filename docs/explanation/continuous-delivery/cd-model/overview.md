@@ -2,17 +2,25 @@
 
 ## Introduction
 
-The Continuous Delivery (CD) Model provides a comprehensive framework for delivering software from initial development through production deployment and ongoing maintenance.
+The Continuous Delivery (CD) Model provides a comprehensive framework for delivering software,
+from initial development through production deployment and ongoing maintenance.
 
 The model ensures quality, traceability, and compliance throughout the entire software delivery lifecycle.
 
-Unlike traditional linear Software Development Lifecycle (SDLC) approaches that rely on manual handoffs and stage-gate approvals, the CD Model integrates automation, quality gates, and continuous validation at every step.
+Unlike traditional linear Software Development Lifecycle (SDLC) approaches that rely on manual handoffs and stage-gate approvals,
+the CD Model integrates automation, quality gates, and continuous validation at every step.
 
 This approach reduces lead time, increases deployment frequency, and improves software quality through rapid feedback loops.
 
 ## The 12-Stage Model
 
-The CD Model consists of 12 distinct stages that guide software from code authoring to production operation:
+The CD Model consists of 12 distinct stages that guide software from code authoring to production operation.
+
+The following diagram provides a compact view of all stages, using chevrons for regular stages and diamonds for approval gates (stages 1, 3, 9, 12):
+
+![CD Model Stages](../../../assets/cd-model/model.drawio.png){width=900}
+
+For detailed interactions between stages, environments, and quality gates, see the full canvas view:
 
 ![CD Model Full View](../../../assets/cd-model/canvas-compliance-ra.drawio.png)
 

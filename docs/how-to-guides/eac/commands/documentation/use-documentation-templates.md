@@ -97,10 +97,10 @@ templates install claude
 
 > **WARNING**: Template installation will overwrite existing files at the destination without confirmation. Always backup important files before installing templates.
 
-| Problem                      | Solution                                                 |
-| ---------------------------- | -------------------------------------------------------- |
-| Template directory not found | Ensure `templates/` directory exists in repository       |
-| Permission denied            | Check write permissions for destination directory        |
+| Problem                      | Solution                                                              |
+| ---------------------------- | --------------------------------------------------------------------- |
+| Template directory not found | Ensure `templates/` directory exists in repository                    |
+| Permission denied            | Check write permissions for destination directory                     |
 | Files already exist          | Templates will overwrite existing files without warning; backup first |
 
 ## Next Steps

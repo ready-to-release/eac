@@ -36,6 +36,7 @@
 // Flag.all: type=bool, usage=Include non-default books (those with default: false)
 // Flag.list-artifacts: type=bool, usage=List artifacts that would be produced (no build)
 // Flag.dry-run: type=bool, usage=Simulate build without running actual commands
+// Flag.turbo: type=bool, usage=Enable turbo mode for faster builds (increases parallelism)
 // Args: modules
 package build
 
@@ -157,6 +158,7 @@ func Build() int {
 	layeredBuild := false    // Execute in layers sequentially (default: all parallel)
 	showTimings := false
 	debugMode := false // Enable debug logs to console
+	turbo := false     // Enable turbo mode (+2 parallel workers)
 	version := ""
 	listArtifacts := false
 	dryRun := false
@@ -186,6 +188,8 @@ func Build() int {
 			showTimings = true
 		case "--debug":
 			debugMode = true
+		case "--turbo":
+			turbo = true
 		case "--accept-warnings":
 			// Flag is handled in mkdocs builder via os.Args check
 			// Just accept it here so it doesn't fail as unknown flag
@@ -251,6 +255,13 @@ func Build() int {
 		return 1
 	}
 
+	// Validate --turbo and --layered-build mutual exclusivity
+	// (layered-build implies sequential execution, turbo increases parallelism)
+	if turbo && layeredBuild {
+		log.Errorf("Error: --turbo and --layered-build cannot be used together")
+		return 1
+	}
+
 	// Get repository root
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {
@@ -303,6 +314,7 @@ func Build() int {
 		SkipDepm:     skipDepm,
 		ForceRebuild: forceRebuild,
 		Layered:      layeredBuild,
+		Turbo:        turbo,
 		DryRun:       dryRun,
 		UseTUI:       useTUI,
 		TUIHeight:    tuiHeight,
@@ -526,6 +538,7 @@ func printBuildUsage() {
 	log.Info("  --skip-depm               Only build specified modules, no module dependency resolution (CI isolation)")
 	log.Info("  --use-existing-depm       Skip building module dependencies if artifacts exist (for CI incremental builds)")
 	log.Info("  --skip-deps               Skip system dependency verification (go, docker, etc.)")
+	log.Info("  --turbo                   Enable turbo mode for faster builds (increases parallelism)")
 	log.Info("  --timings                 Show detailed timing summary")
 	log.Info("  --debug                   Enable debug logs to console (file logging always enabled)")
 	log.Info("  --tui                     Enable TUI console (default for local, errors in CI/container)")

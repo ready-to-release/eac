@@ -69,7 +69,7 @@ func iRunTheMetaTestsInIsolation(testName string) error {
 	tfCtx.tempDir = tempRoot
 
 	testingDir := filepath.Join(tempRoot, "testing")
-	if err := os.MkdirAll(testingDir, 0o755); err != nil {
+	if err := os.MkdirAll(testingDir, 0o750); err != nil {
 		return fmt.Errorf("failed to create testing dir: %w", err)
 	}
 
@@ -116,7 +116,7 @@ func iRunAllMetaTestsInIsolation() error {
 	tfCtx.tempDir = tempRoot
 
 	testingDir := filepath.Join(tempRoot, "testing")
-	if err := os.MkdirAll(testingDir, 0o755); err != nil {
+	if err := os.MkdirAll(testingDir, 0o750); err != nil {
 		return fmt.Errorf("failed to create testing dir: %w", err)
 	}
 
@@ -147,7 +147,10 @@ func iRunAllMetaTestsInIsolation() error {
 func getRepoRoot() string {
 	// Navigate from go/eac/specs/impl/eac-core/testing-framework to repo root
 	// This assumes tests run from the specs module directory
-	cwd, _ := os.Getwd()
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "."
+	}
 	// Try to find repo root by looking for .git or go.work
 	dir := cwd
 	for {
@@ -270,7 +273,7 @@ func copyDependentPackages(coreDir, tempRoot string) error {
 		}
 
 		destPkgDir := filepath.Join(tempRoot, pkg)
-		if err := os.MkdirAll(destPkgDir, 0o755); err != nil {
+		if err := os.MkdirAll(destPkgDir, 0o750); err != nil {
 			return fmt.Errorf("failed to create %s: %w", destPkgDir, err)
 		}
 
@@ -306,7 +309,7 @@ func copyPackageRecursive(src, dest string) error {
 		destPath := filepath.Join(dest, relPath)
 
 		if info.IsDir() {
-			return os.MkdirAll(destPath, 0o755)
+			return os.MkdirAll(destPath, 0o750)
 		}
 
 		// Only copy .go, .yml/.yaml, and .json files (json needed for embedded schemas)
@@ -327,13 +330,13 @@ func copyConfigFiles(repoRoot, tempRoot string) error {
 	configSrcDir := filepath.Join(repoRoot, ".r2r", "eac")
 	configDestDir := filepath.Join(tempRoot, ".r2r", "eac")
 
-	if err := os.MkdirAll(configDestDir, 0o755); err != nil {
+	if err := os.MkdirAll(configDestDir, 0o750); err != nil {
 		return fmt.Errorf("failed to create config dir: %w", err)
 	}
 
 	// Create a fake .git directory so the config loader can find the repo root
 	gitDir := filepath.Join(tempRoot, ".git")
-	if err := os.MkdirAll(gitDir, 0o755); err != nil {
+	if err := os.MkdirAll(gitDir, 0o750); err != nil {
 		return fmt.Errorf("failed to create .git dir: %w", err)
 	}
 

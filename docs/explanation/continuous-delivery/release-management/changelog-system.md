@@ -2,9 +2,14 @@
 
 ## Overview
 
-This repository uses a **changelog-based release system**. Releases are triggered by updating changelogs and merging to main - no manual tagging required.
+This repository uses a **changelog-based release system**.
 
-**Key principle:** The changelog is the source of truth for releases. When a new version appears in a changelog and merges to main, the release workflow automatically creates a git tag and triggers the appropriate release pipeline.
+Releases are triggered by updating changelogs and merging to main - no manual tagging required.
+
+**Key principle:** The changelog is the source of truth for releases.
+
+When a new version appears in a changelog and merges to main,
+the release workflow automatically creates a git tag and triggers the appropriate release pipeline.
 
 ---
 
@@ -79,7 +84,9 @@ Developer
 
 For complete CLI commands and workflow details, see:
 
-**[Release Commands Reference](../../../reference/eac/continuous-delivery/changelog/release-commands.md)** - Complete implementation guide including:
+**[Release Commands Reference](../../../reference/eac/continuous-delivery/changelog/release-commands.md)**
+
+Complete implementation guide including:
 
 - `r2r release pending` - Check for unreleased changes
 - `r2r release this` - Finalize changelog for release
@@ -88,7 +95,9 @@ For complete CLI commands and workflow details, see:
 - Workflow automation details
 - Troubleshooting guide
 
-**[Changelog Format Specification](../../../reference/eac/continuous-delivery/changelog/format-specification.md)** - Keep a Changelog format details
+**[Changelog Format Specification](../../../reference/eac/continuous-delivery/changelog/format-specification.md)**
+
+Keep a Changelog format details
 
 ---
 

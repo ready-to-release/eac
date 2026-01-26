@@ -177,7 +177,7 @@ func (c *goVersionContext) extractGoVersionFromSystemDeps() error {
 		}
 	}
 
-	return fmt.Errorf("Go dependency not found in system-dependencies.yml")
+	return fmt.Errorf("go dependency not found in system-dependencies.yml")
 }
 
 func (c *goVersionContext) extractGoVersionFromGoWork() error {
@@ -210,7 +210,10 @@ func (c *goVersionContext) extractGoVersionFromGitHubActions() error {
 		matches := re.FindAllStringSubmatch(string(data), -1)
 		for _, match := range matches {
 			if len(match) >= 2 {
-				relPath, _ := filepath.Rel(c.repoRoot, actionFile)
+				relPath, err := filepath.Rel(c.repoRoot, actionFile)
+				if err != nil {
+					relPath = actionFile
+				}
 				c.actionVersions[relPath] = match[1]
 			}
 		}
@@ -226,10 +229,7 @@ func (c *goVersionContext) extractGoVersionFromGitHubActions() error {
 func (c *goVersionContext) goVersionsShouldMatch() error {
 	if c.sysDepsVersion != c.goWorkVersion {
 		return fmt.Errorf(
-			"Go version mismatch:\n"+
-				"  system-dependencies.yml: %s\n"+
-				"  go.work:                 %s\n\n"+
-				"These versions must match to ensure consistent module resolution between local and CI environments.",
+			"go version mismatch: system-dependencies.yml=%s, go.work=%s",
 			c.sysDepsVersion,
 			c.goWorkVersion,
 		)

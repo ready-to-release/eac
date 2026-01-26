@@ -1,8 +1,6 @@
 // Package main provides the r2r-cli command-line interface
 //
-// This file contains go:generate directives that copy contract files
-// from the contracts directory to their appropriate locations before building.
-//
-//go:generate go run tools/copy.go ../../../contracts/r2r-cli/0.1.0/command.ebnf internal/command-parser/command.ebnf
-//go:generate go run tools/copy.go ../../../contracts/r2r-cli/0.1.0/r2r-cli.schema.json internal/validator/config/schema.json
+// Contract files (schemas, EBNF grammar) are consumed from the contracts module
+// at github.com/ready-to-release/eac/contracts, eliminating the need for
+// go:generate copy steps.
 package main

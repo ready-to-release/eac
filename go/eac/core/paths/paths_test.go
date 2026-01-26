@@ -114,6 +114,208 @@ func TestPathConstants(t *testing.T) {
 	}
 }
 
+// TestSanitizeForCacheName tests converting source paths to cache-friendly identifiers.
+func TestSanitizeForCacheName(t *testing.T) {
+	tests := []struct {
+		name       string
+		sourcePath string
+		want       string
+	}{
+		{
+			name:       "drawio_in_architecture",
+			sourcePath: "docs/assets/architecture/modules-overview.drawio.png",
+			want:       "architecture_modules-overview",
+		},
+		{
+			name:       "drawio_in_assisted_with_numbers",
+			sourcePath: "docs/assets/assisted/01-cd-model-12-stages.drawio.png",
+			want:       "assisted_01-cd-model-12-stages",
+		},
+		{
+			name:       "markdown_in_cd-model",
+			sourcePath: "docs/explanation/cd-model/overview.md",
+			want:       "cd-model_overview",
+		},
+		{
+			name:       "markdown_in_eac_architecture",
+			sourcePath: "docs/reference/eac/architecture/index.md",
+			want:       "architecture_index",
+		},
+		{
+			name:       "very_long_path_truncated",
+			sourcePath: "docs/explanation/continuous-delivery/release-management/very-long-feature-name-that-exceeds-the-limit.md",
+			want:       "release-management_very-long-feature-name-that-exceeds-the-limit",
+		},
+		{
+			name:       "windows_path_with_backslashes",
+			sourcePath: "docs\\assets\\architecture\\modules-overview.drawio.png",
+			want:       "architecture_modules-overview",
+		},
+		{
+			name:       "deeply_nested_path",
+			sourcePath: "docs/reference/eac/commands/categories/build.md",
+			want:       "categories_build",
+		},
+		{
+			name:       "simple_file_at_root",
+			sourcePath: "docs/index.md",
+			want:       "docs_index",
+		},
+		{
+			name:       "file_in_assets_cache",
+			sourcePath: "docs/assets/cache/drawio/somefile.png",
+			want:       "drawio_somefile",
+		},
+		{
+			name:       "path_with_multiple_extensions",
+			sourcePath: "docs/assets/diagram.drawio.svg.png",
+			want:       "assets_diagram.drawio.svg",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := SanitizeForCacheName(tt.sourcePath)
+			if got != tt.want {
+				t.Errorf("SanitizeForCacheName(%q) = %q, want %q", tt.sourcePath, got, tt.want)
+			}
+
+			// Verify length constraint (max 64 chars)
+			if len(got) > 64 {
+				t.Errorf("SanitizeForCacheName(%q) returned %d chars, want <= 64", tt.sourcePath, len(got))
+			}
+		})
+	}
+}
+
+// TestDrawioCachePathV2 tests the traceable drawio cache path generation.
+func TestDrawioCachePathV2(t *testing.T) {
+	tests := []struct {
+		name        string
+		cacheRoot   string
+		sourcePath  string
+		contentHash string
+		want        string
+	}{
+		{
+			name:        "basic_drawio_cache_path",
+			cacheRoot:   "/repo/docs/assets/cache",
+			sourcePath:  "docs/assets/architecture/modules-overview.drawio.png",
+			contentHash: "abc123def456789",
+			want:        filepath.Join("/repo/docs/assets/cache", "drawio", "architecture_modules-overview_abc123de.png"),
+		},
+		{
+			name:        "short_hash_preserved",
+			cacheRoot:   "/cache",
+			sourcePath:  "docs/assets/assisted/01-cd-model-12-stages.drawio.png",
+			contentHash: "12345678",
+			want:        filepath.Join("/cache", "drawio", "assisted_01-cd-model-12-stages_12345678.png"),
+		},
+		{
+			name:        "hash_exactly_8_chars",
+			cacheRoot:   "/cache",
+			sourcePath:  "docs/assets/test.drawio.png",
+			contentHash: "abcdefgh",
+			want:        filepath.Join("/cache", "drawio", "assets_test_abcdefgh.png"),
+		},
+		{
+			name:        "long_hash_truncated_to_8",
+			cacheRoot:   "/cache",
+			sourcePath:  "docs/assets/test.drawio.png",
+			contentHash: "0123456789abcdef0123456789abcdef",
+			want:        filepath.Join("/cache", "drawio", "assets_test_01234567.png"),
+		},
+		{
+			name:        "empty_hash_handled",
+			cacheRoot:   "/cache",
+			sourcePath:  "docs/assets/test.drawio.png",
+			contentHash: "",
+			want:        filepath.Join("/cache", "drawio", "assets_test_.png"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := DrawioCachePathV2(tt.cacheRoot, tt.sourcePath, tt.contentHash)
+			if got != tt.want {
+				t.Errorf("DrawioCachePathV2(%q, %q, %q) = %q, want %q",
+					tt.cacheRoot, tt.sourcePath, tt.contentHash, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestMermaidCachePathV2 tests the traceable mermaid cache path generation.
+func TestMermaidCachePathV2(t *testing.T) {
+	tests := []struct {
+		name        string
+		cacheRoot   string
+		sourcePath  string
+		blockIndex  int
+		contentHash string
+		want        string
+	}{
+		{
+			name:        "basic_mermaid_cache_path",
+			cacheRoot:   "/repo/docs/assets/cache",
+			sourcePath:  "docs/explanation/cd-model/overview.md",
+			blockIndex:  0,
+			contentHash: "abc123def456789",
+			want:        filepath.Join("/repo/docs/assets/cache", "mermaid", "cd-model_overview_0_abc123de.svg"),
+		},
+		{
+			name:        "second_block_in_file",
+			cacheRoot:   "/cache",
+			sourcePath:  "docs/reference/eac/architecture/index.md",
+			blockIndex:  1,
+			contentHash: "deadbeef12345678",
+			want:        filepath.Join("/cache", "mermaid", "architecture_index_1_deadbeef.svg"),
+		},
+		{
+			name:        "high_block_index",
+			cacheRoot:   "/cache",
+			sourcePath:  "docs/test.md",
+			blockIndex:  99,
+			contentHash: "abcdefgh",
+			want:        filepath.Join("/cache", "mermaid", "docs_test_99_abcdefgh.svg"),
+		},
+		{
+			name:        "zero_block_index",
+			cacheRoot:   "/cache",
+			sourcePath:  "docs/overview.md",
+			blockIndex:  0,
+			contentHash: "12345678",
+			want:        filepath.Join("/cache", "mermaid", "docs_overview_0_12345678.svg"),
+		},
+		{
+			name:        "long_hash_truncated_to_8",
+			cacheRoot:   "/cache",
+			sourcePath:  "docs/test.md",
+			blockIndex:  0,
+			contentHash: "0123456789abcdef0123456789abcdef",
+			want:        filepath.Join("/cache", "mermaid", "docs_test_0_01234567.svg"),
+		},
+		{
+			name:        "windows_path_support",
+			cacheRoot:   "C:\\projects\\cache",
+			sourcePath:  "docs\\reference\\index.md",
+			blockIndex:  2,
+			contentHash: "wxyz1234",
+			want:        filepath.Join("C:\\projects\\cache", "mermaid", "reference_index_2_wxyz1234.svg"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := MermaidCachePathV2(tt.cacheRoot, tt.sourcePath, tt.blockIndex, tt.contentHash)
+			if got != tt.want {
+				t.Errorf("MermaidCachePathV2(%q, %q, %d, %q) = %q, want %q",
+					tt.cacheRoot, tt.sourcePath, tt.blockIndex, tt.contentHash, got, tt.want)
+			}
+		})
+	}
+}
+
 // TestTemplatePathVariadic tests the variadic template path functions.
 func TestTemplatePathVariadic(t *testing.T) {
 	repoRoot := "/repo"

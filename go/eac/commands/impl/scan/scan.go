@@ -28,6 +28,7 @@
 // Flag.no-tui: type=bool, default=false, usage=Disable TUI console
 // Flag.tui-height: type=int, default=8, usage=Set TUI console height (3-20)
 // Flag.sequential: type=bool, default=false, usage=Run scans sequentially instead of in parallel
+// Flag.turbo: type=bool, default=false, usage=Enable turbo mode for faster scanning (increases parallelism)
 // HasSideEffects: false
 // Args: modules
 package scan
@@ -61,6 +62,7 @@ type scanArgs struct {
 	Scanners         []internal.ScannerType
 	Debug            bool
 	Sequential       bool
+	Turbo            bool
 	UseTUI           bool
 	TUIHeight        int
 	TUIExplicitlySet bool
@@ -96,6 +98,17 @@ func Scan() int {
 		return 1
 	}
 
+	// Validate --turbo and --sequential mutual exclusivity
+	if parsed.Turbo && parsed.Sequential {
+		log.Errorf("Error: --turbo and --sequential cannot be used together")
+		return 1
+	}
+
+	// Apply turbo mode to scanner semaphores if enabled
+	if parsed.Turbo {
+		SetTurboScannerCapacity()
+	}
+
 	// Create command config
 	cmdCfg := &cmdframework.CommandConfig{
 		Type:        cmdframework.CommandTypeScan,
@@ -105,6 +118,7 @@ func Scan() int {
 		Monikers:    parsed.Monikers,
 		Layered:     false, // Scan uses parallel execution
 		Sequential:  parsed.Sequential,
+		Turbo:       parsed.Turbo,
 		UseTUI:      parsed.UseTUI,
 		TUIHeight:   parsed.TUIHeight,
 		DebugMode:   parsed.Debug,
@@ -178,6 +192,8 @@ func parseArgs(args []string) (*scanArgs, error) {
 			parsed.Debug = true
 		case "--sequential":
 			parsed.Sequential = true
+		case "--turbo":
+			parsed.Turbo = true
 		case "--tui":
 			parsed.UseTUI = true
 			parsed.TUIExplicitlySet = true
@@ -281,6 +297,7 @@ func printScanUsage() {
 	log.Info("Flags:")
 	log.Info("  --scanner <types>         Scanner types to run (comma-separated)")
 	log.Info("                            Options: sbom, vuln, secrets, iac, compliance, sast, zap")
+	log.Info("  --turbo                   Enable turbo mode for faster scanning (increases parallelism)")
 	log.Info("  --sequential              Run scans sequentially instead of in parallel")
 	log.Info("  --debug, -d               Enable debug logging")
 	log.Info("  --tui                     Enable TUI console (default for local)")
