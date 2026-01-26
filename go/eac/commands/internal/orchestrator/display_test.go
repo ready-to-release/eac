@@ -78,12 +78,7 @@ func TestDisplayManager_StatusWithLockInfo(t *testing.T) {
 	var buf bytes.Buffer
 	logger := log.New(&buf, "", 0)
 
-	dm := newDisplayManager(logger, "building", 5, 1000, false)
-	dm.running["test-module"] = true
-	dm.completed = 2
-	dm.total = 5
-
-	// Create and register with a test registry
+	// Create registry with test data
 	registry := locktracker.NewRegistry()
 	registry.Register(locktracker.LockInfo{
 		ID:       "sem-1",
@@ -94,7 +89,10 @@ func TestDisplayManager_StatusWithLockInfo(t *testing.T) {
 		Waiting:  1,
 	})
 
-	dm.registry = registry
+	dm := newDisplayManager(logger, "building", 5, 1000, false, registry)
+	dm.running["test-module"] = true
+	dm.completed = 2
+	dm.total = 5
 
 	dm.displayStatus()
 

@@ -149,3 +149,15 @@ func (r *Registry) notify(event LockEvent) {
 		}
 	}
 }
+
+// Close clears the registry and removes all subscribers.
+// After Close, the registry should not be used.
+func (r *Registry) Close() {
+	r.mu.Lock()
+	r.locks = make(map[string]LockInfo)
+	r.mu.Unlock()
+
+	r.subMu.Lock()
+	r.subscribers = nil
+	r.subMu.Unlock()
+}

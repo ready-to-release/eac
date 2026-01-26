@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/locktracker"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/output"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
 )
@@ -50,10 +51,18 @@ type ComponentScheduler struct {
 }
 
 // NewComponentScheduler creates a new scheduler with the given configuration.
-func NewComponentScheduler(config Config, tuiConsole *tui.Console) *ComponentScheduler {
+// If registry is non-nil, the semaphore will be tracked for lock visualization.
+func NewComponentScheduler(config Config, tuiConsole *tui.Console, registry *locktracker.Registry) *ComponentScheduler {
+	var sem *WeightedSemaphore
+	if registry != nil {
+		sem = NewWeightedSemaphoreWithRegistry("component-scheduler", config.MaxConcurrency, registry)
+	} else {
+		sem = NewWeightedSemaphore(config.MaxConcurrency)
+	}
+
 	cs := &ComponentScheduler{
 		config:           config,
-		semaphore:        NewWeightedSemaphore(config.MaxConcurrency),
+		semaphore:        sem,
 		moduleComplete:   make(map[string]bool),
 		moduleCompleteCh: make(map[string]chan struct{}),
 		moduleCompCount:  make(map[string]int),

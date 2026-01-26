@@ -33,7 +33,8 @@ type displayManager struct {
 }
 
 // newDisplayManager creates a new display manager.
-func newDisplayManager(logger *log.Logger, actionVerb string, total, updateIntervalMs int, tuiMode bool) *displayManager {
+// If registry is non-nil, lock info will be included in status updates.
+func newDisplayManager(logger *log.Logger, actionVerb string, total, updateIntervalMs int, tuiMode bool, registry *locktracker.Registry) *displayManager {
 	if updateIntervalMs <= 0 {
 		updateIntervalMs = 500 // default to 500ms for responsive feedback
 	}
@@ -49,6 +50,7 @@ func newDisplayManager(logger *log.Logger, actionVerb string, total, updateInter
 		completionChan: make(chan *WorkResult, 100),
 		done:           make(chan bool),
 		tuiMode:        tuiMode,
+		registry:       registry,
 	}
 }
 
