@@ -3,7 +3,7 @@ module github.com/ready-to-release/eac/go/eac/specs
 go 1.24.4
 
 require (
-	github.com/bmatcuk/doublestar/v4 v4.9.2
+	github.com/bmatcuk/doublestar/v4 v4.10.0
 	github.com/cucumber/godog v0.15.1
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/ready-to-release/eac/go/eac/core v0.0.0
