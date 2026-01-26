@@ -47,7 +47,7 @@ type RepositorySettings struct {
 	Type              string            `yaml:"type"`                  // mono, poly, adjunct
 	TrunkBranch       string            `yaml:"trunk_branch"`          // main branch name
 	MaxBranchAgeDays  int               `yaml:"max_branch_age_days"`   // max age for feature branches
-	Schemes           []string          `yaml:"schemes"`               // valid versioning schemes
+	Schemes           []string          `yaml:"schemes"`               // valid versioning schemes for releasable modules (Implicit always available)
 	PR                PRConfig          `yaml:"pr"`                    // PR workflow config
 	Versioning        VersioningConfig  `yaml:"versioning"`            // versioning constraints
 	Parallelism       ParallelismConfig `yaml:"parallelism"`           // parallelism limits

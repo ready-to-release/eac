@@ -207,6 +207,7 @@ modules:
     description: Go module providing embedded contract files (schemas, EBNF, defaults) for consumption by other modules
     versioning:
       scheme: Implicit
+      release_type: none
     components:
       go:
         root: contracts

@@ -453,14 +453,9 @@ func runModuleBuild(module *modules.ModuleContract, workspaceRoot, outputDir str
 		}
 	}
 
-	// Execute post-build steps for each component
-	for _, ch := range compHandlers {
-		componentOutputDir := paths.ComponentBuildOutputPath(workspaceRoot, module.Moniker, ch.Component)
-		exitCode := builders.ExecutePostBuildSteps(module.Moniker, ch.Component, workspaceRoot, componentOutputDir, logWriter)
-		if exitCode != 0 {
-			return exitCode
-		}
-	}
+	// Note: Post-build steps are executed centrally by framework.go's buildAfterExecute()
+	// via processAllArtifactDerivations(). This ensures consistent behavior and prevents
+	// duplicate execution when framework.go calls runModuleBuild() as its worker.
 
 	return 0
 }

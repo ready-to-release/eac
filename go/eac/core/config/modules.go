@@ -88,9 +88,12 @@ type ReleaseBundleCategory struct {
 }
 
 // ModuleVersioning holds module versioning configuration.
+// Modules are either "supporting" (Implicit scheme) or "releasable" (SemVer/CalVer scheme).
+// Supporting modules have no explicit version and are released only as part of releasable modules.
+// Releasable modules have explicit versions and their own CI/release pipelines.
 type ModuleVersioning struct {
-	Scheme      string `yaml:"scheme"`                 // SemVer, CalVer
-	Current     string `yaml:"current,omitempty"`      // Current version (optional)
+	Scheme      string `yaml:"scheme"`                 // Implicit (supporting), SemVer, or CalVer (releasable)
+	Current     string `yaml:"current,omitempty"`      // Current version (releasable modules only)
 	Changelog   string `yaml:"changelog,omitempty"`    // Path to changelog (defaults to release/<moniker>/CHANGELOG.md)
 	ReleaseType string `yaml:"release_type,omitempty"` // published | internal | bundle | none
 }
@@ -104,6 +107,7 @@ type ModuleBuild struct {
 }
 
 // PostBuildConfig contains post-build actions for a component.
+// Configured at the component level within a module's build configuration.
 type PostBuildConfig struct {
 	// CopyTo specifies the target path to copy build output.
 	// Path is relative to workspace root.

@@ -694,17 +694,17 @@
     },
     "module_versioning": {
       "type": "object",
-      "description": "Module versioning configuration",
+      "description": "Module versioning configuration. Modules are either supporting (Implicit) or releasable (SemVer/CalVer).",
       "properties": {
         "scheme": {
           "type": "string",
           "enum": ["Implicit", "SemVer", "CalVer"],
-          "description": "Versioning scheme for this module. Implicit (default): module is only released through non-implicit modules. SemVer: semantic versioning. CalVer: calendar versioning.",
+          "description": "Versioning scheme. Implicit: supporting module with no explicit version, released only as part of releasable modules. SemVer/CalVer: releasable module with explicit version and CI/release pipelines.",
           "default": "Implicit"
         },
         "current": {
           "type": "string",
-          "description": "Current version (optional, can be tracked in changelog instead)"
+          "description": "Current version (releasable modules only)"
         },
         "changelog": {
           "type": "string",

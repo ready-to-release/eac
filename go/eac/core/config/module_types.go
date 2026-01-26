@@ -1,25 +1,12 @@
 package config
 
-// BuildConfig contains build output configuration for a module type.
+// This file contains build-related types used in component-types.yml configuration.
+// These define component-type-level defaults for artifacts and Docker builds.
+
+// BuildConfig contains build output configuration for a component type.
 type BuildConfig struct {
-	Artifacts []Artifact      `yaml:"artifacts"`
-	PostBuild []PostBuildStep `yaml:"post_build,omitempty"`
+	Artifacts []Artifact `yaml:"artifacts"`
 }
-
-// PostBuildStep defines a post-build action to execute after successful build.
-type PostBuildStep struct {
-	Action  string   `yaml:"action"`            // copy, script
-	Target  string   `yaml:"target,omitempty"`  // Target path for copy action
-	Include []string `yaml:"include,omitempty"` // Glob patterns to include (for copy)
-	Exclude []string `yaml:"exclude,omitempty"` // Glob patterns to exclude (for copy)
-	Script  string   `yaml:"script,omitempty"`  // Script command to run (for script action)
-}
-
-// PostBuildAction constants.
-const (
-	PostBuildActionCopy   = "copy"
-	PostBuildActionScript = "script"
-)
 
 // Artifact defines an expected build artifact.
 type Artifact struct {
@@ -205,12 +192,3 @@ func (a *Artifact) RequiresCompression() bool {
 	return a.Compression == CompressionStrip || a.Compression == CompressionUPX
 }
 
-// IsCopyAction returns true if this is a copy action.
-func (p *PostBuildStep) IsCopyAction() bool {
-	return p.Action == PostBuildActionCopy
-}
-
-// IsScriptAction returns true if this is a script action.
-func (p *PostBuildStep) IsScriptAction() bool {
-	return p.Action == PostBuildActionScript
-}

@@ -13,7 +13,11 @@ repository:
   # Repository type: poly (polyrepo), mono (monorepo), adjacent (supporting repo)
   type: poly
 
-  # Valid versioning schemes that modules can declare
+  # Valid versioning schemes for releasable modules.
+  # Implicit scheme is always available (supporting modules) and need not be listed.
+  # Supporting modules (Implicit): no explicit version, released as part of releasable modules.
+  # Releasable modules (SemVer/CalVer): explicit version, own CI/release pipelines.
+  # Note: Versioning is set at module level; components inherit from their owner module.
   schemes:
     - SemVer
     - CalVer
