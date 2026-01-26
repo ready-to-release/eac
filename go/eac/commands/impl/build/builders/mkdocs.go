@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/books"
@@ -19,13 +20,46 @@ import (
 
 // pdfExportSemaphore limits concurrent PDF exports based on system memory.
 // mkdocs-exporter uses Playwright which is resource-intensive (~2-4GB per instance).
-// Concurrency is determined by available RAM:
-//   - < 8GB: 1 concurrent export
-//   - 8-16GB: 2 concurrent exports
-//   - >= 16GB: 3 concurrent exports
+// Initialized lazily to capture turbo mode setting from command-line.
+//
+// Concurrency is determined by RAM with low-RAM penalty for ≤16GB:
+//   - >16GB: 3 concurrent (4 with turbo)
+//   - 16GB: 2 concurrent (turbo ignored)
+//   - 8-16GB: 1 concurrent (turbo ignored)
+//   - <8GB: 1 concurrent (minimum)
 //
 // Preprocessing and other operations can run in parallel without this limit.
-var pdfExportSemaphore = make(chan struct{}, environments.GetPDFExportConcurrency())
+var (
+	pdfSemaphoreOnce    sync.Once
+	pdfExportSemaphore  chan struct{}
+	pdfConcurrencyLimit int
+)
+
+// isTurboMode checks if turbo mode is enabled via command-line flag.
+func isTurboMode() bool {
+	for _, arg := range os.Args {
+		if arg == "--turbo" || arg == "-T" {
+			return true
+		}
+	}
+	return false
+}
+
+// initPDFSemaphore lazily initializes the PDF export semaphore.
+// For low RAM systems (≤16GB), turbo is ignored to prevent resource exhaustion.
+func initPDFSemaphore() {
+	pdfSemaphoreOnce.Do(func() {
+		turbo := isTurboMode()
+		pdfConcurrencyLimit = environments.GetPDFExportConcurrencyWithTurbo(turbo)
+		pdfExportSemaphore = make(chan struct{}, pdfConcurrencyLimit)
+	})
+}
+
+// getPDFConcurrencyLimit returns the PDF semaphore capacity, initializing if needed.
+func getPDFConcurrencyLimit() int {
+	initPDFSemaphore()
+	return pdfConcurrencyLimit
+}
 
 // getPDFConcurrency returns the internal Playwright page concurrency for a single PDF export.
 // This controls how many pages within one book are rendered in parallel.
@@ -707,10 +741,12 @@ func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName, bo
 	}
 
 	// Acquire semaphore - limit concurrent PDF exports based on system memory
-	pdfConcurrencyLimit := cap(pdfExportSemaphore)
-	Logln(logWriter, "⏳ Waiting for PDF export slot (capacity: %d)...", pdfConcurrencyLimit)
+	// Lazily initializes semaphore on first use, capturing turbo mode setting
+	initPDFSemaphore()
+	capacity := getPDFConcurrencyLimit()
+	Logln(logWriter, "⏳ Waiting for PDF export slot (capacity: %d)...", capacity)
 	pdfExportSemaphore <- struct{}{}
-	Logln(logWriter, "🔓 Acquired PDF export slot (%d/%d in use)", len(pdfExportSemaphore), pdfConcurrencyLimit)
+	Logln(logWriter, "🔓 Acquired PDF export slot (%d/%d in use)", len(pdfExportSemaphore), capacity)
 
 	// Retry logic for PDF builds - Playwright can have transient timeouts
 	maxRetries := 2
