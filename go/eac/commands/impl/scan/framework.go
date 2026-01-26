@@ -167,12 +167,12 @@ func scanWorkerWrapper(ctx *cmdframework.ExecutionContext, moniker string, logWr
 
 	// Acquire lock for this module
 	lockCfg := locking.ScanConfig(moniker, paths.OutSecurityRelPath) // OutSecurityRelPath = "out/scan"
-	lockFile, err := locking.Acquire(ctx.WorkspaceRoot, lockCfg)
+	lockFile, err := locking.AcquireTracked(ctx.WorkspaceRoot, lockCfg, ctx.Orchestrator.GetRegistry())
 	if err != nil {
 		output.Writeln(logWriter, "Error: %v", err)
 		return 1
 	}
-	defer locking.Release(lockFile)
+	defer locking.ReleaseTracked(lockFile)
 
 	// Acquire scanner semaphore - only one of each scanner type runs at a time
 	sem := getScannerSemaphore(scanCfg.ScannerType)
@@ -252,12 +252,12 @@ func scanComponentWorker(ctx *cmdframework.ExecutionContext, moniker, component 
 
 	// Acquire lock for this component
 	lockCfg := locking.ComponentScanConfig(moniker, component, paths.OutSecurityRelPath)
-	lockFile, err := locking.Acquire(ctx.WorkspaceRoot, lockCfg)
+	lockFile, err := locking.AcquireTracked(ctx.WorkspaceRoot, lockCfg, ctx.Orchestrator.GetRegistry())
 	if err != nil {
 		output.Writeln(logWriter, "Error: %v", err)
 		return 1
 	}
-	defer locking.Release(lockFile)
+	defer locking.ReleaseTracked(lockFile)
 
 	// Get scanners from component type configuration
 	var scanners []internal.ScannerType
@@ -699,12 +699,12 @@ func multiScanWorker(ctx *cmdframework.ExecutionContext, moniker string, logWrit
 
 	// Acquire lock for this module
 	lockCfg := locking.ScanConfig(moniker, paths.OutSecurityRelPath) // OutSecurityRelPath = "out/scan"
-	lockFile, err := locking.Acquire(ctx.WorkspaceRoot, lockCfg)
+	lockFile, err := locking.AcquireTracked(ctx.WorkspaceRoot, lockCfg, ctx.Orchestrator.GetRegistry())
 	if err != nil {
 		output.Writeln(logWriter, "Error: %v", err)
 		return 1
 	}
-	defer locking.Release(lockFile)
+	defer locking.ReleaseTracked(lockFile)
 
 	// Determine which scanners to run
 	var scanners []internal.ScannerType

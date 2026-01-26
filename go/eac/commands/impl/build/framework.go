@@ -388,12 +388,12 @@ func buildWorker(ctx *cmdframework.ExecutionContext, moniker string, logWriter i
 	// Acquire lock (skip in dry-run)
 	if !ctx.Config.DryRun {
 		lockCfg := locking.BuildConfig(moniker, paths.OutBuildRelPath)
-		lockFile, err := locking.Acquire(ctx.WorkspaceRoot, lockCfg)
+		lockFile, err := locking.AcquireTracked(ctx.WorkspaceRoot, lockCfg, ctx.Orchestrator.GetRegistry())
 		if err != nil {
 			output.Writeln(logWriter, "Error: %v", err)
 			return 1
 		}
-		defer locking.Release(lockFile)
+		defer locking.ReleaseTracked(lockFile)
 	}
 
 	// Run the build
@@ -447,12 +447,12 @@ func buildComponentWorker(ctx *cmdframework.ExecutionContext, module, component 
 	// Use component-level locking to allow parallel builds of different components within the same module
 	if !ctx.Config.DryRun {
 		lockCfg := locking.ComponentBuildConfig(module, component, paths.OutBuildRelPath)
-		lockFile, err := locking.Acquire(ctx.WorkspaceRoot, lockCfg)
+		lockFile, err := locking.AcquireTracked(ctx.WorkspaceRoot, lockCfg, ctx.Orchestrator.GetRegistry())
 		if err != nil {
 			output.Writeln(logWriter, "Error: %v", err)
 			return 1
 		}
-		defer locking.Release(lockFile)
+		defer locking.ReleaseTracked(lockFile)
 	}
 
 	// Get the handler for this component

@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofrs/flock"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/internal/artifacts"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/internal/manifests"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/show"
@@ -66,7 +65,7 @@ type TestFrameworkConfig struct {
 	// Execution state
 	ExecCtx       *TestExecutionContext
 	TestStartTime time.Time
-	Lock          *flock.Flock
+	Lock          *locking.TrackedLock
 }
 
 // testSelectionStats tracks test selection statistics.
@@ -137,12 +136,12 @@ func testAfterInit(ctx *cmdframework.ExecutionContext) error {
 	// Acquire suite lock
 	repoCfg := ctx.EACConfig.Repository
 	lockCfg := locking.TestConfig(testCfg.SuiteName, repoCfg.Paths.Out.Test)
-	lock, err := locking.Acquire(ctx.WorkspaceRoot, lockCfg)
+	lock, err := locking.AcquireTracked(ctx.WorkspaceRoot, lockCfg, ctx.Orchestrator.GetRegistry())
 	if err != nil {
 		return fmt.Errorf("failed to acquire lock: %w", err)
 	}
 	testCfg.Lock = lock
-	ctx.AddCleanup(func() { locking.Release(lock) })
+	ctx.AddCleanup(func() { locking.ReleaseTracked(lock) })
 
 	// Create test output directory
 	testCfg.TestRunDir = filepath.Join(ctx.WorkspaceRoot, repoCfg.TestOutputDir())
