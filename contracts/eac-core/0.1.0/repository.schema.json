@@ -433,6 +433,20 @@
               "description": "Config file patterns (overrides component-type defaults)"
             }
           }
+        },
+        "build": {
+          "$ref": "#/definitions/module_build",
+          "description": "Build configuration for this component"
+        }
+      }
+    },
+    "post_build_config": {
+      "type": "object",
+      "description": "Post-build actions to execute after successful component build",
+      "properties": {
+        "copy_to": {
+          "type": "string",
+          "description": "Target path to copy build output (relative to workspace root)"
         }
       }
     },
@@ -503,6 +517,10 @@
         "options": {
           "$ref": "#/definitions/build_options",
           "description": "Build behavior options"
+        },
+        "post_build": {
+          "$ref": "#/definitions/post_build_config",
+          "description": "Post-build actions to execute after successful build"
         }
       }
     },

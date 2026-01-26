@@ -590,6 +590,9 @@ modules:
             - "*.json"
             - ".mocharc.json"
             - ".vscodeignore"
+        build:
+          post_build:
+            copy_to: ".vscode/extensions/vscode-ext-commit/out"
       markdown: typescript/vscode-ext-commit
       json: contracts/vscode-commit
       gherkin: specs/vscode-ext-commit

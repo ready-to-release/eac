@@ -97,9 +97,18 @@ type ModuleVersioning struct {
 
 // ModuleBuild contains per-module build configuration.
 type ModuleBuild struct {
-	Handler   string           `yaml:"handler,omitempty"`   // Explicit build handler override
-	Artifacts []ModuleArtifact `yaml:"artifacts,omitempty"` // Artifacts to produce
-	Options   *BuildOptions    `yaml:"options,omitempty"`   // Build behavior options
+	Handler   string           `yaml:"handler,omitempty"`    // Explicit build handler override
+	Artifacts []ModuleArtifact `yaml:"artifacts,omitempty"`  // Artifacts to produce
+	Options   *BuildOptions    `yaml:"options,omitempty"`    // Build behavior options
+	PostBuild *PostBuildConfig `yaml:"post_build,omitempty"` // Post-build actions
+}
+
+// PostBuildConfig contains post-build actions for a component.
+type PostBuildConfig struct {
+	// CopyTo specifies the target path to copy build output.
+	// Path is relative to workspace root.
+	// The target directory is cleaned before copying to avoid stale files.
+	CopyTo string `yaml:"copy_to,omitempty" json:"copy_to,omitempty"`
 }
 
 // ModuleArtifact defines an artifact to be produced by a module build.
@@ -130,6 +139,11 @@ func (b *ModuleBuild) Clone() *ModuleBuild {
 	}
 	if b.Options != nil {
 		clone.Options = &BuildOptions{}
+	}
+	if b.PostBuild != nil {
+		clone.PostBuild = &PostBuildConfig{
+			CopyTo: b.PostBuild.CopyTo,
+		}
 	}
 	return clone
 }

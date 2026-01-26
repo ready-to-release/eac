@@ -12,6 +12,7 @@ import (
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/dockerutil"
+	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/platform"
 )
 
@@ -107,12 +108,67 @@ func IsDockerAvailable() bool {
 	return dockerutil.IsDockerAvailable()
 }
 
-// ExecutePostBuildSteps runs any post-build steps defined for the module.
-// Returns non-zero exit code if any step fails.
-func ExecutePostBuildSteps(moniker, workspaceRoot, outputDir string, logWriter io.Writer) int {
-	// Post-build steps are expected to be defined at the module level
-	// This function is a placeholder for future implementation
+// ExecutePostBuildSteps runs any post-build steps defined for the component.
+// Parameters:
+//   - moniker: Module moniker
+//   - component: Component name (e.g., "typescript", "go")
+//   - workspaceRoot: Absolute path to repository root
+//   - outputDir: Absolute path to component build output (out/build/<module>/<component>/)
+//   - logWriter: Writer for log output
+//
+// Returns 0 on success, non-zero on failure.
+func ExecutePostBuildSteps(moniker, component, workspaceRoot, outputDir string, logWriter io.Writer) int {
+	cfg := config.Global()
+	if cfg == nil || cfg.Repository == nil {
+		return 0
+	}
+
+	// Get module configuration
+	module := cfg.Repository.GetByMoniker(moniker)
+	if module == nil {
+		return 0
+	}
+
+	// Get component entry
+	compEntry, ok := module.Components[component]
+	if !ok || compEntry == nil || compEntry.Build == nil || compEntry.Build.PostBuild == nil {
+		return 0
+	}
+
+	postBuild := compEntry.Build.PostBuild
+
+	// Execute copy_to if configured
+	if postBuild.CopyTo != "" {
+		targetPath := filepath.Join(workspaceRoot, postBuild.CopyTo)
+
+		// Validate target is within workspace (security check)
+		relPath, err := filepath.Rel(workspaceRoot, targetPath)
+		if err != nil || strings.HasPrefix(relPath, "..") {
+			Logln(logWriter, "Error: post-build copy_to path must be within workspace")
+			return 1
+		}
+
+		if err := executeCopyTo(outputDir, targetPath, logWriter); err != nil {
+			Logln(logWriter, "Error: post-build copy failed: %v", err)
+			return 1
+		}
+		Logln(logWriter, "Post-build: copied output to %s", postBuild.CopyTo)
+	}
+
 	return 0
+}
+
+// executeCopyTo copies build output to the target directory.
+// The target directory is cleaned first to avoid stale files.
+func executeCopyTo(srcDir, dstDir string, logWriter io.Writer) error {
+	// Clean the destination first to avoid stale files
+	if err := os.RemoveAll(dstDir); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to clean target directory: %w", err)
+	}
+
+	// Copy using existing CopyBuildOutput helper
+	// Skip log files and manifest, copy everything else
+	return CopyBuildOutput(srcDir, dstDir, nil, nil, logWriter)
 }
 
 // substituteVars replaces variable placeholders in a string.

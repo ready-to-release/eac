@@ -453,8 +453,16 @@ func runModuleBuild(module *modules.ModuleContract, workspaceRoot, outputDir str
 		}
 	}
 
-	// Execute post-build steps if build succeeded
-	return builders.ExecutePostBuildSteps(module.Moniker, workspaceRoot, outputDir, logWriter)
+	// Execute post-build steps for each component
+	for _, ch := range compHandlers {
+		componentOutputDir := paths.ComponentBuildOutputPath(workspaceRoot, module.Moniker, ch.Component)
+		exitCode := builders.ExecutePostBuildSteps(module.Moniker, ch.Component, workspaceRoot, componentOutputDir, logWriter)
+		if exitCode != 0 {
+			return exitCode
+		}
+	}
+
+	return 0
 }
 
 // verifyBuildDependenciesQuiet checks build dependencies silently and returns status for summary
