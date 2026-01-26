@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/locktracker"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/output"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
 )
@@ -24,6 +25,9 @@ type Orchestrator struct {
 	display         *displayManager
 	orchestratorOut io.Writer
 	logger          *log.Logger // goroutine-safe logger
+
+	// Lock tracking registry for visualization
+	registry *locktracker.Registry
 
 	// TUI console for real-time output display
 	tuiConsole *tui.Console
@@ -54,9 +58,13 @@ func New(config Config, worker WorkerFunc) *Orchestrator {
 		config.TUIHeight = tui.DefaultHeight
 	}
 
+	// Create lock tracking registry
+	registry := locktracker.NewRegistry()
+
 	o := &Orchestrator{
-		config: config,
-		worker: worker,
+		config:   config,
+		worker:   worker,
+		registry: registry,
 	}
 
 	// Initialize TUI console if enabled
@@ -113,7 +121,7 @@ func (o *Orchestrator) RunLayered(layers [][]string) ([]WorkResult, error) {
 
 	// Create and start display manager (only when TUI is not enabled)
 	if !o.config.TUI {
-		o.display = newDisplayManager(o.logger, o.config.ActionVerb, len(allMonikers), o.config.StatusUpdateInterval, false)
+		o.display = newDisplayManager(o.logger, o.config.ActionVerb, len(allMonikers), o.config.StatusUpdateInterval, false, o.registry)
 		o.display.start()
 	}
 
@@ -224,7 +232,7 @@ func (o *Orchestrator) Run(monikers []string) ([]WorkResult, error) {
 
 	// Create and start display manager (only when TUI is not enabled)
 	if !o.config.TUI {
-		o.display = newDisplayManager(o.logger, o.config.ActionVerb, len(monikers), o.config.StatusUpdateInterval, false)
+		o.display = newDisplayManager(o.logger, o.config.ActionVerb, len(monikers), o.config.StatusUpdateInterval, false, o.registry)
 		o.display.start()
 	}
 
@@ -481,6 +489,17 @@ func (o *Orchestrator) StopTUI() {
 func (o *Orchestrator) Close() {
 	// Stop TUI if not already stopped
 	o.StopTUI()
+
+	// Close lock tracking registry
+	if o.registry != nil {
+		o.registry.Close()
+	}
+}
+
+// GetRegistry returns the lock tracking registry.
+// Useful for external components that need lock visualization.
+func (o *Orchestrator) GetRegistry() *locktracker.Registry {
+	return o.registry
 }
 
 // tuiMarkRunning adds a module to the running list and updates TUI status.
@@ -505,6 +524,7 @@ func (o *Orchestrator) tuiMarkRunning(moniker string) {
 		Total:       total,
 		Layer:       layer,
 		TotalLayers: totalLayers,
+		Locks:       o.getLockStatuses(),
 	})
 }
 
@@ -537,7 +557,32 @@ func (o *Orchestrator) tuiMarkCompleted(moniker string) {
 		Total:       total,
 		Layer:       layer,
 		TotalLayers: totalLayers,
+		Locks:       o.getLockStatuses(),
 	})
+}
+
+// getLockStatuses returns current lock states from the registry.
+func (o *Orchestrator) getLockStatuses() []tui.LockStatus {
+	if o.registry == nil {
+		return nil
+	}
+
+	snapshot := o.registry.Snapshot()
+	if len(snapshot) == 0 {
+		return nil
+	}
+
+	locks := make([]tui.LockStatus, 0, len(snapshot))
+	for _, info := range snapshot {
+		locks = append(locks, tui.LockStatus{
+			Name:     info.Name,
+			Type:     string(info.Type),
+			Capacity: int(info.Capacity),
+			Used:     int(info.Used),
+			Waiting:  int(info.Waiting),
+		})
+	}
+	return locks
 }
 
 // SetPhase switches the TUI to a specific phase (Init, Run, End).
@@ -714,7 +759,7 @@ func (o *Orchestrator) RunComponentsLayered(layers [][]ComponentWork, worker Com
 	}
 
 	// Create component scheduler
-	scheduler := NewComponentScheduler(o.config, o.tuiConsole)
+	scheduler := NewComponentScheduler(o.config, o.tuiConsole, o.registry)
 
 	// Start TUI console if enabled
 	if o.tuiConsole != nil {
@@ -742,7 +787,7 @@ func (o *Orchestrator) RunComponentsLayered(layers [][]ComponentWork, worker Com
 
 	// Create and start display manager (only when TUI is not enabled)
 	if !o.config.TUI {
-		o.display = newDisplayManager(o.logger, o.config.ActionVerb, len(allWork), o.config.StatusUpdateInterval, false)
+		o.display = newDisplayManager(o.logger, o.config.ActionVerb, len(allWork), o.config.StatusUpdateInterval, false, o.registry)
 		o.display.start()
 	}
 
@@ -827,7 +872,7 @@ func (o *Orchestrator) RunComponentsParallel(work []ComponentWork, worker Compon
 	}
 
 	// Create component scheduler
-	scheduler := NewComponentScheduler(o.config, o.tuiConsole)
+	scheduler := NewComponentScheduler(o.config, o.tuiConsole, o.registry)
 
 	// Start TUI console if enabled
 	if o.tuiConsole != nil {
@@ -855,7 +900,7 @@ func (o *Orchestrator) RunComponentsParallel(work []ComponentWork, worker Compon
 
 	// Create and start display manager (only when TUI is not enabled)
 	if !o.config.TUI {
-		o.display = newDisplayManager(o.logger, o.config.ActionVerb, len(work), o.config.StatusUpdateInterval, false)
+		o.display = newDisplayManager(o.logger, o.config.ActionVerb, len(work), o.config.StatusUpdateInterval, false, o.registry)
 		o.display.start()
 	}
 

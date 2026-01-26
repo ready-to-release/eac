@@ -32,6 +32,18 @@ type Status struct {
 	Total       int
 	Layer       int // Current layer being executed (1-indexed, 0 = not using layers)
 	TotalLayers int // Total number of layers (0 = not using layers)
+
+	// Detailed lock tracking info (from locktracker.Registry)
+	Locks []LockStatus // Individual lock states
+}
+
+// LockStatus represents the state of a single lock.
+type LockStatus struct {
+	Name     string // Lock name (e.g., "component-scheduler", "module:books")
+	Type     string // Lock type: "semaphore", "weighted", "filelock"
+	Capacity int    // Total capacity (for semaphores/weighted)
+	Used     int    // Currently in use
+	Waiting  int    // Waiting for this lock
 }
 
 // PhaseUpdateMsg is sent when a phase changes state (exported for tui package).

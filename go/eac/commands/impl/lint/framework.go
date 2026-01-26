@@ -254,12 +254,12 @@ func lintWorker(ctx *cmdframework.ExecutionContext, moniker string, logWriter io
 
 	// Acquire lock for this module
 	lockCfg := locking.LintConfig(moniker, paths.OutLintRelPath)
-	lockFile, err := locking.Acquire(ctx.WorkspaceRoot, lockCfg)
+	lockFile, err := locking.AcquireTracked(ctx.WorkspaceRoot, lockCfg, ctx.Orchestrator.GetRegistry())
 	if err != nil {
 		output.Writeln(logWriter, "Error: %v", err)
 		return 1
 	}
-	defer locking.Release(lockFile)
+	defer locking.ReleaseTracked(lockFile)
 
 	// Create output directory
 	outputDir := paths.LintOutputPath(ctx.WorkspaceRoot, moniker)
@@ -367,12 +367,12 @@ func lintComponentWorker(ctx *cmdframework.ExecutionContext, module, component s
 	componentDir := compName + "_" + providerName
 	if !ctx.Config.DryRun {
 		lockCfg := locking.ComponentLintConfig(module, componentDir, paths.OutLintRelPath)
-		lockFile, err := locking.Acquire(ctx.WorkspaceRoot, lockCfg)
+		lockFile, err := locking.AcquireTracked(ctx.WorkspaceRoot, lockCfg, ctx.Orchestrator.GetRegistry())
 		if err != nil {
 			output.Writeln(logWriter, "Error: %v", err)
 			return 1
 		}
-		defer locking.Release(lockFile)
+		defer locking.ReleaseTracked(lockFile)
 	}
 
 	// Create output directory for this module+component+provider

@@ -1,9 +1,16 @@
+//go:build L1
+
 package locking
 
 import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
+
+	"github.com/ready-to-release/eac/go/eac/commands/internal/locktracker"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAcquireAndRelease(t *testing.T) {
@@ -140,4 +147,144 @@ func TestManualTestFileConfig(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Lock tracking tests
+
+func TestAcquireTracked_RegistersWithRegistry(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "locking-test-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+
+	registry := locktracker.NewRegistry()
+	cfg := Config{
+		BaseDir:      "locks",
+		Identifier:   "test-module",
+		ResourceType: "module",
+		ActionVerb:   "already being built",
+	}
+
+	lock, err := AcquireTracked(tempDir, cfg, registry)
+	require.NoError(t, err)
+	defer ReleaseTracked(lock)
+
+	snapshot := registry.Snapshot()
+	require.Len(t, snapshot, 1)
+
+	var info locktracker.LockInfo
+	for _, v := range snapshot {
+		info = v
+	}
+
+	assert.Equal(t, locktracker.LockTypeFileLock, info.Type)
+	assert.Equal(t, "module:test-module", info.Name)
+	assert.Equal(t, int64(1), info.Used) // File lock is either held (1) or not (0)
+}
+
+func TestReleaseTracked_UnregistersFromRegistry(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "locking-test-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+
+	registry := locktracker.NewRegistry()
+	cfg := Config{
+		BaseDir:      "locks",
+		Identifier:   "test-module",
+		ResourceType: "module",
+		ActionVerb:   "already being built",
+	}
+
+	lock, err := AcquireTracked(tempDir, cfg, registry)
+	require.NoError(t, err)
+
+	// Verify lock is registered
+	snapshot := registry.Snapshot()
+	require.Len(t, snapshot, 1)
+
+	// Release the lock
+	ReleaseTracked(lock)
+
+	// Verify lock is unregistered
+	snapshot = registry.Snapshot()
+	assert.Len(t, snapshot, 0, "registry should be empty after release")
+}
+
+func TestAcquireTracked_Events(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "locking-test-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+
+	registry := locktracker.NewRegistry()
+
+	// Subscribe to events
+	eventCh := make(chan locktracker.LockEvent, 10)
+	unsubscribe := registry.Subscribe(eventCh)
+	defer unsubscribe()
+
+	cfg := Config{
+		BaseDir:      "locks",
+		Identifier:   "test-module",
+		ResourceType: "module",
+		ActionVerb:   "already being built",
+	}
+
+	lock, err := AcquireTracked(tempDir, cfg, registry)
+	require.NoError(t, err)
+
+	// Should receive EventAcquired
+	select {
+	case event := <-eventCh:
+		assert.Equal(t, locktracker.EventAcquired, event.Type)
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("expected EventAcquired event")
+	}
+
+	// Release the lock
+	ReleaseTracked(lock)
+
+	// Should receive EventReleased
+	select {
+	case event := <-eventCh:
+		assert.Equal(t, locktracker.EventReleased, event.Type)
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("expected EventReleased event")
+	}
+}
+
+func TestReleaseTracked_Nil(t *testing.T) {
+	// Should not panic
+	ReleaseTracked(nil)
+}
+
+func TestTrackedLock_AcquiredAt(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "locking-test-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+
+	registry := locktracker.NewRegistry()
+	cfg := Config{
+		BaseDir:      "locks",
+		Identifier:   "test-module",
+		ResourceType: "module",
+		ActionVerb:   "already being built",
+	}
+
+	beforeAcquire := time.Now()
+	lock, err := AcquireTracked(tempDir, cfg, registry)
+	require.NoError(t, err)
+	defer ReleaseTracked(lock)
+	afterAcquire := time.Now()
+
+	snapshot := registry.Snapshot()
+	require.Len(t, snapshot, 1)
+
+	var info locktracker.LockInfo
+	for _, v := range snapshot {
+		info = v
+	}
+
+	assert.True(t, info.AcquiredAt.After(beforeAcquire) || info.AcquiredAt.Equal(beforeAcquire),
+		"AcquiredAt should be after or equal to beforeAcquire")
+	assert.True(t, info.AcquiredAt.Before(afterAcquire) || info.AcquiredAt.Equal(afterAcquire),
+		"AcquiredAt should be before or equal to afterAcquire")
 }
