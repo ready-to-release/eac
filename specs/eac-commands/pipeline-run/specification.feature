@@ -10,7 +10,6 @@ Feature: eac-commands_pipeline-run
 
   Rule: Pipeline executes modules in dependency order
 
-    @skip:wip
     Scenario: Run pipeline for all modules
       Given modules exist with dependencies:
         | moniker    | depends_on |

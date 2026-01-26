@@ -1,12 +1,19 @@
 package github
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
 	"time"
+)
+
+// Compile-time interface checks
+var (
+	_ API         = (*GHClient)(nil)
+	_ CLIExecutor = (*GHClient)(nil)
 )
 
 // ErrRunNotFound is returned when a workflow run is not found for the given SHA.
@@ -166,4 +173,25 @@ func (c *GHClient) ReleaseExists(tag string) (bool, error) {
 		return false, nil
 	}
 	return true, nil
+}
+
+// Exec executes a raw GitHub CLI command.
+// This is a low-level method - prefer using the typed methods above when possible.
+func (c *GHClient) Exec(args ...string) ([]byte, error) {
+	return c.ExecContext(context.Background(), args...)
+}
+
+// ExecContext executes a raw GitHub CLI command with context support.
+// This is a low-level method - prefer using the typed methods above when possible.
+func (c *GHClient) ExecContext(ctx context.Context, args ...string) ([]byte, error) {
+	cmd := exec.CommandContext(ctx, "gh", args...)
+	if c.workDir != "" {
+		cmd.Dir = c.workDir
+	}
+
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("gh command failed: %w", err)
+	}
+	return output, nil
 }

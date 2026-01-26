@@ -3,7 +3,10 @@
 // unit testing with mocks.
 package github
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 // WorkflowRun represents a GitHub Actions workflow run.
 type WorkflowRun struct {
@@ -59,4 +62,14 @@ func SetGlobal(api API) {
 // Returns nil if not set - callers should check.
 func Global() API {
 	return global
+}
+
+// CLIExecutor defines the interface for executing GitHub CLI commands.
+// Implementations include GHClient (real) and CLIMock (testing).
+type CLIExecutor interface {
+	// Exec executes a GitHub CLI command and returns output.
+	Exec(args ...string) ([]byte, error)
+
+	// ExecContext executes a GitHub CLI command with context support.
+	ExecContext(ctx context.Context, args ...string) ([]byte, error)
 }
