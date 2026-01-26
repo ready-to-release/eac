@@ -3,9 +3,24 @@
   "enableAllProjectMcpServers": true,
   "permissions": {
     "defaultMode": "bypassPermissions",
-    "allow": ["Bash(git status:*)", "Bash(git log:*)"],
+    "allow": [],
     "ask": [],
-    "deny": ["Bash(git:*)"]
+    "deny": [
+      "Bash(git push*)",
+      "Bash(git commit*)",
+      "Bash(git reset*)",
+      "Bash(git checkout*)",
+      "Bash(git rebase*)",
+      "Bash(git merge*)",
+      "Bash(git cherry-pick*)",
+      "Bash(git revert*)",
+      "Bash(git stash*)",
+      "Bash(git branch -d*)",
+      "Bash(git branch -D*)",
+      "Bash(git tag*)",
+      "Bash(git clean*)",
+      "Bash(git restore*)"
+    ]
   },
   "hooks": {
   },
