@@ -48,6 +48,22 @@ type Summary struct {
 
 	// Component count - total components to process across all modules
 	ComponentCount int
+
+	// Parallelism configuration
+	Parallelism *ParallelismInfo // nil if not set
+}
+
+// ParallelismInfo captures parallelism configuration for display.
+type ParallelismInfo struct {
+	Mode             string // "ci" or "devbox"
+	BaseWorkers      int    // From config
+	TurboBoost       int    // Additional workers (0 if not turbo)
+	EffectiveWorkers int    // Final worker count
+
+	// Semaphore capacities
+	ScannerCapacity  int // Per-scanner-type capacity
+	PDFCapacity      int // PDF export slots
+	WeightedCapacity int // Component scheduler capacity
 }
 
 // Flags captures all command-line flags that affect execution.
@@ -259,6 +275,12 @@ func (s *Summary) SetComponentCount(count int) *Summary {
 	return s
 }
 
+// SetParallelism sets the parallelism configuration.
+func (s *Summary) SetParallelism(info *ParallelismInfo) *Summary {
+	s.Parallelism = info
+	return s
+}
+
 // HasDepmAdded returns true if module dependencies were added to the request.
 func (s *Summary) HasDepmAdded() bool {
 	return len(s.AddedDepm) > 0
@@ -277,6 +299,11 @@ func (s *Summary) HasTestInfo() bool {
 // HasArtifactValidation returns true if artifact validation was performed.
 func (s *Summary) HasArtifactValidation() bool {
 	return s.ArtifactValidation != nil
+}
+
+// HasParallelism returns true if parallelism info was set.
+func (s *Summary) HasParallelism() bool {
+	return s.Parallelism != nil
 }
 
 // TotalModules returns the total number of modules to be processed.
@@ -310,4 +337,112 @@ func (s *Summary) IsBuild() bool {
 // IsTest returns true if this is a test command.
 func (s *Summary) IsTest() bool {
 	return s.Command == "test"
+}
+
+// FormatInitLine generates a concise one-line initialization summary.
+// Format: "build [devbox] | 12 modules (+3 deps) | 45 components | 4 layers | workers:8+2 (turbo) | [tidy,tui]"
+func (s *Summary) FormatInitLine() string {
+	parts := []string{}
+
+	// Command and environment
+	parts = append(parts, s.Command+" ["+s.ExecutionContext+"]")
+
+	// Module count
+	moduleInfo := formatModuleCount(len(s.CalculatedModules), len(s.AddedDepm))
+	parts = append(parts, moduleInfo)
+
+	// Component count if available
+	if s.ComponentCount > 0 {
+		parts = append(parts, formatInt(s.ComponentCount)+" components")
+	}
+
+	// Layer info
+	if s.LayerCount > 0 && !s.FlatExecution {
+		parts = append(parts, formatInt(s.LayerCount)+" layers")
+	} else if s.FlatExecution {
+		parts = append(parts, "parallel")
+	}
+
+	// Parallelism info
+	if s.HasParallelism() {
+		p := s.Parallelism
+		workerInfo := "workers:" + formatInt(p.EffectiveWorkers)
+		if p.TurboBoost > 0 {
+			workerInfo += "+" + formatInt(p.TurboBoost)
+		}
+		parts = append(parts, workerInfo)
+	}
+
+	// Flags (compact)
+	flags := formatActiveFlags(s.Flags)
+	if len(flags) > 0 {
+		parts = append(parts, "["+joinStrings(flags, ",")+"]")
+	}
+
+	return joinStrings(parts, " | ")
+}
+
+// formatModuleCount formats module count with optional deps.
+func formatModuleCount(total, added int) string {
+	if added > 0 {
+		return formatInt(total) + " modules (+" + formatInt(added) + " deps)"
+	}
+	return formatInt(total) + " modules"
+}
+
+// formatInt converts int to string.
+func formatInt(n int) string {
+	return formatIntHelper(n)
+}
+
+// formatIntHelper is a simple int to string conversion.
+func formatIntHelper(n int) string {
+	if n == 0 {
+		return "0"
+	}
+	if n < 0 {
+		return "-" + formatIntHelper(-n)
+	}
+	result := ""
+	for n > 0 {
+		result = string(rune('0'+n%10)) + result
+		n /= 10
+	}
+	return result
+}
+
+// formatActiveFlags returns a list of active flag names.
+func formatActiveFlags(f Flags) []string {
+	flags := []string{}
+	if f.TidyFirst {
+		flags = append(flags, "tidy")
+	}
+	if f.ForceRebuild {
+		flags = append(flags, "rebuild")
+	}
+	if f.DryRun {
+		flags = append(flags, "dry-run")
+	}
+	if f.UseTUI {
+		flags = append(flags, "tui")
+	}
+	if f.SkipDepm {
+		flags = append(flags, "skip-depm")
+	}
+	if f.SkipDeps {
+		flags = append(flags, "skip-deps")
+	}
+	return flags
+}
+
+// joinStrings joins strings with a separator.
+func joinStrings(parts []string, sep string) string {
+	if len(parts) == 0 {
+		return ""
+	}
+	result := parts[0]
+	for i := 1; i < len(parts); i++ {
+		result += sep + parts[i]
+	}
+	return result
 }

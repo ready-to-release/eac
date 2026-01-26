@@ -1,3 +1,5 @@
+//go:build L1
+
 package initsummary
 
 import (
@@ -331,4 +333,152 @@ func TestTestSummaryChaining(t *testing.T) {
 	if !s.ArtifactValidation.AllPresent {
 		t.Error("Artifacts should all be present")
 	}
+}
+
+func TestSetParallelism(t *testing.T) {
+	tests := []struct {
+		name     string
+		parallel *ParallelismInfo
+		hasInfo  bool
+	}{
+		{
+			name:     "nil parallelism",
+			parallel: nil,
+			hasInfo:  false,
+		},
+		{
+			name: "devbox mode",
+			parallel: &ParallelismInfo{
+				Mode:             "devbox",
+				BaseWorkers:      8,
+				TurboBoost:       2,
+				EffectiveWorkers: 10,
+			},
+			hasInfo: true,
+		},
+		{
+			name: "ci mode",
+			parallel: &ParallelismInfo{
+				Mode:             "ci",
+				BaseWorkers:      4,
+				TurboBoost:       0,
+				EffectiveWorkers: 4,
+			},
+			hasInfo: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := New("build").SetParallelism(tt.parallel)
+
+			if s.HasParallelism() != tt.hasInfo {
+				t.Errorf("HasParallelism() = %v, want %v", s.HasParallelism(), tt.hasInfo)
+			}
+
+			if tt.hasInfo {
+				if s.Parallelism.Mode != tt.parallel.Mode {
+					t.Errorf("Mode = %q, want %q", s.Parallelism.Mode, tt.parallel.Mode)
+				}
+				if s.Parallelism.EffectiveWorkers != tt.parallel.EffectiveWorkers {
+					t.Errorf("EffectiveWorkers = %d, want %d",
+						s.Parallelism.EffectiveWorkers, tt.parallel.EffectiveWorkers)
+				}
+			}
+		})
+	}
+}
+
+func TestParallelismInfo_FullConfig(t *testing.T) {
+	s := New("build").
+		SetParallelism(&ParallelismInfo{
+			Mode:             "devbox",
+			BaseWorkers:      8,
+			TurboBoost:       2,
+			EffectiveWorkers: 10,
+			ScannerCapacity:  3,
+			PDFCapacity:      4,
+			WeightedCapacity: 10,
+		})
+
+	if !s.HasParallelism() {
+		t.Fatal("should have parallelism info")
+	}
+
+	p := s.Parallelism
+	if p.ScannerCapacity != 3 {
+		t.Errorf("ScannerCapacity = %d, want 3", p.ScannerCapacity)
+	}
+	if p.PDFCapacity != 4 {
+		t.Errorf("PDFCapacity = %d, want 4", p.PDFCapacity)
+	}
+	if p.WeightedCapacity != 10 {
+		t.Errorf("WeightedCapacity = %d, want 10", p.WeightedCapacity)
+	}
+}
+
+func TestFormatInitLine(t *testing.T) {
+	tests := []struct {
+		name     string
+		summary  *Summary
+		contains []string
+	}{
+		{
+			name: "build with parallelism",
+			summary: New("build").
+				SetExecutionContext("devbox").
+				SetRequest([]string{"a", "b"}, []string{"a", "b", "c"}).
+				SetExecutionPlan([][]string{{"a", "b"}, {"c"}}).
+				SetComponentCount(45).
+				SetParallelism(&ParallelismInfo{
+					Mode:             "devbox",
+					BaseWorkers:      8,
+					TurboBoost:       2,
+					EffectiveWorkers: 10,
+				}),
+			contains: []string{"build", "devbox", "3 modules", "2 layers", "workers:10"},
+		},
+		{
+			name: "build without turbo",
+			summary: New("build").
+				SetExecutionContext("ci").
+				SetRequest([]string{"a"}, []string{"a"}).
+				SetParallelism(&ParallelismInfo{
+					Mode:             "ci",
+					BaseWorkers:      4,
+					TurboBoost:       0,
+					EffectiveWorkers: 4,
+				}),
+			contains: []string{"build", "ci", "workers:4"},
+		},
+		{
+			name: "build flat execution",
+			summary: New("build").
+				SetExecutionContext("local").
+				SetRequest([]string{"a", "b"}, []string{"a", "b"}).
+				SetExecutionPlan([][]string{{"a"}, {"b"}}).
+				SetFlatExecution(true),
+			contains: []string{"parallel"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.summary.FormatInitLine()
+			for _, want := range tt.contains {
+				if !containsSubstring(result, want) {
+					t.Errorf("FormatInitLine() = %q, want to contain %q", result, want)
+				}
+			}
+		})
+	}
+}
+
+func containsSubstring(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
 }

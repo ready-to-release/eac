@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/locktracker"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/output"
 )
 
@@ -26,8 +27,9 @@ type displayManager struct {
 	completionChan   chan *WorkResult
 	statusTicker     *time.Ticker
 	done             chan bool
-	completedResults []*WorkResult // collected results for summary generation
-	tuiMode          bool          // when true, skip running list (TUI tabs show it)
+	completedResults []*WorkResult         // collected results for summary generation
+	tuiMode          bool                  // when true, skip running list (TUI tabs show it)
+	registry         *locktracker.Registry // lock tracker registry for status display
 }
 
 // newDisplayManager creates a new display manager.
@@ -246,10 +248,19 @@ func (dm *displayManager) displayStatus() {
 		failedStr = fmt.Sprintf(" (%d failed)", dm.failed)
 	}
 
+	// Get lock info if registry is available
+	lockStr := ""
+	if dm.registry != nil {
+		lockStr = formatLockInfo(dm.registry)
+		if lockStr != "" {
+			lockStr = " | " + lockStr
+		}
+	}
+
 	// In TUI mode, skip the running list - TUI tabs already show running modules
 	if dm.tuiMode {
-		dm.logger.Printf("Status: %s elapsed, %d/%d completed%s. %d running%s",
-			formatDuration(elapsed), dm.completed, dm.total, failedStr, runningCount, LineEndingPrefix)
+		dm.logger.Printf("Status: %s elapsed, %d/%d completed%s. %d running%s%s",
+			formatDuration(elapsed), dm.completed, dm.total, failedStr, runningCount, lockStr, LineEndingPrefix)
 		return
 	}
 
@@ -269,8 +280,46 @@ func (dm *displayManager) displayStatus() {
 		nameList += name
 	}
 
-	dm.logger.Printf("Status: %s elapsed, %d/%d completed%s. %d running (%s)%s",
-		formatDuration(elapsed), dm.completed, dm.total, failedStr, runningCount, nameList, LineEndingPrefix)
+	dm.logger.Printf("Status: %s elapsed, %d/%d completed%s. %d running (%s)%s%s",
+		formatDuration(elapsed), dm.completed, dm.total, failedStr, runningCount, nameList, lockStr, LineEndingPrefix)
+}
+
+// formatLockInfo returns a compact string describing lock status.
+// Returns empty string if no locks or registry is nil.
+func formatLockInfo(registry *locktracker.Registry) string {
+	if registry == nil {
+		return ""
+	}
+
+	summary := registry.Summary()
+	if summary.Total == 0 {
+		return ""
+	}
+
+	var parts []string
+
+	// Show semaphore/weighted usage (combined capacity)
+	if summary.TotalCapacity > 0 {
+		parts = append(parts, fmt.Sprintf("slots:%d/%d",
+			summary.TotalUsed, summary.TotalCapacity))
+	}
+
+	// Show waiting if any
+	if summary.TotalWaiting > 0 {
+		parts = append(parts, fmt.Sprintf("wait:%d", summary.TotalWaiting))
+	}
+
+	// Show file lock count
+	fileLocks := summary.ByType[locktracker.LockTypeFileLock]
+	if fileLocks > 0 {
+		parts = append(parts, fmt.Sprintf("locks:%d", fileLocks))
+	}
+
+	if len(parts) == 0 {
+		return ""
+	}
+
+	return strings.Join(parts, " ")
 }
 
 // formatDuration formats a duration as "1m 23s" or "45s".

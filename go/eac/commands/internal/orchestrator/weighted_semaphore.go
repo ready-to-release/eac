@@ -2,6 +2,9 @@ package orchestrator
 
 import (
 	"sync"
+
+	"github.com/google/uuid"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/locktracker"
 )
 
 // WeightedSemaphore controls concurrent access based on resource weight.
@@ -17,9 +20,18 @@ type WeightedSemaphore struct {
 	cond     *sync.Cond
 	capacity int
 	used     int
+	waiting  int // Count of goroutines waiting to acquire
+
+	// Lock tracking
+	id       string
+	name     string
+	registry *locktracker.Registry
+	closed   bool
 }
 
 // NewWeightedSemaphore creates a semaphore with the given capacity.
+// This creates a semaphore without lock tracking. Use NewWeightedSemaphoreWithRegistry
+// for semaphores that should be tracked.
 func NewWeightedSemaphore(capacity int) *WeightedSemaphore {
 	ws := &WeightedSemaphore{
 		capacity: capacity,
@@ -29,28 +41,75 @@ func NewWeightedSemaphore(capacity int) *WeightedSemaphore {
 	return ws
 }
 
+// NewWeightedSemaphoreWithRegistry creates a semaphore with lock tracking.
+// The semaphore is registered with the provided registry and will report
+// capacity usage and waiting counts in real-time.
+func NewWeightedSemaphoreWithRegistry(name string, capacity int, registry *locktracker.Registry) *WeightedSemaphore {
+	ws := &WeightedSemaphore{
+		capacity: capacity,
+		used:     0,
+		id:       uuid.New().String(),
+		name:     name,
+		registry: registry,
+	}
+	ws.cond = sync.NewCond(&ws.mu)
+
+	// Register with the lock tracker
+	ws.registry.Register(locktracker.LockInfo{
+		ID:       ws.id,
+		Type:     locktracker.LockTypeWeighted,
+		Name:     name,
+		Capacity: int64(capacity),
+		Used:     0,
+		Waiting:  0,
+	})
+
+	return ws
+}
+
 // Acquire blocks until the requested weight can be allocated.
 // If weight exceeds capacity, it will still proceed (blocking all others).
 func (ws *WeightedSemaphore) Acquire(weight int) {
 	ws.mu.Lock()
 	defer ws.mu.Unlock()
 
+	// Track waiting if we'll need to wait
+	needsWait := false
+
 	// Handle edge case: if weight > capacity, we still allow it
 	// but it blocks everything else until done
 	if weight > ws.capacity {
 		// Wait for all current work to complete
+		if ws.used > 0 {
+			needsWait = true
+			ws.waiting++
+			ws.updateRegistry()
+		}
 		for ws.used > 0 {
 			ws.cond.Wait()
 		}
+		if needsWait {
+			ws.waiting--
+		}
 		ws.used = weight
+		ws.updateRegistry()
 		return
 	}
 
 	// Normal case: wait until we have enough capacity
+	if ws.used+weight > ws.capacity {
+		needsWait = true
+		ws.waiting++
+		ws.updateRegistry()
+	}
 	for ws.used+weight > ws.capacity {
 		ws.cond.Wait()
 	}
+	if needsWait {
+		ws.waiting--
+	}
 	ws.used += weight
+	ws.updateRegistry()
 }
 
 // TryAcquire attempts to acquire the requested weight without blocking.
@@ -73,6 +132,7 @@ func (ws *WeightedSemaphore) Release(weight int) {
 	if ws.used < 0 {
 		ws.used = 0 // Safety: don't go negative
 	}
+	ws.updateRegistry()
 	ws.cond.Broadcast()
 	ws.mu.Unlock()
 }
@@ -96,4 +156,26 @@ func (ws *WeightedSemaphore) Available() int {
 	ws.mu.Lock()
 	defer ws.mu.Unlock()
 	return ws.capacity - ws.used
+}
+
+// Close unregisters the semaphore from tracking.
+// Should be called when the semaphore is no longer needed.
+func (ws *WeightedSemaphore) Close() {
+	ws.mu.Lock()
+	defer ws.mu.Unlock()
+
+	if ws.closed || ws.registry == nil {
+		return
+	}
+	ws.closed = true
+	ws.registry.Unregister(ws.id)
+}
+
+// updateRegistry sends current state to the lock tracker.
+// Must be called with mu held.
+func (ws *WeightedSemaphore) updateRegistry() {
+	if ws.registry == nil {
+		return
+	}
+	ws.registry.UpdateSemaphore(ws.id, int64(ws.used), int64(ws.waiting))
 }
