@@ -1,6 +1,8 @@
 package console
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -30,6 +32,9 @@ type Model struct {
 	totalLayers int       // Total number of layers (0 = not using layers)
 	startTime   time.Time // Execution start
 	lastError   *Line     // Most recent error (sticky display)
+
+	// Lock tracking info (from locktracker.Registry)
+	locks []LockStatus // Individual lock states
 
 	// Per-module tab tracking for Run phase
 	moduleStates  map[string]*ModuleState // Per-module state (running, completed, failed)
@@ -403,4 +408,46 @@ func (m *Model) GetActiveModuleBuffer() *RingBuffer {
 func (m *Model) CleanupDecayedTabs() {
 	// Tabs are now removed instantly when modules complete
 	// This function is kept for compatibility but does nothing
+}
+
+// formatLockInfo returns a compact string describing lock status.
+// Returns empty string if no locks are active.
+func (m Model) formatLockInfo() string {
+	if len(m.locks) == 0 {
+		return ""
+	}
+
+	var parts []string
+
+	for _, lock := range m.locks {
+		switch lock.Type {
+		case "semaphore", "weighted":
+			// Show capacity usage: "name:used/cap"
+			if lock.Capacity > 0 {
+				part := fmt.Sprintf("%s:%d/%d", lock.Name, lock.Used, lock.Capacity)
+				if lock.Waiting > 0 {
+					part += fmt.Sprintf("(w%d)", lock.Waiting)
+				}
+				parts = append(parts, part)
+			}
+		case "filelock":
+			// Show file lock: "name:locked"
+			if lock.Used > 0 {
+				parts = append(parts, fmt.Sprintf("%s:🔒", lock.Name))
+			}
+		default:
+			// Generic display
+			if lock.Capacity > 0 {
+				parts = append(parts, fmt.Sprintf("%s:%d/%d", lock.Name, lock.Used, lock.Capacity))
+			} else if lock.Used > 0 {
+				parts = append(parts, fmt.Sprintf("%s:active", lock.Name))
+			}
+		}
+	}
+
+	if len(parts) == 0 {
+		return ""
+	}
+
+	return strings.Join(parts, " ")
 }

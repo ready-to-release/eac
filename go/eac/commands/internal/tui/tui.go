@@ -446,6 +446,9 @@ type PhaseStatus = console.PhaseStatus
 // SummaryData is an alias for console.SummaryData for public use.
 type SummaryData = console.SummaryData
 
+// LockStatus is an alias for console.LockStatus for public use.
+type LockStatus = console.LockStatus
+
 // Level constants for public use.
 const (
 	LevelInfo  = console.LevelInfo

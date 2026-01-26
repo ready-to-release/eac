@@ -195,6 +195,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.layer = status.Layer
 		m.totalLayers = status.TotalLayers
 
+		// Update lock tracking info
+		m.locks = status.Locks
+
 		if !m.statusDone {
 			return m, m.listenForStatus()
 		}

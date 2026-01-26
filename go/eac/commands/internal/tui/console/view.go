@@ -233,6 +233,12 @@ func (m Model) renderPaneHeader(phase Phase) string {
 			m.completed,
 			m.total,
 		)
+
+		// Add lock info if available
+		lockInfo := m.formatLockInfo()
+		if lockInfo != "" {
+			left += " " + Styles.Dim.Render("│") + " " + Styles.Dim.Render(lockInfo)
+		}
 	}
 
 	// Add summary for completed phases

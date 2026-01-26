@@ -524,6 +524,7 @@ func (o *Orchestrator) tuiMarkRunning(moniker string) {
 		Total:       total,
 		Layer:       layer,
 		TotalLayers: totalLayers,
+		Locks:       o.getLockStatuses(),
 	})
 }
 
@@ -556,7 +557,32 @@ func (o *Orchestrator) tuiMarkCompleted(moniker string) {
 		Total:       total,
 		Layer:       layer,
 		TotalLayers: totalLayers,
+		Locks:       o.getLockStatuses(),
 	})
+}
+
+// getLockStatuses returns current lock states from the registry.
+func (o *Orchestrator) getLockStatuses() []tui.LockStatus {
+	if o.registry == nil {
+		return nil
+	}
+
+	snapshot := o.registry.Snapshot()
+	if len(snapshot) == 0 {
+		return nil
+	}
+
+	locks := make([]tui.LockStatus, 0, len(snapshot))
+	for _, info := range snapshot {
+		locks = append(locks, tui.LockStatus{
+			Name:     info.Name,
+			Type:     string(info.Type),
+			Capacity: int(info.Capacity),
+			Used:     int(info.Used),
+			Waiting:  int(info.Waiting),
+		})
+	}
+	return locks
 }
 
 // SetPhase switches the TUI to a specific phase (Init, Run, End).
