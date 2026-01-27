@@ -69,7 +69,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
-	systemdeps "github.com/ready-to-release/eac/go/eac/core/system-deps"
+	"github.com/ready-to-release/eac/go/eac/core/tool"
 )
 
 var log = logging.C()
@@ -166,6 +166,7 @@ func Build() int {
 	useTUI := env.ShouldUseTUI() // TUI enabled by default for local console mode
 	tuiExplicitlySet := false
 	tuiHeight := tui.DefaultHeight // TUI console height
+	tuiASCII := false              // Use ASCII-only characters in TUI
 
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
@@ -205,6 +206,8 @@ func Build() int {
 		case "--no-tui":
 			useTUI = false
 			tuiExplicitlySet = true
+		case "--ascii":
+			tuiASCII = true
 		case "--tui-height":
 			if i+1 >= len(args) {
 				log.Errorf("Error: --tui-height requires a value")
@@ -318,6 +321,7 @@ func Build() int {
 		DryRun:       dryRun,
 		UseTUI:       useTUI,
 		TUIHeight:    tuiHeight,
+		TUIASCIIMode: tuiASCII,
 		ShowTimings:  showTimings,
 		DebugMode:    debugMode,
 	}
@@ -502,17 +506,18 @@ func verifyBuildDependenciesQuiet(monikers []string, moduleReport *reports.Modul
 	sort.Strings(deps)
 	status.Required = deps
 
-	// Verify only build-phase dependencies
-	results := systemdeps.VerifyAllForPhase(deps, "build")
+	// Verify dependencies using tool registry
+	registry := tool.GlobalRegistry()
+	results := registry.VerifyAll(deps)
 
 	for _, result := range results {
 		status.Available = append(status.Available, initsummary.DepsResult{
-			Name:      result.Name,
+			Name:      result.ToolID,
 			Available: result.Available,
 			Version:   result.Version,
 		})
 		if !result.Available {
-			status.Missing = append(status.Missing, result.Moniker)
+			status.Missing = append(status.Missing, result.ToolID)
 		}
 	}
 
@@ -547,6 +552,7 @@ func printBuildUsage() {
 	log.Info("  --tui                     Enable TUI console (default for local, errors in CI/container)")
 	log.Info("  --no-tui                  Disable TUI console (use plain output)")
 	log.Info(fmt.Sprintf("  --tui-height N            Set TUI console height (3-20, default: %d)", tui.DefaultHeight))
+	log.Info("  --ascii                   Use ASCII-only characters in TUI (for terminals with poor Unicode support)")
 	log.Info("  --version VERSION         Inject version string into binary (Go modules with executable artifacts)")
 	log.Info("  --accept-warnings         Don't fail on MkDocs warnings (non-strict mode)")
 	log.Info("  --all                     Include non-default books (those with default: false)")

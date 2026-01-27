@@ -16,6 +16,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"github.com/ready-to-release/eac/go/eac/core/tool"
 	"gopkg.in/yaml.v3"
 )
 
@@ -154,7 +155,7 @@ func ExtensionMeta() int {
 		},
 		ExpectedHostImages: []string{
 			"mkdocs-site:local",
-			"structurizr/lite:latest",
+			tool.GetToolImageWithDefault("structurizr-lite", "structurizr/lite:latest"),
 		},
 		Env: []EnvVar{
 			{Name: "GODOG_SUITE_TAGS"},

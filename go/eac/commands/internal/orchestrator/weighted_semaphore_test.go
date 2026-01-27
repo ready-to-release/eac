@@ -214,3 +214,107 @@ func TestNewWeightedSemaphore_BackwardCompatible(t *testing.T) {
 	ws.Release(3)
 	assert.Equal(t, 0, ws.Used())
 }
+
+func TestWeightedSemaphore_SetCapacity_IncreasesCapacity(t *testing.T) {
+	registry := locktracker.NewRegistry()
+	ws := NewWeightedSemaphoreWithRegistry("test-semaphore", 4, registry)
+	defer ws.Close()
+
+	// Initial capacity should be 4
+	assert.Equal(t, 4, ws.Capacity())
+
+	// Increase capacity
+	ws.SetCapacity(8)
+	assert.Equal(t, 8, ws.Capacity())
+
+	// Registry should reflect new capacity
+	snapshot := registry.Snapshot()
+	var info locktracker.LockInfo
+	for _, v := range snapshot {
+		info = v
+	}
+	assert.Equal(t, int64(8), info.Capacity)
+}
+
+func TestWeightedSemaphore_SetCapacity_DecreasesCapacity(t *testing.T) {
+	registry := locktracker.NewRegistry()
+	ws := NewWeightedSemaphoreWithRegistry("test-semaphore", 8, registry)
+	defer ws.Close()
+
+	// Decrease capacity
+	ws.SetCapacity(4)
+	assert.Equal(t, 4, ws.Capacity())
+
+	// Registry should reflect new capacity
+	snapshot := registry.Snapshot()
+	var info locktracker.LockInfo
+	for _, v := range snapshot {
+		info = v
+	}
+	assert.Equal(t, int64(4), info.Capacity)
+}
+
+func TestWeightedSemaphore_SetCapacity_WakesWaiters(t *testing.T) {
+	registry := locktracker.NewRegistry()
+	ws := NewWeightedSemaphoreWithRegistry("test-semaphore", 2, registry)
+	defer ws.Close()
+
+	// Fill the semaphore
+	ws.Acquire(2)
+
+	// Start a goroutine that will block waiting
+	acquired := make(chan struct{})
+	go func() {
+		ws.Acquire(1) // Will block until capacity increases
+		close(acquired)
+	}()
+
+	// Give time for the goroutine to start waiting
+	time.Sleep(50 * time.Millisecond)
+
+	// Increase capacity - should wake up the waiter
+	ws.SetCapacity(3)
+
+	// The waiter should now be able to acquire
+	select {
+	case <-acquired:
+		// Success
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("SetCapacity should have woken up waiting goroutine")
+	}
+}
+
+func TestWeightedSemaphore_SetCapacity_MinimumCapacity(t *testing.T) {
+	ws := NewWeightedSemaphore(8)
+
+	// Try to set capacity to 0
+	ws.SetCapacity(0)
+	assert.Equal(t, 1, ws.Capacity(), "capacity should be at least 1")
+
+	// Try to set negative capacity
+	ws.SetCapacity(-5)
+	assert.Equal(t, 1, ws.Capacity(), "capacity should be at least 1")
+}
+
+func TestWeightedSemaphore_SetCapacity_NeverBelowUsed(t *testing.T) {
+	registry := locktracker.NewRegistry()
+	ws := NewWeightedSemaphoreWithRegistry("test-semaphore", 8, registry)
+	defer ws.Close()
+
+	// Acquire 4 slots
+	ws.Acquire(4)
+	assert.Equal(t, 4, ws.Used())
+
+	// Try to reduce capacity below used - should clamp to used
+	ws.SetCapacity(2)
+	assert.Equal(t, 4, ws.Capacity(), "capacity should not go below used (4)")
+
+	// Registry should also show correct capacity
+	snapshot := registry.Snapshot()
+	var info locktracker.LockInfo
+	for _, v := range snapshot {
+		info = v
+	}
+	assert.Equal(t, int64(4), info.Capacity, "registry should show clamped capacity")
+	assert.Equal(t, int64(4), info.Used, "registry should show used")
+}

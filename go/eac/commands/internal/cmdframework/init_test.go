@@ -4,60 +4,54 @@ import (
 	"testing"
 )
 
-// TestCalculateMaxConcurrency tests the turbo boost calculation logic.
+// TestCalculateMaxConcurrency tests the max concurrency calculation logic.
+// Note: turbo no longer affects MaxConcurrency - it's handled by TurboMultiplier.
+// MaxConcurrency returns 0 for dynamic mode (orchestrator calculates from CPU×RAM).
 func TestCalculateMaxConcurrency(t *testing.T) {
 	tests := []struct {
 		name              string
 		configConcurrency int  // MaxConcurrency from CommandConfig
 		repoConcurrency   int  // EffectiveParallelism from repo config
-		turbo             bool // Turbo flag
+		turbo             bool // Turbo flag (no longer affects MaxConcurrency)
 		sequential        bool // Sequential flag
 		expected          int
 	}{
 		{
-			name:              "default uses repo parallelism",
+			name:              "default returns 0 for dynamic mode",
 			configConcurrency: 0,
-			repoConcurrency:   4,
+			repoConcurrency:   0,
 			turbo:             false,
 			sequential:        false,
-			expected:          4,
+			expected:          0, // Dynamic - orchestrator calculates
 		},
 		{
-			name:              "explicit config overrides repo default",
+			name:              "explicit config is used as ceiling",
 			configConcurrency: 8,
-			repoConcurrency:   4,
+			repoConcurrency:   0,
 			turbo:             false,
 			sequential:        false,
 			expected:          8,
 		},
 		{
-			name:              "turbo adds 2 to default parallelism",
+			name:              "turbo does not affect MaxConcurrency",
 			configConcurrency: 0,
-			repoConcurrency:   4,
+			repoConcurrency:   0,
 			turbo:             true,
 			sequential:        false,
-			expected:          6, // 4 + 2
+			expected:          0, // Still dynamic - turbo handled separately
 		},
 		{
-			name:              "turbo adds 2 to explicit config",
-			configConcurrency: 8,
-			repoConcurrency:   4,
-			turbo:             true,
-			sequential:        false,
-			expected:          10, // 8 + 2
-		},
-		{
-			name:              "sequential overrides turbo",
+			name:              "sequential overrides everything",
 			configConcurrency: 0,
-			repoConcurrency:   4,
+			repoConcurrency:   0,
 			turbo:             true,
 			sequential:        true,
 			expected:          1,
 		},
 		{
-			name:              "sequential forces 1",
+			name:              "sequential forces 1 even with explicit config",
 			configConcurrency: 8,
-			repoConcurrency:   4,
+			repoConcurrency:   0,
 			turbo:             false,
 			sequential:        true,
 			expected:          1,
@@ -75,10 +69,20 @@ func TestCalculateMaxConcurrency(t *testing.T) {
 	}
 }
 
-// TestTurboBoostConstant verifies the turbo boost value is consistent.
-func TestTurboBoostConstant(t *testing.T) {
-	if TurboBoost != 2 {
-		t.Errorf("TurboBoost = %d, want 2", TurboBoost)
+// TestDefaultTurboMultiplier verifies the turbo multiplier value is consistent.
+func TestDefaultTurboMultiplier(t *testing.T) {
+	if DefaultTurboMultiplier != 4 {
+		t.Errorf("DefaultTurboMultiplier = %d, want 4", DefaultTurboMultiplier)
+	}
+}
+
+// TestCalculateTurboMultiplier verifies turbo multiplier calculation.
+func TestCalculateTurboMultiplier(t *testing.T) {
+	if CalculateTurboMultiplier(false) != 1 {
+		t.Errorf("CalculateTurboMultiplier(false) = %d, want 1", CalculateTurboMultiplier(false))
+	}
+	if CalculateTurboMultiplier(true) != DefaultTurboMultiplier {
+		t.Errorf("CalculateTurboMultiplier(true) = %d, want %d", CalculateTurboMultiplier(true), DefaultTurboMultiplier)
 	}
 }
 

@@ -456,7 +456,7 @@ tools:
     type: container
     image: ghcr.io/aquasecurity/trivy
     tag: "0.68.2"
-    command: ["fs", "--scanners", "vuln", "--format", "cyclonedx-json", "--list-all-pkgs", "--quiet", "/scan"]
+    command: ["fs", "--scanners", "vuln", "--format", "cyclonedx", "--list-all-pkgs", "--quiet", "/scan"]
     mounts:
       - source: "{module}"
         target: /scan
@@ -495,7 +495,7 @@ tools:
     type: container
     image: semgrep/semgrep
     tag: "1.145.1"
-    command: ["scan", "--config", "auto", "--json", "/src"]
+    command: ["semgrep", "scan", "--config", "auto", "--json", "/src"]
     mounts:
       - source: "{module}"
         target: /src

@@ -107,22 +107,16 @@ const ModulesTwoGo = `modules:
 `
 
 // ============================================================================
-// System Dependencies Templates
+// System Dependencies Templates (Deprecated)
 // ============================================================================
 
-// SystemDependenciesMinimal is minimal system-dependencies.yml.
-const SystemDependenciesMinimal = `dependencies:
-  - name: go
-    version: ">=1.21"
-`
+// SystemDependenciesMinimal is deprecated - tool-config.yml is now used instead.
+// Kept for backwards compatibility.
+const SystemDependenciesMinimal = ``
 
-// SystemDependenciesWithDocker is system-dependencies.yml with Docker.
-const SystemDependenciesWithDocker = `dependencies:
-  - name: go
-    version: ">=1.21"
-  - name: docker
-    version: ">=24.0"
-`
+// SystemDependenciesWithDocker is deprecated - tool-config.yml is now used instead.
+// Kept for backwards compatibility.
+const SystemDependenciesWithDocker = ``
 
 // ============================================================================
 // Named Template Registry
@@ -130,6 +124,7 @@ const SystemDependenciesWithDocker = `dependencies:
 
 // namedTemplates maps template names to their definitions.
 // Note: Modules are defined in repository.yml (unified config).
+// Note: Tool definitions are loaded from tool-config.yml via the tool package.
 var namedTemplates = map[string]*Template{
 	"minimal": {
 		Name:        "minimal",
@@ -143,36 +138,32 @@ var namedTemplates = map[string]*Template{
 		Name:        "minimal-go",
 		Description: "Minimal EAC config for Go development",
 		Files: map[string]string{
-			".r2r/eac/repository.yml":          ModulesSingleGo,
-			".r2r/eac/module-types.yml":        ModuleTypesGo,
-			".r2r/eac/system-dependencies.yml": SystemDependenciesMinimal,
+			".r2r/eac/repository.yml":   ModulesSingleGo,
+			".r2r/eac/module-types.yml": ModuleTypesGo,
 		},
 	},
 	"minimal-with-docker": {
 		Name:        "minimal-with-docker",
 		Description: "Minimal EAC config with Docker support",
 		Files: map[string]string{
-			".r2r/eac/repository.yml":          ModulesSingleGo,
-			".r2r/eac/module-types.yml":        ModuleTypesDocker,
-			".r2r/eac/system-dependencies.yml": SystemDependenciesWithDocker,
+			".r2r/eac/repository.yml":   ModulesSingleGo,
+			".r2r/eac/module-types.yml": ModuleTypesDocker,
 		},
 	},
 	"multi-module": {
 		Name:        "multi-module",
 		Description: "EAC config with two Go modules",
 		Files: map[string]string{
-			".r2r/eac/repository.yml":          ModulesTwoGo,
-			".r2r/eac/module-types.yml":        ModuleTypesGo,
-			".r2r/eac/system-dependencies.yml": SystemDependenciesMinimal,
+			".r2r/eac/repository.yml":   ModulesTwoGo,
+			".r2r/eac/module-types.yml": ModuleTypesGo,
 		},
 	},
 	"complete": {
 		Name:        "complete",
 		Description: "Complete EAC config with all module types",
 		Files: map[string]string{
-			".r2r/eac/repository.yml":          ModulesSingleGo,
-			".r2r/eac/module-types.yml":        ModuleTypesComplete,
-			".r2r/eac/system-dependencies.yml": SystemDependenciesWithDocker,
+			".r2r/eac/repository.yml":   ModulesSingleGo,
+			".r2r/eac/module-types.yml": ModuleTypesComplete,
 		},
 	},
 }

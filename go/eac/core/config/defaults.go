@@ -96,26 +96,6 @@ func LoadRepositoryDefaults(repoRoot string) (*RepositoryConfig, error) {
 	return &cfg, nil
 }
 
-// LoadSystemDependenciesDefaults loads default system dependencies from contract defaults.
-// Returns ErrNoDefaults when defaults don't exist - allows tests to work without contracts folder.
-func LoadSystemDependenciesDefaults(repoRoot string) (*SystemDependenciesConfig, error) {
-	data, err := loadDefaultFile(repoRoot, "system-dependencies.yml")
-	if err != nil {
-		// Defaults are optional - return ErrNoDefaults if they don't exist
-		if os.IsNotExist(err) {
-			return nil, ErrNoDefaults
-		}
-		return nil, fmt.Errorf("loading system-dependencies defaults: %w", err)
-	}
-
-	var cfg SystemDependenciesConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("parsing system-dependencies defaults: %w", err)
-	}
-
-	return &cfg, nil
-}
-
 // LoadComponentTypesDefaults loads default component types from contract defaults.
 // Returns ErrNoDefaults when defaults don't exist - allows tests to work without contracts folder.
 func LoadComponentTypesDefaults(repoRoot string) (*ComponentTypesConfig, error) {
@@ -356,63 +336,3 @@ func MergeTestSuites(defaults, user *TestSuitesConfig) *TestSuitesConfig {
 	return result
 }
 
-// MergeSystemDependencies merges user system dependencies with defaults.
-// User entries with same moniker override defaults, new entries are appended.
-func MergeSystemDependencies(defaults, user *SystemDependenciesConfig) *SystemDependenciesConfig {
-	if defaults == nil {
-		return user
-	}
-	if user == nil {
-		return defaults
-	}
-
-	// Start with defaults
-	result := &SystemDependenciesConfig{
-		Dependencies:           make([]SystemDependency, len(defaults.Dependencies)),
-		CapabilityRequirements: defaults.CapabilityRequirements,
-	}
-	copy(result.Dependencies, defaults.Dependencies)
-
-	// Build map for fast lookup
-	depMap := make(map[string]int)
-	for i, dep := range result.Dependencies {
-		depMap[dep.Moniker] = i
-	}
-
-	// Merge user dependencies (override or append)
-	for _, userDep := range user.Dependencies {
-		if idx, exists := depMap[userDep.Moniker]; exists {
-			// Merge: override only non-empty fields
-			existing := &result.Dependencies[idx]
-			if userDep.Name != "" {
-				existing.Name = userDep.Name
-			}
-			if userDep.Description != "" {
-				existing.Description = userDep.Description
-			}
-			if userDep.Version != "" {
-				existing.Version = userDep.Version
-			}
-			if userDep.Verify.Command != "" || len(userDep.Verify.EnvVars) > 0 {
-				existing.Verify = userDep.Verify
-			}
-		} else {
-			// Append new dependency
-			result.Dependencies = append(result.Dependencies, userDep)
-			depMap[userDep.Moniker] = len(result.Dependencies) - 1
-		}
-	}
-
-	// Merge capability requirements if user provides any
-	if user.CapabilityRequirements != nil {
-		if result.CapabilityRequirements == nil {
-			result.CapabilityRequirements = make(map[string][]string)
-		}
-		for cap, deps := range user.CapabilityRequirements {
-			result.CapabilityRequirements[cap] = deps
-		}
-	}
-
-	result.buildDepMap()
-	return result
-}

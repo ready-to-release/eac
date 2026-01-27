@@ -240,22 +240,10 @@ func InferSystemDepsFromModuleDeps(tests []TestReference, registry *modules.Regi
 	return enriched
 }
 
-// GetOSPlatformTags returns OS platform monikers from system dependencies config.
-// Falls back to built-in defaults if config cannot be loaded.
+// GetOSPlatformTags returns OS platform monikers.
+// OS platforms are no longer defined in system-dependencies.yml.
 func GetOSPlatformTags() []string {
-	cfg, err := config.Load(config.DefaultLoadOptions())
-	if err != nil || cfg.SystemDependencies == nil {
-		// Fallback to built-in defaults
-		return []string{"linux", "macos", "windows", "darwin"}
-	}
-
-	var platforms []string
-	for _, dep := range cfg.SystemDependencies.Dependencies {
-		if dep.Verify.IsOSPlatformBased() {
-			platforms = append(platforms, dep.Moniker)
-		}
-	}
-	return platforms
+	return []string{"linux", "macos", "windows", "darwin"}
 }
 
 // GetOSPlatformTagsFull returns OS platform tags with @deps: prefix as a map.

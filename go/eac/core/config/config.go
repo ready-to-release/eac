@@ -21,11 +21,10 @@ const EACConfigRelPath = paths.EACConfigRelPath
 
 // Config file names.
 const (
-	EnvironmentsFileName       = "environments.yml"
-	TestingTagsFileName        = "testing-tags.yml"
-	TestSuitesFileName         = "test-suites.yml"
-	SystemDependenciesFileName = "system-dependencies.yml"
-	ComponentTypesFileName     = "component-types.yml"
+	EnvironmentsFileName   = "environments.yml"
+	TestingTagsFileName    = "testing-tags.yml"
+	TestSuitesFileName     = "test-suites.yml"
+	ComponentTypesFileName = "component-types.yml"
 )
 
 // EACConfig holds all loaded EAC repository configuration.
@@ -36,19 +35,23 @@ const (
 // All config fields are guaranteed non-nil after a successful Load() call.
 // The loader uses fail-fast for core configs and empty defaults for optional configs:
 //
-//   - Repository:         GUARANTEED non-nil (fails if cannot load defaults)
-//   - ComponentTypes:     GUARANTEED non-nil (loads defaults if file missing)
-//   - SystemDependencies: GUARANTEED non-nil (loads defaults if file missing)
-//   - SecurityTools:      GUARANTEED non-nil (uses defaults if file missing)
-//   - Environments:       GUARANTEED non-nil (empty if file missing)
-//   - TestingTags:        GUARANTEED non-nil (empty if file missing)
-//   - TestSuites:         GUARANTEED non-nil (empty if file missing)
-//   - Books:              GUARANTEED non-nil (empty if file missing)
-//   - Commands:           GUARANTEED non-nil (uses defaults if file missing)
+//   - Repository:     GUARANTEED non-nil (fails if cannot load defaults)
+//   - ComponentTypes: GUARANTEED non-nil (loads defaults if file missing)
+//   - SecurityTools:  GUARANTEED non-nil (uses defaults if file missing)
+//   - Environments:   GUARANTEED non-nil (empty if file missing)
+//   - TestingTags:    GUARANTEED non-nil (empty if file missing)
+//   - TestSuites:     GUARANTEED non-nil (empty if file missing)
+//   - Books:          GUARANTEED non-nil (empty if file missing)
+//   - Commands:       GUARANTEED non-nil (uses defaults if file missing)
 //
 // # Module Access
 //
 // Modules are now part of Repository config. Access via cfg.Repository.Modules.
+//
+// # Tool Verification
+//
+// Tool availability is verified via the tool package (tool.GlobalRegistry().VerifyAll).
+// Tools are defined in tool-config.yml, not system-dependencies.yml.
 //
 // # Sub-field Nil Checks Still Required
 //
@@ -66,15 +69,14 @@ type EACConfig struct {
 	Repository *RepositoryConfig
 
 	// Optional configs - empty defaults if file missing (non-nil guaranteed)
-	Environments       *EnvironmentsConfig
-	TestingTags        *TestingTagsConfig
-	TestSuites         *TestSuitesConfig
-	SystemDependencies *SystemDependenciesConfig
-	Books              *BooksConfig
-	SecurityTools      *SecurityToolsConfig
-	Commands           *CommandsConfig
-	ComponentTypes     *ComponentTypesConfig
-	LintProviders      *LintProvidersConfig
+	Environments   *EnvironmentsConfig
+	TestingTags    *TestingTagsConfig
+	TestSuites     *TestSuitesConfig
+	Books          *BooksConfig
+	SecurityTools  *SecurityToolsConfig
+	Commands       *CommandsConfig
+	ComponentTypes *ComponentTypesConfig
+	LintProviders  *LintProvidersConfig
 
 	// Schema validator (lazy initialized)
 	validator     *schema.Validator
@@ -203,10 +205,6 @@ func (c *EACConfig) LoadAll(opts LoadOptions) error {
 
 	if err := c.LoadBooks(validateSchemas); err != nil {
 		errs = append(errs, fmt.Errorf("books: %w", err))
-	}
-
-	if err := c.LoadSystemDependencies(validateSchemas); err != nil {
-		errs = append(errs, fmt.Errorf("system-dependencies: %w", err))
 	}
 
 	if err := c.LoadSecurityTools(validateSchemas); err != nil {
@@ -409,49 +407,6 @@ func (c *EACConfig) LoadTestSuites(validateSchema bool) error {
 
 	// Merge defaults with user config
 	c.TestSuites = MergeTestSuites(defaults, &userCfg)
-	return nil
-}
-
-// LoadSystemDependencies loads the system-dependencies configuration.
-// Merges contract defaults with user config.
-func (c *EACConfig) LoadSystemDependencies(validateSchema bool) error {
-	// Load defaults from contract
-	defaults, err := LoadSystemDependenciesDefaults(c.RepoRoot)
-	if err != nil && !errors.Is(err, ErrNoDefaults) {
-		return fmt.Errorf("loading system-dependencies defaults: %w", err)
-	}
-
-	// Check if user config exists
-	depsPath := filepath.Join(c.ConfigRoot, SystemDependenciesFileName)
-	if _, err := os.Stat(depsPath); os.IsNotExist(err) {
-		// Use defaults only (may be nil in test environments without contract files)
-		if defaults == nil {
-			// Create empty config to guarantee non-nil
-			defaults = &SystemDependenciesConfig{}
-		}
-		defaults.buildDepMap()
-		c.SystemDependencies = defaults
-		return nil
-	}
-
-	data, err := c.readConfigFile(SystemDependenciesFileName)
-	if err != nil {
-		return err
-	}
-
-	if validateSchema {
-		if err := c.validateSchema(schema.SchemaSystemDependencies, data); err != nil {
-			return err
-		}
-	}
-
-	var userCfg SystemDependenciesConfig
-	if err := yaml.Unmarshal(data, &userCfg); err != nil {
-		return fmt.Errorf("failed to parse %s: %w", SystemDependenciesFileName, err)
-	}
-
-	// Merge defaults with user config
-	c.SystemDependencies = MergeSystemDependencies(defaults, &userCfg)
 	return nil
 }
 

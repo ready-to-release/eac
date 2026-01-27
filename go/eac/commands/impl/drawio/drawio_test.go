@@ -108,7 +108,12 @@ func TestContainerWorkdir(t *testing.T) {
 	assert.Equal(t, "/docs", ContainerWorkdir)
 }
 
-// TestDrawioImageName verifies the Docker image name constant.
+// TestDrawioImageName verifies the Docker image name default and function.
 func TestDrawioImageName(t *testing.T) {
-	assert.Equal(t, "cli-drawio-cli:latest", DrawioImageName)
+	// Test the default constant
+	assert.Equal(t, "cli-drawio-cli:latest", DefaultDrawioImageName)
+
+	// Test the function (returns default when tool config not loaded)
+	imageName := GetDrawioImageName()
+	assert.Equal(t, "cli-drawio-cli:latest", imageName)
 }

@@ -89,7 +89,7 @@ func AcquireTracked(workspaceRoot string, cfg Config, registry *locktracker.Regi
 	}
 
 	// Register with the lock tracker
-	registry.Register(locktracker.LockInfo{
+	registry.Register(&locktracker.LockInfo{
 		ID:         id,
 		Type:       locktracker.LockTypeFileLock,
 		Name:       lockName,

@@ -7,10 +7,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/scan/internal"
+	"github.com/ready-to-release/eac/go/eac/commands/impl/scan/scanners"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/cmdframework"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/initsummary"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/locking"
@@ -19,6 +19,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/manifest"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
+	"github.com/ready-to-release/eac/go/eac/core/tool"
 )
 
 func init() {
@@ -27,43 +28,8 @@ func init() {
 	cmdframework.RegisterComponentWorker(cmdframework.CommandTypeScan, scanComponentWorker)
 }
 
-// scannerSemaphores limits concurrent executions per scanner type.
-// Each scanner type (trivy, semgrep, zap) gets its own semaphore with capacity 3.
-// This allows some parallelism while preventing resource contention.
-var (
-	scannerSemaphores        = make(map[internal.ScannerType]chan struct{})
-	semaphoreMu              sync.Mutex
-	scannerSemaphoreCapacity = 3 // Max concurrent executions per scanner type
-)
-
-// ScannerTurboBoost is the additional capacity for scanner semaphores in turbo mode.
-const ScannerTurboBoost = 2
-
-// SetTurboScannerCapacity enables turbo mode for scanner semaphores.
-// This increases the per-scanner-type concurrency from 3 to 5 (3 + 2).
-// Must be called before scans start, as it resets existing semaphores.
-func SetTurboScannerCapacity() {
-	semaphoreMu.Lock()
-	defer semaphoreMu.Unlock()
-	scannerSemaphoreCapacity = 3 + ScannerTurboBoost // 5
-	// Reset semaphores to pick up new capacity
-	scannerSemaphores = make(map[internal.ScannerType]chan struct{})
-}
-
-// getScannerSemaphore returns the semaphore for a scanner type, creating it if needed.
-func getScannerSemaphore(scannerType internal.ScannerType) chan struct{} {
-	semaphoreMu.Lock()
-	defer semaphoreMu.Unlock()
-
-	if sem, exists := scannerSemaphores[scannerType]; exists {
-		return sem
-	}
-
-	// Create a semaphore with capacity 2 (two concurrent executions per scanner type)
-	sem := make(chan struct{}, scannerSemaphoreCapacity)
-	scannerSemaphores[scannerType] = sem
-	return sem
-}
+// NOTE: Scanner-specific semaphores removed - parallelism is now controlled by
+// the orchestrator's weighted semaphore system via component weights in getScanWeight()
 
 // log is declared in scan.go
 
@@ -174,16 +140,7 @@ func scanWorkerWrapper(ctx *cmdframework.ExecutionContext, moniker string, logWr
 	}
 	defer locking.ReleaseTracked(lockFile)
 
-	// Acquire scanner semaphore - only one of each scanner type runs at a time
-	sem := getScannerSemaphore(scanCfg.ScannerType)
-	output.Writeln(logWriter, "%s Waiting for %s scanner slot...", scanCfg.ScannerEmoji, scanCfg.ScannerType)
-	sem <- struct{}{}
-	output.Writeln(logWriter, "%s Acquired %s scanner slot", scanCfg.ScannerEmoji, scanCfg.ScannerType)
-	defer func() {
-		<-sem
-		output.Writeln(logWriter, "%s Released %s scanner slot", scanCfg.ScannerEmoji, scanCfg.ScannerType)
-	}()
-
+	// Parallelism controlled by orchestrator's weighted semaphore via component weights
 	output.Writeln(logWriter, "%s Scanning %s...", scanCfg.ScannerEmoji, moniker)
 	scanStart := time.Now()
 
@@ -299,16 +256,7 @@ func scanComponentWorker(ctx *cmdframework.ExecutionContext, moniker, component 
 func runComponentScanner(ctx *cmdframework.ExecutionContext, module *modules.ModuleContract, moniker, component, componentRoot string, scannerType internal.ScannerType, multiCfg *MultiScanConfig, logWriter io.Writer) int {
 	emoji := getScannerEmoji(scannerType)
 
-	// Acquire scanner semaphore
-	sem := getScannerSemaphore(scannerType)
-	output.Writeln(logWriter, "%s Waiting for %s scanner slot...", emoji, scannerType)
-	sem <- struct{}{}
-	output.Writeln(logWriter, "%s Acquired %s scanner slot", emoji, scannerType)
-	defer func() {
-		<-sem
-		output.Writeln(logWriter, "%s Released %s scanner slot", emoji, scannerType)
-	}()
-
+	// Parallelism controlled by orchestrator's weighted semaphore via component weights
 	output.Writeln(logWriter, "%s Running %s scanner on %s/%s...", emoji, scannerType, moniker, component)
 	scanStart := time.Now()
 
@@ -337,42 +285,64 @@ func runComponentScanner(ctx *cmdframework.ExecutionContext, module *modules.Mod
 	return 0
 }
 
-// runScannerOnPath runs a scanner on a specific path.
-func runScannerOnPath(ctx *cmdframework.ExecutionContext, targetPath string, scannerType internal.ScannerType, multiCfg *MultiScanConfig, logWriter io.Writer) (interface{}, error) {
+// logScannerConfig logs scanner-specific configuration for visibility.
+func logScannerConfig(scannerType internal.ScannerType, logWriter io.Writer, multiCfg *MultiScanConfig, ctx *cmdframework.ExecutionContext) {
 	switch scannerType {
 	case internal.ScannerSBOM:
-		trivyImage := ctx.EACConfig.SecurityTools.DockerImages.Trivy.FullImage()
-		output.Writeln(logWriter, "  Using Trivy image: %s", trivyImage)
+		output.Writeln(logWriter, "  Using Trivy image: %s", ctx.EACConfig.SecurityTools.DockerImages.Trivy.FullImage())
 		output.Writeln(logWriter, "  Format: %s", multiCfg.SBOMFormat)
-		return internal.RunTrivySBOM(ctx.WorkspaceRoot, targetPath, multiCfg.SBOMFormat, trivyImage)
-
 	case internal.ScannerVuln:
-		trivyImage := ctx.EACConfig.SecurityTools.DockerImages.Trivy.FullImage()
-		output.Writeln(logWriter, "  Using Trivy image: %s", trivyImage)
-		return internal.RunTrivyVuln(targetPath, multiCfg.VulnSeverities, trivyImage)
-
-	case internal.ScannerSecrets:
-		trivyImage := ctx.EACConfig.SecurityTools.DockerImages.Trivy.FullImage()
-		output.Writeln(logWriter, "  Using Trivy image: %s", trivyImage)
-		return internal.RunTrivySecrets(targetPath, trivyImage)
-
-	case internal.ScannerIaC:
-		trivyImage := ctx.EACConfig.SecurityTools.DockerImages.Trivy.FullImage()
-		output.Writeln(logWriter, "  Using Trivy image: %s", trivyImage)
-		return internal.RunTrivyIaC(targetPath, trivyImage)
-
+		output.Writeln(logWriter, "  Using Trivy image: %s", ctx.EACConfig.SecurityTools.DockerImages.Trivy.FullImage())
+		if len(multiCfg.VulnSeverities) > 0 {
+			output.Writeln(logWriter, "  Severity filter: %v", multiCfg.VulnSeverities)
+		}
+	case internal.ScannerSecrets, internal.ScannerIaC:
+		output.Writeln(logWriter, "  Using Trivy image: %s", ctx.EACConfig.SecurityTools.DockerImages.Trivy.FullImage())
+	case internal.ScannerCompliance:
+		output.Writeln(logWriter, "  Using Trivy image: %s", ctx.EACConfig.SecurityTools.DockerImages.Trivy.FullImage())
+		output.Writeln(logWriter, "  Compliance standard: %s", multiCfg.ComplianceStandard)
 	case internal.ScannerSAST:
-		semgrepImage := ctx.EACConfig.SecurityTools.DockerImages.Semgrep.FullImage()
-		output.Writeln(logWriter, "  Using Semgrep image: %s", semgrepImage)
+		output.Writeln(logWriter, "  Using Semgrep image: %s", ctx.EACConfig.SecurityTools.DockerImages.Semgrep.FullImage())
 		output.Writeln(logWriter, "  Config: %s", multiCfg.SemgrepConfig)
-		return internal.RunSemgrepSAST(ctx.WorkspaceRoot, targetPath, multiCfg.SemgrepConfig, semgrepImage)
-
 	case internal.ScannerDAST:
-		return nil, fmt.Errorf("ZAP scanner requires --target URL flag")
-
-	default:
-		return nil, fmt.Errorf("unknown scanner type: %s", scannerType)
+		output.Writeln(logWriter, "  Using ZAP image: %s", ctx.EACConfig.SecurityTools.DockerImages.ZAP.FullImage())
 	}
+}
+
+// runScannerOnPath runs a scanner on a specific path using the scanner registry.
+func runScannerOnPath(ctx *cmdframework.ExecutionContext, targetPath string, scannerType internal.ScannerType, multiCfg *MultiScanConfig, logWriter io.Writer) (interface{}, error) {
+	// ZAP requires special handling (target URL)
+	if scannerType == internal.ScannerDAST {
+		return nil, fmt.Errorf("ZAP scanner requires --target URL flag")
+	}
+
+	// Populate global scan context with execution-time config
+	scanners.GlobalScanContext = &scanners.ScanContext{
+		TrivyImage:         ctx.EACConfig.SecurityTools.DockerImages.Trivy.FullImage(),
+		SemgrepImage:       ctx.EACConfig.SecurityTools.DockerImages.Semgrep.FullImage(),
+		ZAPImage:           ctx.EACConfig.SecurityTools.DockerImages.ZAP.FullImage(),
+		SBOMFormat:         multiCfg.SBOMFormat,
+		VulnSeverities:     multiCfg.VulnSeverities,
+		SemgrepConfig:      multiCfg.SemgrepConfig,
+		ComplianceStandard: multiCfg.ComplianceStandard,
+		WorkspaceRoot:      ctx.WorkspaceRoot,
+		GitCommit:          internal.GetGitCommit(ctx.WorkspaceRoot),
+	}
+	defer func() { scanners.GlobalScanContext = nil }()
+
+	// Log scanner-specific configuration
+	logScannerConfig(scannerType, logWriter, multiCfg, ctx)
+
+	// Get scanner from registry (native or YAML)
+	scanFn := scanners.GetScanner(tool.ScannerType(scannerType))
+	if scanFn == nil {
+		return nil, fmt.Errorf("no scanner found for type: %s", scannerType)
+	}
+
+	// Execute scanner
+	return scanFn(ctx.WorkspaceRoot, targetPath, "", logWriter, tool.ScanOptions{
+		ScanType: string(scannerType),
+	})
 }
 
 // handleScanFailure handles a failed scan (module or component level).
@@ -751,16 +721,7 @@ func multiScanWorker(ctx *cmdframework.ExecutionContext, moniker string, logWrit
 func runSingleScanner(ctx *cmdframework.ExecutionContext, module *modules.ModuleContract, scannerType internal.ScannerType, multiCfg *MultiScanConfig, logWriter io.Writer) int {
 	emoji := getScannerEmoji(scannerType)
 
-	// Acquire scanner semaphore - only one of each scanner type runs at a time
-	sem := getScannerSemaphore(scannerType)
-	output.Writeln(logWriter, "%s Waiting for %s scanner slot...", emoji, scannerType)
-	sem <- struct{}{}
-	output.Writeln(logWriter, "%s Acquired %s scanner slot", emoji, scannerType)
-	defer func() {
-		<-sem
-		output.Writeln(logWriter, "%s Released %s scanner slot", emoji, scannerType)
-	}()
-
+	// Parallelism controlled by orchestrator's weighted semaphore via component weights
 	output.Writeln(logWriter, "%s Running %s scanner...", emoji, scannerType)
 	scanStart := time.Now()
 
@@ -789,7 +750,7 @@ func runSingleScanner(ctx *cmdframework.ExecutionContext, module *modules.Module
 	return 0
 }
 
-// runScanner dispatches to the appropriate scanner implementation.
+// runScanner dispatches to the appropriate scanner implementation using the scanner registry.
 func runScanner(ctx *cmdframework.ExecutionContext, module *modules.ModuleContract, scannerType internal.ScannerType, multiCfg *MultiScanConfig, logWriter io.Writer) (interface{}, error) {
 	// Get the module's scannable root (buildable package root or first available)
 	moduleRoot := module.Components.GetBuildableRoot()
@@ -803,49 +764,38 @@ func runScanner(ctx *cmdframework.ExecutionContext, module *modules.ModuleContra
 		return nil, fmt.Errorf("no package root found for module %s", module.Moniker)
 	}
 
-	switch scannerType {
-	case internal.ScannerSBOM:
-		trivyImage := ctx.EACConfig.SecurityTools.DockerImages.Trivy.FullImage()
-		output.Writeln(logWriter, "  Using Trivy image: %s", trivyImage)
-		output.Writeln(logWriter, "  Format: %s", multiCfg.SBOMFormat)
-		return internal.RunTrivySBOM(ctx.WorkspaceRoot, moduleRoot, multiCfg.SBOMFormat, trivyImage)
-
-	case internal.ScannerVuln:
-		trivyImage := ctx.EACConfig.SecurityTools.DockerImages.Trivy.FullImage()
-		output.Writeln(logWriter, "  Using Trivy image: %s", trivyImage)
-		if len(multiCfg.VulnSeverities) > 0 {
-			output.Writeln(logWriter, "  Severity filter: %v", multiCfg.VulnSeverities)
-		}
-		return internal.RunTrivyVuln(moduleRoot, multiCfg.VulnSeverities, trivyImage)
-
-	case internal.ScannerSecrets:
-		trivyImage := ctx.EACConfig.SecurityTools.DockerImages.Trivy.FullImage()
-		output.Writeln(logWriter, "  Using Trivy image: %s", trivyImage)
-		return internal.RunTrivySecrets(moduleRoot, trivyImage)
-
-	case internal.ScannerIaC:
-		trivyImage := ctx.EACConfig.SecurityTools.DockerImages.Trivy.FullImage()
-		output.Writeln(logWriter, "  Using Trivy image: %s", trivyImage)
-		return internal.RunTrivyIaC(moduleRoot, trivyImage)
-
-	case internal.ScannerCompliance:
-		trivyImage := ctx.EACConfig.SecurityTools.DockerImages.Trivy.FullImage()
-		output.Writeln(logWriter, "  Using Trivy image: %s", trivyImage)
-		output.Writeln(logWriter, "  Compliance standard: %s", multiCfg.ComplianceStandard)
-		return internal.RunTrivyCompliance(moduleRoot, multiCfg.ComplianceStandard, trivyImage)
-
-	case internal.ScannerSAST:
-		semgrepImage := ctx.EACConfig.SecurityTools.DockerImages.Semgrep.FullImage()
-		output.Writeln(logWriter, "  Using Semgrep image: %s", semgrepImage)
-		output.Writeln(logWriter, "  Config: %s", multiCfg.SemgrepConfig)
-		return internal.RunSemgrepSAST(ctx.WorkspaceRoot, moduleRoot, multiCfg.SemgrepConfig, semgrepImage)
-
-	case internal.ScannerDAST:
+	// ZAP requires special handling (target URL)
+	if scannerType == internal.ScannerDAST {
 		return nil, fmt.Errorf("ZAP scanner requires --target URL flag")
-
-	default:
-		return nil, fmt.Errorf("unknown scanner type: %s", scannerType)
 	}
+
+	// Populate global scan context with execution-time config
+	scanners.GlobalScanContext = &scanners.ScanContext{
+		TrivyImage:         ctx.EACConfig.SecurityTools.DockerImages.Trivy.FullImage(),
+		SemgrepImage:       ctx.EACConfig.SecurityTools.DockerImages.Semgrep.FullImage(),
+		ZAPImage:           ctx.EACConfig.SecurityTools.DockerImages.ZAP.FullImage(),
+		SBOMFormat:         multiCfg.SBOMFormat,
+		VulnSeverities:     multiCfg.VulnSeverities,
+		SemgrepConfig:      multiCfg.SemgrepConfig,
+		ComplianceStandard: multiCfg.ComplianceStandard,
+		WorkspaceRoot:      ctx.WorkspaceRoot,
+		GitCommit:          internal.GetGitCommit(ctx.WorkspaceRoot),
+	}
+	defer func() { scanners.GlobalScanContext = nil }()
+
+	// Log scanner-specific configuration
+	logScannerConfig(scannerType, logWriter, multiCfg, ctx)
+
+	// Get scanner from registry (native or YAML)
+	scanFn := scanners.GetScanner(tool.ScannerType(scannerType))
+	if scanFn == nil {
+		return nil, fmt.Errorf("no scanner found for type: %s", scannerType)
+	}
+
+	// Execute scanner
+	return scanFn(ctx.WorkspaceRoot, moduleRoot, "", logWriter, tool.ScanOptions{
+		ScanType: string(scannerType),
+	})
 }
 
 // getScannerEmoji returns the emoji for a scanner type.

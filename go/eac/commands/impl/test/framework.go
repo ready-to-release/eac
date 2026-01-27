@@ -24,8 +24,8 @@ import (
 	moduledeps "github.com/ready-to-release/eac/go/eac/core/module-deps"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
-	systemdeps "github.com/ready-to-release/eac/go/eac/core/system-deps"
 	"github.com/ready-to-release/eac/go/eac/core/testing"
+	"github.com/ready-to-release/eac/go/eac/core/tool"
 	"github.com/ready-to-release/eac/go/eac/core/teststate"
 )
 
@@ -587,12 +587,20 @@ func verifyTestDependencies(ctx *cmdframework.ExecutionContext, testCfg *TestFra
 		return nil
 	}
 
-	// Verify only test-phase system dependencies
-	sysResults := systemdeps.VerifyAllForPhase(systemDeps, "test")
+	// Strip @deps: prefix from system dependencies to get tool IDs
+	toolIDs := make([]string, 0, len(systemDeps))
+	for _, dep := range systemDeps {
+		toolID := strings.TrimPrefix(dep, "@deps:")
+		toolIDs = append(toolIDs, toolID)
+	}
+
+	// Verify system dependencies using tool registry
+	registry := tool.GlobalRegistry()
+	sysResults := registry.VerifyAll(toolIDs)
 	var missing []string
 	for _, result := range sysResults {
 		if !result.Available {
-			missing = append(missing, result.Name)
+			missing = append(missing, result.ToolID)
 		}
 	}
 

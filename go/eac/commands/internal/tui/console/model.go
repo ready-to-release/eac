@@ -15,6 +15,7 @@ type Model struct {
 	height       int    // Total height (default: tui.DefaultHeight)
 	width        int    // Terminal width
 	runPhaseName string // Custom name for Run phase (e.g., "building", "testing")
+	asciiMode    bool   // Use ASCII-only characters (--ascii flag)
 
 	// 3-pane state
 	panes       [3]*Pane     // Init, Run, Summary panes
@@ -64,6 +65,7 @@ type Model struct {
 type ModuleState struct {
 	Moniker   string       // Module identifier
 	Index     int          // 1-based index in execution order (for tab display)
+	Weight    int          // Scheduling weight/pressure (shown in tab)
 	Buffer    *RingBuffer  // Module-specific output buffer
 	Status    ModuleStatus // Running, Complete, Failed
 	StartTime time.Time    // When module started
@@ -76,27 +78,30 @@ type ModuleState struct {
 type ModuleStatus int
 
 const (
-	ModuleRunning ModuleStatus = iota
-	ModuleComplete
-	ModuleFailed
+	ModulePending  ModuleStatus = iota // Scheduled, waiting for slot
+	ModuleRunning                      // Actively executing
+	ModuleComplete                     // Finished successfully
+	ModuleFailed                       // Finished with error
 )
 
-// Icon returns the icon for a module status.
+// Icon returns the icon for a module status (ASCII-safe).
 func (s ModuleStatus) Icon() string {
 	switch s {
+	case ModulePending:
+		return "o" // Waiting
 	case ModuleRunning:
-		return "▶"
+		return ">" // Active
 	case ModuleComplete:
-		return "✓"
+		return "V" // Done
 	case ModuleFailed:
-		return "✗"
+		return "X" // Error
 	default:
 		return "?"
 	}
 }
 
 // NewModel creates a new console model.
-func NewModel(height int, runPhaseName string, lineChan <-chan Line, statusChan <-chan Status) Model {
+func NewModel(height int, runPhaseName string, lineChan <-chan Line, statusChan <-chan Status, asciiMode bool) Model {
 	if height <= 0 {
 		height = 5
 	}
@@ -118,6 +123,7 @@ func NewModel(height int, runPhaseName string, lineChan <-chan Line, statusChan 
 		height:        height,
 		width:         80, // Default, will be updated on WindowSizeMsg
 		runPhaseName:  runPhaseName,
+		asciiMode:     asciiMode,
 		resultsBuffer: NewRingBuffer(100), // Results buffer
 		panes:         panes,
 		activePhase:   PhaseInit, // Start with Init phase
@@ -128,7 +134,7 @@ func NewModel(height int, runPhaseName string, lineChan <-chan Line, statusChan 
 		moduleStates:  make(map[string]*ModuleState), // Per-module state tracking
 		moduleOrder:   make([]string, 0),             // Tab ordering
 		activeTab:     "",                            // Start with aggregate view
-		maxTabs:       8,                             // Maximum visible tabs
+		maxTabs:       36,                            // Maximum visible tabs (6 rows × 6 tabs/row)
 	}
 }
 
@@ -228,29 +234,42 @@ func (m *Model) CompletePhase(phase Phase, success bool, summary string) {
 }
 
 // calculatePaneHeights determines how many lines each pane gets
-// Dynamic heights: Init and Summary are fixed, Run fills remaining space.
+// Init and Summary are fixed, Run fills ALL remaining terminal space.
 func (m Model) calculatePaneHeights() (initH, runH, summaryH int) {
-	// Total lines needed for headers and footers (3 headers + 3 footers)
-	const headerFooterLines = 6
+	// Fixed content heights for Init and Summary panes
+	const initHeight = 6
+	const summaryHeight = 4
 
-	// Fixed heights for Init and Summary panes
-	const initHeight = 5
-	const summaryHeight = 10
+	// Chrome lines (non-content):
+	// - Init: header (1) + footer (1) = 2
+	// - Resources pane: header (1) + content (1) + footer (1) = 3
+	// - Run: header (1) + footer (1) = 2
+	// Total base chrome = 7 lines
+	chromeLines := 7
 
-	// Minimum height for Run pane
-	const minRunHeight = 5
+	// Add Summary chrome only if it will be rendered
+	if m.summaryData != nil {
+		chromeLines += 2 // Summary header (1) + footer (1)
+	}
 
-	// Calculate available space for content
-	availableForContent := m.height - headerFooterLines
+	// Use actual terminal height (m.height is updated by WindowSizeMsg in alt-screen mode)
+	terminalHeight := m.height
+	if terminalHeight < 20 {
+		terminalHeight = 20 // Minimum usable height
+	}
 
-	// Allocate heights: Init and Summary fixed, Run gets the rest
+	// Allocate heights
 	initH = initHeight
-	summaryH = summaryHeight
-	runH = availableForContent - initH - summaryH
+	if m.summaryData != nil {
+		summaryH = summaryHeight
+	} else {
+		summaryH = 0 // Don't reserve space for Summary if not showing
+	}
+	runH = terminalHeight - chromeLines - initH - summaryH
 
-	// Ensure Run pane meets minimum height
-	if runH < minRunHeight {
-		runH = minRunHeight
+	// Minimum Run pane content height
+	if runH < 5 {
+		runH = 5
 	}
 
 	return initH, runH, summaryH
@@ -277,26 +296,45 @@ func (m *Model) SetSummaryData(data *SummaryData) {
 }
 
 // GetOrCreateModuleState gets or creates a module state for the given moniker.
-func (m *Model) GetOrCreateModuleState(moniker string) *ModuleState {
+func (m *Model) GetOrCreateModuleState(moniker string, weight int) *ModuleState {
 	if state, exists := m.moduleStates[moniker]; exists {
+		// Update weight if provided (in case it changed)
+		if weight > 0 {
+			state.Weight = weight
+		}
 		return state
 	}
 
 	// Increment counter first to get unique index
 	m.nextModuleIdx++
 
+	// Default weight to 1 if not provided
+	if weight <= 0 {
+		weight = 1
+	}
+
 	// Create new module state with its own buffer
 	state := &ModuleState{
 		Moniker:   moniker,
 		Index:     m.nextModuleIdx, // Unique 1-based index from counter
+		Weight:    weight,
 		Buffer:    NewRingBuffer(200),
-		Status:    ModuleRunning,
+		Status:    ModulePending, // Start as pending until slot acquired
 		StartTime: time.Now(),
 	}
 	m.moduleStates[moniker] = state
 	m.moduleOrder = append(m.moduleOrder, moniker)
 
 	return state
+}
+
+// MarkModuleRunning marks a module as actively running (slot acquired).
+func (m *Model) MarkModuleRunning(moniker string) {
+	state, exists := m.moduleStates[moniker]
+	if !exists {
+		return
+	}
+	state.Status = ModuleRunning
 }
 
 // MarkModuleComplete marks a module as completed
@@ -315,11 +353,7 @@ func (m *Model) MarkModuleComplete(moniker string, exitCode int) {
 		state.Status = ModuleFailed
 	}
 
-	// Only remove from tabs if not currently selected
-	// If selected, user can continue viewing it until they switch away
-	if m.activeTab != moniker {
-		m.removeModuleFromTabs(moniker)
-	}
+	// Tabs stay visible - only removed via FIFO when over limit
 }
 
 // removeModuleFromTabs removes a module from the tab display.
@@ -337,8 +371,9 @@ func (m *Model) removeModuleFromTabs(moniker string) {
 	delete(m.moduleStates, moniker)
 }
 
-// GetVisibleTabs returns the tabs that should be displayed
-// Shows running modules + the active tab (even if completed).
+// GetVisibleTabs returns the tabs that should be displayed.
+// Tabs are shown in execution order (moduleOrder). All tabs are kept - no deletion.
+// maxTabs is ignored to preserve full visibility of execution state.
 func (m *Model) GetVisibleTabs() []*ModuleState {
 	var tabs []*ModuleState
 
@@ -347,61 +382,53 @@ func (m *Model) GetVisibleTabs() []*ModuleState {
 		if state == nil {
 			continue
 		}
-
-		// Show running modules OR the currently selected tab (even if completed)
-		if state.Status == ModuleRunning || moniker == m.activeTab {
-			tabs = append(tabs, state)
-		}
-	}
-
-	// Limit to maxTabs if too many
-	if len(tabs) > m.maxTabs {
-		tabs = tabs[:m.maxTabs]
+		tabs = append(tabs, state)
 	}
 
 	return tabs
 }
 
 // SetActiveTab sets the currently active tab
-// When switching away from a completed tab, it will be removed.
+// SetActiveTab sets the currently active tab.
+// Tabs persist until FIFO removal, so any visible tab can be selected.
 func (m *Model) SetActiveTab(moniker string) {
-	oldTab := m.activeTab
-
 	// Empty moniker = aggregate view (always valid)
 	if moniker == "" {
 		m.activeTab = ""
-	} else {
-		// Validate moniker exists (allow completed tabs that are still selected)
-		state, exists := m.moduleStates[moniker]
-		if !exists {
-			return
-		}
-		// Only allow switching to running modules or the current active tab
-		if state.Status != ModuleRunning && moniker != m.activeTab {
-			return
-		}
-		m.activeTab = moniker
+		return
 	}
 
-	// If we switched away from a completed/failed tab, remove it now
-	if oldTab != "" && oldTab != m.activeTab {
-		if state, exists := m.moduleStates[oldTab]; exists {
-			if state.Status == ModuleComplete || state.Status == ModuleFailed {
-				m.removeModuleFromTabs(oldTab)
-			}
-		}
+	// Validate moniker exists in visible tabs
+	_, exists := m.moduleStates[moniker]
+	if !exists {
+		return
 	}
+	m.activeTab = moniker
 }
 
-// GetActiveModuleBuffer returns the buffer for the active tab, or nil for aggregate view.
+// GetActiveModuleBuffer returns the buffer for the active tab.
+// If no tab is selected, returns the first tab's buffer.
 func (m *Model) GetActiveModuleBuffer() *RingBuffer {
-	if m.activeTab == "" {
-		return nil // Aggregate view - use Run pane buffer
+	activeMoniker := m.getEffectiveActiveTab()
+	if activeMoniker == "" {
+		return nil // No tabs yet
 	}
-	if state, exists := m.moduleStates[m.activeTab]; exists {
+	if state, exists := m.moduleStates[activeMoniker]; exists {
 		return state.Buffer
 	}
 	return nil
+}
+
+// getEffectiveActiveTab returns the active tab, defaulting to first tab if none selected.
+func (m *Model) getEffectiveActiveTab() string {
+	if m.activeTab != "" {
+		return m.activeTab
+	}
+	// Default to first tab
+	if len(m.moduleOrder) > 0 {
+		return m.moduleOrder[0]
+	}
+	return ""
 }
 
 // CleanupDecayedTabs is a no-op now (tabs removed instantly on completion).
@@ -413,8 +440,18 @@ func (m *Model) CleanupDecayedTabs() {
 // formatLockInfo returns a compact string describing lock status.
 // Returns empty string if no locks are active.
 func (m Model) formatLockInfo() string {
-	if len(m.locks) == 0 {
+	parts := m.getLockParts()
+	if len(parts) == 0 {
 		return ""
+	}
+	return strings.Join(parts, " ")
+}
+
+// getLockParts returns individual formatted lock strings.
+// File locks are excluded as they're redundant with the module tabs.
+func (m Model) getLockParts() []string {
+	if len(m.locks) == 0 {
+		return nil
 	}
 
 	var parts []string
@@ -431,12 +468,10 @@ func (m Model) formatLockInfo() string {
 				parts = append(parts, part)
 			}
 		case "filelock":
-			// Show file lock: "name:locked"
-			if lock.Used > 0 {
-				parts = append(parts, fmt.Sprintf("%s:🔒", lock.Name))
-			}
+			// Skip file locks - they're redundant with module tabs
+			continue
 		default:
-			// Generic display
+			// Generic display for other lock types
 			if lock.Capacity > 0 {
 				parts = append(parts, fmt.Sprintf("%s:%d/%d", lock.Name, lock.Used, lock.Capacity))
 			} else if lock.Used > 0 {
@@ -445,9 +480,5 @@ func (m Model) formatLockInfo() string {
 		}
 	}
 
-	if len(parts) == 0 {
-		return ""
-	}
-
-	return strings.Join(parts, " ")
+	return parts
 }

@@ -11,10 +11,6 @@ import (
 	"path/filepath"
 )
 
-func init() {
-	RegisterHandler(&GoHandler{})
-}
-
 // GoHandler lints Go modules using golangci-lint.
 type GoHandler struct{}
 

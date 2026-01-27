@@ -2,7 +2,7 @@ package books
 
 import (
 	"os"
-	"path/filepath"
+	"path/filepath" // Used for filepath.Rel
 	"regexp"
 	"strings"
 )
@@ -18,24 +18,17 @@ var diataxisSections = map[string]bool{
 // stripMacros removes Jinja2 macro calls from markdown files (PDF only)
 // The macros plugin is only enabled for site builds, not PDF builds
 // Common macros: {{ diataxis_footer() }}, {{ page_breadcrumb() }}.
+// macroPattern matches {{ macro_name() }} or {{ macro_name(args) }}.
+var macroPattern = regexp.MustCompile(`\{\{\s*\w+\([^)]*\)\s*\}\}`)
+
 func (p *Preprocessor) stripMacros() error {
 	p.log("    Stripping macros from markdown files...")
-
-	// Pattern matches {{ macro_name() }} or {{ macro_name(args) }}
-	macroPattern := regexp.MustCompile(`\{\{\s*\w+\([^)]*\)\s*\}\}`)
 
 	stripped := 0
 	filesModified := 0
 
-	err := filepath.WalkDir(p.stagingDir, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if d.IsDir() || !strings.HasSuffix(path, ".md") {
-			return nil
-		}
-
+	// Use file index for efficient iteration
+	for _, path := range p.fileIndex.GetMarkdownFiles() {
 		content, err := os.ReadFile(path)
 		if err != nil {
 			return err
@@ -54,16 +47,14 @@ func (p *Preprocessor) stripMacros() error {
 				return err
 			}
 		}
-
-		return nil
-	})
-	if err != nil {
-		return err
 	}
 
 	p.log("    Stripped %d macros from %d files", stripped, filesModified)
 	return nil
 }
+
+// navTitlePattern matches title line at start of .nav.yml files.
+var navTitlePattern = regexp.MustCompile(`(?m)^title:\s*.*\n?`)
 
 // stripNavTitles removes the 'title' field from .nav.yml files
 // The awesome-nav plugin warns that title has no effect at top level.
@@ -72,13 +63,10 @@ func (p *Preprocessor) stripNavTitles() error {
 
 	stripped := 0
 
-	err := filepath.WalkDir(p.stagingDir, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if d.IsDir() || !strings.HasSuffix(path, ".nav.yml") {
-			return nil
+	// Use file index for efficient iteration
+	for _, path := range p.fileIndex.GetAllFiles() {
+		if !strings.HasSuffix(path, ".nav.yml") {
+			continue
 		}
 
 		content, err := os.ReadFile(path)
@@ -86,9 +74,7 @@ func (p *Preprocessor) stripNavTitles() error {
 			return err
 		}
 
-		// Simple regex to remove title line at start of file
-		titlePattern := regexp.MustCompile(`(?m)^title:\s*.*\n?`)
-		modified := titlePattern.ReplaceAllString(string(content), "")
+		modified := navTitlePattern.ReplaceAllString(string(content), "")
 
 		if modified != string(content) {
 			if err := os.WriteFile(path, []byte(modified), 0o644); err != nil {
@@ -96,16 +82,18 @@ func (p *Preprocessor) stripNavTitles() error {
 			}
 			stripped++
 		}
-
-		return nil
-	})
-	if err != nil {
-		return err
 	}
 
 	p.log("    Stripped titles from %d .nav.yml files", stripped)
 	return nil
 }
+
+// Patterns for macro injection.
+var (
+	h1TitlePattern    = regexp.MustCompile(`(?m)^#\s+.+$`)            // First H1 title line
+	breadcrumbPattern = regexp.MustCompile(`\{\{\s*page_breadcrumb\(\)\s*\}\}`)
+	footerPattern     = regexp.MustCompile(`\{\{\s*diataxis_footer\(\)\s*\}\}`)
+)
 
 // injectMacros adds Jinja2 navigation macros to markdown files (site builds only)
 // Injects {{ page_breadcrumb() }} after the title and {{ diataxis_footer() }} at the end
@@ -113,25 +101,11 @@ func (p *Preprocessor) stripNavTitles() error {
 func (p *Preprocessor) injectMacros() error {
 	p.log("    Injecting navigation macros into markdown files...")
 
-	// Pattern to find the first H1 title line
-	titlePattern := regexp.MustCompile(`(?m)^#\s+.+$`)
-
-	// Pattern to check if macros already exist (for idempotency)
-	breadcrumbPattern := regexp.MustCompile(`\{\{\s*page_breadcrumb\(\)\s*\}\}`)
-	footerPattern := regexp.MustCompile(`\{\{\s*diataxis_footer\(\)\s*\}\}`)
-
 	injected := 0
 	filesModified := 0
 
-	err := filepath.WalkDir(p.stagingDir, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if d.IsDir() || !strings.HasSuffix(path, ".md") {
-			return nil
-		}
-
+	// Use file index for efficient iteration
+	for _, path := range p.fileIndex.GetMarkdownFiles() {
 		// Get relative path from staging root to determine section
 		relPath, err := filepath.Rel(p.stagingDir, path)
 		if err != nil {
@@ -142,13 +116,13 @@ func (p *Preprocessor) injectMacros() error {
 		relPath = filepath.ToSlash(relPath)
 		parts := strings.Split(relPath, "/")
 		if len(parts) == 0 {
-			return nil
+			continue
 		}
 
 		// Check if file is in a Diátaxis section
 		section := parts[0]
 		if !diataxisSections[section] {
-			return nil // Skip files not in a Diátaxis section
+			continue // Skip files not in a Diátaxis section
 		}
 
 		content, err := os.ReadFile(path)
@@ -163,7 +137,7 @@ func (p *Preprocessor) injectMacros() error {
 		// Check if breadcrumb already exists
 		if !breadcrumbPattern.MatchString(modified) {
 			// Find first H1 title and insert breadcrumb after it
-			loc := titlePattern.FindStringIndex(modified)
+			loc := h1TitlePattern.FindStringIndex(modified)
 			if loc != nil {
 				titleEnd := loc[1]
 				// Insert breadcrumb macro after the title line
@@ -187,11 +161,6 @@ func (p *Preprocessor) injectMacros() error {
 				return err
 			}
 		}
-
-		return nil
-	})
-	if err != nil {
-		return err
 	}
 
 	p.log("    Injected %d macros into %d files", injected, filesModified)

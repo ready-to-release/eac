@@ -13,7 +13,16 @@ import (
 
 var log = logging.C()
 
+// CopyStats tracks copy operation statistics.
+type CopyStats struct {
+	Copied  int // Files copied (new or changed)
+	Skipped int // Files skipped (unchanged - same mtime/size)
+	Lazy    int // Files skipped (lazy asset copy - unreferenced)
+}
+
 // copyStaticFiles copies all copy-type sources to staging (Step 1).
+// Uses mtime/size comparison for fast incremental copies.
+// After copying, removes orphaned files that were deleted from source since last build.
 func (p *Preprocessor) copyStaticFiles() error {
 	copySources := p.book.GetCopySources()
 	if len(copySources) == 0 {
@@ -21,20 +30,33 @@ func (p *Preprocessor) copyStaticFiles() error {
 		return nil
 	}
 
+	var totalStats CopyStats
 	for i := range copySources {
 		src := &copySources[i]
-		count, err := p.copySingleSource(*src)
+		stats, err := p.copySingleSource(*src)
 		if err != nil {
 			return err
 		}
-		p.log("    Copied %d files from %s", count, src.From)
+		totalStats.Copied += stats.Copied
+		totalStats.Skipped += stats.Skipped
+		totalStats.Lazy += stats.Lazy
+	}
+
+	p.log("    Copied %d files (%d unchanged, %d lazy-skipped)",
+		totalStats.Copied, totalStats.Skipped, totalStats.Lazy)
+
+	// Clean up orphaned files (source files deleted since last build)
+	if err := p.cleanOrphanedStagedFiles(); err != nil {
+		return err
 	}
 
 	return nil
 }
 
 // copySingleSource copies files matching a single copy source.
-func (p *Preprocessor) copySingleSource(src config.Source) (int, error) {
+// Uses mtime/size comparison for fast incremental copies (robocopy-style).
+func (p *Preprocessor) copySingleSource(src config.Source) (CopyStats, error) {
+	var stats CopyStats
 	from := src.From
 	to := src.To
 	exclude := src.Exclude
@@ -46,24 +68,18 @@ func (p *Preprocessor) copySingleSource(src config.Source) (int, error) {
 	pattern := filepath.Join(p.workspaceRoot, from)
 
 	// Use doublestar for glob matching with ** support
-	basePath, _ := doublestar.SplitPattern(pattern)
-	if basePath == "" {
-		basePath = p.workspaceRoot
-	}
-
 	matches, err := doublestar.FilepathGlob(pattern)
 	if err != nil {
-		return 0, err
+		return stats, err
 	}
 
-	var copied, skipped int
 	for _, match := range matches {
 		// Check if it's a file (skip directories)
-		info, err := os.Stat(match)
+		srcInfo, err := os.Stat(match)
 		if err != nil {
 			continue
 		}
-		if info.IsDir() {
+		if srcInfo.IsDir() {
 			continue
 		}
 
@@ -81,7 +97,7 @@ func (p *Preprocessor) copySingleSource(src config.Source) (int, error) {
 		// Exception: always copy css/, js/, logo/ (required for styling)
 		if isAssetCopy && p.referencedAssets != nil && len(p.referencedAssets) > 0 {
 			if !p.isAssetNeeded(match) {
-				skipped++
+				stats.Lazy++
 				continue
 			}
 		}
@@ -89,34 +105,30 @@ func (p *Preprocessor) copySingleSource(src config.Source) (int, error) {
 		// Calculate relative path from the base of the glob pattern
 		relPath, err := calculateRelativePath(match, from, p.workspaceRoot)
 		if err != nil {
-			return copied, err
+			return stats, err
 		}
 
 		// Destination in staging
 		destPath := filepath.Join(p.stagingDir, to, relPath)
 
-		// DEBUG: Log markdown file copies
-		if strings.HasSuffix(strings.ToLower(match), ".md") {
-			log.Debugf("[COPY] MD file: %s -> %s", match, destPath)
-		}
-
-		// Copy file
-		if err := copyFile(match, destPath); err != nil {
-			return copied, err
-		}
-
-		// Track source → staging mapping for link translation
-		// Track all files so we can generate correct relative paths for images, etc.
+		// Track source → staging mapping for link translation (always, even if skipped)
 		p.linkTranslator.AddFileMapping(destPath, match)
 
-		copied++
+		// Check if file needs copying using mtime/size comparison (fast, no I/O for unchanged)
+		if !needsCopy(srcInfo, destPath) {
+			stats.Skipped++
+			continue
+		}
+
+		// Copy file and preserve mtime
+		if err := copyFilePreserveMtime(match, destPath, srcInfo); err != nil {
+			return stats, err
+		}
+
+		stats.Copied++
 	}
 
-	if skipped > 0 {
-		p.log("    Skipped %d unreferenced assets (lazy copy)", skipped)
-	}
-
-	return copied, nil
+	return stats, nil
 }
 
 // isAssetNeeded checks if an asset file should be copied based on references.
@@ -230,4 +242,63 @@ func copyFile(src, dst string) error {
 	// Copy contents
 	_, err = io.Copy(dstFile, srcFile)
 	return err
+}
+
+
+// cleanOrphanedStagedFiles removes files from staging that were not tracked during this build.
+// This handles the case where a source file was deleted between builds.
+// Only removes files with source-type extensions (.md, .png, .jpg, etc.), not generated content.
+func (p *Preprocessor) cleanOrphanedStagedFiles() error {
+	var removed int
+
+	err := filepath.WalkDir(p.stagingDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return nil
+		}
+
+		// Check if this file was tracked during this build's copy phase
+		if _, tracked := p.linkTranslator.GetSourcePath(path); tracked {
+			return nil // File is tracked - not an orphan
+		}
+
+		// Only clean source file types, not generated content (mermaid SVGs, etc.)
+		if !shouldCleanOrphan(path) {
+			return nil
+		}
+
+		// Remove orphaned file
+		if err := os.Remove(path); err != nil {
+			// Non-fatal: log and continue
+			p.log("    ⚠️  Failed to remove orphan: %s (%v)", path, err)
+			return nil
+		}
+
+		removed++
+		return nil
+	})
+
+	if removed > 0 {
+		p.log("    Removed %d orphaned files from staging", removed)
+	}
+
+	// Clean up empty directories left behind
+	cleanEmptyDirs(p.stagingDir)
+
+	return err
+}
+
+// shouldCleanOrphan checks if a file type should be cleaned as an orphan.
+// Only source file types are cleaned - generated content is preserved.
+func shouldCleanOrphan(path string) bool {
+	ext := strings.ToLower(filepath.Ext(path))
+	sourceExts := map[string]bool{
+		".md":   true,
+		".png":  true,
+		".jpg":  true,
+		".jpeg": true,
+		".gif":  true,
+		".webp": true,
+		// Note: .svg excluded since mermaid generates SVGs
+	}
+	return sourceExts[ext]
 }

@@ -3,7 +3,6 @@ package books
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -11,18 +10,12 @@ import (
 func (p *Preprocessor) cleanupLinksForPDF() error {
 	p.log("    Processing images for PDF compatibility...")
 
-	processed := 0
 	imagesFixed := 0
 
-	err := filepath.WalkDir(p.stagingDir, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
+	// Use file index for efficient iteration
+	mdFiles := p.fileIndex.GetMarkdownFiles()
 
-		if d.IsDir() || !strings.HasSuffix(path, ".md") {
-			return nil
-		}
-
+	for _, path := range mdFiles {
 		content, err := os.ReadFile(path)
 		if err != nil {
 			return err
@@ -37,14 +30,9 @@ func (p *Preprocessor) cleanupLinksForPDF() error {
 			}
 			imagesFixed += count
 		}
-		processed++
-		return nil
-	})
-	if err != nil {
-		return err
 	}
 
-	p.log("    Processed %d files, added width constraints to %d images", processed, imagesFixed)
+	p.log("    Processed %d files, added width constraints to %d images", len(mdFiles), imagesFixed)
 	return nil
 }
 
@@ -69,18 +57,12 @@ var imageWithAttrsPattern = regexp.MustCompile(`!\[([^\]]*)\]\(([^)]+)\)\s*\{:?\
 func (p *Preprocessor) convertAttrListImagesToHTML() error {
 	p.log("    Converting attr_list images to HTML...")
 
-	processed := 0
 	converted := 0
 
-	err := filepath.WalkDir(p.stagingDir, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
+	// Use file index for efficient iteration
+	mdFiles := p.fileIndex.GetMarkdownFiles()
 
-		if d.IsDir() || !strings.HasSuffix(path, ".md") {
-			return nil
-		}
-
+	for _, path := range mdFiles {
 		content, err := os.ReadFile(path)
 		if err != nil {
 			return err
@@ -95,14 +77,9 @@ func (p *Preprocessor) convertAttrListImagesToHTML() error {
 			}
 			converted += count
 		}
-		processed++
-		return nil
-	})
-	if err != nil {
-		return err
 	}
 
-	p.log("    Processed %d files, converted %d images to HTML", processed, converted)
+	p.log("    Processed %d files, converted %d images to HTML", len(mdFiles), converted)
 	return nil
 }
 

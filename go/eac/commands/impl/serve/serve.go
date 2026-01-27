@@ -24,6 +24,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/impl/serve/servers"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/serve"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
@@ -447,20 +448,44 @@ func (c *DockerClient) IsRunning() (bool, *serve.ServeResult, error) {
 }
 
 // StartContainer starts the serve container.
+// Uses configuration from servers.GlobalServeContext if set, otherwise uses defaults.
 func (c *DockerClient) StartContainer(workspaceRoot, contentPath string, port int) (*serve.ServeResult, error) {
-	dockerfile := filepath.Join(workspaceRoot, "containers/static-site/Dockerfile")
-	contextPath := filepath.Dir(dockerfile)
+	// Get configuration from GlobalServeContext or use defaults
+	ctx := servers.GlobalServeContext
+	if ctx == nil {
+		ctx = servers.DefaultServeContext()
+	}
+
+	// Determine image
+	image := ctx.StaticSiteImage
+	if image == "" {
+		image = "cli-static-site:latest"
+	}
+
+	// Determine Dockerfile path
+	dockerfile := ctx.StaticSiteDockerfile
+	contextPath := ctx.StaticSiteContext
+	if dockerfile == "" {
+		dockerfile = filepath.Join(workspaceRoot, "containers/static-site/Dockerfile")
+		contextPath = filepath.Dir(dockerfile)
+	}
+
+	// Determine container port
+	containerPort := ctx.ContainerPort
+	if containerPort == 0 {
+		containerPort = 8000
+	}
 
 	serveConfig := &serve.ServeConfig{
 		Name:  c.containerName,
-		Image: "cli-static-site:latest",
+		Image: image,
 		BuildInfo: &serve.BuildInfo{
 			Dockerfile:  dockerfile,
 			ContextPath: contextPath,
 		},
 		ContentPath:   contentPath,
 		ContainerPath: "/usr/share/nginx/html",
-		ContainerPort: 8000,
+		ContainerPort: containerPort,
 		PreferredPort: port,
 		RestartPolicy: "unless-stopped",
 	}
@@ -474,12 +499,30 @@ func (c *DockerClient) StopContainer() error {
 }
 
 // IsImageStale checks if the container image is stale.
+// Uses configuration from servers.GlobalServeContext if set, otherwise uses defaults.
 func (c *DockerClient) IsImageStale(workspaceRoot string) (bool, string, error) {
-	dockerfile := filepath.Join(workspaceRoot, "containers/static-site/Dockerfile")
-	contextPath := filepath.Dir(dockerfile)
+	// Get configuration from GlobalServeContext or use defaults
+	ctx := servers.GlobalServeContext
+	if ctx == nil {
+		ctx = servers.DefaultServeContext()
+	}
+
+	// Determine image
+	image := ctx.StaticSiteImage
+	if image == "" {
+		image = "cli-static-site:latest"
+	}
+
+	// Determine Dockerfile path
+	dockerfile := ctx.StaticSiteDockerfile
+	contextPath := ctx.StaticSiteContext
+	if dockerfile == "" {
+		dockerfile = filepath.Join(workspaceRoot, "containers/static-site/Dockerfile")
+		contextPath = filepath.Dir(dockerfile)
+	}
 
 	serveConfig := &serve.ServeConfig{
-		Image: "cli-static-site:latest",
+		Image: image,
 		BuildInfo: &serve.BuildInfo{
 			Dockerfile:  dockerfile,
 			ContextPath: contextPath,

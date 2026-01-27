@@ -6,6 +6,7 @@ import (
 	"context"
 	"io"
 	"net"
+	"runtime"
 	"testing"
 	"time"
 
@@ -106,6 +107,10 @@ func TestNewExecutor(t *testing.T) {
 }
 
 func TestDefaultExecutor_ExecuteSystem(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipping test on Windows: echo behaves differently")
+	}
+
 	e := NewExecutor()
 	defer e.Close()
 
@@ -138,6 +143,10 @@ func TestDefaultExecutor_ExecuteSystem(t *testing.T) {
 }
 
 func TestDefaultExecutor_ExecuteSystem_WithEnv(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipping test on Windows: sh not available")
+	}
+
 	e := NewExecutor()
 	defer e.Close()
 
@@ -171,6 +180,10 @@ func TestDefaultExecutor_ExecuteSystem_WithEnv(t *testing.T) {
 }
 
 func TestDefaultExecutor_ExecuteSystem_WithArgsOverrides(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipping test on Windows: echo behaves differently")
+	}
+
 	e := NewExecutor()
 	defer e.Close()
 
@@ -200,6 +213,10 @@ func TestDefaultExecutor_ExecuteSystem_WithArgsOverrides(t *testing.T) {
 }
 
 func TestDefaultExecutor_ExecuteSystem_Placeholders(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipping test on Windows: echo behaves differently")
+	}
+
 	e := NewExecutor()
 	defer e.Close()
 
@@ -232,6 +249,10 @@ func TestDefaultExecutor_ExecuteSystem_Placeholders(t *testing.T) {
 }
 
 func TestDefaultExecutor_ExecuteSystem_NonZeroExit(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipping test on Windows: sh not available")
+	}
+
 	e := NewExecutor()
 	defer e.Close()
 
@@ -283,6 +304,9 @@ func TestDefaultExecutor_Validate_SystemTool(t *testing.T) {
 	defer e.Close()
 
 	t.Run("existing binary", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("skipping test on Windows: echo is not a standalone binary")
+		}
 		tool := &ToolDefinition{
 			ID:     "echo",
 			Type:   ToolTypeSystem,
@@ -361,6 +385,10 @@ func TestDefaultExecutor_Execute_UnknownType(t *testing.T) {
 }
 
 func TestDefaultExecutor_LogWriter(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipping test on Windows: echo behaves differently")
+	}
+
 	e := NewExecutor()
 	defer e.Close()
 
@@ -485,6 +513,10 @@ func TestResolvePlaceholders_NilMap(t *testing.T) {
 }
 
 func TestExecutionResult_Duration(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipping test on Windows: sh not available")
+	}
+
 	e := NewExecutor()
 	defer e.Close()
 

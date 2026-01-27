@@ -4,6 +4,8 @@ package internal
 import (
 	"encoding/json"
 	"time"
+
+	"github.com/ready-to-release/eac/go/eac/core/tool"
 )
 
 // EvidenceFile represents the standardized security evidence format.
@@ -17,39 +19,24 @@ type EvidenceFile struct {
 	Findings  json.RawMessage `json:"findings"`  // Scanner-specific JSON output
 }
 
-// ScannerType represents the type of security scanner.
-type ScannerType string
+// ScannerType is an alias to tool.ScannerType for backward compatibility.
+// The canonical type is defined in core/tool/scan_bridge.go.
+type ScannerType = tool.ScannerType
 
+// Scanner type constants - use the canonical values from core/tool.
 const (
-	ScannerSBOM       ScannerType = "sbom"
-	ScannerVuln       ScannerType = "vuln"
-	ScannerSecrets    ScannerType = "secrets"
-	ScannerCompliance ScannerType = "compliance"
-	ScannerIaC        ScannerType = "iac"
-	ScannerSAST       ScannerType = "sast"
-	ScannerDAST       ScannerType = "zap"
+	ScannerSBOM       = tool.ScannerSBOM
+	ScannerVuln       = tool.ScannerVuln
+	ScannerSecrets    = tool.ScannerSecrets
+	ScannerCompliance = tool.ScannerCompliance
+	ScannerIaC        = tool.ScannerIaC
+	ScannerSAST       = tool.ScannerSAST
+	ScannerDAST       = tool.ScannerDAST
 )
 
-// ParseScannerType converts a string to ScannerType.
+// ParseScannerType delegates to tool.ParseScannerType for backward compatibility.
 func ParseScannerType(s string) (ScannerType, bool) {
-	switch s {
-	case "sbom":
-		return ScannerSBOM, true
-	case "vuln":
-		return ScannerVuln, true
-	case "secrets":
-		return ScannerSecrets, true
-	case "compliance":
-		return ScannerCompliance, true
-	case "iac":
-		return ScannerIaC, true
-	case "sast":
-		return ScannerSAST, true
-	case "zap":
-		return ScannerDAST, true
-	default:
-		return "", false
-	}
+	return tool.ParseScannerType(s)
 }
 
 // ScanResult holds the outcome of a security scan.

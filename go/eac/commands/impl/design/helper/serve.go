@@ -41,7 +41,7 @@ func StartStructurizrLite(moduleName string, autoStop bool) error {
 	// Build configuration for the serve helper
 	config := &serve.ServeConfig{
 		Name:          containerName,
-		Image:         StructurizrLiteImage,
+		Image:         GetStructurizrLiteImage(),
 		BuildInfo:     nil, // Use official image from registry
 		ContentPath:   workspaceDir,
 		ContainerPath: "/usr/local/structurizr",

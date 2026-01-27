@@ -12,6 +12,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/locktracker"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/output"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
+	"github.com/shirou/gopsutil/v3/mem"
 )
 
 // ComponentScheduler manages parallel execution of component work items
@@ -19,6 +20,13 @@ import (
 type ComponentScheduler struct {
 	config    Config
 	semaphore *WeightedSemaphore
+	registry  *locktracker.Registry // Lock tracking registry for TUI visualization
+
+	// Dynamic capacity management
+	capacityTicker *time.Ticker    // Recalculates capacity every 2 seconds
+	capacityStop   chan struct{}   // Signal to stop the capacity ticker
+	configMax      int             // Maximum capacity from config (ceiling)
+	turbo          int             // Turbo multiplier (1x, 2x, 4x, etc.)
 
 	// Module completion tracking for inter-module dependencies
 	moduleCompleteMu sync.RWMutex
@@ -52,17 +60,31 @@ type ComponentScheduler struct {
 
 // NewComponentScheduler creates a new scheduler with the given configuration.
 // If registry is non-nil, the semaphore will be tracked for lock visualization.
-func NewComponentScheduler(config Config, tuiConsole *tui.Console, registry *locktracker.Registry) *ComponentScheduler {
+// Starts a dynamic capacity ticker that adjusts capacity based on available system resources.
+func NewComponentScheduler(config *Config, tuiConsole *tui.Console, registry *locktracker.Registry) *ComponentScheduler {
+	// Calculate initial capacity based on available resources
+	// Turbo multiplies the pressure roof: 1=normal, 2=2x, 4=4x
+	// If turbo flag is set without a value, default to 4x
+	turbo := config.Turbo
+	if turbo < 1 {
+		turbo = 1
+	}
+	initialCap := detectAvailableCapacity(config.MaxConcurrency, turbo)
+
 	var sem *WeightedSemaphore
 	if registry != nil {
-		sem = NewWeightedSemaphoreWithRegistry("component-scheduler", config.MaxConcurrency, registry)
+		sem = NewWeightedSemaphoreWithRegistry("component-scheduler", initialCap, registry)
 	} else {
-		sem = NewWeightedSemaphore(config.MaxConcurrency)
+		sem = NewWeightedSemaphore(initialCap)
 	}
 
 	cs := &ComponentScheduler{
-		config:           config,
+		config:           *config,
 		semaphore:        sem,
+		registry:         registry,
+		configMax:        config.MaxConcurrency,
+		turbo:            turbo,
+		capacityStop:     make(chan struct{}),
 		moduleComplete:   make(map[string]bool),
 		moduleCompleteCh: make(map[string]chan struct{}),
 		moduleCompCount:  make(map[string]int),
@@ -80,7 +102,96 @@ func NewComponentScheduler(config Config, tuiConsole *tui.Console, registry *loc
 		cs.orchestratorOut = os.Stdout
 	}
 
+	// Start dynamic capacity ticker
+	cs.startCapacityTicker()
+
 	return cs
+}
+
+// startCapacityTicker starts a goroutine that recalculates capacity every 2 seconds
+// based on available system resources. The config max is used as a ceiling.
+func (cs *ComponentScheduler) startCapacityTicker() {
+	cs.capacityTicker = time.NewTicker(2 * time.Second)
+
+	go func() {
+		for {
+			select {
+			case <-cs.capacityTicker.C:
+				newCap := detectAvailableCapacity(cs.configMax, cs.turbo)
+				cs.semaphore.SetCapacity(newCap)
+			case <-cs.capacityStop:
+				cs.capacityTicker.Stop()
+				return
+			}
+		}
+	}()
+}
+
+// StopCapacityTicker stops the dynamic capacity ticker.
+// Should be called when the scheduler is no longer needed.
+func (cs *ComponentScheduler) StopCapacityTicker() {
+	if cs.capacityStop != nil {
+		close(cs.capacityStop)
+		cs.capacityStop = nil
+	}
+}
+
+// Close releases resources held by the scheduler.
+// Should be called when the scheduler is no longer needed.
+func (cs *ComponentScheduler) Close() {
+	cs.StopCapacityTicker()
+	if cs.semaphore != nil {
+		cs.semaphore.Close()
+	}
+}
+
+// detectAvailableCapacity calculates capacity as percentage of RAM.
+// Normal: 100% of (RAM/1GB) slots
+// Turbo: turbo × 100% of (RAM/1GB) slots
+// configMax is only used as ceiling if > 0 (user explicitly set it).
+// Returns at least 1.
+func detectAvailableCapacity(configMax int, turbo int) int {
+	// Try smart detection for WSL/Docker environments first
+	effectiveRAM := GetEffectiveMemoryBytes()
+
+	if effectiveRAM == 0 {
+		// Fall back to host available RAM
+		memInfo, err := mem.VirtualMemory()
+		if err != nil {
+			// Fall back to a sensible default on error
+			if configMax > 0 {
+				return configMax
+			}
+			return 4
+		}
+		// Use Available (free + buffers/cache) rather than Free for better accuracy
+		effectiveRAM = memInfo.Available
+	}
+
+	// Base capacity: 1 slot per 256MB of RAM
+	const slotSize = 256 * 1024 * 1024
+	baseCapacity := effectiveRAM / slotSize
+
+	// Apply turbo multiplier (percentage: 1x=100%, 2x=200%, 4x=400%)
+	capacity := int(baseCapacity) * turbo
+
+	// Cap at reasonable maximum
+	const maxCapacity = 64
+	if capacity > maxCapacity {
+		capacity = maxCapacity
+	}
+
+	// Ensure at least 1
+	if capacity < 1 {
+		capacity = 1
+	}
+
+	// Only apply configMax ceiling if user explicitly set it (> 0)
+	if configMax > 0 && capacity > configMax {
+		return configMax
+	}
+
+	return capacity
 }
 
 // InitializeWork prepares the scheduler for a batch of component work items.
@@ -123,13 +234,24 @@ func (cs *ComponentScheduler) InitializeWork(work []ComponentWork) {
 
 // RunComponents executes component work items in parallel with weighted scheduling.
 // Components respect intra-module dependencies (BuildAfter) and weighted resource limits.
+// Uses LPT (Longest Processing Time First) scheduling: heaviest jobs start first
+// to ensure heavy jobs are distributed throughout execution.
 // Returns results in the same order as the input work items.
 func (cs *ComponentScheduler) RunComponents(work []ComponentWork, worker ComponentWorkerFunc) []ComponentResult {
 	results := make([]ComponentResult, len(work))
 	var wg sync.WaitGroup
 
-	// Launch all components - they will wait for their dependencies
-	for _, w := range work {
+	// Sort by weight descending (LPT scheduling) - heaviest jobs first
+	// This ensures heavy jobs start early and are distributed across execution time
+	sortedWork := make([]ComponentWork, len(work))
+	copy(sortedWork, work)
+	sort.Slice(sortedWork, func(i, j int) bool {
+		return sortedWork[i].Weight > sortedWork[j].Weight
+	})
+
+	// Launch components in LPT order - heaviest first
+	// Results are placed by original Index, so output order is preserved
+	for _, w := range sortedWork {
 		wg.Add(1)
 		go func(cw ComponentWork) {
 			defer wg.Done()
@@ -176,13 +298,25 @@ func (cs *ComponentScheduler) processComponent(work ComponentWork, worker Compon
 		}
 	}
 
+	// Display name for TUI (module:component)
+	displayName := fmt.Sprintf("%s:%s", work.Module, work.Component)
+
 	// 2. Acquire weighted slot
 	weight := work.Weight
 	if weight <= 0 {
 		weight = 1
 	}
+
+	// Create tab as PENDING before acquiring slot (shows scheduled but waiting)
+	cs.tuiMarkPending(displayName, weight)
+
 	cs.semaphore.Acquire(weight)
-	defer cs.semaphore.Release(weight)
+	// Note: We explicitly release the semaphore BEFORE marking complete in TUI
+	// to ensure the pressure gauge and running tabs stay in sync.
+	// Do not use defer here - it would release after TUI update.
+
+	// Mark as RUNNING after acquiring slot
+	cs.tuiMarkRunning(displayName)
 
 	// 3. Create output directory for this component
 	// Structure: out/build/<module>/<component> (e.g., out/build/books/howto)
@@ -198,6 +332,7 @@ func (cs *ComponentScheduler) processComponent(work ComponentWork, worker Compon
 		result.Errors = []string{fmt.Sprintf("Failed to create directory: %v", err)}
 		result.LogPath = relLogPath
 		result.Duration = time.Since(startTime)
+		cs.semaphore.Release(weight) // Release before TUI update
 		cs.markComponentComplete(work, &result)
 		return result
 	}
@@ -210,24 +345,38 @@ func (cs *ComponentScheduler) processComponent(work ComponentWork, worker Compon
 		result.Errors = []string{fmt.Sprintf("Failed to create log file: %v", err)}
 		result.LogPath = relLogPath
 		result.Duration = time.Since(startTime)
+		cs.semaphore.Release(weight) // Release before TUI update
 		cs.markComponentComplete(work, &result)
 		return result
 	}
 
-	// Mark as running
-	cs.tuiMarkRunning(work.Module, work.Component)
-
 	// Create writer for worker
 	var workerWriter io.Writer
 	if cs.tuiConsole != nil {
-		displayName := fmt.Sprintf("%s:%s", work.Module, work.Component)
 		workerWriter = cs.tuiConsole.NewWriter(displayName, logFile)
 	} else {
 		workerWriter = logFile
 	}
 
-	// 4. Execute build
+	// 4. Execute build with memory instrumentation
+	memBefore := GetMemoryStats()
+	fmt.Fprintf(logFile, "[memory] before: used=%s avail=%s total=%s (%.1f%%)\n",
+		FormatBytes(memBefore.UsedBytes), FormatBytes(memBefore.AvailableBytes),
+		FormatBytes(memBefore.TotalBytes), memBefore.UsedPercent)
+
 	exitCode := worker(work.Module, work.Component, workerWriter)
+
+	memAfter := GetMemoryStats()
+	memDelta := int64(memAfter.UsedBytes) - int64(memBefore.UsedBytes)
+	deltaSign := "+"
+	if memDelta < 0 {
+		deltaSign = ""
+	}
+	fmt.Fprintf(logFile, "[memory] after: used=%s avail=%s total=%s (%.1f%%) delta=%s%s\n",
+		FormatBytes(memAfter.UsedBytes), FormatBytes(memAfter.AvailableBytes),
+		FormatBytes(memAfter.TotalBytes), memAfter.UsedPercent,
+		deltaSign, FormatBytes(uint64(abs64(memDelta))))
+
 	logFile.Close()
 
 	// Parse log for warnings/errors
@@ -239,7 +388,11 @@ func (cs *ComponentScheduler) processComponent(work ComponentWork, worker Compon
 	result.LogPath = relLogPath
 	result.Duration = time.Since(startTime)
 
-	// Mark as completed
+	// Release semaphore BEFORE marking complete in TUI
+	// This ensures pressure gauge reflects the release immediately
+	cs.semaphore.Release(weight)
+
+	// Mark as completed (TUI will now show correct pressure)
 	cs.markComponentComplete(work, &result)
 
 	return result
@@ -268,8 +421,9 @@ func (cs *ComponentScheduler) markComponentComplete(work ComponentWork, result *
 	}
 	cs.moduleCompleteMu.Unlock()
 
-	// Update TUI
-	cs.tuiMarkCompleted(work.Module, work.Component)
+	// Update TUI with exit code
+	displayName := fmt.Sprintf("%s:%s", work.Module, work.Component)
+	cs.tuiMarkCompleted(displayName, result.ExitCode)
 }
 
 // WaitForModule blocks until all components of a module are complete.
@@ -299,13 +453,23 @@ func (cs *ComponentScheduler) IsModuleFailed(module string) bool {
 	return false
 }
 
-// tuiMarkRunning adds a component to the running list.
-func (cs *ComponentScheduler) tuiMarkRunning(module, component string) {
+// tuiMarkPending creates a component tab in pending state (scheduled, waiting for slot).
+func (cs *ComponentScheduler) tuiMarkPending(displayName string, weight int) {
+	if cs.tuiConsole == nil {
+		return
+	}
+	// Create the tab with pending status
+	cs.tuiConsole.StartModule(displayName, weight)
+}
+
+// tuiMarkRunning marks a component as actively running (slot acquired).
+func (cs *ComponentScheduler) tuiMarkRunning(displayName string) {
 	if cs.tuiConsole == nil {
 		return
 	}
 
-	displayName := fmt.Sprintf("%s:%s", module, component)
+	// Update status to running
+	cs.tuiConsole.MarkModuleRunning(displayName)
 
 	cs.tuiMu.Lock()
 	cs.tuiRunning = append(cs.tuiRunning, displayName)
@@ -320,16 +484,18 @@ func (cs *ComponentScheduler) tuiMarkRunning(module, component string) {
 		Running:   running,
 		Completed: completed,
 		Total:     total,
+		Locks:     cs.getLockStatuses(),
 	})
 }
 
-// tuiMarkCompleted removes a component from running and increments completed.
-func (cs *ComponentScheduler) tuiMarkCompleted(module, component string) {
+// tuiMarkCompleted removes a component from running, increments completed, and reports exit code.
+func (cs *ComponentScheduler) tuiMarkCompleted(displayName string, exitCode int) {
 	if cs.tuiConsole == nil {
 		return
 	}
 
-	displayName := fmt.Sprintf("%s:%s", module, component)
+	// First, send the completion message with exit code so TUI knows success/failure
+	cs.tuiConsole.MarkModuleComplete(displayName, exitCode)
 
 	cs.tuiMu.Lock()
 	// Remove from running list
@@ -351,7 +517,32 @@ func (cs *ComponentScheduler) tuiMarkCompleted(module, component string) {
 		Running:   running,
 		Completed: completed,
 		Total:     total,
+		Locks:     cs.getLockStatuses(),
 	})
+}
+
+// getLockStatuses returns current lock states from the registry.
+func (cs *ComponentScheduler) getLockStatuses() []tui.LockStatus {
+	if cs.registry == nil {
+		return nil
+	}
+
+	snapshot := cs.registry.Snapshot()
+	if len(snapshot) == 0 {
+		return nil
+	}
+
+	locks := make([]tui.LockStatus, 0, len(snapshot))
+	for _, info := range snapshot {
+		locks = append(locks, tui.LockStatus{
+			Name:     info.Name,
+			Type:     string(info.Type),
+			Capacity: int(info.Capacity),
+			Used:     int(info.Used),
+			Waiting:  int(info.Waiting),
+		})
+	}
+	return locks
 }
 
 // AggregateToWorkResults converts component results to module-level WorkResults.
@@ -479,3 +670,11 @@ func AggregateToComponentResultSets(results []ComponentResult) []ComponentResult
 }
 
 // Note: sanitizePathForFS is defined in orchestrator.go
+
+// abs64 returns the absolute value of an int64.
+func abs64(n int64) int64 {
+	if n < 0 {
+		return -n
+	}
+	return n
+}

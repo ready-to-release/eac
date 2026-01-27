@@ -104,10 +104,8 @@ func (c *goVersionContext) loadSystemDependencies(repoCtx *repositoryContext) er
 	if err := c.ensureRepoRoot(repoCtx); err != nil {
 		return err
 	}
-	c.sysDepsPath = filepath.Join(c.repoRoot, ".r2r", "eac", "system-dependencies.yml")
-	if _, err := os.Stat(c.sysDepsPath); os.IsNotExist(err) {
-		return fmt.Errorf("system-dependencies.yml not found at %s", c.sysDepsPath)
-	}
+	// Tool versions are now defined in tool-config.yml (loaded from contract defaults)
+	// No longer need to check for system-dependencies.yml
 	return nil
 }
 

@@ -38,7 +38,7 @@ func NewTrackedSemaphoreWithRegistry(name string, capacity int64, registry *Regi
 	}
 
 	// Register with the registry
-	ts.registry.Register(LockInfo{
+	ts.registry.Register(&LockInfo{
 		ID:       ts.id,
 		Type:     LockTypeSemaphore,
 		Name:     name,
@@ -97,6 +97,26 @@ func (ts *TrackedSemaphore) TryAcquire() bool {
 // Stats returns the current (capacity, used, waiting) counts.
 func (ts *TrackedSemaphore) Stats() (capacity, used, waiting int64) {
 	return ts.capacity, atomic.LoadInt64(&ts.used), atomic.LoadInt64(&ts.waiting)
+}
+
+// Used returns the current number of slots in use.
+func (ts *TrackedSemaphore) Used() int64 {
+	return atomic.LoadInt64(&ts.used)
+}
+
+// AcquireBlocking blocks until a slot is available (no context cancellation support).
+func (ts *TrackedSemaphore) AcquireBlocking() {
+	// Increment waiting count
+	atomic.AddInt64(&ts.waiting, 1)
+	ts.updateRegistry()
+
+	// Block until slot available
+	ts.sem <- struct{}{}
+
+	// Got a slot
+	atomic.AddInt64(&ts.waiting, -1)
+	atomic.AddInt64(&ts.used, 1)
+	ts.updateRegistry()
 }
 
 // Close unregisters the semaphore from tracking.

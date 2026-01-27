@@ -27,15 +27,23 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/dockerutil"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
+	"github.com/ready-to-release/eac/go/eac/core/tool"
 )
 
 const (
-	// DrawioImageName is the Docker image for drawio-cli
-	DrawioImageName = "cli-drawio-cli:latest"
+	// DefaultDrawioImageName is the default Docker image for drawio-cli
+	// This is used as fallback when tool-config.yml is not loaded.
+	DefaultDrawioImageName = "cli-drawio-cli:latest"
 
 	// ContainerWorkdir is where files are mounted in the container
 	ContainerWorkdir = "/docs"
 )
+
+// GetDrawioImageName returns the Docker image for drawio-cli.
+// It first checks tool-config.yml, then falls back to the default.
+func GetDrawioImageName() string {
+	return tool.GetToolImageWithDefault("drawio-cli", DefaultDrawioImageName)
+}
 
 var log = logging.C()
 
@@ -66,12 +74,13 @@ func EnsureDrawioImage(workspaceRoot string, logWriter io.Writer) error {
 		contextPath = hostRepoRoot + "/containers/drawio-cli"
 	}
 
+	imageName := GetDrawioImageName()
 	if logWriter != nil {
-		fmt.Fprintf(logWriter, "Building Docker image: %s\n", DrawioImageName)
+		fmt.Fprintf(logWriter, "Building Docker image: %s\n", imageName)
 	}
 
 	cmd := exec.Command("docker", "build",
-		"-t", DrawioImageName,
+		"-t", imageName,
 		"-f", dockerfilePath,
 		contextPath)
 
@@ -126,7 +135,7 @@ func RunDrawioCommand(
 	}
 
 	// Add image and command
-	dockerArgs = append(dockerArgs, DrawioImageName, "python", "/app/drawio_cli.py")
+	dockerArgs = append(dockerArgs, GetDrawioImageName(), "python", "/app/drawio_cli.py")
 	dockerArgs = append(dockerArgs, args...)
 
 	cmd := exec.Command("docker", dockerArgs...)
@@ -184,7 +193,7 @@ func CheckDockerAvailable(workspaceRoot string) error {
 	}
 
 	// Check if image exists, build if not
-	cmd := exec.Command("docker", "image", "inspect", DrawioImageName)
+	cmd := exec.Command("docker", "image", "inspect", GetDrawioImageName())
 	if err := cmd.Run(); err != nil {
 		// Image doesn't exist, build it
 		log.Infof("Building drawio-cli Docker image...")

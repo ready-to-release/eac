@@ -29,6 +29,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/ready-to-release/eac/go/eac/core/tool"
 )
 
 func init() {
@@ -283,13 +284,12 @@ func isValidSkipReason(reason string, tagsConfig *config.TestingTagsConfig) bool
 	return false
 }
 
-// isValidDepsName checks if a deps name is valid (system dep from system-dependencies.yml or OS platform).
+// isValidDepsName checks if a deps name is valid (tool from tool-config.yml or OS platform).
 func isValidDepsName(name string, tagsConfig *config.TestingTagsConfig) bool {
-	// Check system dependencies from system-dependencies.yml
-	if eacConfig != nil && eacConfig.SystemDependencies != nil {
-		if eacConfig.SystemDependencies.Get(name) != nil {
-			return true
-		}
+	// Check tool registry for valid tool IDs
+	registry := tool.GlobalRegistry()
+	if registry.Has(name) {
+		return true
 	}
 
 	// Check hardcoded OS platforms (linux, macos, windows)

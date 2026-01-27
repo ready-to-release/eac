@@ -1,0 +1,9 @@
+[package]
+name = "test-module"
+version = "1.0.0"
+edition = "2021"
+description = "Test Rust module"
+
+[lib]
+name = "test_module"
+path = "src/lib.rs"

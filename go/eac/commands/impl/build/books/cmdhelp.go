@@ -77,15 +77,8 @@ func (p *Preprocessor) processCommandMarkers() error {
 	replacements := 0
 	filesModified := 0
 
-	err := filepath.WalkDir(p.stagingDir, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if d.IsDir() || !strings.HasSuffix(path, ".md") {
-			return nil
-		}
-
+	// Use file index for efficient iteration
+	for _, path := range p.fileIndex.GetMarkdownFiles() {
 		content, err := os.ReadFile(path)
 		if err != nil {
 			return err
@@ -163,11 +156,6 @@ func (p *Preprocessor) processCommandMarkers() error {
 			replacements += fileReplacements
 			filesModified++
 		}
-
-		return nil
-	})
-	if err != nil {
-		return err
 	}
 
 	p.log("    Processed %d command markers in %d files", replacements, filesModified)

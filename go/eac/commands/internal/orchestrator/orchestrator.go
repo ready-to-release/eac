@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -47,22 +46,20 @@ type Orchestrator struct {
 }
 
 // New creates a new Orchestrator with the given configuration and worker function.
-func New(config Config, worker WorkerFunc) *Orchestrator {
-	// Set default max concurrency to number of CPUs
-	if config.MaxConcurrency <= 0 {
-		config.MaxConcurrency = runtime.NumCPU()
-	}
+func New(config *Config, worker WorkerFunc) *Orchestrator {
+	// MaxConcurrency=0 means dynamic (calculated from CPU×RAM).
+	// Only use MaxConcurrency as ceiling if explicitly set by user.
 
 	// Set default TUI height
 	if config.TUIHeight <= 0 {
 		config.TUIHeight = tui.DefaultHeight
 	}
 
-	// Create lock tracking registry
-	registry := locktracker.NewRegistry()
+	// Use global lock tracking registry (shared with component scheduler and other components)
+	registry := locktracker.Get()
 
 	o := &Orchestrator{
-		config:   config,
+		config:   *config,
 		worker:   worker,
 		registry: registry,
 	}
@@ -73,6 +70,7 @@ func New(config Config, worker WorkerFunc) *Orchestrator {
 			Height:       config.TUIHeight,
 			BufferSize:   1000,
 			RunPhaseName: config.ActionVerb,
+			ASCIIMode:    config.TUIASCIIMode,
 		})
 		o.tuiCtx, o.tuiCancel = context.WithCancel(context.Background())
 	}
@@ -112,6 +110,7 @@ func (o *Orchestrator) RunLayered(layers [][]string) ([]WorkResult, error) {
 			Total:       len(allMonikers),
 			Layer:       0,
 			TotalLayers: len(layers),
+			Locks:       o.getLockStatuses(),
 		})
 	}
 
@@ -222,6 +221,7 @@ func (o *Orchestrator) Run(monikers []string) ([]WorkResult, error) {
 			Total:       len(monikers),
 			Layer:       0,
 			TotalLayers: 0,
+			Locks:       o.getLockStatuses(),
 		})
 	}
 
@@ -260,24 +260,19 @@ func (o *Orchestrator) Run(monikers []string) ([]WorkResult, error) {
 	return results, nil
 }
 
-// executeParallel runs work items in parallel with controlled concurrency.
+// executeParallel runs work items in parallel.
+// Note: Concurrency is controlled at the component level by ComponentScheduler.
+// This method launches all module work items; actual resource throttling happens
+// when components acquire slots from the weighted semaphore.
 func (o *Orchestrator) executeParallel(workItems []WorkItem) []WorkResult {
 	results := make([]WorkResult, len(workItems))
 	var wg sync.WaitGroup
-
-	// Create semaphore to limit concurrency
-	sem := make(chan struct{}, o.config.MaxConcurrency)
 
 	for _, item := range workItems {
 		wg.Add(1)
 
 		go func(wi WorkItem) {
 			defer wg.Done()
-
-			// Acquire semaphore
-			sem <- struct{}{}
-			defer func() { <-sem }()
-
 			result := o.processWorkItem(wi)
 			results[wi.Index] = result
 		}(item)
@@ -301,7 +296,7 @@ func (o *Orchestrator) processWorkItem(item WorkItem) WorkResult {
 		if o.display != nil {
 			o.display.markCompleted(&result)
 		}
-		o.tuiMarkCompleted(item.Moniker)
+		o.tuiMarkCompleted(item.Moniker, result.ExitCode)
 	}
 
 	// Create output directory for this module
@@ -490,10 +485,8 @@ func (o *Orchestrator) Close() {
 	// Stop TUI if not already stopped
 	o.StopTUI()
 
-	// Close lock tracking registry
-	if o.registry != nil {
-		o.registry.Close()
-	}
+	// Note: registry is global, don't close it here
+	// Component scheduler manages its own semaphore lifecycle
 }
 
 // GetRegistry returns the lock tracking registry.
@@ -528,11 +521,15 @@ func (o *Orchestrator) tuiMarkRunning(moniker string) {
 	})
 }
 
-// tuiMarkCompleted removes a module from running and increments completed count.
-func (o *Orchestrator) tuiMarkCompleted(moniker string) {
+// tuiMarkCompleted removes a module from running, increments completed count, and reports exit code.
+func (o *Orchestrator) tuiMarkCompleted(moniker string, exitCode int) {
 	if o.tuiConsole == nil {
 		return
 	}
+
+	// First, send the completion message with exit code so TUI knows success/failure
+	o.tuiConsole.MarkModuleComplete(moniker, exitCode)
+
 	o.tuiMu.Lock()
 	// Remove from running list
 	for i, m := range o.tuiRunning {
@@ -758,8 +755,9 @@ func (o *Orchestrator) RunComponentsLayered(layers [][]ComponentWork, worker Com
 		return nil, err
 	}
 
-	// Create component scheduler
-	scheduler := NewComponentScheduler(o.config, o.tuiConsole, o.registry)
+	// Create component scheduler with dynamic capacity management
+	scheduler := NewComponentScheduler(&o.config, o.tuiConsole, o.registry)
+	defer scheduler.Close()
 
 	// Start TUI console if enabled
 	if o.tuiConsole != nil {
@@ -777,6 +775,7 @@ func (o *Orchestrator) RunComponentsLayered(layers [][]ComponentWork, worker Com
 			Total:       len(allWork),
 			Layer:       0,
 			TotalLayers: len(layers),
+			Locks:       o.getLockStatuses(),
 		})
 	}
 
@@ -871,8 +870,9 @@ func (o *Orchestrator) RunComponentsParallel(work []ComponentWork, worker Compon
 		return nil, err
 	}
 
-	// Create component scheduler
-	scheduler := NewComponentScheduler(o.config, o.tuiConsole, o.registry)
+	// Create component scheduler with dynamic capacity management
+	scheduler := NewComponentScheduler(&o.config, o.tuiConsole, o.registry)
+	defer scheduler.Close()
 
 	// Start TUI console if enabled
 	if o.tuiConsole != nil {
@@ -890,6 +890,7 @@ func (o *Orchestrator) RunComponentsParallel(work []ComponentWork, worker Compon
 			Total:       len(work),
 			Layer:       0,
 			TotalLayers: 0,
+			Locks:       o.getLockStatuses(),
 		})
 	}
 

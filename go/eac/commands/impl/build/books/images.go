@@ -53,18 +53,11 @@ func (p *Preprocessor) optimizeDrawioImages() error {
 	}
 	imageRefs := make(map[string]DrawioImageRef) // absolute path -> ref
 
-	// Step 1: Scan markdown files for drawio.png references
-	err := filepath.WalkDir(p.stagingDir, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() || !strings.HasSuffix(path, ".md") {
-			return nil
-		}
-
+	// Step 1: Scan markdown files for drawio.png references using file index
+	for _, path := range p.fileIndex.GetMarkdownFiles() {
 		content, err := os.ReadFile(path)
 		if err != nil {
-			return err
+			return fmt.Errorf("reading %s: %w", path, err)
 		}
 
 		// Find all drawio.png references
@@ -90,10 +83,6 @@ func (p *Preprocessor) optimizeDrawioImages() error {
 				}
 			}
 		}
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("scanning markdown files: %w", err)
 	}
 
 	if len(imageRefs) == 0 {
@@ -155,19 +144,12 @@ func (p *Preprocessor) optimizeDrawioImages() error {
 		cachePathBySource[ref.AbsPath] = stagingCachePath
 	}
 
-	// Step 3: Update markdown references to point to cached images
+	// Step 3: Update markdown references to point to cached images using file index
 	updated := 0
-	err = filepath.WalkDir(p.stagingDir, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() || !strings.HasSuffix(path, ".md") {
-			return nil
-		}
-
+	for _, path := range p.fileIndex.GetMarkdownFiles() {
 		content, err := os.ReadFile(path)
 		if err != nil {
-			return err
+			return fmt.Errorf("reading %s: %w", path, err)
 		}
 
 		original := string(content)
@@ -175,14 +157,10 @@ func (p *Preprocessor) optimizeDrawioImages() error {
 
 		if modified != original {
 			if err := os.WriteFile(path, []byte(modified), 0o644); err != nil {
-				return err
+				return fmt.Errorf("writing %s: %w", path, err)
 			}
 			updated++
 		}
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("updating markdown references: %w", err)
 	}
 
 	// Step 4: Delete original drawio.png files from staging

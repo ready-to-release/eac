@@ -66,15 +66,6 @@ func (c *EACConfig) ValidateAll() error {
 		}
 	}
 
-	if c.SystemDependencies != nil {
-		data, err := c.readConfigFile(SystemDependenciesFileName)
-		if err != nil {
-			errs = append(errs, fmt.Errorf("system-dependencies: failed to read: %w", err))
-		} else if err := c.validateSchema(schema.SchemaSystemDependencies, data); err != nil {
-			errs = append(errs, fmt.Errorf("system-dependencies: %w", err))
-		}
-	}
-
 	if len(errs) > 0 {
 		return &MultiError{Errors: errs}
 	}

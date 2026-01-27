@@ -230,15 +230,12 @@ func CreateModuleTypesYml(ctx *TestContext, types ...string) error {
 	return CreateFile(ctx, ".r2r/eac/module-types.yml", content.String())
 }
 
-// CreateSystemDependenciesYml creates system-dependencies.yml.
+// CreateSystemDependenciesYml is deprecated - system-dependencies.yml is replaced by tool-config.yml.
+// This function is kept for backwards compatibility but does nothing.
+// Tool definitions are now loaded from tool-config.yml via the tool package.
 func CreateSystemDependenciesYml(ctx *TestContext, withDocker bool) error {
-	var content string
-	if withDocker {
-		content = SystemDependenciesWithDocker
-	} else {
-		content = SystemDependenciesMinimal
-	}
-	return CreateFile(ctx, ".r2r/eac/system-dependencies.yml", content)
+	// No-op: system-dependencies.yml is replaced by tool-config.yml
+	return nil
 }
 
 // ============================================================================

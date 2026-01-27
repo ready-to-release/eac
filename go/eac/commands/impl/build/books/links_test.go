@@ -11,6 +11,36 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestLinkTranslator_GetSourcePath tests looking up source paths from staging paths.
+func TestLinkTranslator_GetSourcePath(t *testing.T) {
+	translator := NewLinkTranslator("/workspace/docs", "/workspace/out/staging/book", nil, false)
+
+	// Add some mappings
+	translator.AddFileMapping("/workspace/out/staging/book/index.md", "/workspace/docs/docs/index.md")
+	translator.AddFileMapping("/workspace/out/staging/book/guide/intro.md", "/workspace/docs/docs/guide/intro.md")
+
+	// Test looking up existing paths
+	srcPath, ok := translator.GetSourcePath("/workspace/out/staging/book/index.md")
+	assert.True(t, ok, "should find existing staging path")
+	assert.Equal(t, "/workspace/docs/docs/index.md", srcPath)
+
+	srcPath, ok = translator.GetSourcePath("/workspace/out/staging/book/guide/intro.md")
+	assert.True(t, ok, "should find nested staging path")
+	assert.Equal(t, "/workspace/docs/docs/guide/intro.md", srcPath)
+
+	// Test looking up non-existent path
+	_, ok = translator.GetSourcePath("/workspace/out/staging/book/nonexistent.md")
+	assert.False(t, ok, "should not find non-existent path")
+}
+
+// TestLinkTranslator_GetSourcePath_Empty tests empty translator.
+func TestLinkTranslator_GetSourcePath_Empty(t *testing.T) {
+	translator := NewLinkTranslator("/workspace", "/workspace/out", nil, false)
+
+	_, ok := translator.GetSourcePath("/workspace/out/file.md")
+	assert.False(t, ok, "empty translator should return false")
+}
+
 func TestReplaceLinkPaths(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -484,14 +514,19 @@ func TestCleanupLinksForPDF_Integration(t *testing.T) {
 `
 	require.NoError(t, os.WriteFile(testFile, []byte(content), 0o644))
 
+	// Build file index (required after FileIndex optimization)
+	fileIndex, err := NewFileIndex(stagingDir)
+	require.NoError(t, err)
+
 	p := &Preprocessor{
 		stagingDir: stagingDir,
 		book:       &config.Book{},
 		logWriter:  &bytes.Buffer{},
+		fileIndex:  fileIndex,
 	}
 
 	// Act
-	err := p.cleanupLinksForPDF()
+	err = p.cleanupLinksForPDF()
 
 	// Assert
 	require.NoError(t, err)
@@ -530,14 +565,19 @@ func TestConvertAttrListImagesToHTML_Integration(t *testing.T) {
 `
 	require.NoError(t, os.WriteFile(testFile, []byte(content), 0o644))
 
+	// Build file index (required after FileIndex optimization)
+	fileIndex, err := NewFileIndex(stagingDir)
+	require.NoError(t, err)
+
 	p := &Preprocessor{
 		stagingDir: stagingDir,
 		book:       &config.Book{},
 		logWriter:  &bytes.Buffer{},
+		fileIndex:  fileIndex,
 	}
 
 	// Act
-	err := p.convertAttrListImagesToHTML()
+	err = p.convertAttrListImagesToHTML()
 
 	// Assert
 	require.NoError(t, err)
@@ -564,14 +604,19 @@ func TestCleanupLinksForPDF_EmptyDirectory(t *testing.T) {
 	// Arrange
 	stagingDir := t.TempDir()
 
+	// Build file index (required after FileIndex optimization)
+	fileIndex, err := NewFileIndex(stagingDir)
+	require.NoError(t, err)
+
 	p := &Preprocessor{
 		stagingDir: stagingDir,
 		book:       &config.Book{},
 		logWriter:  &bytes.Buffer{},
+		fileIndex:  fileIndex,
 	}
 
 	// Act
-	err := p.cleanupLinksForPDF()
+	err = p.cleanupLinksForPDF()
 
 	// Assert
 	require.NoError(t, err) // Should not error on empty directory
@@ -592,14 +637,19 @@ func TestConvertAttrListImagesToHTML_MultipleFiles(t *testing.T) {
 	require.NoError(t, os.WriteFile(file1, []byte(content1), 0o644))
 	require.NoError(t, os.WriteFile(file2, []byte(content2), 0o644))
 
+	// Build file index (required after FileIndex optimization)
+	fileIndex, err := NewFileIndex(stagingDir)
+	require.NoError(t, err)
+
 	p := &Preprocessor{
 		stagingDir: stagingDir,
 		book:       &config.Book{},
 		logWriter:  &bytes.Buffer{},
+		fileIndex:  fileIndex,
 	}
 
 	// Act
-	err := p.convertAttrListImagesToHTML()
+	err = p.convertAttrListImagesToHTML()
 
 	// Assert
 	require.NoError(t, err)

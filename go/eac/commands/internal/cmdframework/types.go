@@ -58,10 +58,11 @@ type CommandConfig struct {
 	ForceRebuild bool // Bypass incremental change detection
 
 	// UI
-	UseTUI      bool // Enable TUI console
-	TUIHeight   int  // TUI height (0 = default)
-	DebugMode   bool // Enable debug logging to console
-	ShowTimings bool // Show timing breakdown in summary
+	UseTUI       bool // Enable TUI console
+	TUIHeight    int  // TUI height (0 = default)
+	TUIASCIIMode bool // Use ASCII-only characters in TUI (--ascii flag)
+	DebugMode    bool // Enable debug logging to console
+	ShowTimings  bool // Show timing breakdown in summary
 
 	// Command-Specific Options
 	Extra map[string]interface{}

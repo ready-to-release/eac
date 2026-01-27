@@ -1,0 +1,13 @@
+{
+  "name": "test-module",
+  "version": "1.0.0",
+  "description": "Test TypeScript module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "echo \"No tests configured\""
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

@@ -50,17 +50,17 @@ const (
 	PhaseFailed
 )
 
-// Icon returns the icon for a phase status.
+// Icon returns the icon for a phase status (ASCII-safe).
 func (s PhaseStatus) Icon() string {
 	switch s {
 	case PhasePending:
-		return "○"
+		return "o"
 	case PhaseActive:
-		return "▶"
+		return ">"
 	case PhaseComplete:
-		return "✓"
+		return "V"
 	case PhaseFailed:
-		return "✗"
+		return "X"
 	default:
 		return "?"
 	}
