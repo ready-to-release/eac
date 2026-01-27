@@ -29,4 +29,6 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	registerDrawioSteps(sc, ctx)
 	registerPrunePackagesSteps(sc, ctx)
 	registerPipelineSteps(sc, ctx)
+	registerPipelineStatusSteps(sc, ctx)
+	registerReleaseSteps(sc, ctx)
 }

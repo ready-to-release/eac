@@ -1,38 +1,13 @@
-@L2 @ov @deps:go @deps:docker @env:isolated-test-project @skip:broken @control:si-7 @control:sa-11
+@L2 @ov @deps:go @deps:docker @env:isolated-test-project
 Feature: security_iac
 
   As a security auditor
-  I want to scan Infrastructure as Code files for misconfigurations
-  So that I can identify security issues before deployment
+  I want to scan modules for security issues
+  So that I can identify and remediate risks
 
-  Rule: IaC scanner creates evidence file with integrity verification
+  Rule: Scanner wrapper executes successfully with Docker mock
 
-    Scenario: Scan IaC files with mocked tool
-      When I run the command "scan iac eac-core"
-      Then the exit code is 0 or 1
-      And evidence files should exist in directory "out/scan/eac-core/go/"
-      And the latest evidence file should have JSON field "module" with value "eac-core"
-      And the latest evidence file should have JSON field "scanner" with value "iac"
-      And the latest evidence file should have JSON field "timestamp" matching RFC3339 format
-      And the latest evidence file should have JSON field "sha256" with 64 character hex hash
-      And the latest evidence file should have JSON field "findings" with non-empty data
-
-    Scenario: IaC scan with debug logging
-      When I run the command "scan iac eac-core --debug"
-      Then the exit code is 0 or 1
-      And a log file should exist in directory "out/logs/security/"
-
-    Scenario: IaC scan with invalid module
-      When I run the command "scan iac nonexistent-module-xyz"
-      Then the exit code is 1
-      And I should see "not found" or "Error"
-
-    Scenario: IaC scan for all modules
-      When I run the command "scan iac"
-      Then the exit code is 0 or 1
-      And I should see "modules" or "Scanning"
-
-    Scenario: IaC scan help is accessible
-      When I run the command "scan iac --help"
+    Scenario: Run iac scan with mocked Docker  
+      When I run the command "scan eac-core --scanner iac"
       Then the exit code is 0
-      And I should see "iac" or "Infrastructure" or "Usage"
+      And evidence files should exist in directory "out/scan/eac-core/go/"

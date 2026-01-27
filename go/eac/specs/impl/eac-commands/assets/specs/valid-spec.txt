@@ -14,3 +14,11 @@ Feature: test_valid-feature
     Scenario: Basic functionality works
       When I run a command
       Then the exit code is 0
+
+  Rule: Error handling works correctly
+
+    @L2 @ov
+    Scenario: Invalid input is rejected
+      When I run a command with invalid input
+      Then the exit code is 1
+      And an error message is shown

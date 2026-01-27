@@ -11,8 +11,13 @@ You are preparing a Go CLI module for release.
 1. **Run release checklist**:
    - Delegate to go-security-release agent
    - Use Task tool with subagent_type="go-security-release"
-   - Or invoke go-cli-release-check skill directly
+   - Or follow go-cli-release-check workflow skill
    - This runs all pre-release validation steps
+
+   **Skill invocation example**:
+   ```
+   Follow the go-cli-release-check skill workflow to validate the module for release
+   ```
 
 2. **Check CI status**:
    - MCP `release-check-ci <module>` to verify CI passed

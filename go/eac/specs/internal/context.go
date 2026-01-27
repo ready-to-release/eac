@@ -129,6 +129,13 @@ func (c *TestContext) SetupIsolation() error {
 		return fmt.Errorf("failed to create specs directory in isolation: %w", err)
 	}
 
+	// Ensure .git directory exists and is valid in isolated directory
+	// This is critical for repository.GetRepositoryRoot() to find the correct root
+	gitDir := filepath.Join(c.IsolatedDir, ".git")
+	if _, err := os.Stat(gitDir); os.IsNotExist(err) {
+		return fmt.Errorf(".git directory not found in isolated directory: %s", c.IsolatedDir)
+	}
+
 	return nil
 }
 
@@ -206,6 +213,10 @@ func (c *TestContext) buildMockingEnvironment(env []string) []string {
 	// This allows validation tests to run without Docker
 	env = append(env, fmt.Sprintf("%s=true", environments.EnvR2RMockStructurizr))
 
+	// Enable GitHub CLI mocking for pipeline tests
+	// This allows pipeline tests to run without GitHub authentication
+	env = append(env, fmt.Sprintf("%s=true", environments.EnvR2RMockGitHubCLI))
+
 	return env
 }
 
@@ -233,8 +244,13 @@ func (c *TestContext) RunCommand(cmdLine string) error {
 	cmd := c.createCommand(parts)
 
 	// Set working directory for isolated tests
+	// CRITICAL: Always set cmd.Dir for isolated tests to ensure subprocess runs in correct directory
 	if c.IsolatedDir != "" {
 		cmd.Dir = c.getEffectiveWorkDir()
+		// Verify that the directory exists before running command
+		if _, err := os.Stat(cmd.Dir); os.IsNotExist(err) {
+			return fmt.Errorf("isolated directory does not exist: %s", cmd.Dir)
+		}
 	}
 
 	// Build environment with all necessary variables

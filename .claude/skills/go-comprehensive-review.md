@@ -36,7 +36,7 @@ Provide comprehensive code quality assessment from multiple angles:
 
 ### Phase 1: Context Loading (1-2 min)
 
-1. Check for cached session context (`out/session-context.json`)
+1. Check for cached session context (`out/claude/session-context.json`)
 2. If missing, gather project context once
 3. Share context with all agents
 
@@ -181,7 +181,7 @@ Full agent reports available at:
 User: /go:comprehensive-review
 Assistant: Starting comprehensive code review...
 
-Phase 1: Loading context... (checking out/session-context.json)
+Phase 1: Loading context... (checking out/claude/session-context.json)
 Phase 2: Running 5 specialized agents...
   - go-architect reviewing architecture... (2m 15s)
   - go-test-engineer analyzing tests... (2m 42s)

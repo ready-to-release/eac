@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/ready-to-release/eac/go/eac/core/environments"
 )
 
 // ReleaseNotes represents the structure of a RELEASE-NOTES.md file.
@@ -173,7 +174,12 @@ func GenerateTemplate(workspaceRoot string, cfg *config.RepositoryConfig, path, 
 	}
 
 	// Get template path from config
-	templatePath := cfg.TemplatePathAbs(workspaceRoot, "reports", "release", "release-notes-template.md")
+	// For isolated tests, use R2R_CONTAINER_ROOT to find templates (they're in the real repo, not the temp test dir)
+	templateRoot := workspaceRoot
+	if containerRoot := os.Getenv(environments.EnvR2RContainerRoot); containerRoot != "" {
+		templateRoot = containerRoot
+	}
+	templatePath := cfg.TemplatePathAbs(templateRoot, "reports", "release", "release-notes-template.md")
 	templateContent, err := os.ReadFile(templatePath)
 	if err != nil {
 		return fmt.Errorf("failed to read template file %s: %w", templatePath, err)
