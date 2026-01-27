@@ -6,12 +6,6 @@ import (
 	"testing"
 )
 
-func TestIsValidControlID(t *testing.T) {
-	// Note: This function doesn't exist yet in catalog validation,
-	// but this test shows the pattern for when it's added
-	t.Skip("isValidControlID not yet implemented in risk-catalog")
-}
-
 func TestValidateCatalog_ValidMinimalCatalog(t *testing.T) {
 	// Create temp file with valid minimal catalog
 	tmpDir := t.TempDir()

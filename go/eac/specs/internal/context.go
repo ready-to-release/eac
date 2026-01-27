@@ -13,16 +13,12 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/environments"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 	coretesting "github.com/ready-to-release/eac/go/eac/core/testing"
 )
-
-func init() {
-	// Import the serve package to trigger its init() which registers the mock reset function
-	// This is done via a blank import in a file that uses serve functionality
-}
 
 // TestContext wraps the core SharedTestContext with additional spec-specific state.
 type TestContext struct {
@@ -194,28 +190,43 @@ func (c *TestContext) buildMockingEnvironment(env []string) []string {
 	// This allows AI commands to load system default templates from templates/ai/
 	env = append(env, fmt.Sprintf("%s=%s", environments.EnvR2RContainerRoot, c.OriginalRepoRoot))
 
-	// Set mock AI directory for subprocess commands
-	// This enables commands to use mock responses instead of real AI calls
-	// Use container root if in container, otherwise repo root
-	assetsRoot := repository.GetDistRoot(c.OriginalRepoRoot)
-	if assetsRoot != "" {
-		assetsDir := filepath.Join(assetsRoot, "go", "eac", "specs", "impl", "eac-commands", "assets")
-		if _, err := os.Stat(assetsDir); err == nil {
-			env = append(env, fmt.Sprintf("%s=%s", environments.EnvR2RMockAIDir, assetsDir))
-		}
+	// Load mock configuration from .r2r/eac/testing-mocks.yml
+	// Falls back to environment variables if config file doesn't exist (backward compatibility)
+	mockConfigPath := filepath.Join(c.OriginalRepoRoot, ".r2r", "eac", "testing-mocks.yml")
+	mockConfig, err := config.LoadTestingMocks(mockConfigPath)
+	if err != nil {
+		// Log warning but continue with empty config (will use environment variables)
+		// This ensures tests still work if config file is missing
+		fmt.Fprintf(os.Stderr, "Warning: Failed to load mock config from %s: %v\n", mockConfigPath, err)
+		fmt.Fprintf(os.Stderr, "Falling back to environment variables for mock configuration\n")
+		// Use empty config which will generate no mock env vars
+		mockConfig = config.TestingMocksConfig{}
 	}
 
-	// Enable security tool mocking for subprocess commands
-	// This enables security commands to use mock responses instead of real Docker tools
-	env = append(env, fmt.Sprintf("%s=true", environments.EnvR2RMockSecurity))
+	// Convert mock configuration to environment variables
+	mockEnvVars := mockConfig.ToEnvironmentVariables()
+	env = append(env, mockEnvVars...)
 
-	// Enable Structurizr CLI mocking for design validation tests
-	// This allows validation tests to run without Docker
-	env = append(env, fmt.Sprintf("%s=true", environments.EnvR2RMockStructurizr))
-
-	// Enable GitHub CLI mocking for pipeline tests
-	// This allows pipeline tests to run without GitHub authentication
-	env = append(env, fmt.Sprintf("%s=true", environments.EnvR2RMockGitHubCLI))
+	// Override mock AI directory if not already set by config
+	// This ensures backward compatibility with existing tests
+	hasAIDir := false
+	for _, e := range mockEnvVars {
+		if strings.HasPrefix(e, environments.EnvR2RMockAIDir+"=") {
+			hasAIDir = true
+			break
+		}
+	}
+	if !hasAIDir && mockConfig.Mocks.AI.Enabled {
+		// Set mock AI directory for subprocess commands
+		// Use container root if in container, otherwise repo root
+		assetsRoot := repository.GetDistRoot(c.OriginalRepoRoot)
+		if assetsRoot != "" {
+			assetsDir := filepath.Join(assetsRoot, "go", "eac", "specs", "impl", "eac-commands", "assets")
+			if _, err := os.Stat(assetsDir); err == nil {
+				env = append(env, fmt.Sprintf("%s=%s", environments.EnvR2RMockAIDir, assetsDir))
+			}
+		}
+	}
 
 	return env
 }

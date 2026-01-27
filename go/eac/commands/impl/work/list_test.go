@@ -5,9 +5,11 @@ package work
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/work/internal"
+	eactesting "github.com/ready-to-release/eac/go/eac/core/testing"
 )
 
 // TestParseListConfig tests the configuration parsing
@@ -48,6 +50,8 @@ func TestParseListConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			eactesting.RequireGitRepository(t)
+
 			// Save original os.Args
 			oldArgs := os.Args
 			defer func() { os.Args = oldArgs }()
@@ -57,10 +61,6 @@ func TestParseListConfig(t *testing.T) {
 
 			config, err := parseListConfig()
 			if err != nil {
-				// Skip test if not in a git repository
-				if contains(err.Error(), "repository root") {
-					t.Skip("Not in a git repository")
-				}
 				t.Fatalf("unexpected error: %v", err)
 			}
 
@@ -238,7 +238,7 @@ func TestBuildWorktreeTable(t *testing.T) {
 			result := buildWorktreeTable(tt.worktrees, tt.verbose)
 
 			for _, expected := range tt.contains {
-				if !contains(result, expected) {
+				if !strings.Contains(result, expected) {
 					t.Errorf("expected table to contain '%s', but it didn't\nTable:\n%s", expected, result)
 				}
 			}
@@ -246,18 +246,3 @@ func TestBuildWorktreeTable(t *testing.T) {
 	}
 }
 
-// Helper function to check if a string contains a substring
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) &&
-		(s[:len(substr)] == substr || s[len(s)-len(substr):] == substr ||
-			containsMiddle(s, substr)))
-}
-
-func containsMiddle(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
-}

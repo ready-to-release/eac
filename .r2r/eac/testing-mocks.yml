@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=../../contracts/eac-core/0.1.0/testing-mocks.schema.json
+#
+# Testing Mocks Configuration
+# Controls mock behavior for BDD test infrastructure
+#
+# This configuration is loaded by the test framework (specs/internal/context.go)
+# and translated to environment variables for subprocess commands.
+#
+# Personal Overrides:
+# Create .r2r/eac/testing-mocks.personal.yml to override these settings locally
+# (personal.yml is gitignored and won't be committed)
+
+mocks:
+  # AI Provider Mocking
+  # When enabled, AI commands use file-based mock responses instead of real API calls
+  ai:
+    enabled: true
+    mock_dir: "go/eac/specs/impl/eac-commands/assets"
+
+  # Security Tool Mocking (Trivy, Semgrep, ZAP)
+  # When enabled, security scanners return predefined mock data
+  security:
+    enabled: true
+    tools: []  # Empty array = mock all tools. Specify ["trivy", "semgrep"] to mock specific tools
+
+  # Docker Client Mocking
+  # When enabled, Docker operations use in-memory mock state instead of real Docker daemon
+  docker:
+    enabled: true
+
+  # GitHub CLI Mocking
+  # When enabled, gh commands return mock responses instead of making real API calls
+  github:
+    enabled: true
+    no_workflows: false  # Set to true to disable workflow execution in tests

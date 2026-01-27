@@ -68,6 +68,7 @@ linters:
     - nilnil     # Why: Returning nil error with invalid value is a common bug pattern
     - nolintlint # Why: Ensures nolint directives are justified and specific
     - whitespace # Why: Consistent whitespace improves readability
+    - testifylint # Why: Prefer testify assertions over manual error checks for better test readability
 
   settings:
     errcheck:
@@ -183,6 +184,16 @@ linters:
     whitespace:
       multi-if: false   # [default]
       multi-func: false # [default]
+
+    testifylint:
+      # [override] Enable checks that improve testify usage
+      enable-all: true
+      # [override] Disable overly strict checks that don't add value
+      disable:
+        # Why: suite-extra-assert-call is too strict for realistic test scenarios
+        - suite-extra-assert-call
+        # Why: require-error check conflicts with existing error handling patterns
+        - require-error
 
     nolintlint:
       allow-unused: false # [default]
