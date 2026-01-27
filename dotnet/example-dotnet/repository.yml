@@ -1,0 +1,13 @@
+moniker: example-dotnet
+description: Example .NET console application for testing the dotnet extension
+
+components:
+  dotnet:
+    root: .
+    type: dotnet
+
+build:
+  artifacts:
+    - id: current-platform
+      type: executable
+      pattern: "{moniker}{ext}"

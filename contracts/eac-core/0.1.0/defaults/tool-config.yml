@@ -1,0 +1,696 @@
+# Tool Configuration - Default Tool Definitions
+# yaml-language-server: $schema=../tool-config.schema.json
+#
+# This file defines the pluggable tool composition system.
+# Tools can be system binaries or containers, assigned to component types for operations.
+#
+# Key concepts:
+# - Tools: Executable definitions (system binary or container)
+# - Component-tools: Maps component types to tools for each operation
+# - Environments: Override tool assignments per environment (ci, local)
+#
+# Resource scheduling uses component-types.yml Resources, NOT tool definitions.
+# Tools inherit resource weights from the component type they're building.
+
+tools:
+  #---------------------------------------------------------------------------
+  # Base System Tools (dependencies for other tools)
+  # These define how to verify tool availability.
+  #---------------------------------------------------------------------------
+  go:
+    description: "Go programming language compiler and toolchain"
+    type: system
+    binary: go
+    verify:
+      command: "go version"
+      pattern: "go version go(\\d+\\.\\d+)"
+    version: ">=1.21"
+
+  git:
+    description: "Distributed version control system"
+    type: system
+    binary: git
+    verify:
+      command: "git --version"
+      pattern: "git version (\\d+\\.\\d+)"
+    version: ">=2.30"
+
+  docker:
+    description: "Container runtime for building and running containers"
+    type: system
+    binary: docker
+    verify:
+      command: "docker info"
+      pattern: "Server Version: (\\d+\\.\\d+)"
+    version: ">=20.10"
+
+  buildx:
+    description: "Docker buildx for multi-platform container image builds"
+    type: system
+    binary: docker
+    args: ["buildx"]
+    verify:
+      command: "docker buildx version"
+      pattern: "github.com/docker/buildx v(\\d+\\.\\d+)"
+    version: ">=0.10"
+    requirements: [docker]
+
+  npm:
+    description: "Node.js runtime providing npm package manager"
+    type: system
+    binary: npm
+    verify:
+      command: "node --version"
+      pattern: "v(\\d+\\.\\d+)"
+    version: ">=18.0"
+
+  gh-cli:
+    description: "GitHub command-line interface"
+    type: system
+    binary: gh
+    verify:
+      command: "gh --version"
+      pattern: "gh version (\\d+\\.\\d+)"
+    version: ">=2.0"
+
+  bash:
+    description: "Bourne Again SHell for running shell scripts"
+    type: system
+    binary: bash
+    verify:
+      command: "bash --version"
+      pattern: "version (\\d+\\.\\d+)"
+    version: ">=4.0"
+
+  pwsh:
+    description: "PowerShell 7+ cross-platform shell"
+    type: system
+    binary: pwsh
+    verify:
+      command: "pwsh --version"
+      pattern: "PowerShell (\\d+\\.\\d+)"
+    version: ">=7.0"
+
+  curl:
+    description: "Command-line tool for transferring data with URLs"
+    type: system
+    binary: curl
+    verify:
+      command: "curl --version"
+      pattern: "curl (\\d+\\.\\d+)"
+    version: ">=7.0"
+
+  python:
+    description: "Python programming language interpreter"
+    type: system
+    binary: python
+    verify:
+      command: "python --version"
+      pattern: "Python (\\d+\\.\\d+)"
+    version: ">=3.8"
+
+  cargo:
+    description: "Rust package manager and build tool"
+    type: system
+    binary: cargo
+    verify:
+      command: "cargo --version"
+      pattern: "cargo (\\d+\\.\\d+)"
+    version: ">=1.70"
+
+  dotnet:
+    description: ".NET SDK for building and running .NET applications"
+    type: system
+    binary: dotnet
+    verify:
+      command: "dotnet --version"
+      pattern: "(\\d+\\.\\d+)"
+    version: ">=8.0"
+
+  golangci-lint:
+    description: "Go linters aggregator (container)"
+    type: container
+    image: golangci/golangci-lint
+    tag: latest
+    command: ["golangci-lint", "run", "--out-format", "json"]
+    mounts:
+      - source: "{module}"
+        target: /app
+      - source: "{workspace}/.cache/golangci-lint"
+        target: /root/.cache/golangci-lint
+    workdir: /app
+    requirements: [docker]
+
+  markdownlint:
+    description: "Markdown linter (container)"
+    type: container
+    image: davidanson/markdownlint-cli2
+    tag: latest
+    mounts:
+      - source: "{module}"
+        target: /workdir
+    workdir: /workdir
+    requirements: [docker]
+
+  mkdocs:
+    description: "Documentation site generator"
+    type: system
+    binary: mkdocs
+    verify:
+      command: "mkdocs --version"
+      pattern: "mkdocs, version (\\d+\\.\\d+)"
+    version: ">=1.5"
+
+  gh-token:
+    description: "GitHub authentication credentials for registry access"
+    type: system
+    binary: ""
+    verify:
+      env_vars:
+        - GITHUB_TOKEN
+        - GITHUB_USERNAME
+      require: "all"
+
+  #---------------------------------------------------------------------------
+  # Go Tools (using base go tool as requirement)
+  #---------------------------------------------------------------------------
+  go-system:
+    description: "System Go compiler"
+    type: system
+    binary: go
+    requirements: [go]
+
+  golangci-lint-container:
+    description: "golangci-lint container linter"
+    type: container
+    image: golangci/golangci-lint
+    tag: latest
+    command: ["golangci-lint", "run", "--out-format", "json"]
+    mounts:
+      - source: "{module}"
+        target: /app
+      - source: "{workspace}/.cache/golangci-lint"
+        target: /root/.cache/golangci-lint
+    workdir: /app
+    requirements: [docker]
+
+  go-test-system:
+    description: "System Go test runner"
+    type: system
+    binary: go
+    args: ["test"]
+    requirements: [go]
+
+  #---------------------------------------------------------------------------
+  # TypeScript/JavaScript Tools
+  #---------------------------------------------------------------------------
+  npm-system:
+    description: "System npm"
+    type: system
+    binary: npm
+    requirements: [npm]
+
+  npm-build:
+    description: "NPM build command"
+    type: system
+    binary: npm
+    args: ["run", "build"]
+    requirements: [npm]
+
+  npm-test:
+    description: "NPM test command"
+    type: system
+    binary: npm
+    args: ["test"]
+    requirements: [npm]
+
+  #---------------------------------------------------------------------------
+  # Python Tools
+  #---------------------------------------------------------------------------
+  python-build:
+    description: "Python build using pip/setuptools"
+    type: system
+    binary: python
+    args: ["-m", "pip", "install", "-e", "."]
+    requirements: [python]
+
+  pytest:
+    description: "Python test runner"
+    type: system
+    binary: python
+    args: ["-m", "pytest"]
+    requirements: [python]
+
+  ruff-container:
+    description: "Ruff Python linter (container)"
+    type: container
+    image: ghcr.io/astral-sh/ruff
+    tag: latest
+    command: ["check", "."]
+    mounts:
+      - source: "{module}"
+        target: /app
+    workdir: /app
+    requirements: [docker]
+
+  #---------------------------------------------------------------------------
+  # Rust Tools
+  #---------------------------------------------------------------------------
+  cargo-build:
+    description: "Cargo build for Rust projects"
+    type: system
+    binary: cargo
+    args: ["build", "--release"]
+    requirements: [cargo]
+
+  cargo-test:
+    description: "Cargo test runner for Rust"
+    type: system
+    binary: cargo
+    args: ["test"]
+    requirements: [cargo]
+
+  clippy-container:
+    description: "Clippy Rust linter (container)"
+    type: container
+    image: rust
+    tag: latest
+    command: ["cargo", "clippy", "--", "-D", "warnings"]
+    mounts:
+      - source: "{module}"
+        target: /app
+    workdir: /app
+    requirements: [docker]
+
+  #---------------------------------------------------------------------------
+  # .NET Tools
+  #---------------------------------------------------------------------------
+  dotnet-build:
+    description: ".NET build command"
+    type: system
+    binary: dotnet
+    args: ["build", "--configuration", "Release"]
+    requirements: [dotnet]
+
+  dotnet-test:
+    description: ".NET test runner"
+    type: system
+    binary: dotnet
+    args: ["test"]
+    requirements: [dotnet]
+
+  dotnet-format:
+    description: ".NET code formatter/linter"
+    type: system
+    binary: dotnet
+    args: ["format", "--verify-no-changes"]
+    requirements: [dotnet]
+
+  #---------------------------------------------------------------------------
+  # Docker/Container Tools
+  #---------------------------------------------------------------------------
+  buildx-system:
+    description: "Docker Buildx for container builds"
+    type: system
+    binary: docker
+    args: ["buildx", "build"]
+    requirements: [docker]
+
+  #---------------------------------------------------------------------------
+  # Documentation Tools
+  #---------------------------------------------------------------------------
+  mkdocs-system:
+    description: "System MkDocs"
+    type: system
+    binary: mkdocs
+    args: ["build", "--strict"]
+    requirements: [mkdocs]
+
+  mkdocs-container:
+    description: "MkDocs Material container"
+    type: container
+    container: mkdocs-material
+    command: ["build", "--strict"]
+    mounts:
+      - source: "{workspace}"
+        target: /docs
+      - source: "{output}"
+        target: /docs/site
+    workdir: /docs/{module}
+    requirements: [docker]
+
+  #---------------------------------------------------------------------------
+  # Diagram Tools
+  #---------------------------------------------------------------------------
+  drawio-cli:
+    description: "DrawIO CLI for diagram manipulation"
+    type: container
+    image: cli-drawio-cli
+    tag: latest
+    command: ["python", "/app/drawio_cli.py"]
+    mounts:
+      - source: "{workspace}"
+        target: /docs
+    workdir: /docs
+    requirements: [docker]
+
+  #---------------------------------------------------------------------------
+  # Architecture/Design Tools
+  #---------------------------------------------------------------------------
+  structurizr-cli:
+    description: "Structurizr CLI for DSL export and validation"
+    type: container
+    image: structurizr/cli
+    tag: latest
+    mounts:
+      - source: "{workspace}"
+        target: /workspace
+    workdir: /workspace
+    requirements: [docker]
+
+  structurizr-lite:
+    description: "Structurizr Lite for architecture diagram viewing"
+    type: container
+    image: structurizr/lite
+    tag: latest
+    mounts:
+      - source: "{content}"
+        target: /usr/local/structurizr
+    requirements: [docker]
+    serve:
+      container_port: 8080
+      host_port_range: "9000-9999"
+      restart_policy: unless-stopped
+      auto_open_browser: true
+
+  plantuml:
+    description: "PlantUML diagram renderer"
+    type: container
+    image: plantuml/plantuml
+    tag: latest
+    mounts:
+      - source: "{output}"
+        target: /data
+    requirements: [docker]
+
+  #---------------------------------------------------------------------------
+  # Serve Tools (for local development servers)
+  #---------------------------------------------------------------------------
+  static-site:
+    description: "Static site server (nginx-based)"
+    type: container
+    image: cli-static-site
+    tag: latest
+    mounts:
+      - source: "{content}"
+        target: /usr/share/nginx/html
+        readonly: true
+    requirements: [docker]
+    serve:
+      container_port: 8000
+      host_port_range: "9000-9999"
+      restart_policy: unless-stopped
+      auto_open_browser: true
+
+  mkdocs-live:
+    description: "MkDocs live reload server"
+    type: container
+    image: squidfunk/mkdocs-material
+    tag: latest
+    command: ["serve", "--dev-addr=0.0.0.0:8000"]
+    mounts:
+      - source: "{module}"
+        target: /docs
+    workdir: /docs
+    requirements: [docker]
+    serve:
+      container_port: 8000
+      host_port_range: "9000-9999"
+      restart_policy: unless-stopped
+      auto_open_browser: true
+      watch_enabled: true
+      watch_paths: ["docs/", "mkdocs.yml"]
+
+  structurizr:
+    description: "Structurizr Lite architecture diagram server"
+    type: container
+    image: structurizr/lite
+    tag: latest
+    mounts:
+      - source: "{content}"
+        target: /usr/local/structurizr
+        readonly: true
+    requirements: [docker]
+    serve:
+      container_port: 8080
+      host_port_range: "9000-9999"
+      restart_policy: unless-stopped
+      auto_open_browser: true
+
+  #---------------------------------------------------------------------------
+  # Security Scanners (Container-based)
+  # Images pinned to match security-tools.yml for consistency
+  #---------------------------------------------------------------------------
+  trivy-sbom:
+    description: "Trivy SBOM generator"
+    type: container
+    image: ghcr.io/aquasecurity/trivy
+    tag: "0.68.2"
+    command: ["fs", "--scanners", "vuln", "--format", "cyclonedx-json", "--list-all-pkgs", "--quiet", "/scan"]
+    mounts:
+      - source: "{module}"
+        target: /scan
+        readonly: true
+    output_format: json
+    requirements: [docker]
+
+  trivy-vuln:
+    description: "Trivy vulnerability scanner"
+    type: container
+    image: ghcr.io/aquasecurity/trivy
+    tag: "0.68.2"
+    command: ["fs", "--scanners", "vuln", "--format", "json", "--quiet", "/scan"]
+    mounts:
+      - source: "{module}"
+        target: /scan
+        readonly: true
+    output_format: json
+    requirements: [docker]
+
+  trivy-secrets:
+    description: "Trivy secrets scanner"
+    type: container
+    image: ghcr.io/aquasecurity/trivy
+    tag: "0.68.2"
+    command: ["fs", "--scanners", "secret", "--format", "json", "--quiet", "/scan"]
+    mounts:
+      - source: "{module}"
+        target: /scan
+        readonly: true
+    output_format: json
+    requirements: [docker]
+
+  semgrep-sast:
+    description: "Semgrep SAST scanner"
+    type: container
+    image: semgrep/semgrep
+    tag: "1.145.1"
+    command: ["scan", "--config", "auto", "--json", "/src"]
+    mounts:
+      - source: "{module}"
+        target: /src
+        readonly: true
+    output_format: json
+    requirements: [docker]
+
+  trivy-iac:
+    description: "Trivy IaC scanner for misconfigurations"
+    type: container
+    image: ghcr.io/aquasecurity/trivy
+    tag: "0.68.2"
+    command: ["fs", "--scanners", "misconfig", "--format", "json", "--quiet", "/scan"]
+    mounts:
+      - source: "{module}"
+        target: /scan
+        readonly: true
+    output_format: json
+    requirements: [docker]
+
+  trivy-compliance:
+    description: "Trivy compliance scanner"
+    type: container
+    image: ghcr.io/aquasecurity/trivy
+    tag: "0.68.2"
+    command: ["fs", "--compliance", "all", "--format", "json", "--quiet", "/scan"]
+    mounts:
+      - source: "{module}"
+        target: /scan
+        readonly: true
+    output_format: json
+    requirements: [docker]
+
+  zap-dast:
+    description: "OWASP ZAP DAST scanner"
+    type: container
+    image: zaproxy/zap-stable
+    tag: "2.14.0"
+    command: ["zap-baseline.py", "-t", "{target_url}", "-J", "report.json"]
+    mounts:
+      - source: "{output}"
+        target: /zap/wrk
+    output_format: json
+    requirements: [docker]
+
+  #---------------------------------------------------------------------------
+  # Markdown/Linting Tools (Container-based)
+  #---------------------------------------------------------------------------
+  markdownlint-container:
+    description: "Markdown linter container"
+    type: container
+    image: davidanson/markdownlint-cli2
+    tag: latest
+    mounts:
+      - source: "{module}"
+        target: /workdir
+    workdir: /workdir
+    requirements: [docker]
+
+  #---------------------------------------------------------------------------
+  # Script Tools
+  #---------------------------------------------------------------------------
+  pwsh-system:
+    description: "PowerShell 7.4+ script execution"
+    type: system
+    binary: pwsh
+    requirements: [pwsh]
+
+  bash-system:
+    description: "Bash script execution"
+    type: system
+    binary: bash
+    requirements: [bash]
+
+#---------------------------------------------------------------------------
+# Component-to-Tool Assignments
+# Maps component types (from component-types.yml) to tools for each operation
+#---------------------------------------------------------------------------
+component-tools:
+  go:
+    builder: go-system
+    linter: golangci-lint-container
+    tester: go-test-system
+    scanners:
+      - trivy-sbom
+      - trivy-vuln
+      - trivy-secrets
+      - semgrep-sast
+
+  typescript:
+    builder: npm-build
+    tester: npm-test
+    scanners:
+      - trivy-sbom
+      - trivy-vuln
+      - trivy-secrets
+
+  javascript:
+    builder: npm-build
+    tester: npm-test
+    scanners:
+      - trivy-sbom
+      - trivy-vuln
+      - trivy-secrets
+
+  dockerfile:
+    builder: buildx-system
+    scanners:
+      - trivy-sbom
+      - trivy-vuln
+      - trivy-iac
+
+  book:
+    builder: mkdocs-system
+    server: static-site
+    servers:
+      - static-site
+      - mkdocs-live
+
+  design:
+    server: structurizr
+
+  markdown:
+    linter: markdownlint-container
+
+  pwsh:
+    builder: pwsh-system
+    tester: pwsh-system
+
+  bash:
+    builder: bash-system
+
+  python:
+    builder: python-build
+    tester: pytest
+    linter: ruff-container
+    scanners:
+      - trivy-sbom
+      - trivy-vuln
+      - trivy-secrets
+      - semgrep-sast
+
+  rust:
+    builder: cargo-build
+    tester: cargo-test
+    linter: clippy-container
+    scanners:
+      - trivy-sbom
+      - trivy-vuln
+      - trivy-secrets
+      - semgrep-sast
+
+  dotnet:
+    builder: dotnet-build
+    tester: dotnet-test
+    linter: dotnet-format
+    scanners:
+      - trivy-sbom
+      - trivy-vuln
+      - trivy-secrets
+      - semgrep-sast
+
+#---------------------------------------------------------------------------
+# Environment Overrides
+# Different tool assignments based on execution context
+#---------------------------------------------------------------------------
+environments:
+  ci:
+    description: "CI/CD environment - prefer containers for reproducibility"
+    component-tools:
+      book:
+        builder: mkdocs-container
+
+  local:
+    description: "Local development - prefer system tools for speed"
+    component-tools:
+      # Default assignments already prefer system tools
+
+#---------------------------------------------------------------------------
+# Cache Configuration
+# Paths for mounted caches (improves container performance)
+#---------------------------------------------------------------------------
+caches:
+  go_cache:
+    path: ".cache/go"
+    description: "Go module cache"
+
+  go_build_cache:
+    path: ".cache/go-build"
+    description: "Go build cache"
+
+  npm_cache:
+    path: ".cache/npm"
+    description: "NPM package cache"
+
+  lint_cache:
+    path: ".cache/lint"
+    description: "Linter caches (golangci-lint, etc.)"
