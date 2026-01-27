@@ -5,7 +5,10 @@ package work
 
 import (
 	"os"
+	"strings"
 	"testing"
+
+	eactesting "github.com/ready-to-release/eac/go/eac/core/testing"
 )
 
 // TestParseCommitConfig tests the configuration parsing
@@ -103,6 +106,8 @@ func TestParseCommitConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			eactesting.RequireGitRepository(t)
+
 			// Save original os.Args
 			oldArgs := os.Args
 			defer func() { os.Args = oldArgs }()
@@ -112,10 +117,6 @@ func TestParseCommitConfig(t *testing.T) {
 
 			config, err := parseCommitConfig()
 			if err != nil {
-				// Skip test if not in a git repository
-				if containsStr(err.Error(), "repository root") {
-					t.Skip("Not in a git repository")
-				}
 				t.Fatalf("unexpected error: %v", err)
 			}
 
@@ -161,8 +162,7 @@ func TestParseCommitConfig_MissingMessageValue(t *testing.T) {
 			}
 
 			if !tt.expectError && err != nil {
-				// Skip if not in git repo
-				if !containsStr(err.Error(), "repository root") {
+				if !strings.Contains(err.Error(), "repository root") {
 					t.Errorf("unexpected error: %v", err)
 				}
 			}
@@ -172,6 +172,8 @@ func TestParseCommitConfig_MissingMessageValue(t *testing.T) {
 
 // TestCommitConfigDefaults tests default configuration values
 func TestCommitConfigDefaults(t *testing.T) {
+	eactesting.RequireGitRepository(t)
+
 	// Save original os.Args
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
@@ -181,10 +183,6 @@ func TestCommitConfigDefaults(t *testing.T) {
 
 	config, err := parseCommitConfig()
 	if err != nil {
-		// Skip test if not in a git repository
-		if containsStr(err.Error(), "repository root") {
-			t.Skip("Not in a git repository")
-		}
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -206,16 +204,3 @@ func TestCommitConfigDefaults(t *testing.T) {
 	}
 }
 
-// Helper function to check if a string contains a substring
-func containsStr(s, substr string) bool {
-	return len(s) >= len(substr) && findSubstr(s, substr)
-}
-
-func findSubstr(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
-}

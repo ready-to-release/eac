@@ -1,0 +1,20 @@
+[
+  {
+    "tagName": "v1.0.0",
+    "name": "Release v1.0.0",
+    "isDraft": false,
+    "body": "Initial release with core features"
+  },
+  {
+    "tagName": "v1.1.0",
+    "name": "Release v1.1.0",
+    "isDraft": false,
+    "body": "Added new pipeline commands"
+  },
+  {
+    "tagName": "v1.2.0-beta",
+    "name": "Beta Release v1.2.0",
+    "isDraft": true,
+    "body": "Pre-release for testing"
+  }
+]

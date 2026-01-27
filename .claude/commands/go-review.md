@@ -9,10 +9,12 @@ You are reviewing Go code changes for quality, clarity, and correctness.
 ## Process
 
 1. **MANDATORY: Run code-simplifier plugin FIRST**:
-   - Use the Task tool with subagent_type="code-simplifier"
+   - Run `/plugin code-simplifier` to invoke the plugin
    - This MUST be done before other review steps
    - Review and apply suggested changes
    - Commit simplifications separately
+
+   **Note**: The code-simplifier is a Claude Code plugin that analyzes code and suggests simplifications for clarity and maintainability
 
 2. **Review checklist**:
    - ✅ All tests pass (`go test ./...`)

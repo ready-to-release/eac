@@ -38,7 +38,7 @@ Design CLI commands that are:
 
 Before using MCP tools for project discovery:
 
-1. **Check for cached context**: Read `out/session-context.json` (if exists and age < 5 minutes)
+1. **Check for cached context**: Read `out/claude/session-context.json` (if exists and age < 5 minutes)
 2. **If valid cache**: Use cached project metadata (skip expensive MCP calls)
 3. **If missing/stale**: Run MCP discovery and consider caching results
 4. **Never cache during boot**: The boot command handles initial caching
@@ -51,7 +51,7 @@ Before using MCP tools for project discovery:
 2. **Design structure**: Command name, flags, help text, examples
 3. **Implement with validation**: Early validation, clear errors, proper exit codes
 4. **Write tests**: Table-driven tests for CLI parsing and output
-5. **Output structured result**: Save JSON report to `out/go-cli-ux-<timestamp>.json`
+5. **Output structured result**: Save JSON report to `out/claude/go-cli-ux-<timestamp>.json`
 
 ## What You'll Get
 
@@ -92,7 +92,7 @@ command-name --flag1 --flag2 value arg1 arg2
 
 In addition to the CLI design, I generate a structured JSON report:
 
-**File**: `out/go-cli-ux-<timestamp>.json`
+**File**: `out/claude/go-cli-ux-<timestamp>.json`
 
 **Schema**: `.claude/schemas/agent-result.json`
 

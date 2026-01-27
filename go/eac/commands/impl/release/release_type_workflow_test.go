@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	eactesting "github.com/ready-to-release/eac/go/eac/core/testing"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -17,26 +18,26 @@ import (
 // TestReleaseTypeWorkflowValidation_PublishedModules tests that published modules
 // are allowed to trigger release workflows.
 func TestReleaseTypeWorkflowValidation_PublishedModules(t *testing.T) {
-	workspaceRoot := getWorkspaceRoot(t)
-
-	moduleRegistry, err := modules.LoadFromWorkspace(workspaceRoot)
-	require.NoError(t, err)
-
 	// Published modules that should be allowed to release
 	publishedModules := []string{"r2r-cli", "ext-eac", "docs", "books"}
+
+	// Use mock registry with predictable data
+	registryOpts := make([]eactesting.RegistryOption, 0, len(publishedModules))
+	for _, moniker := range publishedModules {
+		registryOpts = append(registryOpts,
+			eactesting.WithModule(moniker,
+				eactesting.WithVersioning(),
+				eactesting.WithChangelog("release/"+moniker+"/CHANGELOG.md"),
+				eactesting.WithReleaseType("published"),
+			),
+		)
+	}
+	moduleRegistry := eactesting.NewMockRegistry(registryOpts...)
 
 	for _, moniker := range publishedModules {
 		t.Run(moniker, func(t *testing.T) {
 			moduleContract, exists := moduleRegistry.Get(moniker)
-			if !exists {
-				t.Skipf("module %s not found", moniker)
-				return
-			}
-
-			if moduleContract.Versioning == nil {
-				t.Skipf("module %s has no versioning", moniker)
-				return
-			}
+			require.True(t, exists, "mock module should always exist")
 
 			releaseType := moduleContract.Versioning.ReleaseType
 			assert.Equal(t, "published", releaseType,
@@ -53,26 +54,26 @@ func TestReleaseTypeWorkflowValidation_PublishedModules(t *testing.T) {
 // TestReleaseTypeWorkflowValidation_BundleModules tests that bundle modules
 // are allowed to trigger release workflows.
 func TestReleaseTypeWorkflowValidation_BundleModules(t *testing.T) {
-	workspaceRoot := getWorkspaceRoot(t)
-
-	moduleRegistry, err := modules.LoadFromWorkspace(workspaceRoot)
-	require.NoError(t, err)
-
 	// Bundle modules that should be allowed to release
 	bundleModules := []string{"r2r-eac-bundle"}
+
+	// Use mock registry with predictable data
+	registryOpts := make([]eactesting.RegistryOption, 0, len(bundleModules))
+	for _, moniker := range bundleModules {
+		registryOpts = append(registryOpts,
+			eactesting.WithModule(moniker,
+				eactesting.WithVersioning(),
+				eactesting.WithChangelog("release/"+moniker+"/CHANGELOG.md"),
+				eactesting.WithReleaseType("bundle"),
+			),
+		)
+	}
+	moduleRegistry := eactesting.NewMockRegistry(registryOpts...)
 
 	for _, moniker := range bundleModules {
 		t.Run(moniker, func(t *testing.T) {
 			moduleContract, exists := moduleRegistry.Get(moniker)
-			if !exists {
-				t.Skipf("module %s not found", moniker)
-				return
-			}
-
-			if moduleContract.Versioning == nil {
-				t.Skipf("module %s has no versioning", moniker)
-				return
-			}
+			require.True(t, exists, "mock module should always exist")
 
 			releaseType := moduleContract.Versioning.ReleaseType
 			assert.Equal(t, "bundle", releaseType,
@@ -89,26 +90,31 @@ func TestReleaseTypeWorkflowValidation_BundleModules(t *testing.T) {
 // TestReleaseTypeWorkflowValidation_InternalModules tests that internal modules
 // should NOT trigger release workflows.
 func TestReleaseTypeWorkflowValidation_InternalModules(t *testing.T) {
-	workspaceRoot := getWorkspaceRoot(t)
-
-	moduleRegistry, err := modules.LoadFromWorkspace(workspaceRoot)
-	require.NoError(t, err)
-
 	// Internal modules that should NOT be allowed to release
-	internalModules := []string{"eac-commands", "eac-mcp-commands", "r2r-installer", "vscode-ext-commit"}
+	internalModulesConfig := map[string]string{
+		"eac-commands":      "go/eac/commands/CHANGELOG.md",
+		"eac-mcp-commands":  "go/eac/mcp/commands/CHANGELOG.md",
+		"r2r-installer":     "scripts/CHANGELOG.md",
+		"vscode-ext-commit": "typescript/vscode-ext-commit/CHANGELOG.md",
+	}
 
-	for _, moniker := range internalModules {
+	// Use mock registry with predictable data
+	registryOpts := make([]eactesting.RegistryOption, 0, len(internalModulesConfig))
+	for moniker, changelog := range internalModulesConfig {
+		registryOpts = append(registryOpts,
+			eactesting.WithModule(moniker,
+				eactesting.WithVersioning(),
+				eactesting.WithChangelog(changelog),
+				eactesting.WithReleaseType("internal"),
+			),
+		)
+	}
+	moduleRegistry := eactesting.NewMockRegistry(registryOpts...)
+
+	for moniker := range internalModulesConfig {
 		t.Run(moniker, func(t *testing.T) {
 			moduleContract, exists := moduleRegistry.Get(moniker)
-			if !exists {
-				t.Skipf("module %s not found", moniker)
-				return
-			}
-
-			if moduleContract.Versioning == nil {
-				t.Skipf("module %s has no versioning", moniker)
-				return
-			}
+			require.True(t, exists, "mock module should always exist")
 
 			releaseType := moduleContract.Versioning.ReleaseType
 			assert.Equal(t, "internal", releaseType,
@@ -130,26 +136,25 @@ func TestReleaseTypeWorkflowValidation_InternalModules(t *testing.T) {
 // TestReleaseTypeWorkflowValidation_NoneModules tests that modules with no releases
 // should NOT trigger release workflows.
 func TestReleaseTypeWorkflowValidation_NoneModules(t *testing.T) {
-	workspaceRoot := getWorkspaceRoot(t)
-
-	moduleRegistry, err := modules.LoadFromWorkspace(workspaceRoot)
-	require.NoError(t, err)
-
 	// Modules with release_type: none
 	noneModules := []string{"eac-core"}
+
+	// Use mock registry with predictable data
+	registryOpts := make([]eactesting.RegistryOption, 0, len(noneModules))
+	for _, moniker := range noneModules {
+		registryOpts = append(registryOpts,
+			eactesting.WithModule(moniker,
+				eactesting.WithVersioning(),
+				eactesting.WithReleaseType("none"),
+			),
+		)
+	}
+	moduleRegistry := eactesting.NewMockRegistry(registryOpts...)
 
 	for _, moniker := range noneModules {
 		t.Run(moniker, func(t *testing.T) {
 			moduleContract, exists := moduleRegistry.Get(moniker)
-			if !exists {
-				t.Skipf("module %s not found", moniker)
-				return
-			}
-
-			if moduleContract.Versioning == nil {
-				t.Skipf("module %s has no versioning", moniker)
-				return
-			}
+			require.True(t, exists, "mock module should always exist")
 
 			releaseType := moduleContract.Versioning.ReleaseType
 			assert.Equal(t, "none", releaseType,

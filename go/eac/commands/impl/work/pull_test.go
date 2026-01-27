@@ -5,9 +5,12 @@ package work
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/work/internal"
+	"github.com/ready-to-release/eac/go/eac/core/logging"
+	eactesting "github.com/ready-to-release/eac/go/eac/core/testing"
 )
 
 // TestParsePullConfig tests the configuration parsing
@@ -78,6 +81,8 @@ func TestParsePullConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			eactesting.RequireGitRepository(t)
+
 			// Save original os.Args
 			oldArgs := os.Args
 			defer func() { os.Args = oldArgs }()
@@ -87,10 +92,6 @@ func TestParsePullConfig(t *testing.T) {
 
 			config, err := parsePullConfig()
 			if err != nil {
-				// Skip test if not in a git repository
-				if containsStr(err.Error(), "repository root") {
-					t.Skip("Not in a git repository")
-				}
 				t.Fatalf("unexpected error: %v", err)
 			}
 
@@ -103,6 +104,8 @@ func TestParsePullConfig(t *testing.T) {
 
 // TestPullConfigDefaults tests default configuration values
 func TestPullConfigDefaults(t *testing.T) {
+	eactesting.RequireGitRepository(t)
+
 	// Save original os.Args
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
@@ -112,10 +115,6 @@ func TestPullConfigDefaults(t *testing.T) {
 
 	config, err := parsePullConfig()
 	if err != nil {
-		// Skip test if not in a git repository
-		if containsStr(err.Error(), "repository root") {
-			t.Skip("Not in a git repository")
-		}
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -170,10 +169,17 @@ func TestValidatePullEnvironment(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Create a logger for the test
+			logger, err := logging.NewDefault("test", ".")
+			if err != nil {
+				t.Fatalf("failed to create logger: %v", err)
+			}
+
 			// Create a base config with default git ops
 			baseConfig := &internal.BaseConfig{
 				GitOps:   internal.GetGitOps("."),
 				RepoRoot: ".",
+				Logger:   logger,
 			}
 
 			config := &pullConfig{
@@ -183,7 +189,7 @@ func TestValidatePullEnvironment(t *testing.T) {
 				autostash:     true, // Set to true to skip worktree check
 			}
 
-			err := validatePullEnvironment(config)
+			err = validatePullEnvironment(config)
 
 			if tt.expectError && err == nil {
 				t.Error("expected error, got nil")
@@ -194,7 +200,7 @@ func TestValidatePullEnvironment(t *testing.T) {
 			}
 
 			if tt.expectError && err != nil {
-				if !containsStr(err.Error(), tt.errorContains) {
+				if !strings.Contains(err.Error(), tt.errorContains) {
 					t.Errorf("expected error containing '%s', got '%s'", tt.errorContains, err.Error())
 				}
 			}
@@ -204,6 +210,8 @@ func TestValidatePullEnvironment(t *testing.T) {
 
 // TestPullConfigWorktreeBranchDetection tests branch detection in worktree environments
 func TestPullConfigWorktreeBranchDetection(t *testing.T) {
+	eactesting.RequireGitRepository(t)
+
 	// Save original os.Args
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
@@ -213,31 +221,12 @@ func TestPullConfigWorktreeBranchDetection(t *testing.T) {
 
 	config, err := parsePullConfig()
 	if err != nil {
-		// Skip test if not in a git repository
-		if containsStr(err.Error(), "repository root") {
-			t.Skip("Not in a git repository")
-		}
 		t.Fatalf("unexpected error: %v", err)
 	}
-
-	// The current branch should be detected from the current working directory,
-	// not from the repository root. This is critical for worktree environments
-	// where the main repo and worktrees may be on different branches.
-	//
-	// For example:
-	// - Main repo at C:\source\simply-cli\cli (on "main" branch)
-	// - Worktree at C:\source\simply-cli\cli-feature-design (on "feature/design" branch)
-	//
-	// When running from the worktree directory, config.currentBranch should be
-	// "feature/design", NOT "main".
 
 	if config.currentBranch == "" {
 		t.Error("expected currentBranch to be set, got empty string")
 	}
 
-	// Verify that currentBranch does not incorrectly report main/master
-	// when we're actually in a feature branch worktree.
-	// This test will pass if we're on any branch (main or feature).
-	// The real validation happens when running the actual command.
 	t.Logf("Detected current branch: %s", config.currentBranch)
 }

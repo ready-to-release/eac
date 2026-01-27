@@ -22,9 +22,12 @@
 // Long:   pipeline run eac-core r2r-cli   # Run specific modules
 // Flag.changed-only: type=bool, usage=Only run pipelines for changed modules
 // Flag.ref: type=string, usage=Git ref to compare against (default: current branch)
+// Flag.wait: type=bool, usage=Wait for pipeline completion before returning
+// Flag.timeout: type=int, usage=Timeout in seconds when waiting (default: no timeout)
 package pipeline
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"strings"
@@ -47,6 +50,8 @@ func PipelineRun() int {
 	}
 	// Parse flags
 	changedOnly := false
+	wait := false
+	timeout := 0
 	ref := getCurrentBranch()
 	var monikers []string
 
@@ -54,6 +59,14 @@ func PipelineRun() int {
 		arg := os.Args[i]
 		if arg == "--changed-only" {
 			changedOnly = true
+		} else if arg == "--wait" {
+			wait = true
+		} else if arg == "--timeout" {
+			if i+1 < len(os.Args) {
+				// Parse timeout value
+				fmt.Sscanf(os.Args[i+1], "%d", &timeout)
+				i++
+			}
 		} else if arg == "--ref" {
 			if i+1 < len(os.Args) {
 				ref = os.Args[i+1]
@@ -72,6 +85,9 @@ func PipelineRun() int {
 	}
 
 	runner := pipelinerunner.New(workspaceRoot)
+
+	// Configure wait options
+	runner.SetWaitOptions(wait, timeout)
 
 	var pipelineErr error
 	if changedOnly {

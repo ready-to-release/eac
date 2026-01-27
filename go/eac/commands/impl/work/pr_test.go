@@ -5,9 +5,12 @@ package work
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/work/internal"
+	"github.com/ready-to-release/eac/go/eac/core/logging"
+	eactesting "github.com/ready-to-release/eac/go/eac/core/testing"
 )
 
 // TestParsePRConfig tests the configuration parsing
@@ -96,6 +99,8 @@ func TestParsePRConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			eactesting.RequireGitRepository(t)
+
 			// Save original os.Args
 			oldArgs := os.Args
 			defer func() { os.Args = oldArgs }()
@@ -105,10 +110,6 @@ func TestParsePRConfig(t *testing.T) {
 
 			config, err := parsePRConfig()
 			if err != nil {
-				// Skip test if not in a git repository
-				if containsStr(err.Error(), "repository root") {
-					t.Skip("Not in a git repository")
-				}
 				t.Fatalf("unexpected error: %v", err)
 			}
 
@@ -134,13 +135,15 @@ func TestParsePRConfig_MissingTitleValue(t *testing.T) {
 		t.Error("expected error for --title without value, got nil")
 	}
 
-	if err != nil && !containsStr(err.Error(), "--title requires a value") {
+	if err != nil && !strings.Contains(err.Error(), "--title requires a value") {
 		t.Errorf("expected error about missing title value, got: %v", err)
 	}
 }
 
 // TestPRConfigDefaults tests default configuration values
 func TestPRConfigDefaults(t *testing.T) {
+	eactesting.RequireGitRepository(t)
+
 	// Save original os.Args
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
@@ -150,10 +153,6 @@ func TestPRConfigDefaults(t *testing.T) {
 
 	config, err := parsePRConfig()
 	if err != nil {
-		// Skip test if not in a git repository
-		if containsStr(err.Error(), "repository root") {
-			t.Skip("Not in a git repository")
-		}
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -208,10 +207,17 @@ func TestValidatePREnvironment(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Create a logger for the test
+			logger, err := logging.NewDefault("test", ".")
+			if err != nil {
+				t.Fatalf("failed to create logger: %v", err)
+			}
+
 			// Create a base config with default git ops
 			baseConfig := &internal.BaseConfig{
 				GitOps:   internal.GetGitOps("."),
 				RepoRoot: ".",
+				Logger:   logger,
 			}
 
 			config := &prConfig{
@@ -220,7 +226,7 @@ func TestValidatePREnvironment(t *testing.T) {
 				targetBranch:  "main",
 			}
 
-			err := validatePREnvironment(config)
+			err = validatePREnvironment(config)
 
 			if tt.expectError && err == nil {
 				t.Error("expected error, got nil")
@@ -228,15 +234,15 @@ func TestValidatePREnvironment(t *testing.T) {
 
 			if !tt.expectError && err != nil {
 				// Skip if worktree not clean or gh not available
-				if containsStr(err.Error(), "uncommitted changes") ||
-					containsStr(err.Error(), "gh CLI not found") {
+				if strings.Contains(err.Error(), "uncommitted changes") ||
+					strings.Contains(err.Error(), "gh CLI not found") {
 					t.Skip("Worktree not clean or gh CLI not available")
 				}
 				t.Errorf("unexpected error: %v", err)
 			}
 
 			if tt.expectError && err != nil {
-				if !containsStr(err.Error(), tt.errorContains) {
+				if !strings.Contains(err.Error(), tt.errorContains) {
 					t.Errorf("expected error containing '%s', got '%s'", tt.errorContains, err.Error())
 				}
 			}
@@ -290,23 +296,23 @@ func TestGeneratePRDescription(t *testing.T) {
 	description := generatePRDescription(commits, diffStat)
 
 	// Check that description contains expected sections
-	if !containsStr(description, "## Summary") {
+	if !strings.Contains(description, "## Summary") {
 		t.Error("description should contain Summary section")
 	}
 
-	if !containsStr(description, "## Changes") {
+	if !strings.Contains(description, "## Changes") {
 		t.Error("description should contain Changes section")
 	}
 
-	if !containsStr(description, "## Test Plan") {
+	if !strings.Contains(description, "## Test Plan") {
 		t.Error("description should contain Test Plan section")
 	}
 
-	if !containsStr(description, "feat: add feature") {
+	if !strings.Contains(description, "feat: add feature") {
 		t.Error("description should contain commit messages")
 	}
 
-	if !containsStr(description, diffStat) {
+	if !strings.Contains(description, diffStat) {
 		t.Error("description should contain diff stat")
 	}
 }

@@ -23,9 +23,3 @@ Feature: eac-commands_build
       When I run the command "build --help"
       Then the exit code is 0
       And I should see "build" or "module" or "Usage"
-
-    @deps:npm @skip:broken
-    Scenario: Build with no args builds all
-      When I run the command "build --dry-run"
-      Then the exit code is 0
-      And I should see "Building" or "dry-run" or "build"

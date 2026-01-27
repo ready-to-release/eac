@@ -70,10 +70,11 @@ func NewDockerClient() (DockerClient, error) {
 }
 
 // shouldUseMockDockerClient checks if mock client should be used.
-// Returns true when R2R_MOCK_STRUCTURIZR environment variable is set to "true".
+// Returns true when R2R_MOCK_DOCKER or R2R_MOCK_STRUCTURIZR (legacy) environment variable is set to "true".
 // This is set by the BDD test infrastructure to prevent real Docker operations.
 func shouldUseMockDockerClient() bool {
-	return os.Getenv(environments.EnvR2RMockStructurizr) == "true"
+	return os.Getenv(environments.EnvR2RMockDocker) == "true" ||
+		os.Getenv(environments.EnvR2RMockStructurizr) == "true" // Legacy support
 }
 
 // newRealDockerClient creates a real Docker client (extracted from NewDockerClient).

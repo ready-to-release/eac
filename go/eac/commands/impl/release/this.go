@@ -410,12 +410,6 @@ func performRelease(module string, dryRun bool, overrideDate string) ReleaseResu
 	result.NewVersion = newVersion
 	result.Tag = fmt.Sprintf("%s/%s", module, newVersion)
 
-	// If dry run, stop here
-	if dryRun {
-		result.Success = true
-		return result
-	}
-
 	// Create version entry from commits
 	newVersionEntry := changelog.CommitsToVersion(filteredCommits, newVersion, releaseDate)
 
@@ -447,6 +441,12 @@ func performRelease(module string, dryRun bool, overrideDate string) ReleaseResu
 	releaseDir := filepath.Dir(fullChangelogPath)
 	if err := os.MkdirAll(releaseDir, 0o755); err != nil {
 		result.Error = fmt.Sprintf("failed to create release directory: %v", err)
+		return result
+	}
+
+	// If dry run, skip validation and changelog writing
+	if dryRun {
+		result.Success = true
 		return result
 	}
 

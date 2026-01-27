@@ -5,9 +5,12 @@ package work
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/work/internal"
+	"github.com/ready-to-release/eac/go/eac/core/logging"
+	eactesting "github.com/ready-to-release/eac/go/eac/core/testing"
 )
 
 // TestParseMergeConfig tests the configuration parsing
@@ -102,6 +105,8 @@ func TestParseMergeConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			eactesting.RequireGitRepository(t)
+
 			// Save original os.Args
 			oldArgs := os.Args
 			defer func() { os.Args = oldArgs }()
@@ -111,10 +116,6 @@ func TestParseMergeConfig(t *testing.T) {
 
 			config, err := parseMergeConfig()
 			if err != nil {
-				// Skip test if not in a git repository
-				if containsStr(err.Error(), "repository root") {
-					t.Skip("Not in a git repository")
-				}
 				t.Fatalf("unexpected error: %v", err)
 			}
 
@@ -127,6 +128,8 @@ func TestParseMergeConfig(t *testing.T) {
 
 // TestMergeConfigDefaults tests default configuration values
 func TestMergeConfigDefaults(t *testing.T) {
+	eactesting.RequireGitRepository(t)
+
 	// Save original os.Args
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
@@ -136,10 +139,6 @@ func TestMergeConfigDefaults(t *testing.T) {
 
 	config, err := parseMergeConfig()
 	if err != nil {
-		// Skip test if not in a git repository
-		if containsStr(err.Error(), "repository root") {
-			t.Skip("Not in a git repository")
-		}
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -198,10 +197,17 @@ func TestValidateMergeEnvironment(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Create a logger for the test
+			logger, err := logging.NewDefault("test", ".")
+			if err != nil {
+				t.Fatalf("failed to create logger: %v", err)
+			}
+
 			// Create a base config with default git ops
 			baseConfig := &internal.BaseConfig{
 				GitOps:   internal.GetGitOps("."),
 				RepoRoot: ".",
+				Logger:   logger,
 			}
 
 			config := &mergeConfig{
@@ -210,7 +216,7 @@ func TestValidateMergeEnvironment(t *testing.T) {
 				targetBranch:  "main",
 			}
 
-			err := validateMergeEnvironment(config)
+			err = validateMergeEnvironment(config)
 
 			if tt.expectError && err == nil {
 				t.Error("expected error, got nil")
@@ -218,14 +224,14 @@ func TestValidateMergeEnvironment(t *testing.T) {
 
 			if !tt.expectError && err != nil {
 				// Skip if worktree not clean (we can't control this in tests)
-				if containsStr(err.Error(), "uncommitted changes") {
+				if strings.Contains(err.Error(), "uncommitted changes") {
 					t.Skip("Worktree not clean")
 				}
 				t.Errorf("unexpected error: %v", err)
 			}
 
 			if tt.expectError && err != nil {
-				if !containsStr(err.Error(), tt.errorContains) {
+				if !strings.Contains(err.Error(), tt.errorContains) {
 					t.Errorf("expected error containing '%s', got '%s'", tt.errorContains, err.Error())
 				}
 			}
