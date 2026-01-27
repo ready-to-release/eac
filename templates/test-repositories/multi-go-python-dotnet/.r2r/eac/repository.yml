@@ -1,0 +1,15 @@
+modules:
+  - moniker: api-service
+    name: API Service
+    components:
+      go: go/api-service
+
+  - moniker: ml-service
+    name: ML Service
+    components:
+      python: python/ml-service
+
+  - moniker: web-api
+    name: Web API
+    components:
+      dotnet: dotnet/web-api

@@ -1,0 +1,30 @@
+modules:
+  - moniker: api-gateway
+    name: API Gateway
+    components:
+      go: go/api-gateway
+
+  - moniker: web-frontend
+    name: Web Frontend
+    components:
+      typescript: typescript/web-frontend
+
+  - moniker: ml-engine
+    name: ML Engine
+    components:
+      python: python/ml-engine
+
+  - moniker: core-services
+    name: Core Services
+    components:
+      dotnet: dotnet/core-services
+
+  - moniker: cli-tools
+    name: CLI Tools
+    components:
+      rust: rust/cli-tools
+
+  - moniker: containers
+    name: Container Images
+    components:
+      dockerfile: containers/images

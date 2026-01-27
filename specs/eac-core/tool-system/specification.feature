@@ -78,6 +78,28 @@ Feature: Tool Resolution for Component Types
       And the builder for component type "python" is "python-build"
       And the builder for component type "typescript" is "npm-build"
 
+    Scenario: B3 - Three language repo resolves all builders
+      Given I copy the test layout "multi-go-python-dotnet"
+      When I load the EAC configuration
+      Then the configuration has 3 modules
+      And the module "api-service" has component "go"
+      And the module "ml-service" has component "python"
+      And the module "web-api" has component "dotnet"
+      And the builder for component type "go" is "go-system"
+      And the builder for component type "python" is "python-build"
+      And the builder for component type "dotnet" is "dotnet-build"
+
+    Scenario: B4 - Full stack repo resolves all six language builders
+      Given I copy the test layout "multi-full-stack"
+      When I load the EAC configuration
+      Then the configuration has 6 modules
+      And the module "api-gateway" has component "go"
+      And the module "web-frontend" has component "typescript"
+      And the module "ml-engine" has component "python"
+      And the module "core-services" has component "dotnet"
+      And the module "cli-tools" has component "rust"
+      And the module "containers" has component "dockerfile"
+
   # ===========================================================================
   # Category C: Tester Tool Resolution
   # ===========================================================================

@@ -35,7 +35,15 @@ func (m Model) ViewFinal() string {
 
 	// Render summary data if available (this has authoritative success/failure info)
 	if m.summaryData != nil {
-		// Summary header
+		// Details first (includes module table from summary.go)
+		if len(m.summaryData.Details) > 0 {
+			b.WriteString("\n")
+			for _, line := range m.summaryData.Details {
+				b.WriteString(fmt.Sprintf("  %s\n", line))
+			}
+		}
+
+		// Summary status at the end
 		icon := "✓"
 		statusText := "PASSED"
 		if !m.summaryData.Success {
@@ -47,14 +55,6 @@ func (m Model) ViewFinal() string {
 		// Run phase summary
 		if m.summaryData.RunSummary != "" {
 			b.WriteString(fmt.Sprintf("  %s\n", m.summaryData.RunSummary))
-		}
-
-		// Details (includes component table from summary.go)
-		if len(m.summaryData.Details) > 0 {
-			b.WriteString("\n")
-			for _, line := range m.summaryData.Details {
-				b.WriteString(fmt.Sprintf("  %s\n", line))
-			}
 		}
 	} else if m.panes[PhaseRun].Status != PhasePending {
 		// Fallback: use module states if no summary data (shouldn't normally happen)
@@ -146,16 +146,15 @@ func (m Model) renderTabBar(tabs []*ModuleState) string {
 		if m.asciiMode {
 			weightStr = fmt.Sprintf(" w%d", state.Weight)
 		} else {
-			// Unicode mode: show circled digit
-			weightStr = " " + weightDigit(state.Weight)
+			// Unicode mode: show circled digit with trailing space for background coverage
+			weightStr = " " + weightDigit(state.Weight) + " "
 		}
 
 		// Calculate space for name
+		// Use lipgloss.Width for correct Unicode width (circled digits are 2 chars wide)
 		iconWidth := 1
-		if !m.asciiMode {
-			iconWidth = 1 // Unicode icons are still 1 char wide visually
-		}
-		nameSpace := tabWidth - iconWidth - 1 - len(weightStr) - 1
+		weightWidth := lipgloss.Width(weightStr)
+		nameSpace := tabWidth - iconWidth - 1 - weightWidth - 1
 		if nameSpace < 4 {
 			nameSpace = 4
 		}
@@ -205,7 +204,7 @@ func (m Model) renderTabBar(tabs []*ModuleState) string {
 	}
 
 	// Fixed number of tabs per row
-	const tabsPerRow = 6
+	const tabsPerRow = 8
 
 	// Split into rows
 	var rows [][]tabEntry

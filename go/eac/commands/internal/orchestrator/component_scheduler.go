@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"sync"
 	"time"
@@ -147,36 +148,56 @@ func (cs *ComponentScheduler) Close() {
 
 // detectAvailableCapacity calculates capacity as percentage of RAM.
 // Normal: 100% of (RAM/1GB) slots
-// Turbo: turbo × 100% of (RAM/1GB) slots
+// detectAvailableCapacity calculates the pressure roof for parallel builds.
+//
+// Formula: min(CPU count, RAM_GB / 2) × turbo
+//
+// This gives predictable results:
+//   - 16 CPU, 32 GB RAM → min(16, 16) = 16 base slots
+//   - 8 CPU, 16 GB RAM → min(8, 8) = 8 base slots
+//   - 4 CPU, 8 GB RAM → min(4, 4) = 4 base slots
+//
+// With turbo=2: double the slots (for I/O bound builds)
+// With turbo=4: quadruple the slots
+//
 // configMax is only used as ceiling if > 0 (user explicitly set it).
 // Returns at least 1.
 func detectAvailableCapacity(configMax int, turbo int) int {
-	// Try smart detection for WSL/Docker environments first
-	effectiveRAM := GetEffectiveMemoryBytes()
-
-	if effectiveRAM == 0 {
-		// Fall back to host available RAM
-		memInfo, err := mem.VirtualMemory()
-		if err != nil {
-			// Fall back to a sensible default on error
-			if configMax > 0 {
-				return configMax
-			}
-			return 4
-		}
-		// Use Available (free + buffers/cache) rather than Free for better accuracy
-		effectiveRAM = memInfo.Available
+	// Use HOST resources (not Docker limits) since orchestrator runs on host
+	cpuCount := runtime.NumCPU()
+	if cpuCount < 1 {
+		cpuCount = 4 // Fallback
 	}
 
-	// Base capacity: 1 slot per 256MB of RAM
-	const slotSize = 256 * 1024 * 1024
-	baseCapacity := effectiveRAM / slotSize
+	// Get host total RAM in GB
+	var ramGB int
+	memInfo, err := mem.VirtualMemory()
+	if err == nil {
+		ramGB = int(memInfo.Total / (1024 * 1024 * 1024))
+	} else {
+		ramGB = 8 // Fallback: assume 8GB
+	}
 
-	// Apply turbo multiplier (percentage: 1x=100%, 2x=200%, 4x=400%)
-	capacity := int(baseCapacity) * turbo
+	// Base capacity: min(CPU count, RAM_GB / 2)
+	// This ensures we don't over-subscribe either resource
+	ramBasedCap := ramGB / 2
+	if ramBasedCap < 1 {
+		ramBasedCap = 1
+	}
 
-	// Cap at reasonable maximum
-	const maxCapacity = 64
+	baseCapacity := cpuCount
+	if ramBasedCap < baseCapacity {
+		baseCapacity = ramBasedCap
+	}
+
+	// Apply turbo multiplier
+	capacity := baseCapacity * turbo
+
+	// Cap at reasonable maximum (2x CPU count or 64, whichever is lower)
+	maxCapacity := cpuCount * 2
+	if maxCapacity > 64 {
+		maxCapacity = 64
+	}
 	if capacity > maxCapacity {
 		capacity = maxCapacity
 	}
