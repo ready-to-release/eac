@@ -62,47 +62,98 @@ func generateTUISummary(ctx *ExecutionContext, totalTime time.Duration) *tui.Sum
 	return generateModuleTUISummary(ctx, totalTime)
 }
 
-// generateComponentTUISummary creates TUI summary showing component-level results.
-// Format: Name (module:component), Status, Duration
+// generateComponentTUISummary creates TUI summary showing module-level aggregated results.
+// Table format varies by command type (build, test, lint, scan).
 func generateComponentTUISummary(ctx *ExecutionContext, totalTime time.Duration) *tui.SummaryData {
 	resultSets := ctx.ComponentResultSets
 
-	// Count successes and failures at component level
+	// Count successes and failures at module level
 	var successCount, failureCount int
 	for _, rs := range resultSets {
-		for _, comp := range rs.Components {
-			if comp.ExitCode == 0 {
-				successCount++
-			} else {
-				failureCount++
-			}
+		status := rs.DeriveStatus()
+		if status == orchestrator.ModuleStatusFailed {
+			failureCount++
+		} else if status == orchestrator.ModuleStatusSuccess {
+			successCount++
 		}
 	}
 
 	// Build run summary line
-	runSummary := fmt.Sprintf("%d succeeded", successCount)
+	runSummary := fmt.Sprintf("%d modules succeeded", successCount)
 	if failureCount > 0 {
 		runSummary += fmt.Sprintf(", %d failed", failureCount)
 	}
 
-	// Build details with summary table - one row per component
-	var details []string
-	tb := render.NewTableBuilder().
-		WithHeaders("Name", "Status", "Duration")
+	// Sort resultSets by module name
+	sortedSets := make([]orchestrator.ComponentResultSet, len(resultSets))
+	copy(sortedSets, resultSets)
+	sort.Slice(sortedSets, func(i, j int) bool {
+		return sortedSets[i].Module < sortedSets[j].Module
+	})
 
-	// ComponentResultSets are already sorted by module, components sorted within
-	for _, rs := range resultSets {
-		for _, comp := range rs.GetSortedComponents() {
-			// Format: "module:component" (truncated to fit table width)
-			name := output.TruncateComponentName(rs.Module, comp.Component, output.NameWidth)
-			statusIcon := "✓"
-			if comp.ExitCode != 0 {
-				statusIcon = "✗"
-			} else if len(comp.Warnings) > 0 {
-				statusIcon = "⚠"
-			}
-			duration := formatDuration(comp.Duration)
-			tb.AddRow(name, statusIcon, duration)
+	// Build table based on command type
+	var details []string
+	var tb *render.TableBuilder
+
+	switch ctx.Config.Type {
+	case CommandTypeTest:
+		tb = render.NewTableBuilder().
+			WithHeaders("Module", "Components", "#Test", "Time", "Stat")
+	case CommandTypeLint:
+		tb = render.NewTableBuilder().
+			WithHeaders("Module", "Components", "#Err", "#Warn", "Time", "Stat")
+	case CommandTypeScan:
+		tb = render.NewTableBuilder().
+			WithHeaders("Module", "Components", "#Err", "#Warn", "Time", "Stat")
+	default: // CommandTypeBuild
+		tb = render.NewTableBuilder().
+			WithHeaders("Module", "Components", "Time", "Stat")
+	}
+
+	for _, rs := range sortedSets {
+		// Get sorted component names
+		sortedComps := rs.GetSortedComponents()
+		compNames := make([]string, len(sortedComps))
+		for i, comp := range sortedComps {
+			compNames[i] = comp.Component
+		}
+		components := strings.Join(compNames, ", ")
+		// Truncate if too long (max 40 chars)
+		if len(components) > 40 {
+			components = components[:37] + "..."
+		}
+
+		// Sum duration and count errors/warnings from all components
+		var moduleDuration time.Duration
+		var errorCount, warnCount int
+		for _, comp := range rs.Components {
+			moduleDuration += comp.Duration
+			errorCount += len(comp.Errors)
+			warnCount += len(comp.Warnings)
+		}
+
+		// Derive status
+		statusIcon := " ✓"
+		status := rs.DeriveStatus()
+		if status == orchestrator.ModuleStatusFailed {
+			statusIcon = " ✗"
+		} else if warnCount > 0 {
+			statusIcon = " ⚠"
+		}
+
+		moduleName := output.PackageDisplayName(rs.Module)
+		duration := formatDuration(moduleDuration)
+
+		// Add row based on command type
+		switch ctx.Config.Type {
+		case CommandTypeTest:
+			// TODO: Test count requires plumbing from test runners
+			testCount := "-"
+			tb.AddRow(moduleName, components, testCount, duration, statusIcon)
+		case CommandTypeLint, CommandTypeScan:
+			tb.AddRow(moduleName, components, errorCount, warnCount, duration, statusIcon)
+		default: // CommandTypeBuild
+			tb.AddRow(moduleName, components, duration, statusIcon)
 		}
 	}
 
@@ -114,31 +165,68 @@ func generateComponentTUISummary(ctx *ExecutionContext, totalTime time.Duration)
 		}
 	}
 
-	// Add failed/warning results with error details
+	// Add failed/warning results with error details (top 5 failures)
 	if hasComponentFailures(resultSets) {
 		details = append(details, "")
-		for _, rs := range resultSets {
+		failCount := 0
+		const maxFailures = 5
+		for _, rs := range sortedSets {
+			if failCount >= maxFailures {
+				break
+			}
+			status := rs.DeriveStatus()
+			if status != orchestrator.ModuleStatusFailed {
+				// Check for warnings
+				hasWarnings := false
+				for _, comp := range rs.Components {
+					if len(comp.Warnings) > 0 {
+						hasWarnings = true
+						break
+					}
+				}
+				if !hasWarnings {
+					continue
+				}
+			}
+			failCount++
+
+			// Module header with status
+			statusIcon := "✗"
+			if status != orchestrator.ModuleStatusFailed {
+				statusIcon = "⚠"
+			}
+			moduleName := output.PackageDisplayName(rs.Module)
+			details = append(details, fmt.Sprintf("%s %s", statusIcon, moduleName))
+
+			// Show first error/warning from failed components
 			for _, comp := range rs.GetSortedComponents() {
 				if comp.ExitCode == 0 && len(comp.Warnings) == 0 {
 					continue
 				}
-				statusIcon := "✗"
-				if comp.ExitCode == 0 && len(comp.Warnings) > 0 {
-					statusIcon = "⚠"
+				// Show component name and first error
+				if len(comp.Errors) > 0 {
+					errMsg := comp.Errors[0]
+					if len(errMsg) > 80 {
+						errMsg = errMsg[:77] + "..."
+					}
+					details = append(details, fmt.Sprintf("    %s: %s", comp.Component, errMsg))
+				} else if len(comp.Warnings) > 0 {
+					warnMsg := comp.Warnings[0]
+					if len(warnMsg) > 80 {
+						warnMsg = warnMsg[:77] + "..."
+					}
+					details = append(details, fmt.Sprintf("    %s: %s", comp.Component, warnMsg))
 				}
-				name := output.TruncateComponentName(rs.Module, comp.Component, output.NameWidth)
-				details = append(details, fmt.Sprintf("%s %s - %s",
-					statusIcon, name, formatDuration(comp.Duration)))
-				for _, err := range comp.Errors {
-					details = append(details, formatErrorLines("  Error: ", err)...)
-				}
-				for _, warn := range comp.Warnings {
-					details = append(details, formatErrorLines("  Warning: ", warn)...)
-				}
+				// Show log path
 				if comp.LogPath != "" {
-					details = append(details, fmt.Sprintf("  Log: %s", comp.LogPath))
+					details = append(details, fmt.Sprintf("    Log: %s", comp.LogPath))
 				}
+				break // Only show first failed component per module
 			}
+		}
+		if failCount >= maxFailures && countFailures(sortedSets) > maxFailures {
+			remaining := countFailures(sortedSets) - maxFailures
+			details = append(details, fmt.Sprintf("  ... and %d more failures", remaining))
 		}
 	}
 
@@ -361,6 +449,26 @@ func hasComponentFailures(resultSets []orchestrator.ComponentResultSet) bool {
 		}
 	}
 	return false
+}
+
+// countFailures counts the number of failed or warned modules.
+func countFailures(resultSets []orchestrator.ComponentResultSet) int {
+	count := 0
+	for _, rs := range resultSets {
+		status := rs.DeriveStatus()
+		if status == orchestrator.ModuleStatusFailed {
+			count++
+			continue
+		}
+		// Check for warnings
+		for _, comp := range rs.Components {
+			if len(comp.Warnings) > 0 {
+				count++
+				break
+			}
+		}
+	}
+	return count
 }
 
 // hasModuleFailures checks if any module result is not passed.

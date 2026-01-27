@@ -1,0 +1,13 @@
+{
+  "name": "web-frontend",
+  "version": "1.0.0",
+  "description": "Web Frontend",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "echo \"No tests configured\""
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

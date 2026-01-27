@@ -1,0 +1,9 @@
+[package]
+name = "cli-tools"
+version = "1.0.0"
+edition = "2021"
+description = "CLI Tools"
+
+[[bin]]
+name = "cli"
+path = "src/main.rs"
