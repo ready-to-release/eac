@@ -110,7 +110,8 @@ dependencies:
     name: "Bash"
     description: "Bourne Again SHell for running shell scripts"
     version: ">=4.0"
-    phases: [command, build, test]
+    platforms: [linux, darwin]
+    phases: [command, test]
     verify:
       command: "bash --version"
       pattern: "version (\\d+\\.\\d+)"
@@ -119,7 +120,8 @@ dependencies:
     name: "PowerShell"
     description: "PowerShell 7+ cross-platform shell"
     version: ">=7.0"
-    phases: [command, build, test]
+    platforms: [windows]
+    phases: [command, test]
     verify:
       command: "pwsh --version"
       pattern: "PowerShell (\\d+\\.\\d+)"

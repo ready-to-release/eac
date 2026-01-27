@@ -228,24 +228,43 @@ func VerifyAllForPhase(dependencies []string, phase string) []Result {
 		return results
 	}
 
+	// Get current platform
+	platform := runtime.GOOS // linux, windows, darwin
+
 	verifier := NewVerifier(cfg)
 	results := make([]Result, len(dependencies))
 
 	for i, depName := range dependencies {
 		dep := cfg.Get(depName)
-		if dep != nil && !dep.AppliesToPhase(phase) {
-			// Dependency exists but doesn't apply to this phase - mark as available
-			results[i] = Result{
-				Dependency: depName,
-				Moniker:    depName,
-				Name:       dep.Name,
-				Available:  true,
-				Version:    fmt.Sprintf("n/a (%s phase)", phase),
+		if dep != nil {
+			// Check both phase AND platform
+			phaseMismatch := !dep.AppliesToPhase(phase)
+			platformMismatch := !dep.AppliesToPlatform(platform)
+
+			if phaseMismatch || platformMismatch {
+				// Dependency doesn't apply - mark as available
+				var reason string
+				if phaseMismatch && platformMismatch {
+					reason = fmt.Sprintf("n/a (%s phase, %s platform)", phase, platform)
+				} else if phaseMismatch {
+					reason = fmt.Sprintf("n/a (%s phase)", phase)
+				} else {
+					reason = fmt.Sprintf("n/a (%s platform)", platform)
+				}
+
+				results[i] = Result{
+					Dependency: depName,
+					Moniker:    depName,
+					Name:       dep.Name,
+					Available:  true,
+					Version:    reason,
+				}
+				continue
 			}
-		} else {
-			// Verify normally (unknown deps or deps that apply to this phase)
-			results[i] = verifier.Verify(depName)
 		}
+
+		// Verify normally (applies to this phase AND platform)
+		results[i] = verifier.Verify(depName)
 	}
 
 	return results

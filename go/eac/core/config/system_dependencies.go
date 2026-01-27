@@ -15,7 +15,8 @@ type SystemDependency struct {
 	Name        string                 `yaml:"name"`
 	Description string                 `yaml:"description,omitempty"`
 	Version     string                 `yaml:"version"`
-	Phases      []string               `yaml:"phases,omitempty"` // command, build, test, scan, lint
+	Phases      []string               `yaml:"phases,omitempty"`    // command, build, test, scan, lint
+	Platforms   []string               `yaml:"platforms,omitempty"` // linux, windows, darwin
 	Verify      SystemDependencyVerify `yaml:"verify"`
 }
 
@@ -27,6 +28,20 @@ func (d *SystemDependency) AppliesToPhase(phase string) bool {
 	}
 	for _, p := range d.Phases {
 		if p == phase {
+			return true
+		}
+	}
+	return false
+}
+
+// AppliesToPlatform returns true if this dependency is needed on the given platform.
+// If no platforms are specified, the dependency applies to all platforms.
+func (d *SystemDependency) AppliesToPlatform(platform string) bool {
+	if len(d.Platforms) == 0 {
+		return true // Platform-agnostic deps apply everywhere
+	}
+	for _, p := range d.Platforms {
+		if p == platform {
 			return true
 		}
 	}

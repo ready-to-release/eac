@@ -56,6 +56,15 @@
           },
           "minItems": 1
         },
+        "platforms": {
+          "type": "array",
+          "description": "OS platforms where this dependency is required. If omitted, required on all platforms. Values: linux, windows, darwin.",
+          "items": {
+            "type": "string",
+            "enum": ["linux", "windows", "darwin"]
+          },
+          "minItems": 1
+        },
         "verify": {
           "$ref": "#/definitions/verify"
         }
