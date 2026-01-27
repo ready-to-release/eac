@@ -159,6 +159,7 @@ func Build() int {
 	showTimings := false
 	debugMode := false // Enable debug logs to console
 	turbo := false     // Enable turbo mode (+2 parallel workers)
+	roof := 0          // Max capacity/roof limit (0 = auto-detect)
 	version := ""
 	listArtifacts := false
 	dryRun := false
@@ -191,6 +192,20 @@ func Build() int {
 			debugMode = true
 		case "--turbo":
 			turbo = true
+		case "--roof":
+			if i+1 >= len(args) {
+				log.Errorf("Error: --roof requires a value")
+				printBuildUsage()
+				return 1
+			}
+			i++
+			var err error
+			roof, err = parseIntArg(args[i])
+			if err != nil || roof < 1 {
+				log.Errorf("Error: --roof must be a positive integer")
+				printBuildUsage()
+				return 1
+			}
 		case "--accept-warnings":
 			// Flag is handled in mkdocs builder via os.Args check
 			// Just accept it here so it doesn't fail as unknown flag
@@ -239,6 +254,15 @@ func Build() int {
 				tuiHeight, err = parseIntArg(heightStr)
 				if err != nil || tuiHeight < 3 || tuiHeight > 20 {
 					log.Errorf("Error: --tui-height must be a number between 3 and 20")
+					printBuildUsage()
+					return 1
+				}
+			} else if strings.HasPrefix(arg, "--roof=") {
+				roofStr := strings.TrimPrefix(arg, "--roof=")
+				var err error
+				roof, err = parseIntArg(roofStr)
+				if err != nil || roof < 1 {
+					log.Errorf("Error: --roof must be a positive integer")
 					printBuildUsage()
 					return 1
 				}
@@ -317,8 +341,9 @@ func Build() int {
 		SkipDepm:     skipDepm,
 		ForceRebuild: forceRebuild,
 		Layered:      layeredBuild,
-		Turbo:        turbo,
-		DryRun:       dryRun,
+		Turbo:          turbo,
+		MaxConcurrency: roof,
+		DryRun:         dryRun,
 		UseTUI:       useTUI,
 		TUIHeight:    tuiHeight,
 		TUIASCIIMode: tuiASCII,
@@ -547,6 +572,7 @@ func printBuildUsage() {
 	log.Info("  --use-existing-depm       Skip building module dependencies if artifacts exist (for CI incremental builds)")
 	log.Info("  --skip-deps               Skip system dependency verification (go, docker, etc.)")
 	log.Info("  --turbo                   Enable turbo mode for faster builds (increases parallelism)")
+	log.Info("  --roof N                  Limit max parallel capacity to N (default: auto-detect from CPU/RAM)")
 	log.Info("  --timings                 Show detailed timing summary")
 	log.Info("  --debug                   Enable debug logs to console (file logging always enabled)")
 	log.Info("  --tui                     Enable TUI console (default for local, errors in CI/container)")

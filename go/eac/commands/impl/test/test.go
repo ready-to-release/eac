@@ -81,6 +81,7 @@ type TestConfig struct {
 	TUIHeight   int
 	Parallel    bool
 	Turbo       bool // --turbo flag to increase parallelism
+	Roof        int  // --roof flag to limit max parallel capacity
 	ForceRetest bool // --retest flag to bypass incremental testing
 }
 
@@ -136,7 +137,7 @@ func Test() int {
 		OutputDir:      "out/test",
 		LogFileName:    "test.log",
 		Monikers:       cfg.Monikers,
-		MaxConcurrency: 0, // Use config default
+		MaxConcurrency: cfg.Roof, // 0 = auto-detect
 		Sequential:     !cfg.Parallel,
 		Turbo:          cfg.Turbo,
 		SkipDeps:       cfg.SkipDeps,
@@ -214,6 +215,26 @@ func parseTestArgs(args []string) *TestConfig {
 			cfg.Parallel = false
 		case arg == "--turbo":
 			cfg.Turbo = true
+		case arg == "--roof":
+			if i+1 >= len(args) {
+				log.Errorf("--roof requires a value")
+				return nil
+			}
+			i++
+			var err error
+			cfg.Roof, err = strconv.Atoi(args[i])
+			if err != nil || cfg.Roof < 1 {
+				log.Errorf("--roof must be a positive integer")
+				return nil
+			}
+		case strings.HasPrefix(arg, "--roof="):
+			roofStr := strings.TrimPrefix(arg, "--roof=")
+			var err error
+			cfg.Roof, err = strconv.Atoi(roofStr)
+			if err != nil || cfg.Roof < 1 {
+				log.Errorf("--roof must be a positive integer")
+				return nil
+			}
 		case arg == "--retest":
 			cfg.ForceRetest = true
 		case arg == "--tui-height":
@@ -238,7 +259,7 @@ func parseTestArgs(args []string) *TestConfig {
 			}
 		case strings.HasPrefix(arg, "--") || strings.HasPrefix(arg, "-"):
 			log.Errorf("unknown flag: %s", arg)
-			log.Errorf("Valid flags: --suite, --coverage, --skip-deps, --skip-depm, --list-only, --timings, --debug, --tui, --no-tui, --tui-height, --sequential, --turbo, --retest")
+			log.Errorf("Valid flags: --suite, --coverage, --skip-deps, --skip-depm, --list-only, --timings, --debug, --tui, --no-tui, --tui-height, --sequential, --turbo, --roof, --retest")
 			return nil
 		default:
 			cfg.Monikers = append(cfg.Monikers, arg)
@@ -574,6 +595,7 @@ func printTestUsage() {
 	log.Info("  --no-tui               Disable TUI console (TUI is default for local console)")
 	log.Info(fmt.Sprintf("  --tui-height N         Set TUI console height (3-20, default: %d)", tui.DefaultHeight))
 	log.Info("  --turbo                Enable turbo mode for faster testing (increases parallelism)")
+	log.Info("  --roof N               Limit max parallel capacity to N (default: auto-detect from CPU/RAM)")
 	log.Info("  --sequential           Run tests sequentially instead of in parallel")
 	log.Info("  --retest               Force full test run, bypassing incremental detection")
 	log.Info("")
