@@ -265,3 +265,33 @@ func TestCopyFile_Overwrite(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "new content", string(content))
 }
+
+// TestShouldCleanOrphan verifies orphan file type detection.
+func TestShouldCleanOrphan(t *testing.T) {
+	tests := []struct {
+		name     string
+		path     string
+		expected bool
+	}{
+		{"markdown file", "docs/guide.md", true},
+		{"png image", "assets/diagram.png", true},
+		{"jpg image", "assets/photo.jpg", true},
+		{"jpeg image", "assets/photo.jpeg", true},
+		{"gif image", "assets/animation.gif", true},
+		{"webp image", "assets/modern.webp", true},
+		{"svg file (excluded - generated)", "cache/mermaid.svg", false},
+		{"html file (excluded)", "site/index.html", false},
+		{"yaml file (excluded)", "config/nav.yml", false},
+		{"json file (excluded)", "cache/state.json", false},
+		{"css file (excluded)", "assets/style.css", false},
+		{"js file (excluded)", "assets/script.js", false},
+		{"no extension (excluded)", "Makefile", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := shouldCleanOrphan(tt.path)
+			assert.Equal(t, tt.expected, result, "shouldCleanOrphan(%s)", tt.path)
+		})
+	}
+}

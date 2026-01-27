@@ -16,6 +16,84 @@ type ComponentTypesConfig struct {
 	ComponentTypes map[string]*ComponentType `yaml:"component-types"`
 }
 
+// Resources defines the resource requirements for a component type.
+// Used for calculating build weights in the dynamic scheduler.
+type Resources struct {
+	// RAM is the memory requirement (e.g., "1GB", "2GB", "8GB").
+	// Used for weight calculation: weight = max(ceil(ram/2GB), cores)
+	RAM string `yaml:"ram,omitempty" json:"ram,omitempty"`
+
+	// Cores is the CPU cores requirement.
+	// Used for weight calculation: weight = max(ceil(ram/2GB), cores)
+	Cores int `yaml:"cores,omitempty" json:"cores,omitempty"`
+}
+
+// CalculateWeight computes the scheduling weight from Resources.
+// Formula: max(ceil(ram/2GB), cores), minimum 1.
+func (r *Resources) CalculateWeight() int {
+	if r == nil {
+		return 1
+	}
+
+	// Parse RAM and calculate weight from it
+	ramWeight := 1
+	if r.RAM != "" {
+		ramBytes := parseRAMSize(r.RAM)
+		const twoGB = 2 * 1024 * 1024 * 1024 // 2GB in bytes
+		if ramBytes > 0 {
+			// Ceiling division: (ramBytes + twoGB - 1) / twoGB
+			ramWeight = int((ramBytes + twoGB - 1) / twoGB)
+		}
+	}
+
+	// Take max of RAM-based weight and cores
+	coresWeight := r.Cores
+	if coresWeight < 1 {
+		coresWeight = 1
+	}
+
+	if ramWeight > coresWeight {
+		return ramWeight
+	}
+	return coresWeight
+}
+
+// parseRAMSize parses a RAM size string like "1GB", "2GB", "512MB" into bytes.
+func parseRAMSize(s string) int64 {
+	if s == "" {
+		return 0
+	}
+
+	// Normalize to uppercase
+	s = strings.ToUpper(strings.TrimSpace(s))
+
+	var multiplier int64 = 1
+	var numStr string
+
+	switch {
+	case strings.HasSuffix(s, "GB"):
+		multiplier = 1024 * 1024 * 1024
+		numStr = strings.TrimSuffix(s, "GB")
+	case strings.HasSuffix(s, "MB"):
+		multiplier = 1024 * 1024
+		numStr = strings.TrimSuffix(s, "MB")
+	case strings.HasSuffix(s, "KB"):
+		multiplier = 1024
+		numStr = strings.TrimSuffix(s, "KB")
+	case strings.HasSuffix(s, "B"):
+		multiplier = 1
+		numStr = strings.TrimSuffix(s, "B")
+	default:
+		// Assume bytes if no suffix
+		numStr = s
+	}
+
+	numStr = strings.TrimSpace(numStr)
+	var num int64
+	fmt.Sscanf(numStr, "%d", &num)
+	return num * multiplier
+}
+
 // ComponentType defines how to process files of a certain type for building.
 // Linting configuration is separate - see LintProvider in lint_providers.go.
 type ComponentType struct {
@@ -30,13 +108,20 @@ type ComponentType struct {
 	// Empty or omitted means the component type is not scannable.
 	Scanners []string `yaml:"scanners,omitempty" json:"scanners,omitempty"`
 
+	// Resources defines RAM and CPU requirements for dynamic weight calculation.
+	// If set, BuildWeight is computed as: max(ceil(ram/2GB), cores)
+	// If not set, BuildWeight/TestWeight are used directly.
+	Resources *Resources `yaml:"resources,omitempty" json:"resources,omitempty"`
+
 	// BuildWeight is the resource weight for parallel build scheduling.
 	// Higher weight = more resource pressure. Default is 1.
+	// Deprecated: Use Resources instead for dynamic weight calculation.
 	// Examples: go=1, npm=1, mkdocs=4 (uses Docker), buildx=4
 	BuildWeight int `yaml:"build_weight,omitempty" json:"build_weight,omitempty"`
 
 	// TestWeight is the resource weight for parallel test scheduling.
 	// Higher weight = more resource pressure. Default is 1.
+	// Deprecated: Use Resources instead for dynamic weight calculation.
 	// Examples: go=1, typescript=2 (npm install overhead)
 	TestWeight int `yaml:"test_weight,omitempty" json:"test_weight,omitempty"`
 
@@ -93,8 +178,14 @@ func (c *ComponentType) GetScanners() []string {
 }
 
 // GetBuildWeight returns the build weight for parallel scheduling.
-// Returns 1 as default if not specified.
+// If Resources is set, calculates weight as max(ceil(ram/2GB), cores).
+// Otherwise uses BuildWeight directly, defaulting to 1.
 func (c *ComponentType) GetBuildWeight() int {
+	// Use Resources-based calculation if available
+	if c.Resources != nil {
+		return c.Resources.CalculateWeight()
+	}
+	// Fall back to explicit BuildWeight
 	if c.BuildWeight <= 0 {
 		return 1
 	}
@@ -102,8 +193,14 @@ func (c *ComponentType) GetBuildWeight() int {
 }
 
 // GetTestWeight returns the test weight for parallel scheduling.
-// Returns 1 as default if not specified.
+// If Resources is set, calculates weight as max(ceil(ram/2GB), cores).
+// Otherwise uses TestWeight directly, defaulting to 1.
 func (c *ComponentType) GetTestWeight() int {
+	// Use Resources-based calculation if available
+	if c.Resources != nil {
+		return c.Resources.CalculateWeight()
+	}
+	// Fall back to explicit TestWeight
 	if c.TestWeight <= 0 {
 		return 1
 	}

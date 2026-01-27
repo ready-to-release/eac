@@ -264,7 +264,8 @@ func copyFile(src, dest string) error {
 func copyDependentPackages(coreDir, tempRoot string) error {
 	// Copy contracts, environments, config, etc. packages
 	// Note: defaults and logging are required by config/modules.go and contracts/retry.go
-	packages := []string{"config", "contracts", "defaults", "environments", "git", "logging", "markdown", "repository", "system-deps"}
+	// Note: tool package provides verification (replaced system-deps)
+	packages := []string{"config", "contracts", "defaults", "environments", "git", "logging", "markdown", "repository", "tool"}
 
 	for _, pkg := range packages {
 		srcPkgDir := filepath.Join(coreDir, pkg)

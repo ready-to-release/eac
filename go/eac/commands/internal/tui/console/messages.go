@@ -70,7 +70,15 @@ type SummaryDataMsg struct {
 }
 
 // ModuleStartMsg is sent when a module starts execution (for tab tracking).
+// This creates the tab in pending state (scheduled but waiting for slot).
 type ModuleStartMsg struct {
+	Moniker string
+	Weight  int // Scheduling weight/pressure for this module
+}
+
+// ModuleRunningMsg is sent when a module acquires its execution slot.
+// This transitions the tab from pending to running state.
+type ModuleRunningMsg struct {
 	Moniker string
 }
 

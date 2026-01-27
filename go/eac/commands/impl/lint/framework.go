@@ -25,7 +25,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/lintstate"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
-	systemdeps "github.com/ready-to-release/eac/go/eac/core/system-deps"
+	"github.com/ready-to-release/eac/go/eac/core/tool"
 )
 
 func init() {
@@ -580,17 +580,18 @@ func lintDepsVerifier(ctx *cmdframework.ExecutionContext) *initsummary.DepsStatu
 	sort.Strings(deps)
 	status.Required = deps
 
-	// Verify only lint-phase dependencies
-	results := systemdeps.VerifyAllForPhase(deps, "lint")
+	// Verify dependencies using tool registry
+	registry := tool.GlobalRegistry()
+	results := registry.VerifyAll(deps)
 
 	for _, result := range results {
 		status.Available = append(status.Available, initsummary.DepsResult{
-			Name:      result.Name,
+			Name:      result.ToolID,
 			Available: result.Available,
 			Version:   result.Version,
 		})
 		if !result.Available {
-			status.Missing = append(status.Missing, result.Moniker)
+			status.Missing = append(status.Missing, result.ToolID)
 		}
 	}
 

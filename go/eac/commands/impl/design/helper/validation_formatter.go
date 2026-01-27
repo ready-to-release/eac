@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/ready-to-release/eac/go/eac/core/tool"
 )
 
 // FormatValidationResult formats a single validation result for console output.
@@ -13,7 +15,7 @@ func FormatValidationResult(result *ValidationResult, verbose bool) string {
 	output := ""
 
 	output += fmt.Sprintf("🔍 Validating module: %s\n", result.Module)
-	output += "🐳 Using Docker: structurizr/cli:latest\n"
+	output += fmt.Sprintf("🐳 Using Docker: %s\n", tool.GetToolImageWithDefault("structurizr-cli", DefaultStructurizrCLIImage))
 
 	if verbose {
 		output += fmt.Sprintf("⏱️  Started at: %s\n", result.Timestamp.Format("15:04:05"))
@@ -104,7 +106,7 @@ func FormatValidationResult(result *ValidationResult, verbose bool) string {
 
 		output += "    docker run --rm \\\n"
 		output += fmt.Sprintf("      -v \"%s:/workspace\" \\\n", workspaceDir)
-		output += "      structurizr/cli:latest \\\n"
+		output += fmt.Sprintf("      %s \\\n", tool.GetToolImageWithDefault("structurizr-cli", DefaultStructurizrCLIImage))
 		output += fmt.Sprintf("      validate -workspace /workspace/%s\n", workspaceFile)
 
 		output += "\n  Raw Structurizr CLI Output:\n"
@@ -123,7 +125,7 @@ func FormatValidationSummary(summary *ValidationSummary, verbose bool) string {
 	output := ""
 
 	output += "🔍 Validating all modules...\n"
-	output += "🐳 Using Docker: structurizr/cli:latest\n"
+	output += fmt.Sprintf("🐳 Using Docker: %s\n", tool.GetToolImageWithDefault("structurizr-cli", DefaultStructurizrCLIImage))
 
 	if verbose {
 		output += fmt.Sprintf("⏱️  Started at: %s\n", summary.Timestamp.Format("15:04:05"))

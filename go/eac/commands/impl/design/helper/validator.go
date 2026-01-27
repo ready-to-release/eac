@@ -443,7 +443,7 @@ func (v *StructurizrValidatorImpl) executeDockerValidation(workspacePath string)
 	cmd := exec.CommandContext(ctx, "docker", "run",
 		"--rm",
 		"-v", dockerVolume+":"+DockerWorkspaceMount,
-		StructurizrCLIImage,
+		GetStructurizrCLIImage(),
 		"validate",
 		"-workspace", DockerWorkspaceMount+"/"+relWorkspacePath,
 	)

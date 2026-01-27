@@ -45,6 +45,9 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+
+	// Import scanners package to trigger init() registration of native scanners
+	_ "github.com/ready-to-release/eac/go/eac/commands/impl/scan/scanners"
 )
 
 var log = logging.C()
@@ -104,10 +107,7 @@ func Scan() int {
 		return 1
 	}
 
-	// Apply turbo mode to scanner semaphores if enabled
-	if parsed.Turbo {
-		SetTurboScannerCapacity()
-	}
+	// Turbo mode is handled by orchestrator via cmdCfg.Turbo
 
 	// Create command config
 	cmdCfg := &cmdframework.CommandConfig{

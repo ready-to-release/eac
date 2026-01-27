@@ -461,19 +461,19 @@ func (c *RepositoryConfig) AllMonikers() []string {
 // EffectiveParallelism returns the maximum number of parallel workers
 // based on the runtime environment. Pass isCI=true for CI environments,
 // isCI=false for local development (devbox).
-// Falls back to defaults if not configured: CI=4, Devbox=8.
+// Returns 0 if not configured, signaling dynamic calculation (CPU×RAM based).
 func (c *RepositoryConfig) EffectiveParallelism(isCI bool) int {
 	if isCI {
 		if c.Repository.Parallelism.CI > 0 {
 			return c.Repository.Parallelism.CI
 		}
-		return 4 // Default for CI
+		return 0 // Dynamic - let orchestrator calculate from CPU×RAM
 	}
 	// Devbox/local environment
 	if c.Repository.Parallelism.Devbox > 0 {
 		return c.Repository.Parallelism.Devbox
 	}
-	return 8 // Default for devbox
+	return 0 // Dynamic - let orchestrator calculate from CPU×RAM
 }
 
 // GetContainerConfig returns the configuration for a specific container tool.

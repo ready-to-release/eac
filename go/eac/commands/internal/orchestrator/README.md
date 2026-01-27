@@ -216,6 +216,162 @@ Run tests with:
 go test ./go/eac/commands/internal/orchestrator/...
 ```
 
+## Dynamic Capacity System
+
+The orchestrator uses a dynamic capacity system that automatically adjusts parallelism based on available system resources.
+
+### Capacity Calculation
+
+```
+Capacity = (Available RAM / 256MB) × turbo
+```
+
+| Mode | Formula | Example (6GB RAM) |
+|------|---------|-------------------|
+| Normal | RAM / 256MB × 1 | 22 slots |
+| Turbo 2x | RAM / 256MB × 2 | 44 slots |
+| Turbo 4x | RAM / 256MB × 4 | 64 slots (capped) |
+
+The capacity is recalculated every 2 seconds to adapt to changing system conditions.
+
+### Memory Detection
+
+The system intelligently detects available memory based on the execution environment:
+
+1. **Docker** (preferred): Queries `docker info --format {{.MemTotal}}`
+   - Reflects WSL2 memory limit on Windows
+   - Most accurate for containerized builds
+
+2. **WSL**: Queries `wsl -e cat /proc/meminfo`
+   - Gets actual memory available inside WSL
+   - Used when Docker is not available
+
+3. **Host fallback**: Uses `gopsutil` to query host available RAM
+   - Used when neither Docker nor WSL is available
+
+### Turbo Mode
+
+Turbo mode multiplies the capacity roof for more aggressive parallelism:
+
+```bash
+eac build --turbo      # Uses default 4x multiplier
+eac build --turbo=2    # Uses 2x multiplier
+eac build --turbo=8    # Uses 8x multiplier
+```
+
+Use turbo mode when:
+- Builds are I/O-bound (waiting on network, disk)
+- Running lightweight containerized builds
+- You want faster builds and have headroom
+
+### Memory Instrumentation
+
+Each build logs memory usage before and after execution:
+
+```
+[memory] before: used=2.89GB avail=2.89GB total=5.78GB (50.0%)
+[memory] after: used=3.10GB avail=2.68GB total=5.78GB (53.6%) delta=+210MB
+```
+
+This data can be used to:
+- Tune the 256MB slot size if needed
+- Identify memory-hungry builds
+- Validate that containerized builds have low memory impact
+
+### Configuration
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `MaxConcurrency` | Hard ceiling (0 = dynamic) | 0 (dynamic) |
+| `Turbo` | Capacity multiplier | 1 (normal) |
+
+Example configuration:
+
+```go
+config := orchestrator.Config{
+    MaxConcurrency: 0,  // Dynamic based on RAM
+    Turbo:          4,  // 4x multiplier
+}
+```
+
+### Files
+
+| File | Purpose |
+|------|---------|
+| `memory_detection.go` | Docker/WSL/host memory detection |
+| `component_scheduler.go` | Capacity calculation, LPT scheduling |
+
+## LPT Scheduling Algorithm
+
+The orchestrator uses **LPT (Longest Processing Time First)** scheduling to optimize job distribution and minimize total build time.
+
+### Problem
+
+Without intelligent scheduling, jobs might execute in arbitrary order, causing:
+- All heavy jobs running at the end (poor parallelism)
+- Light jobs finishing early, leaving heavy jobs queued
+- Suboptimal resource utilization
+
+### Solution
+
+LPT sorts jobs by weight (processing time) in descending order before execution:
+
+```
+Before LPT: [docs●, core●, cli●, books●●●●, tests●●]
+After LPT:  [books●●●●, tests●●, docs●, core●, cli●]
+```
+
+Heavy jobs start first, ensuring they run in parallel with lighter jobs rather than sequentially at the end.
+
+### Algorithm
+
+```go
+// Sort by weight descending (heaviest first)
+sort.Slice(work, func(i, j int) bool {
+    return work[i].Weight > work[j].Weight
+})
+```
+
+### Benefits
+
+1. **Better parallelism**: Heavy jobs overlap with light jobs
+2. **Shorter makespan**: Total build time is minimized
+3. **Predictable behavior**: Heavy jobs always visible early in TUI
+4. **4/3 approximation**: LPT guarantees makespan within 4/3 of optimal
+
+### Example
+
+With capacity 6 and jobs: `books(4)`, `docs(1)`, `core(1)`, `cli(1)`, `tests(2)`
+
+**Without LPT** (arbitrary order):
+```
+Time 0-1: docs(1), core(1), cli(1), tests(2) = 5 slots
+Time 1-2: books(4) waiting... then runs alone = 4 slots
+Total: 2 time units, poor utilization
+```
+
+**With LPT** (heaviest first):
+```
+Time 0-1: books(4), tests(2) = 6 slots (full!)
+Time 0-1: docs(1), core(1), cli(1) finish during books
+Total: 1 time unit, optimal utilization
+```
+
+### TUI Visualization
+
+The TUI displays job weights as dots in the tab bar:
+
+```
+│All ▶ books ●●●● ▶ tests ●● ▶ docs ● ▶ core ●              │
+```
+
+This shows at a glance which heavy jobs are running.
+
+### References
+
+- [LPT Scheduling - Wikipedia](https://en.wikipedia.org/wiki/Longest-processing-time-first_scheduling)
+- [Multiprocessor Scheduling](https://en.wikipedia.org/wiki/Identical-machines_scheduling)
+
 ## Future Enhancements
 
 Possible improvements:
@@ -224,4 +380,4 @@ Possible improvements:
 - Progress bars for long-running operations
 - Colorized output based on module status
 - Dependency-aware scheduling (respect module dependencies)
-- Resource-aware concurrency (adjust based on system load)
+- Component weight tuning based on instrumentation data

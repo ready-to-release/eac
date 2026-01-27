@@ -64,6 +64,13 @@ type Config struct {
 	TUI bool
 	// TUIHeight is the height of the TUI console window (default: tui.DefaultHeight)
 	TUIHeight int
+	// TUIASCIIMode uses ASCII-only characters for TUI (default: false)
+	// Set to true via --ascii flag for terminals that don't render Unicode well
+	TUIASCIIMode bool
+	// Turbo is the parallelism multiplier (1x, 2x, 3x, 4x, etc.)
+	// Higher values reduce memory per slot, increasing concurrent builds.
+	// Default is 4x when turbo is enabled, 1x when disabled.
+	Turbo int
 }
 
 // ComponentWork represents a single component build work item.
@@ -154,7 +161,7 @@ type ComponentResultSet struct {
 // - If any component has ExitCode > 0 -> ModuleStatusFailed
 // - If any component has ExitCode < 0 -> ModuleStatusRunning (pending/in-progress)
 // - If all components have ExitCode == 0 -> ModuleStatusSuccess
-// - If no components -> ModuleStatusPending
+// - If no components -> ModuleStatusPending.
 func (rs *ComponentResultSet) DeriveStatus() ModuleStatus {
 	if len(rs.Components) == 0 {
 		return ModuleStatusPending

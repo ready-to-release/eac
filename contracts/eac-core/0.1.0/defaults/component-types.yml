@@ -51,9 +51,11 @@ component-types:
       source: ["Dockerfile"]
 
   # Book component - MkDocs documentation builds
+  # Weight 4 because mkdocs runs in Docker container (higher memory pressure)
   book:
     extensions: []  # Not file-based, uses books.yml
     builder: mkdocs
+    build_weight: 4
     requirements: [mkdocs]
 
   # Markdown component - documentation files
@@ -72,7 +74,7 @@ component-types:
   workflows:
     extensions: []  # Uses .yml/.yaml but in specific paths
     default_root: .github/workflows
-    requirements: [actionlint]
+    requirements: []
     files:
       source: ["**/*.yml", "**/*.yaml"]
       config: []
@@ -133,3 +135,39 @@ component-types:
     requirements: [bash]
     files:
       source: ["**/*.sh", "**/*.bash"]
+
+  # Python component - Python modules and packages
+  python:
+    extensions: [".py"]
+    builder: python
+    scanners: [sbom, vuln, secrets, sast]
+    requirements: [python]
+    test_weight: 2
+    files:
+      source: ["**/*.py"]
+      tests: ["tests/**/*.py", "**/*_test.py"]
+      config: ["pyproject.toml", "setup.py", "requirements.txt"]
+
+  # Rust component - Cargo-based Rust projects
+  rust:
+    extensions: [".rs"]
+    builder: cargo
+    scanners: [sbom, vuln, secrets, sast]
+    requirements: [cargo]
+    test_weight: 2
+    files:
+      source: ["src/**/*.rs", "**/*.rs"]
+      tests: ["tests/**/*.rs"]
+      config: ["Cargo.toml", "Cargo.lock"]
+
+  # .NET component - C#/F#/VB.NET projects
+  dotnet:
+    extensions: [".cs", ".fs", ".vb"]
+    builder: dotnet
+    scanners: [sbom, vuln, secrets, sast]
+    requirements: [dotnet]
+    test_weight: 2
+    files:
+      source: ["**/*.cs", "**/*.fs"]
+      tests: ["**/*Tests.cs", "**/*.Tests/**/*.cs"]
+      config: ["*.csproj", "*.sln", "Directory.Build.props"]

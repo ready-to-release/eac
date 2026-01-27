@@ -49,7 +49,7 @@ func TestNewRegistry_MultipleInstances(t *testing.T) {
 		Capacity: 1,
 		Used:     1,
 	}
-	reg1.Register(lockInfo)
+	reg1.Register(&lockInfo)
 
 	// Verify reg1 has the lock
 	assert.Equal(t, 1, len(reg1.Snapshot()), "reg1 should have 1 lock")
@@ -77,7 +77,7 @@ func TestRegistry_Register_AddsLock(t *testing.T) {
 		Waiting:    0,
 	}
 
-	reg.Register(lockInfo)
+	reg.Register(&lockInfo)
 
 	snapshot := reg.Snapshot()
 	assert.Equal(t, 1, len(snapshot), "Registry should have 1 lock after Register")
@@ -110,7 +110,7 @@ func TestRegistry_Register_TriggersEventAcquired(t *testing.T) {
 		Used:     1,
 	}
 
-	reg.Register(lockInfo)
+	reg.Register(&lockInfo)
 
 	// Verify event was received
 	select {
@@ -136,7 +136,7 @@ func TestRegistry_Register_MultipleLocks(t *testing.T) {
 	}
 
 	for _, lock := range locks {
-		reg.Register(lock)
+		reg.Register(&lock)
 	}
 
 	snapshot := reg.Snapshot()
@@ -164,7 +164,7 @@ func TestRegistry_Register_UpdatesExisting(t *testing.T) {
 		Used:     2,
 		Waiting:  0,
 	}
-	reg.Register(lockInfo)
+	reg.Register(&lockInfo)
 
 	// Update with same ID
 	updated := LockInfo{
@@ -175,7 +175,7 @@ func TestRegistry_Register_UpdatesExisting(t *testing.T) {
 		Used:     4,
 		Waiting:  1,
 	}
-	reg.Register(updated)
+	reg.Register(&updated)
 
 	snapshot := reg.Snapshot()
 	assert.Equal(t, 1, len(snapshot), "Registry should still have 1 lock")
@@ -200,7 +200,7 @@ func TestRegistry_Unregister_RemovesLock(t *testing.T) {
 		Capacity: 1,
 		Used:     1,
 	}
-	reg.Register(lockInfo)
+	reg.Register(&lockInfo)
 
 	// Verify lock exists
 	assert.Equal(t, 1, len(reg.Snapshot()))
@@ -226,7 +226,7 @@ func TestRegistry_Unregister_TriggersEventReleased(t *testing.T) {
 		Capacity: 1,
 		Used:     1,
 	}
-	reg.Register(lockInfo)
+	reg.Register(&lockInfo)
 
 	// Subscribe after registration to only capture release event
 	eventChan := make(chan LockEvent, 10)
@@ -263,7 +263,7 @@ func TestRegistry_Unregister_MultipleLocks(t *testing.T) {
 
 	// Register multiple locks
 	for i := 1; i <= 5; i++ {
-		reg.Register(LockInfo{
+		reg.Register(&LockInfo{
 			ID:       "lock-" + string(rune('0'+i)),
 			Type:     LockTypeMutex,
 			Capacity: 1,
@@ -311,7 +311,7 @@ func TestRegistry_UpdateSemaphore_UpdatesCounts(t *testing.T) {
 		Used:     0,
 		Waiting:  0,
 	}
-	reg.Register(lockInfo)
+	reg.Register(&lockInfo)
 
 	// Update counts
 	reg.UpdateSemaphore("sem-1", 5, 2)
@@ -334,7 +334,7 @@ func TestRegistry_UpdateSemaphore_TriggersCapacityChanged(t *testing.T) {
 		Used:     1,
 		Waiting:  0,
 	}
-	reg.Register(lockInfo)
+	reg.Register(&lockInfo)
 
 	// Subscribe after registration
 	eventChan := make(chan LockEvent, 10)
@@ -378,7 +378,7 @@ func TestRegistry_UpdateSemaphore_MultipleUpdates(t *testing.T) {
 		Used:     0,
 		Waiting:  0,
 	}
-	reg.Register(lockInfo)
+	reg.Register(&lockInfo)
 
 	updates := []struct {
 		used    int64
@@ -416,7 +416,7 @@ func TestRegistry_Snapshot_ReturnsCopy(t *testing.T) {
 		Capacity: 1,
 		Used:     1,
 	}
-	reg.Register(lockInfo)
+	reg.Register(&lockInfo)
 
 	// Get snapshot
 	snapshot1 := reg.Snapshot()
@@ -443,7 +443,7 @@ func TestRegistry_Snapshot_ReturnsDeepCopy(t *testing.T) {
 		Used:     5,
 		Waiting:  2,
 	}
-	reg.Register(lockInfo)
+	reg.Register(&lockInfo)
 
 	// Get snapshot and modify it
 	snapshot := reg.Snapshot()
@@ -485,7 +485,7 @@ func TestRegistry_Summary_AggregatesStatistics(t *testing.T) {
 	}
 
 	for _, lock := range locks {
-		reg.Register(lock)
+		reg.Register(&lock)
 	}
 
 	summary := reg.Summary()
@@ -518,8 +518,8 @@ func TestRegistry_Summary_UpdatesAfterChanges(t *testing.T) {
 	reg := NewRegistry()
 
 	// Add locks
-	reg.Register(LockInfo{ID: "lock-1", Type: LockTypeMutex, Capacity: 1, Used: 1})
-	reg.Register(LockInfo{ID: "lock-2", Type: LockTypeSemaphore, Capacity: 5, Used: 3, Waiting: 1})
+	reg.Register(&LockInfo{ID: "lock-1", Type: LockTypeMutex, Capacity: 1, Used: 1})
+	reg.Register(&LockInfo{ID: "lock-2", Type: LockTypeSemaphore, Capacity: 5, Used: 3, Waiting: 1})
 
 	summary1 := reg.Summary()
 	assert.Equal(t, 2, summary1.Total)
@@ -557,7 +557,7 @@ func TestRegistry_Subscribe_ReceivesEvents(t *testing.T) {
 	defer unsubscribe()
 
 	// Register a lock
-	reg.Register(LockInfo{ID: "lock-1", Type: LockTypeMutex, Capacity: 1, Used: 1})
+	reg.Register(&LockInfo{ID: "lock-1", Type: LockTypeMutex, Capacity: 1, Used: 1})
 
 	// Verify event received
 	select {
@@ -586,7 +586,7 @@ func TestRegistry_Subscribe_MultipleSubscribers(t *testing.T) {
 	defer unsub3()
 
 	// Register a lock
-	reg.Register(LockInfo{ID: "lock-1", Type: LockTypeMutex, Capacity: 1, Used: 1})
+	reg.Register(&LockInfo{ID: "lock-1", Type: LockTypeMutex, Capacity: 1, Used: 1})
 
 	// Verify all channels received the event
 	channels := []chan LockEvent{chan1, chan2, chan3}
@@ -609,7 +609,7 @@ func TestRegistry_Unsubscribe_StopsEvents(t *testing.T) {
 	unsubscribe := reg.Subscribe(eventChan)
 
 	// Register first lock
-	reg.Register(LockInfo{ID: "lock-1", Type: LockTypeMutex, Capacity: 1, Used: 1})
+	reg.Register(&LockInfo{ID: "lock-1", Type: LockTypeMutex, Capacity: 1, Used: 1})
 
 	// Receive the event
 	select {
@@ -623,7 +623,7 @@ func TestRegistry_Unsubscribe_StopsEvents(t *testing.T) {
 	unsubscribe()
 
 	// Register another lock
-	reg.Register(LockInfo{ID: "lock-2", Type: LockTypeMutex, Capacity: 1, Used: 1})
+	reg.Register(&LockInfo{ID: "lock-2", Type: LockTypeMutex, Capacity: 1, Used: 1})
 
 	// Should not receive any event
 	select {
@@ -643,7 +643,7 @@ func TestRegistry_Subscribe_EventTypes(t *testing.T) {
 	defer unsubscribe()
 
 	// Register (EventAcquired)
-	reg.Register(LockInfo{ID: "sem-1", Type: LockTypeSemaphore, Capacity: 5, Used: 1})
+	reg.Register(&LockInfo{ID: "sem-1", Type: LockTypeSemaphore, Capacity: 5, Used: 1})
 
 	event1 := <-eventChan
 	assert.Equal(t, EventAcquired, event1.Type)
@@ -688,7 +688,7 @@ func TestGet_Persistence(t *testing.T) {
 	defer reg.Unregister(lockID)
 
 	// Register a lock
-	reg.Register(LockInfo{
+	reg.Register(&LockInfo{
 		ID:       lockID,
 		Type:     LockTypeMutex,
 		Name:     "test",
@@ -734,7 +734,7 @@ func TestRegistry_ConcurrentRegisterUnregister(t *testing.T) {
 				}
 
 				// Register
-				reg.Register(lockInfo)
+				reg.Register(&lockInfo)
 
 				// Snapshot
 				_ = reg.Snapshot()
@@ -764,7 +764,7 @@ func TestRegistry_ConcurrentSnapshot(t *testing.T) {
 
 	// Pre-populate some locks
 	for i := 0; i < 10; i++ {
-		reg.Register(LockInfo{
+		reg.Register(&LockInfo{
 			ID:       "lock-" + string(rune('0'+i)),
 			Type:     LockTypeMutex,
 			Capacity: 1,
@@ -802,8 +802,8 @@ func TestRegistry_ConcurrentSummary(t *testing.T) {
 	reg := NewRegistry()
 
 	// Pre-populate some locks
-	reg.Register(LockInfo{ID: "sem-1", Type: LockTypeSemaphore, Capacity: 10, Used: 5, Waiting: 2})
-	reg.Register(LockInfo{ID: "mutex-1", Type: LockTypeMutex, Capacity: 1, Used: 1})
+	reg.Register(&LockInfo{ID: "sem-1", Type: LockTypeSemaphore, Capacity: 10, Used: 5, Waiting: 2})
+	reg.Register(&LockInfo{ID: "mutex-1", Type: LockTypeMutex, Capacity: 1, Used: 1})
 
 	const numGoroutines = 20
 	const operationsPerGoroutine = 100
@@ -853,7 +853,7 @@ func TestRegistry_ConcurrentSubscribeUnsubscribe(t *testing.T) {
 
 				// Trigger an event
 				lockID := "concurrent-lock"
-				reg.Register(LockInfo{ID: lockID, Type: LockTypeMutex, Capacity: 1, Used: 1})
+				reg.Register(&LockInfo{ID: lockID, Type: LockTypeMutex, Capacity: 1, Used: 1})
 
 				// Unsubscribe
 				unsubscribe()
@@ -884,7 +884,7 @@ func TestRegistry_ConcurrentMixedOperations(t *testing.T) {
 
 			for j := 0; j < operationsPerGoroutine; j++ {
 				lockID := "register-" + string(rune('A'+id%26)) + "-" + string(rune('0'+j%10))
-				reg.Register(LockInfo{
+				reg.Register(&LockInfo{
 					ID:       lockID,
 					Type:     LockTypeSemaphore,
 					Capacity: 5,
@@ -951,7 +951,7 @@ func TestRegistry_RaceDetector(t *testing.T) {
 			lockID := "race-lock-" + string(rune('A'+id))
 
 			// Register
-			reg.Register(LockInfo{
+			reg.Register(&LockInfo{
 				ID:       lockID,
 				Type:     LockTypeSemaphore,
 				Capacity: 5,

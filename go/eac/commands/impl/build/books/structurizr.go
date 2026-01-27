@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 
 	design "github.com/ready-to-release/eac/go/eac/commands/impl/design/helper"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
@@ -33,18 +32,11 @@ func (p *Preprocessor) processStructurizrDiagrams() error {
 	// Build cache of DSL hashes for each module
 	dslHashes := make(map[string]string)
 
-	// Scan for markers in staging directory
+	// Scan for markers in staging directory using file index
 	markersByFile := make(map[string][]StructurizrMarker)
 	modulesUsed := make(map[string]bool)
 
-	err := filepath.WalkDir(p.stagingDir, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() || !strings.HasSuffix(path, ".md") {
-			return nil
-		}
-
+	for _, path := range p.fileIndex.GetMarkdownFiles() {
 		content, err := os.ReadFile(path)
 		if err != nil {
 			return fmt.Errorf("reading %s: %w", path, err)
@@ -57,10 +49,6 @@ func (p *Preprocessor) processStructurizrDiagrams() error {
 				modulesUsed[m.Module] = true
 			}
 		}
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("scanning for structurizr markers: %w", err)
 	}
 
 	if len(markersByFile) == 0 {

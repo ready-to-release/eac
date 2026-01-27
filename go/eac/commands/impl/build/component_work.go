@@ -74,7 +74,7 @@ func FlattenModulesToComponentWork(ctx *cmdframework.ExecutionContext) [][]orche
 					buildAfter = compType.GetBuildAfter()
 				}
 
-				work := orchestrator.ComponentWork{
+					work := orchestrator.ComponentWork{
 					Module:        moniker,
 					Component:     componentName,
 					ComponentType: compTypeName,

@@ -21,7 +21,7 @@ func TestDisplayManager_FormatLockInfo_WithSemaphores(t *testing.T) {
 	registry := locktracker.NewRegistry()
 
 	// Register a semaphore with usage
-	registry.Register(locktracker.LockInfo{
+	registry.Register(&locktracker.LockInfo{
 		ID:       "sem-1",
 		Type:     locktracker.LockTypeSemaphore,
 		Name:     "component-scheduler",
@@ -39,7 +39,7 @@ func TestDisplayManager_FormatLockInfo_NoWaiting(t *testing.T) {
 	registry := locktracker.NewRegistry()
 
 	// Register a semaphore without waiting
-	registry.Register(locktracker.LockInfo{
+	registry.Register(&locktracker.LockInfo{
 		ID:       "sem-1",
 		Type:     locktracker.LockTypeSemaphore,
 		Name:     "component-scheduler",
@@ -57,13 +57,13 @@ func TestDisplayManager_FormatLockInfo_WithFileLocks(t *testing.T) {
 	registry := locktracker.NewRegistry()
 
 	// Register file locks
-	registry.Register(locktracker.LockInfo{
+	registry.Register(&locktracker.LockInfo{
 		ID:   "file-1",
 		Type: locktracker.LockTypeFileLock,
 		Name: "module:eac-core",
 		Used: 1,
 	})
-	registry.Register(locktracker.LockInfo{
+	registry.Register(&locktracker.LockInfo{
 		ID:   "file-2",
 		Type: locktracker.LockTypeFileLock,
 		Name: "module:docs",
@@ -80,7 +80,7 @@ func TestDisplayManager_StatusWithLockInfo(t *testing.T) {
 
 	// Create registry with test data
 	registry := locktracker.NewRegistry()
-	registry.Register(locktracker.LockInfo{
+	registry.Register(&locktracker.LockInfo{
 		ID:       "sem-1",
 		Type:     locktracker.LockTypeSemaphore,
 		Name:     "scheduler",

@@ -12,12 +12,6 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/testing"
 )
 
-func init() {
-	// Register handler for "npm" build dependency
-	// All npm-based types (vscode-ext, etc.) use this via their build_deps contract
-	RegisterSystem("npm", TestNpmModule)
-}
-
 // TestNpmModule is the test handler for npm-based modules.
 // It runs Mocha tests with tag filtering based on the test suite configuration.
 // Tags are embedded in describe() names: describe('@L0 ComponentName', ...)

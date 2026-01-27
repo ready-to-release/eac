@@ -18,8 +18,9 @@ import (
 
 // Default TUI configuration values.
 const (
-	// DefaultHeight is the default TUI console height in rows (3-20).
-	DefaultHeight = 15
+	// DefaultHeight is the initial TUI height before WindowSizeMsg arrives.
+	// In alt-screen mode, the actual terminal height is used instead.
+	DefaultHeight = 40
 )
 
 // Config configures the console window.
@@ -27,6 +28,7 @@ type Config struct {
 	Height       int    // Total height (default: DefaultHeight)
 	BufferSize   int    // Line buffer size (default: 1000)
 	RunPhaseName string // Custom name for Run phase (e.g., "building", "testing")
+	ASCIIMode    bool   // Use ASCII-only characters (default: false, use --ascii for compatibility)
 }
 
 // Console manages the TUI console window for build/test output.
@@ -86,6 +88,7 @@ func (c *Console) Start(ctx context.Context) error {
 		c.config.RunPhaseName,
 		c.lineChan,
 		c.statusChan,
+		c.config.ASCIIMode,
 	)
 
 	// Prevent lipgloss from querying terminal background color (causes OSC escape leaks)
@@ -409,6 +412,59 @@ func (c *Console) WriteResult(text string) {
 			Source: "results",
 			Level:  console.LevelInfo,
 		},
+	})
+}
+
+// StartModule notifies the TUI that a module has started with its weight.
+// This creates the tab in pending state (scheduled but waiting for slot).
+func (c *Console) StartModule(moniker string, weight int) {
+	c.mu.Lock()
+	stopped := c.stopped
+	program := c.program
+	c.mu.Unlock()
+
+	if stopped || program == nil {
+		return
+	}
+
+	program.Send(console.ModuleStartMsg{
+		Moniker: moniker,
+		Weight:  weight,
+	})
+}
+
+// MarkModuleRunning notifies the TUI that a module has acquired its execution slot.
+// This transitions the tab from pending to running state.
+func (c *Console) MarkModuleRunning(moniker string) {
+	c.mu.Lock()
+	stopped := c.stopped
+	program := c.program
+	c.mu.Unlock()
+
+	if stopped || program == nil {
+		return
+	}
+
+	program.Send(console.ModuleRunningMsg{
+		Moniker: moniker,
+	})
+}
+
+// MarkModuleComplete notifies the TUI that a module has finished with the given exit code.
+// Exit code 0 = success, non-zero = failure.
+func (c *Console) MarkModuleComplete(moniker string, exitCode int) {
+	c.mu.Lock()
+	stopped := c.stopped
+	program := c.program
+	c.mu.Unlock()
+
+	if stopped || program == nil {
+		return
+	}
+
+	program.Send(console.ModuleCompleteMsg{
+		Moniker:  moniker,
+		ExitCode: exitCode,
 	})
 }
 

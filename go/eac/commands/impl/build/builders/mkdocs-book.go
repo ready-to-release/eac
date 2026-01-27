@@ -194,8 +194,7 @@ func BuildSingleBook(module *modules.ModuleContract, book *config.Book, workspac
 	if pdfMode {
 		if pdfTheme == "all" {
 			// Build both themes sequentially, sharing preprocessing
-			// Staging is always at module output root for isolation
-			stagingDir, ok := preprocessBook(book, workspaceRoot, moduleOutputDir, logWriter, true)
+			stagingDir, ok := preprocessBook(book, workspaceRoot, module.Moniker, logWriter, true)
 			if !ok {
 				return 1 // Preprocessing failed
 			}
@@ -211,33 +210,38 @@ func BuildSingleBook(module *modules.ModuleContract, book *config.Book, workspac
 		}
 
 		// Single theme build
-		return buildBookWithTheme(module, book, workspaceRoot, moduleOutputDir, bookOutputDir, logWriter, pdfTheme)
+		return buildBookWithTheme(module, book, workspaceRoot, module.Moniker, moduleOutputDir, bookOutputDir, logWriter, pdfTheme)
 	}
 
 	// HTML-only build
-	return buildBookHTML(module, book, workspaceRoot, moduleOutputDir, bookOutputDir, logWriter)
+	return buildBookHTML(module, book, workspaceRoot, module.Moniker, moduleOutputDir, bookOutputDir, logWriter)
 }
 
 // preprocessBook runs book preprocessing and returns the staging directory.
-// Uses book-specific staging directory at the module output root: staging/<bookname>/
-// This enables parallel builds with isolated preprocessing for each book.
-// The staging directory is placed at moduleOutputDir/staging/<bookname> to ensure
-// all books share the same base level, regardless of their individual output paths.
-func preprocessBook(book *config.Book, workspaceRoot, moduleOutputDir string, logWriter io.Writer, pdfMode bool) (string, bool) {
-	// Use book-specific staging directory for isolation during parallel builds
-	// Always relative to module output root for consistent isolation
-	// Example: out/build/docs/staging/site/ or out/build/docs/staging/pdf/
-	stagingDir := filepath.Join(moduleOutputDir, "staging", book.Name)
+// Uses persistent cache at out/cache/{moniker}/staging/{bookname}/ for incremental builds.
+// This enables fast mtime-based incremental copies across builds.
+//
+// Incremental build support:
+// - Staging directory is preserved across builds in out/cache/
+// - Use --force flag to clear staging and rebuild from scratch
+func preprocessBook(book *config.Book, workspaceRoot, moniker string, logWriter io.Writer, pdfMode bool) (string, bool) {
+	// Use persistent cache directory for incremental builds
+	// Path: out/cache/{moniker}/staging/{book}
+	// Example: out/cache/docs:site/staging/site/
+	stagingDir := filepath.Join(workspaceRoot, "out", "cache", moniker, "staging", book.Name)
 
-	// Clean staging directory on every build (ensures fresh content)
-	if err := os.RemoveAll(stagingDir); err != nil && !os.IsNotExist(err) {
-		Logln(logWriter, "❌ Failed to clean staging directory: %v", err)
-		Logln(logWriter, "   This may indicate file locks or permission issues")
-		Logln(logWriter, "   Try: rm -rf %s", stagingDir)
-		return "", false
+	// Only clean staging directory on force rebuild (enables incremental builds)
+	if isForceRebuild() {
+		Logln(logWriter, "🔄 Force rebuild: clearing staging directory")
+		if err := os.RemoveAll(stagingDir); err != nil && !os.IsNotExist(err) {
+			Logln(logWriter, "❌ Failed to clean staging directory: %v", err)
+			Logln(logWriter, "   This may indicate file locks or permission issues")
+			Logln(logWriter, "   Try: rm -rf %s", stagingDir)
+			return "", false
+		}
 	}
 
-	// Create fresh staging directory
+	// Ensure staging directory exists (may already exist from previous build)
 	if err := os.MkdirAll(stagingDir, 0o755); err != nil {
 		Logln(logWriter, "❌ Failed to create staging directory: %v", err)
 		return "", false
@@ -256,9 +260,10 @@ func preprocessBook(book *config.Book, workspaceRoot, moduleOutputDir string, lo
 }
 
 // buildBookWithTheme builds a book as PDF with a specific theme
-// moduleOutputDir is used for staging and final PDF location, bookOutputDir is for MkDocs output.
-func buildBookWithTheme(module *modules.ModuleContract, book *config.Book, workspaceRoot, moduleOutputDir, bookOutputDir string, logWriter io.Writer, theme string) int {
-	stagingDir, ok := preprocessBook(book, workspaceRoot, moduleOutputDir, logWriter, true)
+// moniker is the module:component identifier for cache isolation.
+// moduleOutputDir is used for final PDF location, bookOutputDir is for MkDocs output.
+func buildBookWithTheme(module *modules.ModuleContract, book *config.Book, workspaceRoot, moniker, moduleOutputDir, bookOutputDir string, logWriter io.Writer, theme string) int {
+	stagingDir, ok := preprocessBook(book, workspaceRoot, moniker, logWriter, true)
 	if !ok {
 		return 1 // Preprocessing failed
 	}
@@ -296,10 +301,10 @@ func buildBookWithThemeAndStaging(module *modules.ModuleContract, book *config.B
 }
 
 // buildBookHTML builds a book as HTML site
-// moduleOutputDir is used for staging, bookOutputDir is for final output.
-func buildBookHTML(module *modules.ModuleContract, book *config.Book, workspaceRoot, moduleOutputDir, bookOutputDir string, logWriter io.Writer) int {
-	// Preprocess the book - staging is always at module output root for isolation
-	stagingDir, ok := preprocessBook(book, workspaceRoot, moduleOutputDir, logWriter, false)
+// moniker is the module:component identifier for cache isolation.
+// bookOutputDir is for final output.
+func buildBookHTML(module *modules.ModuleContract, book *config.Book, workspaceRoot, moniker, moduleOutputDir, bookOutputDir string, logWriter io.Writer) int {
+	stagingDir, ok := preprocessBook(book, workspaceRoot, moniker, logWriter, false)
 	if !ok {
 		return 1 // Preprocessing failed
 	}

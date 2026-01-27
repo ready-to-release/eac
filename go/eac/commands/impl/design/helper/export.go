@@ -18,6 +18,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
+	"github.com/ready-to-release/eac/go/eac/core/tool"
 )
 
 // ExportedView represents a single exported view from a workspace.
@@ -202,8 +203,14 @@ func (e *StructurizrExporterImpl) ExportAll() (*ExportSummary, error) {
 	return summary, nil
 }
 
-// PlantUMLImage is the Docker image for rendering PlantUML to SVG.
-const PlantUMLImage = "plantuml/plantuml:latest"
+// DefaultPlantUMLImage is the fallback Docker image for rendering PlantUML to SVG.
+const DefaultPlantUMLImage = "plantuml/plantuml:latest"
+
+// GetPlantUMLImage returns the PlantUML Docker image.
+// It first checks tool-config.yml, then falls back to the default.
+func GetPlantUMLImage() string {
+	return tool.GetToolImageWithDefault("plantuml", DefaultPlantUMLImage)
+}
 
 // executeDockerExport runs a two-step export process:
 // 1. Structurizr CLI exports to PlantUML format
@@ -245,7 +252,7 @@ func (e *StructurizrExporterImpl) executeDockerExport(workspacePath, outputDir, 
 		"run", "--rm",
 		"-v", dockerSpecsVolume + ":" + DockerWorkspaceMount + ":ro",
 		"-v", dockerOutputVolume + ":/output",
-		StructurizrCLIImage,
+		GetStructurizrCLIImage(),
 		"export",
 		"-workspace", DockerWorkspaceMount + "/" + relWorkspacePath,
 		"-format", "plantuml/c4plantuml",
@@ -288,7 +295,7 @@ func (e *StructurizrExporterImpl) executeDockerExport(workspacePath, outputDir, 
 	renderArgs := []string{
 		"run", "--rm",
 		"-v", dockerOutputVolume + ":/data",
-		PlantUMLImage,
+		GetPlantUMLImage(),
 		"-tsvg", "/data",
 	}
 

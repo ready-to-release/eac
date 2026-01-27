@@ -35,14 +35,14 @@ func Get() *Registry {
 }
 
 // Register adds a lock to the registry and triggers EventAcquired notification.
-func (r *Registry) Register(info LockInfo) {
+func (r *Registry) Register(info *LockInfo) {
 	r.mu.Lock()
-	r.locks[info.ID] = info
+	r.locks[info.ID] = *info
 	r.mu.Unlock()
 
-	r.notify(LockEvent{
+	r.notify(&LockEvent{
 		Type:      EventAcquired,
-		Lock:      info,
+		Lock:      *info,
 		Timestamp: time.Now(),
 	})
 }
@@ -57,7 +57,7 @@ func (r *Registry) Unregister(id string) {
 	r.mu.Unlock()
 
 	if exists {
-		r.notify(LockEvent{
+		r.notify(&LockEvent{
 			Type:      EventReleased,
 			Lock:      info,
 			Timestamp: time.Now(),
@@ -77,7 +77,27 @@ func (r *Registry) UpdateSemaphore(id string, used, waiting int64) {
 	r.mu.Unlock()
 
 	if exists {
-		r.notify(LockEvent{
+		r.notify(&LockEvent{
+			Type:      EventCapacityChanged,
+			Lock:      info,
+			Timestamp: time.Now(),
+		})
+	}
+}
+
+// UpdateSemaphoreCapacity updates the capacity for a semaphore and triggers EventCapacityChanged.
+// Used for dynamic capacity adjustments based on available system resources.
+func (r *Registry) UpdateSemaphoreCapacity(id string, capacity int64) {
+	r.mu.Lock()
+	info, exists := r.locks[id]
+	if exists {
+		info.Capacity = capacity
+		r.locks[id] = info
+	}
+	r.mu.Unlock()
+
+	if exists {
+		r.notify(&LockEvent{
 			Type:      EventCapacityChanged,
 			Lock:      info,
 			Timestamp: time.Now(),
@@ -137,13 +157,13 @@ func (r *Registry) Subscribe(ch chan LockEvent) func() {
 }
 
 // notify sends an event to all subscribers.
-func (r *Registry) notify(event LockEvent) {
+func (r *Registry) notify(event *LockEvent) {
 	r.subMu.RLock()
 	defer r.subMu.RUnlock()
 
 	for _, ch := range r.subscribers {
 		select {
-		case ch <- event:
+		case ch <- *event:
 		default:
 			// Channel full, skip
 		}

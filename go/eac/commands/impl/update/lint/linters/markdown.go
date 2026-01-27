@@ -18,10 +18,6 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 )
 
-func init() {
-	RegisterHandler(&MarkdownHandler{})
-}
-
 // MarkdownHandler lints markdown files using markdownlint-cli2.
 // Configuration files (one source of truth):
 // - .markdownlint.yml for rules

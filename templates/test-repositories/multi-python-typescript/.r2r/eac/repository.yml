@@ -1,0 +1,10 @@
+modules:
+  - moniker: backend
+    name: Backend Service
+    components:
+      python: python/backend
+
+  - moniker: frontend
+    name: Frontend Application
+    components:
+      typescript: typescript/frontend

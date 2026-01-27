@@ -76,6 +76,13 @@ func (t *LinkTranslator) AddFileMapping(stagingPath, sourcePath string) {
 	}
 }
 
+// GetSourcePath returns the source path for a staging path, if tracked.
+// Used by orphan detection to check if a file in staging was tracked during this build.
+func (t *LinkTranslator) GetSourcePath(stagingPath string) (string, bool) {
+	src, ok := t.fileMap[stagingPath]
+	return src, ok
+}
+
 // logDebug writes a debug message if logger is available.
 func (t *LinkTranslator) logDebug(format string, args ...any) {
 	if t.logWriter != nil {
@@ -86,18 +93,21 @@ func (t *LinkTranslator) logDebug(format string, args ...any) {
 // relativeLinkPattern matches markdown images, links, and HTML img/anchor tags
 // Captures relative paths (not http://, https://, /, or #).
 var (
+	// Link extraction patterns (used by extractRelativeLinks)
 	mdImagePattern  = regexp.MustCompile(`!\[.*?\]\(([^)]+)\)`)    // ![alt](path)
 	mdLinkPattern   = regexp.MustCompile(`\[.*?\]\(([^)]+)\)`)     // [text](path)
 	htmlImgPattern  = regexp.MustCompile(`<img[^>]+src="([^"]+)"`) // <img src="path">
 	htmlLinkPattern = regexp.MustCompile(`<a[^>]+href="([^"]+)"`)  // <a href="path">
+
+	// Code block patterns (used by stripCodeBlocks, replaceOutsideCodeBlocks)
+	fencedCodeBlockPattern      = regexp.MustCompile("(?s)```.*?```")   // fenced code blocks
+	fencedCodeBlockSplitPattern = regexp.MustCompile("(?s)(```.*?```)") // fenced code blocks (with capture for split)
 )
 
 // stripCodeBlocks removes both fenced and indented code blocks from markdown content
 // to prevent extracting links from code examples.
 func stripCodeBlocks(content string) string {
-	// Remove fenced code blocks (```...```)
-	// Use (?s) flag to make . match newlines
-	fencedCodeBlockPattern := regexp.MustCompile("(?s)```.*?```")
+	// Remove fenced code blocks (```...```) using pre-compiled pattern
 	content = fencedCodeBlockPattern.ReplaceAllString(content, "")
 
 	// Remove indented code blocks (lines starting with 4 spaces or tab)
@@ -431,13 +441,10 @@ func (t *LinkTranslator) applyTranslation(stagingFile string, trans *LinkTransla
 // It replaces within link contexts (markdown links/images, HTML src/href attributes)
 // to prevent corrupting plain text when path patterns might overlap.
 func replaceOutsideCodeBlocks(content, old, new string) string {
-	// Pattern to match fenced code blocks: ```...```
-	// Uses (?s) to make . match newlines, .*? for non-greedy matching
-	codeBlockPattern := regexp.MustCompile("(?s)(```.*?```)")
-
 	// Split content by code blocks, keeping the code blocks as separators
-	parts := codeBlockPattern.Split(content, -1)
-	codeBlocks := codeBlockPattern.FindAllString(content, -1)
+	// Uses pre-compiled pattern for performance
+	parts := fencedCodeBlockSplitPattern.Split(content, -1)
+	codeBlocks := fencedCodeBlockSplitPattern.FindAllString(content, -1)
 
 	// Apply replacements only to non-code-block parts
 	var result strings.Builder

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/ready-to-release/eac/go/eac/core/config"
+	"golang.org/x/sync/errgroup"
 )
 
 // Preprocessor handles book preprocessing before MkDocs build.
@@ -22,6 +23,7 @@ type Preprocessor struct {
 	linkTranslator   *LinkTranslator  // Handles source → staging path translations
 	assetCache       *AssetCache      // Persistent cache for expensive operations (mermaid, etc.)
 	referencedAssets map[string]bool  // Asset paths referenced by markdown (for lazy copying)
+	fileIndex        *FileIndex       // Pre-built file index to avoid repeated WalkDir calls
 }
 
 // NewPreprocessor creates a new book preprocessor
@@ -61,6 +63,15 @@ func (p *Preprocessor) Preprocess() error {
 	if err := p.copyStaticFiles(); err != nil {
 		return fmt.Errorf("step 1 (copy): %w", err)
 	}
+
+	// Build file index after copy for efficient file iteration in subsequent steps
+	p.log("  Building file index...")
+	fileIndex, err := NewFileIndex(p.stagingDir)
+	if err != nil {
+		return fmt.Errorf("building file index: %w", err)
+	}
+	p.fileIndex = fileIndex
+	p.log("    Indexed %d files (%d markdown)", fileIndex.FileCount(), fileIndex.MarkdownCount())
 
 	// Step 1b: Convert attr_list images to HTML (before link translation)
 	// Converts: ![alt](img.png){width=100} -> <img src="img.png" width="100" alt="alt">
@@ -141,43 +152,12 @@ func (p *Preprocessor) Preprocess() error {
 		}
 	}
 
-	// Step 9: Process mermaid diagram sizing (both PDF and site)
-	// Wraps mermaid blocks with size directives in container divs
-	p.log("  Step 9: Processing mermaid sizing...")
-	if err := p.processMermaidSizing(); err != nil {
-		return fmt.Errorf("step 9 (mermaid sizing): %w", err)
-	}
-
-	// Step 9b: Process mermaid diagrams with caching (both PDF and site)
-	// Scans for diagrams, uses cached SVGs, replaces blocks with img tags
-	// Only modifies staging markdown (source stays pure)
-	p.log("  Step 9b: Processing mermaid diagrams...")
-	blocksByFile, statuses, err := p.scanForMermaidDiagrams()
-	if err != nil {
-		return fmt.Errorf("step 9b (mermaid scan): %w", err)
-	}
-
-	// Replace mermaid blocks with img tags in staging
-	if err := p.replaceMermaidBlocksWithImages(blocksByFile, statuses); err != nil {
-		return fmt.Errorf("step 9b (mermaid replace): %w", err)
-	}
-
-	// Step 9c: Process Structurizr diagrams (both PDF and site)
-	// Scans for <!-- structurizr:module:view --> markers and replaces with img tags
-	// pointing to cached SVGs from docs/assets/cache/structurizr/
-	p.log("  Step 9c: Processing Structurizr diagrams...")
-	if err := p.processStructurizrDiagrams(); err != nil {
-		return fmt.Errorf("step 9c (structurizr): %w", err)
-	}
-
-	// Step 10: Convert .drawio to cached images (PDF only)
-	// Interactive .drawio diagrams can't display in PDFs, so render to static images
-	// For HTML site, .drawio files are rendered by JavaScript viewer
-	if p.pdfMode {
-		p.log("  Step 10: Converting .drawio to cached images...")
-		if err := p.convertDrawioToLinks(); err != nil {
-			return fmt.Errorf("step 10 (drawio to images): %w", err)
-		}
+	// Diagram Processing Phase (Steps 9, 9b, 9c, 10)
+	// These steps can run in parallel as they process different diagram types
+	// Mermaid processing is split into sizing (9) -> scan+replace (9b) internally
+	p.log("  Diagram processing phase (parallel)...")
+	if err := p.processDiagramsParallel(); err != nil {
+		return err
 	}
 
 	// Step 11: Add image width constraints (both PDF and site)
@@ -281,4 +261,54 @@ func getSourceDir(pattern, workspaceRoot string) string {
 // containsCI checks if s contains substr (case-insensitive).
 func containsCI(s, substr string) bool {
 	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
+}
+
+// processDiagramsParallel runs diagram processing steps concurrently.
+// This includes mermaid, structurizr, and drawio processing.
+func (p *Preprocessor) processDiagramsParallel() error {
+	var g errgroup.Group
+
+	// Step 9 + 9b: Mermaid processing (sizing + scan + render + replace)
+	g.Go(func() error {
+		p.log("  Step 9: Processing mermaid sizing...")
+		if err := p.processMermaidSizing(); err != nil {
+			return fmt.Errorf("step 9 (mermaid sizing): %w", err)
+		}
+
+		p.log("  Step 9b: Processing mermaid diagrams...")
+		blocksByFile, statuses, err := p.scanForMermaidDiagrams()
+		if err != nil {
+			return fmt.Errorf("step 9b (mermaid scan): %w", err)
+		}
+
+		// Replace mermaid blocks with img tags in staging
+		if err := p.replaceMermaidBlocksWithImages(blocksByFile, statuses); err != nil {
+			return fmt.Errorf("step 9b (mermaid replace): %w", err)
+		}
+
+		return nil
+	})
+
+	// Step 9c: Structurizr diagrams (independent of mermaid)
+	g.Go(func() error {
+		p.log("  Step 9c: Processing Structurizr diagrams...")
+		if err := p.processStructurizrDiagrams(); err != nil {
+			return fmt.Errorf("step 9c (structurizr): %w", err)
+		}
+		return nil
+	})
+
+	// Step 10: Convert .drawio to links (PDF only, independent)
+	if p.pdfMode {
+		g.Go(func() error {
+			p.log("  Step 10: Converting .drawio to cached images...")
+			if err := p.convertDrawioToLinks(); err != nil {
+				return fmt.Errorf("step 10 (drawio to images): %w", err)
+			}
+			return nil
+		})
+	}
+
+	// Wait for all diagram processing to complete
+	return g.Wait()
 }

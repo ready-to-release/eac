@@ -23,18 +23,12 @@ func (p *Preprocessor) fixBrokenInternalLinks() error {
 		siteURL += "/"
 	}
 
-	processed := 0
 	linksFixed := 0
 
-	err := filepath.WalkDir(p.stagingDir, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
+	// Use file index for efficient iteration
+	mdFiles := p.fileIndex.GetMarkdownFiles()
 
-		if d.IsDir() || !strings.HasSuffix(path, ".md") {
-			return nil
-		}
-
+	for _, path := range mdFiles {
 		content, err := os.ReadFile(path)
 		if err != nil {
 			return err
@@ -56,14 +50,9 @@ func (p *Preprocessor) fixBrokenInternalLinks() error {
 			}
 			linksFixed += count
 		}
-		processed++
-		return nil
-	})
-	if err != nil {
-		return err
 	}
 
-	p.log("    Processed %d files, fixed %d broken links", processed, linksFixed)
+	p.log("    Processed %d files, fixed %d broken links", len(mdFiles), linksFixed)
 	return nil
 }
 

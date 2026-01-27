@@ -55,7 +55,7 @@ func NewWeightedSemaphoreWithRegistry(name string, capacity int, registry *lockt
 	ws.cond = sync.NewCond(&ws.mu)
 
 	// Register with the lock tracker
-	ws.registry.Register(locktracker.LockInfo{
+	ws.registry.Register(&locktracker.LockInfo{
 		ID:       ws.id,
 		Type:     locktracker.LockTypeWeighted,
 		Name:     name,
@@ -142,6 +142,41 @@ func (ws *WeightedSemaphore) Capacity() int {
 	ws.mu.Lock()
 	defer ws.mu.Unlock()
 	return ws.capacity
+}
+
+// SetCapacity dynamically adjusts the semaphore capacity.
+// This is used for adaptive resource-based scheduling where capacity
+// is recalculated based on available system resources.
+// The new capacity takes effect immediately, but existing acquired
+// slots are not forcibly released.
+// Capacity will not be reduced below the currently used slots to avoid
+// displaying invalid states like "3/2".
+func (ws *WeightedSemaphore) SetCapacity(newCapacity int) {
+	if newCapacity < 1 {
+		newCapacity = 1
+	}
+
+	ws.mu.Lock()
+	defer ws.mu.Unlock()
+
+	// Don't reduce capacity below currently used slots
+	// This prevents displaying invalid states like "3/2"
+	if newCapacity < ws.used {
+		newCapacity = ws.used
+	}
+
+	oldCapacity := ws.capacity
+	ws.capacity = newCapacity
+
+	// Update registry with new capacity
+	if ws.registry != nil {
+		ws.registry.UpdateSemaphoreCapacity(ws.id, int64(newCapacity))
+	}
+
+	// If capacity increased, wake up waiters who might now be able to proceed
+	if newCapacity > oldCapacity {
+		ws.cond.Broadcast()
+	}
 }
 
 // Used returns the currently used capacity.

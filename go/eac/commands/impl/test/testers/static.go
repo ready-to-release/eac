@@ -10,14 +10,6 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
-func init() {
-	// Build dependency handlers - contracts define which types use which build deps
-	RegisterSystem("mkdocs", TestMkDocsModule)
-	// npm is registered in npm.go with full suite/tag support
-	RegisterSystem("docker", TestStaticModule)
-	RegisterSystem("", TestStaticModule) // Modules with no build deps
-}
-
 // TestStaticModule is a passthrough for modules without runtime tests.
 // These modules are validated by the build process.
 func TestStaticModule(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, reportFormat, suiteName string) int {

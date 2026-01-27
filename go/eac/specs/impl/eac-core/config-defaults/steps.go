@@ -13,6 +13,7 @@ import (
 
 	"github.com/cucumber/godog"
 	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/ready-to-release/eac/go/eac/core/tool"
 	"github.com/ready-to-release/eac/go/eac/specs/internal"
 )
 
@@ -629,35 +630,32 @@ func theRepositoryPathsFieldIs(field, expected string) error {
 }
 
 // ============================================================================
-// System Dependencies Assertions
+// Tool Registry Assertions (replacing system dependencies)
 // ============================================================================
 
 func theSystemDependenciesConfigContains(moniker string) error {
-	if state.cfg == nil || state.cfg.SystemDependencies == nil {
-		return fmt.Errorf("system dependencies config not loaded")
-	}
-	dep := state.cfg.SystemDependencies.Get(moniker)
-	if dep == nil {
-		// List available deps for debugging
+	// Tools are now defined in tool-config.yml and accessed via tool registry
+	registry := tool.GlobalRegistry()
+	if !registry.Has(moniker) {
+		// List available tools for debugging
 		var available []string
-		for _, d := range state.cfg.SystemDependencies.Dependencies {
-			available = append(available, d.Moniker)
+		for toolID := range registry.GetAll() {
+			available = append(available, toolID)
 		}
-		return fmt.Errorf("dependency %q not found in config (available: %v)", moniker, available)
+		return fmt.Errorf("tool %q not found in registry (available: %v)", moniker, available)
 	}
 	return nil
 }
 
 func theDependencyHasVersion(moniker, expected string) error {
-	if state.cfg == nil || state.cfg.SystemDependencies == nil {
-		return fmt.Errorf("system dependencies config not loaded")
+	// Tools are now defined in tool-config.yml and accessed via tool registry
+	registry := tool.GlobalRegistry()
+	toolDef, ok := registry.Get(moniker)
+	if !ok {
+		return fmt.Errorf("tool %q not found in registry", moniker)
 	}
-	dep := state.cfg.SystemDependencies.Get(moniker)
-	if dep == nil {
-		return fmt.Errorf("dependency %q not found", moniker)
-	}
-	if dep.Version != expected {
-		return fmt.Errorf("dependency %q has version %q, expected %q", moniker, dep.Version, expected)
+	if toolDef.Version != expected {
+		return fmt.Errorf("tool %q has version %q, expected %q", moniker, toolDef.Version, expected)
 	}
 	return nil
 }

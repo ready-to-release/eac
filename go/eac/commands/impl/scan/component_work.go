@@ -49,17 +49,8 @@ func FlattenModulesToScanComponentWork(ctx *cmdframework.ExecutionContext) [][]o
 		}
 
 		if len(scannableComponents) == 0 {
-			// Module has no scannable components - create a placeholder
-			allWork = append(allWork, orchestrator.ComponentWork{
-				Module:        moniker,
-				Component:     "none",
-				ComponentType: "none",
-				Handler:       "",
-				Weight:        1,
-				BuildAfter:    nil,
-				Index:         globalIndex,
-			})
-			globalIndex++
+			// Module has no scannable components - skip it entirely
+			// No placeholder needed since scan only operates on scannable components
 			continue
 		}
 

@@ -51,17 +51,12 @@ var mermaidBlockPlain = regexp.MustCompile("(?s)```mermaid\\s*\n(.*?)```")
 func (p *Preprocessor) processMermaidSizing() error {
 	p.log("    Processing mermaid diagram sizing...")
 
-	processed := 0
 	wrapped := 0
 
-	err := filepath.WalkDir(p.stagingDir, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() || !strings.HasSuffix(path, ".md") {
-			return nil
-		}
+	// Use file index for efficient iteration (avoids repeated WalkDir calls)
+	mdFiles := p.fileIndex.GetMarkdownFiles()
 
+	for _, path := range mdFiles {
 		content, err := os.ReadFile(path)
 		if err != nil {
 			return err
@@ -76,14 +71,9 @@ func (p *Preprocessor) processMermaidSizing() error {
 			}
 			wrapped++
 		}
-		processed++
-		return nil
-	})
-	if err != nil {
-		return err
 	}
 
-	p.log("    Processed %d files, wrapped %d mermaid blocks with sizing", processed, wrapped)
+	p.log("    Processed %d files, wrapped %d mermaid blocks with sizing", len(mdFiles), wrapped)
 	return nil
 }
 
@@ -634,18 +624,11 @@ func (p *Preprocessor) scanForMermaidDiagrams() (map[string][]MermaidBlock, []Ca
 	blocksByFile := make(map[string][]MermaidBlock)
 	allBlocks := []MermaidBlock{}
 
-	// Step 1: Extract all mermaid blocks
-	err := filepath.WalkDir(p.stagingDir, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() || !strings.HasSuffix(path, ".md") {
-			return nil
-		}
-
+	// Step 1: Extract all mermaid blocks using file index
+	for _, path := range p.fileIndex.GetMarkdownFiles() {
 		content, err := os.ReadFile(path)
 		if err != nil {
-			return err
+			return nil, nil, fmt.Errorf("reading %s: %w", path, err)
 		}
 
 		blocks := extractMermaidBlocks(string(content), path, p.stagingDir)
@@ -653,11 +636,6 @@ func (p *Preprocessor) scanForMermaidDiagrams() (map[string][]MermaidBlock, []Ca
 			blocksByFile[path] = blocks
 			allBlocks = append(allBlocks, blocks...)
 		}
-
-		return nil
-	})
-	if err != nil {
-		return nil, nil, err
 	}
 
 	if len(allBlocks) == 0 {

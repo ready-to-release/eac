@@ -31,7 +31,7 @@ func TestLockDisplay_RenderCompact_WithSemaphores(t *testing.T) {
 	ld := NewLockDisplay(registry)
 
 	// Register a semaphore with some usage
-	registry.Register(locktracker.LockInfo{
+	registry.Register(&locktracker.LockInfo{
 		ID:       "sem-1",
 		Type:     locktracker.LockTypeSemaphore,
 		Name:     "component-scheduler",
@@ -50,13 +50,13 @@ func TestLockDisplay_RenderCompact_WithFileLocks(t *testing.T) {
 	ld := NewLockDisplay(registry)
 
 	// Register file locks
-	registry.Register(locktracker.LockInfo{
+	registry.Register(&locktracker.LockInfo{
 		ID:   "file-1",
 		Type: locktracker.LockTypeFileLock,
 		Name: "module:eac-core",
 		Used: 1,
 	})
-	registry.Register(locktracker.LockInfo{
+	registry.Register(&locktracker.LockInfo{
 		ID:   "file-2",
 		Type: locktracker.LockTypeFileLock,
 		Name: "module:docs",
@@ -72,7 +72,7 @@ func TestLockDisplay_RenderCompact_NoWaiting(t *testing.T) {
 	ld := NewLockDisplay(registry)
 
 	// Register a semaphore without waiting
-	registry.Register(locktracker.LockInfo{
+	registry.Register(&locktracker.LockInfo{
 		ID:       "sem-1",
 		Type:     locktracker.LockTypeSemaphore,
 		Name:     "component-scheduler",
@@ -100,7 +100,7 @@ func TestLockDisplay_RenderDetailed_WithSemaphores(t *testing.T) {
 	ld := NewLockDisplay(registry)
 
 	// Register semaphores
-	registry.Register(locktracker.LockInfo{
+	registry.Register(&locktracker.LockInfo{
 		ID:       "sem-1",
 		Type:     locktracker.LockTypeSemaphore,
 		Name:     "scanner-trivy",
@@ -108,7 +108,7 @@ func TestLockDisplay_RenderDetailed_WithSemaphores(t *testing.T) {
 		Used:     2,
 		Waiting:  0,
 	})
-	registry.Register(locktracker.LockInfo{
+	registry.Register(&locktracker.LockInfo{
 		ID:       "sem-2",
 		Type:     locktracker.LockTypeSemaphore,
 		Name:     "pdf-export",
@@ -149,7 +149,7 @@ func TestLockDisplay_RenderDetailed_WithWeighted(t *testing.T) {
 	ld := NewLockDisplay(registry)
 
 	// Register weighted semaphore
-	registry.Register(locktracker.LockInfo{
+	registry.Register(&locktracker.LockInfo{
 		ID:       "weighted-1",
 		Type:     locktracker.LockTypeWeighted,
 		Name:     "component-scheduler",
@@ -185,7 +185,7 @@ func TestLockDisplay_RenderDetailed_WithFileLocks(t *testing.T) {
 	ld := NewLockDisplay(registry)
 
 	// Register file locks with acquired time
-	registry.Register(locktracker.LockInfo{
+	registry.Register(&locktracker.LockInfo{
 		ID:         "file-1",
 		Type:       locktracker.LockTypeFileLock,
 		Name:       "module:eac-core",

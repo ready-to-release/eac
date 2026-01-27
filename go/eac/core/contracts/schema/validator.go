@@ -18,30 +18,30 @@ type SchemaType string
 
 // Schema type constants for different configuration file types.
 const (
-	SchemaComponentTypes     SchemaType = "component-types"
-	SchemaEnvironments       SchemaType = "environments"
-	SchemaTestingTags        SchemaType = "testing-tags"
-	SchemaTestSuites         SchemaType = "test-suites"
-	SchemaSystemDependencies SchemaType = "system-dependencies"
-	SchemaRepository         SchemaType = "repository"
-	SchemaEACConfig          SchemaType = "ai-provider"
-	SchemaBooks              SchemaType = "books"
-	SchemaSecurityTools      SchemaType = "security-tools"
-	SchemaCommands           SchemaType = "commands"
+	SchemaComponentTypes SchemaType = "component-types"
+	SchemaEnvironments   SchemaType = "environments"
+	SchemaTestingTags    SchemaType = "testing-tags"
+	SchemaTestSuites     SchemaType = "test-suites"
+	SchemaRepository     SchemaType = "repository"
+	SchemaEACConfig      SchemaType = "ai-provider"
+	SchemaBooks          SchemaType = "books"
+	SchemaSecurityTools  SchemaType = "security-tools"
+	SchemaCommands       SchemaType = "commands"
+	SchemaToolConfig     SchemaType = "tool-config"
 )
 
 // schemaFileNames maps schema types to their file names (without path).
 var schemaFileNames = map[SchemaType]string{
-	SchemaComponentTypes:     "component-types.schema.json",
-	SchemaEnvironments:       "environments.schema.json",
-	SchemaTestingTags:        "testing-tags.schema.json",
-	SchemaTestSuites:         "test-suites.schema.json",
-	SchemaSystemDependencies: "system-dependencies.schema.json",
-	SchemaRepository:         "repository.schema.json",
-	SchemaEACConfig:          "ai-provider.schema.json",
-	SchemaBooks:              "books.schema.json",
-	SchemaSecurityTools:      "security-tools.schema.json",
-	SchemaCommands:           "commands.schema.json",
+	SchemaComponentTypes: "component-types.schema.json",
+	SchemaEnvironments:   "environments.schema.json",
+	SchemaTestingTags:    "testing-tags.schema.json",
+	SchemaTestSuites:     "test-suites.schema.json",
+	SchemaRepository:     "repository.schema.json",
+	SchemaEACConfig:      "ai-provider.schema.json",
+	SchemaBooks:          "books.schema.json",
+	SchemaSecurityTools:  "security-tools.schema.json",
+	SchemaCommands:       "commands.schema.json",
+	SchemaToolConfig:     "tool-config.schema.json",
 }
 
 // ContractVersion is the schema contract version.
@@ -229,11 +229,11 @@ func GetSchemaTypes() []SchemaType {
 		SchemaEnvironments,
 		SchemaTestingTags,
 		SchemaTestSuites,
-		SchemaSystemDependencies,
 		SchemaRepository,
 		SchemaEACConfig,
 		SchemaBooks,
 		SchemaSecurityTools,
+		SchemaToolConfig,
 	}
 }
 

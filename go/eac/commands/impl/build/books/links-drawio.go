@@ -22,18 +22,12 @@ func (p *Preprocessor) convertDrawioToLinks() error {
 		siteURL += "/"
 	}
 
-	processed := 0
 	converted := 0
 
-	err := filepath.WalkDir(p.stagingDir, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
+	// Use file index for efficient iteration
+	mdFiles := p.fileIndex.GetMarkdownFiles()
 
-		if d.IsDir() || !strings.HasSuffix(path, ".md") {
-			return nil
-		}
-
+	for _, path := range mdFiles {
 		content, err := os.ReadFile(path)
 		if err != nil {
 			return err
@@ -54,14 +48,9 @@ func (p *Preprocessor) convertDrawioToLinks() error {
 			}
 			converted += count
 		}
-		processed++
-		return nil
-	})
-	if err != nil {
-		return err
 	}
 
-	p.log("    Processed %d files, converted %d .drawio images to links", processed, converted)
+	p.log("    Processed %d files, converted %d .drawio images to links", len(mdFiles), converted)
 	return nil
 }
 

@@ -53,7 +53,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				state.Buffer.Push(line)
 			} else {
 				// Create module state on first output (module started)
-				state := m.GetOrCreateModuleState(line.Source)
+				// Weight defaults to 1 if not set via ModuleStartMsg
+				state := m.GetOrCreateModuleState(line.Source, 0)
 				state.Buffer.Push(line)
 			}
 		}
@@ -145,48 +146,41 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case statusMsg:
 		status := Status(msg)
 
-		// Detect modules that were running but are now gone (completed)
-		// Compare old running list with new one
+		// Build sets for comparison
+		oldRunningSet := make(map[string]bool)
+		for _, moniker := range m.running {
+			oldRunningSet[moniker] = true
+		}
 		newRunningSet := make(map[string]bool)
 		for _, moniker := range status.Running {
 			newRunningSet[moniker] = true
 		}
 
-		// Find modules that were in old running list but not in new
-		for _, moniker := range m.running {
-			if !newRunningSet[moniker] {
-				// This module completed
-				// If it's the active tab, keep it visible (will be removed on tab switch)
-				if m.activeTab == moniker {
-					// Mark as complete but don't remove - user is viewing it
-					if state, exists := m.moduleStates[moniker]; exists {
-						state.Status = ModuleComplete
-						state.EndTime = time.Now()
-					}
-				} else {
-					// Not selected - remove from tabs immediately
-					m.removeModuleFromTabs(moniker)
-				}
+		// Mark NEW modules as running (appeared in status.Running but weren't before)
+		for _, moniker := range status.Running {
+			if !oldRunningSet[moniker] {
+				// New running module - create state if needed and mark as running
+				state := m.GetOrCreateModuleState(moniker, 0)
+				state.Status = ModuleRunning
+				state.StartTime = time.Now()
 			}
 		}
 
-		// Also check moduleStates for modules created via lineMsg that were never in running list
-		// (fast modules that complete before status update, or modules not tracked by orchestrator)
-		// Collect modules to remove first to avoid modifying map while iterating
-		var modulesToRemove []string
-		for moniker, state := range m.moduleStates {
-			if state.Status == ModuleRunning && !newRunningSet[moniker] {
-				// Module has state but isn't running - it completed
-				if m.activeTab == moniker {
-					state.Status = ModuleComplete
-					state.EndTime = time.Now()
-				} else {
-					modulesToRemove = append(modulesToRemove, moniker)
+		// Mark COMPLETED modules (were running but now gone)
+		// Only update if still in Running status - ModuleCompleteMsg may have already set the real status
+		for _, moniker := range m.running {
+			if !newRunningSet[moniker] {
+				// This module was running and is now gone
+				if state, exists := m.moduleStates[moniker]; exists {
+					// Only set to complete if still running (ModuleCompleteMsg sets actual status with exit code)
+					if state.Status == ModuleRunning {
+						state.Status = ModuleComplete
+					}
+					if state.EndTime.IsZero() {
+						state.EndTime = time.Now()
+					}
 				}
 			}
-		}
-		for _, moniker := range modulesToRemove {
-			m.removeModuleFromTabs(moniker)
 		}
 
 		m.running = status.Running
@@ -234,8 +228,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case ModuleStartMsg:
-		// Create module state when module starts
-		m.GetOrCreateModuleState(msg.Moniker)
+		// Create module state when module starts (pending state)
+		m.GetOrCreateModuleState(msg.Moniker, msg.Weight)
+		return m, nil
+
+	case ModuleRunningMsg:
+		// Mark module as running (slot acquired)
+		m.MarkModuleRunning(msg.Moniker)
 		return m, nil
 
 	case ModuleCompleteMsg:
@@ -404,10 +403,11 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	if msg.Button == tea.MouseButtonLeft && msg.Action == tea.MouseActionPress {
 		// Check if click is on the tab bar (always shown when Run phase is active)
 		if m.panes[PhaseRun].Status != PhasePending {
-			tabBarY := m.getTabBarY()
-			if msg.Y == tabBarY {
+			tabBarStartY, tabBarEndY := m.getTabBarYRange()
+			if msg.Y >= tabBarStartY && msg.Y <= tabBarEndY {
 				// Click is on the tab bar - determine which tab was clicked
-				selectedTab := m.getTabAtPosition(msg.X)
+				row := msg.Y - tabBarStartY
+				selectedTab := m.getTabAtPosition(msg.X, row)
 				m.SetActiveTab(selectedTab)
 				// Reset scroll
 				if m.panes[PhaseRun] != nil {
@@ -422,65 +422,90 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// getTabBarY returns the Y coordinate of the tab bar (line after Run pane header).
-func (m Model) getTabBarY() int {
+// getTabBarYRange returns the Y coordinate range of the tab bar rows.
+// Returns (startY, endY) where both are inclusive.
+func (m Model) getTabBarYRange() (int, int) {
 	// Layout (0-indexed Y coordinates):
 	// 0: Init header
 	// 1 to initH: Init content
 	// initH+1: Init footer
-	// initH+2: Run header
-	// initH+3: Tab bar (if tabs exist)
+	// initH+2: Resources header (if shown)
+	// initH+3: Resources content
+	// initH+4: Resources footer
+	// initH+5 to initH+5+tabRows-1: Tab bar rows
+	// Then: Run header, Run content, etc.
 	initH, _, _ := m.calculatePaneHeights()
-	return initH + 3
+
+	// Check if resources pane is shown (scheduler active)
+	resourcesShown := false
+	for _, lock := range m.locks {
+		if lock.Name == "component-scheduler" && lock.Capacity > 0 {
+			resourcesShown = true
+			break
+		}
+	}
+
+	startY := initH + 2 // After init footer
+	if resourcesShown {
+		startY += 3 // Resources pane: header + content + footer
+	}
+
+	// Calculate number of tab rows
+	tabs := m.GetVisibleTabs()
+	numTabs := len(tabs) + 1 // +1 for "All" tab
+	const tabsPerRow = 6
+	numRows := (numTabs + tabsPerRow - 1) / tabsPerRow
+	if numRows < 1 {
+		numRows = 1
+	}
+
+	endY := startY + numRows - 1
+	return startY, endY
 }
 
-// getTabAtPosition determines which tab was clicked based on X coordinate.
-func (m Model) getTabAtPosition(x int) string {
+// getTabAtPosition determines which tab was clicked based on X coordinate and row.
+func (m Model) getTabAtPosition(x, row int) string {
 	tabs := m.GetVisibleTabs()
 
-	// Tab bar layout (matching renderTabBar exactly):
-	// │ All  ▶ mod1  ▶ mod2                    │
-	// ^ ^    ^  ^
-	// 0 1    6  8
-	//
-	// Position 0: left border "│"
-	// Position 1-5: "All" tab with padding " All " (5 chars rendered)
-	// Position 6: separator " "
-	// Position 7+: module tabs
+	// Fixed tab layout: 20 chars per tab, 6 tabs per row
+	// │tab1              │tab2              │...│All               │
+	// Border (1) + tab content (20) + separator (1) per tab
+	const tabWidth = 20
+	const tabsPerRow = 6
 
+	// Build all tabs (modules only, no "All" tab)
+	allTabs := make([]string, 0, len(tabs))
+	for _, state := range tabs {
+		allTabs = append(allTabs, state.Moniker)
+	}
+
+	// Calculate which tabs are in this row
+	startIdx := row * tabsPerRow
+	if startIdx >= len(allTabs) {
+		return m.activeTab // Click on empty row
+	}
+
+	// Position calculation within the row:
+	// │ = 1 char border
+	// Each tab is tabWidth chars
+	// │ separator between tabs
 	currentX := 1 // After left border
 
-	// "All" tab: " All " = 5 chars visual width (1 padding + 3 text + 1 padding)
-	allTabWidth := 5
-	if x >= currentX && x < currentX+allTabWidth {
-		return "" // Aggregate view
+	endIdx := startIdx + tabsPerRow
+	if endIdx > len(allTabs) {
+		endIdx = len(allTabs)
 	}
-	currentX += allTabWidth
 
-	// Check module tabs
-	for _, state := range tabs {
-		// Separator " " = 1 char
-		currentX++
-
-		// Tab content: " ▶ modname " (icon + space + name, with padding)
-		label := state.Moniker
-		maxLabelLen := 12
-		if len(label) > maxLabelLen {
-			label = label[:maxLabelLen-1] + "…"
-		}
-		// Icon is 1 char wide visually (▶, ✓, ✗)
-		// Tab text: icon + " " + label = 2 + len(label)
-		// With padding: 1 + 2 + len(label) + 1 = 4 + len(label)
-		tabWidth := 4 + len(label)
-
+	for i := startIdx; i < endIdx; i++ {
+		// Check if click is within this tab
 		if x >= currentX && x < currentX+tabWidth {
-			return state.Moniker
+			return allTabs[i]
 		}
 		currentX += tabWidth
 
-		// Stop if past terminal width
-		if currentX > m.width-4 {
-			break
+		// Add separator width (except after last tab)
+		if i < endIdx-1 {
+			currentX++ // │ separator
 		}
 	}
 

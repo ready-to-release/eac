@@ -114,13 +114,6 @@ func RunTrivySBOM(workspaceRoot, moduleRoot, format, trivyImage string) (interfa
 
 	log.Debugf("Trivy SBOM scan completed: outputSize=%d", len(cleanOutput))
 
-	// TEMPORARY DEBUG: Log first 500 chars of output
-	outputPreview := string(cleanOutput)
-	if len(outputPreview) > 500 {
-		outputPreview = outputPreview[:500]
-	}
-	log.Infof("Trivy SBOM output preview: %s", outputPreview)
-
 	// Parse JSON output
 	var findings interface{}
 	if err := json.Unmarshal(cleanOutput, &findings); err != nil {

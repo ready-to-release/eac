@@ -12,30 +12,37 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/environments"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
+	"github.com/ready-to-release/eac/go/eac/core/tool"
 )
 
-// TurboBoost is the number of additional parallel workers when turbo mode is enabled.
-const TurboBoost = 2
+// DefaultTurboMultiplier is the turbo multiplier when --turbo is set without a value.
+const DefaultTurboMultiplier = 4
 
 // CalculateMaxConcurrency determines the effective max concurrency based on configuration.
-// It applies turbo boost (+2 workers) if enabled, and sequential mode overrides everything.
+// Returns 0 for dynamic mode (orchestrator calculates from CPU×RAM).
+// Only returns non-zero if user explicitly set a limit or sequential mode.
 func CalculateMaxConcurrency(configConcurrency, repoConcurrency int, turbo, sequential bool) int {
-	maxConcurrency := configConcurrency
-	if maxConcurrency <= 0 {
-		maxConcurrency = repoConcurrency
-	}
-
-	// Apply turbo boost (+2 parallel workers)
-	if turbo {
-		maxConcurrency += TurboBoost
-	}
-
 	// Sequential overrides everything
 	if sequential {
-		maxConcurrency = 1
+		return 1
 	}
 
-	return maxConcurrency
+	// If user explicitly set concurrency, use it
+	if configConcurrency > 0 {
+		return configConcurrency
+	}
+
+	// Return 0 for dynamic mode - orchestrator will calculate from CPU×RAM
+	return 0
+}
+
+// CalculateTurboMultiplier returns the turbo multiplier for the pressure roof.
+// Returns 1 for normal mode, DefaultTurboMultiplier for turbo mode.
+func CalculateTurboMultiplier(turbo bool) int {
+	if turbo {
+		return DefaultTurboMultiplier
+	}
+	return 1
 }
 
 // phaseInit handles the initialization phase:
@@ -62,6 +69,14 @@ func phaseInit(ctx *ExecutionContext) error {
 	ctx.EACConfig = eacCfg
 	ctx.RepoConfig = eacCfg.Repository
 
+	// Initialize tool system bridges
+	// This loads tool-config.yml and integrates YAML-defined tools with native handlers
+	configRoot := filepath.Join(workspaceRoot, ".eac")
+	if err := tool.InitializeGlobalBridges(workspaceRoot, configRoot); err != nil {
+		log.Debugf("Tool bridge initialization skipped: %v", err)
+		// Continue - tool config is optional, native handlers will still work
+	}
+
 	// Create output directory
 	outputDir := filepath.Join(workspaceRoot, ctx.Config.OutputDir)
 	if err := os.MkdirAll(outputDir, 0o755); err != nil {
@@ -69,12 +84,14 @@ func phaseInit(ctx *ExecutionContext) error {
 	}
 
 	// Determine max concurrency using shared calculation
+	// 0 = dynamic (orchestrator calculates from CPU×RAM×turbo)
 	repoConcurrency := ctx.RepoConfig.EffectiveParallelism(environments.IsCI())
 	maxConcurrency := CalculateMaxConcurrency(ctx.Config.MaxConcurrency, repoConcurrency, ctx.Config.Turbo, ctx.Config.Sequential)
+	turboMultiplier := CalculateTurboMultiplier(ctx.Config.Turbo)
 
 	// Log turbo mode if enabled
 	if ctx.Config.Turbo && !ctx.Config.Sequential {
-		log.Debugf("Turbo mode enabled: +%d parallel workers", TurboBoost)
+		log.Debugf("Turbo mode enabled: %dx pressure multiplier", turboMultiplier)
 	}
 
 	// Configure orchestrator
@@ -84,16 +101,18 @@ func phaseInit(ctx *ExecutionContext) error {
 		LogFileName:          ctx.Config.LogFileName,
 		ActionVerb:           ctx.Config.ActionVerb,
 		MaxConcurrency:       maxConcurrency,
+		Turbo:                turboMultiplier,
 		StatusUpdateInterval: 500, // 500ms for responsive feedback
 		ModuleTypes:          ctx.ModuleTypes,
 		ShowTimings:          ctx.Config.ShowTimings,
 		DryRun:               ctx.Config.DryRun,
 		TUI:                  ctx.Config.UseTUI,
 		TUIHeight:            ctx.Config.TUIHeight,
+		TUIASCIIMode:         ctx.Config.TUIASCIIMode,
 	}
 
 	// Create orchestrator
-	orch := orchestrator.New(orchConfig, nil) // Worker set later
+	orch := orchestrator.New(&orchConfig, nil) // Worker set later
 	ctx.Orchestrator = orch
 	ctx.AddCleanup(func() { orch.Close() })
 
