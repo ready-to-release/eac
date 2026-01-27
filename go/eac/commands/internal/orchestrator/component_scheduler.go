@@ -193,10 +193,17 @@ func detectAvailableCapacity(configMax int, turbo int) int {
 	// Apply turbo multiplier
 	capacity := baseCapacity * turbo
 
-	// Cap at reasonable maximum (2x CPU count or 64, whichever is lower)
-	maxCapacity := cpuCount * 2
-	if maxCapacity > 64 {
-		maxCapacity = 64
+	// Cap at reasonable maximum:
+	// - Without turbo (turbo=1): cap at CPU count
+	// - With turbo: cap at 2x CPU count (max 64)
+	var maxCapacity int
+	if turbo <= 1 {
+		maxCapacity = cpuCount
+	} else {
+		maxCapacity = cpuCount * 2
+		if maxCapacity > 64 {
+			maxCapacity = 64
+		}
 	}
 	if capacity > maxCapacity {
 		capacity = maxCapacity
