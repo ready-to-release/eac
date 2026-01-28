@@ -4,7 +4,7 @@ go 1.24.4
 
 require (
 	github.com/anthropics/anthropic-sdk-go v1.19.0
-	github.com/bmatcuk/doublestar/v4 v4.9.2
+	github.com/bmatcuk/doublestar/v4 v4.10.0
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/defenseunicorns/go-oscal v0.7.0
