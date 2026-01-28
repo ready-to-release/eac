@@ -16,10 +16,10 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
-// isForceRebuild checks if the user requested a full rebuild (--force flag).
+// isForceRebuild checks if the user requested a full rebuild (--rebuild or --force flag).
 func isForceRebuild() bool {
 	for _, arg := range os.Args {
-		if arg == "--force" || arg == "-f" {
+		if arg == "--force" || arg == "-f" || arg == "--rebuild" {
 			return true
 		}
 	}

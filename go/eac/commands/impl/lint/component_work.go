@@ -72,7 +72,7 @@ func FlattenModulesToLintComponentWork(ctx *cmdframework.ExecutionContext) [][]o
 				componentWithProvider := compName + ":" + providerName
 
 				// Get weight (base weight × amp, calculated internally)
-				weight := getComponentWeight(moniker, compName, compType, tool.OperationLint)
+				weight := getComponentWeight(moniker, compName, providerName, tool.OperationLint)
 
 				work := orchestrator.ComponentWork{
 					Module:        moniker,
@@ -107,26 +107,20 @@ func CountLintComponents(layers [][]orchestrator.ComponentWork) int {
 	return count
 }
 
-// getLintToolWeight returns the scheduling weight for a lint operation.
+// getLintToolWeight returns the scheduling weight for a lint provider.
 // Weight is derived from tool.Resources.CPUs. Defaults to 1.
-func getLintToolWeight(componentType string) int {
+func getLintToolWeight(providerName string) int {
 	bridge := tool.GlobalLintBridge()
 	if bridge == nil {
 		return 1
 	}
-
-	t := bridge.ResolveTool(componentType, tool.OperationLint)
-	if t == nil {
-		return 1
-	}
-
-	return t.Resources.Weight()
+	return bridge.GetProviderWeight(providerName)
 }
 
 // getComponentWeight returns the scheduling weight for a component.
 // Weight = base tool weight × component amp (from config).
-func getComponentWeight(moniker, componentName, componentType string, operation tool.OperationType) int {
-	baseWeight := getLintToolWeight(componentType)
+func getComponentWeight(moniker, componentName, providerName string, operation tool.OperationType) int {
+	baseWeight := getLintToolWeight(providerName)
 
 	// Get amp from config (the source of truth)
 	amp := 1.0

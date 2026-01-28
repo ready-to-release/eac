@@ -80,9 +80,9 @@ modules:
       go:
         root: go/eac/core
         patterns:
-          source: ["**/*.go", "specs/gherkin/testdata/**/*.feature"]
+          source: ["**/*.go", "**/*.json"]
           tests: ["**/*_test.go"]
-          config: [go.mod, go.sum, contracts/schema/schemas/*.json]
+          config: [go.mod, go.sum]
       markdown: go/eac/core
       json: contracts/eac-core
       yaml:
@@ -91,7 +91,9 @@ modules:
           source: ["**/*.yml", "**/*.yaml"]
       testdata:
         type: testdata
-        root: go/eac/core/testing/testdata
+        root: go/eac/core
+        patterns:
+          source: ["testing/testdata/**/*", "specs/gherkin/testdata/**/*.feature"]
       gherkin: ~
       structurizr: ~
       test-impl: ~
@@ -268,6 +270,8 @@ modules:
     components:
       go:
         root: go/r2r/cli
+        patterns:
+          source: ["**/*.go", "**/*.json"]
         build:
           artifacts:
             - id: linux-amd64

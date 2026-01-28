@@ -512,6 +512,7 @@ func buildComponentWorker(ctx *cmdframework.ExecutionContext, module, component 
 		RequestedArtifacts: requestedArtifacts,
 		Component:          compName, // Pass original component name for component-level parallelism
 		Reproducible:       buildCfg.ResolveReproducible(),
+		ForceRebuild:       ctx.Config.ForceRebuild,
 	}
 
 	// In dry-run mode, simulate a successful build

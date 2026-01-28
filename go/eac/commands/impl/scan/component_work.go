@@ -7,7 +7,6 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/cmdframework"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
 	"github.com/ready-to-release/eac/go/eac/core/config"
-	"github.com/ready-to-release/eac/go/eac/core/tool"
 )
 
 // FlattenModulesToScanComponentWork converts modules to scan component work items.
@@ -103,22 +102,6 @@ func FlattenModulesToScanComponentWork(ctx *cmdframework.ExecutionContext) [][]o
 	return [][]orchestrator.ComponentWork{allWork}
 }
 
-// getScanWeight returns the weight for scanning a component type.
-// Weight is derived from tool.Resources.CPUs. Defaults to 1.
-func getScanWeight(componentType string) int {
-	bridge := tool.GlobalScanBridge()
-	if bridge == nil {
-		return 1
-	}
-
-	t := bridge.ResolveTool(componentType, tool.OperationScan)
-	if t == nil {
-		return 1
-	}
-
-	return t.Resources.Weight()
-}
-
 // getScanWeightForScanner returns the weight for a specific scanner type.
 // Different scanners have different resource requirements.
 func getScanWeightForScanner(scannerType internal.ScannerType) int {
@@ -188,6 +171,3 @@ func getScanComponentCount(ctx *cmdframework.ExecutionContext) int {
 	layers := FlattenModulesToScanComponentWork(ctx)
 	return CountScanComponents(layers)
 }
-
-// Suppress unused import warning for tool package
-var _ = tool.GlobalScanBridge

@@ -43,6 +43,7 @@ type BuildOptions struct {
 	RequestedArtifacts []string // Specific artifact IDs to build (empty = default artifacts, "*" = all)
 	Component          string   // Specific component to build (empty = all components)
 	Reproducible       bool     // Force rebuild of MkDocs HTML even if staging unchanged (CI mode)
+	ForceRebuild       bool     // Force full rebuild, ignore cache (--rebuild flag)
 }
 
 // ToolHandlerAdapter wraps a ToolDefinition to implement BuildHandler.

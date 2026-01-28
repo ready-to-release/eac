@@ -86,12 +86,7 @@ func (b *LintBridge) GetHandlerForProvider(providerName string) LintHandler {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
-	// Look up handler name from provider mapping
-	handlerName, ok := b.providerHandlers[providerName]
-	if !ok {
-		// Direct mapping: provider name == handler name
-		handlerName = providerName
-	}
+	handlerName := b.resolveHandlerName(providerName)
 
 	// Check tool registry
 	if b.registry != nil && b.executor != nil {
@@ -101,6 +96,34 @@ func (b *LintBridge) GetHandlerForProvider(providerName string) LintHandler {
 	}
 
 	return nil
+}
+
+// GetProviderWeight returns the scheduling weight for a lint provider.
+// Weight is derived from the tool's Resources configuration.
+// Returns 1 if no tool is configured or resources not specified.
+func (b *LintBridge) GetProviderWeight(providerName string) int {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	handlerName := b.resolveHandlerName(providerName)
+
+	// Check tool registry for resources
+	if b.registry != nil {
+		if tool, ok := b.registry.Get(handlerName); ok && tool.Resources != nil {
+			return tool.Resources.Weight()
+		}
+	}
+
+	return 1
+}
+
+// resolveHandlerName maps a provider name to its handler name.
+// Must be called with mu held.
+func (b *LintBridge) resolveHandlerName(providerName string) string {
+	if handlerName, ok := b.providerHandlers[providerName]; ok {
+		return handlerName
+	}
+	return providerName
 }
 
 // GetProvidersForModule returns all applicable lint providers for a module's components.

@@ -845,14 +845,22 @@ func AggregateToWorkResults(compResults []ComponentResult, work []ComponentWork)
 
 		var maxDuration time.Duration
 		var firstFailedLogPath string
+		allSkipped := true
+		anyFailed := false
 		for _, cr := range compResults {
-			// Any component failure = module failure
-			if cr.ExitCode != 0 {
+			// Component failure (exit code > 0) = module failure
+			// Exit code -1 means cached/skipped, not failure
+			if cr.ExitCode > 0 {
+				anyFailed = true
 				wr.ExitCode = 1
 				// Track first failed component's log path
 				if firstFailedLogPath == "" {
 					firstFailedLogPath = cr.LogPath
 				}
+			}
+			// Track if all components were skipped (cached)
+			if cr.ExitCode != -1 {
+				allSkipped = false
 			}
 			// Collect all warnings and errors
 			wr.Warnings = append(wr.Warnings, cr.Warnings...)
@@ -861,6 +869,10 @@ func AggregateToWorkResults(compResults []ComponentResult, work []ComponentWork)
 			if cr.Duration > maxDuration {
 				maxDuration = cr.Duration
 			}
+		}
+		// If all components returned -1 (cached), module result is -1
+		if !anyFailed && allSkipped && len(compResults) > 0 {
+			wr.ExitCode = -1
 		}
 		wr.Duration = maxDuration
 
