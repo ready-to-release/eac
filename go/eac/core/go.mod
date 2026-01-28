@@ -7,7 +7,7 @@ toolchain go1.24.4
 require gopkg.in/yaml.v3 v3.0.1
 
 require (
-	github.com/bmatcuk/doublestar/v4 v4.9.2
+	github.com/bmatcuk/doublestar/v4 v4.10.0
 	github.com/cucumber/gherkin/go/v26 v26.2.0
 	github.com/cucumber/messages/go/v21 v21.0.1
 	github.com/defenseunicorns/go-oscal v0.7.0
