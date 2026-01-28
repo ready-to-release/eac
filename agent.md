@@ -211,13 +211,59 @@ Specialized agents for specific tasks (invoke via Task tool):
 
 ### Available Skills
 
-Orchestrated workflows that combine multiple agents (invoke via Task tool or directly):
+Orchestrated workflows combining multiple agents. See `.claude/skills/` for detailed documentation.
 
-| Skill                    | Purpose                          | Workflow                                                                     |
-| ------------------------ | -------------------------------- | ---------------------------------------------------------------------------- |
-| **go-cli-feature**       | End-to-end feature development   | Plan → Specify → Design UX → Test → Implement → Verify → Simplify → Document |
-| **go-cli-release-check** | Pre-release validation checklist | CI checks → Security scans → Build validation → Changelog review → Tests     |
-| **go-cli-refactor-safe** | Safe refactoring with validation | Baseline → Plan → Refactor incrementally → Test after each step → Simplify   |
+| Skill                       | Purpose                                     | Key Agents                                | When to Use                                |
+| --------------------------- | ------------------------------------------- | ----------------------------------------- | ------------------------------------------ |
+| **go-cli-feature**          | End-to-end feature development (TDD)        | go-architect, go-cli-ux, go-test-engineer | Building new CLI commands or features      |
+| **go-cli-refactor-safe**    | Safe refactoring with continuous validation | go-architect, go-test-engineer            | Refactoring code without breaking behavior |
+| **go-cli-release-check**    | Pre-release validation checklist            | go-security-release                       | Before tagging releases or deployment      |
+| **go-comprehensive-review** | Multi-perspective code review               | All agents                                | Important features, security changes       |
+| **drawio-editor**           | DrawIO diagram editing                      | None (standalone)                         | Architecture diagrams, visualizations      |
+
+**Workflows**:
+
+- `go-cli-feature`: Plan → Specify → Design UX → Test → Implement → Verify → Simplify → Document
+- `go-cli-refactor-safe`: Baseline → Plan → Refactor → Test → Simplify
+- `go-cli-release-check`: CI → Security → Build → Changelog → Dependencies → Tests → Docs → Final Check
+- `go-comprehensive-review`: Context → Multi-Agent Analysis → Aggregate Findings
+- `drawio-editor`: Decode → Edit → Encode → Embed
+
+**Quick Selection**:
+
+- New features → `go-cli-feature`
+- Refactoring → `go-cli-refactor-safe`
+- Release prep → `go-cli-release-check`
+- Code review → `go-comprehensive-review`
+- Diagrams → `drawio-editor`
+
+### How to Use Skills
+
+**Method 1: Via Slash Commands** (Recommended)
+
+Use slash commands that automatically load skill instructions:
+
+```text
+/go:plan          # Loads go-plan skill
+/go:implement     # Loads go-implement skill
+/go:review        # Loads go-review skill
+```
+
+**Method 2: Reference Workflow Skills**:
+
+Request Claude to follow a specific workflow skill:
+
+```text
+Follow the go-cli-feature skill to implement the new command
+```
+
+**Method 3: Agent Delegation**:
+
+Commands delegate to agents, which may use workflow skills:
+
+```text
+/go:release → go-security-release agent → go-cli-release-check workflow
+```
 
 ### Available Slash Commands
 
@@ -259,11 +305,13 @@ Quick-access commands for common workflows:
 
 **MANDATORY**: The `code-simplifier` plugin must run at the end of every session.
 
-**How it runs**:
+**How to invoke**:
 
-1. Automatically via `/go:review` command (before commit/PR)
-2. Automatically via `/go:session-end` command (end of session)
-3. Within skills: `go-cli-feature` (step 7), `go-cli-refactor-safe` (step 5)
+Run `/plugin code-simplifier` to invoke the plugin directly, or it runs automatically in:
+
+1. `/go:review` command (before commit/PR)
+2. `/go:session-end` command (end of session)
+3. Skills: `go-cli-feature` (step 7), `go-cli-refactor-safe` (step 5)
 
 **What it does**:
 
@@ -277,6 +325,10 @@ Quick-access commands for common workflows:
 - MUST run `/go:session-end` at the end of EVERY session
 - Review simplifications (don't blindly accept)
 - Commit simplifications separately from feature work
+
+**Plugin installation**:
+
+The code-simplifier is a Claude Code plugin. Install it via `/plugin` if not already available.
 
 ---
 

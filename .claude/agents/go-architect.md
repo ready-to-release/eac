@@ -43,7 +43,7 @@ I'll auto-discover module structure using MCP tools.
 
 Before using MCP tools for project discovery:
 
-1. **Check for cached context**: Read `out/session-context.json` (if exists and age < 5 minutes)
+1. **Check for cached context**: Read `out/claude/session-context.json` (if exists and age < 5 minutes)
 2. **If valid cache**: Use cached project metadata (skip expensive MCP calls)
 3. **If missing/stale**: Run MCP discovery and consider caching results
 4. **Never cache during boot**: The boot command handles initial caching
@@ -57,7 +57,7 @@ Before using MCP tools for project discovery:
 3. **Design solution**: Propose minimal changes, clear interfaces, testable structure
 4. **Document decisions**: Provide ADRs, interface definitions, migration plan
 5. **Save plan**: Write plan document to `out/` folder (e.g., `out/feature-name-plan.md`)
-6. **Output structured result**: Save JSON report to `out/go-architect-<timestamp>.json` (see schema below)
+6. **Output structured result**: Save JSON report to `out/claude/go-architect-<timestamp>.json` (see schema below)
 
 ## What You'll Get
 
@@ -99,7 +99,7 @@ A comprehensive architecture plan saved to **`out/<feature-name>-plan.md`**:
 
 In addition to the human-readable plan, I generate a structured JSON report for aggregation and tracking:
 
-**File**: `out/go-architect-<timestamp>.json`
+**File**: `out/claude/go-architect-<timestamp>.json`
 
 **Schema**: `.claude/schemas/agent-result.json`
 

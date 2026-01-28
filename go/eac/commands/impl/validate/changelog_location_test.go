@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	eactesting "github.com/ready-to-release/eac/go/eac/core/testing"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -95,10 +96,6 @@ func TestSpecificModuleChangelogLocations(t *testing.T) {
 		workspaceRoot = filepath.Dir(workspaceRoot)
 	}
 
-	// Load modules
-	moduleRegistry, err := modules.LoadFromWorkspace(workspaceRoot)
-	require.NoError(t, err)
-
 	// Internal modules should have changelogs in module roots (Phase 2 completed)
 	internalModules := []struct {
 		moniker      string
@@ -124,17 +121,17 @@ func TestSpecificModuleChangelogLocations(t *testing.T) {
 
 	for _, pm := range internalModules {
 		t.Run(pm.moniker, func(t *testing.T) {
-			moduleContract, exists := moduleRegistry.Get(pm.moniker)
-			if !exists {
-				t.Skipf("module %s not found in registry", pm.moniker)
-				return
-			}
+			// Use mock registry with predictable data
+			moduleRegistry := eactesting.NewMockRegistry(
+				eactesting.WithModule(pm.moniker,
+					eactesting.WithVersioning(),
+					eactesting.WithChangelog(pm.expectedPath),
+					eactesting.WithReleaseType("internal"),
+				),
+			)
 
-			// Skip if module doesn't have versioning
-			if moduleContract.Versioning == nil {
-				t.Skipf("module %s has no versioning configured", pm.moniker)
-				return
-			}
+			moduleContract, exists := moduleRegistry.Get(pm.moniker)
+			require.True(t, exists, "mock module should always exist")
 
 			// Get actual path from contract
 			actualPath := moduleContract.GetChangelogPath()

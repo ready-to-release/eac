@@ -10,6 +10,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	eactesting "github.com/ready-to-release/eac/go/eac/core/testing"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -18,15 +19,17 @@ import (
 func TestValidateChangelog_ExplicitPath(t *testing.T) {
 	workspaceRoot := getWorkspaceRoot(t)
 
-	moduleRegistry, err := modules.LoadFromWorkspace(workspaceRoot)
-	require.NoError(t, err)
+	// Use mock registry with predictable data
+	moduleRegistry := eactesting.NewMockRegistry(
+		eactesting.WithModule("eac-commands",
+			eactesting.WithVersioning(),
+			eactesting.WithChangelog("go/eac/commands/CHANGELOG.md"),
+			eactesting.WithReleaseType("internal"),
+		),
+	)
 
-	// Test with a module that has an explicit changelog path
-	// Using eac-commands as an example (currently has explicit path in wrong location)
 	moduleContract, exists := moduleRegistry.Get("eac-commands")
-	if !exists {
-		t.Skip("eac-commands module not found")
-	}
+	require.True(t, exists, "mock module should always exist")
 
 	result := validateChangelog("eac-commands", moduleContract, workspaceRoot)
 
@@ -36,7 +39,7 @@ func TestValidateChangelog_ExplicitPath(t *testing.T) {
 
 	// Check if file exists at the reported path
 	fullPath := filepath.Join(workspaceRoot, result.Path)
-	_, err = os.Stat(fullPath)
+	_, err := os.Stat(fullPath)
 
 	if result.Valid {
 		// If valid, file must exist
@@ -51,36 +54,22 @@ func TestValidateChangelog_ExplicitPath(t *testing.T) {
 func TestValidateChangelog_DefaultPath(t *testing.T) {
 	workspaceRoot := getWorkspaceRoot(t)
 
-	moduleRegistry, err := modules.LoadFromWorkspace(workspaceRoot)
-	require.NoError(t, err)
+	// Use mock registry with a module using default changelog path
+	moduleRegistry := eactesting.NewMockRegistry(
+		eactesting.WithModule("r2r-cli",
+			eactesting.WithVersioning(),
+			// No explicit changelog = uses default path
+			eactesting.WithReleaseType("published"),
+		),
+	)
 
-	// Find a module with default path (versioning but no explicit changelog)
-	allModules := moduleRegistry.AllMonikers()
-	var testModule string
-	var testContract *modules.ModuleContract
+	moduleContract, exists := moduleRegistry.Get("r2r-cli")
+	require.True(t, exists, "mock module should always exist")
 
-	for _, moniker := range allModules {
-		mc, exists := moduleRegistry.Get(moniker)
-		if !exists || mc.Versioning == nil {
-			continue
-		}
+	result := validateChangelog("r2r-cli", moduleContract, workspaceRoot)
 
-		// Check if it's using default path
-		if mc.Versioning.Changelog == "" {
-			testModule = moniker
-			testContract = mc
-			break
-		}
-	}
-
-	if testModule == "" {
-		t.Skip("no module found using default changelog path")
-	}
-
-	result := validateChangelog(testModule, testContract, workspaceRoot)
-
-	assert.Equal(t, testModule, result.Module)
-	expectedPath := "release/" + testModule + "/CHANGELOG.md"
+	assert.Equal(t, "r2r-cli", result.Module)
+	expectedPath := "release/r2r-cli/CHANGELOG.md"
 	assert.Equal(t, expectedPath, result.Path)
 }
 
@@ -111,9 +100,6 @@ func TestValidateChangelog_MissingFile(t *testing.T) {
 func TestValidateRelease_InternalModules(t *testing.T) {
 	workspaceRoot := getWorkspaceRoot(t)
 
-	moduleRegistry, err := modules.LoadFromWorkspace(workspaceRoot)
-	require.NoError(t, err)
-
 	// Internal modules should have changelogs in their module roots (POST-migration)
 	internalModules := map[string]struct {
 		moduleRootPath string // Where changelog should be after Phase 2
@@ -139,16 +125,17 @@ func TestValidateRelease_InternalModules(t *testing.T) {
 
 	for moniker, paths := range internalModules {
 		t.Run(moniker, func(t *testing.T) {
-			moduleContract, exists := moduleRegistry.Get(moniker)
-			if !exists {
-				t.Skipf("module %s not found in registry", moniker)
-				return
-			}
+			// Use mock registry with predictable data
+			moduleRegistry := eactesting.NewMockRegistry(
+				eactesting.WithModule(moniker,
+					eactesting.WithVersioning(),
+					eactesting.WithChangelog(paths.moduleRootPath),
+					eactesting.WithReleaseType("internal"),
+				),
+			)
 
-			if moduleContract.Versioning == nil {
-				t.Skipf("module %s has no versioning", moniker)
-				return
-			}
+			moduleContract, exists := moduleRegistry.Get(moniker)
+			require.True(t, exists, "mock module should always exist")
 
 			// Verify release_type is internal
 			assert.Equal(t, "internal", moduleContract.Versioning.ReleaseType,

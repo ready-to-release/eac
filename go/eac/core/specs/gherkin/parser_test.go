@@ -103,9 +103,17 @@ func TestParseFile_NonExistent(t *testing.T) {
 }
 
 func TestParseFile_InvalidGherkin(t *testing.T) {
-	// We'll test this by writing empty content or malformed Gherkin
-	// For now, we'll skip since gherkin-go might be lenient
-	t.Skip("TODO: Add test for invalid Gherkin once we understand gherkin-go error handling")
+	path := filepath.Join("testdata", "invalid.feature")
+
+	_, err := ParseFile(path)
+	if err == nil {
+		t.Fatal("expected error for invalid Gherkin, got nil")
+	}
+
+	// Error should mention "parsing Gherkin" since that's where it fails
+	if !strings.Contains(err.Error(), "parsing Gherkin") {
+		t.Errorf("error should indicate Gherkin parsing failure, got: %v", err)
+	}
 }
 
 // Helper function to check if a tag exists in a list.

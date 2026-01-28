@@ -5,9 +5,11 @@ package work
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/work/internal"
+	eactesting "github.com/ready-to-release/eac/go/eac/core/testing"
 )
 
 // TestParseRemoveConfig tests the configuration parsing
@@ -87,6 +89,8 @@ func TestParseRemoveConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			eactesting.RequireGitRepository(t)
+
 			// Save original os.Args
 			oldArgs := os.Args
 			defer func() { os.Args = oldArgs }()
@@ -96,11 +100,6 @@ func TestParseRemoveConfig(t *testing.T) {
 
 			config, err := parseRemoveConfig()
 			if err != nil {
-				// Skip test if not in a git repository or other expected errors
-				if containsStr(err.Error(), "repository root") ||
-					containsStr(err.Error(), "workspace not found") {
-					t.Skip("Not in a git repository or workspace")
-				}
 				t.Fatalf("unexpected error: %v", err)
 			}
 
@@ -113,6 +112,8 @@ func TestParseRemoveConfig(t *testing.T) {
 
 // TestRemoveConfigDefaults tests default configuration values
 func TestRemoveConfigDefaults(t *testing.T) {
+	eactesting.RequireGitRepository(t)
+
 	// Save original os.Args
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
@@ -122,10 +123,6 @@ func TestRemoveConfigDefaults(t *testing.T) {
 
 	config, err := parseRemoveConfig()
 	if err != nil {
-		// Skip test if not in a git repository
-		if containsStr(err.Error(), "repository root") {
-			t.Skip("Not in a git repository")
-		}
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -202,7 +199,7 @@ func TestValidateRemoveEnvironment(t *testing.T) {
 			}
 
 			if tt.expectError && err != nil {
-				if !containsStr(err.Error(), tt.errorContains) {
+				if !strings.Contains(err.Error(), tt.errorContains) {
 					t.Errorf("expected error containing '%s', got '%s'", tt.errorContains, err.Error())
 				}
 			}

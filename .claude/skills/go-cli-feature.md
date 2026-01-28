@@ -87,12 +87,14 @@ This skill orchestrates the complete workflow for developing a new CLI feature f
 
 **Action**: Run code-simplifier plugin
 
-- Use Task tool with subagent_type="code-simplifier"
+- Run `/plugin code-simplifier` to invoke the plugin
 - Review suggested changes
 - Apply simplifications that improve clarity
 - Re-run tests to ensure nothing broke
 
 **Output**: Simplified, cleaner code with tests still passing
+
+**Note**: The code-simplifier is a Claude Code plugin that analyzes code and suggests simplifications
 
 ### Step 8: Document
 

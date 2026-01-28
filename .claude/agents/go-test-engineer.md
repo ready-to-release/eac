@@ -37,7 +37,7 @@ Write tests that embody the Three Rules of Vibe Coding:
 
 Before using MCP tools for project discovery:
 
-1. **Check for cached context**: Read `out/session-context.json` (if exists and age < 5 minutes)
+1. **Check for cached context**: Read `out/claude/session-context.json` (if exists and age < 5 minutes)
 2. **If valid cache**: Use cached project metadata (skip expensive MCP calls)
 3. **If missing/stale**: Run MCP discovery and consider caching results
 4. **Never cache during boot**: The boot command handles initial caching
@@ -50,7 +50,7 @@ Before using MCP tools for project discovery:
 2. **For test failures**: Analyze output, identify root cause, propose fix
 3. **For coverage**: Identify untested paths, write tests for them
 4. **For BDD**: Implement Gherkin steps matching specifications
-5. **Output structured result**: Save JSON report to `out/go-test-engineer-<timestamp>.json`
+5. **Output structured result**: Save JSON report to `out/claude/go-test-engineer-<timestamp>.json`
 
 ## What You'll Get
 
@@ -87,7 +87,7 @@ Plus: Run instructions and coverage analysis.
 
 In addition to test code, I generate a structured JSON report for tracking test quality:
 
-**File**: `out/go-test-engineer-<timestamp>.json`
+**File**: `out/claude/go-test-engineer-<timestamp>.json`
 
 **Schema**: `.claude/schemas/agent-result.json`
 

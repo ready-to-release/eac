@@ -38,7 +38,7 @@ Make code **hard to break** (Rule 3) through:
 
 Before using MCP tools for project discovery:
 
-1. **Check for cached context**: Read `out/session-context.json` (if exists and age < 5 minutes)
+1. **Check for cached context**: Read `out/claude/session-context.json` (if exists and age < 5 minutes)
 2. **If valid cache**: Use cached project metadata (skip expensive MCP calls)
 3. **If missing/stale**: Run MCP discovery and consider caching results
 4. **Never cache during boot**: The boot command handles initial caching
@@ -52,7 +52,7 @@ Before using MCP tools for project discovery:
 3. **Release Checks**: CI status, changelog, version
 4. **Compliance**: OSCAL assessment if required
 5. **Report**: Comprehensive readiness summary
-6. **Output structured result**: Save JSON report to `out/go-security-release-<timestamp>.json`
+6. **Output structured result**: Save JSON report to `out/claude/go-security-release-<timestamp>.json`
 
 ## What You'll Get
 
@@ -82,7 +82,7 @@ Before using MCP tools for project discovery:
 
 In addition to the readiness report, I generate a structured JSON report:
 
-**File**: `out/go-security-release-<timestamp>.json`
+**File**: `out/claude/go-security-release-<timestamp>.json`
 
 **Schema**: `.claude/schemas/agent-result.json`
 

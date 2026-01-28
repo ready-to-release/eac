@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ready-to-release.org/schemas/eac-core/testing-mocks/0.1.0",
+  "title": "Testing Mocks Configuration Schema",
+  "description": "Schema for test mocking configuration in BDD tests",
+  "type": "object",
+  "properties": {
+    "mocks": {
+      "type": "object",
+      "description": "Mock configuration for various test dependencies",
+      "properties": {
+        "ai": {
+          "$ref": "#/definitions/ai_mock"
+        },
+        "security": {
+          "$ref": "#/definitions/security_mock"
+        },
+        "docker": {
+          "$ref": "#/definitions/docker_mock"
+        },
+        "github": {
+          "$ref": "#/definitions/github_mock"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": ["mocks"],
+  "additionalProperties": false,
+  "definitions": {
+    "ai_mock": {
+      "type": "object",
+      "description": "AI provider mocking configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable AI provider mocking (uses file-based responses)",
+          "default": false
+        },
+        "mock_dir": {
+          "type": "string",
+          "description": "Base directory for mock response files (relative to repo root)",
+          "minLength": 1
+        }
+      },
+      "required": ["enabled"],
+      "additionalProperties": false
+    },
+    "security_mock": {
+      "type": "object",
+      "description": "Security tool mocking configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable security tool mocking (Trivy, Semgrep, ZAP)",
+          "default": false
+        },
+        "tools": {
+          "type": "array",
+          "description": "Specific tools to mock (if empty, mock all)",
+          "items": {
+            "type": "string",
+            "enum": ["trivy", "semgrep", "zap"]
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": ["enabled"],
+      "additionalProperties": false
+    },
+    "docker_mock": {
+      "type": "object",
+      "description": "Docker client mocking configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable Docker client mocking (no real Docker operations)",
+          "default": false
+        }
+      },
+      "required": ["enabled"],
+      "additionalProperties": false
+    },
+    "github_mock": {
+      "type": "object",
+      "description": "GitHub CLI mocking configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable GitHub CLI mocking (no real API calls)",
+          "default": false
+        },
+        "no_workflows": {
+          "type": "boolean",
+          "description": "Disable workflow execution in mocked GitHub operations",
+          "default": false
+        }
+      },
+      "required": ["enabled"],
+      "additionalProperties": false
+    }
+  }
+}

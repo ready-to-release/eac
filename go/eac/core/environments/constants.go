@@ -15,7 +15,10 @@ const (
 	EnvR2RContainerRoot = "R2R_CONTAINER_ROOT"
 
 	// Mock environment variables for testing.
-	EnvR2RMockAIDir       = "R2R_MOCK_AI_DIR"
-	EnvR2RMockSecurity    = "R2R_MOCK_SECURITY"
-	EnvR2RMockStructurizr = "R2R_MOCK_STRUCTURIZR"
+	EnvR2RMockAIDir        = "R2R_MOCK_AI_DIR"
+	EnvR2RMockSecurity     = "R2R_MOCK_SECURITY"
+	EnvR2RMockStructurizr  = "R2R_MOCK_STRUCTURIZR" // Legacy: use EnvR2RMockDocker instead
+	EnvR2RMockDocker       = "R2R_MOCK_DOCKER"       // Preferred for all Docker mocking
+	EnvR2RMockGitHubCLI    = "R2R_MOCK_GITHUB_CLI"
+	EnvR2RMockNoWorkflows  = "R2R_MOCK_NO_WORKFLOWS"
 )

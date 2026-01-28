@@ -11,11 +11,6 @@ repository:
   remote:
     owner: ready-to-release
     repo: eac
-  # Parallelism limits for build and test commands
-  # CI uses lower limits to avoid resource contention on shared GitHub Actions runners
-  parallelism:
-    ci: 4 # Max parallel workers in CI (GitHub Actions)
-    devbox: 8 # Max parallel workers in local development
 
 # Module Contracts
 # Component defaults (files.source, files.tests, files.config) loaded from component-types

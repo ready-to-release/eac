@@ -40,7 +40,7 @@ Debug code to make it **hard to break** (Rule 3):
 
 Before using MCP tools for project discovery:
 
-1. **Check for cached context**: Read `out/session-context.json` (if exists and age < 5 minutes)
+1. **Check for cached context**: Read `out/claude/session-context.json` (if exists and age < 5 minutes)
 2. **If valid cache**: Use cached project metadata (skip expensive MCP calls)
 3. **If missing/stale**: Run MCP discovery and consider caching results
 4. **Never cache during boot**: The boot command handles initial caching
@@ -54,7 +54,7 @@ Before using MCP tools for project discovery:
 3. **Identify root cause**: What actually went wrong?
 4. **Propose fix**: Minimal change with clear explanation
 5. **Add regression test**: Prevent recurrence
-6. **Output structured result**: Save JSON report to `out/go-debugger-<timestamp>.json`
+6. **Output structured result**: Save JSON report to `out/claude/go-debugger-<timestamp>.json`
 
 ## What You'll Get
 
@@ -92,7 +92,7 @@ Run: `go test ./path -run TestName`
 
 In addition to the root cause analysis, I generate a structured JSON report:
 
-**File**: `out/go-debugger-<timestamp>.json`
+**File**: `out/claude/go-debugger-<timestamp>.json`
 
 **Schema**: `.claude/schemas/agent-result.json`
 

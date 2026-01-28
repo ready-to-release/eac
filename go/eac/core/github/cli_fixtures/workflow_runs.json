@@ -1,0 +1,26 @@
+[
+  {
+    "databaseId": 123456789,
+    "headSha": "abc123def456",
+    "status": "completed",
+    "conclusion": "success",
+    "createdAt": "2026-01-26T10:00:00Z",
+    "name": "CI"
+  },
+  {
+    "databaseId": 987654321,
+    "headSha": "fed456abc123",
+    "status": "completed",
+    "conclusion": "failure",
+    "createdAt": "2026-01-26T09:00:00Z",
+    "name": "CI"
+  },
+  {
+    "databaseId": 555555555,
+    "headSha": "pending123",
+    "status": "in_progress",
+    "conclusion": "",
+    "createdAt": "2026-01-26T11:00:00Z",
+    "name": "CI"
+  }
+]

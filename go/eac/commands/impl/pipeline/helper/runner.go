@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -18,8 +19,10 @@ var log = logging.C()
 
 // PipelineRunner orchestrates execution of module pipelines.
 type PipelineRunner struct {
-	repoPath string
-	ghCLI    GitHubCLI
+	repoPath    string
+	ghCLI       GitHubCLI
+	wait        bool // Wait for pipeline completion
+	timeout     int  // Timeout in seconds (0 = no timeout)
 }
 
 // New creates a new PipelineRunner.
@@ -27,11 +30,29 @@ func New(repoPath string) *PipelineRunner {
 	return &PipelineRunner{
 		repoPath: repoPath,
 		ghCLI:    NewGitHubCLI(repoPath),
+		wait:     true, // Default to waiting
+		timeout:  0,    // Default to no timeout
 	}
+}
+
+// SetWaitOptions configures wait behavior for the pipeline runner.
+func (r *PipelineRunner) SetWaitOptions(wait bool, timeout int) {
+	r.wait = wait
+	r.timeout = timeout
 }
 
 // RunPipeline executes a single pipeline.
 func (r *PipelineRunner) RunPipeline(moniker, ref string) error {
+	// First check if the module exists in the registry
+	registry, err := modules.LoadFromWorkspace(r.repoPath)
+	if err != nil {
+		return fmt.Errorf("failed to load module registry: %w", err)
+	}
+
+	if _, exists := registry.Get(moniker); !exists {
+		return fmt.Errorf("module not found: %s", moniker)
+	}
+
 	workflowFile := moniker + ".yaml"
 
 	// Check if workflow file exists
@@ -48,13 +69,27 @@ func (r *PipelineRunner) RunPipeline(moniker, ref string) error {
 	}
 
 	log.Infof("Started run %s for %s", runID, moniker)
-	log.Info("Waiting for completion...")
 
-	if err := r.ghCLI.WatchRun(runID); err != nil {
-		return fmt.Errorf("pipeline failed for %s: %w", moniker, err)
+	// Wait for completion if wait flag is set
+	if r.wait {
+		log.Info("Waiting for completion...")
+
+		var err error
+		if r.timeout > 0 {
+			err = r.ghCLI.WatchRunWithTimeout(runID, r.timeout)
+		} else {
+			err = r.ghCLI.WatchRun(runID)
+		}
+
+		if err != nil {
+			return fmt.Errorf("pipeline failed for %s: %w", moniker, err)
+		}
+
+		log.Infof("✅ %s completed successfully", moniker)
+	} else {
+		log.Info("Pipeline started (not waiting for completion)")
 	}
 
-	log.Infof("✅ %s completed successfully", moniker)
 	return nil
 }
 
@@ -131,8 +166,20 @@ func (r *PipelineRunner) RunAllPipelines(ref string) error {
 func (r *PipelineRunner) RunAllChangedPipelines(ref string) error {
 	log.Info("Detecting changed modules...")
 
-	// Get changed files using git diff
-	cmd := exec.Command("git", "diff", "--name-only", "HEAD")
+	// Determine what to compare against
+	// If ref is provided and not the current branch, compare against that ref
+	// Otherwise, detect uncommitted changes (diff HEAD)
+	var cmd *exec.Cmd
+	if ref != "" && ref != getCurrentBranch(r.repoPath) {
+		// Compare against specific ref
+		log.Infof("Comparing against ref: %s", ref)
+		cmd = exec.Command("git", "diff", "--name-only", ref)
+	} else {
+		// Detect uncommitted changes
+		log.Info("Detecting uncommitted changes...")
+		cmd = exec.Command("git", "diff", "--name-only", "HEAD")
+	}
+
 	cmd.Dir = r.repoPath
 	output, err := cmd.Output()
 	if err != nil {
@@ -169,6 +216,17 @@ func (r *PipelineRunner) RunAllChangedPipelines(ref string) error {
 	return r.RunPipelines(modules, ref)
 }
 
+// getCurrentBranch gets the current git branch name.
+func getCurrentBranch(repoPath string) string {
+	cmd := exec.Command("git", "branch", "--show-current")
+	cmd.Dir = repoPath
+	output, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(output))
+}
+
 // executeLayers executes pipeline layers sequentially, with parallel execution within each layer.
 func (r *PipelineRunner) executeLayers(plan *repository.ExecutionPlan, ref string) error {
 	for layerIdx, layer := range plan.Layers {
@@ -194,16 +252,27 @@ func (r *PipelineRunner) executeLayers(plan *repository.ExecutionPlan, ref strin
 
 		log.Info("")
 
-		// Wait for all workflows in this layer to complete
-		for _, moniker := range layer {
-			runID := runIDs[moniker]
-			log.Infof("Waiting for %s (run %s)...", moniker, runID)
+		// Wait for all workflows in this layer to complete (if wait is enabled)
+		if r.wait {
+			for _, moniker := range layer {
+				runID := runIDs[moniker]
+				log.Infof("Waiting for %s (run %s)...", moniker, runID)
 
-			if err := r.ghCLI.WatchRun(runID); err != nil {
-				return fmt.Errorf("pipeline failed: %s: %w", moniker, err)
+				var err error
+				if r.timeout > 0 {
+					err = r.ghCLI.WatchRunWithTimeout(runID, r.timeout)
+				} else {
+					err = r.ghCLI.WatchRun(runID)
+				}
+
+				if err != nil {
+					return fmt.Errorf("pipeline failed: %s: %w", moniker, err)
+				}
+
+				log.Infof("  ✅ %s completed", moniker)
 			}
-
-			log.Infof("  ✅ %s completed", moniker)
+		} else {
+			log.Info("Pipelines started (not waiting for completion)")
 		}
 
 		log.Info("")

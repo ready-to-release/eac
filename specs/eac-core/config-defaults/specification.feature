@@ -419,22 +419,6 @@ Feature: Configuration Defaults System
       And the system dependencies config contains "docker"
 
   # ===========================================================================
-  # Category G: Loading Precedence
-  # ===========================================================================
-
-  Rule: Filesystem defaults take precedence over embedded
-
-    # NOTE: This scenario tests embedded defaults fallback which requires
-    # the config loader to use go:embed for defaults. Currently not implemented.
-    @skip @pending
-    Scenario: G1 - Embedded defaults are used when filesystem unavailable
-      Given the repository has no ".r2r/eac" directory
-      And the contracts directory does not exist
-      When I load the EAC configuration
-      Then the modules config contains module "default"
-      And the module types config contains type "go"
-
-  # ===========================================================================
   # Category H: Edge Cases
   # ===========================================================================
 

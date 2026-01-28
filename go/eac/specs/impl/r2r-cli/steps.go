@@ -38,10 +38,7 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	// Initialize executable path
 	initializeExecutablePath()
 
-	// r2r-cli specific steps (use different pattern to avoid conflict with common steps)
-	sc.Step(`^I run r2r "([^"]*)"$`, iRunR2r)
-	sc.Step(`^I should see "([^"]*)" or "([^"]*)" or "([^"]*)"$`, iShouldSeeOrOr)
-	sc.Step(`^I should see "([^"]*)" or "([^"]*)"$`, iShouldSeeOr)
+	// r2r-cli specific steps (common steps like "I should see" are in internal/steps.go)
 	sc.Step(`^I should see version number$`, iShouldSeeVersionNumber)
 
 	// CLI integration test steps
@@ -57,9 +54,14 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 }
 
 func initializeExecutablePath() {
-	// Find the pre-built executable
+	// If not already set, find the pre-built executable
+	if cliCtx.executablePath != "" {
+		return
+	}
+
 	// Expected location: out/build/r2r-cli/<platform>-r2r-cli (or <platform>-r2r-cli.exe on Windows)
-	workspaceRoot := filepath.Join("..", "..", "..", "..")
+	// Working directory during test is go/eac, so we go up 2 levels to repo root
+	workspaceRoot := filepath.Join("..", "..")
 
 	possiblePaths := []string{
 		filepath.Join(workspaceRoot, "out", "build", "r2r-cli", "windows-r2r-cli.exe"),
@@ -70,51 +72,20 @@ func initializeExecutablePath() {
 	}
 
 	for _, execPath := range possiblePaths {
-		if _, err := os.Stat(execPath); err == nil {
-			absPath, err := filepath.Abs(execPath)
-			if err == nil {
-				cliCtx.executablePath = absPath
-			}
-			break
+		absPath, err := filepath.Abs(execPath)
+		if err != nil {
+			continue
+		}
+		if _, err := os.Stat(absPath); err == nil {
+			cliCtx.executablePath = absPath
+			return
 		}
 	}
 }
 
 // ============================================================================
-// Common Steps
+// r2r-cli Specific Steps
 // ============================================================================
-
-func iRunR2r(args string) error {
-	if cliCtx.executablePath == "" {
-		return fmt.Errorf("r2r executable not found - please run 'build module r2r-cli' first")
-	}
-
-	parts := []string{cliCtx.executablePath}
-	if args != "" {
-		parts = append(parts, strings.Fields(args)...)
-	}
-
-	return runCommandWithArgs(parts...)
-}
-
-func iShouldSeeOrOr(text1, text2, text3 string) error {
-	if strings.Contains(cliCtx.sharedCtx.CommandOutput, text1) ||
-		strings.Contains(cliCtx.sharedCtx.CommandOutput, text2) ||
-		strings.Contains(cliCtx.sharedCtx.CommandOutput, text3) {
-		return nil
-	}
-	return fmt.Errorf("expected output to contain one of '%s', '%s', or '%s', got:\n%s",
-		text1, text2, text3, cliCtx.sharedCtx.CommandOutput)
-}
-
-func iShouldSeeOr(text1, text2 string) error {
-	if strings.Contains(cliCtx.sharedCtx.CommandOutput, text1) ||
-		strings.Contains(cliCtx.sharedCtx.CommandOutput, text2) {
-		return nil
-	}
-	return fmt.Errorf("expected output to contain '%s' or '%s', got:\n%s",
-		text1, text2, cliCtx.sharedCtx.CommandOutput)
-}
 
 func iShouldSeeVersionNumber() error {
 	output := strings.ToLower(cliCtx.sharedCtx.CommandOutput)
