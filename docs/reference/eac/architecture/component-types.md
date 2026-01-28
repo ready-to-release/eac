@@ -263,6 +263,118 @@ components:
 
 ---
 
+## Resource Configuration
+
+Components consume resources during build, test, lint, and scan operations. EAC provides two mechanisms to control resource allocation:
+
+1. **Tool Resources** - Base resource limits defined per tool in `tool-config.yml`
+2. **Component Amp** - Per-component multiplier defined in `repository.yml`
+
+### Tool Resources
+
+Each tool can define resource requirements in `tool-config.yml`:
+
+```yaml
+tools:
+  mkdocs-system:
+    type: container
+    resources:
+      cpus: 4        # CPU cores (also used as scheduling weight)
+      memory: "4g"   # Memory limit (e.g., "512m", "2g", "8g")
+      shm_size: "1g" # Shared memory size (optional, for browsers/heavy tools)
+```
+
+**Resource Fields:**
+
+| Field | Description | Default | Example |
+|-------|-------------|---------|---------|
+| `cpus` | CPU cores allocated to container; also used as scheduling weight | 1 | `4` |
+| `memory` | Memory limit for container | unlimited | `"4g"`, `"512m"` |
+| `shm_size` | Shared memory (`/dev/shm`) size | Docker default | `"1g"` |
+
+**Typical Resource Values by Tool Type:**
+
+| Tool Category | CPUs | Memory | Notes |
+|--------------|------|--------|-------|
+| Linters | 1-2 | 2-4g | Fast, low memory |
+| Go builds | 2-4 | 4g | Parallelizes well |
+| TypeScript builds | 2 | 4g | Node.js memory usage |
+| MkDocs/Books | 4 | 4g | PDF generation is heavy |
+| Docker buildx | 4 | 4g+ | Layer caching helps |
+| Security scanners | 2 | 2-4g | Database lookups |
+
+### Component Amp (Resource Amplifier)
+
+The `amp` field lets you adjust resource allocation per-component without modifying tool definitions. This is useful when specific components need more or fewer resources than the default.
+
+**Configuration in `repository.yml`:**
+
+```yaml
+modules:
+  - moniker: my-module
+    components:
+      # Heavy PDF book needs more build resources
+      howto:
+        type: book
+        amp:
+          build: 2.0    # Double the base tool resources
+
+      # Standard Go component with heavy tests
+      go:
+        root: go/my-module
+        amp:
+          build: 1.0    # Normal build resources
+          test: 2.0     # Double resources for parallel tests
+          lint: 0.5     # Half resources (linting is light)
+
+      # Trivial markdown docs
+      readme:
+        type: markdown
+        amp:
+          lint: 0.5     # Minimal resources needed
+```
+
+**Amp Operations:**
+
+| Operation | When Applied |
+|-----------|--------------|
+| `build` | During `eac build` |
+| `test` | During `eac test` |
+| `lint` | During `eac lint` |
+| `scan` | During `eac scan` |
+
+**Amp Value Effects:**
+
+| Amp Value | Effect | Use Case |
+|-----------|--------|----------|
+| `1.0` | No change (default) | Most components |
+| `2.0` | Double resources | Heavy builds, large test suites |
+| `0.5` | Half resources | Lightweight linting, small components |
+| `0.1` | Minimum (10%) | Trivial operations |
+| `10.0` | Maximum (10x) | Extreme resource needs |
+
+**How Amp Works:**
+
+1. **Scheduling Weight**: `base_cpus × amp` determines parallel slot allocation
+2. **Container Resources**: CPU and memory limits are multiplied by amp
+
+```
+Example: Tool has cpus: 4, memory: 4g
+         Component has amp.build: 2.0
+
+Result:  Scheduling weight = 8
+         Container gets 8 CPUs, 8GB memory
+```
+
+**When to Use Amp:**
+
+- ✅ One component is slower than others of same type
+- ✅ Test suite needs more parallelism
+- ✅ Linting a small component doesn't need full resources
+- ❌ All components of a type need more resources (update tool-config.yml instead)
+
+---
+
 ## Component Configuration
 
 ### Simple Form (Path Only)
@@ -385,3 +497,5 @@ r2r eac show-modules
 - [Modules](./index.md) - Module system and dependency management
 - [Contracts](../contracts/index.md) - Contract system and YAML schemas
 - [Dependencies](./dependencies.md) - Dependency resolution details
+- `contracts/eac-core/0.1.0/defaults/tool-config.yml` - Tool definitions with resource settings
+- `contracts/eac-core/0.1.0/repository.schema.json` - Schema for amp configuration

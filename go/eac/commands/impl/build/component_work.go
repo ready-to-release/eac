@@ -1,10 +1,13 @@
 package build
 
 import (
+	"math"
+
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/builders"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/cmdframework"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
 	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/ready-to-release/eac/go/eac/core/tool"
 )
 
 // FlattenModulesToComponentWork converts module layers to component work layers.
@@ -64,19 +67,24 @@ func FlattenModulesToComponentWork(ctx *cmdframework.ExecutionContext) [][]orche
 				// Get component type (may differ from name for named components)
 				compTypeName := module.Components.GetComponentType(componentName)
 
-				// Get weight and build_after from component type config
-				weight := 1
+				// Get build_after from component type config
 				var buildAfter []string
-
 				compType := cfg.ComponentTypes.Get(compTypeName)
 				if compType != nil {
-					weight = compType.GetBuildWeight()
 					buildAfter = compType.GetBuildAfter()
 				}
 
-					work := orchestrator.ComponentWork{
+				// Get weight (base weight × amp, calculated internally)
+				weight := getComponentWeight(moniker, componentName, compTypeName, tool.OperationBuild)
+
+				// Component work item: component name includes builder for unique identification
+				// Format: "component:builder" so display becomes "module:component:builder"
+				// This matches the lint pattern (e.g., "go:golangci-lint")
+				componentWithBuilder := componentName + ":" + handlerName
+
+				work := orchestrator.ComponentWork{
 					Module:        moniker,
-					Component:     componentName,
+					Component:     componentWithBuilder,
 					ComponentType: compTypeName,
 					Handler:       handlerName,
 					Weight:        weight,
@@ -113,4 +121,43 @@ func CountComponents(layers [][]orchestrator.ComponentWork) int {
 		count += len(layer)
 	}
 	return count
+}
+
+// getToolWeight returns the scheduling weight for a component type and operation.
+// Weight is derived from tool.Resources.CPUs. Defaults to 1.
+func getToolWeight(componentType string, operation tool.OperationType) int {
+	bridge := tool.GlobalBuildBridge()
+	if bridge == nil {
+		return 1
+	}
+
+	t := bridge.ResolveTool(componentType, operation)
+	if t == nil {
+		return 1
+	}
+
+	return t.Resources.Weight()
+}
+
+// getComponentWeight returns the scheduling weight for a component.
+// Weight = base tool weight × component amp (from config).
+func getComponentWeight(moniker, componentName, componentType string, operation tool.OperationType) int {
+	baseWeight := getToolWeight(componentType, operation)
+
+	// Get amp from config (the source of truth)
+	amp := 1.0
+	cfg := config.Global()
+	if cfg != nil && cfg.Repository != nil {
+		if module, ok := cfg.Repository.GetModule(moniker); ok && module != nil {
+			amp = module.GetComponentAmp(componentName, string(operation))
+		}
+	}
+
+	// Apply amp to weight (ceil to ensure at least 1)
+	weight := int(math.Ceil(float64(baseWeight) * amp))
+	if weight < 1 {
+		weight = 1
+	}
+
+	return weight
 }

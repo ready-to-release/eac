@@ -166,20 +166,10 @@ func ComputeRiskScore(module string, likelihood, impact int, reasoning string) *
 }
 
 // GetDefaultImpact returns default impact rating based on module type.
+// Uses configurable mappings from risk-scoring.yml with fallback to defaults.
 // Can be overridden by module metadata.
 func GetDefaultImpact(moduleType string) int {
-	switch moduleType {
-	case "api", "service", "gateway":
-		return 4 // High: External-facing
-	case "library", "core":
-		return 3 // Medium: Shared code
-	case "cli", "tool":
-		return 2 // Low: Developer tools
-	case "docs", "config":
-		return 1 // Very Low: Documentation/config
-	default:
-		return 3 // Default: Medium
-	}
+	return GetRiskScoringConfig().GetImpact(moduleType)
 }
 
 // FormatRiskBandColor returns ANSI color code for risk band.

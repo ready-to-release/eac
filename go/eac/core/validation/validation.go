@@ -38,27 +38,20 @@ func NewValidationErrorWithContext(code ErrorCode, message string, line int, con
 
 // NewLegacyValidationError creates a validation error from legacy string code (backward compatibility).
 func NewLegacyValidationError(code, message string, line int, severity string) *ValidationError {
-	// Try to look up structured error code
-	if ec, ok := GetErrorCode(code); ok {
-		return &ValidationError{
-			Code:       ec,
-			LegacyCode: code,
-			Message:    message,
-			Line:       line,
-			Severity:   string(ec.Severity),
-			Context:    "",
-		}
-	}
-
-	// Fall back to legacy mode (no structured code)
-	return &ValidationError{
-		Code:       nil,
+	ve := &ValidationError{
 		LegacyCode: code,
 		Message:    message,
 		Line:       line,
 		Severity:   severity,
-		Context:    "",
 	}
+
+	// Try to look up structured error code, override severity if found
+	if ec, ok := GetErrorCode(code); ok {
+		ve.Code = ec
+		ve.Severity = string(ec.Severity)
+	}
+
+	return ve
 }
 
 // GetCode returns the error code string.

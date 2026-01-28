@@ -359,5 +359,5 @@ r2r eac build             # Use extension
 
 - [R2R CLI Overview](../../r2r/index.md) - Framework commands
 - [EAC Commands Reference](../../eac/commands/index.md) - Extension commands
-- [Configuration Guide](../../r2r/configuration/) - Detailed configuration
+- [Configuration Guide](../../r2r/configuration/index.md) - Detailed configuration
 - [Quick Start Tutorial](../../../tutorials/getting-started/quick-start.md) - Getting started

@@ -7,9 +7,8 @@ import (
 	"time"
 
 	"github.com/gofrs/flock"
+	"github.com/ready-to-release/eac/go/eac/core/config"
 )
-
-const DefaultLockTimeout = 30 * time.Second
 
 // AtomicWriteJSONWithLock combines atomic write with file locking.
 // Pattern extracted from oscal/writer.go WriteAssessmentResults().
@@ -21,7 +20,7 @@ func AtomicWriteJSONWithLock(path string, v interface{}, perm os.FileMode) error
 	lockPath := path + ".lock"
 	lock := flock.New(lockPath)
 
-	ctx, cancel := context.WithTimeout(context.Background(), DefaultLockTimeout)
+	ctx, cancel := config.WithFileLockContext(context.Background())
 	defer cancel()
 
 	locked, err := lock.TryLockContext(ctx, 100*time.Millisecond)
@@ -29,7 +28,7 @@ func AtomicWriteJSONWithLock(path string, v interface{}, perm os.FileMode) error
 		return fmt.Errorf("acquiring lock: %w", err)
 	}
 	if !locked {
-		return fmt.Errorf("file locked by another process (timeout after %s)", DefaultLockTimeout)
+		return fmt.Errorf("file locked by another process (timeout after %s)", config.FileLockTimeout())
 	}
 	defer func() {
 		//nolint:errcheck // best-effort cleanup

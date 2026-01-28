@@ -7,12 +7,12 @@ from development through production with quality, traceability, and compliance b
 
 | Topic                                       | Description                                                                  |
 | ------------------------------------------- | ---------------------------------------------------------------------------- |
-| [Core Concepts](./core-concepts/)           | Unit of Flow and Deployable Modules fundamentals                             |
-| [CD Model](./cd-model/)                     | Complete 12-stage framework with visual notation and implementation patterns |
-| [Workflow](./workflow/)                     | Trunk-based development and branching strategies                             |
-| [Testing](./testing/)                       | Testing strategy integrated throughout all CD Model stages                   |
-| [Quality Gates](./quality-gates/)           | Quality gate philosophy and Stage 2, 3, 9 gate explanations                  |
-| [Deployment](./deployment/)                 | Deployment strategies and ring-based rollout patterns                        |
-| [Release Management](./release-management/) | Release documentation and approval patterns (RA vs CDe)                      |
-| [Environments](./environments/)             | Environment types and network security zones                                 |
-| [Security](./security/)                     | Security integration using open-source tools                                 |
+| [Core Concepts](./core-concepts/index.md)           | Unit of Flow and Deployable Modules fundamentals                             |
+| [CD Model](./cd-model/index.md)                     | Complete 12-stage framework with visual notation and implementation patterns |
+| [Workflow](./workflow/index.md)                     | Trunk-based development and branching strategies                             |
+| [Testing](./testing/index.md)                       | Testing strategy integrated throughout all CD Model stages                   |
+| [Quality Gates](./quality-gates/index.md)           | Quality gate philosophy and Stage 2, 3, 9 gate explanations                  |
+| [Deployment](./deployment/index.md)                 | Deployment strategies and ring-based rollout patterns                        |
+| [Release Management](./release-management/index.md) | Release documentation and approval patterns (RA vs CDe)                      |
+| [Environments](./environments/index.md)             | Environment types and network security zones                                 |
+| [Security](./security/index.md)                     | Security integration using open-source tools                                 |

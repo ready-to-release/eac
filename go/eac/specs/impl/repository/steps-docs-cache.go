@@ -99,8 +99,10 @@ func (c *repositoryContext) checkMermaidBlocksAgainstCache() error {
 	c.uncachedMermaidBlocks = []mermaidBlockInfo{}
 
 	for _, block := range c.mermaidBlocks {
-		// Check if cached SVG exists
-		cachePath := filepath.Join(cacheDir, "mermaid", block.hash+".svg")
+		// Check if cached SVG exists using the same path format as the build system
+		// Format: {identifier}_{blockIndex}_{shortHash}.svg
+		// paths.MermaidCachePath handles identifier extraction and hash truncation
+		cachePath := paths.MermaidCachePath(cacheDir, block.sourceFile, block.blockIndex, block.hash)
 		if _, err := os.Stat(cachePath); os.IsNotExist(err) {
 			c.uncachedMermaidBlocks = append(c.uncachedMermaidBlocks, block)
 		}
@@ -226,7 +228,8 @@ func (c *repositoryContext) checkDrawioImagesAgainstCache() error {
 	for _, img := range c.drawioImages {
 		// Calculate cache key hash (same algorithm as books/cache.go)
 		cacheHash := hashDrawioContent(img.hash, maxWidth)
-		cachePath := filepath.Join(cacheDir, "drawio", cacheHash+".png")
+		// Use DrawioCachePath which includes traceable filename: {identifier}_{hash8}.png
+		cachePath := paths.DrawioCachePath(cacheDir, img.relPath, cacheHash)
 
 		if _, err := os.Stat(cachePath); os.IsNotExist(err) {
 			c.uncachedDrawioImages = append(c.uncachedDrawioImages, img)

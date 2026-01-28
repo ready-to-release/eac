@@ -4,7 +4,9 @@ nav:
   - update.md
   - design.md
   - docs.md
+  - docs-manifest.md
   - evidence.md
+  - lint.md
   - lint/
   - pdf-screenshots.md
   - structurizr.md

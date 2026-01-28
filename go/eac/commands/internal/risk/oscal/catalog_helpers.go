@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
+	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
@@ -82,8 +82,8 @@ func LoadCatalog(catalogPath string) (*oscalTypes.Catalog, error) {
 
 // fetchCatalogFromURL fetches catalog JSON from a URL with timeout.
 func fetchCatalogFromURL(url string) ([]byte, error) {
-	// Create context with 30 second timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	// Create context with HTTP request timeout
+	ctx, cancel := context.WithTimeout(context.Background(), config.HTTPRequestTimeout())
 	defer cancel()
 
 	// Create request with context

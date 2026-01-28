@@ -100,10 +100,10 @@ func GetRepositoryRoot(startPath string) (string, error) {
 		currentPath = parentPath
 	}
 
-	// If in Docker mode and no git root found, fall back to /var/task
+	// If in Docker mode and no git root found, fall back to ContainerRepoRoot
 	// This handles the case where we're in a subdirectory of the mounted repo
 	if os.Getenv("R2R_DOCKER_MODE") == "true" {
-		return "/var/task", nil
+		return paths.ContainerRepoRoot, nil
 	}
 
 	// Not in Docker mode and no git root found - error

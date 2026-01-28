@@ -17,16 +17,15 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/cmdframework"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/initsummary"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/locking"
-	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/environments"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	moduledeps "github.com/ready-to-release/eac/go/eac/core/module-deps"
-	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 	"github.com/ready-to-release/eac/go/eac/core/testing"
-	"github.com/ready-to-release/eac/go/eac/core/tool"
 	"github.com/ready-to-release/eac/go/eac/core/teststate"
+	"github.com/ready-to-release/eac/go/eac/core/tool"
 )
 
 func init() {
@@ -45,17 +44,15 @@ type TestFrameworkConfig struct {
 	ListOnly    bool
 
 	// Resolved during execution
-	Suite             *testing.TestSuite
-	SelectedTests     []testing.TestReference
-	TestsByPackage    map[string][]testing.TestReference
-	TestsByModulePath map[string][]testing.TestReference
-	ModulePathToPkg   map[string]string
-	ModuleMapper      *ModuleMapper
-	TestRunDir        string
-	SuiteTagFilter    string
-	OSFilteredCount   int
+	Suite           *testing.TestSuite
+	SelectedTests   []testing.TestReference
+	TestsByPackage  map[string][]testing.TestReference // Package path -> tests
+	ModuleMapper    *ModuleMapper
+	TestRunDir      string
+	SuiteTagFilter  string
+	OSFilteredCount int
 
-	// Execution paths
+	// Execution paths (using package paths directly)
 	ParallelPaths   []string
 	SequentialPaths []string
 
@@ -313,17 +310,13 @@ func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 		testCfg.TestsByPackage = testsByPackage
 	}
 
-	// Convert to module paths and build execution plan
-	testsByModulePath, modulePathToPkg := convertToModulePaths(testsByPackage, ctx.WorkspaceRoot, ctx.EACConfig)
-	testCfg.TestsByModulePath = testsByModulePath
-	testCfg.ModulePathToPkg = modulePathToPkg
-
-	// Separate parallel vs sequential paths
+	// Separate parallel vs sequential paths using package paths directly
+	// (No conversion to module paths - tests use path-based keys)
 	var parallelPaths, sequentialPaths []string
 	moduleTypes := make(map[string]string)
 	moduleTypeSet := make(map[string]map[string]bool) // Track unique test types per moniker
 
-	for modulePath, tests := range testsByModulePath {
+	for pkgPath, tests := range testsByPackage {
 		hasSequential := false
 		for i := range tests {
 			test := &tests[i]
@@ -334,19 +327,18 @@ func testAfterResolve(ctx *cmdframework.ExecutionContext) error {
 		}
 
 		if hasSequential {
-			sequentialPaths = append(sequentialPaths, modulePath)
+			sequentialPaths = append(sequentialPaths, pkgPath)
 		} else {
-			parallelPaths = append(parallelPaths, modulePath)
+			parallelPaths = append(parallelPaths, pkgPath)
 		}
 
-		// Aggregate test types by moniker (e.g., "eac-core" from "eac-core/config")
-		// A module may have multiple components with different test types
+		// Aggregate test types by moniker using module mapper
 		if len(tests) > 0 {
-			moniker := extractMonikerFromModulePath(modulePath)
+			moniker := extractMonikerFromPath(pkgPath, testCfg.ModuleMapper)
 			if moduleTypeSet[moniker] == nil {
 				moduleTypeSet[moniker] = make(map[string]bool)
 			}
-			// Capture ALL test types from this component, not just the first
+			// Capture ALL test types from this package, not just the first
 			for i := range tests {
 				moduleTypeSet[moniker][tests[i].Type] = true
 			}
@@ -399,8 +391,8 @@ func testBeforeExecute(ctx *cmdframework.ExecutionContext) error {
 	}
 
 	testCfg.ExecCtx = &TestExecutionContext{
-		testsByPackage:  testCfg.TestsByModulePath,
-		modulePathToPkg: testCfg.ModulePathToPkg,
+		testsByPackage:  testCfg.TestsByPackage,
+		modulePathToPkg: nil, // No longer needed - using package paths directly
 		testParallelism: testParallelism,
 		testRunDir:      testCfg.TestRunDir,
 		coverage:        testCfg.Coverage,
@@ -460,7 +452,7 @@ func testAfterExecute(ctx *cmdframework.ExecutionContext) error {
 	// Generate test manifests
 	manifests.GenerateTestManifests(
 		results,
-		testCfg.TestsByModulePath,
+		testCfg.TestsByPackage,
 		cucumberResultsByModule,
 		testCfg.SuiteName,
 		testDuration,
@@ -515,9 +507,10 @@ func testWorker(ctx *cmdframework.ExecutionContext, modulePath string, logWriter
 	return 0
 }
 
-// testComponentWorker runs tests for a module path using component-level execution.
+// testComponentWorker runs tests for a package path using component-level execution.
 // This is called by the ComponentScheduler for parallel test component execution.
-// The component parameter is the subpath (e.g., "config" for "eac-core/config").
+// The component parameter is in "path:testType" format (e.g., "go/eac/core/config:gotest").
+// Note: The path may contain "/" so we parse from the right to find the test type.
 func testComponentWorker(ctx *cmdframework.ExecutionContext, module, component string, logWriter io.Writer) int {
 	testCfg, ok := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
 	if !ok || testCfg == nil {
@@ -530,32 +523,60 @@ func testComponentWorker(ctx *cmdframework.ExecutionContext, module, component s
 		return 1
 	}
 
-	// Reconstruct the full modulePath from module + component for test lookup
-	// component is now just the subpath (e.g., "config"), so we need module/component
-	var modulePath string
-	if component == module {
-		// No subpath case: component equals module name
-		modulePath = module
+	// Parse component parameter: "path:testType" (e.g., "go/eac/core/config:gotest")
+	// The path may contain "/" so we find the LAST ":" to split path from testType
+	lastColonIdx := strings.LastIndex(component, ":")
+	var pkgPath, testType string
+	if lastColonIdx > 0 {
+		pkgPath = component[:lastColonIdx]
+		testType = component[lastColonIdx+1:]
 	} else {
-		modulePath = module + "/" + component
+		// No colon found - component is just the path
+		pkgPath = component
+		testType = ""
 	}
 
-	tests := testCfg.ExecCtx.testsByPackage[modulePath]
+	tests := testCfg.ExecCtx.testsByPackage[pkgPath]
 	if len(tests) == 0 {
-		fmt.Fprintf(logWriter, "No tests found for component: %s\n", modulePath)
+		fmt.Fprintf(logWriter, "No tests found for path: %s\n", pkgPath)
 		return 0
 	}
 
-	// Build output directory using component-level path
-	// component is already just the subpath, so use it directly
-	outputDir := paths.ComponentTestOutputPath(ctx.WorkspaceRoot, module, component)
+	// Filter tests by type if specified
+	if testType != "" {
+		tests = filterTestsByType(tests, testType)
+		if len(tests) == 0 {
+			fmt.Fprintf(logWriter, "No %s tests found for path: %s\n", testType, pkgPath)
+			return 0
+		}
+	}
+
+	// Build output directory using sanitized path with test type
+	// Sanitize path for directory name (replace "/" and ":" with "_" for Windows compatibility)
+	sanitizedPath := strings.ReplaceAll(pkgPath, "/", "_")
+	sanitizedPath = strings.ReplaceAll(sanitizedPath, ":", "_")
+	componentDir := sanitizedPath
+	if testType != "" {
+		componentDir = sanitizedPath + "_" + testType
+	}
+	outputDir := filepath.Join(ctx.WorkspaceRoot, ctx.EACConfig.Repository.TestOutputDir(), componentDir)
 
 	// Run tests with OutputDir set
-	result := testCfg.ExecCtx.runPackageTestsWithOutputDir(modulePath, tests, logWriter, outputDir)
+	// Use the full component key (path:testType) as result key for proper aggregation
+	resultKey := component // Already in "path:testType" format
+	result := testCfg.ExecCtx.runPackageTestsWithOutputDir(pkgPath, tests, logWriter, outputDir)
 
 	testCfg.ExecCtx.mu.Lock()
-	testCfg.ExecCtx.results[modulePath] = result
+	testCfg.ExecCtx.results[resultKey] = result
 	testCfg.ExecCtx.mu.Unlock()
+
+	// Pass test counts to orchestrator for summary display
+	ctx.Orchestrator.SetComponentExtras(module, component, orchestrator.ComponentExtras{
+		TestsTotal:   result.TestsTotal,
+		TestsPassed:  result.TestsPassed,
+		TestsFailed:  result.TestsFailed,
+		TestsSkipped: result.TestsSkipped,
+	})
 
 	if result.PackageFailed || result.TestsFailed > 0 {
 		return 1
@@ -563,17 +584,27 @@ func testComponentWorker(ctx *cmdframework.ExecutionContext, module, component s
 	return 0
 }
 
-// extractSubpathFromModulePath extracts the subpath from a module path.
-// Input: "eac-core/config" or "eac-commands"
-// Output: "config" or ""
-func extractSubpathFromModulePath(modulePath string) string {
-	if idx := strings.Index(modulePath, "/"); idx >= 0 {
-		return modulePath[idx+1:]
+// filterTestsByType returns only tests matching the specified type.
+func filterTestsByType(tests []testing.TestReference, testType string) []testing.TestReference {
+	var filtered []testing.TestReference
+	for i := range tests {
+		if tests[i].Type == testType {
+			filtered = append(filtered, tests[i])
+		}
 	}
-	return ""
+	return filtered
 }
 
 // Helper functions
+
+// extractMonikerFromPath extracts the module moniker from a package path.
+// Returns empty string if mapper is nil or path doesn't map to any module.
+func extractMonikerFromPath(pkgPath string, mapper *ModuleMapper) string {
+	if mapper == nil {
+		return ""
+	}
+	return mapper.GetModuleForPackagePath(pkgPath)
+}
 
 func verifyTestDependencies(ctx *cmdframework.ExecutionContext, testCfg *TestFrameworkConfig) error {
 	systemDeps := testing.GetSystemDependencies(testCfg.SelectedTests)
@@ -593,6 +624,9 @@ func verifyTestDependencies(ctx *cmdframework.ExecutionContext, testCfg *TestFra
 		toolID := strings.TrimPrefix(dep, "@deps:")
 		toolIDs = append(toolIDs, toolID)
 	}
+
+	// Filter out platform-incompatible tools before verification
+	toolIDs = tool.FilterPlatformSupported(toolIDs)
 
 	// Verify system dependencies using tool registry
 	registry := tool.GlobalRegistry()
@@ -699,79 +733,6 @@ func filterIncrementalTests(ctx *cmdframework.ExecutionContext, testCfg *TestFra
 	return filtered
 }
 
-func convertToModulePaths(testsByPackage map[string][]testing.TestReference, workspaceRoot string, cfg *config.EACConfig) (map[string][]testing.TestReference, map[string]string) {
-	testsByModulePath := make(map[string][]testing.TestReference)
-	modulePathToPkg := make(map[string]string)
-
-	for pkgPath, tests := range testsByPackage {
-		modulePath := convertPkgPathToModulePath(pkgPath, workspaceRoot, cfg)
-		testsByModulePath[modulePath] = tests
-		modulePathToPkg[modulePath] = pkgPath
-	}
-
-	return testsByModulePath, modulePathToPkg
-}
-
-func convertPkgPathToModulePath(pkgPath, workspaceRoot string, cfg *config.EACConfig) string {
-	// Handle BDD paths with colons: "featureName:moduleRoot:featurePath"
-	colonParts := strings.SplitN(pkgPath, ":", 3)
-	if len(colonParts) == 3 {
-		// BDD format: featureName:moduleRoot:featurePath
-		featureName := colonParts[0]
-		moduleRoot := colonParts[1]
-		// Find the module moniker for this root - check all package roots and test-impl package
-		for i := range cfg.Repository.Modules {
-			module := &cfg.Repository.Modules[i]
-			// Check all package roots
-			for _, entry := range module.Components {
-				if entry == nil || entry.Root == "" {
-					continue
-				}
-				pkgRootPath := filepath.ToSlash(entry.Root)
-				if moduleRoot == pkgRootPath || strings.HasPrefix(moduleRoot, pkgRootPath+"/") {
-					return module.Moniker + "/" + featureName
-				}
-			}
-			// Check test-impl package if it exists
-			if testImplEntry, ok := module.Components["test-impl"]; ok && testImplEntry != nil {
-				testImplPath := filepath.ToSlash(testImplEntry.Root)
-				if testImplPath != "" && (moduleRoot == testImplPath || strings.HasPrefix(moduleRoot, testImplPath+"/")) {
-					return module.Moniker + "/" + featureName
-				}
-			}
-		}
-		// Module not found - use sanitized path
-		return sanitizePathForLog(pkgPath)
-	}
-
-	// Try to extract module moniker and subpath from standard paths
-	parts := strings.Split(pkgPath, "/")
-	if len(parts) == 0 {
-		return pkgPath
-	}
-
-	// Check if path matches any module's package root
-	for i := range cfg.Repository.Modules {
-		module := &cfg.Repository.Modules[i]
-		for _, entry := range module.Components {
-			if entry == nil || entry.Root == "" {
-				continue
-			}
-			moduleRoot := filepath.ToSlash(entry.Root)
-			if strings.HasPrefix(pkgPath, moduleRoot+"/") || pkgPath == moduleRoot {
-				subPath := strings.TrimPrefix(pkgPath, moduleRoot)
-				subPath = strings.TrimPrefix(subPath, "/")
-				if subPath == "" {
-					return module.Moniker
-				}
-				return module.Moniker + "/" + subPath
-			}
-		}
-	}
-
-	return pkgPath
-}
-
 func buildSuiteTagFilter(suite *testing.TestSuite) string {
 	return suite.BuildGodogTagFilter()
 }
@@ -803,21 +764,29 @@ func buildTestInitSummary(ctx *cmdframework.ExecutionContext, testCfg *TestFrame
 			ModulesNoTests:        stats.ModulesNoTests,
 			InferenceRulesApplied: len(suite.Inferences),
 		}).
-		SetComponentCount(len(testCfg.TestsByModulePath)).
+		SetComponentCount(len(testCfg.TestsByPackage)).
 		SetOutputDir(testCfg.TestRunDir)
 
 	ctx.InitSummary = summary
 }
 
-func updateTestState(ctx *cmdframework.ExecutionContext, testCfg *TestFrameworkConfig, results []PackageResult) {
+func updateTestState(ctx *cmdframework.ExecutionContext, testCfg *TestFrameworkConfig, _ []PackageResult) {
 	testedModuleResults := make(map[string]bool)
 
-	for modulePath := range testCfg.TestsByModulePath {
-		moduleMoniker := strings.Split(modulePath, "/")[0]
-		result, exists := testCfg.ExecCtx.results[modulePath]
-		if !exists {
-			continue
+	// Iterate over actual results (which use path:testType format like "go/eac/core/config:gotest")
+	for resultKey, result := range testCfg.ExecCtx.results {
+		// Extract pkgPath from resultKey (strip test type suffix if present)
+		pkgPath := resultKey
+		if colonIdx := strings.LastIndex(resultKey, ":"); colonIdx > 0 {
+			// Check if suffix is a valid test type
+			suffix := resultKey[colonIdx+1:]
+			if testing.IsValidTestType(suffix) {
+				pkgPath = resultKey[:colonIdx]
+			}
 		}
+
+		// Get module moniker from package path using module mapper
+		moduleMoniker := extractMonikerFromPath(pkgPath, testCfg.ModuleMapper)
 
 		if existing, ok := testedModuleResults[moduleMoniker]; ok && !existing {
 			continue
@@ -829,17 +798,12 @@ func updateTestState(ctx *cmdframework.ExecutionContext, testCfg *TestFrameworkC
 
 	moduleTestInfo, _ := buildModuleTestInfo(testCfg.TestsByPackage, ctx.ModuleRegistry, ctx.EACConfig, ctx.WorkspaceRoot)
 
-	uniqueModules := make([]string, 0, len(testedModuleResults))
-	for m := range testedModuleResults {
-		uniqueModules = append(uniqueModules, m)
-	}
-
 	if err := teststate.UpdateModuleState(ctx.WorkspaceRoot, testedModuleResults, moduleTestInfo); err != nil {
 		log.Warnf("Failed to update test state: %v", err)
 	}
 }
 
-func showTestTimings(ctx *cmdframework.ExecutionContext, testCfg *TestFrameworkConfig) {
+func showTestTimings(_ *cmdframework.ExecutionContext, testCfg *TestFrameworkConfig) {
 	testedModules := make(map[string]bool)
 	for pkgPath := range testCfg.TestsByPackage {
 		moduleMoniker := testCfg.ModuleMapper.GetModuleForPackagePath(pkgPath)

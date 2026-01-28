@@ -304,66 +304,112 @@ func (c *EACConfig) LoadRepository(validateSchema bool) error {
 
 	// Step 8: Final merge: (base + type-specific) + user
 	c.Repository = MergeRepository(mergedDefaults, userCfg)
+
+	// Step 9: Expand module templates
+	// Load templates and expand modules that reference them
+	if err := c.Repository.ExpandModuleTemplates(c.RepoRoot); err != nil {
+		return fmt.Errorf("expanding module templates: %w", err)
+	}
+
 	return nil
 }
 
-// LoadEnvironments loads the environments configuration with fallback to system defaults.
+// LoadEnvironments loads the environments configuration.
+// Loads contract defaults first, then merges user config on top if present.
 func (c *EACConfig) LoadEnvironments(validateSchema bool) error {
-	// Try loading with fallback (user override → system default)
-	data, err := c.readConfigFileWithFallback(EnvironmentsFileName)
-	if err != nil {
-		// If file not found in either location, use empty config
-		if os.IsNotExist(err) || strings.Contains(err.Error(), "not found") {
-			c.Environments = &EnvironmentsConfig{}
-			return nil
-		}
+	// Load defaults from contract
+	cfg, err := LoadEnvironmentsDefaults(c.RepoRoot)
+	if err != nil && !errors.Is(err, ErrNoDefaults) {
 		return err
 	}
 
-	if validateSchema {
-		if err := c.validateSchema(schema.SchemaEnvironments, data); err != nil {
-			return err
+	// Ensure we have a valid config even if no defaults
+	if cfg == nil {
+		cfg = &EnvironmentsConfig{}
+	}
+
+	// Try loading user override
+	userPath := filepath.Join(c.ConfigRoot, EnvironmentsFileName)
+	data, err := os.ReadFile(userPath)
+	if err == nil {
+		if validateSchema {
+			if err := c.validateSchema(schema.SchemaEnvironments, data); err != nil {
+				return err
+			}
 		}
+
+		var userCfg EnvironmentsConfig
+		if err := yaml.Unmarshal(data, &userCfg); err != nil {
+			return fmt.Errorf("failed to parse %s: %w", EnvironmentsFileName, err)
+		}
+
+		// Merge user environments into defaults (user overrides)
+		for _, userEnv := range userCfg.Environments {
+			found := false
+			for i, defEnv := range cfg.Environments {
+				if defEnv.Moniker == userEnv.Moniker {
+					cfg.Environments[i] = userEnv // Replace
+					found = true
+					break
+				}
+			}
+			if !found {
+				cfg.Environments = append(cfg.Environments, userEnv)
+			}
+		}
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("failed to read %s: %w", EnvironmentsFileName, err)
 	}
 
-	var cfg EnvironmentsConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return fmt.Errorf("failed to parse %s: %w", EnvironmentsFileName, err)
-	}
-
-	c.Environments = &cfg
+	c.Environments = cfg
 	return nil
 }
 
-// LoadTestingTags loads the testing-tags configuration with fallback to system defaults.
+// LoadTestingTags loads the testing-tags configuration.
+// Loads contract defaults first, then merges user config on top if present.
 func (c *EACConfig) LoadTestingTags(validateSchema bool) error {
-	// Try loading with fallback (user override → system default)
-	data, err := c.readConfigFileWithFallback(TestingTagsFileName)
-	if err != nil {
-		// If file not found in either location, initialize empty config
-		if os.IsNotExist(err) || strings.Contains(err.Error(), "not found") {
-			c.TestingTags = &TestingTagsConfig{}
-			return nil
-		}
+	// Load defaults from contract
+	cfg, err := LoadTestingTagsDefaults(c.RepoRoot)
+	if err != nil && !errors.Is(err, ErrNoDefaults) {
 		return err
 	}
 
-	if validateSchema {
-		if err := c.validateSchema(schema.SchemaTestingTags, data); err != nil {
-			return err
-		}
+	// Ensure we have a valid config even if no defaults
+	if cfg == nil {
+		cfg = &TestingTagsConfig{}
 	}
 
-	var cfg TestingTagsConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return fmt.Errorf("failed to parse %s: %w", TestingTagsFileName, err)
+	// Load user config if present (optional)
+	userPath := filepath.Join(c.ConfigRoot, TestingTagsFileName)
+	if data, err := os.ReadFile(userPath); err == nil {
+		if validateSchema {
+			if err := c.validateSchema(schema.SchemaTestingTags, data); err != nil {
+				return err
+			}
+		}
+
+		var userCfg TestingTagsConfig
+		if err := yaml.Unmarshal(data, &userCfg); err != nil {
+			return fmt.Errorf("failed to parse %s: %w", TestingTagsFileName, err)
+		}
+
+		// Merge user config into defaults (user takes precedence)
+		if len(userCfg.Tags) > 0 {
+			cfg.Tags = userCfg.Tags
+		}
+		if len(userCfg.Types) > 0 {
+			cfg.Types = userCfg.Types
+		}
+		if len(userCfg.SkipReasons) > 0 {
+			cfg.SkipReasons = userCfg.SkipReasons
+		}
 	}
 
 	if err := cfg.Initialize(); err != nil {
 		return fmt.Errorf("failed to initialize testing-tags: %w", err)
 	}
 
-	c.TestingTags = &cfg
+	c.TestingTags = cfg
 	return nil
 }
 
@@ -410,33 +456,48 @@ func (c *EACConfig) LoadTestSuites(validateSchema bool) error {
 	return nil
 }
 
-// LoadBooks loads the books configuration (optional - only if file exists).
+// LoadBooks loads the books configuration with template expansion.
+// Loads both defaults and user config, then expands templates and snippets.
 func (c *EACConfig) LoadBooks(validateSchema bool) error {
-	// Check if books file exists - it's optional
-	booksPath := filepath.Join(c.ConfigRoot, BooksFileName)
-	if _, err := os.Stat(booksPath); os.IsNotExist(err) {
-		// Initialize empty config to guarantee non-nil
-		c.Books = &BooksConfig{}
-		return nil
-	}
-
-	data, err := c.readConfigFile(BooksFileName)
-	if err != nil {
-		return err
-	}
-
-	if validateSchema {
-		if err := c.validateSchema(schema.SchemaBooks, data); err != nil {
-			return err
+	// Load defaults from contracts folder
+	var defaultsRaw *BooksConfigRaw
+	defaultsData, err := loadDefaultFile(c.RepoRoot, BooksFileName)
+	if err == nil {
+		defaultsRaw, err = LoadBooksConfigRaw(defaultsData)
+		if err != nil {
+			return fmt.Errorf("failed to parse default %s: %w", BooksFileName, err)
 		}
 	}
 
-	var cfg BooksConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return fmt.Errorf("failed to parse %s: %w", BooksFileName, err)
+	// Load user config (optional)
+	var userRaw *BooksConfigRaw
+	booksPath := filepath.Join(c.ConfigRoot, BooksFileName)
+	if _, err := os.Stat(booksPath); err == nil {
+		data, err := c.readConfigFile(BooksFileName)
+		if err != nil {
+			return err
+		}
+
+		if validateSchema {
+			if err := c.validateSchema(schema.SchemaBooks, data); err != nil {
+				return err
+			}
+		}
+
+		userRaw, err = LoadBooksConfigRaw(data)
+		if err != nil {
+			return fmt.Errorf("failed to parse %s: %w", BooksFileName, err)
+		}
 	}
 
-	c.Books = &cfg
+	// Get modules for evidence book generation
+	var modules []Module
+	if c.Repository != nil {
+		modules = c.Repository.Modules
+	}
+
+	// Merge and expand
+	c.Books = MergeBooksConfigs(defaultsRaw, userRaw, modules)
 	return nil
 }
 

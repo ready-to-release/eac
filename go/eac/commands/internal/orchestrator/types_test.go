@@ -115,23 +115,31 @@ func TestComponentResultSet_DeriveStatus(t *testing.T) {
 			want: ModuleStatusFailed,
 		},
 		{
-			name: "negative exit code (pending/running) returns running",
+			name: "exit code -1 (cached/skipped) with success returns success",
 			components: []ComponentResult{
 				{Module: "mod1", Component: "go", ExitCode: 0},
 				{Module: "mod1", Component: "book", ExitCode: -1},
 			},
-			want: ModuleStatusRunning,
+			want: ModuleStatusSuccess,
 		},
 		{
-			name: "all negative exit codes returns running",
+			name: "all exit code -1 (cached) returns skipped",
 			components: []ComponentResult{
 				{Module: "mod1", Component: "go", ExitCode: -1},
 				{Module: "mod1", Component: "book", ExitCode: -1},
 			},
+			want: ModuleStatusSkipped,
+		},
+		{
+			name: "exit code < -1 (running) returns running",
+			components: []ComponentResult{
+				{Module: "mod1", Component: "go", ExitCode: 0},
+				{Module: "mod1", Component: "book", ExitCode: -2},
+			},
 			want: ModuleStatusRunning,
 		},
 		{
-			name: "mixed negative and positive failure - failure takes precedence",
+			name: "mixed cached and failure - failure takes precedence",
 			components: []ComponentResult{
 				{Module: "mod1", Component: "go", ExitCode: -1},
 				{Module: "mod1", Component: "book", ExitCode: 1},
@@ -540,10 +548,10 @@ func TestAggregateToComponentResultSets(t *testing.T) {
 			wantDurations:  []time.Duration{10 * time.Second, 8 * time.Second},
 		},
 		{
-			name: "status with running components (negative exit code)",
+			name: "status with running components (exit code < -1)",
 			results: []ComponentResult{
 				{Module: "mod-a", Component: "go", ExitCode: 0},
-				{Module: "mod-a", Component: "book", ExitCode: -1}, // running
+				{Module: "mod-a", Component: "book", ExitCode: -2}, // running
 			},
 			wantModules:    []string{"mod-a"},
 			wantComponents: [][]string{{"book", "go"}},
@@ -551,9 +559,20 @@ func TestAggregateToComponentResultSets(t *testing.T) {
 			wantDurations:  []time.Duration{0},
 		},
 		{
-			name: "failure takes precedence over running",
+			name: "status with cached component (exit code -1)",
 			results: []ComponentResult{
-				{Module: "mod-a", Component: "go", ExitCode: -1},  // running
+				{Module: "mod-a", Component: "go", ExitCode: 0},
+				{Module: "mod-a", Component: "book", ExitCode: -1}, // cached
+			},
+			wantModules:    []string{"mod-a"},
+			wantComponents: [][]string{{"book", "go"}},
+			wantStatuses:   []ModuleStatus{ModuleStatusSuccess},
+			wantDurations:  []time.Duration{0},
+		},
+		{
+			name: "failure takes precedence over cached",
+			results: []ComponentResult{
+				{Module: "mod-a", Component: "go", ExitCode: -1},  // cached
 				{Module: "mod-a", Component: "book", ExitCode: 1}, // failed
 			},
 			wantModules:    []string{"mod-a"},
@@ -732,10 +751,10 @@ func TestAggregateToComponentResultSets_ModuleWithSamePrefix(t *testing.T) {
 }
 
 // TestComponentResultSet_DeriveStatus_Priority tests that failure status takes
-// precedence over running status when both conditions exist.
+// precedence over running and cached status when multiple conditions exist.
 func TestComponentResultSet_DeriveStatus_Priority(t *testing.T) {
-	// When both failed (ExitCode > 0) and running (ExitCode < 0) exist,
-	// failed should take precedence
+	// When both failed (ExitCode > 0) and running (ExitCode < -1) exist,
+	// failed should take precedence. ExitCode -1 means cached (success).
 	tests := []struct {
 		name       string
 		components []ComponentResult
@@ -745,7 +764,7 @@ func TestComponentResultSet_DeriveStatus_Priority(t *testing.T) {
 			name: "failure first, then running",
 			components: []ComponentResult{
 				{Component: "a", ExitCode: 1},
-				{Component: "b", ExitCode: -1},
+				{Component: "b", ExitCode: -2},
 				{Component: "c", ExitCode: 0},
 			},
 			want: ModuleStatusFailed,
@@ -753,7 +772,7 @@ func TestComponentResultSet_DeriveStatus_Priority(t *testing.T) {
 		{
 			name: "running first, then failure",
 			components: []ComponentResult{
-				{Component: "a", ExitCode: -1},
+				{Component: "a", ExitCode: -2},
 				{Component: "b", ExitCode: 1},
 				{Component: "c", ExitCode: 0},
 			},
@@ -763,10 +782,28 @@ func TestComponentResultSet_DeriveStatus_Priority(t *testing.T) {
 			name: "success and running only",
 			components: []ComponentResult{
 				{Component: "a", ExitCode: 0},
-				{Component: "b", ExitCode: -1},
+				{Component: "b", ExitCode: -2},
 				{Component: "c", ExitCode: 0},
 			},
 			want: ModuleStatusRunning,
+		},
+		{
+			name: "success and cached only",
+			components: []ComponentResult{
+				{Component: "a", ExitCode: 0},
+				{Component: "b", ExitCode: -1},
+				{Component: "c", ExitCode: 0},
+			},
+			want: ModuleStatusSuccess,
+		},
+		{
+			name: "failure takes precedence over cached",
+			components: []ComponentResult{
+				{Component: "a", ExitCode: 1},
+				{Component: "b", ExitCode: -1},
+				{Component: "c", ExitCode: 0},
+			},
+			want: ModuleStatusFailed,
 		},
 	}
 

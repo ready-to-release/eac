@@ -116,11 +116,13 @@ func (p *Preprocessor) optimizeDrawioImages() error {
 		if _, err := os.Stat(stagingCachePath); err == nil {
 			cacheHits++
 			cachePathBySource[ref.AbsPath] = stagingCachePath
+			log.Debugf("cache: drawio staging HIT file=%s hash=%s", ref.Filename, ref.Hash[:8])
 			continue
 		}
 
 		// Cache miss - need to optimize the image
 		cacheMisses++
+		log.Debugf("cache: drawio staging MISS file=%s hash=%s", ref.Filename, ref.Hash[:8])
 
 		// Ensure cache directory exists for new renders
 		if err := os.MkdirAll(cacheDir, 0o755); err != nil {
@@ -452,6 +454,8 @@ func UpdateDrawioCache(workspaceRoot string, logWriter io.Writer) (int, error) {
 		return 0, fmt.Errorf("scanning for drawio images: %w", err)
 	}
 
+	log.Debugf("cache: UpdateDrawioCache found %d drawio images", len(images))
+
 	if len(images) == 0 {
 		return 0, nil
 	}
@@ -467,8 +471,11 @@ func UpdateDrawioCache(workspaceRoot string, logWriter io.Writer) (int, error) {
 
 		cachePath, hit := cache.GetDrawio(cacheKey)
 		if hit {
+			log.Debugf("cache: UpdateDrawioCache HIT file=%s hash=%s", img.RelPath, img.Hash[:8])
 			continue // Already cached
 		}
+
+		log.Debugf("cache: UpdateDrawioCache MISS file=%s hash=%s - optimizing", img.RelPath, img.Hash[:8])
 
 		// Optimize and cache
 		if err := OptimizeSingleImage(img.SourceFile, cachePath, MaxImageWidthPDF); err != nil {
@@ -483,5 +490,6 @@ func UpdateDrawioCache(workspaceRoot string, logWriter io.Writer) (int, error) {
 		optimized++
 	}
 
+	log.Debugf("cache: UpdateDrawioCache complete: %d optimized, %d cached", optimized, len(images)-optimized)
 	return optimized, nil
 }

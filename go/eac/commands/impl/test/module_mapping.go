@@ -72,7 +72,7 @@ func (m *ModuleMapper) GetModuleForFile(filePath string) string {
 // GetModuleForPackagePath returns the module moniker for a package path.
 // Package paths are like "go/eac/core/contracts" or for godog:
 // "featureName:go/eac/specs/impl/eac-commands:specs/eac-commands/..."
-// Returns empty string if no module found - no fallback heuristics.
+// Returns empty string if no module found.
 func (m *ModuleMapper) GetModuleForPackagePath(pkgPath string) string {
 	// Handle godog BDD paths: "featureName:testRoot:featurePath"
 	// The testRoot (second part) is where the test runner lives and determines the module
@@ -93,12 +93,11 @@ func (m *ModuleMapper) GetModuleForPackagePath(pkgPath string) string {
 		return moniker
 	}
 
-	// Try with synthetic test file
-	if moniker := m.GetModuleForFile(actualPath + "/*_test.go"); moniker != "" {
+	// Try with synthetic test file to trigger pattern matching
+	if moniker := m.GetModuleForFile(actualPath + "/godog_test.go"); moniker != "" {
 		return moniker
 	}
 
-	// No fallback - return empty string
 	return ""
 }
 

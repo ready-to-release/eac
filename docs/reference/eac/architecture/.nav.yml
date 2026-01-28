@@ -3,7 +3,12 @@ nav:
   - index.md
   - modules/
   - cli-integration.md
+  - component-types.md
   - contracts.md
+  - dependencies.md
   - dependency-system.md
+  - module-types.md
+  - modules.md
   - repository-layout.md
+  - viewing-diagrams.md
   - creating-commands.md

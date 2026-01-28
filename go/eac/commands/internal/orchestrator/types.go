@@ -67,10 +67,10 @@ type Config struct {
 	// TUIASCIIMode uses ASCII-only characters for TUI (default: false)
 	// Set to true via --ascii flag for terminals that don't render Unicode well
 	TUIASCIIMode bool
-	// Turbo is the parallelism multiplier (1x, 2x, 3x, 4x, etc.)
+	// Turbo is the parallelism multiplier (1.0x, 1.25x, 2.0x, etc.)
 	// Higher values reduce memory per slot, increasing concurrent builds.
-	// Default is 4x when turbo is enabled, 1x when disabled.
-	Turbo int
+	// Default is 1.25x when turbo is enabled, 1.0x when disabled.
+	Turbo float64
 }
 
 // ComponentWork represents a single component build work item.
@@ -84,7 +84,7 @@ type ComponentWork struct {
 	ComponentType string
 	// Handler is the name of the build handler (e.g., "go", "npm", "mkdocs")
 	Handler string
-	// Weight is the resource weight for scheduling (1=light, 4=heavy)
+	// Weight is the resource weight for scheduling (base weight × amp, 1=light, 4=heavy)
 	Weight int
 	// BuildAfter lists component types that must complete before this one (same module)
 	BuildAfter []string
@@ -108,6 +108,12 @@ type ComponentResult struct {
 	Warnings []string
 	// LogPath is the relative path to the component's log file
 	LogPath string
+
+	// Test-specific fields (0 for non-test commands)
+	TestsTotal   int
+	TestsPassed  int
+	TestsFailed  int
+	TestsSkipped int
 }
 
 // ComponentWorkerFunc processes a single component build.
@@ -125,6 +131,8 @@ const (
 	ModuleStatusRunning
 	// ModuleStatusSuccess indicates the module completed successfully.
 	ModuleStatusSuccess
+	// ModuleStatusSkipped indicates the module was skipped (cached/unchanged).
+	ModuleStatusSkipped
 	// ModuleStatusFailed indicates the module failed.
 	ModuleStatusFailed
 )
@@ -138,6 +146,8 @@ func (s ModuleStatus) String() string {
 		return "running"
 	case ModuleStatusSuccess:
 		return "success"
+	case ModuleStatusSkipped:
+		return "cached"
 	case ModuleStatusFailed:
 		return "failed"
 	default:
@@ -159,8 +169,9 @@ type ComponentResultSet struct {
 
 // DeriveStatus computes the module status from component results.
 // - If any component has ExitCode > 0 -> ModuleStatusFailed
-// - If any component has ExitCode < 0 -> ModuleStatusRunning (pending/in-progress)
-// - If all components have ExitCode == 0 -> ModuleStatusSuccess
+// - If any component has ExitCode < -1 -> ModuleStatusRunning (pending/in-progress)
+// - If all components have ExitCode == -1 -> ModuleStatusSkipped (cached)
+// - If all components have ExitCode <= 0 (mix of 0 and -1) -> ModuleStatusSuccess
 // - If no components -> ModuleStatusPending.
 func (rs *ComponentResultSet) DeriveStatus() ModuleStatus {
 	if len(rs.Components) == 0 {
@@ -168,17 +179,25 @@ func (rs *ComponentResultSet) DeriveStatus() ModuleStatus {
 	}
 
 	hasRunning := false
+	allSkipped := true
 	for _, c := range rs.Components {
 		if c.ExitCode > 0 {
 			return ModuleStatusFailed
 		}
-		if c.ExitCode < 0 {
+		if c.ExitCode < -1 {
 			hasRunning = true
+		}
+		if c.ExitCode != -1 {
+			allSkipped = false
 		}
 	}
 
 	if hasRunning {
 		return ModuleStatusRunning
+	}
+
+	if allSkipped {
+		return ModuleStatusSkipped
 	}
 
 	return ModuleStatusSuccess

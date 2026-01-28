@@ -51,11 +51,10 @@ func (v *CommitMessageValidator) VerifyImplementation() []contracts.ValidationEr
 	// Verify contract can be loaded from unified config
 	_, err := LoadContractFromConfig(v.workspaceRoot)
 	if err != nil {
-		return []contracts.ValidationError{*contracts.NewLegacyValidationError(
-			"CONTRACT_LOAD_ERROR",
+		return []contracts.ValidationError{*contracts.NewValidationError(
+			contracts.ErrContractLoadError,
 			err.Error(),
 			0,
-			"error",
 		)}
 	}
 	return nil

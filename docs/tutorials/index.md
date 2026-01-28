@@ -8,7 +8,7 @@ Step-by-step guides to help you get started with r2r and Everything-as-Code work
 
 Start here if you're new to r2r and Everything-as-Code:
 
-[Getting Started](./getting-started/) - Complete setup and fundamentals
+[Getting Started](./getting-started/index.md) - Complete setup and fundamentals
 
 - [Quick Start](./getting-started/quick-start.md) - Install r2r CLI, initialize configuration, install EAC extension
 - [Understanding Configuration Files](./getting-started/configuration-files.md) - Learn about `.r2r/` and `.r2r/eac/` configuration files

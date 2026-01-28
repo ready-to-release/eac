@@ -26,7 +26,7 @@ The EAC repository is a modular monorepo containing:
 All modules are defined in `.r2r/eac/repository.yml`. Each module has:
 
 - Unique moniker (identifier)
-- Type (from `module-types.yml`)
+- Components (go, typescript, specs, etc.)
 - File ownership patterns
 - Dependencies on other modules
 
@@ -39,10 +39,12 @@ All modules are defined in `.r2r/eac/repository.yml`. Each module has:
 
 Everything is configured via YAML contracts validated against JSON schemas:
 
-- `repository.yml` - Module definitions
-- `module-types.yml` - Type templates
-- `environments.yml` - Test environments
-- `test-suites.yml` - Test suite definitions
+- `repository.yml` - Module definitions (in `.r2r/eac/`)
+- `component-types.yml` - Component type definitions (system default)
+- `environments.yml` - Test environments (system default)
+- `test-suites.yml` - Test suite definitions (system default)
+
+System defaults are in `contracts/eac-core/0.1.0/defaults/`.
 
 ## Quick Commands
 
@@ -72,5 +74,5 @@ r2r eac test <module>
 ## See Also
 
 - [Creating Commands](../../eac/development/creating-commands.md) - Add new EAC commands
-- [Contracts Reference](../../eac/contracts/) - Full contract documentation
-- [Local Setup](../../../how-to-guides/local-setup/) - Development environment setup
+- [Contracts Reference](../../eac/contracts/index.md) - Full contract documentation
+- [Local Setup](../../../how-to-guides/local-setup/index.md) - Development environment setup

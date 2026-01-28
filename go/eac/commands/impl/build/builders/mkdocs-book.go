@@ -93,7 +93,7 @@ func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book
 				if len(moduleBooks) > 1 {
 					_, _ = logWriter.Write(bookLog.Bytes()) //nolint:errcheck // best-effort log aggregation
 				}
-				results <- 0 // Skipped is success from the caller's perspective
+				results <- exitCodeSkipped // Pass through -1 so TUI shows cached (blue)
 				return
 			}
 
@@ -146,10 +146,25 @@ func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book
 	wg.Wait()
 	close(results)
 
+	// Aggregate results: failure > success > skipped
+	// - If any book fails (>0), return failure
+	// - If all books skipped (-1), return skipped
+	// - Otherwise return success
+	allSkipped := true
 	for exitCode := range results {
-		if exitCode != 0 {
-			return exitCode
+		if exitCode > 0 {
+			return exitCode // Failure takes precedence
 		}
+		if exitCode == 0 {
+			allSkipped = false
+		}
+	}
+
+	if allSkipped && len(moduleBooks) > 0 {
+		if len(moduleBooks) > 1 {
+			Logln(logWriter, "\n⏭️  All %d books unchanged (cached)", len(moduleBooks))
+		}
+		return exitCodeSkipped
 	}
 
 	if len(moduleBooks) > 1 {
@@ -218,17 +233,17 @@ func BuildSingleBook(module *modules.ModuleContract, book *config.Book, workspac
 }
 
 // preprocessBook runs book preprocessing and returns the staging directory.
-// Uses persistent cache at out/cache/{moniker}/staging/{bookname}/ for incremental builds.
+// Uses persistent cache at .cache/eac/staging/{moniker}/{bookname}/ for incremental builds.
 // This enables fast mtime-based incremental copies across builds.
 //
 // Incremental build support:
-// - Staging directory is preserved across builds in out/cache/
+// - Staging directory is preserved across builds in .cache/eac/staging/
 // - Use --force flag to clear staging and rebuild from scratch
 func preprocessBook(book *config.Book, workspaceRoot, moniker string, logWriter io.Writer, pdfMode bool) (string, bool) {
 	// Use persistent cache directory for incremental builds
-	// Path: out/cache/{moniker}/staging/{book}
-	// Example: out/cache/docs:site/staging/site/
-	stagingDir := filepath.Join(workspaceRoot, "out", "cache", moniker, "staging", book.Name)
+	// Path: .cache/eac/staging/{moniker}/{book}
+	// Example: .cache/eac/staging/docs:site/site/
+	stagingDir := paths.BookStagingCachePath(workspaceRoot, moniker, book.Name)
 
 	// Only clean staging directory on force rebuild (enables incremental builds)
 	if isForceRebuild() {
@@ -309,8 +324,28 @@ func buildBookHTML(module *modules.ModuleContract, book *config.Book, workspaceR
 		return 1 // Preprocessing failed
 	}
 
+	// Check if we can skip the build (cache hit)
+	if !isForceRebuild() {
+		canSkip, reason := ShouldSkipSiteBuild(module.Moniker, stagingDir, workspaceRoot, bookOutputDir, false)
+		if canSkip {
+			Logln(logWriter, "⏭️  Skipping site build: %s", reason)
+			Logln(logWriter, "✅ MkDocs site cached (unchanged)")
+			return exitCodeSkipped
+		}
+		Logln(logWriter, "   Cache miss: %s", reason)
+	}
+
 	// Build using existing HTML logic with the staging directory
-	return buildHTMLWithStaging(module, workspaceRoot, bookOutputDir, logWriter, stagingDir)
+	exitCode := buildHTMLWithStaging(module, workspaceRoot, bookOutputDir, logWriter, stagingDir)
+
+	// Record successful build for future cache hits
+	if exitCode == 0 {
+		if err := RecordSiteBuildComplete(module.Moniker, stagingDir, workspaceRoot, bookOutputDir); err != nil {
+			Logln(logWriter, "   ⚠️  Failed to save build cache: %v", err)
+		}
+	}
+
+	return exitCode
 }
 
 // buildHTMLWithStaging builds HTML site using a staging directory.
@@ -340,6 +375,12 @@ func buildHTMLWithStaging(module *modules.ModuleContract, workspaceRoot, outputD
 		return 1
 	}
 	Logln(logWriter, "   Config: %s (from template)", configPath)
+
+	// Verify config file was written successfully
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		Logln(logWriter, "❌ Config file does not exist after generation: %s", configPath)
+		return 1
+	}
 
 	// Copy mkdocs macros script for footer generation
 	macrosSource := filepath.Join(workspaceRoot, "containers", "mkdocs-site", "mkdocs_macros.py")
@@ -455,13 +496,13 @@ func checkAndPreprocessBook(moniker, workspaceRoot, outputDir string, logWriter 
 		Logln(logWriter, "📚 Book configuration found: '%s' (module: %s)", book.Name, moniker)
 	}
 
-	// Use persistent staging directory at out/staging/{book.Name}
+	// Use persistent staging directory at .cache/eac/staging/{moniker}/{book.Name}
 	// This survives across builds, enabling:
 	// - Mermaid SVG caching (rendered diagrams persist)
 	// - Faster incremental builds (unchanged files already staged)
 	// NOTE: We don't clean this directory - files are overwritten incrementally.
-	// For a clean rebuild, delete out/staging/ manually.
-	stagingDir := paths.StagingPath(workspaceRoot, book.Name)
+	// For a clean rebuild, delete .cache/eac/staging/ manually.
+	stagingDir := paths.BookStagingCachePath(workspaceRoot, moniker, book.Name)
 
 	if err := os.MkdirAll(stagingDir, 0o755); err != nil {
 		Logln(logWriter, "❌ Failed to create staging directory: %v", err)

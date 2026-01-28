@@ -36,11 +36,10 @@ func (v *ModuleSectionValidator) Validate(output string, context map[string]inte
 
 	lines := strings.Split(output, "\n")
 	if len(lines) == 0 {
-		errors = append(errors, *contracts.NewLegacyValidationError(
-			"EMPTY_MODULE_SECTION",
+		errors = append(errors, *contracts.NewValidationError(
+			contracts.ErrEmptyModuleSection,
 			"Module section is empty",
 			0,
-			"error",
 		))
 		return errors
 	}
@@ -53,11 +52,10 @@ func (v *ModuleSectionValidator) Validate(output string, context map[string]inte
 	}
 
 	if startIdx >= len(lines) {
-		errors = append(errors, *contracts.NewLegacyValidationError(
-			"EMPTY_MODULE_SECTION",
+		errors = append(errors, *contracts.NewValidationError(
+			contracts.ErrEmptyModuleSection,
 			"Module section contains only blank lines",
 			0,
-			"error",
 		))
 		return errors
 	}
@@ -65,42 +63,38 @@ func (v *ModuleSectionValidator) Validate(output string, context map[string]inte
 	// Line 1: Module name
 	moduleName := strings.TrimSpace(lines[startIdx])
 	if !isModuleName(moduleName) {
-		errors = append(errors, *contracts.NewLegacyValidationError(
-			"INVALID_MODULE_NAME",
+		errors = append(errors, *contracts.NewValidationError(
+			contracts.ErrInvalidModuleName,
 			fmt.Sprintf("First line should be module name, got: %s", moduleName),
 			startIdx+1,
-			"error",
 		))
 	}
 
 	// Line 2: Dashes
 	if startIdx+1 >= len(lines) {
-		errors = append(errors, *contracts.NewLegacyValidationError(
-			"MISSING_DASHES",
+		errors = append(errors, *contracts.NewValidationError(
+			contracts.ErrMissingDashes,
 			"Module section missing dashes separator line",
 			0,
-			"error",
 		))
 		return errors
 	}
 
 	dashesLine := strings.TrimSpace(lines[startIdx+1])
 	if !isDashesLine(dashesLine) {
-		errors = append(errors, *contracts.NewLegacyValidationError(
-			"INVALID_DASHES",
+		errors = append(errors, *contracts.NewValidationError(
+			contracts.ErrInvalidDashes,
 			fmt.Sprintf("Second line should be dashes (--------), got: %s", dashesLine),
 			startIdx+2,
-			"error",
 		))
 	}
 
 	// Line 3: Subject line (<module>: <type>: <description>)
 	if startIdx+2 >= len(lines) {
-		errors = append(errors, *contracts.NewLegacyValidationError(
-			"MISSING_SUBJECT_LINE",
+		errors = append(errors, *contracts.NewValidationError(
+			contracts.ErrMissingSubjectLine,
 			"Module section missing subject line",
 			0,
-			"error",
 		))
 		return errors
 	}
@@ -114,31 +108,28 @@ func (v *ModuleSectionValidator) Validate(output string, context map[string]inte
 	}
 
 	if subjectLine != "" && !getModuleSubjectLineRegex().MatchString(subjectLine) {
-		errors = append(errors, *contracts.NewLegacyValidationError(
-			"INVALID_SUBJECT_FORMAT",
+		errors = append(errors, *contracts.NewValidationError(
+			contracts.ErrInvalidSubjectFormat,
 			fmt.Sprintf("Subject line must follow '<module>: <type>: <description>' format, got: %s", subjectLine),
 			startIdx+3,
-			"error",
 		))
 	}
 
 	// Check subject line length
 	if len(subjectLine) > MaxSubjectLength {
-		errors = append(errors, *contracts.NewLegacyValidationError(
-			"SUBJECT_TOO_LONG",
+		errors = append(errors, *contracts.NewValidationError(
+			contracts.ErrSubjectTooLong,
 			fmt.Sprintf("Subject line exceeds %d characters (%d chars)", MaxSubjectLength, len(subjectLine)),
 			0,
-			"error",
 		))
 	}
 
 	// Check for trailing period
 	if strings.HasSuffix(subjectLine, ".") && !strings.HasSuffix(subjectLine, "...") {
-		errors = append(errors, *contracts.NewLegacyValidationError(
-			"SUBJECT_TRAILING_PERIOD",
+		errors = append(errors, *contracts.NewValidationError(
+			contracts.ErrSubjectTrailingPeriod,
 			"Subject line must not end with period",
 			0,
-			"error",
 		))
 	}
 
@@ -153,11 +144,10 @@ func (v *ModuleSectionValidator) Validate(output string, context map[string]inte
 	}
 
 	if !hasBody {
-		errors = append(errors, *contracts.NewLegacyValidationError(
-			"MISSING_BODY",
+		errors = append(errors, *contracts.NewValidationError(
+			contracts.ErrMissingBody,
 			"Module section missing body text",
 			0,
-			"warning",
 		))
 	}
 
@@ -172,11 +162,10 @@ func (v *ModuleSectionValidator) Validate(output string, context map[string]inte
 			if len(preview) > 50 {
 				preview = preview[:47] + "..."
 			}
-			errors = append(errors, *contracts.NewLegacyValidationError(
-				"LINE_TOO_LONG",
+			errors = append(errors, *contracts.NewValidationError(
+				contracts.ErrLineTooLong,
 				fmt.Sprintf("Line exceeds %d characters (%d chars): %s", MaxLineLength, len(trimmed), preview),
 				i+1,
-				"warning",
 			))
 		}
 	}

@@ -98,7 +98,7 @@ func generateComponentTUISummary(ctx *ExecutionContext, totalTime time.Duration)
 	switch ctx.Config.Type {
 	case CommandTypeTest:
 		tb = render.NewTableBuilder().
-			WithHeaders("Module", "Components", "#Test", "Time", "Stat")
+			WithHeaders("Module", "Test Types", "#Test", "Time", "Stat")
 	case CommandTypeLint:
 		tb = render.NewTableBuilder().
 			WithHeaders("Module", "Components", "#Err", "#Warn", "Time", "Stat")
@@ -123,13 +123,27 @@ func generateComponentTUISummary(ctx *ExecutionContext, totalTime time.Duration)
 			components = components[:37] + "..."
 		}
 
-		// Sum duration and count errors/warnings from all components
+		// Aggregate component stats
+		// Use max duration for tests (wall-clock approximation for parallel execution)
+		// Use sum duration for build/lint/scan (sequential or shows total work)
 		var moduleDuration time.Duration
 		var errorCount, warnCount int
+		var testsTotal, testsPassed, testsFailed int
 		for _, comp := range rs.Components {
-			moduleDuration += comp.Duration
+			if ctx.Config.Type == CommandTypeTest {
+				// For tests: use max (parallel execution wall-clock approximation)
+				if comp.Duration > moduleDuration {
+					moduleDuration = comp.Duration
+				}
+			} else {
+				// For build/lint/scan: sum durations
+				moduleDuration += comp.Duration
+			}
 			errorCount += len(comp.Errors)
 			warnCount += len(comp.Warnings)
+			testsTotal += comp.TestsTotal
+			testsPassed += comp.TestsPassed
+			testsFailed += comp.TestsFailed
 		}
 
 		// Derive status
@@ -147,9 +161,21 @@ func generateComponentTUISummary(ctx *ExecutionContext, totalTime time.Duration)
 		// Add row based on command type
 		switch ctx.Config.Type {
 		case CommandTypeTest:
-			// TODO: Test count requires plumbing from test runners
-			testCount := "-"
-			tb.AddRow(moduleName, components, testCount, duration, statusIcon)
+			// Extract unique test types from component names (format: "subpath:testType")
+			testTypes := extractUniqueTestTypes(sortedComps)
+
+			// Format test count: "passed/total" if failures, else "total"
+			var testCount string
+			if testsTotal > 0 {
+				if testsFailed > 0 {
+					testCount = fmt.Sprintf("%d/%d", testsPassed, testsTotal)
+				} else {
+					testCount = fmt.Sprintf("%d", testsTotal)
+				}
+			} else {
+				testCount = "-"
+			}
+			tb.AddRow(moduleName, testTypes, testCount, duration, statusIcon)
 		case CommandTypeLint, CommandTypeScan:
 			tb.AddRow(moduleName, components, errorCount, warnCount, duration, statusIcon)
 		default: // CommandTypeBuild
@@ -351,33 +377,107 @@ func printConsoleSummary(ctx *ExecutionContext, totalTime time.Duration) {
 }
 
 // printComponentConsoleSummary prints component-level summary to console.
+// For test commands, displays a module-level table with test types.
 func printComponentConsoleSummary(ctx *ExecutionContext, totalTime time.Duration) {
 	resultSets := ctx.ComponentResultSets
 
-	// Count at component level
-	var totalComponents, successCount, failureCount int
-	for _, rs := range resultSets {
-		for _, comp := range rs.Components {
-			totalComponents++
-			if comp.ExitCode == 0 {
-				successCount++
+	// Sort by module name for consistent output
+	sortedSets := make([]orchestrator.ComponentResultSet, len(resultSets))
+	copy(sortedSets, resultSets)
+	sort.Slice(sortedSets, func(i, j int) bool {
+		return sortedSets[i].Module < sortedSets[j].Module
+	})
+
+	// Count at module level
+	var moduleSuccessCount, moduleFailureCount int
+	for _, rs := range sortedSets {
+		status := rs.DeriveStatus()
+		if status == orchestrator.ModuleStatusFailed {
+			moduleFailureCount++
+		} else {
+			moduleSuccessCount++
+		}
+	}
+
+	// Build module-level table for test commands
+	if ctx.Config.Type == CommandTypeTest && len(sortedSets) > 0 {
+		tb := render.NewTableBuilder().
+			WithHeaders("Module", "Test Types", "#Test", "Time", "Stat")
+
+		for _, rs := range sortedSets {
+			sortedComps := rs.GetSortedComponents()
+
+			// Use max duration (wall-clock approximation for parallel execution)
+			var moduleDuration time.Duration
+			var testsTotal, testsPassed, testsFailed int
+			for _, comp := range rs.Components {
+				if comp.Duration > moduleDuration {
+					moduleDuration = comp.Duration // Max, not sum
+				}
+				testsTotal += comp.TestsTotal
+				testsPassed += comp.TestsPassed
+				testsFailed += comp.TestsFailed
+			}
+
+			// Derive status
+			statusIcon := " ✓"
+			status := rs.DeriveStatus()
+			if status == orchestrator.ModuleStatusFailed {
+				statusIcon = " ✗"
+			}
+
+			moduleName := output.PackageDisplayName(rs.Module)
+			duration := formatDuration(moduleDuration)
+
+			// Extract unique test types from component names
+			testTypes := extractUniqueTestTypes(sortedComps)
+
+			// Format test count
+			var testCount string
+			if testsTotal > 0 {
+				if testsFailed > 0 {
+					testCount = fmt.Sprintf("%d/%d", testsPassed, testsTotal)
+				} else {
+					testCount = fmt.Sprintf("%d", testsTotal)
+				}
 			} else {
-				failureCount++
+				testCount = "-"
+			}
+
+			tb.AddRow(moduleName, testTypes, testCount, duration, statusIcon)
+		}
+
+		log.Info("")
+		for _, line := range strings.Split(tb.Build(), "\n") {
+			if line != "" {
+				log.Info(line)
 			}
 		}
 	}
 
+	// Print summary totals
 	log.Info("")
-	log.Info("=== Summary ===")
-	log.Infof("Total: %d components", totalComponents)
-	log.Infof("Succeeded: %d", successCount)
-	log.Infof("Failed: %d", failureCount)
-	log.Infof("Duration: %s", formatDuration(totalTime))
+	if moduleSuccessCount > 0 || moduleFailureCount > 0 {
+		summaryLine := fmt.Sprintf("✓ PASSED (%s)", formatDuration(totalTime))
+		if moduleFailureCount > 0 {
+			summaryLine = fmt.Sprintf("✗ FAILED (%s)", formatDuration(totalTime))
+		}
+		log.Info(summaryLine)
+		log.Infof("  %d modules succeeded", moduleSuccessCount)
+		if moduleFailureCount > 0 {
+			log.Infof("  %d modules failed", moduleFailureCount)
+		}
+	} else {
+		log.Info("=== Summary ===")
+		log.Infof("Total: %d modules", len(sortedSets))
+		log.Infof("Duration: %s", formatDuration(totalTime))
+	}
 
-	if failureCount > 0 {
+	// Show failed components with details
+	if moduleFailureCount > 0 {
 		log.Info("")
 		log.Info("Failed components:")
-		for _, rs := range resultSets {
+		for _, rs := range sortedSets {
 			for _, comp := range rs.GetSortedComponents() {
 				if comp.ExitCode == 0 {
 					continue
@@ -532,5 +632,34 @@ func formatErrorLines(prefix, errMsg string) []string {
 		}
 	}
 
+	return result
+}
+
+// extractUniqueTestTypes extracts unique test types from component names.
+// Component names are in format "subpath:testType" (e.g., "config:gotest", "cli:godog").
+// Returns a comma-separated string of unique test types (e.g., "gotest, godog").
+func extractUniqueTestTypes(components []orchestrator.ComponentResult) string {
+	seen := make(map[string]bool)
+	var types []string
+
+	for _, comp := range components {
+		// Extract test type from component name (format: "subpath:testType")
+		testType := comp.Component
+		if colonIdx := strings.LastIndex(comp.Component, ":"); colonIdx >= 0 {
+			testType = comp.Component[colonIdx+1:]
+		}
+
+		log.Debugf("extractUniqueTestTypes: component=%s -> testType=%s", comp.Component, testType)
+
+		if !seen[testType] {
+			seen[testType] = true
+			types = append(types, testType)
+		}
+	}
+
+	// Sort for consistent output
+	sort.Strings(types)
+	result := strings.Join(types, ", ")
+	log.Debugf("extractUniqueTestTypes: found types=%v", types)
 	return result
 }

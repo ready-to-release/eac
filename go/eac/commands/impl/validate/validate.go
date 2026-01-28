@@ -62,6 +62,9 @@ func Validate() int {
 	case "release-version":
 		// Handled by separate registrations in respective files
 		return 0
+	case "docs":
+		// Handled by separate registrations in respective files
+		return 0
 	default:
 		log.Errorf("Error: unknown subcommand: %s\n", args[0])
 		printValidateUsage()
@@ -78,6 +81,7 @@ func printValidateUsage() {
 	log.Info("  books                     Validate books.yml configuration")
 	log.Info("  contracts                 Validate repository contracts against JSON schemas")
 	log.Info("  dependencies              Validate module dependency contracts")
+	log.Info("  docs                      Validate documentation for obsolete references")
 	log.Info("  go-tidy                   Validate Go module dependencies are tidy")
 	log.Info("  markdown                  Validate markdown file syntax")
 	log.Info("  module-files              Validate module file ownership")
@@ -113,6 +117,9 @@ func printValidateUsage() {
 	log.Info("")
 	log.Info("  # Validate release version format")
 	log.Info("  r2r validate release-version 1.2.3")
+	log.Info("")
+	log.Info("  # Validate documentation for obsolete references")
+	log.Info("  r2r validate docs")
 	log.Info("")
 	log.Info("Use 'r2r validate <subcommand> --help' for more information about a command.")
 }

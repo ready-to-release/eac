@@ -16,5 +16,6 @@ nav:
   - get-version.md
   - pending.md
   - prune.md
+  - prune-packages.md
   - r2r-cli.md
   - tag-pending.md

@@ -78,8 +78,50 @@
         "parallelism": {
           "$ref": "#/definitions/parallelism_config",
           "description": "Parallelism limits for build and test commands"
+        },
+        "remote": {
+          "$ref": "#/definitions/remote_config",
+          "description": "Remote VCS repository configuration (GitHub, GitLab, Azure DevOps, etc.)"
         }
       },
+      "additionalProperties": false
+    },
+    "remote_config": {
+      "type": "object",
+      "description": "Remote VCS repository configuration. Only owner is required - URLs are derived from type + owner if not specified.",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["github", "gitlab", "azure-devops", "bitbucket"],
+          "description": "VCS provider type (default: github)",
+          "default": "github"
+        },
+        "owner": {
+          "type": "string",
+          "description": "Organization or username on the VCS provider (required)",
+          "minLength": 1
+        },
+        "repo": {
+          "type": "string",
+          "description": "Repository name - auto-detected from git if not set",
+          "minLength": 1
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Repository URL - derived from type/owner if not set"
+        },
+        "pages_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Documentation site URL - derived from type/owner if not set"
+        },
+        "registry_url": {
+          "type": "string",
+          "description": "Container registry URL - derived from type/owner if not set"
+        }
+      },
+      "required": ["owner"],
       "additionalProperties": false
     },
     "parallelism_config": {
@@ -317,6 +359,23 @@
           "type": "string",
           "description": "Module description (defaults to name if not specified)"
         },
+        "template": {
+          "type": "string",
+          "description": "Name of a module template to use as base configuration. Templates are defined in defaults/module-templates.yml.",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "auto_discover": {
+          "type": "boolean",
+          "description": "Enable automatic discovery of conventional components (gherkin, structurizr, test-impl, markdown)",
+          "default": false
+        },
+        "parameters": {
+          "type": "object",
+          "description": "Template parameter values for placeholder substitution (e.g., go_root)",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
         "depends_on": {
           "type": "array",
           "description": "List of module monikers this module depends on (defaults to [])",
@@ -378,7 +437,7 @@
           "description": "Component types for this module (required - defines what the module contains)"
         }
       },
-      "required": ["moniker", "name", "components"]
+      "required": ["moniker", "name"]
     },
     "module_components": {
       "type": "object",
@@ -437,8 +496,43 @@
         "build": {
           "$ref": "#/definitions/module_build",
           "description": "Build configuration for this component"
+        },
+        "amp": {
+          "$ref": "#/definitions/amp_config",
+          "description": "Resource amplifier for this component's operations"
         }
       }
+    },
+    "amp_config": {
+      "type": "object",
+      "description": "Per-operation resource amplifiers (fractional multipliers). Values < 1.0 reduce resources, > 1.0 increase resources.",
+      "properties": {
+        "build": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 10.0,
+          "description": "Build operation weight multiplier"
+        },
+        "lint": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 10.0,
+          "description": "Lint operation weight multiplier"
+        },
+        "test": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 10.0,
+          "description": "Test operation weight multiplier"
+        },
+        "scan": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 10.0,
+          "description": "Scan operation weight multiplier"
+        }
+      },
+      "additionalProperties": false
     },
     "post_build_config": {
       "type": "object",
@@ -725,15 +819,14 @@
       "properties": {
         "org": {
           "type": "string",
-          "description": "Organization name in the registry",
+          "description": "Organization name in the registry (optional, derived from repository.remote.registry_url if not set)",
           "minLength": 1
         },
         "cleanup": {
           "$ref": "#/definitions/registry_cleanup_policy",
           "description": "Cleanup policy for container images"
         }
-      },
-      "required": ["org"]
+      }
     },
     "registry_cleanup_policy": {
       "type": "object",

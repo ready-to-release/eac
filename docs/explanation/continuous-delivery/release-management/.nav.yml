@@ -3,5 +3,6 @@ nav:
   - index.md
   - changelog-system.md
   - approval-patterns.md
+  - container-cleanup.md
   - release-evidence.md
   - release-notes.md

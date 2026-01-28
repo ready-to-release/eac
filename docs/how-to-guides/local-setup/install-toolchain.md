@@ -106,5 +106,5 @@ r2r install eac
 
 ## See Also
 
-- [R2R CLI Reference](../../reference/r2r/commands/) - Full CLI command documentation
+- [R2R CLI Reference](../../reference/r2r/commands/index.md) - Full CLI command documentation
 - [CLI vs Extensions](../../reference/devex/internal/cli-vs-extensions.md) - Architecture overview

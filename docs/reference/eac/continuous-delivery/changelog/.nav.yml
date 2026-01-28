@@ -4,4 +4,5 @@ nav:
   - format-specification.md
   - versioning.md
   - module-changelogs.md
+  - release-commands.md
   - repository-changelog.md

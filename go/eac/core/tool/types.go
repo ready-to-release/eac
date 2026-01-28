@@ -8,9 +8,40 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"path/filepath"
 	"strings"
 	"time"
 )
+
+// ToolResources defines resource requirements for a tool.
+// For container tools: passed to docker run as --cpus, --memory, --shm-size
+// For all tools: cpus is used as scheduling weight
+type ToolResources struct {
+	CPUs    int    `yaml:"cpus" json:"cpus"`
+	Memory  string `yaml:"memory,omitempty" json:"memory,omitempty"`
+	ShmSize string `yaml:"shm_size,omitempty" json:"shm_size,omitempty"`
+}
+
+// Weight returns the scheduling weight for this tool.
+// Defaults to 1 if cpus not specified.
+func (r *ToolResources) Weight() int {
+	if r == nil || r.CPUs < 1 {
+		return 1
+	}
+	return r.CPUs
+}
+
+// Clone creates a deep copy of the ToolResources.
+func (r *ToolResources) Clone() *ToolResources {
+	if r == nil {
+		return nil
+	}
+	return &ToolResources{
+		CPUs:    r.CPUs,
+		Memory:  r.Memory,
+		ShmSize: r.ShmSize,
+	}
+}
 
 // ToolType represents the execution type of a tool.
 type ToolType string
@@ -61,10 +92,12 @@ type ToolDefinition struct {
 	Args   []string `yaml:"args,omitempty" json:"args,omitempty"`
 
 	// Container tool configuration (Type == "container")
-	// Option 1: Direct image specification
+	// Option 1: Local container build (has Dockerfile in LocalPath)
+	LocalPath string `yaml:"localPath,omitempty" json:"localPath,omitempty"`
+	// Option 2: Direct image specification (external container)
 	Image string `yaml:"image,omitempty" json:"image,omitempty"`
 	Tag   string `yaml:"tag,omitempty" json:"tag,omitempty"`
-	// Option 2: Reference to repository.yml containers section
+	// Option 3: Reference to repository.yml containers section (legacy)
 	Container string `yaml:"container,omitempty" json:"container,omitempty"`
 
 	// Container execution details
@@ -76,14 +109,20 @@ type ToolDefinition struct {
 	WorkDir string            `yaml:"workdir,omitempty" json:"workdir,omitempty"`
 
 	// Container-specific settings
-	Mounts      []MountConfig `yaml:"mounts,omitempty" json:"mounts,omitempty"`
-	Network     string        `yaml:"network,omitempty" json:"network,omitempty"`
-	User        string        `yaml:"user,omitempty" json:"user,omitempty"`
-	Privileged  bool          `yaml:"privileged,omitempty" json:"privileged,omitempty"`
-	MemoryLimit string        `yaml:"memory_limit,omitempty" json:"memory_limit,omitempty"` // Docker memory limit (e.g., "8g")
+	Mounts     []MountConfig `yaml:"mounts,omitempty" json:"mounts,omitempty"`
+	Network    string        `yaml:"network,omitempty" json:"network,omitempty"`
+	User       string        `yaml:"user,omitempty" json:"user,omitempty"`
+	Privileged bool          `yaml:"privileged,omitempty" json:"privileged,omitempty"`
+
+	// Resource requirements (scheduling weight and container limits)
+	Resources *ToolResources `yaml:"resources,omitempty" json:"resources,omitempty"`
 
 	// Validation
 	Requirements []string `yaml:"requirements,omitempty" json:"requirements,omitempty"`
+
+	// Platform constraints (empty means all platforms)
+	// Valid values: "linux", "darwin", "windows"
+	Platforms []string `yaml:"platforms,omitempty" json:"platforms,omitempty"`
 
 	// Verification (for checking tool availability)
 	Verify  *ToolVerify `yaml:"verify,omitempty" json:"verify,omitempty"`
@@ -138,6 +177,7 @@ func (v *ToolVerify) Clone() *ToolVerify {
 type VerifyResult struct {
 	ToolID          string // Tool identifier
 	Available       bool   // Whether the tool is available
+	Skipped         bool   // Whether verification was skipped (e.g., platform incompatible)
 	Version         string // Detected version
 	RequiredVersion string // Required version from config
 	Error           error  // Error if verification failed
@@ -146,6 +186,24 @@ type VerifyResult struct {
 // IsSuccess returns true if the tool is available without errors.
 func (r VerifyResult) IsSuccess() bool {
 	return r.Available && r.Error == nil
+}
+
+// IsPlatformSkipped returns true if the tool was skipped due to platform incompatibility.
+func (r VerifyResult) IsPlatformSkipped() bool {
+	return r.Skipped && !r.Available
+}
+
+// forbiddenExternalTags are mutable tags that cannot be used for external containers.
+// External containers must use pinned versions for reproducibility and security.
+var forbiddenExternalTags = map[string]bool{
+	"latest":  true,
+	"local":   true,
+	"dev":     true,
+	"main":    true,
+	"master":  true,
+	"stable":  true,
+	"edge":    true,
+	"nightly": true,
 }
 
 // Validate checks if the tool definition is valid.
@@ -161,9 +219,19 @@ func (t *ToolDefinition) Validate() error {
 			return fmt.Errorf("system tool %q requires binary", t.ID)
 		}
 	case ToolTypeContainer:
-		// Must have either direct image or container reference
-		if t.Image == "" && t.Container == "" {
-			return fmt.Errorf("container tool %q requires image or container reference", t.ID)
+		// Must have either local path, direct image, or container reference
+		if t.LocalPath == "" && t.Image == "" && t.Container == "" {
+			return fmt.Errorf("container tool %q requires localPath, image, or container reference", t.ID)
+		}
+
+		// External containers (no LocalPath) must have pinned versions
+		if t.LocalPath == "" && t.Image != "" {
+			if t.Tag == "" {
+				return fmt.Errorf("external container %q requires explicit version tag", t.ID)
+			}
+			if forbiddenExternalTags[strings.ToLower(t.Tag)] {
+				return fmt.Errorf("external container %q has mutable tag %q - use explicit version", t.ID, t.Tag)
+			}
 		}
 	case "":
 		return fmt.Errorf("tool %q requires type (system or container)", t.ID)
@@ -193,6 +261,31 @@ func (t *ToolDefinition) FullImage() string {
 	return t.Image + ":" + t.Tag
 }
 
+// IsLocalContainer returns true if this container has a local build context.
+// Local containers have a LocalPath set and are built from Dockerfile.
+func (t *ToolDefinition) IsLocalContainer() bool {
+	return t.Type == ToolTypeContainer && t.LocalPath != ""
+}
+
+// LocalContextPath returns the absolute path to the container build context.
+// Returns empty string if not a local container.
+func (t *ToolDefinition) LocalContextPath(workspaceRoot string) string {
+	if t.LocalPath == "" {
+		return ""
+	}
+	return filepath.Join(workspaceRoot, t.LocalPath)
+}
+
+// LocalImageTag returns the local Docker tag for this container.
+// Returns "{dirname}:local" based on the LocalPath directory name.
+// Returns empty string if not a local container.
+func (t *ToolDefinition) LocalImageTag() string {
+	if t.LocalPath == "" {
+		return ""
+	}
+	return filepath.Base(t.LocalPath) + ":local"
+}
+
 // Clone creates a deep copy of the tool definition.
 func (t *ToolDefinition) Clone() *ToolDefinition {
 	if t == nil {
@@ -204,6 +297,7 @@ func (t *ToolDefinition) Clone() *ToolDefinition {
 		Description:  t.Description,
 		Type:         t.Type,
 		Binary:       t.Binary,
+		LocalPath:    t.LocalPath,
 		Image:        t.Image,
 		Tag:          t.Tag,
 		Container:    t.Container,
@@ -211,7 +305,7 @@ func (t *ToolDefinition) Clone() *ToolDefinition {
 		Network:      t.Network,
 		User:         t.User,
 		Privileged:   t.Privileged,
-		MemoryLimit:  t.MemoryLimit,
+		Resources:    t.Resources.Clone(),
 		Version:      t.Version,
 		OutputFormat: t.OutputFormat,
 	}
@@ -232,6 +326,10 @@ func (t *ToolDefinition) Clone() *ToolDefinition {
 	if t.Requirements != nil {
 		clone.Requirements = make([]string, len(t.Requirements))
 		copy(clone.Requirements, t.Requirements)
+	}
+	if t.Platforms != nil {
+		clone.Platforms = make([]string, len(t.Platforms))
+		copy(clone.Platforms, t.Platforms)
 	}
 
 	// Copy maps
@@ -450,6 +548,11 @@ type ExecutionContext struct {
 	// Placeholders for mount path resolution
 	// Common placeholders: {workspace}, {module}, {output}, {go_cache}, {npm_cache}
 	Placeholders map[string]string
+
+	// Resource amplifier for container provisioning.
+	// Multiplies the tool's base resource allocation (CPUs, Memory).
+	// Value of 1.0 means no change, 2.0 doubles resources, 0.5 halves resources.
+	Amp float64
 }
 
 // ExecutionResult captures the outcome of tool execution.

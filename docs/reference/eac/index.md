@@ -83,17 +83,17 @@ The repository is organized as a **modular monorepo** with clearly defined modul
 cli/
 ├── .r2r/                       # R2R and EAC configuration
 │   ├── cache/                  # Build cache
-│   └── eac/                    # EAC contracts (12 YAML files)
-│       ├── repository.yml         # Module registry
-│       ├── module-types.yml    # Module type definitions
-│       ├── environments.yml    # Test environments (L0-L4)
-│       ├── test-suites.yml     # Test suite definitions
-│       └── ...
+│   └── eac/                    # User configuration overrides
+│       ├── repository.yml      # Module registry
+│       └── books.yml           # Book configuration
 │
-├── contracts/                  # JSON schemas for validation
-│   └── eac-core/0.1.0/         # Versioned schemas
-│       ├── modules.schema.json
-│       ├── module-types.schema.json
+├── contracts/                  # JSON schemas and system defaults
+│   └── eac-core/0.1.0/         # Versioned schemas and defaults
+│       ├── defaults/           # System default configurations
+│       │   ├── component-types.yml
+│       │   ├── tool-config.yml
+│       │   └── ...
+│       ├── repository.schema.json
 │       └── ...
 │
 ├── go/                         # Go source code
@@ -156,7 +156,7 @@ All modules defined in `.r2r/eac/repository.yml` with explicit dependencies and 
 
 | Document                                                 | Description                                           |
 | -------------------------------------------------------- | ----------------------------------------------------- |
-| [Architecture](./architecture/)                          | System architecture, components, and execution models |
+| [Architecture](./architecture/index.md)                          | System architecture, components, and execution models |
 | [Viewing Architecture](./guides/viewing-architecture.md) | How to view and work with C4 architecture diagrams    |
 | [Modules](./architecture/modules.md)                     | Module system, dependencies, and build management     |
 | [Component Types](./architecture/component-types.md)     | Language support and component type specifications    |
@@ -168,7 +168,7 @@ All modules defined in `.r2r/eac/repository.yml` with explicit dependencies and 
 
 ### System Architecture
 
-**[Architecture](./architecture/)**
+**[Architecture](./architecture/index.md)**
 
 Complete system architecture including component layers, execution models (Docker CLI, MCP Server, Fallback),
 integration patterns, data flow, security architecture, and technology stack.
@@ -205,6 +205,6 @@ flag definitions, registry integration, and best practices.
 
 ## Related Documentation
 
-- **[Command Reference](./commands/)** - Complete reference for all EAC commands
-- **[How-To Guides](../../how-to-guides/eac/)** - Task-oriented guides for using EAC
-- **[Decision Records](../repository/decision-records/)** - Architectural decisions and rationale
+- **[Command Reference](./commands/index.md)** - Complete reference for all EAC commands
+- **[How-To Guides](../../how-to-guides/eac/index.md)** - Task-oriented guides for using EAC
+- **[Decision Records](../repository/decision-records/index.md)** - Architectural decisions and rationale

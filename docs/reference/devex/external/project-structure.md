@@ -28,10 +28,6 @@ your-project/
 │   ├── cache/                   # Build cache (gitignored)
 │   └── eac/
 │       ├── repository.yml        # Module definitions
-│       ├── module-types.yml      # Custom type templates
-│       ├── environments.yml      # Test environments
-│       ├── test-suites.yml       # Test suite definitions
-│       ├── testing-tags.yml      # Valid test tags
 │       ├── ai-provider.yml       # AI configuration
 │       └── ai-provider.personal.yml  # Personal AI config (gitignored)
 │
@@ -58,10 +54,9 @@ your-project/
 | --------------------------- | ---------------------- |
 | `.r2r/r2r-cli.yml`          | Extension registry     |
 | `.r2r/eac/repository.yml`   | Module definitions     |
-| `.r2r/eac/module-types.yml` | Type templates         |
-| `.r2r/eac/environments.yml` | Test environments      |
-| `.r2r/eac/test-suites.yml`  | Test suites            |
 | `.r2r/eac/ai-provider.yml`  | AI config (no secrets) |
+
+System defaults (in `contracts/eac-core/0.1.0/defaults/`) are used automatically and don't need to be committed.
 
 ### Never Commit (Add to .gitignore)
 
@@ -265,4 +260,4 @@ r2r eac test <module>
 
 - [Configuration](./configuration.md) - Configuration reference
 - [Getting Started](./getting-started.md) - Initial setup guide
-- [Modules Reference](../../eac/modules/) - Module system details
+- [Modules Reference](../../eac/modules/index.md) - Module system details

@@ -54,13 +54,14 @@ func ShowBooks() int {
 		return 1
 	}
 
-	if err := cfg.LoadBooks(false); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to load books: %v\n", err)
+	// Load repository first - books need modules for from_modules generator
+	if err := cfg.LoadRepository(false); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to load repository: %v\n", err)
 		return 1
 	}
 
-	if err := cfg.LoadRepository(false); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to load repository: %v\n", err)
+	if err := cfg.LoadBooks(false); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to load books: %v\n", err)
 		return 1
 	}
 

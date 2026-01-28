@@ -1,5 +1,6 @@
 title: Overview
 nav:
+  - index.md
   - command-taxonomy.md
   - naming-conventions.md
   - common-flags.md

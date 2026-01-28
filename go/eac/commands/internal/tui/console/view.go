@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
+	zone "github.com/lrstanley/bubblezone"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
 )
@@ -17,7 +18,8 @@ func (m Model) View() string {
 	if m.quitting {
 		return ""
 	}
-	return m.viewPanes()
+	// Wrap with zone.Scan to enable mouse click detection on marked zones
+	return zone.Scan(m.viewPanes())
 }
 
 // ViewFinal renders a clean summary after TUI exit.
@@ -39,7 +41,9 @@ func (m Model) ViewFinal() string {
 		if len(m.summaryData.Details) > 0 {
 			b.WriteString("\n")
 			for _, line := range m.summaryData.Details {
-				b.WriteString(fmt.Sprintf("  %s\n", line))
+				// Strip markdown table pipes for cleaner terminal output
+				cleanLine := stripMarkdownPipes(line)
+				b.WriteString(fmt.Sprintf("%s\n", cleanLine))
 			}
 		}
 
@@ -68,6 +72,31 @@ func (m Model) ViewFinal() string {
 	return b.String()
 }
 
+// stripMarkdownPipes removes leading/trailing pipe characters from markdown table lines.
+// Converts "| col1 | col2 |" to "col1   col2" for cleaner terminal display.
+func stripMarkdownPipes(line string) string {
+	// Handle separator lines (dashes)
+	if strings.Contains(line, "---") {
+		// Convert separator to plain dashes without pipes
+		line = strings.TrimPrefix(line, "|")
+		line = strings.TrimSuffix(line, "|")
+		line = strings.ReplaceAll(line, "|", " ")
+		return strings.TrimSpace(line)
+	}
+
+	// Handle data lines
+	if strings.HasPrefix(line, "|") && strings.HasSuffix(line, "|") {
+		// Remove outer pipes
+		line = strings.TrimPrefix(line, "|")
+		line = strings.TrimSuffix(line, "|")
+		// Replace inner pipes with spaces for alignment
+		line = strings.ReplaceAll(line, " | ", "   ")
+		return strings.TrimSpace(line)
+	}
+
+	return line
+}
+
 // viewPanes renders the 3-pane layout with panes appearing progressively.
 func (m Model) viewPanes() string {
 	var b strings.Builder
@@ -91,16 +120,15 @@ func (m Model) viewPanes() string {
 
 	// Render Run pane only if it actually started (not still pending)
 	if m.panes[PhaseRun].Status != PhasePending {
-		// Render tab bar BEFORE Run pane (between Resources and Run content)
-		// Tab bar may be 1 or 2 rows depending on number of tabs
+		// Render Components pane (contains tab bar) between Resources and Run content
 		tabs := m.GetVisibleTabs()
-		tabBar := m.renderTabBar(tabs)
-		b.WriteString(tabBar)
+		componentsPane := m.renderComponentsPane(tabs)
+		b.WriteString(componentsPane)
 		b.WriteString("\n")
 
-		// Count tab bar rows (1 + number of newlines in tabBar)
-		tabBarRows := 1 + strings.Count(tabBar, "\n")
-		runH -= tabBarRows
+		// Count components pane rows (header + tab rows + footer)
+		componentsPaneRows := strings.Count(componentsPane, "\n") + 1
+		runH -= componentsPaneRows
 
 		b.WriteString(m.renderPaneHeader(PhaseRun))
 		b.WriteString("\n")
@@ -175,10 +203,10 @@ func (m Model) renderTabBar(tabs []*ModuleState) string {
 		}
 		tabText += weightStr
 
-		// Style based on selection and status
-		// Use effective active tab (defaults to first tab if none explicitly selected)
+		// Style based on selection, hover, and status
 		effectiveActiveTab := m.getEffectiveActiveTab()
 		isActive := state.Moniker == effectiveActiveTab
+		isHovered := state.Moniker == m.hoveredTab
 
 		// Get base style from status
 		var style lipgloss.Style
@@ -189,18 +217,25 @@ func (m Model) renderTabBar(tabs []*ModuleState) string {
 			style = Styles.TabRunning
 		case ModuleComplete:
 			style = Styles.TabComplete
+		case ModuleSkipped:
+			style = Styles.TabSkipped
 		case ModuleFailed:
 			style = Styles.TabFailed
 		default:
 			style = Styles.TabDim
 		}
 
-		// If active, darken background for pressed/sunken effect while keeping status color
-		if isActive {
-			style = style.Bold(true).Background(lipgloss.Color("235")) // Dark bg = pressed
+		// Apply hover effect (dimmed highlight background)
+		if isHovered && !isActive {
+			style = style.Background(lipgloss.Color("238"))
 		}
 
-		allTabs = append(allTabs, tabEntry{text: tabText, style: style})
+		// If active, use reverse video effect for clear selection indicator
+		if isActive {
+			style = style.Bold(true).Reverse(true)
+		}
+
+		allTabs = append(allTabs, tabEntry{text: tabText, style: style, zoneID: state.Moniker})
 	}
 
 	// Fixed number of tabs per row
@@ -251,6 +286,8 @@ func (m Model) statusIcon(status ModuleStatus) string {
 			return ">"
 		case ModuleComplete:
 			return "V"
+		case ModuleSkipped:
+			return "="
 		case ModuleFailed:
 			return "X"
 		default:
@@ -265,6 +302,8 @@ func (m Model) statusIcon(status ModuleStatus) string {
 		return "▶"
 	case ModuleComplete:
 		return "✓"
+	case ModuleSkipped:
+		return "⏭"
 	case ModuleFailed:
 		return "✗"
 	default:
@@ -309,8 +348,12 @@ func (m Model) renderTabRow(tabs []tabEntry, tabWidth int) string {
 			usedWidth++
 		}
 
-		// Render tab content with style
-		b.WriteString(tab.style.Render(tab.text))
+		// Render tab content with style, wrapped in zone for mouse detection
+		styledTab := tab.style.Render(tab.text)
+		if tab.zoneID != "" {
+			styledTab = zone.Mark(tab.zoneID, styledTab)
+		}
+		b.WriteString(styledTab)
 		usedWidth += tabWidth
 	}
 
@@ -326,8 +369,9 @@ func (m Model) renderTabRow(tabs []tabEntry, tabWidth int) string {
 
 // tabEntry represents a single tab for rendering.
 type tabEntry struct {
-	text  string
-	style lipgloss.Style
+	text   string
+	style  lipgloss.Style
+	zoneID string // Zone ID for mouse click detection (empty for filler tabs)
 }
 
 // renderPaneHeader renders a pane's header line.
@@ -374,7 +418,7 @@ func (m Model) renderPaneHeader(phase Phase) string {
 			if state, exists := m.moduleStates[activeModule]; exists {
 				if state.Status == ModuleRunning {
 					moduleElapsed = time.Since(state.StartTime).Round(time.Millisecond * 100)
-				} else if state.Status == ModuleComplete || state.Status == ModuleFailed {
+				} else if state.Status == ModuleComplete || state.Status == ModuleSkipped || state.Status == ModuleFailed {
 					// Show final duration for completed modules
 					moduleElapsed = state.EndTime.Sub(state.StartTime).Round(time.Millisecond * 100)
 				}
@@ -436,32 +480,192 @@ func (m Model) renderResourcesPane() string {
 
 	var result strings.Builder
 
-	// Header: ┌─ Resources ────────────────────────┐
+	// Header: ┌─ Resources ──────────────────────┐
 	title := "Resources"
 	headerLeft := "┌─ " + Styles.Dim.Render(title) + " "
+
 	headerBorderLen := m.width - lipgloss.Width(headerLeft) - 1
 	if headerBorderLen < 3 {
 		headerBorderLen = 3
 	}
 	result.WriteString(headerLeft + Styles.Border.Render(strings.Repeat("─", headerBorderLen)) + "┐\n")
 
-	// Content line: pressure (weighted scheduler) | cpu dots | memory %
-	pressureStr := fmt.Sprintf("pressure: %2d/%-2d", pressureUsed, pressureCap)
+	// Content line: timer | pressure (weighted scheduler) | cpu dots | memory %
+	// White style for labels
+	white := lipgloss.NewStyle().Foreground(lipgloss.Color("255"))
+
+	// Timer with fixed width MM:SS format (white)
+	elapsed := time.Since(m.startTime)
+	mins := int(elapsed.Minutes())
+	secs := int(elapsed.Seconds()) % 60
+	timerStr := white.Render(fmt.Sprintf("%02d:%02d", mins, secs))
+
+	pressureStr := white.Render("Pressure: ") + Styles.Dim.Render(fmt.Sprintf("%2d/%-2d", pressureUsed, pressureCap))
 
 	// Per-core CPU usage as colored dots
-	cpuStr := "cpu: " + m.renderCPUDots()
+	cpuStr := white.Render("CPU: ") + m.renderCPUDots()
 
 	// System memory usage as dots (11 dots, red for used, dim for free)
-	memStr := "mem: " + m.renderMemDots()
+	memStr := white.Render("Memory: ") + m.renderMemDots()
 
-	content := pressureStr + " │ " + cpuStr + " │ " + memStr
+	// Active containers with pressure dots (colored by weight)
+	containerDotsStr := m.renderActiveContainerDots()
 
-	// Content line: │ content                            │
+	sep := Styles.Dim.Render(" │ ")
+	content := timerStr + sep + pressureStr + sep + cpuStr + sep + memStr
+	if containerDotsStr != "" {
+		content += sep + white.Render("Jobs: ") + containerDotsStr
+	}
+
+	// Add exit countdown if active
+	if m.exitCountdownSecs > 0 {
+		exitStr := white.Render("Exit: ") + Styles.Dim.Render(fmt.Sprintf("%d", m.exitCountdownSecs))
+		content += sep + exitStr
+	}
+
+	// Content line 1: │ content                            │
 	contentPadding := m.width - lipgloss.Width(content) - 4
 	if contentPadding < 0 {
 		contentPadding = 0
 	}
-	result.WriteString(Styles.Border.Render("│") + " " + Styles.Dim.Render(content) + strings.Repeat(" ", contentPadding) + " " + Styles.Border.Render("│") + "\n")
+	result.WriteString(Styles.Border.Render("│") + " " + content + strings.Repeat(" ", contentPadding) + " " + Styles.Border.Render("│") + "\n")
+
+	// Content line 2: tools row (show tools grouped by type - containers | system)
+	hasContainers := len(m.usedContainers) > 0
+	hasSystem := len(m.usedSystemTools) > 0
+	if hasContainers || hasSystem {
+		// Horizontal separator between metrics and tools
+		sepLen := m.width - 2
+		if sepLen < 3 {
+			sepLen = 3
+		}
+		result.WriteString("├" + Styles.Border.Render(strings.Repeat("─", sepLen)) + "┤\n")
+
+		// Render each tool with appropriate color (orange=active, light grey/white=was active)
+		orange := lipgloss.NewStyle().Foreground(lipgloss.Color("208"))
+		lightGrey := lipgloss.NewStyle().Foreground(lipgloss.Color("250")) // Light grey for previously-active tools
+		white := lipgloss.NewStyle().Foreground(lipgloss.Color("255"))     // White for labels
+
+		// Build active tool sets for quick lookup
+		activeContainerSet := make(map[string]bool)
+		for _, t := range m.activeContainers {
+			activeContainerSet[t] = true
+		}
+		activeSystemSet := make(map[string]bool)
+		for _, t := range m.activeSystemTools {
+			activeSystemSet[t] = true
+		}
+
+		var toolsParts []string
+
+		// System tools group (first)
+		if hasSystem {
+			var systemParts []string
+			for _, tool := range m.usedSystemTools {
+				if activeSystemSet[tool] {
+					systemParts = append(systemParts, orange.Render(tool))
+				} else {
+					systemParts = append(systemParts, lightGrey.Render(tool))
+				}
+			}
+			systemList := strings.Join(systemParts, Styles.Dim.Render(", "))
+			toolsParts = append(toolsParts, white.Render("System: ")+systemList)
+		}
+
+		// Containers group (second)
+		if hasContainers {
+			var containerParts []string
+			for _, tool := range m.usedContainers {
+				if activeContainerSet[tool] {
+					containerParts = append(containerParts, orange.Render(tool))
+				} else {
+					containerParts = append(containerParts, lightGrey.Render(tool))
+				}
+			}
+			containersList := strings.Join(containerParts, Styles.Dim.Render(", "))
+			toolsParts = append(toolsParts, white.Render("Containers: ")+containersList)
+		}
+
+		// Join groups with separator
+		toolsContent := strings.Join(toolsParts, Styles.Dim.Render(" │ "))
+
+		// Calculate padding (need to use lipgloss.Width for styled content)
+		toolsPadding := m.width - lipgloss.Width(toolsContent) - 4
+		if toolsPadding < 0 {
+			toolsPadding = 0
+		}
+		result.WriteString(Styles.Border.Render("│") + " " + toolsContent + strings.Repeat(" ", toolsPadding) + " " + Styles.Border.Render("│") + "\n")
+	}
+
+	// Content line 3: active component row (shows hovered or active tab name)
+	activeComponent := ""
+	if m.hoveredTab != "" {
+		activeComponent = m.hoveredTab
+	} else if activeTab := m.getEffectiveActiveTab(); activeTab != "" {
+		activeComponent = activeTab
+	}
+	if activeComponent != "" {
+		// Horizontal separator
+		sepLen := m.width - 2
+		if sepLen < 3 {
+			sepLen = 3
+		}
+		result.WriteString("├" + Styles.Border.Render(strings.Repeat("─", sepLen)) + "┤\n")
+
+		white := lipgloss.NewStyle().Foreground(lipgloss.Color("255"))
+		orange := lipgloss.NewStyle().Foreground(lipgloss.Color("208"))
+		dim := Styles.Dim
+
+		// Parse component string into parts: module:component:handler
+		// Format: "module:component:handler" or "module:component/path:handler"
+		parts := strings.Split(activeComponent, ":")
+		var componentContent string
+
+		// Determine labels based on operation type
+		componentLabel := "Component"
+		toolLabel := "Tool"
+		switch m.runPhaseName {
+		case "building", "Building":
+			componentLabel = "Component"
+			toolLabel = "Builder"
+		case "testing", "Testing":
+			componentLabel = "Test"
+			toolLabel = "Runner"
+		case "linting", "Linting":
+			componentLabel = "Component"
+			toolLabel = "Linter"
+		case "scanning", "Scanning":
+			componentLabel = "Component"
+			toolLabel = "Scanner"
+		}
+
+		if len(parts) >= 3 {
+			// Full format: module:component:handler
+			module := parts[0]
+			component := parts[1]
+			handler := parts[len(parts)-1]
+			// If there are more than 3 parts, component might have colons in path
+			if len(parts) > 3 {
+				component = strings.Join(parts[1:len(parts)-1], ":")
+			}
+			componentContent = white.Render("Module: ") + orange.Render(module) +
+				dim.Render(" │ ") + white.Render(componentLabel+": ") + orange.Render(component) +
+				dim.Render(" │ ") + white.Render(toolLabel+": ") + orange.Render(handler)
+		} else if len(parts) == 2 {
+			// Format: module:component
+			componentContent = white.Render("Module: ") + orange.Render(parts[0]) +
+				dim.Render(" │ ") + white.Render(componentLabel+": ") + orange.Render(parts[1])
+		} else {
+			// Fallback: just show as-is
+			componentContent = white.Render("Active: ") + orange.Render(activeComponent)
+		}
+
+		componentPadding := m.width - lipgloss.Width(componentContent) - 4
+		if componentPadding < 0 {
+			componentPadding = 0
+		}
+		result.WriteString(Styles.Border.Render("│") + " " + componentContent + strings.Repeat(" ", componentPadding) + " " + Styles.Border.Render("│") + "\n")
+	}
 
 	// Footer: └─────────────────────────────────────┘
 	footerBorderLen := m.width - 2
@@ -470,6 +674,185 @@ func (m Model) renderResourcesPane() string {
 	}
 	result.WriteString("└" + Styles.Border.Render(strings.Repeat("─", footerBorderLen)) + "┘")
 
+	return result.String()
+}
+
+// renderComponentsPane renders the Components pane containing the tab bar.
+// This provides a bordered container for component tabs similar to other panes.
+func (m Model) renderComponentsPane(tabs []*ModuleState) string {
+	if len(tabs) == 0 {
+		return ""
+	}
+
+	var result strings.Builder
+
+	// Count running, completed, skipped, failed for header summary
+	var running, completed, skipped, failed int
+	for _, tab := range tabs {
+		switch tab.Status {
+		case ModuleRunning:
+			running++
+		case ModuleComplete:
+			completed++
+		case ModuleSkipped:
+			skipped++
+		case ModuleFailed:
+			failed++
+		}
+	}
+
+	// Header: ┌─ Components: 3 running, 5/10 done ─────────────────┐
+	title := "Components"
+	var statusParts []string
+	if running > 0 {
+		statusParts = append(statusParts, fmt.Sprintf("%d running", running))
+	}
+	if completed > 0 || skipped > 0 || failed > 0 {
+		statusParts = append(statusParts, fmt.Sprintf("%d/%d done", completed+skipped+failed, len(tabs)))
+	}
+	if len(statusParts) > 0 {
+		title += ": " + strings.Join(statusParts, ", ")
+	}
+
+	headerLeft := "┌─ " + Styles.Dim.Render(title) + " "
+	headerBorderLen := m.width - lipgloss.Width(headerLeft) - 1
+	if headerBorderLen < 3 {
+		headerBorderLen = 3
+	}
+	result.WriteString(headerLeft + Styles.Border.Render(strings.Repeat("─", headerBorderLen)) + "┐\n")
+
+	// Tab bar content (may be multiple rows)
+	tabBar := m.renderTabBarContent(tabs)
+	result.WriteString(tabBar)
+
+	// Footer: └─────────────────────────────────────────────────────┘
+	footerBorderLen := m.width - 2
+	if footerBorderLen < 3 {
+		footerBorderLen = 3
+	}
+	result.WriteString("\n└" + Styles.Border.Render(strings.Repeat("─", footerBorderLen)) + "┘")
+
+	return result.String()
+}
+
+// renderTabBarContent renders the tab rows without outer borders (used inside Components pane).
+func (m Model) renderTabBarContent(tabs []*ModuleState) string {
+	const tabWidth = 20 // Fixed width for uniform tabs
+
+	// Build list of all tab entries (modules first, then "All" at the end)
+	var allTabs []tabEntry
+
+	// Add module tabs first
+	for _, state := range tabs {
+		icon := m.statusIcon(state.Status)
+
+		// Use full module:component name
+		label := state.Moniker
+
+		// Weight as circled digit or suffix based on mode
+		var weightStr string
+		if m.asciiMode {
+			weightStr = fmt.Sprintf(" w%d", state.Weight)
+		} else {
+			// Unicode mode: show circled digit with trailing space for background coverage
+			weightStr = " " + weightDigit(state.Weight) + " "
+		}
+
+		// Calculate space for name
+		// Use lipgloss.Width for correct Unicode width (circled digits are 2 chars wide)
+		iconWidth := 1
+		weightWidth := lipgloss.Width(weightStr)
+		nameSpace := tabWidth - iconWidth - 1 - weightWidth - 1
+		if nameSpace < 4 {
+			nameSpace = 4
+		}
+
+		if len(label) > nameSpace {
+			if m.asciiMode {
+				label = label[:nameSpace-2] + ".."
+			} else {
+				label = label[:nameSpace-1] + "…"
+			}
+		}
+
+		// Build tab text
+		tabText := fmt.Sprintf("%s %s", icon, label)
+		padLen := tabWidth - lipgloss.Width(tabText) - lipgloss.Width(weightStr)
+		if padLen > 0 {
+			tabText += strings.Repeat(" ", padLen)
+		}
+		tabText += weightStr
+
+		// Style based on selection, hover, and status
+		effectiveActiveTab := m.getEffectiveActiveTab()
+		isActive := state.Moniker == effectiveActiveTab
+		isHovered := state.Moniker == m.hoveredTab
+
+		// Get base style from status
+		var style lipgloss.Style
+		switch state.Status {
+		case ModulePending:
+			style = Styles.TabPending
+		case ModuleRunning:
+			style = Styles.TabRunning
+		case ModuleComplete:
+			style = Styles.TabComplete
+		case ModuleSkipped:
+			style = Styles.TabSkipped
+		case ModuleFailed:
+			style = Styles.TabFailed
+		default:
+			style = Styles.TabDim
+		}
+
+		// Apply hover effect (dimmed highlight background)
+		if isHovered && !isActive {
+			style = style.Background(lipgloss.Color("238"))
+		}
+
+		// If active, use reverse video effect for clear selection indicator
+		if isActive {
+			style = style.Bold(true).Reverse(true)
+		}
+
+		allTabs = append(allTabs, tabEntry{text: tabText, style: style, zoneID: state.Moniker})
+	}
+
+	// Fixed number of tabs per row
+	const tabsPerRow = 8
+
+	// Split into rows
+	var rows [][]tabEntry
+	for i := 0; i < len(allTabs); i += tabsPerRow {
+		end := i + tabsPerRow
+		if end > len(allTabs) {
+			end = len(allTabs)
+		}
+		rows = append(rows, allTabs[i:end])
+	}
+
+	// Fill last row with empty filler tabs for visual coherence
+	if len(rows) > 0 {
+		lastRow := rows[len(rows)-1]
+		for len(lastRow) < tabsPerRow {
+			// Create empty filler tab (no name, no weight)
+			fillerText := strings.Repeat(" ", tabWidth)
+			lastRow = append(lastRow, tabEntry{
+				text:  fillerText,
+				style: Styles.TabDim,
+			})
+		}
+		rows[len(rows)-1] = lastRow
+	}
+
+	// Render all rows
+	var result strings.Builder
+	for i, row := range rows {
+		if i > 0 {
+			result.WriteString("\n")
+		}
+		result.WriteString(m.renderTabRow(row, tabWidth))
+	}
 	return result.String()
 }
 
@@ -563,6 +946,51 @@ func (m Model) renderMemDots() string {
 			default:
 				dots.WriteString(red.Render(filledChar))
 			}
+		}
+	}
+
+	return dots.String()
+}
+
+// renderActiveContainerDots returns colored dots for each running job.
+// Each dot represents an active job, colored by its weight/pressure:
+// Green = weight 1-2 (light), Yellow = weight 3-4, Orange = weight 5-6, Red = weight 7+
+func (m Model) renderActiveContainerDots() string {
+	// Collect running modules with their weights
+	var runningJobs []int // Weights of running jobs
+	for _, moniker := range m.moduleOrder {
+		state := m.moduleStates[moniker]
+		if state != nil && state.Status == ModuleRunning {
+			runningJobs = append(runningJobs, state.Weight)
+		}
+	}
+
+	if len(runningJobs) == 0 {
+		return ""
+	}
+
+	green := lipgloss.NewStyle().Foreground(lipgloss.Color("71"))   // Weight 1-2
+	yellow := lipgloss.NewStyle().Foreground(lipgloss.Color("226")) // Weight 3-4
+	orange := lipgloss.NewStyle().Foreground(lipgloss.Color("208")) // Weight 5-6
+	red := lipgloss.NewStyle().Foreground(lipgloss.Color("196"))    // Weight 7+
+
+	// Choose character based on mode
+	filledChar := "●"
+	if m.asciiMode {
+		filledChar = "*"
+	}
+
+	var dots strings.Builder
+	for _, weight := range runningJobs {
+		switch {
+		case weight <= 2:
+			dots.WriteString(green.Render(filledChar))
+		case weight <= 4:
+			dots.WriteString(yellow.Render(filledChar))
+		case weight <= 6:
+			dots.WriteString(orange.Render(filledChar))
+		default:
+			dots.WriteString(red.Render(filledChar))
 		}
 	}
 
@@ -1239,7 +1667,7 @@ func (m Model) renderModuleResultsTable(tabs []*ModuleState) string {
 	b.WriteString("┤\n")
 
 	// Count results
-	var passed, failed, running, pending int
+	var passed, skipped, failed, running, pending int
 
 	// Table rows
 	for _, state := range tabs {
@@ -1249,6 +1677,9 @@ func (m Model) renderModuleResultsTable(tabs []*ModuleState) string {
 		case ModuleComplete:
 			icon = "  ✓  "
 			passed++
+		case ModuleSkipped:
+			icon = "  ⏭  "
+			skipped++
 		case ModuleFailed:
 			icon = "  ✗  "
 			failed++
@@ -1333,6 +1764,9 @@ func (m Model) renderModuleResultsTable(tabs []*ModuleState) string {
 		}
 	} else {
 		b.WriteString(fmt.Sprintf("  Total: %d  ✓ %d passed", len(tabs), passed))
+	}
+	if skipped > 0 {
+		b.WriteString(fmt.Sprintf("  ⏭ %d cached", skipped))
 	}
 	if running > 0 {
 		b.WriteString(fmt.Sprintf("  ▶ %d running", running))

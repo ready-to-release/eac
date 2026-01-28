@@ -4,6 +4,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/ready-to-release/eac/go/eac/core/config"
 )
 
 // Update handles all messages and updates the model.
@@ -40,10 +41,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Write to active phase's buffer
 		pane := m.panes[m.activePhase]
 		pane.Buffer.Push(line)
-		// If pane is scrolled up (not auto-scrolling), increment offset to keep view locked
-		if !pane.autoScroll && pane.scrollOffset > 0 {
-			pane.scrollOffset++
-		}
 
 		// Route to per-module buffer if this is a module output line
 		// (Source is the module moniker, not "system" or phase name)
@@ -56,6 +53,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// Weight defaults to 1 if not set via ModuleStartMsg
 				state := m.GetOrCreateModuleState(line.Source, 0)
 				state.Buffer.Push(line)
+			}
+		}
+
+		// If pane is scrolled up (not auto-scrolling), increment offset to keep view locked
+		// Only increment if this line affects the currently viewed buffer
+		if !pane.autoScroll && pane.scrollOffset > 0 {
+			if m.activeTab == "" {
+				// Viewing "All" - any line increments scroll
+				pane.scrollOffset++
+			} else if line.Source == m.activeTab {
+				// Viewing specific module - only lines for that module increment scroll
+				pane.scrollOffset++
 			}
 		}
 
@@ -76,8 +85,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			pane := m.panes[msg.Phase]
 			pane.Buffer.Push(msg.Line)
 			// If pane is scrolled up (not auto-scrolling), increment offset to keep view locked
+			// Only increment if viewing the aggregate buffer (PhaseLineMsg goes to pane.Buffer, not module buffers)
 			if !pane.autoScroll && pane.scrollOffset > 0 {
-				pane.scrollOffset++
+				// For Run pane, only increment if viewing aggregate (not a specific module tab)
+				if msg.Phase != PhaseRun || m.activeTab == "" {
+					pane.scrollOffset++
+				}
 			}
 		}
 		return m, nil
@@ -106,13 +119,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.panes[PhaseSummary].Status = PhaseActive
 			m.panes[PhaseSummary].StartTime = time.Now()
 		}
-		// Mark summary pane as complete/failed and quit immediately
+		// Mark summary pane as complete/failed
 		if msg.Data != nil && !msg.Data.Success {
 			m.panes[PhaseSummary].Status = PhaseFailed
 		} else {
 			m.panes[PhaseSummary].Status = PhaseComplete
 		}
 		m.panes[PhaseSummary].EndTime = time.Now()
+
+		// If user has interacted (scrolled or clicked tab), start countdown
+		// Otherwise exit immediately
+		if !m.lastUserInteraction.IsZero() {
+			m.exitCountdownStart = time.Now()
+			m.exitCountdownSecs = 10
+			return m, nil
+		}
+		// No user interaction - exit immediately
 		m.quitting = true
 		return m, tea.Quit
 
@@ -192,6 +214,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Update lock tracking info
 		m.locks = status.Locks
 
+		// Update tools tracking (containers vs system)
+		m.activeContainers = status.ActiveContainers
+		m.usedContainers = status.UsedContainers
+		m.activeSystemTools = status.ActiveSystemTools
+		m.usedSystemTools = status.UsedSystemTools
+
 		if !m.statusDone {
 			return m, m.listenForStatus()
 		}
@@ -200,6 +228,35 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tickMsg:
 		// Clean up decayed tabs on each tick
 		m.CleanupDecayedTabs()
+
+		// Check if auto-scroll should resume after timeout
+		if m.panes[PhaseRun] != nil {
+			m.panes[PhaseRun].CheckAutoScrollResume(config.TUIAutoScrollResumeTimeout())
+		}
+
+		// Handle exit countdown
+		if !m.exitCountdownStart.IsZero() {
+			// Check if user interacted recently - reset countdown
+			if !m.lastUserInteraction.IsZero() && m.lastUserInteraction.After(m.exitCountdownStart) {
+				m.exitCountdownStart = time.Now()
+				m.exitCountdownSecs = 10
+			}
+
+			// Calculate remaining seconds
+			elapsed := time.Since(m.exitCountdownStart)
+			remaining := 10 - int(elapsed.Seconds())
+			if remaining < 0 {
+				remaining = 0
+			}
+			m.exitCountdownSecs = remaining
+
+			// Exit when countdown reaches 0
+			if remaining == 0 {
+				m.quitting = true
+				return m, tea.Quit
+			}
+		}
+
 		return m, m.tickCmd()
 
 	case linesDoneMsg:
@@ -240,6 +297,26 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ModuleCompleteMsg:
 		// Mark module as complete (alternative to completedMsg)
 		m.MarkModuleComplete(msg.Moniker, msg.ExitCode)
+
+		// Auto-select next running tab if:
+		// 1. The completed module was the active tab
+		// 2. User hasn't interacted (no exit countdown in progress)
+		if msg.Moniker == m.activeTab && m.exitCountdownStart.IsZero() {
+			// Find next running module to select
+			for _, moniker := range m.moduleOrder {
+				if state, exists := m.moduleStates[moniker]; exists {
+					if state.Status == ModuleRunning {
+						m.activeTab = moniker
+						// Reset scroll for new tab
+						if m.panes[PhaseRun] != nil {
+							m.panes[PhaseRun].scrollOffset = 0
+							m.panes[PhaseRun].autoScroll = true
+						}
+						break
+					}
+				}
+			}
+		}
 		return m, nil
 
 	case TabSelectMsg:
@@ -264,6 +341,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "q", "ctrl+c":
+		m.quitting = true
+		return m, tea.Quit
+	case "esc":
+		// Force immediate exit (bypass user interaction delay)
+		m.forceExit = true
 		m.quitting = true
 		return m, tea.Quit
 	case " ", "p":
@@ -392,126 +474,90 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		switch msg.Button {
 		case tea.MouseButtonWheelUp:
 			pane.ScrollUp(scrollAmount)
+			m.lastUserInteraction = time.Now() // Reset exit delay timer
 		case tea.MouseButtonWheelDown:
 			pane.ScrollDown(scrollAmount)
+			m.lastUserInteraction = time.Now() // Reset exit delay timer
 		}
 
 		return m, nil
 	}
 
-	// Handle left mouse button click for tab selection (use Press for responsiveness)
-	if msg.Button == tea.MouseButtonLeft && msg.Action == tea.MouseActionPress {
-		// Check if click is on the tab bar (always shown when Run phase is active)
-		if m.panes[PhaseRun].Status != PhasePending {
-			tabBarStartY, tabBarEndY := m.getTabBarYRange()
-			if msg.Y >= tabBarStartY && msg.Y <= tabBarEndY {
-				// Click is on the tab bar - determine which tab was clicked
-				row := msg.Y - tabBarStartY
-				selectedTab := m.getTabAtPosition(msg.X, row)
-				m.SetActiveTab(selectedTab)
-				// Reset scroll
+	// Tab detection helper
+	detectTabAt := func(x, y int) string {
+		if m.panes[PhaseRun].Status == PhasePending {
+			return ""
+		}
+		tabs := m.GetVisibleTabs()
+		if len(tabs) == 0 {
+			return ""
+		}
+
+		const tabWidth = 20
+		const tabsPerRow = 8
+
+		// Calculate tab row start Y (after init + resources)
+		initH, _, _ := m.calculatePaneHeights()
+		tabStartY := initH + 2
+		for _, lock := range m.locks {
+			if lock.Name == "component-scheduler" && lock.Capacity > 0 {
+				tabStartY += 3
+				break
+			}
+		}
+
+		numRows := (len(tabs) + tabsPerRow - 1) / tabsPerRow
+		row := y - tabStartY
+		// Allow some tolerance for row detection
+		if row < 0 {
+			row = 0
+		}
+		if row >= numRows {
+			row = numRows - 1
+		}
+		if x < 1 {
+			return ""
+		}
+
+		col := (x - 1) / (tabWidth + 1)
+		if col < 0 || col >= tabsPerRow {
+			return ""
+		}
+
+		tabIdx := row*tabsPerRow + col
+		if tabIdx >= 0 && tabIdx < len(tabs) {
+			return tabs[tabIdx].Moniker
+		}
+		return ""
+	}
+
+	// Handle mouse motion for hover effect
+	if msg.Action == tea.MouseActionMotion {
+		hoveredTab := detectTabAt(msg.X, msg.Y)
+		if hoveredTab != m.hoveredTab {
+			m.hoveredTab = hoveredTab
+		}
+		return m, nil
+	}
+
+	// Handle left mouse button click for tab selection
+	if msg.Button == tea.MouseButtonLeft && msg.Action == tea.MouseActionRelease {
+		if tab := detectTabAt(msg.X, msg.Y); tab != "" {
+			m.lastUserInteraction = time.Now() // Reset exit delay timer
+			if tab != m.activeTab {
+				m.SetActiveTab(tab)
 				if m.panes[PhaseRun] != nil {
 					m.panes[PhaseRun].scrollOffset = 0
 					m.panes[PhaseRun].autoScroll = true
 				}
-				return m, nil
 			}
+			return m, nil
 		}
 	}
 
 	return m, nil
 }
 
-// getTabBarYRange returns the Y coordinate range of the tab bar rows.
-// Returns (startY, endY) where both are inclusive.
-func (m Model) getTabBarYRange() (int, int) {
-	// Layout (0-indexed Y coordinates):
-	// 0: Init header
-	// 1 to initH: Init content
-	// initH+1: Init footer
-	// initH+2: Resources header (if shown)
-	// initH+3: Resources content
-	// initH+4: Resources footer
-	// initH+5 to initH+5+tabRows-1: Tab bar rows
-	// Then: Run header, Run content, etc.
-	initH, _, _ := m.calculatePaneHeights()
-
-	// Check if resources pane is shown (scheduler active)
-	resourcesShown := false
-	for _, lock := range m.locks {
-		if lock.Name == "component-scheduler" && lock.Capacity > 0 {
-			resourcesShown = true
-			break
-		}
-	}
-
-	startY := initH + 2 // After init footer
-	if resourcesShown {
-		startY += 3 // Resources pane: header + content + footer
-	}
-
-	// Calculate number of tab rows
-	tabs := m.GetVisibleTabs()
-	numTabs := len(tabs) + 1 // +1 for "All" tab
-	const tabsPerRow = 6
-	numRows := (numTabs + tabsPerRow - 1) / tabsPerRow
-	if numRows < 1 {
-		numRows = 1
-	}
-
-	endY := startY + numRows - 1
-	return startY, endY
-}
-
-// getTabAtPosition determines which tab was clicked based on X coordinate and row.
-func (m Model) getTabAtPosition(x, row int) string {
-	tabs := m.GetVisibleTabs()
-
-	// Fixed tab layout: 20 chars per tab, 6 tabs per row
-	// │tab1              │tab2              │...│All               │
-	// Border (1) + tab content (20) + separator (1) per tab
-	const tabWidth = 20
-	const tabsPerRow = 6
-
-	// Build all tabs (modules only, no "All" tab)
-	allTabs := make([]string, 0, len(tabs))
-	for _, state := range tabs {
-		allTabs = append(allTabs, state.Moniker)
-	}
-
-	// Calculate which tabs are in this row
-	startIdx := row * tabsPerRow
-	if startIdx >= len(allTabs) {
-		return m.activeTab // Click on empty row
-	}
-
-	// Position calculation within the row:
-	// │ = 1 char border
-	// Each tab is tabWidth chars
-	// │ separator between tabs
-	currentX := 1 // After left border
-
-	endIdx := startIdx + tabsPerRow
-	if endIdx > len(allTabs) {
-		endIdx = len(allTabs)
-	}
-
-	for i := startIdx; i < endIdx; i++ {
-		// Check if click is within this tab
-		if x >= currentX && x < currentX+tabWidth {
-			return allTabs[i]
-		}
-		currentX += tabWidth
-
-		// Add separator width (except after last tab)
-		if i < endIdx-1 {
-			currentX++ // │ separator
-		}
-	}
-
-	// Click not on any recognized tab - keep current selection
-	return m.activeTab
-}
 
 // getPaneAtPosition determines which pane (0, 1, or 2) is at the given Y coordinate.
 // Returns -1 if not over any pane content area.

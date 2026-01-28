@@ -1,13 +1,19 @@
 package scan
 
 import (
+	"math"
+
+	"github.com/ready-to-release/eac/go/eac/commands/impl/scan/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/cmdframework"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
 	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/ready-to-release/eac/go/eac/core/tool"
 )
 
 // FlattenModulesToScanComponentWork converts modules to scan component work items.
-// Each module's scannable components (go, typescript, dockerfile, etc.) become work items.
+// Each module's scannable component + scanner combination becomes a work item.
+// This allows parallel execution of different scanners (trivy-vuln, semgrep, etc.)
+// within the same module.
 // Returns nil if no scannable components are found.
 func FlattenModulesToScanComponentWork(ctx *cmdframework.ExecutionContext) [][]orchestrator.ComponentWork {
 	cfg := config.Global()
@@ -38,43 +44,54 @@ func FlattenModulesToScanComponentWork(ctx *cmdframework.ExecutionContext) [][]o
 		// Get enabled components for this module
 		enabledComponents := module.GetEnabledComponents()
 
-		// Filter to only scannable components
-		var scannableComponents []string
+		// Process each component
 		for _, componentName := range enabledComponents {
 			compTypeName := module.Components.GetComponentType(componentName)
 			compType := cfg.ComponentTypes.Get(compTypeName)
-			if compType != nil && compType.IsScannable() {
-				scannableComponents = append(scannableComponents, componentName)
-			}
-		}
-
-		if len(scannableComponents) == 0 {
-			// Module has no scannable components - skip it entirely
-			// No placeholder needed since scan only operates on scannable components
-			continue
-		}
-
-		// Create work item for each scannable component
-		for _, componentName := range scannableComponents {
-			// Get component type (may differ from name for named components)
-			compTypeName := module.Components.GetComponentType(componentName)
-
-			// Determine weight based on component type
-			// Heavier scans (container, SAST on large codebases) get higher weight
-			weight := getScanWeight(compTypeName)
-
-			work := orchestrator.ComponentWork{
-				Module:        moniker,
-				Component:     componentName,
-				ComponentType: compTypeName,
-				Handler:       "scan",
-				Weight:        weight,
-				BuildAfter:    nil, // Scans have no intra-module dependencies
-				Index:         globalIndex,
+			if compType == nil || !compType.IsScannable() {
+				continue
 			}
 
-			allWork = append(allWork, work)
-			globalIndex++
+			// Get scanners from component type configuration
+			scannerStrings := compType.GetScanners()
+			if len(scannerStrings) == 0 {
+				continue
+			}
+
+			// Create one work item per scanner (allows parallel scanner execution)
+			seenScanners := make(map[string]bool)
+			for _, scannerStr := range scannerStrings {
+				if seenScanners[scannerStr] {
+					continue
+				}
+				seenScanners[scannerStr] = true
+
+				scannerType, valid := internal.ParseScannerType(scannerStr)
+				if !valid {
+					continue
+				}
+
+				// Component work item: component name includes scanner for unique identification
+				// Format: "component:scanner" so display becomes "module:component:scanner"
+				// This matches the lint pattern (e.g., "go:golangci-lint")
+				componentWithScanner := componentName + ":" + string(scannerType)
+
+				// Get weight (base weight × amp, calculated internally)
+				weight := getComponentWeight(moniker, componentName, scannerType)
+
+				work := orchestrator.ComponentWork{
+					Module:        moniker,
+					Component:     componentWithScanner,
+					ComponentType: compTypeName,
+					Handler:       string(scannerType), // Use scanner type instead of generic "scan"
+					Weight:        weight,
+					BuildAfter:    nil, // Scans have no intra-module dependencies
+					Index:         globalIndex,
+				}
+
+				allWork = append(allWork, work)
+				globalIndex++
+			}
 		}
 	}
 
@@ -87,16 +104,74 @@ func FlattenModulesToScanComponentWork(ctx *cmdframework.ExecutionContext) [][]o
 }
 
 // getScanWeight returns the weight for scanning a component type.
-// Higher weight = more resource-intensive scan.
+// Weight is derived from tool.Resources.CPUs. Defaults to 1.
 func getScanWeight(componentType string) int {
-	switch componentType {
-	case "dockerfile":
-		return 3 // Container scans are heavy (pull images, scan layers)
-	case "go", "typescript":
-		return 2 // SAST scans are moderately heavy
-	default:
-		return 1 // Light scans (config files, etc.)
+	bridge := tool.GlobalScanBridge()
+	if bridge == nil {
+		return 1
 	}
+
+	t := bridge.ResolveTool(componentType, tool.OperationScan)
+	if t == nil {
+		return 1
+	}
+
+	return t.Resources.Weight()
+}
+
+// getScanWeightForScanner returns the weight for a specific scanner type.
+// Different scanners have different resource requirements.
+func getScanWeightForScanner(scannerType internal.ScannerType) int {
+	// Default weights based on scanner characteristics
+	// Higher weights = more resource-intensive
+	switch scannerType {
+	case internal.ScannerSAST:
+		// SAST (Semgrep) can be CPU-intensive on large codebases
+		return 2
+	case internal.ScannerVuln:
+		// Vulnerability scanning involves network requests for DB updates
+		return 2
+	case internal.ScannerSBOM:
+		// SBOM generation is relatively lightweight
+		return 1
+	case internal.ScannerSecrets:
+		// Secret scanning is relatively fast
+		return 1
+	case internal.ScannerIaC:
+		// IaC scanning is moderate
+		return 1
+	case internal.ScannerCompliance:
+		// Compliance scanning is moderate
+		return 1
+	case internal.ScannerDAST:
+		// DAST requires running services, high resource
+		return 3
+	default:
+		return 1
+	}
+}
+
+// getComponentWeight returns the scheduling weight for a component.
+// Weight = base scanner weight × component amp (from config).
+func getComponentWeight(moniker, componentName string, scannerType internal.ScannerType) int {
+	baseWeight := getScanWeightForScanner(scannerType)
+
+	// Get amp from config (the source of truth)
+	amp := 1.0
+	cfg := config.Global()
+	if cfg != nil && cfg.Repository != nil {
+		if module, ok := cfg.Repository.GetModule(moniker); ok && module != nil {
+			amp = module.GetComponentAmp(componentName, "scan")
+		}
+	}
+
+	// Apply amp to weight (ceil to ensure at least 1)
+	weight := int(math.Ceil(float64(baseWeight) * amp))
+	if weight < 1 {
+		weight = 1
+	}
+
+	return weight
 }
 
 // CountScanComponents returns the total number of scan component work items.
@@ -113,3 +188,6 @@ func getScanComponentCount(ctx *cmdframework.ExecutionContext) int {
 	layers := FlattenModulesToScanComponentWork(ctx)
 	return CountScanComponents(layers)
 }
+
+// Suppress unused import warning for tool package
+var _ = tool.GlobalScanBridge

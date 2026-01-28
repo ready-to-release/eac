@@ -40,5 +40,5 @@ r2r eac init --ai claude-api
 
 After setup, explore:
 
-- [EAC Commands](../eac/commands/) - Available automation commands
+- [EAC Commands](../eac/commands/index.md) - Available automation commands
 - [Creating Extensions](../r2r/creating-extensions.md) - Build your own R2R extensions

@@ -54,6 +54,12 @@ func ValidateBooks() int {
 		return 1
 	}
 
+	// Load repository first - books need modules for from_modules generator
+	if err := cfg.LoadRepository(false); err != nil {
+		log.Errorf("failed to load repository: %v", err)
+		return 1
+	}
+
 	// Load books with schema validation
 	if err := cfg.LoadBooks(true); err != nil {
 		log.Errorf("  books.yml: FAILED")
@@ -70,12 +76,6 @@ func ValidateBooks() int {
 
 	log.Info("  books.yml: schema valid")
 	log.Info("")
-
-	// Load repository for modules cross-reference validation
-	if err := cfg.LoadRepository(false); err != nil {
-		log.Errorf("failed to load repository: %v", err)
-		return 1
-	}
 
 	var hasErrors bool
 	var validBooks int

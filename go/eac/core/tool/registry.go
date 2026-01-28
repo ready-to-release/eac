@@ -277,10 +277,15 @@ func (r *DefaultRegistry) VerifyAll(toolIDs []string) []VerifyResult {
 }
 
 // GetMissingTools returns the IDs of tools that aren't available.
+// Tools that are skipped due to platform incompatibility are not considered missing.
 func (r *DefaultRegistry) GetMissingTools(toolIDs []string) []string {
 	var missing []string
 	for _, toolID := range toolIDs {
 		result := r.VerifyTool(toolID)
+		// Skip platform-incompatible tools - they're not "missing", just not applicable
+		if result.Skipped {
+			continue
+		}
 		if !result.Available {
 			missing = append(missing, toolID)
 		}

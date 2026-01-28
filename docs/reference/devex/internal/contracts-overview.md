@@ -12,24 +12,29 @@ Contracts are YAML configuration files that define how the EAC system behaves. T
 
 ## Core Contracts
 
-| Contract         | File               | Purpose                                          |
-| ---------------- | ------------------ | ------------------------------------------------ |
-| **Repository**   | `repository.yml`   | Module definitions, dependencies, file ownership |
-| **Module Types** | `module-types.yml` | Type templates with build/test behavior          |
-| **Environments** | `environments.yml` | Test execution environments (L0-L4)              |
-| **Test Suites**  | `test-suites.yml`  | Test suites with tag selectors                   |
-| **Testing Tags** | `testing-tags.yml` | Valid test tag definitions                       |
+| Contract            | File                  | Location                  | Purpose                                          |
+| ------------------- | --------------------- | ------------------------- | ------------------------------------------------ |
+| **Repository**      | `repository.yml`      | `.r2r/eac/`               | Module definitions, dependencies, file ownership |
+| **Component Types** | `component-types.yml` | `contracts/.../defaults/` | Component type definitions with build behavior   |
+| **Tool Config**     | `tool-config.yml`     | `contracts/.../defaults/` | Tool definitions and resources                   |
+| **Environments**    | `environments.yml`    | `contracts/.../defaults/` | Test execution environments (L0-L4)              |
+| **Test Suites**     | `test-suites.yml`     | `contracts/.../defaults/` | Test suites with tag selectors                   |
+| **Testing Tags**    | `testing-tags.yml`    | `contracts/.../defaults/` | Valid test tag definitions                       |
 
-**Location**: All contracts in `.r2r/eac/`
+**Location**: User configs in `.r2r/eac/`, system defaults in `contracts/eac-core/0.1.0/defaults/`
 
 ## Contract Relationships
 
 ```text
-repository.yml ──references──> module-types.yml
-      │                              │
-      │ depends_on                   │ requires
-      ▼                              ▼
-  (other modules)          system-dependencies.yml
+repository.yml ──defines──> components
+      │                          │
+      │ depends_on               │ use types from
+      ▼                          ▼
+  (other modules)        component-types.yml
+                                 │
+                                 │ use tools from
+                                 ▼
+                           tool-config.yml
 
 test-suites.yml ──selects──> testing-tags.yml
       │
@@ -111,11 +116,11 @@ modules:
 2. Add module definition with moniker and type
 3. Run `r2r eac validate` to verify
 
-### Create a New Module Type
+### Create a New Component Type
 
-1. Edit `.r2r/eac/module-types.yml`
-2. Define type with capabilities and defaults
-3. Reference the type in modules
+1. Copy `contracts/eac-core/0.1.0/defaults/component-types.yml` to `.r2r/eac/component-types.yml`
+2. Define new type with builder and file patterns
+3. Reference the type in module components
 
 ### Add Test Environment
 
@@ -127,5 +132,5 @@ modules:
 
 For complete contract reference with all fields and examples:
 
-- [Contracts Reference](../../eac/contracts/) - Full documentation
-- [Modules](../../eac/modules/) - Module system details
+- [Contracts Reference](../../eac/contracts/index.md) - Full documentation
+- [Modules](../../eac/modules/index.md) - Module system details

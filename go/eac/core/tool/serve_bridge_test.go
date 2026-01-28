@@ -22,8 +22,8 @@ func TestServeBridge_GetServer_YAMLTool(t *testing.T) {
 	registry := NewRegistry()
 	registry.Register(&ToolDefinition{
 		ID:    "static-site", // Matches default mapping
-		Type:  ToolTypeContainer,
-		Image: "nginx:alpine",
+		Type:      ToolTypeContainer,
+		LocalPath: "containers/static-site",
 	})
 	bridge.SetToolSystem(registry, nil, &mockExecutor{})
 
@@ -53,9 +53,9 @@ func TestServeBridge_GetServer_CustomMapping(t *testing.T) {
 	// Set up tool system with the custom tool
 	registry := NewRegistry()
 	registry.Register(&ToolDefinition{
-		ID:    "custom-mkdocs-server",
-		Type:  ToolTypeContainer,
-		Image: "custom/mkdocs",
+		ID:        "custom-mkdocs-server",
+		Type:      ToolTypeContainer,
+		LocalPath: "containers/custom-mkdocs",
 	})
 	bridge.SetToolSystem(registry, nil, &mockExecutor{})
 
@@ -78,8 +78,8 @@ func TestServeBridge_SetToolSystem(t *testing.T) {
 	// Verify tool system is set by registering a tool and retrieving it
 	registry.Register(&ToolDefinition{
 		ID:    "structurizr",
-		Type:  ToolTypeContainer,
-		Image: "structurizr/lite",
+		Type:      ToolTypeContainer,
+		LocalPath: "containers/structurizr",
 	})
 
 	server := bridge.GetServer(ServerStructurizr)
@@ -95,13 +95,13 @@ func TestServeBridge_HasServer(t *testing.T) {
 	registry := NewRegistry()
 	registry.Register(&ToolDefinition{
 		ID:    "static-site",
-		Type:  ToolTypeContainer,
-		Image: "nginx:alpine",
+		Type:      ToolTypeContainer,
+		LocalPath: "containers/static-site",
 	})
 	registry.Register(&ToolDefinition{
 		ID:    "mkdocs-live",
-		Type:  ToolTypeContainer,
-		Image: "squidfunk/mkdocs-material",
+		Type:      ToolTypeContainer,
+		LocalPath: "containers/mkdocs-live",
 	})
 	bridge.SetToolSystem(registry, nil, &mockExecutor{})
 
@@ -130,18 +130,18 @@ func TestServeBridge_GetAllServerTypes(t *testing.T) {
 	registry := NewRegistry()
 	registry.Register(&ToolDefinition{
 		ID:    "static-site",
-		Type:  ToolTypeContainer,
-		Image: "nginx:alpine",
+		Type:      ToolTypeContainer,
+		LocalPath: "containers/static-site",
 	})
 	registry.Register(&ToolDefinition{
 		ID:    "mkdocs-live",
-		Type:  ToolTypeContainer,
-		Image: "squidfunk/mkdocs-material",
+		Type:      ToolTypeContainer,
+		LocalPath: "containers/mkdocs-live",
 	})
 	registry.Register(&ToolDefinition{
 		ID:    "structurizr",
-		Type:  ToolTypeContainer,
-		Image: "structurizr/lite",
+		Type:      ToolTypeContainer,
+		LocalPath: "containers/structurizr",
 	})
 	bridge.SetToolSystem(registry, nil, &mockExecutor{})
 
@@ -236,8 +236,8 @@ func TestServeBridge_Concurrent(t *testing.T) {
 	registry := NewRegistry()
 	registry.Register(&ToolDefinition{
 		ID:    "static-site",
-		Type:  ToolTypeContainer,
-		Image: "nginx:alpine",
+		Type:      ToolTypeContainer,
+		LocalPath: "containers/static-site",
 	})
 	bridge.SetToolSystem(registry, nil, &mockExecutor{})
 
@@ -368,8 +368,8 @@ func TestServeBridge_ToolSystemWithExecutorOnly(t *testing.T) {
 	registry := NewRegistry()
 	registry.Register(&ToolDefinition{
 		ID:    "mkdocs-live",
-		Type:  ToolTypeContainer,
-		Image: "squidfunk/mkdocs-material",
+		Type:      ToolTypeContainer,
+		LocalPath: "containers/mkdocs-live",
 	})
 	bridge.SetToolSystem(registry, nil, nil) // nil executor
 

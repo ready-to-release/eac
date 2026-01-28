@@ -137,4 +137,4 @@ Scenario: API responds within 200ms under load
 
 - [Test Levels](./test-levels.md) - L0-L4 taxonomy
 - [CD Model Stage 5](../cd-model/stages.md#stage-5-acceptance-testing) - Acceptance testing in context
-- [Testing Taxonomy](../../specifications/taxonomy/) - Tag contracts
+- [Testing Taxonomy](../../specifications/taxonomy/index.md) - Tag contracts

@@ -118,11 +118,6 @@ func wrapMermaidBlocks(content string) string {
 	return result
 }
 
-// countMermaidBlocks returns the number of mermaid blocks in content (for logging).
-func countMermaidBlocks(content string) int {
-	return len(mermaidBlockPlain.FindAllString(content, -1))
-}
-
 // MermaidBlock represents a mermaid diagram found in markdown
 // Used for caching and pre-rendering during preprocessing
 // Exported for use by update docs command.
@@ -489,6 +484,7 @@ func (p *Preprocessor) renderMermaidDiagrams(statuses []CacheStatus) (int, error
 func (p *Preprocessor) checkMermaidCache(blocks []MermaidBlock) ([]CacheStatus, error) {
 	// Cache directory: staging/assets/cache/mermaid/ (copied from docs/assets/cache/)
 	cacheDir := filepath.Join(p.stagingDir, "assets", "cache", "mermaid")
+	log.Debugf("cache: checkMermaidCache blocks=%d cacheDir=%s", len(blocks), cacheDir)
 
 	statuses := make([]CacheStatus, 0, len(blocks))
 
@@ -510,6 +506,9 @@ func (p *Preprocessor) checkMermaidCache(blocks []MermaidBlock) ([]CacheStatus, 
 		cached := false
 		if _, err := os.Stat(stagingCachePath); err == nil {
 			cached = true
+			log.Debugf("cache: mermaid staging HIT block=%d file=%s", block.BlockIndex, stagingCachePath)
+		} else {
+			log.Debugf("cache: mermaid staging MISS block=%d file=%s", block.BlockIndex, stagingCachePath)
 		}
 
 		statuses = append(statuses, CacheStatus{

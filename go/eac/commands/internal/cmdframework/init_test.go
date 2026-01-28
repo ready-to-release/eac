@@ -56,6 +56,22 @@ func TestCalculateMaxConcurrency(t *testing.T) {
 			sequential:        true,
 			expected:          1,
 		},
+		{
+			name:              "repo config parallelism used as ceiling",
+			configConcurrency: 0,
+			repoConcurrency:   8,
+			turbo:             false,
+			sequential:        false,
+			expected:          8,
+		},
+		{
+			name:              "CLI flag overrides repo config",
+			configConcurrency: 4,
+			repoConcurrency:   8,
+			turbo:             false,
+			sequential:        false,
+			expected:          4,
+		},
 	}
 
 	for _, tt := range tests {
@@ -71,18 +87,18 @@ func TestCalculateMaxConcurrency(t *testing.T) {
 
 // TestDefaultTurboMultiplier verifies the turbo multiplier value is consistent.
 func TestDefaultTurboMultiplier(t *testing.T) {
-	if DefaultTurboMultiplier != 4 {
-		t.Errorf("DefaultTurboMultiplier = %d, want 4", DefaultTurboMultiplier)
+	if DefaultTurboMultiplier != 1.25 {
+		t.Errorf("DefaultTurboMultiplier = %v, want 1.25", DefaultTurboMultiplier)
 	}
 }
 
 // TestCalculateTurboMultiplier verifies turbo multiplier calculation.
 func TestCalculateTurboMultiplier(t *testing.T) {
-	if CalculateTurboMultiplier(false) != 1 {
-		t.Errorf("CalculateTurboMultiplier(false) = %d, want 1", CalculateTurboMultiplier(false))
+	if CalculateTurboMultiplier(false) != 1.0 {
+		t.Errorf("CalculateTurboMultiplier(false) = %v, want 1.0", CalculateTurboMultiplier(false))
 	}
 	if CalculateTurboMultiplier(true) != DefaultTurboMultiplier {
-		t.Errorf("CalculateTurboMultiplier(true) = %d, want %d", CalculateTurboMultiplier(true), DefaultTurboMultiplier)
+		t.Errorf("CalculateTurboMultiplier(true) = %v, want %v", CalculateTurboMultiplier(true), DefaultTurboMultiplier)
 	}
 }
 

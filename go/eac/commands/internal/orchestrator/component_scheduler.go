@@ -7,14 +7,25 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/locktracker"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/output"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
+	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/shirou/gopsutil/v3/mem"
 )
+
+// ComponentExtras holds additional data passed from workers to component results.
+// Used for test-specific fields that need to flow from the test runner to the summary.
+type ComponentExtras struct {
+	TestsTotal   int
+	TestsPassed  int
+	TestsFailed  int
+	TestsSkipped int
+}
 
 // ComponentScheduler manages parallel execution of component work items
 // with weighted resource control and dependency ordering.
@@ -27,7 +38,7 @@ type ComponentScheduler struct {
 	capacityTicker *time.Ticker    // Recalculates capacity every 2 seconds
 	capacityStop   chan struct{}   // Signal to stop the capacity ticker
 	configMax      int             // Maximum capacity from config (ceiling)
-	turbo          int             // Turbo multiplier (1x, 2x, 4x, etc.)
+	turbo          float64         // Turbo multiplier (1.0x, 1.25x, 2.0x, etc.)
 
 	// Module completion tracking for inter-module dependencies
 	moduleCompleteMu sync.RWMutex
@@ -45,6 +56,10 @@ type ComponentScheduler struct {
 	compFailedMu sync.RWMutex
 	compFailed   map[string]map[string]bool // module -> component -> failed
 
+	// Component extras tracking (test counts, etc.)
+	compExtrasMu sync.RWMutex
+	compExtras   map[string]map[string]ComponentExtras // module -> component -> extras
+
 	// TUI console for real-time output display
 	tuiConsole *tui.Console
 	tuiCtx     interface{} // context.Context but we avoid import cycle
@@ -55,6 +70,13 @@ type ComponentScheduler struct {
 	tuiCompleted int
 	tuiTotal     int
 
+	// Tools tracking (protected by toolsMu) - separated by type
+	toolsMu          sync.Mutex
+	activeContainers map[string]int  // container tool -> count of running components
+	usedContainers   map[string]bool // all container tools ever used
+	activeSystem     map[string]int  // system tool -> count of running components
+	usedSystem       map[string]bool // all system tools ever used
+
 	// Output infrastructure
 	orchestratorOut io.Writer
 }
@@ -64,11 +86,11 @@ type ComponentScheduler struct {
 // Starts a dynamic capacity ticker that adjusts capacity based on available system resources.
 func NewComponentScheduler(config *Config, tuiConsole *tui.Console, registry *locktracker.Registry) *ComponentScheduler {
 	// Calculate initial capacity based on available resources
-	// Turbo multiplies the pressure roof: 1=normal, 2=2x, 4=4x
-	// If turbo flag is set without a value, default to 4x
+	// Turbo multiplies the pressure roof: 1.0=normal, 1.25=+25%, 2.0=2x
+	// If turbo flag is set without a value, default to 1.25x
 	turbo := config.Turbo
-	if turbo < 1 {
-		turbo = 1
+	if turbo < 1.0 {
+		turbo = 1.0
 	}
 	initialCap := detectAvailableCapacity(config.MaxConcurrency, turbo)
 
@@ -93,6 +115,11 @@ func NewComponentScheduler(config *Config, tuiConsole *tui.Console, registry *lo
 		compComplete:     make(map[string]map[string]bool),
 		compCompleteCh:   make(map[string]map[string]chan struct{}),
 		compFailed:       make(map[string]map[string]bool),
+		compExtras:       make(map[string]map[string]ComponentExtras),
+		activeContainers: make(map[string]int),
+		usedContainers:   make(map[string]bool),
+		activeSystem:     make(map[string]int),
+		usedSystem:       make(map[string]bool),
 		tuiConsole:       tuiConsole,
 	}
 
@@ -112,7 +139,7 @@ func NewComponentScheduler(config *Config, tuiConsole *tui.Console, registry *lo
 // startCapacityTicker starts a goroutine that recalculates capacity every 2 seconds
 // based on available system resources. The config max is used as a ceiling.
 func (cs *ComponentScheduler) startCapacityTicker() {
-	cs.capacityTicker = time.NewTicker(2 * time.Second)
+	cs.capacityTicker = time.NewTicker(config.CapacityRecalcInterval())
 
 	go func() {
 		for {
@@ -157,12 +184,12 @@ func (cs *ComponentScheduler) Close() {
 //   - 8 CPU, 16 GB RAM → min(8, 8) = 8 base slots
 //   - 4 CPU, 8 GB RAM → min(4, 4) = 4 base slots
 //
-// With turbo=2: double the slots (for I/O bound builds)
-// With turbo=4: quadruple the slots
+// With turbo=1.25: 25% more slots
+// With turbo=2.0: double the slots (for I/O bound builds)
 //
 // configMax is only used as ceiling if > 0 (user explicitly set it).
 // Returns at least 1.
-func detectAvailableCapacity(configMax int, turbo int) int {
+func detectAvailableCapacity(configMax int, turbo float64) int {
 	// Use HOST resources (not Docker limits) since orchestrator runs on host
 	cpuCount := runtime.NumCPU()
 	if cpuCount < 1 {
@@ -191,13 +218,13 @@ func detectAvailableCapacity(configMax int, turbo int) int {
 	}
 
 	// Apply turbo multiplier
-	capacity := baseCapacity * turbo
+	capacity := int(float64(baseCapacity) * turbo)
 
 	// Cap at reasonable maximum:
-	// - Without turbo (turbo=1): cap at CPU count
+	// - Without turbo (turbo=1.0): cap at CPU count
 	// - With turbo: cap at 2x CPU count (max 64)
 	var maxCapacity int
-	if turbo <= 1 {
+	if turbo <= 1.0 {
 		maxCapacity = cpuCount
 	} else {
 		maxCapacity = cpuCount * 2
@@ -233,6 +260,11 @@ func (cs *ComponentScheduler) InitializeWork(work []ComponentWork) {
 	cs.compComplete = make(map[string]map[string]bool)
 	cs.compCompleteCh = make(map[string]map[string]chan struct{})
 	cs.compFailed = make(map[string]map[string]bool)
+	cs.compExtras = make(map[string]map[string]ComponentExtras)
+	cs.activeContainers = make(map[string]int)
+	cs.usedContainers = make(map[string]bool)
+	cs.activeSystem = make(map[string]int)
+	cs.usedSystem = make(map[string]bool)
 
 	// Count components per module and initialize tracking maps
 	for _, w := range work {
@@ -294,13 +326,13 @@ func (cs *ComponentScheduler) RunComponents(work []ComponentWork, worker Compone
 
 // processComponent handles a single component build with dependency waiting and weighted scheduling.
 func (cs *ComponentScheduler) processComponent(work ComponentWork, worker ComponentWorkerFunc) ComponentResult {
-	startTime := time.Now()
 	result := ComponentResult{
 		Module:    work.Module,
 		Component: work.Component,
 	}
 
 	// 1. Wait for intra-module component dependencies (build_after)
+	// Note: This wait time is NOT included in duration - duration measures actual execution time
 	for _, depComp := range work.BuildAfter {
 		// Check if dependency component exists in this module
 		cs.compCompleteMu.RLock()
@@ -319,7 +351,7 @@ func (cs *ComponentScheduler) processComponent(work ComponentWork, worker Compon
 			if depFailed {
 				result.ExitCode = 1
 				result.Errors = []string{fmt.Sprintf("Skipped: dependency %s failed", depComp)}
-				result.Duration = time.Since(startTime)
+				// Duration is 0 for skipped components (no actual execution)
 				cs.markComponentComplete(work, &result)
 				return result
 			}
@@ -343,8 +375,14 @@ func (cs *ComponentScheduler) processComponent(work ComponentWork, worker Compon
 	// to ensure the pressure gauge and running tabs stay in sync.
 	// Do not use defer here - it would release after TUI update.
 
+	// Start timing AFTER acquiring slot - duration measures actual execution time
+	startTime := time.Now()
+
 	// Mark as RUNNING after acquiring slot
 	cs.tuiMarkRunning(displayName)
+
+	// Track active tool usage
+	cs.addActiveTool(work.Handler)
 
 	// 3. Create output directory for this component
 	// Structure: out/build/<module>/<component> (e.g., out/build/books/howto)
@@ -416,6 +454,17 @@ func (cs *ComponentScheduler) processComponent(work ComponentWork, worker Compon
 	result.LogPath = relLogPath
 	result.Duration = time.Since(startTime)
 
+	// Merge any extras set by the worker (e.g., test counts)
+	if extras, ok := cs.getComponentExtras(work.Module, work.Component); ok {
+		result.TestsTotal = extras.TestsTotal
+		result.TestsPassed = extras.TestsPassed
+		result.TestsFailed = extras.TestsFailed
+		result.TestsSkipped = extras.TestsSkipped
+	}
+
+	// Remove tool from active list before releasing resources
+	cs.removeActiveTool(work.Handler)
+
 	// Release semaphore BEFORE marking complete in TUI
 	// This ensures pressure gauge reflects the release immediately
 	cs.semaphore.Release(weight)
@@ -481,6 +530,186 @@ func (cs *ComponentScheduler) IsModuleFailed(module string) bool {
 	return false
 }
 
+// SetComponentExtras stores additional data for a component result.
+// This is called by workers to pass test counts or other data that will be
+// merged into the ComponentResult when processing completes.
+func (cs *ComponentScheduler) SetComponentExtras(module, component string, extras ComponentExtras) {
+	cs.compExtrasMu.Lock()
+	defer cs.compExtrasMu.Unlock()
+
+	if cs.compExtras[module] == nil {
+		cs.compExtras[module] = make(map[string]ComponentExtras)
+	}
+	cs.compExtras[module][component] = extras
+}
+
+// getComponentExtras retrieves the extras for a component, if any.
+func (cs *ComponentScheduler) getComponentExtras(module, component string) (ComponentExtras, bool) {
+	cs.compExtrasMu.RLock()
+	defer cs.compExtrasMu.RUnlock()
+
+	if moduleExtras, ok := cs.compExtras[module]; ok {
+		if extras, ok := moduleExtras[component]; ok {
+			return extras, true
+		}
+	}
+	return ComponentExtras{}, false
+}
+
+// addActiveTool increments the usage count for a tool/handler.
+// Looks up tool type from registry to categorize as container or system.
+// Also tracks docker as active when container tools are used.
+func (cs *ComponentScheduler) addActiveTool(handler string) {
+	if handler == "" {
+		return
+	}
+
+	// Look up tool type from registry
+	isContainer := cs.isContainerTool(handler)
+
+	cs.toolsMu.Lock()
+	if isContainer {
+		cs.activeContainers[handler]++
+		cs.usedContainers[handler] = true
+		// Container tools require docker - track it as active system tool
+		cs.activeSystem["docker"]++
+		cs.usedSystem["docker"] = true
+	} else {
+		cs.activeSystem[handler]++
+		cs.usedSystem[handler] = true
+	}
+	cs.toolsMu.Unlock()
+}
+
+// removeActiveTool decrements the usage count for a tool/handler.
+// Also decrements docker count when container tools finish.
+func (cs *ComponentScheduler) removeActiveTool(handler string) {
+	if handler == "" {
+		return
+	}
+
+	isContainer := cs.isContainerTool(handler)
+
+	cs.toolsMu.Lock()
+	if isContainer {
+		if cs.activeContainers[handler] > 0 {
+			cs.activeContainers[handler]--
+			if cs.activeContainers[handler] == 0 {
+				delete(cs.activeContainers, handler)
+			}
+		}
+		// Decrement docker usage count
+		if cs.activeSystem["docker"] > 0 {
+			cs.activeSystem["docker"]--
+			if cs.activeSystem["docker"] == 0 {
+				delete(cs.activeSystem, "docker")
+			}
+		}
+	} else {
+		if cs.activeSystem[handler] > 0 {
+			cs.activeSystem[handler]--
+			if cs.activeSystem[handler] == 0 {
+				delete(cs.activeSystem, handler)
+			}
+		}
+	}
+	cs.toolsMu.Unlock()
+}
+
+// isContainerTool checks if a handler is a container tool by looking up in registry.
+func (cs *ComponentScheduler) isContainerTool(handler string) bool {
+	// Import cycle prevention: we can't import tool package here
+	// Use naming convention: tools ending in "-container" or "-system" indicate type
+	// Or check for known container tool patterns
+	if strings.HasSuffix(handler, "-container") {
+		return true
+	}
+	if strings.HasSuffix(handler, "-system") {
+		return false
+	}
+	// Default heuristic: if name contains common container tool names
+	containerTools := map[string]bool{
+		"mkdocs": true, "npm": true, "golangci-lint": true,
+		"markdownlint": true, "trivy": true, "semgrep": true,
+		"ruff": true, "clippy": true, "buildx": true,
+		"bash": true, "pwsh": true, // Script containers
+	}
+	for name := range containerTools {
+		if strings.Contains(handler, name) {
+			return true
+		}
+	}
+	return false
+}
+
+// getActiveContainersList returns a sorted list of currently active container tools.
+func (cs *ComponentScheduler) getActiveContainersList() []string {
+	cs.toolsMu.Lock()
+	defer cs.toolsMu.Unlock()
+
+	if len(cs.activeContainers) == 0 {
+		return nil
+	}
+
+	tools := make([]string, 0, len(cs.activeContainers))
+	for tool := range cs.activeContainers {
+		tools = append(tools, tool)
+	}
+	sort.Strings(tools)
+	return tools
+}
+
+// getUsedContainersList returns a sorted list of all container tools that have been used.
+func (cs *ComponentScheduler) getUsedContainersList() []string {
+	cs.toolsMu.Lock()
+	defer cs.toolsMu.Unlock()
+
+	if len(cs.usedContainers) == 0 {
+		return nil
+	}
+
+	tools := make([]string, 0, len(cs.usedContainers))
+	for tool := range cs.usedContainers {
+		tools = append(tools, tool)
+	}
+	sort.Strings(tools)
+	return tools
+}
+
+// getActiveSystemToolsList returns a sorted list of currently active system tools.
+func (cs *ComponentScheduler) getActiveSystemToolsList() []string {
+	cs.toolsMu.Lock()
+	defer cs.toolsMu.Unlock()
+
+	if len(cs.activeSystem) == 0 {
+		return nil
+	}
+
+	tools := make([]string, 0, len(cs.activeSystem))
+	for tool := range cs.activeSystem {
+		tools = append(tools, tool)
+	}
+	sort.Strings(tools)
+	return tools
+}
+
+// getUsedSystemToolsList returns a sorted list of all system tools that have been used.
+func (cs *ComponentScheduler) getUsedSystemToolsList() []string {
+	cs.toolsMu.Lock()
+	defer cs.toolsMu.Unlock()
+
+	if len(cs.usedSystem) == 0 {
+		return nil
+	}
+
+	tools := make([]string, 0, len(cs.usedSystem))
+	for tool := range cs.usedSystem {
+		tools = append(tools, tool)
+	}
+	sort.Strings(tools)
+	return tools
+}
+
 // tuiMarkPending creates a component tab in pending state (scheduled, waiting for slot).
 func (cs *ComponentScheduler) tuiMarkPending(displayName string, weight int) {
 	if cs.tuiConsole == nil {
@@ -508,11 +737,15 @@ func (cs *ComponentScheduler) tuiMarkRunning(displayName string) {
 	cs.tuiMu.Unlock()
 
 	cs.tuiConsole.UpdateStatus(tui.Status{
-		Phase:     capitalize(cs.config.ActionVerb),
-		Running:   running,
-		Completed: completed,
-		Total:     total,
-		Locks:     cs.getLockStatuses(),
+		Phase:             capitalize(cs.config.ActionVerb),
+		Running:           running,
+		Completed:         completed,
+		Total:             total,
+		Locks:             cs.getLockStatuses(),
+		ActiveContainers:  cs.getActiveContainersList(),
+		UsedContainers:    cs.getUsedContainersList(),
+		ActiveSystemTools: cs.getActiveSystemToolsList(),
+		UsedSystemTools:   cs.getUsedSystemToolsList(),
 	})
 }
 
@@ -541,11 +774,15 @@ func (cs *ComponentScheduler) tuiMarkCompleted(displayName string, exitCode int)
 	cs.tuiMu.Unlock()
 
 	cs.tuiConsole.UpdateStatus(tui.Status{
-		Phase:     capitalize(cs.config.ActionVerb),
-		Running:   running,
-		Completed: completed,
-		Total:     total,
-		Locks:     cs.getLockStatuses(),
+		Phase:             capitalize(cs.config.ActionVerb),
+		Running:           running,
+		Completed:         completed,
+		Total:             total,
+		Locks:             cs.getLockStatuses(),
+		ActiveContainers:  cs.getActiveContainersList(),
+		UsedContainers:    cs.getUsedContainersList(),
+		ActiveSystemTools: cs.getActiveSystemToolsList(),
+		UsedSystemTools:   cs.getUsedSystemToolsList(),
 	})
 }
 

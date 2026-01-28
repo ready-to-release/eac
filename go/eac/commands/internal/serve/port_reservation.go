@@ -2,9 +2,11 @@ package serve
 
 import (
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"sync"
 	"time"
+
+	"github.com/ready-to-release/eac/go/eac/core/config"
 )
 
 var (
@@ -12,11 +14,6 @@ var (
 	reservedPorts = make(map[int]time.Time)
 	// portMutex protects the reservedPorts map.
 	portMutex sync.Mutex
-)
-
-const (
-	// reservationTTL is how long a port reservation lasts before automatic cleanup.
-	reservationTTL = 30 * time.Second
 )
 
 // ReservePort attempts to reserve a specific port.
@@ -50,7 +47,7 @@ func ReleasePort(port int) {
 func cleanupExpiredReservations() {
 	now := time.Now()
 	for port, reservedAt := range reservedPorts {
-		if now.Sub(reservedAt) > reservationTTL {
+		if now.Sub(reservedAt) > config.PortReservationTTL() {
 			delete(reservedPorts, port)
 		}
 	}
@@ -59,14 +56,11 @@ func cleanupExpiredReservations() {
 // FindAndReservePort finds an available port and reserves it atomically.
 // This prevents race conditions when multiple containers start simultaneously.
 func FindAndReservePort() (int, error) {
-	// Initialize random seed
-	rand.Seed(time.Now().UnixNano())
-
 	// Calculate port range size
 	portRange := PortRangeEnd - PortRangeStart + 1
 
-	// Start at a random position
-	startOffset := rand.Intn(portRange)
+	// Start at a random position (Go 1.22+ auto-seeds)
+	startOffset := rand.IntN(portRange)
 
 	// Scan circularly from random start
 	for offset := 0; offset < portRange; offset++ {

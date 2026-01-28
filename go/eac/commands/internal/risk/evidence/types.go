@@ -8,6 +8,8 @@ package evidence
 import (
 	"encoding/json"
 	"time"
+
+	"github.com/ready-to-release/eac/go/eac/core/config"
 )
 
 // EvidenceType represents the type of evidence.
@@ -144,10 +146,10 @@ type EvidenceAgePolicy struct {
 	MaxAge time.Duration `json:"max_age"`
 }
 
-// DefaultEvidenceAgePolicy returns the default evidence age policy (24 hours).
+// DefaultEvidenceAgePolicy returns the default evidence age policy.
 func DefaultEvidenceAgePolicy() EvidenceAgePolicy {
 	return EvidenceAgePolicy{
-		MaxAge: 24 * time.Hour,
+		MaxAge: config.EvidenceMaxAge(),
 	}
 }
 

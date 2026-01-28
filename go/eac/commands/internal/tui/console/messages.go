@@ -35,6 +35,13 @@ type Status struct {
 
 	// Detailed lock tracking info (from locktracker.Registry)
 	Locks []LockStatus // Individual lock states
+
+	// Container tools (e.g., "mkdocs", "golangci-lint")
+	ActiveContainers []string
+	UsedContainers   []string
+	// System tools (e.g., "go", "docker")
+	ActiveSystemTools []string
+	UsedSystemTools   []string
 }
 
 // LockStatus represents the state of a single lock.

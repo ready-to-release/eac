@@ -13,6 +13,13 @@ repository:
   # Repository type: poly (polyrepo), mono (monorepo), adjacent (supporting repo)
   type: poly
 
+  # Remote VCS provider configuration is required in local config:
+  #   remote:
+  #     owner: your-org    # Required: GitHub/GitLab org or username
+  #     repo: your-repo    # Optional: auto-detected from git if not set
+  #     type: github       # Optional: defaults to github
+  # URLs (url, pages_url, registry_url) are derived from owner+repo+type
+
   # Valid versioning schemes for releasable modules.
   # Implicit scheme is always available (supporting modules) and need not be listed.
   # Supporting modules (Implicit): no explicit version, released as part of releasable modules.
@@ -42,8 +49,8 @@ repository:
   # Parallelism limits for build and test commands
   # CI uses lower limits to avoid resource contention on shared runners
   parallelism:
-    ci: 4      # Max parallel workers in CI (GitHub Actions)
-    devbox: 8  # Max parallel workers in local development
+    ci: 8       # Max parallel workers in CI (GitHub Actions)
+    devbox: 16  # Max parallel workers in local development
 
 # Default paths configuration
 paths:

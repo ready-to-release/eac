@@ -110,6 +110,17 @@ func (c *RepositoryConfig) GetRegistryConfig(hostname string) *RegistryConfig {
 	return c.Registries[hostname]
 }
 
+// GetRegistryOrg returns the organization for a registry.
+// Falls back to deriving from repository.remote.registry_url if not explicitly set.
+func (c *RepositoryConfig) GetRegistryOrg(hostname string) string {
+	reg := c.GetRegistryConfig(hostname)
+	if reg != nil && reg.Org != "" {
+		return reg.Org
+	}
+	// Fall back to remote config
+	return c.Repository.Remote.GetOwner()
+}
+
 // IsCleanupEnabled returns true if cleanup is enabled for the registry.
 // Returns false if registry is not configured or cleanup is disabled.
 func (r *RegistryConfig) IsCleanupEnabled() bool {

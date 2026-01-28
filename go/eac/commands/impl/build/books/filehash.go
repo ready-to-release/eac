@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 // FileHashCache tracks content hashes for files to enable incremental processing.
@@ -82,8 +84,9 @@ func (c *FileHashCache) Save() error {
 }
 
 // CachePath returns the path where this cache is stored.
+// Path: .cache/eac/build/hashes/{bookName}.json
 func (c *FileHashCache) CachePath() string {
-	return filepath.Join(c.workspaceRoot, "out", "cache", "preprocess-state", c.BookName+".json")
+	return paths.FileHashCachePath(c.workspaceRoot, c.BookName)
 }
 
 // ShouldProcessFile checks if a file needs processing by comparing its content hash.
@@ -98,12 +101,18 @@ func (c *FileHashCache) ShouldProcessFile(path string, content []byte) bool {
 	existingHash, exists := c.Hashes[path]
 	if exists && existingHash == newHash {
 		c.stats.Hits++
+		log.Debugf("cache: filehash HIT path=%s hash=%s", path, newHash[:8])
 		return false // unchanged
 	}
 
 	// New or changed file - update cache
 	c.Hashes[path] = newHash
 	c.stats.Misses++
+	if exists {
+		log.Debugf("cache: filehash MISS (changed) path=%s prev=%s curr=%s", path, existingHash[:8], newHash[:8])
+	} else {
+		log.Debugf("cache: filehash MISS (new) path=%s hash=%s", path, newHash[:8])
+	}
 	return true
 }
 

@@ -2,6 +2,7 @@ title: show
 nav:
   - index.md
   - show.md
+  - approval-comments.md
   - approve-summary.md
   - artifacts.md
   - books.md
@@ -24,6 +25,7 @@ nav:
   - release-notes.md
   - release-summary.md
   - scan-summary.md
+  - specs.md
   - suite.md
   - test-results.md
   - test-summary.md

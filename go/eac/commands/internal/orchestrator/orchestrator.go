@@ -28,6 +28,9 @@ type Orchestrator struct {
 	// Lock tracking registry for visualization
 	registry *locktracker.Registry
 
+	// Current component scheduler (set during RunComponentsLayered/RunComponentsParallel)
+	currentScheduler *ComponentScheduler
+
 	// TUI console for real-time output display
 	tuiConsole *tui.Console
 	tuiCtx     context.Context
@@ -726,6 +729,16 @@ func (o *Orchestrator) SetMaxConcurrency(maxConcurrency int) {
 	o.config.MaxConcurrency = maxConcurrency
 }
 
+// SetComponentExtras stores additional data for a component result.
+// This is called by workers to pass test counts or other data that will be
+// merged into the ComponentResult when processing completes.
+// Does nothing if no component scheduler is active.
+func (o *Orchestrator) SetComponentExtras(module, component string, extras ComponentExtras) {
+	if o.currentScheduler != nil {
+		o.currentScheduler.SetComponentExtras(module, component, extras)
+	}
+}
+
 // GetLastComponentResults returns the component-level results from the last
 // RunComponentsLayered or RunComponentsParallel call.
 // Returns nil if no component execution has occurred.
@@ -757,7 +770,11 @@ func (o *Orchestrator) RunComponentsLayered(layers [][]ComponentWork, worker Com
 
 	// Create component scheduler with dynamic capacity management
 	scheduler := NewComponentScheduler(&o.config, o.tuiConsole, o.registry)
-	defer scheduler.Close()
+	o.currentScheduler = scheduler
+	defer func() {
+		scheduler.Close()
+		o.currentScheduler = nil
+	}()
 
 	// Start TUI console if enabled
 	if o.tuiConsole != nil {
@@ -872,7 +889,11 @@ func (o *Orchestrator) RunComponentsParallel(work []ComponentWork, worker Compon
 
 	// Create component scheduler with dynamic capacity management
 	scheduler := NewComponentScheduler(&o.config, o.tuiConsole, o.registry)
-	defer scheduler.Close()
+	o.currentScheduler = scheduler
+	defer func() {
+		scheduler.Close()
+		o.currentScheduler = nil
+	}()
 
 	// Start TUI console if enabled
 	if o.tuiConsole != nil {

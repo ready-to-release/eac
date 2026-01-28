@@ -32,6 +32,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
@@ -142,7 +143,7 @@ func dispatchAndWait(workflow, ref, inputs string, timeout int, workspaceRoot st
 	}
 
 	// Wait a moment for the run to appear
-	time.Sleep(2 * time.Second)
+	time.Sleep(config.CIDispatchSettleTime())
 
 	// Find the most recent run for this workflow
 	runID, err := findLatestRunID(workflow, ref, workspaceRoot)
@@ -184,7 +185,7 @@ func waitForRun(runID string, timeout int, workspaceRoot string) int {
 	log.Infof("Waiting for run %s to complete (timeout: %ds)...", runID, timeout)
 
 	startTime := time.Now()
-	pollInterval := 10 * time.Second
+	pollInterval := config.CIPollInterval()
 
 	for {
 		// Check if timeout exceeded

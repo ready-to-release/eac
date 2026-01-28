@@ -174,10 +174,17 @@ func ReleasePrunePackages() int {
 	ghClient := github.NewGHClient(workspaceRoot)
 	ctx := context.Background()
 
+	// Get org (from registry config or derived from remote config)
+	org := cfg.Repository.GetRegistryOrg("ghcr.io")
+	if org == "" {
+		log.Errorf("No organization configured. Set registries.ghcr.io.org or repository.remote.registry_url")
+		return 1
+	}
+
 	// Get packages to process
 	var packages []string
 	if pruneAll {
-		pkgList, err := pkgClient.ListOrgPackages(ctx, registryConfig.Org)
+		pkgList, err := pkgClient.ListOrgPackages(ctx, org)
 		if err != nil {
 			log.Errorf("Failed to list packages: %v", err)
 			return 1
@@ -200,7 +207,7 @@ func ReleasePrunePackages() int {
 	totalDeleted := 0
 
 	for _, pkg := range packages {
-		result := prunePackage(ctx, pkg, registryConfig.Org, cleanupPolicy, keepCount, releases, pkgClient, force, verbose, jsonOutput)
+		result := prunePackage(ctx, pkg, org, cleanupPolicy, keepCount, releases, pkgClient, force, verbose, jsonOutput)
 		results = append(results, result)
 		totalDeleted += result.DeletedCount
 	}

@@ -96,4 +96,4 @@ Your current directory is mounted at `/workspace` in the container:
 - [R2R CLI Overview](index.md) - Command overview
 - [metadata command](metadata.md) - Get extension metadata
 - [install command](install.md) - Install extensions
-- [Configuration Reference](../configuration/) - Extension configuration
+- [Configuration Reference](../configuration/index.md) - Extension configuration

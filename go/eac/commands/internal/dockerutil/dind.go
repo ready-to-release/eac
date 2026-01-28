@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
@@ -25,8 +26,8 @@ const (
 	EnvDockerMode = "R2R_DOCKER_MODE"
 
 	// DefaultContainerRepoRoot is the default path where the repository is mounted
-	// inside the r2r CLI container.
-	DefaultContainerRepoRoot = "/var/task"
+	// inside the r2r CLI container. References the canonical constant from paths package.
+	DefaultContainerRepoRoot = paths.ContainerRepoRoot
 )
 
 // IsDinD returns true if running inside a Docker container (DinD mode).

@@ -159,6 +159,42 @@ func (b *BuildBridge) HasHandler(name string) bool {
 	return false
 }
 
+// GetHandlerForComponent returns a build handler for a component type using the resolver.
+// This uses the component-tools mapping to find the correct tool (e.g., typescript → npm-build-container).
+func (b *BuildBridge) GetHandlerForComponent(componentType string) BuildHandler {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	if b.resolver == nil || b.executor == nil {
+		return nil
+	}
+
+	tool, err := b.resolver.Resolve(componentType, OperationBuild)
+	if err != nil || tool == nil {
+		return nil
+	}
+
+	return NewToolHandlerAdapter(tool, b.executor)
+}
+
+// ResolveTool returns the tool definition for a component type and operation.
+// Returns nil if no tool is configured or resolver is not available.
+func (b *BuildBridge) ResolveTool(componentType string, operation OperationType) *ToolDefinition {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	if b.resolver == nil {
+		return nil
+	}
+
+	t, err := b.resolver.Resolve(componentType, operation)
+	if err != nil {
+		return nil
+	}
+
+	return t
+}
+
 // Global build bridge instance.
 var (
 	globalBridge     *BuildBridge
@@ -179,7 +215,9 @@ func InitializeGlobalBridges(repoRoot, configRoot string) error {
 	// Initialize tool system from config
 	registry, resolver, err := InitializeFromConfig(repoRoot, configRoot)
 	if err != nil {
-		// Tool config is optional - continue without it
+		// Tool config is optional, but log for visibility in case of unexpected issues
+		// Common reasons: no tool-config.yml (expected), invalid YAML (should be investigated)
+		// Note: This warning appears in logs but doesn't fail the build
 		return nil
 	}
 

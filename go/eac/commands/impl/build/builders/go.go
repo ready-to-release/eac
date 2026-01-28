@@ -130,9 +130,12 @@ func buildGoModule(module *modules.ModuleContract, workspaceRoot, outputDir stri
 	// Check if module has go package type
 	hasGoModule := module.HasComponent("go")
 
-	// Skip if not a go module (shouldn't happen if packages is correct, but defensive)
+	// Skip if not a go module - this is expected for script-only modules (pwsh, bash)
+	// that have test-impl components triggering Go builds
 	if !hasGoModule {
-		Logln(logWriter, "⚠️  Module '%s' doesn't have go package", module.Moniker)
+		if !isScriptOnlyModule(module) {
+			Logln(logWriter, "  Skipping: module '%s' has no Go package", module.Moniker)
+		}
 		return 0
 	}
 
@@ -658,4 +661,10 @@ func computeSHA256(filePath string) (string, error) {
 
 	h := sha256.Sum256(data)
 	return fmt.Sprintf("%x", h), nil
+}
+
+// isScriptOnlyModule returns true if module only has script components (pwsh/bash).
+// These modules are expected to not have Go packages.
+func isScriptOnlyModule(module *modules.ModuleContract) bool {
+	return module.HasComponent("pwsh") || module.HasComponent("bash")
 }

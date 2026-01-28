@@ -8,8 +8,8 @@ Learn how to use CLI commands, write BDD specifications, configure integrations,
 
 | Guide                   | Description                                               |
 | ----------------------- | --------------------------------------------------------- |
-| [Commands](./commands/) | CLI commands for build, test, validate, release, and more |
-| [Modules](./modules/)   | Creating modules and module types                         |
+| [Commands](./commands/index.md) | CLI commands for build, test, validate, release, and more |
+| [Modules](./modules/index.md)   | Creating modules and module types                         |
 
 ## Language Support
 
@@ -28,15 +28,15 @@ See [R2R and EAC Reference](../../reference/eac/index.md#language-support) for d
 
 New to EAC? Start here:
 
-1. **[Commands](./commands/)** - Learn the essential commands
-2. **[Modules](./modules/)** - Create your first module
+1. **[Commands](./commands/index.md)** - Learn the essential commands
+2. **[Modules](./modules/index.md)** - Create your first module
 
 ## Common Tasks
 
 ### Development Workflow
 
 - [Create Feature Workspace](./commands/development-workflow/create-feature-workspace.md)
-- [Build and Test](./commands/build-test-validate/)
+- [Build and Test](./commands/build-test-validate/index.md)
 - [Validate Before Commit](./commands/build-test-validate/validate-before-commit.md)
 - [Make Commits with AI](./commands/development-workflow/make-commits-with-ai.md)
 
@@ -56,5 +56,5 @@ New to EAC? Start here:
 
 These how-to guides focus on accomplishing tasks. For comprehensive technical details:
 
-- **[Command Reference](../../reference/eac/commands/)** - Complete command syntax and options
-- **[R2R and EAC Reference](../../reference/eac/)** - Architecture, contracts, and extending EAC
+- **[Command Reference](../../reference/eac/commands/index.md)** - Complete command syntax and options
+- **[R2R and EAC Reference](../../reference/eac/index.md)** - Architecture, contracts, and extending EAC

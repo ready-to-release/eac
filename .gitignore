@@ -72,6 +72,7 @@ package-lock.json
 # MkDocs
 site/
 .cache/
+!.cache/**/.gitkeep
 # Generated files during PDF build (staging area - not committed)
 docs/assets/rendered/
 # Mermaid cache IS tracked in git for CI optimization

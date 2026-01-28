@@ -4,11 +4,10 @@ package serve
 
 import (
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"net"
 	"os"
 	"strconv"
-	"time"
 )
 
 const (
@@ -65,14 +64,11 @@ func ResetPortRange() {
 // and reduced collision probability when multiple containers start simultaneously.
 // Returns the first available port or an error if no ports are available.
 func FindAvailablePort() (int, error) {
-	// Initialize random seed (safe to call multiple times)
-	rand.Seed(time.Now().UnixNano())
-
 	// Calculate port range size
 	portRange := PortRangeEnd - PortRangeStart + 1
 
-	// Start at a random position
-	startOffset := rand.Intn(portRange)
+	// Start at a random position (Go 1.22+ auto-seeds)
+	startOffset := rand.IntN(portRange)
 
 	// Scan circularly from random start
 	for offset := 0; offset < portRange; offset++ {

@@ -87,6 +87,72 @@ func TestNewPathHelpers(t *testing.T) {
 	}
 }
 
+// TestCachePathHelpers tests the cache path helper functions.
+func TestCachePathHelpers(t *testing.T) {
+	repoRoot := "/repo"
+
+	tests := []struct {
+		name     string
+		fn       func() string
+		expected string
+	}{
+		{
+			name:     "CacheRootPath",
+			fn:       func() string { return CacheRootPath(repoRoot) },
+			expected: filepath.Join(repoRoot, ".cache", "eac"),
+		},
+		{
+			name:     "CachePath_deprecated",
+			fn:       func() string { return CachePath(repoRoot) },
+			expected: filepath.Join(repoRoot, ".cache", "eac"),
+		},
+		{
+			name:     "BuildCachePath",
+			fn:       func() string { return BuildCachePath(repoRoot) },
+			expected: filepath.Join(repoRoot, ".cache", "eac", "build"),
+		},
+		{
+			name:     "FileHashCachePath",
+			fn:       func() string { return FileHashCachePath(repoRoot, "my-book") },
+			expected: filepath.Join(repoRoot, ".cache", "eac", "build", "hashes", "my-book.json"),
+		},
+		{
+			name:     "PDFScreenshotsCachePath",
+			fn:       func() string { return PDFScreenshotsCachePath(repoRoot) },
+			expected: filepath.Join(repoRoot, ".cache", "eac", "pdf-screenshots"),
+		},
+		{
+			name:     "PDFScreenshotsDirPath",
+			fn:       func() string { return PDFScreenshotsDirPath(repoRoot, "abc123") },
+			expected: filepath.Join(repoRoot, ".cache", "eac", "pdf-screenshots", "abc123"),
+		},
+		{
+			name:     "StagingCachePath",
+			fn:       func() string { return StagingCachePath(repoRoot) },
+			expected: filepath.Join(repoRoot, ".cache", "eac", "staging"),
+		},
+		{
+			name:     "BookStagingCachePath",
+			fn:       func() string { return BookStagingCachePath(repoRoot, "docs:site", "my-book") },
+			expected: filepath.Join(repoRoot, ".cache", "eac", "staging", "docs:site", "my-book"),
+		},
+		{
+			name:     "BuildStateCachePath",
+			fn:       func() string { return BuildStateCachePath(repoRoot) },
+			expected: filepath.Join(repoRoot, ".cache", "eac", "build", "state"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.fn()
+			if result != tt.expected {
+				t.Errorf("%s() = %q, expected %q", tt.name, result, tt.expected)
+			}
+		})
+	}
+}
+
 // TestPathConstants validates that path constants haven't changed.
 func TestPathConstants(t *testing.T) {
 	tests := []struct {
@@ -103,6 +169,7 @@ func TestPathConstants(t *testing.T) {
 		{"LogsDir", LogsDir, "logs"},
 		{"RiskControlsDir", RiskControlsDir, ".risk-controls"},
 		{"ReleaseDir", ReleaseDir, "release"},
+		{"EACCacheRoot", EACCacheRoot, ".cache/eac"},
 	}
 
 	for _, tt := range tests {
@@ -188,8 +255,8 @@ func TestSanitizeForCacheName(t *testing.T) {
 	}
 }
 
-// TestDrawioCachePathV2 tests the traceable drawio cache path generation.
-func TestDrawioCachePathV2(t *testing.T) {
+// TestDrawioCachePath tests the traceable drawio cache path generation.
+func TestDrawioCachePath(t *testing.T) {
 	tests := []struct {
 		name        string
 		cacheRoot   string
@@ -236,17 +303,17 @@ func TestDrawioCachePathV2(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := DrawioCachePathV2(tt.cacheRoot, tt.sourcePath, tt.contentHash)
+			got := DrawioCachePath(tt.cacheRoot, tt.sourcePath, tt.contentHash)
 			if got != tt.want {
-				t.Errorf("DrawioCachePathV2(%q, %q, %q) = %q, want %q",
+				t.Errorf("DrawioCachePath(%q, %q, %q) = %q, want %q",
 					tt.cacheRoot, tt.sourcePath, tt.contentHash, got, tt.want)
 			}
 		})
 	}
 }
 
-// TestMermaidCachePathV2 tests the traceable mermaid cache path generation.
-func TestMermaidCachePathV2(t *testing.T) {
+// TestMermaidCachePath tests the traceable mermaid cache path generation.
+func TestMermaidCachePath(t *testing.T) {
 	tests := []struct {
 		name        string
 		cacheRoot   string
@@ -307,9 +374,9 @@ func TestMermaidCachePathV2(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := MermaidCachePathV2(tt.cacheRoot, tt.sourcePath, tt.blockIndex, tt.contentHash)
+			got := MermaidCachePath(tt.cacheRoot, tt.sourcePath, tt.blockIndex, tt.contentHash)
 			if got != tt.want {
-				t.Errorf("MermaidCachePathV2(%q, %q, %d, %q) = %q, want %q",
+				t.Errorf("MermaidCachePath(%q, %q, %d, %q) = %q, want %q",
 					tt.cacheRoot, tt.sourcePath, tt.blockIndex, tt.contentHash, got, tt.want)
 			}
 		})

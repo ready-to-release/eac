@@ -1,0 +1,73 @@
+# Risk Scoring Configuration
+# yaml-language-server: $schema=../risk-scoring.schema.json
+#
+# Configures risk assessment mappings for ISO 27005 methodology.
+# Risk Score = Likelihood x Impact
+#
+# Impact and Likelihood scale:
+#   5 = Very High / Almost Certain
+#   4 = High / Likely
+#   3 = Medium / Possible
+#   2 = Low / Unlikely
+#   1 = Very Low / Rare
+#
+# Criticality is used for AI risk analysis context (high, medium, low)
+
+#---------------------------------------------------------------------------
+# Impact Mappings
+# Maps module type to default impact rating (1-5)
+# Can be overridden by module metadata if supported
+#---------------------------------------------------------------------------
+impact:
+  # External-facing components (High impact: 4)
+  api: 4
+  service: 4
+  gateway: 4
+
+  # Shared code components (Medium impact: 3)
+  library: 3
+  core: 3
+
+  # Developer tools (Low impact: 2)
+  cli: 2
+  tool: 2
+
+  # Documentation/configuration (Very Low impact: 1)
+  docs: 1
+  config: 1
+
+  # Default for unknown types
+  _default: 3
+
+#---------------------------------------------------------------------------
+# Criticality Mappings
+# Maps module type to criticality level for AI analysis context
+# Valid values: high, medium, low
+#---------------------------------------------------------------------------
+criticality:
+  # External-facing or critical services
+  api: high
+  gateway: high
+  service: high
+
+  # Shared code
+  core: medium
+  library: medium
+
+  # Developer tools
+  cli: low
+  tool: low
+
+  # Default for unknown types
+  _default: medium
+
+#---------------------------------------------------------------------------
+# Severity Weights (for likelihood calculation)
+# These are the severity-to-likelihood increments
+# Base likelihood is 1 (Rare), then add weight based on highest severity found
+#---------------------------------------------------------------------------
+severity_weights:
+  critical: 4  # Results in likelihood 5 (Almost Certain)
+  high: 3      # Results in likelihood 4 (Likely)
+  medium: 2    # Results in likelihood 3 (Possible)
+  low: 1       # Results in likelihood 2 (Unlikely)

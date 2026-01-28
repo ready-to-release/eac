@@ -396,7 +396,7 @@ At release approval, regulatory tags enable automatic generation of:
 
 **Testing Taxonomy**:
 
-- [Testing Taxonomy](../taxonomy/) - Core testing taxonomy tags
+- [Testing Taxonomy](../taxonomy/index.md) - Core testing taxonomy tags
 - [Three-Layer Approach](../concepts/three-layer-approach.md) - Rule/Scenario/Unit Test integration
 
 **Specifications**:

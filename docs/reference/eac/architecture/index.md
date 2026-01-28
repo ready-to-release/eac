@@ -76,7 +76,7 @@ graph TB
 | **eac-specs**        | BDD test infrastructure (Godog), OSCAL compliance                        | go-library  |
 | **eac-mcp-commands** | MCP server for LLM tool integration                                      | go-mcp      |
 
-See [Module Architectures](./modules/) for detailed C4 diagrams.
+See [Module Architectures](./modules/index.md) for detailed C4 diagrams.
 
 ### Supporting Modules
 
@@ -88,7 +88,7 @@ See [Module Architectures](./modules/) for detailed C4 diagrams.
 | **implicit-r2r-cli**  | Devbox CLI configuration                           |
 | **vscode-ext-commit** | VS Code commit message extension                   |
 
-See [Supporting Modules](./modules/supporting/) for details.
+See [Supporting Modules](./modules/supporting/index.md) for details.
 
 ### Container Structure
 
@@ -107,13 +107,13 @@ ext-eac:latest
 
 All repository structure is defined in **YAML contracts** validated against **JSON schemas**:
 
-| Contract             | Schema Location            | Purpose                             |
-| -------------------- | -------------------------- | ----------------------------------- |
-| **repository.yml**   | `repository.schema.json`   | Repository-wide configuration       |
-| **modules.yml**      | `modules.schema.json`      | Module definitions and dependencies |
-| **module-types.yml** | `module-types.schema.json` | Module type definitions             |
-| **books.yml**        | `books.schema.json`        | Documentation book configuration    |
-| **tests.yml**        | `tests.schema.json`        | Test suite and case definitions     |
+| Contract                | Schema Location               | Purpose                             |
+| ----------------------- | ----------------------------- | ----------------------------------- |
+| **repository.yml**      | `repository.schema.json`      | Repository-wide configuration       |
+| **component-types.yml** | `component-types.schema.json` | Component type definitions          |
+| **tool-config.yml**     | `tool-config.schema.json`     | Tool definitions and resources      |
+| **books.yml**           | `books.schema.json`           | Documentation book configuration    |
+| **test-suites.yml**     | `test-suites.schema.json`     | Test suite definitions              |
 
 Contracts are loaded by `eac-core` at runtime and validated before any operation. This ensures:
 
@@ -246,9 +246,9 @@ AI commands use a **retry strategy** with exponential backoff for rate limiting 
 **Precedence** (highest to lowest):
 
 1. **Personal config** (`.personal.yml`, not in Git) - User-specific overrides
-2. **Shared config** (`.yml` files in `.r2r/eac/`) - Team shared settings
-3. **Type defaults** (from `module-types.yml`) - Defaults by module type
-4. **System defaults** (hardcoded in eac-core) - Fallback values
+2. **User config** (`.yml` files in `.r2r/eac/`) - Team shared settings
+3. **System defaults** (`contracts/eac-core/0.1.0/defaults/`) - Default configurations
+4. **Hardcoded defaults** (in eac-core) - Fallback values
 
 This hierarchy allows:
 
@@ -356,7 +356,7 @@ See [CLI Integration](./cli-integration.md) for details on the R2R ↔ EAC bound
 ### Architecture
 
 - [R2R CLI Architecture](https://ready-to-release.github.io/eac/reference/r2r/architecture/) - Framework overview and container model
-- [Module Architectures](./modules/) - Individual module C4 diagrams
+- [Module Architectures](./modules/index.md) - Individual module C4 diagrams
 - [Contracts System](./contracts.md) - YAML contract specification
 - [Dependency System](./dependency-system.md) - Module dependency graph
 - [Component Types](./component-types.md) - Component type reference
@@ -372,5 +372,5 @@ See [CLI Integration](./cli-integration.md) for details on the R2R ↔ EAC bound
 
 ### Reference
 
-- [EAC Commands](../commands/) - Complete command reference
-- [Decision Records](../../repository/decision-records/) - Architectural decisions
+- [EAC Commands](../commands/index.md) - Complete command reference
+- [Decision Records](../../repository/decision-records/index.md) - Architectural decisions

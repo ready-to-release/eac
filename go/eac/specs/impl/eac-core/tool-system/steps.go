@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/cucumber/godog"
 	"github.com/ready-to-release/eac/go/eac/core/config"
@@ -30,74 +31,71 @@ var state *testState
 
 // RegisterSteps registers step definitions for tool system feature specs.
 func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
-	// Setup/teardown
-	sc.Before(func(c context.Context, sc *godog.Scenario) (context.Context, error) {
-		state = &testState{}
-		// Save original env vars and clear config cache
-		state.origRepoRoot = os.Getenv("R2R_REPO_ROOT")
-		state.origContainerRoot = os.Getenv("R2R_CONTAINER_ROOT")
-		config.ClearCache()
-		return c, nil
-	})
+	registerHooks(sc)
+	registerBackgroundSteps(sc, ctx)
+	registerWhenSteps(sc)
+	registerThenSteps(sc)
+}
 
-	// Background steps
+func registerHooks(sc *godog.ScenarioContext) {
+	sc.Before(beforeScenario)
+	sc.After(afterScenario)
+}
+
+func beforeScenario(c context.Context, _ *godog.Scenario) (context.Context, error) {
+	state = &testState{
+		origRepoRoot:      os.Getenv("R2R_REPO_ROOT"),
+		origContainerRoot: os.Getenv("R2R_CONTAINER_ROOT"),
+	}
+	config.ClearCache()
+	return c, nil
+}
+
+func afterScenario(c context.Context, _ *godog.Scenario, _ error) (context.Context, error) {
+	cleanupTestState()
+	return c, nil
+}
+
+func registerBackgroundSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	sc.Step(`^I am in an isolated test repository$`, func() error {
 		return iAmInAnIsolatedTestRepository(ctx)
 	})
-
-	// Given steps - copy test layouts
 	sc.Step(`^I copy the test layout "([^"]*)"$`, func(layoutName string) error {
-		return iCopyTheTestLayout(ctx, layoutName)
+		return internal.CopyTestLayout(ctx, layoutName, false)
 	})
+}
 
-	// When steps - loading config
-	sc.Step(`^I load the EAC configuration$`, func() error {
-		return iLoadTheEACConfiguration()
-	})
+func registerWhenSteps(sc *godog.ScenarioContext) {
+	sc.Step(`^I load the EAC configuration$`, iLoadTheEACConfiguration)
+}
 
-	// Then steps - module assertions
-	sc.Step(`^the module "([^"]*)" has component "([^"]*)"$`, func(moniker, compType string) error {
-		return theModuleHasComponent(moniker, compType)
-	})
-	sc.Step(`^the configuration has (\d+) modules$`, func(count int) error {
-		return theConfigurationHasNModules(count)
-	})
-
-	// Then steps - tool resolution assertions
-	sc.Step(`^the builder for component type "([^"]*)" is "([^"]*)"$`, func(compType, toolID string) error {
-		return theBuilderForComponentTypeIs(compType, toolID)
-	})
-	sc.Step(`^the tester for component type "([^"]*)" is "([^"]*)"$`, func(compType, toolID string) error {
-		return theTesterForComponentTypeIs(compType, toolID)
-	})
-	sc.Step(`^the component type "([^"]*)" has scanner "([^"]*)"$`, func(compType, scannerID string) error {
-		return theComponentTypeHasScanner(compType, scannerID)
-	})
-
-	// Then steps - component type assertions
-	sc.Step(`^the component type "([^"]*)" has extension "([^"]*)"$`, func(compType, ext string) error {
-		return theComponentTypeHasExtension(compType, ext)
-	})
+func registerThenSteps(sc *godog.ScenarioContext) {
+	sc.Step(`^the module "([^"]*)" has component "([^"]*)"$`, theModuleHasComponent)
+	sc.Step(`^the configuration has (\d+) modules$`, theConfigurationHasNModules)
+	sc.Step(`^the builder for component type "([^"]*)" is "([^"]*)"$`, theBuilderForComponentTypeIs)
+	sc.Step(`^the tester for component type "([^"]*)" is "([^"]*)"$`, theTesterForComponentTypeIs)
+	sc.Step(`^the component type "([^"]*)" has scanner "([^"]*)"$`, theComponentTypeHasScanner)
+	sc.Step(`^the component type "([^"]*)" has extension "([^"]*)"$`, theComponentTypeHasExtension)
 }
 
 // cleanupTestState cleans up test state after each scenario.
 func cleanupTestState() {
-	if state != nil {
-		// Restore original R2R_REPO_ROOT
-		if state.origRepoRoot != "" {
-			os.Setenv("R2R_REPO_ROOT", state.origRepoRoot)
-		} else {
-			os.Unsetenv("R2R_REPO_ROOT")
-		}
-		// Restore original R2R_CONTAINER_ROOT
-		if state.origContainerRoot != "" {
-			os.Setenv("R2R_CONTAINER_ROOT", state.origContainerRoot)
-		} else {
-			os.Unsetenv("R2R_CONTAINER_ROOT")
-		}
-		config.ClearCache()
+	if state == nil {
+		return
 	}
+	restoreEnvVar("R2R_REPO_ROOT", state.origRepoRoot)
+	restoreEnvVar("R2R_CONTAINER_ROOT", state.origContainerRoot)
+	config.ClearCache()
 	state = nil
+}
+
+// restoreEnvVar restores an environment variable to its original value.
+func restoreEnvVar(key, origValue string) {
+	if origValue != "" {
+		os.Setenv(key, origValue)
+	} else {
+		os.Unsetenv(key)
+	}
 }
 
 // ============================================================================
@@ -105,76 +103,100 @@ func cleanupTestState() {
 // ============================================================================
 
 func iAmInAnIsolatedTestRepository(ctx *internal.TestContext) error {
-	// Create a temporary directory for test isolation
-	tempDir, err := os.MkdirTemp("", "tool-system-test-*")
+	tempDir, err := createIsolatedGitRepo()
 	if err != nil {
-		return fmt.Errorf("failed to create temp dir: %w", err)
+		return err
 	}
+	setupTestEnvironment(ctx, tempDir, resolveToolRoot(ctx))
+	return nil
+}
 
-	// Create minimal .git directory so config loader can find repo root
-	gitDir := filepath.Join(tempDir, ".git")
-	if err := os.MkdirAll(gitDir, 0o750); err != nil {
-		return fmt.Errorf("failed to create .git: %w", err)
-	}
-	if err := os.WriteFile(filepath.Join(gitDir, "config"), []byte("[core]\n\tbare = false\n"), 0o644); err != nil {
-		return fmt.Errorf("failed to create .git/config: %w", err)
-	}
-	if err := os.WriteFile(filepath.Join(gitDir, "HEAD"), []byte("ref: refs/heads/main\n"), 0o644); err != nil {
-		return fmt.Errorf("failed to create .git/HEAD: %w", err)
-	}
-
-	// Find the tool's distribution root (where contracts/defaults live)
-	toolRoot := ctx.OriginalRepoRoot
-	if toolRoot == "" {
-		cwd, err := os.Getwd()
-		if err != nil {
-			return err
-		}
-		toolRoot = findRepoRoot(cwd)
-		// Set OriginalRepoRoot so CopyTestLayout can find templates
-		ctx.OriginalRepoRoot = toolRoot
-	}
-
+func setupTestEnvironment(ctx *internal.TestContext, tempDir, toolRoot string) {
 	ctx.IsolatedDir = tempDir
 	state.repoRoot = tempDir
-
-	// R2R_REPO_ROOT: User's workspace (isolated test directory)
 	os.Setenv("R2R_REPO_ROOT", tempDir)
-
-	// R2R_CONTAINER_ROOT: Tool's distribution (real repo with contracts)
 	if toolRoot != "" {
 		os.Setenv("R2R_CONTAINER_ROOT", toolRoot)
 	}
+}
 
+func createIsolatedGitRepo() (string, error) {
+	tempDir, err := os.MkdirTemp("", "tool-system-test-*")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp dir: %w", err)
+	}
+	if err := initMinimalGitDir(tempDir); err != nil {
+		return "", err
+	}
+	return tempDir, nil
+}
+
+func initMinimalGitDir(repoDir string) error {
+	gitDir := filepath.Join(repoDir, ".git")
+	if err := os.MkdirAll(gitDir, 0o750); err != nil {
+		return fmt.Errorf("failed to create .git: %w", err)
+	}
+	return writeGitFiles(gitDir)
+}
+
+func writeGitFiles(gitDir string) error {
+	if err := writeGitFile(gitDir, "config", "[core]\n\tbare = false\n"); err != nil {
+		return err
+	}
+	return writeGitFile(gitDir, "HEAD", "ref: refs/heads/main\n")
+}
+
+func writeGitFile(gitDir, name, content string) error {
+	if err := os.WriteFile(filepath.Join(gitDir, name), []byte(content), 0o644); err != nil {
+		return fmt.Errorf("failed to create .git/%s: %w", name, err)
+	}
 	return nil
+}
+
+func resolveToolRoot(ctx *internal.TestContext) string {
+	if ctx.OriginalRepoRoot != "" {
+		return ctx.OriginalRepoRoot
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return ""
+	}
+	toolRoot := findRepoRoot(cwd)
+	ctx.OriginalRepoRoot = toolRoot
+	return toolRoot
 }
 
 // findRepoRoot walks up directories to find the repo root.
 func findRepoRoot(start string) string {
-	dir := start
-	for {
-		if _, err := os.Stat(filepath.Join(dir, "go.work")); err == nil {
+	for dir := start; ; dir = filepath.Dir(dir) {
+		if isRepoRoot(dir) {
 			return dir
 		}
-		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
-			return dir
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
+		if filepath.Dir(dir) == dir {
 			return ""
 		}
-		dir = parent
 	}
 }
 
-func iCopyTheTestLayout(ctx *internal.TestContext, layoutName string) error {
-	return internal.CopyTestLayout(ctx, layoutName, false)
+func isRepoRoot(dir string) bool {
+	markers := []string{"go.work", ".git"}
+	for _, m := range markers {
+		if _, err := os.Stat(filepath.Join(dir, m)); err == nil {
+			return true
+		}
+	}
+	return false
 }
 
 func iLoadTheEACConfiguration() error {
-	// Clear cache before loading to ensure fresh load
 	config.ClearCache()
+	if err := loadEACConfig(); err != nil {
+		return err
+	}
+	return loadToolConfig()
+}
 
+func loadEACConfig() error {
 	cfg, err := config.Load(config.LoadOptions{
 		RepoRoot:        state.repoRoot,
 		ValidateSchemas: true,
@@ -184,14 +206,15 @@ func iLoadTheEACConfiguration() error {
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
+	return nil
+}
 
-	// Load tool configuration
+func loadToolConfig() error {
 	toolCfg, err := tool.LoadToolConfig(state.repoRoot, filepath.Join(state.repoRoot, ".r2r", "eac"))
 	if err != nil {
 		return fmt.Errorf("failed to load tool config: %w", err)
 	}
 	state.toolConfig = toolCfg
-
 	return nil
 }
 
@@ -200,12 +223,9 @@ func iLoadTheEACConfiguration() error {
 // ============================================================================
 
 func theModuleHasComponent(moniker, compType string) error {
-	if state.cfg == nil || state.cfg.Repository == nil {
-		return fmt.Errorf("config not loaded")
-	}
-	m, found := state.cfg.Repository.GetModule(moniker)
-	if !found {
-		return fmt.Errorf("module %q not found", moniker)
+	m, err := getModule(moniker)
+	if err != nil {
+		return err
 	}
 	if !m.HasComponent(compType) {
 		return fmt.Errorf("module %q does not have component %q, has: %v", moniker, compType, m.Components.GetEnabled())
@@ -213,13 +233,30 @@ func theModuleHasComponent(moniker, compType string) error {
 	return nil
 }
 
+func getModule(moniker string) (*config.Module, error) {
+	if err := requireLoadedConfig(); err != nil {
+		return nil, err
+	}
+	m, found := state.cfg.Repository.GetModule(moniker)
+	if !found {
+		return nil, fmt.Errorf("module %q not found", moniker)
+	}
+	return m, nil
+}
+
 func theConfigurationHasNModules(count int) error {
+	if err := requireLoadedConfig(); err != nil {
+		return err
+	}
+	if actual := len(state.cfg.Repository.Modules); actual != count {
+		return fmt.Errorf("expected %d modules, got %d", count, actual)
+	}
+	return nil
+}
+
+func requireLoadedConfig() error {
 	if state.cfg == nil || state.cfg.Repository == nil {
 		return fmt.Errorf("config not loaded")
-	}
-	actual := len(state.cfg.Repository.Modules)
-	if actual != count {
-		return fmt.Errorf("expected %d modules, got %d", count, actual)
 	}
 	return nil
 }
@@ -228,48 +265,48 @@ func theConfigurationHasNModules(count int) error {
 // Tool Resolution Assertions
 // ============================================================================
 
-func theBuilderForComponentTypeIs(compType, expectedToolID string) error {
+func getComponentTools(compType string) (*tool.ToolAssignment, error) {
 	if state.toolConfig == nil {
-		return fmt.Errorf("tool config not loaded")
+		return nil, fmt.Errorf("tool config not loaded")
 	}
-	componentTools, ok := state.toolConfig.ComponentTools[compType]
-	if !ok || componentTools == nil {
-		return fmt.Errorf("no component tools defined for %q", compType)
+	ct, ok := state.toolConfig.ComponentTools[compType]
+	if !ok || ct == nil {
+		return nil, fmt.Errorf("no component tools defined for %q", compType)
 	}
-	if componentTools.Builder != expectedToolID {
-		return fmt.Errorf("builder for %q is %q, expected %q", compType, componentTools.Builder, expectedToolID)
+	return ct, nil
+}
+
+func theBuilderForComponentTypeIs(compType, expected string) error {
+	ct, err := getComponentTools(compType)
+	if err != nil {
+		return err
+	}
+	if ct.Builder != expected {
+		return fmt.Errorf("builder for %q is %q, expected %q", compType, ct.Builder, expected)
 	}
 	return nil
 }
 
-func theTesterForComponentTypeIs(compType, expectedToolID string) error {
-	if state.toolConfig == nil {
-		return fmt.Errorf("tool config not loaded")
+func theTesterForComponentTypeIs(compType, expected string) error {
+	ct, err := getComponentTools(compType)
+	if err != nil {
+		return err
 	}
-	componentTools, ok := state.toolConfig.ComponentTools[compType]
-	if !ok || componentTools == nil {
-		return fmt.Errorf("no component tools defined for %q", compType)
-	}
-	if componentTools.Tester != expectedToolID {
-		return fmt.Errorf("tester for %q is %q, expected %q", compType, componentTools.Tester, expectedToolID)
+	if ct.Tester != expected {
+		return fmt.Errorf("tester for %q is %q, expected %q", compType, ct.Tester, expected)
 	}
 	return nil
 }
 
 func theComponentTypeHasScanner(compType, scannerID string) error {
-	if state.toolConfig == nil {
-		return fmt.Errorf("tool config not loaded")
+	ct, err := getComponentTools(compType)
+	if err != nil {
+		return err
 	}
-	componentTools, ok := state.toolConfig.ComponentTools[compType]
-	if !ok || componentTools == nil {
-		return fmt.Errorf("no component tools defined for %q", compType)
+	if !slices.Contains(ct.Scanners, scannerID) {
+		return fmt.Errorf("component type %q does not have scanner %q, has: %v", compType, scannerID, ct.Scanners)
 	}
-	for _, s := range componentTools.Scanners {
-		if s == scannerID {
-			return nil
-		}
-	}
-	return fmt.Errorf("component type %q does not have scanner %q, has: %v", compType, scannerID, componentTools.Scanners)
+	return nil
 }
 
 // ============================================================================
@@ -277,17 +314,23 @@ func theComponentTypeHasScanner(compType, scannerID string) error {
 // ============================================================================
 
 func theComponentTypeHasExtension(compType, ext string) error {
+	ct, err := getComponentType(compType)
+	if err != nil {
+		return err
+	}
+	if !slices.Contains(ct.Extensions, ext) {
+		return fmt.Errorf("component type %q does not have extension %q, has: %v", compType, ext, ct.Extensions)
+	}
+	return nil
+}
+
+func getComponentType(compType string) (*config.ComponentType, error) {
 	if state.cfg == nil || state.cfg.ComponentTypes == nil {
-		return fmt.Errorf("component types config not loaded")
+		return nil, fmt.Errorf("component types config not loaded")
 	}
 	ct := state.cfg.ComponentTypes.Get(compType)
 	if ct == nil {
-		return fmt.Errorf("component type %q not found", compType)
+		return nil, fmt.Errorf("component type %q not found", compType)
 	}
-	for _, e := range ct.Extensions {
-		if e == ext {
-			return nil
-		}
-	}
-	return fmt.Errorf("component type %q does not have extension %q, has: %v", compType, ext, ct.Extensions)
+	return ct, nil
 }

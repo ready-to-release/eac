@@ -89,5 +89,5 @@ r2r eac create-spec            # Generate Gherkin specifications
 
 ## See Also
 
-- [Command Reference](../../eac/commands/) - All EAC commands
-- [Local Setup](../../../how-to-guides/local-setup/) - Installation guides
+- [Command Reference](../../eac/commands/index.md) - All EAC commands
+- [Local Setup](../../../how-to-guides/local-setup/index.md) - Installation guides

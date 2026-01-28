@@ -1,5 +1,20 @@
 # Module Types Reference
 
+!!! warning "Deprecated: Use Component Types Instead"
+
+    **Module types have been replaced by component types.** The concept of a single "module type"
+    per module is deprecated. Modules now contain multiple **components**, each with its own type.
+
+    **See:** [Component Types Reference](./component-types.md) for the current system.
+
+    **Key changes:**
+
+    - Old: `type: go-library` (one type per module)
+    - New: `components: { go: path/to/code, specs: null }` (multiple components per module)
+    - Configuration moved from `.r2r/eac/module-types.yml` to `contracts/eac-core/0.1.0/defaults/component-types.yml`
+
+---
+
 EAC supports different module types, each optimized for specific languages and build requirements.
 
 ## Available Module Types
@@ -266,11 +281,15 @@ This architecture allows new languages to be added by:
 
 ## Adding Custom Module Types
 
+!!! note "See Component Types"
+
+    For the current approach to adding custom types, see [Adding Custom Component Types](./component-types.md#adding-custom-component-types).
+
 To add support for a new language:
 
 ### 1. Define Module Type
 
-Create or update `.r2r/eac/module-types.yml`:
+Create or update `contracts/eac-core/0.1.0/defaults/component-types.yml` (or copy to `.r2r/eac/component-types.yml` for local override):
 
 ```yaml
 types:

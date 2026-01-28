@@ -146,12 +146,20 @@ func (c *testSanityContext) scanForFeatureFiles(dir string) error {
 
 func (c *testSanityContext) scanForGoTestFiles(excludeGodog bool) error {
 	root := c.repoRoot
-	pattern := filepath.Join(root, "go", "**", "*_test.go")
-	pattern = filepath.ToSlash(pattern)
 
-	matches, err := doublestar.FilepathGlob(pattern)
-	if err != nil {
-		return err
+	// Scan all Go module roots that can contain tests
+	patterns := []string{
+		filepath.ToSlash(filepath.Join(root, "go", "**", "*_test.go")),
+		filepath.ToSlash(filepath.Join(root, "contracts", "**", "*_test.go")),
+	}
+
+	var matches []string
+	for _, pattern := range patterns {
+		m, err := doublestar.FilepathGlob(pattern)
+		if err != nil {
+			return fmt.Errorf("glob %s: %w", pattern, err)
+		}
+		matches = append(matches, m...)
 	}
 
 	// Filter to only files that actually contain Test functions

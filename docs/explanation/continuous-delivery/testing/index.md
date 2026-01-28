@@ -55,4 +55,4 @@ Testing is integrated throughout every stage of the Continuous Delivery Model, n
 
 - [Test Levels](./test-levels.md) - L0-L4 taxonomy and shift-left strategy
 - [Verification Types](./verification-types.md) - IV/OV/PV for acceptance testing
-- [Testing Taxonomy](../../specifications/taxonomy/) - Tag contracts and test suites
+- [Testing Taxonomy](../../specifications/taxonomy/index.md) - Tag contracts and test suites

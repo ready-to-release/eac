@@ -17,10 +17,10 @@ and template management.
 
 | Reference                       | Description                     |
 | ------------------------------- | ------------------------------- |
-| [Commands](./commands/)         | R2R CLI command reference       |
-| [Architecture](./architecture/) | R2R CLI architecture and design |
+| [Commands](./commands/index.md)         | R2R CLI command reference       |
+| [Architecture](./architecture/index.md) | R2R CLI architecture and design |
 
 ## Related Documentation
 
-- [EAC Extension Reference](../eac/) - EAC extension for R2R
-- [How-to Guides: R2R CLI](../../how-to-guides/r2r/) - Task-oriented guides
+- [EAC Extension Reference](../eac/index.md) - EAC extension for R2R
+- [How-to Guides: R2R CLI](../../how-to-guides/r2r/index.md) - Task-oriented guides

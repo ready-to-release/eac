@@ -421,7 +421,7 @@ The three layers use different tag types:
 **Scenario Layer**:
 
 - Uses **testing taxonomy tags**: `@ov`, `@iv`, `@pv` (verification) + `@L2`, `@L3`, `@L4` (level)
-- See **[Testing Taxonomy](../taxonomy/)** for complete taxonomy
+- See **[Testing Taxonomy](../taxonomy/index.md)** for complete taxonomy
 
 **Unit Test Layer**:
 
@@ -445,7 +445,7 @@ Rule: Valid credentials grant access
 
 For complete tag documentation, see:
 
-- **Testing taxonomy tags**: [Testing Taxonomy](../taxonomy/)
+- **Testing taxonomy tags**: [Testing Taxonomy](../taxonomy/index.md)
 - **Organizational tags**: [File Structure](../organization/file-structure.md)
 
 ---

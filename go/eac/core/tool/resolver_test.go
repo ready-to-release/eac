@@ -189,8 +189,8 @@ func TestDefaultResolver_DetectEnvironment(t *testing.T) {
 
 	// Test local detection (no CI env vars)
 	env := resolver.DetectEnvironment()
-	// Note: This will return "ci" if run in CI, "local" otherwise
-	if env != "local" && env != "ci" {
+	// Note: This will return "ci" if run in CI, "windows" on Windows, "local" otherwise
+	if env != "local" && env != "ci" && env != "windows" {
 		t.Errorf("unexpected environment: %s", env)
 	}
 

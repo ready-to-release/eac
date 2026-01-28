@@ -1,3 +1,4 @@
+// do not delete log.Debugf calls: we always want to be able to track cache usage
 package books
 
 import (
@@ -55,21 +56,23 @@ func NewAssetCache(workspaceRoot string) *AssetCache {
 // Returns: (cachePath, cacheHit)
 func (c *AssetCache) GetMermaid(key MermaidCacheKey) (string, bool) {
 	hash := c.hashMermaid(key)
-	cachePath := paths.MermaidCachePathV2(c.cacheRoot, key.SourceFile, key.BlockIndex, hash)
+	cachePath := paths.MermaidCachePath(c.cacheRoot, key.SourceFile, key.BlockIndex, hash)
 
 	if _, err := os.Stat(cachePath); err == nil {
 		c.stats.MermaidHits++
+		log.Debugf("cache: mermaid HIT block=%d hash=%s path=%s", key.BlockIndex, hash[:8], cachePath)
 		return cachePath, true
 	}
 
 	c.stats.MermaidMisses++
+	log.Debugf("cache: mermaid MISS block=%d hash=%s path=%s", key.BlockIndex, hash[:8], cachePath)
 	return cachePath, false
 }
 
 // PutMermaid stores a rendered SVG in the cache for future reuse
 func (c *AssetCache) PutMermaid(svgPath string, key MermaidCacheKey) error {
 	hash := c.hashMermaid(key)
-	cachePath := paths.MermaidCachePathV2(c.cacheRoot, key.SourceFile, key.BlockIndex, hash)
+	cachePath := paths.MermaidCachePath(c.cacheRoot, key.SourceFile, key.BlockIndex, hash)
 
 	// Ensure cache directory exists
 	if err := os.MkdirAll(filepath.Dir(cachePath), 0755); err != nil {
@@ -106,21 +109,23 @@ func HashMermaidKey(key MermaidCacheKey) string {
 // Returns: (cachePath, cacheHit)
 func (c *AssetCache) GetDrawio(key DrawioCacheKey) (string, bool) {
 	hash := c.hashDrawio(key)
-	cachePath := paths.DrawioCachePathV2(c.cacheRoot, key.SourcePath, hash)
+	cachePath := paths.DrawioCachePath(c.cacheRoot, key.SourcePath, hash)
 
 	if _, err := os.Stat(cachePath); err == nil {
 		c.stats.DrawioHits++
+		log.Debugf("cache: drawio HIT hash=%s path=%s", hash[:8], cachePath)
 		return cachePath, true
 	}
 
 	c.stats.DrawioMisses++
+	log.Debugf("cache: drawio MISS hash=%s path=%s", hash[:8], cachePath)
 	return cachePath, false
 }
 
 // PutDrawio stores an optimized PNG in the cache for future reuse
 func (c *AssetCache) PutDrawio(pngPath string, key DrawioCacheKey) error {
 	hash := c.hashDrawio(key)
-	cachePath := paths.DrawioCachePathV2(c.cacheRoot, key.SourcePath, hash)
+	cachePath := paths.DrawioCachePath(c.cacheRoot, key.SourcePath, hash)
 
 	// Ensure cache directory exists
 	if err := os.MkdirAll(filepath.Dir(cachePath), 0755); err != nil {

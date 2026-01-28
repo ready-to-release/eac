@@ -6,5 +6,5 @@ Technical reference documentation for the continuous delivery system, including 
 
 | Reference                 | Description                                             |
 | ------------------------- | ------------------------------------------------------- |
-| [Workflows](./workflows/) | GitHub Actions workflow specifications and architecture |
-| [Changelog](./changelog/) | Changelog format and versioning conventions             |
+| [Workflows](./workflows/index.md) | GitHub Actions workflow specifications and architecture |
+| [Changelog](./changelog/index.md) | Changelog format and versioning conventions             |

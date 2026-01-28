@@ -62,9 +62,14 @@ modules:
 
 ## Module Types
 
-**File**: `.r2r/eac/module-types.yml`
+!!! note "See Component Types"
 
-Module types define:
+    Module types are deprecated. Modules now use **components** instead.
+    See [Component Types Reference](../architecture/component-types.md).
+
+**File**: `contracts/eac-core/0.1.0/defaults/component-types.yml`
+
+Component types define:
 
 - **Build Dependencies** - System dependencies (go, docker, npm)
 - **Capabilities** - Type capabilities (executable, go_module, etc.)
@@ -655,7 +660,7 @@ r2r eac release-this <module>      # Create release
 
 ## Related Documentation
 
-- [Architecture](../architecture/) - System architecture and components
-- [Contracts](../contracts/) - Contract system and YAML schemas
+- [Architecture](../architecture/index.md) - System architecture and components
+- [Contracts](../contracts/index.md) - Contract system and YAML schemas
 - [Dependencies](../architecture/dependencies.md) - Dependency resolution details
 - [Module Types](../architecture/component-types.md) - Module type specifications

@@ -258,7 +258,7 @@ See [Creating Extensions](../../../how-to-guides/r2r/creating-extensions.md) for
 
 ## Related Documentation
 
-- [R2R CLI Commands](../commands/) - Command reference
-- [EAC Extension Architecture](../../eac/architecture/) - EAC extension details
-- [How-to Guides: R2R](../../../how-to-guides/r2r/) - Usage guides
+- [R2R CLI Commands](../commands/index.md) - Command reference
+- [EAC Extension Architecture](../../eac/architecture/index.md) - EAC extension details
+- [How-to Guides: R2R](../../../how-to-guides/r2r/index.md) - Usage guides
 - [Creating Extensions](../../../how-to-guides/r2r/creating-extensions.md) - Extension development guide

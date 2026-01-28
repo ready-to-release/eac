@@ -12,7 +12,11 @@ import (
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
+
+// Package-level logger for discovery debugging
+var log = logging.C()
 
 // DiscoveryConfig holds configuration for test discovery.
 // All values come from repository.yml - no defaults, no fallbacks.
@@ -296,11 +300,25 @@ func discoverAllTests(rootPath string) ([]TestReference, error) {
 func discoverModuleAllTests(rootPath string, module *modules.ModuleContract, dc *DiscoveryConfig) ([]TestReference, error) {
 	refs := []TestReference{}
 
+	// Log module discovery start with component count
+	enabledComps := module.GetEnabledComponents()
+	log.Debugf("Discovery: module=%s components=%d (%v)", module.Moniker, len(module.Components), enabledComps)
+
 	// 1. Discover tests from all components with test patterns
 	for pkgType, pkg := range module.Components {
-		if pkg == nil || pkg.Patterns == nil || len(pkg.Patterns.Tests) == 0 {
+		if pkg == nil {
+			log.Debugf("Discovery P1: %s:%s skipped (nil entry)", module.Moniker, pkgType)
 			continue
 		}
+		if pkg.Patterns == nil {
+			log.Debugf("Discovery P1: %s:%s skipped (nil patterns)", module.Moniker, pkgType)
+			continue
+		}
+		if len(pkg.Patterns.Tests) == 0 {
+			log.Debugf("Discovery P1: %s:%s skipped (no test patterns)", module.Moniker, pkgType)
+			continue
+		}
+		log.Debugf("Discovery P1: %s:%s root=%s patterns=%v", module.Moniker, pkgType, pkg.Root, pkg.Patterns.Tests)
 		pkgRoot := filepath.Join(rootPath, pkg.Root)
 
 		for _, pattern := range pkg.Patterns.Tests {
@@ -325,10 +343,12 @@ func discoverModuleAllTests(rootPath string, module *modules.ModuleContract, dc 
 	// 2. Discover Go tests from test-impl package if specified
 	testImplPath := module.GetTestImplementationPath()
 	if testImplPath != "" {
+		log.Debugf("Discovery P2: %s test-impl=%s", module.Moniker, testImplPath)
 		fullTestImplPath := filepath.Join(rootPath, testImplPath)
 		if _, err := os.Stat(fullTestImplPath); err == nil {
 			goRefs, err := discoverGoTestTagsInPath(fullTestImplPath, dc)
 			if err == nil {
+				log.Debugf("Discovery P2: %s found %d gotest from test-impl", module.Moniker, len(goRefs))
 				// Tag tests with module dependency
 				for i := range goRefs {
 					depmTag := "@depm:" + module.Moniker
@@ -338,22 +358,32 @@ func discoverModuleAllTests(rootPath string, module *modules.ModuleContract, dc 
 					goRefs[i].ModuleDependencies = append(goRefs[i].ModuleDependencies, module.Moniker)
 				}
 				refs = append(refs, goRefs...)
+			} else {
+				log.Debugf("Discovery P2: %s test-impl error: %v", module.Moniker, err)
 			}
+		} else {
+			log.Debugf("Discovery P2: %s test-impl path not found: %s", module.Moniker, fullTestImplPath)
 		}
+	} else {
+		log.Debugf("Discovery P2: %s skipped (no test-impl)", module.Moniker)
 	}
 
 	// 3. Discover Gherkin specs from specs package
 	featureTestType := getFeatureTestTypeForModule(module)
 	specsRoot := module.GetSpecsRoot()
 
+	log.Debugf("Discovery P3: %s specsRoot=%s type=%s", module.Moniker, specsRoot, featureTestType)
+
 	specPattern := filepath.Join(rootPath, specsRoot, "**/*.feature")
 	specPattern = filepath.ToSlash(specPattern)
 
 	matches, err := doublestar.FilepathGlob(specPattern)
 	if err == nil {
+		log.Debugf("Discovery P3: %s found %d .feature files", module.Moniker, len(matches))
 		for _, specFile := range matches {
 			featureRefs, err := parseFeatureFile(specFile, dc)
 			if err != nil {
+				log.Debugf("Discovery P3: %s parse error in %s: %v", module.Moniker, specFile, err)
 				continue
 			}
 			// Tag specs with module dependency and set correct test type
@@ -367,8 +397,11 @@ func discoverModuleAllTests(rootPath string, module *modules.ModuleContract, dc 
 			}
 			refs = append(refs, featureRefs...)
 		}
+	} else {
+		log.Debugf("Discovery P3: %s glob error: %v", module.Moniker, err)
 	}
 
+	log.Debugf("Discovery: %s total=%d tests discovered", module.Moniker, len(refs))
 	return refs, nil
 }
 
@@ -396,26 +429,34 @@ func discoverTestsInFile(filePath, moniker, packageType string, dc *DiscoveryCon
 	// Get test framework from package type configuration
 	testFramework := getTestFrameworkForPackage(packageType)
 
+	log.Debugf("discoverTestsInFile: %s ext=%s pkg=%s framework=%s", filePath, ext, packageType, testFramework)
+
 	switch {
 	case ext == ".ts" && strings.HasSuffix(name, ".test.ts"):
 		// TypeScript test file
+		log.Debugf("discoverTestsInFile: %s -> mocha (typescript test)", name)
 		refs, err = parseNodeTestFile(filePath, testFramework)
 	case ext == ".js" && strings.HasSuffix(name, ".test.js"):
 		// JavaScript test file
+		log.Debugf("discoverTestsInFile: %s -> mocha (javascript test)", name)
 		refs, err = parseNodeTestFile(filePath, testFramework)
 	case ext == ".feature":
 		// Gherkin feature file - already handled by DiscoverGodogFeatureTags
 		// Skip to avoid duplicates
+		log.Debugf("discoverTestsInFile: %s -> skipped (handled by P3)", name)
 		return nil, nil
 	case ext == ".go" && strings.HasSuffix(name, "_test.go"):
 		// Go test file - parse it directly
 		// Skip godog runners as they're not unit tests
 		if dc.IsGodogTestFile(name) {
+			log.Debugf("discoverTestsInFile: %s -> skipped (godog runner)", name)
 			return nil, nil
 		}
+		log.Debugf("discoverTestsInFile: %s -> gotest", name)
 		refs, err = parseGoTestFile(filePath)
 	default:
 		// Unknown test file type
+		log.Debugf("discoverTestsInFile: %s -> skipped (unknown type)", name)
 		return nil, nil
 	}
 
@@ -783,7 +824,9 @@ func getTestFrameworkForPackage(packageType string) string {
 // - go package (or anything else) → "godog" (Go BDD framework).
 func getFeatureTestTypeForModule(module *modules.ModuleContract) string {
 	// Check if module has typescript package
-	if module.HasComponent("typescript") {
+	hasTS := module.HasComponent("typescript")
+	log.Debugf("getFeatureTestTypeForModule: %s hasTypescript=%v", module.Moniker, hasTS)
+	if hasTS {
 		return "tscucumber"
 	}
 	// Default to godog for Go and other modules

@@ -67,5 +67,5 @@ Feature: Container Tests
 ## Related Documentation
 
 - [Three-Layer Approach](../concepts/three-layer-approach.md) - Conceptual overview
-- [Go Implementation](../implementation/go/) - Build tags and test levels in Go
-- [Organizing Specifications](../organization/) - File structure and naming
+- [Go Implementation](../implementation/go/index.md) - Build tags and test levels in Go
+- [Organizing Specifications](../organization/index.md) - File structure and naming

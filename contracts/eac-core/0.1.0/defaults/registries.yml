@@ -1,0 +1,28 @@
+# Container Registry Defaults
+# Default cleanup policies for container registries.
+# These can be overridden in .r2r/eac/repository.yml
+
+registries:
+  ghcr.io:
+    cleanup:
+      enabled: true
+      policy: keep-latest-n
+      keep: 10
+      min_age_days: 7
+      # Image tag rules (OCI/Docker tags on the container image)
+      image_tags:
+        # Tags that are never deleted (glob patterns)
+        preserve:
+          - "v*"                      # Release tags like v1.0.0
+          - "latest"                  # Latest tag
+          - "[0-9]*.[0-9]*.[0-9]*"    # Semver like 1.0.0
+        # Tags eligible for cleanup (glob patterns)
+        prune:
+          - "sha-*"                   # CI builds like sha-abc1234
+          - "dev-*"                   # Dev builds
+          - "pr-*"                    # PR builds
+          - "ci"                      # CI tag
+      # GitHub Release API correlation
+      # Note: Released packages are ALWAYS protected - this is non-configurable for safety.
+      github_releases:
+        tag_format: "{module}/{version}"  # e.g., ext-eac/1.0.0

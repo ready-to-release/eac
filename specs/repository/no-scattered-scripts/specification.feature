@@ -34,11 +34,11 @@ Feature: repository_no-scattered-scripts
         | scripts/pwsh/<package>/*             | PowerShell packages        |
         | scripts/sh/<package>/*               | Shell packages             |
         | scripts/cmd/<package>/*              | Batch packages             |
+        | containers/*/entrypoint.sh           | Container entrypoints      |
         | importer.sh                          | Root shell importer        |
         | importer.ps1                         | Root PowerShell importer   |
       And no scripts should exist in:
         | Location              | Reason                              |
-        | containers/           | Use Dockerfiles instead             |
         | src/                  | Source code, not scripts            |
         | docs/                 | Documentation, not scripts          |
       And these locations are excluded from validation:

@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 )
@@ -17,6 +18,24 @@ func VerifyToolDefinition(tool *ToolDefinition) VerifyResult {
 		ToolID:          tool.ID,
 		Available:       false,
 		RequiredVersion: tool.Version,
+	}
+
+	// Check platform compatibility first
+	if len(tool.Platforms) > 0 {
+		currentPlatform := runtime.GOOS
+		supported := false
+		for _, p := range tool.Platforms {
+			if p == currentPlatform {
+				supported = true
+				break
+			}
+		}
+		if !supported {
+			result.Skipped = true
+			result.Error = fmt.Errorf("tool %q not available on platform %s (supports: %v)",
+				tool.ID, currentPlatform, tool.Platforms)
+			return result
+		}
 	}
 
 	// If tool has explicit verify config, use it
@@ -55,8 +74,20 @@ func verifyCommand(result VerifyResult, tool *ToolDefinition) VerifyResult {
 	cmd := exec.Command(parts[0], parts[1:]...) //nolint:gosec // G204: command from tool-config.yml
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		result.Error = fmt.Errorf("verification command failed: %w", err)
-		return result
+		// On Windows, try WSL fallback for compatible tools
+		if runtime.GOOS == "windows" && isWSLCompatibleTool(parts[0]) && wslAvailable() {
+			wslArgs := append([]string{parts[0]}, parts[1:]...)
+			wslCmd := exec.Command("wsl", wslArgs...)
+			wslOutput, wslErr := wslCmd.CombinedOutput()
+			if wslErr == nil {
+				output = wslOutput
+				err = nil
+			}
+		}
+		if err != nil {
+			result.Error = fmt.Errorf("verification command failed: %w", err)
+			return result
+		}
 	}
 
 	result.Available = true
@@ -130,6 +161,14 @@ func verifyBinaryExists(result VerifyResult, tool *ToolDefinition) VerifyResult 
 
 	_, err := exec.LookPath(tool.Binary)
 	if err != nil {
+		// On Windows, try WSL fallback for common Unix tools
+		if runtime.GOOS == "windows" && isWSLCompatibleTool(tool.Binary) {
+			if wslAvailable() {
+				result.Available = true
+				result.Version = "wsl"
+				return result
+			}
+		}
 		result.Error = fmt.Errorf("binary %q not found in PATH", tool.Binary)
 		return result
 	}
@@ -226,4 +265,77 @@ func IsAvailable(toolID string) bool {
 // This mirrors the old systemdeps API for easier migration.
 func GetMissingDependencies(toolIDs []string) []string {
 	return GlobalRegistry().GetMissingTools(toolIDs)
+}
+
+// wslCompatibleTools lists Unix tools that can run via WSL on Windows.
+var wslCompatibleTools = map[string]bool{
+	"bash": true,
+	"sh":   true,
+}
+
+// isWSLCompatibleTool checks if a binary can be run via WSL.
+func isWSLCompatibleTool(binary string) bool {
+	return wslCompatibleTools[binary]
+}
+
+// wslAvailable checks if WSL is available and the tool can be run through it.
+// Caches the result after first check.
+var wslChecked bool
+var wslIsAvailable bool
+
+func wslAvailable() bool {
+	if wslChecked {
+		return wslIsAvailable
+	}
+	wslChecked = true
+
+	// Check if wsl.exe exists
+	_, err := exec.LookPath("wsl")
+	if err != nil {
+		wslIsAvailable = false
+		return false
+	}
+
+	// Verify WSL can run bash
+	cmd := exec.Command("wsl", "bash", "--version")
+	if err := cmd.Run(); err != nil {
+		wslIsAvailable = false
+		return false
+	}
+
+	wslIsAvailable = true
+	return true
+}
+
+// IsPlatformSupported checks if a tool is supported on the current platform.
+// Returns true if the tool has no platform restrictions or if the current platform is in the list.
+func IsPlatformSupported(tool *ToolDefinition) bool {
+	if tool == nil || len(tool.Platforms) == 0 {
+		return true
+	}
+	currentPlatform := runtime.GOOS
+	for _, p := range tool.Platforms {
+		if p == currentPlatform {
+			return true
+		}
+	}
+	return false
+}
+
+// FilterPlatformSupported filters a list of tool IDs to only include those supported on the current platform.
+func FilterPlatformSupported(toolIDs []string) []string {
+	registry := GlobalRegistry()
+	var supported []string
+	for _, id := range toolIDs {
+		tool, ok := registry.Get(id)
+		if !ok {
+			// Unknown tool - include it so verification can report the error
+			supported = append(supported, id)
+			continue
+		}
+		if IsPlatformSupported(tool) {
+			supported = append(supported, id)
+		}
+	}
+	return supported
 }

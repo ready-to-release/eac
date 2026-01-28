@@ -7,8 +7,8 @@ This repository is organized as a **modular monorepo** with clearly defined modu
 **Quick Reference**: For complete documentation on the R2R CLI and EAC system, see:
 
 - [EAC Overview](../../eac/index.md) - System overview with repository structure
-- [Modules](../../eac/modules/) - Module system and dependency management
-- [Contracts](../../eac/contracts/) - Module contracts and configuration
+- [Modules](../../eac/modules/index.md) - Module system and dependency management
+- [Contracts](../../eac/contracts/index.md) - Module contracts and configuration
 
 All modules are defined in `.r2r/eac/repository.yml`, which serves as the central contract for module ownership,
 dependencies, and build configuration.
@@ -30,15 +30,9 @@ eac/
 │
 ├── .r2r/                             # R2R and extension configuration
 │   ├── cache/                        # Build cache
-│   └── eac/                          # extension (EAC) configuration files
-│   │   ├── repository.yml            # Module contracts (central registry)
-│   │   ├── component-types.yml       # Component type definitions
-│   │   ├── environments.yml          # Environment configurations
-│   │   ├── test-suites.yml           # Test suite definitions
-│   │   ├── books.yml                 # PDF book generation config
-│   │   ├── ai-config.yml             # AI provider configuration
-│   │   └── system-dependencies.yml
-│   └── ...
+│   └── eac/                          # User configuration overrides
+│       ├── repository.yml            # Module contracts (central registry)
+│       └── books.yml                 # PDF book generation config
 │
 ├── .vscode/                          # VSCode workspace configuration
 │   └── extensions/                   # Custom VSCode extensions
@@ -49,12 +43,16 @@ eac/
 │   ├── mkdocs-pdf/                   # PDF documentation builder
 │   └── ...
 │
-├── contracts/                        # JSON schemas for configuration files
-│   ├── eac-core/0.1.0/               # Core EAC schemas
-│   │   ├── modules.schema.json
+├── contracts/                        # JSON schemas and system defaults
+│   ├── eac-core/0.1.0/               # Core EAC schemas and defaults
+│   │   ├── defaults/                 # System default configurations
+│   │   │   ├── component-types.yml   # Component type definitions
+│   │   │   ├── tool-config.yml       # Tool definitions and resources
+│   │   │   ├── environments.yml      # Environment configurations
+│   │   │   ├── test-suites.yml       # Test suite definitions
+│   │   │   └── ...                   # Other system defaults
+│   │   ├── repository.schema.json
 │   │   ├── component-types.schema.json
-│   │   ├── environments.schema.json
-│   │   ├── handlers.schema.json
 │   │   └── ...
 │   └── r2r-cli/0.1.0/                # CLI-specific schemas
 │
@@ -120,7 +118,7 @@ Modules are organized into two categories:
 - **eac-specs** - BDD test infrastructure
 - **eac-mcp-commands** - MCP server for LLM tools
 
-For detailed information on module types, capabilities, and configuration, see [Modules Documentation](../../eac/modules/).
+For detailed information on module types, capabilities, and configuration, see [Modules Documentation](../../eac/modules/index.md).
 
 ## Module Configuration
 
@@ -147,9 +145,9 @@ modules:
 
 For complete module configuration reference, see:
 
-- [Modules Contract](../../eac/contracts/#modules-contract) - Full field reference and validation rules
-- [Module Types Contract](../../eac/contracts/#module-types-contract) - Type templates and capabilities
-- [Modules Documentation](../../eac/modules/) - Module system and lifecycle
+- [Modules Contract](../../eac/contracts/index.md#modules-contract) - Full field reference and validation rules
+- [Component Types Contract](../../eac/contracts/index.md#component-types-contract) - Type templates and capabilities
+- [Modules Documentation](../../eac/modules/index.md) - Module system and lifecycle
 
 ---
 
@@ -160,9 +158,9 @@ For comprehensive information about the R2R and EAC system:
 ### Core Documentation
 
 - [EAC Overview](../../eac/index.md) - System overview with repository structure
-- [Architecture](../../eac/architecture/) - System architecture, components, and execution models
-- [Contracts](../../eac/contracts/) - Contract system and YAML configuration
-- [Modules](../../eac/modules/) - Module system and dependency management
+- [Architecture](../../eac/architecture/index.md) - System architecture, components, and execution models
+- [Contracts](../../eac/contracts/index.md) - Contract system and YAML configuration
+- [Modules](../../eac/modules/index.md) - Module system and dependency management
 
 ### Related Topics
 
@@ -171,6 +169,7 @@ For comprehensive information about the R2R and EAC system:
 
 ### Configuration Files
 
-- `.r2r/eac/repository.yml` - Module registry and dependencies
-- `.r2r/eac/module-types.yml` - Module type templates
+- `.r2r/eac/repository.yml` - Module registry and dependencies (user config)
+- `contracts/eac-core/0.1.0/defaults/` - System default configurations
+- `contracts/eac-core/0.1.0/defaults/component-types.yml` - Component type definitions
 - `contracts/eac-core/0.1.0/` - JSON schemas for validation

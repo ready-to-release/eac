@@ -11,3 +11,5 @@ nav:
   - validate-specifications.md
   - scan-for-security-issues.md
   - manage-risk-compliance.md
+  - execute-manual-tests.md
+  - fix-windows-defender-false-positives.md

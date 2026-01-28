@@ -38,7 +38,7 @@ func TestFileHashCache_NewAndSave(t *testing.T) {
 	require.NoError(t, err, "Save should succeed")
 
 	// Verify cache file was created in correct location
-	expectedPath := filepath.Join(workspaceRoot, "out", "cache", "preprocess-state", bookName+".json")
+	expectedPath := filepath.Join(workspaceRoot, ".cache", "eac", "build", "hashes", bookName+".json")
 	_, err = os.Stat(expectedPath)
 	require.NoError(t, err, "cache file should exist at %s", expectedPath)
 
@@ -61,7 +61,7 @@ func TestFileHashCache_Load(t *testing.T) {
 	bookName := "existing-book"
 
 	// Create cache directory and file manually
-	cacheDir := filepath.Join(workspaceRoot, "out", "cache", "preprocess-state")
+	cacheDir := filepath.Join(workspaceRoot, ".cache", "eac", "build", "hashes")
 	require.NoError(t, os.MkdirAll(cacheDir, 0o755))
 
 	cacheData := FileHashCache{
@@ -183,7 +183,7 @@ func TestFileHashCache_BookSpecific(t *testing.T) {
 	require.NoError(t, cache2.Save())
 
 	// Verify separate files were created
-	cacheDir := filepath.Join(workspaceRoot, "out", "cache", "preprocess-state")
+	cacheDir := filepath.Join(workspaceRoot, ".cache", "eac", "build", "hashes")
 	alphaPath := filepath.Join(cacheDir, "book-alpha.json")
 	betaPath := filepath.Join(cacheDir, "book-beta.json")
 
@@ -208,7 +208,7 @@ func TestFileHashCache_CorruptCache(t *testing.T) {
 	bookName := "corrupt-book"
 
 	// Create cache directory with corrupt file
-	cacheDir := filepath.Join(workspaceRoot, "out", "cache", "preprocess-state")
+	cacheDir := filepath.Join(workspaceRoot, ".cache", "eac", "build", "hashes")
 	require.NoError(t, os.MkdirAll(cacheDir, 0o755))
 
 	cachePath := filepath.Join(cacheDir, bookName+".json")
@@ -434,7 +434,7 @@ func TestFileHashCache_SaveCreatesDirectory(t *testing.T) {
 	bookName := "create-dir"
 
 	// Ensure cache directory doesn't exist
-	cacheDir := filepath.Join(workspaceRoot, "out", "cache", "preprocess-state")
+	cacheDir := filepath.Join(workspaceRoot, ".cache", "eac", "build", "hashes")
 	_, err := os.Stat(cacheDir)
 	require.True(t, os.IsNotExist(err), "cache directory should not exist initially")
 
@@ -475,7 +475,7 @@ func TestFileHashCache_GetCachePath(t *testing.T) {
 	bookName := "my-book"
 
 	cache := NewFileHashCache(bookName, workspaceRoot)
-	expectedPath := filepath.Join(workspaceRoot, "out", "cache", "preprocess-state", "my-book.json")
+	expectedPath := filepath.Join(workspaceRoot, ".cache", "eac", "build", "hashes", "my-book.json")
 
 	assert.Equal(t, expectedPath, cache.CachePath(), "cache path should be correct")
 }
@@ -495,7 +495,7 @@ func TestFileHashCache_MultipleBooks(t *testing.T) {
 	}
 
 	// Verify each book has its own cache file
-	cacheDir := filepath.Join(workspaceRoot, "out", "cache", "preprocess-state")
+	cacheDir := filepath.Join(workspaceRoot, ".cache", "eac", "build", "hashes")
 	entries, err := os.ReadDir(cacheDir)
 	require.NoError(t, err)
 

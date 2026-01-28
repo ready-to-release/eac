@@ -7,6 +7,7 @@ nav:
   - validate.md
   - verify.md
   - cleanup.md
+  - configuration.md
   - interactive.md
   - metadata.md
   - version.md

@@ -26,7 +26,7 @@ Each implementation guide covers:
 
 | Language | Framework | Status   | Link                             |
 | -------- | --------- | -------- | -------------------------------- |
-| **Go**   | Godog     | Complete | [Go Implementation Guide](./go/) |
+| **Go**   | Godog     | Complete | [Go Implementation Guide](./go/index.md) |
 
 ---
 
@@ -107,7 +107,7 @@ For complete code examples, commands, and templates, see:
    - [Organizing Rules](../organization/organizing-rules.md) - Structure your specifications
 
 3. **Choose your language guide**:
-   - [Go Implementation Guide](./go/) - Currently the only complete guide
+   - [Go Implementation Guide](./go/index.md) - Currently the only complete guide
 
 ---
 
@@ -122,7 +122,7 @@ For complete code examples, commands, and templates, see:
 ### Organization
 
 - [File Structure](../organization/file-structure.md) - Separation of specs and implementation
-- [Organizing Specifications](../organization/) - File and folder structure
+- [Organizing Specifications](../organization/index.md) - File and folder structure
 
 ### Testing Taxonomy
 

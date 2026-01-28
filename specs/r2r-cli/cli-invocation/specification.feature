@@ -10,5 +10,5 @@ Feature: r2r-cli_cli-invocation
   Rule: CLI shows version when requested
 
     Scenario: Version flag displays version
-      When I run "r2r --version"
+      When I run r2r "--version"
       Then the exit code is 0

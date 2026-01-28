@@ -15,6 +15,9 @@ type Module struct {
 	Moniker       string                   `yaml:"moniker"`
 	Name          string                   `yaml:"name"`
 	Description   string                   `yaml:"description"`
+	Template      string                   `yaml:"template,omitempty"`       // Reference to a module template name
+	AutoDiscover  bool                     `yaml:"auto_discover,omitempty"`  // Enable automatic component discovery
+	Parameters    map[string]string        `yaml:"parameters,omitempty"`     // Template parameter values
 	DependsOn     []string                 `yaml:"depends_on"`
 	DependsOnCI   []string                 `yaml:"depends_on_ci"`            // CI artifact dependencies (merged into DependsOn)
 	CIDeps        []string                 `yaml:"-"`                        // Computed: CI artifact deps for dispatch layering
@@ -29,6 +32,19 @@ type Module struct {
 // HasComponent returns true if a component with the given name exists for this module.
 func (m *Module) HasComponent(name string) bool {
 	return m.Components.HasComponent(name)
+}
+
+// GetComponentAmp returns the resource amplifier for a component and operation.
+// Returns 1.0 (no amplification) if the component doesn't exist or has no amp config.
+func (m *Module) GetComponentAmp(componentName, operation string) float64 {
+	if m == nil || m.Components == nil {
+		return 1.0
+	}
+	entry, exists := m.Components[componentName]
+	if !exists || entry == nil {
+		return 1.0
+	}
+	return entry.GetAmpForOperation(operation)
 }
 
 // GetEnabledComponents returns all component names for this module.
@@ -162,6 +178,43 @@ type ModuleComponents map[string]*ComponentEntry
 
 // ComponentEntry represents a component's configuration within a module.
 // It can be parsed from either a simple string (root path) or full object.
+// AmpConfig contains per-operation resource amplifiers for a component.
+// Each value is a multiplier applied to the tool's base weight.
+// Values < 1.0 reduce resources, > 1.0 increase resources.
+type AmpConfig struct {
+	Build float64 `yaml:"build,omitempty" json:"build,omitempty"`
+	Lint  float64 `yaml:"lint,omitempty" json:"lint,omitempty"`
+	Test  float64 `yaml:"test,omitempty" json:"test,omitempty"`
+	Scan  float64 `yaml:"scan,omitempty" json:"scan,omitempty"`
+}
+
+// GetAmp returns the amplifier for the given operation type.
+// Returns 1.0 (no amplification) if not specified.
+func (a *AmpConfig) GetAmp(op string) float64 {
+	if a == nil {
+		return 1.0
+	}
+	switch op {
+	case "build":
+		if a.Build > 0 {
+			return a.Build
+		}
+	case "lint":
+		if a.Lint > 0 {
+			return a.Lint
+		}
+	case "test":
+		if a.Test > 0 {
+			return a.Test
+		}
+	case "scan":
+		if a.Scan > 0 {
+			return a.Scan
+		}
+	}
+	return 1.0
+}
+
 type ComponentEntry struct {
 	// Type is the component type (e.g., "go", "book"). If omitted, the map key (name) is used as the type.
 	// This allows multiple components of the same type with different names.
@@ -179,8 +232,20 @@ type ComponentEntry struct {
 	// DockerBuild contains Docker build configuration (for dockerfile components)
 	DockerBuild *DockerBuildConfig `yaml:"docker_build,omitempty" json:"docker_build,omitempty"`
 
+	// Amp contains per-operation resource amplifiers
+	Amp *AmpConfig `yaml:"amp,omitempty" json:"amp,omitempty"`
+
 	// Resolved indicates if this entry has been resolved with defaults
 	Resolved bool `yaml:"-" json:"-"`
+}
+
+// GetAmpForOperation returns the resource amplifier for an operation.
+// Returns 1.0 (no amplification) if not specified.
+func (ce *ComponentEntry) GetAmpForOperation(op string) float64 {
+	if ce == nil {
+		return 1.0
+	}
+	return ce.Amp.GetAmp(op)
 }
 
 // ComponentPatterns contains optional file pattern overrides for a component.

@@ -16,20 +16,27 @@ import (
 )
 
 // DefaultTurboMultiplier is the turbo multiplier when --turbo is set without a value.
-const DefaultTurboMultiplier = 4
+// 1.25 = 25% increase in pressure roof capacity.
+const DefaultTurboMultiplier = 1.25
 
 // CalculateMaxConcurrency determines the effective max concurrency based on configuration.
 // Returns 0 for dynamic mode (orchestrator calculates from CPU×RAM).
 // Only returns non-zero if user explicitly set a limit or sequential mode.
+// Priority: sequential (1) > CLI flag (configConcurrency) > repo config (repoConcurrency) > dynamic (0)
 func CalculateMaxConcurrency(configConcurrency, repoConcurrency int, turbo, sequential bool) int {
 	// Sequential overrides everything
 	if sequential {
 		return 1
 	}
 
-	// If user explicitly set concurrency, use it
+	// If user explicitly set concurrency via CLI flag, use it
 	if configConcurrency > 0 {
 		return configConcurrency
+	}
+
+	// If repo config has a parallelism ceiling, use it
+	if repoConcurrency > 0 {
+		return repoConcurrency
 	}
 
 	// Return 0 for dynamic mode - orchestrator will calculate from CPU×RAM
@@ -37,12 +44,12 @@ func CalculateMaxConcurrency(configConcurrency, repoConcurrency int, turbo, sequ
 }
 
 // CalculateTurboMultiplier returns the turbo multiplier for the pressure roof.
-// Returns 1 for normal mode, DefaultTurboMultiplier for turbo mode.
-func CalculateTurboMultiplier(turbo bool) int {
+// Returns 1.0 for normal mode, DefaultTurboMultiplier for turbo mode.
+func CalculateTurboMultiplier(turbo bool) float64 {
 	if turbo {
 		return DefaultTurboMultiplier
 	}
-	return 1
+	return 1.0
 }
 
 // phaseInit handles the initialization phase:
@@ -91,7 +98,7 @@ func phaseInit(ctx *ExecutionContext) error {
 
 	// Log turbo mode if enabled
 	if ctx.Config.Turbo && !ctx.Config.Sequential {
-		log.Debugf("Turbo mode enabled: %dx pressure multiplier", turboMultiplier)
+		log.Debugf("Turbo mode enabled: %.2fx pressure multiplier", turboMultiplier)
 	}
 
 	// Configure orchestrator

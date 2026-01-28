@@ -4,15 +4,24 @@ How to configure EAC for your project.
 
 ## Configuration Files
 
-EAC uses YAML configuration files in `.r2r/eac/`:
+EAC uses YAML configuration files with a layered system:
 
-| File               | Purpose                | Required |
-| ------------------ | ---------------------- | -------- |
-| `repository.yml`   | Module definitions     | Yes      |
-| `module-types.yml` | Custom type templates  | No       |
-| `environments.yml` | Test environments      | No       |
-| `test-suites.yml`  | Test suite definitions | No       |
-| `ai-provider.yml`  | AI provider settings   | No       |
+**User configs** (`.r2r/eac/`):
+
+| File             | Purpose              | Required |
+| ---------------- | -------------------- | -------- |
+| `repository.yml` | Module definitions   | Yes      |
+| `books.yml`      | Book configuration   | No       |
+| `ai-provider.yml`| AI provider settings | No       |
+
+**System defaults** (`contracts/eac-core/0.1.0/defaults/`):
+
+| File                  | Purpose                    |
+| --------------------- | -------------------------- |
+| `component-types.yml` | Component type definitions |
+| `tool-config.yml`     | Tool configurations        |
+| `environments.yml`    | Test environments          |
+| `test-suites.yml`     | Test suite definitions     |
 
 ## Module Configuration
 
@@ -174,9 +183,9 @@ suites:
 
 Settings are merged in order (later overrides earlier):
 
-1. System defaults (built into EAC)
-2. Type defaults (from `module-types.yml`)
-3. Shared config (`.r2r/eac/*.yml`)
+1. Hardcoded defaults (in eac-core code)
+2. System defaults (`contracts/eac-core/0.1.0/defaults/`)
+3. User config (`.r2r/eac/*.yml`)
 4. Personal config (`.r2r/eac/*.personal.yml`)
 
 ## Validation
@@ -251,5 +260,5 @@ modules:
 ## See Also
 
 - [Project Structure](./project-structure.md) - Directory organization
-- [Contracts Reference](../../eac/contracts/) - Full contract documentation
+- [Contracts Reference](../../eac/contracts/index.md) - Full contract documentation
 - [Module Types](../../eac/architecture/component-types.md) - All available types

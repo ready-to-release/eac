@@ -85,7 +85,7 @@ Specifications are living documents that improve through:
 1. **Start here**: [BDD Fundamentals](./bdd-fundamentals.md) - Understand Given/When/Then
 2. **Learn the structure**: [Three-Layer Approach](./three-layer-approach.md) - How Rules/Scenarios/Tests work together
 3. **Discover requirements**: [Example Mapping](../discovery/example-mapping.md) - Workshop technique for finding acceptance criteria
-4. **Write specifications**: [Organizing Specifications](../organization/) - File structure and naming conventions
+4. **Write specifications**: [Organizing Specifications](../organization/index.md) - File structure and naming conventions
 
 ### Common Workflows
 
@@ -118,10 +118,10 @@ See: [Canon TDD Workflow](./canon-tdd-workflow.md)
 
 ### Organization
 
-- [Organizing Specifications](../organization/) - File structure and naming conventions
-- [Testing Taxonomy](../taxonomy/) - Tags, test levels, and execution control
+- [Organizing Specifications](../organization/index.md) - File structure and naming conventions
+- [Testing Taxonomy](../taxonomy/index.md) - Tags, test levels, and execution control
 
 ### Implementation
 
-- [Go Implementation Guide](../implementation/go/) - Go/Godog BDD implementation
-- [Quality and Maintenance](../quality/) - Review and iterate on specifications
+- [Go Implementation Guide](../implementation/go/index.md) - Go/Godog BDD implementation
+- [Quality and Maintenance](../quality/index.md) - Review and iterate on specifications

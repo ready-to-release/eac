@@ -4,11 +4,13 @@ package build
 import (
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/builders"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/internal/artifacts"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/cmdframework"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/environment"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/git"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/initsummary"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/locking"
@@ -55,11 +57,35 @@ type BuildConfig struct {
 	UseExistingDepm bool
 	LayeredBuild    bool
 
+	// Reproducible controls determinism behavior for MkDocs builds.
+	// Values: "auto" (default), "true", "false"
+	// - auto: CI=true (always rebuild), local=false (use cache)
+	// - true: Always rebuild HTML from staging (CI default)
+	// - false: Skip MkDocs if staging unchanged (local default)
+	Reproducible string
+
 	// Set of originally requested modules (for --use-existing-depm logic)
 	RequestedSet map[string]bool
 
 	// Incremental build state
 	SkippedModules []string
+}
+
+// ResolveReproducible converts the Reproducible string value to a boolean.
+// "auto" resolves based on CI environment, "true"/"false" return literal values.
+func (c *BuildConfig) ResolveReproducible() bool {
+	switch c.Reproducible {
+	case "true":
+		return true
+	case "false":
+		return false
+	case "auto", "":
+		// Auto mode: use CI environment detection
+		env := environment.Detect()
+		return env.IsCI
+	default:
+		return false
+	}
 }
 
 // buildContext holds build-specific state during execution.
@@ -399,7 +425,7 @@ func buildWorker(ctx *cmdframework.ExecutionContext, moniker string, logWriter i
 	// Run the build
 	moduleOutputDir := paths.BuildOutputPath(ctx.WorkspaceRoot, moniker)
 	exitCode := runModuleBuild(module, ctx.WorkspaceRoot, moduleOutputDir, logWriter,
-		buildCfg.TidyFirst, buildCfg.Version, ctx.Config.DryRun, buildCfg.BuildAll)
+		buildCfg.TidyFirst, buildCfg.Version, ctx.Config.DryRun, buildCfg.BuildAll, buildCfg.ResolveReproducible())
 
 	// Validate artifacts if build succeeded
 	if exitCode == 0 && !ctx.Config.DryRun {
@@ -415,6 +441,7 @@ func buildWorker(ctx *cmdframework.ExecutionContext, moniker string, logWriter i
 
 // buildComponentWorker builds a single component within a module.
 // This is called by the ComponentScheduler for parallel component execution.
+// The component parameter is in "compName:builderName" format (e.g., "go:go", "docs:mkdocs").
 func buildComponentWorker(ctx *cmdframework.ExecutionContext, module, component string, logWriter io.Writer) int {
 	buildCfg, ok := ctx.Config.Extra["buildConfig"].(*BuildConfig)
 	if !ok {
@@ -435,6 +462,14 @@ func buildComponentWorker(ctx *cmdframework.ExecutionContext, module, component 
 		return 0
 	}
 
+	// Parse component parameter: "compName:builderName" (e.g., "go:go", "docs:mkdocs")
+	parts := strings.SplitN(component, ":", 2)
+	compName := parts[0]
+	builderName := ""
+	if len(parts) == 2 {
+		builderName = parts[1]
+	}
+
 	// Skip if dependency and artifacts exist (--use-existing-depm)
 	if buildCfg.UseExistingDepm && !ctx.Config.DryRun && !buildCfg.RequestedSet[module] {
 		if hasExistingArtifacts(module, ctx.ModuleTypes[module], ctx.WorkspaceRoot, buildCfg.BuildAll) {
@@ -445,8 +480,13 @@ func buildComponentWorker(ctx *cmdframework.ExecutionContext, module, component 
 
 	// Acquire component-level lock (skip in dry-run)
 	// Use component-level locking to allow parallel builds of different components within the same module
+	// Use underscore separator for Windows compatibility (same as lint)
+	componentDir := compName
+	if builderName != "" {
+		componentDir = compName + "_" + builderName
+	}
 	if !ctx.Config.DryRun {
-		lockCfg := locking.ComponentBuildConfig(module, component, paths.OutBuildRelPath)
+		lockCfg := locking.ComponentBuildConfig(module, componentDir, paths.OutBuildRelPath)
 		lockFile, err := locking.AcquireTracked(ctx.WorkspaceRoot, lockCfg, ctx.Orchestrator.GetRegistry())
 		if err != nil {
 			output.Writeln(logWriter, "Error: %v", err)
@@ -456,7 +496,7 @@ func buildComponentWorker(ctx *cmdframework.ExecutionContext, module, component 
 	}
 
 	// Get the handler for this component
-	handler := getHandlerForComponent(moduleContract, component)
+	handler := getHandlerForComponent(moduleContract, compName, builderName)
 	if handler == nil {
 		output.Writeln(logWriter, "Error: no handler found for component %s in module %s", component, module)
 		return 1
@@ -470,7 +510,8 @@ func buildComponentWorker(ctx *cmdframework.ExecutionContext, module, component 
 		Version:            buildCfg.Version,
 		DryRun:             ctx.Config.DryRun,
 		RequestedArtifacts: requestedArtifacts,
-		Component:          component, // Pass component name for component-level parallelism
+		Component:          compName, // Pass original component name for component-level parallelism
+		Reproducible:       buildCfg.ResolveReproducible(),
 	}
 
 	// In dry-run mode, simulate a successful build
@@ -482,32 +523,44 @@ func buildComponentWorker(ctx *cmdframework.ExecutionContext, module, component 
 	}
 
 	// Log which component we're building
-	output.Writeln(logWriter, "━━━ Building component: %s (handler: %s) ━━━", component, handler.Name())
+	output.Writeln(logWriter, "━━━ Building component: %s (handler: %s) ━━━", compName, handler.Name())
 
 	// Validate module before building
-	if err := handler.ValidateModule(moduleContract, ctx.WorkspaceRoot, component); err != nil {
-		output.Writeln(logWriter, "❌ Module validation failed for %s: %v", component, err)
+	if err := handler.ValidateModule(moduleContract, ctx.WorkspaceRoot, compName); err != nil {
+		output.Writeln(logWriter, "❌ Module validation failed for %s: %v", compName, err)
 		return 1
 	}
 
 	// Build the component
-	// Use component-level output directory: out/build/<module>/<component>
-	componentOutputDir := paths.ComponentBuildOutputPath(ctx.WorkspaceRoot, module, component)
+	// Use component-level output directory: out/build/<module>/<component>/<builder>
+	componentOutputDir := paths.ComponentBuildOutputPath(ctx.WorkspaceRoot, module, componentDir)
 	exitCode := handler.Build(moduleContract, ctx.WorkspaceRoot, componentOutputDir, logWriter, opts)
-	if exitCode != 0 {
-		output.Writeln(logWriter, "❌ Build failed for component: %s", component)
+
+	// Handle exit codes:
+	// -1 = skipped (cached), 0 = success, >0 = failure
+	if exitCode > 0 {
+		output.Writeln(logWriter, "❌ Build failed for component: %s", compName)
 		return exitCode
 	}
+	if exitCode == -1 {
+		output.Writeln(logWriter, "⏭️  Component %s unchanged (cached)", compName)
+		return exitCode // Pass through -1 so TUI shows blue
+	}
 
-	output.Writeln(logWriter, "✅ Component %s built successfully", component)
+	output.Writeln(logWriter, "✅ Component %s built successfully", compName)
 	return 0
 }
 
 // getHandlerForComponent finds the build handler for a specific component.
-func getHandlerForComponent(module *modules.ModuleContract, component string) builders.Handler {
+// It matches by component name and optionally by builder name.
+func getHandlerForComponent(module *modules.ModuleContract, compName, builderName string) builders.Handler {
 	compHandlers := builders.GetHandlersForModule(module)
 	for _, ch := range compHandlers {
-		if ch.Component == component {
+		if ch.Component == compName {
+			// If builder name specified, verify it matches
+			if builderName != "" && ch.Handler.Name() != builderName {
+				continue
+			}
 			return ch.Handler
 		}
 	}

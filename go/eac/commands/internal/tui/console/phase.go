@@ -76,9 +76,10 @@ type Pane struct {
 	EndTime   time.Time   // When this phase ended (zero if not complete)
 
 	// Scroll state for mouse wheel support
-	scrollOffset int  // Lines scrolled back from bottom (0 = showing most recent)
-	maxScroll    int  // Maximum scroll offset (updated when buffer changes)
-	autoScroll   bool // Whether to auto-scroll to bottom on new content
+	scrollOffset   int       // Lines scrolled back from bottom (0 = showing most recent)
+	maxScroll      int       // Maximum scroll offset (updated when buffer changes)
+	autoScroll     bool      // Whether to auto-scroll to bottom on new content
+	lastScrollTime time.Time // When user last scrolled (for auto-resume timeout)
 }
 
 // NewPane creates a new pane for the given phase.
@@ -132,6 +133,7 @@ func (p *Pane) ScrollUp(lines int) {
 		p.scrollOffset = p.maxScroll
 	}
 	p.autoScroll = false // Disable auto-scroll when user manually scrolls
+	p.lastScrollTime = time.Now()
 }
 
 // ScrollDown moves the viewport down (shows newer content).
@@ -140,7 +142,26 @@ func (p *Pane) ScrollDown(lines int) {
 	if p.scrollOffset <= 0 {
 		p.scrollOffset = 0
 		p.autoScroll = true // Re-enable auto-scroll at bottom
+	} else {
+		p.lastScrollTime = time.Now()
 	}
+}
+
+// CheckAutoScrollResume checks if auto-scroll should resume after timeout.
+// Returns true if auto-scroll was resumed.
+func (p *Pane) CheckAutoScrollResume(timeout time.Duration) bool {
+	if p.autoScroll {
+		return false // Already auto-scrolling
+	}
+	if p.lastScrollTime.IsZero() {
+		return false
+	}
+	if time.Since(p.lastScrollTime) >= timeout {
+		p.autoScroll = true
+		p.scrollOffset = 0
+		return true
+	}
+	return false
 }
 
 // UpdateMaxScroll recalculates maximum scroll based on buffer size and pane height.

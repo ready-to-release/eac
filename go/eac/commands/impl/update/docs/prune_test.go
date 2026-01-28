@@ -181,7 +181,7 @@ End of document.
 
 	// Compute the valid filename for the mermaid block (traceable format)
 	validHash := computeMermaidCacheHash("flowchart TD\n    A --> B")
-	validFilename := filepath.Base(paths.MermaidCachePathV2(cacheDir, mdPath, 0, validHash))
+	validFilename := filepath.Base(paths.MermaidCachePath(cacheDir, mdPath, 0, validHash))
 
 	// Create cache files: one valid, one orphan
 	if err := os.WriteFile(filepath.Join(mermaidCacheDir, validFilename), []byte("<svg></svg>"), 0o644); err != nil {
@@ -246,7 +246,7 @@ func TestPruneCache_IdentifiesDrawioOrphans(t *testing.T) {
 
 	// Compute the valid cache filename (traceable format)
 	cacheHash := computeDrawioCacheHash(sourceHash, books.MaxImageWidthPDF)
-	validFilename := filepath.Base(paths.DrawioCachePathV2(cacheDir, drawioPath, cacheHash))
+	validFilename := filepath.Base(paths.DrawioCachePath(cacheDir, drawioPath, cacheHash))
 
 	// Create cache files: one valid, one orphan
 	if err := os.WriteFile(filepath.Join(drawioCacheDir, validFilename), []byte("optimized"), 0o644); err != nil {
@@ -317,9 +317,9 @@ More text.
 	hash2 := computeMermaidCacheHash("sequenceDiagram\n    A->>B: Hello")
 	hash3 := computeMermaidCacheHash("pie\n    title Pets\n    \"Dogs\": 45\n    \"Cats\": 30")
 
-	filename1 := filepath.Base(paths.MermaidCachePathV2(cacheDir, mdPath, 0, hash1))
-	filename2 := filepath.Base(paths.MermaidCachePathV2(cacheDir, mdPath, 1, hash2))
-	filename3 := filepath.Base(paths.MermaidCachePathV2(cacheDir, mdPath, 2, hash3))
+	filename1 := filepath.Base(paths.MermaidCachePath(cacheDir, mdPath, 0, hash1))
+	filename2 := filepath.Base(paths.MermaidCachePath(cacheDir, mdPath, 1, hash2))
+	filename3 := filepath.Base(paths.MermaidCachePath(cacheDir, mdPath, 2, hash3))
 
 	// Create all valid cache files plus one orphan
 	for _, fn := range []string{filename1, filename2, filename3} {
@@ -731,8 +731,8 @@ func TestPruneCache_SameContentDifferentFiles(t *testing.T) {
 	contentHash := computeMermaidCacheHash("flowchart TD\n    SHARED")
 
 	// Generate expected filenames using the paths module
-	cache1Path := paths.MermaidCachePathV2(cacheDir, doc1Path, 0, contentHash)
-	cache2Path := paths.MermaidCachePathV2(cacheDir, doc2Path, 0, contentHash)
+	cache1Path := paths.MermaidCachePath(cacheDir, doc1Path, 0, contentHash)
+	cache2Path := paths.MermaidCachePath(cacheDir, doc2Path, 0, contentHash)
 	cache1Filename := filepath.Base(cache1Path)
 	cache2Filename := filepath.Base(cache2Path)
 
@@ -787,7 +787,7 @@ func TestPruneCache_NestedDocsDirectories(t *testing.T) {
 
 	// Compute hash and create cache using traceable naming
 	nestedHash := computeMermaidCacheHash("flowchart TD\n    NESTED")
-	cachePath := paths.MermaidCachePathV2(cacheDir, mdPath, 0, nestedHash)
+	cachePath := paths.MermaidCachePath(cacheDir, mdPath, 0, nestedHash)
 	cacheFilename := filepath.Base(cachePath)
 	if err := os.WriteFile(filepath.Join(mermaidCacheDir, cacheFilename), []byte("<svg></svg>"), 0o644); err != nil {
 		t.Fatalf("Failed to write cache: %v", err)
@@ -848,12 +848,12 @@ func TestPruneCache_MixedContentTypes(t *testing.T) {
 
 	// Compute valid hashes and create cache files using traceable naming
 	mermaidHash := computeMermaidCacheHash("flowchart TD\n    MIXED")
-	mermaidCachePath := paths.MermaidCachePathV2(cacheDir, mdPath, 0, mermaidHash)
+	mermaidCachePath := paths.MermaidCachePath(cacheDir, mdPath, 0, mermaidHash)
 	mermaidCacheFilename := filepath.Base(mermaidCachePath)
 
 	drawioSourceHash, _ := books.HashFileContent(drawioPath)
 	drawioHash := computeDrawioCacheHash(drawioSourceHash, books.MaxImageWidthPDF)
-	drawioCachePath := paths.DrawioCachePathV2(cacheDir, drawioPath, drawioHash)
+	drawioCachePath := paths.DrawioCachePath(cacheDir, drawioPath, drawioHash)
 	drawioCacheFilename := filepath.Base(drawioCachePath)
 
 	// Create valid cache files with traceable names
@@ -1159,7 +1159,7 @@ func TestPruneCache_IdentifiesLegacyMermaidFiles(t *testing.T) {
 
 	// Compute valid V2 filename
 	validHash := computeMermaidCacheHash("flowchart TD\n    A --> B")
-	validFilename := filepath.Base(paths.MermaidCachePathV2(cacheDir, mdPath, 0, validHash))
+	validFilename := filepath.Base(paths.MermaidCachePath(cacheDir, mdPath, 0, validHash))
 
 	// Create files: 1 valid V2, 2 legacy, 1 orphan V2-style
 	files := map[string]int{

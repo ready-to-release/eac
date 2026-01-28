@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ready-to-release.org/schemas/eac-core/risk-scoring/0.1.0",
+  "title": "Risk Scoring Configuration Schema",
+  "description": "Schema for configuring risk assessment mappings following ISO 27005 methodology. Risk Score = Likelihood x Impact.",
+  "type": "object",
+  "properties": {
+    "impact": {
+      "type": "object",
+      "description": "Maps module type to default impact rating (1-5). Use '_default' for fallback value when type is not found.",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 5,
+        "description": "Impact rating: 1=Very Low, 2=Low, 3=Medium, 4=High, 5=Very High"
+      },
+      "propertyNames": {
+        "pattern": "^[a-z_][a-z0-9_-]*$"
+      }
+    },
+    "criticality": {
+      "type": "object",
+      "description": "Maps module type to criticality level for AI risk analysis context. Use '_default' for fallback value.",
+      "additionalProperties": {
+        "type": "string",
+        "enum": ["high", "medium", "low"],
+        "description": "Criticality level for AI analysis"
+      },
+      "propertyNames": {
+        "pattern": "^[a-z_][a-z0-9_-]*$"
+      }
+    },
+    "severity_weights": {
+      "type": "object",
+      "description": "Severity-to-likelihood weights for base likelihood calculation. Base likelihood is 1, then add weight based on highest severity found.",
+      "properties": {
+        "critical": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4,
+          "description": "Weight for CRITICAL severity findings (results in likelihood up to 5)"
+        },
+        "high": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4,
+          "description": "Weight for HIGH severity findings"
+        },
+        "medium": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4,
+          "description": "Weight for MEDIUM severity findings"
+        },
+        "low": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4,
+          "description": "Weight for LOW severity findings"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

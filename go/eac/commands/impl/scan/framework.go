@@ -179,6 +179,7 @@ func scanWorkerWrapper(ctx *cmdframework.ExecutionContext, moniker string, logWr
 
 // scanComponentWorker runs scans for a single component using component-level execution.
 // This is called by the ComponentScheduler for parallel scan component execution.
+// The component parameter is in "compName:scannerType" format (e.g., "go:trivy-vuln", "go:semgrep").
 func scanComponentWorker(ctx *cmdframework.ExecutionContext, moniker, component string, logWriter io.Writer) int {
 	// Get multi-scan config if available (contains scanner settings)
 	multiCfg, _ := ctx.Config.Extra["multiScanConfig"].(*MultiScanConfig)
@@ -197,8 +198,16 @@ func scanComponentWorker(ctx *cmdframework.ExecutionContext, moniker, component 
 		return 1
 	}
 
+	// Parse component parameter: "compName:scannerType" (e.g., "go:trivy-vuln")
+	parts := strings.SplitN(component, ":", 2)
+	compName := parts[0]
+	scannerTypeStr := ""
+	if len(parts) == 2 {
+		scannerTypeStr = parts[1]
+	}
+
 	// Get component type for this component
-	compTypeName := module.Components.GetComponentType(component)
+	compTypeName := module.Components.GetComponentType(compName)
 	compType := ctx.EACConfig.ComponentTypes.Get(compTypeName)
 
 	// Skip non-scannable component types
@@ -207,8 +216,14 @@ func scanComponentWorker(ctx *cmdframework.ExecutionContext, moniker, component 
 		return 0
 	}
 
-	// Acquire lock for this component
-	lockCfg := locking.ComponentScanConfig(moniker, component, paths.OutSecurityRelPath)
+	// Use underscore separator for Windows compatibility in lock/output paths
+	componentDir := compName
+	if scannerTypeStr != "" {
+		componentDir = compName + "_" + scannerTypeStr
+	}
+
+	// Acquire lock for this component+scanner
+	lockCfg := locking.ComponentScanConfig(moniker, componentDir, paths.OutSecurityRelPath)
 	lockFile, err := locking.AcquireTracked(ctx.WorkspaceRoot, lockCfg, ctx.Orchestrator.GetRegistry())
 	if err != nil {
 		output.Writeln(logWriter, "Error: %v", err)
@@ -216,7 +231,24 @@ func scanComponentWorker(ctx *cmdframework.ExecutionContext, moniker, component 
 	}
 	defer locking.ReleaseTracked(lockFile)
 
-	// Get scanners from component type configuration
+	// Get component root path
+	componentRoot := module.Components.GetComponentRoot(compName)
+	if componentRoot == "" {
+		output.Writeln(logWriter, "Error: no root found for component %s", compName)
+		return 1
+	}
+
+	// If scanner type specified (3-part key), run only that scanner
+	if scannerTypeStr != "" {
+		scannerType, valid := internal.ParseScannerType(scannerTypeStr)
+		if !valid {
+			output.Writeln(logWriter, "Error: invalid scanner type: %s", scannerTypeStr)
+			return 1
+		}
+		return runComponentScanner(ctx, module, moniker, compName, componentRoot, scannerType, multiCfg, logWriter)
+	}
+
+	// Legacy 2-part key: run all scanners from component type configuration
 	var scanners []internal.ScannerType
 	seenScanners := make(map[string]bool)
 	for _, s := range compType.GetScanners() {
@@ -233,17 +265,10 @@ func scanComponentWorker(ctx *cmdframework.ExecutionContext, moniker, component 
 		return 0
 	}
 
-	// Get component root path
-	componentRoot := module.Components.GetComponentRoot(component)
-	if componentRoot == "" {
-		output.Writeln(logWriter, "Error: no root found for component %s", component)
-		return 1
-	}
-
 	// Run each scanner
 	exitCode := 0
 	for _, scannerType := range scanners {
-		result := runComponentScanner(ctx, module, moniker, component, componentRoot, scannerType, multiCfg, logWriter)
+		result := runComponentScanner(ctx, module, moniker, compName, componentRoot, scannerType, multiCfg, logWriter)
 		if result != 0 {
 			exitCode = 1 // Mark as failed but continue with other scanners
 		}

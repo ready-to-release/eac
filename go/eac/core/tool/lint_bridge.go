@@ -145,6 +145,24 @@ func (b *LintBridge) HasHandler(name string) bool {
 	return false
 }
 
+// ResolveTool returns the tool definition for a component type and operation.
+// Returns nil if no tool is configured or resolver is not available.
+func (b *LintBridge) ResolveTool(componentType string, operation OperationType) *ToolDefinition {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	if b.resolver == nil {
+		return nil
+	}
+
+	t, err := b.resolver.Resolve(componentType, operation)
+	if err != nil {
+		return nil
+	}
+
+	return t
+}
+
 // Global lint bridge instance.
 var (
 	globalLintBridge     *LintBridge

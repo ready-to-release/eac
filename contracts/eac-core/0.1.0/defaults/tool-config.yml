@@ -8,9 +8,21 @@
 # - Tools: Executable definitions (system binary or container)
 # - Component-tools: Maps component types to tools for each operation
 # - Environments: Override tool assignments per environment (ci, local)
-#
-# Resource scheduling uses component-types.yml Resources, NOT tool definitions.
-# Tools inherit resource weights from the component type they're building.
+# - Resources: CPU/memory limits for containers; cpus value used as scheduling weight
+
+#---------------------------------------------------------------------------
+# Base Image Versions
+# Pinned versions for reproducible Docker builds.
+# These are passed as ARG values when building Dockerfiles locally.
+#---------------------------------------------------------------------------
+base_images:
+  python: "3.12"
+  python-slim: "3.14"
+  python-alpine: "3.14"
+  node: "25"
+  node-slim: "25"
+  alpine: "3.20"
+  nginx: "alpine"
 
 tools:
   #---------------------------------------------------------------------------
@@ -86,6 +98,7 @@ tools:
     description: "PowerShell 7+ cross-platform shell"
     type: system
     binary: pwsh
+    platforms: [windows, linux, darwin]
     verify:
       command: "pwsh --version"
       pattern: "PowerShell (\\d+\\.\\d+)"
@@ -131,7 +144,7 @@ tools:
     description: "Go linters aggregator (container)"
     type: container
     image: golangci/golangci-lint
-    tag: latest
+    tag: "v1.62.2"
     command: ["golangci-lint", "run", "--out-format", "json"]
     mounts:
       - source: "{module}"
@@ -145,7 +158,7 @@ tools:
     description: "Markdown linter (container)"
     type: container
     image: davidanson/markdownlint-cli2
-    tag: latest
+    tag: "v0.17.2"
     mounts:
       - source: "{module}"
         target: /workdir
@@ -178,13 +191,18 @@ tools:
     description: "System Go compiler"
     type: system
     binary: go
+    resources:
+      cpus: 1
     requirements: [go]
 
   golangci-lint-container:
     description: "golangci-lint container linter"
     type: container
     image: golangci/golangci-lint
-    tag: latest
+    tag: "v1.62.2"
+    resources:
+      cpus: 2
+      memory: "4g"
     command: ["golangci-lint", "run", "--out-format", "json"]
     mounts:
       - source: "{module}"
@@ -198,22 +216,20 @@ tools:
     description: "System Go test runner"
     type: system
     binary: go
+    resources:
+      cpus: 1
     args: ["test"]
     requirements: [go]
 
   #---------------------------------------------------------------------------
   # TypeScript/JavaScript Tools
   #---------------------------------------------------------------------------
-  npm-system:
-    description: "System npm"
-    type: system
-    binary: npm
-    requirements: [npm]
-
   npm-build:
     description: "NPM build command"
     type: system
     binary: npm
+    resources:
+      cpus: 2
     args: ["run", "build"]
     requirements: [npm]
 
@@ -221,8 +237,61 @@ tools:
     description: "NPM test command"
     type: system
     binary: npm
+    resources:
+      cpus: 2
     args: ["test"]
     requirements: [npm]
+
+  # npm container tools (for environments without local Node.js)
+  npm-container:
+    description: "Node.js container for npm package management"
+    type: container
+    image: node
+    tag: "22-alpine"
+    resources:
+      cpus: 2
+      memory: "2g"
+    mounts:
+      - source: "{module}"
+        target: /app
+      - source: "{workspace}/.cache/npm"
+        target: /root/.npm
+    workdir: /app
+    requirements: [docker]
+
+  npm-build-container:
+    description: "NPM build command (container)"
+    type: container
+    image: node
+    tag: "22-alpine"
+    resources:
+      cpus: 2
+      memory: "4g"
+    command: ["sh", "-c", "npm ci && npm run build"]
+    mounts:
+      - source: "{module}"
+        target: /app
+      - source: "{workspace}/.cache/npm"
+        target: /root/.npm
+    workdir: /app
+    requirements: [docker]
+
+  npm-test-container:
+    description: "NPM test command (container)"
+    type: container
+    image: node
+    tag: "22-alpine"
+    resources:
+      cpus: 2
+      memory: "4g"
+    command: ["sh", "-c", "npm ci && npm test"]
+    mounts:
+      - source: "{module}"
+        target: /app
+      - source: "{workspace}/.cache/npm"
+        target: /root/.npm
+    workdir: /app
+    requirements: [docker]
 
   #---------------------------------------------------------------------------
   # Python Tools
@@ -245,7 +314,7 @@ tools:
     description: "Ruff Python linter (container)"
     type: container
     image: ghcr.io/astral-sh/ruff
-    tag: latest
+    tag: "0.8.6"
     command: ["check", "."]
     mounts:
       - source: "{module}"
@@ -274,7 +343,7 @@ tools:
     description: "Clippy Rust linter (container)"
     type: container
     image: rust
-    tag: latest
+    tag: "1.84.0"
     command: ["cargo", "clippy", "--", "-D", "warnings"]
     mounts:
       - source: "{module}"
@@ -313,30 +382,31 @@ tools:
     description: "Docker Buildx for container builds"
     type: system
     binary: docker
+    resources:
+      cpus: 4
     args: ["buildx", "build"]
     requirements: [docker]
 
   #---------------------------------------------------------------------------
   # Documentation Tools
   #---------------------------------------------------------------------------
-  mkdocs-system:
-    description: "System MkDocs"
-    type: system
-    binary: mkdocs
-    args: ["build", "--strict"]
-    requirements: [mkdocs]
-
   mkdocs-container:
     description: "MkDocs Material container"
     type: container
-    container: mkdocs-material
-    command: ["build", "--strict"]
+    localPath: containers/mkdocs-site
+    resources:
+      cpus: 4
+      memory: "4g"
+    # HACK: mkdocs --strict returns exit code 0 even when it aborts due to warnings.
+    # This is a known bug: https://github.com/mkdocs/mkdocs/issues/3842 (open as of 1.6.1)
+    # Workaround: capture output and check for "Aborted" string, return exit 1 if found.
+    command: ["sh", "-c", "mkdocs build --strict --site-dir /output/site 2>&1 | tee /tmp/mkdocs.log; if grep -q 'Aborted' /tmp/mkdocs.log; then exit 1; fi"]
     mounts:
       - source: "{workspace}"
-        target: /docs
+        target: /workspace
       - source: "{output}"
-        target: /docs/site
-    workdir: /docs/{module}
+        target: /output
+    workdir: /docs
     requirements: [docker]
 
   #---------------------------------------------------------------------------
@@ -345,8 +415,7 @@ tools:
   drawio-cli:
     description: "DrawIO CLI for diagram manipulation"
     type: container
-    image: cli-drawio-cli
-    tag: latest
+    localPath: containers/drawio-cli
     command: ["python", "/app/drawio_cli.py"]
     mounts:
       - source: "{workspace}"
@@ -361,7 +430,7 @@ tools:
     description: "Structurizr CLI for DSL export and validation"
     type: container
     image: structurizr/cli
-    tag: latest
+    tag: "2024.12.18"
     mounts:
       - source: "{workspace}"
         target: /workspace
@@ -372,7 +441,7 @@ tools:
     description: "Structurizr Lite for architecture diagram viewing"
     type: container
     image: structurizr/lite
-    tag: latest
+    tag: "2024.12.18"
     mounts:
       - source: "{content}"
         target: /usr/local/structurizr
@@ -387,7 +456,7 @@ tools:
     description: "PlantUML diagram renderer"
     type: container
     image: plantuml/plantuml
-    tag: latest
+    tag: "1.2024.8"
     mounts:
       - source: "{output}"
         target: /data
@@ -399,8 +468,7 @@ tools:
   static-site:
     description: "Static site server (nginx-based)"
     type: container
-    image: cli-static-site
-    tag: latest
+    localPath: containers/static-site
     mounts:
       - source: "{content}"
         target: /usr/share/nginx/html
@@ -416,7 +484,7 @@ tools:
     description: "MkDocs live reload server"
     type: container
     image: squidfunk/mkdocs-material
-    tag: latest
+    tag: "9.5.49"
     command: ["serve", "--dev-addr=0.0.0.0:8000"]
     mounts:
       - source: "{module}"
@@ -435,7 +503,7 @@ tools:
     description: "Structurizr Lite architecture diagram server"
     type: container
     image: structurizr/lite
-    tag: latest
+    tag: "2024.12.18"
     mounts:
       - source: "{content}"
         target: /usr/local/structurizr
@@ -548,7 +616,7 @@ tools:
     description: "Markdown linter container"
     type: container
     image: davidanson/markdownlint-cli2
-    tag: latest
+    tag: "v0.17.2"
     mounts:
       - source: "{module}"
         target: /workdir
@@ -558,17 +626,73 @@ tools:
   #---------------------------------------------------------------------------
   # Script Tools
   #---------------------------------------------------------------------------
-  pwsh-system:
-    description: "PowerShell 7.4+ script execution"
-    type: system
-    binary: pwsh
-    requirements: [pwsh]
+  # pwsh container tools (for environments without local PowerShell)
+  pwsh-container:
+    description: "PowerShell 7 cross-platform shell (container)"
+    type: container
+    image: mcr.microsoft.com/powershell
+    tag: "7.4-alpine-3.20"
+    resources:
+      cpus: 1
+      memory: "1g"
+    mounts:
+      - source: "{module}"
+        target: /scripts
+      - source: "{workspace}"
+        target: /workspace
+    workdir: /scripts
+    requirements: [docker]
 
-  bash-system:
-    description: "Bash script execution"
-    type: system
-    binary: bash
-    requirements: [bash]
+  pwsh-build-container:
+    description: "PowerShell build/execution (container)"
+    type: container
+    image: mcr.microsoft.com/powershell
+    tag: "7.4-alpine-3.20"
+    resources:
+      cpus: 1
+      memory: "1g"
+    entrypoint: ["pwsh", "-NoLogo", "-NoProfile"]
+    mounts:
+      - source: "{module}"
+        target: /scripts
+      - source: "{workspace}"
+        target: /workspace
+    workdir: /scripts
+    requirements: [docker]
+
+  pwsh-test-container:
+    description: "PowerShell Pester test runner (container)"
+    type: container
+    image: mcr.microsoft.com/powershell
+    tag: "7.4-alpine-3.20"
+    resources:
+      cpus: 1
+      memory: "2g"
+    command: ["pwsh", "-NoLogo", "-NoProfile", "-Command", "Invoke-Pester -EnableExit"]
+    mounts:
+      - source: "{module}"
+        target: /scripts
+      - source: "{workspace}"
+        target: /workspace
+    workdir: /scripts
+    requirements: [docker]
+
+  bash-container:
+    description: "Bash script execution (container)"
+    type: container
+    image: bash
+    tag: "5.2"
+    resources:
+      cpus: 1
+      memory: "1g"
+    entrypoint: ["bash"]
+    mounts:
+      - source: "{module}"
+        target: /scripts
+      - source: "{workspace}"
+        target: /workspace
+    workdir: /scripts
+    requirements: [docker]
 
 #---------------------------------------------------------------------------
 # Component-to-Tool Assignments
@@ -609,7 +733,7 @@ component-tools:
       - trivy-iac
 
   book:
-    builder: mkdocs-system
+    builder: mkdocs-container
     server: static-site
     servers:
       - static-site
@@ -622,11 +746,11 @@ component-tools:
     linter: markdownlint-container
 
   pwsh:
-    builder: pwsh-system
-    tester: pwsh-system
+    builder: pwsh-build-container
+    tester: pwsh-test-container
 
   bash:
-    builder: bash-system
+    builder: bash-container
 
   python:
     builder: python-build
@@ -671,8 +795,17 @@ environments:
 
   local:
     description: "Local development - prefer system tools for speed"
+    # Default assignments already prefer system tools
+
+  windows:
+    description: "Windows environment - use containers for npm tools (npm has PATH issues on Windows)"
     component-tools:
-      # Default assignments already prefer system tools
+      typescript:
+        builder: npm-build-container
+        tester: npm-test-container
+      javascript:
+        builder: npm-build-container
+        tester: npm-test-container
 
 #---------------------------------------------------------------------------
 # Cache Configuration
@@ -689,7 +822,11 @@ caches:
 
   npm_cache:
     path: ".cache/npm"
-    description: "NPM package cache"
+    description: "NPM package cache for container builds"
+
+  powershell_cache:
+    path: ".cache/powershell"
+    description: "PowerShell module cache for container builds"
 
   lint_cache:
     path: ".cache/lint"

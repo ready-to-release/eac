@@ -1,4 +1,5 @@
 title: core
 nav:
   - index.md
+  - extension-meta.md
   - lint.md

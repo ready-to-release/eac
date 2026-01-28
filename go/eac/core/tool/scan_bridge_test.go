@@ -22,12 +22,12 @@ func TestNewScanBridge(t *testing.T) {
 func TestScanBridge_GetScanner_YAMLTool(t *testing.T) {
 	bridge := NewScanBridge()
 
-	// Set up tool system
+	// Set up tool system - use LocalPath for test containers (no version pinning needed)
 	registry := NewRegistry()
 	registry.Register(&ToolDefinition{
-		ID:    "trivy-sbom", // Matches default mapping
-		Type:  ToolTypeContainer,
-		Image: "aquasec/trivy",
+		ID:        "trivy-sbom", // Matches default mapping
+		Type:      ToolTypeContainer,
+		LocalPath: "containers/trivy",
 	})
 	bridge.SetToolSystem(registry, nil, &mockExecutor{})
 
@@ -57,9 +57,9 @@ func TestScanBridge_GetScanner_CustomMapping(t *testing.T) {
 	// Set up tool system with the custom tool
 	registry := NewRegistry()
 	registry.Register(&ToolDefinition{
-		ID:    "custom-sast-tool",
-		Type:  ToolTypeContainer,
-		Image: "custom/sast",
+		ID:        "custom-sast-tool",
+		Type:      ToolTypeContainer,
+		LocalPath: "containers/custom-sast",
 	})
 	bridge.SetToolSystem(registry, nil, &mockExecutor{})
 
@@ -82,8 +82,8 @@ func TestScanBridge_SetToolSystem(t *testing.T) {
 	// Verify tool system is set by registering a tool and retrieving it
 	registry.Register(&ToolDefinition{
 		ID:    "trivy-vuln",
-		Type:  ToolTypeContainer,
-		Image: "aquasec/trivy",
+		Type:      ToolTypeContainer,
+		LocalPath: "containers/trivy",
 	})
 
 	scanner := bridge.GetScanner(ScannerVuln)
@@ -99,13 +99,13 @@ func TestScanBridge_HasScanner(t *testing.T) {
 	registry := NewRegistry()
 	registry.Register(&ToolDefinition{
 		ID:    "trivy-sbom",
-		Type:  ToolTypeContainer,
-		Image: "aquasec/trivy",
+		Type:      ToolTypeContainer,
+		LocalPath: "containers/trivy",
 	})
 	registry.Register(&ToolDefinition{
 		ID:    "trivy-vuln",
-		Type:  ToolTypeContainer,
-		Image: "aquasec/trivy",
+		Type:      ToolTypeContainer,
+		LocalPath: "containers/trivy",
 	})
 	bridge.SetToolSystem(registry, nil, &mockExecutor{})
 
@@ -134,18 +134,18 @@ func TestScanBridge_GetAllScannerTypes(t *testing.T) {
 	registry := NewRegistry()
 	registry.Register(&ToolDefinition{
 		ID:    "trivy-sbom",
-		Type:  ToolTypeContainer,
-		Image: "aquasec/trivy",
+		Type:      ToolTypeContainer,
+		LocalPath: "containers/trivy",
 	})
 	registry.Register(&ToolDefinition{
 		ID:    "trivy-vuln",
-		Type:  ToolTypeContainer,
-		Image: "aquasec/trivy",
+		Type:      ToolTypeContainer,
+		LocalPath: "containers/trivy",
 	})
 	registry.Register(&ToolDefinition{
 		ID:    "trivy-secrets",
-		Type:  ToolTypeContainer,
-		Image: "aquasec/trivy",
+		Type:      ToolTypeContainer,
+		LocalPath: "containers/trivy",
 	})
 	bridge.SetToolSystem(registry, nil, &mockExecutor{})
 
@@ -362,8 +362,8 @@ func TestScanBridge_Concurrent(t *testing.T) {
 	registry := NewRegistry()
 	registry.Register(&ToolDefinition{
 		ID:    "trivy-sbom",
-		Type:  ToolTypeContainer,
-		Image: "aquasec/trivy",
+		Type:      ToolTypeContainer,
+		LocalPath: "containers/trivy",
 	})
 	bridge.SetToolSystem(registry, nil, &mockExecutor{})
 

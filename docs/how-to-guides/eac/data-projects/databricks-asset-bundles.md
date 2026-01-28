@@ -41,8 +41,7 @@ Each data pipeline is a module with its own versioning, dependencies, CI workflo
 ```text
 data-platform/                    # Repository root
 ├── .r2r/eac/
-│   ├── repository.yml           # Module contracts (see below)
-│   └── module-types.yml
+│   └── repository.yml           # Module contracts (see below)
 ├── pipelines/
 │   ├── customer-segmentation/   # Module: customer-segmentation
 │   │   ├── databricks.yml      # Bundle configuration

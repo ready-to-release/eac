@@ -1,0 +1,268 @@
+# yaml-language-server: $schema=../books.schema.json
+# Default Book Definitions
+# Generic books that work for any EAC repository.
+# Repos can override or extend these in .r2r/eac/books.yml
+
+# =============================================================================
+# SOURCE SNIPPETS - Reusable source blocks
+# =============================================================================
+source-snippets:
+  # Common documentation assets (used by nearly all PDF books)
+  common-assets:
+    - type: copy
+      from: "docs/assets/**"
+      to: "assets/"
+      exclude: ["docs/assets/lfs/pdf/**"]
+
+  # Standard Diataxis category sources (parameterized)
+  diataxis-category:
+    - type: copy
+      from: "docs/{category}/**"
+      to: "./"
+    - type: copy
+      from: "docs/{category}/**/.nav.yml"
+      to: "./"
+    - type: snippet
+      name: common-assets
+
+  # Module release evidence commands (parameterized by {moniker} and {prefix})
+  module-evidence:
+    - type: command
+      command: "show release-notes {moniker} latest"
+      target: "{prefix}release-notes.md"
+      frontmatter:
+        title: "{prefix_title}Release Notes"
+        description: "Release notes for {moniker} module"
+      order: 1
+    - type: command
+      command: "show changelog {moniker} latest"
+      target: "{prefix}changelog.md"
+      frontmatter:
+        title: "{prefix_title}Changelog"
+        description: "Detailed changelog for {moniker} module"
+      order: 2
+    - type: command
+      command: "show specs {moniker} latest"
+      target: "{prefix}specifications.md"
+      frontmatter:
+        title: "{prefix_title}Specifications"
+        description: "Specifications for {moniker} module"
+      order: 3
+    - type: command
+      command: "show approval-comments {moniker} latest"
+      target: "{prefix}approval-comments.md"
+      frontmatter:
+        title: "{prefix_title}PR Approvals"
+        description: "PR approval comments for {moniker} module"
+      order: 4
+    - type: command
+      command: "show test-results {moniker}"
+      target: "{prefix}test-results.md"
+      frontmatter:
+        title: "{prefix_title}Test Results"
+        description: "Test results for {moniker} and its dependencies"
+      order: 5
+
+# =============================================================================
+# BOOK TEMPLATES - Reusable book structures
+# =============================================================================
+book-templates:
+  # Template for Diataxis subset PDFs
+  diataxis-pdf:
+    title: "{title}"
+    description: "{description}"
+    output: pdf-dark
+    site_url: "{site_url}"
+    sources:
+      - type: snippet
+        name: diataxis-category
+        parameters:
+          category: "{category}"
+
+  # Template for single-module release evidence
+  release-evidence:
+    title: "{moniker} Release Evidence Package"
+    description: "Release evidence for {moniker} module with dependency test results"
+    output: pdf-dark
+    site_url: "{site_url}"
+    sources:
+      - type: snippet
+        name: common-assets
+      - type: snippet
+        name: module-evidence
+        parameters:
+          moniker: "{moniker}"
+          prefix: ""
+          prefix_title: ""
+
+# =============================================================================
+# DEFAULT BOOKS
+# =============================================================================
+books:
+  # ============================================================================
+  # Documentation PDF - Full docs directory as PDF
+  # ============================================================================
+  - name: docs
+    title: "Documentation"
+    description: "Full documentation from /docs directory"
+    output: pdf-dark
+
+    sources:
+      - type: copy
+        from: "docs/**/*.md"
+        to: "./"
+
+      - type: copy
+        from: "docs/**/.nav.yml"
+        to: "./"
+
+      - type: copy
+        from: "docs/assets/**"
+        to: "assets/"
+
+  # ============================================================================
+  # Documentation Site - Full docs directory as HTML site
+  # ============================================================================
+  - name: site
+    title: "Documentation Site"
+    description: "HTML documentation site from /docs directory"
+    output: site
+
+    sources:
+      - type: copy
+        from: "docs/**/*.md"
+        to: "./"
+
+      - type: copy
+        from: "docs/**/.nav.yml"
+        to: "./"
+
+      - type: copy
+        from: "docs/assets/**"
+        to: "assets/"
+
+      - type: inline
+        target: "index.md"
+        inserts:
+          - marker: "modules-overview"
+            command: "show modules"
+
+  # ============================================================================
+  # Repository Report - Structure report using show commands
+  # ============================================================================
+  - name: repository-report
+    title: "Repository Structure Report"
+    description: "Complete repository structure report with all generated content"
+    output: pdf-dark
+
+    sources:
+      - type: copy
+        from: "docs/assets/**"
+        to: "assets/"
+
+      - type: command
+        command: "show modules"
+        target: "modules.md"
+        frontmatter:
+          title: "Repository Modules"
+          description: "Complete inventory of all modules in the repository"
+        order: 1
+
+      - type: command
+        command: "show dependencies"
+        target: "dependencies.md"
+        frontmatter:
+          title: "Module Dependencies"
+          description: "Dependency relationships between modules"
+        order: 2
+
+      - type: command
+        command: "show files"
+        target: "files.md"
+        frontmatter:
+          title: "File Ownership"
+          description: "Repository files with module ownership"
+        order: 3
+
+      - type: command
+        command: "show environments"
+        target: "environments.md"
+        frontmatter:
+          title: "Environments"
+          description: "Environment contract definitions"
+        order: 4
+
+      - type: command
+        command: "show tests"
+        target: "tests.md"
+        frontmatter:
+          title: "Test Suites"
+          description: "All test suites in the repository"
+        order: 5
+
+  # ============================================================================
+  # Risk Evidence Package - Comprehensive audit evidence bundle
+  # ============================================================================
+  - name: risk-evidence-package
+    title: "Risk Assessment Evidence Package"
+    description: "Comprehensive risk assessment evidence package with all supporting artifacts"
+    output: pdf-dark
+
+    sources:
+      - type: copy
+        from: "docs/assets/**"
+        to: "assets/"
+
+      # 00 - Risk Assessment Report
+      - type: copy
+        from: "out/risk/**/risk-assessment-*.md"
+        to: "00-risk-assessment/"
+
+      # 01 - OSCAL Evidence
+      - type: copy
+        from: "specs/.risk-controls/risk-profile.json"
+        to: "01-oscal-evidence/risk-profile.json"
+
+      - type: copy
+        from: "out/risk/**/assessment-results.json"
+        to: "01-oscal-evidence/"
+
+      # 02 - Test Evidence
+      - type: copy
+        from: "out/test/**/*.json"
+        to: "02-test-evidence/"
+
+      - type: command
+        command: "show tests"
+        target: "02-test-evidence/test-suite-summary.md"
+        frontmatter:
+          title: "Test Suite Summary"
+          description: "Overview of all test suites and their status"
+        order: 1
+
+      # 03 - Security Evidence
+      - type: copy
+        from: "out/scan/**/*.json"
+        to: "03-security-evidence/"
+
+      # 04 - Specifications
+      - type: copy
+        from: "specs/**/*.feature"
+        to: "04-specifications/"
+
+      # 05 - Module Contracts
+      - type: command
+        command: "show modules"
+        target: "05-module-contracts/modules.md"
+        frontmatter:
+          title: "Module Contracts"
+          description: "All module contracts in the repository"
+        order: 1
+
+      - type: command
+        command: "show dependencies"
+        target: "05-module-contracts/dependencies.md"
+        frontmatter:
+          title: "Module Dependencies"
+          description: "Dependency relationships between modules"
+        order: 2

@@ -555,8 +555,6 @@ func copySystemTemplates(workspaceRoot string, force bool) error {
 	// List of Category B files (system defaults) to copy
 	templateFiles := []string{
 		"ai-config.yml",
-		"module-types.yml",
-		"system-dependencies.yml",
 		"security-tools.yml",
 		"logging.yml",
 		"testing-tags.yml",

@@ -102,7 +102,7 @@ func (c *Console) Start(ctx context.Context) error {
 		tea.WithAltScreen(), // Take over screen, restore on exit
 		tea.WithoutBracketedPaste(),
 		tea.WithoutSignalHandler(), // Let our custom signal handler catch Ctrl-C
-		tea.WithMouseCellMotion(),  // Enable mouse for scrolling
+		tea.WithMouseAllMotion(),  // Enable mouse for scrolling and hover
 	)
 
 	// Signal that TUI is ready

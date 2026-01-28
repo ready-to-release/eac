@@ -106,4 +106,4 @@ Feature: cli_init-project
 - [BDD Fundamentals](../concepts/bdd-fundamentals.md) - Understanding BDD
 - [Three-Layer Approach](../concepts/three-layer-approach.md) - Rules/Scenarios/Unit Tests
 - [Example Mapping](../discovery/example-mapping.md) - Discovery workshops
-- [Testing Taxonomy](../taxonomy/) - Tags and test levels
+- [Testing Taxonomy](../taxonomy/index.md) - Tags and test levels

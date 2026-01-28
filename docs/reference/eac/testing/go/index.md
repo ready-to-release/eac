@@ -28,4 +28,4 @@ r2r eac test eac-commands --verbose
 ## Related Documentation
 
 - [Test Suites](../test-suites.md) - Suite definitions and configuration
-- [Specifications](../../specifications/) - Gherkin specification reference
+- [Specifications](../../specifications/index.md) - Gherkin specification reference

@@ -286,10 +286,20 @@ func isValidSkipReason(reason string, tagsConfig *config.TestingTagsConfig) bool
 
 // isValidDepsName checks if a deps name is valid (tool from tool-config.yml or OS platform).
 func isValidDepsName(name string, tagsConfig *config.TestingTagsConfig) bool {
-	// Check tool registry for valid tool IDs
+	// Check tool registry for valid tool IDs (if populated)
 	registry := tool.GlobalRegistry()
 	if registry.Has(name) {
 		return true
+	}
+
+	// Load tool config directly to check tool IDs (registry may not be initialized)
+	if eacConfig != nil {
+		toolConfig, err := tool.LoadToolConfig(eacConfig.RepoRoot, eacConfig.ConfigRoot)
+		if err == nil && toolConfig != nil && toolConfig.Tools != nil {
+			if _, exists := toolConfig.Tools[name]; exists {
+				return true
+			}
+		}
 	}
 
 	// Check hardcoded OS platforms (linux, macos, windows)

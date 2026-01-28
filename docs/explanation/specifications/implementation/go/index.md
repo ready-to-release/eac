@@ -45,9 +45,9 @@ For complete implementation details, code templates, and commands, see:
 
 - [Three-Layer Testing Approach](../../concepts/three-layer-approach.md) - Testing philosophy
 - [BDD Fundamentals](../../concepts/bdd-fundamentals.md) - BDD principles
-- [Testing Taxonomy](../../taxonomy/) - Tag taxonomy concepts
+- [Testing Taxonomy](../../taxonomy/index.md) - Tag taxonomy concepts
 
 ### Organizational
 
-- [Organizing Specifications](../../organization/) - Specification structure
+- [Organizing Specifications](../../organization/index.md) - Specification structure
 - [Example Mapping](../../discovery/example-mapping.md) - Requirements discovery

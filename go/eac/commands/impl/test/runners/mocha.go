@@ -1,4 +1,18 @@
 // mocha.go - Test runner for TypeScript mocha unit tests
+//
+// MIGRATION NOTE: This runner uses direct npm subprocess execution for test
+// execution with JSON output parsing. For container-based testing:
+//
+// 1. The test bridge path (GetTestFunc) now uses npm-test-container from
+//    tool-config.yml for simple pass/fail test execution.
+//
+// 2. This runner is still used for detailed test execution with:
+//    - JSON reporter output capture
+//    - CTRF format conversion for test reporting
+//    - Log file management
+//
+// Full containerization of this runner would require extending the tool executor
+// to support structured output capture (JSON parsing from container stdout).
 package runners
 
 import (

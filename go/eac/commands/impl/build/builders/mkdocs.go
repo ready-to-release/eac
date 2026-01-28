@@ -2,23 +2,46 @@
 package builders
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
-	"time"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/books"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	"github.com/ready-to-release/eac/go/eac/core/environments"
+	"github.com/ready-to-release/eac/go/eac/core/tool"
 )
 
 func init() {
-	RegisterHandler(&MkDocsHandler{})
+	// Native handler disabled - using tool system's mkdocs-container directly
+	// RegisterHandler(&MkDocsHandler{})
+}
+
+// resolveHostRepoRoot returns the correct repo root path for Docker operations.
+// In Docker-in-Docker mode, uses R2R_HOST_REPOROOT environment variable if set.
+func resolveHostRepoRoot(containerRoot string, logWriter io.Writer) string {
+	if !IsDockerInDocker() {
+		return containerRoot
+	}
+	if hostRoot := os.Getenv("R2R_HOST_REPOROOT"); hostRoot != "" {
+		Logln(logWriter, "   Docker-in-Docker: using host path %s", hostRoot)
+		return hostRoot
+	}
+	return containerRoot
+}
+
+// toDockerPath converts a file path to Docker-compatible format (forward slashes).
+func toDockerPath(workspaceRoot, filePath string) string {
+	relPath, err := filepath.Rel(workspaceRoot, filePath)
+	if err != nil {
+		relPath = filePath
+	}
+	return strings.ReplaceAll(relPath, "\\", "/")
 }
 
 // getPDFConcurrency returns the internal Playwright page concurrency for a single PDF export.
@@ -51,7 +74,7 @@ func getPDFConcurrency(workspaceRoot string) int {
 // MkDocsHandler builds MkDocs documentation sites using Docker.
 type MkDocsHandler struct{}
 
-func (h *MkDocsHandler) Name() string { return "mkdocs" }
+func (h *MkDocsHandler) Name() string { return "mkdocs-container" }
 
 func (h *MkDocsHandler) Capabilities() []string { return []string{"documentation", "container"} }
 
@@ -263,6 +286,17 @@ func buildMkDocsModule(module *modules.ModuleContract, workspaceRoot, outputDir 
 		return 1
 	}
 
+	// Check if we can skip the build using content hash caching
+	if stagingDir != "" {
+		canSkip, reason := ShouldSkipSiteBuild(module.Moniker, stagingDir, workspaceRoot, outputDir, opts.Reproducible)
+		if canSkip {
+			Logln(logWriter, "⏭️  Skipping site build: %s", reason)
+			Logln(logWriter, "✅ MkDocs site cached (unchanged)")
+			return exitCodeSkipped // -1 signals cached to TUI (blue tab)
+		}
+		Logln(logWriter, "   Cache miss: %s", reason)
+	}
+
 	Logln(logWriter, "📚 Building MkDocs site using Docker")
 
 	// Check Docker availability first - fail fast if unavailable
@@ -315,28 +349,17 @@ func buildMkDocsModule(module *modules.ModuleContract, workspaceRoot, outputDir 
 	}
 
 	// For Docker-in-Docker: use host path for volume mount
-	// When running inside a container, the Docker daemon runs on the host,
-	// so volume mounts need host paths instead of container paths
-	hostRepoRoot := workspaceRoot
+	hostRepoRoot := resolveHostRepoRoot(workspaceRoot, logWriter)
 	isDinD := IsDockerInDocker()
-	if isDinD {
-		if hostRoot := os.Getenv("R2R_HOST_REPOROOT"); hostRoot != "" {
-			hostRepoRoot = hostRoot
-			Logln(logWriter, "   Docker-in-Docker: using host path %s", hostRoot)
-		}
-	}
 
 	// Get docker configuration from module first, then type, then defaults
 	dockerCfg := getMkDocsDockerConfig(module, workspaceRoot, false)
 	imageName := dockerCfg.ImageName
 
-	// For docker build, use container paths (workspaceRoot) because the Docker CLI
-	// runs in the container and tars up the context locally before sending to the daemon.
-	// Host paths are only needed for volume mounts (docker run -v).
-	dockerfilePath := dockerCfg.DockerfilePath
+	// Get context path for image manager
 	contextPath := dockerCfg.ContextPath
 
-	if err := ensureMkDocsImage(imageName, dockerfilePath, contextPath, logWriter); err != nil {
+	if err := ensureMkDocsImage(imageName, workspaceRoot, contextPath, logWriter); err != nil {
 		Logln(logWriter, "❌ Failed to ensure Docker image: %v", err)
 		return 1
 	}
@@ -366,11 +389,7 @@ func buildMkDocsModule(module *modules.ModuleContract, workspaceRoot, outputDir 
 	}
 
 	// Get relative config path for Docker (config is already in mounted volume)
-	relConfigPath, relErr := filepath.Rel(workspaceRoot, configPath)
-	if relErr != nil {
-		relConfigPath = configPath // Fallback to absolute
-	}
-	dockerConfigPath := strings.ReplaceAll(relConfigPath, "\\", "/")
+	dockerConfigPath := toDockerPath(workspaceRoot, configPath)
 
 	buildArgs := []string{
 		"run", "--rm",
@@ -425,116 +444,60 @@ func buildMkDocsModule(module *modules.ModuleContract, workspaceRoot, outputDir 
 		return exitCode
 	}
 
+	// Record successful build in cache
+	if stagingDir != "" {
+		if err := RecordSiteBuildComplete(module.Moniker, stagingDir, workspaceRoot, outputDir); err != nil {
+			Logln(logWriter, "   ⚠️  Failed to save build cache: %v", err)
+		}
+	}
+
 	Logln(logWriter, "✅ MkDocs site built successfully")
 	Logln(logWriter, "   HTML Output: %s", siteDir)
 	return 0
 }
 
 // ensureMkDocsImage ensures the mkdocs Docker image is available and up-to-date.
-// First checks if image exists locally and is not stale, then tries to pull from GHCR,
-// finally builds from Dockerfile if needed.
-// In DinD mode, dockerfilePath and contextPath are host (Windows) paths.
-func ensureMkDocsImage(imageName, dockerfilePath, contextPath string, logWriter io.Writer) error {
-	// Check if image already exists locally and is up-to-date
-	if imageExists(imageName) {
-		if isImageStale(imageName, contextPath, logWriter) {
-			Logln(logWriter, "   Docker image is stale, rebuilding: %s", imageName)
-		} else {
-			Logln(logWriter, "   Docker image exists: %s", imageName)
-			return nil
-		}
-	}
-
+// Uses tool.ImageManager for environment-aware image resolution:
+// - Devbox: Build from Dockerfile if stale
+// - CI: Pull from GHCR
+func ensureMkDocsImage(imageName, workspaceRoot, contextPath string, logWriter io.Writer) error {
 	// Extract container name from image (e.g., "mkdocs-pdf:local" -> "mkdocs-pdf")
 	containerName := strings.Split(imageName, ":")[0]
 
-	// Try to pull from GHCR (pre-built images for CI performance)
-	ghcrImage := "ghcr.io/ready-to-release/" + containerName + ":latest"
-	Logln(logWriter, "   Pulling Docker image: %s", ghcrImage)
-	pullExitCode := RunCommandWithLog("", logWriter, "docker", "pull", ghcrImage)
-	if pullExitCode == 0 {
-		// Tag as local name for compatibility
-		RunCommandWithLog("", logWriter, "docker", "tag", ghcrImage, imageName)
-		Logln(logWriter, "   Pulled and tagged as: %s", imageName)
-		return nil
+	// Create ImageManager for local container handling
+	imgMgr := tool.NewImageManager(
+		workspaceRoot,
+		environments.IsCI(),
+		"ready-to-release", // GHCR org
+		logWriter,
+	)
+
+	// Create a synthetic tool definition for the local container
+	localTool := &tool.ToolDefinition{
+		ID:        containerName,
+		Type:      tool.ToolTypeContainer,
+		LocalPath: strings.TrimPrefix(contextPath, workspaceRoot+string(filepath.Separator)),
+	}
+	// Normalize path separators
+	localTool.LocalPath = filepath.ToSlash(localTool.LocalPath)
+
+	// Use ImageManager to ensure image (handles staleness, CI pull, local build)
+	ctx := context.Background()
+	resolvedImage, err := imgMgr.EnsureImage(ctx, localTool)
+	if err != nil {
+		return fmt.Errorf("ensuring image %s: %w", imageName, err)
 	}
 
-	// Fall back to building from Dockerfile
-	Logln(logWriter, "   Building Docker image: %s", imageName)
-	exitCode := RunCommandWithLog("", logWriter,
-		"docker", "build",
-		"-t", imageName,
-		"-f", dockerfilePath,
-		contextPath)
-
-	if exitCode != 0 {
-		return fmt.Errorf("docker build failed with exit code %d", exitCode)
+	// If ImageManager returned a different image ref (e.g., GHCR in CI), tag it as local
+	if resolvedImage != "" && resolvedImage != imageName {
+		Logln(logWriter, "   Tagging %s as %s", resolvedImage, imageName)
+		exitCode := RunCommandWithLog("", logWriter, "docker", "tag", resolvedImage, imageName)
+		if exitCode != 0 {
+			return fmt.Errorf("failed to tag image %s as %s", resolvedImage, imageName)
+		}
 	}
 
 	return nil
-}
-
-// imageExists checks if a Docker image exists locally.
-func imageExists(imageName string) bool {
-	cmd := exec.Command("docker", "images", "-q", imageName)
-	output, err := cmd.Output()
-	if err != nil {
-		return false
-	}
-	return strings.TrimSpace(string(output)) != ""
-}
-
-// isImageStale checks if any file in the context directory was modified after the image was created.
-// Returns true if the image should be rebuilt.
-func isImageStale(imageName, contextPath string, logWriter io.Writer) bool {
-	// Get image creation time
-	cmd := exec.Command("docker", "inspect", "--format", "{{.Created}}", imageName)
-	output, err := cmd.Output()
-	if err != nil {
-		// Can't determine image creation time, assume stale
-		return true
-	}
-
-	// Parse image creation time (RFC3339 format)
-	imageTimeStr := strings.TrimSpace(string(output))
-	// Docker returns time in RFC3339Nano format
-	imageTime, err := parseDockerTime(imageTimeStr)
-	if err != nil {
-		Logln(logWriter, "   Warning: Could not parse image creation time: %v", err)
-		return true
-	}
-
-	// Check if any file in context was modified after image creation
-	var newestFileTime int64
-	err = filepath.Walk(contextPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil // Skip files we can't access
-		}
-		if info.IsDir() {
-			return nil
-		}
-		if info.ModTime().Unix() > newestFileTime {
-			newestFileTime = info.ModTime().Unix()
-		}
-		return nil
-	})
-	if err != nil {
-		return true // Can't walk context, assume stale
-	}
-
-	// Image is stale if any context file is newer
-	return newestFileTime > imageTime.Unix()
-}
-
-// parseDockerTime parses Docker's timestamp format (RFC3339Nano)
-func parseDockerTime(s string) (time.Time, error) {
-	// Docker returns time in RFC3339Nano format: 2024-01-20T10:30:00.123456789Z
-	t, err := time.Parse(time.RFC3339Nano, s)
-	if err != nil {
-		// Try RFC3339 without nanoseconds
-		t, err = time.Parse(time.RFC3339, s)
-	}
-	return t, err
 }
 
 // buildMkDocsWithTheme builds a PDF with a specific theme (dark or light)
@@ -609,26 +572,17 @@ func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName, bo
 	Logln(logWriter, "   WorkspaceRoot: %s", workspaceRoot)
 
 	// For Docker-in-Docker: use host path for volume mount
-	hostRepoRoot := workspaceRoot
+	hostRepoRoot := resolveHostRepoRoot(workspaceRoot, logWriter)
 	isDinD := IsDockerInDocker()
-	if isDinD {
-		if hostRoot := os.Getenv("R2R_HOST_REPOROOT"); hostRoot != "" {
-			hostRepoRoot = hostRoot
-			Logln(logWriter, "   Docker-in-Docker: using host path %s", hostRoot)
-		}
-	}
 
 	// Get docker configuration from module first, then type, then defaults (PDF mode)
 	dockerCfg := getMkDocsDockerConfig(module, workspaceRoot, true)
 	imageName := dockerCfg.ImageName
 
-	// Use container paths for docker build context
-	// The Docker CLI (running in container) needs to access these paths to tar up the context
-	// Host paths are only needed for volume mounts, not build context
-	dockerfilePath := dockerCfg.DockerfilePath
+	// Get context path for image manager
 	contextPath := dockerCfg.ContextPath
 
-	if err := ensureMkDocsImage(imageName, dockerfilePath, contextPath, logWriter); err != nil {
+	if err := ensureMkDocsImage(imageName, workspaceRoot, contextPath, logWriter); err != nil {
 		Logln(logWriter, "❌ Failed to ensure Docker image: %v", err)
 		return 1
 	}
@@ -641,14 +595,9 @@ func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName, bo
 	}
 
 	// MkDocs resolves --site-dir relative to the config file directory when using -f
-	// Since both config and site are in outputDir, site-dir is just "site"
-	relConfigPath, relErr := filepath.Rel(workspaceRoot, configPath)
-	if relErr != nil {
-		relConfigPath = configPath // Fallback to absolute
-	}
 	dockerVolume := FormatDockerVolumePath(hostRepoRoot)
 	dockerSiteDir := "site"
-	dockerConfigPath := strings.ReplaceAll(relConfigPath, "\\", "/")
+	dockerConfigPath := toDockerPath(workspaceRoot, configPath)
 
 	// Use all available CPUs for PDF rendering (adapts to CI runners with fewer cores)
 	cpuLimit := fmt.Sprintf("%d", runtime.NumCPU())

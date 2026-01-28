@@ -13,8 +13,11 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/impl/test/internal/ctrf"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/test/internal/runner"
 	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/testing"
 )
+
+var goRunnerLog = logging.C()
 
 func init() {
 	goRunner := &GoRunner{}
@@ -130,6 +133,7 @@ func (r *GoRunner) FindTestRoot(featurePath string, cfg *config.EACConfig) strin
 	// Get path components
 	parts := strings.Split(relPath, "/")
 	if len(parts) == 0 {
+		goRunnerLog.Debugf("FindTestRoot: empty path parts for %s", featurePath)
 		return ""
 	}
 
@@ -138,15 +142,22 @@ func (r *GoRunner) FindTestRoot(featurePath string, cfg *config.EACConfig) strin
 
 	// Verify module exists - fail early if not
 	if cfg.Repository.GetByMoniker(moniker) == nil {
+		goRunnerLog.Debugf("FindTestRoot: unknown module %s for %s", moniker, featurePath)
 		return "" // Unknown module, no fallback guessing
 	}
 
 	// Get test impl path from module contract
 	basePath := cfg.Repository.TestImplPath(moniker)
+	if basePath == "" {
+		goRunnerLog.Debugf("FindTestRoot: no test-impl path for module %s", moniker)
+		return ""
+	}
 
 	// Check if godog_test.go exists at base path
 	workspaceRoot := cfg.RepoRoot
-	if fileExists(filepath.Join(workspaceRoot, basePath, "godog_test.go")) {
+	baseCheck := filepath.Join(workspaceRoot, basePath, "godog_test.go")
+	if fileExists(baseCheck) {
+		goRunnerLog.Debugf("FindTestRoot: found godog_test.go at basePath %s", basePath)
 		return basePath
 	}
 
@@ -154,12 +165,15 @@ func (r *GoRunner) FindTestRoot(featurePath string, cfg *config.EACConfig) strin
 	for i := 1; i < len(parts)-1; i++ {
 		subPath := filepath.Join(basePath, strings.Join(parts[1:i+1], "/"))
 		subPath = filepath.ToSlash(subPath)
-		if fileExists(filepath.Join(workspaceRoot, subPath, "godog_test.go")) {
+		subCheck := filepath.Join(workspaceRoot, subPath, "godog_test.go")
+		if fileExists(subCheck) {
+			goRunnerLog.Debugf("FindTestRoot: found godog_test.go at subPath %s", subPath)
 			return subPath
 		}
 	}
 
 	// No test runner found - no fallback
+	goRunnerLog.Debugf("FindTestRoot: no godog_test.go found for %s (basePath=%s, parts=%v)", featurePath, basePath, parts)
 	return ""
 }
 

@@ -18,24 +18,22 @@ Configuration, architecture, and behavior are version-controlled and validated b
 
 ## All Contracts
 
-| Contract           | File                      | Purpose                                          |
-| ------------------ | ------------------------- | ------------------------------------------------ |
-| **Modules**        | `repository.yml`          | Module definitions, dependencies, file ownership |
-| **Module Types**   | `module-types.yml`        | Type templates with build/test behavior          |
-| **Containers**     | `repository.yml`          | Container tool configurations with version pins  |
-| **Registries**     | `repository.yml`          | Container registry cleanup policies              |
-| **Environments**   | `environments.yml`        | Test execution environments (L0-L4)              |
-| **Test Suites**    | `test-suites.yml`         | Test suites with tag selectors                   |
-| **Testing Tags**   | `testing-tags.yml`        | Valid test tag definitions                       |
-| **Books**          | `books.yml`               | Documentation book configuration                 |
-| **Repository**     | `repository.yml`          | Repository metadata, incl. module declarations   |
-| **System Deps**    | `system-dependencies.yml` | Required system tools (go, docker, etc.)         |
-| **Security Tools** | `security-tools.yml`      | Security scanning tool configuration             |
-| **AI Config**      | `ai-config.yml`           | AI provider configuration                        |
-| **EAC Config**     | `eac-config.yml`          | EAC system configuration                         |
-| **Logging**        | `logging.yml`             | Logging configuration                            |
+| Contract            | File                  | Location                             | Purpose                                          |
+| ------------------- | --------------------- | ------------------------------------ | ------------------------------------------------ |
+| **Repository**      | `repository.yml`      | `.r2r/eac/`                          | Module definitions, dependencies, file ownership |
+| **Component Types** | `component-types.yml` | `contracts/.../defaults/`            | Component type definitions with build behavior   |
+| **Tool Config**     | `tool-config.yml`     | `contracts/.../defaults/`            | Tool definitions and resource configuration      |
+| **Registries**      | `registries.yml`      | `contracts/.../defaults/`            | Container registry definitions                   |
+| **Environments**    | `environments.yml`    | `contracts/.../defaults/`            | Test execution environments (L0-L4)              |
+| **Test Suites**     | `test-suites.yml`     | `contracts/.../defaults/`            | Test suites with tag selectors                   |
+| **Testing Tags**    | `testing-tags.yml`    | `contracts/.../defaults/`            | Valid test tag definitions                       |
+| **Books**           | `books.yml`           | `.r2r/eac/`                          | Documentation book configuration                 |
+| **Security Tools**  | `security-tools.yml`  | `contracts/.../defaults/`            | Security scanning tool configuration             |
+| **AI Config**       | `ai-config.yml`       | `contracts/.../defaults/`            | AI type definitions                              |
+| **AI Provider**     | `ai-provider.yml`     | `contracts/.../defaults/`            | Default AI provider settings                     |
+| **Logging**         | `logging.yml`         | `contracts/.../defaults/`            | Logging configuration                            |
 
-**Location**: All contracts in `.r2r/eac/`, validated against schemas in `contracts/`
+**Location**: User configs in `.r2r/eac/`, system defaults in `contracts/eac-core/0.1.0/defaults/`, schemas in `contracts/eac-core/0.1.0/`
 
 ---
 
@@ -82,7 +80,7 @@ modules:
 | Field         | Type   | Required | Description                                   |
 | ------------- | ------ | -------- | --------------------------------------------- |
 | `moniker`     | string | ✅       | Unique module identifier (kebab-case)         |
-| `type`        | string | ✅       | Module type reference (from module-types.yml) |
+| `type`        | string | ❌       | Deprecated; use `components` instead          |
 | `name`        | string | ❌       | Human-readable name                           |
 | `description` | string | ❌       | Module purpose                                |
 | `depends_on`  | array  | ❌       | Module dependencies (monikers)                |
@@ -128,11 +126,16 @@ modules:
 
 ---
 
-## Module Types Contract
+## Component Types Contract
 
-**File**: `.r2r/eac/module-types.yml`
+!!! note "Replaces Module Types"
 
-**Purpose**: Define reusable module type templates with build configuration, capabilities, and defaults
+    The component types system replaces the old module types system. Modules now contain multiple
+    components, each with its own type. See [Component Types Reference](../architecture/component-types.md).
+
+**File**: `contracts/eac-core/0.1.0/defaults/component-types.yml` (system default)
+
+**Purpose**: Define component types with build behavior, file patterns, and tooling requirements
 
 ### Structure
 
@@ -546,20 +549,18 @@ registries:
 
 ```mermaid
 graph TB
-    Modules[repository.yml] -->|references| Types[module-types.yml]
+    Modules[repository.yml] -->|defines| Components[components]
+    Components -->|use types from| Types[component-types.yml]
+    Components -->|use tools from| Tools[tool-config.yml]
     Modules -->|depends_on| Modules
-    Modules -->|uses| Containers[containers]
-    Modules -->|publishes to| Registries[registries]
-    Types -->|requires| SysDeps[system-dependencies.yml]
+    Modules -->|publishes to| Registries[registries.yml]
     Suites[test-suites.yml] -->|selects| Tags[testing-tags.yml]
     Suites -->|runs in| Envs[environments.yml]
-    Envs -->|requires| SysDeps
-    Containers -->|pulls from| Registries
 
     style Modules fill:#e1f5ff
     style Types fill:#ffe1e1
+    style Tools fill:#fff3e1
     style Suites fill:#e1ffe1
-    style Containers fill:#fff3e1
     style Registries fill:#e1ffe8
 ```
 
@@ -610,11 +611,11 @@ r2r eac validate-design
 **Hierarchy** (highest to lowest priority):
 
 1. **Personal config** (`.personal.yml` files, not in Git)
-2. **Shared config** (standard `.yml` files in `.r2r/eac/`)
-3. **Type defaults** (from `module-types.yml`)
-4. **System defaults** (hardcoded in eac-core)
+2. **User config** (`.yml` files in `.r2r/eac/`)
+3. **System defaults** (`contracts/eac-core/0.1.0/defaults/`)
+4. **Hardcoded defaults** (in eac-core code)
 
-**Example**: `.r2r/eac/modules.personal.yml` overrides `.r2r/eac/repository.yml`
+**Example**: `.r2r/eac/component-types.yml` overrides `contracts/eac-core/0.1.0/defaults/component-types.yml`
 
 ---
 
@@ -788,5 +789,5 @@ r2r eac get-config              # Config JSON
 
 ## Related Documentation
 
-- [Architecture](../architecture/) - System architecture and components
-- [Modules](../modules/) - Module system and dependency management
+- [Architecture](../architecture/index.md) - System architecture and components
+- [Modules](../modules/index.md) - Module system and dependency management

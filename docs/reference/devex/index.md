@@ -10,7 +10,7 @@ This section serves two distinct audiences:
 
 **For developers contributing to the EAC repository itself.**
 
-Working on the R2R CLI, EAC commands, or supporting modules? The [Internal](./internal/) section covers:
+Working on the R2R CLI, EAC commands, or supporting modules? The [Internal](./internal/index.md) section covers:
 
 - Repository structure and layout
 - CLI vs Extensions architecture
@@ -21,7 +21,7 @@ Working on the R2R CLI, EAC commands, or supporting modules? The [Internal](./in
 
 **For developers using EAC in their own projects.**
 
-Adopting EAC in your repository? The [External](./external/) section covers:
+Adopting EAC in your repository? The [External](./external/index.md) section covers:
 
 - Getting started with EAC
 - Configuration options
@@ -31,8 +31,8 @@ Adopting EAC in your repository? The [External](./external/) section covers:
 
 | Audience         | Section                 | Key Topics                              |
 | ---------------- | ----------------------- | --------------------------------------- |
-| **Contributors** | [Internal](./internal/) | Repository layout, contracts, workflows |
-| **Adopters**     | [External](./external/) | Setup, configuration, structure         |
+| **Contributors** | [Internal](./internal/index.md) | Repository layout, contracts, workflows |
+| **Adopters**     | [External](./external/index.md) | Setup, configuration, structure         |
 
 ## Which Section Do I Need?
 

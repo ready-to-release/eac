@@ -9,15 +9,13 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"gopkg.in/yaml.v3"
 )
 
 // ErrNoDefaults is returned when a defaults file doesn't exist.
 // This is not an error condition - it just means defaults should be skipped.
 var ErrNoDefaults = errors.New("defaults file not found")
-
-// DefaultsVersion is the contract version for defaults.
-const DefaultsVersion = "0.1.0"
 
 // peekRepositoryType reads only the repository.type field from user config.
 // This is a minimal read to determine which type-specific defaults to load.
@@ -90,10 +88,37 @@ func LoadRepositoryDefaults(repoRoot string) (*RepositoryConfig, error) {
 		return nil, fmt.Errorf("parsing repository defaults: %w", err)
 	}
 
+	// Load registries defaults and merge
+	registries, err := LoadRegistriesDefaults(repoRoot)
+	if err == nil && registries != nil {
+		cfg.Registries = registries
+	}
+
 	// Apply module defaults
 	cfg.applyModuleDefaults()
 
 	return &cfg, nil
+}
+
+// LoadRegistriesDefaults loads default registries config from contract defaults.
+// Returns ErrNoDefaults when defaults don't exist.
+func LoadRegistriesDefaults(repoRoot string) (RegistriesConfig, error) {
+	data, err := loadDefaultFile(repoRoot, "registries.yml")
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, ErrNoDefaults
+		}
+		return nil, fmt.Errorf("loading registries defaults: %w", err)
+	}
+
+	var wrapper struct {
+		Registries RegistriesConfig `yaml:"registries"`
+	}
+	if err := yaml.Unmarshal(data, &wrapper); err != nil {
+		return nil, fmt.Errorf("parsing registries defaults: %w", err)
+	}
+
+	return wrapper.Registries, nil
 }
 
 // LoadComponentTypesDefaults loads default component types from contract defaults.
@@ -111,6 +136,46 @@ func LoadComponentTypesDefaults(repoRoot string) (*ComponentTypesConfig, error) 
 	var cfg ComponentTypesConfig
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, fmt.Errorf("parsing component-types defaults: %w", err)
+	}
+
+	return &cfg, nil
+}
+
+// LoadEnvironmentsDefaults loads default environments from contract defaults.
+// Returns ErrNoDefaults when defaults don't exist - allows tests to work without contracts folder.
+func LoadEnvironmentsDefaults(repoRoot string) (*EnvironmentsConfig, error) {
+	data, err := loadDefaultFile(repoRoot, EnvironmentsFileName)
+	if err != nil {
+		// Defaults are optional - return ErrNoDefaults if they don't exist
+		if os.IsNotExist(err) {
+			return nil, ErrNoDefaults
+		}
+		return nil, fmt.Errorf("loading environments defaults: %w", err)
+	}
+
+	var cfg EnvironmentsConfig
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return nil, fmt.Errorf("parsing environments defaults: %w", err)
+	}
+
+	return &cfg, nil
+}
+
+// LoadTestingTagsDefaults loads default testing-tags from contract defaults.
+// Returns ErrNoDefaults when defaults don't exist - allows tests to work without contracts folder.
+func LoadTestingTagsDefaults(repoRoot string) (*TestingTagsConfig, error) {
+	data, err := loadDefaultFile(repoRoot, TestingTagsFileName)
+	if err != nil {
+		// Defaults are optional - return ErrNoDefaults if they don't exist
+		if os.IsNotExist(err) {
+			return nil, ErrNoDefaults
+		}
+		return nil, fmt.Errorf("loading testing-tags defaults: %w", err)
+	}
+
+	var cfg TestingTagsConfig
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return nil, fmt.Errorf("parsing testing-tags defaults: %w", err)
 	}
 
 	return &cfg, nil
@@ -137,7 +202,7 @@ func loadDefaultFile(repoRoot, filename string) ([]byte, error) {
 		return nil, fmt.Errorf("no root available for loading defaults (repoRoot empty and not in container)")
 	}
 
-	fsPath := filepath.Join(root, "contracts", "eac-core", DefaultsVersion, "defaults", filename)
+	fsPath := filepath.Join(root, "contracts", "eac-core", paths.DefaultsVersion, "defaults", filename)
 	data, err := os.ReadFile(fsPath)
 	if err != nil {
 		// Return raw error for IsNotExist checks, wrapped for other errors
@@ -265,6 +330,44 @@ func MergeRepository(defaults, user *RepositoryConfig) *RepositoryConfig {
 	}
 	if user.Conventions.TemplateRiskCatalogDir != "" {
 		result.Conventions.TemplateRiskCatalogDir = user.Conventions.TemplateRiskCatalogDir
+	}
+
+	// Merge remote config if set
+	if user.Repository.Remote.Type != "" {
+		result.Repository.Remote.Type = user.Repository.Remote.Type
+	}
+	if user.Repository.Remote.Owner != "" {
+		result.Repository.Remote.Owner = user.Repository.Remote.Owner
+	}
+	if user.Repository.Remote.RepoName != "" {
+		result.Repository.Remote.RepoName = user.Repository.Remote.RepoName
+	}
+	if user.Repository.Remote.URL != "" {
+		result.Repository.Remote.URL = user.Repository.Remote.URL
+	}
+	if user.Repository.Remote.PagesURL != "" {
+		result.Repository.Remote.PagesURL = user.Repository.Remote.PagesURL
+	}
+	if user.Repository.Remote.RegistryURL != "" {
+		result.Repository.Remote.RegistryURL = user.Repository.Remote.RegistryURL
+	}
+
+	// Merge registries: defaults + user overrides
+	if result.Registries == nil {
+		result.Registries = make(RegistriesConfig)
+	}
+	for hostname, userReg := range user.Registries {
+		if result.Registries[hostname] == nil {
+			result.Registries[hostname] = userReg
+		} else {
+			// Merge individual registry config
+			if userReg.Org != "" {
+				result.Registries[hostname].Org = userReg.Org
+			}
+			if userReg.Cleanup != nil {
+				result.Registries[hostname].Cleanup = userReg.Cleanup
+			}
+		}
 	}
 
 	// Modules: user modules completely override defaults (no merge)

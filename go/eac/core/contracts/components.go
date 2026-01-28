@@ -37,6 +37,43 @@ func (c *ComponentType) HasLinter() bool {
 // ModuleComponents is a map of component type name to its configuration.
 type ModuleComponents map[string]*ComponentEntry
 
+// AmpConfig contains per-operation resource amplifiers for a component.
+// Each value is a multiplier applied to the tool's base weight.
+// Values < 1.0 reduce resources, > 1.0 increase resources.
+type AmpConfig struct {
+	Build float64 `yaml:"build,omitempty" json:"build,omitempty"`
+	Lint  float64 `yaml:"lint,omitempty" json:"lint,omitempty"`
+	Test  float64 `yaml:"test,omitempty" json:"test,omitempty"`
+	Scan  float64 `yaml:"scan,omitempty" json:"scan,omitempty"`
+}
+
+// GetAmp returns the amplifier for the given operation type.
+// Returns 1.0 (no amplification) if not specified.
+func (a *AmpConfig) GetAmp(op string) float64 {
+	if a == nil {
+		return 1.0
+	}
+	switch op {
+	case "build":
+		if a.Build > 0 {
+			return a.Build
+		}
+	case "lint":
+		if a.Lint > 0 {
+			return a.Lint
+		}
+	case "test":
+		if a.Test > 0 {
+			return a.Test
+		}
+	case "scan":
+		if a.Scan > 0 {
+			return a.Scan
+		}
+	}
+	return 1.0
+}
+
 // ComponentEntry represents a component's configuration within a module.
 type ComponentEntry struct {
 	Type        string                 `yaml:"type,omitempty" json:"type,omitempty"` // Component type (if different from map key name)
@@ -44,7 +81,16 @@ type ComponentEntry struct {
 	Patterns    *ComponentPatterns     `yaml:"patterns,omitempty" json:"patterns,omitempty"`
 	Build       *ComponentBuild        `yaml:"build,omitempty" json:"build,omitempty"`
 	DockerBuild map[string]interface{} `yaml:"docker_build,omitempty" json:"docker_build,omitempty"`
+	Amp         *AmpConfig             `yaml:"amp,omitempty" json:"amp,omitempty"`
 	Resolved    bool                   `yaml:"-" json:"-"`
+}
+
+// GetAmpForOperation returns the resource amplifier for an operation.
+func (ce *ComponentEntry) GetAmpForOperation(op string) float64 {
+	if ce == nil {
+		return 1.0
+	}
+	return ce.Amp.GetAmp(op)
 }
 
 // ComponentBuild contains build configuration for a component.

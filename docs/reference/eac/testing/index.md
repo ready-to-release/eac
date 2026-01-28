@@ -7,7 +7,7 @@ Technical reference for EAC test suite configuration, execution, and CLI command
 | Reference                       | Description                                            |
 | ------------------------------- | ------------------------------------------------------ |
 | [Test Suites](./test-suites.md) | Suite definitions, tag selection, and CD stage mapping |
-| [Go Testing](./go/)             | Go/Godog BDD implementation, step definitions          |
+| [Go Testing](./go/index.md)             | Go/Godog BDD implementation, step definitions          |
 
 ## Quick Reference
 
@@ -25,5 +25,5 @@ r2r eac test <module> --suite unit --count
 
 ## Related Documentation
 
-- [Test Command Reference](../commands/test/) - Full test command options
+- [Test Command Reference](../commands/test/index.md) - Full test command options
 - [Test Levels (Conceptual)](../../../explanation/specifications/taxonomy/test-levels.md) - L0-L4 environment concepts

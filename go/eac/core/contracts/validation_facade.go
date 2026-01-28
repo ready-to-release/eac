@@ -52,10 +52,6 @@ func NewValidationErrorWithContext(code ErrorCode, message string, line int, con
 	return validation.NewValidationErrorWithContext(code, message, line, context)
 }
 
-func NewLegacyValidationError(code, message string, line int, severity string) *ValidationError {
-	return validation.NewLegacyValidationError(code, message, line, severity)
-}
-
 // Error code registry functions.
 func GetErrorCode(code string) (*ErrorCode, bool) {
 	return validation.GetErrorCode(code)
@@ -118,4 +114,30 @@ var (
 	ErrContractNameMismatch      = validation.ErrContractNameMismatch
 	ErrNoTagContract             = validation.ErrNoTagContract
 	ErrContractVersionMismatch   = validation.ErrContractVersionMismatch
+
+	// Commit message validation error codes
+	ErrEmptyMessage            = validation.ErrEmptyMessage
+	ErrInvalidHeaderFormat     = validation.ErrInvalidHeaderFormat
+	ErrHeaderTooLong           = validation.ErrHeaderTooLong
+	ErrHeaderTrailingPeriod    = validation.ErrHeaderTrailingPeriod
+	ErrMissingAuditorSummary   = validation.ErrMissingAuditorSummary
+	ErrMissingTopLevelBody     = validation.ErrMissingTopLevelBody
+	ErrMissingModuleSection    = validation.ErrMissingModuleSection
+	ErrMissingSubjectLine      = validation.ErrMissingSubjectLine
+	ErrInvalidSubjectFormat    = validation.ErrInvalidSubjectFormat
+	ErrSubjectTooLong          = validation.ErrSubjectTooLong
+	ErrSubjectTrailingPeriod   = validation.ErrSubjectTrailingPeriod
+	ErrUnclosedCodeBlock       = validation.ErrUnclosedCodeBlock
+	ErrOrphanedDashesLine      = validation.ErrOrphanedDashesLine
+	ErrMalformedModuleSection  = validation.ErrMalformedModuleSection
+	ErrMissingModuleName       = validation.ErrMissingModuleName
+	ErrMissingModuleDashes     = validation.ErrMissingModuleDashes
+	ErrContractLoadError       = validation.ErrContractLoadError
+	ErrEmptyModuleSection      = validation.ErrEmptyModuleSection
+	ErrInvalidModuleName       = validation.ErrInvalidModuleName
+	ErrMissingDashes           = validation.ErrMissingDashes
+	ErrInvalidDashes           = validation.ErrInvalidDashes
+	ErrMissingBody             = validation.ErrMissingBody
+	ErrUnexpectedModuleSection = validation.ErrUnexpectedModuleSection
+	ErrUnexpectedFileList      = validation.ErrUnexpectedFileList
 )

@@ -445,6 +445,6 @@ For CLI commands and validation details, see:
 - [BDD Fundamentals](../concepts/bdd-fundamentals.md) - Writing executable specs
 - [Three-Layer Approach](../concepts/three-layer-approach.md) - Integrating controls into workflow
 - [Review and Iterate](../quality/review-and-iterate.md) - Specification maintenance
-- [Testing Taxonomy](../taxonomy/) - Complete tag documentation
+- [Testing Taxonomy](../taxonomy/index.md) - Complete tag documentation
 - [OSCAL Documentation](https://pages.nist.gov/OSCAL/) - Official OSCAL standard
 - [NIST 800-53](https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final) - Security control catalog

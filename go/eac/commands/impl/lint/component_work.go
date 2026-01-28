@@ -1,10 +1,13 @@
 package lint
 
 import (
+	"math"
+
 	"github.com/ready-to-release/eac/go/eac/commands/impl/update/lint/linters"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/cmdframework"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
 	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/ready-to-release/eac/go/eac/core/tool"
 )
 
 // FlattenModulesToLintComponentWork converts modules to lint component work items.
@@ -68,12 +71,15 @@ func FlattenModulesToLintComponentWork(ctx *cmdframework.ExecutionContext) [][]o
 				// Format: "component:provider" so display becomes "module:component:provider"
 				componentWithProvider := compName + ":" + providerName
 
+				// Get weight (base weight × amp, calculated internally)
+				weight := getComponentWeight(moniker, compName, compType, tool.OperationLint)
+
 				work := orchestrator.ComponentWork{
 					Module:        moniker,
 					Component:     componentWithProvider,
 					ComponentType: compType,
 					Handler:       providerName,
-					Weight:        1, // Lint operations are lightweight
+					Weight:        weight,
 					BuildAfter:    nil,
 					Index:         globalIndex,
 				}
@@ -99,4 +105,43 @@ func CountLintComponents(layers [][]orchestrator.ComponentWork) int {
 		count += len(layer)
 	}
 	return count
+}
+
+// getLintToolWeight returns the scheduling weight for a lint operation.
+// Weight is derived from tool.Resources.CPUs. Defaults to 1.
+func getLintToolWeight(componentType string) int {
+	bridge := tool.GlobalLintBridge()
+	if bridge == nil {
+		return 1
+	}
+
+	t := bridge.ResolveTool(componentType, tool.OperationLint)
+	if t == nil {
+		return 1
+	}
+
+	return t.Resources.Weight()
+}
+
+// getComponentWeight returns the scheduling weight for a component.
+// Weight = base tool weight × component amp (from config).
+func getComponentWeight(moniker, componentName, componentType string, operation tool.OperationType) int {
+	baseWeight := getLintToolWeight(componentType)
+
+	// Get amp from config (the source of truth)
+	amp := 1.0
+	cfg := config.Global()
+	if cfg != nil && cfg.Repository != nil {
+		if module, ok := cfg.Repository.GetModule(moniker); ok && module != nil {
+			amp = module.GetComponentAmp(componentName, string(operation))
+		}
+	}
+
+	// Apply amp to weight (ceil to ensure at least 1)
+	weight := int(math.Ceil(float64(baseWeight) * amp))
+	if weight < 1 {
+		weight = 1
+	}
+
+	return weight
 }

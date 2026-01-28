@@ -11,13 +11,15 @@ type BooksConfig struct {
 
 // Book represents a single book configuration.
 type Book struct {
-	Name         string         `yaml:"name"`
-	Title        string         `yaml:"title,omitempty"` // Book-specific title for cover page (optional, defaults to Name)
-	Description  string         `yaml:"description"`
-	Output       string         `yaml:"output,omitempty"`   // Default output mode: "site", "pdf-dark", "pdf-light", "pdf-all" (default: "pdf-dark" for book modules)
-	SiteURL      string         `yaml:"site_url,omitempty"` // Base URL for GitHub Pages (e.g., https://ready-to-release.github.io/eac/)
-	Sources      []Source       `yaml:"sources"`
-	GeneratedNav []GeneratedNav `yaml:"generated_nav"`
+	Name         string            `yaml:"name"`
+	Title        string            `yaml:"title,omitempty"`       // Book-specific title for cover page (optional, defaults to Name)
+	Description  string            `yaml:"description,omitempty"` // Book description
+	Output       string            `yaml:"output,omitempty"`      // Default output mode: "site", "pdf-dark", "pdf-light", "pdf-all" (default: "pdf-dark" for book modules)
+	SiteURL      string            `yaml:"site_url,omitempty"`    // Base URL for GitHub Pages (e.g., https://ready-to-release.github.io/eac/)
+	Template     string            `yaml:"template,omitempty"`    // Reference to a book-template name
+	Parameters   map[string]string `yaml:"parameters,omitempty"`  // Parameter values to substitute into template placeholders
+	Sources      []Source          `yaml:"sources,omitempty"`
+	GeneratedNav []GeneratedNav    `yaml:"generated_nav,omitempty"`
 }
 
 // OutputMode constants for book default output.
@@ -56,10 +58,10 @@ func (b *Book) GetPDFTheme() string {
 	}
 }
 
-// Source represents a content source (copy, command, or inline).
+// Source represents a content source (copy, command, inline, or snippet).
 type Source struct {
 	// Common field
-	Type string `yaml:"type"` // "copy", "command", or "inline"
+	Type string `yaml:"type"` // "copy", "command", "inline", or "snippet"
 
 	// Copy source fields
 	From    string   `yaml:"from,omitempty"`
@@ -75,6 +77,10 @@ type Source struct {
 	// Inline source fields
 	MarkerPattern string         `yaml:"marker_pattern,omitempty"`
 	Inserts       []InlineInsert `yaml:"inserts,omitempty"`
+
+	// Snippet reference fields
+	SnippetName string            `yaml:"name,omitempty"`       // Name of the source snippet to include (when type="snippet")
+	Parameters  map[string]string `yaml:"parameters,omitempty"` // Parameter values for snippet placeholders
 }
 
 // InlineInsert maps a marker ID to an EAC command.

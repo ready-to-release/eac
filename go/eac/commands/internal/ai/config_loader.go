@@ -4,10 +4,12 @@ package ai
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"sync"
 
 	"github.com/ready-to-release/eac/go/eac/core/contracts/schema"
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"gopkg.in/yaml.v3"
 )
 
@@ -39,11 +41,12 @@ func LoadConfig(path string) (*Config, error) {
 	return config, nil
 }
 
-// LoadConfigWithOverrides loads team config and merges with personal overrides.
+// LoadConfigWithOverrides loads defaults, team config, and personal overrides.
+// Merge order: defaults → team → personal (each layer overrides the previous).
 // Personal config can override any field: provider, model, api_key, endpoint, git token.
-// Validates both configs against the ai-provider schema.
+// Validates configs against the ai-provider schema.
 //
-// Schema (both files use same structure):
+// Schema (all files use same structure):
 //
 //	ai:
 //	  provider: claude-api          # or claude-cli, openai, gemini
@@ -53,12 +56,23 @@ func LoadConfig(path string) (*Config, error) {
 //	git:
 //	  token: ${GIT_TOKEN}  # or literal token
 //
-// Personal config only needs to specify fields to override.
+// Team and personal configs only need to specify fields to override.
 func LoadConfigWithOverrides(workspaceRoot, teamConfigPath, personalConfigPath string) (*Config, error) {
-	// Load and validate team config (required)
-	config, err := loadConfigFileWithValidation(teamConfigPath, workspaceRoot)
-	if err != nil {
-		return nil, err
+	// Start with defaults (optional - system still works without them)
+	config, _ := loadAIProviderDefaults(workspaceRoot)
+	if config == nil {
+		config = &Config{}
+	}
+
+	// Load and validate team config (optional with defaults, required without)
+	if teamConfigPath != "" {
+		if _, statErr := os.Stat(teamConfigPath); statErr == nil {
+			teamConfig, loadErr := loadConfigFileWithValidation(teamConfigPath, workspaceRoot)
+			if loadErr != nil {
+				return nil, loadErr
+			}
+			mergeConfig(config, teamConfig)
+		}
 	}
 
 	// Load and validate personal config (optional) and merge
@@ -83,6 +97,56 @@ func LoadConfigWithOverrides(workspaceRoot, teamConfigPath, personalConfigPath s
 	}
 
 	return config, nil
+}
+
+// loadAIProviderDefaults loads AI provider defaults from contracts folder.
+// Container-aware: uses R2R_CONTAINER_ROOT when running in container.
+func loadAIProviderDefaults(repoRoot string) (*Config, error) {
+	root := repoRoot
+	if containerRoot := os.Getenv("R2R_CONTAINER_ROOT"); containerRoot != "" {
+		root = containerRoot
+	}
+	if root == "" {
+		return nil, fmt.Errorf("no root available for loading defaults")
+	}
+
+	fsPath := filepath.Join(root, "contracts", "eac-core", paths.DefaultsVersion, "defaults", "ai-provider.yml")
+	data, err := os.ReadFile(fsPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, err
+		}
+		return nil, fmt.Errorf("reading ai-provider defaults: %w", err)
+	}
+
+	var cfg Config
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return nil, fmt.Errorf("parsing ai-provider defaults: %w", err)
+	}
+
+	return &cfg, nil
+}
+
+// mergeConfig merges override config into base config.
+func mergeConfig(base, override *Config) {
+	if override == nil {
+		return
+	}
+	if override.AI.Provider != "" {
+		base.AI.Provider = override.AI.Provider
+	}
+	if override.AI.Model != "" {
+		base.AI.Model = override.AI.Model
+	}
+	if override.AI.APIKey != "" {
+		base.AI.APIKey = override.AI.APIKey
+	}
+	if override.AI.Endpoint != "" {
+		base.AI.Endpoint = override.AI.Endpoint
+	}
+	if override.Git.Token != "" {
+		base.Git.Token = override.Git.Token
+	}
 }
 
 // PersonalConfig represents the personal override file structure.
@@ -138,11 +202,6 @@ func validateAgentConfigSchema(workspaceRoot string, data []byte) error {
 	}
 
 	return schemaValidator.ValidateYAML(schema.SchemaEACConfig, data)
-}
-
-// loadPersonalConfig loads the personal override file.
-func loadPersonalConfig(path string) (*PersonalConfig, error) {
-	return loadPersonalConfigWithValidation(path, "")
 }
 
 // loadPersonalConfigWithValidation loads and validates the personal override file.

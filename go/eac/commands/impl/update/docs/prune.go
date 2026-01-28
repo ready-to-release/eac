@@ -146,7 +146,7 @@ func computeMermaidFilenames(docsDir, cacheRoot string) (map[string]bool, error)
 			// Use same algorithm as AssetCache - compute the full cache path
 			cleanContent := books.StripSizeDirective(block.Content)
 			hash := computeMermaidCacheHash(cleanContent)
-			cachePath := paths.MermaidCachePathV2(cacheRoot, block.SourceFile, block.BlockIndex, hash)
+			cachePath := paths.MermaidCachePath(cacheRoot, block.SourceFile, block.BlockIndex, hash)
 			filename := filepath.Base(cachePath)
 			filenames[filename] = true
 		}
@@ -169,7 +169,7 @@ func computeDrawioFilenames(docsDir, cacheRoot string) (map[string]bool, error) 
 	for _, img := range images {
 		// Use same algorithm as AssetCache - compute the full cache path
 		hash := computeDrawioCacheHash(img.Hash, books.MaxImageWidthPDF)
-		cachePath := paths.DrawioCachePathV2(cacheRoot, img.SourceFile, hash)
+		cachePath := paths.DrawioCachePath(cacheRoot, img.SourceFile, hash)
 		filename := filepath.Base(cachePath)
 		filenames[filename] = true
 	}

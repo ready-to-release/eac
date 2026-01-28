@@ -1,0 +1,171 @@
+# Module Templates - Reusable module structures
+#
+# Templates define common module patterns that can be instantiated with
+# the "template" field in module definitions. Parameters are substituted
+# using {placeholder} syntax.
+#
+# Available parameters (automatically provided):
+#   {moniker}   - Module moniker
+#   {owner}     - Repository owner (from repository.remote.owner)
+#
+# Custom parameters can be provided via the "parameters" field in modules.
+# Common custom parameters:
+#   {go_root}   - Go module root (auto-inferred from "go" component if present)
+#
+# Usage in .r2r/eac/repository.yml:
+#   - moniker: my-container
+#     name: My Container
+#     template: container
+#
+#   - moniker: my-lib
+#     name: My Library
+#     template: go-library
+#     parameters:
+#       go_root: go/my-lib
+
+module-templates:
+  # ==========================================================================
+  # GO MODULE TEMPLATES
+  # ==========================================================================
+
+  # Base Go library module (internal/supporting)
+  # Use for: shared libraries, core modules, internal utilities
+  go-library:
+    versioning:
+      scheme: Implicit
+      release_type: none
+    components:
+      go: "{go_root}"
+      markdown: "{go_root}"
+      # Convention-based components (discovered if directory exists):
+      # - gherkin: specs/{moniker}
+      # - structurizr: specs/{moniker}/.design
+      # - test-impl: go/eac/specs/impl/{moniker}
+
+  # Go CLI tool (published)
+  # Use for: command-line tools with releases
+  go-cli:
+    versioning:
+      scheme: SemVer
+      changelog: "release/{moniker}/CHANGELOG.md"
+      release_type: published
+    components:
+      go: "{go_root}"
+      markdown: "{go_root}"
+      # Convention-based components auto-discovered
+
+  # Go internal CLI (not externally released)
+  # Use for: internal tools, development utilities
+  go-internal:
+    versioning:
+      scheme: SemVer
+      changelog: "{go_root}/CHANGELOG.md"
+      release_type: internal
+    components:
+      go: "{go_root}"
+      markdown: "{go_root}"
+
+  # ==========================================================================
+  # CONTAINER TEMPLATES
+  # ==========================================================================
+
+  # Standard container (pushed to GHCR)
+  # Use for: tool containers, build containers
+  container:
+    components:
+      dockerfile:
+        root: "containers/{moniker}"
+        docker_build:
+          container: "{moniker}"
+          context: "containers/{moniker}"
+          dockerfile: "containers/{moniker}/Dockerfile"
+          platforms:
+            - linux/amd64
+          tags:
+            - "ghcr.io/{owner}/{moniker}:latest"
+            - "ghcr.io/{owner}/{moniker}:sha-{short_sha}"
+          push: true
+          registry: ghcr.io
+          cache:
+            type: gha
+      markdown: "containers/{moniker}"
+      yaml: "containers/{moniker}"
+
+  # Container with multi-arch support
+  # Use for: containers that need to run on both amd64 and arm64
+  container-multiarch:
+    components:
+      dockerfile:
+        root: "containers/{moniker}"
+        docker_build:
+          container: "{moniker}"
+          context: "."
+          dockerfile: "containers/{moniker}/Dockerfile"
+          platforms:
+            - linux/amd64
+            - linux/arm64
+          tags:
+            - "ghcr.io/{owner}/{moniker}:ci"
+            - "ghcr.io/{owner}/{moniker}:sha-{short_sha}"
+          push: true
+          registry: ghcr.io
+          cache:
+            type: registry
+            from: "ghcr.io/{owner}/{moniker}:buildcache"
+            to: "ghcr.io/{owner}/{moniker}:buildcache"
+            mode: max
+          sbom: true
+          provenance: true
+      markdown: "containers/{moniker}"
+
+  # ==========================================================================
+  # DOCUMENTATION TEMPLATES
+  # ==========================================================================
+
+  # Documentation site module (MkDocs-based)
+  # Use for: main documentation sites
+  documentation-site:
+    versioning:
+      scheme: CalVer
+      changelog: "release/{moniker}/CHANGELOG.md"
+      release_type: published
+    components:
+      site:
+        type: book
+        root: docs
+      markdown: docs
+      yaml:
+        root: docs
+        patterns:
+          source:
+            - "**/.nav.yml"
+            - mkdocs.yml
+      assets:
+        type: docs-assets
+        root: docs/assets
+
+# Discovery conventions for auto-discovery mode
+# These rules determine how components are discovered when auto_discover: true
+conventions:
+  component_discovery:
+    # Gherkin specs: look in specs/{moniker}/
+    gherkin:
+      path_pattern: "specs/{moniker}"
+      required_file: "specification.feature"
+
+    # Structurizr designs: look in specs/{moniker}/.design/
+    structurizr:
+      path_pattern: "specs/{moniker}/.design"
+      required_file: "workspace.dsl"
+
+    # Test implementations: look in go/eac/specs/impl/{moniker}/
+    test_impl:
+      path_pattern: "go/eac/specs/impl/{moniker}"
+      required_file: "godog_test.go"
+
+    # Markdown: derive from primary component (go, typescript, etc.)
+    markdown:
+      derive_from:
+        - go
+        - typescript
+        - dockerfile

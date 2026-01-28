@@ -219,4 +219,4 @@ git rebase main
 
 - [Commit Messages](../../../explanation/continuous-delivery/workflow/commit-messages.md) - Detailed commit guidelines
 - [Trunk-Based Development](../../../explanation/continuous-delivery/workflow/trunk-based-development.md) - Branching philosophy
-- [CI Workflows](../../eac/continuous-delivery/workflows/) - CI/CD documentation
+- [CI Workflows](../../eac/continuous-delivery/workflows/index.md) - CI/CD documentation

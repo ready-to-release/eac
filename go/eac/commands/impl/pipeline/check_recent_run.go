@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/github"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
@@ -38,7 +39,7 @@ func PipelineCheckRecentRun() int {
 	// Parse flags
 	workflow := ""
 	sha := ""
-	since := 2 * time.Hour
+	since := config.CIRecentRunWindow()
 	format := ""
 
 	for i := 3; i < len(os.Args); i++ {

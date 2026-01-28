@@ -187,5 +187,5 @@ r2r eac create risk-assess --profile specs/.risk-controls/risk-profile.json
 ## Related Documentation
 
 - [Test Suites](../testing/test-suites.md) - Test execution commands
-- [Security Scanning](../security/) - Security scan commands
+- [Security Scanning](../security/index.md) - Security scan commands
 - [Risk Controls](../compliance/risk-controls.md) - OSCAL assessment generation

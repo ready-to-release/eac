@@ -33,6 +33,7 @@
 // Flag.tui-height: type=int, usage=Set TUI console height (3-20, default: 6)
 // Flag.version: type=string, usage=Inject version string into binary (Go modules with executable artifacts)
 // Flag.accept-warnings: type=bool, usage=Don't fail on MkDocs warnings (non-strict mode)
+// Flag.reproducible: type=string, usage=MkDocs reproducibility mode (auto/true/false, default: auto)
 // Flag.all: type=bool, usage=Include non-default books (those with default: false)
 // Flag.list-artifacts: type=bool, usage=List artifacts that would be produced (no build)
 // Flag.dry-run: type=bool, usage=Simulate build without running actual commands
@@ -157,9 +158,10 @@ func Build() int {
 	forceRebuild := false    // Force full rebuild, ignoring incremental build state (--rebuild)
 	layeredBuild := false    // Execute in layers sequentially (default: all parallel)
 	showTimings := false
-	debugMode := false // Enable debug logs to console
-	turbo := false     // Enable turbo mode (+2 parallel workers)
-	roof := 0          // Max capacity/roof limit (0 = auto-detect)
+	debugMode := false   // Enable debug logs to console
+	turbo := false       // Enable turbo mode (+2 parallel workers)
+	roof := 0            // Max capacity/roof limit (0 = auto-detect)
+	reproducible := "auto" // MkDocs reproducibility mode: auto, true, false
 	version := ""
 	listArtifacts := false
 	dryRun := false
@@ -209,6 +211,19 @@ func Build() int {
 		case "--accept-warnings":
 			// Flag is handled in mkdocs builder via os.Args check
 			// Just accept it here so it doesn't fail as unknown flag
+		case "--reproducible":
+			if i+1 >= len(args) {
+				log.Errorf("Error: --reproducible requires a value (auto, true, false)")
+				printBuildUsage()
+				return 1
+			}
+			i++
+			reproducible = args[i]
+			if !isValidReproducible(reproducible) {
+				log.Errorf("Error: --reproducible must be 'auto', 'true', or 'false'")
+				printBuildUsage()
+				return 1
+			}
 		case "--list-artifacts":
 			listArtifacts = true
 		case "--dry-run":
@@ -263,6 +278,13 @@ func Build() int {
 				roof, err = parseIntArg(roofStr)
 				if err != nil || roof < 1 {
 					log.Errorf("Error: --roof must be a positive integer")
+					printBuildUsage()
+					return 1
+				}
+			} else if strings.HasPrefix(arg, "--reproducible=") {
+				reproducible = strings.TrimPrefix(arg, "--reproducible=")
+				if !isValidReproducible(reproducible) {
+					log.Errorf("Error: --reproducible must be 'auto', 'true', or 'false'")
 					printBuildUsage()
 					return 1
 				}
@@ -358,6 +380,7 @@ func Build() int {
 		BuildAll:        buildAll,
 		UseExistingDepm: useExistingDepm,
 		LayeredBuild:    layeredBuild,
+		Reproducible:    reproducible,
 		RequestedSet:    requestedSet,
 	}
 
@@ -367,6 +390,11 @@ func Build() int {
 // parseIntArg parses a string argument as an integer.
 func parseIntArg(s string) (int, error) {
 	return strconv.Atoi(s)
+}
+
+// isValidReproducible checks if a reproducible flag value is valid.
+func isValidReproducible(value string) bool {
+	return value == "auto" || value == "true" || value == "false"
 }
 
 // listModuleArtifacts lists the artifacts that would be produced by building the specified modules.
@@ -411,7 +439,7 @@ func listModuleArtifacts(monikers []string, workspaceRoot string, moduleReport *
 
 // runModuleBuild runs build for a single module.
 // Executes all handlers for the module's buildable components in sequence.
-func runModuleBuild(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, tidyFirst bool, version string, dryRun, buildAll bool) int {
+func runModuleBuild(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, tidyFirst bool, version string, dryRun, buildAll, reproducible bool) int {
 	// Get all handlers for module's buildable components
 	compHandlers := builders.GetHandlersForModule(module)
 	if len(compHandlers) == 0 {
@@ -427,6 +455,7 @@ func runModuleBuild(module *modules.ModuleContract, workspaceRoot, outputDir str
 		Version:            version,
 		DryRun:             dryRun,
 		RequestedArtifacts: requestedArtifacts,
+		Reproducible:       reproducible,
 	}
 
 	// In dry-run mode, simulate a successful build
@@ -529,6 +558,9 @@ func verifyBuildDependenciesQuiet(monikers []string, moduleReport *reports.Modul
 		deps = append(deps, dep)
 	}
 	sort.Strings(deps)
+
+	// Filter out platform-incompatible tools before verification
+	deps = tool.FilterPlatformSupported(deps)
 	status.Required = deps
 
 	// Verify dependencies using tool registry
@@ -581,6 +613,10 @@ func printBuildUsage() {
 	log.Info("  --ascii                   Use ASCII-only characters in TUI (for terminals with poor Unicode support)")
 	log.Info("  --version VERSION         Inject version string into binary (Go modules with executable artifacts)")
 	log.Info("  --accept-warnings         Don't fail on MkDocs warnings (non-strict mode)")
+	log.Info("  --reproducible MODE       MkDocs reproducibility mode: auto (default), true, false")
+	log.Info("                            auto: CI uses true, local uses false")
+	log.Info("                            true: Always rebuild HTML from staging")
+	log.Info("                            false: Skip MkDocs if staging unchanged")
 	log.Info("  --all                     Include non-default books (those with default: false)")
 	log.Info("  -h, --help                Show this help message")
 	log.Info("")

@@ -26,7 +26,7 @@ Created when using `--ai-token` flag. Contains actual API keys.
 
 ## Advanced: Copying System Templates
 
-By default, EAC uses built-in system defaults for configuration files like `ai-config.yml`, `module-types.yml`, etc. These files don't need to be copied to your repository.
+By default, EAC uses built-in system defaults from `contracts/eac-core/0.1.0/defaults/`. These files don't need to be copied to your repository.
 
 However, if you need to customize these configurations:
 
@@ -38,8 +38,8 @@ r2r eac init --copy-templates
 This copies these files to `.r2r/eac/`:
 
 - `ai-config.yml` - AI type definitions (specs, commit-message)
-- `module-types.yml` - Module type definitions
-- `system-dependencies.yml` - System dependency definitions
+- `component-types.yml` - Component type definitions (go, typescript, etc.)
+- `tool-config.yml` - Tool definitions and resource configuration
 - `security-tools.yml` - Security tool configurations
 - `logging.yml` - Logging configuration
 - `environments.yml` - Test environment definitions
@@ -49,7 +49,7 @@ Once copied, you can edit these files and commit them. Your versions will take p
 **When to use `--copy-templates`:**
 
 - ✅ You need custom AI type definitions
-- ✅ You need custom module types
+- ✅ You need custom component types
 - ✅ You want to version control these configurations
 
 **When NOT to use `--copy-templates`:**

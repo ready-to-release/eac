@@ -119,7 +119,7 @@ func TestDefaultRegistry_Get(t *testing.T) {
 func TestDefaultRegistry_GetAll(t *testing.T) {
 	r := NewRegistry()
 	r.Register(&ToolDefinition{ID: "tool1", Type: ToolTypeSystem, Binary: "t1"})
-	r.Register(&ToolDefinition{ID: "tool2", Type: ToolTypeContainer, Image: "img"})
+	r.Register(&ToolDefinition{ID: "tool2", Type: ToolTypeContainer, LocalPath: "containers/test"})
 
 	all := r.GetAll()
 	if len(all) != 2 {
@@ -138,7 +138,7 @@ func TestDefaultRegistry_ListByType(t *testing.T) {
 	r := NewRegistry()
 	r.Register(&ToolDefinition{ID: "sys1", Type: ToolTypeSystem, Binary: "s1"})
 	r.Register(&ToolDefinition{ID: "sys2", Type: ToolTypeSystem, Binary: "s2"})
-	r.Register(&ToolDefinition{ID: "cont1", Type: ToolTypeContainer, Image: "img1"})
+	r.Register(&ToolDefinition{ID: "cont1", Type: ToolTypeContainer, LocalPath: "containers/test"})
 
 	systemTools := r.ListByType(ToolTypeSystem)
 	if len(systemTools) != 2 {
@@ -311,7 +311,7 @@ func TestDefaultRegistry_Validate(t *testing.T) {
 func TestDefaultRegistry_ValidateAll(t *testing.T) {
 	r := NewRegistry()
 	r.Register(&ToolDefinition{ID: "valid1", Type: ToolTypeSystem, Binary: "echo"})
-	r.Register(&ToolDefinition{ID: "valid2", Type: ToolTypeContainer, Image: "alpine"})
+	r.Register(&ToolDefinition{ID: "valid2", Type: ToolTypeContainer, Image: "alpine", Tag: "3.20"})
 
 	errs := r.ValidateAll()
 	if len(errs) != 0 {

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	zone "github.com/lrstanley/bubblezone"
 )
 
 // Model is the Bubbletea model for the console window.
@@ -37,11 +38,18 @@ type Model struct {
 	// Lock tracking info (from locktracker.Registry)
 	locks []LockStatus // Individual lock states
 
+	// Tools tracking (containers vs system)
+	activeContainers  []string // Currently active container tools (orange)
+	usedContainers    []string // All container tools ever used
+	activeSystemTools []string // Currently active system tools (orange)
+	usedSystemTools   []string // All system tools ever used
+
 	// Per-module tab tracking for Run phase
 	moduleStates  map[string]*ModuleState // Per-module state (running, completed, failed)
 	moduleOrder   []string                // Order in which modules started (for tab ordering)
 	nextModuleIdx int                     // Counter for assigning unique indices to modules
 	activeTab     string                  // Currently selected tab ("" = aggregate view)
+	hoveredTab    string                  // Tab currently under mouse cursor
 	maxTabs       int                     // Maximum visible tabs before scrolling/hiding
 
 	// Channels for async updates
@@ -56,6 +64,12 @@ type Model struct {
 	// Done state
 	linesDone  bool
 	statusDone bool
+
+	// User interaction tracking (for delayed exit)
+	lastUserInteraction time.Time // Reset on scroll or tab click
+	forceExit           bool      // User pressed ESC to force immediate exit
+	exitCountdownStart  time.Time // When exit countdown started (zero = not counting)
+	exitCountdownSecs   int       // Seconds remaining (10, 9, 8...)
 
 	// Quitting state - triggers plain-text final render
 	quitting bool
@@ -81,6 +95,7 @@ const (
 	ModulePending  ModuleStatus = iota // Scheduled, waiting for slot
 	ModuleRunning                      // Actively executing
 	ModuleComplete                     // Finished successfully
+	ModuleSkipped                      // Skipped (cached, unchanged)
 	ModuleFailed                       // Finished with error
 )
 
@@ -93,6 +108,8 @@ func (s ModuleStatus) Icon() string {
 		return ">" // Active
 	case ModuleComplete:
 		return "V" // Done
+	case ModuleSkipped:
+		return "=" // Cached/Skipped
 	case ModuleFailed:
 		return "X" // Error
 	default:
@@ -102,6 +119,9 @@ func (s ModuleStatus) Icon() string {
 
 // NewModel creates a new console model.
 func NewModel(height int, runPhaseName string, lineChan <-chan Line, statusChan <-chan Status, asciiMode bool) Model {
+	// Initialize zone manager for mouse click tracking
+	zone.NewGlobal()
+
 	if height <= 0 {
 		height = 5
 	}
@@ -314,13 +334,13 @@ func (m *Model) GetOrCreateModuleState(moniker string, weight int) *ModuleState 
 	}
 
 	// Create new module state with its own buffer
+	// StartTime is left zero - will be set when MarkModuleRunning is called
 	state := &ModuleState{
-		Moniker:   moniker,
-		Index:     m.nextModuleIdx, // Unique 1-based index from counter
-		Weight:    weight,
-		Buffer:    NewRingBuffer(200),
-		Status:    ModulePending, // Start as pending until slot acquired
-		StartTime: time.Now(),
+		Moniker: moniker,
+		Index:   m.nextModuleIdx, // Unique 1-based index from counter
+		Weight:  weight,
+		Buffer:  NewRingBuffer(200),
+		Status:  ModulePending, // Start as pending until slot acquired
 	}
 	m.moduleStates[moniker] = state
 	m.moduleOrder = append(m.moduleOrder, moniker)
@@ -329,12 +349,14 @@ func (m *Model) GetOrCreateModuleState(moniker string, weight int) *ModuleState 
 }
 
 // MarkModuleRunning marks a module as actively running (slot acquired).
+// This sets the StartTime to now, so duration tracking reflects actual execution time.
 func (m *Model) MarkModuleRunning(moniker string) {
 	state, exists := m.moduleStates[moniker]
 	if !exists {
 		return
 	}
 	state.Status = ModuleRunning
+	state.StartTime = time.Now() // Start timing when execution actually begins
 }
 
 // MarkModuleComplete marks a module as completed
@@ -349,6 +371,8 @@ func (m *Model) MarkModuleComplete(moniker string, exitCode int) {
 	state.ExitCode = exitCode
 	if exitCode == 0 {
 		state.Status = ModuleComplete
+	} else if exitCode < 0 {
+		state.Status = ModuleSkipped // Negative = skipped (cached)
 	} else {
 		state.Status = ModuleFailed
 	}

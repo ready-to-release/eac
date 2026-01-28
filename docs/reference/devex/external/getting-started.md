@@ -132,13 +132,13 @@ r2r eac test my-app
 | "Docker not running" | Start Docker Desktop             |
 | "Image not found"    | Run `r2r install eac`            |
 | "Module not found"   | Check `repository.yml` syntax    |
-| "Invalid type"       | Use type from `module-types.yml` |
+| "Invalid type"       | Use valid component type (go, typescript, etc.) |
 
 ## Next Steps
 
 - [Configuration](./configuration.md) - Customize EAC settings
 - [Project Structure](./project-structure.md) - Organize configuration files
-- [Command Reference](../../eac/commands/) - Explore all commands
+- [Command Reference](../../eac/commands/index.md) - Explore all commands
 
 ## See Also
 

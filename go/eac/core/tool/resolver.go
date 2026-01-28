@@ -3,6 +3,7 @@ package tool
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"sync"
 )
 
@@ -129,9 +130,10 @@ func (r *DefaultResolver) SetEnvironment(env string) {
 	r.currentEnv = env
 }
 
-// DetectEnvironment auto-detects the environment from common CI environment variables.
+// DetectEnvironment auto-detects the environment from common CI environment variables
+// and platform characteristics.
 func (r *DefaultResolver) DetectEnvironment() string {
-	// Check for common CI environment variables
+	// Check for common CI environment variables (highest priority)
 	ciEnvVars := []string{
 		"CI",
 		"GITHUB_ACTIONS",
@@ -146,6 +148,11 @@ func (r *DefaultResolver) DetectEnvironment() string {
 		if os.Getenv(envVar) != "" {
 			return "ci"
 		}
+	}
+
+	// Check for Windows (npm has PATH issues, use containers)
+	if runtime.GOOS == "windows" {
+		return "windows"
 	}
 
 	return "local"

@@ -214,4 +214,4 @@ Run `r2r release validate <module>` to check for format issues:
 
 - [Format Specification](./format-specification.md) - Keep a Changelog format details
 - [Versioning](./versioning.md) - Semantic versioning rules
-- [Release Command Reference](../../commands/release/) - Full release command options
+- [Release Command Reference](../../commands/release/index.md) - Full release command options

@@ -7,7 +7,7 @@
 site_name: Documentation
 site_description: Generated documentation site
 site_url: ""
-docs_dir: docs
+docs_dir: /workspace/docs
 
 repo_name: eac
 repo_url: https://github.com/ready-to-release/eac
@@ -43,6 +43,8 @@ plugins:
   # Mermaid diagram rendering for web (JavaScript-based)
   - mermaid2:
       version: '9.4.3'
+  # Note: minify_html plugin added to requirements.txt but not enabled here
+  # Enable after container image is rebuilt: - minify_html
 
 markdown_extensions:
   - footnotes

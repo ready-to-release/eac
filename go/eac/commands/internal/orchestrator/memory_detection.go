@@ -41,7 +41,8 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"time"
+
+	"github.com/ready-to-release/eac/go/eac/core/config"
 )
 
 const (
@@ -63,7 +64,7 @@ func GetWSLMemoryBytes() uint64 {
 		return 0
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := config.WithDockerQueryContext(context.Background())
 	defer cancel()
 
 	// Query /proc/meminfo inside WSL to get total memory
@@ -103,7 +104,7 @@ func parseMeminfo(output string) uint64 {
 // On Windows with WSL2 backend, this reflects the WSL2 memory limit,
 // making it the most accurate source for containerized build capacity.
 func GetDockerMemoryBytes() uint64 {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := config.WithDockerQueryContext(context.Background())
 	defer cancel()
 
 	// Try formatted output first (most efficient)
@@ -231,7 +232,7 @@ func getWSLMemoryStats() MemoryStats {
 		return MemoryStats{}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := config.WithDockerQueryContext(context.Background())
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "wsl", "-e", "cat", "/proc/meminfo")
@@ -278,7 +279,7 @@ func parseMeminfoStats(output string) MemoryStats {
 func getHostMemoryStats() MemoryStats {
 	// Import is at package level via gopsutil in component_scheduler.go
 	// We'll use a simple approach here
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := config.WithDockerQueryContext(context.Background())
 	defer cancel()
 
 	// Try platform-specific commands
@@ -335,7 +336,7 @@ func FormatBytes(bytes uint64) string {
 // GetDockerCPUs returns the number of CPUs available to Docker.
 // Returns 0 if Docker is not available or the command fails.
 func GetDockerCPUs() int {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := config.WithDockerQueryContext(context.Background())
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "docker", "info", "--format", "{{.NCPU}}")

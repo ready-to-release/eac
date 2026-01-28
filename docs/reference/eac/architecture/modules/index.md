@@ -11,7 +11,7 @@ This section contains C4 architecture diagrams for individual EAC modules.
 
 ## Supporting Modules
 
-See [supporting modules](./supporting/) for additional module documentation.
+See [supporting modules](./supporting/index.md) for additional module documentation.
 
 ## Related Documentation
 

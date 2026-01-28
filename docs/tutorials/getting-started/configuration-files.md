@@ -116,25 +116,27 @@ git:
 
 ### 2. System Defaults (Automatic Fallback)
 
-These files ship with EAC and provide default configurations. You **don't need to create them** - EAC automatically uses them.
+System default configurations live in `contracts/eac-core/0.1.0/defaults/`. You **don't need to create them** - EAC automatically uses them.
 
-| File                      | Purpose                                                                         | Need to Copy?               |
-| ------------------------- | ------------------------------------------------------------------------------- | --------------------------- |
-| `ai-config.yml`           | AI type definitions (specs, commit-message)                                     | ❌ No (uses system default) |
-| `module-types.yml`        | Module type definitions                                                         | ❌ No (uses system default) |
-| `system-dependencies.yml` | System dependency definitions                                                   | ❌ No (uses system default) |
-| `security-tools.yml`      | Security tool configurations                                                    | ❌ No (uses system default) |
-| `logging.yml`             | Logging configuration                                                           | ❌ No (uses system default) |
-| `environments.yml`        | Test environment definitions                                                    | ❌ No (uses system default) |
-| `test-suites.yml`         | Test suite definitions (unit, integration, acceptance, production-verification) | ❌ No (uses system default) |
-| `testing-tags.yml`        | Test tag definitions                                                            | ❌ No (uses system default) |
+| File                 | Purpose                                                                         | Need to Copy?               |
+| -------------------- | ------------------------------------------------------------------------------- | --------------------------- |
+| `ai-config.yml`      | AI type definitions (specs, commit-message)                                     | ❌ No (uses system default) |
+| `ai-provider.yml`    | Default AI provider settings                                                    | ❌ No (uses system default) |
+| `component-types.yml`| Component type definitions (go, typescript, dockerfile, etc.)                   | ❌ No (uses system default) |
+| `tool-config.yml`    | Tool definitions and resource configuration                                     | ❌ No (uses system default) |
+| `security-tools.yml` | Security tool configurations                                                    | ❌ No (uses system default) |
+| `logging.yml`        | Logging configuration                                                           | ❌ No (uses system default) |
+| `environments.yml`   | Test environment definitions                                                    | ❌ No (uses system default) |
+| `test-suites.yml`    | Test suite definitions (unit, integration, acceptance, production-verification) | ❌ No (uses system default) |
+| `testing-tags.yml`   | Test tag definitions                                                            | ❌ No (uses system default) |
+| `registries.yml`     | Container registry definitions                                                  | ❌ No (uses system default) |
 
 **How it works:**
 
 EAC uses a **layered fallback system** (similar to Git config):
 
 1. **User override** (`.r2r/eac/ai-config.yml`) - checked first
-2. **System default** (built into EAC) - fallback if not found
+2. **System default** (`contracts/eac-core/0.1.0/defaults/`) - fallback if not found
 3. **Hardcoded default** (in code) - last resort
 
 > **Example: Using system defaults**
@@ -261,7 +263,7 @@ If you need custom AI type definitions or other advanced configurations, you can
 r2r eac init --copy-templates
 ```
 
-This copies configuration files like `ai-config.yml`, `module-types.yml`, etc. to `.r2r/eac/`. You can then:
+This copies configuration files like `ai-config.yml`, `component-types.yml`, etc. to `.r2r/eac/`. You can then:
 
 1. Edit the copied files to customize them
 2. Commit your customizations to version control
@@ -273,7 +275,7 @@ This copies configuration files like `ai-config.yml`, `module-types.yml`, etc. t
 .r2r/eac/
 ├── ai-provider.yml          (created by init)
 ├── ai-config.yml            (copied with --copy-templates)
-├── module-types.yml         (copied with --copy-templates)
+├── component-types.yml      (copied with --copy-templates)
 └── (other copied files...)
 ```
 
@@ -297,7 +299,7 @@ For details on the file formats, see the [Init Command Reference](../../referenc
 ✅ Custom overrides (if you customized them)
 
 - `ai-config.yml` (only if you created a custom version)
-- `module-types.yml` (only if you created a custom version)
+- `component-types.yml` (only if you created a custom version)
 - `test-suites.yml` (only if you generated/customized it)
 - `testing-tags.yml` (only if you created a custom version)
 - etc.

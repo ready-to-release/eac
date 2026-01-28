@@ -1,25 +1,34 @@
 package test
 
 import (
-	"strings"
+	"math"
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/cmdframework"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
 	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/testing"
+	"github.com/ready-to-release/eac/go/eac/core/tool"
 )
 
-// FlattenModulesToTestComponentWork converts TestsByModulePath to component work layers.
+var componentWorkLog = logging.C()
+
+// FlattenModulesToTestComponentWork converts TestsByPackage to component work layers.
 // Returns two layers: parallel tests first, sequential tests second.
 // Returns nil if no tests to execute.
+// Work items are created for each unique path:testType combination,
+// allowing parallel execution of different test types (gotest, godog) within the same package.
+//
+// Test keys use path-based format: "go/eac/core/config:gotest"
+// This differs from build/lint/scan which use component-based format: "module:component:tool".
 func FlattenModulesToTestComponentWork(ctx *cmdframework.ExecutionContext) [][]orchestrator.ComponentWork {
 	testCfg, ok := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
 	if !ok || testCfg == nil {
 		return nil
 	}
 
-	testsByModulePath := testCfg.TestsByModulePath
-	if len(testsByModulePath) == 0 {
+	testsByPackage := testCfg.TestsByPackage
+	if len(testsByPackage) == 0 {
 		return nil
 	}
 
@@ -31,44 +40,59 @@ func FlattenModulesToTestComponentWork(ctx *cmdframework.ExecutionContext) [][]o
 	var parallelWork []orchestrator.ComponentWork
 	var sequentialWork []orchestrator.ComponentWork
 
-	for modulePath, tests := range testsByModulePath {
+	for pkgPath, tests := range testsByPackage {
 		if len(tests) == 0 {
 			continue
 		}
 
-		// Check if any test is sequential
-		hasSequential := false
-		for i := range tests {
-			if tests[i].IsSequential {
-				hasSequential = true
-				break
+		// Get module ownership for this package path
+		// Module mapping is configured via test-impl component in component-types.yml
+		moduleMoniker := testCfg.ModuleMapper.GetModuleForPackagePath(pkgPath)
+		if moduleMoniker == "" {
+			componentWorkLog.Warnf("FlattenModulesToTestComponentWork: no module found for pkgPath=%s, skipping", pkgPath)
+			continue
+		}
+
+		// Group tests by type to create separate work items per test type
+		// This allows parallel execution of gotest and godog tests within the same package
+		testsByType := groupTestsByType(tests)
+
+		for testType, typeTests := range testsByType {
+			// Check if any test of this type is sequential
+			hasSequential := false
+			for i := range typeTests {
+				if typeTests[i].IsSequential {
+					hasSequential = true
+					break
+				}
 			}
-		}
 
-		// Determine weight from test type -> component type mapping
-		weight := getTestComponentWeight(tests, cfg)
+			// Get weight (base weight × amp, calculated internally)
+			// For tests, we find the component by mapping test type -> component type
+			compTypeName := getTestTypeComponentType(testType)
+			componentName := findComponentOfType(ctx, moduleMoniker, compTypeName)
+			weight := getTestComponentWeight(moduleMoniker, componentName, typeTests)
 
-		// Extract module and subpath from modulePath (e.g., "eac-specs/cli-installation")
-		moduleMoniker := extractMonikerFromModulePath(modulePath)
-		componentSubpath := extractSubpathFromModulePath(modulePath)
-		if componentSubpath == "" {
-			componentSubpath = moduleMoniker // Use module name if no subpath
-		}
+			// Component work item: use full path with test type
+			// Format: "path:testType" (e.g., "go/eac/core/config:gotest")
+			// This differs from build/lint/scan which use "component:tool" format
+			componentWithTestType := pkgPath + ":" + testType
 
-		work := orchestrator.ComponentWork{
-			Module:        moduleMoniker,
-			Component:     componentSubpath, // Just the subpath, not full modulePath
-			ComponentType: getTestType(tests),
-			Handler:       "test",
-			Weight:        weight,
-			BuildAfter:    nil, // Tests don't have intra-module deps
-			Index:         0,   // Will be set per-layer below
-		}
+			work := orchestrator.ComponentWork{
+				Module:        moduleMoniker,
+				Component:     componentWithTestType,
+				ComponentType: testType,
+				Handler:       testType, // Use test type instead of generic "test"
+				Weight:        weight,
+				BuildAfter:    nil, // Tests don't have intra-module deps
+				Index:         0,   // Will be set per-layer below
+			}
 
-		if hasSequential {
-			sequentialWork = append(sequentialWork, work)
-		} else {
-			parallelWork = append(parallelWork, work)
+			if hasSequential {
+				sequentialWork = append(sequentialWork, work)
+			} else {
+				parallelWork = append(parallelWork, work)
+			}
 		}
 	}
 
@@ -92,47 +116,78 @@ func FlattenModulesToTestComponentWork(ctx *cmdframework.ExecutionContext) [][]o
 	return layers
 }
 
-// getTestComponentWeight determines the weight for a set of tests based on their type.
-func getTestComponentWeight(tests []testing.TestReference, cfg *config.EACConfig) int {
+// groupTestsByType groups tests by their type (e.g., "gotest", "godog").
+func groupTestsByType(tests []testing.TestReference) map[string][]testing.TestReference {
+	result := make(map[string][]testing.TestReference)
+	for i := range tests {
+		testType := tests[i].Type
+		result[testType] = append(result[testType], tests[i])
+	}
+	return result
+}
+
+// getTestTypeComponentType maps test type to component type for tool lookup.
+func getTestTypeComponentType(testType string) string {
+	switch testType {
+	case "gotest", "godog":
+		return "go"
+	case "mocha", "tscucumber":
+		return "typescript"
+	default:
+		return "go" // Default
+	}
+}
+
+// findComponentOfType finds the first component of the given type in a module.
+// Returns empty string if not found.
+func findComponentOfType(ctx *cmdframework.ExecutionContext, moniker, compTypeName string) string {
+	module, exists := ctx.ModuleRegistry.Get(moniker)
+	if !exists {
+		return ""
+	}
+	for name := range module.Components {
+		if module.Components.GetComponentType(name) == compTypeName {
+			return name
+		}
+	}
+	return ""
+}
+
+// getTestComponentWeight returns the scheduling weight for a set of tests.
+// Weight = base tool weight × component amp (from config).
+func getTestComponentWeight(moniker, componentName string, tests []testing.TestReference) int {
 	if len(tests) == 0 {
 		return 1
 	}
 
-	// Map test type to component type for weight lookup
-	testType := tests[0].Type
-	var compTypeName string
+	// Map test type to component type for tool lookup
+	compTypeName := getTestTypeComponentType(tests[0].Type)
 
-	switch testType {
-	case "gotest", "godog":
-		compTypeName = "go"
-	case "mocha", "tscucumber":
-		compTypeName = "typescript"
-	default:
-		compTypeName = "go" // Default
+	// Get base weight from tool resources via test bridge
+	baseWeight := 1
+	bridge := tool.GlobalTestBridge()
+	if bridge != nil {
+		if t := bridge.ResolveTool(compTypeName, tool.OperationTest); t != nil {
+			baseWeight = t.Resources.Weight()
+		}
 	}
 
-	compType := cfg.ComponentTypes.Get(compTypeName)
-	if compType != nil {
-		return compType.GetTestWeight()
+	// Get amp from config (the source of truth)
+	amp := 1.0
+	if componentName != "" {
+		cfg := config.Global()
+		if cfg != nil && cfg.Repository != nil {
+			if module, ok := cfg.Repository.GetModule(moniker); ok && module != nil {
+				amp = module.GetComponentAmp(componentName, "test")
+			}
+		}
 	}
 
-	return 1
-}
-
-// getTestType returns the test type from the first test reference.
-func getTestType(tests []testing.TestReference) string {
-	if len(tests) == 0 {
-		return "unknown"
+	// Apply amp to weight (ceil to ensure at least 1)
+	weight := int(math.Ceil(float64(baseWeight) * amp))
+	if weight < 1 {
+		weight = 1
 	}
-	return tests[0].Type
-}
 
-// extractMonikerFromModulePath extracts the module moniker from a module path.
-// Input: "eac-core/config" or "eac-commands"
-// Output: "eac-core" or "eac-commands"
-func extractMonikerFromModulePath(modulePath string) string {
-	if idx := strings.Index(modulePath, "/"); idx >= 0 {
-		return modulePath[:idx]
-	}
-	return modulePath
+	return weight
 }

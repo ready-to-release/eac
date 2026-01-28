@@ -11,12 +11,8 @@ import (
 
 	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
 	"github.com/gofrs/flock"
+	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
-)
-
-const (
-	// LockTimeout is the maximum time to wait for a file lock.
-	LockTimeout = 30 * time.Second
 )
 
 // WriteProfile writes an OSCAL profile to a file using go-oscal types.
@@ -61,7 +57,7 @@ func WriteAssessmentResults(path string, ar *oscalTypes.AssessmentResults) error
 	lock := flock.New(lockPath)
 
 	// Try to acquire lock with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), LockTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), config.FileLockTimeout())
 	defer cancel()
 
 	locked, err := lock.TryLockContext(ctx, 100*time.Millisecond)
@@ -69,7 +65,7 @@ func WriteAssessmentResults(path string, ar *oscalTypes.AssessmentResults) error
 		return fmt.Errorf("failed to acquire lock: %w", err)
 	}
 	if !locked {
-		return fmt.Errorf("assessment-results.json is locked by another process (timeout after %s)", LockTimeout)
+		return fmt.Errorf("assessment-results.json is locked by another process (timeout after %s)", config.FileLockTimeout())
 	}
 	defer func() {
 		//nolint:errcheck // best-effort cleanup
@@ -136,7 +132,7 @@ func CleanStaleLocksIfNeeded(lockPath string) error {
 		return err
 	}
 
-	if time.Since(info.ModTime()) > 5*time.Minute {
+	if time.Since(info.ModTime()) > config.StaleLockThreshold() {
 		return os.Remove(lockPath)
 	}
 

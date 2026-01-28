@@ -213,17 +213,9 @@ func BuildModuleContext(moduleName string, registry *modules.Registry, satisfied
 }
 
 // determineCriticality maps module type to criticality level.
+// Uses configurable mappings from risk-scoring.yml with fallback to defaults.
 func determineCriticality(moduleType string) string {
-	switch moduleType {
-	case "api", "gateway", "service":
-		return "high" // External-facing or critical services
-	case "core", "library":
-		return "medium" // Shared code
-	case "cli", "tool":
-		return "low" // Developer tools
-	default:
-		return "medium"
-	}
+	return GetRiskScoringConfig().GetCriticality(moduleType)
 }
 
 // Helper functions

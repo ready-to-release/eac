@@ -107,18 +107,6 @@ const ModulesTwoGo = `modules:
 `
 
 // ============================================================================
-// System Dependencies Templates (Deprecated)
-// ============================================================================
-
-// SystemDependenciesMinimal is deprecated - tool-config.yml is now used instead.
-// Kept for backwards compatibility.
-const SystemDependenciesMinimal = ``
-
-// SystemDependenciesWithDocker is deprecated - tool-config.yml is now used instead.
-// Kept for backwards compatibility.
-const SystemDependenciesWithDocker = ``
-
-// ============================================================================
 // Named Template Registry
 // ============================================================================
 

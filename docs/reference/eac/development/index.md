@@ -12,5 +12,5 @@ Developer guides for contributing to and extending EAC.
 
 ## See Also
 
-- [Modules](../modules/) - Module system reference
-- [Contracts](../contracts/) - Contract system reference
+- [Modules](../modules/index.md) - Module system reference
+- [Contracts](../contracts/index.md) - Contract system reference

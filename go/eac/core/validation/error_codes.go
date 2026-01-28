@@ -571,6 +571,228 @@ var (
 )
 
 // ===============================================
+// Commit Message Validation Errors
+// ===============================================
+
+var (
+	// ErrEmptyMessage indicates commit message is empty.
+	ErrEmptyMessage = ErrorCode{
+		Code:        "EMPTY_MESSAGE",
+		Category:    CategoryStructure,
+		Retriable:   false,
+		Severity:    SeverityError,
+		Description: "Commit message is empty",
+	}
+
+	// ErrInvalidHeaderFormat indicates header format is invalid.
+	ErrInvalidHeaderFormat = ErrorCode{
+		Code:        "INVALID_HEADER_FORMAT",
+		Category:    CategoryFormat,
+		Retriable:   true,
+		Severity:    SeverityError,
+		Description: "Header must follow format: <type>(<scope>): <summary>",
+	}
+
+	// ErrHeaderTooLong indicates header exceeds maximum length.
+	ErrHeaderTooLong = ErrorCode{
+		Code:        "HEADER_TOO_LONG",
+		Category:    CategoryConstraint,
+		Retriable:   true,
+		Severity:    SeverityError,
+		Description: "Header exceeds maximum length",
+	}
+
+	// ErrHeaderTrailingPeriod indicates header ends with period.
+	ErrHeaderTrailingPeriod = ErrorCode{
+		Code:        "HEADER_TRAILING_PERIOD",
+		Category:    CategoryFormat,
+		Retriable:   true,
+		Severity:    SeverityError,
+		Description: "Header must not end with period",
+	}
+
+	// ErrMissingAuditorSummary indicates Auditor-Summary field is missing.
+	ErrMissingAuditorSummary = ErrorCode{
+		Code:        "MISSING_AUDITOR_SUMMARY",
+		Category:    CategorySemantic,
+		Retriable:   true,
+		Severity:    SeverityError,
+		Description: "Missing Auditor-Summary field after header",
+	}
+
+	// ErrMissingTopLevelBody indicates body text is missing after title.
+	ErrMissingTopLevelBody = ErrorCode{
+		Code:        "MISSING_TOP_LEVEL_BODY",
+		Category:    CategorySemantic,
+		Retriable:   true,
+		Severity:    SeverityError,
+		Description: "Missing top-level body text after title",
+	}
+
+	// ErrMissingModuleSection indicates module sections are missing.
+	ErrMissingModuleSection = ErrorCode{
+		Code:        "MISSING_MODULE_SECTION",
+		Category:    CategorySemantic,
+		Retriable:   true,
+		Severity:    SeverityError,
+		Description: "Multi-module commit missing module sections",
+	}
+
+	// ErrMissingSubjectLine indicates module subject line is missing.
+	ErrMissingSubjectLine = ErrorCode{
+		Code:        "MISSING_SUBJECT_LINE",
+		Category:    CategorySemantic,
+		Retriable:   true,
+		Severity:    SeverityError,
+		Description: "Module section missing subject line",
+	}
+
+	// ErrInvalidSubjectFormat indicates subject line format is invalid.
+	ErrInvalidSubjectFormat = ErrorCode{
+		Code:        "INVALID_SUBJECT_FORMAT",
+		Category:    CategoryFormat,
+		Retriable:   true,
+		Severity:    SeverityError,
+		Description: "Subject line must follow '<module>: <type>: <description>' format",
+	}
+
+	// ErrSubjectTooLong indicates subject line exceeds maximum length.
+	ErrSubjectTooLong = ErrorCode{
+		Code:        "SUBJECT_TOO_LONG",
+		Category:    CategoryConstraint,
+		Retriable:   true,
+		Severity:    SeverityError,
+		Description: "Subject line exceeds maximum length",
+	}
+
+	// ErrSubjectTrailingPeriod indicates subject line ends with period.
+	ErrSubjectTrailingPeriod = ErrorCode{
+		Code:        "SUBJECT_TRAILING_PERIOD",
+		Category:    CategoryFormat,
+		Retriable:   true,
+		Severity:    SeverityError,
+		Description: "Subject line must not end with period",
+	}
+
+	// ErrUnclosedCodeBlock indicates code block is not closed.
+	ErrUnclosedCodeBlock = ErrorCode{
+		Code:        "UNCLOSED_CODE_BLOCK",
+		Category:    CategoryStructure,
+		Retriable:   true,
+		Severity:    SeverityError,
+		Description: "Code block opened but not closed",
+	}
+
+	// ErrOrphanedDashesLine indicates dashes line without module name.
+	ErrOrphanedDashesLine = ErrorCode{
+		Code:        "ORPHANED_DASHES_LINE",
+		Category:    CategoryFormat,
+		Retriable:   true,
+		Severity:    SeverityError,
+		Description: "Dashes line must be preceded by module name",
+	}
+
+	// ErrMalformedModuleSection indicates module section is malformed.
+	ErrMalformedModuleSection = ErrorCode{
+		Code:        "MALFORMED_MODULE_SECTION",
+		Category:    CategoryStructure,
+		Retriable:   true,
+		Severity:    SeverityError,
+		Description: "Module section missing name and dashes header",
+	}
+
+	// ErrMissingModuleName indicates module section missing module name.
+	ErrMissingModuleName = ErrorCode{
+		Code:        "MISSING_MODULE_NAME",
+		Category:    CategorySemantic,
+		Retriable:   true,
+		Severity:    SeverityError,
+		Description: "Module section missing module name",
+	}
+
+	// ErrMissingModuleDashes indicates module section missing dashes separator.
+	ErrMissingModuleDashes = ErrorCode{
+		Code:        "MISSING_MODULE_DASHES",
+		Category:    CategoryFormat,
+		Retriable:   true,
+		Severity:    SeverityError,
+		Description: "Module section missing dashes separator",
+	}
+
+	// ErrContractLoadError indicates failed to load contract.
+	ErrContractLoadError = ErrorCode{
+		Code:        "CONTRACT_LOAD_ERROR",
+		Category:    CategoryStructure,
+		Retriable:   false,
+		Severity:    SeverityError,
+		Description: "Failed to load validation contract",
+	}
+
+	// ErrEmptyModuleSection indicates module section is empty.
+	ErrEmptyModuleSection = ErrorCode{
+		Code:        "EMPTY_MODULE_SECTION",
+		Category:    CategoryStructure,
+		Retriable:   false,
+		Severity:    SeverityError,
+		Description: "Module section is empty",
+	}
+
+	// ErrInvalidModuleName indicates invalid module name format.
+	ErrInvalidModuleName = ErrorCode{
+		Code:        "INVALID_MODULE_NAME",
+		Category:    CategoryFormat,
+		Retriable:   true,
+		Severity:    SeverityError,
+		Description: "Invalid module name format",
+	}
+
+	// ErrMissingDashes indicates dashes line is missing.
+	ErrMissingDashes = ErrorCode{
+		Code:        "MISSING_DASHES",
+		Category:    CategoryFormat,
+		Retriable:   true,
+		Severity:    SeverityError,
+		Description: "Module section missing dashes separator line",
+	}
+
+	// ErrInvalidDashes indicates dashes format is invalid.
+	ErrInvalidDashes = ErrorCode{
+		Code:        "INVALID_DASHES",
+		Category:    CategoryFormat,
+		Retriable:   true,
+		Severity:    SeverityError,
+		Description: "Second line should be dashes (--------)",
+	}
+
+	// ErrMissingBody indicates body text is missing.
+	ErrMissingBody = ErrorCode{
+		Code:        "MISSING_BODY",
+		Category:    CategorySemantic,
+		Retriable:   true,
+		Severity:    SeverityError,
+		Description: "Missing body text",
+	}
+
+	// ErrUnexpectedModuleSection indicates unexpected module headers.
+	ErrUnexpectedModuleSection = ErrorCode{
+		Code:        "UNEXPECTED_MODULE_SECTION",
+		Category:    CategorySemantic,
+		Retriable:   true,
+		Severity:    SeverityError,
+		Description: "Top-level output should not contain module sections",
+	}
+
+	// ErrUnexpectedFileList indicates unexpected file/change list.
+	ErrUnexpectedFileList = ErrorCode{
+		Code:        "UNEXPECTED_FILE_LIST",
+		Category:    CategorySemantic,
+		Retriable:   true,
+		Severity:    SeverityError,
+		Description: "Top-level output should not contain file/change lists",
+	}
+)
+
+// ===============================================
 // Warning-Level Errors
 // ===============================================
 
@@ -693,6 +915,32 @@ var errorCodeRegistry = map[string]*ErrorCode{
 	"OSCAL_EMPTY_IMPORT":          &ErrOSCALEmptyImport,
 	"OSCAL_VERSION_MISMATCH":      &ErrOSCALVersionMismatch,
 	"OSCAL_FILE_READ":             &ErrOSCALFileRead,
+
+	// Commit message validation errors
+	"EMPTY_MESSAGE":             &ErrEmptyMessage,
+	"INVALID_HEADER_FORMAT":     &ErrInvalidHeaderFormat,
+	"HEADER_TOO_LONG":           &ErrHeaderTooLong,
+	"HEADER_TRAILING_PERIOD":    &ErrHeaderTrailingPeriod,
+	"MISSING_AUDITOR_SUMMARY":   &ErrMissingAuditorSummary,
+	"MISSING_TOP_LEVEL_BODY":    &ErrMissingTopLevelBody,
+	"MISSING_MODULE_SECTION":    &ErrMissingModuleSection,
+	"MISSING_SUBJECT_LINE":      &ErrMissingSubjectLine,
+	"INVALID_SUBJECT_FORMAT":    &ErrInvalidSubjectFormat,
+	"SUBJECT_TOO_LONG":          &ErrSubjectTooLong,
+	"SUBJECT_TRAILING_PERIOD":   &ErrSubjectTrailingPeriod,
+	"UNCLOSED_CODE_BLOCK":       &ErrUnclosedCodeBlock,
+	"ORPHANED_DASHES_LINE":      &ErrOrphanedDashesLine,
+	"MALFORMED_MODULE_SECTION":  &ErrMalformedModuleSection,
+	"MISSING_MODULE_NAME":       &ErrMissingModuleName,
+	"MISSING_MODULE_DASHES":     &ErrMissingModuleDashes,
+	"CONTRACT_LOAD_ERROR":       &ErrContractLoadError,
+	"EMPTY_MODULE_SECTION":      &ErrEmptyModuleSection,
+	"INVALID_MODULE_NAME":       &ErrInvalidModuleName,
+	"MISSING_DASHES":            &ErrMissingDashes,
+	"INVALID_DASHES":            &ErrInvalidDashes,
+	"MISSING_BODY":              &ErrMissingBody,
+	"UNEXPECTED_MODULE_SECTION": &ErrUnexpectedModuleSection,
+	"UNEXPECTED_FILE_LIST":      &ErrUnexpectedFileList,
 
 	// Warning-level errors
 	"UNKNOWN_TAG":               &ErrUnknownTag,

@@ -57,5 +57,5 @@ For complete code examples, execution commands, and TDD workflow, see:
 ## Related Documentation
 
 - [File Organization](./file-organization.md) - Directory structure and file naming
-- [Testing Taxonomy](../../taxonomy/) - Complete tag reference
+- [Testing Taxonomy](../../taxonomy/index.md) - Complete tag reference
 - [Three-Layer Approach](../../concepts/three-layer-approach.md) - Conceptual overview

@@ -103,6 +103,7 @@ type DefaultExecutor struct {
 	registry     *DefaultRegistry // For requirement validation via tool registry
 	dockerClient DockerClient
 	dockerErr    error // Lazily initialized; captures Docker client init error
+	imageManager *ImageManager
 }
 
 // NewExecutor creates a new tool executor.
@@ -124,6 +125,16 @@ func NewExecutorWithDocker(client DockerClient) *DefaultExecutor {
 	return &DefaultExecutor{
 		dockerClient: client,
 	}
+}
+
+// SetImageManager sets the image manager for handling local containers and GHCR caching.
+func (e *DefaultExecutor) SetImageManager(mgr *ImageManager) {
+	e.imageManager = mgr
+}
+
+// GetImageManager returns the current image manager, or nil if not set.
+func (e *DefaultExecutor) GetImageManager() *ImageManager {
+	return e.imageManager
 }
 
 // Execute runs a tool with the given context.
@@ -228,14 +239,9 @@ func (e *DefaultExecutor) executeContainer(ctx context.Context, tool *ToolDefini
 		return nil, err
 	}
 
-	// Resolve image reference
-	imageRef := tool.FullImage()
-	if imageRef == "" {
-		return nil, fmt.Errorf("container tool %q has no image specified", tool.ID)
-	}
-
-	// Pull image if needed
-	if err := e.ensureImage(ctx, imageRef); err != nil {
+	// Resolve and ensure image is available
+	imageRef, err := e.resolveContainerImage(ctx, tool, execCtx)
+	if err != nil {
 		return nil, err
 	}
 
@@ -244,8 +250,14 @@ func (e *DefaultExecutor) executeContainer(ctx context.Context, tool *ToolDefini
 	for _, mount := range tool.Mounts {
 		resolved := mount.ResolvePlaceholders(execCtx.Placeholders)
 
+		// Ensure mount source is an absolute path (required for Docker bind mounts)
+		source := resolved.Source
+		if !filepath.IsAbs(source) {
+			source = filepath.Join(execCtx.WorkspaceRoot, source)
+		}
+
 		// Convert to Docker bind mount format: source:target[:ro]
-		bind := resolved.Source + ":" + resolved.Target
+		bind := source + ":" + resolved.Target
 		if resolved.ReadOnly {
 			bind += ":ro"
 		}
@@ -256,6 +268,13 @@ func (e *DefaultExecutor) executeContainer(ctx context.Context, tool *ToolDefini
 	workDir := tool.WorkDir
 	if workDir != "" {
 		workDir = resolvePlaceholders(workDir, execCtx.Placeholders)
+	}
+
+	// Debug: log container configuration
+	if execCtx.LogWriter != nil {
+		fmt.Fprintf(execCtx.LogWriter, "[debug] container workdir: %s\n", workDir)
+		fmt.Fprintf(execCtx.LogWriter, "[debug] container command: %v\n", tool.Command)
+		fmt.Fprintf(execCtx.LogWriter, "[debug] placeholders: %v\n", execCtx.Placeholders)
 	}
 
 	// Build environment variables
@@ -305,10 +324,30 @@ func (e *DefaultExecutor) executeContainer(ctx context.Context, tool *ToolDefini
 		hostConfig.Privileged = true
 	}
 
-	if tool.MemoryLimit != "" {
-		memLimit := parseMemoryLimit(tool.MemoryLimit)
-		if memLimit > 0 {
-			hostConfig.Resources.Memory = memLimit
+	// Apply resource limits from tool configuration, with optional amp multiplier.
+	// Amp values: 1.0 = no change, 2.0 = double resources, 0.5 = half resources.
+	amp := execCtx.Amp
+	if amp <= 0 {
+		amp = 1.0 // Default: no amplification
+	}
+
+	if tool.Resources != nil {
+		if tool.Resources.Memory != "" {
+			memLimit := parseMemoryLimit(tool.Resources.Memory)
+			if memLimit > 0 {
+				hostConfig.Resources.Memory = int64(float64(memLimit) * amp)
+			}
+		}
+		if tool.Resources.CPUs > 0 {
+			// Convert cpus to NanoCPUs (1 CPU = 1e9 NanoCPUs) with amp
+			ampedCPUs := float64(tool.Resources.CPUs) * amp
+			hostConfig.Resources.NanoCPUs = int64(ampedCPUs * 1e9)
+		}
+		if tool.Resources.ShmSize != "" {
+			shmSize := parseMemoryLimit(tool.Resources.ShmSize)
+			if shmSize > 0 {
+				hostConfig.ShmSize = int64(float64(shmSize) * amp)
+			}
 		}
 	}
 
@@ -359,19 +398,51 @@ func (e *DefaultExecutor) runContainer(ctx context.Context, config *container.Co
 	_, _ = stdcopy.StdCopy(stdoutWriter, stderrWriter, attachResp.Reader)
 
 	// Wait for container exit
+	// We need to wait for waitChan to get the actual exit code.
+	// errChan only receives errors from the wait operation itself.
 	var exitCode int
-	select {
-	case err := <-errChan:
-		if err != nil {
-			return nil, fmt.Errorf("container wait error: %w", err)
+	for {
+		select {
+		case err := <-errChan:
+			if err != nil {
+				return nil, fmt.Errorf("container wait error: %w", err)
+			}
+			// errChan received nil - continue waiting for waitChan
+			if logWriter != nil {
+				fmt.Fprintf(logWriter, "[debug] errChan received nil, waiting for waitChan\n")
+			}
+			continue
+		case waitResp := <-waitChan:
+			exitCode = int(waitResp.StatusCode)
+			if logWriter != nil {
+				fmt.Fprintf(logWriter, "[debug] container exited with code %d (StatusCode: %d, Error: %v)\n",
+					exitCode, waitResp.StatusCode, waitResp.Error)
+			}
+			// Check if there's an error message in the wait response
+			if waitResp.Error != nil && waitResp.Error.Message != "" {
+				if logWriter != nil {
+					fmt.Fprintf(logWriter, "[debug] container error message: %s\n", waitResp.Error.Message)
+				}
+			}
+		case <-ctx.Done():
+			return nil, fmt.Errorf("container execution cancelled")
 		}
-	case waitResp := <-waitChan:
-		exitCode = int(waitResp.StatusCode)
-	case <-ctx.Done():
-		return nil, fmt.Errorf("container execution cancelled")
+		break
 	}
 
 	duration := time.Since(start)
+
+	// Workaround for tools that return exit code 0 despite errors (e.g., mkdocs 1.6.1 bug)
+	// Check both stdout and stderr for known error patterns and override exit code if found
+	if exitCode == 0 {
+		combinedOutput := stdout.String() + stderr.String()
+		if containsErrorPattern(combinedOutput) {
+			if logWriter != nil {
+				fmt.Fprintf(logWriter, "[debug] detected error in output despite exit code 0, overriding to 1\n")
+			}
+			exitCode = 1
+		}
+	}
 
 	return &ExecutionResult{
 		ExitCode: exitCode,
@@ -379,6 +450,85 @@ func (e *DefaultExecutor) runContainer(ctx context.Context, config *container.Co
 		Stderr:   stderr.Bytes(),
 		Duration: duration,
 	}, nil
+}
+
+// containsErrorPattern checks if output contains known error patterns from buggy tools.
+// Some tools (e.g., mkdocs 1.6.1) return exit code 0 despite printing errors.
+func containsErrorPattern(output string) bool {
+	errorPatterns := []string{
+		"Error:",           // Generic error prefix (mkdocs, etc.)
+		"error:",           // Lowercase variant
+		"FATAL:",           // Fatal errors
+		"fatal:",           // Lowercase variant
+		"Exception:",       // Python exceptions
+		"Traceback (most",  // Python tracebacks
+		"panic:",           // Go panics
+		"FAILED",           // Test failures
+		"Aborted",          // mkdocs strict mode abort
+	}
+
+	for _, pattern := range errorPatterns {
+		if strings.Contains(output, pattern) {
+			return true
+		}
+	}
+	return false
+}
+
+// resolveContainerImage resolves and ensures the container image is available.
+// Uses ImageManager for local containers and GHCR caching, falls back to direct pull.
+func (e *DefaultExecutor) resolveContainerImage(ctx context.Context, tool *ToolDefinition, execCtx *ExecutionContext) (string, error) {
+	// Use ImageManager if available (handles local containers and GHCR caching)
+	if e.imageManager != nil {
+		imageRef, err := e.imageManager.EnsureImage(ctx, tool)
+		if err != nil {
+			return "", fmt.Errorf("image manager failed: %w", err)
+		}
+		if imageRef != "" {
+			return imageRef, nil
+		}
+	}
+
+	// Fallback: direct image resolution for external containers without ImageManager
+	imageRef := tool.FullImage()
+	if imageRef == "" {
+		// Local container without ImageManager - try to use local tag
+		if tool.IsLocalContainer() {
+			imageRef = tool.LocalImageTag()
+			if imageRef == "" {
+				return "", fmt.Errorf("container tool %q has no image and no localPath", tool.ID)
+			}
+			// Check if local image exists
+			if !e.imageExistsLocally(ctx, imageRef) {
+				return "", fmt.Errorf("local container image %q not found - build it first or configure ImageManager", imageRef)
+			}
+			return imageRef, nil
+		}
+		return "", fmt.Errorf("container tool %q has no image specified", tool.ID)
+	}
+
+	// Pull image if needed
+	if err := e.ensureImage(ctx, imageRef); err != nil {
+		return "", err
+	}
+
+	return imageRef, nil
+}
+
+// imageExistsLocally checks if an image exists in the local Docker daemon.
+func (e *DefaultExecutor) imageExistsLocally(ctx context.Context, imageRef string) bool {
+	images, err := e.dockerClient.ImageList(ctx, image.ListOptions{})
+	if err != nil {
+		return false
+	}
+	for _, img := range images {
+		for _, tag := range img.RepoTags {
+			if tag == imageRef {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // ensureDockerClient lazily initializes the Docker client.
@@ -401,18 +551,8 @@ func (e *DefaultExecutor) ensureDockerClient() error {
 
 // ensureImage checks if an image exists locally and pulls it if not.
 func (e *DefaultExecutor) ensureImage(ctx context.Context, imageRef string) error {
-	// Check if image exists locally
-	images, err := e.dockerClient.ImageList(ctx, image.ListOptions{})
-	if err != nil {
-		return fmt.Errorf("failed to list images: %w", err)
-	}
-
-	for _, img := range images {
-		for _, tag := range img.RepoTags {
-			if tag == imageRef {
-				return nil // Image exists
-			}
-		}
+	if e.imageExistsLocally(ctx, imageRef) {
+		return nil
 	}
 
 	// Pull image

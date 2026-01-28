@@ -32,15 +32,19 @@ func RunCommandWithLog(dir string, logWriter io.Writer, name string, args ...str
 	cmd.Stdout = logWriter
 	cmd.Stderr = logWriter
 
-	if err := cmd.Run(); err != nil {
+	err := cmd.Run()
+	if err != nil {
 		exitErr := &exec.ExitError{}
 		if errors.As(err, &exitErr) {
-			return exitErr.ExitCode()
+			exitCode := exitErr.ExitCode()
+			Logln(logWriter, "[debug] command exited with code %d", exitCode)
+			return exitCode
 		}
 		Logln(logWriter, "\nError: failed to execute command: %v", err)
 		return 1
 	}
 
+	Logln(logWriter, "[debug] command completed successfully (exit code 0)")
 	return 0
 }
 

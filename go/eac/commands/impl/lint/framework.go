@@ -578,6 +578,9 @@ func lintDepsVerifier(ctx *cmdframework.ExecutionContext) *initsummary.DepsStatu
 		deps = append(deps, dep)
 	}
 	sort.Strings(deps)
+
+	// Filter out platform-incompatible tools before verification
+	deps = tool.FilterPlatformSupported(deps)
 	status.Required = deps
 
 	// Verify dependencies using tool registry

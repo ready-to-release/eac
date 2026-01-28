@@ -89,11 +89,11 @@ This pattern is consistent across all information-retrieval commands, making it 
 
 For detailed command documentation, see:
 
-- **[Command Reference](../../../../reference/eac/commands/)** - Complete alphabetical listing
-- **[Getting Started Commands](../getting-started/)** - Beginner-friendly guides
-- **[Development Workflow Commands](../development-workflow/)** - Daily development tasks
-- **[Build, Test & Validate Commands](../build-test-validate/)** - Build and test execution
-- **[Release Management Commands](../release-management/)** - Version management
+- **[Command Reference](../../../../reference/eac/commands/index.md)** - Complete alphabetical listing
+- **[Getting Started Commands](../getting-started/index.md)** - Beginner-friendly guides
+- **[Development Workflow Commands](../development-workflow/index.md)** - Daily development tasks
+- **[Build, Test & Validate Commands](../build-test-validate/index.md)** - Build and test execution
+- **[Release Management Commands](../release-management/index.md)** - Version management
 
 ### Getting Help for Specific Commands
 

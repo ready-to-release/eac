@@ -28,18 +28,31 @@ func FormatCompact(s *Summary) string {
 		b.WriteString(fmt.Sprintf("Components: %d\n", s.ComponentCount))
 	}
 
-	// Module layers (only if multiple)
-	if s.LayerCount > 1 {
-		layerInfo := fmt.Sprintf("Module Layers: %d (%s)", s.LayerCount, formatLayerSizes(s.LayerSizes()))
-		if s.FlatExecution {
-			layerInfo += " (running all layers in parallel)"
+	// Layer information (only if multiple layers)
+	if s.LayerCount > 1 || s.ComponentLayerCount > 1 {
+		// Calculate width needed for alignment (max of all layer sizes)
+		moduleSizes := s.LayerSizes()
+		componentSizes := s.ComponentLayerSizes()
+		maxVal := maxLayerSize(moduleSizes)
+		if m := maxLayerSize(componentSizes); m > maxVal {
+			maxVal = m
 		}
-		b.WriteString(layerInfo + "\n")
-	}
+		width := digitWidth(maxVal)
 
-	// Component layers (only if multiple)
-	if s.ComponentLayerCount > 1 {
-		b.WriteString(fmt.Sprintf("Component Layers: %d (%s)\n", s.ComponentLayerCount, formatLayerSizes(s.ComponentLayerSizes())))
+		// Show flat execution message first if applicable
+		if s.FlatExecution {
+			b.WriteString("(running all layers in parallel)\n")
+		}
+
+		// Module layers
+		if s.LayerCount > 1 {
+			b.WriteString(fmt.Sprintf("   Modules in each layer: (%s)\n", formatLayerSizes(moduleSizes, width)))
+		}
+
+		// Component layers
+		if s.ComponentLayerCount > 1 {
+			b.WriteString(fmt.Sprintf("Components in each layer: (%s)\n", formatLayerSizes(componentSizes, width)))
+		}
 	}
 
 	// Test suite info
@@ -101,7 +114,10 @@ func FormatCompact(s *Summary) string {
 				required,
 				strings.Join(s.DepsStatus.Missing, ", ")))
 		} else {
-			b.WriteString(fmt.Sprintf("Deps: ✅ %d/%d available\n", available, required))
+			b.WriteString(fmt.Sprintf("Deps: ✅ %d/%d available (%s)\n",
+				available,
+				required,
+				strings.Join(s.DepsStatus.Required, ", ")))
 		}
 	}
 
@@ -404,17 +420,42 @@ func truncateList(items []string, maxLen int) string {
 	return items[0][:min(len(items[0]), maxLen-3)] + "..."
 }
 
-// formatLayerSizes formats layer sizes as "2 → 1 → 3".
-func formatLayerSizes(sizes []int) string {
+// formatLayerSizes formats layer sizes as " 2 →  1 →  3" with space padding.
+// The width parameter specifies minimum width for each number.
+func formatLayerSizes(sizes []int, width int) string {
 	if len(sizes) == 0 {
 		return "none"
 	}
 
 	parts := make([]string, len(sizes))
 	for i, size := range sizes {
-		parts[i] = fmt.Sprintf("%d", size)
+		parts[i] = fmt.Sprintf("%*d", width, size)
 	}
 	return strings.Join(parts, " → ")
+}
+
+// maxLayerSize returns the maximum value in the layer sizes for width calculation.
+func maxLayerSize(sizes []int) int {
+	max := 0
+	for _, s := range sizes {
+		if s > max {
+			max = s
+		}
+	}
+	return max
+}
+
+// digitWidth returns the number of digits needed to display a number.
+func digitWidth(n int) int {
+	if n == 0 {
+		return 1
+	}
+	width := 0
+	for n > 0 {
+		width++
+		n /= 10
+	}
+	return width
 }
 
 // formatFlagsCompact returns a compact one-line summary of non-default flags.

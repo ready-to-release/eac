@@ -46,20 +46,29 @@ func BuildTagFilter() string {
 		panic(fmt.Sprintf("Failed to load config: %v", err))
 	}
 
-	// Build base tag filter
-	skipFilter := cfg.TestingTags.BuildGodogSkipTagFilter()
-	tagFilter := skipFilter + " && ~@pending"
+	// Collect all filter parts, then join with " && "
+	// This avoids invalid expressions like " && ~@pending" when some parts are empty
+	var parts []string
 
-	// Add platform-specific exclusions
-	tagFilter = tagFilter + " && " + buildPlatformTagFilter()
-
-	// Add suite tag filter if provided
-	suiteTagFilter := os.Getenv("GODOG_SUITE_TAGS")
-	if suiteTagFilter != "" {
-		tagFilter = tagFilter + " && " + suiteTagFilter
+	// Skip reasons filter
+	if skipFilter := cfg.TestingTags.BuildGodogSkipTagFilter(); skipFilter != "" {
+		parts = append(parts, skipFilter)
 	}
 
-	return tagFilter
+	// Always exclude @pending
+	parts = append(parts, "~@pending")
+
+	// Platform-specific exclusions
+	if platformFilter := buildPlatformTagFilter(); platformFilter != "" {
+		parts = append(parts, platformFilter)
+	}
+
+	// Suite tag filter from environment
+	if suiteTagFilter := os.Getenv("GODOG_SUITE_TAGS"); suiteTagFilter != "" {
+		parts = append(parts, suiteTagFilter)
+	}
+
+	return strings.Join(parts, " && ")
 }
 
 // buildPlatformTagFilter returns a tag filter that excludes platform-incompatible scenarios.

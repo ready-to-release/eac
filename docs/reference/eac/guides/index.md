@@ -14,7 +14,7 @@ Guides provide detailed walkthroughs of EAC architectural concepts and developme
 
 ## Related Documentation
 
-- [Architecture Reference](../architecture/) - EAC system architecture
-- [Commands Reference](../commands/) - EAC command documentation
-- [How-to Guides: EAC](../../../how-to-guides/eac/) - Task-oriented guides
-- [Tutorials](../../../tutorials/) - Learning-oriented tutorials
+- [Architecture Reference](../architecture/index.md) - EAC system architecture
+- [Commands Reference](../commands/index.md) - EAC command documentation
+- [How-to Guides: EAC](../../../how-to-guides/eac/index.md) - Task-oriented guides
+- [Tutorials](../../../tutorials/index.md) - Learning-oriented tutorials

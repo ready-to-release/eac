@@ -2,18 +2,38 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "books.schema.json",
   "title": "Books Configuration",
-  "description": "Configuration for book preprocessing that aggregates static content with dynamically-generated content from EAC commands",
+  "description": "Configuration for book preprocessing that aggregates static content with dynamically-generated content from EAC commands. Supports templates, snippets, and generators for DRY configuration.",
   "type": "object",
   "properties": {
+    "book-templates": {
+      "type": "object",
+      "description": "Reusable book templates with placeholder parameters",
+      "additionalProperties": {
+        "$ref": "#/definitions/bookTemplate"
+      }
+    },
+    "source-snippets": {
+      "type": "object",
+      "description": "Reusable source block collections",
+      "additionalProperties": {
+        "$ref": "#/definitions/sourceSnippet"
+      }
+    },
+    "book-generators": {
+      "type": "object",
+      "description": "Generate multiple books from templates",
+      "additionalProperties": {
+        "$ref": "#/definitions/bookGenerator"
+      }
+    },
     "books": {
       "type": "array",
-      "description": "List of book configurations",
+      "description": "List of explicit book configurations",
       "items": {
         "$ref": "#/definitions/book"
       }
     }
   },
-  "required": ["books"],
   "definitions": {
     "book": {
       "type": "object",
@@ -43,6 +63,17 @@
           "description": "Base URL for the published site (e.g., https://example.github.io/repo/). Used to fix broken internal links in PDF mode by converting them to absolute URLs.",
           "format": "uri"
         },
+        "template": {
+          "type": "string",
+          "description": "Reference to a book-template name. Template provides defaults; book fields override."
+        },
+        "parameters": {
+          "type": "object",
+          "description": "Parameter values for template placeholders ({param} syntax)",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
         "sources": {
           "type": "array",
           "description": "Content sources for the book",
@@ -50,10 +81,10 @@
             "oneOf": [
               { "$ref": "#/definitions/copySource" },
               { "$ref": "#/definitions/commandSource" },
-              { "$ref": "#/definitions/inlineSource" }
+              { "$ref": "#/definitions/inlineSource" },
+              { "$ref": "#/definitions/snippetSource" }
             ]
-          },
-          "minItems": 1
+          }
         },
         "generated_nav": {
           "type": "array",
@@ -63,7 +94,129 @@
           }
         }
       },
-      "required": ["name", "sources"],
+      "required": ["name"],
+      "additionalProperties": false
+    },
+    "bookTemplate": {
+      "type": "object",
+      "description": "A reusable book template with placeholders",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Template title (can include {placeholders})"
+        },
+        "description": {
+          "type": "string",
+          "description": "Template description (can include {placeholders})"
+        },
+        "output": {
+          "type": "string",
+          "description": "Output format",
+          "enum": ["site", "pdf-dark", "pdf-light", "pdf-all"]
+        },
+        "site_url": {
+          "type": "string",
+          "description": "Base URL (can include {placeholders})"
+        },
+        "sources": {
+          "type": "array",
+          "description": "Template sources (can include {placeholders})",
+          "items": {
+            "oneOf": [
+              { "$ref": "#/definitions/copySource" },
+              { "$ref": "#/definitions/commandSource" },
+              { "$ref": "#/definitions/inlineSource" },
+              { "$ref": "#/definitions/snippetSource" }
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "sourceSnippet": {
+      "type": "array",
+      "description": "A reusable list of sources",
+      "items": {
+        "oneOf": [
+          { "$ref": "#/definitions/copySource" },
+          { "$ref": "#/definitions/commandSource" },
+          { "$ref": "#/definitions/inlineSource" },
+          { "$ref": "#/definitions/snippetSource" }
+        ]
+      }
+    },
+    "bookGenerator": {
+      "type": "object",
+      "description": "Generates multiple books from a template",
+      "properties": {
+        "template": {
+          "type": "string",
+          "description": "Name of the book-template to use"
+        },
+        "site_url": {
+          "type": "string",
+          "description": "Base site URL for generated books"
+        },
+        "categories": {
+          "type": "array",
+          "description": "Generate books from category list (for diataxis PDFs)",
+          "items": {
+            "$ref": "#/definitions/generatorCategory"
+          }
+        },
+        "from_modules": {
+          "type": "boolean",
+          "description": "Generate evidence books from modules with evidence_books field",
+          "default": false
+        }
+      },
+      "required": ["template"],
+      "additionalProperties": false
+    },
+    "generatorCategory": {
+      "type": "object",
+      "description": "Category definition for book generation",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Category path (e.g., 'reference/eac')"
+        },
+        "path": {
+          "type": "string",
+          "description": "Output book name (defaults to name with / replaced by -)"
+        },
+        "title": {
+          "type": "string",
+          "description": "Book title"
+        },
+        "description": {
+          "type": "string",
+          "description": "Book description"
+        }
+      },
+      "required": ["name", "title"],
+      "additionalProperties": false
+    },
+    "snippetSource": {
+      "type": "object",
+      "description": "Reference to a source-snippet by name",
+      "properties": {
+        "type": {
+          "const": "snippet"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the source-snippet to include"
+        },
+        "parameters": {
+          "type": "object",
+          "description": "Parameter values for snippet placeholders",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": ["type", "name"],
       "additionalProperties": false
     },
     "copySource": {

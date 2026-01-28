@@ -21,8 +21,8 @@ func TestFormatCompact(t *testing.T) {
 	if !strings.Contains(output, "1 requested → 3 total (+2 depm)") {
 		t.Errorf("FormatCompact missing module summary\n\nGot:\n%s", output)
 	}
-	if !strings.Contains(output, "Layers: 2") {
-		t.Errorf("FormatCompact missing layers\n\nGot:\n%s", output)
+	if !strings.Contains(output, "Modules in each layer:") {
+		t.Errorf("FormatCompact missing layer sizes\n\nGot:\n%s", output)
 	}
 	if !strings.Contains(output, "Depm: ✅") {
 		t.Errorf("FormatCompact missing depm status\n\nGot:\n%s", output)
@@ -224,32 +224,62 @@ func TestFormatLayerSizes(t *testing.T) {
 	tests := []struct {
 		name  string
 		sizes []int
+		width int
 		want  string
 	}{
 		{
-			name:  "single layer",
+			name:  "single layer width 1",
 			sizes: []int{3},
+			width: 1,
 			want:  "3",
 		},
 		{
-			name:  "multiple layers",
+			name:  "multiple layers width 1",
 			sizes: []int{2, 1, 3},
+			width: 1,
 			want:  "2 → 1 → 3",
+		},
+		{
+			name:  "multiple layers width 2",
+			sizes: []int{8, 6, 14, 1},
+			width: 2,
+			want:  " 8 →  6 → 14 →  1",
 		},
 		{
 			name:  "empty",
 			sizes: []int{},
+			width: 1,
 			want:  "none",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := formatLayerSizes(tt.sizes)
+			got := formatLayerSizes(tt.sizes, tt.width)
 			if got != tt.want {
 				t.Errorf("formatLayerSizes() = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestDigitWidth(t *testing.T) {
+	tests := []struct {
+		n    int
+		want int
+	}{
+		{0, 1},
+		{1, 1},
+		{9, 1},
+		{10, 2},
+		{99, 2},
+		{100, 3},
+	}
+	for _, tt := range tests {
+		got := digitWidth(tt.n)
+		if got != tt.want {
+			t.Errorf("digitWidth(%d) = %d, want %d", tt.n, got, tt.want)
+		}
 	}
 }
 

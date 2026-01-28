@@ -285,6 +285,24 @@ func (b *ScanBridge) createExecutionContext(workspaceRoot, moduleRoot, outputDir
 	}
 }
 
+// ResolveTool returns the tool definition for a component type and operation.
+// Returns nil if no tool is configured or resolver is not available.
+func (b *ScanBridge) ResolveTool(componentType string, operation OperationType) *ToolDefinition {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	if b.resolver == nil {
+		return nil
+	}
+
+	t, err := b.resolver.Resolve(componentType, operation)
+	if err != nil {
+		return nil
+	}
+
+	return t
+}
+
 // Global scan bridge instance.
 var (
 	globalScanBridge     *ScanBridge

@@ -199,5 +199,5 @@ The following diagram provides a complete view of the test taxonomy matrix, show
 ## Next Steps
 
 - [Verification Types](./verification-types.md) - IV/OV/PV for acceptance testing
-- [Testing Taxonomy](../../specifications/taxonomy/) - Tag contracts and test suites
+- [Testing Taxonomy](../../specifications/taxonomy/index.md) - Tag contracts and test suites
 - [Environments](../environments/environments.md) - PLTE for L3 tests

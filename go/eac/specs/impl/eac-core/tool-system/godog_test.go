@@ -28,7 +28,7 @@ func TestToolSystemFeatures(t *testing.T) {
 			internal.RegisterCommonSteps(sc, ctx)
 			cfg.RegisterSteps(sc, ctx)
 
-			sc.After(func(c context.Context, sc *godog.Scenario, err error) (context.Context, error) {
+			sc.After(func(c context.Context, _ *godog.Scenario, _ error) (context.Context, error) {
 				cleanupTestState()
 				return c, nil
 			})

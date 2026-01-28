@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/ready-to-release/eac/go/eac/core/config"
 )
 
 // GitHubCLI defines operations for interacting with GitHub workflows.
@@ -39,7 +41,7 @@ func (g *GitHubCLIImpl) TriggerWorkflow(workflowFile, ref string) (string, error
 	}
 
 	// Wait a bit for the workflow to be created
-	time.Sleep(2 * time.Second)
+	time.Sleep(config.CIDispatchSettleTime())
 
 	// Get the most recent run ID for this workflow
 	cmd = exec.Command("gh", "run", "list", "--workflow="+workflowFile, "--limit", "1", "--json", "databaseId", "--jq", ".[0].databaseId")

@@ -7,11 +7,11 @@ Feature: eac-commands_books_validation_edge_cases
 
   Rule: Validation must detect configuration errors
 
-    Scenario: Show books when none configured
+    Scenario: Show books shows default books when none configured
       Given books.yml does not exist
       When I run the command "show books"
       Then the exit code is 0
-      And I should see "No books" or "empty"
+      And I should see "Name" or "docs"
 
     Scenario: Validate detects missing module
       Given books.yml references module "nonexistent"

@@ -38,8 +38,8 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	// Initialize executable path
 	initializeExecutablePath()
 
-	// Common CLI steps
-	sc.Step(`^I run "([^"]*)"$`, iRun)
+	// r2r-cli specific steps (use different pattern to avoid conflict with common steps)
+	sc.Step(`^I run r2r "([^"]*)"$`, iRunR2r)
 	sc.Step(`^I should see "([^"]*)" or "([^"]*)" or "([^"]*)"$`, iShouldSeeOrOr)
 	sc.Step(`^I should see "([^"]*)" or "([^"]*)"$`, iShouldSeeOr)
 	sc.Step(`^I should see version number$`, iShouldSeeVersionNumber)
@@ -84,17 +84,14 @@ func initializeExecutablePath() {
 // Common Steps
 // ============================================================================
 
-func iRun(cmdLine string) error {
-	parts := strings.Fields(cmdLine)
-	if len(parts) == 0 {
-		return fmt.Errorf("empty command")
+func iRunR2r(args string) error {
+	if cliCtx.executablePath == "" {
+		return fmt.Errorf("r2r executable not found - please run 'build module r2r-cli' first")
 	}
 
-	if parts[0] == "r2r" {
-		if cliCtx.executablePath == "" {
-			return fmt.Errorf("executable not found - please run 'build module r2r-cli' first")
-		}
-		parts[0] = cliCtx.executablePath
+	parts := []string{cliCtx.executablePath}
+	if args != "" {
+		parts = append(parts, strings.Fields(args)...)
 	}
 
 	return runCommandWithArgs(parts...)

@@ -55,9 +55,6 @@ const (
 	// StagingDir is the subdirectory under OutDir for build staging areas.
 	StagingDir = "staging"
 
-	// CacheDir is the subdirectory under OutDir for build caches.
-	CacheDir = "cache"
-
 	// SpecsDir is the root directory for specifications (Gherkin, Structurizr).
 	SpecsDir = "specs"
 
@@ -111,6 +108,18 @@ const (
 
 	// ContainerRootEnv is the environment variable for container root path.
 	ContainerRootEnv = "R2R_CONTAINER_ROOT"
+
+	// ContainerRepoRoot is the standard path where the repository is mounted inside containers.
+	// This is the canonical mount point for Docker containers running eac commands.
+	ContainerRepoRoot = "/var/task"
+
+	// EACCacheRoot is the root directory for all EAC build caches.
+	// This is separate from out/ to clearly distinguish working cache from build outputs.
+	// Structure:
+	//   - .cache/eac/mkdocs/          - MkDocs build state and staging
+	//   - .cache/eac/build/           - Build acceleration caches (hashes, state)
+	//   - .cache/eac/pdf-screenshots/ - Extracted PDF page images
+	EACCacheRoot = ".cache/eac"
 )
 
 // Relative path constants.
@@ -135,9 +144,6 @@ const (
 
 	// OutStagingRelPath is the relative path from repo root to staging area.
 	OutStagingRelPath = OutDir + "/" + StagingDir
-
-	// OutCacheRelPath is the relative path from repo root to cache.
-	OutCacheRelPath = OutDir + "/" + CacheDir
 
 	// EACCommandsModule is the module name for the EAC commands binary.
 	EACCommandsModule = "eac-commands"
@@ -194,8 +200,50 @@ func StagingPath(repoRoot, name string) string {
 }
 
 // CachePath returns the path to the cache directory.
+// DEPRECATED: Use CacheRootPath for new code. This now returns .cache/eac.
 func CachePath(repoRoot string) string {
-	return filepath.Join(repoRoot, OutDir, CacheDir)
+	return CacheRootPath(repoRoot)
+}
+
+// CacheRootPath returns the root EAC cache directory (.cache/eac).
+// All transient build caches should be stored under this directory.
+func CacheRootPath(repoRoot string) string {
+	return filepath.Join(repoRoot, EACCacheRoot)
+}
+
+// BuildCachePath returns the path to the build acceleration cache directory.
+// Used for file hashes and build state tracking.
+// Path: .cache/eac/build/
+func BuildCachePath(repoRoot string) string {
+	return filepath.Join(CacheRootPath(repoRoot), "build")
+}
+
+// FileHashCachePath returns the path to a book's file hash cache.
+// Used for incremental preprocessing to track which files have changed.
+// Path: .cache/eac/build/hashes/{bookName}.json
+func FileHashCachePath(repoRoot, bookName string) string {
+	return filepath.Join(BuildCachePath(repoRoot), "hashes", bookName+".json")
+}
+
+// BuildStateCachePath returns the path to the build state cache directory.
+// Used for tracking incremental build state (PDF/site content hashes).
+// Path: .cache/eac/build/state/
+func BuildStateCachePath(repoRoot string) string {
+	return filepath.Join(BuildCachePath(repoRoot), "state")
+}
+
+// StagingCachePath returns the path to the staging cache directory.
+// Used for persistent staging areas that survive across builds.
+// Path: .cache/eac/staging/
+func StagingCachePath(repoRoot string) string {
+	return filepath.Join(CacheRootPath(repoRoot), "staging")
+}
+
+// BookStagingCachePath returns the path to a book's staging directory.
+// The staging directory persists across builds for incremental preprocessing.
+// Path: .cache/eac/staging/{moniker}/{bookName}
+func BookStagingCachePath(repoRoot, moniker, bookName string) string {
+	return filepath.Join(StagingCachePath(repoRoot), moniker, bookName)
 }
 
 // CommandsBinaryPath returns the full path to the pre-built eac-commands binary.
@@ -589,24 +637,6 @@ func DocsCachePath(repoRoot string) string {
 	return filepath.Join(repoRoot, DocsDir, AssetsDir, DocsCacheDir)
 }
 
-// MermaidDocsCachePath returns the path to a cached mermaid SVG in docs/assets/cache
-// This is the git-tracked cache location for CI optimization.
-func MermaidDocsCachePath(repoRoot, hash string) string {
-	return filepath.Join(DocsCachePath(repoRoot), "mermaid", hash+".svg")
-}
-
-// DrawioCachePath returns the path to a cached optimized drawio PNG
-// Takes cacheRoot (from DocsCachePath) for consistency with MermaidCachePath.
-func DrawioCachePath(cacheRoot, hash string) string {
-	return filepath.Join(cacheRoot, "drawio", hash+".png")
-}
-
-// DrawioDocsCachePath returns the path to a cached optimized drawio PNG in docs/assets/cache
-// This is the git-tracked cache location for CI optimization (pre-optimized drawio images).
-func DrawioDocsCachePath(repoRoot, hash string) string {
-	return filepath.Join(DocsCachePath(repoRoot), "drawio", hash+".png")
-}
-
 // StructurizrCachePath returns the path to the Structurizr cache directory in docs/assets/cache
 // This is the git-tracked cache location for CI optimization (pre-rendered Structurizr diagrams).
 func StructurizrCachePath(repoRoot string) string {
@@ -622,10 +652,10 @@ func StructurizrDocsCachePath(repoRoot, module, viewKey, dslHash string) string 
 	return filepath.Join(StructurizrCachePath(repoRoot), filename)
 }
 
-// PDFScreenshotsCachePath returns the path to the PDF screenshots cache directory
-// Located in out/cache/pdf-screenshots/ (not git-tracked).
+// PDFScreenshotsCachePath returns the path to the PDF screenshots cache directory.
+// Located in .cache/eac/pdf-screenshots/ (not git-tracked).
 func PDFScreenshotsCachePath(repoRoot string) string {
-	return filepath.Join(repoRoot, OutDir, CacheDir, "pdf-screenshots")
+	return filepath.Join(CacheRootPath(repoRoot), "pdf-screenshots")
 }
 
 // PDFScreenshotsDirPath returns the path to a specific PDF's screenshot directory
@@ -827,28 +857,28 @@ func truncateHash(hash string, n int) string {
 	return hash
 }
 
-// DrawioCachePathV2 returns path with traceable filename for drawio cache.
+// DrawioCachePath returns path with traceable filename for drawio cache.
 // Format: {cacheRoot}/drawio/{identifier}_{hash8}.png
 //
 // Example:
 //
-//	DrawioCachePathV2("/cache", "docs/assets/arch/overview.drawio.png", "abc123def456")
+//	DrawioCachePath("/cache", "docs/assets/arch/overview.drawio.png", "abc123def456")
 //	-> "/cache/drawio/arch_overview_abc123de.png"
-func DrawioCachePathV2(cacheRoot, sourcePath, contentHash string) string {
+func DrawioCachePath(cacheRoot, sourcePath, contentHash string) string {
 	identifier := SanitizeForCacheName(sourcePath)
 	shortHash := truncateHash(contentHash, CacheHashLength)
 	filename := fmt.Sprintf("%s_%s.png", identifier, shortHash)
 	return filepath.Join(cacheRoot, "drawio", filename)
 }
 
-// MermaidCachePathV2 returns path with traceable filename for mermaid cache.
+// MermaidCachePath returns path with traceable filename for mermaid cache.
 // Format: {cacheRoot}/mermaid/{identifier}_{blockIndex}_{hash8}.svg
 //
 // Example:
 //
-//	MermaidCachePathV2("/cache", "docs/cd-model/overview.md", 0, "abc123def456")
+//	MermaidCachePath("/cache", "docs/cd-model/overview.md", 0, "abc123def456")
 //	-> "/cache/mermaid/cd-model_overview_0_abc123de.svg"
-func MermaidCachePathV2(cacheRoot, sourcePath string, blockIndex int, contentHash string) string {
+func MermaidCachePath(cacheRoot, sourcePath string, blockIndex int, contentHash string) string {
 	identifier := SanitizeForCacheName(sourcePath)
 	shortHash := truncateHash(contentHash, CacheHashLength)
 	filename := fmt.Sprintf("%s_%d_%s.svg", identifier, blockIndex, shortHash)

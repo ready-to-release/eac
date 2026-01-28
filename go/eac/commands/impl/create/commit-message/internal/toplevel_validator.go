@@ -38,11 +38,10 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 
 	lines := strings.Split(output, "\n")
 	if len(lines) == 0 {
-		errors = append(errors, *contracts.NewLegacyValidationError(
-			"EMPTY_MESSAGE",
+		errors = append(errors, *contracts.NewValidationError(
+			contracts.ErrEmptyMessage,
 			"Top-level commit message is empty",
 			0,
-			"error",
 		))
 		return errors
 	}
@@ -50,31 +49,28 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 	// Rule 1: First line must be conventional commit header
 	firstLine := strings.TrimSpace(lines[0])
 	if !getConventionalCommitRegex().MatchString(firstLine) {
-		errors = append(errors, *contracts.NewLegacyValidationError(
-			"INVALID_HEADER_FORMAT",
+		errors = append(errors, *contracts.NewValidationError(
+			contracts.ErrInvalidHeaderFormat,
 			"Header must follow format: <type>(<scope>): <summary> (e.g., feat(cli): add new command)",
 			1,
-			"error",
 		))
 	}
 
 	// Rule 2: Header max length
 	if len(firstLine) > MaxHeaderLength {
-		errors = append(errors, *contracts.NewLegacyValidationError(
-			"HEADER_TOO_LONG",
+		errors = append(errors, *contracts.NewValidationError(
+			contracts.ErrHeaderTooLong,
 			fmt.Sprintf("Header exceeds %d characters (%d chars)", MaxHeaderLength, len(firstLine)),
 			1,
-			"error",
 		))
 	}
 
 	// Rule 3: No trailing period (except ellipsis)
 	if strings.HasSuffix(firstLine, ".") && !strings.HasSuffix(firstLine, "...") {
-		errors = append(errors, *contracts.NewLegacyValidationError(
-			"HEADER_TRAILING_PERIOD",
+		errors = append(errors, *contracts.NewValidationError(
+			contracts.ErrHeaderTrailingPeriod,
 			"Header must not end with period",
 			1,
-			"error",
 		))
 	}
 
@@ -87,11 +83,10 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 		}
 	}
 	if !hasAuditorSummary {
-		errors = append(errors, *contracts.NewLegacyValidationError(
-			"MISSING_AUDITOR_SUMMARY",
+		errors = append(errors, *contracts.NewValidationError(
+			contracts.ErrMissingAuditorSummary,
 			"Missing Auditor-Summary field after header",
 			0,
-			"error",
 		))
 	}
 
@@ -116,11 +111,10 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 		}
 	}
 	if !hasBody {
-		errors = append(errors, *contracts.NewLegacyValidationError(
-			"MISSING_BODY",
+		errors = append(errors, *contracts.NewValidationError(
+			contracts.ErrMissingBody,
 			"Missing body text after Auditor-Summary",
 			0,
-			"error",
 		))
 	}
 
@@ -130,11 +124,10 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 
 		// Check for any markdown headers (## or ###) - these shouldn't be in top-level
 		if strings.HasPrefix(trimmed, "## ") || strings.HasPrefix(trimmed, "### ") {
-			errors = append(errors, *contracts.NewLegacyValidationError(
-				"UNEXPECTED_MODULE_SECTION",
+			errors = append(errors, *contracts.NewValidationError(
+				contracts.ErrUnexpectedModuleSection,
 				fmt.Sprintf("Top-level output should not contain markdown headers (found: %s)", trimmed),
 				0,
-				"error",
 			))
 		}
 
@@ -143,11 +136,10 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 			rest := trimmed[2:]
 			// Check if it looks like a file path or module reference
 			if strings.Contains(rest, "/") || strings.HasPrefix(rest, "New ") || strings.HasPrefix(rest, "Updated ") {
-				errors = append(errors, *contracts.NewLegacyValidationError(
-					"UNEXPECTED_FILE_LIST",
+				errors = append(errors, *contracts.NewValidationError(
+					contracts.ErrUnexpectedFileList,
 					fmt.Sprintf("Top-level output should not contain file/change lists (found: %s)", trimmed),
 					0,
-					"error",
 				))
 			}
 		}
@@ -156,11 +148,10 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 		if i < len(lines)-1 && isModuleName(trimmed) {
 			nextLine := strings.TrimSpace(lines[i+1])
 			if isDashesLine(nextLine) && len(nextLine) > 3 {
-				errors = append(errors, *contracts.NewLegacyValidationError(
-					"UNEXPECTED_MODULE_SECTION",
+				errors = append(errors, *contracts.NewValidationError(
+					contracts.ErrUnexpectedModuleSection,
 					fmt.Sprintf("Top-level output should not contain module sections (found: %s)", trimmed),
 					0,
-					"error",
 				))
 			}
 		}
@@ -193,11 +184,10 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 			if len(preview) > 50 {
 				preview = preview[:47] + "..."
 			}
-			errors = append(errors, *contracts.NewLegacyValidationError(
-				"LINE_TOO_LONG",
+			errors = append(errors, *contracts.NewValidationError(
+				contracts.ErrLineTooLong,
 				fmt.Sprintf("Line exceeds %d characters (%d chars): %s", MaxLineLength, len(trimmed), preview),
 				0,
-				"warning",
 			))
 		}
 	}

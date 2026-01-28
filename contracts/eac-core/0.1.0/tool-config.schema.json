@@ -64,19 +64,24 @@
           "description": "Default arguments for system binary. Supports placeholders: {workspace}, {module}, {output}.",
           "items": { "type": "string" }
         },
+        "localPath": {
+          "type": "string",
+          "description": "Path to local container build context (e.g., 'containers/mkdocs-site'). When set, the container is built from Dockerfile in devbox and pulled from GHCR in CI.",
+          "examples": ["containers/mkdocs-site", "containers/drawio-cli"]
+        },
         "image": {
           "type": "string",
-          "description": "Docker image name (for type: container). Example: 'aquasec/trivy'.",
+          "description": "Docker image name for external containers. Example: 'ghcr.io/aquasecurity/trivy'. External containers require pinned version tags.",
           "pattern": "^[a-z0-9][a-z0-9._/-]*$"
         },
         "tag": {
           "type": "string",
-          "description": "Docker image tag. Defaults to 'latest' if omitted.",
-          "examples": ["latest", "0.50.1", "v2.1.0"]
+          "description": "Docker image tag. External containers must use explicit version tags (not 'latest', 'dev', etc.).",
+          "examples": ["0.50.1", "v2.1.0", "1.62.2"]
         },
         "container": {
           "type": "string",
-          "description": "Reference to container defined in repository.yml containers section.",
+          "description": "Reference to container defined in repository.yml containers section (legacy, prefer localPath).",
           "pattern": "^[a-z][a-z0-9-]*$"
         },
         "command": {
@@ -118,10 +123,9 @@
           "description": "Run container in privileged mode. Use with caution.",
           "default": false
         },
-        "memory_limit": {
-          "type": "string",
-          "description": "Docker memory limit (e.g., '8g', '512m').",
-          "pattern": "^[0-9]+(g|gb|m|mb|k|kb)?$"
+        "resources": {
+          "$ref": "#/$defs/resources_config",
+          "description": "Resource requirements for scheduling and container limits."
         },
         "requirements": {
           "type": "array",
@@ -130,6 +134,15 @@
             "type": "string",
             "pattern": "^[a-z][a-z0-9-]*$"
           }
+        },
+        "platforms": {
+          "type": "array",
+          "description": "Platforms where this tool is available. Empty means all platforms.",
+          "items": {
+            "type": "string",
+            "enum": ["linux", "darwin", "windows"]
+          },
+          "examples": [["linux", "darwin"], ["windows"], ["linux", "darwin", "windows"]]
         },
         "verify": {
           "$ref": "#/$defs/verify_config",
@@ -159,6 +172,7 @@
           "if": { "properties": { "type": { "const": "container" } } },
           "then": {
             "anyOf": [
+              { "required": ["localPath"] },
               { "required": ["image"] },
               { "required": ["container"] }
             ]
@@ -375,6 +389,27 @@
           "enum": ["any", "all"],
           "description": "Whether any or all env_vars must be set.",
           "default": "any"
+        }
+      }
+    },
+    "resources_config": {
+      "type": "object",
+      "description": "Resource requirements for tool execution. CPUs value is used as scheduling weight.",
+      "properties": {
+        "cpus": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of CPUs. Used as scheduling weight and passed to container runtime."
+        },
+        "memory": {
+          "type": "string",
+          "pattern": "^[0-9]+[gmGM]$",
+          "description": "Memory limit (e.g., '4g', '512m'). Passed to container runtime as --memory."
+        },
+        "shm_size": {
+          "type": "string",
+          "pattern": "^[0-9]+[gmGM]$",
+          "description": "Shared memory size for Chromium-based tools (e.g., '2g'). Passed as --shm-size."
         }
       }
     }

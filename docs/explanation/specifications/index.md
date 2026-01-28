@@ -6,7 +6,7 @@ Understanding specifications, BDD, TDD, and executable testing practices.
 
 ## In This Section
 
-### [Core Concepts](./concepts/)
+### [Core Concepts](./concepts/index.md)
 
 Foundation of behavior-driven development and test-driven development.
 
@@ -17,7 +17,7 @@ Foundation of behavior-driven development and test-driven development.
 - Canon TDD Workflow
 - Ubiquitous Language
 
-### [Organizing Specifications](./organization/)
+### [Organizing Specifications](./organization/index.md)
 
 How to structure and organize Gherkin specification files.
 
@@ -27,7 +27,7 @@ How to structure and organize Gherkin specification files.
 - Naming Conventions
 - Size Guidelines
 
-### [Testing Taxonomy](./taxonomy/)
+### [Testing Taxonomy](./taxonomy/index.md)
 
 Complete reference for test levels, verification tags, and test suites.
 
@@ -39,7 +39,7 @@ Complete reference for test levels, verification tags, and test suites.
 - Tag Inheritance
 - Test Suites
 
-### [Discovery Techniques](./discovery/)
+### [Discovery Techniques](./discovery/index.md)
 
 Collaborative workshop techniques for discovering requirements.
 
@@ -47,25 +47,25 @@ Collaborative workshop techniques for discovering requirements.
 - Example Mapping
 - Card Reference
 
-### [Quality and Maintenance](./quality/)
+### [Quality and Maintenance](./quality/index.md)
 
 Maintaining living specifications through continuous improvement.
 
 - Specification Quality Checklist
 - Review and Iterate
 
-### [Compliance and Risk](./compliance/)
+### [Compliance and Risk](./compliance/index.md)
 
 Risk-based testing and regulatory compliance.
 
 - Risk Controls (OSCAL integration)
 - GxP Tagging (pharmaceutical/medical device)
 
-### [Implementation Guides](./implementation/)
+### [Implementation Guides](./implementation/index.md)
 
 Language-specific implementation details.
 
-- [Go/Godog Implementation](./implementation/go/)
+- [Go/Godog Implementation](./implementation/go/index.md)
 
 ---
 

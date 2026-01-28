@@ -42,6 +42,7 @@ type BuildOptions struct {
 	DryRun             bool     // Simulate build without actually running it
 	RequestedArtifacts []string // Specific artifact IDs to build (empty = default artifacts, "*" = all)
 	Component          string   // Specific component to build (empty = all components)
+	Reproducible       bool     // Force rebuild of MkDocs HTML even if staging unchanged (CI mode)
 }
 
 // ToolHandlerAdapter wraps a ToolDefinition to implement BuildHandler.
@@ -69,15 +70,18 @@ func (a *ToolHandlerAdapter) Build(module *modules.ModuleContract, workspaceRoot
 	logWriter io.Writer, opts BuildOptions) int {
 
 	// Build execution context
+	// Note: {module} is the RELATIVE path for use in container workdir (e.g., /docs/{module})
+	// while ModuleRoot is the relative path from workspace for host operations
+	moduleRelPath := module.GetComponentRoot(opts.Component)
 	execCtx := &ExecutionContext{
 		WorkspaceRoot: workspaceRoot,
-		ModuleRoot:    module.GetComponentRoot(opts.Component),
+		ModuleRoot:    moduleRelPath,
 		OutputDir:     outputDir,
 		LogWriter:     logWriter,
 		Operation:     OperationBuild,
 		Placeholders: map[string]string{
 			"{workspace}": workspaceRoot,
-			"{module}":    filepath.Join(workspaceRoot, module.GetComponentRoot(opts.Component)),
+			"{module}":    moduleRelPath, // Relative path for container workdir
 			"{output}":    outputDir,
 		},
 	}

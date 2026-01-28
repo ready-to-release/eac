@@ -112,15 +112,10 @@ func HasComponentExecution(cmdType CommandType) bool {
 }
 
 
-// phaseExecute handles the execution phase:
-// - Set up worker function
-// - Run orchestrator (layered or parallel)
-// - Collect results.
-func phaseExecute(ctx *ExecutionContext, worker WorkerFunc) error {
-	if worker == nil {
-		return fmt.Errorf("worker function is required")
-	}
-
+// phaseExecute handles the execution phase using component-level execution.
+// The worker parameter is retained for API compatibility but is not used;
+// component execution uses workers registered via RegisterComponentWorker.
+func phaseExecute(ctx *ExecutionContext, _ WorkerFunc) error {
 	// Early return if nothing to execute
 	monikers := ctx.GetExecutionMonikers()
 	if len(monikers) == 0 {
@@ -128,14 +123,13 @@ func phaseExecute(ctx *ExecutionContext, worker WorkerFunc) error {
 		return nil
 	}
 
-	// Check for component-level execution (build, test, scan, lint)
+	// All command types use component-level execution
 	cmdType := ctx.Config.Type
-	if HasComponentExecution(cmdType) {
-		return phaseExecuteComponentsUnified(ctx, cmdType)
+	if !HasComponentExecution(cmdType) {
+		return fmt.Errorf("no component execution registered for command type: %s", cmdType)
 	}
 
-	// Fall back to module-level execution (legacy)
-	return phaseExecuteModules(ctx, worker)
+	return phaseExecuteComponentsUnified(ctx, cmdType)
 }
 
 // phaseExecuteComponentsUnified handles component-level execution for all command types.
@@ -194,41 +188,6 @@ func phaseExecuteComponentsUnified(ctx *ExecutionContext, cmdType CommandType) e
 	ctx.ComponentResults = ctx.Orchestrator.GetLastComponentResults()
 	ctx.ComponentResultSets = orchestrator.AggregateToComponentResultSets(ctx.ComponentResults)
 
-	return nil
-}
-
-// phaseExecuteModules runs module-level execution (legacy).
-func phaseExecuteModules(ctx *ExecutionContext, worker WorkerFunc) error {
-	// Wrap the user's worker to match orchestrator signature
-	orchWorker := func(moniker string, logWriter io.Writer) int {
-		return worker(ctx, moniker, logWriter)
-	}
-
-	// Set worker on orchestrator
-	ctx.Orchestrator.SetWorker(orchWorker)
-
-	// Execute based on mode
-	var results []orchestrator.WorkResult
-	var err error
-
-	if ctx.Config.Layered {
-		// Layered execution (build): respect dependency order
-		layers := ctx.GetLayers()
-		log.Debugf("Executing %d layers with %d total modules",
-			len(layers), len(ctx.GetExecutionMonikers()))
-		results, err = ctx.Orchestrator.RunLayered(layers)
-	} else {
-		// Parallel execution (test/scan): all at once
-		monikers := ctx.GetExecutionMonikers()
-		log.Debugf("Executing %d modules in parallel", len(monikers))
-		results, err = ctx.Orchestrator.Run(monikers)
-	}
-
-	if err != nil {
-		return fmt.Errorf("execution failed: %w", err)
-	}
-
-	ctx.Results = results
 	return nil
 }
 

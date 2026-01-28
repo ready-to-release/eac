@@ -1,6 +1,7 @@
 package tool
 
 import (
+	"path/filepath"
 	"testing"
 )
 
@@ -43,7 +44,7 @@ func TestToolDefinition_Validate(t *testing.T) {
 				Type: ToolTypeContainer,
 			},
 			wantErr: true,
-			errMsg:  "container tool \"trivy\" requires image or container reference",
+			errMsg:  "container tool \"trivy\" requires localPath, image, or container reference",
 		},
 		{
 			name: "valid container tool with image",
@@ -78,7 +79,8 @@ func TestToolDefinition_Validate(t *testing.T) {
 			tool: ToolDefinition{
 				ID:    "test",
 				Type:  ToolTypeContainer,
-				Image: "test",
+				Image: "test/image",
+				Tag:   "1.0.0",
 				Mounts: []MountConfig{
 					{Target: "/app"},
 				},
@@ -91,7 +93,8 @@ func TestToolDefinition_Validate(t *testing.T) {
 			tool: ToolDefinition{
 				ID:    "test",
 				Type:  ToolTypeContainer,
-				Image: "test",
+				Image: "test/image",
+				Tag:   "1.0.0",
 				Mounts: []MountConfig{
 					{Source: "/workspace"},
 				},
@@ -104,7 +107,8 @@ func TestToolDefinition_Validate(t *testing.T) {
 			tool: ToolDefinition{
 				ID:    "test",
 				Type:  ToolTypeContainer,
-				Image: "test",
+				Image: "test/image",
+				Tag:   "1.0.0",
 				Mounts: []MountConfig{
 					{Source: "{workspace}", Target: "/app"},
 					{Source: "{output}", Target: "/out", ReadOnly: true},
@@ -426,5 +430,307 @@ func TestAllOperations(t *testing.T) {
 		if ops[i] != op {
 			t.Errorf("operation[%d] = %s, want %s", i, ops[i], op)
 		}
+	}
+}
+
+func TestToolDefinition_IsLocalContainer(t *testing.T) {
+	tests := []struct {
+		name string
+		tool ToolDefinition
+		want bool
+	}{
+		{
+			name: "local container with localPath",
+			tool: ToolDefinition{
+				Type:      ToolTypeContainer,
+				LocalPath: "containers/mkdocs-site",
+			},
+			want: true,
+		},
+		{
+			name: "external container without localPath",
+			tool: ToolDefinition{
+				Type:  ToolTypeContainer,
+				Image: "ghcr.io/aquasecurity/trivy",
+				Tag:   "0.68.2",
+			},
+			want: false,
+		},
+		{
+			name: "system tool is not local container",
+			tool: ToolDefinition{
+				Type:   ToolTypeSystem,
+				Binary: "go",
+			},
+			want: false,
+		},
+		{
+			name: "system tool with localPath is not local container",
+			tool: ToolDefinition{
+				Type:      ToolTypeSystem,
+				Binary:    "go",
+				LocalPath: "containers/something", // shouldn't matter for system tools
+			},
+			want: false,
+		},
+		{
+			name: "container with empty localPath",
+			tool: ToolDefinition{
+				Type:      ToolTypeContainer,
+				Image:     "alpine",
+				LocalPath: "",
+			},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.tool.IsLocalContainer()
+			if got != tt.want {
+				t.Errorf("IsLocalContainer() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestToolDefinition_LocalContextPath(t *testing.T) {
+	tests := []struct {
+		name          string
+		tool          ToolDefinition
+		workspaceRoot string
+		localPath     string // expected relative path components
+		wantEmpty     bool
+	}{
+		{
+			name: "local container",
+			tool: ToolDefinition{
+				Type:      ToolTypeContainer,
+				LocalPath: "containers/mkdocs-site",
+			},
+			workspaceRoot: "/home/user/project",
+			localPath:     "containers/mkdocs-site",
+			wantEmpty:     false,
+		},
+		{
+			name: "external container returns empty",
+			tool: ToolDefinition{
+				Type:  ToolTypeContainer,
+				Image: "alpine",
+			},
+			workspaceRoot: "/home/user/project",
+			wantEmpty:     true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.tool.LocalContextPath(tt.workspaceRoot)
+			if tt.wantEmpty {
+				if got != "" {
+					t.Errorf("LocalContextPath() = %q, want empty", got)
+				}
+				return
+			}
+			// Use filepath.Join to construct expected path (handles OS-specific separators)
+			want := filepath.Join(tt.workspaceRoot, tt.localPath)
+			if got != want {
+				t.Errorf("LocalContextPath() = %q, want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestToolDefinition_LocalImageTag(t *testing.T) {
+	tests := []struct {
+		name string
+		tool ToolDefinition
+		want string
+	}{
+		{
+			name: "local container",
+			tool: ToolDefinition{
+				Type:      ToolTypeContainer,
+				LocalPath: "containers/mkdocs-site",
+			},
+			want: "mkdocs-site:local",
+		},
+		{
+			name: "local container with nested path",
+			tool: ToolDefinition{
+				Type:      ToolTypeContainer,
+				LocalPath: "tools/containers/my-tool",
+			},
+			want: "my-tool:local",
+		},
+		{
+			name: "external container returns empty",
+			tool: ToolDefinition{
+				Type:  ToolTypeContainer,
+				Image: "alpine",
+			},
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.tool.LocalImageTag()
+			if got != tt.want {
+				t.Errorf("LocalImageTag() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestToolDefinition_Validate_ExternalContainerVersionPinning(t *testing.T) {
+	tests := []struct {
+		name    string
+		tool    ToolDefinition
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name: "external container with pinned version is valid",
+			tool: ToolDefinition{
+				ID:    "trivy",
+				Type:  ToolTypeContainer,
+				Image: "ghcr.io/aquasecurity/trivy",
+				Tag:   "0.68.2",
+			},
+			wantErr: false,
+		},
+		{
+			name: "external container with semver is valid",
+			tool: ToolDefinition{
+				ID:    "semgrep",
+				Type:  ToolTypeContainer,
+				Image: "semgrep/semgrep",
+				Tag:   "1.145.1",
+			},
+			wantErr: false,
+		},
+		{
+			name: "external container with latest tag is invalid",
+			tool: ToolDefinition{
+				ID:    "trivy",
+				Type:  ToolTypeContainer,
+				Image: "ghcr.io/aquasecurity/trivy",
+				Tag:   "latest",
+			},
+			wantErr: true,
+			errMsg:  `external container "trivy" has mutable tag "latest" - use explicit version`,
+		},
+		{
+			name: "external container with dev tag is invalid",
+			tool: ToolDefinition{
+				ID:    "myimage",
+				Type:  ToolTypeContainer,
+				Image: "myorg/myimage",
+				Tag:   "dev",
+			},
+			wantErr: true,
+			errMsg:  `external container "myimage" has mutable tag "dev" - use explicit version`,
+		},
+		{
+			name: "external container with no tag is invalid",
+			tool: ToolDefinition{
+				ID:    "trivy",
+				Type:  ToolTypeContainer,
+				Image: "ghcr.io/aquasecurity/trivy",
+			},
+			wantErr: true,
+			errMsg:  `external container "trivy" requires explicit version tag`,
+		},
+		{
+			name: "local container can use any tag (validation doesn't apply)",
+			tool: ToolDefinition{
+				ID:        "mkdocs",
+				Type:      ToolTypeContainer,
+				LocalPath: "containers/mkdocs-site",
+			},
+			wantErr: false,
+		},
+		{
+			name: "external container with LATEST (case insensitive) is invalid",
+			tool: ToolDefinition{
+				ID:    "test",
+				Type:  ToolTypeContainer,
+				Image: "test/image",
+				Tag:   "LATEST",
+			},
+			wantErr: true,
+			errMsg:  `external container "test" has mutable tag "LATEST" - use explicit version`,
+		},
+		{
+			name: "external container with main tag is invalid",
+			tool: ToolDefinition{
+				ID:    "test",
+				Type:  ToolTypeContainer,
+				Image: "test/image",
+				Tag:   "main",
+			},
+			wantErr: true,
+			errMsg:  `external container "test" has mutable tag "main" - use explicit version`,
+		},
+		{
+			name: "external container with master tag is invalid",
+			tool: ToolDefinition{
+				ID:    "test",
+				Type:  ToolTypeContainer,
+				Image: "test/image",
+				Tag:   "master",
+			},
+			wantErr: true,
+			errMsg:  `external container "test" has mutable tag "master" - use explicit version`,
+		},
+		{
+			name: "external container with stable tag is invalid",
+			tool: ToolDefinition{
+				ID:    "test",
+				Type:  ToolTypeContainer,
+				Image: "test/image",
+				Tag:   "stable",
+			},
+			wantErr: true,
+			errMsg:  `external container "test" has mutable tag "stable" - use explicit version`,
+		},
+		{
+			name: "external container with edge tag is invalid",
+			tool: ToolDefinition{
+				ID:    "test",
+				Type:  ToolTypeContainer,
+				Image: "test/image",
+				Tag:   "edge",
+			},
+			wantErr: true,
+			errMsg:  `external container "test" has mutable tag "edge" - use explicit version`,
+		},
+		{
+			name: "external container with nightly tag is invalid",
+			tool: ToolDefinition{
+				ID:    "test",
+				Type:  ToolTypeContainer,
+				Image: "test/image",
+				Tag:   "nightly",
+			},
+			wantErr: true,
+			errMsg:  `external container "test" has mutable tag "nightly" - use explicit version`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.tool.Validate()
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("expected error but got none")
+				} else if tt.errMsg != "" && err.Error() != tt.errMsg {
+					t.Errorf("error message mismatch:\n  got:  %s\n  want: %s", err.Error(), tt.errMsg)
+				}
+			} else if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+		})
 	}
 }

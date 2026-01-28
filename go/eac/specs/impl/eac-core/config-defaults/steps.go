@@ -297,6 +297,11 @@ func iLoadTheEACConfiguration() error {
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
+
+	// Initialize global tool registry from config (required for system dependencies checks)
+	// Uses the isolated repo root's config, falling back to container root for defaults
+	_ = tool.InitializeGlobalBridges(state.repoRoot, cfg.ConfigRoot)
+
 	return nil
 }
 

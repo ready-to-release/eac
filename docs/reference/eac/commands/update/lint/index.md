@@ -12,7 +12,7 @@ Run linters on modules based on their capabilities. The lint system automaticall
 
 ## Linter Selection
 
-Linters are selected based on module capabilities defined in `module-types.yml`:
+Linters are selected based on component types defined in `component-types.yml`:
 
 | Capability | Linter            | Module Types           |
 | ---------- | ----------------- | ---------------------- |

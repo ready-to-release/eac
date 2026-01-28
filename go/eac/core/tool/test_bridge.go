@@ -30,10 +30,12 @@ type TestBridge struct {
 // NewTestBridge creates a new test bridge.
 func NewTestBridge() *TestBridge {
 	return &TestBridge{
+		// Fallback mappings - the resolver (component-tools from tool-config.yml)
+		// takes priority over these hardcoded defaults.
 		componentTestHandlers: map[string]string{
-			"go":         "go-test-system",
-			"npm":        "npm-test",
-			"typescript": "npm-test",
+			"go": "go-test-system",
+			// npm/typescript mappings removed - now resolved via component-tools
+			// which maps typescript/javascript to npm-test-container
 		},
 	}
 }
@@ -56,6 +58,9 @@ func (b *TestBridge) SetComponentMapping(compType, handlerName string) {
 
 // GetTestFunc returns the appropriate test function for a module.
 // It matches module component types to test handlers from tool-config.yml.
+// Resolution order:
+// 1. Resolver (component-tools mapping from tool-config.yml)
+// 2. Hardcoded componentTestHandlers fallback
 func (b *TestBridge) GetTestFunc(module *modules.ModuleContract) TestFunc {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -64,7 +69,19 @@ func (b *TestBridge) GetTestFunc(module *modules.ModuleContract) TestFunc {
 		return noOpTestFunc
 	}
 
-	// Check module component types and find matching handler
+	// Get all component types for this module
+	componentTypes := module.Components.GetComponentTypes()
+
+	// Priority 1: Try resolver for each component type (uses component-tools mapping)
+	if b.resolver != nil && b.executor != nil {
+		for _, compType := range componentTypes {
+			if tool, err := b.resolver.Resolve(compType, OperationTest); err == nil && tool != nil {
+				return b.createToolTestFunc(tool)
+			}
+		}
+	}
+
+	// Priority 2: Fall back to hardcoded mappings
 	for compType, handlerName := range b.componentTestHandlers {
 		if module.HasComponent(compType) {
 			// Try YAML-defined tool
@@ -107,6 +124,24 @@ func (b *TestBridge) HasHandler(name string) bool {
 	}
 
 	return false
+}
+
+// ResolveTool returns the tool definition for a component type and operation.
+// Returns nil if no tool is configured or resolver is not available.
+func (b *TestBridge) ResolveTool(componentType string, operation OperationType) *ToolDefinition {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	if b.resolver == nil {
+		return nil
+	}
+
+	t, err := b.resolver.Resolve(componentType, operation)
+	if err != nil {
+		return nil
+	}
+
+	return t
 }
 
 // Global test bridge instance.

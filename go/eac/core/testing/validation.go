@@ -17,6 +17,20 @@ import (
 // Spec tests: godog (Go), tscucumber (npm).
 var ValidTestTypes = []string{"gotest", "godog", "mocha", "tscucumber"}
 
+// validTestTypesMap provides O(1) lookup for test type validation.
+var validTestTypesMap = func() map[string]bool {
+	m := make(map[string]bool, len(ValidTestTypes))
+	for _, t := range ValidTestTypes {
+		m[t] = true
+	}
+	return m
+}()
+
+// IsValidTestType checks if a string is a valid test type (O(1) lookup).
+func IsValidTestType(s string) bool {
+	return validTestTypesMap[s]
+}
+
 // GetLevelTags returns taxonomy level tags from config.
 // Returns nil if config is unavailable - callers must handle this.
 func GetLevelTags() []string {

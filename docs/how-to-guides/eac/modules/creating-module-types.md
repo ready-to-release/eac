@@ -1,8 +1,23 @@
 # Creating Module Types
 
+!!! warning "Deprecated: Use Component Types Instead"
+
+    **Module types have been replaced by component types.** The concept of a single "module type"
+    per module is deprecated. Modules now contain multiple **components**, each with its own type.
+
+    **See:** [Component Types Reference](../../../reference/eac/architecture/component-types.md) for the current system.
+
+    **Key changes:**
+
+    - Old: `type: python-service` (one type per module)
+    - New: `components: { dockerfile: path/to/Dockerfile }` (multiple components per module)
+    - Configuration moved from `.r2r/eac/module-types.yml` to `contracts/eac-core/0.1.0/defaults/component-types.yml`
+
+---
+
 **Problem**: You have multiple modules with the same structure (e.g., Python services, React apps) and want to define consistent defaults.
 
-**Solution**: Create a module type in `.r2r/eac/module-types.yml` that provides templates for common patterns.
+**Solution**: Create a component type in `contracts/eac-core/0.1.0/defaults/component-types.yml` (or copy to `.r2r/eac/component-types.yml` for local override).
 
 ## What is a Module Type?
 
@@ -16,7 +31,7 @@ Modules inherit these defaults, reducing repetition.
 
 ## Quick Start
 
-Add a type to `.r2r/eac/module-types.yml`:
+Add a component type to `component-types.yml`:
 
 ```yaml
 types:
@@ -259,12 +274,12 @@ r2r eac get modules --format=json | jq '.modules[].type' | sort -u
 
 ## Troubleshooting
 
-| Problem             | Solution                               |
-| ------------------- | -------------------------------------- |
-| Type not found      | Check spelling in module-types.yml     |
-| Build fails         | Verify build_deps are installed        |
-| Wrong files matched | Adjust file patterns in type or module |
-| Missing capability  | Add to type's capabilities list        |
+| Problem             | Solution                                   |
+| ------------------- | ------------------------------------------ |
+| Type not found      | Check spelling in component-types.yml      |
+| Build fails         | Verify requirements (tools) are installed  |
+| Wrong files matched | Adjust file patterns in type or module     |
+| Missing capability  | Add to type's capabilities list            |
 
 ## See Also
 

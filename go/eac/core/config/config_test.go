@@ -77,7 +77,7 @@ func TestRepositoryConfig_ModuleDefaults(t *testing.T) {
 
 	// Check that defaults are applied
 	for _, m := range cfg.Repository.Modules {
-		assert.NotEmpty(t, m.Type, "module %s should have type", m.Moniker)
+		assert.NotEmpty(t, m.Components, "module %s should have components", m.Moniker)
 		assert.NotEmpty(t, m.Description, "module %s should have description", m.Moniker)
 		assert.NotNil(t, m.DependsOn, "module %s should have depends_on", m.Moniker)
 	}

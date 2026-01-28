@@ -66,7 +66,7 @@ func TestBuildStateRoundTrip(t *testing.T) {
 		OutputPath:  "/path/to/test-book-dark.pdf",
 	}
 
-	// Save state (uses tempDir as workspaceRoot, cache goes to tempDir/out/cache/build-state/)
+	// Save state (uses tempDir as workspaceRoot, cache goes to tempDir/.cache/eac/build/state/)
 	err := SaveBookBuildState(state, tempDir)
 	require.NoError(t, err)
 
@@ -138,8 +138,8 @@ func TestShouldSkipPDFGeneration_MissingPDF(t *testing.T) {
 func TestBuildStateCacheLocation(t *testing.T) {
 	workspaceRoot := t.TempDir()
 
-	// Cache should be in out/cache/build-state/, not out/build/
-	expectedDir := filepath.Join(workspaceRoot, "out", "cache", "build-state")
+	// Cache should be in .cache/eac/build/state/, not out/build/
+	expectedDir := filepath.Join(workspaceRoot, ".cache", "eac", "build", "state")
 	actualDir := getBuildStateCacheDir(workspaceRoot)
 
 	assert.Equal(t, expectedDir, actualDir)

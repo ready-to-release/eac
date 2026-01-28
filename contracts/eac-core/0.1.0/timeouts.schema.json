@@ -1,0 +1,209 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ready-to-release.org/schemas/eac-core/timeouts/0.1.0",
+  "title": "Timeout Configuration Schema",
+  "description": "Centralized timeout configuration for EAC CLI operations",
+  "type": "object",
+  "properties": {
+    "docker": {
+      "$ref": "#/$defs/docker_timeouts"
+    },
+    "http": {
+      "$ref": "#/$defs/http_timeouts"
+    },
+    "filesystem": {
+      "$ref": "#/$defs/filesystem_timeouts"
+    },
+    "ci": {
+      "$ref": "#/$defs/ci_timeouts"
+    },
+    "long_operations": {
+      "$ref": "#/$defs/long_operation_timeouts"
+    },
+    "tui": {
+      "$ref": "#/$defs/tui_timeouts"
+    },
+    "scheduling": {
+      "$ref": "#/$defs/scheduling_timeouts"
+    }
+  },
+  "$defs": {
+    "duration": {
+      "type": "string",
+      "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+      "description": "Go-style duration (e.g., '30s', '5m', '2h')"
+    },
+    "docker_timeouts": {
+      "type": "object",
+      "description": "Docker and container operation timeouts",
+      "properties": {
+        "query": {
+          "$ref": "#/$defs/duration",
+          "description": "Quick Docker daemon queries",
+          "default": "5s"
+        },
+        "image_pull": {
+          "$ref": "#/$defs/duration",
+          "description": "Docker image pull operations",
+          "default": "5m"
+        },
+        "image_build": {
+          "$ref": "#/$defs/duration",
+          "description": "Docker image build operations",
+          "default": "30m"
+        },
+        "container_start": {
+          "$ref": "#/$defs/duration",
+          "description": "Container startup timeout",
+          "default": "60s"
+        },
+        "container_stop": {
+          "$ref": "#/$defs/duration",
+          "description": "Container graceful stop timeout",
+          "default": "5s"
+        },
+        "container_exec": {
+          "$ref": "#/$defs/duration",
+          "description": "Container execution timeout",
+          "default": "30m"
+        },
+        "validation": {
+          "$ref": "#/$defs/duration",
+          "description": "Docker validation operations",
+          "default": "30s"
+        }
+      }
+    },
+    "http_timeouts": {
+      "type": "object",
+      "description": "HTTP and network operation timeouts",
+      "properties": {
+        "request": {
+          "$ref": "#/$defs/duration",
+          "description": "Standard HTTP request timeout",
+          "default": "30s"
+        },
+        "download": {
+          "$ref": "#/$defs/duration",
+          "description": "File download timeout",
+          "default": "5m"
+        },
+        "dial": {
+          "$ref": "#/$defs/duration",
+          "description": "Connection establishment timeout",
+          "default": "10s"
+        },
+        "idle": {
+          "$ref": "#/$defs/duration",
+          "description": "Idle connection timeout",
+          "default": "60s"
+        }
+      }
+    },
+    "filesystem_timeouts": {
+      "type": "object",
+      "description": "File system operation timeouts",
+      "properties": {
+        "lock_acquire": {
+          "$ref": "#/$defs/duration",
+          "description": "File lock acquisition timeout",
+          "default": "30s"
+        },
+        "stale_lock": {
+          "$ref": "#/$defs/duration",
+          "description": "Threshold for stale lock cleanup",
+          "default": "5m"
+        },
+        "watch_debounce": {
+          "$ref": "#/$defs/duration",
+          "description": "File watcher debounce interval",
+          "default": "500ms"
+        }
+      }
+    },
+    "ci_timeouts": {
+      "type": "object",
+      "description": "CI/CD and pipeline operation timeouts",
+      "properties": {
+        "dispatch_settle": {
+          "$ref": "#/$defs/duration",
+          "description": "Time to wait after workflow dispatch",
+          "default": "2s"
+        },
+        "poll_interval": {
+          "$ref": "#/$defs/duration",
+          "description": "Status polling interval",
+          "default": "10s"
+        },
+        "workflow_completion": {
+          "$ref": "#/$defs/duration",
+          "description": "Default workflow completion timeout",
+          "default": "5m"
+        },
+        "recent_run_window": {
+          "$ref": "#/$defs/duration",
+          "description": "Window for considering runs as recent",
+          "default": "2h"
+        }
+      }
+    },
+    "long_operation_timeouts": {
+      "type": "object",
+      "description": "Timeouts for long-running operations",
+      "properties": {
+        "security_scan": {
+          "$ref": "#/$defs/duration",
+          "description": "Security scan execution timeout",
+          "default": "30m"
+        },
+        "build": {
+          "$ref": "#/$defs/duration",
+          "description": "Build operation timeout",
+          "default": "30m"
+        },
+        "test": {
+          "$ref": "#/$defs/duration",
+          "description": "Test execution timeout",
+          "default": "30m"
+        },
+        "evidence_max_age": {
+          "$ref": "#/$defs/duration",
+          "description": "Maximum age for valid evidence",
+          "default": "24h"
+        }
+      }
+    },
+    "tui_timeouts": {
+      "type": "object",
+      "description": "Terminal UI and interactive timeouts",
+      "properties": {
+        "auto_scroll_resume": {
+          "$ref": "#/$defs/duration",
+          "description": "Time before auto-scroll resumes",
+          "default": "8s"
+        },
+        "exit_countdown": {
+          "$ref": "#/$defs/duration",
+          "description": "Countdown before auto-exit after completion",
+          "default": "10s"
+        },
+        "port_reservation": {
+          "$ref": "#/$defs/duration",
+          "description": "Port reservation TTL",
+          "default": "30s"
+        }
+      }
+    },
+    "scheduling_timeouts": {
+      "type": "object",
+      "description": "Resource scheduling timeouts",
+      "properties": {
+        "capacity_recalc": {
+          "$ref": "#/$defs/duration",
+          "description": "Interval for capacity recalculation",
+          "default": "2s"
+        }
+      }
+    }
+  }
+}

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
 // containsAny checks if s contains any of the substrings.
@@ -30,10 +32,10 @@ func findRepositoryRoot(startPath string) (string, error) {
 		return filepath.Clean(repoRoot), nil
 	}
 
-	// Check for Docker R2R mode - repository is mounted at /var/task
+	// Check for Docker R2R mode - repository is mounted at ContainerRepoRoot
 	// Only applies when no explicit override is set
 	if os.Getenv("R2R_DOCKER_MODE") == "true" {
-		return "/var/task", nil
+		return paths.ContainerRepoRoot, nil
 	}
 
 	// Use current directory if no path provided

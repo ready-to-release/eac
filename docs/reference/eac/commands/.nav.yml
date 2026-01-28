@@ -1,6 +1,8 @@
 title: Commands
 nav:
   - index.md
+  - cheat-sheet.md
+  - language-support.md
   - overview/
   - categories/
   - core/

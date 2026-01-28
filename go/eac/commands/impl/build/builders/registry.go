@@ -108,7 +108,8 @@ func HasHandler(name string) bool {
 }
 
 // GetHandlersForModule returns all handlers for a module's buildable components.
-// Uses native handlers when available, falls back to tool system.
+// Uses native handlers when available, falls back to tool system's resolver for
+// tools configured in component-tools mapping (e.g., npm-build-container for typescript).
 func GetHandlersForModule(module *modules.ModuleContract) []ComponentHandler {
 	if module == nil {
 		return nil
@@ -143,11 +144,26 @@ func GetHandlersForModule(module *modules.ModuleContract) []ComponentHandler {
 
 		builderName := compType.Builder
 
-		// Try native handler first
-		if h := GetHandler(builderName); h != nil {
+		// Try native handler first (for specialized handlers like go, mkdocs, docker)
+		mu.RLock()
+		h := handlers[builderName]
+		mu.RUnlock()
+
+		if h != nil {
 			result = append(result, ComponentHandler{
 				Component: compName,
 				Handler:   h,
+			})
+			continue
+		}
+
+		// Fall back to tool system's resolver which uses component-tools mapping
+		// This allows npm-build-container to be used for typescript even though
+		// component-types.yml specifies builder: npm
+		if toolHandler := tool.GlobalBuildBridge().GetHandlerForComponent(compTypeName); toolHandler != nil {
+			result = append(result, ComponentHandler{
+				Component: compName,
+				Handler:   toolHandler,
 			})
 		}
 	}

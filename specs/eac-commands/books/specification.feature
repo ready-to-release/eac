@@ -14,7 +14,7 @@ Feature: eac-commands_books
     Scenario: Show configured books
       When I run the command "show books"
       Then the exit code is 0
-      And I should see "docs" in the output
+      And I should see "reference" in the output
       And I should see a table with book information
 
   Rule: Books configuration must be validated
