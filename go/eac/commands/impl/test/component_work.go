@@ -78,7 +78,7 @@ func FlattenModulesToTestComponentWork(ctx *cmdframework.ExecutionContext) [][]o
 
 			work := orchestrator.ComponentWork{
 				Module:        moduleMoniker,
-				Component:     pkgPath,
+				Component:     pkgPath + ":" + testType,
 				ComponentType: testType,
 				Handler:       testType, // Use test type instead of generic "test"
 				IsContainer:   tool.GlobalTestBridge().IsContainer(compTypeName),

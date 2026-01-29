@@ -112,6 +112,8 @@ type ComponentResult struct {
 	Module string
 	// Component is the component name
 	Component string
+	// Handler is the build/test handler type (e.g., "go", "gotest", "godog")
+	Handler string
 	// ExitCode is the exit code from the build (0 = success)
 	ExitCode int
 	// Duration is the time taken to build this component

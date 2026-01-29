@@ -33,6 +33,11 @@ type SummaryBuilder struct {
 	completedModules int  // Number of modules that have completed
 	allComplete      bool // True when all modules have completed
 
+	// Completion callback for immediate summary send
+	onComplete  func(*SummaryBuilder) // Called when all modules complete
+	startTime   time.Time             // Execution start time for totalTime calculation
+	summarySent bool                  // True if summary was already sent via callback
+
 	// Command context
 	commandType CommandType
 }
@@ -79,12 +84,39 @@ func NewSummaryBuilder(cmdType CommandType, componentCounts map[string]int) *Sum
 // SetOnComplete sets a callback that will be called when all modules have completed.
 // The callback receives the builder so it can call Finalize().
 // This allows immediate summary send without waiting for execution phase to fully unwind.
+func (sb *SummaryBuilder) SetOnComplete(callback func(*SummaryBuilder)) {
+	sb.mu.Lock()
+	defer sb.mu.Unlock()
+	sb.onComplete = callback
+}
+
+// SetStartTime sets the execution start time for totalTime calculation in Finalize.
+func (sb *SummaryBuilder) SetStartTime(t time.Time) {
+	sb.mu.Lock()
+	defer sb.mu.Unlock()
+	sb.startTime = t
+}
+
+// MarkSummarySent marks that the summary has been sent via callback.
+func (sb *SummaryBuilder) MarkSummarySent() {
+	sb.mu.Lock()
+	defer sb.mu.Unlock()
+	sb.summarySent = true
+}
+
+// WasSummarySent returns true if the summary was already sent via callback.
+func (sb *SummaryBuilder) WasSummarySent() bool {
+	sb.mu.Lock()
+	defer sb.mu.Unlock()
+	return sb.summarySent
+}
+
 // AddResult adds a component result to the builder.
 // This is called by the scheduler as each component completes.
 // Thread-safe: can be called from multiple goroutines.
 func (sb *SummaryBuilder) AddResult(result orchestrator.ComponentResult) {
 	sb.mu.Lock()
-	defer sb.mu.Unlock()
+	// Note: no defer - we unlock manually to call callback outside lock
 
 	// Get or create module cache
 	cache, exists := sb.moduleCaches[result.Module]
@@ -123,6 +155,9 @@ func (sb *SummaryBuilder) AddResult(result orchestrator.ComponentResult) {
 	sb.moduleCompDone[result.Module]++
 
 	// Check if module is now complete and update counts
+	var shouldCallCallback bool
+	var callback func(*SummaryBuilder)
+
 	if sb.moduleCompDone[result.Module] >= sb.moduleCompCount[result.Module] {
 		// Module is complete, update running totals
 		if cache.hasFailure {
@@ -135,9 +170,23 @@ func (sb *SummaryBuilder) AddResult(result orchestrator.ComponentResult) {
 
 		// Track global completion
 		sb.completedModules++
-		if sb.completedModules >= sb.totalModules {
+		if sb.completedModules >= sb.totalModules && !sb.allComplete {
 			sb.allComplete = true
+			// Capture callback to call outside lock
+			if sb.onComplete != nil {
+				shouldCallCallback = true
+				callback = sb.onComplete
+				sb.onComplete = nil // Only call once
+			}
 		}
+	}
+
+	// Release lock before calling callback to avoid deadlock
+	sb.mu.Unlock()
+
+	// Call completion callback outside lock - this sends summary immediately
+	if shouldCallCallback && callback != nil {
+		callback(sb)
 	}
 }
 
@@ -247,21 +296,32 @@ func (sb *SummaryBuilder) Finalize(totalTime time.Duration) *tui.SummaryData {
 	return data
 }
 
-// buildRunSummary creates the run summary line.
+// buildRunSummary creates the run summary line with command-appropriate verbs.
 func (sb *SummaryBuilder) buildRunSummary() string {
+	// Use command-appropriate verb
+	successVerb := "built"
+	switch sb.commandType {
+	case CommandTypeTest:
+		successVerb = "tested"
+	case CommandTypeLint:
+		successVerb = "linted"
+	case CommandTypeScan:
+		successVerb = "scanned"
+	}
+
 	switch {
 	case sb.skippedCount > 0 && sb.successCount > 0 && sb.failureCount > 0:
-		return fmt.Sprintf("%d cached, %d built, %d failed", sb.skippedCount, sb.successCount, sb.failureCount)
+		return fmt.Sprintf("%d cached, %d %s, %d failed", sb.skippedCount, sb.successCount, successVerb, sb.failureCount)
 	case sb.skippedCount > 0 && sb.successCount > 0:
-		return fmt.Sprintf("%d cached, %d built", sb.skippedCount, sb.successCount)
+		return fmt.Sprintf("%d cached, %d %s", sb.skippedCount, sb.successCount, successVerb)
 	case sb.skippedCount > 0 && sb.failureCount > 0:
 		return fmt.Sprintf("%d cached, %d failed", sb.skippedCount, sb.failureCount)
 	case sb.successCount > 0 && sb.failureCount > 0:
-		return fmt.Sprintf("%d built, %d failed", sb.successCount, sb.failureCount)
+		return fmt.Sprintf("%d %s, %d failed", sb.successCount, successVerb, sb.failureCount)
 	case sb.skippedCount > 0:
 		return fmt.Sprintf("%d cached", sb.skippedCount)
 	case sb.successCount > 0:
-		return fmt.Sprintf("%d built", sb.successCount)
+		return fmt.Sprintf("%d %s", sb.successCount, successVerb)
 	case sb.failureCount > 0:
 		return fmt.Sprintf("%d failed", sb.failureCount)
 	default:
@@ -319,7 +379,8 @@ func (sb *SummaryBuilder) buildComponentString(components []orchestrator.Compone
 	return result
 }
 
-// extractUniqueTestTypes extracts unique test types from component names.
+// extractUniqueTestTypes extracts unique test types from component results.
+// Uses the Handler field which contains the test type (e.g., "gotest", "godog").
 func (sb *SummaryBuilder) extractUniqueTestTypes(components []orchestrator.ComponentResult) string {
 	if len(components) == 0 {
 		return "-"
@@ -329,15 +390,26 @@ func (sb *SummaryBuilder) extractUniqueTestTypes(components []orchestrator.Compo
 	types := make([]string, 0, 4)
 
 	for _, comp := range components {
-		testType := comp.Component
-		if colonIdx := strings.LastIndex(comp.Component, ":"); colonIdx >= 0 {
-			testType = comp.Component[colonIdx+1:]
+		// Use Handler field which contains the test type
+		testType := comp.Handler
+		if testType == "" {
+			// Fallback: try to extract from component name
+			testType = comp.Component
+			if colonIdx := strings.LastIndex(comp.Component, ":"); colonIdx >= 0 {
+				testType = comp.Component[colonIdx+1:]
+			}
 		}
 
-		if _, exists := seen[testType]; !exists {
-			seen[testType] = struct{}{}
-			types = append(types, testType)
+		if testType != "" {
+			if _, exists := seen[testType]; !exists {
+				seen[testType] = struct{}{}
+				types = append(types, testType)
+			}
 		}
+	}
+
+	if len(types) == 0 {
+		return "-"
 	}
 
 	sort.Strings(types)

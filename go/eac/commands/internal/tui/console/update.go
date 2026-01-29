@@ -138,18 +138,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 
-		// Since all runners are done and we have summary, we can exit
-		// (unless user has interacted and timer hasn't expired)
+		// If user hasn't interacted, exit immediately (fast path)
 		if !m.userHasInteracted {
 			m.exitRequested = true
-		}
-
-		// If exit was already requested (waiting for this), finalize now
-		if m.exitRequested {
 			m.activateSummary()
 			m.quitting = true
 			return m, tea.Quit
 		}
+
+		// User has interacted - let them read the output
+		// The tick handler will manage the 10-second countdown
+		m.exitRequested = true
 		return m, nil
 
 	case PhaseUpdateMsg:
@@ -254,6 +253,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tickMsg:
+		// Update cached system metrics (CPU/memory) - do this early so View() has fresh values
+		// These gopsutil calls are expensive, so we cache them and only update periodically
+		m.UpdateCachedMetrics()
+
 		// Clean up decayed tabs on each tick
 		m.CleanupDecayedTabs()
 

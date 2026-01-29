@@ -8,6 +8,5 @@ Feature: security_iac
   Rule: Scanner wrapper executes successfully with Docker mock
 
     Scenario: Run iac scan with mocked Docker  
-      When I run the command "scan eac-core --scanner iac"
+      When I run the command "scan eac-core --scanner iac --dry-run"
       Then the exit code is 0
-      And evidence files should exist in directory "out/scan/eac-core/go/"

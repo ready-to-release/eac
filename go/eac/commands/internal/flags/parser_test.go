@@ -238,12 +238,12 @@ func TestParser_AllFlags(t *testing.T) {
 
 	// Count expected flags:
 	// Execution: turbo, roof (2)
-	// Output: tui, no-tui, tui-height, ascii, debug, timings (6)
+	// Output: tui, no-tui, tui-height, ascii, skip-tui-delay, debug, timings (7)
 	// Cache: skip-cache, skip-deps (2)
 	// Module: exclude, skip-depm (2)
 	// DryRun: dry-run (1)
-	// Total: 13
-	expectedCount := 13
+	// Total: 14
+	expectedCount := 14
 	if len(flags) != expectedCount {
 		t.Errorf("AllFlags() returned %d flags, want %d", len(flags), expectedCount)
 	}

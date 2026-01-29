@@ -220,24 +220,12 @@ func (cs *ComponentScheduler) SetSummaryBuilder(builder SummaryBuilder) {
 //
 // Returns at least 1.
 func detectAvailableCapacity(configMax int, turbo float64) int {
-	// If user explicitly set --roof, use that as the target capacity
-	// This allows overriding system detection for power users
-	if configMax > 0 {
-		// Apply reasonable hard cap to prevent runaway
-		if configMax > 128 {
-			return 128
-		}
-		return configMax
-	}
-
-	// Auto-detect capacity from system resources
-	// Use HOST resources (not Docker limits) since orchestrator runs on host
+	// Get actual system resources
 	cpuCount := runtime.NumCPU()
 	if cpuCount < 1 {
 		cpuCount = 4 // Fallback
 	}
 
-	// Get host total RAM in GB
 	var ramGB int
 	memInfo, err := mem.VirtualMemory()
 	if err == nil {
@@ -246,6 +234,20 @@ func detectAvailableCapacity(configMax int, turbo float64) int {
 		ramGB = 8 // Fallback: assume 8GB
 	}
 
+	return calculateCapacity(cpuCount, ramGB, configMax, turbo)
+}
+
+// calculateCapacity computes the effective parallelism capacity.
+// This is a pure function for testability.
+//
+// Parameters:
+//   - cpuCount: number of CPU cores
+//   - ramGB: total RAM in gigabytes
+//   - configMax: ceiling from config (0 = no ceiling)
+//   - turbo: multiplier (1.0 = normal, 1.25 = turbo)
+//
+// Returns capacity respecting all constraints.
+func calculateCapacity(cpuCount, ramGB, configMax int, turbo float64) int {
 	// Base capacity: min(CPU count, RAM_GB / 2)
 	// This ensures we don't over-subscribe either resource
 	ramBasedCap := ramGB / 2
@@ -275,6 +277,12 @@ func detectAvailableCapacity(configMax int, turbo float64) int {
 	}
 	if capacity > maxCapacity {
 		capacity = maxCapacity
+	}
+
+	// Apply configMax as ceiling if set (from --roof flag or repo config)
+	// This allows repo config to limit parallelism on shared machines
+	if configMax > 0 && capacity > configMax {
+		capacity = configMax
 	}
 
 	// Ensure at least 1
@@ -365,6 +373,7 @@ func (cs *ComponentScheduler) processComponent(work ComponentWork, worker Compon
 	result := ComponentResult{
 		Module:    work.Module,
 		Component: work.Component,
+		Handler:   work.Handler,
 	}
 
 	// 1. Wait for intra-module component dependencies (build_after)

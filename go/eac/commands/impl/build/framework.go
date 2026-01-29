@@ -337,33 +337,53 @@ func buildAfterExecute(ctx *cmdframework.ExecutionContext) error {
 		return fmt.Errorf("buildContext not found or wrong type")
 	}
 
-	// Process artifact derivations for all successfully built modules
-	// This includes compression, UPX, and other post-processing
-	if !ctx.Config.DryRun {
-		if err := processAllArtifactDerivations(ctx, buildCfg); err != nil {
-			return fmt.Errorf("artifact derivation failed: %w", err)
+	// Check if any modules were actually built (vs all cached)
+	// If all modules are cached (exit code -1), skip expensive post-processing
+	anyBuilt := false
+	for _, result := range ctx.Results {
+		if result.ExitCode == 0 {
+			anyBuilt = true
+			break
 		}
 	}
 
-	// Generate build manifest
-	if err := generateBuildManifest(ctx.WorkspaceRoot, ctx.Results, ctx.ModuleTypes,
-		ctx.GetExecutionMonikers(), buildCfg.BuildAll); err != nil {
-		return fmt.Errorf("failed to generate build manifest: %w", err)
+	// Process artifact derivations for all successfully built modules
+	// This includes compression, UPX, and other post-processing
+	if !ctx.Config.DryRun && anyBuilt {
+		start := time.Now()
+		if err := processAllArtifactDerivations(ctx, buildCfg); err != nil {
+			return fmt.Errorf("artifact derivation failed: %w", err)
+		}
+		log.Debugf("buildAfterExecute: processAllArtifactDerivations took %v", time.Since(start))
+	}
+
+	// Generate build manifest - only if something was actually built
+	if anyBuilt {
+		start := time.Now()
+		if err := generateBuildManifest(ctx.WorkspaceRoot, ctx.Results, ctx.ModuleTypes,
+			ctx.GetExecutionMonikers(), buildCfg.BuildAll); err != nil {
+			return fmt.Errorf("failed to generate build manifest: %w", err)
+		}
+		log.Debugf("buildAfterExecute: generateBuildManifest took %v", time.Since(start))
 	}
 
 	// Update cached module manifests
 	if !ctx.Config.DryRun && len(bctx.cachedModules) > 0 {
+		start := time.Now()
 		gitCommit := getGitCommit(ctx.WorkspaceRoot)
 		var cachedList []string
 		for m := range bctx.cachedModules {
 			cachedList = append(cachedList, m)
 		}
 		updateSkippedModuleManifests(ctx.WorkspaceRoot, cachedList, gitCommit)
+		log.Debugf("buildAfterExecute: updateSkippedModuleManifests took %v", time.Since(start))
 	}
 
-	// Update incremental build state
-	if !ctx.Config.DryRun {
+	// Update incremental build state - only if something was actually built
+	if !ctx.Config.DryRun && anyBuilt {
+		start := time.Now()
 		updateIncrementalState(ctx, bctx)
+		log.Debugf("buildAfterExecute: updateIncrementalState took %v", time.Since(start))
 	}
 
 	return nil

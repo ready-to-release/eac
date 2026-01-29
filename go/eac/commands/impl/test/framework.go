@@ -553,7 +553,7 @@ func testComponentWorker(ctx *cmdframework.ExecutionContext, module, component s
 
 	tests := testCfg.ExecCtx.testsByPackage[pkgPath]
 	if len(tests) == 0 {
-		fmt.Fprintf(logWriter, "No tests found for path: %s\n", pkgPath)
+		fmt.Fprintf(logWriter, "No tests: Success\n")
 		return 0
 	}
 
@@ -561,7 +561,7 @@ func testComponentWorker(ctx *cmdframework.ExecutionContext, module, component s
 	if testType != "" {
 		tests = filterTestsByType(tests, testType)
 		if len(tests) == 0 {
-			fmt.Fprintf(logWriter, "No %s tests found for path: %s\n", testType, pkgPath)
+			fmt.Fprintf(logWriter, "No %s tests: Success\n", testType)
 			return 0
 		}
 	}
@@ -712,8 +712,8 @@ func validateTestArtifacts(ctx *cmdframework.ExecutionContext, testCfg *TestFram
 	}
 
 	ctx.WriteInit("")
-	ctx.WriteInit("Resolution: Run 'build <module>' for each module to generate up-to-date artifacts")
-	return fmt.Errorf("build artifacts invalid")
+	ctx.WriteInit("Resolution: Run 'eac build' first to generate up-to-date artifacts")
+	return fmt.Errorf("build required: run 'eac build' first to generate artifacts")
 }
 
 func filterIncrementalTests(ctx *cmdframework.ExecutionContext, testCfg *TestFrameworkConfig, testsByPackage map[string][]testing.TestReference) map[string][]testing.TestReference {
@@ -728,17 +728,19 @@ func filterIncrementalTests(ctx *cmdframework.ExecutionContext, testCfg *TestFra
 		return testsByPackage
 	}
 
-	moduleTestInfo, _ := buildModuleTestInfo(testsByPackage, ctx.ModuleRegistry, ctx.EACConfig, ctx.WorkspaceRoot)
+	moduleTestInfo, depBuildIDLoader := buildModuleTestInfo(testsByPackage, ctx.ModuleRegistry, ctx.EACConfig, ctx.WorkspaceRoot)
 
-	// Get suite names for change detection
-	// For composite suites (e.g., "unit+integration"), split into constituent suites
-	suiteNames := manifests.GetSuitesIncluded(testCfg.SuiteName)
-	if suiteNames == nil {
-		// Non-composite suite: use the suite name directly
-		suiteNames = []string{testCfg.SuiteName}
+	// Determine test set from suite L-tags
+	testSet := teststate.TestSetUnit // Default to unit
+	var ltags []string
+	if ctx.EACConfig != nil && ctx.EACConfig.TestSuites != nil {
+		ltags = ctx.EACConfig.TestSuites.GetSuiteLTags(testCfg.SuiteName)
+		testSet = teststate.ClassifyTestByTags(ltags)
 	}
+	log.Debugf("[TUI-CACHE] Incremental detection: suite=%s ltags=%v testSet=%s moduleCount=%d",
+		testCfg.SuiteName, ltags, testSet, len(moduleTestInfo))
 
-	changeResult, err := teststate.DetectChanges(ctx.WorkspaceRoot, moduleTestInfo, suiteNames)
+	changeResult, err := teststate.DetectChanges(ctx.WorkspaceRoot, moduleTestInfo, testSet, depBuildIDLoader)
 	if err != nil {
 		log.Debugf("Failed to detect test changes: %v", err)
 		return testsByPackage
@@ -753,7 +755,12 @@ func filterIncrementalTests(ctx *cmdframework.ExecutionContext, testCfg *TestFra
 	changedSet := make(map[string]bool)
 	for _, m := range changeResult.ModulesNeedingTest {
 		changedSet[m] = true
+		if reason, ok := changeResult.ChangeReasons[m]; ok {
+			log.Debugf("[TUI-CACHE] Module needs test: %s reason=%s", m, reason)
+		}
 	}
+	log.Debugf("[TUI-CACHE] Detection result: needsTest=%d upToDate=%d",
+		len(changeResult.ModulesNeedingTest), len(changeResult.UpToDateModules))
 
 	// Build set of cached modules (modules that are up-to-date)
 	// These will be skipped at the component worker level, not filtered from the plan.
@@ -823,13 +830,16 @@ func buildTestInitSummary(ctx *cmdframework.ExecutionContext, testCfg *TestFrame
 // This ensures interrupted runs preserve cache for completed modules (atomic caching).
 func updateModuleTestStateAtomic(ctx *cmdframework.ExecutionContext, testCfg *TestFrameworkConfig, module string, passed bool) error {
 	if ctx.ModuleRegistry == nil {
+		log.Debugf("[ATOMIC-STATE] ModuleRegistry is nil for module=%s", module)
 		return nil
 	}
 
 	contract, exists := ctx.ModuleRegistry.Get(module)
 	if !exists {
+		log.Debugf("[ATOMIC-STATE] Module not found in registry: module=%s", module)
 		return nil
 	}
+	log.Debugf("[ATOMIC-STATE] Updating test state for module=%s passed=%v", module, passed)
 
 	// Build module info for just this module
 	info := teststate.ModuleTestFiles{
@@ -856,10 +866,19 @@ func updateModuleTestStateAtomic(ctx *cmdframework.ExecutionContext, testCfg *Te
 	moduleTestInfo := map[string]teststate.ModuleTestFiles{module: info}
 	testedModules := map[string]bool{module: passed}
 
-	// Use the suite name for proper incremental detection
-	// For composite suites (e.g., "unit+integration"), record each constituent suite
-	suiteName := testCfg.SuiteName
-	return teststate.UpdateModuleStateForSuite(ctx.WorkspaceRoot, testedModules, moduleTestInfo, suiteName)
+	// Determine test set from suite L-tags
+	testSet := teststate.TestSetUnit
+	if ctx.EACConfig != nil && ctx.EACConfig.TestSuites != nil {
+		ltags := ctx.EACConfig.TestSuites.GetSuiteLTags(testCfg.SuiteName)
+		testSet = teststate.ClassifyTestByTags(ltags)
+	}
+
+	log.Debugf("[ATOMIC-STATE] Calling UpdateModuleTestSetState: module=%s testSet=%s sourceFiles=%d", module, testSet, len(info.SourceFiles))
+	err = teststate.UpdateModuleTestSetState(ctx.WorkspaceRoot, testedModules, moduleTestInfo, testSet, nil)
+	if err != nil {
+		log.Debugf("[ATOMIC-STATE] UpdateModuleTestSetState failed: module=%s err=%v", module, err)
+	}
+	return err
 }
 
 func updateTestState(ctx *cmdframework.ExecutionContext, testCfg *TestFrameworkConfig, _ []PackageResult) {
@@ -890,7 +909,14 @@ func updateTestState(ctx *cmdframework.ExecutionContext, testCfg *TestFrameworkC
 
 	moduleTestInfo, _ := buildModuleTestInfo(testCfg.TestsByPackage, ctx.ModuleRegistry, ctx.EACConfig, ctx.WorkspaceRoot)
 
-	if err := teststate.UpdateModuleState(ctx.WorkspaceRoot, testedModuleResults, moduleTestInfo); err != nil {
+	// Determine test set from suite L-tags
+	testSet := teststate.TestSetUnit
+	if ctx.EACConfig != nil && ctx.EACConfig.TestSuites != nil {
+		ltags := ctx.EACConfig.TestSuites.GetSuiteLTags(testCfg.SuiteName)
+		testSet = teststate.ClassifyTestByTags(ltags)
+	}
+
+	if err := teststate.UpdateModuleTestSetState(ctx.WorkspaceRoot, testedModuleResults, moduleTestInfo, testSet, nil); err != nil {
 		log.Warnf("Failed to update test state: %v", err)
 	}
 }

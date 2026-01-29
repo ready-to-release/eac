@@ -3,7 +3,6 @@ package test
 
 import (
 	"path/filepath"
-	"sort"
 	"strings"
 
 	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
@@ -16,13 +15,13 @@ import (
 // buildModuleTestInfo builds test file information for each module from the test packages.
 // This is used for incremental test detection - tracking which source and test files
 // belong to each module so we can detect when they change.
-// Returns a map of module moniker to test files info, and a sorted list of module monikers.
+// Returns a map of module moniker to test files info, and a loader for dependency BuildIDs.
 func buildModuleTestInfo(
 	testsByPackage map[string][]testing.TestReference,
 	moduleRegistry *modules.Registry,
 	eacCfg *config.EACConfig,
 	workspaceRoot string,
-) (map[string]teststate.ModuleTestFiles, []string) {
+) (map[string]teststate.ModuleTestFiles, teststate.DependencyBuildIDLoader) {
 	moduleInfo := make(map[string]teststate.ModuleTestFiles)
 	uniqueModules := make(map[string]bool)
 
@@ -96,14 +95,16 @@ func buildModuleTestInfo(
 		moduleInfo[moniker] = info
 	}
 
-	// Convert uniqueModules map to slice
-	moduleList := make([]string, 0, len(uniqueModules))
-	for m := range uniqueModules {
-		moduleList = append(moduleList, m)
+	// Create a loader for dependency BuildIDs
+	depBuildIDLoader := func(moniker string) string {
+		moduleBuildDir := eacCfg.Repository.BuildOutputPathAbs(workspaceRoot, moniker)
+		if manifest, err := implinternal.LoadModuleManifest(moduleBuildDir); err == nil {
+			return manifest.BuildID
+		}
+		return ""
 	}
-	sort.Strings(moduleList)
 
-	return moduleInfo, moduleList
+	return moduleInfo, depBuildIDLoader
 }
 
 // isTestFile returns true if the file path looks like a test file.

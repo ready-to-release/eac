@@ -8,6 +8,5 @@ Feature: security_sast
   Rule: Scanner wrapper executes successfully with Docker mock
 
     Scenario: Run sast scan with mocked Docker  
-      When I run the command "scan eac-core --scanner sast"
+      When I run the command "scan eac-core --scanner sast --dry-run"
       Then the exit code is 0
-      And evidence files should exist in directory "out/scan/eac-core/go/"

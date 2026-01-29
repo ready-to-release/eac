@@ -7,6 +7,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/mem"
 
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
@@ -87,6 +89,11 @@ type Model struct {
 
 	// Quitting state - triggers plain-text final render
 	quitting bool
+
+	// Cached system metrics (updated periodically, not on every render)
+	cachedCPUPercent   []float64 // Per-core CPU usage percentages
+	cachedMemPercent   float64   // Memory usage percentage
+	lastMetricsUpdate  time.Time // When metrics were last updated
 }
 
 // ModuleState tracks per-module execution state for tab display.
@@ -692,4 +699,35 @@ func (m Model) getLockParts() []string {
 	}
 
 	return parts
+}
+
+// metricsUpdateInterval is how often to refresh CPU/memory metrics.
+// These gopsutil calls are expensive (100-500ms on Windows), so we cache them.
+const metricsUpdateInterval = 500 * time.Millisecond
+
+// UpdateCachedMetrics refreshes the cached CPU and memory metrics.
+// Should be called from the tick handler, not from View().
+func (m *Model) UpdateCachedMetrics() {
+	// Skip during exit sequence - no need to update metrics when quitting
+	// Also skip once all runners are done (summary is being generated)
+	if m.exitRequested || m.quitting || m.pendingSummaryData != nil || !m.allRunnersCompleted.IsZero() {
+		return
+	}
+
+	// Skip if updated recently
+	if time.Since(m.lastMetricsUpdate) < metricsUpdateInterval {
+		return
+	}
+
+	// Update CPU metrics (this is the slow call)
+	if perCore, err := cpu.Percent(0, true); err == nil {
+		m.cachedCPUPercent = perCore
+	}
+
+	// Update memory metrics
+	if memInfo, err := mem.VirtualMemory(); err == nil {
+		m.cachedMemPercent = memInfo.UsedPercent
+	}
+
+	m.lastMetricsUpdate = time.Now()
 }

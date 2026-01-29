@@ -287,8 +287,8 @@ func TestOutputFlagSet_Metadata(t *testing.T) {
 	}
 
 	flags := s.Flags()
-	if len(flags) != 6 {
-		t.Errorf("Flags() returned %d flags, want 6", len(flags))
+	if len(flags) != 7 {
+		t.Errorf("Flags() returned %d flags, want 7", len(flags))
 	}
 
 	flagNames := make(map[string]bool)
@@ -296,7 +296,7 @@ func TestOutputFlagSet_Metadata(t *testing.T) {
 		flagNames[f.Name] = true
 	}
 
-	expected := []string{"tui", "no-tui", "tui-height", "ascii", "debug", "timings"}
+	expected := []string{"tui", "no-tui", "tui-height", "ascii", "skip-tui-delay", "debug", "timings"}
 	for _, name := range expected {
 		if !flagNames[name] {
 			t.Errorf("Flags() missing %s flag", name)

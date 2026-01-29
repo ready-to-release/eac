@@ -39,18 +39,28 @@ func phaseSummary(ctx *ExecutionContext, customSummary SummaryGenerator) int {
 	}
 
 	if ctx.Config.UseTUI {
-		// Send summary using incremental builder if available, otherwise generate from scratch
-		var summaryData *tui.SummaryData
-		if ctx.SummaryBuilder != nil {
-			summaryData = ctx.SummaryBuilder.Finalize(totalTime)
-		} else {
-			summaryData = generateTUISummary(ctx, totalTime)
-		}
-		log.Debugf("phaseSummary: summary generation took %v", time.Since(summaryStart))
-		ctx.Orchestrator.SendSummary(summaryData)
+		// Check if summary was already sent via completion callback (immediate send path)
+		alreadySent := ctx.SummaryBuilder != nil && ctx.SummaryBuilder.WasSummarySent()
 
-		// Wait for TUI to finish
+		if !alreadySent {
+			// Send summary using incremental builder if available, otherwise generate from scratch
+			var summaryData *tui.SummaryData
+			if ctx.SummaryBuilder != nil {
+				summaryData = ctx.SummaryBuilder.Finalize(totalTime)
+			} else {
+				summaryData = generateTUISummary(ctx, totalTime)
+			}
+			log.Debugf("phaseSummary: summary generation took %v", time.Since(summaryStart))
+			ctx.Orchestrator.SendSummary(summaryData)
+		} else {
+			log.Debugf("phaseSummary: summary already sent via callback")
+		}
+
+		// Wait for TUI to exit - handles user timer if active, else exits immediately
+		log.Debugf("phaseSummary: calling WaitTUI")
+		waitStart := time.Now()
 		ctx.Orchestrator.WaitTUI()
+		log.Debugf("phaseSummary: WaitTUI returned in %v", time.Since(waitStart))
 		ctx.Orchestrator.StopTUI()
 	} else {
 		// Print summary to console
@@ -122,21 +132,31 @@ func generateComponentTUISummary(ctx *ExecutionContext, totalTime time.Duration)
 		}
 	}
 
-	// Build run summary line
+	// Build run summary line with command-appropriate verbs
+	successVerb := "built"
+	switch ctx.Config.Type {
+	case CommandTypeTest:
+		successVerb = "tested"
+	case CommandTypeLint:
+		successVerb = "linted"
+	case CommandTypeScan:
+		successVerb = "scanned"
+	}
+
 	var runSummary string
 	switch {
 	case skippedCount > 0 && successCount > 0 && failureCount > 0:
-		runSummary = fmt.Sprintf("%d cached, %d built, %d failed", skippedCount, successCount, failureCount)
+		runSummary = fmt.Sprintf("%d cached, %d %s, %d failed", skippedCount, successCount, successVerb, failureCount)
 	case skippedCount > 0 && successCount > 0:
-		runSummary = fmt.Sprintf("%d cached, %d built", skippedCount, successCount)
+		runSummary = fmt.Sprintf("%d cached, %d %s", skippedCount, successCount, successVerb)
 	case skippedCount > 0 && failureCount > 0:
 		runSummary = fmt.Sprintf("%d cached, %d failed", skippedCount, failureCount)
 	case successCount > 0 && failureCount > 0:
-		runSummary = fmt.Sprintf("%d built, %d failed", successCount, failureCount)
+		runSummary = fmt.Sprintf("%d %s, %d failed", successCount, successVerb, failureCount)
 	case skippedCount > 0:
 		runSummary = fmt.Sprintf("%d cached", skippedCount)
 	case successCount > 0:
-		runSummary = fmt.Sprintf("%d built", successCount)
+		runSummary = fmt.Sprintf("%d %s", successCount, successVerb)
 	case failureCount > 0:
 		runSummary = fmt.Sprintf("%d failed", failureCount)
 	default:
@@ -668,9 +688,9 @@ func formatErrorLines(prefix, errMsg string) []string {
 	return result
 }
 
-// extractUniqueTestTypes extracts unique test types from component names.
-// Component names are in format "subpath:testType" (e.g., "config:gotest", "cli:godog").
-// Returns a comma-separated string of unique test types (e.g., "gotest, godog").
+// extractUniqueTestTypes extracts unique test types from component results.
+// Uses the Handler field which contains the test type (e.g., "gotest", "godog").
+// Returns a comma-separated string of unique test types.
 func extractUniqueTestTypes(components []orchestrator.ComponentResult) string {
 	if len(components) == 0 {
 		return "-"
@@ -681,16 +701,26 @@ func extractUniqueTestTypes(components []orchestrator.ComponentResult) string {
 	types := make([]string, 0, 4)
 
 	for _, comp := range components {
-		// Extract test type from component name (format: "subpath:testType")
-		testType := comp.Component
-		if colonIdx := strings.LastIndex(comp.Component, ":"); colonIdx >= 0 {
-			testType = comp.Component[colonIdx+1:]
+		// Use Handler field which contains the test type
+		testType := comp.Handler
+		if testType == "" {
+			// Fallback: try to extract from component name (format: "subpath:testType")
+			testType = comp.Component
+			if colonIdx := strings.LastIndex(comp.Component, ":"); colonIdx >= 0 {
+				testType = comp.Component[colonIdx+1:]
+			}
 		}
 
-		if _, exists := seen[testType]; !exists {
-			seen[testType] = struct{}{}
-			types = append(types, testType)
+		if testType != "" {
+			if _, exists := seen[testType]; !exists {
+				seen[testType] = struct{}{}
+				types = append(types, testType)
+			}
 		}
+	}
+
+	if len(types) == 0 {
+		return "-"
 	}
 
 	// Sort for consistent output

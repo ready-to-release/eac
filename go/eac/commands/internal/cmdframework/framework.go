@@ -2,8 +2,10 @@ package cmdframework
 
 import (
 	"fmt"
+	"os"
 	"time"
 
+	"github.com/ready-to-release/eac/go/eac/core/environments"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
@@ -21,6 +23,18 @@ var log = logging.C()
 //	    // ... other config
 //	}, myWorkerFunc, nil)
 func Run(cfg *CommandConfig, worker WorkerFunc, hooks *Hooks) int {
+	// ISOLATION CHECK: Fail-fast if running build/test/scan/lint within test scope
+	// Tests should not actively run these commands - it's bad isolation.
+	// Use --dry-run for planning/validation within tests.
+	if os.Getenv(environments.EnvR2RTestScope) != "" && !cfg.DryRun {
+		switch cfg.Type {
+		case CommandTypeBuild, CommandTypeTest, CommandTypeScan, CommandTypeLint:
+			log.Errorf("ISOLATION VIOLATION: %s command cannot run within test scope without --dry-run", cfg.Type)
+			log.Errorf("Tests should not actively execute %s - use --dry-run for validation", cfg.Type)
+			return 1
+		}
+	}
+
 	if hooks == nil {
 		hooks = &Hooks{}
 	}
@@ -138,16 +152,29 @@ func Run(cfg *CommandConfig, worker WorkerFunc, hooks *Hooks) int {
 		return 1
 	}
 
-	// Hook: AfterExecute
+	// Hook: AfterExecute - run in background while TUI is displayed
+	// TUI is visual-only: we wait for user timer (if active), but AfterExecute runs in parallel
+	var afterExecDone chan struct{}
 	if hooks.AfterExecute != nil {
-		if err := hooks.AfterExecute(ctx); err != nil {
-			log.Errorf("AfterExecute hook failed: %v", err)
-			// Continue to summary even if hook fails
-		}
+		afterExecDone = make(chan struct{})
+		go func() {
+			defer close(afterExecDone)
+			afterExecStart := time.Now()
+			log.Debugf("AfterExecute: starting")
+			if err := hooks.AfterExecute(ctx); err != nil {
+				log.Errorf("AfterExecute hook failed: %v", err)
+			}
+			log.Debugf("AfterExecute: completed in %v", time.Since(afterExecStart))
+		}()
 	}
 
-	// Phase 5: Summary
-	return phaseSummary(ctx, hooks.CustomSummary)
+	// Phase 5: Summary - handles TUI exit (user timer if active, else immediate)
+	exitCode := phaseSummary(ctx, hooks.CustomSummary)
+
+	// Don't wait for AfterExecute - it runs in background and completes after process exits
+	// For non-TUI mode, AfterExecute ran synchronously before phaseSummary
+
+	return exitCode
 }
 
 // RunSimple is a convenience wrapper for commands that don't need hooks.

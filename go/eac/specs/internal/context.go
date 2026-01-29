@@ -168,7 +168,7 @@ func (c *TestContext) buildBaseEnvironment() []string {
 }
 
 // buildIsolationEnvironment adds isolation-specific environment variables.
-// Sets R2R_PWD and R2R_REPO_ROOT for isolated test execution.
+// Sets R2R_PWD, R2R_REPO_ROOT, and R2R_TEST_SCOPE for isolated test execution.
 func (c *TestContext) buildIsolationEnvironment(env []string) []string {
 	if c.IsolatedDir == "" {
 		return env
@@ -176,9 +176,11 @@ func (c *TestContext) buildIsolationEnvironment(env []string) []string {
 
 	// R2R_PWD: current working directory (may be worktree)
 	// R2R_REPO_ROOT: main repository root (never changes)
+	// R2R_TEST_SCOPE: marker indicating we're inside a spec test
 	workDir := c.getEffectiveWorkDir()
 	env = append(env, fmt.Sprintf("%s=%s", environments.EnvR2RPWD, workDir))
 	env = append(env, fmt.Sprintf("%s=%s", environments.EnvR2RRepoRoot, c.IsolatedDir))
+	env = append(env, fmt.Sprintf("%s=1", environments.EnvR2RTestScope))
 	return env
 }
 

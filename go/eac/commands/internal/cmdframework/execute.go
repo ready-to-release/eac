@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"sync"
+	"time"
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
 )
@@ -153,11 +154,23 @@ func phaseExecuteComponentsUnified(ctx *ExecutionContext, cmdType CommandType) e
 	// Create incremental summary builder with component counts per module
 	componentCounts := computeComponentCounts(componentLayers)
 	ctx.SummaryBuilder = NewSummaryBuilder(cmdType, componentCounts)
+	ctx.SummaryBuilder.SetStartTime(ctx.StartTime)
 	ctx.Orchestrator.SetSummaryBuilder(ctx.SummaryBuilder)
 
-	// Note: We don't use completion callback because it triggers TUI exit before
-	// wg.Wait() completes, causing a race. Instead, summary is sent from phaseSummary
-	// after execution fully completes. The incremental builder still pre-computes data.
+	// Set completion callback to send summary immediately when all components finish.
+	// This eliminates the delay between TUI showing "rendering summary" and receiving data.
+	// The TUI exits immediately on receiving summary; framework waits via WaitTUI().
+	if ctx.Config.UseTUI {
+		ctx.SummaryBuilder.SetOnComplete(func(sb *SummaryBuilder) {
+			callbackStart := time.Now()
+			log.Debugf("OnComplete callback: starting")
+			totalTime := time.Since(ctx.StartTime)
+			summaryData := sb.Finalize(totalTime)
+			ctx.Orchestrator.SendSummary(summaryData)
+			sb.MarkSummarySent()
+			log.Debugf("OnComplete callback: completed in %v", time.Since(callbackStart))
+		})
+	}
 
 	// Wrap worker to match orchestrator signature
 	orchWorker := func(module, component string, logWriter io.Writer) int {
@@ -176,6 +189,7 @@ func phaseExecuteComponentsUnified(ctx *ExecutionContext, cmdType CommandType) e
 	var results []orchestrator.WorkResult
 	var err error
 
+	execStart := time.Now()
 	if useLayered {
 		log.Debugf("Executing %d %s component layers with weighted parallelism",
 			len(componentLayers), cmdType)
@@ -186,6 +200,7 @@ func phaseExecuteComponentsUnified(ctx *ExecutionContext, cmdType CommandType) e
 			len(allWork), cmdType)
 		results, err = ctx.Orchestrator.RunComponentsParallel(allWork, orchWorker)
 	}
+	log.Debugf("phaseExecuteComponentsUnified: execution returned in %v", time.Since(execStart))
 
 	if err != nil {
 		return fmt.Errorf("%s component execution failed: %w", cmdType, err)

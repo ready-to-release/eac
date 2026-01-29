@@ -8,6 +8,5 @@ Feature: security_compliance
   Rule: Scanner wrapper executes successfully with Docker mock
 
     Scenario: Run compliance scan with mocked Docker  
-      When I run the command "scan eac-core --scanner compliance"
+      When I run the command "scan eac-core --scanner compliance --dry-run"
       Then the exit code is 0
-      And evidence files should exist in directory "out/scan/eac-core/go/"

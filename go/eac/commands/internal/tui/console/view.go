@@ -7,8 +7,6 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
-	"github.com/shirou/gopsutil/v3/cpu"
-	"github.com/shirou/gopsutil/v3/mem"
 )
 
 // View renders the console window.
@@ -23,31 +21,21 @@ func (m Model) View() string {
 }
 
 // ViewFinal renders a clean summary after TUI exit.
-// Shows Init pane and summary data (which has authoritative results from orchestrator).
+// Shows only essential summary data - no pane chrome.
 func (m Model) ViewFinal() string {
 	var b strings.Builder
 
-	// Render Init pane (frozen state)
-	b.WriteString(m.renderPaneHeaderPlain(PhaseInit))
-	b.WriteString("\n")
-	b.WriteString(m.renderPaneContentPlainExpanded(PhaseInit, 10))
-	b.WriteString("\n")
-	b.WriteString(m.renderPaneFooterPlain(PhaseInit))
-	b.WriteString("\n")
-
-	// Render summary data if available (this has authoritative success/failure info)
+	// Render summary data if available
 	if m.summaryData != nil {
-		// Details first (includes module table from summary.go)
+		// Details (includes module table from summary.go)
 		if len(m.summaryData.Details) > 0 {
-			b.WriteString("\n")
 			for _, line := range m.summaryData.Details {
-				// Strip markdown table pipes for cleaner terminal output
 				cleanLine := stripMarkdownPipes(line)
 				b.WriteString(fmt.Sprintf("%s\n", cleanLine))
 			}
 		}
 
-		// Summary status at the end
+		// Summary status
 		icon := "✓"
 		statusText := "PASSED"
 		if !m.summaryData.Success {
@@ -59,13 +47,6 @@ func (m Model) ViewFinal() string {
 		// Run phase summary
 		if m.summaryData.RunSummary != "" {
 			b.WriteString(fmt.Sprintf("  %s\n", m.summaryData.RunSummary))
-		}
-	} else if m.panes[PhaseRun].Status != PhasePending {
-		// Fallback: use module states if no summary data (shouldn't normally happen)
-		tabs := m.GetVisibleTabs()
-		if len(tabs) > 0 {
-			b.WriteString("\n")
-			b.WriteString(m.renderModuleResultsTable(tabs))
 		}
 	}
 
@@ -1908,17 +1889,6 @@ func (m Model) renderResourcesPane() string {
 		content += sep + white.Render("Jobs: ") + containerDotsStr
 	}
 
-	// Add "waiting for locks" indicator at end of line if any locks are being waited on
-	if waitingMsg := m.getWaitingForLocksMessage(); waitingMsg != "" {
-		// Highlight waiting status with yellow/orange
-		waitingStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true)
-		// Animated dots
-		elapsed := time.Since(m.startTime)
-		dotCount := int(elapsed.Seconds()*2) % 4
-		dots := strings.Repeat(".", dotCount+1)
-		content += sep + waitingStyle.Render("⏳ "+waitingMsg+dots)
-	}
-
 	// Add exit countdown if active
 	if m.exitCountdownSecs > 0 {
 		exitStr := white.Render("Exit: ") + Styles.Dim.Render(fmt.Sprintf("%d", m.exitCountdownSecs))
@@ -1931,6 +1901,22 @@ func (m Model) renderResourcesPane() string {
 		contentPadding = 0
 	}
 	result.WriteString(Styles.Border.Render("│") + " " + content + strings.Repeat(" ", contentPadding) + " " + Styles.Border.Render("│") + "\n")
+
+	// Content line 2: "waiting for locks" indicator on its own line if any locks are being waited on
+	if waitingMsg := m.getWaitingForLocksMessage(); waitingMsg != "" {
+		// Highlight waiting status with yellow/orange
+		waitingStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true)
+		// Animated dots
+		elapsed := time.Since(m.startTime)
+		dotCount := int(elapsed.Seconds()*2) % 4
+		dots := strings.Repeat(".", dotCount+1)
+		locksContent := waitingStyle.Render("⏳ " + waitingMsg + dots)
+		locksPadding := m.width - lipgloss.Width(locksContent) - 4
+		if locksPadding < 0 {
+			locksPadding = 0
+		}
+		result.WriteString(Styles.Border.Render("│") + " " + locksContent + strings.Repeat(" ", locksPadding) + " " + Styles.Border.Render("│") + "\n")
+	}
 
 	// Content line 2: tools row (show tools grouped by type - containers | system)
 	hasContainers := len(m.usedContainers) > 0
@@ -2275,9 +2261,11 @@ func (m Model) renderTabBarContent(tabs []*ModuleState) string {
 
 // renderCPUDots returns colored dots representing per-core CPU usage.
 // Green = low, Yellow = medium, Orange = very high, Red = maxed
+// Uses cached metrics updated by UpdateCachedMetrics() to avoid blocking gopsutil calls.
 func (m Model) renderCPUDots() string {
-	perCore, err := cpu.Percent(0, true) // true = per CPU
-	if err != nil || len(perCore) == 0 {
+	// Use cached values (updated periodically by tick handler)
+	perCore := m.cachedCPUPercent
+	if len(perCore) == 0 {
 		return "----"
 	}
 
@@ -2314,16 +2302,16 @@ func (m Model) renderCPUDots() string {
 
 // renderMemDots returns 11 dots representing memory usage.
 // Color progression: green (low) → yellow → orange → red (high)
+// Uses cached metrics updated by UpdateCachedMetrics() to avoid blocking gopsutil calls.
 func (m Model) renderMemDots() string {
 	const totalDots = 11
 
-	memInfo, err := mem.VirtualMemory()
-	if err != nil {
+	// Use cached value (updated periodically by tick handler)
+	usedPct := m.cachedMemPercent
+	if usedPct == 0 && m.lastMetricsUpdate.IsZero() {
+		// No metrics yet
 		return strings.Repeat("-", totalDots)
 	}
-
-	// Calculate how many dots should be active based on usage
-	usedPct := memInfo.UsedPercent
 	// Map percentage to dots: 0% = 1 active, 100% = 11 active
 	activeDots := 1 + int(usedPct/10.0+0.5)
 	if activeDots > totalDots {

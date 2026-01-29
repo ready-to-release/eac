@@ -7,6 +7,7 @@ const (
 	// Test infrastructure environment variables.
 	EnvR2RTestLoggingActive = "R2R_TEST_LOGGING_ACTIVE"
 	EnvR2RTestRunID         = "R2R_TEST_RUN_ID"
+	EnvR2RTestScope         = "R2R_TEST_SCOPE" // Set when running within spec test scope
 	EnvGodogFormat          = "GODOG_FORMAT"
 
 	// Repository path environment variables.
