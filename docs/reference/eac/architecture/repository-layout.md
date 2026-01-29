@@ -11,8 +11,8 @@ The following diagram illustrates the version control and artifact storage archi
 **Quick Reference**: For complete documentation on the R2R CLI and EAC system, see:
 
 - [EAC Overview](../../eac/index.md) - System overview with repository structure
-- [Modules](../../eac/modules/index.md) - Module system and dependency management
-- [Contracts](../../eac/contracts/index.md) - Module contracts and configuration
+- [Modules](../modules/index.md) - Module system and dependency management
+- [Contracts](./contracts.md) - Module contracts and configuration
 
 All modules are defined in `.r2r/eac/repository.yml`, which serves as the central contract for module ownership, dependencies,
 and build configuration.
@@ -137,7 +137,7 @@ Modules are organized into two categories:
 - **eac-specs** - BDD test infrastructure
 - **eac-mcp-commands** - MCP server for LLM tools
 
-For detailed information on module types, capabilities, and configuration, see [Modules Documentation](../../eac/modules/index.md).
+For detailed information on module types, capabilities, and configuration, see [Modules Documentation](../modules/index.md).
 
 ## Module Configuration
 
@@ -164,9 +164,9 @@ modules:
 
 For complete module configuration reference, see:
 
-- [Modules Contract](../contracts/index.md#modules-contract) - Full field reference and validation rules
-- [Component Types Contract](../contracts/index.md#component-types-contract) - Type templates and capabilities
-- [Modules Documentation](../../eac/modules/index.md) - Module system and lifecycle
+- [Modules Contract](./contracts.md#modules-contract) - Full field reference and validation rules
+- [Component Types Contract](./contracts.md#component-types-contract) - Type templates and capabilities
+- [Modules Documentation](../modules/index.md) - Module system and lifecycle
 
 ---
 
@@ -178,7 +178,7 @@ For comprehensive information about the R2R and EAC system:
 
 - [EAC Overview](../index.md) - System overview with repository structure
 - [Architecture](./index.md) - System architecture, components, and execution models
-- [Contracts](../contracts/index.md) - Contract system and YAML configuration
+- [Contracts](./contracts.md) - Contract system and YAML configuration
 - [Modules](../modules/index.md) - Module system and dependency management
 
 ### Related Topics

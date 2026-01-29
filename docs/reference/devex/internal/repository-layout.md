@@ -8,7 +8,7 @@ This repository is organized as a **modular monorepo** with clearly defined modu
 
 - [EAC Overview](../../eac/index.md) - System overview with repository structure
 - [Modules](../../eac/modules/index.md) - Module system and dependency management
-- [Contracts](../../eac/contracts/index.md) - Module contracts and configuration
+- [Contracts](../../eac/architecture/contracts.md) - Module contracts and configuration
 
 All modules are defined in `.r2r/eac/repository.yml`, which serves as the central contract for module ownership,
 dependencies, and build configuration.
@@ -145,8 +145,8 @@ modules:
 
 For complete module configuration reference, see:
 
-- [Modules Contract](../../eac/contracts/index.md#modules-contract) - Full field reference and validation rules
-- [Component Types Contract](../../eac/contracts/index.md#component-types-contract) - Type templates and capabilities
+- [Modules Contract](../../eac/architecture/contracts.md#modules-contract) - Full field reference and validation rules
+- [Component Types Contract](../../eac/architecture/contracts.md#component-types-contract) - Type templates and capabilities
 - [Modules Documentation](../../eac/modules/index.md) - Module system and lifecycle
 
 ---
@@ -159,7 +159,7 @@ For comprehensive information about the R2R and EAC system:
 
 - [EAC Overview](../../eac/index.md) - System overview with repository structure
 - [Architecture](../../eac/architecture/index.md) - System architecture, components, and execution models
-- [Contracts](../../eac/contracts/index.md) - Contract system and YAML configuration
+- [Contracts](../../eac/architecture/contracts.md) - Contract system and YAML configuration
 - [Modules](../../eac/modules/index.md) - Module system and dependency management
 
 ### Related Topics

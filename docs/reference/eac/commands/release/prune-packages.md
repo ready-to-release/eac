@@ -1,3 +1,5 @@
+<!-- book:cmd release prune-packages -->
+
 # prune-packages
 
 Remove old container image versions from GitHub Container Registry (GHCR), keeping the newest N versions while protecting released packages.

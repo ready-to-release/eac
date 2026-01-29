@@ -658,6 +658,6 @@ r2r eac release-this <module>      # Create release
 ## Related Documentation
 
 - [Architecture](../architecture/index.md) - System architecture and components
-- [Contracts](../contracts/index.md) - Contract system and YAML schemas
+- [Contracts](../architecture/contracts.md) - Contract system and YAML schemas
 - [Dependencies](../architecture/dependencies.md) - Dependency resolution details
 - [Module Types](../architecture/component-types.md) - Module type specifications

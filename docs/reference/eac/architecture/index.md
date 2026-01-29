@@ -30,7 +30,7 @@ r2r eac serve design
 - **eac-mcp-commands**: [specs/eac-mcp-commands/.design/](https://github.com/ready-to-release/eac/tree/main/specs/eac-mcp-commands/.design/)
 - **ext-eac**: [specs/ext-eac/.design/](https://github.com/ready-to-release/eac/tree/main/specs/ext-eac/.design/)
 
-See [Viewing Architecture](../guides/viewing-architecture.md) for detailed instructions.
+See [Viewing Architecture](./viewing-diagrams.md) for detailed instructions.
 
 ---
 
@@ -76,7 +76,7 @@ graph TB
 | **eac-specs**        | BDD test infrastructure (Godog), OSCAL compliance                        | go-library  |
 | **eac-mcp-commands** | MCP server for LLM tool integration                                      | go-mcp      |
 
-See [Module Architectures](./modules/index.md) for detailed C4 diagrams.
+See [Modules Reference](../modules/index.md) for detailed module documentation.
 
 ### Supporting Modules
 
@@ -88,7 +88,7 @@ See [Module Architectures](./modules/index.md) for detailed C4 diagrams.
 | **implicit-r2r-cli**  | Devbox CLI configuration                           |
 | **vscode-ext-commit** | VS Code commit message extension                   |
 
-See [Supporting Modules](./modules/supporting/index.md) for details.
+See [Modules Reference](../modules/index.md) for details on all modules.
 
 ### Container Structure
 
@@ -157,7 +157,7 @@ EAC uses this graph to:
 - **test_deps**: Required for testing (test utilities, fixtures)
 - **deploy_deps**: Required for deployment (runtime dependencies)
 
-See [Dependency System](./dependency-system.md) for graph algorithms and caching strategies.
+See [Dependency System](./dependencies.md) for graph algorithms and caching strategies.
 
 ---
 
@@ -356,9 +356,9 @@ See [CLI Integration](./cli-integration.md) for details on the R2R ↔ EAC bound
 ### Architecture
 
 - [R2R CLI Architecture](https://ready-to-release.github.io/eac/reference/r2r/architecture/) - Framework overview and container model
-- [Module Architectures](./modules/index.md) - Individual module C4 diagrams
+- [Modules Reference](../modules/index.md) - Module documentation and C4 diagrams
 - [Contracts System](./contracts.md) - YAML contract specification
-- [Dependency System](./dependency-system.md) - Module dependency graph
+- [Dependency System](./dependencies.md) - Module dependency graph
 - [Component Types](./component-types.md) - Component type reference
 - [Repository Layout](./repository-layout.md) - File organization conventions
 - [CLI Integration](./cli-integration.md) - R2R ↔ EAC integration details

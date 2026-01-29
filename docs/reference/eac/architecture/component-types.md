@@ -495,7 +495,7 @@ r2r eac show-modules
 ## Related Documentation
 
 - [Modules](./index.md) - Module system and dependency management
-- [Contracts](../contracts/index.md) - Contract system and YAML schemas
+- [Contracts](./contracts.md) - Contract system and YAML schemas
 - [Dependencies](./dependencies.md) - Dependency resolution details
 - `contracts/eac-core/0.1.0/defaults/tool-config.yml` - Tool definitions with resource settings
 - `contracts/eac-core/0.1.0/repository.schema.json` - Schema for amp configuration

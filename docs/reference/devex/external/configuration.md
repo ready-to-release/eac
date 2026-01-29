@@ -259,5 +259,5 @@ modules:
 ## See Also
 
 - [Project Structure](./project-structure.md) - Directory organization
-- [Contracts Reference](../../eac/contracts/index.md) - Full contract documentation
+- [Contracts Reference](../../eac/architecture/contracts.md) - Full contract documentation
 - [Component Types](../../eac/architecture/component-types.md) - All available types

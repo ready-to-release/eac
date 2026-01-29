@@ -298,7 +298,7 @@ Is the module released to external users?
 - [DR-011: Calendar Versioning Policy](../decision-records/dr011.md) - CalVer usage for docs
 - [Module Changelogs](changelog/module-changelogs.md) - Changelog format and structure
 - [Release Workflows](workflows/release-workflows.md) - Automated release process
-- [Supporting Modules](../../eac/architecture/modules/supporting/index.md) - Module catalog
+- [Supporting Modules](../../eac/modules/index.md) - Module catalog
 
 ---
 
