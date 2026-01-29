@@ -37,42 +37,7 @@
 
 ---
 
-<h2 align="center">The Problem</h2>
-
-<p align="center">
-<a href="https://ready-to-release.github.io/eac/explanation/everything-as-code/compliance-velocity-paradox/"><img src="https://img.shields.io/badge/⚠️_THE_PARADOX-Compliance_demands_rigor._Markets_demand_speed.-dc2626?style=for-the-badge&labelColor=7f1d1d" alt="The Paradox"></a>
-</p>
-
-<p align="center">
-<a href="https://ready-to-release.github.io/eac/reference/commands/validate/"><img src="https://img.shields.io/badge/🎯-No_Source_of_Truth-dc2626?style=for-the-badge" alt="No Source of Truth"></a>
-<a href="https://ready-to-release.github.io/eac/reference/commands/show/books/"><img src="https://img.shields.io/badge/📄-Docs_Drift-dc2626?style=for-the-badge" alt="Docs Drift"></a>
-<a href="https://ready-to-release.github.io/eac/reference/commands/pipeline/"><img src="https://img.shields.io/badge/🔍-Traceability_Lost-dc2626?style=for-the-badge" alt="Traceability Lost"></a>
-<a href="https://ready-to-release.github.io/eac/reference/commands/scan/"><img src="https://img.shields.io/badge/⏰-Audit_Prep-dc2626?style=for-the-badge" alt="Audit Prep"></a>
-<br>
-<a href="https://ready-to-release.github.io/eac/reference/commands/validate/"><img src="https://img.shields.io/badge/📦-Evidence_Scattered-dc2626?style=for-the-badge" alt="Evidence Scattered"></a>
-<a href="https://ready-to-release.github.io/eac/reference/commands/scan/"><img src="https://img.shields.io/badge/🛡️-Scan_Late-dc2626?style=for-the-badge" alt="Scan Late"></a>
-<a href="https://ready-to-release.github.io/eac/reference/commands/create/spec/"><img src="https://img.shields.io/badge/🔗-Specs_Disconnect-dc2626?style=for-the-badge" alt="Specs Disconnect"></a>
-<a href="https://ready-to-release.github.io/eac/reference/commands/create/design/"><img src="https://img.shields.io/badge/🏛️-Knowledge_Silos-dc2626?style=for-the-badge" alt="Knowledge Silos"></a>
-<br>
-<a href="https://ready-to-release.github.io/eac/reference/commands/release/"><img src="https://img.shields.io/badge/🚀-Release_Events-dc2626?style=for-the-badge" alt="Release Events"></a>
-<a href="https://ready-to-release.github.io/eac/reference/commands/create/"><img src="https://img.shields.io/badge/📋-Copy--Paste_Compliance-dc2626?style=for-the-badge" alt="Copy-Paste Compliance"></a>
-<a href="https://ready-to-release.github.io/eac/reference/commands/pipeline/"><img src="https://img.shields.io/badge/🚧-Manual_Gates-dc2626?style=for-the-badge" alt="Manual Gates"></a>
-<a href="https://ready-to-release.github.io/eac/reference/commands/release/"><img src="https://img.shields.io/badge/🎲-Deployment_Roulette-dc2626?style=for-the-badge" alt="Deployment Roulette"></a>
-</p>
-
-<p align="center">
-<a href="https://dora.dev/capabilities/streamlining-change-approval/">DORA research</a> proves heavyweight approvals backfire—they <em>increase</em> risk.<br>
-<strong>Elite teams prove you can have both — speed <em>and</em> compliance.</strong>
-</p>
-
----
-
-<h2 align="center">The Solution</h2>
-
-<p align="center">
-<a href="https://dora.dev/capabilities/version-control/">DORA</a> proves elite performers store <strong>everything</strong> in version control.<br>
-<sub>Not just code—configurations, infrastructure, specifications, tests, and deployment automation.</sub>
-</p>
+<h2 align="center">What You Get</h2>
 
 <p align="center">
 <a href="https://ready-to-release.github.io/eac/tutorials/"><img src="https://img.shields.io/badge/🚀-R2R-3b82f6?style=for-the-badge" alt="R2R"></a>
@@ -81,7 +46,7 @@
 
 <p align="center">
 <strong>Ready to Release</strong> — <em>"Ready to release at any time, for any team."</em><br>
-<sub>Extensible CLI · Docker encapsulation</sub><br>
+<sub>Extensible CLI · Docker encapsulation · Zero lock-in</sub><br>
 <sup><a href="https://ready-to-release.github.io/eac/tutorials/">Install →</a> · <a href="https://ready-to-release.github.io/eac/how-to-guides/r2r/creating-extensions/">Extend →</a></sup>
 </p>
 
@@ -97,19 +62,7 @@
 
 ---
 
-<h2 align="center">How It Works</h2>
-
-<p align="center">
-One commit. Validated build. Auditable release.
-</p>
-
-<p align="center">
-<a href="https://ready-to-release.github.io/eac/reference/commands/create/spec/"><img src="https://img.shields.io/badge/Requirements-22c55e?style=for-the-badge" alt="Requirements"></a>
-<a href="https://ready-to-release.github.io/eac/reference/commands/templates/"><img src="https://img.shields.io/badge/Documentation-14b8a6?style=for-the-badge" alt="Documentation"></a>
-<a href="https://ready-to-release.github.io/eac/reference/commands/validate/"><img src="https://img.shields.io/badge/Compliance-a855f7?style=for-the-badge" alt="Compliance"></a>
-<a href="https://ready-to-release.github.io/eac/reference/commands/pipeline/"><img src="https://img.shields.io/badge/Traceability-ec4899?style=for-the-badge" alt="Traceability"></a>
-<a href="https://ready-to-release.github.io/eac/reference/commands/scan/"><img src="https://img.shields.io/badge/Audit-f97316?style=for-the-badge" alt="Audit"></a>
-</p>
+<h2 align="center">The Transformation</h2>
 
 <p align="center">
 <sub><del>Word documents</del> → <strong>Executable specs</strong></sub><br>
@@ -120,8 +73,16 @@ One commit. Validated build. Auditable release.
 </p>
 
 <p align="center">
-<strong>The result</strong>: Audit-ready documentation as a byproduct of your pipeline, not a bottleneck before release.<br>
-<a href="https://ready-to-release.github.io/eac/explanation/everything-as-code/">Understand the paradigm →</a> · <a href="https://ready-to-release.github.io/eac/explanation/everything-as-code/compliance-velocity-paradox/">See the compliance-velocity paradox →</a>
+<a href="https://ready-to-release.github.io/eac/reference/commands/create/spec/"><img src="https://img.shields.io/badge/✅-Requirements-22c55e?style=for-the-badge" alt="Requirements"></a>
+<a href="https://ready-to-release.github.io/eac/reference/commands/templates/"><img src="https://img.shields.io/badge/✅-Documentation-14b8a6?style=for-the-badge" alt="Documentation"></a>
+<a href="https://ready-to-release.github.io/eac/reference/commands/validate/"><img src="https://img.shields.io/badge/✅-Compliance-a855f7?style=for-the-badge" alt="Compliance"></a>
+<a href="https://ready-to-release.github.io/eac/reference/commands/pipeline/"><img src="https://img.shields.io/badge/✅-Traceability-ec4899?style=for-the-badge" alt="Traceability"></a>
+<a href="https://ready-to-release.github.io/eac/reference/commands/scan/"><img src="https://img.shields.io/badge/✅-Audit-f97316?style=for-the-badge" alt="Audit"></a>
+</p>
+
+<p align="center">
+<strong>One commit. Validated build. Auditable release.</strong><br>
+<sub>Audit-ready documentation as a byproduct of your pipeline, not a bottleneck before release.</sub>
 </p>
 
 ---
@@ -211,6 +172,45 @@ The difference isn't less compliance—it's <strong>automated compliance</strong
 <p align="center">
 <a href="https://github.com/ready-to-release/eac"><img src="https://img.shields.io/badge/🐕-Dogfooding-f97316?style=flat-square" alt="Dogfooding"></a><br>
 <sub>This repository uses R2R and EAC to build itself—living proof of the toolings efficacy.</sub>
+</p>
+
+---
+
+<h2 align="center">Why This Matters</h2>
+
+<p align="center">
+<a href="https://ready-to-release.github.io/eac/explanation/everything-as-code/compliance-velocity-paradox/"><img src="https://img.shields.io/badge/⚖️_THE_PARADOX-Compliance_demands_rigor._Markets_demand_speed.-3b82f6?style=for-the-badge&labelColor=1e40af" alt="The Paradox"></a>
+</p>
+
+<p align="center">
+<a href="https://dora.dev/capabilities/version-control/">DORA</a> proves elite performers store <strong>everything</strong> in version control.<br>
+<sub>Not just code—configurations, infrastructure, specifications, tests, and deployment automation.</sub><br>
+<a href="https://dora.dev/capabilities/streamlining-change-approval/">Research shows</a> heavyweight approvals increase risk. <strong>Elite teams have both—speed and compliance.</strong>
+</p>
+
+<p align="center">
+<details>
+<summary><b>Common challenges this solves</b></summary>
+<br>
+
+Traditional approaches create friction:
+
+- **No single source of truth** → Multiple systems, version mismatches, manual reconciliation
+- **Documentation drift** → Wiki pages outdated, Word docs lost, specs disconnected from code
+- **Scattered evidence** → Audit prep takes months, traceability requires manual investigation
+- **Late security scans** → Issues found at the end, expensive to fix, delays release
+- **Manual gates** → Bottlenecks in the pipeline, human error, inconsistent checks
+- **Release events** → Big-bang deployments, deployment roulette, high-risk changes
+
+<br>
+
+**EAC replaces friction with flow** — everything versioned, traced, and automated in git.
+
+</details>
+</p>
+
+<p align="center">
+<a href="https://ready-to-release.github.io/eac/explanation/everything-as-code/">Understand the paradigm →</a> · <a href="https://ready-to-release.github.io/eac/explanation/everything-as-code/compliance-velocity-paradox/">Explore the compliance-velocity paradox →</a>
 </p>
 
 ---

@@ -33,6 +33,9 @@ type SummaryBuilder struct {
 	completedModules int  // Number of modules that have completed
 	allComplete      bool // True when all modules have completed
 
+	// Completion callback
+	onComplete func(*SummaryBuilder) // Called when all modules have completed
+
 	// Command context
 	commandType CommandType
 }
@@ -79,6 +82,12 @@ func NewSummaryBuilder(cmdType CommandType, componentCounts map[string]int) *Sum
 // SetOnComplete sets a callback that will be called when all modules have completed.
 // The callback receives the builder so it can call Finalize().
 // This allows immediate summary send without waiting for execution phase to fully unwind.
+func (sb *SummaryBuilder) SetOnComplete(callback func(*SummaryBuilder)) {
+	sb.mu.Lock()
+	defer sb.mu.Unlock()
+	sb.onComplete = callback
+}
+
 // AddResult adds a component result to the builder.
 // This is called by the scheduler as each component completes.
 // Thread-safe: can be called from multiple goroutines.
@@ -137,6 +146,11 @@ func (sb *SummaryBuilder) AddResult(result orchestrator.ComponentResult) {
 		sb.completedModules++
 		if sb.completedModules >= sb.totalModules {
 			sb.allComplete = true
+
+			// Call completion callback if set
+			if sb.onComplete != nil {
+				sb.onComplete(sb)
+			}
 		}
 	}
 }
