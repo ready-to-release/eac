@@ -6,6 +6,14 @@ import (
 	"time"
 )
 
+// SummaryBuilder defines the interface for incremental summary building.
+// This interface allows the scheduler to send results to the summary builder
+// without creating an import cycle with cmdframework.
+type SummaryBuilder interface {
+	// AddResult adds a component result to the builder (thread-safe).
+	AddResult(result ComponentResult)
+}
+
 // WorkItem represents a single unit of work to be processed.
 type WorkItem struct {
 	// Moniker is the unique identifier for this work item

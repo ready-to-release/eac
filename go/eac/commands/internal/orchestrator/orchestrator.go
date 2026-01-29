@@ -49,6 +49,9 @@ type Orchestrator struct {
 
 	// Pending cache times to apply when scheduler is created
 	pendingCacheTimes map[string]time.Time
+
+	// Summary builder for incremental summary computation
+	summaryBuilder SummaryBuilder
 }
 
 // New creates a new Orchestrator with the given configuration and worker function.
@@ -370,6 +373,11 @@ func (o *Orchestrator) processWorkItem(item WorkItem) WorkResult {
 
 	// Execute worker function
 	exitCode := o.worker(item.Moniker, workerWriter)
+
+	// Close TUI writer first (flushes pipe), then log file
+	if closer, ok := workerWriter.(io.Closer); ok {
+		closer.Close()
+	}
 	logFile.Close()
 
 	// Parse log for warnings/errors
@@ -762,6 +770,13 @@ func (o *Orchestrator) SetCacheTimes(times map[string]time.Time) {
 	}
 }
 
+// SetSummaryBuilder sets the summary builder for incremental summary computation.
+// The builder receives component results as they complete, enabling parallel
+// summary computation during execution.
+func (o *Orchestrator) SetSummaryBuilder(builder SummaryBuilder) {
+	o.summaryBuilder = builder
+}
+
 // GetLastComponentResults returns the component-level results from the last
 // RunComponentsLayered or RunComponentsParallel call.
 // Returns nil if no component execution has occurred.
@@ -799,6 +814,11 @@ func (o *Orchestrator) RunComponentsLayered(layers [][]ComponentWork, worker Com
 	if o.pendingCacheTimes != nil {
 		scheduler.SetCacheTimes(o.pendingCacheTimes)
 		o.pendingCacheTimes = nil
+	}
+
+	// Apply summary builder if set
+	if o.summaryBuilder != nil {
+		scheduler.SetSummaryBuilder(o.summaryBuilder)
 	}
 
 	defer func() {
@@ -925,6 +945,11 @@ func (o *Orchestrator) RunComponentsParallel(work []ComponentWork, worker Compon
 	if o.pendingCacheTimes != nil {
 		scheduler.SetCacheTimes(o.pendingCacheTimes)
 		o.pendingCacheTimes = nil
+	}
+
+	// Apply summary builder if set
+	if o.summaryBuilder != nil {
+		scheduler.SetSummaryBuilder(o.summaryBuilder)
 	}
 
 	defer func() {

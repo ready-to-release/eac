@@ -2,6 +2,7 @@
 package scan
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -63,11 +64,9 @@ type ScanModuleResult struct {
 
 // scanContext holds scan-specific state during execution.
 type scanContext struct {
-	cachedModules map[string]bool     // Modules that are up-to-date (cache hits)
-	moduleFiles   map[string][]string // For state update
-	scannerTypes  []string            // Requested scanner types
-	results       map[string]map[string]bool // module -> scanner -> passed
-	mu            sync.Mutex          // Protects results map for concurrent access
+	cachedModules map[string]bool  // Modules that are up-to-date (cache hits)
+	scanResults   map[string]bool  // module -> passed (true = all scanners passed)
+	mu            sync.Mutex       // Protects scanResults map for concurrent access
 }
 
 // ScanWorker is the function signature for scanner-specific work.
@@ -136,29 +135,94 @@ func scanAfterExecute(ctx *cmdframework.ExecutionContext) error {
 }
 
 // updateScanState updates the scan state after execution.
+// This follows the build pattern - computing moduleFiles fresh rather than storing in context.
 func updateScanState(ctx *cmdframework.ExecutionContext, sctx *scanContext) {
-	if len(sctx.results) == 0 {
+	// Collect successfully scanned modules (exit code 0 or -1 for cached)
+	scannedModules := make(map[string]bool)
+	for _, result := range ctx.Results {
+		if result.ExitCode == 0 || result.ExitCode == -1 {
+			// Check if we have an explicit result recorded
+			sctx.mu.Lock()
+			if passed, ok := sctx.scanResults[result.Moniker]; ok {
+				scannedModules[result.Moniker] = passed
+			} else {
+				// Default: exit code 0 means passed
+				scannedModules[result.Moniker] = result.ExitCode == 0
+			}
+			sctx.mu.Unlock()
+		}
+	}
+
+	// Also include component results (for component-level execution)
+	for _, result := range ctx.ComponentResults {
+		if result.ExitCode == 0 || result.ExitCode == -1 {
+			// Check if we have an explicit result recorded
+			sctx.mu.Lock()
+			if passed, ok := sctx.scanResults[result.Module]; ok {
+				scannedModules[result.Module] = passed
+			} else {
+				// For component results, check if any failed
+				if existing, exists := scannedModules[result.Module]; exists {
+					// Keep false if already failed
+					if !existing {
+						scannedModules[result.Module] = false
+					}
+				} else {
+					scannedModules[result.Module] = result.ExitCode == 0
+				}
+			}
+			sctx.mu.Unlock()
+		}
+	}
+
+	if len(scannedModules) == 0 {
+		log.Debugf("[SCAN-CACHE] No scanned modules to update state for")
 		return
 	}
 
-	// Update state
-	if err := scanstate.UpdateModuleState(ctx.WorkspaceRoot, sctx.results, sctx.moduleFiles); err != nil {
+	// Build modules map for state update (compute moduleFiles fresh like build does)
+	modulesMap := make(map[string]scanstate.ModuleFileGetter)
+	for moniker := range scannedModules {
+		if contract, ok := ctx.ModuleRegistry.Get(moniker); ok {
+			modulesMap[moniker] = contract
+		}
+	}
+
+	moduleFiles, err := scanstate.GetModuleSourceFiles(ctx.WorkspaceRoot, modulesMap)
+	if err != nil {
+		log.Warnf("Failed to get module files for state update: %v", err)
+		return
+	}
+
+	log.Debugf("[SCAN-CACHE] Updating state for %d modules", len(scannedModules))
+	for moniker, passed := range scannedModules {
+		log.Debugf("[SCAN-CACHE] Module %s: passed=%v", moniker, passed)
+	}
+
+	if err := scanstate.UpdateModuleState(ctx.WorkspaceRoot, scannedModules, moduleFiles); err != nil {
 		log.Warnf("Failed to update scan state: %v", err)
 	}
 }
 
 // recordScanResult records the result of a scan for state tracking.
-func recordScanResult(sctx *scanContext, moniker, scannerType string, passed bool) {
+func recordScanResult(sctx *scanContext, moniker string, passed bool) {
 	if sctx == nil {
 		return
 	}
 	sctx.mu.Lock()
 	defer sctx.mu.Unlock()
 
-	if sctx.results[moniker] == nil {
-		sctx.results[moniker] = make(map[string]bool)
+	// Track module-level result (all scanners must pass for module to be cached)
+	if existing, ok := sctx.scanResults[moniker]; ok {
+		// If any scanner fails, mark module as failed
+		if !passed {
+			sctx.scanResults[moniker] = false
+		} else if !existing {
+			// Keep existing false value
+		}
+	} else {
+		sctx.scanResults[moniker] = passed
 	}
-	sctx.results[moniker][scannerType] = passed
 }
 
 // scanWorkerWrapper wraps the scanner-specific worker for cmdframework.
@@ -181,9 +245,10 @@ func scanWorkerWrapper(ctx *cmdframework.ExecutionContext, moniker string, logWr
 		return 1
 	}
 
-	// Acquire lock for this module
+	// Acquire lock for this module with wait
 	lockCfg := locking.ScanConfig(moniker, paths.OutSecurityRelPath) // OutSecurityRelPath = "out/scan"
-	lockFile, err := locking.AcquireTracked(ctx.WorkspaceRoot, lockCfg, ctx.Orchestrator.GetRegistry())
+	lockFile, err := locking.AcquireWithWait(context.Background(), ctx.WorkspaceRoot, lockCfg,
+		ctx.Orchestrator.GetRegistry(), locking.DefaultWaitConfig())
 	if err != nil {
 		output.Writeln(logWriter, "Error: %v", err)
 		return 1
@@ -285,9 +350,10 @@ func scanComponentWorker(ctx *cmdframework.ExecutionContext, moniker, component 
 		componentDir = compName + "_" + scannerTypeStr
 	}
 
-	// Acquire lock for this component+scanner
+	// Acquire lock for this component+scanner with wait
 	lockCfg := locking.ComponentScanConfig(moniker, componentDir, paths.OutSecurityRelPath)
-	lockFile, err := locking.AcquireTracked(ctx.WorkspaceRoot, lockCfg, ctx.Orchestrator.GetRegistry())
+	lockFile, err := locking.AcquireWithWait(context.Background(), ctx.WorkspaceRoot, lockCfg,
+		ctx.Orchestrator.GetRegistry(), locking.DefaultWaitConfig())
 	if err != nil {
 		output.Writeln(logWriter, "Error: %v", err)
 		return 1
@@ -372,7 +438,7 @@ func runComponentScanner(ctx *cmdframework.ExecutionContext, module *modules.Mod
 	if err != nil {
 		handleScanFailure(ctx, scanCfg, module, moniker, component, scanStart, err, logWriter)
 		// Record failed scan result
-		recordScanResult(sctx, moniker, string(scannerType), false)
+		recordScanResult(sctx, moniker, false)
 		return 1
 	}
 
@@ -380,12 +446,12 @@ func runComponentScanner(ctx *cmdframework.ExecutionContext, module *modules.Mod
 	_, writeErr := handleScanSuccess(ctx, scanCfg, module, moniker, component, scanStart, findings, logWriter)
 	if writeErr != nil {
 		// Record failed scan result
-		recordScanResult(sctx, moniker, string(scannerType), false)
+		recordScanResult(sctx, moniker, false)
 		return 1
 	}
 
 	// Record successful scan result
-	recordScanResult(sctx, moniker, string(scannerType), true)
+	recordScanResult(sctx, moniker, true)
 
 	return 0
 }
@@ -710,8 +776,7 @@ func RunMultiScan(cmdCfg *cmdframework.CommandConfig, multiCfg *MultiScanConfig)
 
 	// Create scan context for incremental caching
 	sctx := &scanContext{
-		moduleFiles: make(map[string][]string),
-		results:     make(map[string]map[string]bool),
+		scanResults: make(map[string]bool),
 	}
 	cmdCfg.Extra["scanContext"] = sctx
 
@@ -757,7 +822,6 @@ func multiScanAfterInit(ctx *cmdframework.ExecutionContext) error {
 // multiScanAfterResolve sets the component count after ModuleRegistry is available.
 // It also handles incremental scan detection.
 func multiScanAfterResolve(ctx *cmdframework.ExecutionContext) error {
-	multiCfg, _ := ctx.Config.Extra["multiScanConfig"].(*MultiScanConfig)
 	sctx, _ := ctx.Config.Extra["scanContext"].(*scanContext)
 
 	// Now that ModuleRegistry is available, calculate and set component count
@@ -777,7 +841,7 @@ func multiScanAfterResolve(ctx *cmdframework.ExecutionContext) error {
 	// Incremental scan detection (devbox only, not CI)
 	// Also run in dry-run mode to show which modules would be scanned/skipped
 	if !environments.IsCI() && sctx != nil {
-		detectIncrementalScanChanges(ctx, sctx, multiCfg)
+		detectIncrementalScanChanges(ctx, sctx)
 	}
 
 	return nil
@@ -786,10 +850,14 @@ func multiScanAfterResolve(ctx *cmdframework.ExecutionContext) error {
 // detectIncrementalScanChanges detects which modules need rescanning.
 // Instead of filtering modules from the execution plan, it stores which modules
 // are cached so the component worker can skip them with -1 (blue in TUI).
-func detectIncrementalScanChanges(ctx *cmdframework.ExecutionContext, sctx *scanContext, multiCfg *MultiScanConfig) {
+// This follows the same pattern as build's detectIncrementalChanges.
+func detectIncrementalScanChanges(ctx *cmdframework.ExecutionContext, sctx *scanContext) {
 	startTime := time.Now()
+	defer func() {
+		ctx.SetChangeDetectionTiming(time.Since(startTime))
+	}()
 
-	// Collect module files for change detection
+	// Build modules map for change detection
 	modulesMap := make(map[string]scanstate.ModuleFileGetter)
 	for _, moniker := range ctx.GetExecutionMonikers() {
 		if contract, ok := ctx.ModuleRegistry.Get(moniker); ok {
@@ -807,22 +875,22 @@ func detectIncrementalScanChanges(ctx *cmdframework.ExecutionContext, sctx *scan
 		return
 	}
 
-	// Store for later state update
-	sctx.moduleFiles = moduleFiles
-
-	// Collect scanner types for detection
-	scannerTypes := collectScannerTypes(ctx, multiCfg)
-	sctx.scannerTypes = scannerTypes
-
-	changeResult, err := scanstate.DetectChanges(ctx.WorkspaceRoot, moduleFiles, scannerTypes)
+	changeResult, err := scanstate.DetectChanges(ctx.WorkspaceRoot, moduleFiles)
 	if err != nil {
 		log.Debugf("Failed to detect scan changes: %v", err)
 		return
 	}
 
+	log.Debugf("[SCAN-CACHE] DetectChanges result: FreshRun=%v Changed=%d UpToDate=%d",
+		changeResult.FreshRun, len(changeResult.ChangedModules), len(changeResult.UpToDateModules))
+	for moniker, reason := range changeResult.ChangeReasons {
+		log.Debugf("[SCAN-CACHE] Changed: %s -> %s", moniker, reason)
+	}
+
 	detectionTime := time.Since(startTime)
 
 	if changeResult.FreshRun {
+		log.Debugf("Fresh scan detected, all modules will scan")
 		if ctx.InitSummary != nil {
 			ctx.InitSummary.SetIncremental(&initsummary.IncrementalInfo{
 				Enabled:       true,
@@ -866,42 +934,17 @@ func detectIncrementalScanChanges(ctx *cmdframework.ExecutionContext, sctx *scan
 
 	log.Debugf("Incremental scan: %d modules to scan, %d cached (will show blue in TUI)",
 		len(changedList), len(cachedList))
-}
 
-// collectScannerTypes collects all scanner types that will be used.
-func collectScannerTypes(ctx *cmdframework.ExecutionContext, multiCfg *MultiScanConfig) []string {
-	if multiCfg != nil && len(multiCfg.Scanners) > 0 {
-		var types []string
-		for _, s := range multiCfg.Scanners {
-			types = append(types, string(s))
+	// Debug: Log the cached modules map keys
+	if len(sctx.cachedModules) > 0 {
+		var keys []string
+		for k := range sctx.cachedModules {
+			keys = append(keys, k)
 		}
-		return types
+		log.Debugf("[SCAN-CACHE] cachedModules set with %d entries: %v", len(keys), keys)
+	} else {
+		log.Debugf("[SCAN-CACHE] cachedModules is empty or nil")
 	}
-
-	// Collect from component types
-	seenScanners := make(map[string]bool)
-	for _, moniker := range ctx.GetExecutionMonikers() {
-		module, exists := ctx.ModuleRegistry.Get(moniker)
-		if !exists {
-			continue
-		}
-		for _, componentName := range module.GetEnabledComponents() {
-			compTypeName := module.Components.GetComponentType(componentName)
-			compType := ctx.EACConfig.ComponentTypes.Get(compTypeName)
-			if compType == nil || !compType.IsScannable() {
-				continue
-			}
-			for _, s := range compType.GetScanners() {
-				seenScanners[s] = true
-			}
-		}
-	}
-
-	var types []string
-	for s := range seenScanners {
-		types = append(types, s)
-	}
-	return types
 }
 
 // multiScanWorker runs all configured scanners for a single module.
@@ -919,9 +962,10 @@ func multiScanWorker(ctx *cmdframework.ExecutionContext, moniker string, logWrit
 		return 1
 	}
 
-	// Acquire lock for this module
+	// Acquire lock for this module with wait
 	lockCfg := locking.ScanConfig(moniker, paths.OutSecurityRelPath) // OutSecurityRelPath = "out/scan"
-	lockFile, err := locking.AcquireTracked(ctx.WorkspaceRoot, lockCfg, ctx.Orchestrator.GetRegistry())
+	lockFile, err := locking.AcquireWithWait(context.Background(), ctx.WorkspaceRoot, lockCfg,
+		ctx.Orchestrator.GetRegistry(), locking.DefaultWaitConfig())
 	if err != nil {
 		output.Writeln(logWriter, "Error: %v", err)
 		return 1

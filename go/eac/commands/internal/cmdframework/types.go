@@ -99,9 +99,23 @@ type ExecutionContext struct {
 	// ComponentResultSets contains component results grouped by module
 	ComponentResultSets []orchestrator.ComponentResultSet
 
+	// Incremental summary builder (receives results as components complete)
+	SummaryBuilder *SummaryBuilder
+
 	// Internal
-	tuiWriter io.Writer
-	cleanup   []func()
+	tuiWriter   io.Writer
+	cleanup     []func()
+	initTimings InitTimings
+}
+
+// InitTimings tracks duration of initialization phases for boot-style output.
+type InitTimings struct {
+	ConfigLoad      time.Duration
+	ToolInit        time.Duration
+	ModuleDiscovery time.Duration
+	ExecutionOrder  time.Duration
+	ChangeDetection time.Duration
+	DepsVerify      time.Duration
 }
 
 // WorkerFunc processes a single module and returns an exit code.
@@ -178,6 +192,24 @@ func (ctx *ExecutionContext) WriteInit(format string, args ...interface{}) {
 	} else {
 		log.Info(msg)
 	}
+}
+
+// WriteStatus writes a boot-style status line: "[ ok ] message" or "[    ] message".
+// Use ok=true for completed steps, ok=false for in-progress steps.
+func (ctx *ExecutionContext) WriteStatus(ok bool, format string, args ...interface{}) {
+	msg := fmt.Sprintf(format, args...)
+	var prefix string
+	if ok {
+		prefix = "[ ok ]"
+	} else {
+		prefix = "[    ]"
+	}
+	ctx.WriteInit("%s %s", prefix, msg)
+}
+
+// SetChangeDetectionTiming sets the change detection timing for boot-style output.
+func (ctx *ExecutionContext) SetChangeDetectionTiming(d time.Duration) {
+	ctx.initTimings.ChangeDetection = d
 }
 
 // AddCleanup registers a function to be called during cleanup.

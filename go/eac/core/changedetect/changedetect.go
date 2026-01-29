@@ -10,6 +10,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"runtime"
+	"sync"
 	"time"
 )
 
@@ -174,56 +176,119 @@ func (d *Detector) DetectChanges(ctx context.Context, opts DetectOptions) (*Chan
 		return result, nil
 	}
 
-	// Get current git state
-	currentCommit, err := d.git.HeadCommit(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get HEAD commit: %w", err)
-	}
+	// Get current git state in parallel
+	var currentCommit string
+	var uncommittedFiles []string
+	var commitErr, uncommittedErr error
 
-	uncommittedFiles, err := d.git.UncommittedFiles(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get uncommitted files: %w", err)
+	var gitWg sync.WaitGroup
+	gitWg.Add(2)
+	go func() {
+		defer gitWg.Done()
+		currentCommit, commitErr = d.git.HeadCommit(ctx)
+	}()
+	go func() {
+		defer gitWg.Done()
+		uncommittedFiles, uncommittedErr = d.git.UncommittedFiles(ctx)
+	}()
+	gitWg.Wait()
+
+	if commitErr != nil {
+		return nil, fmt.Errorf("failed to get HEAD commit: %w", commitErr)
+	}
+	if uncommittedErr != nil {
+		return nil, fmt.Errorf("failed to get uncommitted files: %w", uncommittedErr)
 	}
 
 	var uncommittedHash string
 	if len(uncommittedFiles) > 0 {
-		uncommittedHash, err = d.hasher.HashUncommittedState(ctx, opts.WorkspaceRoot, uncommittedFiles)
-		if err != nil {
-			return nil, fmt.Errorf("failed to hash uncommitted state: %w", err)
+		var hashErr error
+		uncommittedHash, hashErr = d.hasher.HashUncommittedState(ctx, opts.WorkspaceRoot, uncommittedFiles)
+		if hashErr != nil {
+			return nil, fmt.Errorf("failed to hash uncommitted state: %w", hashErr)
 		}
 	}
 
-	// Check each module
-	for _, moniker := range opts.Modules {
-		prevModuleState, hasPrevious := opts.PreviousState.Modules[moniker]
+	// Compute module hashes in parallel
+	type moduleResult struct {
+		moniker string
+		hash    string
+		err     error
+	}
 
-		// New module that wasn't in previous state
-		if !hasPrevious {
+	// Identify modules that need hash computation
+	var modulesToHash []string
+	for _, moniker := range opts.Modules {
+		if _, hasPrevious := opts.PreviousState.Modules[moniker]; !hasPrevious {
 			result.Changed = append(result.Changed, moniker)
 			result.Reasons[moniker] = "new module (not in previous state)"
-			continue
+		} else {
+			modulesToHash = append(modulesToHash, moniker)
+		}
+	}
+
+	// Compute hashes in parallel with bounded concurrency (half CPU, floor min(4,NumCPU), cap 8)
+	moduleHashes := make(map[string]string)
+	if len(modulesToHash) > 0 {
+		results := make(chan moduleResult, len(modulesToHash))
+		numCPU := runtime.NumCPU()
+		workers := numCPU / 2
+		floor := 4
+		if numCPU < floor {
+			floor = numCPU
+		}
+		if workers < floor {
+			workers = floor
+		}
+		if workers > 8 {
+			workers = 8
+		}
+		sem := make(chan struct{}, workers)
+
+		var hashWg sync.WaitGroup
+		for _, moniker := range modulesToHash {
+			hashWg.Add(1)
+			go func(m string) {
+				defer hashWg.Done()
+				sem <- struct{}{}
+				defer func() { <-sem }()
+
+				hash, err := d.ComputeModuleHash(ctx, opts.WorkspaceRoot, m)
+				results <- moduleResult{moniker: m, hash: hash, err: err}
+			}(moniker)
 		}
 
-		// Compute current hash for module
-		currentHash, err := d.ComputeModuleHash(ctx, opts.WorkspaceRoot, moniker)
-		if err != nil {
-			return nil, fmt.Errorf("failed to compute hash for module %s: %w", moniker, err)
+		// Close results channel when all goroutines complete
+		go func() {
+			hashWg.Wait()
+			close(results)
+		}()
+
+		// Collect results
+		for r := range results {
+			if r.err != nil {
+				return nil, fmt.Errorf("failed to compute hash for module %s: %w", r.moniker, r.err)
+			}
+			moduleHashes[r.moniker] = r.hash
 		}
+	}
+
+	// Compare hashes for modules we computed
+	for _, moniker := range modulesToHash {
+		prevModuleState := opts.PreviousState.Modules[moniker]
+		currentHash := moduleHashes[moniker]
 
 		if debugDetect {
 			fmt.Fprintf(os.Stderr, "[DEBUG changedetect] Module %s: prev=%s curr=%s match=%v\n",
 				moniker, prevModuleState.SourceHash, currentHash, currentHash == prevModuleState.SourceHash)
 		}
 
-		// Compare hashes
 		if currentHash != prevModuleState.SourceHash {
 			result.Changed = append(result.Changed, moniker)
 			result.Reasons[moniker] = "source files changed"
-			continue
+		} else {
+			result.UpToDate = append(result.UpToDate, moniker)
 		}
-
-		// Module is up-to-date
-		result.UpToDate = append(result.UpToDate, moniker)
 	}
 
 	// Handle dependency propagation if enabled
@@ -271,17 +336,31 @@ func (d *Detector) ComputeCurrentState(ctx context.Context, workspaceRoot string
 		RecordedAt: time.Now(),
 	}
 
-	// Get git state
-	commit, err := d.git.HeadCommit(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get HEAD commit: %w", err)
-	}
-	state.Commit = commit
+	// Get git state in parallel
+	var commit string
+	var uncommittedFiles []string
+	var commitErr, uncommittedErr error
 
-	uncommittedFiles, err := d.git.UncommittedFiles(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get uncommitted files: %w", err)
+	var gitWg sync.WaitGroup
+	gitWg.Add(2)
+	go func() {
+		defer gitWg.Done()
+		commit, commitErr = d.git.HeadCommit(ctx)
+	}()
+	go func() {
+		defer gitWg.Done()
+		uncommittedFiles, uncommittedErr = d.git.UncommittedFiles(ctx)
+	}()
+	gitWg.Wait()
+
+	if commitErr != nil {
+		return nil, fmt.Errorf("failed to get HEAD commit: %w", commitErr)
 	}
+	if uncommittedErr != nil {
+		return nil, fmt.Errorf("failed to get uncommitted files: %w", uncommittedErr)
+	}
+
+	state.Commit = commit
 
 	if len(uncommittedFiles) > 0 {
 		uncommittedHash, err := d.hasher.HashUncommittedState(ctx, workspaceRoot, uncommittedFiles)
@@ -291,14 +370,54 @@ func (d *Detector) ComputeCurrentState(ctx context.Context, workspaceRoot string
 		state.UncommittedHash = uncommittedHash
 	}
 
-	// Compute hash for each module
-	for _, moniker := range modules {
-		hash, err := d.ComputeModuleHash(ctx, workspaceRoot, moniker)
-		if err != nil {
-			return nil, fmt.Errorf("failed to compute hash for module %s: %w", moniker, err)
+	// Compute hashes for all modules in parallel (half CPU, floor min(4,NumCPU), cap 8)
+	if len(modules) > 0 {
+		type moduleResult struct {
+			moniker string
+			hash    string
+			err     error
 		}
-		state.Modules[moniker] = ModuleState{
-			SourceHash: hash,
+
+		results := make(chan moduleResult, len(modules))
+		numCPU := runtime.NumCPU()
+		workers := numCPU / 2
+		floor := 4
+		if numCPU < floor {
+			floor = numCPU
+		}
+		if workers < floor {
+			workers = floor
+		}
+		if workers > 8 {
+			workers = 8
+		}
+		sem := make(chan struct{}, workers)
+
+		var hashWg sync.WaitGroup
+		for _, moniker := range modules {
+			hashWg.Add(1)
+			go func(m string) {
+				defer hashWg.Done()
+				sem <- struct{}{}
+				defer func() { <-sem }()
+
+				hash, err := d.ComputeModuleHash(ctx, workspaceRoot, m)
+				results <- moduleResult{moniker: m, hash: hash, err: err}
+			}(moniker)
+		}
+
+		go func() {
+			hashWg.Wait()
+			close(results)
+		}()
+
+		for r := range results {
+			if r.err != nil {
+				return nil, fmt.Errorf("failed to compute hash for module %s: %w", r.moniker, r.err)
+			}
+			state.Modules[r.moniker] = ModuleState{
+				SourceHash: r.hash,
+			}
 		}
 	}
 

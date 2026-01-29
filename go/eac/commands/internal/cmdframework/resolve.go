@@ -2,6 +2,7 @@ package cmdframework
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -15,12 +16,14 @@ import (
 // - Build module type lookup.
 func phaseResolve(ctx *ExecutionContext) error {
 	// Load module contracts
+	discoveryStart := time.Now()
 	moduleReport, err := reports.GetModuleContracts(ctx.WorkspaceRoot)
 	if err != nil {
 		return fmt.Errorf("failed to load module contracts: %w", err)
 	}
 	ctx.ModuleReport = moduleReport
 	ctx.ModuleRegistry = moduleReport.Registry
+	ctx.initTimings.ModuleDiscovery = time.Since(discoveryStart)
 
 	// Resolve monikers - if none specified, use all modules
 	monikers := ctx.Config.Monikers
@@ -44,6 +47,7 @@ func phaseResolve(ctx *ExecutionContext) error {
 	}
 
 	// Calculate execution order
+	orderStart := time.Now()
 	executionPlan, err := repository.CalculateExecutionOrder(
 		monikers,
 		ctx.WorkspaceRoot,
@@ -53,6 +57,7 @@ func phaseResolve(ctx *ExecutionContext) error {
 		return fmt.Errorf("failed to calculate execution order: %w", err)
 	}
 	ctx.ExecutionPlan = executionPlan
+	ctx.initTimings.ExecutionOrder = time.Since(orderStart)
 
 	// Build module component types lookup for all modules in execution plan
 	for _, moniker := range executionPlan.ExecutionOrder {

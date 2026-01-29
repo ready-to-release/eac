@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ready-to-release/eac/go/eac/commands/internal/capacity"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/locktracker"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/output"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
@@ -30,8 +31,8 @@ type ComponentExtras struct {
 // with weighted resource control and dependency ordering.
 type ComponentScheduler struct {
 	config    Config
-	semaphore *WeightedSemaphore
-	registry  *locktracker.Registry // Lock tracking registry for TUI visualization
+	semaphore *capacity.GlobalSemaphore // Global cross-process semaphore
+	registry  *locktracker.Registry     // Lock tracking registry for TUI visualization
 
 	// Dynamic capacity management
 	capacityTicker *time.Ticker    // Recalculates capacity every 2 seconds
@@ -82,11 +83,15 @@ type ComponentScheduler struct {
 	// Cache times for displaying when cached artifacts were built
 	cacheTimesMu sync.RWMutex
 	cacheTimes   map[string]time.Time // module -> time when artifact was last built
+
+	// Summary builder for incremental summary computation
+	summaryBuilder SummaryBuilder
 }
 
 // NewComponentScheduler creates a new scheduler with the given configuration.
 // If registry is non-nil, the semaphore will be tracked for lock visualization.
 // Starts a dynamic capacity ticker that adjusts capacity based on available system resources.
+// Uses a GLOBAL semaphore shared across all processes (build, test, lint, scan).
 func NewComponentScheduler(config *Config, tuiConsole *tui.Console, registry *locktracker.Registry) *ComponentScheduler {
 	// Calculate initial capacity based on available resources
 	// Turbo multiplies the pressure roof: 1.0=normal, 1.25=+25%, 2.0=2x
@@ -97,12 +102,8 @@ func NewComponentScheduler(config *Config, tuiConsole *tui.Console, registry *lo
 	}
 	initialCap := detectAvailableCapacity(config.MaxConcurrency, turbo)
 
-	var sem *WeightedSemaphore
-	if registry != nil {
-		sem = NewWeightedSemaphoreWithRegistry("component-scheduler", initialCap, registry)
-	} else {
-		sem = NewWeightedSemaphore(initialCap)
-	}
+	// Create GLOBAL semaphore - shared across all processes via filesystem
+	sem := capacity.NewGlobalSemaphore(config.WorkspaceRoot, initialCap, registry)
 
 	cs := &ComponentScheduler{
 		config:           *config,
@@ -195,10 +196,18 @@ func (cs *ComponentScheduler) getCacheTime(module string) time.Time {
 	return cs.cacheTimes[module]
 }
 
-// detectAvailableCapacity calculates capacity as percentage of RAM.
-// Normal: 100% of (RAM/1GB) slots
+// SetSummaryBuilder sets the summary builder for incremental summary computation.
+// The builder receives component results as they complete.
+func (cs *ComponentScheduler) SetSummaryBuilder(builder SummaryBuilder) {
+	cs.summaryBuilder = builder
+}
+
 // detectAvailableCapacity calculates the pressure roof for parallel builds.
 //
+// When configMax (--roof) is explicitly set (> 0), it is used as the target capacity.
+// This allows users to override system detection when they know their system can handle more.
+//
+// When configMax is not set (0), capacity is calculated from system resources:
 // Formula: min(CPU count, RAM_GB / 2) × turbo
 //
 // This gives predictable results:
@@ -209,9 +218,19 @@ func (cs *ComponentScheduler) getCacheTime(module string) time.Time {
 // With turbo=1.25: 25% more slots
 // With turbo=2.0: double the slots (for I/O bound builds)
 //
-// configMax is only used as ceiling if > 0 (user explicitly set it).
 // Returns at least 1.
 func detectAvailableCapacity(configMax int, turbo float64) int {
+	// If user explicitly set --roof, use that as the target capacity
+	// This allows overriding system detection for power users
+	if configMax > 0 {
+		// Apply reasonable hard cap to prevent runaway
+		if configMax > 128 {
+			return 128
+		}
+		return configMax
+	}
+
+	// Auto-detect capacity from system resources
 	// Use HOST resources (not Docker limits) since orchestrator runs on host
 	cpuCount := runtime.NumCPU()
 	if cpuCount < 1 {
@@ -261,11 +280,6 @@ func detectAvailableCapacity(configMax int, turbo float64) int {
 	// Ensure at least 1
 	if capacity < 1 {
 		capacity = 1
-	}
-
-	// Only apply configMax ceiling if user explicitly set it (> 0)
-	if configMax > 0 && capacity > configMax {
-		return configMax
 	}
 
 	return capacity
@@ -380,8 +394,13 @@ func (cs *ComponentScheduler) processComponent(work ComponentWork, worker Compon
 		}
 	}
 
-	// Display name for TUI (module:component)
-	displayName := fmt.Sprintf("%s:%s", work.Module, work.Component)
+	// Display name for TUI (module:component or module:component:handler)
+	var displayName string
+	if work.Handler != "" {
+		displayName = fmt.Sprintf("%s:%s:%s", work.Module, work.Component, work.Handler)
+	} else {
+		displayName = fmt.Sprintf("%s:%s", work.Module, work.Component)
+	}
 
 	// Note: Cache detection is handled by the worker, not here.
 	// The worker checks cachedModules and performs artifact verification,
@@ -470,6 +489,10 @@ func (cs *ComponentScheduler) processComponent(work ComponentWork, worker Compon
 		FormatBytes(memAfter.TotalBytes), memAfter.UsedPercent,
 		deltaSign, FormatBytes(uint64(abs64(memDelta))))
 
+	// Close TUI writer first (flushes pipe), then log file
+	if closer, ok := workerWriter.(io.Closer); ok {
+		closer.Close()
+	}
 	logFile.Close()
 
 	// Parse log for warnings/errors
@@ -525,8 +548,19 @@ func (cs *ComponentScheduler) markComponentComplete(work ComponentWork, result *
 	}
 	cs.moduleCompleteMu.Unlock()
 
+	// Send result to summary builder for incremental summary computation
+	if cs.summaryBuilder != nil {
+		cs.summaryBuilder.AddResult(*result)
+	}
+
 	// Update TUI with exit code
-	displayName := fmt.Sprintf("%s:%s", work.Module, work.Component)
+	// Use same format as tuiMarkPending/tuiMarkRunning: module:component:handler
+	var displayName string
+	if work.Handler != "" {
+		displayName = fmt.Sprintf("%s:%s:%s", work.Module, work.Component, work.Handler)
+	} else {
+		displayName = fmt.Sprintf("%s:%s", work.Module, work.Component)
+	}
 	cs.tuiMarkCompleted(displayName, result.ExitCode)
 }
 

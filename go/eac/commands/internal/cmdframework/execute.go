@@ -150,6 +150,15 @@ func phaseExecuteComponentsUnified(ctx *ExecutionContext, cmdType CommandType) e
 		return nil
 	}
 
+	// Create incremental summary builder with component counts per module
+	componentCounts := computeComponentCounts(componentLayers)
+	ctx.SummaryBuilder = NewSummaryBuilder(cmdType, componentCounts)
+	ctx.Orchestrator.SetSummaryBuilder(ctx.SummaryBuilder)
+
+	// Note: We don't use completion callback because it triggers TUI exit before
+	// wg.Wait() completes, causing a race. Instead, summary is sent from phaseSummary
+	// after execution fully completes. The incremental builder still pre-computes data.
+
 	// Wrap worker to match orchestrator signature
 	orchWorker := func(module, component string, logWriter io.Writer) int {
 		return worker(ctx, module, component, logWriter)
@@ -185,10 +194,32 @@ func phaseExecuteComponentsUnified(ctx *ExecutionContext, cmdType CommandType) e
 	ctx.Results = results
 
 	// Populate component-level results for detailed reporting
-	ctx.ComponentResults = ctx.Orchestrator.GetLastComponentResults()
-	ctx.ComponentResultSets = orchestrator.AggregateToComponentResultSets(ctx.ComponentResults)
+	// Use SummaryBuilder's pre-aggregated results when available
+	if ctx.SummaryBuilder != nil {
+		ctx.ComponentResultSets = ctx.SummaryBuilder.GetResultSets()
+		// Flatten for ComponentResults
+		var allResults []orchestrator.ComponentResult
+		for _, rs := range ctx.ComponentResultSets {
+			allResults = append(allResults, rs.Components...)
+		}
+		ctx.ComponentResults = allResults
+	} else {
+		ctx.ComponentResults = ctx.Orchestrator.GetLastComponentResults()
+		ctx.ComponentResultSets = orchestrator.AggregateToComponentResultSets(ctx.ComponentResults)
+	}
 
 	return nil
+}
+
+// computeComponentCounts computes the number of components per module from work layers.
+func computeComponentCounts(layers [][]orchestrator.ComponentWork) map[string]int {
+	counts := make(map[string]int)
+	for _, layer := range layers {
+		for _, work := range layer {
+			counts[work.Module]++
+		}
+	}
+	return counts
 }
 
 // flattenComponentLayers flattens component work layers to a single slice.

@@ -73,17 +73,12 @@ func FlattenModulesToTestComponentWork(ctx *cmdframework.ExecutionContext) [][]o
 			componentName := findComponentOfType(ctx, moduleMoniker, compTypeName)
 			weight := getTestComponentWeight(moduleMoniker, componentName, typeTests)
 
-			// Component work item: use full path with test type
-			// Format: "path:testType" (e.g., "go/eac/core/config:gotest")
-			// This differs from build/lint/scan which use "component:tool" format
-			componentWithTestType := pkgPath + ":" + testType
-
 			// Check if module is cached
 			isCached := testCfg.CachedModules != nil && testCfg.CachedModules[moduleMoniker]
 
 			work := orchestrator.ComponentWork{
 				Module:        moduleMoniker,
-				Component:     componentWithTestType,
+				Component:     pkgPath,
 				ComponentType: testType,
 				Handler:       testType, // Use test type instead of generic "test"
 				IsContainer:   tool.GlobalTestBridge().IsContainer(compTypeName),

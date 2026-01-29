@@ -2,6 +2,7 @@
 package build
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"strings"
@@ -38,14 +39,19 @@ func getBuildComponentCount(ctx *cmdframework.ExecutionContext) int {
 }
 
 // getBuildComponentLayers returns the component execution layers as string slices.
-// Each layer contains component identifiers in "module:component" format.
+// Each layer contains component identifiers in "module:component:handler" format.
+// This matches the display name format used by the TUI scheduler.
 func getBuildComponentLayers(ctx *cmdframework.ExecutionContext) [][]string {
 	layers := FlattenModulesToComponentWork(ctx)
 	result := make([][]string, len(layers))
 	for i, layer := range layers {
 		result[i] = make([]string, len(layer))
 		for j, work := range layer {
-			result[i][j] = fmt.Sprintf("%s:%s", work.Module, work.Component)
+			if work.Handler != "" {
+				result[i][j] = fmt.Sprintf("%s:%s:%s", work.Module, work.Component, work.Handler)
+			} else {
+				result[i][j] = fmt.Sprintf("%s:%s", work.Module, work.Component)
+			}
 		}
 	}
 	return result
@@ -209,6 +215,9 @@ func buildAfterResolve(ctx *cmdframework.ExecutionContext) error {
 // This keeps all modules visible and clickable in the TUI.
 func detectIncrementalChanges(ctx *cmdframework.ExecutionContext, bctx *buildContext) {
 	startTime := time.Now()
+	defer func() {
+		ctx.SetChangeDetectionTiming(time.Since(startTime))
+	}()
 
 	// Build modules map for change detection
 	modulesMap := make(map[string]buildstate.ModuleFileGetter)
@@ -467,10 +476,11 @@ func buildWorker(ctx *cmdframework.ExecutionContext, moniker string, logWriter i
 		}
 	}
 
-	// Acquire lock (skip in dry-run)
+	// Acquire lock with wait (skip in dry-run)
 	if !ctx.Config.DryRun {
 		lockCfg := locking.BuildConfig(moniker, paths.OutBuildRelPath)
-		lockFile, err := locking.AcquireTracked(ctx.WorkspaceRoot, lockCfg, ctx.Orchestrator.GetRegistry())
+		lockFile, err := locking.AcquireWithWait(context.Background(), ctx.WorkspaceRoot, lockCfg,
+			ctx.Orchestrator.GetRegistry(), locking.DefaultWaitConfig())
 		if err != nil {
 			output.Writeln(logWriter, "Error: %v", err)
 			return 1
@@ -577,7 +587,7 @@ func buildComponentWorker(ctx *cmdframework.ExecutionContext, module, component 
 		}
 	}
 
-	// Acquire component-level lock (skip in dry-run)
+	// Acquire component-level lock with wait (skip in dry-run)
 	// Use component-level locking to allow parallel builds of different components within the same module
 	// Use underscore separator for Windows compatibility (same as lint)
 	componentDir := compName
@@ -586,7 +596,8 @@ func buildComponentWorker(ctx *cmdframework.ExecutionContext, module, component 
 	}
 	if !ctx.Config.DryRun {
 		lockCfg := locking.ComponentBuildConfig(module, componentDir, paths.OutBuildRelPath)
-		lockFile, err := locking.AcquireTracked(ctx.WorkspaceRoot, lockCfg, ctx.Orchestrator.GetRegistry())
+		lockFile, err := locking.AcquireWithWait(context.Background(), ctx.WorkspaceRoot, lockCfg,
+			ctx.Orchestrator.GetRegistry(), locking.DefaultWaitConfig())
 		if err != nil {
 			output.Writeln(logWriter, "Error: %v", err)
 			return 1

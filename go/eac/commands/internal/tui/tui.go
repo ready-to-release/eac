@@ -82,7 +82,9 @@ func (c *Console) Start(ctx context.Context) error {
 	c.mu.Unlock()
 
 	// Signal completion when Start() returns (after all cleanup including printSummary)
-	defer close(c.done)
+	defer func() {
+		close(c.done)
+	}()
 
 	model := console.NewModel(
 		c.config.Height,

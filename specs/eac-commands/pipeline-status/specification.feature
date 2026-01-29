@@ -1,4 +1,4 @@
-@L2 @deps:go @deps:git @deps:gh-cli @ov @env:isolated-test-project
+@L2 @deps:go @deps:git @deps:gh @ov @env:isolated-test-project
 Feature: eac-commands_pipeline-status
 
   As a developer using the eac platform

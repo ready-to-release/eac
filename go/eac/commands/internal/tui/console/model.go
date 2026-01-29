@@ -50,12 +50,13 @@ type Model struct {
 	usedSystemTools   []string // All system tools ever used
 
 	// Per-module tab tracking for Run phase
-	moduleStates  map[string]*ModuleState // Per-module state (running, completed, failed)
-	moduleOrder   []string                // Order in which modules started (for tab ordering)
-	nextModuleIdx int                     // Counter for assigning unique indices to modules
-	activeTab     string                  // Currently selected tab ("" = aggregate view)
-	hoveredTab    string                  // Tab currently under mouse cursor
-	maxTabs       int                     // Maximum visible tabs before scrolling/hiding
+	moduleStates    map[string]*ModuleState // Per-module state (running, completed, failed)
+	moduleOrder     []string                // Order in which modules started (for tab ordering)
+	nextModuleIdx   int                     // Counter for assigning unique indices to modules
+	activeTab       string                  // Currently selected tab ("" = aggregate view)
+	hoveredTab      string                  // Tab currently under mouse cursor
+	hoveredTabScroll int                    // Marquee scroll offset for hovered tab name
+	maxTabs         int                     // Maximum visible tabs before scrolling/hiding
 
 	// Channels for async updates
 	lineChan   <-chan Line   // Incoming output lines
@@ -74,9 +75,14 @@ type Model struct {
 
 	// User interaction tracking (for delayed exit)
 	lastUserInteraction time.Time // Reset on scroll or tab click
+	userHasInteracted   bool      // True if user ever interacted with mouse
 	forceExit           bool      // User pressed ESC to force immediate exit
-	exitCountdownStart  time.Time // When exit countdown started (zero = not counting)
-	exitCountdownSecs   int       // Seconds remaining (10, 9, 8...)
+	exitCountdownSecs   int       // Seconds remaining until user timer expires (10, 9, 8...)
+	allRunnersCompleted time.Time // When all runners finished
+
+	// Exit/finalization state
+	exitRequested      bool         // True when we want to exit (waiting for summary if needed)
+	pendingSummaryData *SummaryData // Summary data received from builder
 
 	// Quitting state - triggers plain-text final render
 	quitting bool

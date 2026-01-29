@@ -69,20 +69,24 @@ func phaseInit(ctx *ExecutionContext) error {
 	ctx.WorkspaceRoot = workspaceRoot
 
 	// Load EAC configuration
+	configStart := time.Now()
 	eacCfg, err := config.Load(config.DefaultLoadOptions())
 	if err != nil {
 		return fmt.Errorf("failed to load EAC config: %w", err)
 	}
 	ctx.EACConfig = eacCfg
 	ctx.RepoConfig = eacCfg.Repository
+	ctx.initTimings.ConfigLoad = time.Since(configStart)
 
 	// Initialize tool system bridges
 	// This loads tool-config.yml and integrates YAML-defined tools with native handlers
+	toolStart := time.Now()
 	configRoot := filepath.Join(workspaceRoot, ".eac")
 	if err := tool.InitializeGlobalBridges(workspaceRoot, configRoot); err != nil {
 		log.Debugf("Tool bridge initialization skipped: %v", err)
 		// Continue - tool config is optional, native handlers will still work
 	}
+	ctx.initTimings.ToolInit = time.Since(toolStart)
 
 	// Create output directory
 	outputDir := filepath.Join(workspaceRoot, ctx.Config.OutputDir)
@@ -123,18 +127,11 @@ func phaseInit(ctx *ExecutionContext) error {
 	ctx.Orchestrator = orch
 	ctx.AddCleanup(func() { orch.Close() })
 
-	// Initialize and start TUI if enabled
+	// Initialize TUI (but don't show yet - that happens after init phases complete)
 	if ctx.Config.UseTUI {
 		if err := orch.Init(); err != nil {
 			return fmt.Errorf("failed to initialize orchestrator: %w", err)
 		}
-		orch.StartTUI()
-
-		// Get TUI writer for init phase output
-		ctx.tuiWriter = orch.GetTUIWriter(tui.PhaseInit)
-
-		// Brief pause to ensure TUI is ready
-		time.Sleep(10 * time.Millisecond)
 	}
 
 	// Configure logging

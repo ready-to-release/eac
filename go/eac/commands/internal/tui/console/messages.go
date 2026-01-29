@@ -109,3 +109,6 @@ type TabSelectMsg struct {
 
 // TabDecayMsg is sent periodically to clean up decayed tabs.
 type TabDecayMsg struct{}
+
+// MarqueeTickMsg is sent periodically to animate hovered tab name scrolling.
+type MarqueeTickMsg struct{}

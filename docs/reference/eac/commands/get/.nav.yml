@@ -38,4 +38,5 @@ nav:
   - test-results.md
   - test-timings.md
   - tests.md
+  - token-size.md
   - valid-commands.md

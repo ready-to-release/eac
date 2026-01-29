@@ -75,16 +75,12 @@ func FlattenModulesToLintComponentWork(ctx *cmdframework.ExecutionContext) [][]o
 					continue
 				}
 
-				// Component work item: component name includes provider for unique identification
-				// Format: "component:provider" so display becomes "module:component:provider"
-				componentWithProvider := compName + ":" + providerName
-
 				// Get weight (base weight × amp, calculated internally)
 				weight := getComponentWeight(moniker, compName, providerName, tool.OperationLint)
 
 				work := orchestrator.ComponentWork{
 					Module:        moniker,
-					Component:     componentWithProvider,
+					Component:     compName,
 					ComponentType: compType,
 					Handler:       providerName,
 					IsContainer:   handler.IsContainer(),

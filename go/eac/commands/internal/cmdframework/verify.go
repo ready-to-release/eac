@@ -145,19 +145,14 @@ func SetComponentLayersProvider(p ComponentLayersProvider) {
 	componentLayersProvider = p
 }
 
-// displayInitSummary outputs the initialization summary.
+// displayInitSummary outputs the initialization summary to console.
+// TUI receives the summary separately after TUI is started.
 func displayInitSummary(ctx *ExecutionContext) {
 	if ctx.InitSummary == nil {
 		return
 	}
 
-	// Send structured data to TUI for rich display
-	if ctx.Orchestrator != nil && ctx.Config.UseTUI {
-		tuiSummary := convertToTUIInitSummary(ctx.InitSummary)
-		ctx.Orchestrator.SetInitSummary(tuiSummary)
-	}
-
-	// Also output text lines for early display and non-TUI mode
+	// Output text lines to console (TUI not started yet)
 	var formatted string
 	if ctx.Config.UseTUI {
 		formatted = initsummary.FormatCompact(ctx.InitSummary)
@@ -264,21 +259,25 @@ func convertToTUIInitSummary(s *initsummary.Summary) *tui.InitSummary {
 }
 
 // buildExecutionTree builds the hierarchical tree: layers → modules → components.
+// Components can be in "module:component" or "module:component:handler" format.
+// The full identifier (including handler if present) is stored for tab matching.
 func buildExecutionTree(s *initsummary.Summary) []tui.ExecutionLayer {
 	if len(s.ExecutionLayers) == 0 {
 		return nil
 	}
 
-	// Build a map of module -> component names from ComponentExecutionLayers
-	// Components are named "module:component"
+	// Build a map of module -> component identifiers from ComponentExecutionLayers
+	// Components are named "module:component" or "module:component:handler"
+	// We store the part after the first colon (component:handler or just component)
 	moduleComponents := make(map[string][]string)
 	for _, layer := range s.ComponentExecutionLayers {
 		for _, comp := range layer {
-			// Extract module name and component name from "module:component" format
+			// Extract module name and rest from "module:component[:handler]" format
 			if idx := strings.Index(comp, ":"); idx > 0 {
 				module := comp[:idx]
-				compName := comp[idx+1:]
-				moduleComponents[module] = append(moduleComponents[module], compName)
+				// Store everything after first colon (component:handler or component)
+				compIdentifier := comp[idx+1:]
+				moduleComponents[module] = append(moduleComponents[module], compIdentifier)
 			} else {
 				// Component without colon - use as-is (module is the component)
 				moduleComponents[comp] = append(moduleComponents[comp], comp)

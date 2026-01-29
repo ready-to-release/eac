@@ -29,7 +29,7 @@ func Get() int {
 	case "--help", "-h":
 		printGetUsage()
 		return 0
-	case "artifacts", "build-deps", "build-times", "changed-modules", "changed-modules-ci", "changed-modules-local", "ci-dispatch", "config", "dependencies", "documented-commands", "environments", "execution-order", "files", "modules", "release-bundle", "suite", "test-results", "tests", "test-timings", "valid-commands":
+	case "artifacts", "build-deps", "build-times", "changed-modules", "changed-modules-ci", "changed-modules-local", "ci-dispatch", "config", "dependencies", "documented-commands", "environments", "execution-order", "files", "modules", "release-bundle", "suite", "test-results", "tests", "test-timings", "token-size", "valid-commands":
 		// Handled by separate registrations in respective files
 		return 0
 	default:
@@ -71,6 +71,9 @@ func printGetUsage() {
 	fmt.Println("  tests                     Get all tests in structured format")
 	fmt.Println("  suite <name>              Get test suite information")
 	fmt.Println("  test-timings              Get test timing data from test logs")
+	fmt.Println("")
+	fmt.Println("Utilities:")
+	fmt.Println("  token-size <file|pattern> Estimate token counts for source files")
 	fmt.Println("")
 	fmt.Println("Commands:")
 	fmt.Println("  valid-commands            Get all valid commands in structured format")

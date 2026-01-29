@@ -22,10 +22,11 @@ const (
 type SummaryGenerator func(ctx *ExecutionContext) *initsummary.Summary
 
 // phaseSummary handles the summary phase:
-// - Generate summary data
+// - Generate summary data (using incremental builder if available)
 // - Display TUI summary or print to console
 // - Return exit code.
 func phaseSummary(ctx *ExecutionContext, customSummary SummaryGenerator) int {
+	summaryStart := time.Now()
 	totalTime := time.Since(ctx.StartTime)
 	exitCode := ctx.GetExitCode()
 
@@ -38,8 +39,14 @@ func phaseSummary(ctx *ExecutionContext, customSummary SummaryGenerator) int {
 	}
 
 	if ctx.Config.UseTUI {
-		// Generate TUI summary
-		summaryData := generateTUISummary(ctx, totalTime)
+		// Send summary using incremental builder if available, otherwise generate from scratch
+		var summaryData *tui.SummaryData
+		if ctx.SummaryBuilder != nil {
+			summaryData = ctx.SummaryBuilder.Finalize(totalTime)
+		} else {
+			summaryData = generateTUISummary(ctx, totalTime)
+		}
+		log.Debugf("phaseSummary: summary generation took %v", time.Since(summaryStart))
 		ctx.Orchestrator.SendSummary(summaryData)
 
 		// Wait for TUI to finish
@@ -50,6 +57,7 @@ func phaseSummary(ctx *ExecutionContext, customSummary SummaryGenerator) int {
 		printConsoleSummary(ctx, totalTime)
 	}
 
+	log.Debugf("phaseSummary: total phase took %v", time.Since(summaryStart))
 	return exitCode
 }
 
@@ -62,16 +70,34 @@ func generateTUISummary(ctx *ExecutionContext, totalTime time.Duration) *tui.Sum
 	return generateModuleTUISummary(ctx, totalTime)
 }
 
+// moduleCache holds precomputed data for a module to avoid repeated calculations.
+type moduleCache struct {
+	status         orchestrator.ModuleStatus
+	sortedComps    []orchestrator.ComponentResult
+	moduleDuration time.Duration
+	errorCount     int
+	warnCount      int
+	testsTotal     int
+	testsPassed    int
+	testsFailed    int
+}
+
 // generateComponentTUISummary creates TUI summary showing module-level aggregated results.
 // Table format varies by command type (build, test, lint, scan).
 func generateComponentTUISummary(ctx *ExecutionContext, totalTime time.Duration) *tui.SummaryData {
 	resultSets := ctx.ComponentResultSets
 
-	// Count successes, skipped (cached), and failures at module level
+	// Pre-compute all module data in a single pass
+	caches := make([]moduleCache, len(resultSets))
 	var successCount, skippedCount, failureCount int
-	for _, rs := range resultSets {
-		status := rs.DeriveStatus()
-		switch status {
+
+	for i := range resultSets {
+		rs := &resultSets[i]
+		cache := &caches[i]
+
+		// Derive status once
+		cache.status = rs.DeriveStatus()
+		switch cache.status {
 		case orchestrator.ModuleStatusFailed:
 			failureCount++
 		case orchestrator.ModuleStatusSuccess:
@@ -79,29 +105,51 @@ func generateComponentTUISummary(ctx *ExecutionContext, totalTime time.Duration)
 		case orchestrator.ModuleStatusSkipped:
 			skippedCount++
 		}
+
+		// Sort components once
+		cache.sortedComps = rs.GetSortedComponents()
+
+		// Aggregate stats in single pass
+		for _, comp := range rs.Components {
+			if comp.Duration > cache.moduleDuration {
+				cache.moduleDuration = comp.Duration
+			}
+			cache.errorCount += len(comp.Errors)
+			cache.warnCount += len(comp.Warnings)
+			cache.testsTotal += comp.TestsTotal
+			cache.testsPassed += comp.TestsPassed
+			cache.testsFailed += comp.TestsFailed
+		}
 	}
 
 	// Build run summary line
-	var runParts []string
-	if skippedCount > 0 {
-		runParts = append(runParts, fmt.Sprintf("%d cached", skippedCount))
-	}
-	if successCount > 0 {
-		runParts = append(runParts, fmt.Sprintf("%d built", successCount))
-	}
-	if failureCount > 0 {
-		runParts = append(runParts, fmt.Sprintf("%d failed", failureCount))
-	}
-	runSummary := strings.Join(runParts, ", ")
-	if runSummary == "" {
+	var runSummary string
+	switch {
+	case skippedCount > 0 && successCount > 0 && failureCount > 0:
+		runSummary = fmt.Sprintf("%d cached, %d built, %d failed", skippedCount, successCount, failureCount)
+	case skippedCount > 0 && successCount > 0:
+		runSummary = fmt.Sprintf("%d cached, %d built", skippedCount, successCount)
+	case skippedCount > 0 && failureCount > 0:
+		runSummary = fmt.Sprintf("%d cached, %d failed", skippedCount, failureCount)
+	case successCount > 0 && failureCount > 0:
+		runSummary = fmt.Sprintf("%d built, %d failed", successCount, failureCount)
+	case skippedCount > 0:
+		runSummary = fmt.Sprintf("%d cached", skippedCount)
+	case successCount > 0:
+		runSummary = fmt.Sprintf("%d built", successCount)
+	case failureCount > 0:
+		runSummary = fmt.Sprintf("%d failed", failureCount)
+	default:
 		runSummary = "0 modules"
 	}
 
-	// Sort resultSets by module name
-	sortedSets := make([]orchestrator.ComponentResultSet, len(resultSets))
-	copy(sortedSets, resultSets)
-	sort.Slice(sortedSets, func(i, j int) bool {
-		return sortedSets[i].Module < sortedSets[j].Module
+	// Create sorted indices by module name (avoid copying entire structs)
+	sortedIndices := make([]int, len(resultSets))
+	for i := range sortedIndices {
+		sortedIndices[i] = i
+	}
+	sort.Slice(sortedIndices, func(i, j int) bool {
+		return resultSets[sortedIndices[i]].Module < resultSets[sortedIndices[j]].Module
 	})
 
 	// Build table based on command type
@@ -123,68 +171,70 @@ func generateComponentTUISummary(ctx *ExecutionContext, totalTime time.Duration)
 			WithHeaders("Module", "Components", "Time", "Stat")
 	}
 
-	for _, rs := range sortedSets {
-		// Get sorted component names
-		sortedComps := rs.GetSortedComponents()
-		compNames := make([]string, len(sortedComps))
-		for i, comp := range sortedComps {
-			compNames[i] = comp.Component
+	for _, idx := range sortedIndices {
+		rs := &resultSets[idx]
+		cache := &caches[idx]
+
+		// Build component names string from cached sorted components
+		var components string
+		if len(cache.sortedComps) <= 3 {
+			// Fast path: few components, direct concatenation
+			compNames := make([]string, len(cache.sortedComps))
+			for i, comp := range cache.sortedComps {
+				compNames[i] = comp.Component
+			}
+			components = strings.Join(compNames, ", ")
+		} else {
+			// Use strings.Builder for many components
+			var sb strings.Builder
+			for i, comp := range cache.sortedComps {
+				if i > 0 {
+					sb.WriteString(", ")
+				}
+				if sb.Len()+len(comp.Component) > 57 {
+					sb.WriteString("...")
+					break
+				}
+				sb.WriteString(comp.Component)
+			}
+			components = sb.String()
 		}
-		components := strings.Join(compNames, ", ")
 		// Truncate if too long (max 60 chars)
 		if len(components) > 60 {
 			components = components[:57] + "..."
 		}
 
-		// Aggregate component stats
-		// Use max duration (wall-clock approximation for parallel execution)
-		var moduleDuration time.Duration
-		var errorCount, warnCount int
-		var testsTotal, testsPassed, testsFailed int
-		for _, comp := range rs.Components {
-			// Components run in parallel, so use max duration for wall-clock time
-			if comp.Duration > moduleDuration {
-				moduleDuration = comp.Duration
-			}
-			errorCount += len(comp.Errors)
-			warnCount += len(comp.Warnings)
-			testsTotal += comp.TestsTotal
-			testsPassed += comp.TestsPassed
-			testsFailed += comp.TestsFailed
-		}
-
-		// Derive status
+		// Use cached status
 		statusIcon := " ✓"
-		status := rs.DeriveStatus()
-		if status == orchestrator.ModuleStatusFailed {
+		if cache.status == orchestrator.ModuleStatusFailed {
 			statusIcon = " ✗"
-		} else if warnCount > 0 {
+		} else if cache.warnCount > 0 {
 			statusIcon = " ⚠"
 		}
 
 		moduleName := output.PackageDisplayName(rs.Module)
-		duration := formatDuration(moduleDuration)
+		duration := formatDuration(cache.moduleDuration)
 
 		// Add row based on command type
 		switch ctx.Config.Type {
 		case CommandTypeTest:
 			// Extract unique test types from component names (format: "subpath:testType")
-			testTypes := extractUniqueTestTypes(sortedComps)
+			testTypes := extractUniqueTestTypes(cache.sortedComps)
 
 			// Format test count: "passed/total" if failures, else "total"
 			var testCount string
-			if testsTotal > 0 {
-				if testsFailed > 0 {
-					testCount = fmt.Sprintf("%d/%d", testsPassed, testsTotal)
+			if cache.testsTotal > 0 {
+				if cache.testsFailed > 0 {
+					testCount = fmt.Sprintf("%d/%d", cache.testsPassed, cache.testsTotal)
 				} else {
-					testCount = fmt.Sprintf("%d", testsTotal)
+					testCount = fmt.Sprintf("%d", cache.testsTotal)
 				}
 			} else {
 				testCount = "-"
 			}
 			tb.AddRow(moduleName, testTypes, testCount, duration, statusIcon)
 		case CommandTypeLint, CommandTypeScan:
-			tb.AddRow(moduleName, components, errorCount, warnCount, duration, statusIcon)
+			tb.AddRow(moduleName, components, cache.errorCount, cache.warnCount, duration, statusIcon)
 		default: // CommandTypeBuild
 			tb.AddRow(moduleName, components, duration, statusIcon)
 		}
@@ -199,40 +249,42 @@ func generateComponentTUISummary(ctx *ExecutionContext, totalTime time.Duration)
 	}
 
 	// Add failed/warning results with error details (top 5 failures)
-	if hasComponentFailures(resultSets) {
+	// Check if there are any failures/warnings using cached data
+	hasFailures := false
+	totalFailures := 0
+	for i := range caches {
+		if caches[i].status == orchestrator.ModuleStatusFailed || caches[i].warnCount > 0 {
+			hasFailures = true
+			totalFailures++
+		}
+	}
+
+	if hasFailures {
 		details = append(details, "")
 		failCount := 0
 		const maxFailures = 5
-		for _, rs := range sortedSets {
+		for _, idx := range sortedIndices {
 			if failCount >= maxFailures {
 				break
 			}
-			status := rs.DeriveStatus()
-			if status != orchestrator.ModuleStatusFailed {
-				// Check for warnings
-				hasWarnings := false
-				for _, comp := range rs.Components {
-					if len(comp.Warnings) > 0 {
-						hasWarnings = true
-						break
-					}
-				}
-				if !hasWarnings {
-					continue
-				}
+			rs := &resultSets[idx]
+			cache := &caches[idx]
+
+			if cache.status != orchestrator.ModuleStatusFailed && cache.warnCount == 0 {
+				continue
 			}
 			failCount++
 
 			// Module header with status
 			statusIcon := "✗"
-			if status != orchestrator.ModuleStatusFailed {
+			if cache.status != orchestrator.ModuleStatusFailed {
 				statusIcon = "⚠"
 			}
 			moduleName := output.PackageDisplayName(rs.Module)
 			details = append(details, fmt.Sprintf("%s %s", statusIcon, moduleName))
 
-			// Show first error/warning from failed components
-			for _, comp := range rs.GetSortedComponents() {
+			// Show first error/warning from failed components (use cached sorted)
+			for _, comp := range cache.sortedComps {
 				if comp.ExitCode == 0 && len(comp.Warnings) == 0 {
 					continue
 				}
@@ -257,8 +309,8 @@ func generateComponentTUISummary(ctx *ExecutionContext, totalTime time.Duration)
 				break // Only show first failed component per module
 			}
 		}
-		if failCount >= maxFailures && countFailures(sortedSets) > maxFailures {
-			remaining := countFailures(sortedSets) - maxFailures
+		if failCount >= maxFailures && totalFailures > maxFailures {
+			remaining := totalFailures - maxFailures
 			details = append(details, fmt.Sprintf("  ... and %d more failures", remaining))
 		}
 	}
@@ -388,64 +440,67 @@ func printConsoleSummary(ctx *ExecutionContext, totalTime time.Duration) {
 func printComponentConsoleSummary(ctx *ExecutionContext, totalTime time.Duration) {
 	resultSets := ctx.ComponentResultSets
 
-	// Sort by module name for consistent output
-	sortedSets := make([]orchestrator.ComponentResultSet, len(resultSets))
-	copy(sortedSets, resultSets)
-	sort.Slice(sortedSets, func(i, j int) bool {
-		return sortedSets[i].Module < sortedSets[j].Module
-	})
-
-	// Count at module level
+	// Pre-compute all module data in a single pass (reuse moduleCache type)
+	caches := make([]moduleCache, len(resultSets))
 	var moduleSuccessCount, moduleFailureCount int
-	for _, rs := range sortedSets {
-		status := rs.DeriveStatus()
-		if status == orchestrator.ModuleStatusFailed {
+
+	for i := range resultSets {
+		rs := &resultSets[i]
+		cache := &caches[i]
+
+		cache.status = rs.DeriveStatus()
+		if cache.status == orchestrator.ModuleStatusFailed {
 			moduleFailureCount++
 		} else {
 			moduleSuccessCount++
 		}
+
+		cache.sortedComps = rs.GetSortedComponents()
+
+		for _, comp := range rs.Components {
+			if comp.Duration > cache.moduleDuration {
+				cache.moduleDuration = comp.Duration
+			}
+			cache.testsTotal += comp.TestsTotal
+			cache.testsPassed += comp.TestsPassed
+			cache.testsFailed += comp.TestsFailed
+		}
 	}
 
+	// Create sorted indices by module name
+	sortedIndices := make([]int, len(resultSets))
+	for i := range sortedIndices {
+		sortedIndices[i] = i
+	}
+	sort.Slice(sortedIndices, func(i, j int) bool {
+		return resultSets[sortedIndices[i]].Module < resultSets[sortedIndices[j]].Module
+	})
+
 	// Build module-level table for test commands
-	if ctx.Config.Type == CommandTypeTest && len(sortedSets) > 0 {
+	if ctx.Config.Type == CommandTypeTest && len(resultSets) > 0 {
 		tb := render.NewTableBuilder().
 			WithHeaders("Module", "Test Types", "#Test", "Time", "Stat")
 
-		for _, rs := range sortedSets {
-			sortedComps := rs.GetSortedComponents()
+		for _, idx := range sortedIndices {
+			rs := &resultSets[idx]
+			cache := &caches[idx]
 
-			// Use max duration (wall-clock approximation for parallel execution)
-			var moduleDuration time.Duration
-			var testsTotal, testsPassed, testsFailed int
-			for _, comp := range rs.Components {
-				if comp.Duration > moduleDuration {
-					moduleDuration = comp.Duration // Max, not sum
-				}
-				testsTotal += comp.TestsTotal
-				testsPassed += comp.TestsPassed
-				testsFailed += comp.TestsFailed
-			}
-
-			// Derive status
 			statusIcon := " ✓"
-			status := rs.DeriveStatus()
-			if status == orchestrator.ModuleStatusFailed {
+			if cache.status == orchestrator.ModuleStatusFailed {
 				statusIcon = " ✗"
 			}
 
 			moduleName := output.PackageDisplayName(rs.Module)
-			duration := formatDuration(moduleDuration)
-
-			// Extract unique test types from component names
-			testTypes := extractUniqueTestTypes(sortedComps)
+			duration := formatDuration(cache.moduleDuration)
+			testTypes := extractUniqueTestTypes(cache.sortedComps)
 
 			// Format test count
 			var testCount string
-			if testsTotal > 0 {
-				if testsFailed > 0 {
-					testCount = fmt.Sprintf("%d/%d", testsPassed, testsTotal)
+			if cache.testsTotal > 0 {
+				if cache.testsFailed > 0 {
+					testCount = fmt.Sprintf("%d/%d", cache.testsPassed, cache.testsTotal)
 				} else {
-					testCount = fmt.Sprintf("%d", testsTotal)
+					testCount = fmt.Sprintf("%d", cache.testsTotal)
 				}
 			} else {
 				testCount = "-"
@@ -476,7 +531,7 @@ func printComponentConsoleSummary(ctx *ExecutionContext, totalTime time.Duration
 		}
 	} else {
 		log.Info("=== Summary ===")
-		log.Infof("Total: %d modules", len(sortedSets))
+		log.Infof("Total: %d modules", len(resultSets))
 		log.Infof("Duration: %s", formatDuration(totalTime))
 	}
 
@@ -484,8 +539,10 @@ func printComponentConsoleSummary(ctx *ExecutionContext, totalTime time.Duration
 	if moduleFailureCount > 0 {
 		log.Info("")
 		log.Info("Failed components:")
-		for _, rs := range sortedSets {
-			for _, comp := range rs.GetSortedComponents() {
+		for _, idx := range sortedIndices {
+			rs := &resultSets[idx]
+			cache := &caches[idx]
+			for _, comp := range cache.sortedComps {
 				if comp.ExitCode == 0 {
 					continue
 				}
@@ -546,37 +603,6 @@ type moduleResult struct {
 	logPath    string
 }
 
-// hasComponentFailures checks if any component has failures or warnings.
-func hasComponentFailures(resultSets []orchestrator.ComponentResultSet) bool {
-	for _, rs := range resultSets {
-		for _, comp := range rs.Components {
-			if comp.ExitCode != 0 || len(comp.Warnings) > 0 {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-// countFailures counts the number of failed or warned modules.
-func countFailures(resultSets []orchestrator.ComponentResultSet) int {
-	count := 0
-	for _, rs := range resultSets {
-		status := rs.DeriveStatus()
-		if status == orchestrator.ModuleStatusFailed {
-			count++
-			continue
-		}
-		// Check for warnings
-		for _, comp := range rs.Components {
-			if len(comp.Warnings) > 0 {
-				count++
-				break
-			}
-		}
-	}
-	return count
-}
 
 // hasModuleFailures checks if any module result is not passed.
 func hasModuleFailures(moduleResults []moduleResult) bool {
@@ -646,8 +672,13 @@ func formatErrorLines(prefix, errMsg string) []string {
 // Component names are in format "subpath:testType" (e.g., "config:gotest", "cli:godog").
 // Returns a comma-separated string of unique test types (e.g., "gotest, godog").
 func extractUniqueTestTypes(components []orchestrator.ComponentResult) string {
-	seen := make(map[string]bool)
-	var types []string
+	if len(components) == 0 {
+		return "-"
+	}
+
+	// Pre-size map based on typical test type count (usually 1-3)
+	seen := make(map[string]struct{}, 4)
+	types := make([]string, 0, 4)
 
 	for _, comp := range components {
 		// Extract test type from component name (format: "subpath:testType")
@@ -656,17 +687,13 @@ func extractUniqueTestTypes(components []orchestrator.ComponentResult) string {
 			testType = comp.Component[colonIdx+1:]
 		}
 
-		log.Debugf("extractUniqueTestTypes: component=%s -> testType=%s", comp.Component, testType)
-
-		if !seen[testType] {
-			seen[testType] = true
+		if _, exists := seen[testType]; !exists {
+			seen[testType] = struct{}{}
 			types = append(types, testType)
 		}
 	}
 
 	// Sort for consistent output
 	sort.Strings(types)
-	result := strings.Join(types, ", ")
-	log.Debugf("extractUniqueTestTypes: found types=%v", types)
-	return result
+	return strings.Join(types, ", ")
 }

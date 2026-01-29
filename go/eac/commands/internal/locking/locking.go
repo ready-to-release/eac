@@ -3,6 +3,7 @@
 package locking
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -118,6 +119,136 @@ func ReleaseTracked(lock *TrackedLock) {
 	//nolint:errcheck // best-effort cleanup
 	lock.Unlock()
 	os.Remove(lockPath) // best-effort cleanup
+}
+
+// WaitConfig configures lock waiting behavior.
+type WaitConfig struct {
+	Timeout      time.Duration // Maximum time to wait for lock (default: 5 minutes)
+	PollInterval time.Duration // How often to retry acquiring lock (default: 200ms)
+}
+
+// DefaultWaitConfig returns sensible defaults for lock waiting.
+func DefaultWaitConfig() WaitConfig {
+	return WaitConfig{
+		Timeout:      5 * time.Minute,
+		PollInterval: 200 * time.Millisecond,
+	}
+}
+
+// AcquireWithWait attempts to acquire a lock, waiting with visual feedback if blocked.
+// Unlike AcquireTracked, this will wait (up to timeout) instead of failing immediately.
+// The wait state is tracked in the registry for TUI visualization.
+// ctx can be used to cancel the wait early.
+func AcquireWithWait(ctx context.Context, workspaceRoot string, cfg Config, registry *locktracker.Registry, waitCfg WaitConfig) (*TrackedLock, error) {
+	lockDir := filepath.Join(workspaceRoot, cfg.BaseDir)
+
+	// Ensure directory exists with proper permissions
+	if err := os.MkdirAll(lockDir, 0o755); err != nil {
+		return nil, fmt.Errorf("failed to create lock directory %s: %w", lockDir, err)
+	}
+
+	lockPath := filepath.Join(lockDir, fmt.Sprintf(".lock-%s", cfg.Identifier))
+	lock := flock.New(lockPath)
+
+	id := uuid.New().String()
+	lockName := fmt.Sprintf("%s:%s", cfg.ResourceType, cfg.Identifier)
+
+	// First try without waiting
+	locked, err := lock.TryLock()
+	if err != nil {
+		return nil, fmt.Errorf("failed to acquire lock at %s: %w", lockPath, err)
+	}
+	if locked {
+		// Got it immediately - register and return
+		registry.Register(&locktracker.LockInfo{
+			ID:         id,
+			Type:       locktracker.LockTypeFileLock,
+			Name:       lockName,
+			AcquiredAt: time.Now(),
+			Used:       1,
+		})
+		return &TrackedLock{
+			Flock:    lock,
+			id:       id,
+			registry: registry,
+		}, nil
+	}
+
+	// Lock is held by another process - poll and only show "waiting" after 500ms
+	// Use defaults if not specified
+	if waitCfg.Timeout == 0 {
+		waitCfg.Timeout = 5 * time.Minute
+	}
+	if waitCfg.PollInterval == 0 {
+		waitCfg.PollInterval = 200 * time.Millisecond
+	}
+
+	// Create timeout context
+	timeoutCtx, cancel := context.WithTimeout(ctx, waitCfg.Timeout)
+	defer cancel()
+
+	ticker := time.NewTicker(waitCfg.PollInterval)
+	defer ticker.Stop()
+
+	// Only register as "waiting" after 500ms delay (avoid flashing for quick locks)
+	const waitDisplayDelay = 500 * time.Millisecond
+	waitStart := time.Now()
+	waitID := uuid.New().String()
+	waitRegistered := false
+
+	for {
+		select {
+		case <-timeoutCtx.Done():
+			// Timeout or cancelled - remove waiting registration if we registered
+			if waitRegistered {
+				registry.Unregister(waitID)
+			}
+			if ctx.Err() != nil {
+				return nil, fmt.Errorf("lock acquisition cancelled for %s '%s'", cfg.ResourceType, cfg.Identifier)
+			}
+			return nil, fmt.Errorf("timeout waiting for %s '%s' (held by another process)", cfg.ResourceType, cfg.Identifier)
+
+		case <-ticker.C:
+			// Register as "waiting" only after 500ms delay (avoid flashing for quick waits)
+			if !waitRegistered && time.Since(waitStart) >= waitDisplayDelay {
+				registry.Register(&locktracker.LockInfo{
+					ID:      waitID,
+					Type:    locktracker.LockTypeFileLock,
+					Name:    lockName,
+					Waiting: 1,
+				})
+				waitRegistered = true
+			}
+
+			// Try to acquire again
+			locked, err := lock.TryLock()
+			if err != nil {
+				if waitRegistered {
+					registry.Unregister(waitID)
+				}
+				return nil, fmt.Errorf("failed to acquire lock at %s: %w", lockPath, err)
+			}
+			if locked {
+				// Got it! Remove waiting registration (if any) and register as held
+				if waitRegistered {
+					registry.Unregister(waitID)
+				}
+				registry.Register(&locktracker.LockInfo{
+					ID:         id,
+					Type:       locktracker.LockTypeFileLock,
+					Name:       lockName,
+					AcquiredAt: time.Now(),
+					Used:       1,
+				})
+				return &TrackedLock{
+					Flock:    lock,
+					id:       id,
+					registry: registry,
+				}, nil
+			}
+			// Still locked, continue waiting
+		}
+	}
 }
 
 // BuildConfig returns a Config for module build locking.

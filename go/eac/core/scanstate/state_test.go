@@ -52,12 +52,9 @@ func TestLoad_ValidState(t *testing.T) {
 		Modules: map[string]ModuleState{
 			"test-module": {
 				SourceHash: "source-hash-1",
-				Scanners: map[string]ScannerState{
-					"trivy-vuln": {Passed: true, RunAt: time.Now()},
-					"semgrep":    {Passed: false, RunAt: time.Now()},
-				},
-				ScannedAt: time.Now(),
-				Files:     []string{"file1.go", "file2.go"},
+				Passed:     true,
+				ScannedAt:  time.Now(),
+				Files:      []string{"file1.go", "file2.go"},
 			},
 		},
 		UpdatedAt: time.Now(),
@@ -90,20 +87,8 @@ func TestLoad_ValidState(t *testing.T) {
 		t.Errorf("Expected source hash 'source-hash-1', got: %s", modState.SourceHash)
 	}
 
-	vulnScanner, ok := modState.Scanners["trivy-vuln"]
-	if !ok {
-		t.Fatal("Expected trivy-vuln scanner in state")
-	}
-	if !vulnScanner.Passed {
-		t.Error("Expected trivy-vuln scanner to have passed")
-	}
-
-	semgrepScanner, ok := modState.Scanners["semgrep"]
-	if !ok {
-		t.Fatal("Expected semgrep scanner in state")
-	}
-	if semgrepScanner.Passed {
-		t.Error("Expected semgrep scanner to have failed")
+	if !modState.Passed {
+		t.Error("Expected module to have passed")
 	}
 }
 
@@ -167,9 +152,8 @@ func TestDetectChanges_FreshRun(t *testing.T) {
 		"mod1": {"mod1/main.go"},
 		"mod2": {"mod2/main.go"},
 	}
-	scannerTypes := []string{"trivy-vuln", "semgrep"}
 
-	result, err := DetectChanges(dir, moduleFiles, scannerTypes)
+	result, err := DetectChanges(dir, moduleFiles)
 	if err != nil {
 		t.Fatalf("DetectChanges failed: %v", err)
 	}
@@ -187,7 +171,7 @@ func TestDetectChanges_FreshRun(t *testing.T) {
 		if !ok {
 			t.Errorf("Missing change reason for %s", mod)
 		}
-		if reason != "fresh run (no prior state)" {
+		if reason != "fresh scan (no prior state)" {
 			t.Errorf("Unexpected change reason for %s: %s", mod, reason)
 		}
 	}
@@ -204,15 +188,15 @@ func TestDetectChanges_AllCached(t *testing.T) {
 	}
 
 	// First, update state with current files (simulating a previous successful scan)
-	scannedModules := map[string]map[string]bool{
-		"mod1": {"trivy-vuln": true, "semgrep": true},
+	scannedModules := map[string]bool{
+		"mod1": true,
 	}
 	if err := UpdateModuleState(dir, scannedModules, moduleFiles); err != nil {
 		t.Fatalf("UpdateModuleState failed: %v", err)
 	}
 
 	// Now detect changes - should be cached
-	result, err := DetectChanges(dir, moduleFiles, []string{"trivy-vuln", "semgrep"})
+	result, err := DetectChanges(dir, moduleFiles)
 	if err != nil {
 		t.Fatalf("DetectChanges failed: %v", err)
 	}
@@ -241,8 +225,8 @@ func TestDetectChanges_SourceFileChanged(t *testing.T) {
 	}
 
 	// Save initial state
-	scannedModules := map[string]map[string]bool{
-		"mod1": {"trivy-vuln": true},
+	scannedModules := map[string]bool{
+		"mod1": true,
 	}
 	if err := UpdateModuleState(dir, scannedModules, moduleFiles); err != nil {
 		t.Fatalf("UpdateModuleState failed: %v", err)
@@ -252,7 +236,7 @@ func TestDetectChanges_SourceFileChanged(t *testing.T) {
 	writeTestFile(t, filepath.Join(dir, "mod1", "main.go"), "package main\n\nfunc foo() {}")
 
 	// Detect changes - should detect modification
-	result, err := DetectChanges(dir, moduleFiles, []string{"trivy-vuln"})
+	result, err := DetectChanges(dir, moduleFiles)
 	if err != nil {
 		t.Fatalf("DetectChanges failed: %v", err)
 	}
@@ -275,8 +259,8 @@ func TestDetectChanges_NewModule(t *testing.T) {
 	writeTestFile(t, filepath.Join(dir, "mod2", "main.go"), "package main")
 
 	// Save state for only mod1
-	scannedModules := map[string]map[string]bool{
-		"mod1": {"trivy-vuln": true},
+	scannedModules := map[string]bool{
+		"mod1": true,
 	}
 	moduleFilesPartial := map[string][]string{
 		"mod1": {"mod1/main.go"},
@@ -290,7 +274,7 @@ func TestDetectChanges_NewModule(t *testing.T) {
 		"mod1": {"mod1/main.go"},
 		"mod2": {"mod2/main.go"},
 	}
-	result, err := DetectChanges(dir, moduleFilesFull, []string{"trivy-vuln"})
+	result, err := DetectChanges(dir, moduleFilesFull)
 	if err != nil {
 		t.Fatalf("DetectChanges failed: %v", err)
 	}
@@ -304,12 +288,12 @@ func TestDetectChanges_NewModule(t *testing.T) {
 	}
 
 	reason := result.ChangeReasons["mod2"]
-	if reason != "new module (not previously scanned)" {
+	if reason != "new module (not in previous scan)" {
 		t.Errorf("Expected reason about new module, got: %s", reason)
 	}
 }
 
-func TestDetectChanges_FailedScannerRerun(t *testing.T) {
+func TestDetectChanges_FailedScanRerun(t *testing.T) {
 	dir := setupTestDir(t)
 
 	// Create source files
@@ -319,100 +303,27 @@ func TestDetectChanges_FailedScannerRerun(t *testing.T) {
 		"mod1": {"mod1/main.go"},
 	}
 
-	// Save state with failed scanner
-	scannedModules := map[string]map[string]bool{
-		"mod1": {"trivy-vuln": false}, // Failed
+	// Save state with failed scan
+	scannedModules := map[string]bool{
+		"mod1": false, // Failed
 	}
 	if err := UpdateModuleState(dir, scannedModules, moduleFiles); err != nil {
 		t.Fatalf("UpdateModuleState failed: %v", err)
 	}
 
 	// Detect changes - should re-run because previous scan failed
-	result, err := DetectChanges(dir, moduleFiles, []string{"trivy-vuln"})
+	result, err := DetectChanges(dir, moduleFiles)
 	if err != nil {
 		t.Fatalf("DetectChanges failed: %v", err)
 	}
 
 	if len(result.ChangedModules) != 1 {
-		t.Errorf("Expected 1 changed module (failed scanner), got: %d", len(result.ChangedModules))
+		t.Errorf("Expected 1 changed module (failed scan), got: %d", len(result.ChangedModules))
 	}
 
 	reason := result.ChangeReasons["mod1"]
-	if reason != "previous scan failed for scanner: trivy-vuln" {
-		t.Errorf("Expected reason about failed scanner, got: %s", reason)
-	}
-}
-
-func TestDetectChanges_NewScannerType(t *testing.T) {
-	dir := setupTestDir(t)
-
-	// Create source files
-	writeTestFile(t, filepath.Join(dir, "mod1", "main.go"), "package main")
-
-	moduleFiles := map[string][]string{
-		"mod1": {"mod1/main.go"},
-	}
-
-	// Save state with only trivy-vuln
-	scannedModules := map[string]map[string]bool{
-		"mod1": {"trivy-vuln": true},
-	}
-	if err := UpdateModuleState(dir, scannedModules, moduleFiles); err != nil {
-		t.Fatalf("UpdateModuleState failed: %v", err)
-	}
-
-	// Request both trivy-vuln and semgrep - semgrep is new
-	result, err := DetectChanges(dir, moduleFiles, []string{"trivy-vuln", "semgrep"})
-	if err != nil {
-		t.Fatalf("DetectChanges failed: %v", err)
-	}
-
-	if len(result.ChangedModules) != 1 {
-		t.Errorf("Expected 1 changed module (new scanner), got: %d", len(result.ChangedModules))
-	}
-
-	reason := result.ChangeReasons["mod1"]
-	if reason != "scanner not previously run: semgrep" {
-		t.Errorf("Expected reason about new scanner, got: %s", reason)
-	}
-}
-
-func TestDetectChanges_SomeScannersPassedSomeFailed(t *testing.T) {
-	dir := setupTestDir(t)
-
-	// Create source files
-	writeTestFile(t, filepath.Join(dir, "mod1", "main.go"), "package main")
-
-	moduleFiles := map[string][]string{
-		"mod1": {"mod1/main.go"},
-	}
-
-	// Save state with mixed scanner results
-	scannedModules := map[string]map[string]bool{
-		"mod1": {"trivy-vuln": true, "semgrep": false},
-	}
-	if err := UpdateModuleState(dir, scannedModules, moduleFiles); err != nil {
-		t.Fatalf("UpdateModuleState failed: %v", err)
-	}
-
-	// Request only trivy-vuln (passed) - should be cached
-	result, err := DetectChanges(dir, moduleFiles, []string{"trivy-vuln"})
-	if err != nil {
-		t.Fatalf("DetectChanges failed: %v", err)
-	}
-
-	if len(result.ChangedModules) != 0 {
-		t.Errorf("Expected 0 changed modules (passed scanner requested), got: %d", len(result.ChangedModules))
-	}
-
-	// Request semgrep (failed) - should need rescan
-	result2, err := DetectChanges(dir, moduleFiles, []string{"semgrep"})
-	if err != nil {
-		t.Fatalf("DetectChanges failed: %v", err)
-	}
-
-	if len(result2.ChangedModules) != 1 {
-		t.Errorf("Expected 1 changed module (failed scanner), got: %d", len(result2.ChangedModules))
+	if reason != "previous scan had issues" {
+		t.Errorf("Expected reason about failed scan, got: %s", reason)
 	}
 }
 
@@ -426,8 +337,8 @@ func TestUpdateModuleState_CreatesNewState(t *testing.T) {
 		"mod1": {"mod1/main.go"},
 	}
 
-	scannedModules := map[string]map[string]bool{
-		"mod1": {"trivy-vuln": true, "semgrep": false},
+	scannedModules := map[string]bool{
+		"mod1": true,
 	}
 
 	if err := UpdateModuleState(dir, scannedModules, moduleFiles); err != nil {
@@ -445,16 +356,12 @@ func TestUpdateModuleState_CreatesNewState(t *testing.T) {
 		t.Fatal("Expected mod1 in state")
 	}
 
-	if len(modState.Scanners) != 2 {
-		t.Errorf("Expected 2 scanners, got: %d", len(modState.Scanners))
+	if !modState.Passed {
+		t.Error("Expected mod1 to have passed")
 	}
 
-	if !modState.Scanners["trivy-vuln"].Passed {
-		t.Error("Expected trivy-vuln to be passed")
-	}
-
-	if modState.Scanners["semgrep"].Passed {
-		t.Error("Expected semgrep to be failed")
+	if modState.SourceHash == "" {
+		t.Error("Expected mod1 to have a source hash")
 	}
 }
 
@@ -468,17 +375,17 @@ func TestUpdateModuleState_UpdatesExistingState(t *testing.T) {
 		"mod1": {"mod1/main.go"},
 	}
 
-	// First update: semgrep failed
-	scannedModules1 := map[string]map[string]bool{
-		"mod1": {"semgrep": false},
+	// First update: failed
+	scannedModules1 := map[string]bool{
+		"mod1": false,
 	}
 	if err := UpdateModuleState(dir, scannedModules1, moduleFiles); err != nil {
 		t.Fatalf("UpdateModuleState failed: %v", err)
 	}
 
-	// Second update: semgrep passed now
-	scannedModules2 := map[string]map[string]bool{
-		"mod1": {"semgrep": true},
+	// Second update: passed now
+	scannedModules2 := map[string]bool{
+		"mod1": true,
 	}
 	if err := UpdateModuleState(dir, scannedModules2, moduleFiles); err != nil {
 		t.Fatalf("UpdateModuleState failed: %v", err)
@@ -490,8 +397,8 @@ func TestUpdateModuleState_UpdatesExistingState(t *testing.T) {
 		t.Fatalf("Load failed: %v", err)
 	}
 
-	if !state.Modules["mod1"].Scanners["semgrep"].Passed {
-		t.Error("Expected semgrep to be updated to passed")
+	if !state.Modules["mod1"].Passed {
+		t.Error("Expected mod1 to be updated to passed")
 	}
 }
 

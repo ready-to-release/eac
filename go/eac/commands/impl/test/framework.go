@@ -2,6 +2,7 @@
 package test
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -134,10 +135,11 @@ func testAfterInit(ctx *cmdframework.ExecutionContext) error {
 	}
 	testCfg.Suite = suite
 
-	// Acquire suite lock
+	// Acquire suite lock with wait
 	repoCfg := ctx.EACConfig.Repository
 	lockCfg := locking.TestConfig(testCfg.SuiteName, repoCfg.Paths.Out.Test)
-	lock, err := locking.AcquireTracked(ctx.WorkspaceRoot, lockCfg, ctx.Orchestrator.GetRegistry())
+	lock, err := locking.AcquireWithWait(context.Background(), ctx.WorkspaceRoot, lockCfg,
+		ctx.Orchestrator.GetRegistry(), locking.DefaultWaitConfig())
 	if err != nil {
 		return fmt.Errorf("failed to acquire lock: %w", err)
 	}
@@ -715,6 +717,11 @@ func validateTestArtifacts(ctx *cmdframework.ExecutionContext, testCfg *TestFram
 }
 
 func filterIncrementalTests(ctx *cmdframework.ExecutionContext, testCfg *TestFrameworkConfig, testsByPackage map[string][]testing.TestReference) map[string][]testing.TestReference {
+	startTime := time.Now()
+	defer func() {
+		ctx.SetChangeDetectionTiming(time.Since(startTime))
+	}()
+
 	// Skip incremental if no module registry available
 	if ctx.ModuleRegistry == nil {
 		log.Debugf("Module registry not available, skipping incremental test detection")

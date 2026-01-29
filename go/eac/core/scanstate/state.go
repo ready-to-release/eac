@@ -1,7 +1,7 @@
 // Package scanstate manages incremental scan state for detecting which modules need rescanning.
 // It uses a hybrid git + file hash approach for fast and accurate change detection.
 //
-// State is stored in out/.scan-state.json (global file, similar to lintstate).
+// State is stored in out/.scan-state.json (global file, similar to buildstate).
 package scanstate
 
 import (
@@ -18,8 +18,11 @@ import (
 	"github.com/bmatcuk/doublestar/v4"
 
 	"github.com/ready-to-release/eac/go/eac/core/hash"
+	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
+
+var log = logging.C()
 
 // ErrNoState is returned when no scan state file exists (fresh scan).
 var ErrNoState = errors.New("no scan state file")
@@ -44,26 +47,14 @@ type ModuleState struct {
 	// Hash of all source files in the module
 	SourceHash string `json:"source_hash"`
 
-	// Per-scanner state (tracks which scanners passed)
-	Scanners map[string]ScannerState `json:"scanners"`
+	// Whether the last scan passed (all scanners passed)
+	Passed bool `json:"passed"`
 
 	// Timestamp of successful scan
 	ScannedAt time.Time `json:"scanned_at"`
 
 	// List of file paths included in hash (for debugging)
 	Files []string `json:"files,omitempty"`
-}
-
-// ScannerState represents state for a specific scanner type.
-type ScannerState struct {
-	// Whether the last scan run passed (no findings/errors)
-	Passed bool `json:"passed"`
-
-	// Timestamp of last run
-	RunAt time.Time `json:"run_at"`
-
-	// Evidence file SHA256 for verification
-	EvidenceSHA256 string `json:"evidence_sha256,omitempty"`
 }
 
 // ChangeResult represents the result of change detection.
@@ -103,7 +94,8 @@ func Load(workspaceRoot string) (*State, error) {
 
 	var state State
 	if err := json.Unmarshal(data, &state); err != nil {
-		return nil, fmt.Errorf("failed to parse scan state: %w", err)
+		// Treat corrupted state as fresh scan
+		return nil, ErrNoState
 	}
 
 	return &state, nil
@@ -133,20 +125,17 @@ func (s *State) Save(workspaceRoot string) error {
 
 // DetectChanges detects which modules need rescanning based on file changes.
 // moduleFiles maps moniker -> list of source file paths (relative to workspaceRoot)
-// scannerTypes is the list of scanner types being requested
 //
-// Detection strategy:
+// Detection strategy (same as buildstate):
 //  1. Fast path: If git commit + uncommitted state matches previous scan exactly,
-//     AND all modules were in the previous scan with all requested scanners passed,
-//     trust the stored hashes
+//     AND all modules were in the previous scan and passed, trust the stored hashes
 //  2. Slow path: Hash source files and compare to stored hashes
 //
 // A module needs rescanning if:
 // 1. Its source files changed
 // 2. It's a new module (not in previous state)
-// 3. A requested scanner was not run previously
-// 4. A requested scanner failed (Passed=false).
-func DetectChanges(workspaceRoot string, moduleFiles map[string][]string, scannerTypes []string) (*ChangeResult, error) {
+// 3. Its previous scan failed (Passed=false).
+func DetectChanges(workspaceRoot string, moduleFiles map[string][]string) (*ChangeResult, error) {
 	start := time.Now()
 
 	result := &ChangeResult{
@@ -161,7 +150,7 @@ func DetectChanges(workspaceRoot string, moduleFiles map[string][]string, scanne
 			result.FreshRun = true
 			for moniker := range moduleFiles {
 				result.ChangedModules = append(result.ChangedModules, moniker)
-				result.ChangeReasons[moniker] = "fresh run (no prior state)"
+				result.ChangeReasons[moniker] = "fresh scan (no prior state)"
 			}
 			sort.Strings(result.ChangedModules)
 			result.DetectionTime = time.Since(start)
@@ -186,37 +175,34 @@ func DetectChanges(workspaceRoot string, moduleFiles map[string][]string, scanne
 		currentUncommittedHash = hashUncommittedFiles(workspaceRoot, uncommittedFiles)
 	}
 
-	// Fast path: If git state matches exactly AND all requested modules have stored hashes
-	// with all requested scanners passed, we can skip file hashing entirely.
+	// Fast path check
 	gitStateMatches := currentCommit != "" &&
 		currentCommit == prevState.Commit &&
 		currentUncommittedHash == prevState.UncommittedHash
 
-	// Check if fast path is possible
+	log.Debugf("[SCAN-CACHE] Git state: current=%s prev=%s match=%v",
+		currentCommit, prevState.Commit, currentCommit == prevState.Commit)
+	log.Debugf("[SCAN-CACHE] Uncommitted hash: current=%s prev=%s match=%v",
+		currentUncommittedHash, prevState.UncommittedHash, currentUncommittedHash == prevState.UncommittedHash)
+
+	// Check if fast path is possible (all modules must have prior state and passed)
 	canUseFastPath := gitStateMatches
 	if canUseFastPath {
 		for moniker := range moduleFiles {
 			modState, exists := prevState.Modules[moniker]
-			if !exists {
+			if !exists || !modState.Passed {
+				log.Debugf("[SCAN-CACHE] Fast path blocked: module %s not in state or failed", moniker)
 				canUseFastPath = false
-				break
-			}
-			// Check all requested scanners passed
-			for _, scannerType := range scannerTypes {
-				scannerState, scannerExists := modState.Scanners[scannerType]
-				if !scannerExists || !scannerState.Passed {
-					canUseFastPath = false
-					break
-				}
-			}
-			if !canUseFastPath {
 				break
 			}
 		}
 	}
 
+	log.Debugf("[SCAN-CACHE] Fast path: gitStateMatches=%v canUseFastPath=%v", gitStateMatches, canUseFastPath)
+
 	if canUseFastPath {
-		// Fast path: git state unchanged, all modules have prior hashes and all scanners passed
+		// Fast path: git state unchanged, all modules have prior hashes and passed
+		log.Debugf("[SCAN-CACHE] Using fast path - all %d modules up to date", len(moduleFiles))
 		for moniker := range moduleFiles {
 			result.UpToDateModules = append(result.UpToDateModules, moniker)
 		}
@@ -226,36 +212,20 @@ func DetectChanges(workspaceRoot string, moduleFiles map[string][]string, scanne
 	}
 
 	// Slow path: Hash source files for each module and compare
+	log.Debugf("[SCAN-CACHE] Using slow path - hashing %d modules", len(moduleFiles))
 	for moniker, files := range moduleFiles {
 		prevModState, exists := prevState.Modules[moniker]
 
 		if !exists {
 			result.ChangedModules = append(result.ChangedModules, moniker)
-			result.ChangeReasons[moniker] = "new module (not previously scanned)"
+			result.ChangeReasons[moniker] = "new module (not in previous scan)"
 			continue
 		}
 
-		// Check if any requested scanner was not run or failed
-		var missingScanners []string
-		var failedScanners []string
-		for _, scannerType := range scannerTypes {
-			scannerState, scannerExists := prevModState.Scanners[scannerType]
-			if !scannerExists {
-				missingScanners = append(missingScanners, scannerType)
-			} else if !scannerState.Passed {
-				failedScanners = append(failedScanners, scannerType)
-			}
-		}
-
-		if len(failedScanners) > 0 {
+		// If previous scan failed, needs rescanning
+		if !prevModState.Passed {
 			result.ChangedModules = append(result.ChangedModules, moniker)
-			result.ChangeReasons[moniker] = fmt.Sprintf("previous scan failed for scanner: %s", failedScanners[0])
-			continue
-		}
-
-		if len(missingScanners) > 0 {
-			result.ChangedModules = append(result.ChangedModules, moniker)
-			result.ChangeReasons[moniker] = fmt.Sprintf("scanner not previously run: %s", missingScanners[0])
+			result.ChangeReasons[moniker] = "previous scan had issues"
 			continue
 		}
 
@@ -270,6 +240,8 @@ func DetectChanges(workspaceRoot string, moduleFiles map[string][]string, scanne
 		if currentHash != prevModState.SourceHash {
 			result.ChangedModules = append(result.ChangedModules, moniker)
 			result.ChangeReasons[moniker] = "source files changed"
+			log.Debugf("[SCAN-CACHE] Hash mismatch for %s: current=%s prev=%s",
+				moniker, currentHash[:16], prevModState.SourceHash[:16])
 		} else {
 			result.UpToDateModules = append(result.UpToDateModules, moniker)
 		}
@@ -283,8 +255,8 @@ func DetectChanges(workspaceRoot string, moduleFiles map[string][]string, scanne
 }
 
 // UpdateModuleState updates the scan state for scanned modules.
-// scannedModules maps moniker -> map of scanner -> passed (true = no issues).
-func UpdateModuleState(workspaceRoot string, scannedModules map[string]map[string]bool, moduleFiles map[string][]string) error {
+// scannedModules maps moniker -> passed (true = scan passed).
+func UpdateModuleState(workspaceRoot string, scannedModules map[string]bool, moduleFiles map[string][]string) error {
 	// Load or create state
 	state, err := Load(workspaceRoot)
 	if err != nil {
@@ -296,7 +268,7 @@ func UpdateModuleState(workspaceRoot string, scannedModules map[string]map[strin
 		}
 	}
 
-	// Update git state - errors are non-fatal
+	// Update git state
 	commit, gitErr := getGitCommit(workspaceRoot)
 	if gitErr == nil {
 		state.Commit = commit
@@ -312,7 +284,7 @@ func UpdateModuleState(workspaceRoot string, scannedModules map[string]map[strin
 	}
 
 	// Update each scanned module
-	for moniker, scannerResults := range scannedModules {
+	for moniker, passed := range scannedModules {
 		files, ok := moduleFiles[moniker]
 		if !ok {
 			continue
@@ -320,39 +292,25 @@ func UpdateModuleState(workspaceRoot string, scannedModules map[string]map[strin
 
 		sourceHash, err := hashModuleFiles(workspaceRoot, files)
 		if err != nil {
-			continue // Skip modules we can't hash
+			log.Debugf("[SCAN-CACHE] Failed to hash module %s: %v", moniker, err)
+			continue
 		}
 
-		// Get or create module state
-		modState, exists := state.Modules[moniker]
-		if !exists {
-			modState = ModuleState{
-				Scanners: make(map[string]ScannerState),
-			}
+		state.Modules[moniker] = ModuleState{
+			SourceHash: sourceHash,
+			Passed:     passed,
+			ScannedAt:  time.Now(),
+			Files:      files,
 		}
 
-		modState.SourceHash = sourceHash
-		modState.ScannedAt = time.Now()
-		modState.Files = files
-
-		// Update scanner states
-		if modState.Scanners == nil {
-			modState.Scanners = make(map[string]ScannerState)
-		}
-		for scannerType, passed := range scannerResults {
-			modState.Scanners[scannerType] = ScannerState{
-				Passed: passed,
-				RunAt:  time.Now(),
-			}
-		}
-
-		state.Modules[moniker] = modState
+		log.Debugf("[SCAN-CACHE] Updated state for %s: hash=%s passed=%v",
+			moniker, sourceHash[:16], passed)
 	}
 
 	return state.Save(workspaceRoot)
 }
 
-// ClearState removes the scan state file (for --skip-cache/force rescan).
+// ClearState removes the scan state file (for --skip-cache).
 func ClearState(workspaceRoot string) error {
 	statePath := filepath.Join(workspaceRoot, paths.OutDir, stateFileName)
 	err := os.Remove(statePath)
@@ -398,13 +356,11 @@ func getUncommittedFiles(workspaceRoot string) ([]string, error) {
 }
 
 // hashUncommittedFiles creates a hash representing the uncommitted state.
-// Delegates to core/hash package for the actual hashing.
 func hashUncommittedFiles(workspaceRoot string, files []string) string {
 	return hash.UncommittedState(workspaceRoot, files)
 }
 
 // hashModuleFiles computes a hash of all source files for a module.
-// Delegates to core/hash package for the actual hashing.
 func hashModuleFiles(workspaceRoot string, files []string) (string, error) {
 	return hash.Files(workspaceRoot, files)
 }
@@ -416,27 +372,23 @@ func ExpandGlobPatterns(workspaceRoot string, patterns []string) ([]string, erro
 	seen := make(map[string]bool)
 
 	for _, pattern := range patterns {
-		// Make pattern absolute
 		absPattern := pattern
 		if !filepath.IsAbs(pattern) {
 			absPattern = filepath.Join(workspaceRoot, pattern)
 		}
 
-		// Use doublestar for glob expansion to support ** patterns
 		matches, err := doublestar.FilepathGlob(absPattern)
 		if err != nil {
 			return nil, fmt.Errorf("invalid glob pattern %s: %w", pattern, err)
 		}
 
 		for _, match := range matches {
-			// Convert back to relative path
 			rel, err := filepath.Rel(workspaceRoot, match)
 			if err != nil {
 				continue
 			}
 			rel = filepath.ToSlash(rel)
 
-			// Skip directories, only include files
 			info, err := os.Stat(match)
 			if err != nil || info.IsDir() {
 				continue
@@ -475,58 +427,11 @@ func GetModuleSourceFiles(workspaceRoot string, modules map[string]ModuleFileGet
 }
 
 // DetectChangesForModules is the high-level API for detecting which modules need rescanning.
-// It combines GetModuleSourceFiles and DetectChanges into a single call.
-func DetectChangesForModules(workspaceRoot string, modules map[string]ModuleFileGetter, scannerTypes []string) (*ChangeResult, error) {
+func DetectChangesForModules(workspaceRoot string, modules map[string]ModuleFileGetter) (*ChangeResult, error) {
 	moduleFiles, err := GetModuleSourceFiles(workspaceRoot, modules)
 	if err != nil {
 		return nil, err
 	}
 
-	return DetectChanges(workspaceRoot, moduleFiles, scannerTypes)
-}
-
-// HashModuleFiles computes a SHA-256 hash of all source files for a module.
-// This is the public API for computing input hashes for manifest storage.
-func HashModuleFiles(workspaceRoot string, files []string) (string, error) {
-	return hashModuleFiles(workspaceRoot, files)
-}
-
-// GetCacheStatus returns a human-readable summary of cache state.
-func GetCacheStatus(result *ChangeResult) string {
-	if result.FreshRun {
-		return "fresh scan (no prior state)"
-	}
-
-	total := len(result.ChangedModules) + len(result.UpToDateModules)
-	if len(result.UpToDateModules) == total {
-		return fmt.Sprintf("all %d modules cached", total)
-	}
-
-	return fmt.Sprintf("%d/%d modules need rescanning", len(result.ChangedModules), total)
-}
-
-// filterUncommittedByModule filters uncommitted files to only those in the module.
-func filterUncommittedByModule(uncommittedFiles []string, moduleFiles []string) []string {
-	moduleFileSet := make(map[string]bool)
-	for _, f := range moduleFiles {
-		moduleFileSet[f] = true
-	}
-
-	var filtered []string
-	for _, f := range uncommittedFiles {
-		if moduleFileSet[f] {
-			filtered = append(filtered, f)
-		}
-	}
-	return filtered
-}
-
-// isPathInModule checks if a file path is within a module's files.
-func isPathInModule(path string, moduleFiles []string) bool {
-	for _, f := range moduleFiles {
-		if strings.HasPrefix(path, f) || path == f {
-			return true
-		}
-	}
-	return false
+	return DetectChanges(workspaceRoot, moduleFiles)
 }

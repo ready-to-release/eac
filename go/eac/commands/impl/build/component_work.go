@@ -86,14 +86,9 @@ func FlattenModulesToComponentWork(ctx *cmdframework.ExecutionContext) [][]orche
 				// Get weight (base weight × amp, calculated internally)
 				weight := getComponentWeight(moniker, componentName, compTypeName, tool.OperationBuild)
 
-				// Component work item: component name includes builder for unique identification
-				// Format: "component:builder" so display becomes "module:component:builder"
-				// This matches the lint pattern (e.g., "go:go-lint")
-				componentWithBuilder := componentName + ":" + handlerName
-
 				work := orchestrator.ComponentWork{
 					Module:        moniker,
-					Component:     componentWithBuilder,
+					Component:     componentName,
 					ComponentType: compTypeName,
 					Handler:       handlerName,
 					IsContainer:   ch.Handler.IsContainer(),

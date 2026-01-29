@@ -2,6 +2,7 @@
 package lint
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -126,6 +127,9 @@ func lintAfterResolve(ctx *cmdframework.ExecutionContext) error {
 // This keeps all modules visible and clickable in the TUI.
 func detectIncrementalLintChanges(ctx *cmdframework.ExecutionContext, lctx *lintContext) {
 	startTime := time.Now()
+	defer func() {
+		ctx.SetChangeDetectionTiming(time.Since(startTime))
+	}()
 
 	// Collect module files for change detection
 	modulesMap := make(map[string]lintstate.ModuleFileGetter)
@@ -262,9 +266,10 @@ func lintWorker(ctx *cmdframework.ExecutionContext, moniker string, logWriter io
 		return 1
 	}
 
-	// Acquire lock for this module
+	// Acquire lock for this module with wait
 	lockCfg := locking.LintConfig(moniker, paths.OutLintRelPath)
-	lockFile, err := locking.AcquireTracked(ctx.WorkspaceRoot, lockCfg, ctx.Orchestrator.GetRegistry())
+	lockFile, err := locking.AcquireWithWait(context.Background(), ctx.WorkspaceRoot, lockCfg,
+		ctx.Orchestrator.GetRegistry(), locking.DefaultWaitConfig())
 	if err != nil {
 		output.Writeln(logWriter, "Error: %v", err)
 		return 1
@@ -383,11 +388,12 @@ func lintComponentWorker(ctx *cmdframework.ExecutionContext, module, component s
 		return 1
 	}
 
-	// Acquire component-level lock (use underscore separator for Windows compatibility)
+	// Acquire component-level lock with wait (use underscore separator for Windows compatibility)
 	componentDir := compName + "_" + providerName
 	if !ctx.Config.DryRun {
 		lockCfg := locking.ComponentLintConfig(module, componentDir, paths.OutLintRelPath)
-		lockFile, err := locking.AcquireTracked(ctx.WorkspaceRoot, lockCfg, ctx.Orchestrator.GetRegistry())
+		lockFile, err := locking.AcquireWithWait(context.Background(), ctx.WorkspaceRoot, lockCfg,
+			ctx.Orchestrator.GetRegistry(), locking.DefaultWaitConfig())
 		if err != nil {
 			output.Writeln(logWriter, "Error: %v", err)
 			return 1

@@ -59,8 +59,25 @@ func (op *OutputPipe) Close() error {
 	op.closed = true
 	op.mu.Unlock()
 
+	// Close writer first - this causes scanner.Scan() to return EOF
 	err := op.writer.Close()
-	op.wg.Wait()
+
+	// Wait for readLines() to exit (should be quick after writer closes)
+	// Use a timeout to avoid hanging forever if something goes wrong
+	done := make(chan struct{})
+	go func() {
+		op.wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// Normal exit
+	case <-time.After(2 * time.Second):
+		// Timeout - readLines() is stuck, but we can't block forever
+		// This is a fallback safety; ideally shouldn't happen
+	}
+
 	return err
 }
 
@@ -80,6 +97,14 @@ func (op *OutputPipe) readLines() {
 		// Apply filter
 		if !op.filter.ShouldShow(text) {
 			continue
+		}
+
+		// Check if closed before sending (protects against send on closed channel)
+		op.mu.Lock()
+		closed := op.closed
+		op.mu.Unlock()
+		if closed {
+			return
 		}
 
 		level := classifyLine(text)

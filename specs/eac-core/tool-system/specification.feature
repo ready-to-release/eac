@@ -28,25 +28,25 @@ Feature: Tool Resolution for Component Types
       Given I copy the test layout "single-typescript-module"
       When I load the EAC configuration
       Then the module "test-module" has component "typescript"
-      And the builder for component type "typescript" is "npm-build"
+      And the builder for component type "typescript" is "npm"
 
     Scenario: A3 - Python module resolves to python builder
       Given I copy the test layout "single-python-module"
       When I load the EAC configuration
       Then the module "test-module" has component "python"
-      And the builder for component type "python" is "python-build"
+      And the builder for component type "python" is "python"
 
     Scenario: A4 - .NET module resolves to dotnet builder
       Given I copy the test layout "single-dotnet-module"
       When I load the EAC configuration
       Then the module "test-module" has component "dotnet"
-      And the builder for component type "dotnet" is "dotnet-build"
+      And the builder for component type "dotnet" is "dotnet"
 
-    Scenario: A5 - Rust module resolves to rust builder
+    Scenario: A5 - Rust module resolves to cargo builder
       Given I copy the test layout "single-rust-module"
       When I load the EAC configuration
       Then the module "test-module" has component "rust"
-      And the builder for component type "rust" is "rust-build"
+      And the builder for component type "rust" is "cargo"
 
     Scenario: A6 - Dockerfile module resolves to buildx builder
       Given I copy the test layout "single-dockerfile-module"
@@ -67,7 +67,7 @@ Feature: Tool Resolution for Component Types
       And the module "api-service" has component "go"
       And the module "web-app" has component "typescript"
       And the builder for component type "go" is "go"
-      And the builder for component type "typescript" is "npm-build"
+      And the builder for component type "typescript" is "npm"
 
     Scenario: B2 - Python and TypeScript repo resolves both builders
       Given I copy the test layout "multi-python-typescript"
@@ -75,8 +75,8 @@ Feature: Tool Resolution for Component Types
       Then the configuration has 2 modules
       And the module "backend" has component "python"
       And the module "frontend" has component "typescript"
-      And the builder for component type "python" is "python-build"
-      And the builder for component type "typescript" is "npm-build"
+      And the builder for component type "python" is "python"
+      And the builder for component type "typescript" is "npm"
 
     Scenario: B3 - Three language repo resolves all builders
       Given I copy the test layout "multi-go-python-dotnet"
@@ -86,8 +86,8 @@ Feature: Tool Resolution for Component Types
       And the module "ml-service" has component "python"
       And the module "web-api" has component "dotnet"
       And the builder for component type "go" is "go"
-      And the builder for component type "python" is "python-build"
-      And the builder for component type "dotnet" is "dotnet-build"
+      And the builder for component type "python" is "python"
+      And the builder for component type "dotnet" is "dotnet"
 
     Scenario: B4 - Full stack repo resolves all six language builders
       Given I copy the test layout "multi-full-stack"
@@ -109,27 +109,27 @@ Feature: Tool Resolution for Component Types
     Scenario: C1 - Go module resolves to go tester
       Given I copy the test layout "single-go-module"
       When I load the EAC configuration
-      Then the tester for component type "go" is "go-test"
+      Then the tester for component type "go" is "go"
 
     Scenario: C2 - TypeScript module resolves to npm tester
       Given I copy the test layout "single-typescript-module"
       When I load the EAC configuration
-      Then the tester for component type "typescript" is "npm-test"
+      Then the tester for component type "typescript" is "npm"
 
-    Scenario: C3 - Python module resolves to python tester
+    Scenario: C3 - Python module resolves to pytest
       Given I copy the test layout "single-python-module"
       When I load the EAC configuration
-      Then the tester for component type "python" is "python-test"
+      Then the tester for component type "python" is "pytest"
 
-    Scenario: C4 - Rust module resolves to rust tester
+    Scenario: C4 - Rust module resolves to cargo tester
       Given I copy the test layout "single-rust-module"
       When I load the EAC configuration
-      Then the tester for component type "rust" is "rust-test"
+      Then the tester for component type "rust" is "cargo"
 
     Scenario: C5 - .NET module resolves to dotnet tester
       Given I copy the test layout "single-dotnet-module"
       When I load the EAC configuration
-      Then the tester for component type "dotnet" is "dotnet-test"
+      Then the tester for component type "dotnet" is "dotnet"
 
   # ===========================================================================
   # Category D: Scanner Tool Resolution

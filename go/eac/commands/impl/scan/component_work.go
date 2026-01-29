@@ -71,17 +71,12 @@ func FlattenModulesToScanComponentWork(ctx *cmdframework.ExecutionContext) [][]o
 					continue
 				}
 
-				// Component work item: component name includes scanner for unique identification
-				// Format: "component:scanner" so display becomes "module:component:scanner"
-				// This matches the lint pattern (e.g., "go:go-lint")
-				componentWithScanner := componentName + ":" + string(scannerType)
-
 				// Get weight (base weight × amp, calculated internally)
 				weight := getComponentWeight(moniker, componentName, scannerType)
 
 				work := orchestrator.ComponentWork{
 					Module:        moniker,
-					Component:     componentWithScanner,
+					Component:     componentName,
 					ComponentType: compTypeName,
 					Handler:       string(scannerType), // Use scanner type instead of generic "scan"
 					IsContainer:   tool.GlobalScanBridge().IsContainer(tool.ScannerType(scannerType)),

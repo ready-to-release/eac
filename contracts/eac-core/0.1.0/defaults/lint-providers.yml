@@ -42,17 +42,16 @@ lint-providers:
     options:
       auto_fix: true
 
-  # Markdown Linter - markdownlint-cli2
-  # Same engine as VSCode markdownlint extension for consistency
-  markdownlint-cli2:
-    description: Markdown linter (VSCode extension compatible)
+  # Markdown Linter
+  markdownlint:
+    description: Markdown linter
     command: markdownlint-cli2
     input_mode: files
     config_files:
       - .markdownlint-cli2.yaml
       - .markdownlint.yml
       - .markdownlint.json
-    system_dependency: markdownlint-cli2
+    system_dependency: markdownlint
     applies_to: [markdown]
     options:
       auto_fix: true

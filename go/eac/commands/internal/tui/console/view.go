@@ -127,7 +127,12 @@ func (m Model) viewPanes() string {
 
 	// Render Run pane only if it actually started (not still pending)
 	if m.panes[PhaseRun].Status != PhasePending {
-		tabs := m.GetVisibleTabs()
+		// Show lamp countdown row if user has interacted and countdown is running
+		if m.userHasInteracted && m.exitCountdownSecs > 0 && !m.allRunnersCompleted.IsZero() {
+			b.WriteString(m.renderExitLampRow())
+			b.WriteString("\n")
+			usedLines += 1
+		}
 
 		// Calculate remaining height for side-by-side panels
 		// Reserve space for summary if it will be shown
@@ -142,8 +147,14 @@ func (m Model) viewPanes() string {
 			remainingHeight = 5
 		}
 
+		// Only show waiting state in left pane when actively exiting:
+		// exitRequested is set when all runners done AND (user never interacted OR user timer expired)
+		showWaitingState := m.exitRequested && m.summaryData == nil
+
+		tabs := m.GetVisibleTabs()
 		// Side-by-side layout: Components (tabs/tree) on LEFT, Logs on RIGHT
-		sideBySide := m.renderSideBySideLayout(tabs, remainingHeight)
+		// Pass waiting state to show in left pane when waiting for user idle
+		sideBySide := m.renderSideBySideLayoutWithState(tabs, remainingHeight, showWaitingState)
 		b.WriteString(sideBySide)
 		b.WriteString("\n")
 	}
@@ -167,6 +178,12 @@ func (m Model) viewPanes() string {
 
 // renderSideBySideLayout renders Components (left) and Logs (right) side by side.
 func (m Model) renderSideBySideLayout(tabs []*ModuleState, height int) string {
+	return m.renderSideBySideLayoutWithState(tabs, height, false)
+}
+
+// renderSideBySideLayoutWithState renders Components (left) and Logs (right) side by side.
+// If showWaitingState is true, the left panel shows the current waiting state instead of tabs.
+func (m Model) renderSideBySideLayoutWithState(tabs []*ModuleState, height int, showWaitingState bool) string {
 	// Fixed width for components panel, logs take remaining space
 	const componentsWidth = 62 // Fixed width for 3 columns of tabs
 	logsWidth := m.width - componentsWidth - 1 // -1 for separator
@@ -175,8 +192,11 @@ func (m Model) renderSideBySideLayout(tabs []*ModuleState, height int) string {
 	}
 
 	// Render left panel (Components - tabs or tree based on viewMode)
+	// If waiting for summary, show waiting state instead
 	var leftPanel string
-	if m.viewMode == ViewModeTree {
+	if showWaitingState {
+		leftPanel = m.renderWaitingStatePanel(componentsWidth, height)
+	} else if m.viewMode == ViewModeTree {
 		leftPanel = m.renderTreePanel(tabs, componentsWidth, height)
 	} else {
 		leftPanel = m.renderTabGridPanel(tabs, componentsWidth, height)
@@ -327,9 +347,280 @@ func (m Model) renderInitPaneLoading() string {
 		icon = ">"
 	}
 
-	left := Styles.Running.Render(icon) + " " + Styles.Phase.Render("Initializing") + Styles.Dim.Render(dots)
+	// Check if we're waiting for any locks
+	waitingMessage := m.getWaitingForLocksMessage()
+	var statusText string
+	if waitingMessage != "" {
+		statusText = waitingMessage
+	} else {
+		statusText = "Initializing"
+	}
+
+	left := Styles.Running.Render(icon) + " " + Styles.Phase.Render(statusText) + Styles.Dim.Render(dots)
 
 	// Single line with border
+	borderLen := m.width - lipgloss.Width(left) - 4
+	if borderLen < 1 {
+		borderLen = 1
+	}
+
+	return "─" + left + " " + Styles.Border.Render(strings.Repeat("─", borderLen)) + "─"
+}
+
+// WaitingState describes what the TUI is currently waiting for.
+type WaitingState int
+
+const (
+	WaitingNone           WaitingState = iota // Not waiting for anything
+	WaitingRenderSummary                      // Waiting for summary to be rendered
+	WaitingUserExitTimer                      // Waiting for user exit timer
+	WaitingBothSummaryAndTimer                // Both (shouldn't happen normally)
+)
+
+// getWaitingState returns the current waiting state.
+// This follows the three-thread model:
+// - User timer: countdown from last interaction (informational)
+// - Summary renderer: background builder producing pendingSummaryData
+// - Exit decision: when all done AND (never interacted OR timer expired)
+func (m Model) getWaitingState() WaitingState {
+	hasSummary := m.summaryData != nil
+	hasPendingSummary := m.pendingSummaryData != nil
+
+	// exitRequested is set when we want to exit (all done AND user timer expired/never interacted)
+	if m.exitRequested {
+		if !hasPendingSummary && !hasSummary {
+			// Waiting for summary builder to finish
+			return WaitingRenderSummary
+		}
+		// Summary ready or shown - no waiting state (will quit immediately)
+		return WaitingNone
+	}
+
+	// Not actively exiting yet - check if showing user timer countdown
+	allDone := !m.allRunnersCompleted.IsZero()
+	if allDone && m.userHasInteracted && m.exitCountdownSecs > 0 {
+		// User has interacted and is counting down - show informational timer
+		return WaitingUserExitTimer
+	}
+
+	return WaitingNone
+}
+
+// getWaitingStateMessage returns a human-readable message for the current waiting state.
+func (m Model) getWaitingStateMessage() string {
+	switch m.getWaitingState() {
+	case WaitingRenderSummary:
+		return "rendering summary"
+	case WaitingUserExitTimer:
+		// User has interacted - show countdown as informational (not blocking yet)
+		return fmt.Sprintf("exit in %ds", m.exitCountdownSecs)
+	case WaitingBothSummaryAndTimer:
+		return fmt.Sprintf("rendering + waiting %ds", m.exitCountdownSecs)
+	default:
+		return ""
+	}
+}
+
+// getWaitingForLocksMessage returns a message if any locks are being waited on.
+// Returns empty string if no locks are waiting.
+func (m Model) getWaitingForLocksMessage() string {
+	var waitingLocks []string
+	for _, lock := range m.locks {
+		if lock.Waiting > 0 {
+			// Extract just the identifier from "type:identifier" format
+			name := lock.Name
+			if idx := strings.Index(name, ":"); idx >= 0 {
+				name = name[idx+1:]
+			}
+			waitingLocks = append(waitingLocks, name)
+		}
+	}
+
+	if len(waitingLocks) == 0 {
+		return ""
+	}
+
+	if len(waitingLocks) == 1 {
+		return fmt.Sprintf("Waiting for lock: %s", waitingLocks[0])
+	}
+	return fmt.Sprintf("Waiting for locks: %s", strings.Join(waitingLocks, ", "))
+}
+
+// renderWaitingStatePanel renders the waiting state in the left panel.
+func (m Model) renderWaitingStatePanel(width, height int) string {
+	// Animated dots
+	elapsed := time.Since(m.startTime)
+	dotCount := int(elapsed.Seconds()*2) % 4
+
+	dots := strings.Repeat(".", dotCount+1)
+	if !m.asciiMode {
+		dots = strings.Repeat("·", dotCount+1)
+	}
+
+	icon := "◐"
+	if m.asciiMode {
+		// Rotating ASCII spinner
+		spinChars := []string{"|", "/", "-", "\\"}
+		icon = spinChars[int(elapsed.Seconds()*4)%4]
+	}
+
+	// Get the waiting state message
+	stateMsg := m.getWaitingStateMessage()
+	if stateMsg == "" {
+		stateMsg = "waiting"
+	}
+
+	msg := Styles.Running.Render(icon) + " " + Styles.Phase.Render(stateMsg) + Styles.Dim.Render(dots)
+
+	// Build panel with centered message
+	var result strings.Builder
+
+	// Center vertically
+	topPadding := (height - 1) / 2
+	for i := 0; i < topPadding; i++ {
+		result.WriteString(strings.Repeat(" ", width))
+		result.WriteString("\n")
+	}
+
+	// Center horizontally
+	msgWidth := lipgloss.Width(msg)
+	leftPadding := (width - msgWidth) / 2
+	if leftPadding < 0 {
+		leftPadding = 0
+	}
+	result.WriteString(strings.Repeat(" ", leftPadding))
+	result.WriteString(msg)
+	// Pad to full width
+	rightPadding := width - leftPadding - msgWidth
+	if rightPadding > 0 {
+		result.WriteString(strings.Repeat(" ", rightPadding))
+	}
+
+	// Fill remaining lines
+	for i := topPadding + 1; i < height; i++ {
+		result.WriteString("\n")
+		result.WriteString(strings.Repeat(" ", width))
+	}
+
+	return result.String()
+}
+
+// renderCreatingSummary shows a centered "Rendering summary..." message (full width version).
+func (m Model) renderCreatingSummary(height int) string {
+	// Animated dots
+	elapsed := time.Since(m.startTime)
+	dotCount := int(elapsed.Seconds()*2) % 4
+
+	dots := strings.Repeat(".", dotCount+1)
+	if !m.asciiMode {
+		dots = strings.Repeat("·", dotCount+1)
+	}
+
+	icon := "◐"
+	if m.asciiMode {
+		// Rotating ASCII spinner
+		spinChars := []string{"|", "/", "-", "\\"}
+		icon = spinChars[int(elapsed.Seconds()*4)%4]
+	}
+
+	msg := Styles.Running.Render(icon) + " " + Styles.Phase.Render("Rendering summary") + Styles.Dim.Render(dots)
+
+	// Center vertically and horizontally
+	var result strings.Builder
+	topPadding := (height - 1) / 2
+	for i := 0; i < topPadding; i++ {
+		result.WriteString("\n")
+	}
+
+	msgWidth := lipgloss.Width(msg)
+	leftPadding := (m.width - msgWidth) / 2
+	if leftPadding < 0 {
+		leftPadding = 0
+	}
+	result.WriteString(strings.Repeat(" ", leftPadding))
+	result.WriteString(msg)
+
+	for i := topPadding + 1; i < height; i++ {
+		result.WriteString("\n")
+	}
+
+	return result.String()
+}
+
+// renderExitLampRow renders a single-line visual countdown with 30 lamps turning off right to left.
+func (m Model) renderExitLampRow() string {
+	const totalLamps = 30
+
+	// Calculate lamps remaining: 10 seconds = 30 lamps, so 3 lamps per second
+	lampsLit := m.exitCountdownSecs * 3
+	if lampsLit > totalLamps {
+		lampsLit = totalLamps
+	}
+	if lampsLit < 0 {
+		lampsLit = 0
+	}
+
+	// Lamp characters
+	lampOn := "●"
+	lampOff := "○"
+	if m.asciiMode {
+		lampOn = "O"
+		lampOff = "."
+	}
+
+	// Build lamp string: lit lamps on left, off lamps on right
+	var lamps strings.Builder
+	// Color based on time remaining
+	var color lipgloss.Color
+	if lampsLit > 20 {
+		color = lipgloss.Color("34") // Green - plenty of time
+	} else if lampsLit > 10 {
+		color = lipgloss.Color("214") // Yellow/orange - getting low
+	} else {
+		color = lipgloss.Color("196") // Red - almost out
+	}
+
+	for i := 0; i < totalLamps; i++ {
+		if i < lampsLit {
+			lamps.WriteString(lipgloss.NewStyle().Foreground(color).Render(lampOn))
+		} else {
+			lamps.WriteString(Styles.Dim.Render(lampOff))
+		}
+	}
+
+	// Build status message - show precise waiting state
+	var msg string
+	if m.summaryData != nil && m.summaryData.Success {
+		msg = "Complete"
+	} else if m.summaryData != nil {
+		msg = "Failed"
+	} else {
+		msg = "Done"
+	}
+
+	// Status icon
+	icon := "✓"
+	iconColor := lipgloss.Color("34") // Green
+	if m.summaryData != nil && !m.summaryData.Success {
+		icon = "✗"
+		iconColor = lipgloss.Color("196") // Red
+	}
+	if m.asciiMode {
+		icon = "V"
+		if m.summaryData != nil && !m.summaryData.Success {
+			icon = "X"
+		}
+	}
+
+	// Get precise waiting state
+	waitingText := m.getWaitingStateMessage()
+
+	left := lipgloss.NewStyle().Foreground(iconColor).Bold(true).Render(icon) +
+		" " + Styles.Phase.Render(msg) +
+		"  " + lamps.String() +
+		"  " + Styles.Dim.Render(waitingText)
+
+	// Single line with border fill
 	borderLen := m.width - lipgloss.Width(left) - 4
 	if borderLen < 1 {
 		borderLen = 1
@@ -420,9 +711,6 @@ func (m Model) renderTabGridContent(tabs []*ModuleState, width, height int) stri
 		isActive := state.Moniker == effectiveActiveTab
 		isHovered := state.Moniker == m.hoveredTab && !isActive
 
-		// Status icon
-		icon := m.statusIcon(state.Status)
-
 		// Weight indicator (circled number)
 		var weightStr string
 		if m.asciiMode {
@@ -431,23 +719,50 @@ func (m Model) renderTabGridContent(tabs []*ModuleState, width, height int) stri
 			weightStr = weightDigit(state.Weight)
 		}
 
-		// Fixed label width: tabWidth - icon(1) - spaces(4) - weight(2) - padding(2)
-		labelWidth := tabWidth - 9
+		// Fixed label width: tabWidth - spaces(3) - weight(2)
+		labelWidth := tabWidth - 5
 		if labelWidth < 4 {
 			labelWidth = 4
 		}
-		label := state.Moniker
+
+		// Get the full name for marquee effect
+		fullName := state.Moniker
+		label := fullName
+
+		// Marquee scrolling for hovered tab
+		if isHovered && len(fullName) > labelWidth {
+			// Delay before scrolling starts (10 ticks = 1 second to read visible part)
+			// Then advance position every 4 ticks (400ms per char)
+			const startDelay = 10
+			if m.hoveredTabScroll > startDelay {
+				effectiveScroll := (m.hoveredTabScroll - startDelay) / 4
+				scrollPos := effectiveScroll % (len(fullName) + 3) // +3 for gap before wrap
+				if scrollPos < len(fullName) {
+					// Show scrolled portion
+					label = fullName[scrollPos:]
+					if len(label) < labelWidth {
+						// Add gap and wrap around
+						label = label + "   " + fullName
+					}
+				} else {
+					// In the gap, show start of name
+					gapPos := scrollPos - len(fullName)
+					label = strings.Repeat(" ", 3-gapPos) + fullName
+				}
+			}
+		}
+
+		// Truncate/pad label to fixed width
 		labelLen := lipgloss.Width(label)
 		if labelLen > labelWidth {
-			// Truncate
-			if m.asciiMode {
-				label = label[:labelWidth-2] + ".."
-			} else {
-				label = label[:labelWidth-1] + "…"
-			}
+			label = label[:labelWidth]
 		} else if labelLen < labelWidth {
-			// Pad to fixed width
-			label = label + strings.Repeat(".", labelWidth-labelLen)
+			// Pad with dots for non-hovered, spaces for hovered
+			if isHovered {
+				label = label + strings.Repeat(" ", labelWidth-labelLen)
+			} else {
+				label = label + strings.Repeat(".", labelWidth-labelLen)
+			}
 		}
 
 		// Get colors from map
@@ -456,8 +771,8 @@ func (m Model) renderTabGridContent(tabs []*ModuleState, width, height int) stri
 			colors = cellColors{bg: lipgloss.Color("236"), text: lipgloss.Color("255")}
 		}
 
-		// Build tab content with padding and space around icons
-		content := " " + icon + " " + label + " " + weightStr + " "
+		// Build tab content: " name weight"
+		content := " " + label + " " + weightStr
 
 		// Pad to fixed width
 		contentWidth := lipgloss.Width(content)
@@ -1591,6 +1906,17 @@ func (m Model) renderResourcesPane() string {
 	content += sep + pressureStr + sep + cpuStr + sep + memStr
 	if containerDotsStr != "" {
 		content += sep + white.Render("Jobs: ") + containerDotsStr
+	}
+
+	// Add "waiting for locks" indicator at end of line if any locks are being waited on
+	if waitingMsg := m.getWaitingForLocksMessage(); waitingMsg != "" {
+		// Highlight waiting status with yellow/orange
+		waitingStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true)
+		// Animated dots
+		elapsed := time.Since(m.startTime)
+		dotCount := int(elapsed.Seconds()*2) % 4
+		dots := strings.Repeat(".", dotCount+1)
+		content += sep + waitingStyle.Render("⏳ "+waitingMsg+dots)
 	}
 
 	// Add exit countdown if active
