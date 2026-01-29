@@ -80,6 +80,7 @@ func New(config *Config, worker WorkerFunc) *Orchestrator {
 			BufferSize:   1000,
 			RunPhaseName: config.ActionVerb,
 			ASCIIMode:    config.TUIASCIIMode,
+			SkipTUIDelay:     config.SkipTUIDelay,
 		})
 		o.tuiCtx, o.tuiCancel = context.WithCancel(context.Background())
 	}

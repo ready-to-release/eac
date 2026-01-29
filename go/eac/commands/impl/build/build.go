@@ -178,6 +178,7 @@ func Build() int {
 	useTUI := shared.UseTUI
 	tuiHeight := shared.TUIHeight
 	tuiASCII := shared.TUIASCIIMode
+	skipTUIDelay := shared.SkipTUIDelay
 
 	// Extract build-specific flags
 	useExistingDepm := buildFlags.UseExistingDepm
@@ -265,6 +266,7 @@ func Build() int {
 		UseTUI:       useTUI,
 		TUIHeight:    tuiHeight,
 		TUIASCIIMode: tuiASCII,
+		SkipTUIDelay: skipTUIDelay,
 		ShowTimings:  showTimings,
 		DebugMode:    debugMode,
 	}

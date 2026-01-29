@@ -68,6 +68,7 @@ type SharedFlags struct {
 	UseTUI       bool
 	TUIHeight    int
 	TUIASCIIMode bool
+	SkipTUIDelay     bool
 	Debug        bool
 	ShowTimings  bool
 
@@ -120,6 +121,7 @@ func ParseSharedFlagsWithEnv(config CommandFlagConfig, args []string, env *envir
 		result.UseTUI = parsed.Output.UseTUI
 		result.TUIHeight = parsed.Output.TUIHeight
 		result.TUIASCIIMode = parsed.Output.TUIASCIIMode
+		result.SkipTUIDelay = parsed.Output.SkipTUIDelay
 		result.Debug = parsed.Output.Debug
 		result.ShowTimings = parsed.Output.ShowTimings
 	}

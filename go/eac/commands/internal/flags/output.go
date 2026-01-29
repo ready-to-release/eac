@@ -15,6 +15,7 @@ type OutputFlags struct {
 	NoTUI            bool // --no-tui: Disable TUI console
 	TUIHeight        int  // --tui-height N: TUI height (3-20)
 	TUIASCIIMode     bool // --ascii: ASCII-only TUI characters
+	SkipTUIDelay         bool // --fast-exit: Exit immediately when done (skip user interaction)
 	Debug            bool // --debug, -d: Enable debug logging
 	ShowTimings      bool // --timings: Show timing breakdown
 	TUIExplicitlySet bool // Internal: whether TUI was explicitly set
@@ -74,6 +75,12 @@ func (s *OutputFlagSet) Flags() []FlagDef {
 			Usage:   "Use ASCII-only characters in TUI",
 		},
 		{
+			Name:    "skip-tui-delay",
+			Type:    "bool",
+			Default: "false",
+			Usage:   "Skip TUI exit delay (exit immediately when done)",
+		},
+		{
 			Name:      "debug",
 			Shorthand: "d",
 			Type:      "bool",
@@ -122,6 +129,9 @@ func (s *OutputFlagSet) parseFlag(arg string, args []string, i int) (consumed bo
 		return true, 0, nil
 	case "--ascii":
 		s.flags.TUIASCIIMode = true
+		return true, 0, nil
+	case "--skip-tui-delay":
+		s.flags.SkipTUIDelay = true
 		return true, 0, nil
 	case "--debug", "-d":
 		s.flags.Debug = true

@@ -78,6 +78,7 @@ type Model struct {
 	userHasInteracted   bool      // True if user ever interacted with mouse
 	forceExit           bool      // User pressed ESC to force immediate exit
 	exitCountdownSecs   int       // Seconds remaining until user timer expires (10, 9, 8...)
+	skipTUIDelay            bool      // Skip all user interaction tracking, exit immediately when done
 	allRunnersCompleted time.Time // When all runners finished
 
 	// Exit/finalization state
@@ -180,7 +181,7 @@ func StatusFromExitCode(exitCode int) ModuleStatus {
 }
 
 // NewModel creates a new console model.
-func NewModel(height int, runPhaseName string, lineChan <-chan Line, statusChan <-chan Status, asciiMode bool) Model {
+func NewModel(height int, runPhaseName string, lineChan <-chan Line, statusChan <-chan Status, asciiMode bool, skipTUIDelay bool) Model {
 	// Initialize zone manager for mouse click tracking
 	zone.NewGlobal()
 
@@ -206,6 +207,7 @@ func NewModel(height int, runPhaseName string, lineChan <-chan Line, statusChan 
 		width:         80, // Default, will be updated on WindowSizeMsg
 		runPhaseName:  runPhaseName,
 		asciiMode:     asciiMode,
+		skipTUIDelay:      skipTUIDelay,
 		resultsBuffer: NewRingBuffer(100), // Results buffer
 		panes:         panes,
 		activePhase:   PhaseInit, // Start with Init phase

@@ -131,6 +131,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.allRunnersCompleted = time.Now()
 		}
 
+		// If skipTUIDelay is set, exit immediately without user interaction tracking
+		if m.skipTUIDelay {
+			m.activateSummary()
+			m.quitting = true
+			return m, tea.Quit
+		}
+
 		// Since all runners are done and we have summary, we can exit
 		// (unless user has interacted and timer hasn't expired)
 		if !m.userHasInteracted {

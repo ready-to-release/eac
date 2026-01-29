@@ -61,6 +61,7 @@ type CommandConfig struct {
 	UseTUI       bool // Enable TUI console
 	TUIHeight    int  // TUI height (0 = default)
 	TUIASCIIMode bool // Use ASCII-only characters in TUI (--ascii flag)
+	SkipTUIDelay bool // Skip TUI exit delay (exit immediately when done)
 	DebugMode    bool // Enable debug logging to console
 	ShowTimings  bool // Show timing breakdown in summary
 

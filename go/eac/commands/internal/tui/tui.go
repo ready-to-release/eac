@@ -30,6 +30,7 @@ type Config struct {
 	BufferSize   int    // Line buffer size (default: 1000)
 	RunPhaseName string // Custom name for Run phase (e.g., "building", "testing")
 	ASCIIMode    bool   // Use ASCII-only characters (default: false, use --ascii for compatibility)
+	SkipTUIDelay bool // Skip TUI exit delay (exit immediately when done)
 }
 
 // Console manages the TUI console window for build/test output.
@@ -92,6 +93,7 @@ func (c *Console) Start(ctx context.Context) error {
 		c.lineChan,
 		c.statusChan,
 		c.config.ASCIIMode,
+		c.config.SkipTUIDelay,
 	)
 
 	// Prevent lipgloss from querying terminal background color (causes OSC escape leaks)

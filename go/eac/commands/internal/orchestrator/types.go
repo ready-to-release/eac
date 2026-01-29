@@ -75,6 +75,8 @@ type Config struct {
 	// TUIASCIIMode uses ASCII-only characters for TUI (default: false)
 	// Set to true via --ascii flag for terminals that don't render Unicode well
 	TUIASCIIMode bool
+	// SkipTUIDelay skips TUI exit delay (exit immediately when done)
+	SkipTUIDelay bool
 	// Turbo is the parallelism multiplier (1.0x, 1.25x, 2.0x, etc.)
 	// Higher values reduce memory per slot, increasing concurrent builds.
 	// Default is 1.25x when turbo is enabled, 1.0x when disabled.

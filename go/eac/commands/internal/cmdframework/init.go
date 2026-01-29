@@ -120,6 +120,7 @@ func phaseInit(ctx *ExecutionContext) error {
 		TUI:                  ctx.Config.UseTUI,
 		TUIHeight:            ctx.Config.TUIHeight,
 		TUIASCIIMode:         ctx.Config.TUIASCIIMode,
+		SkipTUIDelay:             ctx.Config.SkipTUIDelay,
 	}
 
 	// Create orchestrator
