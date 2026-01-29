@@ -15,7 +15,7 @@ type OutputFlags struct {
 	NoTUI            bool // --no-tui: Disable TUI console
 	TUIHeight        int  // --tui-height N: TUI height (3-20)
 	TUIASCIIMode     bool // --ascii: ASCII-only TUI characters
-	SkipTUIDelay         bool // --fast-exit: Exit immediately when done (skip user interaction)
+	SkipTUIDelay     bool // --skip-tui-delay: Exit immediately when done (skip user interaction)
 	Debug            bool // --debug, -d: Enable debug logging
 	ShowTimings      bool // --timings: Show timing breakdown
 	TUIExplicitlySet bool // Internal: whether TUI was explicitly set

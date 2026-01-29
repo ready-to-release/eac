@@ -25,6 +25,8 @@
 // Flag.tui: type=bool, usage=Enable TUI console (default for local)
 // Flag.no-tui: type=bool, usage=Disable TUI console
 // Flag.tui-height: type=int, usage=Set TUI console height (3-20, default: 6)
+// Flag.ascii: type=bool, usage=Use ASCII-only characters in TUI
+// Flag.skip-tui-delay: type=bool, usage=Skip TUI exit delay (exit immediately when done)
 // Flag.sequential: type=bool, usage=Run lints sequentially instead of in parallel
 // Flag.turbo: type=bool, usage=Enable turbo mode for faster linting (increases parallelism)
 // Flag.skip-deps: type=bool, usage=Skip system dependency verification
@@ -155,6 +157,8 @@ func printLintUsage() {
 	log.Info("  --tui                     Enable TUI console")
 	log.Info("  --no-tui                  Disable TUI console")
 	log.Info(fmt.Sprintf("  --tui-height N            Set TUI height (3-20, default: %d)", tui.DefaultHeight))
+	log.Info("  --ascii                   Use ASCII-only characters in TUI")
+	log.Info("  --skip-tui-delay          Skip TUI exit delay (exit immediately when done)")
 	log.Info("  -h, --help                Show this help message")
 	log.Info("")
 	log.Info("Examples:")

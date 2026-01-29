@@ -33,6 +33,8 @@
 // Flag.turbo: type=bool, usage=Enable turbo mode for faster testing (increases parallelism)
 // Flag.skip-cache: type=bool, usage=Skip incremental cache, force full test run
 // Flag.tui-height: type=int, usage=Set TUI console height (3-20, default: 6)
+// Flag.ascii: type=bool, usage=Use ASCII-only characters in TUI
+// Flag.skip-tui-delay: type=bool, usage=Skip TUI exit delay (exit immediately when done)
 package test
 
 import (
@@ -68,20 +70,22 @@ func init() {
 
 // TestConfig holds test execution configuration.
 type TestConfig struct {
-	Monikers    []string
-	SuiteName   string
-	Coverage    bool
-	SkipDeps    bool // Skip system dependency verification (--skip-deps)
-	SkipDepm    bool // Skip dependency module build artifact validation (--skip-depm)
-	ListOnly    bool
-	ShowTimings bool
-	DebugMode   bool
-	UseTUI      bool
-	TUIHeight   int
-	Parallel    bool
-	Turbo       bool // --turbo flag to increase parallelism
-	Roof        int  // --roof flag to limit max parallel capacity
-	ForceRetest bool // --skip-cache flag to bypass incremental testing
+	Monikers     []string
+	SuiteName    string
+	Coverage     bool
+	SkipDeps     bool // Skip system dependency verification (--skip-deps)
+	SkipDepm     bool // Skip dependency module build artifact validation (--skip-depm)
+	ListOnly     bool
+	ShowTimings  bool
+	DebugMode    bool
+	UseTUI       bool
+	TUIHeight    int
+	TUIASCIIMode bool // --ascii flag for ASCII-only TUI
+	SkipTUIDelay bool // --skip-tui-delay flag to exit immediately when done
+	Parallel     bool
+	Turbo        bool // --turbo flag to increase parallelism
+	Roof         int  // --roof flag to limit max parallel capacity
+	ForceRetest  bool // --skip-cache flag to bypass incremental testing
 }
 
 // TestExecutionContext holds shared state for parallel test execution.
@@ -144,6 +148,8 @@ func Test() int {
 		ForceRebuild:   cfg.ForceRetest,
 		UseTUI:         cfg.UseTUI,
 		TUIHeight:      cfg.TUIHeight,
+		TUIASCIIMode:   cfg.TUIASCIIMode,
+		SkipTUIDelay:   cfg.SkipTUIDelay,
 		DebugMode:      cfg.DebugMode,
 		ShowTimings:    cfg.ShowTimings,
 		SkipResolve:    true, // Test command manages its own execution plan
@@ -199,17 +205,19 @@ func parseTestArgs(args []string) *TestConfig {
 
 	cfg := &TestConfig{
 		// From shared flags
-		Monikers:    shared.Monikers,
-		SkipDeps:    shared.SkipDeps,
-		SkipDepm:    shared.SkipDepm,
-		ShowTimings: shared.ShowTimings,
-		DebugMode:   shared.Debug,
-		UseTUI:      shared.UseTUI,
-		TUIHeight:   shared.TUIHeight,
-		Turbo:       shared.Turbo,
-		Roof:        shared.MaxConcurrency,
-		ForceRetest: shared.SkipCache,
-		Parallel:    parallel,
+		Monikers:     shared.Monikers,
+		SkipDeps:     shared.SkipDeps,
+		SkipDepm:     shared.SkipDepm,
+		ShowTimings:  shared.ShowTimings,
+		DebugMode:    shared.Debug,
+		UseTUI:       shared.UseTUI,
+		TUIHeight:    shared.TUIHeight,
+		TUIASCIIMode: shared.TUIASCIIMode,
+		SkipTUIDelay: shared.SkipTUIDelay,
+		Turbo:        shared.Turbo,
+		Roof:         shared.MaxConcurrency,
+		ForceRetest:  shared.SkipCache,
+		Parallel:     parallel,
 
 		// From test-specific flags
 		SuiteName: testFlags.SuiteName,
@@ -533,6 +541,8 @@ func printTestUsage() {
 	log.Info("  --debug                Enable debug logs to console (file logging always enabled)")
 	log.Info("  --no-tui               Disable TUI console (TUI is default for local console)")
 	log.Info(fmt.Sprintf("  --tui-height N         Set TUI console height (3-20, default: %d)", tui.DefaultHeight))
+	log.Info("  --ascii                Use ASCII-only characters in TUI")
+	log.Info("  --skip-tui-delay       Skip TUI exit delay (exit immediately when done)")
 	log.Info("  --turbo                Enable turbo mode for faster testing (increases parallelism)")
 	log.Info("  --roof N               Limit max parallel capacity to N (default: auto-detect from CPU/RAM)")
 	log.Info("  --sequential           Run tests sequentially instead of in parallel")

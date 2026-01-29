@@ -27,6 +27,8 @@
 // Flag.tui: type=bool, default=auto, usage=Enable TUI console (default: auto-detect)
 // Flag.no-tui: type=bool, default=false, usage=Disable TUI console
 // Flag.tui-height: type=int, default=8, usage=Set TUI console height (3-20)
+// Flag.ascii: type=bool, default=false, usage=Use ASCII-only characters in TUI
+// Flag.skip-tui-delay: type=bool, default=false, usage=Skip TUI exit delay (exit immediately when done)
 // Flag.sequential: type=bool, default=false, usage=Run scans sequentially instead of in parallel
 // Flag.turbo: type=bool, default=false, usage=Enable turbo mode for faster scanning (increases parallelism)
 // Flag.skip-cache: type=bool, default=false, usage=Skip incremental cache, force full scan
@@ -198,6 +200,8 @@ func printScanUsage() {
 	log.Info("  --tui                     Enable TUI console (default for local)")
 	log.Info("  --no-tui                  Disable TUI console")
 	log.Info("  --tui-height N            Set TUI console height (3-20)")
+	log.Info("  --ascii                   Use ASCII-only characters in TUI")
+	log.Info("  --skip-tui-delay          Skip TUI exit delay (exit immediately when done)")
 	log.Info("")
 	log.Info("Scanner-specific flags:")
 	log.Info("  --format <fmt>            SBOM format (cyclonedx, spdx, spdx-json, github)")
