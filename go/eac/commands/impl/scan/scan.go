@@ -124,6 +124,7 @@ func Scan() int {
 		UseTUI:         shared.UseTUI,
 		TUIHeight:      shared.TUIHeight,
 		TUIASCIIMode:   shared.TUIASCIIMode,
+		SkipTUIDelay:   shared.SkipTUIDelay,
 		DebugMode:      shared.Debug,
 		ShowTimings:    shared.ShowTimings,
 		DryRun:         shared.DryRun,

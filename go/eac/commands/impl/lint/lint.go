@@ -119,6 +119,7 @@ func Lint() int {
 		UseTUI:         shared.UseTUI,
 		TUIHeight:      shared.TUIHeight,
 		TUIASCIIMode:   shared.TUIASCIIMode,
+		SkipTUIDelay:   shared.SkipTUIDelay,
 		ShowTimings:    shared.ShowTimings,
 		DebugMode:      shared.Debug,
 	}
