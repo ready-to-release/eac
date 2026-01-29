@@ -21,15 +21,17 @@ The EAC contract system defines all configuration via **YAML contracts validated
 | **Repository**      | `repository.yml`      | `.r2r/eac/`                          | Module definitions, dependencies, file ownership |
 | **Component Types** | `component-types.yml` | `contracts/.../defaults/`            | Component type definitions with build behavior   |
 | **Tool Config**     | `tool-config.yml`     | `contracts/.../defaults/`            | Tool definitions and resource configuration      |
+| **Registries**      | `registries.yml`      | `contracts/.../defaults/`            | Container registry definitions                   |
 | **Environments**    | `environments.yml`    | `contracts/.../defaults/`            | Test execution environments (L0-L4)              |
 | **Test Suites**     | `test-suites.yml`     | `contracts/.../defaults/`            | Test suites with tag selectors                   |
 | **Testing Tags**    | `testing-tags.yml`    | `contracts/.../defaults/`            | Valid test tag definitions                       |
 | **Books**           | `books.yml`           | `.r2r/eac/`                          | Documentation book configuration                 |
 | **Security Tools**  | `security-tools.yml`  | `contracts/.../defaults/`            | Security scanning tool configuration             |
 | **AI Config**       | `ai-config.yml`       | `contracts/.../defaults/`            | AI type definitions                              |
+| **AI Provider**     | `ai-provider.yml`     | `contracts/.../defaults/`            | Default AI provider settings                     |
 | **Logging**         | `logging.yml`         | `contracts/.../defaults/`            | Logging configuration                            |
 
-**Location**: User configs in `.r2r/eac/`, system defaults in `contracts/eac-core/0.1.0/defaults/`
+**Location**: User configs in `.r2r/eac/`, system defaults in `contracts/eac-core/0.1.0/defaults/`, schemas in `contracts/eac-core/0.1.0/`
 
 ---
 

@@ -232,6 +232,7 @@ specs/.evidence/
 
 ## Related Documentation
 
+- [Manual Testing Reference](../../../reference/eac/testing/manual-tests.md) - Complete technical reference for @Manual workflows
 - [Verification Tags](./verification-tags.md) - Types of validation
 - [Test Suites](./test-suites.md) - How ignored tests are excluded
 - [GxP Tagging](../compliance/gxp-tagging.md) - Regulatory compliance evidence

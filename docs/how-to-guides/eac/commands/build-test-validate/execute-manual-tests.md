@@ -373,6 +373,7 @@ r2r eac show tests $MODULE
 
 ## Next Steps
 
+- [Manual Testing Reference](../../../../reference/eac/testing/manual-tests.md) → Complete technical reference
 - [test export-manual](../../../../reference/eac/commands/test/export-manual.md) → Detailed export options
 - [test import-manual](../../../../reference/eac/commands/test/import-manual.md) → Validation rules
 - [test merge-results](../../../../reference/eac/commands/test/merge-results.md) → Merge behavior

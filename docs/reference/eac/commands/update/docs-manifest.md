@@ -1,3 +1,5 @@
+<!-- book:cmd update docs-manifest -->
+
 # update docs-manifest
 
 Update the documentation assets manifest.

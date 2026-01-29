@@ -57,4 +57,4 @@ r2r eac build $(r2r eac get changed-modules | jq -r '.changed_modules[]')
 - [get build-deps](../get/build-deps.md) - View build dependencies
 - [show build-summary](../show/build-summary.md) - Build execution summary
 - [show build-times](../show/build-times.md) - Build performance analysis
-- [test](build.md) - Test after building
+- [test](./test.md) - Test after building

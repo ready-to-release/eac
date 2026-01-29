@@ -132,5 +132,5 @@ modules:
 
 For complete contract reference with all fields and examples:
 
-- [Contracts Reference](../../eac/contracts/index.md) - Full documentation
+- [Contracts Reference](../../eac/architecture/contracts.md) - Full documentation
 - [Modules](../../eac/modules/index.md) - Module system details

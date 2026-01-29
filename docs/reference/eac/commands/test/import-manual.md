@@ -304,6 +304,7 @@ Record accurate durations for workload estimation:
 
 ## See Also
 
+- [Manual Testing Reference](../../testing/manual-tests.md) - Complete technical reference
 - [test export-manual](./export-manual.md) - Export manual test scenarios
 - [test merge-results](./merge-results.md) - Merge results into manifest
 - [Execute Manual Tests](../../../../how-to-guides/eac/commands/build-test-validate/execute-manual-tests.md) - Full workflow guide

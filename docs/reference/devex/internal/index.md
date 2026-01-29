@@ -73,6 +73,6 @@ r2r eac test <module>
 
 ## See Also
 
-- [Creating Commands](../../eac/development/creating-commands.md) - Add new EAC commands
-- [Contracts Reference](../../eac/contracts/index.md) - Full contract documentation
+- [Creating Commands](../../eac/architecture/creating-commands.md) - Add new EAC commands
+- [Contracts Reference](../../eac/architecture/contracts.md) - Full contract documentation
 - [Local Setup](../../../how-to-guides/local-setup/index.md) - Development environment setup

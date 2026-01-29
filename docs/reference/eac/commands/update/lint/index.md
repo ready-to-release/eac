@@ -6,7 +6,7 @@ Run linters on modules based on their capabilities. The lint system automaticall
 
 | Command                                 | Purpose                                 |
 | --------------------------------------- | --------------------------------------- |
-| [update lint](./lint.md)                | Run linters on one or more modules      |
+| [update lint](../lint.md)               | Run linters on one or more modules      |
 | [update lint (Go)](./go.md)             | Go linting with golangci-lint           |
 | [update lint (Markdown)](./markdown.md) | Markdown linting with markdownlint-cli2 |
 

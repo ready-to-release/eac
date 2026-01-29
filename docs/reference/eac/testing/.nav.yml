@@ -2,4 +2,5 @@ title: Testing
 nav:
   - index.md
   - test-suites.md
+  - manual-tests.md
   - go

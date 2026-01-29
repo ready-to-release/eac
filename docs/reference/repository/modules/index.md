@@ -15,23 +15,23 @@ The C4 model provides four levels of abstraction:
 
 | Module                                                                 | Description                  |
 | ---------------------------------------------------------------------- | ---------------------------- |
-| [eac-commands](../../eac/architecture/modules/eac-commands.md)         | CLI command implementations  |
-| [eac-core](../../eac/architecture/modules/eac-core.md)                 | Core libraries and contracts |
-| [eac-mcp-commands](../../eac/architecture/modules/eac-mcp-commands.md) | MCP server integration       |
+| [eac-commands](../../eac/modules/eac-commands.md)         | CLI command implementations  |
+| [eac-core](../../eac/modules/eac-core.md)                 | Core libraries and contracts |
+| [eac-mcp-commands](../../eac/modules/eac-mcp-commands.md) | MCP server integration       |
 | [r2r-cli](../../r2r/architecture/module.md)                            | Ready-to-Release CLI         |
 
 ## Infrastructure Modules
 
 | Module                                               | Description                         |
 | ---------------------------------------------------- | ----------------------------------- |
-| [ext-eac](../../eac/architecture/modules/ext-eac.md) | Docker extension image              |
+| [ext-eac](../../eac/modules/ext-eac.md) | Docker extension image              |
 | [repository](repository.md)                          | Repository contracts and validation |
 
 ## Supporting Modules
 
 | Module                                                                   | Description                          |
 | ------------------------------------------------------------------------ | ------------------------------------ |
-| [Supporting Modules](../../eac/architecture/modules/supporting/index.md) | docs, templates, r2r-installer, etc. |
+| [Supporting Modules](../../eac/modules/index.md) | docs, templates, r2r-installer, etc. |
 
 ## Viewing Diagrams Interactively
 
