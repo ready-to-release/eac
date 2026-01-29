@@ -69,6 +69,17 @@ tools:
       pattern: "v(\\d+\\.\\d+)"
     version: ">=18.0"
 
+  npm-build:
+    description: "NPM build (runs 'npm run build')"
+    type: system
+    binary: npm
+    args: ["run", "build"]
+    verify:
+      command: "node --version"
+      pattern: "v(\\d+\\.\\d+)"
+    version: ">=18.0"
+    requirements: [npm]
+
   gh:
     description: "GitHub CLI"
     type: system
@@ -464,7 +475,7 @@ component-tools:
     scanners: [trivy-sbom, trivy-vuln, trivy-secrets, semgrep]
 
   typescript:
-    builder: npm
+    builder: npm-build
     linter: eslint
     tester: npm
     scanners: [trivy-sbom, trivy-vuln, trivy-secrets]

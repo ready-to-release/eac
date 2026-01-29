@@ -85,8 +85,8 @@ runs:
         GITHUB_TOKEN: ${{ github.token }}
         GITHUB_ACTOR: ${{ github.actor }}
       run: |
-        # Build in isolation: --rebuild forces fresh build, --skip-depm skips module dependency resolution
-        if ${COMMANDS:?COMMANDS not set} build $MODULE --rebuild --skip-depm $EXTRA_ARGS; then
+        # Build in isolation: --skip-cache forces fresh build, --skip-depm skips module dependency resolution
+        if ${COMMANDS:?COMMANDS not set} build $MODULE --skip-cache --skip-depm $EXTRA_ARGS; then
           echo "build-failed=0" >> $GITHUB_OUTPUT
         else
           echo "build-failed=1" >> $GITHUB_OUTPUT

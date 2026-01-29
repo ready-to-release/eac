@@ -4,10 +4,11 @@ Technical reference for EAC test suite configuration, execution, and CLI command
 
 ## In This Section
 
-| Reference                       | Description                                            |
-| ------------------------------- | ------------------------------------------------------ |
-| [Test Suites](./test-suites.md) | Suite definitions, tag selection, and CD stage mapping |
-| [Go Testing](./go/index.md)             | Go/Godog BDD implementation, step definitions          |
+| Reference                           | Description                                            |
+| ----------------------------------- | ------------------------------------------------------ |
+| [Test Suites](./test-suites.md)     | Suite definitions, tag selection, and CD stage mapping |
+| [Manual Testing](./manual-tests.md) | Manual test workflows, schemas, and CI/CD integration  |
+| [Go Testing](./go/index.md)         | Go/Godog BDD implementation, step definitions          |
 
 ## Quick Reference
 

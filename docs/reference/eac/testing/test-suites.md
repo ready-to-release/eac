@@ -354,6 +354,55 @@ godog run --tags="@ov && !@Manual"
 
 ---
 
+## manual
+
+**Selects**: `@Manual`
+**Excludes**: None (manual tests run separately from automated suites)
+**Time**: Variable (human execution)
+**Purpose**: Manual verification requiring human judgment
+**Environment**: Any (typically staging or production-like)
+**Workflow**: Export → Execute → Import → Merge
+
+### What It Tests
+
+- Hardware integration (physical device interaction)
+- Usability/UX evaluation (subjective assessment)
+- Third-party system integration (no test API available)
+- Regulatory compliance sign-off (human approval required)
+
+### Workflow
+
+Manual tests do not run with `r2r eac test <module> --suite manual`. Instead, use the manual testing workflow:
+
+1. **Export** scenarios: `r2r eac test export-manual --module <module> --release <version>`
+2. **Execute** tests: Human tester fills in results file
+3. **Import** results: `r2r eac test import-manual --input results.json --release <version>`
+4. **Merge** into manifest: `r2r eac test merge-results --module <module> --version <version>`
+
+### Example
+
+```bash
+# Export manual test scenarios
+r2r eac test export-manual --module eac-commands --release v1.2.0
+
+# (Human executes tests and creates results.json)
+
+# Import and merge results
+r2r eac test import-manual --input results.json --release v1.2.0
+r2r eac test merge-results --module eac-commands --version v1.2.0
+
+# View results
+r2r eac show suite manual --module eac-commands
+```
+
+### See Also
+
+- [Manual Testing Reference](./manual-tests.md) - Complete technical reference
+- [Execute Manual Tests](../../../how-to-guides/eac/commands/build-test-validate/execute-manual-tests.md) - Step-by-step guide
+- [Execution Control Tags](../../../explanation/specifications/taxonomy/execution-control-tags.md) - @Manual tag concepts
+
+---
+
 ## Debugging Test Suite Selection
 
 ### Check which tests are selected
