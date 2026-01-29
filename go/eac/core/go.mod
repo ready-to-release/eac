@@ -15,6 +15,7 @@ require (
 	github.com/go-git/go-git/v5 v5.16.4
 	github.com/google/uuid v1.6.0
 	github.com/opencontainers/image-spec v1.1.1
+	github.com/ready-to-release/eac/contracts v0.0.0-20260129143239-c3ff637b8ca9
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/stretchr/testify v1.11.1
 	github.com/xeipuuv/gojsonschema v1.2.0

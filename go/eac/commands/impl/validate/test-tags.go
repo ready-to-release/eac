@@ -295,8 +295,12 @@ func isValidDepsName(name string, tagsConfig *config.TestingTagsConfig) bool {
 	// Load tool config directly to check tool IDs (registry may not be initialized)
 	if eacConfig != nil {
 		toolConfig, err := tool.LoadToolConfig(eacConfig.RepoRoot, eacConfig.ConfigRoot)
-		if err == nil && toolConfig != nil && toolConfig.Tools != nil {
-			if _, exists := toolConfig.Tools[name]; exists {
+		if err == nil && toolConfig != nil {
+			// Check both system-tools and container-tools
+			if _, exists := toolConfig.SystemTools[name]; exists {
+				return true
+			}
+			if _, exists := toolConfig.ContainerTools[name]; exists {
 				return true
 			}
 		}

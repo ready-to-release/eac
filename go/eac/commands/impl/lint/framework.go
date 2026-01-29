@@ -23,10 +23,11 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	"github.com/ready-to-release/eac/go/eac/core/environments"
-	"github.com/ready-to-release/eac/go/eac/core/lintstate"
+	"github.com/ready-to-release/eac/go/eac/core/hash"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/tool"
+	"github.com/ready-to-release/eac/go/eac/core/workunit"
 )
 
 func init() {
@@ -106,7 +107,8 @@ func lintAfterResolve(ctx *cmdframework.ExecutionContext) error {
 
 	// Clear lint state if --skip-cache
 	if lintCfg.ForceLint {
-		if err := lintstate.ClearState(ctx.WorkspaceRoot); err != nil {
+		stateMgr := workunit.NewStateManager(ctx.WorkspaceRoot)
+		if err := stateMgr.ClearContext(workunit.ContextLint); err != nil {
 			log.Warnf("Failed to clear lint state: %v", err)
 		}
 		return nil
@@ -131,28 +133,43 @@ func detectIncrementalLintChanges(ctx *cmdframework.ExecutionContext, lctx *lint
 		ctx.SetChangeDetectionTiming(time.Since(startTime))
 	}()
 
-	// Collect module files for change detection
-	modulesMap := make(map[string]lintstate.ModuleFileGetter)
-	for _, moniker := range ctx.GetExecutionMonikers() {
+	// Collect modules for change detection
+	monikers := ctx.GetExecutionMonikers()
+	if len(monikers) == 0 {
+		return
+	}
+
+	// Build module files map for later state update
+	moduleFiles := make(map[string][]string)
+	for _, moniker := range monikers {
 		if contract, ok := ctx.ModuleRegistry.Get(moniker); ok {
-			modulesMap[moniker] = contract
+			patterns := contract.GetGlobPatterns()
+			files, err := hash.ExpandGlobPatterns(ctx.WorkspaceRoot, patterns)
+			if err != nil {
+				log.Debugf("Failed to expand patterns for %s: %v", moniker, err)
+				continue
+			}
+			moduleFiles[moniker] = files
 		}
-	}
-
-	if len(modulesMap) == 0 {
-		return
-	}
-
-	moduleFiles, err := lintstate.GetModuleSourceFiles(ctx.WorkspaceRoot, modulesMap)
-	if err != nil {
-		log.Debugf("Failed to get module source files: %v", err)
-		return
 	}
 
 	// Store for later state update
 	lctx.moduleFiles = moduleFiles
 
-	changeResult, err := lintstate.DetectChanges(ctx.WorkspaceRoot, moduleFiles)
+	// Use StateManager for change detection
+	stateMgr := workunit.NewStateManager(ctx.WorkspaceRoot)
+	rule := workunit.DefaultRules[workunit.ContextLint]
+
+	// Create hash provider that computes hash from expanded files
+	hashProvider := func(module string) (string, error) {
+		files, ok := moduleFiles[module]
+		if !ok {
+			return "", fmt.Errorf("no files for module %s", module)
+		}
+		return hash.Files(ctx.WorkspaceRoot, files)
+	}
+
+	changeResult, err := stateMgr.DetectModuleChanges(workunit.ContextLint, monikers, rule, hashProvider)
 	if err != nil {
 		log.Debugf("Failed to detect lint changes: %v", err)
 		return
@@ -183,7 +200,7 @@ func detectIncrementalLintChanges(ctx *cmdframework.ExecutionContext, lctx *lint
 	var changedList []string
 	var cachedList []string
 
-	for _, moniker := range ctx.GetExecutionMonikers() {
+	for _, moniker := range monikers {
 		if changedSet[moniker] {
 			changedList = append(changedList, moniker)
 		} else {
@@ -234,20 +251,28 @@ func updateLintState(ctx *cmdframework.ExecutionContext, lctx *lintContext) {
 		return
 	}
 
-	// Build map of linted modules and their results
-	lintedModules := make(map[string]bool)
-	for moniker, result := range lctx.results {
-		lintedModules[moniker] = result.Success
-	}
+	stateMgr := workunit.NewStateManager(ctx.WorkspaceRoot)
 
-	// Update state
-	if err := lintstate.UpdateModuleState(ctx.WorkspaceRoot, lintedModules, lctx.moduleFiles); err != nil {
-		log.Warnf("Failed to update lint state: %v", err)
+	// Update state for each linted module
+	for moniker, result := range lctx.results {
+		files, ok := lctx.moduleFiles[moniker]
+		if !ok {
+			continue
+		}
+
+		sourceHash, err := hash.Files(ctx.WorkspaceRoot, files)
+		if err != nil {
+			log.Debugf("Failed to hash files for %s: %v", moniker, err)
+			continue
+		}
+
+		if err := stateMgr.SaveModuleResult(workunit.ContextLint, moniker, result.Success, sourceHash); err != nil {
+			log.Warnf("Failed to update lint state for %s: %v", moniker, err)
+		}
 	}
 }
 
-// lintWorker is the legacy worker function that lints a single module.
-// This is kept for backward compatibility but component-level execution is preferred.
+// lintWorker runs linting for a single module.
 func lintWorker(ctx *cmdframework.ExecutionContext, moniker string, logWriter io.Writer) int {
 	lintCfg, ok := ctx.Config.Extra["lintConfig"].(*LintConfig)
 	if !ok {
@@ -489,14 +514,21 @@ func updateModuleLintStateAtomic(ctx *cmdframework.ExecutionContext, lctx *lintC
 	}
 
 	// Get source files for this module
-	modulesMap := map[string]lintstate.ModuleFileGetter{module: contract}
-	moduleFiles, err := lintstate.GetModuleSourceFiles(ctx.WorkspaceRoot, modulesMap)
+	patterns := contract.GetGlobPatterns()
+	files, err := hash.ExpandGlobPatterns(ctx.WorkspaceRoot, patterns)
 	if err != nil {
 		return err
 	}
 
-	lintedModules := map[string]bool{module: true}
-	return lintstate.UpdateModuleState(ctx.WorkspaceRoot, lintedModules, moduleFiles)
+	// Compute source hash
+	sourceHash, err := hash.Files(ctx.WorkspaceRoot, files)
+	if err != nil {
+		return err
+	}
+
+	// Save module state
+	stateMgr := workunit.NewStateManager(ctx.WorkspaceRoot)
+	return stateMgr.SaveModuleResult(workunit.ContextLint, module, true, sourceHash)
 }
 
 // lintByPackages lints a module by finding applicable lint providers for its components.

@@ -16,7 +16,6 @@ package serve
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -28,11 +27,11 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/serve"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
-	"github.com/ready-to-release/eac/go/eac/core/buildstate"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
+	"github.com/ready-to-release/eac/go/eac/core/workunit"
 )
 
 // commandFlags defines valid flags for the serve command
@@ -372,16 +371,15 @@ func checkStaleness(workspaceRoot string, moduleConfig *ModuleServeConfig) (bool
 		}
 	}
 
-	// Check build state
-	state, err := buildstate.Load(workspaceRoot)
-	if err != nil {
-		if errors.Is(err, buildstate.ErrNoState) {
-			return true, "no build state found"
-		}
-		return true, "failed to load build state"
+	// Check build state using workunit StateManager
+	stateMgr := workunit.NewStateManager(workspaceRoot)
+	unitID := workunit.UnitID{
+		Context:   workunit.ContextBuild,
+		Module:    moduleConfig.ModuleMoniker,
+		Component: "_module",
+		Tool:      "_",
 	}
-
-	if _, exists := state.Modules[moduleConfig.ModuleMoniker]; !exists {
+	if !stateMgr.Exists(unitID) {
 		return true, moduleConfig.ModuleMoniker + " module not in build state"
 	}
 

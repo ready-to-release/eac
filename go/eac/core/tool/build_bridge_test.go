@@ -37,19 +37,30 @@ func (m *mockBuildHandler) ValidateModule(module *modules.ModuleContract, worksp
 func TestBuildBridge_GetHandler_YAMLTool(t *testing.T) {
 	bridge := NewBuildBridge()
 
-	// Set up tool system
+	// Set up tool system using RegisterFromConfig (canonical registration)
 	registry := NewRegistry()
-	registry.Register(&ToolDefinition{
-		ID:     "custom-builder",
-		Type:   ToolTypeSystem,
-		Binary: "custom",
-	})
+	// Mock verifier: all tools are available
+	registry.SetVerifier(func(tool *ToolDefinition) bool { return true })
+
+	config := &ToolConfig{
+		SystemTools: map[string]*ToolDefinition{
+			"custom-builder": {
+				Type:   ToolTypeSystem,
+				Binary: "custom",
+			},
+		},
+	}
+	if err := registry.RegisterFromConfig(config); err != nil {
+		t.Fatalf("RegisterFromConfig failed: %v", err)
+	}
 	bridge.SetToolSystem(registry, nil, &mockExecutor{})
 
+	// Use canonical name for lookup
 	got := bridge.GetHandler("custom-builder")
 	if got == nil {
 		t.Fatal("GetHandler returned nil for YAML tool")
 	}
+	// Tool ID is now canonical (no suffix) - type is in tool.Type field
 	if got.Name() != "custom-builder" {
 		t.Errorf("GetHandler().Name() = %q, want %q", got.Name(), "custom-builder")
 	}
@@ -67,23 +78,31 @@ func TestBuildBridge_GetHandler_NotFound(t *testing.T) {
 func TestBuildBridge_GetAllHandlers(t *testing.T) {
 	bridge := NewBuildBridge()
 
-	// Set up tool system with tools
+	// Set up tool system with tools using RegisterFromConfig
 	registry := NewRegistry()
-	registry.Register(&ToolDefinition{
-		ID:     "mkdocs",
-		Type:   ToolTypeSystem,
-		Binary: "mkdocs",
-	})
-	registry.Register(&ToolDefinition{
-		ID:     "go",
-		Type:   ToolTypeSystem,
-		Binary: "go",
-	})
+	// Mock verifier: all tools are available
+	registry.SetVerifier(func(tool *ToolDefinition) bool { return true })
+
+	config := &ToolConfig{
+		SystemTools: map[string]*ToolDefinition{
+			"mkdocs": {
+				Type:   ToolTypeSystem,
+				Binary: "mkdocs",
+			},
+			"go": {
+				Type:   ToolTypeSystem,
+				Binary: "go",
+			},
+		},
+	}
+	if err := registry.RegisterFromConfig(config); err != nil {
+		t.Fatalf("RegisterFromConfig failed: %v", err)
+	}
 	bridge.SetToolSystem(registry, nil, &mockExecutor{})
 
 	handlers := bridge.GetAllHandlers()
 
-	// Should have: go (yaml), mkdocs (yaml)
+	// Should have: go:system, mkdocs:system
 	if len(handlers) != 2 {
 		t.Errorf("GetAllHandlers() returned %d handlers, want 2", len(handlers))
 	}
@@ -92,20 +111,29 @@ func TestBuildBridge_GetAllHandlers(t *testing.T) {
 func TestBuildBridge_HasHandler(t *testing.T) {
 	bridge := NewBuildBridge()
 
-	// Set up tool system
+	// Set up tool system using RegisterFromConfig
 	registry := NewRegistry()
-	registry.Register(&ToolDefinition{
-		ID:     "mkdocs",
-		Type:   ToolTypeSystem,
-		Binary: "mkdocs",
-	})
+	// Mock verifier: all tools are available
+	registry.SetVerifier(func(tool *ToolDefinition) bool { return true })
+
+	config := &ToolConfig{
+		SystemTools: map[string]*ToolDefinition{
+			"mkdocs": {
+				Type:   ToolTypeSystem,
+				Binary: "mkdocs",
+			},
+		},
+	}
+	if err := registry.RegisterFromConfig(config); err != nil {
+		t.Fatalf("RegisterFromConfig failed: %v", err)
+	}
 	bridge.SetToolSystem(registry, nil, &mockExecutor{})
 
 	tests := []struct {
 		name   string
 		exists bool
 	}{
-		{"mkdocs", true},  // yaml
+		{"mkdocs", true},  // canonical name lookup
 		{"unknown", false},
 	}
 
@@ -171,17 +199,27 @@ func TestBuildBridge_SetToolSystem(t *testing.T) {
 	bridge := NewBuildBridge()
 
 	registry := NewRegistry()
+	// Mock verifier: all tools are available
+	registry.SetVerifier(func(tool *ToolDefinition) bool { return true })
+
 	resolver := NewResolver(registry)
 	executor := &mockExecutor{}
 
 	bridge.SetToolSystem(registry, resolver, executor)
 
 	// Verify tool system is set by registering a tool and retrieving it
-	registry.Register(&ToolDefinition{
-		ID:     "test-tool",
-		Type:   ToolTypeSystem,
-		Binary: "test",
-	})
+	// Use RegisterFromConfig for canonical registration
+	config := &ToolConfig{
+		SystemTools: map[string]*ToolDefinition{
+			"test-tool": {
+				Type:   ToolTypeSystem,
+				Binary: "test",
+			},
+		},
+	}
+	if err := registry.RegisterFromConfig(config); err != nil {
+		t.Fatalf("RegisterFromConfig failed: %v", err)
+	}
 
 	handler := bridge.GetHandler("test-tool")
 	if handler == nil {

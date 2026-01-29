@@ -21,15 +21,12 @@ func TestLoadToolConfig(t *testing.T) {
 
 	// Write default config (must include docker and go as bootstrap tools)
 	defaultConfig := `
-tools:
+system-tools:
   docker:
-    type: system
     binary: docker
   go:
-    type: system
     binary: go
   default-tool:
-    type: system
     binary: default-binary
     description: Default tool
 
@@ -47,9 +44,9 @@ component-tools:
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		tool, ok := config.Tools["default-tool"]
+		tool, ok := config.SystemTools["default-tool"]
 		if !ok {
-			t.Fatal("default-tool should be loaded")
+			t.Fatal("default-tool should be loaded in SystemTools")
 		}
 		if tool.Binary != "default-binary" {
 			t.Errorf("Binary = %q, want %q", tool.Binary, "default-binary")
@@ -64,9 +61,8 @@ component-tools:
 	t.Run("merges project override", func(t *testing.T) {
 		// Write project override
 		projectConfig := `
-tools:
+system-tools:
   project-tool:
-    type: system
     binary: project-binary
 
 component-tools:
@@ -85,10 +81,10 @@ component-tools:
 		}
 
 		// Should have both tools
-		if _, ok := config.Tools["default-tool"]; !ok {
+		if _, ok := config.SystemTools["default-tool"]; !ok {
 			t.Error("default-tool should still exist")
 		}
-		if _, ok := config.Tools["project-tool"]; !ok {
+		if _, ok := config.SystemTools["project-tool"]; !ok {
 			t.Error("project-tool should be added")
 		}
 
@@ -150,15 +146,12 @@ func TestInitializeFromConfig(t *testing.T) {
 	}
 
 	config := `
-tools:
+system-tools:
   docker:
-    type: system
     binary: docker
   go:
-    type: system
     binary: go
   echo-tool:
-    type: system
     binary: echo
 
 component-tools:
@@ -174,18 +167,26 @@ component-tools:
 		t.Fatalf("InitializeFromConfig failed: %v", err)
 	}
 
-	// Check registry
+	// Check registry - tools are accessible via both canonical name and suffixed alias
+	if !registry.Has("echo-tool:system") {
+		t.Error("registry should have echo-tool:system alias")
+	}
 	if !registry.Has("echo-tool") {
-		t.Error("registry should have echo-tool")
+		t.Error("registry should have echo-tool canonical key")
 	}
 
-	// Check resolver
+	// Check resolver - resolved tool has CANONICAL ID (no suffix)
 	tool, err := resolver.Resolve("test", OperationBuild)
 	if err != nil {
 		t.Fatalf("Resolve failed: %v", err)
 	}
+	// Tool ID is now canonical - type suffix removed
 	if tool.ID != "echo-tool" {
 		t.Errorf("resolved tool ID = %q, want %q", tool.ID, "echo-tool")
+	}
+	// Type is still available in the Type field
+	if tool.Type != ToolTypeSystem {
+		t.Errorf("resolved tool Type = %q, want %q", tool.Type, ToolTypeSystem)
 	}
 }
 
@@ -204,8 +205,11 @@ func TestLoadToolConfig_NoDefaults(t *testing.T) {
 		t.Fatal("config should not be nil")
 	}
 
-	if config.Tools == nil {
-		t.Error("Tools map should be initialized")
+	if config.SystemTools == nil {
+		t.Error("SystemTools map should be initialized")
+	}
+	if config.ContainerTools == nil {
+		t.Error("ContainerTools map should be initialized")
 	}
 }
 
@@ -241,19 +245,15 @@ func TestValidation_DuplicateToolIDs(t *testing.T) {
 		t.Fatalf("failed to create dirs: %v", err)
 	}
 
-	// Config with duplicate tool ID
+	// Config with duplicate tool ID within system-tools
 	config := `
-tools:
+system-tools:
   my-tool:
-    type: system
     binary: first
   other-tool:
-    type: system
     binary: other
   my-tool:
-    type: container
-    image: second
-    tag: "1.0"
+    binary: second
 `
 	if err := os.WriteFile(filepath.Join(contractsDir, "tool-config.yml"), []byte(config), 0644); err != nil {
 		t.Fatalf("failed to write config: %v", err)
@@ -274,7 +274,7 @@ tools:
 	}
 }
 
-func TestValidation_BootstrapToolMustBeSystem(t *testing.T) {
+func TestValidation_BootstrapToolMustExist(t *testing.T) {
 	tmpDir := t.TempDir()
 	contractsDir := filepath.Join(tmpDir, "contracts", "eac-core", "0.1.0", "defaults")
 	configDir := filepath.Join(tmpDir, ".eac")
@@ -286,15 +286,10 @@ func TestValidation_BootstrapToolMustBeSystem(t *testing.T) {
 		t.Fatalf("failed to create dirs: %v", err)
 	}
 
-	// docker is a bootstrap tool - must be system type
+	// Missing docker bootstrap tool - only has go
 	config := `
-tools:
-  docker:
-    type: container
-    image: docker
-    tag: "latest"
+system-tools:
   go:
-    type: system
     binary: go
 `
 	if err := os.WriteFile(filepath.Join(contractsDir, "tool-config.yml"), []byte(config), 0644); err != nil {
@@ -303,7 +298,7 @@ tools:
 
 	_, err := LoadToolConfig(tmpDir, configDir)
 	if err == nil {
-		t.Fatal("expected error for bootstrap tool as container")
+		t.Fatal("expected error for missing bootstrap tool")
 	}
 
 	errStr := err.Error()
@@ -328,15 +323,12 @@ func TestValidation_UnknownToolReference(t *testing.T) {
 	}
 
 	config := `
-tools:
+system-tools:
   docker:
-    type: system
     binary: docker
   go:
-    type: system
     binary: go
   real-tool:
-    type: system
     binary: real
 
 component-tools:
@@ -374,15 +366,14 @@ func TestValidation_UnknownRequirement(t *testing.T) {
 	}
 
 	config := `
-tools:
+system-tools:
   docker:
-    type: system
     binary: docker
   go:
-    type: system
     binary: go
+
+container-tools:
   my-tool:
-    type: container
     image: test
     tag: "1.0"
     requirements: [nonexistent-req]
@@ -418,17 +409,16 @@ func TestValidation_ValidConfig(t *testing.T) {
 		t.Fatalf("failed to create dirs: %v", err)
 	}
 
-	// Valid config following all conventions
+	// Valid config with system-tools and container-tools
 	config := `
-tools:
+system-tools:
   docker:
-    type: system
     binary: docker
   go:
-    type: system
     binary: go
+
+container-tools:
   npm-build:
-    type: container
     image: node
     tag: "22-alpine"
     requirements: [docker]
@@ -448,8 +438,69 @@ component-tools:
 		t.Fatalf("valid config should not error: %v", err)
 	}
 
-	if len(cfg.Tools) != 3 {
-		t.Errorf("expected 3 tools, got %d", len(cfg.Tools))
+	if len(cfg.SystemTools) != 2 {
+		t.Errorf("expected 2 system tools, got %d", len(cfg.SystemTools))
+	}
+	if len(cfg.ContainerTools) != 1 {
+		t.Errorf("expected 1 container tool, got %d", len(cfg.ContainerTools))
+	}
+}
+
+func TestValidation_SameToolInBothTables(t *testing.T) {
+	tmpDir := t.TempDir()
+	contractsDir := filepath.Join(tmpDir, "contracts", "eac-core", "0.1.0", "defaults")
+	configDir := filepath.Join(tmpDir, ".eac")
+
+	if err := os.MkdirAll(contractsDir, 0755); err != nil {
+		t.Fatalf("failed to create dirs: %v", err)
+	}
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatalf("failed to create dirs: %v", err)
+	}
+
+	// Same canonical name in both system-tools and container-tools (valid!)
+	config := `
+system-tools:
+  docker:
+    binary: docker
+  go:
+    binary: go
+  npm-build:
+    binary: npm
+    args: [run, build]
+    requirements: [npm]
+  npm:
+    binary: npm
+
+container-tools:
+  npm-build:
+    image: node
+    tag: "22-alpine"
+    requirements: [docker]
+
+tool-bindings:
+  docker: system
+  go: system
+
+component-tools:
+  typescript:
+    builder: npm-build
+`
+	if err := os.WriteFile(filepath.Join(contractsDir, "tool-config.yml"), []byte(config), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	cfg, err := LoadToolConfig(tmpDir, configDir)
+	if err != nil {
+		t.Fatalf("valid config should not error: %v", err)
+	}
+
+	// Should have npm-build in both tables
+	if _, ok := cfg.SystemTools["npm-build"]; !ok {
+		t.Error("npm-build should exist in SystemTools")
+	}
+	if _, ok := cfg.ContainerTools["npm-build"]; !ok {
+		t.Error("npm-build should exist in ContainerTools")
 	}
 }
 

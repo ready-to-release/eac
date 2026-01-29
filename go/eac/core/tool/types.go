@@ -261,11 +261,177 @@ func (t *ToolDefinition) FullImage() string {
 	return t.Image + ":" + t.Tag
 }
 
+// DisplayName returns human-readable name (e.g., "NPM Build").
+// Converts kebab-case ID to title case.
+func (t *ToolDefinition) DisplayName() string {
+	if t == nil || t.ID == "" {
+		return ""
+	}
+	// Strip type suffix if present
+	id := t.ID
+	if idx := strings.LastIndex(id, ":"); idx != -1 {
+		suffix := id[idx+1:]
+		if suffix == "system" || suffix == "container" {
+			id = id[:idx]
+		}
+	}
+	// Convert kebab-case to title case
+	words := strings.Split(id, "-")
+	for i, word := range words {
+		if len(word) > 0 {
+			words[i] = strings.ToUpper(word[:1]) + word[1:]
+		}
+	}
+	return strings.Join(words, " ")
+}
+
+// ShortName returns compact name for tight spaces (e.g., "npm").
+// Returns the prefix before the first dash, or the full ID if no dash.
+func (t *ToolDefinition) ShortName() string {
+	if t == nil || t.ID == "" {
+		return ""
+	}
+	// Strip type suffix if present
+	id := t.ID
+	if idx := strings.LastIndex(id, ":"); idx != -1 {
+		suffix := id[idx+1:]
+		if suffix == "system" || suffix == "container" {
+			id = id[:idx]
+		}
+	}
+	if idx := strings.Index(id, "-"); idx != -1 {
+		return id[:idx]
+	}
+	return id
+}
+
+// ContainerSafeName returns Docker-safe name (replaces colons and special chars).
+// Docker container names only allow [a-zA-Z0-9][a-zA-Z0-9_.-]
+func (t *ToolDefinition) ContainerSafeName() string {
+	if t == nil || t.ID == "" {
+		return ""
+	}
+	// Strip type suffix - we don't want :system or :container in container names
+	id := t.ID
+	if idx := strings.LastIndex(id, ":"); idx != -1 {
+		suffix := id[idx+1:]
+		if suffix == "system" || suffix == "container" {
+			id = id[:idx]
+		}
+	}
+	// Replace any remaining colons with dashes
+	return strings.ReplaceAll(id, ":", "-")
+}
+
+// CanonicalID returns the tool ID without type suffix.
+// This is the canonical name used for tool lookup and display.
+func (t *ToolDefinition) CanonicalID() string {
+	if t == nil || t.ID == "" {
+		return ""
+	}
+	id := t.ID
+	if idx := strings.LastIndex(id, ":"); idx != -1 {
+		suffix := id[idx+1:]
+		if suffix == "system" || suffix == "container" {
+			id = id[:idx]
+		}
+	}
+	return id
+}
+
 
 // IsLocalContainer returns true if this container has a local build context.
 // Local containers have a LocalPath set and are built from Dockerfile.
 func (t *ToolDefinition) IsLocalContainer() bool {
 	return t.Type == ToolTypeContainer && t.LocalPath != ""
+}
+
+// IsServable returns true if this tool can be used as a server.
+// A tool is servable if it has a Serve configuration with a container port.
+func (t *ToolDefinition) IsServable() bool {
+	return t != nil && t.Serve != nil && t.Serve.ContainerPort > 0
+}
+
+// GetOutputFormat returns the output format for this tool.
+// Returns "text" as default if not specified.
+func (t *ToolDefinition) GetOutputFormat() string {
+	if t == nil || t.OutputFormat == "" {
+		return "text"
+	}
+	return t.OutputFormat
+}
+
+// HasStructuredOutput returns true if the tool outputs structured data (JSON).
+func (t *ToolDefinition) HasStructuredOutput() bool {
+	return t != nil && t.OutputFormat == "json"
+}
+
+// GetScannerCategory extracts the scanner category from the tool ID.
+// Examples: "trivy-sbom" → "sbom", "trivy-vuln" → "vuln", "semgrep" → "sast"
+// This enables dynamic scanner type detection without hardcoded mappings.
+func (t *ToolDefinition) GetScannerCategory() string {
+	if t == nil || t.ID == "" {
+		return ""
+	}
+
+	// Strip type suffix if present (e.g., "trivy-sbom:container" → "trivy-sbom")
+	id := t.ID
+	if idx := strings.LastIndex(id, ":"); idx != -1 {
+		suffix := id[idx+1:]
+		if suffix == "system" || suffix == "container" {
+			id = id[:idx]
+		}
+	}
+
+	// Known scanner tool patterns
+	knownCategories := map[string]string{
+		"trivy-sbom":       "sbom",
+		"trivy-vuln":       "vuln",
+		"trivy-secrets":    "secrets",
+		"trivy-iac":        "iac",
+		"trivy-compliance": "compliance",
+		"semgrep":          "sast",
+		"zap":              "zap",
+	}
+
+	if category, ok := knownCategories[id]; ok {
+		return category
+	}
+
+	// Try to extract from "-category" suffix pattern (e.g., "custom-sbom" → "sbom")
+	if idx := strings.LastIndex(id, "-"); idx != -1 {
+		suffix := id[idx+1:]
+		// Validate known category suffixes
+		validCategories := map[string]bool{
+			"sbom": true, "vuln": true, "secrets": true,
+			"iac": true, "compliance": true, "sast": true, "zap": true,
+		}
+		if validCategories[suffix] {
+			return suffix
+		}
+	}
+
+	return ""
+}
+
+// GetServerType extracts the server type from the tool ID or serves as identifier.
+// Examples: "static-site" → "static-site", "mkdocs-live" → "mkdocs-live"
+// Returns empty string if the tool is not servable.
+func (t *ToolDefinition) GetServerType() string {
+	if !t.IsServable() {
+		return ""
+	}
+
+	// Strip type suffix if present (e.g., "static-site:container" → "static-site")
+	id := t.ID
+	if idx := strings.LastIndex(id, ":"); idx != -1 {
+		suffix := id[idx+1:]
+		if suffix == "system" || suffix == "container" {
+			id = id[:idx]
+		}
+	}
+
+	return id
 }
 
 // LocalContextPath returns the absolute path to the container build context.
@@ -677,10 +843,27 @@ type EnvironmentConfig struct {
 	ComponentTools map[string]*ToolAssignment `yaml:"component-tools,omitempty" json:"component-tools,omitempty"`
 }
 
+// ToolBinding specifies how to resolve a canonical tool name.
+type ToolBinding string
+
+const (
+	// ToolBindingAuto tries system first, falls back to container
+	ToolBindingAuto ToolBinding = "auto"
+	// ToolBindingSystem forces system tool only
+	ToolBindingSystem ToolBinding = "system"
+	// ToolBindingContainer forces container tool only
+	ToolBindingContainer ToolBinding = "container"
+)
+
 // ToolConfig represents the complete tool configuration file.
 type ToolConfig struct {
-	// Tool definitions
-	Tools map[string]*ToolDefinition `yaml:"tools,omitempty" json:"tools,omitempty"`
+	// Separate tool tables by type
+	SystemTools    map[string]*ToolDefinition `yaml:"system-tools,omitempty" json:"system-tools,omitempty"`
+	ContainerTools map[string]*ToolDefinition `yaml:"container-tools,omitempty" json:"container-tools,omitempty"`
+
+	// Tool bindings: canonical name -> binding mode (auto/system/container)
+	// Default is "auto" if not specified
+	ToolBindings map[string]ToolBinding `yaml:"tool-bindings,omitempty" json:"tool-bindings,omitempty"`
 
 	// Component-to-tool assignments
 	ComponentTools map[string]*ToolAssignment `yaml:"component-tools,omitempty" json:"component-tools,omitempty"`
@@ -696,13 +879,29 @@ type ToolConfig struct {
 func (c *ToolConfig) Validate() []error {
 	var errs []error
 
-	// Validate all tool definitions
-	for id, tool := range c.Tools {
+	// Validate system-tools definitions
+	for id, tool := range c.SystemTools {
 		if tool.ID == "" {
-			tool.ID = id // Backfill ID from map key
+			tool.ID = id
+		}
+		if tool.Type == "" {
+			tool.Type = ToolTypeSystem
 		}
 		if err := tool.Validate(); err != nil {
-			errs = append(errs, err)
+			errs = append(errs, fmt.Errorf("system-tools[%s]: %w", id, err))
+		}
+	}
+
+	// Validate container-tools definitions
+	for id, tool := range c.ContainerTools {
+		if tool.ID == "" {
+			tool.ID = id
+		}
+		if tool.Type == "" {
+			tool.Type = ToolTypeContainer
+		}
+		if err := tool.Validate(); err != nil {
+			errs = append(errs, fmt.Errorf("container-tools[%s]: %w", id, err))
 		}
 	}
 
@@ -710,7 +909,7 @@ func (c *ToolConfig) Validate() []error {
 	for compType, assignment := range c.ComponentTools {
 		for _, op := range AllOperations() {
 			for _, toolID := range assignment.GetToolIDs(op) {
-				if _, ok := c.Tools[toolID]; !ok {
+				if !c.hasToolCanonical(toolID) {
 					errs = append(errs, fmt.Errorf(
 						"component-tools[%s].%s references unknown tool: %s",
 						compType, op, toolID,
@@ -725,7 +924,7 @@ func (c *ToolConfig) Validate() []error {
 		for compType, assignment := range env.ComponentTools {
 			for _, op := range AllOperations() {
 				for _, toolID := range assignment.GetToolIDs(op) {
-					if _, ok := c.Tools[toolID]; !ok {
+					if !c.hasToolCanonical(toolID) {
 						errs = append(errs, fmt.Errorf(
 							"environments[%s].component-tools[%s].%s references unknown tool: %s",
 							envName, compType, op, toolID,
@@ -737,4 +936,16 @@ func (c *ToolConfig) Validate() []error {
 	}
 
 	return errs
+}
+
+// hasToolCanonical checks if a tool exists by canonical name.
+// Looks in system-tools and container-tools tables.
+func (c *ToolConfig) hasToolCanonical(canonicalName string) bool {
+	if _, ok := c.SystemTools[canonicalName]; ok {
+		return true
+	}
+	if _, ok := c.ContainerTools[canonicalName]; ok {
+		return true
+	}
+	return false
 }

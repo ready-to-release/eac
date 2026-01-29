@@ -82,6 +82,12 @@ type FlagMetadata struct {
 	Completion   []string // static completion values (optional)
 }
 
+// SubcommandGroup represents a logical grouping of subcommands for help display.
+type SubcommandGroup struct {
+	Name        string   // "Configuration", "Repository Structure", etc.
+	Subcommands []string // ["config", "modules", "dependencies"]
+}
+
 // CommandRegistration holds command metadata.
 type CommandRegistration struct {
 	Func          CommandFunc
@@ -91,6 +97,11 @@ type CommandRegistration struct {
 	Long          string         // Detailed multi-paragraph description
 	Flags         []FlagMetadata // Structured flag definitions
 	Args          string         // Argument completion type: "modules", "files", etc.
+
+	// For parent commands (e.g., get, show, work)
+	IsParent    bool              // true for parent commands with subcommands
+	Subcommands []SubcommandGroup // grouped subcommands for help display
+	Examples    []string          // usage examples
 }
 
 // commandRegistry maps command names (space-separated, e.g., "get files") to registrations.
@@ -146,6 +157,17 @@ func Register(fn CommandFunc) {
 		short = metadata.Description
 	}
 
+	// Build SubcommandGroup slice from Groups map, preserving order
+	var subcommands []SubcommandGroup
+	for _, groupName := range metadata.GroupOrder {
+		if subs, ok := metadata.Groups[groupName]; ok {
+			subcommands = append(subcommands, SubcommandGroup{
+				Name:        groupName,
+				Subcommands: subs,
+			})
+		}
+	}
+
 	// Store in registry (keyed by ActualCommand for dispatch)
 	commandRegistry[metadata.CommandName] = &CommandRegistration{
 		Func:          fn,
@@ -155,6 +177,9 @@ func Register(fn CommandFunc) {
 		Long:          long,
 		Flags:         flags,
 		Args:          metadata.Args,
+		IsParent:      metadata.IsParent,
+		Subcommands:   subcommands,
+		Examples:      metadata.Examples,
 	}
 }
 
@@ -166,6 +191,12 @@ type commandMetadata struct {
 	LongLines   []string // Multi-line long description from "// Long:"
 	FlagDefs    []flagDefinition
 	Args        string // Argument completion type: "modules", "files", etc.
+
+	// Parent command metadata
+	IsParent   bool                // Parsed from "// IsParent: true"
+	Groups     map[string][]string // Parsed from "// Group.<name>: sub1, sub2"
+	GroupOrder []string            // Preserves order of groups as they appear
+	Examples   []string            // Parsed from "// Example: ..."
 }
 
 // flagDefinition holds parsed flag definition from comments.
@@ -265,6 +296,42 @@ func extractCommandMetadata(filePath string) commandMetadata {
 		// Extract Args (completion type for positional arguments)
 		if strings.HasPrefix(line, "// Args:") {
 			metadata.Args = strings.TrimSpace(strings.TrimPrefix(line, "// Args:"))
+		}
+
+		// Extract IsParent
+		if strings.HasPrefix(line, "// IsParent:") {
+			value := strings.TrimSpace(strings.TrimPrefix(line, "// IsParent:"))
+			metadata.IsParent = value == "true"
+		}
+
+		// Extract Group definitions (// Group.<name>: sub1, sub2, ...)
+		if strings.HasPrefix(line, "// Group.") {
+			if metadata.Groups == nil {
+				metadata.Groups = make(map[string][]string)
+			}
+			groupDef := strings.TrimPrefix(line, "// Group.")
+			colonIdx := strings.Index(groupDef, ":")
+			if colonIdx != -1 {
+				groupName := strings.TrimSpace(groupDef[:colonIdx])
+				subsStr := strings.TrimSpace(groupDef[colonIdx+1:])
+				var subs []string
+				for _, s := range strings.Split(subsStr, ",") {
+					s = strings.TrimSpace(s)
+					if s != "" {
+						subs = append(subs, s)
+					}
+				}
+				metadata.Groups[groupName] = subs
+				metadata.GroupOrder = append(metadata.GroupOrder, groupName)
+			}
+		}
+
+		// Extract Examples
+		if strings.HasPrefix(line, "// Example:") {
+			example := strings.TrimSpace(strings.TrimPrefix(line, "// Example:"))
+			if example != "" {
+				metadata.Examples = append(metadata.Examples, example)
+			}
 		}
 	}
 

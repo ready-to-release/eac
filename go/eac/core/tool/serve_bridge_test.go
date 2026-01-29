@@ -10,59 +10,57 @@ func TestNewServeBridge(t *testing.T) {
 	if bridge == nil {
 		t.Fatal("NewServeBridge returned nil")
 	}
-	if bridge.serverTools == nil {
-		t.Error("serverTools map not initialized")
-	}
 }
 
-func TestServeBridge_GetServer_YAMLTool(t *testing.T) {
+func TestServeBridge_GetServerByToolID_YAMLTool(t *testing.T) {
 	bridge := NewServeBridge()
 
 	// Set up tool system
 	registry := NewRegistry()
 	registry.Register(&ToolDefinition{
-		ID:    "static-site", // Matches default mapping
+		ID:        "static-site",
 		Type:      ToolTypeContainer,
 		LocalPath: "containers/static-site",
+		Serve: &ServeConfig{
+			ContainerPort: 8080,
+		},
 	})
 	bridge.SetToolSystem(registry, nil, &mockExecutor{})
 
-	// Should return YAML tool server
-	server := bridge.GetServer(ServerStaticSite)
+	// Should return server for servable tool
+	server := bridge.GetServerByToolID("static-site")
 	if server == nil {
-		t.Fatal("GetServer returned nil for YAML tool server")
+		t.Fatal("GetServerByToolID returned nil for servable tool")
 	}
 }
 
-func TestServeBridge_GetServer_NotFound(t *testing.T) {
+func TestServeBridge_GetServerByToolID_NonServable(t *testing.T) {
+	bridge := NewServeBridge()
+
+	// Set up tool system with non-servable tool
+	registry := NewRegistry()
+	registry.Register(&ToolDefinition{
+		ID:        "trivy-sbom",
+		Type:      ToolTypeContainer,
+		LocalPath: "containers/trivy",
+		// No Serve config - not servable
+	})
+	bridge.SetToolSystem(registry, nil, &mockExecutor{})
+
+	// Should return nil for non-servable tool
+	server := bridge.GetServerByToolID("trivy-sbom")
+	if server != nil {
+		t.Error("GetServerByToolID should return nil for non-servable tool")
+	}
+}
+
+func TestServeBridge_GetServerByToolID_NotFound(t *testing.T) {
 	bridge := NewServeBridge()
 
 	// No tool system configured
-	server := bridge.GetServer(ServerStaticSite)
+	server := bridge.GetServerByToolID("static-site")
 	if server != nil {
-		t.Error("GetServer should return nil when no server available")
-	}
-}
-
-func TestServeBridge_GetServer_CustomMapping(t *testing.T) {
-	bridge := NewServeBridge()
-
-	// Register custom mapping
-	bridge.SetServerToolMapping(ServerMkDocsLive, "custom-mkdocs-server")
-
-	// Set up tool system with the custom tool
-	registry := NewRegistry()
-	registry.Register(&ToolDefinition{
-		ID:        "custom-mkdocs-server",
-		Type:      ToolTypeContainer,
-		LocalPath: "containers/custom-mkdocs",
-	})
-	bridge.SetToolSystem(registry, nil, &mockExecutor{})
-
-	// Should use custom mapping
-	server := bridge.GetServer(ServerMkDocsLive)
-	if server == nil {
-		t.Fatal("GetServer returned nil for custom mapped server")
+		t.Error("GetServerByToolID should return nil when no server available")
 	}
 }
 
@@ -77,79 +75,115 @@ func TestServeBridge_SetToolSystem(t *testing.T) {
 
 	// Verify tool system is set by registering a tool and retrieving it
 	registry.Register(&ToolDefinition{
-		ID:    "structurizr",
+		ID:        "structurizr-lite",
 		Type:      ToolTypeContainer,
 		LocalPath: "containers/structurizr",
+		Serve: &ServeConfig{
+			ContainerPort: 8080,
+		},
 	})
 
-	server := bridge.GetServer(ServerStructurizr)
+	server := bridge.GetServerByToolID("structurizr-lite")
 	if server == nil {
 		t.Error("Tool system not properly configured")
 	}
 }
 
-func TestServeBridge_HasServer(t *testing.T) {
+func TestServeBridge_HasServerByToolID(t *testing.T) {
 	bridge := NewServeBridge()
 
 	// Set up tool system
 	registry := NewRegistry()
 	registry.Register(&ToolDefinition{
-		ID:    "static-site",
+		ID:        "static-site",
 		Type:      ToolTypeContainer,
 		LocalPath: "containers/static-site",
+		Serve: &ServeConfig{
+			ContainerPort: 8000,
+		},
 	})
 	registry.Register(&ToolDefinition{
-		ID:    "mkdocs-live",
+		ID:        "mkdocs-live",
 		Type:      ToolTypeContainer,
 		LocalPath: "containers/mkdocs-live",
+		Serve: &ServeConfig{
+			ContainerPort: 8000,
+		},
+	})
+	registry.Register(&ToolDefinition{
+		ID:        "trivy-sbom", // Not servable
+		Type:      ToolTypeContainer,
+		LocalPath: "containers/trivy",
 	})
 	bridge.SetToolSystem(registry, nil, &mockExecutor{})
 
 	tests := []struct {
-		serverType ServerType
-		exists     bool
+		toolID string
+		exists bool
 	}{
-		{ServerStaticSite, true},   // yaml
-		{ServerMkDocsLive, true},   // yaml
-		{ServerStructurizr, false}, // not registered
+		{"static-site", true},
+		{"mkdocs-live", true},
+		{"trivy-sbom", false},  // exists but not servable
+		{"nonexistent", false}, // doesn't exist
 	}
 
 	for _, tt := range tests {
-		t.Run(string(tt.serverType), func(t *testing.T) {
-			if got := bridge.HasServer(tt.serverType); got != tt.exists {
-				t.Errorf("HasServer(%q) = %v, want %v", tt.serverType, got, tt.exists)
+		t.Run(tt.toolID, func(t *testing.T) {
+			if got := bridge.HasServerByToolID(tt.toolID); got != tt.exists {
+				t.Errorf("HasServerByToolID(%q) = %v, want %v", tt.toolID, got, tt.exists)
 			}
 		})
 	}
 }
 
-func TestServeBridge_GetAllServerTypes(t *testing.T) {
+func TestServeBridge_GetAllServableTools(t *testing.T) {
 	bridge := NewServeBridge()
 
 	// Set up tool system
 	registry := NewRegistry()
 	registry.Register(&ToolDefinition{
-		ID:    "static-site",
+		ID:        "static-site",
 		Type:      ToolTypeContainer,
 		LocalPath: "containers/static-site",
+		Serve: &ServeConfig{
+			ContainerPort: 8000,
+		},
 	})
 	registry.Register(&ToolDefinition{
-		ID:    "mkdocs-live",
+		ID:        "mkdocs-live",
 		Type:      ToolTypeContainer,
 		LocalPath: "containers/mkdocs-live",
+		Serve: &ServeConfig{
+			ContainerPort: 8000,
+		},
 	})
 	registry.Register(&ToolDefinition{
-		ID:    "structurizr",
+		ID:        "structurizr-lite",
 		Type:      ToolTypeContainer,
 		LocalPath: "containers/structurizr",
+		Serve: &ServeConfig{
+			ContainerPort: 8080,
+		},
+	})
+	registry.Register(&ToolDefinition{
+		ID:        "trivy-sbom", // Not servable
+		Type:      ToolTypeContainer,
+		LocalPath: "containers/trivy",
 	})
 	bridge.SetToolSystem(registry, nil, &mockExecutor{})
 
-	serverTypes := bridge.GetAllServerTypes()
+	tools := bridge.GetAllServableTools()
 
-	// Should include: static-site, mkdocs-live, structurizr
-	if len(serverTypes) < 3 {
-		t.Errorf("GetAllServerTypes() returned %d types, want at least 3", len(serverTypes))
+	// Should include only servable tools: static-site, mkdocs-live, structurizr-lite
+	if len(tools) != 3 {
+		t.Errorf("GetAllServableTools() returned %d tools, want 3", len(tools))
+	}
+
+	// Verify all returned tools are servable
+	for _, tool := range tools {
+		if !tool.IsServable() {
+			t.Errorf("Tool %q should be servable", tool.ID)
+		}
 	}
 }
 
@@ -167,77 +201,18 @@ func TestGlobalServeBridge(t *testing.T) {
 	}
 }
 
-func TestParseServerType(t *testing.T) {
-	tests := []struct {
-		input    string
-		expected ServerType
-		ok       bool
-	}{
-		{"static-site", ServerStaticSite, true},
-		{"mkdocs-live", ServerMkDocsLive, true},
-		{"structurizr", ServerStructurizr, true},
-		{"unknown", "", false},
-		{"", "", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
-			got, ok := ParseServerType(tt.input)
-			if ok != tt.ok {
-				t.Errorf("ParseServerType(%q) ok = %v, want %v", tt.input, ok, tt.ok)
-			}
-			if got != tt.expected {
-				t.Errorf("ParseServerType(%q) = %q, want %q", tt.input, got, tt.expected)
-			}
-		})
-	}
-}
-
-func TestServerTypeConstants(t *testing.T) {
-	// Verify all server type constants have expected values
-	tests := []struct {
-		constant ServerType
-		value    string
-	}{
-		{ServerStaticSite, "static-site"},
-		{ServerMkDocsLive, "mkdocs-live"},
-		{ServerStructurizr, "structurizr"},
-	}
-
-	for _, tt := range tests {
-		if string(tt.constant) != tt.value {
-			t.Errorf("Server constant %v = %q, want %q", tt.constant, tt.constant, tt.value)
-		}
-	}
-}
-
-func TestServeBridge_DefaultServerMappings(t *testing.T) {
-	bridge := NewServeBridge()
-
-	// Verify default mappings exist
-	expected := map[ServerType]string{
-		ServerStaticSite:  "static-site",
-		ServerMkDocsLive:  "mkdocs-live",
-		ServerStructurizr: "structurizr",
-	}
-
-	for serverType, expectedToolID := range expected {
-		toolID := bridge.GetServerToolID(serverType)
-		if toolID != expectedToolID {
-			t.Errorf("Default mapping for %v = %q, want %q", serverType, toolID, expectedToolID)
-		}
-	}
-}
-
 func TestServeBridge_Concurrent(t *testing.T) {
 	bridge := NewServeBridge()
 
 	// Set up tool system
 	registry := NewRegistry()
 	registry.Register(&ToolDefinition{
-		ID:    "static-site",
+		ID:        "static-site",
 		Type:      ToolTypeContainer,
 		LocalPath: "containers/static-site",
+		Serve: &ServeConfig{
+			ContainerPort: 8000,
+		},
 	})
 	bridge.SetToolSystem(registry, nil, &mockExecutor{})
 
@@ -247,23 +222,23 @@ func TestServeBridge_Concurrent(t *testing.T) {
 	// Concurrent reads
 	go func() {
 		for i := 0; i < 100; i++ {
-			_ = bridge.GetServer(ServerStaticSite)
+			_ = bridge.GetServerByToolID("static-site")
 		}
 		done <- true
 	}()
 
-	// Concurrent HasServer
+	// Concurrent HasServerByToolID
 	go func() {
 		for i := 0; i < 100; i++ {
-			_ = bridge.HasServer(ServerMkDocsLive)
+			_ = bridge.HasServerByToolID("mkdocs-live")
 		}
 		done <- true
 	}()
 
-	// Concurrent GetAllServerTypes
+	// Concurrent GetAllServableTools
 	go func() {
 		for i := 0; i < 100; i++ {
-			_ = bridge.GetAllServerTypes()
+			_ = bridge.GetAllServableTools()
 		}
 		done <- true
 	}()
@@ -316,48 +291,19 @@ func TestServeResult(t *testing.T) {
 	}
 }
 
-func TestServeBridge_SetServerToolMapping(t *testing.T) {
-	bridge := NewServeBridge()
-
-	// Set a custom mapping
-	bridge.SetServerToolMapping(ServerMkDocsLive, "my-custom-mkdocs")
-
-	// Verify it was set
-	toolID := bridge.GetServerToolID(ServerMkDocsLive)
-	if toolID != "my-custom-mkdocs" {
-		t.Errorf("GetServerToolID(ServerMkDocsLive) = %q, want %q", toolID, "my-custom-mkdocs")
-	}
-
-	// Other mappings should be unchanged
-	staticToolID := bridge.GetServerToolID(ServerStaticSite)
-	if staticToolID != "static-site" {
-		t.Errorf("GetServerToolID(ServerStaticSite) = %q, want %q", staticToolID, "static-site")
-	}
-}
-
-func TestServeBridge_GetServerToolID_NotFound(t *testing.T) {
-	bridge := NewServeBridge()
-
-	// Query a non-existent server type (cast to avoid compile error)
-	toolID := bridge.GetServerToolID(ServerType("unknown-server"))
-	if toolID != "" {
-		t.Errorf("GetServerToolID for unknown type should return empty string, got %q", toolID)
-	}
-}
-
 func TestServeBridge_NilToolSystem(t *testing.T) {
 	bridge := NewServeBridge()
 
 	// Don't set tool system - should handle nil gracefully
 	// No servers should be available
-	if bridge.HasServer(ServerStaticSite) {
-		t.Error("HasServer should return false without tool system")
+	if bridge.HasServerByToolID("static-site") {
+		t.Error("HasServerByToolID should return false without tool system")
 	}
 
-	// GetServer should return nil
-	server := bridge.GetServer(ServerMkDocsLive)
+	// GetServerByToolID should return nil
+	server := bridge.GetServerByToolID("mkdocs-live")
 	if server != nil {
-		t.Error("GetServer should return nil without tool system")
+		t.Error("GetServerByToolID should return nil without tool system")
 	}
 }
 
@@ -367,25 +313,59 @@ func TestServeBridge_ToolSystemWithExecutorOnly(t *testing.T) {
 	// Set tool system without executor - tool-based servers shouldn't work
 	registry := NewRegistry()
 	registry.Register(&ToolDefinition{
-		ID:    "mkdocs-live",
+		ID:        "mkdocs-live",
 		Type:      ToolTypeContainer,
 		LocalPath: "containers/mkdocs-live",
+		Serve: &ServeConfig{
+			ContainerPort: 8000,
+		},
 	})
 	bridge.SetToolSystem(registry, nil, nil) // nil executor
 
-	// YAML-based server should NOT work without executor
-	server := bridge.GetServer(ServerMkDocsLive)
+	// Server should NOT work without executor
+	server := bridge.GetServerByToolID("mkdocs-live")
 	if server != nil {
-		t.Error("GetServer should return nil without executor")
+		t.Error("GetServerByToolID should return nil without executor")
 	}
 }
 
-func TestServeBridge_GetAllServerTypes_Empty(t *testing.T) {
+func TestServeBridge_GetAllServableTools_Empty(t *testing.T) {
 	bridge := NewServeBridge()
 
 	// No tool system configured
-	serverTypes := bridge.GetAllServerTypes()
-	if len(serverTypes) != 0 {
-		t.Errorf("GetAllServerTypes() should return empty slice, got %d items", len(serverTypes))
+	tools := bridge.GetAllServableTools()
+	if tools != nil {
+		t.Errorf("GetAllServableTools() should return nil, got %d items", len(tools))
+	}
+}
+
+func TestServeBridge_GetServerToolByID(t *testing.T) {
+	bridge := NewServeBridge()
+
+	// Set up tool system
+	registry := NewRegistry()
+	staticSite := &ToolDefinition{
+		ID:        "static-site",
+		Type:      ToolTypeContainer,
+		LocalPath: "containers/static-site",
+		Serve: &ServeConfig{
+			ContainerPort: 8000,
+		},
+	}
+	registry.Register(staticSite)
+	bridge.SetToolSystem(registry, nil, &mockExecutor{})
+
+	// Should return the tool definition
+	tool := bridge.GetServerToolByID("static-site")
+	if tool == nil {
+		t.Fatal("GetServerToolByID returned nil for existing tool")
+	}
+	if !tool.IsServable() {
+		t.Error("Returned tool should be servable")
+	}
+
+	// Non-existent tool should return nil
+	if bridge.GetServerToolByID("nonexistent") != nil {
+		t.Error("GetServerToolByID should return nil for non-existent tool")
 	}
 }

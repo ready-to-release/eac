@@ -316,7 +316,7 @@ func TestToolAssignment_GetToolIDs_SingleTool(t *testing.T) {
 func TestToolConfig_Validate(t *testing.T) {
 	t.Run("valid config", func(t *testing.T) {
 		config := &ToolConfig{
-			Tools: map[string]*ToolDefinition{
+			SystemTools: map[string]*ToolDefinition{
 				"go-builder": {
 					ID:     "go-builder",
 					Type:   ToolTypeSystem,
@@ -336,7 +336,7 @@ func TestToolConfig_Validate(t *testing.T) {
 
 	t.Run("invalid tool reference", func(t *testing.T) {
 		config := &ToolConfig{
-			Tools: map[string]*ToolDefinition{
+			SystemTools: map[string]*ToolDefinition{
 				"go-builder": {
 					ID:     "go-builder",
 					Type:   ToolTypeSystem,
@@ -356,7 +356,7 @@ func TestToolConfig_Validate(t *testing.T) {
 
 	t.Run("invalid environment tool reference", func(t *testing.T) {
 		config := &ToolConfig{
-			Tools: map[string]*ToolDefinition{
+			SystemTools: map[string]*ToolDefinition{
 				"go-builder": {
 					ID:     "go-builder",
 					Type:   ToolTypeSystem,
@@ -584,6 +584,288 @@ func TestToolDefinition_LocalImageTag(t *testing.T) {
 }
 
 
+func TestToolDefinition_IsServable(t *testing.T) {
+	tests := []struct {
+		name string
+		tool *ToolDefinition
+		want bool
+	}{
+		{
+			name: "nil tool",
+			tool: nil,
+			want: false,
+		},
+		{
+			name: "tool without serve config",
+			tool: &ToolDefinition{
+				ID:   "trivy-sbom",
+				Type: ToolTypeContainer,
+			},
+			want: false,
+		},
+		{
+			name: "tool with nil serve",
+			tool: &ToolDefinition{
+				ID:    "static-site",
+				Type:  ToolTypeContainer,
+				Serve: nil,
+			},
+			want: false,
+		},
+		{
+			name: "tool with serve but no port",
+			tool: &ToolDefinition{
+				ID:    "static-site",
+				Type:  ToolTypeContainer,
+				Serve: &ServeConfig{},
+			},
+			want: false,
+		},
+		{
+			name: "tool with serve and container port",
+			tool: &ToolDefinition{
+				ID:   "static-site",
+				Type: ToolTypeContainer,
+				Serve: &ServeConfig{
+					ContainerPort: 8080,
+				},
+			},
+			want: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.tool.IsServable()
+			if got != tt.want {
+				t.Errorf("IsServable() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestToolDefinition_GetOutputFormat(t *testing.T) {
+	tests := []struct {
+		name string
+		tool *ToolDefinition
+		want string
+	}{
+		{
+			name: "nil tool",
+			tool: nil,
+			want: "text",
+		},
+		{
+			name: "tool without output format",
+			tool: &ToolDefinition{
+				ID:   "test",
+				Type: ToolTypeSystem,
+			},
+			want: "text",
+		},
+		{
+			name: "tool with json output",
+			tool: &ToolDefinition{
+				ID:           "trivy-sbom",
+				Type:         ToolTypeContainer,
+				OutputFormat: "json",
+			},
+			want: "json",
+		},
+		{
+			name: "tool with stream output",
+			tool: &ToolDefinition{
+				ID:           "build",
+				Type:         ToolTypeSystem,
+				OutputFormat: "stream",
+			},
+			want: "stream",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.tool.GetOutputFormat()
+			if got != tt.want {
+				t.Errorf("GetOutputFormat() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestToolDefinition_HasStructuredOutput(t *testing.T) {
+	tests := []struct {
+		name string
+		tool *ToolDefinition
+		want bool
+	}{
+		{
+			name: "nil tool",
+			tool: nil,
+			want: false,
+		},
+		{
+			name: "tool without output format",
+			tool: &ToolDefinition{ID: "test"},
+			want: false,
+		},
+		{
+			name: "tool with json output",
+			tool: &ToolDefinition{ID: "test", OutputFormat: "json"},
+			want: true,
+		},
+		{
+			name: "tool with text output",
+			tool: &ToolDefinition{ID: "test", OutputFormat: "text"},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.tool.HasStructuredOutput()
+			if got != tt.want {
+				t.Errorf("HasStructuredOutput() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestToolDefinition_GetScannerCategory(t *testing.T) {
+	tests := []struct {
+		name string
+		tool *ToolDefinition
+		want string
+	}{
+		{
+			name: "nil tool",
+			tool: nil,
+			want: "",
+		},
+		{
+			name: "empty ID",
+			tool: &ToolDefinition{ID: ""},
+			want: "",
+		},
+		{
+			name: "trivy-sbom",
+			tool: &ToolDefinition{ID: "trivy-sbom"},
+			want: "sbom",
+		},
+		{
+			name: "trivy-vuln",
+			tool: &ToolDefinition{ID: "trivy-vuln"},
+			want: "vuln",
+		},
+		{
+			name: "trivy-secrets",
+			tool: &ToolDefinition{ID: "trivy-secrets"},
+			want: "secrets",
+		},
+		{
+			name: "trivy-iac",
+			tool: &ToolDefinition{ID: "trivy-iac"},
+			want: "iac",
+		},
+		{
+			name: "trivy-compliance",
+			tool: &ToolDefinition{ID: "trivy-compliance"},
+			want: "compliance",
+		},
+		{
+			name: "semgrep",
+			tool: &ToolDefinition{ID: "semgrep"},
+			want: "sast",
+		},
+		{
+			name: "zap",
+			tool: &ToolDefinition{ID: "zap"},
+			want: "zap",
+		},
+		{
+			name: "with container suffix",
+			tool: &ToolDefinition{ID: "trivy-sbom:container"},
+			want: "sbom",
+		},
+		{
+			name: "with system suffix",
+			tool: &ToolDefinition{ID: "trivy-vuln:system"},
+			want: "vuln",
+		},
+		{
+			name: "custom tool with category suffix",
+			tool: &ToolDefinition{ID: "custom-sbom"},
+			want: "sbom",
+		},
+		{
+			name: "unknown tool",
+			tool: &ToolDefinition{ID: "unknown-tool"},
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.tool.GetScannerCategory()
+			if got != tt.want {
+				t.Errorf("GetScannerCategory() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestToolDefinition_GetServerType(t *testing.T) {
+	tests := []struct {
+		name string
+		tool *ToolDefinition
+		want string
+	}{
+		{
+			name: "nil tool",
+			tool: nil,
+			want: "",
+		},
+		{
+			name: "non-servable tool",
+			tool: &ToolDefinition{ID: "trivy-sbom"},
+			want: "",
+		},
+		{
+			name: "servable tool",
+			tool: &ToolDefinition{
+				ID:    "static-site",
+				Serve: &ServeConfig{ContainerPort: 8080},
+			},
+			want: "static-site",
+		},
+		{
+			name: "servable tool with container suffix",
+			tool: &ToolDefinition{
+				ID:    "mkdocs-live:container",
+				Serve: &ServeConfig{ContainerPort: 8000},
+			},
+			want: "mkdocs-live",
+		},
+		{
+			name: "structurizr-lite",
+			tool: &ToolDefinition{
+				ID:    "structurizr-lite",
+				Serve: &ServeConfig{ContainerPort: 8080},
+			},
+			want: "structurizr-lite",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.tool.GetServerType()
+			if got != tt.want {
+				t.Errorf("GetServerType() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestToolDefinition_Validate_ExternalContainerVersionPinning(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -731,6 +1013,183 @@ func TestToolDefinition_Validate_ExternalContainerVersionPinning(t *testing.T) {
 				}
 			} else if err != nil {
 				t.Errorf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+func TestToolDefinition_DisplayName(t *testing.T) {
+	tests := []struct {
+		name string
+		tool ToolDefinition
+		want string
+	}{
+		{
+			name: "simple name",
+			tool: ToolDefinition{ID: "go"},
+			want: "Go",
+		},
+		{
+			name: "kebab-case name",
+			tool: ToolDefinition{ID: "npm-build"},
+			want: "Npm Build",
+		},
+		{
+			name: "multiple dashes",
+			tool: ToolDefinition{ID: "mkdocs-build-site"},
+			want: "Mkdocs Build Site",
+		},
+		{
+			name: "with type suffix stripped",
+			tool: ToolDefinition{ID: "go:system"},
+			want: "Go",
+		},
+		{
+			name: "with container suffix stripped",
+			tool: ToolDefinition{ID: "trivy-sbom:container"},
+			want: "Trivy Sbom",
+		},
+		{
+			name: "empty ID returns empty",
+			tool: ToolDefinition{},
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.tool.DisplayName()
+			if got != tt.want {
+				t.Errorf("DisplayName() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestToolDefinition_ShortName(t *testing.T) {
+	tests := []struct {
+		name string
+		tool ToolDefinition
+		want string
+	}{
+		{
+			name: "simple name returns full",
+			tool: ToolDefinition{ID: "go"},
+			want: "go",
+		},
+		{
+			name: "kebab-case returns prefix",
+			tool: ToolDefinition{ID: "npm-build"},
+			want: "npm",
+		},
+		{
+			name: "with type suffix stripped first",
+			tool: ToolDefinition{ID: "npm-build:system"},
+			want: "npm",
+		},
+		{
+			name: "no dash returns full",
+			tool: ToolDefinition{ID: "mkdocs:container"},
+			want: "mkdocs",
+		},
+		{
+			name: "empty ID returns empty",
+			tool: ToolDefinition{},
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.tool.ShortName()
+			if got != tt.want {
+				t.Errorf("ShortName() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestToolDefinition_ContainerSafeName(t *testing.T) {
+	tests := []struct {
+		name string
+		tool ToolDefinition
+		want string
+	}{
+		{
+			name: "simple name unchanged",
+			tool: ToolDefinition{ID: "mkdocs-build"},
+			want: "mkdocs-build",
+		},
+		{
+			name: "colon suffix stripped",
+			tool: ToolDefinition{ID: "mkdocs-build:container"},
+			want: "mkdocs-build",
+		},
+		{
+			name: "system suffix stripped",
+			tool: ToolDefinition{ID: "go:system"},
+			want: "go",
+		},
+		{
+			name: "embedded colon replaced",
+			tool: ToolDefinition{ID: "trivy:sbom"},
+			want: "trivy-sbom",
+		},
+		{
+			name: "empty returns empty",
+			tool: ToolDefinition{},
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.tool.ContainerSafeName()
+			if got != tt.want {
+				t.Errorf("ContainerSafeName() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestToolDefinition_CanonicalID(t *testing.T) {
+	tests := []struct {
+		name string
+		tool ToolDefinition
+		want string
+	}{
+		{
+			name: "already canonical",
+			tool: ToolDefinition{ID: "mkdocs-build"},
+			want: "mkdocs-build",
+		},
+		{
+			name: "strips system suffix",
+			tool: ToolDefinition{ID: "go:system"},
+			want: "go",
+		},
+		{
+			name: "strips container suffix",
+			tool: ToolDefinition{ID: "trivy:container"},
+			want: "trivy",
+		},
+		{
+			name: "preserves non-type colon",
+			tool: ToolDefinition{ID: "scope:tool"},
+			want: "scope:tool",
+		},
+		{
+			name: "empty returns empty",
+			tool: ToolDefinition{},
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.tool.CanonicalID()
+			if got != tt.want {
+				t.Errorf("CanonicalID() = %q, want %q", got, tt.want)
 			}
 		})
 	}

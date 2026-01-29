@@ -24,10 +24,11 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/environments"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	moduledeps "github.com/ready-to-release/eac/go/eac/core/module-deps"
+	"github.com/ready-to-release/eac/go/eac/core/hash"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 	"github.com/ready-to-release/eac/go/eac/core/testing"
-	"github.com/ready-to-release/eac/go/eac/core/teststate"
 	"github.com/ready-to-release/eac/go/eac/core/tool"
+	"github.com/ready-to-release/eac/go/eac/core/workunit"
 )
 
 func init() {
@@ -731,16 +732,26 @@ func filterIncrementalTests(ctx *cmdframework.ExecutionContext, testCfg *TestFra
 	moduleTestInfo, depBuildIDLoader := buildModuleTestInfo(testsByPackage, ctx.ModuleRegistry, ctx.EACConfig, ctx.WorkspaceRoot)
 
 	// Determine test set from suite L-tags
-	testSet := teststate.TestSetUnit // Default to unit
+	testSet := workunit.TestSetUnit // Default to unit
 	var ltags []string
 	if ctx.EACConfig != nil && ctx.EACConfig.TestSuites != nil {
 		ltags = ctx.EACConfig.TestSuites.GetSuiteLTags(testCfg.SuiteName)
-		testSet = teststate.ClassifyTestByTags(ltags)
+		testSet = workunit.ClassifyTestByTags(ltags)
 	}
 	log.Debugf("[TUI-CACHE] Incremental detection: suite=%s ltags=%v testSet=%s moduleCount=%d",
 		testCfg.SuiteName, ltags, testSet, len(moduleTestInfo))
 
-	changeResult, err := teststate.DetectChanges(ctx.WorkspaceRoot, moduleTestInfo, testSet, depBuildIDLoader)
+	// Create hash provider for source files
+	hashProvider := func(module string) (string, error) {
+		info, ok := moduleTestInfo[module]
+		if !ok {
+			return "", fmt.Errorf("no info for module %s", module)
+		}
+		return hash.Files(ctx.WorkspaceRoot, info.SourceFiles)
+	}
+
+	stateMgr := workunit.NewStateManager(ctx.WorkspaceRoot)
+	changeResult, err := stateMgr.DetectTestModuleChanges(moduleTestInfo, testSet, hashProvider, depBuildIDLoader)
 	if err != nil {
 		log.Debugf("Failed to detect test changes: %v", err)
 		return testsByPackage
@@ -842,41 +853,41 @@ func updateModuleTestStateAtomic(ctx *cmdframework.ExecutionContext, testCfg *Te
 	log.Debugf("[ATOMIC-STATE] Updating test state for module=%s passed=%v", module, passed)
 
 	// Build module info for just this module
-	info := teststate.ModuleTestFiles{
-		Dependencies: contract.GetDependencies(),
-	}
+	var sourceFiles []string
+	var buildID string
 
 	// Load build manifest to get BuildID
 	moduleBuildDir := ctx.EACConfig.Repository.BuildOutputPathAbs(ctx.WorkspaceRoot, module)
 	if manifest, err := implinternal.LoadModuleManifest(moduleBuildDir); err == nil {
-		info.BuildID = manifest.BuildID
+		buildID = manifest.BuildID
 	}
 
 	// Get source files from module definition
 	sourcePatterns := contract.GetGlobPatterns()
-	sourceFiles, err := teststate.ExpandGlobPatterns(ctx.WorkspaceRoot, sourcePatterns)
+	files, err := hash.ExpandGlobPatterns(ctx.WorkspaceRoot, sourcePatterns)
 	if err == nil {
-		for _, f := range sourceFiles {
+		for _, f := range files {
 			if !isTestFile(f) {
-				info.SourceFiles = append(info.SourceFiles, f)
+				sourceFiles = append(sourceFiles, f)
 			}
 		}
 	}
 
-	moduleTestInfo := map[string]teststate.ModuleTestFiles{module: info}
-	testedModules := map[string]bool{module: passed}
-
 	// Determine test set from suite L-tags
-	testSet := teststate.TestSetUnit
+	testSet := workunit.TestSetUnit
 	if ctx.EACConfig != nil && ctx.EACConfig.TestSuites != nil {
 		ltags := ctx.EACConfig.TestSuites.GetSuiteLTags(testCfg.SuiteName)
-		testSet = teststate.ClassifyTestByTags(ltags)
+		testSet = workunit.ClassifyTestByTags(ltags)
 	}
 
-	log.Debugf("[ATOMIC-STATE] Calling UpdateModuleTestSetState: module=%s testSet=%s sourceFiles=%d", module, testSet, len(info.SourceFiles))
-	err = teststate.UpdateModuleTestSetState(ctx.WorkspaceRoot, testedModules, moduleTestInfo, testSet, nil)
+	// Compute source hash
+	sourceHash, _ := hash.Files(ctx.WorkspaceRoot, sourceFiles)
+
+	log.Debugf("[ATOMIC-STATE] Saving test state: module=%s testSet=%s sourceFiles=%d", module, testSet, len(sourceFiles))
+	stateMgr := workunit.NewStateManager(ctx.WorkspaceRoot)
+	err = stateMgr.SaveTestModuleResult(module, testSet, passed, sourceHash, buildID, "")
 	if err != nil {
-		log.Debugf("[ATOMIC-STATE] UpdateModuleTestSetState failed: module=%s err=%v", module, err)
+		log.Debugf("[ATOMIC-STATE] SaveTestModuleResult failed: module=%s err=%v", module, err)
 	}
 	return err
 }
@@ -910,14 +921,24 @@ func updateTestState(ctx *cmdframework.ExecutionContext, testCfg *TestFrameworkC
 	moduleTestInfo, _ := buildModuleTestInfo(testCfg.TestsByPackage, ctx.ModuleRegistry, ctx.EACConfig, ctx.WorkspaceRoot)
 
 	// Determine test set from suite L-tags
-	testSet := teststate.TestSetUnit
+	testSet := workunit.TestSetUnit
 	if ctx.EACConfig != nil && ctx.EACConfig.TestSuites != nil {
 		ltags := ctx.EACConfig.TestSuites.GetSuiteLTags(testCfg.SuiteName)
-		testSet = teststate.ClassifyTestByTags(ltags)
+		testSet = workunit.ClassifyTestByTags(ltags)
 	}
 
-	if err := teststate.UpdateModuleTestSetState(ctx.WorkspaceRoot, testedModuleResults, moduleTestInfo, testSet, nil); err != nil {
-		log.Warnf("Failed to update test state: %v", err)
+	// Save test state for each module
+	stateMgr := workunit.NewStateManager(ctx.WorkspaceRoot)
+	for module, passed := range testedModuleResults {
+		info, ok := moduleTestInfo[module]
+		if !ok {
+			continue
+		}
+
+		sourceHash, _ := hash.Files(ctx.WorkspaceRoot, info.SourceFiles)
+		if err := stateMgr.SaveTestModuleResult(module, testSet, passed, sourceHash, info.BuildID, ""); err != nil {
+			log.Warnf("Failed to update test state for %s: %v", module, err)
+		}
 	}
 }
 

@@ -3,6 +3,7 @@ package tool
 import (
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 
 	"gopkg.in/yaml.v3"
@@ -66,17 +67,32 @@ type Registry interface {
 	ValidateAll() []error
 }
 
+// ToolVerifier is a function that checks if a tool is available.
+// Used for testing to mock system tool verification.
+type ToolVerifier func(tool *ToolDefinition) bool
+
 // DefaultRegistry is the thread-safe in-memory implementation of Registry.
 type DefaultRegistry struct {
-	mu    sync.RWMutex
-	tools map[string]*ToolDefinition
+	mu       sync.RWMutex
+	tools    map[string]*ToolDefinition
+	bindings map[string]ToolBinding // canonical name -> binding mode
+	verifier ToolVerifier           // custom verifier for tests (nil = use default)
 }
 
 // NewRegistry creates a new tool registry.
 func NewRegistry() *DefaultRegistry {
 	return &DefaultRegistry{
-		tools: make(map[string]*ToolDefinition),
+		tools:    make(map[string]*ToolDefinition),
+		bindings: make(map[string]ToolBinding),
 	}
+}
+
+// SetVerifier sets a custom tool verifier (for testing).
+// Pass nil to restore default verification behavior.
+func (r *DefaultRegistry) SetVerifier(v ToolVerifier) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.verifier = v
 }
 
 // Register adds a tool to the registry.
@@ -110,73 +126,223 @@ func (r *DefaultRegistry) RegisterFromYAML(path string) error {
 		return fmt.Errorf("parsing tool config %s: %w", path, err)
 	}
 
-	// Register all tools from the config
-	for id, tool := range config.Tools {
-		if tool.ID == "" {
-			tool.ID = id // Use map key as ID if not set
-		}
-		if err := r.Register(tool); err != nil {
-			return fmt.Errorf("registering tool %s from %s: %w", id, path, err)
-		}
-	}
-
-	return nil
+	return r.RegisterFromConfig(&config)
 }
 
 // RegisterFromConfig registers all tools from a ToolConfig.
+// Tools are stored with CANONICAL IDs (no type suffix) in tool.ID.
+// Registry stores dual keys for lookup convenience:
+//   - Primary key: canonical name (e.g., "npm-build")
+//   - Alias key: name with type suffix (e.g., "npm-build:system")
+//
+// Both keys point to the same tool, and tool.ID is always canonical.
 func (r *DefaultRegistry) RegisterFromConfig(config *ToolConfig) error {
 	if config == nil {
 		return nil
 	}
 
-	for id, tool := range config.Tools {
-		if tool.ID == "" {
-			tool.ID = id
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Register system-tools with canonical ID (no suffix)
+	for id, tool := range config.SystemTools {
+		tool.ID = id // Canonical - NO suffix
+		if tool.Type == "" {
+			tool.Type = ToolTypeSystem
 		}
-		if err := r.Register(tool); err != nil {
-			return fmt.Errorf("registering tool %s: %w", id, err)
+		if err := tool.Validate(); err != nil {
+			return fmt.Errorf("registering system-tool %s: %w", id, err)
 		}
+		// Dual-key storage: both canonical and suffixed keys point to same tool
+		r.tools[id] = tool            // Primary key: "npm-build"
+		r.tools[id+":system"] = tool  // Alias key for explicit lookup
 	}
+
+	// Register container-tools with canonical ID (no suffix)
+	for id, tool := range config.ContainerTools {
+		tool.ID = id // Canonical - NO suffix
+		if tool.Type == "" {
+			tool.Type = ToolTypeContainer
+		}
+		if err := tool.Validate(); err != nil {
+			return fmt.Errorf("registering container-tool %s: %w", id, err)
+		}
+		// Dual-key storage: both canonical and suffixed keys point to same tool
+		r.tools[id] = tool               // Primary key: "npm-build"
+		r.tools[id+":container"] = tool  // Alias key for explicit lookup
+	}
+
+	// Store bindings for canonical resolution
+	r.bindings = config.ToolBindings
 
 	return nil
 }
 
-// Get returns a tool by ID.
-// Returns the tool and true if found, or nil and false if not found.
+// Get returns a tool by ID or canonical name.
+// If toolID contains ":system" or ":container" suffix, does exact lookup.
+// Otherwise, does canonical lookup with binding rules (auto/system/container),
+// with fallback to direct ID lookup for backward compatibility.
 func (r *DefaultRegistry) Get(toolID string) (*ToolDefinition, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	tool, ok := r.tools[toolID]
-	if !ok {
-		return nil, false
+	// Exact lookup if ID has type suffix
+	if strings.HasSuffix(toolID, ":system") || strings.HasSuffix(toolID, ":container") {
+		tool, ok := r.tools[toolID]
+		if !ok {
+			return nil, false
+		}
+		return tool.Clone(), true
 	}
 
-	// Return a clone to prevent external modification
-	return tool.Clone(), true
+	// Canonical lookup with binding rules
+	if tool, ok := r.getCanonicalUnlocked(toolID); ok {
+		return tool, true
+	}
+
+	// Fallback: direct ID lookup (backward compatibility for tests/legacy)
+	if tool, ok := r.tools[toolID]; ok {
+		return tool.Clone(), true
+	}
+
+	return nil, false
 }
 
+// getCanonicalUnlocked does canonical lookup. Must be called with lock held.
+func (r *DefaultRegistry) getCanonicalUnlocked(canonicalName string) (*ToolDefinition, bool) {
+	binding := r.bindings[canonicalName]
+	if binding == "" {
+		binding = ToolBindingAuto
+	}
 
-// GetAll returns a copy of all registered tools.
+	systemID := canonicalName + ":system"
+	containerID := canonicalName + ":container"
+
+	debug := os.Getenv("DEBUG_TOOL_RESOLVE") != ""
+	if debug {
+		fmt.Fprintf(os.Stderr, "[DEBUG] getCanonical(%s) binding=%s\n", canonicalName, binding)
+	}
+
+	switch binding {
+	case ToolBindingSystem:
+		if tool, ok := r.tools[systemID]; ok {
+			if debug {
+				fmt.Fprintf(os.Stderr, "[DEBUG] -> using system tool %s\n", systemID)
+			}
+			return tool.Clone(), true
+		}
+	case ToolBindingContainer:
+		if tool, ok := r.tools[containerID]; ok {
+			if debug {
+				fmt.Fprintf(os.Stderr, "[DEBUG] -> using container tool %s\n", containerID)
+			}
+			return tool.Clone(), true
+		}
+	case ToolBindingAuto:
+		// Try system first - check if available
+		if tool, ok := r.tools[systemID]; ok {
+			avail := r.isToolAvailableUnlocked(tool)
+			if debug {
+				fmt.Fprintf(os.Stderr, "[DEBUG] -> system %s found, available=%v\n", systemID, avail)
+			}
+			if avail {
+				return tool.Clone(), true
+			}
+		} else if debug {
+			fmt.Fprintf(os.Stderr, "[DEBUG] -> system %s not found in registry\n", systemID)
+		}
+		// Fall back to container
+		if tool, ok := r.tools[containerID]; ok {
+			if debug {
+				fmt.Fprintf(os.Stderr, "[DEBUG] -> falling back to container %s\n", containerID)
+			}
+			return tool.Clone(), true
+		} else if debug {
+			fmt.Fprintf(os.Stderr, "[DEBUG] -> container %s not found in registry\n", containerID)
+		}
+	}
+
+	if debug {
+		fmt.Fprintf(os.Stderr, "[DEBUG] -> no tool found for %s\n", canonicalName)
+	}
+	return nil, false
+}
+
+// isToolAvailableUnlocked checks if a system tool and all its requirements are available.
+// Must be called with lock held.
+func (r *DefaultRegistry) isToolAvailableUnlocked(tool *ToolDefinition) bool {
+	if tool == nil || tool.Type != ToolTypeSystem {
+		return false
+	}
+
+	// Use custom verifier if set (for testing), otherwise use default
+	var available bool
+	if r.verifier != nil {
+		available = r.verifier(tool)
+	} else {
+		result := VerifyToolDefinition(tool)
+		available = result.Available
+	}
+	if !available {
+		return false
+	}
+
+	// Verify all requirements recursively
+	for _, reqName := range tool.Requirements {
+		// Try to find requirement as system tool
+		reqID := reqName + ":system"
+		reqTool, exists := r.tools[reqID]
+		if !exists {
+			// Requirement not found as system tool
+			return false
+		}
+		if !r.isToolAvailableUnlocked(reqTool) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// GetAll returns a copy of all registered tools by their canonical ID.
+// Only returns tools keyed by their canonical name (no :system/:container aliases).
 func (r *DefaultRegistry) GetAll() map[string]*ToolDefinition {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	result := make(map[string]*ToolDefinition, len(r.tools))
+	result := make(map[string]*ToolDefinition)
+	seen := make(map[*ToolDefinition]bool)
+
 	for id, tool := range r.tools {
+		// Skip alias keys (those with :system or :container suffix)
+		if strings.HasSuffix(id, ":system") || strings.HasSuffix(id, ":container") {
+			continue
+		}
+		// Deduplicate by tool pointer (in case same tool is registered under multiple canonical names)
+		if seen[tool] {
+			continue
+		}
+		seen[tool] = true
 		result[id] = tool.Clone()
 	}
 	return result
 }
 
 // ListByType returns all tools of the specified type.
+// Only returns unique tools (no duplicates from alias keys).
 func (r *DefaultRegistry) ListByType(toolType ToolType) []*ToolDefinition {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
 	var result []*ToolDefinition
-	for _, tool := range r.tools {
-		if tool.Type == toolType {
+	seen := make(map[*ToolDefinition]bool)
+	for id, tool := range r.tools {
+		// Skip alias keys
+		if strings.HasSuffix(id, ":system") || strings.HasSuffix(id, ":container") {
+			continue
+		}
+		if tool.Type == toolType && !seen[tool] {
+			seen[tool] = true
 			result = append(result, tool.Clone())
 		}
 	}

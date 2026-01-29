@@ -15,6 +15,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/locktracker"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/output"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
+	"github.com/ready-to-release/eac/go/eac/core/workunit"
 )
 
 // Orchestrator manages parallel execution of work items.
@@ -86,6 +87,19 @@ func New(config *Config, worker WorkerFunc) *Orchestrator {
 	}
 
 	return o
+}
+
+// SetConsole sets an external TUI console for the orchestrator.
+// This allows the cmdframework to inject a console created via the TUI registry.
+// If called with a non-nil console, it replaces any console created in New().
+// The console should implement the internal/tui.Console interface.
+func (o *Orchestrator) SetConsole(console *tui.Console) {
+	if console != nil {
+		o.tuiConsole = console
+		if o.tuiCtx == nil {
+			o.tuiCtx, o.tuiCancel = context.WithCancel(context.Background())
+		}
+	}
 }
 
 // RunLayered executes modules in dependency layers - layers run sequentially, modules within a layer run in parallel.
@@ -787,13 +801,13 @@ func (o *Orchestrator) GetLastComponentResults() []ComponentResult {
 
 // RunComponentsLayered executes component builds in dependency layers.
 // Within each layer, components run in parallel with weighted scheduling.
-// Components respect intra-module dependencies (BuildAfter) and inter-module
+// Components respect intra-module dependencies (DependsOn) and inter-module
 // dependencies (layers).
 //
 // Returns WorkResult aggregated at module level for compatibility with existing code.
-func (o *Orchestrator) RunComponentsLayered(layers [][]ComponentWork, worker ComponentWorkerFunc) ([]WorkResult, error) {
+func (o *Orchestrator) RunComponentsLayered(layers [][]workunit.UnitSpec, worker ComponentWorkerFunc) ([]WorkResult, error) {
 	// Flatten to get total count
-	var allWork []ComponentWork
+	var allWork []workunit.UnitSpec
 	for _, layer := range layers {
 		allWork = append(allWork, layer...)
 	}
@@ -925,10 +939,10 @@ func (o *Orchestrator) RunComponentsLayered(layers [][]ComponentWork, worker Com
 }
 
 // RunComponentsParallel executes all components in parallel with weighted scheduling.
-// Components respect intra-module dependencies (BuildAfter).
+// Components respect intra-module dependencies (DependsOn).
 //
 // Returns WorkResult aggregated at module level for compatibility with existing code.
-func (o *Orchestrator) RunComponentsParallel(work []ComponentWork, worker ComponentWorkerFunc) ([]WorkResult, error) {
+func (o *Orchestrator) RunComponentsParallel(work []workunit.UnitSpec, worker ComponentWorkerFunc) ([]WorkResult, error) {
 	if len(work) == 0 {
 		return []WorkResult{}, nil
 	}
@@ -1016,23 +1030,24 @@ func (o *Orchestrator) RunComponentsParallel(work []ComponentWork, worker Compon
 	return AggregateToWorkResults(results, work), nil
 }
 
-// countUniqueModules counts unique modules in component work items.
-func countUniqueModules(work []ComponentWork) int {
+// countUniqueModules counts unique modules in work units.
+func countUniqueModules(work []workunit.UnitSpec) int {
 	seen := make(map[string]bool)
 	for _, w := range work {
-		seen[w.Module] = true
+		seen[w.ID.Module] = true
 	}
 	return len(seen)
 }
 
-// getLayerModules returns unique module names from component work items.
-func getLayerModules(work []ComponentWork) []string {
+// getLayerModules returns unique module names from work units.
+func getLayerModules(work []workunit.UnitSpec) []string {
 	seen := make(map[string]bool)
 	var modules []string
 	for _, w := range work {
-		if !seen[w.Module] {
-			seen[w.Module] = true
-			modules = append(modules, w.Module)
+		module := w.ID.Module
+		if !seen[module] {
+			seen[module] = true
+			modules = append(modules, module)
 		}
 	}
 	return modules

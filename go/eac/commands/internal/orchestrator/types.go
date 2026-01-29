@@ -83,29 +83,6 @@ type Config struct {
 	Turbo float64
 }
 
-// ComponentWork represents a single component build work item.
-// This is the unit of work for component-level parallelism.
-type ComponentWork struct {
-	// Module is the module moniker (e.g., "eac-core")
-	Module string
-	// Component is the component name (e.g., "go", "typescript", "book")
-	Component string
-	// ComponentType is the component type from component-types.yml (may differ from Component for named components)
-	ComponentType string
-	// Handler is the name of the build handler (e.g., "go", "npm", "mkdocs")
-	Handler string
-	// IsContainer indicates if the handler runs in a Docker container (vs system tool)
-	IsContainer bool
-	// Weight is the resource weight for scheduling (base weight × amp, 1=light, 4=heavy)
-	Weight int
-	// BuildAfter lists component types that must complete before this one (same module)
-	BuildAfter []string
-	// Index is used for result ordering
-	Index int
-	// Cached indicates this component is pre-determined to be cached (skip execution overhead)
-	Cached bool
-}
-
 // ComponentResult represents the outcome of building a single component.
 type ComponentResult struct {
 	// Module is the module moniker

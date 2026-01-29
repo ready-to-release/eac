@@ -14,59 +14,35 @@ func TestNewScanBridge(t *testing.T) {
 	if bridge == nil {
 		t.Fatal("NewScanBridge returned nil")
 	}
-	if bridge.scannerTools == nil {
-		t.Error("scannerTools map not initialized")
-	}
 }
 
-func TestScanBridge_GetScanner_YAMLTool(t *testing.T) {
+func TestScanBridge_GetScannerByToolID_YAMLTool(t *testing.T) {
 	bridge := NewScanBridge()
 
 	// Set up tool system - use LocalPath for test containers (no version pinning needed)
 	registry := NewRegistry()
 	registry.Register(&ToolDefinition{
-		ID:        "trivy-sbom", // Matches default mapping
-		Type:      ToolTypeContainer,
-		LocalPath: "containers/trivy",
+		ID:           "trivy-sbom",
+		Type:         ToolTypeContainer,
+		LocalPath:    "containers/trivy",
+		OutputFormat: "json",
 	})
 	bridge.SetToolSystem(registry, nil, &mockExecutor{})
 
-	// Should return YAML tool scanner
-	scanner := bridge.GetScanner(ScannerSBOM)
+	// Should return scanner for tool
+	scanner := bridge.GetScannerByToolID("trivy-sbom")
 	if scanner == nil {
-		t.Fatal("GetScanner returned nil for YAML tool scanner")
+		t.Fatal("GetScannerByToolID returned nil for scanner tool")
 	}
 }
 
-func TestScanBridge_GetScanner_NotFound(t *testing.T) {
+func TestScanBridge_GetScannerByToolID_NotFound(t *testing.T) {
 	bridge := NewScanBridge()
 
 	// No tool system configured
-	scanner := bridge.GetScanner(ScannerSBOM)
+	scanner := bridge.GetScannerByToolID("trivy-sbom")
 	if scanner != nil {
-		t.Error("GetScanner should return nil when no scanner available")
-	}
-}
-
-func TestScanBridge_GetScanner_CustomMapping(t *testing.T) {
-	bridge := NewScanBridge()
-
-	// Register custom mapping
-	bridge.SetScannerToolMapping(ScannerSAST, "custom-sast-tool")
-
-	// Set up tool system with the custom tool
-	registry := NewRegistry()
-	registry.Register(&ToolDefinition{
-		ID:        "custom-sast-tool",
-		Type:      ToolTypeContainer,
-		LocalPath: "containers/custom-sast",
-	})
-	bridge.SetToolSystem(registry, nil, &mockExecutor{})
-
-	// Should use custom mapping
-	scanner := bridge.GetScanner(ScannerSAST)
-	if scanner == nil {
-		t.Fatal("GetScanner returned nil for custom mapped scanner")
+		t.Error("GetScannerByToolID should return nil when no scanner available")
 	}
 }
 
@@ -81,79 +57,144 @@ func TestScanBridge_SetToolSystem(t *testing.T) {
 
 	// Verify tool system is set by registering a tool and retrieving it
 	registry.Register(&ToolDefinition{
-		ID:    "trivy-vuln",
-		Type:      ToolTypeContainer,
-		LocalPath: "containers/trivy",
+		ID:           "trivy-vuln",
+		Type:         ToolTypeContainer,
+		LocalPath:    "containers/trivy",
+		OutputFormat: "json",
 	})
 
-	scanner := bridge.GetScanner(ScannerVuln)
+	scanner := bridge.GetScannerByToolID("trivy-vuln")
 	if scanner == nil {
 		t.Error("Tool system not properly configured")
 	}
 }
 
-func TestScanBridge_HasScanner(t *testing.T) {
+func TestScanBridge_HasScannerByToolID(t *testing.T) {
 	bridge := NewScanBridge()
 
 	// Set up tool system
 	registry := NewRegistry()
 	registry.Register(&ToolDefinition{
-		ID:    "trivy-sbom",
-		Type:      ToolTypeContainer,
-		LocalPath: "containers/trivy",
+		ID:           "trivy-sbom",
+		Type:         ToolTypeContainer,
+		LocalPath:    "containers/trivy",
+		OutputFormat: "json",
 	})
 	registry.Register(&ToolDefinition{
-		ID:    "trivy-vuln",
-		Type:      ToolTypeContainer,
-		LocalPath: "containers/trivy",
+		ID:           "trivy-vuln",
+		Type:         ToolTypeContainer,
+		LocalPath:    "containers/trivy",
+		OutputFormat: "json",
 	})
 	bridge.SetToolSystem(registry, nil, &mockExecutor{})
 
 	tests := []struct {
-		scannerType ScannerType
-		exists      bool
+		toolID string
+		exists bool
 	}{
-		{ScannerSBOM, true},     // yaml
-		{ScannerVuln, true},     // yaml
-		{ScannerSecrets, false}, // not registered
+		{"trivy-sbom", true},
+		{"trivy-vuln", true},
+		{"trivy-secrets", false}, // not registered
 	}
 
 	for _, tt := range tests {
-		t.Run(string(tt.scannerType), func(t *testing.T) {
-			if got := bridge.HasScanner(tt.scannerType); got != tt.exists {
-				t.Errorf("HasScanner(%q) = %v, want %v", tt.scannerType, got, tt.exists)
+		t.Run(tt.toolID, func(t *testing.T) {
+			if got := bridge.HasScannerByToolID(tt.toolID); got != tt.exists {
+				t.Errorf("HasScannerByToolID(%q) = %v, want %v", tt.toolID, got, tt.exists)
 			}
 		})
 	}
 }
 
-func TestScanBridge_GetAllScannerTypes(t *testing.T) {
+func TestScanBridge_GetAllScannerTools(t *testing.T) {
 	bridge := NewScanBridge()
 
 	// Set up tool system
 	registry := NewRegistry()
 	registry.Register(&ToolDefinition{
-		ID:    "trivy-sbom",
-		Type:      ToolTypeContainer,
-		LocalPath: "containers/trivy",
+		ID:           "trivy-sbom",
+		Type:         ToolTypeContainer,
+		LocalPath:    "containers/trivy",
+		OutputFormat: "json",
 	})
 	registry.Register(&ToolDefinition{
-		ID:    "trivy-vuln",
-		Type:      ToolTypeContainer,
-		LocalPath: "containers/trivy",
+		ID:           "trivy-vuln",
+		Type:         ToolTypeContainer,
+		LocalPath:    "containers/trivy",
+		OutputFormat: "json",
 	})
 	registry.Register(&ToolDefinition{
-		ID:    "trivy-secrets",
+		ID:           "trivy-secrets",
+		Type:         ToolTypeContainer,
+		LocalPath:    "containers/trivy",
+		OutputFormat: "json",
+	})
+	registry.Register(&ToolDefinition{
+		ID:        "static-site", // Not a scanner
 		Type:      ToolTypeContainer,
-		LocalPath: "containers/trivy",
+		LocalPath: "containers/static-site",
+		Serve: &ServeConfig{
+			ContainerPort: 8080,
+		},
 	})
 	bridge.SetToolSystem(registry, nil, &mockExecutor{})
 
-	scannerTypes := bridge.GetAllScannerTypes()
+	scannerTools := bridge.GetAllScannerTools()
 
-	// Should include: sbom, vuln, secrets
-	if len(scannerTypes) < 3 {
-		t.Errorf("GetAllScannerTypes() returned %d types, want at least 3", len(scannerTypes))
+	// Should include only scanner tools: trivy-sbom, trivy-vuln, trivy-secrets
+	if len(scannerTools) != 3 {
+		t.Errorf("GetAllScannerTools() returned %d tools, want 3", len(scannerTools))
+	}
+
+	// Verify all returned tools are scanners
+	for _, tool := range scannerTools {
+		if tool.GetScannerCategory() == "" {
+			t.Errorf("Tool %q should have a scanner category", tool.ID)
+		}
+	}
+}
+
+func TestScanBridge_GetScannersByCategory(t *testing.T) {
+	bridge := NewScanBridge()
+
+	// Set up tool system
+	registry := NewRegistry()
+	registry.Register(&ToolDefinition{
+		ID:           "trivy-sbom",
+		Type:         ToolTypeContainer,
+		LocalPath:    "containers/trivy",
+		OutputFormat: "json",
+	})
+	registry.Register(&ToolDefinition{
+		ID:           "trivy-vuln",
+		Type:         ToolTypeContainer,
+		LocalPath:    "containers/trivy",
+		OutputFormat: "json",
+	})
+	registry.Register(&ToolDefinition{
+		ID:           "semgrep",
+		Type:         ToolTypeContainer,
+		LocalPath:    "containers/semgrep",
+		OutputFormat: "json",
+	})
+	bridge.SetToolSystem(registry, nil, &mockExecutor{})
+
+	// Should find sbom scanners
+	sbomScanners := bridge.GetScannersByCategory("sbom")
+	if len(sbomScanners) != 1 {
+		t.Errorf("GetScannersByCategory('sbom') returned %d tools, want 1", len(sbomScanners))
+	}
+
+	// Should find sast scanners
+	sastScanners := bridge.GetScannersByCategory("sast")
+	if len(sastScanners) != 1 {
+		t.Errorf("GetScannersByCategory('sast') returned %d tools, want 1", len(sastScanners))
+	}
+
+	// Should return empty for unknown category
+	unknownScanners := bridge.GetScannersByCategory("unknown")
+	if len(unknownScanners) != 0 {
+		t.Errorf("GetScannersByCategory('unknown') returned %d tools, want 0", len(unknownScanners))
 	}
 }
 
@@ -193,36 +234,36 @@ func TestScanBridge_GetScannersForModule(t *testing.T) {
 		},
 	}, "/workspace")
 
-	// Create component types config with scanners
+	// Create component types config with scanners (tool IDs now)
 	componentTypes := &config.ComponentTypesConfig{
 		ComponentTypes: map[string]*config.ComponentType{
 			"go": {
-				Scanners: []string{"sbom", "vuln", "secrets"},
+				Scanners: []string{"trivy-sbom", "trivy-vuln", "trivy-secrets"},
 			},
 		},
 	}
 
 	scanners := bridge.GetScannersForModule(module, componentTypes)
 
-	// Should return scanner types for go component
+	// Should return scanner tool IDs for go component
 	if len(scanners) == 0 {
 		t.Fatal("GetScannersForModule returned empty scanner list")
 	}
 
 	// Verify expected scanners
-	found := make(map[ScannerType]bool)
-	for _, st := range scanners {
-		found[st] = true
+	found := make(map[string]bool)
+	for _, toolID := range scanners {
+		found[toolID] = true
 	}
 
-	if !found[ScannerSBOM] {
-		t.Error("ScannerSBOM should be in scanner list")
+	if !found["trivy-sbom"] {
+		t.Error("trivy-sbom should be in scanner list")
 	}
-	if !found[ScannerVuln] {
-		t.Error("ScannerVuln should be in scanner list")
+	if !found["trivy-vuln"] {
+		t.Error("trivy-vuln should be in scanner list")
 	}
-	if !found[ScannerSecrets] {
-		t.Error("ScannerSecrets should be in scanner list")
+	if !found["trivy-secrets"] {
+		t.Error("trivy-secrets should be in scanner list")
 	}
 }
 
@@ -248,10 +289,10 @@ func TestScanBridge_GetScannersForModule_MultipleComponents(t *testing.T) {
 	componentTypes := &config.ComponentTypesConfig{
 		ComponentTypes: map[string]*config.ComponentType{
 			"go": {
-				Scanners: []string{"sbom", "vuln"},
+				Scanners: []string{"trivy-sbom", "trivy-vuln"},
 			},
 			"dockerfile": {
-				Scanners: []string{"iac", "secrets"},
+				Scanners: []string{"trivy-iac", "trivy-secrets"},
 			},
 		},
 	}
@@ -259,9 +300,9 @@ func TestScanBridge_GetScannersForModule_MultipleComponents(t *testing.T) {
 	scanners := bridge.GetScannersForModule(module, componentTypes)
 
 	// Should return union of scanners from both component types
-	// Go: sbom, vuln
-	// Dockerfile: iac, secrets
-	// Total unique: sbom, vuln, iac, secrets = 4
+	// Go: trivy-sbom, trivy-vuln
+	// Dockerfile: trivy-iac, trivy-secrets
+	// Total unique: 4
 	if len(scanners) != 4 {
 		t.Errorf("GetScannersForModule returned %d scanners, want 4", len(scanners))
 	}
@@ -281,89 +322,16 @@ func TestGlobalScanBridge(t *testing.T) {
 	}
 }
 
-func TestParseScannerType(t *testing.T) {
-	tests := []struct {
-		input    string
-		expected ScannerType
-		ok       bool
-	}{
-		{"sbom", ScannerSBOM, true},
-		{"vuln", ScannerVuln, true},
-		{"secrets", ScannerSecrets, true},
-		{"compliance", ScannerCompliance, true},
-		{"iac", ScannerIaC, true},
-		{"sast", ScannerSAST, true},
-		{"zap", ScannerDAST, true},
-		{"unknown", "", false},
-		{"", "", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
-			got, ok := ParseScannerType(tt.input)
-			if ok != tt.ok {
-				t.Errorf("ParseScannerType(%q) ok = %v, want %v", tt.input, ok, tt.ok)
-			}
-			if got != tt.expected {
-				t.Errorf("ParseScannerType(%q) = %q, want %q", tt.input, got, tt.expected)
-			}
-		})
-	}
-}
-
-func TestScannerTypeConstants(t *testing.T) {
-	// Verify all scanner type constants have expected values
-	tests := []struct {
-		constant ScannerType
-		value    string
-	}{
-		{ScannerSBOM, "sbom"},
-		{ScannerVuln, "vuln"},
-		{ScannerSecrets, "secrets"},
-		{ScannerCompliance, "compliance"},
-		{ScannerIaC, "iac"},
-		{ScannerSAST, "sast"},
-		{ScannerDAST, "zap"},
-	}
-
-	for _, tt := range tests {
-		if string(tt.constant) != tt.value {
-			t.Errorf("Scanner constant %v = %q, want %q", tt.constant, tt.constant, tt.value)
-		}
-	}
-}
-
-func TestScanBridge_DefaultScannerMappings(t *testing.T) {
-	bridge := NewScanBridge()
-
-	// Verify default mappings exist
-	expected := map[ScannerType]string{
-		ScannerSBOM:       "trivy-sbom",
-		ScannerVuln:       "trivy-vuln",
-		ScannerSecrets:    "trivy-secrets",
-		ScannerIaC:        "trivy-iac",
-		ScannerCompliance: "trivy-compliance",
-		ScannerSAST:       "semgrep",
-		ScannerDAST:       "zap",
-	}
-
-	for scannerType, expectedToolID := range expected {
-		toolID := bridge.GetScannerToolID(scannerType)
-		if toolID != expectedToolID {
-			t.Errorf("Default mapping for %v = %q, want %q", scannerType, toolID, expectedToolID)
-		}
-	}
-}
-
 func TestScanBridge_Concurrent(t *testing.T) {
 	bridge := NewScanBridge()
 
 	// Set up tool system
 	registry := NewRegistry()
 	registry.Register(&ToolDefinition{
-		ID:    "trivy-sbom",
-		Type:      ToolTypeContainer,
-		LocalPath: "containers/trivy",
+		ID:           "trivy-sbom",
+		Type:         ToolTypeContainer,
+		LocalPath:    "containers/trivy",
+		OutputFormat: "json",
 	})
 	bridge.SetToolSystem(registry, nil, &mockExecutor{})
 
@@ -373,23 +341,23 @@ func TestScanBridge_Concurrent(t *testing.T) {
 	// Concurrent reads
 	go func() {
 		for i := 0; i < 100; i++ {
-			_ = bridge.GetScanner(ScannerSBOM)
+			_ = bridge.GetScannerByToolID("trivy-sbom")
 		}
 		done <- true
 	}()
 
-	// Concurrent HasScanner
+	// Concurrent HasScannerByToolID
 	go func() {
 		for i := 0; i < 100; i++ {
-			_ = bridge.HasScanner(ScannerVuln)
+			_ = bridge.HasScannerByToolID("trivy-vuln")
 		}
 		done <- true
 	}()
 
-	// Concurrent GetAllScannerTypes
+	// Concurrent GetAllScannerTools
 	go func() {
 		for i := 0; i < 100; i++ {
-			_ = bridge.GetAllScannerTypes()
+			_ = bridge.GetAllScannerTools()
 		}
 		done <- true
 	}()
@@ -398,4 +366,57 @@ func TestScanBridge_Concurrent(t *testing.T) {
 	<-done
 	<-done
 	<-done
+}
+
+func TestScanBridge_IsContainer(t *testing.T) {
+	bridge := NewScanBridge()
+
+	// Set up tool system with both container and system tools
+	registry := NewRegistry()
+	registry.Register(&ToolDefinition{
+		ID:           "trivy-sbom",
+		Type:         ToolTypeContainer,
+		LocalPath:    "containers/trivy",
+		OutputFormat: "json",
+	})
+	registry.Register(&ToolDefinition{
+		ID:     "go-lint",
+		Type:   ToolTypeSystem,
+		Binary: "golangci-lint",
+	})
+	bridge.SetToolSystem(registry, nil, &mockExecutor{})
+
+	if !bridge.IsContainer("trivy-sbom") {
+		t.Error("trivy-sbom should be a container tool")
+	}
+	if bridge.IsContainer("go-lint") {
+		t.Error("go-lint should not be a container tool")
+	}
+	if bridge.IsContainer("nonexistent") {
+		t.Error("nonexistent tool should return false")
+	}
+}
+
+func TestScanBridge_GetScanHandler(t *testing.T) {
+	bridge := NewScanBridge()
+
+	// Set up tool system
+	registry := NewRegistry()
+	registry.Register(&ToolDefinition{
+		ID:           "trivy-sbom",
+		Type:         ToolTypeContainer,
+		LocalPath:    "containers/trivy",
+		OutputFormat: "json",
+	})
+	bridge.SetToolSystem(registry, nil, &mockExecutor{})
+
+	handler := bridge.GetScanHandler("trivy-sbom")
+	if handler == nil {
+		t.Error("GetScanHandler should return a handler for valid tool")
+	}
+
+	// Non-existent tool should return nil
+	if bridge.GetScanHandler("nonexistent") != nil {
+		t.Error("GetScanHandler should return nil for non-existent tool")
+	}
 }

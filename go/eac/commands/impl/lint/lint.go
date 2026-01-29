@@ -107,6 +107,7 @@ func Lint() int {
 	// Create command config for framework
 	cmdCfg := &cmdframework.CommandConfig{
 		Type:           cmdframework.CommandTypeLint,
+		CommandPath:    "lint",
 		ActionVerb:     "Linting",
 		OutputDir:      paths.OutLintRelPath,
 		LogFileName:    "lint.log",

@@ -5,10 +5,11 @@ import (
 	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/initsummary"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/utils"
-	"github.com/ready-to-release/eac/go/eac/core/buildstate"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/hash"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"github.com/ready-to-release/eac/go/eac/core/workunit"
 )
 
 var log = logging.C()
@@ -57,38 +58,50 @@ func ValidateBuildArtifacts(
 		}
 	}
 
-	// Check for staleness using buildstate change detection
+	// Check for staleness using workunit StateManager change detection
 	var staleModules []string
 	staleReasons := make(map[string]string)
 
 	if moduleRegistry != nil {
-		// Build modules map for change detection
-		modulesMap := make(map[string]buildstate.ModuleFileGetter)
+		// Build list of modules with contracts
+		var monikers []string
+		moduleFiles := make(map[string][]string)
 		for _, moniker := range moduleList {
 			if contract, ok := moduleRegistry.Get(moniker); ok {
-				modulesMap[moniker] = contract
+				monikers = append(monikers, moniker)
+				// Expand glob patterns to get source files
+				files, err := hash.ExpandGlobPatterns(workspaceRoot, contract.GetGlobPatterns())
+				if err == nil {
+					moduleFiles[moniker] = files
+				}
 			}
 		}
 
-		if len(modulesMap) > 0 {
-			moduleFiles, err := buildstate.GetModuleSourceFiles(workspaceRoot, modulesMap)
+		if len(monikers) > 0 {
+			// Create hash provider
+			hashProvider := func(module string) (string, error) {
+				files, ok := moduleFiles[module]
+				if !ok {
+					return "", nil
+				}
+				return hash.Files(workspaceRoot, files)
+			}
+
+			stateMgr := workunit.NewStateManager(workspaceRoot)
+			rule := workunit.DefaultRules[workunit.ContextBuild]
+			changeResult, err := stateMgr.DetectModuleChanges(workunit.ContextBuild, monikers, rule, hashProvider)
 			if err != nil {
-				log.Debugf("Failed to get module source files for staleness check: %v", err)
-			} else {
-				changeResult, err := buildstate.DetectChanges(workspaceRoot, moduleFiles)
-				if err != nil {
-					log.Debugf("Failed to detect changes for staleness check: %v", err)
-				} else if !changeResult.FreshBuild {
-					// Report changed modules as stale (they need rebuild)
-					for _, moniker := range changeResult.ChangedModules {
-						// Only report as stale if artifacts are present (otherwise it's already in missingFrom)
-						if !utils.Contains(missingFrom, moniker) {
-							staleModules = append(staleModules, moniker)
-							if reason, ok := changeResult.ChangeReasons[moniker]; ok {
-								staleReasons[moniker] = reason
-							} else {
-								staleReasons[moniker] = "source files changed since build"
-							}
+				log.Debugf("Failed to detect changes for staleness check: %v", err)
+			} else if !changeResult.FreshRun {
+				// Report changed modules as stale (they need rebuild)
+				for _, moniker := range changeResult.ChangedModules {
+					// Only report as stale if artifacts are present (otherwise it's already in missingFrom)
+					if !utils.Contains(missingFrom, moniker) {
+						staleModules = append(staleModules, moniker)
+						if reason, ok := changeResult.ChangeReasons[moniker]; ok {
+							staleReasons[moniker] = reason
+						} else {
+							staleReasons[moniker] = "source files changed since build"
 						}
 					}
 				}

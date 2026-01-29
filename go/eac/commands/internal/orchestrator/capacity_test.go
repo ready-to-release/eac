@@ -73,14 +73,14 @@ func TestCalculateCapacity(t *testing.T) {
 			want:      2, // min(2, 16/2=8) = 2
 		},
 
-		// configMax as ceiling (the bug fix case)
+		// configMax (--roof) fully controls capacity
 		{
-			name:      "configMax higher than detected - uses detected",
+			name:      "configMax higher than detected - uses configMax",
 			cpuCount:  8,
 			ramGB:     16,
 			configMax: 16,
 			turbo:     1.0,
-			want:      8, // detected=8, configMax=16, uses 8
+			want:      16, // --roof=16 overrides detected=8
 		},
 		{
 			name:      "configMax lower than detected - uses configMax",
@@ -171,30 +171,33 @@ func TestCalculateCapacity(t *testing.T) {
 	}
 }
 
-func TestCalculateCapacity_ConfigMaxAsCeiling(t *testing.T) {
-	// This test specifically validates the bug fix:
-	// configMax should be a ceiling, not an override
+func TestCalculateCapacity_RoofFullyControls(t *testing.T) {
+	// This test validates that --roof fully controls capacity,
+	// allowing both raising AND lowering from auto-detected values
 
-	// Simulate a small machine (half resources of a typical dev machine)
+	// Case 1: Small machine with high --roof - should raise capacity
 	smallMachineCPU := 8
 	smallMachineRAM := 16 // GB
+	highRoof := 16
 
-	// Repo config designed for larger machine
-	repoConfigParallelism := 16
-
-	// Expected: should use detected capacity (8), not config (16)
-	got := calculateCapacity(smallMachineCPU, smallMachineRAM, repoConfigParallelism, 1.0)
-	if got != 8 {
-		t.Errorf("On small machine with configMax=16, got capacity=%d, want 8", got)
+	got := calculateCapacity(smallMachineCPU, smallMachineRAM, highRoof, 1.0)
+	if got != 16 {
+		t.Errorf("Small machine with --roof=16: got capacity=%d, want 16 (roof overrides detected)", got)
 	}
 
-	// Large machine should also respect configMax as ceiling
+	// Case 2: Large machine with low --roof - should lower capacity
 	largeMachineCPU := 32
 	largeMachineRAM := 64 // GB
+	lowRoof := 8
 
-	// Expected: should use configMax (16), not detected (32)
-	got = calculateCapacity(largeMachineCPU, largeMachineRAM, repoConfigParallelism, 1.0)
-	if got != 16 {
-		t.Errorf("On large machine with configMax=16, got capacity=%d, want 16", got)
+	got = calculateCapacity(largeMachineCPU, largeMachineRAM, lowRoof, 1.0)
+	if got != 8 {
+		t.Errorf("Large machine with --roof=8: got capacity=%d, want 8 (roof overrides detected)", got)
+	}
+
+	// Case 3: No roof (0) - should use auto-detection
+	got = calculateCapacity(smallMachineCPU, smallMachineRAM, 0, 1.0)
+	if got != 8 {
+		t.Errorf("Small machine with no --roof: got capacity=%d, want 8 (auto-detected)", got)
 	}
 }

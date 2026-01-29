@@ -5,15 +5,15 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/builders"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/cmdframework"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/tool"
+	"github.com/ready-to-release/eac/go/eac/core/workunit"
 )
 
 // FlattenModulesToComponentWork converts module layers to component work layers.
 // Each module is expanded to its buildable components with weight and dependency info.
 // Returns nil if no buildable components are found.
-func FlattenModulesToComponentWork(ctx *cmdframework.ExecutionContext) [][]orchestrator.ComponentWork {
+func FlattenModulesToComponentWork(ctx *cmdframework.ExecutionContext) [][]workunit.UnitSpec {
 	cfg := config.Global()
 	if cfg == nil || cfg.ComponentTypes == nil {
 		return nil
@@ -35,11 +35,11 @@ func FlattenModulesToComponentWork(ctx *cmdframework.ExecutionContext) [][]orche
 		layers = [][]string{monikers}
 	}
 
-	var componentLayers [][]orchestrator.ComponentWork
+	var componentLayers [][]workunit.UnitSpec
 	globalIndex := 0
 
 	for _, layerMonikers := range layers {
-		var layerWork []orchestrator.ComponentWork
+		var layerWork []workunit.UnitSpec
 
 		for _, moniker := range layerMonikers {
 			// Check if module is cached
@@ -54,15 +54,21 @@ func FlattenModulesToComponentWork(ctx *cmdframework.ExecutionContext) [][]orche
 			compHandlers := builders.GetHandlersForModule(module)
 			if len(compHandlers) == 0 {
 				// Module has no buildable components - create a placeholder
-				layerWork = append(layerWork, orchestrator.ComponentWork{
-					Module:        moniker,
-					Component:     "none",
-					ComponentType: "none",
-					Handler:       "",
-					Weight:        1,
-					BuildAfter:    nil,
+				layerWork = append(layerWork, workunit.UnitSpec{
+					ID: workunit.UnitID{
+						Context:   workunit.ContextBuild,
+						Module:    moniker,
+						Component: "none",
+						Tool:      "",
+					},
+					ComponentType:   "none",
+					Weight:          1,
+					IsContainer:     false,
+					IsHostInstalled: true,
+					DependsOn:       nil,
+					Cached:          isCached,
+					Metadata:      make(map[string]any),
 					Index:         globalIndex,
-					Cached:        isCached,
 				})
 				globalIndex++
 				continue
@@ -76,26 +82,38 @@ func FlattenModulesToComponentWork(ctx *cmdframework.ExecutionContext) [][]orche
 				// Get component type (may differ from name for named components)
 				compTypeName := module.Components.GetComponentType(componentName)
 
-				// Get build_after from component type config
-				var buildAfter []string
+				// Get build_after from component type config and convert to DependsOn
+				var dependsOn []workunit.UnitID
 				compType := cfg.ComponentTypes.Get(compTypeName)
 				if compType != nil {
-					buildAfter = compType.GetBuildAfter()
+					buildAfter := compType.GetBuildAfter()
+					for _, depComponent := range buildAfter {
+						dependsOn = append(dependsOn, workunit.UnitID{
+							Context:   workunit.ContextBuild,
+							Module:    moniker, // Same module - intra-module dependency
+							Component: depComponent,
+						})
+					}
 				}
 
 				// Get weight (base weight × amp, calculated internally)
 				weight := getComponentWeight(moniker, componentName, compTypeName, tool.OperationBuild)
 
-				work := orchestrator.ComponentWork{
-					Module:        moniker,
-					Component:     componentName,
-					ComponentType: compTypeName,
-					Handler:       handlerName,
-					IsContainer:   ch.Handler.IsContainer(),
-					Weight:        weight,
-					BuildAfter:    buildAfter,
+				work := workunit.UnitSpec{
+					ID: workunit.UnitID{
+						Context:   workunit.ContextBuild,
+						Module:    moniker,
+						Component: componentName,
+						Tool:      handlerName,
+					},
+					ComponentType:   compTypeName,
+					Weight:          weight,
+					IsContainer:     ch.Handler.IsContainer(),
+					IsHostInstalled: !ch.Handler.IsContainer(),
+					DependsOn:       dependsOn,
+					Cached:          isCached,
+					Metadata:      make(map[string]any),
 					Index:         globalIndex,
-					Cached:        isCached,
 				}
 
 				layerWork = append(layerWork, work)
@@ -112,8 +130,8 @@ func FlattenModulesToComponentWork(ctx *cmdframework.ExecutionContext) [][]orche
 }
 
 // FlattenComponentLayers flattens component work layers to a single slice.
-func FlattenComponentLayers(layers [][]orchestrator.ComponentWork) []orchestrator.ComponentWork {
-	var all []orchestrator.ComponentWork
+func FlattenComponentLayers(layers [][]workunit.UnitSpec) []workunit.UnitSpec {
+	var all []workunit.UnitSpec
 	for _, layer := range layers {
 		all = append(all, layer...)
 	}
@@ -121,7 +139,7 @@ func FlattenComponentLayers(layers [][]orchestrator.ComponentWork) []orchestrato
 }
 
 // CountComponents returns the total number of component work items.
-func CountComponents(layers [][]orchestrator.ComponentWork) int {
+func CountComponents(layers [][]workunit.UnitSpec) int {
 	count := 0
 	for _, layer := range layers {
 		count += len(layer)

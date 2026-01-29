@@ -2,6 +2,9 @@
 //
 // All scanners are defined in tool-config.yml and resolved via tool.GlobalScanBridge().
 // This package provides convenience functions for accessing scanner handlers.
+//
+// Scanner tools are detected dynamically by their GetScannerCategory() capability
+// (derived from tool ID patterns like "trivy-sbom" → "sbom" or explicit metadata).
 package scanners
 
 import (
@@ -12,9 +15,6 @@ import (
 
 // Type aliases - delegate to tool package types.
 type (
-	// ScannerType represents the type of security scanner.
-	ScannerType = tool.ScannerType
-
 	// ScanFunc is the signature for scanner functions.
 	ScanFunc = tool.ScanFunc
 
@@ -25,51 +25,51 @@ type (
 	ScanHandler = tool.ScanHandler
 )
 
-// Scanner type constants - re-export from tool package for convenience.
-const (
-	ScannerSBOM       = tool.ScannerSBOM
-	ScannerVuln       = tool.ScannerVuln
-	ScannerSecrets    = tool.ScannerSecrets
-	ScannerCompliance = tool.ScannerCompliance
-	ScannerIaC        = tool.ScannerIaC
-	ScannerSAST       = tool.ScannerSAST
-	ScannerDAST       = tool.ScannerDAST
-)
-
-// GetScanner returns the scanner function for a scanner type from tool-config.yml.
-func GetScanner(scannerType ScannerType) ScanFunc {
-	return tool.GlobalScanBridge().GetScanner(scannerType)
+// GetScanner returns the scanner function for a tool ID from tool-config.yml.
+func GetScanner(toolID string) ScanFunc {
+	return tool.GlobalScanBridge().GetScannerByToolID(toolID)
 }
 
-// HasScanner checks if a scanner is available for the given type.
-func HasScanner(scannerType ScannerType) bool {
-	return tool.GlobalScanBridge().HasScanner(scannerType)
+// HasScanner checks if a scanner tool exists.
+func HasScanner(toolID string) bool {
+	return tool.GlobalScanBridge().HasScannerByToolID(toolID)
 }
 
-// GetAllScannerTypes returns all available scanner types from tool-config.yml.
-func GetAllScannerTypes() []ScannerType {
-	return tool.GlobalScanBridge().GetAllScannerTypes()
+// GetAllScannerTools returns all tools that can be used as scanners.
+func GetAllScannerTools() []*tool.ToolDefinition {
+	return tool.GlobalScanBridge().GetAllScannerTools()
 }
 
-// GetScannersForModule returns all applicable scanners for a module's components.
+// GetScannersByCategory returns all scanner tools of a specific category.
+// Categories include: sbom, vuln, secrets, iac, compliance, sast, zap
+func GetScannersByCategory(category string) []*tool.ToolDefinition {
+	return tool.GlobalScanBridge().GetScannersByCategory(category)
+}
+
+// GetScannersForModule returns all applicable scanner tool IDs for a module's components.
 // Uses component-types.yml to determine which scanners apply based on
 // the component types present in the module.
-func GetScannersForModule(module *modules.ModuleContract, componentTypes *config.ComponentTypesConfig) []ScannerType {
+func GetScannersForModule(module *modules.ModuleContract, componentTypes *config.ComponentTypesConfig) []string {
 	return tool.GlobalScanBridge().GetScannersForModule(module, componentTypes)
 }
 
-// GetScannerToolID returns the tool ID mapped to a scanner type.
-func GetScannerToolID(scannerType ScannerType) string {
-	return tool.GlobalScanBridge().GetScannerToolID(scannerType)
+// GetScannerToolsForModule returns tool definitions for all applicable scanners.
+func GetScannerToolsForModule(module *modules.ModuleContract, componentTypes *config.ComponentTypesConfig) []*tool.ToolDefinition {
+	return tool.GlobalScanBridge().GetScannerToolsForModule(module, componentTypes)
 }
 
-// GetScanHandler returns a ScanHandler interface for a scanner type.
+// GetScannerToolByID returns the tool definition by ID.
+func GetScannerToolByID(toolID string) *tool.ToolDefinition {
+	return tool.GlobalScanBridge().GetScannerToolByID(toolID)
+}
+
+// GetScanHandler returns a ScanHandler interface for a tool ID.
 // This provides compatibility with code expecting the ScanHandler interface.
-func GetScanHandler(scannerType ScannerType) ScanHandler {
-	return tool.GlobalScanBridge().GetScanHandler(scannerType)
+func GetScanHandler(toolID string) ScanHandler {
+	return tool.GlobalScanBridge().GetScanHandler(toolID)
 }
 
-// ParseScannerType converts a string to ScannerType.
-func ParseScannerType(s string) (ScannerType, bool) {
-	return tool.ParseScannerType(s)
+// IsContainer returns true if the scanner tool runs in a container.
+func IsContainer(toolID string) bool {
+	return tool.GlobalScanBridge().IsContainer(toolID)
 }

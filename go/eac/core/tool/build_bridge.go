@@ -34,6 +34,7 @@ func (b *BuildBridge) SetToolSystem(registry Registry, resolver *DefaultResolver
 }
 
 // GetHandler returns a build handler by name from the tool registry.
+// Uses canonical lookup with binding rules (auto/system/container).
 func (b *BuildBridge) GetHandler(name string) BuildHandler {
 	b.mu.RLock()
 	defer b.mu.RUnlock()

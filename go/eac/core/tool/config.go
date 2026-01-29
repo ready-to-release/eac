@@ -66,7 +66,9 @@ func LoadToolConfig(repoRoot, configRoot string) (*ToolConfig, error) {
 
 	if config == nil {
 		config = &ToolConfig{
-			Tools:          make(map[string]*ToolDefinition),
+			SystemTools:    make(map[string]*ToolDefinition),
+			ContainerTools: make(map[string]*ToolDefinition),
+			ToolBindings:   make(map[string]ToolBinding),
 			ComponentTools: make(map[string]*ToolAssignment),
 			Environments:   make(map[string]*EnvironmentConfig),
 			Caches:         make(map[string]*CacheConfig),
@@ -131,7 +133,12 @@ func loadToolConfigDefaults(repoRoot string) (*ToolConfig, error) {
 	}
 
 	// Backfill IDs from map keys
-	for id, tool := range config.Tools {
+	for id, tool := range config.SystemTools {
+		if tool.ID == "" {
+			tool.ID = id
+		}
+	}
+	for id, tool := range config.ContainerTools {
 		if tool.ID == "" {
 			tool.ID = id
 		}
@@ -167,7 +174,7 @@ func validateToolConfigWithDuplicates(data []byte, filePath string, config *Tool
 	return errs
 }
 
-// checkRequiredSystemTools validates that bootstrap tools are defined as system type.
+// checkRequiredSystemTools validates that bootstrap tools are defined in system-tools.
 // Only docker and go are required as system dependencies - everything else can run in containers.
 func checkRequiredSystemTools(config *ToolConfig, filePath string) ConfigValidationErrors {
 	var errs ConfigValidationErrors
@@ -178,20 +185,12 @@ func checkRequiredSystemTools(config *ToolConfig, filePath string) ConfigValidat
 	requiredSystemTools := []string{"docker", "go"}
 
 	for _, toolID := range requiredSystemTools {
-		tool, exists := config.Tools[toolID]
+		_, exists := config.SystemTools[toolID]
 		if !exists {
 			errs = append(errs, ConfigValidationError{
-				Message: fmt.Sprintf("required bootstrap tool %q is not defined", toolID),
+				Message: fmt.Sprintf("required bootstrap tool %q is not defined in system-tools", toolID),
 				File:    filePath,
-				Fix:     fmt.Sprintf("Add %q as a system tool - it's required for bootstrapping", toolID),
-			})
-			continue
-		}
-		if tool.Type != ToolTypeSystem {
-			errs = append(errs, ConfigValidationError{
-				Message: fmt.Sprintf("bootstrap tool %q must be type 'system', got %q", toolID, tool.Type),
-				File:    filePath,
-				Fix:     fmt.Sprintf("%q is a bootstrap dependency and must be system-installed (type: system)", toolID),
+				Fix:     fmt.Sprintf("Add %q to the system-tools section - it's required for bootstrapping", toolID),
 			})
 		}
 	}
@@ -218,11 +217,11 @@ func checkToolReferences(config *ToolConfig, filePath string) ConfigValidationEr
 	for compType, assignment := range config.ComponentTools {
 		for _, op := range AllOperations() {
 			for _, toolID := range assignment.GetToolIDs(op) {
-				if _, ok := config.Tools[toolID]; !ok {
+				if !config.hasToolCanonical(toolID) {
 					errs = append(errs, ConfigValidationError{
 						Message: fmt.Sprintf("component-tools[%s].%s references unknown tool %q", compType, op, toolID),
 						File:    filePath,
-						Fix:     fmt.Sprintf("Add tool %q to the tools section, or fix the typo in the reference", toolID),
+						Fix:     fmt.Sprintf("Add tool %q to system-tools or container-tools section", toolID),
 					})
 				}
 			}
@@ -234,11 +233,11 @@ func checkToolReferences(config *ToolConfig, filePath string) ConfigValidationEr
 		for compType, assignment := range env.ComponentTools {
 			for _, op := range AllOperations() {
 				for _, toolID := range assignment.GetToolIDs(op) {
-					if _, ok := config.Tools[toolID]; !ok {
+					if !config.hasToolCanonical(toolID) {
 						errs = append(errs, ConfigValidationError{
 							Message: fmt.Sprintf("environments[%s].component-tools[%s].%s references unknown tool %q", envName, compType, op, toolID),
 							File:    filePath,
-							Fix:     fmt.Sprintf("Add tool %q to the tools section, or fix the typo in the reference", toolID),
+							Fix:     fmt.Sprintf("Add tool %q to system-tools or container-tools section", toolID),
 						})
 					}
 				}
@@ -246,14 +245,27 @@ func checkToolReferences(config *ToolConfig, filePath string) ConfigValidationEr
 		}
 	}
 
-	// Check tool requirements reference valid tools
-	for id, tool := range config.Tools {
+	// Check system-tools requirements reference valid tools
+	for id, tool := range config.SystemTools {
 		for _, req := range tool.Requirements {
-			if _, ok := config.Tools[req]; !ok {
+			if !config.hasToolCanonical(req) {
 				errs = append(errs, ConfigValidationError{
-					Message: fmt.Sprintf("tool %q requires unknown tool %q", id, req),
+					Message: fmt.Sprintf("system-tools[%s] requires unknown tool %q", id, req),
 					File:    filePath,
-					Fix:     fmt.Sprintf("Add tool %q to the tools section, or fix the requirement in tool %q", req, id),
+					Fix:     fmt.Sprintf("Add tool %q to system-tools or container-tools section", req),
+				})
+			}
+		}
+	}
+
+	// Check container-tools requirements reference valid tools
+	for id, tool := range config.ContainerTools {
+		for _, req := range tool.Requirements {
+			if !config.hasToolCanonical(req) {
+				errs = append(errs, ConfigValidationError{
+					Message: fmt.Sprintf("container-tools[%s] requires unknown tool %q", id, req),
+					File:    filePath,
+					Fix:     fmt.Sprintf("Add tool %q to system-tools or container-tools section", req),
 				})
 			}
 		}
@@ -279,16 +291,41 @@ func mergeToolConfig(base, override *ToolConfig) {
 		return
 	}
 
-	// Merge tools
-	for id, tool := range override.Tools {
+	// Merge system-tools
+	for id, tool := range override.SystemTools {
 		if tool.ID == "" {
 			tool.ID = id
 		}
-		base.Tools[id] = tool
+		if base.SystemTools == nil {
+			base.SystemTools = make(map[string]*ToolDefinition)
+		}
+		base.SystemTools[id] = tool
+	}
+
+	// Merge container-tools
+	for id, tool := range override.ContainerTools {
+		if tool.ID == "" {
+			tool.ID = id
+		}
+		if base.ContainerTools == nil {
+			base.ContainerTools = make(map[string]*ToolDefinition)
+		}
+		base.ContainerTools[id] = tool
+	}
+
+	// Merge tool-bindings
+	for name, binding := range override.ToolBindings {
+		if base.ToolBindings == nil {
+			base.ToolBindings = make(map[string]ToolBinding)
+		}
+		base.ToolBindings[name] = binding
 	}
 
 	// Merge component-tools
 	for compType, assignment := range override.ComponentTools {
+		if base.ComponentTools == nil {
+			base.ComponentTools = make(map[string]*ToolAssignment)
+		}
 		if base.ComponentTools[compType] == nil {
 			base.ComponentTools[compType] = assignment
 		} else {
@@ -298,6 +335,9 @@ func mergeToolConfig(base, override *ToolConfig) {
 
 	// Merge environments
 	for envName, envConfig := range override.Environments {
+		if base.Environments == nil {
+			base.Environments = make(map[string]*EnvironmentConfig)
+		}
 		if base.Environments[envName] == nil {
 			base.Environments[envName] = envConfig
 		} else {
@@ -317,6 +357,9 @@ func mergeToolConfig(base, override *ToolConfig) {
 
 	// Merge caches
 	for name, cache := range override.Caches {
+		if base.Caches == nil {
+			base.Caches = make(map[string]*CacheConfig)
+		}
 		base.Caches[name] = cache
 	}
 }

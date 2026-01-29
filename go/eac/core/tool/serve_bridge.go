@@ -9,30 +9,6 @@ import (
 	"sync"
 )
 
-// ServerType represents the type of server.
-// This allows for different serve implementations (static site, live reload, etc.)
-type ServerType string
-
-const (
-	ServerStaticSite  ServerType = "static-site"
-	ServerMkDocsLive  ServerType = "mkdocs-live"
-	ServerStructurizr ServerType = "structurizr"
-)
-
-// ParseServerType converts a string to ServerType.
-func ParseServerType(s string) (ServerType, bool) {
-	switch s {
-	case "static-site":
-		return ServerStaticSite, true
-	case "mkdocs-live":
-		return ServerMkDocsLive, true
-	case "structurizr":
-		return ServerStructurizr, true
-	default:
-		return "", false
-	}
-}
-
 // ServeOptions contains options for serve execution.
 type ServeOptions struct {
 	LiveReload  bool     // Enable live reload on file changes
@@ -54,12 +30,10 @@ type ServeResult struct {
 type ServeFunc func(workspaceRoot, moduleRoot, contentPath string, port int, logWriter io.Writer, opts ServeOptions) (*ServeResult, error)
 
 // ServeBridge provides a unified interface for resolving serve handlers.
-// All servers are resolved from tool-config.yml definitions.
+// All servers are resolved dynamically from tool-config.yml definitions.
+// Server tools are detected by their IsServable() capability (having a Serve config).
 type ServeBridge struct {
 	mu sync.RWMutex
-
-	// Server type to tool ID mapping (from tool-config.yml)
-	serverTools map[ServerType]string
 
 	// Tool system integration
 	registry      Registry
@@ -70,14 +44,7 @@ type ServeBridge struct {
 
 // NewServeBridge creates a new serve bridge.
 func NewServeBridge() *ServeBridge {
-	return &ServeBridge{
-		serverTools: map[ServerType]string{
-			// Default mappings (from tool-config.yml)
-			ServerStaticSite:  "static-site",
-			ServerMkDocsLive:  "mkdocs-live",
-			ServerStructurizr: "structurizr",
-		},
-	}
+	return &ServeBridge{}
 }
 
 // SetToolSystem configures the tool system for tool-config.yml defined servers.
@@ -88,21 +55,6 @@ func (b *ServeBridge) SetToolSystem(registry Registry, resolver *DefaultResolver
 	b.resolver = resolver
 	b.executor = executor
 	b.toolSystemSet = true
-}
-
-// SetServerToolMapping sets a custom server-to-tool mapping.
-// This allows overriding the default tool ID for a server type.
-func (b *ServeBridge) SetServerToolMapping(serverType ServerType, toolID string) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	b.serverTools[serverType] = toolID
-}
-
-// GetServerToolID returns the tool ID mapped to a server type.
-func (b *ServeBridge) GetServerToolID(serverType ServerType) string {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
-	return b.serverTools[serverType]
 }
 
 // getRegistry returns the registry to use, falling back to GlobalRegistry.
@@ -131,8 +83,9 @@ func (b *ServeBridge) getExecutor() Executor {
 	return nil
 }
 
-// GetServer returns the server function for a server type from tool-config.yml.
-func (b *ServeBridge) GetServer(serverType ServerType) ServeFunc {
+// GetServerByToolID returns the server function for a tool ID from tool-config.yml.
+// The tool must be servable (have a Serve configuration).
+func (b *ServeBridge) GetServerByToolID(toolID string) ServeFunc {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
@@ -140,8 +93,7 @@ func (b *ServeBridge) GetServer(serverType ServerType) ServeFunc {
 	executor := b.getExecutor()
 
 	if registry != nil && executor != nil {
-		toolID := b.serverTools[serverType]
-		if tool, ok := registry.Get(toolID); ok {
+		if tool, ok := registry.Get(toolID); ok && tool.IsServable() {
 			return b.createToolServeFuncWithExecutor(tool, executor)
 		}
 	}
@@ -149,44 +101,102 @@ func (b *ServeBridge) GetServer(serverType ServerType) ServeFunc {
 	return nil
 }
 
-// HasServer checks if a server is available for the given type.
-func (b *ServeBridge) HasServer(serverType ServerType) bool {
+// GetServerForComponent returns the server function for a component type.
+// Uses the resolver to look up the server tool from component-tools config.
+func (b *ServeBridge) GetServerForComponent(componentType string) ServeFunc {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
-	registry := b.getRegistry()
-	if registry != nil {
-		toolID := b.serverTools[serverType]
-		if _, ok := registry.Get(toolID); ok {
-			return true
-		}
+	if b.resolver == nil {
+		return nil
 	}
 
-	return false
+	executor := b.getExecutor()
+	if executor == nil {
+		return nil
+	}
+
+	tool, err := b.resolver.Resolve(componentType, OperationServe)
+	if err != nil || tool == nil {
+		return nil
+	}
+
+	if !tool.IsServable() {
+		return nil
+	}
+
+	return b.createToolServeFuncWithExecutor(tool, executor)
 }
 
-// GetAllServerTypes returns all available server types.
-func (b *ServeBridge) GetAllServerTypes() []ServerType {
+// GetServerTool returns the tool definition for a component type's server.
+// Returns nil if no server is configured or the tool is not servable.
+func (b *ServeBridge) GetServerTool(componentType string) *ToolDefinition {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
-	serverSet := make(map[ServerType]bool)
+	if b.resolver == nil {
+		return nil
+	}
 
-	// Add servers available via tool registry
+	tool, err := b.resolver.Resolve(componentType, OperationServe)
+	if err != nil || tool == nil {
+		return nil
+	}
+
+	if !tool.IsServable() {
+		return nil
+	}
+
+	return tool
+}
+
+// GetServerToolByID returns the tool definition by ID if it's servable.
+// Returns nil if the tool doesn't exist or is not servable.
+func (b *ServeBridge) GetServerToolByID(toolID string) *ToolDefinition {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
 	registry := b.getRegistry()
-	if registry != nil {
-		for st, toolID := range b.serverTools {
-			if _, ok := registry.Get(toolID); ok {
-				serverSet[st] = true
-			}
+	if registry == nil {
+		return nil
+	}
+
+	tool, ok := registry.Get(toolID)
+	if !ok || !tool.IsServable() {
+		return nil
+	}
+
+	return tool
+}
+
+// HasServerForComponent checks if a server is available for the given component type.
+func (b *ServeBridge) HasServerForComponent(componentType string) bool {
+	return b.GetServerTool(componentType) != nil
+}
+
+// HasServerByToolID checks if a server tool exists and is servable.
+func (b *ServeBridge) HasServerByToolID(toolID string) bool {
+	return b.GetServerToolByID(toolID) != nil
+}
+
+// GetAllServableTools returns all tools that can be used as servers.
+// A tool is servable if it has a Serve configuration with a container port.
+func (b *ServeBridge) GetAllServableTools() []*ToolDefinition {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	registry := b.getRegistry()
+	if registry == nil {
+		return nil
+	}
+
+	var servable []*ToolDefinition
+	for _, tool := range registry.GetAll() {
+		if tool.IsServable() {
+			servable = append(servable, tool)
 		}
 	}
-
-	result := make([]ServerType, 0, len(serverSet))
-	for st := range serverSet {
-		result = append(result, st)
-	}
-	return result
+	return servable
 }
 
 // createToolServeFuncWithExecutor wraps a ToolDefinition as a ServeFunc with an explicit executor.

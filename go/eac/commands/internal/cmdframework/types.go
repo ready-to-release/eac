@@ -31,6 +31,7 @@ const (
 type CommandConfig struct {
 	// Identity
 	Type        CommandType // build, test, scan
+	CommandPath string      // Command path for TUI binding (e.g., "build", "test", "work create")
 	ActionVerb  string      // "Building", "Testing", "Scanning"
 	OutputDir   string      // Relative path: "out/build", "out/test", "out/scan"
 	LogFileName string      // "build.log", "test.log", "scan.log"

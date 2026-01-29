@@ -19,11 +19,12 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/output"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	"github.com/ready-to-release/eac/go/eac/core/environments"
+	"github.com/ready-to-release/eac/go/eac/core/hash"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/manifest"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
-	"github.com/ready-to-release/eac/go/eac/core/scanstate"
 	"github.com/ready-to-release/eac/go/eac/core/tool"
+	"github.com/ready-to-release/eac/go/eac/core/workunit"
 )
 
 func init() {
@@ -180,27 +181,36 @@ func updateScanState(ctx *cmdframework.ExecutionContext, sctx *scanContext) {
 		return
 	}
 
-	// Build modules map for state update (compute moduleFiles fresh like build does)
-	modulesMap := make(map[string]scanstate.ModuleFileGetter)
-	for moniker := range scannedModules {
-		if contract, ok := ctx.ModuleRegistry.Get(moniker); ok {
-			modulesMap[moniker] = contract
-		}
-	}
-
-	moduleFiles, err := scanstate.GetModuleSourceFiles(ctx.WorkspaceRoot, modulesMap)
-	if err != nil {
-		log.Warnf("Failed to get module files for state update: %v", err)
-		return
-	}
-
 	log.Debugf("[SCAN-CACHE] Updating state for %d modules", len(scannedModules))
 	for moniker, passed := range scannedModules {
 		log.Debugf("[SCAN-CACHE] Module %s: passed=%v", moniker, passed)
 	}
 
-	if err := scanstate.UpdateModuleState(ctx.WorkspaceRoot, scannedModules, moduleFiles); err != nil {
-		log.Warnf("Failed to update scan state: %v", err)
+	// Update state using StateManager
+	stateMgr := workunit.NewStateManager(ctx.WorkspaceRoot)
+	for moniker, passed := range scannedModules {
+		contract, ok := ctx.ModuleRegistry.Get(moniker)
+		if !ok {
+			continue
+		}
+
+		// Get source files and compute hash
+		patterns := contract.GetGlobPatterns()
+		files, err := hash.ExpandGlobPatterns(ctx.WorkspaceRoot, patterns)
+		if err != nil {
+			log.Debugf("[SCAN-CACHE] Failed to expand patterns for %s: %v", moniker, err)
+			continue
+		}
+
+		sourceHash, err := hash.Files(ctx.WorkspaceRoot, files)
+		if err != nil {
+			log.Debugf("[SCAN-CACHE] Failed to hash files for %s: %v", moniker, err)
+			continue
+		}
+
+		if err := stateMgr.SaveModuleResult(workunit.ContextScan, moniker, passed, sourceHash); err != nil {
+			log.Warnf("Failed to update scan state for %s: %v", moniker, err)
+		}
 	}
 }
 
@@ -369,21 +379,21 @@ func scanComponentWorker(ctx *cmdframework.ExecutionContext, moniker, component 
 
 	// If scanner type specified (3-part key), run only that scanner
 	if scannerTypeStr != "" {
-		scannerType, valid := internal.ParseScannerType(scannerTypeStr)
-		if !valid {
+		toolID := tool.ScannerToolIDForCategory(scannerTypeStr)
+		if toolID == "" {
 			output.Writeln(logWriter, "Error: invalid scanner type: %s", scannerTypeStr)
 			return 1
 		}
-		return runComponentScanner(ctx, module, moniker, compName, componentRoot, scannerType, multiCfg, logWriter)
+		return runComponentScanner(ctx, module, moniker, compName, componentRoot, internal.ScannerType(toolID), multiCfg, logWriter)
 	}
 
-	// Legacy 2-part key: run all scanners from component type configuration
+	// 2-part key (no scanner specified): run all scanners from component type configuration
 	var scanners []internal.ScannerType
 	seenScanners := make(map[string]bool)
 	for _, s := range compType.GetScanners() {
 		if !seenScanners[s] {
-			if scannerType, valid := internal.ParseScannerType(s); valid {
-				scanners = append(scanners, scannerType)
+			if toolID := tool.ScannerToolIDForCategory(s); toolID != "" {
+				scanners = append(scanners, internal.ScannerType(toolID))
 				seenScanners[s] = true
 			}
 		}
@@ -505,7 +515,7 @@ func runScannerOnPath(ctx *cmdframework.ExecutionContext, targetPath string, sca
 	logScannerConfig(scannerType, logWriter, multiCfg, ctx)
 
 	// Get scanner from registry (native or YAML)
-	scanFn := scanners.GetScanner(tool.ScannerType(scannerType))
+	scanFn := scanners.GetScanner(string(scannerType))
 	if scanFn == nil {
 		return nil, fmt.Errorf("no scanner found for type: %s", scannerType)
 	}
@@ -745,6 +755,7 @@ func GetDockerImage(ctx *cmdframework.ExecutionContext, scannerType internal.Sca
 func CreateCommandConfig(scannerType internal.ScannerType, scannerName string, monikers []string, debug, useTUI bool, tuiHeight int) *cmdframework.CommandConfig {
 	return &cmdframework.CommandConfig{
 		Type:        cmdframework.CommandTypeScan,
+		CommandPath: "scan",
 		ActionVerb:  fmt.Sprintf("Scanning (%s)", scannerName),
 		OutputDir:   "out/scan",
 		LogFileName: fmt.Sprintf("%s.log", scannerType),
@@ -832,7 +843,8 @@ func multiScanAfterResolve(ctx *cmdframework.ExecutionContext) error {
 
 	// Clear scan state if --skip-cache
 	if ctx.Config.ForceRebuild {
-		if err := scanstate.ClearState(ctx.WorkspaceRoot); err != nil {
+		stateMgr := workunit.NewStateManager(ctx.WorkspaceRoot)
+		if err := stateMgr.ClearContext(workunit.ContextScan); err != nil {
 			log.Warnf("Failed to clear scan state: %v", err)
 		}
 		return nil
@@ -857,25 +869,40 @@ func detectIncrementalScanChanges(ctx *cmdframework.ExecutionContext, sctx *scan
 		ctx.SetChangeDetectionTiming(time.Since(startTime))
 	}()
 
-	// Build modules map for change detection
-	modulesMap := make(map[string]scanstate.ModuleFileGetter)
-	for _, moniker := range ctx.GetExecutionMonikers() {
+	// Collect modules for change detection
+	monikers := ctx.GetExecutionMonikers()
+	if len(monikers) == 0 {
+		return
+	}
+
+	// Build module files map for hash computation
+	moduleFiles := make(map[string][]string)
+	for _, moniker := range monikers {
 		if contract, ok := ctx.ModuleRegistry.Get(moniker); ok {
-			modulesMap[moniker] = contract
+			patterns := contract.GetGlobPatterns()
+			files, err := hash.ExpandGlobPatterns(ctx.WorkspaceRoot, patterns)
+			if err != nil {
+				log.Debugf("Failed to expand patterns for %s: %v", moniker, err)
+				continue
+			}
+			moduleFiles[moniker] = files
 		}
 	}
 
-	if len(modulesMap) == 0 {
-		return
+	// Use StateManager for change detection
+	stateMgr := workunit.NewStateManager(ctx.WorkspaceRoot)
+	rule := workunit.DefaultRules[workunit.ContextScan]
+
+	// Create hash provider that computes hash from expanded files
+	hashProvider := func(module string) (string, error) {
+		files, ok := moduleFiles[module]
+		if !ok {
+			return "", fmt.Errorf("no files for module %s", module)
+		}
+		return hash.Files(ctx.WorkspaceRoot, files)
 	}
 
-	moduleFiles, err := scanstate.GetModuleSourceFiles(ctx.WorkspaceRoot, modulesMap)
-	if err != nil {
-		log.Debugf("Failed to get module source files: %v", err)
-		return
-	}
-
-	changeResult, err := scanstate.DetectChanges(ctx.WorkspaceRoot, moduleFiles)
+	changeResult, err := stateMgr.DetectModuleChanges(workunit.ContextScan, monikers, rule, hashProvider)
 	if err != nil {
 		log.Debugf("Failed to detect scan changes: %v", err)
 		return
@@ -913,7 +940,7 @@ func detectIncrementalScanChanges(ctx *cmdframework.ExecutionContext, sctx *scan
 	var changedList []string
 	var cachedList []string
 
-	for _, moniker := range ctx.GetExecutionMonikers() {
+	for _, moniker := range monikers {
 		if changedSet[moniker] {
 			changedList = append(changedList, moniker)
 		} else {
@@ -987,8 +1014,8 @@ func multiScanWorker(ctx *cmdframework.ExecutionContext, moniker string, logWrit
 			}
 			for _, s := range compType.GetScanners() {
 				if !seenScanners[s] {
-					if scannerType, valid := internal.ParseScannerType(s); valid {
-						scanners = append(scanners, scannerType)
+					if toolID := tool.ScannerToolIDForCategory(s); toolID != "" {
+						scanners = append(scanners, internal.ScannerType(toolID))
 						seenScanners[s] = true
 					}
 				}
@@ -1083,7 +1110,7 @@ func runScanner(ctx *cmdframework.ExecutionContext, module *modules.ModuleContra
 	logScannerConfig(scannerType, logWriter, multiCfg, ctx)
 
 	// Get scanner from registry (native or YAML)
-	scanFn := scanners.GetScanner(tool.ScannerType(scannerType))
+	scanFn := scanners.GetScanner(string(scannerType))
 	if scanFn == nil {
 		return nil, fmt.Errorf("no scanner found for type: %s", scannerType)
 	}

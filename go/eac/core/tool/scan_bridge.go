@@ -12,55 +12,16 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 )
 
-// ScannerType represents the type of security scanner.
-// This mirrors internal.ScannerType to avoid import cycles between
-// the tool package and scan/internal package.
-type ScannerType string
-
-const (
-	ScannerSBOM       ScannerType = "sbom"
-	ScannerVuln       ScannerType = "vuln"
-	ScannerSecrets    ScannerType = "secrets"
-	ScannerCompliance ScannerType = "compliance"
-	ScannerIaC        ScannerType = "iac"
-	ScannerSAST       ScannerType = "sast"
-	ScannerDAST       ScannerType = "zap"
-)
-
-// ParseScannerType converts a string to ScannerType.
-func ParseScannerType(s string) (ScannerType, bool) {
-	switch s {
-	case "sbom":
-		return ScannerSBOM, true
-	case "vuln":
-		return ScannerVuln, true
-	case "secrets":
-		return ScannerSecrets, true
-	case "compliance":
-		return ScannerCompliance, true
-	case "iac":
-		return ScannerIaC, true
-	case "sast":
-		return ScannerSAST, true
-	case "zap":
-		return ScannerDAST, true
-	default:
-		return "", false
-	}
-}
-
 // ScanFunc is the signature for scanner functions.
 // Parameters: workspace root, module root, output dir, log writer, scan options
 // Returns: findings (JSON-serializable), error
 type ScanFunc func(workspaceRoot, moduleRoot, outputDir string, logWriter io.Writer, opts ScanOptions) (interface{}, error)
 
 // ScanBridge provides a unified interface for resolving security scan handlers.
-// All scanners are resolved from tool-config.yml definitions.
+// All scanners are resolved dynamically from tool-config.yml definitions.
+// Scanner tools are detected by their GetScannerCategory() capability.
 type ScanBridge struct {
 	mu sync.RWMutex
-
-	// Scanner type to tool ID mapping (from tool-config.yml)
-	scannerTools map[ScannerType]string
 
 	// Tool system integration
 	registry      Registry
@@ -71,18 +32,7 @@ type ScanBridge struct {
 
 // NewScanBridge creates a new scan bridge.
 func NewScanBridge() *ScanBridge {
-	return &ScanBridge{
-		scannerTools: map[ScannerType]string{
-			// Default mappings (from tool-config.yml)
-			ScannerSBOM:       "trivy-sbom",
-			ScannerVuln:       "trivy-vuln",
-			ScannerSecrets:    "trivy-secrets",
-			ScannerIaC:        "trivy-iac",
-			ScannerCompliance: "trivy-compliance",
-			ScannerSAST:       "semgrep",
-			ScannerDAST:       "zap",
-		},
-	}
+	return &ScanBridge{}
 }
 
 // SetToolSystem configures the tool system for tool-config.yml defined scanners.
@@ -93,21 +43,6 @@ func (b *ScanBridge) SetToolSystem(registry Registry, resolver *DefaultResolver,
 	b.resolver = resolver
 	b.executor = executor
 	b.toolSystemSet = true
-}
-
-// SetScannerToolMapping sets a custom scanner-to-tool mapping.
-// This allows overriding the default tool ID for a scanner type.
-func (b *ScanBridge) SetScannerToolMapping(scannerType ScannerType, toolID string) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	b.scannerTools[scannerType] = toolID
-}
-
-// GetScannerToolID returns the tool ID mapped to a scanner type.
-func (b *ScanBridge) GetScannerToolID(scannerType ScannerType) string {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
-	return b.scannerTools[scannerType]
 }
 
 // getRegistry returns the registry to use, falling back to GlobalRegistry.
@@ -136,8 +71,8 @@ func (b *ScanBridge) getExecutor() Executor {
 	return nil
 }
 
-// GetScanner returns the scanner function for a scanner type from tool-config.yml.
-func (b *ScanBridge) GetScanner(scannerType ScannerType) ScanFunc {
+// GetScannerByToolID returns the scanner function for a tool ID from tool-config.yml.
+func (b *ScanBridge) GetScannerByToolID(toolID string) ScanFunc {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
@@ -145,7 +80,6 @@ func (b *ScanBridge) GetScanner(scannerType ScannerType) ScanFunc {
 	executor := b.getExecutor()
 
 	if registry != nil && executor != nil {
-		toolID := b.scannerTools[scannerType]
 		if tool, ok := registry.Get(toolID); ok {
 			return b.createToolScanFuncWithExecutor(tool, executor)
 		}
@@ -154,50 +88,93 @@ func (b *ScanBridge) GetScanner(scannerType ScannerType) ScanFunc {
 	return nil
 }
 
-// HasScanner checks if a scanner is available for the given type.
-func (b *ScanBridge) HasScanner(scannerType ScannerType) bool {
+// GetScannerToolByID returns the tool definition by ID.
+// Returns nil if the tool doesn't exist.
+func (b *ScanBridge) GetScannerToolByID(toolID string) *ToolDefinition {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
 	registry := b.getRegistry()
-	if registry != nil {
-		toolID := b.scannerTools[scannerType]
-		if _, ok := registry.Get(toolID); ok {
-			return true
-		}
+	if registry == nil {
+		return nil
 	}
 
-	return false
+	tool, ok := registry.Get(toolID)
+	if !ok {
+		return nil
+	}
+
+	return tool
 }
 
-// GetAllScannerTypes returns all available scanner types.
-func (b *ScanBridge) GetAllScannerTypes() []ScannerType {
+// HasScannerByToolID checks if a scanner tool exists.
+func (b *ScanBridge) HasScannerByToolID(toolID string) bool {
+	return b.GetScannerToolByID(toolID) != nil
+}
+
+// GetScannersForComponentType returns all scanner tools assigned to a component type.
+// Uses the resolver to look up scanners from component-tools config.
+func (b *ScanBridge) GetScannersForComponentType(componentType string) []*ToolDefinition {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
-	scannerSet := make(map[ScannerType]bool)
-
-	// Add scanners available via tool registry
-	registry := b.getRegistry()
-	if registry != nil {
-		for st, toolID := range b.scannerTools {
-			if _, ok := registry.Get(toolID); ok {
-				scannerSet[st] = true
-			}
-		}
+	if b.resolver == nil {
+		return nil
 	}
 
-	result := make([]ScannerType, 0, len(scannerSet))
-	for st := range scannerSet {
-		result = append(result, st)
+	// Get scanner tools from resolver
+	tools, err := b.resolver.ResolveMultiple(componentType, OperationScan)
+	if err != nil || len(tools) == 0 {
+		return nil
 	}
-	return result
+
+	return tools
 }
 
-// GetScannersForModule returns all applicable scanners for a module's components.
+// GetAllScannerTools returns all tools that can be used as scanners.
+// A scanner tool is identified by having a scanner category (via GetScannerCategory).
+func (b *ScanBridge) GetAllScannerTools() []*ToolDefinition {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	registry := b.getRegistry()
+	if registry == nil {
+		return nil
+	}
+
+	var scanners []*ToolDefinition
+	for _, tool := range registry.GetAll() {
+		if tool.GetScannerCategory() != "" {
+			scanners = append(scanners, tool)
+		}
+	}
+	return scanners
+}
+
+// GetScannersByCategory returns all scanner tools of a specific category.
+// Categories include: sbom, vuln, secrets, iac, compliance, sast, zap
+func (b *ScanBridge) GetScannersByCategory(category string) []*ToolDefinition {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	registry := b.getRegistry()
+	if registry == nil {
+		return nil
+	}
+
+	var scanners []*ToolDefinition
+	for _, tool := range registry.GetAll() {
+		if tool.GetScannerCategory() == category {
+			scanners = append(scanners, tool)
+		}
+	}
+	return scanners
+}
+
+// GetScannersForModule returns all applicable scanner tool IDs for a module's components.
 // Uses component-types.yml to determine which scanners apply based on
 // the component types present in the module.
-func (b *ScanBridge) GetScannersForModule(module *modules.ModuleContract, componentTypes *config.ComponentTypesConfig) []ScannerType {
+func (b *ScanBridge) GetScannersForModule(module *modules.ModuleContract, componentTypes *config.ComponentTypesConfig) []string {
 	if module == nil || componentTypes == nil {
 		return nil
 	}
@@ -205,7 +182,7 @@ func (b *ScanBridge) GetScannersForModule(module *modules.ModuleContract, compon
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
-	scannerSet := make(map[ScannerType]bool)
+	scannerSet := make(map[string]bool)
 
 	for _, compName := range module.GetEnabledComponents() {
 		compTypeName := module.Components.GetComponentType(compName)
@@ -214,20 +191,42 @@ func (b *ScanBridge) GetScannersForModule(module *modules.ModuleContract, compon
 			continue
 		}
 
-		// Get scanners defined for this component type
+		// Get scanners defined for this component type (these are tool IDs)
 		scanners := compType.GetScanners()
 		for _, s := range scanners {
-			if st, ok := ParseScannerType(s); ok {
-				scannerSet[st] = true
-			}
+			scannerSet[s] = true
 		}
 	}
 
-	result := make([]ScannerType, 0, len(scannerSet))
-	for st := range scannerSet {
-		result = append(result, st)
+	result := make([]string, 0, len(scannerSet))
+	for toolID := range scannerSet {
+		result = append(result, toolID)
 	}
 	return result
+}
+
+// GetScannerToolsForModule returns tool definitions for all applicable scanners.
+func (b *ScanBridge) GetScannerToolsForModule(module *modules.ModuleContract, componentTypes *config.ComponentTypesConfig) []*ToolDefinition {
+	toolIDs := b.GetScannersForModule(module, componentTypes)
+	if len(toolIDs) == 0 {
+		return nil
+	}
+
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	registry := b.getRegistry()
+	if registry == nil {
+		return nil
+	}
+
+	var tools []*ToolDefinition
+	for _, toolID := range toolIDs {
+		if tool, ok := registry.Get(toolID); ok {
+			tools = append(tools, tool)
+		}
+	}
+	return tools
 }
 
 // createToolScanFuncWithExecutor wraps a ToolDefinition as a ScanFunc with an explicit executor.
@@ -250,9 +249,9 @@ func (b *ScanBridge) createToolScanFuncWithExecutor(tool *ToolDefinition, execut
 	}
 }
 
-// GetScanHandler returns a ScanHandler interface for a scanner type.
+// GetScanHandler returns a ScanHandler interface for a tool ID.
 // This provides compatibility with code expecting the ScanHandler interface.
-func (b *ScanBridge) GetScanHandler(scannerType ScannerType) ScanHandler {
+func (b *ScanBridge) GetScanHandler(toolID string) ScanHandler {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
@@ -260,7 +259,6 @@ func (b *ScanBridge) GetScanHandler(scannerType ScannerType) ScanHandler {
 	executor := b.getExecutor()
 
 	if registry != nil && executor != nil {
-		toolID := b.scannerTools[scannerType]
 		if tool, ok := registry.Get(toolID); ok {
 			return NewScanHandlerAdapter(tool, executor)
 		}
@@ -303,8 +301,8 @@ func (b *ScanBridge) ResolveTool(componentType string, operation OperationType) 
 	return t
 }
 
-// IsContainer returns true if the scan handler for the given scanner type runs in a container.
-func (b *ScanBridge) IsContainer(scannerType ScannerType) bool {
+// IsContainer returns true if the scan handler for the given tool ID runs in a container.
+func (b *ScanBridge) IsContainer(toolID string) bool {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
@@ -313,7 +311,6 @@ func (b *ScanBridge) IsContainer(scannerType ScannerType) bool {
 		return false
 	}
 
-	toolID := b.scannerTools[scannerType]
 	if t, ok := registry.Get(toolID); ok {
 		return t.Type == ToolTypeContainer
 	}

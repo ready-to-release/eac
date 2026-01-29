@@ -14,6 +14,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/commands/help"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 )
 
@@ -88,10 +89,32 @@ func main() {
 
 	if exists {
 		// Check if --help or -h is in arguments after the command
+		// Only intercept help if the command has complete registry metadata
+		// (parent commands like get, show, work handle their own help)
 		for _, arg := range os.Args[1:] {
 			if arg == "--help" || arg == "-h" {
-				printCommandHelp(cmdFunc)
-				os.Exit(0)
+				// Check if this command has complete help metadata
+				cmdRegistry := registry.GetCommandRegistry()
+				var cmdName string
+				for argCount := len(os.Args) - 1; argCount >= 1; argCount-- {
+					testPath := strings.Join(os.Args[1:argCount+1], " ")
+					if strings.HasPrefix(os.Args[argCount], "-") {
+						continue
+					}
+					if _, found := cmdRegistry[testPath]; found {
+						cmdName = testPath
+						break
+					}
+				}
+				if cmdName != "" {
+					if reg := cmdRegistry[cmdName]; reg != nil && reg.Short != "" {
+						// Has complete metadata, print help from registry
+						printCommandHelp(cmdFunc)
+						os.Exit(0)
+					}
+				}
+				// Let the command handle its own help
+				break
 			}
 		}
 	}
@@ -186,6 +209,15 @@ func getSubcommands(prefix string) []string {
 
 // printSubcommandHelp prints help for a parent command.
 func printSubcommandHelp(prefix string, subcommands []string) {
+	// Check if we have registry metadata for this parent command
+	cmdRegistry := registry.GetCommandRegistry()
+	if reg := cmdRegistry[prefix]; reg != nil && reg.IsParent && len(reg.Subcommands) > 0 {
+		// Use registry-based help
+		help.PrintHelp(os.Stdout, reg, cmdRegistry)
+		return
+	}
+
+	// Fallback to simple list (for commands not yet migrated)
 	if prefix == "" {
 		fmt.Println("Usage: go run . <command> [subcommand] [args...]")
 		fmt.Println("")
@@ -254,36 +286,6 @@ func printCommandHelp(_ registry.CommandFunc) {
 		return
 	}
 
-	// Print command name and short description
-	fmt.Printf("%s - %s\n", reg.ActualCommand, reg.Short)
-	fmt.Println()
-
-	// Print long description if available
-	if reg.Long != "" {
-		fmt.Println(reg.Long)
-		fmt.Println()
-	}
-
-	// Print flags if any
-	if len(reg.Flags) > 0 {
-		fmt.Println("Flags:")
-		for _, flag := range reg.Flags {
-			shorthand := ""
-			if flag.Shorthand != "" {
-				shorthand = fmt.Sprintf("-%s, ", flag.Shorthand)
-			}
-			defaultVal := ""
-			if flag.DefaultValue != "" {
-				defaultVal = fmt.Sprintf(" (default: %s)", flag.DefaultValue)
-			}
-			required := ""
-			if flag.Required {
-				required = " [required]"
-			}
-			fmt.Printf("  %s--%s%s%s\n", shorthand, flag.Name, defaultVal, required)
-			if flag.Usage != "" {
-				fmt.Printf("      %s\n", flag.Usage)
-			}
-		}
-	}
+	// Use unified help printer
+	help.PrintHelp(os.Stdout, reg, cmdRegistry)
 }

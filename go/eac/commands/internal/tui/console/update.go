@@ -5,6 +5,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	zone "github.com/lrstanley/bubblezone"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 )
 
@@ -138,7 +139,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 
-		// If user hasn't interacted, exit immediately (fast path)
+		// If user hasn't interacted, exit immediately (fast path - prioritize speed)
 		if !m.userHasInteracted {
 			m.exitRequested = true
 			m.activateSummary()
@@ -147,8 +148,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		// User has interacted - let them read the output
-		// The tick handler will manage the 10-second countdown
-		m.exitRequested = true
+		// DON'T set exitRequested here - let the tick handler manage the 10-second countdown
+		// and only set exitRequested when the timer expires
 		return m, nil
 
 	case PhaseUpdateMsg:
@@ -278,7 +279,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		userTimerExpired := false
 		if m.userHasInteracted {
 			elapsed := time.Since(m.lastUserInteraction)
-			remaining := 10 - int(elapsed.Seconds())
+			remaining := m.freezeTimeoutSecs - int(elapsed.Seconds())
 			if remaining < 0 {
 				remaining = 0
 			}
@@ -549,124 +550,13 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	if msg.Button != tea.MouseButtonNone && msg.Action != tea.MouseActionMotion {
 		m.userHasInteracted = true
 		m.lastUserInteraction = time.Now()
+		m.exitRequested = false // Reset exit sequence - user is still investigating
 	}
 
 	// Mouse interactions:
 	// - Scroll wheel → scroll panes (handled first to prevent any accidental tab switching)
 	// - Click on tab bar → switch tabs
 	// - Shift+Click → select text (standard terminal behavior, bypasses mouse mode)
-
-	// Handle wheel events FIRST - scrolling should never change tabs
-	if msg.Button == tea.MouseButtonWheelUp || msg.Button == tea.MouseButtonWheelDown {
-		// Fixed components panel width (matches renderSideBySideLayout)
-		const componentsWidth = 62
-		scrollAmount := 3 // Lines to scroll per wheel tick
-
-		// Check if mouse is over tabs pane (left) or logs pane (right)
-		if msg.X < componentsWidth {
-			// Scrolling over tabs/tree pane (left side)
-			// Calculate max scroll based on content
-			tabs := m.GetVisibleTabs()
-			maxScroll := 0
-			if m.viewMode == ViewModeTree {
-				// Tree view: count lines
-				if m.initSummary != nil && len(m.initSummary.ExecutionTree) > 0 {
-					for layerIdx, layer := range m.initSummary.ExecutionTree {
-						maxScroll++ // Layer header
-						for _, module := range layer.Modules {
-							maxScroll++ // Module line
-							maxScroll += len(module.Components)
-						}
-						if layerIdx < len(m.initSummary.ExecutionTree)-1 {
-							maxScroll++ // Spacing
-						}
-					}
-				} else {
-					// Fallback count
-					maxScroll = len(tabs) * 2
-				}
-			} else {
-				// Tab grid: count lines (layer header + 1 line per row of compact tabs)
-				// Compact layout: ~6 tabs per row, 1 line per row
-				const compactTabsPerRow = 6
-				if m.initSummary != nil && len(m.initSummary.ExecutionTree) > 0 {
-					for _, layer := range m.initSummary.ExecutionTree {
-						maxScroll++ // Layer header
-						layerComps := 0
-						for _, module := range layer.Modules {
-							layerComps += len(module.Components)
-						}
-						rows := (layerComps + compactTabsPerRow - 1) / compactTabsPerRow
-						maxScroll += rows // 1 line per row (compact)
-					}
-				} else {
-					rows := (len(tabs) + compactTabsPerRow - 1) / compactTabsPerRow
-					maxScroll = rows
-				}
-			}
-			// Leave some visible content (at least 5 lines)
-			maxScroll -= 5
-			if maxScroll < 0 {
-				maxScroll = 0
-			}
-
-			switch msg.Button {
-			case tea.MouseButtonWheelUp:
-				m.tabsScrollOffset -= scrollAmount
-				if m.tabsScrollOffset < 0 {
-					m.tabsScrollOffset = 0
-				}
-			case tea.MouseButtonWheelDown:
-				m.tabsScrollOffset += scrollAmount
-				if m.tabsScrollOffset > maxScroll {
-					m.tabsScrollOffset = maxScroll
-				}
-			}
-			return m, nil
-		}
-
-		// Scrolling over logs pane (right side) - use existing pane scroll logic
-		paneIdx := m.getPaneAtPosition(msg.Y)
-		if paneIdx < 0 || paneIdx >= len(m.panes) {
-			return m, nil // Mouse not over any pane
-		}
-
-		pane := m.panes[paneIdx]
-		if pane == nil {
-			return m, nil
-		}
-
-		// Calculate pane height for this specific pane
-		initH, runH, summaryH := m.calculatePaneHeights()
-		paneHeight := initH
-		switch paneIdx {
-		case 1: // Run pane
-			paneHeight = runH
-		case 2: // Summary pane
-			paneHeight = summaryH
-		}
-
-		// Determine which buffer is being displayed (for Run pane with active tab)
-		buffer := pane.Buffer
-		if paneIdx == 1 && m.activeTab != "" { // Run pane with module tab selected
-			if moduleBuffer := m.GetActiveModuleBuffer(); moduleBuffer != nil {
-				buffer = moduleBuffer
-			}
-		}
-
-		// Update max scroll based on the ACTIVE buffer
-		pane.UpdateMaxScrollForBuffer(buffer, paneHeight)
-
-		// Scroll the pane - use Button to determine direction
-		switch msg.Button {
-		case tea.MouseButtonWheelUp:
-			pane.ScrollUp(scrollAmount)
-		case tea.MouseButtonWheelDown:
-			pane.ScrollDown(scrollAmount)
-		}
-
-		return m, nil
-	}
 
 	// Tab detection helper for side-by-side layout (works for both tab grid and tree view)
 	detectTabAt := func(x, y int) string {
@@ -878,6 +768,130 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		return ""
 	}
 
+	// Handle wheel events FIRST - scrolling should never change tabs
+	if msg.Button == tea.MouseButtonWheelUp || msg.Button == tea.MouseButtonWheelDown {
+		// Fixed components panel width (matches renderSideBySideLayout)
+		const componentsWidth = 62
+		scrollAmount := 3 // Lines to scroll per wheel tick
+
+		// Check if mouse is over tabs pane (left) or logs pane (right)
+		if msg.X < componentsWidth {
+			// Scrolling over tabs/tree pane (left side)
+			// Calculate max scroll based on content
+			tabs := m.GetVisibleTabs()
+			maxScroll := 0
+			if m.viewMode == ViewModeTree {
+				// Tree view: count lines
+				if m.initSummary != nil && len(m.initSummary.ExecutionTree) > 0 {
+					for layerIdx, layer := range m.initSummary.ExecutionTree {
+						maxScroll++ // Layer header
+						for _, module := range layer.Modules {
+							maxScroll++ // Module line
+							maxScroll += len(module.Components)
+						}
+						if layerIdx < len(m.initSummary.ExecutionTree)-1 {
+							maxScroll++ // Spacing
+						}
+					}
+				} else {
+					// Fallback count
+					maxScroll = len(tabs) * 2
+				}
+			} else {
+				// Tab grid: count lines (layer header + 1 line per row of compact tabs)
+				// Compact layout: ~6 tabs per row, 1 line per row
+				const compactTabsPerRow = 6
+				if m.initSummary != nil && len(m.initSummary.ExecutionTree) > 0 {
+					for _, layer := range m.initSummary.ExecutionTree {
+						maxScroll++ // Layer header
+						layerComps := 0
+						for _, module := range layer.Modules {
+							layerComps += len(module.Components)
+						}
+						rows := (layerComps + compactTabsPerRow - 1) / compactTabsPerRow
+						maxScroll += rows // 1 line per row (compact)
+					}
+				} else {
+					rows := (len(tabs) + compactTabsPerRow - 1) / compactTabsPerRow
+					maxScroll = rows
+				}
+			}
+			// Leave some visible content (at least 5 lines)
+			maxScroll -= 5
+			if maxScroll < 0 {
+				maxScroll = 0
+			}
+
+			switch msg.Button {
+			case tea.MouseButtonWheelUp:
+				m.tabsScrollOffset -= scrollAmount
+				if m.tabsScrollOffset < 0 {
+					m.tabsScrollOffset = 0
+				}
+			case tea.MouseButtonWheelDown:
+				m.tabsScrollOffset += scrollAmount
+				if m.tabsScrollOffset > maxScroll {
+					m.tabsScrollOffset = maxScroll
+				}
+			}
+			// Update hover state after scroll - the tab under the cursor may have changed
+			// (detectTabAt accounts for scroll offset, so it will find the correct tab)
+			hoveredTab := detectTabAt(msg.X, msg.Y)
+			if hoveredTab != m.hoveredTab {
+				m.hoveredTab = hoveredTab
+				m.hoveredTabScroll = 0 // Reset marquee scroll on hover change
+				if hoveredTab != "" {
+					return m, tea.Tick(200*time.Millisecond, func(t time.Time) tea.Msg {
+						return MarqueeTickMsg{}
+					})
+				}
+			}
+			return m, nil
+		}
+
+		// Scrolling over logs pane (right side) - use existing pane scroll logic
+		paneIdx := m.getPaneAtPosition(msg.Y)
+		if paneIdx < 0 || paneIdx >= len(m.panes) {
+			return m, nil // Mouse not over any pane
+		}
+
+		pane := m.panes[paneIdx]
+		if pane == nil {
+			return m, nil
+		}
+
+		// Calculate pane height for this specific pane
+		initH, runH, summaryH := m.calculatePaneHeights()
+		paneHeight := initH
+		switch paneIdx {
+		case 1: // Run pane
+			paneHeight = runH
+		case 2: // Summary pane
+			paneHeight = summaryH
+		}
+
+		// Determine which buffer is being displayed (for Run pane with active tab)
+		buffer := pane.Buffer
+		if paneIdx == 1 && m.activeTab != "" { // Run pane with module tab selected
+			if moduleBuffer := m.GetActiveModuleBuffer(); moduleBuffer != nil {
+				buffer = moduleBuffer
+			}
+		}
+
+		// Update max scroll based on the ACTIVE buffer
+		pane.UpdateMaxScrollForBuffer(buffer, paneHeight)
+
+		// Scroll the pane - use Button to determine direction
+		switch msg.Button {
+		case tea.MouseButtonWheelUp:
+			pane.ScrollUp(scrollAmount)
+		case tea.MouseButtonWheelDown:
+			pane.ScrollDown(scrollAmount)
+		}
+
+		return m, nil
+	}
+
 	// Handle mouse motion for hover effect
 	if msg.Action == tea.MouseActionMotion {
 		hoveredTab := detectTabAt(msg.X, msg.Y)
@@ -894,8 +908,19 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	// Handle left mouse button click for tab selection
+	// Handle left mouse button click for tab selection and freeze button
 	if msg.Button == tea.MouseButtonLeft && msg.Action == tea.MouseActionRelease {
+		// Check for Freeze button click first
+		if zone.Get("freeze-button").InBounds(msg) {
+			// Activate freeze: set 2-minute timeout and reset timer
+			m.freezeTimeoutSecs = 120
+			m.userHasInteracted = true
+			m.lastUserInteraction = time.Now()
+			m.exitRequested = false // Cancel any pending exit
+			return m, nil
+		}
+
+		// Then check for tab clicks
 		if tab := detectTabAt(msg.X, msg.Y); tab != "" {
 			if tab != m.activeTab {
 				m.SetActiveTab(tab)

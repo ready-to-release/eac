@@ -38,7 +38,7 @@
           "description": "Default scanners for this component type. Omit or empty = not scannable.",
           "items": {
             "type": "string",
-            "enum": ["sbom", "vuln", "secrets", "iac", "compliance", "sast"]
+            "enum": ["sbom", "vuln", "secrets", "iac", "compliance", "sast", "zap"]
           }
         },
         "build_weight": {

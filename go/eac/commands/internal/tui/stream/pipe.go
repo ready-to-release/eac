@@ -109,16 +109,35 @@ func (op *OutputPipe) readLines() {
 
 		level := classifyLine(text)
 
-		select {
-		case op.lineChan <- console.Line{
+		// Send line to channel, handling potential channel closure gracefully.
+		// The lineChan may be closed externally before we finish draining.
+		if !op.trySendLine(console.Line{
 			Text:      text,
 			Source:    op.source,
 			Level:     level,
 			Timestamp: time.Now(),
-		}:
-		default:
-			// Drop if channel full (non-blocking)
+		}) {
+			return // Channel closed, stop processing
 		}
+	}
+}
+
+// trySendLine attempts to send a line to the channel.
+// Returns false if the channel is closed (recovered from panic).
+func (op *OutputPipe) trySendLine(line console.Line) (ok bool) {
+	defer func() {
+		if r := recover(); r != nil {
+			// Channel was closed - this is expected during shutdown
+			ok = false
+		}
+	}()
+
+	select {
+	case op.lineChan <- line:
+		return true
+	default:
+		// Drop if channel full (non-blocking)
+		return true
 	}
 }
 

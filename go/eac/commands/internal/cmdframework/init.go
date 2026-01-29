@@ -8,6 +8,8 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
+	rootTUI "github.com/ready-to-release/eac/go/eac/commands/tui"
+	"github.com/ready-to-release/eac/go/eac/commands/tui/parallel"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/environments"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
@@ -105,7 +107,12 @@ func phaseInit(ctx *ExecutionContext) error {
 		log.Debugf("Turbo mode enabled: %.2fx pressure multiplier", turboMultiplier)
 	}
 
+	// Determine if we should use the TUI registry for console creation
+	// Use registry if CommandPath is set (new path), otherwise fallback to orchestrator's internal creation
+	useRegistryTUI := ctx.Config.CommandPath != "" && ctx.Config.UseTUI
+
 	// Configure orchestrator
+	// If using registry, set TUI: false so orchestrator doesn't create its own console
 	orchConfig := orchestrator.Config{
 		WorkspaceRoot:        workspaceRoot,
 		OutputBaseDir:        ctx.Config.OutputDir,
@@ -117,16 +124,40 @@ func phaseInit(ctx *ExecutionContext) error {
 		ModuleTypes:          ctx.ModuleTypes,
 		ShowTimings:          ctx.Config.ShowTimings,
 		DryRun:               ctx.Config.DryRun,
-		TUI:                  ctx.Config.UseTUI,
+		TUI:                  ctx.Config.UseTUI && !useRegistryTUI, // Let orchestrator create TUI only if not using registry
 		TUIHeight:            ctx.Config.TUIHeight,
 		TUIASCIIMode:         ctx.Config.TUIASCIIMode,
-		SkipTUIDelay:             ctx.Config.SkipTUIDelay,
+		SkipTUIDelay:         ctx.Config.SkipTUIDelay,
 	}
 
 	// Create orchestrator
 	orch := orchestrator.New(&orchConfig, nil) // Worker set later
 	ctx.Orchestrator = orch
 	ctx.AddCleanup(func() { orch.Close() })
+
+	// If using registry, create TUI via registry and set it on orchestrator
+	if useRegistryTUI {
+		tuiConfig := rootTUI.Config{
+			Height:       getTUIHeight(ctx.Config),
+			BufferSize:   1000,
+			RunPhaseName: ctx.Config.ActionVerb,
+			ASCIIMode:    ctx.Config.TUIASCIIMode,
+			SkipTUIDelay: ctx.Config.SkipTUIDelay,
+			CommandName:  ctx.Config.CommandPath,
+			CommandType:  string(ctx.Config.Type),
+		}
+
+		// Create console via registry
+		console := rootTUI.NewForCommand(ctx.Config.CommandPath, tuiConfig)
+
+		// If it's a parallel.Console, extract the inner tui.Console for the orchestrator
+		if pc, ok := console.(*parallel.Console); ok {
+			orch.SetConsole(pc.Inner())
+		}
+		// Note: If it's a different TUI type (e.g., default TUI), the orchestrator
+		// won't have a console set and will run in non-TUI mode. This is expected
+		// for interactive selection TUIs that don't need parallel task display.
+	}
 
 	// Initialize TUI (but don't show yet - that happens after init phases complete)
 	if ctx.Config.UseTUI {

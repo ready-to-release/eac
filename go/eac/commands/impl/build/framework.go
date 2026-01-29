@@ -17,11 +17,12 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/initsummary"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/locking"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/output"
-	"github.com/ready-to-release/eac/go/eac/core/buildstate"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/hash"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
+	"github.com/ready-to-release/eac/go/eac/core/workunit"
 )
 
 func init() {
@@ -47,10 +48,10 @@ func getBuildComponentLayers(ctx *cmdframework.ExecutionContext) [][]string {
 	for i, layer := range layers {
 		result[i] = make([]string, len(layer))
 		for j, work := range layer {
-			if work.Handler != "" {
-				result[i][j] = fmt.Sprintf("%s:%s:%s", work.Module, work.Component, work.Handler)
+			if work.ID.Tool != "" {
+				result[i][j] = fmt.Sprintf("%s:%s:%s", work.ID.Module, work.ID.Component, work.ID.Tool)
 			} else {
-				result[i][j] = fmt.Sprintf("%s:%s", work.Module, work.Component)
+				result[i][j] = fmt.Sprintf("%s:%s", work.ID.Module, work.ID.Component)
 			}
 		}
 	}
@@ -219,35 +220,54 @@ func detectIncrementalChanges(ctx *cmdframework.ExecutionContext, bctx *buildCon
 		ctx.SetChangeDetectionTiming(time.Since(startTime))
 	}()
 
-	// Build modules map for change detection
-	modulesMap := make(map[string]buildstate.ModuleFileGetter)
-	for _, moniker := range ctx.GetExecutionMonikers() {
-		if contract, ok := ctx.ModuleRegistry.Get(moniker); ok {
-			modulesMap[moniker] = contract
-		}
-	}
-
-	moduleFiles, err := buildstate.GetModuleSourceFiles(ctx.WorkspaceRoot, modulesMap)
-	if err != nil {
-		log.Debugf("Failed to get module source files: %v", err)
+	// Collect modules for change detection
+	monikers := ctx.GetExecutionMonikers()
+	if len(monikers) == 0 {
 		return
 	}
 
-	changeResult, err := buildstate.DetectChanges(ctx.WorkspaceRoot, moduleFiles)
+	// Build module files map for hash computation
+	moduleFiles := make(map[string][]string)
+	for _, moniker := range monikers {
+		if contract, ok := ctx.ModuleRegistry.Get(moniker); ok {
+			patterns := contract.GetGlobPatterns()
+			files, err := hash.ExpandGlobPatterns(ctx.WorkspaceRoot, patterns)
+			if err != nil {
+				log.Debugf("Failed to expand patterns for %s: %v", moniker, err)
+				continue
+			}
+			moduleFiles[moniker] = files
+		}
+	}
+
+	// Use StateManager for change detection
+	stateMgr := workunit.NewStateManager(ctx.WorkspaceRoot)
+	rule := workunit.DefaultRules[workunit.ContextBuild]
+
+	// Create hash provider that computes hash from expanded files
+	hashProvider := func(module string) (string, error) {
+		files, ok := moduleFiles[module]
+		if !ok {
+			return "", fmt.Errorf("no files for module %s", module)
+		}
+		return hash.Files(ctx.WorkspaceRoot, files)
+	}
+
+	changeResult, err := stateMgr.DetectModuleChanges(workunit.ContextBuild, monikers, rule, hashProvider)
 	if err != nil {
 		log.Debugf("Failed to detect changes: %v", err)
 		return
 	}
 
 	log.Debugf("[TUI-CACHE] DetectChanges result: FreshBuild=%v Changed=%d UpToDate=%d",
-		changeResult.FreshBuild, len(changeResult.ChangedModules), len(changeResult.UpToDateModules))
+		changeResult.FreshRun, len(changeResult.ChangedModules), len(changeResult.UpToDateModules))
 	for moniker, reason := range changeResult.ChangeReasons {
 		log.Debugf("[TUI-CACHE] Changed: %s -> %s", moniker, reason)
 	}
 
 	detectionTime := time.Since(startTime)
 
-	if changeResult.FreshBuild {
+	if changeResult.FreshRun {
 		log.Debugf("Fresh build detected, all modules will build")
 		if ctx.InitSummary != nil {
 			ctx.InitSummary.SetIncremental(&initsummary.IncrementalInfo{
@@ -274,10 +294,7 @@ func detectIncrementalChanges(ctx *cmdframework.ExecutionContext, bctx *buildCon
 	var changedList []string
 	var cachedList []string
 
-	// Load state to get BuiltAt times for cached modules
-	state, stateErr := buildstate.Load(ctx.WorkspaceRoot)
-
-	for _, moniker := range ctx.GetExecutionMonikers() {
+	for _, moniker := range monikers {
 		// In dry-run mode, show actual cache state (not forced rebuild)
 		// In normal mode, explicitly requested modules always rebuild (bypass cache)
 		if !ctx.Config.DryRun && buildCfg.RequestedSet[moniker] {
@@ -289,11 +306,15 @@ func detectIncrementalChanges(ctx *cmdframework.ExecutionContext, bctx *buildCon
 		} else {
 			bctx.cachedModules[moniker] = true
 			cachedList = append(cachedList, moniker)
-			// Store the BuiltAt time from state for display in TUI
-			if stateErr == nil && state != nil {
-				if ms, exists := state.Modules[moniker]; exists {
-					bctx.cacheTimes[moniker] = ms.BuiltAt
-				}
+			// Load the ExecutedAt time from state for display in TUI
+			unitID := workunit.UnitID{
+				Context:   workunit.ContextBuild,
+				Module:    moniker,
+				Component: "_module",
+				Tool:      "_",
+			}
+			if state, loadErr := stateMgr.Load(unitID); loadErr == nil && state != nil {
+				bctx.cacheTimes[moniker] = state.ExecutedAt
 			}
 		}
 	}
@@ -452,25 +473,35 @@ func updateIncrementalState(ctx *cmdframework.ExecutionContext, _ *buildContext)
 		}
 	}
 
-	// All successful modules (built + cached) are tracked
-	allSuccessful := successfulModules
-
-	// Build modules map for state update
-	modulesMap := make(map[string]buildstate.ModuleFileGetter)
-	for _, moniker := range allSuccessful {
-		if contract, ok := ctx.ModuleRegistry.Get(moniker); ok {
-			modulesMap[moniker] = contract
-		}
-	}
-
-	moduleFiles, err := buildstate.GetModuleSourceFiles(ctx.WorkspaceRoot, modulesMap)
-	if err != nil {
-		log.Warnf("Failed to get module files for state update: %v", err)
+	if len(successfulModules) == 0 {
 		return
 	}
 
-	if err := buildstate.UpdateModuleState(ctx.WorkspaceRoot, allSuccessful, moduleFiles); err != nil {
-		log.Warnf("Failed to update build state: %v", err)
+	// Update state using StateManager
+	stateMgr := workunit.NewStateManager(ctx.WorkspaceRoot)
+	for _, moniker := range successfulModules {
+		contract, ok := ctx.ModuleRegistry.Get(moniker)
+		if !ok {
+			continue
+		}
+
+		// Get source files and compute hash
+		patterns := contract.GetGlobPatterns()
+		files, err := hash.ExpandGlobPatterns(ctx.WorkspaceRoot, patterns)
+		if err != nil {
+			log.Debugf("Failed to expand patterns for %s: %v", moniker, err)
+			continue
+		}
+
+		sourceHash, err := hash.Files(ctx.WorkspaceRoot, files)
+		if err != nil {
+			log.Debugf("Failed to hash files for %s: %v", moniker, err)
+			continue
+		}
+
+		if err := stateMgr.SaveModuleResult(workunit.ContextBuild, moniker, true, sourceHash); err != nil {
+			log.Warnf("Failed to update build state for %s: %v", moniker, err)
+		}
 	}
 }
 
@@ -696,14 +727,22 @@ func updateModuleBuildStateAtomic(ctx *cmdframework.ExecutionContext, module str
 		return nil
 	}
 
-	// Get source files for this module using the standard interface
-	modulesMap := map[string]buildstate.ModuleFileGetter{module: contract}
-	moduleFiles, err := buildstate.GetModuleSourceFiles(ctx.WorkspaceRoot, modulesMap)
+	// Get source files for this module
+	patterns := contract.GetGlobPatterns()
+	files, err := hash.ExpandGlobPatterns(ctx.WorkspaceRoot, patterns)
 	if err != nil {
 		return err
 	}
 
-	return buildstate.UpdateModuleState(ctx.WorkspaceRoot, []string{module}, moduleFiles)
+	// Compute source hash
+	sourceHash, err := hash.Files(ctx.WorkspaceRoot, files)
+	if err != nil {
+		return err
+	}
+
+	// Save module state
+	stateMgr := workunit.NewStateManager(ctx.WorkspaceRoot)
+	return stateMgr.SaveModuleResult(workunit.ContextBuild, module, true, sourceHash)
 }
 
 // getHandlerForComponent finds the build handler for a specific component.

@@ -136,6 +136,7 @@ func Test() int {
 	// Convert to framework config
 	cmdCfg := &cmdframework.CommandConfig{
 		Type:           cmdframework.CommandTypeTest,
+		CommandPath:    "test",
 		ActionVerb:     "Testing",
 		OutputDir:      "out/test",
 		LogFileName:    "test.log",

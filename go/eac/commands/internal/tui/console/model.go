@@ -80,6 +80,7 @@ type Model struct {
 	userHasInteracted   bool      // True if user ever interacted with mouse
 	forceExit           bool      // User pressed ESC to force immediate exit
 	exitCountdownSecs   int       // Seconds remaining until user timer expires (10, 9, 8...)
+	freezeTimeoutSecs   int       // Timeout duration in seconds (10 default, 120 when Freeze clicked)
 	skipTUIDelay            bool      // Skip all user interaction tracking, exit immediately when done
 	allRunnersCompleted time.Time // When all runners finished
 
@@ -210,22 +211,23 @@ func NewModel(height int, runPhaseName string, lineChan <-chan Line, statusChan 
 	}
 
 	return Model{
-		height:        height,
-		width:         80, // Default, will be updated on WindowSizeMsg
-		runPhaseName:  runPhaseName,
-		asciiMode:     asciiMode,
+		height:            height,
+		width:             80, // Default, will be updated on WindowSizeMsg
+		runPhaseName:      runPhaseName,
+		asciiMode:         asciiMode,
 		skipTUIDelay:      skipTUIDelay,
-		resultsBuffer: NewRingBuffer(100), // Results buffer
-		panes:         panes,
-		activePhase:   PhaseInit, // Start with Init phase
-		lineChan:      lineChan,
-		statusChan:    statusChan,
-		startTime:     time.Now(),
-		mouseMode:     true,                          // Start with mouse ON (scrolling enabled)
-		moduleStates:  make(map[string]*ModuleState), // Per-module state tracking
-		moduleOrder:   make([]string, 0),             // Tab ordering
-		activeTab:     "",                            // Start with aggregate view
-		maxTabs:       36,                            // Maximum visible tabs (6 rows × 6 tabs/row)
+		freezeTimeoutSecs: 10, // Default user timer (10s), set to 120 when Freeze clicked
+		resultsBuffer:     NewRingBuffer(100), // Results buffer
+		panes:             panes,
+		activePhase:       PhaseInit, // Start with Init phase
+		lineChan:          lineChan,
+		statusChan:        statusChan,
+		startTime:         time.Now(),
+		mouseMode:         true,                          // Start with mouse ON (scrolling enabled)
+		moduleStates:      make(map[string]*ModuleState), // Per-module state tracking
+		moduleOrder:       make([]string, 0),             // Tab ordering
+		activeTab:         "",                            // Start with aggregate view
+		maxTabs:           36,                            // Maximum visible tabs (6 rows × 6 tabs/row)
 	}
 }
 

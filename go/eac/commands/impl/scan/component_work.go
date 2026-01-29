@@ -5,9 +5,9 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/scan/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/cmdframework"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/tool"
+	"github.com/ready-to-release/eac/go/eac/core/workunit"
 )
 
 // FlattenModulesToScanComponentWork converts modules to scan component work items.
@@ -15,7 +15,7 @@ import (
 // This allows parallel execution of different scanners (trivy-vuln, semgrep, etc.)
 // within the same module.
 // Returns nil if no scannable components are found.
-func FlattenModulesToScanComponentWork(ctx *cmdframework.ExecutionContext) [][]orchestrator.ComponentWork {
+func FlattenModulesToScanComponentWork(ctx *cmdframework.ExecutionContext) [][]workunit.UnitSpec {
 	cfg := config.Global()
 	if cfg == nil {
 		return nil
@@ -31,7 +31,7 @@ func FlattenModulesToScanComponentWork(ctx *cmdframework.ExecutionContext) [][]o
 		return nil
 	}
 
-	var allWork []orchestrator.ComponentWork
+	var allWork []workunit.UnitSpec
 	globalIndex := 0
 
 	for _, moniker := range monikers {
@@ -66,23 +66,31 @@ func FlattenModulesToScanComponentWork(ctx *cmdframework.ExecutionContext) [][]o
 				}
 				seenScanners[scannerStr] = true
 
-				scannerType, valid := internal.ParseScannerType(scannerStr)
-				if !valid {
+				toolID := tool.ScannerToolIDForCategory(scannerStr)
+				if toolID == "" {
 					continue
 				}
+				scannerType := internal.ScannerType(toolID)
 
 				// Get weight (base weight × amp, calculated internally)
 				weight := getComponentWeight(moniker, componentName, scannerType)
 
-				work := orchestrator.ComponentWork{
-					Module:        moniker,
-					Component:     componentName,
-					ComponentType: compTypeName,
-					Handler:       string(scannerType), // Use scanner type instead of generic "scan"
-					IsContainer:   tool.GlobalScanBridge().IsContainer(tool.ScannerType(scannerType)),
-					Weight:        weight,
-					BuildAfter:    nil, // Scans have no intra-module dependencies
-					Index:         globalIndex,
+				isContainer := tool.GlobalScanBridge().IsContainer(string(scannerType))
+				work := workunit.UnitSpec{
+					ID: workunit.UnitID{
+						Context:   workunit.ContextScan,
+						Module:    moniker,
+						Component: componentName,
+						Tool:      string(scannerType), // Use scanner type instead of generic "scan"
+					},
+					ComponentType:   compTypeName,
+					Weight:          weight,
+					IsContainer:     isContainer,
+					IsHostInstalled: !isContainer,
+					DependsOn:       nil, // Scans have no intra-module dependencies
+					Cached:          false,
+					Metadata:        make(map[string]any),
+					Index:           globalIndex,
 				}
 
 				allWork = append(allWork, work)
@@ -96,7 +104,7 @@ func FlattenModulesToScanComponentWork(ctx *cmdframework.ExecutionContext) [][]o
 	}
 
 	// Return as single layer (scans run in parallel)
-	return [][]orchestrator.ComponentWork{allWork}
+	return [][]workunit.UnitSpec{allWork}
 }
 
 // getScanWeightForScanner returns the weight for a specific scanner type.
@@ -155,7 +163,7 @@ func getComponentWeight(moniker, componentName string, scannerType internal.Scan
 }
 
 // CountScanComponents returns the total number of scan component work items.
-func CountScanComponents(layers [][]orchestrator.ComponentWork) int {
+func CountScanComponents(layers [][]workunit.UnitSpec) int {
 	count := 0
 	for _, layer := range layers {
 		count += len(layer)

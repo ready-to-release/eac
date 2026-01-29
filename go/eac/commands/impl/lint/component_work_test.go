@@ -6,14 +6,14 @@ package lint
 import (
 	"testing"
 
-	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
+	"github.com/ready-to-release/eac/go/eac/core/workunit"
 )
 
 // TestCountLintComponents tests the CountLintComponents function.
 func TestCountLintComponents(t *testing.T) {
 	tests := []struct {
 		name   string
-		layers [][]orchestrator.ComponentWork
+		layers [][]workunit.UnitSpec
 		want   int
 	}{
 		{
@@ -23,48 +23,48 @@ func TestCountLintComponents(t *testing.T) {
 		},
 		{
 			name:   "empty layers returns 0",
-			layers: [][]orchestrator.ComponentWork{},
+			layers: [][]workunit.UnitSpec{},
 			want:   0,
 		},
 		{
 			name: "single layer with single component",
-			layers: [][]orchestrator.ComponentWork{
+			layers: [][]workunit.UnitSpec{
 				{
-					{Module: "mod-a", Component: "go-lint"},
+					{ID: workunit.UnitID{Module: "mod-a", Component: "go-lint"}},
 				},
 			},
 			want: 1,
 		},
 		{
 			name: "single layer with multiple components",
-			layers: [][]orchestrator.ComponentWork{
+			layers: [][]workunit.UnitSpec{
 				{
-					{Module: "mod-a", Component: "go-lint"},
-					{Module: "mod-b", Component: "go-lint"},
-					{Module: "mod-c", Component: "eslint"},
+					{ID: workunit.UnitID{Module: "mod-a", Component: "go-lint"}},
+					{ID: workunit.UnitID{Module: "mod-b", Component: "go-lint"}},
+					{ID: workunit.UnitID{Module: "mod-c", Component: "eslint"}},
 				},
 			},
 			want: 3,
 		},
 		{
 			name: "multiple layers with multiple components",
-			layers: [][]orchestrator.ComponentWork{
+			layers: [][]workunit.UnitSpec{
 				{
-					{Module: "mod-a", Component: "go-lint"},
-					{Module: "mod-b", Component: "go-lint"},
+					{ID: workunit.UnitID{Module: "mod-a", Component: "go-lint"}},
+					{ID: workunit.UnitID{Module: "mod-b", Component: "go-lint"}},
 				},
 				{
-					{Module: "mod-c", Component: "eslint"},
+					{ID: workunit.UnitID{Module: "mod-c", Component: "eslint"}},
 				},
 			},
 			want: 3,
 		},
 		{
 			name: "empty inner layer",
-			layers: [][]orchestrator.ComponentWork{
+			layers: [][]workunit.UnitSpec{
 				{},
 				{
-					{Module: "mod-a", Component: "go-lint"},
+					{ID: workunit.UnitID{Module: "mod-a", Component: "go-lint"}},
 				},
 			},
 			want: 1,

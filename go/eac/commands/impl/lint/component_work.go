@@ -5,16 +5,16 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/update/lint/linters"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/cmdframework"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/tool"
+	"github.com/ready-to-release/eac/go/eac/core/workunit"
 )
 
 // FlattenModulesToLintComponentWork converts modules to lint component work items.
 // Each module is expanded to its lintable components with weight info.
 // Work items are created for each unique module:component:provider combination.
 // Returns nil if no lintable components are found.
-func FlattenModulesToLintComponentWork(ctx *cmdframework.ExecutionContext) [][]orchestrator.ComponentWork {
+func FlattenModulesToLintComponentWork(ctx *cmdframework.ExecutionContext) [][]workunit.UnitSpec {
 	cfg := config.Global()
 	if cfg == nil || cfg.LintProviders == nil {
 		return nil
@@ -32,7 +32,7 @@ func FlattenModulesToLintComponentWork(ctx *cmdframework.ExecutionContext) [][]o
 	}
 
 	// Lint runs in parallel (no layers), so treat all modules as single layer
-	var componentWork []orchestrator.ComponentWork
+	var componentWork []workunit.UnitSpec
 	globalIndex := 0
 
 	for _, moniker := range monikers {
@@ -78,16 +78,21 @@ func FlattenModulesToLintComponentWork(ctx *cmdframework.ExecutionContext) [][]o
 				// Get weight (base weight × amp, calculated internally)
 				weight := getComponentWeight(moniker, compName, providerName, tool.OperationLint)
 
-				work := orchestrator.ComponentWork{
-					Module:        moniker,
-					Component:     compName,
-					ComponentType: compType,
-					Handler:       providerName,
-					IsContainer:   handler.IsContainer(),
-					Weight:        weight,
-					BuildAfter:    nil,
+				work := workunit.UnitSpec{
+					ID: workunit.UnitID{
+						Context:   workunit.ContextLint,
+						Module:    moniker,
+						Component: compName,
+						Tool:      providerName,
+					},
+					ComponentType:   compType,
+					Weight:          weight,
+					IsContainer:     handler.IsContainer(),
+					IsHostInstalled: !handler.IsContainer(),
+					DependsOn:       nil,
+					Cached:          isCached,
+					Metadata:      make(map[string]any),
 					Index:         globalIndex,
-					Cached:        isCached,
 				}
 
 				componentWork = append(componentWork, work)
@@ -101,11 +106,11 @@ func FlattenModulesToLintComponentWork(ctx *cmdframework.ExecutionContext) [][]o
 	}
 
 	// Return as single layer (lint runs in parallel)
-	return [][]orchestrator.ComponentWork{componentWork}
+	return [][]workunit.UnitSpec{componentWork}
 }
 
 // CountLintComponents returns the total number of lintable component work items.
-func CountLintComponents(layers [][]orchestrator.ComponentWork) int {
+func CountLintComponents(layers [][]workunit.UnitSpec) int {
 	count := 0
 	for _, layer := range layers {
 		count += len(layer)

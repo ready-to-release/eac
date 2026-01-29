@@ -1,15 +1,63 @@
 // Command: validate
+// Short: Validate repository contracts and dependencies
+// IsParent: true
+// Group.Contracts: contracts, dependencies, books
+// Group.Code Quality: go-tidy, markdown, module-files, module-hierarchy
+// Group.Documentation: docs
+// Group.Specifications: specs, test-tags
+// Group.Risk: risk-catalog, risk-profile
+// Group.Release: release, release-version, version
+// Group.Design: design
+// Group.Artifacts: artifacts, control-tags
+// Example: r2r validate contracts
+// Example: r2r validate dependencies
+// Example: r2r validate test-tags
+// Example: r2r validate module-hierarchy
 package validate
 
 import (
+	"context"
 	"os"
 
+	"github.com/ready-to-release/eac/go/eac/commands/help"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/commands/tui"
+
+	// Import default TUI to register it
+	_ "github.com/ready-to-release/eac/go/eac/commands/tui/default"
 )
 
 func init() {
 	registry.Register(Validate)
+}
+
+// subcommands defines all available validate subcommands.
+var subcommands = []tui.SubcommandInfo{
+	{Name: "books", Description: "Validate books.yml configuration"},
+	{Name: "contracts", Description: "Validate repository contracts against JSON schemas"},
+	{Name: "dependencies", Description: "Validate module dependency contracts"},
+	{Name: "docs", Description: "Validate documentation for obsolete references"},
+	{Name: "go-tidy", Description: "Validate Go module dependencies are tidy"},
+	{Name: "markdown", Description: "Validate markdown file syntax"},
+	{Name: "module-files", Description: "Validate module file ownership"},
+	{Name: "module-hierarchy", Description: "Validate module dependency graph structure"},
+	{Name: "release-version", Description: "Validate release version format (semver)"},
+	{Name: "risk-catalog", Description: "Validate OSCAL risk catalog"},
+	{Name: "risk-profile", Description: "Validate OSCAL risk profiles"},
+	{Name: "specs", Description: "Validate specification files"},
+	{Name: "test-tags", Description: "Validate that all test tags are defined"},
+	{Name: "artifacts", Description: "Validate artifacts"},
+	{Name: "control-tags", Description: "Validate control tags"},
+	{Name: "design", Description: "Validate design documents"},
+	{Name: "release", Description: "Validate release configuration"},
+	{Name: "version", Description: "Validate version format"},
+}
+
+// printHelp prints the help for the validate command using registry metadata.
+func printHelp() {
+	reg := registry.GetCommand("validate")
+	help.PrintHelp(os.Stdout, reg, registry.GetCommandRegistry())
 }
 
 // Validate command entry point.
@@ -22,104 +70,68 @@ func Validate() int {
 
 	args := os.Args[2:] // Skip program name and "validate"
 
+	// Check for help flag first
+	if len(args) > 0 && (args[0] == "--help" || args[0] == "-h") {
+		printHelp()
+		return 0
+	}
+
+	// If no subcommand and interactive, show TUI
 	if len(args) == 0 {
-		printValidateUsage()
+		if tui.ShouldUseTUI("validate", false, false) {
+			return runInteractiveTUI()
+		}
+		printHelp()
 		return 1
 	}
 
-	// Check for help flag
+	// Check for valid subcommand
 	switch args[0] {
-	case "--help", "-h":
-		printValidateUsage()
-		return 0
-	case "books":
-		// Handled by separate registrations in respective files
-		return 0
-	case "contracts":
-		// Handled by separate registrations in respective files
-		return 0
-	case "dependencies":
-		// Handled by separate registrations in respective files
-		return 0
-	case "test-tags":
-		// Handled by separate registrations in respective files
-		return 0
-	case "module-hierarchy":
-		// Handled by separate registrations in respective files
-		return 0
-	case "module-files":
-		// Handled by separate registrations in respective files
-		return 0
-	case "markdown":
-		// Handled by separate registrations in respective files
-		return 0
-	case "go-tidy":
-		// Handled by separate registrations in respective files
-		return 0
-	case "risk":
-		// Handled by separate registrations in respective files
-		return 0
-	case "release-version":
-		// Handled by separate registrations in respective files
-		return 0
-	case "docs":
+	case "artifacts", "books", "contracts", "control-tags", "dependencies",
+		"design", "docs", "go-tidy", "markdown", "module-files", "module-hierarchy",
+		"release", "release-version", "risk", "risk-catalog", "risk-profile",
+		"specs", "test-tags", "version":
 		// Handled by separate registrations in respective files
 		return 0
 	default:
 		log.Errorf("Error: unknown subcommand: %s\n", args[0])
-		printValidateUsage()
+		printHelp()
 		return 1
 	}
 }
 
-func printValidateUsage() {
-	log.Info("Validate repository contracts and dependencies")
-	log.Info("")
-	log.Info("Usage: r2r validate <subcommand> [args...]")
-	log.Info("")
-	log.Info("Subcommands:")
-	log.Info("  books                     Validate books.yml configuration")
-	log.Info("  contracts                 Validate repository contracts against JSON schemas")
-	log.Info("  dependencies              Validate module dependency contracts")
-	log.Info("  docs                      Validate documentation for obsolete references")
-	log.Info("  go-tidy                   Validate Go module dependencies are tidy")
-	log.Info("  markdown                  Validate markdown file syntax")
-	log.Info("  module-files              Validate module file ownership")
-	log.Info("  module-hierarchy          Validate module dependency graph structure")
-	log.Info("  release-version           Validate release version format (semver)")
-	log.Info("  risk                      Validate OSCAL profiles and assessment-results")
-	log.Info("  test-tags                 Validate that all test tags are defined in the tag contract")
-	log.Info("")
-	log.Info("Examples:")
-	log.Info("  # Validate all contracts against schemas")
-	log.Info("  r2r validate contracts")
-	log.Info("")
-	log.Info("  # Validate all dependencies")
-	log.Info("  r2r validate dependencies")
-	log.Info("")
-	log.Info("  # Validate test tags")
-	log.Info("  r2r validate test-tags")
-	log.Info("")
-	log.Info("  # Validate module hierarchy")
-	log.Info("  r2r validate module-hierarchy")
-	log.Info("")
-	log.Info("  # Validate module file ownership")
-	log.Info("  r2r validate module-files")
-	log.Info("")
-	log.Info("  # Validate markdown files")
-	log.Info("  r2r validate markdown")
-	log.Info("")
-	log.Info("  # Validate Go module tidiness")
-	log.Info("  r2r validate go-tidy")
-	log.Info("")
-	log.Info("  # Validate OSCAL risk documents")
-	log.Info("  r2r validate risk specs/risk-controls/billing.profile.json")
-	log.Info("")
-	log.Info("  # Validate release version format")
-	log.Info("  r2r validate release-version 1.2.3")
-	log.Info("")
-	log.Info("  # Validate documentation for obsolete references")
-	log.Info("  r2r validate docs")
-	log.Info("")
-	log.Info("Use 'r2r validate <subcommand> --help' for more information about a command.")
+// runInteractiveTUI shows the interactive TUI for subcommand selection.
+func runInteractiveTUI() int {
+	console := tui.NewForCommand("validate", tui.Config{
+		CommandName: "validate",
+		Height:      20,
+	})
+
+	// Set subcommands if the console supports it
+	if ic, ok := console.(tui.InteractiveConsole); ok {
+		ic.SetSubcommands(subcommands)
+	}
+
+	// Run the TUI
+	if err := console.Start(context.Background()); err != nil {
+		log.Errorf("TUI error: %v", err)
+		return 1
+	}
+
+	// Get selected command
+	if ic, ok := console.(tui.InteractiveConsole); ok {
+		selected, params := ic.GetSelectedCommand()
+		if selected != "" {
+			// Re-execute with selected subcommand
+			newArgs := []string{os.Args[0], "validate", selected}
+			if args, ok := params["args"]; ok && args != "" {
+				newArgs = append(newArgs, args)
+			}
+			os.Args = newArgs
+			return Validate()
+		}
+	}
+
+	return 0
 }
+

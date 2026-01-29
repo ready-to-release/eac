@@ -7,11 +7,12 @@ import (
 	"time"
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
+	"github.com/ready-to-release/eac/go/eac/core/workunit"
 )
 
-// ComponentWorkProvider is a function that converts execution context to component work items.
+// ComponentWorkProvider is a function that converts execution context to work units.
 // This is provided by the build package to avoid import cycles.
-type ComponentWorkProvider func(ctx *ExecutionContext) [][]orchestrator.ComponentWork
+type ComponentWorkProvider func(ctx *ExecutionContext) [][]workunit.UnitSpec
 
 // ExecutionMode defines how components should be executed.
 type ExecutionMode int
@@ -227,19 +228,19 @@ func phaseExecuteComponentsUnified(ctx *ExecutionContext, cmdType CommandType) e
 }
 
 // computeComponentCounts computes the number of components per module from work layers.
-func computeComponentCounts(layers [][]orchestrator.ComponentWork) map[string]int {
+func computeComponentCounts(layers [][]workunit.UnitSpec) map[string]int {
 	counts := make(map[string]int)
 	for _, layer := range layers {
 		for _, work := range layer {
-			counts[work.Module]++
+			counts[work.ID.Module]++
 		}
 	}
 	return counts
 }
 
-// flattenComponentLayers flattens component work layers to a single slice.
-func flattenComponentLayers(layers [][]orchestrator.ComponentWork) []orchestrator.ComponentWork {
-	var all []orchestrator.ComponentWork
+// flattenComponentLayers flattens work unit layers to a single slice.
+func flattenComponentLayers(layers [][]workunit.UnitSpec) []workunit.UnitSpec {
+	var all []workunit.UnitSpec
 	for _, layer := range layers {
 		all = append(all, layer...)
 	}

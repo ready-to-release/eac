@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/ready-to-release/eac/go/eac/core/contracts"
 	"github.com/ready-to-release/eac/go/eac/core/tool"
 )
 
@@ -13,30 +14,40 @@ import (
 // and regulatory compliance (traceability, integrity verification).
 type EvidenceFile struct {
 	Module    string          `json:"module"`    // Module moniker
-	Scanner   string          `json:"scanner"`   // Scanner type (sbom, vuln, etc.)
+	Scanner   string          `json:"scanner"`   // Scanner tool ID (trivy-sbom, trivy-vuln, etc.)
 	Timestamp string          `json:"timestamp"` // RFC3339 format for unambiguous timezone
 	SHA256    string          `json:"sha256"`    // Hash of findings for integrity verification
 	Findings  json.RawMessage `json:"findings"`  // Scanner-specific JSON output
 }
 
-// ScannerType is an alias to tool.ScannerType for backward compatibility.
-// The canonical type is defined in core/tool/scan_bridge.go.
-type ScannerType = tool.ScannerType
+// ScannerType is a string alias for scanner tool IDs.
+// This provides backward compatibility and type safety for scanner operations.
+type ScannerType string
 
-// Scanner type constants - use the canonical values from core/tool.
+// Well-known scanner tool IDs from tool-config.yml.
+// These use centralized constants from the tool package.
+// Scanner categories are detected dynamically via ToolDefinition.GetScannerCategory().
 const (
-	ScannerSBOM       = tool.ScannerSBOM
-	ScannerVuln       = tool.ScannerVuln
-	ScannerSecrets    = tool.ScannerSecrets
-	ScannerCompliance = tool.ScannerCompliance
-	ScannerIaC        = tool.ScannerIaC
-	ScannerSAST       = tool.ScannerSAST
-	ScannerDAST       = tool.ScannerDAST
+	ScannerSBOM       ScannerType = ScannerType(tool.ToolTrivySBOM)
+	ScannerVuln       ScannerType = ScannerType(tool.ToolTrivyVuln)
+	ScannerSecrets    ScannerType = ScannerType(tool.ToolTrivySecrets)
+	ScannerCompliance ScannerType = ScannerType(tool.ToolTrivyCompliance)
+	ScannerIaC        ScannerType = ScannerType(tool.ToolTrivyIaC)
+	ScannerSAST       ScannerType = ScannerType(tool.ToolSemgrep)
+	ScannerDAST       ScannerType = ScannerType(tool.ToolZap)
 )
 
-// ParseScannerType delegates to tool.ParseScannerType for backward compatibility.
-func ParseScannerType(s string) (ScannerType, bool) {
-	return tool.ParseScannerType(s)
+// ValidScannerCategories returns all valid scanner category names.
+// These are loaded from the shared-definitions.schema.json contract.
+// Used in component-types.yml and tool-config.yml.
+func ValidScannerCategories() map[string]bool {
+	return contracts.ValidScannerCategories()
+}
+
+// IsValidScannerCategory returns true if the category is valid.
+// Delegates to the contracts package which loads from schema.
+func IsValidScannerCategory(category string) bool {
+	return contracts.IsValidScannerCategory(category)
 }
 
 // ScanResult holds the outcome of a security scan.

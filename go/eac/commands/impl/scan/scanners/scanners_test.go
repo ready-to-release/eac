@@ -314,14 +314,14 @@ func TestRegistryIntegration(t *testing.T) {
 	tool.SetGlobalRegistry(registry)
 
 	// Verify that native scanners are registered
-	scannerTypes := []tool.ScannerType{
-		tool.ScannerSBOM,
-		tool.ScannerVuln,
-		tool.ScannerSecrets,
-		tool.ScannerIaC,
-		tool.ScannerCompliance,
-		tool.ScannerSAST,
-		tool.ScannerDAST,
+	scannerTypes := []string{
+		tool.ToolTrivySBOM,
+		tool.ToolTrivyVuln,
+		tool.ToolTrivySecrets,
+		tool.ToolTrivyIaC,
+		tool.ToolTrivyCompliance,
+		tool.ToolSemgrep,
+		tool.ToolZap,
 	}
 
 	for _, st := range scannerTypes {
@@ -355,32 +355,5 @@ func findRepoRoot(t *testing.T) string {
 	}
 }
 
-func TestParseScannerType(t *testing.T) {
-	tests := []struct {
-		input    string
-		expected ScannerType
-		valid    bool
-	}{
-		{"sbom", ScannerSBOM, true},
-		{"vuln", ScannerVuln, true},
-		{"secrets", ScannerSecrets, true},
-		{"compliance", ScannerCompliance, true},
-		{"iac", ScannerIaC, true},
-		{"sast", ScannerSAST, true},
-		{"zap", ScannerDAST, true},
-		{"invalid", "", false},
-		{"", "", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
-			got, valid := ParseScannerType(tt.input)
-			if valid != tt.valid {
-				t.Errorf("ParseScannerType(%q) valid = %v, want %v", tt.input, valid, tt.valid)
-			}
-			if valid && got != tt.expected {
-				t.Errorf("ParseScannerType(%q) = %v, want %v", tt.input, got, tt.expected)
-			}
-		})
-	}
-}
+// TestParseScannerType removed - use tool.ScannerToolIDForCategory() instead.
+// See go/eac/core/tool/categories_test.go for category resolution tests.

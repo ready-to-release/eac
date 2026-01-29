@@ -1,12 +1,40 @@
 // Command: get
+// Short: Retrieve repository data in structured format
+// IsParent: true
+// Group.Configuration: config
+// Group.Repository Structure: modules, dependencies, execution-order
+// Group.Files and Changes: files, files-by-module, changed-modules, changed-modules-ci, changed-modules-local
+// Group.CI/CD: ci-dispatch, ci-dispatch-layers, ci-workflows
+// Group.Build: build-times, build-deps, artifacts
+// Group.Testing: test-results, tests, suite, test-timings
+// Group.Utilities: token-size
+// Group.Commands: valid-commands, documented-commands
+// Group.Release: release-bundle, release-notes, release-status
+// Group.Environment: environments
+// Group.Specifications: specs, changelog
+// Group.Approvals: approval-comments
+// Group.Books: book-description
+// Group.Git: current-sha
+// Group.Evidence: evidence-ci-runs, module-ci-workflow, module-trigger-reason
+// Group.CLI: cli-release-notes
+// Example: r2r get modules
+// Example: r2r get dependencies
+// Example: r2r get changed-modules
+// Example: r2r get changed-modules-ci --as-json
 package get
 
 import (
+	"context"
 	"fmt"
 	"os"
 
+	"github.com/ready-to-release/eac/go/eac/commands/help"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
+	"github.com/ready-to-release/eac/go/eac/commands/tui"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+
+	// Import default TUI to register it
+	_ "github.com/ready-to-release/eac/go/eac/commands/tui/default"
 )
 
 var log = logging.C()
@@ -15,88 +43,121 @@ func init() {
 	registry.Register(Get)
 }
 
+// subcommands defines all available get subcommands.
+var subcommands = []tui.SubcommandInfo{
+	{Name: "config", Description: "Get all EAC configuration"},
+	{Name: "modules", Description: "Get all module contracts"},
+	{Name: "dependencies", Description: "Get module dependency graph"},
+	{Name: "execution-order", Description: "Get build order for modules"},
+	{Name: "files", Description: "Get repository files with module mappings"},
+	{Name: "files-by-module", Description: "Get files grouped by module"},
+	{Name: "changed-modules", Description: "Get modules affected by changes"},
+	{Name: "changed-modules-ci", Description: "Get modules requiring CI rebuild"},
+	{Name: "changed-modules-local", Description: "Get modules requiring local rebuild"},
+	{Name: "ci-dispatch", Description: "Filter modules for CI dispatch"},
+	{Name: "ci-dispatch-layers", Description: "Get CI dispatch layers"},
+	{Name: "ci-workflows", Description: "Get CI workflow configurations"},
+	{Name: "build-times", Description: "Get build timing data"},
+	{Name: "build-deps", Description: "Get build dependencies for a module"},
+	{Name: "artifacts", Description: "Get resolved artifacts for a module"},
+	{Name: "test-results", Description: "Get test execution results"},
+	{Name: "tests", Description: "Get all tests in structured format"},
+	{Name: "suite", Description: "Get test suite information"},
+	{Name: "test-timings", Description: "Get test timing data"},
+	{Name: "token-size", Description: "Estimate token counts for files"},
+	{Name: "valid-commands", Description: "Get all valid commands"},
+	{Name: "documented-commands", Description: "Get commands documented in markdown"},
+	{Name: "release-bundle", Description: "Get release bundle configuration"},
+	{Name: "release-notes", Description: "Get release notes"},
+	{Name: "release-status", Description: "Get release status"},
+	{Name: "environments", Description: "Get all environment contracts"},
+	{Name: "specs", Description: "Get specification files"},
+	{Name: "changelog", Description: "Get changelog entries"},
+	{Name: "approval-comments", Description: "Get approval comments"},
+	{Name: "book-description", Description: "Get book descriptions"},
+	{Name: "cli-release-notes", Description: "Get CLI release notes"},
+	{Name: "current-sha", Description: "Get current git SHA"},
+	{Name: "evidence-ci-runs", Description: "Get evidence CI runs"},
+	{Name: "module-ci-workflow", Description: "Get module CI workflow"},
+	{Name: "module-trigger-reason", Description: "Get module trigger reason"},
+}
+
+// printHelp prints the help for the get command using registry metadata.
+func printHelp() {
+	reg := registry.GetCommand("get")
+	help.PrintHelp(os.Stdout, reg, registry.GetCommandRegistry())
+}
+
 // Get command entry point.
 func Get() int {
 	args := os.Args[2:] // Skip program name and "get"
 
+	// Check for help flag first
+	if len(args) > 0 && (args[0] == "--help" || args[0] == "-h") {
+		printHelp()
+		return 0
+	}
+
+	// If no subcommand and interactive, show TUI
 	if len(args) == 0 {
-		printGetUsage()
+		if tui.ShouldUseTUI("get", false, false) {
+			return runInteractiveTUI()
+		}
+		printHelp()
 		return 1
 	}
 
-	// Check for help flag
+	// Check for valid subcommand
 	switch args[0] {
-	case "--help", "-h":
-		printGetUsage()
-		return 0
-	case "artifacts", "build-deps", "build-times", "changed-modules", "changed-modules-ci", "changed-modules-local", "ci-dispatch", "config", "dependencies", "documented-commands", "environments", "execution-order", "files", "modules", "release-bundle", "suite", "test-results", "tests", "test-timings", "token-size", "valid-commands":
+	case "artifacts", "build-deps", "build-times", "changed-modules", "changed-modules-ci",
+		"changed-modules-local", "ci-dispatch", "ci-dispatch-layers", "ci-workflows",
+		"config", "dependencies", "documented-commands", "environments", "execution-order",
+		"files", "files-by-module", "modules", "release-bundle", "release-notes",
+		"release-status", "suite", "test-results", "tests", "test-timings", "token-size",
+		"valid-commands", "specs", "changelog", "approval-comments", "book-description",
+		"cli-release-notes", "current-sha", "evidence-ci-runs", "module-ci-workflow",
+		"module-trigger-reason":
 		// Handled by separate registrations in respective files
 		return 0
 	default:
 		fmt.Fprintf(os.Stderr, "Error: unknown subcommand: %s\n", args[0])
-		printGetUsage()
+		printHelp()
 		return 1
 	}
 }
 
-func printGetUsage() {
-	fmt.Println("Retrieve repository data in structured format")
-	fmt.Println("")
-	fmt.Println("Usage: r2r get <subcommand> [args...]")
-	fmt.Println("")
-	fmt.Println("Configuration:")
-	fmt.Println("  config                    Get all EAC configuration (6 configs with defaults)")
-	fmt.Println("")
-	fmt.Println("Repository Structure:")
-	fmt.Println("  modules                   Get all module contracts")
-	fmt.Println("  dependencies              Get module dependency graph")
-	fmt.Println("  execution-order           Get build order for modules based on dependencies")
-	fmt.Println("")
-	fmt.Println("Files and Changes:")
-	fmt.Println("  files                     Get repository files with module mappings")
-	fmt.Println("  changed-modules           Get modules affected by changed files")
-	fmt.Println("  changed-modules-ci        Get modules requiring rebuild since last successful CI")
-	fmt.Println("  changed-modules-local     Get modules requiring rebuild based on local build state")
-	fmt.Println("")
-	fmt.Println("CI/CD:")
-	fmt.Println("  ci-dispatch               Filter modules for CI dispatch (skip those with valid CI)")
-	fmt.Println("")
-	fmt.Println("Build:")
-	fmt.Println("  build-times               Get build timing data from build logs")
-	fmt.Println("  build-deps                Get build dependencies for a module")
-	fmt.Println("  artifacts                 Get resolved artifacts for a module")
-	fmt.Println("")
-	fmt.Println("Testing:")
-	fmt.Println("  test-results              Get test execution results from test manifests")
-	fmt.Println("  tests                     Get all tests in structured format")
-	fmt.Println("  suite <name>              Get test suite information")
-	fmt.Println("  test-timings              Get test timing data from test logs")
-	fmt.Println("")
-	fmt.Println("Utilities:")
-	fmt.Println("  token-size <file|pattern> Estimate token counts for source files")
-	fmt.Println("")
-	fmt.Println("Commands:")
-	fmt.Println("  valid-commands            Get all valid commands in structured format")
-	fmt.Println("  documented-commands       Get EAC commands documented in markdown files")
-	fmt.Println("")
-	fmt.Println("Release:")
-	fmt.Println("  release-bundle            Get release bundle configuration with module details")
-	fmt.Println("")
-	fmt.Println("Environment:")
-	fmt.Println("  environments              Get all environment contracts")
-	fmt.Println("")
-	fmt.Println("Examples:")
-	fmt.Println("  # Get all modules as JSON")
-	fmt.Println("  r2r get modules")
-	fmt.Println("")
-	fmt.Println("  # Get dependency graph")
-	fmt.Println("  r2r get dependencies")
-	fmt.Println("")
-	fmt.Println("  # Get affected modules")
-	fmt.Println("  r2r get changed-modules")
-	fmt.Println("")
-	fmt.Println("  # Get modules requiring rebuild in CI (includes cache invalidation)")
-	fmt.Println("  r2r get changed-modules-ci --as-json")
-	fmt.Println("")
-	fmt.Println("Use 'r2r get <subcommand> --help' for more information about a command.")
+// runInteractiveTUI shows the interactive TUI for subcommand selection.
+func runInteractiveTUI() int {
+	console := tui.NewForCommand("get", tui.Config{
+		CommandName: "get",
+		Height:      20,
+	})
+
+	// Set subcommands if the console supports it
+	if ic, ok := console.(tui.InteractiveConsole); ok {
+		ic.SetSubcommands(subcommands)
+	}
+
+	// Run the TUI
+	if err := console.Start(context.Background()); err != nil {
+		log.Errorf("TUI error: %v", err)
+		return 1
+	}
+
+	// Get selected command
+	if ic, ok := console.(tui.InteractiveConsole); ok {
+		selected, params := ic.GetSelectedCommand()
+		if selected != "" {
+			// Re-execute with selected subcommand
+			newArgs := []string{os.Args[0], "get", selected}
+			if args, ok := params["args"]; ok && args != "" {
+				newArgs = append(newArgs, args)
+			}
+			os.Args = newArgs
+			return Get()
+		}
+	}
+
+	return 0
 }
+

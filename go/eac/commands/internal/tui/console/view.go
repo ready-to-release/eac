@@ -108,13 +108,6 @@ func (m Model) viewPanes() string {
 
 	// Render Run pane only if it actually started (not still pending)
 	if m.panes[PhaseRun].Status != PhasePending {
-		// Show lamp countdown row if user has interacted and countdown is running
-		if m.userHasInteracted && m.exitCountdownSecs > 0 && !m.allRunnersCompleted.IsZero() {
-			b.WriteString(m.renderExitLampRow())
-			b.WriteString("\n")
-			usedLines += 1
-		}
-
 		// Calculate remaining height for side-by-side panels
 		// Reserve space for summary if it will be shown
 		summaryLines := 0
@@ -128,14 +121,9 @@ func (m Model) viewPanes() string {
 			remainingHeight = 5
 		}
 
-		// Only show waiting state in left pane when actively exiting:
-		// exitRequested is set when all runners done AND (user never interacted OR user timer expired)
-		showWaitingState := m.exitRequested && m.summaryData == nil
-
 		tabs := m.GetVisibleTabs()
 		// Side-by-side layout: Components (tabs/tree) on LEFT, Logs on RIGHT
-		// Pass waiting state to show in left pane when waiting for user idle
-		sideBySide := m.renderSideBySideLayoutWithState(tabs, remainingHeight, showWaitingState)
+		sideBySide := m.renderSideBySideLayout(tabs, remainingHeight)
 		b.WriteString(sideBySide)
 		b.WriteString("\n")
 	}
@@ -159,12 +147,6 @@ func (m Model) viewPanes() string {
 
 // renderSideBySideLayout renders Components (left) and Logs (right) side by side.
 func (m Model) renderSideBySideLayout(tabs []*ModuleState, height int) string {
-	return m.renderSideBySideLayoutWithState(tabs, height, false)
-}
-
-// renderSideBySideLayoutWithState renders Components (left) and Logs (right) side by side.
-// If showWaitingState is true, the left panel shows the current waiting state instead of tabs.
-func (m Model) renderSideBySideLayoutWithState(tabs []*ModuleState, height int, showWaitingState bool) string {
 	// Fixed width for components panel, logs take remaining space
 	const componentsWidth = 62 // Fixed width for 3 columns of tabs
 	logsWidth := m.width - componentsWidth - 1 // -1 for separator
@@ -173,11 +155,8 @@ func (m Model) renderSideBySideLayoutWithState(tabs []*ModuleState, height int, 
 	}
 
 	// Render left panel (Components - tabs or tree based on viewMode)
-	// If waiting for summary, show waiting state instead
 	var leftPanel string
-	if showWaitingState {
-		leftPanel = m.renderWaitingStatePanel(componentsWidth, height)
-	} else if m.viewMode == ViewModeTree {
+	if m.viewMode == ViewModeTree {
 		leftPanel = m.renderTreePanel(tabs, componentsWidth, height)
 	} else {
 		leftPanel = m.renderTabGridPanel(tabs, componentsWidth, height)
@@ -348,60 +327,6 @@ func (m Model) renderInitPaneLoading() string {
 	return "─" + left + " " + Styles.Border.Render(strings.Repeat("─", borderLen)) + "─"
 }
 
-// WaitingState describes what the TUI is currently waiting for.
-type WaitingState int
-
-const (
-	WaitingNone           WaitingState = iota // Not waiting for anything
-	WaitingRenderSummary                      // Waiting for summary to be rendered
-	WaitingUserExitTimer                      // Waiting for user exit timer
-	WaitingBothSummaryAndTimer                // Both (shouldn't happen normally)
-)
-
-// getWaitingState returns the current waiting state.
-// This follows the three-thread model:
-// - User timer: countdown from last interaction (informational)
-// - Summary renderer: background builder producing pendingSummaryData
-// - Exit decision: when all done AND (never interacted OR timer expired)
-func (m Model) getWaitingState() WaitingState {
-	hasSummary := m.summaryData != nil
-	hasPendingSummary := m.pendingSummaryData != nil
-
-	// exitRequested is set when we want to exit (all done AND user timer expired/never interacted)
-	if m.exitRequested {
-		if !hasPendingSummary && !hasSummary {
-			// Waiting for summary builder to finish
-			return WaitingRenderSummary
-		}
-		// Summary ready or shown - no waiting state (will quit immediately)
-		return WaitingNone
-	}
-
-	// Not actively exiting yet - check if showing user timer countdown
-	allDone := !m.allRunnersCompleted.IsZero()
-	if allDone && m.userHasInteracted && m.exitCountdownSecs > 0 {
-		// User has interacted and is counting down - show informational timer
-		return WaitingUserExitTimer
-	}
-
-	return WaitingNone
-}
-
-// getWaitingStateMessage returns a human-readable message for the current waiting state.
-func (m Model) getWaitingStateMessage() string {
-	switch m.getWaitingState() {
-	case WaitingRenderSummary:
-		return "rendering summary"
-	case WaitingUserExitTimer:
-		// User has interacted - show countdown as informational (not blocking yet)
-		return fmt.Sprintf("exit in %ds", m.exitCountdownSecs)
-	case WaitingBothSummaryAndTimer:
-		return fmt.Sprintf("rendering + waiting %ds", m.exitCountdownSecs)
-	default:
-		return ""
-	}
-}
-
 // getWaitingForLocksMessage returns a message if any locks are being waited on.
 // Returns empty string if no locks are waiting.
 func (m Model) getWaitingForLocksMessage() string {
@@ -425,189 +350,6 @@ func (m Model) getWaitingForLocksMessage() string {
 		return fmt.Sprintf("Waiting for lock: %s", waitingLocks[0])
 	}
 	return fmt.Sprintf("Waiting for locks: %s", strings.Join(waitingLocks, ", "))
-}
-
-// renderWaitingStatePanel renders the waiting state in the left panel.
-func (m Model) renderWaitingStatePanel(width, height int) string {
-	// Animated dots
-	elapsed := time.Since(m.startTime)
-	dotCount := int(elapsed.Seconds()*2) % 4
-
-	dots := strings.Repeat(".", dotCount+1)
-	if !m.asciiMode {
-		dots = strings.Repeat("·", dotCount+1)
-	}
-
-	icon := "◐"
-	if m.asciiMode {
-		// Rotating ASCII spinner
-		spinChars := []string{"|", "/", "-", "\\"}
-		icon = spinChars[int(elapsed.Seconds()*4)%4]
-	}
-
-	// Get the waiting state message
-	stateMsg := m.getWaitingStateMessage()
-	if stateMsg == "" {
-		stateMsg = "waiting"
-	}
-
-	msg := Styles.Running.Render(icon) + " " + Styles.Phase.Render(stateMsg) + Styles.Dim.Render(dots)
-
-	// Build panel with centered message
-	var result strings.Builder
-
-	// Center vertically
-	topPadding := (height - 1) / 2
-	for i := 0; i < topPadding; i++ {
-		result.WriteString(strings.Repeat(" ", width))
-		result.WriteString("\n")
-	}
-
-	// Center horizontally
-	msgWidth := lipgloss.Width(msg)
-	leftPadding := (width - msgWidth) / 2
-	if leftPadding < 0 {
-		leftPadding = 0
-	}
-	result.WriteString(strings.Repeat(" ", leftPadding))
-	result.WriteString(msg)
-	// Pad to full width
-	rightPadding := width - leftPadding - msgWidth
-	if rightPadding > 0 {
-		result.WriteString(strings.Repeat(" ", rightPadding))
-	}
-
-	// Fill remaining lines
-	for i := topPadding + 1; i < height; i++ {
-		result.WriteString("\n")
-		result.WriteString(strings.Repeat(" ", width))
-	}
-
-	return result.String()
-}
-
-// renderCreatingSummary shows a centered "Rendering summary..." message (full width version).
-func (m Model) renderCreatingSummary(height int) string {
-	// Animated dots
-	elapsed := time.Since(m.startTime)
-	dotCount := int(elapsed.Seconds()*2) % 4
-
-	dots := strings.Repeat(".", dotCount+1)
-	if !m.asciiMode {
-		dots = strings.Repeat("·", dotCount+1)
-	}
-
-	icon := "◐"
-	if m.asciiMode {
-		// Rotating ASCII spinner
-		spinChars := []string{"|", "/", "-", "\\"}
-		icon = spinChars[int(elapsed.Seconds()*4)%4]
-	}
-
-	msg := Styles.Running.Render(icon) + " " + Styles.Phase.Render("Rendering summary") + Styles.Dim.Render(dots)
-
-	// Center vertically and horizontally
-	var result strings.Builder
-	topPadding := (height - 1) / 2
-	for i := 0; i < topPadding; i++ {
-		result.WriteString("\n")
-	}
-
-	msgWidth := lipgloss.Width(msg)
-	leftPadding := (m.width - msgWidth) / 2
-	if leftPadding < 0 {
-		leftPadding = 0
-	}
-	result.WriteString(strings.Repeat(" ", leftPadding))
-	result.WriteString(msg)
-
-	for i := topPadding + 1; i < height; i++ {
-		result.WriteString("\n")
-	}
-
-	return result.String()
-}
-
-// renderExitLampRow renders a single-line visual countdown with 30 lamps turning off right to left.
-func (m Model) renderExitLampRow() string {
-	const totalLamps = 30
-
-	// Calculate lamps remaining: 10 seconds = 30 lamps, so 3 lamps per second
-	lampsLit := m.exitCountdownSecs * 3
-	if lampsLit > totalLamps {
-		lampsLit = totalLamps
-	}
-	if lampsLit < 0 {
-		lampsLit = 0
-	}
-
-	// Lamp characters
-	lampOn := "●"
-	lampOff := "○"
-	if m.asciiMode {
-		lampOn = "O"
-		lampOff = "."
-	}
-
-	// Build lamp string: lit lamps on left, off lamps on right
-	var lamps strings.Builder
-	// Color based on time remaining
-	var color lipgloss.Color
-	if lampsLit > 20 {
-		color = lipgloss.Color("34") // Green - plenty of time
-	} else if lampsLit > 10 {
-		color = lipgloss.Color("214") // Yellow/orange - getting low
-	} else {
-		color = lipgloss.Color("196") // Red - almost out
-	}
-
-	for i := 0; i < totalLamps; i++ {
-		if i < lampsLit {
-			lamps.WriteString(lipgloss.NewStyle().Foreground(color).Render(lampOn))
-		} else {
-			lamps.WriteString(Styles.Dim.Render(lampOff))
-		}
-	}
-
-	// Build status message - show precise waiting state
-	var msg string
-	if m.summaryData != nil && m.summaryData.Success {
-		msg = "Complete"
-	} else if m.summaryData != nil {
-		msg = "Failed"
-	} else {
-		msg = "Done"
-	}
-
-	// Status icon
-	icon := "✓"
-	iconColor := lipgloss.Color("34") // Green
-	if m.summaryData != nil && !m.summaryData.Success {
-		icon = "✗"
-		iconColor = lipgloss.Color("196") // Red
-	}
-	if m.asciiMode {
-		icon = "V"
-		if m.summaryData != nil && !m.summaryData.Success {
-			icon = "X"
-		}
-	}
-
-	// Get precise waiting state
-	waitingText := m.getWaitingStateMessage()
-
-	left := lipgloss.NewStyle().Foreground(iconColor).Bold(true).Render(icon) +
-		" " + Styles.Phase.Render(msg) +
-		"  " + lamps.String() +
-		"  " + Styles.Dim.Render(waitingText)
-
-	// Single line with border fill
-	borderLen := m.width - lipgloss.Width(left) - 4
-	if borderLen < 1 {
-		borderLen = 1
-	}
-
-	return "─" + left + " " + Styles.Border.Render(strings.Repeat("─", borderLen)) + "─"
 }
 
 // renderInitPaneCompact renders a compact single-line Init pane when initialization is complete.
@@ -1840,15 +1582,38 @@ func (m Model) renderResourcesPane() string {
 
 	var result strings.Builder
 
-	// Header: ┌─ Resources ──────────────────────┐
+	// Header: ┌─ Resources ────────────────────── [Freeze MM:SS] ┐
 	title := "Resources"
 	headerLeft := "┌─ " + Styles.Dim.Render(title) + " "
 
-	headerBorderLen := m.width - lipgloss.Width(headerLeft) - 1
+	// Freeze button: shows "Freeze" or countdown when active
+	var freezeBtn string
+	if m.exitCountdownSecs > 0 && m.userHasInteracted {
+		// Show countdown when freeze is active
+		mins := m.exitCountdownSecs / 60
+		secs := m.exitCountdownSecs % 60
+		// Color based on time remaining
+		var btnStyle lipgloss.Style
+		if m.exitCountdownSecs > 60 {
+			btnStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("34")).Bold(true) // Green
+		} else if m.exitCountdownSecs > 20 {
+			btnStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true) // Yellow/orange
+		} else {
+			btnStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true) // Red
+		}
+		freezeBtn = btnStyle.Render(fmt.Sprintf("[Freeze %d:%02d]", mins, secs))
+	} else {
+		// Show inactive freeze button
+		freezeBtn = Styles.Dim.Render("[Freeze]")
+	}
+	freezeBtn = zone.Mark("freeze-button", freezeBtn)
+
+	// Calculate border length accounting for freeze button
+	headerBorderLen := m.width - lipgloss.Width(headerLeft) - lipgloss.Width(freezeBtn) - 3
 	if headerBorderLen < 3 {
 		headerBorderLen = 3
 	}
-	result.WriteString(headerLeft + Styles.Border.Render(strings.Repeat("─", headerBorderLen)) + "┐\n")
+	result.WriteString(headerLeft + Styles.Border.Render(strings.Repeat("─", headerBorderLen)) + " " + freezeBtn + " ┐\n")
 
 	// Content line: timer | mouse mode | pressure (weighted scheduler) | cpu dots | memory %
 	// White style for labels
@@ -1889,10 +1654,33 @@ func (m Model) renderResourcesPane() string {
 		content += sep + white.Render("Jobs: ") + containerDotsStr
 	}
 
-	// Add exit countdown if active
-	if m.exitCountdownSecs > 0 {
-		exitStr := white.Render("Exit: ") + Styles.Dim.Render(fmt.Sprintf("%d", m.exitCountdownSecs))
-		content += sep + exitStr
+	// Add red lamps for waiting locks at end of resource row
+	waitingCount := 0
+	for _, lock := range m.locks {
+		if lock.Waiting > 0 {
+			waitingCount += lock.Waiting
+		}
+	}
+	if waitingCount > 0 {
+		redStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("196"))
+		lamp := "●"
+		if m.asciiMode {
+			lamp = "O"
+		}
+		// Cap displayed lamps at 16 to avoid visual overload
+		displayCount := waitingCount
+		if displayCount > 16 {
+			displayCount = 16
+		}
+		lamps := strings.Repeat(lamp, displayCount)
+		// Show count if more than displayed
+		var waitStr string
+		if waitingCount > displayCount {
+			waitStr = fmt.Sprintf("%s+%d", lamps, waitingCount-displayCount)
+		} else {
+			waitStr = lamps
+		}
+		content += sep + white.Render("Locks: ") + redStyle.Render(waitStr)
 	}
 
 	// Content line 1: │ content                            │
@@ -1902,23 +1690,7 @@ func (m Model) renderResourcesPane() string {
 	}
 	result.WriteString(Styles.Border.Render("│") + " " + content + strings.Repeat(" ", contentPadding) + " " + Styles.Border.Render("│") + "\n")
 
-	// Content line 2: "waiting for locks" indicator on its own line if any locks are being waited on
-	if waitingMsg := m.getWaitingForLocksMessage(); waitingMsg != "" {
-		// Highlight waiting status with yellow/orange
-		waitingStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true)
-		// Animated dots
-		elapsed := time.Since(m.startTime)
-		dotCount := int(elapsed.Seconds()*2) % 4
-		dots := strings.Repeat(".", dotCount+1)
-		locksContent := waitingStyle.Render("⏳ " + waitingMsg + dots)
-		locksPadding := m.width - lipgloss.Width(locksContent) - 4
-		if locksPadding < 0 {
-			locksPadding = 0
-		}
-		result.WriteString(Styles.Border.Render("│") + " " + locksContent + strings.Repeat(" ", locksPadding) + " " + Styles.Border.Render("│") + "\n")
-	}
-
-	// Content line 2: tools row (show tools grouped by type - containers | system)
+	// Content line 2: tools row (single line with all tools)
 	hasContainers := len(m.usedContainers) > 0
 	hasSystem := len(m.usedSystemTools) > 0
 	if hasContainers || hasSystem {
@@ -1929,10 +1701,12 @@ func (m Model) renderResourcesPane() string {
 		}
 		result.WriteString("├" + Styles.Border.Render(strings.Repeat("─", sepLen)) + "┤\n")
 
-		// Render each tool with appropriate color (orange=active, light grey/white=was active)
-		orange := lipgloss.NewStyle().Foreground(lipgloss.Color("208"))
-		lightGrey := lipgloss.NewStyle().Foreground(lipgloss.Color("250")) // Light grey for previously-active tools
-		white := lipgloss.NewStyle().Foreground(lipgloss.Color("255"))     // White for labels
+		// Tool styles by category and state
+		systemActive := lipgloss.NewStyle().Foreground(lipgloss.Color("208"))
+		systemInactive := lipgloss.NewStyle().Foreground(lipgloss.Color("130"))
+		containerActive := lipgloss.NewStyle().Foreground(lipgloss.Color("39"))
+		containerInactive := lipgloss.NewStyle().Foreground(lipgloss.Color("24"))
+		labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("255"))
 
 		// Build active tool sets for quick lookup
 		activeContainerSet := make(map[string]bool)
@@ -1944,40 +1718,29 @@ func (m Model) renderResourcesPane() string {
 			activeSystemSet[t] = true
 		}
 
-		var toolsParts []string
-
-		// System tools group (first)
-		if hasSystem {
-			var systemParts []string
-			for _, tool := range m.usedSystemTools {
-				if activeSystemSet[tool] {
-					systemParts = append(systemParts, orange.Render(tool))
-				} else {
-					systemParts = append(systemParts, lightGrey.Render(tool))
-				}
+		// Collect all tools in single list (system first, then containers)
+		// Strip :system/:container suffixes - type is indicated by color
+		var allTools []string
+		for _, tool := range m.usedSystemTools {
+			displayName := stripToolTypeSuffix(tool)
+			if activeSystemSet[tool] {
+				allTools = append(allTools, systemActive.Render(displayName))
+			} else {
+				allTools = append(allTools, systemInactive.Render(displayName))
 			}
-			systemList := strings.Join(systemParts, Styles.Dim.Render(", "))
-			toolsParts = append(toolsParts, white.Render("System: ")+systemList)
+		}
+		for _, tool := range m.usedContainers {
+			displayName := stripToolTypeSuffix(tool)
+			if activeContainerSet[tool] {
+				allTools = append(allTools, containerActive.Render(displayName))
+			} else {
+				allTools = append(allTools, containerInactive.Render(displayName))
+			}
 		}
 
-		// Containers group (second)
-		if hasContainers {
-			var containerParts []string
-			for _, tool := range m.usedContainers {
-				if activeContainerSet[tool] {
-					containerParts = append(containerParts, orange.Render(tool))
-				} else {
-					containerParts = append(containerParts, lightGrey.Render(tool))
-				}
-			}
-			containersList := strings.Join(containerParts, Styles.Dim.Render(", "))
-			toolsParts = append(toolsParts, white.Render("Containers: ")+containersList)
-		}
+		toolsContent := labelStyle.Render("Tools: ") + strings.Join(allTools, Styles.Dim.Render(", "))
 
-		// Join groups with separator
-		toolsContent := strings.Join(toolsParts, Styles.Dim.Render(" │ "))
-
-		// Calculate padding (need to use lipgloss.Width for styled content)
+		// Calculate padding
 		toolsPadding := m.width - lipgloss.Width(toolsContent) - 4
 		if toolsPadding < 0 {
 			toolsPadding = 0
@@ -2443,6 +2206,18 @@ func padRight(s string, width int) string {
 		return s[:width]
 	}
 	return s + strings.Repeat(" ", width-len(s))
+}
+
+// stripToolTypeSuffix removes :system or :container suffix from tool names.
+// Type is indicated by color in the TUI, not by suffix in the name.
+func stripToolTypeSuffix(toolID string) string {
+	if idx := strings.LastIndex(toolID, ":"); idx != -1 {
+		suffix := toolID[idx+1:]
+		if suffix == "system" || suffix == "container" {
+			return toolID[:idx]
+		}
+	}
+	return toolID
 }
 
 

@@ -23,9 +23,10 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
-	"github.com/ready-to-release/eac/go/eac/core/buildstate"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/hash"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
+	"github.com/ready-to-release/eac/go/eac/core/workunit"
 )
 
 func init() {
@@ -75,7 +76,7 @@ func GetChangedModulesLocal() int {
 }
 
 // detectLocalChanges detects which modules need rebuilding based on build state.
-// Uses the shared buildstate.DetectChangesForModules function.
+// Uses workunit.StateManager.DetectModuleChanges for change detection.
 func detectLocalChanges(workspaceRoot string, requestedModules []string) (*LocalChangedModulesResult, error) {
 	// Load module registry
 	reg, err := modules.LoadFromWorkspace(workspaceRoot)
@@ -83,9 +84,9 @@ func detectLocalChanges(workspaceRoot string, requestedModules []string) (*Local
 		return nil, err
 	}
 
-	// Build modules map for change detection
-	// Uses buildstate.ModuleFileGetter interface
-	modulesMap := make(map[string]buildstate.ModuleFileGetter)
+	// Build list of modules to check and their files
+	var monikers []string
+	moduleFiles := make(map[string][]string)
 
 	if len(requestedModules) > 0 {
 		// Only check requested modules
@@ -95,49 +96,70 @@ func detectLocalChanges(workspaceRoot string, requestedModules []string) (*Local
 				fmt.Fprintf(os.Stderr, "Warning: module not found: %s\n", moniker)
 				continue
 			}
-			modulesMap[moniker] = contract
+			monikers = append(monikers, moniker)
+			// Debug: print module patterns
+			if os.Getenv("DEBUG_CACHE_CMD") != "" {
+				patterns := contract.GetGlobPatterns()
+				fmt.Fprintf(os.Stderr, "[DEBUG cmd] %s patterns=%v\n", moniker, patterns)
+			}
+			// Expand glob patterns to get source files
+			files, err := hash.ExpandGlobPatterns(workspaceRoot, contract.GetGlobPatterns())
+			if err == nil {
+				moduleFiles[moniker] = files
+			}
 		}
 	} else {
 		// Check all modules
 		for _, contract := range reg.All() {
-			modulesMap[contract.Moniker] = contract
-		}
-	}
-
-	// Debug: print module patterns
-	if os.Getenv("DEBUG_CACHE_CMD") != "" {
-		for moniker, mod := range modulesMap {
-			patterns := mod.GetGlobPatterns()
-			fmt.Fprintf(os.Stderr, "[DEBUG cmd] %s patterns=%v\n", moniker, patterns)
-		}
-	}
-
-	// Get files before calling detection to show what's being discovered
-	if os.Getenv("DEBUG_CACHE_CMD") != "" {
-		moduleFiles, err := buildstate.GetModuleSourceFiles(workspaceRoot, modulesMap)
-		if err == nil {
-			for moniker, files := range moduleFiles {
-				fmt.Fprintf(os.Stderr, "[DEBUG cmd] %s files=%v\n", moniker, files)
+			monikers = append(monikers, contract.Moniker)
+			// Debug: print module patterns
+			if os.Getenv("DEBUG_CACHE_CMD") != "" {
+				patterns := contract.GetGlobPatterns()
+				fmt.Fprintf(os.Stderr, "[DEBUG cmd] %s patterns=%v\n", contract.Moniker, patterns)
+			}
+			// Expand glob patterns to get source files
+			files, err := hash.ExpandGlobPatterns(workspaceRoot, contract.GetGlobPatterns())
+			if err == nil {
+				moduleFiles[contract.Moniker] = files
 			}
 		}
 	}
 
-	// Use shared detection function
-	changed, upToDate, reasons, isFresh, detectionTime, err := buildstate.DetectChangesForModules(workspaceRoot, modulesMap)
+	// Debug: print discovered files
+	if os.Getenv("DEBUG_CACHE_CMD") != "" {
+		for moniker, files := range moduleFiles {
+			fmt.Fprintf(os.Stderr, "[DEBUG cmd] %s files=%v\n", moniker, files)
+		}
+	}
+
+	// Create hash provider for change detection
+	hashProvider := func(module string) (string, error) {
+		files, ok := moduleFiles[module]
+		if !ok {
+			return "", fmt.Errorf("no files for module %s", module)
+		}
+		return hash.Files(workspaceRoot, files)
+	}
+
+	// Use workunit StateManager for change detection
+	stateMgr := workunit.NewStateManager(workspaceRoot)
+	rule := workunit.DefaultRules[workunit.ContextBuild]
+	changeResult, err := stateMgr.DetectModuleChanges(workunit.ContextBuild, monikers, rule, hashProvider)
 	if err != nil {
 		return nil, err
 	}
 
 	// Debug: print results
 	if os.Getenv("DEBUG_CACHE_CMD") != "" {
-		fmt.Fprintf(os.Stderr, "[DEBUG cmd] changed=%v upToDate=%v reasons=%v\n", changed, upToDate, reasons)
+		fmt.Fprintf(os.Stderr, "[DEBUG cmd] changed=%v upToDate=%v reasons=%v\n",
+			changeResult.ChangedModules, changeResult.UpToDateModules, changeResult.ChangeReasons)
 	}
 
 	return &LocalChangedModulesResult{
-		Modules:       changed,
-		UpToDate:      upToDate,
-		ChangeReasons: reasons,
-		IsFreshBuild:  isFresh,
-		DetectionTime: detectionTime.Round(time.Millisecond).String(),
+		Modules:       changeResult.ChangedModules,
+		UpToDate:      changeResult.UpToDateModules,
+		ChangeReasons: changeResult.ChangeReasons,
+		IsFreshBuild:  changeResult.FreshRun,
+		DetectionTime: changeResult.DetectionTime.Round(time.Millisecond).String(),
 	}, nil
 }

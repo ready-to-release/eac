@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
+	"github.com/ready-to-release/eac/go/eac/core/workunit"
 )
 
 // TestComponentRegistry_RegisterAndRetrieve tests basic registration and retrieval.
@@ -14,8 +14,8 @@ func TestComponentRegistry_RegisterAndRetrieve(t *testing.T) {
 	reg := NewComponentRegistry()
 
 	// Create mock provider and worker
-	mockProvider := func(ctx *ExecutionContext) [][]orchestrator.ComponentWork {
-		return [][]orchestrator.ComponentWork{{}}
+	mockProvider := func(ctx *ExecutionContext) [][]workunit.UnitSpec {
+		return [][]workunit.UnitSpec{{}}
 	}
 	mockWorker := func(ctx *ExecutionContext, module, component string, logWriter io.Writer) int {
 		return 0
@@ -68,7 +68,7 @@ func TestComponentRegistry_PartialRegistration(t *testing.T) {
 	reg := NewComponentRegistry()
 
 	// Register only provider
-	mockProvider := func(ctx *ExecutionContext) [][]orchestrator.ComponentWork {
+	mockProvider := func(ctx *ExecutionContext) [][]workunit.UnitSpec {
 		return nil
 	}
 	reg.RegisterProvider(CommandTypeTest, mockProvider)
@@ -95,11 +95,11 @@ func TestComponentRegistry_ReplaceRegistration(t *testing.T) {
 	reg := NewComponentRegistry()
 
 	callCount := 0
-	provider1 := func(ctx *ExecutionContext) [][]orchestrator.ComponentWork {
+	provider1 := func(ctx *ExecutionContext) [][]workunit.UnitSpec {
 		callCount = 1
 		return nil
 	}
-	provider2 := func(ctx *ExecutionContext) [][]orchestrator.ComponentWork {
+	provider2 := func(ctx *ExecutionContext) [][]workunit.UnitSpec {
 		callCount = 2
 		return nil
 	}
@@ -128,7 +128,7 @@ func TestComponentRegistry_AllCommandTypes(t *testing.T) {
 	commandTypes := []CommandType{CommandTypeBuild, CommandTypeTest, CommandTypeScan, CommandTypeLint}
 
 	for _, cmdType := range commandTypes {
-		mockProvider := func(ctx *ExecutionContext) [][]orchestrator.ComponentWork {
+		mockProvider := func(ctx *ExecutionContext) [][]workunit.UnitSpec {
 			return nil
 		}
 		mockWorker := func(ctx *ExecutionContext, module, component string, logWriter io.Writer) int {
@@ -157,7 +157,7 @@ func TestComponentRegistry_ConcurrentAccess(t *testing.T) {
 		go func(idx int) {
 			defer wg.Done()
 			cmdType := CommandType([]CommandType{CommandTypeBuild, CommandTypeTest, CommandTypeScan, CommandTypeLint}[idx%4])
-			reg.RegisterProvider(cmdType, func(ctx *ExecutionContext) [][]orchestrator.ComponentWork {
+			reg.RegisterProvider(cmdType, func(ctx *ExecutionContext) [][]workunit.UnitSpec {
 				return nil
 			})
 			reg.RegisterWorker(cmdType, func(ctx *ExecutionContext, module, component string, logWriter io.Writer) int {
@@ -216,7 +216,7 @@ func TestGlobalRegistryFunctions(t *testing.T) {
 
 	// Test RegisterComponentProvider and GetComponentProvider
 	buildCalled := false
-	RegisterComponentProvider(CommandTypeBuild, func(ctx *ExecutionContext) [][]orchestrator.ComponentWork {
+	RegisterComponentProvider(CommandTypeBuild, func(ctx *ExecutionContext) [][]workunit.UnitSpec {
 		buildCalled = true
 		return nil
 	})

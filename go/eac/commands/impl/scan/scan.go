@@ -48,6 +48,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"github.com/ready-to-release/eac/go/eac/core/tool"
 
 	// Import scanners package to trigger init() registration of native scanners
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/scan/scanners"
@@ -113,6 +114,7 @@ func Scan() int {
 	// Create command config
 	cmdCfg := &cmdframework.CommandConfig{
 		Type:           cmdframework.CommandTypeScan,
+		CommandPath:    "scan",
 		ActionVerb:     "Scanning",
 		OutputDir:      "out/scan",
 		LogFileName:    "scan.log",
@@ -152,11 +154,11 @@ func parseScannerList(input string) ([]internal.ScannerType, error) {
 		if s == "" {
 			continue
 		}
-		scannerType, valid := internal.ParseScannerType(s)
-		if !valid {
+		toolID := tool.ScannerToolIDForCategory(s)
+		if toolID == "" {
 			return nil, fmt.Errorf("invalid scanner type: %s (valid: %s)", s, strings.Join(ValidScannerTypes, ", "))
 		}
-		scanners = append(scanners, scannerType)
+		scanners = append(scanners, internal.ScannerType(toolID))
 	}
 	if len(scanners) == 0 {
 		return nil, fmt.Errorf("no valid scanner types specified")

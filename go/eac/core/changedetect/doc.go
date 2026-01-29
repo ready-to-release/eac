@@ -47,14 +47,15 @@
 //
 // # State Persistence
 //
-// The Detector itself does not persist state. State persistence remains in
-// operation-specific packages (buildstate, lintstate, teststate) which store
-// additional operation-specific data:
-//   - buildstate: Stores BuiltAt timestamp and file list for debugging
-//   - lintstate: Stores Passed flag (failed modules need re-linting)
-//   - teststate: Stores suite tracking, BuildID, and test-specific state
+// The Detector itself does not persist state. State persistence is handled by
+// workunit.StateManager which stores per-module state files with:
+//   - SourceHash: Hash of source files for change detection
+//   - Passed: Whether the last operation succeeded (failed units need re-execution)
+//   - BuildID: For test/scan - the build this was tested against
+//   - DependencyHash: For integration tests - hash of dependency build IDs
+//   - ExecutedAt: Timestamp of last execution
 //
-// Use ConvertToWorkspaceState() to convert operation-specific state to the
+// Use ConvertToWorkspaceState() to convert workunit state to the
 // WorkspaceState format expected by Detector.DetectChanges().
 //
 // # Usage Example
@@ -73,17 +74,25 @@
 //	    },
 //	)
 //
-//	// Load previous state (from operation-specific package)
-//	prevState, _ := buildstate.Load(workspaceRoot)
+//	// Load previous state using workunit.StateManager
+//	stateMgr := workunit.NewStateManager(workspaceRoot)
 //	moduleHashes := make(map[string]string)
-//	for m, s := range prevState.Modules {
-//	    moduleHashes[m] = s.SourceHash
+//	for _, m := range []string{"module-a", "module-b"} {
+//	    unitID := workunit.UnitID{
+//	        Context:   workunit.ContextBuild,
+//	        Module:    m,
+//	        Component: "_module",
+//	        Tool:      "_",
+//	    }
+//	    if state, err := stateMgr.Load(unitID); err == nil {
+//	        moduleHashes[m] = state.SourceHash
+//	    }
 //	}
 //	workspaceState := changedetect.ConvertToWorkspaceState(
-//	    prevState.Commit,
-//	    prevState.UncommittedHash,
+//	    "", // git commit tracked separately if needed
+//	    "",
 //	    moduleHashes,
-//	    prevState.UpdatedAt,
+//	    time.Now(),
 //	)
 //
 //	// Detect changes

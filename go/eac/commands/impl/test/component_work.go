@@ -4,11 +4,11 @@ import (
 	"math"
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/cmdframework"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/testing"
 	"github.com/ready-to-release/eac/go/eac/core/tool"
+	"github.com/ready-to-release/eac/go/eac/core/workunit"
 )
 
 var componentWorkLog = logging.C()
@@ -21,7 +21,7 @@ var componentWorkLog = logging.C()
 //
 // Test keys use path-based format: "go/eac/core/config:gotest"
 // This differs from build/lint/scan which use component-based format: "module:component:tool".
-func FlattenModulesToTestComponentWork(ctx *cmdframework.ExecutionContext) [][]orchestrator.ComponentWork {
+func FlattenModulesToTestComponentWork(ctx *cmdframework.ExecutionContext) [][]workunit.UnitSpec {
 	testCfg, ok := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
 	if !ok || testCfg == nil {
 		return nil
@@ -37,8 +37,8 @@ func FlattenModulesToTestComponentWork(ctx *cmdframework.ExecutionContext) [][]o
 		return nil
 	}
 
-	var parallelWork []orchestrator.ComponentWork
-	var sequentialWork []orchestrator.ComponentWork
+	var parallelWork []workunit.UnitSpec
+	var sequentialWork []workunit.UnitSpec
 
 	for pkgPath, tests := range testsByPackage {
 		if len(tests) == 0 {
@@ -76,16 +76,23 @@ func FlattenModulesToTestComponentWork(ctx *cmdframework.ExecutionContext) [][]o
 			// Check if module is cached
 			isCached := testCfg.CachedModules != nil && testCfg.CachedModules[moduleMoniker]
 
-			work := orchestrator.ComponentWork{
-				Module:        moduleMoniker,
-				Component:     pkgPath + ":" + testType,
-				ComponentType: testType,
-				Handler:       testType, // Use test type instead of generic "test"
-				IsContainer:   tool.GlobalTestBridge().IsContainer(compTypeName),
-				Weight:        weight,
-				BuildAfter:    nil, // Tests don't have intra-module deps
-				Index:         0,   // Will be set per-layer below
-				Cached:        isCached,
+			isContainer := tool.GlobalTestBridge().IsContainer(compTypeName)
+			work := workunit.UnitSpec{
+				ID: workunit.UnitID{
+					Context:   workunit.ContextTest,
+					Module:    moduleMoniker,
+					Component: pkgPath + ":" + testType,
+					Tool:      testType, // Use test type instead of generic "test"
+					Extra:     map[string]string{"testset": testType},
+				},
+				ComponentType:   testType,
+				Weight:          weight,
+				IsContainer:     isContainer,
+				IsHostInstalled: !isContainer,
+				DependsOn:       nil, // Tests don't have intra-module deps
+				Cached:          isCached,
+				Metadata:        make(map[string]any),
+				Index:           0, // Will be set per-layer below
 			}
 
 			if hasSequential {
@@ -105,7 +112,7 @@ func FlattenModulesToTestComponentWork(ctx *cmdframework.ExecutionContext) [][]o
 	}
 
 	// Build layers: parallel first, sequential second
-	var layers [][]orchestrator.ComponentWork
+	var layers [][]workunit.UnitSpec
 	if len(parallelWork) > 0 {
 		layers = append(layers, parallelWork)
 	}

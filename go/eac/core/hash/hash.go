@@ -1,5 +1,5 @@
 // Package hash provides deterministic file content hashing for change detection.
-// It consolidates hashing logic previously duplicated across buildstate, lintstate, and teststate.
+// It provides the core hashing functions used by workunit.StateManager for cache invalidation.
 package hash
 
 import (
@@ -102,4 +102,22 @@ func ExpandGlobPatterns(workspaceRoot string, patterns []string) ([]string, erro
 
 	sort.Strings(result)
 	return result, nil
+}
+
+// GlobPatternGetter is an interface for types that provide glob patterns.
+// Module contracts implement this interface via GetGlobPatterns().
+type GlobPatternGetter interface {
+	GetGlobPatterns() []string
+}
+
+// ComputeFromPatterns computes a hash from glob patterns.
+// This is a convenience function that expands patterns and computes the hash.
+// Useful for computing module input hashes for cache validation.
+func ComputeFromPatterns(workspaceRoot string, getter GlobPatternGetter) (string, error) {
+	patterns := getter.GetGlobPatterns()
+	files, err := ExpandGlobPatterns(workspaceRoot, patterns)
+	if err != nil {
+		return "", fmt.Errorf("failed to expand patterns: %w", err)
+	}
+	return Files(workspaceRoot, files)
 }

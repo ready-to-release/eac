@@ -380,8 +380,8 @@ func (e *DefaultExecutor) executeContainer(ctx context.Context, tool *ToolDefini
 		}
 	}
 
-	// Create unique container name
-	containerName := fmt.Sprintf("tool-%s-%d", tool.ID, time.Now().UnixNano())
+	// Create unique container name using Docker-safe name
+	containerName := fmt.Sprintf("eac-%s-%d", tool.ContainerSafeName(), time.Now().UnixNano())
 
 	// Execute container
 	return e.runContainer(ctx, containerConfig, hostConfig, containerName, execCtx.LogWriter)

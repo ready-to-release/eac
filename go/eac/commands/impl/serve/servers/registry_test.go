@@ -37,12 +37,12 @@ func TestHasServer(t *testing.T) {
 	tool.SetGlobalRegistry(registry)
 
 	// Should have static-site from tool-config.yml
-	if !HasServer(ServerStaticSite) {
+	if !HasServer(tool.ToolStaticSite) {
 		t.Error("HasServer should return true for static-site server")
 	}
 }
 
-func TestGetAllServerTypes(t *testing.T) {
+func TestGetAllServableTools(t *testing.T) {
 	// Initialize tool system from default config
 	repoRoot := findRepoRoot(t)
 	registry, _, err := tool.InitializeFromConfig(repoRoot, "")
@@ -51,68 +51,26 @@ func TestGetAllServerTypes(t *testing.T) {
 	}
 	tool.SetGlobalRegistry(registry)
 
-	types := GetAllServerTypes()
-	if len(types) == 0 {
-		t.Error("GetAllServerTypes should return at least one type")
+	tools := GetAllServableTools()
+	if len(tools) == 0 {
+		t.Error("GetAllServableTools should return at least one tool")
 	}
 
 	// Verify static-site is in the list
 	found := false
-	for _, st := range types {
-		if st == ServerStaticSite {
+	for _, tool := range tools {
+		if tool.GetServerType() == "static-site" {
 			found = true
 			break
 		}
 	}
 	if !found {
-		t.Error("ServerStaticSite should be in GetAllServerTypes")
+		t.Error("static-site should be in GetAllServableTools")
 	}
 }
 
-func TestGetServerToolID(t *testing.T) {
-	toolID := GetServerToolID(ServerStaticSite)
-	if toolID != "static-site" {
-		t.Errorf("GetServerToolID(ServerStaticSite) = %q, want %q", toolID, "static-site")
-	}
-}
-
-func TestParseServerType(t *testing.T) {
-	tests := []struct {
-		input    string
-		expected ServerType
-		ok       bool
-	}{
-		{"static-site", ServerStaticSite, true},
-		{"mkdocs-live", ServerMkDocsLive, true},
-		{"structurizr", ServerStructurizr, true},
-		{"unknown", "", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
-			got, ok := ParseServerType(tt.input)
-			if ok != tt.ok {
-				t.Errorf("ParseServerType(%q) ok = %v, want %v", tt.input, ok, tt.ok)
-			}
-			if got != tt.expected {
-				t.Errorf("ParseServerType(%q) = %q, want %q", tt.input, got, tt.expected)
-			}
-		})
-	}
-}
-
-func TestServerTypeConstants(t *testing.T) {
-	// Verify constants have expected values
-	if ServerStaticSite != "static-site" {
-		t.Errorf("ServerStaticSite = %q, want %q", ServerStaticSite, "static-site")
-	}
-	if ServerMkDocsLive != "mkdocs-live" {
-		t.Errorf("ServerMkDocsLive = %q, want %q", ServerMkDocsLive, "mkdocs-live")
-	}
-	if ServerStructurizr != "structurizr" {
-		t.Errorf("ServerStructurizr = %q, want %q", ServerStructurizr, "structurizr")
-	}
-}
+// TestServerToolConstants removed - use tool.ToolXxx constants from go/eac/core/tool/ids.go.
+// See go/eac/core/tool/ids_test.go for server constant tests.
 
 func TestAllServersRegistered(t *testing.T) {
 	// Initialize tool system from default config
@@ -124,21 +82,39 @@ func TestAllServersRegistered(t *testing.T) {
 	tool.SetGlobalRegistry(registry)
 
 	// All three servers should be available via tool-config.yml
-	servers := []ServerType{
-		ServerStaticSite,
-		ServerMkDocsLive,
-		ServerStructurizr,
+	servers := []string{
+		tool.ToolStaticSite,
+		tool.ToolMkDocsLive,
+		tool.ToolStructurizrLite,
 	}
 
-	for _, st := range servers {
-		t.Run(string(st), func(t *testing.T) {
-			if !HasServer(st) {
-				t.Errorf("Server %q should be registered", st)
+	for _, toolID := range servers {
+		t.Run(toolID, func(t *testing.T) {
+			if !HasServer(toolID) {
+				t.Errorf("Server %q should be registered", toolID)
 			}
-			server := GetServer(st)
+			server := GetServer(toolID)
 			if server == nil {
-				t.Errorf("GetServer(%q) should not return nil", st)
+				t.Errorf("GetServer(%q) should not return nil", toolID)
 			}
 		})
+	}
+}
+
+func TestGetServerToolByID(t *testing.T) {
+	// Initialize tool system from default config
+	repoRoot := findRepoRoot(t)
+	registry, _, err := tool.InitializeFromConfig(repoRoot, "")
+	if err != nil {
+		t.Fatalf("failed to initialize tool system: %v", err)
+	}
+	tool.SetGlobalRegistry(registry)
+
+	serverTool := GetServerToolByID(tool.ToolStaticSite)
+	if serverTool == nil {
+		t.Fatal("GetServerToolByID should return a tool for static-site")
+	}
+	if !serverTool.IsServable() {
+		t.Error("static-site tool should be servable")
 	}
 }

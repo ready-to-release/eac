@@ -8,8 +8,9 @@ import (
 	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/hash"
 	"github.com/ready-to-release/eac/go/eac/core/testing"
-	"github.com/ready-to-release/eac/go/eac/core/teststate"
+	"github.com/ready-to-release/eac/go/eac/core/workunit"
 )
 
 // buildModuleTestInfo builds test file information for each module from the test packages.
@@ -21,8 +22,8 @@ func buildModuleTestInfo(
 	moduleRegistry *modules.Registry,
 	eacCfg *config.EACConfig,
 	workspaceRoot string,
-) (map[string]teststate.ModuleTestFiles, teststate.DependencyBuildIDLoader) {
-	moduleInfo := make(map[string]teststate.ModuleTestFiles)
+) (map[string]workunit.TestModuleInfo, workunit.DependencyBuildIDLoader) {
+	moduleInfo := make(map[string]workunit.TestModuleInfo)
 	uniqueModules := make(map[string]bool)
 
 	// Create a module mapper to find which module owns each package
@@ -38,14 +39,14 @@ func buildModuleTestInfo(
 		}
 	}
 
-	// Build ModuleTestFiles for each module
+	// Build TestModuleInfo for each module
 	for moniker := range uniqueModules {
 		module, exists := moduleRegistry.Get(moniker)
 		if !exists {
 			continue
 		}
 
-		info := teststate.ModuleTestFiles{
+		info := workunit.TestModuleInfo{
 			Dependencies: module.GetDependencies(),
 		}
 
@@ -58,7 +59,7 @@ func buildModuleTestInfo(
 
 		// Get source files from module definition
 		sourcePatterns := module.GetGlobPatterns()
-		sourceFiles, err := teststate.ExpandGlobPatterns(workspaceRoot, sourcePatterns)
+		sourceFiles, err := hash.ExpandGlobPatterns(workspaceRoot, sourcePatterns)
 		if err == nil {
 			// Filter to only include actual source files (not test files)
 			for _, f := range sourceFiles {
@@ -86,7 +87,7 @@ func buildModuleTestInfo(
 				filepath.Join(actualPath, "*_test.go"),
 				filepath.Join(actualPath, "*.feature"),
 			}
-			testFiles, err := teststate.ExpandGlobPatterns(workspaceRoot, testGlobs)
+			testFiles, err := hash.ExpandGlobPatterns(workspaceRoot, testGlobs)
 			if err == nil {
 				info.TestFiles = append(info.TestFiles, testFiles...)
 			}

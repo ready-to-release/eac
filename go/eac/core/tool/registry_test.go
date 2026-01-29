@@ -56,12 +56,12 @@ func TestDefaultRegistry_Register(t *testing.T) {
 
 	t.Run("overwrites existing", func(t *testing.T) {
 		tool1 := &ToolDefinition{
-			ID:     "overwrite-test",
+			ID:     "overwrite-test:system", // Use suffix for direct register
 			Type:   ToolTypeSystem,
 			Binary: "original",
 		}
 		tool2 := &ToolDefinition{
-			ID:     "overwrite-test",
+			ID:     "overwrite-test:system",
 			Type:   ToolTypeSystem,
 			Binary: "updated",
 		}
@@ -69,7 +69,8 @@ func TestDefaultRegistry_Register(t *testing.T) {
 		r.Register(tool1)
 		r.Register(tool2)
 
-		got, ok := r.Get("overwrite-test")
+		// Use exact suffix lookup
+		got, ok := r.Get("overwrite-test:system")
 		if !ok {
 			t.Fatal("tool should exist")
 		}
@@ -81,18 +82,40 @@ func TestDefaultRegistry_Register(t *testing.T) {
 
 func TestDefaultRegistry_Get(t *testing.T) {
 	r := NewRegistry()
-	tool := &ToolDefinition{
-		ID:     "get-test",
-		Type:   ToolTypeSystem,
-		Binary: "test",
-	}
-	r.Register(tool)
+	// Mock verifier so system tools are considered available
+	r.SetVerifier(func(tool *ToolDefinition) bool { return true })
 
-	t.Run("existing tool", func(t *testing.T) {
+	config := &ToolConfig{
+		SystemTools: map[string]*ToolDefinition{
+			"get-test": {
+				Type:   ToolTypeSystem,
+				Binary: "test",
+			},
+		},
+	}
+	r.RegisterFromConfig(config)
+
+	t.Run("existing tool via canonical lookup", func(t *testing.T) {
 		got, ok := r.Get("get-test")
 		if !ok {
-			t.Fatal("tool should be found")
+			t.Fatal("tool should be found via canonical lookup")
 		}
+		// Tool ID is now canonical (no suffix)
+		if got.ID != "get-test" {
+			t.Errorf("ID = %q, want %q", got.ID, "get-test")
+		}
+		// Type is preserved in the Type field
+		if got.Type != ToolTypeSystem {
+			t.Errorf("Type = %q, want %q", got.Type, ToolTypeSystem)
+		}
+	})
+
+	t.Run("existing tool via exact suffix", func(t *testing.T) {
+		got, ok := r.Get("get-test:system")
+		if !ok {
+			t.Fatal("tool should be found via exact suffix")
+		}
+		// Even when looked up with suffix, tool.ID is canonical
 		if got.ID != "get-test" {
 			t.Errorf("ID = %q, want %q", got.ID, "get-test")
 		}
@@ -118,27 +141,51 @@ func TestDefaultRegistry_Get(t *testing.T) {
 
 func TestDefaultRegistry_GetAll(t *testing.T) {
 	r := NewRegistry()
-	r.Register(&ToolDefinition{ID: "tool1", Type: ToolTypeSystem, Binary: "t1"})
-	r.Register(&ToolDefinition{ID: "tool2", Type: ToolTypeContainer, LocalPath: "containers/test"})
+	// Mock verifier so system tools are considered available
+	r.SetVerifier(func(tool *ToolDefinition) bool { return true })
+
+	config := &ToolConfig{
+		SystemTools: map[string]*ToolDefinition{
+			"tool1": {Type: ToolTypeSystem, Binary: "t1"},
+		},
+		ContainerTools: map[string]*ToolDefinition{
+			"tool2": {Type: ToolTypeContainer, LocalPath: "containers/test"},
+		},
+	}
+	r.RegisterFromConfig(config)
 
 	all := r.GetAll()
 	if len(all) != 2 {
 		t.Errorf("expected 2 tools, got %d", len(all))
 	}
 
+	// Verify tools are returned by canonical name (not suffixed)
+	if _, ok := all["tool1"]; !ok {
+		t.Error("GetAll should return tools by canonical name")
+	}
+
 	// Verify it's a copy
-	all["tool1"].Binary = "modified"
-	original, _ := r.Get("tool1")
-	if original.Binary == "modified" {
-		t.Error("GetAll should return copies")
+	if tool1, ok := all["tool1"]; ok {
+		tool1.Binary = "modified"
+		original, _ := r.Get("tool1")
+		if original.Binary == "modified" {
+			t.Error("GetAll should return copies")
+		}
 	}
 }
 
 func TestDefaultRegistry_ListByType(t *testing.T) {
 	r := NewRegistry()
-	r.Register(&ToolDefinition{ID: "sys1", Type: ToolTypeSystem, Binary: "s1"})
-	r.Register(&ToolDefinition{ID: "sys2", Type: ToolTypeSystem, Binary: "s2"})
-	r.Register(&ToolDefinition{ID: "cont1", Type: ToolTypeContainer, LocalPath: "containers/test"})
+	config := &ToolConfig{
+		SystemTools: map[string]*ToolDefinition{
+			"sys1": {Type: ToolTypeSystem, Binary: "s1"},
+			"sys2": {Type: ToolTypeSystem, Binary: "s2"},
+		},
+		ContainerTools: map[string]*ToolDefinition{
+			"cont1": {Type: ToolTypeContainer, LocalPath: "containers/test"},
+		},
+	}
+	r.RegisterFromConfig(config)
 
 	systemTools := r.ListByType(ToolTypeSystem)
 	if len(systemTools) != 2 {
@@ -227,7 +274,7 @@ func TestDefaultRegistry_RegisterFromYAML(t *testing.T) {
 	yamlPath := filepath.Join(tmpDir, "tool-config.yml")
 
 	yamlContent := `
-tools:
+system-tools:
   yaml-tool:
     type: system
     binary: echo
@@ -244,9 +291,10 @@ tools:
 		t.Fatalf("RegisterFromYAML failed: %v", err)
 	}
 
-	tool, ok := r.Get("yaml-tool")
+	// Tools are stored with :system suffix
+	tool, ok := r.Get("yaml-tool:system")
 	if !ok {
-		t.Fatal("tool should be registered from YAML")
+		t.Fatal("tool should be registered from YAML with :system suffix")
 	}
 	if tool.Description != "Tool from YAML" {
 		t.Errorf("Description = %q, want %q", tool.Description, "Tool from YAML")
@@ -266,7 +314,7 @@ func TestDefaultRegistry_RegisterFromYAML_FileNotFound(t *testing.T) {
 
 func TestDefaultRegistry_RegisterFromConfig(t *testing.T) {
 	config := &ToolConfig{
-		Tools: map[string]*ToolDefinition{
+		SystemTools: map[string]*ToolDefinition{
 			"config-tool": {
 				Type:   ToolTypeSystem,
 				Binary: "test",
@@ -280,12 +328,23 @@ func TestDefaultRegistry_RegisterFromConfig(t *testing.T) {
 		t.Fatalf("RegisterFromConfig failed: %v", err)
 	}
 
-	tool, ok := r.Get("config-tool")
+	// Tools are accessible via both canonical and suffixed keys
+	tool, ok := r.Get("config-tool:system")
 	if !ok {
-		t.Fatal("tool should be registered from config")
+		t.Fatal("tool should be accessible via :system suffix")
 	}
+	// But tool.ID is canonical (no suffix)
 	if tool.ID != "config-tool" {
-		t.Error("ID should be backfilled from map key")
+		t.Errorf("ID = %q, want %q", tool.ID, "config-tool")
+	}
+
+	// Also accessible via canonical name
+	tool2, ok := r.Get("config-tool")
+	if !ok {
+		t.Fatal("tool should be accessible via canonical name")
+	}
+	if tool2.ID != "config-tool" {
+		t.Errorf("ID = %q, want %q", tool2.ID, "config-tool")
 	}
 }
 
@@ -317,5 +376,304 @@ func TestDefaultRegistry_ValidateAll(t *testing.T) {
 	if len(errs) != 0 {
 		t.Errorf("expected no errors, got %v", errs)
 	}
+}
+
+// =============================================================================
+// Canonical Lookup Tests
+// =============================================================================
+
+func TestDefaultRegistry_CanonicalLookup_ExactSuffix(t *testing.T) {
+	config := &ToolConfig{
+		SystemTools: map[string]*ToolDefinition{
+			"npm-build": {
+				Type:        ToolTypeSystem,
+				Binary:      "npm",
+				Args:        []string{"run", "build"},
+				Description: "NPM build (system)",
+			},
+		},
+		ContainerTools: map[string]*ToolDefinition{
+			"npm-build": {
+				Type:        ToolTypeContainer,
+				Image:       "node",
+				Tag:         "22-alpine",
+				Description: "NPM build (container)",
+			},
+		},
+	}
+
+	r := NewRegistry()
+	err := r.RegisterFromConfig(config)
+	if err != nil {
+		t.Fatalf("RegisterFromConfig failed: %v", err)
+	}
+
+	t.Run("exact system lookup", func(t *testing.T) {
+		tool, ok := r.Get("npm-build:system")
+		if !ok {
+			t.Fatal("should find tool with exact :system suffix")
+		}
+		if tool.Type != ToolTypeSystem {
+			t.Errorf("Type = %q, want %q", tool.Type, ToolTypeSystem)
+		}
+		if tool.Binary != "npm" {
+			t.Errorf("Binary = %q, want %q", tool.Binary, "npm")
+		}
+	})
+
+	t.Run("exact container lookup", func(t *testing.T) {
+		tool, ok := r.Get("npm-build:container")
+		if !ok {
+			t.Fatal("should find tool with exact :container suffix")
+		}
+		if tool.Type != ToolTypeContainer {
+			t.Errorf("Type = %q, want %q", tool.Type, ToolTypeContainer)
+		}
+		if tool.Image != "node" {
+			t.Errorf("Image = %q, want %q", tool.Image, "node")
+		}
+	})
+}
+
+func TestDefaultRegistry_CanonicalLookup_AutoBinding(t *testing.T) {
+	// Mock system tool that's NOT available (binary doesn't exist)
+	config := &ToolConfig{
+		SystemTools: map[string]*ToolDefinition{
+			"fake-tool": {
+				Type:        ToolTypeSystem,
+				Binary:      "nonexistent-binary-xyz-12345",
+				Description: "System tool (unavailable)",
+			},
+		},
+		ContainerTools: map[string]*ToolDefinition{
+			"fake-tool": {
+				Type:        ToolTypeContainer,
+				Image:       "alpine",
+				Tag:         "3.20",
+				Description: "Container fallback",
+			},
+		},
+		ToolBindings: map[string]ToolBinding{}, // auto is default
+	}
+
+	r := NewRegistry()
+	err := r.RegisterFromConfig(config)
+	if err != nil {
+		t.Fatalf("RegisterFromConfig failed: %v", err)
+	}
+
+	t.Run("canonical lookup falls back to container when system unavailable", func(t *testing.T) {
+		tool, ok := r.Get("fake-tool")
+		if !ok {
+			t.Fatal("should find tool via canonical lookup")
+		}
+		// Since system binary doesn't exist, should fall back to container
+		if tool.Type != ToolTypeContainer {
+			t.Errorf("Type = %q, want %q (system should be unavailable, fallback to container)", tool.Type, ToolTypeContainer)
+		}
+		if tool.Image != "alpine" {
+			t.Errorf("Image = %q, want %q", tool.Image, "alpine")
+		}
+	})
+}
+
+func TestDefaultRegistry_CanonicalLookup_SystemBinding(t *testing.T) {
+	config := &ToolConfig{
+		SystemTools: map[string]*ToolDefinition{
+			"docker": {
+				Type:        ToolTypeSystem,
+				Binary:      "docker",
+				Description: "Docker (system)",
+			},
+		},
+		ContainerTools: map[string]*ToolDefinition{
+			"docker": {
+				Type:        ToolTypeContainer,
+				Image:       "docker",
+				Tag:         "dind",
+				Description: "Docker in Docker",
+			},
+		},
+		ToolBindings: map[string]ToolBinding{
+			"docker": ToolBindingSystem, // Force system
+		},
+	}
+
+	r := NewRegistry()
+	err := r.RegisterFromConfig(config)
+	if err != nil {
+		t.Fatalf("RegisterFromConfig failed: %v", err)
+	}
+
+	t.Run("system binding forces system tool", func(t *testing.T) {
+		tool, ok := r.Get("docker")
+		if !ok {
+			t.Fatal("should find tool via canonical lookup")
+		}
+		if tool.Type != ToolTypeSystem {
+			t.Errorf("Type = %q, want %q (binding forces system)", tool.Type, ToolTypeSystem)
+		}
+	})
+}
+
+func TestDefaultRegistry_CanonicalLookup_ContainerBinding(t *testing.T) {
+	config := &ToolConfig{
+		SystemTools: map[string]*ToolDefinition{
+			"golangci-lint": {
+				Type:        ToolTypeSystem,
+				Binary:      "golangci-lint",
+				Description: "Linter (system)",
+			},
+		},
+		ContainerTools: map[string]*ToolDefinition{
+			"golangci-lint": {
+				Type:        ToolTypeContainer,
+				Image:       "golangci/golangci-lint",
+				Tag:         "v1.62.2",
+				Description: "Linter (container)",
+			},
+		},
+		ToolBindings: map[string]ToolBinding{
+			"golangci-lint": ToolBindingContainer, // Force container
+		},
+	}
+
+	r := NewRegistry()
+	err := r.RegisterFromConfig(config)
+	if err != nil {
+		t.Fatalf("RegisterFromConfig failed: %v", err)
+	}
+
+	t.Run("container binding forces container tool", func(t *testing.T) {
+		tool, ok := r.Get("golangci-lint")
+		if !ok {
+			t.Fatal("should find tool via canonical lookup")
+		}
+		if tool.Type != ToolTypeContainer {
+			t.Errorf("Type = %q, want %q (binding forces container)", tool.Type, ToolTypeContainer)
+		}
+	})
+}
+
+func TestDefaultRegistry_CanonicalLookup_OnlyContainer(t *testing.T) {
+	// When only container exists, auto should use it
+	config := &ToolConfig{
+		ContainerTools: map[string]*ToolDefinition{
+			"semgrep": {
+				Type:        ToolTypeContainer,
+				Image:       "semgrep/semgrep",
+				Tag:         "1.145.1", // Must use explicit version, not "latest"
+				Description: "SAST scanner",
+			},
+		},
+	}
+
+	r := NewRegistry()
+	err := r.RegisterFromConfig(config)
+	if err != nil {
+		t.Fatalf("RegisterFromConfig failed: %v", err)
+	}
+
+	t.Run("canonical lookup finds container when no system exists", func(t *testing.T) {
+		tool, ok := r.Get("semgrep")
+		if !ok {
+			t.Fatal("should find tool via canonical lookup")
+		}
+		if tool.Type != ToolTypeContainer {
+			t.Errorf("Type = %q, want %q", tool.Type, ToolTypeContainer)
+		}
+	})
+}
+
+func TestDefaultRegistry_CanonicalLookup_OnlySystem(t *testing.T) {
+	// When only system exists and it's available, auto should use it
+	config := &ToolConfig{
+		SystemTools: map[string]*ToolDefinition{
+			"echo-test": {
+				Type:        ToolTypeSystem,
+				Binary:      "echo", // Available on all systems
+				Description: "Echo command",
+			},
+		},
+	}
+
+	r := NewRegistry()
+	err := r.RegisterFromConfig(config)
+	if err != nil {
+		t.Fatalf("RegisterFromConfig failed: %v", err)
+	}
+
+	t.Run("canonical lookup finds available system tool", func(t *testing.T) {
+		tool, ok := r.Get("echo-test")
+		if !ok {
+			t.Fatal("should find tool via canonical lookup")
+		}
+		if tool.Type != ToolTypeSystem {
+			t.Errorf("Type = %q, want %q", tool.Type, ToolTypeSystem)
+		}
+	})
+}
+
+func TestDefaultRegistry_CanonicalLookup_NotFound(t *testing.T) {
+	r := NewRegistry()
+
+	t.Run("canonical lookup returns not found for unknown tool", func(t *testing.T) {
+		_, ok := r.Get("nonexistent-tool")
+		if ok {
+			t.Error("should not find nonexistent tool")
+		}
+	})
+}
+
+func TestDefaultRegistry_CanonicalLookup_RequirementsRecursive(t *testing.T) {
+	// Test that system tool availability checks requirements recursively
+	config := &ToolConfig{
+		SystemTools: map[string]*ToolDefinition{
+			"npm": {
+				Type:        ToolTypeSystem,
+				Binary:      "nonexistent-npm-xyz", // Not available
+				Description: "Node package manager",
+			},
+			"tsc": {
+				Type:         ToolTypeSystem,
+				Binary:       "nonexistent-tsc-xyz", // Not available
+				Requirements: []string{"npm"},
+				Description:  "TypeScript compiler",
+			},
+			"npm-build": {
+				Type:         ToolTypeSystem,
+				Binary:       "nonexistent-npm-xyz",
+				Args:         []string{"run", "build"},
+				Requirements: []string{"npm", "tsc"},
+				Description:  "NPM build with TypeScript",
+			},
+		},
+		ContainerTools: map[string]*ToolDefinition{
+			"npm-build": {
+				Type:        ToolTypeContainer,
+				Image:       "node",
+				Tag:         "22-alpine",
+				Description: "NPM build (container fallback)",
+			},
+		},
+	}
+
+	r := NewRegistry()
+	err := r.RegisterFromConfig(config)
+	if err != nil {
+		t.Fatalf("RegisterFromConfig failed: %v", err)
+	}
+
+	t.Run("falls back to container when system requirements unavailable", func(t *testing.T) {
+		tool, ok := r.Get("npm-build")
+		if !ok {
+			t.Fatal("should find tool via canonical lookup")
+		}
+		// System npm-build requires npm and tsc which are unavailable
+		// Should fall back to container
+		if tool.Type != ToolTypeContainer {
+			t.Errorf("Type = %q, want %q (requirements unavailable, should fallback)", tool.Type, ToolTypeContainer)
+		}
+	})
 }
 

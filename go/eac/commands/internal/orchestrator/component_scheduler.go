@@ -15,6 +15,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/output"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
 	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/ready-to-release/eac/go/eac/core/workunit"
 	"github.com/shirou/gopsutil/v3/mem"
 )
 
@@ -48,9 +49,11 @@ type ComponentScheduler struct {
 	moduleCompDone   map[string]int            // module -> components completed
 
 	// Component completion tracking for intra-module dependencies (build_after)
-	compCompleteMu sync.RWMutex
-	compComplete   map[string]map[string]bool          // module -> component -> done
-	compCompleteCh map[string]map[string]chan struct{} // module -> component -> broadcast
+	compCompleteMu   sync.RWMutex
+	compComplete     map[string]map[string]bool          // module -> component -> done
+	compCompleteCh   map[string]map[string]chan struct{} // module -> component -> broadcast
+	compHandlerCount map[string]map[string]int           // module -> component -> total handlers
+	compHandlerDone  map[string]map[string]int           // module -> component -> handlers completed
 
 	// Component failure tracking
 	compFailedMu sync.RWMutex
@@ -86,6 +89,9 @@ type ComponentScheduler struct {
 
 	// Summary builder for incremental summary computation
 	summaryBuilder SummaryBuilder
+
+	// Work queue for dispatcher-based scheduling
+	workQueue *WorkQueue
 }
 
 // NewComponentScheduler creates a new scheduler with the given configuration.
@@ -118,6 +124,8 @@ func NewComponentScheduler(config *Config, tuiConsole *tui.Console, registry *lo
 		moduleCompDone:   make(map[string]int),
 		compComplete:     make(map[string]map[string]bool),
 		compCompleteCh:   make(map[string]map[string]chan struct{}),
+		compHandlerCount: make(map[string]map[string]int),
+		compHandlerDone:  make(map[string]map[string]int),
 		compFailed:       make(map[string]map[string]bool),
 		compExtras:       make(map[string]map[string]ComponentExtras),
 		activeContainers: make(map[string]int),
@@ -203,22 +211,7 @@ func (cs *ComponentScheduler) SetSummaryBuilder(builder SummaryBuilder) {
 }
 
 // detectAvailableCapacity calculates the pressure roof for parallel builds.
-//
-// When configMax (--roof) is explicitly set (> 0), it is used as the target capacity.
-// This allows users to override system detection when they know their system can handle more.
-//
-// When configMax is not set (0), capacity is calculated from system resources:
-// Formula: min(CPU count, RAM_GB / 2) × turbo
-//
-// This gives predictable results:
-//   - 16 CPU, 32 GB RAM → min(16, 16) = 16 base slots
-//   - 8 CPU, 16 GB RAM → min(8, 8) = 8 base slots
-//   - 4 CPU, 8 GB RAM → min(4, 4) = 4 base slots
-//
-// With turbo=1.25: 25% more slots
-// With turbo=2.0: double the slots (for I/O bound builds)
-//
-// Returns at least 1.
+// If --roof is set, uses that value directly. Otherwise auto-detects from system resources.
 func detectAvailableCapacity(configMax int, turbo float64) int {
 	// Get actual system resources
 	cpuCount := runtime.NumCPU()
@@ -238,54 +231,39 @@ func detectAvailableCapacity(configMax int, turbo float64) int {
 }
 
 // calculateCapacity computes the effective parallelism capacity.
-// This is a pure function for testability.
 //
-// Parameters:
-//   - cpuCount: number of CPU cores
-//   - ramGB: total RAM in gigabytes
-//   - configMax: ceiling from config (0 = no ceiling)
-//   - turbo: multiplier (1.0 = normal, 1.25 = turbo)
-//
-// Returns capacity respecting all constraints.
-func calculateCapacity(cpuCount, ramGB, configMax int, turbo float64) int {
-	// Base capacity: min(CPU count, RAM_GB / 2)
-	// This ensures we don't over-subscribe either resource
-	ramBasedCap := ramGB / 2
-	if ramBasedCap < 1 {
-		ramBasedCap = 1
+// If roof > 0: use roof directly (--roof flag overrides everything)
+// If roof == 0: auto-detect from system resources
+func calculateCapacity(cpuCount, ramGB, roof int, turbo float64) int {
+	// --roof overrides all
+	if roof > 0 {
+		return roof
 	}
 
-	baseCapacity := cpuCount
-	if ramBasedCap < baseCapacity {
-		baseCapacity = ramBasedCap
+	// Auto-detect: min(CPU, RAM/2) × turbo, capped at 2×CPU (max 64)
+	ramCap := ramGB / 2
+	if ramCap < 1 {
+		ramCap = 1
 	}
 
-	// Apply turbo multiplier
-	capacity := int(float64(baseCapacity) * turbo)
+	base := cpuCount
+	if ramCap < base {
+		base = ramCap
+	}
 
-	// Cap at reasonable maximum:
-	// - Without turbo (turbo=1.0): cap at CPU count
-	// - With turbo: cap at 2x CPU count (max 64)
-	var maxCapacity int
-	if turbo <= 1.0 {
-		maxCapacity = cpuCount
-	} else {
-		maxCapacity = cpuCount * 2
-		if maxCapacity > 64 {
-			maxCapacity = 64
+	capacity := int(float64(base) * turbo)
+
+	maxCap := cpuCount
+	if turbo > 1.0 {
+		maxCap = cpuCount * 2
+		if maxCap > 64 {
+			maxCap = 64
 		}
 	}
-	if capacity > maxCapacity {
-		capacity = maxCapacity
+	if capacity > maxCap {
+		capacity = maxCap
 	}
 
-	// Apply configMax as ceiling if set (from --roof flag or repo config)
-	// This allows repo config to limit parallelism on shared machines
-	if configMax > 0 && capacity > configMax {
-		capacity = configMax
-	}
-
-	// Ensure at least 1
 	if capacity < 1 {
 		capacity = 1
 	}
@@ -293,9 +271,9 @@ func calculateCapacity(cpuCount, ramGB, configMax int, turbo float64) int {
 	return capacity
 }
 
-// InitializeWork prepares the scheduler for a batch of component work items.
+// InitializeWork prepares the scheduler for a batch of work units.
 // Must be called before RunComponents.
-func (cs *ComponentScheduler) InitializeWork(work []ComponentWork) {
+func (cs *ComponentScheduler) InitializeWork(work []workunit.UnitSpec) {
 	// Reset state
 	cs.moduleComplete = make(map[string]bool)
 	cs.moduleCompleteCh = make(map[string]chan struct{})
@@ -303,6 +281,8 @@ func (cs *ComponentScheduler) InitializeWork(work []ComponentWork) {
 	cs.moduleCompDone = make(map[string]int)
 	cs.compComplete = make(map[string]map[string]bool)
 	cs.compCompleteCh = make(map[string]map[string]chan struct{})
+	cs.compHandlerCount = make(map[string]map[string]int)
+	cs.compHandlerDone = make(map[string]map[string]int)
 	cs.compFailed = make(map[string]map[string]bool)
 	cs.compExtras = make(map[string]map[string]ComponentExtras)
 	cs.activeContainers = make(map[string]int)
@@ -312,22 +292,30 @@ func (cs *ComponentScheduler) InitializeWork(work []ComponentWork) {
 
 	// Count components per module and initialize tracking maps
 	for _, w := range work {
-		cs.moduleCompCount[w.Module]++
+		module := w.ID.Module
+		component := w.ID.Component
+
+		cs.moduleCompCount[module]++
 
 		// Initialize module completion channel if needed
-		if _, ok := cs.moduleCompleteCh[w.Module]; !ok {
-			cs.moduleCompleteCh[w.Module] = make(chan struct{})
+		if _, ok := cs.moduleCompleteCh[module]; !ok {
+			cs.moduleCompleteCh[module] = make(chan struct{})
 		}
 
 		// Initialize component tracking for this module if needed
-		if cs.compComplete[w.Module] == nil {
-			cs.compComplete[w.Module] = make(map[string]bool)
-			cs.compCompleteCh[w.Module] = make(map[string]chan struct{})
-			cs.compFailed[w.Module] = make(map[string]bool)
+		if cs.compComplete[module] == nil {
+			cs.compComplete[module] = make(map[string]bool)
+			cs.compCompleteCh[module] = make(map[string]chan struct{})
+			cs.compHandlerCount[module] = make(map[string]int)
+			cs.compHandlerDone[module] = make(map[string]int)
+			cs.compFailed[module] = make(map[string]bool)
 		}
 
-		// Initialize component completion channel
-		cs.compCompleteCh[w.Module][w.Component] = make(chan struct{})
+		// Count handlers per component and create channel only once per component
+		cs.compHandlerCount[module][component]++
+		if _, exists := cs.compCompleteCh[module][component]; !exists {
+			cs.compCompleteCh[module][component] = make(chan struct{})
+		}
 	}
 
 	// Initialize TUI status
@@ -336,224 +324,119 @@ func (cs *ComponentScheduler) InitializeWork(work []ComponentWork) {
 	cs.tuiRunning = nil
 }
 
-// RunComponents executes component work items in parallel with weighted scheduling.
-// Components respect intra-module dependencies (BuildAfter) and weighted resource limits.
-// Uses LPT (Longest Processing Time First) scheduling: heaviest jobs start first
-// to ensure heavy jobs are distributed throughout execution.
+// RunComponents executes work units with worker pool scheduling.
+// Uses LPT (Longest Processing Time First) - heaviest jobs scheduled first.
+// Spawns a pool of worker goroutines that pull from the queue concurrently.
 // Returns results in the same order as the input work items.
-func (cs *ComponentScheduler) RunComponents(work []ComponentWork, worker ComponentWorkerFunc) []ComponentResult {
+func (cs *ComponentScheduler) RunComponents(work []workunit.UnitSpec, worker ComponentWorkerFunc) []ComponentResult {
 	results := make([]ComponentResult, len(work))
+	var resultsMu sync.Mutex
 	var wg sync.WaitGroup
 
-	// Sort by weight descending (LPT scheduling) - heaviest jobs first
-	// This ensures heavy jobs start early and are distributed across execution time
-	sortedWork := make([]ComponentWork, len(work))
-	copy(sortedWork, work)
-	sort.Slice(sortedWork, func(i, j int) bool {
-		return sortedWork[i].Weight > sortedWork[j].Weight
-	})
+	// Create work queue (items ordered by weight via LPT heap)
+	queue := NewWorkQueue(work)
+	cs.workQueue = queue // Store for stats access
 
-	// Launch components in LPT order - heaviest first
-	// Results are placed by original Index, so output order is preserved
-	for _, w := range sortedWork {
-		wg.Add(1)
-		go func(cw ComponentWork) {
-			defer wg.Done()
-			result := cs.processComponent(cw, worker)
-			results[cw.Index] = result
-		}(w)
+	// Create all tabs as QUEUED upfront (positions are immutable)
+	for _, w := range work {
+		displayName := cs.formatDisplayName(w)
+		cs.tuiMarkQueued(displayName, w.Weight)
 	}
 
+	// Determine worker pool size: min(work items, capacity)
+	// This ensures we can saturate capacity immediately
+	poolSize := len(work)
+	capacity := cs.semaphore.Capacity()
+	if capacity > 0 && poolSize > capacity {
+		poolSize = capacity
+	}
+
+	// Spawn worker pool - all workers start immediately and compete for queue items
+	for i := 0; i < poolSize; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			for {
+				// Get next ready item (blocks until deps satisfied or queue closed)
+				spec := queue.PopReady()
+				if spec == nil {
+					return // queue exhausted
+				}
+
+				weight := spec.Weight
+				if weight <= 0 {
+					weight = 1
+				}
+
+				// Acquire capacity (blocks until slot available)
+				cs.semaphore.Acquire(weight)
+
+				// Update TUI: queued -> running
+				cs.tuiMarkRunning(cs.formatDisplayName(*spec))
+
+				// Execute work
+				result := cs.executeWorker(*spec, worker)
+
+				// Release capacity
+				cs.semaphore.Release(weight)
+
+				// Store result by original index
+				resultsMu.Lock()
+				results[spec.Index] = result
+				resultsMu.Unlock()
+
+				// Notify queue that this component is done (unblocks dependents)
+				queue.MarkComplete(spec.ID)
+
+				// Mark component complete (broadcasts to legacy channels, updates TUI)
+				cs.markComponentComplete(*spec, &result)
+			}
+		}()
+	}
+
+	// Wait for all workers to complete
 	wg.Wait()
+
+	// Close queue
+	queue.Close()
+
 	return results
 }
 
-// processComponent handles a single component build with dependency waiting and weighted scheduling.
-func (cs *ComponentScheduler) processComponent(work ComponentWork, worker ComponentWorkerFunc) ComponentResult {
-	result := ComponentResult{
-		Module:    work.Module,
-		Component: work.Component,
-		Handler:   work.Handler,
-	}
-
-	// 1. Wait for intra-module component dependencies (build_after)
-	// Note: This wait time is NOT included in duration - duration measures actual execution time
-	for _, depComp := range work.BuildAfter {
-		// Check if dependency component exists in this module
-		cs.compCompleteMu.RLock()
-		ch, exists := cs.compCompleteCh[work.Module][depComp]
-		cs.compCompleteMu.RUnlock()
-
-		if exists {
-			// Wait for dependency to complete
-			<-ch
-
-			// Check if dependency failed - skip if so
-			cs.compFailedMu.RLock()
-			depFailed := cs.compFailed[work.Module][depComp]
-			cs.compFailedMu.RUnlock()
-
-			if depFailed {
-				result.ExitCode = 1
-				result.Errors = []string{fmt.Sprintf("Skipped: dependency %s failed", depComp)}
-				// Duration is 0 for skipped components (no actual execution)
-				cs.markComponentComplete(work, &result)
-				return result
-			}
-		}
-	}
-
-	// Display name for TUI (module:component or module:component:handler)
-	var displayName string
-	if work.Handler != "" {
-		displayName = fmt.Sprintf("%s:%s:%s", work.Module, work.Component, work.Handler)
-	} else {
-		displayName = fmt.Sprintf("%s:%s", work.Module, work.Component)
-	}
-
-	// Note: Cache detection is handled by the worker, not here.
-	// The worker checks cachedModules and performs artifact verification,
-	// returning -1 if the cache is valid. This ensures proper TUI flow
-	// (pending → running → complete) and consistent verification for all components.
-
-	// 2. Acquire weighted slot
-	weight := work.Weight
-	if weight <= 0 {
-		weight = 1
-	}
-
-	// Create tab as PENDING before acquiring slot (shows scheduled but waiting)
-	cs.tuiMarkPending(displayName, weight)
-
-	cs.semaphore.Acquire(weight)
-	// Note: We explicitly release the semaphore BEFORE marking complete in TUI
-	// to ensure the pressure gauge and running tabs stay in sync.
-	// Do not use defer here - it would release after TUI update.
-
-	// Start timing AFTER acquiring slot - duration measures actual execution time
-	startTime := time.Now()
-
-	// Mark as RUNNING after acquiring slot
-	cs.tuiMarkRunning(displayName)
-
-	// Track active tool usage
-	cs.addActiveTool(work.Handler, work.IsContainer)
-
-	// 3. Create output directory for this component
-	// Structure: out/build/<module>/<component> (e.g., out/build/books/howto)
-	sanitizedModule := sanitizePathForFS(output.PackageDisplayName(work.Module))
-	sanitizedComponent := sanitizePathForFS(work.Component)
-	componentOutputDir := filepath.Join(cs.config.WorkspaceRoot, cs.config.OutputBaseDir, sanitizedModule, sanitizedComponent)
-
-	// Relative log path for result reporting: out/build/<module>/<component>/build.log
-	relLogPath := filepath.Join(cs.config.OutputBaseDir, sanitizedModule, sanitizedComponent, cs.config.LogFileName)
-
-	if err := os.MkdirAll(componentOutputDir, 0o755); err != nil {
-		result.ExitCode = 1
-		result.Errors = []string{fmt.Sprintf("Failed to create directory: %v", err)}
-		result.LogPath = relLogPath
-		result.Duration = time.Since(startTime)
-		cs.semaphore.Release(weight) // Release before TUI update
-		cs.markComponentComplete(work, &result)
-		return result
-	}
-
-	// Create log file
-	logPath := filepath.Join(componentOutputDir, cs.config.LogFileName)
-	logFile, err := os.Create(logPath)
-	if err != nil {
-		result.ExitCode = 1
-		result.Errors = []string{fmt.Sprintf("Failed to create log file: %v", err)}
-		result.LogPath = relLogPath
-		result.Duration = time.Since(startTime)
-		cs.semaphore.Release(weight) // Release before TUI update
-		cs.markComponentComplete(work, &result)
-		return result
-	}
-
-	// Create writer for worker
-	var workerWriter io.Writer
-	if cs.tuiConsole != nil {
-		workerWriter = cs.tuiConsole.NewWriter(displayName, logFile)
-	} else {
-		workerWriter = logFile
-	}
-
-	// 4. Execute build with memory instrumentation
-	memBefore := GetMemoryStats()
-	fmt.Fprintf(logFile, "[memory] before: used=%s avail=%s total=%s (%.1f%%)\n",
-		FormatBytes(memBefore.UsedBytes), FormatBytes(memBefore.AvailableBytes),
-		FormatBytes(memBefore.TotalBytes), memBefore.UsedPercent)
-
-	exitCode := worker(work.Module, work.Component, workerWriter)
-
-	memAfter := GetMemoryStats()
-	memDelta := int64(memAfter.UsedBytes) - int64(memBefore.UsedBytes)
-	deltaSign := "+"
-	if memDelta < 0 {
-		deltaSign = ""
-	}
-	fmt.Fprintf(logFile, "[memory] after: used=%s avail=%s total=%s (%.1f%%) delta=%s%s\n",
-		FormatBytes(memAfter.UsedBytes), FormatBytes(memAfter.AvailableBytes),
-		FormatBytes(memAfter.TotalBytes), memAfter.UsedPercent,
-		deltaSign, FormatBytes(uint64(abs64(memDelta))))
-
-	// Close TUI writer first (flushes pipe), then log file
-	if closer, ok := workerWriter.(io.Closer); ok {
-		closer.Close()
-	}
-	logFile.Close()
-
-	// Parse log for warnings/errors
-	warnings, errors := parseLogForIssues(logPath)
-
-	result.ExitCode = exitCode
-	result.Warnings = warnings
-	result.Errors = errors
-	result.LogPath = relLogPath
-	result.Duration = time.Since(startTime)
-
-	// Merge any extras set by the worker (e.g., test counts)
-	if extras, ok := cs.getComponentExtras(work.Module, work.Component); ok {
-		result.TestsTotal = extras.TestsTotal
-		result.TestsPassed = extras.TestsPassed
-		result.TestsFailed = extras.TestsFailed
-		result.TestsSkipped = extras.TestsSkipped
-	}
-
-	// Remove tool from active list before releasing resources
-	cs.removeActiveTool(work.Handler, work.IsContainer)
-
-	// Release semaphore BEFORE marking complete in TUI
-	// This ensures pressure gauge reflects the release immediately
-	cs.semaphore.Release(weight)
-
-	// Mark as completed (TUI will now show correct pressure)
-	cs.markComponentComplete(work, &result)
-
-	return result
-}
-
 // markComponentComplete marks a component as done and broadcasts to waiters.
-func (cs *ComponentScheduler) markComponentComplete(work ComponentWork, result *ComponentResult) {
-	// Mark component complete
+func (cs *ComponentScheduler) markComponentComplete(spec workunit.UnitSpec, result *ComponentResult) {
+	module := spec.ID.Module
+	component := spec.ID.Component
+	tool := spec.ID.Tool
+
+	// Track handler completion and only close channel when all handlers are done
 	cs.compCompleteMu.Lock()
-	cs.compComplete[work.Module][work.Component] = true
 	if result.ExitCode != 0 {
-		cs.compFailed[work.Module][work.Component] = true
+		cs.compFailed[module][component] = true
 	}
-	ch := cs.compCompleteCh[work.Module][work.Component]
+	cs.compHandlerDone[module][component]++
+	handlersDone := cs.compHandlerDone[module][component]
+	handlersTotal := cs.compHandlerCount[module][component]
+	allHandlersDone := handlersDone >= handlersTotal
+	var ch chan struct{}
+	if allHandlersDone {
+		cs.compComplete[module][component] = true
+		ch = cs.compCompleteCh[module][component]
+	}
 	cs.compCompleteMu.Unlock()
 
-	// Broadcast completion
-	close(ch)
+	// Broadcast completion only when all handlers for this component are done
+	if allHandlersDone {
+		close(ch)
+	}
 
 	// Update module completion tracking
 	cs.moduleCompleteMu.Lock()
-	cs.moduleCompDone[work.Module]++
-	if cs.moduleCompDone[work.Module] >= cs.moduleCompCount[work.Module] {
-		cs.moduleComplete[work.Module] = true
-		close(cs.moduleCompleteCh[work.Module])
+	cs.moduleCompDone[module]++
+	if cs.moduleCompDone[module] >= cs.moduleCompCount[module] {
+		cs.moduleComplete[module] = true
+		close(cs.moduleCompleteCh[module])
 	}
 	cs.moduleCompleteMu.Unlock()
 
@@ -563,12 +446,12 @@ func (cs *ComponentScheduler) markComponentComplete(work ComponentWork, result *
 	}
 
 	// Update TUI with exit code
-	// Use same format as tuiMarkPending/tuiMarkRunning: module:component:handler
+	// Use same format as tuiMarkPending/tuiMarkRunning: module:component:tool
 	var displayName string
-	if work.Handler != "" {
-		displayName = fmt.Sprintf("%s:%s:%s", work.Module, work.Component, work.Handler)
+	if tool != "" {
+		displayName = fmt.Sprintf("%s:%s:%s", module, component, tool)
 	} else {
-		displayName = fmt.Sprintf("%s:%s", work.Module, work.Component)
+		displayName = fmt.Sprintf("%s:%s", module, component)
 	}
 	cs.tuiMarkCompleted(displayName, result.ExitCode)
 }
@@ -757,6 +640,128 @@ func (cs *ComponentScheduler) tuiMarkPending(displayName string, weight int) {
 	cs.tuiConsole.StartModule(displayName, weight)
 }
 
+// tuiMarkQueued creates a component tab in queued state (waiting in work queue).
+// This is the same visual as pending - tabs are created upfront.
+func (cs *ComponentScheduler) tuiMarkQueued(displayName string, weight int) {
+	cs.tuiMarkPending(displayName, weight)
+}
+
+// formatDisplayName returns the display name for a work unit.
+func (cs *ComponentScheduler) formatDisplayName(spec workunit.UnitSpec) string {
+	if spec.ID.Tool != "" {
+		return fmt.Sprintf("%s:%s:%s", spec.ID.Module, spec.ID.Component, spec.ID.Tool)
+	}
+	return fmt.Sprintf("%s:%s", spec.ID.Module, spec.ID.Component)
+}
+
+// executeWorker runs the actual work for a component.
+// Called by dispatcher after capacity is acquired and dependencies satisfied.
+// This is the core execution extracted from processComponent without dep-waiting or semaphore handling.
+func (cs *ComponentScheduler) executeWorker(spec workunit.UnitSpec, worker ComponentWorkerFunc) ComponentResult {
+	module := spec.ID.Module
+	component := spec.ID.Component
+	tool := spec.ID.Tool
+
+	result := ComponentResult{
+		Module:    module,
+		Component: component,
+		Handler:   tool,
+	}
+
+	displayName := cs.formatDisplayName(spec)
+
+	// Start timing - duration measures actual execution time
+	startTime := time.Now()
+
+	// Track active tool usage
+	cs.addActiveTool(tool, spec.IsContainer)
+
+	// Create output directory for this component
+	// Structure: out/build/<module>/<component> (e.g., out/build/books/howto)
+	sanitizedModule := sanitizePathForFS(output.PackageDisplayName(module))
+	sanitizedComponent := sanitizePathForFS(component)
+	componentOutputDir := filepath.Join(cs.config.WorkspaceRoot, cs.config.OutputBaseDir, sanitizedModule, sanitizedComponent)
+
+	// Relative log path for result reporting: out/build/<module>/<component>/build.log
+	relLogPath := filepath.Join(cs.config.OutputBaseDir, sanitizedModule, sanitizedComponent, cs.config.LogFileName)
+
+	if err := os.MkdirAll(componentOutputDir, 0o755); err != nil {
+		result.ExitCode = 1
+		result.Errors = []string{fmt.Sprintf("Failed to create directory: %v", err)}
+		result.LogPath = relLogPath
+		result.Duration = time.Since(startTime)
+		cs.removeActiveTool(tool, spec.IsContainer)
+		return result
+	}
+
+	// Create log file
+	logPath := filepath.Join(componentOutputDir, cs.config.LogFileName)
+	logFile, err := os.Create(logPath)
+	if err != nil {
+		result.ExitCode = 1
+		result.Errors = []string{fmt.Sprintf("Failed to create log file: %v", err)}
+		result.LogPath = relLogPath
+		result.Duration = time.Since(startTime)
+		cs.removeActiveTool(tool, spec.IsContainer)
+		return result
+	}
+
+	// Create writer for worker
+	var workerWriter io.Writer
+	if cs.tuiConsole != nil {
+		workerWriter = cs.tuiConsole.NewWriter(displayName, logFile)
+	} else {
+		workerWriter = logFile
+	}
+
+	// Execute work with memory instrumentation
+	memBefore := GetMemoryStats()
+	fmt.Fprintf(logFile, "[memory] before: used=%s avail=%s total=%s (%.1f%%)\n",
+		FormatBytes(memBefore.UsedBytes), FormatBytes(memBefore.AvailableBytes),
+		FormatBytes(memBefore.TotalBytes), memBefore.UsedPercent)
+
+	exitCode := worker(module, component, workerWriter)
+
+	memAfter := GetMemoryStats()
+	memDelta := int64(memAfter.UsedBytes) - int64(memBefore.UsedBytes)
+	deltaSign := "+"
+	if memDelta < 0 {
+		deltaSign = ""
+	}
+	fmt.Fprintf(logFile, "[memory] after: used=%s avail=%s total=%s (%.1f%%) delta=%s%s\n",
+		FormatBytes(memAfter.UsedBytes), FormatBytes(memAfter.AvailableBytes),
+		FormatBytes(memAfter.TotalBytes), memAfter.UsedPercent,
+		deltaSign, FormatBytes(uint64(abs64(memDelta))))
+
+	// Close TUI writer first (flushes pipe), then log file
+	if closer, ok := workerWriter.(io.Closer); ok {
+		closer.Close()
+	}
+	logFile.Close()
+
+	// Parse log for warnings/errors
+	warnings, errors := parseLogForIssues(logPath)
+
+	result.ExitCode = exitCode
+	result.Warnings = warnings
+	result.Errors = errors
+	result.LogPath = relLogPath
+	result.Duration = time.Since(startTime)
+
+	// Merge any extras set by the worker (e.g., test counts)
+	if extras, ok := cs.getComponentExtras(module, component); ok {
+		result.TestsTotal = extras.TestsTotal
+		result.TestsPassed = extras.TestsPassed
+		result.TestsFailed = extras.TestsFailed
+		result.TestsSkipped = extras.TestsSkipped
+	}
+
+	// Remove tool from active list
+	cs.removeActiveTool(tool, spec.IsContainer)
+
+	return result
+}
+
 // tuiMarkRunning marks a component as actively running (slot acquired).
 func (cs *ComponentScheduler) tuiMarkRunning(displayName string) {
 	if cs.tuiConsole == nil {
@@ -870,7 +875,7 @@ func (cs *ComponentScheduler) getLockStatuses() []tui.LockStatus {
 
 // AggregateToWorkResults converts component results to module-level WorkResults.
 // This maintains compatibility with existing code that expects WorkResult.
-func AggregateToWorkResults(compResults []ComponentResult, work []ComponentWork) []WorkResult {
+func AggregateToWorkResults(compResults []ComponentResult, work []workunit.UnitSpec) []WorkResult {
 	// Group results by module
 	moduleResults := make(map[string][]ComponentResult)
 	for _, r := range compResults {
@@ -881,9 +886,10 @@ func AggregateToWorkResults(compResults []ComponentResult, work []ComponentWork)
 	seenModules := make(map[string]bool)
 	var moduleOrder []string
 	for _, w := range work {
-		if !seenModules[w.Module] {
-			seenModules[w.Module] = true
-			moduleOrder = append(moduleOrder, w.Module)
+		module := w.ID.Module
+		if !seenModules[module] {
+			seenModules[module] = true
+			moduleOrder = append(moduleOrder, module)
 		}
 	}
 

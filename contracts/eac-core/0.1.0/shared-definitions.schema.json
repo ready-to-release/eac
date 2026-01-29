@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ready-to-release.org/schemas/eac-core/shared-definitions/0.1.0",
+  "title": "Shared Schema Definitions",
+  "description": "Common type definitions used across multiple schemas. This file serves as the source of truth for enums that are also defined in Go code.",
+  "$defs": {
+    "scanner_category": {
+      "type": "string",
+      "description": "Scanner category identifier. Maps to tool IDs: sbom->trivy-sbom, vuln->trivy-vuln, secrets->trivy-secrets, iac->trivy-iac, compliance->trivy-compliance, sast->semgrep, zap->zap",
+      "enum": ["sbom", "vuln", "secrets", "iac", "compliance", "sast", "zap"]
+    },
+    "scanner_categories_array": {
+      "type": "array",
+      "description": "Array of scanner categories",
+      "items": {
+        "$ref": "#/$defs/scanner_category"
+      }
+    },
+    "server_type": {
+      "type": "string",
+      "description": "Server type identifier for serve operations. Maps to tool IDs.",
+      "enum": ["static-site", "mkdocs-live", "structurizr-lite"]
+    },
+    "component_type": {
+      "type": "string",
+      "description": "Component type identifier",
+      "enum": [
+        "go",
+        "typescript",
+        "javascript",
+        "python",
+        "rust",
+        "dotnet",
+        "dockerfile",
+        "book",
+        "design",
+        "markdown",
+        "pwsh",
+        "bash",
+        "specs"
+      ]
+    },
+    "operation_type": {
+      "type": "string",
+      "description": "Tool operation type",
+      "enum": ["build", "lint", "scan", "test", "serve"]
+    },
+    "tool_execution_type": {
+      "type": "string",
+      "description": "How the tool is executed",
+      "enum": ["system", "container"]
+    },
+    "platform": {
+      "type": "string",
+      "description": "Operating system platform",
+      "enum": ["linux", "darwin", "windows"]
+    },
+    "severity": {
+      "type": "string",
+      "description": "Vulnerability severity level",
+      "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+    }
+  }
+}

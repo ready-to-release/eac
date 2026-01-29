@@ -2,8 +2,8 @@
 // It encapsulates git state, file hashing, and module mapping to answer:
 // "Which modules have changed since the last recorded state?"
 //
-// This package consolidates change detection logic previously duplicated across
-// buildstate, lintstate, and teststate packages.
+// This package provides the core detection algorithm. State persistence is handled
+// by workunit.StateManager which stores per-module state in out/<context>/<module>/state.json.
 package changedetect
 
 import (
@@ -458,10 +458,10 @@ func NewDetectorWithRegistry(
 	)
 }
 
-// ConvertBuildStateToWorkspaceState converts a buildstate-like structure to WorkspaceState.
-// This is a helper for migrating from operation-specific state packages.
+// ConvertToWorkspaceState converts module state to WorkspaceState format.
+// This is a helper for integrating with workunit.StateManager.
 //
-// The moduleStates parameter should map moniker to an object with a SourceHash field.
+// The moduleStates parameter should map moniker to source hash.
 func ConvertToWorkspaceState(
 	commit string,
 	uncommittedHash string,

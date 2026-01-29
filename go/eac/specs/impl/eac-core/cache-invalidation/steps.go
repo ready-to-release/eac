@@ -18,9 +18,9 @@ import (
 	"github.com/cucumber/godog"
 	"gopkg.in/yaml.v3"
 
-	"github.com/ready-to-release/eac/go/eac/core/buildstate"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
-	"github.com/ready-to-release/eac/go/eac/core/lintstate"
+	"github.com/ready-to-release/eac/go/eac/core/hash"
+	"github.com/ready-to-release/eac/go/eac/core/workunit"
 	"github.com/ready-to-release/eac/go/eac/specs/internal"
 )
 
@@ -403,23 +403,23 @@ func buildAllModules(ctx *internal.TestContext) error {
 		return fmt.Errorf("failed to load module registry: %w", err)
 	}
 
-	// Build modules map for change detection (same as get changed-modules-local)
-	modulesMap := make(map[string]buildstate.ModuleFileGetter)
-	var moduleNames []string
+	// Save build state for each module using workunit StateManager
+	stateMgr := workunit.NewStateManager(ctx.IsolatedDir)
 	for _, contract := range reg.All() {
-		modulesMap[contract.Moniker] = contract
-		moduleNames = append(moduleNames, contract.Moniker)
-	}
-
-	// Get module source files using the same method as DetectChangesForModules
-	moduleFiles, err := buildstate.GetModuleSourceFiles(ctx.IsolatedDir, modulesMap)
-	if err != nil {
-		return fmt.Errorf("failed to get module source files: %w", err)
-	}
-
-	// Use buildstate.UpdateModuleState which computes correct SHA256 hashes
-	if err := buildstate.UpdateModuleState(ctx.IsolatedDir, moduleNames, moduleFiles); err != nil {
-		return fmt.Errorf("failed to update build state: %w", err)
+		// Expand glob patterns to get source files
+		files, err := hash.ExpandGlobPatterns(ctx.IsolatedDir, contract.GetGlobPatterns())
+		if err != nil {
+			return fmt.Errorf("failed to expand patterns for %s: %w", contract.Moniker, err)
+		}
+		// Compute source hash
+		sourceHash, err := hash.Files(ctx.IsolatedDir, files)
+		if err != nil {
+			return fmt.Errorf("failed to hash files for %s: %w", contract.Moniker, err)
+		}
+		// Save module state as passed build
+		if err := stateMgr.SaveModuleResult(workunit.ContextBuild, contract.Moniker, true, sourceHash); err != nil {
+			return fmt.Errorf("failed to update build state for %s: %w", contract.Moniker, err)
+		}
 	}
 
 	return nil
@@ -856,17 +856,22 @@ func lintModuleSuccessfully(ctx *internal.TestContext, module string) error {
 		return fmt.Errorf("module not found: %s", module)
 	}
 
-	// Get module source files
-	modulesMap := map[string]lintstate.ModuleFileGetter{module: contract}
-	moduleFiles, err := lintstate.GetModuleSourceFiles(ctx.IsolatedDir, modulesMap)
+	// Expand glob patterns to get source files
+	files, err := hash.ExpandGlobPatterns(ctx.IsolatedDir, contract.GetGlobPatterns())
 	if err != nil {
-		return fmt.Errorf("failed to get module source files: %w", err)
+		return fmt.Errorf("failed to expand patterns for %s: %w", module, err)
 	}
 
-	// Create lint state showing module passed
-	lintedModules := map[string]bool{module: true} // true = passed
-	if err := lintstate.UpdateModuleState(ctx.IsolatedDir, lintedModules, moduleFiles); err != nil {
-		return fmt.Errorf("failed to update lint state: %w", err)
+	// Compute source hash
+	sourceHash, err := hash.Files(ctx.IsolatedDir, files)
+	if err != nil {
+		return fmt.Errorf("failed to hash files for %s: %w", module, err)
+	}
+
+	// Create lint state showing module passed using workunit StateManager
+	stateMgr := workunit.NewStateManager(ctx.IsolatedDir)
+	if err := stateMgr.SaveModuleResult(workunit.ContextLint, module, true, sourceHash); err != nil {
+		return fmt.Errorf("failed to update lint state for %s: %w", module, err)
 	}
 
 	return nil
@@ -897,17 +902,22 @@ func setLintStateFailed(ctx *internal.TestContext, module string) error {
 		return fmt.Errorf("module not found: %s", module)
 	}
 
-	// Get module source files
-	modulesMap := map[string]lintstate.ModuleFileGetter{module: contract}
-	moduleFiles, err := lintstate.GetModuleSourceFiles(ctx.IsolatedDir, modulesMap)
+	// Expand glob patterns to get source files
+	files, err := hash.ExpandGlobPatterns(ctx.IsolatedDir, contract.GetGlobPatterns())
 	if err != nil {
-		return fmt.Errorf("failed to get module source files: %w", err)
+		return fmt.Errorf("failed to expand patterns for %s: %w", module, err)
 	}
 
-	// Create lint state showing module failed
-	lintedModules := map[string]bool{module: false} // false = failed
-	if err := lintstate.UpdateModuleState(ctx.IsolatedDir, lintedModules, moduleFiles); err != nil {
-		return fmt.Errorf("failed to update lint state: %w", err)
+	// Compute source hash
+	sourceHash, err := hash.Files(ctx.IsolatedDir, files)
+	if err != nil {
+		return fmt.Errorf("failed to hash files for %s: %w", module, err)
+	}
+
+	// Create lint state showing module failed using workunit StateManager
+	stateMgr := workunit.NewStateManager(ctx.IsolatedDir)
+	if err := stateMgr.SaveModuleResult(workunit.ContextLint, module, false, sourceHash); err != nil {
+		return fmt.Errorf("failed to update lint state for %s: %w", module, err)
 	}
 
 	return nil
@@ -942,25 +952,28 @@ func buildSpecificModules(ctx *internal.TestContext, mod1, mod2 string) error {
 		return fmt.Errorf("failed to load module registry: %w", err)
 	}
 
-	// Build modules map for only the specified modules
-	modulesMap := make(map[string]buildstate.ModuleFileGetter)
+	// Save build state for the specified modules using workunit StateManager
+	stateMgr := workunit.NewStateManager(ctx.IsolatedDir)
 	moduleNames := []string{mod1, mod2}
 	for _, moniker := range moduleNames {
 		contract, ok := reg.Get(moniker)
 		if !ok {
 			return fmt.Errorf("module not found: %s", moniker)
 		}
-		modulesMap[moniker] = contract
-	}
-
-	// Get source files and update build state
-	moduleFiles, err := buildstate.GetModuleSourceFiles(ctx.IsolatedDir, modulesMap)
-	if err != nil {
-		return fmt.Errorf("failed to get module source files: %w", err)
-	}
-
-	if err := buildstate.UpdateModuleState(ctx.IsolatedDir, moduleNames, moduleFiles); err != nil {
-		return fmt.Errorf("failed to update build state: %w", err)
+		// Expand glob patterns to get source files
+		files, err := hash.ExpandGlobPatterns(ctx.IsolatedDir, contract.GetGlobPatterns())
+		if err != nil {
+			return fmt.Errorf("failed to expand patterns for %s: %w", moniker, err)
+		}
+		// Compute source hash
+		sourceHash, err := hash.Files(ctx.IsolatedDir, files)
+		if err != nil {
+			return fmt.Errorf("failed to hash files for %s: %w", moniker, err)
+		}
+		// Save module state as passed build
+		if err := stateMgr.SaveModuleResult(workunit.ContextBuild, moniker, true, sourceHash); err != nil {
+			return fmt.Errorf("failed to update build state for %s: %w", moniker, err)
+		}
 	}
 
 	return nil

@@ -64,7 +64,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/output"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
-	"github.com/ready-to-release/eac/go/eac/core/buildstate"
+	"github.com/ready-to-release/eac/go/eac/core/hash"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
@@ -253,6 +253,7 @@ func Build() int {
 	// Create command config for framework
 	cmdCfg := &cmdframework.CommandConfig{
 		Type:         cmdframework.CommandTypeBuild,
+		CommandPath:  "build",
 		ActionVerb:   "Building",
 		OutputDir:    paths.OutBuildRelPath,
 		LogFileName:  "build.log",
@@ -581,7 +582,7 @@ func hasExistingArtifacts(moniker, moduleType, workspaceRoot string, buildAll bo
 		modRegistry, err := modules.LoadFromWorkspace(workspaceRoot)
 		if err == nil {
 			if contract, ok := modRegistry.Get(moniker); ok {
-				currentHash, err := buildstate.ComputeModuleInputHash(workspaceRoot, contract)
+				currentHash, err := hash.ComputeFromPatterns(workspaceRoot, contract)
 				if err == nil && currentHash != manifest.InputHash {
 					log.Debugf("Module %s: input hash mismatch (cached=%s, current=%s) - need rebuild",
 						moniker, manifest.InputHash[:16], currentHash[:16])
@@ -754,7 +755,7 @@ func generateBuildManifest(workspaceRoot string, results []orchestrator.WorkResu
 		// Compute input hash for CI cache validation
 		if modRegistry != nil {
 			if contract, ok := modRegistry.Get(moniker); ok {
-				inputHash, err := buildstate.ComputeModuleInputHash(workspaceRoot, contract)
+				inputHash, err := hash.ComputeFromPatterns(workspaceRoot, contract)
 				if err != nil {
 					log.Debugf("Failed to compute input hash for %s: %v", moniker, err)
 				} else {
