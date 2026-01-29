@@ -150,11 +150,11 @@ A self-contained unit of code with its own contract, dependencies, and lifecycle
 
 Can be a library, service, command-line tool, or test suite. See [Modules](./reference/eac/architecture/modules.md).
 
-### Module Type
+### Component Type
 
-A classification of modules (e.g., `go-library`, `go-service`, `go-commands`).
+A classification of modules (e.g., `go-library`, `go-cli`, `go-commands`).
 
-Determines build, test, and deployment behavior.
+Determines build, test, and deployment behavior. See [Component Types](./reference/eac/architecture/component-types.md).
 
 ### Moniker
 

@@ -7,7 +7,11 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
+
+	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
+
+var log = logging.C()
 
 // Model is the Bubbletea model for the console window.
 // Displays build/test output in a 3-pane view (Init/Run/Summary).
@@ -22,6 +26,7 @@ type Model struct {
 	panes       [3]*Pane     // Init, Run, Summary panes
 	activePhase Phase        // Currently active phase
 	summaryData *SummaryData // Structured data for Summary pane
+	initSummary *InitSummary // Structured data for Init pane
 
 	// Results buffer for post-execution output
 	resultsBuffer *RingBuffer // Output that appears after Run phase completes
@@ -57,9 +62,11 @@ type Model struct {
 	statusChan <-chan Status // Status updates
 
 	// Display preferences
-	paused    bool // Pause scrolling (for review)
-	errorMode bool // Show only errors
-	mouseMode bool // Mouse mode: true=scrolling enabled, false=text selection enabled
+	paused    bool     // Pause scrolling (for review)
+	errorMode bool     // Show only errors
+	mouseMode bool     // Mouse mode: true=scrolling enabled, false=text selection enabled
+	viewMode         ViewMode // Components view mode: TabGrid or Tree
+	tabsScrollOffset int      // Scroll offset for tabs/tree panel
 
 	// Done state
 	linesDone  bool
@@ -86,6 +93,8 @@ type ModuleState struct {
 	EndTime   time.Time    // When module finished (zero if running)
 	ExitCode  int          // Exit code (only valid when complete/failed)
 	DecayTime time.Time    // When tab should disappear (zero = don't decay)
+	CacheTime time.Time    // For cached modules: when the artifact was last built
+	LogPath   string       // Path to build log file (if available)
 }
 
 // ModuleStatus represents the execution state of a module.
@@ -97,6 +106,14 @@ const (
 	ModuleComplete                     // Finished successfully
 	ModuleSkipped                      // Skipped (cached, unchanged)
 	ModuleFailed                       // Finished with error
+)
+
+// ViewMode represents the display mode for the components pane.
+type ViewMode int
+
+const (
+	ViewModeTabGrid ViewMode = iota // Tab grid view (default)
+	ViewModeTree                    // Execution tree view
 )
 
 // Icon returns the icon for a module status (ASCII-safe).
@@ -115,6 +132,45 @@ func (s ModuleStatus) Icon() string {
 	default:
 		return "?"
 	}
+}
+
+// StatusColors holds the color scheme for a module status.
+type StatusColors struct {
+	Border string // Border/outline color
+	Text   string // Text/icon color
+	Bg     string // Background color
+}
+
+// Colors returns the color scheme for a module status.
+// Colors are ANSI 256-color codes.
+func (s ModuleStatus) Colors() StatusColors {
+	switch s {
+	case ModulePending:
+		return StatusColors{Border: "238", Text: "245", Bg: "234"} // Gray
+	case ModuleRunning:
+		return StatusColors{Border: "214", Text: "214", Bg: "94"} // Orange/Yellow
+	case ModuleComplete:
+		return StatusColors{Border: "40", Text: "40", Bg: "22"} // Green
+	case ModuleSkipped:
+		return StatusColors{Border: "75", Text: "75", Bg: "23"} // Cyan/Blue (cached)
+	case ModuleFailed:
+		return StatusColors{Border: "196", Text: "196", Bg: "52"} // Red
+	default:
+		return StatusColors{Border: "238", Text: "245", Bg: "234"} // Gray
+	}
+}
+
+// StatusFromExitCode returns the appropriate ModuleStatus for an exit code.
+// exitCode == 0: Complete (success)
+// exitCode < 0: Skipped (cached)
+// exitCode > 0: Failed
+func StatusFromExitCode(exitCode int) ModuleStatus {
+	if exitCode == 0 {
+		return ModuleComplete
+	} else if exitCode < 0 {
+		return ModuleSkipped
+	}
+	return ModuleFailed
 }
 
 // NewModel creates a new console model.
@@ -272,6 +328,26 @@ func (m Model) calculatePaneHeights() (initH, runH, summaryH int) {
 		chromeLines += 2 // Summary header (1) + footer (1)
 	}
 
+	// Account for structured Init pane (8 lines total when initSummary is available)
+	// instead of buffer-based init (2 chrome + 6 content)
+	structuredInitHeight := 0
+	if m.initSummary != nil {
+		structuredInitHeight = 8 // header + 4 rows + 2 separators + footer
+	}
+
+	// Account for Execution Tree pane (variable height based on layers)
+	execTreeHeight := 0
+	if m.initSummary != nil && len(m.initSummary.ExecutionTree) > 0 {
+		// header (1) + per layer: header (1) + modules + spacing (1 between layers) + footer (1)
+		execTreeHeight = 2 // header + footer
+		for i, layer := range m.initSummary.ExecutionTree {
+			execTreeHeight += 1 + len(layer.Modules) // layer header + modules
+			if i < len(m.initSummary.ExecutionTree)-1 {
+				execTreeHeight++ // spacing between layers
+			}
+		}
+	}
+
 	// Use actual terminal height (m.height is updated by WindowSizeMsg in alt-screen mode)
 	terminalHeight := m.height
 	if terminalHeight < 20 {
@@ -279,13 +355,27 @@ func (m Model) calculatePaneHeights() (initH, runH, summaryH int) {
 	}
 
 	// Allocate heights
-	initH = initHeight
+	if m.initSummary != nil {
+		// Using structured init - don't count initH in content, it's fully rendered
+		initH = 0 // Not used for structured rendering
+	} else {
+		initH = initHeight
+	}
+
 	if m.summaryData != nil {
 		summaryH = summaryHeight
 	} else {
 		summaryH = 0 // Don't reserve space for Summary if not showing
 	}
-	runH = terminalHeight - chromeLines - initH - summaryH
+
+	// Calculate Run pane height
+	if m.initSummary != nil {
+		// Structured mode: subtract fixed pane heights
+		runH = terminalHeight - chromeLines - structuredInitHeight - execTreeHeight - summaryH
+	} else {
+		// Buffer mode: use original calculation
+		runH = terminalHeight - chromeLines - initH - summaryH
+	}
 
 	// Minimum Run pane content height
 	if runH < 5 {
@@ -315,6 +405,90 @@ func (m *Model) SetSummaryData(data *SummaryData) {
 	m.summaryData = data
 }
 
+// InitSummary holds structured init summary data for the Init pane.
+// This is populated from initsummary.Summary and sent via InitSummaryMsg.
+type InitSummary struct {
+	// Command being executed
+	Command string // "build", "test", "lint", "scan"
+
+	// Execution context
+	ExecutionContext string // local/CI/container
+
+	// Module counts
+	RequestedModules  int // What user asked for
+	CalculatedModules int // Final list after dependency resolution
+	AddedDepm         int // Module dependencies added
+
+	// Component count
+	ComponentCount int
+
+	// Execution tree - for visual tree rendering
+	ExecutionTree         []ExecutionLayer // Full tree: layers → modules → components
+	LayerCount            int              // Number of execution layers
+	LayerSizes            []int            // Number of modules per layer
+	ComponentsPerModLayer []int            // Number of components per layer
+	FlatExecution         bool             // True if running all layers in parallel
+
+	// Parallelism
+	ParallelismMode  string // "ci" or "devbox"
+	EffectiveWorkers int    // Final worker count
+	TurboBoost       int    // Additional workers (0 if not turbo)
+	WeightedCapacity int    // Component scheduler capacity
+
+	// Flags
+	Flags InitSummaryFlags
+
+	// Deps status
+	DepsVerified  bool
+	DepsSkipped   bool
+	DepsAvailable []string // Available system deps
+	DepsMissing   []string // Missing system deps
+
+	// Depm status
+	DepmVerified bool
+	DepmSkipped  bool
+	DepmResolved int      // Number of resolved module deps (to be built)
+	DepmExisting int      // Number of existing module deps (already built)
+	DepmTotal    int      // Total module deps
+	DepmMissing  []string // Missing module deps
+
+	// Incremental (build only)
+	IncrementalEnabled  bool
+	IncrementalChanged  int
+	IncrementalUpToDate int
+	IncrementalFresh    bool
+
+	// Test-specific
+	TestSuiteName  string
+	TestSelected   int
+	TestDiscovered int
+	TestOSFiltered int
+
+	// Output directory
+	OutputDir string
+}
+
+// ExecutionLayer represents a single execution layer with its modules.
+type ExecutionLayer struct {
+	Modules []ExecutionModule
+}
+
+// ExecutionModule represents a module and its components within a layer.
+type ExecutionModule struct {
+	Name       string   // Module name (e.g., "eac-commands")
+	Components []string // Component names (e.g., ["godog", "impl/build"])
+}
+
+// InitSummaryFlags captures relevant flags for display.
+type InitSummaryFlags struct {
+	TidyFirst    bool
+	ForceRebuild bool
+	DryRun       bool
+	UseTUI       bool
+	SkipDeps     bool
+	SkipDepm     bool
+}
+
 // GetOrCreateModuleState gets or creates a module state for the given moniker.
 func (m *Model) GetOrCreateModuleState(moniker string, weight int) *ModuleState {
 	if state, exists := m.moduleStates[moniker]; exists {
@@ -324,6 +498,9 @@ func (m *Model) GetOrCreateModuleState(moniker string, weight int) *ModuleState 
 		}
 		return state
 	}
+
+	// DEBUG: Log module registration for TUI caching investigation
+	log.Debugf("[TUI-CACHE] GetOrCreateModuleState: registering module=%s weight=%d", moniker, weight)
 
 	// Increment counter first to get unique index
 	m.nextModuleIdx++
@@ -359,23 +536,25 @@ func (m *Model) MarkModuleRunning(moniker string) {
 	state.StartTime = time.Now() // Start timing when execution actually begins
 }
 
-// MarkModuleComplete marks a module as completed
+// MarkModuleComplete marks a module as completed with the given exit code.
+// Exit codes: 0=success(green), <0=skipped/cached(blue), >0=failed(red)
 // If the tab is currently selected, it stays visible until user switches away.
 func (m *Model) MarkModuleComplete(moniker string, exitCode int) {
 	state, exists := m.moduleStates[moniker]
 	if !exists {
-		return
+		// Module not registered - create it now so we can set the correct status
+		// This handles race conditions where complete arrives before start
+		log.Debugf("[TUI-CACHE] MarkModuleComplete: module=%s exitCode=%d - creating state", moniker, exitCode)
+		state = m.GetOrCreateModuleState(moniker, 1)
 	}
+
+	// Always set the status from exit code - this is the authoritative source
+	newStatus := StatusFromExitCode(exitCode)
+	log.Debugf("[TUI-CACHE] MarkModuleComplete: module=%s exitCode=%d -> %v", moniker, exitCode, newStatus)
 
 	state.EndTime = time.Now()
 	state.ExitCode = exitCode
-	if exitCode == 0 {
-		state.Status = ModuleComplete
-	} else if exitCode < 0 {
-		state.Status = ModuleSkipped // Negative = skipped (cached)
-	} else {
-		state.Status = ModuleFailed
-	}
+	state.Status = newStatus
 
 	// Tabs stay visible - only removed via FIFO when over limit
 }

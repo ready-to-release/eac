@@ -2,7 +2,7 @@
 
 ## Overview
 
-The **pipeline** category contains 7 commands for CI/CD orchestration and diagnostics.
+The **pipeline** category contains commands for CI/CD orchestration and diagnostics.
 
 ## Commands
 

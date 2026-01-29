@@ -60,12 +60,9 @@ modules:
 
 ---
 
-## Module Types
+## Component Types
 
-!!! note "See Component Types"
-
-    Module types are deprecated. Modules now use **components** instead.
-    See [Component Types Reference](../architecture/component-types.md).
+See [Component Types Reference](../architecture/component-types.md) for full documentation.
 
 **File**: `contracts/eac-core/0.1.0/defaults/component-types.yml`
 

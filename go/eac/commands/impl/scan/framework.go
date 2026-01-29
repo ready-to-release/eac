@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/scan/internal"
@@ -16,9 +17,11 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/locking"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/output"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/environments"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/manifest"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
+	"github.com/ready-to-release/eac/go/eac/core/scanstate"
 	"github.com/ready-to-release/eac/go/eac/core/tool"
 )
 
@@ -56,6 +59,15 @@ type ScanModuleResult struct {
 	EvidencePath string
 	ErrorMessage string
 	Duration     time.Duration
+}
+
+// scanContext holds scan-specific state during execution.
+type scanContext struct {
+	cachedModules map[string]bool     // Modules that are up-to-date (cache hits)
+	moduleFiles   map[string][]string // For state update
+	scannerTypes  []string            // Requested scanner types
+	results       map[string]map[string]bool // module -> scanner -> passed
+	mu            sync.Mutex          // Protects results map for concurrent access
 }
 
 // ScanWorker is the function signature for scanner-specific work.
@@ -108,7 +120,45 @@ func scanAfterExecute(ctx *cmdframework.ExecutionContext) error {
 	// This is needed because component-level execution creates manifests at
 	// out/scan/<module>/<component>/scan.manifest.json, but show scan-summary
 	// expects them at out/scan/<module>/scan.manifest.json
-	return aggregateComponentScanManifests(ctx)
+	if err := aggregateComponentScanManifests(ctx); err != nil {
+		log.Warnf("Failed to aggregate scan manifests: %v", err)
+	}
+
+	// Update incremental scan state (devbox only)
+	if !environments.IsCI() && !ctx.Config.DryRun {
+		sctx, _ := ctx.Config.Extra["scanContext"].(*scanContext)
+		if sctx != nil {
+			updateScanState(ctx, sctx)
+		}
+	}
+
+	return nil
+}
+
+// updateScanState updates the scan state after execution.
+func updateScanState(ctx *cmdframework.ExecutionContext, sctx *scanContext) {
+	if len(sctx.results) == 0 {
+		return
+	}
+
+	// Update state
+	if err := scanstate.UpdateModuleState(ctx.WorkspaceRoot, sctx.results, sctx.moduleFiles); err != nil {
+		log.Warnf("Failed to update scan state: %v", err)
+	}
+}
+
+// recordScanResult records the result of a scan for state tracking.
+func recordScanResult(sctx *scanContext, moniker, scannerType string, passed bool) {
+	if sctx == nil {
+		return
+	}
+	sctx.mu.Lock()
+	defer sctx.mu.Unlock()
+
+	if sctx.results[moniker] == nil {
+		sctx.results[moniker] = make(map[string]bool)
+	}
+	sctx.results[moniker][scannerType] = passed
 }
 
 // scanWorkerWrapper wraps the scanner-specific worker for cmdframework.
@@ -189,6 +239,19 @@ func scanComponentWorker(ctx *cmdframework.ExecutionContext, moniker, component 
 			SemgrepConfig:  "auto",
 			VulnSeverities: nil,
 		}
+	}
+
+	// Get scan context for caching
+	sctx, _ := ctx.Config.Extra["scanContext"].(*scanContext)
+
+	// Check incremental cache first - if module is cached, skip immediately (blue in TUI)
+	if sctx != nil && sctx.cachedModules != nil && sctx.cachedModules[moniker] {
+		if ctx.Config.DryRun {
+			output.Writeln(logWriter, "⏭️  %s is up-to-date (would be skipped)", moniker)
+		} else {
+			output.Writeln(logWriter, "⏭️  Cached (unchanged)")
+		}
+		return -1 // -1 = skipped/cached = blue in TUI
 	}
 
 	// Get module contract
@@ -281,6 +344,16 @@ func scanComponentWorker(ctx *cmdframework.ExecutionContext, moniker, component 
 func runComponentScanner(ctx *cmdframework.ExecutionContext, module *modules.ModuleContract, moniker, component, componentRoot string, scannerType internal.ScannerType, multiCfg *MultiScanConfig, logWriter io.Writer) int {
 	emoji := getScannerEmoji(scannerType)
 
+	// Get scan context for result recording
+	sctx, _ := ctx.Config.Extra["scanContext"].(*scanContext)
+
+	// In dry-run mode, show what would happen without actually scanning
+	if ctx.Config.DryRun {
+		output.Writeln(logWriter, "🔍 %s/%s would be scanned (changed)", moniker, component)
+		output.Writeln(logWriter, "   Scanner: %s", scannerType)
+		return 0
+	}
+
 	// Parallelism controlled by orchestrator's weighted semaphore via component weights
 	output.Writeln(logWriter, "%s Running %s scanner on %s/%s...", emoji, scannerType, moniker, component)
 	scanStart := time.Now()
@@ -298,14 +371,21 @@ func runComponentScanner(ctx *cmdframework.ExecutionContext, module *modules.Mod
 	findings, err := runScannerOnPath(ctx, componentRoot, scannerType, multiCfg, logWriter)
 	if err != nil {
 		handleScanFailure(ctx, scanCfg, module, moniker, component, scanStart, err, logWriter)
+		// Record failed scan result
+		recordScanResult(sctx, moniker, string(scannerType), false)
 		return 1
 	}
 
 	// Write evidence and update manifest
 	_, writeErr := handleScanSuccess(ctx, scanCfg, module, moniker, component, scanStart, findings, logWriter)
 	if writeErr != nil {
+		// Record failed scan result
+		recordScanResult(sctx, moniker, string(scannerType), false)
 		return 1
 	}
+
+	// Record successful scan result
+	recordScanResult(sctx, moniker, string(scannerType), true)
 
 	return 0
 }
@@ -628,6 +708,13 @@ func RunMultiScan(cmdCfg *cmdframework.CommandConfig, multiCfg *MultiScanConfig)
 	}
 	cmdCfg.Extra["multiScanConfig"] = multiCfg
 
+	// Create scan context for incremental caching
+	sctx := &scanContext{
+		moduleFiles: make(map[string][]string),
+		results:     make(map[string]map[string]bool),
+	}
+	cmdCfg.Extra["scanContext"] = sctx
+
 	// Set up hooks for multi-scan
 	hooks := &cmdframework.Hooks{
 		AfterInit:    multiScanAfterInit,
@@ -668,13 +755,153 @@ func multiScanAfterInit(ctx *cmdframework.ExecutionContext) error {
 }
 
 // multiScanAfterResolve sets the component count after ModuleRegistry is available.
+// It also handles incremental scan detection.
 func multiScanAfterResolve(ctx *cmdframework.ExecutionContext) error {
+	multiCfg, _ := ctx.Config.Extra["multiScanConfig"].(*MultiScanConfig)
+	sctx, _ := ctx.Config.Extra["scanContext"].(*scanContext)
+
 	// Now that ModuleRegistry is available, calculate and set component count
 	if ctx.InitSummary != nil && ctx.ModuleRegistry != nil {
 		componentCount := getScanComponentCount(ctx)
 		ctx.InitSummary.SetComponentCount(componentCount)
 	}
+
+	// Clear scan state if --skip-cache
+	if ctx.Config.ForceRebuild {
+		if err := scanstate.ClearState(ctx.WorkspaceRoot); err != nil {
+			log.Warnf("Failed to clear scan state: %v", err)
+		}
+		return nil
+	}
+
+	// Incremental scan detection (devbox only, not CI)
+	// Also run in dry-run mode to show which modules would be scanned/skipped
+	if !environments.IsCI() && sctx != nil {
+		detectIncrementalScanChanges(ctx, sctx, multiCfg)
+	}
+
 	return nil
+}
+
+// detectIncrementalScanChanges detects which modules need rescanning.
+// Instead of filtering modules from the execution plan, it stores which modules
+// are cached so the component worker can skip them with -1 (blue in TUI).
+func detectIncrementalScanChanges(ctx *cmdframework.ExecutionContext, sctx *scanContext, multiCfg *MultiScanConfig) {
+	startTime := time.Now()
+
+	// Collect module files for change detection
+	modulesMap := make(map[string]scanstate.ModuleFileGetter)
+	for _, moniker := range ctx.GetExecutionMonikers() {
+		if contract, ok := ctx.ModuleRegistry.Get(moniker); ok {
+			modulesMap[moniker] = contract
+		}
+	}
+
+	if len(modulesMap) == 0 {
+		return
+	}
+
+	moduleFiles, err := scanstate.GetModuleSourceFiles(ctx.WorkspaceRoot, modulesMap)
+	if err != nil {
+		log.Debugf("Failed to get module source files: %v", err)
+		return
+	}
+
+	// Store for later state update
+	sctx.moduleFiles = moduleFiles
+
+	// Collect scanner types for detection
+	scannerTypes := collectScannerTypes(ctx, multiCfg)
+	sctx.scannerTypes = scannerTypes
+
+	changeResult, err := scanstate.DetectChanges(ctx.WorkspaceRoot, moduleFiles, scannerTypes)
+	if err != nil {
+		log.Debugf("Failed to detect scan changes: %v", err)
+		return
+	}
+
+	detectionTime := time.Since(startTime)
+
+	if changeResult.FreshRun {
+		if ctx.InitSummary != nil {
+			ctx.InitSummary.SetIncremental(&initsummary.IncrementalInfo{
+				Enabled:       true,
+				DetectionTime: detectionTime,
+				FreshBuild:    true,
+			})
+		}
+		return
+	}
+
+	// Build set of changed modules
+	changedSet := make(map[string]bool)
+	for _, m := range changeResult.ChangedModules {
+		changedSet[m] = true
+	}
+
+	// Build set of cached modules (modules that are up-to-date)
+	// These will be skipped at the component worker level, not filtered from the plan.
+	sctx.cachedModules = make(map[string]bool)
+	var changedList []string
+	var cachedList []string
+
+	for _, moniker := range ctx.GetExecutionMonikers() {
+		if changedSet[moniker] {
+			changedList = append(changedList, moniker)
+		} else {
+			sctx.cachedModules[moniker] = true
+			cachedList = append(cachedList, moniker)
+		}
+	}
+
+	if ctx.InitSummary != nil {
+		ctx.InitSummary.SetIncremental(&initsummary.IncrementalInfo{
+			Enabled:       true,
+			DetectionTime: detectionTime,
+			Changed:       changedList,
+			UpToDate:      cachedList,
+			FreshBuild:    false,
+		})
+	}
+
+	log.Debugf("Incremental scan: %d modules to scan, %d cached (will show blue in TUI)",
+		len(changedList), len(cachedList))
+}
+
+// collectScannerTypes collects all scanner types that will be used.
+func collectScannerTypes(ctx *cmdframework.ExecutionContext, multiCfg *MultiScanConfig) []string {
+	if multiCfg != nil && len(multiCfg.Scanners) > 0 {
+		var types []string
+		for _, s := range multiCfg.Scanners {
+			types = append(types, string(s))
+		}
+		return types
+	}
+
+	// Collect from component types
+	seenScanners := make(map[string]bool)
+	for _, moniker := range ctx.GetExecutionMonikers() {
+		module, exists := ctx.ModuleRegistry.Get(moniker)
+		if !exists {
+			continue
+		}
+		for _, componentName := range module.GetEnabledComponents() {
+			compTypeName := module.Components.GetComponentType(componentName)
+			compType := ctx.EACConfig.ComponentTypes.Get(compTypeName)
+			if compType == nil || !compType.IsScannable() {
+				continue
+			}
+			for _, s := range compType.GetScanners() {
+				seenScanners[s] = true
+			}
+		}
+	}
+
+	var types []string
+	for s := range seenScanners {
+		types = append(types, s)
+	}
+	return types
 }
 
 // multiScanWorker runs all configured scanners for a single module.

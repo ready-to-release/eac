@@ -2,7 +2,7 @@
 
 ## Overview
 
-The **update** category contains 2 commands for updating existing documentation and architecture diagrams.
+The **update** category contains commands for updating existing documentation and architecture diagrams.
 
 ## Commands
 

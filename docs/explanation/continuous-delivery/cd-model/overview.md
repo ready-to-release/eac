@@ -16,7 +16,8 @@ This approach reduces lead time, increases deployment frequency, and improves so
 
 The CD Model consists of 12 distinct stages that guide software from code authoring to production operation.
 
-The following diagram provides a compact view of all stages, using chevrons for regular stages and diamonds for approval gates (stages 1, 3, 9, 12):
+The following diagram provides a compact view of all stages,
+using chevrons for regular stages and diamonds for approval gates (stages 1, 3, 9, 12):
 
 ![CD Model Stages](../../../assets/cd-model/model.drawio.png){width=900}
 
@@ -24,7 +25,8 @@ For detailed interactions between stages, environments, and quality gates, see t
 
 ![CD Model Full View](../../../assets/cd-model/canvas-compliance-ra.drawio.png)
 
-This visualization shows the complete flow through all stages, including quality gates, environment transitions, and approval points.
+This visualization shows the complete flow through all stages,
+including quality gates, environment transitions, and approval points.
 
 ```mermaid
 flowchart LR

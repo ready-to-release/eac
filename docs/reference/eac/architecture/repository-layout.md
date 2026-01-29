@@ -24,7 +24,11 @@ eac/
 ├── .claude/                    # Claude Code CLI configuration
 │   ├── agents/                 # Custom agent definitions
 │   ├── commands/               # Custom command definitions
-│   └── hooks/                  # Git hooks for Claude integration
+│   ├── hooks/                  # Git hooks for Claude integration
+│   ├── plans/                  # Plan mode output files
+│   ├── rules/                  # Custom rules and guidelines
+│   ├── schemas/                # JSON schemas for validation
+│   └── skills/                 # Custom skill definitions
 │
 ├── .github/                    # GitHub Actions workflows and configuration
 │   ├── actions/                # Reusable workflow actions
@@ -32,17 +36,24 @@ eac/
 │
 ├── .r2r/                       # R2R and EAC configuration (Everything as Code)
 │   ├── cache/                  # Build cache
-│   └── eac/                    # User configuration overrides
-│       ├── repository.yml      # Module contracts (central registry)
-│       └── books.yml           # PDF book generation config
+│   ├── eac/                    # User configuration overrides
+│   │   ├── repository.yml      # Module contracts (central registry)
+│   │   └── books.yml           # PDF book generation config
+│   └── templates/              # Report templates
 │
 ├── .vscode/                    # VSCode workspace configuration
 │   └── extensions/             # Custom VSCode extensions
 │
 ├── containers/                 # Docker container definitions
+│   ├── drawio-cli/             # Draw.io diagram CLI
 │   ├── ext-eac/                # R2R CLI extension for EAC
+│   ├── git-filter-repo/        # Git history filtering tool
+│   ├── gource/                 # Repository visualization
+│   ├── mermaid-cli/            # Mermaid diagram renderer
+│   ├── mkdocs-pdf/             # PDF documentation builder
 │   ├── mkdocs-site/            # Documentation site builder
-│   └── mkdocs-pdf/             # PDF documentation builder
+│   ├── pdf-tools/              # PDF manipulation utilities
+│   └── static-site/            # Static site hosting
 │
 ├── contracts/                  # JSON schemas and system defaults
 │   ├── eac-core/0.1.0/         # Core EAC schemas and defaults
@@ -55,7 +66,9 @@ eac/
 │   │   ├── repository.schema.json
 │   │   ├── component-types.schema.json
 │   │   └── ...
-│   └── r2r-cli/0.1.0/          # CLI-specific schemas
+│   ├── eac-docs/0.1.0/         # Documentation schemas
+│   ├── r2r-cli/0.1.0/          # CLI-specific schemas
+│   └── vscode-commit/          # VSCode extension schemas
 │
 ├── docs/                       # MkDocs documentation site source
 │   ├── assets/                 # Images, diagrams, etc.
@@ -66,7 +79,7 @@ eac/
 │
 ├── go/                         # Go source code
 │   ├── eac/                    # EAC implementation
-│   │   ├── commands/           # CLI commands library (eac-commands module) with integrated AI providers
+│   │   ├── commands/           # CLI commands library (eac-commands module)
 │   │   ├── core/               # Core domain libraries (eac-core module)
 │   │   ├── mcp/                # MCP server implementations
 │   │   └── specs/              # Shared BDD test infrastructure
@@ -77,7 +90,8 @@ eac/
 │   ├── books/                  # Books module releases
 │   ├── docs/                   # Docs module releases
 │   ├── ext-eac/                # Extension releases
-│   └── r2r-cli/                # CLI releases
+│   ├── r2r-cli/                # CLI releases
+│   └── r2r-eac-bundle/         # Bundle releases
 │
 ├── scripts/                    # Cross-platform scripts
 │   ├── pwsh/                   # PowerShell scripts (Windows)
@@ -90,9 +104,13 @@ eac/
 │   └── repository/             # Repository-level validation specs
 │
 ├── templates/                  # Project templates
-│   ├── design/                 # Design document templates
+│   ├── ai/                     # AI prompt templates
+│   ├── claude/                 # Claude Code configuration templates
 │   ├── docs/                   # Documentation templates
-│   └── specs/                  # Specification templates
+│   ├── github/                 # GitHub Actions templates
+│   ├── reports/                # Report templates
+│   ├── specs/                  # Specification templates
+│   └── test-repositories/      # Test fixture repositories
 │
 ├── typescript/                 # TypeScript source code
 │   └── vscode-ext-commit/      # VSCode Git extension

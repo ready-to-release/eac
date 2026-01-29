@@ -67,21 +67,34 @@ func generateTUISummary(ctx *ExecutionContext, totalTime time.Duration) *tui.Sum
 func generateComponentTUISummary(ctx *ExecutionContext, totalTime time.Duration) *tui.SummaryData {
 	resultSets := ctx.ComponentResultSets
 
-	// Count successes and failures at module level
-	var successCount, failureCount int
+	// Count successes, skipped (cached), and failures at module level
+	var successCount, skippedCount, failureCount int
 	for _, rs := range resultSets {
 		status := rs.DeriveStatus()
-		if status == orchestrator.ModuleStatusFailed {
+		switch status {
+		case orchestrator.ModuleStatusFailed:
 			failureCount++
-		} else if status == orchestrator.ModuleStatusSuccess {
+		case orchestrator.ModuleStatusSuccess:
 			successCount++
+		case orchestrator.ModuleStatusSkipped:
+			skippedCount++
 		}
 	}
 
 	// Build run summary line
-	runSummary := fmt.Sprintf("%d modules succeeded", successCount)
+	var runParts []string
+	if skippedCount > 0 {
+		runParts = append(runParts, fmt.Sprintf("%d cached", skippedCount))
+	}
+	if successCount > 0 {
+		runParts = append(runParts, fmt.Sprintf("%d built", successCount))
+	}
 	if failureCount > 0 {
-		runSummary += fmt.Sprintf(", %d failed", failureCount)
+		runParts = append(runParts, fmt.Sprintf("%d failed", failureCount))
+	}
+	runSummary := strings.Join(runParts, ", ")
+	if runSummary == "" {
+		runSummary = "0 modules"
 	}
 
 	// Sort resultSets by module name
@@ -118,26 +131,20 @@ func generateComponentTUISummary(ctx *ExecutionContext, totalTime time.Duration)
 			compNames[i] = comp.Component
 		}
 		components := strings.Join(compNames, ", ")
-		// Truncate if too long (max 40 chars)
-		if len(components) > 40 {
-			components = components[:37] + "..."
+		// Truncate if too long (max 60 chars)
+		if len(components) > 60 {
+			components = components[:57] + "..."
 		}
 
 		// Aggregate component stats
-		// Use max duration for tests (wall-clock approximation for parallel execution)
-		// Use sum duration for build/lint/scan (sequential or shows total work)
+		// Use max duration (wall-clock approximation for parallel execution)
 		var moduleDuration time.Duration
 		var errorCount, warnCount int
 		var testsTotal, testsPassed, testsFailed int
 		for _, comp := range rs.Components {
-			if ctx.Config.Type == CommandTypeTest {
-				// For tests: use max (parallel execution wall-clock approximation)
-				if comp.Duration > moduleDuration {
-					moduleDuration = comp.Duration
-				}
-			} else {
-				// For build/lint/scan: sum durations
-				moduleDuration += comp.Duration
+			// Components run in parallel, so use max duration for wall-clock time
+			if comp.Duration > moduleDuration {
+				moduleDuration = comp.Duration
 			}
 			errorCount += len(comp.Errors)
 			warnCount += len(comp.Warnings)
@@ -514,7 +521,7 @@ func printModuleConsoleSummary(ctx *ExecutionContext, totalTime time.Duration) {
 		log.Info("")
 		log.Info("Failed modules:")
 		for _, result := range results {
-			if result.ExitCode != 0 {
+			if result.ExitCode > 0 { // Only actual failures, not skipped (-1)
 				log.Infof("  - %s (exit code %d)", output.PackageDisplayName(result.Moniker), result.ExitCode)
 				if result.LogPath != "" {
 					log.Infof("    Log: %s", result.LogPath)

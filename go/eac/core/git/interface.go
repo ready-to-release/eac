@@ -25,6 +25,13 @@ type GitRepository interface {
 	// HeadShortSHA returns the short SHA of the HEAD commit.
 	HeadShortSHA() (string, error)
 
+	// HeadCommit returns the full SHA of the HEAD commit.
+	HeadCommit() (string, error)
+
+	// UncommittedFiles returns paths of files with uncommitted changes.
+	// Uses git status --porcelain format parsing.
+	UncommittedFiles() ([]string, error)
+
 	// TrackedFiles returns all files tracked by Git (in the index).
 	TrackedFiles() ([]string, error)
 

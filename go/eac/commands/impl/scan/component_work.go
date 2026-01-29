@@ -7,6 +7,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/cmdframework"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
 	"github.com/ready-to-release/eac/go/eac/core/config"
+	"github.com/ready-to-release/eac/go/eac/core/tool"
 )
 
 // FlattenModulesToScanComponentWork converts modules to scan component work items.
@@ -72,7 +73,7 @@ func FlattenModulesToScanComponentWork(ctx *cmdframework.ExecutionContext) [][]o
 
 				// Component work item: component name includes scanner for unique identification
 				// Format: "component:scanner" so display becomes "module:component:scanner"
-				// This matches the lint pattern (e.g., "go:golangci-lint")
+				// This matches the lint pattern (e.g., "go:go-lint")
 				componentWithScanner := componentName + ":" + string(scannerType)
 
 				// Get weight (base weight × amp, calculated internally)
@@ -83,6 +84,7 @@ func FlattenModulesToScanComponentWork(ctx *cmdframework.ExecutionContext) [][]o
 					Component:     componentWithScanner,
 					ComponentType: compTypeName,
 					Handler:       string(scannerType), // Use scanner type instead of generic "scan"
+					IsContainer:   tool.GlobalScanBridge().IsContainer(tool.ScannerType(scannerType)),
 					Weight:        weight,
 					BuildAfter:    nil, // Scans have no intra-module dependencies
 					Index:         globalIndex,

@@ -156,6 +156,7 @@ func (r *DefaultRegistry) Get(toolID string) (*ToolDefinition, bool) {
 	return tool.Clone(), true
 }
 
+
 // GetAll returns a copy of all registered tools.
 func (r *DefaultRegistry) GetAll() map[string]*ToolDefinition {
 	r.mu.RLock()
@@ -241,6 +242,7 @@ func (r *DefaultRegistry) Has(toolID string) bool {
 	return ok
 }
 
+
 // Remove removes a tool from the registry.
 // Returns true if the tool was removed, false if it didn't exist.
 func (r *DefaultRegistry) Remove(toolID string) bool {
@@ -250,6 +252,7 @@ func (r *DefaultRegistry) Remove(toolID string) bool {
 	if _, ok := r.tools[toolID]; !ok {
 		return false
 	}
+
 	delete(r.tools, toolID)
 	return true
 }
@@ -275,6 +278,7 @@ func (r *DefaultRegistry) VerifyAll(toolIDs []string) []VerifyResult {
 	}
 	return results
 }
+
 
 // GetMissingTools returns the IDs of tools that aren't available.
 // Tools that are skipped due to platform incompatibility are not considered missing.

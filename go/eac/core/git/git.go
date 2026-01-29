@@ -89,6 +89,62 @@ func (r *Repository) HeadShortSHA() (string, error) {
 	return head.Hash().String()[:7], nil
 }
 
+// HeadCommit returns the full SHA of the HEAD commit.
+func (r *Repository) HeadCommit() (string, error) {
+	head, err := r.repo.Head()
+	if err != nil {
+		return "", fmt.Errorf("failed to get HEAD: %w", err)
+	}
+
+	return head.Hash().String(), nil
+}
+
+// UncommittedFiles returns paths of files with uncommitted changes.
+// Uses git status --porcelain format parsing.
+func (r *Repository) UncommittedFiles() ([]string, error) {
+	output, err := r.runGitCommand("status", "--porcelain")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get status: %w", err)
+	}
+
+	return parseStatusPorcelain(output), nil
+}
+
+// parseStatusPorcelain extracts file paths from git status --porcelain output.
+// Format per line: XY filename
+// - X = index status (staged)
+// - Y = worktree status (unstaged)
+// - A space separates XY from filename
+// - Filenames with spaces are quoted
+func parseStatusPorcelain(output string) []string {
+	if output == "" {
+		return nil
+	}
+
+	// Only trim trailing newlines/whitespace, not leading (which could be a status char)
+	output = strings.TrimRight(output, "\n\r ")
+	if output == "" {
+		return nil
+	}
+
+	lines := strings.Split(output, "\n")
+	var files []string
+	for _, line := range lines {
+		if len(line) < 4 {
+			// Minimum valid line: "XY f" (2 status + space + 1 char filename)
+			continue
+		}
+		// Skip position 0 (index status), 1 (worktree status), 2 (space separator)
+		// Filename starts at position 3
+		path := strings.TrimSpace(line[3:])
+		path = strings.Trim(path, "\"")
+		if path != "" {
+			files = append(files, path)
+		}
+	}
+	return files
+}
+
 // TrackedFiles returns all files tracked by Git (in the index).
 // This reflects the current index state: HEAD files + staged additions - staged deletions.
 // Uses native git command for performance (go-git's wt.Status() is slow).

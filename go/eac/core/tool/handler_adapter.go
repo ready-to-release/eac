@@ -32,6 +32,12 @@ type BuildHandler interface {
 	// ValidateModule checks if a module's configuration is valid for a specific component.
 	// Returns nil if valid, or an error describing the problem.
 	ValidateModule(module *modules.ModuleContract, workspaceRoot, component string) error
+
+	// IsContainer returns true if this handler runs in a Docker container.
+	IsContainer() bool
+
+	// IsHostInstalled returns true if this handler runs using host-installed tools (not containers).
+	IsHostInstalled() bool
 }
 
 // BuildOptions contains flags for controlling the build process.
@@ -129,12 +135,24 @@ func (a *ToolHandlerAdapter) ValidateModule(module *modules.ModuleContract, work
 	return nil
 }
 
+// IsContainer returns true if this handler runs in a Docker container.
+func (a *ToolHandlerAdapter) IsContainer() bool {
+	return a.tool.Type == ToolTypeContainer
+}
+
+// IsHostInstalled returns true if this handler runs using host-installed tools.
+func (a *ToolHandlerAdapter) IsHostInstalled() bool {
+	return a.tool.Type == ToolTypeSystem
+}
+
 // LintHandler is the interface for lint handlers.
 type LintHandler interface {
 	Name() string
 	Lint(moduleRoot, workspaceRoot, outputDir string, logWriter io.Writer, opts LintOptions) int
 	Requirements() []string
 	ValidateModule(moduleRoot, workspaceRoot string) error
+	IsContainer() bool
+	IsHostInstalled() bool
 }
 
 // LintOptions contains flags for controlling the lint process.
@@ -207,11 +225,23 @@ func (a *LintHandlerAdapter) ValidateModule(moduleRoot, workspaceRoot string) er
 	return nil
 }
 
+// IsContainer returns true if this handler runs in a Docker container.
+func (a *LintHandlerAdapter) IsContainer() bool {
+	return a.tool.Type == ToolTypeContainer
+}
+
+// IsHostInstalled returns true if this handler runs using host-installed tools.
+func (a *LintHandlerAdapter) IsHostInstalled() bool {
+	return a.tool.Type == ToolTypeSystem
+}
+
 // TestHandler is the interface for test handlers.
 type TestHandler interface {
 	Name() string
 	Test(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, opts TestOptions) int
 	Requirements() []string
+	IsContainer() bool
+	IsHostInstalled() bool
 }
 
 // TestOptions contains flags for controlling the test process.
@@ -281,11 +311,23 @@ func (a *TestHandlerAdapter) Requirements() []string {
 	return a.tool.Requirements
 }
 
+// IsContainer returns true if this handler runs in a Docker container.
+func (a *TestHandlerAdapter) IsContainer() bool {
+	return a.tool.Type == ToolTypeContainer
+}
+
+// IsHostInstalled returns true if this handler runs using host-installed tools.
+func (a *TestHandlerAdapter) IsHostInstalled() bool {
+	return a.tool.Type == ToolTypeSystem
+}
+
 // ScanHandler is the interface for security scan handlers.
 type ScanHandler interface {
 	Name() string
 	Scan(moduleRoot, workspaceRoot, outputDir string, logWriter io.Writer, opts ScanOptions) (int, []byte)
 	Requirements() []string
+	IsContainer() bool
+	IsHostInstalled() bool
 }
 
 // ScanOptions contains flags for controlling the scan process.
@@ -344,4 +386,14 @@ func (a *ScanHandlerAdapter) Scan(moduleRoot, workspaceRoot, outputDir string, l
 // Requirements returns the tool's requirements.
 func (a *ScanHandlerAdapter) Requirements() []string {
 	return a.tool.Requirements
+}
+
+// IsContainer returns true if this handler runs in a Docker container.
+func (a *ScanHandlerAdapter) IsContainer() bool {
+	return a.tool.Type == ToolTypeContainer
+}
+
+// IsHostInstalled returns true if this handler runs using host-installed tools.
+func (a *ScanHandlerAdapter) IsHostInstalled() bool {
+	return a.tool.Type == ToolTypeSystem
 }

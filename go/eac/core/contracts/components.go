@@ -12,7 +12,7 @@ type ComponentType struct {
 	// Extensions are the file extensions belonging to this component type (e.g., [".go"], [".md", ".markdown"])
 	Extensions []string `yaml:"extensions" json:"extensions"`
 
-	// Linter is the linter tool to use (e.g., "golangci-lint", "markdownlint-cli2")
+	// Linter is the linter tool to use (e.g., "go-lint", "markdown-lint")
 	Linter string `yaml:"linter,omitempty" json:"linter,omitempty"`
 
 	// LintInput specifies how files are passed to the linter:

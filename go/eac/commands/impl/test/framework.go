@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/internal/artifacts"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/internal/manifests"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/show"
@@ -58,6 +59,9 @@ type TestFrameworkConfig struct {
 
 	// Stats for summary
 	Stats *testSelectionStats
+
+	// Incremental state
+	CachedModules map[string]bool // Modules that are up-to-date (cache hits)
 
 	// Execution state
 	ExecCtx       *TestExecutionContext
@@ -536,6 +540,15 @@ func testComponentWorker(ctx *cmdframework.ExecutionContext, module, component s
 		testType = ""
 	}
 
+	// Check incremental cache - if module is cached, skip immediately (blue in TUI)
+	// Use the module parameter directly (already resolved by orchestrator)
+	log.Debugf("[TUI-CACHE] Test worker for %s: CachedModules=%v, isCached=%v",
+		module, testCfg.CachedModules != nil, testCfg.CachedModules != nil && testCfg.CachedModules[module])
+	if testCfg.CachedModules != nil && testCfg.CachedModules[module] {
+		fmt.Fprintf(logWriter, "⏭️  Cached (unchanged)\n")
+		return -1 // -1 = skipped/cached = blue in TUI
+	}
+
 	tests := testCfg.ExecCtx.testsByPackage[pkgPath]
 	if len(tests) == 0 {
 		fmt.Fprintf(logWriter, "No tests found for path: %s\n", pkgPath)
@@ -578,6 +591,13 @@ func testComponentWorker(ctx *cmdframework.ExecutionContext, module, component s
 		TestsSkipped: result.TestsSkipped,
 	})
 
+	// Atomically update test state for this module immediately after completion
+	// This ensures interrupted runs still preserve cache for completed modules
+	passed := !result.PackageFailed && result.TestsFailed == 0
+	if err := updateModuleTestStateAtomic(ctx, testCfg, module, passed); err != nil {
+		log.Debugf("Failed to update test state for %s: %v", module, err)
+	}
+
 	if result.PackageFailed || result.TestsFailed > 0 {
 		return 1
 	}
@@ -619,6 +639,7 @@ func verifyTestDependencies(ctx *cmdframework.ExecutionContext, testCfg *TestFra
 	}
 
 	// Strip @deps: prefix from system dependencies to get tool IDs
+	// @deps: tags use tool IDs (e.g., @deps:go, @deps:docker, @deps:go-lint)
 	toolIDs := make([]string, 0, len(systemDeps))
 	for _, dep := range systemDeps {
 		toolID := strings.TrimPrefix(dep, "@deps:")
@@ -700,37 +721,58 @@ func filterIncrementalTests(ctx *cmdframework.ExecutionContext, testCfg *TestFra
 		return testsByPackage
 	}
 
-	moduleTestInfo, uniqueModules := buildModuleTestInfo(testsByPackage, ctx.ModuleRegistry, ctx.EACConfig, ctx.WorkspaceRoot)
+	moduleTestInfo, _ := buildModuleTestInfo(testsByPackage, ctx.ModuleRegistry, ctx.EACConfig, ctx.WorkspaceRoot)
 
-	changeResult, err := teststate.DetectChanges(ctx.WorkspaceRoot, moduleTestInfo, uniqueModules)
+	// Get suite names for change detection
+	// For composite suites (e.g., "unit+integration"), split into constituent suites
+	suiteNames := manifests.GetSuitesIncluded(testCfg.SuiteName)
+	if suiteNames == nil {
+		// Non-composite suite: use the suite name directly
+		suiteNames = []string{testCfg.SuiteName}
+	}
+
+	changeResult, err := teststate.DetectChanges(ctx.WorkspaceRoot, moduleTestInfo, suiteNames)
 	if err != nil {
 		log.Debugf("Failed to detect test changes: %v", err)
 		return testsByPackage
 	}
 
 	if changeResult.FreshRun {
+		log.Debugf("[TUI-CACHE] Test incremental: FreshRun=true, no cache available")
 		return testsByPackage
 	}
 
+	// Build set of modules that need testing
 	changedSet := make(map[string]bool)
 	for _, m := range changeResult.ModulesNeedingTest {
 		changedSet[m] = true
 	}
 
-	filtered := make(map[string][]testing.TestReference)
-	for pkgPath, tests := range testsByPackage {
+	// Build set of cached modules (modules that are up-to-date)
+	// These will be skipped at the component worker level, not filtered from the plan.
+	// This keeps all packages visible in the TUI.
+	testCfg.CachedModules = make(map[string]bool)
+	var changedCount, cachedCount int
+
+	for pkgPath := range testsByPackage {
 		moduleMoniker := testCfg.ModuleMapper.GetModuleForPackagePath(pkgPath)
 		if changedSet[moduleMoniker] {
-			filtered[pkgPath] = tests
+			changedCount++
+			log.Debugf("[TUI-CACHE] Test incremental: pkgPath=%s -> module=%s (CHANGED)", pkgPath, moduleMoniker)
+		} else {
+			testCfg.CachedModules[moduleMoniker] = true
+			cachedCount++
+			log.Debugf("[TUI-CACHE] Test incremental: pkgPath=%s -> module=%s (CACHED)", pkgPath, moduleMoniker)
 		}
 	}
 
-	if len(filtered) < len(testsByPackage) {
-		skipped := len(testsByPackage) - len(filtered)
-		ctx.WriteInit("Incremental: skipping %d unchanged package(s)", skipped)
+	if cachedCount > 0 {
+		log.Debugf("Incremental test: %d packages to test, %d cached (will show blue in TUI)",
+			changedCount, cachedCount)
 	}
 
-	return filtered
+	// Return ALL packages - filtering happens at component worker level
+	return testsByPackage
 }
 
 func buildSuiteTagFilter(suite *testing.TestSuite) string {
@@ -768,6 +810,49 @@ func buildTestInitSummary(ctx *cmdframework.ExecutionContext, testCfg *TestFrame
 		SetOutputDir(testCfg.TestRunDir)
 
 	ctx.InitSummary = summary
+}
+
+// updateModuleTestStateAtomic updates test state for a single module immediately after completion.
+// This ensures interrupted runs preserve cache for completed modules (atomic caching).
+func updateModuleTestStateAtomic(ctx *cmdframework.ExecutionContext, testCfg *TestFrameworkConfig, module string, passed bool) error {
+	if ctx.ModuleRegistry == nil {
+		return nil
+	}
+
+	contract, exists := ctx.ModuleRegistry.Get(module)
+	if !exists {
+		return nil
+	}
+
+	// Build module info for just this module
+	info := teststate.ModuleTestFiles{
+		Dependencies: contract.GetDependencies(),
+	}
+
+	// Load build manifest to get BuildID
+	moduleBuildDir := ctx.EACConfig.Repository.BuildOutputPathAbs(ctx.WorkspaceRoot, module)
+	if manifest, err := implinternal.LoadModuleManifest(moduleBuildDir); err == nil {
+		info.BuildID = manifest.BuildID
+	}
+
+	// Get source files from module definition
+	sourcePatterns := contract.GetGlobPatterns()
+	sourceFiles, err := teststate.ExpandGlobPatterns(ctx.WorkspaceRoot, sourcePatterns)
+	if err == nil {
+		for _, f := range sourceFiles {
+			if !isTestFile(f) {
+				info.SourceFiles = append(info.SourceFiles, f)
+			}
+		}
+	}
+
+	moduleTestInfo := map[string]teststate.ModuleTestFiles{module: info}
+	testedModules := map[string]bool{module: passed}
+
+	// Use the suite name for proper incremental detection
+	// For composite suites (e.g., "unit+integration"), record each constituent suite
+	suiteName := testCfg.SuiteName
+	return teststate.UpdateModuleStateForSuite(ctx.WorkspaceRoot, testedModules, moduleTestInfo, suiteName)
 }
 
 func updateTestState(ctx *cmdframework.ExecutionContext, testCfg *TestFrameworkConfig, _ []PackageResult) {

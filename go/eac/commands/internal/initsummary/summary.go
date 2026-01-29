@@ -80,7 +80,7 @@ type Flags struct {
 	SkipDeps bool // --skip-deps: skip go, docker, etc. checks
 
 	// Build behavior
-	ForceRebuild bool   // --rebuild: force full rebuild, ignore incremental state
+	ForceRebuild bool   // --skip-cache: skip incremental cache, force full execution
 	DryRun       bool   // --dry-run: simulate without executing
 	BuildAll     bool   // --all: include non-default artifacts
 	Version      string // --version: version string to inject

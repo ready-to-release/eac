@@ -62,7 +62,7 @@ modules:
 | `depends_on` | No       | Module dependencies                    |
 | `files`      | No       | File ownership patterns                |
 
-## Available Module Types
+## Available Component Types
 
 | Type            | Purpose                |
 | --------------- | ---------------------- |
@@ -157,7 +157,6 @@ environments:
     name: Integration Tests
     level: L2
     type: docker
-    system_deps: [docker]
 ```
 
 ## Test Suites
@@ -261,4 +260,4 @@ modules:
 
 - [Project Structure](./project-structure.md) - Directory organization
 - [Contracts Reference](../../eac/contracts/index.md) - Full contract documentation
-- [Module Types](../../eac/architecture/component-types.md) - All available types
+- [Component Types](../../eac/architecture/component-types.md) - All available types

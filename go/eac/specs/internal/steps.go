@@ -25,9 +25,6 @@ func RegisterCommonSteps(sc *godog.ScenarioContext, ctx *TestContext) {
 	sc.Step(`^the exit code is (\d+)$`, func(expectedCode int) error {
 		return ExitCodeIs(ctx, expectedCode)
 	})
-	sc.Step(`^the exit code is (\d+) or (\d+)$`, func(code1, code2 int) error {
-		return ExitCodeIsOneOf(ctx, code1, code2)
-	})
 	sc.Step(`^the command should succeed$`, func() error {
 		return CommandSucceeded(ctx)
 	})

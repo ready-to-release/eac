@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/initsummary"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
@@ -150,6 +151,13 @@ func displayInitSummary(ctx *ExecutionContext) {
 		return
 	}
 
+	// Send structured data to TUI for rich display
+	if ctx.Orchestrator != nil && ctx.Config.UseTUI {
+		tuiSummary := convertToTUIInitSummary(ctx.InitSummary)
+		ctx.Orchestrator.SetInitSummary(tuiSummary)
+	}
+
+	// Also output text lines for early display and non-TUI mode
 	var formatted string
 	if ctx.Config.UseTUI {
 		formatted = initsummary.FormatCompact(ctx.InitSummary)
@@ -162,4 +170,136 @@ func displayInitSummary(ctx *ExecutionContext) {
 			ctx.WriteInit("%s", line)
 		}
 	}
+}
+
+// convertToTUIInitSummary converts initsummary.Summary to tui.InitSummary.
+func convertToTUIInitSummary(s *initsummary.Summary) *tui.InitSummary {
+	ts := &tui.InitSummary{
+		Command:           s.Command,
+		ExecutionContext:  s.ExecutionContext,
+		RequestedModules:  len(s.RequestedModules),
+		CalculatedModules: len(s.CalculatedModules),
+		AddedDepm:         len(s.AddedDepm),
+		ComponentCount:    s.ComponentCount,
+		FlatExecution:     s.FlatExecution,
+		OutputDir:         s.OutputDir,
+	}
+
+	// Build execution tree: layers → modules → components
+	ts.ExecutionTree = buildExecutionTree(s)
+
+	// Compute layer sizes from execution tree
+	ts.LayerCount = len(s.ExecutionLayers)
+	ts.LayerSizes = make([]int, len(s.ExecutionLayers))
+	ts.ComponentsPerModLayer = make([]int, len(s.ExecutionLayers))
+
+	for i, layer := range s.ExecutionLayers {
+		ts.LayerSizes[i] = len(layer)
+	}
+
+	// Count components per layer from ComponentExecutionLayers
+	if len(s.ComponentExecutionLayers) > 0 {
+		for i, compLayer := range s.ComponentExecutionLayers {
+			if i < len(ts.ComponentsPerModLayer) {
+				ts.ComponentsPerModLayer[i] = len(compLayer)
+			}
+		}
+	}
+
+	// Parallelism info
+	if s.Parallelism != nil {
+		ts.ParallelismMode = s.Parallelism.Mode
+		ts.EffectiveWorkers = s.Parallelism.EffectiveWorkers
+		ts.TurboBoost = s.Parallelism.TurboBoost
+		ts.WeightedCapacity = s.Parallelism.WeightedCapacity
+	}
+
+	// Flags
+	ts.Flags = tui.InitSummaryFlags{
+		TidyFirst:    s.Flags.TidyFirst,
+		ForceRebuild: s.Flags.ForceRebuild,
+		DryRun:       s.Flags.DryRun,
+		UseTUI:       s.Flags.UseTUI,
+		SkipDeps:     s.Flags.SkipDeps,
+		SkipDepm:     s.Flags.SkipDepm,
+	}
+
+	// Deps status
+	ts.DepsVerified = s.DepsStatus.Verified
+	ts.DepsSkipped = s.DepsStatus.Skipped
+	if len(s.DepsStatus.Available) > 0 {
+		for _, dep := range s.DepsStatus.Available {
+			if dep.Available {
+				ts.DepsAvailable = append(ts.DepsAvailable, dep.Name)
+			}
+		}
+	}
+	ts.DepsMissing = s.DepsStatus.Missing
+
+	// Depm status
+	ts.DepmVerified = s.DepmStatus.Verified
+	ts.DepmSkipped = s.DepmStatus.Skipped
+	ts.DepmResolved = len(s.DepmStatus.Resolved)
+	ts.DepmExisting = len(s.DepmStatus.Existing)
+	ts.DepmTotal = s.DepmStatus.Total
+	ts.DepmMissing = s.DepmStatus.Missing
+
+	// Incremental info
+	if s.Incremental != nil {
+		ts.IncrementalEnabled = s.Incremental.Enabled
+		ts.IncrementalChanged = len(s.Incremental.Changed)
+		ts.IncrementalUpToDate = len(s.Incremental.UpToDate)
+		ts.IncrementalFresh = s.Incremental.FreshBuild
+	}
+
+	// Test info
+	if s.Test != nil {
+		ts.TestSuiteName = s.Test.SuiteName
+		ts.TestSelected = s.Test.Selected
+		ts.TestDiscovered = s.Test.TotalDiscovered
+		ts.TestOSFiltered = s.Test.OSFiltered
+	}
+
+	return ts
+}
+
+// buildExecutionTree builds the hierarchical tree: layers → modules → components.
+func buildExecutionTree(s *initsummary.Summary) []tui.ExecutionLayer {
+	if len(s.ExecutionLayers) == 0 {
+		return nil
+	}
+
+	// Build a map of module -> component names from ComponentExecutionLayers
+	// Components are named "module:component"
+	moduleComponents := make(map[string][]string)
+	for _, layer := range s.ComponentExecutionLayers {
+		for _, comp := range layer {
+			// Extract module name and component name from "module:component" format
+			if idx := strings.Index(comp, ":"); idx > 0 {
+				module := comp[:idx]
+				compName := comp[idx+1:]
+				moduleComponents[module] = append(moduleComponents[module], compName)
+			} else {
+				// Component without colon - use as-is (module is the component)
+				moduleComponents[comp] = append(moduleComponents[comp], comp)
+			}
+		}
+	}
+
+	// Build the tree structure
+	tree := make([]tui.ExecutionLayer, len(s.ExecutionLayers))
+	for i, moduleNames := range s.ExecutionLayers {
+		layer := tui.ExecutionLayer{
+			Modules: make([]tui.ExecutionModule, len(moduleNames)),
+		}
+		for j, moduleName := range moduleNames {
+			layer.Modules[j] = tui.ExecutionModule{
+				Name:       moduleName,
+				Components: moduleComponents[moduleName],
+			}
+		}
+		tree[i] = layer
+	}
+
+	return tree
 }

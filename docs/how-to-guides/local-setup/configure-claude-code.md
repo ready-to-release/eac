@@ -194,7 +194,7 @@ Claude: ✅ APPROVED FOR RELEASE v1.5.0
 
 ## Understanding the Setup
 
-### MCP Tools (100+ Commands)
+### MCP Tools
 
 The repository has an MCP server providing commands like:
 

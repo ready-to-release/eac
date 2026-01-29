@@ -372,6 +372,304 @@ func (m *mockExecCmd) Run() error {
 	return m.runFn()
 }
 
+// TestVerifyArtifactsIntegrity tests the cache validation via manifest artifact verification.
+func TestVerifyArtifactsIntegrity_ValidArtifact(t *testing.T) {
+	// Create temp directory with a test artifact
+	tmpDir := t.TempDir()
+
+	// Create a test file with known content
+	testContent := []byte("test file content for hashing")
+	testFile := filepath.Join(tmpDir, "test-artifact.txt")
+	if err := os.WriteFile(testFile, testContent, 0644); err != nil {
+		t.Fatalf("failed to create test file: %v", err)
+	}
+
+	// Calculate expected hash
+	_, expectedHash, err := HashArtifactFile(testFile)
+	if err != nil {
+		t.Fatalf("failed to hash test file: %v", err)
+	}
+
+	manifest := &ModuleManifest{
+		BuildID:    "test-build-id",
+		BuildAgent: BuildAgentDevbox,
+		Moniker:    "test-module",
+		Type:       "go",
+		BuildTime:  time.Now(),
+		Artifacts: []ArtifactInfo{
+			{
+				Type:   "file",
+				ID:     "test-artifact",
+				Name:   "test-artifact.txt",
+				Path:   "test-artifact.txt",
+				Size:   int64(len(testContent)),
+				SHA256: expectedHash,
+			},
+		},
+		Platforms: []PlatformInfo{{OS: "linux", Arch: "amd64"}},
+		Version:   "2.0",
+	}
+
+	err = manifest.VerifyArtifactsIntegrity(tmpDir)
+	if err != nil {
+		t.Errorf("valid artifact should pass integrity check: %v", err)
+	}
+}
+
+func TestVerifyArtifactsIntegrity_HashMismatch(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create a test file
+	testContent := []byte("actual content")
+	testFile := filepath.Join(tmpDir, "test-artifact.txt")
+	if err := os.WriteFile(testFile, testContent, 0644); err != nil {
+		t.Fatalf("failed to create test file: %v", err)
+	}
+
+	manifest := &ModuleManifest{
+		BuildID:    "test-build-id",
+		BuildAgent: BuildAgentDevbox,
+		Moniker:    "test-module",
+		Type:       "go",
+		BuildTime:  time.Now(),
+		Artifacts: []ArtifactInfo{
+			{
+				Type:   "file",
+				ID:     "test-artifact",
+				Name:   "test-artifact.txt",
+				Path:   "test-artifact.txt",
+				Size:   int64(len(testContent)),
+				SHA256: "0000000000000000000000000000000000000000000000000000000000000000", // Wrong hash
+			},
+		},
+		Platforms: []PlatformInfo{{OS: "linux", Arch: "amd64"}},
+		Version:   "2.0",
+	}
+
+	err := manifest.VerifyArtifactsIntegrity(tmpDir)
+	if err == nil {
+		t.Error("hash mismatch should fail integrity check")
+	}
+
+	// Verify it's the right error type
+	integrityErr := &ArtifactIntegrityError{}
+	if !errors.As(err, &integrityErr) {
+		t.Errorf("expected ArtifactIntegrityError, got %T: %v", err, err)
+	}
+	if integrityErr.ArtifactID != "test-artifact" {
+		t.Errorf("expected artifact ID 'test-artifact', got '%s'", integrityErr.ArtifactID)
+	}
+}
+
+func TestVerifyArtifactsIntegrity_SizeMismatch(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create a test file
+	testContent := []byte("actual content")
+	testFile := filepath.Join(tmpDir, "test-artifact.txt")
+	if err := os.WriteFile(testFile, testContent, 0644); err != nil {
+		t.Fatalf("failed to create test file: %v", err)
+	}
+
+	// Get actual hash
+	_, actualHash, err := HashArtifactFile(testFile)
+	if err != nil {
+		t.Fatalf("failed to hash test file: %v", err)
+	}
+
+	manifest := &ModuleManifest{
+		BuildID:    "test-build-id",
+		BuildAgent: BuildAgentDevbox,
+		Moniker:    "test-module",
+		Type:       "go",
+		BuildTime:  time.Now(),
+		Artifacts: []ArtifactInfo{
+			{
+				Type:   "file",
+				ID:     "test-artifact",
+				Name:   "test-artifact.txt",
+				Path:   "test-artifact.txt",
+				Size:   99999, // Wrong size
+				SHA256: actualHash,
+			},
+		},
+		Platforms: []PlatformInfo{{OS: "linux", Arch: "amd64"}},
+		Version:   "2.0",
+	}
+
+	err = manifest.VerifyArtifactsIntegrity(tmpDir)
+	if err == nil {
+		t.Error("size mismatch should fail integrity check")
+	}
+
+	integrityErr := &ArtifactIntegrityError{}
+	if !errors.As(err, &integrityErr) {
+		t.Errorf("expected ArtifactIntegrityError, got %T: %v", err, err)
+	}
+}
+
+func TestVerifyArtifactsIntegrity_MissingFile(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	manifest := &ModuleManifest{
+		BuildID:    "test-build-id",
+		BuildAgent: BuildAgentDevbox,
+		Moniker:    "test-module",
+		Type:       "go",
+		BuildTime:  time.Now(),
+		Artifacts: []ArtifactInfo{
+			{
+				Type:   "file",
+				ID:     "missing-artifact",
+				Name:   "missing.txt",
+				Path:   "missing.txt",
+				Size:   100,
+				SHA256: "0000000000000000000000000000000000000000000000000000000000000000",
+			},
+		},
+		Platforms: []PlatformInfo{{OS: "linux", Arch: "amd64"}},
+		Version:   "2.0",
+	}
+
+	err := manifest.VerifyArtifactsIntegrity(tmpDir)
+	if err == nil {
+		t.Error("missing file should fail integrity check")
+	}
+
+	integrityErr := &ArtifactIntegrityError{}
+	if !errors.As(err, &integrityErr) {
+		t.Errorf("expected ArtifactIntegrityError, got %T: %v", err, err)
+	}
+}
+
+func TestVerifyArtifactsIntegrity_SkipsDockerImages(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	manifest := &ModuleManifest{
+		BuildID:    "test-build-id",
+		BuildAgent: BuildAgentDevbox,
+		Moniker:    "test-module",
+		Type:       "container",
+		BuildTime:  time.Now(),
+		Artifacts: []ArtifactInfo{
+			{
+				Type:   "image",
+				ID:     "image",
+				Name:   "test:latest",
+				Path:   "test:latest",
+				SHA256: "", // Images don't have file SHA256
+			},
+		},
+		Platforms: []PlatformInfo{{OS: "linux", Arch: "amd64"}},
+		Version:   "2.0",
+	}
+
+	// Should pass - docker images are skipped
+	err := manifest.VerifyArtifactsIntegrity(tmpDir)
+	if err != nil {
+		t.Errorf("docker images should be skipped in integrity check: %v", err)
+	}
+}
+
+func TestVerifyArtifactsIntegrity_SkipsArtifactsWithoutHash(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create a directory
+	if err := os.MkdirAll(filepath.Join(tmpDir, "docs-dir"), 0755); err != nil {
+		t.Fatalf("failed to create test dir: %v", err)
+	}
+
+	manifest := &ModuleManifest{
+		BuildID:    "test-build-id",
+		BuildAgent: BuildAgentDevbox,
+		Moniker:    "test-module",
+		Type:       "docs",
+		BuildTime:  time.Now(),
+		Artifacts: []ArtifactInfo{
+			{
+				Type:   "directory",
+				ID:     "docs",
+				Name:   "docs-dir",
+				Path:   "docs-dir",
+				SHA256: "", // Directories don't have SHA256
+			},
+		},
+		Platforms: []PlatformInfo{{OS: "linux", Arch: "amd64"}},
+		Version:   "2.0",
+	}
+
+	// Should pass - artifacts without SHA256 are skipped
+	err := manifest.VerifyArtifactsIntegrity(tmpDir)
+	if err != nil {
+		t.Errorf("artifacts without SHA256 should be skipped: %v", err)
+	}
+}
+
+func TestVerifyArtifactsIntegrity_FindsInComponentSubdir(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create artifact in component subdirectory
+	compDir := filepath.Join(tmpDir, "go_go")
+	if err := os.MkdirAll(compDir, 0755); err != nil {
+		t.Fatalf("failed to create component dir: %v", err)
+	}
+
+	testContent := []byte("component artifact content")
+	testFile := filepath.Join(compDir, "test-cli.exe")
+	if err := os.WriteFile(testFile, testContent, 0644); err != nil {
+		t.Fatalf("failed to create test file: %v", err)
+	}
+
+	_, expectedHash, err := HashArtifactFile(testFile)
+	if err != nil {
+		t.Fatalf("failed to hash test file: %v", err)
+	}
+
+	manifest := &ModuleManifest{
+		BuildID:    "test-build-id",
+		BuildAgent: BuildAgentDevbox,
+		Moniker:    "test-module",
+		Type:       "go",
+		BuildTime:  time.Now(),
+		Artifacts: []ArtifactInfo{
+			{
+				Type:   "executable",
+				ID:     "windows-amd64",
+				Name:   "test-cli.exe",
+				Path:   "test-cli.exe", // Relative path, should be found in component subdir
+				Size:   int64(len(testContent)),
+				SHA256: expectedHash,
+			},
+		},
+		Platforms: []PlatformInfo{{OS: "windows", Arch: "amd64"}},
+		Version:   "2.0",
+	}
+
+	err = manifest.VerifyArtifactsIntegrity(tmpDir)
+	if err != nil {
+		t.Errorf("should find artifact in component subdir: %v", err)
+	}
+}
+
+func TestTruncateHash(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"abcdef1234567890", "abcdef123456"},
+		{"short", "short"},
+		{"exactly12ch", "exactly12ch"},
+		{"", ""},
+	}
+
+	for _, tt := range tests {
+		result := truncateHash(tt.input)
+		if result != tt.expected {
+			t.Errorf("truncateHash(%q) = %q, want %q", tt.input, result, tt.expected)
+		}
+	}
+}
+
 // TestVerifyArtifactsExist_CIPushedImage simulates the exact CI scenario:
 // - buildx pushes image to ghcr.io (push=true, load=false)
 // - local image doesn't exist

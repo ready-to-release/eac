@@ -261,6 +261,7 @@ func (t *ToolDefinition) FullImage() string {
 	return t.Image + ":" + t.Tag
 }
 
+
 // IsLocalContainer returns true if this container has a local build context.
 // Local containers have a LocalPath set and are built from Dockerfile.
 func (t *ToolDefinition) IsLocalContainer() bool {
@@ -293,8 +294,8 @@ func (t *ToolDefinition) Clone() *ToolDefinition {
 	}
 
 	clone := &ToolDefinition{
-		ID:           t.ID,
-		Description:  t.Description,
+		ID:          t.ID,
+		Description: t.Description,
 		Type:         t.Type,
 		Binary:       t.Binary,
 		LocalPath:    t.LocalPath,
@@ -399,7 +400,7 @@ func (m *MountConfig) ResolvePlaceholders(placeholders map[string]string) MountC
 // These fields only apply when the tool is used for OperationServe.
 type ServeConfig struct {
 	// Port Configuration
-	ContainerPort int    `yaml:"container_port,omitempty" json:"container_port,omitempty"` // Port inside container
+	ContainerPort int    `yaml:"container_port,omitempty" json:"container_port,omitempty"`   // Port inside container
 	HostPortRange string `yaml:"host_port_range,omitempty" json:"host_port_range,omitempty"` // "9000-9999"
 	HostPortFixed int    `yaml:"host_port_fixed,omitempty" json:"host_port_fixed,omitempty"` // Fixed port (0 = auto)
 
@@ -553,6 +554,92 @@ type ExecutionContext struct {
 	// Multiplies the tool's base resource allocation (CPUs, Memory).
 	// Value of 1.0 means no change, 2.0 doubles resources, 0.5 halves resources.
 	Amp float64
+
+	// DinD support: Host paths for volume mounts when running inside a container.
+	// When set, mount sources are translated from container paths to host paths.
+	// This is populated automatically by the executor when R2R_HOST_REPOROOT is set.
+	HostWorkspaceRoot string // Host's view of workspace (e.g., "C:\projects\eac")
+	ContainerRepoRoot string // Container's view (e.g., "/var/task")
+}
+
+// IsDinD returns true if running in Docker-in-Docker mode.
+func (ctx *ExecutionContext) IsDinD() bool {
+	return ctx.HostWorkspaceRoot != ""
+}
+
+// TranslatePathForMount converts a container path to host path for Docker mounts.
+// In direct host mode (not DinD), returns the path unchanged.
+// In DinD mode, translates paths under ContainerRepoRoot to HostWorkspaceRoot.
+func (ctx *ExecutionContext) TranslatePathForMount(containerPath string) string {
+	if !ctx.IsDinD() {
+		return containerPath
+	}
+
+	// Handle empty path
+	if containerPath == "" {
+		return containerPath
+	}
+
+	// Normalize paths for comparison (use forward slashes for container paths)
+	containerPathNorm := strings.ReplaceAll(containerPath, "\\", "/")
+	containerPathNorm = cleanUnixPath(containerPathNorm)
+
+	containerRootNorm := strings.ReplaceAll(ctx.ContainerRepoRoot, "\\", "/")
+	containerRootNorm = cleanUnixPath(containerRootNorm)
+
+	// Check if path is under container root using proper directory boundary check
+	// /var/task is a prefix of /var/task/src but NOT /var/taskdata
+	if !isUnderPath(containerPathNorm, containerRootNorm) {
+		return containerPath // Not under container root
+	}
+
+	// Get relative path
+	rel := strings.TrimPrefix(containerPathNorm, containerRootNorm)
+	rel = strings.TrimPrefix(rel, "/")
+
+	// Join with host root
+	return joinHostPath(ctx.HostWorkspaceRoot, rel)
+}
+
+// cleanUnixPath normalizes a Unix path (removes trailing slashes, handles . and ..)
+func cleanUnixPath(path string) string {
+	// Simple path cleaning that preserves forward slashes
+	path = strings.TrimSuffix(path, "/")
+	if path == "" {
+		return "/"
+	}
+	return path
+}
+
+// isUnderPath checks if target is under base path (proper directory boundary check).
+func isUnderPath(target, base string) bool {
+	if target == base {
+		return true // Path equals container root
+	}
+	// Must be followed by a slash to be under the path
+	// /var/task/src is under /var/task
+	// /var/taskdata is NOT under /var/task
+	return strings.HasPrefix(target, base+"/")
+}
+
+// joinHostPath joins a host root with a relative path, preserving host separators.
+// This function is platform-aware: Windows host paths use backslashes, Unix uses forward slashes.
+func joinHostPath(hostRoot, relPath string) string {
+	// Handle "." or empty relative path
+	if relPath == "" || relPath == "." {
+		return hostRoot
+	}
+
+	// Detect Windows host path (has drive letter like C:)
+	if len(hostRoot) >= 2 && hostRoot[1] == ':' {
+		// Windows host path: use backslash separator
+		relPath = strings.ReplaceAll(relPath, "/", "\\")
+		return hostRoot + "\\" + relPath
+	}
+
+	// Unix host path: use forward slashes explicitly (don't use filepath.Join on Windows)
+	relPath = strings.ReplaceAll(relPath, "\\", "/")
+	return hostRoot + "/" + relPath
 }
 
 // ExecutionResult captures the outcome of tool execution.

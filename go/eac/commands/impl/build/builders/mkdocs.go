@@ -18,7 +18,7 @@ import (
 )
 
 func init() {
-	// Native handler disabled - using tool system's mkdocs-container directly
+	// Native handler disabled - using tool system's mkdocs-builder directly
 	// RegisterHandler(&MkDocsHandler{})
 }
 
@@ -74,7 +74,7 @@ func getPDFConcurrency(workspaceRoot string) int {
 // MkDocsHandler builds MkDocs documentation sites using Docker.
 type MkDocsHandler struct{}
 
-func (h *MkDocsHandler) Name() string { return "mkdocs-container" }
+func (h *MkDocsHandler) Name() string { return "mkdocs" }
 
 func (h *MkDocsHandler) Capabilities() []string { return []string{"documentation", "container"} }
 

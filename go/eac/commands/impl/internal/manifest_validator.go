@@ -224,6 +224,82 @@ func (e *ArtifactExistenceError) Error() string {
 	return fmt.Sprintf("build for %s produced manifest but artifacts are missing: %v", e.Moniker, e.Missing)
 }
 
+// ArtifactIntegrityError represents an artifact hash/size mismatch error.
+type ArtifactIntegrityError struct {
+	ArtifactID string
+	Message    string
+}
+
+func (e *ArtifactIntegrityError) Error() string {
+	return fmt.Sprintf("artifact %s: %s", e.ArtifactID, e.Message)
+}
+
+// VerifyArtifactsIntegrity checks that all artifacts exist AND have matching SHA256 hashes.
+// Returns nil if all artifacts are valid, error describing what's wrong otherwise.
+// This is used during cache hit validation to ensure out/ contents match the manifest.
+func (m *ModuleManifest) VerifyArtifactsIntegrity(moduleBuildDir string) error {
+	for _, art := range m.Artifacts {
+		// Skip Docker images - they're verified differently (via docker commands)
+		if art.Type == "image" {
+			continue
+		}
+
+		// Skip artifacts without SHA256 (directories, etc.)
+		if art.SHA256 == "" {
+			continue
+		}
+
+		// Try to find the artifact file
+		filePath := filepath.Join(moduleBuildDir, art.Path)
+		size, hash, err := HashArtifactFile(filePath)
+
+		// If not found at module level, check component subdirectories
+		if hash == "" {
+			if foundPath := findInComponentSubdirs(moduleBuildDir, art.Path); foundPath != "" {
+				size, hash, err = HashArtifactFile(foundPath)
+			}
+		}
+
+		if err != nil {
+			return &ArtifactIntegrityError{
+				ArtifactID: art.ID,
+				Message:    fmt.Sprintf("failed to hash file: %v", err),
+			}
+		}
+
+		if hash == "" {
+			return &ArtifactIntegrityError{
+				ArtifactID: art.ID,
+				Message:    fmt.Sprintf("file not found at %s", art.Path),
+			}
+		}
+
+		if hash != art.SHA256 {
+			return &ArtifactIntegrityError{
+				ArtifactID: art.ID,
+				Message:    fmt.Sprintf("hash mismatch (expected %s, got %s)", truncateHash(art.SHA256), truncateHash(hash)),
+			}
+		}
+
+		if size != art.Size {
+			return &ArtifactIntegrityError{
+				ArtifactID: art.ID,
+				Message:    fmt.Sprintf("size mismatch (expected %d, got %d)", art.Size, size),
+			}
+		}
+	}
+
+	return nil
+}
+
+// truncateHash returns the first 12 characters of a hash for display.
+func truncateHash(hash string) string {
+	if len(hash) > 12 {
+		return hash[:12]
+	}
+	return hash
+}
+
 // VerifyArtifactsExist checks that all artifacts declared in the manifest actually exist.
 func (m *ModuleManifest) VerifyArtifactsExist(moduleBuildDir string) error {
 	var missing []string

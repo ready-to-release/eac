@@ -4,7 +4,6 @@
 package cacheinvalidation
 
 import (
-	"context"
 	"os"
 	"testing"
 
@@ -21,17 +20,8 @@ func TestCacheInvalidationFeatures(t *testing.T) {
 
 	opts := internal.BuildOptions(cfg.SpecsPath, cfg.DefaultReportName, t)
 	suite := godog.TestSuite{
-		ScenarioInitializer: func(sc *godog.ScenarioContext) {
-			ctx := internal.NewTestContext()
-			internal.RegisterCommonSteps(sc, ctx)
-			cfg.RegisterSteps(sc, ctx)
-
-			sc.After(func(c context.Context, sc *godog.Scenario, err error) (context.Context, error) {
-				cleanupCacheContext(ctx)
-				return c, nil
-			})
-		},
-		Options: opts,
+		ScenarioInitializer: internal.CreateScenarioInitializer(cfg),
+		Options:             opts,
 	}
 
 	if suite.Run() != 0 {

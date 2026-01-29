@@ -30,13 +30,9 @@ type TestBridge struct {
 // NewTestBridge creates a new test bridge.
 func NewTestBridge() *TestBridge {
 	return &TestBridge{
-		// Fallback mappings - the resolver (component-tools from tool-config.yml)
-		// takes priority over these hardcoded defaults.
-		componentTestHandlers: map[string]string{
-			"go": "go-test-system",
-			// npm/typescript mappings removed - now resolved via component-tools
-			// which maps typescript/javascript to npm-test-container
-		},
+		// All mappings come from component-tools in tool-config.yml via the resolver.
+		// No hardcoded fallbacks - tool names should not be embedded in code.
+		componentTestHandlers: map[string]string{},
 	}
 }
 
@@ -142,6 +138,15 @@ func (b *TestBridge) ResolveTool(componentType string, operation OperationType) 
 	}
 
 	return t
+}
+
+// IsContainer returns true if the test handler for the given component type runs in a container.
+func (b *TestBridge) IsContainer(componentType string) bool {
+	t := b.ResolveTool(componentType, OperationTest)
+	if t == nil {
+		return false
+	}
+	return t.Type == ToolTypeContainer
 }
 
 // Global test bridge instance.

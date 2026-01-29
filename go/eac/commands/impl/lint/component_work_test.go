@@ -30,7 +30,7 @@ func TestCountLintComponents(t *testing.T) {
 			name: "single layer with single component",
 			layers: [][]orchestrator.ComponentWork{
 				{
-					{Module: "mod-a", Component: "golangci-lint"},
+					{Module: "mod-a", Component: "go-lint"},
 				},
 			},
 			want: 1,
@@ -39,8 +39,8 @@ func TestCountLintComponents(t *testing.T) {
 			name: "single layer with multiple components",
 			layers: [][]orchestrator.ComponentWork{
 				{
-					{Module: "mod-a", Component: "golangci-lint"},
-					{Module: "mod-b", Component: "golangci-lint"},
+					{Module: "mod-a", Component: "go-lint"},
+					{Module: "mod-b", Component: "go-lint"},
 					{Module: "mod-c", Component: "eslint"},
 				},
 			},
@@ -50,8 +50,8 @@ func TestCountLintComponents(t *testing.T) {
 			name: "multiple layers with multiple components",
 			layers: [][]orchestrator.ComponentWork{
 				{
-					{Module: "mod-a", Component: "golangci-lint"},
-					{Module: "mod-b", Component: "golangci-lint"},
+					{Module: "mod-a", Component: "go-lint"},
+					{Module: "mod-b", Component: "go-lint"},
 				},
 				{
 					{Module: "mod-c", Component: "eslint"},
@@ -64,7 +64,7 @@ func TestCountLintComponents(t *testing.T) {
 			layers: [][]orchestrator.ComponentWork{
 				{},
 				{
-					{Module: "mod-a", Component: "golangci-lint"},
+					{Module: "mod-a", Component: "go-lint"},
 				},
 			},
 			want: 1,

@@ -20,12 +20,12 @@
 // Long:   build --tidy-first eac-commands # Build with go mod tidy first
 // Flag.tidy-first: type=bool, usage=Run 'go mod tidy' before building (default for local)
 // Flag.no-tidy: type=bool, usage=Skip 'go mod tidy' (default for CI)
-// Flag.rebuild: type=bool, usage=Force full rebuild, ignoring incremental build state
+// Flag.skip-cache: type=bool, usage=Skip incremental cache, force full rebuild
 // Flag.layered-build: type=bool, usage=Execute layers sequentially (default: all modules in parallel)
 // Flag.skip-depm: type=bool, usage=Only build specified modules, no dependency resolution (CI isolation)
 // Flag.no-deps: type=bool, usage=Alias for --skip-depm
 // Flag.use-existing-depm: type=bool, usage=Skip building module dependencies if artifacts exist (for CI incremental builds)
-// Flag.skip-deps-verification: type=bool, usage=Skip system dependency verification (go, docker, etc.)
+// Flag.skip-deps: type=bool, usage=Skip system dependency verification (go, docker, etc.)
 // Flag.timings: type=bool, usage=Show detailed timing summary
 // Flag.debug: type=bool, usage=Enable debug logs to console (file logging always enabled)
 // Flag.tui: type=bool, usage=Enable TUI console (default for local, errors in CI/container)
@@ -49,7 +49,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/builders"
@@ -128,8 +127,6 @@ func ensureCommandsBinary(workspaceRoot string) error {
 	return nil
 }
 
-// buildFlags defines valid flags for the build command
-
 // Build command entry point - builds one or more modules.
 func Build() int {
 	args := os.Args[2:] // Skip program name and "build"
@@ -140,168 +137,64 @@ func Build() int {
 		return 0
 	}
 
-	// Validate flags before parsing
-	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		return 1
-	}
-
 	// Detect execution environment
 	env := environment.Detect()
 
-	// Parse module monikers and flags
-	var monikers []string
-	tidyFirst := !env.IsCI   // Default: true for local, false for CI
-	skipDeps := false        // Skip system dependency verification (go, docker, etc.)
-	skipDepm := false        // Skip including transitive module dependencies in execution plan
-	useExistingDepm := false // Use existing module dependency artifacts (skip building if present)
-	forceRebuild := false    // Force full rebuild, ignoring incremental build state (--rebuild)
-	layeredBuild := false    // Execute in layers sequentially (default: all parallel)
-	showTimings := false
-	debugMode := false   // Enable debug logs to console
-	turbo := false       // Enable turbo mode (+2 parallel workers)
-	roof := 0            // Max capacity/roof limit (0 = auto-detect)
-	reproducible := "auto" // MkDocs reproducibility mode: auto, true, false
-	version := ""
-	listArtifacts := false
-	dryRun := false
-	buildAll := false            // Include non-default books (those with default: false)
-	useTUI := env.ShouldUseTUI() // TUI enabled by default for local console mode
-	tuiExplicitlySet := false
-	tuiHeight := tui.DefaultHeight // TUI console height
-	tuiASCII := false              // Use ASCII-only characters in TUI
+	// Parse shared flags using flag sets
+	shared, err := flags.ParseSharedFlagsWithEnv(flags.BuildConfig(), args, env)
+	if err != nil {
+		log.Errorf("Error: %v", err)
+		printBuildUsage()
+		return 1
+	}
 
-	for i := 0; i < len(args); i++ {
-		arg := args[i]
-		switch arg {
-		case "--tidy-first":
-			tidyFirst = true
-		case "--no-tidy":
-			tidyFirst = false
-		case "--skip-depm":
-			skipDepm = true
-		case "--use-existing-depm":
-			useExistingDepm = true
-		case "--rebuild":
-			forceRebuild = true
-		case "--layered-build":
-			layeredBuild = true
-		case "--skip-deps":
-			skipDeps = true
-		case "--timings":
-			showTimings = true
-		case "--debug":
-			debugMode = true
-		case "--turbo":
-			turbo = true
-		case "--roof":
-			if i+1 >= len(args) {
-				log.Errorf("Error: --roof requires a value")
-				printBuildUsage()
-				return 1
-			}
-			i++
-			var err error
-			roof, err = parseIntArg(args[i])
-			if err != nil || roof < 1 {
-				log.Errorf("Error: --roof must be a positive integer")
-				printBuildUsage()
-				return 1
-			}
-		case "--accept-warnings":
-			// Flag is handled in mkdocs builder via os.Args check
-			// Just accept it here so it doesn't fail as unknown flag
-		case "--reproducible":
-			if i+1 >= len(args) {
-				log.Errorf("Error: --reproducible requires a value (auto, true, false)")
-				printBuildUsage()
-				return 1
-			}
-			i++
-			reproducible = args[i]
-			if !isValidReproducible(reproducible) {
-				log.Errorf("Error: --reproducible must be 'auto', 'true', or 'false'")
-				printBuildUsage()
-				return 1
-			}
-		case "--list-artifacts":
-			listArtifacts = true
-		case "--dry-run":
-			dryRun = true
-		case "--all":
-			buildAll = true
-		case "--tui":
-			useTUI = true
-			tuiExplicitlySet = true
-		case "--no-tui":
-			useTUI = false
-			tuiExplicitlySet = true
-		case "--ascii":
-			tuiASCII = true
-		case "--tui-height":
-			if i+1 >= len(args) {
-				log.Errorf("Error: --tui-height requires a value")
-				printBuildUsage()
-				return 1
-			}
-			i++
-			var err error
-			tuiHeight, err = parseIntArg(args[i])
-			if err != nil || tuiHeight < 3 || tuiHeight > 20 {
-				log.Errorf("Error: --tui-height must be a number between 3 and 20")
-				printBuildUsage()
-				return 1
-			}
-		case "--version":
-			if i+1 >= len(args) {
-				log.Errorf("Error: --version requires a value")
-				printBuildUsage()
-				return 1
-			}
-			i++
-			version = args[i]
-		default:
-			if strings.HasPrefix(arg, "--version=") {
-				version = strings.TrimPrefix(arg, "--version=")
-			} else if strings.HasPrefix(arg, "--tui-height=") {
-				heightStr := strings.TrimPrefix(arg, "--tui-height=")
-				var err error
-				tuiHeight, err = parseIntArg(heightStr)
-				if err != nil || tuiHeight < 3 || tuiHeight > 20 {
-					log.Errorf("Error: --tui-height must be a number between 3 and 20")
-					printBuildUsage()
-					return 1
-				}
-			} else if strings.HasPrefix(arg, "--roof=") {
-				roofStr := strings.TrimPrefix(arg, "--roof=")
-				var err error
-				roof, err = parseIntArg(roofStr)
-				if err != nil || roof < 1 {
-					log.Errorf("Error: --roof must be a positive integer")
-					printBuildUsage()
-					return 1
-				}
-			} else if strings.HasPrefix(arg, "--reproducible=") {
-				reproducible = strings.TrimPrefix(arg, "--reproducible=")
-				if !isValidReproducible(reproducible) {
-					log.Errorf("Error: --reproducible must be 'auto', 'true', or 'false'")
-					printBuildUsage()
-					return 1
-				}
-			} else if strings.HasPrefix(arg, "--") {
-				log.Errorf("Error: unknown flag: %s", arg)
-				printBuildUsage()
-				return 1
-			} else {
-				monikers = append(monikers, arg)
-			}
+	// Parse build-specific flags from remaining args
+	buildFlags, unknownArgs, err := ParseBuildSpecificFlags(shared.Remaining)
+	if err != nil {
+		log.Errorf("Error: %v", err)
+		printBuildUsage()
+		return 1
+	}
+
+	// Check for unknown flags
+	for _, arg := range unknownArgs {
+		if strings.HasPrefix(arg, "--") {
+			log.Errorf("Error: unknown flag: %s", arg)
+			printBuildUsage()
+			return 1
 		}
 	}
 
-	// Validate TUI usage - error if explicitly enabled in CI or container mode
-	if err := env.ValidateTUI(tuiExplicitlySet, useTUI); err != nil {
-		log.Errorf("Error: %v", err)
-		return 1
+	// Extract values from shared flags
+	monikers := shared.Monikers
+	skipDeps := shared.SkipDeps
+	skipDepm := shared.SkipDepm
+	forceRebuild := shared.SkipCache
+	showTimings := shared.ShowTimings
+	debugMode := shared.Debug
+	turbo := shared.Turbo
+	roof := shared.MaxConcurrency
+	dryRun := shared.DryRun
+	useTUI := shared.UseTUI
+	tuiHeight := shared.TUIHeight
+	tuiASCII := shared.TUIASCIIMode
+
+	// Extract build-specific flags
+	useExistingDepm := buildFlags.UseExistingDepm
+	layeredBuild := buildFlags.LayeredBuild
+	version := buildFlags.Version
+	reproducible := buildFlags.Reproducible
+	listArtifacts := buildFlags.ListArtifacts
+	buildAll := buildFlags.BuildAll
+
+	// Handle tidy flag: --tidy-first sets it true, --no-tidy sets it false
+	// Default is based on environment (true for local, false for CI)
+	tidyFirst := !env.IsCI
+	if buildFlags.TidyFirst {
+		tidyFirst = true
+	}
+	if buildFlags.NoTidy {
+		tidyFirst = false
 	}
 
 	// Validate --turbo and --layered-build mutual exclusivity
@@ -333,6 +226,15 @@ func Build() int {
 		return 1
 	}
 
+	// Build requested set BEFORE expanding to all modules
+	// RequestedSet tracks modules explicitly specified by the user on the command line.
+	// This enables incremental detection to skip unchanged modules when "eac build" is run
+	// without arguments, while still building explicitly requested modules unconditionally.
+	requestedSet := make(map[string]bool)
+	for _, m := range monikers {
+		requestedSet[m] = true
+	}
+
 	// If no monikers provided, default to all buildable modules (before dependency check)
 	if len(monikers) == 0 {
 		for _, module := range moduleReport.Registry.All() {
@@ -343,12 +245,6 @@ func Build() int {
 	// Handle --list-artifacts flag
 	if listArtifacts {
 		return listModuleArtifacts(monikers, workspaceRoot, moduleReport)
-	}
-
-	// Build requested set for --use-existing-depm logic
-	requestedSet := make(map[string]bool)
-	for _, m := range monikers {
-		requestedSet[m] = true
 	}
 
 	// Create command config for framework
@@ -385,11 +281,6 @@ func Build() int {
 	}
 
 	return RunBuildWithFramework(cmdCfg, buildCfg)
-}
-
-// parseIntArg parses a string argument as an integer.
-func parseIntArg(s string) (int, error) {
-	return strconv.Atoi(s)
 }
 
 // isValidReproducible checks if a reproducible flag value is valid.
@@ -598,7 +489,7 @@ func printBuildUsage() {
 	log.Info("  --list-artifacts          List artifacts that would be produced (no build)")
 	log.Info("  --tidy-first              Run 'go mod tidy' before building (default for local)")
 	log.Info("  --no-tidy                 Skip 'go mod tidy' (default for CI)")
-	log.Info("  --rebuild                 Force full rebuild, ignoring incremental build state")
+	log.Info("  --skip-cache              Skip incremental cache, force full rebuild")
 	log.Info("  --layered-build           Execute layers sequentially (default: all modules in parallel)")
 	log.Info("  --skip-depm               Only build specified modules, no module dependency resolution (CI isolation)")
 	log.Info("  --use-existing-depm       Skip building module dependencies if artifacts exist (for CI incremental builds)")
@@ -751,8 +642,9 @@ func generateBuildManifest(workspaceRoot string, results []orchestrator.WorkResu
 
 	// Process each successfully built module - create a per-module manifest
 	for _, result := range results {
-		// Skip failed builds
-		if result.ExitCode != 0 {
+		// Skip failed builds (exit code > 0)
+		// Note: exit code -1 means cached/skipped - still process these as they may need manifest updates
+		if result.ExitCode > 0 {
 			log.Debugf("Skipping %s: build failed (exit code %d)", result.Moniker, result.ExitCode)
 			continue
 		}

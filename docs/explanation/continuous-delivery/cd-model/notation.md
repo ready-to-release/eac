@@ -4,7 +4,8 @@ The CD Model uses specific visual elements to represent different concepts.
 
 Understanding these symbols is essential for reading the model diagrams.
 
-The following diagram provides a comprehensive reference for all visual elements used in EAC documentation, including stages, gates, environments, and test level indicators.
+The following diagram provides a comprehensive reference for all visual elements used in EAC documentation,
+including stages, gates, environments, and test level indicators.
 
 ![EAC Visual Language Reference](../../../assets/assisted/16-eac-visual-language.drawio.png){width=1000}
 

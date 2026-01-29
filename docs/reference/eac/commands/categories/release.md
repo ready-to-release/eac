@@ -2,7 +2,7 @@
 
 ## Overview
 
-The **release** category contains 11 commands for release management and version control.
+The **release** category contains commands for release management and version control.
 
 ## Commands
 

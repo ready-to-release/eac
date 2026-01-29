@@ -19,16 +19,22 @@ func TestLoadToolConfig(t *testing.T) {
 		t.Fatalf("failed to create config dir: %v", err)
 	}
 
-	// Write default config
+	// Write default config (must include docker and go as bootstrap tools)
 	defaultConfig := `
 tools:
+  docker:
+    type: system
+    binary: docker
+  go:
+    type: system
+    binary: go
   default-tool:
     type: system
     binary: default-binary
     description: Default tool
 
 component-tools:
-  go:
+  golang:
     builder: default-tool
 `
 	if err := os.WriteFile(filepath.Join(contractsDir, "tool-config.yml"), []byte(defaultConfig), 0644); err != nil {
@@ -49,7 +55,7 @@ component-tools:
 			t.Errorf("Binary = %q, want %q", tool.Binary, "default-binary")
 		}
 
-		assignment := config.ComponentTools["go"]
+		assignment := config.ComponentTools["golang"]
 		if assignment == nil || assignment.Builder != "default-tool" {
 			t.Error("component-tools assignment not loaded correctly")
 		}
@@ -64,7 +70,7 @@ tools:
     binary: project-binary
 
 component-tools:
-  go:
+  golang:
     linter: project-tool
   typescript:
     builder: project-tool
@@ -86,16 +92,16 @@ component-tools:
 			t.Error("project-tool should be added")
 		}
 
-		// Go should have merged assignments
-		goAssignment := config.ComponentTools["go"]
-		if goAssignment == nil {
-			t.Fatal("go assignment should exist")
+		// Golang component should have merged assignments
+		golangAssignment := config.ComponentTools["golang"]
+		if golangAssignment == nil {
+			t.Fatal("golang assignment should exist")
 		}
-		if goAssignment.Builder != "default-tool" {
-			t.Errorf("Builder = %q, should be preserved from defaults", goAssignment.Builder)
+		if golangAssignment.Builder != "default-tool" {
+			t.Errorf("Builder = %q, should be preserved from defaults", golangAssignment.Builder)
 		}
-		if goAssignment.Linter != "project-tool" {
-			t.Errorf("Linter = %q, should be from project", goAssignment.Linter)
+		if golangAssignment.Linter != "project-tool" {
+			t.Errorf("Linter = %q, should be from project", golangAssignment.Linter)
 		}
 
 		// TypeScript should be from project
@@ -145,6 +151,12 @@ func TestInitializeFromConfig(t *testing.T) {
 
 	config := `
 tools:
+  docker:
+    type: system
+    binary: docker
+  go:
+    type: system
+    binary: go
   echo-tool:
     type: system
     binary: echo
@@ -215,4 +227,242 @@ func TestDefaultsRoot_LocalMode(t *testing.T) {
 	if root != "/local/root" {
 		t.Errorf("defaultsRoot = %q, want %q", root, "/local/root")
 	}
+}
+
+func TestValidation_DuplicateToolIDs(t *testing.T) {
+	tmpDir := t.TempDir()
+	contractsDir := filepath.Join(tmpDir, "contracts", "eac-core", "0.1.0", "defaults")
+	configDir := filepath.Join(tmpDir, ".eac")
+
+	if err := os.MkdirAll(contractsDir, 0755); err != nil {
+		t.Fatalf("failed to create dirs: %v", err)
+	}
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatalf("failed to create dirs: %v", err)
+	}
+
+	// Config with duplicate tool ID
+	config := `
+tools:
+  my-tool:
+    type: system
+    binary: first
+  other-tool:
+    type: system
+    binary: other
+  my-tool:
+    type: container
+    image: second
+    tag: "1.0"
+`
+	if err := os.WriteFile(filepath.Join(contractsDir, "tool-config.yml"), []byte(config), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	_, err := LoadToolConfig(tmpDir, configDir)
+	if err == nil {
+		t.Fatal("expected error for duplicate tool IDs")
+	}
+
+	errStr := err.Error()
+	// yaml.v3 detects duplicates with: "mapping key \"my-tool\" already defined at line X"
+	if !contains(errStr, "already defined") {
+		t.Errorf("error should mention 'already defined', got: %v", err)
+	}
+	if !contains(errStr, "my-tool") {
+		t.Errorf("error should mention tool name 'my-tool', got: %v", err)
+	}
+}
+
+func TestValidation_BootstrapToolMustBeSystem(t *testing.T) {
+	tmpDir := t.TempDir()
+	contractsDir := filepath.Join(tmpDir, "contracts", "eac-core", "0.1.0", "defaults")
+	configDir := filepath.Join(tmpDir, ".eac")
+
+	if err := os.MkdirAll(contractsDir, 0755); err != nil {
+		t.Fatalf("failed to create dirs: %v", err)
+	}
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatalf("failed to create dirs: %v", err)
+	}
+
+	// docker is a bootstrap tool - must be system type
+	config := `
+tools:
+  docker:
+    type: container
+    image: docker
+    tag: "latest"
+  go:
+    type: system
+    binary: go
+`
+	if err := os.WriteFile(filepath.Join(contractsDir, "tool-config.yml"), []byte(config), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	_, err := LoadToolConfig(tmpDir, configDir)
+	if err == nil {
+		t.Fatal("expected error for bootstrap tool as container")
+	}
+
+	errStr := err.Error()
+	if !contains(errStr, "docker") {
+		t.Errorf("error should mention 'docker', got: %v", err)
+	}
+	if !contains(errStr, "bootstrap") {
+		t.Errorf("error should mention 'bootstrap', got: %v", err)
+	}
+}
+
+func TestValidation_UnknownToolReference(t *testing.T) {
+	tmpDir := t.TempDir()
+	contractsDir := filepath.Join(tmpDir, "contracts", "eac-core", "0.1.0", "defaults")
+	configDir := filepath.Join(tmpDir, ".eac")
+
+	if err := os.MkdirAll(contractsDir, 0755); err != nil {
+		t.Fatalf("failed to create dirs: %v", err)
+	}
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatalf("failed to create dirs: %v", err)
+	}
+
+	config := `
+tools:
+  docker:
+    type: system
+    binary: docker
+  go:
+    type: system
+    binary: go
+  real-tool:
+    type: system
+    binary: real
+
+component-tools:
+  golang:
+    builder: nonexistent-tool
+`
+	if err := os.WriteFile(filepath.Join(contractsDir, "tool-config.yml"), []byte(config), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	_, err := LoadToolConfig(tmpDir, configDir)
+	if err == nil {
+		t.Fatal("expected error for unknown tool reference")
+	}
+
+	errStr := err.Error()
+	if !contains(errStr, "nonexistent-tool") {
+		t.Errorf("error should mention the unknown tool, got: %v", err)
+	}
+	if !contains(errStr, "component-tools") {
+		t.Errorf("error should mention component-tools, got: %v", err)
+	}
+}
+
+func TestValidation_UnknownRequirement(t *testing.T) {
+	tmpDir := t.TempDir()
+	contractsDir := filepath.Join(tmpDir, "contracts", "eac-core", "0.1.0", "defaults")
+	configDir := filepath.Join(tmpDir, ".eac")
+
+	if err := os.MkdirAll(contractsDir, 0755); err != nil {
+		t.Fatalf("failed to create dirs: %v", err)
+	}
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatalf("failed to create dirs: %v", err)
+	}
+
+	config := `
+tools:
+  docker:
+    type: system
+    binary: docker
+  go:
+    type: system
+    binary: go
+  my-tool:
+    type: container
+    image: test
+    tag: "1.0"
+    requirements: [nonexistent-req]
+`
+	if err := os.WriteFile(filepath.Join(contractsDir, "tool-config.yml"), []byte(config), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	_, err := LoadToolConfig(tmpDir, configDir)
+	if err == nil {
+		t.Fatal("expected error for unknown requirement")
+	}
+
+	errStr := err.Error()
+	if !contains(errStr, "nonexistent-req") {
+		t.Errorf("error should mention the unknown requirement, got: %v", err)
+	}
+	if !contains(errStr, "requires") {
+		t.Errorf("error should mention 'requires', got: %v", err)
+	}
+}
+
+
+func TestValidation_ValidConfig(t *testing.T) {
+	tmpDir := t.TempDir()
+	contractsDir := filepath.Join(tmpDir, "contracts", "eac-core", "0.1.0", "defaults")
+	configDir := filepath.Join(tmpDir, ".eac")
+
+	if err := os.MkdirAll(contractsDir, 0755); err != nil {
+		t.Fatalf("failed to create dirs: %v", err)
+	}
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatalf("failed to create dirs: %v", err)
+	}
+
+	// Valid config following all conventions
+	config := `
+tools:
+  docker:
+    type: system
+    binary: docker
+  go:
+    type: system
+    binary: go
+  npm-build:
+    type: container
+    image: node
+    tag: "22-alpine"
+    requirements: [docker]
+
+component-tools:
+  go:
+    builder: go
+  typescript:
+    builder: npm-build
+`
+	if err := os.WriteFile(filepath.Join(contractsDir, "tool-config.yml"), []byte(config), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	cfg, err := LoadToolConfig(tmpDir, configDir)
+	if err != nil {
+		t.Fatalf("valid config should not error: %v", err)
+	}
+
+	if len(cfg.Tools) != 3 {
+		t.Errorf("expected 3 tools, got %d", len(cfg.Tools))
+	}
+}
+
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
+		(len(s) > 0 && len(substr) > 0 && findSubstring(s, substr)))
+}
+
+func findSubstring(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
 }

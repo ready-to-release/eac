@@ -6,9 +6,9 @@ EAC commands are organized into a hierarchical taxonomy based on their primary f
 
 ## Command Categories
 
-EAC provides **108 commands** organized into **14 top-level categories**:
+EAC provides many commands organized into top-level categories:
 
-### 1. create (7 commands)
+### 1. create
 
 **Purpose**: AI-powered content generation
 
@@ -30,7 +30,7 @@ Create commands use AI to generate various artifacts including commit messages, 
 
 ---
 
-### 2. get (18 commands)
+### 2. get
 
 **Purpose**: Structured JSON output for automation
 
@@ -83,7 +83,7 @@ Get commands provide machine-readable JSON output designed for CI/CD pipelines, 
 
 ---
 
-### 3. show (17 commands)
+### 3. show
 
 **Purpose**: Human-readable output for interactive use
 
@@ -135,7 +135,7 @@ Show commands provide formatted, human-readable output designed for terminal dis
 
 ---
 
-### 4. validate (20 commands)
+### 4. validate
 
 **Purpose**: Contract and quality validation
 
@@ -183,7 +183,7 @@ Validate commands ensure repository consistency, enforce contracts, and verify q
 
 ---
 
-### 5. work (6 commands)
+### 5. work
 
 **Purpose**: Workspace management using git worktrees
 
@@ -204,7 +204,7 @@ Work commands manage parallel development workspaces, enabling multiple topic br
 
 ---
 
-### 6. test (4 commands)
+### 6. test
 
 **Purpose**: Testing and test suite management
 
@@ -223,7 +223,7 @@ Test commands run tests, manage test suites, and analyze test results.
 
 ---
 
-### 7. build (1 command)
+### 7. build
 
 **Purpose**: Module building
 
@@ -237,7 +237,7 @@ Test commands run tests, manage test suites, and analyze test results.
 
 ---
 
-### 8. pipeline (6 commands)
+### 8. pipeline
 
 **Purpose**: CI/CD orchestration and monitoring
 
@@ -258,7 +258,7 @@ Pipeline commands orchestrate CI/CD workflows, monitor build status, and generat
 
 ---
 
-### 9. release (8 commands)
+### 9. release
 
 **Purpose**: Release management and versioning
 
@@ -281,7 +281,7 @@ Release commands manage the release process from changelog generation through ta
 
 ---
 
-### 10. scan (8 commands)
+### 10. scan
 
 **Purpose**: Security scanning and evidence collection
 
@@ -302,7 +302,7 @@ Scan commands perform various security scans and generate compliance evidence.
 
 ---
 
-### 11. serve (2 commands)
+### 11. serve
 
 **Purpose**: Local development servers
 
@@ -319,7 +319,7 @@ Serve commands start local servers for documentation and architecture visualizat
 
 ---
 
-### 12. templates (6 commands)
+### 12. templates
 
 **Purpose**: Template management for documentation and specifications
 

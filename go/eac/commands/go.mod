@@ -5,6 +5,7 @@ go 1.24.4
 require (
 	github.com/anthropics/anthropic-sdk-go v1.19.0
 	github.com/bmatcuk/doublestar/v4 v4.10.0
+	github.com/charmbracelet/bubbles v0.21.0
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/defenseunicorns/go-oscal v0.7.0
@@ -22,6 +23,7 @@ require (
 	github.com/ready-to-release/eac/go/eac/core v0.0.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/sashabaranov/go-openai v1.41.2
+	github.com/shahar3/bubble-grid v1.0.0
 	github.com/shirou/gopsutil/v3 v3.24.5
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/zap v1.27.1

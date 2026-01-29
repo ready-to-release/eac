@@ -9,7 +9,7 @@ Learn how to use CLI commands, write BDD specifications, configure integrations,
 | Guide                   | Description                                               |
 | ----------------------- | --------------------------------------------------------- |
 | [Commands](./commands/index.md) | CLI commands for build, test, validate, release, and more |
-| [Modules](./modules/index.md)   | Creating modules and module types                         |
+| [Modules](./modules/index.md)   | Creating and configuring modules                          |
 
 ## Language Support
 

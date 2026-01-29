@@ -93,7 +93,7 @@ contracts/
 └── eac-core/
     └── 0.1.0/
         ├── repository.schema.json
-        ├── module-types.schema.json
+        ├── component-types.schema.json
         ├── environments.schema.json
         └── ...
 ```

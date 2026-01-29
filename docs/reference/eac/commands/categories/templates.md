@@ -2,7 +2,7 @@
 
 ## Overview
 
-The **templates** category contains 6 commands for installing project templates for documentation,
+The **templates** category contains commands for installing project templates for documentation,
 AI prompts, reports, and specifications.
 
 ## Commands

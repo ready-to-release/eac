@@ -7,7 +7,6 @@ nav:
   - contracts.md
   - dependencies.md
   - dependency-system.md
-  - module-types.md
   - modules.md
   - repository-layout.md
   - viewing-diagrams.md

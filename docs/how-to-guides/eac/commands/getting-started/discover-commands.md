@@ -2,7 +2,7 @@
 
 {{ page_breadcrumb() }}
 
-The EAC extension provides 147 commands organized by category. This guide shows you how to discover, explore, and use them effectively.
+The EAC extension provides hundreds of commands organized by category. This guide shows you how to discover, explore, and use them effectively.
 
 **What you'll learn:**
 
@@ -37,7 +37,7 @@ r2r eac get valid-commands   # JSON format
 
 ## Command Categories
 
-EAC provides 147 commands organized into logical groups. Here are the main categories:
+EAC provides many commands organized into logical groups. Here are the main categories:
 
 | Category                 | Commands               | Description                                                   |
 | ------------------------ | ---------------------- | ------------------------------------------------------------- |

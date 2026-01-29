@@ -2,7 +2,7 @@
 
 ## Overview
 
-The **create** category contains 7 commands for AI-powered content generation and documentation creation.
+The **create** category contains commands for AI-powered content generation and documentation creation.
 
 ## How AI Generation Works
 

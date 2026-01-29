@@ -217,10 +217,11 @@ func (ctx *ExecutionContext) GetSuccessCount() int {
 }
 
 // GetFailureCount returns the number of failed results.
+// Only counts actual failures (ExitCode > 0), not skipped (-1).
 func (ctx *ExecutionContext) GetFailureCount() int {
 	count := 0
 	for _, r := range ctx.Results {
-		if r.ExitCode != 0 {
+		if r.ExitCode > 0 {
 			count++
 		}
 	}
@@ -238,10 +239,11 @@ func (ctx *ExecutionContext) GetResultByMoniker(moniker string) *orchestrator.Wo
 }
 
 // GetFailedMonikers returns the monikers of failed modules.
+// Only returns actual failures (ExitCode > 0), not skipped (-1).
 func (ctx *ExecutionContext) GetFailedMonikers() []string {
 	var failed []string
 	for _, r := range ctx.Results {
-		if r.ExitCode != 0 {
+		if r.ExitCode > 0 {
 			failed = append(failed, r.Moniker)
 		}
 	}

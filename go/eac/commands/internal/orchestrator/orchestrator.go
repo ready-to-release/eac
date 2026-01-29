@@ -46,6 +46,9 @@ type Orchestrator struct {
 
 	// Component results from last execution (for detailed reporting)
 	lastComponentResults []ComponentResult
+
+	// Pending cache times to apply when scheduler is created
+	pendingCacheTimes map[string]time.Time
 }
 
 // New creates a new Orchestrator with the given configuration and worker function.
@@ -667,6 +670,14 @@ func (o *Orchestrator) SendSummary(data *tui.SummaryData) {
 	o.tuiConsole.SendSummary(data)
 }
 
+// SetInitSummary sends structured init summary data for display in the Init pane.
+func (o *Orchestrator) SetInitSummary(data *tui.InitSummary) {
+	if o.tuiConsole == nil {
+		return
+	}
+	o.tuiConsole.SetInitSummary(data)
+}
+
 // Init initializes the orchestrator's output infrastructure.
 // This must be called before StartTUI or using phase methods.
 // It's automatically called by Run/RunLayered if not called explicitly.
@@ -739,6 +750,18 @@ func (o *Orchestrator) SetComponentExtras(module, component string, extras Compo
 	}
 }
 
+// SetCacheTimes sets the cache times for modules that are up-to-date (cached).
+// These times are passed to the TUI to display when cached artifacts were built.
+// If the scheduler hasn't been created yet, times are stored and applied when it starts.
+func (o *Orchestrator) SetCacheTimes(times map[string]time.Time) {
+	if o.currentScheduler != nil {
+		o.currentScheduler.SetCacheTimes(times)
+	} else {
+		// Store for later application when scheduler is created
+		o.pendingCacheTimes = times
+	}
+}
+
 // GetLastComponentResults returns the component-level results from the last
 // RunComponentsLayered or RunComponentsParallel call.
 // Returns nil if no component execution has occurred.
@@ -771,6 +794,13 @@ func (o *Orchestrator) RunComponentsLayered(layers [][]ComponentWork, worker Com
 	// Create component scheduler with dynamic capacity management
 	scheduler := NewComponentScheduler(&o.config, o.tuiConsole, o.registry)
 	o.currentScheduler = scheduler
+
+	// Apply pending cache times if any
+	if o.pendingCacheTimes != nil {
+		scheduler.SetCacheTimes(o.pendingCacheTimes)
+		o.pendingCacheTimes = nil
+	}
+
 	defer func() {
 		scheduler.Close()
 		o.currentScheduler = nil
@@ -890,6 +920,13 @@ func (o *Orchestrator) RunComponentsParallel(work []ComponentWork, worker Compon
 	// Create component scheduler with dynamic capacity management
 	scheduler := NewComponentScheduler(&o.config, o.tuiConsole, o.registry)
 	o.currentScheduler = scheduler
+
+	// Apply pending cache times if any
+	if o.pendingCacheTimes != nil {
+		scheduler.SetCacheTimes(o.pendingCacheTimes)
+		o.pendingCacheTimes = nil
+	}
+
 	defer func() {
 		scheduler.Close()
 		o.currentScheduler = nil
@@ -975,11 +1012,12 @@ func getLayerModules(work []ComponentWork) []string {
 	return modules
 }
 
-// GetExitCode returns the appropriate exit code based on results
-// Returns 1 if any module failed, 0 otherwise.
+// GetExitCode returns the appropriate exit code based on results.
+// Returns 1 if any module failed (ExitCode > 0), 0 otherwise.
+// ExitCode -1 means skipped/cached and is treated as success.
 func GetExitCode(results []WorkResult) int {
 	for _, result := range results {
-		if result.ExitCode != 0 {
+		if result.ExitCode > 0 {
 			return 1
 		}
 	}

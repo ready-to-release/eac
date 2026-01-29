@@ -79,8 +79,8 @@ func NewScanBridge() *ScanBridge {
 			ScannerSecrets:    "trivy-secrets",
 			ScannerIaC:        "trivy-iac",
 			ScannerCompliance: "trivy-compliance",
-			ScannerSAST:       "semgrep-sast",
-			ScannerDAST:       "zap-dast",
+			ScannerSAST:       "semgrep",
+			ScannerDAST:       "zap",
 		},
 	}
 }
@@ -301,6 +301,23 @@ func (b *ScanBridge) ResolveTool(componentType string, operation OperationType) 
 	}
 
 	return t
+}
+
+// IsContainer returns true if the scan handler for the given scanner type runs in a container.
+func (b *ScanBridge) IsContainer(scannerType ScannerType) bool {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	registry := b.getRegistry()
+	if registry == nil {
+		return false
+	}
+
+	toolID := b.scannerTools[scannerType]
+	if t, ok := registry.Get(toolID); ok {
+		return t.Type == ToolTypeContainer
+	}
+	return false
 }
 
 // Global scan bridge instance.

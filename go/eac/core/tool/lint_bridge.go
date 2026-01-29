@@ -24,13 +24,9 @@ type LintBridge struct {
 // NewLintBridge creates a new lint bridge.
 func NewLintBridge() *LintBridge {
 	return &LintBridge{
-		providerHandlers: map[string]string{
-			// Default provider-to-handler mapping
-			// Provider names (from lint-providers.yml) map to handler names
-			"golangci-lint":     "golangci-lint-system",
-			"markdownlint-cli2": "markdownlint-system",
-			"eslint":            "eslint-system",
-		},
+		// All mappings come from component-tools in tool-config.yml via the resolver.
+		// No hardcoded fallbacks - tool names should not be embedded in code.
+		providerHandlers: map[string]string{},
 	}
 }
 

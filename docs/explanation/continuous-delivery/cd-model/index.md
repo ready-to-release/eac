@@ -5,7 +5,8 @@ traceability, and compliance built in.
 
 ![CD Model 12 Stages Overview](../../../assets/assisted/01-cd-model-12-stages.drawio.png)
 
-The diagram above shows all 12 stages divided into Development (Stages 1-7) and Release (Stages 8-12) phases, with color-coded stage types indicating their purpose in the delivery pipeline.
+The diagram above shows all 12 stages divided into Development (Stages 1-7) and Release (Stages 8-12) phases,
+with color-coded stage types indicating their purpose in the delivery pipeline.
 
 ## In This Section
 

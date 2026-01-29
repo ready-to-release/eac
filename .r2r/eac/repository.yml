@@ -93,7 +93,7 @@ modules:
         type: testdata
         root: go/eac/core
         patterns:
-          source: ["testing/testdata/**/*", "specs/gherkin/testdata/**/*.feature"]
+          source: ["testing/testdata/**/*", "specs/gherkin/testdata/**/*.feature", "github/cli_fixtures/**/*"]
       gherkin: ~
       structurizr: ~
       test-impl: ~
@@ -302,7 +302,11 @@ modules:
       markdown: go/r2r/cli
       json: contracts/r2r-cli
       yaml: contracts/r2r-cli
-      testdata: ~
+      testdata:
+        type: testdata
+        root: go/r2r/cli
+        patterns:
+          source: ["internal/validator/config/**/*.json"]
       gherkin: ~
       structurizr: ~
       test-impl: ~

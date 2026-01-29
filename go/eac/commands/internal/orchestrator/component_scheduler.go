@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 
@@ -79,6 +78,10 @@ type ComponentScheduler struct {
 
 	// Output infrastructure
 	orchestratorOut io.Writer
+
+	// Cache times for displaying when cached artifacts were built
+	cacheTimesMu sync.RWMutex
+	cacheTimes   map[string]time.Time // module -> time when artifact was last built
 }
 
 // NewComponentScheduler creates a new scheduler with the given configuration.
@@ -171,6 +174,25 @@ func (cs *ComponentScheduler) Close() {
 	if cs.semaphore != nil {
 		cs.semaphore.Close()
 	}
+}
+
+// SetCacheTimes sets the cache times for modules that are up-to-date.
+// These times are displayed in the TUI for cached modules to show when
+// the cached artifacts were originally built.
+func (cs *ComponentScheduler) SetCacheTimes(times map[string]time.Time) {
+	cs.cacheTimesMu.Lock()
+	defer cs.cacheTimesMu.Unlock()
+	cs.cacheTimes = times
+}
+
+// getCacheTime returns the cache time for a module, or zero time if not cached.
+func (cs *ComponentScheduler) getCacheTime(module string) time.Time {
+	cs.cacheTimesMu.RLock()
+	defer cs.cacheTimesMu.RUnlock()
+	if cs.cacheTimes == nil {
+		return time.Time{}
+	}
+	return cs.cacheTimes[module]
 }
 
 // detectAvailableCapacity calculates capacity as percentage of RAM.
@@ -361,6 +383,11 @@ func (cs *ComponentScheduler) processComponent(work ComponentWork, worker Compon
 	// Display name for TUI (module:component)
 	displayName := fmt.Sprintf("%s:%s", work.Module, work.Component)
 
+	// Note: Cache detection is handled by the worker, not here.
+	// The worker checks cachedModules and performs artifact verification,
+	// returning -1 if the cache is valid. This ensures proper TUI flow
+	// (pending → running → complete) and consistent verification for all components.
+
 	// 2. Acquire weighted slot
 	weight := work.Weight
 	if weight <= 0 {
@@ -382,7 +409,7 @@ func (cs *ComponentScheduler) processComponent(work ComponentWork, worker Compon
 	cs.tuiMarkRunning(displayName)
 
 	// Track active tool usage
-	cs.addActiveTool(work.Handler)
+	cs.addActiveTool(work.Handler, work.IsContainer)
 
 	// 3. Create output directory for this component
 	// Structure: out/build/<module>/<component> (e.g., out/build/books/howto)
@@ -463,7 +490,7 @@ func (cs *ComponentScheduler) processComponent(work ComponentWork, worker Compon
 	}
 
 	// Remove tool from active list before releasing resources
-	cs.removeActiveTool(work.Handler)
+	cs.removeActiveTool(work.Handler, work.IsContainer)
 
 	// Release semaphore BEFORE marking complete in TUI
 	// This ensures pressure gauge reflects the release immediately
@@ -557,15 +584,11 @@ func (cs *ComponentScheduler) getComponentExtras(module, component string) (Comp
 }
 
 // addActiveTool increments the usage count for a tool/handler.
-// Looks up tool type from registry to categorize as container or system.
 // Also tracks docker as active when container tools are used.
-func (cs *ComponentScheduler) addActiveTool(handler string) {
+func (cs *ComponentScheduler) addActiveTool(handler string, isContainer bool) {
 	if handler == "" {
 		return
 	}
-
-	// Look up tool type from registry
-	isContainer := cs.isContainerTool(handler)
 
 	cs.toolsMu.Lock()
 	if isContainer {
@@ -583,12 +606,10 @@ func (cs *ComponentScheduler) addActiveTool(handler string) {
 
 // removeActiveTool decrements the usage count for a tool/handler.
 // Also decrements docker count when container tools finish.
-func (cs *ComponentScheduler) removeActiveTool(handler string) {
+func (cs *ComponentScheduler) removeActiveTool(handler string, isContainer bool) {
 	if handler == "" {
 		return
 	}
-
-	isContainer := cs.isContainerTool(handler)
 
 	cs.toolsMu.Lock()
 	if isContainer {
@@ -614,32 +635,6 @@ func (cs *ComponentScheduler) removeActiveTool(handler string) {
 		}
 	}
 	cs.toolsMu.Unlock()
-}
-
-// isContainerTool checks if a handler is a container tool by looking up in registry.
-func (cs *ComponentScheduler) isContainerTool(handler string) bool {
-	// Import cycle prevention: we can't import tool package here
-	// Use naming convention: tools ending in "-container" or "-system" indicate type
-	// Or check for known container tool patterns
-	if strings.HasSuffix(handler, "-container") {
-		return true
-	}
-	if strings.HasSuffix(handler, "-system") {
-		return false
-	}
-	// Default heuristic: if name contains common container tool names
-	containerTools := map[string]bool{
-		"mkdocs": true, "npm": true, "golangci-lint": true,
-		"markdownlint": true, "trivy": true, "semgrep": true,
-		"ruff": true, "clippy": true, "buildx": true,
-		"bash": true, "pwsh": true, // Script containers
-	}
-	for name := range containerTools {
-		if strings.Contains(handler, name) {
-			return true
-		}
-	}
-	return false
 }
 
 // getActiveContainersList returns a sorted list of currently active container tools.
@@ -755,8 +750,28 @@ func (cs *ComponentScheduler) tuiMarkCompleted(displayName string, exitCode int)
 		return
 	}
 
-	// First, send the completion message with exit code so TUI knows success/failure
-	cs.tuiConsole.MarkModuleComplete(displayName, exitCode)
+	// DEBUG: Log exit code for TUI caching visibility investigation
+	// Exit codes: 0=success(green), <0=skipped(blue), >0=failed(red)
+	// Note: This will only fire if something actually returns -1, which currently only mkdocs does
+
+	// For cached modules (exitCode < 0), include when the artifact was last built
+	if exitCode < 0 {
+		// Extract module name from displayName (format: "module:component")
+		moduleName := displayName
+		if idx := len(displayName) - 1; idx > 0 {
+			// displayName is typically "module:component", we need just the module
+			for i := 0; i < len(displayName); i++ {
+				if displayName[i] == ':' {
+					moduleName = displayName[:i]
+					break
+				}
+			}
+		}
+		cacheTime := cs.getCacheTime(moduleName)
+		cs.tuiConsole.MarkModuleCompleteWithCacheInfo(displayName, exitCode, cacheTime, "")
+	} else {
+		cs.tuiConsole.MarkModuleComplete(displayName, exitCode)
+	}
 
 	cs.tuiMu.Lock()
 	// Remove from running list

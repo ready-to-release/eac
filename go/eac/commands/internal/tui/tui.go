@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -453,6 +454,12 @@ func (c *Console) MarkModuleRunning(moniker string) {
 // MarkModuleComplete notifies the TUI that a module has finished with the given exit code.
 // Exit code 0 = success, non-zero = failure.
 func (c *Console) MarkModuleComplete(moniker string, exitCode int) {
+	c.MarkModuleCompleteWithCacheInfo(moniker, exitCode, time.Time{}, "")
+}
+
+// MarkModuleCompleteWithCacheInfo marks a module as complete with optional cache info.
+// For cached modules, cacheTime is when the artifact was built, logPath is the build log location.
+func (c *Console) MarkModuleCompleteWithCacheInfo(moniker string, exitCode int, cacheTime time.Time, logPath string) {
 	c.mu.Lock()
 	stopped := c.stopped
 	program := c.program
@@ -463,8 +470,10 @@ func (c *Console) MarkModuleComplete(moniker string, exitCode int) {
 	}
 
 	program.Send(console.ModuleCompleteMsg{
-		Moniker:  moniker,
-		ExitCode: exitCode,
+		Moniker:   moniker,
+		ExitCode:  exitCode,
+		CacheTime: cacheTime,
+		LogPath:   logPath,
 	})
 }
 
@@ -481,6 +490,22 @@ func (c *Console) SendSummary(data *SummaryData) {
 
 	program.Send(console.SummaryDataMsg{
 		Data: (*console.SummaryData)(data),
+	})
+}
+
+// SetInitSummary sends init summary data for structured display in the Init pane.
+func (c *Console) SetInitSummary(summary *InitSummary) {
+	c.mu.Lock()
+	stopped := c.stopped
+	program := c.program
+	c.mu.Unlock()
+
+	if stopped || program == nil {
+		return
+	}
+
+	program.Send(console.InitSummaryMsg{
+		Summary: (*console.InitSummary)(summary),
 	})
 }
 
@@ -504,6 +529,18 @@ type SummaryData = console.SummaryData
 
 // LockStatus is an alias for console.LockStatus for public use.
 type LockStatus = console.LockStatus
+
+// InitSummary is an alias for console.InitSummary for public use.
+type InitSummary = console.InitSummary
+
+// InitSummaryFlags is an alias for console.InitSummaryFlags for public use.
+type InitSummaryFlags = console.InitSummaryFlags
+
+// ExecutionLayer is an alias for console.ExecutionLayer for public use.
+type ExecutionLayer = console.ExecutionLayer
+
+// ExecutionModule is an alias for console.ExecutionModule for public use.
+type ExecutionModule = console.ExecutionModule
 
 // Level constants for public use.
 const (

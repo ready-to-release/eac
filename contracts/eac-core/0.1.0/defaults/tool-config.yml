@@ -4,6 +4,12 @@
 # This file defines the pluggable tool composition system.
 # Tools can be system binaries or containers, assigned to component types for operations.
 #
+# Naming conventions:
+# - Base dependencies: simple names (go, docker) - used in @deps: test tags
+# - System operation tools: clean names (e.g., go-test, npm-build)
+# - Container tools: simple names with purpose (e.g., go-lint, npm-build)
+# - Multiple tools for same purpose: add "-<purpose>" suffix (e.g., mkdocs-build, mkdocs-live)
+#
 # Key concepts:
 # - Tools: Executable definitions (system binary or container)
 # - Component-tools: Maps component types to tools for each operation
@@ -26,8 +32,8 @@ base_images:
 
 tools:
   #---------------------------------------------------------------------------
-  # Base System Tools (dependencies for other tools)
-  # These define how to verify tool availability.
+  # Base Dependencies (simple names for @deps: tag references in tests)
+  # These are the only tools verified as system requirements.
   #---------------------------------------------------------------------------
   go:
     description: "Go programming language compiler and toolchain"
@@ -38,15 +44,6 @@ tools:
       pattern: "go version go(\\d+\\.\\d+)"
     version: ">=1.21"
 
-  git:
-    description: "Distributed version control system"
-    type: system
-    binary: git
-    verify:
-      command: "git --version"
-      pattern: "git version (\\d+\\.\\d+)"
-    version: ">=2.30"
-
   docker:
     description: "Container runtime for building and running containers"
     type: system
@@ -56,15 +53,30 @@ tools:
       pattern: "Server Version: (\\d+\\.\\d+)"
     version: ">=20.10"
 
+  git:
+    description: "Distributed version control system"
+    type: system
+    binary: git
+    verify:
+      command: "git --version"
+      pattern: "git version (\\d+\\.\\d+)"
+    version: ">=2.0"
+
+  #---------------------------------------------------------------------------
+  # System Operation Tools
+  # These tools use the base dependencies above.
+  #---------------------------------------------------------------------------
   buildx:
     description: "Docker buildx for multi-platform container image builds"
     type: system
     binary: docker
-    args: ["buildx"]
+    args: ["buildx", "build"]
     verify:
       command: "docker buildx version"
       pattern: "github.com/docker/buildx v(\\d+\\.\\d+)"
     version: ">=0.10"
+    resources:
+      cpus: 4
     requirements: [docker]
 
   npm:
@@ -113,7 +125,7 @@ tools:
       pattern: "curl (\\d+\\.\\d+)"
     version: ">=7.0"
 
-  python:
+  python-runtime:
     description: "Python programming language interpreter"
     type: system
     binary: python
@@ -131,7 +143,7 @@ tools:
       pattern: "cargo (\\d+\\.\\d+)"
     version: ">=1.70"
 
-  dotnet:
+  dotnet-runtime:
     description: ".NET SDK for building and running .NET applications"
     type: system
     binary: dotnet
@@ -139,31 +151,6 @@ tools:
       command: "dotnet --version"
       pattern: "(\\d+\\.\\d+)"
     version: ">=8.0"
-
-  golangci-lint:
-    description: "Go linters aggregator (container)"
-    type: container
-    image: golangci/golangci-lint
-    tag: "v1.62.2"
-    command: ["golangci-lint", "run", "--out-format", "json"]
-    mounts:
-      - source: "{module}"
-        target: /app
-      - source: "{workspace}/.cache/golangci-lint"
-        target: /root/.cache/golangci-lint
-    workdir: /app
-    requirements: [docker]
-
-  markdownlint:
-    description: "Markdown linter (container)"
-    type: container
-    image: davidanson/markdownlint-cli2
-    tag: "v0.17.2"
-    mounts:
-      - source: "{module}"
-        target: /workdir
-    workdir: /workdir
-    requirements: [docker]
 
   mkdocs:
     description: "Documentation site generator"
@@ -185,34 +172,20 @@ tools:
       require: "all"
 
   #---------------------------------------------------------------------------
-  # Go Tools (using base go tool as requirement)
+  # Go System Tools
   #---------------------------------------------------------------------------
-  go-system:
-    description: "System Go compiler"
+  go-lint:
+    description: "golangci-lint linter (system)"
     type: system
-    binary: go
-    resources:
-      cpus: 1
-    requirements: [go]
-
-  golangci-lint-container:
-    description: "golangci-lint container linter"
-    type: container
-    image: golangci/golangci-lint
-    tag: "v1.62.2"
+    binary: golangci-lint
     resources:
       cpus: 2
-      memory: "4g"
-    command: ["golangci-lint", "run", "--out-format", "json"]
-    mounts:
-      - source: "{module}"
-        target: /app
-      - source: "{workspace}/.cache/golangci-lint"
-        target: /root/.cache/golangci-lint
-    workdir: /app
-    requirements: [docker]
+    verify:
+      command: "golangci-lint --version"
+      pattern: "golangci-lint has version (\\d+\\.\\d+)"
+    version: ">=1.50"
 
-  go-test-system:
+  go-test:
     description: "System Go test runner"
     type: system
     binary: go
@@ -225,7 +198,7 @@ tools:
   # TypeScript/JavaScript Tools
   #---------------------------------------------------------------------------
   npm-build:
-    description: "NPM build command"
+    description: "NPM build command (system)"
     type: system
     binary: npm
     resources:
@@ -234,7 +207,7 @@ tools:
     requirements: [npm]
 
   npm-test:
-    description: "NPM test command"
+    description: "NPM test command (system)"
     type: system
     binary: npm
     resources:
@@ -242,75 +215,27 @@ tools:
     args: ["test"]
     requirements: [npm]
 
-  # npm container tools (for environments without local Node.js)
-  npm-container:
-    description: "Node.js container for npm package management"
-    type: container
-    image: node
-    tag: "22-alpine"
-    resources:
-      cpus: 2
-      memory: "2g"
-    mounts:
-      - source: "{module}"
-        target: /app
-      - source: "{workspace}/.cache/npm"
-        target: /root/.npm
-    workdir: /app
-    requirements: [docker]
-
-  npm-build-container:
-    description: "NPM build command (container)"
-    type: container
-    image: node
-    tag: "22-alpine"
-    resources:
-      cpus: 2
-      memory: "4g"
-    command: ["sh", "-c", "npm ci && npm run build"]
-    mounts:
-      - source: "{module}"
-        target: /app
-      - source: "{workspace}/.cache/npm"
-        target: /root/.npm
-    workdir: /app
-    requirements: [docker]
-
-  npm-test-container:
-    description: "NPM test command (container)"
-    type: container
-    image: node
-    tag: "22-alpine"
-    resources:
-      cpus: 2
-      memory: "4g"
-    command: ["sh", "-c", "npm ci && npm test"]
-    mounts:
-      - source: "{module}"
-        target: /app
-      - source: "{workspace}/.cache/npm"
-        target: /root/.npm
-    workdir: /app
-    requirements: [docker]
-
   #---------------------------------------------------------------------------
   # Python Tools
   #---------------------------------------------------------------------------
   python-build:
-    description: "Python build using pip/setuptools"
+    description: "Python build using pip/setuptools (system)"
     type: system
     binary: python
     args: ["-m", "pip", "install", "-e", "."]
-    requirements: [python]
+    requirements: [python-runtime]
 
-  pytest:
-    description: "Python test runner"
+  python-test:
+    description: "Python test runner (system)"
     type: system
     binary: python
     args: ["-m", "pytest"]
-    requirements: [python]
+    requirements: [python-runtime]
 
-  ruff-container:
+  #---------------------------------------------------------------------------
+  # Python Container Tools
+  #---------------------------------------------------------------------------
+  python-lint:
     description: "Ruff Python linter (container)"
     type: container
     image: ghcr.io/astral-sh/ruff
@@ -323,23 +248,26 @@ tools:
     requirements: [docker]
 
   #---------------------------------------------------------------------------
-  # Rust Tools
+  # Rust System Tools
   #---------------------------------------------------------------------------
-  cargo-build:
-    description: "Cargo build for Rust projects"
+  rust-build:
+    description: "Cargo build for Rust projects (system)"
     type: system
     binary: cargo
     args: ["build", "--release"]
     requirements: [cargo]
 
-  cargo-test:
-    description: "Cargo test runner for Rust"
+  rust-test:
+    description: "Cargo test runner for Rust (system)"
     type: system
     binary: cargo
     args: ["test"]
     requirements: [cargo]
 
-  clippy-container:
+  #---------------------------------------------------------------------------
+  # Rust Container Tools
+  #---------------------------------------------------------------------------
+  rust-lint:
     description: "Clippy Rust linter (container)"
     type: container
     image: rust
@@ -352,46 +280,48 @@ tools:
     requirements: [docker]
 
   #---------------------------------------------------------------------------
-  # .NET Tools
+  # .NET System Tools
   #---------------------------------------------------------------------------
   dotnet-build:
-    description: ".NET build command"
+    description: ".NET build command (system)"
     type: system
     binary: dotnet
     args: ["build", "--configuration", "Release"]
-    requirements: [dotnet]
+    requirements: [dotnet-runtime]
 
   dotnet-test:
-    description: ".NET test runner"
+    description: ".NET test runner (system)"
     type: system
     binary: dotnet
     args: ["test"]
-    requirements: [dotnet]
+    requirements: [dotnet-runtime]
 
-  dotnet-format:
-    description: ".NET code formatter/linter"
+  dotnet-lint:
+    description: ".NET code formatter/linter (system)"
     type: system
     binary: dotnet
     args: ["format", "--verify-no-changes"]
-    requirements: [dotnet]
+    requirements: [dotnet-runtime]
 
   #---------------------------------------------------------------------------
-  # Docker/Container Tools
+  # Markdown Container Tools
   #---------------------------------------------------------------------------
-  buildx-system:
-    description: "Docker Buildx for container builds"
-    type: system
-    binary: docker
-    resources:
-      cpus: 4
-    args: ["buildx", "build"]
+  markdown-lint:
+    description: "Markdown linter (container)"
+    type: container
+    image: davidanson/markdownlint-cli2
+    tag: "v0.17.2"
+    mounts:
+      - source: "{module}"
+        target: /workdir
+    workdir: /workdir
     requirements: [docker]
 
   #---------------------------------------------------------------------------
-  # Documentation Tools
+  # Documentation Container Tools
   #---------------------------------------------------------------------------
-  mkdocs-container:
-    description: "MkDocs Material container"
+  mkdocs-build:
+    description: "MkDocs Material container for building docs"
     type: container
     localPath: containers/mkdocs-site
     resources:
@@ -409,10 +339,29 @@ tools:
     workdir: /docs
     requirements: [docker]
 
+  mkdocs-live:
+    description: "MkDocs live reload server"
+    type: container
+    image: squidfunk/mkdocs-material
+    tag: "9.5.49"
+    command: ["serve", "--dev-addr=0.0.0.0:8000"]
+    mounts:
+      - source: "{module}"
+        target: /docs
+    workdir: /docs
+    requirements: [docker]
+    serve:
+      container_port: 8000
+      host_port_range: "9000-9999"
+      restart_policy: unless-stopped
+      auto_open_browser: true
+      watch_enabled: true
+      watch_paths: ["docs/", "mkdocs.yml"]
+
   #---------------------------------------------------------------------------
-  # Diagram Tools
+  # Diagram Container Tools
   #---------------------------------------------------------------------------
-  drawio-cli:
+  drawio:
     description: "DrawIO CLI for diagram manipulation"
     type: container
     localPath: containers/drawio-cli
@@ -424,7 +373,7 @@ tools:
     requirements: [docker]
 
   #---------------------------------------------------------------------------
-  # Architecture/Design Tools
+  # Architecture/Design Container Tools
   #---------------------------------------------------------------------------
   structurizr-cli:
     description: "Structurizr CLI for DSL export and validation"
@@ -463,7 +412,7 @@ tools:
     requirements: [docker]
 
   #---------------------------------------------------------------------------
-  # Serve Tools (for local development servers)
+  # Serve Container Tools (for local development servers)
   #---------------------------------------------------------------------------
   static-site:
     description: "Static site server (nginx-based)"
@@ -479,25 +428,6 @@ tools:
       host_port_range: "9000-9999"
       restart_policy: unless-stopped
       auto_open_browser: true
-
-  mkdocs-live:
-    description: "MkDocs live reload server"
-    type: container
-    image: squidfunk/mkdocs-material
-    tag: "9.5.49"
-    command: ["serve", "--dev-addr=0.0.0.0:8000"]
-    mounts:
-      - source: "{module}"
-        target: /docs
-    workdir: /docs
-    requirements: [docker]
-    serve:
-      container_port: 8000
-      host_port_range: "9000-9999"
-      restart_policy: unless-stopped
-      auto_open_browser: true
-      watch_enabled: true
-      watch_paths: ["docs/", "mkdocs.yml"]
 
   structurizr:
     description: "Structurizr Lite architecture diagram server"
@@ -558,7 +488,7 @@ tools:
     output_format: json
     requirements: [docker]
 
-  semgrep-sast:
+  semgrep:
     description: "Semgrep SAST scanner"
     type: container
     image: semgrep/semgrep
@@ -597,7 +527,7 @@ tools:
     output_format: json
     requirements: [docker]
 
-  zap-dast:
+  zap:
     description: "OWASP ZAP DAST scanner"
     type: container
     image: zaproxy/zap-stable
@@ -610,40 +540,9 @@ tools:
     requirements: [docker]
 
   #---------------------------------------------------------------------------
-  # Markdown/Linting Tools (Container-based)
+  # Script Container Tools
   #---------------------------------------------------------------------------
-  markdownlint-container:
-    description: "Markdown linter container"
-    type: container
-    image: davidanson/markdownlint-cli2
-    tag: "v0.17.2"
-    mounts:
-      - source: "{module}"
-        target: /workdir
-    workdir: /workdir
-    requirements: [docker]
-
-  #---------------------------------------------------------------------------
-  # Script Tools
-  #---------------------------------------------------------------------------
-  # pwsh container tools (for environments without local PowerShell)
-  pwsh-container:
-    description: "PowerShell 7 cross-platform shell (container)"
-    type: container
-    image: mcr.microsoft.com/powershell
-    tag: "7.4-alpine-3.20"
-    resources:
-      cpus: 1
-      memory: "1g"
-    mounts:
-      - source: "{module}"
-        target: /scripts
-      - source: "{workspace}"
-        target: /workspace
-    workdir: /scripts
-    requirements: [docker]
-
-  pwsh-build-container:
+  pwsh-build:
     description: "PowerShell build/execution (container)"
     type: container
     image: mcr.microsoft.com/powershell
@@ -660,7 +559,7 @@ tools:
     workdir: /scripts
     requirements: [docker]
 
-  pwsh-test-container:
+  pwsh-test:
     description: "PowerShell Pester test runner (container)"
     type: container
     image: mcr.microsoft.com/powershell
@@ -677,7 +576,7 @@ tools:
     workdir: /scripts
     requirements: [docker]
 
-  bash-container:
+  bash-runner:
     description: "Bash script execution (container)"
     type: container
     image: bash
@@ -700,14 +599,14 @@ tools:
 #---------------------------------------------------------------------------
 component-tools:
   go:
-    builder: go-system
-    linter: golangci-lint-container
-    tester: go-test-system
+    builder: go
+    linter: go-lint
+    tester: go-test
     scanners:
       - trivy-sbom
       - trivy-vuln
       - trivy-secrets
-      - semgrep-sast
+      - semgrep
 
   typescript:
     builder: npm-build
@@ -726,14 +625,14 @@ component-tools:
       - trivy-secrets
 
   dockerfile:
-    builder: buildx-system
+    builder: buildx
     scanners:
       - trivy-sbom
       - trivy-vuln
       - trivy-iac
 
   book:
-    builder: mkdocs-container
+    builder: mkdocs-build
     server: static-site
     servers:
       - static-site
@@ -743,44 +642,44 @@ component-tools:
     server: structurizr
 
   markdown:
-    linter: markdownlint-container
+    linter: markdown-lint
 
   pwsh:
-    builder: pwsh-build-container
-    tester: pwsh-test-container
+    builder: pwsh-build
+    tester: pwsh-test
 
   bash:
-    builder: bash-container
+    builder: bash-runner
 
   python:
     builder: python-build
-    tester: pytest
-    linter: ruff-container
+    tester: python-test
+    linter: python-lint
     scanners:
       - trivy-sbom
       - trivy-vuln
       - trivy-secrets
-      - semgrep-sast
+      - semgrep
 
   rust:
-    builder: cargo-build
-    tester: cargo-test
-    linter: clippy-container
+    builder: rust-build
+    tester: rust-test
+    linter: rust-lint
     scanners:
       - trivy-sbom
       - trivy-vuln
       - trivy-secrets
-      - semgrep-sast
+      - semgrep
 
   dotnet:
     builder: dotnet-build
     tester: dotnet-test
-    linter: dotnet-format
+    linter: dotnet-lint
     scanners:
       - trivy-sbom
       - trivy-vuln
       - trivy-secrets
-      - semgrep-sast
+      - semgrep
 
 #---------------------------------------------------------------------------
 # Environment Overrides
@@ -791,21 +690,11 @@ environments:
     description: "CI/CD environment - prefer containers for reproducibility"
     component-tools:
       book:
-        builder: mkdocs-container
+        builder: mkdocs-build
 
   local:
     description: "Local development - prefer system tools for speed"
     # Default assignments already prefer system tools
-
-  windows:
-    description: "Windows environment - use containers for npm tools (npm has PATH issues on Windows)"
-    component-tools:
-      typescript:
-        builder: npm-build-container
-        tester: npm-test-container
-      javascript:
-        builder: npm-build-container
-        tester: npm-test-container
 
 #---------------------------------------------------------------------------
 # Cache Configuration

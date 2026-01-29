@@ -40,6 +40,12 @@ func (h *GoHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot
 	return nil
 }
 
+// IsContainer returns false as Go builds run using the local go toolchain.
+func (h *GoHandler) IsContainer() bool { return false }
+
+// IsHostInstalled returns true as Go builds use the local go toolchain.
+func (h *GoHandler) IsHostInstalled() bool { return true }
+
 // findGoMod walks up from dir to find go.mod, stopping at workspaceRoot.
 func findGoMod(dir, workspaceRoot string) string {
 	for {

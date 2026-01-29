@@ -3,7 +3,7 @@
 // MIGRATION NOTE: This runner uses direct npm subprocess execution for test
 // execution with JSON output parsing. For container-based testing:
 //
-// 1. The test bridge path (GetTestFunc) now uses npm-test-container from
+// 1. The test bridge path (GetTestFunc) now uses npm-test from
 //    tool-config.yml for simple pass/fail test execution.
 //
 // 2. This runner is still used for detailed test execution with:

@@ -1,6 +1,7 @@
 package console
 
 import (
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -100,6 +101,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.resultsBuffer.Push(msg.Line)
 		return m, nil
 
+	case InitSummaryMsg:
+		// Store init summary for structured rendering
+		m.initSummary = msg.Summary
+		return m, nil
+
 	case SummaryDataMsg:
 		// Set summary data and activate Summary pane
 		m.summaryData = msg.Data
@@ -188,16 +194,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
-		// Mark COMPLETED modules (were running but now gone)
-		// Only update if still in Running status - ModuleCompleteMsg may have already set the real status
+		// Track EndTime for modules that were running but now gone
+		// DON'T set status here - only ModuleCompleteMsg sets terminal status
+		// (it has the exit code to determine Complete vs Skipped vs Failed)
 		for _, moniker := range m.running {
 			if !newRunningSet[moniker] {
 				// This module was running and is now gone
 				if state, exists := m.moduleStates[moniker]; exists {
-					// Only set to complete if still running (ModuleCompleteMsg sets actual status with exit code)
-					if state.Status == ModuleRunning {
-						state.Status = ModuleComplete
-					}
 					if state.EndTime.IsZero() {
 						state.EndTime = time.Now()
 					}
@@ -298,10 +301,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Mark module as complete (alternative to completedMsg)
 		m.MarkModuleComplete(msg.Moniker, msg.ExitCode)
 
+		// Store cache info for skipped (cached) modules
+		if state, exists := m.moduleStates[msg.Moniker]; exists {
+			if !msg.CacheTime.IsZero() {
+				state.CacheTime = msg.CacheTime
+			}
+			if msg.LogPath != "" {
+				state.LogPath = msg.LogPath
+			}
+		}
+
 		// Auto-select next running tab if:
-		// 1. The completed module was the active tab
+		// 1. The completed module was the effective active tab (including default first tab)
 		// 2. User hasn't interacted (no exit countdown in progress)
-		if msg.Moniker == m.activeTab && m.exitCountdownStart.IsZero() {
+		effectiveTab := m.getEffectiveActiveTab()
+		if msg.Moniker == effectiveTab && m.exitCountdownStart.IsZero() {
 			// Find next running module to select
 			for _, moniker := range m.moduleOrder {
 				if state, exists := m.moduleStates[moniker]; exists {
@@ -390,6 +404,22 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.panes[PhaseRun].scrollOffset = 0
 			m.panes[PhaseRun].autoScroll = true
 		}
+	case "t":
+		// Toggle between TabGrid and Tree view
+		if m.viewMode == ViewModeTabGrid {
+			m.viewMode = ViewModeTree
+		} else {
+			m.viewMode = ViewModeTabGrid
+		}
+		// Reset scroll offset when switching views (different layouts)
+		m.tabsScrollOffset = 0
+	case "m":
+		// Toggle mouse mode: ON = scrolling/clicking, OFF = text selection
+		m.mouseMode = !m.mouseMode
+		if m.mouseMode {
+			return m, tea.EnableMouseAllMotion
+		}
+		return m, tea.DisableMouse
 	}
 	return m, nil
 }
@@ -437,7 +467,74 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 
 	// Handle wheel events FIRST - scrolling should never change tabs
 	if msg.Button == tea.MouseButtonWheelUp || msg.Button == tea.MouseButtonWheelDown {
-		// Determine which pane the mouse is over
+		// Fixed components panel width (matches renderSideBySideLayout)
+		const componentsWidth = 62
+		scrollAmount := 3 // Lines to scroll per wheel tick
+
+		// Check if mouse is over tabs pane (left) or logs pane (right)
+		if msg.X < componentsWidth {
+			// Scrolling over tabs/tree pane (left side)
+			// Calculate max scroll based on content
+			tabs := m.GetVisibleTabs()
+			maxScroll := 0
+			if m.viewMode == ViewModeTree {
+				// Tree view: count lines
+				if m.initSummary != nil && len(m.initSummary.ExecutionTree) > 0 {
+					for layerIdx, layer := range m.initSummary.ExecutionTree {
+						maxScroll++ // Layer header
+						for _, module := range layer.Modules {
+							maxScroll++ // Module line
+							maxScroll += len(module.Components)
+						}
+						if layerIdx < len(m.initSummary.ExecutionTree)-1 {
+							maxScroll++ // Spacing
+						}
+					}
+				} else {
+					// Fallback count
+					maxScroll = len(tabs) * 2
+				}
+			} else {
+				// Tab grid: count lines (layer header + 3 lines per row of buttons)
+				if m.initSummary != nil && len(m.initSummary.ExecutionTree) > 0 {
+					for _, layer := range m.initSummary.ExecutionTree {
+						maxScroll++ // Layer header
+						layerComps := 0
+						for _, module := range layer.Modules {
+							layerComps += len(module.Components)
+						}
+						rows := (layerComps + 2) / 3 // 3 per row
+						maxScroll += rows * 3        // 3 lines per row
+					}
+				} else {
+					rows := (len(tabs) + 2) / 3
+					maxScroll = rows * 3
+				}
+			}
+			// Leave some visible content (at least 5 lines)
+			maxScroll -= 5
+			if maxScroll < 0 {
+				maxScroll = 0
+			}
+
+			switch msg.Button {
+			case tea.MouseButtonWheelUp:
+				m.tabsScrollOffset -= scrollAmount
+				if m.tabsScrollOffset < 0 {
+					m.tabsScrollOffset = 0
+				}
+				m.lastUserInteraction = time.Now()
+			case tea.MouseButtonWheelDown:
+				m.tabsScrollOffset += scrollAmount
+				if m.tabsScrollOffset > maxScroll {
+					m.tabsScrollOffset = maxScroll
+				}
+				m.lastUserInteraction = time.Now()
+			}
+			return m, nil
+		}
+
+		// Scrolling over logs pane (right side) - use existing pane scroll logic
 		paneIdx := m.getPaneAtPosition(msg.Y)
 		if paneIdx < 0 || paneIdx >= len(m.panes) {
 			return m, nil // Mouse not over any pane
@@ -470,7 +567,6 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		pane.UpdateMaxScrollForBuffer(buffer, paneHeight)
 
 		// Scroll the pane - use Button to determine direction
-		scrollAmount := 3 // Lines to scroll per wheel tick
 		switch msg.Button {
 		case tea.MouseButtonWheelUp:
 			pane.ScrollUp(scrollAmount)
@@ -483,7 +579,7 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	// Tab detection helper
+	// Tab detection helper for side-by-side layout (works for both tab grid and tree view)
 	detectTabAt := func(x, y int) string {
 		if m.panes[PhaseRun].Status == PhasePending {
 			return ""
@@ -493,38 +589,203 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			return ""
 		}
 
-		const tabWidth = 20
-		const tabsPerRow = 8
+		// Fixed components panel width (matches renderSideBySideLayout)
+		const componentsWidth = 62
 
-		// Calculate tab row start Y (after init + resources)
-		initH, _, _ := m.calculatePaneHeights()
-		tabStartY := initH + 2
-		for _, lock := range m.locks {
-			if lock.Name == "component-scheduler" && lock.Capacity > 0 {
-				tabStartY += 3
-				break
-			}
+		// Check if X is within the components panel (left side)
+		if x >= componentsWidth {
+			return "" // Click is on the logs panel (right side)
 		}
 
-		numRows := (len(tabs) + tabsPerRow - 1) / tabsPerRow
-		row := y - tabStartY
-		// Allow some tolerance for row detection
+		// Calculate Y position where content starts
+		// Count actual rendered lines by rendering and counting newlines
+		usedLines := 0
+
+		// Init line (compact when initSummary available)
+		if m.initSummary != nil {
+			usedLines = 1
+		} else {
+			usedLines = 8 // header + 6 content + footer
+		}
+
+		// Resources pane - render it and count lines
+		resourcesPane := m.renderResourcesPane()
+		if resourcesPane != "" {
+			usedLines += strings.Count(resourcesPane, "\n") + 1
+		}
+
+		// Components panel header adds 1 line
+		usedLines += 1
+
+		// Content starts at usedLines (0-indexed)
+		contentStartY := usedLines
+
+		// Check if Y is within content area
+		row := y - contentStartY
 		if row < 0 {
-			row = 0
-		}
-		if row >= numRows {
-			row = numRows - 1
-		}
-		if x < 1 {
 			return ""
 		}
 
-		col := (x - 1) / (tabWidth + 1)
+		// Clamp scroll offset if it's become invalid (content may have changed)
+		if m.tabsScrollOffset < 0 {
+			m.tabsScrollOffset = 0
+		}
+
+		// Account for scroll offset - add it to get the actual content row
+		row += m.tabsScrollOffset
+
+		// Tree view mode - each line maps to a component (need to track line->moniker mapping)
+		if m.viewMode == ViewModeTree {
+			// Build line-to-moniker mapping (matches renderTreeContent logic)
+			var lineToMoniker []string
+
+			// Check if we should use ExecutionTree or fallback (same logic as renderTreeContent)
+			useExecutionTree := false
+			if m.initSummary != nil && len(m.initSummary.ExecutionTree) > 0 {
+				matchedTabs := 0
+				tabMap := make(map[string]bool)
+				for _, tab := range tabs {
+					tabMap[tab.Moniker] = true
+				}
+				for _, layer := range m.initSummary.ExecutionTree {
+					for _, module := range layer.Modules {
+						for _, comp := range module.Components {
+							moniker := module.Name + ":" + comp
+							if tabMap[moniker] {
+								matchedTabs++
+							}
+						}
+					}
+				}
+				useExecutionTree = matchedTabs > 0 && matchedTabs >= len(tabs)/2
+			}
+
+			if useExecutionTree {
+				// Tree from ExecutionTree
+				for layerIdx, layer := range m.initSummary.ExecutionTree {
+					lineToMoniker = append(lineToMoniker, "") // Layer header line
+					for _, module := range layer.Modules {
+						lineToMoniker = append(lineToMoniker, "") // Module line
+						for _, comp := range module.Components {
+							moniker := module.Name + ":" + comp
+							lineToMoniker = append(lineToMoniker, moniker) // Component line
+						}
+					}
+					if layerIdx < len(m.initSummary.ExecutionTree)-1 {
+						lineToMoniker = append(lineToMoniker, "") // Spacing between layers
+					}
+				}
+			} else {
+				// Fallback: group tabs by module
+				moduleGroups := make(map[string][]*ModuleState)
+				var moduleOrder []string
+				for _, tab := range tabs {
+					parts := strings.SplitN(tab.Moniker, ":", 2)
+					moduleName := parts[0]
+					if _, exists := moduleGroups[moduleName]; !exists {
+						moduleOrder = append(moduleOrder, moduleName)
+					}
+					moduleGroups[moduleName] = append(moduleGroups[moduleName], tab)
+				}
+
+				for _, moduleName := range moduleOrder {
+					lineToMoniker = append(lineToMoniker, "") // Module line
+					for _, tab := range moduleGroups[moduleName] {
+						lineToMoniker = append(lineToMoniker, tab.Moniker) // Component line
+					}
+				}
+			}
+
+			if row < len(lineToMoniker) {
+				return lineToMoniker[row]
+			}
+			return ""
+		}
+
+		// Tab grid mode - 3 columns with button-style layout, grouped by layer
+		const tabsPerRow = 3
+		// Match the calculation in renderTabGridContent
+		cellWidth := (componentsWidth - 2) / tabsPerRow
+		cellWidth -= 2 // Compact cells (matches renderTabGridContent)
+		if cellWidth < 14 {
+			cellWidth = 14
+		}
+
+		// Build a map from moniker to tab state for quick lookup
+		tabMap := make(map[string]*ModuleState)
+		for _, t := range tabs {
+			tabMap[t.Moniker] = t
+		}
+
+		// Calculate column from X (accounting for left border and cell gaps)
+		col := (x - 1) / (cellWidth + 1)
 		if col < 0 || col >= tabsPerRow {
 			return ""
 		}
 
-		tabIdx := row*tabsPerRow + col
+		// Check if layer grouping is used (same logic as renderTabGridContent)
+		useLayerGrouping := false
+		if m.initSummary != nil && len(m.initSummary.ExecutionTree) > 0 {
+			matchedTabs := 0
+			for _, layer := range m.initSummary.ExecutionTree {
+				for _, module := range layer.Modules {
+					for _, comp := range module.Components {
+						moniker := module.Name + ":" + comp
+						if _, ok := tabMap[moniker]; ok {
+							matchedTabs++
+						}
+					}
+				}
+			}
+			useLayerGrouping = matchedTabs > 0 && matchedTabs >= len(tabs)/2
+		}
+
+		// Handle layer-grouped layout
+		if useLayerGrouping {
+			currentLine := 0
+			for _, layer := range m.initSummary.ExecutionTree {
+				// Layer header takes 1 line
+				currentLine++
+
+				// Collect tabs for this layer
+				var layerTabs []*ModuleState
+				for _, module := range layer.Modules {
+					for _, comp := range module.Components {
+						moniker := module.Name + ":" + comp
+						if state, ok := tabMap[moniker]; ok {
+							layerTabs = append(layerTabs, state)
+						}
+					}
+				}
+
+				// Each row of tabs takes 3 lines
+				numRows := (len(layerTabs) + tabsPerRow - 1) / tabsPerRow
+				layerEndLine := currentLine + numRows*3
+
+				if row >= currentLine && row < layerEndLine {
+					// Click is within this layer's tab area
+					localRow := row - currentLine
+					tabRow := localRow / 3
+					tabIdx := tabRow*tabsPerRow + col
+					if tabIdx >= 0 && tabIdx < len(layerTabs) {
+						return layerTabs[tabIdx].Moniker
+					}
+					return ""
+				}
+
+				currentLine = layerEndLine
+			}
+			return ""
+		}
+
+		// Fallback: flat list (no layer grouping)
+		tabRow := row / 3
+		numTabRows := (len(tabs) + tabsPerRow - 1) / tabsPerRow
+		if tabRow >= numTabRows {
+			return ""
+		}
+
+		tabIdx := tabRow*tabsPerRow + col
 		if tabIdx >= 0 && tabIdx < len(tabs) {
 			return tabs[tabIdx].Moniker
 		}
@@ -551,6 +812,8 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 					m.panes[PhaseRun].autoScroll = true
 				}
 			}
+			// Reset tabs scroll to ensure continued click detection works
+			m.tabsScrollOffset = 0
 			return m, nil
 		}
 	}

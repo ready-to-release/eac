@@ -51,7 +51,7 @@ component-types:
   # Book component - MkDocs documentation builds
   book:
     extensions: []  # Not file-based, uses books.yml
-    builder: mkdocs-container
+    builder: mkdocs
     requirements: [docker]
 
   # Markdown component - documentation files
@@ -124,7 +124,7 @@ component-types:
   # Runs in container for cross-platform consistency
   pwsh:
     extensions: [".ps1", ".psm1", ".psd1"]
-    builder: pwsh-build-container
+    builder: pwsh-build
     scanners: [secrets]
     requirements: [docker]
     files:
@@ -136,7 +136,7 @@ component-types:
   # Runs in container for cross-platform consistency (no host bash required)
   bash:
     extensions: [".sh", ".bash"]
-    builder: bash-container
+    builder: bash
     scanners: [secrets]
     requirements: [docker]
     files:

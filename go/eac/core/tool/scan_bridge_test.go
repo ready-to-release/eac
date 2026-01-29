@@ -343,8 +343,8 @@ func TestScanBridge_DefaultScannerMappings(t *testing.T) {
 		ScannerSecrets:    "trivy-secrets",
 		ScannerIaC:        "trivy-iac",
 		ScannerCompliance: "trivy-compliance",
-		ScannerSAST:       "semgrep-sast",
-		ScannerDAST:       "zap-dast",
+		ScannerSAST:       "semgrep",
+		ScannerDAST:       "zap",
 	}
 
 	for scannerType, expectedToolID := range expected {

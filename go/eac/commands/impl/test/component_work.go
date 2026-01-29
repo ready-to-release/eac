@@ -78,14 +78,19 @@ func FlattenModulesToTestComponentWork(ctx *cmdframework.ExecutionContext) [][]o
 			// This differs from build/lint/scan which use "component:tool" format
 			componentWithTestType := pkgPath + ":" + testType
 
+			// Check if module is cached
+			isCached := testCfg.CachedModules != nil && testCfg.CachedModules[moduleMoniker]
+
 			work := orchestrator.ComponentWork{
 				Module:        moduleMoniker,
 				Component:     componentWithTestType,
 				ComponentType: testType,
 				Handler:       testType, // Use test type instead of generic "test"
+				IsContainer:   tool.GlobalTestBridge().IsContainer(compTypeName),
 				Weight:        weight,
 				BuildAfter:    nil, // Tests don't have intra-module deps
 				Index:         0,   // Will be set per-layer below
+				Cached:        isCached,
 			}
 
 			if hasSequential {

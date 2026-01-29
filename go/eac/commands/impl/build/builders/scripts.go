@@ -34,6 +34,12 @@ func (h *ScriptsHandler) ValidateModule(module *modules.ModuleContract, workspac
 	return fmt.Errorf("no source patterns defined in any package")
 }
 
+// IsContainer returns false as scripts handler copies files on the host.
+func (h *ScriptsHandler) IsContainer() bool { return false }
+
+// IsHostInstalled returns true as scripts handler copies files using the host filesystem.
+func (h *ScriptsHandler) IsHostInstalled() bool { return true }
+
 func (h *ScriptsHandler) ListArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {
 	return nil // Artifacts are the copied files, tracked in manifest
 }

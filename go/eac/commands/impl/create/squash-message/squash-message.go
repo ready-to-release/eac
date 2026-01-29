@@ -201,8 +201,7 @@ func CreateSquashMessage() int {
 	finalMessage := assembleMessage(topLevelMessage, moduleSections)
 	logDebugArtifact("SQUASH-FINAL", finalMessage)
 
-	// Phase 13: Output message (validation skipped for now)
-	fmt.Println(">>>>>>OUTPUT START<<<<<<")
+	// Phase 13: Output message
 	fmt.Println(finalMessage)
 
 	log.Debug("Create squash-message command completed successfully")
@@ -357,7 +356,12 @@ func buildFilesTable(files []repository.RepositoryFileWithModule) string {
 func generateTopLevelMessage(workspaceRoot, promptContext string) (string, error) {
 	// Check for mock response from file-based mock system (subprocess testing)
 	if mock, ok := coreai.GetMockResponse("squash-message"); ok {
-		return mock, nil
+		// Format mock JSON to squash message text
+		formattedResult, err := FormatSquashMessage(mock)
+		if err != nil {
+			return "", fmt.Errorf("failed to format mock squash message: %w", err)
+		}
+		return strings.TrimSpace(formattedResult), nil
 	}
 
 	// Load squash prompt template with three-tier priority:

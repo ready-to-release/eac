@@ -38,10 +38,15 @@ type MockRepository struct {
 	worktrees      []WorktreeEntry
 	dirtyWorktrees map[string]bool
 
+	// Uncommitted files for change detection
+	uncommittedFiles []string
+
 	// Error injection for testing failure paths
 	RemoteURLError          error
 	CurrentBranchError      error
 	HeadSHAError            error
+	HeadCommitError         error
+	UncommittedFilesError   error
 	TrackedFilesError       error
 	StagedFilesError        error
 	StagedDiffError         error
@@ -108,6 +113,12 @@ func (m *MockRepository) WithHeadSHA(sha string) *MockRepository {
 	return m
 }
 
+// WithUncommittedFiles sets the list of uncommitted files.
+func (m *MockRepository) WithUncommittedFiles(files []string) *MockRepository {
+	m.uncommittedFiles = files
+	return m
+}
+
 // WithTrackedFiles sets the list of tracked files.
 func (m *MockRepository) WithTrackedFiles(files []string) *MockRepository {
 	m.trackedFiles = files
@@ -155,6 +166,10 @@ func (m *MockRepository) WithError(operation string, err error) *MockRepository 
 		m.CurrentBranchError = err
 	case "HeadSHA":
 		m.HeadSHAError = err
+	case "HeadCommit":
+		m.HeadCommitError = err
+	case "UncommittedFiles":
+		m.UncommittedFilesError = err
 	case "TrackedFiles":
 		m.TrackedFilesError = err
 	case "StagedFiles":
@@ -224,6 +239,23 @@ func (m *MockRepository) HeadShortSHA() (string, error) {
 		return m.headSHA[:7], nil
 	}
 	return m.headSHA, nil
+}
+
+func (m *MockRepository) HeadCommit() (string, error) {
+	if m.HeadCommitError != nil {
+		return "", m.HeadCommitError
+	}
+	if m.headSHA == "" {
+		return "", errors.New("no HEAD commit")
+	}
+	return m.headSHA, nil
+}
+
+func (m *MockRepository) UncommittedFiles() ([]string, error) {
+	if m.UncommittedFilesError != nil {
+		return nil, m.UncommittedFilesError
+	}
+	return m.uncommittedFiles, nil
 }
 
 func (m *MockRepository) TrackedFiles() ([]string, error) {

@@ -47,12 +47,34 @@ func generateWithPrompt(promptName, userPrompt, workspaceRoot string, affectedMo
 func generateWithPromptResult(promptName, userPrompt, workspaceRoot string, affectedModules []string, debugEnabled bool, testExecutor *ai.Executor) (*GenerationResult, error) {
 	// Check for mock response from file-based mock system (subprocess testing)
 	if mock, ok := aimock.GetMockResponse("commit-message"); ok {
-		return &GenerationResult{Output: mock, ProviderName: "mock-file"}, nil
+		// Format mock JSON to conventional commit format
+		var formattedOutput string
+		var err error
+		if promptName == "module" {
+			formattedOutput, err = FormatModuleSection(mock)
+		} else {
+			formattedOutput, err = FormatCommitMessage(mock)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("failed to format mock response: %w", err)
+		}
+		return &GenerationResult{Output: formattedOutput, ProviderName: "mock-file"}, nil
 	}
 
 	// Check for mock response (test mode - in-process testing)
 	if mockAIResponse != "" {
-		return &GenerationResult{Output: mockAIResponse, ProviderName: "mock"}, nil
+		// Format mock JSON to conventional commit format
+		var formattedOutput string
+		var err error
+		if promptName == "module" {
+			formattedOutput, err = FormatModuleSection(mockAIResponse)
+		} else {
+			formattedOutput, err = FormatCommitMessage(mockAIResponse)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("failed to format mock response: %w", err)
+		}
+		return &GenerationResult{Output: formattedOutput, ProviderName: "mock"}, nil
 	}
 
 	// Load prompt template using three-tier system

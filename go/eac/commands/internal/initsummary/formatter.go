@@ -362,18 +362,38 @@ func FormatDetailed(s *Summary) string {
 		b.WriteString("\n")
 	}
 
-	// Incremental build (build only)
+	// Incremental cache info
 	if s.HasIncremental() {
+		// Use command-specific labels
+		actionVerb := "Building"
+		if s.Command == "lint" {
+			actionVerb = "Linting"
+		} else if s.Command == "test" {
+			actionVerb = "Testing"
+		} else if s.Command == "scan" {
+			actionVerb = "Scanning"
+		}
+
 		b.WriteString("── Incremental Build ──\n")
 		inc := s.Incremental
 		if !inc.Enabled {
-			b.WriteString("  ⏭️  Disabled (CI or --rebuild)\n")
+			b.WriteString("  ⏭️  Disabled (CI or --skip-cache)\n")
 		} else if inc.FreshBuild {
 			b.WriteString("  🆕 Fresh build (no prior state)\n")
 		} else {
 			b.WriteString(fmt.Sprintf("  ✅ Enabled (detection: %v)\n", inc.DetectionTime.Round(1e6)))
-			b.WriteString(fmt.Sprintf("  Building: %d modules\n", len(inc.Changed)))
-			b.WriteString(fmt.Sprintf("  Skipped: %d modules\n", len(inc.UpToDate)))
+			if len(inc.Changed) > 0 {
+				b.WriteString(fmt.Sprintf("  %s: %s (%d changed)\n",
+					actionVerb, formatModuleListInline(inc.Changed, 60), len(inc.Changed)))
+			} else {
+				b.WriteString(fmt.Sprintf("  %s: 0 modules\n", actionVerb))
+			}
+			if len(inc.UpToDate) > 0 {
+				b.WriteString(fmt.Sprintf("  Skipped: %s (%d up-to-date)\n",
+					formatModuleListInline(inc.UpToDate, 60), len(inc.UpToDate)))
+			} else {
+				b.WriteString("  Skipped: 0 modules\n")
+			}
 		}
 		b.WriteString("\n")
 	}

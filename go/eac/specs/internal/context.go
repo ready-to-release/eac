@@ -205,6 +205,20 @@ func (c *TestContext) buildMockingEnvironment(env []string) []string {
 
 	// Convert mock configuration to environment variables
 	mockEnvVars := mockConfig.ToEnvironmentVariables()
+
+	// Process mock env vars to make relative paths absolute
+	// The mock_dir in config is relative to repo root, but subprocess runs from isolated dir
+	for i, e := range mockEnvVars {
+		if strings.HasPrefix(e, environments.EnvR2RMockAIDir+"=") {
+			// Extract the path and make it absolute if relative
+			mockDir := strings.TrimPrefix(e, environments.EnvR2RMockAIDir+"=")
+			if mockDir != "" && !filepath.IsAbs(mockDir) {
+				mockDir = filepath.Join(c.OriginalRepoRoot, mockDir)
+			}
+			mockEnvVars[i] = fmt.Sprintf("%s=%s", environments.EnvR2RMockAIDir, mockDir)
+		}
+	}
+
 	env = append(env, mockEnvVars...)
 
 	// Override mock AI directory if not already set by config

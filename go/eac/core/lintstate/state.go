@@ -5,12 +5,9 @@
 package lintstate
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -18,6 +15,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bmatcuk/doublestar/v4"
+
+	"github.com/ready-to-release/eac/go/eac/core/hash"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
@@ -337,57 +337,15 @@ func getUncommittedFiles(workspaceRoot string) ([]string, error) {
 }
 
 // hashUncommittedFiles creates a hash representing the uncommitted state.
+// Delegates to core/hash package for the actual hashing.
 func hashUncommittedFiles(workspaceRoot string, files []string) string {
-	h := sha256.New()
-
-	// Sort for deterministic hash
-	sorted := make([]string, len(files))
-	copy(sorted, files)
-	sort.Strings(sorted)
-
-	for _, file := range sorted {
-		path := filepath.Join(workspaceRoot, file)
-		f, err := os.Open(path)
-		if err != nil {
-			// File might be deleted - include that in hash
-			h.Write([]byte(file + ":deleted\n"))
-			continue
-		}
-		if _, err := io.Copy(h, f); err != nil {
-			h.Write([]byte(file + ":error\n"))
-		}
-		f.Close()
-	}
-
-	return hex.EncodeToString(h.Sum(nil))[:16] // Short hash is sufficient
+	return hash.UncommittedState(workspaceRoot, files)
 }
 
 // hashModuleFiles computes a hash of all source files for a module.
+// Delegates to core/hash package for the actual hashing.
 func hashModuleFiles(workspaceRoot string, files []string) (string, error) {
-	h := sha256.New()
-
-	// Sort for deterministic hash
-	sorted := make([]string, len(files))
-	copy(sorted, files)
-	sort.Strings(sorted)
-
-	for _, file := range sorted {
-		path := filepath.Join(workspaceRoot, file)
-		f, err := os.Open(path)
-		if err != nil {
-			return "", fmt.Errorf("failed to open %s: %w", file, err)
-		}
-
-		// Include filename in hash (so renames are detected)
-		h.Write([]byte(file + "\n"))
-		if _, err := io.Copy(h, f); err != nil {
-			f.Close()
-			return "", fmt.Errorf("failed to read %s: %w", file, err)
-		}
-		f.Close()
-	}
-
-	return hex.EncodeToString(h.Sum(nil)), nil
+	return hash.Files(workspaceRoot, files)
 }
 
 // ExpandGlobPatterns expands glob patterns to actual file paths.
@@ -403,8 +361,8 @@ func ExpandGlobPatterns(workspaceRoot string, patterns []string) ([]string, erro
 			absPattern = filepath.Join(workspaceRoot, pattern)
 		}
 
-		// Expand glob
-		matches, err := filepath.Glob(absPattern)
+		// Use doublestar for glob expansion to support ** patterns
+		matches, err := doublestar.FilepathGlob(absPattern)
 		if err != nil {
 			return nil, fmt.Errorf("invalid glob pattern %s: %w", pattern, err)
 		}

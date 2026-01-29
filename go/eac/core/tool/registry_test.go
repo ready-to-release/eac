@@ -318,3 +318,4 @@ func TestDefaultRegistry_ValidateAll(t *testing.T) {
 		t.Errorf("expected no errors, got %v", errs)
 	}
 }
+

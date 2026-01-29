@@ -4,7 +4,10 @@ Security integrated throughout all stages of the CD Model, not bolted on at the 
 
 ## What is Shift-Left Security
 
-The following diagram illustrates the cost of fixing security vulnerabilities at different stages, from IDE ($1x) through Production ($1000x+). The earlier issues are caught, the cheaper they are to fix.
+The following diagram illustrates the cost of fixing security vulnerabilities at different stages,
+from IDE ($1x) through Production ($1000x+).
+
+The earlier issues are caught, the cheaper they are to fix.
 
 ![Shift-Left Security Cost Timeline](../../../assets/assisted/14-shift-left-security.drawio.png)
 

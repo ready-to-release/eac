@@ -21,6 +21,21 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
+// DinD environment variable constants.
+const (
+	// EnvHostRepoRoot is the environment variable that contains the host repository root
+	// when running inside a Docker container (DinD mode).
+	EnvHostRepoRoot = "R2R_HOST_REPOROOT"
+
+	// EnvContainerRepoRoot is the environment variable that contains the container's
+	// view of the repository root (typically /var/task).
+	EnvContainerRepoRoot = "R2R_CONTAINER_REPOROOT"
+
+	// DefaultContainerRoot is the default path where the repository is mounted
+	// inside the r2r CLI container.
+	DefaultContainerRoot = "/var/task"
+)
+
 // Global executor instance for use throughout the codebase.
 var (
 	globalExecutor   *DefaultExecutor
@@ -146,6 +161,9 @@ func (e *DefaultExecutor) Execute(ctx context.Context, tool *ToolDefinition, exe
 		return nil, fmt.Errorf("execution context is nil")
 	}
 
+	// Populate DinD context from environment (for container path translation)
+	e.populateDinDContext(execCtx)
+
 	// Validate requirements before execution
 	if err := e.validateRequirements(tool); err != nil {
 		return nil, err
@@ -256,6 +274,12 @@ func (e *DefaultExecutor) executeContainer(ctx context.Context, tool *ToolDefini
 			source = filepath.Join(execCtx.WorkspaceRoot, source)
 		}
 
+		// DinD: Translate container path to host path for Docker daemon
+		source = execCtx.TranslatePathForMount(source)
+
+		// Format path for Docker volume mount (handles Windows C:\ -> /c/ conversion)
+		source = formatDockerVolume(source)
+
 		// Convert to Docker bind mount format: source:target[:ro]
 		bind := source + ":" + resolved.Target
 		if resolved.ReadOnly {
@@ -275,6 +299,11 @@ func (e *DefaultExecutor) executeContainer(ctx context.Context, tool *ToolDefini
 		fmt.Fprintf(execCtx.LogWriter, "[debug] container workdir: %s\n", workDir)
 		fmt.Fprintf(execCtx.LogWriter, "[debug] container command: %v\n", tool.Command)
 		fmt.Fprintf(execCtx.LogWriter, "[debug] placeholders: %v\n", execCtx.Placeholders)
+		if execCtx.IsDinD() {
+			fmt.Fprintf(execCtx.LogWriter, "[dind] host workspace: %s\n", execCtx.HostWorkspaceRoot)
+			fmt.Fprintf(execCtx.LogWriter, "[dind] container root: %s\n", execCtx.ContainerRepoRoot)
+			fmt.Fprintf(execCtx.LogWriter, "[dind] translated mounts: %v\n", resolvedMounts)
+		}
 	}
 
 	// Build environment variables
@@ -456,15 +485,15 @@ func (e *DefaultExecutor) runContainer(ctx context.Context, config *container.Co
 // Some tools (e.g., mkdocs 1.6.1) return exit code 0 despite printing errors.
 func containsErrorPattern(output string) bool {
 	errorPatterns := []string{
-		"Error:",           // Generic error prefix (mkdocs, etc.)
-		"error:",           // Lowercase variant
-		"FATAL:",           // Fatal errors
-		"fatal:",           // Lowercase variant
-		"Exception:",       // Python exceptions
-		"Traceback (most",  // Python tracebacks
-		"panic:",           // Go panics
-		"FAILED",           // Test failures
-		"Aborted",          // mkdocs strict mode abort
+		"Error:",          // Generic error prefix (mkdocs, etc.)
+		"error:",          // Lowercase variant
+		"FATAL:",          // Fatal errors
+		"fatal:",          // Lowercase variant
+		"Exception:",      // Python exceptions
+		"Traceback (most", // Python tracebacks
+		"panic:",          // Go panics
+		"FAILED",          // Test failures
+		"Aborted",         // mkdocs strict mode abort
 	}
 
 	for _, pattern := range errorPatterns {
@@ -676,4 +705,35 @@ func (e *DefaultExecutor) validateRequirements(tool *ToolDefinition) error {
 	}
 
 	return fmt.Errorf("tool %q requirements not met: missing %v", tool.ID, missing)
+}
+
+// populateDinDContext sets up DinD-related fields from environment variables.
+// When R2R_HOST_REPOROOT is set, it indicates we're running in DinD mode
+// and mount paths need to be translated from container paths to host paths.
+func (e *DefaultExecutor) populateDinDContext(execCtx *ExecutionContext) {
+	hostRoot := os.Getenv(EnvHostRepoRoot)
+	if hostRoot == "" {
+		return // Not in DinD mode
+	}
+
+	execCtx.HostWorkspaceRoot = hostRoot
+	execCtx.ContainerRepoRoot = os.Getenv(EnvContainerRepoRoot)
+	if execCtx.ContainerRepoRoot == "" {
+		execCtx.ContainerRepoRoot = DefaultContainerRoot
+	}
+}
+
+// formatDockerVolume formats a path for Docker volume mount.
+// On Windows, converts paths like C:\path to /c/path for Docker compatibility.
+func formatDockerVolume(path string) string {
+	// Check if this is a Windows absolute path (e.g., C:\...)
+	if len(path) >= 2 && path[1] == ':' {
+		// Convert C:\path to /c/path
+		driveLetter := strings.ToLower(string(path[0]))
+		rest := strings.ReplaceAll(path[2:], "\\", "/")
+		return "/" + driveLetter + rest
+	}
+
+	// Already Unix-style or relative path - just normalize slashes
+	return strings.ReplaceAll(path, "\\", "/")
 }

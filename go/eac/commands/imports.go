@@ -36,6 +36,7 @@ import (
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/templates/install/reports"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/templates/install/specs"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/test"
+	_ "github.com/ready-to-release/eac/go/eac/commands/impl/update/cache-clear"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/update/design"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/update/docs"
 	_ "github.com/ready-to-release/eac/go/eac/commands/impl/update/docs-manifest"

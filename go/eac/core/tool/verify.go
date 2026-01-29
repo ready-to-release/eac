@@ -326,15 +326,15 @@ func IsPlatformSupported(tool *ToolDefinition) bool {
 func FilterPlatformSupported(toolIDs []string) []string {
 	registry := GlobalRegistry()
 	var supported []string
-	for _, id := range toolIDs {
-		tool, ok := registry.Get(id)
+	for _, toolID := range toolIDs {
+		tool, ok := registry.Get(toolID)
 		if !ok {
 			// Unknown tool - include it so verification can report the error
-			supported = append(supported, id)
+			supported = append(supported, toolID)
 			continue
 		}
 		if IsPlatformSupported(tool) {
-			supported = append(supported, id)
+			supported = append(supported, toolID)
 		}
 	}
 	return supported

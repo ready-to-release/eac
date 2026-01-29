@@ -5,11 +5,8 @@
 package teststate
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,6 +14,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bmatcuk/doublestar/v4"
+
+	"github.com/ready-to-release/eac/go/eac/core/hash"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
@@ -390,13 +390,21 @@ func DetectChangesWithLoader(workspaceRoot string, moduleInfo map[string]ModuleT
 // This should be called after tests complete to record state for change detection.
 // It updates the SourceHash, TestHash, BuildID, and Dependencies fields in each manifest.
 func UpdateModuleState(workspaceRoot string, testedModules map[string]bool, moduleInfo map[string]ModuleTestFiles) error {
+	// Use default empty suite name for backwards compatibility
+	return UpdateModuleStateForSuite(workspaceRoot, testedModules, moduleInfo, "")
+}
+
+// UpdateModuleStateForSuite updates the incremental test state with suite information.
+// suiteName specifies which suite was run - this is critical for change detection.
+// Pass empty string for backwards compatibility (won't record suite info).
+func UpdateModuleStateForSuite(workspaceRoot string, testedModules map[string]bool, moduleInfo map[string]ModuleTestFiles, suiteName string) error {
 	gitCommit, err := getGitCommit(workspaceRoot)
 	if err != nil {
 		gitCommit = "" // Use empty if git is unavailable
 	}
 
 	// Update each tested module's manifest
-	for moniker := range testedModules {
+	for moniker, passed := range testedModules {
 		info, ok := moduleInfo[moniker]
 		if !ok {
 			continue
@@ -405,17 +413,29 @@ func UpdateModuleState(workspaceRoot string, testedModules map[string]bool, modu
 		moduleTestDir := paths.TestModuleDir(workspaceRoot, moniker)
 		manifestPath := filepath.Join(moduleTestDir, testManifestFileName)
 
-		// Load existing manifest (should exist after test run)
-		data, err := os.ReadFile(manifestPath)
-		if err != nil {
-			// No manifest - skip this module (shouldn't happen normally)
+		// Ensure directory exists
+		if err := os.MkdirAll(moduleTestDir, 0o755); err != nil {
 			continue
 		}
 
-		// Parse as generic map to preserve all fields
+		// Load existing manifest or create minimal one
 		var manifest map[string]interface{}
-		if err := json.Unmarshal(data, &manifest); err != nil {
-			continue
+		data, err := os.ReadFile(manifestPath)
+		if err != nil {
+			// No manifest - create a minimal one for incremental state
+			manifest = map[string]interface{}{
+				"moniker":   moniker,
+				"test_time": time.Now().Format(time.RFC3339),
+			}
+		} else {
+			// Parse existing manifest
+			if err := json.Unmarshal(data, &manifest); err != nil {
+				// Invalid manifest - create fresh
+				manifest = map[string]interface{}{
+					"moniker":   moniker,
+					"test_time": time.Now().Format(time.RFC3339),
+				}
+			}
 		}
 
 		// Calculate and update incremental state fields
@@ -433,6 +453,46 @@ func UpdateModuleState(workspaceRoot string, testedModules map[string]bool, modu
 		manifest["build_id"] = info.BuildID
 		manifest["dependencies"] = info.Dependencies
 		manifest["git_commit"] = gitCommit
+		manifest["test_time"] = time.Now().Format(time.RFC3339)
+
+		// Update suite results if suite name provided
+		if suiteName != "" {
+			suites, ok := manifest["suites"].(map[string]interface{})
+			if !ok {
+				suites = make(map[string]interface{})
+			}
+
+			// Calculate test summary based on pass/fail
+			testSummary := map[string]interface{}{
+				"total":   0,
+				"passed":  0,
+				"failed":  0,
+				"skipped": 0,
+			}
+			if passed {
+				testSummary["passed"] = 1
+				testSummary["total"] = 1
+			} else {
+				testSummary["failed"] = 1
+				testSummary["total"] = 1
+			}
+
+			// Handle composite suites (e.g., "unit+integration")
+			// Record each constituent suite separately for proper change detection
+			suiteNamesToRecord := []string{suiteName}
+			if strings.Contains(suiteName, "+") {
+				suiteNamesToRecord = strings.Split(suiteName, "+")
+			}
+
+			for _, name := range suiteNamesToRecord {
+				suites[name] = map[string]interface{}{
+					"run_time":         time.Now().Format(time.RFC3339),
+					"duration_seconds": 0,
+					"tests":            testSummary,
+				}
+			}
+			manifest["suites"] = suites
+		}
 
 		// Write updated manifest
 		updatedData, err := json.MarshalIndent(manifest, "", "  ")
@@ -482,33 +542,9 @@ func getGitCommit(workspaceRoot string) (string, error) {
 }
 
 // hashFiles computes a hash of all files.
+// Delegates to core/hash package for the actual hashing.
 func hashFiles(workspaceRoot string, files []string) (string, error) {
-	if len(files) == 0 {
-		return "", nil
-	}
-
-	h := sha256.New()
-
-	sorted := make([]string, len(files))
-	copy(sorted, files)
-	sort.Strings(sorted)
-
-	for _, file := range sorted {
-		path := filepath.Join(workspaceRoot, file)
-		f, err := os.Open(path)
-		if err != nil {
-			return "", fmt.Errorf("failed to open %s: %w", file, err)
-		}
-
-		h.Write([]byte(file + "\n"))
-		if _, err := io.Copy(h, f); err != nil {
-			f.Close()
-			return "", fmt.Errorf("failed to read %s: %w", file, err)
-		}
-		f.Close()
-	}
-
-	return hex.EncodeToString(h.Sum(nil)), nil
+	return hash.Files(workspaceRoot, files)
 }
 
 // ExpandGlobPatterns expands glob patterns to actual file paths
@@ -523,7 +559,8 @@ func ExpandGlobPatterns(workspaceRoot string, patterns []string) ([]string, erro
 			absPattern = filepath.Join(workspaceRoot, pattern)
 		}
 
-		matches, err := filepath.Glob(absPattern)
+		// Use doublestar for glob expansion to support ** patterns
+		matches, err := doublestar.FilepathGlob(absPattern)
 		if err != nil {
 			return nil, fmt.Errorf("invalid glob pattern %s: %w", pattern, err)
 		}

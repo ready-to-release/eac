@@ -39,10 +39,10 @@ const (
 	ContainerWorkdir = "/docs"
 )
 
-// GetDrawioImageName returns the Docker image for drawio-cli.
+// GetDrawioImageName returns the Docker image for drawio.
 // It first checks tool-config.yml, then falls back to the default.
 func GetDrawioImageName() string {
-	return tool.GetToolImageWithDefault("drawio-cli", DefaultDrawioImageName)
+	return tool.GetToolImageWithDefault("drawio", DefaultDrawioImageName)
 }
 
 var log = logging.C()

@@ -4,7 +4,9 @@
 
 "Compliance as Code" applies software engineering best practices to regulatory compliance.
 
-Instead of manual documentation and periodic reviews, organizations encode requirements as executable specifications, automate validation, and generate evidence as a delivery pipeline byproduct.
+Instead of manual documentation and periodic reviews,
+organizations encode requirements as executable specifications,
+automate validation, and generate evidence as a delivery pipeline byproduct.
 
 **Core insight**: Compliance requirements are specifications that can be tested, just like functional requirements.
 
@@ -20,7 +22,8 @@ Compliance as Code rests on five interconnected principles:
 4. **Automated Evidence** - Evidence generated automatically from pipelines
 5. **Executable Specifications** - Requirements expressed as automated tests
 
-These principles work as a system - implementing only one or two provides limited value; implementing all five creates transformative change.
+These principles work as a system - implementing only one or two provides limited value;
+implementing all five creates transformative change.
 
 ---
 
@@ -41,7 +44,8 @@ Instead of Word documents in SharePoint, everything lives in version control.
 !!! note "Requirements Storage"
 Requirements MUST be stored as Gherkin specifications in `specs/risk-controls/*.feature`
 
-**Why It Matters**: Version control provides traceability, collaboration via pull requests, searchability, immutability, and automation capabilities impossible with traditional document management.
+**Why It Matters**: Version control provides traceability, collaboration via pull requests,
+searchability, immutability, and automation capabilities impossible with traditional document management.
 
 **See**: [Everything as Code](../everything-as-code/index.md) for detailed explanation of the paradigm and benefits.
 
@@ -60,7 +64,8 @@ Compliance checked on every commit, not periodically. Compliance tests run in CI
 - Policy violations fail builds
 - Real-time compliance status visible in dashboards
 
-**Why It Matters**: Continuous validation provides immediate feedback when violations occur, prevents compliance drift, scales without manual review overhead, and provides continuous audit readiness.
+**Why It Matters**: Continuous validation provides immediate feedback when violations occur,
+prevents compliance drift, scales without manual review overhead, and provides continuous audit readiness.
 
 **See**: [CD Model Stages 1-7](../continuous-delivery/cd-model/stages.md#development-stages) for how continuous validation integrates into development stages.
 

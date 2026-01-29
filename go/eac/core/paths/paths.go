@@ -174,8 +174,20 @@ func ComponentTestOutputPath(repoRoot, module, component string) string {
 }
 
 // LintOutputPath returns the path to a module's lint output directory.
+// On Windows, colons in monikers are replaced with underscores since colons
+// are not valid in Windows file paths (except for drive letters).
 func LintOutputPath(repoRoot, moniker string) string {
-	return filepath.Join(repoRoot, OutDir, LintDir, moniker)
+	safeName := sanitizeMonikerForPath(moniker)
+	return filepath.Join(repoRoot, OutDir, LintDir, safeName)
+}
+
+// sanitizeMonikerForPath replaces characters that are invalid in file paths.
+// On Windows, colons are not allowed in file/directory names.
+func sanitizeMonikerForPath(moniker string) string {
+	if runtime.GOOS == "windows" {
+		return strings.ReplaceAll(moniker, ":", "_")
+	}
+	return moniker
 }
 
 // ComponentLintOutputPath returns the path to a component's lint output directory.

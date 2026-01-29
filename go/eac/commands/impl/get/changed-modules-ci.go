@@ -111,13 +111,16 @@ func GetChangedModulesCI() int {
 		}
 	}
 
-	// Get current HEAD SHA using shared detection logic
-	shaResult, err := DetectCurrentSHA(workspaceRoot, "")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: getting current SHA: %v\n", err)
-		return 1
+	// Get current HEAD SHA (check for mock first)
+	headSHA := getMockedHeadSHA()
+	if headSHA == "" {
+		shaResult, err := DetectCurrentSHA(workspaceRoot, "")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: getting current SHA: %v\n", err)
+			return 1
+		}
+		headSHA = shaResult.SHA
 	}
-	headSHA := shaResult.SHA
 
 	// Build the result using per-module change detection
 	result, err := buildPerModuleCIResult(workspaceRoot, headSHA, prBase, filterWorkflows)
@@ -163,7 +166,7 @@ func buildPerModuleCIResult(workspaceRoot, headSHA, prBase string, filterWorkflo
 	// Filter to only modules with CI workflows
 	modulesWithCI, filteredOut := filterModulesWithWorkflows(allModules, workspaceRoot)
 
-	// Create GitHub API client
+	// Create GitHub API client (may not be used if mocking)
 	api := github.NewGHClient(workspaceRoot)
 
 	// Track results
@@ -188,9 +191,26 @@ func buildPerModuleCIResult(workspaceRoot, headSHA, prBase string, filterWorkflo
 	// Track all changed files across modules for aggregate reporting
 	allChangedFilesSet := make(map[string]bool)
 
+	// Check for mock support
+	mockedStatus := loadMockedCIStatus()
+	mockedChangedFiles := getMockedChangedFiles()
+
 	// Check each module's CI status
 	for _, module := range modulesWithCI {
-		status := checkModuleCIStatusPerModule(module, headSHA, prBase, workspaceRoot, api, ciExcludedFiles)
+		var status ModuleCIStatus
+
+		// Use mocked status if available
+		if mockedStatus != nil {
+			if mock, ok := mockedStatus[module]; ok {
+				status = checkModuleCIStatusMocked(module, headSHA, mock, mockedChangedFiles, workspaceRoot, ciExcludedFiles)
+			} else {
+				// Module not in mock - treat as no CI history
+				status = ModuleCIStatus{HasValidCI: false, Reason: "no_ci_history"}
+			}
+		} else {
+			// Use real GitHub API
+			status = checkModuleCIStatusPerModule(module, headSHA, prBase, workspaceRoot, api, ciExcludedFiles)
+		}
 		result.ModuleStatus[module] = status
 
 		if status.HasValidCI {
@@ -203,23 +223,26 @@ func buildPerModuleCIResult(workspaceRoot, headSHA, prBase string, filterWorkflo
 
 			// Track changed files for this module
 			if status.FilesChanged > 0 {
-				// Get the actual changed files for this module for reporting
-				if baseSHA := status.LastSuccessSHA; baseSHA != "" {
-					files, filesErr := getChangedFilesBetweenSHAs(baseSHA, headSHA, workspaceRoot)
-					if filesErr == nil {
-						moduleFiles := filterFilesForModule(files, module, workspaceRoot, ciExcludedFiles)
-						result.FilesByModule[module] = moduleFiles
-						// Only count files directly owned by this module
-						for _, f := range moduleFiles {
-							allChangedFilesSet[f] = true
-						}
+				// Get changed files for this module for reporting
+				var files []string
+				if mockedChangedFiles != nil {
+					files = mockedChangedFiles
+				} else if baseSHA := status.LastSuccessSHA; baseSHA != "" {
+					files, _ = getChangedFilesBetweenSHAs(baseSHA, headSHA, workspaceRoot)
+				}
+				if len(files) > 0 {
+					moduleFiles := filterFilesForModule(files, module, workspaceRoot, ciExcludedFiles)
+					result.FilesByModule[module] = moduleFiles
+					// Only count files directly owned by this module
+					for _, f := range moduleFiles {
+						allChangedFilesSet[f] = true
 					}
 				}
 			}
 		}
 	}
 
-	// Calculate transitive invalidation
+	// Calculate transitive invalidation (iteratively until no new modules invalidated)
 	// Modules that have valid CI but depend on modules that need CI
 	depGraph, err := repository.GetModuleDependencyGraph(workspaceRoot)
 	if err == nil {
@@ -228,40 +251,52 @@ func buildPerModuleCIResult(workspaceRoot, headSHA, prBase string, filterWorkflo
 			needsCISet[m] = true
 		}
 
-		// Check each skipped module to see if its dependencies need CI
-		newInvalidated := []string{}
-		for _, skippedModule := range result.Skipped {
-			if deps, ok := depGraph.Dependencies[skippedModule]; ok {
-				for _, dep := range deps {
-					if needsCISet[dep] {
-						// This skipped module depends on a module that needs CI
-						newInvalidated = append(newInvalidated, skippedModule)
-						result.ModuleStatus[skippedModule] = ModuleCIStatus{
-							HasValidCI: false,
-							Reason:     fmt.Sprintf("dependency %s needs CI", dep),
+		// Iteratively propagate invalidation until no new modules are found
+		allInvalidated := []string{}
+		remainingSkipped := result.Skipped
+
+		for {
+			newInvalidated := []string{}
+			stillSkipped := []string{}
+
+			for _, skippedModule := range remainingSkipped {
+				invalidated := false
+				if deps, ok := depGraph.Dependencies[skippedModule]; ok {
+					for _, dep := range deps {
+						if needsCISet[dep] {
+							// This skipped module depends on a module that needs CI
+							newInvalidated = append(newInvalidated, skippedModule)
+							result.ModuleStatus[skippedModule] = ModuleCIStatus{
+								HasValidCI: false,
+								Reason:     fmt.Sprintf("dependency %s needs CI", dep),
+							}
+							invalidated = true
+							break
 						}
-						break
 					}
 				}
-			}
-		}
-
-		// Move invalidated modules from Skipped to Invalidated
-		if len(newInvalidated) > 0 {
-			// Remove from skipped
-			newSkipped := []string{}
-			invalidatedSet := make(map[string]bool)
-			for _, m := range newInvalidated {
-				invalidatedSet[m] = true
-			}
-			for _, m := range result.Skipped {
-				if !invalidatedSet[m] {
-					newSkipped = append(newSkipped, m)
+				if !invalidated {
+					stillSkipped = append(stillSkipped, skippedModule)
 				}
 			}
-			result.Skipped = newSkipped
-			result.Invalidated = newInvalidated
-			result.Modules = append(result.Modules, newInvalidated...)
+
+			if len(newInvalidated) == 0 {
+				break // No more modules to invalidate
+			}
+
+			// Add newly invalidated to needsCISet for next iteration
+			for _, m := range newInvalidated {
+				needsCISet[m] = true
+				allInvalidated = append(allInvalidated, m)
+			}
+			remainingSkipped = stillSkipped
+		}
+
+		// Update results
+		if len(allInvalidated) > 0 {
+			result.Skipped = remainingSkipped
+			result.Invalidated = allInvalidated
+			result.Modules = append(result.Modules, allInvalidated...)
 		}
 	}
 
@@ -618,31 +653,39 @@ func filterModulesWithWorkflows(monikers []string, workspaceRoot string) ([]stri
 	return filtered, filteredOut
 }
 
-// getCIExcludedFiles returns a set of file paths that should not trigger CI.
-// Uses files.ignore patterns from module contracts - files that are owned but
-// changes to them don't affect module functionality.
+// getCIExcludedFiles returns a set of file paths/patterns that should not trigger CI.
+// These are files that are owned by modules but don't affect module functionality:
+// - CHANGELOG.md: release documentation only
+// - README.md: documentation only
+// - CONTRIBUTING.md: contribution guidelines
+// - LICENSE: legal text
 func getCIExcludedFiles(workspaceRoot string) map[string]bool {
 	result := make(map[string]bool)
+
+	// Common CI-excluded file patterns
+	// These patterns are matched against file paths relative to repo root
+	commonPatterns := []string{
+		"CHANGELOG.md",
+		"README.md",
+		"CONTRIBUTING.md",
+		"LICENSE",
+	}
 
 	registry, err := modules.LoadFromWorkspace(workspaceRoot)
 	if err != nil {
 		return result // Return empty on error - non-fatal
 	}
 
+	// Add patterns for each module's component roots
 	for _, module := range registry.All() {
-		// Use ignore patterns from module packages
-		// Get the buildable root for pattern resolution
-		buildableRoot := module.Components.GetBuildableRoot()
-		if buildableRoot == "" {
-			// Fallback to first available package root
-			for _, root := range module.GetComponentRoots() {
-				buildableRoot = root
-				break
+		for _, root := range module.GetComponentRoots() {
+			for _, pattern := range commonPatterns {
+				// Add both with and without trailing separator for flexibility
+				path := filepath.Join(root, pattern)
+				path = filepath.ToSlash(path) // Normalize to forward slashes
+				result[path] = true
 			}
 		}
-		// Note: files.ignore patterns moved to package-level - skip for now
-		// Modules needing CI exclusions should configure at package level
-		_ = buildableRoot // Reserved for future use
 	}
 
 	return result
@@ -714,4 +757,110 @@ func isFileExcluded(filePath string, patterns map[string]bool) bool {
 		}
 	}
 	return false
+}
+
+// ============================================================================
+// Mock support for testing
+// ============================================================================
+
+// mockedCIStatus represents mocked CI status for a module (matches step definitions).
+type mockedCIStatus struct {
+	LastSuccessSHA   string `json:"LastSuccessSHA"`
+	HasFilesChanged  bool   `json:"HasFilesChanged"`
+	HasValidCIAtHead bool   `json:"HasValidCIAtHead"`
+	NoHistory        bool   `json:"NoHistory"`
+}
+
+// loadMockedCIStatus loads mocked CI status from R2R_MOCK_CI_STATUS environment variable.
+// Returns nil if no mock is configured.
+func loadMockedCIStatus() map[string]mockedCIStatus {
+	mockPath := os.Getenv("R2R_MOCK_CI_STATUS")
+	if mockPath == "" {
+		return nil
+	}
+
+	data, err := os.ReadFile(mockPath)
+	if err != nil {
+		return nil
+	}
+
+	var mocks map[string]mockedCIStatus
+	if err := json.Unmarshal(data, &mocks); err != nil {
+		return nil
+	}
+	return mocks
+}
+
+// getMockedHeadSHA returns the mocked HEAD SHA if R2R_MOCK_HEAD_SHA is set.
+func getMockedHeadSHA() string {
+	return os.Getenv("R2R_MOCK_HEAD_SHA")
+}
+
+// getMockedChangedFiles returns the mocked changed files if R2R_MOCK_CHANGED_FILES is set.
+func getMockedChangedFiles() []string {
+	files := os.Getenv("R2R_MOCK_CHANGED_FILES")
+	if files == "" {
+		return nil
+	}
+	return strings.Split(files, ",")
+}
+
+// checkModuleCIStatusMocked checks CI status using mocked data.
+func checkModuleCIStatusMocked(module, headSHA string, mock mockedCIStatus, changedFiles []string, workspaceRoot string, ciExcludedFiles map[string]bool) ModuleCIStatus {
+	// No CI history
+	if mock.NoHistory {
+		return ModuleCIStatus{
+			HasValidCI: false,
+			Reason:     "no_ci_history",
+		}
+	}
+
+	// Valid CI at HEAD
+	if mock.HasValidCIAtHead {
+		return ModuleCIStatus{
+			HasValidCI:     true,
+			LastSuccessSHA: headSHA,
+			Reason:         "valid_ci_at_head",
+		}
+	}
+
+	// CI at different SHA - check if module files changed
+	if !mock.HasFilesChanged {
+		// No files changed that affect this module
+		return ModuleCIStatus{
+			HasValidCI:     true,
+			LastSuccessSHA: mock.LastSuccessSHA,
+			Reason:         "no_affecting_changes",
+		}
+	}
+
+	// HasFilesChanged is true - if no specific files provided, trust the mock
+	if len(changedFiles) == 0 {
+		// Mock says files changed, but no specific files listed - trust the mock
+		return ModuleCIStatus{
+			HasValidCI:     false,
+			LastSuccessSHA: mock.LastSuccessSHA,
+			Reason:         fmt.Sprintf("files_changed_since_%s", mock.LastSuccessSHA[:min(7, len(mock.LastSuccessSHA))]),
+			FilesChanged:   1, // Indicate at least 1 file changed
+		}
+	}
+
+	// Filter changed files to those affecting this module
+	moduleFiles := filterFilesForModule(changedFiles, module, workspaceRoot, ciExcludedFiles)
+	if len(moduleFiles) == 0 {
+		// All changed files were CI-excluded
+		return ModuleCIStatus{
+			HasValidCI:     true,
+			LastSuccessSHA: mock.LastSuccessSHA,
+			Reason:         "only_ci_excluded_changes",
+		}
+	}
+
+	// Files affecting this module changed - needs CI
+	return ModuleCIStatus{
+		HasValidCI:     false,
+		LastSuccessSHA: mock.LastSuccessSHA,
+		Reason:         fmt.Sprintf("files_changed_since_%s", mock.LastSuccessSHA[:min(7, len(mock.LastSuccessSHA))]),
+		FilesChanged:   len(moduleFiles),
+	}
 }

@@ -19,6 +19,12 @@ func FlattenModulesToComponentWork(ctx *cmdframework.ExecutionContext) [][]orche
 		return nil
 	}
 
+	// Get cached modules map from build context (set during incremental detection)
+	var cachedModules map[string]bool
+	if bctx, ok := ctx.Config.Extra["buildContext"].(*buildContext); ok && bctx != nil {
+		cachedModules = bctx.cachedModules
+	}
+
 	layers := ctx.GetLayers()
 	if len(layers) == 0 {
 		// Not using layers - treat all modules as single layer
@@ -36,6 +42,8 @@ func FlattenModulesToComponentWork(ctx *cmdframework.ExecutionContext) [][]orche
 		var layerWork []orchestrator.ComponentWork
 
 		for _, moniker := range layerMonikers {
+			// Check if module is cached
+			isCached := cachedModules != nil && cachedModules[moniker]
 			// Get module contract
 			module, exists := ctx.ModuleRegistry.Get(moniker)
 			if !exists {
@@ -54,6 +62,7 @@ func FlattenModulesToComponentWork(ctx *cmdframework.ExecutionContext) [][]orche
 					Weight:        1,
 					BuildAfter:    nil,
 					Index:         globalIndex,
+					Cached:        isCached,
 				})
 				globalIndex++
 				continue
@@ -79,7 +88,7 @@ func FlattenModulesToComponentWork(ctx *cmdframework.ExecutionContext) [][]orche
 
 				// Component work item: component name includes builder for unique identification
 				// Format: "component:builder" so display becomes "module:component:builder"
-				// This matches the lint pattern (e.g., "go:golangci-lint")
+				// This matches the lint pattern (e.g., "go:go-lint")
 				componentWithBuilder := componentName + ":" + handlerName
 
 				work := orchestrator.ComponentWork{
@@ -87,9 +96,11 @@ func FlattenModulesToComponentWork(ctx *cmdframework.ExecutionContext) [][]orche
 					Component:     componentWithBuilder,
 					ComponentType: compTypeName,
 					Handler:       handlerName,
+					IsContainer:   ch.Handler.IsContainer(),
 					Weight:        weight,
 					BuildAfter:    buildAfter,
 					Index:         globalIndex,
+					Cached:        isCached,
 				}
 
 				layerWork = append(layerWork, work)

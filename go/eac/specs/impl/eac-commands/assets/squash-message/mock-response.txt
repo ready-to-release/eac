@@ -1,9 +1,21 @@
-feat(test-module): implement comprehensive testing features
-
-Auditor-Summary: Added complete test module functionality with multiple features.
-
-Implemented feature 1 and feature 2 to provide comprehensive testing
-capabilities. The changes enable better test coverage and improve
-overall code quality.
-
-Changes: 2 files, +10 insertions, -0 deletions
+{
+  "type": "feat",
+  "scope": "test-module",
+  "subject": "implement comprehensive testing features",
+  "body": "Implemented feature 1 and feature 2 to provide comprehensive testing capabilities. The changes enable better test coverage and improve overall code quality.",
+  "breaking": false,
+  "changes": [
+    {
+      "type": "feat",
+      "scope": "test-module",
+      "description": "add feature 1 for better test coverage"
+    },
+    {
+      "type": "feat",
+      "scope": "test-module",
+      "description": "add feature 2 for improved code quality"
+    }
+  ],
+  "modules": ["test-module"],
+  "auditor_summary": "Added complete test module functionality with multiple features for comprehensive testing."
+}

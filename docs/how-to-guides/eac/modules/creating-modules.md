@@ -9,25 +9,24 @@
 A module is a logical unit of code with:
 
 - **Moniker**: Unique identifier (e.g., `eac-core`, `my-service`)
-- **Type**: Classification that provides defaults (e.g., `go`, `container`, `typescript`, `static`)
+- **Type**: Component type that provides defaults (e.g., `go-cli`, `go-library`, `mkdocs-site`)
 - **Files**: Ownership boundaries (which files belong to this module)
 - **Dependencies**: Other modules this depends on
 
-## Choosing a Module Type
+## Choosing a Component Type
 
-Select the appropriate type based on your module's language:
+Select the appropriate type based on your module's purpose:
 
-| Language              | Module Type  | Build Support                           | Test Support          |
-| --------------------- | ------------ | --------------------------------------- | --------------------- |
-| Go                    | `go`         | ✅ Full (cross-compile, version inject) | ✅ gotest, godog      |
-| TypeScript/JavaScript | `typescript` | ✅ npm, tsc                             | ✅ mocha, cucumber-js |
-| Any (containerized)   | `container`  | ✅ Docker buildx                        | Depends on container  |
-| Documentation         | `docs`       | ✅ MkDocs                               | ❌ No tests           |
-| None (static files)   | `static`     | ❌ No build                             | ❌ No tests           |
+| Purpose               | Component Type  | Build Support                           | Test Support          |
+| --------------------- | --------------- | --------------------------------------- | --------------------- |
+| Go CLI application    | `go-cli`        | ✅ Full (cross-compile, version inject) | ✅ gotest, godog      |
+| Go library            | `go-library`    | ✅ Go module                            | ✅ gotest, godog      |
+| Go commands library   | `go-commands`   | ✅ Go module with CLI wrapper           | ✅ gotest, godog      |
+| Documentation site    | `mkdocs-site`   | ✅ MkDocs HTML                          | ❌ No tests           |
+| R2R extension         | `r2r-extension` | ✅ Docker buildx                        | Depends on container  |
+| Configuration files   | `configuration` | ❌ No build                             | ❌ No tests           |
 
-**For other languages** (Python, Rust, Java): Use `container` type with a Dockerfile that builds your code.
-
-See [Component Types Reference](../../../reference/eac/architecture/component-types.md) for detailed language support and configuration options.
+See [Component Types Reference](../../../reference/eac/architecture/component-types.md) for all available types and configuration options.
 
 ## Quick Start
 
@@ -37,7 +36,7 @@ Add a module to `.r2r/eac/repository.yml`:
 modules:
   - moniker: my-service
     name: My Service
-    type: go
+    type: go-cli
     description: Core business logic service
     files:
       root: src/my-service
@@ -58,7 +57,7 @@ r2r eac get files my-service   # Show files owned by module
 modules:
   - moniker: my-module        # Required: unique identifier
     name: My Module           # Required: human-readable name
-    type: go                  # Required: module type (go, container, typescript, static)
+    type: go-library          # Required: component type
     files:
       root: src/my-module     # Required: root directory
 ```
@@ -69,7 +68,7 @@ modules:
 modules:
   - moniker: my-service
     name: My Service
-    type: go
+    type: go-cli
     description: API service for user management
 
     depends_on:               # Other modules this depends on
@@ -114,16 +113,18 @@ modules:
         test_impl: "go/eac/specs/impl/my-service"
 ```
 
-## Module Types
+## Component Types
 
-The unified type system uses four base types. Behavior is determined by per-module artifact definitions:
+Component types define build behavior and defaults for modules:
 
-| Type         | Description                              | Capabilities            |
-| ------------ | ---------------------------------------- | ----------------------- |
-| `go`         | Go module (library, executable, or test) | go_module               |
-| `container`  | Docker container module                  | buildx                  |
-| `typescript` | TypeScript/npm module                    | npm_package, typescript |
-| `static`     | Static files (no build)                  | none                    |
+| Type            | Description                    | Capabilities                    |
+| --------------- | ------------------------------ | ------------------------------- |
+| `go-cli`        | Go CLI with cross-compilation  | go_module, executable           |
+| `go-library`    | Go library package             | go_module                       |
+| `go-commands`   | Go library with CLI wrapper    | go_module                       |
+| `mkdocs-site`   | MkDocs documentation           | documentation                   |
+| `r2r-extension` | Docker container extension     | container, buildx               |
+| `configuration` | Configuration files            | none                            |
 
 See available types:
 
@@ -232,5 +233,5 @@ r2r eac validate contracts
 | ------------------ | ------------------------------------------------------ |
 | Overlapping files  | Use `exclude` patterns or adjust ownership             |
 | Missing type       | Check component type in `component-types.yml`          |
-| Build fails        | Check `build_deps` match available system dependencies |
+| Build fails        | Check `build_deps` are available (docker, go)          |
 | Wrong files listed | Verify glob patterns and root directory                |

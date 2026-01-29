@@ -54,11 +54,11 @@ type LintModuleResult struct {
 
 // lintContext holds lint-specific state during execution.
 type lintContext struct {
-	cfg            *LintConfig
-	results        map[string]*LintModuleResult
-	skippedModules []string
-	moduleFiles    map[string][]string // For state update
-	mu             sync.Mutex          // Protects results map for concurrent access
+	cfg           *LintConfig
+	results       map[string]*LintModuleResult
+	cachedModules map[string]bool     // Modules that are up-to-date (cache hits)
+	moduleFiles   map[string][]string // For state update
+	mu            sync.Mutex          // Protects results map for concurrent access
 }
 
 // RunLintWithFramework executes lint using the cmdframework.
@@ -103,7 +103,7 @@ func lintAfterResolve(ctx *cmdframework.ExecutionContext) error {
 	lintCfg := ctx.Config.Extra["lintConfig"].(*LintConfig)
 	lctx := ctx.Config.Extra["lintContext"].(*lintContext)
 
-	// Clear lint state if --relint
+	// Clear lint state if --skip-cache
 	if lintCfg.ForceLint {
 		if err := lintstate.ClearState(ctx.WorkspaceRoot); err != nil {
 			log.Warnf("Failed to clear lint state: %v", err)
@@ -112,14 +112,18 @@ func lintAfterResolve(ctx *cmdframework.ExecutionContext) error {
 	}
 
 	// Incremental lint detection (devbox only, not CI)
-	if !environments.IsCI() && !ctx.Config.DryRun {
+	// Also run in dry-run mode to show which modules would be linted/skipped
+	if !environments.IsCI() {
 		detectIncrementalLintChanges(ctx, lctx)
 	}
 
 	return nil
 }
 
-// detectIncrementalLintChanges filters out modules that haven't changed.
+// detectIncrementalLintChanges detects which modules need relinting.
+// Instead of filtering modules from the execution plan, it stores which modules
+// are cached so the component worker can skip them with -1 (blue in TUI).
+// This keeps all modules visible and clickable in the TUI.
 func detectIncrementalLintChanges(ctx *cmdframework.ExecutionContext, lctx *lintContext) {
 	startTime := time.Now()
 
@@ -163,33 +167,39 @@ func detectIncrementalLintChanges(ctx *cmdframework.ExecutionContext, lctx *lint
 		return
 	}
 
-	// Filter execution plan to only changed modules
+	// Build set of changed modules
 	changedSet := make(map[string]bool)
 	for _, m := range changeResult.ChangedModules {
 		changedSet[m] = true
 	}
 
-	var filteredOrder []string
-	for _, m := range ctx.ExecutionPlan.ExecutionOrder {
-		if changedSet[m] {
-			filteredOrder = append(filteredOrder, m)
+	// Build set of cached modules (modules that are up-to-date)
+	// These will be skipped at the component worker level, not filtered from the plan.
+	lctx.cachedModules = make(map[string]bool)
+	var changedList []string
+	var cachedList []string
+
+	for _, moniker := range ctx.GetExecutionMonikers() {
+		if changedSet[moniker] {
+			changedList = append(changedList, moniker)
 		} else {
-			lctx.skippedModules = append(lctx.skippedModules, m)
+			lctx.cachedModules[moniker] = true
+			cachedList = append(cachedList, moniker)
 		}
 	}
-
-	ctx.ExecutionPlan.ExecutionOrder = filteredOrder
-	ctx.ExecutionPlan.Layers = [][]string{filteredOrder}
 
 	if ctx.InitSummary != nil {
 		ctx.InitSummary.SetIncremental(&initsummary.IncrementalInfo{
 			Enabled:       true,
 			DetectionTime: detectionTime,
-			Changed:       filteredOrder,
-			UpToDate:      lctx.skippedModules,
+			Changed:       changedList,
+			UpToDate:      cachedList,
 			FreshBuild:    false,
 		})
 	}
+
+	log.Debugf("Incremental lint: %d modules to lint, %d cached (will show blue in TUI)",
+		len(changedList), len(cachedList))
 }
 
 // lintAfterExecute handles post-lint tasks.
@@ -317,7 +327,7 @@ func lintWorker(ctx *cmdframework.ExecutionContext, moniker string, logWriter io
 
 // lintComponentWorker lints a single component with a specific provider.
 // This is called by the ComponentScheduler for parallel component execution.
-// The component parameter is in "compName:providerName" format (e.g., "go:golangci-lint").
+// The component parameter is in "compName:providerName" format (e.g., "go:go-lint").
 func lintComponentWorker(ctx *cmdframework.ExecutionContext, module, component string, logWriter io.Writer) int {
 	lintCfg, ok := ctx.Config.Extra["lintConfig"].(*LintConfig)
 	if !ok {
@@ -328,6 +338,16 @@ func lintComponentWorker(ctx *cmdframework.ExecutionContext, module, component s
 	if !ok {
 		output.Writeln(logWriter, "Error: lintContext not found or wrong type")
 		return 1
+	}
+
+	// Check incremental cache first - if module is cached, skip immediately (blue in TUI)
+	if lctx.cachedModules != nil && lctx.cachedModules[module] {
+		if ctx.Config.DryRun {
+			output.Writeln(logWriter, "⏭️  %s is up-to-date (would be skipped)", module)
+		} else {
+			output.Writeln(logWriter, "⏭️  Cached (unchanged)")
+		}
+		return -1 // -1 = skipped/cached = blue in TUI
 	}
 
 	cfg := config.Global()
@@ -396,6 +416,13 @@ func lintComponentWorker(ctx *cmdframework.ExecutionContext, module, component s
 		return 1
 	}
 
+	// In dry-run mode, show what would happen without actually linting
+	if ctx.Config.DryRun {
+		output.Writeln(logWriter, "🔍 %s would be linted (changed)", module)
+		output.Writeln(logWriter, "   Component: %s, Provider: %s", compName, providerName)
+		return 0
+	}
+
 	output.Writeln(logWriter, "━━━ Linting %s with %s ━━━", compName, providerName)
 
 	lintStart := time.Now()
@@ -436,9 +463,34 @@ func lintComponentWorker(ctx *cmdframework.ExecutionContext, module, component s
 		output.Writeln(logWriter, "❌ Lint failed for %s:%s with %s", module, compName, providerName)
 	} else {
 		output.Writeln(logWriter, "✅ Lint passed for %s:%s with %s", module, compName, providerName)
+
+		// Atomically update lint state for this module immediately after success
+		// This ensures interrupted lint runs preserve cache for completed modules
+		if err := updateModuleLintStateAtomic(ctx, lctx, module); err != nil {
+			log.Debugf("Failed to update lint state for %s: %v", module, err)
+		}
 	}
 
 	return exitCode
+}
+
+// updateModuleLintStateAtomic updates lint state for a single module immediately after completion.
+// This ensures interrupted lint runs preserve cache for completed modules (atomic caching).
+func updateModuleLintStateAtomic(ctx *cmdframework.ExecutionContext, lctx *lintContext, module string) error {
+	contract, exists := ctx.ModuleRegistry.Get(module)
+	if !exists {
+		return nil
+	}
+
+	// Get source files for this module
+	modulesMap := map[string]lintstate.ModuleFileGetter{module: contract}
+	moduleFiles, err := lintstate.GetModuleSourceFiles(ctx.WorkspaceRoot, modulesMap)
+	if err != nil {
+		return err
+	}
+
+	lintedModules := map[string]bool{module: true}
+	return lintstate.UpdateModuleState(ctx.WorkspaceRoot, lintedModules, moduleFiles)
 }
 
 // lintByPackages lints a module by finding applicable lint providers for its components.
@@ -640,6 +692,12 @@ func countLintIssues(jsonPath string) (int, error) {
 // generateLintManifest generates the lint manifest for a module.
 func generateLintManifest(ctx *cmdframework.ExecutionContext, moniker string, result *LintModuleResult) error {
 	outputDir := paths.LintOutputPath(ctx.WorkspaceRoot, moniker)
+
+	// Ensure output directory exists
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
+		return fmt.Errorf("failed to create output directory %s: %w", outputDir, err)
+	}
+
 	manifestPath := filepath.Join(outputDir, "lint.manifest.json")
 
 	manifest := LintManifest{

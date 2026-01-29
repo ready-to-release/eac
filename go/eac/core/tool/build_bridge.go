@@ -160,7 +160,7 @@ func (b *BuildBridge) HasHandler(name string) bool {
 }
 
 // GetHandlerForComponent returns a build handler for a component type using the resolver.
-// This uses the component-tools mapping to find the correct tool (e.g., typescript → npm-build-container).
+// This uses the component-tools mapping to find the correct tool (e.g., typescript → npm-build).
 func (b *BuildBridge) GetHandlerForComponent(componentType string) BuildHandler {
 	b.mu.RLock()
 	defer b.mu.RUnlock()

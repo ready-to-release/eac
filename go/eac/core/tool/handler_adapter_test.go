@@ -169,7 +169,7 @@ func TestToolHandlerAdapter_ListArtifacts(t *testing.T) {
 
 func TestLintHandlerAdapter_Lint(t *testing.T) {
 	tool := &ToolDefinition{
-		ID:     "golangci-lint",
+		ID:     "go-lint",
 		Type:   ToolTypeSystem,
 		Binary: "golangci-lint",
 		Args:   []string{"run"},
@@ -223,14 +223,14 @@ func TestLintHandlerAdapter_Lint(t *testing.T) {
 
 func TestLintHandlerAdapter_Name(t *testing.T) {
 	tool := &ToolDefinition{
-		ID:     "golangci-lint",
+		ID:     "go-lint",
 		Type:   ToolTypeSystem,
 		Binary: "golangci-lint",
 	}
 	adapter := NewLintHandlerAdapter(tool, &mockExecutor{})
 
-	if adapter.Name() != "golangci-lint" {
-		t.Errorf("Name() = %q, want %q", adapter.Name(), "golangci-lint")
+	if adapter.Name() != "go-lint" {
+		t.Errorf("Name() = %q, want %q", adapter.Name(), "go-lint")
 	}
 }
 

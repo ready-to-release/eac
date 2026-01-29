@@ -158,7 +158,10 @@ Not all repositories are trunks. **Adjacent repositories** serve specialized pur
 
 A Kubernetes GitOps repository is a special form of IaC constrained to declarations only.
 
-The following diagram illustrates the relationship between trunk repositories and adjacent GitOps repositories. The GitOps repository maintains its own independent history that reflects the cluster state, while being triggered from the main trunk pipeline.
+The following diagram illustrates the relationship between trunk repositories and adjacent GitOps repositories.
+
+The GitOps repository maintains its own independent history that reflects the cluster state,
+while being triggered from the main trunk pipeline.
 
 ![Adjacent Repository Pattern](../../../assets/repository/adjacent.drawio.png){width=800}
 
@@ -226,7 +229,8 @@ rather than deployable module boundary, creates dependency chaos.
 
 **Avoid:**
 
-- Separate repos for frontend, backend, scripts, docs, infrastructure unless each is a distinct deployable module with proper contracts
+- Separate repos for frontend, backend, scripts, docs, infrastructure
+  unless each is a distinct deployable module with proper contracts
 - Loose gatherings of repositories with cross-repository dependencies
 - Head-to-head dependencies between repos (use pinning and stitching instead)
 

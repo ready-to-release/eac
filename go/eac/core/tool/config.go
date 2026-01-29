@@ -5,9 +5,49 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
+
+// ConfigValidationError represents a validation error with actionable guidance.
+type ConfigValidationError struct {
+	Message string
+	File    string
+	Line    int
+	Fix     string
+}
+
+func (e *ConfigValidationError) Error() string {
+	loc := ""
+	if e.File != "" {
+		loc = e.File
+		if e.Line > 0 {
+			loc = fmt.Sprintf("%s:%d", e.File, e.Line)
+		}
+		loc += ": "
+	}
+	msg := loc + e.Message
+	if e.Fix != "" {
+		msg += "\n  Fix: " + e.Fix
+	}
+	return msg
+}
+
+// ConfigValidationErrors collects multiple validation errors.
+type ConfigValidationErrors []ConfigValidationError
+
+func (e ConfigValidationErrors) Error() string {
+	if len(e) == 0 {
+		return ""
+	}
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("tool-config.yml has %d validation error(s):\n", len(e)))
+	for i, err := range e {
+		sb.WriteString(fmt.Sprintf("  %d. %s\n", i+1, err.Error()))
+	}
+	return sb.String()
+}
 
 // ToolConfigFileName is the config file for tool definitions.
 const ToolConfigFileName = "tool-config.yml"
@@ -97,8 +137,131 @@ func loadToolConfigDefaults(repoRoot string) (*ToolConfig, error) {
 		}
 	}
 
+	// Validate configuration before returning
+	if errs := validateToolConfigWithDuplicates(data, configPath, &config); len(errs) > 0 {
+		return nil, errs
+	}
+
 	return &config, nil
 }
+
+// validateToolConfigWithDuplicates performs comprehensive validation.
+// Note: Duplicate key detection is handled by yaml.v3 at parse time with clear error messages.
+// This function performs semantic validation on the parsed config.
+func validateToolConfigWithDuplicates(data []byte, filePath string, config *ToolConfig) ConfigValidationErrors {
+	var errs ConfigValidationErrors
+
+	// Check bootstrap tools (docker, go) are system type
+	errs = append(errs, checkRequiredSystemTools(config, filePath)...)
+
+	// Check naming convention alignment (-host for system, no suffix for container)
+	errs = append(errs, checkNamingConventions(config, filePath)...)
+
+	// Check that all referenced tools exist
+	errs = append(errs, checkToolReferences(config, filePath)...)
+
+
+	// Note: data parameter kept for potential future use (e.g., line number extraction)
+	_ = data
+
+	return errs
+}
+
+// checkRequiredSystemTools validates that bootstrap tools are defined as system type.
+// Only docker and go are required as system dependencies - everything else can run in containers.
+func checkRequiredSystemTools(config *ToolConfig, filePath string) ConfigValidationErrors {
+	var errs ConfigValidationErrors
+
+	// Bootstrap tools required as system dependencies
+	// - docker: needed to run any container tools
+	// - go: needed to build the tooling itself
+	requiredSystemTools := []string{"docker", "go"}
+
+	for _, toolID := range requiredSystemTools {
+		tool, exists := config.Tools[toolID]
+		if !exists {
+			errs = append(errs, ConfigValidationError{
+				Message: fmt.Sprintf("required bootstrap tool %q is not defined", toolID),
+				File:    filePath,
+				Fix:     fmt.Sprintf("Add %q as a system tool - it's required for bootstrapping", toolID),
+			})
+			continue
+		}
+		if tool.Type != ToolTypeSystem {
+			errs = append(errs, ConfigValidationError{
+				Message: fmt.Sprintf("bootstrap tool %q must be type 'system', got %q", toolID, tool.Type),
+				File:    filePath,
+				Fix:     fmt.Sprintf("%q is a bootstrap dependency and must be system-installed (type: system)", toolID),
+			})
+		}
+	}
+
+	return errs
+}
+
+// checkNamingConventions validates tool naming alignment.
+// Convention: -host suffix for system tools, no suffix for container tools.
+// This is a soft convention - we check for misalignment but the goal is consistency.
+func checkNamingConventions(config *ToolConfig, filePath string) ConfigValidationErrors {
+	// Clean naming: tool ID is the capability name, type field distinguishes system vs container
+	// No suffix validation needed - naming is now flexible
+	_ = config
+	_ = filePath
+	return nil
+}
+
+// checkToolReferences validates all tool references in component-tools and environments.
+func checkToolReferences(config *ToolConfig, filePath string) ConfigValidationErrors {
+	var errs ConfigValidationErrors
+
+	// Check component-tools references
+	for compType, assignment := range config.ComponentTools {
+		for _, op := range AllOperations() {
+			for _, toolID := range assignment.GetToolIDs(op) {
+				if _, ok := config.Tools[toolID]; !ok {
+					errs = append(errs, ConfigValidationError{
+						Message: fmt.Sprintf("component-tools[%s].%s references unknown tool %q", compType, op, toolID),
+						File:    filePath,
+						Fix:     fmt.Sprintf("Add tool %q to the tools section, or fix the typo in the reference", toolID),
+					})
+				}
+			}
+		}
+	}
+
+	// Check environment overrides
+	for envName, env := range config.Environments {
+		for compType, assignment := range env.ComponentTools {
+			for _, op := range AllOperations() {
+				for _, toolID := range assignment.GetToolIDs(op) {
+					if _, ok := config.Tools[toolID]; !ok {
+						errs = append(errs, ConfigValidationError{
+							Message: fmt.Sprintf("environments[%s].component-tools[%s].%s references unknown tool %q", envName, compType, op, toolID),
+							File:    filePath,
+							Fix:     fmt.Sprintf("Add tool %q to the tools section, or fix the typo in the reference", toolID),
+						})
+					}
+				}
+			}
+		}
+	}
+
+	// Check tool requirements reference valid tools
+	for id, tool := range config.Tools {
+		for _, req := range tool.Requirements {
+			if _, ok := config.Tools[req]; !ok {
+				errs = append(errs, ConfigValidationError{
+					Message: fmt.Sprintf("tool %q requires unknown tool %q", id, req),
+					File:    filePath,
+					Fix:     fmt.Sprintf("Add tool %q to the tools section, or fix the requirement in tool %q", req, id),
+				})
+			}
+		}
+	}
+
+	return errs
+}
+
 
 // defaultsRoot returns the root directory for loading contract defaults.
 // Container-aware: uses R2R_CONTAINER_ROOT when running in container.

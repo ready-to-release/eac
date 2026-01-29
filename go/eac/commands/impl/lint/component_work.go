@@ -20,6 +20,12 @@ func FlattenModulesToLintComponentWork(ctx *cmdframework.ExecutionContext) [][]o
 		return nil
 	}
 
+	// Get cached modules map from lint context (set during incremental detection)
+	var cachedModules map[string]bool
+	if lctx, ok := ctx.Config.Extra["lintContext"].(*lintContext); ok && lctx != nil {
+		cachedModules = lctx.cachedModules
+	}
+
 	monikers := ctx.GetExecutionMonikers()
 	if len(monikers) == 0 {
 		return nil
@@ -30,6 +36,8 @@ func FlattenModulesToLintComponentWork(ctx *cmdframework.ExecutionContext) [][]o
 	globalIndex := 0
 
 	for _, moniker := range monikers {
+		// Check if module is cached
+		isCached := cachedModules != nil && cachedModules[moniker]
 		// Get module contract
 		module, exists := ctx.ModuleRegistry.Get(moniker)
 		if !exists {
@@ -79,9 +87,11 @@ func FlattenModulesToLintComponentWork(ctx *cmdframework.ExecutionContext) [][]o
 					Component:     componentWithProvider,
 					ComponentType: compType,
 					Handler:       providerName,
+					IsContainer:   handler.IsContainer(),
 					Weight:        weight,
 					BuildAfter:    nil,
 					Index:         globalIndex,
+					Cached:        isCached,
 				}
 
 				componentWork = append(componentWork, work)

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The **drawio** category contains 6 commands for editing DrawIO diagram files embedded in PNG images.
+The **drawio** category contains commands for editing DrawIO diagram files embedded in PNG images.
 
 ## How DrawIO Editing Works
 
@@ -54,7 +54,7 @@ r2r eac drawio render --xml edited.xml --output diagram.drawio.png
 
 ## Key Features
 
-- Docker-based processing (drawio-cli container)
+- Docker-based processing (drawio container)
 - Works with DinD (Docker-in-Docker) environments
 - Supports stdin/stdout for Unix-style piping
 - Creates PNG files if they don't exist

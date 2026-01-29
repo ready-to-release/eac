@@ -17,10 +17,10 @@
 // Long:   lint                           # Lint all modules
 // Long:   lint eac-commands              # Lint a single module
 // Long:   lint --fix                     # Lint with auto-fix
-// Long:   lint --relint                  # Force full lint, ignore incremental state
+// Long:   lint --skip-cache              # Force full lint, ignore incremental state
 // Flag.fix: type=bool, usage=Auto-fix issues where possible
 // Flag.config: type=string, usage=Override lint config file path
-// Flag.relint: type=bool, usage=Force full lint, ignoring incremental state
+// Flag.skip-cache: type=bool, usage=Skip incremental cache, force full lint
 // Flag.debug: type=bool, usage=Enable debug logs to console
 // Flag.tui: type=bool, usage=Enable TUI console (default for local)
 // Flag.no-tui: type=bool, usage=Disable TUI console
@@ -29,13 +29,13 @@
 // Flag.turbo: type=bool, usage=Enable turbo mode for faster linting (increases parallelism)
 // Flag.skip-deps: type=bool, usage=Skip system dependency verification
 // Flag.timings: type=bool, usage=Show detailed timing summary
+// Flag.dry-run: type=bool, usage=Show what would be linted without running linters
 // Args: modules
 package lint
 
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 
 	// Import linters package to trigger handler registration via init().
@@ -43,6 +43,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/cmdframework"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/environment"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
@@ -68,117 +69,65 @@ func Lint() int {
 	// Detect execution environment
 	env := environment.Detect()
 
-	// Parse module monikers and flags
-	var monikers []string
-	fix := false
-	configPath := ""
-	skipDeps := false
-	sequential := false
-	turbo := false
-	forceRelint := false
-	debugMode := false
-	showTimings := false
-	useTUI := env.ShouldUseTUI()
-	tuiExplicitlySet := false
-	tuiHeight := tui.DefaultHeight
-
-	for i := 0; i < len(args); i++ {
-		arg := args[i]
-		switch arg {
-		case "--fix":
-			fix = true
-		case "--config":
-			if i+1 >= len(args) {
-				log.Errorf("Error: --config requires a value")
-				return 1
-			}
-			i++
-			configPath = args[i]
-		case "--skip-deps":
-			skipDeps = true
-		case "--sequential":
-			sequential = true
-		case "--turbo":
-			turbo = true
-		case "--relint":
-			forceRelint = true
-		case "--debug":
-			debugMode = true
-		case "--timings":
-			showTimings = true
-		case "--tui":
-			useTUI = true
-			tuiExplicitlySet = true
-		case "--no-tui":
-			useTUI = false
-			tuiExplicitlySet = true
-		case "--tui-height":
-			if i+1 >= len(args) {
-				log.Errorf("Error: --tui-height requires a value")
-				return 1
-			}
-			i++
-			var err error
-			tuiHeight, err = strconv.Atoi(args[i])
-			if err != nil || tuiHeight < 3 || tuiHeight > 20 {
-				log.Errorf("Error: --tui-height must be a number between 3 and 20")
-				return 1
-			}
-		default:
-			if strings.HasPrefix(arg, "--config=") {
-				configPath = strings.TrimPrefix(arg, "--config=")
-			} else if strings.HasPrefix(arg, "--tui-height=") {
-				heightStr := strings.TrimPrefix(arg, "--tui-height=")
-				var err error
-				tuiHeight, err = strconv.Atoi(heightStr)
-				if err != nil || tuiHeight < 3 || tuiHeight > 20 {
-					log.Errorf("Error: --tui-height must be a number between 3 and 20")
-					return 1
-				}
-			} else if strings.HasPrefix(arg, "--") {
-				log.Errorf("Error: unknown flag: %s", arg)
-				return 1
-			} else {
-				monikers = append(monikers, arg)
-			}
-		}
-	}
-
-	// Validate TUI usage
-	if err := env.ValidateTUI(tuiExplicitlySet, useTUI); err != nil {
+	// Parse shared flags using flag sets
+	shared, err := flags.ParseSharedFlagsWithEnv(flags.LintConfig(), args, env)
+	if err != nil {
 		log.Errorf("Error: %v", err)
+		printLintUsage()
 		return 1
 	}
 
-	// Validate --turbo and --sequential mutual exclusivity
-	if turbo && sequential {
-		log.Errorf("Error: --turbo and --sequential cannot be used together")
+	// Parse lint-specific flags from remaining args
+	lintFlags, unknownArgs, err := ParseLintSpecificFlags(shared.Remaining)
+	if err != nil {
+		log.Errorf("Error: %v", err)
+		printLintUsage()
+		return 1
+	}
+
+	// Check for unknown flags
+	for _, arg := range unknownArgs {
+		if strings.HasPrefix(arg, "--") {
+			log.Errorf("Error: unknown flag: %s", arg)
+			return 1
+		}
+	}
+
+	// Determine sequential mode: --roof 1 means sequential
+	sequential := shared.MaxConcurrency == 1
+
+	// Validate --turbo and sequential mutual exclusivity
+	if shared.Turbo && sequential {
+		log.Errorf("Error: --turbo and --roof 1 (sequential) cannot be used together")
 		return 1
 	}
 
 	// Create command config for framework
 	cmdCfg := &cmdframework.CommandConfig{
-		Type:         cmdframework.CommandTypeLint,
-		ActionVerb:   "Linting",
-		OutputDir:    paths.OutLintRelPath,
-		LogFileName:  "lint.log",
-		Monikers:     monikers,
-		SkipDeps:     skipDeps,
-		Sequential:   sequential,
-		Turbo:        turbo,
-		ForceRebuild: forceRelint, // Use ForceRebuild for relint flag
-		Layered:      false,       // Lint runs in parallel (no dependency ordering needed)
-		UseTUI:       useTUI,
-		TUIHeight:    tuiHeight,
-		ShowTimings:  showTimings,
-		DebugMode:    debugMode,
+		Type:           cmdframework.CommandTypeLint,
+		ActionVerb:     "Linting",
+		OutputDir:      paths.OutLintRelPath,
+		LogFileName:    "lint.log",
+		Monikers:       shared.Monikers,
+		SkipDeps:       shared.SkipDeps,
+		Sequential:     sequential,
+		Turbo:          shared.Turbo,
+		MaxConcurrency: shared.MaxConcurrency,
+		ForceRebuild:   shared.SkipCache, // Use ForceRebuild for skip-cache flag
+		DryRun:         shared.DryRun,
+		Layered:        false, // Lint runs in parallel (no dependency ordering needed)
+		UseTUI:         shared.UseTUI,
+		TUIHeight:      shared.TUIHeight,
+		TUIASCIIMode:   shared.TUIASCIIMode,
+		ShowTimings:    shared.ShowTimings,
+		DebugMode:      shared.Debug,
 	}
 
 	// Create lint-specific config
 	lintCfg := &LintConfig{
-		Fix:       fix,
-		Config:    configPath,
-		ForceLint: forceRelint,
+		Fix:       lintFlags.Fix,
+		Config:    lintFlags.ConfigPath,
+		ForceLint: shared.SkipCache,
 	}
 
 	return RunLintWithFramework(cmdCfg, lintCfg)
@@ -195,7 +144,8 @@ func printLintUsage() {
 	log.Info("Flags:")
 	log.Info("  --fix                     Auto-fix issues where possible")
 	log.Info("  --config PATH             Override lint config file path")
-	log.Info("  --relint                  Force full lint, ignore incremental state")
+	log.Info("  --skip-cache              Skip incremental cache, force full lint")
+	log.Info("  --dry-run                 Show what would be linted without running linters")
 	log.Info("  --turbo                   Enable turbo mode for faster linting (increases parallelism)")
 	log.Info("  --sequential              Run lints sequentially (default: parallel)")
 	log.Info("  --skip-deps               Skip system dependency verification")
@@ -210,5 +160,5 @@ func printLintUsage() {
 	log.Info("  lint                      # Lint all modules")
 	log.Info("  lint eac-commands         # Lint a single module")
 	log.Info("  lint --fix                # Lint with auto-fix")
-	log.Info("  lint --relint             # Force full lint")
+	log.Info("  lint --skip-cache         # Force full lint")
 }

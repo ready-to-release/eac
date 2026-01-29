@@ -104,10 +104,33 @@ func detectLocalChanges(workspaceRoot string, requestedModules []string) (*Local
 		}
 	}
 
+	// Debug: print module patterns
+	if os.Getenv("DEBUG_CACHE_CMD") != "" {
+		for moniker, mod := range modulesMap {
+			patterns := mod.GetGlobPatterns()
+			fmt.Fprintf(os.Stderr, "[DEBUG cmd] %s patterns=%v\n", moniker, patterns)
+		}
+	}
+
+	// Get files before calling detection to show what's being discovered
+	if os.Getenv("DEBUG_CACHE_CMD") != "" {
+		moduleFiles, err := buildstate.GetModuleSourceFiles(workspaceRoot, modulesMap)
+		if err == nil {
+			for moniker, files := range moduleFiles {
+				fmt.Fprintf(os.Stderr, "[DEBUG cmd] %s files=%v\n", moniker, files)
+			}
+		}
+	}
+
 	// Use shared detection function
 	changed, upToDate, reasons, isFresh, detectionTime, err := buildstate.DetectChangesForModules(workspaceRoot, modulesMap)
 	if err != nil {
 		return nil, err
+	}
+
+	// Debug: print results
+	if os.Getenv("DEBUG_CACHE_CMD") != "" {
+		fmt.Fprintf(os.Stderr, "[DEBUG cmd] changed=%v upToDate=%v reasons=%v\n", changed, upToDate, reasons)
 	}
 
 	return &LocalChangedModulesResult{

@@ -29,6 +29,8 @@
 // Flag.tui-height: type=int, default=8, usage=Set TUI console height (3-20)
 // Flag.sequential: type=bool, default=false, usage=Run scans sequentially instead of in parallel
 // Flag.turbo: type=bool, default=false, usage=Enable turbo mode for faster scanning (increases parallelism)
+// Flag.skip-cache: type=bool, default=false, usage=Skip incremental cache, force full scan
+// Flag.skip-deps: type=bool, default=false, usage=Skip system dependency verification (trivy, semgrep, etc.)
 // HasSideEffects: false
 // Args: modules
 package scan
@@ -36,13 +38,12 @@ package scan
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/scan/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/cmdframework"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/environment"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 
@@ -59,23 +60,6 @@ func init() {
 	registry.Register(Scan)
 }
 
-// scanArgs holds parsed arguments for the scan command.
-type scanArgs struct {
-	Monikers         []string
-	Scanners         []internal.ScannerType
-	Debug            bool
-	Sequential       bool
-	Turbo            bool
-	UseTUI           bool
-	TUIHeight        int
-	TUIExplicitlySet bool
-	// Scanner-specific options
-	SBOMFormat         string              // SBOM format (cyclonedx, spdx, etc.)
-	VulnSeverities     []internal.Severity // Vuln severity filter
-	SemgrepConfig      string              // SAST config
-	ComplianceStandard string              // Compliance standard
-}
-
 // Scan command entry point.
 func Scan() int {
 	args := os.Args[2:] // Skip program name and "scan"
@@ -86,167 +70,75 @@ func Scan() int {
 		return 0
 	}
 
-	// Parse arguments (empty args = scan all modules with defaults)
-	parsed, err := parseArgs(args)
+	// Detect execution environment
+	env := environment.Detect()
+
+	// Parse scan-specific flags FIRST (before shared flags)
+	// This ensures --scanner <value> is consumed before shared parsing
+	// separates the value into positional args
+	scanFlags, remainingAfterScan, err := ParseScanSpecificFlags(args)
 	if err != nil {
 		log.Errorf("Error: %v", err)
 		printScanUsage()
 		return 1
 	}
 
-	// Validate TUI usage
-	env := environment.Detect()
-	if err := env.ValidateTUI(parsed.TUIExplicitlySet, parsed.UseTUI); err != nil {
+	// Parse shared flags from remaining args
+	shared, err := flags.ParseSharedFlagsWithEnv(flags.ScanConfig(), remainingAfterScan, env)
+	if err != nil {
 		log.Errorf("Error: %v", err)
+		printScanUsage()
 		return 1
 	}
 
-	// Validate --turbo and --sequential mutual exclusivity
-	if parsed.Turbo && parsed.Sequential {
-		log.Errorf("Error: --turbo and --sequential cannot be used together")
-		return 1
+	// Check for unknown flags
+	for _, arg := range shared.Remaining {
+		if strings.HasPrefix(arg, "--") {
+			log.Errorf("Error: unknown flag: %s", arg)
+			return 1
+		}
 	}
 
-	// Turbo mode is handled by orchestrator via cmdCfg.Turbo
+	// Determine sequential mode: --roof 1 means sequential
+	sequential := shared.MaxConcurrency == 1
+
+	// Validate --turbo and sequential mutual exclusivity
+	if shared.Turbo && sequential {
+		log.Errorf("Error: --turbo and --roof 1 (sequential) cannot be used together")
+		return 1
+	}
 
 	// Create command config
 	cmdCfg := &cmdframework.CommandConfig{
-		Type:        cmdframework.CommandTypeScan,
-		ActionVerb:  "Scanning",
-		OutputDir:   "out/scan",
-		LogFileName: "scan.log",
-		Monikers:    parsed.Monikers,
-		Layered:     false, // Scan uses parallel execution
-		Sequential:  parsed.Sequential,
-		Turbo:       parsed.Turbo,
-		UseTUI:      parsed.UseTUI,
-		TUIHeight:   parsed.TUIHeight,
-		DebugMode:   parsed.Debug,
+		Type:           cmdframework.CommandTypeScan,
+		ActionVerb:     "Scanning",
+		OutputDir:      "out/scan",
+		LogFileName:    "scan.log",
+		Monikers:       shared.Monikers,
+		Layered:        false, // Scan uses parallel execution
+		Sequential:     sequential,
+		Turbo:          shared.Turbo,
+		MaxConcurrency: shared.MaxConcurrency,
+		ForceRebuild:   shared.SkipCache,
+		SkipDeps:       shared.SkipDeps,
+		UseTUI:         shared.UseTUI,
+		TUIHeight:      shared.TUIHeight,
+		TUIASCIIMode:   shared.TUIASCIIMode,
+		DebugMode:      shared.Debug,
+		ShowTimings:    shared.ShowTimings,
+		DryRun:         shared.DryRun,
 	}
 
 	// Create multi-scanner config
 	multiCfg := &MultiScanConfig{
-		Scanners:           parsed.Scanners,
-		SBOMFormat:         parsed.SBOMFormat,
-		VulnSeverities:     parsed.VulnSeverities,
-		SemgrepConfig:      parsed.SemgrepConfig,
-		ComplianceStandard: parsed.ComplianceStandard,
+		Scanners:           scanFlags.Scanners,
+		SBOMFormat:         scanFlags.SBOMFormat,
+		VulnSeverities:     scanFlags.VulnSeverities,
+		SemgrepConfig:      scanFlags.SemgrepConfig,
+		ComplianceStandard: scanFlags.ComplianceStandard,
 	}
 
 	return RunMultiScan(cmdCfg, multiCfg)
-}
-
-// parseArgs parses command line arguments.
-func parseArgs(args []string) (*scanArgs, error) {
-	env := environment.Detect()
-	parsed := &scanArgs{
-		UseTUI:             env.ShouldUseTUI(),
-		TUIHeight:          tui.DefaultHeight,
-		SBOMFormat:         "cyclonedx",
-		SemgrepConfig:      "auto",
-		ComplianceStandard: "k8s-cis",
-	}
-
-	for i := 0; i < len(args); i++ {
-		arg := args[i]
-		switch arg {
-		case "--scanner":
-			if i+1 >= len(args) {
-				return nil, fmt.Errorf("--scanner requires a value")
-			}
-			i++
-			scanners, err := parseScannerList(args[i])
-			if err != nil {
-				return nil, err
-			}
-			parsed.Scanners = scanners
-		case "--format":
-			if i+1 >= len(args) {
-				return nil, fmt.Errorf("--format requires a value")
-			}
-			i++
-			parsed.SBOMFormat = args[i]
-		case "--severity":
-			if i+1 >= len(args) {
-				return nil, fmt.Errorf("--severity requires a value")
-			}
-			i++
-			severities, err := parseSeverityList(args[i])
-			if err != nil {
-				return nil, err
-			}
-			parsed.VulnSeverities = severities
-		case "--config":
-			if i+1 >= len(args) {
-				return nil, fmt.Errorf("--config requires a value")
-			}
-			i++
-			parsed.SemgrepConfig = args[i]
-		case "--compliance":
-			if i+1 >= len(args) {
-				return nil, fmt.Errorf("--compliance requires a value")
-			}
-			i++
-			parsed.ComplianceStandard = args[i]
-		case "--debug", "-d":
-			parsed.Debug = true
-		case "--sequential":
-			parsed.Sequential = true
-		case "--turbo":
-			parsed.Turbo = true
-		case "--tui":
-			parsed.UseTUI = true
-			parsed.TUIExplicitlySet = true
-		case "--no-tui":
-			parsed.UseTUI = false
-			parsed.TUIExplicitlySet = true
-		case "--tui-height":
-			if i+1 >= len(args) {
-				return nil, fmt.Errorf("--tui-height requires a value")
-			}
-			i++
-			height, err := strconv.Atoi(args[i])
-			if err != nil || height < 3 || height > 20 {
-				return nil, fmt.Errorf("--tui-height must be a number between 3 and 20")
-			}
-			parsed.TUIHeight = height
-		default:
-			// Handle --flag=value syntax
-			if strings.HasPrefix(arg, "--scanner=") {
-				scanners, err := parseScannerList(strings.TrimPrefix(arg, "--scanner="))
-				if err != nil {
-					return nil, err
-				}
-				parsed.Scanners = scanners
-			} else if strings.HasPrefix(arg, "--format=") {
-				parsed.SBOMFormat = strings.TrimPrefix(arg, "--format=")
-			} else if strings.HasPrefix(arg, "--severity=") {
-				severities, err := parseSeverityList(strings.TrimPrefix(arg, "--severity="))
-				if err != nil {
-					return nil, err
-				}
-				parsed.VulnSeverities = severities
-			} else if strings.HasPrefix(arg, "--config=") {
-				parsed.SemgrepConfig = strings.TrimPrefix(arg, "--config=")
-			} else if strings.HasPrefix(arg, "--compliance=") {
-				parsed.ComplianceStandard = strings.TrimPrefix(arg, "--compliance=")
-			} else if strings.HasPrefix(arg, "--tui-height=") {
-				heightStr := strings.TrimPrefix(arg, "--tui-height=")
-				height, err := strconv.Atoi(heightStr)
-				if err != nil || height < 3 || height > 20 {
-					return nil, fmt.Errorf("--tui-height must be a number between 3 and 20")
-				}
-				parsed.TUIHeight = height
-			} else if strings.HasPrefix(arg, "--") {
-				return nil, fmt.Errorf("unknown flag: %s", arg)
-			} else {
-				// Assume it's a module moniker
-				parsed.Monikers = append(parsed.Monikers, arg)
-			}
-		}
-	}
-
-	return parsed, nil
 }
 
 // parseScannerList parses a comma-separated list of scanner types.
@@ -298,6 +190,8 @@ func printScanUsage() {
 	log.Info("  --scanner <types>         Scanner types to run (comma-separated)")
 	log.Info("                            Options: sbom, vuln, secrets, iac, compliance, sast, zap")
 	log.Info("  --turbo                   Enable turbo mode for faster scanning (increases parallelism)")
+	log.Info("  --skip-cache              Skip incremental cache, force full scan")
+	log.Info("  --skip-deps               Skip system dependency verification (trivy, semgrep)")
 	log.Info("  --sequential              Run scans sequentially instead of in parallel")
 	log.Info("  --debug, -d               Enable debug logging")
 	log.Info("  --tui                     Enable TUI console (default for local)")

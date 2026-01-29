@@ -35,6 +35,12 @@ type Handler interface {
 	// ValidateModule checks if a module's configuration is valid for a specific component.
 	// Returns nil if valid, or an error describing the problem.
 	ValidateModule(module *modules.ModuleContract, workspaceRoot, component string) error
+
+	// IsContainer returns true if this handler runs in a Docker container.
+	IsContainer() bool
+
+	// IsHostInstalled returns true if this handler runs using host-installed tools (not containers).
+	IsHostInstalled() bool
 }
 
 // BuildOptions contains flags for controlling the build process.
@@ -109,7 +115,7 @@ func HasHandler(name string) bool {
 
 // GetHandlersForModule returns all handlers for a module's buildable components.
 // Uses native handlers when available, falls back to tool system's resolver for
-// tools configured in component-tools mapping (e.g., npm-build-container for typescript).
+// tools configured in component-tools mapping (e.g., npm-build for typescript).
 func GetHandlersForModule(module *modules.ModuleContract) []ComponentHandler {
 	if module == nil {
 		return nil
@@ -158,7 +164,7 @@ func GetHandlersForModule(module *modules.ModuleContract) []ComponentHandler {
 		}
 
 		// Fall back to tool system's resolver which uses component-tools mapping
-		// This allows npm-build-container to be used for typescript even though
+		// This allows npm-build to be used for typescript even though
 		// component-types.yml specifies builder: npm
 		if toolHandler := tool.GlobalBuildBridge().GetHandlerForComponent(compTypeName); toolHandler != nil {
 			result = append(result, ComponentHandler{

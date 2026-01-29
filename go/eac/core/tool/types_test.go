@@ -252,8 +252,8 @@ func TestMountConfig_ResolvePlaceholders(t *testing.T) {
 
 func TestToolAssignment_GetToolID(t *testing.T) {
 	assignment := &ToolAssignment{
-		Builder: "go-system",
-		Linter:  "golangci-lint",
+		Builder: "go-builder",
+		Linter:  "go-lint",
 		Scanner: "trivy-vuln",
 		Tester:  "go-test",
 		Server:  "docs-serve",
@@ -263,8 +263,8 @@ func TestToolAssignment_GetToolID(t *testing.T) {
 		op   OperationType
 		want string
 	}{
-		{OperationBuild, "go-system"},
-		{OperationLint, "golangci-lint"},
+		{OperationBuild, "go-builder"},
+		{OperationLint, "go-lint"},
 		{OperationScan, "trivy-vuln"},
 		{OperationTest, "go-test"},
 		{OperationServe, "docs-serve"},
@@ -317,14 +317,14 @@ func TestToolConfig_Validate(t *testing.T) {
 	t.Run("valid config", func(t *testing.T) {
 		config := &ToolConfig{
 			Tools: map[string]*ToolDefinition{
-				"go-system": {
-					ID:     "go-system",
+				"go-builder": {
+					ID:     "go-builder",
 					Type:   ToolTypeSystem,
 					Binary: "go",
 				},
 			},
 			ComponentTools: map[string]*ToolAssignment{
-				"go": {Builder: "go-system"},
+				"go": {Builder: "go-builder"},
 			},
 		}
 
@@ -337,8 +337,8 @@ func TestToolConfig_Validate(t *testing.T) {
 	t.Run("invalid tool reference", func(t *testing.T) {
 		config := &ToolConfig{
 			Tools: map[string]*ToolDefinition{
-				"go-system": {
-					ID:     "go-system",
+				"go-builder": {
+					ID:     "go-builder",
 					Type:   ToolTypeSystem,
 					Binary: "go",
 				},
@@ -357,8 +357,8 @@ func TestToolConfig_Validate(t *testing.T) {
 	t.Run("invalid environment tool reference", func(t *testing.T) {
 		config := &ToolConfig{
 			Tools: map[string]*ToolDefinition{
-				"go-system": {
-					ID:     "go-system",
+				"go-builder": {
+					ID:     "go-builder",
 					Type:   ToolTypeSystem,
 					Binary: "go",
 				},
@@ -582,6 +582,7 @@ func TestToolDefinition_LocalImageTag(t *testing.T) {
 		})
 	}
 }
+
 
 func TestToolDefinition_Validate_ExternalContainerVersionPinning(t *testing.T) {
 	tests := []struct {

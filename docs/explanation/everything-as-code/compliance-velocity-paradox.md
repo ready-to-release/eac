@@ -4,7 +4,8 @@
 
 ## The Challenge
 
-The following diagram contrasts the traditional view of compliance vs. velocity (as opposing forces) with the modern Everything as Code approach that resolves this apparent paradox through automation.
+The following diagram contrasts the traditional view of compliance vs. velocity (as opposing forces)
+with the modern Everything as Code approach that resolves this apparent paradox through automation.
 
 ![Compliance-Velocity Paradox](../../assets/assisted/17-compliance-velocity-paradox.drawio.png)
 
@@ -71,7 +72,8 @@ Organizations must now navigate an increasingly complex web of regulations:
 
 **The challenge:**
 
-Each regulation demands documentation, validation, traceability, and evidence—often with overlapping but not identical requirements.
+Each regulation demands documentation, validation, traceability, and evidence—
+often with overlapping but not identical requirements.
 
 **Market pressure is accelerating:**
 

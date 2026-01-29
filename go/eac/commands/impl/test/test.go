@@ -31,7 +31,7 @@
 // Flag.no-tui: type=bool, usage=Disable TUI console (use plain output)
 // Flag.sequential: type=bool, usage=Run tests sequentially instead of parallel
 // Flag.turbo: type=bool, usage=Enable turbo mode for faster testing (increases parallelism)
-// Flag.retest: type=bool, usage=Force retest, bypassing incremental test state
+// Flag.skip-cache: type=bool, usage=Skip incremental cache, force full test run
 // Flag.tui-height: type=int, usage=Set TUI console height (3-20, default: 6)
 package test
 
@@ -42,7 +42,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -82,7 +81,7 @@ type TestConfig struct {
 	Parallel    bool
 	Turbo       bool // --turbo flag to increase parallelism
 	Roof        int  // --roof flag to limit max parallel capacity
-	ForceRetest bool // --retest flag to bypass incremental testing
+	ForceRetest bool // --skip-cache flag to bypass incremental testing
 }
 
 // TestExecutionContext holds shared state for parallel test execution.
@@ -161,121 +160,61 @@ func Test() int {
 	return RunTestWithFramework(cmdCfg, testCfg)
 }
 
-// testFlags defines valid flags for the test command
-
 // parseTestArgs parses command line arguments into TestConfig.
 func parseTestArgs(args []string) *TestConfig {
-	// Validate flags before parsing
-	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
-		log.Errorf("%v", err)
-		return nil
-	}
-
 	// Detect execution environment for TUI defaults
 	env := environment.Detect()
 
-	cfg := &TestConfig{
-		SuiteName: "", // Empty means "use default suites from config"
-		TUIHeight: tui.DefaultHeight,
-		Parallel:  true,
-		UseTUI:    env.ShouldUseTUI(), // TUI enabled by default for local console mode
-	}
-
-	tuiExplicitlySet := false
-
-	for i := 0; i < len(args); i++ {
-		arg := args[i]
-		switch {
-		case arg == "--suite":
-			if i+1 >= len(args) {
-				log.Errorf("--suite requires a suite name")
-				return nil
-			}
-			i++
-			cfg.SuiteName = args[i]
-		case arg == "--coverage":
-			cfg.Coverage = true
-		case arg == "--skip-deps":
-			cfg.SkipDeps = true
-		case arg == "--skip-depm":
-			cfg.SkipDepm = true
-		case arg == "--list-only":
-			cfg.ListOnly = true
-		case arg == "--timings":
-			cfg.ShowTimings = true
-		case arg == "--debug":
-			cfg.DebugMode = true
-		case arg == "--tui":
-			cfg.UseTUI = true
-			tuiExplicitlySet = true
-		case arg == "--no-tui":
-			cfg.UseTUI = false
-			tuiExplicitlySet = true
-		case arg == "--sequential":
-			cfg.Parallel = false
-		case arg == "--turbo":
-			cfg.Turbo = true
-		case arg == "--roof":
-			if i+1 >= len(args) {
-				log.Errorf("--roof requires a value")
-				return nil
-			}
-			i++
-			var err error
-			cfg.Roof, err = strconv.Atoi(args[i])
-			if err != nil || cfg.Roof < 1 {
-				log.Errorf("--roof must be a positive integer")
-				return nil
-			}
-		case strings.HasPrefix(arg, "--roof="):
-			roofStr := strings.TrimPrefix(arg, "--roof=")
-			var err error
-			cfg.Roof, err = strconv.Atoi(roofStr)
-			if err != nil || cfg.Roof < 1 {
-				log.Errorf("--roof must be a positive integer")
-				return nil
-			}
-		case arg == "--retest":
-			cfg.ForceRetest = true
-		case arg == "--tui-height":
-			if i+1 >= len(args) {
-				log.Errorf("--tui-height requires a value")
-				return nil
-			}
-			i++
-			var err error
-			cfg.TUIHeight, err = strconv.Atoi(args[i])
-			if err != nil || cfg.TUIHeight < 3 || cfg.TUIHeight > 20 {
-				log.Errorf("--tui-height must be a number between 3 and 20")
-				return nil
-			}
-		case strings.HasPrefix(arg, "--tui-height="):
-			heightStr := strings.TrimPrefix(arg, "--tui-height=")
-			var err error
-			cfg.TUIHeight, err = strconv.Atoi(heightStr)
-			if err != nil || cfg.TUIHeight < 3 || cfg.TUIHeight > 20 {
-				log.Errorf("--tui-height must be a number between 3 and 20")
-				return nil
-			}
-		case strings.HasPrefix(arg, "--") || strings.HasPrefix(arg, "-"):
-			log.Errorf("unknown flag: %s", arg)
-			log.Errorf("Valid flags: --suite, --coverage, --skip-deps, --skip-depm, --list-only, --timings, --debug, --tui, --no-tui, --tui-height, --sequential, --turbo, --roof, --retest")
-			return nil
-		default:
-			cfg.Monikers = append(cfg.Monikers, arg)
-		}
-	}
-
-	// Validate TUI usage in CI/container environments
-	if err := env.ValidateTUI(tuiExplicitlySet, cfg.UseTUI); err != nil {
+	// Parse shared flags using flag sets
+	shared, err := flags.ParseSharedFlagsWithEnv(flags.TestConfig(), args, env)
+	if err != nil {
 		log.Errorf("Error: %v", err)
 		return nil
 	}
 
-	// Validate --turbo and --sequential mutual exclusivity
-	if cfg.Turbo && !cfg.Parallel {
-		log.Errorf("Error: --turbo and --sequential cannot be used together")
+	// Parse test-specific flags from remaining args
+	testFlags, unknownArgs, err := ParseTestSpecificFlags(shared.Remaining)
+	if err != nil {
+		log.Errorf("Error: %v", err)
 		return nil
+	}
+
+	// Check for unknown flags
+	for _, arg := range unknownArgs {
+		if strings.HasPrefix(arg, "--") || strings.HasPrefix(arg, "-") {
+			log.Errorf("unknown flag: %s", arg)
+			log.Errorf("Valid flags: --suite, --coverage, --skip-deps, --skip-depm, --list-only, --timings, --debug, --tui, --no-tui, --tui-height, --turbo, --roof, --skip-cache, --dry-run")
+			return nil
+		}
+	}
+
+	// Determine parallel mode: --roof 1 means sequential
+	parallel := shared.MaxConcurrency != 1
+
+	// Validate --turbo and sequential mutual exclusivity
+	if shared.Turbo && !parallel {
+		log.Errorf("Error: --turbo and --roof 1 (sequential) cannot be used together")
+		return nil
+	}
+
+	cfg := &TestConfig{
+		// From shared flags
+		Monikers:    shared.Monikers,
+		SkipDeps:    shared.SkipDeps,
+		SkipDepm:    shared.SkipDepm,
+		ShowTimings: shared.ShowTimings,
+		DebugMode:   shared.Debug,
+		UseTUI:      shared.UseTUI,
+		TUIHeight:   shared.TUIHeight,
+		Turbo:       shared.Turbo,
+		Roof:        shared.MaxConcurrency,
+		ForceRetest: shared.SkipCache,
+		Parallel:    parallel,
+
+		// From test-specific flags
+		SuiteName: testFlags.SuiteName,
+		Coverage:  testFlags.Coverage,
+		ListOnly:  testFlags.ListOnly,
 	}
 
 	return cfg
@@ -597,7 +536,7 @@ func printTestUsage() {
 	log.Info("  --turbo                Enable turbo mode for faster testing (increases parallelism)")
 	log.Info("  --roof N               Limit max parallel capacity to N (default: auto-detect from CPU/RAM)")
 	log.Info("  --sequential           Run tests sequentially instead of in parallel")
-	log.Info("  --retest               Force full test run, bypassing incremental detection")
+	log.Info("  --skip-cache           Skip incremental cache, force full test run")
 	log.Info("")
 	log.Info("Available suites:")
 	log.Info("  unit                     L0-L1 tests (fast unit tests)")

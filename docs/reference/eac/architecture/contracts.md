@@ -124,11 +124,6 @@ modules:
 
 ## Component Types Contract
 
-!!! note "Replaces Module Types"
-
-    The component types system replaces the old module types. Modules now contain multiple
-    components, each with its own type. See [Component Types Reference](./component-types.md).
-
 **File**: `contracts/eac-core/0.1.0/defaults/component-types.yml`
 
 **Purpose**: Define component types with build behavior, file patterns, and tooling
@@ -204,7 +199,7 @@ build:
 
 **Pattern Variables**: `{moniker}`, `{os}`, `{arch}`, `{ext}`, `{root}`
 
-### Module Type Families
+### Component Type Families
 
 **Go Family**:
 
@@ -282,7 +277,6 @@ environments:
     description: "Kubernetes-based production-like test environment"
     level: "L3"
     type: "plte"
-    system_deps: [kubectl, helm]
 ```
 
 ### Key Fields
@@ -294,17 +288,16 @@ environments:
 | `level`       | string | ✅       | Test level: L0, L1, L2, L3, L4                    |
 | `type`        | string | ✅       | Environment type (unit, docker, plte, production) |
 | `description` | string | ❌       | Detailed environment description                  |
-| `system_deps` | array  | ❌       | Required system dependencies                      |
 
 ### Testing Pyramid Levels
 
-| Level  | Speed     | Execution Time | Type       | System Deps   | Use Cases                          |
-| ------ | --------- | -------------- | ---------- | ------------- | ---------------------------------- |
-| **L0** | Very Fast | < 100ms        | unit       | None          | Pure logic, no I/O                 |
-| **L1** | Fast      | 100ms - 1s     | unit       | go            | Component tests, mocked deps       |
-| **L2** | Moderate  | 1s - 30s       | docker     | docker        | Service integration, API contracts |
-| **L3** | Slow      | 30s - 5min     | plte       | kubectl, helm | End-to-end tests, PLTE             |
-| **L4** | Variable  | Variable       | production | kubectl, helm | Smoke tests, production            |
+| Level  | Speed     | Execution Time | Type       | Use Cases                          |
+| ------ | --------- | -------------- | ---------- | ---------------------------------- |
+| **L0** | Very Fast | < 100ms        | unit       | Pure logic, no I/O                 |
+| **L1** | Fast      | 100ms - 1s     | unit       | Component tests, mocked deps       |
+| **L2** | Moderate  | 1s - 30s       | docker     | Service integration, API contracts |
+| **L3** | Slow      | 30s - 5min     | plte       | End-to-end tests, PLTE             |
+| **L4** | Variable  | Variable       | production | Smoke tests, production            |
 
 **Recommended Distribution**: 54% L0, 30% L1, 10% L2, 5% L3, 1% L4
 
@@ -327,7 +320,6 @@ environments:
   name: "L0 Environment 01 - In-process Unit Tests"
   level: "L0"
   type: "unit"
-  system_deps: []
 ```
 
 **L2 (Docker)**:
@@ -337,7 +329,6 @@ environments:
   name: "Local Environment 01 - Docker Container"
   level: "L2"
   type: "docker"
-  system_deps: [docker]
 ```
 
 **L3 (PLTE)**:
@@ -347,7 +338,6 @@ environments:
   name: "PLTE Environment 01 - Kubernetes"
   level: "L3"
   type: "plte"
-  system_deps: [kubectl, helm]
 ```
 
 ---
@@ -508,8 +498,8 @@ modules:
 contracts/
 └── eac-core/
     └── 0.1.0/
-        ├── modules.schema.json
-        ├── module-types.schema.json
+        ├── repository.schema.json
+        ├── component-types.schema.json
         ├── environments.schema.json
         └── ...
 ```
@@ -565,7 +555,7 @@ r2r eac get-config              # Config JSON
     prefix: v
 ```
 
-### Module Type Pattern
+### Component Type Pattern
 
 ```yaml
 # Custom type template
@@ -594,7 +584,6 @@ r2r eac get-config              # Config JSON
 - moniker: local01
   level: "L2"
   type: "docker"
-  system_deps: [docker]
 ```
 
 ### Test Suite Pattern

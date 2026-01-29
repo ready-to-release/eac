@@ -56,7 +56,7 @@ modules:
 
 ### Automation Commands
 
-100+ commands for common tasks:
+Many commands for common tasks:
 
 ```bash
 r2r eac build <module>      # Build modules

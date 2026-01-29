@@ -3,12 +3,9 @@
 package buildstate
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,8 +13,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bmatcuk/doublestar/v4"
+
+	"github.com/ready-to-release/eac/go/eac/core/hash"
+	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
+
+var log = logging.C()
 
 // ErrNoState is returned when no build state file exists (fresh build).
 var ErrNoState = errors.New("no build state file")
@@ -86,7 +89,8 @@ func Load(workspaceRoot string) (*State, error) {
 
 	var state State
 	if err := json.Unmarshal(data, &state); err != nil {
-		return nil, fmt.Errorf("failed to parse build state: %w", err)
+		// Treat corrupted state as fresh build - return ErrNoState to trigger rebuild
+		return nil, ErrNoState
 	}
 
 	return &state, nil
@@ -171,20 +175,28 @@ func DetectChanges(workspaceRoot string, moduleFiles map[string][]string) (*Chan
 		currentCommit == prevState.Commit &&
 		currentUncommittedHash == prevState.UncommittedHash
 
+	// DEBUG: Log git state comparison
+	log.Debugf("[TUI-CACHE] Git state: current=%s prev=%s match=%v", currentCommit, prevState.Commit, currentCommit == prevState.Commit)
+	log.Debugf("[TUI-CACHE] Uncommitted hash: current=%s prev=%s match=%v", currentUncommittedHash, prevState.UncommittedHash, currentUncommittedHash == prevState.UncommittedHash)
+
 	// Check if fast path is possible (all modules must have prior state)
 	canUseFastPath := gitStateMatches
 	if canUseFastPath {
 		for moniker := range moduleFiles {
 			if _, exists := prevState.Modules[moniker]; !exists {
+				log.Debugf("[TUI-CACHE] Fast path blocked: module %s not in previous state", moniker)
 				canUseFastPath = false
 				break
 			}
 		}
 	}
 
+	log.Debugf("[TUI-CACHE] Fast path: gitStateMatches=%v canUseFastPath=%v", gitStateMatches, canUseFastPath)
+
 	if canUseFastPath {
 		// Fast path: git state unchanged, all modules have prior hashes
 		// Trust that files haven't changed
+		log.Debugf("[TUI-CACHE] Using fast path - all %d modules up to date", len(moduleFiles))
 		for moniker := range moduleFiles {
 			result.UpToDateModules = append(result.UpToDateModules, moniker)
 		}
@@ -195,6 +207,7 @@ func DetectChanges(workspaceRoot string, moduleFiles map[string][]string) (*Chan
 
 	// Slow path: Hash source files for each module and compare
 	// This handles: branch switches, git reset, stash/unstash, cherry-pick, etc.
+	log.Debugf("[TUI-CACHE] Using slow path - hashing %d modules", len(moduleFiles))
 	for moniker, files := range moduleFiles {
 		prevModState, exists := prevState.Modules[moniker]
 
@@ -215,6 +228,7 @@ func DetectChanges(workspaceRoot string, moduleFiles map[string][]string) (*Chan
 		if currentHash != prevModState.SourceHash {
 			result.ChangedModules = append(result.ChangedModules, moniker)
 			result.ChangeReasons[moniker] = "source files changed"
+			log.Debugf("[TUI-CACHE] Hash mismatch for %s: current=%s prev=%s", moniker, currentHash[:16], prevModState.SourceHash[:16])
 		} else {
 			result.UpToDateModules = append(result.UpToDateModules, moniker)
 		}
@@ -323,62 +337,37 @@ func getUncommittedFiles(workspaceRoot string) ([]string, error) {
 }
 
 // hashUncommittedFiles creates a hash representing the uncommitted state.
+// Delegates to core/hash package for the actual hashing.
 func hashUncommittedFiles(workspaceRoot string, files []string) string {
-	h := sha256.New()
-
-	// Sort for deterministic hash
-	sorted := make([]string, len(files))
-	copy(sorted, files)
-	sort.Strings(sorted)
-
-	for _, file := range sorted {
-		path := filepath.Join(workspaceRoot, file)
-		f, err := os.Open(path)
-		if err != nil {
-			// File might be deleted - include that in hash
-			h.Write([]byte(file + ":deleted\n"))
-			continue
-		}
-		if _, err := io.Copy(h, f); err != nil {
-			// Hash partial content on error - still produces unique result
-			h.Write([]byte(file + ":error\n"))
-		}
-		f.Close()
-	}
-
-	return hex.EncodeToString(h.Sum(nil))[:16] // Short hash is sufficient
+	return hash.UncommittedState(workspaceRoot, files)
 }
 
 // hashModuleFiles computes a hash of all source files for a module.
+// Delegates to core/hash package for the actual hashing.
 func hashModuleFiles(workspaceRoot string, files []string) (string, error) {
-	h := sha256.New()
-
-	// Sort for deterministic hash
-	sorted := make([]string, len(files))
-	copy(sorted, files)
-	sort.Strings(sorted)
-
-	for _, file := range sorted {
-		path := filepath.Join(workspaceRoot, file)
-		f, err := os.Open(path)
-		if err != nil {
-			return "", fmt.Errorf("failed to open %s: %w", file, err)
-		}
-
-		// Include filename in hash (so renames are detected)
-		h.Write([]byte(file + "\n"))
-		if _, err := io.Copy(h, f); err != nil {
-			f.Close()
-			return "", fmt.Errorf("failed to read %s: %w", file, err)
-		}
-		f.Close()
+	// Debug output if enabled
+	debugHash := os.Getenv("DEBUG_CACHE_HASH") != ""
+	if debugHash {
+		sorted := make([]string, len(files))
+		copy(sorted, files)
+		sort.Strings(sorted)
+		fmt.Fprintf(os.Stderr, "[DEBUG hashModuleFiles] workspace=%s, files=%v\n", workspaceRoot, sorted)
 	}
 
-	return hex.EncodeToString(h.Sum(nil)), nil
+	result, err := hash.Files(workspaceRoot, files)
+	if err != nil {
+		return "", err
+	}
+
+	if debugHash {
+		fmt.Fprintf(os.Stderr, "[DEBUG hashModuleFiles] result hash=%s\n", result)
+	}
+	return result, nil
 }
 
 // ExpandGlobPatterns expands glob patterns to actual file paths
 // Returns files relative to workspaceRoot.
+// Supports ** (doublestar) patterns for recursive directory matching.
 func ExpandGlobPatterns(workspaceRoot string, patterns []string) ([]string, error) {
 	var result []string
 	seen := make(map[string]bool)
@@ -390,8 +379,8 @@ func ExpandGlobPatterns(workspaceRoot string, patterns []string) ([]string, erro
 			absPattern = filepath.Join(workspaceRoot, pattern)
 		}
 
-		// Expand glob
-		matches, err := filepath.Glob(absPattern)
+		// Use doublestar for glob expansion to support ** patterns
+		matches, err := doublestar.FilepathGlob(absPattern)
 		if err != nil {
 			return nil, fmt.Errorf("invalid glob pattern %s: %w", pattern, err)
 		}

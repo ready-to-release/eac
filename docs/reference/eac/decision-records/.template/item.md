@@ -8,8 +8,6 @@
 - [ ] Deprecated
 - [ ] Superseded
 
-**Date**: YYYY-MM-DD
-
 ---
 
 ## Context

@@ -36,7 +36,7 @@ type Status struct {
 	// Detailed lock tracking info (from locktracker.Registry)
 	Locks []LockStatus // Individual lock states
 
-	// Container tools (e.g., "mkdocs", "golangci-lint")
+	// Container tools (e.g., "mkdocs-build", "go-lint")
 	ActiveContainers []string
 	UsedContainers   []string
 	// System tools (e.g., "go", "docker")
@@ -76,6 +76,11 @@ type SummaryDataMsg struct {
 	Data *SummaryData
 }
 
+// InitSummaryMsg delivers init summary for structured display.
+type InitSummaryMsg struct {
+	Summary *InitSummary
+}
+
 // ModuleStartMsg is sent when a module starts execution (for tab tracking).
 // This creates the tab in pending state (scheduled but waiting for slot).
 type ModuleStartMsg struct {
@@ -91,8 +96,10 @@ type ModuleRunningMsg struct {
 
 // ModuleCompleteMsg is sent when a module completes execution.
 type ModuleCompleteMsg struct {
-	Moniker  string
-	ExitCode int
+	Moniker   string
+	ExitCode  int
+	CacheTime time.Time // For cached modules: when the artifact was last built (zero = unknown)
+	LogPath   string    // Path to build log file (if available)
 }
 
 // TabSelectMsg is sent when user clicks on a tab.

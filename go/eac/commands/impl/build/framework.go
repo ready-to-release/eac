@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/builders"
+	"github.com/ready-to-release/eac/go/eac/commands/impl/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/internal/artifacts"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/cmdframework"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/environment"
@@ -18,6 +19,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/buildstate"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
@@ -90,8 +92,9 @@ func (c *BuildConfig) ResolveReproducible() bool {
 
 // buildContext holds build-specific state during execution.
 type buildContext struct {
-	cfg            *BuildConfig
-	skippedModules []string
+	cfg           *BuildConfig
+	cachedModules map[string]bool      // Modules that are up-to-date (cache hits)
+	cacheTimes    map[string]time.Time // When cached modules were last built
 }
 
 // RunBuildWithFramework executes build using the cmdframework.
@@ -127,7 +130,19 @@ func RunBuildWithFramework(cmdCfg *cmdframework.CommandConfig, buildCfg *BuildCo
 
 // buildAfterInit handles build-specific initialization after framework init.
 func buildAfterInit(ctx *cmdframework.ExecutionContext) error {
-	// Nothing special needed for now
+	// Build init summary early so we can set incremental info in AfterResolve
+	buildCfg := ctx.Config.Extra["buildConfig"].(*BuildConfig)
+	summary := initsummary.New("build").
+		SetRequest(ctx.Config.Monikers, ctx.GetExecutionMonikers()).
+		SetExecutionContext(string(logging.GetExecutionContext())).
+		SetFlags(initsummary.Flags{
+			DebugMode: ctx.Config.DebugMode,
+			UseTUI:    ctx.Config.UseTUI,
+			TidyFirst: buildCfg.TidyFirst,
+		}).
+		SetOutputDir(paths.OutBuildRelPath)
+
+	ctx.InitSummary = summary
 	return nil
 }
 
@@ -175,14 +190,23 @@ func buildAfterResolve(ctx *cmdframework.ExecutionContext) error {
 	}
 
 	// Incremental build detection (devbox only)
-	if !ctx.Config.ForceRebuild && !ctx.Config.DryRun && !buildCfg.UseExistingDepm {
+	// Also run in dry-run mode to show which modules would be built/skipped
+	if !ctx.Config.ForceRebuild && !buildCfg.UseExistingDepm {
 		detectIncrementalChanges(ctx, bctx)
+
+		// Pass cache times to orchestrator for TUI display
+		if len(bctx.cacheTimes) > 0 && ctx.Orchestrator != nil {
+			ctx.Orchestrator.SetCacheTimes(bctx.cacheTimes)
+		}
 	}
 
 	return nil
 }
 
 // detectIncrementalChanges performs incremental build detection.
+// Instead of filtering modules from the execution plan, it stores which modules
+// are cached so the component worker can skip them with -1 (blue in TUI).
+// This keeps all modules visible and clickable in the TUI.
 func detectIncrementalChanges(ctx *cmdframework.ExecutionContext, bctx *buildContext) {
 	startTime := time.Now()
 
@@ -206,11 +230,16 @@ func detectIncrementalChanges(ctx *cmdframework.ExecutionContext, bctx *buildCon
 		return
 	}
 
+	log.Debugf("[TUI-CACHE] DetectChanges result: FreshBuild=%v Changed=%d UpToDate=%d",
+		changeResult.FreshBuild, len(changeResult.ChangedModules), len(changeResult.UpToDateModules))
+	for moniker, reason := range changeResult.ChangeReasons {
+		log.Debugf("[TUI-CACHE] Changed: %s -> %s", moniker, reason)
+	}
+
 	detectionTime := time.Since(startTime)
 
 	if changeResult.FreshBuild {
-		log.Debugf("Fresh build detected, no incremental filtering")
-		// Report fresh build in init summary
+		log.Debugf("Fresh build detected, all modules will build")
 		if ctx.InitSummary != nil {
 			ctx.InitSummary.SetIncremental(&initsummary.IncrementalInfo{
 				Enabled:       true,
@@ -221,48 +250,71 @@ func detectIncrementalChanges(ctx *cmdframework.ExecutionContext, bctx *buildCon
 		return
 	}
 
-	// Filter execution plan to only changed modules
+	// Build set of changed modules (modules that need rebuilding)
 	changedSet := make(map[string]bool)
 	for _, m := range changeResult.ChangedModules {
 		changedSet[m] = true
 	}
 
+	// Build set of cached modules (modules that are up-to-date)
+	// These will be skipped at the component worker level, not filtered from the plan.
+	// This keeps all modules visible in the TUI.
+	bctx.cachedModules = make(map[string]bool)
+	bctx.cacheTimes = make(map[string]time.Time)
 	buildCfg := bctx.cfg
-	var filteredOrder []string
-	var filteredLayers [][]string
+	var changedList []string
+	var cachedList []string
 
-	for _, layer := range ctx.ExecutionPlan.Layers {
-		var filteredLayer []string
-		for _, m := range layer {
-			// Include if changed or explicitly requested
-			if changedSet[m] || buildCfg.RequestedSet[m] {
-				filteredLayer = append(filteredLayer, m)
-				filteredOrder = append(filteredOrder, m)
-			} else {
-				bctx.skippedModules = append(bctx.skippedModules, m)
-			}
+	// Load state to get BuiltAt times for cached modules
+	state, stateErr := buildstate.Load(ctx.WorkspaceRoot)
+
+	for _, moniker := range ctx.GetExecutionMonikers() {
+		// In dry-run mode, show actual cache state (not forced rebuild)
+		// In normal mode, explicitly requested modules always rebuild (bypass cache)
+		if !ctx.Config.DryRun && buildCfg.RequestedSet[moniker] {
+			changedList = append(changedList, moniker)
+			continue
 		}
-		if len(filteredLayer) > 0 {
-			filteredLayers = append(filteredLayers, filteredLayer)
+		if changedSet[moniker] {
+			changedList = append(changedList, moniker)
+		} else {
+			bctx.cachedModules[moniker] = true
+			cachedList = append(cachedList, moniker)
+			// Store the BuiltAt time from state for display in TUI
+			if stateErr == nil && state != nil {
+				if ms, exists := state.Modules[moniker]; exists {
+					bctx.cacheTimes[moniker] = ms.BuiltAt
+				}
+			}
 		}
 	}
 
-	ctx.ExecutionPlan.ExecutionOrder = filteredOrder
-	ctx.ExecutionPlan.Layers = filteredLayers
-
 	// Report incremental detection in init summary
+	log.Debugf("[INCREMENTAL] Setting summary: InitSummary=%v, changedList=%v, cachedList=%v",
+		ctx.InitSummary != nil, changedList, cachedList)
 	if ctx.InitSummary != nil {
 		ctx.InitSummary.SetIncremental(&initsummary.IncrementalInfo{
 			Enabled:       true,
 			DetectionTime: detectionTime,
-			Changed:       filteredOrder,
-			UpToDate:      bctx.skippedModules,
+			Changed:       changedList,
+			UpToDate:      cachedList,
 			FreshBuild:    false,
 		})
 	}
 
-	log.Debugf("Incremental: %d modules to build, %d skipped",
-		len(filteredOrder), len(bctx.skippedModules))
+	log.Debugf("Incremental: %d modules to build, %d cached (will show blue in TUI)",
+		len(changedList), len(cachedList))
+
+	// Debug: Log the cached modules map keys
+	if len(bctx.cachedModules) > 0 {
+		var keys []string
+		for k := range bctx.cachedModules {
+			keys = append(keys, k)
+		}
+		log.Debugf("[TUI-CACHE] cachedModules set with %d entries: %v", len(keys), keys)
+	} else {
+		log.Debugf("[TUI-CACHE] cachedModules is empty or nil")
+	}
 }
 
 // buildAfterExecute handles post-build tasks: artifact derivations, manifest generation, state updates.
@@ -290,10 +342,14 @@ func buildAfterExecute(ctx *cmdframework.ExecutionContext) error {
 		return fmt.Errorf("failed to generate build manifest: %w", err)
 	}
 
-	// Update skipped module manifests
-	if !ctx.Config.DryRun && len(bctx.skippedModules) > 0 {
+	// Update cached module manifests
+	if !ctx.Config.DryRun && len(bctx.cachedModules) > 0 {
 		gitCommit := getGitCommit(ctx.WorkspaceRoot)
-		updateSkippedModuleManifests(ctx.WorkspaceRoot, bctx.skippedModules, gitCommit)
+		var cachedList []string
+		for m := range bctx.cachedModules {
+			cachedList = append(cachedList, m)
+		}
+		updateSkippedModuleManifests(ctx.WorkspaceRoot, cachedList, gitCommit)
 	}
 
 	// Update incremental build state
@@ -358,17 +414,17 @@ func processAllArtifactDerivations(ctx *cmdframework.ExecutionContext, buildCfg 
 }
 
 // updateIncrementalState updates the build state for incremental detection.
-func updateIncrementalState(ctx *cmdframework.ExecutionContext, bctx *buildContext) {
-	// Collect successfully built modules
+func updateIncrementalState(ctx *cmdframework.ExecutionContext, _ *buildContext) {
+	// Collect successfully built modules (exit code 0 or -1 for cached)
 	var successfulModules []string
 	for _, result := range ctx.Results {
-		if result.ExitCode == 0 {
+		if result.ExitCode == 0 || result.ExitCode == -1 {
 			successfulModules = append(successfulModules, result.Moniker)
 		}
 	}
 
-	// Include skipped modules (they were already up-to-date)
-	allSuccessful := append(successfulModules, bctx.skippedModules...)
+	// All successful modules (built + cached) are tracked
+	allSuccessful := successfulModules
 
 	// Build modules map for state update
 	modulesMap := make(map[string]buildstate.ModuleFileGetter)
@@ -448,6 +504,49 @@ func buildComponentWorker(ctx *cmdframework.ExecutionContext, module, component 
 		output.Writeln(logWriter, "Error: buildConfig not found or wrong type")
 		return 1
 	}
+	bctx, ok := ctx.Config.Extra["buildContext"].(*buildContext)
+	if !ok {
+		output.Writeln(logWriter, "Error: buildContext not found or wrong type")
+		return 1
+	}
+
+	// Check incremental cache first - if module is cached, verify artifacts and skip (blue in TUI)
+	log.Debugf("[TUI-CACHE] Component worker for %s: cachedModules=%v, isCached=%v",
+		module, bctx.cachedModules != nil, bctx.cachedModules[module])
+	if bctx.cachedModules != nil && bctx.cachedModules[module] {
+		// In dry-run mode, just report what would happen
+		if ctx.Config.DryRun {
+			output.Writeln(logWriter, "⏭️  %s is up-to-date (would be skipped)", module)
+			return -1 // -1 = skipped/cached = blue in TUI
+		}
+
+		// Verify manifest artifacts are intact before declaring cache hit
+		// If manifest doesn't exist, trust the source hash check (which already passed)
+		// Only fail cache if manifest exists AND integrity check fails (actual tampering)
+		moduleBuildDir := paths.BuildOutputPath(ctx.WorkspaceRoot, module)
+		manifest, err := internal.LoadModuleManifest(moduleBuildDir)
+		if err != nil {
+			// No manifest - trust source hash, allow cache hit
+			log.Debugf("Cache hit (no manifest to verify): %v", err)
+			output.Writeln(logWriter, "⏭️  Cached (unchanged)")
+			return -1 // -1 = skipped/cached = blue in TUI
+		}
+
+		// Manifest exists - verify artifact integrity
+		if err := manifest.VerifyArtifactsIntegrity(moduleBuildDir); err != nil {
+			output.Writeln(logWriter, "Cache miss: %v", err)
+			// Fall through to build - clear cache flag so other components don't skip
+			delete(bctx.cachedModules, module)
+		} else {
+			// Valid cache hit - update verification timestamp
+			gitCommit := getGitCommit(ctx.WorkspaceRoot)
+			if updateErr := manifest.UpdateVerifiedUnchangedAt(moduleBuildDir, gitCommit); updateErr != nil {
+				log.Debugf("Failed to update verified timestamp: %v", updateErr)
+			}
+			output.Writeln(logWriter, "⏭️  Cached (verified)")
+			return -1 // -1 = skipped/cached = blue in TUI
+		}
+	}
 
 	// Get module contract
 	moduleContract, exists := ctx.ModuleRegistry.Get(module)
@@ -517,9 +616,8 @@ func buildComponentWorker(ctx *cmdframework.ExecutionContext, module, component 
 
 	// In dry-run mode, simulate a successful build
 	if ctx.Config.DryRun {
-		output.Writeln(logWriter, "Build: %s:%s (dry-run)", module, component)
-		output.Writeln(logWriter, "Handler: %s", handler.Name())
-		output.Writeln(logWriter, "Dry-run mode: skipping actual build")
+		output.Writeln(logWriter, "🔨 %s would be built (changed)", module)
+		output.Writeln(logWriter, "   Component: %s, Handler: %s", component, handler.Name())
 		return 0
 	}
 
@@ -549,7 +647,32 @@ func buildComponentWorker(ctx *cmdframework.ExecutionContext, module, component 
 	}
 
 	output.Writeln(logWriter, "✅ Component %s built successfully", compName)
+
+	// Atomically update build state for this module immediately after success
+	// This ensures interrupted builds preserve cache for completed modules
+	if err := updateModuleBuildStateAtomic(ctx, module); err != nil {
+		log.Debugf("Failed to update build state for %s: %v", module, err)
+	}
+
 	return 0
+}
+
+// updateModuleBuildStateAtomic updates build state for a single module immediately after completion.
+// This ensures interrupted builds preserve cache for completed modules (atomic caching).
+func updateModuleBuildStateAtomic(ctx *cmdframework.ExecutionContext, module string) error {
+	contract, exists := ctx.ModuleRegistry.Get(module)
+	if !exists {
+		return nil
+	}
+
+	// Get source files for this module using the standard interface
+	modulesMap := map[string]buildstate.ModuleFileGetter{module: contract}
+	moduleFiles, err := buildstate.GetModuleSourceFiles(ctx.WorkspaceRoot, modulesMap)
+	if err != nil {
+		return err
+	}
+
+	return buildstate.UpdateModuleState(ctx.WorkspaceRoot, []string{module}, moduleFiles)
 }
 
 // getHandlerForComponent finds the build handler for a specific component.

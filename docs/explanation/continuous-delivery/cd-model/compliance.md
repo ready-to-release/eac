@@ -5,7 +5,8 @@ including verification types, evidence generation, signoff gates, and audit trai
 
 ## Verification Types
 
-The CD Model uses three verification types to validate software readiness, primarily collected during Stage 5 (Acceptance Testing).
+The CD Model uses three verification types to validate software readiness,
+primarily collected during Stage 5 (Acceptance Testing).
 
 ### Installation Verification (IV)
 
@@ -96,7 +97,8 @@ Every piece of evidence is linked to:
 
 The CD Model includes formal signoff points where human or automated approval is required.
 
-The following diagram shows the signoff workflow for the RA pattern, illustrating the five key stages and detailed signoff point indicators.
+The following diagram shows the signoff workflow for the RA pattern,
+illustrating the five key stages and detailed signoff point indicators.
 
 ![Signoff Workflow](../../../assets/cd-model/canvas-signoffs.drawio.png){width=900}
 

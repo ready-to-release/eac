@@ -44,6 +44,12 @@ func (h *DockerHandler) ValidateModule(module *modules.ModuleContract, workspace
 	return nil
 }
 
+// IsContainer returns false as Docker builds run docker commands on the host.
+func (h *DockerHandler) IsContainer() bool { return false }
+
+// IsHostInstalled returns true as Docker builds use the local docker CLI.
+func (h *DockerHandler) IsHostInstalled() bool { return true }
+
 func (h *DockerHandler) ListArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {
 	return []string{fmt.Sprintf("docker-image:%s", module.Moniker)}
 }
