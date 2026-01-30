@@ -1,0 +1,12 @@
+title: Capability Metrics
+nav:
+  - index.md
+  - levels.md
+  - practice-areas.md
+  - Practice Areas:
+      - practice-areas/version-control.md
+      - practice-areas/testing.md
+      - practice-areas/ci-cd.md
+      - practice-areas/specifications.md
+      - practice-areas/evidence.md
+      - practice-areas/security.md

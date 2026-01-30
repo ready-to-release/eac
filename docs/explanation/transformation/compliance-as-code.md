@@ -2,11 +2,9 @@
 
 ## Introduction
 
-"Compliance as Code" applies software engineering best practices to regulatory compliance.
+"Compliance as Code" applies software engineering practices to regulatory compliance.
 
-Instead of manual documentation and periodic reviews,
-organizations encode requirements as executable specifications,
-automate validation, and generate evidence as a delivery pipeline byproduct.
+Organizations encode requirements as executable specifications, automate validation, and generate evidence as a delivery pipeline byproduct.
 
 **Core insight**: Compliance requirements are specifications that can be tested, just like functional requirements.
 
@@ -31,9 +29,7 @@ implementing all five creates transformative change.
 
 ### What It Means
 
-All compliance artifacts stored as version-controlled text files in Git.
-
-Instead of Word documents in SharePoint, everything lives in version control.
+All compliance artifacts stored as version-controlled text files in Git instead of Word documents in SharePoint.
 
 **In practice**:
 
@@ -42,7 +38,7 @@ Instead of Word documents in SharePoint, everything lives in version control.
 - Evidence automatically referenced from version control
 
 !!! note "Requirements Storage"
-Requirements MUST be stored as Gherkin specifications in `specs/risk-controls/*.feature`
+    Requirements can be stored as Gherkin specifications
 
 **Why It Matters**: Version control provides traceability, collaboration via pull requests,
 searchability, immutability, and automation capabilities impossible with traditional document management.
@@ -55,7 +51,7 @@ searchability, immutability, and automation capabilities impossible with traditi
 
 ### What It Means
 
-Compliance checked on every commit, not periodically. Compliance tests run in CI/CD pipeline alongside functional tests.
+Compliance checked on every commit. Compliance tests run in CI/CD pipeline alongside functional tests.
 
 **In practice**:
 
@@ -78,7 +74,7 @@ prevents compliance drift, scales without manual review overhead, and provides c
 Validate compliance as early as possible in the delivery lifecycle - ideally before code commits.
 
 !!! tip "Shift-Left Economics"
-The earlier you catch issues, the cheaper they are to fix:
+    The earlier you catch issues, the cheaper they are to fix:
 
     - **Pre-commit** (Stage 2): 5 minutes to fix
     - **CI** (Stage 4): 15 minutes to fix
@@ -100,9 +96,7 @@ The earlier you catch issues, the cheaper they are to fix:
 
 ### What It Means
 
-Evidence generated automatically as byproduct of pipeline execution.
-
-No manual evidence collection during audits.
+Evidence generated automatically as byproduct of pipeline execution - no manual collection during audits.
 
 **In practice**:
 
@@ -111,12 +105,7 @@ No manual evidence collection during audits.
 - Scan results referenced by commit SHA
 - Traceability matrices generated from version control metadata
 
-**Why It Matters**:
-
-- Automated evidence eliminates manual collection overhead
-- Ensures completeness (can't forget to collect)
-- Provides tamper-evident audit trail
-- - and enables instant audit responses.
+**Why It Matters**: Automated evidence eliminates manual collection overhead, ensures completeness, provides tamper-evident audit trail, and enables instant audit responses.
 
 **Architecture**: Evidence collection integrates into CD Model at multiple stages (commit, PLTE, production).
 
@@ -126,94 +115,28 @@ No manual evidence collection during audits.
 
 ### What It Means
 
-Compliance requirements expressed as Gherkin scenarios that can be executed as automated tests.
+User scenarios expressed as executable Gherkin specifications, linked to risk controls that define compliance requirements.
 
-**Project Risk Controls** (`specs/risk-controls/auth-mfa.feature`):
+### The Risk Control Architecture
 
-```gherkin
-# @industry:HEALTH @industry:PHARMA
-# @severity:critical @risk-type:security @control-type:preventive
-# @iso27001 @hipaa @fda-21cfr11
-# @implementation:required @automation:full
+**Three Layers**:
 
-@control:ia-2(1)
-Feature: Multi-Factor Authentication
+1. **Risk Catalog**
+   - Library of all available risk controls
+   - You don't modify this - it's your control library
+   - Example controls: AC-2 (Account Management), IA-2 (Authentication), AU-2 (Audit Events)
 
-  # Source: Risk Assessment RA-2025-001
+2. **Risk Profile**
+   - Selects which controls from the catalog apply to YOUR solution
+   - Single repository-wide profile
+   - Based on your risk assessment
 
-  Rule: Authentication requires multiple factors
+3. **Specifications**
+   - User scenarios tagged with `@control:<id>` to link to profile controls
+   - Tests that verify control satisfaction
+   - Evidence that proves compliance
 
-    @control:ia-2(1)
-    Scenario: MFA required for all access
-      Given a system with protected resources
-      Then all user access MUST require at least two factors
-      And authentication MUST occur before granting access
-      And failed authentication attempts MUST be logged
-```
-
-**User Scenarios** link to risk controls via `@control:<id>` tags:
-
-```gherkin
-Feature: cli_user-login
-
-  Rule: Users must authenticate before accessing protected resources
-
-    @ov @control:ia-2(1)
-    Scenario: Valid credentials with MFA grant access
-      Given I have valid credentials and MFA token
-      When I run "r2r login --user admin --mfa"
-      Then I should be authenticated
-```
-
-**Traceability Chain**:
-
-- Regulatory requirement →
-- →Risk control specification (`@control:ia-2(1)`) →
-- →User scenarios (`@control:ia-2(1)` tag) →
-- →Step implementations →
-- →Production code
-
-**See**:
-
-- [Three-Layer Testing Approach](../specifications/concepts/three-layer-approach.md) - How Rules/Scenarios/Unit Tests work together
-- [Risk Controls](../specifications/compliance/risk-controls.md) - Risk control specification pattern
-- [File Structure](../specifications/organization/file-structure.md) - How to structure specifications
-
----
-
-## The System Effect
-
-These five principles create a virtuous cycle:
-
-1. **Everything as Code** enables automation
-2. **Continuous Validation** catches issues immediately
-3. **Shift-Left** reduces fix costs
-4. **Automated Evidence** eliminates audit overhead
-5. **Executable Specifications** provide clear requirements
-
-Together: **70-80% reduction in compliance overhead** while **improving compliance quality** and achieving **continuous audit readiness**.
-
----
-
-## Implementation Sequence
-
-Organizations typically implement in this order:
-
-!!! info "Implementation Sequence"
-**Phase 1 - Pilot** (12-16 weeks):
-
-    1. Start with Everything as Code (specs in Git)
-    2. Add Executable Specifications (risk controls in Gherkin)
-    3. Enable Continuous Validation (CI runs specs)
-
-    **Phase 2 - Scale** (8-12 weeks):
-
-    4. Implement Shift-Left (pre-commit hooks)
-    5. Automate Evidence Collection (pipeline integration)
-
-    **Timeline**: 12-16 weeks for pilot, 8-12 weeks for automation tooling
-
-**See**: [Transformation Framework](./transformation-framework.md) for detailed phased approach.
+**Implementation Note**: The catalog and profile use OSCAL (Open Security Controls Assessment Language), an NIST standard for machine-readable compliance.
 
 ---
 

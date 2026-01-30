@@ -9,33 +9,37 @@ phased approach that proves the concept with a pilot, builds reusable automation
 
 This document describes a four-phase framework that guides compliance transformation from initial assessment through organization-wide adoption.
 
-The framework has been validated across multiple organizations and regulatory contexts.
+!!! info "Transformation Overview"
 
-!!! info
+    Duration and investment vary based on baseline capabilities, organization size, and change capacity.
 
-    - "Transformation Overview"
-    - **Timeline**: 12-18 months from start to organization-wide adoption
-    - **Investment**: 2-3 FTE dedicated resources plus team participation
-    - **Expected ROI**: 3-10 month payback period, $1.8M - $6.4M annual benefit for typical mid-size organization
+    Assess your baseline using the [Capability Metrics Framework](capability-metrics/index.md) before planning phases.
 
 ## The Journey Overview
 
-| Phase                   | Duration    | Primary Objective                             | Success Criterion               |
-| ----------------------- | ----------- | --------------------------------------------- | ------------------------------- |
-| **Phase 1: Assessment** | 4-6 weeks   | Understand current state, plan transformation | Approved roadmap                |
-| **Phase 2: Pilot**      | 12-16 weeks | Prove approach with one team                  | Successful test audit           |
-| **Phase 3: Automation** | 8-12 weeks  | Build reusable automation tools               | Documented tools, trained teams |
-| **Phase 4: Rollout**    | 6-12 months | Scale to organization                         | 80% adoption                    |
+| Phase                   | Primary Objective                             | Success Criterion               |
+| ----------------------- | --------------------------------------------- | ------------------------------- |
+| **Phase 1: Assessment** | Understand current state, plan transformation | Approved roadmap                |
+| **Phase 2: Pilot**      | Prove approach with one team                  | Successful test audit           |
+| **Phase 3: Automation** | Build reusable automation tools               | Documented tools, trained teams |
+| **Phase 4: Rollout**    | Scale to organization                         | 80% adoption                    |
 
-```mermaid
-flowchart LR
-    P1[Phase 1<br/>Assessment<br/>4-6 weeks] --> P2[Phase 2<br/>Pilot<br/>12-16 weeks]
-    P2 --> P3[Phase 3<br/>Automation<br/>8-12 weeks]
-    P3 --> P4[Phase 4<br/>Rollout<br/>6-12 months]
+---
 
-```
+## Planning Your Transformation Timeline
 
-**Total**: 12-18 months from start to organization-wide adoption
+### Your Timeline Depends on Your Baseline
+
+Organizations vary widely in their starting capabilities. A realistic transformation timeline depends on:
+
+1. **Current capability levels** across 6 practice areas
+2. **Organizational change capacity** (dedicated resources, management support)
+3. **Compliance complexity** (number of requirements, regulatory frameworks)
+4. **Organization size** (number of teams to scale to)
+
+**Do NOT use one-size-fits-all timelines**. Instead, assess your baseline and plan accordingly.
+
+Use the [Capability Metrics Framework](capability-metrics/index.md) to assess your organization's current level across all 6 practice areas using the capability questions for each area.
 
 ---
 
@@ -50,11 +54,11 @@ These principles guide successful transformation:
 5. **Feedback Loops**: Learn and adapt continuously based on pilot experience
 6. **Governance Matters**: Clear decision authority accelerates progress
 7. **Training is Critical**: Teams cannot adopt what they don't understand
-8. **Long-term View**: This is an 18-month journey, not a 3-month sprint
+8. **Long-term View**: This is a multi-phase journey requiring sustained commitment
 
 ---
 
-## Phase 1: Assessment and Planning (4-6 weeks)
+## Phase 1: Assessment and Planning
 
 ### Objective
 
@@ -75,9 +79,7 @@ Inventory all compliance obligations:
 
     "Where to Start" - **If you have existing SOPs**: Use these documented procedures as your starting point
     They provide organization-specific context for how requirements are currently interpreted.
-    - **If you don't have SOPs**: Look directly at the regulations applicable to your domain.
-    For GxP organizations, consult ICH guidelines.
-    For security, reference ISO 27001 control requirements.
+    **If you don't have SOPs**: Look directly at the regulations applicable to your domain.
 
 **Deliverable**: Compliance Requirements Inventory (spreadsheet or database)
 
@@ -92,8 +94,6 @@ Evaluate current practices:
 
 **Measure these metrics before starting transformation:**
 
-<!-- markdownlint-disable MD046 -->
-
 !!! note "Baseline Metrics"
 
     - Manual compliance work: hours per team per week
@@ -101,10 +101,6 @@ Evaluate current practices:
     - Evidence collection: % manual vs automated
     - Compliance validation time: days to approve release
     - Audit findings: number per audit cycle
-
-<!-- markdownlint-enable MD046 -->
-
-Track these throughout transformation to demonstrate ROI. Typical improvements: 70-80% reduction in manual work, 95%+ evidence automation, release approval time from days to hours.
 
 **Deliverable**: Current State Assessment Report
 
@@ -119,8 +115,7 @@ Map compliance activities to identify waste:
 
 **Reference**:
 
-See [Measuring and Improving Flow](../everything-as-code/measuring-and-improving-flow.md),
-for detailed guidance on Value Stream Mapping and flow engineering principles.
+See [Measuring and Improving Flow](../everything-as-code/measuring-and-improving-flow.md), for detailed guidance on Value Stream Mapping and flow engineering principles.
 
 **Deliverable**: Value Stream Maps (current + future states)
 
@@ -158,7 +153,7 @@ Create vision and plan:
 
 ---
 
-## Phase 2: Pilot Implementation (12-16 weeks)
+## Phase 2: Pilot Implementation
 
 ### Objective
 
@@ -166,18 +161,20 @@ Prove the compliance-as-code approach with one team, validate through test audit
 
 ### Key Activities
 
-**1. Create Risk Control Specifications**:
+**1. Create Risk Profile and Specifications**:
 
-Translate requirements to executable format:
+Select applicable controls and write user specifications:
 
-- Select subset of requirements for pilot scope
-- Write risk control specifications in Gherkin format
-- Tag with @control IDs for traceability
-- Review with compliance office for approval
+- **Create Risk Profile**: Select subset of controls from risk catalog for pilot scope
+- **Write User Specifications**: Create Gherkin scenarios that demonstrate how you satisfy selected controls
+- **Tag Scenarios**: Link specifications to controls using `@control:<id>` tags
+- **Review with Compliance Office**: Get approval on control selection and specification coverage
 
-**Format**: Document risk controls as `.feature` files with Gherkin scenarios using `@control:` tags
+**Architecture**: Risk controls come from the catalog (`templates/specs/risk-catalog/controls.catalog.json`). Your risk profile (`specs/.risk-controls/risk-profile.json`) selects applicable controls. Your specifications (`.feature` files) contain user scenarios tagged with `@control:` to link to those controls.
 
-**Deliverable**: Risk control specifications (`specs/risk-controls/*.feature`)
+See [Executable Specifications](compliance-as-code.md#principle-5-executable-specifications) for the 3-layer architecture (Risk Catalog → Risk Profile → Specifications).
+
+**Deliverable**: Risk profile and user specifications tagged with control references
 
 **2. Move Artifacts to Version Control**:
 
@@ -186,19 +183,21 @@ Transition from document management to version control:
 - Convert policies/procedures from Word to Markdown
 - Store in Git repository with branch protection
 - Establish pull request workflow for changes
-- Use [existing template catalog](https://github.com/ready-to-release/eac/blob/main/templates/index.md) as starting point
 - Keep external systems unchanged during pilot (reduce complexity)
+
+See [Everything as Code](../everything-as-code/index.md) for principles guiding this transition.
 
 **Deliverable**: Version-controlled compliance artifacts
 
 **3. Design Compliance Validation Pipeline**:
 
-Integrate compliance into CI/CD:
+Map compliance checks across CD Model:
 
-- Map compliance checks to CD Model stages (see [CD Model](../continuous-delivery/cd-model/overview.md))
-- Implement validation at Stages 2 (pre-commit), 4 (commit), 5 (acceptance), 11 (production)
-- Design PLTE for L3 testing (see [Testing Strategy](../continuous-delivery/testing/index.md))
-- Implement quality gates that block non-compliant changes
+- **Shift-Left** (Stages 2-4): Pre-commit and commit gates validate policies, secrets, configuration
+- **Acceptance** (Stage 5): PLTE validates functional requirements against compliance
+- **Production** (Stage 11): Continuous monitoring validates runtime compliance
+
+See [CD Model](../continuous-delivery/cd-model/overview.md) for stage details and [Testing Strategy](../continuous-delivery/testing/index.md) for L0-L4 testing levels.
 
 **Security Integration**: See [Security in CD Model](../continuous-delivery/security/index.md) for security tooling
 
@@ -206,30 +205,30 @@ Integrate compliance into CI/CD:
 
 **4. Implement Automated Tests**:
 
-Write test code for specifications:
+Write test code for specifications across testing levels:
 
-- Implement L0-L2 tests (local/agent execution, fast feedback)
-- Implement L3 tests (PLTE vertical testing)
-- Implement L4 tests (production monitoring)
+- **L0-L2 tests**: Development (local/agent execution, fast feedback)
+- **L3 tests**: Acceptance testing (PLTE vertical testing, Stages 5-6)
+- **L4 tests**: Production monitoring
 
-**Reference**: [Three-layer testing approach](../specifications/concepts/three-layer-approach.md)
+See [Testing Strategy](../continuous-delivery/testing/index.md) for L0-L4 levels and [Three-layer approach](../specifications/concepts/three-layer-approach.md) for implementation patterns.
 
 **Deliverable**: Automated test suite with passing tests
 
 **5. Automate Evidence Collection**:
 
-Build evidence collection capability:
+Automate evidence collection in the pipeline:
 
-- Define evidence requirements for pilot scope
-- Implement collection scripts for pipeline artifacts
-- Extract relevant data from Git history
-- Generate traceability matrix automatically
-- Create evidence package generator
+- Define evidence types: test results, security scans, deployment logs, audit records
+- Store evidence automatically: test results in Git LFS/artifacts, deployment logs via commit messages
+- Generate traceability automatically: link test scenarios via `@control:` tags to evidence
+- Create evidence packages for audit: generate on-demand packages
+
+See [Automated Evidence Collection](compliance-as-code.md#principle-4-automated-evidence-collection) for detailed approach.
 
 !!! tip "Evidence Collection Automation"
 
-    This step requires an automation layer.
-    The Ready-to-Release (r2r) CLI provides evidence collection and packaging capabilities to accelerate this phase.
+    Automation layer (e.g., r2r CLI) accelerates evidence collection and packaging.
 
 **Deliverable**: Evidence collection system
 
@@ -247,7 +246,7 @@ Validate approach with auditors:
 
 ### Exit Criteria
 
-- ✅ Risk controls created and approved by compliance office
+- ✅ Risk profile created and specifications approved by compliance office
 - ✅ Artifacts in version control (100% of pilot scope)
 - ✅ Pipeline implemented and functional
 - ✅ Tests passing (100% of implemented scenarios)
@@ -258,7 +257,7 @@ Validate approach with auditors:
 
 ---
 
-## Phase 3: Automation and Scaling (8-12 weeks)
+## Phase 3: Automation and Scaling
 
 ### Objective
 
@@ -321,16 +320,9 @@ Test with early adopters:
 - ✅ 2-3 teams validated successfully using tools
 - ✅ Feedback incorporated into tools and docs
 
-### Deliverables
-
-- Automation tools (CLI or scripts)
-- Updated documentation
-- Training materials (slides, exercises, recordings)
-- Migration guide
-
 ---
 
-## Phase 4: Organization-Wide Rollout (6-12 months)
+## Phase 4: Organization-Wide Rollout
 
 ### Objective
 
@@ -343,7 +335,7 @@ Scale transformation across the organization achieving 80%+ adoption.
 Create systematic rollout plan:
 
 - Prioritize teams by risk, readiness, and impact
-- Create rollout schedule (batches of 3-5 teams every 4-6 weeks)
+- Create rollout schedule (batches sized for your change capacity)
 - Allocate support resources
 - Define success criteria per batch
 
@@ -351,13 +343,13 @@ Create systematic rollout plan:
 
 **2. Execute Team Onboarding**:
 
-Systematic 6-week onboarding cycle per batch:
+Systematic onboarding cycle per batch:
 
-- **Week 1**: Assessment - Team readiness, tooling gaps, training needs
-- **Week 2**: Training and setup - Workshop, tool installation, pipeline integration
-- **Weeks 3-4**: Implementation - Teams implement with coaching support
-- **Week 5**: Validation - Test audit-style review of team's implementation
-- **Week 6**: Review and handoff - Lessons learned, handoff to operations support
+- **Assessment**: Team readiness, tooling gaps, training needs
+- **Training and setup**: Workshop, tool installation, pipeline integration
+- **Implementation**: Teams implement with coaching support
+- **Validation**: Test audit-style review of team's implementation
+- **Review and handoff**: Lessons learned, handoff to operations support
 
 **Deliverable**: Onboarding completion reports per batch
 
@@ -429,87 +421,15 @@ After transformation completes, maintain and improve:
 
 ---
 
-## Common Pitfalls
+## Ready to Transform?
 
-<!-- markdownlint-disable MD046 -->
-
-!!! warning "Learn from Others' Mistakes"
-
-    These seven pitfalls have derailed numerous transformation efforts. Read all of them before starting.
-
-### 1. Skipping Assessment
-
-!!! warning "Pitfall: Skipping Assessment"
-
-    **Mistake**: Jumping to implementation without understanding current state
-    **Impact**: Build wrong solution, miss key requirements
-    **Avoidance**: Invest full 4-6 weeks in Phase 1
-
-### 2. Boiling the Ocean
-
-!!! warning "Pitfall: Boiling the Ocean"
-
-    **Mistake**: Trying to transform everything at once
-    **Impact**: Overwhelm teams, project fails
-    **Avoidance**: Start with pilot, scale systematically
-
-### 3. Building Without User Input
-
-!!! warning "Pitfall: Building Without User Input"
-
-    **Mistake**: Automation team builds tools in isolation
-    **Impact**: Tools don't match needs, low adoption
-    **Avoidance**: Deeply involve pilot team in design
-
-### 4. Inadequate Training
-
-!!! warning "Pitfall: Inadequate Training"
-
-    **Mistake**: Assuming teams will figure it out
-    **Impact**: Slow adoption, frustration, workarounds
-    **Avoidance**: Invest in comprehensive training
-
-### 5. Losing Compliance Buy-In
-
-!!! warning "Pitfall: Losing Compliance Buy-In"
-
-    **Mistake**: Proceeding without compliance office endorsement
-    **Impact**: Auditors reject approach, transformation fails
-    **Avoidance**: Compliance officer as co-sponsor, test audits early
-
-### 6. No Operations Plan
-
-!!! warning "Pitfall: No Operations Plan"
-
-    **Mistake**: Treating transformation as project with end date
-    **Impact**: Tools degrade, support vanishes, teams revert
-    **Avoidance**: Plan for ongoing operations from start
-
-### 7. Ignoring Change Management
-
-!!! warning "Pitfall: Ignoring Change Management"
-
-    **Mistake**: Focusing only on technology, ignoring people
-    **Impact**: Resistance, slow adoption, partial implementation
-    **Avoidance**: Communication, training, recognition throughout
-
-<!-- markdownlint-enable MD046 -->
-
----
-
-## Next Steps
-
-To understand the transformation in detail:
-
-1. **Understand risk controls** - Review pilot team's `.feature` files for patterns
-2. **Study shift-left** - Understand early compliance validation in pipelines
-
-To begin transformation:
+Follow these action steps:
 
 1. Build business case using [Why Transformation?](why-transformation.md)
 2. Engage executive sponsor and compliance officer
-3. Identify pilot team
-4. Begin Phase 1: Assessment
+3. Assess baseline using [Capability Metrics Framework](capability-metrics/index.md)
+4. Identify pilot team
+5. Begin Phase 1: Assessment
 
 ---
 
