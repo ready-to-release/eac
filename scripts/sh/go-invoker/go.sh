@@ -7,8 +7,14 @@
 #   get_go_src_commands                              - List available commands
 #   new_run_alias                                    - Create 'run' alias
 
-# Get repository root (three levels up from this script)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Get repository root
+if [ -n "$ZSH_VERSION" ]; then
+    # Zsh specific way to get current script path
+    SCRIPT_DIR="${0:a:h}"
+else
+    # Bash specific way
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+fi
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
 #
@@ -98,7 +104,9 @@ new_run_alias() {
     fi
 }
 
-# Export functions so they can be used after sourcing
-export -f invoke_go_src_command
-export -f get_go_src_commands
-export -f new_run_alias
+# Export functions so they can be used after sourcing (Bash only)
+if [ -n "$BASH_VERSION" ]; then
+    export -f invoke_go_src_command
+    export -f get_go_src_commands
+    export -f new_run_alias
+fi
