@@ -240,8 +240,10 @@ func calculateCapacity(cpuCount, ramGB, roof int, turbo float64) int {
 		return roof
 	}
 
-	// Auto-detect: min(CPU, RAM/2) × turbo, capped at 2×CPU (max 64)
-	ramCap := ramGB / 2
+	// Auto-detect: min(CPU, RAM/3) × turbo
+	// RAM/3 because each weight unit uses ~2.5GB + overhead
+	// This ensures we don't overcommit memory on lower-spec machines
+	ramCap := ramGB / 3
 	if ramCap < 1 {
 		ramCap = 1
 	}
@@ -253,6 +255,7 @@ func calculateCapacity(cpuCount, ramGB, roof int, turbo float64) int {
 
 	capacity := int(float64(base) * turbo)
 
+	// Cap at CPU count (or 2x with turbo, max 64)
 	maxCap := cpuCount
 	if turbo > 1.0 {
 		maxCap = cpuCount * 2

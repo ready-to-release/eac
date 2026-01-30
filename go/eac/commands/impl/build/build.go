@@ -52,6 +52,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/builders"
 	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
@@ -93,11 +94,11 @@ type BuildResult struct {
 	Errors   []string
 }
 
-// ensureCommandsBinary rebuilds the commands binary on every local build call.
-// This ensures the binary always reflects the latest source code changes.
+// ensureCommandsBinary rebuilds the commands binary if source has changed.
+// Uses go.mod as a proxy for source changes - faster than checking all files.
 // CI uses the setup-commands action instead.
 func ensureCommandsBinary(workspaceRoot string) error {
-	fmt.Println("⚙️  Building commands binary...")
+	buildStart := time.Now()
 
 	// Determine binary name for current platform
 	binaryName := "commands"
@@ -115,7 +116,17 @@ func ensureCommandsBinary(workspaceRoot string) error {
 	cmdDir := filepath.Join(workspaceRoot, "go", "eac", "commands")
 	outputPath := filepath.Join(toolsDir, binaryName)
 
+	// Check if rebuild is needed
+	needsBuild, reason := commandsBinaryNeedsRebuild(workspaceRoot, cmdDir, outputPath)
+	if !needsBuild {
+		fmt.Printf("⏭️  Commands binary up-to-date (%v)\n", time.Since(buildStart))
+		return nil
+	}
+
+	fmt.Printf("⚙️  Building commands binary (%s)...\n", reason)
+
 	// Build the binary
+	goBuildStart := time.Now()
 	buildCmd := exec.Command("go", "build", "-o", outputPath, ".")
 	buildCmd.Dir = cmdDir
 	buildCmd.Stdout = os.Stdout
@@ -125,12 +136,81 @@ func ensureCommandsBinary(workspaceRoot string) error {
 		return fmt.Errorf("go build: %w", err)
 	}
 
-	fmt.Printf("   ✅ Built: %s\n", outputPath)
+	fmt.Printf("   ✅ Built: %s (go build: %v, total: %v)\n", outputPath, time.Since(goBuildStart), time.Since(buildStart))
 	return nil
+}
+
+// commandsBinaryNeedsRebuild checks if the commands binary needs rebuilding.
+// Returns (needsBuild, reason) where reason explains why rebuild is needed.
+func commandsBinaryNeedsRebuild(workspaceRoot, cmdDir, binaryPath string) (bool, string) {
+	// Check if binary exists
+	binaryStat, err := os.Stat(binaryPath)
+	if err != nil {
+		return true, "binary missing"
+	}
+	binaryModTime := binaryStat.ModTime()
+
+	// Check sentinel files that indicate source changes:
+	// 1. go.mod in the commands directory (dependency changes)
+	// 2. go.sum in the commands directory (dependency changes)
+	// 3. go.work in workspace root (workspace changes)
+	sentinelFiles := []string{
+		filepath.Join(cmdDir, "go.mod"),
+		filepath.Join(cmdDir, "go.sum"),
+		filepath.Join(workspaceRoot, "go.work"),
+	}
+
+	for _, sentinel := range sentinelFiles {
+		if stat, err := os.Stat(sentinel); err == nil {
+			if stat.ModTime().After(binaryModTime) {
+				return true, filepath.Base(sentinel) + " changed"
+			}
+		}
+	}
+
+	// Check if any .go file in the commands package tree is newer
+	// Walk the entire go/eac directory since commands imports from core, etc.
+	goDir := filepath.Join(workspaceRoot, "go", "eac")
+	newestGoFile := ""
+	newestGoTime := time.Time{}
+
+	filepath.Walk(goDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil // Skip errors
+		}
+		if info.IsDir() {
+			// Skip vendor, testdata, and hidden directories
+			name := info.Name()
+			if name == "vendor" || name == "testdata" || strings.HasPrefix(name, ".") {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		// Only check .go files
+		if strings.HasSuffix(path, ".go") {
+			if info.ModTime().After(newestGoTime) {
+				newestGoTime = info.ModTime()
+				newestGoFile = path
+			}
+		}
+		return nil
+	})
+
+	if newestGoTime.After(binaryModTime) {
+		// Get relative path for cleaner output
+		relPath, _ := filepath.Rel(workspaceRoot, newestGoFile)
+		if relPath == "" {
+			relPath = filepath.Base(newestGoFile)
+		}
+		return true, relPath + " changed"
+	}
+
+	return false, ""
 }
 
 // Build command entry point - builds one or more modules.
 func Build() int {
+	startupStart := time.Now()
 	args := os.Args[2:] // Skip program name and "build"
 
 	// Check for help flag
@@ -140,10 +220,14 @@ func Build() int {
 	}
 
 	// Detect execution environment
+	envStart := time.Now()
 	env := environment.Detect()
+	fmt.Fprintf(os.Stderr, "[STARTUP] environment.Detect: %v\n", time.Since(envStart))
 
 	// Parse shared flags using flag sets
+	flagsStart := time.Now()
 	shared, err := flags.ParseSharedFlagsWithEnv(flags.BuildConfig(), args, env)
+	fmt.Fprintf(os.Stderr, "[STARTUP] flags.ParseSharedFlagsWithEnv: %v\n", time.Since(flagsStart))
 	if err != nil {
 		log.Errorf("Error: %v", err)
 		printBuildUsage()
@@ -208,7 +292,9 @@ func Build() int {
 	}
 
 	// Get repository root
+	repoStart := time.Now()
 	workspaceRoot, err := repository.GetRepositoryRoot("")
+	fmt.Fprintf(os.Stderr, "[STARTUP] repository.GetRepositoryRoot: %v\n", time.Since(repoStart))
 	if err != nil {
 		log.Errorf("Error: failed to find repository root: %v", err)
 		return 1
@@ -216,14 +302,18 @@ func Build() int {
 
 	// Ensure commands binary exists (devbox only - CI uses setup-commands action)
 	if env.IsLocalConsole {
+		binaryStart := time.Now()
 		if err := ensureCommandsBinary(workspaceRoot); err != nil {
-			log.Errorf("Error: failed to build commands binary: %v", err)
+			fmt.Fprintf(os.Stderr, "Error: failed to build commands binary: %v\n", err)
 			return 1
 		}
+		fmt.Fprintf(os.Stderr, "[STARTUP] ensureCommandsBinary: %v\n", time.Since(binaryStart))
 	}
 
 	// Load module contracts
+	contractsStart := time.Now()
 	moduleReport, err := reports.GetModuleContracts(workspaceRoot)
+	fmt.Fprintf(os.Stderr, "[STARTUP] reports.GetModuleContracts: %v\n", time.Since(contractsStart))
 	if err != nil {
 		log.Errorf("Error: failed to load module contracts: %v", err)
 		return 1
@@ -285,6 +375,7 @@ func Build() int {
 		RequestedSet:    requestedSet,
 	}
 
+	fmt.Fprintf(os.Stderr, "[STARTUP] Total pre-framework startup: %v\n", time.Since(startupStart))
 	return RunBuildWithFramework(cmdCfg, buildCfg)
 }
 

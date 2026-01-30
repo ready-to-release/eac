@@ -73,17 +73,19 @@ type ToolVerifier func(tool *ToolDefinition) bool
 
 // DefaultRegistry is the thread-safe in-memory implementation of Registry.
 type DefaultRegistry struct {
-	mu       sync.RWMutex
-	tools    map[string]*ToolDefinition
-	bindings map[string]ToolBinding // canonical name -> binding mode
-	verifier ToolVerifier           // custom verifier for tests (nil = use default)
+	mu          sync.RWMutex
+	tools       map[string]*ToolDefinition
+	bindings    map[string]ToolBinding // canonical name -> binding mode
+	verifier    ToolVerifier           // custom verifier for tests (nil = use default)
+	verifyCache map[string]bool        // cache for tool availability checks
 }
 
 // NewRegistry creates a new tool registry.
 func NewRegistry() *DefaultRegistry {
 	return &DefaultRegistry{
-		tools:    make(map[string]*ToolDefinition),
-		bindings: make(map[string]ToolBinding),
+		tools:       make(map[string]*ToolDefinition),
+		bindings:    make(map[string]ToolBinding),
+		verifyCache: make(map[string]bool),
 	}
 }
 
@@ -269,10 +271,15 @@ func (r *DefaultRegistry) getCanonicalUnlocked(canonicalName string) (*ToolDefin
 }
 
 // isToolAvailableUnlocked checks if a system tool and all its requirements are available.
-// Must be called with lock held.
+// Must be called with lock held. Results are cached for the lifetime of the registry.
 func (r *DefaultRegistry) isToolAvailableUnlocked(tool *ToolDefinition) bool {
 	if tool == nil || tool.Type != ToolTypeSystem {
 		return false
+	}
+
+	// Check cache first
+	if cached, ok := r.verifyCache[tool.ID]; ok {
+		return cached
 	}
 
 	// Use custom verifier if set (for testing), otherwise use default
@@ -284,6 +291,7 @@ func (r *DefaultRegistry) isToolAvailableUnlocked(tool *ToolDefinition) bool {
 		available = result.Available
 	}
 	if !available {
+		r.verifyCache[tool.ID] = false
 		return false
 	}
 
@@ -294,13 +302,16 @@ func (r *DefaultRegistry) isToolAvailableUnlocked(tool *ToolDefinition) bool {
 		reqTool, exists := r.tools[reqID]
 		if !exists {
 			// Requirement not found as system tool
+			r.verifyCache[tool.ID] = false
 			return false
 		}
 		if !r.isToolAvailableUnlocked(reqTool) {
+			r.verifyCache[tool.ID] = false
 			return false
 		}
 	}
 
+	r.verifyCache[tool.ID] = true
 	return true
 }
 
@@ -437,11 +448,22 @@ func (r *DefaultRegistry) VerifyTool(toolID string) VerifyResult {
 }
 
 // VerifyAll checks multiple tools and returns results for each.
+// Runs verifications in parallel for faster startup.
 func (r *DefaultRegistry) VerifyAll(toolIDs []string) []VerifyResult {
 	results := make([]VerifyResult, len(toolIDs))
+
+	// Run verifications in parallel
+	var wg sync.WaitGroup
+	wg.Add(len(toolIDs))
+
 	for i, toolID := range toolIDs {
-		results[i] = r.VerifyTool(toolID)
+		go func(idx int, id string) {
+			defer wg.Done()
+			results[idx] = r.VerifyTool(id)
+		}(i, toolID)
 	}
+
+	wg.Wait()
 	return results
 }
 

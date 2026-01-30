@@ -3,6 +3,7 @@ package cmdframework
 import (
 	"os"
 	"strings"
+	"time"
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/initsummary"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
@@ -30,6 +31,8 @@ func detectExecutionContext() string {
 // - System dependency verification (via hook)
 // - Module dependency validation (via hook).
 func phaseVerify(ctx *ExecutionContext) error {
+	verifyStart := time.Now()
+
 	// Use existing summary if set by a hook (e.g., test framework), otherwise create new one
 	summary := ctx.InitSummary
 	if summary == nil {
@@ -53,8 +56,9 @@ func phaseVerify(ctx *ExecutionContext) error {
 	// Only use provider if component count wasn't already set by a hook (e.g., test framework)
 	// This allows us to show the actual component count, not just module count
 	if summary.ComponentCount == 0 && componentCountProvider != nil {
+		countStart := time.Now()
 		count := componentCountProvider(ctx)
-		log.Debugf("Component count from provider: %d", count)
+		log.Debugf("Component count from provider: %d (took %v)", count, time.Since(countStart))
 		summary.ComponentCount = count
 	} else if summary.ComponentCount > 0 {
 		log.Debugf("Component count already set by hook: %d", summary.ComponentCount)
@@ -65,8 +69,9 @@ func phaseVerify(ctx *ExecutionContext) error {
 	// Calculate component layers using the registered provider (if available)
 	// Only use provider if component layers wasn't already set by a hook
 	if summary.ComponentLayerCount == 0 && componentLayersProvider != nil {
+		layersStart := time.Now()
 		layers := componentLayersProvider(ctx)
-		log.Debugf("Component layers from provider: %d layers", len(layers))
+		log.Debugf("Component layers from provider: %d layers (took %v)", len(layers), time.Since(layersStart))
 		summary.ComponentExecutionLayers = layers
 		summary.ComponentLayerCount = len(layers)
 	}
@@ -79,7 +84,9 @@ func phaseVerify(ctx *ExecutionContext) error {
 
 	// System dependency verification (if hook provided)
 	if !ctx.Config.SkipDeps && depsVerifier != nil {
+		depsStart := time.Now()
 		depsStatus := depsVerifier(ctx)
+		log.Debugf("Deps verification took %v", time.Since(depsStart))
 		if depsStatus != nil {
 			summary.DepsStatus = *depsStatus
 		}
@@ -91,12 +98,15 @@ func phaseVerify(ctx *ExecutionContext) error {
 	// Build command creates artifacts - it doesn't need them to exist beforehand
 	// Test/scan commands consume artifacts - they need to verify builds exist
 	if ctx.Config.Type != CommandTypeBuild && !ctx.Config.SkipDepm && artifactValidator != nil {
+		artifactStart := time.Now()
 		artifactInfo := artifactValidator(ctx)
+		log.Debugf("Artifact validation took %v", time.Since(artifactStart))
 		if artifactInfo != nil {
 			summary.ArtifactValidation = artifactInfo
 		}
 	}
 
+	log.Debugf("phaseVerify total: %v", time.Since(verifyStart))
 	ctx.InitSummary = summary
 	return nil
 }

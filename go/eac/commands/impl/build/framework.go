@@ -33,9 +33,26 @@ func init() {
 	cmdframework.SetComponentLayersProvider(getBuildComponentLayers)
 }
 
+// getCachedComponentWork returns cached component work layers, computing once if needed.
+// This avoids duplicate calls to FlattenModulesToComponentWork during startup.
+func getCachedComponentWork(ctx *cmdframework.ExecutionContext) [][]workunit.UnitSpec {
+	// Check if already cached in Extra
+	if ctx.Config.Extra == nil {
+		ctx.Config.Extra = make(map[string]interface{})
+	}
+	if cached, ok := ctx.Config.Extra["componentWorkLayers"]; ok {
+		return cached.([][]workunit.UnitSpec)
+	}
+
+	// Compute and cache
+	layers := FlattenModulesToComponentWork(ctx)
+	ctx.Config.Extra["componentWorkLayers"] = layers
+	return layers
+}
+
 // getBuildComponentCount returns the total number of buildable components.
 func getBuildComponentCount(ctx *cmdframework.ExecutionContext) int {
-	layers := FlattenModulesToComponentWork(ctx)
+	layers := getCachedComponentWork(ctx)
 	return CountComponents(layers)
 }
 
@@ -43,7 +60,7 @@ func getBuildComponentCount(ctx *cmdframework.ExecutionContext) int {
 // Each layer contains component identifiers in "module:component:handler" format.
 // This matches the display name format used by the TUI scheduler.
 func getBuildComponentLayers(ctx *cmdframework.ExecutionContext) [][]string {
-	layers := FlattenModulesToComponentWork(ctx)
+	layers := getCachedComponentWork(ctx)
 	result := make([][]string, len(layers))
 	for i, layer := range layers {
 		result[i] = make([]string, len(layer))
@@ -453,13 +470,7 @@ func processAllArtifactDerivations(ctx *cmdframework.ExecutionContext, buildCfg 
 			continue // Skip failed components
 		}
 
-		// Calculate component directory path matching build worker convention:
-		// <component>_<handler> when handler is present, otherwise just <component>
-		componentDir := compResult.Component
-		if compResult.Handler != "" {
-			componentDir = compResult.Component + "_" + compResult.Handler
-		}
-		componentOutputDir := paths.ComponentBuildOutputPath(ctx.WorkspaceRoot, compResult.Module, componentDir)
+		componentOutputDir := paths.ComponentBuildOutputPath(ctx.WorkspaceRoot, compResult.Module, compResult.Component)
 		if exitCode := builders.ExecutePostBuildSteps(compResult.Module, compResult.Component, ctx.WorkspaceRoot, componentOutputDir, io.Discard); exitCode != 0 {
 			log.Warnf("Post-build steps warning for %s/%s: exit code %d", compResult.Module, compResult.Component, exitCode)
 			// Continue with other components

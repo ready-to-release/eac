@@ -152,14 +152,69 @@ func ExecutePostBuildSteps(moniker, component, workspaceRoot, outputDir string, 
 			return 1
 		}
 
-		if err := executeCopyTo(outputDir, targetPath, logWriter); err != nil {
+		// Determine source directory for copy:
+		// 1. First try the framework's output directory (out/build/<module>/<component>/)
+		// 2. Fall back to component's source output directory (<component_root>/out/)
+		//    This handles in-place builders like npm-build that output to source directory
+		srcDir := findBuildOutputDir(outputDir, workspaceRoot, compEntry.Root)
+		if srcDir == "" {
+			Logln(logWriter, "Error: no build output found in %s or %s/out", outputDir, compEntry.Root)
+			return 1
+		}
+
+		if err := executeCopyTo(srcDir, targetPath, logWriter); err != nil {
 			Logln(logWriter, "Error: post-build copy failed: %v", err)
 			return 1
 		}
-		Logln(logWriter, "Post-build: copied output to %s", postBuild.CopyTo)
+		Logln(logWriter, "Post-build: copied output from %s to %s", srcDir, postBuild.CopyTo)
 	}
 
 	return 0
+}
+
+// findBuildOutputDir determines the actual build output directory.
+// Checks the framework output dir first, then falls back to component source output.
+// Returns empty string if no valid output directory is found.
+func findBuildOutputDir(frameworkOutputDir, workspaceRoot, componentRoot string) string {
+	// Check if framework output directory has content (not just log files)
+	if hasNonLogFiles(frameworkOutputDir) {
+		return frameworkOutputDir
+	}
+
+	// Fall back to component's source output directory (for in-place builders like npm-build)
+	// TypeScript/npm outputs to <component_root>/out/
+	if componentRoot != "" {
+		sourceOutputDir := filepath.Join(workspaceRoot, componentRoot, "out")
+		if hasNonLogFiles(sourceOutputDir) {
+			return sourceOutputDir
+		}
+	}
+
+	return ""
+}
+
+// hasNonLogFiles checks if a directory exists and contains files other than logs.
+func hasNonLogFiles(dir string) bool {
+	info, err := os.Stat(dir)
+	if err != nil || !info.IsDir() {
+		return false
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return false
+	}
+
+	for _, entry := range entries {
+		name := entry.Name()
+		// Skip log files and build manifests
+		if strings.HasSuffix(name, ".log") || name == "build.manifest.json" {
+			continue
+		}
+		return true
+	}
+
+	return false
 }
 
 // executeCopyTo copies build output to the target directory.

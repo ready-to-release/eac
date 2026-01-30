@@ -11,14 +11,14 @@ func TestCalculateCapacity(t *testing.T) {
 		turbo     float64
 		want      int
 	}{
-		// Basic cases - balanced CPU/RAM
+		// Basic cases - RAM/3 because each weight unit uses ~2.5GB + overhead
 		{
 			name:      "16 CPU, 32GB RAM, no config, no turbo",
 			cpuCount:  16,
 			ramGB:     32,
 			configMax: 0,
 			turbo:     1.0,
-			want:      16, // min(16, 32/2=16) = 16
+			want:      10, // min(16, 32/3=10) = 10
 		},
 		{
 			name:      "8 CPU, 16GB RAM, no config, no turbo",
@@ -26,7 +26,7 @@ func TestCalculateCapacity(t *testing.T) {
 			ramGB:     16,
 			configMax: 0,
 			turbo:     1.0,
-			want:      8, // min(8, 16/2=8) = 8
+			want:      5, // min(8, 16/3=5) = 5
 		},
 		{
 			name:      "4 CPU, 8GB RAM, no config, no turbo",
@@ -34,7 +34,7 @@ func TestCalculateCapacity(t *testing.T) {
 			ramGB:     8,
 			configMax: 0,
 			turbo:     1.0,
-			want:      4, // min(4, 8/2=4) = 4
+			want:      2, // min(4, 8/3=2) = 2
 		},
 
 		// RAM-limited cases
@@ -44,7 +44,7 @@ func TestCalculateCapacity(t *testing.T) {
 			ramGB:     8,
 			configMax: 0,
 			turbo:     1.0,
-			want:      4, // min(16, 8/2=4) = 4
+			want:      2, // min(16, 8/3=2) = 2
 		},
 		{
 			name:      "8 CPU, 4GB RAM - RAM limited",
@@ -52,7 +52,7 @@ func TestCalculateCapacity(t *testing.T) {
 			ramGB:     4,
 			configMax: 0,
 			turbo:     1.0,
-			want:      2, // min(8, 4/2=2) = 2
+			want:      1, // min(8, 4/3=1) = 1
 		},
 
 		// CPU-limited cases
@@ -62,7 +62,7 @@ func TestCalculateCapacity(t *testing.T) {
 			ramGB:     32,
 			configMax: 0,
 			turbo:     1.0,
-			want:      4, // min(4, 32/2=16) = 4
+			want:      4, // min(4, 32/3=10) = 4
 		},
 		{
 			name:      "2 CPU, 16GB RAM - CPU limited",
@@ -70,7 +70,7 @@ func TestCalculateCapacity(t *testing.T) {
 			ramGB:     16,
 			configMax: 0,
 			turbo:     1.0,
-			want:      2, // min(2, 16/2=8) = 2
+			want:      2, // min(2, 16/3=5) = 2
 		},
 
 		// configMax (--roof) fully controls capacity
@@ -80,7 +80,7 @@ func TestCalculateCapacity(t *testing.T) {
 			ramGB:     16,
 			configMax: 16,
 			turbo:     1.0,
-			want:      16, // --roof=16 overrides detected=8
+			want:      16, // --roof=16 overrides detected=5
 		},
 		{
 			name:      "configMax lower than detected - uses configMax",
@@ -88,41 +88,41 @@ func TestCalculateCapacity(t *testing.T) {
 			ramGB:     32,
 			configMax: 4,
 			turbo:     1.0,
-			want:      4, // detected=16, configMax=4, uses 4
+			want:      4, // detected=10, configMax=4, uses 4
 		},
 		{
 			name:      "configMax equals detected",
 			cpuCount:  8,
 			ramGB:     16,
-			configMax: 8,
+			configMax: 5,
 			turbo:     1.0,
-			want:      8,
+			want:      5,
 		},
 
 		// Turbo mode
 		{
-			name:      "turbo 1.25x on 8 CPU",
+			name:      "turbo 1.25x on 8 CPU, 16GB",
 			cpuCount:  8,
 			ramGB:     16,
 			configMax: 0,
 			turbo:     1.25,
-			want:      10, // base=8, 8*1.25=10, cap=16 (2x CPU)
+			want:      6, // base=5, 5*1.25=6.25->6, cap=16 (2x CPU)
 		},
 		{
-			name:      "turbo 2.0x on 8 CPU",
+			name:      "turbo 2.0x on 8 CPU, 16GB",
 			cpuCount:  8,
 			ramGB:     16,
 			configMax: 0,
 			turbo:     2.0,
-			want:      16, // base=8, 8*2=16, cap=16 (2x CPU)
+			want:      10, // base=5, 5*2=10, cap=16 (2x CPU)
 		},
 		{
 			name:      "turbo 2.0x on 8 CPU with low configMax",
 			cpuCount:  8,
 			ramGB:     16,
-			configMax: 10,
+			configMax: 8,
 			turbo:     2.0,
-			want:      10, // base=8, 8*2=16, but configMax=10 caps it
+			want:      8, // base=5, 5*2=10, but configMax=8 caps it
 		},
 
 		// Edge cases
@@ -140,15 +140,15 @@ func TestCalculateCapacity(t *testing.T) {
 			ramGB:     1,
 			configMax: 0,
 			turbo:     1.0,
-			want:      1, // 1GB/2 = 0, but min is 1
+			want:      1, // 1GB/3 = 0, but min is 1
 		},
 		{
 			name:      "turbo with 64 cap",
 			cpuCount:  64,
-			ramGB:     128,
+			ramGB:     192,
 			configMax: 0,
 			turbo:     2.0,
-			want:      64, // base=64, 64*2=128, but max is 64
+			want:      64, // base=min(64, 64)=64, 64*2=128, but max is 64
 		},
 		{
 			name:      "configMax of 1 forces sequential",
@@ -195,9 +195,10 @@ func TestCalculateCapacity_RoofFullyControls(t *testing.T) {
 		t.Errorf("Large machine with --roof=8: got capacity=%d, want 8 (roof overrides detected)", got)
 	}
 
-	// Case 3: No roof (0) - should use auto-detection
+	// Case 3: No roof (0) - should use auto-detection (RAM/3)
+	// 16GB/3 = 5, min(8, 5) = 5
 	got = calculateCapacity(smallMachineCPU, smallMachineRAM, 0, 1.0)
-	if got != 8 {
-		t.Errorf("Small machine with no --roof: got capacity=%d, want 8 (auto-detected)", got)
+	if got != 5 {
+		t.Errorf("Small machine with no --roof: got capacity=%d, want 5 (auto-detected from 16GB/3)", got)
 	}
 }
