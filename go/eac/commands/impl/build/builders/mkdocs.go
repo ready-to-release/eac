@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/books"
@@ -46,29 +45,74 @@ func toDockerPath(workspaceRoot, filePath string) string {
 
 // getPDFConcurrency returns the internal Playwright page concurrency for a single PDF export.
 // This controls how many pages within one book are rendered in parallel.
-// Uses repository parallelism config: CI=4, devbox=8.
+// Uses memory-based detection to scale appropriately to system resources.
 // Note: Cross-book concurrency is controlled by the component scheduler's weighted semaphore.
 func getPDFConcurrency(workspaceRoot string) int {
-	cfg, err := config.Load(config.LoadOptions{RepoRoot: workspaceRoot})
-	if err != nil {
-		// Fallback to sensible defaults
-		if environments.IsCI() {
-			return 4
-		}
-		return 8
-	}
+	// Use memory-based detection from environments package
+	// This already handles CI vs devbox and returns 1-4 based on RAM tier
+	return environments.GetPDFExportConcurrency()
+}
 
-	if environments.IsCI() {
-		if cfg.Repository.Repository.Parallelism.CI > 0 {
-			return cfg.Repository.Repository.Parallelism.CI
-		}
-		return 4
+// formatDockerMemory formats bytes as Docker memory string (e.g., "4g").
+// Minimum 2GB, maximum 24GB for beefy machines.
+func formatDockerMemory(bytes int64) string {
+	const gbSize = 1024 * 1024 * 1024
+	gbVal := bytes / gbSize
+	if gbVal < 2 {
+		return "2g" // minimum for any build
 	}
+	if gbVal > 24 {
+		return "24g" // cap for very large allocations
+	}
+	return fmt.Sprintf("%dg", gbVal)
+}
 
-	if cfg.Repository.Repository.Parallelism.Devbox > 0 {
-		return cfg.Repository.Repository.Parallelism.Devbox
+// formatDockerShm calculates shared memory for Docker (1/4 of container, min 512MB, max 4GB).
+// Shared memory is used by Chromium/Playwright for rendering.
+func formatDockerShm(containerMemory int64) string {
+	const (
+		minShm = 512 * 1024 * 1024      // 512MB
+		maxShm = 4 * 1024 * 1024 * 1024 // 4GB for beefy machines
+		mb     = 1024 * 1024
+	)
+
+	shm := containerMemory / 4
+	if shm < minShm {
+		return "512m"
 	}
-	return 8
+	if shm >= maxShm {
+		return "4g"
+	}
+	return fmt.Sprintf("%dm", shm/mb)
+}
+
+// getEffectiveWeight returns the scheduling weight for a component type.
+// Returns the tool's Resources.CPUs if available, otherwise default of 4.
+func getEffectiveWeight(componentType string) int {
+	bridge := tool.GlobalBuildBridge()
+	if bridge != nil {
+		if t := bridge.ResolveTool(componentType, tool.OperationBuild); t != nil {
+			if t.Resources != nil && t.Resources.CPUs > 0 {
+				return t.Resources.CPUs
+			}
+		}
+	}
+	return 4 // default for PDF builds
+}
+
+// calculateWeightedMemory calculates container memory allocation based on weight.
+// Memory scales with weight: weight 1 = 2.5GB, weight 4 = 10GB, etc.
+// Capped at available container memory (half of host RAM).
+func calculateWeightedMemory(weight int) int64 {
+	// 2.5GB per weight unit - balances beefy machines with lower-spec ones
+	const baseMemoryPerWeight = 2560 * 1024 * 1024 // 2.5GB per weight unit
+	maxContainerMem := environments.GetContainerMemoryBytes()
+
+	weightedMem := int64(weight) * baseMemoryPerWeight
+	if weightedMem > maxContainerMem {
+		return maxContainerMem
+	}
+	return weightedMem
 }
 
 // MkDocsHandler builds MkDocs documentation sites using Docker.
@@ -599,20 +643,26 @@ func buildMkDocsWithThemeAndStaging(module *modules.ModuleContract, bookName, bo
 	dockerSiteDir := "site"
 	dockerConfigPath := toDockerPath(workspaceRoot, configPath)
 
-	// Use all available CPUs for PDF rendering (adapts to CI runners with fewer cores)
-	cpuLimit := fmt.Sprintf("%d", runtime.NumCPU())
+	// Calculate resource allocation based on work unit weight
+	// Weight determines both CPU and memory: weight 4 = 4 CPUs, 8GB RAM
+	weight := getEffectiveWeight("book")
+	weightedMemory := calculateWeightedMemory(weight)
+	memoryLimit := formatDockerMemory(weightedMemory)
+	shmSize := formatDockerShm(weightedMemory)
+	cpuLimit := fmt.Sprintf("%d", weight)
 
 	buildArgs := []string{
 		"run", "--rm",
 		"-v", dockerVolume + ":/docs",
 		"-w", "/docs",
-		"--cpus", cpuLimit, // Allocate available CPU cores for faster rendering
-		"--memory", "8g", // 8GB RAM for Chromium and mkdocs
-		"--shm-size", "2gb", // Shared memory for Chromium (prevents crashes)
+		"--cpus", cpuLimit,
+		"--memory", memoryLimit,
+		"--shm-size", shmSize,
 		"-e", "ENABLE_PDF_EXPORT=true",
 	}
 
 	Logln(logWriter, "   PDF Export: enabled (mkdocs-exporter)")
+	Logln(logWriter, "   Resources: weight=%d, cpus=%s, memory=%s, shm=%s", weight, cpuLimit, memoryLimit, shmSize)
 
 	if isDinD {
 		uid := os.Getuid()

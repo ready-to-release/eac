@@ -2,13 +2,11 @@
 package builders
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/books"
 	"github.com/ready-to-release/eac/go/eac/core/config"
@@ -30,140 +28,58 @@ func isForceRebuild() bool {
 // This is distinct from success (0) to signal that no new PDF was generated.
 const exitCodeSkipped = -1
 
-// buildModuleBooks builds all books for a module in parallel.
-// Preprocessing runs in parallel; PDF exports are serialized via semaphore.
+// buildModuleBooks builds books for a module sequentially.
+// Concurrency is managed solely by the orchestrator's weighted semaphore.
 // Final PDFs are moved to the module output root with naming: {book-name}-{theme}.pdf.
 func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book, workspaceRoot, outputDir string, logWriter io.Writer) int {
+	if len(moduleBooks) == 0 {
+		return 0
+	}
+
 	if len(moduleBooks) > 1 {
 		Logln(logWriter, "\n=== Building book: %s (%d books) ===", module.Moniker, len(moduleBooks))
 		for _, book := range moduleBooks {
 			Logln(logWriter, "   - %s (%s)", book.Name, book.GetOutput())
 		}
-		Logln(logWriter, "\n🚀 Building %d books in parallel (PDF exports serialized)...", len(moduleBooks))
 	}
 
 	// Pre-build: ensure drawio cache is up to date
-	// This is fast if already cached (just hash comparison)
 	optimized, err := books.UpdateDrawioCache(workspaceRoot, logWriter)
 	if err != nil {
 		Logln(logWriter, "⚠️  Warning: drawio cache update failed: %v", err)
-		// Non-fatal - continue with build
 	} else if optimized > 0 {
 		Logln(logWriter, "📊 Updated drawio cache: %d image(s) optimized", optimized)
 	}
 
-	// Build books in parallel (PDF exports serialized via pdfExportSemaphore)
-	var wg sync.WaitGroup
-	results := make(chan int, len(moduleBooks))
-
-	for _, book := range moduleBooks {
-		wg.Add(1)
-		go func(b *config.Book) {
-			defer wg.Done()
-
-			// Determine output directory based on book type:
-			// - Site books: output directly to module dir (MkDocs creates site/ subdirectory)
-			// - PDF books: use isolated subdirectory (PDF is moved to module root after build)
-			var bookOutputDir string
-			if b.GetOutput() == "site" {
-				bookOutputDir = outputDir
-			} else {
-				bookOutputDir = filepath.Join(outputDir, b.Name)
-			}
-
-			if err := os.MkdirAll(bookOutputDir, 0o755); err != nil {
-				Logln(logWriter, "❌ Failed to create output directory for book '%s': %v", b.Name, err)
-				results <- 1
-				return
-			}
-
-			// Use buffered writer for parallel builds to avoid interleaved output
-			var bookLog bytes.Buffer
-			var bookLogWriter io.Writer = &bookLog
-			if len(moduleBooks) == 1 {
-				// Single book - write directly to main log
-				bookLogWriter = logWriter
-			}
-
-			// Build the book (PDF exports will be serialized via semaphore)
-			exitCode := BuildSingleBook(module, b, workspaceRoot, outputDir, bookOutputDir, bookLogWriter)
-
-			// Handle skipped builds (incremental - content unchanged)
-			if exitCode == exitCodeSkipped {
-				if len(moduleBooks) > 1 {
-					_, _ = logWriter.Write(bookLog.Bytes()) //nolint:errcheck // best-effort log aggregation
-				}
-				results <- exitCodeSkipped // Pass through -1 so TUI shows cached (blue)
-				return
-			}
-
-			if exitCode != 0 {
-				if len(moduleBooks) > 1 {
-					_, _ = logWriter.Write(bookLog.Bytes()) //nolint:errcheck // best-effort log aggregation
-				}
-				results <- exitCode
-				return
-			}
-
-			// For PDF books, move PDF to module output root
-			// (only happens when build actually ran, not when skipped)
-			bookOutput := b.GetOutput()
-			if bookOutput != "site" {
-				themes := []string{}
-				switch bookOutput {
-				case "pdf-dark":
-					themes = []string{"dark"}
-				case "pdf-light":
-					themes = []string{"light"}
-				case "pdf-all":
-					themes = []string{"dark", "light"}
-				}
-
-				for _, theme := range themes {
-					// Move PDF from site/pdf/ to module root
-					// Use copy+delete instead of rename to handle cross-user permission issues
-					// (Docker creates files as different user than the Go process)
-					srcPdf := filepath.Join(bookOutputDir, "site", "pdf", fmt.Sprintf("%s-%s.pdf", b.Name, theme))
-					dstPdf := filepath.Join(outputDir, fmt.Sprintf("%s-%s.pdf", b.Name, theme))
-					if err := copyFile(srcPdf, dstPdf); err != nil {
-						Logln(bookLogWriter, "⚠️  Failed to copy PDF to module root: %v", err)
-					} else {
-						// Remove source after successful copy
-						os.Remove(srcPdf)
-						Logln(bookLogWriter, "   📄 %s-%s.pdf → module output root", b.Name, theme)
-					}
-				}
-			}
-
-			// Write complete log atomically for parallel builds
-			if len(moduleBooks) > 1 {
-				_, _ = logWriter.Write(bookLog.Bytes()) //nolint:errcheck // best-effort log aggregation
-			}
-			results <- 0
-		}(book)
-	}
-
-	wg.Wait()
-	close(results)
-
-	// Aggregate results: failure > success > skipped
-	// - If any book fails (>0), return failure
-	// - If all books skipped (-1), return skipped
-	// - Otherwise return success
+	// Build books sequentially - orchestrator manages parallelism
 	allSkipped := true
-	for exitCode := range results {
+	for _, book := range moduleBooks {
+		// Determine output directory based on book type
+		var bookOutputDir string
+		if book.GetOutput() == "site" {
+			bookOutputDir = outputDir
+		} else {
+			bookOutputDir = filepath.Join(outputDir, book.Name)
+		}
+
+		if err := os.MkdirAll(bookOutputDir, 0o755); err != nil {
+			Logln(logWriter, "❌ Failed to create output directory for book '%s': %v", book.Name, err)
+			return 1
+		}
+
+		exitCode := BuildSingleBook(module, book, workspaceRoot, outputDir, bookOutputDir, logWriter)
+
 		if exitCode > 0 {
-			return exitCode // Failure takes precedence
+			return exitCode // Failure
 		}
 		if exitCode == 0 {
 			allSkipped = false
+			// For PDF books, move PDF to module output root
+			movePDFToModuleRoot(book, bookOutputDir, outputDir, logWriter)
 		}
 	}
 
 	if allSkipped && len(moduleBooks) > 0 {
-		if len(moduleBooks) > 1 {
-			Logln(logWriter, "\n⏭️  All %d books unchanged (cached)", len(moduleBooks))
-		}
 		return exitCodeSkipped
 	}
 
@@ -171,6 +87,35 @@ func buildModuleBooks(module *modules.ModuleContract, moduleBooks []*config.Book
 		Logln(logWriter, "\n✅ All %d books built successfully", len(moduleBooks))
 	}
 	return 0
+}
+
+// movePDFToModuleRoot moves generated PDFs from build directory to module output root.
+func movePDFToModuleRoot(book *config.Book, bookOutputDir, outputDir string, logWriter io.Writer) {
+	bookOutput := book.GetOutput()
+	if bookOutput == "site" {
+		return
+	}
+
+	var themes []string
+	switch bookOutput {
+	case "pdf-dark":
+		themes = []string{"dark"}
+	case "pdf-light":
+		themes = []string{"light"}
+	case "pdf-all":
+		themes = []string{"dark", "light"}
+	}
+
+	for _, theme := range themes {
+		srcPdf := filepath.Join(bookOutputDir, "site", "pdf", fmt.Sprintf("%s-%s.pdf", book.Name, theme))
+		dstPdf := filepath.Join(outputDir, fmt.Sprintf("%s-%s.pdf", book.Name, theme))
+		if err := copyFile(srcPdf, dstPdf); err != nil {
+			Logln(logWriter, "⚠️  Failed to copy PDF to module root: %v", err)
+		} else {
+			os.Remove(srcPdf)
+			Logln(logWriter, "   📄 %s-%s.pdf → module output root", book.Name, theme)
+		}
+	}
 }
 
 // BuildSingleBook builds a single book based on its output configuration.

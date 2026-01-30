@@ -67,20 +67,22 @@ func CalculatePDFConcurrencyWithTurbo(memoryBytes uint64, turbo bool) int {
 	}
 }
 
-// GetContainerMemoryBytes returns recommended memory for a container (half of host).
-// - 32GB host = 16GB container
-// - 16GB host = 8GB container
+// GetContainerMemoryBytes returns recommended memory for a container (60% of host).
+// - 32GB host = 19GB container
+// - 16GB host = 9.6GB container
 // - Minimum 2GB.
 func GetContainerMemoryBytes() int64 {
 	return CalculateContainerMemory(GetSystemMemoryBytes())
 }
 
 // CalculateContainerMemory calculates container memory allocation for a given host memory.
-// Returns half of host memory with a minimum of 2GB.
+// Returns 60% of host memory with a minimum of 2GB.
+// 60% leaves room for OS and other processes while utilizing more than half.
 func CalculateContainerMemory(hostMemoryBytes uint64) int64 {
 	const minMemory = 2 * 1024 * 1024 * 1024 // 2GB minimum
 
-	containerMem := int64(hostMemoryBytes / 2)
+	// 60% of host memory (was 50%)
+	containerMem := int64(float64(hostMemoryBytes) * 0.6)
 	if containerMem < minMemory {
 		return minMemory
 	}

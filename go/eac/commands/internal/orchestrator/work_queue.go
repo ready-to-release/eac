@@ -45,7 +45,16 @@ func NewWorkQueue(work []workunit.UnitSpec) *WorkQueue {
 // PopReady blocks until a ready item is available, then returns it.
 // An item is ready when all its DependsOn components have completed.
 // Returns nil when queue is empty or closed.
+// Note: Use PopReadyWithBudget for bin-packing scheduling.
 func (q *WorkQueue) PopReady() *workunit.UnitSpec {
+	return q.PopReadyWithBudget(0) // 0 = unlimited budget
+}
+
+// PopReadyWithBudget blocks until a ready item is available that fits within the budget.
+// If budget <= 0, returns the heaviest ready item (pure LPT).
+// If budget > 0, returns the heaviest ready item with weight <= budget (bin-packing).
+// Returns nil when queue is empty or closed.
+func (q *WorkQueue) PopReadyWithBudget(budget int) *workunit.UnitSpec {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
@@ -55,8 +64,8 @@ func (q *WorkQueue) PopReady() *workunit.UnitSpec {
 			return nil
 		}
 
-		// Find highest-weight ready item
-		if spec := q.findReady(); spec != nil {
+		// Find highest-weight ready item that fits budget
+		if spec := q.findReadyWithBudget(budget); spec != nil {
 			return spec
 		}
 
@@ -71,23 +80,29 @@ func (q *WorkQueue) PopReady() *workunit.UnitSpec {
 	}
 }
 
-// findReady finds and removes the highest-weight item with satisfied deps.
+// findReadyWithBudget finds and removes the highest-weight ready item within budget.
+// If budget <= 0, ignores budget constraint (pure LPT).
 // Must be called with mu held.
-func (q *WorkQueue) findReady() *workunit.UnitSpec {
-	// Scan heap for first ready item
-	// Note: The heap maintains weight ordering, so scanning from start
-	// gives us items in roughly weight order, but heap property only
-	// guarantees parent > children, not strict sorted order.
-	// We scan to find the highest-weight ready item.
+func (q *WorkQueue) findReadyWithBudget(budget int) *workunit.UnitSpec {
+	// Scan heap for best ready item that fits budget
+	// We want: heaviest ready item with weight <= budget (if budget > 0)
 	bestIdx := -1
 	bestWeight := -1
 
 	for i, item := range q.items {
-		if q.deps.IsReady(item.ID) {
-			if item.Weight > bestWeight {
-				bestIdx = i
-				bestWeight = item.Weight
-			}
+		if !q.deps.IsReady(item.ID) {
+			continue
+		}
+
+		// Check budget constraint (0 or negative = unlimited)
+		if budget > 0 && item.Weight > budget {
+			continue
+		}
+
+		// Prefer heavier items
+		if item.Weight > bestWeight {
+			bestIdx = i
+			bestWeight = item.Weight
 		}
 	}
 
@@ -98,6 +113,22 @@ func (q *WorkQueue) findReady() *workunit.UnitSpec {
 	// Remove from heap and return
 	item := heap.Remove(&q.items, bestIdx).(workunit.UnitSpec)
 	return &item
+}
+
+// HasReadyWithBudget checks if there's a ready item that fits within budget.
+// Used by scheduler to decide whether to wait for capacity or look for smaller items.
+func (q *WorkQueue) HasReadyWithBudget(budget int) bool {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	for _, item := range q.items {
+		if q.deps.IsReady(item.ID) {
+			if budget <= 0 || item.Weight <= budget {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // MarkComplete marks a component as done, potentially unblocking dependents.

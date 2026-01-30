@@ -352,14 +352,23 @@ func (cs *ComponentScheduler) RunComponents(work []workunit.UnitSpec, worker Com
 	}
 
 	// Spawn worker pool - all workers start immediately and compete for queue items
+	// Workers use bin-packing: check available capacity, pop item that fits
 	for i := 0; i < poolSize; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 
 			for {
-				// Get next ready item (blocks until deps satisfied or queue closed)
-				spec := queue.PopReady()
+				// Check available capacity for bin-packing
+				// This is approximate (race-safe) - actual acquisition may differ
+				available := cs.semaphore.Available()
+				if available < 1 {
+					available = 1 // At minimum, look for weight-1 items
+				}
+
+				// Pop item that fits available capacity (bin-packing)
+				// Prioritizes heavier items that fit, enabling parallel small jobs
+				spec := queue.PopReadyWithBudget(available)
 				if spec == nil {
 					return // queue exhausted
 				}

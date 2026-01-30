@@ -250,3 +250,130 @@ func TestWorkHeap_LessFunction(t *testing.T) {
 	assert.True(t, h.Less(1, 0), "weight 10 should come before weight 5")
 	assert.False(t, h.Less(0, 1), "weight 5 should not come before weight 10")
 }
+
+func TestWorkQueue_PopReadyWithBudget_BinPacking(t *testing.T) {
+	// Test bin-packing: with limited budget, smaller items should be picked
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Module: "mod1", Component: "heavy"}, Weight: 8, Index: 0},
+		{ID: workunit.UnitID{Module: "mod1", Component: "medium"}, Weight: 4, Index: 1},
+		{ID: workunit.UnitID{Module: "mod1", Component: "light"}, Weight: 1, Index: 2},
+	}
+
+	q := NewWorkQueue(work)
+
+	// With budget 4, should skip heavy (8) and pick medium (4)
+	item1 := q.PopReadyWithBudget(4)
+	require.NotNil(t, item1)
+	assert.Equal(t, "medium", item1.ID.Component, "should pick heaviest that fits budget")
+	assert.Equal(t, 4, item1.Weight)
+
+	// With budget 2, should skip heavy (8) and pick light (1)
+	item2 := q.PopReadyWithBudget(2)
+	require.NotNil(t, item2)
+	assert.Equal(t, "light", item2.ID.Component, "should pick heaviest that fits budget")
+	assert.Equal(t, 1, item2.Weight)
+
+	// With unlimited budget (0), should pick the remaining heavy
+	item3 := q.PopReadyWithBudget(0)
+	require.NotNil(t, item3)
+	assert.Equal(t, "heavy", item3.ID.Component, "unlimited budget should pick heaviest")
+	assert.Equal(t, 8, item3.Weight)
+}
+
+func TestWorkQueue_PopReadyWithBudget_NothingFits(t *testing.T) {
+	// All items exceed budget - should return nil (waits for capacity)
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Module: "mod1", Component: "heavy1"}, Weight: 8},
+		{ID: workunit.UnitID{Module: "mod1", Component: "heavy2"}, Weight: 6},
+	}
+
+	q := NewWorkQueue(work)
+
+	// Run in goroutine since PopReadyWithBudget blocks when nothing fits
+	done := make(chan *workunit.UnitSpec, 1)
+	go func() {
+		// Budget 4 - neither heavy1 (8) nor heavy2 (6) fits
+		// This should block until something changes
+		item := q.PopReadyWithBudget(4)
+		done <- item
+	}()
+
+	// Should not return immediately since nothing fits
+	select {
+	case <-done:
+		t.Fatal("should block when nothing fits budget")
+	case <-time.After(50 * time.Millisecond):
+		// Expected - nothing fits
+	}
+
+	// Close queue to unblock
+	q.Close()
+
+	// Now should return nil
+	item := <-done
+	assert.Nil(t, item, "should return nil when closed")
+}
+
+func TestWorkQueue_HasReadyWithBudget(t *testing.T) {
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Module: "mod1", Component: "heavy"}, Weight: 8},
+		{ID: workunit.UnitID{Module: "mod1", Component: "light"}, Weight: 2},
+	}
+
+	q := NewWorkQueue(work)
+
+	// Budget 10 - both fit
+	assert.True(t, q.HasReadyWithBudget(10))
+
+	// Budget 4 - only light fits
+	assert.True(t, q.HasReadyWithBudget(4))
+
+	// Budget 1 - nothing fits
+	assert.False(t, q.HasReadyWithBudget(1))
+
+	// Unlimited - always true if queue has items
+	assert.True(t, q.HasReadyWithBudget(0))
+}
+
+func TestWorkQueue_PopReadyWithBudget_RespectsDependencies(t *testing.T) {
+	// Even with budget, blocked items should not be picked
+	work := []workunit.UnitSpec{
+		{ID: workunit.UnitID{Module: "mod1", Component: "dep"}, Weight: 2},
+		{
+			ID:        workunit.UnitID{Module: "mod1", Component: "light-blocked"},
+			Weight:    1, // Lighter but blocked
+			DependsOn: []workunit.UnitID{{Module: "mod1", Component: "dep"}},
+		},
+	}
+
+	q := NewWorkQueue(work)
+
+	// Budget 1 - light-blocked (1) fits but is blocked, dep (2) doesn't fit
+	// Should block until dep completes
+	done := make(chan *workunit.UnitSpec, 1)
+	go func() {
+		item := q.PopReadyWithBudget(1)
+		done <- item
+	}()
+
+	// Should block since only ready item (dep=2) doesn't fit budget
+	select {
+	case <-done:
+		t.Fatal("should block when nothing fits budget")
+	case <-time.After(50 * time.Millisecond):
+		// Expected
+	}
+
+	// Use unlimited budget to get dep
+	dep := q.PopReadyWithBudget(0)
+	require.NotNil(t, dep)
+	assert.Equal(t, "dep", dep.ID.Component)
+
+	// Mark dep complete - now light-blocked should become ready
+	q.MarkComplete(dep.ID)
+
+	// Now the blocked goroutine should get light-blocked
+	item := <-done
+	require.NotNil(t, item)
+	assert.Equal(t, "light-blocked", item.ID.Component)
+}

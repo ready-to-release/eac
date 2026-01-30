@@ -180,6 +180,15 @@ func (gs *GlobalSemaphore) Used() int {
 	return used
 }
 
+// Available returns current available capacity (capacity - used).
+func (gs *GlobalSemaphore) Available() int {
+	avail := gs.Capacity() - gs.Used()
+	if avail < 0 {
+		return 0
+	}
+	return avail
+}
+
 // Close releases all local allocations and unregisters from tracking.
 // Safe to call multiple times.
 func (gs *GlobalSemaphore) Close() {

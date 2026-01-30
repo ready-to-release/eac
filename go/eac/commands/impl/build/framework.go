@@ -453,7 +453,13 @@ func processAllArtifactDerivations(ctx *cmdframework.ExecutionContext, buildCfg 
 			continue // Skip failed components
 		}
 
-		componentOutputDir := paths.ComponentBuildOutputPath(ctx.WorkspaceRoot, compResult.Module, compResult.Component)
+		// Calculate component directory path matching build worker convention:
+		// <component>_<handler> when handler is present, otherwise just <component>
+		componentDir := compResult.Component
+		if compResult.Handler != "" {
+			componentDir = compResult.Component + "_" + compResult.Handler
+		}
+		componentOutputDir := paths.ComponentBuildOutputPath(ctx.WorkspaceRoot, compResult.Module, componentDir)
 		if exitCode := builders.ExecutePostBuildSteps(compResult.Module, compResult.Component, ctx.WorkspaceRoot, componentOutputDir, io.Discard); exitCode != 0 {
 			log.Warnf("Post-build steps warning for %s/%s: exit code %d", compResult.Module, compResult.Component, exitCode)
 			// Continue with other components
