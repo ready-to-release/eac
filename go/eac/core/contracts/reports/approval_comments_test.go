@@ -1,12 +1,12 @@
 package reports
 
 import (
-	"os"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/ready-to-release/eac/go/eac/core/git"
+	coretesting "github.com/ready-to-release/eac/go/eac/core/testing"
 )
 
 // mockGitHubCLI implements GitHubCLI for testing.
@@ -75,11 +75,7 @@ func TestGetApprovalComments(t *testing.T) {
 		},
 	}
 
-	// Get repository root
-	workspaceRoot := os.Getenv("WORKSPACE_ROOT")
-	if workspaceRoot == "" {
-		t.Skip("WORKSPACE_ROOT not set, skipping integration test")
-	}
+	workspaceRoot := coretesting.SetupWorkspaceIsolation(t)
 
 	// Set up mock GitHub CLI
 	mockCLI := &mockGitHubCLI{
@@ -136,11 +132,7 @@ func TestGetApprovalComments(t *testing.T) {
 // TestGetApprovalComments_BundleModuleAggregation verifies that bundle modules
 // aggregate approvals from all their dependencies.
 func TestGetApprovalComments_BundleModuleAggregation(t *testing.T) {
-	// Get repository root
-	workspaceRoot := os.Getenv("WORKSPACE_ROOT")
-	if workspaceRoot == "" {
-		t.Skip("WORKSPACE_ROOT not set, skipping integration test")
-	}
+	workspaceRoot := coretesting.SetupWorkspaceIsolation(t)
 
 	// Set up mock GitHub CLI with sample PR data
 	mockCLI := &mockGitHubCLI{

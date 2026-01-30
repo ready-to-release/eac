@@ -195,7 +195,7 @@ func (c *Console) SetInitSummary(summary *rootTUI.InitSummary) {
 		RequestedModules:      summary.RequestedModules,
 		CalculatedModules:     summary.CalculatedModules,
 		AddedDepm:             summary.AddedDepm,
-		ComponentCount:        summary.ComponentCount,
+		UoWCount:              summary.UoWCount,
 		ExecutionTree:         layers,
 		LayerCount:            summary.LayerCount,
 		LayerSizes:            summary.LayerSizes,

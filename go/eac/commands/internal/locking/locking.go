@@ -218,6 +218,10 @@ func AcquireWithWait(ctx context.Context, workspaceRoot string, cfg Config, regi
 					Waiting: 1,
 				})
 				waitRegistered = true
+
+				// Print user-friendly message to stdout
+				action := extractAction(cfg.ActionVerb)
+				fmt.Printf("Waiting for %s lock...\n", action)
 			}
 
 			// Try to acquire again
@@ -251,6 +255,27 @@ func AcquireWithWait(ctx context.Context, workspaceRoot string, cfg Config, regi
 	}
 }
 
+// extractAction converts ActionVerb to a user-friendly action name for waiting messages.
+// "already being built" → "building", "already running" → "testing", etc.
+func extractAction(actionVerb string) string {
+	switch actionVerb {
+	case "already being built":
+		return "building"
+	case "already running":
+		return "testing"
+	case "already being scanned":
+		return "scanning"
+	case "already being linted":
+		return "linting"
+	default:
+		// Fallback: extract verb from "already being X" or "already X"
+		if len(actionVerb) > 14 && actionVerb[:14] == "already being " {
+			return actionVerb[14:]
+		}
+		return "lock"
+	}
+}
+
 // BuildConfig returns a Config for module build locking.
 func BuildConfig(moniker, baseDir string) Config {
 	return Config{
@@ -261,9 +286,9 @@ func BuildConfig(moniker, baseDir string) Config {
 	}
 }
 
-// ComponentBuildConfig returns a Config for component-level build locking.
+// UnitBuildConfig returns a Config for component-level build locking.
 // Use this when building components within a module in parallel.
-func ComponentBuildConfig(module, component, baseDir string) Config {
+func UnitBuildConfig(module, component, baseDir string) Config {
 	return Config{
 		BaseDir:      baseDir,
 		Identifier:   module + ":" + component,
@@ -282,6 +307,17 @@ func TestConfig(suiteName, baseDir string) Config {
 	}
 }
 
+// UnitTestConfig returns a Config for component-level test locking.
+// Use this when testing components within a module in parallel.
+func UnitTestConfig(module, component, baseDir string) Config {
+	return Config{
+		BaseDir:      baseDir,
+		Identifier:   module + "-" + component, // Use dash to avoid path issues
+		ResourceType: "test component",
+		ActionVerb:   "already running",
+	}
+}
+
 // ScanConfig returns a Config for module scan locking.
 func ScanConfig(moniker, baseDir string) Config {
 	return Config{
@@ -292,8 +328,8 @@ func ScanConfig(moniker, baseDir string) Config {
 	}
 }
 
-// ComponentScanConfig returns a Config for component-level scan locking.
-func ComponentScanConfig(module, component, baseDir string) Config {
+// UnitScanConfig returns a Config for component-level scan locking.
+func UnitScanConfig(module, component, baseDir string) Config {
 	return Config{
 		BaseDir:      baseDir,
 		Identifier:   module + "-" + component, // Use dash to avoid path issues
@@ -312,9 +348,9 @@ func LintConfig(moniker, baseDir string) Config {
 	}
 }
 
-// ComponentLintConfig returns a Config for component-level lint locking.
+// UnitLintConfig returns a Config for component-level lint locking.
 // Use this when linting components within a module in parallel.
-func ComponentLintConfig(module, component, baseDir string) Config {
+func UnitLintConfig(module, component, baseDir string) Config {
 	return Config{
 		BaseDir:      baseDir,
 		Identifier:   module + "-" + component, // Use dash to avoid path issues

@@ -1,9 +1,10 @@
 package reports
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
+
+	coretesting "github.com/ready-to-release/eac/go/eac/core/testing"
 )
 
 func TestGetChangelog(t *testing.T) {
@@ -30,11 +31,7 @@ func TestGetChangelog(t *testing.T) {
 		},
 	}
 
-	// Get repository root
-	workspaceRoot := os.Getenv("WORKSPACE_ROOT")
-	if workspaceRoot == "" {
-		t.Skip("WORKSPACE_ROOT not set, skipping integration test")
-	}
+	workspaceRoot := coretesting.SetupWorkspaceIsolation(t)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

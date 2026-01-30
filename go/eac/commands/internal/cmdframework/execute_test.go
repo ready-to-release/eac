@@ -8,10 +8,10 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/workunit"
 )
 
-// TestComponentRegistry_RegisterAndRetrieve tests basic registration and retrieval.
-func TestComponentRegistry_RegisterAndRetrieve(t *testing.T) {
+// TestUnitRegistry_RegisterAndRetrieve tests basic registration and retrieval.
+func TestUnitRegistry_RegisterAndRetrieve(t *testing.T) {
 	// Create a fresh registry for testing
-	reg := NewComponentRegistry()
+	reg := NewUnitRegistry()
 
 	// Create mock provider and worker
 	mockProvider := func(ctx *ExecutionContext) [][]workunit.UnitSpec {
@@ -42,9 +42,9 @@ func TestComponentRegistry_RegisterAndRetrieve(t *testing.T) {
 	}
 }
 
-// TestComponentRegistry_UnregisteredCommandType tests behavior for unregistered types.
-func TestComponentRegistry_UnregisteredCommandType(t *testing.T) {
-	reg := NewComponentRegistry()
+// TestUnitRegistry_UnregisteredCommandType tests behavior for unregistered types.
+func TestUnitRegistry_UnregisteredCommandType(t *testing.T) {
+	reg := NewUnitRegistry()
 
 	// Should return nil for unregistered command type
 	provider := reg.GetProvider(CommandTypeBuild)
@@ -63,9 +63,9 @@ func TestComponentRegistry_UnregisteredCommandType(t *testing.T) {
 	}
 }
 
-// TestComponentRegistry_PartialRegistration tests that HasComponents requires both.
-func TestComponentRegistry_PartialRegistration(t *testing.T) {
-	reg := NewComponentRegistry()
+// TestUnitRegistry_PartialRegistration tests that HasComponents requires both.
+func TestUnitRegistry_PartialRegistration(t *testing.T) {
+	reg := NewUnitRegistry()
 
 	// Register only provider
 	mockProvider := func(ctx *ExecutionContext) [][]workunit.UnitSpec {
@@ -90,9 +90,9 @@ func TestComponentRegistry_PartialRegistration(t *testing.T) {
 	}
 }
 
-// TestComponentRegistry_ReplaceRegistration tests that registration can be replaced.
-func TestComponentRegistry_ReplaceRegistration(t *testing.T) {
-	reg := NewComponentRegistry()
+// TestUnitRegistry_ReplaceRegistration tests that registration can be replaced.
+func TestUnitRegistry_ReplaceRegistration(t *testing.T) {
+	reg := NewUnitRegistry()
 
 	callCount := 0
 	provider1 := func(ctx *ExecutionContext) [][]workunit.UnitSpec {
@@ -121,9 +121,9 @@ func TestComponentRegistry_ReplaceRegistration(t *testing.T) {
 	}
 }
 
-// TestComponentRegistry_AllCommandTypes tests registration for all command types.
-func TestComponentRegistry_AllCommandTypes(t *testing.T) {
-	reg := NewComponentRegistry()
+// TestUnitRegistry_AllCommandTypes tests registration for all command types.
+func TestUnitRegistry_AllCommandTypes(t *testing.T) {
+	reg := NewUnitRegistry()
 
 	commandTypes := []CommandType{CommandTypeBuild, CommandTypeTest, CommandTypeScan, CommandTypeLint}
 
@@ -144,9 +144,9 @@ func TestComponentRegistry_AllCommandTypes(t *testing.T) {
 	}
 }
 
-// TestComponentRegistry_ConcurrentAccess tests thread safety.
-func TestComponentRegistry_ConcurrentAccess(t *testing.T) {
-	reg := NewComponentRegistry()
+// TestUnitRegistry_ConcurrentAccess tests thread safety.
+func TestUnitRegistry_ConcurrentAccess(t *testing.T) {
+	reg := NewUnitRegistry()
 
 	var wg sync.WaitGroup
 	iterations := 100
@@ -211,40 +211,40 @@ func TestExecutionMode_Configuration(t *testing.T) {
 // TestGlobalRegistryFunctions tests the package-level registry functions.
 func TestGlobalRegistryFunctions(t *testing.T) {
 	// Reset global registry for test isolation
-	registry = NewComponentRegistry()
-	defer func() { registry = NewComponentRegistry() }()
+	registry = NewUnitRegistry()
+	defer func() { registry = NewUnitRegistry() }()
 
-	// Test RegisterComponentProvider and GetComponentProvider
+	// Test RegisterUnitProvider and GetUnitProvider
 	buildCalled := false
-	RegisterComponentProvider(CommandTypeBuild, func(ctx *ExecutionContext) [][]workunit.UnitSpec {
+	RegisterUnitProvider(CommandTypeBuild, func(ctx *ExecutionContext) [][]workunit.UnitSpec {
 		buildCalled = true
 		return nil
 	})
 
-	provider := GetComponentProvider(CommandTypeBuild)
+	provider := GetUnitProvider(CommandTypeBuild)
 	if provider == nil {
-		t.Fatal("RegisterComponentProvider should register for CommandTypeBuild")
+		t.Fatal("RegisterUnitProvider should register for CommandTypeBuild")
 	}
 	provider(nil)
 	if !buildCalled {
 		t.Error("Build provider was not called")
 	}
 
-	// Test RegisterComponentWorker and GetComponentWorker
-	RegisterComponentWorker(CommandTypeBuild, func(ctx *ExecutionContext, module, component string, logWriter io.Writer) int {
+	// Test RegisterUnitWorker and GetUnitWorker
+	RegisterUnitWorker(CommandTypeBuild, func(ctx *ExecutionContext, module, component string, logWriter io.Writer) int {
 		return 42
 	})
 
-	worker := GetComponentWorker(CommandTypeBuild)
+	worker := GetUnitWorker(CommandTypeBuild)
 	if worker == nil {
-		t.Fatal("RegisterComponentWorker should register for CommandTypeBuild")
+		t.Fatal("RegisterUnitWorker should register for CommandTypeBuild")
 	}
 	if result := worker(nil, "", "", nil); result != 42 {
 		t.Errorf("Expected worker to return 42, got %d", result)
 	}
 
-	// Test HasComponentExecution
-	if !HasComponentExecution(CommandTypeBuild) {
-		t.Error("HasComponentExecution should return true after registering both provider and worker")
+	// Test HasUnitExecution
+	if !HasUnitExecution(CommandTypeBuild) {
+		t.Error("HasUnitExecution should return true after registering both provider and worker")
 	}
 }

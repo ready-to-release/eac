@@ -3,29 +3,39 @@ package workunit
 // DisplayNameResolver computes shortest unique names within a set.
 // When multiple units have the same component name, it includes the module
 // for disambiguation. When a component name is unique, just the component is returned.
+// For BDD tests (with Spec set), uses the spec name for uniqueness checking.
 type DisplayNameResolver struct {
-	componentCounts map[string]int // component -> count of units with this component
+	componentCounts map[string]int // component/spec -> count of units with this name
 }
 
 // NewDisplayNameResolver creates a resolver for the given set of units.
-// It counts how many times each component name appears to determine
+// It counts how many times each component/spec name appears to determine
 // which names need disambiguation.
 func NewDisplayNameResolver(units []UnitID) *DisplayNameResolver {
 	r := &DisplayNameResolver{componentCounts: make(map[string]int)}
 	for _, u := range units {
-		r.componentCounts[u.Component]++
+		key := u.Component
+		if u.Spec != "" {
+			key = u.Spec // Use spec name for BDD tests
+		}
+		r.componentCounts[key]++
 	}
 	return r
 }
 
 // Resolve returns shortest unique name for unit.
+// For BDD tests, uses spec name (e.g., "build-module" or "eac-commands:build-module").
 // If the component name is unique in the set, returns just the component (e.g., "go").
 // If the component name is ambiguous, returns module:component (e.g., "eac-core:go").
 func (r *DisplayNameResolver) Resolve(u UnitID) string {
-	if r.componentCounts[u.Component] == 1 {
-		return u.Component // Unique: just "go"
+	key := u.Component
+	if u.Spec != "" {
+		key = u.Spec
 	}
-	return u.Module + ":" + u.Component // Ambiguous: "eac-core:go"
+	if r.componentCounts[key] == 1 {
+		return key // Unique: just "go" or "build-module"
+	}
+	return u.Module + ":" + key // Ambiguous: "eac-core:go" or "eac-commands:build-module"
 }
 
 // ResolveTabLabel returns tab-constrained name.
@@ -41,7 +51,7 @@ func (r *DisplayNameResolver) ResolveTabLabel(u UnitID, maxWidth int) string {
 	return name[:maxWidth]
 }
 
-// NeedsDisambiguation returns true if the component name appears more than once.
+// NeedsDisambiguation returns true if the component/spec name appears more than once.
 func (r *DisplayNameResolver) NeedsDisambiguation(component string) bool {
 	return r.componentCounts[component] > 1
 }

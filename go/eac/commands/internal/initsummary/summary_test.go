@@ -429,7 +429,7 @@ func TestFormatInitLine(t *testing.T) {
 				SetExecutionContext("devbox").
 				SetRequest([]string{"a", "b"}, []string{"a", "b", "c"}).
 				SetExecutionPlan([][]string{{"a", "b"}, {"c"}}).
-				SetComponentCount(45).
+				SetUoWCount(45).
 				SetParallelism(&ParallelismInfo{
 					Mode:             "devbox",
 					BaseWorkers:      8,

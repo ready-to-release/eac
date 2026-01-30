@@ -6,6 +6,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/ready-to-release/eac/go/eac/core/workspace"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -25,8 +26,7 @@ func TestLoad_DefaultOptions(t *testing.T) {
 }
 
 func TestLoad_WithExplicitRepoRoot(t *testing.T) {
-	// Use findRepositoryRoot (the local implementation)
-	repoRoot, err := findRepositoryRoot("")
+	repoRoot, err := workspace.Root()
 	require.NoError(t, err)
 
 	opts := LoadOptions{
@@ -224,7 +224,7 @@ func TestPeekRepositoryType(t *testing.T) {
 
 // TestLoadRepositoryTypeDefaults tests loading type-specific defaults
 func TestLoadRepositoryTypeDefaults(t *testing.T) {
-	repoRoot, err := findRepositoryRoot("")
+	repoRoot, err := workspace.Root()
 	require.NoError(t, err)
 
 	t.Run("loads mono defaults", func(t *testing.T) {

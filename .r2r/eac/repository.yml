@@ -205,10 +205,6 @@ modules:
   - moniker: eac-commands
     name: Go Commands Library
     description: Go library containing CLI command implementations
-    versioning:
-      scheme: SemVer
-      changelog: go/eac/commands/CHANGELOG.md
-      release_type: internal
     depends_on: [eac-core]
     components:
       go:
@@ -240,6 +236,9 @@ modules:
           dockerfile: "containers/drawio-cli/Dockerfile"
           platforms: [linux/amd64]
           push: false
+      dockerfile-go-build:
+        type: dockerfile
+        root: containers/go-build
       drawio-scripts:
         type: testdata
         root: containers/drawio-cli
@@ -345,6 +344,9 @@ modules:
         build:
           post_build:
             copy_to: ".vscode/extensions/vscode-ext-commit/out"
+            copy_files:
+              - from: package.json
+                to: ".vscode/extensions/vscode-ext-commit/package.json"
       markdown: typescript/vscode-ext-commit
       json: contracts/vscode-commit
       gherkin: ~

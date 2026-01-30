@@ -13,6 +13,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/core/contracts/schema"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
+	"github.com/ready-to-release/eac/go/eac/core/workspace"
 	"gopkg.in/yaml.v3"
 )
 
@@ -119,7 +120,7 @@ func Load(opts LoadOptions) (*EACConfig, error) {
 	repoRoot := opts.RepoRoot
 	if repoRoot == "" {
 		var err error
-		repoRoot, err = findRepositoryRoot("")
+		repoRoot, err = workspace.Root()
 		if err != nil {
 			return nil, fmt.Errorf("failed to find repository root: %w", err)
 		}

@@ -125,8 +125,8 @@ type InitSummary struct {
 	CalculatedModules int // Final list after dependency resolution
 	AddedDepm         int // Module dependencies added
 
-	// Component count
-	ComponentCount int
+	// UoW count - total units of work to schedule
+	UoWCount int
 
 	// Execution tree - for visual tree rendering
 	ExecutionTree         []ExecutionLayer // Full tree: layers -> modules -> components
@@ -172,6 +172,9 @@ type InitSummary struct {
 
 	// Output directory
 	OutputDir string
+
+	// Tools that will be used (for pre-populating tool lamps)
+	PlannedTools []PlannedTool
 }
 
 // ExecutionLayer represents a single execution layer with its modules.
@@ -193,6 +196,12 @@ type InitSummaryFlags struct {
 	UseTUI       bool
 	SkipDeps     bool
 	SkipDepm     bool
+}
+
+// PlannedTool represents a tool that will be used during execution.
+type PlannedTool struct {
+	Name        string // Tool identifier (e.g., "go", "godog", "trivy")
+	IsContainer bool   // true = runs in container, false = runs on system
 }
 
 // SubcommandInfo describes a subcommand for the default TUI.

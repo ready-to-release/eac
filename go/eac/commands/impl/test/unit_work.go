@@ -2,6 +2,7 @@ package test
 
 import (
 	"math"
+	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/cmdframework"
 	"github.com/ready-to-release/eac/go/eac/core/config"
@@ -13,7 +14,7 @@ import (
 
 var componentWorkLog = logging.C()
 
-// FlattenModulesToTestComponentWork converts TestsByPackage to component work layers.
+// FlattenModulesToTestUnits converts TestsByPackage to component work layers.
 // Returns two layers: parallel tests first, sequential tests second.
 // Returns nil if no tests to execute.
 // Work items are created for each unique path:testType combination,
@@ -21,7 +22,7 @@ var componentWorkLog = logging.C()
 //
 // Test keys use path-based format: "go/eac/core/config:gotest"
 // This differs from build/lint/scan which use component-based format: "module:component:tool".
-func FlattenModulesToTestComponentWork(ctx *cmdframework.ExecutionContext) [][]workunit.UnitSpec {
+func FlattenModulesToTestUnits(ctx *cmdframework.ExecutionContext) [][]workunit.UnitSpec {
 	testCfg, ok := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
 	if !ok || testCfg == nil {
 		return nil
@@ -49,7 +50,7 @@ func FlattenModulesToTestComponentWork(ctx *cmdframework.ExecutionContext) [][]w
 		// Module mapping is configured via test-impl component in component-types.yml
 		moduleMoniker := testCfg.ModuleMapper.GetModuleForPackagePath(pkgPath)
 		if moduleMoniker == "" {
-			componentWorkLog.Warnf("FlattenModulesToTestComponentWork: no module found for pkgPath=%s, skipping", pkgPath)
+			componentWorkLog.Warnf("FlattenModulesToTestUnits: no module found for pkgPath=%s, skipping", pkgPath)
 			continue
 		}
 
@@ -76,6 +77,12 @@ func FlattenModulesToTestComponentWork(ctx *cmdframework.ExecutionContext) [][]w
 			// Check if module is cached
 			isCached := testCfg.CachedModules != nil && testCfg.CachedModules[moduleMoniker]
 
+			// Extract spec name for BDD tests (godog, tscucumber)
+			spec := ""
+			if testType == "godog" || testType == "tscucumber" {
+				spec = extractSpecName(pkgPath)
+			}
+
 			isContainer := tool.GlobalTestBridge().IsContainer(compTypeName)
 			work := workunit.UnitSpec{
 				ID: workunit.UnitID{
@@ -84,6 +91,7 @@ func FlattenModulesToTestComponentWork(ctx *cmdframework.ExecutionContext) [][]w
 					Component: pkgPath + ":" + testType,
 					Tool:      testType, // Use test type instead of generic "test"
 					Extra:     map[string]string{"testset": testType},
+					Spec:      spec, // Spec name for BDD tests (e.g., "build-module")
 				},
 				ComponentType:   testType,
 				Weight:          weight,
@@ -197,4 +205,16 @@ func getTestComponentWeight(moniker, componentName string, tests []testing.TestR
 	}
 
 	return weight
+}
+
+// extractSpecName extracts the spec name from a BDD pkgPath.
+// For godog tests, pkgPath format is: "specname:testRoot:featurePath"
+// Example: "build-module:go/eac/specs/impl/eac-commands:specs/eac-commands/build-module/specification.feature"
+// Returns the spec name (first part before colon), or empty string if not found.
+func extractSpecName(pkgPath string) string {
+	parts := strings.SplitN(pkgPath, ":", 2)
+	if len(parts) >= 1 && parts[0] != "" {
+		return parts[0]
+	}
+	return ""
 }

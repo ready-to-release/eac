@@ -129,6 +129,19 @@ type PostBuildConfig struct {
 	// Path is relative to workspace root.
 	// The target directory is cleaned before copying to avoid stale files.
 	CopyTo string `yaml:"copy_to,omitempty" json:"copy_to,omitempty"`
+
+	// CopyFiles specifies additional files to copy after build.
+	// Each entry maps a source path (relative to component root) to a
+	// target path (relative to workspace root).
+	CopyFiles []CopyFileEntry `yaml:"copy_files,omitempty" json:"copy_files,omitempty"`
+}
+
+// CopyFileEntry specifies a single file copy operation.
+type CopyFileEntry struct {
+	// From is the source path relative to component root.
+	From string `yaml:"from" json:"from"`
+	// To is the target path relative to workspace root.
+	To string `yaml:"to" json:"to"`
 }
 
 // ModuleArtifact defines an artifact to be produced by a module build.
@@ -479,6 +492,24 @@ func (c *RepositoryConfig) applyModuleDefaults() {
 					m.DependsOn = append(m.DependsOn, ciDep)
 					existing[ciDep] = true
 				}
+			}
+		}
+
+		// Modules without versioning config default to Implicit scheme
+		// Implicit modules derive their version from parent modules and don't have standalone releases.
+		if m.Versioning == nil {
+			m.Versioning = &ModuleVersioning{
+				Scheme:      "Implicit",
+				ReleaseType: "internal",
+			}
+		} else if m.Versioning.Scheme == "Implicit" {
+			// Implicit versioned modules can only have release_type "internal" or "none"
+			// Default to "internal" if not specified or if an invalid value was given
+			if m.Versioning.ReleaseType == "" {
+				m.Versioning.ReleaseType = "internal"
+			} else if m.Versioning.ReleaseType != "internal" && m.Versioning.ReleaseType != "none" {
+				// Silently correct invalid release types - implicit modules can't be published
+				m.Versioning.ReleaseType = "internal"
 			}
 		}
 

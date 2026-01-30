@@ -32,8 +32,8 @@ import (
 
 func init() {
 	// Register component-level execution support for lint
-	cmdframework.RegisterComponentProvider(cmdframework.CommandTypeLint, FlattenModulesToLintComponentWork)
-	cmdframework.RegisterComponentWorker(cmdframework.CommandTypeLint, lintComponentWorker)
+	cmdframework.RegisterUnitProvider(cmdframework.CommandTypeLint, FlattenModulesToLintUnits)
+	cmdframework.RegisterUnitWorker(cmdframework.CommandTypeLint, lintUnitWorker)
 }
 
 // LintConfig holds lint-specific configuration.
@@ -355,10 +355,10 @@ func lintWorker(ctx *cmdframework.ExecutionContext, moniker string, logWriter io
 	return exitCode
 }
 
-// lintComponentWorker lints a single component with a specific provider.
-// This is called by the ComponentScheduler for parallel component execution.
+// lintUnitWorker lints a single component with a specific provider.
+// This is called by the UnitScheduler for parallel component execution.
 // The component parameter is in "compName:providerName" format (e.g., "go:go-lint").
-func lintComponentWorker(ctx *cmdframework.ExecutionContext, module, component string, logWriter io.Writer) int {
+func lintUnitWorker(ctx *cmdframework.ExecutionContext, module, component string, logWriter io.Writer) int {
 	lintCfg, ok := ctx.Config.Extra["lintConfig"].(*LintConfig)
 	if !ok {
 		output.Writeln(logWriter, "Error: lintConfig not found or wrong type")
@@ -416,7 +416,7 @@ func lintComponentWorker(ctx *cmdframework.ExecutionContext, module, component s
 	// Acquire component-level lock with wait (use underscore separator for Windows compatibility)
 	componentDir := compName + "_" + providerName
 	if !ctx.Config.DryRun {
-		lockCfg := locking.ComponentLintConfig(module, componentDir, paths.OutLintRelPath)
+		lockCfg := locking.UnitLintConfig(module, componentDir, paths.OutLintRelPath)
 		lockFile, err := locking.AcquireWithWait(context.Background(), ctx.WorkspaceRoot, lockCfg,
 			ctx.Orchestrator.GetRegistry(), locking.DefaultWaitConfig())
 		if err != nil {

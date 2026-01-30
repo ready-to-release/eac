@@ -29,8 +29,8 @@ import (
 
 func init() {
 	// Register scan component-level execution support
-	cmdframework.RegisterComponentProvider(cmdframework.CommandTypeScan, FlattenModulesToScanComponentWork)
-	cmdframework.RegisterComponentWorker(cmdframework.CommandTypeScan, scanComponentWorker)
+	cmdframework.RegisterUnitProvider(cmdframework.CommandTypeScan, FlattenModulesToScanUnits)
+	cmdframework.RegisterUnitWorker(cmdframework.CommandTypeScan, scanUnitWorker)
 }
 
 // NOTE: Scanner-specific semaphores removed - parallelism is now controlled by
@@ -155,7 +155,7 @@ func updateScanState(ctx *cmdframework.ExecutionContext, sctx *scanContext) {
 	}
 
 	// Also include component results (for component-level execution)
-	for _, result := range ctx.ComponentResults {
+	for _, result := range ctx.UnitResults {
 		if result.ExitCode == 0 || result.ExitCode == -1 {
 			// Check if we have an explicit result recorded
 			sctx.mu.Lock()
@@ -302,10 +302,10 @@ func scanWorkerWrapper(ctx *cmdframework.ExecutionContext, moniker string, logWr
 	return 0
 }
 
-// scanComponentWorker runs scans for a single component using component-level execution.
-// This is called by the ComponentScheduler for parallel scan component execution.
+// scanUnitWorker runs scans for a single component using component-level execution.
+// This is called by the UnitScheduler for parallel scan component execution.
 // The component parameter is in "compName:scannerType" format (e.g., "go:trivy-vuln", "go:semgrep").
-func scanComponentWorker(ctx *cmdframework.ExecutionContext, moniker, component string, logWriter io.Writer) int {
+func scanUnitWorker(ctx *cmdframework.ExecutionContext, moniker, component string, logWriter io.Writer) int {
 	// Get multi-scan config if available (contains scanner settings)
 	multiCfg, _ := ctx.Config.Extra["multiScanConfig"].(*MultiScanConfig)
 	if multiCfg == nil {
@@ -361,7 +361,7 @@ func scanComponentWorker(ctx *cmdframework.ExecutionContext, moniker, component 
 	}
 
 	// Acquire lock for this component+scanner with wait
-	lockCfg := locking.ComponentScanConfig(moniker, componentDir, paths.OutSecurityRelPath)
+	lockCfg := locking.UnitScanConfig(moniker, componentDir, paths.OutSecurityRelPath)
 	lockFile, err := locking.AcquireWithWait(context.Background(), ctx.WorkspaceRoot, lockCfg,
 		ctx.Orchestrator.GetRegistry(), locking.DefaultWaitConfig())
 	if err != nil {
@@ -384,7 +384,7 @@ func scanComponentWorker(ctx *cmdframework.ExecutionContext, moniker, component 
 			output.Writeln(logWriter, "Error: invalid scanner type: %s", scannerTypeStr)
 			return 1
 		}
-		return runComponentScanner(ctx, module, moniker, compName, componentRoot, internal.ScannerType(toolID), multiCfg, logWriter)
+		return runUnitScanner(ctx, module, moniker, compName, componentRoot, internal.ScannerType(toolID), multiCfg, logWriter)
 	}
 
 	// 2-part key (no scanner specified): run all scanners from component type configuration
@@ -407,7 +407,7 @@ func scanComponentWorker(ctx *cmdframework.ExecutionContext, moniker, component 
 	// Run each scanner
 	exitCode := 0
 	for _, scannerType := range scanners {
-		result := runComponentScanner(ctx, module, moniker, compName, componentRoot, scannerType, multiCfg, logWriter)
+		result := runUnitScanner(ctx, module, moniker, compName, componentRoot, scannerType, multiCfg, logWriter)
 		if result != 0 {
 			exitCode = 1 // Mark as failed but continue with other scanners
 		}
@@ -416,8 +416,8 @@ func scanComponentWorker(ctx *cmdframework.ExecutionContext, moniker, component 
 	return exitCode
 }
 
-// runComponentScanner runs a single scanner for a component.
-func runComponentScanner(ctx *cmdframework.ExecutionContext, module *modules.ModuleContract, moniker, component, componentRoot string, scannerType internal.ScannerType, multiCfg *MultiScanConfig, logWriter io.Writer) int {
+// runUnitScanner runs a single scanner for a component.
+func runUnitScanner(ctx *cmdframework.ExecutionContext, module *modules.ModuleContract, moniker, component, componentRoot string, scannerType internal.ScannerType, multiCfg *MultiScanConfig, logWriter io.Writer) int {
 	emoji := getScannerEmoji(scannerType)
 
 	// Get scan context for result recording
@@ -835,10 +835,10 @@ func multiScanAfterInit(ctx *cmdframework.ExecutionContext) error {
 func multiScanAfterResolve(ctx *cmdframework.ExecutionContext) error {
 	sctx, _ := ctx.Config.Extra["scanContext"].(*scanContext)
 
-	// Now that ModuleRegistry is available, calculate and set component count
+	// Now that ModuleRegistry is available, calculate and set UoW count
 	if ctx.InitSummary != nil && ctx.ModuleRegistry != nil {
-		componentCount := getScanComponentCount(ctx)
-		ctx.InitSummary.SetComponentCount(componentCount)
+		uowCount := getScanUoWCount(ctx)
+		ctx.InitSummary.SetUoWCount(uowCount)
 	}
 
 	// Clear scan state if --skip-cache

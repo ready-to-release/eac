@@ -10,11 +10,11 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/workunit"
 )
 
-// FlattenModulesToLintComponentWork converts modules to lint component work items.
+// FlattenModulesToLintUnits converts modules to lint component work items.
 // Each module is expanded to its lintable components with weight info.
 // Work items are created for each unique module:component:provider combination.
 // Returns nil if no lintable components are found.
-func FlattenModulesToLintComponentWork(ctx *cmdframework.ExecutionContext) [][]workunit.UnitSpec {
+func FlattenModulesToLintUnits(ctx *cmdframework.ExecutionContext) [][]workunit.UnitSpec {
 	cfg := config.Global()
 	if cfg == nil || cfg.LintProviders == nil {
 		return nil

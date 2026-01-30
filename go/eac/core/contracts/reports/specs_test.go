@@ -1,9 +1,10 @@
 package reports
 
 import (
-	"os"
 	"strings"
 	"testing"
+
+	coretesting "github.com/ready-to-release/eac/go/eac/core/testing"
 )
 
 func TestGetSpecs(t *testing.T) {
@@ -59,11 +60,7 @@ func TestGetSpecs(t *testing.T) {
 		},
 	}
 
-	// Get repository root
-	workspaceRoot := os.Getenv("WORKSPACE_ROOT")
-	if workspaceRoot == "" {
-		t.Skip("WORKSPACE_ROOT not set, skipping integration test")
-	}
+	workspaceRoot := coretesting.SetupWorkspaceIsolation(t)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -120,11 +117,7 @@ func TestGetSpecs(t *testing.T) {
 // TestGetSpecs_BundleModuleAggregation verifies that bundle modules
 // aggregate specs from all their dependencies.
 func TestGetSpecs_BundleModuleAggregation(t *testing.T) {
-	// Get repository root
-	workspaceRoot := os.Getenv("WORKSPACE_ROOT")
-	if workspaceRoot == "" {
-		t.Skip("WORKSPACE_ROOT not set, skipping integration test")
-	}
+	workspaceRoot := coretesting.SetupWorkspaceIsolation(t)
 
 	// Test ext-eac bundle module (depends on eac-commands and r2r-cli)
 	t.Run("ext-eac aggregates specs from dependencies", func(t *testing.T) {

@@ -210,7 +210,6 @@ func commandsBinaryNeedsRebuild(workspaceRoot, cmdDir, binaryPath string) (bool,
 
 // Build command entry point - builds one or more modules.
 func Build() int {
-	startupStart := time.Now()
 	args := os.Args[2:] // Skip program name and "build"
 
 	// Check for help flag
@@ -220,14 +219,10 @@ func Build() int {
 	}
 
 	// Detect execution environment
-	envStart := time.Now()
 	env := environment.Detect()
-	fmt.Fprintf(os.Stderr, "[STARTUP] environment.Detect: %v\n", time.Since(envStart))
 
 	// Parse shared flags using flag sets
-	flagsStart := time.Now()
 	shared, err := flags.ParseSharedFlagsWithEnv(flags.BuildConfig(), args, env)
-	fmt.Fprintf(os.Stderr, "[STARTUP] flags.ParseSharedFlagsWithEnv: %v\n", time.Since(flagsStart))
 	if err != nil {
 		log.Errorf("Error: %v", err)
 		printBuildUsage()
@@ -292,9 +287,7 @@ func Build() int {
 	}
 
 	// Get repository root
-	repoStart := time.Now()
 	workspaceRoot, err := repository.GetRepositoryRoot("")
-	fmt.Fprintf(os.Stderr, "[STARTUP] repository.GetRepositoryRoot: %v\n", time.Since(repoStart))
 	if err != nil {
 		log.Errorf("Error: failed to find repository root: %v", err)
 		return 1
@@ -302,18 +295,14 @@ func Build() int {
 
 	// Ensure commands binary exists (devbox only - CI uses setup-commands action)
 	if env.IsLocalConsole {
-		binaryStart := time.Now()
 		if err := ensureCommandsBinary(workspaceRoot); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: failed to build commands binary: %v\n", err)
+			log.Errorf("Error: failed to build commands binary: %v", err)
 			return 1
 		}
-		fmt.Fprintf(os.Stderr, "[STARTUP] ensureCommandsBinary: %v\n", time.Since(binaryStart))
 	}
 
 	// Load module contracts
-	contractsStart := time.Now()
 	moduleReport, err := reports.GetModuleContracts(workspaceRoot)
-	fmt.Fprintf(os.Stderr, "[STARTUP] reports.GetModuleContracts: %v\n", time.Since(contractsStart))
 	if err != nil {
 		log.Errorf("Error: failed to load module contracts: %v", err)
 		return 1
@@ -375,7 +364,6 @@ func Build() int {
 		RequestedSet:    requestedSet,
 	}
 
-	fmt.Fprintf(os.Stderr, "[STARTUP] Total pre-framework startup: %v\n", time.Since(startupStart))
 	return RunBuildWithFramework(cmdCfg, buildCfg)
 }
 

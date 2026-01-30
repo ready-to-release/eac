@@ -3,14 +3,12 @@ package show
 import (
 	"os"
 	"testing"
+
+	coretesting "github.com/ready-to-release/eac/go/eac/core/testing"
 )
 
 func TestShowReleaseNotes(t *testing.T) {
-	// Get repository root
-	workspaceRoot := os.Getenv("WORKSPACE_ROOT")
-	if workspaceRoot == "" {
-		t.Skip("WORKSPACE_ROOT not set, skipping integration test")
-	}
+	coretesting.SetupWorkspaceIsolation(t)
 
 	tests := []struct {
 		name         string
@@ -20,19 +18,19 @@ func TestShowReleaseNotes(t *testing.T) {
 	}{
 		{
 			name:         "no arguments",
-			args:         []string{"show", "release-notes"},
+			args:         []string{"eac", "show", "release-notes"},
 			wantErr:      true,
 			expectedExit: 1,
 		},
 		{
 			name:         "valid module",
-			args:         []string{"show", "release-notes", "ext-eac"},
+			args:         []string{"eac", "show", "release-notes", "ext-eac"},
 			wantErr:      false,
 			expectedExit: 0,
 		},
 		{
 			name:         "invalid module",
-			args:         []string{"show", "release-notes", "non-existent-module"},
+			args:         []string{"eac", "show", "release-notes", "non-existent-module"},
 			wantErr:      true,
 			expectedExit: 1,
 		},

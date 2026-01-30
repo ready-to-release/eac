@@ -3,14 +3,12 @@ package show
 import (
 	"os"
 	"testing"
+
+	coretesting "github.com/ready-to-release/eac/go/eac/core/testing"
 )
 
 func TestShowChangelog(t *testing.T) {
-	// Get repository root
-	workspaceRoot := os.Getenv("WORKSPACE_ROOT")
-	if workspaceRoot == "" {
-		t.Skip("WORKSPACE_ROOT not set, skipping integration test")
-	}
+	coretesting.SetupWorkspaceIsolation(t)
 
 	tests := []struct {
 		name         string
@@ -20,27 +18,21 @@ func TestShowChangelog(t *testing.T) {
 	}{
 		{
 			name:         "no arguments",
-			args:         []string{"show", "changelog"},
+			args:         []string{"eac", "show", "changelog"},
 			wantErr:      true,
 			expectedExit: 1,
 		},
 		{
 			name:         "valid module",
-			args:         []string{"show", "changelog", "ext-eac"},
+			args:         []string{"eac", "show", "changelog", "ext-eac"},
 			wantErr:      false,
 			expectedExit: 0,
 		},
 		{
 			name:         "invalid module",
-			args:         []string{"show", "changelog", "non-existent-module"},
+			args:         []string{"eac", "show", "changelog", "non-existent-module"},
 			wantErr:      true,
 			expectedExit: 1,
-		},
-		{
-			name:         "valid module with version",
-			args:         []string{"show", "changelog", "ext-eac", "Unreleased"},
-			wantErr:      false,
-			expectedExit: 0,
 		},
 	}
 

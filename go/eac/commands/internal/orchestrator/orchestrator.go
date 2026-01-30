@@ -29,8 +29,8 @@ type Orchestrator struct {
 	// Lock tracking registry for visualization
 	registry *locktracker.Registry
 
-	// Current component scheduler (set during RunComponentsLayered/RunComponentsParallel)
-	currentScheduler *ComponentScheduler
+	// Current component scheduler (set during RunUnitsLayered/RunUnitsParallel)
+	currentScheduler *UnitScheduler
 
 	// TUI console for real-time output display
 	tuiConsole *tui.Console
@@ -46,10 +46,14 @@ type Orchestrator struct {
 	tuiTotalLayers int // Total layers (0 = not using layers)
 
 	// Component results from last execution (for detailed reporting)
-	lastComponentResults []ComponentResult
+	lastUnitResults []UnitResult
 
 	// Pending cache times to apply when scheduler is created
 	pendingCacheTimes map[string]time.Time
+
+	// Pending cache detection config to apply when scheduler is created
+	pendingCacheVerifier      CacheVerifier
+	pendingCachedModules      map[string]bool
 
 	// Summary builder for incremental summary computation
 	summaryBuilder SummaryBuilder
@@ -285,7 +289,7 @@ func (o *Orchestrator) Run(monikers []string) ([]WorkResult, error) {
 }
 
 // executeParallel runs work items in parallel.
-// Note: Concurrency is controlled at the component level by ComponentScheduler.
+// Note: Concurrency is controlled at the component level by UnitScheduler.
 // This method launches all module work items; actual resource throttling happens
 // when components acquire slots from the weighted semaphore.
 func (o *Orchestrator) executeParallel(workItems []WorkItem) []WorkResult {
@@ -763,13 +767,13 @@ func (o *Orchestrator) SetMaxConcurrency(maxConcurrency int) {
 	o.config.MaxConcurrency = maxConcurrency
 }
 
-// SetComponentExtras stores additional data for a component result.
+// SetUnitExtras stores additional data for a component result.
 // This is called by workers to pass test counts or other data that will be
-// merged into the ComponentResult when processing completes.
+// merged into the UnitResult when processing completes.
 // Does nothing if no component scheduler is active.
-func (o *Orchestrator) SetComponentExtras(module, component string, extras ComponentExtras) {
+func (o *Orchestrator) SetUnitExtras(module, component string, extras UnitExtras) {
 	if o.currentScheduler != nil {
-		o.currentScheduler.SetComponentExtras(module, component, extras)
+		o.currentScheduler.SetUnitExtras(module, component, extras)
 	}
 }
 
@@ -785,6 +789,24 @@ func (o *Orchestrator) SetCacheTimes(times map[string]time.Time) {
 	}
 }
 
+// SetCacheDetection configures background cache detection for early TUI feedback.
+// When set, cached tabs will progressively "light up" blue as detection completes,
+// and workers will short-circuit for already-detected cached items.
+//
+// verifier: function to check if a component is cached
+// cachedModules: pre-computed set of modules known to be cached
+//
+// If the scheduler hasn't been created yet, config is stored and applied when it starts.
+func (o *Orchestrator) SetCacheDetection(verifier CacheVerifier, cachedModules map[string]bool) {
+	if o.currentScheduler != nil {
+		o.currentScheduler.SetCacheDetection(verifier, cachedModules)
+	} else {
+		// Store for later application when scheduler is created
+		o.pendingCacheVerifier = verifier
+		o.pendingCachedModules = cachedModules
+	}
+}
+
 // SetSummaryBuilder sets the summary builder for incremental summary computation.
 // The builder receives component results as they complete, enabling parallel
 // summary computation during execution.
@@ -792,20 +814,20 @@ func (o *Orchestrator) SetSummaryBuilder(builder SummaryBuilder) {
 	o.summaryBuilder = builder
 }
 
-// GetLastComponentResults returns the component-level results from the last
-// RunComponentsLayered or RunComponentsParallel call.
+// GetLastUnitResults returns the component-level results from the last
+// RunUnitsLayered or RunUnitsParallel call.
 // Returns nil if no component execution has occurred.
-func (o *Orchestrator) GetLastComponentResults() []ComponentResult {
-	return o.lastComponentResults
+func (o *Orchestrator) GetLastUnitResults() []UnitResult {
+	return o.lastUnitResults
 }
 
-// RunComponentsLayered executes component builds in dependency layers.
+// RunUnitsLayered executes component builds in dependency layers.
 // Within each layer, components run in parallel with weighted scheduling.
 // Components respect intra-module dependencies (DependsOn) and inter-module
 // dependencies (layers).
 //
 // Returns WorkResult aggregated at module level for compatibility with existing code.
-func (o *Orchestrator) RunComponentsLayered(layers [][]workunit.UnitSpec, worker ComponentWorkerFunc) ([]WorkResult, error) {
+func (o *Orchestrator) RunUnitsLayered(layers [][]workunit.UnitSpec, worker UnitWorkerFunc) ([]WorkResult, error) {
 	// Flatten to get total count
 	var allWork []workunit.UnitSpec
 	for _, layer := range layers {
@@ -822,13 +844,20 @@ func (o *Orchestrator) RunComponentsLayered(layers [][]workunit.UnitSpec, worker
 	}
 
 	// Create component scheduler with dynamic capacity management
-	scheduler := NewComponentScheduler(&o.config, o.tuiConsole, o.registry)
+	scheduler := NewUnitScheduler(&o.config, o.tuiConsole, o.registry)
 	o.currentScheduler = scheduler
 
 	// Apply pending cache times if any
 	if o.pendingCacheTimes != nil {
 		scheduler.SetCacheTimes(o.pendingCacheTimes)
 		o.pendingCacheTimes = nil
+	}
+
+	// Apply pending cache detection if any
+	if o.pendingCacheVerifier != nil {
+		scheduler.SetCacheDetection(o.pendingCacheVerifier, o.pendingCachedModules)
+		o.pendingCacheVerifier = nil
+		o.pendingCachedModules = nil
 	}
 
 	// Apply summary builder if set
@@ -876,7 +905,7 @@ func (o *Orchestrator) RunComponentsLayered(layers [][]workunit.UnitSpec, worker
 	o.SetPhase(tui.PhaseRun)
 
 	// Execute layers sequentially
-	var allResults []ComponentResult
+	var allResults []UnitResult
 
 	for layerIdx, layerWork := range layers {
 		if len(layerWork) == 0 {
@@ -905,7 +934,7 @@ func (o *Orchestrator) RunComponentsLayered(layers [][]workunit.UnitSpec, worker
 		scheduler.InitializeWork(layerWork)
 
 		// Execute layer with parallel component scheduling
-		layerResults := scheduler.RunComponents(layerWork, worker)
+		layerResults := scheduler.RunUnits(layerWork, worker)
 
 		// Collect results
 		allResults = append(allResults, layerResults...)
@@ -919,7 +948,7 @@ func (o *Orchestrator) RunComponentsLayered(layers [][]workunit.UnitSpec, worker
 					o.display.flushCompletedLines()
 				}
 				// Store component results for detailed reporting
-				o.lastComponentResults = allResults
+				o.lastUnitResults = allResults
 				return AggregateToWorkResults(allResults, allWork), nil
 			}
 		}
@@ -932,17 +961,17 @@ func (o *Orchestrator) RunComponentsLayered(layers [][]workunit.UnitSpec, worker
 	}
 
 	// Store component results for detailed reporting
-	o.lastComponentResults = allResults
+	o.lastUnitResults = allResults
 
 	// Aggregate component results to module results
 	return AggregateToWorkResults(allResults, allWork), nil
 }
 
-// RunComponentsParallel executes all components in parallel with weighted scheduling.
+// RunUnitsParallel executes all components in parallel with weighted scheduling.
 // Components respect intra-module dependencies (DependsOn).
 //
 // Returns WorkResult aggregated at module level for compatibility with existing code.
-func (o *Orchestrator) RunComponentsParallel(work []workunit.UnitSpec, worker ComponentWorkerFunc) ([]WorkResult, error) {
+func (o *Orchestrator) RunUnitsParallel(work []workunit.UnitSpec, worker UnitWorkerFunc) ([]WorkResult, error) {
 	if len(work) == 0 {
 		return []WorkResult{}, nil
 	}
@@ -953,13 +982,20 @@ func (o *Orchestrator) RunComponentsParallel(work []workunit.UnitSpec, worker Co
 	}
 
 	// Create component scheduler with dynamic capacity management
-	scheduler := NewComponentScheduler(&o.config, o.tuiConsole, o.registry)
+	scheduler := NewUnitScheduler(&o.config, o.tuiConsole, o.registry)
 	o.currentScheduler = scheduler
 
 	// Apply pending cache times if any
 	if o.pendingCacheTimes != nil {
 		scheduler.SetCacheTimes(o.pendingCacheTimes)
 		o.pendingCacheTimes = nil
+	}
+
+	// Apply pending cache detection if any
+	if o.pendingCacheVerifier != nil {
+		scheduler.SetCacheDetection(o.pendingCacheVerifier, o.pendingCachedModules)
+		o.pendingCacheVerifier = nil
+		o.pendingCachedModules = nil
 	}
 
 	// Apply summary builder if set
@@ -1015,7 +1051,7 @@ func (o *Orchestrator) RunComponentsParallel(work []workunit.UnitSpec, worker Co
 	scheduler.InitializeWork(work)
 
 	// Execute all components
-	results := scheduler.RunComponents(work, worker)
+	results := scheduler.RunUnits(work, worker)
 
 	// Stop display manager
 	if o.display != nil {
@@ -1024,7 +1060,7 @@ func (o *Orchestrator) RunComponentsParallel(work []workunit.UnitSpec, worker Co
 	}
 
 	// Store component results for detailed reporting
-	o.lastComponentResults = results
+	o.lastUnitResults = results
 
 	// Aggregate component results to module results
 	return AggregateToWorkResults(results, work), nil

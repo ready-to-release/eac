@@ -44,7 +44,7 @@ type SummaryBuilder struct {
 
 // incrementalModuleCache holds pre-computed data for a module, updated incrementally.
 type incrementalModuleCache struct {
-	components     []orchestrator.ComponentResult // All component results for this module
+	components     []orchestrator.UnitResult // All component results for this module
 	moduleDuration time.Duration                  // Max duration across components
 	errorCount     int
 	warnCount      int
@@ -72,7 +72,7 @@ func NewSummaryBuilder(cmdType CommandType, componentCounts map[string]int) *Sum
 	// Initialize module caches with expected component counts
 	for module, count := range componentCounts {
 		sb.moduleCaches[module] = &incrementalModuleCache{
-			components: make([]orchestrator.ComponentResult, 0, count),
+			components: make([]orchestrator.UnitResult, 0, count),
 			allSkipped: true, // Assume skipped until we see a non-skipped component
 		}
 		sb.moduleCompCount[module] = count
@@ -114,7 +114,7 @@ func (sb *SummaryBuilder) WasSummarySent() bool {
 // AddResult adds a component result to the builder.
 // This is called by the scheduler as each component completes.
 // Thread-safe: can be called from multiple goroutines.
-func (sb *SummaryBuilder) AddResult(result orchestrator.ComponentResult) {
+func (sb *SummaryBuilder) AddResult(result orchestrator.UnitResult) {
 	sb.mu.Lock()
 	// Note: no defer - we unlock manually to call callback outside lock
 
@@ -122,7 +122,7 @@ func (sb *SummaryBuilder) AddResult(result orchestrator.ComponentResult) {
 	cache, exists := sb.moduleCaches[result.Module]
 	if !exists {
 		cache = &incrementalModuleCache{
-			components: make([]orchestrator.ComponentResult, 0, 4),
+			components: make([]orchestrator.UnitResult, 0, 4),
 			allSkipped: true,
 		}
 		sb.moduleCaches[result.Module] = cache
@@ -341,7 +341,7 @@ func (sb *SummaryBuilder) deriveModuleStatus(cache *incrementalModuleCache) orch
 }
 
 // buildComponentString creates the component names string for display.
-func (sb *SummaryBuilder) buildComponentString(components []orchestrator.ComponentResult) string {
+func (sb *SummaryBuilder) buildComponentString(components []orchestrator.UnitResult) string {
 	if len(components) == 0 {
 		return ""
 	}
@@ -381,7 +381,7 @@ func (sb *SummaryBuilder) buildComponentString(components []orchestrator.Compone
 
 // extractUniqueTestTypes extracts unique test types from component results.
 // Uses the Handler field which contains the test type (e.g., "gotest", "godog").
-func (sb *SummaryBuilder) extractUniqueTestTypes(components []orchestrator.ComponentResult) string {
+func (sb *SummaryBuilder) extractUniqueTestTypes(components []orchestrator.UnitResult) string {
 	if len(components) == 0 {
 		return "-"
 	}
@@ -493,7 +493,7 @@ func (sb *SummaryBuilder) appendFailureDetails(details []string, modules []strin
 
 // GetResultSets returns the component results grouped by module.
 // This can be used to populate ComponentResultSets without re-aggregating.
-func (sb *SummaryBuilder) GetResultSets() []orchestrator.ComponentResultSet {
+func (sb *SummaryBuilder) GetResultSets() []orchestrator.ModuleResultSet {
 	sb.mu.Lock()
 	defer sb.mu.Unlock()
 
@@ -505,21 +505,21 @@ func (sb *SummaryBuilder) GetResultSets() []orchestrator.ComponentResultSet {
 	sort.Strings(modules)
 
 	// Build result sets
-	resultSets := make([]orchestrator.ComponentResultSet, 0, len(modules))
+	resultSets := make([]orchestrator.ModuleResultSet, 0, len(modules))
 	for _, module := range modules {
 		cache := sb.moduleCaches[module]
 
-		// Sort components
-		sortedComponents := make([]orchestrator.ComponentResult, len(cache.components))
-		copy(sortedComponents, cache.components)
-		sort.Slice(sortedComponents, func(i, j int) bool {
-			return sortedComponents[i].Component < sortedComponents[j].Component
+		// Sort units by component name
+		sortedUnits := make([]orchestrator.UnitResult, len(cache.components))
+		copy(sortedUnits, cache.components)
+		sort.Slice(sortedUnits, func(i, j int) bool {
+			return sortedUnits[i].Component < sortedUnits[j].Component
 		})
 
-		rs := orchestrator.ComponentResultSet{
-			Module:     module,
-			Components: sortedComponents,
-			Duration:   cache.moduleDuration,
+		rs := orchestrator.ModuleResultSet{
+			Module:   module,
+			Units:    sortedUnits,
+			Duration: cache.moduleDuration,
 		}
 		rs.Status = rs.DeriveStatus()
 

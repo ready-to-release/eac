@@ -29,9 +29,15 @@ func ResolveVersion(workspaceRoot, module, versionStr string) (*VersionInfo, err
 		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
 
-	_, ok := cfg.Repository.GetModule(module)
+	mod, ok := cfg.Repository.GetModule(module)
 	if !ok {
 		return nil, fmt.Errorf("module not found: %s", module)
+	}
+
+	// Implicit versioned modules don't have changelogs - they derive their version from parent modules
+	// Modules without versioning config also default to Implicit
+	if mod.Versioning == nil || mod.Versioning.Scheme == "Implicit" {
+		return resolveImplicitVersion(module, versionStr)
 	}
 
 	// Parse changelog to get version history
@@ -107,6 +113,27 @@ func ResolveVersion(workspaceRoot, module, versionStr string) (*VersionInfo, err
 	}
 
 	return info, nil
+}
+
+// resolveImplicitVersion handles version resolution for implicit-versioned modules.
+// Implicit modules don't have changelogs - they derive their version from parent modules.
+// Only "unreleased" or "" are valid for implicit modules.
+func resolveImplicitVersion(module, versionStr string) (*VersionInfo, error) {
+	info := &VersionInfo{
+		Module: module,
+	}
+
+	// Handle empty or "unreleased" - the only valid options for implicit modules
+	if versionStr == "" || versionStr == "unreleased" {
+		info.VersionNumber = "Unreleased"
+		info.IsUnreleased = true
+		info.GitTag = ""         // Implicit modules don't have tags
+		info.PreviousGitTag = "" // Compare from beginning
+		return info, nil
+	}
+
+	// "latest" and specific versions are not valid for implicit modules
+	return nil, fmt.Errorf("implicit-versioned module %q does not support version %q; only 'unreleased' is valid", module, versionStr)
 }
 
 // versionResolverRepo holds the git repository instance for testing (allows mock injection).

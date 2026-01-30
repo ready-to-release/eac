@@ -10,9 +10,9 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/workunit"
 )
 
-// ComponentWorkProvider is a function that converts execution context to work units.
+// UnitWorkProvider is a function that converts execution context to work units.
 // This is provided by the build package to avoid import cycles.
-type ComponentWorkProvider func(ctx *ExecutionContext) [][]workunit.UnitSpec
+type UnitWorkProvider func(ctx *ExecutionContext) [][]workunit.UnitSpec
 
 // ExecutionMode defines how components should be executed.
 type ExecutionMode int
@@ -34,89 +34,89 @@ var executionModeConfig = map[CommandType]ExecutionMode{
 	CommandTypeLint:  ExecutionModeParallel,   // No dependency order needed
 }
 
-// ComponentRegistry holds providers and workers for each command type.
+// UnitRegistry holds providers and workers for each command type.
 // It provides thread-safe access to component execution functions.
-type ComponentRegistry struct {
+type UnitRegistry struct {
 	mu        sync.RWMutex
-	providers map[CommandType]ComponentWorkProvider
-	workers   map[CommandType]ComponentWorkerFunc
+	providers map[CommandType]UnitWorkProvider
+	workers   map[CommandType]UnitWorkerFunc
 }
 
-// NewComponentRegistry creates a new component registry.
-func NewComponentRegistry() *ComponentRegistry {
-	return &ComponentRegistry{
-		providers: make(map[CommandType]ComponentWorkProvider),
-		workers:   make(map[CommandType]ComponentWorkerFunc),
+// NewUnitRegistry creates a new component registry.
+func NewUnitRegistry() *UnitRegistry {
+	return &UnitRegistry{
+		providers: make(map[CommandType]UnitWorkProvider),
+		workers:   make(map[CommandType]UnitWorkerFunc),
 	}
 }
 
 // RegisterProvider registers a work provider for a command type.
-func (r *ComponentRegistry) RegisterProvider(cmdType CommandType, provider ComponentWorkProvider) {
+func (r *UnitRegistry) RegisterProvider(cmdType CommandType, provider UnitWorkProvider) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.providers[cmdType] = provider
 }
 
 // RegisterWorker registers a worker function for a command type.
-func (r *ComponentRegistry) RegisterWorker(cmdType CommandType, worker ComponentWorkerFunc) {
+func (r *UnitRegistry) RegisterWorker(cmdType CommandType, worker UnitWorkerFunc) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.workers[cmdType] = worker
 }
 
 // GetProvider returns the registered provider for a command type.
-func (r *ComponentRegistry) GetProvider(cmdType CommandType) ComponentWorkProvider {
+func (r *UnitRegistry) GetProvider(cmdType CommandType) UnitWorkProvider {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.providers[cmdType]
 }
 
 // GetWorker returns the registered worker for a command type.
-func (r *ComponentRegistry) GetWorker(cmdType CommandType) ComponentWorkerFunc {
+func (r *UnitRegistry) GetWorker(cmdType CommandType) UnitWorkerFunc {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.workers[cmdType]
 }
 
 // HasComponents returns true if both provider and worker are registered.
-func (r *ComponentRegistry) HasComponents(cmdType CommandType) bool {
+func (r *UnitRegistry) HasComponents(cmdType CommandType) bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.providers[cmdType] != nil && r.workers[cmdType] != nil
 }
 
 // registry is the global component registry.
-var registry = NewComponentRegistry()
+var registry = NewUnitRegistry()
 
-// RegisterComponentProvider registers a work provider for a command type.
-func RegisterComponentProvider(cmdType CommandType, provider ComponentWorkProvider) {
+// RegisterUnitProvider registers a work provider for a command type.
+func RegisterUnitProvider(cmdType CommandType, provider UnitWorkProvider) {
 	registry.RegisterProvider(cmdType, provider)
 }
 
-// RegisterComponentWorker registers a worker function for a command type.
-func RegisterComponentWorker(cmdType CommandType, worker ComponentWorkerFunc) {
+// RegisterUnitWorker registers a worker function for a command type.
+func RegisterUnitWorker(cmdType CommandType, worker UnitWorkerFunc) {
 	registry.RegisterWorker(cmdType, worker)
 }
 
-// GetComponentProvider returns the registered provider for a command type.
-func GetComponentProvider(cmdType CommandType) ComponentWorkProvider {
+// GetUnitProvider returns the registered provider for a command type.
+func GetUnitProvider(cmdType CommandType) UnitWorkProvider {
 	return registry.GetProvider(cmdType)
 }
 
-// GetComponentWorker returns the registered worker for a command type.
-func GetComponentWorker(cmdType CommandType) ComponentWorkerFunc {
+// GetUnitWorker returns the registered worker for a command type.
+func GetUnitWorker(cmdType CommandType) UnitWorkerFunc {
 	return registry.GetWorker(cmdType)
 }
 
-// HasComponentExecution returns true if component-level execution is available for a command type.
-func HasComponentExecution(cmdType CommandType) bool {
+// HasUnitExecution returns true if component-level execution is available for a command type.
+func HasUnitExecution(cmdType CommandType) bool {
 	return registry.HasComponents(cmdType)
 }
 
 
 // phaseExecute handles the execution phase using component-level execution.
 // The worker parameter is retained for API compatibility but is not used;
-// component execution uses workers registered via RegisterComponentWorker.
+// component execution uses workers registered via RegisterUnitWorker.
 func phaseExecute(ctx *ExecutionContext, _ WorkerFunc) error {
 	// Early return if nothing to execute
 	monikers := ctx.GetExecutionMonikers()
@@ -127,7 +127,7 @@ func phaseExecute(ctx *ExecutionContext, _ WorkerFunc) error {
 
 	// All command types use component-level execution
 	cmdType := ctx.Config.Type
-	if !HasComponentExecution(cmdType) {
+	if !HasUnitExecution(cmdType) {
 		return fmt.Errorf("no component execution registered for command type: %s", cmdType)
 	}
 
@@ -138,8 +138,8 @@ func phaseExecute(ctx *ExecutionContext, _ WorkerFunc) error {
 // It uses the registered provider and worker for the given command type, and respects
 // the execution mode configuration (layered vs parallel).
 func phaseExecuteComponentsUnified(ctx *ExecutionContext, cmdType CommandType) error {
-	provider := GetComponentProvider(cmdType)
-	worker := GetComponentWorker(cmdType)
+	provider := GetUnitProvider(cmdType)
+	worker := GetUnitWorker(cmdType)
 
 	if provider == nil || worker == nil {
 		return fmt.Errorf("component provider or worker not registered for %s", cmdType)
@@ -194,12 +194,12 @@ func phaseExecuteComponentsUnified(ctx *ExecutionContext, cmdType CommandType) e
 	if useLayered {
 		log.Debugf("Executing %d %s component layers with weighted parallelism",
 			len(componentLayers), cmdType)
-		results, err = ctx.Orchestrator.RunComponentsLayered(componentLayers, orchWorker)
+		results, err = ctx.Orchestrator.RunUnitsLayered(componentLayers, orchWorker)
 	} else {
-		allWork := flattenComponentLayers(componentLayers)
+		allWork := flattenUnitLayers(componentLayers)
 		log.Debugf("Executing %d %s components in parallel with weighted scheduling",
 			len(allWork), cmdType)
-		results, err = ctx.Orchestrator.RunComponentsParallel(allWork, orchWorker)
+		results, err = ctx.Orchestrator.RunUnitsParallel(allWork, orchWorker)
 	}
 	log.Debugf("phaseExecuteComponentsUnified: execution returned in %v", time.Since(execStart))
 
@@ -212,16 +212,16 @@ func phaseExecuteComponentsUnified(ctx *ExecutionContext, cmdType CommandType) e
 	// Populate component-level results for detailed reporting
 	// Use SummaryBuilder's pre-aggregated results when available
 	if ctx.SummaryBuilder != nil {
-		ctx.ComponentResultSets = ctx.SummaryBuilder.GetResultSets()
+		ctx.ModuleResultSets = ctx.SummaryBuilder.GetResultSets()
 		// Flatten for ComponentResults
-		var allResults []orchestrator.ComponentResult
-		for _, rs := range ctx.ComponentResultSets {
-			allResults = append(allResults, rs.Components...)
+		var allResults []orchestrator.UnitResult
+		for _, rs := range ctx.ModuleResultSets {
+			allResults = append(allResults, rs.Units...)
 		}
-		ctx.ComponentResults = allResults
+		ctx.UnitResults = allResults
 	} else {
-		ctx.ComponentResults = ctx.Orchestrator.GetLastComponentResults()
-		ctx.ComponentResultSets = orchestrator.AggregateToComponentResultSets(ctx.ComponentResults)
+		ctx.UnitResults = ctx.Orchestrator.GetLastUnitResults()
+		ctx.ModuleResultSets = orchestrator.AggregateToModuleResultSets(ctx.UnitResults)
 	}
 
 	return nil
@@ -238,8 +238,8 @@ func computeComponentCounts(layers [][]workunit.UnitSpec) map[string]int {
 	return counts
 }
 
-// flattenComponentLayers flattens work unit layers to a single slice.
-func flattenComponentLayers(layers [][]workunit.UnitSpec) []workunit.UnitSpec {
+// flattenUnitLayers flattens work unit layers to a single slice.
+func flattenUnitLayers(layers [][]workunit.UnitSpec) []workunit.UnitSpec {
 	var all []workunit.UnitSpec
 	for _, layer := range layers {
 		all = append(all, layer...)

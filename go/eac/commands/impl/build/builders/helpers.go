@@ -169,6 +169,40 @@ func ExecutePostBuildSteps(moniker, component, workspaceRoot, outputDir string, 
 		Logln(logWriter, "Post-build: copied output from %s to %s", srcDir, postBuild.CopyTo)
 	}
 
+	// Execute copy_files if configured
+	for _, cf := range postBuild.CopyFiles {
+		if compEntry.Root == "" {
+			continue
+		}
+		componentRoot := filepath.Join(workspaceRoot, compEntry.Root)
+		srcPath := filepath.Join(componentRoot, cf.From)
+		dstPath := filepath.Join(workspaceRoot, cf.To)
+
+		// Validate paths are within workspace (security check)
+		srcRel, err := filepath.Rel(workspaceRoot, srcPath)
+		if err != nil || strings.HasPrefix(srcRel, "..") {
+			Logln(logWriter, "Error: copy_files source must be within workspace: %s", cf.From)
+			return 1
+		}
+		dstRel, err := filepath.Rel(workspaceRoot, dstPath)
+		if err != nil || strings.HasPrefix(dstRel, "..") {
+			Logln(logWriter, "Error: copy_files target must be within workspace: %s", cf.To)
+			return 1
+		}
+
+		// Create parent directory if needed
+		if err := os.MkdirAll(filepath.Dir(dstPath), 0o755); err != nil {
+			Logln(logWriter, "Error: failed to create directory for %s: %v", cf.To, err)
+			return 1
+		}
+
+		if err := CopyFile(srcPath, dstPath); err != nil {
+			Logln(logWriter, "Error: failed to copy %s to %s: %v", cf.From, cf.To, err)
+			return 1
+		}
+		Logln(logWriter, "Post-build: copied %s to %s", cf.From, cf.To)
+	}
+
 	return 0
 }
 

@@ -47,16 +47,16 @@ func TestModuleStatus_String(t *testing.T) {
 	}
 }
 
-// TestComponentResultSet_DeriveStatus tests the DeriveStatus() method.
-func TestComponentResultSet_DeriveStatus(t *testing.T) {
+// TestModuleResultSet_DeriveStatus tests the DeriveStatus() method.
+func TestModuleResultSet_DeriveStatus(t *testing.T) {
 	tests := []struct {
 		name       string
-		components []ComponentResult
+		components []UnitResult
 		want       ModuleStatus
 	}{
 		{
 			name:       "empty components returns pending",
-			components: []ComponentResult{},
+			components: []UnitResult{},
 			want:       ModuleStatusPending,
 		},
 		{
@@ -66,7 +66,7 @@ func TestComponentResultSet_DeriveStatus(t *testing.T) {
 		},
 		{
 			name: "all success returns success",
-			components: []ComponentResult{
+			components: []UnitResult{
 				{Module: "mod1", Component: "go", ExitCode: 0},
 				{Module: "mod1", Component: "book", ExitCode: 0},
 				{Module: "mod1", Component: "typescript", ExitCode: 0},
@@ -75,14 +75,14 @@ func TestComponentResultSet_DeriveStatus(t *testing.T) {
 		},
 		{
 			name: "single success returns success",
-			components: []ComponentResult{
+			components: []UnitResult{
 				{Module: "mod1", Component: "go", ExitCode: 0},
 			},
 			want: ModuleStatusSuccess,
 		},
 		{
 			name: "one failure returns failed",
-			components: []ComponentResult{
+			components: []UnitResult{
 				{Module: "mod1", Component: "go", ExitCode: 0},
 				{Module: "mod1", Component: "book", ExitCode: 1},
 				{Module: "mod1", Component: "typescript", ExitCode: 0},
@@ -91,7 +91,7 @@ func TestComponentResultSet_DeriveStatus(t *testing.T) {
 		},
 		{
 			name: "first component failed returns failed",
-			components: []ComponentResult{
+			components: []UnitResult{
 				{Module: "mod1", Component: "go", ExitCode: 1},
 				{Module: "mod1", Component: "book", ExitCode: 0},
 			},
@@ -99,7 +99,7 @@ func TestComponentResultSet_DeriveStatus(t *testing.T) {
 		},
 		{
 			name: "last component failed returns failed",
-			components: []ComponentResult{
+			components: []UnitResult{
 				{Module: "mod1", Component: "go", ExitCode: 0},
 				{Module: "mod1", Component: "book", ExitCode: 1},
 			},
@@ -107,7 +107,7 @@ func TestComponentResultSet_DeriveStatus(t *testing.T) {
 		},
 		{
 			name: "all components failed returns failed",
-			components: []ComponentResult{
+			components: []UnitResult{
 				{Module: "mod1", Component: "go", ExitCode: 1},
 				{Module: "mod1", Component: "book", ExitCode: 2},
 				{Module: "mod1", Component: "typescript", ExitCode: 1},
@@ -116,7 +116,7 @@ func TestComponentResultSet_DeriveStatus(t *testing.T) {
 		},
 		{
 			name: "exit code -1 (cached/skipped) with success returns success",
-			components: []ComponentResult{
+			components: []UnitResult{
 				{Module: "mod1", Component: "go", ExitCode: 0},
 				{Module: "mod1", Component: "book", ExitCode: -1},
 			},
@@ -124,7 +124,7 @@ func TestComponentResultSet_DeriveStatus(t *testing.T) {
 		},
 		{
 			name: "all exit code -1 (cached) returns skipped",
-			components: []ComponentResult{
+			components: []UnitResult{
 				{Module: "mod1", Component: "go", ExitCode: -1},
 				{Module: "mod1", Component: "book", ExitCode: -1},
 			},
@@ -132,7 +132,7 @@ func TestComponentResultSet_DeriveStatus(t *testing.T) {
 		},
 		{
 			name: "exit code < -1 (running) returns running",
-			components: []ComponentResult{
+			components: []UnitResult{
 				{Module: "mod1", Component: "go", ExitCode: 0},
 				{Module: "mod1", Component: "book", ExitCode: -2},
 			},
@@ -140,7 +140,7 @@ func TestComponentResultSet_DeriveStatus(t *testing.T) {
 		},
 		{
 			name: "mixed cached and failure - failure takes precedence",
-			components: []ComponentResult{
+			components: []UnitResult{
 				{Module: "mod1", Component: "go", ExitCode: -1},
 				{Module: "mod1", Component: "book", ExitCode: 1},
 			},
@@ -148,7 +148,7 @@ func TestComponentResultSet_DeriveStatus(t *testing.T) {
 		},
 		{
 			name: "high exit code returns failed",
-			components: []ComponentResult{
+			components: []UnitResult{
 				{Module: "mod1", Component: "go", ExitCode: 0},
 				{Module: "mod1", Component: "book", ExitCode: 127},
 			},
@@ -158,29 +158,29 @@ func TestComponentResultSet_DeriveStatus(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rs := ComponentResultSet{
+			rs := ModuleResultSet{
 				Module:     "test-module",
 				Components: tt.components,
 			}
 
 			got := rs.DeriveStatus()
 			if got != tt.want {
-				t.Errorf("ComponentResultSet.DeriveStatus() = %v, want %v", got, tt.want)
+				t.Errorf("ModuleResultSet.DeriveStatus() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-// TestComponentResultSet_GetSortedComponents tests the GetSortedComponents() method.
-func TestComponentResultSet_GetSortedComponents(t *testing.T) {
+// TestModuleResultSet_GetSortedUnits tests the GetSortedUnits() method.
+func TestModuleResultSet_GetSortedUnits(t *testing.T) {
 	tests := []struct {
 		name       string
-		components []ComponentResult
+		components []UnitResult
 		wantOrder  []string // expected component names in order
 	}{
 		{
 			name:       "empty components returns empty slice",
-			components: []ComponentResult{},
+			components: []UnitResult{},
 			wantOrder:  []string{},
 		},
 		{
@@ -190,14 +190,14 @@ func TestComponentResultSet_GetSortedComponents(t *testing.T) {
 		},
 		{
 			name: "single component returns single item",
-			components: []ComponentResult{
+			components: []UnitResult{
 				{Module: "mod1", Component: "go", ExitCode: 0},
 			},
 			wantOrder: []string{"go"},
 		},
 		{
 			name: "already sorted components remain sorted",
-			components: []ComponentResult{
+			components: []UnitResult{
 				{Module: "mod1", Component: "book", ExitCode: 0},
 				{Module: "mod1", Component: "go", ExitCode: 0},
 				{Module: "mod1", Component: "typescript", ExitCode: 0},
@@ -206,7 +206,7 @@ func TestComponentResultSet_GetSortedComponents(t *testing.T) {
 		},
 		{
 			name: "unsorted components are sorted alphabetically",
-			components: []ComponentResult{
+			components: []UnitResult{
 				{Module: "mod1", Component: "typescript", ExitCode: 0},
 				{Module: "mod1", Component: "go", ExitCode: 0},
 				{Module: "mod1", Component: "book", ExitCode: 0},
@@ -215,7 +215,7 @@ func TestComponentResultSet_GetSortedComponents(t *testing.T) {
 		},
 		{
 			name: "reverse order is sorted correctly",
-			components: []ComponentResult{
+			components: []UnitResult{
 				{Module: "mod1", Component: "zeta", ExitCode: 0},
 				{Module: "mod1", Component: "beta", ExitCode: 0},
 				{Module: "mod1", Component: "alpha", ExitCode: 0},
@@ -224,7 +224,7 @@ func TestComponentResultSet_GetSortedComponents(t *testing.T) {
 		},
 		{
 			name: "components with same prefix are sorted correctly",
-			components: []ComponentResult{
+			components: []UnitResult{
 				{Module: "mod1", Component: "go-test", ExitCode: 0},
 				{Module: "mod1", Component: "go", ExitCode: 0},
 				{Module: "mod1", Component: "go-build", ExitCode: 0},
@@ -233,7 +233,7 @@ func TestComponentResultSet_GetSortedComponents(t *testing.T) {
 		},
 		{
 			name: "case-sensitive sorting",
-			components: []ComponentResult{
+			components: []UnitResult{
 				{Module: "mod1", Component: "Book", ExitCode: 0},
 				{Module: "mod1", Component: "alpha", ExitCode: 0},
 				{Module: "mod1", Component: "Zebra", ExitCode: 0},
@@ -244,44 +244,44 @@ func TestComponentResultSet_GetSortedComponents(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rs := ComponentResultSet{
+			rs := ModuleResultSet{
 				Module:     "test-module",
 				Components: tt.components,
 			}
 
-			got := rs.GetSortedComponents()
+			got := rs.GetSortedUnits()
 
 			// Verify length
 			if len(got) != len(tt.wantOrder) {
-				t.Fatalf("GetSortedComponents() returned %d items, want %d", len(got), len(tt.wantOrder))
+				t.Fatalf("GetSortedUnits() returned %d items, want %d", len(got), len(tt.wantOrder))
 			}
 
 			// Verify order
 			for i, wantName := range tt.wantOrder {
 				if got[i].Component != wantName {
-					t.Errorf("GetSortedComponents()[%d].Component = %q, want %q", i, got[i].Component, wantName)
+					t.Errorf("GetSortedUnits()[%d].Component = %q, want %q", i, got[i].Component, wantName)
 				}
 			}
 		})
 	}
 }
 
-// TestComponentResultSet_GetSortedComponents_DoesNotModifyOriginal verifies that
-// GetSortedComponents returns a new slice and does not modify the original.
-func TestComponentResultSet_GetSortedComponents_DoesNotModifyOriginal(t *testing.T) {
-	original := []ComponentResult{
+// TestModuleResultSet_GetSortedUnits_DoesNotModifyOriginal verifies that
+// GetSortedUnits returns a new slice and does not modify the original.
+func TestModuleResultSet_GetSortedUnits_DoesNotModifyOriginal(t *testing.T) {
+	original := []UnitResult{
 		{Module: "mod1", Component: "zeta", ExitCode: 0},
 		{Module: "mod1", Component: "alpha", ExitCode: 0},
 		{Module: "mod1", Component: "beta", ExitCode: 0},
 	}
 
-	rs := ComponentResultSet{
+	rs := ModuleResultSet{
 		Module:     "test-module",
 		Components: original,
 	}
 
-	// Call GetSortedComponents
-	sorted := rs.GetSortedComponents()
+	// Call GetSortedUnits
+	sorted := rs.GetSortedUnits()
 
 	// Verify sorted is correct
 	if sorted[0].Component != "alpha" {
@@ -293,16 +293,16 @@ func TestComponentResultSet_GetSortedComponents_DoesNotModifyOriginal(t *testing
 		t.Errorf("Original slice was modified: original[0].Component = %q, want %q", original[0].Component, "zeta")
 	}
 
-	// Verify rs.Components was NOT modified
-	if rs.Components[0].Component != "zeta" {
-		t.Errorf("ComponentResultSet.Components was modified: [0].Component = %q, want %q", rs.Components[0].Component, "zeta")
+	// Verify rs.Units was NOT modified
+	if rs.Units[0].Component != "zeta" {
+		t.Errorf("ModuleResultSet.Components was modified: [0].Component = %q, want %q", rs.Units[0].Component, "zeta")
 	}
 }
 
-// TestComponentResultSet_GetSortedComponents_PreservesAllFields verifies that
-// GetSortedComponents preserves all fields of ComponentResult, not just Component name.
-func TestComponentResultSet_GetSortedComponents_PreservesAllFields(t *testing.T) {
-	components := []ComponentResult{
+// TestModuleResultSet_GetSortedUnits_PreservesAllFields verifies that
+// GetSortedUnits preserves all fields of UnitResult, not just Component name.
+func TestModuleResultSet_GetSortedUnits_PreservesAllFields(t *testing.T) {
+	components := []UnitResult{
 		{
 			Module:    "mod1",
 			Component: "zeta",
@@ -323,12 +323,12 @@ func TestComponentResultSet_GetSortedComponents_PreservesAllFields(t *testing.T)
 		},
 	}
 
-	rs := ComponentResultSet{
+	rs := ModuleResultSet{
 		Module:     "test-module",
 		Components: components,
 	}
 
-	sorted := rs.GetSortedComponents()
+	sorted := rs.GetSortedUnits()
 
 	// alpha should be first after sorting
 	alpha := sorted[0]
@@ -364,11 +364,11 @@ func TestComponentResultSet_GetSortedComponents_PreservesAllFields(t *testing.T)
 	}
 }
 
-// TestComponentResultSet_Fields tests that ComponentResultSet has the expected fields.
-func TestComponentResultSet_Fields(t *testing.T) {
-	rs := ComponentResultSet{
+// TestModuleResultSet_Fields tests that ModuleResultSet has the expected fields.
+func TestModuleResultSet_Fields(t *testing.T) {
+	rs := ModuleResultSet{
 		Module: "my-module",
-		Components: []ComponentResult{
+		Components: []UnitResult{
 			{Module: "my-module", Component: "go", ExitCode: 0},
 		},
 		Status:   ModuleStatusSuccess,
@@ -378,8 +378,8 @@ func TestComponentResultSet_Fields(t *testing.T) {
 	if rs.Module != "my-module" {
 		t.Errorf("Module = %q, want %q", rs.Module, "my-module")
 	}
-	if len(rs.Components) != 1 {
-		t.Errorf("Components length = %d, want %d", len(rs.Components), 1)
+	if len(rs.Units) != 1 {
+		t.Errorf("Components length = %d, want %d", len(rs.Units), 1)
 	}
 	if rs.Status != ModuleStatusSuccess {
 		t.Errorf("Status = %v, want %v", rs.Status, ModuleStatusSuccess)
@@ -414,11 +414,11 @@ func TestModuleStatus_Values(t *testing.T) {
 	}
 }
 
-// TestAggregateToComponentResultSets tests the AggregateToComponentResultSets function.
-func TestAggregateToComponentResultSets(t *testing.T) {
+// TestAggregateToModuleResultSets tests the AggregateToModuleResultSets function.
+func TestAggregateToModuleResultSets(t *testing.T) {
 	tests := []struct {
 		name           string
-		results        []ComponentResult
+		results        []UnitResult
 		wantModules    []string   // expected module names in order
 		wantComponents [][]string // expected component names per module in order
 		wantStatuses   []ModuleStatus
@@ -426,7 +426,7 @@ func TestAggregateToComponentResultSets(t *testing.T) {
 	}{
 		{
 			name:           "empty input returns empty slice",
-			results:        []ComponentResult{},
+			results:        []UnitResult{},
 			wantModules:    []string{},
 			wantComponents: [][]string{},
 			wantStatuses:   []ModuleStatus{},
@@ -441,8 +441,8 @@ func TestAggregateToComponentResultSets(t *testing.T) {
 			wantDurations:  []time.Duration{},
 		},
 		{
-			name: "single component creates single ComponentResultSet",
-			results: []ComponentResult{
+			name: "single component creates single ModuleResultSet",
+			results: []UnitResult{
 				{Module: "mod-a", Component: "go", ExitCode: 0, Duration: 5 * time.Second},
 			},
 			wantModules:    []string{"mod-a"},
@@ -452,7 +452,7 @@ func TestAggregateToComponentResultSets(t *testing.T) {
 		},
 		{
 			name: "multiple components from same module grouped together",
-			results: []ComponentResult{
+			results: []UnitResult{
 				{Module: "mod-a", Component: "go", ExitCode: 0, Duration: 3 * time.Second},
 				{Module: "mod-a", Component: "typescript", ExitCode: 0, Duration: 2 * time.Second},
 				{Module: "mod-a", Component: "book", ExitCode: 0, Duration: 4 * time.Second},
@@ -464,7 +464,7 @@ func TestAggregateToComponentResultSets(t *testing.T) {
 		},
 		{
 			name: "multiple modules sorted alphabetically",
-			results: []ComponentResult{
+			results: []UnitResult{
 				{Module: "zebra-mod", Component: "go", ExitCode: 0, Duration: 1 * time.Second},
 				{Module: "alpha-mod", Component: "go", ExitCode: 0, Duration: 2 * time.Second},
 				{Module: "beta-mod", Component: "go", ExitCode: 0, Duration: 3 * time.Second},
@@ -476,7 +476,7 @@ func TestAggregateToComponentResultSets(t *testing.T) {
 		},
 		{
 			name: "components within module sorted by name",
-			results: []ComponentResult{
+			results: []UnitResult{
 				{Module: "mod-a", Component: "zeta", ExitCode: 0, Duration: 1 * time.Second},
 				{Module: "mod-a", Component: "alpha", ExitCode: 0, Duration: 2 * time.Second},
 				{Module: "mod-a", Component: "beta", ExitCode: 0, Duration: 3 * time.Second},
@@ -488,7 +488,7 @@ func TestAggregateToComponentResultSets(t *testing.T) {
 		},
 		{
 			name: "status derived correctly - all success",
-			results: []ComponentResult{
+			results: []UnitResult{
 				{Module: "mod-a", Component: "go", ExitCode: 0},
 				{Module: "mod-a", Component: "book", ExitCode: 0},
 			},
@@ -499,7 +499,7 @@ func TestAggregateToComponentResultSets(t *testing.T) {
 		},
 		{
 			name: "status derived correctly - one failure",
-			results: []ComponentResult{
+			results: []UnitResult{
 				{Module: "mod-a", Component: "go", ExitCode: 0},
 				{Module: "mod-a", Component: "book", ExitCode: 1},
 			},
@@ -510,7 +510,7 @@ func TestAggregateToComponentResultSets(t *testing.T) {
 		},
 		{
 			name: "status derived correctly - mixed modules",
-			results: []ComponentResult{
+			results: []UnitResult{
 				{Module: "mod-a", Component: "go", ExitCode: 0},
 				{Module: "mod-a", Component: "book", ExitCode: 0},
 				{Module: "mod-b", Component: "go", ExitCode: 1},
@@ -523,7 +523,7 @@ func TestAggregateToComponentResultSets(t *testing.T) {
 		},
 		{
 			name: "duration is max of component durations",
-			results: []ComponentResult{
+			results: []UnitResult{
 				{Module: "mod-a", Component: "go", ExitCode: 0, Duration: 10 * time.Second},
 				{Module: "mod-a", Component: "book", ExitCode: 0, Duration: 5 * time.Second},
 				{Module: "mod-a", Component: "typescript", ExitCode: 0, Duration: 15 * time.Second},
@@ -535,7 +535,7 @@ func TestAggregateToComponentResultSets(t *testing.T) {
 		},
 		{
 			name: "complex scenario with multiple modules and components",
-			results: []ComponentResult{
+			results: []UnitResult{
 				{Module: "eac-core", Component: "go", ExitCode: 0, Duration: 5 * time.Second},
 				{Module: "eac-commands", Component: "go", ExitCode: 0, Duration: 10 * time.Second},
 				{Module: "eac-core", Component: "typescript", ExitCode: 0, Duration: 3 * time.Second},
@@ -549,7 +549,7 @@ func TestAggregateToComponentResultSets(t *testing.T) {
 		},
 		{
 			name: "status with running components (exit code < -1)",
-			results: []ComponentResult{
+			results: []UnitResult{
 				{Module: "mod-a", Component: "go", ExitCode: 0},
 				{Module: "mod-a", Component: "book", ExitCode: -2}, // running
 			},
@@ -560,7 +560,7 @@ func TestAggregateToComponentResultSets(t *testing.T) {
 		},
 		{
 			name: "status with cached component (exit code -1)",
-			results: []ComponentResult{
+			results: []UnitResult{
 				{Module: "mod-a", Component: "go", ExitCode: 0},
 				{Module: "mod-a", Component: "book", ExitCode: -1}, // cached
 			},
@@ -571,7 +571,7 @@ func TestAggregateToComponentResultSets(t *testing.T) {
 		},
 		{
 			name: "failure takes precedence over cached",
-			results: []ComponentResult{
+			results: []UnitResult{
 				{Module: "mod-a", Component: "go", ExitCode: -1},  // cached
 				{Module: "mod-a", Component: "book", ExitCode: 1}, // failed
 			},
@@ -584,11 +584,11 @@ func TestAggregateToComponentResultSets(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := AggregateToComponentResultSets(tt.results)
+			got := AggregateToModuleResultSets(tt.results)
 
 			// Verify number of result sets
 			if len(got) != len(tt.wantModules) {
-				t.Fatalf("AggregateToComponentResultSets() returned %d sets, want %d", len(got), len(tt.wantModules))
+				t.Fatalf("AggregateToModuleResultSets() returned %d sets, want %d", len(got), len(tt.wantModules))
 			}
 
 			// Verify each result set
@@ -599,13 +599,13 @@ func TestAggregateToComponentResultSets(t *testing.T) {
 				}
 
 				// Check component count
-				if len(rs.Components) != len(tt.wantComponents[i]) {
-					t.Errorf("ResultSet[%d].Components length = %d, want %d", i, len(rs.Components), len(tt.wantComponents[i]))
+				if len(rs.Units) != len(tt.wantComponents[i]) {
+					t.Errorf("ResultSet[%d].Components length = %d, want %d", i, len(rs.Units), len(tt.wantComponents[i]))
 					continue
 				}
 
 				// Check component names (should be sorted)
-				for j, comp := range rs.Components {
+				for j, comp := range rs.Units {
 					if comp.Component != tt.wantComponents[i][j] {
 						t.Errorf("ResultSet[%d].Components[%d].Component = %q, want %q", i, j, comp.Component, tt.wantComponents[i][j])
 					}
@@ -625,10 +625,10 @@ func TestAggregateToComponentResultSets(t *testing.T) {
 	}
 }
 
-// TestAggregateToComponentResultSets_PreservesAllFields verifies that all ComponentResult fields
+// TestAggregateToModuleResultSets_PreservesAllFields verifies that all UnitResult fields
 // are preserved in the aggregated output.
-func TestAggregateToComponentResultSets_PreservesAllFields(t *testing.T) {
-	input := []ComponentResult{
+func TestAggregateToModuleResultSets_PreservesAllFields(t *testing.T) {
+	input := []UnitResult{
 		{
 			Module:    "mod-a",
 			Component: "go",
@@ -649,19 +649,19 @@ func TestAggregateToComponentResultSets_PreservesAllFields(t *testing.T) {
 		},
 	}
 
-	got := AggregateToComponentResultSets(input)
+	got := AggregateToModuleResultSets(input)
 
 	if len(got) != 1 {
 		t.Fatalf("Expected 1 result set, got %d", len(got))
 	}
 
 	rs := got[0]
-	if len(rs.Components) != 2 {
-		t.Fatalf("Expected 2 components, got %d", len(rs.Components))
+	if len(rs.Units) != 2 {
+		t.Fatalf("Expected 2 components, got %d", len(rs.Units))
 	}
 
 	// alpha should be first (sorted)
-	alpha := rs.Components[0]
+	alpha := rs.Units[0]
 	if alpha.Component != "alpha" {
 		t.Fatalf("Expected alpha first, got %q", alpha.Component)
 	}
@@ -682,7 +682,7 @@ func TestAggregateToComponentResultSets_PreservesAllFields(t *testing.T) {
 	}
 
 	// go should be second
-	goComp := rs.Components[1]
+	goComp := rs.Units[1]
 	if goComp.Component != "go" {
 		t.Fatalf("Expected go second, got %q", goComp.Component)
 	}
@@ -700,10 +700,10 @@ func TestAggregateToComponentResultSets_PreservesAllFields(t *testing.T) {
 	}
 }
 
-// TestAggregateToComponentResultSets_DoesNotModifyInput verifies that the input slice
+// TestAggregateToModuleResultSets_DoesNotModifyInput verifies that the input slice
 // is not modified by the aggregation.
-func TestAggregateToComponentResultSets_DoesNotModifyInput(t *testing.T) {
-	input := []ComponentResult{
+func TestAggregateToModuleResultSets_DoesNotModifyInput(t *testing.T) {
+	input := []UnitResult{
 		{Module: "mod-b", Component: "zeta", ExitCode: 0, Duration: 1 * time.Second},
 		{Module: "mod-a", Component: "beta", ExitCode: 0, Duration: 2 * time.Second},
 		{Module: "mod-b", Component: "alpha", ExitCode: 0, Duration: 3 * time.Second},
@@ -716,7 +716,7 @@ func TestAggregateToComponentResultSets_DoesNotModifyInput(t *testing.T) {
 	}
 
 	// Call the function
-	_ = AggregateToComponentResultSets(input)
+	_ = AggregateToModuleResultSets(input)
 
 	// Verify input was not modified
 	for i, r := range input {
@@ -727,16 +727,16 @@ func TestAggregateToComponentResultSets_DoesNotModifyInput(t *testing.T) {
 	}
 }
 
-// TestAggregateToComponentResultSets_ModuleWithSamePrefix tests that modules with similar prefixes
+// TestAggregateToModuleResultSets_ModuleWithSamePrefix tests that modules with similar prefixes
 // are sorted correctly.
-func TestAggregateToComponentResultSets_ModuleWithSamePrefix(t *testing.T) {
-	input := []ComponentResult{
+func TestAggregateToModuleResultSets_ModuleWithSamePrefix(t *testing.T) {
+	input := []UnitResult{
 		{Module: "eac-commands-extra", Component: "go", ExitCode: 0},
 		{Module: "eac", Component: "go", ExitCode: 0},
 		{Module: "eac-commands", Component: "go", ExitCode: 0},
 	}
 
-	got := AggregateToComponentResultSets(input)
+	got := AggregateToModuleResultSets(input)
 
 	if len(got) != 3 {
 		t.Fatalf("Expected 3 result sets, got %d", len(got))
@@ -750,19 +750,19 @@ func TestAggregateToComponentResultSets_ModuleWithSamePrefix(t *testing.T) {
 	}
 }
 
-// TestComponentResultSet_DeriveStatus_Priority tests that failure status takes
+// TestModuleResultSet_DeriveStatus_Priority tests that failure status takes
 // precedence over running and cached status when multiple conditions exist.
-func TestComponentResultSet_DeriveStatus_Priority(t *testing.T) {
+func TestModuleResultSet_DeriveStatus_Priority(t *testing.T) {
 	// When both failed (ExitCode > 0) and running (ExitCode < -1) exist,
 	// failed should take precedence. ExitCode -1 means cached (success).
 	tests := []struct {
 		name       string
-		components []ComponentResult
+		components []UnitResult
 		want       ModuleStatus
 	}{
 		{
 			name: "failure first, then running",
-			components: []ComponentResult{
+			components: []UnitResult{
 				{Component: "a", ExitCode: 1},
 				{Component: "b", ExitCode: -2},
 				{Component: "c", ExitCode: 0},
@@ -771,7 +771,7 @@ func TestComponentResultSet_DeriveStatus_Priority(t *testing.T) {
 		},
 		{
 			name: "running first, then failure",
-			components: []ComponentResult{
+			components: []UnitResult{
 				{Component: "a", ExitCode: -2},
 				{Component: "b", ExitCode: 1},
 				{Component: "c", ExitCode: 0},
@@ -780,7 +780,7 @@ func TestComponentResultSet_DeriveStatus_Priority(t *testing.T) {
 		},
 		{
 			name: "success and running only",
-			components: []ComponentResult{
+			components: []UnitResult{
 				{Component: "a", ExitCode: 0},
 				{Component: "b", ExitCode: -2},
 				{Component: "c", ExitCode: 0},
@@ -789,7 +789,7 @@ func TestComponentResultSet_DeriveStatus_Priority(t *testing.T) {
 		},
 		{
 			name: "success and cached only",
-			components: []ComponentResult{
+			components: []UnitResult{
 				{Component: "a", ExitCode: 0},
 				{Component: "b", ExitCode: -1},
 				{Component: "c", ExitCode: 0},
@@ -798,7 +798,7 @@ func TestComponentResultSet_DeriveStatus_Priority(t *testing.T) {
 		},
 		{
 			name: "failure takes precedence over cached",
-			components: []ComponentResult{
+			components: []UnitResult{
 				{Component: "a", ExitCode: 1},
 				{Component: "b", ExitCode: -1},
 				{Component: "c", ExitCode: 0},
@@ -809,7 +809,7 @@ func TestComponentResultSet_DeriveStatus_Priority(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rs := ComponentResultSet{
+			rs := ModuleResultSet{
 				Module:     "test",
 				Components: tt.components,
 			}

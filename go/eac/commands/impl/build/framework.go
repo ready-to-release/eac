@@ -27,15 +27,15 @@ import (
 
 func init() {
 	// Register component-level execution support
-	cmdframework.RegisterComponentProvider(cmdframework.CommandTypeBuild, FlattenModulesToComponentWork)
-	cmdframework.RegisterComponentWorker(cmdframework.CommandTypeBuild, buildComponentWorker)
-	cmdframework.SetComponentCountProvider(getBuildComponentCount)
-	cmdframework.SetComponentLayersProvider(getBuildComponentLayers)
+	cmdframework.RegisterUnitProvider(cmdframework.CommandTypeBuild, FlattenModulesToUnits)
+	cmdframework.RegisterUnitWorker(cmdframework.CommandTypeBuild, buildUnitWorker)
+	cmdframework.SetUoWCountProvider(getBuildUoWCount)
+	cmdframework.SetUnitLayersProvider(getBuildUnitLayers)
 }
 
-// getCachedComponentWork returns cached component work layers, computing once if needed.
-// This avoids duplicate calls to FlattenModulesToComponentWork during startup.
-func getCachedComponentWork(ctx *cmdframework.ExecutionContext) [][]workunit.UnitSpec {
+// getCachedUnitWork returns cached component work layers, computing once if needed.
+// This avoids duplicate calls to FlattenModulesToUnits during startup.
+func getCachedUnitWork(ctx *cmdframework.ExecutionContext) [][]workunit.UnitSpec {
 	// Check if already cached in Extra
 	if ctx.Config.Extra == nil {
 		ctx.Config.Extra = make(map[string]interface{})
@@ -45,22 +45,22 @@ func getCachedComponentWork(ctx *cmdframework.ExecutionContext) [][]workunit.Uni
 	}
 
 	// Compute and cache
-	layers := FlattenModulesToComponentWork(ctx)
+	layers := FlattenModulesToUnits(ctx)
 	ctx.Config.Extra["componentWorkLayers"] = layers
 	return layers
 }
 
-// getBuildComponentCount returns the total number of buildable components.
-func getBuildComponentCount(ctx *cmdframework.ExecutionContext) int {
-	layers := getCachedComponentWork(ctx)
-	return CountComponents(layers)
+// getBuildUoWCount returns the total number of buildable UoWs (units of work).
+func getBuildUoWCount(ctx *cmdframework.ExecutionContext) int {
+	layers := getCachedUnitWork(ctx)
+	return CountUnits(layers)
 }
 
-// getBuildComponentLayers returns the component execution layers as string slices.
+// getBuildUnitLayers returns the component execution layers as string slices.
 // Each layer contains component identifiers in "module:component:handler" format.
 // This matches the display name format used by the TUI scheduler.
-func getBuildComponentLayers(ctx *cmdframework.ExecutionContext) [][]string {
-	layers := getCachedComponentWork(ctx)
+func getBuildUnitLayers(ctx *cmdframework.ExecutionContext) [][]string {
+	layers := getCachedUnitWork(ctx)
 	result := make([][]string, len(layers))
 	for i, layer := range layers {
 		result[i] = make([]string, len(layer))
@@ -221,6 +221,12 @@ func buildAfterResolve(ctx *cmdframework.ExecutionContext) error {
 		// Pass cache times to orchestrator for TUI display
 		if len(bctx.cacheTimes) > 0 && ctx.Orchestrator != nil {
 			ctx.Orchestrator.SetCacheTimes(bctx.cacheTimes)
+		}
+
+		// Enable early cache detection for fast TUI feedback
+		// Tabs will progressively "light up" blue as cache hits are detected
+		if len(bctx.cachedModules) > 0 && ctx.Orchestrator != nil {
+			ctx.Orchestrator.SetCacheDetection(CacheVerifierFunc(), bctx.cachedModules)
 		}
 	}
 
@@ -465,7 +471,7 @@ func processAllArtifactDerivations(ctx *cmdframework.ExecutionContext, buildCfg 
 	}
 
 	// Execute post-build steps for each successfully built component
-	for _, compResult := range ctx.ComponentResults {
+	for _, compResult := range ctx.UnitResults {
 		if compResult.ExitCode != 0 {
 			continue // Skip failed components
 		}
@@ -573,10 +579,10 @@ func buildWorker(ctx *cmdframework.ExecutionContext, moniker string, logWriter i
 	return exitCode
 }
 
-// buildComponentWorker builds a single component within a module.
-// This is called by the ComponentScheduler for parallel component execution.
+// buildUnitWorker builds a single component within a module.
+// This is called by the UnitScheduler for parallel component execution.
 // The component parameter is in "compName:builderName" format (e.g., "go:go", "docs:mkdocs").
-func buildComponentWorker(ctx *cmdframework.ExecutionContext, module, component string, logWriter io.Writer) int {
+func buildUnitWorker(ctx *cmdframework.ExecutionContext, module, component string, logWriter io.Writer) int {
 	buildCfg, ok := ctx.Config.Extra["buildConfig"].(*BuildConfig)
 	if !ok {
 		output.Writeln(logWriter, "Error: buildConfig not found or wrong type")
@@ -663,7 +669,7 @@ func buildComponentWorker(ctx *cmdframework.ExecutionContext, module, component 
 		componentDir = compName + "_" + builderName
 	}
 	if !ctx.Config.DryRun {
-		lockCfg := locking.ComponentBuildConfig(module, componentDir, paths.OutBuildRelPath)
+		lockCfg := locking.UnitBuildConfig(module, componentDir, paths.OutBuildRelPath)
 		lockFile, err := locking.AcquireWithWait(context.Background(), ctx.WorkspaceRoot, lockCfg,
 			ctx.Orchestrator.GetRegistry(), locking.DefaultWaitConfig())
 		if err != nil {

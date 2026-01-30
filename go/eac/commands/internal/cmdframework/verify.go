@@ -3,7 +3,6 @@ package cmdframework
 import (
 	"os"
 	"strings"
-	"time"
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/initsummary"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
@@ -31,8 +30,6 @@ func detectExecutionContext() string {
 // - System dependency verification (via hook)
 // - Module dependency validation (via hook).
 func phaseVerify(ctx *ExecutionContext) error {
-	verifyStart := time.Now()
-
 	// Use existing summary if set by a hook (e.g., test framework), otherwise create new one
 	summary := ctx.InitSummary
 	if summary == nil {
@@ -52,26 +49,24 @@ func phaseVerify(ctx *ExecutionContext) error {
 	}
 	summary.FlatExecution = !ctx.Config.Layered
 
-	// Calculate component count using the registered provider (if available)
-	// Only use provider if component count wasn't already set by a hook (e.g., test framework)
-	// This allows us to show the actual component count, not just module count
-	if summary.ComponentCount == 0 && componentCountProvider != nil {
-		countStart := time.Now()
-		count := componentCountProvider(ctx)
-		log.Debugf("Component count from provider: %d (took %v)", count, time.Since(countStart))
-		summary.ComponentCount = count
-	} else if summary.ComponentCount > 0 {
-		log.Debugf("Component count already set by hook: %d", summary.ComponentCount)
+	// Calculate UoW count using the registered provider (if available)
+	// Only use provider if UoW count wasn't already set by a hook (e.g., test framework)
+	// This allows us to show the actual UoW count, not just module count
+	if summary.UoWCount == 0 && uowCountProvider != nil {
+		count := uowCountProvider(ctx)
+		log.Debugf("UoW count from provider: %d", count)
+		summary.UoWCount = count
+	} else if summary.UoWCount > 0 {
+		log.Debugf("UoW count already set by hook: %d", summary.UoWCount)
 	} else {
-		log.Debugf("No component count provider registered")
+		log.Debugf("No UoW count provider registered")
 	}
 
 	// Calculate component layers using the registered provider (if available)
 	// Only use provider if component layers wasn't already set by a hook
-	if summary.ComponentLayerCount == 0 && componentLayersProvider != nil {
-		layersStart := time.Now()
-		layers := componentLayersProvider(ctx)
-		log.Debugf("Component layers from provider: %d layers (took %v)", len(layers), time.Since(layersStart))
+	if summary.ComponentLayerCount == 0 && unitLayersProvider != nil {
+		layers := unitLayersProvider(ctx)
+		log.Debugf("Component layers from provider: %d layers", len(layers))
 		summary.ComponentExecutionLayers = layers
 		summary.ComponentLayerCount = len(layers)
 	}
@@ -84,9 +79,7 @@ func phaseVerify(ctx *ExecutionContext) error {
 
 	// System dependency verification (if hook provided)
 	if !ctx.Config.SkipDeps && depsVerifier != nil {
-		depsStart := time.Now()
 		depsStatus := depsVerifier(ctx)
-		log.Debugf("Deps verification took %v", time.Since(depsStart))
 		if depsStatus != nil {
 			summary.DepsStatus = *depsStatus
 		}
@@ -98,15 +91,12 @@ func phaseVerify(ctx *ExecutionContext) error {
 	// Build command creates artifacts - it doesn't need them to exist beforehand
 	// Test/scan commands consume artifacts - they need to verify builds exist
 	if ctx.Config.Type != CommandTypeBuild && !ctx.Config.SkipDepm && artifactValidator != nil {
-		artifactStart := time.Now()
 		artifactInfo := artifactValidator(ctx)
-		log.Debugf("Artifact validation took %v", time.Since(artifactStart))
 		if artifactInfo != nil {
 			summary.ArtifactValidation = artifactInfo
 		}
 	}
 
-	log.Debugf("phaseVerify total: %v", time.Since(verifyStart))
 	ctx.InitSummary = summary
 	return nil
 }
@@ -120,19 +110,19 @@ type DepsVerifier func(ctx *ExecutionContext) *initsummary.DepsStatus
 // is internal to impl/.
 type ArtifactValidator func(ctx *ExecutionContext) *initsummary.ArtifactValidationInfo
 
-// ComponentCountProvider is a function that returns the total component count.
+// UoWCountProvider is a function that returns the total UoW count.
 // Commands provide their own implementation based on their work items.
-type ComponentCountProvider func(ctx *ExecutionContext) int
+type UoWCountProvider func(ctx *ExecutionContext) int
 
-// ComponentLayersProvider is a function that returns the component execution layers.
+// UnitLayersProvider is a function that returns the component execution layers.
 // Used to compute component layer info for the init summary display.
-type ComponentLayersProvider func(ctx *ExecutionContext) [][]string
+type UnitLayersProvider func(ctx *ExecutionContext) [][]string
 
 var (
 	depsVerifier            DepsVerifier
 	artifactValidator       ArtifactValidator
-	componentCountProvider  ComponentCountProvider
-	componentLayersProvider ComponentLayersProvider
+	uowCountProvider        UoWCountProvider
+	unitLayersProvider UnitLayersProvider
 )
 
 // SetDepsVerifier sets the global system dependency verifier function.
@@ -145,14 +135,14 @@ func SetArtifactValidator(v ArtifactValidator) {
 	artifactValidator = v
 }
 
-// SetComponentCountProvider sets the global component count provider function.
-func SetComponentCountProvider(p ComponentCountProvider) {
-	componentCountProvider = p
+// SetUoWCountProvider sets the global UoW count provider function.
+func SetUoWCountProvider(p UoWCountProvider) {
+	uowCountProvider = p
 }
 
-// SetComponentLayersProvider sets the global component layers provider function.
-func SetComponentLayersProvider(p ComponentLayersProvider) {
-	componentLayersProvider = p
+// SetUnitLayersProvider sets the global component layers provider function.
+func SetUnitLayersProvider(p UnitLayersProvider) {
+	unitLayersProvider = p
 }
 
 // displayInitSummary outputs the initialization summary to console.
@@ -185,7 +175,7 @@ func convertToTUIInitSummary(s *initsummary.Summary) *tui.InitSummary {
 		RequestedModules:  len(s.RequestedModules),
 		CalculatedModules: len(s.CalculatedModules),
 		AddedDepm:         len(s.AddedDepm),
-		ComponentCount:    s.ComponentCount,
+		UoWCount:          s.UoWCount,
 		FlatExecution:     s.FlatExecution,
 		OutputDir:         s.OutputDir,
 	}
@@ -266,6 +256,42 @@ func convertToTUIInitSummary(s *initsummary.Summary) *tui.InitSummary {
 	}
 
 	return ts
+}
+
+// ExtractPlannedTools extracts unique tools from component work layers.
+// Returns a list of tools with their IsContainer status for TUI display.
+func ExtractPlannedTools(ctx *ExecutionContext) []tui.PlannedTool {
+	provider := GetUnitProvider(ctx.Config.Type)
+	if provider == nil {
+		return nil
+	}
+
+	layers := provider(ctx)
+	if len(layers) == 0 {
+		return nil
+	}
+
+	// Track unique tools (tool name -> isContainer)
+	toolMap := make(map[string]bool)
+	for _, layer := range layers {
+		for _, unit := range layer {
+			if unit.ID.Tool != "" {
+				// Use the full tool key to ensure uniqueness
+				toolMap[unit.ID.Tool] = unit.IsContainer
+			}
+		}
+	}
+
+	// Convert to slice
+	tools := make([]tui.PlannedTool, 0, len(toolMap))
+	for name, isContainer := range toolMap {
+		tools = append(tools, tui.PlannedTool{
+			Name:        name,
+			IsContainer: isContainer,
+		})
+	}
+
+	return tools
 }
 
 // buildExecutionTree builds the hierarchical tree: layers → modules → components.

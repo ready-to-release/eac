@@ -85,6 +85,9 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 	sc.Step(`^I delete the file "([^"]*)"$`, func(filePath string) error {
 		return deleteFile(ctx, filePath)
 	})
+	sc.Step(`^I delete the build state directory$`, func() error {
+		return ensureNoBuildState(ctx)
+	})
 
 	// Exit code assertion (not 0) - common steps don't have "not"
 	sc.Step(`^the exit code is not (\d+)$`, func(notExpected int) error {
@@ -372,10 +375,11 @@ func generateRepositoryYAML(modules []moduleConfig) string {
 
 func ensureNoBuildState(ctx *internal.TestContext) error {
 	ctx.MustBeIsolated()
-	// Use correct path: out/build/.build-state.json (not .out)
-	buildStatePath := filepath.Join(ctx.IsolatedDir, "out", "build", ".build-state.json")
-	if err := os.Remove(buildStatePath); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("failed to remove build state: %w", err)
+	// Remove the entire out/build directory to clear all per-module state files
+	// The new workunit system stores state at out/build/<module>/_module/_/state.json
+	buildDir := filepath.Join(ctx.IsolatedDir, "out", "build")
+	if err := os.RemoveAll(buildDir); err != nil {
+		return fmt.Errorf("failed to remove build state directory: %w", err)
 	}
 	return nil
 }

@@ -46,8 +46,8 @@ type Summary struct {
 	// Output directory
 	OutputDir string // out/build/<module>/ or out/test/<module>/
 
-	// Component count - total components to process across all modules
-	ComponentCount int
+	// UoW count - total units of work to schedule across all modules
+	UoWCount int
 
 	// Parallelism configuration
 	Parallelism *ParallelismInfo // nil if not set
@@ -269,9 +269,9 @@ func (s *Summary) SetOutputDir(dir string) *Summary {
 	return s
 }
 
-// SetComponentCount sets the total number of components to process.
-func (s *Summary) SetComponentCount(count int) *Summary {
-	s.ComponentCount = count
+// SetUoWCount sets the total number of units of work to schedule.
+func (s *Summary) SetUoWCount(count int) *Summary {
+	s.UoWCount = count
 	return s
 }
 
@@ -352,8 +352,8 @@ func (s *Summary) FormatInitLine() string {
 	parts = append(parts, moduleInfo)
 
 	// Component count if available
-	if s.ComponentCount > 0 {
-		parts = append(parts, formatInt(s.ComponentCount)+" components")
+	if s.UoWCount > 0 {
+		parts = append(parts, formatInt(s.UoWCount)+" units")
 	}
 
 	// Layer info

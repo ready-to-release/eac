@@ -23,9 +23,9 @@ func FormatCompact(s *Summary) string {
 		b.WriteString(fmt.Sprintf("Modules: %d\n", len(s.CalculatedModules)))
 	}
 
-	// Components count (if set)
-	if s.ComponentCount > 0 {
-		b.WriteString(fmt.Sprintf("Components: %d\n", s.ComponentCount))
+	// UoW count (if set)
+	if s.UoWCount > 0 {
+		b.WriteString(fmt.Sprintf("Units: %d\n", s.UoWCount))
 	}
 
 	// Layer information (only if multiple layers)
@@ -231,9 +231,9 @@ func FormatDetailed(s *Summary) string {
 		b.WriteString("\n")
 	}
 
-	// Components count (if set)
-	if s.ComponentCount > 0 {
-		b.WriteString(fmt.Sprintf("Components: %d\n\n", s.ComponentCount))
+	// UoW count (if set)
+	if s.UoWCount > 0 {
+		b.WriteString(fmt.Sprintf("Units: %d\n\n", s.UoWCount))
 	}
 
 	// Execution plan

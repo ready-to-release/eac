@@ -74,7 +74,7 @@ func phaseSummary(ctx *ExecutionContext, customSummary SummaryGenerator) int {
 // generateTUISummary creates TUI summary data from execution results.
 func generateTUISummary(ctx *ExecutionContext, totalTime time.Duration) *tui.SummaryData {
 	// Use component-level results if available, otherwise fall back to module-level
-	if len(ctx.ComponentResultSets) > 0 {
+	if len(ctx.ModuleResultSets) > 0 {
 		return generateComponentTUISummary(ctx, totalTime)
 	}
 	return generateModuleTUISummary(ctx, totalTime)
@@ -83,7 +83,7 @@ func generateTUISummary(ctx *ExecutionContext, totalTime time.Duration) *tui.Sum
 // moduleCache holds precomputed data for a module to avoid repeated calculations.
 type moduleCache struct {
 	status         orchestrator.ModuleStatus
-	sortedComps    []orchestrator.ComponentResult
+	sortedComps    []orchestrator.UnitResult
 	moduleDuration time.Duration
 	errorCount     int
 	warnCount      int
@@ -95,7 +95,7 @@ type moduleCache struct {
 // generateComponentTUISummary creates TUI summary showing module-level aggregated results.
 // Table format varies by command type (build, test, lint, scan).
 func generateComponentTUISummary(ctx *ExecutionContext, totalTime time.Duration) *tui.SummaryData {
-	resultSets := ctx.ComponentResultSets
+	resultSets := ctx.ModuleResultSets
 
 	// Pre-compute all module data in a single pass
 	caches := make([]moduleCache, len(resultSets))
@@ -117,10 +117,10 @@ func generateComponentTUISummary(ctx *ExecutionContext, totalTime time.Duration)
 		}
 
 		// Sort components once
-		cache.sortedComps = rs.GetSortedComponents()
+		cache.sortedComps = rs.GetSortedUnits()
 
 		// Aggregate stats in single pass
-		for _, comp := range rs.Components {
+		for _, comp := range rs.Units {
 			if comp.Duration > cache.moduleDuration {
 				cache.moduleDuration = comp.Duration
 			}
@@ -448,7 +448,7 @@ func generateModuleTUISummary(ctx *ExecutionContext, totalTime time.Duration) *t
 // printConsoleSummary prints a summary to the console for non-TUI mode.
 func printConsoleSummary(ctx *ExecutionContext, totalTime time.Duration) {
 	// Use component-level results if available
-	if len(ctx.ComponentResultSets) > 0 {
+	if len(ctx.ModuleResultSets) > 0 {
 		printComponentConsoleSummary(ctx, totalTime)
 		return
 	}
@@ -458,7 +458,7 @@ func printConsoleSummary(ctx *ExecutionContext, totalTime time.Duration) {
 // printComponentConsoleSummary prints component-level summary to console.
 // For test commands, displays a module-level table with test types.
 func printComponentConsoleSummary(ctx *ExecutionContext, totalTime time.Duration) {
-	resultSets := ctx.ComponentResultSets
+	resultSets := ctx.ModuleResultSets
 
 	// Pre-compute all module data in a single pass (reuse moduleCache type)
 	caches := make([]moduleCache, len(resultSets))
@@ -475,9 +475,9 @@ func printComponentConsoleSummary(ctx *ExecutionContext, totalTime time.Duration
 			moduleSuccessCount++
 		}
 
-		cache.sortedComps = rs.GetSortedComponents()
+		cache.sortedComps = rs.GetSortedUnits()
 
-		for _, comp := range rs.Components {
+		for _, comp := range rs.Units {
 			if comp.Duration > cache.moduleDuration {
 				cache.moduleDuration = comp.Duration
 			}
@@ -691,7 +691,7 @@ func formatErrorLines(prefix, errMsg string) []string {
 // extractUniqueTestTypes extracts unique test types from component results.
 // Uses the Handler field which contains the test type (e.g., "gotest", "godog").
 // Returns a comma-separated string of unique test types.
-func extractUniqueTestTypes(components []orchestrator.ComponentResult) string {
+func extractUniqueTestTypes(components []orchestrator.UnitResult) string {
 	if len(components) == 0 {
 		return "-"
 	}

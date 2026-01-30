@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/ready-to-release/eac/go/eac/core/workspace"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -591,7 +592,7 @@ func TestModuleTemplate_DeepMergePartialComponent(t *testing.T) {
 // Integration test: Load real templates from defaults file
 func TestLoadModuleTemplates_Integration(t *testing.T) {
 	// Find repo root
-	repoRoot, err := findRepositoryRoot("")
+	repoRoot, err := workspace.Root()
 	require.NoError(t, err)
 
 	// Load templates
@@ -624,7 +625,7 @@ func TestLoadModuleTemplates_Integration(t *testing.T) {
 
 // Integration test: Expand a module using real templates
 func TestExpandModuleTemplates_IntegrationWithRealTemplates(t *testing.T) {
-	repoRoot, err := findRepositoryRoot("")
+	repoRoot, err := workspace.Root()
 	require.NoError(t, err)
 
 	cfg, err := LoadModuleTemplates(repoRoot)

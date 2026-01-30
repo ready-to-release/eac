@@ -120,6 +120,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				}
 			}
+
+			// Calculate initial tab columns to fit all UoWs without scrolling
+			m.tabColumns = m.calculateOptimalTabColumns()
+		}
+
+		// Pre-populate tool lamps from PlannedTools
+		// All tools shown from start (inactive), light up when active
+		if msg.Summary != nil && len(msg.Summary.PlannedTools) > 0 {
+			for _, tool := range msg.Summary.PlannedTools {
+				if tool.IsContainer {
+					m.plannedContainers = append(m.plannedContainers, tool.Name)
+				} else {
+					m.plannedSystemTools = append(m.plannedSystemTools, tool.Name)
+				}
+			}
 		}
 		return m, nil
 
@@ -230,11 +245,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Update lock tracking info
 		m.locks = status.Locks
 
-		// Update tools tracking (containers vs system)
+		// Update active tools (planned tools set at init, only active state changes)
 		m.activeContainers = status.ActiveContainers
-		m.usedContainers = status.UsedContainers
 		m.activeSystemTools = status.ActiveSystemTools
-		m.usedSystemTools = status.UsedSystemTools
 
 		if !m.statusDone {
 			return m, m.listenForStatus()
@@ -412,6 +425,11 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.forceExit = true
 		m.quitting = true
 		return m, tea.Quit
+	case "enter":
+		// Enter skips the freeze countdown (sets timer to 0, normal exit behavior continues)
+		if m.userHasInteracted && m.exitCountdownSecs > 0 {
+			m.exitCountdownSecs = 0
+		}
 	case " ", "p":
 		// Toggle pause
 		m.paused = !m.paused
@@ -470,6 +488,18 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, tea.EnableMouseAllMotion
 		}
 		return m, tea.DisableMouse
+	case "left":
+		// Decrease tab columns (min 1)
+		if m.tabColumns > 1 {
+			m.tabColumns--
+			m.tabsScrollOffset = 0 // Reset scroll when changing layout
+		}
+	case "right":
+		// Increase tab columns (max 6)
+		if m.tabColumns < 6 {
+			m.tabColumns++
+			m.tabsScrollOffset = 0 // Reset scroll when changing layout
+		}
 	}
 	return m, nil
 }
@@ -482,6 +512,12 @@ func (m *Model) activateSummary() {
 
 	m.summaryData = m.pendingSummaryData
 	m.pendingSummaryData = nil
+
+	// Finalize any tabs still in non-terminal states before exiting.
+	// By the time summary arrives, all workers have completed - any remaining
+	// running/pending tabs are due to message queue timing. Mark them as
+	// skipped (blue) to avoid showing misleading orange tabs at exit.
+	m.finalizeAllTabs()
 
 	// Activate Summary pane
 	if m.activePhase != PhaseSummary {
@@ -507,6 +543,29 @@ func (m *Model) activateSummary() {
 		m.panes[PhaseSummary].Status = PhaseComplete
 	}
 	m.panes[PhaseSummary].EndTime = time.Now()
+}
+
+// finalizeAllTabs ensures all module tabs are in terminal states before exit.
+// Any tabs still in running/pending state are marked as skipped (blue).
+// This handles message queue timing where completion messages haven't been
+// processed yet when the summary arrives.
+func (m *Model) finalizeAllTabs() {
+	for _, state := range m.moduleStates {
+		if state.Status == ModuleRunning || state.Status == ModulePending {
+			// Mark as skipped (blue) - the safest default since by the time
+			// summary arrives, all work is complete. Running/pending state
+			// indicates the completion message is still in the queue.
+			if state.Status == ModuleRunning && m.uowRunning > 0 {
+				m.uowRunning--
+			}
+			state.Status = ModuleSkipped
+			state.ExitCode = -1
+			if state.EndTime.IsZero() {
+				state.EndTime = time.Now()
+			}
+			m.uowCached++
+		}
+	}
 }
 
 // cycleTab cycles through tabs in the given direction (+1 = next, -1 = prev).
@@ -558,7 +617,79 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	// - Click on tab bar → switch tabs
 	// - Shift+Click → select text (standard terminal behavior, bypasses mouse mode)
 
+	// Resource zone detection helper for Resources pane
+	// IMPORTANT: Uses calculateLayoutMetrics() as single source of truth for Y offset.
+	// This ensures hover detection aligns with rendered output regardless of layout changes.
+	detectResourceZoneAt := func(x, y int) string {
+		metrics := m.calculateLayoutMetrics()
+
+		// Resources pane only exists if it has lines
+		if metrics.ResourcesLines == 0 {
+			return ""
+		}
+
+		// Resources pane layout (0-indexed Y coordinates):
+		// Y = InitLines:     Resources header (contains freeze-button)
+		// Y = InitLines + 1: Content line 1 (timer, cpu, mem, jobs)
+		// Y = InitLines + 2: Content line 2 (uow, tools, layer)
+		// Y = InitLines + 3: Resources footer
+
+		resourcesStartY := metrics.InitLines // Header line
+		contentLine1Y := metrics.InitLines + 1
+		contentLine2Y := metrics.InitLines + 2
+
+		// Column boundaries (matching renderResourcesPane)
+		const (
+			col1End = 38        // timer+CPU or UoW
+			col2End = 38 + 3 + 24 // + separator + Mem/Tools
+			col3End = 38 + 3 + 24 + 3 + 20 // + separator + Jobs/Layer
+		)
+
+		// Check header line for freeze button
+		if y == resourcesStartY {
+			// Freeze button is at the right end of the header
+			// It's marked with zone, so just check if we're on header line and right side
+			if x > m.width-20 { // Approximate freeze button location
+				return "freeze-button"
+			}
+			return ""
+		}
+
+		// Check content line 1: timer, cpu, mem, jobs
+		if y == contentLine1Y {
+			if x < col1End {
+				// Col1 contains both timer and CPU
+				// Timer is first ~6 chars, CPU follows
+				if x < 8 {
+					return "res-timer"
+				}
+				return "res-cpu"
+			} else if x < col2End {
+				return "res-mem"
+			} else if x < col3End {
+				return "res-jobs"
+			}
+			return ""
+		}
+
+		// Check content line 2: uow, tools, layer
+		if y == contentLine2Y {
+			if x < col1End {
+				return "res-uow"
+			} else if x < col2End {
+				return "res-tools"
+			} else if x < col3End {
+				return "res-layer"
+			}
+			return ""
+		}
+
+		return ""
+	}
+
 	// Tab detection helper for side-by-side layout (works for both tab grid and tree view)
+	// IMPORTANT: Uses calculateLayoutMetrics() as single source of truth for Y offset.
+	// This ensures click detection aligns with rendered output regardless of layout changes.
 	detectTabAt := func(x, y int) string {
 		if m.panes[PhaseRun].Status == PhasePending {
 			return ""
@@ -568,32 +699,21 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			return ""
 		}
 
-		// Fixed components panel width (matches renderSideBySideLayout)
-		const componentsWidth = 62
+		// Dynamic components panel width (matches renderSideBySideLayout)
+		componentsWidth := m.ComponentsWidth()
 
 		// Check if X is within the components panel (left side)
 		if x >= componentsWidth {
 			return "" // Click is on the logs panel (right side)
 		}
 
-		// Calculate Y position where content starts
-		// Count actual rendered lines by rendering and counting newlines
-		usedLines := 0
+		// Use shared layout metrics - single source of truth for Y offset calculation
+		// ComponentsStart already includes: init + resources + selected + panel header
+		metrics := m.calculateLayoutMetrics()
 
-		// Init line - always 1 line (either compact summary or loading indicator)
-		usedLines = 1
-
-		// Resources pane - render it and count lines
-		resourcesPane := m.renderResourcesPane()
-		if resourcesPane != "" {
-			usedLines += strings.Count(resourcesPane, "\n") + 1
-		}
-
-		// Components panel header adds 1 line
-		usedLines += 1
-
-		// Content starts at usedLines (0-indexed)
-		contentStartY := usedLines
+		// Content starts at ComponentsStart (0-indexed Y coordinate)
+		// Subtract 1 because mouse Y coordinates are 0-indexed in terminal
+		contentStartY := metrics.ComponentsStart - 1
 
 		// Check if Y is within content area
 		row := y - contentStartY
@@ -678,9 +798,9 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		}
 
 		// Tab grid mode - compact single-line tabs, grouped by layer
-		// Match the calculation in renderTabGridContent
-		const tabWidth = 18
-		tabsPerRow := (componentsWidth - 2) / tabWidth
+		// Use configured tab columns (matches renderTabGridContent)
+		const tabWidth = 15
+		tabsPerRow := m.tabColumns
 		if tabsPerRow < 1 {
 			tabsPerRow = 1
 		}
@@ -770,8 +890,8 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 
 	// Handle wheel events FIRST - scrolling should never change tabs
 	if msg.Button == tea.MouseButtonWheelUp || msg.Button == tea.MouseButtonWheelDown {
-		// Fixed components panel width (matches renderSideBySideLayout)
-		const componentsWidth = 62
+		// Dynamic components panel width (matches renderSideBySideLayout)
+		componentsWidth := m.ComponentsWidth()
 		scrollAmount := 3 // Lines to scroll per wheel tick
 
 		// Check if mouse is over tabs pane (left) or logs pane (right)
@@ -799,8 +919,14 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 				}
 			} else {
 				// Tab grid: count lines (layer header + 1 line per row of compact tabs)
-				// Compact layout: ~6 tabs per row, 1 line per row
-				const compactTabsPerRow = 6
+				// Uses configured tab columns (adjustable with left/right arrows)
+				tabsPerRow := m.tabColumns
+				if tabsPerRow < 1 {
+					tabsPerRow = 1
+				}
+				if tabsPerRow > 6 {
+					tabsPerRow = 6
+				}
 				if m.initSummary != nil && len(m.initSummary.ExecutionTree) > 0 {
 					for _, layer := range m.initSummary.ExecutionTree {
 						maxScroll++ // Layer header
@@ -808,11 +934,11 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 						for _, module := range layer.Modules {
 							layerComps += len(module.Components)
 						}
-						rows := (layerComps + compactTabsPerRow - 1) / compactTabsPerRow
+						rows := (layerComps + tabsPerRow - 1) / tabsPerRow
 						maxScroll += rows // 1 line per row (compact)
 					}
 				} else {
-					rows := (len(tabs) + compactTabsPerRow - 1) / compactTabsPerRow
+					rows := (len(tabs) + tabsPerRow - 1) / tabsPerRow
 					maxScroll = rows
 				}
 			}
@@ -840,6 +966,12 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			if hoveredTab != m.hoveredTab {
 				m.hoveredTab = hoveredTab
 				m.hoveredTabScroll = 0 // Reset marquee scroll on hover change
+				// Update hoveredZone for tab
+				if hoveredTab != "" {
+					m.hoveredZone = "tab:" + hoveredTab
+				} else {
+					m.hoveredZone = ""
+				}
 				if hoveredTab != "" {
 					return m, tea.Tick(200*time.Millisecond, func(t time.Time) tea.Msg {
 						return MarqueeTickMsg{}
@@ -849,30 +981,23 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
-		// Scrolling over logs pane (right side) - use existing pane scroll logic
-		paneIdx := m.getPaneAtPosition(msg.Y)
-		if paneIdx < 0 || paneIdx >= len(m.panes) {
-			return m, nil // Mouse not over any pane
-		}
-
-		pane := m.panes[paneIdx]
+		// Scrolling over logs pane (right side) - directly use Run pane
+		// In side-by-side layout, right side is always the Run pane logs
+		pane := m.panes[PhaseRun]
 		if pane == nil {
 			return m, nil
 		}
 
-		// Calculate pane height for this specific pane
-		initH, runH, summaryH := m.calculatePaneHeights()
-		paneHeight := initH
-		switch paneIdx {
-		case 1: // Run pane
-			paneHeight = runH
-		case 2: // Summary pane
-			paneHeight = summaryH
+		// Use shared layout metrics - single source of truth for height calculation
+		metrics := m.calculateLayoutMetrics()
+		paneHeight := metrics.RemainingHeight - 2 // -2 for panel header/footer
+		if paneHeight < 5 {
+			paneHeight = 5
 		}
 
 		// Determine which buffer is being displayed (for Run pane with active tab)
 		buffer := pane.Buffer
-		if paneIdx == 1 && m.activeTab != "" { // Run pane with module tab selected
+		if m.activeTab != "" {
 			if moduleBuffer := m.GetActiveModuleBuffer(); moduleBuffer != nil {
 				buffer = moduleBuffer
 			}
@@ -894,16 +1019,38 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 
 	// Handle mouse motion for hover effect
 	if msg.Action == tea.MouseActionMotion {
+		// Check Resources pane zones first (help text display)
+		// Uses layout-aware detection for accurate Y positioning
+		resourceZone := detectResourceZoneAt(msg.X, msg.Y)
+		if resourceZone != "" {
+			if m.hoveredZone != resourceZone {
+				m.hoveredZone = resourceZone
+				m.hoveredTab = ""           // Clear tab hover when over resource zone
+				m.hoveredTabScroll = 0      // Reset marquee
+			}
+			return m, nil
+		}
+
+		// If not over a resource zone, check for tab hover
 		hoveredTab := detectTabAt(msg.X, msg.Y)
 		if hoveredTab != m.hoveredTab {
 			m.hoveredTab = hoveredTab
 			m.hoveredTabScroll = 0 // Reset marquee scroll on hover change
+			// Update hoveredZone for tab
+			if hoveredTab != "" {
+				m.hoveredZone = "tab:" + hoveredTab
+			} else {
+				m.hoveredZone = ""
+			}
 			// Start marquee ticker if hovering a tab
 			if hoveredTab != "" {
 				return m, tea.Tick(200*time.Millisecond, func(t time.Time) tea.Msg {
 					return MarqueeTickMsg{}
 				})
 			}
+		} else if hoveredTab == "" && m.hoveredZone != "" {
+			// Clear hoveredZone if not over any resource zone or tab
+			m.hoveredZone = ""
 		}
 		return m, nil
 	}

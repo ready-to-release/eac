@@ -10,8 +10,8 @@ import (
 // This interface allows the scheduler to send results to the summary builder
 // without creating an import cycle with cmdframework.
 type SummaryBuilder interface {
-	// AddResult adds a component result to the builder (thread-safe).
-	AddResult(result ComponentResult)
+	// AddResult adds a unit result to the builder (thread-safe).
+	AddResult(result UnitResult)
 }
 
 // WorkItem represents a single unit of work to be processed.
@@ -83,8 +83,8 @@ type Config struct {
 	Turbo float64
 }
 
-// ComponentResult represents the outcome of building a single component.
-type ComponentResult struct {
+// UnitResult represents the outcome of executing a single work unit.
+type UnitResult struct {
 	// Module is the module moniker
 	Module string
 	// Component is the component name
@@ -109,10 +109,10 @@ type ComponentResult struct {
 	TestsSkipped int
 }
 
-// ComponentWorkerFunc processes a single component build.
+// UnitWorkerFunc processes a single work unit.
 // It receives the module, component name, and log writer.
 // Returns an exit code (0 for success).
-type ComponentWorkerFunc func(module, component string, logWriter io.Writer) int
+type UnitWorkerFunc func(module, component string, logWriter io.Writer) int
 
 // ModuleStatus represents the execution status of a module.
 type ModuleStatus int
@@ -148,32 +148,32 @@ func (s ModuleStatus) String() string {
 	}
 }
 
-// ComponentResultSet aggregates component results for a single module.
-type ComponentResultSet struct {
+// ModuleResultSet aggregates unit results for a single module.
+type ModuleResultSet struct {
 	// Module is the module moniker
 	Module string
-	// Components contains the results for each component in the module
-	Components []ComponentResult
+	// Units contains the results for each work unit in the module
+	Units []UnitResult
 	// Status is the derived module status based on component results
 	Status ModuleStatus
 	// Duration is the total time taken to process all components
 	Duration time.Duration
 }
 
-// DeriveStatus computes the module status from component results.
-// - If any component has ExitCode > 0 -> ModuleStatusFailed
-// - If any component has ExitCode < -1 -> ModuleStatusRunning (pending/in-progress)
-// - If all components have ExitCode == -1 -> ModuleStatusSkipped (cached)
-// - If all components have ExitCode <= 0 (mix of 0 and -1) -> ModuleStatusSuccess
-// - If no components -> ModuleStatusPending.
-func (rs *ComponentResultSet) DeriveStatus() ModuleStatus {
-	if len(rs.Components) == 0 {
+// DeriveStatus computes the module status from unit results.
+// - If any unit has ExitCode > 0 -> ModuleStatusFailed
+// - If any unit has ExitCode < -1 -> ModuleStatusRunning (pending/in-progress)
+// - If all units have ExitCode == -1 -> ModuleStatusSkipped (cached)
+// - If all units have ExitCode <= 0 (mix of 0 and -1) -> ModuleStatusSuccess
+// - If no units -> ModuleStatusPending.
+func (rs *ModuleResultSet) DeriveStatus() ModuleStatus {
+	if len(rs.Units) == 0 {
 		return ModuleStatusPending
 	}
 
 	hasRunning := false
 	allSkipped := true
-	for _, c := range rs.Components {
+	for _, c := range rs.Units {
 		if c.ExitCode > 0 {
 			return ModuleStatusFailed
 		}
@@ -196,16 +196,16 @@ func (rs *ComponentResultSet) DeriveStatus() ModuleStatus {
 	return ModuleStatusSuccess
 }
 
-// GetSortedComponents returns a copy of the components sorted alphabetically by Component name.
+// GetSortedUnits returns a copy of the units sorted alphabetically by Component name.
 // The original slice is not modified.
-func (rs *ComponentResultSet) GetSortedComponents() []ComponentResult {
-	if len(rs.Components) == 0 {
-		return []ComponentResult{}
+func (rs *ModuleResultSet) GetSortedUnits() []UnitResult {
+	if len(rs.Units) == 0 {
+		return []UnitResult{}
 	}
 
 	// Create a copy to avoid modifying the original
-	sorted := make([]ComponentResult, len(rs.Components))
-	copy(sorted, rs.Components)
+	sorted := make([]UnitResult, len(rs.Units))
+	copy(sorted, rs.Units)
 
 	// Sort alphabetically by Component name
 	sort.Slice(sorted, func(i, j int) bool {

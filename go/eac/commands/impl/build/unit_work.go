@@ -2,27 +2,18 @@ package build
 
 import (
 	"math"
-	"time"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/builders"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/cmdframework"
 	"github.com/ready-to-release/eac/go/eac/core/config"
-	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/tool"
 	"github.com/ready-to-release/eac/go/eac/core/workunit"
 )
 
-var compWorkLog = logging.C()
-
-// FlattenModulesToComponentWork converts module layers to component work layers.
+// FlattenModulesToUnits converts module layers to component work layers.
 // Each module is expanded to its buildable components with weight and dependency info.
 // Returns nil if no buildable components are found.
-func FlattenModulesToComponentWork(ctx *cmdframework.ExecutionContext) [][]workunit.UnitSpec {
-	flattenStart := time.Now()
-	defer func() {
-		compWorkLog.Debugf("[FLATTEN] Total FlattenModulesToComponentWork: %v", time.Since(flattenStart))
-	}()
-
+func FlattenModulesToUnits(ctx *cmdframework.ExecutionContext) [][]workunit.UnitSpec {
 	cfg := config.Global()
 	if cfg == nil || cfg.ComponentTypes == nil {
 		return nil
@@ -47,7 +38,6 @@ func FlattenModulesToComponentWork(ctx *cmdframework.ExecutionContext) [][]worku
 	var componentLayers [][]workunit.UnitSpec
 	globalIndex := 0
 
-	var handlersTime, weightTime time.Duration
 	for _, layerMonikers := range layers {
 		var layerWork []workunit.UnitSpec
 
@@ -61,9 +51,7 @@ func FlattenModulesToComponentWork(ctx *cmdframework.ExecutionContext) [][]worku
 			}
 
 			// Get all handlers for module's buildable components
-			handlerStart := time.Now()
 			compHandlers := builders.GetHandlersForModule(module)
-			handlersTime += time.Since(handlerStart)
 			if len(compHandlers) == 0 {
 				// Module has no buildable components - create a placeholder
 				layerWork = append(layerWork, workunit.UnitSpec{
@@ -109,9 +97,7 @@ func FlattenModulesToComponentWork(ctx *cmdframework.ExecutionContext) [][]worku
 				}
 
 				// Get weight (base weight × amp, calculated internally)
-				weightStart := time.Now()
 				weight := getComponentWeight(moniker, componentName, compTypeName, tool.OperationBuild)
-				weightTime += time.Since(weightStart)
 
 				work := workunit.UnitSpec{
 					ID: workunit.UnitID{
@@ -140,12 +126,11 @@ func FlattenModulesToComponentWork(ctx *cmdframework.ExecutionContext) [][]worku
 		}
 	}
 
-	compWorkLog.Debugf("[FLATTEN] GetHandlersForModule total: %v, getComponentWeight total: %v", handlersTime, weightTime)
 	return componentLayers
 }
 
-// FlattenComponentLayers flattens component work layers to a single slice.
-func FlattenComponentLayers(layers [][]workunit.UnitSpec) []workunit.UnitSpec {
+// FlattenUnitLayers flattens component work layers to a single slice.
+func FlattenUnitLayers(layers [][]workunit.UnitSpec) []workunit.UnitSpec {
 	var all []workunit.UnitSpec
 	for _, layer := range layers {
 		all = append(all, layer...)
@@ -153,8 +138,8 @@ func FlattenComponentLayers(layers [][]workunit.UnitSpec) []workunit.UnitSpec {
 	return all
 }
 
-// CountComponents returns the total number of component work items.
-func CountComponents(layers [][]workunit.UnitSpec) int {
+// CountUnits returns the total number of component work items.
+func CountUnits(layers [][]workunit.UnitSpec) int {
 	count := 0
 	for _, layer := range layers {
 		count += len(layer)
@@ -165,22 +150,12 @@ func CountComponents(layers [][]workunit.UnitSpec) int {
 // getToolWeight returns the scheduling weight for a component type and operation.
 // Weight is derived from tool.Resources.CPUs. Defaults to 1.
 func getToolWeight(componentType string, operation tool.OperationType) int {
-	bridgeStart := time.Now()
 	bridge := tool.GlobalBuildBridge()
-	bridgeTime := time.Since(bridgeStart)
-	if bridgeTime > 10*time.Millisecond {
-		compWorkLog.Debugf("[WEIGHT] GlobalBuildBridge took %v", bridgeTime)
-	}
 	if bridge == nil {
 		return 1
 	}
 
-	resolveStart := time.Now()
 	t := bridge.ResolveTool(componentType, operation)
-	resolveTime := time.Since(resolveStart)
-	if resolveTime > 10*time.Millisecond {
-		compWorkLog.Debugf("[WEIGHT] ResolveTool(%s) took %v", componentType, resolveTime)
-	}
 	if t == nil {
 		return 1
 	}

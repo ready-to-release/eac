@@ -33,8 +33,30 @@ import (
 
 func init() {
 	// Register test component-level execution support
-	cmdframework.RegisterComponentProvider(cmdframework.CommandTypeTest, FlattenModulesToTestComponentWork)
-	cmdframework.RegisterComponentWorker(cmdframework.CommandTypeTest, testComponentWorker)
+	cmdframework.RegisterUnitProvider(cmdframework.CommandTypeTest, FlattenModulesToTestUnits)
+	cmdframework.RegisterUnitWorker(cmdframework.CommandTypeTest, testUnitWorker)
+	cmdframework.SetUnitLayersProvider(getTestUnitLayers)
+}
+
+// getTestUnitLayers returns the component execution layers as string slices.
+// For spec tests (godog, tscucumber), uses "module:spec:specname" format for TUI tree matching.
+// This format matches the Longname() output from UnitID when Spec is set.
+func getTestUnitLayers(ctx *cmdframework.ExecutionContext) [][]string {
+	layers := FlattenModulesToTestUnits(ctx)
+	result := make([][]string, len(layers))
+	for i, layer := range layers {
+		result[i] = make([]string, len(layer))
+		for j, work := range layer {
+			if work.ID.Spec != "" {
+				// Spec test: use Longname() which returns "module:spec:specname"
+				result[i][j] = work.ID.Longname()
+			} else {
+				// Regular test: "module:component:tool"
+				result[i][j] = fmt.Sprintf("%s:%s:%s", work.ID.Module, work.ID.Component, work.ID.Tool)
+			}
+		}
+	}
+	return result
 }
 
 // TestFrameworkConfig holds test-specific configuration for the framework.
@@ -68,7 +90,7 @@ type TestFrameworkConfig struct {
 	// Execution state
 	ExecCtx       *TestExecutionContext
 	TestStartTime time.Time
-	Lock          *locking.TrackedLock
+	// NOTE: Lock acquisition moved to testUnitWorker (after cache check)
 }
 
 // testSelectionStats tracks test selection statistics.
@@ -136,18 +158,11 @@ func testAfterInit(ctx *cmdframework.ExecutionContext) error {
 	}
 	testCfg.Suite = suite
 
-	// Acquire suite lock with wait
-	repoCfg := ctx.EACConfig.Repository
-	lockCfg := locking.TestConfig(testCfg.SuiteName, repoCfg.Paths.Out.Test)
-	lock, err := locking.AcquireWithWait(context.Background(), ctx.WorkspaceRoot, lockCfg,
-		ctx.Orchestrator.GetRegistry(), locking.DefaultWaitConfig())
-	if err != nil {
-		return fmt.Errorf("failed to acquire lock: %w", err)
-	}
-	testCfg.Lock = lock
-	ctx.AddCleanup(func() { locking.ReleaseTracked(lock) })
+	// NOTE: Lock acquisition moved to testUnitWorker (after cache check)
+	// This ensures locks are only held during actual test execution, not during TUI init
 
 	// Create test output directory
+	repoCfg := ctx.EACConfig.Repository
 	testCfg.TestRunDir = filepath.Join(ctx.WorkspaceRoot, repoCfg.TestOutputDir())
 	if err := os.MkdirAll(testCfg.TestRunDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create test directory: %w", err)
@@ -412,7 +427,26 @@ func testBeforeExecute(ctx *cmdframework.ExecutionContext) error {
 	}
 	testCfg.TestStartTime = time.Now()
 
+	// Enable early cache detection for fast TUI feedback
+	// Tabs will progressively "light up" blue as cache hits are detected
+	if len(testCfg.CachedModules) > 0 && ctx.Orchestrator != nil {
+		ctx.Orchestrator.SetCacheDetection(testCacheVerifierFunc(testCfg.CachedModules), testCfg.CachedModules)
+	}
+
 	return nil
+}
+
+// testCacheVerifierFunc returns a CacheVerifier for test incremental caching.
+// Test caching is simpler than build - just checks if module is in cached set.
+// No artifact integrity verification needed since test state is tracked separately.
+func testCacheVerifierFunc(cachedModules map[string]bool) orchestrator.CacheVerifier {
+	return func(workspaceRoot string, spec workunit.UnitSpec, _ map[string]bool, cacheTimes map[string]time.Time) (bool, time.Time) {
+		module := spec.ID.Module
+		if cachedModules[module] {
+			return true, cacheTimes[module]
+		}
+		return false, time.Time{}
+	}
 }
 
 // testAfterExecute handles manifest generation and state updates.
@@ -514,11 +548,11 @@ func testWorker(ctx *cmdframework.ExecutionContext, modulePath string, logWriter
 	return 0
 }
 
-// testComponentWorker runs tests for a package path using component-level execution.
-// This is called by the ComponentScheduler for parallel test component execution.
+// testUnitWorker runs tests for a package path using component-level execution.
+// This is called by the UnitScheduler for parallel test component execution.
 // The component parameter is in "path:testType" format (e.g., "go/eac/core/config:gotest").
 // Note: The path may contain "/" so we parse from the right to find the test type.
-func testComponentWorker(ctx *cmdframework.ExecutionContext, module, component string, logWriter io.Writer) int {
+func testUnitWorker(ctx *cmdframework.ExecutionContext, module, component string, logWriter io.Writer) int {
 	testCfg, ok := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
 	if !ok || testCfg == nil {
 		fmt.Fprintf(logWriter, "Error: testConfig not found or wrong type\n")
@@ -568,6 +602,27 @@ func testComponentWorker(ctx *cmdframework.ExecutionContext, module, component s
 	}
 
 	// Build output directory using sanitized path with test type
+	// Sanitize path for lock identifier (replace "/" and ":" with "-" for cross-platform compatibility)
+	sanitizedForLock := strings.ReplaceAll(pkgPath, "/", "-")
+	sanitizedForLock = strings.ReplaceAll(sanitizedForLock, ":", "-")
+	if testType != "" {
+		sanitizedForLock = sanitizedForLock + "-" + testType
+	}
+
+	// Acquire component-level lock with wait (skip in dry-run)
+	// Lock acquired AFTER cache check to avoid blocking on cached items
+	if !ctx.Config.DryRun {
+		lockCfg := locking.UnitTestConfig(module, sanitizedForLock, ctx.EACConfig.Repository.Paths.Out.Test)
+		lockFile, err := locking.AcquireWithWait(context.Background(), ctx.WorkspaceRoot, lockCfg,
+			ctx.Orchestrator.GetRegistry(), locking.DefaultWaitConfig())
+		if err != nil {
+			fmt.Fprintf(logWriter, "Error: %v\n", err)
+			return 1
+		}
+		defer locking.ReleaseTracked(lockFile)
+	}
+
+	// Build output directory using sanitized path with test type
 	// Sanitize path for directory name (replace "/" and ":" with "_" for Windows compatibility)
 	sanitizedPath := strings.ReplaceAll(pkgPath, "/", "_")
 	sanitizedPath = strings.ReplaceAll(sanitizedPath, ":", "_")
@@ -587,7 +642,7 @@ func testComponentWorker(ctx *cmdframework.ExecutionContext, module, component s
 	testCfg.ExecCtx.mu.Unlock()
 
 	// Pass test counts to orchestrator for summary display
-	ctx.Orchestrator.SetComponentExtras(module, component, orchestrator.ComponentExtras{
+	ctx.Orchestrator.SetUnitExtras(module, component, orchestrator.UnitExtras{
 		TestsTotal:   result.TestsTotal,
 		TestsPassed:  result.TestsPassed,
 		TestsFailed:  result.TestsFailed,
@@ -697,24 +752,57 @@ func validateTestArtifacts(ctx *cmdframework.ExecutionContext, testCfg *TestFram
 		return nil
 	}
 
+	// Collect affected modules for the resolution command
+	var affectedModules []string
+
+	ctx.WriteInit("")
+	ctx.WriteInit("┌─────────────────────────────────────────────────────────────────┐")
+	ctx.WriteInit("│  Build Required                                                 │")
+	ctx.WriteInit("└─────────────────────────────────────────────────────────────────┘")
+	ctx.WriteInit("")
+
 	if !artifactValidation.AllPresent {
-		ctx.WriteInit("❌ Build artifacts are missing")
+		ctx.WriteInit("Missing build artifacts:")
 		for _, moduleName := range artifactValidation.MissingFrom {
-			ctx.WriteInit("  - %s", moduleName)
+			ctx.WriteInit("  • %s", moduleName)
+			affectedModules = append(affectedModules, moduleName)
 		}
+		ctx.WriteInit("")
 	}
 
 	if !artifactValidation.AllCurrent {
-		ctx.WriteInit("❌ Build artifacts are stale (source changed since build)")
+		ctx.WriteInit("Stale build artifacts (source changed since last build):")
 		for _, moduleName := range artifactValidation.StaleModules {
 			reason := artifactValidation.StaleReasons[moduleName]
-			ctx.WriteInit("  - %s: %s", moduleName, reason)
+			ctx.WriteInit("  • %s: %s", moduleName, reason)
+			// Only add if not already in the list
+			found := false
+			for _, m := range affectedModules {
+				if m == moduleName {
+					found = true
+					break
+				}
+			}
+			if !found {
+				affectedModules = append(affectedModules, moduleName)
+			}
 		}
+		ctx.WriteInit("")
 	}
 
+	// Show resolution command
+	ctx.WriteInit("To fix, run:")
+	if len(affectedModules) == 1 {
+		ctx.WriteInit("  eac build %s", affectedModules[0])
+	} else if len(affectedModules) <= 3 {
+		ctx.WriteInit("  eac build %s", strings.Join(affectedModules, " "))
+	} else {
+		ctx.WriteInit("  eac build")
+	}
 	ctx.WriteInit("")
-	ctx.WriteInit("Resolution: Run 'eac build' first to generate up-to-date artifacts")
-	return fmt.Errorf("build required: run 'eac build' first to generate artifacts")
+
+	// Return informational exit - no additional error message needed
+	return cmdframework.NewInformationalExit("build required")
 }
 
 func filterIncrementalTests(ctx *cmdframework.ExecutionContext, testCfg *TestFrameworkConfig, testsByPackage map[string][]testing.TestReference) map[string][]testing.TestReference {
@@ -831,7 +919,7 @@ func buildTestInitSummary(ctx *cmdframework.ExecutionContext, testCfg *TestFrame
 			ModulesNoTests:        stats.ModulesNoTests,
 			InferenceRulesApplied: len(suite.Inferences),
 		}).
-		SetComponentCount(len(testCfg.TestsByPackage)).
+		SetUoWCount(len(testCfg.TestsByPackage)).
 		SetOutputDir(testCfg.TestRunDir)
 
 	ctx.InitSummary = summary

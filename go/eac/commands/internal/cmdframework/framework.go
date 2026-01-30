@@ -1,6 +1,7 @@
 package cmdframework
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -83,6 +84,12 @@ func Run(cfg *CommandConfig, worker WorkerFunc, hooks *Hooks) int {
 	if hooks.AfterResolve != nil {
 		hookStart := time.Now()
 		if err := hooks.AfterResolve(ctx); err != nil {
+			// Check for informational exit (user-facing output already written)
+			var infoErr ErrInformationalExit
+			if errors.As(err, &infoErr) {
+				// Graceful exit - no additional error logging needed
+				return 1
+			}
 			log.Errorf("AfterResolve hook failed: %v", err)
 			return 1
 		}
@@ -117,6 +124,7 @@ func Run(cfg *CommandConfig, worker WorkerFunc, hooks *Hooks) int {
 		// Send init summary to TUI
 		if ctx.InitSummary != nil {
 			tuiSummary := convertToTUIInitSummary(ctx.InitSummary)
+			tuiSummary.PlannedTools = ExtractPlannedTools(ctx)
 			ctx.Orchestrator.SetInitSummary(tuiSummary)
 		}
 	}

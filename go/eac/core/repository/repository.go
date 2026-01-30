@@ -8,6 +8,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/core/git"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
+	"github.com/ready-to-release/eac/go/eac/core/workspace"
 	"go.uber.org/zap"
 )
 
@@ -58,56 +59,15 @@ func NewRepositoryError(op, path string, err error, message string) *RepositoryE
 //	root, err := repository.GetRepositoryRoot("")
 //	root, err := repository.GetRepositoryRoot("/path/to/subdir")
 func GetRepositoryRoot(startPath string) (string, error) {
-	// Check for explicit workspace root override first
-	// This takes precedence over R2R_DOCKER_MODE to allow test isolation
-	// Used by CLI wrapper and tests to specify the repository root
-	if repoRoot := GetWorkspaceRoot(); repoRoot != "" {
-		return filepath.Clean(repoRoot), nil
-	}
-
-	// Use current directory if no path provided
-	if startPath == "" {
-		var err error
-		startPath, err = os.Getwd()
-		if err != nil {
-			return "", NewRepositoryError("getwd", "", err, "failed to get current directory")
-		}
-	}
-
-	// Convert to absolute path
-	absPath, err := filepath.Abs(startPath)
+	ws, err := workspace.DetectWithOptions(workspace.Options{
+		Mode:      workspace.ModeAuto,
+		StartPath: startPath,
+		Validate:  false, // Preserve backward compatibility
+	})
 	if err != nil {
-		return "", NewRepositoryError("abs", startPath, err, "failed to get absolute path")
+		return "", NewRepositoryError("find", startPath, err, "workspace detection failed")
 	}
-
-	// Search for .git directory by walking up the tree
-	currentPath := absPath
-	for {
-		gitPath := filepath.Join(currentPath, ".git")
-		if info, err := os.Stat(gitPath); err == nil {
-			// Found .git - check if it's a directory or file (submodule/worktree)
-			if info.IsDir() || info.Mode().IsRegular() {
-				return currentPath, nil
-			}
-		}
-
-		// Move to parent directory
-		parentPath := filepath.Dir(currentPath)
-		if parentPath == currentPath {
-			// Reached filesystem root without finding .git
-			break
-		}
-		currentPath = parentPath
-	}
-
-	// If in Docker mode and no git root found, fall back to ContainerRepoRoot
-	// This handles the case where we're in a subdirectory of the mounted repo
-	if os.Getenv("R2R_DOCKER_MODE") == "true" {
-		return paths.ContainerRepoRoot, nil
-	}
-
-	// Not in Docker mode and no git root found - error
-	return "", NewRepositoryError("find", absPath, nil, "not a git repository (or any parent up to mount point)")
+	return ws.Root, nil
 }
 
 // FileInfo represents information about a repository file.
@@ -313,23 +273,12 @@ func IsGitRepository(path string) bool {
 
 // GetContainerRoot returns the container's internal root directory if running
 // inside a container (R2R_CONTAINER_ROOT is set), otherwise returns empty string.
-//
-// This is used to locate container-internal files (pre-built binaries, test assets)
-// which may differ from the mounted repository root in container environments.
 func GetContainerRoot() string {
 	return os.Getenv("R2R_CONTAINER_ROOT")
 }
 
-// GetDistRoot returns the distribution root where tool assets live (contracts,
-// schemas, defaults). In container mode, this is R2R_CONTAINER_ROOT. Otherwise
-// falls back to the provided fallback (typically the repo root).
-//
-// Use this for loading:
-//   - Contract schemas (contracts/eac-core/*/schemas/)
-//   - Default configs (contracts/eac-core/*/defaults/)
-//   - Tool definitions and templates
-//
-// These are part of the TOOL distribution, not the user's workspace.
+// GetDistRoot returns the distribution root where tool assets live.
+// In container mode, this is R2R_CONTAINER_ROOT. Otherwise falls back to the provided fallback.
 func GetDistRoot(fallback string) string {
 	if containerRoot := GetContainerRoot(); containerRoot != "" {
 		return containerRoot
@@ -337,16 +286,7 @@ func GetDistRoot(fallback string) string {
 	return fallback
 }
 
-// GetWorkspaceRoot returns the workspace root override (R2R_REPO_ROOT) if set,
-// otherwise returns empty string. The caller should fall back to git-based
-// discovery if this returns empty.
-//
-// Use this for loading:
-//   - User configs (.r2r/eac/*.yml)
-//   - Project source files
-//   - Build outputs
-//
-// These are part of the USER's workspace, not the tool distribution.
+// GetWorkspaceRoot returns the workspace root override (R2R_REPO_ROOT) if set.
 func GetWorkspaceRoot() string {
 	return os.Getenv("R2R_REPO_ROOT")
 }

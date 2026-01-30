@@ -9,6 +9,56 @@ import (
 	zone "github.com/lrstanley/bubblezone"
 )
 
+// LayoutMetrics contains pre-calculated layout dimensions for the TUI.
+// This is the SINGLE SOURCE OF TRUTH for layout calculations.
+// Both rendering (viewPanes) and mouse handling (detectTabAt) MUST use this
+// to ensure click detection aligns with rendered output.
+type LayoutMetrics struct {
+	InitLines       int // Lines used by init pane (always 1)
+	ResourcesLines  int // Lines used by resources pane (0 if not shown)
+	SelectedLines   int // Lines used by selected pane (0 if not shown)
+	ComponentsStart int // Y coordinate where components panel content starts
+	SummaryLines    int // Lines reserved for summary pane (0 if not shown)
+	RemainingHeight int // Height available for side-by-side layout
+}
+
+// calculateLayoutMetrics computes layout dimensions based on current model state.
+// This method ensures consistent calculations across rendering and mouse handling.
+func (m Model) calculateLayoutMetrics() LayoutMetrics {
+	metrics := LayoutMetrics{}
+
+	// Init pane - always 1 line (compact or loading)
+	metrics.InitLines = 1
+
+	// Resources pane - render to count actual lines
+	if resourcesPane := m.renderResourcesPane(); resourcesPane != "" {
+		metrics.ResourcesLines = strings.Count(resourcesPane, "\n") + 1
+	}
+
+	// Selected pane - render to count actual lines
+	if selectedPane := m.renderSelectedPane(); selectedPane != "" {
+		metrics.SelectedLines = strings.Count(selectedPane, "\n") + 1
+	}
+
+	// Summary pane reservation
+	if m.summaryData != nil {
+		metrics.SummaryLines = 6 // header + 4 content + footer
+	}
+
+	// Components panel starts after init + resources + selected + panel header
+	// The +1 accounts for the panel header line (┌─ Unit (of work) ─┐)
+	metrics.ComponentsStart = metrics.InitLines + metrics.ResourcesLines + metrics.SelectedLines + 1
+
+	// Remaining height for side-by-side layout
+	usedLines := metrics.InitLines + metrics.ResourcesLines + metrics.SelectedLines
+	metrics.RemainingHeight = m.height - usedLines - metrics.SummaryLines
+	if metrics.RemainingHeight < 5 {
+		metrics.RemainingHeight = 5
+	}
+
+	return metrics
+}
+
 // View renders the console window.
 func (m Model) View() string {
 	// When quitting in alt screen mode, return empty (screen will be restored)
@@ -80,50 +130,42 @@ func stripMarkdownPipes(line string) string {
 
 // viewPanes renders the layout with panes appearing progressively.
 // When Run phase is active, Components (tabs/tree) and Run (logs) are side-by-side.
+// IMPORTANT: Layout calculations use calculateLayoutMetrics() as single source of truth.
 func (m Model) viewPanes() string {
 	var b strings.Builder
 
-	// Track lines used
-	usedLines := 0
+	// Use shared layout metrics for consistency with mouse handling
+	metrics := m.calculateLayoutMetrics()
 
 	// Render Init pane (always visible)
 	if m.initSummary != nil {
 		// Compact single line when initialization is complete
 		b.WriteString(m.renderInitPaneCompact())
 		b.WriteString("\n")
-		usedLines += 1
 	} else {
 		// Loading state - show animated dots
 		b.WriteString(m.renderInitPaneLoading())
 		b.WriteString("\n")
-		usedLines += 1
 	}
 
 	// Render Resources pane between Init and Run (shows locks and system metrics)
 	if resourcesPane := m.renderResourcesPane(); resourcesPane != "" {
 		b.WriteString(resourcesPane)
 		b.WriteString("\n")
-		usedLines += strings.Count(resourcesPane, "\n") + 1
+	}
+
+	// Render Selected pane (shows details of selected/hovered component)
+	if selectedPane := m.renderSelectedPane(); selectedPane != "" {
+		b.WriteString(selectedPane)
+		b.WriteString("\n")
 	}
 
 	// Render Run pane only if it actually started (not still pending)
 	if m.panes[PhaseRun].Status != PhasePending {
-		// Calculate remaining height for side-by-side panels
-		// Reserve space for summary if it will be shown
-		summaryLines := 0
-		if m.summaryData != nil {
-			summaryLines = 6 // header + 4 content + footer
-		}
-
-		// Fill remaining terminal height
-		remainingHeight := m.height - usedLines - summaryLines
-		if remainingHeight < 5 {
-			remainingHeight = 5
-		}
-
 		tabs := m.GetVisibleTabs()
 		// Side-by-side layout: Components (tabs/tree) on LEFT, Logs on RIGHT
-		sideBySide := m.renderSideBySideLayout(tabs, remainingHeight)
+		// Use metrics.RemainingHeight for consistent height calculation
+		sideBySide := m.renderSideBySideLayout(tabs, metrics.RemainingHeight)
 		b.WriteString(sideBySide)
 		b.WriteString("\n")
 	}
@@ -147,8 +189,8 @@ func (m Model) viewPanes() string {
 
 // renderSideBySideLayout renders Components (left) and Logs (right) side by side.
 func (m Model) renderSideBySideLayout(tabs []*ModuleState, height int) string {
-	// Fixed width for components panel, logs take remaining space
-	const componentsWidth = 62 // Fixed width for 3 columns of tabs
+	// Dynamic width based on tab columns
+	componentsWidth := m.ComponentsWidth()
 	logsWidth := m.width - componentsWidth - 1 // -1 for separator
 	if logsWidth < 40 {
 		logsWidth = 40
@@ -222,19 +264,7 @@ func (m Model) renderTabGridPanel(tabs []*ModuleState, width, height int) string
 		}
 	}
 
-	title := "Components"
-	var statusParts []string
-	if running > 0 {
-		statusParts = append(statusParts, fmt.Sprintf("%d running", running))
-	}
-	if completed > 0 || skipped > 0 || failed > 0 {
-		statusParts = append(statusParts, fmt.Sprintf("%d/%d done", completed+skipped+failed, len(tabs)))
-	}
-	if len(statusParts) > 0 {
-		title += ": " + strings.Join(statusParts, ", ")
-	}
-
-	// Mode indicator
+	title := "Units (of work)"
 	modeIndicator := "[Tabs]"
 
 	headerLeft := "┌─ " + Styles.Dim.Render(title) + " "
@@ -372,8 +402,8 @@ func (m Model) renderInitPaneCompact() string {
 
 	if m.initSummary != nil {
 		var parts []string
-		if m.initSummary.ComponentCount > 0 {
-			parts = append(parts, fmt.Sprintf("%d components", m.initSummary.ComponentCount))
+		if m.initSummary.UoWCount > 0 {
+			parts = append(parts, fmt.Sprintf("%d units", m.initSummary.UoWCount))
 		}
 		if m.initSummary.LayerCount > 0 {
 			parts = append(parts, fmt.Sprintf("%d layers", m.initSummary.LayerCount))
@@ -402,15 +432,15 @@ func (m Model) renderTabGridContent(tabs []*ModuleState, width, height int) stri
 		return Styles.Dim.Render("No components")
 	}
 
-	// Calculate how many tabs fit per row
-	// Each tab: [icon name weight] = ~18 chars
-	const tabWidth = 18
-	tabsPerRow := width / tabWidth
+	// Use configured tab columns (adjustable with left/right arrows)
+	// Each tab: [name weight] = ~15 chars
+	const tabWidth = 15
+	tabsPerRow := m.tabColumns
 	if tabsPerRow < 1 {
 		tabsPerRow = 1
 	}
 	if tabsPerRow > 6 {
-		tabsPerRow = 6 // Cap at 6 for readability
+		tabsPerRow = 6
 	}
 
 	effectiveActiveTab := m.getEffectiveActiveTab()
@@ -434,44 +464,48 @@ func (m Model) renderTabGridContent(tabs []*ModuleState, width, height int) stri
 		isActive := state.Moniker == effectiveActiveTab
 		isHovered := state.Moniker == m.hoveredTab && !isActive
 
-		// Weight indicator (circled number)
+		// Weight indicator (circled number) with trailing space for background coverage
 		var weightStr string
 		if m.asciiMode {
-			weightStr = fmt.Sprintf("%d", state.Weight)
+			weightStr = fmt.Sprintf("%d ", state.Weight)
 		} else {
-			weightStr = weightDigit(state.Weight)
+			weightStr = weightDigit(state.Weight) + " "
 		}
 
-		// Fixed label width: tabWidth - spaces(3) - weight(2)
+		// Fixed label width: tabWidth - leading space(1) - space before weight(1) - weight(2) - trailing space(1)
 		labelWidth := tabWidth - 5
 		if labelWidth < 4 {
 			labelWidth = 4
 		}
 
-		// Get the full name for marquee effect
-		fullName := state.Moniker
-		label := fullName
+		// Extract module name for static display, full path for marquee
+		moduleName := getModuleName(state.Moniker)
+		fullPath := state.Moniker
+		label := moduleName
 
-		// Marquee scrolling for hovered tab
-		if isHovered && len(fullName) > labelWidth {
+		// Marquee scrolling for hovered tab - shows full path (module:component)
+		if isHovered && len(fullPath) > labelWidth {
 			// Delay before scrolling starts (10 ticks = 1 second to read visible part)
 			// Then advance position every 4 ticks (400ms per char)
 			const startDelay = 10
 			if m.hoveredTabScroll > startDelay {
 				effectiveScroll := (m.hoveredTabScroll - startDelay) / 4
-				scrollPos := effectiveScroll % (len(fullName) + 3) // +3 for gap before wrap
-				if scrollPos < len(fullName) {
+				scrollPos := effectiveScroll % (len(fullPath) + 3) // +3 for gap before wrap
+				if scrollPos < len(fullPath) {
 					// Show scrolled portion
-					label = fullName[scrollPos:]
+					label = fullPath[scrollPos:]
 					if len(label) < labelWidth {
 						// Add gap and wrap around
-						label = label + "   " + fullName
+						label = label + "   " + fullPath
 					}
 				} else {
 					// In the gap, show start of name
-					gapPos := scrollPos - len(fullName)
-					label = strings.Repeat(" ", 3-gapPos) + fullName
+					gapPos := scrollPos - len(fullPath)
+					label = strings.Repeat(" ", 3-gapPos) + fullPath
 				}
+			} else {
+				// Not yet scrolling, show full path start
+				label = fullPath
 			}
 		}
 
@@ -588,7 +622,7 @@ func (m Model) renderTabGridContent(tabs []*ModuleState, width, height int) stri
 					}
 				}
 
-				// Render tabs in rows of 3
+				// Render tabs in rows (tabsPerRow calculated from width)
 				for rowStart := 0; rowStart < len(layerTabs); rowStart += tabsPerRow {
 					tabRows := renderTabRow(layerTabs, rowStart)
 					rows = append(rows, tabRows...)
@@ -618,7 +652,7 @@ func (m Model) renderTreePanel(tabs []*ModuleState, width, height int) string {
 	var b strings.Builder
 
 	// Header with tree mode indicator
-	title := "Components"
+	title := "Units (of work)"
 	modeIndicator := "[Tree]"
 
 	headerLeft := "┌─ " + Styles.Dim.Render(title) + " "
@@ -1271,10 +1305,10 @@ func (m Model) renderTabBar(tabs []*ModuleState) string {
 		// Use full module:component name
 		label := state.Moniker
 
-		// Weight as circled digit or suffix based on mode
+		// Weight as circled digit or suffix based on mode (with trailing space for background coverage)
 		var weightStr string
 		if m.asciiMode {
-			weightStr = fmt.Sprintf(" w%d", state.Weight)
+			weightStr = fmt.Sprintf(" w%d ", state.Weight)
 		} else {
 			// Unicode mode: show circled digit with trailing space for background coverage
 			weightStr = " " + weightDigit(state.Weight) + " "
@@ -1565,11 +1599,10 @@ func (m Model) renderPaneHeader(phase Phase) string {
 // Returns empty string if no scheduler is active.
 func (m Model) renderResourcesPane() string {
 	// Get component scheduler stats (the single weighted scheduler)
-	var pressureUsed, pressureCap int
+	var pressureCap int
 
 	for _, lock := range m.locks {
 		if lock.Name == "component-scheduler" {
-			pressureUsed = lock.Used
 			pressureCap = lock.Capacity
 			break
 		}
@@ -1582,256 +1615,155 @@ func (m Model) renderResourcesPane() string {
 
 	var result strings.Builder
 
+	// Fixed column widths for vertical alignment across 2 lines
+	// Col1: timer+CPU / UoW
+	// Col2: Mem / Tools
+	// Col3: Jobs / Layer
+	const (
+		col1Width = 38 // Aligns: timer+CPU, UoW
+		col2Width = 24 // Aligns: Mem, Tools
+		col3Width = 20 // Aligns: Jobs, Layer
+	)
+
+	// Helper to pad string to fixed width
+	padTo := func(s string, width int) string {
+		visWidth := lipgloss.Width(s)
+		if visWidth >= width {
+			return s
+		}
+		return s + strings.Repeat(" ", width-visWidth)
+	}
+
 	// Header: ┌─ Resources ────────────────────── [Freeze MM:SS] ┐
 	title := "Resources"
 	headerLeft := "┌─ " + Styles.Dim.Render(title) + " "
 
-	// Freeze button: shows "Freeze" or countdown when active
+	// Freeze button
 	var freezeBtn string
 	if m.exitCountdownSecs > 0 && m.userHasInteracted {
-		// Show countdown when freeze is active
 		mins := m.exitCountdownSecs / 60
 		secs := m.exitCountdownSecs % 60
-		// Color based on time remaining
 		var btnStyle lipgloss.Style
 		if m.exitCountdownSecs > 60 {
-			btnStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("34")).Bold(true) // Green
+			btnStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("34")).Bold(true)
 		} else if m.exitCountdownSecs > 20 {
-			btnStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true) // Yellow/orange
+			btnStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true)
 		} else {
-			btnStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true) // Red
+			btnStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true)
 		}
 		freezeBtn = btnStyle.Render(fmt.Sprintf("[Freeze %d:%02d]", mins, secs))
 	} else {
-		// Show inactive freeze button
 		freezeBtn = Styles.Dim.Render("[Freeze]")
 	}
 	freezeBtn = zone.Mark("freeze-button", freezeBtn)
 
-	// Calculate border length accounting for freeze button
 	headerBorderLen := m.width - lipgloss.Width(headerLeft) - lipgloss.Width(freezeBtn) - 3
 	if headerBorderLen < 3 {
 		headerBorderLen = 3
 	}
 	result.WriteString(headerLeft + Styles.Border.Render(strings.Repeat("─", headerBorderLen)) + " " + freezeBtn + " ┐\n")
 
-	// Content line: timer | mouse mode | pressure (weighted scheduler) | cpu dots | memory %
-	// White style for labels
+	// Styles
 	white := lipgloss.NewStyle().Foreground(lipgloss.Color("255"))
+	sep := Styles.Dim.Render(" │ ")
 
-	// Timer with fixed width MM:SS format (white)
+	// Content width (inside borders)
+	contentWidth := m.width - 4
+
+	// === Line 1: System metrics ===
 	elapsed := time.Since(m.startTime)
 	mins := int(elapsed.Minutes())
 	secs := int(elapsed.Seconds()) % 60
-	timerStr := white.Render(fmt.Sprintf("%02d:%02d", mins, secs))
+	timerStr := zone.Mark("res-timer", white.Render(fmt.Sprintf("%02d:%02d", mins, secs)))
 
-	// Mouse mode indicator: when OFF, show "Select" to indicate text selection is available
-	// Press 'm' to toggle
-	var mouseModeStr string
-	if !m.mouseMode {
-		cyan := lipgloss.NewStyle().Foreground(lipgloss.Color("51"))
-		mouseModeStr = cyan.Render("[m]Select")
-	}
+	cpuDots := m.renderCPUDots()
+	cpuStr := zone.Mark("res-cpu", white.Render("CPU:")+cpuDots)
 
-	pressureStr := white.Render("Pressure: ") + Styles.Dim.Render(fmt.Sprintf("%2d/%-2d", pressureUsed, pressureCap))
+	// Col1: timer + CPU
+	col1Line1 := padTo(timerStr+" "+cpuStr, col1Width)
 
-	// Per-core CPU usage as colored dots
-	cpuStr := white.Render("CPU: ") + m.renderCPUDots()
+	// Col2: Mem (aligns with Slots on line2, Runner on line3)
+	memDots := m.renderMemDots()
+	col2Line1 := padTo(zone.Mark("res-mem", white.Render("Mem:")+memDots), col2Width)
 
-	// System memory usage as dots (11 dots, red for used, dim for free)
-	memStr := white.Render("Memory: ") + m.renderMemDots()
+	// Col3: Jobs (swapped with Slots)
+	containerDotsLine1 := m.renderActiveContainerDots()
+	col3Line1 := padTo(zone.Mark("res-jobs", white.Render("Containers:")+containerDotsLine1), col3Width)
 
-	// Active containers with pressure dots (colored by weight)
-	containerDotsStr := m.renderActiveContainerDots()
+	line1 := col1Line1 + sep + col2Line1 + sep + col3Line1
+	line1 = padTo(line1, contentWidth)
+	result.WriteString(Styles.Border.Render("│") + " " + line1 + " " + Styles.Border.Render("│") + "\n")
 
-	sep := Styles.Dim.Render(" │ ")
-	content := timerStr
-	if mouseModeStr != "" {
-		content += sep + mouseModeStr
-	}
-	content += sep + pressureStr + sep + cpuStr + sep + memStr
-	if containerDotsStr != "" {
-		content += sep + white.Render("Jobs: ") + containerDotsStr
-	}
-
-	// Add red lamps for waiting locks at end of resource row
-	waitingCount := 0
-	for _, lock := range m.locks {
-		if lock.Waiting > 0 {
-			waitingCount += lock.Waiting
+	// === Line 2: UoW status ===
+	// Count from actual tabs (same as header panel) for consistency
+	var running, done, cached, failed int
+	for _, moniker := range m.moduleOrder {
+		state := m.moduleStates[moniker]
+		if state == nil {
+			continue
+		}
+		switch state.Status {
+		case ModuleRunning:
+			running++
+		case ModuleComplete:
+			done++
+		case ModuleSkipped:
+			cached++
+		case ModuleFailed:
+			failed++
 		}
 	}
-	if waitingCount > 0 {
-		redStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("196"))
-		lamp := "●"
-		if m.asciiMode {
-			lamp = "O"
-		}
-		// Cap displayed lamps at 16 to avoid visual overload
-		displayCount := waitingCount
-		if displayCount > 16 {
-			displayCount = 16
-		}
-		lamps := strings.Repeat(lamp, displayCount)
-		// Show count if more than displayed
-		var waitStr string
-		if waitingCount > displayCount {
-			waitStr = fmt.Sprintf("%s+%d", lamps, waitingCount-displayCount)
-		} else {
-			waitStr = lamps
-		}
-		content += sep + white.Render("Locks: ") + redStyle.Render(waitStr)
+
+	// Icons (assume 2 chars width each for Unicode)
+	runIcon, doneIcon, cacheIcon, failIcon := "▶", "✓", "⏭", "✗"
+	if m.asciiMode {
+		runIcon, doneIcon, cacheIcon, failIcon = "> ", "V ", "= ", "X "
 	}
 
-	// Content line 1: │ content                            │
-	contentPadding := m.width - lipgloss.Width(content) - 4
-	if contentPadding < 0 {
-		contentPadding = 0
+	// Calculate remaining and total
+	// Use initSummary.UoWCount as the authoritative total (scheduled work items)
+	total := 0
+	if m.initSummary != nil && m.initSummary.UoWCount > 0 {
+		total = m.initSummary.UoWCount
+	} else {
+		total = len(m.moduleOrder)
 	}
-	result.WriteString(Styles.Border.Render("│") + " " + content + strings.Repeat(" ", contentPadding) + " " + Styles.Border.Render("│") + "\n")
+	finalized := done + cached + failed
+	remaining := total - finalized
 
-	// Content line 2: tools row (single line with all tools)
-	hasContainers := len(m.usedContainers) > 0
-	hasSystem := len(m.usedSystemTools) > 0
-	if hasContainers || hasSystem {
-		// Horizontal separator between metrics and tools
-		sepLen := m.width - 2
-		if sepLen < 3 {
-			sepLen = 3
-		}
-		result.WriteString("├" + Styles.Border.Render(strings.Repeat("─", sepLen)) + "┤\n")
+	// Fixed-width format: "UoW: ▶XX/YY ▶ZZ/WW ✓XXX ⏭XXX ✗XXX"
+	// First fraction: remaining/total (pending work)
+	// Second fraction: running/capacity (active slots)
+	remainingStr := Styles.TabPending.Render(fmt.Sprintf("%3d", remaining)) +
+		Styles.Dim.Render(fmt.Sprintf("/%-3d", total))
+	runStr := Styles.TabRunning.Render(fmt.Sprintf("%s%2d", runIcon, running)) +
+		Styles.Dim.Render(fmt.Sprintf("/%-2d", pressureCap))
 
-		// Tool styles by category and state
-		systemActive := lipgloss.NewStyle().Foreground(lipgloss.Color("208"))
-		systemInactive := lipgloss.NewStyle().Foreground(lipgloss.Color("130"))
-		containerActive := lipgloss.NewStyle().Foreground(lipgloss.Color("39"))
-		containerInactive := lipgloss.NewStyle().Foreground(lipgloss.Color("24"))
-		labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("255"))
+	div := Styles.Dim.Render("|")
+	uowStr := white.Render("UoW: ") +
+		remainingStr + " " + div + " " +
+		runStr + " " + div + " " +
+		Styles.TabComplete.Render(fmt.Sprintf("%s%3d", doneIcon, done)) + " " +
+		Styles.TabSkipped.Render(fmt.Sprintf("%s%3d", cacheIcon, cached)) + " " +
+		Styles.TabFailed.Render(fmt.Sprintf("%s%3d", failIcon, failed))
 
-		// Build active tool sets for quick lookup
-		activeContainerSet := make(map[string]bool)
-		for _, t := range m.activeContainers {
-			activeContainerSet[t] = true
-		}
-		activeSystemSet := make(map[string]bool)
-		for _, t := range m.activeSystemTools {
-			activeSystemSet[t] = true
-		}
+	// Col1: UoW stats
+	col1Line2 := padTo(zone.Mark("res-uow", uowStr), col1Width)
 
-		// Collect all tools in single list (system first, then containers)
-		// Strip :system/:container suffixes - type is indicated by color
-		var allTools []string
-		for _, tool := range m.usedSystemTools {
-			displayName := stripToolTypeSuffix(tool)
-			if activeSystemSet[tool] {
-				allTools = append(allTools, systemActive.Render(displayName))
-			} else {
-				allTools = append(allTools, systemInactive.Render(displayName))
-			}
-		}
-		for _, tool := range m.usedContainers {
-			displayName := stripToolTypeSuffix(tool)
-			if activeContainerSet[tool] {
-				allTools = append(allTools, containerActive.Render(displayName))
-			} else {
-				allTools = append(allTools, containerInactive.Render(displayName))
-			}
-		}
+	// Col2: Tools (lamps only, slots count shown in UoW)
+	toolsStr := white.Render("Tools:") + m.renderToolsDots()
+	col2Line2 := padTo(zone.Mark("res-tools", toolsStr), col2Width)
 
-		toolsContent := labelStyle.Render("Tools: ") + strings.Join(allTools, Styles.Dim.Render(", "))
-
-		// Calculate padding
-		toolsPadding := m.width - lipgloss.Width(toolsContent) - 4
-		if toolsPadding < 0 {
-			toolsPadding = 0
-		}
-		result.WriteString(Styles.Border.Render("│") + " " + toolsContent + strings.Repeat(" ", toolsPadding) + " " + Styles.Border.Render("│") + "\n")
+	// Col3: Layer (if set) or empty
+	var col3Line2 string
+	if m.totalLayers > 0 {
+		col3Line2 = zone.Mark("res-layer", white.Render("Layer: ")+Styles.Dim.Render(fmt.Sprintf("%d/%d", m.layer, m.totalLayers)))
 	}
+	col3Line2 = padTo(col3Line2, col3Width)
 
-	// Content line 3: active component row (shows hovered or active tab name)
-	activeComponent := ""
-	if m.hoveredTab != "" {
-		activeComponent = m.hoveredTab
-	} else if activeTab := m.getEffectiveActiveTab(); activeTab != "" {
-		activeComponent = activeTab
-	}
-	if activeComponent != "" {
-		// Horizontal separator
-		sepLen := m.width - 2
-		if sepLen < 3 {
-			sepLen = 3
-		}
-		result.WriteString("├" + Styles.Border.Render(strings.Repeat("─", sepLen)) + "┤\n")
-
-		white := lipgloss.NewStyle().Foreground(lipgloss.Color("255"))
-		orange := lipgloss.NewStyle().Foreground(lipgloss.Color("208"))
-		dim := Styles.Dim
-
-		// Parse component string into parts: module:component:handler
-		// Format: "module:component:handler" or "module:component/path:handler"
-		parts := strings.Split(activeComponent, ":")
-		var componentContent string
-
-		// Determine tool label based on operation type
-		toolLabel := "Tool"
-		isTesting := false
-		switch m.runPhaseName {
-		case "building", "Building":
-			toolLabel = "Builder"
-		case "testing", "Testing":
-			toolLabel = "Runner"
-			isTesting = true
-		case "linting", "Linting":
-			toolLabel = "Linter"
-		case "scanning", "Scanning":
-			toolLabel = "Scanner"
-		}
-
-		// Special handling for test display
-		// Test formats:
-		// - gotest: "module:path:gotest" (3 parts)
-		// - godog:  "module:featureName:testRoot:specPath:godog" (5 parts)
-		if isTesting && len(parts) >= 3 {
-			module := parts[0]
-			runner := parts[len(parts)-1] // Last part is always the runner (gotest/godog)
-
-			if runner == "godog" && len(parts) >= 5 {
-				// BDD test: module:featureName:testRoot:specPath:godog
-				featureName := parts[1]
-				testRoot := parts[2]
-				specPath := strings.Join(parts[3:len(parts)-1], ":")
-				componentContent = white.Render("Unit: ") + orange.Render(module+":"+featureName) +
-					dim.Render(" │ ") + white.Render(toolLabel+": ") + orange.Render(runner) +
-					dim.Render(" │ ") + white.Render("Code: ") + orange.Render(testRoot) +
-					dim.Render(" │ ") + white.Render("Spec: ") + orange.Render(specPath)
-			} else {
-				// Unit test: module:path:gotest (or similar)
-				codePath := strings.Join(parts[1:len(parts)-1], ":")
-				componentContent = white.Render("Unit: ") + orange.Render(module+":"+codePath) +
-					dim.Render(" │ ") + white.Render(toolLabel+": ") + orange.Render(runner)
-			}
-		} else if len(parts) >= 3 {
-			// Non-test: module:component:handler
-			module := parts[0]
-			component := parts[1]
-			handler := parts[len(parts)-1]
-			if len(parts) > 3 {
-				component = strings.Join(parts[1:len(parts)-1], ":")
-			}
-			componentContent = white.Render("Unit: ") + orange.Render(module+":"+component) +
-				dim.Render(" │ ") + white.Render(toolLabel+": ") + orange.Render(handler)
-		} else if len(parts) == 2 {
-			componentContent = white.Render("Unit: ") + orange.Render(parts[0]+":"+parts[1])
-		} else {
-			componentContent = white.Render("Unit: ") + orange.Render(activeComponent)
-		}
-
-		componentPadding := m.width - lipgloss.Width(componentContent) - 4
-		if componentPadding < 0 {
-			componentPadding = 0
-		}
-		result.WriteString(Styles.Border.Render("│") + " " + componentContent + strings.Repeat(" ", componentPadding) + " " + Styles.Border.Render("│") + "\n")
-	}
+	line2 := col1Line2 + sep + col2Line2 + sep + col3Line2
+	line2 = padTo(line2, contentWidth)
+	result.WriteString(Styles.Border.Render("│") + " " + line2 + " " + Styles.Border.Render("│") + "\n")
 
 	// Footer: └─────────────────────────────────────┘
 	footerBorderLen := m.width - 2
@@ -1841,6 +1773,234 @@ func (m Model) renderResourcesPane() string {
 	result.WriteString("└" + Styles.Border.Render(strings.Repeat("─", footerBorderLen)) + "┘")
 
 	return result.String()
+}
+
+// renderSelectedPane renders a context-aware information display:
+// - UoW details when hovering over component tabs
+// - Help text when hovering over Resources pane elements
+// Always renders (for stable layout) but with empty content when nothing is hovered.
+// Returns empty string if scheduler is not active.
+func (m Model) renderSelectedPane() string {
+	// Only show when scheduler is active (same condition as Resources pane)
+	hasScheduler := false
+	for _, lock := range m.locks {
+		if lock.Name == "component-scheduler" && lock.Capacity > 0 {
+			hasScheduler = true
+			break
+		}
+	}
+	if !hasScheduler {
+		return ""
+	}
+
+	var result strings.Builder
+
+	// Helper to pad string to fixed width
+	padTo := func(s string, width int) string {
+		visWidth := lipgloss.Width(s)
+		if visWidth >= width {
+			return s
+		}
+		return s + strings.Repeat(" ", width-visWidth)
+	}
+
+	// Header: ┌─ Selected ─────────────────────────┐
+	title := "Selected"
+	headerLeft := "┌─ " + Styles.Dim.Render(title) + " "
+	headerBorderLen := m.width - lipgloss.Width(headerLeft) - 1
+	if headerBorderLen < 3 {
+		headerBorderLen = 3
+	}
+	result.WriteString(headerLeft + Styles.Border.Render(strings.Repeat("─", headerBorderLen)) + "┐\n")
+
+	// Content width (inside borders)
+	contentWidth := m.width - 4
+
+	var content string
+
+	// Determine what to show based on hoveredZone
+	if strings.HasPrefix(m.hoveredZone, "tab:") || m.hoveredTab != "" {
+		// Show UoW details for hovered/selected component tab
+		activeComponent := m.hoveredTab
+		if activeComponent == "" {
+			activeComponent = m.getEffectiveActiveTab()
+		}
+		content = m.renderSelectedUoW(activeComponent, contentWidth)
+	} else if helpText, ok := HelpTextMap[m.hoveredZone]; ok {
+		// Show help text for hovered resource element
+		content = m.renderSelectedHelp(m.hoveredZone, helpText, contentWidth)
+	}
+	// else: empty content (no hover)
+
+	content = padTo(content, contentWidth)
+	result.WriteString(Styles.Border.Render("│") + " " + content + " " + Styles.Border.Render("│") + "\n")
+
+	// Footer: └─────────────────────────────────────┘
+	footerBorderLen := m.width - 2
+	if footerBorderLen < 3 {
+		footerBorderLen = 3
+	}
+	result.WriteString("└" + Styles.Border.Render(strings.Repeat("─", footerBorderLen)) + "┘")
+
+	return result.String()
+}
+
+// renderSelectedUoW renders UoW details for the selected/hovered component tab.
+func (m Model) renderSelectedUoW(activeComponent string, contentWidth int) string {
+	if activeComponent == "" {
+		return ""
+	}
+
+	// Fixed column widths matching Resources pane
+	const (
+		col1Width = 38 // Unit
+		col2Width = 24 // Runner/Tool
+		col3Width = 20 // Status
+	)
+
+	// Helper to truncate with ellipsis
+	truncate := func(s string, maxLen int) string {
+		if len(s) <= maxLen {
+			return s
+		}
+		if maxLen <= 3 {
+			return s[:maxLen]
+		}
+		return s[:maxLen-3] + "..."
+	}
+
+	// Helper to pad string to fixed width
+	padTo := func(s string, width int) string {
+		visWidth := lipgloss.Width(s)
+		if visWidth >= width {
+			return s
+		}
+		return s + strings.Repeat(" ", width-visWidth)
+	}
+
+	// Semantic styles for status display
+	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("255"))   // White for labels
+	activeStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("214"))  // Gold/amber for active unit
+	pendingStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("245")) // Gray for pending
+	runningStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("33"))  // Blue for running
+	completeStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("42")) // Green for complete
+	cachedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("141"))  // Purple for cached
+	failedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("196"))  // Red for failed
+	sep := Styles.Dim.Render(" │ ")
+
+	var col1, col2, col3 string
+
+	// Get status of the active component
+	var statusStr string
+	var statusStyle lipgloss.Style
+	if state, exists := m.moduleStates[activeComponent]; exists {
+		switch state.Status {
+		case ModulePending:
+			statusStr = "pending"
+			statusStyle = pendingStyle
+		case ModuleRunning:
+			statusStr = "running"
+			statusStyle = runningStyle
+			if !state.StartTime.IsZero() {
+				dur := time.Since(state.StartTime)
+				statusStr = fmt.Sprintf("running %s", formatElapsed(dur))
+			}
+		case ModuleComplete:
+			statusStr = "done"
+			statusStyle = completeStyle
+			if !state.StartTime.IsZero() && !state.EndTime.IsZero() {
+				dur := state.EndTime.Sub(state.StartTime)
+				statusStr = fmt.Sprintf("done %s", formatElapsed(dur))
+			}
+		case ModuleSkipped:
+			statusStr = "cached"
+			statusStyle = cachedStyle
+		case ModuleFailed:
+			statusStr = "failed"
+			statusStyle = failedStyle
+			if state.ExitCode != 0 {
+				statusStr = fmt.Sprintf("failed (exit %d)", state.ExitCode)
+			}
+		}
+	}
+
+	// Parse component string into parts
+	parts := strings.Split(activeComponent, ":")
+
+	// Determine tool label based on operation type
+	toolLabel := "Tool"
+	switch m.runPhaseName {
+	case "building", "Building":
+		toolLabel = "Builder"
+	case "testing", "Testing":
+		toolLabel = "Runner"
+	case "linting", "Linting":
+		toolLabel = "Linter"
+	case "scanning", "Scanning":
+		toolLabel = "Scanner"
+	}
+
+	// Extract unit name and tool name
+	var unitName, toolName string
+	if len(parts) >= 2 {
+		if len(parts) > 2 {
+			unitName = parts[0] + ":" + strings.Join(parts[1:len(parts)-1], ":")
+		} else {
+			unitName = activeComponent
+		}
+		toolName = parts[len(parts)-1]
+	} else {
+		unitName = activeComponent
+		toolName = ""
+	}
+
+	// Col1: Unit
+	col1 = labelStyle.Render("Unit:") + activeStyle.Render(truncate(unitName, col1Width-5))
+
+	// Col2: Runner/Tool
+	if toolName != "" {
+		col2 = labelStyle.Render(toolLabel+":") + activeStyle.Render(truncate(toolName, col2Width-len(toolLabel)-1))
+	}
+
+	// Col3: Status
+	if statusStr != "" {
+		col3 = labelStyle.Render("Status:") + statusStyle.Render(truncate(statusStr, col3Width-7))
+	}
+
+	col1 = padTo(col1, col1Width)
+	col2 = padTo(col2, col2Width)
+	col3 = padTo(col3, col3Width)
+
+	return col1 + sep + col2 + sep + col3
+}
+
+// renderSelectedHelp renders help text for a hovered resource element.
+func (m Model) renderSelectedHelp(zoneID, helpText string, contentWidth int) string {
+	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("255")).Bold(true)
+	helpStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("252"))
+
+	// Map zone IDs to friendly element names
+	elementNames := map[string]string{
+		"res-timer":    "Timer",
+		"res-cpu":      "CPU",
+		"res-mem":      "Memory",
+		"res-jobs":     "Containers",
+		"res-uow":      "UoW",
+		"res-tools":    "Tools",
+		"res-layer":    "Layer",
+		"freeze-button": "Freeze",
+	}
+
+	elementName := elementNames[zoneID]
+	if elementName == "" {
+		// Fallback: derive from zone ID
+		elementName = strings.TrimPrefix(zoneID, "res-")
+		if len(elementName) > 0 {
+			elementName = strings.ToUpper(elementName[:1]) + elementName[1:]
+		}
+	}
+
+	return labelStyle.Render(elementName+": ") + helpStyle.Render(helpText)
 }
 
 // renderComponentsPane renders the Components pane containing the tab bar.
@@ -1867,18 +2027,8 @@ func (m Model) renderComponentsPane(tabs []*ModuleState) string {
 		}
 	}
 
-	// Header: ┌─ Components: 3 running, 5/10 done ─────────────────┐
-	title := "Components"
-	var statusParts []string
-	if running > 0 {
-		statusParts = append(statusParts, fmt.Sprintf("%d running", running))
-	}
-	if completed > 0 || skipped > 0 || failed > 0 {
-		statusParts = append(statusParts, fmt.Sprintf("%d/%d done", completed+skipped+failed, len(tabs)))
-	}
-	if len(statusParts) > 0 {
-		title += ": " + strings.Join(statusParts, ", ")
-	}
+	// Header: ┌─ Units (of work) ─────────────────┐
+	title := "Units (of work)"
 
 	headerLeft := "┌─ " + Styles.Dim.Render(title) + " "
 	headerBorderLen := m.width - lipgloss.Width(headerLeft) - 1
@@ -1915,10 +2065,10 @@ func (m Model) renderTabBarContent(tabs []*ModuleState) string {
 		// Use full module:component name
 		label := state.Moniker
 
-		// Weight as circled digit or suffix based on mode
+		// Weight as circled digit or suffix based on mode (with trailing space for background coverage)
 		var weightStr string
 		if m.asciiMode {
-			weightStr = fmt.Sprintf(" w%d", state.Weight)
+			weightStr = fmt.Sprintf(" w%d ", state.Weight)
 		} else {
 			// Unicode mode: show circled digit with trailing space for background coverage
 			weightStr = " " + weightDigit(state.Weight) + " "
@@ -2165,6 +2315,59 @@ func (m Model) renderActiveContainerDots() string {
 	return dots.String()
 }
 
+// renderToolsDots returns colored dots for all known tools.
+// All tools known from init are always shown - filled when active, empty when inactive.
+// Containers: blue (sharp=active, light=inactive), System tools: orange
+func (m Model) renderToolsDots() string {
+	sharpBlue := lipgloss.NewStyle().Foreground(lipgloss.Color("39"))  // Active container
+	lightBlue := lipgloss.NewStyle().Foreground(lipgloss.Color("75"))  // Inactive container
+	orange := lipgloss.NewStyle().Foreground(lipgloss.Color("208"))    // System tool (active)
+	dimOrange := lipgloss.NewStyle().Foreground(lipgloss.Color("130")) // System tool (inactive)
+
+	filledChar := "●"
+	emptyChar := "○"
+	if m.asciiMode {
+		filledChar = "*"
+		emptyChar = "o"
+	}
+
+	var dots strings.Builder
+
+	// All planned containers - show all, filled if active
+	for _, tool := range m.plannedContainers {
+		isActive := false
+		for _, active := range m.activeContainers {
+			if tool == active {
+				isActive = true
+				break
+			}
+		}
+		if isActive {
+			dots.WriteString(sharpBlue.Render(filledChar))
+		} else {
+			dots.WriteString(lightBlue.Render(emptyChar))
+		}
+	}
+
+	// All planned system tools - show all, filled if active
+	for _, tool := range m.plannedSystemTools {
+		isActive := false
+		for _, active := range m.activeSystemTools {
+			if tool == active {
+				isActive = true
+				break
+			}
+		}
+		if isActive {
+			dots.WriteString(orange.Render(filledChar))
+		} else {
+			dots.WriteString(dimOrange.Render(emptyChar))
+		}
+	}
+
+	return dots.String()
+}
+
 // weightDigit returns a colored circled digit for weight display.
 // Uses filled circled digits: ❶ ❷ ❸ ❹ ❺ ❻ ❼ ❽ ❾
 func weightDigit(weight int) string {
@@ -2176,6 +2379,15 @@ func weightDigit(weight int) string {
 		weight = 9
 	}
 	return digits[weight-1]
+}
+
+// getModuleName extracts the module name from a full moniker (module:component).
+// Returns the part before the first colon, or the full string if no colon is present.
+func getModuleName(moniker string) string {
+	if idx := strings.Index(moniker, ":"); idx >= 0 {
+		return moniker[:idx]
+	}
+	return moniker
 }
 
 // padOrTruncate pads or truncates a string to exactly the specified width.

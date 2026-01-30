@@ -16,6 +16,24 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 
+// ErrInformationalExit signals that the command should exit with code 1,
+// but all necessary user-facing output has already been written.
+// This prevents the framework from logging an additional error message,
+// creating a cleaner user experience for expected validation failures.
+type ErrInformationalExit struct {
+	// Reason is a short internal identifier (not shown to user)
+	Reason string
+}
+
+func (e ErrInformationalExit) Error() string {
+	return e.Reason
+}
+
+// NewInformationalExit creates an ErrInformationalExit with the given reason.
+func NewInformationalExit(reason string) ErrInformationalExit {
+	return ErrInformationalExit{Reason: reason}
+}
+
 // CommandType defines the type of command for configuration defaults.
 type CommandType string
 
@@ -96,10 +114,10 @@ type ExecutionContext struct {
 	Results   []orchestrator.WorkResult
 
 	// Component-level results (populated by component-based execution)
-	// ComponentResults contains raw component results for detailed display
-	ComponentResults []orchestrator.ComponentResult
-	// ComponentResultSets contains component results grouped by module
-	ComponentResultSets []orchestrator.ComponentResultSet
+	// UnitResults contains raw unit results for detailed display
+	UnitResults []orchestrator.UnitResult
+	// ModuleResultSets contains unit results grouped by module
+	ModuleResultSets []orchestrator.ModuleResultSet
 
 	// Incremental summary builder (receives results as components complete)
 	SummaryBuilder *SummaryBuilder
@@ -125,10 +143,10 @@ type InitTimings struct {
 // Return 0 for success, non-zero for failure.
 type WorkerFunc func(ctx *ExecutionContext, moniker string, logWriter io.Writer) int
 
-// ComponentWorkerFunc processes a single component and returns an exit code.
+// UnitWorkerFunc processes a single work unit and returns an exit code.
 // It receives the execution context, module moniker, component name, and a log writer.
 // Return 0 for success, non-zero for failure.
-type ComponentWorkerFunc func(ctx *ExecutionContext, module, component string, logWriter io.Writer) int
+type UnitWorkerFunc func(ctx *ExecutionContext, module, component string, logWriter io.Writer) int
 
 // PhaseHook is called at specific points during command execution.
 // Return an error to abort execution.

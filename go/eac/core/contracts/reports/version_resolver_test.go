@@ -1,12 +1,12 @@
 package reports
 
 import (
-	"os"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/ready-to-release/eac/go/eac/core/git"
+	coretesting "github.com/ready-to-release/eac/go/eac/core/testing"
 )
 
 func TestResolveVersion(t *testing.T) {
@@ -61,13 +61,42 @@ func TestResolveVersion(t *testing.T) {
 			wantErr:     true,
 			errContains: "version not found",
 		},
+		// Implicit versioned modules (no changelog)
+		{
+			name:               "implicit module - unreleased explicit",
+			module:             "eac-commands",
+			versionStr:         "unreleased",
+			expectedVersion:    "Unreleased",
+			expectedUnreleased: true,
+			expectedLatest:     false,
+			wantErr:            false,
+		},
+		{
+			name:               "implicit module - unreleased implicit (empty)",
+			module:             "eac-commands",
+			versionStr:         "",
+			expectedVersion:    "Unreleased",
+			expectedUnreleased: true,
+			expectedLatest:     false,
+			wantErr:            false,
+		},
+		{
+			name:        "implicit module - latest not supported",
+			module:      "eac-commands",
+			versionStr:  "latest",
+			wantErr:     true,
+			errContains: "does not support version",
+		},
+		{
+			name:        "implicit module - specific version not supported",
+			module:      "eac-commands",
+			versionStr:  "1.0.0",
+			wantErr:     true,
+			errContains: "does not support version",
+		},
 	}
 
-	// Get repository root
-	workspaceRoot := os.Getenv("WORKSPACE_ROOT")
-	if workspaceRoot == "" {
-		t.Skip("WORKSPACE_ROOT not set, skipping integration test")
-	}
+	workspaceRoot := coretesting.SetupWorkspaceIsolation(t)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -114,11 +143,7 @@ func TestResolveVersion(t *testing.T) {
 }
 
 func TestResolveVersionWithValidation(t *testing.T) {
-	// Get repository root for integration tests
-	workspaceRoot := os.Getenv("WORKSPACE_ROOT")
-	if workspaceRoot == "" {
-		t.Skip("WORKSPACE_ROOT not set, skipping integration test")
-	}
+	workspaceRoot := coretesting.SetupWorkspaceIsolation(t)
 
 	// Test with mock repository to simulate missing tags
 	t.Run("tag exists - validation passes", func(t *testing.T) {

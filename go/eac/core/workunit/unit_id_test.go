@@ -896,6 +896,150 @@ func TestUnitID_MultipleTestSetsForSameModule(t *testing.T) {
 }
 
 // =============================================================================
+// Spec Field Tests (BDD Tests: godog, tscucumber)
+// =============================================================================
+
+func TestUnitID_Spec_Shortname(t *testing.T) {
+	tests := []struct {
+		name     string
+		unitID   UnitID
+		expected string
+	}{
+		{
+			name: "spec test returns spec name",
+			unitID: UnitID{
+				Context:   ContextTest,
+				Module:    "eac-commands",
+				Component: "build-module:go/eac/specs/impl/eac-commands:specs/.../specification.feature:godog",
+				Tool:      "godog",
+				Spec:      "build-module",
+			},
+			expected: "build-module",
+		},
+		{
+			name: "non-spec test returns module:component",
+			unitID: UnitID{
+				Context:   ContextTest,
+				Module:    "eac-core",
+				Component: "go",
+				Tool:      "gotest",
+			},
+			expected: "eac-core:go",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.unitID.Shortname())
+		})
+	}
+}
+
+func TestUnitID_Spec_Longname(t *testing.T) {
+	tests := []struct {
+		name     string
+		unitID   UnitID
+		expected string
+	}{
+		{
+			name: "spec test returns module:spec:specname format",
+			unitID: UnitID{
+				Context:   ContextTest,
+				Module:    "eac-commands",
+				Component: "build-module:go/eac/specs/impl/eac-commands:specs/.../specification.feature:godog",
+				Tool:      "godog",
+				Spec:      "build-module",
+			},
+			expected: "eac-commands:spec:build-module",
+		},
+		{
+			name: "spec test with different module",
+			unitID: UnitID{
+				Context:   ContextTest,
+				Module:    "eac-core",
+				Component: "cache-invalidation:go/eac/specs/impl/eac-core:specs/.../specification.feature:godog",
+				Tool:      "godog",
+				Spec:      "cache-invalidation",
+			},
+			expected: "eac-core:spec:cache-invalidation",
+		},
+		{
+			name: "non-spec test returns standard format",
+			unitID: UnitID{
+				Context:   ContextTest,
+				Module:    "eac-core",
+				Component: "go",
+				Tool:      "gotest",
+				Extra:     map[string]string{"testset": "unit"},
+			},
+			expected: "test:eac-core:go:gotest:unit",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.unitID.Longname())
+		})
+	}
+}
+
+func TestUnitID_Spec_DisplayName(t *testing.T) {
+	specUnit := UnitID{
+		Context:   ContextTest,
+		Module:    "eac-commands",
+		Component: "build-module:go/eac/specs/impl/eac-commands:specs/.../specification.feature:godog",
+		Tool:      "godog",
+		Spec:      "build-module",
+	}
+
+	t.Run("disambiguate false returns spec only", func(t *testing.T) {
+		assert.Equal(t, "build-module", specUnit.DisplayName(false))
+	})
+
+	t.Run("disambiguate true returns module:spec:specname", func(t *testing.T) {
+		assert.Equal(t, "eac-commands:spec:build-module", specUnit.DisplayName(true))
+	})
+}
+
+func TestUnitID_Spec_TabLabel(t *testing.T) {
+	tests := []struct {
+		name      string
+		spec      string
+		maxWidth  int
+		expected  string
+	}{
+		{
+			name:     "short spec fits",
+			spec:     "build",
+			maxWidth: 10,
+			expected: "build",
+		},
+		{
+			name:     "long spec truncated",
+			spec:     "build-module-name",
+			maxWidth: 10,
+			expected: "build-m...",
+		},
+		{
+			name:     "exact fit",
+			spec:     "build-mod",
+			maxWidth: 9,
+			expected: "build-mod",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			u := UnitID{
+				Component: "complex-component-path",
+				Spec:      tt.spec,
+			}
+			assert.Equal(t, tt.expected, u.TabLabel(tt.maxWidth))
+		})
+	}
+}
+
+// =============================================================================
 // Context Type Behavior Tests
 // =============================================================================
 

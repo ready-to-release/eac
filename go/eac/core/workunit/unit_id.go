@@ -13,11 +13,15 @@ type UnitID struct {
 	Component string            // component name (e.g., "go", "gherkin")
 	Tool      string            // handler/provider/scanner (e.g., "go", "gotest", "golangci-lint")
 	Extra     map[string]string // context-specific (e.g., testset: "unit")
+	Spec      string            // Spec name for BDD tests (godog, tscucumber), e.g., "build-module"
 }
 
-// Shortname returns display name: module:component
+// Shortname returns display name: module:component, or just spec name for BDD tests.
 // Deprecated: Use Path() for stable identifiers or DisplayName() for contextual display.
 func (u UnitID) Shortname() string {
+	if u.Spec != "" {
+		return u.Spec // "build-module"
+	}
 	return u.Module + ":" + u.Component
 }
 
@@ -34,9 +38,16 @@ func (u UnitID) ComponentName() string {
 }
 
 // DisplayName returns context-appropriate name.
+// For BDD tests, returns spec name (or module:spec:specname if disambiguate is true).
 // If disambiguate is true, returns full module:component.
 // If disambiguate is false, returns just the component.
 func (u UnitID) DisplayName(disambiguate bool) string {
+	if u.Spec != "" {
+		if disambiguate {
+			return u.Module + ":spec:" + u.Spec // "eac-commands:spec:build-module"
+		}
+		return u.Spec // "build-module"
+	}
 	if disambiguate {
 		return u.Module + ":" + u.Component
 	}
@@ -44,9 +55,13 @@ func (u UnitID) DisplayName(disambiguate bool) string {
 }
 
 // TabLabel returns truncated name for TUI tabs (max width).
-// If the component name exceeds maxWidth, it's truncated with "...".
+// For BDD tests, uses the spec name. Otherwise uses component name.
+// If the name exceeds maxWidth, it's truncated with "...".
 func (u UnitID) TabLabel(maxWidth int) string {
 	name := u.Component
+	if u.Spec != "" {
+		name = u.Spec
+	}
 	if maxWidth <= 3 {
 		if len(name) > maxWidth {
 			return name[:maxWidth]
@@ -60,8 +75,12 @@ func (u UnitID) TabLabel(maxWidth int) string {
 }
 
 // Longname returns full ID: context:module:component:tool[:extra]
+// For BDD tests (godog, tscucumber), returns "module:spec:specname" format.
 // For test context with testset extra, appends the testset value.
 func (u UnitID) Longname() string {
+	if u.Spec != "" {
+		return fmt.Sprintf("%s:spec:%s", u.Module, u.Spec) // "eac-commands:spec:build-module"
+	}
 	base := fmt.Sprintf("%s:%s:%s:%s", u.Context, u.Module, u.Component, u.Tool)
 	if testset, ok := u.Extra["testset"]; ok && testset != "" {
 		base += ":" + testset

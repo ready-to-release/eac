@@ -39,7 +39,7 @@ func TestSummaryBuilder_AddResult(t *testing.T) {
 	sb := NewSummaryBuilder(CommandTypeBuild, componentCounts)
 
 	// Add first result
-	result1 := orchestrator.ComponentResult{
+	result1 := orchestrator.UnitResult{
 		Module:    "module-a",
 		Component: "comp1",
 		ExitCode:  0,
@@ -57,7 +57,7 @@ func TestSummaryBuilder_AddResult(t *testing.T) {
 	}
 
 	// Add second result with longer duration
-	result2 := orchestrator.ComponentResult{
+	result2 := orchestrator.UnitResult{
 		Module:    "module-a",
 		Component: "comp2",
 		ExitCode:  0,
@@ -83,14 +83,14 @@ func TestSummaryBuilder_AddResult_Failure(t *testing.T) {
 	sb := NewSummaryBuilder(CommandTypeBuild, componentCounts)
 
 	// Add successful result
-	sb.AddResult(orchestrator.ComponentResult{
+	sb.AddResult(orchestrator.UnitResult{
 		Module:    "module-a",
 		Component: "comp1",
 		ExitCode:  0,
 	})
 
 	// Add failed result
-	sb.AddResult(orchestrator.ComponentResult{
+	sb.AddResult(orchestrator.UnitResult{
 		Module:    "module-a",
 		Component: "comp2",
 		ExitCode:  1,
@@ -118,12 +118,12 @@ func TestSummaryBuilder_AddResult_Skipped(t *testing.T) {
 	sb := NewSummaryBuilder(CommandTypeBuild, componentCounts)
 
 	// Add two skipped results (exit code -1)
-	sb.AddResult(orchestrator.ComponentResult{
+	sb.AddResult(orchestrator.UnitResult{
 		Module:    "module-a",
 		Component: "comp1",
 		ExitCode:  -1,
 	})
-	sb.AddResult(orchestrator.ComponentResult{
+	sb.AddResult(orchestrator.UnitResult{
 		Module:    "module-a",
 		Component: "comp2",
 		ExitCode:  -1,
@@ -147,13 +147,13 @@ func TestSummaryBuilder_Finalize(t *testing.T) {
 	sb := NewSummaryBuilder(CommandTypeBuild, componentCounts)
 
 	// Add results
-	sb.AddResult(orchestrator.ComponentResult{
+	sb.AddResult(orchestrator.UnitResult{
 		Module:    "module-a",
 		Component: "go",
 		ExitCode:  0,
 		Duration:  100 * time.Millisecond,
 	})
-	sb.AddResult(orchestrator.ComponentResult{
+	sb.AddResult(orchestrator.UnitResult{
 		Module:    "module-b",
 		Component: "go",
 		ExitCode:  0,
@@ -191,12 +191,12 @@ func TestSummaryBuilder_Finalize_WithFailure(t *testing.T) {
 	}
 	sb := NewSummaryBuilder(CommandTypeBuild, componentCounts)
 
-	sb.AddResult(orchestrator.ComponentResult{
+	sb.AddResult(orchestrator.UnitResult{
 		Module:    "module-a",
 		Component: "go",
 		ExitCode:  0,
 	})
-	sb.AddResult(orchestrator.ComponentResult{
+	sb.AddResult(orchestrator.UnitResult{
 		Module:    "module-b",
 		Component: "go",
 		ExitCode:  1,
@@ -223,19 +223,19 @@ func TestSummaryBuilder_Finalize_MixedStatus(t *testing.T) {
 	sb := NewSummaryBuilder(CommandTypeBuild, componentCounts)
 
 	// Cached
-	sb.AddResult(orchestrator.ComponentResult{
+	sb.AddResult(orchestrator.UnitResult{
 		Module:    "module-a",
 		Component: "go",
 		ExitCode:  -1,
 	})
 	// Success
-	sb.AddResult(orchestrator.ComponentResult{
+	sb.AddResult(orchestrator.UnitResult{
 		Module:    "module-b",
 		Component: "go",
 		ExitCode:  0,
 	})
 	// Failed
-	sb.AddResult(orchestrator.ComponentResult{
+	sb.AddResult(orchestrator.UnitResult{
 		Module:    "module-c",
 		Component: "go",
 		ExitCode:  1,
@@ -254,12 +254,12 @@ func TestSummaryBuilder_GetResultSets(t *testing.T) {
 	}
 	sb := NewSummaryBuilder(CommandTypeBuild, componentCounts)
 
-	sb.AddResult(orchestrator.ComponentResult{
+	sb.AddResult(orchestrator.UnitResult{
 		Module:    "module-a",
 		Component: "typescript",
 		ExitCode:  0,
 	})
-	sb.AddResult(orchestrator.ComponentResult{
+	sb.AddResult(orchestrator.UnitResult{
 		Module:    "module-a",
 		Component: "go",
 		ExitCode:  0,
@@ -276,16 +276,16 @@ func TestSummaryBuilder_GetResultSets(t *testing.T) {
 		t.Errorf("expected module-a, got %s", rs.Module)
 	}
 
-	if len(rs.Components) != 2 {
-		t.Errorf("expected 2 components, got %d", len(rs.Components))
+	if len(rs.Units) != 2 {
+		t.Errorf("expected 2 units, got %d", len(rs.Units))
 	}
 
-	// Components should be sorted alphabetically
-	if rs.Components[0].Component != "go" {
-		t.Errorf("expected first component 'go', got '%s'", rs.Components[0].Component)
+	// Units should be sorted alphabetically by component type
+	if rs.Units[0].Component != "go" {
+		t.Errorf("expected first unit 'go', got '%s'", rs.Units[0].Component)
 	}
-	if rs.Components[1].Component != "typescript" {
-		t.Errorf("expected second component 'typescript', got '%s'", rs.Components[1].Component)
+	if rs.Units[1].Component != "typescript" {
+		t.Errorf("expected second unit 'typescript', got '%s'", rs.Units[1].Component)
 	}
 }
 
@@ -295,14 +295,14 @@ func TestSummaryBuilder_TestCommand(t *testing.T) {
 	}
 	sb := NewSummaryBuilder(CommandTypeTest, componentCounts)
 
-	sb.AddResult(orchestrator.ComponentResult{
+	sb.AddResult(orchestrator.UnitResult{
 		Module:      "module-a",
 		Component:   "unit:gotest",
 		ExitCode:    0,
 		TestsTotal:  10,
 		TestsPassed: 10,
 	})
-	sb.AddResult(orchestrator.ComponentResult{
+	sb.AddResult(orchestrator.UnitResult{
 		Module:      "module-a",
 		Component:   "e2e:godog",
 		ExitCode:    0,
@@ -334,7 +334,7 @@ func TestSummaryBuilder_ConcurrentAddResult(t *testing.T) {
 	done := make(chan struct{})
 	for i := 0; i < 100; i++ {
 		go func(idx int) {
-			sb.AddResult(orchestrator.ComponentResult{
+			sb.AddResult(orchestrator.UnitResult{
 				Module:    "module-a",
 				Component: "comp" + string(rune('0'+idx%10)),
 				ExitCode:  0,
@@ -375,7 +375,7 @@ func TestSummaryBuilder_CompletionCallback(t *testing.T) {
 	})
 
 	// Add results - callback should NOT be called yet
-	sb.AddResult(orchestrator.ComponentResult{
+	sb.AddResult(orchestrator.UnitResult{
 		Module:    "module-a",
 		Component: "comp1",
 		ExitCode:  0,
@@ -384,7 +384,7 @@ func TestSummaryBuilder_CompletionCallback(t *testing.T) {
 		t.Error("callback should not be called after first result")
 	}
 
-	sb.AddResult(orchestrator.ComponentResult{
+	sb.AddResult(orchestrator.UnitResult{
 		Module:    "module-a",
 		Component: "comp2",
 		ExitCode:  0,
@@ -394,7 +394,7 @@ func TestSummaryBuilder_CompletionCallback(t *testing.T) {
 	}
 
 	// Add final result - callback should be called now
-	sb.AddResult(orchestrator.ComponentResult{
+	sb.AddResult(orchestrator.UnitResult{
 		Module:    "module-b",
 		Component: "comp1",
 		ExitCode:  0,

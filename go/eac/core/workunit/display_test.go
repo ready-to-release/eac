@@ -137,3 +137,75 @@ func TestDisplayNameResolver_Count(t *testing.T) {
 		t.Errorf("Count(missing) = %d, want 0", got)
 	}
 }
+
+// =============================================================================
+// Spec Field Tests (BDD Tests)
+// =============================================================================
+
+func TestDisplayNameResolver_Resolve_WithSpec(t *testing.T) {
+	tests := []struct {
+		name  string
+		units []UnitID
+		query UnitID
+		want  string
+	}{
+		{
+			name: "unique spec returns just spec name",
+			units: []UnitID{
+				{Module: "eac-commands", Component: "complex-path:godog", Spec: "build-module"},
+				{Module: "eac-core", Component: "go"},
+			},
+			query: UnitID{Module: "eac-commands", Component: "complex-path:godog", Spec: "build-module"},
+			want:  "build-module",
+		},
+		{
+			name: "duplicate spec returns module:specname",
+			units: []UnitID{
+				{Module: "eac-commands", Component: "complex-path1:godog", Spec: "build-module"},
+				{Module: "eac-core", Component: "complex-path2:godog", Spec: "build-module"},
+			},
+			query: UnitID{Module: "eac-commands", Component: "complex-path1:godog", Spec: "build-module"},
+			want:  "eac-commands:build-module",
+		},
+		{
+			name: "mixed spec and non-spec units",
+			units: []UnitID{
+				{Module: "eac-commands", Component: "complex-path:godog", Spec: "build-module"},
+				{Module: "eac-core", Component: "go"},
+				{Module: "eac-core", Component: "complex-path:godog", Spec: "cache-invalidation"},
+			},
+			query: UnitID{Module: "eac-core", Component: "complex-path:godog", Spec: "cache-invalidation"},
+			want:  "cache-invalidation",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resolver := NewDisplayNameResolver(tt.units)
+			got := resolver.Resolve(tt.query)
+			if got != tt.want {
+				t.Errorf("Resolve() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDisplayNameResolver_NeedsDisambiguation_WithSpec(t *testing.T) {
+	units := []UnitID{
+		{Module: "eac-commands", Component: "path1:godog", Spec: "build-module"},
+		{Module: "eac-core", Component: "path2:godog", Spec: "build-module"}, // Duplicate spec name
+		{Module: "eac-core", Component: "go"},
+		{Module: "eac-specs", Component: "path3:godog", Spec: "unique-spec"},
+	}
+	resolver := NewDisplayNameResolver(units)
+
+	if !resolver.NeedsDisambiguation("build-module") {
+		t.Error("build-module should need disambiguation (appears in 2 modules)")
+	}
+	if resolver.NeedsDisambiguation("unique-spec") {
+		t.Error("unique-spec should not need disambiguation")
+	}
+	if resolver.NeedsDisambiguation("go") {
+		t.Error("go should not need disambiguation (only 1 unit)")
+	}
+}

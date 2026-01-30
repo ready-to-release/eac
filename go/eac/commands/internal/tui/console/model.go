@@ -15,6 +15,18 @@ import (
 
 var log = logging.C()
 
+// HelpTextMap maps zone IDs to help descriptions for the Resources pane elements.
+var HelpTextMap = map[string]string{
+	"res-timer":    "Elapsed time since execution started",
+	"res-cpu":      "CPU usage per core (green=low, yellow=medium, red=high)",
+	"res-mem":      "Memory usage (green=low, yellow=medium, red=high)",
+	"res-jobs":     "Active containers running in parallel",
+	"res-uow":      "Unit of Work counts: running/done/cached/failed",
+	"res-tools":    "Tool lamps: blue=container, orange=system (filled=active)",
+	"res-layer":    "Current execution layer / total layers",
+	"freeze-button": "Click to pause auto-exit countdown for 2 minutes",
+}
+
 // Model is the Bubbletea model for the console window.
 // Displays build/test output in a 3-pane view (Init/Run/Summary).
 type Model struct {
@@ -46,10 +58,10 @@ type Model struct {
 	locks []LockStatus // Individual lock states
 
 	// Tools tracking (containers vs system)
-	activeContainers  []string // Currently active container tools (orange)
-	usedContainers    []string // All container tools ever used
-	activeSystemTools []string // Currently active system tools (orange)
-	usedSystemTools   []string // All system tools ever used
+	plannedContainers  []string // All container tools (from PlannedTools at init)
+	plannedSystemTools []string // All system tools (from PlannedTools at init)
+	activeContainers   []string // Currently active container tools
+	activeSystemTools  []string // Currently active system tools
 
 	// Per-module tab tracking for Run phase
 	moduleStates    map[string]*ModuleState // Per-module state (running, completed, failed)
@@ -58,7 +70,15 @@ type Model struct {
 	activeTab       string                  // Currently selected tab ("" = aggregate view)
 	hoveredTab      string                  // Tab currently under mouse cursor
 	hoveredTabScroll int                    // Marquee scroll offset for hovered tab name
+	hoveredZone     string                  // Currently hovered zone ID (empty = none, "tab:moniker" for tabs, "res-*" for resources)
 	maxTabs         int                     // Maximum visible tabs before scrolling/hiding
+
+	// Cumulative UoW counters (only increment, never recalculated)
+	uowTotal   int // Total UoW expected (set once)
+	uowRunning int // Currently running (can go up/down)
+	uowDone    int // Completed successfully (only goes up)
+	uowCached  int // Skipped/cached (only goes up)
+	uowFailed  int // Failed (only goes up)
 
 	// Channels for async updates
 	lineChan   <-chan Line   // Incoming output lines
@@ -70,6 +90,7 @@ type Model struct {
 	mouseMode bool     // Mouse mode: true=scrolling enabled, false=text selection enabled
 	viewMode         ViewMode // Components view mode: TabGrid or Tree
 	tabsScrollOffset int      // Scroll offset for tabs/tree panel
+	tabColumns       int      // Number of columns for tab grid (2-6, default 4)
 
 	// Done state
 	linesDone  bool
@@ -228,6 +249,7 @@ func NewModel(height int, runPhaseName string, lineChan <-chan Line, statusChan 
 		moduleOrder:       make([]string, 0),             // Tab ordering
 		activeTab:         "",                            // Start with aggregate view
 		maxTabs:           36,                            // Maximum visible tabs (6 rows × 6 tabs/row)
+		tabColumns:        4,                             // Default tab columns (adjustable 2-6)
 	}
 }
 
@@ -436,8 +458,8 @@ type InitSummary struct {
 	CalculatedModules int // Final list after dependency resolution
 	AddedDepm         int // Module dependencies added
 
-	// Component count
-	ComponentCount int
+	// UoW count - total units of work to schedule
+	UoWCount int
 
 	// Execution tree - for visual tree rendering
 	ExecutionTree         []ExecutionLayer // Full tree: layers → modules → components
@@ -483,6 +505,15 @@ type InitSummary struct {
 
 	// Output directory
 	OutputDir string
+
+	// Tools that will be used (for pre-populating tool lamps)
+	PlannedTools []PlannedTool
+}
+
+// PlannedTool represents a tool that will be used during execution.
+type PlannedTool struct {
+	Name        string // Tool identifier (e.g., "go", "godog", "trivy")
+	IsContainer bool   // true = runs in container, false = runs on system
 }
 
 // ExecutionLayer represents a single execution layer with its modules.
@@ -539,15 +570,29 @@ func (m *Model) GetOrCreateModuleState(moniker string, weight int) *ModuleState 
 	m.moduleStates[moniker] = state
 	m.moduleOrder = append(m.moduleOrder, moniker)
 
+	// Track total UoW count
+	m.uowTotal++
+
 	return state
 }
 
 // MarkModuleRunning marks a module as actively running (slot acquired).
 // This sets the StartTime to now, so duration tracking reflects actual execution time.
+// If the module is already in a terminal state (complete/skipped/failed), this is a no-op
+// to prevent overwriting early cache detection results.
 func (m *Model) MarkModuleRunning(moniker string) {
 	state, exists := m.moduleStates[moniker]
 	if !exists {
 		return
+	}
+	// Don't transition to running if already in a terminal state
+	// This prevents background cache detection results from being overwritten
+	if state.Status == ModuleComplete || state.Status == ModuleSkipped || state.Status == ModuleFailed {
+		return
+	}
+	// Only count transition from pending to running
+	if state.Status == ModulePending {
+		m.uowRunning++
 	}
 	state.Status = ModuleRunning
 	state.StartTime = time.Now() // Start timing when execution actually begins
@@ -565,13 +610,34 @@ func (m *Model) MarkModuleComplete(moniker string, exitCode int) {
 		state = m.GetOrCreateModuleState(moniker, 1)
 	}
 
+	// Check if already in a terminal state (don't double-count)
+	oldStatus := state.Status
+	alreadyComplete := oldStatus == ModuleComplete || oldStatus == ModuleSkipped || oldStatus == ModuleFailed
+
+	// Track running count - decrement if transitioning from running
+	if oldStatus == ModuleRunning && m.uowRunning > 0 {
+		m.uowRunning--
+	}
+
 	// Always set the status from exit code - this is the authoritative source
 	newStatus := StatusFromExitCode(exitCode)
-	log.Debugf("[TUI-CACHE] MarkModuleComplete: module=%s exitCode=%d -> %v", moniker, exitCode, newStatus)
+	log.Debugf("[TUI-CACHE] MarkModuleComplete: module=%s exitCode=%d -> %v (was %v)", moniker, exitCode, newStatus, oldStatus)
 
 	state.EndTime = time.Now()
 	state.ExitCode = exitCode
 	state.Status = newStatus
+
+	// Track cumulative completion counters (only increment once, when first completing)
+	if !alreadyComplete {
+		switch newStatus {
+		case ModuleComplete:
+			m.uowDone++
+		case ModuleSkipped:
+			m.uowCached++
+		case ModuleFailed:
+			m.uowFailed++
+		}
+	}
 
 	// Tabs stay visible - only removed via FIFO when over limit
 }
@@ -732,4 +798,50 @@ func (m *Model) UpdateCachedMetrics() {
 	}
 
 	m.lastMetricsUpdate = time.Now()
+}
+
+// calculateOptimalTabColumns determines the minimum number of columns (1-6)
+// needed to display all UoWs without scrolling in the visible panel area.
+// Simple math: cols = ceil(totalUoWs / uowPerColumn)
+func (m *Model) calculateOptimalTabColumns() int {
+	// Use UoWCount from initSummary - this is the actual count of scheduled work items
+	// (number of scheduled work items, not just components)
+	totalUoWs := 0
+	if m.initSummary != nil {
+		totalUoWs = m.initSummary.UoWCount
+	}
+
+	// Get visible rows from layout metrics
+	metrics := m.calculateLayoutMetrics()
+	// Panel content height = remaining height - header(1) - footer(1)
+	uowPerCol := metrics.RemainingHeight - 2
+	if uowPerCol < 1 {
+		uowPerCol = 1
+	}
+
+	// cols = ceil(totalUoWs / uowPerCol)
+	cols := (totalUoWs + uowPerCol - 1) / uowPerCol
+
+	// Clamp to valid range
+	if cols < 1 {
+		cols = 1
+	}
+	if cols > 6 {
+		cols = 6
+	}
+
+	return cols
+}
+
+// ComponentsWidth returns the width of the components panel based on tab columns.
+func (m Model) ComponentsWidth() int {
+	const tabWidth = 15
+	// Width = columns * tabWidth + spaces_between_tabs + borders
+	// Tabs are joined with spaces, so N columns = N-1 spaces between them
+	// Borders = 2 (left + right)
+	width := m.tabColumns*tabWidth + (m.tabColumns - 1) + 2
+	if width < 20 {
+		width = 20
+	}
+	return width
 }

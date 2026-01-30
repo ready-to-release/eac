@@ -10,12 +10,12 @@ import (
 	"github.com/ready-to-release/eac/go/eac/core/workunit"
 )
 
-// FlattenModulesToScanComponentWork converts modules to scan component work items.
+// FlattenModulesToScanUnits converts modules to scan component work items.
 // Each module's scannable component + scanner combination becomes a work item.
 // This allows parallel execution of different scanners (trivy-vuln, semgrep, etc.)
 // within the same module.
 // Returns nil if no scannable components are found.
-func FlattenModulesToScanComponentWork(ctx *cmdframework.ExecutionContext) [][]workunit.UnitSpec {
+func FlattenModulesToScanUnits(ctx *cmdframework.ExecutionContext) [][]workunit.UnitSpec {
 	cfg := config.Global()
 	if cfg == nil {
 		return nil
@@ -73,7 +73,7 @@ func FlattenModulesToScanComponentWork(ctx *cmdframework.ExecutionContext) [][]w
 				scannerType := internal.ScannerType(toolID)
 
 				// Get weight (base weight × amp, calculated internally)
-				weight := getComponentWeight(moniker, componentName, scannerType)
+				weight := getUnitWeight(moniker, componentName, scannerType)
 
 				isContainer := tool.GlobalScanBridge().IsContainer(string(scannerType))
 				work := workunit.UnitSpec{
@@ -139,9 +139,9 @@ func getScanWeightForScanner(scannerType internal.ScannerType) int {
 	}
 }
 
-// getComponentWeight returns the scheduling weight for a component.
+// getUnitWeight returns the scheduling weight for a component.
 // Weight = base scanner weight × component amp (from config).
-func getComponentWeight(moniker, componentName string, scannerType internal.ScannerType) int {
+func getUnitWeight(moniker, componentName string, scannerType internal.ScannerType) int {
 	baseWeight := getScanWeightForScanner(scannerType)
 
 	// Get amp from config (the source of truth)
@@ -171,8 +171,8 @@ func CountScanComponents(layers [][]workunit.UnitSpec) int {
 	return count
 }
 
-// getScanComponentCount returns the total number of scannable components.
-func getScanComponentCount(ctx *cmdframework.ExecutionContext) int {
-	layers := FlattenModulesToScanComponentWork(ctx)
+// getScanUoWCount returns the total number of scannable UoWs (units of work).
+func getScanUoWCount(ctx *cmdframework.ExecutionContext) int {
+	layers := FlattenModulesToScanUnits(ctx)
 	return CountScanComponents(layers)
 }

@@ -4,68 +4,26 @@ package registry
 import (
 	"bufio"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/ready-to-release/eac/go/eac/core/workspace"
 )
 
 // InitialWorkingDir stores the working directory when the program started.
 var InitialWorkingDir string
 
-// WorkspaceRoot stores the repository root (cached after first call).
-var WorkspaceRoot string
-
 func init() {
-	// Initialize working directory
-	InitialWorkingDir = os.Getenv("R2R_PWD")
-	if InitialWorkingDir == "" {
-		var err error
-		InitialWorkingDir, err = os.Getwd()
-		if err != nil {
-			InitialWorkingDir = "."
-		}
-	}
-}
-
-// GetWorkspaceRoot returns the repository root directory, using cached value if available.
-func GetWorkspaceRoot() (string, error) {
-	// IMPORTANT: Check for test isolation override FIRST, before using cached value
-	// This ensures isolated tests use their temporary directory instead of the cached real repo root
-	if testRoot := os.Getenv("R2R_REPO_ROOT"); testRoot != "" {
-		return testRoot, nil
-	}
-
-	// Use cached value only if we're not in a test isolation environment
-	if WorkspaceRoot != "" {
-		return WorkspaceRoot, nil
-	}
-
-	// Import repository package at runtime to avoid circular dependency
-	// We'll use a simple implementation here instead
-	return findRepositoryRoot()
-}
-
-// findRepositoryRoot finds the git repository root by walking up directories.
-func findRepositoryRoot() (string, error) {
-	startPath, err := os.Getwd()
+	var err error
+	InitialWorkingDir, err = workspace.WorkingDir()
 	if err != nil {
-		return "", err
+		InitialWorkingDir = "."
 	}
+}
 
-	currentPath := startPath
-	for {
-		gitPath := filepath.Join(currentPath, ".git")
-		if _, err := os.Stat(gitPath); err == nil {
-			WorkspaceRoot = currentPath
-			return currentPath, nil
-		}
-
-		parentPath := currentPath[:strings.LastIndex(currentPath, string(os.PathSeparator))]
-		if parentPath == currentPath || parentPath == "" {
-			return "", os.ErrNotExist
-		}
-		currentPath = parentPath
-	}
+// GetWorkspaceRoot returns the repository root directory.
+func GetWorkspaceRoot() (string, error) {
+	return workspace.Root()
 }
 
 // CommandFunc is the signature for all command functions.

@@ -15,7 +15,13 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/tui/console"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/tui/stream"
+	"golang.org/x/term"
 )
+
+// isTerminal returns true if the given file descriptor is a terminal.
+func isTerminal(fd int) bool {
+	return term.IsTerminal(fd)
+}
 
 // Default TUI configuration values.
 const (
@@ -99,16 +105,28 @@ func (c *Console) Start(ctx context.Context) error {
 	// Prevent lipgloss from querying terminal background color (causes OSC escape leaks)
 	lipgloss.SetHasDarkBackground(true)
 
-	// Use alt screen mode to take over terminal, then restore on exit
-	// Disable bracketed paste to prevent escape sequence leaks
-	// Disable signal handler so our custom handler can catch Ctrl-C
-	// Start with mouse mode enabled for scrolling
-	c.program = tea.NewProgram(model,
-		tea.WithAltScreen(), // Take over screen, restore on exit
+	// Build program options based on environment
+	opts := []tea.ProgramOption{
+		tea.WithAltScreen(),        // Take over screen, restore on exit
 		tea.WithoutBracketedPaste(),
 		tea.WithoutSignalHandler(), // Let our custom signal handler catch Ctrl-C
-		tea.WithMouseAllMotion(),  // Enable mouse for scrolling and hover
-	)
+	}
+
+	// Check if stdin is a terminal - if not, disable input to prevent blocking
+	// When stdin is not a terminal (e.g., /dev/null, pipe), bubbletea's default
+	// behavior of opening a new TTY can block indefinitely
+	stdinFd := int(os.Stdin.Fd())
+	stdinIsTerminal := isTerminal(stdinFd)
+	if stdinIsTerminal {
+		// Normal terminal mode - enable mouse for scrolling and hover
+		opts = append(opts, tea.WithMouseAllMotion())
+	} else {
+		// Non-interactive mode - disable input to prevent blocking
+		// This happens when stdin is redirected (e.g., running in background)
+		opts = append(opts, tea.WithInput(nil))
+	}
+
+	c.program = tea.NewProgram(model, opts...)
 
 	// Signal that TUI is ready
 	close(c.ready)
@@ -545,6 +563,9 @@ type ExecutionLayer = console.ExecutionLayer
 
 // ExecutionModule is an alias for console.ExecutionModule for public use.
 type ExecutionModule = console.ExecutionModule
+
+// PlannedTool is an alias for console.PlannedTool for public use.
+type PlannedTool = console.PlannedTool
 
 // Level constants for public use.
 const (

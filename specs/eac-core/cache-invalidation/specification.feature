@@ -36,7 +36,7 @@ Feature: Cache Invalidation System
 
     Scenario: A2 - Deleted build state triggers fresh detection
       Given I have built all modules successfully
-      When I delete the file "out/build/.build-state.json"
+      When I delete the build state directory
       And I run "get changed-modules-local "
       Then the YAML output field "is_fresh_build" is "true"
 
@@ -51,7 +51,7 @@ Feature: Cache Invalidation System
       When I append "// cache-test-comment" to file "go/test-core/main.go"
       And I run "get changed-modules-local "
       Then the YAML output field "modules" contains "test-core"
-      And the YAML output field "change_reasons.test-core" contains "source files changed"
+      And the YAML output field "change_reasons.test-core" contains "source changed"
 
     Scenario: B2 - Unchanged modules remain up-to-date
       Given I have built all modules successfully
@@ -214,7 +214,7 @@ Feature: Cache Invalidation System
       And a new module "test-new" is configured with go_root "go/test-new"
       When I run "get changed-modules-local "
       Then the YAML output field "modules" contains "test-new"
-      And the YAML output field "change_reasons.test-new" contains "new module"
+      And the YAML output field "change_reasons.test-new" contains "no prior state"
 
     Scenario: K2 - Circular dependency is detected and rejected
       Given modules are configured with circular dependency:
