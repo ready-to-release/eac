@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 #
 # importer.sh - Import the go-invoker module and optionally create 'run' alias
 #
@@ -15,7 +15,14 @@
 # Note:
 #   Must be sourced (source ./importer.sh) for the alias to work in your session.
 
-set -e
+# Check if the script is being sourced
+# This works in both Bash and Zsh by testing if 'return' is allowed
+(return 0 2>/dev/null) && IS_SOURCED=1 || IS_SOURCED=0
+
+if [ "$IS_SOURCED" -eq 0 ]; then
+    echo "This script must be sourced: source ./importer.sh" >&2
+    exit 1
+fi
 
 # Parse arguments
 NO_ALIAS=0
@@ -36,11 +43,14 @@ MODULE_PATH="$SCRIPT_DIR/scripts/sh/go-invoker/go.sh"
 # Check if module exists
 if [ ! -f "$MODULE_PATH" ]; then
     echo "Error: Module not found at: $MODULE_PATH" >&2
-    return 1 2>/dev/null || exit 1
+    return 1
 fi
 
 # Source the module
-source "$MODULE_PATH"
+if ! source "$MODULE_PATH"; then
+    echo "Error: Failed to source module at: $MODULE_PATH" >&2
+    return 1
+fi
 
 # Show welcome only once per session
 if [ "$SHOW_WELCOME" -eq 1 ]; then
