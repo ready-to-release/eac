@@ -9,3 +9,4 @@ How to transform compliance from a bottleneck into a continuous, automated capab
 | [Why Transformation?](./why-transformation.md)            | Problems with traditional compliance and the quantified opportunity for improvement |
 | [Compliance as Code Principles](./compliance-as-code.md)  | Five interconnected principles that define modern compliance                        |
 | [Transformation Framework](./transformation-framework.md) | Four-phase approach from assessment to organization-wide adoption                   |
+| [Capability Metrics Framework](./capability-metrics/index.md) | 5-level capability framework for measuring and advancing compliance automation across practice areas |

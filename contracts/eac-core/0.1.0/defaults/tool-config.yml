@@ -542,11 +542,7 @@ component-tools:
     linter: markdownlint
 
   pwsh:
-    builder: pwsh
     tester: pester
-
-  bash:
-    builder: bash
 
 #---------------------------------------------------------------------------
 # Environment Overrides
