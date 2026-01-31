@@ -37,10 +37,10 @@ module-templates:
     components:
       go: "{go_root}"
       markdown: "{go_root}"
-      # Convention-based components (discovered if directory exists):
+      # Convention-based components (auto-inferred if directory exists):
       # - gherkin: specs/{moniker}
       # - structurizr: specs/{moniker}/.design
-      # - test-impl: go/eac/specs/impl/{moniker}
+      # - gherkin-steps: {go_root}/specs (if godog_test.go exists)
 
   # Go CLI tool (published)
   # Use for: command-line tools with releases
@@ -158,9 +158,15 @@ conventions:
       path_pattern: "specs/{moniker}/.design"
       required_file: "workspace.dsl"
 
-    # Test implementations: look in go/eac/specs/impl/{moniker}/
-    test_impl:
-      path_pattern: "go/eac/specs/impl/{moniker}"
+    # Gherkin steps: infer from code component location
+    # - go component at X -> steps at X/specs (godog runner)
+    # - typescript component at X -> steps at X/features (cucumber-js runner)
+    # - no code component -> steps at go/eac/specs/{moniker}
+    gherkin_steps:
+      derive_from_components:
+        go: "specs"
+        typescript: "features"
+      fallback_pattern: "go/eac/specs/{moniker}"
       required_file: "godog_test.go"
 
     # Markdown: derive from primary component (go, typescript, etc.)

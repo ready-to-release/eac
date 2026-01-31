@@ -15,6 +15,14 @@ WORKDIR /app
 # Copy go.mod and go.sum files for dependency caching
 COPY go/eac/core/go.mod go/eac/core/go.sum ./go/eac/core/
 COPY go/eac/commands/go.mod go/eac/commands/go.sum ./go/eac/commands/
+COPY go/eac/godog/go.mod go/eac/godog/go.sum ./go/eac/godog/
+COPY contracts/eac-core/0.1.0/interfaces/go.mod ./contracts/eac-core/0.1.0/interfaces/
+COPY contracts/eac-adapters/ai/go.mod ./contracts/eac-adapters/ai/
+COPY contracts/eac-adapters/docker/go.mod contracts/eac-adapters/docker/go.sum ./contracts/eac-adapters/docker/
+COPY contracts/eac-adapters/tui/go.mod ./contracts/eac-adapters/tui/
+COPY go/eac/adapters/ai/go.mod go/eac/adapters/ai/go.sum ./go/eac/adapters/ai/
+COPY go/eac/adapters/docker/go.mod go/eac/adapters/docker/go.sum ./go/eac/adapters/docker/
+COPY go/eac/adapters/tui/go.mod go/eac/adapters/tui/go.sum ./go/eac/adapters/tui/
 
 # Download dependencies with BuildKit cache mount for faster rebuilds
 RUN --mount=type=cache,target=/go/pkg/mod \
@@ -31,6 +39,9 @@ ARG TARGETARCH
 # Copy source code
 COPY go/eac/core/ ./go/eac/core/
 COPY go/eac/commands/ ./go/eac/commands/
+COPY go/eac/adapters/ ./go/eac/adapters/
+COPY contracts/eac-core/0.1.0/interfaces/ ./contracts/eac-core/0.1.0/interfaces/
+COPY contracts/eac-adapters/ ./contracts/eac-adapters/
 
 # Cross-compile for target architecture (fast - no QEMU needed)
 RUN --mount=type=cache,target=/go/pkg/mod \
@@ -73,6 +84,7 @@ ENV R2R_CONTAINER_ROOT=/app
 # Copy source code to /app (needed for go test in acceptance tests)
 COPY go/eac/core/ ./go/eac/core/
 COPY go/eac/commands/ ./go/eac/commands/
+COPY go/eac/adapters/ ./go/eac/adapters/
 COPY go/eac/specs/ ./go/eac/specs/
 COPY contracts/ ./contracts/
 COPY .r2r/ ./.r2r/

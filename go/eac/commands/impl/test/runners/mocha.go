@@ -103,7 +103,8 @@ func (r *MochaRunner) BuildPackagePath(testRoot, testPath string) string {
 }
 
 // Execute runs TypeScript mocha tests for a package.
-func (r *MochaRunner) Execute(pkgPath string, tests []testing.TestReference, tuiWriter io.Writer, cfg RunConfig) RunResult {
+// logWriter is provided by the orchestrator (UoW manages log files).
+func (r *MochaRunner) Execute(pkgPath string, tests []testing.TestReference, logWriter io.Writer, cfg RunConfig) RunResult {
 	start := time.Now()
 	result := RunResult{
 		PackageName:   pkgPath,
@@ -114,107 +115,81 @@ func (r *MochaRunner) Execute(pkgPath string, tests []testing.TestReference, tui
 	// We need to find the module root (parent of test directory)
 	moduleRoot := filepath.Dir(filepath.Join(cfg.WorkspaceRoot, pkgPath))
 
-	// Use pre-created OutputDir if set, otherwise create based on module path
-	var logDir string
-	if cfg.OutputDir != "" {
-		logDir = cfg.OutputDir
-	} else {
-		outputPath := cfg.ModuleOutputPath
-		if outputPath == "" {
-			outputPath = sanitizePathForLog(pkgPath)
-		}
-		// Always sanitize to handle colons in paths (Windows incompatible)
-		logDir = filepath.Join(cfg.TestRunDir, sanitizePathForLog(outputPath))
-	}
-	if err := os.MkdirAll(logDir, 0o755); err != nil {
-		fmt.Fprintf(tuiWriter, "Failed to create log directory: %v\n", err)
-		result.PackageFailed = true
-		return result
-	}
-
-	// Create log file
-	logFilePath := filepath.Join(logDir, "test.log")
-	logFile, err := os.Create(logFilePath)
-	if err != nil {
-		fmt.Fprintf(tuiWriter, "Failed to create log file: %v\n", err)
-		result.PackageFailed = true
-		return result
-	}
-	defer logFile.Close()
-	result.LogFilePath = logFilePath
-
 	// Check if package.json exists
 	packageJSON := filepath.Join(moduleRoot, "package.json")
 	if _, err := os.Stat(packageJSON); os.IsNotExist(err) {
-		fmt.Fprintf(tuiWriter, "No package.json found\n")
-		fmt.Fprintf(logFile, "No package.json found at %s\n", packageJSON)
+		fmt.Fprintf(logWriter, "No package.json found at %s\n", packageJSON)
 		result.PackageFailed = true
 		return result
 	}
 
-	// Install dependencies if node_modules doesn't exist (CI runs build and test in separate jobs)
-	nodeModules := filepath.Join(moduleRoot, "node_modules")
-	if _, err := os.Stat(nodeModules); os.IsNotExist(err) {
-		// Use npm ci if package-lock.json exists (faster, deterministic), otherwise npm install
-		packageLock := filepath.Join(moduleRoot, "package-lock.json")
-		var npmCmd string
-		if _, err := os.Stat(packageLock); err == nil {
-			npmCmd = "ci"
-		} else {
-			npmCmd = "install"
-		}
+	// Prepare isolated npm environment to avoid Windows EPERM errors
+	// and interference between parallel test runs
+	isolation := NewNpmIsolation(cfg.WorkspaceRoot)
+	env, err := isolation.PrepareIsolatedEnv(moduleRoot, cfg.ModuleMoniker)
+	if err != nil {
+		fmt.Fprintf(logWriter, "Failed to prepare isolated environment: %v\n", err)
+		result.PackageFailed = true
+		return result
+	}
 
-		fmt.Fprintf(logFile, "Installing npm dependencies (npm %s)...\n", npmCmd)
-		fmt.Fprintf(tuiWriter, "Installing dependencies...\n")
-		installName, installArgs := platform.WrapCommand("npm", npmCmd)
-		installCmd := exec.Command(installName, installArgs...)
-		installCmd.Dir = moduleRoot
-		installCmd.Env = os.Environ()
-		installOutput, installErr := installCmd.CombinedOutput()
-		fmt.Fprintf(logFile, "%s\n", installOutput)
-		if installErr != nil {
-			fmt.Fprintf(tuiWriter, "npm %s failed\n", npmCmd)
-			fmt.Fprintf(logFile, "npm %s failed: %v\n", npmCmd, installErr)
-			result.PackageFailed = true
-			return result
-		}
-		fmt.Fprintf(logFile, "Dependencies installed successfully\n\n")
+	fmt.Fprintf(logWriter, "Using isolated environment: %s\n", env.WorkDir)
+
+	// Always run npm ci (or npm install if no package-lock.json)
+	// This ensures dependencies are installed with correct platform binaries
+	packageLock := filepath.Join(moduleRoot, "package-lock.json")
+	var npmCmd string
+	if _, err := os.Stat(packageLock); err == nil {
+		npmCmd = "ci"
+	} else {
+		npmCmd = "install"
+	}
+
+	fmt.Fprintf(logWriter, "Installing npm dependencies (npm %s)...\n", npmCmd)
+	installName, installArgs := platform.WrapCommand("npm", npmCmd)
+	installCmd := exec.Command(installName, installArgs...)
+	installCmd.Dir = env.WorkDir // Run in isolated directory
+	installCmd.Env = env.Env     // Use environment with NPM_CONFIG_CACHE
+	installOutput, installErr := installCmd.CombinedOutput()
+	fmt.Fprintf(logWriter, "%s\n", installOutput)
+	if installErr != nil {
+		fmt.Fprintf(logWriter, "npm %s failed: %v\n", npmCmd, installErr)
+		result.PackageFailed = true
+		return result
 	}
 
 	// Build npm test command with JSON reporter for structured output
-	// Mocha's built-in json reporter outputs results to stdout
 	args := []string{"test", "--", "--reporter", "json"}
 
 	// Log command
-	fmt.Fprintf(logFile, "=== Testing TypeScript mocha tests ===\n")
-	fmt.Fprintf(logFile, "Module root: %s\n", moduleRoot)
-	fmt.Fprintf(logFile, "Command: npm %s\n\n", strings.Join(args, " "))
+	fmt.Fprintf(logWriter, "=== Testing TypeScript mocha tests ===\n")
+	fmt.Fprintf(logWriter, "Module root: %s (isolated: %s)\n", moduleRoot, env.WorkDir)
+	fmt.Fprintf(logWriter, "Command: npm %s\n\n", strings.Join(args, " "))
 
-	// Execute npm test
+	// Execute npm test in isolated directory
 	wrappedName, wrappedArgs := platform.WrapCommand("npm", args...)
 	cmd := exec.Command(wrappedName, wrappedArgs...)
-	cmd.Dir = moduleRoot
-	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, "R2R_TEST_LOGGING_ACTIVE=true")
+	cmd.Dir = env.WorkDir // Run in isolated directory
+	cmd.Env = append(env.Env, "R2R_TEST_LOGGING_ACTIVE=true")
 
 	// Capture stdout (JSON) and stderr separately
 	stdout, pipeErr := cmd.StdoutPipe()
 	if pipeErr != nil {
-		fmt.Fprintf(tuiWriter, "Failed to create stdout pipe: %v\n", pipeErr)
+		fmt.Fprintf(logWriter, "Failed to create stdout pipe: %v\n", pipeErr)
 		result.PackageFailed = true
 		return result
 	}
 	stderr, pipeErr := cmd.StderrPipe()
 	if pipeErr != nil {
-		fmt.Fprintf(tuiWriter, "Failed to create stderr pipe: %v\n", pipeErr)
+		fmt.Fprintf(logWriter, "Failed to create stderr pipe: %v\n", pipeErr)
 		result.PackageFailed = true
 		return result
 	}
 
 	runErr := cmd.Start()
 	if runErr != nil {
-		fmt.Fprintf(tuiWriter, "Failed to start mocha: %v\n", runErr)
-		fmt.Fprintf(logFile, "Failed to start: %v\n", runErr)
+		fmt.Fprintf(logWriter, "Failed to start mocha: %v\n", runErr)
+		fmt.Fprintf(logWriter, "Failed to start: %v\n", runErr)
 		result.PackageFailed = true
 		return result
 	}
@@ -228,16 +203,16 @@ func (r *MochaRunner) Execute(pkgPath string, tests []testing.TestReference, tui
 
 	// Write stderr to log file
 	if len(stderrOutput) > 0 {
-		fmt.Fprintf(logFile, "%s\n", stderrOutput)
+		fmt.Fprintf(logWriter, "%s\n", stderrOutput)
 	}
 
-	// Convert mocha JSON to CTRF and save
-	if len(jsonOutput) > 0 {
+	// Convert mocha JSON to CTRF and save (writes to UoW output directory)
+	if len(jsonOutput) > 0 && cfg.OutputDir != "" {
 		if ctrfReport := convertMochaJSONToCTRF(jsonOutput); ctrfReport != nil {
 			if ctrfData, err := ctrfReport.ToJSON(); err == nil {
-				jsonPath := filepath.Join(logDir, "unit.json")
+				jsonPath := filepath.Join(cfg.OutputDir, "unit.json")
 				_ = os.WriteFile(jsonPath, ctrfData, 0o644) //nolint:errcheck // best-effort artifact save
-				fmt.Fprintf(logFile, "CTRF JSON saved to unit.json (%d bytes)\n", len(ctrfData))
+				fmt.Fprintf(logWriter, "CTRF JSON saved to unit.json (%d bytes)\n", len(ctrfData))
 			}
 		}
 	}
@@ -246,10 +221,10 @@ func (r *MochaRunner) Execute(pkgPath string, tests []testing.TestReference, tui
 	if runErr != nil {
 		result.PackageFailed = true
 		result.TestsFailed = len(tests)
-		fmt.Fprintf(tuiWriter, "mocha tests failed\n")
+		fmt.Fprintf(logWriter, "mocha tests failed\n")
 	} else {
 		result.TestsPassed = len(tests)
-		fmt.Fprintf(tuiWriter, "mocha tests passed\n")
+		fmt.Fprintf(logWriter, "mocha tests passed\n")
 	}
 
 	result.TestsTotal = len(tests)

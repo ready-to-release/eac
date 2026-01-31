@@ -31,9 +31,9 @@ import (
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/dockerutil"
+	"github.com/ready-to-release/eac/go/eac/adapters/docker"
+	dockerutil "github.com/ready-to-release/eac/go/eac/adapters/docker/util"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/serve"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
@@ -188,7 +188,7 @@ func UpdatePDFScreenshots() int {
 	}
 
 	// Create Docker client
-	dockerClient, err := serve.NewDockerClient()
+	dockerClient, err := docker.NewDockerClient()
 	if err != nil {
 		log.Errorf("Error creating Docker client: %v", err)
 		return 1
@@ -397,7 +397,7 @@ func ensurePDFToolsImage(repoRoot string) error {
 }
 
 // extractPages uses pdftoppm to extract PDF pages as PNG images.
-func extractPages(client serve.DockerClient, pdfPath, outputDir string, dpi int) error {
+func extractPages(client docker.DockerClient, pdfPath, outputDir string, dpi int) error {
 	pdfDir := filepath.Dir(pdfPath)
 	pdfName := filepath.Base(pdfPath)
 
@@ -471,7 +471,7 @@ func extractPages(client serve.DockerClient, pdfPath, outputDir string, dpi int)
 }
 
 // getContainerLogs retrieves container logs for debugging.
-func getContainerLogs(ctx context.Context, client serve.DockerClient, containerID string) (string, error) {
+func getContainerLogs(ctx context.Context, client docker.DockerClient, containerID string) (string, error) {
 	logsReader, err := client.ContainerLogs(ctx, containerID, container.LogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,

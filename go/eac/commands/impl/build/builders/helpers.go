@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/bmatcuk/doublestar/v4"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/dockerutil"
+	dockerutil "github.com/ready-to-release/eac/go/eac/adapters/docker/util"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/platform"
 )

@@ -45,13 +45,6 @@ type Console interface {
 // This allows TUI implementations to be instantiated lazily with runtime config.
 type ConsoleFactory func(config Config) Console
 
-// InteractiveConsole extends Console with interactive capabilities
-// for the default TUI (subcommand selection, parameter editing).
-type InteractiveConsole interface {
-	Console
-
-	// Interactive capabilities
-	SetSubcommands(commands []SubcommandInfo)
-	GetSelectedCommand() (string, map[string]string)
-	ShowParameterEditor(params []ParameterInfo)
-}
+// Note: InteractiveConsole interface has been removed.
+// For subcommand selection, use the selector package directly:
+//   selector.RunSelector(ctx, tui.SubcommandsToOptions(subcommands))

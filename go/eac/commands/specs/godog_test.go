@@ -18,6 +18,7 @@ func TestEacCommandsFeatures(t *testing.T) {
 	cfg := eacgodog.RunnerConfig{
 		SpecsPath:         "../../../../specs/eac-commands",
 		DefaultReportName: "cucumber-eac-commands",
+		AssetsPath:        "go/eac/commands/specs/assets",
 		RegisterSteps:     registerAllSteps,
 	}
 

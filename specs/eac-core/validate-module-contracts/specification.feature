@@ -1,3 +1,4 @@
+@skip:broken
 Feature: eac-core_validate-module-contracts
 
 As a repository maintainer

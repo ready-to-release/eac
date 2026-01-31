@@ -582,7 +582,7 @@ caches:
 
   npm:
     path: ".cache/npm"
-    description: "NPM cache"
+    description: "NPM download cache and isolated work directories (work/{moniker})"
 
   lint:
     path: ".cache/lint"

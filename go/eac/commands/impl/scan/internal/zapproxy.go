@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/docker/docker/api/types/container"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/dockerutil"
+	dockerutil "github.com/ready-to-release/eac/go/eac/adapters/docker/util"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 )
 

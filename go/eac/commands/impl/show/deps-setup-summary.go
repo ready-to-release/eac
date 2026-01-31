@@ -111,7 +111,7 @@ func generateDepsSetupSummary(module, deps string, goAvailable, nodeAvailable, b
 		} else {
 			tb.AddRow("Node.js", "Installed")
 		}
-		tb.AddRow("npm packages", "Installed")
+		tb.AddRow("npm dependencies", "Installed")
 	}
 
 	if strings.Contains(deps, "buildx") {

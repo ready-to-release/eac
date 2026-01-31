@@ -31,8 +31,8 @@ import (
 
 	design "github.com/ready-to-release/eac/go/eac/commands/impl/design"
 	designInternal "github.com/ready-to-release/eac/go/eac/commands/impl/design/helper"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
+	"github.com/ready-to-release/eac/go/eac/adapters/ai"
+	"github.com/ready-to-release/eac/go/eac/adapters/ai/providers"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	coreai "github.com/ready-to-release/eac/go/eac/core/ai"

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/domain"
 )
 
@@ -457,24 +458,24 @@ func Test_normalizePathSeparators(t *testing.T) {
 
 func TestModuleContract_GetTestImplementationPath(t *testing.T) {
 	tests := []struct {
-		name     string
-		testImpl string
-		expected string
+		name           string
+		gherkinSteps   string
+		expected       string
 	}{
 		{
-			name:     "explicit test_impl path",
-			testImpl: "go/eac/specs/impl/repository",
-			expected: "go/eac/specs/impl/repository",
+			name:         "gherkin-steps component defined",
+			gherkinSteps: "go/eac/specs/repository",
+			expected:     "go/eac/specs/repository",
 		},
 		{
-			name:     "empty test_impl returns empty",
-			testImpl: "",
-			expected: "",
+			name:         "no gherkin-steps returns empty",
+			gherkinSteps: "",
+			expected:     "",
 		},
 		{
-			name:     "nested path",
-			testImpl: "go/eac/commands/tests",
-			expected: "go/eac/commands/tests",
+			name:         "nested path",
+			gherkinSteps: "go/eac/commands/specs",
+			expected:     "go/eac/commands/specs",
 		},
 	}
 
@@ -482,14 +483,11 @@ func TestModuleContract_GetTestImplementationPath(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			base := domain.BaseContract{
 				Moniker: "test-module",
-				Files: domain.Files{
-					Root: "src/test",
-					Repo: domain.RepoPatterns{
-						TestImpl: tt.testImpl,
-					},
-				},
 			}
 			module := NewModuleContract(base, "/workspace")
+			if tt.gherkinSteps != "" {
+				module.Components["gherkin-steps"] = &config.ComponentEntry{Root: tt.gherkinSteps}
+			}
 
 			got := module.GetTestImplementationPath()
 			if got != tt.expected {

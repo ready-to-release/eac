@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ready-to-release/eac/go/eac/commands/internal/serve"
+	"github.com/ready-to-release/eac/go/eac/adapters/docker"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -39,7 +39,7 @@ func StartStructurizrLite(moduleName string, autoStop bool) error {
 	containerName := fmt.Sprintf("%s-%s", containerNamePrefix, moduleName)
 
 	// Build configuration for the serve helper
-	config := &serve.ServeConfig{
+	config := &docker.ServeConfig{
 		Name:          containerName,
 		Image:         GetStructurizrLiteImage(),
 		BuildInfo:     nil, // Use official image from registry
@@ -55,7 +55,7 @@ func StartStructurizrLite(moduleName string, autoStop bool) error {
 	log.Info("Starting Structurizr Lite Docker container...")
 
 	ctx := context.Background()
-	result, err := serve.StartServe(ctx, config)
+	result, err := docker.StartServe(ctx, config)
 	if err != nil {
 		return fmt.Errorf("failed to start Docker container: %w", err)
 	}
@@ -69,7 +69,7 @@ func StartStructurizrLite(moduleName string, autoStop bool) error {
 	log.Info("")
 
 	// Open browser (skipped in DinD mode)
-	opened, err := serve.OpenBrowserWithFallback(result.URL)
+	opened, err := docker.OpenBrowserWithFallback(result.URL)
 	if err != nil {
 		log.Infof("Could not open browser automatically: %v", err)
 		log.Infof("   Please open manually: %s", result.URL)
@@ -85,12 +85,12 @@ func StartStructurizrLite(moduleName string, autoStop bool) error {
 func StopStructurizrLite(moduleName string) error {
 	containerName := fmt.Sprintf("%s-%s", containerNamePrefix, moduleName)
 	ctx := context.Background()
-	return serve.StopServe(ctx, containerName)
+	return docker.StopServe(ctx, containerName)
 }
 
 // IsStructurizrLiteRunning checks if Structurizr Lite is running for a module.
-func IsStructurizrLiteRunning(moduleName string) (*serve.ServeResult, bool, error) {
+func IsStructurizrLiteRunning(moduleName string) (*docker.ServeResult, bool, error) {
 	containerName := fmt.Sprintf("%s-%s", containerNamePrefix, moduleName)
 	ctx := context.Background()
-	return serve.IsServing(ctx, containerName)
+	return docker.IsServing(ctx, containerName)
 }

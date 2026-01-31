@@ -269,23 +269,27 @@ func TestConventionDiscovery_StructurizrFound(t *testing.T) {
 	assert.Equal(t, "specs/my-module/.design", mod.Components["structurizr"].Root)
 }
 
-func TestConventionDiscovery_TestImplFound(t *testing.T) {
+func TestConventionDiscovery_GherkinStepsFound(t *testing.T) {
 	repoRoot := t.TempDir()
-	implDir := filepath.Join(repoRoot, "go", "eac", "specs", "impl", "my-module")
-	require.NoError(t, os.MkdirAll(implDir, 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(implDir, "godog_test.go"), []byte("package test"), 0644))
+	// gherkin-steps are discovered based on go component location + /specs subdirectory
+	goDir := filepath.Join(repoRoot, "go", "my-module")
+	specsDir := filepath.Join(goDir, "specs")
+	require.NoError(t, os.MkdirAll(specsDir, 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(specsDir, "godog_test.go"), []byte("package test"), 0644))
 
 	conv := DefaultDiscoveryConventions()
 	mod := &Module{
 		Moniker:      "my-module",
 		AutoDiscover: true,
-		Components:   make(ModuleComponents),
+		Components: ModuleComponents{
+			"go": &ComponentEntry{Root: "go/my-module"},
+		},
 	}
 
 	discoverComponents(mod, conv, repoRoot)
 
-	assert.Contains(t, mod.Components, "test-impl")
-	assert.Equal(t, "go/eac/specs/impl/my-module", mod.Components["test-impl"].Root)
+	assert.Contains(t, mod.Components, "gherkin-steps")
+	assert.Equal(t, "go/my-module/specs", mod.Components["gherkin-steps"].Root)
 }
 
 func TestConventionDiscovery_MarkdownDerived(t *testing.T) {
@@ -441,9 +445,9 @@ func TestDefaultDiscoveryConventions(t *testing.T) {
 	assert.Equal(t, "specs/{moniker}/.design", conv.Structurizr.PathPattern)
 	assert.Equal(t, "workspace.dsl", conv.Structurizr.RequiredFile)
 
-	require.NotNil(t, conv.TestImpl)
-	assert.Equal(t, "go/eac/specs/impl/{moniker}", conv.TestImpl.PathPattern)
-	assert.Equal(t, "godog_test.go", conv.TestImpl.RequiredFile)
+	require.NotNil(t, conv.GherkinSteps)
+	assert.Equal(t, "go/eac/specs/{moniker}", conv.GherkinSteps.FallbackPattern)
+	assert.Equal(t, "godog_test.go", conv.GherkinSteps.RequiredFile)
 
 	require.NotNil(t, conv.Markdown)
 	assert.Contains(t, conv.Markdown.DeriveFrom, "go")

@@ -7,14 +7,10 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
 )
-
-// ansiEscapeRegex matches all ANSI escape sequences for stripping from log files.
-var ansiEscapeRegex = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
 
 // TestEvent represents a single event from `go test -json` output.
 type TestEvent struct {
@@ -135,6 +131,7 @@ func (r *StreamingRunner) Run(cmd *exec.Cmd) (TestResult, error) {
 }
 
 // processJSONOutput parses JSON lines from go test and streams human-readable output.
+// ANSI stripping is handled at the orchestrator level via StrippingWriter.
 func (r *StreamingRunner) processJSONOutput(reader io.Reader) {
 	scanner := bufio.NewScanner(reader)
 	// Increase buffer size for long lines
@@ -147,17 +144,11 @@ func (r *StreamingRunner) processJSONOutput(reader io.Reader) {
 		// Parse JSON event
 		var event TestEvent
 		if err := json.Unmarshal(line, &event); err != nil {
-			// Not valid JSON, write raw line to both outputs
+			// Not valid JSON, write raw line
 			// Write errors are intentionally ignored - streaming is best-effort
 			if r.tuiWriter != nil {
 				_, _ = r.tuiWriter.Write(line)         //nolint:errcheck // best-effort streaming
 				_, _ = r.tuiWriter.Write([]byte("\n")) //nolint:errcheck // best-effort streaming
-			}
-			if r.logWriter != nil {
-				// Strip ANSI codes for log file readability
-				stripped := ansiEscapeRegex.ReplaceAll(line, []byte{})
-				_, _ = r.logWriter.Write(stripped)     //nolint:errcheck // best-effort streaming
-				_, _ = r.logWriter.Write([]byte("\n")) //nolint:errcheck // best-effort streaming
 			}
 			continue
 		}
@@ -167,7 +158,7 @@ func (r *StreamingRunner) processJSONOutput(reader io.Reader) {
 		r.events = append(r.events, event)
 		r.mu.Unlock()
 
-		// Write human-readable output to both TUI and log file
+		// Write human-readable output
 		if event.Action == "output" && event.Output != "" {
 			output := event.Output
 			trimmed := strings.TrimSpace(output)
@@ -177,39 +168,25 @@ func (r *StreamingRunner) processJSONOutput(reader io.Reader) {
 				continue
 			}
 
-			// Write to TUI (with ANSI codes for color)
 			// Write errors are intentionally ignored - streaming is best-effort
 			if r.tuiWriter != nil {
 				_, _ = r.tuiWriter.Write([]byte(output)) //nolint:errcheck // best-effort streaming
-			}
-
-			// Write to log file (strip ANSI codes for readability)
-			if r.logWriter != nil {
-				stripped := ansiEscapeRegex.ReplaceAllString(output, "")
-				_, _ = r.logWriter.Write([]byte(stripped)) //nolint:errcheck // best-effort streaming
 			}
 		}
 	}
 }
 
 // processStderr handles stderr output (usually build errors).
+// ANSI stripping is handled at the orchestrator level via StrippingWriter.
 func (r *StreamingRunner) processStderr(reader io.Reader) {
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
 		line := scanner.Bytes()
 
 		// Write errors are intentionally ignored - streaming is best-effort
-		// Write to TUI (with ANSI codes)
 		if r.tuiWriter != nil {
 			_, _ = r.tuiWriter.Write(line)         //nolint:errcheck // best-effort streaming
 			_, _ = r.tuiWriter.Write([]byte("\n")) //nolint:errcheck // best-effort streaming
-		}
-
-		// Write to log (strip ANSI codes for readability)
-		if r.logWriter != nil {
-			stripped := ansiEscapeRegex.ReplaceAll(line, []byte{})
-			_, _ = r.logWriter.Write(stripped)     //nolint:errcheck // best-effort streaming
-			_, _ = r.logWriter.Write([]byte("\n")) //nolint:errcheck // best-effort streaming
 		}
 	}
 }

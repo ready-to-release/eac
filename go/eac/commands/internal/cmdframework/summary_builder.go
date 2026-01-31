@@ -10,7 +10,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/output"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
+	"github.com/ready-to-release/eac/go/eac/adapters/tui"
 )
 
 // SummaryBuilder incrementally builds summary data as components complete.
@@ -184,9 +184,11 @@ func (sb *SummaryBuilder) AddResult(result orchestrator.UnitResult) {
 	// Release lock before calling callback to avoid deadlock
 	sb.mu.Unlock()
 
-	// Call completion callback outside lock - this sends summary immediately
+	// Call completion callback outside lock in a separate goroutine.
+	// This decouples worker completion from summary sending - workers can
+	// return immediately without blocking on TUI updates.
 	if shouldCallCallback && callback != nil {
-		callback(sb)
+		go callback(sb)
 	}
 }
 
@@ -393,10 +395,11 @@ func (sb *SummaryBuilder) extractUniqueTestTypes(components []orchestrator.UnitR
 		// Use Handler field which contains the test type
 		testType := comp.Handler
 		if testType == "" {
-			// Fallback: try to extract from component name
+			// Fallback: extract test type from component name
+			// Component format: "name/testType" (e.g., "config/gotest", "docs-drawio-cache/godog")
 			testType = comp.Component
-			if colonIdx := strings.LastIndex(comp.Component, ":"); colonIdx >= 0 {
-				testType = comp.Component[colonIdx+1:]
+			if slashIdx := strings.LastIndex(comp.Component, "/"); slashIdx >= 0 {
+				testType = comp.Component[slashIdx+1:]
 			}
 		}
 

@@ -44,8 +44,8 @@ func registerTestResultsSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestConte
 			assetName = "eac-commands-with-godog.manifest.json"
 		}
 
-		// Read asset file from specs/impl/eac-commands/assets
-		assetPath := filepath.Join(ctx.OriginalRepoRoot, "go", "eac", "specs", "impl", "eac-commands", "assets", "test-results", assetName)
+		// Read asset file from configured assets directory
+		assetPath := filepath.Join(ctx.OriginalRepoRoot, ctx.AssetsPath, "test-results", assetName)
 		content, err := os.ReadFile(assetPath)
 		if err != nil {
 			return fmt.Errorf("failed to read test asset %s: %w", assetName, err)
@@ -58,7 +58,7 @@ func registerTestResultsSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestConte
 
 	sc.Step(`^module "([^"]*)" has godog test for feature "([^"]*)"$`, func(module, feature string) error {
 		// Use the godog manifest asset
-		assetPath := filepath.Join(ctx.OriginalRepoRoot, "go", "eac", "specs", "impl", "eac-commands", "assets", "test-results", "eac-commands-with-godog.manifest.json")
+		assetPath := filepath.Join(ctx.OriginalRepoRoot, ctx.AssetsPath, "test-results", "eac-commands-with-godog.manifest.json")
 		content, err := os.ReadFile(assetPath)
 		if err != nil {
 			return fmt.Errorf("failed to read godog test asset: %w", err)
@@ -183,7 +183,7 @@ func registerTestResultsSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestConte
 
 	sc.Step(`^test has tags \["([^"]*)", "([^"]*)", "([^"]*)"\]$`, func(tag1, tag2, tag3 string) error {
 		// Use a manifest with tests that have these tags
-		assetPath := filepath.Join(ctx.OriginalRepoRoot, "go", "eac", "specs", "impl", "eac-commands", "assets", "test-results", "eac-commands-with-godog.manifest.json")
+		assetPath := filepath.Join(ctx.OriginalRepoRoot, ctx.AssetsPath, "test-results", "eac-commands-with-godog.manifest.json")
 		content, err := os.ReadFile(assetPath)
 		if err != nil {
 			return fmt.Errorf("failed to read godog test asset: %w", err)
@@ -210,7 +210,7 @@ func registerTestResultsSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestConte
 
 		// Also create a valid manifest for another module so there's something to process
 		// This verifies the command can skip corrupted manifests and continue
-		assetPath := filepath.Join(ctx.OriginalRepoRoot, "go", "eac", "specs", "impl", "eac-commands", "assets", "test-results", "eac-core-5-passed.manifest.json")
+		assetPath := filepath.Join(ctx.OriginalRepoRoot, ctx.AssetsPath, "test-results", "eac-core-5-passed.manifest.json")
 		content, err := os.ReadFile(assetPath)
 		if err != nil {
 			return fmt.Errorf("failed to read test asset: %w", err)
@@ -221,7 +221,7 @@ func registerTestResultsSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestConte
 
 	sc.Step(`^test manifests exist$`, func() error {
 		// Create a minimal test manifest for scenarios that just need "any" manifest
-		assetPath := filepath.Join(ctx.OriginalRepoRoot, "go", "eac", "specs", "impl", "eac-commands", "assets", "test-results", "eac-core-5-passed.manifest.json")
+		assetPath := filepath.Join(ctx.OriginalRepoRoot, ctx.AssetsPath, "test-results", "eac-core-5-passed.manifest.json")
 		content, err := os.ReadFile(assetPath)
 		if err != nil {
 			return fmt.Errorf("failed to read test asset: %w", err)
@@ -233,7 +233,7 @@ func registerTestResultsSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestConte
 
 	sc.Step(`^test "([^"]*)" in manifest has:$`, func(testName string, table *godog.Table) error {
 		// Use the godog manifest which has a test named "Generate message from commits"
-		assetPath := filepath.Join(ctx.OriginalRepoRoot, "go", "eac", "specs", "impl", "eac-commands", "assets", "test-results", "eac-commands-with-godog.manifest.json")
+		assetPath := filepath.Join(ctx.OriginalRepoRoot, ctx.AssetsPath, "test-results", "eac-commands-with-godog.manifest.json")
 		content, err := os.ReadFile(assetPath)
 		if err != nil {
 			return fmt.Errorf("failed to read godog test asset: %w", err)
@@ -371,7 +371,7 @@ func registerTestResultsSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestConte
 	// Then steps - output verification for show test-results
 	sc.Step(`^test execution data is available$`, func() error {
 		// Create a test manifest with godog tests so show test-results has spec_coverage data
-		assetPath := filepath.Join(ctx.OriginalRepoRoot, "go", "eac", "specs", "impl", "eac-commands", "assets", "test-results", "eac-commands-with-godog.manifest.json")
+		assetPath := filepath.Join(ctx.OriginalRepoRoot, ctx.AssetsPath, "test-results", "eac-commands-with-godog.manifest.json")
 		content, err := os.ReadFile(assetPath)
 		if err != nil {
 			return fmt.Errorf("failed to read test asset: %w", err)
@@ -390,7 +390,7 @@ func registerTestResultsSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestConte
 		}
 
 		for module, assetName := range manifests {
-			assetPath := filepath.Join(ctx.OriginalRepoRoot, "go", "eac", "specs", "impl", "eac-commands", "assets", "test-results", assetName)
+			assetPath := filepath.Join(ctx.OriginalRepoRoot, ctx.AssetsPath, "test-results", assetName)
 			content, err := os.ReadFile(assetPath)
 			if err != nil {
 				return fmt.Errorf("failed to read test asset %s: %w", assetName, err)
@@ -624,7 +624,7 @@ paths:
 
 	sc.Step(`^module "([^"]*)" has (\d+) tests: (\d+) passed, (\d+) failed$`, func(module string, total, passed, failed int) error {
 		// Create a manifest for this module with the specified test counts
-		assetPath := filepath.Join(ctx.OriginalRepoRoot, "go", "eac", "specs", "impl", "eac-commands", "assets", "test-results", "eac-commands-with-godog.manifest.json")
+		assetPath := filepath.Join(ctx.OriginalRepoRoot, ctx.AssetsPath, "test-results", "eac-commands-with-godog.manifest.json")
 		content, err := os.ReadFile(assetPath)
 		if err != nil {
 			return fmt.Errorf("failed to read test asset: %w", err)
@@ -651,7 +651,7 @@ paths:
 
 	sc.Step(`^feature "([^"]*)" has (\d+) scenarios: (\d+) passed, (\d+) failed$`, func(feature string, total, passed, failed int) error {
 		// Create a manifest with godog test data
-		assetPath := filepath.Join(ctx.OriginalRepoRoot, "go", "eac", "specs", "impl", "eac-commands", "assets", "test-results", "eac-commands-with-godog.manifest.json")
+		assetPath := filepath.Join(ctx.OriginalRepoRoot, ctx.AssetsPath, "test-results", "eac-commands-with-godog.manifest.json")
 		content, err := os.ReadFile(assetPath)
 		if err != nil {
 			return fmt.Errorf("failed to read test asset: %w", err)
@@ -677,7 +677,7 @@ paths:
 
 	sc.Step(`^(\d+) features with scenarios$`, func(count int) error {
 		// Create a manifest with godog test data
-		assetPath := filepath.Join(ctx.OriginalRepoRoot, "go", "eac", "specs", "impl", "eac-commands", "assets", "test-results", "eac-commands-with-godog.manifest.json")
+		assetPath := filepath.Join(ctx.OriginalRepoRoot, ctx.AssetsPath, "test-results", "eac-commands-with-godog.manifest.json")
 		content, err := os.ReadFile(assetPath)
 		if err != nil {
 			return fmt.Errorf("failed to read test asset: %w", err)
@@ -699,7 +699,7 @@ paths:
 
 	sc.Step(`^control "([^"]*)" has (\d+) tests across (\d+) modules$`, func(control string, tests, modules int) error {
 		// Create a manifest with control tags
-		assetPath := filepath.Join(ctx.OriginalRepoRoot, "go", "eac", "specs", "impl", "eac-commands", "assets", "test-results", "eac-commands-with-godog.manifest.json")
+		assetPath := filepath.Join(ctx.OriginalRepoRoot, ctx.AssetsPath, "test-results", "eac-commands-with-godog.manifest.json")
 		content, err := os.ReadFile(assetPath)
 		if err != nil {
 			return fmt.Errorf("failed to read test asset: %w", err)
@@ -814,7 +814,7 @@ paths:
 	sc.Step(`^module "([^"]*)" has duration (\d+)\.(\d+) seconds$`, func(module string, whole, decimal int) error {
 		// Create a manifest with specified duration
 		duration := float64(whole) + float64(decimal)/10.0
-		assetPath := filepath.Join(ctx.OriginalRepoRoot, "go", "eac", "specs", "impl", "eac-commands", "assets", "test-results", "eac-commands-with-godog.manifest.json")
+		assetPath := filepath.Join(ctx.OriginalRepoRoot, ctx.AssetsPath, "test-results", "eac-commands-with-godog.manifest.json")
 		content, err := os.ReadFile(assetPath)
 		if err != nil {
 			return fmt.Errorf("failed to read test asset: %w", err)
@@ -827,7 +827,7 @@ paths:
 
 	sc.Step(`^module "([^"]*)" has (\d+) tests$`, func(module string, count int) error {
 		// For large test counts, just use the godog manifest (it will show the breakdown sections)
-		assetPath := filepath.Join(ctx.OriginalRepoRoot, "go", "eac", "specs", "impl", "eac-commands", "assets", "test-results", "eac-commands-with-godog.manifest.json")
+		assetPath := filepath.Join(ctx.OriginalRepoRoot, ctx.AssetsPath, "test-results", "eac-commands-with-godog.manifest.json")
 		content, err := os.ReadFile(assetPath)
 		if err != nil {
 			return fmt.Errorf("failed to read test asset: %w", err)
@@ -838,7 +838,7 @@ paths:
 
 	sc.Step(`^module "([^"]*)" has tests with various statuses$`, func(module string) error {
 		// Use the godog manifest which has tests
-		assetPath := filepath.Join(ctx.OriginalRepoRoot, "go", "eac", "specs", "impl", "eac-commands", "assets", "test-results", "eac-commands-with-godog.manifest.json")
+		assetPath := filepath.Join(ctx.OriginalRepoRoot, ctx.AssetsPath, "test-results", "eac-commands-with-godog.manifest.json")
 		content, err := os.ReadFile(assetPath)
 		if err != nil {
 			return fmt.Errorf("failed to read test asset: %w", err)

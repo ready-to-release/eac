@@ -31,9 +31,9 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/dockerutil"
+	"github.com/ready-to-release/eac/go/eac/adapters/docker"
+	dockerutil "github.com/ready-to-release/eac/go/eac/adapters/docker/util"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/serve"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/environments"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
@@ -202,7 +202,7 @@ func ServeGource() int {
 	ctx := context.Background()
 
 	// Check if already running
-	result, running, err := serve.IsServing(ctx, containerName)
+	result, running, err := docker.IsServing(ctx, containerName)
 	if err != nil {
 		log.Errorf("Failed to check container status: %v", err)
 		return 1
@@ -212,7 +212,7 @@ func ServeGource() int {
 		log.Info("Gource visualization is already running")
 		log.Infof("URL: %s", result.URL)
 		if !noBrowser {
-			_, _ = serve.OpenBrowserWithFallback(result.URL)
+			_, _ = docker.OpenBrowserWithFallback(result.URL)
 		}
 		return 0
 	}
@@ -228,10 +228,10 @@ func ServeGource() int {
 	}
 
 	// Build serve config
-	serveConfig := &serve.ServeConfig{
+	serveConfig := &docker.ServeConfig{
 		Name:  containerName,
 		Image: "cli-gource:latest",
-		BuildInfo: &serve.BuildInfo{
+		BuildInfo: &docker.BuildInfo{
 			Dockerfile:  filepath.Join(workspaceRoot, "containers/gource/Dockerfile"),
 			ContextPath: filepath.Join(workspaceRoot, "containers/gource"),
 		},
@@ -256,7 +256,7 @@ func ServeGource() int {
 	log.Infof("Repository: %s", workspaceRoot)
 	log.Infof("Resolution: %s", resolution)
 
-	result, err = serve.StartServe(ctx, serveConfig)
+	result, err = docker.StartServe(ctx, serveConfig)
 	if err != nil {
 		log.Errorf("Failed to start container: %v", err)
 		return 1
@@ -267,7 +267,7 @@ func ServeGource() int {
 	log.Infof("URL: %s", result.URL)
 
 	if !noBrowser {
-		_, _ = serve.OpenBrowserWithFallback(result.URL)
+		_, _ = docker.OpenBrowserWithFallback(result.URL)
 	}
 
 	if !debug {
@@ -283,7 +283,7 @@ func ServeGource() int {
 func handleStop(containerName string) int {
 	ctx := context.Background()
 
-	if err := serve.StopServe(ctx, containerName); err != nil {
+	if err := docker.StopServe(ctx, containerName); err != nil {
 		if strings.Contains(err.Error(), "no container found") {
 			log.Info("Gource visualization stopped")
 			return 0
@@ -337,15 +337,15 @@ func handleFileOutput(ctx context.Context, workspaceRoot, title, resolution stri
 	defer cli.Close()
 
 	// Ensure image exists using serve package
-	serveConfig := &serve.ServeConfig{
+	serveConfig := &docker.ServeConfig{
 		Image: "cli-gource:latest",
-		BuildInfo: &serve.BuildInfo{
+		BuildInfo: &docker.BuildInfo{
 			Dockerfile:  filepath.Join(workspaceRoot, "containers/gource/Dockerfile"),
 			ContextPath: filepath.Join(workspaceRoot, "containers/gource"),
 		},
 	}
 
-	stale, reason, err := serve.CheckImageStale(ctx, serveConfig)
+	stale, reason, err := docker.CheckImageStale(ctx, serveConfig)
 	if err != nil {
 		log.Warnf("Could not check image staleness: %v", err)
 	}

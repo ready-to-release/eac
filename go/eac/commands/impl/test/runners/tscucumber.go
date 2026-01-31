@@ -126,7 +126,8 @@ func extractTsFeatureFolderName(featurePath string) string {
 }
 
 // Execute runs TypeScript cucumber-js tests for a package.
-func (r *TsCucumberRunner) Execute(pkgPath string, tests []testing.TestReference, tuiWriter io.Writer, cfg RunConfig) RunResult {
+// logWriter is provided by the orchestrator (UoW manages log files).
+func (r *TsCucumberRunner) Execute(pkgPath string, tests []testing.TestReference, logWriter io.Writer, cfg RunConfig) RunResult {
 	start := time.Now()
 
 	// Parse package path - new format: "featureName:moduleRoot:featurePath" or "moduleRoot"
@@ -156,35 +157,44 @@ func (r *TsCucumberRunner) Execute(pkgPath string, tests []testing.TestReference
 	// moduleRoot is the TypeScript module directory
 	moduleRoot := filepath.Join(cfg.WorkspaceRoot, relPkgPath)
 
-	// Create log directory using module-based output path if available
-	outputPath := cfg.ModuleOutputPath
-	if outputPath == "" {
-		outputPath = sanitizePathForLog(pkgPath)
-	}
-	// Always sanitize to handle colons in paths (Windows incompatible)
-	logDir := filepath.Join(cfg.TestRunDir, sanitizePathForLog(outputPath))
-	if err := os.MkdirAll(logDir, 0o755); err != nil {
-		fmt.Fprintf(tuiWriter, "Failed to create log directory: %v\n", err)
-		result.PackageFailed = true
-		return result
-	}
-
-	// Create log file
-	logFilePath := filepath.Join(logDir, "test.log")
-	logFile, err := os.Create(logFilePath)
-	if err != nil {
-		fmt.Fprintf(tuiWriter, "Failed to create log file: %v\n", err)
-		result.PackageFailed = true
-		return result
-	}
-	defer logFile.Close()
-	result.LogFilePath = logFilePath
-
 	// Check if package.json exists
 	packageJSON := filepath.Join(moduleRoot, "package.json")
 	if _, err := os.Stat(packageJSON); os.IsNotExist(err) {
-		fmt.Fprintf(tuiWriter, "No package.json found\n")
-		fmt.Fprintf(logFile, "No package.json found at %s\n", packageJSON)
+		fmt.Fprintf(logWriter, "No package.json found at %s\n", packageJSON)
+		result.PackageFailed = true
+		return result
+	}
+
+	// Prepare isolated npm environment to avoid Windows EPERM errors
+	// and interference between parallel test runs
+	isolation := NewNpmIsolation(cfg.WorkspaceRoot)
+	env, err := isolation.PrepareIsolatedEnv(moduleRoot, cfg.ModuleMoniker)
+	if err != nil {
+		fmt.Fprintf(logWriter, "Failed to prepare isolated environment: %v\n", err)
+		result.PackageFailed = true
+		return result
+	}
+
+	fmt.Fprintf(logWriter, "Using isolated environment: %s\n", env.WorkDir)
+
+	// Run npm ci (or npm install if no package-lock.json) to ensure dependencies are installed
+	packageLock := filepath.Join(moduleRoot, "package-lock.json")
+	var npmCmd string
+	if _, err := os.Stat(packageLock); err == nil {
+		npmCmd = "ci"
+	} else {
+		npmCmd = "install"
+	}
+
+	fmt.Fprintf(logWriter, "Installing npm dependencies (npm %s)...\n", npmCmd)
+	installName, installArgs := platform.WrapCommand("npm", npmCmd)
+	installCmd := exec.Command(installName, installArgs...)
+	installCmd.Dir = env.WorkDir // Run in isolated directory
+	installCmd.Env = env.Env     // Use environment with NPM_CONFIG_CACHE
+	installOutput, installErr := installCmd.CombinedOutput()
+	fmt.Fprintf(logWriter, "%s\n", installOutput)
+	if installErr != nil {
+		fmt.Fprintf(logWriter, "npm %s failed: %v\n", npmCmd, installErr)
 		result.PackageFailed = true
 		return result
 	}
@@ -192,9 +202,11 @@ func (r *TsCucumberRunner) Execute(pkgPath string, tests []testing.TestReference
 	// Build cucumber-js command
 	args := []string{"cucumber-js"}
 
-	// Add cucumber.json output format
-	cucumberJSONPath := filepath.Join(logDir, "cucumber.json")
-	args = append(args, "--format", fmt.Sprintf("json:%s", cucumberJSONPath))
+	// Add cucumber.json output format (writes to UoW output directory)
+	if cfg.OutputDir != "" {
+		cucumberJSONPath := filepath.Join(cfg.OutputDir, "cucumber.json")
+		args = append(args, "--format", fmt.Sprintf("json:%s", cucumberJSONPath))
+	}
 
 	// Add tag filter if provided
 	if cfg.SuiteTagFilter != "" {
@@ -207,36 +219,35 @@ func (r *TsCucumberRunner) Execute(pkgPath string, tests []testing.TestReference
 	// Add the specific feature file if provided
 	if relFeatureFile != "" {
 		featurePath := filepath.Join(cfg.WorkspaceRoot, relFeatureFile)
-		relPath, err := filepath.Rel(moduleRoot, featurePath)
+		relPath, err := filepath.Rel(env.WorkDir, featurePath)
 		if err == nil {
 			args = append(args, relPath)
 		}
 	}
 
 	// Log command
-	fmt.Fprintf(logFile, "=== Testing TypeScript cucumber specs ===\n")
-	fmt.Fprintf(logFile, "Module root: %s\n", moduleRoot)
-	fmt.Fprintf(logFile, "Command: npx %s\n\n", strings.Join(args, " "))
+	fmt.Fprintf(logWriter, "=== Testing TypeScript cucumber specs ===\n")
+	fmt.Fprintf(logWriter, "Module root: %s (isolated: %s)\n", moduleRoot, env.WorkDir)
+	fmt.Fprintf(logWriter, "Command: npx %s\n\n", strings.Join(args, " "))
 
-	// Execute npx cucumber-js
+	// Execute npx cucumber-js in isolated directory
 	wrappedName, wrappedArgs := platform.WrapCommand("npx", args...)
 	cmd := exec.Command(wrappedName, wrappedArgs...)
-	cmd.Dir = moduleRoot
-	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, "R2R_TEST_LOGGING_ACTIVE=true")
+	cmd.Dir = env.WorkDir // Run in isolated directory
+	cmd.Env = append(env.Env, "R2R_TEST_LOGGING_ACTIVE=true")
 
 	// Capture output
 	output, runErr := cmd.CombinedOutput()
-	fmt.Fprintf(logFile, "%s\n", output)
+	fmt.Fprintf(logWriter, "%s\n", output)
 
 	// Parse results
 	if runErr != nil {
 		result.PackageFailed = true
 		result.TestsFailed = len(tests)
-		fmt.Fprintf(tuiWriter, "cucumber-js failed\n")
+		fmt.Fprintf(logWriter, "cucumber-js failed\n")
 	} else {
 		result.TestsPassed = len(tests)
-		fmt.Fprintf(tuiWriter, "cucumber-js passed\n")
+		fmt.Fprintf(logWriter, "cucumber-js passed\n")
 	}
 
 	result.TestsTotal = len(tests)

@@ -10,10 +10,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ready-to-release/eac/go/eac/adapters/tui"
+	"github.com/ready-to-release/eac/go/eac/commands/internal/ansi"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/capacity"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/locktracker"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/output"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/workunit"
 	"github.com/shirou/gopsutil/v3/mem"
@@ -64,7 +65,7 @@ type UnitScheduler struct {
 	unitExtras   map[string]map[string]UnitExtras // module -> component -> extras
 
 	// TUI console for real-time output display
-	tuiConsole *tui.Console
+	tuiConsole tui.Console
 	tuiCtx     interface{} // context.Context but we avoid import cycle
 
 	// TUI status tracking (protected by tuiMu)
@@ -116,7 +117,7 @@ type EarlyCacheInfo struct {
 // If registry is non-nil, the semaphore will be tracked for lock visualization.
 // Starts a dynamic capacity ticker that adjusts capacity based on available system resources.
 // Uses a GLOBAL semaphore shared across all processes (build, test, lint, scan).
-func NewUnitScheduler(config *Config, tuiConsole *tui.Console, registry *locktracker.Registry) *UnitScheduler {
+func NewUnitScheduler(config *Config, tuiConsole tui.Console, registry *locktracker.Registry) *UnitScheduler {
 	// Calculate initial capacity based on available resources
 	// Turbo multiplies the pressure roof: 1.0=normal, 1.25=+25%, 2.0=2x
 	// If turbo flag is set without a value, default to 1.25x
@@ -878,12 +879,15 @@ func (us *UnitScheduler) executeWorker(spec workunit.UnitSpec, worker UnitWorker
 		return result
 	}
 
+	// Wrap log file with ANSI stripping to keep logs clean
+	strippedLogFile := ansi.NewStrippingWriter(logFile, displayName)
+
 	// Create writer for worker
 	var workerWriter io.Writer
 	if us.tuiConsole != nil {
-		workerWriter = us.tuiConsole.NewWriter(displayName, logFile)
+		workerWriter = us.tuiConsole.NewWriter(displayName, strippedLogFile)
 	} else {
-		workerWriter = logFile
+		workerWriter = strippedLogFile
 	}
 
 	// Execute work with memory instrumentation
@@ -892,7 +896,28 @@ func (us *UnitScheduler) executeWorker(spec workunit.UnitSpec, worker UnitWorker
 		FormatBytes(memBefore.UsedBytes), FormatBytes(memBefore.AvailableBytes),
 		FormatBytes(memBefore.TotalBytes), memBefore.UsedPercent)
 
-	exitCode := worker(module, component, workerWriter)
+	// Get worker timeout from config (default 5m if not set)
+	timeout := config.WorkerTimeout()
+	if timeout == 0 {
+		timeout = 5 * time.Minute
+	}
+
+	// Run worker with timeout enforcement
+	var exitCode int
+	resultCh := make(chan int, 1)
+	go func() {
+		resultCh <- worker(module, component, workerWriter)
+	}()
+
+	select {
+	case exitCode = <-resultCh:
+		// Worker completed normally
+	case <-time.After(timeout):
+		// Worker timed out - kill it
+		exitCode = workunit.ExitCodeTimeout
+		fmt.Fprintf(os.Stderr, "TIMEOUT: %s killed after %v (limit: %v)\n", displayName, time.Since(startTime), timeout)
+		fmt.Fprintf(logFile, "\n[TIMEOUT] Worker killed after %v (limit: %v)\n", time.Since(startTime), timeout)
+	}
 
 	memAfter := GetMemoryStats()
 	memDelta := int64(memAfter.UsedBytes) - int64(memBefore.UsedBytes)

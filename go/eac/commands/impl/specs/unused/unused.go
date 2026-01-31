@@ -1,6 +1,6 @@
 // Command: get specs unused-steps
 // Short: Detect unused godog step definitions
-// Long: The get specs unused-steps command scans step definition files in go/eac/specs/impl/
+// Long: The get specs unused-steps command scans step definition files in gherkin-steps components
 // Long: and compares them against feature files in specs/ to find step definitions
 // Long: that are not matched by any Gherkin step.
 // Long: This helps identify dead code and maintain a clean test codebase.
@@ -75,7 +75,7 @@ func runAnalysis(repoRoot string, verbose bool, moduleFilter string) int {
 	}
 
 	if len(pairs) == 0 {
-		log.Info("No impl↔specs pairs found in go/eac/specs/impl/")
+		log.Info("No gherkin-steps pairs found (modules with godog_test.go)")
 		return 0
 	}
 

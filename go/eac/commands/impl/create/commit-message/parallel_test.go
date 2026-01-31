@@ -10,7 +10,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
+	"github.com/ready-to-release/eac/go/eac/adapters/ai"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 	"github.com/stretchr/testify/assert"

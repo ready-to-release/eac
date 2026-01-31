@@ -365,13 +365,14 @@ func TestSummaryBuilder_CompletionCallback(t *testing.T) {
 	}
 	sb := NewSummaryBuilder(CommandTypeBuild, componentCounts)
 
-	// Track callback invocations
-	callbackCalled := false
+	// Track callback invocations with sync primitives.
+	// The callback runs in a goroutine so we need to wait for it.
+	callbackDone := make(chan struct{})
 	var callbackBuilder *SummaryBuilder
 
 	sb.SetOnComplete(func(builder *SummaryBuilder) {
-		callbackCalled = true
 		callbackBuilder = builder
+		close(callbackDone)
 	})
 
 	// Add results - callback should NOT be called yet
@@ -380,8 +381,11 @@ func TestSummaryBuilder_CompletionCallback(t *testing.T) {
 		Component: "comp1",
 		ExitCode:  0,
 	})
-	if callbackCalled {
+	select {
+	case <-callbackDone:
 		t.Error("callback should not be called after first result")
+	default:
+		// Expected - callback not called yet
 	}
 
 	sb.AddResult(orchestrator.UnitResult{
@@ -389,18 +393,25 @@ func TestSummaryBuilder_CompletionCallback(t *testing.T) {
 		Component: "comp2",
 		ExitCode:  0,
 	})
-	if callbackCalled {
+	select {
+	case <-callbackDone:
 		t.Error("callback should not be called until all modules complete")
+	default:
+		// Expected - callback not called yet
 	}
 
-	// Add final result - callback should be called now
+	// Add final result - callback should be called now (in a goroutine)
 	sb.AddResult(orchestrator.UnitResult{
 		Module:    "module-b",
 		Component: "comp1",
 		ExitCode:  0,
 	})
 
-	if !callbackCalled {
+	// Wait for callback with timeout
+	select {
+	case <-callbackDone:
+		// Success - callback was called
+	case <-time.After(time.Second):
 		t.Error("callback should have been called when all modules completed")
 	}
 

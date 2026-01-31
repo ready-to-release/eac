@@ -10,8 +10,8 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/ready-to-release/eac/go/eac/adapters/docker"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/books"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/serve"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
@@ -54,7 +54,7 @@ func isContainerRunning(cli *client.Client, ctx context.Context) (bool, *Contain
 	containerNameBase, _, _ := getDockerImageConfig()
 	log.Debugf("Checking if container is running: containerName=%s", containerNameBase)
 
-	result, running, err := serve.IsServing(ctx, containerNameBase)
+	result, running, err := docker.IsServing(ctx, containerNameBase)
 	if err != nil {
 		log.Errorf("Failed to check container status: error=%v", err)
 		return false, nil, err
@@ -146,10 +146,10 @@ func startMkDocsContainer(cli *client.Client, ctx context.Context, port int) (*C
 
 	log.Debugf("Container configuration: dockerfile=%s, contextPath=%s, contentPath=%s, configPath=%s, containerPort=%d", dockerfilePath, contextPath, repoRoot, dockerConfigPath, containerInternalPort)
 
-	serveConfig := &serve.ServeConfig{
+	serveConfig := &docker.ServeConfig{
 		Name:  containerNameBase,
 		Image: imageName,
-		BuildInfo: &serve.BuildInfo{
+		BuildInfo: &docker.BuildInfo{
 			Dockerfile:  dockerfilePath,
 			ContextPath: contextPath,
 		},
@@ -163,7 +163,7 @@ func startMkDocsContainer(cli *client.Client, ctx context.Context, port int) (*C
 
 	// Start the serve container
 	log.Infof("Launching container via serve helper: image=%s", imageName)
-	result, err := serve.StartServe(ctx, serveConfig)
+	result, err := docker.StartServe(ctx, serveConfig)
 	if err != nil {
 		log.Errorf("Failed to start container: error=%v", err)
 		return nil, err
@@ -183,7 +183,7 @@ func stopMkDocsContainer(cli *client.Client, ctx context.Context) error {
 	containerNameBase, _, _ := getDockerImageConfig()
 	log.Debugf("Stopping MkDocs container: containerName=%s", containerNameBase)
 
-	err := serve.StopServe(ctx, containerNameBase)
+	err := docker.StopServe(ctx, containerNameBase)
 	if err != nil {
 		log.Errorf("Failed to stop container: error=%v", err)
 		return err

@@ -264,6 +264,10 @@ func performRelease(module string, dryRun bool, overrideDate string) ReleaseResu
 
 	// Determine changelog path from module contract
 	changelogPath := moduleContract.GetChangelogPath()
+	if changelogPath == "" {
+		result.Error = fmt.Sprintf("module '%s' does not have a changelog configured (requires versioning.scheme: SemVer or explicit versioning.changelog path)", module)
+		return result
+	}
 	fullChangelogPath := filepath.Join(workspaceRoot, changelogPath)
 	result.ChangelogPath = changelogPath
 

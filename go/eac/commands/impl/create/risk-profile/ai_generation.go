@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
+	"github.com/ready-to-release/eac/go/eac/adapters/ai"
+	"github.com/ready-to-release/eac/go/eac/adapters/ai/providers"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/oscal"
 	coreai "github.com/ready-to-release/eac/go/eac/core/ai"
 	"github.com/ready-to-release/eac/go/eac/core/logging"

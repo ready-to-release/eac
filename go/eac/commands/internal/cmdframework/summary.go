@@ -10,7 +10,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/output"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
+	"github.com/ready-to-release/eac/go/eac/adapters/tui"
 )
 
 const (
@@ -704,10 +704,11 @@ func extractUniqueTestTypes(components []orchestrator.UnitResult) string {
 		// Use Handler field which contains the test type
 		testType := comp.Handler
 		if testType == "" {
-			// Fallback: try to extract from component name (format: "subpath:testType")
+			// Fallback: extract test type from component name
+			// Component format: "name/testType" (e.g., "config/gotest", "docs-drawio-cache/godog")
 			testType = comp.Component
-			if colonIdx := strings.LastIndex(comp.Component, ":"); colonIdx >= 0 {
-				testType = comp.Component[colonIdx+1:]
+			if slashIdx := strings.LastIndex(comp.Component, "/"); slashIdx >= 0 {
+				testType = comp.Component[slashIdx+1:]
 			}
 		}
 

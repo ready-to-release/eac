@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ready-to-release/eac/go/eac/commands/internal/dockerutil"
+	dockerutil "github.com/ready-to-release/eac/go/eac/adapters/docker/util"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"

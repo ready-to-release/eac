@@ -27,11 +27,29 @@ type ModuleTemplatesConfig struct {
 
 // DiscoveryConventions defines rules for auto-discovering components based on filesystem.
 type DiscoveryConventions struct {
-	Gherkin     *DiscoveryRule `yaml:"gherkin,omitempty"`
-	Structurizr *DiscoveryRule `yaml:"structurizr,omitempty"`
-	TestImpl    *DiscoveryRule `yaml:"test_impl,omitempty"`
-	Markdown    *DeriveRule    `yaml:"markdown,omitempty"`
-	YAML        *DeriveRule    `yaml:"yaml,omitempty"`
+	Gherkin      *DiscoveryRule    `yaml:"gherkin,omitempty"`
+	Structurizr  *DiscoveryRule    `yaml:"structurizr,omitempty"`
+	GherkinSteps *GherkinStepsRule `yaml:"gherkin_steps,omitempty"`
+	Markdown     *DeriveRule       `yaml:"markdown,omitempty"`
+	YAML         *DeriveRule       `yaml:"yaml,omitempty"`
+}
+
+// GherkinStepsRule defines how to infer gherkin-steps component path.
+// The steps path is derived from the module's primary code component.
+// Supports multiple test runners: godog (Go), cucumber-js (TypeScript).
+type GherkinStepsRule struct {
+	// DeriveFromComponents maps component type to subdirectory suffix.
+	// e.g., {"go": "specs", "typescript": "features"}
+	// Path becomes: {component_root}/{subdirectory}
+	DeriveFromComponents map[string]string `yaml:"derive_from_components,omitempty"`
+
+	// FallbackPattern is used when no code component exists.
+	// Uses {moniker} placeholder, e.g., "go/eac/specs/{moniker}"
+	FallbackPattern string `yaml:"fallback_pattern,omitempty"`
+
+	// RequiredFile must exist for the component to be discovered.
+	// e.g., "godog_test.go" for Go executors
+	RequiredFile string `yaml:"required_file"`
 }
 
 // DiscoveryRule defines how to find a component on the filesystem.
@@ -95,9 +113,17 @@ func DefaultDiscoveryConventions() *DiscoveryConventions {
 			PathPattern:  "specs/{moniker}/.design",
 			RequiredFile: "workspace.dsl",
 		},
-		TestImpl: &DiscoveryRule{
-			PathPattern:  "go/eac/specs/impl/{moniker}",
-			RequiredFile: "godog_test.go",
+		// GherkinSteps inference rules:
+		// - Module with go component: {go_root}/specs (requires godog_test.go)
+		// - Module with typescript component: {ts_root}/features (requires cucumber runner)
+		// - Module without code: go/eac/specs/{moniker}
+		GherkinSteps: &GherkinStepsRule{
+			DeriveFromComponents: map[string]string{
+				"go":         "specs",
+				"typescript": "features",
+			},
+			FallbackPattern: "go/eac/specs/{moniker}",
+			RequiredFile:    "godog_test.go",
 		},
 		Markdown: &DeriveRule{
 			DeriveFrom: []string{"go", "typescript", "dockerfile"},
@@ -133,7 +159,13 @@ func ExpandModuleFromTemplate(
 		resolveConventionalComponents(mod, conventions, repoRoot)
 	}
 
-	// 4. If auto_discover is enabled, scan filesystem for additional components
+	// 4. Always discover core BDD components (gherkin, structurizr, gherkin-steps)
+	// These are auto-inferred based on filesystem conventions without requiring explicit config
+	if conventions != nil {
+		discoverCoreComponents(mod, conventions, repoRoot)
+	}
+
+	// 5. If auto_discover is enabled, scan filesystem for ALL additional components
 	if mod.AutoDiscover && conventions != nil {
 		discoverComponents(mod, conventions, repoRoot)
 	}
@@ -436,11 +468,18 @@ func resolveConventionalComponents(mod *Module, conv *DiscoveryConventions, repo
 			continue
 		}
 
-		// Check if this is a convention-based component
-		path := getConventionalPath(name, mod.Moniker, conv)
-		if path == "" {
-			// Try deriving from other components
-			path = derivePathFrom(mod.Components, name, conv)
+		var path string
+
+		// Handle gherkin-steps specially - it derives from code components
+		if name == "gherkin-steps" {
+			path = getGherkinStepsPath(mod.Components, mod.Moniker, conv, repoRoot)
+		} else {
+			// Check if this is a convention-based component
+			path = getConventionalPath(name, mod.Moniker, conv)
+			if path == "" {
+				// Try deriving from other components
+				path = derivePathFrom(mod.Components, name, conv)
+			}
 		}
 
 		if path == "" {
@@ -451,8 +490,8 @@ func resolveConventionalComponents(mod *Module, conv *DiscoveryConventions, repo
 			continue
 		}
 
-		// Check if path exists
-		if !pathExists(repoRoot, path) {
+		// Check if path exists (for gherkin-steps, this was already checked)
+		if name != "gherkin-steps" && !pathExists(repoRoot, path) {
 			// Path doesn't exist, remove the nil marker
 			if comp == nil {
 				delete(mod.Components, name)
@@ -481,8 +520,6 @@ func getConventionalPath(compName, moniker string, conv *DiscoveryConventions) s
 		rule = conv.Gherkin
 	case "structurizr":
 		rule = conv.Structurizr
-	case "test-impl":
-		rule = conv.TestImpl
 	}
 
 	if rule == nil || rule.PathPattern == "" {
@@ -490,6 +527,42 @@ func getConventionalPath(compName, moniker string, conv *DiscoveryConventions) s
 	}
 
 	return strings.ReplaceAll(rule.PathPattern, "{moniker}", moniker)
+}
+
+// getGherkinStepsPath derives the gherkin-steps path based on module components.
+// Inference rules:
+// - Module with go component: {go_root}/specs
+// - Module with typescript component: {ts_root}/features
+// - Module without code: go/eac/specs/{moniker}
+// Returns empty string if path doesn't exist or no rule applies.
+func getGherkinStepsPath(components ModuleComponents, moniker string, conv *DiscoveryConventions, repoRoot string) string {
+	if conv == nil || conv.GherkinSteps == nil {
+		return ""
+	}
+
+	rule := conv.GherkinSteps
+
+	// Try deriving from code components (in priority order: go, then typescript)
+	for _, compType := range []string{"go", "typescript"} {
+		if subdir, ok := rule.DeriveFromComponents[compType]; ok {
+			if entry, exists := components[compType]; exists && entry != nil && entry.Root != "" {
+				path := filepath.ToSlash(filepath.Join(entry.Root, subdir))
+				if pathHasRequiredFile(repoRoot, path, rule.RequiredFile) {
+					return path
+				}
+			}
+		}
+	}
+
+	// Fallback for modules without code components
+	if rule.FallbackPattern != "" {
+		path := strings.ReplaceAll(rule.FallbackPattern, "{moniker}", moniker)
+		if pathHasRequiredFile(repoRoot, path, rule.RequiredFile) {
+			return path
+		}
+	}
+
+	return ""
 }
 
 // derivePathFrom attempts to derive a component's path from another component.
@@ -520,6 +593,46 @@ func derivePathFrom(components ModuleComponents, targetName string, conv *Discov
 	return ""
 }
 
+// discoverCoreComponents auto-discovers gherkin, structurizr, and gherkin-steps components.
+// These core BDD components are ALWAYS inferred based on filesystem conventions,
+// unlike other components which require auto_discover: true.
+func discoverCoreComponents(mod *Module, conv *DiscoveryConventions, repoRoot string) {
+	if conv == nil {
+		return
+	}
+
+	// Ensure Components map exists
+	if mod.Components == nil {
+		mod.Components = make(ModuleComponents)
+	}
+
+	// Discover gherkin specs from specs/{moniker}/
+	// Features are in subdirectories (e.g., specs/eac-core/cache-invalidation/specification.feature)
+	// So we check for directory existence and any .feature files
+	if !mod.Components.HasComponent("gherkin") && conv.Gherkin != nil {
+		path := strings.ReplaceAll(conv.Gherkin.PathPattern, "{moniker}", mod.Moniker)
+		if pathHasFeatureFiles(repoRoot, path) {
+			mod.Components["gherkin"] = &ComponentEntry{Root: path}
+		}
+	}
+
+	// Discover structurizr designs from specs/{moniker}/.design/
+	if !mod.Components.HasComponent("structurizr") && conv.Structurizr != nil {
+		path := strings.ReplaceAll(conv.Structurizr.PathPattern, "{moniker}", mod.Moniker)
+		if pathHasRequiredFile(repoRoot, path, conv.Structurizr.RequiredFile) {
+			mod.Components["structurizr"] = &ComponentEntry{Root: path}
+		}
+	}
+
+	// Discover gherkin-steps based on code component location
+	if !mod.Components.HasComponent("gherkin-steps") && conv.GherkinSteps != nil {
+		path := getGherkinStepsPath(mod.Components, mod.Moniker, conv, repoRoot)
+		if path != "" {
+			mod.Components["gherkin-steps"] = &ComponentEntry{Root: path}
+		}
+	}
+}
+
 // discoverComponents scans filesystem for conventional components not already defined.
 func discoverComponents(mod *Module, conv *DiscoveryConventions, repoRoot string) {
 	if conv == nil {
@@ -542,11 +655,11 @@ func discoverComponents(mod *Module, conv *DiscoveryConventions, repoRoot string
 		}
 	}
 
-	// Try to discover test-impl
-	if !mod.Components.HasComponent("test-impl") && conv.TestImpl != nil {
-		path := strings.ReplaceAll(conv.TestImpl.PathPattern, "{moniker}", mod.Moniker)
-		if pathHasRequiredFile(repoRoot, path, conv.TestImpl.RequiredFile) {
-			mod.Components["test-impl"] = &ComponentEntry{Root: path}
+	// Try to discover gherkin-steps
+	if !mod.Components.HasComponent("gherkin-steps") && conv.GherkinSteps != nil {
+		path := getGherkinStepsPath(mod.Components, mod.Moniker, conv, repoRoot)
+		if path != "" {
+			mod.Components["gherkin-steps"] = &ComponentEntry{Root: path}
 		}
 	}
 
@@ -564,6 +677,36 @@ func pathExists(repoRoot, path string) bool {
 	fullPath := filepath.Join(repoRoot, path)
 	_, err := os.Stat(fullPath)
 	return err == nil
+}
+
+// pathHasFeatureFiles checks if a path contains any .feature files (including subdirectories).
+// This is used for gherkin component discovery where features are in subdirectories.
+func pathHasFeatureFiles(repoRoot, path string) bool {
+	fullPath := filepath.Join(repoRoot, path)
+
+	// Check if directory exists
+	info, err := os.Stat(fullPath)
+	if err != nil || !info.IsDir() {
+		return false
+	}
+
+	// Check for .feature files in immediate subdirectories
+	// (features are organized as specs/{moniker}/{feature-name}/specification.feature)
+	entries, err := os.ReadDir(fullPath)
+	if err != nil {
+		return false
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			featurePath := filepath.Join(fullPath, entry.Name(), "specification.feature")
+			if _, err := os.Stat(featurePath); err == nil {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 // pathHasRequiredFile checks if a path contains the required file.

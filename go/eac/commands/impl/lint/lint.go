@@ -46,7 +46,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/cmdframework"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/environment"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
+	"github.com/ready-to-release/eac/go/eac/adapters/tui"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"

@@ -26,14 +26,13 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/commands/help"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
-	"github.com/ready-to-release/eac/go/eac/commands/tui"
+	"github.com/ready-to-release/eac/go/eac/adapters/tui"
+	"github.com/ready-to-release/eac/go/eac/adapters/tui/selector"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
-
-	// Import default TUI to register it
-	_ "github.com/ready-to-release/eac/go/eac/commands/tui/default"
 )
 
 var log = logging.C()
@@ -122,37 +121,20 @@ func Show() int {
 }
 
 // runInteractiveTUI shows the interactive TUI for subcommand selection.
+// Uses the new SelectorConsole pattern: TUI just picks a command, caller executes.
 func runInteractiveTUI() int {
-	console := tui.NewForCommand("show", tui.Config{
-		CommandName: "show",
-		Height:      20,
-	})
+	options := tui.SubcommandsToOptions(subcommands)
+	selected, args, cancelled := selector.RunSelector(context.Background(), options)
 
-	// Set subcommands if the console supports it
-	if ic, ok := console.(tui.InteractiveConsole); ok {
-		ic.SetSubcommands(subcommands)
+	if cancelled || selected == "" {
+		return 0
 	}
 
-	// Run the TUI
-	if err := console.Start(context.Background()); err != nil {
-		log.Errorf("TUI error: %v", err)
-		return 1
+	newArgs := []string{os.Args[0], "show", selected}
+	if args != "" {
+		newArgs = append(newArgs, strings.Fields(args)...)
 	}
-
-	// Get selected command
-	if ic, ok := console.(tui.InteractiveConsole); ok {
-		selected, params := ic.GetSelectedCommand()
-		if selected != "" {
-			// Re-execute with selected subcommand
-			newArgs := []string{os.Args[0], "show", selected}
-			if args, ok := params["args"]; ok && args != "" {
-				newArgs = append(newArgs, args)
-			}
-			os.Args = newArgs
-			return Show()
-		}
-	}
-
-	return 0
+	os.Args = newArgs
+	return Show()
 }
 

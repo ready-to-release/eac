@@ -34,6 +34,11 @@ type RunnerConfig struct {
 	// DefaultReportName is the default name for the report file
 	DefaultReportName string
 
+	// AssetsPath is the path to the assets directory relative to the repository root.
+	// Example: "go/eac/commands/specs/assets" for eac-commands.
+	// If empty, LoadAsset will fail with an error.
+	AssetsPath string
+
 	// RegisterSteps is a function that registers spec-specific steps
 	RegisterSteps func(sc *godog.ScenarioContext, ctx *TestContext)
 }
@@ -203,6 +208,7 @@ func CreateScenarioInitializer(cfg RunnerConfig) func(sc *godog.ScenarioContext)
 		// Create context for this scenario
 		ctx := NewTestContext()
 		ctx.OriginalRepoRoot = repoRoot
+		ctx.AssetsPath = cfg.AssetsPath
 		ctx.FixturePool = fixturePool
 		ctx.OriginalRepoCache = globalRepoCache // Share global cache across ALL test packages!
 

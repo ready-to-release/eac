@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/environment"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
+	"github.com/ready-to-release/eac/go/eac/adapters/tui"
 )
 
 func TestParser_AllSetsSubscribed(t *testing.T) {

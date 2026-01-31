@@ -4,11 +4,11 @@
 // Long: This forces a full rebuild/retest/relint on the next run.
 // Long:
 // Long: Cache files cleared:
-// Long:   - out/build/.build-state.json (build incremental state)
-// Long:   - out/.lint-state.json (lint incremental state)
-// Long:   - out/test/.test-state.json (test incremental state)
-// Long:   - out/cache/build-state/*.json (book build cache)
-// Long:   - out/cache/preprocess-state/*.json (preprocessing cache)
+// Long:   - out/build/**/state.json (per-module build state)
+// Long:   - out/lint/**/state.json (per-module lint state)
+// Long:   - out/test/**/state.json (per-module test state)
+// Long:   - out/cache/build-state/* (book build cache)
+// Long:   - out/cache/preprocess-state/* (preprocessing cache)
 // Long:
 // Long: Use --dry-run to see what would be deleted without actually deleting.
 // Flag.dry-run: type=bool, default=false, usage=Show what would be deleted without deleting
@@ -31,13 +31,6 @@ var log = logging.C()
 
 func init() {
 	registry.Register(ClearCache)
-}
-
-// cacheTarget defines a cache file or directory to clear.
-type cacheTarget struct {
-	path        string // Relative path from repo root
-	description string
-	isDir       bool // If true, delete entire directory contents
 }
 
 // ClearCache removes all incremental cache state files.
@@ -70,15 +63,6 @@ func ClearCache() int {
 		return 1
 	}
 
-	// Define all cache targets
-	targets := []cacheTarget{
-		{filepath.Join(paths.OutDir, paths.BuildDir, ".build-state.json"), "build incremental state", false},
-		{filepath.Join(paths.OutDir, ".lint-state.json"), "lint incremental state", false},
-		{filepath.Join(paths.OutDir, paths.TestDir, ".test-state.json"), "test incremental state", false},
-		{filepath.Join(paths.OutDir, "cache", "build-state"), "book build cache", true},
-		{filepath.Join(paths.OutDir, "cache", "preprocess-state"), "preprocessing cache", true},
-	}
-
 	if dryRun {
 		fmt.Println("Dry run - would delete:")
 	} else {
@@ -86,60 +70,37 @@ func ClearCache() int {
 	}
 
 	deleted := 0
-	for _, target := range targets {
-		fullPath := filepath.Join(repoRoot, target.path)
 
-		if target.isDir {
-			// Delete directory contents
-			entries, err := os.ReadDir(fullPath)
-			if err != nil {
-				if !os.IsNotExist(err) && verbose {
-					fmt.Printf("  [skip] %s (error: %v)\n", target.path, err)
-				}
-				continue
-			}
+	// Clear per-module state files (state.json) in build/lint/test directories
+	contextDirs := []struct {
+		dir         string
+		description string
+	}{
+		{filepath.Join(paths.OutDir, paths.BuildDir), "build state"},
+		{filepath.Join(paths.OutDir, paths.LintDir), "lint state"},
+		{filepath.Join(paths.OutDir, paths.TestDir), "test state"},
+	}
 
-			for _, entry := range entries {
-				entryPath := filepath.Join(fullPath, entry.Name())
-				relPath := filepath.Join(target.path, entry.Name())
+	for _, ctx := range contextDirs {
+		fullPath := filepath.Join(repoRoot, ctx.dir)
+		count := clearStateFiles(fullPath, ctx.dir, ctx.description, dryRun, verbose)
+		deleted += count
+	}
 
-				if dryRun {
-					fmt.Printf("  %s (%s)\n", relPath, target.description)
-					deleted++
-				} else {
-					if err := os.RemoveAll(entryPath); err != nil {
-						log.Errorf("Failed to delete %s: %v", relPath, err)
-					} else {
-						if verbose {
-							fmt.Printf("  deleted: %s\n", relPath)
-						}
-						deleted++
-					}
-				}
-			}
-		} else {
-			// Delete single file
-			if _, err := os.Stat(fullPath); os.IsNotExist(err) {
-				if verbose {
-					fmt.Printf("  [skip] %s (not found)\n", target.path)
-				}
-				continue
-			}
+	// Clear book cache directories (delete entire contents)
+	bookCacheDirs := []struct {
+		dir         string
+		description string
+	}{
+		{filepath.Join(paths.OutDir, "cache", "build-state"), "book build cache"},
+		{filepath.Join(paths.OutDir, "cache", "preprocess-state"), "preprocessing cache"},
+		{filepath.Join(".cache", "npm", "work"), "npm isolated work directories"},
+	}
 
-			if dryRun {
-				fmt.Printf("  %s (%s)\n", target.path, target.description)
-				deleted++
-			} else {
-				if err := os.Remove(fullPath); err != nil {
-					log.Errorf("Failed to delete %s: %v", target.path, err)
-				} else {
-					if verbose {
-						fmt.Printf("  deleted: %s\n", target.path)
-					}
-					deleted++
-				}
-			}
-		}
+	for _, cache := range bookCacheDirs {
+		fullPath := filepath.Join(repoRoot, cache.dir)
+		count := clearDirectoryContents(fullPath, cache.dir, cache.description, dryRun, verbose)
+		deleted += count
 	}
 
 	if dryRun {
@@ -149,6 +110,84 @@ func ClearCache() int {
 	}
 
 	return 0
+}
+
+// clearStateFiles recursively finds and deletes all state.json files in a directory.
+func clearStateFiles(rootPath, relRoot, description string, dryRun, verbose bool) int {
+	deleted := 0
+
+	err := filepath.Walk(rootPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil // Skip errors
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		if info.Name() == "state.json" {
+			relPath, _ := filepath.Rel(filepath.Dir(rootPath), path)
+			if relPath == "" {
+				relPath = path
+			}
+
+			if dryRun {
+				fmt.Printf("  %s (%s)\n", relPath, description)
+				deleted++
+			} else {
+				if err := os.Remove(path); err != nil {
+					log.Errorf("Failed to delete %s: %v", relPath, err)
+				} else {
+					if verbose {
+						fmt.Printf("  deleted: %s\n", relPath)
+					}
+					deleted++
+				}
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil && verbose {
+		fmt.Printf("  [skip] %s (error: %v)\n", relRoot, err)
+	}
+
+	return deleted
+}
+
+// clearDirectoryContents deletes all entries in a directory.
+func clearDirectoryContents(fullPath, relPath, description string, dryRun, verbose bool) int {
+	deleted := 0
+
+	entries, err := os.ReadDir(fullPath)
+	if err != nil {
+		if !os.IsNotExist(err) && verbose {
+			fmt.Printf("  [skip] %s (error: %v)\n", relPath, err)
+		}
+		return 0
+	}
+
+	for _, entry := range entries {
+		entryPath := filepath.Join(fullPath, entry.Name())
+		entryRelPath := filepath.Join(relPath, entry.Name())
+
+		if dryRun {
+			fmt.Printf("  %s (%s)\n", entryRelPath, description)
+			deleted++
+		} else {
+			if err := os.RemoveAll(entryPath); err != nil {
+				log.Errorf("Failed to delete %s: %v", entryRelPath, err)
+			} else {
+				if verbose {
+					fmt.Printf("  deleted: %s\n", entryRelPath)
+				}
+				deleted++
+			}
+		}
+	}
+
+	return deleted
 }
 
 func printUsage() {

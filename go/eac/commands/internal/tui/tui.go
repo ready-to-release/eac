@@ -57,6 +57,13 @@ type Console struct {
 
 	// Store final model state for post-exit summary
 	finalModel *console.Model
+
+	// Async message queue to prevent blocking workers.
+	// program.Send() is blocking - if the TUI event loop is slow/busy,
+	// it blocks indefinitely, causing workers to hang. This decouples
+	// worker completion from TUI rendering speed.
+	msgChan chan tea.Msg
+	msgWg   sync.WaitGroup // Track pending messages for clean shutdown
 }
 
 // New creates a new console with the given configuration.
@@ -127,6 +134,18 @@ func (c *Console) Start(ctx context.Context) error {
 	}
 
 	c.program = tea.NewProgram(model, opts...)
+
+	// Start async message pump goroutine.
+	// This decouples worker completion from TUI rendering - workers can
+	// complete immediately without blocking on slow TUI updates.
+	c.msgChan = make(chan tea.Msg, 100) // Buffered to absorb bursts
+	c.msgWg.Add(1)
+	go func() {
+		defer c.msgWg.Done()
+		for msg := range c.msgChan {
+			c.program.Send(msg)
+		}
+	}()
 
 	// Signal that TUI is ready
 	close(c.ready)
@@ -247,6 +266,13 @@ func (c *Console) Stop() {
 	close(c.lineChan)
 	close(c.statusChan)
 
+	// Close async message channel and wait for pending messages.
+	// This ensures all queued TUI updates are delivered before exit.
+	if c.msgChan != nil {
+		close(c.msgChan)
+		c.msgWg.Wait()
+	}
+
 	// Quit the program and wait for it to fully exit
 	if c.program != nil {
 		c.program.Quit()
@@ -337,19 +363,29 @@ func (c *Console) SendError(source, text string) {
 	})
 }
 
-// SetPhase switches to a new phase (Init, Run, End).
-func (c *Console) SetPhase(phase Phase) {
+// sendAsync queues a message for async delivery to the TUI.
+// Non-blocking - returns immediately even if TUI is slow.
+// This prevents workers from blocking on slow TUI rendering.
+func (c *Console) sendAsync(msg tea.Msg) {
 	c.mu.Lock()
-	stopped := c.stopped
-	program := c.program
-	c.mu.Unlock()
-
-	if stopped || program == nil {
+	if c.stopped || c.program == nil || c.msgChan == nil {
+		c.mu.Unlock()
 		return
 	}
+	msgChan := c.msgChan
+	c.mu.Unlock()
 
-	// Send phase update directly to Bubbletea program
-	program.Send(console.PhaseUpdateMsg{
+	select {
+	case msgChan <- msg:
+		// Queued successfully
+	default:
+		// Buffer full - drop message (TUI updates are lossy)
+	}
+}
+
+// SetPhase switches to a new phase (Init, Run, End).
+func (c *Console) SetPhase(phase Phase) {
+	c.sendAsync(console.PhaseUpdateMsg{
 		Phase:  phase,
 		Status: console.PhaseActive,
 	})
@@ -357,16 +393,7 @@ func (c *Console) SetPhase(phase Phase) {
 
 // SetPhaseSummary sets the summary text for a collapsed phase.
 func (c *Console) SetPhaseSummary(phase Phase, summary string) {
-	c.mu.Lock()
-	stopped := c.stopped
-	program := c.program
-	c.mu.Unlock()
-
-	if stopped || program == nil {
-		return
-	}
-
-	program.Send(console.PhaseUpdateMsg{
+	c.sendAsync(console.PhaseUpdateMsg{
 		Phase:   phase,
 		Summary: summary,
 	})
@@ -374,21 +401,12 @@ func (c *Console) SetPhaseSummary(phase Phase, summary string) {
 
 // CompletePhase marks a phase as complete with a summary.
 func (c *Console) CompletePhase(phase Phase, success bool, summary string) {
-	c.mu.Lock()
-	stopped := c.stopped
-	program := c.program
-	c.mu.Unlock()
-
-	if stopped || program == nil {
-		return
-	}
-
 	status := console.PhaseComplete
 	if !success {
 		status = console.PhaseFailed
 	}
 
-	program.Send(console.PhaseUpdateMsg{
+	c.sendAsync(console.PhaseUpdateMsg{
 		Phase:   phase,
 		Status:  status,
 		Summary: summary,
@@ -397,17 +415,7 @@ func (c *Console) CompletePhase(phase Phase, success bool, summary string) {
 
 // WriteToPhase writes a line to a specific phase's buffer.
 func (c *Console) WriteToPhase(phase Phase, text string) {
-	c.mu.Lock()
-	stopped := c.stopped
-	program := c.program
-	c.mu.Unlock()
-
-	if stopped || program == nil {
-		return
-	}
-
-	// Send line to specific phase buffer via Bubbletea
-	program.Send(console.PhaseLineMsg{
+	c.sendAsync(console.PhaseLineMsg{
 		Phase: phase,
 		Line: console.Line{
 			Text:   text,
@@ -419,17 +427,7 @@ func (c *Console) WriteToPhase(phase Phase, text string) {
 
 // WriteResult writes a line to the results buffer (appears below Run pane).
 func (c *Console) WriteResult(text string) {
-	c.mu.Lock()
-	stopped := c.stopped
-	program := c.program
-	c.mu.Unlock()
-
-	if stopped || program == nil {
-		return
-	}
-
-	// Send line to results buffer via Bubbletea
-	program.Send(console.ResultLineMsg{
+	c.sendAsync(console.ResultLineMsg{
 		Line: console.Line{
 			Text:   text,
 			Source: "results",
@@ -441,16 +439,7 @@ func (c *Console) WriteResult(text string) {
 // StartModule notifies the TUI that a module has started with its weight.
 // This creates the tab in pending state (scheduled but waiting for slot).
 func (c *Console) StartModule(moniker string, weight int) {
-	c.mu.Lock()
-	stopped := c.stopped
-	program := c.program
-	c.mu.Unlock()
-
-	if stopped || program == nil {
-		return
-	}
-
-	program.Send(console.ModuleStartMsg{
+	c.sendAsync(console.ModuleStartMsg{
 		Moniker: moniker,
 		Weight:  weight,
 	})
@@ -459,16 +448,7 @@ func (c *Console) StartModule(moniker string, weight int) {
 // MarkModuleRunning notifies the TUI that a module has acquired its execution slot.
 // This transitions the tab from pending to running state.
 func (c *Console) MarkModuleRunning(moniker string) {
-	c.mu.Lock()
-	stopped := c.stopped
-	program := c.program
-	c.mu.Unlock()
-
-	if stopped || program == nil {
-		return
-	}
-
-	program.Send(console.ModuleRunningMsg{
+	c.sendAsync(console.ModuleRunningMsg{
 		Moniker: moniker,
 	})
 }
@@ -482,16 +462,7 @@ func (c *Console) MarkModuleComplete(moniker string, exitCode int) {
 // MarkModuleCompleteWithCacheInfo marks a module as complete with optional cache info.
 // For cached modules, cacheTime is when the artifact was built, logPath is the build log location.
 func (c *Console) MarkModuleCompleteWithCacheInfo(moniker string, exitCode int, cacheTime time.Time, logPath string) {
-	c.mu.Lock()
-	stopped := c.stopped
-	program := c.program
-	c.mu.Unlock()
-
-	if stopped || program == nil {
-		return
-	}
-
-	program.Send(console.ModuleCompleteMsg{
+	c.sendAsync(console.ModuleCompleteMsg{
 		Moniker:   moniker,
 		ExitCode:  exitCode,
 		CacheTime: cacheTime,
@@ -500,6 +471,9 @@ func (c *Console) MarkModuleCompleteWithCacheInfo(moniker string, exitCode int, 
 }
 
 // SendSummary sends summary data and activates the Summary pane.
+// NOTE: This intentionally uses blocking program.Send() (not sendAsync).
+// The final summary must be delivered before TUI exits - it's only called
+// once at the end and we need to guarantee it's displayed.
 func (c *Console) SendSummary(data *SummaryData) {
 	c.mu.Lock()
 	stopped := c.stopped
@@ -517,16 +491,7 @@ func (c *Console) SendSummary(data *SummaryData) {
 
 // SetInitSummary sends init summary data for structured display in the Init pane.
 func (c *Console) SetInitSummary(summary *InitSummary) {
-	c.mu.Lock()
-	stopped := c.stopped
-	program := c.program
-	c.mu.Unlock()
-
-	if stopped || program == nil {
-		return
-	}
-
-	program.Send(console.InitSummaryMsg{
+	c.sendAsync(console.InitSummaryMsg{
 		Summary: (*console.InitSummary)(summary),
 	})
 }

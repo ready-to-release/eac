@@ -204,18 +204,11 @@ type PlannedTool struct {
 	IsContainer bool   // true = runs in container, false = runs on system
 }
 
-// SubcommandInfo describes a subcommand for the default TUI.
+// SubcommandInfo describes a subcommand for command selection.
+// Used by parent commands to define their available subcommands.
+// Convert to CommandOption using SubcommandToOption for use with the selector.
 type SubcommandInfo struct {
 	Name        string
 	Description string
 	Aliases     []string
-}
-
-// ParameterInfo describes a command parameter for editing.
-type ParameterInfo struct {
-	Name        string
-	Description string
-	Type        string // "string", "bool", "int", "[]string"
-	Default     string
-	Required    bool
 }

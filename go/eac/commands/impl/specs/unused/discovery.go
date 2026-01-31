@@ -21,8 +21,8 @@ type ImplSpecsPair struct {
 	UsesInternal bool     // whether this pair uses shared internal steps
 }
 
-// DiscoverPairs finds all impl↔specs pairs by scanning modules with test-impl components.
-// Each module's test-impl component defines where to find godog_test.go.
+// DiscoverPairs finds all impl↔specs pairs by scanning modules with gherkin-steps components.
+// Each module's gherkin-steps component defines where to find godog_test.go (Go) or cucumber runner (TypeScript).
 func DiscoverPairs(repoRoot string) ([]ImplSpecsPair, error) {
 	// Load EAC config (properly merged with defaults) for path resolution
 	eacCfg, err := config.Load(config.DefaultLoadOptions())
@@ -32,17 +32,17 @@ func DiscoverPairs(repoRoot string) ([]ImplSpecsPair, error) {
 
 	var pairs []ImplSpecsPair
 
-	// Iterate modules that have test-impl components
+	// Iterate modules that have gherkin-steps components
 	for _, module := range eacCfg.Repository.Modules {
-		comp, hasTestImpl := module.Components["test-impl"]
-		if !hasTestImpl || comp == nil || comp.Root == "" {
+		comp, ok := module.Components["gherkin-steps"]
+		if !ok || comp == nil || comp.Root == "" {
 			continue
 		}
 
 		implDir := filepath.Join(repoRoot, comp.Root)
 		godogFile := filepath.Join(implDir, "godog_test.go")
 
-		// Check if godog_test.go exists in this module's test-impl root
+		// Check if godog_test.go exists in this module's executor root
 		if _, err := os.Stat(godogFile); os.IsNotExist(err) {
 			continue
 		}

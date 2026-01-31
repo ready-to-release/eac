@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/commands/internal/dockerutil"
+	dockerutil "github.com/ready-to-release/eac/go/eac/adapters/docker/util"
 )
 
 // Size presets for mermaid diagrams.

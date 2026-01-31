@@ -15,14 +15,13 @@ package work
 import (
 	"context"
 	"os"
+	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/commands/help"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
-	"github.com/ready-to-release/eac/go/eac/commands/tui"
+	"github.com/ready-to-release/eac/go/eac/adapters/tui"
+	"github.com/ready-to-release/eac/go/eac/adapters/tui/selector"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
-
-	// Import default TUI to register it
-	_ "github.com/ready-to-release/eac/go/eac/commands/tui/default"
 )
 
 var log = logging.C()
@@ -81,37 +80,31 @@ func Work() int {
 }
 
 // runInteractiveTUI shows the interactive TUI for subcommand selection.
+// Uses the new SelectorConsole pattern: TUI just picks a command, caller executes.
 func runInteractiveTUI() int {
-	console := tui.NewForCommand("work", tui.Config{
-		CommandName: "work",
-		Height:      15,
-	})
+	// Convert subcommands to CommandOptions
+	options := tui.SubcommandsToOptions(subcommands)
 
-	// Set subcommands if the console supports it
-	if ic, ok := console.(tui.InteractiveConsole); ok {
-		ic.SetSubcommands(subcommands)
+	// Run the selector - it shows the list, user picks, returns selection
+	selected, args, cancelled := selector.RunSelector(context.Background(), options)
+
+	// Handle cancellation
+	if cancelled {
+		return 0
 	}
 
-	// Run the TUI
-	if err := console.Start(context.Background()); err != nil {
-		log.Errorf("TUI error: %v", err)
-		return 1
+	// Handle empty selection (shouldn't happen, but be safe)
+	if selected == "" {
+		return 0
 	}
 
-	// Get selected command
-	if ic, ok := console.(tui.InteractiveConsole); ok {
-		selected, params := ic.GetSelectedCommand()
-		if selected != "" {
-			// Re-execute with selected subcommand
-			newArgs := []string{os.Args[0], "work", selected}
-			if args, ok := params["args"]; ok && args != "" {
-				newArgs = append(newArgs, args)
-			}
-			os.Args = newArgs
-			return Work()
-		}
+	// Build new args and re-execute with selected subcommand
+	newArgs := []string{os.Args[0], "work", selected}
+	if args != "" {
+		// Split args on whitespace to handle multiple arguments
+		newArgs = append(newArgs, strings.Fields(args)...)
 	}
-
-	return 0
+	os.Args = newArgs
+	return Work()
 }
 

@@ -27,8 +27,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	dockerutil "github.com/ready-to-release/eac/go/eac/adapters/docker/util"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/books"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/dockerutil"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/logging"

@@ -1,11 +1,11 @@
 // Command: show tests
 // Short: Display all test assertions with metadata
 // Long: The show tests command displays all test assertions in the repository with their metadata.
-// Long: Shows test names, modules, packages, tags (type, level, verification, dependencies), with indicators for inferred values.
+// Long: Shows test names, modules, components, tags (type, level, verification, dependencies), with indicators for inferred values.
 // Long:
 // Long: Expected Output:
-// Long: - Table with test assertions showing: Module, Package, Assertion, Type, Level, Verify, Deps
-// Long: - Module overview table with per-module statistics (assertions, packages, level breakdown, types)
+// Long: - Table with test assertions showing: Module, Component, Assertion, Type, Level, Verify, Deps
+// Long: - Module overview table with per-module statistics (assertions, components, level breakdown, types)
 // Long: - Summary sections showing counts by type and by level
 // Long: - Legend indicating inferred tags with * and ~ symbols
 package show
@@ -73,7 +73,7 @@ func ShowTests() int {
 	fmt.Println("")
 
 	tb := render.NewTableBuilder().
-		WithHeaders("#", "Module", "Package", "Assertion", "Type", "Level", "Verify", "Deps")
+		WithHeaders("#", "Module", "Component", "Assertion", "Type", "Level", "Verify", "Deps")
 
 	for i, entry := range data.Tests {
 		levelStr := formatTagsWithInferred(entry.Level, entry.InferredTags)
@@ -175,7 +175,7 @@ func buildModuleOverview(tests []testing.SuiteTestEntry, osFilteredCount int, cu
 
 	// Build table
 	tb := render.NewTableBuilder().
-		WithHeaders("Module", "Assertions", "Packages", "L0", "L1", "L2", "L3", "L4", "Types")
+		WithHeaders("Module", "Assertions", "Components", "L0", "L1", "L2", "L3", "L4", "Types")
 
 	for _, name := range names {
 		stats := modules[name]

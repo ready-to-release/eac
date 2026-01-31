@@ -18,7 +18,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/xeipuuv/gojsonschema v1.2.0
 	golang.org/x/sys v0.40.0
-	golang.org/x/text v0.32.0
+	golang.org/x/text v0.33.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -31,9 +31,9 @@ require (
 	github.com/bmatcuk/doublestar/v4 v4.10.0 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/charmbracelet/colorprofile v0.2.3-0.20250311203215-f60798e515dc // indirect
+	github.com/charmbracelet/colorprofile v0.3.1 // indirect
 	github.com/charmbracelet/x/ansi v0.10.1 // indirect
-	github.com/charmbracelet/x/cellbuf v0.0.13-0.20250311204145-2c3ea96c31dd // indirect
+	github.com/charmbracelet/x/cellbuf v0.0.13 // indirect
 	github.com/charmbracelet/x/term v0.2.1 // indirect
 	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
@@ -103,8 +103,8 @@ require (
 	go.uber.org/multierr v1.10.0 // indirect
 	go.uber.org/zap v1.27.1 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/crypto v0.46.0 // indirect
-	golang.org/x/net v0.48.0 // indirect
+	golang.org/x/crypto v0.47.0 // indirect
+	golang.org/x/net v0.49.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect

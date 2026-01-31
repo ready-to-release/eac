@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/environment"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
+	"github.com/ready-to-release/eac/go/eac/adapters/tui"
 )
 
 // OutputFlags holds TUI and output control flags.

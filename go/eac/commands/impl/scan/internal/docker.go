@@ -12,7 +12,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/serve"
+	"github.com/ready-to-release/eac/go/eac/adapters/docker"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
@@ -22,16 +22,16 @@ var containerCounter uint64
 // Package-level logger for internal scanner operations.
 var log = logging.C()
 
-// OneOffDockerRunner wraps serve.DockerClient for running one-off container executions.
+// OneOffDockerRunner wraps docker.DockerClient for running one-off container executions.
 // It provides utilities for running security scanners and other short-lived containers
 // with automatic cleanup after execution.
 type OneOffDockerRunner struct {
-	client serve.DockerClient
+	client docker.DockerClient
 }
 
 // NewOneOffDockerRunner creates a new one-off Docker runner.
 func NewOneOffDockerRunner() (*OneOffDockerRunner, error) {
-	client, err := serve.NewDockerClient()
+	client, err := docker.NewDockerClient()
 	if err != nil {
 		return nil, fmt.Errorf("Docker is not available. Please install and start Docker:\n"+
 			"  Download from: https://www.docker.com/get-started\n"+
@@ -43,7 +43,7 @@ func NewOneOffDockerRunner() (*OneOffDockerRunner, error) {
 }
 
 // NewOneOffDockerRunnerWithClient creates a runner with a custom Docker client (for testing).
-func NewOneOffDockerRunnerWithClient(client serve.DockerClient) *OneOffDockerRunner {
+func NewOneOffDockerRunnerWithClient(client docker.DockerClient) *OneOffDockerRunner {
 	return &OneOffDockerRunner{
 		client: client,
 	}

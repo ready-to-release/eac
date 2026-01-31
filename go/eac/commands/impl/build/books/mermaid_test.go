@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ready-to-release/eac/go/eac/commands/internal/dockerutil"
+	dockerutil "github.com/ready-to-release/eac/go/eac/adapters/docker/util"
 )
 
 func TestExtractMermaidBlocks(t *testing.T) {

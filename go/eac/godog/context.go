@@ -23,6 +23,10 @@ type TestContext struct {
 	// OriginalRepoRoot is the actual repository root (for running go commands)
 	OriginalRepoRoot string
 
+	// AssetsPath is the path to the assets directory relative to the repository root.
+	// Example: "go/eac/commands/specs/assets" for eac-commands.
+	AssetsPath string
+
 	// IsolatedDir is the temp directory for isolated tests (main repository root)
 	// This should NEVER be changed after initial setup - it's the main isolated directory
 	IsolatedDir string
@@ -228,12 +232,12 @@ func (c *TestContext) buildMockingEnvironment(env []string) []string {
 			break
 		}
 	}
-	if !hasAIDir && mockConfig.Mocks.AI.Enabled {
+	if !hasAIDir && mockConfig.Mocks.AI.Enabled && c.AssetsPath != "" {
 		// Set mock AI directory for subprocess commands
 		// Use container root if in container, otherwise repo root
 		assetsRoot := repository.GetDistRoot(c.OriginalRepoRoot)
 		if assetsRoot != "" {
-			assetsDir := filepath.Join(assetsRoot, "go", "eac", "specs", "impl", "eac-commands", "assets")
+			assetsDir := filepath.Join(assetsRoot, c.AssetsPath)
 			if _, err := os.Stat(assetsDir); err == nil {
 				env = append(env, fmt.Sprintf("%s=%s", environments.EnvR2RMockAIDir, assetsDir))
 			}

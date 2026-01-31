@@ -6,7 +6,7 @@ import (
 	"io"
 	"path/filepath"
 
-	internalserve "github.com/ready-to-release/eac/go/eac/commands/internal/serve"
+	"github.com/ready-to-release/eac/go/eac/adapters/docker"
 	"github.com/ready-to-release/eac/go/eac/core/tool"
 )
 
@@ -33,7 +33,7 @@ func staticSiteServeAdapter(workspaceRoot, moduleRoot, contentPath string, port 
 	containerName := fmt.Sprintf("cli-serve-%s", moduleName)
 
 	// Build serve config
-	serveConfig := &internalserve.ServeConfig{
+	serveConfig := &docker.ServeConfig{
 		Name:          containerName,
 		Image:         image,
 		ContentPath:   contentPath,
@@ -45,14 +45,14 @@ func staticSiteServeAdapter(workspaceRoot, moduleRoot, contentPath string, port 
 
 	// Add build info if Dockerfile path is available
 	if ctx.StaticSiteDockerfile != "" {
-		serveConfig.BuildInfo = &internalserve.BuildInfo{
+		serveConfig.BuildInfo = &docker.BuildInfo{
 			Dockerfile:  ctx.StaticSiteDockerfile,
 			ContextPath: ctx.StaticSiteContext,
 		}
 	} else if workspaceRoot != "" {
 		// Default Dockerfile location
 		dockerfile := filepath.Join(workspaceRoot, "containers/static-site/Dockerfile")
-		serveConfig.BuildInfo = &internalserve.BuildInfo{
+		serveConfig.BuildInfo = &docker.BuildInfo{
 			Dockerfile:  dockerfile,
 			ContextPath: filepath.Dir(dockerfile),
 		}
@@ -64,7 +64,7 @@ func staticSiteServeAdapter(workspaceRoot, moduleRoot, contentPath string, port 
 	}
 
 	// Start the serve container
-	result, err := internalserve.StartServe(context.Background(), serveConfig)
+	result, err := docker.StartServe(context.Background(), serveConfig)
 	if err != nil {
 		if logWriter != nil {
 			io.WriteString(logWriter, fmt.Sprintf("Error starting static site server: %v\n", err))

@@ -182,10 +182,10 @@ func (m *ModuleContract) GetReleaseNotesPath() string {
 	return filepath.Join("release", m.Moniker, "RELEASE-NOTES.md")
 }
 
-// GetTestImplementationPath returns the test implementation directory path.
-// Uses the test-impl component root, or empty string if not defined.
+// GetTestImplementationPath returns the gherkin-steps directory path.
+// Returns empty string if no gherkin-steps component is defined.
 func (m *ModuleContract) GetTestImplementationPath() string {
-	if comp, ok := m.Components["test-impl"]; ok && comp != nil {
+	if comp, ok := m.Components["gherkin-steps"]; ok && comp != nil && comp.Root != "" {
 		return comp.Root
 	}
 	return ""

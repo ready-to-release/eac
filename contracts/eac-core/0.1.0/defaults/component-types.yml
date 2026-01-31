@@ -111,20 +111,11 @@ component-types:
     files:
       source: ["**/*.txt", "**/*.go.txt"]
 
-  # Test implementation component - Go BDD test step implementations (godog)
-  # Contains godog_test.go and step definition files that implement Gherkin specs
-  # DEPRECATED: Use gherkin-executor for new modules (co-located with module code)
-  test-impl:
-    extensions: [".go"]
-    requirements: [go]
-    files:
-      source: ["**/*.go"]
-      tests: ["**/*_test.go"]
-
-  # Gherkin Executor component - Co-located BDD step implementations (godog)
-  # Contains godog_test.go and step definition files that implement Gherkin specs
-  # Located in specs/ subdirectory of the module, using _test.go suffix for test isolation
-  gherkin-executor:
+  # Gherkin Steps component - Co-located BDD step implementations
+  # For Go: godog_test.go and steps_*_test.go files
+  # For TypeScript: cucumber step definitions in features/ directory
+  # Bindings for test runners like godog (Go) and cucumber-js (TypeScript)
+  gherkin-steps:
     extensions: [".go"]
     requirements: [go]
     default_root: specs

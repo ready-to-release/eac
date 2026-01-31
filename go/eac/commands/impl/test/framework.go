@@ -2,7 +2,6 @@
 package test
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"os"
@@ -18,7 +17,6 @@ import (
 	testresults "github.com/ready-to-release/eac/go/eac/commands/impl/test/internal/results"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/cmdframework"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/initsummary"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/locking"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
 	"github.com/ready-to-release/eac/go/eac/core/domain/reports"
 	"github.com/ready-to-release/eac/go/eac/core/environments"
@@ -90,6 +88,10 @@ type TestFrameworkConfig struct {
 
 	// Incremental state
 	CachedModules map[string]bool // Modules that are up-to-date (cache hits)
+
+	// Component mapping for clean directory names
+	// Maps "cleanComponent" (e.g., "docs-drawio-cache/godog") to full pkgPath
+	ComponentToPkgPath map[string]string
 
 	// Execution state
 	ExecCtx       *TestExecutionContext
@@ -554,8 +556,8 @@ func testWorker(ctx *cmdframework.ExecutionContext, modulePath string, logWriter
 
 // testUnitWorker runs tests for a package path using component-level execution.
 // This is called by the UnitScheduler for parallel test component execution.
-// The component parameter is in "path:testType" format (e.g., "go/eac/core/config:gotest").
-// Note: The path may contain "/" so we parse from the right to find the test type.
+// The component parameter is in "cleanPath/testType" format (e.g., "config/gotest" or "docs-drawio-cache/godog").
+// The orchestrator (UoW) creates the log file and output directory - worker just writes to logWriter.
 func testUnitWorker(ctx *cmdframework.ExecutionContext, module, component string, logWriter io.Writer) int {
 	testCfg, ok := ctx.Config.Extra["testConfig"].(*TestFrameworkConfig)
 	if !ok || testCfg == nil {
@@ -568,21 +570,20 @@ func testUnitWorker(ctx *cmdframework.ExecutionContext, module, component string
 		return 1
 	}
 
-	// Parse component parameter: "path:testType" (e.g., "go/eac/core/config:gotest")
-	// The path may contain "/" so we find the LAST ":" to split path from testType
-	lastColonIdx := strings.LastIndex(component, ":")
-	var pkgPath, testType string
-	if lastColonIdx > 0 {
-		pkgPath = component[:lastColonIdx]
-		testType = component[lastColonIdx+1:]
-	} else {
-		// No colon found - component is just the path
-		pkgPath = component
-		testType = ""
+	// Look up pkgPath from component mapping (component is clean, pkgPath is full)
+	pkgPath, ok := testCfg.ComponentToPkgPath[component]
+	if !ok {
+		fmt.Fprintf(logWriter, "Error: no pkgPath mapping for component %s\n", component)
+		return 1
+	}
+
+	// Extract testType from component (format: "name/testType")
+	testType := ""
+	if idx := strings.LastIndex(component, "/"); idx > 0 {
+		testType = component[idx+1:]
 	}
 
 	// Check incremental cache - if module is cached, skip immediately (blue in TUI)
-	// Use the module parameter directly (already resolved by orchestrator)
 	log.Debugf("[TUI-CACHE] Test worker for %s: CachedModules=%v, isCached=%v",
 		module, testCfg.CachedModules != nil, testCfg.CachedModules != nil && testCfg.CachedModules[module])
 	if testCfg.CachedModules != nil && testCfg.CachedModules[module] {
@@ -605,41 +606,10 @@ func testUnitWorker(ctx *cmdframework.ExecutionContext, module, component string
 		}
 	}
 
-	// Build output directory using sanitized path with test type
-	// Sanitize path for lock identifier (replace "/" and ":" with "-" for cross-platform compatibility)
-	sanitizedForLock := strings.ReplaceAll(pkgPath, "/", "-")
-	sanitizedForLock = strings.ReplaceAll(sanitizedForLock, ":", "-")
-	if testType != "" {
-		sanitizedForLock = sanitizedForLock + "-" + testType
-	}
-
-	// Acquire component-level lock with wait (skip in dry-run)
-	// Lock acquired AFTER cache check to avoid blocking on cached items
-	if !ctx.Config.DryRun {
-		lockCfg := locking.UnitTestConfig(module, sanitizedForLock, ctx.EACConfig.Repository.Paths.Out.Test)
-		lockFile, err := locking.AcquireWithWait(context.Background(), ctx.WorkspaceRoot, lockCfg,
-			ctx.Orchestrator.GetRegistry(), locking.DefaultWaitConfig())
-		if err != nil {
-			fmt.Fprintf(logWriter, "Error: %v\n", err)
-			return 1
-		}
-		defer locking.ReleaseTracked(lockFile)
-	}
-
-	// Build output directory using sanitized path with test type
-	// Sanitize path for directory name (replace "/" and ":" with "_" for Windows compatibility)
-	sanitizedPath := strings.ReplaceAll(pkgPath, "/", "_")
-	sanitizedPath = strings.ReplaceAll(sanitizedPath, ":", "_")
-	componentDir := sanitizedPath
-	if testType != "" {
-		componentDir = sanitizedPath + "_" + testType
-	}
-	outputDir := filepath.Join(ctx.WorkspaceRoot, ctx.EACConfig.Repository.TestOutputDir(), componentDir)
-
-	// Run tests with OutputDir set
-	// Use the full component key (path:testType) as result key for proper aggregation
-	resultKey := component // Already in "path:testType" format
-	result := testCfg.ExecCtx.runPackageTestsWithOutputDir(pkgPath, tests, logWriter, outputDir)
+	// Run tests - UoW manages log file, we just write to logWriter
+	// Use the component as result key for aggregation
+	resultKey := component
+	result := testCfg.ExecCtx.runPackageTestsDirect(pkgPath, tests, logWriter)
 
 	testCfg.ExecCtx.mu.Lock()
 	testCfg.ExecCtx.results[resultKey] = result

@@ -204,7 +204,8 @@ func extractFeatureFolderName(featurePath string) string {
 }
 
 // Execute runs Go tests for a package and returns results.
-func (r *GoRunner) Execute(pkgPath string, tests []testing.TestReference, tuiWriter io.Writer, cfg RunConfig) RunResult {
+// logWriter is provided by the orchestrator (UoW manages log files).
+func (r *GoRunner) Execute(pkgPath string, tests []testing.TestReference, logWriter io.Writer, cfg RunConfig) RunResult {
 	start := time.Now()
 
 	// Parse package path - new format: "featureName:testRoot:featurePath" or "testRoot"
@@ -233,41 +234,14 @@ func (r *GoRunner) Execute(pkgPath string, tests []testing.TestReference, tuiWri
 
 	actualPkgDir := filepath.Join(cfg.WorkspaceRoot, relPkgPath)
 
-	// Use pre-created OutputDir if set, otherwise create based on module path
-	var logDir string
-	if cfg.OutputDir != "" {
-		logDir = cfg.OutputDir
-	} else {
-		outputPath := cfg.ModuleOutputPath
-		if outputPath == "" {
-			outputPath = pkgPath
-		}
-		logDir = filepath.Join(cfg.TestRunDir, sanitizePathForLog(outputPath))
-	}
-	if err := os.MkdirAll(logDir, 0o755); err != nil {
-		fmt.Fprintf(tuiWriter, "Failed to create log directory: %v\n", err)
-		result.PackageFailed = true
-		return result
-	}
-
-	// Create log file
-	logFilePath := filepath.Join(logDir, "test.log")
-	logFile, err := os.Create(logFilePath)
-	if err != nil {
-		fmt.Fprintf(tuiWriter, "Failed to create log file: %v\n", err)
-		result.PackageFailed = true
-		return result
-	}
-	defer logFile.Close()
-	result.LogFilePath = logFilePath
-
-	// Create streaming test runner
-	streamingRunner := runner.NewStreamingRunner(tuiWriter, logFile)
+	// UoW creates the log file - runner just writes to logWriter
+	// Log file is wrapped with ANSI stripping at orchestrator level
+	streamingRunner := runner.NewStreamingRunner(logWriter, logWriter)
 
 	// Run go generate to ensure embedded files exist (e.g., from contracts)
 	// This is needed because test jobs may run on fresh checkouts without build artifacts
-	if err := runGoGenerate(actualPkgDir, logFile); err != nil {
-		fmt.Fprintf(logFile, "Warning: go generate failed: %v\n", err)
+	if err := runGoGenerate(actualPkgDir, logWriter); err != nil {
+		fmt.Fprintf(logWriter, "Warning: go generate failed: %v\n", err)
 		// Don't fail - go generate might not be needed for all packages
 	}
 
@@ -280,9 +254,9 @@ func (r *GoRunner) Execute(pkgPath string, tests []testing.TestReference, tuiWri
 		goTestArgs = append(goTestArgs, "-tags", buildTags)
 	}
 
-	// Add coverage if enabled
-	if cfg.Coverage {
-		coverageFile := filepath.Join(logDir, "coverage.out")
+	// Add coverage if enabled (writes to UoW output directory)
+	if cfg.Coverage && cfg.OutputDir != "" {
+		coverageFile := filepath.Join(cfg.OutputDir, "coverage.out")
 		goTestArgs = append(goTestArgs, "-cover", "-coverprofile="+coverageFile)
 	}
 
@@ -309,7 +283,10 @@ func (r *GoRunner) Execute(pkgPath string, tests []testing.TestReference, tuiWri
 		}
 
 		// Always set report output for godog tests (cucumber.json format)
-		cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_OUTPUT_DIR=%s", logDir))
+		// OutputDir is set by the orchestrator for UoW output
+		if cfg.OutputDir != "" {
+			cmd.Env = append(cmd.Env, fmt.Sprintf("GODOG_OUTPUT_DIR=%s", cfg.OutputDir))
+		}
 
 		if relFeatureFile != "" {
 			relFeaturePath, relErr := filepath.Rel(actualPkgDir, filepath.Join(cfg.WorkspaceRoot, relFeatureFile))
@@ -325,12 +302,12 @@ func (r *GoRunner) Execute(pkgPath string, tests []testing.TestReference, tuiWri
 
 	// Save CTRF JSON output for unit tests (non-godog)
 	// Godog tests save cucumber.json via GODOG_OUTPUT_DIR
-	if !isGodogTest {
+	if !isGodogTest && cfg.OutputDir != "" {
 		events := streamingRunner.GetEvents()
 		if len(events) > 0 {
 			report := convertGoTestEventsToCTRF(events)
 			if ctrfData, err := report.ToJSON(); err == nil {
-				jsonPath := filepath.Join(logDir, "unit.json")
+				jsonPath := filepath.Join(cfg.OutputDir, "unit.json")
 				_ = os.WriteFile(jsonPath, ctrfData, 0o644) //nolint:errcheck // best-effort artifact save
 			}
 		}
@@ -385,14 +362,6 @@ func findModuleRoot(dir string) string {
 		}
 		dir = parent
 	}
-}
-
-// sanitizePathForLog converts a package path to a safe directory name.
-func sanitizePathForLog(pkgPath string) string {
-	// Replace colons with slashes for proper path hierarchy
-	safe := strings.ReplaceAll(pkgPath, ":", "/")
-	safe = strings.ReplaceAll(safe, "\\", "/")
-	return safe
 }
 
 // extractGoBuildTags extracts Go build tags from a suite tag filter.

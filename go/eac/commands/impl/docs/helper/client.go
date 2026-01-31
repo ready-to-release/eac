@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/docker/docker/client"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/serve"
+	"github.com/ready-to-release/eac/go/eac/adapters/docker"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 
@@ -80,7 +80,7 @@ func (c *Client) OpenBrowser(url string) error {
 // In DinD mode, returns (false, nil) to indicate browser was skipped.
 func (c *Client) OpenBrowserWithFallback(url string) (opened bool, err error) {
 	log.Debugf("Attempting to open browser with fallback: url=%s", url)
-	opened, err = serve.OpenBrowserWithFallback(url)
+	opened, err = docker.OpenBrowserWithFallback(url)
 	if err != nil {
 		log.Debugf("Browser opening failed: error=%v", err)
 	} else if !opened {

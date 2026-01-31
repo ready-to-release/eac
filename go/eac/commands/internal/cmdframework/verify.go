@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/initsummary"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
+	"github.com/ready-to-release/eac/go/eac/adapters/tui"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 )
 

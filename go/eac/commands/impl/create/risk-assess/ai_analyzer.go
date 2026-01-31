@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
+	"github.com/ready-to-release/eac/go/eac/adapters/ai"
+	"github.com/ready-to-release/eac/go/eac/adapters/ai/providers"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/scoring"
 	coreai "github.com/ready-to-release/eac/go/eac/core/ai"
 	"github.com/ready-to-release/eac/go/eac/core/logging"

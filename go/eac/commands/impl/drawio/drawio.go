@@ -24,7 +24,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/commands/internal/dockerutil"
+	dockerutil "github.com/ready-to-release/eac/go/eac/adapters/docker/util"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 	"github.com/ready-to-release/eac/go/eac/core/tool"
@@ -109,6 +109,10 @@ func RunDrawioCommand(
 	hostRepoRoot, err := dockerutil.GetHostRepoRoot()
 	if err != nil {
 		return fmt.Errorf("failed to get host repo root: %w", err)
+	}
+	if hostRepoRoot == "" {
+		// Not in DinD mode - use the passed workspace root directly
+		hostRepoRoot = workspaceRoot
 	}
 
 	// Format Docker volume path (handles Windows C:\ to /c/ conversion)

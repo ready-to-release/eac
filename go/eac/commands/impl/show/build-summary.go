@@ -283,8 +283,8 @@ func artifactsSection(f *SummaryFormatter, module *config.Module) string {
 func buildConfigSection(f *SummaryFormatter, module *config.Module, cfg *config.EACConfig) string {
 	var configDetails string
 
-	// Package types
-	configDetails += fmt.Sprintf("- %s: %s\n", Bold("Package Types"), module.GetComponentTypesDisplay())
+	// Component types
+	configDetails += fmt.Sprintf("- %s: %s\n", Bold("Component Types"), module.GetComponentTypesDisplay())
 
 	// Build dependencies from package types
 	if cfg.ComponentTypes != nil {

@@ -7,9 +7,8 @@ import (
 	"time"
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
-	rootTUI "github.com/ready-to-release/eac/go/eac/commands/tui"
-	"github.com/ready-to-release/eac/go/eac/commands/tui/parallel"
+	"github.com/ready-to-release/eac/go/eac/adapters/tui"
+	"github.com/ready-to-release/eac/go/eac/adapters/tui/parallel"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/environments"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
@@ -137,7 +136,7 @@ func phaseInit(ctx *ExecutionContext) error {
 
 	// If using registry, create TUI via registry and set it on orchestrator
 	if useRegistryTUI {
-		tuiConfig := rootTUI.Config{
+		tuiConfig := tui.Config{
 			Height:       getTUIHeight(ctx.Config),
 			BufferSize:   1000,
 			RunPhaseName: ctx.Config.ActionVerb,
@@ -148,7 +147,7 @@ func phaseInit(ctx *ExecutionContext) error {
 		}
 
 		// Create console via registry
-		console := rootTUI.NewForCommand(ctx.Config.CommandPath, tuiConfig)
+		console := tui.NewForCommand(ctx.Config.CommandPath, tuiConfig)
 
 		// If it's a parallel.Console, extract the inner tui.Console for the orchestrator
 		if pc, ok := console.(*parallel.Console); ok {

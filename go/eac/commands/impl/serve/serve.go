@@ -23,9 +23,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/adapters/docker"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/serve/servers"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/serve"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
@@ -440,14 +440,14 @@ func NewDockerClient(containerName string) (*DockerClient, error) {
 func (c *DockerClient) Close() {}
 
 // IsRunning checks if the container is running.
-func (c *DockerClient) IsRunning() (bool, *serve.ServeResult, error) {
-	result, running, err := serve.IsServing(c.ctx, c.containerName)
+func (c *DockerClient) IsRunning() (bool, *docker.ServeResult, error) {
+	result, running, err := docker.IsServing(c.ctx, c.containerName)
 	return running, result, err
 }
 
 // StartContainer starts the serve container.
 // Uses configuration from servers.GlobalServeContext if set, otherwise uses defaults.
-func (c *DockerClient) StartContainer(workspaceRoot, contentPath string, port int) (*serve.ServeResult, error) {
+func (c *DockerClient) StartContainer(workspaceRoot, contentPath string, port int) (*docker.ServeResult, error) {
 	// Get configuration from GlobalServeContext or use defaults
 	ctx := servers.GlobalServeContext
 	if ctx == nil {
@@ -474,10 +474,10 @@ func (c *DockerClient) StartContainer(workspaceRoot, contentPath string, port in
 		containerPort = 8000
 	}
 
-	serveConfig := &serve.ServeConfig{
+	serveConfig := &docker.ServeConfig{
 		Name:  c.containerName,
 		Image: image,
-		BuildInfo: &serve.BuildInfo{
+		BuildInfo: &docker.BuildInfo{
 			Dockerfile:  dockerfile,
 			ContextPath: contextPath,
 		},
@@ -488,12 +488,12 @@ func (c *DockerClient) StartContainer(workspaceRoot, contentPath string, port in
 		RestartPolicy: "unless-stopped",
 	}
 
-	return serve.StartServe(c.ctx, serveConfig)
+	return docker.StartServe(c.ctx, serveConfig)
 }
 
 // StopContainer stops the container.
 func (c *DockerClient) StopContainer() error {
-	return serve.StopServe(c.ctx, c.containerName)
+	return docker.StopServe(c.ctx, c.containerName)
 }
 
 // IsImageStale checks if the container image is stale.
@@ -519,20 +519,20 @@ func (c *DockerClient) IsImageStale(workspaceRoot string) (bool, string, error) 
 		contextPath = filepath.Dir(dockerfile)
 	}
 
-	serveConfig := &serve.ServeConfig{
+	serveConfig := &docker.ServeConfig{
 		Image: image,
-		BuildInfo: &serve.BuildInfo{
+		BuildInfo: &docker.BuildInfo{
 			Dockerfile:  dockerfile,
 			ContextPath: contextPath,
 		},
 	}
 
-	return serve.CheckImageStale(c.ctx, serveConfig)
+	return docker.CheckImageStale(c.ctx, serveConfig)
 }
 
 // OpenBrowserWithFallback opens the browser.
 func (c *DockerClient) OpenBrowserWithFallback(url string) (bool, error) {
-	return serve.OpenBrowserWithFallback(url)
+	return docker.OpenBrowserWithFallback(url)
 }
 
 // StreamLogs streams container logs.

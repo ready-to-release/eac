@@ -17,7 +17,7 @@ type BuildSpecificFlags struct {
 	Reproducible    string // --reproducible: MkDocs reproducibility mode
 	AcceptWarnings  bool   // --accept-warnings: Don't fail on MkDocs warnings
 	ListArtifacts   bool   // --list-artifacts: List artifacts without building
-	BuildAll        bool   // --all: Include non-default books
+	BuildAll        bool   // --all: Build all artifacts variants
 }
 
 // ParseBuildSpecificFlags parses build-specific flags from remaining args.

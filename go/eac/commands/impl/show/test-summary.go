@@ -9,7 +9,7 @@
 // Long:
 // Long: Expected Output:
 // Long: - Markdown-formatted test summary with emojis and styling, suitable for GitHub Actions $GITHUB_STEP_SUMMARY
-// Long: - Success: includes status section, test metrics table (packages, tests, passed/failed/skipped, duration), package breakdown
+// Long: - Success: includes status section, test metrics table (components, tests, passed/failed/skipped, duration), component breakdown
 // Long: - Failure: includes status section, diagnostics with last 100 lines of test log, timing data, and configuration
 // Flag.status: type=string, usage=Test status override (success or failure)
 // Flag.run-id: type=string, usage=GitHub Actions run ID for linking to workflow
@@ -531,7 +531,7 @@ func formatTestResults(f *SummaryFormatter, results *TestResults) string {
 	// Overall metrics
 	headers := []string{"Metric", "Value"}
 	rows := [][]string{
-		{"Packages Tested", fmt.Sprintf("%d", results.Packages)},
+		{"Components Tested", fmt.Sprintf("%d", results.Packages)},
 		{"Total Tests", fmt.Sprintf("%d", results.Total)},
 		{"Passed", fmt.Sprintf("%d %s", results.Passed, Emoji("success"))},
 		{"Failed", fmt.Sprintf("%d", results.Failed)},
@@ -566,7 +566,7 @@ func packageBreakdown(f *SummaryFormatter, details []PackageTestResults) string 
 		})
 	}
 
-	return f.Section(Emoji("chart")+" Package Breakdown", f.Table(headers, rows))
+	return f.Section(Emoji("chart")+" Component Breakdown", f.Table(headers, rows))
 }
 
 func testDiagnosticsSection(f *SummaryFormatter, module *config.Module, suite string, cfg *config.EACConfig) string {

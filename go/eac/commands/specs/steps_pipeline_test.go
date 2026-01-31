@@ -365,6 +365,9 @@ func createTestModule(ctx *eacgodog.TestContext, moniker string, dependencies []
 			"moniker":     moniker,
 			"name":        fmt.Sprintf("Test Module %s", moniker),
 			"description": "Test module for pipeline tests",
+			"versioning": map[string]interface{}{
+				"scheme": "SemVer",
+			},
 			"components": map[string]interface{}{
 				"go": fmt.Sprintf("go/%s", moniker),
 			},

@@ -2,6 +2,7 @@ package test
 
 import (
 	"math"
+	"path/filepath"
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/cmdframework"
@@ -36,6 +37,11 @@ func FlattenModulesToTestUnits(ctx *cmdframework.ExecutionContext) [][]workunit.
 	cfg := config.Global()
 	if cfg == nil || cfg.ComponentTypes == nil {
 		return nil
+	}
+
+	// Initialize component-to-pkgPath mapping for clean directory names
+	if testCfg.ComponentToPkgPath == nil {
+		testCfg.ComponentToPkgPath = make(map[string]string)
 	}
 
 	var parallelWork []workunit.UnitSpec
@@ -78,9 +84,16 @@ func FlattenModulesToTestUnits(ctx *cmdframework.ExecutionContext) [][]workunit.
 			isCached := testCfg.CachedModules != nil && testCfg.CachedModules[moduleMoniker]
 
 			// Extract spec name for BDD tests (godog, tscucumber)
+			// For BDD tests, use spec name as the clean component identifier
+			// For unit tests, use the last path component (package name)
 			spec := ""
+			cleanComponent := ""
 			if testType == "godog" || testType == "tscucumber" {
 				spec = extractSpecName(pkgPath)
+				cleanComponent = spec + "/" + testType // e.g., "docs-drawio-cache/godog"
+			} else {
+				// For regular tests, use last path component
+				cleanComponent = filepath.Base(pkgPath) + "/" + testType // e.g., "config/gotest"
 			}
 
 			isContainer := tool.GlobalTestBridge().IsContainer(compTypeName)
@@ -88,8 +101,8 @@ func FlattenModulesToTestUnits(ctx *cmdframework.ExecutionContext) [][]workunit.
 				ID: workunit.UnitID{
 					Context:   workunit.ContextTest,
 					Module:    moduleMoniker,
-					Component: pkgPath + ":" + testType,
-					Tool:      "", // Don't duplicate - testType is already in Component
+					Component: cleanComponent, // Clean path for directory creation
+					Tool:      "",              // Don't duplicate - testType is already in Component
 					Extra:     map[string]string{"testset": testType},
 					Spec:      spec, // Spec name for BDD tests (e.g., "build-module")
 				},
@@ -99,9 +112,12 @@ func FlattenModulesToTestUnits(ctx *cmdframework.ExecutionContext) [][]workunit.
 				IsHostInstalled: !isContainer,
 				DependsOn:       nil, // Tests don't have intra-module deps
 				Cached:          isCached,
-				Metadata:        make(map[string]any),
-				Index:           0, // Will be set per-layer below
+				Metadata:        map[string]any{"pkgPath": pkgPath}, // Full path for test lookup
+				Index:           0,                                  // Will be set per-layer below
 			}
+
+			// Store mapping from cleanComponent to pkgPath for worker lookup
+			testCfg.ComponentToPkgPath[cleanComponent] = pkgPath
 
 			if hasSequential {
 				sequentialWork = append(sequentialWork, work)

@@ -40,6 +40,7 @@ long_operations:
   build: 30m            # Build operation timeout
   test: 30m             # Test execution timeout
   evidence_max_age: 24h # Evidence validity period
+  worker_timeout: 5m    # Kill workers that hang (fail fast)
 
 # TUI and interactive operations
 tui:

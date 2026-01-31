@@ -14,7 +14,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/locktracker"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/output"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
+	"github.com/ready-to-release/eac/go/eac/adapters/tui"
 	"github.com/ready-to-release/eac/go/eac/core/workunit"
 )
 
@@ -33,7 +33,7 @@ type Orchestrator struct {
 	currentScheduler *UnitScheduler
 
 	// TUI console for real-time output display
-	tuiConsole *tui.Console
+	tuiConsole tui.Console
 	tuiCtx     context.Context
 	tuiCancel  context.CancelFunc
 
@@ -80,12 +80,12 @@ func New(config *Config, worker WorkerFunc) *Orchestrator {
 
 	// Initialize TUI console if enabled
 	if config.TUI {
-		o.tuiConsole = tui.New(tui.Config{
+		o.tuiConsole = tui.NewParallelConsole(tui.Config{
 			Height:       config.TUIHeight,
 			BufferSize:   1000,
 			RunPhaseName: config.ActionVerb,
 			ASCIIMode:    config.TUIASCIIMode,
-			SkipTUIDelay:     config.SkipTUIDelay,
+			SkipTUIDelay: config.SkipTUIDelay,
 		})
 		o.tuiCtx, o.tuiCancel = context.WithCancel(context.Background())
 	}
@@ -96,8 +96,8 @@ func New(config *Config, worker WorkerFunc) *Orchestrator {
 // SetConsole sets an external TUI console for the orchestrator.
 // This allows the cmdframework to inject a console created via the TUI registry.
 // If called with a non-nil console, it replaces any console created in New().
-// The console should implement the internal/tui.Console interface.
-func (o *Orchestrator) SetConsole(console *tui.Console) {
+// The console should implement the tui.Console interface.
+func (o *Orchestrator) SetConsole(console tui.Console) {
 	if console != nil {
 		o.tuiConsole = console
 		if o.tuiCtx == nil {

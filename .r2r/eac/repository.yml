@@ -53,9 +53,13 @@ modules:
         root: /
         patterns:
           source: [scripts/pwsh/claude/**/*.ps1, scripts/pwsh/local-dev/**/*.ps1, importer.ps1]
-      test-impl: ~
-      gherkin: ~
-      structurizr: ~
+      go:
+        root: go/eac/specs/repository
+        patterns:
+          config: [go.mod, go.sum]
+      gherkin-steps:
+        root: go/eac/specs/repository
+      # gherkin, structurizr auto-inferred from specs/repository/
 
   - moniker: contracts
     name: Contract Files Module
@@ -64,6 +68,10 @@ modules:
     parameters:
       go_root: contracts
     components:
+      go:
+        root: contracts
+        patterns:
+          config: [go.mod, go.sum, "**/go.mod"]
       testdata:
         type: testdata
         root: contracts
@@ -91,13 +99,7 @@ modules:
         root: go/eac/core
         patterns:
           source: ["testing/testdata/**/*", "specs/gherkin/testdata/**/*.feature", "github/cli_fixtures/**/*"]
-      gherkin: ~
-      structurizr: ~
-      test-impl: ~
-      gherkin-executor:
-        root: go/eac/core/specs
-        patterns:
-          source: ["godog_test.go", "steps_*_test.go"]
+      # gherkin, structurizr, gherkin-steps auto-inferred
 
   - moniker: mkdocs-pdf
     name: MkDocs PDF Container
@@ -201,7 +203,7 @@ modules:
         root: docs
         patterns:
           source: ["LICENSE"]
-      structurizr: ~
+      # structurizr auto-inferred
 
   - moniker: eac-commands
     name: Go Commands Library
@@ -216,13 +218,7 @@ modules:
               type: executable
               pattern: "commands{ext}"
       markdown: go/eac/commands
-      gherkin: ~
-      structurizr: ~
-      test-impl: ~
-      gherkin-executor:
-        root: go/eac/commands/specs
-        patterns:
-          source: ["godog_test.go", "steps_*_test.go"]
+      # gherkin, structurizr, gherkin-steps auto-inferred
       testdata:
         type: testdata
         root: go/eac/commands/testdata
@@ -274,6 +270,33 @@ modules:
           tests: [internal/**/*_test.go]
           config: [go.mod, go.sum]
 
+  - moniker: eac-ai
+    name: AI Adapter
+    description: LLM integration abstraction with multi-provider support (Anthropic, OpenAI, Gemini, Claude CLI)
+    depends_on: [eac-core]
+    components:
+      go:
+        root: go/eac/adapters/ai
+      markdown: go/eac/adapters/ai
+
+  - moniker: eac-docker
+    name: Docker Adapter
+    description: Docker SDK wrapper for container lifecycle, image operations, port allocation, and serve functionality
+    depends_on: [eac-core]
+    components:
+      go:
+        root: go/eac/adapters/docker
+      markdown: go/eac/adapters/docker
+
+  - moniker: eac-tui
+    name: TUI Adapter
+    description: Terminal UI implementations with registry-based binding for parallel and basic console modes
+    depends_on: [eac-core]
+    components:
+      go:
+        root: go/eac/adapters/tui
+      markdown: go/eac/adapters/tui
+
   - moniker: r2r-cli
     name: The CLI of CLIs
     description: The extendable go-based CLI tool
@@ -323,13 +346,7 @@ modules:
         root: go/r2r/cli
         patterns:
           source: ["internal/validator/config/**/*.json"]
-      gherkin: ~
-      structurizr: ~
-      test-impl: ~
-      gherkin-executor:
-        root: go/r2r/cli/specs
-        patterns:
-          source: ["godog_test.go", "steps_*_test.go"]
+      # gherkin, structurizr, gherkin-steps auto-inferred
 
   - moniker: templates
     name: Project Templates
@@ -345,7 +362,7 @@ modules:
         root: templates
         patterns:
           source: ["**/*.template"]
-      structurizr: ~
+      # structurizr auto-inferred
 
   - moniker: vscode-ext-commit
     name: VSCode Extension - Git Commit
@@ -370,8 +387,7 @@ modules:
                 to: ".vscode/extensions/vscode-ext-commit/package.json"
       markdown: typescript/vscode-ext-commit
       json: contracts/vscode-commit
-      gherkin: ~
-      structurizr: ~
+      # gherkin, structurizr auto-inferred
 
   # ============================================================================
   # LAYER 2 - Depends on Layer 1
@@ -419,7 +435,7 @@ modules:
               type: executable
               pattern: "{moniker}{ext}"
       markdown: go/eac/mcp/commands
-      structurizr: ~
+      # structurizr auto-inferred
       testdata:
         type: testdata
         root: templates/test-repositories
@@ -456,7 +472,7 @@ modules:
             - id: image
               type: image
               pattern: "{moniker}:latest"
-      structurizr: ~
+      # structurizr auto-inferred
 
   - moniker: github
     name: GitHub Configuration
@@ -466,8 +482,7 @@ modules:
       yaml: .github
       markdown: .github
       workflows:
-      gherkin: ~
-      structurizr: ~
+      # No gherkin specs for this module
 
   - moniker: r2r-installer
     name: R2R CLI Installer Scripts
@@ -478,9 +493,13 @@ modules:
         root: scripts/pwsh/cli
       bash:
         root: scripts/sh/cli
-      test-impl: ~
-      gherkin: ~
-      structurizr: ~
+      go:
+        root: go/eac/specs/r2r-installer
+        patterns:
+          config: [go.mod, go.sum]
+      gherkin-steps:
+        root: go/eac/specs/r2r-installer
+      # gherkin, structurizr auto-inferred from specs/r2r-installer/
 
   - moniker: implicit-r2r-cli
     name: Go Command Invoker Scripts
@@ -496,9 +515,13 @@ modules:
         root: scripts/sh/go-invoker
         patterns:
           source: ["**/*.sh", "../../../importer.sh"]
-      gherkin: ~
-      structurizr: ~
-      test-impl: ~
+      go:
+        root: go/eac/specs/implicit-r2r-cli
+        patterns:
+          config: [go.mod, go.sum]
+      gherkin-steps:
+        root: go/eac/specs/implicit-r2r-cli
+      # gherkin, structurizr auto-inferred from specs/implicit-r2r-cli/
 
   # ============================================================================
   # LAYER 3 - Depends on Layer 2

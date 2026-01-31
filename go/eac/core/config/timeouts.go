@@ -86,6 +86,7 @@ type LongOperationTimeouts struct {
 	Build          Duration `yaml:"build"`            // Build timeout
 	Test           Duration `yaml:"test"`             // Test timeout
 	EvidenceMaxAge Duration `yaml:"evidence_max_age"` // Evidence validity period
+	WorkerTimeout  Duration `yaml:"worker_timeout"`   // Kill workers that hang
 }
 
 // TUITimeouts holds TUI-related timeouts.
@@ -135,6 +136,7 @@ func DefaultTimeoutConfig() *TimeoutConfig {
 			Build:          Duration(30 * time.Minute),
 			Test:           Duration(30 * time.Minute),
 			EvidenceMaxAge: Duration(24 * time.Hour),
+			WorkerTimeout:  Duration(5 * time.Minute),
 		},
 		TUI: TUITimeouts{
 			AutoScrollResume: Duration(8 * time.Second),
@@ -230,6 +232,9 @@ func MergeTimeoutConfigs(defaults, override *TimeoutConfig) *TimeoutConfig {
 	}
 	if override.LongOperations.EvidenceMaxAge != 0 {
 		result.LongOperations.EvidenceMaxAge = override.LongOperations.EvidenceMaxAge
+	}
+	if override.LongOperations.WorkerTimeout != 0 {
+		result.LongOperations.WorkerTimeout = override.LongOperations.WorkerTimeout
 	}
 
 	// TUI

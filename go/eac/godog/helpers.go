@@ -25,12 +25,16 @@ import (
 // Asset Loading Helpers
 // ============================================================================
 
-// LoadAsset loads content from an asset file in go/eac/specs/impl/eac-commands/assets/.
+// LoadAsset loads content from an asset file relative to the configured AssetsPath.
 // The assetPath is relative to the assets directory (e.g., "specs/valid-spec.txt").
 // Uses container root if in container, otherwise repo root.
+// Requires ctx.AssetsPath to be set (configured via RunnerConfig.AssetsPath).
 func LoadAsset(ctx *TestContext, assetPath string) (string, error) {
+	if ctx.AssetsPath == "" {
+		return "", fmt.Errorf("AssetsPath not configured - set RunnerConfig.AssetsPath in godog_test.go")
+	}
 	assetsRoot := repository.GetDistRoot(ctx.OriginalRepoRoot)
-	fullPath := filepath.Join(assetsRoot, "go", "eac", "specs", "impl", "eac-commands", "assets", assetPath)
+	fullPath := filepath.Join(assetsRoot, ctx.AssetsPath, assetPath)
 	data, err := os.ReadFile(fullPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to load asset %s: %w", assetPath, err)

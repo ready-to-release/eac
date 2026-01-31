@@ -3,13 +3,13 @@ package internal
 import (
 	"testing"
 
-	"github.com/ready-to-release/eac/go/eac/commands/internal/serve"
+	"github.com/ready-to-release/eac/go/eac/adapters/docker/mocks"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestOneOffDockerRunner_Creation(t *testing.T) {
 	// Test with mock client
-	mockClient := new(serve.MockDockerClient)
+	mockClient := new(mocks.MockDockerClient)
 	mockClient.On("Close").Return(nil)
 
 	runner := NewOneOffDockerRunnerWithClient(mockClient)
@@ -72,7 +72,7 @@ func TestStripDockerLogHeaders(t *testing.T) {
 }
 
 func TestOneOffDockerRunner_WithMockClient(t *testing.T) {
-	mockClient := new(serve.MockDockerClient)
+	mockClient := new(mocks.MockDockerClient)
 
 	// Create runner with mock
 	runner := NewOneOffDockerRunnerWithClient(mockClient)

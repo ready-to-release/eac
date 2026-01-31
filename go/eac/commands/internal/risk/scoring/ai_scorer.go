@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
+	"github.com/ready-to-release/eac/go/eac/adapters/ai"
+	"github.com/ready-to-release/eac/go/eac/adapters/ai/providers"
 	aimock "github.com/ready-to-release/eac/go/eac/core/ai"
 )
 

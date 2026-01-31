@@ -6,7 +6,7 @@ import (
 	"io"
 	"path/filepath"
 
-	internalserve "github.com/ready-to-release/eac/go/eac/commands/internal/serve"
+	"github.com/ready-to-release/eac/go/eac/adapters/docker"
 	"github.com/ready-to-release/eac/go/eac/core/tool"
 )
 
@@ -40,7 +40,7 @@ func structurizrServeAdapter(workspaceRoot, moduleRoot, contentPath string, port
 	}
 
 	// Build serve config for Structurizr Lite
-	serveConfig := &internalserve.ServeConfig{
+	serveConfig := &docker.ServeConfig{
 		Name:          containerName,
 		Image:         image,
 		ContentPath:   workspacePath,
@@ -51,7 +51,7 @@ func structurizrServeAdapter(workspaceRoot, moduleRoot, contentPath string, port
 	}
 
 	// Start the serve container
-	result, err := internalserve.StartServe(context.Background(), serveConfig)
+	result, err := docker.StartServe(context.Background(), serveConfig)
 	if err != nil {
 		if logWriter != nil {
 			io.WriteString(logWriter, fmt.Sprintf("Error starting Structurizr server: %v\n", err))

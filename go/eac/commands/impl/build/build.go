@@ -54,9 +54,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ready-to-release/eac/go/eac/adapters/tui"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/builders"
 	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
-	"github.com/ready-to-release/eac/go/eac/core/adapters"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/cmdframework"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/environment"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
@@ -64,12 +64,12 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/initsummary"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/output"
-	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
-	"github.com/ready-to-release/eac/go/eac/core/hash"
+	"github.com/ready-to-release/eac/go/eac/core/adapters"
 	"github.com/ready-to-release/eac/go/eac/core/config"
 	"github.com/ready-to-release/eac/go/eac/core/domain/modules"
 	"github.com/ready-to-release/eac/go/eac/core/domain/reports"
+	"github.com/ready-to-release/eac/go/eac/core/hash"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -332,26 +332,26 @@ func Build() int {
 
 	// Create command config for framework
 	cmdCfg := &cmdframework.CommandConfig{
-		Type:         cmdframework.CommandTypeBuild,
-		CommandPath:  "build",
-		ActionVerb:   "Building",
-		OutputDir:    paths.OutBuildRelPath,
-		LogFileName:  "build.log",
-		Monikers:     monikers,
-		IncludeDepm:  !skipDepm,
-		SkipDeps:     skipDeps,
-		SkipDepm:     skipDepm,
-		ForceRebuild: forceRebuild,
-		Layered:      layeredBuild,
+		Type:           cmdframework.CommandTypeBuild,
+		CommandPath:    "build",
+		ActionVerb:     "Building",
+		OutputDir:      paths.OutBuildRelPath,
+		LogFileName:    "build.log",
+		Monikers:       monikers,
+		IncludeDepm:    !skipDepm,
+		SkipDeps:       skipDeps,
+		SkipDepm:       skipDepm,
+		ForceRebuild:   forceRebuild,
+		Layered:        layeredBuild,
 		Turbo:          turbo,
 		MaxConcurrency: roof,
 		DryRun:         dryRun,
-		UseTUI:       useTUI,
-		TUIHeight:    tuiHeight,
-		TUIASCIIMode: tuiASCII,
-		SkipTUIDelay: skipTUIDelay,
-		ShowTimings:  showTimings,
-		DebugMode:    debugMode,
+		UseTUI:         useTUI,
+		TUIHeight:      tuiHeight,
+		TUIASCIIMode:   tuiASCII,
+		SkipTUIDelay:   skipTUIDelay,
+		ShowTimings:    showTimings,
+		DebugMode:      debugMode,
 	}
 
 	// Create build-specific config
@@ -596,11 +596,10 @@ func printBuildUsage() {
 	log.Info("                            auto: CI uses true, local uses false")
 	log.Info("                            true: Always rebuild HTML from staging")
 	log.Info("                            false: Skip MkDocs if staging unchanged")
-	log.Info("  --all                     Include non-default books (those with default: false)")
 	log.Info("  -h, --help                Show this help message")
 	log.Info("")
 	log.Info("MkDocs modules with books (books.yml):")
-	log.Info("  Books with 'default: false' are skipped unless --all is used.")
+	log.Info("  Books with 'default: false' are skipped.")
 	log.Info("  Output is configured via the book's 'output' field:")
 	log.Info("    site       - HTML site only")
 	log.Info("    pdf-dark   - PDF with dark theme")
@@ -610,7 +609,6 @@ func printBuildUsage() {
 	log.Info("Examples:")
 	log.Info("  build                                # Build all modules")
 	log.Info("  build r2r-cli                        # Build CLI for current platform")
-	log.Info("  build r2r-cli --all                  # Build CLI for all platforms")
 	log.Info("  build books                          # Build books (uses books.yml output config)")
 	log.Info("  build r2r-cli --list-artifacts       # List artifacts without building")
 }

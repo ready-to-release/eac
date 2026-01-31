@@ -70,13 +70,13 @@ func ShowModules() int {
 	// Build markdown table
 	tb := render.NewTableBuilder()
 	if withArtifacts {
-		tb.WithHeaders("Moniker", "Packages", "Artifacts", "Missing", "Overrides")
+		tb.WithHeaders("Moniker", "Components", "Artifacts", "Missing", "Overrides")
 	} else {
-		tb.WithHeaders("Moniker", "Packages")
+		tb.WithHeaders("Moniker", "Components")
 	}
 
 	for _, mod := range report.Modules {
-		// Format packages list
+		// Format components list
 		pkgDisplay := mod.GetComponentTypesDisplay()
 
 		if withArtifacts {

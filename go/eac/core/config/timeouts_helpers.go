@@ -178,6 +178,11 @@ func EvidenceMaxAge() time.Duration {
 	return Timeouts().LongOperations.EvidenceMaxAge.D()
 }
 
+// WorkerTimeout returns the timeout for killing hanging workers.
+func WorkerTimeout() time.Duration {
+	return Timeouts().LongOperations.WorkerTimeout.D()
+}
+
 // ============================================================================
 // TUI Timeout Helpers
 // ============================================================================

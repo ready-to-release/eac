@@ -15,7 +15,7 @@ mocks:
   # When enabled, AI commands use file-based mock responses instead of real API calls
   ai:
     enabled: true
-    mock_dir: "go/eac/specs/impl/eac-commands/assets"
+    mock_dir: "go/eac/commands/specs/assets"
 
   # Security Tool Mocking (Trivy, Semgrep, ZAP)
   # When enabled, security scanners return predefined mock data
