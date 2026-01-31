@@ -7,6 +7,7 @@ require gopkg.in/yaml.v3 v3.0.1
 require (
 	github.com/bmatcuk/doublestar/v4 v4.10.0
 	github.com/cucumber/gherkin/go/v26 v26.2.0
+	github.com/cucumber/godog v0.15.1
 	github.com/cucumber/messages/go/v21 v21.0.1
 	github.com/defenseunicorns/go-oscal v0.7.0
 	github.com/docker/docker v28.5.2+incompatible
@@ -15,6 +16,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/ready-to-release/eac/contracts v0.0.0-20260129143239-c3ff637b8ca9
 	github.com/ready-to-release/eac/contracts/eac-core-interfaces v0.0.0-00010101000000-000000000000
+	github.com/ready-to-release/eac/go/eac/godog v0.0.0-00010101000000-000000000000
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/stretchr/testify v1.11.1
 	github.com/xeipuuv/gojsonschema v1.2.0
@@ -45,6 +47,9 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/gofrs/uuid v4.3.1+incompatible // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
+	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
+	github.com/hashicorp/go-memdb v1.3.4 // indirect
+	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
@@ -57,6 +62,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
 	github.com/skeema/knownhosts v1.3.1 // indirect
+	github.com/spf13/pflag v1.0.9 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
@@ -81,4 +87,7 @@ require (
 	gotest.tools/v3 v3.5.2 // indirect
 )
 
-replace github.com/ready-to-release/eac/contracts/eac-core-interfaces => ../../../contracts/eac-core/0.1.0/interfaces
+replace (
+	github.com/ready-to-release/eac/contracts/eac-core-interfaces => ../../../contracts/eac-core/0.1.0/interfaces
+	github.com/ready-to-release/eac/go/eac/godog => ../godog
+)

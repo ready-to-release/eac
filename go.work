@@ -5,6 +5,7 @@ use (
 	./contracts/eac-core/0.1.0/interfaces
 	./go/eac/commands
 	./go/eac/core
+	./go/eac/godog
 	./go/eac/mcp/commands
 	./go/eac/specs
 	./go/r2r/cli

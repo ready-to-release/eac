@@ -54,11 +54,12 @@ func TestValidateChangelog_ExplicitPath(t *testing.T) {
 func TestValidateChangelog_DefaultPath(t *testing.T) {
 	workspaceRoot := getWorkspaceRoot(t)
 
-	// Use mock registry with a module using default changelog path
+	// Use mock registry with a SemVer module using default changelog path
+	// Note: Only SemVer modules get the default release/{moniker}/CHANGELOG.md path
 	moduleRegistry := eactesting.NewMockRegistry(
 		eactesting.WithModule("r2r-cli",
-			eactesting.WithVersioning(),
-			// No explicit changelog = uses default path
+			eactesting.WithSemver(),
+			// No explicit changelog = uses default path for SemVer
 			eactesting.WithReleaseType("published"),
 		),
 	)
@@ -189,6 +190,11 @@ func TestValidateRelease_AllModulesConsistency(t *testing.T) {
 
 		// Skip modules without versioning
 		if moduleContract.Versioning == nil {
+			continue
+		}
+
+		// Skip Implicit-versioned modules - they derive versions from parents and don't have changelogs
+		if moduleContract.Versioning.Scheme == "Implicit" {
 			continue
 		}
 

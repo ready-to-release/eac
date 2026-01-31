@@ -94,6 +94,10 @@ modules:
       gherkin: ~
       structurizr: ~
       test-impl: ~
+      gherkin-executor:
+        root: go/eac/core/specs
+        patterns:
+          source: ["godog_test.go", "steps_*_test.go"]
 
   - moniker: mkdocs-pdf
     name: MkDocs PDF Container

@@ -136,7 +136,8 @@ func TestGetModuleReleaseType(t *testing.T) {
 		{"eac-mcp-commands", "internal"},
 		{"r2r-installer", "internal"},
 		{"vscode-ext-commit", "internal"},
-		{"eac-core", "none"},
+		// eac-core no longer has explicit versioning config, so it gets default "internal"
+		{"eac-core", "internal"},
 	}
 
 	for _, tc := range testCases {

@@ -123,7 +123,8 @@ func (r *MochaRunner) Execute(pkgPath string, tests []testing.TestReference, tui
 		if outputPath == "" {
 			outputPath = sanitizePathForLog(pkgPath)
 		}
-		logDir = filepath.Join(cfg.TestRunDir, outputPath)
+		// Always sanitize to handle colons in paths (Windows incompatible)
+		logDir = filepath.Join(cfg.TestRunDir, sanitizePathForLog(outputPath))
 	}
 	if err := os.MkdirAll(logDir, 0o755); err != nil {
 		fmt.Fprintf(tuiWriter, "Failed to create log directory: %v\n", err)
