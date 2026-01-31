@@ -3,7 +3,7 @@ package ai
 
 import "context"
 
-// ExecutorAdapter adapts ai.Executor to contracts.AIExecutor interface
+// ExecutorAdapter adapts ai.Executor to domain.AIExecutor interface
 //
 // This adapter bridges the gap between the concrete ai.Executor type
 // and the interface expected by the contracts package, allowing for
@@ -28,7 +28,7 @@ func NewExecutorAdapterWithModel(executor *Executor, model string) *ExecutorAdap
 	}
 }
 
-// Execute adapts the ai.Executor.Execute signature to contracts.AIExecutor.Execute
+// Execute adapts the ai.Executor.Execute signature to domain.AIExecutor.Execute
 //
 // This method performs the necessary type conversions to bridge between
 // the interface{} types used by contracts and the concrete types used by ai.Executor.
@@ -68,7 +68,7 @@ func (a *ExecutorAdapter) Execute(ctx interface{}, prompt string, opts ...interf
 }
 
 // GetProviderName returns the name of the AI provider used for the last execution.
-// Implements contracts.AIExecutorWithProviderInfo interface.
+// Implements domain.AIExecutorWithProviderInfo interface.
 //
 // Returns:
 //   - Provider name if an execution has occurred and provider info is available

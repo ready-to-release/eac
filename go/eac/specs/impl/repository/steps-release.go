@@ -44,7 +44,7 @@ func (c *repositoryContext) everyReleaseSubdirShouldCorrespondToModule() error {
 
 	for _, subdir := range c.releaseSubdirs {
 		// Check if this subdirectory corresponds to a registered module
-		if _, exists := c.moduleReport.Registry.Get(subdir); !exists {
+		if _, exists := c.moduleReport.Registry().Get(subdir); !exists {
 			c.orphanReleaseDirs = append(c.orphanReleaseDirs, subdir)
 		}
 	}

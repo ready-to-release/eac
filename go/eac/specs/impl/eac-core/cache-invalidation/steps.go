@@ -18,7 +18,7 @@ import (
 	"github.com/cucumber/godog"
 	"gopkg.in/yaml.v3"
 
-	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/domain/modules"
 	"github.com/ready-to-release/eac/go/eac/core/hash"
 	"github.com/ready-to-release/eac/go/eac/core/workunit"
 	"github.com/ready-to-release/eac/go/eac/specs/internal"

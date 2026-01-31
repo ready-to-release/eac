@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
+	"github.com/ready-to-release/eac/go/eac/core/domain"
 )
 
 // TopLevelValidator validates the top-level commit message (header, auditor-summary, body)
@@ -33,13 +33,13 @@ func NewTopLevelValidator(affectedModules []string) *TopLevelValidator {
 }
 
 // Validate validates a top-level commit message against the expected format.
-func (v *TopLevelValidator) Validate(output string, context map[string]interface{}) []contracts.ValidationError {
-	var errors []contracts.ValidationError
+func (v *TopLevelValidator) Validate(output string, context map[string]interface{}) []domain.ValidationError {
+	var errors []domain.ValidationError
 
 	lines := strings.Split(output, "\n")
 	if len(lines) == 0 {
-		errors = append(errors, *contracts.NewValidationError(
-			contracts.ErrEmptyMessage,
+		errors = append(errors, *domain.NewValidationError(
+			domain.ErrEmptyMessage,
 			"Top-level commit message is empty",
 			0,
 		))
@@ -49,8 +49,8 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 	// Rule 1: First line must be conventional commit header
 	firstLine := strings.TrimSpace(lines[0])
 	if !getConventionalCommitRegex().MatchString(firstLine) {
-		errors = append(errors, *contracts.NewValidationError(
-			contracts.ErrInvalidHeaderFormat,
+		errors = append(errors, *domain.NewValidationError(
+			domain.ErrInvalidHeaderFormat,
 			"Header must follow format: <type>(<scope>): <summary> (e.g., feat(cli): add new command)",
 			1,
 		))
@@ -58,8 +58,8 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 
 	// Rule 2: Header max length
 	if len(firstLine) > MaxHeaderLength {
-		errors = append(errors, *contracts.NewValidationError(
-			contracts.ErrHeaderTooLong,
+		errors = append(errors, *domain.NewValidationError(
+			domain.ErrHeaderTooLong,
 			fmt.Sprintf("Header exceeds %d characters (%d chars)", MaxHeaderLength, len(firstLine)),
 			1,
 		))
@@ -67,8 +67,8 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 
 	// Rule 3: No trailing period (except ellipsis)
 	if strings.HasSuffix(firstLine, ".") && !strings.HasSuffix(firstLine, "...") {
-		errors = append(errors, *contracts.NewValidationError(
-			contracts.ErrHeaderTrailingPeriod,
+		errors = append(errors, *domain.NewValidationError(
+			domain.ErrHeaderTrailingPeriod,
 			"Header must not end with period",
 			1,
 		))
@@ -83,8 +83,8 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 		}
 	}
 	if !hasAuditorSummary {
-		errors = append(errors, *contracts.NewValidationError(
-			contracts.ErrMissingAuditorSummary,
+		errors = append(errors, *domain.NewValidationError(
+			domain.ErrMissingAuditorSummary,
 			"Missing Auditor-Summary field after header",
 			0,
 		))
@@ -111,8 +111,8 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 		}
 	}
 	if !hasBody {
-		errors = append(errors, *contracts.NewValidationError(
-			contracts.ErrMissingBody,
+		errors = append(errors, *domain.NewValidationError(
+			domain.ErrMissingBody,
 			"Missing body text after Auditor-Summary",
 			0,
 		))
@@ -124,8 +124,8 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 
 		// Check for any markdown headers (## or ###) - these shouldn't be in top-level
 		if strings.HasPrefix(trimmed, "## ") || strings.HasPrefix(trimmed, "### ") {
-			errors = append(errors, *contracts.NewValidationError(
-				contracts.ErrUnexpectedModuleSection,
+			errors = append(errors, *domain.NewValidationError(
+				domain.ErrUnexpectedModuleSection,
 				fmt.Sprintf("Top-level output should not contain markdown headers (found: %s)", trimmed),
 				0,
 			))
@@ -136,8 +136,8 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 			rest := trimmed[2:]
 			// Check if it looks like a file path or module reference
 			if strings.Contains(rest, "/") || strings.HasPrefix(rest, "New ") || strings.HasPrefix(rest, "Updated ") {
-				errors = append(errors, *contracts.NewValidationError(
-					contracts.ErrUnexpectedFileList,
+				errors = append(errors, *domain.NewValidationError(
+					domain.ErrUnexpectedFileList,
 					fmt.Sprintf("Top-level output should not contain file/change lists (found: %s)", trimmed),
 					0,
 				))
@@ -148,8 +148,8 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 		if i < len(lines)-1 && isModuleName(trimmed) {
 			nextLine := strings.TrimSpace(lines[i+1])
 			if isDashesLine(nextLine) && len(nextLine) > 3 {
-				errors = append(errors, *contracts.NewValidationError(
-					contracts.ErrUnexpectedModuleSection,
+				errors = append(errors, *domain.NewValidationError(
+					domain.ErrUnexpectedModuleSection,
 					fmt.Sprintf("Top-level output should not contain module sections (found: %s)", trimmed),
 					0,
 				))
@@ -184,8 +184,8 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 			if len(preview) > 50 {
 				preview = preview[:47] + "..."
 			}
-			errors = append(errors, *contracts.NewValidationError(
-				contracts.ErrLineTooLong,
+			errors = append(errors, *domain.NewValidationError(
+				domain.ErrLineTooLong,
 				fmt.Sprintf("Line exceeds %d characters (%d chars): %s", MaxLineLength, len(trimmed), preview),
 				0,
 			))
@@ -196,6 +196,6 @@ func (v *TopLevelValidator) Validate(output string, context map[string]interface
 }
 
 // VerifyImplementation is a no-op for top-level validators.
-func (v *TopLevelValidator) VerifyImplementation() []contracts.ValidationError {
+func (v *TopLevelValidator) VerifyImplementation() []domain.ValidationError {
 	return nil
 }

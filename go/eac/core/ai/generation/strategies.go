@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/core/ai/config"
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
+	"github.com/ready-to-release/eac/go/eac/core/domain"
 	"github.com/ready-to-release/eac/go/eac/core/validation"
 )
 
@@ -161,7 +161,7 @@ func (s *StandardStrategy) BuildRetryPrompt(ctx context.Context, originalPrompt,
 		originalPrompt,
 		header,
 		summary,
-		contracts.FormatValidationErrors(errors),
+		domain.FormatValidationErrors(errors),
 		headerStandardCorrection,
 		standardInstructions,
 	)
@@ -214,7 +214,7 @@ func (s *FocusedStrategy) BuildRetryPrompt(ctx context.Context, originalPrompt, 
 		originalPrompt,
 		header,
 		summary,
-		contracts.FormatValidationErrors(focusedErrors),
+		domain.FormatValidationErrors(focusedErrors),
 		headerFocusedCorrection,
 		focusedInstructions,
 	)

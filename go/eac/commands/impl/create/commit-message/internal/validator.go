@@ -1,10 +1,10 @@
 package commitmessage
 
 import (
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
+	"github.com/ready-to-release/eac/go/eac/core/domain"
 )
 
-// CommitMessageValidator implements contracts.Validator for commit message validation.
+// CommitMessageValidator implements domain.Validator for commit message validation.
 type CommitMessageValidator struct {
 	contract        *CommitMessageContract
 	affectedModules []string
@@ -35,7 +35,7 @@ func NewCommitMessageValidator(
 //   - "affectedModules": []string - list of modules with changes (overrides constructor value)
 //
 // Returns validation errors (empty slice if valid).
-func (v *CommitMessageValidator) Validate(output string, context map[string]interface{}) []contracts.ValidationError {
+func (v *CommitMessageValidator) Validate(output string, context map[string]interface{}) []domain.ValidationError {
 	// Use affected modules from context if provided, otherwise use constructor value
 	modules := v.affectedModules
 	if contextModules, ok := context["affectedModules"].([]string); ok {
@@ -47,12 +47,12 @@ func (v *CommitMessageValidator) Validate(output string, context map[string]inte
 }
 
 // VerifyImplementation verifies that the validator implements all contract rules.
-func (v *CommitMessageValidator) VerifyImplementation() []contracts.ValidationError {
+func (v *CommitMessageValidator) VerifyImplementation() []domain.ValidationError {
 	// Verify contract can be loaded from unified config
 	_, err := LoadContractFromConfig(v.workspaceRoot)
 	if err != nil {
-		return []contracts.ValidationError{*contracts.NewValidationError(
-			contracts.ErrContractLoadError,
+		return []domain.ValidationError{*domain.NewValidationError(
+			domain.ErrContractLoadError,
 			err.Error(),
 			0,
 		)}

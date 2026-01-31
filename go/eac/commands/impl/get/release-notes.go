@@ -23,7 +23,7 @@ import (
 	getInternal "github.com/ready-to-release/eac/go/eac/commands/impl/get/internal"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
-	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
+	"github.com/ready-to-release/eac/go/eac/core/domain/reports"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 )
 

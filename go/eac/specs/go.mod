@@ -5,8 +5,9 @@ go 1.24.4
 require (
 	github.com/bmatcuk/doublestar/v4 v4.10.0
 	github.com/cucumber/godog v0.15.1
-	github.com/docker/docker v28.5.2+incompatible
+	github.com/ready-to-release/eac/contracts/eac-core-interfaces v0.0.0-00010101000000-000000000000
 	github.com/ready-to-release/eac/go/eac/core v0.0.0
+	github.com/ready-to-release/eac/go/eac/godog v0.0.0
 	github.com/stretchr/testify v1.11.1
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -26,6 +27,7 @@ require (
 	github.com/cyphar/filepath-securejoin v0.4.1 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/distribution/reference v0.6.0 // indirect
+	github.com/docker/docker v28.5.2+incompatible // indirect
 	github.com/docker/go-connections v0.6.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
@@ -78,7 +80,9 @@ require (
 )
 
 replace (
+	github.com/ready-to-release/eac/contracts/eac-core-interfaces => ../../../contracts/eac-core/0.1.0/interfaces
 	github.com/ready-to-release/eac/go/eac/commands => ../commands
 	github.com/ready-to-release/eac/go/eac/core => ../core
+	github.com/ready-to-release/eac/go/eac/godog => ../godog
 	github.com/ready-to-release/eac/go/r2r/cli => ../../r2r/cli
 )

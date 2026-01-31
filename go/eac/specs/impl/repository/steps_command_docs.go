@@ -18,8 +18,8 @@ import (
 	"strings"
 
 	"github.com/cucumber/godog"
+	eacgodog "github.com/ready-to-release/eac/go/eac/godog"
 	"github.com/ready-to-release/eac/go/eac/core/config"
-	"github.com/ready-to-release/eac/go/eac/specs/internal"
 	"gopkg.in/yaml.v3"
 )
 
@@ -35,7 +35,7 @@ type commandDocsContext struct {
 var cmdDocsCtx *commandDocsContext
 
 // registerCommandDocsSteps registers command documentation coverage step definitions.
-func registerCommandDocsSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
+func registerCommandDocsSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 	// Given steps
 	sc.Step(`^I load all valid commands from the CLI$`, loadAllValidCommandsFromCLI)
 	sc.Step(`^I scan docs/reference/eac/commands/ for command documentation files$`, scanDocsForCommandDocumentation)

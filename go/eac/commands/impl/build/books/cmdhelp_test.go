@@ -121,7 +121,7 @@ This command validates all contracts in the repository against their
 JSON schemas. It ensures data integrity and consistency.
 
 Multiple validation types are supported including module contracts,
-dependency contracts, and environment contracts.
+dependency contracts, and environment domain.
 
 Usage: validate [flags]
 
@@ -131,7 +131,7 @@ Flags:
 Example:
   validate
 `,
-			wantDesc:     "validate - Validate repository contracts\n\nThis command validates all contracts in the repository against their JSON schemas. It ensures data integrity and consistency.\n\nMultiple validation types are supported including module contracts, dependency contracts, and environment contracts.",
+			wantDesc:     "validate - Validate repository contracts\n\nThis command validates all contracts in the repository against their JSON schemas. It ensures data integrity and consistency.\n\nMultiple validation types are supported including module contracts, dependency contracts, and environment domain.",
 			wantUsage:    "validate [flags]",
 			wantExamples: "validate",
 			wantFlags:    1,

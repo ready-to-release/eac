@@ -9,7 +9,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
 	aimock "github.com/ready-to-release/eac/go/eac/core/ai"
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
+	"github.com/ready-to-release/eac/go/eac/core/domain"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
@@ -114,7 +114,7 @@ func generateWithPromptResult(promptName, userPrompt, workspaceRoot string, affe
 		schemaFilename = "commit-message-module.schema.json"
 	}
 	schemaPath := filepath.Join(paths.ContractsVersionPath(workspaceRoot, paths.EACCoreModule, paths.DefaultsVersion), schemaFilename)
-	validator, err := contracts.NewJSONSchemaValidator(schemaPath)
+	validator, err := domain.NewJSONSchemaValidator(schemaPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create JSON schema validator: %w", err)
 	}

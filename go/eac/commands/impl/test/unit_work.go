@@ -89,7 +89,7 @@ func FlattenModulesToTestUnits(ctx *cmdframework.ExecutionContext) [][]workunit.
 					Context:   workunit.ContextTest,
 					Module:    moduleMoniker,
 					Component: pkgPath + ":" + testType,
-					Tool:      testType, // Use test type instead of generic "test"
+					Tool:      "", // Don't duplicate - testType is already in Component
 					Extra:     map[string]string{"testset": testType},
 					Spec:      spec, // Spec name for BDD tests (e.g., "build-module")
 				},

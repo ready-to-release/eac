@@ -1,9 +1,9 @@
 // Command: validate dependencies
 // Short: Validate module dependencies from go.mod files against contracts
-// Long: Validate module dependencies from go.mod files against contracts.
+// Long: Validate module dependencies from go.mod files against domain.
 // Long:
 // Long: This command checks that actual dependencies in go.mod files match the dependencies
-// Long: declared in module contracts. It helps ensure consistency between contract definitions
+// Long: declared in module domain. It helps ensure consistency between contract definitions
 // Long: and actual implementation dependencies.
 // Long:
 // Long: Validation failures indicate mismatches that should be resolved by either updating
@@ -22,7 +22,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
-	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/domain/modules"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 	"github.com/ready-to-release/eac/go/eac/core/repository/gomod"
 )

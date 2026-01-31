@@ -20,7 +20,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/initsummary"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/locking"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/orchestrator"
-	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
+	"github.com/ready-to-release/eac/go/eac/core/domain/reports"
 	"github.com/ready-to-release/eac/go/eac/core/environments"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	moduledeps "github.com/ready-to-release/eac/go/eac/core/module-deps"
@@ -35,7 +35,7 @@ func init() {
 	// Register test component-level execution support
 	cmdframework.RegisterUnitProvider(cmdframework.CommandTypeTest, FlattenModulesToTestUnits)
 	cmdframework.RegisterUnitWorker(cmdframework.CommandTypeTest, testUnitWorker)
-	cmdframework.SetUnitLayersProvider(getTestUnitLayers)
+	cmdframework.RegisterUnitLayersProvider(cmdframework.CommandTypeTest, getTestUnitLayers)
 }
 
 // getTestUnitLayers returns the component execution layers as string slices.
@@ -50,9 +50,13 @@ func getTestUnitLayers(ctx *cmdframework.ExecutionContext) [][]string {
 			if work.ID.Spec != "" {
 				// Spec test: use Longname() which returns "module:spec:specname"
 				result[i][j] = work.ID.Longname()
-			} else {
-				// Regular test: "module:component:tool"
+			} else if work.ID.Tool != "" {
+				// Regular test with tool: "module:component:tool"
 				result[i][j] = fmt.Sprintf("%s:%s:%s", work.ID.Module, work.ID.Component, work.ID.Tool)
+			} else {
+				// Regular test without tool: "module:component"
+				// (testType is already included in component as "path:testType")
+				result[i][j] = fmt.Sprintf("%s:%s", work.ID.Module, work.ID.Component)
 			}
 		}
 	}

@@ -20,7 +20,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/render"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
-	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
+	"github.com/ready-to-release/eac/go/eac/core/domain/reports"
 )
 
 func init() {

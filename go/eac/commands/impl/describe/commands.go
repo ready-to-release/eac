@@ -13,7 +13,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
-	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
+	"github.com/ready-to-release/eac/go/eac/core/domain/reports"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
 	"gopkg.in/yaml.v3"
@@ -141,7 +141,7 @@ func buildCommandTree() CommandTree {
 	}
 }
 
-// loadModuleMonikers loads all module monikers from the contracts.
+// loadModuleMonikers loads all module monikers from the domain.
 func loadModuleMonikers() []string {
 	workspaceRoot, err := repository.GetRepositoryRoot("")
 	if err != nil {

@@ -25,8 +25,8 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/builders"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/config"
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
-	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/domain"
+	"github.com/ready-to-release/eac/go/eac/core/domain/modules"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -143,9 +143,9 @@ func UpdateEvidence() int {
 
 		// Create a minimal module contract for the builder
 		// The builder only uses this for logging and Docker config (which defaults for PDF)
-		minimalModule := modules.NewModuleContract(contracts.BaseContract{
+		minimalModule := modules.NewModuleContract(domain.BaseContract{
 			Moniker:    moniker,
-			Components: contracts.ModuleComponents{"evidence": nil},
+			Components: domain.ModuleComponents{"evidence": nil},
 		}, repoRoot)
 
 		// Build each evidence book

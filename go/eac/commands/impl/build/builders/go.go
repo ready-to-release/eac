@@ -12,9 +12,11 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/core/adapters"
 	"github.com/ready-to-release/eac/go/eac/core/config"
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
-	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/domain"
+	"github.com/ready-to-release/eac/go/eac/core/domain/modules"
+	"github.com/ready-to-release/eac/contracts/eac-core-interfaces"
 )
 
 func init() {
@@ -30,7 +32,7 @@ func (h *GoHandler) Capabilities() []string { return []string{"go_module", "cros
 
 func (h *GoHandler) Requirements() []string { return []string{"go"} }
 
-func (h *GoHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot, component string) error {
+func (h *GoHandler) ValidateModule(module interfaces.ModuleContractPort, workspaceRoot, component string) error {
 	componentRoot := filepath.Join(workspaceRoot, module.GetComponentRoot(component))
 	// Walk up from component root to find go.mod (may be in parent directory)
 	goMod := findGoMod(componentRoot, workspaceRoot)
@@ -61,12 +63,21 @@ func findGoMod(dir, workspaceRoot string) string {
 	}
 }
 
-func (h *GoHandler) ListArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {
-	return listGoModuleArtifacts(module, workspaceRoot)
+func (h *GoHandler) ListArtifacts(module interfaces.ModuleContractPort, workspaceRoot string) []string {
+	concrete := adapters.UnwrapModule(module)
+	if concrete == nil {
+		return nil
+	}
+	return listGoModuleArtifacts(concrete, workspaceRoot)
 }
 
-func (h *GoHandler) Build(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	return buildGoModule(module, workspaceRoot, outputDir, logWriter, opts)
+func (h *GoHandler) Build(module interfaces.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+	concrete := adapters.UnwrapModule(module)
+	if concrete == nil {
+		Logln(logWriter, "Error: invalid module type")
+		return 1
+	}
+	return buildGoModule(concrete, workspaceRoot, outputDir, logWriter, opts)
 }
 
 // listGoModuleArtifacts returns the artifacts that would be produced by building this Go module.
@@ -236,7 +247,7 @@ func buildTestModule(module *modules.ModuleContract, moduleRoot, outputDir strin
 }
 
 // buildSingleBinaryFromArtifact builds a single binary from a per-module artifact definition.
-func buildSingleBinaryFromArtifact(module *modules.ModuleContract, moduleRoot, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions, artifact contracts.ModuleArtifact) int {
+func buildSingleBinaryFromArtifact(module *modules.ModuleContract, moduleRoot, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions, artifact domain.ModuleArtifact) int {
 	// Resolve artifact pattern to binary name
 	resolver := config.NewArtifactResolverWithPlatform(module.Moniker, "", runtime.GOOS, runtime.GOARCH)
 	binaryName := resolver.ResolvePattern(artifact.Pattern)
@@ -251,7 +262,7 @@ func buildSingleBinaryFromArtifact(module *modules.ModuleContract, moduleRoot, w
 }
 
 // buildCrossCompiledFromArtifacts builds binaries for multiple platforms from per-module artifact definitions.
-func buildCrossCompiledFromArtifacts(module *modules.ModuleContract, moduleRoot, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions, artifacts []contracts.ModuleArtifact) int {
+func buildCrossCompiledFromArtifacts(module *modules.ModuleContract, moduleRoot, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions, artifacts []domain.ModuleArtifact) int {
 	// Extract platform targets from artifact IDs
 	type buildTarget struct {
 		goos        string

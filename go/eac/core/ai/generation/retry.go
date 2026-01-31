@@ -7,7 +7,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/core/ai/config"
 	configpkg "github.com/ready-to-release/eac/go/eac/core/config"
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
+	"github.com/ready-to-release/eac/go/eac/core/domain"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/validation"
 	"github.com/ready-to-release/eac/go/eac/core/validation/formats/gherkin"
@@ -375,7 +375,7 @@ func loadValidatorForFormat(templateRoot, typeName string, format StructuredForm
 	case FormatJSON:
 		// Load JSON schema validator
 		schemaPath := filepath.Join(templateRoot, ContractSchemaPath(), typeName+".schema.json")
-		validator, err := contracts.NewJSONSchemaValidator(schemaPath)
+		validator, err := domain.NewJSONSchemaValidator(schemaPath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load JSON schema for type '%s': %w", typeName, err)
 		}
@@ -418,7 +418,7 @@ func loadValidatorForFormat(templateRoot, typeName string, format StructuredForm
 
 	case FormatPlainText:
 		// No-op validator for plain text (always valid)
-		return &contracts.NoOpValidator{}, nil
+		return &domain.NoOpValidator{}, nil
 
 	default:
 		return nil, fmt.Errorf("unsupported format: %s (must be json, gherkin, oscal-catalog, oscal-profile, structurizr, or plaintext)", format)

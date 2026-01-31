@@ -45,7 +45,7 @@ func ValidateContracts() int {
 		return 1
 	}
 
-	log.Info("Validating repository contracts...")
+	log.Info("Validating repository domain...")
 	log.Info("")
 
 	// Load with schema validation enabled

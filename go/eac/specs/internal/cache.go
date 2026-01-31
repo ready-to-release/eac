@@ -4,13 +4,16 @@ package internal
 import (
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
 
-	contractsreports "github.com/ready-to-release/eac/go/eac/core/contracts/reports"
+	"github.com/ready-to-release/eac/go/eac/core/domain/modules"
+	contractsreports "github.com/ready-to-release/eac/go/eac/core/domain/reports"
 	"github.com/ready-to-release/eac/go/eac/core/git"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
+	"github.com/ready-to-release/eac/contracts/eac-core-interfaces"
 )
 
 var log = logging.C()
@@ -203,14 +206,28 @@ func (c *TestCache) FilesMatchingAnyExtension(extensions []string) []string {
 	return filtered
 }
 
-// ModuleReport returns the module contract report.
+// ModuleReport returns the module contract report as a port interface.
 // Caching is handled internally by GetModuleContracts - consumers don't need to know.
-func (c *TestCache) ModuleReport() (*contractsreports.ModuleContractReport, error) {
+func (c *TestCache) ModuleReport() (interfaces.ModuleReportPort, error) {
 	c.mu.RLock()
 	repoRoot := c.repoRoot
 	c.mu.RUnlock()
 
 	// GetModuleContracts has internal global caching - just call it
+	report, err := contractsreports.GetModuleContracts(repoRoot)
+	if err != nil {
+		return nil, err
+	}
+	return newModuleReportAdapter(report), nil
+}
+
+// ModuleReportConcrete returns the concrete module contract report.
+// Use this when you need access to the concrete type (e.g., during migration).
+func (c *TestCache) ModuleReportConcrete() (*contractsreports.ModuleContractReport, error) {
+	c.mu.RLock()
+	repoRoot := c.repoRoot
+	c.mu.RUnlock()
+
 	return contractsreports.GetModuleContracts(repoRoot)
 }
 
@@ -227,3 +244,212 @@ func (c *TestCache) RepoRoot() string {
 	defer c.mu.RUnlock()
 	return c.repoRoot
 }
+
+// Interface compliance check
+var _ interfaces.TestCachePort = (*TestCache)(nil)
+
+// ============================================================================
+// Adapters for concrete types to port interfaces
+// ============================================================================
+
+// moduleReportAdapter wraps *contractsreports.ModuleContractReport to implement interfaces.ModuleReportPort.
+type moduleReportAdapter struct {
+	report *contractsreports.ModuleContractReport
+}
+
+func newModuleReportAdapter(report *contractsreports.ModuleContractReport) *moduleReportAdapter {
+	return &moduleReportAdapter{report: report}
+}
+
+// Registry implements interfaces.ModuleReportPort.
+func (a *moduleReportAdapter) Registry() interfaces.ModuleRegistryPort {
+	if a.report.Registry == nil {
+		return nil
+	}
+	return newModuleRegistryAdapter(a.report.Registry)
+}
+
+// Errors implements interfaces.ModuleReportPort.
+func (a *moduleReportAdapter) Errors() []error {
+	return nil // ModuleContractReport doesn't track errors
+}
+
+var _ interfaces.ModuleReportPort = (*moduleReportAdapter)(nil)
+
+// moduleRegistryAdapter wraps *modules.Registry to implement interfaces.ModuleRegistryPort.
+type moduleRegistryAdapter struct {
+	registry *modules.Registry
+}
+
+func newModuleRegistryAdapter(registry *modules.Registry) *moduleRegistryAdapter {
+	return &moduleRegistryAdapter{registry: registry}
+}
+
+// Get implements interfaces.ModuleRegistryPort.
+func (a *moduleRegistryAdapter) Get(moniker string) (interfaces.ModuleContractPort, bool) {
+	mod, ok := a.registry.Get(moniker)
+	if !ok || mod == nil {
+		return nil, false
+	}
+	return newModuleContractAdapter(mod), true
+}
+
+// Has implements interfaces.ModuleRegistryPort.
+func (a *moduleRegistryAdapter) Has(moniker string) bool {
+	_, ok := a.registry.Get(moniker)
+	return ok
+}
+
+// All implements interfaces.ModuleRegistryPort.
+func (a *moduleRegistryAdapter) All() []interfaces.ModuleContractPort {
+	mods := a.registry.All()
+	result := make([]interfaces.ModuleContractPort, len(mods))
+	for i, mod := range mods {
+		result[i] = newModuleContractAdapter(mod)
+	}
+	return result
+}
+
+// AllMonikers implements interfaces.ModuleRegistryPort.
+func (a *moduleRegistryAdapter) AllMonikers() []string {
+	mods := a.registry.All()
+	result := make([]string, len(mods))
+	for i, mod := range mods {
+		result[i] = mod.Moniker
+	}
+	sort.Strings(result)
+	return result
+}
+
+// Count implements interfaces.ModuleRegistryPort.
+func (a *moduleRegistryAdapter) Count() int {
+	return len(a.registry.All())
+}
+
+// FilterByComponent implements interfaces.ModuleRegistryPort.
+func (a *moduleRegistryAdapter) FilterByComponent(componentType string) []interfaces.ModuleContractPort {
+	mods := a.registry.All()
+	var result []interfaces.ModuleContractPort
+	for _, mod := range mods {
+		if mod.HasComponent(componentType) {
+			result = append(result, newModuleContractAdapter(mod))
+		}
+	}
+	return result
+}
+
+// FindModulesForFile implements interfaces.ModuleRegistryPort.
+func (a *moduleRegistryAdapter) FindModulesForFile(filePath string) []interfaces.ModuleContractPort {
+	mods := a.registry.FindModulesForFile(filePath)
+	result := make([]interfaces.ModuleContractPort, len(mods))
+	for i, mod := range mods {
+		result[i] = newModuleContractAdapter(mod)
+	}
+	return result
+}
+
+// WorkspaceRoot implements interfaces.ModuleRegistryPort.
+func (a *moduleRegistryAdapter) WorkspaceRoot() string {
+	return a.registry.WorkspaceRoot()
+}
+
+var _ interfaces.ModuleRegistryPort = (*moduleRegistryAdapter)(nil)
+
+// moduleContractAdapter wraps *modules.ModuleContract to implement interfaces.ModuleContractPort.
+type moduleContractAdapter struct {
+	module *modules.ModuleContract
+}
+
+func newModuleContractAdapter(module *modules.ModuleContract) *moduleContractAdapter {
+	return &moduleContractAdapter{module: module}
+}
+
+// GetMoniker implements interfaces.ModuleContractPort.
+func (a *moduleContractAdapter) GetMoniker() string {
+	return a.module.Moniker
+}
+
+// GetName implements interfaces.ModuleContractPort.
+func (a *moduleContractAdapter) GetName() string {
+	return a.module.GetName()
+}
+
+// GetDescription implements interfaces.ModuleContractPort.
+func (a *moduleContractAdapter) GetDescription() string {
+	return a.module.GetDescription()
+}
+
+// HasComponent implements interfaces.ModuleContractPort.
+func (a *moduleContractAdapter) HasComponent(componentType string) bool {
+	return a.module.HasComponent(componentType)
+}
+
+// GetComponentRoot implements interfaces.ModuleContractPort.
+func (a *moduleContractAdapter) GetComponentRoot(componentType string) string {
+	return a.module.GetComponentRoot(componentType)
+}
+
+// GetComponentRoots implements interfaces.ModuleContractPort.
+func (a *moduleContractAdapter) GetComponentRoots() map[string]string {
+	return a.module.GetComponentRoots()
+}
+
+// GetComponentTypesDisplay implements interfaces.ModuleContractPort.
+func (a *moduleContractAdapter) GetComponentTypesDisplay() string {
+	return a.module.GetComponentTypesDisplay()
+}
+
+// GetComponentAmp implements interfaces.ModuleContractPort.
+func (a *moduleContractAdapter) GetComponentAmp(componentName, operation string) float64 {
+	// Access amp from component config if defined
+	if comp, ok := a.module.Components[componentName]; ok && comp != nil {
+		return comp.Amp.GetAmp(operation)
+	}
+	return 1.0 // Default amplifier
+}
+
+// GetDependsOn implements interfaces.ModuleContractPort.
+func (a *moduleContractAdapter) GetDependsOn() []string {
+	return a.module.DependsOn
+}
+
+// GetVersioningScheme implements interfaces.ModuleContractPort.
+func (a *moduleContractAdapter) GetVersioningScheme() string {
+	if a.module.Versioning != nil {
+		return a.module.Versioning.Scheme
+	}
+	return ""
+}
+
+// GetReleaseType implements interfaces.ModuleContractPort.
+func (a *moduleContractAdapter) GetReleaseType() string {
+	if a.module.Versioning != nil {
+		return a.module.Versioning.ReleaseType
+	}
+	return ""
+}
+
+// GetChangelog implements interfaces.ModuleContractPort.
+func (a *moduleContractAdapter) GetChangelog() string {
+	return a.module.GetChangelog()
+}
+
+// HasVersioning implements interfaces.ModuleContractPort.
+func (a *moduleContractAdapter) HasVersioning() bool {
+	return a.module.Versioning != nil && a.module.Versioning.Scheme != ""
+}
+
+// GetMetadata implements interfaces.ModuleContractPort.
+func (a *moduleContractAdapter) GetMetadata() map[string]interface{} {
+	// Convert map[string]string to map[string]interface{}
+	if a.module.Metadata == nil {
+		return nil
+	}
+	result := make(map[string]interface{}, len(a.module.Metadata))
+	for k, v := range a.module.Metadata {
+		result[k] = v
+	}
+	return result
+}
+
+var _ interfaces.ModuleContractPort = (*moduleContractAdapter)(nil)

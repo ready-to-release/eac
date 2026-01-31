@@ -3,6 +3,7 @@ package cmdframework
 import (
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/initsummary"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/tui"
@@ -62,13 +63,16 @@ func phaseVerify(ctx *ExecutionContext) error {
 		log.Debugf("No UoW count provider registered")
 	}
 
-	// Calculate component layers using the registered provider (if available)
+	// Calculate component layers using the command-type-specific provider (if available)
 	// Only use provider if component layers wasn't already set by a hook
-	if summary.ComponentLayerCount == 0 && unitLayersProvider != nil {
-		layers := unitLayersProvider(ctx)
-		log.Debugf("Component layers from provider: %d layers", len(layers))
-		summary.ComponentExecutionLayers = layers
-		summary.ComponentLayerCount = len(layers)
+	if summary.ComponentLayerCount == 0 {
+		provider := GetUnitLayersProvider(ctx.Config.Type)
+		if provider != nil {
+			layers := provider(ctx)
+			log.Debugf("Component layers from provider: %d layers", len(layers))
+			summary.ComponentExecutionLayers = layers
+			summary.ComponentLayerCount = len(layers)
+		}
 	}
 
 	// Set flags (merge with any existing flags from hooks)
@@ -119,10 +123,11 @@ type UoWCountProvider func(ctx *ExecutionContext) int
 type UnitLayersProvider func(ctx *ExecutionContext) [][]string
 
 var (
-	depsVerifier            DepsVerifier
-	artifactValidator       ArtifactValidator
-	uowCountProvider        UoWCountProvider
-	unitLayersProvider UnitLayersProvider
+	depsVerifier              DepsVerifier
+	artifactValidator         ArtifactValidator
+	uowCountProvider          UoWCountProvider
+	unitLayersProviders       = make(map[CommandType]UnitLayersProvider)
+	unitLayersProvidersMu     sync.RWMutex
 )
 
 // SetDepsVerifier sets the global system dependency verifier function.
@@ -140,9 +145,25 @@ func SetUoWCountProvider(p UoWCountProvider) {
 	uowCountProvider = p
 }
 
-// SetUnitLayersProvider sets the global component layers provider function.
+// SetUnitLayersProvider is deprecated. Use RegisterUnitLayersProvider instead.
+// This function is kept for backward compatibility but should be removed.
 func SetUnitLayersProvider(p UnitLayersProvider) {
-	unitLayersProvider = p
+	// No-op - callers should use RegisterUnitLayersProvider
+}
+
+// RegisterUnitLayersProvider registers a component layers provider for a specific command type.
+// This ensures each command type (build, test, scan, lint) uses its own provider.
+func RegisterUnitLayersProvider(cmdType CommandType, p UnitLayersProvider) {
+	unitLayersProvidersMu.Lock()
+	defer unitLayersProvidersMu.Unlock()
+	unitLayersProviders[cmdType] = p
+}
+
+// GetUnitLayersProvider returns the component layers provider for a command type.
+func GetUnitLayersProvider(cmdType CommandType) UnitLayersProvider {
+	unitLayersProvidersMu.RLock()
+	defer unitLayersProvidersMu.RUnlock()
+	return unitLayersProviders[cmdType]
 }
 
 // displayInitSummary outputs the initialization summary to console.

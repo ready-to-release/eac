@@ -37,7 +37,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	coreai "github.com/ready-to-release/eac/go/eac/core/ai"
 	eacConfig "github.com/ready-to-release/eac/go/eac/core/config"
-	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
+	"github.com/ready-to-release/eac/go/eac/core/domain/reports"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"

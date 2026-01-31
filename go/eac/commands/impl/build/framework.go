@@ -10,6 +10,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/builders"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/internal"
+	"github.com/ready-to-release/eac/go/eac/core/adapters"
 	"github.com/ready-to-release/eac/go/eac/commands/impl/internal/artifacts"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/cmdframework"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/environment"
@@ -18,7 +19,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/locking"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/output"
 	"github.com/ready-to-release/eac/go/eac/core/config"
-	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/domain/modules"
 	"github.com/ready-to-release/eac/go/eac/core/hash"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
@@ -30,7 +31,7 @@ func init() {
 	cmdframework.RegisterUnitProvider(cmdframework.CommandTypeBuild, FlattenModulesToUnits)
 	cmdframework.RegisterUnitWorker(cmdframework.CommandTypeBuild, buildUnitWorker)
 	cmdframework.SetUoWCountProvider(getBuildUoWCount)
-	cmdframework.SetUnitLayersProvider(getBuildUnitLayers)
+	cmdframework.RegisterUnitLayersProvider(cmdframework.CommandTypeBuild, getBuildUnitLayers)
 }
 
 // getCachedUnitWork returns cached component work layers, computing once if needed.
@@ -642,6 +643,12 @@ func buildUnitWorker(ctx *cmdframework.ExecutionContext, module, component strin
 	// Handle placeholder "none" component (modules with no buildable components)
 	if component == "none" {
 		output.Writeln(logWriter, "ℹ️  No buildable components for module: %s", module)
+		// Still update build state so cache detection works for modules with no buildable components
+		if !ctx.Config.DryRun {
+			if err := updateModuleBuildStateAtomic(ctx, module); err != nil {
+				log.Debugf("Failed to update build state for %s: %v", module, err)
+			}
+		}
 		return 0
 	}
 
@@ -709,8 +716,11 @@ func buildUnitWorker(ctx *cmdframework.ExecutionContext, module, component strin
 	// Log which component we're building
 	output.Writeln(logWriter, "━━━ Building component: %s (handler: %s) ━━━", compName, handler.Name())
 
+	// Adapt module to port interface for handler methods
+	modulePort := adapters.AdaptModule(moduleContract)
+
 	// Validate module before building
-	if err := handler.ValidateModule(moduleContract, ctx.WorkspaceRoot, compName); err != nil {
+	if err := handler.ValidateModule(modulePort, ctx.WorkspaceRoot, compName); err != nil {
 		output.Writeln(logWriter, "❌ Module validation failed for %s: %v", compName, err)
 		return 1
 	}
@@ -718,7 +728,7 @@ func buildUnitWorker(ctx *cmdframework.ExecutionContext, module, component strin
 	// Build the component
 	// Use component-level output directory: out/build/<module>/<component>/<builder>
 	componentOutputDir := paths.ComponentBuildOutputPath(ctx.WorkspaceRoot, module, componentDir)
-	exitCode := handler.Build(moduleContract, ctx.WorkspaceRoot, componentOutputDir, logWriter, opts)
+	exitCode := handler.Build(modulePort, ctx.WorkspaceRoot, componentOutputDir, logWriter, opts)
 
 	// Handle exit codes:
 	// -1 = skipped (cached), 0 = success, >0 = failure

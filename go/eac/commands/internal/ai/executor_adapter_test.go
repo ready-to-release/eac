@@ -13,27 +13,27 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/ai/providers"
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
+	"github.com/ready-to-release/eac/go/eac/core/domain"
 )
 
 func TestExecutorAdapter_ImplementsAIExecutorInterface(t *testing.T) {
-	// Verify ExecutorAdapter implements contracts.AIExecutor interface
+	// Verify ExecutorAdapter implements domain.AIExecutor interface
 	tmpDir := t.TempDir()
 	executor := ai.NewExecutor(tmpDir)
 	adapter := ai.NewExecutorAdapter(executor)
 
 	// This will fail to compile if ExecutorAdapter doesn't implement AIExecutor
-	var _ contracts.AIExecutor = adapter
+	var _ domain.AIExecutor = adapter
 }
 
 func TestExecutorAdapter_ImplementsAIExecutorWithProviderInfo(t *testing.T) {
-	// Verify ExecutorAdapter implements contracts.AIExecutorWithProviderInfo interface
+	// Verify ExecutorAdapter implements domain.AIExecutorWithProviderInfo interface
 	tmpDir := t.TempDir()
 	executor := ai.NewExecutor(tmpDir)
 	adapter := ai.NewExecutorAdapter(executor)
 
 	// This will fail to compile if ExecutorAdapter doesn't implement AIExecutorWithProviderInfo
-	var _ contracts.AIExecutorWithProviderInfo = adapter
+	var _ domain.AIExecutorWithProviderInfo = adapter
 }
 
 func TestExecutorAdapter_Execute(t *testing.T) {
@@ -105,7 +105,7 @@ git:
 				return &testMockProviderWithName{name: "mock", response: "mock response"}, nil
 			})
 
-			var adapter contracts.AIExecutor
+			var adapter domain.AIExecutor
 			if tt.modelOverride != "" {
 				adapter = ai.NewExecutorAdapterWithModel(executor, tt.modelOverride)
 			} else {

@@ -42,11 +42,11 @@ func (c *repositoryContext) validateBidirectionalRelationships() error {
 	}
 
 	// Check all depends_on references exist
-	for _, m := range c.moduleReport.Registry.All() {
-		for _, dep := range m.DependsOn {
-			if _, exists := c.moduleReport.Registry.Get(dep); !exists {
+	for _, m := range c.moduleReport.Registry().All() {
+		for _, dep := range m.GetDependsOn() {
+			if _, exists := c.moduleReport.Registry().Get(dep); !exists {
 				c.missingModules = append(c.missingModules,
-					fmt.Sprintf("%s depends_on %s but %s does not exist", m.Name, dep, dep))
+					fmt.Sprintf("%s depends_on %s but %s does not exist", m.GetName(), dep, dep))
 			}
 		}
 	}
@@ -60,7 +60,7 @@ func (c *repositoryContext) buildCompleteDependencyGraph() error {
 	}
 	// Graph is implicitly built via module contracts
 	// Check for cycles using DFS
-	modules := c.moduleReport.Registry.All()
+	modules := c.moduleReport.Registry().All()
 	visited := make(map[string]int) // 0=unvisited, 1=visiting, 2=visited
 
 	var dfs func(name string, path []string) bool
@@ -84,8 +84,8 @@ func (c *repositoryContext) buildCompleteDependencyGraph() error {
 		}
 
 		visited[name] = 1
-		if m, exists := c.moduleReport.Registry.Get(name); exists {
-			for _, dep := range m.DependsOn {
+		if m, exists := c.moduleReport.Registry().Get(name); exists {
+			for _, dep := range m.GetDependsOn() {
 				if dfs(dep, append(path, name)) {
 					return true
 				}
@@ -96,8 +96,8 @@ func (c *repositoryContext) buildCompleteDependencyGraph() error {
 	}
 
 	for _, m := range modules {
-		if visited[m.Name] == 0 {
-			dfs(m.Name, []string{})
+		if visited[m.GetName()] == 0 {
+			dfs(m.GetName(), []string{})
 		}
 	}
 	return nil
@@ -108,11 +108,11 @@ func (c *repositoryContext) checkAllDependsOnReferences() error {
 		return fmt.Errorf("module contracts not loaded")
 	}
 
-	for _, m := range c.moduleReport.Registry.All() {
-		for _, dep := range m.DependsOn {
-			if _, exists := c.moduleReport.Registry.Get(dep); !exists {
+	for _, m := range c.moduleReport.Registry().All() {
+		for _, dep := range m.GetDependsOn() {
+			if _, exists := c.moduleReport.Registry().Get(dep); !exists {
 				c.missingModules = append(c.missingModules,
-					fmt.Sprintf("%s.depends_on references non-existent module: %s", m.Name, dep))
+					fmt.Sprintf("%s.depends_on references non-existent module: %s", m.GetName(), dep))
 			}
 		}
 	}
@@ -214,7 +214,7 @@ func (c *repositoryContext) checkForOrphanFiles() error {
 		}
 
 		// Use the already-loaded registry to check file ownership
-		matchingModules := c.moduleReport.Registry.FindModulesForFile(file)
+		matchingModules := c.moduleReport.Registry().FindModulesForFile(file)
 		if len(matchingModules) == 0 {
 			c.orphanFiles = append(c.orphanFiles, repository.RepositoryFileWithModule{
 				Name:    file,
@@ -264,12 +264,12 @@ func (c *repositoryContext) checkForFilesWithMultiModuleOwnership() error {
 		}
 
 		// Use the already-loaded registry to check file ownership
-		matchingModules := c.moduleReport.Registry.FindModulesForFile(file)
+		matchingModules := c.moduleReport.Registry().FindModulesForFile(file)
 		if len(matchingModules) > 1 {
 			// Extract module names
 			moduleNames := make([]string, len(matchingModules))
 			for i, m := range matchingModules {
-				moduleNames[i] = m.Name
+				moduleNames[i] = m.GetName()
 			}
 			c.multiOwnershipMap[file] = moduleNames
 		}

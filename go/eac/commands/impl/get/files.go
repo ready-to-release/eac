@@ -3,7 +3,7 @@
 // Long: Get repository files with their module ownership in structured format.
 // Long:
 // Long: This command analyzes the repository and maps each file to its owning module
-// Long: based on module contracts. The output can be formatted as YAML, JSON, or TOML
+// Long: based on module domain. The output can be formatted as YAML, JSON, or TOML
 // Long: for programmatic processing.
 // Long:
 // Long: Use filters to scope the output to specific files or modules:

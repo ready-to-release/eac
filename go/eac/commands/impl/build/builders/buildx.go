@@ -9,8 +9,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ready-to-release/eac/go/eac/core/adapters"
 	"github.com/ready-to-release/eac/go/eac/core/config"
-	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/domain/modules"
+	"github.com/ready-to-release/eac/contracts/eac-core-interfaces"
 	"gopkg.in/yaml.v3"
 )
 
@@ -28,7 +30,7 @@ func (h *BuildxHandler) Capabilities() []string { return []string{"buildx"} }
 
 func (h *BuildxHandler) Requirements() []string { return []string{"docker"} }
 
-func (h *BuildxHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot, component string) error {
+func (h *BuildxHandler) ValidateModule(module interfaces.ModuleContractPort, workspaceRoot, component string) error {
 	if !IsDockerAvailable() {
 		if IsDockerInDocker() {
 			return fmt.Errorf("Docker socket not mounted")
@@ -44,12 +46,18 @@ func (h *BuildxHandler) IsContainer() bool { return false }
 // IsHostInstalled returns true as buildx uses the local docker CLI.
 func (h *BuildxHandler) IsHostInstalled() bool { return true }
 
-func (h *BuildxHandler) ListArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {
-	return []string{fmt.Sprintf("docker-image:%s", module.Moniker)}
+func (h *BuildxHandler) ListArtifacts(module interfaces.ModuleContractPort, workspaceRoot string) []string {
+	return []string{fmt.Sprintf("docker-image:%s", module.GetMoniker())}
 }
 
-func (h *BuildxHandler) Build(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	Logln(logWriter, "\n=== Building Docker Image: %s ===", module.Moniker)
+func (h *BuildxHandler) Build(module interfaces.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+	concrete := adapters.UnwrapModule(module)
+	if concrete == nil {
+		Logln(logWriter, "Error: invalid module type")
+		return 1
+	}
+	moniker := module.GetMoniker()
+	Logln(logWriter, "\n=== Building Docker Image: %s ===", moniker)
 
 	// Check if Docker is available
 	if !IsDockerAvailable() {
@@ -64,9 +72,9 @@ func (h *BuildxHandler) Build(module *modules.ModuleContract, workspaceRoot, out
 	}
 
 	// Get docker_build config from module first, then fall back to module type
-	dockerBuild := getDockerBuildConfig(module, logWriter)
+	dockerBuild := getDockerBuildConfig(concrete, logWriter)
 	if dockerBuild == nil {
-		Logln(logWriter, "❌ No docker_build configuration found for module %s", module.Moniker)
+		Logln(logWriter, "❌ No docker_build configuration found for module %s", moniker)
 		return 1
 	}
 
@@ -102,9 +110,9 @@ func (h *BuildxHandler) Build(module *modules.ModuleContract, workspaceRoot, out
 	}
 
 	// Expand template variables in docker_build config
-	container := expandTemplate(dockerBuild.Container, module.Moniker)
-	context := filepath.Join(workspaceRoot, expandTemplate(dockerBuild.Context, module.Moniker))
-	dockerfilePath := expandTemplate(dockerBuild.Dockerfile, module.Moniker)
+	container := expandTemplate(dockerBuild.Container, moniker)
+	context := filepath.Join(workspaceRoot, expandTemplate(dockerBuild.Context, moniker))
+	dockerfilePath := expandTemplate(dockerBuild.Dockerfile, moniker)
 	if dockerfilePath == "" {
 		dockerfilePath = filepath.Join(context, "Dockerfile")
 	} else {
@@ -114,7 +122,7 @@ func (h *BuildxHandler) Build(module *modules.ModuleContract, workspaceRoot, out
 	// Expand tags
 	var tags []string
 	for _, tagTemplate := range dockerBuild.Tags {
-		tag := expandTemplate(tagTemplate, module.Moniker)
+		tag := expandTemplate(tagTemplate, moniker)
 		tags = append(tags, tag)
 	}
 
@@ -132,7 +140,7 @@ func (h *BuildxHandler) Build(module *modules.ModuleContract, workspaceRoot, out
 	}
 
 	// Build the image
-	args := buildDockerBuildArgs(dockerBuild, context, dockerfilePath, tags, module.Moniker)
+	args := buildDockerBuildArgs(dockerBuild, context, dockerfilePath, tags, moniker)
 
 	Logln(logWriter, "\nExecuting: docker %s", strings.Join(args, " "))
 

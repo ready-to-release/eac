@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"sync"
 
-	"github.com/ready-to-release/eac/go/eac/core/contracts/schema"
+	"github.com/ready-to-release/eac/go/eac/core/domain/schema"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"gopkg.in/yaml.v3"
 )

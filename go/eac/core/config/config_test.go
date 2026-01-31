@@ -286,3 +286,72 @@ func TestLoadRepository_TypeSpecificMerge(t *testing.T) {
 	})
 }
 
+func TestModule_ShouldAggregateFromDependencies(t *testing.T) {
+	tests := []struct {
+		name     string
+		module   Module
+		expected bool
+	}{
+		{
+			name:     "no dependencies",
+			module:   Module{Moniker: "test"},
+			expected: false,
+		},
+		{
+			name: "library with dependencies - should NOT aggregate",
+			module: Module{
+				Moniker:   "my-lib",
+				DependsOn: []string{"other-lib"},
+			},
+			expected: false,
+		},
+		{
+			name: "container module - should aggregate",
+			module: Module{
+				Moniker:   "my-container",
+				Template:  "container",
+				DependsOn: []string{"my-lib"},
+			},
+			expected: true,
+		},
+		{
+			name: "container-multiarch module - should aggregate",
+			module: Module{
+				Moniker:   "ext-eac",
+				Template:  "container-multiarch",
+				DependsOn: []string{"eac-commands"},
+			},
+			expected: true,
+		},
+		{
+			name: "bundle release type - should aggregate",
+			module: Module{
+				Moniker:   "r2r-eac-bundle",
+				DependsOn: []string{"r2r-cli", "ext-eac"},
+				Versioning: &ModuleVersioning{
+					ReleaseType: "bundle",
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "published release type with deps - should NOT aggregate",
+			module: Module{
+				Moniker:   "my-app",
+				DependsOn: []string{"my-lib"},
+				Versioning: &ModuleVersioning{
+					ReleaseType: "published",
+				},
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.module.ShouldAggregateFromDependencies()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+

@@ -88,7 +88,7 @@ func LoadToolConfig(repoRoot, configRoot string) (*ToolConfig, error) {
 	return config, nil
 }
 
-// loadToolConfigDefaults loads default tool configuration from contracts.
+// loadToolConfigDefaults loads default tool configuration from domain.
 func loadToolConfigDefaults(repoRoot string) (*ToolConfig, error) {
 	root := defaultsRoot(repoRoot)
 	if root == "" {

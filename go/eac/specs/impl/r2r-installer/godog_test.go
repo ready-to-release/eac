@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/cucumber/godog"
-	"github.com/ready-to-release/eac/go/eac/specs/internal"
+	eacgodog "github.com/ready-to-release/eac/go/eac/godog"
 )
 
 func TestR2RInstallerFeatures(t *testing.T) {
@@ -20,15 +20,15 @@ func TestR2RInstallerFeatures(t *testing.T) {
 	// This avoids 3+ second network latency per test
 	os.Setenv("__R2R_TEST_MOCK", "1")
 
-	cfg := internal.RunnerConfig{
+	cfg := eacgodog.RunnerConfig{
 		SpecsPath:         "../../../../../specs/r2r-installer",
 		DefaultReportName: "cucumber-r2r-installer",
 		RegisterSteps:     RegisterSteps,
 	}
 
-	opts := internal.BuildOptions(cfg.SpecsPath, cfg.DefaultReportName, t)
+	opts := eacgodog.BuildOptions(cfg.SpecsPath, cfg.DefaultReportName, t)
 	suite := godog.TestSuite{
-		ScenarioInitializer: internal.CreateScenarioInitializer(cfg),
+		ScenarioInitializer: eacgodog.CreateScenarioInitializer(cfg),
 		Options:             opts,
 	}
 

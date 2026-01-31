@@ -6,14 +6,14 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/core/config"
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
+	"github.com/ready-to-release/eac/go/eac/core/domain"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/validation"
 )
 
-// Validator validates Gherkin specifications against structure and tag contracts.
+// Validator validates Gherkin specifications against structure and tag domain.
 type Validator struct {
-	contract   *contracts.Contract
+	contract   *domain.Contract
 	tagsConfig *config.TestingTagsConfig
 }
 
@@ -26,7 +26,7 @@ type Validator struct {
 //	contract, _ := loader.LoadContract()
 //	cfg, _ := config.Load(config.DefaultLoadOptions())
 //	validator := gherkin.NewValidator(contract, cfg.TestingTags)
-func NewValidator(contract *contracts.Contract, tagsConfig *config.TestingTagsConfig) *Validator {
+func NewValidator(contract *domain.Contract, tagsConfig *config.TestingTagsConfig) *Validator {
 	return &Validator{
 		contract:   contract,
 		tagsConfig: tagsConfig,

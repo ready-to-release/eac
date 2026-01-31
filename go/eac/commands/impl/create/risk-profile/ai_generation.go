@@ -117,7 +117,7 @@ func callAIWithRetry(ctx context.Context, prompt string, config *Config) (string
 	executor := ai.NewExecutor(config.WorkspaceRoot)
 	providers.RegisterBuiltIn(executor)
 
-	// Wrap executor to match contracts.AIExecutor interface
+	// Wrap executor to match domain.AIExecutor interface
 	executorAdapter := ai.NewExecutorAdapter(executor)
 
 	// Load AI config for retry strategy

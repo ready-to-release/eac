@@ -1,8 +1,6 @@
 module github.com/ready-to-release/eac/go/eac/mcp/commands
 
-go 1.24.0
-
-toolchain go1.24.4
+go 1.24.4
 
 require (
 	github.com/ready-to-release/eac/go/eac/core v0.0.0
@@ -44,4 +42,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/ready-to-release/eac/go/eac/core => ../../core
+replace (
+	github.com/ready-to-release/eac/contracts/eac-core-interfaces => ../../../../contracts/eac-core/0.1.0/interfaces
+	github.com/ready-to-release/eac/go/eac/core => ../../core
+)

@@ -113,12 +113,25 @@ component-types:
 
   # Test implementation component - Go BDD test step implementations (godog)
   # Contains godog_test.go and step definition files that implement Gherkin specs
+  # DEPRECATED: Use gherkin-executor for new modules (co-located with module code)
   test-impl:
     extensions: [".go"]
     requirements: [go]
     files:
       source: ["**/*.go"]
       tests: ["**/*_test.go"]
+
+  # Gherkin Executor component - Co-located BDD step implementations (godog)
+  # Contains godog_test.go and step definition files that implement Gherkin specs
+  # Located in specs/ subdirectory of the module, using _test.go suffix for test isolation
+  gherkin-executor:
+    extensions: [".go"]
+    requirements: [go]
+    default_root: specs
+    files:
+      source: ["godog_test.go", "steps_*_test.go"]
+      tests: ["*_test.go"]
+      config: []
 
   # PowerShell component - PowerShell 7.4+ scripts (.ps1, .psm1, .psd1)
   # Runs in container for cross-platform consistency

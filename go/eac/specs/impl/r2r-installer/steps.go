@@ -21,13 +21,13 @@ import (
 	"time"
 
 	"github.com/cucumber/godog"
+	eacgodog "github.com/ready-to-release/eac/go/eac/godog"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
-	"github.com/ready-to-release/eac/go/eac/specs/internal"
 )
 
 // installerContext holds state between steps for installer tests.
 type installerContext struct {
-	sharedCtx      *internal.TestContext
+	sharedCtx      *eacgodog.TestContext
 	scriptsRoot    string
 	tempInstallDir string
 }
@@ -35,7 +35,7 @@ type installerContext struct {
 var instCtx *installerContext
 
 // RegisterSteps registers all r2r-installer specific step definitions.
-func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
+func RegisterSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 	instCtx = &installerContext{sharedCtx: ctx}
 
 	// Initialize scripts root and temp install dir

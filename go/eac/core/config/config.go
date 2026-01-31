@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/ready-to-release/eac/go/eac/core/contracts/schema"
+	"github.com/ready-to-release/eac/go/eac/core/domain/schema"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/workspace"
 	"gopkg.in/yaml.v3"

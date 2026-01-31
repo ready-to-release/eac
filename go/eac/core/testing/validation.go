@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/core/config"
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
+	"github.com/ready-to-release/eac/go/eac/core/domain"
 )
 
 // NOTE: ValidTags map has been removed - validation now uses tag contract
@@ -81,7 +81,7 @@ func ValidateTags(tags []string) []string {
 	// Check for invalid tags
 	for _, tag := range tags {
 		if !IsValidTagWithConfig(tag, cfg) {
-			errors = append(errors, fmt.Sprintf("tag %s is not defined in %s/testing-tags.yml", tag, contracts.EACConfigRelPath))
+			errors = append(errors, fmt.Sprintf("tag %s is not defined in %s/testing-tags.yml", tag, domain.EACConfigRelPath))
 		}
 	}
 
@@ -128,7 +128,7 @@ func ValidatePostInference(test TestReference, validSkipReasons map[string]confi
 	// CRITICAL: Check for undefined tags first
 	for _, tag := range test.Tags {
 		if !IsValidTagWithConfig(tag, cfg) {
-			errors = append(errors, fmt.Sprintf("test '%s' has undefined tag '%s' (not in %s/testing-tags.yml)", test.TestName, tag, contracts.EACConfigRelPath))
+			errors = append(errors, fmt.Sprintf("test '%s' has undefined tag '%s' (not in %s/testing-tags.yml)", test.TestName, tag, domain.EACConfigRelPath))
 		}
 
 		// Validate skip reason codes if contract is loaded
@@ -289,7 +289,7 @@ func ValidateTestReference(test TestReference) []string {
 	return errors
 }
 
-// IsValidTag checks if a tag is valid according to contracts.
+// IsValidTag checks if a tag is valid according to domain.
 // Returns false if config cannot be loaded (fail-closed behavior).
 // Note: This does lightweight validation - for full validation use validate test-tags command.
 func IsValidTag(tag string) bool {

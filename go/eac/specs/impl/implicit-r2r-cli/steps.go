@@ -18,12 +18,12 @@ import (
 	"strings"
 
 	"github.com/cucumber/godog"
-	"github.com/ready-to-release/eac/go/eac/specs/internal"
+	eacgodog "github.com/ready-to-release/eac/go/eac/godog"
 )
 
 // importerContext holds state between steps for importer tests.
 type importerContext struct {
-	sharedCtx    *internal.TestContext
+	sharedCtx    *eacgodog.TestContext
 	repoRoot     string
 	moduleExists bool
 	modulePath   string
@@ -33,7 +33,7 @@ type importerContext struct {
 var impCtx *importerContext
 
 // RegisterSteps registers all implicit-r2r-cli specific step definitions.
-func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
+func RegisterSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 	impCtx = &importerContext{sharedCtx: ctx}
 
 	// Initialize repo root

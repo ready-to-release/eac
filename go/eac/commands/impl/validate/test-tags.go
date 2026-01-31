@@ -315,7 +315,7 @@ func isValidDepsName(name string, tagsConfig *config.TestingTagsConfig) bool {
 	return false
 }
 
-// isValidEnvMoniker checks if an environment moniker is defined in environment contracts.
+// isValidEnvMoniker checks if an environment moniker is defined in environment domain.
 func isValidEnvMoniker(moniker string) bool {
 	// Use the already-loaded config
 	if eacConfig == nil || eacConfig.Environments == nil {
@@ -333,7 +333,7 @@ func isValidEnvMoniker(moniker string) bool {
 	return false
 }
 
-// isValidModuleName checks if a module name is defined in module contracts.
+// isValidModuleName checks if a module name is defined in module domain.
 func isValidModuleName(moduleName string) bool {
 	// Use the already-loaded config
 	if eacConfig == nil || eacConfig.Repository == nil {

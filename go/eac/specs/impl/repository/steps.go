@@ -10,13 +10,13 @@ import (
 	"strings"
 
 	"github.com/cucumber/godog"
-	contractsreports "github.com/ready-to-release/eac/go/eac/core/contracts/reports"
+	eacgodog "github.com/ready-to-release/eac/go/eac/godog"
+	"github.com/ready-to-release/eac/contracts/eac-core-interfaces"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
-	"github.com/ready-to-release/eac/go/eac/specs/internal"
 )
 
 // RegisterSteps registers all repository-specific step definitions.
-func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
+func RegisterSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 	// Create repository-specific context that also updates the shared context
 	repoCtx := &repositoryContext{sharedCtx: ctx}
 
@@ -317,7 +317,7 @@ func RegisterSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
 
 // repositoryContext holds state for repository validation scenarios.
 type repositoryContext struct {
-	sharedCtx *internal.TestContext
+	sharedCtx *eacgodog.TestContext
 	repoRoot  string
 
 	// Go modules tidy
@@ -334,7 +334,7 @@ type repositoryContext struct {
 	tagConflicts []string
 
 	// Module hierarchy validation
-	moduleReport         *contractsreports.ModuleContractReport
+	moduleReport         interfaces.ModuleReportPort
 	dependencyErrors     []string
 	circularDependencies []string
 	missingModules       []string
@@ -437,9 +437,9 @@ func (c *repositoryContext) discoverAllGoModulesUsingContracts() error {
 		return fmt.Errorf("failed to load module contracts: %w", err)
 	}
 
-	for _, module := range moduleReport.Registry.All() {
+	for _, module := range moduleReport.Registry().All() {
 		// In the unified type system, check if module has "go" package type
-		if module.Components.HasComponent("go") {
+		if module.HasComponent("go") {
 			goRoot := module.GetComponentRoot("go")
 			if goRoot != "" {
 				modulePath := filepath.Join(c.repoRoot, goRoot)

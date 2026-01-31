@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
+	"github.com/ready-to-release/eac/go/eac/core/domain"
 )
 
 // SquashMessageValidator validates squash message output.
@@ -16,14 +16,14 @@ func NewSquashMessageValidator() *SquashMessageValidator {
 }
 
 // Validate validates the squash message output (formatted text).
-func (v *SquashMessageValidator) Validate(output string, context map[string]interface{}) []contracts.ValidationError {
-	var errors []contracts.ValidationError
+func (v *SquashMessageValidator) Validate(output string, context map[string]interface{}) []domain.ValidationError {
+	var errors []domain.ValidationError
 
 	// Basic checks for formatted commit message
 	lines := strings.Split(output, "\n")
 	if len(lines) == 0 || strings.TrimSpace(lines[0]) == "" {
-		errors = append(errors, *contracts.NewValidationError(
-			contracts.ErrEmptyOutput,
+		errors = append(errors, *domain.NewValidationError(
+			domain.ErrEmptyOutput,
 			"Commit message is empty",
 			0,
 		))
@@ -33,8 +33,8 @@ func (v *SquashMessageValidator) Validate(output string, context map[string]inte
 	// Check header format (type(scope): subject)
 	header := strings.TrimSpace(lines[0])
 	if !strings.Contains(header, ":") {
-		errors = append(errors, *contracts.NewValidationError(
-			contracts.ErrInvalidPattern,
+		errors = append(errors, *domain.NewValidationError(
+			domain.ErrInvalidPattern,
 			"Header must follow format: type(scope): subject",
 			1,
 		))
@@ -42,8 +42,8 @@ func (v *SquashMessageValidator) Validate(output string, context map[string]inte
 
 	// Check header length
 	if len(header) > 72 {
-		errors = append(errors, *contracts.NewValidationError(
-			contracts.ErrLineTooLong,
+		errors = append(errors, *domain.NewValidationError(
+			domain.ErrLineTooLong,
 			fmt.Sprintf("Header exceeds 72 characters (%d)", len(header)),
 			1,
 		))
@@ -53,6 +53,6 @@ func (v *SquashMessageValidator) Validate(output string, context map[string]inte
 }
 
 // VerifyImplementation checks validator implementation.
-func (v *SquashMessageValidator) VerifyImplementation() []contracts.ValidationError {
+func (v *SquashMessageValidator) VerifyImplementation() []domain.ValidationError {
 	return nil
 }

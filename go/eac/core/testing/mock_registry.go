@@ -1,15 +1,15 @@
 package testing
 
 import (
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
-	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/domain"
+	"github.com/ready-to-release/eac/go/eac/core/domain/modules"
 )
 
 // RegistryOption is a function that configures a mock registry.
 type RegistryOption func(*modules.Registry)
 
 // ModuleOption is a function that configures a mock module.
-type ModuleOption func(*contracts.BaseContract)
+type ModuleOption func(*domain.BaseContract)
 
 // NewMockRegistry creates a new mock module registry for testing.
 func NewMockRegistry(opts ...RegistryOption) *modules.Registry {
@@ -25,9 +25,9 @@ func NewMockRegistry(opts ...RegistryOption) *modules.Registry {
 // WithModule adds a module to the mock registry with optional configuration.
 func WithModule(moniker string, opts ...ModuleOption) RegistryOption {
 	return func(r *modules.Registry) {
-		base := contracts.BaseContract{
+		base := domain.BaseContract{
 			Moniker:    moniker,
-			Components: make(contracts.ModuleComponents),
+			Components: make(domain.ModuleComponents),
 		}
 
 		// Apply module options
@@ -42,8 +42,8 @@ func WithModule(moniker string, opts ...ModuleOption) RegistryOption {
 
 // WithVersioning adds versioning configuration to a module with default CalVer scheme.
 func WithVersioning() ModuleOption {
-	return func(m *contracts.BaseContract) {
-		m.Versioning = &contracts.ModuleVersioning{
+	return func(m *domain.BaseContract) {
+		m.Versioning = &domain.ModuleVersioning{
 			Scheme: "CalVer", // Default to CalVer
 		}
 	}
@@ -51,8 +51,8 @@ func WithVersioning() ModuleOption {
 
 // WithSemver adds semver versioning configuration to a module.
 func WithSemver() ModuleOption {
-	return func(m *contracts.BaseContract) {
-		m.Versioning = &contracts.ModuleVersioning{
+	return func(m *domain.BaseContract) {
+		m.Versioning = &domain.ModuleVersioning{
 			Scheme: "SemVer",
 		}
 	}
@@ -60,9 +60,9 @@ func WithSemver() ModuleOption {
 
 // WithChangelog sets the changelog path for a module.
 func WithChangelog(path string) ModuleOption {
-	return func(m *contracts.BaseContract) {
+	return func(m *domain.BaseContract) {
 		if m.Versioning == nil {
-			m.Versioning = &contracts.ModuleVersioning{
+			m.Versioning = &domain.ModuleVersioning{
 				Scheme: "CalVer",
 			}
 		}
@@ -72,18 +72,18 @@ func WithChangelog(path string) ModuleOption {
 
 // WithDependsOn adds dependencies to a module.
 func WithDependsOn(dependencies ...string) ModuleOption {
-	return func(m *contracts.BaseContract) {
+	return func(m *domain.BaseContract) {
 		m.DependsOn = append(m.DependsOn, dependencies...)
 	}
 }
 
 // WithComponent adds a component to a module with specified root path.
 func WithComponent(componentType, root string) ModuleOption {
-	return func(m *contracts.BaseContract) {
+	return func(m *domain.BaseContract) {
 		if m.Components == nil {
-			m.Components = make(contracts.ModuleComponents)
+			m.Components = make(domain.ModuleComponents)
 		}
-		m.Components[componentType] = &contracts.ComponentEntry{
+		m.Components[componentType] = &domain.ComponentEntry{
 			Root: root,
 		}
 	}
@@ -106,9 +106,9 @@ func WithSpecsComponent(root string) ModuleOption {
 
 // WithReleaseType sets the release type for a module (published, internal, bundle, none).
 func WithReleaseType(releaseType string) ModuleOption {
-	return func(m *contracts.BaseContract) {
+	return func(m *domain.BaseContract) {
 		if m.Versioning == nil {
-			m.Versioning = &contracts.ModuleVersioning{
+			m.Versioning = &domain.ModuleVersioning{
 				Scheme: "CalVer",
 			}
 		}

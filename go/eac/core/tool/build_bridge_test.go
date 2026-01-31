@@ -4,8 +4,9 @@ import (
 	"io"
 	"testing"
 
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
-	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/domain"
+	"github.com/ready-to-release/eac/go/eac/core/domain/modules"
+	"github.com/ready-to-release/eac/contracts/eac-core-interfaces"
 )
 
 // mockBuildHandler implements BuildHandler for testing.
@@ -18,11 +19,11 @@ type mockBuildHandler struct {
 
 func (m *mockBuildHandler) Name() string { return m.name }
 
-func (m *mockBuildHandler) Build(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+func (m *mockBuildHandler) Build(module interfaces.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
 	return m.buildResult
 }
 
-func (m *mockBuildHandler) ListArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {
+func (m *mockBuildHandler) ListArtifacts(module interfaces.ModuleContractPort, workspaceRoot string) []string {
 	return m.artifacts
 }
 
@@ -30,7 +31,7 @@ func (m *mockBuildHandler) Requirements() []string {
 	return m.requirements
 }
 
-func (m *mockBuildHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot, component string) error {
+func (m *mockBuildHandler) ValidateModule(module interfaces.ModuleContractPort, workspaceRoot, component string) error {
 	return nil
 }
 
@@ -173,10 +174,10 @@ func TestBuildBridge_GetHandlersForModule(t *testing.T) {
 	bridge := NewBuildBridge()
 
 	// Create module
-	module := modules.NewModuleContract(contracts.BaseContract{
+	module := modules.NewModuleContract(domain.BaseContract{
 		Moniker: "test-module",
-		Components: contracts.ModuleComponents{
-			"go": &contracts.ComponentEntry{Root: "."},
+		Components: domain.ModuleComponents{
+			"go": &domain.ComponentEntry{Root: "."},
 		},
 	}, "/workspace")
 

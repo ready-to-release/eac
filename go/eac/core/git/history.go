@@ -1,6 +1,7 @@
 package git
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sort"
@@ -139,8 +140,16 @@ func (r *Repository) getCommitFiles(c *object.Commit) ([]string, error) {
 			return nil
 		})
 	} else {
-		// Compare with parent
-		changes, err := parentTree.Diff(tree)
+		// Compare with parent - disable rename detection for performance
+		// Rename detection computes file similarity which is O(n*m) and very slow
+		// when there are many renamed files (e.g., 330+ files takes 30+ seconds)
+		changes, err := object.DiffTreeWithOptions(
+			context.Background(),
+			parentTree,
+			tree,
+			&object.DiffTreeOptions{
+				DetectRenames: false,
+			})
 		if err != nil {
 			return nil, err
 		}

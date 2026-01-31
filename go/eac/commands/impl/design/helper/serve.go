@@ -18,7 +18,7 @@ var log = logging.C()
 const containerNamePrefix = "structurizr-lite"
 
 // StartStructurizrLite starts the Structurizr Lite Docker container and opens the browser
-// The autoStop parameter is kept for backward compatibility but is less relevant with dynamic ports.
+// The autoStop parameter is kept for backward compatibility but is less relevant with dynamic interfaces.
 func StartStructurizrLite(moduleName string, autoStop bool) error {
 	// Get repository root
 	repoRoot, err := repository.GetRepositoryRoot("")

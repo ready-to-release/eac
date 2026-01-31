@@ -91,8 +91,8 @@ func groupTestsByPackage(tests []testing.TestReference, workspaceRoot string, cf
 
 // sanitizePathForLog converts a package path to a safe directory name.
 func sanitizePathForLog(pkgPath string) string {
-	// Replace colons and other special chars
-	safe := strings.ReplaceAll(pkgPath, ":", "_")
+	// Replace colons with slashes for proper path hierarchy
+	safe := strings.ReplaceAll(pkgPath, ":", "/")
 	safe = strings.ReplaceAll(safe, "\\", "/")
 	return safe
 }

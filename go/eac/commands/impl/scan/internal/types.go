@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
+	"github.com/ready-to-release/eac/go/eac/core/domain"
 	"github.com/ready-to-release/eac/go/eac/core/tool"
 )
 
@@ -41,13 +41,13 @@ const (
 // These are loaded from the shared-definitions.schema.json contract.
 // Used in component-types.yml and tool-config.yml.
 func ValidScannerCategories() map[string]bool {
-	return contracts.ValidScannerCategories()
+	return domain.ValidScannerCategories()
 }
 
 // IsValidScannerCategory returns true if the category is valid.
 // Delegates to the contracts package which loads from schema.
 func IsValidScannerCategory(category string) bool {
-	return contracts.IsValidScannerCategory(category)
+	return domain.IsValidScannerCategory(category)
 }
 
 // ScanResult holds the outcome of a security scan.

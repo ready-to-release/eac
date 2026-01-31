@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
+	"github.com/ready-to-release/eac/go/eac/core/domain"
 )
 
 // ModuleSectionValidator validates individual module sections (not full commit messages)
@@ -31,13 +31,13 @@ func NewModuleSectionValidator(moduleName string) *ModuleSectionValidator {
 }
 
 // Validate validates a module section against the expected format.
-func (v *ModuleSectionValidator) Validate(output string, context map[string]interface{}) []contracts.ValidationError {
-	var errors []contracts.ValidationError
+func (v *ModuleSectionValidator) Validate(output string, context map[string]interface{}) []domain.ValidationError {
+	var errors []domain.ValidationError
 
 	lines := strings.Split(output, "\n")
 	if len(lines) == 0 {
-		errors = append(errors, *contracts.NewValidationError(
-			contracts.ErrEmptyModuleSection,
+		errors = append(errors, *domain.NewValidationError(
+			domain.ErrEmptyModuleSection,
 			"Module section is empty",
 			0,
 		))
@@ -52,8 +52,8 @@ func (v *ModuleSectionValidator) Validate(output string, context map[string]inte
 	}
 
 	if startIdx >= len(lines) {
-		errors = append(errors, *contracts.NewValidationError(
-			contracts.ErrEmptyModuleSection,
+		errors = append(errors, *domain.NewValidationError(
+			domain.ErrEmptyModuleSection,
 			"Module section contains only blank lines",
 			0,
 		))
@@ -63,8 +63,8 @@ func (v *ModuleSectionValidator) Validate(output string, context map[string]inte
 	// Line 1: Module name
 	moduleName := strings.TrimSpace(lines[startIdx])
 	if !isModuleName(moduleName) {
-		errors = append(errors, *contracts.NewValidationError(
-			contracts.ErrInvalidModuleName,
+		errors = append(errors, *domain.NewValidationError(
+			domain.ErrInvalidModuleName,
 			fmt.Sprintf("First line should be module name, got: %s", moduleName),
 			startIdx+1,
 		))
@@ -72,8 +72,8 @@ func (v *ModuleSectionValidator) Validate(output string, context map[string]inte
 
 	// Line 2: Dashes
 	if startIdx+1 >= len(lines) {
-		errors = append(errors, *contracts.NewValidationError(
-			contracts.ErrMissingDashes,
+		errors = append(errors, *domain.NewValidationError(
+			domain.ErrMissingDashes,
 			"Module section missing dashes separator line",
 			0,
 		))
@@ -82,8 +82,8 @@ func (v *ModuleSectionValidator) Validate(output string, context map[string]inte
 
 	dashesLine := strings.TrimSpace(lines[startIdx+1])
 	if !isDashesLine(dashesLine) {
-		errors = append(errors, *contracts.NewValidationError(
-			contracts.ErrInvalidDashes,
+		errors = append(errors, *domain.NewValidationError(
+			domain.ErrInvalidDashes,
 			fmt.Sprintf("Second line should be dashes (--------), got: %s", dashesLine),
 			startIdx+2,
 		))
@@ -91,8 +91,8 @@ func (v *ModuleSectionValidator) Validate(output string, context map[string]inte
 
 	// Line 3: Subject line (<module>: <type>: <description>)
 	if startIdx+2 >= len(lines) {
-		errors = append(errors, *contracts.NewValidationError(
-			contracts.ErrMissingSubjectLine,
+		errors = append(errors, *domain.NewValidationError(
+			domain.ErrMissingSubjectLine,
 			"Module section missing subject line",
 			0,
 		))
@@ -108,8 +108,8 @@ func (v *ModuleSectionValidator) Validate(output string, context map[string]inte
 	}
 
 	if subjectLine != "" && !getModuleSubjectLineRegex().MatchString(subjectLine) {
-		errors = append(errors, *contracts.NewValidationError(
-			contracts.ErrInvalidSubjectFormat,
+		errors = append(errors, *domain.NewValidationError(
+			domain.ErrInvalidSubjectFormat,
 			fmt.Sprintf("Subject line must follow '<module>: <type>: <description>' format, got: %s", subjectLine),
 			startIdx+3,
 		))
@@ -117,8 +117,8 @@ func (v *ModuleSectionValidator) Validate(output string, context map[string]inte
 
 	// Check subject line length
 	if len(subjectLine) > MaxSubjectLength {
-		errors = append(errors, *contracts.NewValidationError(
-			contracts.ErrSubjectTooLong,
+		errors = append(errors, *domain.NewValidationError(
+			domain.ErrSubjectTooLong,
 			fmt.Sprintf("Subject line exceeds %d characters (%d chars)", MaxSubjectLength, len(subjectLine)),
 			0,
 		))
@@ -126,8 +126,8 @@ func (v *ModuleSectionValidator) Validate(output string, context map[string]inte
 
 	// Check for trailing period
 	if strings.HasSuffix(subjectLine, ".") && !strings.HasSuffix(subjectLine, "...") {
-		errors = append(errors, *contracts.NewValidationError(
-			contracts.ErrSubjectTrailingPeriod,
+		errors = append(errors, *domain.NewValidationError(
+			domain.ErrSubjectTrailingPeriod,
 			"Subject line must not end with period",
 			0,
 		))
@@ -144,8 +144,8 @@ func (v *ModuleSectionValidator) Validate(output string, context map[string]inte
 	}
 
 	if !hasBody {
-		errors = append(errors, *contracts.NewValidationError(
-			contracts.ErrMissingBody,
+		errors = append(errors, *domain.NewValidationError(
+			domain.ErrMissingBody,
 			"Module section missing body text",
 			0,
 		))
@@ -162,8 +162,8 @@ func (v *ModuleSectionValidator) Validate(output string, context map[string]inte
 			if len(preview) > 50 {
 				preview = preview[:47] + "..."
 			}
-			errors = append(errors, *contracts.NewValidationError(
-				contracts.ErrLineTooLong,
+			errors = append(errors, *domain.NewValidationError(
+				domain.ErrLineTooLong,
 				fmt.Sprintf("Line exceeds %d characters (%d chars): %s", MaxLineLength, len(trimmed), preview),
 				i+1,
 			))
@@ -174,6 +174,6 @@ func (v *ModuleSectionValidator) Validate(output string, context map[string]inte
 }
 
 // VerifyImplementation is a no-op for module validators (no contract to verify against).
-func (v *ModuleSectionValidator) VerifyImplementation() []contracts.ValidationError {
+func (v *ModuleSectionValidator) VerifyImplementation() []domain.ValidationError {
 	return nil
 }

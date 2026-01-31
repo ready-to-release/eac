@@ -27,7 +27,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/ai"
 	"github.com/ready-to-release/eac/go/eac/core/config"
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
+	"github.com/ready-to-release/eac/go/eac/core/domain"
 	"github.com/ready-to-release/eac/go/eac/core/git"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
@@ -164,7 +164,7 @@ func ValidateSpecs() int {
 			}
 		}
 
-		criticalCount := contracts.CountCriticalErrors(errors)
+		criticalCount := domain.CountCriticalErrors(errors)
 		results = []*ValidationResult{
 			{
 				Path:   cfg.Path,
@@ -211,7 +211,7 @@ type ValidateConfig struct {
 type ValidationResult struct {
 	Path   string                      `json:"path"`
 	Valid  bool                        `json:"valid"`
-	Errors []contracts.ValidationError `json:"errors"`
+	Errors []domain.ValidationError `json:"errors"`
 }
 
 // parseValidateConfig parses command line arguments into configuration.
@@ -339,7 +339,7 @@ func validatePath(path, repoRoot string) error {
 }
 
 // validateGherkinFile validates a single Gherkin specification file.
-func validateGherkinFile(filePath, repoRoot string, checkTags bool) ([]contracts.ValidationError, error) {
+func validateGherkinFile(filePath, repoRoot string, checkTags bool) ([]domain.ValidationError, error) {
 	// Read file content
 	content, err := os.ReadFile(filePath)
 	if err != nil {
@@ -407,7 +407,7 @@ func validateDirectory(dirPath, repoRoot string, quiet, checkTags bool, format s
 			return nil
 		}
 
-		criticalCount := contracts.CountCriticalErrors(errors)
+		criticalCount := domain.CountCriticalErrors(errors)
 		result := &ValidationResult{
 			Path:   path,
 			Valid:  criticalCount == 0,
@@ -528,7 +528,7 @@ func formatValidationResult(result *ValidationResult) string {
 	}
 
 	// Display each error/warning
-	output.WriteString(contracts.FormatValidationErrors(result.Errors))
+	output.WriteString(domain.FormatValidationErrors(result.Errors))
 
 	return output.String()
 }
@@ -631,7 +631,7 @@ func (r *FixResult) FixCount() int {
 // Supports fixing:
 // - MISSING_VERIFICATION_TAG: adds @ov tag before scenario
 // - INVALID_FEATURE_NAMING: renames feature to <module>_<kebab-name> format.
-func fixGherkinFile(filePath string, errors []contracts.ValidationError) (*FixResult, error) {
+func fixGherkinFile(filePath string, errors []domain.ValidationError) (*FixResult, error) {
 	result := &FixResult{
 		Path:  filePath,
 		Fixes: []FixedIssue{},

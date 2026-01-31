@@ -3,7 +3,7 @@ package repository
 import (
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/domain/modules"
 	"github.com/ready-to-release/eac/go/eac/core/git"
 )
 
@@ -208,7 +208,7 @@ func GetMultiOwnershipFiles(files []RepositoryFileWithModule) []RepositoryFileWi
 }
 
 // GetOrphanFiles returns files that don't belong to any module.
-// Useful for finding files that aren't covered by module contracts.
+// Useful for finding files that aren't covered by module domain.
 //
 // Example:
 //

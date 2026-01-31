@@ -6,14 +6,14 @@ import (
 	"fmt"
 	"text/template"
 
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
+	"github.com/ready-to-release/eac/go/eac/core/domain"
 	"gopkg.in/yaml.v3"
 )
 
 // PromptData holds data for prompt template execution.
 type PromptData struct {
 	Contract    string              // Contract structure as YAML
-	ContractRaw *contracts.Contract // Raw contract object for advanced templates
+	ContractRaw *domain.Contract // Raw contract object for advanced templates
 	Custom      map[string]string   // Custom data provided by caller
 }
 
@@ -38,7 +38,7 @@ type PromptData struct {
 // Returns rendered prompt or error if template execution fails.
 func BuildPromptWithTemplate(
 	promptTemplate string,
-	contract *contracts.Contract,
+	contract *domain.Contract,
 	customData map[string]string,
 ) (string, error) {
 	// Parse template

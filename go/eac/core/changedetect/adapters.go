@@ -80,7 +80,7 @@ type ContractResolverAdapter struct {
 	provider ModuleContractProvider
 }
 
-// NewContractResolverAdapter creates a ModuleFileResolver that uses module contracts.
+// NewContractResolverAdapter creates a ModuleFileResolver that uses module domain.
 // The provider should be an adapter that wraps a modules.Registry.
 func NewContractResolverAdapter(provider ModuleContractProvider) *ContractResolverAdapter {
 	return &ContractResolverAdapter{provider: provider}
@@ -102,7 +102,7 @@ type RegistryAdapter struct {
 	getContract func(moniker string) (interface{ GetGlobPatterns() []string }, bool)
 }
 
-// NewRegistryAdapterFunc creates a RegistryAdapter from a function that gets contracts.
+// NewRegistryAdapterFunc creates a RegistryAdapter from a function that gets domain.
 // This allows flexible integration with different registry implementations.
 //
 // Example usage:

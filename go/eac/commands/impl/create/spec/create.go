@@ -34,8 +34,8 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	aimock "github.com/ready-to-release/eac/go/eac/core/ai"
 	configpkg "github.com/ready-to-release/eac/go/eac/core/config"
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
-	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
+	"github.com/ready-to-release/eac/go/eac/core/domain"
+	"github.com/ready-to-release/eac/go/eac/core/domain/reports"
 	"github.com/ready-to-release/eac/go/eac/core/git"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
@@ -317,14 +317,14 @@ func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 
 	// Handle validation errors
 	if len(result.ValidationErrors) > 0 {
-		criticalErrors := contracts.CountCriticalErrors(result.ValidationErrors)
+		criticalErrors := domain.CountCriticalErrors(result.ValidationErrors)
 
 		if criticalErrors > 0 {
 			log.Errorf("Generated specification has critical validation errors: criticalErrors=%d, attempts=%d",
 				criticalErrors, result.Attempts)
 			log.Error("")
 			log.Error("⚠️  Generated specification has validation errors:\n")
-			log.Errorf("%s", contracts.FormatValidationErrors(result.ValidationErrors))
+			log.Errorf("%s", domain.FormatValidationErrors(result.ValidationErrors))
 			log.Errorf("\nThe AI attempted %d time(s) but could not generate valid output.", result.Attempts)
 			log.Error("\nTroubleshooting:")
 			log.Error("  1. Try rephrasing your description to be more specific")
@@ -336,7 +336,7 @@ func generateAndClean(config *SpecsConfig, prompt string) (string, error) {
 		// Only warnings - log them but continue
 		log.Warnf("Generated specification has warnings: warnings=%d", len(result.ValidationErrors))
 		log.Errorf("\nℹ️  Generated specification has %d warning(s):", len(result.ValidationErrors))
-		log.Errorf("%s", contracts.FormatValidationErrors(result.ValidationErrors))
+		log.Errorf("%s", domain.FormatValidationErrors(result.ValidationErrors))
 	}
 
 	return result.Output, nil
@@ -601,7 +601,7 @@ func loadPromptTemplates(config *SpecsConfig) (string, error) {
 	}
 
 	// Load referenced files (tags)
-	tagsPath := filepath.Join(contracts.EACConfigRelPath, "testing-tags.yml")
+	tagsPath := filepath.Join(domain.EACConfigRelPath, "testing-tags.yml")
 	tagsContent, err := loader.LoadReferencedFile(tagsPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to load tags: %w", err)

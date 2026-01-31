@@ -36,7 +36,7 @@ func (e *ManifestValidationError) Error() string {
 // Contract version for build manifest schema.
 const manifestContractVersion = "0.1.0"
 
-// NewManifestValidator creates a new manifest validator that loads schema from contracts.
+// NewManifestValidator creates a new manifest validator that loads schema from domain.
 func NewManifestValidator(workspaceRoot string) (*ManifestValidator, error) {
 	c := jsonschema.NewCompiler()
 

@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
+	"github.com/ready-to-release/eac/go/eac/core/domain"
 	"github.com/ready-to-release/eac/go/eac/core/validation"
 )
 
@@ -14,7 +14,7 @@ import (
 type QuickValidator struct {
 	identifierPattern   *regexp.Regexp
 	relationshipPattern *regexp.Regexp
-	contract            *contracts.Contract
+	contract            *domain.Contract
 }
 
 // NewQuickValidator creates a new quick validator.
@@ -29,7 +29,7 @@ func NewQuickValidator() *QuickValidator {
 }
 
 // NewQuickValidatorWithContract creates a new quick validator with contract.
-func NewQuickValidatorWithContract(contract *contracts.Contract) *QuickValidator {
+func NewQuickValidatorWithContract(contract *domain.Contract) *QuickValidator {
 	v := NewQuickValidator()
 	v.contract = contract
 

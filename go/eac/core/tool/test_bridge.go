@@ -5,13 +5,14 @@ import (
 	"io"
 	"sync"
 
-	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/domain/modules"
+	"github.com/ready-to-release/eac/contracts/eac-core-interfaces"
 )
 
 // TestFunc is the signature for module test functions.
-// Parameters: module contract, workspace root, output directory, log writer, report format, suite name
+// Parameters: module contract port, workspace root, output directory, log writer, report format, suite name
 // Returns: exit code.
-type TestFunc func(*modules.ModuleContract, string, string, io.Writer, string, string) int
+type TestFunc func(interfaces.ModuleContractPort, string, string, io.Writer, string, string) int
 
 // TestBridge provides a unified interface for resolving test handlers.
 // All handlers are resolved from tool-config.yml definitions.
@@ -94,7 +95,7 @@ func (b *TestBridge) GetTestFunc(module *modules.ModuleContract) TestFunc {
 
 // createToolTestFunc wraps a ToolDefinition as a TestFunc.
 func (b *TestBridge) createToolTestFunc(tool *ToolDefinition) TestFunc {
-	return func(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, reportFormat, suiteName string) int {
+	return func(module interfaces.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, reportFormat, suiteName string) int {
 		adapter := NewTestHandlerAdapter(tool, b.executor)
 		opts := TestOptions{
 			Verbose: false,
@@ -104,7 +105,7 @@ func (b *TestBridge) createToolTestFunc(tool *ToolDefinition) TestFunc {
 }
 
 // noOpTestFunc is the default no-op test function.
-func noOpTestFunc(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, reportFormat, suiteName string) int {
+func noOpTestFunc(module interfaces.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, reportFormat, suiteName string) int {
 	return 0
 }
 

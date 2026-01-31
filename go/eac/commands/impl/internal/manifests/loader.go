@@ -6,7 +6,7 @@ import (
 	"sort"
 
 	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
-	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/domain/modules"
 )
 
 // LoadAllTestManifests loads all test.manifest.json files from out/test/ directory.

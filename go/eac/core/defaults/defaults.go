@@ -1,4 +1,4 @@
-// Package defaults provides default values and path derivation for module contracts.
+// Package defaults provides default values and path derivation for module domain.
 //
 // Use these when:
 //   - Creating new specs/designs without an existing module contract

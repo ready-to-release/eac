@@ -5,15 +5,18 @@ import (
 	"context"
 	"testing"
 
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
-	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/adapters"
+	"github.com/ready-to-release/eac/go/eac/core/domain"
+	"github.com/ready-to-release/eac/go/eac/core/domain/modules"
+	"github.com/ready-to-release/eac/contracts/eac-core-interfaces"
 )
 
-// createTestModule creates a ModuleContract for testing.
-func createTestModule(moniker string) *modules.ModuleContract {
-	return modules.NewModuleContract(contracts.BaseContract{
+// createTestModule creates a ModuleContractPort for testing.
+func createTestModule(moniker string) interfaces.ModuleContractPort {
+	m := modules.NewModuleContract(domain.BaseContract{
 		Moniker: moniker,
 	}, "/workspace")
+	return adapters.AdaptModule(m)
 }
 
 // mockExecutor implements Executor for testing.

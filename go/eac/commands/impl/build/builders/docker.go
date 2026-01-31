@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/contracts/eac-core-interfaces"
 )
 
 func init() {
@@ -34,7 +34,7 @@ func (h *DockerHandler) Capabilities() []string { return []string{"container"} }
 
 func (h *DockerHandler) Requirements() []string { return []string{"docker"} }
 
-func (h *DockerHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot, component string) error {
+func (h *DockerHandler) ValidateModule(module interfaces.ModuleContractPort, workspaceRoot, component string) error {
 	if !IsDockerAvailable() {
 		if IsDockerInDocker() {
 			return fmt.Errorf("Docker socket not mounted (-v /var/run/docker.sock:/var/run/docker.sock)")
@@ -50,12 +50,13 @@ func (h *DockerHandler) IsContainer() bool { return false }
 // IsHostInstalled returns true as Docker builds use the local docker CLI.
 func (h *DockerHandler) IsHostInstalled() bool { return true }
 
-func (h *DockerHandler) ListArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {
-	return []string{fmt.Sprintf("docker-image:%s", module.Moniker)}
+func (h *DockerHandler) ListArtifacts(module interfaces.ModuleContractPort, workspaceRoot string) []string {
+	return []string{fmt.Sprintf("docker-image:%s", module.GetMoniker())}
 }
 
-func (h *DockerHandler) Build(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	Logln(logWriter, "\n=== Building dockerfile: %s ===", module.Moniker)
+func (h *DockerHandler) Build(module interfaces.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+	moniker := module.GetMoniker()
+	Logln(logWriter, "\n=== Building dockerfile: %s ===", moniker)
 
 	// Check if Docker is available before attempting to build
 	if !IsDockerAvailable() {
@@ -69,11 +70,11 @@ func (h *DockerHandler) Build(module *modules.ModuleContract, workspaceRoot, out
 		return 1
 	}
 
-	// Get relevant package roots
+	// Get relevant package roots (these methods are available via the port interface)
 	dockerRoot := module.GetComponentRoot("dockerfile")
 	goRoot := module.GetComponentRoot("go")
 
-	// Check if module has go package type
+	// Check if module has go package type (available via port interface)
 	hasGoModule := module.HasComponent("go")
 
 	// Step 1: go mod tidy (if Go module and enabled)
@@ -94,7 +95,7 @@ func (h *DockerHandler) Build(module *modules.ModuleContract, workspaceRoot, out
 	searchPaths := []string{"containers/{moniker}/Dockerfile", "{root}/Dockerfile"}
 
 	for _, pathTemplate := range searchPaths {
-		resolvedPath := resolveDockerfilePath(pathTemplate, module.Moniker, dockerRoot)
+		resolvedPath := resolveDockerfilePath(pathTemplate, moniker, dockerRoot)
 		fullPath := filepath.Join(workspaceRoot, resolvedPath)
 		if _, err := os.Stat(fullPath); err == nil {
 			dockerfilePath = fullPath
@@ -108,9 +109,9 @@ func (h *DockerHandler) Build(module *modules.ModuleContract, workspaceRoot, out
 	}
 
 	// Build list of tags for the image
-	tags := buildDockerTags(module.Moniker, workspaceRoot)
+	tags := buildDockerTags(moniker, workspaceRoot)
 
-	Logln(logWriter, "📦 Building Docker image: %s", module.Moniker)
+	Logln(logWriter, "📦 Building Docker image: %s", moniker)
 	Logln(logWriter, "   Tags: %v", tags)
 	Logln(logWriter, "   Dockerfile: %s", dockerfilePath)
 	Logln(logWriter, "   Build context: %s", workspaceRoot)
@@ -118,7 +119,7 @@ func (h *DockerHandler) Build(module *modules.ModuleContract, workspaceRoot, out
 	isCI := os.Getenv("CI") == "true"
 
 	if isCI {
-		return buildDockerCI(module, workspaceRoot, outputDir, dockerfilePath, tags, logWriter)
+		return buildDockerCI(moniker, workspaceRoot, outputDir, dockerfilePath, tags, logWriter)
 	}
 	return buildDockerLocal(workspaceRoot, outputDir, dockerfilePath, tags, logWriter)
 }
@@ -221,7 +222,7 @@ func buildDockerLocal(workspaceRoot, outputDir, dockerfilePath string, tags []st
 }
 
 // buildDockerCI builds a Docker image in CI with multi-platform support.
-func buildDockerCI(module *modules.ModuleContract, workspaceRoot, outputDir, dockerfilePath string, tags []string, logWriter io.Writer) int {
+func buildDockerCI(moniker, workspaceRoot, outputDir, dockerfilePath string, tags []string, logWriter io.Writer) int {
 	// Default CI platforms
 	ciPlatforms := "linux/amd64,linux/arm64"
 
@@ -253,7 +254,7 @@ func buildDockerCI(module *modules.ModuleContract, workspaceRoot, outputDir, doc
 
 	// Export multi-platform for release
 	Logln(logWriter, "\n--- CI Mode: Building multi-platform for release ---")
-	ociArchivePath := filepath.Join(outputDir, fmt.Sprintf("%s-ci-test.tar", module.Moniker))
+	ociArchivePath := filepath.Join(outputDir, fmt.Sprintf("%s-ci-test.tar", moniker))
 
 	// Build multi-platform with all tags
 	args = []string{"buildx", "build", "--platform", ciPlatforms}

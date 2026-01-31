@@ -35,7 +35,7 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	coreai "github.com/ready-to-release/eac/go/eac/core/ai"
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
+	"github.com/ready-to-release/eac/go/eac/core/domain"
 	"github.com/ready-to-release/eac/go/eac/core/git"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
@@ -395,7 +395,7 @@ func generateTopLevelMessage(workspaceRoot, promptContext string) (string, error
 	// Phase 1 generates JSON output that matches squash-message.schema.json
 	// The formatter then converts JSON → plaintext squash message (no AI involved)
 	schemaPath := filepath.Join(paths.ContractsVersionPath(workspaceRoot, paths.EACCoreModule, paths.DefaultsVersion), "squash-message.schema.json")
-	validator, err := contracts.NewJSONSchemaValidator(schemaPath)
+	validator, err := domain.NewJSONSchemaValidator(schemaPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to create JSON schema validator: %w", err)
 	}

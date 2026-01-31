@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
-	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/domain"
+	"github.com/ready-to-release/eac/go/eac/core/domain/modules"
 	eactesting "github.com/ready-to-release/eac/go/eac/core/testing"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -79,9 +79,9 @@ func TestValidateChangelog_MissingFile(t *testing.T) {
 
 	// Create a mock module contract with a non-existent changelog
 	mockContract := &modules.ModuleContract{
-		BaseContract: contracts.BaseContract{
+		BaseContract: domain.BaseContract{
 			Moniker: "nonexistent-module",
-			Versioning: &contracts.ModuleVersioning{
+			Versioning: &domain.ModuleVersioning{
 				Scheme:    "SemVer",
 				Changelog: "nonexistent/path/CHANGELOG.md",
 			},

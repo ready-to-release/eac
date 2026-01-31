@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/domain/modules"
 )
 
-// Validator validates go.mod dependencies against module contracts.
+// Validator validates go.mod dependencies against module domain.
 type Validator struct {
 	graph    *DependencyGraph
 	registry *modules.Registry
@@ -21,7 +21,7 @@ func NewValidator(graph *DependencyGraph, registry *modules.Registry) *Validator
 	}
 }
 
-// Validate compares the dependency graph against module contracts.
+// Validate compares the dependency graph against module domain.
 func (v *Validator) Validate() *ValidationReport {
 	report := &ValidationReport{
 		Discrepancies: []Discrepancy{},
@@ -181,7 +181,7 @@ func (r *ValidationReport) HasDiscrepancies() bool {
 	return r.Summary.WithDiscrepancies > 0
 }
 
-// AllMatch returns true if all modules match their contracts.
+// AllMatch returns true if all modules match their domain.
 func (r *ValidationReport) AllMatch() bool {
 	return r.Summary.WithDiscrepancies == 0 && r.Summary.TotalModules > 0
 }

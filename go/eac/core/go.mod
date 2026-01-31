@@ -1,8 +1,6 @@
 module github.com/ready-to-release/eac/go/eac/core
 
-go 1.24.0
-
-toolchain go1.24.4
+go 1.24.4
 
 require gopkg.in/yaml.v3 v3.0.1
 
@@ -16,6 +14,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/ready-to-release/eac/contracts v0.0.0-20260129143239-c3ff637b8ca9
+	github.com/ready-to-release/eac/contracts/eac-core-interfaces v0.0.0-00010101000000-000000000000
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/stretchr/testify v1.11.1
 	github.com/xeipuuv/gojsonschema v1.2.0
@@ -81,3 +80,5 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gotest.tools/v3 v3.5.2 // indirect
 )
+
+replace github.com/ready-to-release/eac/contracts/eac-core-interfaces => ../../../contracts/eac-core/0.1.0/interfaces

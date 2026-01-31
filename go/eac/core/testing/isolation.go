@@ -36,7 +36,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
+	"github.com/ready-to-release/eac/go/eac/core/domain"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 )
 
@@ -131,8 +131,8 @@ func (t *TestIsolation) Setup() error {
 
 	// Copy repository config if requested
 	if t.copyContracts && t.originalRepoRoot != "" {
-		srcContracts := filepath.Join(t.originalRepoRoot, contracts.EACConfigRelPath)
-		dstContracts := filepath.Join(t.isolatedDir, contracts.EACConfigRelPath)
+		srcContracts := filepath.Join(t.originalRepoRoot, domain.EACConfigRelPath)
+		dstContracts := filepath.Join(t.isolatedDir, domain.EACConfigRelPath)
 		if err := copyDir(srcContracts, dstContracts); err != nil {
 			t.Cleanup()
 			return fmt.Errorf("failed to copy repository config: %w", err)

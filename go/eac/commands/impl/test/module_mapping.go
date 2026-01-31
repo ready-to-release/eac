@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/domain/modules"
 )
 
 // ModuleMapper provides file-to-module mapping functionality.
@@ -42,14 +42,10 @@ func (m *ModuleMapper) GetModuleForFile(filePath string) string {
 		return matches[0].Moniker
 	}
 
-	// Try with a synthetic file to handle directory paths
-	if !strings.HasSuffix(relPath, ".go") && !strings.HasSuffix(relPath, ".feature") {
-		// This looks like a directory path - try with a synthetic Go file
-		syntheticFile := relPath + "/test.go"
-		matches = m.registry.FindModulesForFile(syntheticFile)
-		if len(matches) > 0 {
-			return matches[0].Moniker
-		}
+	// For directory paths, check if path is under any component root
+	// This handles test directories that don't match specific file patterns
+	if moniker := m.findModuleByComponentRoot(relPath); moniker != "" {
+		return moniker
 	}
 
 	// Fallback: handle specs/ directory by convention (specs/<moniker>/**)
@@ -66,6 +62,24 @@ func (m *ModuleMapper) GetModuleForFile(filePath string) string {
 		}
 	}
 
+	return ""
+}
+
+// findModuleByComponentRoot finds the module that owns a path by checking component roots.
+// This handles directory paths that don't match specific file patterns but are under a component root.
+func (m *ModuleMapper) findModuleByComponentRoot(path string) string {
+	for _, module := range m.registry.All() {
+		for _, root := range module.GetComponentRoots() {
+			if root == "" || root == "/" {
+				continue
+			}
+			root = filepath.ToSlash(root)
+			// Check if path is under this component root
+			if strings.HasPrefix(path, root+"/") || path == root {
+				return module.Moniker
+			}
+		}
+	}
 	return ""
 }
 

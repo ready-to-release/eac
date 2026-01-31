@@ -56,6 +56,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/builders"
 	implinternal "github.com/ready-to-release/eac/go/eac/commands/impl/internal"
+	"github.com/ready-to-release/eac/go/eac/core/adapters"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/cmdframework"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/environment"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/flags"
@@ -67,8 +68,8 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/registry"
 	"github.com/ready-to-release/eac/go/eac/core/hash"
 	"github.com/ready-to-release/eac/go/eac/core/config"
-	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
-	"github.com/ready-to-release/eac/go/eac/core/contracts/reports"
+	"github.com/ready-to-release/eac/go/eac/core/domain/modules"
+	"github.com/ready-to-release/eac/go/eac/core/domain/reports"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"github.com/ready-to-release/eac/go/eac/core/repository"
@@ -395,8 +396,9 @@ func listModuleArtifacts(monikers []string, workspaceRoot string, moduleReport *
 		outputDir := paths.BuildOutputPath(workspaceRoot, moniker)
 
 		// Collect artifacts from all handlers
+		modulePort := adapters.AdaptModule(module)
 		for _, ch := range compHandlers {
-			artifacts := ch.Handler.ListArtifacts(module, workspaceRoot)
+			artifacts := ch.Handler.ListArtifacts(modulePort, workspaceRoot)
 			for _, artifact := range artifacts {
 				// Output full path relative to workspace root
 				fullPath := filepath.Join(outputDir, artifact)
@@ -451,6 +453,7 @@ func runModuleBuild(module *modules.ModuleContract, workspaceRoot, outputDir str
 	}
 
 	// Run each handler in sequence
+	modulePort := adapters.AdaptModule(module)
 	for _, ch := range compHandlers {
 		handler := ch.Handler
 
@@ -461,12 +464,12 @@ func runModuleBuild(module *modules.ModuleContract, workspaceRoot, outputDir str
 		}
 
 		// Validate module before building
-		if err := handler.ValidateModule(module, workspaceRoot, ch.Component); err != nil {
+		if err := handler.ValidateModule(modulePort, workspaceRoot, ch.Component); err != nil {
 			output.Writeln(logWriter, "❌ Module validation failed for %s: %v", ch.Component, err)
 			return 1
 		}
 
-		exitCode := handler.Build(module, workspaceRoot, outputDir, logWriter, opts)
+		exitCode := handler.Build(modulePort, workspaceRoot, outputDir, logWriter, opts)
 		if exitCode != 0 {
 			output.Writeln(logWriter, "❌ Build failed for component: %s", ch.Component)
 			return exitCode

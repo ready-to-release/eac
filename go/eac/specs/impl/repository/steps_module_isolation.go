@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"github.com/cucumber/godog"
-	"github.com/ready-to-release/eac/go/eac/specs/internal"
+	eacgodog "github.com/ready-to-release/eac/go/eac/godog"
 )
 
 // moduleIsolationContext holds state for module isolation validation.
@@ -30,7 +30,7 @@ type moduleIsolationContext struct {
 var modIsoCtx *moduleIsolationContext
 
 // registerModuleIsolationSteps registers module isolation step definitions.
-func registerModuleIsolationSteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
+func registerModuleIsolationSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 	// Background
 	sc.Step(`^the repository contains the following Go modules:$`, theRepositoryContainsGoModules)
 

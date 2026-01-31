@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ready-to-release/eac/go/eac/core/contracts/schema"
+	"github.com/ready-to-release/eac/go/eac/core/domain/schema"
 )
 
 // validateSchema validates data against a JSON schema.

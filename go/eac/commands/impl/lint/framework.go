@@ -20,8 +20,8 @@ import (
 	"github.com/ready-to-release/eac/go/eac/commands/internal/locking"
 	"github.com/ready-to-release/eac/go/eac/commands/internal/output"
 	"github.com/ready-to-release/eac/go/eac/core/config"
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
-	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/domain"
+	"github.com/ready-to-release/eac/go/eac/core/domain/modules"
 	"github.com/ready-to-release/eac/go/eac/core/environments"
 	"github.com/ready-to-release/eac/go/eac/core/hash"
 	"github.com/ready-to-release/eac/go/eac/core/logging"
@@ -600,7 +600,7 @@ func lintByPackages(ctx *cmdframework.ExecutionContext, module *modules.ModuleCo
 }
 
 // isProviderEnabledForModule checks if a lint provider should run for a module.
-func isProviderEnabledForModule(providerName string, linting *contracts.ModuleLinting) bool {
+func isProviderEnabledForModule(providerName string, linting *domain.ModuleLinting) bool {
 	if linting == nil {
 		return true // No overrides, use default behavior
 	}

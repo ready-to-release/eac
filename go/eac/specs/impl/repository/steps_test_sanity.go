@@ -13,8 +13,8 @@ import (
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/cucumber/godog"
+	eacgodog "github.com/ready-to-release/eac/go/eac/godog"
 	"github.com/ready-to-release/eac/go/eac/core/testing"
-	"github.com/ready-to-release/eac/go/eac/specs/internal"
 )
 
 // Package-level cache for test discovery results.
@@ -27,7 +27,7 @@ var (
 
 // testSanityContext holds state for test-sanity scenarios.
 type testSanityContext struct {
-	sharedCtx        *internal.TestContext
+	sharedCtx        *eacgodog.TestContext
 	repoRoot         string
 	rawScanFiles     []string
 	rawScanCount     int
@@ -36,7 +36,7 @@ type testSanityContext struct {
 }
 
 // registerTestSanitySteps registers steps for test-sanity feature.
-func registerTestSanitySteps(sc *godog.ScenarioContext, ctx *internal.TestContext) {
+func registerTestSanitySteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 	tsCtx := &testSanityContext{
 		sharedCtx:        ctx,
 		discoveredCounts: make(map[string]int),

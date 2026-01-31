@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/domain/modules"
 	eactesting "github.com/ready-to-release/eac/go/eac/core/testing"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

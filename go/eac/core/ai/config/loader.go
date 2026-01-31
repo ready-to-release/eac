@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
+	"github.com/ready-to-release/eac/go/eac/core/domain"
 	"github.com/ready-to-release/eac/go/eac/core/paths"
 	"gopkg.in/yaml.v3"
 )
@@ -192,7 +192,7 @@ func NewContractLoader(workspaceRoot, contractPath, _ string) *ContractLoader {
 
 // LoadContract loads validation config as a Contract for backward compatibility
 // Note: Validation is now done via JSON schema. This returns minimal contract info.
-func (cl *ContractLoader) LoadContract() (*contracts.Contract, error) {
+func (cl *ContractLoader) LoadContract() (*domain.Contract, error) {
 	typeConfig, err := cl.loader.GetType(cl.typeName)
 	if err != nil {
 		return nil, err
@@ -200,11 +200,11 @@ func (cl *ContractLoader) LoadContract() (*contracts.Contract, error) {
 
 	// Create minimal Contract from type config
 	// Actual validation is done via JSON schema
-	contract := &contracts.Contract{
+	contract := &domain.Contract{
 		Version:     paths.DefaultsVersion,
 		Name:        typeConfig.Name,
 		Description: typeConfig.Description,
-		Type:        contracts.ContractTypeAI,
+		Type:        domain.ContractTypeAI,
 		RawData:     make(map[string]interface{}), // Empty - using JSON schema now
 	}
 

@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/core/config"
-	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/domain/modules"
 )
 
 // ResolvedArtifact represents an artifact with metadata overrides applied and existence checked.

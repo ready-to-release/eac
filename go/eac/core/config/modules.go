@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
+	"github.com/ready-to-release/eac/go/eac/core/domain"
 	"gopkg.in/yaml.v3"
 )
 
@@ -26,7 +26,7 @@ type Module struct {
 	Metadata      map[string]string        `yaml:"metadata,omitempty"`       // Generic key-value store for module-specific data
 	Versioning    *ModuleVersioning        `yaml:"versioning,omitempty"`
 	Components    ModuleComponents         `yaml:"components"`        // Component types for this module (required)
-	Linting       *contracts.ModuleLinting `yaml:"linting,omitempty"` // Linting configuration overrides
+	Linting       *domain.ModuleLinting `yaml:"linting,omitempty"` // Linting configuration overrides
 }
 
 // HasComponent returns true if a component with the given name exists for this module.
@@ -87,6 +87,30 @@ func (m *Module) GetChangelog() string {
 		return m.Versioning.Changelog
 	}
 	return "release/" + m.Moniker + "/CHANGELOG.md"
+}
+
+// ShouldAggregateFromDependencies returns true if this module should aggregate
+// specs/approvals from its dependencies. This is true for:
+// - Bundle modules (release_type: bundle)
+// - Container modules (template contains "container")
+// Regular library modules with compile-time dependencies should NOT aggregate.
+func (m *Module) ShouldAggregateFromDependencies() bool {
+	// No dependencies means nothing to aggregate
+	if len(m.DependsOn) == 0 {
+		return false
+	}
+
+	// Explicit bundle release type
+	if m.Versioning != nil && m.Versioning.ReleaseType == "bundle" {
+		return true
+	}
+
+	// Container modules (template name contains "container")
+	if strings.Contains(m.Template, "container") {
+		return true
+	}
+
+	return false
 }
 
 // ReleaseBundle configures how the release module creates GitHub releases.
@@ -595,7 +619,7 @@ func replaceMoniker(s, moniker string) string {
 	))
 }
 
-// resolveDerivedPaths is a no-op since changelog derivation is now done in contracts.
+// resolveDerivedPaths is a no-op since changelog derivation is now done in domain.
 func (m *Module) resolveDerivedPaths() {
-	// Changelog is derived from components in contracts.ModuleContract.GetChangelogPath()
+	// Changelog is derived from components in domain.ModuleContract.GetChangelogPath()
 }

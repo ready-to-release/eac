@@ -8,7 +8,8 @@ import (
 	"path/filepath"
 
 	"github.com/bmatcuk/doublestar/v4"
-	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/adapters"
+	"github.com/ready-to-release/eac/contracts/eac-core-interfaces"
 )
 
 func init() {
@@ -24,9 +25,13 @@ func (h *ScriptsHandler) Capabilities() []string { return []string{"scripts_pack
 
 func (h *ScriptsHandler) Requirements() []string { return nil }
 
-func (h *ScriptsHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot, component string) error {
+func (h *ScriptsHandler) ValidateModule(module interfaces.ModuleContractPort, workspaceRoot, component string) error {
+	concrete := adapters.UnwrapModule(module)
+	if concrete == nil {
+		return fmt.Errorf("invalid module type")
+	}
 	// Check if any package has source patterns
-	for _, pkg := range module.Components {
+	for _, pkg := range concrete.Components {
 		if pkg != nil && pkg.Patterns != nil && len(pkg.Patterns.Source) > 0 {
 			return nil
 		}
@@ -40,17 +45,22 @@ func (h *ScriptsHandler) IsContainer() bool { return false }
 // IsHostInstalled returns true as scripts handler copies files using the host filesystem.
 func (h *ScriptsHandler) IsHostInstalled() bool { return true }
 
-func (h *ScriptsHandler) ListArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {
+func (h *ScriptsHandler) ListArtifacts(module interfaces.ModuleContractPort, workspaceRoot string) []string {
 	return nil // Artifacts are the copied files, tracked in manifest
 }
 
-func (h *ScriptsHandler) Build(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	Logln(logWriter, "\n=== scripts: %s ===", module.Moniker)
+func (h *ScriptsHandler) Build(module interfaces.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+	concrete := adapters.UnwrapModule(module)
+	if concrete == nil {
+		Logln(logWriter, "Error: invalid module type")
+		return 1
+	}
+	Logln(logWriter, "\n=== scripts: %s ===", concrete.Moniker)
 
 	// Get the specific component being built
-	comp := module.Components[opts.Component]
+	comp := concrete.Components[opts.Component]
 	if comp == nil {
-		Logln(logWriter, "❌ Component %s not found in module %s", opts.Component, module.Moniker)
+		Logln(logWriter, "❌ Component %s not found in module %s", opts.Component, concrete.Moniker)
 		return 1
 	}
 

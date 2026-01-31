@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/commands/internal/risk/evidence"
-	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/domain/modules"
 )
 
 // ExtractVulnerabilityFindings extracts vulnerability data from security scan evidence

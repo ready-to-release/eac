@@ -1,0 +1,149 @@
+package adapters
+
+import (
+	"github.com/ready-to-release/eac/go/eac/core/domain/modules"
+	"github.com/ready-to-release/eac/contracts/eac-core-interfaces"
+)
+
+// Compile-time interface check.
+var _ interfaces.ModuleContractPort = (*ModuleContractAdapter)(nil)
+
+// ModuleContractAdapter wraps a *modules.ModuleContract to implement interfaces.ModuleContractPort.
+type ModuleContractAdapter struct {
+	module *modules.ModuleContract
+}
+
+// NewModuleContractAdapter creates a new adapter wrapping a module contract.
+func NewModuleContractAdapter(m *modules.ModuleContract) *ModuleContractAdapter {
+	return &ModuleContractAdapter{module: m}
+}
+
+// Unwrap returns the underlying concrete module contract.
+// Use this when you need access to methods not exposed through the port interface.
+func (a *ModuleContractAdapter) Unwrap() *modules.ModuleContract {
+	return a.module
+}
+
+// GetMoniker returns the module's unique identifier.
+func (a *ModuleContractAdapter) GetMoniker() string {
+	return a.module.GetMoniker()
+}
+
+// GetName returns the module's display name.
+func (a *ModuleContractAdapter) GetName() string {
+	return a.module.GetName()
+}
+
+// GetDescription returns the module's description.
+func (a *ModuleContractAdapter) GetDescription() string {
+	return a.module.GetDescription()
+}
+
+// HasComponent returns true if the module has the specified component type.
+func (a *ModuleContractAdapter) HasComponent(componentType string) bool {
+	return a.module.HasComponent(componentType)
+}
+
+// GetComponentRoot returns the root directory for a component type.
+func (a *ModuleContractAdapter) GetComponentRoot(componentType string) string {
+	return a.module.GetComponentRoot(componentType)
+}
+
+// GetComponentRoots returns all component roots as a map.
+func (a *ModuleContractAdapter) GetComponentRoots() map[string]string {
+	return a.module.GetComponentRoots()
+}
+
+// GetComponentTypesDisplay returns a comma-separated list of component types.
+func (a *ModuleContractAdapter) GetComponentTypesDisplay() string {
+	return a.module.GetComponentTypesDisplay()
+}
+
+// GetComponentAmp returns the resource amplifier for a component's operation.
+func (a *ModuleContractAdapter) GetComponentAmp(componentName, operation string) float64 {
+	if a.module.Components == nil {
+		return 1.0
+	}
+	comp, ok := a.module.Components[componentName]
+	if !ok || comp == nil {
+		return 1.0
+	}
+	return comp.GetAmpForOperation(operation)
+}
+
+// GetDependsOn returns the list of module dependencies.
+func (a *ModuleContractAdapter) GetDependsOn() []string {
+	return a.module.DependsOn
+}
+
+// GetVersioningScheme returns the versioning scheme (SemVer, CalVer, Implicit).
+func (a *ModuleContractAdapter) GetVersioningScheme() string {
+	if a.module.Versioning == nil {
+		return ""
+	}
+	return a.module.Versioning.Scheme
+}
+
+// GetReleaseType returns the release type (published, internal, bundle, none).
+func (a *ModuleContractAdapter) GetReleaseType() string {
+	if a.module.Versioning == nil {
+		return ""
+	}
+	return a.module.Versioning.ReleaseType
+}
+
+// GetChangelog returns the path to the changelog file.
+func (a *ModuleContractAdapter) GetChangelog() string {
+	return a.module.GetChangelog()
+}
+
+// HasVersioning returns true if versioning is configured.
+func (a *ModuleContractAdapter) HasVersioning() bool {
+	return a.module.Versioning != nil
+}
+
+// GetMetadata returns the module's metadata as a map.
+func (a *ModuleContractAdapter) GetMetadata() map[string]interface{} {
+	if a.module.Metadata == nil {
+		return nil
+	}
+	// Convert map[string]string to map[string]interface{}
+	result := make(map[string]interface{}, len(a.module.Metadata))
+	for k, v := range a.module.Metadata {
+		result[k] = v
+	}
+	return result
+}
+
+// AdaptModule is a convenience function to wrap a module contract.
+func AdaptModule(m *modules.ModuleContract) interfaces.ModuleContractPort {
+	if m == nil {
+		return nil
+	}
+	return NewModuleContractAdapter(m)
+}
+
+// AdaptModules wraps a slice of module domain.
+func AdaptModules(modules []*modules.ModuleContract) []interfaces.ModuleContractPort {
+	if modules == nil {
+		return nil
+	}
+	result := make([]interfaces.ModuleContractPort, len(modules))
+	for i, m := range modules {
+		result[i] = AdaptModule(m)
+	}
+	return result
+}
+
+// UnwrapModule extracts the concrete ModuleContract from a port interface.
+// Returns nil if the port is nil or not backed by a ModuleContractAdapter.
+// Use this in native handlers that need access to methods not in the port interface.
+func UnwrapModule(port interfaces.ModuleContractPort) *modules.ModuleContract {
+	if port == nil {
+		return nil
+	}
+	if adapter, ok := port.(*ModuleContractAdapter); ok {
+		return adapter.Unwrap()
+	}
+	return nil
+}

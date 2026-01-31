@@ -188,6 +188,17 @@ container-tools:
     workdir: /app
     requirements: [docker]
 
+  npm-test:
+    description: "NPM test in container"
+    image: node
+    tag: "22-alpine"
+    command: ["sh", "-c", "npm install && npm test"]
+    mounts:
+      - source: "{module}"
+        target: /app
+    workdir: /app
+    requirements: [docker]
+
   # Linters
   golangci-lint:
     description: "Go linter aggregator"
@@ -499,13 +510,13 @@ component-tools:
   typescript:
     builder: npm-build
     linter: eslint
-    tester: npm
+    tester: npm-test
     scanners: [trivy-sbom, trivy-vuln, trivy-secrets]
 
   javascript:
-    builder: npm
+    builder: npm-build
     linter: eslint
-    tester: npm
+    tester: npm-test
     scanners: [trivy-sbom, trivy-vuln, trivy-secrets]
 
   python:

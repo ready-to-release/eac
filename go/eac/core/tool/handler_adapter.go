@@ -7,7 +7,7 @@ import (
 	"io"
 	"path/filepath"
 
-	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/contracts/eac-core-interfaces"
 )
 
 // BuildHandler is the interface for build handlers.
@@ -18,12 +18,12 @@ type BuildHandler interface {
 
 	// Build executes the build for a module.
 	// Returns exit code (0 = success, non-zero = failure).
-	Build(module *modules.ModuleContract, workspaceRoot, outputDir string,
+	Build(module interfaces.ModuleContractPort, workspaceRoot, outputDir string,
 		logWriter io.Writer, opts BuildOptions) int
 
 	// ListArtifacts returns artifact paths that would be produced.
 	// Paths are relative to the module's output directory.
-	ListArtifacts(module *modules.ModuleContract, workspaceRoot string) []string
+	ListArtifacts(module interfaces.ModuleContractPort, workspaceRoot string) []string
 
 	// Requirements returns system dependencies required by this handler.
 	// Used for early validation (e.g., ["go", "docker"]).
@@ -31,7 +31,7 @@ type BuildHandler interface {
 
 	// ValidateModule checks if a module's configuration is valid for a specific component.
 	// Returns nil if valid, or an error describing the problem.
-	ValidateModule(module *modules.ModuleContract, workspaceRoot, component string) error
+	ValidateModule(module interfaces.ModuleContractPort, workspaceRoot, component string) error
 
 	// IsContainer returns true if this handler runs in a Docker container.
 	IsContainer() bool
@@ -73,7 +73,7 @@ func (a *ToolHandlerAdapter) Name() string {
 }
 
 // Build executes the tool for a build operation.
-func (a *ToolHandlerAdapter) Build(module *modules.ModuleContract, workspaceRoot, outputDir string,
+func (a *ToolHandlerAdapter) Build(module interfaces.ModuleContractPort, workspaceRoot, outputDir string,
 	logWriter io.Writer, opts BuildOptions) int {
 
 	// Build execution context
@@ -113,7 +113,7 @@ func (a *ToolHandlerAdapter) Build(module *modules.ModuleContract, workspaceRoot
 
 // ListArtifacts returns an empty list - YAML-defined tools don't specify artifacts.
 // Complex artifact handling should use native handlers.
-func (a *ToolHandlerAdapter) ListArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {
+func (a *ToolHandlerAdapter) ListArtifacts(module interfaces.ModuleContractPort, workspaceRoot string) []string {
 	// YAML-defined tools don't specify artifacts
 	// This is intentionally minimal - complex builds should use native handlers
 	return nil
@@ -126,7 +126,7 @@ func (a *ToolHandlerAdapter) Requirements() []string {
 
 // ValidateModule validates the tool can run - always returns nil for YAML tools.
 // Complex validation should use native handlers.
-func (a *ToolHandlerAdapter) ValidateModule(module *modules.ModuleContract, workspaceRoot, component string) error {
+func (a *ToolHandlerAdapter) ValidateModule(module interfaces.ModuleContractPort, workspaceRoot, component string) error {
 	// Basic validation - just check if this is a container tool that Docker is required
 	if a.tool.Type == ToolTypeContainer {
 		// Could check Docker availability here
@@ -238,7 +238,7 @@ func (a *LintHandlerAdapter) IsHostInstalled() bool {
 // TestHandler is the interface for test handlers.
 type TestHandler interface {
 	Name() string
-	Test(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, opts TestOptions) int
+	Test(module interfaces.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts TestOptions) int
 	Requirements() []string
 	IsContainer() bool
 	IsHostInstalled() bool
@@ -272,7 +272,7 @@ func (a *TestHandlerAdapter) Name() string {
 }
 
 // Test executes the tool for a test operation.
-func (a *TestHandlerAdapter) Test(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, opts TestOptions) int {
+func (a *TestHandlerAdapter) Test(module interfaces.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts TestOptions) int {
 	execCtx := &ExecutionContext{
 		WorkspaceRoot: workspaceRoot,
 		ModuleRoot:    module.GetComponentRoot(""),

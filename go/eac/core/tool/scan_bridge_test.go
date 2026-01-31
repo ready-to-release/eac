@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/ready-to-release/eac/go/eac/core/config"
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
-	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/domain"
+	"github.com/ready-to-release/eac/go/eac/core/domain/modules"
 )
 
 func TestNewScanBridge(t *testing.T) {
@@ -210,7 +210,7 @@ func TestScanBridge_GetScannersForModule_NilModule(t *testing.T) {
 func TestScanBridge_GetScannersForModule_NilComponentTypes(t *testing.T) {
 	bridge := NewScanBridge()
 
-	module := modules.NewModuleContract(contracts.BaseContract{
+	module := modules.NewModuleContract(domain.BaseContract{
 		Moniker: "test-module",
 	}, "/workspace")
 
@@ -224,10 +224,10 @@ func TestScanBridge_GetScannersForModule(t *testing.T) {
 	bridge := NewScanBridge()
 
 	// Create a module with a go component
-	module := modules.NewModuleContract(contracts.BaseContract{
+	module := modules.NewModuleContract(domain.BaseContract{
 		Moniker: "test-module",
-		Components: contracts.ModuleComponents{
-			"main": &contracts.ComponentEntry{
+		Components: domain.ModuleComponents{
+			"main": &domain.ComponentEntry{
 				Root: ".",
 				Type: "go",
 			},
@@ -271,14 +271,14 @@ func TestScanBridge_GetScannersForModule_MultipleComponents(t *testing.T) {
 	bridge := NewScanBridge()
 
 	// Create a module with multiple components
-	module := modules.NewModuleContract(contracts.BaseContract{
+	module := modules.NewModuleContract(domain.BaseContract{
 		Moniker: "test-module",
-		Components: contracts.ModuleComponents{
-			"main": &contracts.ComponentEntry{
+		Components: domain.ModuleComponents{
+			"main": &domain.ComponentEntry{
 				Root: ".",
 				Type: "go",
 			},
-			"config": &contracts.ComponentEntry{
+			"config": &domain.ComponentEntry{
 				Root: "config",
 				Type: "dockerfile",
 			},

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ready-to-release/eac/go/eac/core/contracts"
+	"github.com/ready-to-release/eac/go/eac/core/domain"
 )
 
 func TestValidateGherkinFile_ValidFile(t *testing.T) {
@@ -94,11 +94,11 @@ Feature: eac-commands_multi-test
 			}
 
 			// Count critical errors
-			criticalCount := contracts.CountCriticalErrors(errors)
+			criticalCount := domain.CountCriticalErrors(errors)
 			if criticalCount != tt.wantErrs {
 				t.Errorf("validateGherkinFile() got %d critical errors, want %d", criticalCount, tt.wantErrs)
 				if len(errors) > 0 {
-					t.Logf("Errors: %s", contracts.FormatValidationErrors(errors))
+					t.Logf("Errors: %s", domain.FormatValidationErrors(errors))
 				}
 			}
 		})
@@ -230,7 +230,7 @@ Feature: eac-commands_test-feature
 
 			if !found {
 				t.Errorf("validateGherkinFile() missing expected error code %q", tt.wantErrorCode)
-				t.Logf("Got errors: %s", contracts.FormatValidationErrors(errors))
+				t.Logf("Got errors: %s", domain.FormatValidationErrors(errors))
 			}
 		})
 	}
@@ -479,7 +479,7 @@ func TestFormatValidationResult_SingleFile(t *testing.T) {
 			result: &ValidationResult{
 				Path:   "specs/test.feature",
 				Valid:  true,
-				Errors: []contracts.ValidationError{},
+				Errors: []domain.ValidationError{},
 			},
 			want: []string{"✅", "Validation passed", "specs/test.feature"},
 		},
@@ -488,7 +488,7 @@ func TestFormatValidationResult_SingleFile(t *testing.T) {
 			result: &ValidationResult{
 				Path:  "specs/test.feature",
 				Valid: false,
-				Errors: []contracts.ValidationError{
+				Errors: []domain.ValidationError{
 					{Code: "MISSING_RULE", Message: "Missing Rule: declaration", Severity: "error", Line: 0},
 				},
 			},
@@ -499,7 +499,7 @@ func TestFormatValidationResult_SingleFile(t *testing.T) {
 			result: &ValidationResult{
 				Path:  "specs/test.feature",
 				Valid: true,
-				Errors: []contracts.ValidationError{
+				Errors: []domain.ValidationError{
 					{Code: "WARN_NAMING", Message: "Naming could be improved", Severity: "warning", Line: 5},
 				},
 			},
@@ -807,7 +807,7 @@ func TestOutputJSON(t *testing.T) {
 		{
 			name: "single valid result",
 			results: []*ValidationResult{
-				{Path: "specs/test.feature", Valid: true, Errors: []contracts.ValidationError{}},
+				{Path: "specs/test.feature", Valid: true, Errors: []domain.ValidationError{}},
 			},
 			want: []string{`"valid": true`, `"passed": 1`, `"failed": 0`},
 		},
@@ -817,7 +817,7 @@ func TestOutputJSON(t *testing.T) {
 				{
 					Path:  "specs/test.feature",
 					Valid: false,
-					Errors: []contracts.ValidationError{
+					Errors: []domain.ValidationError{
 						{Code: "MISSING_RULE", Message: "Missing Rule", Severity: "error"},
 					},
 				},
@@ -827,8 +827,8 @@ func TestOutputJSON(t *testing.T) {
 		{
 			name: "mixed results",
 			results: []*ValidationResult{
-				{Path: "specs/valid.feature", Valid: true, Errors: []contracts.ValidationError{}},
-				{Path: "specs/invalid.feature", Valid: false, Errors: []contracts.ValidationError{}},
+				{Path: "specs/valid.feature", Valid: true, Errors: []domain.ValidationError{}},
+				{Path: "specs/invalid.feature", Valid: false, Errors: []domain.ValidationError{}},
 			},
 			want: []string{`"total": 2`, `"passed": 1`, `"failed": 1`},
 		},

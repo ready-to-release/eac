@@ -10,9 +10,11 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/eac/commands/impl/build/books"
+	"github.com/ready-to-release/eac/go/eac/core/adapters"
 	"github.com/ready-to-release/eac/go/eac/core/config"
-	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/domain/modules"
 	"github.com/ready-to-release/eac/go/eac/core/environments"
+	"github.com/ready-to-release/eac/contracts/eac-core-interfaces"
 	"github.com/ready-to-release/eac/go/eac/core/tool"
 )
 
@@ -124,7 +126,7 @@ func (h *MkDocsHandler) Capabilities() []string { return []string{"documentation
 
 func (h *MkDocsHandler) Requirements() []string { return []string{"docker"} }
 
-func (h *MkDocsHandler) ValidateModule(module *modules.ModuleContract, workspaceRoot, component string) error {
+func (h *MkDocsHandler) ValidateModule(module interfaces.ModuleContractPort, workspaceRoot, component string) error {
 	if !IsDockerAvailable() {
 		if IsDockerInDocker() {
 			return fmt.Errorf("Docker socket not mounted")
@@ -134,12 +136,17 @@ func (h *MkDocsHandler) ValidateModule(module *modules.ModuleContract, workspace
 	return nil
 }
 
-func (h *MkDocsHandler) ListArtifacts(module *modules.ModuleContract, workspaceRoot string) []string {
+func (h *MkDocsHandler) ListArtifacts(module interfaces.ModuleContractPort, workspaceRoot string) []string {
 	return []string{"site/"}
 }
 
-func (h *MkDocsHandler) Build(module *modules.ModuleContract, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
-	return buildMkDocsModule(module, workspaceRoot, outputDir, logWriter, opts)
+func (h *MkDocsHandler) Build(module interfaces.ModuleContractPort, workspaceRoot, outputDir string, logWriter io.Writer, opts BuildOptions) int {
+	concrete := adapters.UnwrapModule(module)
+	if concrete == nil {
+		Logln(logWriter, "Error: invalid module type")
+		return 1
+	}
+	return buildMkDocsModule(concrete, workspaceRoot, outputDir, logWriter, opts)
 }
 
 // mkdocsDockerConfig holds resolved docker configuration for mkdocs builds.

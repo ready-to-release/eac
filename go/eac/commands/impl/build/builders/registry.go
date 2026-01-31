@@ -9,24 +9,26 @@ import (
 	"sync"
 
 	"github.com/ready-to-release/eac/go/eac/core/config"
-	"github.com/ready-to-release/eac/go/eac/core/contracts/modules"
+	"github.com/ready-to-release/eac/go/eac/core/domain/modules"
+	"github.com/ready-to-release/eac/contracts/eac-core-interfaces"
 	"github.com/ready-to-release/eac/go/eac/core/tool"
 )
 
 // Handler is the interface for build handlers.
 // Each handler is responsible for building modules of specific types.
+// Handler accepts interfaces.ModuleContractPort for decoupled module access.
 type Handler interface {
 	// Name returns the handler identifier (e.g., "go", "mkdocs", "docker")
 	Name() string
 
 	// Build executes the build for a module.
 	// Returns exit code (0 = success, non-zero = failure).
-	Build(module *modules.ModuleContract, workspaceRoot, outputDir string,
+	Build(module interfaces.ModuleContractPort, workspaceRoot, outputDir string,
 		logWriter io.Writer, opts BuildOptions) int
 
 	// ListArtifacts returns artifact paths that would be produced.
 	// Paths are relative to the module's output directory.
-	ListArtifacts(module *modules.ModuleContract, workspaceRoot string) []string
+	ListArtifacts(module interfaces.ModuleContractPort, workspaceRoot string) []string
 
 	// Requirements returns system dependencies required by this handler.
 	// Used for early validation (e.g., ["go", "docker"]).
@@ -34,7 +36,7 @@ type Handler interface {
 
 	// ValidateModule checks if a module's configuration is valid for a specific component.
 	// Returns nil if valid, or an error describing the problem.
-	ValidateModule(module *modules.ModuleContract, workspaceRoot, component string) error
+	ValidateModule(module interfaces.ModuleContractPort, workspaceRoot, component string) error
 
 	// IsContainer returns true if this handler runs in a Docker container.
 	IsContainer() bool

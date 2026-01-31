@@ -73,9 +73,6 @@ modules:
   - moniker: eac-core
     name: Core Domain Libraries
     description: Core library containing contracts and repository operations
-    versioning:
-      scheme: Implicit
-      release_type: none
     components:
       go:
         root: go/eac/core
@@ -218,6 +215,10 @@ modules:
       gherkin: ~
       structurizr: ~
       test-impl: ~
+      gherkin-executor:
+        root: go/eac/commands/specs
+        patterns:
+          source: ["godog_test.go", "steps_*_test.go"]
       testdata:
         type: testdata
         root: go/eac/commands/testdata
@@ -225,7 +226,7 @@ modules:
           source: ["**/*.txt", "**/*.yml", "**/*.yaml"]
       test-assets:
         type: testdata
-        root: go/eac/specs/impl/eac-commands/assets
+        root: go/eac/commands/specs/assets
         patterns:
           source: ["**/*.txt", "**/*.json", "**/*.md"]
       dockerfile:
@@ -244,6 +245,18 @@ modules:
         root: containers/drawio-cli
         patterns:
           source: ["**/*.py", "requirements.txt", "templates/*.xml"]
+
+  - moniker: eac-godog
+    name: Godog Test Infrastructure
+    description: Shared godog BDD test infrastructure (context, cache, helpers, fixtures)
+    depends_on: [eac-core]
+    components:
+      go:
+        root: go/eac/godog
+        patterns:
+          source: ["**/*.go"]
+          tests: ["**/*_test.go"]
+          config: [go.mod, go.sum]
 
   - moniker: eac-specs
     name: Test Infrastructure
@@ -309,6 +322,10 @@ modules:
       gherkin: ~
       structurizr: ~
       test-impl: ~
+      gherkin-executor:
+        root: go/r2r/cli/specs
+        patterns:
+          source: ["godog_test.go", "steps_*_test.go"]
 
   - moniker: templates
     name: Project Templates
@@ -451,10 +468,6 @@ modules:
   - moniker: r2r-installer
     name: R2R CLI Installer Scripts
     description: Cross-platform installer scripts for R2R CLI
-    versioning:
-      scheme: SemVer
-      changelog: scripts/CHANGELOG.md
-      release_type: internal
     depends_on_ci: [r2r-cli]
     components:
       pwsh:

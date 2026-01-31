@@ -6,19 +6,19 @@ import (
 	"testing"
 
 	"github.com/cucumber/godog"
-	"github.com/ready-to-release/eac/go/eac/specs/internal"
+	eacgodog "github.com/ready-to-release/eac/go/eac/godog"
 )
 
 func TestRepositoryFeatures(t *testing.T) {
-	cfg := internal.RunnerConfig{
+	cfg := eacgodog.RunnerConfig{
 		SpecsPath:         "../../../../../specs/repository",
 		DefaultReportName: "cucumber-repository",
 		RegisterSteps:     RegisterSteps,
 	}
 
-	opts := internal.BuildOptions(cfg.SpecsPath, cfg.DefaultReportName, t)
+	opts := eacgodog.BuildOptions(cfg.SpecsPath, cfg.DefaultReportName, t)
 	suite := godog.TestSuite{
-		ScenarioInitializer: internal.CreateScenarioInitializer(cfg),
+		ScenarioInitializer: eacgodog.CreateScenarioInitializer(cfg),
 		Options:             opts,
 	}
 

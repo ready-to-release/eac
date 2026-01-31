@@ -315,15 +315,21 @@ func loadRepositoryConfigUnmerged(repoRoot string) (*RepositoryConfig, error) {
 }
 
 // TestImplPath returns the full path to a module's test implementation.
-// Returns empty string if module not found or has no test-impl component.
-// Modules must explicitly define a test-impl component - there is no fallback.
+// Returns empty string if module not found or has no test implementation component.
+// Checks for gherkin-executor first (decentralized, co-located with module),
+// then falls back to test-impl (centralized, legacy).
 func (c *RepositoryConfig) TestImplPath(moniker string) string {
 	module, found := c.GetModule(moniker)
 	if !found {
 		return ""
 	}
 
-	// Require explicit test-impl component - no fallback
+	// Prefer gherkin-executor (decentralized, co-located with module code)
+	if comp, ok := module.Components["gherkin-executor"]; ok && comp != nil && comp.Root != "" {
+		return comp.Root
+	}
+
+	// Fall back to test-impl (centralized, legacy)
 	if comp, ok := module.Components["test-impl"]; ok && comp != nil && comp.Root != "" {
 		return comp.Root
 	}
