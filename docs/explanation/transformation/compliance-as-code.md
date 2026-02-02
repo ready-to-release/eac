@@ -74,12 +74,13 @@ prevents compliance drift, scales without manual review overhead, and provides c
 Validate compliance as early as possible in the delivery lifecycle - ideally before code commits.
 
 !!! tip "Shift-Left Economics"
-    The earlier you catch issues, the cheaper they are to fix:
+    The earlier you catch issues, the cheaper they are to fix. Issues found at later stages require:
 
-    - **Pre-commit** (Stage 2): 5 minutes to fix
-    - **CI** (Stage 4): 15 minutes to fix
-    - **PLTE** (Stage 5): 1 hour to fix
-    - **Production** (Stage 11): Days to fix + incident response
+    - More coordination across teams
+    - Incident response procedures
+    - Potential regulatory reporting
+    - Customer communication
+    - Significantly longer resolution time
 
 **In practice**:
 
@@ -136,7 +137,7 @@ User scenarios expressed as executable Gherkin specifications, linked to risk co
    - Tests that verify control satisfaction
    - Evidence that proves compliance
 
-**Implementation Note**: The catalog and profile use OSCAL (Open Security Controls Assessment Language), an NIST standard for machine-readable compliance.
+**Implementation Note**: The catalog and profile use OSCAL (Open Security Controls Assessment Language) for machine-readable compliance.
 
 ---
 

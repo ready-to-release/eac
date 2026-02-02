@@ -4,9 +4,9 @@
 
 Most organizations treat compliance as manual burden: periodic audits, late-stage validation, weeks of audit preparation.
 
-Organizations at **Level 1** (manual compliance) experience compliance as friction and overhead.
+Organizations with manual compliance approaches experience compliance as friction and overhead.
 
-Organizations that transform to **Level 3** capabilities reduce overhead 70-80% while improving compliance quality and achieving continuous audit readiness.
+Organizations that transform their compliance capabilities significantly reduce overhead while improving compliance quality and achieving continuous audit readiness.
 
 This document explains why traditional compliance fails and helps assess whether transformation is right for your organization.
 
@@ -16,7 +16,7 @@ This document explains why traditional compliance fails and helps assess whether
 
 ### Characteristics
 
-Traditional compliance (Level 1 capabilities):
+Traditional compliance approaches:
 
 - **Manual Documentation**: Requirements in Word/Excel, policies in SharePoint, evidence collected manually
 - **Periodic Audits**: Compliance assessed quarterly/annually, teams scramble to collect evidence
@@ -42,7 +42,7 @@ Traditional compliance (Level 1 capabilities):
 
 ## The Cost of Traditional Compliance
 
-Organizations at **Level 1** (manual compliance) face:
+Organizations with manual compliance approaches face:
 
 **Time Overhead**:
 
@@ -57,7 +57,7 @@ Organizations at **Level 1** (manual compliance) face:
 - **Production Violations**: Late discovery, regulatory penalties, customer trust impact
 - **Audit Findings**: Expensive remediation, failed audits jeopardize business, increased regulatory scrutiny
 
-See [Capability Metrics - Version Control Level 1](capability-metrics/practice-areas/version-control.md#level-1-initial) for detailed baseline characteristics.
+See [Capability Metrics - Version Control](capability-metrics/practice-areas/version-control.md) for detailed baseline characteristics.
 
 ## Root Causes
 
@@ -116,23 +116,23 @@ Imagine an alternative approach:
 
 ### Expected Benefits
 
-Organizations that advance to **Level 3** capabilities achieve:
+Organizations that transform their compliance capabilities achieve:
 
 **Reduced Overhead**:
 
-- [Version Control Level 3](capability-metrics/practice-areas/version-control.md#level-3-defined): Audit prep time from weeks to minutes
-- [Evidence Level 3](capability-metrics/practice-areas/evidence.md#level-3-defined): 100% automated evidence collection
-- [Testing Level 3](capability-metrics/practice-areas/testing.md#level-3-defined): Shift-left validation catches issues early
+- [Version Control](capability-metrics/practice-areas/version-control.md): Audit prep time from weeks to hours
+- [Evidence](capability-metrics/practice-areas/evidence.md): Comprehensive automated evidence collection
+- [Testing](capability-metrics/practice-areas/testing.md): Shift-left validation catches issues early
 
 **Faster Delivery**:
 
-- [CI/CD Level 3](capability-metrics/practice-areas/ci-cd.md#level-3-defined): On-demand deployment capability
+- [CI/CD](capability-metrics/practice-areas/ci-cd.md): On-demand deployment capability
 - Approval delays: Days → minutes
 
 **Better Quality**:
 
-- Testing Level 3: <10% defect escape rate
-- Evidence Level 3: Complete, consistent evidence packages
+- [Testing](capability-metrics/practice-areas/testing.md): Significantly reduced defect escape rate
+- [Evidence](capability-metrics/practice-areas/evidence.md): Complete, consistent evidence packages
 - Continuous audit readiness
 
 **Continuous Assurance**: Real-time compliance monitoring, issues detected immediately, fewer production violations.
@@ -149,11 +149,11 @@ See [Capability Metrics Framework](capability-metrics/index.md) for detailed out
 
 Use [Capability Metrics Framework](capability-metrics/index.md) to assess your baseline across 6 practice areas.
 
-**Good Fit**: Organizations at Level 1 with:
+**Good Fit**: Organizations with manual compliance approaches that have:
 
 - Multiple compliance requirements (ISO 27001, GDPR, SOC 2, HIPAA, GxP)
 - Significant manual overhead (substantial time on compliance activities)
-- Basic CI/CD foundation (at least Level 1 in CI/CD and Testing)
+- Basic CI/CD foundation (some delivery automation and testing in place)
 - Engineering culture open to change
 - Scale challenges (growing teams, expanding requirements)
 
@@ -174,7 +174,7 @@ Use [Capability Metrics Framework](capability-metrics/index.md) to assess your b
 
     1. **Executive Sponsorship**: VP/C-level champion who can remove blockers
     2. **Compliance Office Buy-In**: Compliance officer must co-sponsor
-    3. **Basic CI/CD Pipelines**: Delivery automation at basic level (Level 1+)
+    3. **Basic CI/CD Pipelines**: Some delivery automation already in place
     4. **Budget**: Resources for multi-phase transformation
     5. **Pilot Team**: Identified team willing to be first adopter
 
