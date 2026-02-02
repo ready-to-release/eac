@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"sync"
 	"time"
@@ -38,17 +37,17 @@ type UnitScheduler struct {
 	registry  *locktracker.Registry     // Lock tracking registry for TUI visualization
 
 	// Dynamic capacity management
-	capacityTicker *time.Ticker    // Recalculates capacity every 2 seconds
-	capacityStop   chan struct{}   // Signal to stop the capacity ticker
-	configMax      int             // Maximum capacity from config (ceiling)
-	turbo          float64         // Turbo multiplier (1.0x, 1.25x, 2.0x, etc.)
+	capacityTicker *time.Ticker  // Recalculates capacity every 2 seconds
+	capacityStop   chan struct{} // Signal to stop the capacity ticker
+	configMax      int           // Maximum capacity from config (ceiling)
+	turbo          float64       // Turbo multiplier (1.0x, 1.25x, 2.0x, etc.)
 
 	// Module completion tracking for inter-module dependencies
 	moduleCompleteMu sync.RWMutex
-	moduleComplete   map[string]bool           // module -> all components done
-	moduleCompleteCh map[string]chan struct{}  // broadcast when module completes
-	moduleCompCount  map[string]int            // module -> number of components
-	moduleCompDone   map[string]int            // module -> components completed
+	moduleComplete   map[string]bool          // module -> all components done
+	moduleCompleteCh map[string]chan struct{} // broadcast when module completes
+	moduleCompCount  map[string]int           // module -> number of components
+	moduleCompDone   map[string]int           // module -> components completed
 
 	// Unit completion tracking for intra-module dependencies (build_after)
 	unitCompleteMu   sync.RWMutex
@@ -379,21 +378,35 @@ func (us *UnitScheduler) StartBackgroundCacheDetection(
 // detectAvailableCapacity calculates the pressure roof for parallel builds.
 // If --roof is set, uses that value directly. Otherwise auto-detects from system resources.
 func detectAvailableCapacity(configMax int, turbo float64) int {
-	// Get actual system resources
-	cpuCount := runtime.NumCPU()
+	// Use Docker/WSL-aware CPU detection
+	cpuCount := GetEffectiveCPUs()
 	if cpuCount < 1 {
 		cpuCount = 4 // Fallback
 	}
 
+	// Prioritize Docker → WSL → Host memory detection
 	var ramGB int
-	memInfo, err := mem.VirtualMemory()
-	if err == nil {
-		ramGB = int(memInfo.Total / (1024 * 1024 * 1024))
+	effectiveMem := GetEffectiveMemoryBytes()
+	if effectiveMem > 0 {
+		ramGB = int(effectiveMem / (1024 * 1024 * 1024))
 	} else {
-		ramGB = 8 // Fallback: assume 8GB
+		// Fallback: use host available RAM (not total) for safety
+		memInfo, err := mem.VirtualMemory()
+		if err == nil {
+			// Use AVAILABLE, not TOTAL (critical on Windows/WSL)
+			ramGB = int(memInfo.Available / (1024 * 1024 * 1024))
+		} else {
+			ramGB = 8 // Hard fallback
+		}
 	}
 
-	return calculateCapacity(cpuCount, ramGB, configMax, turbo)
+	capacity := calculateCapacity(cpuCount, ramGB, configMax, turbo)
+
+	// DEBUG: Log capacity calculation for troubleshooting
+	fmt.Fprintf(os.Stderr, "[scheduler] Capacity calculation: cpuCount=%d ramGB=%d configMax=%d turbo=%.2f → capacity=%d\n",
+		cpuCount, ramGB, configMax, turbo, capacity)
+
+	return capacity
 }
 
 // calculateCapacity computes the effective parallelism capacity.
@@ -403,6 +416,7 @@ func detectAvailableCapacity(configMax int, turbo float64) int {
 func calculateCapacity(cpuCount, ramGB, roof int, turbo float64) int {
 	// --roof overrides all
 	if roof > 0 {
+		fmt.Fprintf(os.Stderr, "[scheduler] Using explicit roof: %d\n", roof)
 		return roof
 	}
 
@@ -416,10 +430,22 @@ func calculateCapacity(cpuCount, ramGB, roof int, turbo float64) int {
 
 	base := cpuCount
 	if ramCap < base {
+		fmt.Fprintf(os.Stderr, "[scheduler] RAM-limited: ramCap=%d < cpuCount=%d, using ramCap\n", ramCap, cpuCount)
 		base = ramCap
+	} else {
+		fmt.Fprintf(os.Stderr, "[scheduler] CPU-limited: ramCap=%d ≥ cpuCount=%d, using cpuCount\n", ramCap, cpuCount)
 	}
 
 	capacity := int(float64(base) * turbo)
+	fmt.Fprintf(os.Stderr, "[scheduler] Base capacity=%d × turbo=%.2f = %d\n", base, turbo, capacity)
+
+	// Cap at RAM limit FIRST (safety), then CPU limit
+	// This prevents turbo from overcommitting memory
+	ramMax := ramGB / 3
+	if capacity > ramMax && ramMax > 0 {
+		fmt.Fprintf(os.Stderr, "[scheduler] Turbo exceeded RAM limit: %d → %d (ramGB=%d)\n", capacity, ramMax, ramGB)
+		capacity = ramMax
+	}
 
 	// Cap at CPU count (or 2x with turbo, max 64)
 	maxCap := cpuCount
