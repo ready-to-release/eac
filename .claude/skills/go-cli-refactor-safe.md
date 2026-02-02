@@ -133,9 +133,9 @@ func validatePhone(phone string) error {
 
 ### Step 5: Simplify (code-simplifier)
 
-**Action**: Run code-simplifier plugin
+**Action**: Run code-simplifier agent
 
-- Run `/plugin code-simplifier` to invoke the plugin
+- Use Task tool with subagent_type="code-simplifier:code-simplifier"
 - Review suggested changes
 - Apply simplifications
 - Run tests after applying changes

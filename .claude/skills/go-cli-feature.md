@@ -85,9 +85,9 @@ This skill orchestrates the complete workflow for developing a new CLI feature f
 
 ### Step 7: Refine (code-simplifier)
 
-**Action**: Run code-simplifier plugin
+**Action**: Run code-simplifier agent
 
-- Run `/plugin code-simplifier` to invoke the plugin
+- Use Task tool with subagent_type="code-simplifier:code-simplifier"
 - Review suggested changes
 - Apply simplifications that improve clarity
 - Re-run tests to ensure nothing broke

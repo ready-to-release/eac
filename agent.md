@@ -303,11 +303,11 @@ Quick-access commands for common workflows:
 
 ### Code-Simplifier Integration
 
-**MANDATORY**: The `code-simplifier` plugin must run at the end of every session.
+**MANDATORY**: The `code-simplifier` agent must run at the end of every session.
 
 **How to invoke**:
 
-Run `/plugin code-simplifier` to invoke the plugin directly, or it runs automatically in:
+The code-simplifier is invoked via Task tool with `subagent_type="code-simplifier:code-simplifier"`. It runs automatically in:
 
 1. `/go:review` command (before commit/PR)
 2. `/go:session-end` command (end of session)
@@ -326,9 +326,9 @@ Run `/plugin code-simplifier` to invoke the plugin directly, or it runs automati
 - Review simplifications (don't blindly accept)
 - Commit simplifications separately from feature work
 
-**Plugin installation**:
+**Agent availability**:
 
-The code-simplifier is a Claude Code plugin. Install it via `/plugin` if not already available.
+The code-simplifier agent is built into Claude Code. Use Task tool with `subagent_type="code-simplifier:code-simplifier"` to invoke it.
 
 ---
 

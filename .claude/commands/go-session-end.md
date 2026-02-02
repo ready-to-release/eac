@@ -10,13 +10,13 @@ You are completing a Claude Code session and running mandatory cleanup.
 
 ## Process
 
-1. **MANDATORY: Run code-simplifier plugin**:
-   - Run `/plugin code-simplifier` to invoke the plugin
+1. **MANDATORY: Run code-simplifier agent**:
+   - Use Task tool with subagent_type="code-simplifier:code-simplifier"
    - This MUST be run at the end of EVERY session
    - Review all suggested changes carefully
    - Apply changes that improve clarity and simplicity
 
-   **Note**: The code-simplifier is a Claude Code plugin that analyzes code and suggests simplifications for clarity and maintainability
+   **Note**: The code-simplifier is a Claude Code agent that analyzes code and suggests simplifications for clarity and maintainability
 
 2. **Run final tests**:
    - `go test ./...` to verify nothing broken
