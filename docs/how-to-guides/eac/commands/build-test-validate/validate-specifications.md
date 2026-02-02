@@ -81,7 +81,7 @@ r2r eac get specs-unused-steps
 # Output:
 # {
 #   "unused_steps": [
-#     "go/eac/specs/impl/r2r-cli/steps_user_login.go:25: When user clicks legacy button"
+#     "go/specs/impl/r2r-cli/steps_user_login.go:25: When user clicks legacy button"
 #   ]
 # }
 

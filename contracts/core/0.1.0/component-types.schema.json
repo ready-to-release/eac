@@ -1,0 +1,235 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ready-to-release.org/schemas/eac-core/component-types/0.1.0",
+  "title": "Component Types Schema",
+  "description": "Schema for component type definitions that define how to process files for building. Linting is configured separately in lint-providers.yml.",
+  "type": "object",
+  "properties": {
+    "component-types": {
+      "type": "object",
+      "description": "Map of component type name to configuration",
+      "additionalProperties": {
+        "$ref": "#/definitions/component_type"
+      }
+    }
+  },
+  "required": ["component-types"],
+  "definitions": {
+    "component_type": {
+      "type": "object",
+      "description": "A component type definition that describes how to process files of a specific type",
+      "properties": {
+        "extensions": {
+          "type": "array",
+          "description": "File extensions that belong to this component type (e.g., [\".go\"], [\".md\"], [\".go.txt\"]). Empty for non-file-based components.",
+          "items": {
+            "type": "string",
+            "pattern": "^\\.[a-zA-Z0-9]+(\\.[a-zA-Z0-9]+)*$"
+          },
+          "default": []
+        },
+        "builder": {
+          "type": "string",
+          "description": "The build handler to use for this component type (e.g., \"go\", \"mkdocs\", \"buildx\")",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "scanners": {
+          "type": "array",
+          "description": "Default scanners for this component type. Omit or empty = not scannable.",
+          "items": {
+            "type": "string",
+            "enum": ["sbom", "vuln", "secrets", "iac", "compliance", "sast", "zap"]
+          }
+        },
+        "build_weight": {
+          "type": "integer",
+          "description": "Resource weight for parallel build scheduling. Higher = more resource pressure. Default is 1.",
+          "minimum": 1,
+          "default": 1
+        },
+        "build_after": {
+          "type": "array",
+          "description": "Component types that must complete before this one within the same module",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          }
+        },
+        "requirements": {
+          "type": "array",
+          "description": "System dependencies required for building this component type (e.g., [\"go\"], [\"docker\"])",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "default": []
+        },
+        "default_root": {
+          "type": "string",
+          "description": "Default root path pattern for this component type. Supports {moniker} variable for module-specific paths (e.g., 'specs/{moniker}' for specs component)."
+        },
+        "files": {
+          "type": "object",
+          "description": "Default file patterns for this component type",
+          "properties": {
+            "source": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "tests": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "config": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        },
+        "tools": {
+          "type": "object",
+          "description": "Phase-specific tool configuration. Keys are phases (build, lint, test, scan). Takes precedence over legacy builder/scanners fields.",
+          "properties": {
+            "build": { "$ref": "#/definitions/phase_config" },
+            "lint": { "$ref": "#/definitions/phase_config" },
+            "test": { "$ref": "#/definitions/phase_config" },
+            "scan": { "$ref": "#/definitions/scan_phase_config" }
+          },
+          "additionalProperties": false
+        },
+        "defaults": {
+          "type": "object",
+          "description": "Default values for component instances. Enables convention-over-configuration.",
+          "properties": {
+            "book_from_name": {
+              "type": "boolean",
+              "description": "If true, derive book name from component name. For 'foo-base', book='foo'. For 'base-site', requires explicit config.book.",
+              "default": false
+            },
+            "auto_base_site": {
+              "type": "boolean",
+              "description": "If true and no depends_on specified, auto-add dependency on '{name}-base' component.",
+              "default": false
+            },
+            "theme": {
+              "type": "string",
+              "description": "Default theme for PDF rendering.",
+              "enum": ["dark", "light"],
+              "default": "dark"
+            },
+            "inject_prerequisite": {
+              "type": "string",
+              "description": "Component type to auto-inject as prerequisite. For site-render/pdf-render, this would be 'base-site'. When set, if a component of this type is declared without an existing prerequisite, one will be automatically created with naming convention '{name}-base'."
+            }
+          },
+          "additionalProperties": true
+        },
+        "resources": {
+          "type": "object",
+          "description": "Resource requirements for scheduling.",
+          "properties": {
+            "cpus": {
+              "type": "integer",
+              "description": "CPU weight for parallel scheduling.",
+              "minimum": 1
+            },
+            "memory": {
+              "type": "string",
+              "description": "Memory requirement (e.g., '8g').",
+              "pattern": "^[0-9]+[gmk]?$"
+            }
+          }
+        },
+        "cache": {
+          "type": "object",
+          "description": "Caching configuration for build artifacts.",
+          "properties": {
+            "key_sources": {
+              "type": "array",
+              "description": "Sources for computing cache key.",
+              "items": { "type": "string" }
+            },
+            "artifacts_cacheable": {
+              "type": "boolean",
+              "description": "Whether build artifacts can be cached.",
+              "default": true
+            }
+          }
+        }
+      }
+    },
+    "phase_config": {
+      "type": "object",
+      "description": "Configuration for a build/lint/test phase",
+      "properties": {
+        "default": {
+          "type": "string",
+          "description": "Default tool for this phase",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "options": {
+          "type": "array",
+          "description": "Available tool alternatives",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          }
+        },
+        "command": {
+          "type": "array",
+          "description": "Tool-specific command override",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "scan_phase_config": {
+      "type": "object",
+      "description": "Configuration for scan phase with category-to-tool mappings",
+      "properties": {
+        "default": {
+          "type": "array",
+          "description": "Default scanner categories to run",
+          "items": {
+            "type": "string",
+            "enum": ["sbom", "vuln", "secrets", "sast", "iac", "compliance", "zap"]
+          }
+        },
+        "sbom": {
+          "type": "string",
+          "description": "Tool for SBOM generation",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "vuln": {
+          "type": "string",
+          "description": "Tool for vulnerability scanning",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "secrets": {
+          "type": "string",
+          "description": "Tool for secrets scanning",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "sast": {
+          "type": "string",
+          "description": "Tool for SAST scanning",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "iac": {
+          "type": "string",
+          "description": "Tool for IaC scanning",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "compliance": {
+          "type": "string",
+          "description": "Tool for compliance scanning",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "zap": {
+          "type": "string",
+          "description": "Tool for DAST scanning",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        }
+      }
+    }
+  }
+}

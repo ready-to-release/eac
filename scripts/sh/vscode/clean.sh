@@ -13,7 +13,7 @@ echo ""
 
 # Clean VSCode extension
 echo "Cleaning VSCode extension..."
-cd "$PROJECT_ROOT/typescript/vscode-ext-commit"
+cd "$PROJECT_ROOT/typescript/vscode-commit"
 
 CLEANED=false
 

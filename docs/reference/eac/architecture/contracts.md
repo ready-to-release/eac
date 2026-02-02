@@ -61,7 +61,7 @@ modules:
     type: go-library
     depends_on: [logging-go]
     files:
-      root: go/eac/core
+      root: go/core
       source: ["**/*.go"]
       tests: ["**/*_test.go"]
       exclude: ["**/*_old.go"]
@@ -90,7 +90,7 @@ modules:
 
 ```yaml
 files:
-  root: go/eac/core        # Base directory
+  root: go/core        # Base directory
   source: ["**/*.go"]      # Source patterns (glob)
   tests: ["**/*_test.go"]  # Test patterns
   exclude: ["**/vendor/**"] # Exclusions

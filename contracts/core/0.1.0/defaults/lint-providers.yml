@@ -1,0 +1,84 @@
+# yaml-language-server: $schema=../lint-providers.schema.json
+# Lint Providers Configuration
+# Defines available linting tools and their execution semantics.
+#
+# Each provider specifies:
+#   - command: The executable to run
+#   - input_mode: How files are passed (packages, files, directory)
+#   - config_files: Standard config file names (for discovery)
+#   - system_dependency: Reference to system-dependencies.yml
+#   - applies_to: Which component types this linter can process
+#   - options: Behavior flags (allow_parallel, auto_fix)
+
+lint-providers:
+  # Go Linter - golangci-lint aggregator
+  # Aggregates 100+ linters into a single tool with caching
+  golangci-lint:
+    description: Fast Go linters runner (aggregates 100+ linters)
+    command: golangci-lint
+    input_mode: packages
+    config_files:
+      - .golangci.yml
+      - .golangci.yaml
+    system_dependency: golangci-lint
+    applies_to: [go]
+    options:
+      allow_parallel: true
+      auto_fix: true
+
+  # JavaScript/TypeScript Linter - ESLint
+  # Standard linter for JavaScript ecosystem
+  eslint:
+    description: JavaScript and TypeScript linter
+    command: eslint
+    input_mode: files
+    config_files:
+      - .eslintrc.js
+      - .eslintrc.json
+      - .eslintrc.yml
+      - eslint.config.js
+      - eslint.config.mjs
+    system_dependency: eslint
+    applies_to: [typescript, javascript]
+    options:
+      auto_fix: true
+
+  # Markdown Linter
+  markdownlint:
+    description: Markdown linter
+    command: markdownlint-cli2
+    input_mode: files
+    config_files:
+      - .markdownlint-cli2.yaml
+      - .markdownlint.yml
+      - .markdownlint.json
+    system_dependency: markdownlint
+    applies_to: [markdown]
+    options:
+      auto_fix: true
+
+  # Future lint providers (uncomment when ready)
+  #
+  # yamllint:
+  #   description: YAML file linter
+  #   command: yamllint
+  #   input_mode: files
+  #   config_files: [.yamllint.yml, .yamllint.yaml]
+  #   system_dependency: yamllint
+  #   applies_to: [yaml]
+  #
+  # shellcheck:
+  #   description: Shell script static analysis
+  #   command: shellcheck
+  #   input_mode: files
+  #   config_files: [.shellcheckrc]
+  #   system_dependency: shellcheck
+  #   applies_to: [bash]
+  #
+  # psscriptanalyzer:
+  #   description: PowerShell static code checker
+  #   command: Invoke-ScriptAnalyzer
+  #   input_mode: files
+  #   config_files: [PSScriptAnalyzerSettings.psd1]
+  #   system_dependency: psscriptanalyzer
+  #   applies_to: [pwsh]

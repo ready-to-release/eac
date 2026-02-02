@@ -185,12 +185,12 @@ repository:
 
 modules:
   - name: core
-    path: go/eac/core
+    path: go/core
     type: lib
     language: go
 
   - name: commands
-    path: go/eac/commands
+    path: go/cli/eac
     type: cli
     language: go
 ```

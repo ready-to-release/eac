@@ -7,84 +7,70 @@ Feature: repository_module-isolation
 
   Background:
     Given the repository contains the following Go modules:
-      | Module              | Path                | Role                          |
-      | go/eac/core         | go/eac/core         | Foundational library          |
-      | go/r2r/cli          | go/r2r/cli          | CLI binary (isolated)         |
-      | go/eac/commands     | go/eac/commands     | Command implementations + AI  |
-      | ext-eac             | containers/ext-eac  | R2R CLI extension (Docker)    |
-      | go/eac/mcp/commands | go/eac/mcp/commands | MCP server                    |
-      | go/eac/specs        | go/eac/specs        | BDD test implementations      |
+      | Module          | Path              | Role                          |
+      | go/core         | go/core           | Foundational library          |
+      | go/cli/r2r      | go/cli/r2r        | CLI binary (isolated)         |
+      | go/cli/eac      | go/cli/eac        | Command implementations + AI  |
+      | go/clibase      | go/clibase        | Shared CLI framework          |
+      | ext-eac         | containers/ext-eac| R2R CLI extension (Docker)    |
+      | go/mcp/commands | go/mcp/commands   | MCP server                    |
 
-  Rule: go/eac/core is the foundational module with no local dependencies
+  Rule: go/core is the foundational module with no local dependencies
 
-    go/eac/core provides shared utilities (contracts, config, testing, git, etc.)
+    go/core provides shared utilities (contracts, config, testing, git, etc.)
     and must not depend on any other local modules.
 
     @L0 @ov
-    Scenario: go/eac/core has no local module dependencies
-      Given I am checking module "go/eac/core"
+    Scenario: go/core has no local module dependencies
+      Given I am checking module "go/core"
       When I scan all .go files for import statements
-      Then no files should import "github.com/ready-to-release/eac/go/r2r/cli"
-      And no files should import "github.com/ready-to-release/eac/go/eac/commands"
-      And no files should import "github.com/ready-to-release/eac/go/eac/mcp"
-      And no files should import "github.com/ready-to-release/eac/go/eac/specs"
+      Then no files should import "github.com/ready-to-release/eac/go/cli/r2r"
+      And no files should import "github.com/ready-to-release/eac/go/cli/eac"
+      And no files should import "github.com/ready-to-release/eac/go/mcp"
+      And no files should import "github.com/ready-to-release/eac/go/clibase"
 
-  Rule: go/r2r/cli is fully isolated with no local dependencies
+  Rule: go/cli/r2r is fully isolated with no local dependencies
 
     The CLI binary must remain lightweight and independently distributable.
     Production code must not import any other local modules.
     Test code MAY import local modules for test infrastructure.
 
     @L0 @ov
-    Scenario: go/r2r/cli production code has no local module imports
-      Given I am checking module "go/r2r/cli"
-      When I scan all production .go files in "go/r2r/cli"
-      Then no production files should import "github.com/ready-to-release/eac/go/eac/core"
-      And no production files should import "github.com/ready-to-release/eac/go/eac/commands"
-      And no production files should import "github.com/ready-to-release/eac/go/eac/mcp"
-      And no production files should import "github.com/ready-to-release/eac/go/eac/specs"
+    Scenario: go/cli/r2r production code has no local module imports
+      Given I am checking module "go/cli/r2r"
+      When I scan all production .go files in "go/cli/r2r"
+      Then no production files should import "github.com/ready-to-release/eac/go/core"
+      And no production files should import "github.com/ready-to-release/eac/go/cli/eac"
+      And no production files should import "github.com/ready-to-release/eac/go/mcp"
+      And no production files should import "github.com/ready-to-release/eac/go/clibase"
 
-  Rule: go/eac/commands depends only on go/eac/core
+  Rule: go/cli/eac depends only on go/core
 
     Command implementations use core utilities. AI integrations are internal
     to this module. They should not depend on CLI, MCP server, or test specs.
 
     @L0 @ov
-    Scenario: go/eac/commands depends only on go/eac/core
-      Given I am checking module "go/eac/commands"
+    Scenario: go/cli/eac depends only on go/core and go/clibase
+      Given I am checking module "go/cli/eac"
       When I scan all .go files for import statements
-      Then files may import "github.com/ready-to-release/eac/go/eac/core"
-      But no files should import "github.com/ready-to-release/eac/go/r2r/cli"
-      And no files should import "github.com/ready-to-release/eac/go/eac/mcp"
-      And no files should import "github.com/ready-to-release/eac/go/eac/specs"
+      Then files may import "github.com/ready-to-release/eac/go/core"
+      And files may import "github.com/ready-to-release/eac/go/clibase"
+      But no files should import "github.com/ready-to-release/eac/go/cli/r2r"
+      And no files should import "github.com/ready-to-release/eac/go/mcp"
 
-  Rule: go/eac/mcp/commands depends only on go/eac/core
+  Rule: go/mcp/commands depends only on go/core
 
     MCP server uses core utilities for contract loading.
     It should not depend on commands or CLI.
 
     @L0 @ov
-    Scenario: go/eac/mcp/commands depends only on go/eac/core
-      Given I am checking module "go/eac/mcp/commands"
+    Scenario: go/mcp/commands depends only on go/core
+      Given I am checking module "go/mcp/commands"
       When I scan all .go files for import statements
-      Then files may import "github.com/ready-to-release/eac/go/eac/core"
-      But no files should import "github.com/ready-to-release/eac/go/r2r/cli"
-      And no files should import "github.com/ready-to-release/eac/go/eac/commands"
-      And no files should import "github.com/ready-to-release/eac/go/eac/specs"
-
-  Rule: go/eac/specs may depend on go/eac/core for test utilities
-
-    BDD test implementations use core utilities.
-    They should not import production modules directly.
-
-    @L0 @ov
-    Scenario: go/eac/specs depends only on go/eac/core
-      Given I am checking module "go/eac/specs"
-      When I scan all .go files for import statements
-      Then files may import "github.com/ready-to-release/eac/go/eac/core"
-      But no files should import "github.com/ready-to-release/eac/go/r2r/cli"
-      And no files should import "github.com/ready-to-release/eac/go/eac/commands"
-      And no files should import "github.com/ready-to-release/eac/go/eac/mcp"
+      Then files may import "github.com/ready-to-release/eac/go/core"
+      But no files should import "github.com/ready-to-release/eac/go/cli/r2r"
+      And no files should import "github.com/ready-to-release/eac/go/cli/eac"
+      And no files should import "github.com/ready-to-release/eac/go/clibase"
 
   Rule: No circular dependencies between modules
 
@@ -96,6 +82,6 @@ Feature: repository_module-isolation
       Then the graph should have no circular dependencies
       And the dependency order should be:
         | Layer | Modules                                                     |
-        | 0     | go/eac/core                                                 |
-        | 1     | go/r2r/cli, go/eac/mcp/commands, go/eac/specs, go/eac/commands |
+        | 0     | go/core                                                     |
+        | 1     | go/cli/r2r, go/clibase, go/mcp/commands, go/cli/eac        |
         | 2     | ext-eac                                                     |

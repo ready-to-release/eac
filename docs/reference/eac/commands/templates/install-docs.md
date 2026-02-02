@@ -1,6 +1,6 @@
-# Templates install-docs
+# templates install docs
 
-<!-- book:cmd templates install-docs -->
+<!-- book:cmd templates install docs -->
 
 ## Details
 

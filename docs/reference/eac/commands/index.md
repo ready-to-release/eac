@@ -142,7 +142,7 @@ $ r2r eac get modules
     {
       "moniker": "eac-commands",
       "type": "go-commands",
-      "path": "go/eac/commands",
+      "path": "go/cli/eac",
       "dependencies": ["eac-core"],
       "files": 45
     }
@@ -167,8 +167,8 @@ $ r2r eac show modules
 ┌───────────────┬─────────────┬────────────────────┬──────┐
 │ Moniker       │ Type        │ Path               │ Files│
 ├───────────────┼─────────────┼────────────────────┼──────┤
-│ eac-commands  │ go-commands │ go/eac/commands    │   45 │
-│ eac-core      │ go-library  │ go/eac/core        │   32 │
+│ eac-commands  │ go-commands │ go/cli/eac    │   45 │
+│ eac-core      │ go-library  │ go/core        │   32 │
 └───────────────┴─────────────┴────────────────────┴──────┘
 ```
 

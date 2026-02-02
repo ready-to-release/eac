@@ -27,7 +27,7 @@ You are completing a Claude Code session and running mandatory cleanup.
    - Address any critical issues
 
 4. **Verify build** (if code was modified):
-   - For affected modules, run: MCP `build <module>` or `go run ./go/eac/commands build <module>`
+   - For affected modules, run: MCP `build <module>` or `go run ./go/cli/eac build <module>`
    - Ensure clean build with no errors
 
 5. **Provide session summary**:

@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=../ai-provider.schema.json
+# AI Provider Defaults
+# Base configuration that makes the AI system runnable.
+# Can be overridden in .r2r/eac/ai-provider.yml (team) and ai-provider.personal.yml (user)
+
+ai:
+  provider: claude-api
+  model: claude-3-haiku-20240307
+  endpoint: https://api.anthropic.com/v1
+  # api_key: loaded from team config, personal config, or ${ANTHROPIC_API_KEY} env var
+
+git:
+  token: ${GIT_TOKEN}  # Loaded from personal config or env var

@@ -1,0 +1,314 @@
+// Package books provides book preprocessing for MkDocs sites.
+// It aggregates static content with dynamically-generated content from EAC commands.
+package books
+
+import (
+	"fmt"
+	"io"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/ready-to-release/eac/go/core/config"
+	"golang.org/x/sync/errgroup"
+)
+
+// Preprocessor handles book preprocessing before MkDocs build.
+type Preprocessor struct {
+	book             *config.Book
+	workspaceRoot    string
+	stagingDir       string
+	logWriter        io.Writer
+	pdfMode          bool
+	linkTranslator   *LinkTranslator  // Handles source → staging path translations
+	assetCache       *AssetCache      // Persistent cache for expensive operations (mermaid, etc.)
+	referencedAssets map[string]bool  // Asset paths referenced by markdown (for lazy copying)
+	fileIndex        *FileIndex       // Pre-built file index to avoid repeated WalkDir calls
+}
+
+// NewPreprocessor creates a new book preprocessor
+// pdfMode enables PDF-specific processing like link normalization.
+func NewPreprocessor(book *config.Book, workspaceRoot, stagingDir string, logWriter io.Writer, pdfMode bool) *Preprocessor {
+	return &Preprocessor{
+		book:           book,
+		workspaceRoot:  workspaceRoot,
+		stagingDir:     stagingDir,
+		logWriter:      logWriter,
+		pdfMode:        pdfMode,
+		linkTranslator: NewLinkTranslator(workspaceRoot, stagingDir, logWriter, pdfMode),
+		assetCache:     NewAssetCache(workspaceRoot),
+	}
+}
+
+// Preprocess runs the preprocessing pipeline.
+func (p *Preprocessor) Preprocess() error {
+	p.log("📚 Book preprocessing: %s", p.book.Name)
+
+	startTime := time.Now()
+
+	// Step 0: Scan source markdown for asset references (lazy asset copying optimization)
+	// This scans the source directories to determine which assets are actually needed,
+	// avoiding copying large asset directories that won't be used by this book.
+	p.log("  Step 0: Scanning asset references...")
+	if err := p.scanAssetReferences(); err != nil {
+		// Non-fatal: fall back to copying all assets
+		p.log("    Warning: asset scan failed, will copy all assets: %v", err)
+		p.referencedAssets = nil
+	} else if len(p.referencedAssets) > 0 {
+		p.log("    Found %d asset references", len(p.referencedAssets))
+	}
+
+	// Step 1: Copy static files to staging
+	p.log("  Step 1: Copying static files...")
+	if err := p.copyStaticFiles(); err != nil {
+		return fmt.Errorf("step 1 (copy): %w", err)
+	}
+
+	// Build file index after copy for efficient file iteration in subsequent steps
+	p.log("  Building file index...")
+	fileIndex, err := NewFileIndex(p.stagingDir)
+	if err != nil {
+		return fmt.Errorf("building file index: %w", err)
+	}
+	p.fileIndex = fileIndex
+	p.log("    Indexed %d files (%d markdown)", fileIndex.FileCount(), fileIndex.MarkdownCount())
+
+	// Step 1b: Convert attr_list images to HTML (before link translation)
+	// Converts: ![alt](img.png){width=100} -> <img src="img.png" width="100" alt="alt">
+	// Path adjustments are handled by the link translator in Step 2
+	p.log("  Step 1b: Converting attr_list images to HTML...")
+	if err := p.convertAttrListImagesToHTML(); err != nil {
+		return fmt.Errorf("step 1b (attr_list images): %w", err)
+	}
+
+	// Step 2: Build and apply link translations
+	// Handles ALL link processing: path depth adjustment, external URLs, etc.
+	// Analyzes source markdown to extract all relative links, calculates new paths
+	// for staging directory structure, and applies translations to fix all paths
+	// NOTE: This processes both markdown links and HTML img src attributes
+	p.log("  Step 2: Building link translations...")
+	if err := p.linkTranslator.BuildTranslations(p.book.SiteURL); err != nil {
+		return fmt.Errorf("step 2 (build translations): %w", err)
+	}
+
+	p.log("  Step 2: Applying link translations...")
+	if err := p.linkTranslator.ApplyAllTranslations(); err != nil {
+		return fmt.Errorf("step 2 (apply translations): %w", err)
+	}
+
+	// Step 3: Execute commands (capture outputs)
+	p.log("  Step 3: Executing commands...")
+	commandOutputs, err := p.executeCommands()
+	if err != nil {
+		return fmt.Errorf("step 3 (commands): %w", err)
+	}
+
+	// Step 4: Ensure root index.md exists
+	// If no index.md, generate one with book metadata and TOC
+	// If index.md exists from copy, create toc.md for separate TOC
+	p.log("  Step 4: Ensuring root index...")
+	if err := p.ensureRootIndex(); err != nil {
+		return fmt.Errorf("step 4 (root index): %w", err)
+	}
+
+	// Step 5: Ensure .nav.yml exists in all directories
+	// Scans staging and creates navigation for any directory missing .nav.yml
+	p.log("  Step 5: Ensuring navigation structure...")
+	if err := p.ensureNavigationStructure(); err != nil {
+		return fmt.Errorf("step 5 (navigation): %w", err)
+	}
+
+	// Step 6: Insert inline command outputs at markers
+	p.log("  Step 6: Inserting inline content...")
+	if err := p.insertInlineContent(commandOutputs); err != nil {
+		return fmt.Errorf("step 6 (inline): %w", err)
+	}
+
+	// Step 6b: Process command help markers
+	// Replaces <!-- book:cmd build --> with formatted command help
+	p.log("  Step 6b: Processing command help markers...")
+	if err := p.processCommandMarkers(); err != nil {
+		return fmt.Errorf("step 6b (command markers): %w", err)
+	}
+
+	// Step 8: Handle navigation macros
+	// PDF mode: Strip nav titles and macros (not processed by PDF builds)
+	// Site mode: Inject navigation macros for Diátaxis sections
+	if p.pdfMode {
+		p.log("  Step 8a: Stripping nav titles...")
+		if err := p.stripNavTitles(); err != nil {
+			return fmt.Errorf("step 8a (strip nav titles): %w", err)
+		}
+		p.log("  Step 8b: Stripping macros...")
+		if err := p.stripMacros(); err != nil {
+			return fmt.Errorf("step 8b (strip macros): %w", err)
+		}
+	} else {
+		// Site mode: inject navigation macros into Diátaxis sections
+		// Adds {{ page_breadcrumb() }} after title and {{ diataxis_footer() }} at end
+		p.log("  Step 8: Injecting navigation macros...")
+		if err := p.injectMacros(); err != nil {
+			return fmt.Errorf("step 8 (inject macros): %w", err)
+		}
+	}
+
+	// Diagram Processing Phase (Steps 9, 9b, 9c, 10)
+	// These steps can run in parallel as they process different diagram types
+	// Mermaid processing is split into sizing (9) -> scan+replace (9b) internally
+	p.log("  Diagram processing phase (parallel)...")
+	if err := p.processDiagramsParallel(); err != nil {
+		return err
+	}
+
+	// Step 11: Add image width constraints (both PDF and site)
+	// Ensures large diagrams fit within page/container boundaries
+	p.log("  Step 11: Adding image width constraints...")
+	if err := p.cleanupLinksForPDF(); err != nil {
+		return fmt.Errorf("step 11 (image constraints): %w", err)
+	}
+
+	// Step 12: Optimize drawio images (both PDF and site)
+	// Uses cached optimized versions for faster builds and smaller output
+	p.log("  Step 12: Optimizing drawio images...")
+	if err := p.optimizeDrawioImages(); err != nil {
+		return fmt.Errorf("step 12 (drawio optimization): %w", err)
+	}
+
+	// Step 13: Clean up unreferenced assets (runs for both PDF and HTML)
+	// Removes any files in staging that are not referenced by markdown
+	// This catches orphaned images, stale assets, and intermediate files
+	p.log("  Step 13: Cleaning up unreferenced assets...")
+	if err := p.cleanupUnreferencedAssets(); err != nil {
+		return fmt.Errorf("step 13 (cleanup unreferenced): %w", err)
+	}
+
+	elapsed := time.Since(startTime)
+	p.log("✅ Book preprocessing complete: %s (took %v)", p.book.Name, elapsed)
+
+	// Log cache statistics
+	stats := p.assetCache.Stats()
+	if stats.MermaidHits+stats.MermaidMisses > 0 {
+		hitRate := float64(stats.MermaidHits) / float64(stats.MermaidHits+stats.MermaidMisses) * 100
+		p.log("   📊 Mermaid cache: %d hits, %d misses (%.1f%% hit rate)",
+			stats.MermaidHits, stats.MermaidMisses, hitRate)
+	}
+	if stats.DrawioHits+stats.DrawioMisses > 0 {
+		hitRate := float64(stats.DrawioHits) / float64(stats.DrawioHits+stats.DrawioMisses) * 100
+		p.log("   📊 Drawio cache: %d hits, %d misses (%.1f%% hit rate)",
+			stats.DrawioHits, stats.DrawioMisses, hitRate)
+	}
+
+	return nil
+}
+
+// log writes a formatted message to the log writer.
+func (p *Preprocessor) log(format string, args ...any) {
+	fmt.Fprintf(p.logWriter, format+"\n", args...)
+}
+
+// scanAssetReferences scans source markdown files to find which assets are referenced.
+// This enables lazy asset copying - only copying assets that are actually used by this book.
+func (p *Preprocessor) scanAssetReferences() error {
+	p.referencedAssets = make(map[string]bool)
+
+	// Get all markdown source directories from book config
+	copySources := p.book.GetCopySources()
+	for _, src := range copySources {
+		// Only scan markdown sources, not asset sources
+		if !isMarkdownPattern(src.From) {
+			continue
+		}
+
+		// Determine the source directory to scan
+		srcDir := getSourceDir(src.From, p.workspaceRoot)
+		if srcDir == "" {
+			continue
+		}
+
+		// Scan this directory for asset references
+		refs, err := ScanAssetReferences(srcDir)
+		if err != nil {
+			return err
+		}
+
+		// Merge into the combined set
+		for ref := range refs {
+			p.referencedAssets[ref] = true
+		}
+	}
+
+	return nil
+}
+
+// isMarkdownPattern checks if a glob pattern targets markdown files.
+func isMarkdownPattern(pattern string) bool {
+	return containsCI(pattern, ".md") || containsCI(pattern, "**/*.md") ||
+		(containsCI(pattern, "**") && !containsCI(pattern, "assets"))
+}
+
+// getSourceDir extracts the source directory from a glob pattern.
+func getSourceDir(pattern, workspaceRoot string) string {
+	// For patterns like "docs/explanation/**", extract "docs/explanation"
+	// For patterns like "docs/**/*.md", extract "docs"
+	parts := strings.Split(pattern, "**")
+	if len(parts) > 0 && parts[0] != "" {
+		dir := strings.TrimSuffix(parts[0], "/")
+		return filepath.Join(workspaceRoot, dir)
+	}
+	return ""
+}
+
+// containsCI checks if s contains substr (case-insensitive).
+func containsCI(s, substr string) bool {
+	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
+}
+
+// processDiagramsParallel runs diagram processing steps concurrently.
+// This includes mermaid, structurizr, and drawio processing.
+func (p *Preprocessor) processDiagramsParallel() error {
+	var g errgroup.Group
+
+	// Step 9 + 9b: Mermaid processing (sizing + scan + render + replace)
+	g.Go(func() error {
+		p.log("  Step 9: Processing mermaid sizing...")
+		if err := p.processMermaidSizing(); err != nil {
+			return fmt.Errorf("step 9 (mermaid sizing): %w", err)
+		}
+
+		p.log("  Step 9b: Processing mermaid diagrams...")
+		blocksByFile, statuses, err := p.scanForMermaidDiagrams()
+		if err != nil {
+			return fmt.Errorf("step 9b (mermaid scan): %w", err)
+		}
+
+		// Replace mermaid blocks with img tags in staging
+		if err := p.replaceMermaidBlocksWithImages(blocksByFile, statuses); err != nil {
+			return fmt.Errorf("step 9b (mermaid replace): %w", err)
+		}
+
+		return nil
+	})
+
+	// Step 9c: Structurizr diagrams (independent of mermaid)
+	g.Go(func() error {
+		p.log("  Step 9c: Processing Structurizr diagrams...")
+		if err := p.processStructurizrDiagrams(); err != nil {
+			return fmt.Errorf("step 9c (structurizr): %w", err)
+		}
+		return nil
+	})
+
+	// Step 10: Convert .drawio to links (PDF only, independent)
+	if p.pdfMode {
+		g.Go(func() error {
+			p.log("  Step 10: Converting .drawio to cached images...")
+			if err := p.convertDrawioToLinks(); err != nil {
+				return fmt.Errorf("step 10 (drawio to images): %w", err)
+			}
+			return nil
+		})
+	}
+
+	// Wait for all diagram processing to complete
+	return g.Wait()
+}

@@ -52,8 +52,8 @@ Documentation is organized using the [Diataxis framework](https://diataxis.fr/) 
 <p><strong>Learning-oriented guides</strong></p>
 <p>Step-by-step lessons that take you through a series of steps to complete a project. Start here if you're new to the CLI and want hands-on guidance through core concepts.</p>
 <ul>
-<li><a href="tutorials/getting-started/quick-start/index.md">Quick Start Guide</a></li>
-<li><a href="tutorials/getting-started/creating-your-first-extension/index.md">Creating Your First Extension</a></li>
+<li><a href="tutorials/getting-started/quick-start.md">Quick Start Guide</a></li>
+<li><a href="tutorials/getting-started/creating-your-first-extension.md">Creating Your First Extension</a></li>
 </ul>
 </div>
 <div>
@@ -71,7 +71,7 @@ Documentation is organized using the [Diataxis framework](https://diataxis.fr/) 
 <p>Technical reference material for looking up details. Check here for system architecture, module contracts, command syntax, configuration options, and specifications.</p>
 <ul>
 <li><a href="reference/eac/architecture/index.md">R2R and EAC Architecture</a> - System overview and design</li>
-<li><a href="reference/eac/architecture/repository-layout/index.md">Repository Layout</a> - File structure</li>
+<li><a href="reference/eac/architecture/repository-layout.md">Repository Layout</a> - File structure</li>
 <li><a href="reference/eac/commands/index.md">Command Reference</a> - CLI commands</li>
 <li><a href="reference/repository/decision-records/index.md">Decision Records</a> - Architectural decisions</li>
 </ul>

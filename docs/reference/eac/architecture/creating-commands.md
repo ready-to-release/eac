@@ -1,6 +1,6 @@
 # Creating CLI Commands
 
-This guide is for developers contributing new commands to the EAC CLI in `go/eac/commands/impl/`.
+This guide is for developers contributing new commands to the EAC CLI in `go/cli/eac/impl/`.
 
 ## Overview
 
@@ -163,8 +163,8 @@ import (
     "os"
     "strings"
 
-    "github.com/ready-to-release/eac/go/eac/commands/internal/registry"
-    "github.com/ready-to-release/eac/go/eac/core/repository"
+    "github.com/ready-to-release/eac/go/cli/eac/internal/registry"
+    "github.com/ready-to-release/eac/go/core/repository"
 )
 
 func init() {
@@ -270,7 +270,7 @@ Instead of manual switch-based flag parsing, use the centralized flag validation
 
 ```go
 import (
-    "github.com/ready-to-release/eac/go/eac/commands/internal/flags"
+    "github.com/ready-to-release/eac/go/cli/eac/internal/flags"
 )
 
 // Define your command's flags
@@ -318,7 +318,7 @@ When implementing `--debug` functionality, log debug content via the logger inst
 
 ```go
 import (
-    "github.com/ready-to-release/eac/go/eac/core/logging"
+    "github.com/ready-to-release/eac/go/core/logging"
 )
 
 // Initialize logger
@@ -367,8 +367,8 @@ go run . completion bash
 
 See these well-documented commands for examples:
 
-- `go/eac/commands/impl/commit/message.go` - Complex command with AI integration
-- `go/eac/commands/impl/create/spec/create.go` - Multiple flags with completion
-- `go/eac/commands/impl/validate/specs.go` - Format flag with completion
-- `go/eac/commands/impl/show/modules.go` - Simple read-only command
-- `go/eac/commands/impl/help/help.go` - Command with verbose flag
+- `go/cli/eac/impl/commit/message.go` - Complex command with AI integration
+- `go/cli/eac/impl/create/spec/create.go` - Multiple flags with completion
+- `go/cli/eac/impl/validate/specs.go` - Format flag with completion
+- `go/cli/eac/impl/show/modules.go` - Simple read-only command
+- `go/cli/eac/impl/help/help.go` - Command with verbose flag

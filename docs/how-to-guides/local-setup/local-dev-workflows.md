@@ -22,7 +22,7 @@ When developing in the EAC repository itself, use `importer.ps1` to load command
 .\scripts\pwsh\importer.ps1
 
 # Set commands path
-$env:R2R_COMMANDS_PATH = '.\go\eac\commands'
+$env:R2R_COMMANDS_PATH = '.\go\cli\eac'
 
 # Load commands
 r2r load-commands
@@ -81,7 +81,7 @@ cd C:\source\ready-to-release\eac
 .\scripts\pwsh\importer.ps1
 
 # Set commands path
-$env:R2R_COMMANDS_PATH = '.\go\eac\commands'
+$env:R2R_COMMANDS_PATH = '.\go\cli\eac'
 
 # Load commands directly from source
 r2r load-commands
@@ -92,7 +92,7 @@ r2r eac help
 
 ### Development Iteration
 
-1. **Make code changes** in `go/eac/commands/`
+1. **Make code changes** in `go/cli/eac/`
 2. **Reload commands**: `r2r load-commands`
 3. **Test immediately**: `r2r eac <command>`
 4. **No Docker rebuild needed**
@@ -319,7 +319,7 @@ When developing and testing in external repositories:
 
    ```powershell
    cd C:\source\ready-to-release\eac
-   # Edit files in go/eac/commands/
+   # Edit files in go/cli/eac/
    ```
 
 2. **Rebuild Docker image**:

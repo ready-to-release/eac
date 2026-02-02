@@ -1,0 +1,141 @@
+// Command: get dependencies
+//
+//	--as-yaml: Output as YAML (default)
+//	--as-json: Output as JSON
+//	--as-toml: Output as TOML
+//	--as-plantuml: Output as PlantUML diagram
+//	--as-mermaid: Output as Mermaid diagram
+//	--as-execution-order: Output execution order only
+//
+// Long:
+// Long: Expected Output:
+// Long: YAML dependency graph showing module relationships, including:
+// Long:   - List of all module monikers
+// Long:   - Dependency edges (module -> list of dependencies)
+// Long:   - Execution order (topologically sorted modules)
+// Long: Alternative formats available: PlantUML diagram, Mermaid diagram, or execution order only.
+package get
+
+import (
+	"fmt"
+	"os"
+	"strings"
+
+	getInternal "github.com/ready-to-release/eac/go/cli/eac/impl/get/internal"
+	"github.com/ready-to-release/eac/go/clibase/flags"
+	"github.com/ready-to-release/eac/go/clibase/registry"
+	"github.com/ready-to-release/eac/go/core/repository"
+)
+
+func init() {
+	registry.Register(GetDependencies)
+}
+
+// dependenciesFlags defines valid flags for the get dependencies command
+
+func GetDependencies() int {
+	// Validate flags before parsing
+	if err := flags.ValidateFlagsFromRegistry(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		return 1
+	}
+
+	// Get repository root
+	workspaceRoot, err := repository.GetRepositoryRoot("")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to find repository root: %v\n", err)
+		return 1
+	}
+
+	// Check for special diagram formats
+	for _, arg := range os.Args {
+		switch arg {
+		case "--as-plantuml":
+			return outputPlantUML(workspaceRoot)
+		case "--as-mermaid":
+			return outputMermaid(workspaceRoot)
+		case "--as-execution-order":
+			return outputExecutionOrder(workspaceRoot)
+		}
+	}
+
+	// Use the shared get command helper for standard formats (YAML, JSON, TOML)
+	return getInternal.ExecuteGetCommand(func() (interface{}, error) {
+		graph, err := repository.GetModuleDependencyGraph(workspaceRoot)
+		if err != nil {
+			return nil, err
+		}
+		return graph, nil
+	})
+}
+
+// outputPlantUML generates PlantUML diagram format.
+func outputPlantUML(workspaceRoot string) int {
+	graph, err := repository.GetModuleDependencyGraph(workspaceRoot)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
+
+	diagram := repository.GetPlantUMLDiagram(graph)
+	fmt.Println(diagram)
+	return 0
+}
+
+// outputMermaid generates Mermaid diagram format.
+func outputMermaid(workspaceRoot string) int {
+	graph, err := repository.GetModuleDependencyGraph(workspaceRoot)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
+
+	diagram := repository.GetMermaidDiagram(graph)
+	fmt.Println(diagram)
+	return 0
+}
+
+// outputExecutionOrder generates execution order only.
+func outputExecutionOrder(workspaceRoot string) int {
+	plan, err := repository.CalculateExecutionOrder(nil, workspaceRoot)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
+
+	// Check for nested format flags
+	hasYAML := false
+	hasJSON := false
+	for _, arg := range os.Args {
+		switch arg {
+		case "--as-yaml":
+			hasYAML = true
+		case "--as-json":
+			hasJSON = true
+		}
+	}
+
+	if hasJSON {
+		// Output as JSON (handled by get command helper)
+		return getInternal.ExecuteGetCommand(func() (interface{}, error) {
+			return plan, nil
+		})
+	} else if hasYAML || !hasJSON {
+		// Default: output as YAML
+		return getInternal.ExecuteGetCommand(func() (interface{}, error) {
+			return plan, nil
+		})
+	}
+
+	return 0
+}
+
+// Helper to check if a string slice contains a value.
+func contains(slice []string, val string) bool {
+	for _, item := range slice {
+		if item == val || strings.Contains(item, val) {
+			return true
+		}
+	}
+	return false
+}

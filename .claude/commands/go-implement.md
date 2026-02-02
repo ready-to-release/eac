@@ -13,8 +13,8 @@ You are implementing a Go CLI feature using Test-Driven Development.
    - Clarify requirements if needed
 
 2. **Create specifications** (if not exists):
-   - Use MCP `create-spec` (or CLI `go run ./go/eac/commands create spec`) to generate Gherkin spec
-   - Validate with MCP `validate-specs` (or CLI `go run ./go/eac/commands validate specs`)
+   - Use MCP `create-spec` (or CLI `go run ./go/cli/eac create spec`) to generate Gherkin spec
+   - Validate with MCP `validate-specs` (or CLI `go run ./go/cli/eac validate specs`)
 
 3. **Write tests FIRST** (delegate to go-test-engineer):
    - Use Task tool with subagent_type="go-test-engineer"

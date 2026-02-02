@@ -1,0 +1,84 @@
+// File: go/cli/eac/impl/templates/internal/security.go
+// Security validation functions to prevent path traversal attacks
+package internal
+
+import (
+	"fmt"
+	"path/filepath"
+	"strings"
+)
+
+// ValidatePath ensures a user-provided path doesn't escape the designated base directory.
+// This prevents path traversal attacks where malicious templates try to write files
+// outside the intended output directory.
+//
+// Security Requirements:
+//   - Reject absolute paths (e.g., /etc/passwd, C:\Windows)
+//   - Reject paths starting with .. (e.g., ../../../etc/passwd)
+//   - Reject paths that would resolve outside basePath after cleaning
+//
+// Returns error if path is unsafe, nil if safe.
+func ValidatePath(basePath, userPath string) error {
+	// Empty path is safe - it becomes basePath
+	if userPath == "" {
+		return nil
+	}
+
+	// Clean the path to resolve . and .. references
+	cleaned := filepath.Clean(userPath)
+
+	// SECURITY CHECK 1: Reject absolute paths
+	// Absolute paths bypass the basePath entirely
+	// Note: filepath.IsAbs behaves differently on Windows vs Unix
+	// On Windows: C:\path is absolute, /path is relative
+	// On Unix: /path is absolute
+	// We reject both to be safe across platforms
+	if filepath.IsAbs(cleaned) || strings.HasPrefix(cleaned, "/") || strings.HasPrefix(cleaned, "\\") {
+		return fmt.Errorf("security: absolute paths not allowed: %s", userPath)
+	}
+
+	// SECURITY CHECK 2: Reject paths starting with ..
+	// Even after cleaning, these try to escape the base directory
+	if strings.HasPrefix(cleaned, ".."+string(filepath.Separator)) || cleaned == ".." {
+		return fmt.Errorf("security: path traversal detected: %s", userPath)
+	}
+
+	// SECURITY CHECK 3: Verify final path stays within basePath
+	// Join with basePath and check the result is still under basePath
+	finalPath := filepath.Join(basePath, cleaned)
+
+	// Get relative path from basePath to finalPath
+	relToBase, err := filepath.Rel(basePath, finalPath)
+	if err != nil {
+		return fmt.Errorf("security: failed to validate path %s: %w", userPath, err)
+	}
+
+	// If relative path starts with .., it means finalPath is outside basePath
+	if strings.HasPrefix(relToBase, ".."+string(filepath.Separator)) || relToBase == ".." {
+		return fmt.Errorf("security: path escapes base directory: %s", userPath)
+	}
+
+	return nil
+}
+
+// SecureFilePath combines ValidatePath with filepath.Join for safe file operations.
+// Use this when constructing file paths from user input.
+//
+// Example:
+//
+//	outputPath, err := SecureFilePath(outputDir, userProvidedPath)
+//	if err != nil {
+//	    return fmt.Errorf("invalid path: %w", err)
+//	}
+//	// Safe to use outputPath now
+func SecureFilePath(basePath, userPath string) (string, error) {
+	if err := ValidatePath(basePath, userPath); err != nil {
+		return "", err
+	}
+
+	// Clean and join paths
+	cleaned := filepath.Clean(userPath)
+	result := filepath.Join(basePath, cleaned)
+
+	return result, nil
+}

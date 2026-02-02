@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=../../contracts/eac-core/0.1.0/testing-mocks.schema.json
+# yaml-language-server: $schema=../../contracts/core/0.1.0/testing-mocks.schema.json
 #
 # Testing Mocks Configuration
 # Controls mock behavior for BDD test infrastructure
@@ -15,7 +15,7 @@ mocks:
   # When enabled, AI commands use file-based mock responses instead of real API calls
   ai:
     enabled: true
-    mock_dir: "go/eac/commands/specs/assets"
+    mock_dir: "go/cli/eac/specs/assets"
 
   # Security Tool Mocking (Trivy, Semgrep, ZAP)
   # When enabled, security scanners return predefined mock data

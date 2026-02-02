@@ -34,11 +34,11 @@ Module-specific continuous integration workflows that build and test individual 
 - `ci-eac-mcp-commands.yaml` - EAC MCP Commands module CI
 - `ci-ext-eac.yaml` - EAC Extension module CI
 - `ci-r2r-cli.yaml` - R2R CLI module CI
-- `ci-vscode-ext-commit.yaml` - VSCode Extension module CI
+- `ci-vscode-commit.yaml` - VSCode Extension module CI
 - `ci-books.yaml` - Books documentation module CI
 - `ci-docs.yaml` - Docs site module CI
 - `ci-r2r-installer.yaml` - R2R CLI Installer scripts CI
-- `ci-implicit-r2r-cli.yaml` - Implicit R2R CLI scripts CI
+- `ci-implicit-cli.yaml` - Implicit CLI scripts CI
 
 ### Release Workflows
 

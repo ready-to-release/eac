@@ -2,21 +2,23 @@ go 1.24.4
 
 use (
 	./contracts
-	./contracts/eac-adapters/ai
-	./contracts/eac-adapters/docker
-	./contracts/eac-adapters/tui
-	./contracts/eac-core/0.1.0/interfaces
-	./go/eac/adapters/ai
-	./go/eac/adapters/docker
-	./go/eac/adapters/tui
-	./go/eac/commands
-	./go/eac/core
-	./go/eac/godog
-	./go/eac/mcp/commands
-	./go/eac/specs
-	./go/eac/specs/eac-core
-	./go/eac/specs/implicit-r2r-cli
-	./go/eac/specs/r2r-installer
-	./go/eac/specs/repository
-	./go/r2r/cli
+	./contracts/ai-adapter/0.1.0/interfaces
+	./contracts/core/0.1.0/interfaces
+	./contracts/docker-adapter/0.1.0/interfaces
+	./contracts/security/0.1.0/interfaces
+	./contracts/testing/0.1.0/interfaces
+	./contracts/tools/0.1.0/interfaces
+	./contracts/tui-adapter/0.1.0/interfaces
+	./go/adapters/ai
+	./go/adapters/docker
+	./go/adapters/tui
+	./go/cli/eac
+	./go/cli/r2r
+	./go/clibase
+	./go/core
+	./go/godog
+	./go/mcp/commands
+	./go/specs/implicit-cli
+	./go/specs/r2r-installer
+	./go/specs/repository
 )

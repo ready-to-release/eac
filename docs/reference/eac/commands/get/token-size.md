@@ -44,7 +44,7 @@ Without `--threshold`, shows all files with their token counts:
 eac get token-size "go/**/*.go"
 
 # JSON output for scripting
-eac get token-size "go/eac/core/**/*.go" --as-json
+eac get token-size "go/core/**/*.go" --as-json
 ```
 
 ## Output Fields (JSON)

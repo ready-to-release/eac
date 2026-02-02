@@ -27,14 +27,14 @@ $ r2r eac get modules
     {
       "moniker": "eac-commands",
       "type": "go-commands",
-      "path": "go/eac/commands",
+      "path": "go/cli/eac",
       "dependencies": ["eac-core"],
       "files": 45
     },
     {
       "moniker": "eac-core",
       "type": "go-library",
-      "path": "go/eac/core",
+      "path": "go/core",
       "dependencies": [],
       "files": 32
     }
@@ -87,8 +87,8 @@ $ r2r eac show modules
 ┌───────────────┬─────────────┬────────────────────┬──────┐
 │ Moniker       │ Type        │ Path               │ Files│
 ├───────────────┼─────────────┼────────────────────┼──────┤
-│ eac-commands  │ go-commands │ go/eac/commands    │   45 │
-│ eac-core      │ go-library  │ go/eac/core        │   32 │
+│ eac-commands  │ go-commands │ go/cli/eac    │   45 │
+│ eac-core      │ go-library  │ go/core        │   32 │
 │ src-auth      │ go-library  │ go/src/auth        │   18 │
 └───────────────┴─────────────┴────────────────────┴──────┘
 ```
@@ -213,8 +213,8 @@ $ r2r eac show modules
 ┌───────────────┬─────────────┬────────────────────┬──────┐
 │ Moniker       │ Type        │ Path               │ Files│
 ├───────────────┼─────────────┼────────────────────┼──────┤
-│ eac-commands  │ go-commands │ go/eac/commands    │   45 │
-│ eac-core      │ go-library  │ go/eac/core        │   32 │
+│ eac-commands  │ go-commands │ go/cli/eac    │   45 │
+│ eac-core      │ go-library  │ go/core        │   32 │
 └───────────────┴─────────────┴────────────────────┴──────┘
 ```
 
@@ -434,7 +434,7 @@ Long values are truncated with ellipsis:
 ┌──────────────────────────────────┐
 │ Path                              │
 ├──────────────────────────────────┤
-│ go/eac/commands/impl/very-lo...  │
+│ go/cli/eac/impl/very-lo...  │
 └──────────────────────────────────┘
 ```
 
@@ -608,7 +608,7 @@ Suggestion: Check module name with: r2r eac show modules
 ```text
 Error: Validation failed
 
-go/eac/commands/impl/work.go:
+go/cli/eac/impl/work.go:
   Line 42: undefined variable 'foo'
   Line 58: missing return statement
 
@@ -631,7 +631,7 @@ Run: r2r eac init
 Error: Build failed for module 'eac-commands'
 
 Compilation errors:
-  go/eac/commands/main.go:15: undefined: fmt.Printl
+  go/cli/eac/main.go:15: undefined: fmt.Printl
 
 Fix errors and run: r2r eac build eac-commands
 ```

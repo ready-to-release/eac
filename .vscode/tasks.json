@@ -5,7 +5,7 @@
       "label": "Watch VSCode Extension",
       "type": "npm",
       "script": "watch",
-      "path": "typescript/vscode-ext-commit/",
+      "path": "typescript/vscode-commit/",
       "problemMatcher": "$tsc-watch",
       "isBackground": true,
       "presentation": {

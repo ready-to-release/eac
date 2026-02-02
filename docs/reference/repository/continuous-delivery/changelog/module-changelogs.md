@@ -24,7 +24,7 @@ See [Understanding Release Types](../release-types.md) for complete details.
 | ------------ | ------------------------------- | ------------------------------------- |
 | `published`  | `release/<module>/CHANGELOG.md` | `release/r2r-cli/CHANGELOG.md`        |
 | `bundle`     | `release/<module>/CHANGELOG.md` | `release/r2r-eac-bundle/CHANGELOG.md` |
-| `internal`   | `<module-root>/CHANGELOG.md`    | `go/eac/commands/CHANGELOG.md`        |
+| `internal`   | `<module-root>/CHANGELOG.md`    | `go/cli/eac/CHANGELOG.md`        |
 | `none`       | No changelog                    | N/A                                   |
 
 ### Pattern 1: Release Directory (Published/Bundle)
@@ -61,20 +61,20 @@ modules:
   - moniker: eac-commands
     versioning:
       scheme: SemVer
-      changelog: go/eac/commands/CHANGELOG.md
+      changelog: go/cli/eac/CHANGELOG.md
       release_type: internal
 ```
 
-**Full path:** `go/eac/commands/CHANGELOG.md`
+**Full path:** `go/cli/eac/CHANGELOG.md`
 
 **Usage:** Internal implementation modules
 
 **Examples:**
 
-- `go/eac/commands/CHANGELOG.md` (internal)
-- `go/eac/mcp/commands/CHANGELOG.md` (internal)
+- `go/cli/eac/CHANGELOG.md` (internal)
+- `go/mcp/commands/CHANGELOG.md` (internal)
 - `scripts/CHANGELOG.md` (internal - r2r-installer)
-- `typescript/vscode-ext-commit/CHANGELOG.md` (internal)
+- `typescript/vscode-commit/CHANGELOG.md` (internal)
 
 ## Module Changelog Structure
 
@@ -201,7 +201,7 @@ Changes to other modules:
 **Belongs in that module's changelog:**
 
 ```markdown
-# go/eac/core/CHANGELOG.md
+# go/core/CHANGELOG.md
 
 ### Added
 
@@ -437,7 +437,7 @@ on:
 | ext-eac           | `release/ext-eac/CHANGELOG.md`              | SemVer     | (varies)        |
 | docs              | `release/docs/CHANGELOG.md`                 | CalVer     | (varies)        |
 | books             | `release/books/CHANGELOG.md`                | CalVer     | (varies)        |
-| vscode-ext-commit | `typescript/vscode-ext-commit/CHANGELOG.md` | SemVer     | (varies)        |
+| vscode-commit     | `typescript/vscode-commit/CHANGELOG.md`     | SemVer     | (varies)        |
 
 ### Supporting Modules (No Independent Changelog)
 

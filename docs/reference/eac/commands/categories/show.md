@@ -33,8 +33,8 @@ $ r2r eac show modules
 ┌───────────────┬─────────────┬────────────────────┬──────┐
 │ Moniker       │ Type        │ Path               │ Files│
 ├───────────────┼─────────────┼────────────────────┼──────┤
-│ eac-commands  │ go-commands │ go/eac/commands    │   45 │
-│ eac-core      │ go-library  │ go/eac/core        │   32 │
+│ eac-commands  │ go-commands │ go/cli/eac    │   45 │
+│ eac-core      │ go-library  │ go/core        │   32 │
 │ src-auth      │ go-library  │ go/src/auth        │   18 │
 └───────────────┴─────────────┴────────────────────┴──────┘
 ```

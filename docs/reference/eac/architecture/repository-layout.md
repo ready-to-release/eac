@@ -45,7 +45,7 @@ eac/
 │   └── extensions/             # Custom VSCode extensions
 │
 ├── containers/                 # Docker container definitions
-│   ├── drawio-cli/             # Draw.io diagram CLI
+│   ├── drawio-tool/             # Draw.io diagram CLI
 │   ├── ext-eac/                # R2R CLI extension for EAC
 │   ├── git-filter-repo/        # Git history filtering tool
 │   ├── gource/                 # Repository visualization
@@ -78,11 +78,12 @@ eac/
 │   └── tutorials/              # Learning-oriented tutorials
 │
 ├── go/                         # Go source code
-│   ├── eac/                    # EAC implementation
-│   │   ├── commands/           # CLI commands library (eac-commands module)
-│   │   ├── core/               # Core domain libraries (eac-core module)
-│   │   ├── mcp/                # MCP server implementations
-│   │   └── specs/              # Shared BDD test infrastructure
+│   ├── adapters/               # Adapters (AI, Docker, TUI)
+│   ├── cli/                    # CLI implementations
+│   │   └── eac/                # EAC CLI commands library (eac-commands module)
+│   ├── core/                   # Core domain libraries (eac-core module)
+│   ├── godog/                  # Shared BDD test infrastructure
+│   ├── specs/                  # Specs implementations
 │   └── r2r/                    # R2R implementation
 │       └── cli/                # R2R CLI application (r2r-cli module)
 │
@@ -113,7 +114,7 @@ eac/
 │   └── test-repositories/      # Test fixture repositories
 │
 ├── typescript/                 # TypeScript source code
-│   └── vscode-ext-commit/      # VSCode Git extension
+│   └── vscode-commit/          # VSCode Git extension
 │
 ├── go.work                     # Go workspace definition
 ├── mkdocs.yml                  # MkDocs site configuration
@@ -157,7 +158,7 @@ modules:
     type: go-commands
     depends_on: [eac-core]
     files:
-      root: go/eac/commands
+      root: go/cli/eac
       source: ["**/*.go"]
       tests: ["**/*_test.go"]
 ```

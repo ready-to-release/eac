@@ -45,7 +45,7 @@ echo "Installing VSCode Extension"
 echo "=================================="
 echo ""
 
-cd "$PROJECT_ROOT/typescript/vscode-ext-commit"
+cd "$PROJECT_ROOT/typescript/vscode-commit"
 
 echo "Installing dependencies..."
 npm install

@@ -1,6 +1,6 @@
-# templates install-ai
+# templates install ai
 
-<!-- book:cmd templates install-ai -->
+<!-- book:cmd templates install ai -->
 
 ## Details
 

@@ -48,7 +48,7 @@ versioning:
 
 **Characteristics**:
 
-- Changelogs in module root (e.g., `go/eac/commands/CHANGELOG.md`)
+- Changelogs in module root (e.g., `go/cli/eac/CHANGELOG.md`)
 - Track changes for development history
 - Do NOT trigger release workflows
 - May or may not follow semantic versioning
@@ -56,17 +56,17 @@ versioning:
 
 **Examples**:
 
-- `eac-commands` - Go command implementations
-- `eac-mcp-commands` - MCP server command bindings
+- `eac-cli` - Go command implementations
+- `mcp-server` - MCP server command bindings
 - `r2r-installer` - Installation scripts
-- `vscode-ext-commit` - VS Code commit message extension
+- `vscode-commit` - VS Code commit message extension
 
 **Workflow**:
 
 ```yaml
 versioning:
   scheme: SemVer
-  changelog: go/eac/commands/CHANGELOG.md
+  changelog: go/cli/eac/CHANGELOG.md
   release_type: internal
 ```
 
@@ -158,7 +158,7 @@ The release type determines changelog location:
 | ------------ | ------------------------------- | ------------------------------------- |
 | `published`  | `release/<module>/CHANGELOG.md` | `release/r2r-cli/CHANGELOG.md`        |
 | `bundle`     | `release/<module>/CHANGELOG.md` | `release/r2r-eac-bundle/CHANGELOG.md` |
-| `internal`   | `<module-root>/CHANGELOG.md`    | `go/eac/commands/CHANGELOG.md`        |
+| `internal`   | `<module-root>/CHANGELOG.md`    | `go/cli/eac/CHANGELOG.md`        |
 | `none`       | No changelog                    | N/A                                   |
 
 **Rationale**:
@@ -193,8 +193,8 @@ jobs:
 
 Tests enforce these rules:
 
-- `go/eac/core/contracts/modules/release_type_test.go`
-- `go/eac/commands/impl/release/release_type_workflow_test.go`
+- `go/core/contracts/modules/release_type_test.go`
+- `go/cli/eac/impl/release/release_type_workflow_test.go`
 
 ---
 

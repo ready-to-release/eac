@@ -33,7 +33,7 @@ release/
 - **Simple automation**: CI can find release changelogs by pattern matching
 - **Audit trail**: Git history shows all release activities together
 
-**Important**: Only modules with `release_type: published` or `release_type: bundle` have changelogs in `release/`. Internal modules (`release_type: internal`) have changelogs in their module roots (e.g., `go/eac/commands/CHANGELOG.md`).
+**Important**: Only modules with `release_type: published` or `release_type: bundle` have changelogs in `release/`. Internal modules (`release_type: internal`) have changelogs in their module roots (e.g., `go/cli/eac/CHANGELOG.md`).
 
 ---
 
@@ -143,7 +143,7 @@ Module contracts in `.r2r/eac/repository.yml` define where each module's changel
 | ------------ | ------------------------------- | ------------------------------------- |
 | `published`  | `release/<module>/CHANGELOG.md` | `release/r2r-cli/CHANGELOG.md`        |
 | `bundle`     | `release/<module>/CHANGELOG.md` | `release/r2r-eac-bundle/CHANGELOG.md` |
-| `internal`   | `<module-root>/CHANGELOG.md`    | `go/eac/commands/CHANGELOG.md`        |
+| `internal`   | `<module-root>/CHANGELOG.md`    | `go/cli/eac/CHANGELOG.md`        |
 | `none`       | No changelog                    | N/A                                   |
 
 See [Understanding Release Types](../../../../reference/repository/continuous-delivery/release-types.md) for details on each type.
@@ -176,14 +176,14 @@ modules:
   - moniker: eac-commands
     versioning:
       scheme: SemVer
-      changelog: go/eac/commands/CHANGELOG.md
+      changelog: go/cli/eac/CHANGELOG.md
       release_type: internal
     components:
       gomod:
-        root: go/eac/commands
+        root: go/cli/eac
 ```
 
-**Changelog location**: `go/eac/commands/CHANGELOG.md` (at module root)
+**Changelog location**: `go/cli/eac/CHANGELOG.md` (at module root)
 
 **Why module root?** Internal modules are implementation details, not public releases. Keeping their changelogs with their code makes it easier to track development history.
 
@@ -212,7 +212,7 @@ modules:
 All release commands resolve changelog paths automatically:
 
 ```go
-// From go/eac/core/contracts/types.go
+// From go/core/contracts/types.go
 func (b *BaseContract) GetChangelog() string {
     if b.Versioning != nil && b.Versioning.Changelog != "" {
         return b.Versioning.Changelog  // Use explicit path
@@ -375,11 +375,11 @@ versioning:
 moniker: eac-commands
 versioning:
   scheme: SemVer
-  changelog: go/eac/commands/CHANGELOG.md
+  changelog: go/cli/eac/CHANGELOG.md
   release_type: internal
 ```
 
-**Changelog location**: `go/eac/commands/CHANGELOG.md` (module root)
+**Changelog location**: `go/cli/eac/CHANGELOG.md` (module root)
 
 **Version format**: `1.2.3` (MAJOR.MINOR.PATCH)
 

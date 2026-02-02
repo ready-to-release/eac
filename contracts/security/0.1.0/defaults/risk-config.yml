@@ -1,0 +1,53 @@
+# Risk and compliance configuration
+# This file defines the risk profile reference and scoring configuration.
+
+# Reference to OSCAL profile (solution-wide control selections)
+profile:
+  # Default profile provided by contract
+  path: risk-profile.json  # Relative to this file's directory
+
+  # Catalog for control validation
+  catalog_url: https://raw.githubusercontent.com/usnistgov/oscal-content/main/nist.gov/SP800-53/rev5/json/NIST_SP-800-53_rev5_catalog.json
+
+# Risk scoring configuration
+# Maps module types to impact and criticality ratings
+scoring:
+  # Impact ratings (1-5 scale)
+  # Higher values indicate greater potential damage from security incidents
+  impact:
+    api: 4
+    service: 4
+    gateway: 4
+    library: 3
+    core: 3
+    cli: 2
+    tool: 2
+    docs: 1
+    config: 1
+    _default: 3
+
+  # Criticality levels (high/medium/low)
+  # Indicates operational importance and required protection level
+  criticality:
+    api: high
+    gateway: high
+    service: high
+    core: medium
+    library: medium
+    cli: low
+    tool: low
+    _default: medium
+
+  # Severity weights for likelihood calculation
+  # Used to increment likelihood based on finding severity
+  severity_weights:
+    critical: 4
+    high: 3
+    medium: 2
+    low: 1
+
+# Module-specific profile overrides (optional)
+# Modules can specify their own risk profiles
+# module_profiles:
+#   billing-service:
+#     path: billing-service.profile.json

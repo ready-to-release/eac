@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=../../contracts/eac-core/0.1.0/books.schema.json
+# yaml-language-server: $schema=../../contracts/core/0.1.0/books.schema.json
 # Local Book Configuration
 # Templates and snippets come from defaults - only specify what's unique here
 

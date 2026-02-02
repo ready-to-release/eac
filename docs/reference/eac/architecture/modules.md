@@ -61,7 +61,7 @@ modules:
     type: go-library
     depends_on: [logging-go]
     files:
-      root: go/eac/core
+      root: go/core
       source: ["**/*.go"]
       tests: ["**/*_test.go"]
 ```
@@ -183,7 +183,7 @@ r2r eac validate-module-hierarchy
 
 ```yaml
 files:
-  root: go/eac/core        # Base directory
+  root: go/core        # Base directory
   source: ["**/*.go"]      # All .go files
   tests: ["**/*_test.go"]  # All test files
   exclude: ["**/vendor/**"] # Exclude vendor

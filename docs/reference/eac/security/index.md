@@ -6,6 +6,7 @@ Technical reference for EAC security scanning commands and configuration.
 
 | Reference                         | Description                                     |
 | --------------------------------- | ----------------------------------------------- |
+| [Risk Configuration](./risk-config.md) | Risk scoring and OSCAL profile configuration |
 | [Supply Chain](./supply-chain.md) | Dependency and container vulnerability scanning |
 | [SAST](./sast.md)                 | Static Application Security Testing             |
 | [DAST](./dast.md)                 | Dynamic Application Security Testing            |
@@ -13,6 +14,11 @@ Technical reference for EAC security scanning commands and configuration.
 ## Quick Reference
 
 ```bash
+# Risk assessment
+eac create risk-profile assessment.md    # Generate OSCAL profile
+eac create risk-assess --profile ...     # Create assessment results
+eac validate risk-profile profile.json   # Validate OSCAL profile
+
 # Static analysis
 eac scan --scanner sast
 eac scan --scanner secrets
