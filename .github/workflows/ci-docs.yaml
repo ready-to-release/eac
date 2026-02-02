@@ -50,4 +50,5 @@ jobs:
       ref: ${{ inputs.ref }}
       sha: ${{ inputs.sha }}
       trigger_run_id: ${{ inputs.trigger_run_id }}
+      build-args: '--all'  # Build PDFs alongside site
       scans: ''  # No scans for documentation

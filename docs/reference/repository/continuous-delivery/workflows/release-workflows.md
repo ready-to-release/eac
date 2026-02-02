@@ -74,7 +74,7 @@ permissions:
 
 **Note**:
 
-Internal modules (eac-commands, eac-mcp-commands, r2r-installer, vscode-ext-commit) do not have release workflows because they are not released independently.
+Internal modules (eac-cli, mcp-server, r2r-installer, vscode-commit) do not have release workflows because they are not released independently.
 
 ## Example: release-r2r-cli.yaml
 

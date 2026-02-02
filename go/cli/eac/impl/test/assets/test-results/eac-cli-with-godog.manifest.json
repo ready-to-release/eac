@@ -1,0 +1,68 @@
+{
+  "test_id": "test-123",
+  "test_agent": "devbox",
+  "moniker": "eac-cli",
+  "type": "go",
+  "test_time": "2026-01-07T15:42:56Z",
+  "duration_seconds": 33.1,
+  "summary": {
+    "total": 5,
+    "passed": 5,
+    "failed": 0,
+    "skipped": 0
+  },
+  "tests": [
+    {
+      "name": "Generate message from commits",
+      "package": "github.com/ready-to-release/eac/go/eac/commands",
+      "type": "godog",
+      "suite": "integration",
+      "status": "passed",
+      "duration_ms": 1200,
+      "tags": ["@L2", "@control:au-2", "@deps:go"],
+      "file_path": "specs/eac-commands/create-commit-message/specification.feature"
+    },
+    {
+      "name": "Generate design from existing code",
+      "package": "github.com/ready-to-release/eac/go/eac/commands",
+      "type": "godog",
+      "suite": "integration",
+      "status": "passed",
+      "duration_ms": 2500,
+      "tags": ["@L2", "@control:ai-2", "@deps:go"],
+      "file_path": "specs/eac-commands/create-design/specification.feature"
+    },
+    {
+      "name": "Generate design with custom output path",
+      "package": "github.com/ready-to-release/eac/go/eac/commands",
+      "type": "godog",
+      "suite": "integration",
+      "status": "passed",
+      "duration_ms": 2400,
+      "tags": ["@L2", "@control:ai-2", "@deps:go"],
+      "file_path": "specs/eac-commands/create-design/specification.feature"
+    },
+    {
+      "name": "Generate design fails when module not found",
+      "package": "github.com/ready-to-release/eac/go/eac/commands",
+      "type": "godog",
+      "suite": "integration",
+      "status": "passed",
+      "duration_ms": 1500,
+      "tags": ["@L2", "@control:ai-2", "@deps:go"],
+      "file_path": "specs/eac-commands/create-design/specification.feature"
+    },
+    {
+      "name": "Validate repository structure",
+      "package": "github.com/ready-to-release/eac/go/eac/commands",
+      "type": "godog",
+      "suite": "integration",
+      "status": "passed",
+      "duration_ms": 1800,
+      "tags": ["@L2", "@control:cm-2", "@deps:go"],
+      "file_path": "specs/eac-commands/validate-design/specification.feature"
+    }
+  ],
+  "artifacts": [],
+  "version": "1.0"
+}

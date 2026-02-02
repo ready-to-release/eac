@@ -1,6 +1,6 @@
-# Templates install-reports
+# templates install reports
 
-<!-- book:cmd templates install-reports -->
+<!-- book:cmd templates install reports -->
 
 ## Details
 

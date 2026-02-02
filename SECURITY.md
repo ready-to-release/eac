@@ -22,11 +22,11 @@ This is a **multi-module Go workspace**. All modules are currently in active dev
 
 | Module           | Path                  | Status             | Go Version |
 |------------------|-----------------------|--------------------|------------|
-| EaC Core         | `go/eac/core`         | Active Development | 1.24+      |
-| EaC Commands     | `go/eac/commands`     | Active Development | 1.24+      |
-| EaC MCP Commands | `go/eac/mcp/commands` | Active Development | 1.24+      |
-| EaC Specs        | `go/eac/specs`        | Active Development | 1.24+      |
-| R2R CLI          | `go/r2r/cli`          | Active Development | 1.24+      |
+| EaC Core         | `go/core`             | Active Development | 1.24+      |
+| EaC CLI          | `go/cli/eac`          | Active Development | 1.24+      |
+| EaC MCP Commands | `go/cli/mcp`          | Active Development | 1.24+      |
+| EaC Specs        | `go/specs`            | Active Development | 1.24+      |
+| R2R CLI          | `go/cli/r2r`          | Active Development | 1.24+      |
 
 Security patches are applied to the main branch and will be included in the next release.
 

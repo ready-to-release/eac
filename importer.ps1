@@ -118,7 +118,7 @@ function global:eac {
     Write-Host "✅ eac alias created -> r2r eac <args>" -ForegroundColor Green
 } else {
     Write-Host "⚠️  r2r binary not found at: $R2rBinary" -ForegroundColor Yellow
-    Write-Host "   Run 'build r2r-cli' or 'go run ./go/eac/commands build r2r-cli' to build it" -ForegroundColor Gray
+    Write-Host "   Run 'build r2r-cli' or 'go run ./go/cli/eac build r2r-cli' to build it" -ForegroundColor Gray
 }
 
 # Create top-level command aliases unless -NoAlias specified

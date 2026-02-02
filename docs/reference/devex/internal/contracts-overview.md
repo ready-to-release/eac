@@ -62,7 +62,7 @@ modules:
     type: go-library
     depends_on: [logging-go]
     files:
-      root: go/eac/core
+      root: go/core
       source: ["**/*.go"]
       tests: ["**/*_test.go"]
 ```

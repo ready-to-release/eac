@@ -11,7 +11,7 @@ echo "Restoring VSCode Extension"
 echo "=================================="
 echo ""
 
-cd "$PROJECT_ROOT/typescript/vscode-ext-commit"
+cd "$PROJECT_ROOT/typescript/vscode-commit"
 
 # Check if node_modules exists
 if [ -d "node_modules" ]; then

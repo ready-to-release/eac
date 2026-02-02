@@ -1,0 +1,76 @@
+# yaml-language-server: $schema=../test-suites.schema.json
+suites:
+  # ============================================================================
+  # Unit Suite - Fast unit tests for module-level validation
+  # ============================================================================
+  - moniker: unit
+    name: Unit Tests
+    description: "Fast tests for Stage 2-4 (Pre-commit, MR, Commit) - L0-L1"
+    selectors:
+      - any_of_tags:
+          - "@L0"
+          - "@L1"
+        exclude_tags:
+          - "@L2"
+          - "@L3"
+          - "@L4"
+
+  # ============================================================================
+  # Integration Suite - Emulated system tests (Docker-based)
+  # ============================================================================
+  - moniker: integration
+    name: Integration Tests
+    description: "Stage 5 - L2 emulated system tests with Docker"
+    selectors:
+      - any_of_tags:
+          - "@L2"
+        exclude_tags:
+          - "@L0"
+          - "@L1"
+          - "@L3"
+          - "@L4"
+
+  # ============================================================================
+  # Acceptance Suite - Production-like system tests
+  # ============================================================================
+  - moniker: acceptance
+    name: Acceptance Tests
+    description: "Stage 6 - L3 production-like system tests"
+    extended_suite: true
+    selectors:
+      - any_of_tags:
+          - "@L3"
+        exclude_tags:
+          - "@L0"
+          - "@L1"
+          - "@L2"
+          - "@L4"
+
+  # ============================================================================
+  # Production Verification Suite - Production smoke tests
+  # ============================================================================
+  - moniker: production-verification
+    name: Production Installation Verification
+    description: "Stage 11-12 - Production smoke tests"
+    extended_suite: true
+    selectors:
+      - require_tags:
+          - "@L4"
+          - "@piv"
+
+  # ============================================================================
+  # Manual Suite - Human-executed tests with evidence collection
+  # ============================================================================
+  - moniker: manual
+    name: Manual Tests
+    description: "Human-executed tests requiring manual verification and evidence collection"
+    extended_suite: true
+    selectors:
+      - require_tags:
+          - "@Manual"
+        exclude_tags:
+          - "@L0"
+          - "@L1"
+          - "@L2"
+          - "@L3"
+          - "@L4"

@@ -1,6 +1,6 @@
 # serve docs
 
-<!-- book:cmd serve docs -->
+<!-- book:cmd serve --module docs -->
 
 ## Workflow
 

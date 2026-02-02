@@ -1,6 +1,6 @@
 # Test suite
 
-<!-- book:cmd test suite -->
+<!-- book:cmd test --suite concept -->
 
 ## See Also
 

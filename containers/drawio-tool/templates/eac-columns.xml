@@ -1,0 +1,151 @@
+<mxfile host="drawio-tool" agent="drawio-tool (Claude)" version="1.0">
+  <diagram name="Column Layout" id="eac-columns">
+    <mxGraphModel dx="1426" dy="758" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" background="#CFCFCF" shadow="1">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title -->
+        <mxCell id="title" value="Multi-Column Diagram"
+                style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontFamily=Lucida Console;fontStyle=1;fontSize=24;"
+                vertex="1" parent="1">
+          <mxGeometry x="400" y="20" width="400" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Column 1: Lead Time -->
+        <mxCell id="col1-container" value=""
+                style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;opacity=30;"
+                vertex="1" parent="1">
+          <mxGeometry x="30" y="80" width="220" height="280" as="geometry"/>
+        </mxCell>
+        <mxCell id="col1-header" value="LEAD TIME"
+                style="rounded=1;whiteSpace=wrap;html=1;fillColor=#6c8ebf;strokeColor=#6c8ebf;fontColor=#ffffff;fontFamily=Lucida Console;fontStyle=1;fontSize=12;"
+                vertex="1" parent="1">
+          <mxGeometry x="40" y="90" width="120" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="col1-content" value="&lt;b&gt;Definition:&lt;/b&gt;&lt;br&gt;Time from commit to production&lt;br&gt;&lt;br&gt;&lt;b&gt;Elite:&lt;/b&gt; &lt; 1 hour&lt;br&gt;&lt;b&gt;High:&lt;/b&gt; 1 day - 1 week&lt;br&gt;&lt;b&gt;Medium:&lt;/b&gt; 1 week - 1 month&lt;br&gt;&lt;b&gt;Low:&lt;/b&gt; &gt; 1 month"
+                style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=1;fontFamily=Lucida Console;fontSize=10;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;"
+                vertex="1" parent="1">
+          <mxGeometry x="45" y="130" width="190" height="150" as="geometry"/>
+        </mxCell>
+
+        <!-- Column 2: Deploy Frequency -->
+        <mxCell id="col2-container" value=""
+                style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;opacity=30;"
+                vertex="1" parent="1">
+          <mxGeometry x="270" y="80" width="220" height="280" as="geometry"/>
+        </mxCell>
+        <mxCell id="col2-header" value="DEPLOY FREQ"
+                style="rounded=1;whiteSpace=wrap;html=1;fillColor=#82b366;strokeColor=#82b366;fontColor=#ffffff;fontFamily=Lucida Console;fontStyle=1;fontSize=12;"
+                vertex="1" parent="1">
+          <mxGeometry x="280" y="90" width="130" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="col2-content" value="&lt;b&gt;Definition:&lt;/b&gt;&lt;br&gt;How often code deploys&lt;br&gt;&lt;br&gt;&lt;b&gt;Elite:&lt;/b&gt; Multiple/day&lt;br&gt;&lt;b&gt;High:&lt;/b&gt; Daily to weekly&lt;br&gt;&lt;b&gt;Medium:&lt;/b&gt; Weekly to monthly&lt;br&gt;&lt;b&gt;Low:&lt;/b&gt; &gt; monthly"
+                style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=1;fontFamily=Lucida Console;fontSize=10;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;"
+                vertex="1" parent="1">
+          <mxGeometry x="285" y="130" width="190" height="150" as="geometry"/>
+        </mxCell>
+
+        <!-- Column 3: Change Failure -->
+        <mxCell id="col3-container" value=""
+                style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;opacity=30;"
+                vertex="1" parent="1">
+          <mxGeometry x="510" y="80" width="220" height="280" as="geometry"/>
+        </mxCell>
+        <mxCell id="col3-header" value="CHANGE FAIL %"
+                style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b85450;strokeColor=#b85450;fontColor=#ffffff;fontFamily=Lucida Console;fontStyle=1;fontSize=12;"
+                vertex="1" parent="1">
+          <mxGeometry x="520" y="90" width="140" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="col3-content" value="&lt;b&gt;Definition:&lt;/b&gt;&lt;br&gt;% of deployments causing failure&lt;br&gt;&lt;br&gt;&lt;b&gt;Elite:&lt;/b&gt; 0-15%&lt;br&gt;&lt;b&gt;High:&lt;/b&gt; 16-30%&lt;br&gt;&lt;b&gt;Medium:&lt;/b&gt; 16-30%&lt;br&gt;&lt;b&gt;Low:&lt;/b&gt; &gt; 30%"
+                style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=1;fontFamily=Lucida Console;fontSize=10;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;"
+                vertex="1" parent="1">
+          <mxGeometry x="525" y="130" width="190" height="150" as="geometry"/>
+        </mxCell>
+
+        <!-- Column 4: MTTR -->
+        <mxCell id="col4-container" value=""
+                style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=2;opacity=30;"
+                vertex="1" parent="1">
+          <mxGeometry x="750" y="80" width="220" height="280" as="geometry"/>
+        </mxCell>
+        <mxCell id="col4-header" value="MTTR"
+                style="rounded=1;whiteSpace=wrap;html=1;fillColor=#9673a6;strokeColor=#9673a6;fontColor=#ffffff;fontFamily=Lucida Console;fontStyle=1;fontSize=12;"
+                vertex="1" parent="1">
+          <mxGeometry x="760" y="90" width="70" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="col4-content" value="&lt;b&gt;Definition:&lt;/b&gt;&lt;br&gt;Time to restore service&lt;br&gt;&lt;br&gt;&lt;b&gt;Elite:&lt;/b&gt; &lt; 1 hour&lt;br&gt;&lt;b&gt;High:&lt;/b&gt; &lt; 1 day&lt;br&gt;&lt;b&gt;Medium:&lt;/b&gt; 1 day - 1 week&lt;br&gt;&lt;b&gt;Low:&lt;/b&gt; &gt; 1 week"
+                style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=1;fontFamily=Lucida Console;fontSize=10;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;"
+                vertex="1" parent="1">
+          <mxGeometry x="765" y="130" width="190" height="150" as="geometry"/>
+        </mxCell>
+
+        <!-- Relationships Section -->
+        <mxCell id="rel-container" value=""
+                style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=2;opacity=30;"
+                vertex="1" parent="1">
+          <mxGeometry x="30" y="390" width="940" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel-header" value="RELATIONSHIPS"
+                style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d6b656;strokeColor=#d6b656;fontColor=#ffffff;fontFamily=Lucida Console;fontStyle=1;fontSize=12;"
+                vertex="1" parent="1">
+          <mxGeometry x="40" y="400" width="140" height="25" as="geometry"/>
+        </mxCell>
+
+        <!-- Relationship arrows -->
+        <mxCell id="rel-arrow-1" value=""
+                style="endArrow=classic;startArrow=classic;html=1;rounded=0;strokeWidth=2;strokeColor=#d6b656;"
+                edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="140" y="460" as="sourcePoint"/>
+            <mxPoint x="380" y="460" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rel-label-1" value="Higher frequency → Lower lead time"
+                style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontFamily=Lucida Console;fontSize=10;"
+                vertex="1" parent="1">
+          <mxGeometry x="150" y="440" width="220" height="20" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="rel-arrow-2" value=""
+                style="endArrow=classic;startArrow=classic;html=1;rounded=0;strokeWidth=2;strokeColor=#d6b656;"
+                edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="620" y="460" as="sourcePoint"/>
+            <mxPoint x="860" y="460" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rel-label-2" value="Lower failure rate → Lower MTTR"
+                style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontFamily=Lucida Console;fontSize=10;"
+                vertex="1" parent="1">
+          <mxGeometry x="630" y="440" width="220" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- Legend Box -->
+        <mxCell id="legend-box" value=""
+                style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;strokeWidth=1;"
+                vertex="1" parent="1">
+          <mxGeometry x="30" y="510" width="200" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend-title" value="Legend"
+                style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontFamily=Lucida Console;fontStyle=1;fontSize=12;"
+                vertex="1" parent="1">
+          <mxGeometry x="40" y="515" width="80" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend-text" value="DORA = DevOps Research&lt;br&gt;and Assessment&lt;br&gt;Metrics for software delivery"
+                style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontFamily=Lucida Console;fontSize=10;"
+                vertex="1" parent="1">
+          <mxGeometry x="45" y="540" width="180" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Key Insight -->
+        <mxCell id="insight" value="Key Insight: Elite performers excel at all four metrics simultaneously"
+                style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=2;fontFamily=Lucida Console;fontStyle=1;fontSize=11;align=center;"
+                vertex="1" parent="1">
+          <mxGeometry x="260" y="540" width="450" height="30" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

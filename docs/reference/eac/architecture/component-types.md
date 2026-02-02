@@ -16,7 +16,7 @@ modules:
   - moniker: eac-commands
     name: EAC Command Implementations
     components:
-      go: go/eac/commands       # Go component
+      go: go/cli/eac       # Go component
       specs: null               # Gherkin specs (uses default path)
       design: null              # Structurizr design (uses default path)
 ```
@@ -383,7 +383,7 @@ When a component just needs a root path:
 
 ```yaml
 components:
-  go: go/eac/core
+  go: go/core
   typescript: typescript/vscode-ext
 ```
 
@@ -404,7 +404,7 @@ Override default file patterns when needed:
 ```yaml
 components:
   go:
-    root: go/eac/core
+    root: go/core
     patterns:
       source: ["**/*.go"]
       tests: ["**/*_test.go"]
@@ -450,7 +450,7 @@ component-types:
 
 ### 2. Create Build Handler
 
-Implement a handler in `go/eac/commands/impl/build/builders/`:
+Implement a handler in `go/cli/eac/impl/build/builders/`:
 
 ```go
 type PythonHandler struct{}
@@ -476,7 +476,7 @@ func init() {
 
 ### 4. Add Test Runner (Optional)
 
-Implement a runner in `go/eac/commands/impl/test/runners/` if the component type has specific test tooling.
+Implement a runner in `go/cli/eac/impl/test/runners/` if the component type has specific test tooling.
 
 ---
 

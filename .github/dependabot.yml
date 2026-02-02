@@ -13,9 +13,9 @@ updates:
       - "dependencies"
       - "github-actions"
 
-  # Go modules - go/r2r/cli
+  # Go modules - go/cli/r2r
   - package-ecosystem: "gomod"
-    directory: "/go/r2r/cli"
+    directory: "/go/cli/r2r"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -25,9 +25,9 @@ updates:
       - "dependencies"
       - "go"
 
-  # Go modules - go/eac/commands
+  # Go modules - go/cli/eac
   - package-ecosystem: "gomod"
-    directory: "/go/eac/commands"
+    directory: "/go/cli/eac"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -37,9 +37,9 @@ updates:
       - "dependencies"
       - "go"
 
-  # Go modules - go/eac/core
+  # Go modules - go/core
   - package-ecosystem: "gomod"
-    directory: "/go/eac/core"
+    directory: "/go/core"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -49,9 +49,9 @@ updates:
       - "dependencies"
       - "go"
 
-  # Go modules - go/eac/specs
+  # Go modules - go/clibase
   - package-ecosystem: "gomod"
-    directory: "/go/eac/specs"
+    directory: "/go/clibase"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -61,11 +61,21 @@ updates:
       - "dependencies"
       - "go"
 
-  # ext-eac is a Docker-based extension (no Go module to track)
-
-  # Go modules - go/eac/mcp/commands
+  # Go modules - go/godog
   - package-ecosystem: "gomod"
-    directory: "/go/eac/mcp/commands"
+    directory: "/go/godog"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "go"
+
+  # Go modules - go/mcp/commands
+  - package-ecosystem: "gomod"
+    directory: "/go/mcp/commands"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -77,7 +87,7 @@ updates:
 
   # npm - VSCode extension
   - package-ecosystem: "npm"
-    directory: "/typescript/vscode-ext-commit"
+    directory: "/typescript/vscode-commit"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -103,9 +113,9 @@ updates:
       - "dependencies"
       - "docker"
 
-  # Docker - mkdocs-site container (python base image)
+  # Docker - site-render-tool container (python base image)
   - package-ecosystem: "docker"
-    directory: "/containers/mkdocs-site"
+    directory: "/containers/site-render-tool"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -115,9 +125,9 @@ updates:
       - "dependencies"
       - "docker"
 
-  # Docker - mkdocs-pdf container (python base image)
+  # Docker - pdf-render-tool container (python base image)
   - package-ecosystem: "docker"
-    directory: "/containers/mkdocs-pdf"
+    directory: "/containers/pdf-render-tool"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -127,9 +137,9 @@ updates:
       - "dependencies"
       - "docker"
 
-  # Docker - mermaid-cli container (node base image)
+  # Docker - mermaid-tool container (node base image)
   - package-ecosystem: "docker"
-    directory: "/containers/mermaid-cli"
+    directory: "/containers/mermaid-tool"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -139,9 +149,9 @@ updates:
       - "dependencies"
       - "docker"
 
-  # npm - mermaid-cli container
+  # npm - mermaid-tool container
   - package-ecosystem: "npm"
-    directory: "/containers/mermaid-cli"
+    directory: "/containers/mermaid-tool"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -155,9 +165,9 @@ updates:
   # Containers - Python dependencies (pip)
   # ============================================================================
 
-  # Python - mkdocs-site container
+  # Python - site-render-tool container
   - package-ecosystem: "pip"
-    directory: "/containers/mkdocs-site"
+    directory: "/containers/site-render-tool"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -167,9 +177,9 @@ updates:
       - "dependencies"
       - "python"
 
-  # Python - mkdocs-pdf container
+  # Python - pdf-render-tool container
   - package-ecosystem: "pip"
-    directory: "/containers/mkdocs-pdf"
+    directory: "/containers/pdf-render-tool"
     schedule:
       interval: "weekly"
       day: "monday"

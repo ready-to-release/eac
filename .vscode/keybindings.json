@@ -16,7 +16,7 @@
   },
   {
     "key": "ctrl+shift+c ctrl+shift+o",
-    "command": "vscode-ext-commit.showOutput",
+    "command": "vscode-commit.showOutput",
     "when": "!terminalFocus"
   }
 ]

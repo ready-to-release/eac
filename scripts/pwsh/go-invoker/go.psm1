@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    PowerShell module for running commands from go/eac/commands/
+    PowerShell module for running commands from go/cli/eac/
 
 .DESCRIPTION
     This module provides the 'Invoke-GoSrcCommand' function (exported as 'run')
@@ -44,10 +44,10 @@ function Get-CommandStructure {
     }
 
     # Cache miss - fetch from commands binary (or build it)
-    $commandsPath = Join-Path $Script:RepoRoot "go/eac/commands"
-    $commandsBinary = Join-Path $Script:RepoRoot "out/tools/commands.exe"
+    $commandsPath = Join-Path $Script:RepoRoot "go/cli/eac"
+    $commandsBinary = Join-Path $Script:RepoRoot "out/tools/eac.exe"
 
-    # Build commands.exe if missing
+    # Build eac.exe if missing
     if (-not (Test-Path $commandsBinary)) {
         Write-Host "   Building commands executable..." -ForegroundColor DarkGray
         # Ensure output directory exists
@@ -88,7 +88,7 @@ function Get-CommandStructure {
 
 <#
 .SYNOPSIS
-    Run a command from go/eac/commands/
+    Run a command from go/cli/eac/
 
 .DESCRIPTION
     Executes a Go command with intelligent tab completion for nested commands.
@@ -169,7 +169,7 @@ function Invoke-GoSrcCommand {
         return
     }
 
-    $commandsPath = Join-Path $Script:RepoRoot "go/eac/commands"
+    $commandsPath = Join-Path $Script:RepoRoot "go/cli/eac"
 
     # Save the original working directory as an environment variable
     # so Go commands can resolve relative paths correctly
@@ -193,7 +193,7 @@ function Invoke-GoSrcCommand {
 
 <#
 .SYNOPSIS
-    Get available Go commands from go/eac/commands/
+    Get available Go commands from go/cli/eac/
 
 .DESCRIPTION
     Returns command information using the structured get commands output

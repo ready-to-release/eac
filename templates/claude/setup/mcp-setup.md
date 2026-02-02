@@ -33,7 +33,7 @@ Model Context Protocol (MCP) allows Claude to interact with external tools and d
   "mcpServers": {
     "commands": {
       "command": "go",
-      "args": ["run", "./go/eac/mcp/commands/main.go"],
+      "args": ["run", "./go/mcp/commands/main.go"],
       "env": {
         "EAC_USE_DIRECT_BINARY": "true"
       }
@@ -59,7 +59,7 @@ Model Context Protocol (MCP) allows Claude to interact with external tools and d
 echo '{"jsonrpc":"2.0","id":1,"method":"initialize"}' | r2r eac mcp commands
 
 # Test development mode
-EAC_USE_DIRECT_BINARY=true go run ./go/eac/mcp/commands/main.go
+EAC_USE_DIRECT_BINARY=true go run ./go/mcp/commands/main.go
 ```
 
 ## Troubleshooting
@@ -71,7 +71,7 @@ EAC_USE_DIRECT_BINARY=true go run ./go/eac/mcp/commands/main.go
 - **Solution**: Use development mode (no Docker overhead)
 
 **Issue**: Binary not found
-- **Solution**: Build binary (`go build -o out/tools/commands ./go/eac/commands`)
+- **Solution**: Build binary (`go build -o out/tools/eac ./go/cli/eac`)
 
 ## Available MCP Commands
 

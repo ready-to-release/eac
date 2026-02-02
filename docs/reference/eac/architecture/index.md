@@ -85,8 +85,8 @@ See [Modules Reference](../modules/index.md) for detailed module documentation.
 | **docs**              | MkDocs documentation site generation               |
 | **templates**         | Template management for specs, reports, AI prompts |
 | **r2r-installer**     | Cross-platform CLI installer                       |
-| **implicit-r2r-cli**  | Devbox CLI configuration                           |
-| **vscode-ext-commit** | VS Code commit message extension                   |
+| **implicit-cli**      | Devbox CLI configuration                           |
+| **vscode-commit**     | VS Code commit message extension                   |
 
 See [Modules Reference](../modules/index.md) for details on all modules.
 
@@ -201,7 +201,7 @@ See [Creating Commands](./creating-commands.md) for command development guide.
 
 **Purpose**: AI provider integrations for automated workflows
 
-**Location**: Integrated within eac-commands at `go/eac/commands/internal/ai/`
+**Location**: Integrated within eac-commands at `go/adapters/ai/`
 
 ### Supported Providers
 
@@ -231,9 +231,9 @@ api_key_env: ANTHROPIC_API_KEY
 
 **Implementation**:
 
-- Provider implementations: `go/eac/commands/internal/ai/providers/`
-- Configuration loading: `go/eac/commands/internal/ai/config_loader.go`
-- AI execution: `go/eac/commands/internal/ai/executor.go`
+- Provider implementations: `go/adapters/ai/providers/`
+- Configuration loading: `go/adapters/ai/config_loader.go`
+- AI execution: `go/adapters/ai/executor.go`
 
 AI commands use a **retry strategy** with exponential backoff for rate limiting and transient errors.
 

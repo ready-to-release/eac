@@ -22,7 +22,7 @@ modules:
       - eac-core
 ```
 
-**Source**: `go/eac/core/contracts/types.go`
+**Source**: `go/core/contracts/types.go`
 
 ```go
 type BaseContract struct {
@@ -50,15 +50,15 @@ Registry (holds all ModuleContract)
 
 | File                                                | Purpose                                       |
 | --------------------------------------------------- | --------------------------------------------- |
-| `go/eac/core/contracts/types.go`                    | `BaseContract.DependsOn` - YAML parsing       |
-| `go/eac/core/contracts/modules/types.go`            | `ModuleContract.GetDependencies()` - accessor |
-| `go/eac/core/repository/dependencies.go`            | Graph operations, execution order             |
-| `go/eac/commands/impl/validate/module-hierarchy.go` | Cycle detection                               |
-| `go/eac/commands/impl/release/await-deps.go`        | Release-time CI verification                  |
+| `go/core/contracts/types.go`                    | `BaseContract.DependsOn` - YAML parsing       |
+| `go/core/contracts/modules/types.go`            | `ModuleContract.GetDependencies()` - accessor |
+| `go/core/repository/dependencies.go`            | Graph operations, execution order             |
+| `go/cli/eac/impl/validate/module-hierarchy.go` | Cycle detection                               |
+| `go/cli/eac/impl/release/await-deps.go`        | Release-time CI verification                  |
 
 ## Execution Order Algorithm
 
-**File**: `go/eac/core/repository/dependencies.go`
+**File**: `go/core/repository/dependencies.go`
 
 Uses **Kahn's topological sort**:
 
@@ -78,7 +78,7 @@ type ExecutionPlan struct {
 
 ## Cycle Detection
 
-**File**: `go/eac/commands/impl/validate/module-hierarchy.go`
+**File**: `go/cli/eac/impl/validate/module-hierarchy.go`
 
 Uses **DFS with recursion stack**:
 
@@ -188,7 +188,7 @@ release-ext-eac.yaml
 
 ### await-deps Command
 
-**File**: `go/eac/commands/impl/release/await-deps.go`
+**File**: `go/cli/eac/impl/release/await-deps.go`
 
 ```text
 release await-deps <module> [--timeout N] [--skip-static]
@@ -233,7 +233,7 @@ eac-core (root)
     │        │          │
     │        ├──► docs ──► books
     │        │
-    │        └──► implicit-r2r-cli
+    │        └──► implicit-cli
     │
     ├──► r2r-cli ──┬──► ext-eac (also depends on eac-commands)
     │              │

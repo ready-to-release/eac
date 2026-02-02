@@ -1,0 +1,69 @@
+# Security Scanner Definitions
+# Each scanner is a Docker container that performs security analysis.
+# Scanners are referenced by ID in policies.yml.
+
+scanners:
+  # Trivy - Comprehensive vulnerability scanner
+  # https://github.com/aquasecurity/trivy
+
+  trivy-sbom:
+    category: sbom
+    image: ghcr.io/aquasecurity/trivy
+    tag: "0.68.2"
+    command: ["fs", "--format", "cyclonedx", "--output", "/output/sbom.json", "/target"]
+    timeout: 10m
+    description: "Generate Software Bill of Materials (SBOM) in CycloneDX format"
+
+  trivy-vuln:
+    category: vuln
+    image: ghcr.io/aquasecurity/trivy
+    tag: "0.68.2"
+    command: ["fs", "--scanners", "vuln", "--format", "json", "--output", "/output/vuln.json", "/target"]
+    timeout: 15m
+    description: "Scan for known vulnerabilities in dependencies"
+
+  trivy-secrets:
+    category: secrets
+    image: ghcr.io/aquasecurity/trivy
+    tag: "0.68.2"
+    command: ["fs", "--scanners", "secret", "--format", "json", "--output", "/output/secrets.json", "/target"]
+    timeout: 10m
+    description: "Detect hardcoded secrets and credentials"
+
+  trivy-iac:
+    category: iac
+    image: ghcr.io/aquasecurity/trivy
+    tag: "0.68.2"
+    command: ["fs", "--scanners", "config", "--format", "json", "--output", "/output/iac.json", "/target"]
+    timeout: 15m
+    description: "Scan Infrastructure as Code for misconfigurations"
+
+  trivy-compliance:
+    category: compliance
+    image: ghcr.io/aquasecurity/trivy
+    tag: "0.68.2"
+    command: ["fs", "--scanners", "compliance", "--compliance", "k8s-cis", "--format", "json", "--output", "/output/compliance.json", "/target"]
+    timeout: 20m
+    description: "Check compliance against CIS benchmarks"
+
+  # Semgrep - Static Application Security Testing
+  # https://github.com/semgrep/semgrep
+
+  semgrep:
+    category: sast
+    image: semgrep/semgrep
+    tag: "1.145.1"
+    command: ["scan", "--config", "auto", "--json", "-o", "/output/sast.json", "/target"]
+    timeout: 20m
+    description: "Static Application Security Testing (SAST) with Semgrep"
+
+  # OWASP ZAP - Dynamic Application Security Testing
+  # https://www.zaproxy.org/
+
+  zap:
+    category: dast
+    image: zaproxy/zap-stable
+    tag: "2.14.0"
+    command: ["zap-baseline.py", "-t", "${TARGET_URL}", "-J", "/output/zap.json"]
+    timeout: 30m
+    description: "Dynamic Application Security Testing (DAST) with OWASP ZAP"

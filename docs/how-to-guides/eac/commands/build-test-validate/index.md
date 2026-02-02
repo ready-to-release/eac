@@ -72,14 +72,14 @@ Optimize your pipeline with:
 
 ```bash
 # Build a module
-go run ./go/eac/commands build <module-name>
+go run ./go/cli/eac build <module-name>
 
 # Run tests
-go run ./go/eac/commands test <module-name>
+go run ./go/cli/eac test <module-name>
 
 # Validate everything
-go run ./go/eac/commands validate
+go run ./go/cli/eac validate
 
 # Security scan
-go run ./go/eac/commands scan
+go run ./go/cli/eac scan
 ```

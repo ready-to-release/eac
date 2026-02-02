@@ -66,9 +66,9 @@ func TestPathHelperVersions(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"EACCorePath", EACCorePath, "repository.schema.json", "eac-core/0.1.0/repository.schema.json"},
-		{"EACCoreDefaultPath", EACCoreDefaultPath, "repository.yml", "eac-core/0.1.0/defaults/repository.yml"},
-		{"EACDocsPath", EACDocsPath, "manifest.schema.json", "eac-docs/0.1.0/manifest.schema.json"},
+		{"EACCorePath", EACCorePath, "repository.schema.json", "core/0.1.0/repository.schema.json"},
+		{"EACCoreDefaultPath", EACCoreDefaultPath, "repository.yml", "core/0.1.0/defaults/repository.yml"},
+		{"EACDocsPath", EACDocsPath, "manifest.schema.json", "docs/0.1.0/manifest.schema.json"},
 		{"R2RCLIPath", R2RCLIPath, "command.ebnf", "r2r-cli/0.1.0/command.ebnf"},
 	}
 

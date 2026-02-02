@@ -84,10 +84,10 @@ runs:
       with:
         go-version: ${{ inputs.go-version }}
         cache-dependency-path: |
-          go/eac/commands/go.sum
-          go/eac/core/go.sum
-          go/eac/specs/go.sum
-          go/eac/mcp/commands/go.sum
+          go/cli/eac/go.sum
+          go/core/go.sum
+          go/godog/go.sum
+          go/mcp/commands/go.sum
 
     - name: Check if Node.js is already available
       id: node-check

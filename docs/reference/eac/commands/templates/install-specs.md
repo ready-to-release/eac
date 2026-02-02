@@ -1,6 +1,6 @@
-# templates install-specs
+# templates install specs
 
-<!-- book:cmd templates install-specs -->
+<!-- book:cmd templates install specs -->
 
 ## Details
 

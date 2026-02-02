@@ -229,7 +229,7 @@ if ($eacRepoNormalized -eq $targetRepoNormalized) {
     Write-ColorOutput "  .\scripts\pwsh\importer.ps1" "White"
     Write-ColorOutput ""
     Write-ColorOutput "Then load commands with:" "Yellow"
-    Write-ColorOutput "  `$env:R2R_COMMANDS_PATH = '.\go\eac\commands'" "White"
+    Write-ColorOutput "  `$env:R2R_COMMANDS_PATH = '.\go\cli\eac'" "White"
     Write-ColorOutput "  r2r load-commands" "White"
     Write-ColorOutput ""
     exit 1

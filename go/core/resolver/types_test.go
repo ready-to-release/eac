@@ -1,0 +1,295 @@
+package resolver
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestScanPhaseConfig_GetToolForCategory(t *testing.T) {
+	cfg := &ScanPhaseConfig{
+		SBOM:    "trivy-sbom",
+		Vuln:    "trivy-vuln",
+		Secrets: "trivy-secrets",
+		SAST:    "semgrep",
+	}
+
+	tests := []struct {
+		category ScanCategory
+		expected string
+	}{
+		{ScanCategorySBOM, "trivy-sbom"},
+		{ScanCategoryVuln, "trivy-vuln"},
+		{ScanCategorySecrets, "trivy-secrets"},
+		{ScanCategorySAST, "semgrep"},
+		{ScanCategoryIAC, ""},
+		{ScanCategoryCompliance, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(string(tt.category), func(t *testing.T) {
+			result := cfg.GetToolForCategory(tt.category)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestScanPhaseConfig_GetToolForCategory_Nil(t *testing.T) {
+	var cfg *ScanPhaseConfig
+	assert.Empty(t, cfg.GetToolForCategory(ScanCategorySBOM))
+}
+
+func TestScanPhaseConfig_GetDefaultCategories(t *testing.T) {
+	tests := []struct {
+		name     string
+		cfg      *ScanPhaseConfig
+		expected []ScanCategory
+	}{
+		{
+			name:     "nil config uses global defaults",
+			cfg:      nil,
+			expected: DefaultScanCategories(),
+		},
+		{
+			name:     "empty default uses global defaults",
+			cfg:      &ScanPhaseConfig{},
+			expected: DefaultScanCategories(),
+		},
+		{
+			name: "custom defaults",
+			cfg: &ScanPhaseConfig{
+				Default: []ScanCategory{ScanCategorySBOM, ScanCategorySAST},
+			},
+			expected: []ScanCategory{ScanCategorySBOM, ScanCategorySAST},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.cfg.GetDefaultCategories()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestComponentTools_GetBuildTool(t *testing.T) {
+	tests := []struct {
+		name     string
+		ct       *ComponentTools
+		expected string
+	}{
+		{
+			name:     "nil config",
+			ct:       nil,
+			expected: "",
+		},
+		{
+			name: "new build field",
+			ct: &ComponentTools{
+				Build:   "go",
+				Builder: "old-go",
+			},
+			expected: "go",
+		},
+		{
+			name: "legacy builder field",
+			ct: &ComponentTools{
+				Builder: "go",
+			},
+			expected: "go",
+		},
+		{
+			name:     "no build tool",
+			ct:       &ComponentTools{},
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.ct.GetBuildTool()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestComponentTools_GetLintTool(t *testing.T) {
+	tests := []struct {
+		name     string
+		ct       *ComponentTools
+		expected string
+	}{
+		{
+			name:     "nil config",
+			ct:       nil,
+			expected: "",
+		},
+		{
+			name: "new lint field",
+			ct: &ComponentTools{
+				Lint:   "golangci-lint",
+				Linter: "old-lint",
+			},
+			expected: "golangci-lint",
+		},
+		{
+			name: "legacy linter field",
+			ct: &ComponentTools{
+				Linter: "golangci-lint",
+			},
+			expected: "golangci-lint",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.ct.GetLintTool()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestScanToolMapping_GetToolForCategory(t *testing.T) {
+	mapping := &ScanToolMapping{
+		SBOM:    "custom-sbom",
+		Vuln:    "custom-vuln",
+		Secrets: "custom-secrets",
+	}
+
+	assert.Equal(t, "custom-sbom", mapping.GetToolForCategory(ScanCategorySBOM))
+	assert.Equal(t, "custom-vuln", mapping.GetToolForCategory(ScanCategoryVuln))
+	assert.Equal(t, "custom-secrets", mapping.GetToolForCategory(ScanCategorySecrets))
+	assert.Empty(t, mapping.GetToolForCategory(ScanCategorySAST))
+
+	var nilMapping *ScanToolMapping
+	assert.Empty(t, nilMapping.GetToolForCategory(ScanCategorySBOM))
+}
+
+func TestExtendedComponentType_GetBuildTool(t *testing.T) {
+	tests := []struct {
+		name     string
+		ect      *ExtendedComponentType
+		expected string
+	}{
+		{
+			name:     "nil config",
+			ect:      nil,
+			expected: "",
+		},
+		{
+			name: "new tools.build field",
+			ect: &ExtendedComponentType{
+				Builder: "old-go",
+				Tools: &ToolsConfig{
+					Build: &PhaseConfig{Default: "go"},
+				},
+			},
+			expected: "go",
+		},
+		{
+			name: "legacy builder field",
+			ect: &ExtendedComponentType{
+				Builder: "go",
+			},
+			expected: "go",
+		},
+		{
+			name: "tools set but no build config",
+			ect: &ExtendedComponentType{
+				Builder: "go",
+				Tools:   &ToolsConfig{},
+			},
+			expected: "go",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.ect.GetBuildTool()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestExtendedComponentType_GetScanCategories(t *testing.T) {
+	tests := []struct {
+		name     string
+		ect      *ExtendedComponentType
+		expected []ScanCategory
+	}{
+		{
+			name:     "nil config",
+			ect:      nil,
+			expected: nil,
+		},
+		{
+			name: "new tools.scan.default",
+			ect: &ExtendedComponentType{
+				Scanners: []string{"sbom", "vuln"},
+				Tools: &ToolsConfig{
+					Scan: &ScanPhaseConfig{
+						Default: []ScanCategory{ScanCategorySAST},
+					},
+				},
+			},
+			expected: []ScanCategory{ScanCategorySAST},
+		},
+		{
+			name: "legacy scanners field",
+			ect: &ExtendedComponentType{
+				Scanners: []string{"sbom", "vuln", "secrets"},
+			},
+			expected: []ScanCategory{ScanCategorySBOM, ScanCategoryVuln, ScanCategorySecrets},
+		},
+		{
+			name:     "no scanners",
+			ect:      &ExtendedComponentType{},
+			expected: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.ect.GetScanCategories()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestExtendedComponentType_HasBuilder(t *testing.T) {
+	assert.True(t, (&ExtendedComponentType{Builder: "go"}).HasBuilder())
+	assert.True(t, (&ExtendedComponentType{
+		Tools: &ToolsConfig{Build: &PhaseConfig{Default: "go"}},
+	}).HasBuilder())
+	assert.False(t, (&ExtendedComponentType{}).HasBuilder())
+	assert.False(t, (*ExtendedComponentType)(nil).HasBuilder())
+}
+
+func TestExtendedComponentType_IsScannable(t *testing.T) {
+	assert.True(t, (&ExtendedComponentType{Scanners: []string{"sbom"}}).IsScannable())
+	assert.True(t, (&ExtendedComponentType{
+		Tools: &ToolsConfig{Scan: &ScanPhaseConfig{Default: []ScanCategory{ScanCategorySBOM}}},
+	}).IsScannable())
+	assert.False(t, (&ExtendedComponentType{}).IsScannable())
+	assert.False(t, (*ExtendedComponentType)(nil).IsScannable())
+}
+
+func TestAllScanCategories(t *testing.T) {
+	cats := AllScanCategories()
+	assert.Len(t, cats, 7)
+	assert.Contains(t, cats, ScanCategorySBOM)
+	assert.Contains(t, cats, ScanCategoryVuln)
+	assert.Contains(t, cats, ScanCategorySecrets)
+	assert.Contains(t, cats, ScanCategorySAST)
+	assert.Contains(t, cats, ScanCategoryIAC)
+	assert.Contains(t, cats, ScanCategoryCompliance)
+	assert.Contains(t, cats, ScanCategoryZAP)
+}
+
+func TestDefaultScanCategories(t *testing.T) {
+	cats := DefaultScanCategories()
+	assert.Len(t, cats, 3)
+	assert.Contains(t, cats, ScanCategorySBOM)
+	assert.Contains(t, cats, ScanCategoryVuln)
+	assert.Contains(t, cats, ScanCategorySecrets)
+}

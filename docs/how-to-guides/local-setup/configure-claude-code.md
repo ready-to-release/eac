@@ -219,7 +219,7 @@ The repository has an MCP server providing commands like:
 **Fallback**: If MCP not connected, all commands work via CLI:
 
 ```bash
-go run ./go/eac/commands <command> [args]
+go run ./go/cli/eac <command> [args]
 ```
 
 ### MCP Server Execution Modes
@@ -253,7 +253,7 @@ The MCP server supports two execution modes:
   "mcpServers": {
     "commands": {
       "command": "go",
-      "args": ["run", "./go/eac/mcp/commands/main.go"],
+      "args": ["run", "./go/mcp/commands/main.go"],
       "env": {
         "EAC_USE_DIRECT_BINARY": "true"
       }
@@ -366,9 +366,9 @@ Before marking work complete:
 **Solution**:
 
 1. Verify config: Check `.mcp.json`
-2. Test server: `go run ./go/eac/mcp/commands/main.go < /dev/null`
+2. Test server: `go run ./go/mcp/commands/main.go < /dev/null`
 3. Check Claude Code MCP logs
-4. **Fallback**: Use direct CLI: `go run ./go/eac/commands <command>`
+4. **Fallback**: Use direct CLI: `go run ./go/cli/eac <command>`
 
 ### code-simplifier Not Running
 

@@ -217,10 +217,10 @@ Next Steps:
 ### Example 2: Selective Review (Specific Files)
 
 ```text
-User: Run comprehensive review on go/eac/commands/release/*.go
+User: Run comprehensive review on go/cli/eac/impl/release/*.go
 Assistant: Starting targeted comprehensive review...
 
-Scope: go/eac/commands/release/*.go (8 files)
+Scope: go/cli/eac/impl/release/*.go (8 files)
 [Same phases as above, but focused on specified files]
 ```
 

@@ -130,7 +130,7 @@ Changes affecting a single module go in that module's changelog:
 **Belongs in module changelog:**
 
 ```markdown
-# go/eac/commands/CHANGELOG.md
+# go/cli/eac/CHANGELOG.md
 
 ### Added
 - feat(commands): add new build command

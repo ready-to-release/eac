@@ -2,4 +2,4 @@ modules:
   - moniker: test-module
     name: Test Module
     components:
-      dotnet: dotnet/test-module
+      dotnet: src/test-module

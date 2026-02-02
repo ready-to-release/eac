@@ -107,9 +107,15 @@ jobs:
           HTML_COUNT=$(find "$SITE_DIR" -name "*.html" | wc -l | tr -d ' ')
           TOTAL_SIZE=$(du -sh "$SITE_DIR" | cut -f1)
 
+          # Check for PDF artifacts
+          PDF_COUNT=$(find "out/build/docs" -maxdepth 2 -name "*.pdf" -type f 2>/dev/null | wc -l | tr -d ' ')
+          PDF_SIZE=$(du -sh "out/build/docs" 2>/dev/null | cut -f1 || echo "0")
+
           echo "file_count=$FILE_COUNT" >> $GITHUB_OUTPUT
           echo "html_count=$HTML_COUNT" >> $GITHUB_OUTPUT
           echo "total_size=$TOTAL_SIZE" >> $GITHUB_OUTPUT
+          echo "pdf_count=$PDF_COUNT" >> $GITHUB_OUTPUT
+          echo "pdf_size=$PDF_SIZE" >> $GITHUB_OUTPUT
 
       # ==========================================================================
       # Deploy HTML Site to GitHub Pages
@@ -132,11 +138,40 @@ jobs:
       - name: Create release notes
         id: release_notes
         run: |
-          cat << 'EOF' > release_notes.md
+          COMMANDS="${{ steps.commands.outputs.commands-path }}"
+          TAG_NAME="${{ needs.approve.outputs.tag_name }}"
+          REPO="${{ github.repository }}"
+
+          cat > release_notes.md << 'HEADER'
           ## Documentation Site Release
 
           The HTML documentation site has been deployed to GitHub Pages.
 
+          HEADER
+
+          # Add PDF books section if PDFs exist
+          PDF_COUNT=$(find out/build/docs -maxdepth 2 -name "*.pdf" -type f 2>/dev/null | wc -l)
+          if [ "$PDF_COUNT" -gt 0 ]; then
+            cat >> release_notes.md << 'PDF_HEADER'
+          ### PDF Books
+
+          PDF documentation books for offline reading:
+
+          PDF_HEADER
+
+            # Generate list items dynamically from actual PDFs
+            for pdf in $(find out/build/docs -maxdepth 2 -name "*.pdf" -type f); do
+              FILENAME=$(basename "$pdf")
+              SIZE=$(du -h "$pdf" | cut -f1)
+              DESC=$(${COMMANDS:?COMMANDS not set} get book-description "$FILENAME" --default "Documentation")
+              DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${TAG_NAME}/${FILENAME}"
+              echo "- **${FILENAME}** - ${DESC} (${SIZE}) - [Download](${DOWNLOAD_URL})" >> release_notes.md
+            done
+
+            echo "" >> release_notes.md
+          fi
+
+          cat >> release_notes.md << EOF
           ### Release Information
 
           - **Version**: ${{ needs.approve.outputs.version }}
@@ -144,7 +179,7 @@ jobs:
           - **Site URL**: ${{ steps.deployment.outputs.page_url }}
 
           ---
-          🤖 Generated with [GitHub Actions](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          🤖 Generated with [GitHub Actions](https://github.com/${REPO}/actions/runs/${{ github.run_id }})
           EOF
 
           cat release_notes.md
@@ -162,12 +197,25 @@ jobs:
             exit 0
           fi
 
+          # Collect PDF files if they exist
+          PDF_FILES=$(find out/build/docs -maxdepth 2 -name "*.pdf" -type f 2>/dev/null | tr '\n' ' ')
+
           # Create tag and release together (tag created on success only)
-          gh release create "$TAG_NAME" \
-            --title "Documentation Site $VERSION" \
-            --notes-file release_notes.md \
-            --target "${{ github.sha }}" \
-            --latest=false
+          if [ -n "$PDF_FILES" ]; then
+            echo "Including PDF files in release: $PDF_FILES"
+            gh release create "$TAG_NAME" \
+              --title "Documentation Site $VERSION" \
+              --notes-file release_notes.md \
+              --target "${{ github.sha }}" \
+              --latest=false \
+              $PDF_FILES
+          else
+            gh release create "$TAG_NAME" \
+              --title "Documentation Site $VERSION" \
+              --notes-file release_notes.md \
+              --target "${{ github.sha }}" \
+              --latest=false
+          fi
 
           echo "✅ Release created successfully"
         env:

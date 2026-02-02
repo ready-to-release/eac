@@ -44,7 +44,7 @@ Active Constraints:
 
 MCP Server Status:
 Commands Server (mcp__commands__*):
-  [✅ CONNECTED - XX tools available / ⚠️ NOT CONNECTED - Using fallback: go run ./go/eac/commands]
+  [✅ CONNECTED - XX tools available / ⚠️ NOT CONNECTED - Using fallback: go run ./go/cli/eac]
 
 GitHub Server (mcp__github__*):
   [✅ CONNECTED - XX tools available / ⚠️ NOT CONNECTED - Using fallback: gh CLI]
@@ -52,10 +52,10 @@ GitHub Server (mcp__github__*):
 [If Commands Server NOT CONNECTED, include this troubleshooting section:]
 ⚠️ Commands MCP Troubleshooting:
 - Server configured in: .mcp.json
-- Commands server: go run ./go/eac/mcp/commands/main.go
-- Verify: go run ./go/eac/mcp/commands/main.go < /dev/null
+- Commands server: go run ./go/mcp/commands/main.go
+- Verify: go run ./go/mcp/commands/main.go < /dev/null
 - Check Claude Code MCP server logs for errors
-- Fallback: Commands operations will use direct CLI commands (go run ./go/eac/commands)
+- Fallback: Commands operations will use direct CLI commands (go run ./go/cli/eac)
 
 [If GitHub Server NOT CONNECTED, include this troubleshooting section:]
 ⚠️ GitHub MCP Troubleshooting:
@@ -83,7 +83,7 @@ This project uses **MCP (Model Context Protocol) servers** to provide specialize
 
 **Status**: ✅ Active (when connected)
 **Type**: Local Go application
-**Configuration**: `.mcp.json` → `go run ./go/eac/mcp/commands/main.go`
+**Configuration**: `.mcp.json` → `go run ./go/mcp/commands/main.go`
 
 **Available Commands** (100+):
 
@@ -96,7 +96,7 @@ This project uses **MCP (Model Context Protocol) servers** to provide specialize
 - **Release Management**: `release-*`, `get-changelog`, `get-release-notes`
 - **Security**: `scan`, `scan-zap`, `validate-risk-catalog`, `validate-risk-profile`
 
-See full list: Use MCP `show-valid-commands` or `go run ./go/eac/commands show valid-commands`
+See full list: Use MCP `show-valid-commands` or `go run ./go/cli/eac show valid-commands`
 
 ### MCP Execution Policy
 
@@ -107,7 +107,7 @@ See full list: Use MCP `show-valid-commands` or `go run ./go/eac/commands show v
 
 **When NOT CONNECTED** (fallback mode):
 
-- ✅ Use direct CLI: `go run ./go/eac/commands <command> [args]`
+- ✅ Use direct CLI: `go run ./go/cli/eac <command> [args]`
 - All functionality remains available
 
 **IMPORTANT during boot**: DO NOT call data-heavy commands like `get-files`, `get-modules`, `get-dependencies` during initialization. Only verify MCP availability, don't invoke large data operations.
@@ -181,7 +181,7 @@ Each Claude session works independently. The user handles all git coordination.
 
 ### File Organization
 
-- **Modules**: All Go modules are placed in the `go/` directory (`go/eac/` for EAC modules, `go/r2r/` for R2R CLI)
+- **Modules**: All Go modules are placed in the `go/` directory (`go/cli/eac` for EAC CLI, `go/cli/r2r` for R2R CLI, `go/core` for shared libraries, `go/adapters/*` for external integrations)
 - **Result files**: DO NOT create result markdown files except in:
   - Module directories (as identified by module contracts or `get-files`)
   - `/out/<my-result-file>.md` for intermediate/temporary files
@@ -441,7 +441,7 @@ All code must meet these standards before completion:
 
 ## Additional Resources
 
-- **Full command reference**: Use MCP `show-valid-commands` or `go run ./go/eac/commands help`
+- **Full command reference**: Use MCP `show-valid-commands` or `go run ./go/cli/eac help`
 - **How-to guide**: See `docs/how-to-guides/eac/claude-code-setup.md` for detailed workflows
 - **Module structure**: Use MCP `show-modules` to see all modules
 - **Dependencies**: Use MCP `show-dependencies <module>` to see dependency graph

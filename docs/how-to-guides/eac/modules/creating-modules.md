@@ -110,7 +110,7 @@ modules:
         specs:
           - "specs/my-service/**/*.feature"
         design: "specs/my-service/.design/workspace.dsl"
-        test_impl: "go/eac/specs/impl/my-service"
+        test_impl: "go/specs/impl/my-service"
 ```
 
 ## Component Types
@@ -199,7 +199,7 @@ files:
     specs:
       - "specs/my-service/**/*.feature"    # Gherkin specs
     design: "specs/my-service/.design/workspace.dsl"  # Architecture
-    test_impl: "go/eac/specs/impl/my-service"  # Step definitions
+    test_impl: "go/specs/impl/my-service"  # Step definitions
     other:
       - "docs/my-service/**/*.md"          # Documentation
 ```

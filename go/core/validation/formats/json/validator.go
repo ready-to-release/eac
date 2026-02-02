@@ -1,0 +1,29 @@
+// Package json provides JSON schema validation utilities.
+package json
+
+import (
+	"github.com/ready-to-release/eac/go/core/validation"
+)
+
+// Validator validates JSON against JSON Schema.
+type Validator struct {
+	schemaPath string
+}
+
+// NewValidator creates a new JSON schema validator.
+func NewValidator(schemaPath string) (*Validator, error) {
+	return &Validator{
+		schemaPath: schemaPath,
+	}, nil
+}
+
+// Validate validates JSON output against schema.
+func (v *Validator) Validate(_ string, _ map[string]interface{}) []validation.ValidationError {
+	// Implementation will be moved from domain.JSONSchemaValidator
+	return nil
+}
+
+// VerifyImplementation checks if the validator is properly configured.
+func (v *Validator) VerifyImplementation() []validation.ValidationError {
+	return nil
+}

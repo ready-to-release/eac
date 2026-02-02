@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# go.sh - Bash module for running Go commands from go/eac/commands/
+# go.sh - Bash module for running Go commands from go/cli/eac/
 #
 # Functions:
 #   invoke_go_src_command <command-name> [args...]  - Run a Go command
@@ -18,7 +18,7 @@ fi
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
 #
-# invoke_go_src_command - Run a command from go/eac/commands/
+# invoke_go_src_command - Run a command from go/cli/eac/
 #
 # Usage: invoke_go_src_command <command> [subcommand] [args...]
 # Examples:
@@ -42,7 +42,7 @@ invoke_go_src_command() {
         return 1
     fi
 
-    local commands_path="$REPO_ROOT/go/eac/commands"
+    local commands_path="$REPO_ROOT/go/cli/eac"
 
     # Run the command via dispatcher (let Go handle command validation)
     # Pass all arguments - Go will figure out what's command vs args
@@ -53,14 +53,14 @@ invoke_go_src_command() {
 }
 
 #
-# get_go_src_commands - Get available Go commands from go/eac/commands/
+# get_go_src_commands - Get available Go commands from go/cli/eac/
 #
 # Usage: get_go_src_commands
 #
 # Returns: List of command names (one per line)
 #
 get_go_src_commands() {
-    local commands_path="$REPO_ROOT/go/eac/commands"
+    local commands_path="$REPO_ROOT/go/cli/eac"
 
     if [ ! -d "$commands_path" ]; then
         return 0

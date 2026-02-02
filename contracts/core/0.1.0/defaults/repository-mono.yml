@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=../repository.schema.json
+# Type-specific defaults for monorepo architecture
+# Merged on top of base repository.yml defaults when repository.type = "mono"
+#
+# Merge order: base defaults → type-specific defaults → user config
+# User values always win over these defaults.
+
+repository:
+  # Monorepos typically have longer-lived feature branches due to
+  # cross-module changes and more complex integration requirements
+  max_branch_age_days: 7
+
+  # PR configuration optimized for monorepos
+  pr:
+    # Squash is preferred in monorepos to keep history clean
+    # across many modules
+    merge_strategy: squash
+    delete_branch_on_merge: true
+
+  # Monorepos often benefit from stricter versioning during early
+  # development to maintain stability across dependent modules
+  versioning:
+    constraint: patch-only
