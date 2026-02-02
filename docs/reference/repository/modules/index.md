@@ -13,24 +13,24 @@ The C4 model provides four levels of abstraction:
 
 ## Core Modules
 
-| Module                                                                 | Description                  |
-| ---------------------------------------------------------------------- | ---------------------------- |
-| [eac-commands](../../eac/modules/eac-commands.md)         | CLI command implementations  |
-| [eac-core](../../eac/modules/eac-core.md)                 | Core libraries and contracts |
-| [eac-mcp-commands](../../eac/modules/eac-mcp-commands.md) | MCP server integration       |
-| [r2r-cli](../../r2r/architecture/module.md)                            | Ready-to-Release CLI         |
+| Module                                        | Description                  |
+| --------------------------------------------- | ---------------------------- |
+| [eac-cli](../../eac/modules/eac-cli.md)       | CLI command implementations  |
+| [core](../../eac/modules/core.md)             | Core libraries and contracts |
+| [mcp-server](../../eac/modules/mcp-server.md) | MCP server integration       |
+| [r2r-cli](../../r2r/architecture/module.md)   | Ready-to-Release CLI         |
 
 ## Infrastructure Modules
 
-| Module                                               | Description                         |
-| ---------------------------------------------------- | ----------------------------------- |
+| Module                                  | Description                         |
+| --------------------------------------- | ----------------------------------- |
 | [ext-eac](../../eac/modules/ext-eac.md) | Docker extension image              |
-| [repository](repository.md)                          | Repository contracts and validation |
+| [repository](repository.md)             | Repository contracts and validation |
 
 ## Supporting Modules
 
-| Module                                                                   | Description                          |
-| ------------------------------------------------------------------------ | ------------------------------------ |
+| Module                                           | Description                          |
+| ------------------------------------------------ | ------------------------------------ |
 | [Supporting Modules](../../eac/modules/index.md) | docs, templates, r2r-installer, etc. |
 
 ## Viewing Diagrams Interactively
@@ -39,7 +39,7 @@ For interactive exploration of architecture diagrams:
 
 ```bash
 # Start Structurizr Lite for a specific module
-r2r eac serve-design --module eac-commands
+r2r eac serve-design --module eac-cli
 ```
 
 ## Design File Locations
@@ -59,5 +59,5 @@ When workspace.dsl files change, regenerate the cached SVGs:
 r2r eac update structurizr
 
 # Update specific module
-r2r eac update structurizr --module eac-commands
+r2r eac update structurizr --module eac-cli
 ```

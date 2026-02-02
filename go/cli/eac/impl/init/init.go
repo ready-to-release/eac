@@ -21,10 +21,13 @@
 // Long:
 // Long: Examples:
 // Long:   init                                                      # Initialize project with config files
+// Long:   init --scan                                               # Scan repository and auto-generate config
+// Long:   init --scan --ai-provider claude-api                      # Scan with AI-enhanced config generation
 // Long:   init --ai-provider claude-api                             # Initialize and configure AI provider
 // Long:   init --ai-provider claude-api --ai-token sk-ant-xxx       # Configure with actual token
 // Long:   init --copy-templates                                     # Also copy system template files
 // Long:   init --force                                              # Overwrite existing config files
+// Flag.scan: type=bool, shorthand=s, default=false, usage=Scan repository to auto-detect modules and generate configuration, required=false
 // Flag.ai-provider: type=string, shorthand=a, usage=AI provider to configure (optional), required=false, completion=claude-api,openai,gemini
 // Flag.ai-token: type=string, usage=AI provider API token (creates personal config if provided), required=false
 // Flag.git-token: type=string, usage=Git provider API token for repository operations (supports GitHub, GitLab, etc.) (optional), required=false
@@ -103,6 +106,7 @@ func Init() int {
 	}
 
 	// Parse flags to get all options
+	scan := false
 	aiProvider := ""
 	aiToken := ""
 	gitToken := ""
@@ -113,6 +117,8 @@ func Init() int {
 	for i := 2; i < len(os.Args); i++ {
 		arg := os.Args[i]
 		switch arg {
+		case "--scan", "-s":
+			scan = true
 		case "--ai-provider", "-a":
 			if i+1 < len(os.Args) {
 				aiProvider = os.Args[i+1]
@@ -130,7 +136,7 @@ func Init() int {
 			}
 		case "--copy-templates":
 			copyTemplates = true
-		case "--force":
+		case "--force", "-f":
 			force = true
 		case "--debug", "-d":
 			debug = true
@@ -194,20 +200,29 @@ func Init() int {
 		log.Info("")
 	}
 
-	// Generate config files with calculated defaults
-	if err := generateRepositoryYML(workspaceRoot, eacDir); err != nil {
-		log.Error(fmt.Sprintf("Error generating repository.yml: %v", err))
-		return 1
-	}
+	// Generate config files
+	if scan {
+		// Scan repository and generate config
+		if err := generateWithScan(workspaceRoot, eacDir, aiProvider); err != nil {
+			log.Error(fmt.Sprintf("Error generating configuration from scan: %v", err))
+			return 1
+		}
+	} else {
+		// Generate config files with calculated defaults
+		if err := generateRepositoryYML(workspaceRoot, eacDir); err != nil {
+			log.Error(fmt.Sprintf("Error generating repository.yml: %v", err))
+			return 1
+		}
 
-	if err := generateBooksYML(eacDir); err != nil {
-		log.Error(fmt.Sprintf("Error generating books.yml: %v", err))
-		return 1
-	}
+		if err := generateBooksYML(eacDir); err != nil {
+			log.Error(fmt.Sprintf("Error generating books.yml: %v", err))
+			return 1
+		}
 
-	if err := generateEnvironmentsYML(eacDir); err != nil {
-		log.Error(fmt.Sprintf("Error generating environments.yml: %v", err))
-		return 1
+		if err := generateEnvironmentsYML(eacDir); err != nil {
+			log.Error(fmt.Sprintf("Error generating environments.yml: %v", err))
+			return 1
+		}
 	}
 
 	// Copy system templates if requested
@@ -710,4 +725,114 @@ environments: []
 
 	log.Info("   ✓ Generated environments.yml")
 	return nil
+}
+
+// generateWithScan scans the repository and generates configuration files.
+func generateWithScan(workspaceRoot, eacDir, aiProvider string) error {
+	log.Info("")
+	log.Info("🔍 Scanning repository structure...")
+
+	// Run scanner
+	scanResult, err := ScanRepository(workspaceRoot)
+	if err != nil {
+		return fmt.Errorf("failed to scan repository: %w", err)
+	}
+
+	// Report scan results
+	if len(scanResult.Modules) == 0 {
+		log.Warn("   ⚠️  No modules detected")
+		log.Info("   Falling back to manual configuration")
+
+		// Generate empty templates
+		if err := generateBooksYML(eacDir); err != nil {
+			return err
+		}
+		if err := generateEnvironmentsYML(eacDir); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	log.Info(fmt.Sprintf("   ✓ Detected: %d module(s)", len(scanResult.Modules)))
+	for _, mod := range scanResult.Modules {
+		log.Info(fmt.Sprintf("      - %s (%s) at %s", mod.Name, mod.Language, mod.Root))
+	}
+
+	// Generate repository.yml
+	log.Info("")
+	var repoYAML string
+	if aiProvider != "" {
+		log.Info(fmt.Sprintf("🤖 Generating configuration with AI (%s)...", aiProvider))
+		repoYAML, err = GenerateConfig(workspaceRoot, scanResult, aiProvider)
+		if err != nil {
+			log.Warn(fmt.Sprintf("   ⚠️  AI generation failed: %v", err))
+			log.Info("   Falling back to rule-based generation")
+			repoYAML = generateRepositoryYAMLFromScan(scanResult)
+		} else {
+			log.Info("   ✓ AI-enhanced configuration generated")
+		}
+	} else {
+		log.Info("🔧 Generating configuration (rule-based)...")
+		repoYAML = generateRepositoryYAMLFromScan(scanResult)
+		log.Info("   ✓ Configuration generated")
+		log.Info("")
+		log.Info("   💡 Tip: Use --ai-provider claude-api for enhanced descriptions")
+	}
+
+	// Write repository.yml
+	repoPath := filepath.Join(eacDir, "repository.yml")
+	if err := os.WriteFile(repoPath, []byte(repoYAML), 0o644); err != nil {
+		return fmt.Errorf("failed to write repository.yml: %w", err)
+	}
+	log.Info(fmt.Sprintf("   ✓ Generated %s", repoPath))
+
+	// Generate other config files
+	if err := generateBooksYML(eacDir); err != nil {
+		return err
+	}
+	if err := generateEnvironmentsYML(eacDir); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// generateRepositoryYAMLFromScan creates a basic repository.yml from scan results (rule-based).
+func generateRepositoryYAMLFromScan(scanResult *ScanResult) string {
+	var buf strings.Builder
+
+	buf.WriteString("# EAC Repository Configuration\n")
+	buf.WriteString("# Auto-generated from repository scan\n")
+	buf.WriteString("# Generated by: r2r eac init --scan\n")
+	buf.WriteString("\nrepository:\n")
+	buf.WriteString("  name: project\n")
+	buf.WriteString("  description: Auto-detected multi-module repository\n")
+	buf.WriteString("\nmodules:\n")
+
+	for _, mod := range scanResult.Modules {
+		buf.WriteString(fmt.Sprintf("  - moniker: %s\n", strings.ToLower(strings.ReplaceAll(mod.Name, "_", "-"))))
+		buf.WriteString(fmt.Sprintf("    description: %s module\n", mod.Language))
+		buf.WriteString("    components:\n")
+		buf.WriteString(fmt.Sprintf("      %s:\n", mod.Language))
+		buf.WriteString(fmt.Sprintf("        root: %s\n", mod.Root))
+
+		// Add type based on language defaults
+		switch mod.Language {
+		case "go":
+			buf.WriteString("        type: service\n")
+		case "python":
+			buf.WriteString("        type: service\n")
+		case "rust":
+			buf.WriteString("        type: binary\n")
+		case "typescript", "javascript":
+			buf.WriteString("        type: app\n")
+		case "dotnet":
+			buf.WriteString("        type: webapi\n")
+		case "java":
+			buf.WriteString("        type: service\n")
+		}
+		buf.WriteString("\n")
+	}
+
+	return buf.String()
 }

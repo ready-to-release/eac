@@ -161,9 +161,30 @@ func (b *HandlerToolBridge) buildContainerConfig(tool *ToolDefinition, tc *ToolC
 		}
 
 		// Apply weight multiplier to resources
-		cpus := float64(tool.Resources.CPUs) * float64(weight)
-		memory := scaleMemory(tool.Resources.Memory, weight)
-		shmSize := scaleMemory(tool.Resources.ShmSize, weight)
+		// If tool specifies CPUs as 1 (base unit), scale by weight
+		// If tool specifies CPUs > 1, use as explicit limit (no scaling)
+		// If tool doesn't specify CPUs (0), use weight directly
+		cpus := float64(tool.Resources.CPUs)
+		if tool.Resources.CPUs == 0 {
+			cpus = float64(weight)
+		} else if tool.Resources.CPUs == 1 {
+			// Base unit - scale by weight
+			cpus = float64(weight)
+		}
+		// else: explicit limit > 1, use as-is
+
+		// Memory scaling: only scale base unit values (<= 2g)
+		// High memory values (>= 4g) are explicit limits (e.g., Playwright/Chromium needs)
+		memory := tool.Resources.Memory
+		if shouldScaleMemory(memory) {
+			memory = scaleMemory(memory, weight)
+		}
+
+		// ShmSize scaling: same logic as memory
+		shmSize := tool.Resources.ShmSize
+		if shouldScaleMemory(shmSize) {
+			shmSize = scaleMemory(shmSize, weight)
+		}
 
 		config.Resources = &container.ResourceConfig{
 			CPUs:    cpus,
@@ -173,6 +194,78 @@ func (b *HandlerToolBridge) buildContainerConfig(tool *ToolDefinition, tc *ToolC
 	}
 
 	return config
+}
+
+// shouldScaleMemory determines if a memory value should be scaled by weight.
+// Memory values >= 4g are considered explicit limits and should not be scaled.
+// Memory values < 4g are considered base units and should be scaled.
+func shouldScaleMemory(mem string) bool {
+	if mem == "" {
+		return false
+	}
+
+	mem = strings.TrimSpace(mem)
+	if len(mem) == 0 {
+		return false
+	}
+
+	// Parse memory to bytes for comparison
+	bytes := parseMemoryToBytes(mem)
+	if bytes < 0 {
+		// Parsing failed, don't scale
+		return false
+	}
+
+	// Don't scale if >= 4GB (explicit limit)
+	fourGB := int64(4 * 1024 * 1024 * 1024)
+	return bytes < fourGB
+}
+
+// parseMemoryToBytes converts a memory string (e.g., "2g", "512m") to bytes.
+// Returns -1 if parsing fails.
+func parseMemoryToBytes(mem string) int64 {
+	mem = strings.TrimSpace(mem)
+	if len(mem) == 0 {
+		return -1
+	}
+
+	// Extract numeric part and unit
+	var value int64
+	var unit string
+	for i, c := range mem {
+		if c < '0' || c > '9' {
+			var err error
+			value, err = parseInt64(mem[:i])
+			if err != nil {
+				return -1
+			}
+			unit = strings.ToLower(mem[i:])
+			break
+		}
+		if i == len(mem)-1 {
+			// All digits, assume bytes
+			var err error
+			value, err = parseInt64(mem)
+			if err != nil {
+				return -1
+			}
+			return value
+		}
+	}
+
+	// Convert to bytes based on unit
+	switch unit {
+	case "g", "gb":
+		return value * 1024 * 1024 * 1024
+	case "m", "mb":
+		return value * 1024 * 1024
+	case "k", "kb":
+		return value * 1024
+	case "b", "":
+		return value
+	default:
+		return -1
+	}
 }
 
 // scaleMemory multiplies a memory string (e.g., "2g", "512m") by a weight factor.

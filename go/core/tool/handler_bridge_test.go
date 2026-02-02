@@ -317,6 +317,145 @@ func TestBuildContainerConfig_NoWeight(t *testing.T) {
 	}
 }
 
+func TestBuildContainerConfig_ExplicitCPULimit(t *testing.T) {
+	bridge := NewHandlerToolBridge()
+
+	// Test case: tool with explicit CPU limit (like pdf-render-tool)
+	// Tool has cpus: 4, component has weight: 4
+	// Should NOT multiply: 4 CPUs used directly (not 4 * 4 = 16)
+	tool := &ToolDefinition{
+		ID:        "pdf-render-tool",
+		Type:      ToolTypeContainer,
+		LocalPath: "containers/pdf-render-tool",
+		Resources: &ToolResources{
+			CPUs:   4,    // Explicit limit
+			Memory: "8g", // Will be scaled by weight
+		},
+	}
+
+	tc := &ToolContext{
+		WorkspaceRoot: "/repo",
+		Weight:        4, // Component weight from pdf-render type
+	}
+
+	config := bridge.buildContainerConfig(tool, tc)
+
+	if config.Resources == nil {
+		t.Fatal("Resources should not be nil")
+	}
+
+	// CPUs should be 4 (explicit limit, not scaled)
+	if config.Resources.CPUs != 4 {
+		t.Errorf("CPUs = %f, want 4 (explicit limit, not multiplied by weight)", config.Resources.CPUs)
+	}
+
+	// Memory should NOT be scaled (>= 4g is explicit limit): 8g stays 8g
+	if config.Resources.Memory != "8g" {
+		t.Errorf("Memory = %q, want %q (explicit limit >= 4g, not scaled)", config.Resources.Memory, "8g")
+	}
+}
+
+func TestShouldScaleMemory(t *testing.T) {
+	tests := []struct {
+		name string
+		mem  string
+		want bool
+	}{
+		{
+			name: "base unit - 2g",
+			mem:  "2g",
+			want: true,
+		},
+		{
+			name: "base unit - 1g",
+			mem:  "1g",
+			want: true,
+		},
+		{
+			name: "base unit - 512m",
+			mem:  "512m",
+			want: true,
+		},
+		{
+			name: "explicit limit - 4g",
+			mem:  "4g",
+			want: false, // >= 4g is explicit
+		},
+		{
+			name: "explicit limit - 8g",
+			mem:  "8g",
+			want: false, // >= 4g is explicit
+		},
+		{
+			name: "explicit limit - 16g",
+			mem:  "16g",
+			want: false,
+		},
+		{
+			name: "empty",
+			mem:  "",
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := shouldScaleMemory(tt.mem)
+			if got != tt.want {
+				t.Errorf("shouldScaleMemory(%q) = %v, want %v", tt.mem, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestParseMemoryToBytes(t *testing.T) {
+	tests := []struct {
+		name string
+		mem  string
+		want int64
+	}{
+		{
+			name: "gigabytes",
+			mem:  "8g",
+			want: 8 * 1024 * 1024 * 1024,
+		},
+		{
+			name: "megabytes",
+			mem:  "512m",
+			want: 512 * 1024 * 1024,
+		},
+		{
+			name: "4gb boundary",
+			mem:  "4g",
+			want: 4 * 1024 * 1024 * 1024,
+		},
+		{
+			name: "just under 4gb",
+			mem:  "3999m",
+			want: 3999 * 1024 * 1024,
+		},
+		{
+			name: "empty",
+			mem:  "",
+			want: -1,
+		},
+		{
+			name: "invalid",
+			mem:  "invalid",
+			want: -1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := parseMemoryToBytes(tt.mem)
+			if got != tt.want {
+				t.Errorf("parseMemoryToBytes(%q) = %d, want %d", tt.mem, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestScaleMemory(t *testing.T) {
 	tests := []struct {
 		name   string
