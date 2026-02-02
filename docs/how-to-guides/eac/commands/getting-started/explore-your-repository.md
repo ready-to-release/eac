@@ -22,7 +22,7 @@ Discover what modules, files, and dependencies exist in your repository using sh
 ### 1. List All Modules
 
 ```bash
-r2r eac show modules
+eac show modules
 ```
 
 **What happens**: Displays table of all modules with their types, paths, and file counts
@@ -30,7 +30,7 @@ r2r eac show modules
 ### 2. View Module Dependencies
 
 ```bash
-r2r eac show dependencies
+eac show dependencies
 ```
 
 **What happens**: Shows dependency graph with which modules depend on others
@@ -38,7 +38,7 @@ r2r eac show dependencies
 ### 3. See File Ownership
 
 ```bash
-r2r eac show files
+eac show files
 ```
 
 **What happens**: Lists all files and which module owns each file
@@ -46,7 +46,7 @@ r2r eac show files
 ### 4. Check Module Types
 
 ```bash
-r2r eac show component-types
+eac show component-types
 ```
 
 **What happens**: Groups modules by type (go-cli, go-library, mkdocs-site, etc.)
@@ -57,16 +57,16 @@ You're new to the codebase and want to understand its structure:
 
 ```bash
 # See what modules exist
-r2r eac show modules
+eac show modules
 
 # Find dependencies for a specific module
-r2r eac show dependencies | grep src-auth
+eac show dependencies | grep src-auth
 
 # See what files belong to src-auth
-r2r eac show files | grep src-auth
+eac show files | grep src-auth
 
 # Get machine-readable output for scripting
-r2r eac get modules | jq '.modules[] | select(.moniker == "src-auth")'
+eac get modules | jq '.modules[] | select(.moniker == "src-auth")'
 ```
 
 ## Common Issues

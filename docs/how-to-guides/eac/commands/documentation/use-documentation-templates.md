@@ -47,8 +47,8 @@ templates install docs
 # Install AI prompt templates
 templates install ai
 # Using templates from templates/ai
-# Installing templates to .r2r/eac/templates/ai...
-# ✓ AI prompt templates installed successfully to .r2r/eac/templates/ai
+# Installing templates to .eac/templates/ai...
+# ✓ AI prompt templates installed successfully to .eac/templates/ai
 
 # Install report templates
 templates install reports
@@ -88,7 +88,7 @@ templates install claude
 | Template Type   | Default Destination       | Custom Path Support   |
 | --------------- | ------------------------- | --------------------- |
 | docs            | `docs/reference/`         | Yes (`--destination`) |
-| ai              | `.r2r/eac/templates/ai/`  | No                    |
+| ai              | `.eac/templates/ai/`  | No                    |
 | reports         | `.r2r/templates/reports/` | No                    |
 | specs           | `specs/risk-controls/`    | No                    |
 | claude          | `.claude/`                | No                    |

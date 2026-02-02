@@ -327,23 +327,23 @@ While CodeQL is the primary security workflow, the repository uses additional se
 
 ```bash
 # Vulnerability scanning
-r2r eac scan --scanner vuln
+eac scan --scanner vuln
 
 # Secret detection
-r2r eac scan --scanner secrets
+eac scan --scanner secrets
 
 # IaC scanning
-r2r eac scan --scanner iac
+eac scan --scanner iac
 
 # Compliance checking
-r2r eac scan --scanner compliance
+eac scan --scanner compliance
 ```
 
 ### Semgrep SAST
 
 ```bash
 # Static analysis
-r2r eac scan --scanner sast
+eac scan --scanner sast
 ```
 
 See module documentation for detailed scan command specifications.

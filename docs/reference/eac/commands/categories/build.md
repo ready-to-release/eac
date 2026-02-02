@@ -25,20 +25,20 @@ They handle dependency resolution, incremental builds, and cross-platform compil
 
 ```bash
 # Build all modules
-r2r eac build
+eac build
 
 # Build specific module
-r2r eac build eac-commands
+eac build eac-commands
 
 # Build multiple modules
-r2r eac build eac-core r2r-cli
+eac build eac-core r2r-cli
 ```
 
 ### Building with Dependencies
 
 ```bash
 # Build module and its dependencies
-r2r eac build r2r-cli
+eac build r2r-cli
 # Automatically builds: eac-core → eac-commands → r2r-cli
 ```
 
@@ -46,10 +46,10 @@ r2r eac build r2r-cli
 
 ```bash
 # Build all modules in CI
-r2r eac build
+eac build
 
 # Build changed modules only
-r2r eac build $(r2r eac get changed-modules | jq -r '.changed_modules[]')
+eac build $(eac get changed-modules | jq -r '.changed_modules[]')
 ```
 
 ## See Also

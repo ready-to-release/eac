@@ -44,7 +44,7 @@ To manually delete a released package, use the GitHub UI or `gh api` directly.
 
 ## Configuration
 
-Configure in `.r2r/eac/repository.yml`:
+Configure in `.eac/repository.yml`:
 
 ```yaml
 registries:

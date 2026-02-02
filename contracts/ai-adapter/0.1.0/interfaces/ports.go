@@ -34,7 +34,7 @@ type Executor interface {
 // ProviderFactory creates a provider from configuration.
 type ProviderFactory func(config *Config) (Provider, error)
 
-// Config represents AI and Git configuration loaded from .r2r/eac/ai-provider.yml.
+// Config represents AI and Git configuration loaded from .eac/ai-provider.yml.
 type Config struct {
 	AI  AIConfig  `yaml:"ai"`  // AI provider configuration
 	Git GitConfig `yaml:"git"` // Git provider configuration

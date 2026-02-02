@@ -15,7 +15,7 @@ The following diagram illustrates how dependencies flow from Trunk through Deplo
 ## YAML Schema
 
 ```yaml
-# In .r2r/eac/repository.yml
+# In .eac/repository.yml
 modules:
   - moniker: eac-commands
     depends_on:

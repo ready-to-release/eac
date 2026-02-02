@@ -262,7 +262,7 @@ Use the validation command to see effective tags:
 
 ```bash
 # Show effective tags for all scenarios
-r2r eac validate specs --show-effective-tags
+eac validate specs --show-effective-tags
 
 # Example output:
 # Feature: auth_api-service
@@ -285,8 +285,8 @@ For validation commands, see:
 
 **[Specifications Reference](../../../reference/eac/specifications/index.md)** - Commands including:
 
-- `r2r eac validate specs` - Validate Gherkin syntax
-- `r2r eac validate specs --show-effective-tags` - Show calculated tags
+- `eac validate specs` - Validate Gherkin syntax
+- `eac validate specs --show-effective-tags` - Show calculated tags
 
 ---
 

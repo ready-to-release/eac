@@ -367,7 +367,7 @@ Available modules:
 Try:
   - Check module name spelling
   - List all modules: show modules
-  - View module contracts: cat .r2r/eac/repository.yml`,
+  - View module contracts: cat .eac/repository.yml`,
 				strings.Join(invalidModules, ", "),
 				strings.Join(availableModules, ", "))
 		}
@@ -434,7 +434,7 @@ func generateMarkdownReport(config *AssessConfig, results []*ModuleAssessmentRes
 }
 
 // loadRiskAssessmentTemplate loads the risk assessment template with fallback logic.
-// Priority 1: Team override (.r2r/eac/templates/reports/risk/risk-assess.md)
+// Priority 1: Team override (.eac/templates/reports/risk/risk-assess.md)
 // Priority 2: System default (templates/reports/risk/risk-assess.md)
 // This follows the same pattern as AI prompt loading (see contracts/ai_loader.go:LoadPrompt).
 func loadRiskAssessmentTemplate(workspaceRoot string) (string, error) {
@@ -449,7 +449,7 @@ func loadRiskAssessmentTemplate(workspaceRoot string) (string, error) {
 	templateFilename := cfg.Repository.Conventions.RiskAssessmentTemplate
 	reportsDir := cfg.Repository.Conventions.TemplateReportsDir
 
-	// Priority 1: Team override (.r2r/eac/templates/reports/<category>/<template>)
+	// Priority 1: Team override (.eac/templates/reports/<category>/<template>)
 	teamOverridePath := filepath.Join(workspaceRoot, paths.R2RDir, paths.EACDir, paths.TemplatesDir, reportsDir, category, templateFilename)
 	if _, err := os.Stat(teamOverridePath); err == nil {
 		return teamOverridePath, nil

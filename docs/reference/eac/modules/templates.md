@@ -13,4 +13,4 @@ Provides template management for specifications, reports, and AI prompts.
 ## Design File
 
 - **Location**: `specs/templates/.design/workspace.dsl`
-- **Interactive**: `r2r eac serve-design --module templates`
+- **Interactive**: `eac serve-design --module templates`

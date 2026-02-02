@@ -87,7 +87,7 @@ docs/assets/.manifest-cache.json
 .structurizr/
 **/.design/workspace.json
 
-# Generated embed files (created by go:generate, source is in .r2r/eac/)
+# Generated embed files (created by go:generate, source is in .eac/)
 go/eac/core/environments/repository/
 
 # Docker
@@ -95,16 +95,17 @@ go/eac/core/environments/repository/
 docker-compose.override.yml
 .vscode/settings.json
 
-# R2R AI configuration and logs
+# R2R CLI configuration and logs
 .r2r/*
 !.r2r/.gitkeep
+!.r2r/r2r-cli.yml
 
-# Personal AI config override (not shared with team)
-.r2r/eac/*.personal*
+# EAC configuration (tracked separately)
+# Personal overrides are gitignored
+.eac/*.personal*
 
-# User can optionally commit .r2r/prompts/ to share customizations with team
-# By default, it's ignored - remove the line below to commit custom prompts
-.r2r/prompts/
+# User can optionally commit prompt customizations
+.eac/prompts/
 nul
 __pycache__/
 main.py

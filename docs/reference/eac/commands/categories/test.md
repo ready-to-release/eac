@@ -53,52 +53,52 @@ suites:
 
 ```bash
 # Test all modules
-r2r eac test
+eac test
 
 # Test specific module
-r2r eac test src-auth
+eac test src-auth
 
 # Test multiple modules
-r2r eac test src-auth src-api
+eac test src-auth src-api
 ```
 
 ### Running Test Suites
 
 ```bash
 # List available suites
-r2r eac test list-suites
+eac test list-suites
 
 # Run specific suite
-r2r eac test suite integration
+eac test suite integration
 
 # Run suite with verbose output
-r2r eac test suite integration --verbose
+eac test suite integration --verbose
 ```
 
 ### Debugging Test Failures
 
 ```bash
 # Run tests and capture failures
-r2r eac test src-auth
+eac test src-auth
 
 # Parse failures for debugging
-r2r eac test debug
+eac test debug
 
 # Show detailed failure information
-r2r eac show test-summary src-auth
+eac show test-summary src-auth
 ```
 
 ### CI/CD Integration
 
 ```bash
 # Run tests in CI (unit + integration for PR, add acceptance for main)
-r2r eac test --suite unit+integration
+eac test --suite unit+integration
 
 # Run specific suite for stage
-r2r eac test --suite acceptance
+eac test --suite acceptance
 
 # Check test results
-r2r eac show test-timings
+eac show test-timings
 ```
 
 ## Test Execution Modes
@@ -108,7 +108,7 @@ r2r eac show test-timings
 Run tests one at a time:
 
 ```bash
-r2r eac test src-auth --sequential
+eac test src-auth --sequential
 ```
 
 **Use when**:
@@ -122,7 +122,7 @@ r2r eac test src-auth --sequential
 Run tests concurrently:
 
 ```bash
-r2r eac test src-auth src-api
+eac test src-auth src-api
 # Runs in parallel by default
 ```
 
@@ -144,7 +144,7 @@ func TestAuthentication(t *testing.T) {
 }
 ```
 
-**Run with**: `r2r eac test <module>`
+**Run with**: `eac test <module>`
 
 ### BDD/Gherkin Tests
 
@@ -158,7 +158,7 @@ Feature: User Authentication
     Then authentication succeeds
 ```
 
-**Run with**: `r2r eac test <module>` (automatically detected)
+**Run with**: `eac test <module>` (automatically detected)
 
 ### Integration Tests
 
@@ -166,7 +166,7 @@ Tests spanning multiple modules:
 
 ```bash
 # Run integration suite
-r2r eac test suite integration
+eac test suite integration
 ```
 
 ## Test Discovery
@@ -202,7 +202,7 @@ suites:
 ### Default Output
 
 ```bash
-r2r eac test src-auth
+eac test src-auth
 
 # Output:
 Testing module: src-auth
@@ -218,7 +218,7 @@ Total time: 2.3s
 ### Verbose Output
 
 ```bash
-r2r eac test src-auth --verbose
+eac test src-auth --verbose
 
 # Shows:
 # - Individual test output
@@ -230,7 +230,7 @@ r2r eac test src-auth --verbose
 ### JSON Output
 
 ```bash
-r2r eac get tests | jq '.'
+eac get tests | jq '.'
 
 # Structured test metadata
 {
@@ -250,23 +250,23 @@ r2r eac get tests | jq '.'
 
 ```bash
 # Show test timing data
-r2r eac show test-timings
+eac show test-timings
 
 # Get slowest tests
-r2r eac get test-timings | jq '[.tests[]] | sort_by(.duration) | reverse | .[0:10]'
+eac get test-timings | jq '[.tests[]] | sort_by(.duration) | reverse | .[0:10]'
 ```
 
 ### Optimizing Test Execution
 
 ```bash
 # Run only fast tests
-r2r eac test suite unit
+eac test suite unit
 
 # Skip slow integration tests
-r2r eac test --exclude-tags @slow
+eac test --exclude-tags @slow
 
 # All suites (parallel is default)
-r2r eac test --suite unit+integration+acceptance
+eac test --suite unit+integration+acceptance
 ```
 
 ## Common Patterns
@@ -275,21 +275,21 @@ r2r eac test --suite unit+integration+acceptance
 
 ```bash
 # Test affected modules
-CHANGED=$(r2r eac get changed-modules | jq -r '.changed_modules[]')
-r2r eac test $CHANGED
+CHANGED=$(eac get changed-modules | jq -r '.changed_modules[]')
+eac test $CHANGED
 ```
 
 ### CI Pipeline Testing
 
 ```bash
 # Full test suite with coverage
-r2r eac test --suite unit+integration+acceptance --coverage
+eac test --suite unit+integration+acceptance --coverage
 
 # Acceptance tests for thorough testing
-r2r eac test --suite acceptance
+eac test --suite acceptance
 
 # Integration tests with coverage
-r2r eac test --suite integration --coverage
+eac test --suite integration --coverage
 ```
 
 ### Test-Driven Development
@@ -297,7 +297,7 @@ r2r eac test --suite integration --coverage
 ```bash
 # Watch and re-run tests
 while true; do
-  r2r eac test src-auth
+  eac test src-auth
   sleep 2
 done
 ```
@@ -327,13 +327,13 @@ Feature: API Authentication
 
 ```bash
 # Run smoke tests only
-r2r eac test --tags @smoke
+eac test --tags @smoke
 
 # Exclude slow tests
-r2r eac test --exclude-tags @slow
+eac test --exclude-tags @slow
 
 # Multiple tags (AND)
-r2r eac test --tags @api,@positive
+eac test --tags @api,@positive
 ```
 
 ## Failure Handling
@@ -343,7 +343,7 @@ r2r eac test --tags @api,@positive
 Stop on first failure:
 
 ```bash
-r2r eac test --fail-fast
+eac test --fail-fast
 ```
 
 ### Collect All Failures
@@ -351,20 +351,20 @@ r2r eac test --fail-fast
 Continue running all tests:
 
 ```bash
-r2r eac test --continue-on-error
+eac test --continue-on-error
 ```
 
 ### Debug Failures
 
 ```bash
 # Parse test output for failures
-r2r eac test debug
+eac test debug
 
 # Show only failures
-r2r eac test src-auth | grep "✗"
+eac test src-auth | grep "✗"
 
 # Get detailed failure report
-r2r eac show test-summary src-auth
+eac show test-summary src-auth
 ```
 
 ## Test Coverage
@@ -373,7 +373,7 @@ r2r eac show test-summary src-auth
 
 ```bash
 # Run with coverage
-r2r eac test src-auth --coverage
+eac test src-auth --coverage
 
 # View coverage report
 go tool cover -html=coverage.out
@@ -383,7 +383,7 @@ go tool cover -html=coverage.out
 
 ```bash
 # Enforce minimum coverage
-r2r eac test --coverage --coverage-threshold 80
+eac test --coverage --coverage-threshold 80
 ```
 
 ## Integration with Other Commands
@@ -392,31 +392,31 @@ r2r eac test --coverage --coverage-threshold 80
 
 ```bash
 # Build before testing
-r2r eac build src-auth && r2r eac test src-auth
+eac build src-auth && eac test src-auth
 ```
 
 ### Test in Clean Environment
 
 ```bash
 # Create workspace for testing
-r2r eac work create test/feature-x
+eac work create test/feature-x
 cd ../work/test-feature-x
 
 # Run tests in isolation
-r2r eac test
+eac test
 ```
 
 ### Validate Before Commit
 
 ```bash
 # Validate changes
-r2r eac validate
+eac validate
 
 # Run tests
-r2r eac test
+eac test
 
 # Commit if passing
-r2r eac work commit --all
+eac work commit --all
 ```
 
 ## Best Practices
@@ -426,40 +426,40 @@ r2r eac work commit --all
 ```bash
 # Test during development
 # After each significant change
-r2r eac test
+eac test
 ```
 
 ### Use Appropriate Granularity
 
 ```bash
 # Development: Test single module
-r2r eac test src-auth
+eac test src-auth
 
 # Pre-commit: Test changed modules
-r2r eac test $(r2r eac get changed-modules | jq -r '.changed_modules[]')
+eac test $(eac get changed-modules | jq -r '.changed_modules[]')
 
 # CI: Test all modules with all suites
-r2r eac test --suite unit+integration+acceptance
+eac test --suite unit+integration+acceptance
 ```
 
 ### Organize with Suites
 
 ```bash
 # Fast feedback with unit tests
-r2r eac test --suite unit
+eac test --suite unit
 
 # Comprehensive validation with all suites
-r2r eac test --suite unit+integration+acceptance
+eac test --suite unit+integration+acceptance
 ```
 
 ### Monitor Performance
 
 ```bash
 # Track test times
-r2r eac show test-timings
+eac show test-timings
 
 # Identify slow tests
-r2r eac get test-timings | jq '[.tests[]] | sort_by(.duration) | reverse'
+eac get test-timings | jq '[.tests[]] | sort_by(.duration) | reverse'
 ```
 
 ## Common Issues
@@ -472,12 +472,12 @@ r2r eac get test-timings | jq '[.tests[]] | sort_by(.duration) | reverse'
 
 ```bash
 # Run tests in Docker (if configured)
-docker run -v $(pwd):/app test-image r2r eac test
+docker run -v $(pwd):/app test-image eac test
 
 # Or use workspace isolation
-r2r eac work create test/investigation
+eac work create test/investigation
 cd ../work/test-investigation
-r2r eac test
+eac test
 ```
 
 ### Flaky Tests
@@ -489,11 +489,11 @@ r2r eac test
 ```bash
 # Run test multiple times
 for i in {1..10}; do
-  r2r eac test src-auth
+  eac test src-auth
 done
 
 # Identify flaky tests
-r2r eac test debug
+eac test debug
 ```
 
 ### Slow Test Suite
@@ -504,13 +504,13 @@ r2r eac test debug
 
 ```bash
 # Find slowest tests
-r2r eac show test-timings
+eac show test-timings
 
 # Run only fast tests during development
-r2r eac test --suite unit
+eac test --suite unit
 
 # Run all suites (parallel is default)
-r2r eac test --suite unit+integration+acceptance
+eac test --suite unit+integration+acceptance
 ```
 
 ### Test Discovery Issues
@@ -521,10 +521,10 @@ r2r eac test --suite unit+integration+acceptance
 
 ```bash
 # Check module configuration
-r2r eac show modules
+eac show modules
 
 # Validate contracts
-r2r eac validate
+eac validate
 ```
 
 ## Command Details
@@ -535,16 +535,16 @@ Execute tests for one or more modules:
 
 ```bash
 # Single module
-r2r eac test src-auth
+eac test src-auth
 
 # Multiple modules
-r2r eac test src-auth src-api
+eac test src-auth src-api
 
 # All modules (no args = all modules)
-r2r eac test
+eac test
 
 # With specific suites and coverage
-r2r eac test src-auth --suite unit+integration --coverage
+eac test src-auth --suite unit+integration --coverage
 ```
 
 ### test suite
@@ -553,13 +553,13 @@ Run tests organized in a suite:
 
 ```bash
 # List available suites
-r2r eac test list-suites
+eac test list-suites
 
 # Run specific suite
-r2r eac test suite integration
+eac test suite integration
 
 # Run with tags
-r2r eac test suite regression --tags @critical
+eac test suite regression --tags @critical
 ```
 
 ### test list-suites
@@ -567,7 +567,7 @@ r2r eac test suite regression --tags @critical
 Display all configured test suites:
 
 ```bash
-r2r eac test list-suites
+eac test list-suites
 
 # Output:
 # Available test suites:
@@ -583,8 +583,8 @@ Parse test output and show failures:
 
 ```bash
 # After running tests
-r2r eac test src-auth
-r2r eac test debug
+eac test src-auth
+eac test debug
 
 # Shows:
 # - Failed test names

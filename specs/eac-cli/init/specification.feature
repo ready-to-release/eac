@@ -8,23 +8,23 @@ Feature: eac-cli_init
     Given I am in a git repository
 
   Rule: Init creates config files with calculated defaults
-    The init command creates the .r2r/eac directory structure and generates
+    The init command creates the .eac directory structure and generates
     configuration files (repository.yml, books.yml, environments.yml) with
     calculated defaults. AI provider configuration is optional.
 
     Scenario: Init without --ai-provider creates config files
-      Given no .r2r directory exists
+      Given no .eac directory exists
       When I run "init" without any flags
       Then the command exits with code 0
-      And the .r2r/eac directory is created
-      And a .r2r/eac/repository.yml file is created
-      And a .r2r/eac/books.yml file is created
-      And a .r2r/eac/environments.yml file is created
+      And the .eac directory is created
+      And a .eac/repository.yml file is created
+      And a .eac/books.yml file is created
+      And a .eac/environments.yml file is created
       And stdout contains "EAC project initialized"
       And stdout contains "Configuration files created"
 
     Scenario: Init with invalid provider shows error
-      Given no .r2r directory exists
+      Given no .eac directory exists
       When I run "init --ai-provider invalid-provider"
       Then the command exits with code 1
       And stderr contains "unsupported provider"
@@ -35,14 +35,14 @@ Feature: eac-cli_init
     unless the --force flag is provided.
 
     Scenario: Init fails when config files exist
-      Given a .r2r/eac/repository.yml file exists
+      Given a .eac/repository.yml file exists
       When I run "init"
       Then the command exits with code 1
       And stdout contains "Configuration files already exist"
       And stdout contains "Use --force to overwrite existing files"
 
     Scenario: Init with --force overwrites existing config files
-      Given a .r2r/eac/repository.yml file exists
+      Given a .eac/repository.yml file exists
       When I run "init --force"
       Then the command exits with code 0
       And stdout contains "Overwriting existing configuration files"
@@ -53,34 +53,34 @@ Feature: eac-cli_init
     with environment variable references (not actual secrets).
 
     Scenario: Init creates valid config for claude-api
-      Given no .r2r directory exists
+      Given no .eac directory exists
       When I run "init --ai-provider claude-api"
-      Then a .r2r/eac/ai-provider.yml file is created
-      And the .r2r/eac/ai-provider.yml file contains "provider: claude-api"
-      And the .r2r/eac/ai-provider.yml file contains "model: claude-3-haiku-20240307"
-      And the .r2r/eac/ai-provider.yml file contains "api_key: ${ANTHROPIC_API_KEY}"
-      And a .r2r/eac/repository.yml file is created
-      And a .r2r/eac/books.yml file is created
-      And a .r2r/eac/environments.yml file is created
+      Then a .eac/ai-provider.yml file is created
+      And the .eac/ai-provider.yml file contains "provider: claude-api"
+      And the .eac/ai-provider.yml file contains "model: claude-3-haiku-20240307"
+      And the .eac/ai-provider.yml file contains "api_key: ${ANTHROPIC_API_KEY}"
+      And a .eac/repository.yml file is created
+      And a .eac/books.yml file is created
+      And a .eac/environments.yml file is created
 
     Scenario: Init creates valid config for gemini
-      Given no .r2r directory exists
+      Given no .eac directory exists
       When I run "init --ai-provider gemini"
-      Then a .r2r/eac/ai-provider.yml file is created
-      And the .r2r/eac/ai-provider.yml file contains "provider: gemini"
-      And the .r2r/eac/ai-provider.yml file contains "model: gemini-1.5-pro"
-      And the .r2r/eac/ai-provider.yml file contains "api_key: ${GOOGLE_API_KEY}"
+      Then a .eac/ai-provider.yml file is created
+      And the .eac/ai-provider.yml file contains "provider: gemini"
+      And the .eac/ai-provider.yml file contains "model: gemini-1.5-pro"
+      And the .eac/ai-provider.yml file contains "api_key: ${GOOGLE_API_KEY}"
 
     Scenario: Init creates valid config for openai
-      Given no .r2r directory exists
+      Given no .eac directory exists
       When I run "init --ai-provider openai"
-      Then a .r2r/eac/ai-provider.yml file is created
-      And the .r2r/eac/ai-provider.yml file contains "provider: openai"
-      And the .r2r/eac/ai-provider.yml file contains "model: gpt-4-turbo"
-      And the .r2r/eac/ai-provider.yml file contains "api_key: ${OPENAI_API_KEY}"
+      Then a .eac/ai-provider.yml file is created
+      And the .eac/ai-provider.yml file contains "provider: openai"
+      And the .eac/ai-provider.yml file contains "model: gpt-4-turbo"
+      And the .eac/ai-provider.yml file contains "api_key: ${OPENAI_API_KEY}"
 
     Scenario: Init shows helpful provider information
-      Given no .r2r directory exists
+      Given no .eac directory exists
       When I run "init --ai-provider claude-api"
       Then stdout contains provider selection confirmation
       And stdout contains API key instructions
@@ -92,19 +92,19 @@ Feature: eac-cli_init
     overwriting the AI configuration.
 
     Scenario: Reinitializing AI provider requires --force flag
-      Given a .r2r/eac/ai-provider.yml file exists with claude-api
-      And a .r2r/eac/repository.yml file exists
+      Given a .eac/ai-provider.yml file exists with claude-api
+      And a .eac/repository.yml file exists
       When I run "init --ai-provider openai"
       Then the command exits with code 1
       And stdout contains "Configuration files already exist"
       And stdout contains "Use --force to overwrite existing files"
 
     Scenario: Reinitializing AI provider with --force overwrites config
-      Given a .r2r/eac/ai-provider.yml file exists with claude-api
-      And a .r2r/eac/repository.yml file exists
-      And a .r2r/eac/books.yml file exists
-      And a .r2r/eac/environments.yml file exists
+      Given a .eac/ai-provider.yml file exists with claude-api
+      And a .eac/repository.yml file exists
+      And a .eac/books.yml file exists
+      And a .eac/environments.yml file exists
       When I run "init --ai-provider openai --force"
       Then stdout contains "Overwriting existing configuration files"
-      And the .r2r/eac/ai-provider.yml file contains "provider: openai"
+      And the .eac/ai-provider.yml file contains "provider: openai"
       And the command exits with code 0

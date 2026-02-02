@@ -87,7 +87,7 @@ Output: manual-test-scenarios.json
 **Command**:
 
 ```bash
-r2r eac test export-manual --module <module> --release <version> [--format json|csv|markdown]
+eac test export-manual --module <module> --release <version> [--format json|csv|markdown]
 ```
 
 ---
@@ -137,7 +137,7 @@ r2r eac test export-manual --module <module> --release <version> [--format json|
 **Command**:
 
 ```bash
-r2r eac test import-manual --input <file> --release <version> [--force]
+eac test import-manual --input <file> --release <version> [--force]
 ```
 
 Use `--force` to overwrite existing results.
@@ -199,7 +199,7 @@ Use `--force` to overwrite existing results.
 **Command**:
 
 ```bash
-r2r eac test merge-results --module <module> --version <version>
+eac test merge-results --module <module> --version <version>
 ```
 
 ---
@@ -449,7 +449,7 @@ r2r eac test merge-results --module <module> --version <version>
 **Synopsis**:
 
 ```bash
-r2r eac test export-manual --module <module> --release <version> [--format <format>]
+eac test export-manual --module <module> --release <version> [--format <format>]
 ```
 
 **Formats**: `json` (default), `csv`, `markdown`
@@ -463,7 +463,7 @@ r2r eac test export-manual --module <module> --release <version> [--format <form
 **Synopsis**:
 
 ```bash
-r2r eac test import-manual --input <file> --release <version> [--force]
+eac test import-manual --input <file> --release <version> [--force]
 ```
 
 **Validation**: Schema compliance, email format, version matching, module validation, scenario ID cross-validation, conflict detection
@@ -477,7 +477,7 @@ r2r eac test import-manual --input <file> --release <version> [--force]
 **Synopsis**:
 
 ```bash
-r2r eac test merge-results --module <module> --version <version>
+eac test merge-results --module <module> --version <version>
 ```
 
 **Behavior**: Replaces manual suite in test manifest (idempotent operation)
@@ -680,18 +680,18 @@ jobs:
 
       - name: Merge manual results into test manifest
         run: |
-          r2r eac test merge-results \
+          eac test merge-results \
             --module eac-commands \
             --version $<< inputs.version >>
 
       - name: Check for test failures
         run: |
           # Block release if manual tests failed
-          if r2r eac show test-summary eac-commands | grep -q "manual.*failed"; then
+          if eac show test-summary eac-commands | grep -q "manual.*failed"; then
             echo "❌ Manual tests failed - blocking release"
             echo ""
             echo "Failed tests must be fixed before proceeding to production"
-            r2r eac show suite manual --module eac-commands
+            eac show suite manual --module eac-commands
             exit 1
           fi
 

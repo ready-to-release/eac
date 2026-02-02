@@ -237,10 +237,10 @@ show <noun>   # Human-readable output for interactive use
 
 ```bash
 # Automation: get + jq
-r2r eac get modules | jq -r '.modules[].moniker'
+eac get modules | jq -r '.modules[].moniker'
 
 # Interactive: show
-r2r eac show modules
+eac show modules
 ```
 
 ---
@@ -344,12 +344,12 @@ Arguments (like module monikers) maintain their defined casing:
 
 ```bash
 # Correct
-r2r eac build eac-commands      # Module moniker as defined
-r2r eac test src-auth           # Module moniker as defined
+eac build eac-commands      # Module moniker as defined
+eac test src-auth           # Module moniker as defined
 
 # Incorrect
-r2r eac build EAC-COMMANDS      # Wrong case
-r2r eac build eac_commands      # Wrong format
+eac build EAC-COMMANDS      # Wrong case
+eac build eac_commands      # Wrong format
 ```
 
 ---

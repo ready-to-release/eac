@@ -19,7 +19,7 @@ func TestYAML() {
 		workspaceRoot = filepath.Dir(workspaceRoot)
 	}
 
-	yamlPath := filepath.Join(workspaceRoot, ".r2r", "eac", "repository.yml")
+	yamlPath := filepath.Join(workspaceRoot, ".eac", "repository.yml")
 	data, err := os.ReadFile(yamlPath)
 	if err != nil {
 		fmt.Printf("Error reading file: %v\n", err)

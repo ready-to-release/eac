@@ -7,7 +7,7 @@
 // Long:   1. Analyzes commits since the last release tag
 // Long:   2. Generates changelog entries from conventional commits
 // Long:   3. Merges any manual entries from [Unreleased] section
-// Long:   4. Calculates the next version (respecting constraints from .r2r/eac/repository.yml)
+// Long:   4. Calculates the next version (respecting constraints from .eac/repository.yml)
 // Long:   5. Adds a new version section to the changelog
 // Long:   6. Clears the [Unreleased] section
 // Long:   7. Writes the updated changelog

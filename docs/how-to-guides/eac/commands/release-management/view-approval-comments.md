@@ -31,13 +31,13 @@ Show approval comments for PRs merged since the last release:
 
 ```bash
 # Human-readable markdown output (only APPROVED reviews)
-r2r eac show approval-comments my-module
+eac show approval-comments my-module
 
 # or explicitly
-r2r eac show approval-comments my-module unreleased
+eac show approval-comments my-module unreleased
 
 # Include all review states (APPROVED, CHANGES_REQUESTED, COMMENTED)
-r2r eac show approval-comments my-module --include-all-reviews
+eac show approval-comments my-module --include-all-reviews
 ```
 
 **Output:**
@@ -90,13 +90,13 @@ Updated module specification
 Show approval comments included in the most recent release:
 
 ```bash
-r2r eac show approval-comments my-module latest
+eac show approval-comments my-module latest
 ```
 
 ## View Approvals for Specific Version
 
 ```bash
-r2r eac show approval-comments my-module 1.2.3
+eac show approval-comments my-module 1.2.3
 ```
 
 ## Query from Different Branches
@@ -105,13 +105,13 @@ By default, commands query from the trunk branch (usually `main`). Use `--branch
 
 ```bash
 # Query from main branch (default)
-r2r eac show approval-comments my-module
+eac show approval-comments my-module
 
 # Query from current branch (useful when working in feature branches)
-r2r eac show approval-comments my-module --branch HEAD
+eac show approval-comments my-module --branch HEAD
 
 # Query from specific branch
-r2r eac show approval-comments my-module --branch develop
+eac show approval-comments my-module --branch develop
 ```
 
 **When to use this:**
@@ -128,31 +128,31 @@ r2r eac show approval-comments my-module --branch develop
 
 ```bash
 # Only APPROVED reviews (default)
-r2r eac get approval-comments my-module --as-json
+eac get approval-comments my-module --as-json
 
 # Include all review states
-r2r eac get approval-comments my-module --include-all-reviews --as-json
+eac get approval-comments my-module --include-all-reviews --as-json
 ```
 
 ### As YAML (default)
 
 ```bash
-r2r eac get approval-comments my-module
+eac get approval-comments my-module
 
 # or explicitly
-r2r eac get approval-comments my-module --as-yaml
+eac get approval-comments my-module --as-yaml
 
 # Include all review states
-r2r eac get approval-comments my-module --include-all-reviews --as-yaml
+eac get approval-comments my-module --include-all-reviews --as-yaml
 ```
 
 ### As TOML
 
 ```bash
-r2r eac get approval-comments my-module --as-toml
+eac get approval-comments my-module --as-toml
 
 # Include all review states
-r2r eac get approval-comments my-module --include-all-reviews --as-toml
+eac get approval-comments my-module --include-all-reviews --as-toml
 ```
 
 ## Common Use Cases
@@ -160,7 +160,7 @@ r2r eac get approval-comments my-module --include-all-reviews --as-toml
 ### 1. Count Total Approvals
 
 ```bash
-r2r eac get approval-comments my-module --as-json | jq '.total_approvals'
+eac get approval-comments my-module --as-json | jq '.total_approvals'
 ```
 
 **Example Output:**
@@ -172,7 +172,7 @@ r2r eac get approval-comments my-module --as-json | jq '.total_approvals'
 ### 2. List All Reviewers
 
 ```bash
-r2r eac get approval-comments my-module --as-json | jq -r '.approvals[].reviewer' | sort -u
+eac get approval-comments my-module --as-json | jq -r '.approvals[].reviewer' | sort -u
 ```
 
 **Example Output:**
@@ -187,7 +187,7 @@ reviewer4
 ### 3. Count Approvals Per PR
 
 ```bash
-r2r eac get approval-comments my-module --as-json | jq '.approvals | group_by(.pr_number) | map({pr: .[0].pr_number, title: .[0].pr_title, approvals: length})'
+eac get approval-comments my-module --as-json | jq '.approvals | group_by(.pr_number) | map({pr: .[0].pr_number, title: .[0].pr_title, approvals: length})'
 ```
 
 **Example Output:**
@@ -210,7 +210,7 @@ r2r eac get approval-comments my-module --as-json | jq '.approvals | group_by(.p
 ### 4. Filter Approvals by Specific Reviewer
 
 ```bash
-r2r eac get approval-comments my-module --as-json | jq '.approvals[] | select(.reviewer == "reviewer1")'
+eac get approval-comments my-module --as-json | jq '.approvals[] | select(.reviewer == "reviewer1")'
 ```
 
 **Example Output:**
@@ -228,7 +228,7 @@ r2r eac get approval-comments my-module --as-json | jq '.approvals[] | select(.r
 ### 5. List PRs with Multiple Approvals
 
 ```bash
-r2r eac get approval-comments my-module --as-json | jq '.approvals | group_by(.pr_number) | map(select(length > 1) | {pr: .[0].pr_number, title: .[0].pr_title, approvals: length})'
+eac get approval-comments my-module --as-json | jq '.approvals | group_by(.pr_number) | map(select(length > 1) | {pr: .[0].pr_number, title: .[0].pr_title, approvals: length})'
 ```
 
 **Example Output:**
@@ -246,7 +246,7 @@ r2r eac get approval-comments my-module --as-json | jq '.approvals | group_by(.p
 ### 6. Find PRs Approved by Specific User
 
 ```bash
-r2r eac get approval-comments my-module --as-json | jq '.approvals | group_by(.pr_number) | map(select(any(.[]; .reviewer == "reviewer1")) | {pr: .[0].pr_number, title: .[0].pr_title})'
+eac get approval-comments my-module --as-json | jq '.approvals | group_by(.pr_number) | map(select(any(.[]; .reviewer == "reviewer1")) | {pr: .[0].pr_number, title: .[0].pr_title})'
 ```
 
 **Example Output:**
@@ -269,7 +269,7 @@ r2r eac get approval-comments my-module --as-json | jq '.approvals | group_by(.p
 Count how many reviews of each type exist:
 
 ```bash
-r2r eac get approval-comments my-module --include-all-reviews --as-json | jq '.approvals | group_by(.review_state) | map({state: .[0].review_state, count: length})'
+eac get approval-comments my-module --include-all-reviews --as-json | jq '.approvals | group_by(.review_state) | map({state: .[0].review_state, count: length})'
 ```
 
 **Example Output:**
@@ -296,7 +296,7 @@ r2r eac get approval-comments my-module --include-all-reviews --as-json | jq '.a
 Identify PRs that need attention:
 
 ```bash
-r2r eac get approval-comments my-module --include-all-reviews --as-json | jq '.approvals | group_by(.pr_number) | map(select(any(.[]; .review_state == "CHANGES_REQUESTED")) | {pr: .[0].pr_number, title: .[0].pr_title})'
+eac get approval-comments my-module --include-all-reviews --as-json | jq '.approvals | group_by(.pr_number) | map(select(any(.[]; .review_state == "CHANGES_REQUESTED")) | {pr: .[0].pr_number, title: .[0].pr_title})'
 ```
 
 **Example Output:**
@@ -317,11 +317,11 @@ Create a summary for regulatory compliance:
 ```bash
 echo "## PR Approval Summary"
 echo ""
-echo "- Total PRs: $(r2r eac get approval-comments my-module latest --as-json | jq '.total_prs')"
-echo "- Total Approvals: $(r2r eac get approval-comments my-module latest --as-json | jq '.total_approvals')"
+echo "- Total PRs: $(eac get approval-comments my-module latest --as-json | jq '.total_prs')"
+echo "- Total Approvals: $(eac get approval-comments my-module latest --as-json | jq '.total_approvals')"
 echo ""
 echo "### Reviewers:"
-r2r eac get approval-comments my-module latest --as-json | jq -r '.approvals[].reviewer' | sort -u | sed 's/^/- /'
+eac get approval-comments my-module latest --as-json | jq -r '.approvals[].reviewer' | sort -u | sed 's/^/- /'
 ```
 
 **Example Output:**
@@ -359,10 +359,10 @@ To include all review states, use the `--include-all-reviews` flag:
 
 ```bash
 # Show only APPROVED reviews (default)
-r2r eac show approval-comments my-module
+eac show approval-comments my-module
 
 # Show all review states
-r2r eac show approval-comments my-module --include-all-reviews
+eac show approval-comments my-module --include-all-reviews
 ```
 
 **Available review states:**

@@ -192,7 +192,7 @@ func loadToolEACConfig() error {
 }
 
 func loadToolToolConfig() error {
-	toolCfg, err := tool.LoadToolConfig(toolState.repoRoot, filepath.Join(toolState.repoRoot, ".r2r", "eac"))
+	toolCfg, err := tool.LoadToolConfig(toolState.repoRoot, filepath.Join(toolState.repoRoot, ".eac"))
 	if err != nil {
 		return fmt.Errorf("failed to load tool config: %w", err)
 	}

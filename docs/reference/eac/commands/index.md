@@ -16,7 +16,7 @@ For framework commands like `r2r init`, `r2r install`, and `r2r list`, see:
 
 ## EAC Extension Commands
 
-Complete technical reference for all EAC extension commands (invoked as `r2r eac <command>`).
+Complete technical reference for all EAC extension commands (invoked as `eac <command>`).
 
 ## Quick Access
 
@@ -95,16 +95,16 @@ Complete technical reference for all EAC extension commands (invoked as `r2r eac
 
    ```bash
    # Discover modules
-   r2r eac show modules
+   eac show modules
 
    # Get help for any command
-   r2r eac help <command>
+   eac help <command>
 
    # Build a module
-   r2r eac build <module>
+   eac build <module>
 
    # Run tests
-   r2r eac test <module>
+   eac test <module>
    ```
 
 ### Looking for a Specific Command?
@@ -136,7 +136,7 @@ EAC commands produce two types of output:
 Structured, machine-readable output for automation:
 
 ```bash
-$ r2r eac get modules
+$ eac get modules
 {
   "modules": [
     {
@@ -153,7 +153,7 @@ $ r2r eac get modules
 **Process with jq**:
 
 ```bash
-r2r eac get modules | jq -r '.modules[].moniker'
+eac get modules | jq -r '.modules[].moniker'
 ```
 
 **See**: [Get Commands](./categories/get.md), [Output Formats](./overview/output-formats.md)
@@ -163,7 +163,7 @@ r2r eac get modules | jq -r '.modules[].moniker'
 Human-readable tables and text for interactive use:
 
 ```bash
-$ r2r eac show modules
+$ eac show modules
 ┌───────────────┬─────────────┬────────────────────┬──────┐
 │ Moniker       │ Type        │ Path               │ Files│
 ├───────────────┼─────────────┼────────────────────┼──────┤
@@ -185,7 +185,7 @@ Generate content using AI:
 - **[create spec](./create/spec.md)** - Gherkin specifications from natural language
 - **[create design](./create/design.md)** - Architecture diagrams with AI assistance
 
-**Setup**: Run `r2r eac init` to configure your AI provider
+**Setup**: Run `eac init` to configure your AI provider
 
 **See**: [Create Commands Category](./categories/create.md), [Init Command]../init/init.md)
 
@@ -233,10 +233,10 @@ Manage development workflows:
 # .git/hooks/pre-commit
 
 # Fast validation (< 10 min)
-r2r eac validate specs || exit 1
-r2r eac validate go-tidy || exit 1
-r2r eac scan --scanner secrets || exit 1
-r2r eac test --short || exit 1
+eac validate specs || exit 1
+eac validate go-tidy || exit 1
+eac scan --scanner secrets || exit 1
+eac test --short || exit 1
 
 echo "✓ Pre-commit checks passed"
 ```
@@ -257,20 +257,20 @@ jobs:
       - name: Get Changed Modules
         id: changed
         run: |
-          MODULES=$(r2r eac get changed-modules-ci | jq -r '.changed_modules | join(" ")')
+          MODULES=$(eac get changed-modules-ci | jq -r '.changed_modules | join(" ")')
           echo "modules=$MODULES" >> $GITHUB_OUTPUT
 
       - name: Build and Test
         run: |
           for module in ⟪ steps.changed.outputs.modules ⟫; do
-            r2r eac build $module
-            r2r eac test $module
+            eac build $module
+            eac test $module
           done
 
       - name: Security Scan
         run: |
-          r2r eac scan --scanner compliance
-          r2r eac scan --scanner vuln
+          eac scan --scanner compliance
+          eac scan --scanner vuln
 ```
 
 ### Release Script
@@ -282,22 +282,22 @@ jobs:
 set -e
 
 # Check for changes
-r2r eac release pending || {
+eac release pending || {
   echo "No changes to release"
   exit 0
 }
 
 # Generate changelog
-r2r eac release changelog
+eac release changelog
 
 # Validate
-r2r eac validate release
+eac validate release
 
 # Check CI
-r2r eac release check-ci $(git rev-parse HEAD)
+eac release check-ci $(git rev-parse HEAD)
 
 # Create release
-r2r eac release this
+eac release this
 
 echo "✓ Release created"
 ```

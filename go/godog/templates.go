@@ -118,40 +118,40 @@ var namedTemplates = map[string]*Template{
 		Name:        "minimal",
 		Description: "Minimal EAC configuration with a single Go module",
 		Files: map[string]string{
-			".r2r/eac/repository.yml":   ModulesSingleGo,
-			".r2r/eac/module-types.yml": ModuleTypesGo,
+			".eac/repository.yml":   ModulesSingleGo,
+			".eac/module-types.yml": ModuleTypesGo,
 		},
 	},
 	"minimal-go": {
 		Name:        "minimal-go",
 		Description: "Minimal EAC config for Go development",
 		Files: map[string]string{
-			".r2r/eac/repository.yml":   ModulesSingleGo,
-			".r2r/eac/module-types.yml": ModuleTypesGo,
+			".eac/repository.yml":   ModulesSingleGo,
+			".eac/module-types.yml": ModuleTypesGo,
 		},
 	},
 	"minimal-with-docker": {
 		Name:        "minimal-with-docker",
 		Description: "Minimal EAC config with Docker support",
 		Files: map[string]string{
-			".r2r/eac/repository.yml":   ModulesSingleGo,
-			".r2r/eac/module-types.yml": ModuleTypesDocker,
+			".eac/repository.yml":   ModulesSingleGo,
+			".eac/module-types.yml": ModuleTypesDocker,
 		},
 	},
 	"multi-module": {
 		Name:        "multi-module",
 		Description: "EAC config with two Go modules",
 		Files: map[string]string{
-			".r2r/eac/repository.yml":   ModulesTwoGo,
-			".r2r/eac/module-types.yml": ModuleTypesGo,
+			".eac/repository.yml":   ModulesTwoGo,
+			".eac/module-types.yml": ModuleTypesGo,
 		},
 	},
 	"complete": {
 		Name:        "complete",
 		Description: "Complete EAC config with all module types",
 		Files: map[string]string{
-			".r2r/eac/repository.yml":   ModulesSingleGo,
-			".r2r/eac/module-types.yml": ModuleTypesComplete,
+			".eac/repository.yml":   ModulesSingleGo,
+			".eac/module-types.yml": ModuleTypesComplete,
 		},
 	},
 }

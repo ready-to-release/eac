@@ -2,7 +2,7 @@
 
 {{ page_breadcrumb() }}
 
-Learn about the configuration files in `.r2r/eac/` and how they're managed by EAC.
+Learn about the configuration files in `.eac/` and how they're managed by EAC.
 
 **Prerequisites:** Completed [Quick Start](./quick-start.md)
 
@@ -23,7 +23,7 @@ R2R uses two layers of configuration:
 | Layer         | File/Directory     | Purpose               | Created By     |
 | ------------- | ------------------ | --------------------- | -------------- |
 | **Framework** | `.r2r/r2r-cli.yml` | Extension management  | `r2r init`     |
-| **Extension** | `.r2r/eac/`        | EAC-specific settings | `r2r eac init` |
+| **Extension** | `.eac/`        | EAC-specific settings | `eac init` |
 
 ### R2R CLI vs EAC Configuration
 
@@ -36,9 +36,9 @@ Understanding the two configuration layers:
 - Scope: Framework-level (applies to all extensions)
 - Example content: Extension registry, Docker images
 
-**`.r2r/eac/`** (EAC Extension Configuration)
+**`.eac/`** (EAC Extension Configuration)
 
-- Created by: `r2r eac init`
+- Created by: `eac init`
 - Purpose: Configures how the EAC extension behaves
 - Scope: Extension-specific (only affects EAC)
 - Example content: AI provider settings, module configuration
@@ -76,9 +76,9 @@ For complete reference, see [R2R CLI Configuration Guide](../../reference/r2r/co
 
 ## EAC Extension Configuration
 
-### The `.r2r/eac/` Directory
+### The `.eac/` Directory
 
-After running `r2r eac init`, you'll have a `.r2r/eac/` directory in your repository. This directory contains configuration files that control how the EAC extension works.
+After running `eac init`, you'll have a `.eac/` directory in your repository. This directory contains configuration files that control how the EAC extension works.
 
 ## File Categories
 
@@ -86,7 +86,7 @@ EAC configuration files fall into three categories:
 
 ### 1. User-Specific Files (Created by Init)
 
-These files are created when you run `r2r eac init` and contain your team or personal settings:
+These files are created when you run `eac init` and contain your team or personal settings:
 
 | File                       | Purpose                                      | Commit?                     |
 | -------------------------- | -------------------------------------------- | --------------------------- |
@@ -135,7 +135,7 @@ System default configurations live in `contracts/eac-core/0.1.0/defaults/`. You 
 
 EAC uses a **layered fallback system** (similar to Git config):
 
-1. **User override** (`.r2r/eac/ai-config.yml`) - checked first
+1. **User override** (`.eac/ai-config.yml`) - checked first
 2. **System default** (`contracts/eac-core/0.1.0/defaults/`) - fallback if not found
 3. **Hardcoded default** (in code) - last resort
 
@@ -143,10 +143,10 @@ EAC uses a **layered fallback system** (similar to Git config):
 
 ```bash
 # This command works automatically - no ai-config.yml needed!
-r2r eac create spec my-module
+eac create spec my-module
 
 # EAC automatically:
-# 1. Checks .r2r/eac/ai-config.yml (not found)
+# 1. Checks .eac/ai-config.yml (not found)
 # 2. Falls back to built-in system default ✓
 # 3. Uses that configuration
 ```
@@ -156,7 +156,7 @@ r2r eac create spec my-module
 Most users never need to customize these files. The system defaults work for typical use cases.
 
 !!! info "Advanced Customization"
-If you need to customize these configurations (rare), you can create your own versions in `.r2r/eac/`. Your versions will take precedence over system defaults. See advanced documentation for details.
+If you need to customize these configurations (rare), you can create your own versions in `.eac/`. Your versions will take precedence over system defaults. See advanced documentation for details.
 
 ---
 
@@ -166,14 +166,14 @@ These files are created by EAC commands and stored in your repository:
 
 | File             | Created By                | Purpose                                    | Commit? |
 | ---------------- | ------------------------- | ------------------------------------------ | ------- |
-| `repository.yml` | `r2r eac analyze modules` | Repository metadata and discovered modules | ✅ Yes  |
-| `books.yml`      | `r2r eac analyze books`   | Architecture patterns found in code        | ✅ Yes  |
+| `repository.yml` | `eac analyze modules` | Repository metadata and discovered modules | ✅ Yes  |
+| `books.yml`      | `eac analyze books`   | Architecture patterns found in code        | ✅ Yes  |
 
 **Note on `test-suites.yml`**: This file has **system defaults** (see Section 2 above) providing standard test suites (unit, integration, acceptance, production-verification). You can optionally generate a customized version:
 
 | File              | Created By                         | Purpose                          | Commit?                |
 | ----------------- | ---------------------------------- | -------------------------------- | ---------------------- |
-| `test-suites.yml` | `r2r eac analyze tests` (optional) | Custom test suite configurations | ✅ Yes (if customized) |
+| `test-suites.yml` | `eac analyze tests` (optional) | Custom test suite configurations | ✅ Yes (if customized) |
 
 **Example: `repository.yml` (generated)**
 
@@ -199,10 +199,10 @@ modules:
 
 ```bash
 # Run analyze to create repository.yml and books.yml
-r2r eac analyze modules
+eac analyze modules
 
 # Optional: Generate custom test-suites.yml (system defaults work automatically)
-r2r eac analyze tests
+eac analyze tests
 ```
 
 **Can you edit them?**
@@ -211,7 +211,7 @@ Yes! You can edit generated files after creation. But running the command again 
 
 ```bash
 # Regenerate (overwrites your edits!)
-r2r eac analyze modules --force
+eac analyze modules --force
 ```
 
 ---
@@ -224,22 +224,22 @@ For most users, you only need to create user-specific files:
 
 ```bash
 # 1. Initialize with AI provider
-r2r eac init --ai-provider claude-api
+eac init --ai-provider claude-api
 
 # 2. Set API key in environment
 export ANTHROPIC_API_KEY=sk-ant-your-key-here
 
 # 3. Run commands (uses system defaults automatically!)
-r2r eac analyze modules
-r2r eac create spec my-module
+eac analyze modules
+eac create spec my-module
 
-# Result: Clean .r2r/eac/ with only user-specific files
+# Result: Clean .eac/ with only user-specific files
 ```
 
 **Files created:**
 
 ```text
-.r2r/eac/
+.eac/
 ├── ai-provider.yml          (your provider config)
 └── (all other files use built-in system defaults)
 ```
@@ -260,10 +260,10 @@ If you need custom AI type definitions or other advanced configurations, you can
 
 ```bash
 # Copy system default files to your repository for customization
-r2r eac init --copy-templates
+eac init --copy-templates
 ```
 
-This copies configuration files like `ai-config.yml`, `component-types.yml`, etc. to `.r2r/eac/`. You can then:
+This copies configuration files like `ai-config.yml`, `component-types.yml`, etc. to `.eac/`. You can then:
 
 1. Edit the copied files to customize them
 2. Commit your customizations to version control
@@ -272,7 +272,7 @@ This copies configuration files like `ai-config.yml`, `component-types.yml`, etc
 **Example file structure after copying:**
 
 ```text
-.r2r/eac/
+.eac/
 ├── ai-provider.yml          (created by init)
 ├── ai-config.yml            (copied with --copy-templates)
 ├── component-types.yml      (copied with --copy-templates)
@@ -318,7 +318,7 @@ EAC automatically adds these patterns to `.gitignore`:
 ```gitignore
 # EAC local configuration (never commit)
 .r2r/*.local.yml
-.r2r/eac/*.personal.yml
+.eac/*.personal.yml
 ```
 
 ---
@@ -330,9 +330,9 @@ EAC automatically adds these patterns to `.gitignore`:
 Use the minimal setup - no customization needed:
 
 ```bash
-r2r eac init --ai-provider claude-api
+eac init --ai-provider claude-api
 export ANTHROPIC_API_KEY=your-key
-r2r eac analyze modules
+eac analyze modules
 ```
 
 **Result:** One config file (`ai-provider.yml`), everything else uses system defaults.
@@ -345,13 +345,13 @@ Edit your provider config:
 
 ```bash
 # Edit ai-provider.yml
-vim .r2r/eac/ai-provider.yml
+vim .eac/ai-provider.yml
 
 # Change the model:
 # model: claude-3-opus-20240229
 
 # Commands now use new model
-r2r eac create spec my-module
+eac create spec my-module
 ```
 
 ---
@@ -365,13 +365,13 @@ If you have specific requirements, copy the system defaults first:
 
 ```bash
 # Copy system template files
-r2r eac init --copy-templates
+eac init --copy-templates
 
 # Edit the file
-vim .r2r/eac/ai-config.yml
+vim .eac/ai-config.yml
 
 # Commit your customization
-git add .r2r/eac/ai-config.yml
+git add .eac/ai-config.yml
 git commit -m "Custom AI configuration"
 ```
 
@@ -385,10 +385,10 @@ Delete your custom override to use system default again:
 
 ```bash
 # Remove custom override
-rm .r2r/eac/ai-config.yml
+rm .eac/ai-config.yml
 
 # Now uses system default again
-r2r eac create spec my-module
+eac create spec my-module
 ```
 
 ---
@@ -398,7 +398,7 @@ r2r eac create spec my-module
 When EAC loads configuration files, it checks locations in order:
 
 ```text
-Priority 1: Your repository (.r2r/eac/ai-config.yml)
+Priority 1: Your repository (.eac/ai-config.yml)
          ↓ not found
 Priority 2: Built-in system defaults
          ↓ not found
@@ -445,7 +445,7 @@ If you've created custom configuration files:
 | System Defaults | Built into EAC | Via override  | If overridden |
 | Generated       | By commands    | Yes (careful) | Yes           |
 
-**Key Takeaway:** You only need to run `r2r eac init`. Everything else works automatically!
+**Key Takeaway:** You only need to run `eac init`. Everything else works automatically!
 
 ## Next Steps
 

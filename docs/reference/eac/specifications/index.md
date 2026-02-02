@@ -12,14 +12,14 @@ Technical reference for EAC specification validation and tag system implementati
 
 ```bash
 # Validate specifications
-r2r eac validate specs
+eac validate specs
 
 # Validate with effective tag output
-r2r eac validate specs --show-effective-tags
+eac validate specs --show-effective-tags
 
 # Validate specific aspects
-r2r eac validate test-tags
-r2r eac validate control-tags
+eac validate test-tags
+eac validate control-tags
 ```
 
 ## Related Documentation

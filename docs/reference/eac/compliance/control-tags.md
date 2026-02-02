@@ -93,7 +93,7 @@ grep -r "@control:ac-" specs/
 
 ```bash
 # Check all @control: tags reference valid catalog controls
-r2r eac validate control-tags
+eac validate control-tags
 
 # Output: Reports invalid control IDs with file locations
 ```
@@ -102,7 +102,7 @@ r2r eac validate control-tags
 
 ```bash
 # Run tests
-r2r eac test <module> --suite acceptance
+eac test <module> --suite acceptance
 
 # Collect compliance evidence
 r2r create risk-assess <module> --profile specs/.risk-controls/<module>.profile.json

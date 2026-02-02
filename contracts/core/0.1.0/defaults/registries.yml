@@ -1,6 +1,6 @@
 # Container Registry Defaults
 # Default cleanup policies for container registries.
-# These can be overridden in .r2r/eac/repository.yml
+# These can be overridden in .eac/repository.yml
 
 registries:
   ghcr.io:

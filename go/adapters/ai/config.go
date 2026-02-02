@@ -7,7 +7,7 @@ import "errors"
 // Commands that depend on AI should check for this error and display the message.
 var ErrAIProviderNotConfigured = errors.New("ai provider not configured, please run eac init --ai-provider to initialize it")
 
-// Config represents AI and Git configuration loaded from .r2r/eac/ai-provider.yml.
+// Config represents AI and Git configuration loaded from .eac/ai-provider.yml.
 type Config struct {
 	AI  AIConfig  `yaml:"ai"`  // AI provider configuration
 	Git GitConfig `yaml:"git"` // Git provider configuration

@@ -33,7 +33,7 @@ Repository-wide validation and consistency checks.
 ## Design File
 
 - **Location**: `specs/repository/.design/workspace.dsl`
-- **Interactive**: `r2r eac serve-design --module repository`
+- **Interactive**: `eac serve-design --module repository`
 
 ## Contract Types
 

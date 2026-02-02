@@ -16,7 +16,7 @@ Tests are discovered by file patterns (`*_test.go`, `*.test.ts`, `*.feature`).
 Use composite suites with `+` to run multiple suites in a single pass:
 
 ```bash
-r2r eac test eac-commands --suite unit+integration
+eac test eac-commands --suite unit+integration
 ```
 
 Test results output to: `out/test/<module>/`

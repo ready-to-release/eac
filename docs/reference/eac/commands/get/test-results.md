@@ -30,10 +30,10 @@ Test manifests must exist from previous test runs:
 
 ```bash
 # Run tests first to generate manifests
-r2r eac test <module>
+eac test <module>
 
 # Then get results
-r2r eac get test-results
+eac get test-results
 ```
 
 ## See Also

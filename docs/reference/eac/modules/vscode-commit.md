@@ -17,4 +17,4 @@ VS Code extension for AI-assisted commit messages.
 ## Design File
 
 - **Location**: `specs/vscode-commit/.design/workspace.dsl`
-- **Interactive**: `r2r eac serve-design --module vscode-commit`
+- **Interactive**: `eac serve-design --module vscode-commit`

@@ -21,13 +21,13 @@ Learn how to view changelog entries and release notes for modules in both human-
 Show all changelog versions in human-readable markdown format:
 
 ```bash
-r2r eac show changelog <module>
+eac show changelog <module>
 ```
 
 **Example:**
 
 ```bash
-r2r eac show changelog my-module
+eac show changelog my-module
 ```
 
 **Output:**
@@ -57,13 +57,13 @@ r2r eac show changelog my-module
 Show changelog for a specific version:
 
 ```bash
-r2r eac show changelog <module> <version>
+eac show changelog <module> <version>
 ```
 
 **Example:**
 
 ```bash
-r2r eac show changelog my-module 1.2.2
+eac show changelog my-module 1.2.2
 ```
 
 ### Display Latest Release
@@ -71,13 +71,13 @@ r2r eac show changelog my-module 1.2.2
 Show the most recent released version:
 
 ```bash
-r2r eac show changelog <module> latest
+eac show changelog <module> latest
 ```
 
 **Example:**
 
 ```bash
-r2r eac show changelog my-module latest
+eac show changelog my-module latest
 ```
 
 ### Display Unreleased Changes
@@ -85,7 +85,7 @@ r2r eac show changelog my-module latest
 Show pending changes not yet released:
 
 ```bash
-r2r eac show changelog <module> unreleased
+eac show changelog <module> unreleased
 ```
 
 ## View Release Notes
@@ -95,13 +95,13 @@ r2r eac show changelog <module> unreleased
 Show release notes for the most recent version:
 
 ```bash
-r2r eac show release-notes <module>
+eac show release-notes <module>
 ```
 
 **Example:**
 
 ```bash
-r2r eac show release-notes my-module
+eac show release-notes my-module
 ```
 
 **Output:**
@@ -123,13 +123,13 @@ The changes improve workflow automation...
 Show the most recent released version explicitly:
 
 ```bash
-r2r eac show release-notes <module> latest
+eac show release-notes <module> latest
 ```
 
 **Example:**
 
 ```bash
-r2r eac show release-notes my-module latest
+eac show release-notes my-module latest
 ```
 
 ### Display Specific Version
@@ -137,13 +137,13 @@ r2r eac show release-notes my-module latest
 Show release notes for a specific version:
 
 ```bash
-r2r eac show release-notes <module> <version>
+eac show release-notes <module> <version>
 ```
 
 **Example:**
 
 ```bash
-r2r eac show release-notes my-module 1.2.2
+eac show release-notes my-module 1.2.2
 ```
 
 ## Export Structured Data
@@ -153,13 +153,13 @@ r2r eac show release-notes my-module 1.2.2
 Get changelog data in JSON format for scripting and automation:
 
 ```bash
-r2r eac get changelog <module> --as-json
+eac get changelog <module> --as-json
 ```
 
 **Example:**
 
 ```bash
-r2r eac get changelog my-module --as-json | jq '.versions[0].number'
+eac get changelog my-module --as-json | jq '.versions[0].number'
 ```
 
 ### Export Changelog as YAML
@@ -167,13 +167,13 @@ r2r eac get changelog my-module --as-json | jq '.versions[0].number'
 Get changelog data in YAML format (default):
 
 ```bash
-r2r eac get changelog <module>
+eac get changelog <module>
 ```
 
 or explicitly:
 
 ```bash
-r2r eac get changelog <module> --as-yaml
+eac get changelog <module> --as-yaml
 ```
 
 ### Export Specific Version
@@ -181,13 +181,13 @@ r2r eac get changelog <module> --as-yaml
 Get structured data for a specific version:
 
 ```bash
-r2r eac get changelog <module> <version> --as-json
+eac get changelog <module> <version> --as-json
 ```
 
 **Example:**
 
 ```bash
-r2r eac get changelog my-module 1.2.2 --as-json
+eac get changelog my-module 1.2.2 --as-json
 ```
 
 ### Export Release Notes
@@ -195,9 +195,9 @@ r2r eac get changelog my-module 1.2.2 --as-json
 Get release notes in structured format:
 
 ```bash
-r2r eac get release-notes <module> --as-json
-r2r eac get release-notes <module> --as-yaml
-r2r eac get release-notes <module> --as-toml
+eac get release-notes <module> --as-json
+eac get release-notes <module> --as-yaml
+eac get release-notes <module> --as-toml
 ```
 
 ## Common Use Cases
@@ -207,7 +207,7 @@ r2r eac get release-notes <module> --as-toml
 Check what's changed since the last release:
 
 ```bash
-r2r eac show changelog <module> unreleased
+eac show changelog <module> unreleased
 ```
 
 ### Compare Versions
@@ -216,13 +216,13 @@ View two different versions side by side:
 
 ```bash
 # PowerShell
-r2r eac show changelog my-module 1.2.1 > old.md
-r2r eac show changelog my-module 1.2.2 > new.md
+eac show changelog my-module 1.2.1 > old.md
+eac show changelog my-module 1.2.2 > new.md
 code --diff old.md new.md
 
 # Bash
-r2r eac show changelog my-module 1.2.1 > old.md
-r2r eac show changelog my-module 1.2.2 > new.md
+eac show changelog my-module 1.2.1 > old.md
+eac show changelog my-module 1.2.2 > new.md
 diff old.md new.md
 ```
 
@@ -232,10 +232,10 @@ Get the latest version programmatically:
 
 ```bash
 # PowerShell
-$version = (r2r eac get changelog my-module --as-json | ConvertFrom-Json).versions[0].number
+$version = (eac get changelog my-module --as-json | ConvertFrom-Json).versions[0].number
 
 # Bash
-version=$(r2r eac get changelog my-module --as-json | jq -r '.versions[0].number')
+version=$(eac get changelog my-module --as-json | jq -r '.versions[0].number')
 ```
 
 ### Generate Release Report
@@ -243,13 +243,13 @@ version=$(r2r eac get changelog my-module --as-json | jq -r '.versions[0].number
 Combine changelog and release notes for a report:
 
 ```bash
-r2r eac show release-notes my-module 1.2.3 > report.md
-r2r eac show changelog my-module 1.2.3 >> report.md
+eac show release-notes my-module 1.2.3 > report.md
+eac show changelog my-module 1.2.3 >> report.md
 ```
 
 ## File Location Requirements
 
-Commands automatically discover files through module contracts in `.r2r/eac/repository.yml`.
+Commands automatically discover files through module contracts in `.eac/repository.yml`.
 
 **Standard locations** (most modules):
 

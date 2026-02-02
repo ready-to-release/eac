@@ -327,7 +327,7 @@ func exitsWithErrorIfTimeoutExceeded(ctx *eacgodog.TestContext) error {
 // It updates repository.yml and creates the module directory structure.
 func createTestModule(ctx *eacgodog.TestContext, moniker string, dependencies []string) error {
 	// Read repository.yml
-	repoYmlPath := filepath.Join(ctx.IsolatedDir, ".r2r", "eac", "repository.yml")
+	repoYmlPath := filepath.Join(ctx.IsolatedDir, ".eac", "repository.yml")
 	data, err := os.ReadFile(repoYmlPath)
 	if err != nil {
 		return fmt.Errorf("failed to read repository.yml: %w", err)

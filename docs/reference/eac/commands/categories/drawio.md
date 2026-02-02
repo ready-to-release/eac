@@ -37,19 +37,19 @@ This enables LLM-powered diagram editing through a decode-edit-embed workflow.
 **Extract diagram for editing**:
 
 ```bash
-r2r eac drawio decode --png diagram.drawio.png --output readable.xml
+eac drawio decode --png diagram.drawio.png --output readable.xml
 ```
 
 **Create a new diagram**:
 
 ```bash
-r2r eac drawio create --output new-diagram.drawio.png
+eac drawio create --output new-diagram.drawio.png
 ```
 
 **Re-render after XML changes**:
 
 ```bash
-r2r eac drawio render --xml edited.xml --output diagram.drawio.png
+eac drawio render --xml edited.xml --output diagram.drawio.png
 ```
 
 ## Key Features

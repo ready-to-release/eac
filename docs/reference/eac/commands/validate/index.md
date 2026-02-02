@@ -28,10 +28,10 @@ Validate repository contracts, dependencies, and compliance for quality gates.
 
 ```bash
 # Validate all contracts
-r2r eac validate
+eac validate
 
 # Validate dependencies
-r2r eac validate dependencies
+eac validate dependencies
 ```
 
 ## See Also

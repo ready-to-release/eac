@@ -14,7 +14,7 @@ Identify and understand test failures with detailed output and timing informatio
 ### 1. List All Failures
 
 ```bash
-r2r eac test debug
+eac test debug
 ```
 
 **What happens**: Parses test results and lists all failures with details
@@ -22,7 +22,7 @@ r2r eac test debug
 ### 2. Check Test Timings
 
 ```bash
-r2r eac show test-timings src-auth
+eac show test-timings src-auth
 ```
 
 **What happens**: Shows which tests are slowest, may indicate issues
@@ -30,7 +30,7 @@ r2r eac show test-timings src-auth
 ### 3. Run Specific Failing Test
 
 ```bash
-r2r eac test src-auth --verbose --fail-fast
+eac test src-auth --verbose --fail-fast
 ```
 
 **What happens**:
@@ -53,7 +53,7 @@ Your tests are failing after auth changes:
 
 ```bash
 # See all failures
-r2r eac test debug
+eac test debug
 
 # Output:
 # Failed Tests:
@@ -66,7 +66,7 @@ r2r eac test debug
 #   File: src/auth/token_test.go:23
 
 # Check if timeout issue
-r2r eac show test-timings src-auth
+eac show test-timings src-auth
 # TestRefreshToken: 31.2s (timeout?)
 
 # Run single test with verbose
@@ -74,7 +74,7 @@ go test -v ./src/auth -run TestLogin
 # Shows detailed output for debugging
 
 # Fix issue and retest
-r2r eac test src-auth --fail-fast
+eac test src-auth --fail-fast
 # ✓ All tests pass
 ```
 

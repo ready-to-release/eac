@@ -5,7 +5,7 @@
 ## Details
 
 - **Source**: `templates/ai/`
-- **Destination**: `.r2r/eac/templates/ai/`
+- **Destination**: `.eac/templates/ai/`
 
 ## Use Case
 

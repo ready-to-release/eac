@@ -192,9 +192,9 @@ func (c *TestContext) buildMockingEnvironment(env []string) []string {
 	// This allows AI commands to load system default templates from templates/ai/
 	env = append(env, fmt.Sprintf("%s=%s", environments.EnvR2RContainerRoot, c.OriginalRepoRoot))
 
-	// Load mock configuration from .r2r/eac/testing-mocks.yml
+	// Load mock configuration from .eac/testing-mocks.yml
 	// Falls back to environment variables if config file doesn't exist (backward compatibility)
-	mockConfigPath := filepath.Join(c.OriginalRepoRoot, ".r2r", "eac", "testing-mocks.yml")
+	mockConfigPath := filepath.Join(c.OriginalRepoRoot, ".eac", "testing-mocks.yml")
 	mockConfig, err := config.LoadTestingMocks(mockConfigPath)
 	if err != nil {
 		// Log warning but continue with empty config (will use environment variables)

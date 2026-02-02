@@ -126,6 +126,7 @@ type ExecutionModule struct {
 type UoWEntry struct {
 	ID          string // Full moniker for matching (Longname: context:module:component:tool)
 	DisplayName string // Short name for display (e.g., "go", "godog")
+	Weight      int    // Scheduling weight for resource allocation
 }
 
 // Direction represents navigation direction for keyboard input.

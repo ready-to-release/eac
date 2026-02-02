@@ -16,7 +16,7 @@ func TestRiskConfig_ImplementsPort(t *testing.T) {
 
 func TestLoadRiskConfig_NoFiles(t *testing.T) {
 	tmpDir := t.TempDir()
-	configDir := filepath.Join(tmpDir, ".r2r", "eac")
+	configDir := filepath.Join(tmpDir, ".eac")
 	require.NoError(t, os.MkdirAll(configDir, 0o755))
 
 	cfg, err := LoadRiskConfig(tmpDir, configDir)
@@ -63,7 +63,7 @@ scoring:
 }`
 	require.NoError(t, os.WriteFile(filepath.Join(defaultsDir, "risk-profile.json"), []byte(profileJSON), 0o644))
 
-	configDir := filepath.Join(tmpDir, ".r2r", "eac")
+	configDir := filepath.Join(tmpDir, ".eac")
 	require.NoError(t, os.MkdirAll(configDir, 0o755))
 
 	cfg, err := LoadRiskConfig(tmpDir, configDir)
@@ -100,7 +100,7 @@ scoring:
 	require.NoError(t, os.WriteFile(filepath.Join(defaultsDir, "risk-config.yml"), []byte(defaultsYAML), 0o644))
 
 	// Create user overrides
-	configDir := filepath.Join(tmpDir, ".r2r", "eac")
+	configDir := filepath.Join(tmpDir, ".eac")
 	require.NoError(t, os.MkdirAll(configDir, 0o755))
 
 	userYAML := `
@@ -126,7 +126,7 @@ scoring:
 func TestLoadRiskConfig_ModuleProfiles(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	configDir := filepath.Join(tmpDir, ".r2r", "eac")
+	configDir := filepath.Join(tmpDir, ".eac")
 	require.NoError(t, os.MkdirAll(configDir, 0o755))
 
 	// Create main profile
@@ -187,7 +187,7 @@ module_profiles:
 
 func TestLoadRiskConfig_InvalidYAML(t *testing.T) {
 	tmpDir := t.TempDir()
-	configDir := filepath.Join(tmpDir, ".r2r", "eac")
+	configDir := filepath.Join(tmpDir, ".eac")
 	require.NoError(t, os.MkdirAll(configDir, 0o755))
 
 	require.NoError(t, os.WriteFile(filepath.Join(configDir, "risk-config.yml"), []byte("invalid: yaml: here:"), 0o644))
@@ -199,7 +199,7 @@ func TestLoadRiskConfig_InvalidYAML(t *testing.T) {
 
 func TestLoadRiskConfig_InvalidProfileJSON(t *testing.T) {
 	tmpDir := t.TempDir()
-	configDir := filepath.Join(tmpDir, ".r2r", "eac")
+	configDir := filepath.Join(tmpDir, ".eac")
 	require.NoError(t, os.MkdirAll(configDir, 0o755))
 
 	configYAML := `
@@ -216,7 +216,7 @@ profile:
 
 func TestLoadRiskConfig_MissingProfileIsOK(t *testing.T) {
 	tmpDir := t.TempDir()
-	configDir := filepath.Join(tmpDir, ".r2r", "eac")
+	configDir := filepath.Join(tmpDir, ".eac")
 	require.NoError(t, os.MkdirAll(configDir, 0o755))
 
 	// Profile path points to non-existent file - this is OK
@@ -265,7 +265,7 @@ func TestRiskConfig_resolvePath(t *testing.T) {
 
 func TestSecurityConfig_Risk_Integration(t *testing.T) {
 	tmpDir := t.TempDir()
-	configDir := filepath.Join(tmpDir, ".r2r", "eac")
+	configDir := filepath.Join(tmpDir, ".eac")
 	require.NoError(t, os.MkdirAll(configDir, 0o755))
 
 	// Create contract defaults structure

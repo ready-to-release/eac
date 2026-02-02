@@ -22,7 +22,7 @@ func sanitizeMonikerForPath(moniker string) string {
 const RepositoryFileName = "repository.yml"
 
 // RepositoryConfig holds all repository configuration including modules.
-// This is the unified config loaded from .r2r/eac/repository.yml.
+// This is the unified config loaded from .eac/repository.yml.
 type RepositoryConfig struct {
 	// Repository settings
 	Repository RepositorySettings `yaml:"repository"`

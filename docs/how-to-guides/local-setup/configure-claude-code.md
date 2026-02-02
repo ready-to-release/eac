@@ -240,7 +240,7 @@ The MCP server supports two execution modes:
 }
 ```
 
-**Execution**: `r2r eac <command>` (Docker container)
+**Execution**: `eac <command>` (Docker container)
 **Startup**: ~2s (Docker overhead)
 **Use Case**: CI/CD, production, consistent environments
 

@@ -40,7 +40,7 @@ type EnvironmentContract struct {
 }
 
 // LoadEnvironmentContract reads and parses the environment contract from the repository.
-// It reads directly from .r2r/eac/environments.yml.
+// It reads directly from .eac/environments.yml.
 func LoadEnvironmentContract() (*EnvironmentContract, error) {
 	eacRoot, err := repository.GetRepoEACConfigRoot("")
 	if err != nil {

@@ -33,11 +33,11 @@ r2r init
 r2r install eac
 
 # 4. Initialize EAC in your project
-r2r eac init
+eac init
 
 # 5. Start using commands
-r2r eac show-modules
-r2r eac validate
+eac show-modules
+eac validate
 ```
 
 ## What EAC Provides
@@ -47,7 +47,7 @@ r2r eac validate
 Define modules with dependencies, file ownership, and build configuration:
 
 ```yaml
-# .r2r/eac/repository.yml
+# .eac/repository.yml
 modules:
   - moniker: my-service
     type: go-cli
@@ -59,10 +59,10 @@ modules:
 Many commands for common tasks:
 
 ```bash
-r2r eac build <module>      # Build modules
-r2r eac test <module>       # Run tests
-r2r eac validate            # Validate configuration
-r2r eac scan                # Security scanning
+eac build <module>      # Build modules
+eac test <module>       # Run tests
+eac validate            # Validate configuration
+eac scan                # Security scanning
 ```
 
 ### AI-Powered Features
@@ -70,9 +70,9 @@ r2r eac scan                # Security scanning
 With an AI provider configured:
 
 ```bash
-r2r eac create commit-message   # Generate commit messages
-r2r eac create-pr              # Create PRs with AI descriptions
-r2r eac create-spec            # Generate Gherkin specifications
+eac create commit-message   # Generate commit messages
+eac create-pr              # Create PRs with AI descriptions
+eac create-spec            # Generate Gherkin specifications
 ```
 
 ## Requirements

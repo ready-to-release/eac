@@ -49,14 +49,14 @@ This pulls the EAC Docker image.
 ## Step 4: Initialize EAC
 
 ```bash
-r2r eac init
+eac init
 ```
 
-This creates the `.r2r/eac/` directory with default configuration.
+This creates the `.eac/` directory with default configuration.
 
 ## Step 5: Define Your First Module
 
-Edit `.r2r/eac/repository.yml`:
+Edit `.eac/repository.yml`:
 
 ```yaml
 modules:
@@ -72,13 +72,13 @@ modules:
 
 ```bash
 # Show modules
-r2r eac show-modules
+eac show-modules
 
 # Validate configuration
-r2r eac validate
+eac validate
 
 # Check module dependencies
-r2r eac show-dependencies
+eac show-dependencies
 ```
 
 ## Optional: Configure AI Provider
@@ -90,7 +90,7 @@ For AI-powered features (commit messages, PR descriptions):
 export ANTHROPIC_API_KEY="sk-ant-..."
 
 # Initialize AI provider
-r2r eac init --ai claude-api
+eac init --ai claude-api
 ```
 
 ## What You Now Have
@@ -110,19 +110,19 @@ your-project/
 
 ```bash
 # View all modules
-r2r eac show-modules
+eac show-modules
 
 # Validate all contracts
-r2r eac validate
+eac validate
 
 # Show available commands
-r2r eac help
+eac help
 
 # Build a module
-r2r eac build my-app
+eac build my-app
 
 # Run tests
-r2r eac test my-app
+eac test my-app
 ```
 
 ## Troubleshooting

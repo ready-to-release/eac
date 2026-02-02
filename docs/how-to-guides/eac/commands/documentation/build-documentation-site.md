@@ -15,8 +15,8 @@ Generate and preview documentation site using MkDocs with validation.
 ### 1. Validate Documentation
 
 ```bash
-r2r eac validate markdown
-r2r eac validate books
+eac validate markdown
+eac validate books
 ```
 
 **What happens**: Checks markdown syntax and books configuration
@@ -24,7 +24,7 @@ r2r eac validate books
 ### 2. Build Documentation
 
 ```bash
-r2r eac build docs-site
+eac build docs-site
 ```
 
 **What happens**: Generates static HTML site from markdown
@@ -32,7 +32,7 @@ r2r eac build docs-site
 ### 3. Preview Documentation
 
 ```bash
-r2r eac serve docs
+eac serve docs
 ```
 
 **What happens**: Starts MkDocs development server with live reload
@@ -62,19 +62,19 @@ Building and previewing docs:
 
 ```bash
 # Validate first
-r2r eac validate markdown
+eac validate markdown
 # ✓ All markdown files valid
 
-r2r eac validate books
+eac validate books
 # ✓ books.yml configuration valid
 
 # Build site
-r2r eac build docs-site
+eac build docs-site
 # Building documentation...
 # ✓ Generated site/
 
 # Preview locally
-r2r eac serve docs
+eac serve docs
 # Starting MkDocs server on http://localhost:8000
 # INFO - Building documentation...
 # INFO - Documentation built in 2.3s
@@ -86,7 +86,7 @@ r2r eac serve docs
 # Ctrl+C
 
 # Build for production
-r2r eac build docs-site --clean
+eac build docs-site --clean
 # ✓ Production site built to site/
 ```
 
@@ -94,10 +94,10 @@ r2r eac build docs-site --clean
 
 ```bash
 # Check markdown syntax
-r2r eac validate markdown
+eac validate markdown
 
 # Validate books config
-r2r eac validate books
+eac validate books
 
 # Validate navigation structure
 find docs -name ".nav.yml" -exec cat {} \;

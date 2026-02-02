@@ -19,20 +19,20 @@ The EAC extension provides hundreds of commands organized by category. This guid
 List all available commands:
 
 ```bash
-r2r eac help
+eac help
 ```
 
 Get help for a specific command:
 
 ```bash
-r2r eac help <command>
+eac help <command>
 ```
 
 Get structured command information:
 
 ```bash
-r2r eac show valid-commands  # Table format
-r2r eac get valid-commands   # JSON format
+eac show valid-commands  # Table format
+eac get valid-commands   # JSON format
 ```
 
 ## Command Categories
@@ -64,8 +64,8 @@ Understanding the difference between `show` and `get` commands:
 **Examples:**
 
 ```bash
-r2r eac show modules          # Pretty table for humans
-r2r eac get modules           # JSON for scripts
+eac show modules          # Pretty table for humans
+eac get modules           # JSON for scripts
 ```
 
 This pattern is consistent across all information-retrieval commands, making it easy to switch between interactive use and automation.
@@ -74,14 +74,14 @@ This pattern is consistent across all information-retrieval commands, making it 
 
 | Command                             | Purpose                                            |
 | ----------------------------------- | -------------------------------------------------- |
-| `r2r eac show modules`              | View all modules in your repository                |
-| `r2r eac show files-changed`        | See which files changed and their module ownership |
-| `r2r eac build <module>`            | Build a specific module                            |
-| `r2r eac test <module>`             | Run tests for a module                             |
-| `r2r eac validate`                  | Validate all repository contracts                  |
-| `r2r eac create spec "description"` | Generate a Gherkin specification                   |
-| `r2r eac release this`              | Prepare a module for release                       |
-| `r2r eac work create <name>`        | Create a new development workspace                 |
+| `eac show modules`              | View all modules in your repository                |
+| `eac show files-changed`        | See which files changed and their module ownership |
+| `eac build <module>`            | Build a specific module                            |
+| `eac test <module>`             | Run tests for a module                             |
+| `eac validate`                  | Validate all repository contracts                  |
+| `eac create spec "description"` | Generate a Gherkin specification                   |
+| `eac release this`              | Prepare a module for release                       |
+| `eac work create <name>`        | Create a new development workspace                 |
 
 ## Finding More Information
 
@@ -100,15 +100,15 @@ For detailed command documentation, see:
 Every command has built-in help:
 
 ```bash
-r2r eac help <command>        # Show command help
-r2r eac <command> --help      # Alternative syntax
+eac help <command>        # Show command help
+eac <command> --help      # Alternative syntax
 ```
 
 Example:
 
 ```bash
-r2r eac help show modules     # Learn about showing modules
-r2r eac help test             # Learn about testing
+eac help show modules     # Learn about showing modules
+eac help test             # Learn about testing
 ```
 
 ## Related Guides

@@ -56,7 +56,7 @@ func TestLoadLoggingConfig_FileNotExists(t *testing.T) {
 func TestLoadLoggingConfig_ValidYAML(t *testing.T) {
 	// Create temp directory with config file
 	tmpDir := t.TempDir()
-	configDir := filepath.Join(tmpDir, ".r2r", "eac")
+	configDir := filepath.Join(tmpDir, ".eac")
 	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -113,7 +113,7 @@ file:
 func TestLoadLoggingConfig_InvalidYAML(t *testing.T) {
 	// Create temp directory with invalid config file
 	tmpDir := t.TempDir()
-	configDir := filepath.Join(tmpDir, ".r2r", "eac")
+	configDir := filepath.Join(tmpDir, ".eac")
 	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -135,7 +135,7 @@ func TestLoadLoggingConfig_InvalidYAML(t *testing.T) {
 func TestLoadLoggingConfig_PartialConfig(t *testing.T) {
 	// Create temp directory with partial config file
 	tmpDir := t.TempDir()
-	configDir := filepath.Join(tmpDir, ".r2r", "eac")
+	configDir := filepath.Join(tmpDir, ".eac")
 	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		t.Fatal(err)
 	}

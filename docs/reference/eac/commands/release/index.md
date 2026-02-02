@@ -23,13 +23,13 @@ Release management and version control for changelogs and tagging.
 
 ```bash
 # Generate changelog
-r2r eac release changelog
+eac release changelog
 
 # Check what needs releasing
-r2r eac release pending
+eac release pending
 
 # Create release
-r2r eac release this
+eac release this
 ```
 
 ## See Also

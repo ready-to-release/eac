@@ -230,7 +230,7 @@ Feature: eac-commands_init
     Scenario: Initialize creates directory structure
       Given I am in a git repository
       When I run "r2r init"
-      Then the ".r2r/eac" directory is created
+      Then the ".eac" directory is created
       And the "specs" directory is created
       And the "templates" directory is created
 

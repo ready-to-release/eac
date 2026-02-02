@@ -1,9 +1,9 @@
 # yaml-language-server: $schema=../ai-config.schema.json
 # System default AI configuration
-# Fallback order: user config (.r2r/eac/ai-config.yml) → system → contracts defaults
+# Fallback order: user config (.eac/ai-config.yml) → system → contracts defaults
 #
-# This file provides ultimate fallback when .r2r/eac/ai-config.yml doesn't exist.
-# User values in .r2r/eac/ai-config.yml always win over these defaults.
+# This file provides ultimate fallback when .eac/ai-config.yml doesn't exist.
+# User values in .eac/ai-config.yml always win over these defaults.
 
 version: "0.1.0"
 name: "AI Configuration"

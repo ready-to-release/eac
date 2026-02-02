@@ -39,7 +39,7 @@ type RiskConfigYAML struct {
 
 // LoadRiskConfig loads risk configuration from eac-security contract.
 // It loads defaults from contracts/security/0.1.0/defaults/risk-config.yml
-// and merges with user overrides from .r2r/eac/risk-config.yml.
+// and merges with user overrides from .eac/risk-config.yml.
 func LoadRiskConfig(repoRoot, configRoot string) (*RiskConfig, error) {
 	cfg := &RiskConfig{
 		moduleProfiles: make(map[string]*ProfileWrapper),

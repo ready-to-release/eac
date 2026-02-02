@@ -14,14 +14,14 @@ Contracts are YAML configuration files that define how the EAC system behaves. T
 
 | Contract            | File                  | Location                  | Purpose                                          |
 | ------------------- | --------------------- | ------------------------- | ------------------------------------------------ |
-| **Repository**      | `repository.yml`      | `.r2r/eac/`               | Module definitions, dependencies, file ownership |
+| **Repository**      | `repository.yml`      | `.eac/`               | Module definitions, dependencies, file ownership |
 | **Component Types** | `component-types.yml` | `contracts/.../defaults/` | Component type definitions with build behavior   |
 | **Tool Config**     | `tool-config.yml`     | `contracts/.../defaults/` | Tool definitions and resources                   |
 | **Environments**    | `environments.yml`    | `contracts/.../defaults/` | Test execution environments (L0-L4)              |
 | **Test Suites**     | `test-suites.yml`     | `contracts/.../defaults/` | Test suites with tag selectors                   |
 | **Testing Tags**    | `testing-tags.yml`    | `contracts/.../defaults/` | Valid test tag definitions                       |
 
-**Location**: User configs in `.r2r/eac/`, system defaults in `contracts/eac-core/0.1.0/defaults/`
+**Location**: User configs in `.eac/`, system defaults in `contracts/eac-core/0.1.0/defaults/`
 
 ## Contract Relationships
 
@@ -81,7 +81,7 @@ Contracts are validated at multiple levels:
 Run all validations:
 
 ```bash
-r2r eac validate
+eac validate
 ```
 
 ## Schema Location
@@ -112,19 +112,19 @@ modules:
 
 ### Add a New Module
 
-1. Edit `.r2r/eac/repository.yml`
+1. Edit `.eac/repository.yml`
 2. Add module definition with moniker and type
-3. Run `r2r eac validate` to verify
+3. Run `eac validate` to verify
 
 ### Create a New Component Type
 
-1. Copy `contracts/eac-core/0.1.0/defaults/component-types.yml` to `.r2r/eac/component-types.yml`
+1. Copy `contracts/eac-core/0.1.0/defaults/component-types.yml` to `.eac/component-types.yml`
 2. Define new type with builder and file patterns
 3. Reference the type in module components
 
 ### Add Test Environment
 
-1. Edit `.r2r/eac/environments.yml`
+1. Edit `.eac/environments.yml`
 2. Define environment with level and type
 3. Update test suites if needed
 

@@ -39,7 +39,7 @@ r2r eac test
 | **Purpose**  | Extension framework | Automation tools      |
 | **Commands** | init, install, list | build, test, validate |
 | **Runs**     | Host machine        | Docker container      |
-| **Config**   | `.r2r/r2r-cli.yml`  | `.r2r/eac/`           |
+| **Config**   | `.r2r/r2r-cli.yml`  | `.eac/`           |
 
 ## Configuration File
 

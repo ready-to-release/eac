@@ -55,11 +55,11 @@ git checkout feature-a
 
 ```bash
 # Create workspace for feature A
-r2r eac work create feature/auth
+eac work create feature/auth
 # Work in: ~/project/work/feature-auth/
 
 # Create workspace for feature B (in different directory)
-r2r eac work create feature/api
+eac work create feature/api
 # Work in: ~/project/work/feature-api/
 
 # Both features available simultaneously!
@@ -78,7 +78,7 @@ r2r eac work create feature/api
 
 ```bash
 # Create workspace
-r2r eac work create feature/user-authentication
+eac work create feature/user-authentication
 
 # Change to workspace directory
 cd ../work/feature-user-authentication
@@ -87,32 +87,32 @@ cd ../work/feature-user-authentication
 # ... write code ...
 
 # Commit with AI message
-r2r eac work commit --all
+eac work commit --all
 ```
 
 ### Working on Multiple Features
 
 ```bash
 # Feature 1: Authentication
-r2r eac work create feature/auth
+eac work create feature/auth
 cd ../work/feature-auth
 # ... develop ...
 
 # Feature 2: API (separate workspace)
 cd ~/project
-r2r eac work create feature/api
+eac work create feature/api
 cd ../work/feature-api
 # ... develop ...
 
 # Both workspaces remain active
-r2r eac show workspaces
+eac show workspaces
 ```
 
 ### Syncing with Main
 
 ```bash
 # Update workspace with latest main changes
-r2r eac work pull
+eac work pull
 
 # Rebases current workspace on latest main
 # Resolves conflicts if any
@@ -122,13 +122,13 @@ r2r eac work pull
 
 ```bash
 # Commit final changes
-r2r eac work commit --all
+eac work commit --all
 
 # Merge to main (squash by default)
-r2r eac work merge
+eac work merge
 
 # Remove workspace
-r2r eac work remove feature/auth
+eac work remove feature/auth
 ```
 
 ## Workspace Lifecycle
@@ -182,10 +182,10 @@ Create isolated workspace for new feature:
 
 ```bash
 # From main
-r2r eac work create feature/authentication
+eac work create feature/authentication
 
 # From specific branch
-r2r eac work create hotfix/security --from release/v1.2.0
+eac work create hotfix/security --from release/v1.2.0
 ```
 
 **What it does**:
@@ -200,13 +200,13 @@ Commit changes with AI-generated messages:
 
 ```bash
 # Commit staged changes
-r2r eac work commit
+eac work commit
 
 # Stage all and commit
-r2r eac work commit --all
+eac work commit --all
 
 # Use manual message
-r2r eac work commit --all --message "fix: resolve auth bug"
+eac work commit --all --message "fix: resolve auth bug"
 ```
 
 **What it does**:
@@ -220,7 +220,7 @@ r2r eac work commit --all --message "fix: resolve auth bug"
 Sync workspace with latest main:
 
 ```bash
-r2r eac work pull
+eac work pull
 ```
 
 **What it does**:
@@ -235,10 +235,10 @@ Merge feature to main:
 
 ```bash
 # Squash merge (default)
-r2r eac work merge
+eac work merge
 
 # No squash (preserve commits)
-r2r eac work merge --no-squash
+eac work merge --no-squash
 ```
 
 **What it does**:
@@ -254,10 +254,10 @@ Remove workspace:
 
 ```bash
 # Remove workspace only
-r2r eac work remove feature/auth
+eac work remove feature/auth
 
 # Remove workspace and branch
-r2r eac work remove feature/auth --delete-branch
+eac work remove feature/auth --delete-branch
 ```
 
 **What it does**:
@@ -274,14 +274,14 @@ Use descriptive, hierarchical names:
 
 ```bash
 # Good
-r2r eac work create feature/user-authentication
-r2r eac work create fix/memory-leak
-r2r eac work create refactor/database-layer
+eac work create feature/user-authentication
+eac work create fix/memory-leak
+eac work create refactor/database-layer
 
 # Avoid
-r2r eac work create auth
-r2r eac work create fix
-r2r eac work create temp
+eac work create auth
+eac work create fix
+eac work create temp
 ```
 
 ### Workspace Organization
@@ -299,7 +299,7 @@ r2r eac work create temp
 
 ```bash
 # Commit small, logical changes
-r2r eac work commit --all
+eac work commit --all
 
 # Don't wait until feature is complete
 # Small commits = better AI messages
@@ -309,7 +309,7 @@ r2r eac work commit --all
 
 ```bash
 # Sync with main daily
-r2r eac work pull
+eac work pull
 
 # Prevents large merge conflicts
 # Keeps topic branch up-to-date
@@ -319,8 +319,8 @@ r2r eac work pull
 
 ```bash
 # Remove workspace after merge
-r2r eac work merge
-r2r eac work remove feature/auth --delete-branch
+eac work merge
+eac work remove feature/auth --delete-branch
 
 # Don't accumulate stale workspaces
 ```
@@ -335,10 +335,10 @@ r2r eac work remove feature/auth --delete-branch
 
 ```bash
 # List workspaces
-r2r eac show workspaces
+eac show workspaces
 
 # Remove existing workspace
-r2r eac work remove feature/auth
+eac work remove feature/auth
 ```
 
 ### Merge Conflicts
@@ -349,7 +349,7 @@ r2r eac work remove feature/auth
 
 ```bash
 # Pull attempts automatic rebase
-r2r eac work pull
+eac work pull
 
 # If conflicts occur:
 # 1. Resolve conflicts in files
@@ -365,7 +365,7 @@ r2r eac work pull
 
 ```bash
 # Commit changes
-r2r eac work commit --all
+eac work commit --all
 
 # Or stash temporarily
 git stash
@@ -384,7 +384,7 @@ git stash pop
 git worktree remove feature/auth --force
 
 # Recreate
-r2r eac work create feature/auth
+eac work create feature/auth
 ```
 
 ## Integration with CI/CD
@@ -393,13 +393,13 @@ r2r eac work create feature/auth
 
 ```bash
 # Before merging, ensure CI passes
-r2r eac pipeline status
+eac pipeline status
 
 # Check CI for current commit
-r2r eac release check-ci $(git rev-parse HEAD)
+eac release check-ci $(git rev-parse HEAD)
 
 # Then merge
-r2r eac work merge
+eac work merge
 ```
 
 ### Automated Workflow
@@ -411,7 +411,7 @@ r2r eac work merge
 FEATURE_NAME=$1
 
 # Create workspace
-r2r eac work create "feature/$FEATURE_NAME"
+eac work create "feature/$FEATURE_NAME"
 
 # Change directory
 cd "../work/feature-$FEATURE_NAME"
@@ -419,18 +419,18 @@ cd "../work/feature-$FEATURE_NAME"
 # ... develop feature ...
 
 # Commit
-r2r eac work commit --all
+eac work commit --all
 
 # Sync with main
-r2r eac work pull
+eac work pull
 
 # Run tests
-r2r eac test
+eac test
 
 # Merge if tests pass
 if [ $? -eq 0 ]; then
-  r2r eac work merge
-  r2r eac work remove "feature/$FEATURE_NAME" --delete-branch
+  eac work merge
+  eac work remove "feature/$FEATURE_NAME" --delete-branch
 fi
 ```
 

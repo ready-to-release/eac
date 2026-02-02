@@ -503,7 +503,7 @@ gh run view <run-id> --log
 
 ```bash
 # Check if CI passed for a commit
-r2r eac release check-ci \
+eac release check-ci \
   --workflow ci-r2r-cli.yaml \
   --commit <sha>
 ```
@@ -512,14 +512,14 @@ r2r eac release check-ci \
 
 ```bash
 # Validate semver format
-r2r eac validate release-version 1.0.0
+eac validate release-version 1.0.0
 ```
 
 ### Test Release Locally
 
 ```bash
 # Build release binaries locally
-r2r eac build r2r-cli --all --version 1.0.0
+eac build r2r-cli --all --version 1.0.0
 
 # Verify binaries
 ls -lh out/build/r2r-cli/

@@ -14,7 +14,7 @@ Verify module dependencies match contracts and are properly configured.
 ### 1. Validate Dependencies
 
 ```bash
-r2r eac validate dependencies
+eac validate dependencies
 ```
 
 **What happens**: Checks all module dependencies match their contracts
@@ -22,7 +22,7 @@ r2r eac validate dependencies
 ### 2. View Dependency Graph
 
 ```bash
-r2r eac show dependencies
+eac show dependencies
 ```
 
 **What happens**: Displays visual dependency graph
@@ -30,7 +30,7 @@ r2r eac show dependencies
 ### 3. Check Go Module Tidiness
 
 ```bash
-r2r eac validate go-tidy
+eac validate go-tidy
 ```
 
 **What happens**: Verifies go.mod and go.sum are tidy
@@ -51,25 +51,25 @@ After adding new module dependency:
 
 ```bash
 # Check dependencies
-r2r eac validate dependencies
+eac validate dependencies
 
 # Output:
 # ✗ Module src-api: depends on src-auth v1.2.0 but using v1.1.0
 # ✗ Module src-db: not listed in go.mod
 
 # View current state
-r2r eac show dependencies | grep src-api
+eac show dependencies | grep src-api
 
 # Fix go.mod
 go get github.com/org/src-auth@v1.2.0
 go mod tidy
 
 # Validate again
-r2r eac validate dependencies
+eac validate dependencies
 # ✓ All dependencies valid
 
 # Ensure go.mod is tidy
-r2r eac validate go-tidy
+eac validate go-tidy
 # ✓ Go modules are tidy
 ```
 
@@ -77,10 +77,10 @@ r2r eac validate go-tidy
 
 ```bash
 # Get build dependencies only
-r2r eac get build-deps src-api
+eac get build-deps src-api
 
 # Get full dependency tree as JSON
-r2r eac get dependencies | jq '.dependencies["src-api"]'
+eac get dependencies | jq '.dependencies["src-api"]'
 ```
 
 ## Common Issues

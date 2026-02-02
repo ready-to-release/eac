@@ -6,14 +6,14 @@ CLI commands for validating Gherkin specifications and tag usage.
 
 ```bash
 # Validate all specifications
-r2r eac validate specs
+eac validate specs
 
 # Validate with effective tag output
-r2r eac validate specs --show-effective-tags
+eac validate specs --show-effective-tags
 
 # Validate specific aspects
-r2r eac validate test-tags
-r2r eac validate control-tags
+eac validate test-tags
+eac validate control-tags
 ```
 
 ---
@@ -23,7 +23,7 @@ r2r eac validate control-tags
 Validates Gherkin specifications against quality contracts.
 
 ```bash
-r2r eac validate specs
+eac validate specs
 ```
 
 **Checks**:
@@ -38,10 +38,10 @@ r2r eac validate specs
 
 ```bash
 # Show effective tags after inheritance
-r2r eac validate specs --show-effective-tags
+eac validate specs --show-effective-tags
 
 # Validate specific module
-r2r eac validate specs --module eac-commands
+eac validate specs --module eac-commands
 ```
 
 ---
@@ -51,7 +51,7 @@ r2r eac validate specs --module eac-commands
 Validates that all test tags are defined in the tag contract.
 
 ```bash
-r2r eac validate test-tags
+eac validate test-tags
 ```
 
 **Checks**:
@@ -67,7 +67,7 @@ r2r eac validate test-tags
 Validates that `@control:` tags reference valid OSCAL catalog controls.
 
 ```bash
-r2r eac validate control-tags
+eac validate control-tags
 ```
 
 **Checks**:

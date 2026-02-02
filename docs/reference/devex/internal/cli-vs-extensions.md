@@ -90,7 +90,7 @@ Extensions are **containerized tools** that provide automation capabilities. Eac
 - **Purpose**: Extension-specific settings
 - **Scope**: Per-extension configuration
 
-Example: `.r2r/eac/` contains EAC-specific config like `ai-provider.yml`.
+Example: `.eac/` contains EAC-specific config like `ai-provider.yml`.
 
 ## The Relationship
 
@@ -107,15 +107,15 @@ Example: `.r2r/eac/` contains EAC-specific config like `ai-provider.yml`.
 2. **Extensions** provide tools:
 
    ```bash
-   r2r eac build     # Extension runs in container
-   r2r eac test      # Extension runs in container
+   eac build     # Extension runs in container
+   eac test      # Extension runs in container
    r2r pwsh script   # Extension runs in container
    ```
 
 ### Command Execution Flow
 
 ```text
-User runs: r2r eac build
+User runs: eac build
 
    ↓
 [R2R CLI]
@@ -128,7 +128,7 @@ User runs: r2r eac build
    [EAC Extension Container]
      ├─ Runs 'eac build' inside container
      ├─ Has access to /workspace (your project)
-     ├─ Reads .r2r/eac/ configuration
+     ├─ Reads .eac/ configuration
      └─ Executes build and returns results
           ↓
    [R2R CLI]
@@ -175,7 +175,7 @@ extensions:
 
 → Tells R2R CLI which extensions are available
 
-**Tier 2** (`.r2r/eac/ai-provider.yml`):
+**Tier 2** (`.eac/ai-provider.yml`):
 
 ```yaml
 ai:
@@ -213,12 +213,12 @@ r2r install eac             # Install EAC extension
 r2r install pwsh            # Install PowerShell extension
 
 # Tier 2: Configure extensions
-r2r eac init --ai-provider claude-api
+eac init --ai-provider claude-api
 r2r pwsh configure
 
 # Tier 2: Use extensions
-r2r eac build
-r2r eac test
+eac build
+eac test
 r2r pwsh run-script.ps1
 ```
 
@@ -256,8 +256,8 @@ extensions:
 Use different versions side by side:
 
 ```bash
-r2r eac build          # Uses v1.2.3
-r2r eac-beta build     # Uses v2.0.0-beta
+eac build          # Uses v1.2.3
+eac-beta build     # Uses v2.0.0-beta
 ```
 
 ## Common Workflows
@@ -275,10 +275,10 @@ r2r init
 r2r install eac
 
 # Step 4: Configure extensions (Tier 2)
-r2r eac init --ai-provider claude-api
+eac init --ai-provider claude-api
 
 # Step 5: Use extensions (Tier 2)
-r2r eac build
+eac build
 ```
 
 ### Daily Development
@@ -289,9 +289,9 @@ r2r cleanup            # Free disk space
 r2r verify             # Check system health
 
 # Extension commands (frequently)
-r2r eac build
-r2r eac test
-r2r eac validate
+eac build
+eac test
+eac validate
 r2r pwsh run-tests.ps1
 ```
 
@@ -307,7 +307,7 @@ r2r list               # See available extensions
 # Extension diagnostics (Tier 2)
 r2r interactive eac    # Open container shell
 r2r metadata eac       # Get extension info
-r2r eac --help         # Extension help
+eac --help         # Extension help
 ```
 
 ## Summary
@@ -352,7 +352,7 @@ Similarly:
 r2r install eac           # Install extension
 
 # Extension usage layer
-r2r eac build             # Use extension
+eac build             # Use extension
 ```
 
 ## See Also

@@ -95,19 +95,19 @@ This command:
 
 - Pulls the EAC extension Docker image from the registry
 - Registers the `eac` extension in your configuration
-- Makes `r2r eac` commands available
+- Makes `eac` commands available
 
 ## Step 5: Initialize EAC in Your Project
 
 Configure the EAC extension for your project:
 
 ```bash
-r2r eac init --ai-provider claude-api
+eac init --ai-provider claude-api
 ```
 
 This command:
 
-- Creates the `.r2r/eac/` directory structure
+- Creates the `.eac/` directory structure
 - Generates `ai-provider.yml` with AI provider settings
 - Uses environment variable placeholders for API keys (safe to commit)
 - Other configuration files use system defaults automatically (no copying needed)
@@ -121,7 +121,7 @@ Available AI providers:
 To use a personal configuration with actual API tokens (gitignored):
 
 ```bash
-r2r eac init --ai-provider claude-api --ai-token sk-ant-your-key-here
+eac init --ai-provider claude-api --ai-token sk-ant-your-key-here
 ```
 
 !!! tip "Configuration Files"
@@ -151,13 +151,13 @@ $env:ANTHROPIC_API_KEY = "sk-ant-your-key-here"
 List all available commands:
 
 ```bash
-r2r eac help
+eac help
 ```
 
 Get help for a specific command:
 
 ```bash
-r2r eac help show
+eac help show
 ```
 
 !!! tip "Command Discovery"
@@ -170,21 +170,21 @@ r2r eac help show
 Before using other commands, analyze your repository structure:
 
 ```bash
-r2r eac analyze modules
+eac analyze modules
 ```
 
 This command:
 
 - Scans your repository to discover modules
-- Generates `.r2r/eac/repository.yml` with module metadata
-- Creates `.r2r/eac/books.yml` with architecture patterns
+- Generates `.eac/repository.yml` with module metadata
+- Creates `.eac/books.yml` with architecture patterns
 
 ## Step 9: View Your Project Structure
 
 Show all modules discovered in your repository:
 
 ```bash
-r2r eac show modules
+eac show modules
 ```
 
 This displays a table of all modules with their type and root path.
@@ -192,7 +192,7 @@ This displays a table of all modules with their type and root path.
 Show the project configuration:
 
 ```bash
-r2r eac show config
+eac show config
 ```
 
 ## Step 10: Run Tests
@@ -200,7 +200,7 @@ r2r eac show config
 To run tests for your project:
 
 ```bash
-r2r eac test
+eac test
 ```
 
 This runs all modules with the default test suites (L0-L2 fast tests).
@@ -208,13 +208,13 @@ This runs all modules with the default test suites (L0-L2 fast tests).
 To test a specific module:
 
 ```bash
-r2r eac test eac-commands # default fast suites
+eac test eac-commands # default fast suites
 ```
 
 To run a different test suite:
 
 ```bash
-r2r eac test --suite acceptance
+eac test --suite acceptance
 ```
 
 Available test suites:
@@ -234,8 +234,8 @@ Congratulations! You've successfully:
 - ✅ Configured EAC with AI provider settings
 - ✅ Set up your API key for AI-powered commands
 - ✅ Analyzed your repository to discover modules
-- ✅ Explored available commands with `r2r eac help`
-- ✅ Viewed repository structure with `r2r eac show modules`
+- ✅ Explored available commands with `eac help`
+- ✅ Viewed repository structure with `eac show modules`
 - ✅ Ran tests with different test suites
 
 ## Key Concepts Covered
@@ -243,7 +243,7 @@ Congratulations! You've successfully:
 - **r2r CLI installation** - Binary distribution for multiple platforms
 - **R2R CLI initialization** - Creating `.r2r/r2r-cli.yml` for extension management
 - **Extension installation** - Installing containerized extensions like EAC
-- **EAC configuration** - Setting up `.r2r/eac/` with AI provider settings
+- **EAC configuration** - Setting up `.eac/` with AI provider settings
 - **Configuration layering** - System defaults vs. user overrides
 - **AI provider configuration** - Claude, OpenAI, or Gemini integration
 - **Repository analysis** - Discovering modules and architecture patterns
@@ -254,7 +254,7 @@ Congratulations! You've successfully:
 
 ### Continue Learning
 
-- **Next tutorial:** [Understanding Configuration Files](./configuration-files.md) - Learn about `.r2r/` and `.r2r/eac/` files
+- **Next tutorial:** [Understanding Configuration Files](./configuration-files.md) - Learn about `.r2r/` and `.eac/` files
 - **Then:** [Creating Your First Extension](./creating-your-first-extension.md) - Build a custom r2r extension
 
 ### Try Common Tasks

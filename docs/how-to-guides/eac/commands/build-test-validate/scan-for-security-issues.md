@@ -14,7 +14,7 @@ Detect security vulnerabilities, secrets, and compliance issues before committin
 ### 1. Run All Security Scans
 
 ```bash
-r2r eac scan
+eac scan
 ```
 
 **What happens**: Runs all security scans (vulnerabilities, secrets, SAST, IaC)
@@ -22,7 +22,7 @@ r2r eac scan
 ### 2. Scan for Vulnerabilities
 
 ```bash
-r2r eac scan --scanner vuln
+eac scan --scanner vuln
 ```
 
 **What happens**: Uses Trivy to scan for known CVEs in dependencies
@@ -30,7 +30,7 @@ r2r eac scan --scanner vuln
 ### 3. Detect Secrets
 
 ```bash
-r2r eac scan --scanner secrets
+eac scan --scanner secrets
 ```
 
 **What happens**: Scans for exposed API keys, passwords, tokens
@@ -38,7 +38,7 @@ r2r eac scan --scanner secrets
 ### 4. Static Analysis
 
 ```bash
-r2r eac scan --scanner sast
+eac scan --scanner sast
 ```
 
 **What happens**: Uses Semgrep for code security issues
@@ -47,16 +47,16 @@ r2r eac scan --scanner sast
 
 ```bash
 # Scan infrastructure code
-r2r eac scan --scanner iac
+eac scan --scanner iac
 
 # Check compliance standards
-r2r eac scan --scanner compliance
+eac scan --scanner compliance
 
 # Generate SBOM
-r2r eac scan --scanner sbom
+eac scan --scanner sbom
 
 # Run multiple scan types together
-r2r eac scan --scanner vuln,secrets,sbom
+eac scan --scanner vuln,secrets,sbom
 ```
 
 ## Example Scenario
@@ -65,7 +65,7 @@ Pre-commit security check:
 
 ```bash
 # Run full security scan
-r2r eac scan
+eac scan
 
 # Output:
 # Running vulnerability scan... ✓ No vulnerabilities
@@ -81,7 +81,7 @@ r2r eac scan
 # Remove hardcoded API key, use environment variable
 
 # Scan again
-r2r eac scan --scanner secrets
+eac scan --scanner secrets
 # ✓ No secrets detected
 ```
 
@@ -89,7 +89,7 @@ r2r eac scan --scanner secrets
 
 ```bash
 # In CI pipeline
-r2r eac scan || exit 1
+eac scan || exit 1
 ```
 
 ## Common Issues

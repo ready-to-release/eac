@@ -2,7 +2,7 @@
 
 **Problem**: You want to add a new component to your repository with proper file ownership, dependencies, and build configuration.
 
-**Solution**: Define a module contract in `.r2r/eac/repository.yml`.
+**Solution**: Define a module contract in `.eac/repository.yml`.
 
 ## What is a Module?
 
@@ -30,7 +30,7 @@ See [Component Types Reference](../../../reference/eac/architecture/component-ty
 
 ## Quick Start
 
-Add a module to `.r2r/eac/repository.yml`:
+Add a module to `.eac/repository.yml`:
 
 ```yaml
 modules:
@@ -45,8 +45,8 @@ modules:
 Verify with:
 
 ```bash
-r2r eac show modules           # List all modules
-r2r eac get files my-service   # Show files owned by module
+eac show modules           # List all modules
+eac get files my-service   # Show files owned by module
 ```
 
 ## Module Contract Structure
@@ -129,7 +129,7 @@ Component types define build behavior and defaults for modules:
 See available types:
 
 ```bash
-r2r eac show component-types
+eac show component-types
 ```
 
 ## Dependencies
@@ -147,8 +147,8 @@ modules:
 View dependency graph:
 
 ```bash
-r2r eac show dependencies
-r2r eac get dependencies --format=json
+eac show dependencies
+eac get dependencies --format=json
 ```
 
 ## File Ownership
@@ -173,9 +173,9 @@ files:
 Check file ownership:
 
 ```bash
-r2r eac show files                    # All files with owners
-r2r eac show files-changed            # Changed files with owners
-r2r eac get changed-modules           # Modules affected by changes
+eac show files                    # All files with owners
+eac show files-changed            # Changed files with owners
+eac get changed-modules           # Modules affected by changes
 ```
 
 ## Workflows
@@ -210,13 +210,13 @@ After defining a module:
 
 ```bash
 # Build
-r2r eac build my-service
+eac build my-service
 
 # Test
-r2r eac test module my-service
+eac test module my-service
 
 # Validate contracts
-r2r eac validate contracts
+eac validate contracts
 ```
 
 ## Best Practices

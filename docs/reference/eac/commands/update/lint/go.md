@@ -54,13 +54,13 @@ linters:
 
 ```bash
 # Lint Go modules
-r2r eac update lint eac-commands
+eac update lint eac-commands
 
 # Lint with auto-fix (formatters only)
-r2r eac update lint eac-commands --fix
+eac update lint eac-commands --fix
 
 # Use custom config
-r2r eac update lint eac-commands --config .golangci-strict.yml
+eac update lint eac-commands --config .golangci-strict.yml
 ```
 
 ## Auto-Fix Support

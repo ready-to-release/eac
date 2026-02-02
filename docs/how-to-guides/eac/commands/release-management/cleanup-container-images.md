@@ -21,7 +21,7 @@ r2r release prune-packages ext-eac --force
 
 ## Step 1: Configure Cleanup Policy
 
-Add registry configuration to `.r2r/eac/repository.yml`:
+Add registry configuration to `.eac/repository.yml`:
 
 ```yaml
 registries:

@@ -13,24 +13,24 @@ The **release** category contains commands for release management and version co
 ### Complete Release Workflow
 
 ```bash
-r2r eac release changelog
-r2r eac validate release
-r2r eac release check-ci $(git rev-parse HEAD)
-r2r eac release this
+eac release changelog
+eac validate release
+eac release check-ci $(git rev-parse HEAD)
+eac release this
 ```
 
 ### Version Management
 
 ```bash
-r2r eac release pending
-r2r eac release tag-pending
-r2r eac release get-version
+eac release pending
+eac release tag-pending
+eac release get-version
 ```
 
 ### Module Release
 
 ```bash
-TAG=$(r2r eac release generate-module-calver src-auth)
+TAG=$(eac release generate-module-calver src-auth)
 git tag -a $TAG -m "Release $TAG"
 ```
 

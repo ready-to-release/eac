@@ -9,7 +9,7 @@ Follow these tutorials in order:
 | Tutorial                                                            | Description                                                |
 | ------------------------------------------------------------------- | ---------------------------------------------------------- |
 | [Quick Start](./quick-start.md)                                     | Install r2r CLI and EAC extension, run your first commands |
-| [Understanding Configuration Files](./configuration-files.md)       | Learn about `.r2r/` and `.r2r/eac/` configuration files    |
+| [Understanding Configuration Files](./configuration-files.md)       | Learn about `.r2r/` and `.eac/` configuration files    |
 | [Creating Your First Extension](./creating-your-first-extension.md) | Build a custom r2r extension from scratch                  |
 
 ## What You'll Learn

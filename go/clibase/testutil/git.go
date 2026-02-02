@@ -185,7 +185,7 @@ func (r *GitRepo) HasStagedChanges() bool {
 func (r *GitRepo) SetupEACConfig() {
 	r.t.Helper()
 
-	r.WriteFile(".r2r/eac/repository.yml", `
+	r.WriteFile(".eac/repository.yml", `
 name: test-repo
 description: Test repository
 versioning:
@@ -211,7 +211,7 @@ func (r *GitRepo) SetupEACConfigWithModules(modules []ModuleSpec) {
 		}
 	}
 
-	r.WriteFile(".r2r/eac/repository.yml", `
+	r.WriteFile(".eac/repository.yml", `
 name: test-repo
 description: Test repository
 versioning:

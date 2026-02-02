@@ -294,10 +294,10 @@ Changelogs can be generated automatically from commit history:
 
 ```bash
 # Generate changelog for a module
-r2r eac release changelog <moniker>
+eac release changelog <moniker>
 
 # Update existing changelog with new commits
-r2r eac release changelog <moniker> --update
+eac release changelog <moniker> --update
 ```
 
 **Process:**
@@ -387,10 +387,10 @@ Validate changelog format:
 
 ```bash
 # Validate changelog structure
-r2r eac validate release
+eac validate release
 
 # Check version format
-r2r eac validate release-version <version>
+eac validate release-version <version>
 ```
 
 **Validation checks:**

@@ -17,13 +17,13 @@ Workspace management using git worktrees for parallel development.
 
 ```bash
 # Create workspace
-r2r eac work create feature-auth
+eac work create feature-auth
 
 # Commit with AI message
-r2r eac work commit
+eac work commit
 
 # Merge back to main
-r2r eac work merge
+eac work merge
 ```
 
 ## See Also

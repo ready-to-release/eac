@@ -418,7 +418,7 @@ func buildContractBasedPrompt(config *DesignConfig) (string, error) {
 
 // loadPrompt loads the AI prompt for design generation with three-tier priority:
 // 1. Command flag (--prompt)
-// 2. Team override (.r2r/eac/templates/coreai.TypeDesign/design.md)
+// 2. Team override (.eac/templates/coreai.TypeDesign/design.md)
 // 3. System default (templates/coreai.TypeDesign/design.md)
 // Convention: Empty string uses type name (design.md).
 func loadPrompt(config *DesignConfig) (string, error) {

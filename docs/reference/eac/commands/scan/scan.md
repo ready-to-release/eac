@@ -28,24 +28,24 @@ The scan command supports multiple scanner types via the `--scanner` flag:
 
 ```bash
 # All modules with default scanners
-r2r eac scan
+eac scan
 
 # Specific module with default scanners
-r2r eac scan eac-core
+eac scan eac-core
 ```
 
 ### Run Specific Scanner Types
 
 ```bash
 # Single scanner type
-r2r eac scan --scanner vuln
-r2r eac scan --scanner sbom
+eac scan --scanner vuln
+eac scan --scanner sbom
 
 # Multiple scanner types
-r2r eac scan --scanner vuln,secrets,sbom
+eac scan --scanner vuln,secrets,sbom
 
 # Specific module with specific scanners
-r2r eac scan eac-core --scanner vuln,secrets
+eac scan eac-core --scanner vuln,secrets
 ```
 
 ### Dynamic Testing (ZAP)
@@ -53,7 +53,7 @@ r2r eac scan eac-core --scanner vuln,secrets
 ZAP is a special case requiring a URL target, so it has its own subcommand:
 
 ```bash
-r2r eac scan zap eac-api --target http://localhost:8080
+eac scan zap eac-api --target http://localhost:8080
 ```
 
 ## See Also

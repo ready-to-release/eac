@@ -29,7 +29,7 @@ They provide formatted tables, lists, and text designed for visual consumption r
 Most show commands display data as formatted tables:
 
 ```bash
-$ r2r eac show modules
+$ eac show modules
 ┌───────────────┬─────────────┬────────────────────┬──────┐
 │ Moniker       │ Type        │ Path               │ Files│
 ├───────────────┼─────────────┼────────────────────┼──────┤
@@ -101,56 +101,56 @@ Many show commands have corresponding `get` commands that provide the same infor
 
 ```bash
 # Start with modules
-r2r eac show modules
+eac show modules
 
 # Understand dependencies
-r2r eac show dependencies
+eac show dependencies
 
 # See file organization
-r2r eac show files
+eac show files
 
 # Check configuration
-r2r eac show config
+eac show config
 ```
 
 ### Checking Status
 
 ```bash
 # See what's changed
-r2r eac show files-changed
+eac show files-changed
 
 # Check workspaces
-r2r eac show workspaces
+eac show workspaces
 
 # View test status
-r2r eac show tests
+eac show tests
 ```
 
 ### Reviewing Results
 
 ```bash
 # Build summary
-r2r eac show build-summary eac-commands
+eac show build-summary eac-commands
 
 # Test summary
-r2r eac show test-summary src-auth acceptance
+eac show test-summary src-auth acceptance
 
 # Performance analysis
-r2r eac show build-times
-r2r eac show test-timings
+eac show build-times
+eac show test-timings
 ```
 
 ### Getting Help
 
 ```bash
 # General help
-r2r eac show help
+eac show help
 
 # List all commands
-r2r eac show valid-commands
+eac show valid-commands
 
 # Command-specific help
-r2r eac help <command>
+eac help <command>
 ```
 
 ## Usage Examples
@@ -159,55 +159,55 @@ r2r eac help <command>
 
 ```bash
 # All modules
-r2r eac show modules
+eac show modules
 
 # Module types
-r2r eac show component-types
+eac show component-types
 
 # Dependency graph
-r2r eac show dependencies
+eac show dependencies
 ```
 
 ### File Investigation
 
 ```bash
 # All files (large output)
-r2r eac show files
+eac show files
 
 # Changed files only
-r2r eac show files-changed
+eac show files-changed
 
 # Staged files only
-r2r eac show files-staged
+eac show files-staged
 ```
 
 ### Test Analysis
 
 ```bash
 # All tests
-r2r eac show tests
+eac show tests
 
 # Specific suite
-r2r eac show suite acceptance
+eac show suite acceptance
 
 # Test performance
-r2r eac show test-timings
+eac show test-timings
 
 # Test summary for CI
-r2r eac show test-summary src-auth acceptance
+eac show test-summary src-auth acceptance
 ```
 
 ### Environment Information
 
 ```bash
 # Environments
-r2r eac show environments
+eac show environments
 
 # Documentation books
-r2r eac show books
+eac show books
 
 # Git worktrees
-r2r eac show workspaces
+eac show workspaces
 ```
 
 ## Output Customization
@@ -217,8 +217,8 @@ r2r eac show workspaces
 For large output, pipe to `less`:
 
 ```bash
-r2r eac show files | less
-r2r eac show tests | less
+eac show files | less
+eac show tests | less
 ```
 
 ### Filtering with grep
@@ -227,13 +227,13 @@ Filter output with grep:
 
 ```bash
 # Find specific module
-r2r eac show modules | grep "src-auth"
+eac show modules | grep "src-auth"
 
 # Find failed tests
-r2r eac show tests | grep "✗"
+eac show tests | grep "✗"
 
 # Find go-library modules
-r2r eac show modules | grep "go-library"
+eac show modules | grep "go-library"
 ```
 
 ### Saving Output
@@ -242,10 +242,10 @@ Save formatted output to files:
 
 ```bash
 # Save to file
-r2r eac show modules > modules.txt
+eac show modules > modules.txt
 
 # Append to log
-r2r eac show test-summary src-auth acceptance >> test-report.log
+eac show test-summary src-auth acceptance >> test-report.log
 ```
 
 ## Performance Notes
@@ -300,11 +300,11 @@ Use [get commands](./get.md) when you need to:
 
 ```bash
 # Find module, then show its dependencies
-MODULE=$(r2r eac show modules | grep "src-auth" | awk '{print $1}')
-r2r eac show dependencies | grep "$MODULE"
+MODULE=$(eac show modules | grep "src-auth" | awk '{print $1}')
+eac show dependencies | grep "$MODULE"
 
 # Better: use get commands for this
-r2r eac get dependencies | jq ".dependencies[\"src-auth\"]"
+eac get dependencies | jq ".dependencies[\"src-auth\"]"
 ```
 
 ## Common Issues
@@ -316,8 +316,8 @@ r2r eac get dependencies | jq ".dependencies[\"src-auth\"]"
 **Solution**: Pipe to `less` or filter with `grep`
 
 ```bash
-r2r eac show files | less
-r2r eac show tests | grep "@auth"
+eac show files | less
+eac show tests | grep "@auth"
 ```
 
 ### Colors Not Working
@@ -329,7 +329,7 @@ r2r eac show tests | grep "@auth"
 ```bash
 # Force colors (if supported)
 export FORCE_COLOR=1
-r2r eac show modules
+eac show modules
 ```
 
 ### Table Misaligned
@@ -340,7 +340,7 @@ r2r eac show modules
 
 ```bash
 # Use get command for narrow terminals
-r2r eac get modules | jq -r '.modules[] | "\(.moniker): \(.type)"'
+eac get modules | jq -r '.modules[] | "\(.moniker): \(.type)"'
 ```
 
 ## See Also

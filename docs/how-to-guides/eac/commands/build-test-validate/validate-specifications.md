@@ -22,7 +22,7 @@ Check Gherkin BDD specifications for quality and detect unused step definitions.
 ### 1. Validate Spec Quality
 
 ```bash
-r2r eac validate specs
+eac validate specs
 ```
 
 **What happens**: Checks Gherkin files against quality standards
@@ -30,7 +30,7 @@ r2r eac validate specs
 ### 2. Find Unused Steps
 
 ```bash
-r2r eac get specs-unused-steps
+eac get specs-unused-steps
 ```
 
 **What happens**: Identifies step definitions that are never used
@@ -56,7 +56,7 @@ Specifications are checked for:
 - **Step definition coverage**
 - **No undefined steps**
 
-**Tagging Requirements**: All tags must comply with `.r2r/eac/testing-tags.yml`
+**Tagging Requirements**: All tags must comply with `.eac/testing-tags.yml`
 
 ## Example Scenario
 
@@ -64,7 +64,7 @@ After adding new authentication specs:
 
 ```bash
 # Validate specifications
-r2r eac validate specs
+eac validate specs
 
 # Output:
 # ✓ specs/r2r-cli/user-login/specification.feature
@@ -76,7 +76,7 @@ r2r eac validate specs
 # ✓ 8 files valid, ✗ 1 file with errors
 
 # Check for unused steps
-r2r eac get specs-unused-steps
+eac get specs-unused-steps
 
 # Output:
 # {
@@ -91,7 +91,7 @@ r2r eac get specs-unused-steps
 # 3. Remove unused step definition
 
 # Validate again
-r2r eac validate specs
+eac validate specs
 # ✓ All specifications valid
 ```
 
@@ -99,7 +99,7 @@ r2r eac validate specs
 
 ```bash
 # In pre-commit hook
-r2r eac validate specs || exit 1
+eac validate specs || exit 1
 ```
 
 ## Common Issues

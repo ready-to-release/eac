@@ -24,16 +24,16 @@ The main `scan` command supports these scanner types via `--scanner` flag:
 
 ```bash
 # Run all default scans
-r2r eac scan
+eac scan
 
 # Specific scanner types
-r2r eac scan --scanner vuln,secrets
+eac scan --scanner vuln,secrets
 
 # Multiple modules with specific scanners
-r2r eac scan eac-core eac-commands --scanner sbom,vuln
+eac scan eac-core eac-commands --scanner sbom,vuln
 
 # Dynamic testing (separate subcommand)
-r2r eac scan zap eac-api --target http://localhost:8080
+eac scan zap eac-api --target http://localhost:8080
 ```
 
 ## See Also

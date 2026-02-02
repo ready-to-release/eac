@@ -96,7 +96,7 @@ runs:
         MODULE: ${{ inputs.module }}
       run: |
         # Extract release_type from repository.yml
-        REPO_YML=".r2r/eac/repository.yml"
+        REPO_YML=".eac/repository.yml"
 
         if [ ! -f "$REPO_YML" ]; then
           echo "::error::Repository configuration not found: $REPO_YML"

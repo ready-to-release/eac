@@ -5,7 +5,7 @@
 // Long:
 // Long: Template Source and Destination:
 // Long:   Source: templates/ai/ (fixed)
-// Long:   Destination: .r2r/eac/templates/ai/ (fixed)
+// Long:   Destination: .eac/templates/ai/ (fixed)
 // Long:
 // Long: Use Case:
 // Long:   Install AI prompt templates once to your project, then customize them as needed.

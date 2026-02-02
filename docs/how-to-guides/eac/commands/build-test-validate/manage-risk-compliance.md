@@ -15,7 +15,7 @@ Track security compliance using OSCAL (Open Security Controls Assessment Languag
 ### 1. Create Risk Profile
 
 ```bash
-r2r eac create risk-profile --catalog nist-800-53
+eac create risk-profile --catalog nist-800-53
 ```
 
 **What happens**: Generates OSCAL profile from risk assessment
@@ -23,7 +23,7 @@ r2r eac create risk-profile --catalog nist-800-53
 ### 2. Run Security Scans
 
 ```bash
-r2r eac scan --scanner compliance
+eac scan --scanner compliance
 ```
 
 **What happens**: Collects evidence for compliance controls
@@ -31,7 +31,7 @@ r2r eac scan --scanner compliance
 ### 3. Update Assessment Results
 
 ```bash
-r2r eac create risk-assess
+eac create risk-assess
 ```
 
 **What happens**: Updates OSCAL assessment-results with test and security evidence
@@ -39,8 +39,8 @@ r2r eac create risk-assess
 ### 4. Validate Compliance
 
 ```bash
-r2r eac validate risk-profile
-r2r eac validate risk-catalog
+eac validate risk-profile
+eac validate risk-catalog
 ```
 
 **What happens**: Checks OSCAL documents are valid
@@ -94,14 +94,14 @@ Tracking NIST 800-53 compliance:
 
 ```bash
 # Create profile for required controls
-r2r eac create risk-profile --catalog nist-800-53
+eac create risk-profile --catalog nist-800-53
 
 # Output:
 # ✓ Created oscal/profile.json
 # Included 25 controls
 
 # Run compliance scans
-r2r eac scan --scanner compliance
+eac scan --scanner compliance
 
 # Output:
 # Checking AC-1 (Access Control Policy)... ✓
@@ -110,17 +110,17 @@ r2r eac scan --scanner compliance
 #   Missing firewall rules
 
 # Update assessment with evidence
-r2r eac create risk-assess
+eac create risk-assess
 
 # Output:
 # ✓ Updated oscal/assessment-results.json
 # 24/25 controls satisfied
 
 # Validate OSCAL documents
-r2r eac validate risk-profile
+eac validate risk-profile
 # ✓ Profile valid per OSCAL 1.1.3 schema
 
-r2r eac validate risk-catalog
+eac validate risk-catalog
 # ✓ Catalog valid
 ```
 
@@ -149,7 +149,7 @@ When tests run, evidence is collected for AC-1.
 
 The `create risk-assess` command generates reports using templates that can be customized:
 
-**Custom template**: `.r2r/eac/templates/reports/risk/risk-assess.md`
+**Custom template**: `.eac/templates/reports/risk/risk-assess.md`
 
 ## Next Steps
 

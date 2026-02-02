@@ -172,14 +172,14 @@ out/
 
 ```bash
 # Build test evidence
-r2r eac update evidence <module>
+eac update evidence <module>
 
 # Show evidence summary
-r2r eac show test-summary <module>
-r2r eac show scan-summary <module>
+eac show test-summary <module>
+eac show scan-summary <module>
 
 # Generate OSCAL assessment
-r2r eac create risk-assess --profile specs/.risk-controls/risk-profile.json
+eac create risk-assess --profile specs/.risk-controls/risk-profile.json
 ```
 
 ---

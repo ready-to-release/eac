@@ -18,13 +18,13 @@ AI-powered content generation commands for creating commits, specifications, PRs
 
 ```bash
 # Generate commit message
-r2r eac create commit-message
+eac create commit-message
 
 # Create pull request
-r2r eac create pr
+eac create pr
 
 # Generate specification
-r2r eac create spec "User can login"
+eac create spec "User can login"
 ```
 
 ## See Also

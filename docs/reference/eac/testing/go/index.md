@@ -16,13 +16,13 @@ Technical reference for Go/Godog BDD implementation in EAC.
 
 ```bash
 # Run Go tests for a module
-r2r eac test eac-commands
+eac test eac-commands
 
 # Run specific suite
-r2r eac test eac-commands --suite unit
+eac test eac-commands --suite unit
 
 # Run with verbose output
-r2r eac test eac-commands --verbose
+eac test eac-commands --verbose
 ```
 
 ## Related Documentation

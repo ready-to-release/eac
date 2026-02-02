@@ -9,7 +9,7 @@ For **container/bundle modules** with dependencies, approvals are **aggregated f
 Example: When querying `ext-eac` (which depends on `eac-commands` and `r2r-cli`):
 
 ```bash
-r2r eac show approval-comments ext-eac
+eac show approval-comments ext-eac
 ```
 
 Shows approvals from PRs containing:

@@ -26,8 +26,8 @@ Feature: eac-cli_templates
     Scenario: Install AI templates
       When I run the templates command "templates install ai"
       Then the command should succeed
-      And the file ".r2r/eac/templates/ai/commit-message/module.md" should exist
-      And the file ".r2r/eac/templates/ai/design/design.md" should exist
+      And the file ".eac/templates/ai/commit-message/module.md" should exist
+      And the file ".eac/templates/ai/design/design.md" should exist
 
     Scenario: Install specs templates
       When I run the templates command "templates install specs"

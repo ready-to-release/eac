@@ -137,7 +137,7 @@ func buildTargetFileCore(cfg Config, logCfg LoggingConfig) (zapcore.Core, io.Clo
 // - What formatter each sink uses
 // Returns the core and any closers that need to be closed on Sync.
 func buildCore(cfg Config) (zapcore.Core, []io.Closer, error) {
-	// Load logging configuration from .r2r/eac/logging.yml
+	// Load logging configuration from .eac/logging.yml
 	logCfg := LoadLoggingConfig(cfg.WorkspaceRoot)
 
 	consoleCore := buildConsoleCore(cfg, logCfg)

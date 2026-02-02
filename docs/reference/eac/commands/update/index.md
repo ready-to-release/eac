@@ -16,13 +16,13 @@ Update existing documentation, architecture diagrams, and run linters.
 
 ```bash
 # Update architecture documentation
-r2r eac update design src-auth
+eac update design src-auth
 
 # Lint all modules
-r2r eac update lint
+eac update lint
 
 # Lint with auto-fix
-r2r eac update lint --fix
+eac update lint --fix
 ```
 
 ## See Also

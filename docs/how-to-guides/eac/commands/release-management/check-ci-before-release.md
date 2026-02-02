@@ -14,7 +14,7 @@ Verify CI pipeline passes before creating a release to ensure quality.
 ### 1. Check Current Status
 
 ```bash
-r2r eac pipeline status
+eac pipeline status
 ```
 
 **What happens**: Shows CI status for head of trunk
@@ -22,7 +22,7 @@ r2r eac pipeline status
 ### 2. Check Specific Commit
 
 ```bash
-r2r eac release check-ci $(git rev-parse HEAD)
+eac release check-ci $(git rev-parse HEAD)
 ```
 
 **What happens**: Verifies CI passed for the commit
@@ -30,7 +30,7 @@ r2r eac release check-ci $(git rev-parse HEAD)
 ### 3. Wait for CI if Running
 
 ```bash
-r2r eac pipeline wait
+eac pipeline wait
 ```
 
 **What happens**: Blocks until CI workflows complete
@@ -40,7 +40,7 @@ r2r eac pipeline wait
 If CI passes, continue with release:
 
 ```bash
-r2r eac release this
+eac release this
 ```
 
 ## Example Scenario
@@ -54,7 +54,7 @@ echo $COMMIT
 # abc123...
 
 # Check CI status
-r2r eac release check-ci $COMMIT
+eac release check-ci $COMMIT
 
 # Output:
 # Checking CI for commit abc123...
@@ -64,20 +64,20 @@ r2r eac release check-ci $COMMIT
 # ✓ All checks passed
 
 # Safe to release
-r2r eac release this
+eac release this
 
 # If CI is still running:
-r2r eac release check-ci $COMMIT
+eac release check-ci $COMMIT
 # ⏳ Build workflow: in progress
 # ✓ Test workflow: passed
 
 # Wait for completion
-r2r eac pipeline wait
+eac pipeline wait
 # Waiting for workflows...
 # ✓ All workflows completed
 
 # Check again
-r2r eac release check-ci $COMMIT
+eac release check-ci $COMMIT
 # ✓ All checks passed
 ```
 
@@ -98,13 +98,13 @@ set -e
 COMMIT=$(git rev-parse HEAD)
 
 # Check CI
-if ! r2r eac release check-ci $COMMIT; then
+if ! eac release check-ci $COMMIT; then
   echo "CI not passing, aborting release"
   exit 1
 fi
 
 # Proceed with release
-r2r eac release this
+eac release this
 ```
 
 ## Next Steps

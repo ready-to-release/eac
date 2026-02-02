@@ -109,7 +109,7 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
     components:
       go: .
 `, module, module)
-		repositoryYmlPath := filepath.Join(".r2r", "eac", "repository.yml")
+		repositoryYmlPath := filepath.Join(".eac", "repository.yml")
 		if err := eacgodog.CreateFile(ctx, repositoryYmlPath, repositoryYml); err != nil {
 			return fmt.Errorf("failed to create repository.yml: %w", err)
 		}
@@ -153,7 +153,7 @@ paths:
 		}
 
 		// Read existing repository.yml or create new one
-		repositoryYmlPath := filepath.Join(ctx.CurrentWorkDir, ".r2r", "eac", "repository.yml")
+		repositoryYmlPath := filepath.Join(ctx.CurrentWorkDir, ".eac", "repository.yml")
 		var repositoryYml string
 		moduleExists := false
 		if existingContent, err := os.ReadFile(repositoryYmlPath); err == nil {
@@ -185,7 +185,7 @@ paths:
 
 		// Only write if we made changes
 		if !moduleExists {
-			if err := eacgodog.CreateFile(ctx, filepath.Join(".r2r", "eac", "repository.yml"), repositoryYml); err != nil {
+			if err := eacgodog.CreateFile(ctx, filepath.Join(".eac", "repository.yml"), repositoryYml); err != nil {
 				return fmt.Errorf("failed to create repository.yml: %w", err)
 			}
 		}
@@ -267,7 +267,7 @@ paths:
 			repositoryYml += "    components:\n"
 			repositoryYml += "      go: .\n"
 		}
-		repositoryYmlPath := filepath.Join(".r2r", "eac", "repository.yml")
+		repositoryYmlPath := filepath.Join(".eac", "repository.yml")
 		if err := eacgodog.CreateFile(ctx, repositoryYmlPath, repositoryYml); err != nil {
 			return fmt.Errorf("failed to create repository.yml: %w", err)
 		}
@@ -320,7 +320,7 @@ paths:
 			repositoryYml += "    components:\n"
 			repositoryYml += "      go: .\n"
 		}
-		repositoryYmlPath := filepath.Join(".r2r", "eac", "repository.yml")
+		repositoryYmlPath := filepath.Join(".eac", "repository.yml")
 		if err := eacgodog.CreateFile(ctx, repositoryYmlPath, repositoryYml); err != nil {
 			return fmt.Errorf("failed to create repository.yml: %w", err)
 		}
@@ -415,7 +415,7 @@ paths:
 	sc.Step(`^all modules have fresh test and security evidence$`, func() error {
 		// This step assumes modules were already created in a previous step
 		// We need to get the list of modules from the repository.yml
-		repositoryYmlPath := filepath.Join(ctx.CurrentWorkDir, ".r2r", "eac", "repository.yml")
+		repositoryYmlPath := filepath.Join(ctx.CurrentWorkDir, ".eac", "repository.yml")
 		content, err := os.ReadFile(repositoryYmlPath)
 		if err != nil {
 			return fmt.Errorf("failed to read repository.yml: %w", err)

@@ -6,7 +6,7 @@ How to configure EAC for your project.
 
 EAC uses YAML configuration files with a layered system:
 
-**User configs** (`.r2r/eac/`):
+**User configs** (`.eac/`):
 
 | File             | Purpose              | Required |
 | ---------------- | -------------------- | -------- |
@@ -28,7 +28,7 @@ EAC uses YAML configuration files with a layered system:
 ### Minimal Module
 
 ```yaml
-# .r2r/eac/repository.yml
+# .eac/repository.yml
 modules:
   - moniker: my-service
     type: go-cli
@@ -110,7 +110,7 @@ files:
 Validate with:
 
 ```bash
-r2r eac validate-module-files
+eac validate-module-files
 ```
 
 ## AI Provider Configuration
@@ -120,7 +120,7 @@ For AI-powered features:
 ### Using Environment Variables (Recommended)
 
 ```yaml
-# .r2r/eac/ai-provider.yml
+# .eac/ai-provider.yml
 provider: claude-api
 api_key_env: ANTHROPIC_API_KEY
 model: claude-sonnet-4-5
@@ -135,7 +135,7 @@ export ANTHROPIC_API_KEY="sk-ant-..."
 ### Using Personal Config (Local Only)
 
 ```yaml
-# .r2r/eac/ai-provider.personal.yml (gitignored)
+# .eac/ai-provider.personal.yml (gitignored)
 provider: claude-api
 api_key: sk-ant-...
 model: claude-sonnet-4-5
@@ -146,7 +146,7 @@ model: claude-sonnet-4-5
 Define test execution environments:
 
 ```yaml
-# .r2r/eac/environments.yml
+# .eac/environments.yml
 environments:
   - moniker: unit
     name: Unit Tests
@@ -164,7 +164,7 @@ environments:
 Group tests by purpose:
 
 ```yaml
-# .r2r/eac/test-suites.yml
+# .eac/test-suites.yml
 suites:
   - moniker: commit
     name: Commit Tests
@@ -184,8 +184,8 @@ Settings are merged in order (later overrides earlier):
 
 1. Hardcoded defaults (in eac-core code)
 2. System defaults (`contracts/eac-core/0.1.0/defaults/`)
-3. User config (`.r2r/eac/*.yml`)
-4. Personal config (`.r2r/eac/*.personal.yml`)
+3. User config (`.eac/*.yml`)
+4. Personal config (`.eac/*.personal.yml`)
 
 ## Validation
 
@@ -193,12 +193,12 @@ Always validate after changes:
 
 ```bash
 # Validate all contracts
-r2r eac validate
+eac validate
 
 # Specific validations
-r2r eac validate-contracts      # Schema validation
-r2r eac validate-dependencies   # Dependency references
-r2r eac validate-module-files   # File ownership
+eac validate-contracts      # Schema validation
+eac validate-dependencies   # Dependency references
+eac validate-module-files   # File ownership
 ```
 
 ## Common Configurations

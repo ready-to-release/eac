@@ -13,4 +13,4 @@ Provides implicit CLI configuration for the devbox environment.
 ## Design File
 
 - **Location**: `specs/implicit-cli/.design/workspace.dsl`
-- **Interactive**: `r2r eac serve-design --module implicit-cli`
+- **Interactive**: `eac serve-design --module implicit-cli`

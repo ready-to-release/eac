@@ -49,13 +49,13 @@ ignores:
 
 ```bash
 # Lint markdown in a module
-r2r eac update lint repository
+eac update lint repository
 
 # Lint with auto-fix
-r2r eac update lint repository --fix
+eac update lint repository --fix
 
 # All static/docs modules
-r2r eac update lint
+eac update lint
 ```
 
 ## Auto-Fix Support
@@ -193,7 +193,7 @@ ignores:
 Run with `--fix` first to auto-correct formatting issues:
 
 ```bash
-r2r eac update lint --fix
+eac update lint --fix
 ```
 
 Then address remaining semantic issues manually.

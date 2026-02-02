@@ -175,7 +175,7 @@ func minimalWorkspaceDSL(module string) string {
 // Note: Modules are defined in repository.yml (unified config).
 func createModuleContract(ctx *eacgodog.TestContext, module, sourcePath string) error {
 	// Path to repository.yml in isolated environment
-	repoYmlPath := filepath.Join(eacgodog.ResolvePath(ctx, ""), ".r2r", "eac", "repository.yml")
+	repoYmlPath := filepath.Join(eacgodog.ResolvePath(ctx, ""), ".eac", "repository.yml")
 
 	// Read existing repository.yml
 	existingData, err := os.ReadFile(repoYmlPath)

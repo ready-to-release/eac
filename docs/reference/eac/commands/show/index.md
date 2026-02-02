@@ -35,10 +35,10 @@ Display repository information in human-readable format for interactive terminal
 
 ```bash
 # Show modules
-r2r eac show modules
+eac show modules
 
 # Show dependencies
-r2r eac show dependencies
+eac show dependencies
 ```
 
 ## See Also

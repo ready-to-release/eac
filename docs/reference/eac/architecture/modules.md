@@ -28,7 +28,7 @@ The following diagram shows the complete entity-relationship model for the modul
 Each module includes C4 architecture diagrams documenting its design. View them interactively:
 
 ```bash
-r2r eac serve-design
+eac serve-design
 # Opens http://localhost:8080
 ```
 
@@ -43,7 +43,7 @@ See [Viewing Diagrams](./viewing-diagrams.md) for detailed instructions.
 
 ## Module Registry
 
-**File**: `.r2r/eac/repository.yml`
+**File**: `.eac/repository.yml`
 
 Modules are registered with:
 
@@ -156,16 +156,16 @@ modules:
 
 ```bash
 # Show dependency graph
-r2r eac show-dependencies
+eac show-dependencies
 
 # Get execution order for specific modules
-r2r eac get-execution-order eac-commands
+eac get-execution-order eac-commands
 
 # Validate dependencies
-r2r eac validate-dependencies
+eac validate-dependencies
 
 # Check for circular dependencies
-r2r eac validate-module-hierarchy
+eac validate-module-hierarchy
 ```
 
 ### Dependency Rules
@@ -202,7 +202,7 @@ files:
 **Command**:
 
 ```bash
-r2r eac validate-module-files
+eac validate-module-files
 ```
 
 **Error Example**:
@@ -217,13 +217,13 @@ r2r eac validate-module-files
 
 ```bash
 # Show all files with ownership
-r2r eac show-files
+eac show-files
 
 # Show changed files with ownership
-r2r eac show-files-changed
+eac show-files-changed
 
 # Show staged files with ownership
-r2r eac show-files-staged
+eac show-files-staged
 ```
 
 ---
@@ -235,7 +235,7 @@ r2r eac show-files-staged
 **Load contracts**:
 
 ```bash
-r2r eac get-modules
+eac get-modules
 ```
 
 **Output**: All modules from `repository.yml` with resolved dependencies
@@ -245,18 +245,18 @@ r2r eac get-modules
 **Build single module**:
 
 ```bash
-r2r eac build <module>
+eac build <module>
 ```
 
 **Build with dependencies**:
 
 ```bash
-r2r eac build <module> --deps
+eac build <module> --deps
 ```
 
 **Build Flow**:
 
-1. Load contracts from `.r2r/eac/`
+1. Load contracts from `.eac/`
 2. Resolve dependencies
 3. Topological sort
 4. Build in dependency order
@@ -268,18 +268,18 @@ r2r eac build <module> --deps
 **Test single module**:
 
 ```bash
-r2r eac test <module>
+eac test <module>
 ```
 
 **Test suite** (multiple modules):
 
 ```bash
-r2r eac test-suite unit
+eac test-suite unit
 ```
 
 **Test Flow**:
 
-1. Load test suites from `.r2r/eac/test-suites.yml`
+1. Load test suites from `.eac/test-suites.yml`
 2. Select tests by tags (e.g., `@L0`, `@L1`)
 3. Run tests in parallel
 4. Collect results in `out/test/`
@@ -289,19 +289,19 @@ r2r eac test-suite unit
 **Schema validation**:
 
 ```bash
-r2r eac validate-contracts
+eac validate-contracts
 ```
 
 **Dependency validation**:
 
 ```bash
-r2r eac validate-dependencies
+eac validate-dependencies
 ```
 
 **File ownership validation**:
 
 ```bash
-r2r eac validate-module-files
+eac validate-module-files
 ```
 
 ### 5. Release
@@ -309,19 +309,19 @@ r2r eac validate-module-files
 **Check pending releases**:
 
 ```bash
-r2r eac release-pending <module>
+eac release-pending <module>
 ```
 
 **Generate changelog**:
 
 ```bash
-r2r eac release-changelog <module>
+eac release-changelog <module>
 ```
 
 **Create release**:
 
 ```bash
-r2r eac release-this <module>
+eac release-this <module>
 ```
 
 ---
@@ -347,14 +347,14 @@ modules:
 **2. Validate**:
 
 ```bash
-r2r eac validate-contracts
-r2r eac validate-module-files
+eac validate-contracts
+eac validate-module-files
 ```
 
 **3. Build**:
 
 ```bash
-r2r eac build my-new-module
+eac build my-new-module
 ```
 
 ### Modifying Dependencies
@@ -368,33 +368,33 @@ depends_on: [logging-go, config-go]  # Add config-go
 **2. Validate**:
 
 ```bash
-r2r eac validate-dependencies
-r2r eac validate-module-hierarchy  # Check for cycles
+eac validate-dependencies
+eac validate-module-hierarchy  # Check for cycles
 ```
 
 **3. Rebuild**:
 
 ```bash
-r2r eac build my-module --deps
+eac build my-module --deps
 ```
 
 ### Finding Module Information
 
 ```bash
 # List all modules
-r2r eac show-modules
+eac show-modules
 
 # Show dependency graph
-r2r eac show-dependencies
+eac show-dependencies
 
 # Show files owned by modules
-r2r eac show-files
+eac show-files
 
 # Get module details (JSON)
-r2r eac get-modules
+eac get-modules
 
 # Get build dependencies
-r2r eac get-build-deps my-module
+eac get-build-deps my-module
 ```
 
 ---
@@ -439,8 +439,8 @@ artifacts:
 **Verification**:
 
 ```bash
-r2r eac show-artifacts <module>
-r2r eac validate-artifacts <module>
+eac show-artifacts <module>
+eac validate-artifacts <module>
 ```
 
 ### Build Cache
@@ -457,10 +457,10 @@ r2r eac validate-artifacts <module>
 
 ```bash
 # Use cache (default)
-r2r eac build my-module
+eac build my-module
 
 # Force rebuild
-r2r eac build my-module --force
+eac build my-module --force
 ```
 
 ### Incremental Builds
@@ -469,23 +469,23 @@ r2r eac build my-module --force
 
 ```bash
 # Detect changed modules since last successful CI
-r2r eac get-changed-modules-ci
+eac get-changed-modules-ci
 
 # Get affected modules (dependents)
-r2r eac get-changed-modules --with-dependents
+eac get-changed-modules --with-dependents
 ```
 
 **CI Workflow**:
 
 ```bash
 # 1. Detect changes
-CHANGED=$(r2r eac get-changed-modules-ci)
+CHANGED=$(eac get-changed-modules-ci)
 
 # 2. Build affected modules
-r2r eac build $CHANGED
+eac build $CHANGED
 
 # 3. Test affected modules
-r2r eac test $CHANGED
+eac test $CHANGED
 ```
 
 ---
@@ -504,12 +504,12 @@ r2r eac test $CHANGED
 
 ```bash
 # Start Structurizr Lite server
-r2r eac serve-design
+eac serve-design
 
 # Access: http://localhost:8080
 
 # Stop server
-r2r eac serve-design --stop
+eac serve-design --stop
 ```
 
 **Method 2: VS Code Extension**:
@@ -521,13 +521,13 @@ r2r eac serve-design --stop
 
 ```bash
 # Validate design
-r2r eac validate-design <module>
+eac validate-design <module>
 
 # Generate design (AI-powered)
-r2r eac create-design <module>
+eac create-design <module>
 
 # Update existing design (AI-powered)
-r2r eac update-design <module>
+eac update-design <module>
 ```
 
 ### C4 Model Levels
@@ -580,59 +580,59 @@ r2r eac update-design <module>
 ### Discovery
 
 ```bash
-r2r eac show-modules               # Module table
-r2r eac show-dependencies          # Dependency graph
-r2r eac show-files                 # File ownership
-r2r eac show-component-types        # Component type table
-r2r eac get-modules                # Modules JSON
-r2r eac get-dependencies           # Dependencies JSON
+eac show-modules               # Module table
+eac show-dependencies          # Dependency graph
+eac show-files                 # File ownership
+eac show-component-types        # Component type table
+eac get-modules                # Modules JSON
+eac get-dependencies           # Dependencies JSON
 ```
 
 ### Build
 
 ```bash
-r2r eac build <module>             # Build single module
-r2r eac build <module> --deps      # Build with dependencies
-r2r eac get-artifacts <module>     # List artifacts
-r2r eac show-artifacts <module>    # Show artifact status
-r2r eac show-build-summary <module> # Build summary
+eac build <module>             # Build single module
+eac build <module> --deps      # Build with dependencies
+eac get-artifacts <module>     # List artifacts
+eac show-artifacts <module>    # Show artifact status
+eac show-build-summary <module> # Build summary
 ```
 
 ### Test
 
 ```bash
-r2r eac test <module>              # Test single module
-r2r eac test-suite <suite>         # Run test suite
-r2r eac test-debug                 # Debug test failures
-r2r eac show-test-summary <module> # Test summary
+eac test <module>              # Test single module
+eac test-suite <suite>         # Run test suite
+eac test-debug                 # Debug test failures
+eac show-test-summary <module> # Test summary
 ```
 
 ### Validation
 
 ```bash
-r2r eac validate                   # Validate all
-r2r eac validate-contracts         # Schema validation
-r2r eac validate-dependencies      # Dependency validation
-r2r eac validate-module-files      # File ownership validation
-r2r eac validate-module-hierarchy  # Circular dependency check
-r2r eac validate-artifacts <module> # Artifact validation
+eac validate                   # Validate all
+eac validate-contracts         # Schema validation
+eac validate-dependencies      # Dependency validation
+eac validate-module-files      # File ownership validation
+eac validate-module-hierarchy  # Circular dependency check
+eac validate-artifacts <module> # Artifact validation
 ```
 
 ### Design
 
 ```bash
-r2r eac validate-design <module>   # Validate Structurizr DSL
-r2r eac create-design <module>     # Generate design (AI)
-r2r eac update-design <module>     # Update design (AI)
-r2r eac serve-design               # Serve designs in browser
+eac validate-design <module>   # Validate Structurizr DSL
+eac create-design <module>     # Generate design (AI)
+eac update-design <module>     # Update design (AI)
+eac serve-design               # Serve designs in browser
 ```
 
 ### Release
 
 ```bash
-r2r eac release-changelog <module> # Generate changelog
-r2r eac release-pending <module>   # Check pending releases
-r2r eac release-this <module>      # Create release
+eac release-changelog <module> # Generate changelog
+eac release-pending <module>   # Check pending releases
+eac release-this <module>      # Create release
 ```
 
 ---

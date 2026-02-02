@@ -53,8 +53,8 @@ your-project/
 | File                        | Purpose                |
 | --------------------------- | ---------------------- |
 | `.r2r/r2r-cli.yml`          | Extension registry     |
-| `.r2r/eac/repository.yml`   | Module definitions     |
-| `.r2r/eac/ai-provider.yml`  | AI config (no secrets) |
+| `.eac/repository.yml`   | Module definitions     |
+| `.eac/ai-provider.yml`  | AI config (no secrets) |
 
 System defaults (in `contracts/eac-core/0.1.0/defaults/`) are used automatically and don't need to be committed.
 
@@ -63,7 +63,7 @@ System defaults (in `contracts/eac-core/0.1.0/defaults/`) are used automatically
 | File/Directory            | Purpose                       |
 | ------------------------- | ----------------------------- |
 | `.r2r/r2r-cli.local.yml`  | Local CLI overrides           |
-| `.r2r/eac/*.personal.yml` | Personal configs with secrets |
+| `.eac/*.personal.yml` | Personal configs with secrets |
 | `.r2r/cache/`             | Build cache                   |
 
 ### Recommended .gitignore Entries
@@ -71,7 +71,7 @@ System defaults (in `contracts/eac-core/0.1.0/defaults/`) are used automatically
 ```gitignore
 # R2R/EAC local configuration
 .r2r/r2r-cli.local.yml
-.r2r/eac/*.personal.yml
+.eac/*.personal.yml
 .r2r/cache/
 ```
 
@@ -81,7 +81,7 @@ System defaults (in `contracts/eac-core/0.1.0/defaults/`) are used automatically
 
 ```text
 your-project/
-├── .r2r/eac/repository.yml
+├── .eac/repository.yml
 ├── cmd/
 │   ├── app1/
 │   │   └── main.go
@@ -125,7 +125,7 @@ modules:
 
 ```text
 your-project/
-├── .r2r/eac/repository.yml
+├── .eac/repository.yml
 ├── main.go
 ├── internal/
 │   └── ...
@@ -147,7 +147,7 @@ modules:
 
 ```text
 your-project/
-├── .r2r/eac/repository.yml
+├── .eac/repository.yml
 ├── docs/
 │   ├── index.md
 │   └── ...
@@ -212,7 +212,7 @@ Each deployable or testable unit should be its own module.
 Every source file should belong to exactly one module. Validate with:
 
 ```bash
-r2r eac validate-module-files
+eac validate-module-files
 ```
 
 ### 4. Consistent Naming
@@ -235,25 +235,25 @@ depends_on: [dep1, dep2]  # Good: explicit
 ```bash
 r2r init
 r2r install eac
-r2r eac init
+eac init
 ```
 
 ### Step 2: Define Modules
 
-Create `.r2r/eac/repository.yml` with your modules.
+Create `.eac/repository.yml` with your modules.
 
 ### Step 3: Validate
 
 ```bash
-r2r eac validate
-r2r eac show-modules
+eac validate
+eac show-modules
 ```
 
 ### Step 4: Test Commands
 
 ```bash
-r2r eac build <module>
-r2r eac test <module>
+eac build <module>
+eac test <module>
 ```
 
 ## See Also

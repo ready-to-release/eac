@@ -39,7 +39,7 @@ workspace "EAC Core Library" "Core domain libraries for contracts, repository op
 
             # Configuration subsystem
             config = container "Configuration" "EAC configuration loading and management" "Go Package" {
-                config_loader = component "Config Loader" "Loads .r2r/eac configuration" "Go"
+                config_loader = component "Config Loader" "Loads .eac configuration" "Go"
                 module_types = component "Module Types" "Defines available module types" "Go"
                 test_suites = component "Test Suites" "Test suite configuration" "Go"
                 environments = component "Environments" "Environment definitions" "Go"

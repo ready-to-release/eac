@@ -14,16 +14,16 @@ The **serve** category contains commands for starting development servers for do
 
 ```bash
 # Start documentation server
-r2r eac serve docs
+eac serve docs
 
 # Stop documentation server
-r2r eac serve docs --stop
+eac serve docs --stop
 ```
 
 ### Architecture Diagrams
 
 ```bash
-r2r eac serve design src-auth
+eac serve design src-auth
 ```
 
 ## Key Features

@@ -60,7 +60,7 @@ OSCAL Assessment Results (Compliance evidence)
 
 ```bash
 # Run tests
-r2r eac test acceptance
+eac test acceptance
 
 # Generate compliance evidence
 r2r create risk-assess --profile specs/.risk-controls/profile.json
@@ -132,7 +132,7 @@ Feature: auth-service_user-authentication
 
 ```bash
 # Execute tests
-r2r eac test auth-service --suite acceptance
+eac test auth-service --suite acceptance
 
 # Generate OSCAL assessment results
 r2r create risk-assess --profile specs/.risk-controls/auth-service.profile.json
@@ -190,13 +190,13 @@ r2r create risk-assess --profile specs/.risk-controls/auth-service.profile.json
 
 ```bash
 # Validate control tags reference valid catalog controls
-r2r eac validate control-tags
+eac validate control-tags
 
 # Validate OSCAL catalog schema
-r2r eac validate risk-catalog
+eac validate risk-catalog
 
 # Validate OSCAL profile schema
-r2r eac validate risk-profile
+eac validate risk-profile
 ```
 
 ---

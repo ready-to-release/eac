@@ -13,20 +13,20 @@ The **pipeline** category contains commands for CI/CD orchestration and diagnost
 ### Local Pipeline Execution
 
 ```bash
-r2r eac pipeline run src-auth
+eac pipeline run src-auth
 ```
 
 ### CI Status Monitoring
 
 ```bash
-r2r eac pipeline status
-r2r eac pipeline wait
+eac pipeline status
+eac pipeline wait
 ```
 
 ### CI Orchestration
 
 ```bash
-r2r eac pipeline ci-dispatch-and-wait
+eac pipeline ci-dispatch-and-wait
 ```
 
 ## Key Features

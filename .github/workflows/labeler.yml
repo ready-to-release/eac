@@ -4,7 +4,7 @@
 # Uses the commands CLI to determine module ownership (same logic as CI detection).
 #
 # Labels:
-# - Module labels: correspond to module monikers from .r2r/eac/repository.yml
+# - Module labels: correspond to module monikers from .eac/repository.yml
 # - Custom labels:
 #   - release:<module>: Applied when release/<module>/CHANGELOG.md is modified
 #

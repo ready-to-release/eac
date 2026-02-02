@@ -23,16 +23,16 @@ Linters are selected based on component types defined in `component-types.yml`:
 
 ```bash
 # Lint a single module
-r2r eac update lint eac-commands
+eac update lint eac-commands
 
 # Lint all modules
-r2r eac update lint
+eac update lint
 
 # Lint with auto-fix
-r2r eac update lint --fix
+eac update lint --fix
 
 # Lint without TUI (CI mode)
-r2r eac update lint --no-tui
+eac update lint --no-tui
 ```
 
 ## Output Structure

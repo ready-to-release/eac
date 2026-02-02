@@ -12,10 +12,10 @@ Initialize EAC project configuration.
 
 ```bash
 # Initialize a new EAC project
-r2r eac init
+eac init
 
 # Initialize with specific options
-r2r eac init --name my-project
+eac init --name my-project
 ```
 
 ## See Also

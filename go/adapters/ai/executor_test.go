@@ -54,7 +54,7 @@ git:
   - broken`,
 			input:       "test prompt",
 			wantErr:     true,
-			errContains: "failed to parse .r2r/eac/ai-provider.yml",
+			errContains: "failed to parse .eac/ai-provider.yml",
 		},
 		{
 			name:         "execute with malformed config suggests eac init",
@@ -101,12 +101,12 @@ git:
 
 			// Create temporary directory for config
 			tmpDir := t.TempDir()
-			configPath := filepath.Join(tmpDir, ".r2r", "eac", "ai-provider.yml")
+			configPath := filepath.Join(tmpDir, ".eac", "ai-provider.yml")
 
 			// Create config file if needed
 			if tt.createConfig {
 				if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
-					t.Fatalf("failed to create .r2r dir: %v", err)
+					t.Fatalf("failed to create .eac dir: %v", err)
 				}
 				if err := os.WriteFile(configPath, []byte(tt.configContent), 0644); err != nil {
 					t.Fatalf("failed to write config file: %v", err)
@@ -189,7 +189,7 @@ func TestExecutor_ExecuteWithDebug(t *testing.T) {
 			tmpDir := t.TempDir()
 
 			// Create config with claude-cli
-			configPath := filepath.Join(tmpDir, ".r2r", "eac", "ai-provider.yml")
+			configPath := filepath.Join(tmpDir, ".eac", "ai-provider.yml")
 			configContent := fmt.Sprintf(`ai:
   provider: claude-cli
   model: %s
@@ -197,7 +197,7 @@ git:
   token: ""`, providers.DefaultClaudeCLIModel)
 
 			if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
-				t.Fatalf("failed to create .r2r dir: %v", err)
+				t.Fatalf("failed to create .eac dir: %v", err)
 			}
 			if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 				t.Fatalf("failed to write config file: %v", err)
@@ -236,7 +236,7 @@ func TestExecutor_ExecuteWithDebugDefault(t *testing.T) {
 	// Verify debug is false by default
 	tmpDir := t.TempDir()
 
-	configPath := filepath.Join(tmpDir, ".r2r", "eac", "ai-provider.yml")
+	configPath := filepath.Join(tmpDir, ".eac", "ai-provider.yml")
 	configContent := `ai:
   provider: mock
   model: test-model
@@ -244,7 +244,7 @@ git:
   token: ""`
 
 	if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
-		t.Fatalf("failed to create .r2r dir: %v", err)
+		t.Fatalf("failed to create .eac dir: %v", err)
 	}
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		t.Fatalf("failed to write config file: %v", err)
@@ -281,10 +281,10 @@ git:
 }
 
 func TestExecutor_NoLogFilesCreated(t *testing.T) {
-	// Verify that NO log files are created in .r2r directory
+	// Verify that NO log files are created in .eac directory
 	tmpDir := t.TempDir()
 
-	configPath := filepath.Join(tmpDir, ".r2r", "eac", "ai-provider.yml")
+	configPath := filepath.Join(tmpDir, ".eac", "ai-provider.yml")
 	configContent := fmt.Sprintf(`ai:
   provider: claude-cli
   model: %s
@@ -292,7 +292,7 @@ git:
   token: ""`, providers.DefaultClaudeCLIModel)
 
 	if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
-		t.Fatalf("failed to create .r2r dir: %v", err)
+		t.Fatalf("failed to create .eac dir: %v", err)
 	}
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		t.Fatalf("failed to write config file: %v", err)
@@ -312,10 +312,10 @@ git:
 		t.Errorf("Execute() error = %v, want nil", err)
 	}
 
-	// Verify no .r2r/logs directory was created
+	// Verify no .eac/logs directory was created
 	logsPath := filepath.Join(tmpDir, ".r2r", "logs")
 	if _, err := os.Stat(logsPath); !os.IsNotExist(err) {
-		t.Errorf("Execute() created .r2r/logs directory, but should not create any log files")
+		t.Errorf("Execute() created .eac/logs directory, but should not create any log files")
 	}
 
 	// Execute with debug enabled
@@ -324,9 +324,9 @@ git:
 		t.Errorf("Execute() error = %v, want nil", err)
 	}
 
-	// Still no .r2r/logs directory should exist
+	// Still no .eac/logs directory should exist
 	if _, err := os.Stat(logsPath); !os.IsNotExist(err) {
-		t.Errorf("Execute() with debug=true created .r2r/logs directory, but should not create any log files")
+		t.Errorf("Execute() with debug=true created .eac/logs directory, but should not create any log files")
 	}
 }
 
@@ -334,7 +334,7 @@ func TestExecutor_ExecuteWithOptions(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create config with claude-cli
-	configPath := filepath.Join(tmpDir, ".r2r", "eac", "ai-provider.yml")
+	configPath := filepath.Join(tmpDir, ".eac", "ai-provider.yml")
 	configContent := fmt.Sprintf(`ai:
   provider: claude-cli
   model: %s
@@ -342,7 +342,7 @@ git:
   token: ""`, providers.DefaultClaudeCLIModel)
 
 	if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
-		t.Fatalf("failed to create .r2r dir: %v", err)
+		t.Fatalf("failed to create .eac dir: %v", err)
 	}
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		t.Fatalf("failed to write config file: %v", err)
@@ -483,7 +483,7 @@ func TestExecutor_WithMockProvider(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create config with mock provider
-	configPath := filepath.Join(tmpDir, ".r2r", "eac", "ai-provider.yml")
+	configPath := filepath.Join(tmpDir, ".eac", "ai-provider.yml")
 	configContent := `ai:
   provider: mock
   model: test-model
@@ -491,7 +491,7 @@ git:
   token: ""`
 
 	if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
-		t.Fatalf("failed to create .r2r dir: %v", err)
+		t.Fatalf("failed to create .eac dir: %v", err)
 	}
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		t.Fatalf("failed to write config file: %v", err)

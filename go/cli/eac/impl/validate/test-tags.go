@@ -8,13 +8,13 @@
 // Long: The validation:
 // Long:   - Discovers all Gherkin feature files in the repository
 // Long:   - Extracts all tags from features, scenarios, and examples
-// Long:   - Loads the tag contract from .r2r/eac/testing-tags.yml
+// Long:   - Loads the tag contract from .eac/testing-tags.yml
 // Long:   - Checks that each tag is defined in the contract
 // Long:   - Reports undefined tags with their file locations
 // Long:
 // Long: Expected Output:
 // Long:   Displays undefined tags with file locations (path:line). Tags are validated against
-// Long:   .r2r/eac/testing-tags.yml contract. Exit code 0 if all tags defined, 1 if undefined tags found.
+// Long:   .eac/testing-tags.yml contract. Exit code 0 if all tags defined, 1 if undefined tags found.
 // Long:
 // Long: Example:
 // Long:   validate test-tags

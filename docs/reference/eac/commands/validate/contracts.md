@@ -6,7 +6,7 @@
 
 Validates repository contract files against JSON schemas:
 
-- **Schema Validation**: Validates `.r2r/eac/repository.yml` against defined schema
+- **Schema Validation**: Validates `.eac/repository.yml` against defined schema
 - **Module Contracts**: Verifies all module definitions are valid
 - **Required Fields**: Ensures all mandatory fields are present
 - **Type Checking**: Validates field types and values

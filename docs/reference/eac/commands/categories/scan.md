@@ -25,29 +25,29 @@ plus a dedicated subcommand for dynamic testing.
 ### Complete Security Scan
 
 ```bash
-r2r eac scan
+eac scan
 ```
 
 ### Vulnerability Assessment
 
 ```bash
-r2r eac scan --scanner vuln,secrets
+eac scan --scanner vuln,secrets
 ```
 
 ### Compliance Checking
 
 ```bash
-r2r eac scan --scanner compliance,sbom
+eac scan --scanner compliance,sbom
 ```
 
 ### Application Security Testing
 
 ```bash
 # Static analysis
-r2r eac scan --scanner sast
+eac scan --scanner sast
 
 # Dynamic testing (requires running application)
-r2r eac scan zap eac-api --target http://localhost:8080
+eac scan zap eac-api --target http://localhost:8080
 ```
 
 ## Key Features

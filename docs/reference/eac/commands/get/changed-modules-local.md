@@ -9,13 +9,13 @@
 Only rebuild modules that changed since last build:
 
 ```bash
-r2r eac get changed-modules-local | jq -r '.modules[]' | xargs -L1 r2r eac build
+eac get changed-modules-local | jq -r '.modules[]' | xargs -L1 eac build
 ```
 
 ### Build Status Reporting
 
 ```bash
-RESULT=$(r2r eac get changed-modules-local)
+RESULT=$(eac get changed-modules-local)
 echo "Modules needing rebuild: $(echo "$RESULT" | jq -r '.modules | length')"
 ```
 

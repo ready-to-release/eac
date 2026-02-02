@@ -19,10 +19,10 @@ const (
 	// LayerContract represents contract defaults (contracts/core/0.1.0/defaults/).
 	LayerContract ConfigLayer = "contract"
 
-	// LayerUser represents user/team configuration (.r2r/eac/).
+	// LayerUser represents user/team configuration (.eac/).
 	LayerUser ConfigLayer = "user"
 
-	// LayerPersonal represents personal overrides (.r2r/eac/*.personal.yml).
+	// LayerPersonal represents personal overrides (.eac/*.personal.yml).
 	LayerPersonal ConfigLayer = "personal"
 )
 
@@ -72,8 +72,8 @@ var allConfigSpecs = []configFileSpec{
 // GetLoadedFiles returns information about all configuration files that were
 // loaded (or could be loaded) for this EACConfig. This includes:
 // - Contract defaults from contracts/core/0.1.0/defaults/
-// - User configuration from .r2r/eac/
-// - Personal overrides from .r2r/eac/*.personal.yml (if applicable)
+// - User configuration from .eac/
+// - Personal overrides from .eac/*.personal.yml (if applicable)
 //
 // Each LoadedConfig contains the config name and all its source files with:
 // - Absolute path

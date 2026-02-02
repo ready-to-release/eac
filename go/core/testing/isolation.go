@@ -83,8 +83,8 @@ func (t *TestIsolation) WithCopySpecs(copy bool) *TestIsolation {
 	return t
 }
 
-// WithCopyAIContracts enables copying the .r2r/eac/ai/ directory (AI configs, prompts) to the isolated dir.
-// This is needed for commands that use AI prompts from .r2r/eac/ai/.
+// WithCopyAIContracts enables copying the .eac/ai/ directory (AI configs, prompts) to the isolated dir.
+// This is needed for commands that use AI prompts from .eac/ai/.
 func (t *TestIsolation) WithCopyAIContracts(copy bool) *TestIsolation {
 	t.copyAIContracts = copy
 	return t
@@ -159,12 +159,12 @@ func (t *TestIsolation) Setup() error {
 			return fmt.Errorf("failed to copy AI contracts: %w", err)
 		}
 
-		// Copy .r2r/eac/ directory (unified ai-config.yml and prompts)
-		srcR2REac := filepath.Join(t.originalRepoRoot, ".r2r", "eac")
-		dstR2REac := filepath.Join(t.isolatedDir, ".r2r", "eac")
+		// Copy .eac/ directory (unified ai-config.yml and prompts)
+		srcR2REac := filepath.Join(t.originalRepoRoot, ".eac")
+		dstR2REac := filepath.Join(t.isolatedDir, ".eac")
 		if err := copyDir(srcR2REac, dstR2REac); err != nil {
 			t.Cleanup()
-			return fmt.Errorf("failed to copy .r2r/eac config: %w", err)
+			return fmt.Errorf("failed to copy .eac config: %w", err)
 		}
 	}
 
@@ -205,7 +205,7 @@ git:
 		configDir := paths.EACConfigPath(t.isolatedDir)
 		if err := os.MkdirAll(configDir, 0o755); err != nil {
 			t.Cleanup()
-			return fmt.Errorf("failed to create .r2r/eac directory: %w", err)
+			return fmt.Errorf("failed to create .eac directory: %w", err)
 		}
 
 		// Remove any personal config that may have been copied (it takes precedence)

@@ -6,7 +6,7 @@ All modules include C4 architecture diagrams defined in Structurizr DSL format.
 
 ```bash
 # Start the Structurizr Lite server
-r2r eac serve-design
+eac serve-design
 
 # Open browser to http://localhost:8080
 ```
@@ -52,14 +52,14 @@ Not all modules include all levels - it depends on complexity.
 The `serve-design` command automatically loads all workspace.dsl files:
 
 ```bash
-r2r eac serve-design
+eac serve-design
 ```
 
 Navigate between modules using the workspace dropdown in Structurizr Lite.
 
 ### View Specific Module
 
-1. Run `r2r eac serve-design`
+1. Run `eac serve-design`
 2. Open `http://localhost:8080`
 3. Select module from workspace dropdown (top-left)
 4. Select diagram from the list
@@ -99,7 +99,7 @@ specs/
 ### AI-Generated Updates
 
 ```bash
-r2r eac update-design <module-name>
+eac update-design <module-name>
 ```
 
 Uses AI to analyze code and update the workspace.dsl file.
@@ -113,7 +113,7 @@ Uses AI to analyze code and update the workspace.dsl file.
 ### Validate Syntax
 
 ```bash
-r2r eac validate-design
+eac validate-design
 ```
 
 Checks all workspace.dsl files for syntax errors using Structurizr CLI.
@@ -125,7 +125,7 @@ Checks all workspace.dsl files for syntax errors using Structurizr CLI.
 For new modules:
 
 ```bash
-r2r eac create-design <module-name>
+eac create-design <module-name>
 ```
 
 Generates a workspace.dsl file based on code analysis.
@@ -180,7 +180,7 @@ Generates a workspace.dsl file based on code analysis.
 
 **Diagrams not appearing:**
 
-- Check workspace.dsl syntax with `r2r eac validate-design`
+- Check workspace.dsl syntax with `eac validate-design`
 - Look for error messages in browser console
 - Verify .design folder contains workspace.dsl
 

@@ -35,7 +35,7 @@ Security patches are applied to the main branch and will be included in the next
 This repository implements comprehensive security measures:
 
 - **Automated scanning:** CodeQL, Trivy, Semgrep, OWASP ZAP
-- **Security commands:** `r2r eac scan` with multiple scanner types
+- **Security commands:** `eac scan` with multiple scanner types
 - **Continuous monitoring:** Security workflows run on every push and PR
 
 For detailed information, see our comprehensive documentation:

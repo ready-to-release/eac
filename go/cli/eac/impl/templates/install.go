@@ -7,8 +7,8 @@
 // Long:
 // Long: Available template types:
 // Long:   docs     - Documentation templates (outputs to docs/reference/)
-// Long:   ai       - AI prompt templates (outputs to .r2r/eac/templates/ai/)
-// Long:   reports  - Report templates (outputs to .r2r/templates/reports/)
+// Long:   ai       - AI prompt templates (outputs to .eac/templates/ai/)
+// Long:   reports  - Report templates (outputs to .eac/templates/reports/)
 // Long:   specs    - Specification templates (outputs to specs/risk-controls/)
 // Long:   claude   - Claude Code templates (outputs to .claude/)
 // Long:

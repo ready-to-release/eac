@@ -11,7 +11,7 @@ Returns the module dependency graph in JSON format:
 - **Ordering**: Use with `get execution-order` to determine build sequence
 - **Traversal**: Supports topological sorting for parallel build execution
 
-The dependency graph is extracted from module contracts in `.r2r/eac/repository.yml`.
+The dependency graph is extracted from module contracts in `.eac/repository.yml`.
 
 ## See Also
 

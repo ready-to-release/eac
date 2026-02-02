@@ -19,12 +19,12 @@ func createValidWorkspace(t *testing.T, dir string) {
 	}
 }
 
-// createEacWorkspace creates a workspace with only .r2r/eac/repository.yml (no .git).
+// createEacWorkspace creates a workspace with only .eac/repository.yml (no .git).
 func createEacWorkspace(t *testing.T, dir string) {
 	t.Helper()
 	eacDir := filepath.Join(dir, paths.EACConfigRelPath)
 	if err := os.MkdirAll(eacDir, 0o755); err != nil {
-		t.Fatalf("failed to create .r2r/eac: %v", err)
+		t.Fatalf("failed to create .eac: %v", err)
 	}
 	repoFile := filepath.Join(eacDir, "repository.yml")
 	if err := os.WriteFile(repoFile, []byte("name: test\n"), 0o644); err != nil {
@@ -252,7 +252,7 @@ func TestDetect_ValidationFailsForMissingMarkers(t *testing.T) {
 	restore := saveAndClearEnv(t)
 	defer restore()
 
-	// Create empty directory (no .git, no .r2r/eac/repository.yml)
+	// Create empty directory (no .git, no .eac/repository.yml)
 	tempDir := t.TempDir()
 	os.Setenv(envR2RRepoRoot, tempDir)
 
@@ -271,7 +271,7 @@ func TestDetect_ValidationDisabled(t *testing.T) {
 	restore := saveAndClearEnv(t)
 	defer restore()
 
-	// Create empty directory (no .git, no .r2r/eac/repository.yml)
+	// Create empty directory (no .git, no .eac/repository.yml)
 	tempDir := t.TempDir()
 	os.Setenv(envR2RRepoRoot, tempDir)
 
@@ -294,7 +294,7 @@ func TestDetect_EacWorkspaceValid(t *testing.T) {
 	restore := saveAndClearEnv(t)
 	defer restore()
 
-	// Create workspace with only .r2r/eac/repository.yml (no .git)
+	// Create workspace with only .eac/repository.yml (no .git)
 	tempDir := t.TempDir()
 	createEacWorkspace(t, tempDir)
 	os.Setenv(envR2RRepoRoot, tempDir)
@@ -313,7 +313,7 @@ func TestDetect_RequireGit(t *testing.T) {
 	restore := saveAndClearEnv(t)
 	defer restore()
 
-	// Create workspace with only .r2r/eac/repository.yml (no .git)
+	// Create workspace with only .eac/repository.yml (no .git)
 	tempDir := t.TempDir()
 	createEacWorkspace(t, tempDir)
 	os.Setenv(envR2RRepoRoot, tempDir)

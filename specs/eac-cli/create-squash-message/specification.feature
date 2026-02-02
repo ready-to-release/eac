@@ -7,7 +7,7 @@ Feature: eac-cli_create-squash-message
 
   Background:
     Given I am in a git repository with EAC configuration
-    And AI configuration exists at ".r2r/eac/ai/commit-message"
+    And AI configuration exists at ".eac/ai/commit-message"
 
   Rule: Requires commits ahead of base branch
 

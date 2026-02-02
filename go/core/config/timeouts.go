@@ -35,7 +35,7 @@ func (d Duration) D() time.Duration {
 
 // TimeoutConfig holds all configurable timeouts for the CLI.
 // Loaded from contracts/core/0.1.0/defaults/timeouts.yml
-// with optional user overrides from .r2r/eac/timeouts.yml.
+// with optional user overrides from .eac/timeouts.yml.
 type TimeoutConfig struct {
 	Docker         DockerTimeouts         `yaml:"docker"`
 	HTTP           HTTPTimeouts           `yaml:"http"`

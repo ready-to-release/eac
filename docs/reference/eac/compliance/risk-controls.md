@@ -8,19 +8,19 @@ This page documents the EAC commands for working with OSCAL-based risk controls.
 
 ```bash
 # Validate control tags against OSCAL catalog
-r2r eac validate control-tags
+eac validate control-tags
 
 # Validate OSCAL catalog documents
-r2r eac validate risk-catalog
+eac validate risk-catalog
 
 # Validate OSCAL profile documents
-r2r eac validate risk-profile
+eac validate risk-profile
 
 # Create risk profile from assessment document
 r2r create risk-profile assessment.md
 
 # Generate assessment results with evidence
-r2r eac create risk-assess --profile specs/.risk-controls/risk-profile.json
+eac create risk-assess --profile specs/.risk-controls/risk-profile.json
 ```
 
 ---
@@ -32,7 +32,7 @@ r2r eac create risk-assess --profile specs/.risk-controls/risk-profile.json
 Checks all `@control:` tags in specifications reference valid controls from the OSCAL catalog.
 
 ```bash
-r2r eac validate control-tags
+eac validate control-tags
 ```
 
 **Output**: Reports invalid control IDs with file locations.
@@ -56,7 +56,7 @@ Validation failed: 2 invalid control references found
 Validates catalog documents against OSCAL 1.1.3 catalog schema.
 
 ```bash
-r2r eac validate risk-catalog
+eac validate risk-catalog
 ```
 
 **Validates**: `templates/specs/risk-catalog/*.catalog.json`
@@ -66,7 +66,7 @@ r2r eac validate risk-catalog
 Validates profile documents against OSCAL 1.1.2 profile schema.
 
 ```bash
-r2r eac validate risk-profile
+eac validate risk-profile
 ```
 
 **Validates**: `specs/.risk-controls/*.profile.json`
@@ -113,7 +113,7 @@ r2r create risk-profile assessment.md
 Generates OSCAL assessment results linking controls to test evidence.
 
 ```bash
-r2r eac create risk-assess --profile specs/.risk-controls/risk-profile.json
+eac create risk-assess --profile specs/.risk-controls/risk-profile.json
 ```
 
 **Output**: `out/risk/assessment-results.json`

@@ -27,7 +27,7 @@ r2r init
 r2r install eac
 
 # 4. Configure AI provider (optional)
-r2r eac init --ai claude-api
+eac init --ai claude-api
 ```
 
 ## Prerequisites

@@ -4,11 +4,11 @@ Technical reference for EAC risk configuration, including OSCAL profile referenc
 
 ## Configuration File
 
-Risk configuration is defined in `contracts/eac-security/0.1.0/defaults/risk-config.yml` with user overrides in `.r2r/eac/risk-config.yml`.
+Risk configuration is defined in `contracts/eac-security/0.1.0/defaults/risk-config.yml` with user overrides in `.eac/risk-config.yml`.
 
 ### Location Priority
 
-1. `.r2r/eac/risk-config.yml` - User/team overrides (highest priority)
+1. `.eac/risk-config.yml` - User/team overrides (highest priority)
 2. `contracts/eac-security/0.1.0/defaults/risk-config.yml` - Contract defaults
 
 ## Configuration Structure
@@ -137,7 +137,7 @@ Module profiles override the solution-wide profile for specific modules.
 
 ## User Overrides
 
-Create `.r2r/eac/risk-config.yml` to customize for your organization:
+Create `.eac/risk-config.yml` to customize for your organization:
 
 ```yaml
 # Override default scoring for your organization

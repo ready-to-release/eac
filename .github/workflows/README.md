@@ -409,7 +409,7 @@ All workflows need the `commands` binary. Three modes:
 
 ### Add a New Module to CI
 
-1. Create module contract in `.r2r/eac/repository.yml`
+1. Create module contract in `.eac/repository.yml`
 2. Copy `ci-eac-core.yaml` → `ci-my-module.yaml`
 3. Replace `eac-core` with `my-module` throughout
 4. Update `change-trigger.yaml` to include new workflow (if dependency-based orchestration needed)

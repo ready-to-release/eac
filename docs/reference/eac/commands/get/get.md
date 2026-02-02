@@ -12,12 +12,12 @@ See the [get Commands Category](../categories/get.md) for complete list of subco
 
 ```bash
 # Cache expensive queries
-r2r eac get files > files.json
+eac get files > files.json
 jq '.files[] | select(.module == "src-auth")' files.json
 
 # Build changed modules
-CHANGED=$(r2r eac get changed-modules | jq -r '.changed_modules[]')
-r2r eac build $CHANGED
+CHANGED=$(eac get changed-modules | jq -r '.changed_modules[]')
+eac build $CHANGED
 ```
 
 ## See Also

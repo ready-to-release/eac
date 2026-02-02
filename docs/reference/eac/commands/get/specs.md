@@ -9,7 +9,7 @@ For **container/bundle modules** with dependencies, specs are **aggregated from 
 Example: `ext-eac` depends on `eac-commands` and `r2r-cli`:
 
 ```bash
-r2r eac get specs ext-eac --as-json
+eac get specs ext-eac --as-json
 ```
 
 Returns specs from:

@@ -162,7 +162,7 @@ func TestTestIsolation_CopyContracts(t *testing.T) {
 	defer os.RemoveAll(origRepo)
 
 	// Create repository config directory with a test file
-	repoConfigDir := filepath.Join(origRepo, ".r2r", "eac", "repository")
+	repoConfigDir := filepath.Join(origRepo, ".eac", "repository")
 	if err := os.MkdirAll(repoConfigDir, 0755); err != nil {
 		t.Fatalf("Failed to create repository config dir: %v", err)
 	}
@@ -182,7 +182,7 @@ func TestTestIsolation_CopyContracts(t *testing.T) {
 	defer ti.Cleanup()
 
 	// Verify repository config was copied
-	copiedFile := filepath.Join(ti.IsolatedDir(), ".r2r", "eac", "repository", "test.yml")
+	copiedFile := filepath.Join(ti.IsolatedDir(), ".eac", "repository", "test.yml")
 	if _, err := os.Stat(copiedFile); os.IsNotExist(err) {
 		t.Error("Contracts file was not copied to isolated directory")
 	}

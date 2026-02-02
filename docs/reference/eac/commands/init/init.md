@@ -9,7 +9,7 @@ The init command creates configuration files at:
 **Team/Environment Config (safe to commit):**
 
 ```text
-.r2r/eac/ai-provider.yml
+.eac/ai-provider.yml
 ```
 
 Contains environment variable references (e.g., `${ANTHROPIC_API_KEY}`).
@@ -18,7 +18,7 @@ Contains environment variable references (e.g., `${ANTHROPIC_API_KEY}`).
 **Personal Config (never commit):**
 
 ```text
-.r2r/eac/ai-provider.personal.yml
+.eac/ai-provider.personal.yml
 ```
 
 Created when using `--ai-token` flag. Contains actual API keys.
@@ -32,10 +32,10 @@ However, if you need to customize these configurations:
 
 ```bash
 # Copy system default files to your repository
-r2r eac init --copy-templates
+eac init --copy-templates
 ```
 
-This copies these files to `.r2r/eac/`:
+This copies these files to `.eac/`:
 
 - `ai-config.yml` - AI type definitions (specs, commit-message)
 - `component-types.yml` - Component type definitions (go, typescript, etc.)
@@ -61,8 +61,8 @@ Once copied, you can edit these files and commit them. Your versions will take p
 
 ```gitignore
 # AI provider personal configuration (contains actual API keys)
-.r2r/eac/*.personal.yml
-.r2r/eac/*.local.yml
+.eac/*.personal.yml
+.eac/*.local.yml
 ```
 
 ## Troubleshooting
@@ -99,21 +99,21 @@ Error: Unknown provider: claude
 Use exact provider name from `init --help`:
 
 ```bash
-r2r eac init --ai claude-api  # Correct
-r2r eac init --ai claude      # Invalid
+eac init --ai claude-api  # Correct
+eac init --ai claude      # Invalid
 ```
 
 ### AI Features Not Working
 
 ```bash
 # 1. Verify configuration exists
-cat .r2r/eac/ai-provider.yml
+cat .eac/ai-provider.yml
 
 # 2. Check environment variable
 echo $ANTHROPIC_API_KEY
 
 # 3. Re-initialize if needed
-r2r eac init --ai claude-api
+eac init --ai claude-api
 ```
 
 ## See Also

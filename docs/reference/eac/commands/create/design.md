@@ -18,7 +18,7 @@ Supported formats: Structurizr DSL for C4 model diagrams (system context, contai
 The design generation supports **three-tier prompt system** for customization:
 
 1. **Command Flag**: `--prompt /path/to/custom.md` (highest priority)
-2. **Team Override**: `.r2r/eac/templates/ai/design/design.md` (team-wide customization)
+2. **Team Override**: `.eac/templates/ai/design/design.md` (team-wide customization)
 3. **System Default**: `templates/ai/design/design.md` (fallback)
 
 See [commit-message](./commit-message.md#custom-prompts) for detailed customization guide.

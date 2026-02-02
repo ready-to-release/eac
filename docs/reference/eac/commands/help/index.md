@@ -12,10 +12,10 @@ Display help information for commands.
 
 ```bash
 # Show general help
-r2r eac help
+eac help
 
 # Show help for a specific command
-r2r eac help build
+eac help build
 ```
 
 ## See Also

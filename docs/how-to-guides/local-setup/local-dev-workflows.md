@@ -28,7 +28,7 @@ $env:R2R_COMMANDS_PATH = '.\go\cli\eac'
 r2r load-commands
 
 # Test your changes immediately
-r2r eac <command>
+eac <command>
 ```
 
 **Advantages:**
@@ -87,14 +87,14 @@ $env:R2R_COMMANDS_PATH = '.\go\cli\eac'
 r2r load-commands
 
 # Test immediately
-r2r eac help
+eac help
 ```
 
 ### Development Iteration
 
 1. **Make code changes** in `go/cli/eac/`
 2. **Reload commands**: `r2r load-commands`
-3. **Test immediately**: `r2r eac <command>`
+3. **Test immediately**: `eac <command>`
 4. **No Docker rebuild needed**
 
 ## External Repository Testing
@@ -233,10 +233,10 @@ $env:R2R_REPO_ROOT = "C:\path\to\your\repository"
 
 ```powershell
 # Test basic functionality
-r2r eac help
+eac help
 
 # Test command execution
-r2r eac show modules
+eac show modules
 ```
 
 ## Configuration Details
@@ -333,7 +333,7 @@ When developing and testing in external repositories:
    ```powershell
    cd C:\path\to\external-repo
    $env:R2R_REPO_ROOT = (Get-Location)
-   r2r eac <command>
+   eac <command>
    ```
 
 **Note**: For faster iteration when developing commands, use `importer.ps1` in the EAC repository instead of the Docker workflow.
@@ -390,7 +390,7 @@ Skip parts of the setup process:
 
 ### Image Not Found
 
-**Problem**: `r2r eac` command fails with "image not found"
+**Problem**: `eac` command fails with "image not found"
 
 **Solution**: Verify image exists locally:
 

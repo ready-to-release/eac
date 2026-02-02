@@ -87,9 +87,9 @@ git:
 
 			// Create config if needed
 			if tt.createConfig {
-				configPath := filepath.Join(tmpDir, ".r2r", "eac", "ai-provider.yml")
+				configPath := filepath.Join(tmpDir, ".eac", "ai-provider.yml")
 				if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
-					t.Fatalf("failed to create .r2r dir: %v", err)
+					t.Fatalf("failed to create .eac dir: %v", err)
 				}
 				if err := os.WriteFile(configPath, []byte(tt.configContent), 0644); err != nil {
 					t.Fatalf("failed to write config file: %v", err)
@@ -183,9 +183,9 @@ git:
 
 			// Create config if needed
 			if tt.createConfig {
-				configPath := filepath.Join(tmpDir, ".r2r", "eac", "ai-provider.yml")
+				configPath := filepath.Join(tmpDir, ".eac", "ai-provider.yml")
 				if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
-					t.Fatalf("failed to create .r2r dir: %v", err)
+					t.Fatalf("failed to create .eac dir: %v", err)
 				}
 				if err := os.WriteFile(configPath, []byte(tt.configContent), 0644); err != nil {
 					t.Fatalf("failed to write config file: %v", err)
@@ -254,14 +254,14 @@ func TestExecutorAdapter_ContextHandling(t *testing.T) {
 			tmpDir := t.TempDir()
 
 			// Create config
-			configPath := filepath.Join(tmpDir, ".r2r", "eac", "ai-provider.yml")
+			configPath := filepath.Join(tmpDir, ".eac", "ai-provider.yml")
 			configContent := `ai:
   provider: mock
   model: test-model
 git:
   token: ""`
 			if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
-				t.Fatalf("failed to create .r2r dir: %v", err)
+				t.Fatalf("failed to create .eac dir: %v", err)
 			}
 			if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 				t.Fatalf("failed to write config file: %v", err)
@@ -301,14 +301,14 @@ func TestExecutorAdapter_OptionsHandling(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create config
-	configPath := filepath.Join(tmpDir, ".r2r", "eac", "ai-provider.yml")
+	configPath := filepath.Join(tmpDir, ".eac", "ai-provider.yml")
 	configContent := `ai:
   provider: mock
   model: test-model
 git:
   token: ""`
 	if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
-		t.Fatalf("failed to create .r2r dir: %v", err)
+		t.Fatalf("failed to create .eac dir: %v", err)
 	}
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		t.Fatalf("failed to write config file: %v", err)

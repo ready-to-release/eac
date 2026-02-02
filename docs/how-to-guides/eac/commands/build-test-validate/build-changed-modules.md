@@ -16,7 +16,7 @@ Build only the modules affected by your changes for efficient CI/CD pipelines.
 ### 1. Identify Changed Modules
 
 ```bash
-r2r eac get changed-modules
+eac get changed-modules
 ```
 
 **What happens**: Returns JSON list of modules affected by local changes
@@ -24,7 +24,7 @@ r2r eac get changed-modules
 ### 2. Get Build Order
 
 ```bash
-r2r eac get execution-order $(r2r eac get changed-modules | jq -r '.changed_modules[]')
+eac get execution-order $(eac get changed-modules | jq -r '.changed_modules[]')
 ```
 
 **What happens**: Determines correct build order respecting dependencies
@@ -32,7 +32,7 @@ r2r eac get execution-order $(r2r eac get changed-modules | jq -r '.changed_modu
 ### 3. Build Changed Modules
 
 ```bash
-r2r eac get changed-modules | jq -r '.changed_modules[]' | xargs r2r eac build
+eac get changed-modules | jq -r '.changed_modules[]' | xargs eac build
 ```
 
 **What happens**: Builds each changed module in dependency order
@@ -43,11 +43,11 @@ For CI pipelines, use `get changed-modules-ci`:
 
 ```bash
 # Get modules changed since last successful CI run
-r2r eac get changed-modules-ci
+eac get changed-modules-ci
 
 # Build only what changed
-MODULES=$(r2r eac get changed-modules-ci | jq -r '.changed_modules[]')
-r2r eac build $MODULES
+MODULES=$(eac get changed-modules-ci | jq -r '.changed_modules[]')
+eac build $MODULES
 ```
 
 ## Example Scenario
@@ -56,22 +56,22 @@ You changed auth module and want to build efficiently:
 
 ```bash
 # Check what needs building
-r2r eac get changed-modules
+eac get changed-modules
 # {
 #   "changed_modules": ["src-auth", "src-api"]
 # }
 
 # Get build order (src-auth must build before src-api)
-r2r eac get execution-order src-auth src-api
+eac get execution-order src-auth src-api
 # ["src-auth", "src-api"]
 
 # Build in order
-r2r eac build src-auth src-api
+eac build src-auth src-api
 # Building src-auth... ✓
 # Building src-api... ✓
 
 # Or use CI detection
-r2r eac get changed-modules-ci | jq -r '.changed_modules[]' | xargs r2r eac build
+eac get changed-modules-ci | jq -r '.changed_modules[]' | xargs eac build
 ```
 
 ## GitHub Actions Example
@@ -80,11 +80,11 @@ r2r eac get changed-modules-ci | jq -r '.changed_modules[]' | xargs r2r eac buil
 - name: Get Changed Modules
   id: changed
   run: |
-    MODULES=$(r2r eac get changed-modules-ci | jq -r '.changed_modules | join(" ")')
+    MODULES=$(eac get changed-modules-ci | jq -r '.changed_modules | join(" ")')
     echo "modules=$MODULES" >> $GITHUB_OUTPUT
 
 - name: Build Changed Modules
-  run: r2r eac build ⟪ steps.changed.outputs.modules ⟫
+  run: eac build ⟪ steps.changed.outputs.modules ⟫
 ```
 
 ## Common Issues

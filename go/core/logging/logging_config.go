@@ -85,7 +85,7 @@ func DefaultLoggingConfig() LoggingConfig {
 }
 
 // LoadLoggingConfig loads logging configuration with defaults from domain.
-// Merge order: contract defaults -> user config (.r2r/eac/logging.yml)
+// Merge order: contract defaults -> user config (.eac/logging.yml)
 // Falls back to built-in defaults if contract defaults don't exist.
 func LoadLoggingConfig(workspaceRoot string) LoggingConfig {
 	// Load contract defaults first

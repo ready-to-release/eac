@@ -82,9 +82,9 @@ func CreateGoModule(ctx *TestContext, modulePath, packageName string, isLibrary,
 //	    "MODULE_PATH": "go/test-module",
 //	})
 func SetupEACConfig(ctx *TestContext, templateName string, params TemplateParams) error {
-	// Ensure .r2r/eac directory exists
-	if err := CreateDirectory(ctx, ".r2r/eac"); err != nil {
-		return fmt.Errorf("failed to create .r2r/eac directory: %w", err)
+	// Ensure .eac directory exists
+	if err := CreateDirectory(ctx, ".eac"); err != nil {
+		return fmt.Errorf("failed to create .eac directory: %w", err)
 	}
 
 	// Apply the template
@@ -127,8 +127,8 @@ func SetupMultiModuleConfig(ctx *TestContext, module1Name, module1Path, module2N
 // This combines EAC configuration setup with module source file creation.
 //
 // Creates:
-//   - .r2r/eac/repository.yml with the module definition
-//   - .r2r/eac/module-types.yml with go type
+//   - .eac/repository.yml with the module definition
+//   - .eac/module-types.yml with go type
 //   - Module directory with Go source file
 //   - Optionally stages all files in git
 func SetupGoModuleWithEAC(ctx *TestContext, moduleName string, stage bool) error {
@@ -183,7 +183,7 @@ func CreateModulesYml(ctx *TestContext, moduleName, modulePath, moduleType strin
       %s: %s
 `, moduleName, moduleName, moduleType, modulePath)
 
-	return CreateFile(ctx, ".r2r/eac/repository.yml", content)
+	return CreateFile(ctx, ".eac/repository.yml", content)
 }
 
 // CreateModuleTypesYml creates module-types.yml with the specified types.
@@ -227,7 +227,7 @@ func CreateModuleTypesYml(ctx *TestContext, types ...string) error {
 		content.WriteString(def)
 	}
 
-	return CreateFile(ctx, ".r2r/eac/module-types.yml", content.String())
+	return CreateFile(ctx, ".eac/module-types.yml", content.String())
 }
 
 

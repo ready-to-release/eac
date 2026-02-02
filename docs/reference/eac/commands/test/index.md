@@ -18,18 +18,18 @@ Testing and test suite management for BDD specifications and unit tests.
 
 ```bash
 # Test a module
-r2r eac test src-auth
+eac test src-auth
 
 # Run test suite
-r2r eac test suite integration
+eac test suite integration
 
 # Debug failures
-r2r eac test debug
+eac test debug
 
 # Manual testing workflow
-r2r eac test export-manual --module src-auth --release v1.2.0
-r2r eac test import-manual --input results.json --release v1.2.0
-r2r eac test merge-results --module src-auth --version v1.2.0
+eac test export-manual --module src-auth --release v1.2.0
+eac test import-manual --input results.json --release v1.2.0
+eac test merge-results --module src-auth --version v1.2.0
 ```
 
 ## See Also

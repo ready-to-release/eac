@@ -39,7 +39,7 @@ For interactive exploration of architecture diagrams:
 
 ```bash
 # Start Structurizr Lite for a specific module
-r2r eac serve-design --module eac-cli
+eac serve-design --module eac-cli
 ```
 
 ## Design File Locations
@@ -56,8 +56,8 @@ When workspace.dsl files change, regenerate the cached SVGs:
 
 ```bash
 # Update all modules
-r2r eac update structurizr
+eac update structurizr
 
 # Update specific module
-r2r eac update structurizr --module eac-cli
+eac update structurizr --module eac-cli
 ```

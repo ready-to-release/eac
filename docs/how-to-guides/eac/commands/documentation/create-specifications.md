@@ -34,7 +34,7 @@ This ensures high-quality specifications every time.
 ### 1. Generate Spec from Description
 
 ```bash
-r2r eac create spec "User can login with email and password"
+eac create spec "User can login with email and password"
 ```
 
 **What happens**: AI generates a Gherkin feature file with scenarios, validates the syntax, and retries automatically if needed
@@ -52,7 +52,7 @@ cat specs/<module>/<feature-name>/specification.feature
 ### 3. Validate Spec Quality
 
 ```bash
-r2r eac validate specs
+eac validate specs
 ```
 
 **What happens**: Checks spec follows quality standards
@@ -80,7 +80,7 @@ Creating login specification:
 
 ```bash
 # Generate spec
-r2r eac create spec "User can login with email and password to access dashboard"
+eac create spec "User can login with email and password to access dashboard"
 
 # Output:
 # Generating specification...
@@ -116,7 +116,7 @@ cat specs/auth/user-login/specification.feature
 #     And user should remain on login page
 
 # Validate
-r2r eac validate specs
+eac validate specs
 # ✓ specs/auth/user-login/specification.feature is valid
 ```
 

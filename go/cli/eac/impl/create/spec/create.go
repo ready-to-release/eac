@@ -529,7 +529,7 @@ func formatModuleList(moduleReport *reports.ModuleContractReport) string {
 
 // loadPromptWithFallback implements prompt loading:
 // 1. Custom path (if specified via --prompt flag)
-// 2. AI config: .r2r/eac/aimock.TypeSpecs/specification.md
+// 2. AI config: .eac/aimock.TypeSpecs/specification.md
 // 3. Built-in: embedded prompts/specification.md.
 func loadPromptWithFallback(templateRoot, customPath string) (string, error) {
 	// Tier 1: Check for custom path (from --prompt flag)
@@ -549,7 +549,7 @@ func loadPromptWithFallback(templateRoot, customPath string) (string, error) {
 
 	// Load prompt with three-tier priority:
 	// 1. Command flag (--prompt)
-	// 2. Team override (.r2r/eac/templates/aimock.TypeSpecs/specs.md)
+	// 2. Team override (.eac/templates/aimock.TypeSpecs/specs.md)
 	// 3. System default (templates/aimock.TypeSpecs/specs.md)
 	// Convention: Empty string uses type name (specs.md)
 	loader := aimock.NewContractLoader(templateRoot, aimock.TypeSpecs, "")

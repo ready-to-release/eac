@@ -601,8 +601,8 @@ func setupTestRepository(t *testing.T, tmpDir, module string, featureFiles map[s
 	gitDir := filepath.Join(tmpDir, ".git")
 	require.NoError(t, os.MkdirAll(gitDir, 0755))
 
-	// Create .r2r/eac directory
-	r2rDir := filepath.Join(tmpDir, ".r2r", "eac")
+	// Create .eac directory
+	r2rDir := filepath.Join(tmpDir, ".eac")
 	require.NoError(t, os.MkdirAll(r2rDir, 0755))
 
 	// Create repository.yml with correct format
@@ -676,8 +676,8 @@ func setupMinimalRepository(t *testing.T, tmpDir string) {
 	gitDir := filepath.Join(tmpDir, ".git")
 	require.NoError(t, os.MkdirAll(gitDir, 0755))
 
-	// Create .r2r/eac directory
-	r2rDir := filepath.Join(tmpDir, ".r2r", "eac")
+	// Create .eac directory
+	r2rDir := filepath.Join(tmpDir, ".eac")
 	require.NoError(t, os.MkdirAll(r2rDir, 0755))
 
 	// Create minimal repository.yml

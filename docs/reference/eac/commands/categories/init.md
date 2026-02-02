@@ -22,20 +22,20 @@ Init commands set up EAC project configuration and initialize repository structu
 
 ```bash
 # Initialize with defaults
-r2r eac init
+eac init
 
 # Initialize with project name
-r2r eac init --name my-project
+eac init --name my-project
 ```
 
 ### Verifying Initialization
 
 ```bash
 # Check configuration
-r2r eac show config
+eac show config
 
 # Validate setup
-r2r eac validate
+eac validate
 ```
 
 ## See Also

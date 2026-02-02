@@ -40,19 +40,19 @@ This architecture ensures all generated content is syntactically correct and fol
 **Pull Request Creation**:
 
 ```bash
-r2r eac create pr
+eac create pr
 ```
 
 **Specification Generation**:
 
 ```bash
-r2r eac create spec "User can login with email and password"
+eac create spec "User can login with email and password"
 ```
 
 **Architecture Documentation**:
 
 ```bash
-r2r eac create design src-auth
+eac create design src-auth
 ```
 
 ## Key Features

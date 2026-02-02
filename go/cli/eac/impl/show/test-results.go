@@ -172,7 +172,7 @@ func ShowTestResults() int {
 }
 
 // loadTestResultsTemplate loads the test results template with fallback logic.
-// Priority 1: Team override (.r2r/eac/templates/reports/<category>/<template>)
+// Priority 1: Team override (.eac/templates/reports/<category>/<template>)
 // Priority 2: System default (templates/reports/<category>/<template>).
 func loadTestResultsTemplate(workspaceRoot string) (string, error) {
 	// Load EAC config for template directory paths and filenames
@@ -191,7 +191,7 @@ func loadTestResultsTemplate(workspaceRoot string) (string, error) {
 	templateFilename := cfg.Repository.Conventions.TestResultsTemplate
 	reportsDir := cfg.Repository.Conventions.TemplateReportsDir
 
-	// Priority 1: Team override (.r2r/eac/templates/reports/<category>/<template>)
+	// Priority 1: Team override (.eac/templates/reports/<category>/<template>)
 	teamOverridePath := filepath.Join(workspaceRoot, paths.R2RDir, paths.EACDir, paths.TemplatesDir, reportsDir, category, templateFilename)
 	if _, err := os.Stat(teamOverridePath); err == nil {
 		return teamOverridePath, nil

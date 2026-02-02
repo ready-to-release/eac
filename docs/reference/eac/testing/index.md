@@ -14,14 +14,14 @@ Technical reference for EAC test suite configuration, execution, and CLI command
 
 ```bash
 # Run test suites
-r2r eac test <module> --suite unit
-r2r eac test <module> --suite integration
-r2r eac test <module> --suite acceptance
-r2r eac test <module> --suite production-verification
+eac test <module> --suite unit
+eac test <module> --suite integration
+eac test <module> --suite acceptance
+eac test <module> --suite production-verification
 
 # Debug test selection
-r2r eac test <module> --suite unit --dry-run
-r2r eac test <module> --suite unit --count
+eac test <module> --suite unit --dry-run
+eac test <module> --suite unit --count
 ```
 
 ## Related Documentation

@@ -12,13 +12,13 @@ See the [show Commands Category](../categories/show.md) for complete list of sub
 
 ```bash
 # Filter output with grep
-r2r eac show modules | grep "src-auth"
+eac show modules | grep "src-auth"
 
 # Count items
-r2r eac show modules | wc -l
+eac show modules | wc -l
 
 # View with pager
-r2r eac show dependencies | less
+eac show dependencies | less
 ```
 
 ## See Also

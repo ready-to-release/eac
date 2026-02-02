@@ -58,7 +58,7 @@ root@container:/workspace# eac build --debug
 
 # Examine logs, filesystem, environment
 root@container:/workspace# env | grep EAC
-root@container:/workspace# ls -la .r2r/eac/
+root@container:/workspace# ls -la .eac/
 ```
 
 ## Container Environment

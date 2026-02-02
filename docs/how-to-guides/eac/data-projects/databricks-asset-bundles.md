@@ -40,7 +40,7 @@ Each data pipeline is a module with its own versioning, dependencies, CI workflo
 
 ```text
 data-platform/                    # Repository root
-├── .r2r/eac/
+├── .eac/
 │   └── repository.yml           # Module contracts (see below)
 ├── pipelines/
 │   ├── customer-segmentation/   # Module: customer-segmentation
@@ -77,7 +77,7 @@ data-platform/                    # Repository root
 
 ### Module Contract Configuration
 
-Define each data pipeline as a module in `.r2r/eac/repository.yml`:
+Define each data pipeline as a module in `.eac/repository.yml`:
 
 ```yaml
 repository:

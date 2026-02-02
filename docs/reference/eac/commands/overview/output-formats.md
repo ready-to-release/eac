@@ -21,7 +21,7 @@ EAC commands produce output in different formats optimized for their use case. U
 **Example**:
 
 ```bash
-$ r2r eac get modules
+$ eac get modules
 {
   "modules": [
     {
@@ -54,16 +54,16 @@ $ r2r eac get modules
 
 ```bash
 # Extract specific fields
-r2r eac get modules | jq -r '.modules[].moniker'
+eac get modules | jq -r '.modules[].moniker'
 
 # Filter by type
-r2r eac get modules | jq '.modules[] | select(.type == "go-library")'
+eac get modules | jq '.modules[] | select(.type == "go-library")'
 
 # Count results
-r2r eac get modules | jq '.modules | length'
+eac get modules | jq '.modules | length'
 
 # Transform structure
-r2r eac get modules | jq '{names: [.modules[].moniker]}'
+eac get modules | jq '{names: [.modules[].moniker]}'
 ```
 
 ---
@@ -83,7 +83,7 @@ r2r eac get modules | jq '{names: [.modules[].moniker]}'
 **Example**:
 
 ```bash
-$ r2r eac show modules
+$ eac show modules
 ┌───────────────┬─────────────┬────────────────────┬──────┐
 │ Moniker       │ Type        │ Path               │ Files│
 ├───────────────┼─────────────┼────────────────────┼──────┤
@@ -123,7 +123,7 @@ $ r2r eac show modules
 **Example**:
 
 ```bash
-$ r2r eac build src-auth
+$ eac build src-auth
 Building module: src-auth
 ✓ Dependencies resolved
 ✓ Compilation successful
@@ -156,7 +156,7 @@ Build completed in 12.3s
 **Example**:
 
 ```bash
-$ r2r eac show test-summary src-auth acceptance
+$ eac show test-summary src-auth acceptance
 # Test Summary: src-auth (acceptance)
 
 ## Results
@@ -195,7 +195,7 @@ Most information commands come in pairs: `get` (JSON) and `show` (formatted).
 **get modules** (JSON):
 
 ```bash
-$ r2r eac get modules | jq '.modules[] | {moniker, type}'
+$ eac get modules | jq '.modules[] | {moniker, type}'
 {
   "moniker": "eac-commands",
   "type": "go-commands"
@@ -209,7 +209,7 @@ $ r2r eac get modules | jq '.modules[] | {moniker, type}'
 **show modules** (Table):
 
 ```bash
-$ r2r eac show modules
+$ eac show modules
 ┌───────────────┬─────────────┬────────────────────┬──────┐
 │ Moniker       │ Type        │ Path               │ Files│
 ├───────────────┼─────────────┼────────────────────┼──────┤
@@ -342,37 +342,37 @@ jq is the standard tool for processing JSON:
 
 ```bash
 # Get all module names
-r2r eac get modules | jq -r '.modules[].moniker'
+eac get modules | jq -r '.modules[].moniker'
 
 # Get specific field
-r2r eac get config | jq -r '.ai.provider'
+eac get config | jq -r '.ai.provider'
 ```
 
 #### Filter Results
 
 ```bash
 # Filter by type
-r2r eac get modules | jq '.modules[] | select(.type == "go-library")'
+eac get modules | jq '.modules[] | select(.type == "go-library")'
 
 # Filter by condition
-r2r eac get modules | jq '.modules[] | select(.files > 30)'
+eac get modules | jq '.modules[] | select(.files > 30)'
 ```
 
 #### Transform Structure
 
 ```bash
 # Create array of names
-r2r eac get modules | jq '[.modules[].moniker]'
+eac get modules | jq '[.modules[].moniker]'
 
 # Create lookup table
-r2r eac get dependencies | jq 'to_entries | map({(.key): .value})'
+eac get dependencies | jq 'to_entries | map({(.key): .value})'
 ```
 
 #### Combine Commands
 
 ```bash
 # Get modules and count by type
-r2r eac get modules | jq '.modules | group_by(.type) | map({type: .[0].type, count: length})'
+eac get modules | jq '.modules | group_by(.type) | map({type: .[0].type, count: length})'
 ```
 
 ### Using grep
@@ -381,10 +381,10 @@ For simple text extraction:
 
 ```bash
 # Extract monikers (fragile, prefer jq)
-r2r eac get modules | grep -Po '"moniker":\s*"\K[^"]*'
+eac get modules | grep -Po '"moniker":\s*"\K[^"]*'
 
 # Count occurrences
-r2r eac get modules | grep -c '"moniker"'
+eac get modules | grep -c '"moniker"'
 ```
 
 ### Using Python
@@ -536,39 +536,39 @@ Built in order:
 
 ```bash
 # Save to file
-r2r eac get modules > modules.json
+eac get modules > modules.json
 
 # Append to file
-r2r eac get modules >> all-data.json
+eac get modules >> all-data.json
 
 # Save with errors
-r2r eac get modules > modules.json 2>&1
+eac get modules > modules.json 2>&1
 ```
 
 ### Saving Tables
 
 ```bash
 # Save table output
-r2r eac show modules > modules.txt
+eac show modules > modules.txt
 
 # Save without colors (for logs)
-r2r eac show modules 2>&1 | tee modules.log
+eac show modules 2>&1 | tee modules.log
 ```
 
 ### Piping
 
 ```bash
 # Pipe to jq
-r2r eac get modules | jq '.modules[].moniker'
+eac get modules | jq '.modules[].moniker'
 
 # Pipe to grep
-r2r eac show modules | grep "go-library"
+eac show modules | grep "go-library"
 
 # Pipe to less
-r2r eac show modules | less
+eac show modules | less
 
 # Pipe to wc
-r2r eac get modules | jq '.modules | length'
+eac get modules | jq '.modules | length'
 ```
 
 ---
@@ -590,7 +590,7 @@ Error: <error-message>
 **Example**:
 
 ```bash
-$ r2r eac build invalid-module
+$ eac build invalid-module
 Error: Module 'invalid-module' not found
 
 Available modules:
@@ -598,7 +598,7 @@ Available modules:
   - eac-core
   - src-auth
 
-Suggestion: Check module name with: r2r eac show modules
+Suggestion: Check module name with: eac show modules
 ```
 
 ### Error Categories
@@ -612,7 +612,7 @@ go/cli/eac/impl/work.go:
   Line 42: undefined variable 'foo'
   Line 58: missing return statement
 
-Run: r2r eac validate contracts
+Run: eac validate contracts
 ```
 
 #### Configuration Errors
@@ -620,9 +620,9 @@ Run: r2r eac validate contracts
 ```text
 Error: AI provider not configured
 
-No configuration found at: .r2r/eac/eac-config.yml
+No configuration found at: .eac/eac-config.yml
 
-Run: r2r eac init
+Run: eac init
 ```
 
 #### Build Errors
@@ -633,7 +633,7 @@ Error: Build failed for module 'eac-commands'
 Compilation errors:
   go/cli/eac/main.go:15: undefined: fmt.Printl
 
-Fix errors and run: r2r eac build eac-commands
+Fix errors and run: eac build eac-commands
 ```
 
 ---
@@ -646,29 +646,29 @@ Fix errors and run: r2r eac build eac-commands
 
    ```bash
    # CI/CD script
-   CHANGED=$(r2r eac get changed-modules | jq -r '.changed_modules[]')
+   CHANGED=$(eac get changed-modules | jq -r '.changed_modules[]')
    ```
 
 2. **Use `show` for exploration**:
 
    ```bash
    # Interactive use
-   r2r eac show modules
-   r2r eac show dependencies
+   eac show modules
+   eac show dependencies
    ```
 
 3. **Pipe JSON through jq**:
 
    ```bash
    # Always validate and format JSON
-   r2r eac get modules | jq '.'
+   eac get modules | jq '.'
    ```
 
 4. **Save JSON for caching**:
 
    ```bash
    # Cache expensive operations
-   r2r eac get files > files.json
+   eac get files > files.json
    jq '.files[] | select(.module == "src-auth")' files.json
    ```
 
@@ -677,7 +677,7 @@ Fix errors and run: r2r eac build eac-commands
 1. **Check exit codes first**:
 
    ```bash
-   if r2r eac get modules > modules.json; then
+   if eac get modules > modules.json; then
      jq '.modules[].moniker' modules.json
    else
      echo "Failed to get modules"
@@ -688,7 +688,7 @@ Fix errors and run: r2r eac build eac-commands
 2. **Handle empty results**:
 
    ```bash
-   MODULES=$(r2r eac get modules | jq -r '.modules[]')
+   MODULES=$(eac get modules | jq -r '.modules[]')
    if [ -z "$MODULES" ]; then
      echo "No modules found"
      exit 1
@@ -699,7 +699,7 @@ Fix errors and run: r2r eac build eac-commands
 
    ```bash
    # Always use -r flag and quote
-   MODULE=$(r2r eac get modules | jq -r '.modules[0].moniker')
+   MODULE=$(eac get modules | jq -r '.modules[0].moniker')
    echo "Building $MODULE"
    ```
 

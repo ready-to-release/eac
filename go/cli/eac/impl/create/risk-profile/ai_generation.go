@@ -14,7 +14,7 @@ import (
 	"github.com/ready-to-release/eac/go/core/logging"
 )
 
-// defaultProfilePrompt is the fallback prompt when .r2r/eac/templates/ai/risk-profile/risk-profile.md is not found.
+// defaultProfilePrompt is the fallback prompt when .eac/templates/ai/risk-profile/risk-profile.md is not found.
 const defaultProfilePrompt = `# Risk Assessment to NIST 800-53 Controls Mapper
 
 You are a security controls analyst. Analyze the risk assessment document and identify NIST 800-53 controls.
@@ -72,7 +72,7 @@ func generateProfile(config *Config, assessmentContent string, catalog *oscalTyp
 func buildProfilePrompt(workspaceRoot, assessmentContent, catalogURL string, availableControls []string) string {
 	// Load prompt template with three-tier priority:
 	// 1. Command flag (not applicable - internal function)
-	// 2. Team override (.r2r/eac/templates/ai/risk-profile/risk-profile.md)
+	// 2. Team override (.eac/templates/ai/risk-profile/risk-profile.md)
 	// 3. System default (templates/ai/risk-profile/risk-profile.md)
 	loader := coreai.NewContractLoader(workspaceRoot, coreai.TypeRiskProfile, "")
 	promptTemplate, _, err := loader.LoadPrompt("", defaultProfilePrompt)

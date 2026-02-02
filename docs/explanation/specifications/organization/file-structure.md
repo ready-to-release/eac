@@ -14,8 +14,8 @@ Understanding the philosophy and structure of separating WHAT from HOW.
 > 2. **Copy template**: `cp templates/specs/specification.feature specs/<module>/<feature>/`
 > 3. **Add Rules and Scenarios**: Convert Example Mapping cards to Gherkin
 > 4. **Add required tags**: `@ov` (verification) and `@ac1` (acceptance criteria link)
-> 5. **Validate**: `r2r eac validate specs`
-> 6. **Run tests**: `r2r eac test <module> --suite pre-commit`
+> 5. **Validate**: `eac validate specs`
+> 6. **Run tests**: `eac test <module> --suite pre-commit`
 >
 > See [Template Usage](#template-usage) for detailed steps.
 
@@ -291,10 +291,10 @@ Every scenario MUST have:
 
 ```bash
 # Validate specification syntax
-r2r eac validate specs
+eac validate specs
 
 # Run the specification
-r2r eac test <module> --suite pre-commit
+eac test <module> --suite pre-commit
 ```
 
 ---
@@ -326,8 +326,8 @@ For validation and test commands, see:
 
 **[Specifications Reference](../../../reference/eac/specifications/index.md)** - Commands including:
 
-- `r2r eac validate specs` - Validate specification syntax
-- `r2r eac test <module> --suite pre-commit` - Run tests
+- `eac validate specs` - Validate specification syntax
+- `eac test <module> --suite pre-commit` - Run tests
 
 **[Go Testing Reference](../../../reference/eac/testing/go/index.md)** - Go-specific implementation details
 

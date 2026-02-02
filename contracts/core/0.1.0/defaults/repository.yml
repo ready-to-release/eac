@@ -7,7 +7,7 @@
 #   - repository-poly.yml     (polyrepo defaults)
 #   - repository-adjacent.yml (adjacent/supporting repo defaults)
 #
-# User values in .r2r/eac/repository.yml always win over all defaults.
+# User values in .eac/repository.yml always win over all defaults.
 
 # Repository settings
 repository:
@@ -67,7 +67,7 @@ paths:
     system: templates/ai
 
     # Team overrides (version controlled, team customizations)
-    team: .r2r/eac/templates/ai
+    team: .eac/templates/ai
 
   # Output directory structure
   out:
@@ -99,7 +99,7 @@ conventions:
 
 # Container Registry Defaults
 # Configure cleanup policies for container images (GHCR, Docker Hub, etc.)
-# Override in .r2r/eac/repository.yml by setting registries.{host}.org
+# Override in .eac/repository.yml by setting registries.{host}.org
 #
 # Note: Registries section is NOT included in defaults because:
 # - org field is required and must be set explicitly by users

@@ -156,7 +156,7 @@ If export file exists at `manual-test-exports/<module>/<version>.json`:
 ### Import Manual Test Results
 
 ```bash
-r2r eac test import-manual --input results.json --release v1.2.0
+eac test import-manual --input results.json --release v1.2.0
 ```
 
 Output:
@@ -170,7 +170,7 @@ Imported manual test results for eac-commands v1.2.0
 ### Overwrite Existing Results
 
 ```bash
-r2r eac test import-manual --input results.json --release v1.2.0 --force
+eac test import-manual --input results.json --release v1.2.0 --force
 ```
 
 Output:

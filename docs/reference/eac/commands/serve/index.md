@@ -13,10 +13,10 @@ Start development servers for documentation and architecture visualization.
 
 ```bash
 # Start documentation server
-r2r eac serve docs
+eac serve docs
 
 # View architecture diagrams
-r2r eac serve design src-auth
+eac serve design src-auth
 ```
 
 ## See Also

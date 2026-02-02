@@ -17,11 +17,11 @@ You help users migrate repositories to the EAC (Enterprise Application Complianc
    - Navigate into cloned directory
 
 3. **Check existing config**:
-   - Look for `.r2r/eac/repository.yml`
+   - Look for `.eac/repository.yml`
    - If exists and not --force, ask user for confirmation
 
 4. **Run migration**:
-   - Execute: `r2r eac init --scan --ai-provider claude-api [--force]`
+   - Execute: `eac init --scan --ai-provider claude-api [--force]`
    - Use --force for showcase mode (avoid permission issues)
    - For custom mode, only use --force if user confirms
 
@@ -40,10 +40,10 @@ Auto-detects:
 ## Next Steps Template
 
 After migration:
-1. Review: `cat .r2r/eac/repository.yml`
-2. Verify: `r2r eac show modules`
-3. Test build: `r2r eac build <module-name>`
-4. Commit: `git add .r2r/eac/ && git commit -m "Add EAC configuration"`
+1. Review: `cat .eac/repository.yml`
+2. Verify: `eac show modules`
+3. Test build: `eac build <module-name>`
+4. Commit: `git add .eac/ && git commit -m "Add EAC configuration"`
 
 ## Error Handling
 

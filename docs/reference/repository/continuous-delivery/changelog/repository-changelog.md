@@ -104,7 +104,7 @@ Changes to repository-level configuration:
 
 **Examples:**
 
-- Module contracts updates (`.r2r/eac/repository.yml`)
+- Module contracts updates (`.eac/repository.yml`)
 - Workspace configuration
 - Repository-level documentation
 - Project templates
@@ -251,13 +251,13 @@ Generate changelog from commits:
 
 ```bash
 # Generate changelog entries from git history
-r2r eac release changelog repository
+eac release changelog repository
 
 # Update existing changelog
-r2r eac release changelog repository --update
+eac release changelog repository --update
 
 # Preview without writing
-r2r eac release changelog repository --dry-run
+eac release changelog repository --dry-run
 ```
 
 **Process:**

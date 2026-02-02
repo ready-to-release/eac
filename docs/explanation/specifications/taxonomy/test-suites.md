@@ -53,7 +53,7 @@ For complete CLI commands, examples, and configuration details, see:
 
 **[Test Suites Reference](../../../reference/eac/testing/test-suites.md)** - Complete implementation guide including:
 
-- CLI commands (`r2r eac test <module> --suite <suite>`)
+- CLI commands (`eac test <module> --suite <suite>`)
 - Suite selection logic with examples
 - Execution time guidelines
 - Debugging test selection

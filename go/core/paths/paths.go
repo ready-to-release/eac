@@ -70,11 +70,11 @@ const (
 	// TemplatesDir is the root directory for templates.
 	TemplatesDir = "templates"
 
-	// R2RDir is the configuration directory (.r2r).
+	// R2RDir is the r2r CLI configuration directory (.r2r).
 	R2RDir = ".r2r"
 
-	// EACDir is the EAC configuration subdirectory under R2RDir.
-	EACDir = "eac"
+	// EACDir is the eac configuration directory (.eac) - sibling to R2RDir.
+	EACDir = ".eac"
 
 	// DesignDir is the design workspace subdirectory under a module's specs.
 	DesignDir = ".design"
@@ -125,7 +125,7 @@ const (
 // Relative path constants.
 const (
 	// EACConfigRelPath is the relative path from repo root to EAC configuration.
-	EACConfigRelPath = R2RDir + "/" + EACDir
+	EACConfigRelPath = EACDir
 
 	// OutBuildRelPath is the relative path from repo root to build output.
 	OutBuildRelPath = OutDir + "/" + BuildDir
@@ -273,12 +273,12 @@ func BookStagingCachePath(repoRoot, moniker, bookName string) string {
 // ensures the tool binary isn't confused with or overwritten by module build outputs.
 //
 // Path Configuration:
-// The tools directory path is defined in .r2r/eac/repository.yml under paths.out.tools.
+// The tools directory path is defined in .eac/repository.yml under paths.out.tools.
 // The default value "out/tools" is also defined as the ToolsDir constant in this package.
 // GitHub Actions and Dockerfile must use this same path - they cannot read the config
 // dynamically, so if the path changes, all locations must be updated together:
-//   - .r2r/eac/repository.yml (paths.out.tools)
-//   - go/eac/core/paths/paths.go (ToolsDir constant)
+//   - .eac/repository.yml (paths.out.tools)
+//   - go/core/paths/paths.go (ToolsDir constant)
 //   - .github/actions/setup-commands/action.yaml
 //   - containers/ext-eac/Dockerfile
 //
@@ -387,7 +387,7 @@ func WorkspaceDSLFiles(repoRoot, moniker string) ([]string, error) {
 
 // EACConfigPath returns the path to the EAC configuration directory.
 func EACConfigPath(repoRoot string) string {
-	return filepath.Join(repoRoot, R2RDir, EACDir)
+	return filepath.Join(repoRoot, EACDir)
 }
 
 // R2RPath returns the path to the .r2r directory.
@@ -490,7 +490,7 @@ func ExtractMonikerFromSpecsPath(specsPath string) string {
 
 // AIConfigPath returns the path to AI configuration for a command.
 func AIConfigPath(repoRoot, command string) string {
-	return filepath.Join(repoRoot, R2RDir, EACDir, AIDir, command)
+	return filepath.Join(repoRoot, EACDir, AIDir, command)
 }
 
 // AIConfigFile returns the path to a specific AI config file.
@@ -500,14 +500,14 @@ func AIConfigFile(repoRoot, command, filename string) string {
 
 // AITestMockPath returns the path to the AI test mock response file.
 func AITestMockPath(repoRoot string) string {
-	return filepath.Join(repoRoot, R2RDir, "test", "ai-mock.txt")
+	return filepath.Join(repoRoot, EACDir, "test", "ai-mock.txt")
 }
 
 // AIPromptsPath returns path to AI prompts (team override or system default)
-// promptType: "team" for .r2r/eac/templates/ai, "system" for templates/ai.
+// promptType: "team" for .eac/templates/ai, "system" for templates/ai.
 func AIPromptsPath(repoRoot, promptType, command, filename string) string {
 	if promptType == "team" {
-		return filepath.Join(repoRoot, R2RDir, EACDir, TemplatesDir, AIDir, command, filename)
+		return filepath.Join(repoRoot, EACDir, TemplatesDir, AIDir, command, filename)
 	}
 	return filepath.Join(repoRoot, TemplatesDir, AIDir, command, filename)
 }

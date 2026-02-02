@@ -2,17 +2,17 @@
 // Short: Initialize EAC project configuration
 // Long: Initialize EAC project configuration.
 // Long:
-// Long: Creates the .r2r/eac directory structure and generates configuration files
+// Long: Creates the .eac directory structure and generates configuration files
 // Long: with calculated defaults. AI provider configuration is optional.
 // Long:
 // Long: Always creates:
-// Long:   - .r2r/eac/repository.yml (module definitions with calculated defaults)
-// Long:   - .r2r/eac/books.yml (empty documentation books template)
-// Long:   - .r2r/eac/environments.yml (empty test environments template)
+// Long:   - .eac/repository.yml (module definitions with calculated defaults)
+// Long:   - .eac/books.yml (empty documentation books template)
+// Long:   - .eac/environments.yml (empty test environments template)
 // Long:
 // Long: When --ai-provider is specified, also creates:
-// Long:   - .r2r/eac/ai-provider.yml (team config) or
-// Long:   - .r2r/eac/ai-provider.personal.yml (personal config with tokens)
+// Long:   - .eac/ai-provider.yml (team config) or
+// Long:   - .eac/ai-provider.personal.yml (personal config with tokens)
 // Long:
 // Long: Available AI providers:
 // Long:   - claude-api: Claude via Anthropic API (requires ANTHROPIC_API_KEY)
@@ -182,7 +182,7 @@ func Init() int {
 		return 1
 	}
 
-	// Create .r2r/eac directory structure (always)
+	// Create .eac directory structure (always)
 	log.Info("📁 Initializing EAC project...")
 	log.Info(fmt.Sprintf("   Repository root: %s", workspaceRoot))
 	log.Info("")
@@ -247,9 +247,9 @@ func Init() int {
 		log.Info(fmt.Sprintf("   %s", filepath.Join(eacDir, "environments.yml")))
 		log.Info("")
 		log.Info("📋 Next steps:")
-		log.Info("   1. Review your configuration: cat .r2r/eac/repository.yml")
+		log.Info("   1. Review your configuration: cat .eac/repository.yml")
 		log.Info("   2. Verify modules: r2r eac show modules")
-		log.Info("   3. Commit to version control: git add .r2r/eac/")
+		log.Info("   3. Commit to version control: git add .eac/")
 		log.Info("")
 		log.Info("ℹ️  To configure AI provider (optional):")
 		log.Info("     r2r eac init --ai-provider claude-api --force")
@@ -307,19 +307,19 @@ func Init() int {
 	if aiToken != "" {
 		// Personal config with tokens
 		log.Info("📋 Next steps:")
-		log.Info("   1. Review your configuration: cat .r2r/eac/repository.yml")
+		log.Info("   1. Review your configuration: cat .eac/repository.yml")
 		log.Info("   2. Verify modules: r2r eac show modules")
 		log.Info("   3. Do NOT commit ai-provider.personal.yml (contains tokens)")
-		log.Info("   4. Commit other config files: git add .r2r/eac/repository.yml .r2r/eac/books.yml .r2r/eac/environments.yml")
+		log.Info("   4. Commit other config files: git add .eac/repository.yml .eac/books.yml .eac/environments.yml")
 	} else {
 		// Team config with placeholders
 		log.Info("📋 Next steps:")
-		log.Info("   1. Review your configuration: cat .r2r/eac/repository.yml")
+		log.Info("   1. Review your configuration: cat .eac/repository.yml")
 		log.Info("   2. Verify modules: r2r eac show modules")
 		if config.envVarName != "" {
 			log.Info(fmt.Sprintf("   3. Set environment variable: %s", config.envVarName))
 		}
-		log.Info("   4. Commit to version control: git add .r2r/eac/")
+		log.Info("   4. Commit to version control: git add .eac/")
 	}
 	log.Info("")
 
@@ -453,14 +453,14 @@ func displayProviderInfo(config *agentConfig) {
 	log.Info("")
 }
 
-// createDirectoryStructure creates the .r2r/eac directory structure.
+// createDirectoryStructure creates the .eac directory structure.
 func createDirectoryStructure(workspaceRoot string) error {
-	// Create .r2r/eac directory
+	// Create .eac directory
 	eacDir := paths.EACConfigPath(workspaceRoot)
 	log.Info(fmt.Sprintf("   Creating directory: %s", eacDir))
 
 	if err := os.MkdirAll(eacDir, 0o755); err != nil {
-		return fmt.Errorf("failed to create .r2r/eac directory: %w", err)
+		return fmt.Errorf("failed to create .eac directory: %w", err)
 	}
 
 	// Verify directory was created
@@ -515,7 +515,7 @@ func buildConfigContent(config *agentConfig, tokens *tokenConfig, useEnvVars boo
 		content.WriteString("#\n")
 		content.WriteString("# For local development with Claude CLI (no API costs):\n")
 		content.WriteString("# - Run: .\\importer.ps1\n")
-		content.WriteString("# - This creates: .r2r/eac/ai-provider.personal.yml (gitignored)\n")
+		content.WriteString("# - This creates: .eac/ai-provider.personal.yml (gitignored)\n")
 		content.WriteString("# - Personal config takes precedence over this team config\n")
 	} else {
 		content.WriteString("# EAC Configuration (Personal)\n")

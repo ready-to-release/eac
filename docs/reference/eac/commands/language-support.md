@@ -166,7 +166,7 @@ EAC uses a **capability matching system** to route commands to appropriate handl
 
 ### 1. Modules Declare Capabilities
 
-In `.r2r/eac/repository.yml`:
+In `.eac/repository.yml`:
 
 ```yaml
 - moniker: my-service

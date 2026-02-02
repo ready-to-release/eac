@@ -253,13 +253,13 @@ Version comparison rules:
 
 ```bash
 # Validate semver format
-r2r eac validate release-version 1.2.3
+eac validate release-version 1.2.3
 
 # Validate with pre-release
-r2r eac validate release-version 1.2.3-beta.1
+eac validate release-version 1.2.3-beta.1
 
 # Validate with build metadata
-r2r eac validate release-version 1.2.3+20251201
+eac validate release-version 1.2.3+20251201
 ```
 
 **Output:**
@@ -399,13 +399,13 @@ git push --delete origin r2r-cli/1.3.0
 
 ```bash
 # Get current version from changelog
-r2r eac release get-version {moniker}
+eac release get-version {moniker}
 
 # Validate version format
-r2r eac validate release-version {version}
+eac validate release-version {version}
 
 # Generate next version tag (CalVer)
-r2r eac release generate-module-calver {moniker}
+eac release generate-module-calver {moniker}
 ```
 
 ## Best Practices

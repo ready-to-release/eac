@@ -37,7 +37,7 @@ func booksRemoveBooksYaml(ctx *eacgodog.TestContext) error {
 	if ctx.IsolatedDir == "" {
 		return fmt.Errorf("books.yml removal requires isolated test environment")
 	}
-	return eacgodog.RemoveFile(ctx, ".r2r/eac/books.yml")
+	return eacgodog.RemoveFile(ctx, ".eac/books.yml")
 }
 
 // booksCreateWithModule creates books.yml with a command that references a non-existent module.
@@ -57,7 +57,7 @@ func booksCreateWithModule(ctx *eacgodog.TestContext, module string) error {
         command: "show artifacts %s"
         target: "artifacts.md"
 `, module)
-	return eacgodog.CreateFile(ctx, ".r2r/eac/books.yml", content)
+	return eacgodog.CreateFile(ctx, ".eac/books.yml", content)
 }
 
 // booksCreateWithInlineCommand creates books.yml with an inline command source (requires isolation).
@@ -78,5 +78,5 @@ func booksCreateWithInlineCommand(ctx *eacgodog.TestContext, cmd string) error {
           - marker: "test-marker"
             command: "%s"
 `, cmd)
-	return eacgodog.CreateFile(ctx, ".r2r/eac/books.yml", content)
+	return eacgodog.CreateFile(ctx, ".eac/books.yml", content)
 }

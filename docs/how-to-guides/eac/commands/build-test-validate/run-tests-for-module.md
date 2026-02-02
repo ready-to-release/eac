@@ -17,7 +17,7 @@ Execute tests for a module and view results with timing information and coverage
 ### 1. Run Tests
 
 ```bash
-r2r eac test src-auth
+eac test src-auth
 ```
 
 **What happens**: Executes all tests for src-auth module, shows pass/fail results
@@ -25,7 +25,7 @@ r2r eac test src-auth
 ### 2. View Test Summary
 
 ```bash
-r2r eac show test-summary src-auth
+eac show test-summary src-auth
 ```
 
 **What happens**: Displays formatted summary with pass/fail counts, timing, and coverage
@@ -33,7 +33,7 @@ r2r eac show test-summary src-auth
 ### 3. Check Test Timings
 
 ```bash
-r2r eac show test-timings src-auth
+eac show test-timings src-auth
 ```
 
 **What happens**: Shows which tests are slowest, helps identify bottlenecks
@@ -42,13 +42,13 @@ r2r eac show test-timings src-auth
 
 ```bash
 # Run only unit tests
-r2r eac test src-auth --tags unit
+eac test src-auth --tags unit
 
 # Run with verbose output
-r2r eac test src-auth --verbose
+eac test src-auth --verbose
 
 # Run and stop on first failure
-r2r eac test src-auth --fail-fast
+eac test src-auth --fail-fast
 ```
 
 ## Example Scenario
@@ -57,7 +57,7 @@ You've added login functionality and want to verify tests pass:
 
 ```bash
 # Run tests
-r2r eac test src-auth
+eac test src-auth
 
 # Output:
 # Running tests for src-auth...
@@ -69,10 +69,10 @@ r2r eac test src-auth
 # coverage: 85.2% of statements
 
 # View detailed summary
-r2r eac show test-summary src-auth
+eac show test-summary src-auth
 
 # Check if any tests are slow
-r2r eac show test-timings src-auth
+eac show test-timings src-auth
 ```
 
 ## Common Issues

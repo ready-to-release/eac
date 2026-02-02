@@ -325,7 +325,7 @@ func validateIfRequired(root string, opts Options) error {
 		}
 	}
 
-	// Check for .git or .r2r/eac/repository.yml
+	// Check for .git or .eac/repository.yml
 	gitPath := filepath.Join(root, ".git")
 	eacPath := filepath.Join(root, paths.EACConfigRelPath, "repository.yml")
 
@@ -354,7 +354,7 @@ func validateIfRequired(root string, opts Options) error {
 			Op:      "validate",
 			Path:    root,
 			Source:  "markers",
-			Message: "neither .git nor .r2r/eac/repository.yml found",
+			Message: "neither .git nor .eac/repository.yml found",
 			Err:     ErrInvalidPath,
 		}
 	}

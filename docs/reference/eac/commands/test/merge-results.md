@@ -149,7 +149,7 @@ The manifest summary aggregates all tests (automated + manual):
 ### Merge Manual Test Results
 
 ```bash
-r2r eac test merge-results --module eac-commands --version v1.2.0
+eac test merge-results --module eac-commands --version v1.2.0
 ```
 
 Output:
@@ -165,10 +165,10 @@ Merged manual test results for eac-commands v1.2.0
 
 ```bash
 # View test summary
-r2r eac show test-summary eac-commands
+eac show test-summary eac-commands
 
 # View manual suite details
-r2r eac show suite manual --module eac-commands
+eac show suite manual --module eac-commands
 ```
 
 ## Error Conditions
@@ -204,7 +204,7 @@ This command is the fourth and final step in the manual testing workflow:
 ### Test Summary
 
 ```bash
-r2r eac show test-summary eac-commands
+eac show test-summary eac-commands
 ```
 
 Shows aggregated statistics including manual tests.
@@ -212,7 +212,7 @@ Shows aggregated statistics including manual tests.
 ### Manual Suite Details
 
 ```bash
-r2r eac show suite manual --module eac-commands
+eac show suite manual --module eac-commands
 ```
 
 Shows only manual test results.
@@ -220,7 +220,7 @@ Shows only manual test results.
 ### All Tests
 
 ```bash
-r2r eac show tests eac-commands
+eac show tests eac-commands
 ```
 
 Lists all tests including manual entries with type "manual".
@@ -232,7 +232,7 @@ Lists all tests including manual entries with type "manual".
 If no test manifest exists:
 
 ```bash
-r2r eac test merge-results --module new-module --version v1.0.0
+eac test merge-results --module new-module --version v1.0.0
 ```
 
 Creates new manifest with only manual tests.
@@ -243,10 +243,10 @@ To replace previous manual test results:
 
 ```bash
 # Re-import new results
-r2r eac test import-manual --input updated-results.json --release v1.2.0 --force
+eac test import-manual --input updated-results.json --release v1.2.0 --force
 
 # Re-merge
-r2r eac test merge-results --module eac-commands --version v1.2.0
+eac test merge-results --module eac-commands --version v1.2.0
 ```
 
 Old manual tests are removed, new ones added.
@@ -257,10 +257,10 @@ Typical workflow:
 
 ```bash
 # Run automated tests (creates manifest)
-r2r eac test eac-commands
+eac test eac-commands
 
 # Merge manual results (updates manifest)
-r2r eac test merge-results --module eac-commands --version v1.2.0
+eac test merge-results --module eac-commands --version v1.2.0
 ```
 
 Manifest now contains both automated and manual test results.
@@ -271,10 +271,10 @@ The merge command is **idempotent** - running it multiple times with the same in
 
 ```bash
 # First merge
-r2r eac test merge-results --module eac-commands --version v1.2.0
+eac test merge-results --module eac-commands --version v1.2.0
 
 # Second merge (produces identical manifest)
-r2r eac test merge-results --module eac-commands --version v1.2.0
+eac test merge-results --module eac-commands --version v1.2.0
 ```
 
 This is safe because:
@@ -290,8 +290,8 @@ This is safe because:
 Always run merge immediately after successful import:
 
 ```bash
-r2r eac test import-manual --input results.json --release v1.2.0 && \
-r2r eac test merge-results --module eac-commands --version v1.2.0
+eac test import-manual --input results.json --release v1.2.0 && \
+eac test merge-results --module eac-commands --version v1.2.0
 ```
 
 ### Version Consistency
@@ -300,9 +300,9 @@ Use the same version for export, import, and merge:
 
 ```bash
 VERSION="v1.2.0"
-r2r eac test export-manual --module eac-commands --release $VERSION
-r2r eac test import-manual --input results.json --release $VERSION
-r2r eac test merge-results --module eac-commands --version $VERSION
+eac test export-manual --module eac-commands --release $VERSION
+eac test import-manual --input results.json --release $VERSION
+eac test merge-results --module eac-commands --version $VERSION
 ```
 
 ### CI Integration
@@ -311,15 +311,15 @@ In CI pipelines, merge manual results before generating test reports:
 
 ```bash
 # Automated tests
-r2r eac test eac-commands
+eac test eac-commands
 
 # Merge manual results (if available)
 if [ -f "test-results/eac-commands/v1.2.0/manual-results.json" ]; then
-  r2r eac test merge-results --module eac-commands --version v1.2.0
+  eac test merge-results --module eac-commands --version v1.2.0
 fi
 
 # Generate reports
-r2r eac show test-summary eac-commands
+eac show test-summary eac-commands
 ```
 
 ## Troubleshooting
@@ -346,7 +346,7 @@ parsing manual results JSON: invalid character '}' looking for beginning of obje
 unknown module: eac-commands-typo
 ```
 
-**Solution**: Verify module moniker with `r2r eac show modules`.
+**Solution**: Verify module moniker with `eac show modules`.
 
 ### Invalid Version Format
 

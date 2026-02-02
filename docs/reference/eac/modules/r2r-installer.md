@@ -13,4 +13,4 @@ Cross-platform installer for the r2r-cli tool.
 ## Design File
 
 - **Location**: `specs/r2r-installer/.design/workspace.dsl`
-- **Interactive**: `r2r eac serve-design --module r2r-installer`
+- **Interactive**: `eac serve-design --module r2r-installer`

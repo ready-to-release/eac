@@ -267,20 +267,20 @@ gh run view <run-id> --json jobs \
 
    ```bash
    # Build all modules
-   r2r eac build
+   eac build
 
    # Test all modules with all suites
-   r2r eac test --suite unit+integration+acceptance
+   eac test --suite unit+integration+acceptance
    ```
 
 4. **Check change detection:**
 
    ```bash
    # Review recent changes
-   r2r eac get changed-modules-ci
+   eac get changed-modules-ci
 
    # Review dependency graph
-   r2r eac get dependencies <module>
+   eac get dependencies <module>
    ```
 
 5. **Review test logs:**

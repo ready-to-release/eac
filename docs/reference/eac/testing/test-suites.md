@@ -15,7 +15,7 @@ Test suites select tests by tags for execution at specific CD Model stages.
 **Time**: 2-5 minutes
 **Purpose**: Fast module-level validation
 **Environment**: DevBox or Build Agent
-**Run**: `r2r eac test <module> --suite unit`
+**Run**: `eac test <module> --suite unit`
 
 ### What It Tests
 
@@ -26,7 +26,7 @@ Test suites select tests by tags for execution at specific CD Model stages.
 
 ```bash
 # Run unit suite
-r2r eac test unit
+eac test unit
 
 # Runs all scenarios with:
 # - @L0 or @L1
@@ -42,7 +42,7 @@ r2r eac test unit
 **Time**: 5-15 minutes
 **Purpose**: Emulated system tests with Docker
 **Environment**: Build Agent with Docker
-**Run**: `r2r eac test <module> --suite integration`
+**Run**: `eac test <module> --suite integration`
 
 ### What It Tests
 
@@ -54,7 +54,7 @@ r2r eac test unit
 
 ```bash
 # Run integration suite
-r2r eac test integration
+eac test integration
 
 # Runs all scenarios with:
 # - @L2
@@ -70,7 +70,7 @@ r2r eac test integration
 **Time**: 1-2 hours
 **Purpose**: Production-like system tests in PLTE
 **Environment**: PLTE (Production-Like Test Environment)
-**Run**: `r2r eac test <module> --suite acceptance`
+**Run**: `eac test <module> --suite acceptance`
 
 ### What It Tests
 
@@ -82,7 +82,7 @@ r2r eac test integration
 
 ```bash
 # Run acceptance suite in PLTE
-r2r eac test acceptance
+eac test acceptance
 
 # Runs all scenarios with:
 # - @L3
@@ -98,7 +98,7 @@ r2r eac test acceptance
 **Time**: Continuous
 **Purpose**: Production smoke tests
 **Environment**: Production
-**Run**: `r2r eac test <module> --suite production-verification`
+**Run**: `eac test <module> --suite production-verification`
 
 ### What It Tests
 
@@ -111,7 +111,7 @@ r2r eac test acceptance
 
 ```bash
 # Run production verification suite
-r2r eac test production-verification
+eac test production-verification
 
 # Runs all scenarios with:
 # - @L4 AND @piv
@@ -208,10 +208,10 @@ Scenario: Ignored test
 
 ```bash
 # Run all suites (single init, single summary)
-r2r eac test
+eac test
 
 # Run all suites for a specific module
-r2r eac test my-module
+eac test my-module
 ```
 
 This runs tests from all three suites while routing output to the module's test folder:
@@ -372,27 +372,27 @@ godog run --tags="@ov && !@Manual"
 
 ### Workflow
 
-Manual tests do not run with `r2r eac test <module> --suite manual`. Instead, use the manual testing workflow:
+Manual tests do not run with `eac test <module> --suite manual`. Instead, use the manual testing workflow:
 
-1. **Export** scenarios: `r2r eac test export-manual --module <module> --release <version>`
+1. **Export** scenarios: `eac test export-manual --module <module> --release <version>`
 2. **Execute** tests: Human tester fills in results file
-3. **Import** results: `r2r eac test import-manual --input results.json --release <version>`
-4. **Merge** into manifest: `r2r eac test merge-results --module <module> --version <version>`
+3. **Import** results: `eac test import-manual --input results.json --release <version>`
+4. **Merge** into manifest: `eac test merge-results --module <module> --version <version>`
 
 ### Example
 
 ```bash
 # Export manual test scenarios
-r2r eac test export-manual --module eac-commands --release v1.2.0
+eac test export-manual --module eac-commands --release v1.2.0
 
 # (Human executes tests and creates results.json)
 
 # Import and merge results
-r2r eac test import-manual --input results.json --release v1.2.0
-r2r eac test merge-results --module eac-commands --version v1.2.0
+eac test import-manual --input results.json --release v1.2.0
+eac test merge-results --module eac-commands --version v1.2.0
 
 # View results
-r2r eac show suite manual --module eac-commands
+eac show suite manual --module eac-commands
 ```
 
 ### See Also
@@ -409,16 +409,16 @@ r2r eac show suite manual --module eac-commands
 
 ```bash
 # Dry run - show which tests would run
-r2r eac test commit --dry-run
-r2r eac test integration --dry-run
-r2r eac test acceptance --dry-run
-r2r eac test production-verification --dry-run
+eac test commit --dry-run
+eac test integration --dry-run
+eac test acceptance --dry-run
+eac test production-verification --dry-run
 
 # Show test count by suite
-r2r eac test commit --count
-r2r eac test integration --count
-r2r eac test acceptance --count
-r2r eac test production-verification --count
+eac test commit --count
+eac test integration --count
+eac test acceptance --count
+eac test production-verification --count
 ```
 
 ### Common Issues

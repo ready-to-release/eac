@@ -9,7 +9,7 @@ For **container/bundle modules** with dependencies, specs are **aggregated from 
 Example: When querying `ext-eac` (which depends on `eac-commands` and `r2r-cli`):
 
 ```bash
-r2r eac show specs ext-eac
+eac show specs ext-eac
 ```
 
 Shows specs from:

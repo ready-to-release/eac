@@ -13,7 +13,7 @@ The **update** category contains commands for updating existing documentation an
 ### Update Architecture Documentation
 
 ```bash
-r2r eac update design src-auth
+eac update design src-auth
 ```
 
 ## Key Features

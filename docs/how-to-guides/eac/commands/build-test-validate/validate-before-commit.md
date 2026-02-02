@@ -16,7 +16,7 @@ Run comprehensive quality checks before committing to ensure code meets reposito
 ### 1. Run All Validations
 
 ```bash
-r2r eac validate
+eac validate
 ```
 
 **What happens**: Runs all validation checks:
@@ -36,16 +36,16 @@ If validation fails, fix the reported issues:
 go mod tidy
 
 # If specs have issues
-r2r eac validate specs
+eac validate specs
 
 # If dependencies are wrong
-r2r eac validate dependencies
+eac validate dependencies
 ```
 
 ### 3. Validate Again
 
 ```bash
-r2r eac validate
+eac validate
 ```
 
 **What happens**: Re-runs all checks to verify fixes
@@ -54,10 +54,10 @@ r2r eac validate
 
 ```bash
 # Validate specific areas
-r2r eac validate specs          # Check Gherkin specs
-r2r eac validate go-tidy        # Check Go modules
-r2r eac validate dependencies   # Check module deps
-r2r eac validate contracts      # Check contracts
+eac validate specs          # Check Gherkin specs
+eac validate go-tidy        # Check Go modules
+eac validate dependencies   # Check module deps
+eac validate contracts      # Check contracts
 ```
 
 ## Example Scenario
@@ -66,7 +66,7 @@ You're ready to commit but want to ensure quality first:
 
 ```bash
 # Run validation
-r2r eac validate
+eac validate
 
 # Output:
 # ✓ Contracts valid
@@ -78,7 +78,7 @@ r2r eac validate
 go mod tidy
 
 # Validate again
-r2r eac validate
+eac validate
 # ✓ All validations passed
 
 # Now safe to commit
@@ -91,7 +91,7 @@ Add to `.git/hooks/pre-commit`:
 
 ```bash
 #!/bin/bash
-r2r eac validate || exit 1
+eac validate || exit 1
 ```
 
 ## Common Issues

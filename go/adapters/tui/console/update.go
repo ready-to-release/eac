@@ -114,7 +114,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				for _, module := range layer.Modules {
 					for _, uow := range module.UoWs {
 						// Use full ID (Longname) for matching, DisplayName for tab labels
-						m.GetOrCreateUoWState(uow.ID, uow.DisplayName, 1)
+						m.GetOrCreateUoWState(uow.ID, uow.DisplayName, uow.Weight)
 					}
 				}
 			}

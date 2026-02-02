@@ -78,8 +78,8 @@ git checkout -b feat/my-feature
 ### 2. Make Changes
 
 - Keep commits atomic and focused
-- Run tests locally: `r2r eac test <module>`
-- Validate contracts: `r2r eac validate`
+- Run tests locally: `eac test <module>`
+- Validate contracts: `eac validate`
 
 ### 3. Push and Create PR
 
@@ -90,7 +90,7 @@ git push -u origin feat/my-feature
 Then create PR via GitHub or:
 
 ```bash
-r2r eac create-pr
+eac create-pr
 ```
 
 ### 4. PR Requirements
@@ -134,7 +134,7 @@ Every push triggers:
 View CI status:
 
 ```bash
-r2r eac pipeline-status
+eac pipeline-status
 ```
 
 ## Release Process
@@ -149,7 +149,7 @@ Releases are triggered by changelog updates:
 Check release readiness:
 
 ```bash
-r2r eac release-check-ci <module>
+eac release-check-ci <module>
 ```
 
 ## Working with Modules
@@ -158,20 +158,20 @@ r2r eac release-check-ci <module>
 
 ```bash
 # See which modules changed
-r2r eac get-changed-modules
+eac get-changed-modules
 
 # Build only changed modules
-r2r eac build --changed
+eac build --changed
 ```
 
 ### Module Dependencies
 
 ```bash
 # View dependency graph
-r2r eac show-dependencies
+eac show-dependencies
 
 # Build with dependencies
-r2r eac build <module> --deps
+eac build <module> --deps
 ```
 
 ## Best Practices
@@ -179,7 +179,7 @@ r2r eac build <module> --deps
 1. **Small, focused changes** - Easier to review and merge
 2. **Test before pushing** - Catch issues early
 3. **Update docs with code** - Keep documentation current
-4. **Validate contracts** - Run `r2r eac validate` before committing
+4. **Validate contracts** - Run `eac validate` before committing
 5. **Use conventional commits** - Enables automated changelog generation
 
 ## Troubleshooting
@@ -188,9 +188,9 @@ r2r eac build <module> --deps
 
 ```bash
 # Run same checks locally
-r2r eac validate
-r2r eac test <module>
-r2r eac update-lint <module>
+eac validate
+eac test <module>
+eac update-lint <module>
 ```
 
 ### Merge Conflicts

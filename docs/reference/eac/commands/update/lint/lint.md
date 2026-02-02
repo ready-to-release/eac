@@ -7,7 +7,7 @@ Run linters on one or more modules. The command automatically selects appropriat
 ## Synopsis
 
 ```bash
-r2r eac update lint [modules...] [flags]
+eac update lint [modules...] [flags]
 ```
 
 ## Description
@@ -31,19 +31,19 @@ Linter selection is automatic based on module type:
 
 ```bash
 # Lint all modules
-r2r eac update lint
+eac update lint
 
 # Lint specific modules
-r2r eac update lint eac-commands eac-core
+eac update lint eac-commands eac-core
 
 # Lint with auto-fix enabled
-r2r eac update lint --fix
+eac update lint --fix
 
 # CI mode (no TUI)
-r2r eac update lint --no-tui
+eac update lint --no-tui
 
 # Use custom config
-r2r eac update lint --config .golangci-strict.yml
+eac update lint --config .golangci-strict.yml
 ```
 
 ## Exit Codes
@@ -85,7 +85,7 @@ The lint command requires language-specific tools to be installed:
 Check availability with:
 
 ```bash
-r2r eac show deps-setup-summary --module=eac-commands --deps=go
+eac show deps-setup-summary --module=eac-commands --deps=go
 ```
 
 ## See Also

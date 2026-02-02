@@ -299,13 +299,13 @@ grep -r "Scenario:" specs/ | cut -d: -f1 | uniq -c | sort -rn
 
 ```bash
 # Validate Gherkin syntax
-r2r eac validate specs
+eac validate specs
 
 # Check control tags
-r2r eac validate control-tags
+eac validate control-tags
 
 # Verify test tags
-r2r eac validate test-tags
+eac validate test-tags
 ```
 
 ---
@@ -336,9 +336,9 @@ For validation commands, see:
 
 **[Specifications Reference](../../../reference/eac/specifications/index.md)** - Commands including:
 
-- `r2r eac validate specs` - Validate Gherkin syntax
-- `r2r eac validate control-tags` - Check control tags against OSCAL catalog
-- `r2r eac validate test-tags` - Verify test tags are defined
+- `eac validate specs` - Validate Gherkin syntax
+- `eac validate control-tags` - Check control tags against OSCAL catalog
+- `eac validate test-tags` - Verify test tags are defined
 
 ---
 

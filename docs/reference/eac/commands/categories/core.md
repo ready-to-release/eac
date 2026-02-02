@@ -24,13 +24,13 @@ These commands are invoked directly without a category prefix.
 
 ```bash
 # Lint all modules
-r2r eac lint
+eac lint
 
 # Lint specific module
-r2r eac lint eac-commands
+eac lint eac-commands
 
 # Lint with auto-fix
-r2r eac lint --fix
+eac lint --fix
 ```
 
 The lint command automatically selects appropriate linters based on module component types (Go, Markdown, etc.).
@@ -39,7 +39,7 @@ The lint command automatically selects appropriate linters based on module compo
 
 ```bash
 # Output extension metadata for r2r CLI
-r2r eac extension-meta
+eac extension-meta
 ```
 
 Provides metadata about the EAC extension for CLI integration and tooling.

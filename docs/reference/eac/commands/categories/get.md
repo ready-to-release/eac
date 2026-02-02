@@ -42,16 +42,16 @@ Get commands are designed to be piped through `jq`:
 
 ```bash
 # Extract specific fields
-r2r eac get modules | jq -r '.modules[].moniker'
+eac get modules | jq -r '.modules[].moniker'
 
 # Filter results
-r2r eac get modules | jq '.modules[] | select(.type == "go-library")'
+eac get modules | jq '.modules[] | select(.type == "go-library")'
 
 # Transform data
-r2r eac get dependencies | jq 'to_entries | map({module: .key, deps: .value})'
+eac get dependencies | jq 'to_entries | map({module: .key, deps: .value})'
 
 # Count results
-r2r eac get modules | jq '.modules | length'
+eac get modules | jq '.modules | length'
 ```
 
 ### Caching Results
@@ -60,7 +60,7 @@ JSON output is deterministic and cacheable:
 
 ```bash
 # Cache expensive queries
-r2r eac get files > files.json
+eac get files > files.json
 
 # Query from cache
 jq '.files[] | select(.module == "src-auth")' files.json
@@ -92,13 +92,13 @@ Most get commands have corresponding `show` commands that provide the same infor
 
 ```bash
 # Get changed modules
-CHANGED=$(r2r eac get changed-modules-ci | jq -r '.changed_modules[]')
+CHANGED=$(eac get changed-modules-ci | jq -r '.changed_modules[]')
 
 # Build in dependency order
 for module in $CHANGED; do
-  ORDER=$(r2r eac get execution order $module | jq -r '.execution_order[]')
+  ORDER=$(eac get execution order $module | jq -r '.execution_order[]')
   for dep in $ORDER; do
-    r2r eac build $dep
+    eac build $dep
   done
 done
 ```
@@ -107,39 +107,39 @@ done
 
 ```bash
 # Get all module monikers
-r2r eac get modules | jq -r '.modules[].moniker'
+eac get modules | jq -r '.modules[].moniker'
 
 # Find modules by type
-r2r eac get modules | jq '.modules[] | select(.type == "go-library")'
+eac get modules | jq '.modules[] | select(.type == "go-library")'
 
 # Count modules by type
-r2r eac get modules | jq '.modules | group_by(.type) | map({type: .[0].type, count: length})'
+eac get modules | jq '.modules | group_by(.type) | map({type: .[0].type, count: length})'
 ```
 
 ### Dependency Analysis
 
 ```bash
 # Get dependency graph
-r2r eac get dependencies | jq '.'
+eac get dependencies | jq '.'
 
 # Find dependencies of a module
-r2r eac get dependencies | jq '.dependencies["src-api"]'
+eac get dependencies | jq '.dependencies["src-api"]'
 
 # Find modules with no dependencies
-r2r eac get dependencies | jq 'to_entries[] | select(.value | length == 0) | .key'
+eac get dependencies | jq 'to_entries[] | select(.value | length == 0) | .key'
 ```
 
 ### Build Optimization
 
 ```bash
 # Get execution order for parallel builds
-r2r eac get execution order r2r-cli | jq -r '.execution_order[]'
+eac get execution order r2r-cli | jq -r '.execution_order[]'
 
 # Get build dependencies
-r2r eac get build-deps src-api | jq '.dependencies[]'
+eac get build-deps src-api | jq '.dependencies[]'
 
 # Analyze build performance
-r2r eac get build-times | jq '[.builds[]] | sort_by(.duration) | reverse'
+eac get build-times | jq '[.builds[]] | sort_by(.duration) | reverse'
 ```
 
 ## Performance Notes
@@ -179,10 +179,10 @@ Validate and process JSON output:
 
 ```bash
 # Good: Validate JSON and extract data
-r2r eac get modules | jq -r '.modules[].moniker'
+eac get modules | jq -r '.modules[].moniker'
 
 # Avoid: Raw grep on JSON (fragile)
-r2r eac get modules | grep '"moniker"'
+eac get modules | grep '"moniker"'
 ```
 
 ### Check Exit Codes
@@ -190,7 +190,7 @@ r2r eac get modules | grep '"moniker"'
 Commands return non-zero on errors:
 
 ```bash
-if ! OUTPUT=$(r2r eac get modules 2>&1); then
+if ! OUTPUT=$(eac get modules 2>&1); then
   echo "Error: Failed to get modules"
   exit 1
 fi
@@ -203,7 +203,7 @@ echo "$OUTPUT" | jq '.modules[]'
 ```bash
 # Cache files query
 if [ ! -f files.json ]; then
-  r2r eac get files > files.json
+  eac get files > files.json
 fi
 
 # Query from cache
@@ -216,18 +216,18 @@ Extract values without quotes:
 
 ```bash
 # With -r: produces raw strings
-r2r eac get modules | jq -r '.modules[].moniker'
+eac get modules | jq -r '.modules[].moniker'
 # Output: eac-commands
 
 # Without -r: produces quoted strings
-r2r eac get modules | jq '.modules[].moniker'
+eac get modules | jq '.modules[].moniker'
 # Output: "eac-commands"
 ```
 
 ### Handle Empty Results
 
 ```bash
-MODULES=$(r2r eac get modules | jq -r '.modules[]')
+MODULES=$(eac get modules | jq -r '.modules[]')
 if [ -z "$MODULES" ]; then
   echo "No modules found"
   exit 1
@@ -252,13 +252,13 @@ jobs:
       - name: Get Changed Modules
         id: changed
         run: |
-          MODULES=$(r2r eac get changed-modules-ci | jq -r '.changed_modules | join(" ")')
+          MODULES=$(eac get changed-modules-ci | jq -r '.changed_modules | join(" ")')
           echo "modules=$MODULES" >> $GITHUB_OUTPUT
 
       - name: Build
         run: |
           for module in ⟪ steps.changed.outputs.modules ⟫; do
-            r2r eac build $module
+            eac build $module
           done
 ```
 
@@ -273,7 +273,7 @@ jobs:
     steps:
       - id: set-matrix
         run: |
-          MATRIX=$(r2r eac get modules | jq -c '{module: [.modules[].moniker]}')
+          MATRIX=$(eac get modules | jq -c '{module: [.modules[].moniker]}')
           echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
 
   build:
@@ -281,7 +281,7 @@ jobs:
     strategy:
       matrix: ⟪ fromJson(needs.generate-matrix.outputs.matrix) ⟫
     steps:
-      - run: r2r eac build ⟪ matrix.module ⟫
+      - run: eac build ⟪ matrix.module ⟫
 ```
 
 ### Build Script
@@ -291,7 +291,7 @@ jobs:
 set -e
 
 # Get changed modules
-CHANGED=$(r2r eac get changed-modules | jq -r '.changed_modules[]')
+CHANGED=$(eac get changed-modules | jq -r '.changed_modules[]')
 
 if [ -z "$CHANGED" ]; then
   echo "No changes detected"
@@ -300,11 +300,11 @@ fi
 
 # Build each in dependency order
 for module in $CHANGED; do
-  ORDER=$(r2r eac get execution order $module | jq -r '.execution_order[]')
+  ORDER=$(eac get execution order $module | jq -r '.execution_order[]')
 
   for dep in $ORDER; do
     echo "Building $dep..."
-    r2r eac build $dep || exit 1
+    eac build $dep || exit 1
   done
 done
 ```
@@ -318,7 +318,7 @@ done
 **Solution**: Check command exit code and stderr
 
 ```bash
-if ! OUTPUT=$(r2r eac get modules 2>&1); then
+if ! OUTPUT=$(eac get modules 2>&1); then
   echo "Command failed: $OUTPUT"
   exit 1
 fi
@@ -337,7 +337,7 @@ fi
 
 ```bash
 # Check if modules exist
-TOTAL=$(r2r eac get modules | jq '.modules | length')
+TOTAL=$(eac get modules | jq '.modules | length')
 if [ "$TOTAL" -eq 0 ]; then
   echo "No modules found in repository"
 fi
@@ -351,18 +351,18 @@ fi
 
 ```bash
 # Avoid: Calling get files repeatedly
-for module in $(r2r eac get modules | jq -r '.modules[].moniker'); do
-  r2r eac get files | jq ".files[] | select(.module == \"$module\")"
+for module in $(eac get modules | jq -r '.modules[].moniker'); do
+  eac get files | jq ".files[] | select(.module == \"$module\")"
 done
 
 # Better: Cache once
-r2r eac get files > files.json
-for module in $(r2r eac get modules | jq -r '.modules[].moniker'); do
+eac get files > files.json
+for module in $(eac get modules | jq -r '.modules[].moniker'); do
   jq ".files[] | select(.module == \"$module\")" files.json
 done
 
 # Best: Use get modules (includes file counts)
-r2r eac get modules | jq '.modules[] | "\(.moniker): \(.files) files"'
+eac get modules | jq '.modules[] | "\(.moniker): \(.files) files"'
 ```
 
 ## See Also

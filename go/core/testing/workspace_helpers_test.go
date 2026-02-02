@@ -29,7 +29,7 @@ func TestSetupWorkspaceIsolation(t *testing.T) {
 	}
 
 	// Verify we can access real repo files
-	repoYml := filepath.Join(root, ".r2r", "eac", "repository.yml")
+	repoYml := filepath.Join(root, ".eac", "repository.yml")
 	if _, err := os.Stat(repoYml); os.IsNotExist(err) {
 		t.Errorf("expected repository.yml at %s, but file not found", repoYml)
 	}
@@ -81,8 +81,8 @@ func TestRealRepoRoot(t *testing.T) {
 		t.Errorf("RealRepoRoot() returned %q but no .git found there", root)
 	}
 
-	// Verify it contains .r2r/eac/repository.yml
-	repoYml := filepath.Join(root, ".r2r", "eac", "repository.yml")
+	// Verify it contains .eac/repository.yml
+	repoYml := filepath.Join(root, ".eac", "repository.yml")
 	if _, err := os.Stat(repoYml); os.IsNotExist(err) {
 		t.Errorf("RealRepoRoot() returned %q but no repository.yml found", root)
 	}
@@ -91,7 +91,7 @@ func TestRealRepoRoot(t *testing.T) {
 func TestCopyToTempWorkspace(t *testing.T) {
 	// Copy a specific file to temp workspace
 	filesToCopy := []string{
-		".r2r/eac/repository.yml",
+		".eac/repository.yml",
 	}
 
 	tempRoot := CopyToTempWorkspace(t, filesToCopy)
@@ -102,7 +102,7 @@ func TestCopyToTempWorkspace(t *testing.T) {
 	}
 
 	// Verify the file was copied
-	copiedFile := filepath.Join(tempRoot, ".r2r", "eac", "repository.yml")
+	copiedFile := filepath.Join(tempRoot, ".eac", "repository.yml")
 	if _, err := os.Stat(copiedFile); os.IsNotExist(err) {
 		t.Errorf("file not copied to %s", copiedFile)
 	}
@@ -122,7 +122,7 @@ func TestCopyToTempWorkspace(t *testing.T) {
 func TestCopyToTempWorkspaceMultipleFiles(t *testing.T) {
 	// Copy multiple files that exist in the repo
 	filesToCopy := []string{
-		".r2r/eac/repository.yml",
+		".eac/repository.yml",
 		"SECURITY.md",
 	}
 

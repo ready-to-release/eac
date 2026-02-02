@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=../books.schema.json
 # Default Book Definitions
 # Generic books that work for any EAC repository.
-# Repos can override or extend these in .r2r/eac/books.yml
+# Repos can override or extend these in .eac/books.yml
 
 # =============================================================================
 # SOURCE SNIPPETS - Reusable source blocks

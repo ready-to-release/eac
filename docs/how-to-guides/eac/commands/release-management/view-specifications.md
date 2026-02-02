@@ -16,10 +16,10 @@ Show specifications that have been added or modified since the last release:
 
 ```bash
 # Human-readable markdown output
-r2r eac show specs my-module
+eac show specs my-module
 
 # or explicitly
-r2r eac show specs my-module unreleased
+eac show specs my-module unreleased
 ```
 
 **Output:**
@@ -40,13 +40,13 @@ r2r eac show specs my-module unreleased
 Show specifications that were included in the most recent release:
 
 ```bash
-r2r eac show specs my-module latest
+eac show specs my-module latest
 ```
 
 ## View Specifications for Specific Version
 
 ```bash
-r2r eac show specs my-module 1.2.3
+eac show specs my-module 1.2.3
 ```
 
 ## Query from Different Branches
@@ -55,13 +55,13 @@ By default, commands query from the trunk branch (usually `main`). Use `--branch
 
 ```bash
 # Query from main branch (default)
-r2r eac show specs my-module
+eac show specs my-module
 
 # Query from current branch (useful when working in feature branches)
-r2r eac show specs my-module --branch HEAD
+eac show specs my-module --branch HEAD
 
 # Query from specific branch
-r2r eac show specs my-module --branch develop
+eac show specs my-module --branch develop
 ```
 
 **When to use this:**
@@ -75,22 +75,22 @@ r2r eac show specs my-module --branch develop
 ### As JSON
 
 ```bash
-r2r eac get specs my-module --as-json
+eac get specs my-module --as-json
 ```
 
 ### As YAML (default)
 
 ```bash
-r2r eac get specs my-module
+eac get specs my-module
 
 # or explicitly
-r2r eac get specs my-module --as-yaml
+eac get specs my-module --as-yaml
 ```
 
 ### As TOML
 
 ```bash
-r2r eac get specs my-module --as-toml
+eac get specs my-module --as-toml
 ```
 
 ## Common Use Cases
@@ -98,7 +98,7 @@ r2r eac get specs my-module --as-toml
 ### 1. Count Total Scenarios in Unreleased Specs
 
 ```bash
-r2r eac get specs my-module unreleased --as-json | jq '.total_scenarios'
+eac get specs my-module unreleased --as-json | jq '.total_scenarios'
 ```
 
 **Example Output:**
@@ -110,7 +110,7 @@ r2r eac get specs my-module unreleased --as-json | jq '.total_scenarios'
 ### 2. List All Added Specifications
 
 ```bash
-r2r eac get specs my-module latest --as-json | jq -r '.spec_files[] | select(.status == "Added") | .relative_path'
+eac get specs my-module latest --as-json | jq -r '.spec_files[] | select(.status == "Added") | .relative_path'
 ```
 
 **Example Output:**
@@ -123,7 +123,7 @@ specs/my-module/get-specs/specification.feature
 ### 3. Get Scenario Count Per Specification
 
 ```bash
-r2r eac get specs my-module --as-json | jq '.spec_files[] | {file: .feature_name, scenarios: .scenario_count}'
+eac get specs my-module --as-json | jq '.spec_files[] | {file: .feature_name, scenarios: .scenario_count}'
 ```
 
 **Example Output:**
@@ -146,7 +146,7 @@ r2r eac get specs my-module --as-json | jq '.spec_files[] | {file: .feature_name
 ### 4. Count Specifications by Status
 
 ```bash
-r2r eac get specs my-module --as-json | jq '{added: .added_count, modified: .modified_count, deleted: .deleted_count}'
+eac get specs my-module --as-json | jq '{added: .added_count, modified: .modified_count, deleted: .deleted_count}'
 ```
 
 **Example Output:**
@@ -162,7 +162,7 @@ r2r eac get specs my-module --as-json | jq '{added: .added_count, modified: .mod
 ### 5. Find Specifications with Most Scenarios
 
 ```bash
-r2r eac get specs my-module --as-json | jq '.spec_files | sort_by(.scenario_count) | reverse | .[0] | {file: .feature_name, scenarios: .scenario_count}'
+eac get specs my-module --as-json | jq '.spec_files | sort_by(.scenario_count) | reverse | .[0] | {file: .feature_name, scenarios: .scenario_count}'
 ```
 
 **Example Output:**
@@ -177,7 +177,7 @@ r2r eac get specs my-module --as-json | jq '.spec_files | sort_by(.scenario_coun
 ### 6. Check if Any Specs Were Deleted
 
 ```bash
-r2r eac get specs my-module --as-json | jq '.deleted_count > 0'
+eac get specs my-module --as-json | jq '.deleted_count > 0'
 ```
 
 **Example Output:**
@@ -193,12 +193,12 @@ Create a summary for release notes:
 ```bash
 echo "## Specification Changes"
 echo ""
-echo "- Added: $(r2r eac get specs my-module latest --as-json | jq '.added_count') specifications"
-echo "- Modified: $(r2r eac get specs my-module latest --as-json | jq '.modified_count') specifications"
-echo "- Total Scenarios: $(r2r eac get specs my-module latest --as-json | jq '.total_scenarios')"
+echo "- Added: $(eac get specs my-module latest --as-json | jq '.added_count') specifications"
+echo "- Modified: $(eac get specs my-module latest --as-json | jq '.modified_count') specifications"
+echo "- Total Scenarios: $(eac get specs my-module latest --as-json | jq '.total_scenarios')"
 echo ""
 echo "### Added Specifications:"
-r2r eac get specs my-module latest --as-json | jq -r '.spec_files[] | select(.status == "Added") | "- " + .feature_name + " (" + (.scenario_count | tostring) + " scenarios)"'
+eac get specs my-module latest --as-json | jq -r '.spec_files[] | select(.status == "Added") | "- " + .feature_name + " (" + (.scenario_count | tostring) + " scenarios)"'
 ```
 
 **Example Output:**

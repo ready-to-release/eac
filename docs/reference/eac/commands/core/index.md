@@ -13,8 +13,8 @@ Core commands are top-level commands that don't fit into a specific category but
 These commands are invoked directly without a category prefix:
 
 ```bash
-r2r eac lint              # Lint all modules
-r2r eac lint eac-commands # Lint specific module
+eac lint              # Lint all modules
+eac lint eac-commands # Lint specific module
 ```
 
 ## See Also

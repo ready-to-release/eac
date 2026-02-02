@@ -14,7 +14,7 @@ func TestNewToolLoader(t *testing.T) {
 		t.Skip("Could not find repo root")
 	}
 
-	configRoot := filepath.Join(repoRoot, ".r2r", "eac")
+	configRoot := filepath.Join(repoRoot, ".eac")
 
 	loader, err := NewToolLoader(repoRoot, configRoot)
 	if err != nil {
@@ -46,7 +46,7 @@ func TestToolLoader_EnsureNamespace(t *testing.T) {
 		t.Skip("Could not find repo root")
 	}
 
-	configRoot := filepath.Join(repoRoot, ".r2r", "eac")
+	configRoot := filepath.Join(repoRoot, ".eac")
 
 	loader, err := NewToolLoader(repoRoot, configRoot)
 	if err != nil {
@@ -81,7 +81,7 @@ func TestToolLoader_EnsureNamespaceForComponent(t *testing.T) {
 		t.Skip("Could not find repo root")
 	}
 
-	configRoot := filepath.Join(repoRoot, ".r2r", "eac")
+	configRoot := filepath.Join(repoRoot, ".eac")
 
 	loader, err := NewToolLoader(repoRoot, configRoot)
 	if err != nil {
@@ -127,7 +127,7 @@ func TestToolLoader_GetBinding(t *testing.T) {
 		t.Skip("Could not find repo root")
 	}
 
-	configRoot := filepath.Join(repoRoot, ".r2r", "eac")
+	configRoot := filepath.Join(repoRoot, ".eac")
 
 	loader, err := NewToolLoader(repoRoot, configRoot)
 	if err != nil {
@@ -161,7 +161,7 @@ func TestToolLoader_GetComponentTools(t *testing.T) {
 		t.Skip("Could not find repo root")
 	}
 
-	configRoot := filepath.Join(repoRoot, ".r2r", "eac")
+	configRoot := filepath.Join(repoRoot, ".eac")
 
 	loader, err := NewToolLoader(repoRoot, configRoot)
 	if err != nil {
@@ -194,7 +194,7 @@ func TestToolLoader_LoadAll(t *testing.T) {
 		t.Skip("Could not find repo root")
 	}
 
-	configRoot := filepath.Join(repoRoot, ".r2r", "eac")
+	configRoot := filepath.Join(repoRoot, ".eac")
 
 	loader, err := NewToolLoader(repoRoot, configRoot)
 	if err != nil {

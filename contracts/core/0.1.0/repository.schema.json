@@ -220,12 +220,12 @@
         "team": {
           "type": "string",
           "description": "Team override prompts (version controlled, team customizations)",
-          "default": ".r2r/eac/templates/ai"
+          "default": ".eac/templates/ai"
         }
       },
       "default": {
         "system": "templates/ai",
-        "team": ".r2r/eac/templates/ai"
+        "team": ".eac/templates/ai"
       }
     },
     "out_paths": {

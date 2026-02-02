@@ -35,13 +35,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case UnitStartMsg:
 		m.AddUnit(msg.Moniker, msg.DisplayName, cells.UnitPending, msg.Weight)
+		m.updateCells() // Sync cells immediately for responsive UI
 
 	case UnitRunningMsg:
 		m.UpdateUnit(msg.Moniker, cells.UnitRunning)
+		m.updateCells() // Sync cells immediately for responsive UI
 
 	case UnitCompleteMsg:
 		status := statusFromExitCode(msg.ExitCode)
 		m.UpdateUnit(msg.Moniker, status)
+		m.updateCells() // Sync cells immediately for responsive UI
 
 	case OutputLineMsg:
 		m.AppendOutput(msg.Line)
@@ -69,9 +72,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case SummaryMsg:
 		m.SetSummary(msg.Data)
+		m.updateCells() // Sync cells immediately
 
 	case SetLayersMsg:
 		m.SetLayers(msg.Layers)
+		m.updateCells() // Sync cells immediately
 
 	case QuitMsg:
 		m.quitting = true

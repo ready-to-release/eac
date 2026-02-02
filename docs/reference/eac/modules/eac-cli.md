@@ -119,7 +119,7 @@ OSCAL-based risk assessment.
 ## Design File
 
 - **Location**: `specs/eac-cli/.design/workspace.dsl`
-- **Interactive**: `r2r eac serve-design --module eac-cli`
+- **Interactive**: `eac serve-design --module eac-cli`
 
 ## Key Dependencies
 

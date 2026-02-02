@@ -48,7 +48,7 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 		state.baseBranch = baseBranch
 
 		// Create module structure
-		if err := eacgodog.CreateDirectory(ctx, ".r2r/eac"); err != nil {
+		if err := eacgodog.CreateDirectory(ctx, ".eac"); err != nil {
 			return err
 		}
 
@@ -58,7 +58,7 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
     components:
       go: go/test-module
 `
-		if err := eacgodog.CreateFile(ctx, ".r2r/eac/repository.yml", repositoryYml); err != nil {
+		if err := eacgodog.CreateFile(ctx, ".eac/repository.yml", repositoryYml); err != nil {
 			return err
 		}
 
@@ -135,7 +135,7 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 		state.baseBranch = baseBranch
 
 		// Create module structure
-		if err := eacgodog.CreateDirectory(ctx, ".r2r/eac"); err != nil {
+		if err := eacgodog.CreateDirectory(ctx, ".eac"); err != nil {
 			return err
 		}
 
@@ -145,7 +145,7 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
     components:
       go: go/test-module
 `
-		if err := eacgodog.CreateFile(ctx, ".r2r/eac/repository.yml", repositoryYml); err != nil {
+		if err := eacgodog.CreateFile(ctx, ".eac/repository.yml", repositoryYml); err != nil {
 			return err
 		}
 

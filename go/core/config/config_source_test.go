@@ -162,7 +162,7 @@ func TestGetLoadedFiles_UserConfigPath(t *testing.T) {
 	}
 	require.NotNil(t, userFile, "user layer file should be present")
 
-	expectedPath := filepath.Join(repoRoot, ".r2r", "eac", "repository.yml")
+	expectedPath := filepath.Join(repoRoot, ".eac", "repository.yml")
 	assert.Equal(t, expectedPath, userFile.Path)
 }
 

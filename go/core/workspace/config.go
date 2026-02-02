@@ -26,11 +26,11 @@ type Options struct {
 	StartPath string
 
 	// Validate checks that the detected path is a valid workspace.
-	// When true, verifies .git or .r2r/eac/repository.yml exists.
+	// When true, verifies .git or .eac/repository.yml exists.
 	// Default: true
 	Validate bool
 
-	// RequireGit requires .git directory to exist (not just .r2r/eac/repository.yml).
+	// RequireGit requires .git directory to exist (not just .eac/repository.yml).
 	// Default: false
 	RequireGit bool
 

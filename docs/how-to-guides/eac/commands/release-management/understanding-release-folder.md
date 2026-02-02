@@ -135,7 +135,7 @@ Analysis of how changes affect business processes, workflows, and users.
 
 ## How Modules Link to Changelogs
 
-Module contracts in `.r2r/eac/repository.yml` define where each module's changelog lives. The location depends on the module's **release type**.
+Module contracts in `.eac/repository.yml` define where each module's changelog lives. The location depends on the module's **release type**.
 
 ### Changelog Location by Release Type
 

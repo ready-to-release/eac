@@ -19,7 +19,7 @@ modules, dependencies, and configurations are defined in YAML contracts validate
 All architecture diagrams referenced in this document can be viewed interactively using Structurizr:
 
 ```bash
-r2r eac serve design
+eac serve design
 # Opens http://localhost:8080
 ```
 
@@ -38,7 +38,7 @@ See [Viewing Architecture](./viewing-diagrams.md) for detailed instructions.
 
 ```mermaid
 graph TB
-    Dev[Developer] -->|r2r eac| CLI[R2R CLI]
+    Dev[Developer] -->|eac| CLI[R2R CLI]
     LLM[LLM Tools] -->|MCP| MCP[MCP Server]
 
     CLI -->|Docker| Ext[ext-eac Container]
@@ -59,7 +59,7 @@ graph TB
 **EAC operates in two execution modes**:
 
 1. **Containerized**
-   (via R2R CLI): Developer runs `r2r eac <command>` → R2R CLI launches ext-eac Docker container → Command executes in isolated environment
+   (via R2R CLI): Developer runs `eac <command>` → R2R CLI launches ext-eac Docker container → Command executes in isolated environment
 2. **Direct**
    (via MCP): LLM tools connect via MCP protocol → eac-mcp-commands exposes tools → Commands execute directly (no container overhead)
 
@@ -185,7 +185,7 @@ type BuildHandler struct {
 }
 
 func (h *BuildHandler) Execute(args []string) error {
-    // 1. Load contracts from .r2r/eac/
+    // 1. Load contracts from .eac/
     // 2. Resolve dependencies using eac-core
     // 3. Execute build logic
     // 4. Verify artifacts and update cache
@@ -212,7 +212,7 @@ See [Creating Commands](./creating-commands.md) for command development guide.
 
 ### Configuration
 
-**File**: `.r2r/eac/ai-config.yml`
+**File**: `.eac/ai-config.yml`
 
 ```yaml
 provider: anthropic
@@ -246,7 +246,7 @@ AI commands use a **retry strategy** with exponential backoff for rate limiting 
 **Precedence** (highest to lowest):
 
 1. **Personal config** (`.personal.yml`, not in Git) - User-specific overrides
-2. **User config** (`.yml` files in `.r2r/eac/`) - Team shared settings
+2. **User config** (`.yml` files in `.eac/`) - Team shared settings
 3. **System defaults** (`contracts/eac-core/0.1.0/defaults/`) - Default configurations
 4. **Hardcoded defaults** (in eac-core) - Fallback values
 

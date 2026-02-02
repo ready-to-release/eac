@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=../ai-provider.schema.json
 # AI Provider Defaults
 # Base configuration that makes the AI system runnable.
-# Can be overridden in .r2r/eac/ai-provider.yml (team) and ai-provider.personal.yml (user)
+# Can be overridden in .eac/ai-provider.yml (team) and ai-provider.personal.yml (user)
 
 ai:
   provider: claude-api

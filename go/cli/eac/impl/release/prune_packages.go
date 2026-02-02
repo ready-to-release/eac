@@ -11,7 +11,7 @@
 // Long:   5. Only versions matching prune patterns (e.g., sha-*, dev-*) are candidates
 // Long:
 // Long: Configuration:
-// Long:   Configure in .r2r/eac/repository.yml under registries:
+// Long:   Configure in .eac/repository.yml under registries:
 // Long:     registries:
 // Long:       ghcr.io:
 // Long:         org: your-org
@@ -147,7 +147,7 @@ func ReleasePrunePackages() int {
 	registryConfig := cfg.Repository.GetRegistryConfig("ghcr.io")
 	if registryConfig == nil {
 		log.Errorf("No registry configuration found for ghcr.io")
-		log.Infof("Add registries section to .r2r/eac/repository.yml:")
+		log.Infof("Add registries section to .eac/repository.yml:")
 		log.Infof("  registries:")
 		log.Infof("    ghcr.io:")
 		log.Infof("      org: your-org")

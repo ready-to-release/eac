@@ -36,7 +36,7 @@ git push origin feature/authentication
 ### 2. Generate PR with AI Description
 
 ```bash
-r2r eac create pr
+eac create pr
 ```
 
 **What happens**:
@@ -77,7 +77,7 @@ You've completed a feature and want to create a PR:
 git push origin feature/add-jwt-auth
 
 # Create PR with AI description
-r2r eac create pr
+eac create pr
 
 # Output:
 # Analyzing 5 commits...

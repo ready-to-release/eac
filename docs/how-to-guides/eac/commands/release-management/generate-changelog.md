@@ -26,7 +26,7 @@ r2r release this my-module
 - Determines version bump (patch/minor/major for SemVer, date for CalVer)
 - Generates/updates `release/my-module/CHANGELOG.md`
 
-**Path discovery**: Command finds changelog via module contract (`versioning.changelog` in `.r2r/eac/repository.yml`), defaulting to `release/<module>/CHANGELOG.md`. See [Understanding the Release Folder](./understanding-release-folder.md) for details.
+**Path discovery**: Command finds changelog via module contract (`versioning.changelog` in `.eac/repository.yml`), defaulting to `release/<module>/CHANGELOG.md`. See [Understanding the Release Folder](./understanding-release-folder.md) for details.
 
 ### 2. Review Generated Changelog
 

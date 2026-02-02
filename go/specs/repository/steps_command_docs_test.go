@@ -4,7 +4,7 @@
 // has corresponding reference documentation.
 //
 // The mapping from command names to documentation paths is driven by
-// .r2r/eac/commands.yml configuration, making it easy to adjust rules
+// .eac/commands.yml configuration, making it easy to adjust rules
 // without code changes.
 package repository
 

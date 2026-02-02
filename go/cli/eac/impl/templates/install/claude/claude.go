@@ -191,7 +191,7 @@ func parseConfig() (*Config, error) {
 		return nil, fmt.Errorf("failed to find repository root: %w", err)
 	}
 
-	// Use .claude/ directory (not .r2r/eac/templates/)
+	// Use .claude/ directory (not .eac/templates/)
 	destination := filepath.Join(workspaceRoot, ".claude")
 
 	cfg := &Config{

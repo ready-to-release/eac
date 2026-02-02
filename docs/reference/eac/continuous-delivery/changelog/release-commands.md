@@ -172,7 +172,7 @@ Tags follow the pattern `<module>/<version>`:
 
 ## Versioning Constraints
 
-The `.r2r/eac/repository.yml` file can constrain version bumps:
+The `.eac/repository.yml` file can constrain version bumps:
 
 ```yaml
 versioning:

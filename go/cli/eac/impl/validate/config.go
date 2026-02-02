@@ -4,8 +4,8 @@
 // Long:
 // Long: This command validates the complete configuration stack:
 // Long:   1. Contract defaults (from contracts/eac-*/defaults/)
-// Long:   2. User overrides (from .r2r/eac/)
-// Long:   3. Personal overrides (from .r2r/eac/*.personal.yml)
+// Long:   2. User overrides (from .eac/)
+// Long:   3. Personal overrides (from .eac/*.personal.yml)
 // Long:
 // Long: Validation phases:
 // Long:   - File Checks: All config files are readable

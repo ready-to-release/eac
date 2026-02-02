@@ -1,5 +1,5 @@
 # Logging Configuration Defaults
-# User overrides in .r2r/eac/logging.yml will be merged on top of these defaults
+# User overrides in .eac/logging.yml will be merged on top of these defaults
 
 # Console output (stdout)
 console:

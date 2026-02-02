@@ -7,7 +7,7 @@ Update the documentation assets manifest.
 ## Synopsis
 
 ```bash
-r2r eac update docs-manifest [flags]
+eac update docs-manifest [flags]
 ```
 
 ## Description
@@ -34,19 +34,19 @@ The manifest tracks:
 ### Update manifest
 
 ```bash
-r2r eac update docs-manifest
+eac update docs-manifest
 ```
 
 ### Validate in CI
 
 ```bash
-r2r eac update docs-manifest --check
+eac update docs-manifest --check
 ```
 
 ### Preview changes
 
 ```bash
-r2r eac update docs-manifest --dry-run
+eac update docs-manifest --dry-run
 ```
 
 ## Output

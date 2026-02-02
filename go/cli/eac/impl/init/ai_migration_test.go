@@ -133,7 +133,7 @@ Scan Results: {{.Custom.ScanResults}}
 			})
 
 			// Create mock AI config
-			configDir := filepath.Join(tmpDir, ".r2r", "eac")
+			configDir := filepath.Join(tmpDir, ".eac")
 			require.NoError(t, os.MkdirAll(configDir, 0755))
 			configContent := `ai:
   provider: mock
@@ -185,7 +185,7 @@ func TestGenerateConfig_EmptyScanResults(t *testing.T) {
 	))
 
 	// Create mock config
-	configDir := filepath.Join(tmpDir, ".r2r", "eac")
+	configDir := filepath.Join(tmpDir, ".eac")
 	require.NoError(t, os.MkdirAll(configDir, 0755))
 	configContent := `ai:
   provider: mock
@@ -284,7 +284,7 @@ func TestGenerateConfig_ValidJSON(t *testing.T) {
 	))
 
 	// Create mock config
-	configDir := filepath.Join(tmpDir, ".r2r", "eac")
+	configDir := filepath.Join(tmpDir, ".eac")
 	require.NoError(t, os.MkdirAll(configDir, 0755))
 	configContent := `ai:
   provider: mock

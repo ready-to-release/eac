@@ -10,7 +10,7 @@ import (
 )
 
 // FixtureConfig loads EAC config from a test fixture directory.
-// The fixture must contain the standard .r2r/eac/ structure.
+// The fixture must contain the standard .eac/ structure.
 func FixtureConfig(t *testing.T, fixturePath string) *config.EACConfig {
 	t.Helper()
 
@@ -118,7 +118,7 @@ func SetupMinimalFixture(t *testing.T) string {
 	dir := TempDir(t, "eac-test-*")
 
 	// Create minimal repository.yml (module-types.yml not needed - defaults are used)
-	WriteFixtureFile(t, dir, ".r2r/eac/repository.yml", `
+	WriteFixtureFile(t, dir, ".eac/repository.yml", `
 name: test-repo
 description: Test repository for unit tests
 versioning:
@@ -149,7 +149,7 @@ func SetupFixtureWithModules(t *testing.T, modules []ModuleSpec) string {
 	}
 
 	// Create repository.yml (module-types.yml not needed - defaults are used)
-	WriteFixtureFile(t, dir, ".r2r/eac/repository.yml", `
+	WriteFixtureFile(t, dir, ".eac/repository.yml", `
 name: test-repo
 description: Test repository for unit tests
 versioning:

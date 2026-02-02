@@ -18,10 +18,10 @@ CI/CD orchestration and diagnostics for module-aware build pipelines.
 
 ```bash
 # Run pipeline for module
-r2r eac pipeline run src-auth
+eac pipeline run src-auth
 
 # Check CI status
-r2r eac pipeline status
+eac pipeline status
 ```
 
 ## See Also

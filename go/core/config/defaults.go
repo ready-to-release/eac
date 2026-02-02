@@ -1,6 +1,6 @@
 // Package config provides defaults loading from contract YAML files.
 // Defaults are loaded at runtime from contracts/core/0.1.0/defaults/*.yml
-// and merged with user config from .r2r/eac/*.yml.
+// and merged with user config from .eac/*.yml.
 package config
 
 import (

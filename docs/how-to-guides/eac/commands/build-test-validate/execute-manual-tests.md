@@ -43,7 +43,7 @@ These tests are tagged with `@Manual` in Gherkin specifications and exported for
 Export scenarios tagged with `@Manual` for the release:
 
 ```bash
-r2r eac test export-manual --module eac-commands --release v1.2.0 --format json
+eac test export-manual --module eac-commands --release v1.2.0 --format json
 ```
 
 **What happens**:
@@ -87,13 +87,13 @@ r2r eac test export-manual --module eac-commands --release v1.2.0 --format json
 **CSV** (for spreadsheet tools):
 
 ```bash
-r2r eac test export-manual --module eac-commands --release v1.2.0 --format csv
+eac test export-manual --module eac-commands --release v1.2.0 --format csv
 ```
 
 **Markdown** (for human-readable checklist):
 
 ```bash
-r2r eac test export-manual --module eac-commands --release v1.2.0 --format markdown
+eac test export-manual --module eac-commands --release v1.2.0 --format markdown
 ```
 
 ### Step 2: Execute Manual Tests
@@ -216,7 +216,7 @@ For each scenario, update with execution results:
 Validate and store results:
 
 ```bash
-r2r eac test import-manual --input manual-test-results.json --release v1.2.0
+eac test import-manual --input manual-test-results.json --release v1.2.0
 ```
 
 **What happens**:
@@ -264,7 +264,7 @@ manual test results already exist for eac-commands v1.2.0
 **Fix**: Use `--force` to overwrite:
 
 ```bash
-r2r eac test import-manual --input manual-test-results.json --release v1.2.0 --force
+eac test import-manual --input manual-test-results.json --release v1.2.0 --force
 ```
 
 ### Step 4: Merge Results into Test Manifest
@@ -272,7 +272,7 @@ r2r eac test import-manual --input manual-test-results.json --release v1.2.0 --f
 Integrate manual results with automated test results:
 
 ```bash
-r2r eac test merge-results --module eac-commands --version v1.2.0
+eac test merge-results --module eac-commands --version v1.2.0
 ```
 
 **What happens**:
@@ -304,7 +304,7 @@ VERSION="v1.2.0"
 MODULE="eac-commands"
 
 # Export scenarios
-r2r eac test export-manual --module $MODULE --release $VERSION --format json
+eac test export-manual --module $MODULE --release $VERSION --format json
 ```
 
 ### Execute Tests
@@ -339,7 +339,7 @@ Open `manual-test-scenarios.json` and:
 
 ```bash
 # Import results
-r2r eac test import-manual --input manual-test-results.json --release $VERSION
+eac test import-manual --input manual-test-results.json --release $VERSION
 
 # Output:
 # Imported manual test results for eac-commands v1.2.0
@@ -347,7 +347,7 @@ r2r eac test import-manual --input manual-test-results.json --release $VERSION
 #   Tests: 8 passed, 2 failed, 1 skipped
 
 # Merge into manifest
-r2r eac test merge-results --module $MODULE --version $VERSION
+eac test merge-results --module $MODULE --version $VERSION
 
 # Output:
 # Merged manual test results for eac-commands v1.2.0
@@ -360,13 +360,13 @@ r2r eac test merge-results --module $MODULE --version $VERSION
 
 ```bash
 # View overall test summary
-r2r eac show test-summary $MODULE
+eac show test-summary $MODULE
 
 # View manual suite details
-r2r eac show suite manual --module $MODULE
+eac show suite manual --module $MODULE
 
 # View all tests (including manual)
-r2r eac show tests $MODULE
+eac show tests $MODULE
 ```
 
 ---

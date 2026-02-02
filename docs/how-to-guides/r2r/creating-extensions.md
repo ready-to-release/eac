@@ -202,7 +202,7 @@ my-extension/
 - **internal/metadata/**: Extension metadata implementation
 - **specs/**: Co-locates behavior tests with implementation
 - **containers/**: Centralizes container definitions
-- **.r2r/eac/**: Optional integration with EAC build system
+- **.eac/**: Optional integration with EAC build system
 
 ### Package Organization
 
@@ -748,7 +748,7 @@ Extensions can optionally integrate with EAC's build system for automated builds
 
 ### Module Contract
 
-Create `.r2r/eac/repository.yml`:
+Create `.eac/repository.yml`:
 
 ```yaml
 repository:

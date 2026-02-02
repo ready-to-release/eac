@@ -13,22 +13,22 @@ The **validate** category contains commands for validating repository contracts,
 ### Pre-commit Validation
 
 ```bash
-r2r eac validate
+eac validate
 ```
 
 ### Dependency Validation
 
 ```bash
-r2r eac validate dependencies
-r2r eac validate go-tidy
+eac validate dependencies
+eac validate go-tidy
 ```
 
 ### Documentation Validation
 
 ```bash
-r2r eac validate specs
-r2r eac validate markdown
-r2r eac validate design
+eac validate specs
+eac validate markdown
+eac validate design
 ```
 
 ## Key Features

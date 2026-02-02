@@ -238,7 +238,7 @@ func printShowConfigUsage() {
 	fmt.Println("")
 	fmt.Println("With --verbose, shows configuration source files:")
 	fmt.Println("  - Contract defaults from contracts/core/0.1.0/defaults/")
-	fmt.Println("  - User configuration from .r2r/eac/")
+	fmt.Println("  - User configuration from .eac/")
 	fmt.Println("  - File existence status and value counts")
 	fmt.Println("")
 	fmt.Println("For full structured output, use 'r2r get config'.")

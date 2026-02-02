@@ -34,7 +34,7 @@ func TestValidator_ValidateRepositoryYAML(t *testing.T) {
 	require.NoError(t, err)
 
 	// Load the actual repository.yml from the repository
-	repoPath := filepath.Join(repoRoot, ".r2r", "eac", "repository.yml")
+	repoPath := filepath.Join(repoRoot, ".eac", "repository.yml")
 	data, err := os.ReadFile(repoPath)
 	require.NoError(t, err)
 
@@ -48,7 +48,7 @@ func TestValidator_ValidateEnvironmentsYAML(t *testing.T) {
 	require.NoError(t, err)
 
 	// Load the actual environments.yml from the repository
-	envPath := filepath.Join(repoRoot, ".r2r", "eac", "environments.yml")
+	envPath := filepath.Join(repoRoot, ".eac", "environments.yml")
 	data, err := os.ReadFile(envPath)
 	require.NoError(t, err)
 
@@ -62,7 +62,7 @@ func TestValidator_ValidateTestingTagsYAML(t *testing.T) {
 	require.NoError(t, err)
 
 	// Load the actual testing-tags.yml from the repository
-	tagsPath := filepath.Join(repoRoot, ".r2r", "eac", "testing-tags.yml")
+	tagsPath := filepath.Join(repoRoot, ".eac", "testing-tags.yml")
 	data, err := os.ReadFile(tagsPath)
 	require.NoError(t, err)
 

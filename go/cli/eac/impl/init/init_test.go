@@ -17,7 +17,7 @@ func TestCreateDirectoryStructure(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "create .r2r/eac directory successfully",
+			name:    "create .eac directory successfully",
 			wantErr: false,
 		},
 	}
@@ -33,10 +33,10 @@ func TestCreateDirectoryStructure(t *testing.T) {
 				return
 			}
 
-			// Verify .r2r/eac directory was created
-			eacDir := filepath.Join(tmpDir, ".r2r", "eac")
+			// Verify .eac directory was created
+			eacDir := filepath.Join(tmpDir, ".eac")
 			if _, err := os.Stat(eacDir); os.IsNotExist(err) {
-				t.Errorf(".r2r/eac directory was not created")
+				t.Errorf(".eac directory was not created")
 			}
 		})
 	}
@@ -107,10 +107,10 @@ func TestWriteAgentConfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tmpDir := t.TempDir()
-			// Create .r2r/eac directory
-			eacDir := filepath.Join(tmpDir, ".r2r", "eac")
+			// Create .eac directory
+			eacDir := filepath.Join(tmpDir, ".eac")
 			if err := os.MkdirAll(eacDir, 0755); err != nil {
-				t.Fatalf("failed to create .r2r/eac directory: %v", err)
+				t.Fatalf("failed to create .eac directory: %v", err)
 			}
 
 			// Create empty token config since we're just testing team config generation
@@ -215,9 +215,9 @@ func TestConfigureProvider(t *testing.T) {
 
 func TestGenerateBooksYML(t *testing.T) {
 	tmpDir := t.TempDir()
-	eacDir := filepath.Join(tmpDir, ".r2r", "eac")
+	eacDir := filepath.Join(tmpDir, ".eac")
 	if err := os.MkdirAll(eacDir, 0755); err != nil {
-		t.Fatalf("failed to create .r2r/eac directory: %v", err)
+		t.Fatalf("failed to create .eac directory: %v", err)
 	}
 
 	err := generateBooksYML(eacDir)
@@ -249,9 +249,9 @@ func TestGenerateBooksYML(t *testing.T) {
 
 func TestGenerateEnvironmentsYML(t *testing.T) {
 	tmpDir := t.TempDir()
-	eacDir := filepath.Join(tmpDir, ".r2r", "eac")
+	eacDir := filepath.Join(tmpDir, ".eac")
 	if err := os.MkdirAll(eacDir, 0755); err != nil {
-		t.Fatalf("failed to create .r2r/eac directory: %v", err)
+		t.Fatalf("failed to create .eac directory: %v", err)
 	}
 
 	err := generateEnvironmentsYML(eacDir)

@@ -23,7 +23,7 @@ The EAC repository is a modular monorepo containing:
 
 ### Modular Monorepo
 
-All modules are defined in `.r2r/eac/repository.yml`. Each module has:
+All modules are defined in `.eac/repository.yml`. Each module has:
 
 - Unique moniker (identifier)
 - Components (go, typescript, specs, etc.)
@@ -39,7 +39,7 @@ All modules are defined in `.r2r/eac/repository.yml`. Each module has:
 
 Everything is configured via YAML contracts validated against JSON schemas:
 
-- `repository.yml` - Module definitions (in `.r2r/eac/`)
+- `repository.yml` - Module definitions (in `.eac/`)
 - `component-types.yml` - Component type definitions (system default)
 - `environments.yml` - Test environments (system default)
 - `test-suites.yml` - Test suite definitions (system default)
@@ -50,19 +50,19 @@ System defaults are in `contracts/eac-core/0.1.0/defaults/`.
 
 ```bash
 # View all modules
-r2r eac show-modules
+eac show-modules
 
 # Check dependencies
-r2r eac show-dependencies
+eac show-dependencies
 
 # Validate contracts
-r2r eac validate
+eac validate
 
 # Build a module
-r2r eac build <module>
+eac build <module>
 
 # Test a module
-r2r eac test <module>
+eac test <module>
 ```
 
 ## Getting Started

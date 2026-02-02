@@ -23,32 +23,32 @@ Commands are organized by workflow and use case for fast lookup.
 
 ```bash
 # List all modules
-r2r eac show modules
+eac show modules
 
 # Get modules as JSON
-r2r eac get modules
+eac get modules
 
 # Show module dependencies
-r2r eac show dependencies
+eac show dependencies
 
 # Get dependency graph as JSON
-r2r eac get dependencies
+eac get dependencies
 ```
 
 ### View Module Information
 
 ```bash
 # Show configuration
-r2r eac show config
+eac show config
 
 # List all files with module ownership
-r2r eac show files
+eac show files
 
 # Show only changed files
-r2r eac show files-changed
+eac show files-changed
 
 # Show staged files
-r2r eac show files-staged
+eac show files-staged
 ```
 
 ---
@@ -59,39 +59,39 @@ r2r eac show files-staged
 
 ```bash
 # Build a single module
-r2r eac build src-auth
+eac build src-auth
 
 # Build multiple modules
-r2r eac build src-auth src-api
+eac build src-auth src-api
 
 # Build with dependencies in order
-r2r eac get execution order src-auth | xargs -L1 r2r eac build
+eac get execution order src-auth | xargs -L1 eac build
 ```
 
 ### Test Commands
 
 ```bash
 # Test a module (all suites)
-r2r eac test src-auth
+eac test src-auth
 
 # Run specific test suite
-r2r eac test suite acceptance
+eac test suite acceptance
 
 # List available test suites
-r2r eac test list-suites
+eac test list-suites
 
 # Show test results
-r2r eac show test-summary src-auth acceptance
+eac show test-summary src-auth acceptance
 ```
 
 ### Debug Test Failures
 
 ```bash
 # Parse and list failures
-r2r eac test debug
+eac test debug
 
 # Show test timing analysis
-r2r eac show test-timings
+eac show test-timings
 ```
 
 ---
@@ -102,19 +102,19 @@ r2r eac show test-timings
 
 ```bash
 # Create new worktree for feature
-r2r eac work create feature/auth
+eac work create feature/auth
 
 # List all workspaces
-r2r eac show workspaces
+eac show workspaces
 
 # Sync workspace with main
-r2r eac work pull
+eac work pull
 
 # Merge workspace to main
-r2r eac work merge
+eac work merge
 
 # Remove workspace
-r2r eac work remove feature/auth
+eac work remove feature/auth
 ```
 
 ### AI-Powered Commits
@@ -124,20 +124,20 @@ r2r eac work remove feature/auth
 git add .
 
 # Generate commit message with AI
-r2r eac work commit
+eac work commit
 
 # Alternative: Generate message only (no commit)
-r2r eac create commit-message
+eac create commit-message
 ```
 
 ### Pull Requests
 
 ```bash
 # Create PR with AI-generated description
-r2r eac create pr
+eac create pr
 
 # Generate squash commit message
-r2r eac create squash-message main..feature/auth
+eac create squash-message main..feature/auth
 ```
 
 ---
@@ -148,36 +148,36 @@ r2r eac create squash-message main..feature/auth
 
 ```bash
 # Get modules affected by changes
-r2r eac get changed-modules
+eac get changed-modules
 
 # Get modules requiring rebuild in CI
-r2r eac get changed-modules-ci
+eac get changed-modules-ci
 ```
 
 ### Pipeline Execution
 
 ```bash
 # Run pipeline for module
-r2r eac pipeline run src-auth
+eac pipeline run src-auth
 
 # Check CI status
-r2r eac pipeline status
+eac pipeline status
 
 # Wait for CI to complete
-r2r eac pipeline wait
+eac pipeline wait
 
 # Orchestrate CI build
-r2r eac pipeline ci
+eac pipeline ci
 ```
 
 ### Build Order
 
 ```bash
 # Get execution order for dependencies
-r2r eac get execution order src-api
+eac get execution order src-api
 
 # Build modules in order
-r2r eac get execution order src-api | xargs -L1 r2r eac build
+eac get execution order src-api | xargs -L1 eac build
 ```
 
 ---
@@ -188,39 +188,39 @@ r2r eac get execution order src-api | xargs -L1 r2r eac build
 
 ```bash
 # Check for pending changes
-r2r eac release pending
+eac release pending
 
 # Check for tag-pending versions
-r2r eac release tag-pending
+eac release tag-pending
 
 # Get current version from changelog
-r2r eac release get-version
+eac release get-version
 ```
 
 ### Generate Release Materials
 
 ```bash
 # Generate changelog from commits
-r2r eac release changelog
+eac release changelog
 
 # Validate changelog format
-r2r eac validate release
+eac validate release
 
 # Check CI status for release
-r2r eac release check-ci $(git rev-parse HEAD)
+eac release check-ci $(git rev-parse HEAD)
 ```
 
 ### Create Release
 
 ```bash
 # Finalize module release (creates git tag)
-r2r eac release this
+eac release this
 
 # Generate calver tag for module
-r2r eac release generate-module-calver src-auth
+eac release generate-module-calver src-auth
 
 # Validate version format
-r2r eac validate release-version
+eac validate release-version
 ```
 
 ---
@@ -231,42 +231,42 @@ r2r eac validate release-version
 
 ```bash
 # Validate everything
-r2r eac validate
+eac validate
 
 # Validate contracts
-r2r eac validate contracts
+eac validate contracts
 
 # Validate dependencies
-r2r eac validate dependencies
+eac validate dependencies
 
 # Check Go module tidiness
-r2r eac validate go-tidy
+eac validate go-tidy
 ```
 
 ### Specification Validation
 
 ```bash
 # Validate Gherkin specs
-r2r eac validate specs
+eac validate specs
 
 # Find unused step definitions
-r2r eac get specs unused-steps
+eac get specs unused-steps
 ```
 
 ### File and Structure Validation
 
 ```bash
 # Validate module file ownership
-r2r eac validate module-files
+eac validate module-files
 
 # Validate module hierarchy
-r2r eac validate module-hierarchy
+eac validate module-hierarchy
 
 # Validate markdown syntax
-r2r eac validate markdown
+eac validate markdown
 
 # Validate architecture diagrams
-r2r eac validate design
+eac validate design
 ```
 
 ---
@@ -277,36 +277,36 @@ r2r eac validate design
 
 ```bash
 # Create architecture diagram
-r2r eac create design src-auth
+eac create design src-auth
 
 # Update existing diagram
-r2r eac update design src-auth
+eac update design src-auth
 
 # View diagrams in browser
-r2r eac serve design src-auth
+eac serve design src-auth
 
 # Validate diagram syntax
-r2r eac validate design
+eac validate design
 ```
 
 ### Specifications
 
 ```bash
 # Generate Gherkin spec from description
-r2r eac create spec "User can login with email and password"
+eac create spec "User can login with email and password"
 
 # Validate specifications
-r2r eac validate specs
+eac validate specs
 ```
 
 ### Documentation Site
 
 ```bash
 # Start documentation server
-r2r eac serve docs
+eac serve docs
 
 # Stop documentation server
-r2r eac serve docs --stop
+eac serve docs --stop
 ```
 
 ### Templates
@@ -336,32 +336,32 @@ r2r templates install specs
 
 ```bash
 # Run all security scans
-r2r eac scan
+eac scan
 ```
 
 ### Individual Scans
 
 ```bash
 # Scan for vulnerabilities
-r2r eac scan --scanner vuln
+eac scan --scanner vuln
 
 # Scan for secrets
-r2r eac scan --scanner secrets
+eac scan --scanner secrets
 
 # Static analysis (SAST)
-r2r eac scan --scanner sast
+eac scan --scanner sast
 
 # Infrastructure as Code scan
-r2r eac scan --scanner iac
+eac scan --scanner iac
 
 # Generate SBOM
-r2r eac scan --scanner sbom
+eac scan --scanner sbom
 
 # Check compliance
-r2r eac scan --scanner compliance
+eac scan --scanner compliance
 
 # Dynamic analysis (DAST)
-r2r eac scan zap eac-api --target http://localhost:8080
+eac scan zap eac-api --target http://localhost:8080
 ```
 
 ---
@@ -374,13 +374,13 @@ Most `get` commands output JSON for scripting:
 
 ```bash
 # Get modules and process with jq
-r2r eac get modules | jq '.modules[].moniker'
+eac get modules | jq '.modules[].moniker'
 
 # Filter by type
-r2r eac get modules | jq '.modules[] | select(.type == "go-library")'
+eac get modules | jq '.modules[] | select(.type == "go-library")'
 
 # Count results
-r2r eac get modules | jq '.modules | length'
+eac get modules | jq '.modules | length'
 ```
 
 ### get vs show Duality
@@ -399,13 +399,13 @@ Information commands come in pairs:
 
 ```bash
 # Show help for any command
-r2r eac show help <command>
+eac show help <command>
 
 # List all valid commands
-r2r eac show valid-commands
+eac show valid-commands
 
 # Get command metadata
-r2r eac get valid-commands
+eac get valid-commands
 ```
 
 ---
@@ -416,12 +416,12 @@ Consider creating shell aliases for frequently used commands:
 
 ```bash
 # ~/.bashrc or ~/.zshrc
-alias r2r-modules='r2r eac show modules'
-alias r2r-build='r2r eac build'
-alias r2r-test='r2r eac test'
-alias r2r-validate='r2r eac validate'
-alias r2r-commit='r2r eac work commit'
-alias r2r-changed='r2r eac get changed-modules'
+alias r2r-modules='eac show modules'
+alias r2r-build='eac build'
+alias r2r-test='eac test'
+alias r2r-validate='eac validate'
+alias r2r-commit='eac work commit'
+alias r2r-changed='eac get changed-modules'
 ```
 
 ---
@@ -433,50 +433,50 @@ alias r2r-changed='r2r eac get changed-modules'
 ```bash
 # 1. Make changes
 # 2. Validate
-r2r eac validate
+eac validate
 
 # 3. Build affected modules
-r2r eac get changed-modules | xargs -L1 r2r eac build
+eac get changed-modules | xargs -L1 eac build
 
 # 4. Run tests
-r2r eac get changed-modules | xargs -L1 r2r eac test
+eac get changed-modules | xargs -L1 eac test
 
 # 5. Commit with AI
-r2r eac work commit
+eac work commit
 ```
 
 ### Release Workflow
 
 ```bash
 # 1. Check pending changes
-r2r eac release pending
+eac release pending
 
 # 2. Generate changelog
-r2r eac release changelog
+eac release changelog
 
 # 3. Validate changelog
-r2r eac validate release
+eac validate release
 
 # 4. Check CI status
-r2r eac release check-ci $(git rev-parse HEAD)
+eac release check-ci $(git rev-parse HEAD)
 
 # 5. Create release tag
-r2r eac release this
+eac release this
 ```
 
 ### CI Build Workflow
 
 ```bash
 # 1. Get changed modules since last CI
-r2r eac get changed-modules-ci
+eac get changed-modules-ci
 
 # 2. Build in dependency order
-for module in $(r2r eac get changed-modules-ci | jq -r '.changed_modules[]'); do
-  r2r eac pipeline run $module
+for module in $(eac get changed-modules-ci | jq -r '.changed_modules[]'); do
+  eac pipeline run $module
 done
 
 # 3. Wait for completion
-r2r eac pipeline wait
+eac pipeline wait
 ```
 
 ---

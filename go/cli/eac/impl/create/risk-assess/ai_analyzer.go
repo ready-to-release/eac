@@ -132,7 +132,7 @@ func GenerateRiskAssessment(ctx context.Context, config *AssessConfig, input *AI
 // buildRiskAssessmentPrompt loads template and appends aggregate statistics.
 func buildRiskAssessmentPrompt(workspaceRoot string, input *AIRiskAssessmentInput) (string, error) {
 	// Load prompt template with three-tier priority:
-	// 1. Team override (.r2r/eac/templates/ai/risk-assess/risk-assess.md)
+	// 1. Team override (.eac/templates/ai/risk-assess/risk-assess.md)
 	// 2. System default (templates/ai/risk-assess/risk-assess.md)
 	loader := coreai.NewContractLoader(workspaceRoot, coreai.TypeRiskAssess, "")
 	promptTemplate, _, err := loader.LoadPrompt("", defaultRiskAssessPrompt)

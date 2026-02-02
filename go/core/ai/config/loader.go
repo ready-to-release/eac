@@ -37,11 +37,11 @@ func (l *AIConfigLoader) Load() (*AIConfig, error) {
 		return l.config, nil
 	}
 
-	// Try user override first (/var/task/.r2r/eac/ai-config.yml)
+	// Try user override first (/var/task/.eac/ai-config.yml)
 	configPath := filepath.Join(l.workspaceRoot, paths.R2RDir, paths.EACDir, paths.AIConfigFilename)
 	data, err := os.ReadFile(configPath)
 
-	// If not found, fall back to system default (/app/.r2r/eac/ai-config.yml)
+	// If not found, fall back to system default (/app/.eac/ai-config.yml)
 	if os.IsNotExist(err) {
 		systemRoot := os.Getenv(paths.ContainerRootEnv)
 		if systemRoot == "" {
@@ -213,7 +213,7 @@ func (cl *ContractLoader) LoadContract() (*domain.Contract, error) {
 
 // LoadPrompt loads a prompt with three-tier priority:
 // 1. Custom path (absolute path means --prompt flag was used)
-// 2. Team override (.r2r/eac/templates/ai/<type>/<name>)
+// 2. Team override (.eac/templates/ai/<type>/<name>)
 // 3. System default (templates/ai/<type>/<name>)
 // 4. Fallback (if provided, for backward compatibility)
 //
@@ -240,7 +240,7 @@ func (cl *ContractLoader) LoadPrompt(promptName, fallback string) (string, strin
 		return string(content), "command flag", nil
 	}
 
-	// Priority 2: Team override (.r2r/eac/templates/ai/<type>/<name>)
+	// Priority 2: Team override (.eac/templates/ai/<type>/<name>)
 	// Note: Team override uses "ai/<type>" path structure
 	teamOverridePath := filepath.Join(cl.loader.workspaceRoot, paths.R2RDir, paths.EACDir, paths.TemplatesDir, paths.AIDir, cl.typeName, promptName)
 	if content, err := os.ReadFile(teamOverridePath); err == nil {

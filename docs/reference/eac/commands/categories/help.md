@@ -22,23 +22,23 @@ Help commands display usage information and documentation for all EAC commands.
 
 ```bash
 # General help
-r2r eac help
+eac help
 
 # Help for specific command
-r2r eac help build
+eac help build
 
 # Help for subcommand
-r2r eac help get modules
+eac help get modules
 ```
 
 ### Alternative Help Access
 
 ```bash
 # Using --help flag
-r2r eac build --help
+eac build --help
 
 # Show all commands
-r2r eac show valid-commands
+eac show valid-commands
 ```
 
 ## See Also

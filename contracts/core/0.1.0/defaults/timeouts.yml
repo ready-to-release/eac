@@ -1,7 +1,7 @@
 # Timeout Configuration - Default Values
 # yaml-language-server: $schema=../timeouts.schema.json
 #
-# Override these values in .r2r/eac/timeouts.yml for repository-specific settings.
+# Override these values in .eac/timeouts.yml for repository-specific settings.
 # All values use Go duration syntax: 500ms, 5s, 2m, 1h, 24h
 
 # Docker and container operations

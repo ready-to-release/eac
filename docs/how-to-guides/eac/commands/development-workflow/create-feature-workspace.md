@@ -17,7 +17,7 @@ Set up an isolated workspace for developing a new feature without affecting your
 ### 1. Create the Workspace
 
 ```bash
-r2r eac work create feature/authentication
+eac work create feature/authentication
 ```
 
 **What happens**: Creates new branch `feature/authentication` and worktree in `../simply-cli-feature-authentication`
@@ -33,7 +33,7 @@ cd ../simply-cli-feature-authentication
 ### 3. Verify Workspace Created
 
 ```bash
-r2r eac show workspaces
+eac show workspaces
 ```
 
 **What happens**: Shows list of all workspaces with their branches and paths
@@ -52,7 +52,7 @@ You need to add JWT authentication while continuing work on another feature:
 
 ```bash
 # Create auth workspace
-r2r eac work create feature/add-jwt-auth
+eac work create feature/add-jwt-auth
 
 # Move to new workspace
 cd ../simply-cli-feature-add-jwt-auth

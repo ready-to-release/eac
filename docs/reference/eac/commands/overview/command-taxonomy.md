@@ -481,13 +481,13 @@ The `help` command and `show help` provide interactive discovery:
 
 ```bash
 # Get help for any command
-r2r eac help <command>
+eac help <command>
 
 # List all commands
-r2r eac show valid-commands
+eac show valid-commands
 
 # Get command metadata
-r2r eac get commands
+eac get commands
 ```
 
 ---

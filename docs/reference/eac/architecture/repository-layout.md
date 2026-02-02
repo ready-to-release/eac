@@ -14,7 +14,7 @@ The following diagram illustrates the version control and artifact storage archi
 - [Modules](../modules/index.md) - Module system and dependency management
 - [Contracts](./contracts.md) - Module contracts and configuration
 
-All modules are defined in `.r2r/eac/repository.yml`, which serves as the central contract for module ownership, dependencies,
+All modules are defined in `.eac/repository.yml`, which serves as the central contract for module ownership, dependencies,
 and build configuration.
 
 ## Repository Structure
@@ -142,7 +142,7 @@ For detailed information on module types, capabilities, and configuration, see [
 
 ## Module Configuration
 
-All modules are defined in `.r2r/eac/repository.yml`. Each module specifies:
+All modules are defined in `.eac/repository.yml`. Each module specifies:
 
 - **Moniker** - Unique identifier (e.g., `eac-commands`)
 - **Type** - Module type reference (e.g., `go-library`)
@@ -189,7 +189,7 @@ For comprehensive information about the R2R and EAC system:
 
 ### Configuration Files
 
-- `.r2r/eac/repository.yml` - Module registry and dependencies (user config)
+- `.eac/repository.yml` - Module registry and dependencies (user config)
 - `contracts/eac-core/0.1.0/defaults/` - System default configurations
 - `contracts/eac-core/0.1.0/defaults/component-types.yml` - Component type definitions
 - `contracts/eac-core/0.1.0/` - JSON schemas for validation

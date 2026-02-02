@@ -15,7 +15,7 @@ Merge your topic branch back to main using squash merge, then clean up the works
 ### 1. Sync with Latest Main
 
 ```bash
-r2r eac work pull
+eac work pull
 ```
 
 **What happens**: Rebases your branch on latest main to avoid conflicts
@@ -23,7 +23,7 @@ r2r eac work pull
 ### 2. Merge to Main
 
 ```bash
-r2r eac work merge
+eac work merge
 ```
 
 **What happens**:
@@ -45,7 +45,7 @@ git log -1
 ### 4. Clean Up Workspace
 
 ```bash
-r2r eac work remove feature/authentication
+eac work remove feature/authentication
 ```
 
 **What happens**: Removes worktree and associated files
@@ -54,13 +54,13 @@ r2r eac work remove feature/authentication
 
 ```bash
 # Merge without squash (preserve commits)
-r2r eac work merge --no-squash
+eac work merge --no-squash
 
 # Merge without deleting worktree
-r2r eac work merge --keep-worktree
+eac work merge --keep-worktree
 
 # Merge to different target branch
-r2r eac work merge --target develop
+eac work merge --target develop
 ```
 
 **Note**: Squash commit messages are always AI-generated based on all commits in the branch. Manual message customization is not supported.
@@ -71,12 +71,12 @@ You've completed JWT authentication feature:
 
 ```bash
 # Sync with main first
-r2r eac work pull
+eac work pull
 # Rebasing feature/add-jwt-auth onto main...
 # ✓ Up to date
 
 # Merge to main
-r2r eac work merge
+eac work merge
 # Switched to 'main'
 # Generating squash message...
 # Squashing 5 commits...
@@ -89,7 +89,7 @@ git log -1
 # feat(auth): add JWT authentication support
 
 # Clean up workspace
-r2r eac work remove add-jwt-auth
+eac work remove add-jwt-auth
 # ✓ Removed worktree
 ```
 

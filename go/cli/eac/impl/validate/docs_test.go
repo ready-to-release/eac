@@ -33,7 +33,7 @@ Configuration lives in repository.yml.
 		{
 			name: "single obsolete reference",
 			content: `# Configuration
-Configuration lives in .r2r/eac/module-types.yml.
+Configuration lives in .eac/module-types.yml.
 `,
 			obsoleteFiles:  []string{"module-types.yml", "system-dependencies.yml"},
 			expectedErrors: 1,
@@ -49,7 +49,7 @@ Dependencies are in system-dependencies.yml.
 		},
 		{
 			name:           "reference in code block should still be flagged",
-			content:        "# Example\n```yaml\n# .r2r/eac/module-types.yml\ntypes:\n  - name: test\n```\n",
+			content:        "# Example\n```yaml\n# .eac/module-types.yml\ntypes:\n  - name: test\n```\n",
 			obsoleteFiles:  []string{"module-types.yml"},
 			expectedErrors: 1,
 		},

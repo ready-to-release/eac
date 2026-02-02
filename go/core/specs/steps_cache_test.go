@@ -207,7 +207,7 @@ func captureHeadSHA(ctx *eacgodog.TestContext) {
 func setupMultiModuleStructure(ctx *eacgodog.TestContext, table *godog.Table) error {
 	ctx.MustBeIsolated()
 
-	r2rDir := filepath.Join(ctx.IsolatedDir, ".r2r", "eac")
+	r2rDir := filepath.Join(ctx.IsolatedDir, ".eac")
 	if err := os.MkdirAll(r2rDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create .r2r directory: %w", err)
 	}
@@ -910,7 +910,7 @@ func buildSpecificModules(ctx *eacgodog.TestContext, mod1, mod2 string) error {
 
 func addNewModule(ctx *eacgodog.TestContext, moniker, goRoot string) error {
 	ctx.MustBeIsolated()
-	repoPath := filepath.Join(ctx.IsolatedDir, ".r2r", "eac", "repository.yml")
+	repoPath := filepath.Join(ctx.IsolatedDir, ".eac", "repository.yml")
 	content, err := os.ReadFile(repoPath)
 	if err != nil {
 		return fmt.Errorf("failed to read repository.yml: %w", err)
@@ -964,7 +964,7 @@ func setupCircularDependency(ctx *eacgodog.TestContext, table *godog.Table) erro
 	}
 
 	repoYAML := generateCacheRepositoryYAML(mods)
-	repoPath := filepath.Join(ctx.IsolatedDir, ".r2r", "eac", "repository.yml")
+	repoPath := filepath.Join(ctx.IsolatedDir, ".eac", "repository.yml")
 	if err := os.WriteFile(repoPath, []byte(repoYAML), 0o644); err != nil {
 		return fmt.Errorf("failed to write repository.yml: %w", err)
 	}

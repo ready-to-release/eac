@@ -13,7 +13,7 @@ import (
 )
 
 // TestBuildMockingEnvironment_LoadsConfigFromFile tests that buildMockingEnvironment
-// correctly loads mock configuration from .r2r/eac/testing-mocks.yml.
+// correctly loads mock configuration from .eac/testing-mocks.yml.
 func TestBuildMockingEnvironment_LoadsConfigFromFile(t *testing.T) {
 	// Get the repository root (walk up from test file location)
 	repoRoot, err := findRepoRoot()

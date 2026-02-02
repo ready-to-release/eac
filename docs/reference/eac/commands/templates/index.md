@@ -25,7 +25,7 @@ r2r templates install docs --destination ./custom-docs
 r2r templates install ai
 
 # Install Claude Code templates
-r2r eac templates install claude
+eac templates install claude
 
 # Install with debug logging
 r2r templates install reports --debug

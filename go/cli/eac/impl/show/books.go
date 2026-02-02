@@ -68,7 +68,7 @@ func ShowBooks() int {
 	if cfg.Books == nil || len(cfg.Books.Books) == 0 {
 		fmt.Println("No books configured")
 		fmt.Println("")
-		fmt.Println("Create .r2r/eac/books.yml to define books.")
+		fmt.Println("Create .eac/books.yml to define books.")
 		return 0
 	}
 

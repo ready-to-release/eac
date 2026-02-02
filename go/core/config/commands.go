@@ -10,7 +10,7 @@ import (
 const CommandsFileName = "commands.yml"
 
 // CommandsConfig holds CLI command documentation mapping configuration.
-// Loaded from .r2r/eac/commands.yml.
+// Loaded from .eac/commands.yml.
 type CommandsConfig struct {
 	Defaults   CommandsDefaults           `yaml:"defaults"`
 	Categories map[string]CategoryConfig  `yaml:"categories"`

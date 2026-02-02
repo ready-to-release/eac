@@ -452,7 +452,7 @@ func (p *Preprocessor) formatCategoriesIndex(cmdBinary string) (string, error) {
 
 // loadCommandsConfig loads the commands configuration from commands.yml.
 func (p *Preprocessor) loadCommandsConfig() (*config.CommandsConfig, error) {
-	configPath := filepath.Join(p.workspaceRoot, ".r2r", "eac", config.CommandsFileName)
+	configPath := filepath.Join(p.workspaceRoot, ".eac", config.CommandsFileName)
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {

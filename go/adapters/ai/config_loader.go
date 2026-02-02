@@ -184,7 +184,7 @@ func loadConfigFileWithValidation(path, workspaceRoot string) (*Config, error) {
 
 	var config Config
 	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("failed to parse .r2r/eac/ai-provider.yml: %w\n\nPlease run: eac init --ai-provider <provider>\nSupported providers: claude-api, openai, gemini", err)
+		return nil, fmt.Errorf("failed to parse .eac/ai-provider.yml: %w\n\nPlease run: eac init --ai-provider <provider>\nSupported providers: claude-api, openai, gemini", err)
 	}
 
 	return &config, nil
@@ -265,7 +265,7 @@ func applyEnvVarSubstitution(config *Config) error {
 	// Only error on missing env vars if provider requires an API key
 	// claude-cli doesn't need an API key (uses local Claude installation)
 	if len(missingVars) > 0 && config.AI.Provider != "claude-cli" {
-		return fmt.Errorf("missing environment variable(s) for API key: %v\n\nPlease set:\n  export %s=your-api-key\n\nOr use claude-cli provider (no API key needed):\n  Run: .\\importer.ps1 (creates .r2r/eac/ai-provider.personal.yml with claude-cli)",
+		return fmt.Errorf("missing environment variable(s) for API key: %v\n\nPlease set:\n  export %s=your-api-key\n\nOr use claude-cli provider (no API key needed):\n  Run: .\\importer.ps1 (creates .eac/ai-provider.personal.yml with claude-cli)",
 			missingVars, missingVars[0])
 	}
 

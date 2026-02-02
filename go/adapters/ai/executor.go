@@ -77,7 +77,7 @@ func (e *Executor) GetLastUsedProvider() Provider {
 	return e.lastUsedProvider
 }
 
-// loadConfig loads the EAC configuration from .r2r/eac directory.
+// loadConfig loads the EAC configuration from .eac directory.
 // Loads team config and merges with personal overrides if present.
 // Personal config can override: api_key, model, provider name, endpoint, git token.
 // Both configs are validated against the ai-provider schema.

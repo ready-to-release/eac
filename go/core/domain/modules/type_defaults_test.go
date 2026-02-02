@@ -1,6 +1,6 @@
 //go:build L0 && ov
 
-// Tests type-based defaults applied when loading contracts from .r2r/eac
+// Tests type-based defaults applied when loading contracts from .eac
 package modules_test
 
 import (
@@ -18,8 +18,8 @@ func createTestRepoWithTypes(t *testing.T, modulesContent, typesContent string) 
 
 	tmpDir := t.TempDir()
 
-	// Create .r2r/eac directory
-	eacDir := filepath.Join(tmpDir, ".r2r", "eac")
+	// Create .eac directory
+	eacDir := filepath.Join(tmpDir, ".eac")
 	if err := os.MkdirAll(eacDir, 0755); err != nil {
 		t.Fatalf("failed to create EAC directory: %v", err)
 	}

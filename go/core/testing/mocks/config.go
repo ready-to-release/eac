@@ -17,7 +17,7 @@ type MockConfig struct {
 func NewMockConfig() *MockConfig {
 	return &MockConfig{
 		repoRoot:   "/mock/workspace",
-		configRoot: "/mock/workspace/.r2r/eac",
+		configRoot: "/mock/workspace/.eac",
 	}
 }
 

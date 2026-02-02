@@ -12,13 +12,13 @@ Build modules and their dependencies.
 
 ```bash
 # Build all modules
-r2r eac build
+eac build
 
 # Build a single module
-r2r eac build eac-commands
+eac build eac-commands
 
 # Build specific modules
-r2r eac build eac-core r2r-cli
+eac build eac-core r2r-cli
 ```
 
 ## See Also

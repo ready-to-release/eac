@@ -52,7 +52,7 @@ See [Component Types Reference](./architecture/component-types.md) for detailed 
 **The EAC extension** (`ext-eac:latest`) provides:
 
 - **Hundreds of commands** spanning build, test, validation, security, AI, documentation, and release workflows
-- **Three execution models**: Docker CLI (`r2r eac <command>`), MCP server for LLM tools, and fallback mode for debugging
+- **Three execution models**: Docker CLI (`eac <command>`), MCP server for LLM tools, and fallback mode for debugging
 - **Contract-driven architecture**: YAML contracts validated against JSON schemas to enforce consistency
 - **Modular design**: Independent packages for core libraries, commands, AI integrations, and MCP servers
 
@@ -148,7 +148,7 @@ cli/
 - **eac-specs** - BDD test infrastructure (Godog)
 - **eac-mcp-commands** - MCP server for LLM tools
 
-All modules defined in `.r2r/eac/repository.yml` with explicit dependencies and file ownership.
+All modules defined in `.eac/repository.yml` with explicit dependencies and file ownership.
 
 ---
 

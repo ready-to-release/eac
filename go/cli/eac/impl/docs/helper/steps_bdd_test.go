@@ -40,13 +40,13 @@ modules:
         from: "docs/**/*.md"
         to: "./"
 `
-	if err := eacgodog.CreateDirectory(ctx, ".r2r/eac"); err != nil {
+	if err := eacgodog.CreateDirectory(ctx, ".eac"); err != nil {
 		return err
 	}
-	if err := eacgodog.CreateFile(ctx, ".r2r/eac/repository.yml", repoYml); err != nil {
+	if err := eacgodog.CreateFile(ctx, ".eac/repository.yml", repoYml); err != nil {
 		return err
 	}
-	if err := eacgodog.CreateFile(ctx, ".r2r/eac/books.yml", booksYml); err != nil {
+	if err := eacgodog.CreateFile(ctx, ".eac/books.yml", booksYml); err != nil {
 		return err
 	}
 	// Create a minimal docs directory

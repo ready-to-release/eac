@@ -484,10 +484,10 @@ Implement a runner in `go/cli/eac/impl/test/runners/` if the component type has 
 
 ```bash
 # List all component types
-r2r eac show-component-types
+eac show-component-types
 
 # Show modules with their components
-r2r eac show-modules
+eac show-modules
 ```
 
 ---

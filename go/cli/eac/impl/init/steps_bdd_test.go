@@ -21,23 +21,23 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 	})
 
 	// Then steps - verification
-	sc.Step(`^the \.r2r/eac directory is created$`, func() error {
-		return initDirExists(ctx, ".r2r/eac")
+	sc.Step(`^the \.eac directory is created$`, func() error {
+		return initDirExists(ctx, ".eac")
 	})
-	sc.Step(`^a \.r2r/eac/ai-provider\.yml file is created$`, func() error {
-		return initFileExists(ctx, ".r2r/eac/ai-provider.yml")
+	sc.Step(`^a \.eac/ai-provider\.yml file is created$`, func() error {
+		return initFileExists(ctx, ".eac/ai-provider.yml")
 	})
-	sc.Step(`^a \.r2r/eac/repository\.yml file is created$`, func() error {
-		return initFileExists(ctx, ".r2r/eac/repository.yml")
+	sc.Step(`^a \.eac/repository\.yml file is created$`, func() error {
+		return initFileExists(ctx, ".eac/repository.yml")
 	})
-	sc.Step(`^a \.r2r/eac/books\.yml file is created$`, func() error {
-		return initFileExists(ctx, ".r2r/eac/books.yml")
+	sc.Step(`^a \.eac/books\.yml file is created$`, func() error {
+		return initFileExists(ctx, ".eac/books.yml")
 	})
-	sc.Step(`^a \.r2r/eac/environments\.yml file is created$`, func() error {
-		return initFileExists(ctx, ".r2r/eac/environments.yml")
+	sc.Step(`^a \.eac/environments\.yml file is created$`, func() error {
+		return initFileExists(ctx, ".eac/environments.yml")
 	})
-	sc.Step(`^the \.r2r/eac/ai-provider\.yml file contains "([^"]*)"$`, func(content string) error {
-		return initFileContains(ctx, ".r2r/eac/ai-provider.yml", content)
+	sc.Step(`^the \.eac/ai-provider\.yml file contains "([^"]*)"$`, func(content string) error {
+		return initFileContains(ctx, ".eac/ai-provider.yml", content)
 	})
 	sc.Step(`^stdout contains provider selection confirmation$`, func() error {
 		return initOutputContainsAny(ctx, "claude", "openai", "provider", "Initialized", "gemini")
@@ -50,18 +50,18 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
 	})
 
 	// Pre-existing configuration steps
-	sc.Step(`^a \.r2r/eac/ai-provider\.yml file exists with ([^"]*)$`, func(provider string) error {
+	sc.Step(`^a \.eac/ai-provider\.yml file exists with ([^"]*)$`, func(provider string) error {
 		content := fmt.Sprintf("provider: %s\n", provider)
-		return eacgodog.CreateFile(ctx, ".r2r/eac/ai-provider.yml", content)
+		return eacgodog.CreateFile(ctx, ".eac/ai-provider.yml", content)
 	})
-	sc.Step(`^a \.r2r/eac/repository\.yml file exists$`, func() error {
-		return eacgodog.CreateFile(ctx, ".r2r/eac/repository.yml", "# existing repository config\n")
+	sc.Step(`^a \.eac/repository\.yml file exists$`, func() error {
+		return eacgodog.CreateFile(ctx, ".eac/repository.yml", "# existing repository config\n")
 	})
-	sc.Step(`^a \.r2r/eac/books\.yml file exists$`, func() error {
-		return eacgodog.CreateFile(ctx, ".r2r/eac/books.yml", "# existing books config\n")
+	sc.Step(`^a \.eac/books\.yml file exists$`, func() error {
+		return eacgodog.CreateFile(ctx, ".eac/books.yml", "# existing books config\n")
 	})
-	sc.Step(`^a \.r2r/eac/environments\.yml file exists$`, func() error {
-		return eacgodog.CreateFile(ctx, ".r2r/eac/environments.yml", "# existing environments config\n")
+	sc.Step(`^a \.eac/environments\.yml file exists$`, func() error {
+		return eacgodog.CreateFile(ctx, ".eac/environments.yml", "# existing environments config\n")
 	})
 }
 

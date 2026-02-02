@@ -13,15 +13,15 @@ Technical reference for EAC compliance features including risk controls, OSCAL i
 
 ```bash
 # Validate control tags against OSCAL catalog
-r2r eac validate control-tags
+eac validate control-tags
 
 # Validate OSCAL files
-r2r eac validate risk-catalog
-r2r eac validate risk-profile
+eac validate risk-catalog
+eac validate risk-profile
 
 # Create risk artifacts
 r2r create risk-profile assessment.md
-r2r eac create risk-assess --profile specs/.risk-controls/risk-profile.json
+eac create risk-assess --profile specs/.risk-controls/risk-profile.json
 ```
 
 ## Related Documentation

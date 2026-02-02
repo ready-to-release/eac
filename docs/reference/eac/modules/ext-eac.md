@@ -25,7 +25,7 @@ The layers and components within the Docker image.
 ## Design File
 
 - **Location**: `specs/ext-eac/.design/workspace.dsl`
-- **Interactive**: `r2r eac serve-design --module ext-eac`
+- **Interactive**: `eac serve-design --module ext-eac`
 
 ## Image Contents
 
@@ -44,9 +44,9 @@ The ext-eac Docker image includes:
 
 ```bash
 # Run EAC commands via r2r
-r2r eac build docs
-r2r eac test eac-commands
-r2r eac validate
+eac build docs
+eac test eac-commands
+eac validate
 
 # Or use the image directly
 docker run ghcr.io/ready-to-release/ext-eac:latest build docs
@@ -58,5 +58,5 @@ The ext-eac image is released to GitHub Container Registry:
 
 ```bash
 # Tag format: ghcr.io/ready-to-release/ext-eac:<version>
-r2r eac release ext-eac
+eac release ext-eac
 ```

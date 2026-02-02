@@ -15,7 +15,7 @@ Create C4 model architecture diagrams using AI to analyze your code and generate
 ### 1. Generate Diagram for Module
 
 ```bash
-r2r eac create design eac-core
+eac create design eac-core
 ```
 
 **What happens**: AI analyzes module code and generates `workspace.dsl` file
@@ -31,7 +31,7 @@ cat specs/eac-core/.design/workspace.dsl
 ### 3. Visualize Diagram
 
 ```bash
-r2r eac serve design eac-core
+eac serve design eac-core
 ```
 
 **What happens**: Starts Structurizr Lite server, opens in browser
@@ -41,7 +41,7 @@ r2r eac serve design eac-core
 Edit `workspace.dsl` manually if needed, then update:
 
 ```bash
-r2r eac update design eac-core
+eac update design eac-core
 ```
 
 **What happens**: AI updates existing diagram with new information
@@ -61,7 +61,7 @@ Documenting core library module:
 
 ```bash
 # Generate diagram
-r2r eac create design eac-core
+eac create design eac-core
 
 # Output:
 # Analyzing eac-core module...
@@ -69,16 +69,16 @@ r2r eac create design eac-core
 # ✓ Created specs/eac-core/.design/workspace.dsl
 
 # View in browser
-r2r eac serve design eac-core
+eac serve design eac-core
 # Starting Structurizr Lite on http://localhost:8080
 # Open browser to view diagrams
 
 # Make code changes, update diagram
-r2r eac update design eac-core
+eac update design eac-core
 # ✓ Updated specs/eac-core/.design/workspace.dsl with latest changes
 
 # Validate syntax
-r2r eac validate design eac-core
+eac validate design eac-core
 # ✓ workspace.dsl syntax valid
 ```
 

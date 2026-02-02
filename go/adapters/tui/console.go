@@ -823,12 +823,13 @@ func (c *ParallelConsole) SetInitSummary(summary *InitSummary) {
 	for i, layer := range summary.ExecutionTree {
 		modules := make([]console.ExecutionModule, len(layer.Modules))
 		for j, mod := range layer.Modules {
-			// Convert UoWs preserving both ID (for matching) and DisplayName (for display)
+			// Convert UoWs preserving ID (for matching), DisplayName (for display), and Weight
 			uows := make([]console.UoWEntry, len(mod.UoWs))
 			for k, uow := range mod.UoWs {
 				uows[k] = console.UoWEntry{
 					ID:          uow.ID,
 					DisplayName: uow.DisplayName,
+					Weight:      uow.Weight,
 				}
 			}
 			modules[j] = console.ExecutionModule{

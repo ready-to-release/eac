@@ -24,13 +24,13 @@ import (
 	"strings"
 
 	"github.com/ready-to-release/eac/go/adapters/docker"
-	"github.com/ready-to-release/eac/go/cli/eac/impl/serve/servers"
 	"github.com/ready-to-release/eac/go/clibase/flags"
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/paths"
 	"github.com/ready-to-release/eac/go/core/repository"
+	"github.com/ready-to-release/eac/go/core/tool"
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
@@ -48,6 +48,13 @@ func Serve() int {
 	if err != nil {
 		log.Errorf("Error: failed to find repository root: %v", err)
 		return 1
+	}
+
+	// Initialize tool system for tool-config.yml access
+	configRoot := filepath.Join(workspaceRoot, ".eac")
+	if err := tool.InitializeGlobalBridges(workspaceRoot, configRoot); err != nil {
+		log.Debugf("Tool bridge initialization skipped: %v", err)
+		// Continue - tool config is optional for basic functionality
 	}
 
 	args := os.Args[2:] // Skip program name and "serve"
@@ -276,49 +283,68 @@ func resolveModuleConfig(workspaceRoot, moduleMoniker, namedBook string) (*Modul
 		return nil, fmt.Errorf("module not found: %s", moduleMoniker)
 	}
 
-	// Check if module is servable (has books configured)
-	books := module.GetBooks()
-	if len(books) == 0 {
-		return nil, fmt.Errorf("module '%s' is not servable (no books configured)", moduleMoniker)
+	// Collect all servable content from the module
+	// Servable types: site-render (HTML sites), pdf-render (PDFs), book (legacy)
+	servableItems := getServableItems(module)
+	if len(servableItems) == 0 {
+		return nil, fmt.Errorf("module '%s' is not servable (no site, PDF, or book components)", moduleMoniker)
 	}
 
-	// Determine which book to serve
-	var targetBook string
+	// Determine which item to serve
+	var targetItem string
+	var isSite bool
 	if namedBook != "" {
-		// User specified a book - validate it exists
+		// User specified a target - validate it exists
 		found := false
-		for _, bookName := range books {
-			if bookName == namedBook {
+		for _, item := range servableItems {
+			if item.name == namedBook {
 				found = true
+				targetItem = item.name
+				isSite = item.isSite
 				break
 			}
 		}
 		if !found {
-			return nil, fmt.Errorf("book '%s' not found in module '%s' (available: %v)", namedBook, moduleMoniker, books)
+			names := make([]string, len(servableItems))
+			for i, item := range servableItems {
+				names[i] = item.name
+			}
+			return nil, fmt.Errorf("'%s' not found in module '%s' (available: %v)", namedBook, moduleMoniker, names)
 		}
-		targetBook = namedBook
 	} else {
-		// Default: first "site" book, or first book if no site
-		for _, bookName := range books {
-			if bookName == "site" {
-				targetBook = "site"
+		// Default: prefer "site" component, then first site-render, then first item
+		for _, item := range servableItems {
+			if item.name == "site" {
+				targetItem = item.name
+				isSite = item.isSite
 				break
 			}
 		}
-		if targetBook == "" {
-			targetBook = books[0]
+		if targetItem == "" {
+			// Take first site-render type
+			for _, item := range servableItems {
+				if item.isSite {
+					targetItem = item.name
+					isSite = true
+					break
+				}
+			}
+		}
+		if targetItem == "" {
+			// Fallback to first item
+			targetItem = servableItems[0].name
+			isSite = servableItems[0].isSite
 		}
 	}
 
-	// Determine content path based on book type
-	isSite := targetBook == "site"
+	// Determine content path based on type
 	var contentPath string
 	if isSite {
 		// MkDocs outputs to site/ directory within the build staging area
-		// Build structure: out/build/<module>/site/site/ (mkdocs output inside staging)
-		contentPath = filepath.Join(paths.BuildOutputPath(workspaceRoot, moduleMoniker), "site", "site")
+		// Build structure: out/build/<module>/<component>/site/ (mkdocs output inside staging)
+		contentPath = filepath.Join(paths.BuildOutputPath(workspaceRoot, moduleMoniker), targetItem, "site")
 	} else {
-		// For non-site books, serve the module root (contains all PDFs)
+		// For non-site items (PDFs), serve the module root (contains all PDFs)
 		contentPath = paths.BuildOutputPath(workspaceRoot, moduleMoniker)
 	}
 
@@ -327,6 +353,49 @@ func resolveModuleConfig(workspaceRoot, moduleMoniker, namedBook string) (*Modul
 		ContentPath:   contentPath,
 		IsSite:        isSite,
 	}, nil
+}
+
+// servableItem represents a component that can be served.
+type servableItem struct {
+	name   string
+	isSite bool // true for HTML sites, false for PDFs
+}
+
+// getServableItems returns all servable components from a module.
+// Checks for site-render (HTML), pdf-render (PDFs), and book (legacy) types.
+func getServableItems(module *config.Module) []servableItem {
+	var items []servableItem
+
+	// Check for site-render components (HTML sites)
+	siteRenders := module.Components.GetComponentsByType("site-render")
+	for name := range siteRenders {
+		items = append(items, servableItem{name: name, isSite: true})
+	}
+
+	// Check for pdf-render components
+	pdfRenders := module.Components.GetComponentsByType("pdf-render")
+	for name := range pdfRenders {
+		items = append(items, servableItem{name: name, isSite: false})
+	}
+
+	// Check for legacy book components
+	books := module.GetBooks()
+	for _, name := range books {
+		// Avoid duplicates if book name matches a pdf-render
+		found := false
+		for _, item := range items {
+			if item.name == name {
+				found = true
+				break
+			}
+		}
+		if !found {
+			// Books with name "site" are HTML sites, others are PDFs
+			items = append(items, servableItem{name: name, isSite: name == "site"})
+		}
+	}
+
+	return items
 }
 
 // listServableModules returns modules that can be served.
@@ -341,9 +410,10 @@ func listServableModules(workspaceRoot string) []string {
 	}
 
 	var modules []string
-	for _, module := range cfg.Repository.Modules {
-		// A module is servable if it has books configured
-		if len(module.GetBooks()) > 0 {
+	for i := range cfg.Repository.Modules {
+		module := &cfg.Repository.Modules[i]
+		// A module is servable if it has site-render, pdf-render, or book components
+		if len(getServableItems(module)) > 0 {
 			modules = append(modules, module.Moniker)
 		}
 	}
@@ -446,46 +516,53 @@ func (c *DockerClient) IsRunning() (bool, *docker.ServeResult, error) {
 }
 
 // StartContainer starts the serve container.
-// Uses configuration from servers.GlobalServeContext if set, otherwise uses defaults.
+// Uses configuration from the tool system (static-site tool definition).
 func (c *DockerClient) StartContainer(workspaceRoot, contentPath string, port int) (*docker.ServeResult, error) {
-	// Get configuration from GlobalServeContext or use defaults
-	ctx := servers.GlobalServeContext
-	if ctx == nil {
-		ctx = servers.DefaultServeContext()
+	// Get the static-site tool definition from tool-config.yml
+	toolDef := tool.GetToolDefinition("static-site")
+	if toolDef == nil {
+		return nil, fmt.Errorf("static-site tool not found in tool-config.yml")
 	}
 
-	// Determine image
-	image := ctx.StaticSiteImage
-	if image == "" {
-		image = "cli-nginx-tool:latest"
-	}
-
-	// Determine Dockerfile path
-	dockerfile := ctx.StaticSiteDockerfile
-	contextPath := ctx.StaticSiteContext
-	if dockerfile == "" {
-		dockerfile = filepath.Join(workspaceRoot, "containers/nginx-tool/Dockerfile")
-		contextPath = filepath.Dir(dockerfile)
-	}
-
-	// Determine container port
-	containerPort := ctx.ContainerPort
-	if containerPort == 0 {
-		containerPort = 8000
-	}
-
+	// Build serve config from tool definition
 	serveConfig := &docker.ServeConfig{
-		Name:  c.containerName,
-		Image: image,
-		BuildInfo: &docker.BuildInfo{
-			Dockerfile:  dockerfile,
-			ContextPath: contextPath,
-		},
+		Name:          c.containerName,
 		ContentPath:   contentPath,
-		ContainerPath: "/usr/share/nginx/html",
-		ContainerPort: containerPort,
 		PreferredPort: port,
-		RestartPolicy: "unless-stopped",
+	}
+
+	// Use LocalImageTag for local containers, or FullImage for external
+	if toolDef.IsLocalContainer() {
+		serveConfig.Image = toolDef.LocalImageTag()
+		contextPath := toolDef.LocalContextPath(workspaceRoot)
+		serveConfig.BuildInfo = &docker.BuildInfo{
+			Dockerfile:  filepath.Join(contextPath, "Dockerfile"),
+			ContextPath: contextPath,
+		}
+	} else {
+		serveConfig.Image = toolDef.FullImage()
+	}
+
+	// Get container path from tool mounts (first mount with {content} source)
+	containerPath := "/usr/share/nginx/html" // fallback
+	for _, mount := range toolDef.Mounts {
+		if mount.Source == "{content}" {
+			containerPath = mount.Target
+			break
+		}
+	}
+	serveConfig.ContainerPath = containerPath
+
+	// Get serve configuration from tool
+	if toolDef.Serve != nil {
+		serveConfig.ContainerPort = toolDef.Serve.ContainerPort
+		serveConfig.RestartPolicy = toolDef.Serve.RestartPolicy
+	}
+	if serveConfig.ContainerPort == 0 {
+		serveConfig.ContainerPort = 8000 // fallback
+	}
+	if serveConfig.RestartPolicy == "" {
+		serveConfig.RestartPolicy = "unless-stopped"
 	}
 
 	return docker.StartServe(c.ctx, serveConfig)
@@ -497,34 +574,27 @@ func (c *DockerClient) StopContainer() error {
 }
 
 // IsImageStale checks if the container image is stale.
-// Uses configuration from servers.GlobalServeContext if set, otherwise uses defaults.
+// Uses configuration from the tool system (static-site tool definition).
 func (c *DockerClient) IsImageStale(workspaceRoot string) (bool, string, error) {
-	// Get configuration from GlobalServeContext or use defaults
-	ctx := servers.GlobalServeContext
-	if ctx == nil {
-		ctx = servers.DefaultServeContext()
+	// Get the static-site tool definition from tool-config.yml
+	toolDef := tool.GetToolDefinition("static-site")
+	if toolDef == nil {
+		return false, "", fmt.Errorf("static-site tool not found in tool-config.yml")
 	}
 
-	// Determine image
-	image := ctx.StaticSiteImage
-	if image == "" {
-		image = "cli-nginx-tool:latest"
-	}
+	// Build serve config from tool definition
+	serveConfig := &docker.ServeConfig{}
 
-	// Determine Dockerfile path
-	dockerfile := ctx.StaticSiteDockerfile
-	contextPath := ctx.StaticSiteContext
-	if dockerfile == "" {
-		dockerfile = filepath.Join(workspaceRoot, "containers/nginx-tool/Dockerfile")
-		contextPath = filepath.Dir(dockerfile)
-	}
-
-	serveConfig := &docker.ServeConfig{
-		Image: image,
-		BuildInfo: &docker.BuildInfo{
-			Dockerfile:  dockerfile,
+	// Use LocalImageTag for local containers, or FullImage for external
+	if toolDef.IsLocalContainer() {
+		serveConfig.Image = toolDef.LocalImageTag()
+		contextPath := toolDef.LocalContextPath(workspaceRoot)
+		serveConfig.BuildInfo = &docker.BuildInfo{
+			Dockerfile:  filepath.Join(contextPath, "Dockerfile"),
 			ContextPath: contextPath,
-		},
+		}
+	} else {
+		serveConfig.Image = toolDef.FullImage()
 	}
 
 	return docker.CheckImageStale(c.ctx, serveConfig)

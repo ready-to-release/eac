@@ -33,10 +33,10 @@ Retrieve repository data in structured JSON format for automation and scripting.
 
 ```bash
 # Get modules as JSON
-r2r eac get modules | jq '.modules[].moniker'
+eac get modules | jq '.modules[].moniker'
 
 # Get changed modules for CI
-r2r eac get changed-modules-ci
+eac get changed-modules-ci
 ```
 
 ## See Also

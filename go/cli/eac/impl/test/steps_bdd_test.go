@@ -500,7 +500,7 @@ func registerSteps(sc *godog.ScenarioContext, ctx *eacgodog.TestContext) {
     components:
       go: go/eac/specs
 `
-		repositoryYmlPath := filepath.Join(".r2r", "eac", "repository.yml")
+		repositoryYmlPath := filepath.Join(".eac", "repository.yml")
 		if err := eacgodog.CreateFile(ctx, repositoryYmlPath, repositoryYml); err != nil {
 			return fmt.Errorf("failed to create repository.yml: %w", err)
 		}
@@ -515,7 +515,7 @@ repository:
     test_results_template: "test-results.md"
     template_reports_dir: "reports"
 `
-		eacYmlPath := filepath.Join(".r2r", "eac", "eac.yml")
+		eacYmlPath := filepath.Join(".eac", "eac.yml")
 		if err := eacgodog.CreateFile(ctx, eacYmlPath, eacYml); err != nil {
 			return fmt.Errorf("failed to create eac.yml: %w", err)
 		}

@@ -45,7 +45,7 @@ r2r metadata eac
     "scan",
     "release"
   ],
-  "config_schema": ".r2r/eac/",
+  "config_schema": ".eac/",
   "build_date": "2024-01-15T10:30:00Z",
   "commit_sha": "abc123def456"
 }

@@ -27,10 +27,10 @@ Test manifests must exist from previous test runs:
 
 ```bash
 # Run tests first
-r2r eac test <module>
+eac test <module>
 
 # Then show results
-r2r eac show test-results
+eac show test-results
 ```
 
 ## See Also

@@ -287,8 +287,8 @@ test:
 1. Downloads commands binary and build artifacts from `trigger_run_id`
 2. Sets up test environment
 3. Runs test suites:
-   - **PR context:** `r2r eac test eac-commands --suite commit`
-   - **Trunk context:** `r2r eac test eac-commands --suite commit,acceptance`
+   - **PR context:** `eac test eac-commands --suite commit`
+   - **Trunk context:** `eac test eac-commands --suite commit,acceptance`
 4. Uploads test results and reports
 
 ## Artifact Handling
@@ -373,23 +373,23 @@ gh run view <run-id> --log-failed
 
 ```bash
 # Get module dependencies
-r2r eac get dependencies eac-commands
+eac get dependencies eac-commands
 
 # Get modules that depend on this module
-r2r eac get dependencies eac-commands --reverse
+eac get dependencies eac-commands --reverse
 ```
 
 ### Test Locally
 
 ```bash
 # Build module locally
-r2r eac build eac-commands
+eac build eac-commands
 
 # Test module locally (commit suite)
-r2r eac test eac-commands --suite commit
+eac test eac-commands --suite commit
 
 # Test module locally (all suites)
-r2r eac test eac-commands --suite commit,acceptance
+eac test eac-commands --suite commit,acceptance
 ```
 
 ## References
@@ -397,4 +397,4 @@ r2r eac test eac-commands --suite commit,acceptance
 - [Trigger Orchestration](./trigger-orchestration.md) - How modules are orchestrated
 - [Overview](./overview.md) - Workflow architecture
 - Reusable actions: `.github/actions/build-module`, `.github/actions/test-module`
-- Module contracts: `.r2r/eac/repository.yml`
+- Module contracts: `.eac/repository.yml`

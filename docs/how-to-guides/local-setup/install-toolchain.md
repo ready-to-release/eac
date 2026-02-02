@@ -64,7 +64,7 @@ r2r version
 r2r verify
 
 # Test EAC extension
-r2r eac help
+eac help
 ```
 
 ## Configuration Files Created
@@ -72,7 +72,7 @@ r2r eac help
 | File               | Purpose                                           |
 | ------------------ | ------------------------------------------------- |
 | `.r2r/r2r-cli.yml` | Extension registry and CLI settings               |
-| `.r2r/eac/`        | EAC-specific configuration (created on first use) |
+| `.eac/`        | EAC-specific configuration (created on first use) |
 
 ## Updating
 

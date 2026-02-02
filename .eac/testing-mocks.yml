@@ -7,7 +7,7 @@
 # and translated to environment variables for subprocess commands.
 #
 # Personal Overrides:
-# Create .r2r/eac/testing-mocks.personal.yml to override these settings locally
+# Create .eac/testing-mocks.personal.yml to override these settings locally
 # (personal.yml is gitignored and won't be committed)
 
 mocks:

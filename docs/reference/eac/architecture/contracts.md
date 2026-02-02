@@ -8,7 +8,7 @@ The EAC contract system defines all configuration via **YAML contracts validated
 
 **Components**:
 
-1. **Contract Files** - YAML configuration in `.r2r/eac/*.yml`
+1. **Contract Files** - YAML configuration in `.eac/*.yml`
 2. **JSON Schemas** - Validation rules in `contracts/**/*.schema.json`
 3. **Validation Engine** - Runtime validation in `eac-core`
 
@@ -18,26 +18,26 @@ The EAC contract system defines all configuration via **YAML contracts validated
 
 | Contract            | File                  | Location                             | Purpose                                          |
 | ------------------- | --------------------- | ------------------------------------ | ------------------------------------------------ |
-| **Repository**      | `repository.yml`      | `.r2r/eac/`                          | Module definitions, dependencies, file ownership |
+| **Repository**      | `repository.yml`      | `.eac/`                          | Module definitions, dependencies, file ownership |
 | **Component Types** | `component-types.yml` | `contracts/.../defaults/`            | Component type definitions with build behavior   |
 | **Tool Config**     | `tool-config.yml`     | `contracts/.../defaults/`            | Tool definitions and resource configuration      |
 | **Registries**      | `registries.yml`      | `contracts/.../defaults/`            | Container registry definitions                   |
 | **Environments**    | `environments.yml`    | `contracts/.../defaults/`            | Test execution environments (L0-L4)              |
 | **Test Suites**     | `test-suites.yml`     | `contracts/.../defaults/`            | Test suites with tag selectors                   |
 | **Testing Tags**    | `testing-tags.yml`    | `contracts/.../defaults/`            | Valid test tag definitions                       |
-| **Books**           | `books.yml`           | `.r2r/eac/`                          | Documentation book configuration                 |
+| **Books**           | `books.yml`           | `.eac/`                          | Documentation book configuration                 |
 | **Security Tools**  | `security-tools.yml`  | `contracts/.../defaults/`            | Security scanning tool configuration             |
 | **AI Config**       | `ai-config.yml`       | `contracts/.../defaults/`            | AI type definitions                              |
 | **AI Provider**     | `ai-provider.yml`     | `contracts/.../defaults/`            | Default AI provider settings                     |
 | **Logging**         | `logging.yml`         | `contracts/.../defaults/`            | Logging configuration                            |
 
-**Location**: User configs in `.r2r/eac/`, system defaults in `contracts/eac-core/0.1.0/defaults/`, schemas in `contracts/eac-core/0.1.0/`
+**Location**: User configs in `.eac/`, system defaults in `contracts/eac-core/0.1.0/defaults/`, schemas in `contracts/eac-core/0.1.0/`
 
 ---
 
 ## Modules Contract
 
-**File**: `.r2r/eac/repository.yml`
+**File**: `.eac/repository.yml`
 
 **Purpose**: Central module registry defining module identities, dependencies, and file ownership
 
@@ -98,7 +98,7 @@ files:
 
 **Validation Rule**: Each file must be claimed by exactly one module
 
-**Command**: `r2r eac validate-module-files`
+**Command**: `eac validate-module-files`
 
 ### Dependencies
 
@@ -120,7 +120,7 @@ modules:
 
 **Build Order** (topological sort): logging-go → eac-core → eac-commands
 
-**Validation**: `r2r eac validate-module-hierarchy` checks for circular dependencies
+**Validation**: `eac validate-module-hierarchy` checks for circular dependencies
 
 ---
 
@@ -254,7 +254,7 @@ modules:
 
 ## Environments Contract
 
-**File**: `.r2r/eac/environments.yml`
+**File**: `.eac/environments.yml`
 
 **Purpose**: Define test execution environments organized in testing pyramid hierarchy (L0-L4)
 
@@ -346,7 +346,7 @@ environments:
 
 ## Test Suites Contract
 
-**File**: `.r2r/eac/test-suites.yml`
+**File**: `.eac/test-suites.yml`
 
 **Purpose**: Define test suites with tag-based selection criteria
 
@@ -415,25 +415,25 @@ graph TB
 
 ```bash
 # Validate all contracts
-r2r eac validate
+eac validate
 
 # Schema validation
-r2r eac validate-contracts
+eac validate-contracts
 
 # Cross-references
-r2r eac validate-dependencies
+eac validate-dependencies
 
 # File ownership
-r2r eac validate-module-files
+eac validate-module-files
 
 # Dependency graph
-r2r eac validate-module-hierarchy
+eac validate-module-hierarchy
 
 # Gherkin specs
-r2r eac validate-specs
+eac validate-specs
 
 # Structurizr DSL
-r2r eac validate-design
+eac validate-design
 ```
 
 ---
@@ -443,22 +443,22 @@ r2r eac validate-design
 **Hierarchy** (highest to lowest priority):
 
 1. **Personal config** (`.personal.yml` files, not in Git)
-2. **User config** (`.yml` files in `.r2r/eac/`)
+2. **User config** (`.yml` files in `.eac/`)
 3. **System defaults** (`contracts/eac-core/0.1.0/defaults/`)
 4. **Hardcoded defaults** (in eac-core code)
 
-**Example**: `.r2r/eac/component-types.yml` overrides `contracts/eac-core/0.1.0/defaults/component-types.yml`
+**Example**: `.eac/component-types.yml` overrides `contracts/eac-core/0.1.0/defaults/component-types.yml`
 
 ---
 
 ## Contract Lifecycle
 
-**1. Definition**: Create/edit YAML files in `.r2r/eac/`
+**1. Definition**: Create/edit YAML files in `.eac/`
 
 **2. Validation**: Validate against JSON schema
 
 ```bash
-r2r eac validate-contracts
+eac validate-contracts
 ```
 
 **3. Loading**: Contracts loaded at command runtime
@@ -515,20 +515,20 @@ contracts/
 ### Display Commands (Human-Readable)
 
 ```bash
-r2r eac show-modules            # Module table
-r2r eac show-dependencies       # Dependency graph
-r2r eac show-environments       # Environment table
-r2r eac show-component-types    # Component type table
-r2r eac show-config             # All configuration
+eac show-modules            # Module table
+eac show-dependencies       # Dependency graph
+eac show-environments       # Environment table
+eac show-component-types    # Component type table
+eac show-config             # All configuration
 ```
 
 ### Get Commands (JSON Output)
 
 ```bash
-r2r eac get-modules             # Modules JSON
-r2r eac get-dependencies        # Dependencies JSON
-r2r eac get-environments        # Environments JSON
-r2r eac get-config              # Config JSON
+eac get-modules             # Modules JSON
+eac get-dependencies        # Dependencies JSON
+eac get-environments        # Environments JSON
+eac get-config              # Config JSON
 ```
 
 ---

@@ -18,7 +18,7 @@ Builds respect dependency order automatically:
 
 ```bash
 # Builds dependencies first
-r2r eac build r2r-cli
+eac build r2r-cli
 # Execution order: eac-core → eac-commands → r2r-cli
 ```
 

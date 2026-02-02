@@ -143,7 +143,7 @@ JSON exports are automatically validated against the schema:
 ### Export as JSON
 
 ```bash
-r2r eac test export-manual --module eac-commands --release v1.2.0
+eac test export-manual --module eac-commands --release v1.2.0
 ```
 
 Output: `manual-test-scenarios.json` in current directory
@@ -151,7 +151,7 @@ Output: `manual-test-scenarios.json` in current directory
 ### Export as CSV
 
 ```bash
-r2r eac test export-manual --module eac-commands --release v1.2.0 --format csv
+eac test export-manual --module eac-commands --release v1.2.0 --format csv
 ```
 
 Output: `manual-test-scenarios.csv`
@@ -159,7 +159,7 @@ Output: `manual-test-scenarios.csv`
 ### Export as Markdown
 
 ```bash
-r2r eac test export-manual --module eac-commands --release v1.2.0 --format markdown
+eac test export-manual --module eac-commands --release v1.2.0 --format markdown
 ```
 
 Output: `manual-test-scenarios.md`

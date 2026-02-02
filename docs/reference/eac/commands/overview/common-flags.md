@@ -18,12 +18,12 @@ EAC commands share common flags and patterns that work consistently across the c
 
 ```bash
 # Get help for any command
-r2r eac build --help
-r2r eac test --help
-r2r eac get modules --help
+eac build --help
+eac test --help
+eac get modules --help
 
 # Short form
-r2r eac build -h
+eac build -h
 ```
 
 **Output**: Command-specific help including:
@@ -47,13 +47,13 @@ r2r eac build -h
 
 ```bash
 # Debug commit message generation
-r2r eac create commit-message --debug
+eac create commit-message --debug
 
 # Debug specification generation
-r2r eac create spec "User can login" --debug
+eac create spec "User can login" --debug
 
 # Debug PR description generation
-r2r eac create pr --debug
+eac create pr --debug
 ```
 
 **Output location**: `out/` directory with timestamped subdirectories
@@ -83,12 +83,12 @@ Many commands accept module monikers as arguments:
 
 ```bash
 # Single module
-r2r eac build eac-commands
-r2r eac test src-auth
+eac build eac-commands
+eac test src-auth
 
 # Multiple modules
-r2r eac build eac-commands src-auth src-api
-r2r eac test eac-commands eac-core
+eac build eac-commands src-auth src-api
+eac test eac-commands eac-core
 ```
 
 **Rules**:
@@ -106,7 +106,7 @@ r2r eac test eac-commands eac-core
 All `get` commands output JSON by default:
 
 ```bash
-r2r eac get modules
+eac get modules
 # Output: {"modules": [...]}
 ```
 
@@ -114,13 +114,13 @@ r2r eac get modules
 
 ```bash
 # Extract specific fields
-r2r eac get modules | jq -r '.modules[].moniker'
+eac get modules | jq -r '.modules[].moniker'
 
 # Filter results
-r2r eac get modules | jq '.modules[] | select(.type == "go-library")'
+eac get modules | jq '.modules[] | select(.type == "go-library")'
 
 # Count results
-r2r eac get modules | jq '.modules | length'
+eac get modules | jq '.modules | length'
 ```
 
 #### Formatted Output (show commands)
@@ -147,10 +147,10 @@ r2r eac get modules | jq '.modules | length'
 
 ```bash
 # Sequential build
-r2r eac build --parallel=false eac-commands
+eac build --parallel=false eac-commands
 
 # Force rebuild
-r2r eac build --force eac-commands
+eac build --force eac-commands
 ```
 
 #### test command
@@ -166,13 +166,13 @@ r2r eac build --force eac-commands
 
 ```bash
 # Sequential tests
-r2r eac test --parallel=false src-auth
+eac test --parallel=false src-auth
 
 # With coverage
-r2r eac test --coverage src-auth
+eac test --coverage src-auth
 
 # Short tests only (for pre-commit)
-r2r eac test --short src-auth
+eac test --short src-auth
 ```
 
 #### test suite command
@@ -187,10 +187,10 @@ r2r eac test --short src-auth
 
 ```bash
 # Run specific tags
-r2r eac test suite acceptance --tags @auth,@login
+eac test suite acceptance --tags @auth,@login
 
 # Stop on first failure
-r2r eac test suite integration --stop-on-failure
+eac test suite integration --stop-on-failure
 ```
 
 #### scan commands
@@ -205,13 +205,13 @@ r2r eac test suite integration --stop-on-failure
 
 ```bash
 # Only high and critical vulnerabilities
-r2r eac scan --scanner vuln --severity HIGH,CRITICAL
+eac scan --scanner vuln --severity HIGH,CRITICAL
 
 # JSON output for CI
-r2r eac scan --scanner secrets --format json --output secrets-report.json
+eac scan --scanner secrets --format json --output secrets-report.json
 
 # SARIF format for GitHub integration
-r2r eac scan --scanner sast --format sarif --output sast-results.sarif
+eac scan --scanner sast --format sarif --output sast-results.sarif
 ```
 
 #### validate commands
@@ -225,10 +225,10 @@ r2r eac scan --scanner sast --format sarif --output sast-results.sarif
 
 ```bash
 # Auto-fix markdown issues
-r2r eac validate markdown --fix docs/
+eac validate markdown --fix docs/
 
 # Strict validation
-r2r eac validate specs --strict
+eac validate specs --strict
 ```
 
 #### create commit-message
@@ -242,13 +242,13 @@ r2r eac validate specs --strict
 
 ```bash
 # Generate and commit automatically
-r2r eac create commit-message --commit
+eac create commit-message --commit
 
 # Debug AI generation
-r2r eac create commit-message --debug
+eac create commit-message --debug
 
 # Both
-r2r eac create commit-message --commit --debug
+eac create commit-message --commit --debug
 ```
 
 #### work commands
@@ -266,13 +266,13 @@ r2r eac create commit-message --commit --debug
 
 ```bash
 # Commit all changes with AI message
-r2r eac work commit --all
+eac work commit --all
 
 # Commit with manual message
-r2r eac work commit --all --message "fix: resolve auth bug"
+eac work commit --all --message "fix: resolve auth bug"
 
 # Create workspace from release branch
-r2r eac work create hotfix/security-patch --from release/v1.2.0
+eac work create hotfix/security-patch --from release/v1.2.0
 ```
 
 #### release commands
@@ -291,10 +291,10 @@ r2r eac work create hotfix/security-patch --from release/v1.2.0
 
 ```bash
 # Generate changelog for specific range
-r2r eac release changelog --from v1.0.0 --to HEAD
+eac release changelog --from v1.0.0 --to HEAD
 
 # Check CI for specific branch
-r2r eac release check-ci --branch release/v1.2.0
+eac release check-ci --branch release/v1.2.0
 ```
 
 #### pipeline commands
@@ -313,10 +313,10 @@ r2r eac release check-ci --branch release/v1.2.0
 
 ```bash
 # Run specific stage
-r2r eac pipeline run --stage build r2r-cli
+eac pipeline run --stage build r2r-cli
 
 # Wait with custom timeout
-r2r eac pipeline wait --timeout 120 --interval 60
+eac pipeline wait --timeout 120 --interval 60
 ```
 
 ---
@@ -385,7 +385,7 @@ GOOGLE_API_KEY       # Google API key (for create commands)
 ```bash
 # Set temporarily
 export ANTHROPIC_API_KEY="sk-ant-api03-..."
-r2r eac create commit-message
+eac create commit-message
 
 # Set permanently (add to ~/.bashrc or ~/.zshrc)
 echo 'export ANTHROPIC_API_KEY="sk-ant-api03-..."' >> ~/.bashrc
@@ -402,7 +402,7 @@ GITHUB_TOKEN         # GitHub personal access token (for pipeline commands)
 ```bash
 # Required for pipeline ci commands
 export GITHUB_TOKEN="ghp_..."
-r2r eac pipeline ci dispatch-and-wait
+eac pipeline ci dispatch-and-wait
 ```
 
 ### Editor Configuration
@@ -417,11 +417,11 @@ GIT_EDITOR           # Git-specific editor (overrides EDITOR)
 ```bash
 # Set default editor
 export EDITOR="vim"
-r2r eac create commit-message
+eac create commit-message
 
 # Set git-specific editor
 export GIT_EDITOR="code --wait"
-r2r eac create commit-message
+eac create commit-message
 ```
 
 ---
@@ -444,13 +444,13 @@ All commands follow standard exit code conventions:
 set -e  # Exit on any error
 
 # Build will exit with non-zero on failure
-r2r eac build src-auth
+eac build src-auth
 
 # Test will exit with non-zero on failure
-r2r eac test src-auth
+eac test src-auth
 
 # Validate will exit with non-zero on failure
-r2r eac validate specs
+eac validate specs
 
 # If we reach here, all commands succeeded
 echo "All checks passed!"
@@ -460,7 +460,7 @@ echo "All checks passed!"
 
 ```bash
 # Check if command succeeded
-r2r eac test src-auth
+eac test src-auth
 if [ $? -eq 0 ]; then
   echo "Tests passed"
 else
@@ -469,7 +469,7 @@ else
 fi
 
 # Or use directly in conditionals
-if r2r eac validate specs; then
+if eac validate specs; then
   echo "Specs valid"
 else
   echo "Specs invalid"
@@ -490,11 +490,11 @@ fi
 
 ```bash
 # Redirect stdout to file
-r2r eac get modules > modules.json
-r2r eac show modules > modules.txt
+eac get modules > modules.json
+eac show modules > modules.txt
 
 # Pipe to other commands
-r2r eac get modules | jq '.modules[].moniker'
+eac get modules | jq '.modules[].moniker'
 ```
 
 ### Standard Error (stderr)
@@ -508,13 +508,13 @@ r2r eac get modules | jq '.modules[].moniker'
 
 ```bash
 # Redirect stderr to file
-r2r eac build src-auth 2> build-errors.txt
+eac build src-auth 2> build-errors.txt
 
 # Redirect both stdout and stderr
-r2r eac test src-auth > test-output.txt 2>&1
+eac test src-auth > test-output.txt 2>&1
 
 # Suppress stderr
-r2r eac build src-auth 2>/dev/null
+eac build src-auth 2>/dev/null
 ```
 
 ### Standard Input (stdin)
@@ -523,10 +523,10 @@ Some commands accept input from stdin:
 
 ```bash
 # Pipe file list to validation
-find docs/ -name "*.md" | r2r eac validate markdown
+find docs/ -name "*.md" | eac validate markdown
 
 # Pipe commits to changelog generation
-git log --oneline | r2r eac release changelog
+git log --oneline | eac release changelog
 ```
 
 ---
@@ -535,7 +535,7 @@ git log --oneline | r2r eac release changelog
 
 ### Repository Configuration
 
-`.r2r/eac/eac-config.yml` - EAC configuration:
+`.eac/eac-config.yml` - EAC configuration:
 
 ```yaml
 provider: claude-api
@@ -545,7 +545,7 @@ max_tokens: 4096
 temperature: 0.7
 ```
 
-**Set with**: `r2r eac init`
+**Set with**: `eac init`
 
 **See also**: [Init Command](../init/init.md)
 
@@ -559,34 +559,34 @@ temperature: 0.7
 
    ```bash
    # Good: Clear intent
-   r2r eac test --coverage --verbose src-auth
+   eac test --coverage --verbose src-auth
 
    # Avoid: Unclear in scripts
-   r2r eac test -cv src-auth
+   eac test -cv src-auth
    ```
 
 2. **Use short form interactively** for speed:
 
    ```bash
    # Interactive use
-   r2r eac build -f src-auth
-   r2r eac test -v src-auth
+   eac build -f src-auth
+   eac test -v src-auth
    ```
 
 3. **Quote values with spaces**:
 
    ```bash
    # Good
-   r2r eac work commit --message "fix: resolve auth bug"
+   eac work commit --message "fix: resolve auth bug"
 
    # Bad (will fail)
-   r2r eac work commit --message fix: resolve auth bug
+   eac work commit --message fix: resolve auth bug
    ```
 
 4. **Check command help** when unsure:
 
    ```bash
-   r2r eac <command> --help
+   eac <command> --help
    ```
 
 ### Error Handling
@@ -594,7 +594,7 @@ temperature: 0.7
 1. **Always check exit codes** in scripts:
 
    ```bash
-   if ! r2r eac test src-auth; then
+   if ! eac test src-auth; then
      echo "Tests failed"
      exit 1
    fi
@@ -603,7 +603,7 @@ temperature: 0.7
 2. **Capture stderr for debugging**:
 
    ```bash
-   r2r eac build src-auth 2>&1 | tee build.log
+   eac build src-auth 2>&1 | tee build.log
    ```
 
 3. **Use set -e** to fail fast:
@@ -611,9 +611,9 @@ temperature: 0.7
    ```bash
    #!/bin/bash
    set -e
-   r2r eac validate specs
-   r2r eac test src-auth
-   r2r eac build src-auth
+   eac validate specs
+   eac test src-auth
+   eac build src-auth
    ```
 
 ---

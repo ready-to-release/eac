@@ -14,7 +14,7 @@ Module changelogs are independent of the repository changelog and follow the sam
 
 ## Module Changelog Locations
 
-Module changelog locations are defined in `.r2r/eac/repository.yml` under `versioning.changelog` and follow the **release type convention**.
+Module changelog locations are defined in `.eac/repository.yml` under `versioning.changelog` and follow the **release type convention**.
 
 See [Understanding Release Types](../release-types.md) for complete details.
 
@@ -361,13 +361,13 @@ Generate module changelog from commits:
 
 ```bash
 # Generate changelog for a module
-r2r eac release changelog r2r-cli
+eac release changelog r2r-cli
 
 # Update existing changelog
-r2r eac release changelog r2r-cli --update
+eac release changelog r2r-cli --update
 
 # Preview without writing
-r2r eac release changelog r2r-cli --dry-run
+eac release changelog r2r-cli --dry-run
 ```
 
 **Filtering:**
@@ -385,7 +385,7 @@ When releasing a module version:
 
 ```bash
 # Review and finalize changelog
-r2r eac release this r2r-cli
+eac release this r2r-cli
 ```
 
 **Actions:**
@@ -459,7 +459,7 @@ Supporting modules don't maintain separate changelogs as they're not independent
 
 ```bash
 # Get latest version from module changelog
-r2r eac release get-version r2r-cli
+eac release get-version r2r-cli
 ```
 
 **Output:** `1.3.0` (latest version from CHANGELOG.md)
@@ -468,7 +468,7 @@ r2r eac release get-version r2r-cli
 
 ```bash
 # Check if module has unreleased changes
-r2r eac release pending r2r-cli
+eac release pending r2r-cli
 ```
 
 **Output:**
@@ -480,7 +480,7 @@ r2r eac release pending r2r-cli
 
 ```bash
 # Validate changelog format and structure
-r2r eac validate release r2r-cli
+eac validate release r2r-cli
 ```
 
 **Checks:**
@@ -492,7 +492,7 @@ r2r eac validate release r2r-cli
 
 ## References
 
-- Module contracts: `.r2r/eac/repository.yml`
+- Module contracts: `.eac/repository.yml`
 - [Format Specification](./format-specification.md) - Keep a Changelog format
 - [Repository Changelog](./repository-changelog.md) - Repository-level conventions
 - [Versioning](./versioning.md) - Semantic versioning and CalVer

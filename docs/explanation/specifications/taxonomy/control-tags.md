@@ -66,7 +66,7 @@ For complete CLI commands, OSCAL integration, and validation details, see:
 
 Complete implementation guide including:
 
-- Validation commands (`r2r eac validate control-tags`)
+- Validation commands (`eac validate control-tags`)
 - Evidence collection commands
 - OSCAL profile integration
 - Migration from old formats

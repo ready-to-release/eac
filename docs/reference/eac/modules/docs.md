@@ -13,4 +13,4 @@ The documentation module manages MkDocs site generation and documentation assets
 ## Design File
 
 - **Location**: `specs/docs/.design/workspace.dsl`
-- **Interactive**: `r2r eac serve-design --module docs`
+- **Interactive**: `eac serve-design --module docs`

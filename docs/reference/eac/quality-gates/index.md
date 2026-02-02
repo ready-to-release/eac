@@ -6,18 +6,18 @@ CLI commands and configuration for CD Model quality gates.
 
 ```bash
 # Pre-commit validation
-r2r eac validate specs
-r2r eac validate test-tags
-r2r eac test <module> --suite unit
+eac validate specs
+eac validate test-tags
+eac test <module> --suite unit
 
 # Security scanning
-r2r eac scan --scanner sast
-r2r eac scan --scanner vuln
-r2r eac scan --scanner secrets
+eac scan --scanner sast
+eac scan --scanner vuln
+eac scan --scanner secrets
 
 # Coverage and test execution
-r2r eac test <module> --coverage
-r2r eac show test-summary <module>
+eac test <module> --coverage
+eac show test-summary <module>
 ```
 
 ---

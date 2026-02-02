@@ -39,7 +39,7 @@ The flow when an AI assistant invokes an EAC command.
 ## Design File
 
 - **Location**: `specs/mcp-server/.design/workspace.dsl`
-- **Interactive**: `r2r eac serve-design --module mcp-server`
+- **Interactive**: `eac serve-design --module mcp-server`
 
 ## MCP Integration
 
@@ -66,7 +66,7 @@ MCP server is configured in Claude Code settings (`.mcp.json`):
 }
 ```
 
-Uses `r2r eac <command>` by default (Docker-based execution).
+Uses `eac <command>` by default (Docker-based execution).
 
 ### Development Configuration (Local Override)
 
@@ -93,13 +93,13 @@ Uses direct binary execution (faster, ~100ms startup vs ~2s Docker).
 **`EAC_USE_DIRECT_BINARY`**:
 
 - `true`: Forces direct binary execution (development)
-- Not set or `false`: Uses `r2r eac` (production, default)
+- Not set or `false`: Uses `eac` (production, default)
 
 ### Verification
 
 ```bash
 # Test production mode
-echo '{"jsonrpc":"2.0","id":1,"method":"initialize"}' | r2r eac mcp commands
+echo '{"jsonrpc":"2.0","id":1,"method":"initialize"}' | eac mcp commands
 
 # Test development mode
 EAC_USE_DIRECT_BINARY=true go run ./go/mcp/commands/main.go < input.json

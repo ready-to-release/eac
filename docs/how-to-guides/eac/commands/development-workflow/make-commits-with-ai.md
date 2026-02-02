@@ -35,7 +35,7 @@ git add src/auth/login.go src/auth/login_test.go
 ### 2. Generate Commit Message
 
 ```bash
-r2r eac create commit-message
+eac create commit-message
 ```
 
 **What happens**: AI analyzes changes, generates a semantic commit message with validation, and opens editor for review
@@ -59,7 +59,7 @@ Review, edit if needed, save and close editor.
 ## Auto-Commit (Skip Editor)
 
 ```bash
-r2r eac create commit-message --commit
+eac create commit-message --commit
 ```
 
 **What happens**: Generates message and commits automatically without opening editor
@@ -73,7 +73,7 @@ You've added login functionality and want a good commit message:
 git add src/auth/
 
 # Generate and commit
-r2r eac create commit-message
+eac create commit-message
 
 # AI generates:
 # feat(auth): implement user login with session management
@@ -88,7 +88,7 @@ r2r eac create commit-message
 
 | Problem                     | Solution                              |
 | --------------------------- | ------------------------------------- |
-| "No AI provider configured" | Run `r2r eac init` to setup           |
+| "No AI provider configured" | Run `eac init` to setup           |
 | "No staged changes"         | Stage files with `git add` first      |
 | Message too generic         | Use `--debug` flag to see AI analysis |
 

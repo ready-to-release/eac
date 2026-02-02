@@ -12,7 +12,7 @@
 # Common custom parameters:
 #   {go_root}   - Go module root (auto-inferred from "go" component if present)
 #
-# Usage in .r2r/eac/repository.yml:
+# Usage in .eac/repository.yml:
 #   - moniker: my-container
 #     name: My Container
 #     template: container

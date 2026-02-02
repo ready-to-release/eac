@@ -366,7 +366,7 @@ func generateTopLevelMessage(workspaceRoot, promptContext string) (string, error
 
 	// Load squash prompt template with three-tier priority:
 	// 1. Command flag (not applicable - internal function)
-	// 2. Team override (.r2r/eac/templates/ai/commit-message/squash.md)
+	// 2. Team override (.eac/templates/ai/commit-message/squash.md)
 	// 3. System default (templates/ai/commit-message/squash.md)
 	loader := coreai.NewContractLoader(workspaceRoot, coreai.TypeCommitMessage, "")
 	promptTemplate, _, err := loader.LoadPrompt("squash", "")
