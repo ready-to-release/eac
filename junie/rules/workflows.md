@@ -38,4 +38,5 @@ Task Switching Protocol
 
 Verification
 - When changes are made, run the smallest sufficient verification (tests/build) required by the change risk.
+- **TDD Prediction Requirement**: Before running tests for any change, you MUST state your prediction of the outcome (how you expect them to fail or if you expect them to pass) and wait for User confirmation/agreement.
 - Never submit with failing builds/tests without explicit user approval.
