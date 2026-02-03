@@ -44,6 +44,24 @@ func GetSpecs() int {
 		return 1
 	}
 
+	// Check for help flag
+	for _, arg := range os.Args[2:] {
+		if arg == "--help" || arg == "-h" {
+			fmt.Println("Get specifications for a module")
+			fmt.Println("\nUsage: get specs <module> [version] [flags]")
+			fmt.Println("\nArguments:")
+			fmt.Println("  module     Module moniker")
+			fmt.Println("  version    Optional version number")
+			fmt.Println("\nFlags:")
+			fmt.Println("  --as-yaml    Output as YAML (default)")
+			fmt.Println("  --as-json    Output as JSON")
+			fmt.Println("  --as-toml    Output as TOML")
+			fmt.Println("  --branch     Branch to query (default: main)")
+			fmt.Println("  -h, --help   Show this help message")
+			return 0
+		}
+	}
+
 	// Parse arguments - expect module after "get specs"
 	args := os.Args[1:]
 

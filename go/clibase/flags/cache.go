@@ -1,16 +1,21 @@
 package flags
 
 import (
+	"strings"
+
 	"github.com/ready-to-release/eac/go/clibase/environment"
+	"github.com/ready-to-release/eac/go/core/cache"
 )
 
 // CacheFlags holds cache and system dependency control flags.
 type CacheFlags struct {
-	SkipCache bool // --skip-cache, --no-cache: Bypass incremental detection
-	SkipDeps  bool // --skip-deps, --no-deps: Skip system dependency verification
+	// CacheConfig controls fine-grained cache skipping via --skip-cache=<spec>
+	CacheConfig *cache.Config
+
+	SkipDeps bool // --skip-deps, --no-deps: Skip system dependency verification
 
 	// Declarative tracking fields
-	CacheExplicit bool // True if --with-cache or --no-cache was used
+	CacheExplicit bool // True if --with-cache or --skip-cache was used
 	DepsExplicit  bool // True if --with-deps, --no-deps, or --skip-deps was used
 }
 
@@ -22,7 +27,9 @@ type CacheFlagSet struct {
 // NewCacheFlagSet creates a new cache flag set.
 func NewCacheFlagSet() *CacheFlagSet {
 	return &CacheFlagSet{
-		flags: &CacheFlags{},
+		flags: &CacheFlags{
+			CacheConfig: cache.NewConfig(),
+		},
 	}
 }
 
@@ -49,14 +56,14 @@ func (s *CacheFlagSet) Flags() []FlagDef {
 			Name:              "no-cache",
 			Type:              "bool",
 			Default:           "false",
-			Usage:             "Disable incremental caching, force full execution",
+			Usage:             "Disable incremental caching (alias for --skip-cache=state)",
 			MutuallyExclusive: []string{"with-cache"},
 		},
 		{
 			Name:    "skip-cache",
-			Type:    "bool",
-			Default: "false",
-			Usage:   "Skip incremental cache (legacy alias for --no-cache)",
+			Type:    "string",
+			Default: "",
+			Usage:   "Skip cache by spec: state, asset, registry, layer, work, local, remote, all, or level:type (e.g., local:registry)",
 		},
 		{
 			Name:    "with-deps",
@@ -85,30 +92,45 @@ func (s *CacheFlagSet) Parse(args []string, env *environment.Env) ([]string, err
 	var remaining []string
 
 	for _, arg := range args {
-		switch arg {
-		// Declarative cache flags
-		case "--with-cache":
-			s.flags.SkipCache = false
-			s.flags.CacheExplicit = true
-		case "--no-cache":
-			s.flags.SkipCache = true
+		switch {
+		// --skip-cache=<spec> with value
+		case strings.HasPrefix(arg, "--skip-cache="):
+			value := strings.TrimPrefix(arg, "--skip-cache=")
+			specs, err := cache.ParseSpecs(value)
+			if err != nil {
+				return nil, err
+			}
+			for _, spec := range specs {
+				s.flags.CacheConfig.Skip(spec)
+			}
 			s.flags.CacheExplicit = true
 
-		// Legacy cache flag (backward compat)
-		case "--skip-cache":
-			s.flags.SkipCache = true
+		// --skip-cache without value: use default skip specs (state + work)
+		case arg == "--skip-cache":
+			for _, spec := range cache.DefaultSkipSpecs {
+				s.flags.CacheConfig.Skip(spec)
+			}
+			s.flags.CacheExplicit = true
+
+		// --no-cache (alias for --skip-cache=state)
+		case arg == "--no-cache":
+			s.flags.CacheConfig.Skip(cache.Spec{Level: cache.LevelAll, Type: cache.TypeState})
+			s.flags.CacheExplicit = true
+
+		// --with-cache (declarative, currently no-op but marks explicit)
+		case arg == "--with-cache":
 			s.flags.CacheExplicit = true
 
 		// Declarative deps flags
-		case "--with-deps":
+		case arg == "--with-deps":
 			s.flags.SkipDeps = false
 			s.flags.DepsExplicit = true
-		case "--no-deps":
+		case arg == "--no-deps":
 			s.flags.SkipDeps = true
 			s.flags.DepsExplicit = true
 
 		// Legacy deps flag (backward compat)
-		case "--skip-deps":
+		case arg == "--skip-deps":
 			s.flags.SkipDeps = true
 			s.flags.DepsExplicit = true
 
@@ -166,10 +188,12 @@ func (s *CacheFlagSet) DeclarativeFlags() []DeclarativeFlagDef {
 func (s *CacheFlagSet) GetDeclarativeState(behavior string) *DeclarativeState {
 	switch behavior {
 	case "cache":
+		// Cache is "off" if any skip specs are present
+		hasSkips := len(s.flags.CacheConfig.SkipSpecs) > 0
 		return &DeclarativeState{
 			Behavior:      "cache",
-			ExplicitlyOn:  s.flags.CacheExplicit && !s.flags.SkipCache,
-			ExplicitlyOff: s.flags.CacheExplicit && s.flags.SkipCache,
+			ExplicitlyOn:  s.flags.CacheExplicit && !hasSkips,
+			ExplicitlyOff: s.flags.CacheExplicit && hasSkips,
 		}
 	case "deps":
 		return &DeclarativeState{

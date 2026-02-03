@@ -123,7 +123,7 @@ func Scan() int {
 		Sequential:     sequential,
 		Turbo:          shared.Turbo,
 		MaxConcurrency: shared.MaxConcurrency,
-		ForceRebuild:   shared.SkipCache,
+		ForceRebuild:   shared.CacheConfig.ShouldSkipState(),
 		SkipDeps:       shared.SkipDeps,
 		UseTUI:         shared.UseTUI,
 		TUIHeight:      shared.TUIHeight,
@@ -133,6 +133,7 @@ func Scan() int {
 		DebugMode:      shared.Debug,
 		ShowTimings:    shared.ShowTimings,
 		DryRun:         shared.DryRun,
+		CacheConfig:    shared.CacheConfig,
 	}
 
 	// Create multi-scanner config

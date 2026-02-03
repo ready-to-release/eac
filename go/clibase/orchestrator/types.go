@@ -62,8 +62,8 @@ type Config struct {
 	MaxConcurrency int
 	// StatusUpdateInterval is how often to show status updates (default: 500ms)
 	StatusUpdateInterval int // in milliseconds
-	// ModuleTypes maps moniker to type string (e.g., "go", "container") for display
-	ModuleTypes map[string]string
+	// ComponentTypesDisplay maps moniker to type string (e.g., "go", "container") for display
+	ComponentTypesDisplay map[string]string
 	// ShowTimings enables the timing summary section (use --timings flag)
 	ShowTimings bool
 	// DryRun skips actual execution and preserves existing output artifacts
@@ -84,6 +84,12 @@ type Config struct {
 	// Higher values reduce memory per slot, increasing concurrent builds.
 	// Default is 1.25x when turbo is enabled, 1.0x when disabled.
 	Turbo float64
+
+	// Layered enables module layer ordering in the work queue.
+	// When true, module dependencies are enforced (LayerModeStrict).
+	// When false, only component layers and DependsOn are enforced (LayerModeNone).
+	// Default is false for backward compatibility.
+	Layered bool
 }
 
 // UnitResult represents the outcome of executing a single work unit.

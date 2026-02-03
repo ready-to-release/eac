@@ -1,5 +1,3 @@
-// Package workunit provides unified types for work unit handling across
-// build, test, lint, and scan commands.
 package workunit
 
 // Context represents the operation type for a unit of work.
@@ -17,4 +15,7 @@ const (
 
 	// ContextScan represents a scan operation.
 	ContextScan Context = "scan"
+
+	// ContextAISummary represents an AI summary operation.
+	ContextAISummary Context = "ai-summary"
 )

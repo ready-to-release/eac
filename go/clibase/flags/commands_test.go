@@ -91,8 +91,8 @@ func TestParseSharedFlags_AllFlags(t *testing.T) {
 	}
 
 	// Cache flags
-	if !flags.SkipCache {
-		t.Error("SkipCache should be true")
+	if !flags.CacheConfig.ShouldSkipState() {
+		t.Error("ShouldSkipState() should be true")
 	}
 	if !flags.SkipDeps {
 		t.Error("SkipDeps should be true")
@@ -209,8 +209,8 @@ func TestParseSharedFlags_Defaults(t *testing.T) {
 	if flags.Turbo {
 		t.Error("Turbo should default to false")
 	}
-	if flags.SkipCache {
-		t.Error("SkipCache should default to false")
+	if flags.CacheConfig.ShouldSkipState() {
+		t.Error("ShouldSkipState() should default to false")
 	}
 	if flags.DryRun {
 		t.Error("DryRun should default to false")

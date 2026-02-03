@@ -134,7 +134,7 @@ func (a *mkdocsSiteAdapter) ensureHandler(workspaceRoot string) {
 }
 
 // ============================================================================
-// pdf-render-tool adapter
+// pdf-tool adapter
 // ============================================================================
 
 // mkdocsPDFAdapter adapts mkdocs.PDFRenderHandler to builders.Handler.
@@ -142,7 +142,7 @@ type mkdocsPDFAdapter struct {
 	handler *mkdocs.PDFRenderHandler
 }
 
-func (a *mkdocsPDFAdapter) Name() string { return "pdf-render-tool" }
+func (a *mkdocsPDFAdapter) Name() string { return "pdf-tool" }
 
 func (a *mkdocsPDFAdapter) Requirements() []string { return []string{"docker"} }
 

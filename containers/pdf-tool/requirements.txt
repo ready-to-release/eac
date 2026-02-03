@@ -1,0 +1,25 @@
+# MkDocs core
+mkdocs>=1.5
+mkdocs-material>=9.4
+
+# Navigation
+mkdocs-awesome-nav>=3.3.0
+
+# Markdown extensions
+pymdown-extensions
+
+# Mermaid diagrams (client-side JS for HTML)
+mkdocs-mermaid2-plugin>=1.1.0
+
+# PDF generation (Playwright-based, better scaling for large docs)
+# Using local fork with parallel merge optimization - see python/mkdocs-exporter-fork
+# mkdocs-exporter>=6.2.0  # Replaced by local fork
+
+# Mermaid to SVG (server-side rendering for PDF)
+# Note: mkdocs-exporter can render Mermaid natively via Playwright,
+# but we keep this for preprocessing consistency
+mkdocs-mermaid-to-svg
+
+# PDF manipulation and generation
+pypdf>=4.0.0
+reportlab>=4.0.0

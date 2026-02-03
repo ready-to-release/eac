@@ -151,7 +151,7 @@ books:
   # ============================================================================
   # Repository Report - Structure report using show commands
   # ============================================================================
-  - name: repository-report
+  - name: report
     title: "Repository Structure Report"
     description: "Complete repository structure report with all generated content"
     output: pdf-dark

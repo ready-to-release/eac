@@ -60,7 +60,7 @@ func (p *Preprocessor) processStructurizrDiagrams() error {
 	for module := range modulesUsed {
 		hash, err := design.GetModuleDSLHash(module)
 		if err != nil {
-			p.log("    Warning: could not get DSL hash for %s: %v", module, err)
+			p.warn("could not get DSL hash for %s: %v", module, err)
 			continue
 		}
 		dslHashes[module] = hash
@@ -92,7 +92,7 @@ func (p *Preprocessor) processStructurizrDiagrams() error {
 			// Get DSL hash for this module
 			dslHash, ok := dslHashes[marker.Module]
 			if !ok {
-				p.log("    Warning: no DSL hash for module %s (marker: %s:%s)",
+				p.warn("no DSL hash for module %s (marker: %s:%s)",
 					marker.Module, marker.Module, marker.ViewKey)
 				missing++
 				continue
@@ -103,7 +103,7 @@ func (p *Preprocessor) processStructurizrDiagrams() error {
 
 			// Check if cached SVG exists in source
 			if _, err := os.Stat(sourceCachePath); os.IsNotExist(err) {
-				p.log("    Warning: cached SVG not found for %s:%s (expected: %s)",
+				p.warn("cached SVG not found for %s:%s (expected: %s)",
 					marker.Module, marker.ViewKey, filepath.Base(sourceCachePath))
 				missing++
 				continue
@@ -117,7 +117,7 @@ func (p *Preprocessor) processStructurizrDiagrams() error {
 
 			// Verify the SVG was copied to staging
 			if _, err := os.Stat(stagingCachePath); os.IsNotExist(err) {
-				p.log("    Warning: SVG not found in staging for %s:%s (expected: %s)",
+				p.warn("SVG not found in staging for %s:%s (expected: %s)",
 					marker.Module, marker.ViewKey, filepath.Base(stagingCachePath))
 				missing++
 				continue

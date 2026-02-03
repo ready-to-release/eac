@@ -1,47 +1,56 @@
 # yaml-language-server: $schema=../../contracts/core/0.1.0/books.schema.json
 # Local Book Configuration
-# Templates and snippets come from defaults - only specify what's unique here
 
-# =============================================================================
-# BOOK GENERATORS
-# =============================================================================
 book-generators:
-  # Diataxis subset PDFs - one entry per category
   diataxis-pdfs:
     template: diataxis-pdf
     site_url: "https://ready-to-release.github.io/eac/"
     categories:
-      - {name: explanation, title: "Explanation", description: "Conceptual documentation - Everything as Code, CD practices, and methodology"}
-      - {name: how-to-guides, path: howto, title: "How-to Guides", description: "Practical how-to guides for common tasks"}
-      - {name: tutorials, title: "Tutorials", description: "Step-by-step learning tutorials"}
-      - {name: reference, title: "Reference", description: "Complete technical reference documentation"}
-      - {name: reference/eac, path: reference-eac, title: "EAC Reference", description: "EAC extension technical reference"}
-      - {name: reference/r2r, path: reference-r2r, title: "R2R CLI Reference", description: "R2R CLI technical reference"}
+      - {
+          name: explanation,
+          title: "Explanation",
+          description: "Conceptual documentation - Everything as Code, CD practices, and methodology",
+        }
+      - {
+          name: how-to-guides,
+          path: howto,
+          title: "How-to Guides",
+          description: "Practical how-to guides for common tasks",
+        }
+      - {
+          name: tutorials,
+          title: "Tutorials",
+          description: "Step-by-step learning tutorials",
+        }
+      - {
+          name: reference,
+          title: "Technical Reference",
+          description: "Complete technical reference",
+        }
 
-  # Evidence books - auto-generated from modules with evidence_books field
   release-evidence:
     template: release-evidence
     site_url: "https://ready-to-release.github.io/eac/"
     from_modules: true
 
-# =============================================================================
-# EXPLICIT BOOKS - Only for non-standard configurations
-# =============================================================================
 books:
-  # Bundle evidence book requires custom multi-module evidence
+  # Bundle evidence book (unchanged)
   - name: release-evidence-r2r-eac-bundle
     title: "r2r-eac-bundle Release Evidence Package"
     description: "Complete release evidence for r2r-eac bundle with all module releases"
     output: pdf-dark
     site_url: "https://ready-to-release.github.io/eac/"
     sources:
-      - type: snippet
-        name: common-assets
-      # ext-eac Evidence
-      - type: snippet
-        name: module-evidence
-        parameters: {moniker: ext-eac, prefix: "ext-eac-", prefix_title: "ext-eac "}
-      # r2r-cli Evidence
-      - type: snippet
-        name: module-evidence
-        parameters: {moniker: r2r-cli, prefix: "r2r-cli-", prefix_title: "r2r-cli "}
+      - { type: snippet, name: common-assets }
+      - {
+          type: snippet,
+          name: module-evidence,
+          parameters:
+            { moniker: ext-eac, prefix: "ext-eac-", prefix_title: "ext-eac " },
+        }
+      - {
+          type: snippet,
+          name: module-evidence,
+          parameters:
+            { moniker: r2r-cli, prefix: "r2r-cli-", prefix_title: "r2r-cli " },
+        }

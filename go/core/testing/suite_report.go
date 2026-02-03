@@ -13,7 +13,7 @@ type SuiteTestEntry struct {
 	FilePath     string   `yaml:"file_path" json:"file_path" toml:"file_path"`
 	Package      string   `yaml:"package" json:"package" toml:"package"` // Feature/package name from path
 	Module       string   `yaml:"module" json:"module" toml:"module"`
-	ModuleType   string   `yaml:"module_type" json:"module_type" toml:"module_type"`
+	ComponentTypes string `yaml:"component_types" json:"component_types" toml:"component_types"`
 	Level        []string `yaml:"level" json:"level" toml:"level"`
 	Verification []string `yaml:"verification" json:"verification" toml:"verification"`
 	SystemDeps   []string `yaml:"system_deps" json:"system_deps" toml:"system_deps"`

@@ -76,6 +76,28 @@ func ShowTestResults() int {
 		return 1
 	}
 
+	// Check for help flag before doing any work
+	for _, arg := range os.Args[2:] {
+		if arg == "--help" || arg == "-h" {
+			fmt.Println("Show test execution results from test manifests")
+			fmt.Println("\nUsage: show test-results [module...]")
+			fmt.Println("\nArguments:")
+			fmt.Println("  module    Optional module moniker(s) to filter results")
+			fmt.Println("\nFlags:")
+			fmt.Println("  -h, --help   Show this help message")
+			fmt.Println("\nOutput:")
+			fmt.Println("  Module overview with pass/fail counts")
+			fmt.Println("  Specification coverage for godog tests")
+			fmt.Println("  Control tag summaries")
+			fmt.Println("  Detailed test results table")
+			fmt.Println("\nExamples:")
+			fmt.Println("  show test-results")
+			fmt.Println("  show test-results ext-eac")
+			fmt.Println("  show test-results ext-eac r2r-cli")
+			return 0
+		}
+	}
+
 	// Parse module arguments
 	args := os.Args[1:]
 	var monikers []string

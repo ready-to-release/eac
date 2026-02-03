@@ -43,6 +43,7 @@ type TimeoutConfig struct {
 	CI             CITimeouts             `yaml:"ci"`
 	LongOperations LongOperationTimeouts  `yaml:"long_operations"`
 	TUI            TUITimeouts            `yaml:"tui"`
+	TUILayout      TUILayoutConfig        `yaml:"tui_layout"`
 	Scheduling     SchedulingTimeouts     `yaml:"scheduling"`
 }
 
@@ -94,6 +95,20 @@ type TUITimeouts struct {
 	AutoScrollResume Duration `yaml:"auto_scroll_resume"` // Auto-scroll resume delay
 	ExitCountdown    Duration `yaml:"exit_countdown"`     // Exit countdown duration
 	PortReservation  Duration `yaml:"port_reservation"`   // Port reservation TTL
+	FreezeCountdown  Duration `yaml:"freeze_countdown"`   // Extended countdown when Freeze clicked
+	MinDisplayTime   Duration `yaml:"min_display_time"`   // Minimum time to show completion state
+	MetricsInterval  Duration `yaml:"metrics_interval"`   // CPU/memory metrics update interval
+}
+
+// TUILayoutConfig holds TUI layout configuration.
+type TUILayoutConfig struct {
+	MaxTabs           int `yaml:"max_tabs"`            // Maximum visible tabs before scrolling
+	DefaultColumns    int `yaml:"default_columns"`     // Default number of tab columns
+	MinColumns        int `yaml:"min_columns"`         // Minimum tab columns
+	MaxColumns        int `yaml:"max_columns"`         // Maximum tab columns
+	BufferSizePane    int `yaml:"buffer_size_pane"`    // Buffer size for each pane
+	BufferSizeResults int `yaml:"buffer_size_results"` // Buffer size for results
+	BufferSizeUoW     int `yaml:"buffer_size_uow"`     // Buffer size per UoW
 }
 
 // SchedulingTimeouts holds scheduling-related timeouts.
@@ -142,6 +157,18 @@ func DefaultTimeoutConfig() *TimeoutConfig {
 			AutoScrollResume: Duration(8 * time.Second),
 			ExitCountdown:    Duration(10 * time.Second),
 			PortReservation:  Duration(30 * time.Second),
+			FreezeCountdown:  Duration(120 * time.Second),
+			MinDisplayTime:   Duration(1500 * time.Millisecond),
+			MetricsInterval:  Duration(500 * time.Millisecond),
+		},
+		TUILayout: TUILayoutConfig{
+			MaxTabs:           36,
+			DefaultColumns:    4,
+			MinColumns:        2,
+			MaxColumns:        6,
+			BufferSizePane:    500,
+			BufferSizeResults: 100,
+			BufferSizeUoW:     200,
 		},
 		Scheduling: SchedulingTimeouts{
 			CapacityRecalc: Duration(2 * time.Second),
@@ -246,6 +273,38 @@ func MergeTimeoutConfigs(defaults, override *TimeoutConfig) *TimeoutConfig {
 	}
 	if override.TUI.PortReservation != 0 {
 		result.TUI.PortReservation = override.TUI.PortReservation
+	}
+	if override.TUI.FreezeCountdown != 0 {
+		result.TUI.FreezeCountdown = override.TUI.FreezeCountdown
+	}
+	if override.TUI.MinDisplayTime != 0 {
+		result.TUI.MinDisplayTime = override.TUI.MinDisplayTime
+	}
+	if override.TUI.MetricsInterval != 0 {
+		result.TUI.MetricsInterval = override.TUI.MetricsInterval
+	}
+
+	// TUILayout
+	if override.TUILayout.MaxTabs != 0 {
+		result.TUILayout.MaxTabs = override.TUILayout.MaxTabs
+	}
+	if override.TUILayout.DefaultColumns != 0 {
+		result.TUILayout.DefaultColumns = override.TUILayout.DefaultColumns
+	}
+	if override.TUILayout.MinColumns != 0 {
+		result.TUILayout.MinColumns = override.TUILayout.MinColumns
+	}
+	if override.TUILayout.MaxColumns != 0 {
+		result.TUILayout.MaxColumns = override.TUILayout.MaxColumns
+	}
+	if override.TUILayout.BufferSizePane != 0 {
+		result.TUILayout.BufferSizePane = override.TUILayout.BufferSizePane
+	}
+	if override.TUILayout.BufferSizeResults != 0 {
+		result.TUILayout.BufferSizeResults = override.TUILayout.BufferSizeResults
+	}
+	if override.TUILayout.BufferSizeUoW != 0 {
+		result.TUILayout.BufferSizeUoW = override.TUILayout.BufferSizeUoW
 	}
 
 	// Scheduling

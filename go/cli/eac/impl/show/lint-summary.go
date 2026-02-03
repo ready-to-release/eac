@@ -37,8 +37,8 @@ func init() {
 // LintManifest represents the lint manifest structure.
 // This is duplicated from the lint package to avoid import cycles.
 type LintManifest struct {
-	Moniker         string    `json:"moniker"`
-	ModuleType      string    `json:"module_type"`
+	Moniker        string `json:"moniker"`
+	ComponentTypes string `json:"component_types"`
 	GitCommit       string    `json:"git_commit"`
 	RunTime         time.Time `json:"run_time"`
 	DurationSeconds float64   `json:"duration_seconds"`
@@ -141,8 +141,8 @@ func generateLintSummaryFromManifest(module string, mf *LintManifest, artifactNa
 	if len(mf.Providers) > 0 {
 		tb.AddRow("Providers", strings.Join(mf.Providers, ", "))
 	}
-	if mf.ModuleType != "" {
-		tb.AddRow("Module Type", mf.ModuleType)
+	if mf.ComponentTypes != "" {
+		tb.AddRow("Component Types", mf.ComponentTypes)
 	}
 
 	sb.WriteString(tb.Build())

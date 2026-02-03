@@ -5,10 +5,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	implinternal "github.com/ready-to-release/eac/go/cli/eac/impl/internal"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/hash"
+	coreoutput "github.com/ready-to-release/eac/go/core/output"
 	"github.com/ready-to-release/eac/go/core/testing"
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
@@ -50,12 +50,10 @@ func buildModuleTestInfo(
 			Dependencies: module.GetDependencies(),
 		}
 
-		// Load build manifest to get BuildID (links tests to specific build)
+		// Get BuildID from UoW manifests (links tests to specific build)
 		// This ensures `build --skip-cache` triggers retesting
-		moduleBuildDir := eacCfg.Repository.BuildOutputPathAbs(workspaceRoot, moniker)
-		if manifest, err := implinternal.LoadModuleManifest(moduleBuildDir); err == nil {
-			info.BuildID = manifest.BuildID
-		}
+		reader := coreoutput.NewReader(workspaceRoot)
+		info.BuildID = reader.GetBuildID(workunit.ContextBuild, moniker)
 
 		// Get source files from module definition
 		sourcePatterns := module.GetGlobPatterns()
@@ -98,11 +96,8 @@ func buildModuleTestInfo(
 
 	// Create a loader for dependency BuildIDs
 	depBuildIDLoader := func(moniker string) string {
-		moduleBuildDir := eacCfg.Repository.BuildOutputPathAbs(workspaceRoot, moniker)
-		if manifest, err := implinternal.LoadModuleManifest(moduleBuildDir); err == nil {
-			return manifest.BuildID
-		}
-		return ""
+		reader := coreoutput.NewReader(workspaceRoot)
+		return reader.GetBuildID(workunit.ContextBuild, moniker)
 	}
 
 	return moduleInfo, depBuildIDLoader

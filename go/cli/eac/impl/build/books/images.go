@@ -72,7 +72,7 @@ func (p *Preprocessor) optimizeDrawioImages() error {
 					// Hash the source file for cache lookup
 					hash, hashErr := HashFileContent(absPath)
 					if hashErr != nil {
-						p.log("    Warning: failed to hash %s: %v", ref, hashErr)
+						p.warn("failed to hash %s: %v", ref, hashErr)
 						continue
 					}
 					imageRefs[absPath] = DrawioImageRef{
@@ -130,7 +130,7 @@ func (p *Preprocessor) optimizeDrawioImages() error {
 		}
 
 		if err := optimizeImage(ref.AbsPath, stagingCachePath, MaxImageWidthPDF); err != nil {
-			p.log("    Warning: failed to optimize %s: %v", ref.Filename, err)
+			p.warn("failed to optimize %s: %v", ref.Filename, err)
 			// Copy original as fallback
 			if err := copyFile(ref.AbsPath, stagingCachePath); err != nil {
 				return fmt.Errorf("copying fallback image %s: %w", ref.Filename, err)
@@ -139,7 +139,7 @@ func (p *Preprocessor) optimizeDrawioImages() error {
 
 		// Store in persistent cache for future builds
 		if err := p.assetCache.PutDrawio(stagingCachePath, cacheKey); err != nil {
-			p.log("    Warning: failed to cache %s: %v", ref.Filename, err)
+			p.warn("failed to cache %s: %v", ref.Filename, err)
 			// Non-fatal - continue
 		}
 
@@ -171,7 +171,7 @@ func (p *Preprocessor) optimizeDrawioImages() error {
 	for _, ref := range imageRefs {
 		if err := os.Remove(ref.AbsPath); err != nil {
 			if !os.IsNotExist(err) {
-				p.log("    Warning: failed to delete %s: %v", ref.Filename, err)
+				p.warn("failed to delete %s: %v", ref.Filename, err)
 			}
 		} else {
 			deleted++
@@ -446,7 +446,7 @@ type DrawioCacheStatus struct {
 // Returns the number of images optimized (0 if all cached).
 func UpdateDrawioCache(workspaceRoot string, logWriter io.Writer) (int, error) {
 	docsDir := filepath.Join(workspaceRoot, "docs")
-	cache := NewAssetCache(workspaceRoot)
+	cache := NewAssetCache(workspaceRoot, nil) // nil = use cache normally
 
 	// Find all drawio images
 	images, err := FindDrawioImages(docsDir)

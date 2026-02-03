@@ -144,7 +144,7 @@ func (h *BuildxHandler) Build(module interfaces.ModuleContractPort, workspaceRoo
 	}
 
 	// Build the image
-	args := buildDockerBuildArgs(dockerBuild, context, dockerfilePath, tags, moniker)
+	args := buildDockerBuildArgs(dockerBuild, context, dockerfilePath, tags, moniker, opts, logWriter)
 
 	Logln(logWriter, "\nExecuting: docker %s", strings.Join(args, " "))
 
@@ -170,8 +170,31 @@ func (h *BuildxHandler) Build(module interfaces.ModuleContractPort, workspaceRoo
 }
 
 // buildDockerBuildArgs constructs the docker buildx build command arguments.
-func buildDockerBuildArgs(dockerBuild *config.DockerBuildConfig, context, dockerfilePath string, tags []string, moniker string) []string {
+func buildDockerBuildArgs(dockerBuild *config.DockerBuildConfig, context, dockerfilePath string, tags []string, moniker string, opts BuildOptions, logWriter io.Writer) []string {
 	args := []string{"buildx", "build"}
+
+	// Use specified builder or default to "default" (docker driver).
+	// The docker driver builds directly in Docker daemon - no slow tarball export.
+	// Use a docker-container driver only for multi-platform builds with QEMU.
+	builder := dockerBuild.Builder
+	if builder == "" {
+		builder = "default"
+	}
+	args = append(args, "--builder", builder)
+
+	// Apply cache flags from CacheConfig
+	if opts.CacheConfig != nil {
+		// --skip-cache=local:layer -> --no-cache (bypass BuildKit layer cache)
+		if opts.CacheConfig.ShouldForceNoCacheDocker() {
+			args = append(args, "--no-cache")
+			Logln(logWriter, "   Cache: --no-cache (local:layer skipped)")
+		}
+		// --skip-cache=local:registry -> --pull (force fresh base images)
+		if opts.CacheConfig.ShouldForcePull() {
+			args = append(args, "--pull")
+			Logln(logWriter, "   Cache: --pull (local:registry skipped)")
+		}
+	}
 
 	// Platforms (multi-arch)
 	if len(dockerBuild.Platforms) > 0 {
@@ -195,9 +218,13 @@ func buildDockerBuildArgs(dockerBuild *config.DockerBuildConfig, context, docker
 	}
 
 	// Cache configuration
-	if dockerBuild.Cache != nil {
+	// --skip-cache=remote:layer disables registry cache
+	skipRemoteLayer := opts.CacheConfig != nil && opts.CacheConfig.ShouldSkipRemoteLayer()
+	if dockerBuild.Cache != nil && !skipRemoteLayer {
 		cacheArgs := buildCacheArgs(dockerBuild.Cache, moniker)
 		args = append(args, cacheArgs...)
+	} else if skipRemoteLayer && dockerBuild.Cache != nil {
+		Logln(logWriter, "   Cache: registry cache disabled (remote:layer skipped)")
 	}
 
 	// SBOM

@@ -10,6 +10,7 @@ import (
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
 
+	tui "github.com/ready-to-release/eac/contracts/tui-adapter/0.1.0/interfaces"
 	"github.com/ready-to-release/eac/go/core/logging"
 )
 
@@ -17,13 +18,13 @@ var log = logging.C()
 
 // HelpTextMap maps zone IDs to help descriptions for the Resources pane elements.
 var HelpTextMap = map[string]string{
-	"res-timer":    "Elapsed time since execution started",
-	"res-cpu":      "CPU usage per core (green=low, yellow=medium, red=high)",
-	"res-mem":      "Memory usage (green=low, yellow=medium, red=high)",
-	"res-jobs":     "Active containers running in parallel",
-	"res-uow":      "Unit of Work counts: running/done/cached/failed",
-	"res-tools":    "Tool lamps: blue=container, orange=system (filled=active)",
-	"res-layer":    "Current execution layer / total layers",
+	"res-timer":     "Elapsed time since execution started",
+	"res-cpu":       "CPU usage per core (green=low, yellow=medium, red=high)",
+	"res-mem":       "Memory usage (green=low, yellow=medium, red=high)",
+	"res-jobs":      "Active containers running in parallel",
+	"res-uow":       "UoW: remaining/total | running/roof [▼pressure] | done cached failed",
+	"res-tools":     "Tool lamps: blue=container, orange=system (filled=active)",
+	"res-layer":     "Current execution layer / total layers",
 	"freeze-button": "Click to pause auto-exit countdown for 2 minutes",
 }
 
@@ -35,6 +36,12 @@ type Model struct {
 	width        int    // Terminal width
 	runPhaseName string // Custom name for Run phase (e.g., "building", "testing")
 	asciiMode    bool   // Use ASCII-only characters (--ascii flag)
+
+	// Config-driven values (from TUIConfig)
+	metricsUpdateInterval time.Duration // How often to refresh CPU/memory metrics
+	minDisplayTime        time.Duration // Minimum time to show completion state
+	autoScrollResume      time.Duration // Auto-scroll resume delay
+	bufferSizeUoW         int           // Buffer size per UoW
 
 	// 3-pane state
 	panes       [3]*Pane     // Init, Run, Summary panes
@@ -51,8 +58,13 @@ type Model struct {
 	total       int       // Total modules
 	layer       int       // Current layer being executed (1-indexed, 0 = not using layers)
 	totalLayers int       // Total number of layers (0 = not using layers)
-	startTime   time.Time // Execution start
-	lastError   *Line     // Most recent error (sticky display)
+
+	// Capacity tracking (three-value model)
+	roof           int // Hard ceiling - actual peak allocation (workers spawned at start)
+	pressureTarget int // Dynamic optimal capacity (may be < roof under memory pressure)
+
+	startTime time.Time // Execution start
+	lastError *Line     // Most recent error (sticky display)
 
 	// Lock tracking info (from locktracker.Registry)
 	locks []LockStatus // Individual lock states
@@ -73,16 +85,13 @@ type Model struct {
 	hoveredZone     string                  // Currently hovered zone ID (empty = none, "tab:moniker" for tabs, "res-*" for resources)
 	maxTabs         int                     // Maximum visible tabs before scrolling/hiding
 
-	// Cumulative UoW counters (only increment, never recalculated)
-	uowTotal   int // Total UoW expected (set once)
-	uowRunning int // Currently running (can go up/down)
-	uowDone    int // Completed successfully (only goes up)
-	uowCached  int // Skipped/cached (only goes up)
-	uowFailed  int // Failed (only goes up)
+	// Note: UoW counters (uowTotal, uowDone, uowCached, uowFailed) were removed.
+	// Use DeriveCounts() to compute statistics from uowStates.
 
 	// Channels for async updates
-	lineChan   <-chan Line   // Incoming output lines
-	statusChan <-chan Status // Status updates
+	lineChan   <-chan Line      // Incoming output lines
+	statusChan <-chan Status    // Status updates
+	doneChan   <-chan struct{}  // Termination signal - closes to unblock listeners
 
 	// Display preferences
 	paused    bool     // Pause scrolling (for review)
@@ -225,7 +234,10 @@ func StatusFromExitCode(exitCode int) UoWStatus {
 }
 
 // NewModel creates a new console model.
-func NewModel(height int, runPhaseName string, lineChan <-chan Line, statusChan <-chan Status, asciiMode bool, skipTUIDelay bool) Model {
+// If tuiConfig is nil, defaults are used.
+// doneChan must be provided - closing it signals listeners to stop,
+// preventing blocking reads on empty channels when work is complete.
+func NewModel(height int, runPhaseName string, lineChan <-chan Line, statusChan <-chan Status, doneChan <-chan struct{}, asciiMode bool, skipTUIDelay bool, tuiConfig *tui.TUIConfig) Model {
 	// Initialize zone manager for mouse click tracking
 	zone.NewGlobal()
 
@@ -238,12 +250,54 @@ func NewModel(height int, runPhaseName string, lineChan <-chan Line, statusChan 
 		runPhaseName = "Run"
 	}
 
+	// Apply TUI config defaults if nil
+	if tuiConfig == nil {
+		tuiConfig = tui.DefaultTUIConfig()
+	}
+
 	// Create panes with appropriate buffer sizes
-	bufferSize := 500 // Per-pane buffer
+	bufferSize := tuiConfig.BufferSizePane
+	if bufferSize <= 0 {
+		bufferSize = 500 // Fallback
+	}
 	panes := [3]*Pane{
 		NewPane(PhaseInit, bufferSize),
 		NewPane(PhaseRun, bufferSize),
 		NewPane(PhaseSummary, bufferSize),
+	}
+
+	// Get values from config with fallbacks
+	resultsBufferSize := tuiConfig.BufferSizeResults
+	if resultsBufferSize <= 0 {
+		resultsBufferSize = 100
+	}
+	maxTabs := tuiConfig.MaxTabs
+	if maxTabs <= 0 {
+		maxTabs = 36
+	}
+	tabColumns := tuiConfig.DefaultColumns
+	if tabColumns <= 0 {
+		tabColumns = 4
+	}
+	freezeTimeoutSecs := int(tuiConfig.ExitCountdown.Seconds())
+	if freezeTimeoutSecs <= 0 {
+		freezeTimeoutSecs = 10
+	}
+	metricsInterval := tuiConfig.MetricsInterval
+	if metricsInterval <= 0 {
+		metricsInterval = 500 * time.Millisecond
+	}
+	minDisplayTime := tuiConfig.MinDisplayTime
+	if minDisplayTime <= 0 {
+		minDisplayTime = 1500 * time.Millisecond
+	}
+	autoScrollResume := tuiConfig.AutoScrollResume
+	if autoScrollResume <= 0 {
+		autoScrollResume = 8 * time.Second
+	}
+	bufferSizeUoW := tuiConfig.BufferSizeUoW
+	if bufferSizeUoW <= 0 {
+		bufferSizeUoW = 200
 	}
 
 	return Model{
@@ -252,19 +306,26 @@ func NewModel(height int, runPhaseName string, lineChan <-chan Line, statusChan 
 		runPhaseName:      runPhaseName,
 		asciiMode:         asciiMode,
 		skipTUIDelay:      skipTUIDelay,
-		freezeTimeoutSecs: 10, // Default user timer (10s), set to 120 when Freeze clicked
-		resultsBuffer:     NewRingBuffer(100), // Results buffer
+		freezeTimeoutSecs: freezeTimeoutSecs,
+		resultsBuffer:     NewRingBuffer(resultsBufferSize),
 		panes:             panes,
 		activePhase:       PhaseInit, // Start with Init phase
 		lineChan:          lineChan,
 		statusChan:        statusChan,
+		doneChan:          doneChan,
 		startTime:         time.Now(),
-		mouseMode:         true,                          // Start with mouse ON (scrolling enabled)
-		uowStates:      make(map[string]*UoWState), // Per-module state tracking
-		uowOrder:       make([]string, 0),             // Tab ordering
-		activeTab:         "",                            // Start with aggregate view
-		maxTabs:           36,                            // Maximum visible tabs (6 rows × 6 tabs/row)
-		tabColumns:        4,                             // Default tab columns (adjustable 2-6)
+		mouseMode:         true,                      // Start with mouse ON (scrolling enabled)
+		uowStates:         make(map[string]*UoWState), // Per-module state tracking
+		uowOrder:          make([]string, 0),          // Tab ordering
+		activeTab:         "",                         // Start with aggregate view
+		maxTabs:           maxTabs,
+		tabColumns:        tabColumns,
+
+		// Config-driven values
+		metricsUpdateInterval: metricsInterval,
+		minDisplayTime:        minDisplayTime,
+		autoScrollResume:      autoScrollResume,
+		bufferSizeUoW:         bufferSizeUoW,
 	}
 }
 
@@ -278,30 +339,40 @@ func (m Model) Init() tea.Cmd {
 }
 
 // listenForLines creates a command that waits for new output lines.
+// Returns linesDoneMsg when lineChan is closed or doneChan is closed.
 func (m Model) listenForLines() tea.Cmd {
 	return func() tea.Msg {
 		if m.lineChan == nil {
 			return linesDoneMsg{}
 		}
-		line, ok := <-m.lineChan
-		if !ok {
+		select {
+		case line, ok := <-m.lineChan:
+			if !ok {
+				return linesDoneMsg{}
+			}
+			return lineMsg(line)
+		case <-m.doneChan:
 			return linesDoneMsg{}
 		}
-		return lineMsg(line)
 	}
 }
 
 // listenForStatus creates a command that waits for status updates.
+// Returns statusDoneMsg when statusChan is closed or doneChan is closed.
 func (m Model) listenForStatus() tea.Cmd {
 	return func() tea.Msg {
 		if m.statusChan == nil {
 			return statusDoneMsg{}
 		}
-		status, ok := <-m.statusChan
-		if !ok {
+		select {
+		case status, ok := <-m.statusChan:
+			if !ok {
+				return statusDoneMsg{}
+			}
+			return statusMsg(status)
+		case <-m.doneChan:
 			return statusDoneMsg{}
 		}
-		return statusMsg(status)
 	}
 }
 
@@ -591,19 +662,21 @@ func (m *Model) GetOrCreateUoWState(moniker, displayName string, weight int) *Uo
 
 	// Create new module state with its own buffer
 	// StartTime is left zero - will be set when MarkUoWRunning is called
+	// Use config-driven buffer size
+	uowBufferSize := m.bufferSizeUoW
+	if uowBufferSize <= 0 {
+		uowBufferSize = 200 // Fallback
+	}
 	state := &UoWState{
 		Moniker:     moniker,
 		DisplayName: displayName,
 		Index:       m.nextUoWIdx, // Unique 1-based index from counter
 		Weight:      weight,
-		Buffer:      NewRingBuffer(200),
+		Buffer:      NewRingBuffer(uowBufferSize),
 		Status:      UoWPending, // Start as pending until slot acquired
 	}
 	m.uowStates[moniker] = state
 	m.uowOrder = append(m.uowOrder, moniker)
-
-	// Track total UoW count
-	m.uowTotal++
 
 	return state
 }
@@ -622,10 +695,8 @@ func (m *Model) MarkUoWRunning(moniker string) {
 	if state.Status == UoWComplete || state.Status == UoWSkipped || state.Status == UoWFailed {
 		return
 	}
-	// Only count transition from pending to running
-	if state.Status == UoWPending {
-		m.uowRunning++
-	}
+	// Weight-based tracking is derived in view.go from UoWState.Weight
+	// No need to track running count here - it's derived from state
 	state.Status = UoWRunning
 	state.StartTime = time.Now() // Start timing when execution actually begins
 }
@@ -642,36 +713,18 @@ func (m *Model) MarkUoWComplete(moniker string, exitCode int) {
 		state = m.GetOrCreateUoWState(moniker, "", 1)
 	}
 
-	// Check if already in a terminal state (don't double-count)
-	oldStatus := state.Status
-	alreadyComplete := oldStatus == UoWComplete || oldStatus == UoWSkipped || oldStatus == UoWFailed
-
-	// Track running count - decrement if transitioning from running
-	if oldStatus == UoWRunning && m.uowRunning > 0 {
-		m.uowRunning--
-	}
-
 	// Always set the status from exit code - this is the authoritative source
+	// Note: counts are derived from uowStates via DeriveCounts(), not counters
 	newStatus := StatusFromExitCode(exitCode)
-	log.Debugf("[TUI-CACHE] MarkUoWComplete: module=%s exitCode=%d -> %v (was %v)", moniker, exitCode, newStatus, oldStatus)
+	log.Debugf("[TUI-CACHE] MarkUoWComplete: module=%s exitCode=%d -> %v (was %v)", moniker, exitCode, newStatus, state.Status)
 
 	state.EndTime = time.Now()
 	state.ExitCode = exitCode
 	state.Status = newStatus
 
-	// Track cumulative completion counters (only increment once, when first completing)
-	if !alreadyComplete {
-		switch newStatus {
-		case UoWComplete:
-			m.uowDone++
-		case UoWSkipped:
-			m.uowCached++
-		case UoWFailed:
-			m.uowFailed++
-		}
-	}
-
 	// Tabs stay visible - only removed via FIFO when over limit
+	// Note: Counter fields (uowDone, uowCached, uowFailed) were removed.
+	// Use DeriveCounts() to get current statistics from uowStates.
 }
 
 // removeUoWFromTabs removes a module from the tab display.
@@ -801,12 +854,9 @@ func (m Model) getLockParts() []string {
 	return parts
 }
 
-// metricsUpdateInterval is how often to refresh CPU/memory metrics.
-// These gopsutil calls are expensive (100-500ms on Windows), so we cache them.
-const metricsUpdateInterval = 500 * time.Millisecond
-
 // UpdateCachedMetrics refreshes the cached CPU and memory metrics.
 // Should be called from the tick handler, not from View().
+// The update interval is configured via TUIConfig.MetricsInterval.
 func (m *Model) UpdateCachedMetrics() {
 	// Skip during exit sequence - no need to update metrics when quitting
 	// Also skip once all runners are done (summary is being generated)
@@ -814,8 +864,8 @@ func (m *Model) UpdateCachedMetrics() {
 		return
 	}
 
-	// Skip if updated recently
-	if time.Since(m.lastMetricsUpdate) < metricsUpdateInterval {
+	// Skip if updated recently (use config-driven interval)
+	if time.Since(m.lastMetricsUpdate) < m.metricsUpdateInterval {
 		return
 	}
 
@@ -876,4 +926,16 @@ func (m Model) ComponentsWidth() int {
 		width = 20
 	}
 	return width
+}
+
+// GetCapacityInfo returns the current capacity state for display.
+// Uses the three-value model: Running (from UoW states), Roof (peak allocation),
+// and PressureTarget (dynamic optimal based on RAM/CPU).
+func (m Model) GetCapacityInfo() CapacityInfo {
+	counts := m.DeriveCounts()
+	return CapacityInfo{
+		Running:        counts.Running,
+		Roof:           m.roof,
+		PressureTarget: m.pressureTarget,
+	}
 }

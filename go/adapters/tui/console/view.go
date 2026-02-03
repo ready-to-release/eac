@@ -1682,13 +1682,13 @@ func (m Model) renderResourcesPane() string {
 	var result strings.Builder
 
 	// Fixed column widths for vertical alignment across 2 lines
-	// Col1: timer+CPU / UoW
-	// Col2: Mem / Tools
-	// Col3: Jobs / Layer
+	// Col1: timer+CPU / UoW (remaining + running/lamps)
+	// Col2: Mem / ✓ ⏭ ✗ counters
+	// Col3: Containers / Tools
 	const (
-		col1Width = 38 // Aligns: timer+CPU, UoW
-		col2Width = 24 // Aligns: Mem, Tools
-		col3Width = 20 // Aligns: Jobs, Layer
+		col1Width = 52 // Aligns: timer+CPU, UoW remaining+running+lamps
+		col2Width = 22 // Aligns: Mem, ✓ ⏭ ✗ counters
+		col3Width = 20 // Aligns: Containers, Tools
 	)
 
 	// Helper to pad string to fixed width
@@ -1761,24 +1761,12 @@ func (m Model) renderResourcesPane() string {
 	result.WriteString(Styles.Border.Render("│") + " " + line1 + " " + Styles.Border.Render("│") + "\n")
 
 	// === Line 2: UoW status ===
-	// Count from actual tabs (same as header panel) for consistency
-	var running, done, cached, failed int
-	for _, moniker := range m.uowOrder {
-		state := m.uowStates[moniker]
-		if state == nil {
-			continue
-		}
-		switch state.Status {
-		case UoWRunning:
-			running++
-		case UoWComplete:
-			done++
-		case UoWSkipped:
-			cached++
-		case UoWFailed:
-			failed++
-		}
-	}
+	// Use derived counts (single source of truth)
+	counts := m.DeriveCounts()
+	running := counts.Running
+	done := counts.Done
+	cached := counts.Cached
+	failed := counts.Failed
 
 	// Icons (assume 2 chars width each for Unicode)
 	runIcon, doneIcon, cacheIcon, failIcon := "▶", "✓", "⏭", "✗"
@@ -1797,35 +1785,67 @@ func (m Model) renderResourcesPane() string {
 	finalized := done + cached + failed
 	remaining := total - finalized
 
+	// Get capacity info for three-value model display
+	capInfo := m.GetCapacityInfo()
+	// If roof not set from Status, fall back to pressureCap from lock
+	if capInfo.Roof == 0 {
+		capInfo.Roof = pressureCap
+	}
+	if capInfo.PressureTarget == 0 {
+		capInfo.PressureTarget = pressureCap
+	}
+
 	// Fixed-width format: "UoW: ▶XX/YY ▶ZZ/WW ✓XXX ⏭XXX ✗XXX"
 	// First fraction: remaining/total (pending work)
-	// Second fraction: running/capacity (active slots)
+	// Second fraction: running/roof (active slots vs hard ceiling)
 	remainingStr := Styles.TabPending.Render(fmt.Sprintf("%3d", remaining)) +
 		Styles.Dim.Render(fmt.Sprintf("/%-3d", total))
-	runStr := Styles.TabRunning.Render(fmt.Sprintf("%s%2d", runIcon, running)) +
-		Styles.Dim.Render(fmt.Sprintf("/%-2d", pressureCap))
+
+	// Build capacity string with optional pressure indicator
+	// Format: "▶●●●●●○○○○○ 5/16 [=16]" normal or "▶●●●●●○○○○○ 5/16 [▼12]" under pressure
+	roof := capInfo.EffectiveRoof()
+
+	// Render capacity lamps: filled (●) = running, empty (○) = available
+	filledLamps, emptyLamps := RenderCapacityLamps(running, roof, m.asciiMode)
+	lampsStr := Styles.TabRunning.Render(filledLamps) + Styles.Dim.Render(emptyLamps)
+
+	runStr := Styles.TabRunning.Render(runIcon) + lampsStr + " " +
+		Styles.TabRunning.Render(fmt.Sprintf("%2d", running)) +
+		Styles.Dim.Render(fmt.Sprintf("/%-2d", roof))
+
+	// Always show pressure target indicator:
+	// [▼N] = under pressure (throttling to N)
+	// [=N] = normal (capacity stable at N)
+	if capInfo.IsUnderPressure() {
+		pressureIcon := "▼"
+		if m.asciiMode {
+			pressureIcon = "v"
+		}
+		runStr += Styles.Dim.Render(fmt.Sprintf(" [%s%d]", pressureIcon, capInfo.PressureTarget))
+	} else if roof > 0 {
+		steadyIcon := "="
+		runStr += Styles.Dim.Render(fmt.Sprintf(" [%s%d]", steadyIcon, roof))
+	}
 
 	div := Styles.Dim.Render("|")
-	uowStr := white.Render("UoW: ") +
-		remainingStr + " " + div + " " +
-		runStr + " " + div + " " +
-		Styles.TabComplete.Render(fmt.Sprintf("%s%3d", doneIcon, done)) + " " +
-		Styles.TabSkipped.Render(fmt.Sprintf("%s%3d", cacheIcon, cached)) + " " +
-		Styles.TabFailed.Render(fmt.Sprintf("%s%3d", failIcon, failed))
 
-	// Col1: UoW stats
+	// Col1: UoW remaining + running/lamps (aligns under Timer+CPU)
+	uowStr := white.Render("UoW: ") + remainingStr + " " + div + " " + runStr
 	col1Line2 := padTo(zone.Mark("res-uow", uowStr), col1Width)
 
-	// Col2: Tools (lamps only, slots count shown in UoW)
-	toolsStr := white.Render("Tools:") + m.renderToolsDots()
-	col2Line2 := padTo(zone.Mark("res-tools", toolsStr), col2Width)
+	// Col2: ✓ ⏭ ✗ counters (aligns under Mem)
+	countersStr := Styles.TabComplete.Render(fmt.Sprintf("%s%3d", doneIcon, done)) + " " +
+		Styles.TabSkipped.Render(fmt.Sprintf("%s%3d", cacheIcon, cached)) + " " +
+		Styles.TabFailed.Render(fmt.Sprintf("%s%3d", failIcon, failed))
+	col2Line2 := padTo(zone.Mark("res-counters", countersStr), col2Width)
 
-	// Col3: Layer (if set) or empty
-	var col3Line2 string
+	// Col3: Tools (aligns under Containers)
+	toolsStr := white.Render("Tools:") + m.renderToolsDots()
+	// Add layer info if available
 	if m.totalLayers > 0 {
-		col3Line2 = zone.Mark("res-layer", white.Render("Layer: ")+Styles.Dim.Render(fmt.Sprintf("%d/%d", m.layer, m.totalLayers)))
+		toolsStr += " " + Styles.Dim.Render(fmt.Sprintf("L%d/%d", m.layer, m.totalLayers))
 	}
-	col3Line2 = padTo(col3Line2, col3Width)
+	col3Line2 := padTo(zone.Mark("res-tools", toolsStr), col3Width)
 
 	line2 := col1Line2 + sep + col2Line2 + sep + col3Line2
 	line2 = padTo(line2, contentWidth)

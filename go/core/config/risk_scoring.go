@@ -10,10 +10,10 @@ import (
 // RiskScoringConfig holds configurable risk scoring mappings.
 // It implements security.RiskScoringPort.
 type RiskScoringConfig struct {
-	// Impact maps module type to default impact rating (1-5)
+	// Impact maps module moniker to default impact rating (1-5)
 	Impact map[string]int `yaml:"impact"`
 
-	// Criticality maps module type to criticality level (high/medium/low)
+	// Criticality maps module moniker to criticality level (high/medium/low)
 	Criticality map[string]string `yaml:"criticality"`
 
 	// SeverityWeights maps severity level to likelihood increment
@@ -66,13 +66,13 @@ func DefaultRiskScoringConfig() *RiskScoringConfig {
 	}
 }
 
-// GetImpact returns the impact rating for a module type.
-// Falls back to _default if the type is not found.
-func (c *RiskScoringConfig) GetImpact(moduleType string) int {
+// GetImpact returns the impact rating for a module moniker.
+// Falls back to _default if the moniker is not found.
+func (c *RiskScoringConfig) GetImpact(moniker string) int {
 	if c == nil || c.Impact == nil {
 		return 3 // Ultimate fallback: Medium
 	}
-	if v, ok := c.Impact[moduleType]; ok {
+	if v, ok := c.Impact[moniker]; ok {
 		return v
 	}
 	if v, ok := c.Impact["_default"]; ok {
@@ -81,13 +81,13 @@ func (c *RiskScoringConfig) GetImpact(moduleType string) int {
 	return 3 // Ultimate fallback: Medium
 }
 
-// GetCriticality returns the criticality level for a module type.
-// Falls back to _default if the type is not found.
-func (c *RiskScoringConfig) GetCriticality(moduleType string) string {
+// GetCriticality returns the criticality level for a module moniker.
+// Falls back to _default if the moniker is not found.
+func (c *RiskScoringConfig) GetCriticality(moniker string) string {
 	if c == nil || c.Criticality == nil {
 		return "medium" // Ultimate fallback
 	}
-	if v, ok := c.Criticality[moduleType]; ok {
+	if v, ok := c.Criticality[moniker]; ok {
 		return v
 	}
 	if v, ok := c.Criticality["_default"]; ok {

@@ -58,8 +58,7 @@ const (
 // # Sub-field Nil Checks Still Required
 //
 // While top-level config fields are guaranteed non-nil, nested fields may be nil:
-//   - moduleType.Build may be nil (module type doesn't define artifacts)
-//   - moduleType.DockerBuild may be nil (not a docker-building type)
+//   - component.Build may be nil (component doesn't define artifacts)
 //   - module.Metadata may be nil (no metadata defined)
 type EACConfig struct {
 	// Root paths

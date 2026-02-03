@@ -144,7 +144,7 @@ func detectLocalChanges(workspaceRoot string, requestedModules []string) (*Local
 	// Use workunit StateManager for change detection
 	stateMgr := workunit.NewStateManager(workspaceRoot)
 	rule := workunit.DefaultRules[workunit.ContextBuild]
-	changeResult, err := stateMgr.DetectModuleChanges(workunit.ContextBuild, monikers, rule, hashProvider)
+	changeResult, err := stateMgr.DetectModuleChanges(workunit.ContextBuild, monikers, rule, hashProvider, nil)
 	if err != nil {
 		return nil, err
 	}

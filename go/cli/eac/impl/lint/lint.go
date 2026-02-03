@@ -116,7 +116,7 @@ func Lint() int {
 		Sequential:     sequential,
 		Turbo:          shared.Turbo,
 		MaxConcurrency: shared.MaxConcurrency,
-		ForceRebuild:   shared.SkipCache, // Use ForceRebuild for skip-cache flag
+		ForceRebuild:   shared.CacheConfig.ShouldSkipState(), // Use ForceRebuild for skip-cache flag
 		DryRun:         shared.DryRun,
 		Layered:        !shared.UnlayeredBuild && !shared.Turbo,
 		UseTUI:         shared.UseTUI,
@@ -126,13 +126,14 @@ func Lint() int {
 		SkipTUIDelay:   shared.SkipTUIDelay,
 		ShowTimings:    shared.ShowTimings,
 		DebugMode:      shared.Debug,
+		CacheConfig:    shared.CacheConfig,
 	}
 
 	// Create lint-specific config
 	lintCfg := &LintConfig{
 		Fix:       lintFlags.Fix,
 		Config:    lintFlags.ConfigPath,
-		ForceLint: shared.SkipCache,
+		ForceLint: shared.CacheConfig.ShouldSkipState(),
 	}
 
 	return RunLintWithFramework(cmdCfg, lintCfg)

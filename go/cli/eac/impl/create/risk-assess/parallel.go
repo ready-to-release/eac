@@ -170,7 +170,7 @@ func assessSingleModule(
 
 		// Calculate risk score
 		likelihood := scoring.CalculateBaseLikelihood(0, 0, 0, result.NotSatisfied)
-		impact := scoring.GetDefaultImpact("service")
+		impact := scoring.GetDefaultImpact(moduleName)
 		result.RiskScore = scoring.ComputeRiskScore(moduleName, likelihood, impact, "Based on control satisfaction")
 	}
 

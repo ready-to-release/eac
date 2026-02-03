@@ -102,6 +102,11 @@ func GenerateMkDocsConfig(workspaceRoot string, opts ConfigOptions) ([]byte, err
 		content = replacePDFConcurrency(content, opts.PDFConcurrency)
 	}
 
+	// For PDF builds, inject book_title and book_description into aggregator config
+	if opts.OutputFormat != "site" {
+		content = injectAggregatorBookInfo(content, opts.BookTitle, opts.BookDescription)
+	}
+
 	return []byte(content), nil
 }
 
@@ -152,6 +157,42 @@ func replacePDFConcurrency(content string, concurrency int) string {
 	// Match "concurrency: <number>" with proper indentation (10 spaces in pdf formats section)
 	pattern := regexp.MustCompile(`(?m)^(\s+concurrency:\s*)\d+\s*$`)
 	return pattern.ReplaceAllString(content, fmt.Sprintf("${1}%d", concurrency))
+}
+
+// injectAggregatorBookInfo adds book_title and book_description to the aggregator config section.
+// These are used by the PDF exporter to generate cover pages, TOC, and footers.
+func injectAggregatorBookInfo(content, bookTitle, bookDescription string) string {
+	if bookTitle == "" && bookDescription == "" {
+		return content
+	}
+
+	// Find the aggregator section and add book_title/book_description after merge_workers
+	// Look for "merge_workers:" line and add after it
+	lines := strings.Split(content, "\n")
+	var result []string
+
+	for i, line := range lines {
+		result = append(result, line)
+
+		// After merge_workers line, inject book_title and book_description
+		if strings.Contains(line, "merge_workers:") {
+			// Detect indentation (12 spaces for aggregator options)
+			indent := "            "
+			if bookTitle != "" {
+				// Escape single quotes in title
+				escaped := strings.ReplaceAll(bookTitle, "'", "''")
+				result = append(result, fmt.Sprintf("%sbook_title: '%s'", indent, escaped))
+			}
+			if bookDescription != "" {
+				// Escape single quotes in description
+				escaped := strings.ReplaceAll(bookDescription, "'", "''")
+				result = append(result, fmt.Sprintf("%sbook_description: '%s'", indent, escaped))
+			}
+		}
+		_ = i // Avoid unused variable warning
+	}
+
+	return strings.Join(result, "\n")
 }
 
 // WriteMkDocsConfig writes a generated mkdocs.yml to the specified path.

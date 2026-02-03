@@ -42,9 +42,14 @@ func (h *SiteRenderHandler) Requirements() []string { return []string{"docker"} 
 // resolveBaseSiteComponent determines the base-site component this site-render depends on.
 // Resolution order:
 // 1. Component's depends_on field (explicit dependency)
-// 2. Naming convention: "{name}-base" for component "{name}"
-// 3. Default to "base-site"
-func resolveBaseSiteComponent(module interfaces.ModuleContractPort, componentName string) string {
+// 2. Same component name (for tool_chain scenarios like docs-pdf)
+// 3. Naming convention: "{name}-base" for component "{name}"
+// 4. Default to "base-site"
+//
+// The manifestStore parameter is optional - if provided, it checks whether a manifest
+// exists for the same component name (supporting tool_chain where preprocess and render
+// share the same component). If nil, falls back to naming conventions only.
+func resolveBaseSiteComponent(module interfaces.ModuleContractPort, componentName string, manifestStore *ManifestStore) string {
 	concrete := adapters.UnwrapModule(module)
 	if concrete != nil {
 		if comp, ok := concrete.Components[componentName]; ok && comp != nil {
@@ -54,6 +59,15 @@ func resolveBaseSiteComponent(module interfaces.ModuleContractPort, componentNam
 				// This works because site-render/pdf-render components
 				// should only depend on their base-site component
 				return dep
+			}
+		}
+
+		// For tool_chain scenarios (like docs-pdf), the preprocess step saves
+		// its manifest under the same component name. Check if one exists.
+		if manifestStore != nil {
+			manifest, _ := manifestStore.Load(concrete.Moniker, componentName)
+			if manifest != nil && manifest.Type == ComponentTypeBaseSite {
+				return componentName
 			}
 		}
 	}
@@ -70,7 +84,7 @@ func resolveBaseSiteComponent(module interfaces.ModuleContractPort, componentNam
 // ValidateModule checks if a module has valid base-site dependency.
 func (h *SiteRenderHandler) ValidateModule(module interfaces.ModuleContractPort, workspaceRoot, component string) error {
 	// Resolve the base-site component this site-render depends on
-	baseSiteComp := resolveBaseSiteComponent(module, component)
+	baseSiteComp := resolveBaseSiteComponent(module, component, h.manifestStore)
 
 	// Check if base-site manifest exists
 	manifest, err := h.manifestStore.Load(module.GetMoniker(), baseSiteComp)
@@ -110,7 +124,7 @@ func (h *SiteRenderHandler) Build(
 	}
 
 	// Resolve base-site component this site-render depends on
-	baseSiteComponent := resolveBaseSiteComponent(module, opts.Component)
+	baseSiteComponent := resolveBaseSiteComponent(module, opts.Component, h.manifestStore)
 
 	logln(logWriter, "\n=== Rendering site: %s/%s (base: %s) ===", concrete.Moniker, opts.Component, baseSiteComponent)
 

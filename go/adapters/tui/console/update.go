@@ -7,7 +7,6 @@ import (
 	"github.com/atotto/clipboard"
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
-	"github.com/ready-to-release/eac/go/core/config"
 )
 
 // Update handles all messages and updates the model.
@@ -152,11 +151,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 
-		// Ensure TUI is visible for at least 1.5 seconds before auto-exit
+		// Ensure TUI is visible for minimum display time before auto-exit
 		// This prevents the TUI from flashing and disappearing on fast builds
-		minDisplayTime := 1500 * time.Millisecond
 		elapsed := time.Since(m.startTime)
-		if elapsed < minDisplayTime && !m.userHasInteracted {
+		if elapsed < m.minDisplayTime && !m.userHasInteracted {
 			// Not enough time has passed - delay exit until tick handler
 			m.exitRequested = true
 			return m, nil
@@ -245,6 +243,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.layer = status.Layer
 		m.totalLayers = status.TotalLayers
 
+		// Update capacity tracking (three-value model)
+		// Only update if non-zero to preserve values across partial status updates
+		if status.Roof > 0 {
+			m.roof = status.Roof
+		}
+		if status.PressureTarget > 0 {
+			m.pressureTarget = status.PressureTarget
+		}
+
 		// Track when all runners completed
 		if m.total > 0 && m.completed >= m.total && m.allRunnersCompleted.IsZero() {
 			m.allRunnersCompleted = time.Now()
@@ -286,7 +293,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Check if auto-scroll should resume after timeout
 		if m.panes[PhaseRun] != nil {
-			m.panes[PhaseRun].CheckAutoScrollResume(config.TUIAutoScrollResumeTimeout())
+			m.panes[PhaseRun].CheckAutoScrollResume(m.autoScrollResume)
 		}
 
 		// === THREE-THREAD MODEL ===
@@ -325,9 +332,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// 4. Finalization: if exit requested, either quit (if summary ready) or show "rendering summary"
 		if m.exitRequested {
 			// Ensure TUI is visible for minimum time before auto-exit (unless user interacted)
-			minDisplayTime := 1500 * time.Millisecond
 			elapsed := time.Since(m.startTime)
-			if elapsed < minDisplayTime && !m.userHasInteracted {
+			if elapsed < m.minDisplayTime && !m.userHasInteracted {
 				// Not enough time - keep ticking
 				return m, m.tickCmd()
 			}
@@ -563,15 +569,12 @@ func (m *Model) finalizeAllTabs() {
 			// Mark as skipped (blue) - the safest default since by the time
 			// summary arrives, all work is complete. Running/pending state
 			// indicates the completion message is still in the queue.
-			if state.Status == UoWRunning && m.uowRunning > 0 {
-				m.uowRunning--
-			}
+			// Note: counts are derived from state via DeriveCounts(), no counter update needed
 			state.Status = UoWSkipped
 			state.ExitCode = -1
 			if state.EndTime.IsZero() {
 				state.EndTime = time.Now()
 			}
-			m.uowCached++
 		}
 	}
 }

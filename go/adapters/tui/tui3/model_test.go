@@ -327,7 +327,7 @@ func TestModel_DeriveUoWCounters_Weighted(t *testing.T) {
 
 		// Add units with different weights
 		m.AddUnit("build:mod-a:go:go", "mod-a:go", cells.UnitRunning, 1)  // weight 1
-		m.AddUnit("build:mod-b:pdf:pdf-render-tool", "mod-b:pdf", cells.UnitRunning, 4) // weight 4 (PDF)
+		m.AddUnit("build:mod-b:pdf:pdf-tool", "mod-b:pdf", cells.UnitRunning, 4) // weight 4 (PDF)
 		m.AddUnit("build:mod-c:site:mkdocs", "mod-c:site", cells.UnitPending, 1) // weight 1 (not running)
 
 		m.updateCells()
@@ -355,6 +355,47 @@ func TestModel_DeriveUoWCounters_Weighted(t *testing.T) {
 		// Running should be 1 + 1 = 2 (each defaults to weight 1)
 		if m.uowRunning != 2 {
 			t.Errorf("uowRunning = %d, want 2 (default weight 1 each)", m.uowRunning)
+		}
+	})
+
+	t.Run("weight preserved after Pending->Running transition via UpdateUnit", func(t *testing.T) {
+		// This test mimics the exact runtime flow:
+		// 1. UnitStartMsg adds unit with weight and Pending status
+		// 2. UnitRunningMsg updates status to Running via UpdateUnit
+		// 3. updateCells should use the preserved weight
+		m := NewModel(80, 24, "test", false)
+
+		// Add 3 docs units with weight 5 each (same as real docs-pdf)
+		// These are added as Pending (mimics UnitStartMsg in update.go)
+		m.AddUnit("build:books:howto:docs-pdf", "books:howto", cells.UnitPending, 5)
+		m.AddUnit("build:books:developer:docs-pdf", "books:developer", cells.UnitPending, 5)
+		m.AddUnit("build:books:operator:docs-pdf", "books:operator", cells.UnitPending, 5)
+
+		m.updateCells()
+
+		// All pending, running should be 0
+		if m.uowRunning != 0 {
+			t.Errorf("initial uowRunning = %d, want 0 (all pending)", m.uowRunning)
+		}
+
+		// Now update all 3 to Running (mimics UnitRunningMsg in update.go)
+		m.UpdateUnit("build:books:howto:docs-pdf", cells.UnitRunning)
+		m.UpdateUnit("build:books:developer:docs-pdf", cells.UnitRunning)
+		m.UpdateUnit("build:books:operator:docs-pdf", cells.UnitRunning)
+
+		m.updateCells()
+
+		// Running should be 5 + 5 + 5 = 15 (weighted sum), NOT 3 (unit count)
+		// This is the bug the user reported: "3x5 != 3"
+		if m.uowRunning != 15 {
+			t.Errorf("uowRunning = %d, want 15 (3 units × weight 5 each)", m.uowRunning)
+		}
+
+		// Verify individual unit weights are preserved
+		for _, unit := range m.units {
+			if unit.Weight != 5 {
+				t.Errorf("unit %s weight = %d, want 5 (weight should be preserved)", unit.Moniker, unit.Weight)
+			}
 		}
 	})
 }

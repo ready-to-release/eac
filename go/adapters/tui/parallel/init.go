@@ -13,4 +13,5 @@ func init() {
 	tui.Register("test", factory)
 	tui.Register("lint", factory)
 	tui.Register("scan", factory)
+	tui.Register("update ai-summary", factory)
 }

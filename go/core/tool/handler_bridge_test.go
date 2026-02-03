@@ -245,7 +245,7 @@ func TestBuildContainerConfig_WithWeight(t *testing.T) {
 	tool := &ToolDefinition{
 		ID:        "pdf-tool",
 		Type:      ToolTypeContainer,
-		LocalPath: "containers/pdf-render-tool",
+		LocalPath: "containers/pdf-tool",
 		Resources: &ToolResources{
 			CPUs:    1,      // Base CPU
 			Memory:  "2g",   // Base memory
@@ -320,13 +320,13 @@ func TestBuildContainerConfig_NoWeight(t *testing.T) {
 func TestBuildContainerConfig_ExplicitCPULimit(t *testing.T) {
 	bridge := NewHandlerToolBridge()
 
-	// Test case: tool with explicit CPU limit (like pdf-render-tool)
+	// Test case: tool with explicit CPU limit (like pdf-tool)
 	// Tool has cpus: 4, component has weight: 4
 	// Should NOT multiply: 4 CPUs used directly (not 4 * 4 = 16)
 	tool := &ToolDefinition{
-		ID:        "pdf-render-tool",
+		ID:        "pdf-tool",
 		Type:      ToolTypeContainer,
-		LocalPath: "containers/pdf-render-tool",
+		LocalPath: "containers/pdf-tool",
 		Resources: &ToolResources{
 			CPUs:   4,    // Explicit limit
 			Memory: "8g", // Will be scaled by weight

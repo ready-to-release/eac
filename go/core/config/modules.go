@@ -613,19 +613,16 @@ func (c *RepositoryConfig) applyModuleDefaults() {
 
 // ApplyComponentDefaults resolves component roots and patterns from component-types.yml.
 // This should be called after ComponentTypes are loaded.
-// Three-phase process:
-// 1. Inject prerequisite components (e.g., auto-create base-site for pdf-render)
-// 2. Resolve roots, patterns, and other defaults
-// 3. Infer Go artifacts when not explicitly defined
+// Two-phase process:
+// 1. Resolve roots, patterns, and other defaults
+// 2. Infer Go artifacts when not explicitly defined
 func (c *RepositoryConfig) ApplyComponentDefaults(compTypes *ComponentTypesConfig, repoRoot string) {
 	for i := range c.Modules {
 		m := &c.Modules[i]
-		// Phase 1: Inject missing prerequisite components
-		m.injectPrerequisiteComponents(compTypes)
-		// Phase 2: Resolve roots, patterns, and other defaults
+		// Phase 1: Resolve roots, patterns, and other defaults
 		m.resolveComponentRoots(compTypes)
 		m.resolveDerivedPaths()
-		// Phase 3: Infer Go artifacts when not explicitly defined
+		// Phase 2: Infer Go artifacts when not explicitly defined
 		m.inferGoArtifacts(compTypes, repoRoot)
 	}
 }
@@ -656,114 +653,6 @@ func (m *Module) inferGoArtifacts(compTypes *ComponentTypesConfig, repoRoot stri
 	}
 
 	goComp.Build.Artifacts = artifacts
-}
-
-// injectPrerequisiteComponents scans for components that require prerequisites
-// and injects the missing components before defaults resolution.
-// This enables simplified declarations where users only specify render components
-// and base-site components are auto-created.
-func (m *Module) injectPrerequisiteComponents(compTypes *ComponentTypesConfig) {
-	if compTypes == nil {
-		return
-	}
-
-	// Collect injections needed (avoid modifying map while iterating)
-	type injection struct {
-		prereqName string            // Component name to inject (e.g., "tutorials-base")
-		prereqType string            // Component type (e.g., "base-site")
-		renderName string            // Render component that needs this prerequisite
-		config     map[string]string // Config values (e.g., book name)
-	}
-	var injections []injection
-
-	for compName, entry := range m.Components {
-		// Get component type
-		compType := compName
-		if entry != nil && entry.Type != "" {
-			compType = entry.Type
-		}
-
-		// Check if this type has inject_prerequisite
-		ct := compTypes.Get(compType)
-		if ct == nil || ct.Defaults == nil || ct.Defaults.InjectPrerequisite == "" {
-			continue
-		}
-
-		prereqType := ct.Defaults.InjectPrerequisite
-		prereqName := derivePrerequisiteName(compName, prereqType)
-
-		// Skip if prerequisite already exists (by derived name)
-		if m.Components.HasComponent(prereqName) {
-			continue
-		}
-
-		// Skip if component already has explicit depends_on to a prerequisite type
-		// This handles cases like docs:site depending on docs:base-site (not site-base)
-		if entry != nil && len(entry.DependsOn) > 0 {
-			hasPrereq := false
-			for _, dep := range entry.DependsOn {
-				if depEntry := m.Components[dep]; depEntry != nil {
-					depType := dep
-					if depEntry.Type != "" {
-						depType = depEntry.Type
-					}
-					if depType == prereqType {
-						hasPrereq = true
-						break
-					}
-				}
-			}
-			if hasPrereq {
-				continue
-			}
-		}
-
-		// Record injection needed
-		injections = append(injections, injection{
-			prereqName: prereqName,
-			prereqType: prereqType,
-			renderName: compName,
-			config:     map[string]string{"book": compName}, // Derive book from render component name
-		})
-	}
-
-	// Apply injections
-	for _, inj := range injections {
-		m.Components[inj.prereqName] = &ComponentEntry{
-			Type:   inj.prereqType,
-			Config: inj.config,
-		}
-
-		// Set depends_on on the render component
-		if renderEntry := m.Components[inj.renderName]; renderEntry != nil {
-			if renderEntry.DependsOn == nil {
-				renderEntry.DependsOn = []string{inj.prereqName}
-			} else if !containsString(renderEntry.DependsOn, inj.prereqName) {
-				renderEntry.DependsOn = append(renderEntry.DependsOn, inj.prereqName)
-			}
-		}
-	}
-}
-
-// derivePrerequisiteName generates the prerequisite component name.
-// Convention: "tutorials" (pdf-render) -> "tutorials-base" (base-site)
-func derivePrerequisiteName(compName, prereqType string) string {
-	switch prereqType {
-	case "base-site":
-		return compName + "-base"
-	default:
-		return compName + "-" + prereqType
-	}
-}
-
-// containsString checks if a slice contains a string.
-func containsString(slice []string, s string) bool {
-	for _, v := range slice {
-		if v == s {
-			return true
-		}
-	}
-	return false
 }
 
 // resolveComponentRoots resolves default roots and patterns for all components in the module.
@@ -839,15 +728,6 @@ func (m *Module) applyComponentDefaults(compName string, entry *ComponentEntry, 
 		}
 	}
 
-	// AutoBaseSite: auto-add dependency on "{name}-base" if no depends_on specified
-	// Convention: "tutorials" (pdf-render) → depends on "tutorials-base"
-	if ct.Defaults.AutoBaseSite && len(entry.DependsOn) == 0 {
-		baseSiteName := deriveBaseSiteName(compName, m.Components)
-		if baseSiteName != "" {
-			entry.DependsOn = []string{baseSiteName}
-		}
-	}
-
 	// Theme: set default theme for PDF rendering if not explicitly set
 	if ct.Defaults.Theme != "" {
 		if _, hasTheme := entry.Config["theme"]; !hasTheme {
@@ -871,21 +751,6 @@ func deriveBookName(compName string) string {
 	}
 	// Otherwise, component name IS the book name
 	return compName
-}
-
-// deriveBaseSiteName finds the base-site component this render depends on.
-// Convention: "tutorials" → looks for "tutorials-base" first, then "base-site"
-func deriveBaseSiteName(compName string, components ModuleComponents) string {
-	// First try "{name}-base"
-	baseName := compName + "-base"
-	if components.HasComponent(baseName) {
-		return baseName
-	}
-	// Fallback to "base-site" if it exists
-	if components.HasComponent("base-site") {
-		return "base-site"
-	}
-	return ""
 }
 
 // substituteMoniker replaces {moniker} in a list of patterns.

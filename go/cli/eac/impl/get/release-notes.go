@@ -40,6 +40,23 @@ func GetReleaseNotes() int {
 		return 1
 	}
 
+	// Check for help flag
+	for _, arg := range os.Args[2:] {
+		if arg == "--help" || arg == "-h" {
+			fmt.Println("Get release notes for a module")
+			fmt.Println("\nUsage: get release-notes <module> [version] [flags]")
+			fmt.Println("\nArguments:")
+			fmt.Println("  module     Module moniker")
+			fmt.Println("  version    Optional version number")
+			fmt.Println("\nFlags:")
+			fmt.Println("  --as-yaml    Output as YAML (default)")
+			fmt.Println("  --as-json    Output as JSON")
+			fmt.Println("  --as-toml    Output as TOML")
+			fmt.Println("  -h, --help   Show this help message")
+			return 0
+		}
+	}
+
 	// Parse arguments - expect module after "get release-notes"
 	args := os.Args[1:]
 

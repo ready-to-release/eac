@@ -35,7 +35,7 @@ func NewPDFRenderHandler(workspaceRoot string) *PDFRenderHandler {
 }
 
 // Name returns the handler identifier.
-func (h *PDFRenderHandler) Name() string { return "pdf-render-tool" }
+func (h *PDFRenderHandler) Name() string { return "pdf-tool" }
 
 // Requirements returns system dependencies (Docker required).
 func (h *PDFRenderHandler) Requirements() []string { return []string{"docker"} }
@@ -43,7 +43,7 @@ func (h *PDFRenderHandler) Requirements() []string { return []string{"docker"} }
 // ValidateModule checks if a module has valid base-site dependency.
 func (h *PDFRenderHandler) ValidateModule(module interfaces.ModuleContractPort, workspaceRoot, component string) error {
 	// Resolve the base-site component this pdf-render depends on
-	baseSiteComp := resolveBaseSiteComponent(module, component)
+	baseSiteComp := resolveBaseSiteComponent(module, component, h.manifestStore)
 
 	// Check if base-site manifest exists
 	manifest, err := h.manifestStore.Load(module.GetMoniker(), baseSiteComp)
@@ -83,7 +83,7 @@ func (h *PDFRenderHandler) Build(
 	}
 
 	// Resolve base-site component this pdf-render depends on
-	baseSiteComponent := resolveBaseSiteComponent(module, opts.Component)
+	baseSiteComponent := resolveBaseSiteComponent(module, opts.Component, h.manifestStore)
 
 	// Resolve book name from the base-site component config
 	bookName := resolveBookName(module, baseSiteComponent)
@@ -108,7 +108,7 @@ func (h *PDFRenderHandler) Build(
 	}
 
 	// Compute input hash for cache check
-	containerHash := getContainerImageHash(workspaceRoot, "pdf-render-tool")
+	containerHash := getContainerImageHash(workspaceRoot, "pdf-tool")
 	inputHash := computePDFRenderInputHash(baseManifest.OutputHash, theme, containerHash)
 
 	// Check cache - skip if base-site and theme unchanged
@@ -218,7 +218,7 @@ func (h *PDFRenderHandler) Build(
 			logln(logWriter, "🔄 Retrying PDF build (attempt %d/%d)...", attempt, maxRetries)
 		}
 
-		exitCode, execErr = bridge.ExecuteTool(context.Background(), "pdf-render-tool", tc)
+		exitCode, execErr = bridge.ExecuteTool(context.Background(), "pdf-tool", tc)
 		if execErr == nil && exitCode == 0 {
 			break
 		}
@@ -249,6 +249,9 @@ func (h *PDFRenderHandler) Build(
 		logln(logWriter, "❌ Failed to copy PDF: %v", err)
 		return BuildResult{ExitCode: 1}
 	}
+
+	// Note: Cover, TOC, and page numbers are now added by mkdocs-exporter's aggregator
+	// inside the container - no separate merge step needed
 
 	// Compute output hash
 	outputHash, _ := computeFileHashPath(pdfPath)

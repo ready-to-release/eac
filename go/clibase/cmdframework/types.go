@@ -11,6 +11,7 @@ import (
 	"github.com/ready-to-release/eac/contracts/core/0.1.0/interfaces"
 	"github.com/ready-to-release/eac/go/clibase/initsummary"
 	"github.com/ready-to-release/eac/go/clibase/orchestrator"
+	"github.com/ready-to-release/eac/go/core/cache"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
 	"github.com/ready-to-release/eac/go/core/domain/reports"
@@ -40,10 +41,11 @@ func NewInformationalExit(reason string) ErrInformationalExit {
 type CommandType string
 
 const (
-	CommandTypeBuild CommandType = "build"
-	CommandTypeTest  CommandType = "test"
-	CommandTypeScan  CommandType = "scan"
-	CommandTypeLint  CommandType = "lint"
+	CommandTypeBuild     CommandType = "build"
+	CommandTypeTest      CommandType = "test"
+	CommandTypeScan      CommandType = "scan"
+	CommandTypeLint      CommandType = "lint"
+	CommandTypeAISummary CommandType = "ai-summary"
 )
 
 // CommandConfig holds all configuration for a command execution.
@@ -87,6 +89,9 @@ type CommandConfig struct {
 	DebugMode    bool // Enable debug logging to console
 	ShowTimings  bool // Show timing breakdown in summary
 
+	// Cache Configuration
+	CacheConfig *cache.Config // Fine-grained cache control (--skip-cache flag)
+
 	// Command-Specific Options
 	Extra map[string]interface{}
 }
@@ -107,7 +112,7 @@ type ExecutionContext struct {
 	ModuleReport   *reports.ModuleContractReport
 	ModuleRegistry *modules.Registry
 	ExecutionPlan  *repository.ExecutionPlan
-	ModuleTypes    map[string]string // moniker -> component types (comma-separated)
+	ComponentTypesDisplay map[string]string // moniker -> component types (comma-separated)
 
 	// Verification State (populated by phaseVerify)
 	InitSummary *initsummary.Summary

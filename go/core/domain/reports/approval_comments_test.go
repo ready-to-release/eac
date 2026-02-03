@@ -59,8 +59,6 @@ func (m *mockGitRepo) GetBranchCommits(base string) ([]git.CommitInfo, error) {
 func (m *mockGitRepo) GetBranchDiff(baseBranch string) (string, error)      { return "", nil }
 func (m *mockGitRepo) GetBranchDiffStats(baseBranch string) (string, error) { return "", nil }
 func (m *mockGitRepo) GetBranchFiles(baseBranch string) ([]string, error)   { return nil, nil }
-func (m *mockGitRepo) WorktreeList() ([]git.WorktreeEntry, error)           { return nil, nil }
-func (m *mockGitRepo) WorktreeIsDirty(path string) (bool, error)            { return false, nil }
 
 // CommitsBetween is the key method - returns mock commits to avoid expensive git operations
 func (m *mockGitRepo) CommitsBetween(fromRef, toRef string) ([]git.CommitInfo, error) {

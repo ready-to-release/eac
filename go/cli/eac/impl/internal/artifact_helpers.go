@@ -9,6 +9,7 @@ import (
 
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/domain/modules"
+	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
 // ResolvedArtifact represents an artifact with metadata overrides applied and existence checked.
@@ -305,10 +306,9 @@ func ValidateArtifactsTargetOnly(
 	targetOS, targetArch string,
 	workspaceRoot string,
 ) (*ValidationResults, error) {
-	// Load per-module manifest to get requested artifacts and platform info
-	moduleBuildDir := cfg.Repository.BuildOutputPathAbs(workspaceRoot, targetModule)
+	// Load per-module manifest from UoW to get requested artifacts and platform info
 	var requestedArtifacts []string
-	manifest, err := LoadModuleManifest(moduleBuildDir)
+	manifest, err := GetModuleManifestFromUoWs(workspaceRoot, workunit.ContextBuild, targetModule, "")
 	if err == nil && manifest != nil {
 		requestedArtifacts = manifest.GetRequestedArtifacts()
 	}
@@ -350,12 +350,10 @@ func ValidateArtifactsWithDependencies(
 		return nil, fmt.Errorf("failed to resolve dependencies: %w", err)
 	}
 
-	// Load per-module manifests to get requested artifacts and platform info
-	// Each module has its own manifest at out/build/<module>/build.manifest.json
+	// Load per-module manifests from UoWs to get requested artifacts and platform info
 	moduleManifests := make(map[string]*ModuleManifest)
 	for moniker := range allModules {
-		moduleBuildDir := cfg.Repository.BuildOutputPathAbs(workspaceRoot, moniker)
-		manifest, err := LoadModuleManifest(moduleBuildDir)
+		manifest, err := GetModuleManifestFromUoWs(workspaceRoot, workunit.ContextBuild, moniker, "")
 		if err == nil && manifest != nil {
 			moduleManifests[moniker] = manifest
 		}

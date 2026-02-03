@@ -63,7 +63,7 @@ type VulnerabilityInput struct {
 
 // ModuleContext provides context about the module for AI analysis.
 type ModuleContext struct {
-	ModuleType       string   `json:"module_type"`
+	ComponentType string `json:"component_type"`
 	Criticality      string   `json:"criticality"` // high, medium, low
 	ExistingControls []string `json:"existing_controls,omitempty"`
 }
@@ -168,8 +168,8 @@ func ComputeRiskScore(module string, likelihood, impact int, reasoning string) *
 // GetDefaultImpact returns default impact rating based on module type.
 // Uses configurable mappings from risk-config.yml.
 // Can be overridden by module metadata.
-func GetDefaultImpact(moduleType string) int {
-	return GetRiskScoringConfig().GetImpact(moduleType)
+func GetDefaultImpact(moniker string) int {
+	return GetRiskScoringConfig().GetImpact(moniker)
 }
 
 // FormatRiskBandColor returns ANSI color code for risk band.

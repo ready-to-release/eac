@@ -4,6 +4,7 @@ import (
 	"container/heap"
 	"sync"
 
+	"github.com/ready-to-release/eac/go/core/execution"
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
@@ -27,10 +28,44 @@ type QueueStats struct {
 
 // NewWorkQueue creates a new work queue with dependency tracking.
 // Items are ordered by weight descending (heaviest first).
+//
+// Uses LayerModeNone by default: component layers + DependsOn are enforced,
+// but module layer ordering is not. For strict layer enforcement, use
+// NewWorkQueueWithPolicy with LayerModeStrict.
+//
+// Panics if the work units contain circular dependencies.
 func NewWorkQueue(work []workunit.UnitSpec) *WorkQueue {
+	// Use LayerModeNone as default - this enforces component layers and DependsOn
+	// but does not enforce module layer ordering (parallel across modules).
+	q, err := NewWorkQueueWithPolicy(work, execution.LayerModeNone)
+	if err != nil {
+		// Circular dependencies are a configuration error - fail fast.
+		panic("NewWorkQueue: " + err.Error())
+	}
+	return q
+}
+
+// NewWorkQueueWithPolicy creates a work queue that uses LayerPolicy for scheduling.
+// The LayerPolicy determines when units are ready based on layer constraints:
+//   - LayerModeStrict: module layers + component layers + DependsOn
+//   - LayerModeNone: component layers + DependsOn (module layers not enforced)
+//
+// Returns an error if the plan computation fails (e.g., circular dependencies).
+func NewWorkQueueWithPolicy(work []workunit.UnitSpec, mode execution.LayerMode) (*WorkQueue, error) {
+	// Compute the execution plan using the LayerPlanner
+	planner := execution.NewLayerPlanner(mode)
+	plan, err := planner.ComputePlan(work)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create DepsTracker and configure with LayerPolicy
+	deps := NewDepsTracker(work)
+	deps.SetLayerPolicy(planner, plan)
+
 	q := &WorkQueue{
 		items: make(workHeap, 0, len(work)),
-		deps:  NewDepsTracker(work),
+		deps:  deps,
 	}
 	q.notEmpty = sync.NewCond(&q.mu)
 
@@ -39,7 +74,14 @@ func NewWorkQueue(work []workunit.UnitSpec) *WorkQueue {
 		heap.Push(&q.items, w)
 	}
 
-	return q
+	return q, nil
+}
+
+// HasLayerPolicy returns true if the queue is using LayerPolicy for scheduling.
+func (q *WorkQueue) HasLayerPolicy() bool {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	return q.deps.HasLayerPolicy()
 }
 
 // PopReady blocks until a ready item is available, then returns it.
@@ -131,12 +173,27 @@ func (q *WorkQueue) HasReadyWithBudget(budget int) bool {
 	return false
 }
 
-// MarkComplete marks a component as done, potentially unblocking dependents.
+// MarkComplete marks a component as done successfully, potentially unblocking dependents.
 func (q *WorkQueue) MarkComplete(id workunit.UnitID) {
 	q.mu.Lock()
 	q.deps.MarkComplete(id)
 	q.notEmpty.Broadcast() // wake PopReady to check for newly ready items
 	q.mu.Unlock()
+}
+
+// MarkFailed marks a component as failed, which will cause dependents to fail.
+func (q *WorkQueue) MarkFailed(id workunit.UnitID) {
+	q.mu.Lock()
+	q.deps.MarkFailed(id)
+	q.notEmpty.Broadcast() // wake PopReady to check for items that should now fail
+	q.mu.Unlock()
+}
+
+// HasFailedDependency returns true if any dependency of the unit has failed.
+func (q *WorkQueue) HasFailedDependency(id workunit.UnitID) bool {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	return q.deps.HasFailedDependency(id)
 }
 
 // Close signals that no more items will be added and wakes any waiting PopReady calls.

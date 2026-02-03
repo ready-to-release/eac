@@ -1,0 +1,225 @@
+// Package aisummary provides framework integration for the ai-summary command.
+package aisummary
+
+import (
+	"fmt"
+	"io"
+
+	"github.com/ready-to-release/eac/go/clibase/cmdframework"
+	"github.com/ready-to-release/eac/go/clibase/initsummary"
+	"github.com/ready-to-release/eac/go/clibase/output"
+	"github.com/ready-to-release/eac/go/core/adapters"
+	"github.com/ready-to-release/eac/go/core/paths"
+	"github.com/ready-to-release/eac/go/core/tool"
+	"github.com/ready-to-release/eac/go/core/workunit"
+)
+
+func init() {
+	// Register component-level execution support
+	cmdframework.RegisterUnitProvider(cmdframework.CommandTypeAISummary, ResolveUnitSpecs)
+	cmdframework.RegisterUnitWorker(cmdframework.CommandTypeAISummary, aiSummaryUnitWorker)
+}
+
+// RunAISummaryWithFramework executes the ai-summary command using the cmdframework.
+func RunAISummaryWithFramework(cmdCfg *cmdframework.CommandConfig) int {
+	// Set up hooks
+	hooks := &cmdframework.Hooks{
+		AfterInit:    aiSummaryAfterInit,
+		AfterResolve: aiSummaryAfterResolve,
+	}
+
+	return cmdframework.Run(cmdCfg, nil, hooks)
+}
+
+// aiSummaryAfterInit handles initialization after framework init.
+func aiSummaryAfterInit(ctx *cmdframework.ExecutionContext) error {
+	summary := initsummary.New("ai-summary").
+		SetRequest(ctx.Config.Monikers, ctx.GetExecutionMonikers()).
+		SetFlags(initsummary.Flags{
+			DebugMode: ctx.Config.DebugMode,
+			UseTUI:    ctx.Config.UseTUI,
+		}).
+		SetOutputDir(paths.OutAISummaryRelPath)
+
+	ctx.InitSummary = summary
+	return nil
+}
+
+// aiSummaryAfterResolve handles post-resolution setup.
+func aiSummaryAfterResolve(ctx *cmdframework.ExecutionContext) error {
+	// Nothing special needed for ai-summary
+	return nil
+}
+
+// ResolveUnitSpecs generates UnitSpecs for AI analysis components.
+func ResolveUnitSpecs(ctx *cmdframework.ExecutionContext) [][]workunit.UnitSpec {
+	// Get analysis type filter from config
+	analysisType := ""
+	if ctx.Config.Extra != nil {
+		if at, ok := ctx.Config.Extra["analysisType"].(string); ok {
+			analysisType = at
+		}
+	}
+
+	// Determine which analysis types to run
+	analysisTypes := []string{"dsl", "specs", "docs"}
+	if analysisType != "" {
+		analysisTypes = []string{analysisType}
+	}
+
+	// Build dependency graph: source depends on dsl and specs
+	// Layer 0: dsl, specs, docs (can run in parallel)
+	// Layer 1: source (depends on dsl and specs)
+
+	var layer0 []workunit.UnitSpec
+	var layer1 []workunit.UnitSpec
+
+	for _, moniker := range ctx.GetExecutionMonikers() {
+		for _, aType := range analysisTypes {
+			toolID := "ai-" + aType + "-analyzer"
+
+			spec := workunit.UnitSpec{
+				ID: workunit.UnitID{
+					Context:   workunit.ContextAISummary,
+					Module:    moniker,
+					Component: "ai-" + aType,
+					Tool:      toolID,
+				},
+				ComponentType: "ai-" + aType,
+				Weight:        getAnalysisWeight(aType),
+				Container:     false,
+				HostInstalled: true,
+				DependsOn:     []workunit.UnitID{},
+				Cached:        false,
+				Metadata:      make(map[string]any),
+			}
+
+			layer0 = append(layer0, spec)
+		}
+
+		// Add source analysis if not filtered out
+		if analysisType == "" || analysisType == "source" {
+			sourceSpec := workunit.UnitSpec{
+				ID: workunit.UnitID{
+					Context:   workunit.ContextAISummary,
+					Module:    moniker,
+					Component: "ai-source",
+					Tool:      "ai-source-analyzer",
+				},
+				ComponentType: "ai-source",
+				Weight:        1, // AI tasks use weight 1 (API-bound, not CPU-bound)
+				Container:     false,
+				HostInstalled: true,
+				DependsOn: []workunit.UnitID{
+					{Context: workunit.ContextAISummary, Module: moniker, Component: "ai-dsl", Tool: "ai-dsl-analyzer"},
+					{Context: workunit.ContextAISummary, Module: moniker, Component: "ai-specs", Tool: "ai-specs-analyzer"},
+				},
+				Cached:   false,
+				Metadata: make(map[string]any),
+			}
+
+			// Only add source if we're running both dsl and specs
+			if analysisType == "" || analysisType == "source" {
+				layer1 = append(layer1, sourceSpec)
+			}
+		}
+	}
+
+	// Return layers
+	var layers [][]workunit.UnitSpec
+	if len(layer0) > 0 {
+		layers = append(layers, layer0)
+	}
+	if len(layer1) > 0 {
+		layers = append(layers, layer1)
+	}
+
+	return layers
+}
+
+// getAnalysisWeight returns the scheduling weight for an analysis type.
+// AI tasks use weight 1 since they're API-bound, not CPU/RAM-bound.
+// Parallelism is controlled via MaxConcurrency in the command config.
+func getAnalysisWeight(analysisType string) int {
+	// All AI tasks have weight 1 - parallelism is token-limited, not resource-limited
+	return 1
+}
+
+// aiSummaryUnitWorker executes a single AI analysis unit.
+func aiSummaryUnitWorker(ctx *cmdframework.ExecutionContext, module, component string, logWriter io.Writer) int {
+	// Get module contract
+	moduleContract, exists := ctx.ModuleRegistry.Get(module)
+	if !exists {
+		output.Writeln(logWriter, "Error: module not found: %s", module)
+		return 1
+	}
+
+	// Extract analysis type from component name (e.g., "ai-dsl" -> "dsl")
+	analysisType := extractAnalysisType(component)
+
+	// Get the tool definition
+	toolID := "ai-" + analysisType + "-analyzer"
+	bridge := tool.GlobalBuildBridge()
+	handler := bridge.GetHandler(toolID)
+
+	// If no handler found, create AI handler directly
+	if handler == nil {
+		// Create tool definition
+		toolDef := &tool.ToolDefinition{
+			ID:          toolID,
+			Description: fmt.Sprintf("AI-powered %s analysis", analysisType),
+			Type:        tool.ToolTypeSystem,
+			Binary:      "eac",
+			Args:        []string{"ai", "analyze", "--type=" + analysisType},
+			Resources: &tool.ToolResources{
+				CPUs: 1, // AI tasks use weight 1 (API-bound, not CPU-bound)
+			},
+		}
+		handler = tool.NewAIToolHandler(toolDef)
+	}
+
+	if handler == nil {
+		output.Writeln(logWriter, "Error: no handler found for %s", toolID)
+		return 1
+	}
+
+	// Build output directory
+	outputDir := paths.AISummaryOutputPath(ctx.WorkspaceRoot, module)
+
+	// Adapt module to port interface
+	modulePort := adapters.AdaptModule(moduleContract)
+
+	// Build options
+	opts := tool.BuildOptions{
+		Component: analysisType,
+		DryRun:    ctx.Config.DryRun,
+	}
+
+	// In dry-run mode, just report what would happen
+	if ctx.Config.DryRun {
+		output.Writeln(logWriter, "Would analyze %s for module %s", analysisType, module)
+		output.Writeln(logWriter, "Output: %s/%s-status.md", outputDir, analysisType)
+		return 0
+	}
+
+	// Execute the handler
+	return handler.Build(modulePort, ctx.WorkspaceRoot, outputDir, logWriter, opts)
+}
+
+// extractAnalysisType extracts the analysis type from a component name.
+// Example: "ai-dsl" -> "dsl", "ai-specs:ai-specs-analyzer" -> "specs"
+func extractAnalysisType(component string) string {
+	// Handle "ai-dsl:ai-dsl-analyzer" format - strip tool suffix
+	for i, c := range component {
+		if c == ':' {
+			component = component[:i]
+			break
+		}
+	}
+
+	// Strip "ai-" prefix
+	if len(component) > 3 && component[:3] == "ai-" {
+		return component[3:]
+	}
+	return component
+}

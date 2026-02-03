@@ -62,8 +62,8 @@ func TestParser_AllSetsSubscribed(t *testing.T) {
 	if result.Cache == nil {
 		t.Fatal("Cache flags not set")
 	}
-	if !result.Cache.SkipCache {
-		t.Error("SkipCache should be true")
+	if !result.Cache.CacheConfig.ShouldSkipState() {
+		t.Error("ShouldSkipState() should be true")
 	}
 	if !result.Cache.SkipDeps {
 		t.Error("SkipDeps should be true")
@@ -323,8 +323,8 @@ func TestParser_MixedArgsAndFlags(t *testing.T) {
 	if !result.Execution.Turbo {
 		t.Error("Turbo should be true")
 	}
-	if !result.Cache.SkipCache {
-		t.Error("SkipCache should be true")
+	if !result.Cache.CacheConfig.ShouldSkipState() {
+		t.Error("ShouldSkipState() should be true")
 	}
 
 	// All positional arguments should be captured

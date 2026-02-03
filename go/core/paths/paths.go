@@ -40,6 +40,9 @@ const (
 	// LintDir is the subdirectory under OutDir for lint outputs.
 	LintDir = "lint"
 
+	// AISummaryDir is the subdirectory under OutDir for AI summary outputs.
+	AISummaryDir = "ai-summary"
+
 	// RiskDir is the subdirectory under OutDir for risk assessment outputs.
 	RiskDir = "risk"
 
@@ -145,6 +148,9 @@ const (
 	// OutStagingRelPath is the relative path from repo root to staging area.
 	OutStagingRelPath = OutDir + "/" + StagingDir
 
+	// OutAISummaryRelPath is the relative path from repo root to AI summary output.
+	OutAISummaryRelPath = OutDir + "/" + AISummaryDir
+
 	// EACCommandsModule is the module name for the EAC commands binary.
 	EACCommandsModule = "eac-cli"
 )
@@ -204,6 +210,11 @@ func TestOutputDir(repoRoot string) string {
 // EvidenceOutputPath returns the path to a module's evidence output directory.
 func EvidenceOutputPath(repoRoot, moniker string) string {
 	return filepath.Join(repoRoot, OutDir, EvidenceDir, moniker)
+}
+
+// AISummaryOutputPath returns the path to a module's AI summary output directory.
+func AISummaryOutputPath(repoRoot, moniker string) string {
+	return filepath.Join(repoRoot, OutDir, AISummaryDir, moniker)
 }
 
 // StagingPath returns the path to a module's staging directory.
@@ -605,9 +616,9 @@ func MkDocsSiteTemplatePath(repoRoot string) string {
 	return filepath.Join(repoRoot, "containers", "site-render-tool", "mkdocs.yml")
 }
 
-// MkDocsPdfTemplatePath returns the path to the pdf-render-tool template.
+// MkDocsPdfTemplatePath returns the path to the pdf-tool template.
 func MkDocsPdfTemplatePath(repoRoot string) string {
-	return filepath.Join(repoRoot, "containers", "pdf-render-tool", "mkdocs.yml")
+	return filepath.Join(repoRoot, "containers", "pdf-tool", "mkdocs.yml")
 }
 
 // SiteOutputPath returns the path to the site output directory.

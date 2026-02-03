@@ -16,7 +16,15 @@ These commands are invoked directly without a category prefix.
 
 ## All Core Commands
 
-<!-- book:category-commands core -->
+| Command | Description |
+|---------|-------------|
+| [build](../build/build.md) | Build one or more modules |
+| [lint](../core/lint.md) | Run linters on modules |
+| [scan](../scan/index.md) | Run security scanners on modules |
+| [test](../test/index.md) | Run tests for modules |
+| [extension-meta](../core/extension-meta.md) | Output extension metadata for CLI integration |
+| [init](../init/index.md) | Initialize a new EAC repository |
+| [help](../help/index.md) | Display help information |
 
 ## Common Use Cases
 
@@ -46,7 +54,7 @@ Provides metadata about the EAC extension for CLI integration and tooling.
 
 ## See Also
 
-- [build](./build.md) - Build modules
-- [test](./test.md) - Test modules
-- [update lint](../update/lint.md) - Update lint configurations
-- [validate](./validate.md) - Validate repository structure
+- [build](../build/build.md) - Build modules
+- [test](../test/index.md) - Test modules
+- [update lint](../update/lint/index.md) - Update lint configurations
+- [validate](../validate/index.md) - Validate repository structure

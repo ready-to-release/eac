@@ -127,6 +127,38 @@ func TestDefaultTimeoutConfig(t *testing.T) {
 	if cfg.TUI.PortReservation.D() != 30*time.Second {
 		t.Errorf("TUI.PortReservation = %v, want 30s", cfg.TUI.PortReservation.D())
 	}
+	if cfg.TUI.FreezeCountdown.D() != 120*time.Second {
+		t.Errorf("TUI.FreezeCountdown = %v, want 120s", cfg.TUI.FreezeCountdown.D())
+	}
+	if cfg.TUI.MinDisplayTime.D() != 1500*time.Millisecond {
+		t.Errorf("TUI.MinDisplayTime = %v, want 1500ms", cfg.TUI.MinDisplayTime.D())
+	}
+	if cfg.TUI.MetricsInterval.D() != 500*time.Millisecond {
+		t.Errorf("TUI.MetricsInterval = %v, want 500ms", cfg.TUI.MetricsInterval.D())
+	}
+
+	// TUILayout defaults
+	if cfg.TUILayout.MaxTabs != 36 {
+		t.Errorf("TUILayout.MaxTabs = %d, want 36", cfg.TUILayout.MaxTabs)
+	}
+	if cfg.TUILayout.DefaultColumns != 4 {
+		t.Errorf("TUILayout.DefaultColumns = %d, want 4", cfg.TUILayout.DefaultColumns)
+	}
+	if cfg.TUILayout.MinColumns != 2 {
+		t.Errorf("TUILayout.MinColumns = %d, want 2", cfg.TUILayout.MinColumns)
+	}
+	if cfg.TUILayout.MaxColumns != 6 {
+		t.Errorf("TUILayout.MaxColumns = %d, want 6", cfg.TUILayout.MaxColumns)
+	}
+	if cfg.TUILayout.BufferSizePane != 500 {
+		t.Errorf("TUILayout.BufferSizePane = %d, want 500", cfg.TUILayout.BufferSizePane)
+	}
+	if cfg.TUILayout.BufferSizeResults != 100 {
+		t.Errorf("TUILayout.BufferSizeResults = %d, want 100", cfg.TUILayout.BufferSizeResults)
+	}
+	if cfg.TUILayout.BufferSizeUoW != 200 {
+		t.Errorf("TUILayout.BufferSizeUoW = %d, want 200", cfg.TUILayout.BufferSizeUoW)
+	}
 
 	// Scheduling defaults
 	if cfg.Scheduling.CapacityRecalc.D() != 2*time.Second {
@@ -189,4 +221,91 @@ func TestMergeTimeoutConfigs(t *testing.T) {
 	if merged.Filesystem.LockAcquire.D() != 30*time.Second {
 		t.Errorf("Filesystem.LockAcquire = %v, want 30s (default)", merged.Filesystem.LockAcquire.D())
 	}
+}
+
+// TestTUIConfigHelper tests the TUIConfig() helper function.
+func TestTUIConfigHelper(t *testing.T) {
+	// Set global timeouts to defaults for this test
+	SetGlobalTimeouts(DefaultTimeoutConfig())
+
+	cfg := TUIConfig()
+
+	// Verify not nil
+	if cfg == nil {
+		t.Fatal("TUIConfig() returned nil")
+	}
+
+	// Verify timeouts are correctly mapped
+	t.Run("timeout mapping", func(t *testing.T) {
+		if cfg.MetricsInterval != 500*time.Millisecond {
+			t.Errorf("MetricsInterval = %v, want 500ms", cfg.MetricsInterval)
+		}
+		if cfg.MinDisplayTime != 1500*time.Millisecond {
+			t.Errorf("MinDisplayTime = %v, want 1500ms", cfg.MinDisplayTime)
+		}
+		if cfg.ExitCountdown != 10*time.Second {
+			t.Errorf("ExitCountdown = %v, want 10s", cfg.ExitCountdown)
+		}
+		if cfg.FreezeCountdown != 120*time.Second {
+			t.Errorf("FreezeCountdown = %v, want 120s", cfg.FreezeCountdown)
+		}
+		if cfg.AutoScrollResume != 8*time.Second {
+			t.Errorf("AutoScrollResume = %v, want 8s", cfg.AutoScrollResume)
+		}
+	})
+
+	// Verify layout is correctly mapped
+	t.Run("layout mapping", func(t *testing.T) {
+		if cfg.MaxTabs != 36 {
+			t.Errorf("MaxTabs = %d, want 36", cfg.MaxTabs)
+		}
+		if cfg.DefaultColumns != 4 {
+			t.Errorf("DefaultColumns = %d, want 4", cfg.DefaultColumns)
+		}
+		if cfg.MinColumns != 2 {
+			t.Errorf("MinColumns = %d, want 2", cfg.MinColumns)
+		}
+		if cfg.MaxColumns != 6 {
+			t.Errorf("MaxColumns = %d, want 6", cfg.MaxColumns)
+		}
+		if cfg.BufferSizePane != 500 {
+			t.Errorf("BufferSizePane = %d, want 500", cfg.BufferSizePane)
+		}
+		if cfg.BufferSizeResults != 100 {
+			t.Errorf("BufferSizeResults = %d, want 100", cfg.BufferSizeResults)
+		}
+		if cfg.BufferSizeUoW != 200 {
+			t.Errorf("BufferSizeUoW = %d, want 200", cfg.BufferSizeUoW)
+		}
+	})
+}
+
+// TestTUIConfigWithCustomTimeouts tests TUIConfig() with custom values.
+func TestTUIConfigWithCustomTimeouts(t *testing.T) {
+	// Set custom timeouts
+	custom := DefaultTimeoutConfig()
+	custom.TUI.MetricsInterval = Duration(1 * time.Second)
+	custom.TUI.ExitCountdown = Duration(30 * time.Second)
+	custom.TUILayout.MaxTabs = 50
+	custom.TUILayout.BufferSizePane = 1000
+	SetGlobalTimeouts(custom)
+
+	cfg := TUIConfig()
+
+	// Verify custom values are reflected
+	if cfg.MetricsInterval != 1*time.Second {
+		t.Errorf("MetricsInterval = %v, want 1s", cfg.MetricsInterval)
+	}
+	if cfg.ExitCountdown != 30*time.Second {
+		t.Errorf("ExitCountdown = %v, want 30s", cfg.ExitCountdown)
+	}
+	if cfg.MaxTabs != 50 {
+		t.Errorf("MaxTabs = %d, want 50", cfg.MaxTabs)
+	}
+	if cfg.BufferSizePane != 1000 {
+		t.Errorf("BufferSizePane = %d, want 1000", cfg.BufferSizePane)
+	}
+
+	// Reset to defaults
+	SetGlobalTimeouts(DefaultTimeoutConfig())
 }

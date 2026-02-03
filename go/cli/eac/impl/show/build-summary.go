@@ -22,6 +22,7 @@ import (
 	"github.com/ready-to-release/eac/go/clibase/registry"
 	"github.com/ready-to-release/eac/go/core/config"
 	"github.com/ready-to-release/eac/go/core/repository"
+	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
 func init() {
@@ -93,9 +94,9 @@ func buildSummaryContent(f *SummaryFormatter, module *config.Module, status stri
 
 	// Status section
 	if status == "success" {
-		summary += f.StatusSection(fmt.Sprintf("%s built successfully", getModuleTypeDescription(module.GetComponentTypesDisplay(), cfg)))
+		summary += f.StatusSection(fmt.Sprintf("%s built successfully", module.GetComponentTypesDisplay()))
 	} else {
-		summary += f.StatusSection(fmt.Sprintf("%s build failed", getModuleTypeDescription(module.GetComponentTypesDisplay(), cfg)))
+		summary += f.StatusSection(fmt.Sprintf("%s build failed", module.GetComponentTypesDisplay()))
 	}
 
 	// Build output metrics (module-type specific)
@@ -112,12 +113,6 @@ func buildSummaryContent(f *SummaryFormatter, module *config.Module, status stri
 	summary += buildConfigSection(f, module, cfg)
 
 	return summary
-}
-
-func getModuleTypeDescription(moduleType string, cfg *config.EACConfig) string {
-	// Module type descriptions are now derived from package types
-	// Return the module type name as-is
-	return moduleType
 }
 
 func buildMetricsSection(f *SummaryFormatter, module *config.Module, cfg *config.EACConfig) string {
@@ -318,10 +313,10 @@ func formatSlice(items []string) string {
 	return result
 }
 
-// deriveBuildStatus determines build status from manifest.
+// deriveBuildStatus determines build status from UoW manifests.
 // Status is derived as:
-// - "success" if manifest exists and has artifacts
-// - "failure" if manifest is missing or has no artifacts.
+// - "success" if UoW manifests exist and have artifacts
+// - "failure" if manifests are missing or have no artifacts.
 func deriveBuildStatus(cfg *config.EACConfig, moduleName string) string {
 	// Get workspace root for absolute path
 	workspaceRoot, err := repository.GetRepositoryRoot("")
@@ -330,10 +325,10 @@ func deriveBuildStatus(cfg *config.EACConfig, moduleName string) string {
 		return "failure"
 	}
 
-	// Load build manifest
-	moduleBuildDir := cfg.Repository.BuildOutputPathAbs(workspaceRoot, moduleName)
-	manifest, err := implinternal.LoadModuleManifest(moduleBuildDir)
-	if err != nil {
+	// Use UoW adapter to get manifest for display
+	manifest, err := implinternal.GetModuleManifestFromUoWs(
+		workspaceRoot, workunit.ContextBuild, moduleName, "")
+	if err != nil || manifest == nil {
 		// No manifest = failure
 		return "failure"
 	}

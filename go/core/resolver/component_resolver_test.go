@@ -198,3 +198,108 @@ func TestScheduledComponentsFilter_DepTypeNotEnabled(t *testing.T) {
 	// No structurizr component exists, so no deps
 	assert.Empty(t, siteDeps, "site should have no deps when depType not enabled")
 }
+
+// =============================================================================
+// Tool Chain Tests
+// =============================================================================
+//
+// These tests validate the tool chain expansion feature where a single component
+// with tools: [a, b, c] expands to multiple UnitSpecs with chain dependencies.
+
+// TestExpandToolChain_SingleTool validates that a component type with a single tool
+// produces a single UnitSpec (same as legacy builder behavior).
+func TestExpandToolChain_SingleTool(t *testing.T) {
+	// Simulate a component type with a single tool (same as legacy builder)
+	tools := []string{"go"}
+	module := "cli"
+	component := "main"
+
+	specs := expandToolChain(module, component, "go", tools, nil)
+
+	assert.Len(t, specs, 1, "single tool should produce one spec")
+	assert.Equal(t, component, specs[0].Component)
+	assert.Equal(t, "go", specs[0].Tool)
+	assert.Empty(t, specs[0].DependsOn, "first tool has no tool chain dependencies")
+}
+
+// TestExpandToolChain_TwoTools validates that a component type with two tools
+// produces two UnitSpecs where the second depends on the first.
+func TestExpandToolChain_TwoTools(t *testing.T) {
+	tools := []string{"preprocess", "mkdocs-pdf"}
+	module := "docs"
+	component := "tutorials-pdf"
+
+	specs := expandToolChain(module, component, "docs-pdf", tools, nil)
+
+	assert.Len(t, specs, 2, "two tools should produce two specs")
+
+	// First spec: preprocess
+	assert.Equal(t, component, specs[0].Component)
+	assert.Equal(t, "preprocess", specs[0].Tool)
+	assert.Empty(t, specs[0].DependsOn, "first tool has no tool chain dependencies")
+
+	// Second spec: mkdocs-pdf depends on preprocess
+	assert.Equal(t, component, specs[1].Component)
+	assert.Equal(t, "mkdocs-pdf", specs[1].Tool)
+	assert.Len(t, specs[1].DependsOn, 1, "second tool depends on first")
+	assert.Equal(t, "preprocess", specs[1].DependsOn[0].Tool)
+	assert.Equal(t, component, specs[1].DependsOn[0].Component)
+}
+
+// TestExpandToolChain_ThreeTools validates that a tool chain with three tools
+// creates a proper chain: a -> b -> c
+func TestExpandToolChain_ThreeTools(t *testing.T) {
+	tools := []string{"step1", "step2", "step3"}
+	module := "mod"
+	component := "comp"
+
+	specs := expandToolChain(module, component, "multi-step", tools, nil)
+
+	assert.Len(t, specs, 3, "three tools should produce three specs")
+
+	// step1 has no deps
+	assert.Equal(t, "step1", specs[0].Tool)
+	assert.Empty(t, specs[0].DependsOn)
+
+	// step2 depends on step1
+	assert.Equal(t, "step2", specs[1].Tool)
+	assert.Len(t, specs[1].DependsOn, 1)
+	assert.Equal(t, "step1", specs[1].DependsOn[0].Tool)
+
+	// step3 depends on step2
+	assert.Equal(t, "step3", specs[2].Tool)
+	assert.Len(t, specs[2].DependsOn, 1)
+	assert.Equal(t, "step2", specs[2].DependsOn[0].Tool)
+}
+
+// TestExpandToolChain_WithExternalDeps validates that external dependencies
+// (from build_after or depends_on) are added to the FIRST tool in the chain.
+func TestExpandToolChain_WithExternalDeps(t *testing.T) {
+	tools := []string{"preprocess", "mkdocs-pdf"}
+	module := "docs"
+	component := "tutorials-pdf"
+
+	// External dependency: structurizr must complete before the chain starts
+	externalDeps := []toolChainDep{
+		{Module: module, Component: "structurizr", Tool: "structurizr-cli"},
+	}
+
+	specs := expandToolChain(module, component, "docs-pdf", tools, externalDeps)
+
+	// First spec should have external deps
+	assert.Len(t, specs[0].DependsOn, 1, "first tool should have external dep")
+	assert.Equal(t, "structurizr", specs[0].DependsOn[0].Component)
+
+	// Second spec should only depend on first tool, not external deps
+	assert.Len(t, specs[1].DependsOn, 1, "second tool only depends on first")
+	assert.Equal(t, "preprocess", specs[1].DependsOn[0].Tool)
+}
+
+// TestExpandToolChain_EmptyTools returns nil when no tools provided.
+func TestExpandToolChain_EmptyTools(t *testing.T) {
+	specs := expandToolChain("mod", "comp", "empty", nil, nil)
+	assert.Nil(t, specs, "empty tools should return nil")
+
+	specs = expandToolChain("mod", "comp", "empty", []string{}, nil)
+	assert.Nil(t, specs, "zero-length tools should return nil")
+}

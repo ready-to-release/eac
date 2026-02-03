@@ -42,7 +42,7 @@ var log = logging.C()
 
 const (
 	// pdfToolsImage is the Docker image for PDF operations.
-	pdfToolsImage = "pdf-tool:latest"
+	pdfToolsImage = "pdf-cli-tool:latest"
 
 	// defaultDPI is the default resolution for extracted images.
 	defaultDPI = 150
@@ -191,10 +191,10 @@ func UpdatePDFScreenshots() int {
 	}
 	defer dockerClient.Close()
 
-	// Build the pdf-tool image if needed
-	fmt.Println("Ensuring pdf-tool Docker image...")
+	// Build the pdf-cli-tool image if needed
+	fmt.Println("Ensuring pdf-cli-tool Docker image...")
 	if err := ensurePDFToolsImage(repoRoot); err != nil {
-		log.Errorf("Error building pdf-tool image: %v", err)
+		log.Errorf("Error building pdf-cli-tool image: %v", err)
 		return 1
 	}
 
@@ -379,10 +379,10 @@ func ensurePDFToolsImage(repoRoot string) error {
 	}
 
 	// Build the image
-	dockerfilePath := paths.ContainerDockerfilePath(repoRoot, "pdf-tool")
-	buildCtx := paths.ContainersPath(repoRoot, "pdf-tool")
+	dockerfilePath := paths.ContainerDockerfilePath(repoRoot, "pdf-cli-tool")
+	buildCtx := paths.ContainersPath(repoRoot, "pdf-cli-tool")
 
-	fmt.Println("Building pdf-tool image...")
+	fmt.Println("Building pdf-cli-tool image...")
 	cmd = exec.Command("docker", "build",
 		"-t", pdfToolsImage,
 		"-f", dockerfilePath,

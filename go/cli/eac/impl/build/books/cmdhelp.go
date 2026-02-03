@@ -138,7 +138,7 @@ func (p *Preprocessor) processCommandMarkers() error {
 						}
 						return fmt.Errorf("command marker in %s references non-existent command: %w", relPath, err)
 					}
-					p.log("    Warning: failed to process %s marker '%s': %v", markerType, match[0], err)
+					p.warn("failed to process %s marker '%s': %v", markerType, match[0], err)
 					continue
 				}
 
@@ -205,7 +205,7 @@ func (p *Preprocessor) formatCommandGroup(cmdBinary, groupName string) (string, 
 	for i, cmd := range groupCmds {
 		help, err := p.getCommandHelp(cmdBinary, cmd.Command)
 		if err != nil {
-			p.log("    Warning: failed to get help for '%s': %v", cmd.Command, err)
+			p.warn("failed to get help for '%s': %v", cmd.Command, err)
 			continue
 		}
 

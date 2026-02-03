@@ -215,7 +215,7 @@ func TestCheckMermaidCache(t *testing.T) {
 		stagingDir:    tmpDir,
 		workspaceRoot: tmpDir,
 		logWriter:     os.Stdout,
-		assetCache:    NewAssetCache(tmpDir),
+		assetCache:    NewAssetCache(tmpDir, nil),
 	}
 
 	// Create some test blocks with content that will be hashed
@@ -312,7 +312,7 @@ func TestCacheDirectoryCreation(t *testing.T) {
 		stagingDir:    tmpDir,
 		workspaceRoot: tmpDir,
 		logWriter:     os.Stdout,
-		assetCache:    NewAssetCache(tmpDir),
+		assetCache:    NewAssetCache(tmpDir, nil),
 	}
 
 	// Cache directory shouldn't exist yet (staging cache location)

@@ -50,21 +50,21 @@ your-project/
 
 ### Always Commit
 
-| File                        | Purpose                |
-| --------------------------- | ---------------------- |
-| `.r2r/r2r-cli.yml`          | Extension registry     |
-| `.eac/repository.yml`   | Module definitions     |
-| `.eac/ai-provider.yml`  | AI config (no secrets) |
+| File                   | Purpose                |
+| ---------------------- | ---------------------- |
+| `.r2r/r2r-cli.yml`     | Extension registry     |
+| `.eac/repository.yml`  | Module definitions     |
+| `.eac/ai-provider.yml` | AI config (no secrets) |
 
 System defaults (in `contracts/eac-core/0.1.0/defaults/`) are used automatically and don't need to be committed.
 
 ### Never Commit (Add to .gitignore)
 
-| File/Directory            | Purpose                       |
-| ------------------------- | ----------------------------- |
-| `.r2r/r2r-cli.local.yml`  | Local CLI overrides           |
-| `.eac/*.personal.yml` | Personal configs with secrets |
-| `.r2r/cache/`             | Build cache                   |
+| File/Directory           | Purpose                       |
+| ------------------------ | ----------------------------- |
+| `.r2r/r2r-cli.local.yml` | Local CLI overrides           |
+| `.eac/*.personal.yml`    | Personal configs with secrets |
+| `.r2r/cache/`            | Build cache                   |
 
 ### Recommended .gitignore Entries
 

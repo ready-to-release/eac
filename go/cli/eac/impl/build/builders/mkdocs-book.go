@@ -210,7 +210,8 @@ func preprocessBook(book *config.Book, workspaceRoot, moniker string, logWriter 
 	Logln(logWriter, "📚 Preprocessing book: %s", book.Name)
 
 	// Run preprocessing
-	preprocessor := books.NewPreprocessor(book, workspaceRoot, stagingDir, logWriter, pdfMode)
+	// TODO: Thread CacheConfig through for --skip-cache=asset support
+	preprocessor := books.NewPreprocessor(book, workspaceRoot, stagingDir, logWriter, pdfMode, nil)
 	if err := preprocessor.Preprocess(); err != nil {
 		Logln(logWriter, "❌ Book preprocessing failed: %v", err)
 		return "", false
@@ -455,7 +456,8 @@ func checkAndPreprocessBook(moniker, workspaceRoot, outputDir string, logWriter 
 	}
 
 	// Run preprocessing (overwrites existing files incrementally)
-	preprocessor := books.NewPreprocessor(book, workspaceRoot, stagingDir, logWriter, pdfMode)
+	// TODO: Thread CacheConfig through for --skip-cache=asset support
+	preprocessor := books.NewPreprocessor(book, workspaceRoot, stagingDir, logWriter, pdfMode, nil)
 	if err := preprocessor.Preprocess(); err != nil {
 		Logln(logWriter, "❌ Book preprocessing failed: %v", err)
 		return "", true

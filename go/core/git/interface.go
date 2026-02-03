@@ -109,21 +109,6 @@ type GitRepository interface {
 	// GetBranchFiles returns list of files changed in baseBranch...HEAD.
 	// Returns relative paths from repository root.
 	GetBranchFiles(baseBranch string) ([]string, error)
-
-	// --- Worktree operations (for workspace management) ---
-
-	// WorktreeList returns information about all worktrees.
-	WorktreeList() ([]WorktreeEntry, error)
-
-	// WorktreeIsDirty checks if a worktree has uncommitted changes.
-	WorktreeIsDirty(worktreePath string) (bool, error)
-}
-
-// WorktreeEntry represents a git worktree.
-type WorktreeEntry struct {
-	Path   string // Absolute path to worktree
-	Branch string // Branch checked out in worktree
-	SHA    string // Short SHA of HEAD commit
 }
 
 // Ensure Repository implements GitRepository.

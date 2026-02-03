@@ -23,7 +23,14 @@ type ComponentType struct {
 	// Empty for non-file-based components like "book"
 	Extensions []string `yaml:"extensions" json:"extensions"`
 
+	// ToolChain is an ordered list of tools to run in sequence within a single UOW.
+	// Each tool depends on the previous tool completing. When set, this takes
+	// precedence over the legacy Builder field.
+	// Example: ["preprocess", "mkdocs-pdf"] runs preprocess first, then mkdocs-pdf.
+	ToolChain []string `yaml:"tool_chain,omitempty" json:"tool_chain,omitempty"`
+
 	// Builder is the build handler to use (e.g., "go", "mkdocs", "buildx")
+	// Deprecated: Use Tools for new component types. Kept for backwards compatibility.
 	Builder string `yaml:"builder,omitempty" json:"builder,omitempty"`
 
 	// Scanners are the default security scanners for this component type (e.g., ["sbom", "vuln", "secrets", "sast"])
@@ -70,21 +77,11 @@ type ComponentTypeResources struct {
 // These enable convention-over-configuration patterns for simpler declarations.
 type ComponentTypeDefaults struct {
 	// BookFromName if true, derives book name from component name.
-	// For "tutorials-base", book="tutorials". For "base-site", requires explicit config.book.
+	// For "tutorials-pdf", book="tutorials".
 	BookFromName bool `yaml:"book_from_name,omitempty" json:"book_from_name,omitempty"`
-
-	// AutoBaseSite if true and no depends_on specified, auto-adds dependency on "{name}-base" component.
-	// For "tutorials", auto-depends on "tutorials-base".
-	AutoBaseSite bool `yaml:"auto_base_site,omitempty" json:"auto_base_site,omitempty"`
 
 	// Theme is the default theme for PDF rendering ("dark" or "light").
 	Theme string `yaml:"theme,omitempty" json:"theme,omitempty"`
-
-	// InjectPrerequisite specifies a component type to auto-inject as prerequisite.
-	// For site-render/pdf-render, this would be "base-site".
-	// When set, if a component of this type is declared without an existing prerequisite,
-	// one will be automatically created with naming convention "{name}-base".
-	InjectPrerequisite string `yaml:"inject_prerequisite,omitempty" json:"inject_prerequisite,omitempty"`
 
 	// ArtifactPattern is the default artifact naming pattern for built outputs.
 	// Supports placeholders: {moniker} for module name, {ext} for platform extension.
@@ -125,7 +122,32 @@ func (c *ComponentType) GetRoot(moniker, explicitRoot string) string {
 
 // HasBuilder returns true if this component type has a builder configured.
 func (c *ComponentType) HasBuilder() bool {
-	return c.Builder != ""
+	return c.Builder != "" || len(c.ToolChain) > 0
+}
+
+// GetTools returns the list of tools to run for this component type.
+// If ToolChain is set, returns it directly. Otherwise, falls back to a single-element
+// slice containing Builder for backwards compatibility. Returns nil if neither is set.
+func (c *ComponentType) GetTools() []string {
+	if c == nil {
+		return nil
+	}
+	if len(c.ToolChain) > 0 {
+		return c.ToolChain
+	}
+	if c.Builder != "" {
+		return []string{c.Builder}
+	}
+	return nil
+}
+
+// HasToolChain returns true if this component type has multiple tools configured.
+// A tool chain means tools are run in sequence with dependencies between them.
+func (c *ComponentType) HasToolChain() bool {
+	if c == nil {
+		return false
+	}
+	return len(c.ToolChain) > 1
 }
 
 // IsScannable returns true if this component type has scanners configured.

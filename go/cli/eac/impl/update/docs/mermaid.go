@@ -30,8 +30,8 @@ func runMermaidUpdate(repoRoot string, opts UpdateOptions, logWriter io.Writer) 
 
 	fmt.Fprintln(logWriter, "Updating mermaid cache...")
 
-	// Create asset cache
-	cache := books.NewAssetCache(repoRoot)
+	// Create asset cache (nil = use cache normally)
+	cache := books.NewAssetCache(repoRoot, nil)
 
 	// Scan docs/ for markdown files
 	docsDir := paths.DocsSourcePath(repoRoot)

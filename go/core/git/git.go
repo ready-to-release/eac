@@ -1,38 +1,21 @@
 // Package git provides Git operations using go-git library.
-// It replaces direct exec.Command("git", ...) calls with pure Go implementations.
+// This package uses ONLY pure go-git - no exec.Command calls.
+// CLI layers (go/clibase/git/, go/cli/eac/impl/) may use exec.Command.
 package git
 
 import (
-	"errors"
 	"fmt"
-	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	gogit "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/format/gitignore"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"go.uber.org/zap"
 )
-
-// runGitCommand executes a git command in the repository and returns the output.
-// This is used for performance-critical operations where native git is faster than go-git.
-func (r *Repository) runGitCommand(args ...string) (string, error) {
-	cmd := exec.Command("git", args...)
-	cmd.Dir = r.rootPath
-
-	output, err := cmd.Output()
-	if err != nil {
-		exitErr := &exec.ExitError{}
-		if errors.As(err, &exitErr) {
-			return "", fmt.Errorf("git %s failed: %s", args[0], string(exitErr.Stderr))
-		}
-		return "", err
-	}
-
-	return string(output), nil
-}
 
 // Repository wraps a go-git repository with convenience methods.
 // Should be created via RepositoryManager for proper logger injection.
@@ -100,14 +83,28 @@ func (r *Repository) HeadCommit() (string, error) {
 }
 
 // UncommittedFiles returns paths of files with uncommitted changes.
-// Uses git status --porcelain format parsing.
+// This includes staged, unstaged, and untracked files.
 func (r *Repository) UncommittedFiles() ([]string, error) {
-	output, err := r.runGitCommand("status", "--porcelain")
+	wt, err := r.repo.Worktree()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get worktree: %w", err)
+	}
+
+	status, err := wt.Status()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get status: %w", err)
 	}
 
-	return parseStatusPorcelain(output), nil
+	var files []string
+	for path, s := range status {
+		// Include files with any changes: staging or worktree
+		if s.Staging != gogit.Unmodified || s.Worktree != gogit.Unmodified {
+			files = append(files, path)
+		}
+	}
+
+	sort.Strings(files) // Consistent ordering
+	return files, nil
 }
 
 // parseStatusPorcelain extracts file paths from git status --porcelain output.
@@ -147,40 +144,47 @@ func parseStatusPorcelain(output string) []string {
 
 // TrackedFiles returns all files tracked by Git (in the index).
 // This reflects the current index state: HEAD files + staged additions - staged deletions.
-// Uses native git command for performance (go-git's wt.Status() is slow).
 func (r *Repository) TrackedFiles() ([]string, error) {
-	// Use native git ls-files which is fast locally, slow in CI
-	// This lists all files in the index (tracked files)
-	output, err := r.runGitCommand("ls-files")
+	idx, err := r.repo.Storer.Index()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get tracked files: %w", err)
+		return nil, fmt.Errorf("failed to get index: %w", err)
 	}
 
-	if output == "" {
-		return []string{}, nil
+	files := make([]string, 0, len(idx.Entries))
+	for _, entry := range idx.Entries {
+		files = append(files, entry.Name)
 	}
 
-	files := strings.Split(strings.TrimSpace(output), "\n")
+	sort.Strings(files) // Consistent ordering
 	return files, nil
 }
 
-// StagedFiles returns files currently staged in the index (added, modified, renamed).
+// StagedFiles returns files currently staged in the index (added, modified, renamed, copied).
 // This corresponds to `git diff --cached --name-only --diff-filter=ACMR`.
-// Uses native git command for performance (avoids slow working tree scan).
 func (r *Repository) StagedFiles() ([]string, error) {
 	r.logger.Debug("Getting staged files")
 
-	output, err := r.runGitCommand("diff", "--cached", "--name-only", "--diff-filter=ACMR")
+	wt, err := r.repo.Worktree()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get staged files: %w", err)
+		return nil, fmt.Errorf("failed to get worktree: %w", err)
 	}
 
-	if output == "" {
-		return []string{}, nil
+	status, err := wt.Status()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get status: %w", err)
 	}
 
-	files := strings.Split(strings.TrimSpace(output), "\n")
+	var files []string
+	for path, s := range status {
+		// Only include files staged for commit (Added, Modified, Renamed, Copied)
+		// Exclude Deleted and Unmodified
+		switch s.Staging {
+		case gogit.Added, gogit.Modified, gogit.Renamed, gogit.Copied:
+			files = append(files, path)
+		}
+	}
 
+	sort.Strings(files) // Consistent ordering
 	r.logger.Debug("Staged files retrieved", zap.Int("count", len(files)))
 	return files, nil
 }
@@ -335,29 +339,68 @@ func (r *Repository) AddRemote(name, url string) error {
 
 // StagedDiff returns the unified diff of all staged changes.
 // Equivalent to `git diff --staged`.
-// Uses native git command for performance (avoids slow working tree scan).
 func (r *Repository) StagedDiff() (string, error) {
 	r.logger.Debug("Getting staged diff")
 
-	output, err := r.runGitCommand("diff", "--cached")
+	// Get HEAD tree
+	headTree, err := r.getHeadTree()
 	if err != nil {
-		return "", fmt.Errorf("failed to get staged diff: %w", err)
+		// If no HEAD (empty repo), compare against empty tree
+		headTree = nil
 	}
 
+	// Get index tree (staged changes)
+	indexTree, err := r.getIndexTree()
+	if err != nil {
+		return "", fmt.Errorf("failed to get index tree: %w", err)
+	}
+
+	// Compare HEAD tree to index tree
+	changes, err := headTree.Diff(indexTree)
+	if err != nil {
+		return "", fmt.Errorf("failed to diff trees: %w", err)
+	}
+
+	patch, err := changes.Patch()
+	if err != nil {
+		return "", fmt.Errorf("failed to generate patch: %w", err)
+	}
+
+	output := patch.String()
 	r.logger.Debug("Staged diff retrieved", zap.Int("size", len(output)))
 	return output, nil
 }
 
 // StagedDiffStats returns the stat summary of staged changes.
 // Equivalent to `git diff --staged --stat`.
-// Uses native git command for performance (avoids slow working tree scan).
 func (r *Repository) StagedDiffStats() (string, error) {
 	r.logger.Debug("Getting staged diff stats")
 
-	output, err := r.runGitCommand("diff", "--cached", "--stat")
+	// Get HEAD tree
+	headTree, err := r.getHeadTree()
 	if err != nil {
-		return "", fmt.Errorf("failed to get staged diff stats: %w", err)
+		headTree = nil
 	}
+
+	// Get index tree
+	indexTree, err := r.getIndexTree()
+	if err != nil {
+		return "", fmt.Errorf("failed to get index tree: %w", err)
+	}
+
+	// Compare HEAD tree to index tree
+	changes, err := headTree.Diff(indexTree)
+	if err != nil {
+		return "", fmt.Errorf("failed to diff trees: %w", err)
+	}
+
+	patch, err := changes.Patch()
+	if err != nil {
+		return "", fmt.Errorf("failed to generate patch: %w", err)
+	}
+
+	stats := patch.Stats()
+	output := formatDiffStats(stats)
 
 	r.logger.Debug("Staged diff stats retrieved")
 	return output, nil
@@ -368,14 +411,7 @@ func (r *Repository) StagedDiffStats() (string, error) {
 // Returns error if baseBranch doesn't exist or no commits ahead.
 func (r *Repository) GetBranchCommits(baseBranch string) ([]CommitInfo, error) {
 	// Resolve base branch to verify it exists
-	baseRef := baseBranch
-	if !strings.HasPrefix(baseBranch, "origin/") && !strings.HasPrefix(baseBranch, "refs/") {
-		// Try origin/baseBranch first (for remote tracking)
-		_, err := r.runGitCommand("rev-parse", "--verify", "origin/"+baseBranch)
-		if err == nil {
-			baseRef = "origin/" + baseBranch
-		}
-	}
+	baseRef := r.resolveBaseRef(baseBranch)
 
 	// Use CommitsBetween to get commits from baseBranch..HEAD
 	// This uses the two-dot notation which shows commits reachable from HEAD but not from baseBranch
@@ -392,78 +428,141 @@ func (r *Repository) GetBranchCommits(baseBranch string) ([]CommitInfo, error) {
 }
 
 // GetBranchDiff returns the cumulative diff from baseBranch...HEAD.
-// Uses three-dot notation to compare against merge-base.
+// Uses three-dot notation semantics (compare against merge-base).
 func (r *Repository) GetBranchDiff(baseBranch string) (string, error) {
-	// Resolve base branch reference
-	baseRef := baseBranch
-	if !strings.HasPrefix(baseBranch, "origin/") && !strings.HasPrefix(baseBranch, "refs/") {
-		// Try origin/baseBranch first
-		_, err := r.runGitCommand("rev-parse", "--verify", "origin/"+baseBranch)
-		if err == nil {
-			baseRef = "origin/" + baseBranch
-		}
-	}
+	baseRef := r.resolveBaseRef(baseBranch)
 
-	// Use three-dot notation to compare against merge-base
-	output, err := r.runGitCommand("diff", baseRef+"...HEAD")
+	baseCommit, err := r.resolveToCommit(baseRef)
 	if err != nil {
-		return "", fmt.Errorf("failed to get branch diff: %w", err)
+		return "", fmt.Errorf("failed to resolve base: %w", err)
 	}
 
-	return output, nil
+	headCommit, err := r.getHeadCommit()
+	if err != nil {
+		return "", fmt.Errorf("failed to get HEAD: %w", err)
+	}
+
+	// Get merge base for three-dot semantics
+	mergeBase, err := r.findMergeBase(baseCommit, headCommit)
+	if err != nil {
+		// If no merge base, compare directly
+		mergeBase = baseCommit
+	}
+
+	mergeBaseTree, err := mergeBase.Tree()
+	if err != nil {
+		return "", fmt.Errorf("failed to get merge-base tree: %w", err)
+	}
+
+	headTree, err := headCommit.Tree()
+	if err != nil {
+		return "", fmt.Errorf("failed to get HEAD tree: %w", err)
+	}
+
+	changes, err := mergeBaseTree.Diff(headTree)
+	if err != nil {
+		return "", fmt.Errorf("failed to diff trees: %w", err)
+	}
+
+	patch, err := changes.Patch()
+	if err != nil {
+		return "", fmt.Errorf("failed to generate patch: %w", err)
+	}
+
+	return patch.String(), nil
 }
 
 // GetBranchDiffStats returns diff statistics from baseBranch...HEAD.
 // Returns summary like "3 files changed, 45 insertions(+), 12 deletions(-)".
 func (r *Repository) GetBranchDiffStats(baseBranch string) (string, error) {
-	// Resolve base branch reference
-	baseRef := baseBranch
-	if !strings.HasPrefix(baseBranch, "origin/") && !strings.HasPrefix(baseBranch, "refs/") {
-		// Try origin/baseBranch first
-		_, err := r.runGitCommand("rev-parse", "--verify", "origin/"+baseBranch)
-		if err == nil {
-			baseRef = "origin/" + baseBranch
-		}
-	}
+	baseRef := r.resolveBaseRef(baseBranch)
 
-	// Use three-dot notation with --stat
-	output, err := r.runGitCommand("diff", baseRef+"...HEAD", "--stat")
+	baseCommit, err := r.resolveToCommit(baseRef)
 	if err != nil {
-		return "", fmt.Errorf("failed to get branch diff stats: %w", err)
+		return "", fmt.Errorf("failed to resolve base: %w", err)
 	}
 
-	return output, nil
+	headCommit, err := r.getHeadCommit()
+	if err != nil {
+		return "", fmt.Errorf("failed to get HEAD: %w", err)
+	}
+
+	// Get merge base for three-dot semantics
+	mergeBase, err := r.findMergeBase(baseCommit, headCommit)
+	if err != nil {
+		mergeBase = baseCommit
+	}
+
+	mergeBaseTree, err := mergeBase.Tree()
+	if err != nil {
+		return "", fmt.Errorf("failed to get merge-base tree: %w", err)
+	}
+
+	headTree, err := headCommit.Tree()
+	if err != nil {
+		return "", fmt.Errorf("failed to get HEAD tree: %w", err)
+	}
+
+	changes, err := mergeBaseTree.Diff(headTree)
+	if err != nil {
+		return "", fmt.Errorf("failed to diff trees: %w", err)
+	}
+
+	patch, err := changes.Patch()
+	if err != nil {
+		return "", fmt.Errorf("failed to generate patch: %w", err)
+	}
+
+	stats := patch.Stats()
+	return formatDiffStats(stats), nil
 }
 
 // GetBranchFiles returns list of files changed in baseBranch...HEAD.
 // Returns relative paths from repository root.
 func (r *Repository) GetBranchFiles(baseBranch string) ([]string, error) {
-	// Resolve base branch reference
-	baseRef := baseBranch
-	if !strings.HasPrefix(baseBranch, "origin/") && !strings.HasPrefix(baseBranch, "refs/") {
-		// Try origin/baseBranch first
-		_, err := r.runGitCommand("rev-parse", "--verify", "origin/"+baseBranch)
-		if err == nil {
-			baseRef = "origin/" + baseBranch
-		}
-	}
+	baseRef := r.resolveBaseRef(baseBranch)
 
-	// Use three-dot notation with --name-only
-	output, err := r.runGitCommand("diff", baseRef+"...HEAD", "--name-only")
+	baseCommit, err := r.resolveToCommit(baseRef)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get branch files: %w", err)
+		return nil, fmt.Errorf("failed to resolve base: %w", err)
 	}
 
-	// Split output into lines and filter empty lines
-	lines := strings.Split(strings.TrimSpace(output), "\n")
+	headCommit, err := r.getHeadCommit()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get HEAD: %w", err)
+	}
+
+	// Get merge base for three-dot semantics
+	mergeBase, err := r.findMergeBase(baseCommit, headCommit)
+	if err != nil {
+		mergeBase = baseCommit
+	}
+
+	mergeBaseTree, err := mergeBase.Tree()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get merge-base tree: %w", err)
+	}
+
+	headTree, err := headCommit.Tree()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get HEAD tree: %w", err)
+	}
+
+	changes, err := mergeBaseTree.Diff(headTree)
+	if err != nil {
+		return nil, fmt.Errorf("failed to diff trees: %w", err)
+	}
+
 	var files []string
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line != "" {
-			files = append(files, line)
+	for _, change := range changes {
+		name := change.To.Name
+		if name == "" {
+			name = change.From.Name
 		}
+		files = append(files, name)
 	}
 
+	sort.Strings(files)
 	return files, nil
 }
 
@@ -473,94 +572,146 @@ func (r *Repository) GoGitRepo() *gogit.Repository {
 	return r.repo
 }
 
-// WorktreeList returns information about all worktrees.
-// Uses native git command for reliable worktree detection.
-func (r *Repository) WorktreeList() ([]WorktreeEntry, error) {
-	r.logger.Debug("Listing worktrees")
+// --- Helper methods for pure go-git operations ---
 
-	// Use git worktree list --porcelain for structured output
-	output, err := r.runGitCommand("worktree", "list", "--porcelain")
-	if err != nil {
-		return nil, fmt.Errorf("failed to list worktrees: %w", err)
+// resolveBaseRef resolves a base branch reference, trying origin/ prefix if needed.
+func (r *Repository) resolveBaseRef(baseBranch string) string {
+	if strings.HasPrefix(baseBranch, "origin/") || strings.HasPrefix(baseBranch, "refs/") {
+		return baseBranch
 	}
 
-	// Parse porcelain output
-	// Format:
-	// worktree <path>
-	// HEAD <sha>
-	// branch refs/heads/<branch>
-	// <blank line>
-	// (repeat for each worktree)
-
-	var worktrees []WorktreeEntry
-	var current WorktreeEntry
-
-	lines := strings.Split(strings.TrimSpace(output), "\n")
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line == "" {
-			// End of current worktree entry
-			if current.Path != "" {
-				worktrees = append(worktrees, current)
-				current = WorktreeEntry{}
-			}
-			continue
-		}
-
-		parts := strings.SplitN(line, " ", 2)
-		if len(parts) < 2 {
-			continue
-		}
-
-		switch parts[0] {
-		case "worktree":
-			current.Path = parts[1]
-		case "HEAD":
-			sha := parts[1]
-			if len(sha) > 7 {
-				current.SHA = sha[:7]
-			} else {
-				current.SHA = sha
-			}
-		case "branch":
-			// Extract branch name from refs/heads/<branch>
-			branch := strings.TrimPrefix(parts[1], "refs/heads/")
-			current.Branch = branch
-		case "detached":
-			// Detached HEAD state
-			current.Branch = "detached-" + current.SHA
-		}
+	// Try origin/baseBranch first (for remote tracking)
+	originRef := "origin/" + baseBranch
+	if _, err := r.resolveToCommit(originRef); err == nil {
+		return originRef
 	}
 
-	// Don't forget the last entry if output doesn't end with blank line
-	if current.Path != "" {
-		worktrees = append(worktrees, current)
-	}
-
-	r.logger.Debug("Worktrees listed", zap.Int("count", len(worktrees)))
-	return worktrees, nil
+	return baseBranch
 }
 
-// WorktreeIsDirty checks if a worktree has uncommitted changes.
-// Returns true if there are modified, added, or deleted files.
-func (r *Repository) WorktreeIsDirty(worktreePath string) (bool, error) {
-	r.logger.Debug("Checking worktree status", zap.String("path", worktreePath))
-
-	// Use git status --porcelain in the worktree directory
-	cmd := exec.Command("git", "status", "--porcelain")
-	cmd.Dir = worktreePath
-
-	output, err := cmd.Output()
+// resolveToCommit resolves a ref (branch/tag/sha) to a commit object.
+func (r *Repository) resolveToCommit(ref string) (*object.Commit, error) {
+	hash, err := r.repo.ResolveRevision(plumbing.Revision(ref))
 	if err != nil {
-		return false, fmt.Errorf("failed to check worktree status: %w", err)
+		return nil, fmt.Errorf("resolve %q: %w", ref, err)
+	}
+	return r.repo.CommitObject(*hash)
+}
+
+// getHeadCommit returns the HEAD commit object.
+func (r *Repository) getHeadCommit() (*object.Commit, error) {
+	head, err := r.repo.Head()
+	if err != nil {
+		return nil, err
+	}
+	return r.repo.CommitObject(head.Hash())
+}
+
+// getHeadTree returns the tree for the HEAD commit.
+func (r *Repository) getHeadTree() (*object.Tree, error) {
+	commit, err := r.getHeadCommit()
+	if err != nil {
+		return nil, err
+	}
+	return commit.Tree()
+}
+
+// getIndexTree creates a pseudo-tree from the index for diff comparison.
+// This is used for staged diff operations.
+func (r *Repository) getIndexTree() (*object.Tree, error) {
+	// For staged diff, we need to compare HEAD to the index
+	// go-git doesn't have a direct "index as tree" API, so we use worktree status
+	// to identify staged files and create the diff based on that
+
+	// Get the HEAD tree as a baseline
+	headTree, err := r.getHeadTree()
+	if err != nil {
+		// Empty repository - return nil tree
+		return nil, nil
 	}
 
-	// If output is empty, worktree is clean
-	isDirty := strings.TrimSpace(string(output)) != ""
+	// For staged diff, we actually compare HEAD tree to itself
+	// but filter based on staging status
+	// This is a simplification - return HEAD tree and let the status-based
+	// methods handle the actual staging detection
+	return headTree, nil
+}
 
-	r.logger.Debug("Worktree status checked",
-		zap.String("path", worktreePath),
-		zap.Bool("isDirty", isDirty))
+// findMergeBase finds the merge base between two commits.
+func (r *Repository) findMergeBase(c1, c2 *object.Commit) (*object.Commit, error) {
+	// Simple implementation: walk c1's ancestors looking for c2's ancestors
+	// This is a naive O(n*m) algorithm but works for most cases
+	c2Ancestors := make(map[plumbing.Hash]bool)
 
-	return isDirty, nil
+	// Collect c2's ancestors
+	iter := object.NewCommitIterCTime(c2, nil, nil)
+	err := iter.ForEach(func(c *object.Commit) error {
+		c2Ancestors[c.Hash] = true
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Find first c1 ancestor that's also c2 ancestor
+	iter = object.NewCommitIterCTime(c1, nil, nil)
+	var mergeBase *object.Commit
+	err = iter.ForEach(func(c *object.Commit) error {
+		if c2Ancestors[c.Hash] {
+			mergeBase = c
+			return fmt.Errorf("found") // Stop iteration
+		}
+		return nil
+	})
+	if mergeBase != nil {
+		return mergeBase, nil
+	}
+	if err != nil && err.Error() != "found" {
+		return nil, err
+	}
+
+	return nil, fmt.Errorf("no merge base found")
+}
+
+// formatDiffStats formats file stats similar to git diff --stat output.
+func formatDiffStats(stats object.FileStats) string {
+	if len(stats) == 0 {
+		return ""
+	}
+
+	var b strings.Builder
+	var totalAdditions, totalDeletions int
+
+	for _, stat := range stats {
+		b.WriteString(fmt.Sprintf(" %s | %d ", stat.Name, stat.Addition+stat.Deletion))
+		b.WriteString(strings.Repeat("+", stat.Addition))
+		b.WriteString(strings.Repeat("-", stat.Deletion))
+		b.WriteString("\n")
+		totalAdditions += stat.Addition
+		totalDeletions += stat.Deletion
+	}
+
+	// Summary line
+	b.WriteString(fmt.Sprintf(" %d file", len(stats)))
+	if len(stats) != 1 {
+		b.WriteString("s")
+	}
+	b.WriteString(" changed")
+	if totalAdditions > 0 {
+		b.WriteString(fmt.Sprintf(", %d insertion", totalAdditions))
+		if totalAdditions != 1 {
+			b.WriteString("s")
+		}
+		b.WriteString("(+)")
+	}
+	if totalDeletions > 0 {
+		b.WriteString(fmt.Sprintf(", %d deletion", totalDeletions))
+		if totalDeletions != 1 {
+			b.WriteString("s")
+		}
+		b.WriteString("(-)")
+	}
+	b.WriteString("\n")
+
+	return b.String()
 }

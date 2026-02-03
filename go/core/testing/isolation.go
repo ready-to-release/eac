@@ -91,7 +91,7 @@ func (t *TestIsolation) WithCopyAIContracts(copy bool) *TestIsolation {
 }
 
 // WithCopyMkdocsConfig enables copying MkDocs container templates to the isolated dir.
-// This copies containers/site-render-tool/ and containers/pdf-render-tool/ which contain the
+// This copies containers/site-render-tool/ and containers/pdf-tool/ which contain the
 // mkdocs.yml templates used by the build system.
 func (t *TestIsolation) WithCopyMkdocsConfig(copy bool) *TestIsolation {
 	t.copyMkdocsConfig = copy
@@ -180,13 +180,13 @@ func (t *TestIsolation) Setup() error {
 				return fmt.Errorf("failed to copy site-render-tool container: %w", err)
 			}
 		}
-		// Copy pdf-render-tool container (for PDF builds)
-		srcPdf := filepath.Join(t.originalRepoRoot, "containers", "pdf-render-tool")
+		// Copy pdf-tool container (for PDF builds)
+		srcPdf := filepath.Join(t.originalRepoRoot, "containers", "pdf-tool")
 		if _, err := os.Stat(srcPdf); err == nil {
-			dstPdf := filepath.Join(t.isolatedDir, "containers", "pdf-render-tool")
+			dstPdf := filepath.Join(t.isolatedDir, "containers", "pdf-tool")
 			if err := copyDir(srcPdf, dstPdf); err != nil {
 				t.Cleanup()
-				return fmt.Errorf("failed to copy pdf-render-tool container: %w", err)
+				return fmt.Errorf("failed to copy pdf-tool container: %w", err)
 			}
 		}
 	}
