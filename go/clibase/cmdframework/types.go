@@ -241,10 +241,17 @@ func (c *CommandConfig) GetExtraInt(key string) int {
 }
 
 // WriteInit writes a message to the init phase output (TUI or console).
+// When TUI is enabled but not yet started, messages also go to console
+// so they're visible if the command exits before TUI starts.
 func (ctx *ExecutionContext) WriteInit(format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
 	if ctx.Orchestrator != nil && ctx.Config.UseTUI {
 		ctx.Orchestrator.SendInitLine(msg)
+		// Also print to console if TUI hasn't started yet
+		// This ensures messages are visible if command exits before TUI starts
+		if !ctx.Orchestrator.IsTUIStarted() {
+			log.Info(msg)
+		}
 	} else {
 		log.Info(msg)
 	}

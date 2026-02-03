@@ -27,7 +27,7 @@ func TestBuildRiskAssessmentPrompt(t *testing.T) {
 					},
 				},
 				Context: scoring.ModuleContext{
-					ModuleType:       "service",
+					ComponentType:    "service",
 					Criticality:      "high",
 					ExistingControls: []string{"ac-2", "ac-3"},
 				},

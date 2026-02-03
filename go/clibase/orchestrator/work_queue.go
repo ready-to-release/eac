@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/ready-to-release/eac/go/core/execution"
+	"github.com/ready-to-release/eac/go/core/logging"
 	"github.com/ready-to-release/eac/go/core/workunit"
 )
 
@@ -12,11 +13,12 @@ import (
 // Items are ordered by weight descending (LPT scheduling - Longest Processing Time First).
 // Only items with satisfied dependencies are considered ready.
 type WorkQueue struct {
-	mu       sync.Mutex
-	items    workHeap
-	deps     *DepsTracker
-	notEmpty *sync.Cond // signaled when items added or deps satisfied
-	closed   bool
+	mu               sync.Mutex
+	items            workHeap
+	deps             *DepsTracker
+	notEmpty         *sync.Cond // signaled when items added or deps satisfied
+	closed           bool
+	overCapacityItem *workunit.UnitID // Track active over-capacity execution (weight > totalCapacity)
 }
 
 // QueueStats holds queue statistics for display.
@@ -89,14 +91,15 @@ func (q *WorkQueue) HasLayerPolicy() bool {
 // Returns nil when queue is empty or closed.
 // Note: Use PopReadyWithBudget for bin-packing scheduling.
 func (q *WorkQueue) PopReady() *workunit.UnitSpec {
-	return q.PopReadyWithBudget(0) // 0 = unlimited budget
+	return q.PopReadyWithBudget(0, 0) // 0 = unlimited budget, 0 = unlimited capacity
 }
 
 // PopReadyWithBudget blocks until a ready item is available that fits within the budget.
 // If budget <= 0, returns the heaviest ready item (pure LPT).
 // If budget > 0, returns the heaviest ready item with weight <= budget (bin-packing).
+// If totalCapacity > 0 and item weight > totalCapacity, marks item as over-capacity (serial execution).
 // Returns nil when queue is empty or closed.
-func (q *WorkQueue) PopReadyWithBudget(budget int) *workunit.UnitSpec {
+func (q *WorkQueue) PopReadyWithBudget(budget int, totalCapacity int) *workunit.UnitSpec {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
@@ -107,7 +110,7 @@ func (q *WorkQueue) PopReadyWithBudget(budget int) *workunit.UnitSpec {
 		}
 
 		// Find highest-weight ready item that fits budget
-		if spec := q.findReadyWithBudget(budget); spec != nil {
+		if spec := q.findReadyWithBudget(budget, totalCapacity); spec != nil {
 			return spec
 		}
 
@@ -124,37 +127,72 @@ func (q *WorkQueue) PopReadyWithBudget(budget int) *workunit.UnitSpec {
 
 // findReadyWithBudget finds and removes the highest-weight ready item within budget.
 // If budget <= 0, ignores budget constraint (pure LPT).
+// Over-capacity fallback: If no items fit budget, returns heaviest ready item to prevent deadlock.
+// If totalCapacity > 0 and item weight > totalCapacity, marks item as over-capacity for serial execution.
 // Must be called with mu held.
-func (q *WorkQueue) findReadyWithBudget(budget int) *workunit.UnitSpec {
+func (q *WorkQueue) findReadyWithBudget(budget int, totalCapacity int) *workunit.UnitSpec {
 	// Scan heap for best ready item that fits budget
-	// We want: heaviest ready item with weight <= budget (if budget > 0)
-	bestIdx := -1
-	bestWeight := -1
+	// Track both fitting items (within budget) and heaviest ready (fallback for over-capacity)
+	bestFitting := -1        // Best item within budget
+	bestFittingWeight := -1
+	heaviest := -1           // Heaviest ready item (fallback)
+	heaviestWeight := -1
 
 	for i, item := range q.items {
 		if !q.deps.IsReady(item.ID) {
 			continue
 		}
 
-		// Check budget constraint (0 or negative = unlimited)
-		if budget > 0 && item.Weight > budget {
-			continue
+		// If over-capacity item is active, skip OTHER over-capacity items
+		// but allow normal items to be popped (preserves layer parallelism)
+		if q.overCapacityItem != nil {
+			wouldBeOverCapacity := (totalCapacity > 0 && budget > 0 &&
+				item.Weight > budget && item.Weight > totalCapacity)
+			if wouldBeOverCapacity {
+				continue // Skip this over-capacity item while another is active
+			}
 		}
 
-		// Prefer heavier items
-		if item.Weight > bestWeight {
-			bestIdx = i
-			bestWeight = item.Weight
+		// Track heaviest ready item (fallback for over-capacity)
+		if item.Weight > heaviestWeight {
+			heaviest = i
+			heaviestWeight = item.Weight
+		}
+
+		// Track best fitting item (within budget)
+		if budget <= 0 || item.Weight <= budget {
+			if item.Weight > bestFittingWeight {
+				bestFitting = i
+				bestFittingWeight = item.Weight
+			}
 		}
 	}
 
-	if bestIdx == -1 {
-		return nil
+	// Prefer fitting items, fall back to heaviest when nothing fits
+	if bestFitting != -1 {
+		item := heap.Remove(&q.items, bestFitting).(workunit.UnitSpec)
+		return &item
 	}
 
-	// Remove from heap and return
-	item := heap.Remove(&q.items, bestIdx).(workunit.UnitSpec)
-	return &item
+	// Over-capacity fallback: run heaviest item even if it exceeds budget
+	if heaviest != -1 && budget > 0 {
+		item := heap.Remove(&q.items, heaviest).(workunit.UnitSpec)
+
+		// Mark as over-capacity if it exceeds TOTAL capacity (not just available budget)
+		// Over-capacity items execute serially to prevent deadlock
+		if totalCapacity > 0 && item.Weight > totalCapacity {
+			q.overCapacityItem = &item.ID
+			logging.C().Debugf("[scheduler] Over-capacity: starting weight=%d (capacity=%d) - SERIAL MODE",
+				item.Weight, totalCapacity)
+		} else {
+			logging.C().Debugf("[scheduler] Over-capacity: starting weight=%d (available=%d)",
+				item.Weight, budget)
+		}
+
+		return &item
+	}
+
+	return nil // Queue exhausted
 }
 
 // HasReadyWithBudget checks if there's a ready item that fits within budget.
@@ -179,6 +217,28 @@ func (q *WorkQueue) MarkComplete(id workunit.UnitID) {
 	q.deps.MarkComplete(id)
 	q.notEmpty.Broadcast() // wake PopReady to check for newly ready items
 	q.mu.Unlock()
+}
+
+// ReleaseOverCapacity clears the over-capacity item marker and wakes waiting workers.
+// Must be called after an over-capacity item (weight > totalCapacity) completes execution.
+// If the provided ID doesn't match the current over-capacity item, this is a no-op.
+func (q *WorkQueue) ReleaseOverCapacity(id workunit.UnitID) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	if q.overCapacityItem != nil && q.overCapacityItem.Longname() == id.Longname() {
+		q.overCapacityItem = nil
+		q.notEmpty.Broadcast() // Wake workers waiting for over-capacity to clear
+		logging.C().Debugf("[scheduler] Over-capacity: released lock for %s", id.Longname())
+	}
+}
+
+// IsOverCapacityActive returns true if an over-capacity item is currently executing.
+// Useful for testing and debugging.
+func (q *WorkQueue) IsOverCapacityActive() bool {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	return q.overCapacityItem != nil
 }
 
 // MarkFailed marks a component as failed, which will cause dependents to fail.

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import os
+import sass
 
+from sass import CompileError
 from urllib.parse import unquote
 
 from mkdocs_exporter.page import Page
+from mkdocs_exporter.logging import logger
 from mkdocs_exporter.formats.pdf.browser import Browser
 from mkdocs_exporter.renderer import Renderer as BaseRenderer
 from mkdocs_exporter.formats.pdf.preprocessor import Preprocessor
@@ -55,21 +58,35 @@ class Renderer(BaseRenderer):
     self.options: dict = options
     self.scripts: list[str] = []
     self.stylesheets: list[str] = []
+    self._compiled_css: list[str] = []  # Pre-compiled CSS strings
+    self._loaded_scripts: list[str] = []  # Pre-loaded script content
     self.browser = browser or Browser(self.options.get('browser', {}))
 
 
   def add_stylesheet(self, path: str) -> Renderer:
-    """Adds a stylesheet to the renderer."""
+    """Adds and pre-compiles a stylesheet."""
 
     self.stylesheets.append(path)
+
+    with open(path, 'r', encoding='utf-8') as file:
+      content = file.read()
+      try:
+        css = sass.compile(string=content, output_style='compressed')
+        self._compiled_css.append(css)
+        logger.debug("[mkdocs-exporter.pdf] Pre-compiled stylesheet: %s", path)
+      except CompileError as error:
+        logger.error("[mkdocs-exporter.pdf] Failed to compile %s: %s", path, error)
 
     return self
 
 
   def add_script(self, path: str) -> Renderer:
-    """Adds a script to the renderer."""
+    """Adds and pre-loads a script."""
 
     self.scripts.append(path)
+
+    with open(path, 'r', encoding='utf-8') as file:
+      self._loaded_scripts.append(file.read())
 
     return self
 
@@ -93,12 +110,12 @@ class Renderer(BaseRenderer):
     preprocessor.set_attribute('details:not([open])', 'open', 'open')
     page.theme.preprocess(preprocessor)
 
-    for stylesheet in self.stylesheets:
-      with open(stylesheet, 'r', encoding='utf-8') as file:
-        preprocessor.stylesheet(file.read())
-    for script in self.scripts:
-      with open(script, 'r', encoding='utf-8') as file:
-        preprocessor.script(file.read(), path=stylesheet)
+    # Use pre-compiled CSS (no SASS compilation during render!)
+    for css in self._compiled_css:
+      preprocessor.add_compiled_css(css)
+    # Use pre-loaded scripts
+    for script_content in self._loaded_scripts:
+      preprocessor.script(script_content)
 
     if 'teleport' not in disable:
       preprocessor.teleport()

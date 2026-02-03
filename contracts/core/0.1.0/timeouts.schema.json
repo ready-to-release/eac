@@ -170,6 +170,11 @@
           "$ref": "#/$defs/duration",
           "description": "Maximum age for valid evidence",
           "default": "24h"
+        },
+        "worker_timeout": {
+          "$ref": "#/$defs/duration",
+          "description": "Default timeout for worker execution (fail fast)",
+          "default": "5m"
         }
       }
     },

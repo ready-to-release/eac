@@ -85,8 +85,9 @@ func (h *PDFHandler) ValidateModule(module interfaces.ModuleContractPort, worksp
 }
 
 // ListArtifacts returns artifact paths that would be produced.
+// PDFs are output to site/pdf/ directory by mkdocs-exporter.
 func (h *PDFHandler) ListArtifacts(module interfaces.ModuleContractPort, workspaceRoot string) []string {
-	return []string{"pdf/", "site/"}
+	return []string{"site/pdf/"}
 }
 
 // Build executes the unified PDF build: preprocessing + container rendering.

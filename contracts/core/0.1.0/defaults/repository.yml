@@ -48,10 +48,11 @@ repository:
     constraint: patch-only
 
   # Parallelism limits for build and test commands
+  # Set to 0 for auto-detection from CPU and RAM (recommended)
   # CI uses lower limits to avoid resource contention on shared runners
   parallelism:
     ci: 8       # Max parallel workers in CI (GitHub Actions)
-    devbox: 16  # Max parallel workers in local development
+    devbox: 0   # Auto-detect from system resources (CPU and RAM)
 
 # Default paths configuration
 paths:

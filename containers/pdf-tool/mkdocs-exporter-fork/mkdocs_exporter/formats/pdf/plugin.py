@@ -128,16 +128,23 @@ class Plugin(BasePlugin[Config]):
       del page.formats['pdf']
 
     if 'pdf' in page.formats:
+      # Preprocess NOW during page build (sync is fine here, allows full parallelism later)
+      page.formats['pdf']['_html'] = self.renderer.preprocess(page)
+
       async def render(page: Page) -> None:
         logger.info("[mkdocs-exporter.pdf] Rendering '%s'...", page.file.src_path)
 
-        html = self.renderer.preprocess(page)
+        # Use pre-computed HTML (no preprocessing in async task!)
+        html = page.formats['pdf']['_html']
         pdf, pages = await self.renderer.render(html)
 
         page.formats['pdf']['pages'] = pages
 
         with open(page.formats['pdf']['path'], 'wb+') as file:
           file.write(pdf)
+
+        # Free memory after rendering
+        page.formats['pdf']['_html'] = None
 
       self.tasks.append(render(page))
 

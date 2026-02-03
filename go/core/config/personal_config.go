@@ -17,6 +17,7 @@ var SupportedPersonalConfigs = []string{
 	"repository.yml",
 	"tools.yml",
 	"environments.yml",
+	"timeouts.yml",
 }
 
 // LoadWithPersonal loads a config file and merges any personal overrides.

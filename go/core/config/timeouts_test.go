@@ -309,3 +309,4 @@ func TestTUIConfigWithCustomTimeouts(t *testing.T) {
 	// Reset to defaults
 	SetGlobalTimeouts(DefaultTimeoutConfig())
 }
+

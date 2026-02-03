@@ -181,6 +181,26 @@ func LoadTestingTagsDefaults(repoRoot string) (*TestingTagsConfig, error) {
 	return &cfg, nil
 }
 
+// LoadTimeoutsDefaults loads default timeouts from contract defaults.
+// Returns ErrNoDefaults when defaults don't exist - allows tests to work without contracts folder.
+func LoadTimeoutsDefaults(repoRoot string) (*TimeoutConfig, error) {
+	data, err := loadDefaultFile(repoRoot, "timeouts.yml")
+	if err != nil {
+		// Defaults are optional - return ErrNoDefaults if they don't exist
+		if os.IsNotExist(err) {
+			return nil, ErrNoDefaults
+		}
+		return nil, fmt.Errorf("loading timeouts defaults: %w", err)
+	}
+
+	var cfg TimeoutConfig
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return nil, fmt.Errorf("parsing timeouts defaults: %w", err)
+	}
+
+	return &cfg, nil
+}
+
 // defaultsRoot returns the root directory for loading contract defaults.
 // Uses the distribution root (container root if in container, otherwise repoRoot).
 // Note: Can't import repository package here to avoid cycles, so inline the check.

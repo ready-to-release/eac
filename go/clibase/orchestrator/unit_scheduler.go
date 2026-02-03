@@ -606,6 +606,9 @@ func (us *UnitScheduler) RunUnits(work []workunit.UnitSpec, worker UnitWorkerFun
 	// Roof is the actual peak allocation - workers spawned at start
 	us.roof = poolSize
 
+	// Store total capacity for over-capacity detection
+	totalCapacity := capacity
+
 	// Spawn worker pool - all workers start immediately and compete for queue items
 	// Workers use bin-packing: check available capacity, pop item that fits
 	for i := 0; i < poolSize; i++ {
@@ -623,7 +626,7 @@ func (us *UnitScheduler) RunUnits(work []workunit.UnitSpec, worker UnitWorkerFun
 
 				// Pop item that fits available capacity (bin-packing)
 				// Prioritizes heavier items that fit, enabling parallel small jobs
-				spec := queue.PopReadyWithBudget(available)
+				spec := queue.PopReadyWithBudget(available, totalCapacity)
 				if spec == nil {
 					return // queue exhausted
 				}
@@ -633,8 +636,15 @@ func (us *UnitScheduler) RunUnits(work []workunit.UnitSpec, worker UnitWorkerFun
 					weight = 1
 				}
 
+				// Check if this is an over-capacity item (weight > total capacity)
+				// Over-capacity items skip semaphore and execute serially via queue lock
+				isOverCapacity := totalCapacity > 0 && weight > totalCapacity
+
 				// Acquire capacity (blocks until slot available)
-				us.semaphore.Acquire(weight)
+				// CRITICAL: Skip semaphore for over-capacity items to prevent forever-blocking
+				if !isOverCapacity {
+					us.semaphore.Acquire(weight)
+				}
 				us.emitResourceStatus() // Update TUI Resources pane
 
 				// Update TUI: queued -> running (uses moniker for matching)
@@ -652,14 +662,18 @@ func (us *UnitScheduler) RunUnits(work []workunit.UnitSpec, worker UnitWorkerFun
 						Errors:    []string{"Skipped: dependency failed"},
 					}
 					// Release capacity immediately since we're not executing
-					us.semaphore.Release(weight)
+					if !isOverCapacity {
+						us.semaphore.Release(weight)
+					}
 					us.emitResourceStatus()
 				} else {
 					// Execute work
 					result = us.executeWorker(*spec, worker)
 
 					// Release capacity
-					us.semaphore.Release(weight)
+					if !isOverCapacity {
+						us.semaphore.Release(weight)
+					}
 					us.emitResourceStatus() // Update TUI Resources pane
 				}
 
@@ -673,6 +687,11 @@ func (us *UnitScheduler) RunUnits(work []workunit.UnitSpec, worker UnitWorkerFun
 					queue.MarkFailed(spec.ID)
 				} else {
 					queue.MarkComplete(spec.ID)
+				}
+
+				// Release over-capacity lock if this was an over-capacity item
+				if isOverCapacity {
+					queue.ReleaseOverCapacity(spec.ID)
 				}
 
 				// Mark component complete (broadcasts to legacy channels, updates TUI)

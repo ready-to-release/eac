@@ -3,10 +3,13 @@ package build
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -744,11 +747,15 @@ func buildUnitWorker(ctx *cmdframework.ExecutionContext, module, component strin
 	// -1 = skipped (cached), 0 = success, >0 = failure
 	if exitCode > 0 {
 		output.Writeln(logWriter, "❌ Build failed for component: %s", compName)
-		// Record failure manifest
+		// Record failure manifest with input hash for debugging
 		if bctx.tracker != nil {
+			inputHash := computeComponentInputHash(ctx, module, moduleContract)
 			manifest := &coreoutput.UoWManifest{
 				ExitCode:   exitCode,
+				InputHash:  inputHash,
 				ExecutedAt: time.Now().UTC(),
+				Artifacts:  nil,
+				OutputHash: "",
 				Version:    "1.0.0",
 			}
 			if err := bctx.tracker.RecordComplete(unitID, manifest); err != nil {
@@ -773,10 +780,19 @@ func buildUnitWorker(ctx *cmdframework.ExecutionContext, module, component strin
 	// Record successful completion with artifacts
 	if bctx.tracker != nil {
 		artifacts := collectUoWArtifacts(componentOutputDir, handler, modulePort, ctx.WorkspaceRoot)
+
+		// Compute InputHash from module source files
+		inputHash := computeComponentInputHash(ctx, module, moduleContract)
+
+		// Compute OutputHash from artifact hashes
+		outputHash := computeOutputHash(artifacts)
+
 		manifest := &coreoutput.UoWManifest{
 			ExitCode:   exitCode,
+			InputHash:  inputHash,
 			ExecutedAt: time.Now().UTC(),
 			Artifacts:  artifacts,
+			OutputHash: outputHash,
 			Version:    "1.0.0",
 		}
 		if err := bctx.tracker.RecordComplete(unitID, manifest); err != nil {
@@ -858,6 +874,7 @@ func getGitCommit(workspaceRoot string) string {
 
 // collectUoWArtifacts collects artifact information from the build output directory.
 // It lists files in the output directory and computes their hashes.
+// Directory paths (ending with "/") are enumerated to collect all files within.
 func collectUoWArtifacts(outputDir string, handler builders.Handler, modulePort interfaces.ModuleContractPort, workspaceRoot string) []coreoutput.Artifact {
 	// Get expected artifacts from handler
 	expectedPaths := handler.ListArtifacts(modulePort, workspaceRoot)
@@ -869,13 +886,20 @@ func collectUoWArtifacts(outputDir string, handler builders.Handler, modulePort 
 	for _, relPath := range expectedPaths {
 		fullPath := filepath.Join(outputDir, relPath)
 
-		// Check if file exists
+		// Check if path exists
 		info, err := os.Stat(fullPath)
-		if err != nil || info.IsDir() {
+		if err != nil {
 			continue
 		}
 
-		// Compute hash
+		// Handle directories: enumerate all files within
+		if info.IsDir() {
+			dirArtifacts := collectDirectoryArtifacts(outputDir, relPath)
+			artifacts = append(artifacts, dirArtifacts...)
+			continue
+		}
+
+		// Handle regular files
 		size, hashHex, err := coreoutput.HashFile(fullPath)
 		if err != nil {
 			log.Debugf("Failed to hash artifact %s: %v", relPath, err)
@@ -885,7 +909,44 @@ func collectUoWArtifacts(outputDir string, handler builders.Handler, modulePort 
 		artifacts = append(artifacts, coreoutput.Artifact{
 			ID:     filepath.Base(relPath),
 			Path:   relPath,
-			SHA256: "sha256:" + hashHex,
+			SHA256: hashHex, // HashFile already includes "sha256:" prefix
+			Size:   size,
+			Type:   inferArtifactType(relPath),
+		})
+	}
+
+	return artifacts
+}
+
+// collectDirectoryArtifacts enumerates files in a directory and collects artifact info.
+// Only collects top-level files to avoid excessive tracking of nested content.
+func collectDirectoryArtifacts(baseDir, relDir string) []coreoutput.Artifact {
+	dirPath := filepath.Join(baseDir, relDir)
+	entries, err := os.ReadDir(dirPath)
+	if err != nil {
+		log.Debugf("Failed to read directory %s: %v", dirPath, err)
+		return nil
+	}
+
+	var artifacts []coreoutput.Artifact
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue // Only collect files, not subdirectories
+		}
+
+		relPath := filepath.Join(relDir, entry.Name())
+		fullPath := filepath.Join(baseDir, relPath)
+
+		size, hashHex, err := coreoutput.HashFile(fullPath)
+		if err != nil {
+			log.Debugf("Failed to hash artifact %s: %v", relPath, err)
+			continue
+		}
+
+		artifacts = append(artifacts, coreoutput.Artifact{
+			ID:     entry.Name(),
+			Path:   relPath,
+			SHA256: hashHex,
 			Size:   size,
 			Type:   inferArtifactType(relPath),
 		})
@@ -917,4 +978,55 @@ func inferArtifactType(path string) string {
 	default:
 		return "file"
 	}
+}
+
+// computeComponentInputHash computes a hash of the input sources for a component.
+// This is used to detect when source files have changed.
+func computeComponentInputHash(ctx *cmdframework.ExecutionContext, module string, moduleContract *modules.ModuleContract) string {
+	if moduleContract == nil {
+		return ""
+	}
+
+	// Get source file patterns from module contract
+	patterns := moduleContract.GetGlobPatterns()
+	if len(patterns) == 0 {
+		return ""
+	}
+
+	// Expand patterns and compute hash
+	files, err := hash.ExpandGlobPatterns(ctx.WorkspaceRoot, patterns)
+	if err != nil {
+		log.Debugf("Failed to expand patterns for input hash of %s: %v", module, err)
+		return ""
+	}
+
+	inputHash, err := hash.Files(ctx.WorkspaceRoot, files)
+	if err != nil {
+		log.Debugf("Failed to compute input hash for %s: %v", module, err)
+		return ""
+	}
+
+	return inputHash
+}
+
+// computeOutputHash computes a combined hash from all artifact hashes.
+// This provides a single value representing all outputs.
+func computeOutputHash(artifacts []coreoutput.Artifact) string {
+	if len(artifacts) == 0 {
+		return ""
+	}
+
+	// Combine all artifact hashes (sorted by path for determinism)
+	var hashes []string
+	for _, a := range artifacts {
+		hashes = append(hashes, a.SHA256)
+	}
+
+	// Sort for determinism
+	sort.Strings(hashes)
+	combined := strings.Join(hashes, ":")
+
+	// Hash the combined string using SHA256
+	h := sha256.Sum256([]byte(combined))
+	return "sha256:" + hex.EncodeToString(h[:])
 }

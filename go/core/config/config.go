@@ -204,6 +204,10 @@ func (c *EACConfig) LoadAll(opts LoadOptions) error {
 		errs = append(errs, fmt.Errorf("testing-tags: %w", err))
 	}
 
+	if err := c.LoadTimeouts(); err != nil {
+		errs = append(errs, fmt.Errorf("timeouts: %w", err))
+	}
+
 	if err := c.LoadTestSuites(validateSchemas); err != nil {
 		errs = append(errs, fmt.Errorf("test-suites: %w", err))
 	}
@@ -420,6 +424,41 @@ func (c *EACConfig) LoadTestingTags(validateSchema bool) error {
 	}
 
 	c.TestingTags = cfg
+	return nil
+}
+
+// LoadTimeouts loads the timeout configuration.
+// Loads contract defaults first, then merges personal overrides from .eac/timeouts.personal.yml.
+// Sets the global timeout configuration for use throughout the application.
+func (c *EACConfig) LoadTimeouts() error {
+	// Load defaults from contract
+	cfg, err := LoadTimeoutsDefaults(c.RepoRoot)
+	if err != nil && !errors.Is(err, ErrNoDefaults) {
+		return fmt.Errorf("loading timeouts defaults: %w", err)
+	}
+
+	// Ensure we have a valid config even if no defaults
+	if cfg == nil {
+		cfg = DefaultTimeoutConfig()
+	}
+
+	// Load personal override if it exists (.eac/timeouts.personal.yml)
+	personalPath := filepath.Join(c.ConfigRoot, "timeouts.personal.yml")
+	if data, err := os.ReadFile(personalPath); err == nil {
+		var personalCfg TimeoutConfig
+		if err := yaml.Unmarshal(data, &personalCfg); err != nil {
+			return fmt.Errorf("failed to parse timeouts.personal.yml: %w", err)
+		}
+
+		// Merge personal overrides into defaults
+		cfg = MergeTimeoutConfigs(cfg, &personalCfg)
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("failed to read timeouts.personal.yml: %w", err)
+	}
+
+	// Set global timeouts for use throughout the application
+	SetGlobalTimeouts(cfg)
+
 	return nil
 }
 

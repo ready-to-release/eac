@@ -84,15 +84,17 @@ func ResolveTestUnitSpecs(ctx *cmdframework.ExecutionContext) [][]workunit.UnitS
 
 			// Extract spec name for BDD tests (godog, tscucumber)
 			// For BDD tests, use spec name as the component identifier
-			// For unit tests, use the last path component (package name)
+			// For unit tests, use a unique path-based name to avoid collisions
 			spec := ""
 			cleanName := ""
 			if testType == "godog" || testType == "tscucumber" {
 				spec = extractSpecName(pkgPath)
 				cleanName = spec // e.g., "docs-drawio-cache"
 			} else {
-				// For regular tests, use last path component
-				cleanName = filepath.Base(pkgPath) // e.g., "config"
+				// For regular tests, use unique component name based on path
+				// This avoids collisions when multiple packages have the same basename
+				// e.g., "go/cli/eac/impl/internal" -> "impl/internal" -> "impl-internal"
+				cleanName = uniqueComponentName(pkgPath, moduleMoniker, testCfg.ModuleMapper)
 			}
 
 			// Tool is the test type (gotest, godog, etc.) - consistent with build/lint/scan
@@ -238,4 +240,43 @@ func extractSpecName(pkgPath string) string {
 		return parts[0]
 	}
 	return ""
+}
+
+// uniqueComponentName generates a unique component name from a package path.
+// Uses the path relative to the module root to avoid collisions between packages
+// with the same basename (e.g., multiple "internal" packages).
+// Example: "go/cli/eac/impl/internal" for module "eac-cli" -> "impl-internal"
+func uniqueComponentName(pkgPath, moduleMoniker string, mapper *ModuleMapper) string {
+	// Normalize path
+	normalizedPath := filepath.ToSlash(pkgPath)
+
+	// Get module info to find the component root
+	if mapper != nil && mapper.registry != nil {
+		if module, exists := mapper.registry.Get(moduleMoniker); exists {
+			// Try to find a matching component root
+			for _, root := range module.GetComponentRoots() {
+				if root == "" || root == "/" {
+					continue
+				}
+				root = filepath.ToSlash(root)
+				// Check if pkgPath is under this component root
+				if strings.HasPrefix(normalizedPath, root+"/") {
+					// Extract the suffix after the root
+					suffix := strings.TrimPrefix(normalizedPath, root+"/")
+					if suffix != "" {
+						// Replace slashes with dashes for a clean component name
+						return strings.ReplaceAll(suffix, "/", "-")
+					}
+				}
+				// Exact match (package is at the root itself)
+				if normalizedPath == root {
+					return filepath.Base(root)
+				}
+			}
+		}
+	}
+
+	// Fallback: use basename (may not be unique, but better than nothing)
+	// This handles edge cases where module mapping isn't available
+	return filepath.Base(pkgPath)
 }

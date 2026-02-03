@@ -108,6 +108,18 @@ class Preprocessor():
     return self
 
 
+  def add_compiled_css(self, css: str, **kwargs) -> Preprocessor:
+    """Appends pre-compiled CSS to the document's head (no SASS compilation)."""
+
+    element = self.html.new_tag('style', type='text/css', rel='stylesheet', **kwargs)
+
+    element.string = css
+
+    self.html.head.append(element)
+
+    return self
+
+
   def remove(self, selectors: Union[str, list[str]]) -> Preprocessor:
     """Removes some elements."""
 

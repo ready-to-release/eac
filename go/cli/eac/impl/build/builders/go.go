@@ -94,7 +94,8 @@ func listGoModuleArtifacts(module *modules.ModuleContract, workspaceRoot string)
 	}
 
 	// No artifacts = library (compile-only verification)
-	return []string{".build-complete"}
+	// The UoW manifest itself proves the build succeeded (exit_code, timestamp, hash)
+	return nil
 }
 
 // listModuleArtifacts returns artifacts based on per-module definitions.
